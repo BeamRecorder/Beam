@@ -1,4 +1,4 @@
-export const COMPOSITION_SCHEMA_VERSION = 6 as const;
+export const COMPOSITION_SCHEMA_VERSION = 7 as const;
 export const SCREEN_CLIP_ID = 'screen';
 
 export type MediaKind = 'video' | 'image' | 'audio';
@@ -6,6 +6,22 @@ export type BlurEffectShape = 'rectangle' | 'square' | 'circle';
 export type BlurEffectMode = 'blur' | 'frosted' | 'pixelated' | 'opaque';
 export type ClipKind = 'screen' | 'video' | 'image' | 'webcam' | 'blur' | 'audio' | 'caption';
 export type AudioRole = 'system' | 'microphone' | 'imported';
+
+export type TransitionPreset =
+  | { kind: 'fade' }
+  | { kind: 'slide'; direction: 'left' | 'right' | 'up' | 'down' }
+  | { kind: 'zoom'; direction: 'in' | 'out' }
+  | { kind: 'blur' };
+
+export interface ClipTransition {
+  preset: TransitionPreset;
+  durationMs: number;
+}
+
+export interface ClipTransitions {
+  entry: ClipTransition | null;
+  exit: ClipTransition | null;
+}
 
 export interface NormalizedTransform {
   x: number;
@@ -136,6 +152,8 @@ export interface ClipBase {
   sourceInMs: number;
   sourceDurationMs: number;
   playbackRate: number;
+  /** Required in persisted v7 compositions; optional while constructing legacy/test input before normalization. */
+  transitions?: ClipTransitions;
   enabled: boolean;
   /** Lower values are nearer the foreground. */
   order: number;
@@ -187,7 +205,7 @@ export interface CaptionClip extends ClipBase {
 export type Clip = VisualClip | BlurClip | AudioClip | CaptionClip;
 
 export interface ClipComposition {
-  schemaVersion: typeof COMPOSITION_SCHEMA_VERSION;
+  schemaVersion: number;
   assets: MediaAsset[];
   clips: Clip[];
   keyboardCaptionSessions: string[];

@@ -10,6 +10,7 @@ import {
   type MediaError,
   type OpenedMediaInput,
 } from '../shared';
+import { audioTransitionGainAt } from '../shared/clip-transitions';
 
 const SCHEDULE_AHEAD_SECONDS = 1;
 const SCHEDULE_INTERVAL_MS = 100;
@@ -326,7 +327,34 @@ export class AudioPlaybackScheduler {
     const gain = context.createGain();
     source.buffer = wrapped.buffer;
     source.playbackRate.value = consumer.clip.playbackRate;
-    gain.gain.value = Math.max(0, Math.min(2, consumer.clip.volume / 100));
+    const volume = Math.max(0, Math.min(2, consumer.clip.volume / 100));
+    if (!consumer.clip.transitions?.entry && !consumer.clip.transitions?.exit) {
+      gain.gain.value = volume;
+    } else {
+      const timelineStartMs =
+        consumer.clip.timelineStartMs +
+        ((segmentStart - consumer.clip.sourceInMs / 1_000) / consumer.clip.playbackRate) * 1_000;
+      const timelineEndMs =
+        consumer.clip.timelineStartMs +
+        ((segmentEnd - consumer.clip.sourceInMs / 1_000) / consumer.clip.playbackRate) * 1_000;
+      const contextTimeAt = (timelineMs: number) => when + (timelineMs - timelineStartMs) / 1_000;
+      gain.gain.value = volume * audioTransitionGainAt(consumer.clip, timelineStartMs);
+      gain.gain.setValueAtTime(gain.gain.value, when);
+      const entryEnd = consumer.clip.timelineStartMs + (consumer.clip.transitions.entry?.durationMs ?? 0);
+      if (consumer.clip.transitions.entry && entryEnd > timelineStartMs && entryEnd <= timelineEndMs)
+        gain.gain.linearRampToValueAtTime(volume, contextTimeAt(entryEnd));
+      const exitStart =
+        consumer.clip.timelineStartMs +
+        consumer.clip.timelineDurationMs -
+        (consumer.clip.transitions.exit?.durationMs ?? 0);
+      if (consumer.clip.transitions.exit && exitStart > timelineStartMs && exitStart < timelineEndMs)
+        gain.gain.setValueAtTime(volume, contextTimeAt(exitStart));
+      if (consumer.clip.transitions.exit && timelineEndMs > exitStart)
+        gain.gain.linearRampToValueAtTime(
+          volume * audioTransitionGainAt(consumer.clip, timelineEndMs),
+          contextTimeAt(timelineEndMs),
+        );
+    }
     source.connect(gain);
     gain.connect(this.masterGain!);
     const node = { source, gain };

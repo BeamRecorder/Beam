@@ -155,6 +155,7 @@ const runTranscription = async () => {
         sourceInMs: 0,
         sourceDurationMs: durationMs,
         playbackRate: 1,
+        transitions: { entry: null, exit: null },
         enabled: true,
         order: preserved.length + index,
         isAiGenerated: true,

@@ -12,7 +12,10 @@ import {
   type MediaAsset,
   type NormalizedCrop,
   type NormalizedTransform,
+  type ClipTransition,
 } from '~/media/shared/composition-types';
+import { normalizeClipTransitions } from '~/media/shared/clip-transitions';
+import { EMPTY_CLIP_TRANSITIONS } from '~/media/shared/clip-transitions';
 import {
   assertValidVisualTracks,
   maximumVisualTrackDuration,
@@ -62,7 +65,11 @@ export const createComposition = (
   const composition: ClipComposition = {
     schemaVersion: COMPOSITION_SCHEMA_VERSION,
     assets: cloneValue(assets),
-    clips: normalizeClipOrders(normalizeGroups(cloneValue(clips))),
+    clips: normalizeClipOrders(
+      normalizeGroups(
+        cloneValue(clips).map((clip) => ({ ...clip, transitions: clip.transitions ?? { entry: null, exit: null } })),
+      ),
+    ),
     keyboardCaptionSessions: [...new Set(keyboardCaptionSessions)],
   };
   validateComposition(composition);
@@ -122,6 +129,10 @@ export function validateComposition(composition: ClipComposition): void {
     ) {
       throw new CompositionEngineError('Invalid clip timing.');
     }
+    if (!clip.transitions) throw new CompositionEngineError('Missing clip transitions.');
+    const normalizedTransitions = normalizeClipTransitions(clip.transitions, clip.timelineDurationMs, clip.kind);
+    if (JSON.stringify(normalizedTransitions) !== JSON.stringify(clip.transitions))
+      throw new CompositionEngineError('Invalid clip transitions.');
     const expectedTimelineDuration = clip.sourceDurationMs / clip.playbackRate;
     if (Math.abs(expectedTimelineDuration - clip.timelineDurationMs) > 2) {
       throw new CompositionEngineError('Clip source and timeline durations disagree.');
@@ -254,6 +265,11 @@ export function setPlaybackRate(composition: ClipComposition, clipId: string, pl
           ...clip,
           playbackRate: effectiveRate,
           timelineDurationMs: Math.max(MIN_CLIP_DURATION_MS, integer(clip.sourceDurationMs / effectiveRate)),
+          transitions: normalizeClipTransitions(
+            clip.transitions ?? EMPTY_CLIP_TRANSITIONS,
+            Math.max(MIN_CLIP_DURATION_MS, integer(clip.sourceDurationMs / effectiveRate)),
+            clip.kind,
+          ),
         }
       : clip,
   );
@@ -302,6 +318,7 @@ export function trimClip(
           timelineDurationMs: newTimelineDuration,
           sourceInMs: 0,
           sourceDurationMs: newSourceDuration,
+          transitions: normalizeClipTransitions(clip.transitions ?? EMPTY_CLIP_TRANSITIONS, newTimelineDuration, clip.kind),
         };
       }
       const sourceDelta = integer(startDelta * rate);
@@ -312,6 +329,7 @@ export function trimClip(
         timelineDurationMs: newTimelineDuration,
         sourceInMs: newSourceInMs,
         sourceDurationMs: newSourceDuration,
+        transitions: normalizeClipTransitions(clip.transitions ?? EMPTY_CLIP_TRANSITIONS, newTimelineDuration, clip.kind),
       };
     }
     const newTimelineDuration = target - clip.timelineStartMs;
@@ -320,6 +338,7 @@ export function trimClip(
       ...clip,
       timelineDurationMs: newTimelineDuration,
       sourceDurationMs: newSourceDuration,
+      transitions: normalizeClipTransitions(clip.transitions ?? EMPTY_CLIP_TRANSITIONS, newTimelineDuration, clip.kind),
     };
   });
   validateComposition(next);
@@ -352,9 +371,19 @@ export function splitClip(
       timelineDurationMs: clip.timelineDurationMs - offset,
       sourceInMs: clip.sourceInMs + leftSourceDuration,
       sourceDurationMs: clip.sourceDurationMs - leftSourceDuration,
+      transitions: normalizeClipTransitions(
+        { entry: null, exit: clip.transitions?.exit ?? null },
+        clip.timelineDurationMs - offset,
+        clip.kind,
+      ),
     };
     additions.push(right);
-    return { ...clip, timelineDurationMs: offset, sourceDurationMs: leftSourceDuration };
+    return {
+      ...clip,
+      timelineDurationMs: offset,
+      sourceDurationMs: leftSourceDuration,
+      transitions: normalizeClipTransitions({ entry: clip.transitions?.entry ?? null, exit: null }, offset, clip.kind),
+    };
   });
   next.clips = normalizeClipOrders([...next.clips, ...additions]);
   validateComposition(next);
@@ -452,6 +481,18 @@ export const setVolume = (composition: ClipComposition, clipId: string, volume: 
     if (!isAudioClip(clip)) throw new CompositionEngineError('Only audio clips have a volume.');
     return { ...clip, volume: Math.max(0, Math.min(200, volume)) };
   });
+
+export function setClipTransition(
+  composition: ClipComposition,
+  clipId: string,
+  edge: 'entry' | 'exit',
+  transition: ClipTransition | null,
+): ClipComposition {
+  return updateClip(composition, clipId, (clip) => ({
+    ...clip,
+    transitions: normalizeClipTransitions({ ...(clip.transitions ?? EMPTY_CLIP_TRANSITIONS), [edge]: transition }, clip.timelineDurationMs, clip.kind),
+  }));
+}
 
 export function reorderClip(composition: ClipComposition, clipId: string, targetIndex: number): ClipComposition {
   const next = clone(composition);

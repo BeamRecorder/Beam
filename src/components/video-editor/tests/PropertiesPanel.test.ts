@@ -4,7 +4,7 @@ import { createDefaultCursorClickEffects, createDefaultCursorMotionSettings } fr
 import type { CursorType } from '~/api/types/cursor-presentation';
 import type { BackgroundMediaGroup, BackgroundValue } from '../composables/backgroundCatalog';
 import type { OutputCanvasSettings } from '../canvas/output-canvas';
-import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import {
   emptyComposition as createEmptyComposition,
   type CaptionClip,
@@ -115,6 +115,22 @@ const screenClip = {
   name: 'Screen',
   timelineStartMs: 0,
   timelineDurationMs: 100,
+} as const;
+const transitionScreenClip = {
+  ...screenClip,
+  name: 'Video',
+  sourceInMs: 0,
+  sourceDurationMs: 100,
+  playbackRate: 1,
+  transitions: { entry: null, exit: null },
+  enabled: true,
+  order: 0,
+  trackId: 'screen-track',
+  assetId: 'screen-asset',
+  transform: { x: 0, y: 0, width: 1, height: 1 },
+  appearance: createDefaultClipAppearance('screen'),
+  isMirrored: false,
+  isMirroredY: false,
 } as const;
 
 const webcamClip = {
@@ -250,14 +266,14 @@ describe('PropertiesPanel', () => {
 
     expect(wrapper.get('.panel-title').text()).toBe('Video');
     const buttons = wrapper.findAll('.panel-header-actions button');
-    expect(buttons).toHaveLength(2);
+    expect(buttons).toHaveLength(3);
 
     // Toggle visibility
     await buttons[0].trigger('click');
     expect(wrapper.emitted('update:clip-enabled')).toEqual([[false]]);
 
     // Delete clip with dynamic video tooltip
-    await buttons[1].trigger('click');
+    await buttons[2].trigger('click');
     expect(wrapper.emitted('delete-clip')).toHaveLength(1);
 
     await wrapper.setProps({ selectedClip: webcamClip });
@@ -274,6 +290,25 @@ describe('PropertiesPanel', () => {
     expect(zoomButtons).toHaveLength(1);
     await zoomButtons[0].trigger('click');
     expect(wrapper.emitted('delete:zoom')).toHaveLength(1);
+  });
+
+  it('uses the real top bar for transitions and stays open when the selected clip object refreshes', async () => {
+    const transitionComposition: ClipComposition = {
+      ...createEmptyComposition(),
+      assets: [{ id: 'screen-asset', kind: 'video', name: 'Video', fileName: null, durationMs: 100, width: 1920, height: 1080, src: '', origin: 'session' }],
+      clips: [transitionScreenClip],
+    };
+    const wrapper = mount(PropertiesPanel, {
+      props: { ...baseProps, activeTab: 'clip', selectedClip: transitionScreenClip, composition: transitionComposition },
+      global,
+    });
+
+    await wrapper.get('[aria-label="Clip transitions"]').trigger('click');
+    expect(wrapper.get('.panel-title').text()).toBe('Video Transitions');
+    expect(wrapper.find('.transitions-header').exists()).toBe(false);
+    await wrapper.setProps({ selectedClip: { ...transitionScreenClip, name: 'Video refreshed' } });
+    expect(wrapper.get('.panel-title').text()).toBe('Video Transitions');
+    expect(wrapper.find('.transitions-panel').exists()).toBe(true);
   });
 
   it('uses the active tool name when no timeline clip is selected', async () => {

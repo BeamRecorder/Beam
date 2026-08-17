@@ -19,6 +19,8 @@ import {
 import type { Canvas2DContext } from '~/types/canvas';
 import { applyBlurEffect } from '../../video-editor/composition/effects/blur-effect';
 import { drawBeamWatermark, WATERMARK_LOGO_KEY } from '../../video-editor/canvas/watermark-render';
+import { drawWithClipTransition } from '../../video-editor/composition/transitions/render-transition';
+import { resolveFrameIntroTransition } from '~/media/shared/clip-transitions';
 
 export interface RenderableMedia {
   source: CanvasImageSource;
@@ -150,19 +152,21 @@ export function drawCompositionLayers(
 ) {
   const timeMs = time * 1_000;
   const layers = resolveCompositionSceneLayers(snapshot.composition, timeMs);
+  const intro = resolveFrameIntroTransition(layers.visualStack, timeMs);
   for (const clip of layers.visualStack) {
     if (clip.kind === 'screen') continue;
     if (isBlurClip(clip)) {
-      drawBlurClip(ctx, clip, snapshot.canvas);
+      drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () => drawBlurClip(ctx, clip, snapshot.canvas), intro?.clipId === clip.id);
       continue;
     }
     const media = visuals.get(clip.id);
     if (!media) continue;
     if (clip.kind === 'webcam') {
-      drawWebcamClip(ctx, clip, media, snapshot.canvas);
-    } else drawVisualClip(ctx, clip, media, snapshot.canvas);
+      drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () => drawWebcamClip(ctx, clip, media, snapshot.canvas), intro?.clipId === clip.id);
+    } else drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () => drawVisualClip(ctx, clip, media, snapshot.canvas), intro?.clipId === clip.id);
   }
-  for (const clip of layers.captions) drawCaption(ctx, clip, timeMs, snapshot);
+  for (const clip of layers.captions)
+    drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () => drawCaption(ctx, clip, timeMs, snapshot));
 }
 
 export const createSnapshotCameraEvaluator = (
@@ -187,7 +191,7 @@ export const createSnapshotCameraEvaluator = (
         : focus,
   });
 
-export function renderCompositionFrame(
+function renderCompositionFrameContent(
   ctx: Canvas2DContext,
   video: RenderableMedia | null,
   snapshot: CompositionSnapshot,
@@ -204,6 +208,7 @@ export function renderCompositionFrame(
   ctx.fillRect(0, 0, width, height);
   const timeMs = time * 1_000;
   const layers = resolvedLayers ?? resolveCompositionSceneLayers(snapshot.composition, timeMs);
+  const intro = resolveFrameIntroTransition(layers.visualStack, timeMs);
   const screen = layers.screen;
   const sourceWidth = video?.width ?? width;
   const sourceHeight = video?.height ?? height;
@@ -248,7 +253,7 @@ export function renderCompositionFrame(
   for (const clip of layers.visualStack) {
     if (clip.kind === 'screen') {
       if (!video || clip.id !== screen?.id || !positionedMedia) continue;
-      drawDecoratedMedia(ctx, {
+      drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () => drawDecoratedMedia(ctx, {
         source: video.source,
         sourceRect: source,
         rect: positionedMedia,
@@ -256,22 +261,22 @@ export function renderCompositionFrame(
         title: screen.name,
         mirrored: screen.isMirrored,
         mirroredY: screen.isMirroredY,
-      });
+      }), intro?.clipId === clip.id);
       continue;
     }
     if (isBlurClip(clip)) {
-      drawBlurClip(ctx, clip, snapshot.canvas);
+      drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () => drawBlurClip(ctx, clip, snapshot.canvas), intro?.clipId === clip.id);
       continue;
     }
     const sourceVisual = visuals?.get(clip.id);
     if (!sourceVisual) continue;
     if (clip.kind === 'webcam')
-      drawWebcamClip(ctx, clip, sourceVisual, snapshot.canvas, {
+      drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () => drawWebcamClip(ctx, clip, sourceVisual, snapshot.canvas, {
         scale,
         focusX: cameraFocus.cx * width,
         focusY: cameraFocus.cy * height,
-      });
-    else drawVisualClip(ctx, clip, sourceVisual, snapshot.canvas);
+      }), intro?.clipId === clip.id);
+    else drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () => drawVisualClip(ctx, clip, sourceVisual, snapshot.canvas), intro?.clipId === clip.id);
   }
   ctx.restore();
   const resolvedCursorMotionPlayer = screen
@@ -293,7 +298,8 @@ export function renderCompositionFrame(
           camera,
         )
       : null;
-  for (const clip of layers.captions) drawCaption(ctx, clip, timeMs, snapshot, keyboardCursorPosition);
+  for (const clip of layers.captions)
+    drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () => drawCaption(ctx, clip, timeMs, snapshot, keyboardCursorPosition));
 
   if (screen && resolvedCursorMotionPlayer) {
     ctx.save();
@@ -320,4 +326,50 @@ export function renderCompositionFrame(
     { x: 0, y: 0, width: snapshot.canvas.width, height: snapshot.canvas.height },
     visuals?.get(WATERMARK_LOGO_KEY)?.source,
   );
+}
+
+let introSurface: OffscreenCanvas | HTMLCanvasElement | null = null;
+const getIntroSurface = (width: number, height: number) => {
+  if (!introSurface) {
+    if (typeof OffscreenCanvas !== 'undefined') introSurface = new OffscreenCanvas(width, height);
+    else if (typeof document !== 'undefined') introSurface = document.createElement('canvas');
+  }
+  if (!introSurface) return null;
+  introSurface.width = width;
+  introSurface.height = height;
+  return introSurface;
+};
+
+export function renderCompositionFrame(
+  ctx: Canvas2DContext,
+  video: RenderableMedia | null,
+  snapshot: CompositionSnapshot,
+  time: number,
+  background?: RenderableMedia | null,
+  cursorImages?: ReadonlyMap<string, HTMLImageElement | ImageBitmap>,
+  visuals?: CompositionVisuals,
+  cursorMotionPlayer?: ReturnType<typeof createCursorMotionPlayer>,
+  cameraEvaluator?: CompositionCameraEvaluator,
+  resolvedLayers?: CompositionSceneLayers,
+) {
+  const layers = resolvedLayers ?? resolveCompositionSceneLayers(snapshot.composition, time * 1_000);
+  const intro = resolveFrameIntroTransition(layers.visualStack, time * 1_000);
+  const surface = intro ? getIntroSurface(snapshot.canvas.width, snapshot.canvas.height) : null;
+  const surfaceContext = surface?.getContext('2d') as Canvas2DContext | null | undefined;
+  if (!intro || !surface || !surfaceContext) {
+    renderCompositionFrameContent(ctx, video, snapshot, time, background, cursorImages, visuals, cursorMotionPlayer, cameraEvaluator, layers);
+    return;
+  }
+  renderCompositionFrameContent(surfaceContext, video, snapshot, time, background, cursorImages, visuals, cursorMotionPlayer, cameraEvaluator, layers);
+  ctx.save();
+  ctx.fillStyle = OUTPUT_FALLBACK_COLOR;
+  ctx.fillRect(0, 0, snapshot.canvas.width, snapshot.canvas.height);
+  ctx.globalAlpha *= intro.state.opacity;
+  ctx.translate(intro.state.translateX * snapshot.canvas.width, intro.state.translateY * snapshot.canvas.height);
+  ctx.translate(snapshot.canvas.width / 2, snapshot.canvas.height / 2);
+  ctx.scale(intro.state.scale, intro.state.scale);
+  ctx.translate(-snapshot.canvas.width / 2, -snapshot.canvas.height / 2);
+  if (intro.state.blur > 0) ctx.filter = `blur(${intro.state.blur * (snapshot.canvas.height / 1080)}px)`;
+  ctx.drawImage(surface, 0, 0);
+  ctx.restore();
 }

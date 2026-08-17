@@ -60,8 +60,6 @@ const selectedCaptionFollowsCursor = computed(
     props.selectedTransformClip.caption.followCursor,
 );
 const screenFrame = computed(() => {
-  // frameFor reads the playback engine's non-reactive cache. frameVersion is
-  // the explicit invalidation signal emitted whenever that cache changes.
   void props.frameVersion;
   return liveScreenClip.value ? props.frameFor(liveScreenClip.value.id) : null;
 });
@@ -92,13 +90,11 @@ const outputAspectRatio = computed(() => props.outputCanvas.width / props.output
 function renderOnce() {
   if (animationFrameId === null) animationFrameId = requestAnimationFrame(draw);
 }
-
 const { drawBackground, syncPlayback, isTransitioningBackground } = useCanvasBackground(
   () => props.selectedBackground,
   () => props.backgroundBlurPercent,
   renderOnce,
 );
-
 let cameraZoom: ReturnType<typeof useCameraZoom>;
 const transformAndCrop = useLayerTransformAndCrop({
   composition: () => props.composition,
@@ -118,11 +114,9 @@ const transformAndCrop = useLayerTransformAndCrop({
   onUpdateCrop: (crop) => emit('update:clip-crop', crop),
   onSelectTransformClip: (clipId) => emit('select:clip', clipId),
 });
-
 const renderGuideLines = computed(() =>
   canvasGuideLines(logicalSize.value, props.outputCanvas, transformAndCrop.activeGuideLines.value),
 );
-
 cameraZoom = useCameraZoom({
   canvasRef: () => canvasRef.value,
   outputCanvas: () => props.outputCanvas,
@@ -148,7 +142,6 @@ cameraZoom = useCameraZoom({
   selectVisualAt: (event) => transformAndCrop.selectVisualAt(event, canvasRef.value),
   selectedTransformClipExists: () => Boolean(props.selectedTransformClip),
 });
-
 watch(
   () => props.isPlaying,
   (playing) => {
@@ -156,7 +149,6 @@ watch(
     if (!playing) cameraZoom.resetCamera();
   },
 );
-
 const isMasterPlaying = () => props.isPlaying;
 let currentRenderWindow: RenderedVideoWindow | null = null;
 const compositionMedia = useCompositionMedia({
@@ -336,7 +328,6 @@ const handleIslandPointerDown = (event: PointerEvent) => {
   if (viewportZoom.beginPan(event, containerRef.value)) return;
   cameraZoom.beginSelectionMove(event);
 };
-
 const handleTransformPointerDown = (event: PointerEvent) => {
   if (event.button === 0) {
     const clipId = transformAndCrop.clipIdAt(event, canvasRef.value);
@@ -348,7 +339,6 @@ const handleTransformPointerDown = (event: PointerEvent) => {
   }
   transformAndCrop.beginTransformDrag(event, 'move');
 };
-
 const handleIslandPointerMove = (event: PointerEvent) => {
   if (viewportZoom.isPanning.value) {
     viewportZoom.movePan(event);
@@ -356,7 +346,6 @@ const handleIslandPointerMove = (event: PointerEvent) => {
   }
   cameraZoom.moveSelection(event);
 };
-
 const handleIslandPointerUp = (event: PointerEvent) => {
   if (viewportZoom.isPanning.value) {
     viewportZoom.endPan(event, containerRef.value);
@@ -418,7 +407,7 @@ defineExpose({
       </div>
     </Transition>
     <div class="canvas-viewport" :style="viewportZoom.viewportStyle.value">
-      <div class="preview-frame" :style="{ '--preview-aspect-ratio': outputAspectRatio }"></div>
+      <div class="preview-frame" :style="{ '--preview-aspect-ratio': outputAspectRatio }" />
       <canvas
         ref="canvasRef"
         class="editor-canvas"
@@ -429,10 +418,8 @@ defineExpose({
         }"
       ></canvas>
       <div v-if="isGridVisible" class="canvas-3x3-grid" :style="previewFrameStyle">
-        <div class="grid-line vertical line-1"></div>
-        <div class="grid-line vertical line-2"></div>
-        <div class="grid-line horizontal line-1"></div>
-        <div class="grid-line horizontal line-2"></div>
+        <div class="grid-line vertical line-1" /><div class="grid-line vertical line-2" />
+        <div class="grid-line horizontal line-1" /><div class="grid-line horizontal line-2" />
       </div>
       <div
         v-for="(guide, index) in renderGuideLines"
@@ -440,7 +427,7 @@ defineExpose({
         class="canvas-guide-line"
         :class="guide.type"
         :style="guide.style"
-      ></div>
+      />
       <CanvasLoadingSkeleton
         :visible="showLoadingSkeleton"
         :label="t('videoPreviewLoading')"
@@ -473,14 +460,14 @@ defineExpose({
         :class="{ locked: selectedZoom?.mode !== 'manual' }"
         :style="cameraZoom.focusTargetStyle.value"
         aria-hidden="true"
-      ></div>
+      />
       <div
         v-if="isCropping && selectedTransformClip"
         class="crop-container"
         :style="transformAndCrop.cropContainerStyle.value"
       >
         <div class="crop-mask-wrapper">
-          <div class="crop-mask-hole" :style="transformAndCrop.cropOverlayStyle.value"></div>
+          <div class="crop-mask-hole" :style="transformAndCrop.cropOverlayStyle.value" />
         </div>
         <div
           class="crop-overlay-box"
@@ -491,15 +478,11 @@ defineExpose({
           @pointercancel="transformAndCrop.endCropDrag"
         >
           <div class="crop-grid">
-            <div class="grid-line vertical line-1"></div>
-            <div class="grid-line vertical line-2"></div>
-            <div class="grid-line horizontal line-1"></div>
-            <div class="grid-line horizontal line-2"></div>
+            <div class="grid-line vertical line-1" /><div class="grid-line vertical line-2" />
+            <div class="grid-line horizontal line-1" /><div class="grid-line horizontal line-2" />
           </div>
           <div class="crop-done-wrapper" @pointerdown.stop @mousedown.stop>
-            <Button variant="primary" size="xs" :icon="Check" class="crop-ok-button" @click.stop="commitCrop">{{
-              t('ok')
-            }}</Button>
+            <Button variant="primary" size="xs" :icon="Check" class="crop-ok-button" @click.stop="commitCrop">{{ t('ok') }}</Button>
           </div>
           <ResizeHandle
             @resize-start="(corner, event) => transformAndCrop.beginCropDrag(event, 'resize', corner)"

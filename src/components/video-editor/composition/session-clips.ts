@@ -98,6 +98,7 @@ const sessionClip = (
     sourceInMs: 0,
     sourceDurationMs: durationMs,
     playbackRate: 1,
+    transitions: { entry: null, exit: null },
     enabled: true,
     order,
   } as const;
@@ -212,6 +213,7 @@ export function synchronizeRecordingClips(
       sourceInMs: 0,
       sourceDurationMs: durationMs,
       playbackRate: 1,
+      transitions: { entry: null, exit: null },
       enabled: true,
       order: 30_000,
       transform: { x: 0, y: 0, width: 1, height: 1 },

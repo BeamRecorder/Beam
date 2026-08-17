@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { AudioClip } from '../../shared/composition-types';
 import type { InputAudioTrack } from 'mediabunny';
 import { createProgressiveAudioMixer, stereoSample } from '../pcm-mixer';
+import { audioTransitionGainAt } from '../../shared/clip-transitions';
 
 const runtime = vi.hoisted(() => {
   class TestAudioSample {
@@ -128,6 +129,53 @@ const outputValues = (sample: InstanceType<typeof runtime.TestAudioSample>) => {
 };
 
 describe('progressive PCM export mixer', () => {
+  it('resolves the linear audio envelope at clip boundaries and without transitions', () => {
+    const plain = clip('plain', 'asset', { timelineDurationMs: 1_000, sourceDurationMs: 1_000 });
+    expect(audioTransitionGainAt(plain, -1)).toBe(0);
+    expect(audioTransitionGainAt(plain, 0)).toBe(1);
+    expect(audioTransitionGainAt(plain, 1_000)).toBe(1);
+    expect(audioTransitionGainAt(plain, 1_001)).toBe(0);
+
+    const transitioned = clip('transitioned', 'asset', {
+      timelineDurationMs: 2_000,
+      sourceDurationMs: 2_000,
+      transitions: {
+        entry: { preset: { kind: 'fade' }, durationMs: 500 },
+        exit: { preset: { kind: 'fade' }, durationMs: 500 },
+      },
+    });
+    expect(audioTransitionGainAt(transitioned, 0)).toBe(0);
+    expect(audioTransitionGainAt(transitioned, 250)).toBeCloseTo(0.5);
+    expect(audioTransitionGainAt(transitioned, 500)).toBe(1);
+    expect(audioTransitionGainAt(transitioned, 1_500)).toBe(1);
+    expect(audioTransitionGainAt(transitioned, 1_750)).toBeCloseTo(0.5);
+    expect(audioTransitionGainAt(transitioned, 2_000)).toBe(0);
+  });
+
+  it('keeps the same fade envelope across PCM block boundaries', async () => {
+    const sample = inputSample([new Array(96_000).fill(1)], 48_000);
+    const value = clip('faded', 'asset', {
+      timelineDurationMs: 2_000,
+      sourceDurationMs: 2_000,
+      transitions: {
+        entry: { preset: { kind: 'fade' }, durationMs: 750 },
+        exit: { preset: { kind: 'fade' }, durationMs: 750 },
+      },
+    });
+    const mixer = createProgressiveAudioMixer([value], new Map([['asset', track(sample)]]), 2);
+
+    const first = await mixer.mixBlock(0, new AbortController().signal);
+    const second = await mixer.mixBlock(1, new AbortController().signal);
+    const firstValues = (first as unknown as { data: Float32Array }).data;
+    const secondValues = (second as unknown as { data: Float32Array }).data;
+    expect(firstValues[0]).toBe(0);
+    expect(firstValues[18_000]).toBeCloseTo(0.5);
+    expect(secondValues[0]).toBe(1);
+    expect(secondValues[30_000]).toBeCloseTo(0.5);
+    expect(secondValues[47_999]).toBeCloseTo(1 / 36_000, 4);
+    await mixer.dispose();
+  });
+
   it('maps mono, stereo, quad, and 5.1 layouts to stereo', () => {
     expect(stereoSample([Float32Array.of(0.25)], 0)).toEqual([0.25, 0.25]);
     expect(stereoSample([Float32Array.of(0.25), Float32Array.of(-0.5)], 0)).toEqual([0.25, -0.5]);

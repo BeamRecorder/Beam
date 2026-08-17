@@ -16,6 +16,8 @@ import { drawCaptionText, type CaptionViewport } from '../../composition/caption
 import type { OutputCanvasSettings } from '../output-canvas';
 import { applyBlurEffect } from '../../composition/effects/blur-effect';
 import { resolveCompositionSceneLayers } from '../../composition/scene-layers';
+import { drawWithClipTransition } from '../../composition/transitions/render-transition';
+import { resolveFrameIntroTransition } from '~/media/shared/clip-transitions';
 
 export interface UseCompositionMediaOptions {
   composition: () => ClipComposition;
@@ -181,11 +183,22 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     drawScreen: () => void,
   ) => {
     const layers = resolveCompositionSceneLayers(options.composition(), options.currentTime() * 1_000);
+    const timeMs = options.currentTime() * 1_000;
+    const intro = resolveFrameIntroTransition(layers.visualStack, timeMs);
     for (const clip of layers.visualStack) {
-      if (clip.kind === 'screen') drawScreen();
-      else if (clip.kind === 'blur') drawBlur(ctx, clip, window);
-      else if (clip.kind === 'webcam') drawWebcam(ctx, clip, window);
-      else drawVisual(ctx, clip, window);
+      drawWithClipTransition(
+        ctx,
+        clip,
+        timeMs,
+        { width: window.dw, height: window.dh },
+        () => {
+          if (clip.kind === 'screen') drawScreen();
+          else if (clip.kind === 'blur') drawBlur(ctx, clip, window);
+          else if (clip.kind === 'webcam') drawWebcam(ctx, clip, window);
+          else drawVisual(ctx, clip, window);
+        },
+        intro?.clipId === clip.id,
+      );
     }
   };
 
@@ -199,9 +212,11 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
       .filter((clip) => (onlyClipId ? clip.id === onlyClipId : clip.kind === 'caption'))
       .sort((left, right) => right.order - left.order);
     for (const clip of clips) {
-      if (clip.kind === 'caption') drawCaption(ctx, clip, timeMs);
-      else if (isBlurClip(clip)) drawBlur(ctx, clip, window);
-      else if (isVisualClip(clip) && clip.kind !== 'webcam') drawVisual(ctx, clip, window);
+      drawWithClipTransition(ctx, clip, timeMs, { width: window.dw, height: window.dh }, () => {
+        if (clip.kind === 'caption') drawCaption(ctx, clip, timeMs);
+        else if (isBlurClip(clip)) drawBlur(ctx, clip, window);
+        else if (isVisualClip(clip) && clip.kind !== 'webcam') drawVisual(ctx, clip, window);
+      });
     }
   };
 

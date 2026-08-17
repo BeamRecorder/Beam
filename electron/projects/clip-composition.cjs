@@ -10,7 +10,8 @@ const {
   validateTrackLayout,
 } = require('./composition-tracks.cjs');
 
-const schemaVersion = 6;
+const schemaVersion = 7;
+const transitionSchemaVersion = 6;
 const typographySchemaVersion = 5;
 const visualTrackSchemaVersion = 4;
 const previousSchemaVersion = 3;
@@ -29,6 +30,30 @@ const id = (value) => typeof value === 'string' && value.length > 0 && value.len
 const color = (value, fallback) =>
   typeof value === 'string' && /^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/i.test(value) ? value : fallback;
 const emptyComposition = () => ({ schemaVersion, assets: [], clips: [], keyboardCaptionSessions: [] });
+const transitionKinds = new Set(['fade', 'slide', 'zoom', 'blur']);
+const transition = (value, clipKind) => {
+  if (value === null) return null;
+  if (!value || typeof value !== 'object' || !Number.isInteger(value.durationMs) || value.durationMs <= 0 || value.durationMs > 5000)
+    throw new Error('Transition de clip invalide');
+  const preset = value.preset;
+  if (!preset || !transitionKinds.has(preset.kind) || (clipKind === 'audio' && preset.kind !== 'fade'))
+    throw new Error('Preset de transition invalide');
+  if (preset.kind === 'slide' && !['left', 'right', 'up', 'down'].includes(preset.direction))
+    throw new Error('Direction de transition invalide');
+  if (preset.kind === 'zoom' && !['in', 'out'].includes(preset.direction))
+    throw new Error('Direction de transition invalide');
+  if ((preset.kind === 'fade' || preset.kind === 'blur') && Object.keys(preset).some((key) => key !== 'kind'))
+    throw new Error('Paramètres de transition invalides');
+  return { preset: { ...preset }, durationMs: value.durationMs };
+};
+const transitions = (value, clipKind, durationMs) => {
+  if (!value || typeof value !== 'object' || !Object.hasOwn(value, 'entry') || !Object.hasOwn(value, 'exit'))
+    throw new Error('Transitions de clip invalides');
+  const next = { entry: transition(value.entry, clipKind), exit: transition(value.exit, clipKind) };
+  if ((next.entry?.durationMs || 0) + (next.exit?.durationMs || 0) > durationMs)
+    throw new Error('Durée de transitions invalide');
+  return next;
+};
 const withHistoricalTypography = (clip) =>
   clip.kind === 'caption'
     ? {
@@ -192,6 +217,7 @@ function normalizeComposition(value) {
       sourceInMs: Math.round(clip.sourceInMs),
       sourceDurationMs: Math.round(clip.sourceDurationMs),
       playbackRate: clip.playbackRate,
+      transitions: transitions(clip.transitions, clip.kind, Math.round(clip.timelineDurationMs)),
       enabled: clip.enabled,
       order: clip.order,
       ...(id(clip.groupId) ? { groupId: clip.groupId } : {}),
@@ -292,19 +318,23 @@ function migrateComposition(value, showBackground, historicalSessionIds = []) {
       previousSchemaVersion,
       visualTrackSchemaVersion,
       typographySchemaVersion,
+      transitionSchemaVersion,
     ].includes(value.schemaVersion) ||
     !Array.isArray(value.assets) ||
     !Array.isArray(value.clips)
   )
     throw new Error(`Version de composition inconnue: ${String(value?.schemaVersion)}`);
-  if ([visualTrackSchemaVersion, typographySchemaVersion].includes(value.schemaVersion)) {
+  if ([visualTrackSchemaVersion, typographySchemaVersion, transitionSchemaVersion].includes(value.schemaVersion)) {
     return normalizeComposition({
       ...value,
       schemaVersion,
       keyboardCaptionSessions: Array.isArray(value.keyboardCaptionSessions)
         ? value.keyboardCaptionSessions
         : historicalSessionIds,
-      clips: repairMigratedTrackIds(value.clips).map(withHistoricalTypography),
+      clips: repairMigratedTrackIds(value.clips).map(withHistoricalTypography).map((clip) => ({
+        ...clip,
+        transitions: { entry: null, exit: null },
+      })),
     });
   }
   return normalizeComposition({
@@ -313,7 +343,8 @@ function migrateComposition(value, showBackground, historicalSessionIds = []) {
     keyboardCaptionSessions: historicalSessionIds,
     clips: repairMigratedTrackIds(
       assignMigratedTrackIds(
-        value.clips.map((clip) => {
+        value.clips.map((sourceClip) => {
+          const clip = { ...sourceClip, transitions: { entry: null, exit: null } };
           if (clip.kind === 'caption') {
             if (value.schemaVersion === captionTypeSchemaVersion)
               return withHistoricalTypography({ ...clip, caption: { ...clip.caption, type: 'text' } });

@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
+import { ArrowLeft } from '@lucide/vue';
+import Button from '~/ui/button/Button.vue';
 import type { CursorType } from '~/components/video-editor/properties/cursor/useCursorReplacer';
 import type {
   BackgroundMedia,
@@ -18,6 +20,9 @@ import CaptionPanel from '~/components/video-editor/properties/captions/CaptionP
 import CaptionClipPanel from '~/components/video-editor/properties/captions/CaptionClipPanel.vue';
 import KeyboardCaptionClipPanel from '~/components/video-editor/properties/captions/KeyboardCaptionClipPanel.vue';
 import ClipActionGroup from '~/components/video-editor/properties/clip/ClipActionGroup.vue';
+import ClipTransitionsPanel from '~/components/video-editor/properties/clip/ClipTransitionsPanel.vue';
+import { setClipTransition } from '~/components/video-editor/composition/engine/clip-engine';
+import type { ClipTransition } from '~/media/shared/composition-types';
 import ScrollShadow from '~/ui/scroll-shadow/ScrollShadow.vue';
 import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
 import type {
@@ -119,6 +124,34 @@ const normalizedSelectedClip = computed(() =>
       }
     : null,
 );
+const transitionsOpen = ref(false);
+const selectedDomainClip = computed(() => {
+  const id = props.selectedClip?.id ?? props.selectedCaptionClip?.id;
+  return id ? props.composition.clips.find((clip) => clip.id === id) ?? null : null;
+});
+const transitionButton = ref<HTMLElement | null>(null);
+const closeTransitions = async () => {
+  transitionsOpen.value = false;
+  await nextTick();
+  transitionButton.value?.querySelector<HTMLElement>('button')?.focus();
+};
+const updateTransition = (edge: 'entry' | 'exit', value: ClipTransition | null) => {
+  if (!selectedDomainClip.value) return;
+  emit('update:composition', setClipTransition(props.composition, selectedDomainClip.value.id, edge, value));
+};
+watch(
+  [() => props.activeTab, () => props.selectedClip?.id, () => props.selectedCaptionClip?.id],
+  () => { transitionsOpen.value = false; },
+);
+const transitionPanelTitle = computed(() => {
+  const kind = selectedDomainClip.value?.kind;
+  if (kind === 'caption') return 'Caption Transitions';
+  if (kind === 'audio') return 'Audio Transitions';
+  if (kind === 'blur') return 'Blur Transitions';
+  if (kind === 'image') return 'Image Transitions';
+  if (kind === 'webcam') return 'Webcam Transitions';
+  return 'Video Transitions';
+});
 const panelTitle = computed(() => {
   if (props.activeTab === 'clip') {
     const clip = props.selectedClip;
@@ -276,23 +309,37 @@ const handleDelete = () => {
 <template>
   <div class="properties-island">
     <div class="panel-header">
-      <h3 class="panel-title">{{ panelTitle }}</h3>
+      <div v-if="transitionsOpen" class="panel-title-navigation">
+        <Button variant="ghost" size="xs" :icon="ArrowLeft" icon-only aria-label="Back" @click="closeTransitions" />
+        <h3 class="panel-title">{{ transitionPanelTitle }}</h3>
+      </div>
+      <h3 v-else class="panel-title">{{ panelTitle }}</h3>
       <ClipActionGroup
-        v-if="isDeletable"
+        v-if="isDeletable && !transitionsOpen"
         class="panel-header-actions"
         :enabled="isCurrentClipEnabled"
         :toggleable="isToggleable"
         :enabled-label="tClip('enabled') || 'Enabled'"
         :disabled-label="tClip('disabled') || 'Disabled'"
         :delete-label="deleteTooltip"
+        :transitionable="activeTab === 'clip'"
+        :transition-active="transitionsOpen"
+        transition-label="Clip transitions"
+        ref="transitionButton"
         @toggle="handleToggleClipEnabled"
         @delete="handleDelete"
+        @transition="transitionsOpen = true"
       />
     </div>
     <ScrollShadow class="panel-scroll-shadow">
       <div class="panel-body">
+        <ClipTransitionsPanel
+          v-if="transitionsOpen && selectedDomainClip"
+          :clip="selectedDomainClip"
+          @update="updateTransition"
+        />
         <CanvasPanel
-          v-if="activeTab === 'canvas'"
+          v-else-if="activeTab === 'canvas'"
           :selected-background="selectedBackground"
           :blur-percent="blurPercent"
           :watermark="canvas.watermark"
