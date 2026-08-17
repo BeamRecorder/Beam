@@ -79,10 +79,13 @@ describe('WebsiteCommunityShader', () => {
       if (kind === 'webgl') return gl as unknown as WebGLRenderingContext;
       return null;
     });
-    vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => {
-      rafs.push(callback);
-      return rafs.length;
-    }));
+    vi.stubGlobal(
+      'requestAnimationFrame',
+      vi.fn((callback: FrameRequestCallback) => {
+        rafs.push(callback);
+        return rafs.length;
+      }),
+    );
     vi.stubGlobal('cancelAnimationFrame', vi.fn());
   });
 
@@ -113,14 +116,17 @@ describe('WebsiteCommunityShader', () => {
   });
 
   it('does not schedule a continuous animation when reduced motion is preferred', () => {
-    vi.stubGlobal('matchMedia', vi.fn((query: string) => ({
-      matches: query === '(prefers-reduced-motion: reduce)',
-      media: query,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-    })));
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query: string) => ({
+        matches: query === '(prefers-reduced-motion: reduce)',
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+      })),
+    );
     mount(WebsiteCommunityShader);
 
     expect(requestAnimationFrame).toHaveBeenCalledTimes(1);

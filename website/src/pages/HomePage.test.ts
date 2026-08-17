@@ -25,7 +25,11 @@ const mountHome = () =>
     global: {
       plugins: [createWebsiteI18n('en'), createHead()],
       stubs: {
-        ClientOnly: defineComponent({ setup(_, { slots }) { return () => slots.default?.(); } }),
+        ClientOnly: defineComponent({
+          setup(_, { slots }) {
+            return () => slots.default?.();
+          },
+        }),
         Button: passthrough('button'),
         WebsiteEditorPreview: defineComponent({
           inheritAttrs: false,
