@@ -16,6 +16,9 @@ import { drawCaptionText, type CaptionViewport } from '../../composition/caption
 import type { OutputCanvasSettings } from '../output-canvas';
 import { applyBlurEffect } from '../../composition/effects/blur-effect';
 import { resolveCompositionSceneLayers } from '../../composition/scene-layers';
+import { drawWithClipTransition } from '../../composition/transitions/render-transition';
+import { isSplitCameraLayout } from '~/media/shared/camera-layout-types';
+import { resolveVisualClipFraming } from '../../composition/visual-framing';
 
 export interface UseCompositionMediaOptions {
   composition: () => ClipComposition;
@@ -88,32 +91,34 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     const sourceWidth = frame?.width ?? image?.naturalWidth ?? 0;
     const sourceHeight = frame?.height ?? image?.naturalHeight ?? 0;
     const crop = options.isCropping?.() && clip.id === selected?.id ? undefined : clip.crop;
+    const layout = {
+      x: window.dx + transform.x * window.dw,
+      y: window.dy + transform.y * window.dh,
+      width: transform.width * window.dw,
+      height: transform.height * window.dh,
+    };
+    const framing = resolveVisualClipFraming(
+      clip,
+      layout,
+      sourceWidth,
+      sourceHeight,
+      crop,
+      options.isCropping?.() && clip.id === selected?.id ? 'custom' : (clip.cameraFramingPreset ?? 'custom'),
+    );
     const output = options.outputCanvas?.();
     const shadowScale = output
       ? Math.min(window.dw / Math.max(1, output.width), window.dh / Math.max(1, output.height))
       : 1;
     drawDecoratedMedia(ctx, {
       source,
-      sourceRect:
-        crop && sourceWidth > 0 && sourceHeight > 0
-          ? {
-              x: crop.x * sourceWidth,
-              y: crop.y * sourceHeight,
-              width: crop.width * sourceWidth,
-              height: crop.height * sourceHeight,
-            }
-          : undefined,
-      rect: {
-        x: window.dx + transform.x * window.dw,
-        y: window.dy + transform.y * window.dh,
-        width: transform.width * window.dw,
-        height: transform.height * window.dh,
-      },
+      sourceRect: framing.sourceRect,
+      rect: framing.rect,
       appearance: clip.appearance,
       shadowScale,
       title: clip.name,
       mirrored: clip.isMirrored,
       mirroredY: clip.isMirroredY,
+      mask: framing.mask,
     });
   };
 
@@ -166,11 +171,16 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
       window.dw,
       window.dh,
       scale,
-      webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY),
+      {
+        ...webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY),
+        reactToZoom: !isSplitCameraLayout(clip.cameraLayoutPreset ?? 'custom'),
+      },
       clip.id === selected?.id && options.transformDraft() ? options.transformDraft()! : clip.transform,
       options.isCropping?.() && clip.id === selected?.id ? undefined : clip.crop,
       clip.appearance,
       clip.name,
+      undefined,
+      options.isCropping?.() && clip.id === selected?.id ? 'custom' : (clip.cameraFramingPreset ?? 'custom'),
     );
     ctx.restore();
   };
@@ -181,11 +191,14 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     drawScreen: () => void,
   ) => {
     const layers = resolveCompositionSceneLayers(options.composition(), options.currentTime() * 1_000);
+    const timeMs = options.currentTime() * 1_000;
     for (const clip of layers.visualStack) {
-      if (clip.kind === 'screen') drawScreen();
-      else if (clip.kind === 'blur') drawBlur(ctx, clip, window);
-      else if (clip.kind === 'webcam') drawWebcam(ctx, clip, window);
-      else drawVisual(ctx, clip, window);
+      drawWithClipTransition(ctx, clip, timeMs, { width: window.dw, height: window.dh }, () => {
+        if (clip.kind === 'screen') drawScreen();
+        else if (clip.kind === 'blur') drawBlur(ctx, clip, window);
+        else if (clip.kind === 'webcam') drawWebcam(ctx, clip, window);
+        else drawVisual(ctx, clip, window);
+      });
     }
   };
 
@@ -199,9 +212,11 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
       .filter((clip) => (onlyClipId ? clip.id === onlyClipId : clip.kind === 'caption'))
       .sort((left, right) => right.order - left.order);
     for (const clip of clips) {
-      if (clip.kind === 'caption') drawCaption(ctx, clip, timeMs);
-      else if (isBlurClip(clip)) drawBlur(ctx, clip, window);
-      else if (isVisualClip(clip) && clip.kind !== 'webcam') drawVisual(ctx, clip, window);
+      drawWithClipTransition(ctx, clip, timeMs, { width: window.dw, height: window.dh }, () => {
+        if (clip.kind === 'caption') drawCaption(ctx, clip, timeMs);
+        else if (isBlurClip(clip)) drawBlur(ctx, clip, window);
+        else if (isVisualClip(clip) && clip.kind !== 'webcam') drawVisual(ctx, clip, window);
+      });
     }
   };
 
@@ -224,7 +239,10 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
         window.dw,
         window.dh,
         window.scale,
-        webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY),
+        {
+          ...webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY),
+          reactToZoom: !isSplitCameraLayout(clip.cameraLayoutPreset ?? 'custom'),
+        },
         clip.id === selected?.id && options.transformDraft() ? options.transformDraft()! : clip.transform,
         options.isCropping?.() && clip.id === selected?.id ? undefined : clip.crop,
         clip.appearance,
@@ -235,6 +253,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
               window.dh / Math.max(1, options.outputCanvas().height),
             )
           : 1,
+        options.isCropping?.() && clip.id === selected?.id ? 'custom' : (clip.cameraFramingPreset ?? 'custom'),
       );
       ctx.restore();
     }

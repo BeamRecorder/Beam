@@ -37,6 +37,7 @@ const backgroundComposition = (asset: MediaAsset, durationMs: number): ClipCompo
       sourceInMs: 0,
       sourceDurationMs: durationMs,
       playbackRate: 1,
+      transitions: { entry: null, exit: null },
       enabled: true,
       order: 0,
       transform: { x: 0, y: 0, width: 1, height: 1 },

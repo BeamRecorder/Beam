@@ -13,5 +13,5 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.typecheck.tsbuildinfo"
   },
   "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules", "dist", "dist_electron", "target", "coverage"]
+  "exclude": ["node_modules", "dist", "dist_electron", "target", "coverage", "website"]
 }

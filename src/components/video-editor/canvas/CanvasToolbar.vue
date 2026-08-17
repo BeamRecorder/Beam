@@ -121,8 +121,9 @@ const items = computed(() => presets.map((id) => ({ id, label: id, active: props
 <style scoped>
 .canvas-toolbar {
   position: relative;
+  width: 100%;
   z-index: 3;
-  height: 44px;
+  height: calc(44px * var(--ui-scale-canvas-controls, 1));
   flex: none;
   display: flex;
   align-items: center;
@@ -133,6 +134,7 @@ const items = computed(() => presets.map((id) => ({ id, label: id, active: props
 }
 
 .toolbar-controls {
+  zoom: var(--ui-scale-canvas-controls, 1);
   display: flex;
   align-items: center;
   justify-content: center;

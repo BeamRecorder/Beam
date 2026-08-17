@@ -1,25 +1,35 @@
 {
   "meta": {
-    "title": "Beam — Nagrywaj. Edytuj. Udostępniaj.",
-    "description": "Beam to otwartoźródłowy rejestrator ekranu i edytor wideo do dopracowanych prezentacji produktów."
+    "title": "Beam — Darmowy rejestrator ekranu i edytor wideo",
+    "description": "Beam to darmowy rejestrator ekranu i edytor wideo open source do tworzenia dopracowanych demonstracji produktów w systemach Windows, macOS i Linux."
   },
   "home": {
-    "heroLine1": "Uchwyć chwilę.",
-    "heroLine2": "Dopracuj historię.",
-    "lede": "Beam łączy przechwytywanie obrazu i edycję w jednej, skoncentrowanej aplikacji desktopowej, dzięki czemu prezentacje produktów można szybko tworzyć i łatwo oglądać.",
+    "heroLine1": "Nagrywaj. Edytuj. Udostępniaj.",
+    "lede": "Beam tworzy dopracowane nagrania ekranu, dzięki czemu demonstracje produktów łatwiej przygotować i przyjemniej oglądać.",
     "watchDemo": "Obejrzyj prawdziwą prezentację",
     "viewSource": "Zobacz kod źródłowy",
     "playDemoAria": "Odtwórz prezentację Beam",
     "demoAlt": "Edytor wideo Beam wyświetlający nagranie produktu",
-    "openDemo": "Otwórz interaktywną prezentację",
-    "openSourceTitle": "Beam powstaje razem ze społecznością.",
-    "openSourceText": "Przeczytaj kod, zgłoś błąd lub pomóż ulepszać rejestrator.",
+    "openDemo": "Poznaj edytor",
+    "openSourceTitle": "Tworzony otwarcie.",
+    "openSourceText": "Beam rozwija się dzięki osobom, które go używają. Śledź rozwój na GitHubie, współtwórz projekt lub dołącz do społeczności na Discordzie.",
     "viewGitHub": "Zobacz na GitHubie",
     "joinDiscord": "Dołącz do Discorda",
     "contributorsAlt": "Współtwórcy Beam na GitHubie",
-    "contributorsFallback": "Poznaj osoby tworzące Beam",
-    "contributors": "{count} współtwórca tworzy Beam | {count} współtwórców tworzy Beam",
-    "footer": "Otwartoźródłowy rejestrator i edytor ekranu."
+    "contributorsFallback": "Tworzony przez społeczność Beam — i stale się rozwija.",
+    "contributors": "Tworzony przez {count} osobę — i stale się rozwija. | Tworzony przez {count} osób — i stale się rozwija.",
+    "footer": "Darmowy rejestrator ekranu i edytor wideo open source.",
+    "heroEyebrow": "Darmowy i open source",
+    "downloadFree": "Pobierz Beam — za darmo",
+    "availabilityTitle": "Darmowy na każdym komputerze.",
+    "availabilityPlatforms": "Dostępny dla Windows, macOS i Linux.",
+    "editorTitle": "Niech każde nagranie będzie warte obejrzenia.",
+    "editorText": "Usuń zbędne fragmenty, dopracuj tempo, dodaj płynne powiększenia i napisy, a następnie wyeksportuj dopracowaną prezentację produktu.",
+    "freeTitle": "Profesjonalny efekt. Bez abonamentu.",
+    "freeText": "Beam to darmowa alternatywa open source dla płatnych narzędzi do nagrywania ekranu, dostępna na Windows, macOS i Linux.",
+    "freeSubscription": "Bez abonamentu",
+    "freeOpenSource": "Open source",
+    "freePlatforms": "Wieloplatformowy"
   },
   "nav": {
     "homeAria": "Strona główna Beam",
@@ -30,7 +40,11 @@
     "starsAria": "Gwiazdki GitHuba",
     "install": "Zainstaluj"
   },
-  "theme": { "switchTo": "Przełącz na motyw {theme}", "light": "jasny", "dark": "ciemny" },
+  "theme": {
+    "switchTo": "Przełącz na motyw {theme}",
+    "light": "jasny",
+    "dark": "ciemny"
+  },
   "install": {
     "downloadTitle": "Pobierz Beam {version} dla {platform}",
     "preparingTitle": "Przygotowywanie Beam {version} dla {platform}",
@@ -73,10 +87,10 @@
   },
   "editor": {
     "aria": "Interaktywna prezentacja edytora Beam",
-    "title": "Wypróbuj prawdziwy edytor Beam",
+    "title": "Poznaj edytor Beam",
     "checking": "Sprawdzanie publicznego projektu demonstracyjnego Beam...",
     "webCodecsUnavailable": "WebCodecs nie jest dostępne w tej przeglądarce. Oryginalny plik MP4 można nadal odtworzyć poniżej.",
-    "ready": "Prawdziwy obszar roboczy Beam, dźwięk, silnik odtwarzania, edytowalne powiększenia i oś czasu.",
+    "ready": "Edytuj prawdziwy projekt Beam bezpośrednio w przeglądarce.",
     "decodeFailed": "Beam nie może zdekodować demonstracyjnego pliku MP4 w tej przeglądarce. Oryginalne nagranie jest nadal dostępne.",
     "filesMissing": "Brakuje {count} publicznego pliku demonstracyjnego lub jest on nieprawidłowy. | Brakuje {count} publicznych plików demonstracyjnych lub są one nieprawidłowe.",
     "invalidEdit": "Ta edycja wykracza poza prawidłowe granice materiału.",

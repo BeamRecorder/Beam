@@ -29,6 +29,9 @@ export interface CaptureProject {
   sessionCount: number;
   previewSrc: string | null;
   thumbnailSrc?: string | null;
+  hasScreen?: boolean;
+  hasCamera?: boolean;
+  hasCaption?: boolean;
 }
 
 export interface CursorMoveEvent {

@@ -399,6 +399,24 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     const enabled = !clips.some((clip) => clip.enabled);
     for (const clip of clips) if (clip.enabled !== enabled) emit('toggle:clip', clip.id);
   };
+  const handleVisualTrackHeader = (clips: Clip[]) => {
+    if (clips[0]?.kind !== 'webcam') {
+      toggleGroup(clips);
+      return;
+    }
+    const timeMs = props.currentTime * 1_000;
+    const cameraClips = clips.filter((clip): clip is VisualClip => clip.kind === 'webcam');
+    const selected = [...cameraClips].sort((left, right) => {
+      const distance = (clip: VisualClip) =>
+        timeMs < clip.timelineStartMs
+          ? clip.timelineStartMs - timeMs
+          : timeMs >= clip.timelineStartMs + clip.timelineDurationMs
+            ? timeMs - (clip.timelineStartMs + clip.timelineDurationMs)
+            : 0;
+      return distance(left) - distance(right) || left.timelineStartMs - right.timelineStartMs;
+    })[0];
+    if (selected) emit('select:clip', selected.id);
+  };
   const iconForVisual = (clip: VisualClip | BlurClip) =>
     clip.kind === 'blur' ? CircleDashed : clip.kind === 'image' ? ImageIcon : clip.kind === 'webcam' ? Camera : Video;
   const labelForVisual = (clip: VisualClip | BlurClip) =>
@@ -472,6 +490,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     leaveTrack,
     addAt,
     toggleGroup,
+    handleVisualTrackHeader,
     iconForVisual,
     labelForVisual,
     zoomScale,

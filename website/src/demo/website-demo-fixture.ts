@@ -54,6 +54,7 @@ export const addDemoCaption = (composition: ClipComposition, timeMs: number, dur
     sourceInMs: 0,
     sourceDurationMs: 1_500,
     playbackRate: 1,
+    transitions: { entry: null, exit: null },
     enabled: true,
     order: -1,
     caption: {

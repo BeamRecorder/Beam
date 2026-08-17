@@ -14,7 +14,6 @@ import UpdateControls from '~/components/updates/UpdateControls.vue';
 import SocialLinks from '~/components/socials/SocialLinks.vue';
 import { isSupportedLocale, localeOptions } from '~/i18n/locales';
 import { useCopySystemInformation } from '~/composables/useCopySystemInformation';
-import Accordion from '~/ui/accordion/Accordion.vue';
 
 const { t } = useTranslate('SettingsPanel');
 const { t: tAppearance } = useTranslate('AppearanceSettings');
@@ -34,7 +33,6 @@ const emit = defineEmits<{
 }>();
 
 const isDevModeEnabled = ref(localStorage.getItem('dev_mode_enabled') === 'true');
-const appearanceOpen = ref(true);
 watch(isDevModeEnabled, (value) => {
   localStorage.setItem('dev_mode_enabled', String(value));
 });
@@ -49,13 +47,7 @@ const { copied: isCopiedSysInfo, copy: copySystemInfo } = useCopySystemInformati
 
 <template>
   <div class="options-group">
-    <Accordion v-model="appearanceOpen" :title="tAppearance('title')" :bordered="false" class="prop-item">
-      <AppearanceSettings :show-title="false" />
-    </Accordion>
-
-    <Divider spacing="xs" />
-
-    <div class="prop-item">
+    <div class="prop-item language-setting">
       <span class="prop-label">{{ t('language') }}</span>
       <Select
         :model-value="localeStore.locale"
@@ -63,6 +55,13 @@ const { copied: isCopiedSysInfo, copy: copySystemInfo } = useCopySystemInformati
         direction="up"
         @update:model-value="updateLocale"
       />
+    </div>
+
+    <Divider spacing="xs" />
+
+    <div class="prop-item appearance-setting">
+      <span class="prop-label appearance-heading">{{ tAppearance('title') }}</span>
+      <AppearanceSettings :show-title="false" />
     </div>
 
     <Divider spacing="xs" />

@@ -1,0 +1,54 @@
+{
+  "locale": "es-ES",
+  "label": "Español",
+  "siteTitle": "Documentación de Beam",
+  "nav": {
+    "website": "Sitio web de Beam"
+  },
+  "sidebar": [
+    {
+      "text": "Empieza aquí",
+      "items": [
+        { "text": "Introducción", "link": "/" },
+        { "text": "Primeros pasos", "link": "/getting-started" },
+        { "text": "Actualizar Beam", "link": "/updates" }
+      ]
+    },
+    {
+      "text": "Aplicación de grabación",
+      "items": [
+        { "text": "Descripción general", "link": "/recorder/" },
+        { "text": "Interfaz", "link": "/recorder/interface" },
+        { "text": "Funciones", "link": "/recorder/capabilities" }
+      ]
+    },
+    {
+      "text": "Editor de vídeo",
+      "items": [
+        { "text": "Descripción general", "link": "/editor/" },
+        { "text": "Interfaz", "link": "/editor/interface" },
+        { "text": "Funciones", "link": "/editor/capabilities" }
+      ]
+    },
+    {
+      "text": "Referencia",
+      "items": [
+        { "text": "Exportación y uso compartido", "link": "/export" },
+        { "text": "Compatibilidad con plataformas", "link": "/platforms" },
+        { "text": "Sistema de archivos", "link": "/filesystem" }
+      ]
+    }
+  ],
+  "social": {
+    "github": "Ver Beam en GitHub",
+    "discord": "Unirse al Discord de Beam"
+  },
+  "theme": {
+    "switchToLight": "Cambiar al tema claro",
+    "switchToDark": "Cambiar al tema oscuro"
+  },
+  "footer": {
+    "message": "Grabación y edición de pantalla de código abierto.",
+    "copyright": "Publicado bajo la licencia MIT."
+  }
+}

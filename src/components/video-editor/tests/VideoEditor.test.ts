@@ -1,6 +1,7 @@
 import './VideoEditor.test.setup';
 import { flushPromises } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import type { ClipComposition } from '~/media/shared/composition-types';
 import { editorState, historyState, mountEditor, setEditorComponent, toast } from './VideoEditor.test.setup';
 
 const { default: VideoEditor } = await import('../VideoEditor.vue');
@@ -20,6 +21,10 @@ describe('VideoEditor', () => {
     const mounted = mountEditor();
     const ambient = mounted.get('.mock-editor-ambient');
 
+    editorState.store.outputCanvas.value = {
+      ...editorState.store.outputCanvas.value,
+      showBackground: true,
+    };
     editorState.store.player.selectedBackground.value = { kind: 'color', color: '#ff0000' };
     await mounted.vm.$nextTick();
     expect(ambient.attributes('data-background-kind')).toBe('none');
@@ -41,6 +46,36 @@ describe('VideoEditor', () => {
     await mounted.get('.toggle-grid').trigger('click');
     expect(mounted.find('.canvas-3x3-grid').exists()).toBe(true);
     expect(mounted.get('.mock-editor-ambient').attributes('data-background-kind')).toBe('image');
+  });
+
+  it('hides the selected background from ambient and canvas rendering without clearing the selection', async () => {
+    const mounted = mountEditor();
+    const background = {
+      id: 'wallpaper-image',
+      name: 'Wallpaper image',
+      kind: 'image' as const,
+      path: '/wallpapers/image/wallpaper.webp',
+      extension: 'webp',
+    };
+
+    editorState.store.player.selectedBackground.value = background;
+    editorState.store.player.selectedBackgroundMedia.value = background;
+    editorState.store.outputCanvas.value = {
+      ...editorState.store.outputCanvas.value,
+      showBackground: false,
+    };
+    await mounted.vm.$nextTick();
+
+    expect(editorState.store.player.selectedBackground.value).toEqual(background);
+    expect(editorState.store.player.selectedBackgroundMedia.value).toEqual(background);
+    expect(mounted.get('.mock-editor-ambient').attributes('data-background-kind')).toBe('none');
+
+    const canvas = mounted.findComponent({ name: 'MockEditorCanvas' });
+    const attrs = canvas.vm.$attrs as Record<string, unknown>;
+    const selectedBackground = Object.prototype.hasOwnProperty.call(attrs, 'selectedBackground')
+      ? attrs.selectedBackground
+      : attrs['selected-background'];
+    expect(selectedBackground).toBeNull();
   });
 
   it('routes canvas, toolbar, timeline and property events to the editor state', async () => {
@@ -153,5 +188,96 @@ describe('VideoEditor', () => {
     editorState.store.player.playbackError.value = { ...playbackError, message: 'A different decode failure.' };
     await mounted.vm.$nextTick();
     expect(toast.error).toHaveBeenCalledTimes(2);
+  });
+
+  it('confirms a timeline copy with a translated success toast', async () => {
+    const mounted = mountEditor();
+
+    await mounted.get('.timeline-copy').trigger('click');
+    await mounted.vm.$nextTick();
+
+    expect(toast.success).toHaveBeenCalledTimes(1);
+    expect(toast.success).toHaveBeenCalledWith('Copied: screen.mp4', 1_500, undefined, { leadingIcon: 'copy' });
+  });
+
+  it('rejects a pasted item from another project without mutating the timeline', async () => {
+    const mounted = mountEditor();
+    const compositionBefore = JSON.stringify(editorState.store.compositionState.composition.value);
+
+    await mounted.get('.timeline-paste-invalid').trigger('click');
+    await mounted.vm.$nextTick();
+
+    expect(JSON.stringify(editorState.store.compositionState.composition.value)).toBe(compositionBefore);
+    expect(editorState.store.editorState.scheduleSave).not.toHaveBeenCalled();
+    expect(historyState.commitNow).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('project'), expect.any(Number));
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it('pastes a clip at the playhead, overwrites its destination range, selects it and saves', async () => {
+    const mounted = mountEditor();
+
+    await mounted.get('.timeline-paste-clip').trigger('click');
+    await mounted.vm.$nextTick();
+
+    const composition = editorState.store.compositionState.composition.value as ClipComposition;
+    const pasted = composition.clips.find(
+      (clip) => clip.kind === 'screen' && clip.timelineStartMs === 1_000 && clip.timelineDurationMs === 1_000,
+    );
+    expect(pasted).toBeDefined();
+    expect(composition.clips.filter((clip) => clip.kind === 'screen')).toHaveLength(2);
+    expect(editorState.store.compositionState.selectClip).toHaveBeenCalledWith(pasted!.id);
+    expect(editorState.store.compositionState.selectedClipId.value).toBe(pasted!.id);
+    expect(editorState.store.activeTab.value).toBe('clip');
+    expect(editorState.store.editorState.scheduleSave).toHaveBeenCalled();
+    expect(historyState.commitNow).toHaveBeenCalledWith(expect.objectContaining({ composition }));
+    expect(toast.success).toHaveBeenCalledWith('Pasted: screen.mp4', 1_500, undefined, { leadingIcon: 'paste' });
+  });
+
+  it('delegates zoom pasting and keeps the pasted zoom selected', async () => {
+    const mounted = mountEditor();
+
+    await mounted.get('.timeline-paste-zoom').trigger('click');
+    await mounted.vm.$nextTick();
+
+    expect(editorState.store.zoomState.pasteZoomAtTime).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'copied-zoom', startMs: 0, endMs: 500 }),
+      1_000,
+    );
+    expect(editorState.store.zoomState.selectedZoomId.value).toBe('pasted-zoom');
+    expect(editorState.store.activeTab.value).toBe('zoom');
+    expect(editorState.store.compositionState.selectedClipId.value).toBeNull();
+    expect(historyState.commitNow).toHaveBeenCalled();
+    expect(toast.success).toHaveBeenCalledWith('Pasted: Zoom 1', 1_500, undefined, { leadingIcon: 'paste' });
+  });
+
+  it('keeps the latest paste highlight alive and expires it 900ms after the latest paste', async () => {
+    vi.useFakeTimers();
+    try {
+      const mounted = mountEditor();
+      const timeline = () => mounted.get('.mock-editor-timeline');
+
+      await mounted.get('.timeline-paste-clip').trigger('click');
+      const firstPasteId = timeline().attributes('data-recent-paste-id');
+      expect(timeline().attributes('data-recent-paste-type')).toBe('clip');
+      expect(firstPasteId).toBeTruthy();
+
+      vi.advanceTimersByTime(450);
+      await mounted.get('.timeline-paste-zoom').trigger('click');
+      expect(timeline().attributes('data-recent-paste-type')).toBe('zoom');
+      expect(timeline().attributes('data-recent-paste-id')).toBe('pasted-zoom');
+
+      // The first timer would have expired by now if the second paste had not replaced it.
+      vi.advanceTimersByTime(899);
+      await mounted.vm.$nextTick();
+      expect(timeline().attributes('data-recent-paste-type')).toBe('zoom');
+
+      vi.advanceTimersByTime(1);
+      await mounted.vm.$nextTick();
+      expect(timeline().attributes('data-recent-paste-type')).toBe('');
+      expect(timeline().attributes('data-recent-paste-id')).toBe('');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

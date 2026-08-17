@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Eye, EyeOff, Trash2 } from '@lucide/vue';
+import { Eye, EyeOff, Trash2, Blend } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import Divider from '~/ui/divider/Divider.vue';
@@ -11,13 +11,17 @@ withDefaults(
     enabledLabel: string;
     disabledLabel: string;
     toggleable?: boolean;
+    transitionable?: boolean;
+    transitionLabel?: string;
+    transitionActive?: boolean;
   }>(),
-  { toggleable: true },
+  { toggleable: true, transitionable: false, transitionLabel: 'Clip transitions', transitionActive: false },
 );
 
 const emit = defineEmits<{
   (event: 'toggle'): void;
   (event: 'delete'): void;
+  (event: 'transition'): void;
 }>();
 </script>
 
@@ -35,6 +39,18 @@ const emit = defineEmits<{
       @click="emit('toggle')"
     />
     <Divider v-if="toggleable" orientation="vertical" spacing="none" />
+    <Button
+      v-if="transitionable"
+      variant="ghost"
+      size="xs"
+      :icon="Blend"
+      icon-only
+      :tooltip="transitionLabel"
+      :aria-label="transitionLabel"
+      :class="{ 'is-active': transitionActive }"
+      @click="emit('transition')"
+    />
+    <Divider v-if="transitionable" orientation="vertical" spacing="none" />
     <Button
       variant="ghost"
       size="xs"
@@ -57,5 +73,9 @@ const emit = defineEmits<{
 .is-muted {
   color: var(--text-muted) !important;
   opacity: 0.6;
+}
+.is-active {
+  color: var(--text-primary) !important;
+  background: var(--surface-active) !important;
 }
 </style>

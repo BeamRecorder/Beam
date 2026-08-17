@@ -14,6 +14,7 @@ const isWebsiteTheme = (value: string | null): value is WebsiteTheme =>
 const applyPreference = () => {
   const resolved = preference.value === 'system' ? (systemDark.value ? 'dark' : 'light') : preference.value;
   document.documentElement.dataset.theme = preference.value;
+  document.documentElement.classList.toggle('dark', resolved === 'dark');
   document.documentElement.style.colorScheme = resolved;
   document
     .querySelector<HTMLMetaElement>('meta[name="theme-color"]')
@@ -25,6 +26,12 @@ const handleSystemTheme = (event: MediaQueryListEvent | MediaQueryList) => {
   if (preference.value === 'system') applyPreference();
 };
 
+const handleStoredTheme = (event: StorageEvent) => {
+  if (event.key !== STORAGE_KEY) return;
+  preference.value = isWebsiteTheme(event.newValue) ? event.newValue : 'system';
+  applyPreference();
+};
+
 export const initializeWebsiteTheme = () => {
   if (initialized || typeof window === 'undefined') return;
   initialized = true;
@@ -33,6 +40,7 @@ export const initializeWebsiteTheme = () => {
   mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
   systemDark.value = mediaQuery.matches;
   mediaQuery.addEventListener('change', handleSystemTheme);
+  window.addEventListener('storage', handleStoredTheme);
   applyPreference();
 };
 

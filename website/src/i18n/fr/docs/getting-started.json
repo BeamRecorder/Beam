@@ -1,0 +1,97 @@
+{
+  "pages": [
+    {
+      "slug": "getting-started",
+      "title": "Premiers pas",
+      "description": "Installez Beam, accordez les autorisations nécessaires et créez votre premier enregistrement.",
+      "lead": "Beam réunit une application d'enregistrement ciblée et un éditeur vidéo non destructif dans une seule application de bureau.",
+      "sections": [
+        {
+          "title": "Installer Beam",
+          "paragraphs": [
+            "Téléchargez la dernière version depuis la [page des versions de Beam](https://github.com/ExtraBinoss/Beam/releases/latest). Choisissez le paquet correspondant à votre système d'exploitation."
+          ],
+          "bullets": [
+            "Windows utilise l'installateur natif.",
+            "macOS utilise un DMG pour les Mac Apple Silicon sous macOS 13 ou version ultérieure.",
+            "Linux propose des paquets AppImage, DEB et RPM."
+          ]
+        },
+        {
+          "title": "Créer votre premier enregistrement",
+          "steps": [
+            "Ouvrez Beam et choisissez Écran ou Fenêtre dans le HUD de l'enregistreur.",
+            "Sélectionnez un écran, une fenêtre d'application ou une zone personnalisée.",
+            "Choisissez les sources microphone, audio système et caméra dont vous avez besoin.",
+            "Démarrez l'enregistrement, puis utilisez la barre d'enregistrement pour mettre en pause, reprendre ou arrêter.",
+            "Arrêtez l'enregistrement et attendez que Beam ouvre le projet dans l'éditeur vidéo."
+          ],
+          "screenshot": {
+            "path": "getting-started/first-recording.webp",
+            "alt": "Enregistreur Beam prêt pour un premier enregistrement",
+            "caption": "Sélectionnez les sources de capture et de média avant de commencer."
+          }
+        },
+        {
+          "title": "Accorder les autorisations lorsqu'elles sont demandées",
+          "paragraphs": [
+            "Le système d'exploitation peut demander des autorisations pour l'enregistrement de l'écran, le microphone, la caméra ou les interactions. Beam ne demande l'accès que lorsque la fonctionnalité concernée en a besoin."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Différences entre les plateformes",
+            "text": "La sélection des sources et les demandes d'autorisation diffèrent entre Windows, macOS, Linux, X11 et Wayland. Consultez la [prise en charge des plateformes](/platforms) avant un enregistrement important."
+          }
+        },
+        {
+          "title": "Poursuivre la découverte",
+          "bullets": [
+            "Découvrez l'[interface de l'enregistreur](/recorder/interface).",
+            "Consultez toutes les [fonctionnalités de l'enregistreur](/recorder/capabilities).",
+            "Découvrez l'[interface de l'éditeur vidéo](/editor/interface).",
+            "Préparez le fichier final avec [l'export et le partage](/export)."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "updates",
+      "title": "Mettre Beam à jour",
+      "description": "Recherchez, téléchargez et installez les mises à jour de Beam depuis l'enregistreur ou l'éditeur vidéo.",
+      "lead": "Les versions installées de Beam peuvent rechercher une nouvelle version sur GitHub Releases sans la télécharger ni l'installer automatiquement.",
+      "sections": [
+        {
+          "title": "Ouvrir les contrôles de mise à jour",
+          "paragraphs": [
+            "Depuis le HUD de l'enregistreur, ouvrez les Paramètres et trouvez la section Mises à jour. Les mêmes contrôles sont disponibles dans les Paramètres de l'éditeur vidéo. Les versions de développement indiquent que les mises à jour sont uniquement disponibles dans l'application installée."
+          ],
+          "screenshot": {
+            "path": "getting-started/update-controls.webp",
+            "alt": "Paramètres de Beam affichant les contrôles de mise à jour",
+            "caption": "Le panneau de mise à jour affiche la version installée et les actions disponibles."
+          }
+        },
+        {
+          "title": "Installer une mise à jour",
+          "steps": [
+            "Choisissez Rechercher des mises à jour.",
+            "Lorsqu'une version est disponible, consultez son journal des modifications et choisissez Télécharger.",
+            "Laissez Beam ouvert pendant que l'indicateur de progression télécharge la mise à jour.",
+            "Lorsque la mise à jour est prête, enregistrez votre travail et choisissez Redémarrer pour fermer Beam et lancer l'installateur."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Les mises à jour restent sous votre contrôle",
+            "text": "Beam ne télécharge pas automatiquement une mise à jour disponible et ne l'installe pas lorsque vous quittez normalement l'application. L'installation commence uniquement après avoir choisi Redémarrer depuis l'état téléchargé."
+          }
+        },
+        {
+          "title": "Si le programme de mise à jour échoue",
+          "paragraphs": [
+            "Utilisez Copier l'erreur pour conserver le message de diagnostic, puis téléchargez manuellement le paquet approprié depuis la [dernière version de Beam](https://github.com/ExtraBinoss/Beam/releases/latest). Vos projets sont stockés séparément de l'installation de l'application."
+          ]
+        }
+      ]
+    }
+  ]
+}

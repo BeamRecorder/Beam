@@ -30,4 +30,37 @@ describe('toastStore', () => {
     vi.advanceTimersByTime(5000);
     expect(store.toasts).toHaveLength(1);
   });
+
+  it('deduplicates identical toasts, increments the count and resets the removal timer', () => {
+    const store = useToastStore();
+    const firstId = store.success('Copied', 1000, undefined, { leadingIcon: 'copy' });
+
+    vi.advanceTimersByTime(900);
+    const secondId = store.success('Copied', 1000, undefined, { leadingIcon: 'copy' });
+
+    expect(secondId).toBe(firstId);
+    expect(store.toasts).toHaveLength(1);
+    expect(store.toasts[0]).toMatchObject({ id: firstId, count: 2, revision: 1 });
+
+    // The first timeout was replaced, so the toast remains for the new full duration.
+    vi.advanceTimersByTime(999);
+    expect(store.toasts).toHaveLength(1);
+    vi.advanceTimersByTime(1);
+    expect(store.toasts).toHaveLength(0);
+  });
+
+  it('does not deduplicate toasts when type, duration, action, or leading icon differs', () => {
+    const store = useToastStore();
+    const retry = vi.fn();
+
+    store.success('Copied', 1000);
+    store.success('Copied', 1000, { label: 'Retry', onClick: retry });
+    store.error('Copied', 1000);
+    store.success('Copied', 2000);
+    store.success('Copied', 1000, undefined, { leadingIcon: 'copy' });
+    store.success('Copied', 1000, undefined, { leadingIcon: 'paste' });
+
+    expect(store.toasts).toHaveLength(6);
+    expect(store.toasts.every((toast) => toast.count === 1 && toast.revision === 0)).toBe(true);
+  });
 });

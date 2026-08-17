@@ -4,6 +4,11 @@ import type {
   WatermarkPosition,
   WatermarkSettings,
 } from './output-canvas-types';
+import {
+  EMPTY_CLIP_TRANSITIONS,
+  MAX_TRANSITION_DURATION_MS,
+  normalizeCanvasTransitions,
+} from '~/media/shared/clip-transitions';
 
 export type {
   OutputCanvasPreset,
@@ -53,6 +58,7 @@ export const normalizeWatermark = (value: Partial<WatermarkSettings> | null | un
 });
 
 export const OUTPUT_PREVIEW_RADIUS = 16;
+export const OUTPUT_FALLBACK_COLOR = '#1e1e24';
 
 export interface CanvasRect {
   x: number;
@@ -66,17 +72,60 @@ export const DEFAULT_OUTPUT_CANVAS: OutputCanvasSettings = {
   width: 1920,
   height: 1080,
   showBackground: false,
+  transitions: { ...EMPTY_CLIP_TRANSITIONS },
   watermark: { ...DEFAULT_WATERMARK },
 };
 
 export const OUTPUT_CANVAS_PRESETS: Record<Exclude<OutputCanvasPreset, 'custom'>, OutputCanvasSettings> = {
-  '16:9': { preset: '16:9', width: 1920, height: 1080, showBackground: false },
-  '9:16': { preset: '9:16', width: 1080, height: 1920, showBackground: false },
-  '1:1': { preset: '1:1', width: 1080, height: 1080, showBackground: false },
-  '4:5': { preset: '4:5', width: 1080, height: 1350, showBackground: false },
-  '3:4': { preset: '3:4', width: 1080, height: 1440, showBackground: false },
-  '4:3': { preset: '4:3', width: 1440, height: 1080, showBackground: false },
-  '21:9': { preset: '21:9', width: 2520, height: 1080, showBackground: false },
+  '16:9': {
+    preset: '16:9',
+    width: 1920,
+    height: 1080,
+    showBackground: false,
+    transitions: { ...EMPTY_CLIP_TRANSITIONS },
+  },
+  '9:16': {
+    preset: '9:16',
+    width: 1080,
+    height: 1920,
+    showBackground: false,
+    transitions: { ...EMPTY_CLIP_TRANSITIONS },
+  },
+  '1:1': {
+    preset: '1:1',
+    width: 1080,
+    height: 1080,
+    showBackground: false,
+    transitions: { ...EMPTY_CLIP_TRANSITIONS },
+  },
+  '4:5': {
+    preset: '4:5',
+    width: 1080,
+    height: 1350,
+    showBackground: false,
+    transitions: { ...EMPTY_CLIP_TRANSITIONS },
+  },
+  '3:4': {
+    preset: '3:4',
+    width: 1080,
+    height: 1440,
+    showBackground: false,
+    transitions: { ...EMPTY_CLIP_TRANSITIONS },
+  },
+  '4:3': {
+    preset: '4:3',
+    width: 1440,
+    height: 1080,
+    showBackground: false,
+    transitions: { ...EMPTY_CLIP_TRANSITIONS },
+  },
+  '21:9': {
+    preset: '21:9',
+    width: 2520,
+    height: 1080,
+    showBackground: false,
+    transitions: { ...EMPTY_CLIP_TRANSITIONS },
+  },
 };
 
 export function normalizeOutputCanvas(
@@ -91,8 +140,12 @@ export function normalizeOutputCanvas(
   const showBackground =
     typeof value?.showBackground === 'boolean' ? value.showBackground : value?.fit === 'cover' ? false : true;
   const watermark = normalizeWatermark(value?.watermark);
-  if (preset !== 'custom') return { ...OUTPUT_CANVAS_PRESETS[preset], showBackground, watermark };
-  return { preset, width: Math.max(1, width), height: Math.max(1, height), showBackground, watermark };
+  const transitions = normalizeCanvasTransitions(
+    value?.transitions ?? EMPTY_CLIP_TRANSITIONS,
+    MAX_TRANSITION_DURATION_MS * 2,
+  );
+  if (preset !== 'custom') return { ...OUTPUT_CANVAS_PRESETS[preset], showBackground, transitions, watermark };
+  return { preset, width: Math.max(1, width), height: Math.max(1, height), showBackground, transitions, watermark };
 }
 
 export function outputPreviewRect(

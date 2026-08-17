@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useToastStore } from './toastStore';
-import { X, CheckCircle, AlertCircle, Info } from '@lucide/vue';
+import { X, CheckCircle, AlertCircle, ClipboardPaste, Copy, Info } from '@lucide/vue';
 import Button from '../button/Button.vue';
 import CopyButton from '../button/CopyButton.vue';
 import type { Toast } from './toastStore';
@@ -25,15 +25,27 @@ const handleToastAction = async (toast: Toast) => {
   <div class="toast-container" aria-live="assertive">
     <TransitionGroup name="toast-list">
       <div v-for="toast in toastStore.toasts" :key="toast.id" class="toast-item" :class="toast.type">
-        <span class="toast-icon-wrapper">
-          <CheckCircle v-if="toast.type === 'success'" class="toast-icon success" />
+        <span class="toast-icon-wrapper" aria-hidden="true">
+          <span
+            v-if="toast.type === 'success' && toast.leadingIcon"
+            :key="`${toast.id}-${toast.revision}`"
+            class="toast-icon-morph success"
+          >
+            <Copy v-if="toast.leadingIcon === 'copy'" class="toast-icon toast-icon-source" />
+            <ClipboardPaste v-else class="toast-icon toast-icon-source" />
+            <CheckCircle class="toast-icon toast-icon-confirmed" />
+          </span>
+          <CheckCircle v-else-if="toast.type === 'success'" class="toast-icon success" />
           <AlertCircle v-else-if="toast.type === 'error'" class="toast-icon error" />
           <AlertCircle v-else-if="toast.type === 'warning'" class="toast-icon warning" />
           <Info v-else class="toast-icon info" />
         </span>
 
         <span class="toast-content">
-          <span class="toast-message">{{ toast.message }}</span>
+          <span class="toast-message">
+            {{ toast.message }}
+            <span v-if="toast.count > 1" class="toast-count">×{{ toast.count }}</span>
+          </span>
           <code v-if="toast.action?.detail" class="toast-detail">{{ toast.action.detail }}</code>
         </span>
 
@@ -65,6 +77,14 @@ const handleToastAction = async (toast: Toast) => {
         <button type="button" class="toast-close" @click="toastStore.remove(toast.id)" aria-label="Dismiss toast">
           <X class="close-icon" />
         </button>
+
+        <span
+          v-if="toast.duration > 0"
+          :key="`progress-${toast.id}-${toast.revision}`"
+          class="toast-progress"
+          :style="{ '--toast-duration': `${toast.duration}ms` }"
+          aria-hidden="true"
+        />
       </div>
     </TransitionGroup>
   </div>
@@ -89,37 +109,13 @@ const handleToastAction = async (toast: Toast) => {
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  background-color: white;
+  background-color: var(--color-bg-element);
   border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
   box-shadow: var(--shadow-lg);
   pointer-events: auto;
   position: relative;
   overflow: hidden;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-/* Accent border/decorations */
-.toast-item::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-}
-
-.toast-item.success::before {
-  background-color: var(--color-success);
-}
-.toast-item.error::before {
-  background-color: var(--color-error);
-}
-.toast-item.warning::before {
-  background-color: var(--color-warning);
-}
-.toast-item.info::before {
-  background-color: var(--color-info);
 }
 
 .toast-icon-wrapper {
@@ -147,6 +143,29 @@ const handleToastAction = async (toast: Toast) => {
   color: var(--color-info);
 }
 
+.toast-icon-morph {
+  position: relative;
+  display: block;
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--color-success);
+}
+
+.toast-icon-morph .toast-icon {
+  position: absolute;
+  inset: 0;
+}
+
+.toast-icon-source {
+  animation: toast-icon-source 520ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.toast-icon-confirmed {
+  opacity: 0;
+  transform: scale(0.65) rotate(-10deg);
+  animation: toast-icon-confirmed 520ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 .toast-content {
   display: flex;
   flex: 1;
@@ -160,6 +179,43 @@ const handleToastAction = async (toast: Toast) => {
   font-weight: 500;
   color: var(--text-primary);
   line-height: 1.4;
+}
+
+.toast-count {
+  display: inline-flex;
+  margin-left: 5px;
+  padding: 1px 5px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-surface-hover);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+}
+
+.toast-progress {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: currentColor;
+  opacity: 0.55;
+  transform-origin: left;
+  animation: toast-progress var(--toast-duration) linear forwards;
+}
+
+.toast-item.success .toast-progress {
+  color: var(--color-success);
+}
+.toast-item.error .toast-progress {
+  color: var(--color-error);
+}
+.toast-item.warning .toast-progress {
+  color: var(--color-warning);
+}
+.toast-item.info .toast-progress {
+  color: var(--color-info);
 }
 
 .toast-detail {
@@ -211,5 +267,60 @@ const handleToastAction = async (toast: Toast) => {
 
 .toast-list-leave-active {
   position: absolute;
+}
+
+@keyframes toast-icon-source {
+  0%,
+  42% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.65) rotate(10deg);
+  }
+}
+
+@keyframes toast-icon-confirmed {
+  0%,
+  42% {
+    opacity: 0;
+    transform: scale(0.65) rotate(-10deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+
+@keyframes toast-progress {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-item {
+    transition: none;
+  }
+
+  .toast-list-enter-from,
+  .toast-list-leave-to {
+    transform: none;
+  }
+
+  .toast-icon-source,
+  .toast-progress {
+    display: none;
+  }
+
+  .toast-icon-confirmed {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
 }
 </style>

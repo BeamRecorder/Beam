@@ -144,6 +144,10 @@
     "waveformUnavailable": "Forma de onda indisponível",
     "trimStart": "Cortar início",
     "trimEnd": "Cortar fim",
+    "holdSegment": "Fixar segmento",
+    "copy": "Copiar",
+    "paste": "Colar",
+    "delete": "Excluir",
     "keyboardCaptions": "Atalhos do teclado",
     "textCaptions": "Legendas de texto"
   },
@@ -196,7 +200,13 @@
     "showDetails": "Detalhes do erro"
   },
   "VideoEditor": {
-    "exportBanner": "Exportação em andamento. As edições ao vivo não afetarão o arquivo que está sendo exportado."
+    "exportBanner": "Exportação em andamento. As edições ao vivo não afetarão o arquivo que está sendo exportado.",
+    "timelineCopied": "Copiado",
+    "timelinePasted": "Colado",
+    "timelineCopiedItem": "Copiado: {item}",
+    "timelinePastedItem": "Colado: {item}",
+    "timelineClipboardCaption": "Legenda “{text}”",
+    "timelineClipboardZoom": "Zoom {number}"
   },
   "BlurPropertiesPanel": {
     "presets": "Predefinições",

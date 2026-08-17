@@ -1,0 +1,46 @@
+{
+  "locale": "it-IT",
+  "label": "Italiano",
+  "siteTitle": "Documentazione di Beam",
+  "nav": { "website": "Sito web di Beam" },
+  "sidebar": [
+    {
+      "text": "Per iniziare",
+      "items": [
+        { "text": "Introduzione", "link": "/" },
+        { "text": "Primi passi", "link": "/getting-started" },
+        { "text": "Aggiorna Beam", "link": "/updates" }
+      ]
+    },
+    {
+      "text": "App di registrazione",
+      "items": [
+        { "text": "Panoramica", "link": "/recorder/" },
+        { "text": "Interfaccia", "link": "/recorder/interface" },
+        { "text": "Funzionalità", "link": "/recorder/capabilities" }
+      ]
+    },
+    {
+      "text": "Editor video",
+      "items": [
+        { "text": "Panoramica", "link": "/editor/" },
+        { "text": "Interfaccia", "link": "/editor/interface" },
+        { "text": "Funzionalità", "link": "/editor/capabilities" }
+      ]
+    },
+    {
+      "text": "Riferimenti",
+      "items": [
+        { "text": "Esportazione e condivisione", "link": "/export" },
+        { "text": "Supporto delle piattaforme", "link": "/platforms" },
+        { "text": "Sistema di file", "link": "/filesystem" }
+      ]
+    }
+  ],
+  "social": { "github": "Vedi Beam su GitHub", "discord": "Unisciti al Discord di Beam" },
+  "theme": { "switchToLight": "Passa al tema chiaro", "switchToDark": "Passa al tema scuro" },
+  "footer": {
+    "message": "Registrazione e montaggio dello schermo open source.",
+    "copyright": "Distribuito con licenza MIT."
+  }
+}

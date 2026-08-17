@@ -397,6 +397,12 @@ describe('EditorCanvas', () => {
     expect(state.beginTransformDrag).toHaveBeenCalledWith(expect.anything(), 'move');
     expect(state.moveTransformDrag).toHaveBeenCalled();
     expect(state.endTransformDrag).toHaveBeenCalled();
+    await mounted.setProps({ transformHandlesMuted: true });
+    expect(mounted.find('.webcam-selection').classes()).toContain('is-muted');
+    await mounted.find('.webcam-selection').trigger('pointerdown');
+    expect(state.beginTransformDrag).toHaveBeenCalledTimes(2);
+    await mounted.setProps({ transformHandlesMuted: false });
+    expect(mounted.find('.webcam-selection').classes()).not.toContain('is-muted');
     state.transformResizeCorners!.value = ['left', 'right'];
     await nextTick();
     expect(mounted.findComponent(ResizeHandle).props('corners')).toEqual(['left', 'right']);

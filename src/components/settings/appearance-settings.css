@@ -36,6 +36,45 @@
   gap: 0.5rem;
 }
 
+.advanced-toggle-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -0.15rem;
+}
+
+.advanced-toggle {
+  color: var(--text-muted);
+}
+
+.advanced-toggle[aria-expanded='true'] {
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.appearance-advanced-panel {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.advanced-category {
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-bg-element) 70%, transparent);
+}
+
+.advanced-category-title {
+  margin: 0 0 0.7rem;
+  color: var(--text-primary);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.theme-customization-section .customization-panel {
+  padding: 0;
+}
+
 .setting-section {
   display: flex;
   flex-direction: column;
@@ -62,6 +101,77 @@
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--text-primary);
+}
+
+.setting-hint {
+  margin: -0.15rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.725rem;
+  line-height: 1.4;
+}
+
+.scale-live-badge,
+.radius-live-badge {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.ui-scale-advanced {
+  margin-top: 0.15rem;
+}
+
+.ui-scale-slider-wrap {
+  padding: 0.55rem 0.15rem 0;
+}
+
+.ui-scale-slider {
+  width: 100%;
+}
+
+.ui-scale-ticks {
+  display: flex;
+  justify-content: space-between;
+  margin-right: 3.5rem;
+  padding-top: 0.4rem;
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.scale-overrides {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.scale-override-row {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.scale-override-row:last-child {
+  border-bottom: 0;
+}
+
+.scale-override-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.scale-override-heading .active {
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.scale-override-slider {
+  width: 100%;
 }
 
 .btn-icon {
@@ -231,7 +341,9 @@
   align-items: center;
   justify-content: center;
   padding: 0;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
   position: relative;
 }
 
@@ -242,7 +354,9 @@
 
 .swatch-btn.active {
   transform: scale(1.1);
-  box-shadow: 0 0 0 2px var(--color-bg-app), 0 0 0 4px var(--color-primary);
+  box-shadow:
+    0 0 0 2px var(--color-bg-app),
+    0 0 0 4px var(--color-primary);
 }
 
 .swatch-check {
@@ -257,7 +371,6 @@
 }
 
 .radius-live-badge {
-  font-size: 0.75rem;
   font-weight: 600;
   color: var(--color-primary);
   background: var(--color-primary-light);

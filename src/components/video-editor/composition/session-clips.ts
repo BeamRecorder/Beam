@@ -7,10 +7,20 @@ import {
   type ClipComposition,
   type MediaAsset,
   type VisualClip,
+  isVisualClip,
 } from '~/media/shared/composition-types';
-import { createComposition } from './engine/clip-engine';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { createComposition, setCameraLayout, updateClip } from './engine/clip-engine';
 import { keyboardCaptionClipsFromInput } from '~/media/shared/keyboard-captions';
+import type { EditorPreferenceDefaults } from '../composables/editor-default-types';
+import {
+  audioDefaultsFor,
+  captionDefaultsFor,
+  normalizeEditorPreferenceDefaults,
+  visualClipDefaultProps,
+} from '../composables/editor-defaults';
+import { isSplitCameraLayout } from '~/media/shared/camera-layout-types';
+import { cameraScreenPartner } from './camera-screen-link';
+import { cameraLayoutTransform } from './camera-layout';
 
 const milliseconds = (nanoseconds: number | null | undefined) =>
   Math.max(0, Math.round((nanoseconds ?? 0) / 1_000_000));
@@ -80,6 +90,7 @@ const sessionClip = (
   segment: SessionTrackAsset,
   durationMs: number,
   order: number,
+  editorDefaults: EditorPreferenceDefaults,
 ): Clip => {
   const id = sourceId(editorData.sessionId, track, segment);
   const timelineStartMs = milliseconds(segment.startNs);
@@ -98,6 +109,7 @@ const sessionClip = (
     sourceInMs: 0,
     sourceDurationMs: durationMs,
     playbackRate: 1,
+    transitions: { entry: null, exit: null },
     enabled: true,
     order,
   } as const;
@@ -107,18 +119,20 @@ const sessionClip = (
       kind: 'audio',
       assetId: id,
       role: track.kind === 'system-audio' ? 'system' : 'microphone',
-      volume: 100,
+      volume: audioDefaultsFor(editorDefaults).volume,
     } satisfies AudioClip;
   }
+  const kind = track.kind === 'camera' ? 'webcam' : 'screen';
+  const defaults = visualClipDefaultProps(editorDefaults, kind, durationMs);
   return {
     ...common,
-    kind: track.kind === 'camera' ? 'webcam' : 'screen',
+    kind,
     trackId: `session:${editorData.sessionId}:track:${track.trackId}`,
     assetId: id,
-    transform: track.kind === 'camera' ? placement(track) : { x: 0, y: 0, width: 1, height: 1 },
-    appearance: createDefaultClipAppearance(track.kind === 'camera' ? 'webcam' : 'screen'),
-    isMirrored: false,
-    isMirroredY: false,
+    ...defaults,
+    playbackRate: 1,
+    transitions: { entry: null, exit: null },
+    ...(track.kind === 'camera' && !editorDefaults.visual?.webcam ? { transform: placement(track) } : {}),
   } satisfies VisualClip;
 };
 
@@ -130,6 +144,7 @@ const sessionClip = (
 export function synchronizeRecordingClips(
   composition: ClipComposition,
   editorData: ProjectEditorData | null | undefined,
+  defaults: EditorPreferenceDefaults = normalizeEditorPreferenceDefaults(undefined),
 ): ClipComposition {
   const input = composition as ClipComposition & {
     schemaVersion?: number;
@@ -175,7 +190,7 @@ export function synchronizeRecordingClips(
             : track.kind === 'system-audio'
               ? 40_000
               : 50_000;
-      const clip = sessionClip(editorData, track, segment, durationMs, priority + candidates.length);
+      const clip = sessionClip(editorData, track, segment, durationMs, priority + candidates.length, defaults);
       if (!existingIds.has(clip.id)) candidates.push(clip);
     }
   }
@@ -211,13 +226,11 @@ export function synchronizeRecordingClips(
       timelineDurationMs: durationMs,
       sourceInMs: 0,
       sourceDurationMs: durationMs,
-      playbackRate: 1,
       enabled: true,
       order: 30_000,
-      transform: { x: 0, y: 0, width: 1, height: 1 },
-      appearance: createDefaultClipAppearance('screen'),
-      isMirrored: false,
-      isMirroredY: false,
+      ...visualClipDefaultProps(defaults, 'screen', durationMs),
+      playbackRate: 1,
+      transitions: { entry: null, exit: null },
     });
   }
 
@@ -234,6 +247,9 @@ export function synchronizeRecordingClips(
         editorData.sessionId,
         editorData.recordedPlatform,
       )) {
+        const captionDefaults = captionDefaultsFor(defaults, clip.caption.style.fontSize);
+        clip.caption.style = captionDefaults.style;
+        if (captionDefaults.transform) clip.transform = captionDefaults.transform;
         if (!existingIds.has(clip.id)) candidates.push(clip);
       }
     }
@@ -261,5 +277,24 @@ export function synchronizeRecordingClips(
     keyboardCaptionSessions.length === canonicalComposition.keyboardCaptionSessions.length
   )
     return canonicalComposition;
-  return createComposition([...assets.values()], [...clips, ...candidates], keyboardCaptionSessions);
+  let next = createComposition([...assets.values()], [...clips, ...candidates], keyboardCaptionSessions);
+  for (const candidate of candidates) {
+    if (!isVisualClip(candidate) || candidate.kind !== 'webcam') continue;
+    const preset = candidate.cameraLayoutPreset;
+    if (!preset || preset === 'custom' || !isSplitCameraLayout(preset)) continue;
+    if (cameraScreenPartner(next, candidate, true)) {
+      next = setCameraLayout(next, candidate.id, preset);
+      continue;
+    }
+    next = updateClip(next, candidate.id, (clip) =>
+      isVisualClip(clip)
+        ? {
+            ...clip,
+            cameraLayoutPreset: 'floating-bottom-right',
+            transform: cameraLayoutTransform('floating-bottom-right'),
+          }
+        : clip,
+    );
+  }
+  return next;
 }

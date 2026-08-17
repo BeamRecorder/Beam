@@ -1,5 +1,12 @@
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type SurfaceTone = 'default' | 'neutral' | 'slate' | 'deep';
+export type UiScalePercent = 50 | 75 | 100 | 125;
+export type UiScaleRegion = 'topbar' | 'sidebar' | 'properties' | 'canvasControls' | 'timeline';
+
+export interface UiScaleSettings {
+  global: UiScalePercent;
+  overrides: Record<UiScaleRegion, UiScalePercent | null>;
+}
 
 export interface ThemePreset {
   id: string;
@@ -20,6 +27,7 @@ export interface AppearanceSettings {
   isPillRadius: boolean;
   surfaceTone: SurfaceTone;
   activePresetId?: string | null;
+  uiScale?: UiScaleSettings;
 }
 
 export interface ColorSwatch {
@@ -43,7 +51,19 @@ export const DEFAULT_APPEARANCE: AppearanceSettings = {
   isPillRadius: false,
   surfaceTone: 'default',
   activePresetId: 'beam-sunset',
+  uiScale: {
+    global: 100,
+    overrides: {
+      topbar: null,
+      sidebar: null,
+      properties: null,
+      canvasControls: null,
+      timeline: null,
+    },
+  },
 };
+
+export const UI_SCALE_PRESETS: UiScalePercent[] = [50, 75, 100, 125];
 
 export const COLOR_PRESETS: ColorSwatch[] = [
   { id: 'beam-orange', label: 'Beam Sunset', color: '#ff5a1f' },

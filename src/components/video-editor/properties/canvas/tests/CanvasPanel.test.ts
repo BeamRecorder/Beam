@@ -35,6 +35,17 @@ const ComposerStub = {
   `,
 };
 
+const SwitchStub = {
+  props: ['modelValue', 'ariaLabel'],
+  emits: ['update:modelValue'],
+  template:
+    '<button class="switch-stub" type="button" :aria-label="ariaLabel" :data-model-value="String(modelValue)" @click="$emit(\'update:modelValue\', !modelValue)">{{ modelValue }}</button>',
+};
+
+const WatermarkControlsStub = {
+  template: '<div class="watermark-controls-stub">Watermark</div>',
+};
+
 class TestIntersectionObserver {
   static instances: TestIntersectionObserver[] = [];
   readonly callback: IntersectionObserverCallback;
@@ -93,15 +104,26 @@ const drainFrames = async () => {
   }
 };
 
-const mountPanel = async (selectedBackground: BackgroundValue | null = null, backgroundGroups = groups) => {
+const mountPanel = async (
+  selectedBackground: BackgroundValue | null = null,
+  backgroundGroups = groups,
+  showBackground = false,
+) => {
   wrapper = mount(CanvasPanel, {
     props: {
       selectedBackground,
       backgroundGroups,
       projectId: 'project-1',
       blurPercent: 20,
+      showBackground,
     },
-    global: { stubs: { BackgroundPresetComposer: ComposerStub } },
+    global: {
+      stubs: {
+        BackgroundPresetComposer: ComposerStub,
+        Switch: SwitchStub,
+        WatermarkControls: WatermarkControlsStub,
+      },
+    },
   });
   await flushPromises();
   await drainFrames();
@@ -153,6 +175,27 @@ afterEach(() => {
 });
 
 describe('CanvasPanel', () => {
+  it('inverts showBackground for Remove Background and places it before the watermark', async () => {
+    const mounted = await mountPanel(imageItems[0], groups, true);
+    const removeBackgroundSwitch = mounted!.get('.switch-stub');
+    const watermark = mounted!.get('.watermark-controls-stub');
+
+    expect(removeBackgroundSwitch.attributes('aria-label')).toBeTruthy();
+    expect(removeBackgroundSwitch.attributes('data-model-value')).toBe('false');
+    expect(
+      removeBackgroundSwitch.element.compareDocumentPosition(watermark.element) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    await removeBackgroundSwitch.trigger('click');
+    expect(mounted!.emitted('update:showBackground')).toEqual([[false]]);
+    expect(mounted!.emitted('update:selectedBackground')).toBeUndefined();
+
+    await mounted!.setProps({ showBackground: false });
+    expect(mounted!.get('.switch-stub').attributes('data-model-value')).toBe('true');
+    await mounted!.get('.switch-stub').trigger('click');
+    expect(mounted!.emitted('update:showBackground')).toEqual([[false], [true]]);
+  });
+
   it('shows image skeletons while loading, worker previews when ready, and paths only on failure', async () => {
     previewState.previews['image-0'] = 'blob:image-0';
     previewState.failed['image-1'] = true;

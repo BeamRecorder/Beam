@@ -8,17 +8,22 @@ const props = withDefaults(
     max?: number;
     step?: number;
     disabled?: boolean;
+    valueSuffix?: string;
+    size?: 'default' | 'compact';
   }>(),
   {
     min: 0,
     max: 100,
     step: 1,
     disabled: false,
+    valueSuffix: '',
+    size: 'default',
   },
 );
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: number): void;
+  (e: 'commit', value: number): void;
 }>();
 
 const percentage = computed(() => {
@@ -32,10 +37,15 @@ const handleInput = (event: Event) => {
   const val = Number((event.target as HTMLInputElement).value);
   emit('update:modelValue', val);
 };
+
+const handleCommit = (event: Event) => {
+  if (props.disabled) return;
+  emit('commit', Number((event.target as HTMLInputElement).value));
+};
 </script>
 
 <template>
-  <div class="slider-wrapper" :class="{ 'is-disabled': disabled }">
+  <div class="slider-wrapper" :class="[`size-${size}`, { 'is-disabled': disabled }]">
     <div class="slider-track-container">
       <input
         type="range"
@@ -49,9 +59,10 @@ const handleInput = (event: Event) => {
           background: `linear-gradient(to right, var(--color-primary) 0%, var(--color-primary) ${percentage}%, var(--color-border) ${percentage}%, var(--color-border) 100%)`,
         }"
         @input="handleInput"
+        @change="handleCommit"
       />
     </div>
-    <span class="slider-value">{{ modelValue }}</span>
+    <span class="slider-value">{{ modelValue }}{{ valueSuffix }}</span>
   </div>
 </template>
 
@@ -147,5 +158,30 @@ const handleInput = (event: Event) => {
   color: var(--text-primary);
   min-width: 2.5rem;
   text-align: right;
+}
+
+.size-compact {
+  gap: 10px;
+}
+
+.size-compact .slider-input {
+  height: 6px;
+}
+
+.size-compact .slider-input::-webkit-slider-thumb {
+  width: 16px;
+  height: 16px;
+  border-width: 3px;
+}
+
+.size-compact .slider-input::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-width: 3px;
+}
+
+.size-compact .slider-value {
+  min-width: 2.2rem;
+  font-size: 0.8rem;
 }
 </style>

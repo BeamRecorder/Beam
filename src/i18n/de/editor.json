@@ -142,8 +142,12 @@
     "audioDisabledFromExport": "Audio für den Export deaktiviert",
     "unlinkMicrophoneTrack": "Mikrofonspur lösen",
     "waveformUnavailable": "Wellenform nicht verfügbar",
-    "trimStart": "Anfang zuschneiden",
-    "trimEnd": "Ende zuschneiden",
+    "trimStart": "Anfang trimmen",
+    "trimEnd": "Ende trimmen",
+    "holdSegment": "Segment halten",
+    "copy": "Kopieren",
+    "paste": "Einfügen",
+    "delete": "Löschen",
     "keyboardCaptions": "Tastaturkürzel",
     "textCaptions": "Textuntertitel"
   },
@@ -196,7 +200,13 @@
     "showDetails": "Fehlerdetails"
   },
   "VideoEditor": {
-    "exportBanner": "Export läuft. Live-Änderungen wirken sich nicht auf die gerade exportierte Datei aus."
+    "exportBanner": "Export läuft. Live-Änderungen wirken sich nicht auf die gerade exportierte Datei aus.",
+    "timelineCopied": "Kopiert",
+    "timelinePasted": "Eingefügt",
+    "timelineCopiedItem": "Kopiert: {item}",
+    "timelinePastedItem": "Eingefügt: {item}",
+    "timelineClipboardCaption": "Untertitel „{text}“",
+    "timelineClipboardZoom": "Zoom {number}"
   },
   "BlurPropertiesPanel": {
     "presets": "Voreinstellungen",

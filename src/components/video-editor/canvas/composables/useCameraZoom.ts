@@ -7,19 +7,13 @@ import {
   sourceOverAlpha,
   ZOOM_MOTION_BLUR_SHUTTER_MS,
 } from '../../zoom/zoom-motion-blur';
-import {
-  framedMediaRect,
-  OUTPUT_PREVIEW_RADIUS,
-  outputPoint,
-  coverSourceRect,
-  outputPreviewRect,
-  type OutputCanvasSettings,
-} from '../output-canvas';
+import { OUTPUT_PREVIEW_RADIUS, outputPreviewRect, type OutputCanvasSettings } from '../output-canvas';
 import type { ProjectEditorData } from '~/api/types/capture-api';
 import { activeClipsAt } from '~/media/shared';
 import type { MediaFrame } from '~/media/shared';
 import type { ClipComposition, NormalizedTransform, VisualClip } from '~/media/shared/composition-types';
 import { drawDecoratedMedia } from '../../composition/appearance/render-decorated-media';
+import { mapSourcePointToScreen, resolveScreenRenderGeometry } from '../../composition/camera-layout';
 
 export interface VideoWindowBounds {
   dx: number;
@@ -243,27 +237,24 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       return null;
     }
     const { x: dx, y: dy, width: dw, height: dh } = preview;
-    const crop = screen && !options.isCropping?.() ? screen.crop : undefined;
-    const cropX = crop ? crop.x * videoWidth : 0;
-    const cropY = crop ? crop.y * videoHeight : 0;
-    const cropW = crop ? crop.width * videoWidth : videoWidth;
-    const cropH = crop ? crop.height * videoHeight : videoHeight;
-    const source = output.showBackground
-      ? { x: cropX, y: cropY, width: cropW, height: cropH }
-      : coverSourceRect(cropW, cropH, dw, dh);
-    if (!output.showBackground) {
-      source.x += cropX;
-      source.y += cropY;
-    }
-    const media = output.showBackground ? framedMediaRect(cropW, cropH, dw, dh) : { x: 0, y: 0, width: dw, height: dh };
     const screenTransform = options.screenTransformDraft?.() ??
       screen?.transform ?? { x: 0, y: 0, width: 1, height: 1 };
-    const positioned = {
-      x: media.x + screenTransform.x * media.width,
-      y: media.y + screenTransform.y * media.height,
-      width: media.width * screenTransform.width,
-      height: media.height * screenTransform.height,
-    };
+    const screenGeometry = screen
+      ? resolveScreenRenderGeometry(
+          screen,
+          videoWidth,
+          videoHeight,
+          dw,
+          dh,
+          output.showBackground,
+          screenTransform,
+          options.isCropping?.() ? undefined : screen.crop,
+          options.isCropping?.() ? 'custom' : (screen.cameraFramingPreset ?? 'custom'),
+        )
+      : null;
+    const source = screenGeometry?.source ?? { x: 0, y: 0, width: videoWidth, height: videoHeight };
+    const media = screenGeometry?.media ?? { x: 0, y: 0, width: dw, height: dh };
+    const positioned = screenGeometry?.positioned ?? media;
 
     ctx.save();
     ctx.beginPath();
@@ -276,16 +267,28 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       telemetry,
       canvas: output,
       source: screen ? [videoWidth, videoHeight] : null,
+      screen: screen ? [screen.transform, screen.crop, screen.cameraFramingPreset] : null,
     });
     if (!cameraEvaluator || key !== cameraEvaluatorKey) {
       cameraEvaluatorKey = key;
       cameraEvaluator = createCompositionCameraEvaluator({
         zooms: options.zoomElements(),
         telemetry,
-        mapFocus: (focus, zoom) =>
-          screen && zoom.mode === 'auto'
-            ? outputPoint(focus.cx, focus.cy, videoWidth, videoHeight, dw, dh, output.showBackground)
-            : focus,
+        mapFocus: (focus, zoom, timeMs) => {
+          const activeScreen = activeClipsAt(options.composition(), timeMs).find(
+            (clip): clip is VisualClip => clip.kind === 'screen',
+          );
+          if (!activeScreen || zoom.mode !== 'auto') return focus;
+          const activeGeometry = resolveScreenRenderGeometry(
+            activeScreen,
+            videoWidth,
+            videoHeight,
+            dw,
+            dh,
+            output.showBackground,
+          );
+          return mapSourcePointToScreen(focus, videoWidth, videoHeight, dw, dh, activeGeometry);
+        },
       });
     }
     const sample = cameraEvaluator.sample(currentTime * 1_000);
@@ -325,6 +328,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
           title: screen.name,
           mirrored: screen.isMirrored,
           mirroredY: screen.isMirroredY,
+          mask: screenGeometry?.mask,
         });
       } else if (options.videoError()) {
         ctx.fillStyle = '#334155';

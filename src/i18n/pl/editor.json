@@ -144,6 +144,10 @@
     "waveformUnavailable": "Przebieg fali niedostępny",
     "trimStart": "Przytnij początek",
     "trimEnd": "Przytnij koniec",
+    "holdSegment": "Zatrzymaj segment",
+    "copy": "Kopiuj",
+    "paste": "Wklej",
+    "delete": "Usuń",
     "keyboardCaptions": "Skróty klawiaturowe",
     "textCaptions": "Napisy tekstowe"
   },
@@ -196,7 +200,13 @@
     "showDetails": "Szczegóły błędu"
   },
   "VideoEditor": {
-    "exportBanner": "Eksportowanie w toku. Bieżące zmiany nie wpłyną na aktualnie eksportowany plik."
+    "exportBanner": "Eksportowanie w toku. Bieżące zmiany nie wpłyną na aktualnie eksportowany plik.",
+    "timelineCopied": "Skopiowano",
+    "timelinePasted": "Wklejono",
+    "timelineCopiedItem": "Skopiowano: {item}",
+    "timelinePastedItem": "Wklejono: {item}",
+    "timelineClipboardCaption": "Napis „{text}”",
+    "timelineClipboardZoom": "Powiększenie {number}"
   },
   "BlurPropertiesPanel": {
     "presets": "Ustawienia wstępne",

@@ -1,0 +1,43 @@
+{
+  "locale": "ko-KR",
+  "label": "한국어",
+  "siteTitle": "Beam 문서",
+  "nav": { "website": "Beam 웹사이트" },
+  "sidebar": [
+    {
+      "text": "여기서 시작",
+      "items": [
+        { "text": "소개", "link": "/" },
+        { "text": "시작하기", "link": "/getting-started" },
+        { "text": "Beam 업데이트", "link": "/updates" }
+      ]
+    },
+    {
+      "text": "녹화기 앱",
+      "items": [
+        { "text": "개요", "link": "/recorder/" },
+        { "text": "인터페이스", "link": "/recorder/interface" },
+        { "text": "기능", "link": "/recorder/capabilities" }
+      ]
+    },
+    {
+      "text": "동영상 편집기",
+      "items": [
+        { "text": "개요", "link": "/editor/" },
+        { "text": "인터페이스", "link": "/editor/interface" },
+        { "text": "기능", "link": "/editor/capabilities" }
+      ]
+    },
+    {
+      "text": "참조",
+      "items": [
+        { "text": "내보내기 및 공유", "link": "/export" },
+        { "text": "플랫폼 지원", "link": "/platforms" },
+        { "text": "파일 시스템", "link": "/filesystem" }
+      ]
+    }
+  ],
+  "social": { "github": "GitHub에서 Beam 보기", "discord": "Beam Discord 참여" },
+  "theme": { "switchToLight": "밝은 테마로 전환", "switchToDark": "어두운 테마로 전환" },
+  "footer": { "message": "오픈 소스 화면 녹화 및 편집 도구.", "copyright": "MIT 라이선스로 배포됩니다." }
+}

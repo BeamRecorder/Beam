@@ -120,6 +120,11 @@ const openDiscordInvite = () => {
   app-region: no-drag;
 }
 
+.left-actions,
+.right-actions {
+  zoom: var(--ui-scale-topbar, 1);
+}
+
 .left-actions {
   gap: 8px;
 }

@@ -1,0 +1,54 @@
+{
+  "locale": "en-US",
+  "label": "English",
+  "siteTitle": "Beam Docs",
+  "nav": {
+    "website": "Beam website"
+  },
+  "sidebar": [
+    {
+      "text": "Start here",
+      "items": [
+        { "text": "Introduction", "link": "/" },
+        { "text": "Getting started", "link": "/getting-started" },
+        { "text": "Updating Beam", "link": "/updates" }
+      ]
+    },
+    {
+      "text": "Recorder app",
+      "items": [
+        { "text": "Overview", "link": "/recorder/" },
+        { "text": "Interface", "link": "/recorder/interface" },
+        { "text": "Capabilities", "link": "/recorder/capabilities" }
+      ]
+    },
+    {
+      "text": "Video editor",
+      "items": [
+        { "text": "Overview", "link": "/editor/" },
+        { "text": "Interface", "link": "/editor/interface" },
+        { "text": "Capabilities", "link": "/editor/capabilities" }
+      ]
+    },
+    {
+      "text": "Reference",
+      "items": [
+        { "text": "Export and sharing", "link": "/export" },
+        { "text": "Platform support", "link": "/platforms" },
+        { "text": "Filesystem", "link": "/filesystem" }
+      ]
+    }
+  ],
+  "social": {
+    "github": "View Beam on GitHub",
+    "discord": "Join the Beam Discord"
+  },
+  "theme": {
+    "switchToLight": "Switch to light theme",
+    "switchToDark": "Switch to dark theme"
+  },
+  "footer": {
+    "message": "Open-source screen recording and editing.",
+    "copyright": "Released under the MIT License."
+  }
+}

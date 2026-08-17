@@ -1,0 +1,29 @@
+{
+  "title": "Beam-Dokumentation",
+  "description": "Lerne, wie du mit Beam hochwertige Produktdemos aufnimmst, bearbeitest und teilst.",
+  "hero": {
+    "name": "Beam-Dokumentation",
+    "text": "Aufnehmen. Bearbeiten. Teilen.",
+    "tagline": "Praktische Anleitungen zum Aufnehmen und Verfeinern von Produktdemos mit Beam.",
+    "imageAlt": "Beam-App-Symbol",
+    "actions": [
+      { "theme": "brand", "text": "Erste Schritte", "link": "/getting-started" },
+      { "theme": "alt", "text": "Auf GitHub ansehen", "link": "https://github.com/ExtraBinoss/Beam" },
+      { "theme": "alt", "text": "Discord beitreten", "link": "https://discord.gg/6Q6v2xUCB" }
+    ]
+  },
+  "categories": [
+    {
+      "title": "Rekorder-App",
+      "details": "Wähle eine Quelle, bereite Audio- und Kameraspuren vor und steuere die Aufnahme über das kompakte HUD.",
+      "link": "/recorder/",
+      "visual": "recorder"
+    },
+    {
+      "title": "Videoeditor",
+      "details": "Gestalte Timing, Bildausschnitt, Zooms, Cursorbewegung, Untertitel, Ton und Export in einem Arbeitsbereich.",
+      "link": "/editor/",
+      "visual": "editor"
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 import { nextTick, ref } from 'vue';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_OUTPUT_CANVAS } from '../../canvas/output-canvas';
-import { emptyComposition } from '~/media/shared/composition-types';
+import { emptyComposition, type Clip, type VisualClip } from '~/media/shared/composition-types';
 import {
   createDefaultCursorClickEffects,
   createDefaultCursorMotionSettings,
@@ -10,6 +10,8 @@ import type { CaptureProject, ProjectEditorState } from '../../../../api/types/c
 import type { BackgroundMedia, BackgroundValue } from '../backgroundCatalog';
 import type { ZoomElement } from '../../zoom/zoom-types';
 import { createDefaultCursorPresentation } from '../../../../api/types/cursor-presentation';
+import type { EditorPreferenceDefaults } from '../editor-default-types';
+import { normalizeEditorPreferenceDefaults } from '../editor-defaults';
 import {
   beginPropertyInteraction,
   endPropertyInteraction,
@@ -19,6 +21,8 @@ import {
 const mocks = vi.hoisted(() => ({
   saveProjectEditorState: vi.fn(),
   getProjectEditorState: vi.fn(),
+  getPreferences: vi.fn(),
+  updatePreferences: vi.fn(),
 }));
 vi.mock('../../../../api/capture', () => ({ capture: mocks }));
 
@@ -52,15 +56,44 @@ const createState = () => {
     cursorShadowColor: ref(cursor.shadow.color),
     cursorShadowDirection: ref(cursor.shadow.direction),
     availableBackgrounds: ref<Array<{ items: BackgroundMedia[] }>>([]),
+    editorDefaults: ref<EditorPreferenceDefaults>(normalizeEditorPreferenceDefaults(undefined)),
+    selectedClip: ref<Clip | null>(null),
+    selectedZoom: ref<ZoomElement | null>(null),
   };
 };
 
+const preferredBackground: BackgroundMedia = {
+  id: 'preferred-background',
+  name: 'Preferred background',
+  path: '/preferred-background.png',
+  extension: 'png',
+  kind: 'image',
+};
+
+const editorDefaults = () =>
+  normalizeEditorPreferenceDefaults({
+    presentation: {
+      canvas: { ...DEFAULT_OUTPUT_CANVAS, preset: '1:1', width: 1080, height: 1080, showBackground: true },
+      selectedBackgroundId: preferredBackground.id,
+      background: null,
+      blurPercent: 37,
+      cursor: { ...createDefaultCursorPresentation(), size: 64, color: '#123456' },
+    },
+  });
+
 describe('useProjectEditorState property persistence', () => {
+  beforeEach(() => {
+    mocks.getPreferences.mockResolvedValue({ extras: {} });
+    mocks.updatePreferences.mockResolvedValue(undefined);
+  });
+
   afterEach(() => {
     resetPropertyInteractions();
     vi.useRealTimers();
     mocks.saveProjectEditorState.mockReset();
     mocks.getProjectEditorState.mockReset();
+    mocks.getPreferences.mockReset();
+    mocks.updatePreferences.mockReset();
   });
 
   it('waits for a property interaction to end before saving', async () => {
@@ -86,6 +119,7 @@ describe('useProjectEditorState property persistence', () => {
 
   it('loads and normalizes persisted composition, backgrounds, blur and cursor effects', async () => {
     const state = createState();
+    state.canvas.value.showBackground = true;
     const globalBackground: BackgroundMedia = {
       id: 'global',
       name: 'Global',
@@ -115,7 +149,7 @@ describe('useProjectEditorState property persistence', () => {
         generatedSessions: [{ sessionId: 'session', algorithmVersion: 1, generatedAt: 'now' }],
       },
       presentation: {
-        canvas: { ...DEFAULT_OUTPUT_CANVAS, width: 1280 },
+        canvas: { ...DEFAULT_OUTPUT_CANVAS, width: 1280, showBackground: false },
         selectedBackgroundId: 'global',
         background: null,
         blurPercent: 250,
@@ -137,6 +171,7 @@ describe('useProjectEditorState property persistence', () => {
     expect(state.selectedBackground.value).toEqual(globalBackground);
     expect(state.backgroundBlurPercent.value).toBe(100);
     expect(state.canvas.value.width).toBe(1280);
+    expect(state.canvas.value.showBackground).toBe(false);
     expect(state.cursorMotion.value).toEqual({
       preset: 'custom',
       smoothing: 0.5,
@@ -146,8 +181,118 @@ describe('useProjectEditorState property persistence', () => {
     expect(editor.loading.value).toBe(false);
   });
 
+  it('applies presentation defaults only when the loaded project is fresh', async () => {
+    const state = createState();
+    const defaults = editorDefaults();
+    state.availableBackgrounds.value = [{ items: [preferredBackground] }];
+    mocks.getPreferences.mockResolvedValue({ extras: { editorDefaults: defaults } });
+    mocks.getProjectEditorState.mockResolvedValue({
+      schemaVersion: 3,
+      isFresh: true,
+      composition: emptyComposition(),
+      zoom: { elements: [], generatedSessions: [] },
+      presentation: {
+        canvas: { ...DEFAULT_OUTPUT_CANVAS, preset: '16:9', width: 1920, height: 1080, showBackground: false },
+        selectedBackgroundId: null,
+        background: null,
+        blurPercent: 0,
+        importedBackgrounds: [],
+        cursor: createDefaultCursorPresentation(),
+      },
+    } satisfies ProjectEditorState);
+
+    const editor = useProjectEditorState(state);
+    await editor.load('project');
+
+    expect(state.canvas.value).toEqual(defaults.presentation!.canvas);
+    expect(state.selectedBackground.value).toEqual(preferredBackground);
+    expect(state.backgroundBlurPercent.value).toBe(37);
+    expect(state.cursorSize.value).toBe(64);
+    expect(state.cursorColor.value).toBe('#123456');
+    expect(state.cursorEffects.value).toEqual(defaults.presentation!.cursor.clickEffects);
+    expect(state.cursorMotion.value).toEqual(defaults.presentation!.cursor.motion);
+  });
+
+  it('preserves an existing project presentation even when global defaults differ', async () => {
+    const state = createState();
+    const defaults = editorDefaults();
+    const existingPresentation: ProjectEditorState['presentation'] = {
+      canvas: { ...DEFAULT_OUTPUT_CANVAS, preset: '9:16', width: 1080, height: 1920, showBackground: false },
+      selectedBackgroundId: null,
+      background: { id: 'saved-color', name: '#abcdef', kind: 'color', color: '#abcdef' },
+      blurPercent: 12,
+      importedBackgrounds: [],
+      cursor: { ...createDefaultCursorPresentation(), size: 29, color: '#fedcba' },
+    };
+    mocks.getPreferences.mockResolvedValue({ extras: { editorDefaults: defaults } });
+    mocks.getProjectEditorState.mockResolvedValue({
+      schemaVersion: 3,
+      isFresh: false,
+      composition: emptyComposition(),
+      zoom: { elements: [], generatedSessions: [] },
+      presentation: existingPresentation,
+    } satisfies ProjectEditorState);
+
+    const editor = useProjectEditorState(state);
+    await editor.load('project');
+
+    expect(state.canvas.value).toEqual(existingPresentation.canvas);
+    expect(state.selectedBackground.value).toEqual(existingPresentation.background);
+    expect(state.backgroundBlurPercent.value).toBe(existingPresentation.blurPercent);
+    expect(state.cursorSize.value).toBe(existingPresentation.cursor.size);
+    expect(state.cursorColor.value).toBe(existingPresentation.cursor.color);
+    expect(state.importedBackgrounds.value).toEqual(existingPresentation.importedBackgrounds);
+    expect(state.cursorEffects.value).toEqual(existingPresentation.cursor.clickEffects);
+    expect(state.cursorMotion.value).toEqual(existingPresentation.cursor.motion);
+    expect(state.cursorShadowEnabled.value).toBe(existingPresentation.cursor.shadow.enabled);
+    expect(state.cursorShadowBlur.value).toBe(existingPresentation.cursor.shadow.blur);
+    expect(state.cursorShadowColor.value).toBe(existingPresentation.cursor.shadow.color);
+    expect(state.cursorShadowDirection.value).toBe(existingPresentation.cursor.shadow.direction);
+  });
+
+  it('does not capture defaults for a technical save after load until default capture is enabled', async () => {
+    vi.useFakeTimers();
+    const state = createState();
+    mocks.getProjectEditorState.mockResolvedValue({
+      schemaVersion: 3,
+      isFresh: false,
+      composition: emptyComposition(),
+      zoom: { elements: [], generatedSessions: [] },
+      presentation: {
+        canvas: { ...DEFAULT_OUTPUT_CANVAS },
+        selectedBackgroundId: null,
+        background: null,
+        blurPercent: 0,
+        importedBackgrounds: [],
+        cursor: createDefaultCursorPresentation(),
+      },
+    } satisfies ProjectEditorState);
+    mocks.saveProjectEditorState.mockResolvedValue(undefined);
+
+    const editor = useProjectEditorState(state);
+    await editor.load('project');
+    await nextTick();
+    mocks.updatePreferences.mockClear();
+
+    editor.scheduleSave(false);
+    await vi.advanceTimersByTimeAsync(250);
+    await nextTick();
+    await Promise.resolve();
+
+    expect(mocks.updatePreferences).not.toHaveBeenCalled();
+
+    editor.enableDefaultCapture();
+    editor.scheduleSave();
+    await vi.advanceTimersByTimeAsync(250);
+    await nextTick();
+    await Promise.resolve();
+
+    expect(mocks.updatePreferences).toHaveBeenCalledOnce();
+  });
+
   it('saves snapshots, preserves custom backgrounds and recovers the write chain after failure', async () => {
     const state = createState();
+    state.canvas.value.showBackground = false;
     const custom: BackgroundValue = {
       id: 'color:#abcdef',
       name: '#ABCDEF',
@@ -160,10 +305,64 @@ describe('useProjectEditorState property persistence', () => {
 
     await expect(editor.saveNow()).rejects.toThrow('disk full');
     expect(mocks.saveProjectEditorState.mock.calls[0][1].presentation.background).toEqual(custom);
+    expect(mocks.saveProjectEditorState.mock.calls[0][1].presentation.canvas.showBackground).toBe(false);
     expect(mocks.saveProjectEditorState.mock.calls[0][1].schemaVersion).toBe(3);
     await editor.saveNow();
     expect(mocks.saveProjectEditorState).toHaveBeenCalledTimes(2);
     expect(editor.isSaving.value).toBe(false);
+  });
+
+  it('persists editor defaults alongside the first successful editor save', async () => {
+    const state = createState();
+    const selectedClip: VisualClip = {
+      id: 'image-clip',
+      kind: 'image',
+      name: 'Image',
+      timelineStartMs: 0,
+      timelineDurationMs: 1_000,
+      sourceInMs: 0,
+      sourceDurationMs: 1_000,
+      playbackRate: 1.5,
+      enabled: true,
+      order: 0,
+      assetId: 'image-asset',
+      transform: { x: 0.1, y: 0.2, width: 0.6, height: 0.7 },
+      appearance: { ...state.editorDefaults.value.visual?.image?.appearance },
+      isMirrored: false,
+      isMirroredY: false,
+    } as VisualClip;
+    const selectedZoom: ZoomElement = {
+      id: 'zoom',
+      sessionId: 'session',
+      startMs: 100,
+      endMs: 900,
+      focus: { cx: 0.4, cy: 0.6 },
+      depth: 4,
+      mode: 'manual',
+    };
+    state.selectedClip.value = selectedClip;
+    state.selectedZoom.value = selectedZoom;
+    mocks.saveProjectEditorState.mockResolvedValue(undefined);
+
+    const editor = useProjectEditorState(state);
+    await editor.saveNow();
+
+    expect(mocks.updatePreferences).toHaveBeenCalledWith({
+      extras: {
+        editorDefaults: expect.objectContaining({
+          schemaVersion: 1,
+          visual: expect.objectContaining({ image: expect.any(Object) }),
+          zoom: { durationMs: 800, depth: 4, mode: 'manual' },
+        }),
+      },
+    });
+    expect(state.editorDefaults.value.zoom).toEqual({ durationMs: 800, depth: 4, mode: 'manual' });
+    expect(state.editorDefaults.value.visual?.image).toMatchObject({
+      transform: selectedClip.transform,
+      playbackRate: selectedClip.playbackRate,
+      cameraLayoutPreset: 'custom',
+      cameraFramingPreset: 'custom',
+    });
   });
 
   it('resolves a late global background and reports unserializable editor state', async () => {

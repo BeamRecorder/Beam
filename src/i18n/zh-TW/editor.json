@@ -142,8 +142,12 @@
     "audioDisabledFromExport": "匯出時不含音訊",
     "unlinkMicrophoneTrack": "解除麥克風軌道連結",
     "waveformUnavailable": "波形無法使用",
-    "trimStart": "裁切開頭",
-    "trimEnd": "裁切結尾",
+    "trimStart": "修剪開頭",
+    "trimEnd": "修剪結尾",
+    "holdSegment": "保持片段",
+    "copy": "複製",
+    "paste": "貼上",
+    "delete": "刪除",
     "keyboardCaptions": "鍵盤快速鍵",
     "textCaptions": "文字字幕"
   },
@@ -196,7 +200,13 @@
     "showDetails": "錯誤詳細資料"
   },
   "VideoEditor": {
-    "exportBanner": "正在匯出。即時編輯不會影響目前正在匯出的檔案。"
+    "exportBanner": "正在匯出。即時編輯不會影響目前正在匯出的檔案。",
+    "timelineCopied": "已複製",
+    "timelinePasted": "已貼上",
+    "timelineCopiedItem": "已複製：{item}",
+    "timelinePastedItem": "已貼上：{item}",
+    "timelineClipboardCaption": "字幕「{text}」",
+    "timelineClipboardZoom": "縮放 {number}"
   },
   "BlurPropertiesPanel": {
     "presets": "預設",

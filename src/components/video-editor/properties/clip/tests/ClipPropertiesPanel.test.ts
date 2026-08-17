@@ -1,12 +1,12 @@
 import { defineComponent, h, nextTick } from 'vue';
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import ClipPropertiesPanel from '../ClipPropertiesPanel.vue';
 
 const BigSliderStub = defineComponent({
   name: 'BigSlider',
   props: { modelValue: { type: Number, default: 0 }, label: { type: String, default: '' } },
-  emits: ['update:modelValue'],
+  emits: ['update:modelValue', 'interaction-start', 'interaction-end'],
   setup(props, { emit }) {
     return () =>
       h(
@@ -15,6 +15,8 @@ const BigSliderStub = defineComponent({
           class: 'slider-stub',
           'data-label': props.label,
           onClick: () => emit('update:modelValue', props.modelValue + 10),
+          onPointerdown: () => emit('interaction-start'),
+          onPointerup: () => emit('interaction-end'),
         },
         props.label,
       );
@@ -81,6 +83,10 @@ const mountPanel = (selectedClip: ReturnType<typeof clip> | null = clip()) =>
       },
     },
   });
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe('ClipPropertiesPanel', () => {
   it('renders the empty state when no clip is selected', () => {
@@ -169,6 +175,37 @@ describe('ClipPropertiesPanel', () => {
     expect(wrapper.findAll('.slider-stub')).toHaveLength(1);
     expect(wrapper.find('.direction-stub').exists()).toBe(false);
     expect(wrapper.find('.color-stub').exists()).toBe(false);
+  });
+
+  it.each(['screen', 'video', 'image', 'webcam'] as const)(
+    'relays corner-radius interaction state for %s slider drags',
+    async (kind) => {
+      const wrapper = mountPanel(clip({ kind, cornerRadius: 32 }));
+      const radiusSlider = wrapper
+        .findAll('.slider-stub')
+        .find((slider) => slider.attributes('data-label')?.toLowerCase().includes('radius'));
+
+      expect(radiusSlider).toBeDefined();
+      await radiusSlider!.trigger('pointerdown');
+      expect(wrapper.emitted('corner-radius-interaction')).toEqual([[true]]);
+
+      await radiusSlider!.trigger('pointerup');
+      expect(wrapper.emitted('corner-radius-interaction')).toEqual([[true], [false]]);
+    },
+  );
+
+  it('attenuates handles for a radius preset and releases them after the short delay', async () => {
+    vi.useFakeTimers();
+    const wrapper = mountPanel(clip({ cornerRadius: 'sm' }));
+    const mediumPreset = wrapper.findAll('button').find((button) => button.text() === '16px');
+
+    expect(mediumPreset).toBeDefined();
+    await mediumPreset!.trigger('click');
+    expect(wrapper.emitted('corner-radius-interaction')).toEqual([[true]]);
+
+    vi.runAllTimers();
+    await nextTick();
+    expect(wrapper.emitted('corner-radius-interaction')).toEqual([[true], [false]]);
   });
 
   it('clamps placement values and ignores placement events without a transform', async () => {

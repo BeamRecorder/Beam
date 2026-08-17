@@ -1,0 +1,124 @@
+{
+  "pages": [
+    {
+      "slug": "export",
+      "title": "Eksport i udostępnianie",
+      "description": "Eksportuj kompozycję Beam do MP4 lub WebM z odpowiednią rozdzielczością i ustawieniem jakości.",
+      "lead": "Eksport renderuje bieżącą kompozycję bezpośrednio do lokalnego pliku, korzystając z ustawień obsługiwanych przez komputer.",
+      "sections": [
+        {
+          "title": "Wybierz format",
+          "bullets": [
+            "WebM korzysta z kontenera WebM i kodera dostępnego na bieżącym komputerze.",
+            "MP4 korzysta z kontenera MP4, gdy Beam znajdzie zgodny koder sprzętowy lub programowy."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Dostępność kodera",
+            "text": "Format może być niedostępny, jeśli komputer nie udostępnia zgodnego kodera. Beam informuje o tym przed eksportem lub w jego trakcie."
+          }
+        },
+        {
+          "title": "Wybierz rozdzielczość",
+          "bullets": [
+            "720p skaluje obraz do wyjścia HD, gdy natywny obszar roboczy jest wystarczająco duży.",
+            "1080p skaluje obraz do Full HD, gdy natywny obszar roboczy jest wystarczająco duży.",
+            "Maksymalna zachowuje wymiary natywnego obszaru wyjściowego."
+          ]
+        },
+        {
+          "title": "Wybierz jakość i przepływność",
+          "paragraphs": [
+            "Ustawienia niska, średnia i wysoka obliczają przepływność na podstawie wymiarów wyjściowych i liczby klatek. Średnia równoważy wyrazistość i rozmiar pliku, a wysoka priorytetowo traktuje wierność obrazu."
+          ],
+          "screenshot": {
+            "path": "reference/export-settings.webp",
+            "alt": "Ustawienia eksportu Beam dotyczące formatu, rozdzielczości i jakości",
+            "caption": "Przed wybraniem pliku docelowego wybierz format, rozdzielczość i jakość."
+          }
+        },
+        {
+          "title": "Monitoruj eksport",
+          "paragraphs": [
+            "Beam wyświetla postęp klatek podczas renderowania. Możesz anulować aktywny eksport lub skopiować raport diagnostyczny. Bieżące zmiany w edytorze nie modyfikują pliku, który jest już renderowany."
+          ]
+        },
+        {
+          "title": "Otwórz wynik",
+          "paragraphs": [
+            "Po udanym eksporcie Beam pokazuje nazwę zapisanego pliku i udostępnia działanie umożliwiające jego otwarcie. Jeśli eksport się nie powiedzie, skopiuj raport techniczny przed poproszeniem o pomoc na [Discordzie](https://discord.gg/6Q6v2xUCB) lub [GitHubie](https://github.com/ExtraBinoss/Beam/issues)."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "platforms",
+      "title": "Obsługiwane platformy",
+      "description": "Sprawdź obsługę Beam i zachowanie specyficzne dla systemu operacyjnego w Windows, macOS i Linuxie.",
+      "lead": "Beam jest dostępny w systemach Windows, macOS i Linux. Natywne uprawnienia i możliwości systemu okien powodują pewne różnice między platformami.",
+      "sections": [
+        {
+          "title": "Windows",
+          "bullets": [
+            "Beam jest rozpowszechniany jako natywny instalator Windows.",
+            "Obsługiwane jest nagrywanie ekranu, okna, obszaru, kamery, mikrofonu i dźwięku systemowego.",
+            "Położenia i rozmiary nakładek można zapisywać i przywracać."
+          ]
+        },
+        {
+          "title": "macOS",
+          "bullets": [
+            "Beam jest rozpowszechniany jako DMG dla komputerów Mac z Apple Silicon i macOS 13 lub nowszym.",
+            "Uprawnienia Nagrywanie ekranu, Mikrofon i Kamera są żądane podczas korzystania z tych źródeł.",
+            "Położenia i rozmiary nakładek można zapisywać i przywracać."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Beam jest uszkodzony i nie można go otworzyć",
+            "text": "Po przeniesieniu Beam do `/Applications` uruchom `xattr -cr /Applications/Beam.app` albo wybierz Otwórz mimo to w Ustawieniach systemowych > Prywatność i bezpieczeństwo."
+          },
+          "subsections": [
+            {
+              "title": "Zezwól na nagrywanie ekranu i dźwięku systemowego",
+              "paragraphs": [
+                "Otwórz menu Apple > Ustawienia systemowe > Prywatność i bezpieczeństwo > Nagrywanie ekranu i dźwięku systemowego, a następnie włącz Beam. Jeśli Beam nie ma na liście, użyj przycisku dodawania i wybierz `/Applications/Beam.app`. Po zmianie uprawnienia zamknij i ponownie otwórz Beam."
+              ],
+              "screenshot": {
+                "path": "platforms/macos-screen-system-audio.webp",
+                "alt": "Ustawienia prywatności macOS dotyczące nagrywania ekranu i dźwięku systemowego z włączonym Beam",
+                "caption": "Włącz Beam w sekcji Nagrywanie ekranu i dźwięku systemowego."
+              }
+            },
+            {
+              "title": "Zezwól na dostęp do mikrofonu i kamery",
+              "paragraphs": [
+                "W Ustawieniach systemowych > Prywatność i bezpieczeństwo otwórz Mikrofon i włącz Beam podczas nagrywania głosu. Otwórz Kamera i włącz Beam, gdy korzystasz z nakładki kamery."
+              ],
+              "screenshot": {
+                "path": "platforms/macos-microphone-camera.webp",
+                "alt": "Ustawienia prywatności macOS dotyczące mikrofonu i kamery Beam",
+                "caption": "Beam musi być włączony na liście prywatności dla każdego źródła, które chcesz przechwytywać."
+              }
+            }
+          ]
+        },
+        {
+          "title": "Linux",
+          "bullets": [
+            "Beam jest rozpowszechniany jako pakiety AppImage, DEB i RPM.",
+            "Przechwytywanie ekranu i okna korzysta z XDG Desktop Portal, PipeWire i FFmpeg.",
+            "Selektor systemowy prosi o uprawnienie po rozpoczęciu przechwytywania.",
+            "Metadane skrótów klawiaturowych i kliknięć myszy wymagają wyraźnej zgody Polkit.",
+            "X11 może przywracać położenia i rozmiary nakładek.",
+            "Natywny Wayland może przywracać rozmiary nakładek, ale nie ich globalne położenia."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Pozycjonowanie w Waylandzie",
+            "text": "Wayland nie udostępnia globalnych współrzędnych okien. Beam nie wymusza XWayland, ponieważ to obejście może być niezgodne z niektórymi konfiguracjami GPU i X11."
+          }
+        }
+      ]
+    }
+  ]
+}

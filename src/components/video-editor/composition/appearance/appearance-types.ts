@@ -16,4 +16,5 @@ export interface DecoratedMediaOptions {
   title: string;
   mirrored?: boolean;
   mirroredY?: boolean;
+  mask?: 'circle' | 'squircle';
 }

@@ -1,0 +1,152 @@
+{
+  "pages": [
+    {
+      "slug": "recorder/index",
+      "title": "Tổng quan ứng dụng quay",
+      "description": "Tìm hiểu quy trình của trình quay Beam từ việc chọn nguồn đến chuyển sang trình chỉnh sửa.",
+      "lead": "Ứng dụng quay là một HUD gọn nhẹ để chuẩn bị, bắt đầu và điều khiển việc ghi hình mà không che khuất không gian làm việc bạn đang trình bày.",
+      "sections": [
+        {
+          "title": "Quy trình ghi hình",
+          "steps": [
+            "Chọn màn hình, cửa sổ hoặc vùng màn hình tùy chỉnh.",
+            "Chuẩn bị các tùy chọn micrô, âm thanh hệ thống, camera, đếm ngược và máy nhắc chữ.",
+            "Bắt đầu ghi và dùng thanh ghi nổi để điều khiển trực tiếp.",
+            "Dừng ghi để hoàn tất các track và mở dự án trong trình chỉnh sửa."
+          ],
+          "screenshot": {
+            "path": "recorder/hud-overview.webp",
+            "alt": "Tổng quan HUD của trình quay Beam",
+            "caption": "HUD giữ các nguồn ghi hình và điều khiển ghi trong một cửa sổ gọn nhẹ."
+          }
+        },
+        {
+          "title": "Các track phương tiện riêng biệt",
+          "paragraphs": [
+            "Beam ghi màn hình, webcam, micrô và âm thanh hệ thống thành các track riêng biệt nếu có. Trình chỉnh sửa có thể điều chỉnh hoặc tắt các track được hỗ trợ mà không thay đổi bản ghi gốc."
+          ]
+        },
+        {
+          "title": "Dự án",
+          "paragraphs": [
+            "Dùng Mở dự án để quay lại một dự án Beam hiện có hoặc tạo dự án mới trước khi ghi. Các phiên đã hoàn tất vẫn gắn với dự án để chỉnh sửa sau này."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "recorder/interface",
+      "title": "Giao diện trình quay",
+      "description": "Tìm hiểu mọi điều khiển trong HUD và thanh ghi của trình quay Beam.",
+      "lead": "Giao diện trình quay tách riêng việc chọn nguồn, điều khiển thiết bị, tùy chọn và thao tác ghi để trạng thái hiện tại luôn rõ ràng.",
+      "sections": [
+        {
+          "title": "Thanh trên cùng",
+          "bullets": [
+            "Nhận diện Beam cho biết cửa sổ trình quay hiện tại.",
+            "Tùy chọn mở cài đặt ghi, cài đặt chung, phím tắt và ứng dụng.",
+            "Các thao tác cửa sổ thu nhỏ hoặc đóng trình quay."
+          ]
+        },
+        {
+          "title": "Nguồn ghi hình",
+          "paragraphs": [
+            "Dùng các thẻ Màn hình và Cửa sổ để đổi loại nguồn. Bộ chọn nguồn hiển thị các màn hình hoặc cửa sổ ứng dụng có trên nền tảng hiện tại. Bạn cũng có thể giới hạn ghi màn hình vào một vùng tùy chỉnh."
+          ],
+          "screenshot": {
+            "path": "recorder/source-selection.webp",
+            "alt": "Điều khiển nguồn màn hình và cửa sổ trong Beam",
+            "caption": "Chọn loại nguồn, sau đó chọn màn hình, cửa sổ hoặc vùng màn hình."
+          }
+        },
+        {
+          "title": "Điều khiển phương tiện",
+          "bullets": [
+            "Micrô chọn thiết bị đầu vào hoặc tắt âm thanh micrô.",
+            "Âm thanh hệ thống bật hoặc tắt âm thanh do máy tính phát ra.",
+            "Camera chọn webcam và mở lớp phủ riêng.",
+            "Đồng hồ âm thanh cung cấp bản xem trước mức âm thanh trực tiếp khi nền tảng hỗ trợ.",
+            "Máy nhắc chữ mở hoặc ẩn cửa sổ kịch bản riêng."
+          ]
+        },
+        {
+          "title": "Thanh ghi",
+          "paragraphs": [
+            "Trong khi ghi, thanh ghi hiển thị thời gian đã trôi qua và trạng thái ghi hiện tại. Các điều khiển cho phép tạm dừng hoặc tiếp tục, dừng, hủy và bật tắt thiết bị được hỗ trợ."
+          ],
+          "screenshot": {
+            "path": "recorder/recording-bar.webp",
+            "alt": "Thanh ghi Beam trong lúc ghi hình",
+            "caption": "Thanh ghi giữ các điều khiển thiết yếu luôn sẵn sàng trong khi ghi."
+          }
+        },
+        {
+          "title": "Tùy chọn",
+          "bullets": [
+            "Đếm ngược có thể tắt hoặc đặt thành 3, 5 hay 10 giây.",
+            "Thanh ghi có thể luôn hiển thị, tự động mờ hoặc chỉ hiện khi di chuột qua.",
+            "Luôn ở trên cùng giữ HUD phía trên các cửa sổ khác.",
+            "Chủ đề và ngôn ngữ điều khiển giao diện ứng dụng.",
+            "Cài đặt phím tắt cấu hình thao tác ghi và máy nhắc chữ."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities",
+      "title": "Tính năng của trình quay",
+      "description": "Sử dụng vùng màn hình, âm thanh riêng, webcam, máy nhắc chữ, phím tắt và siêu dữ liệu tương tác trong Beam.",
+      "lead": "Có thể kết hợp các tính năng của trình quay cho một bản ghi nhẹ hoặc một bài trình bày sản phẩm được chuẩn bị đầy đủ.",
+      "sections": [
+        {
+          "title": "Ghi màn hình, cửa sổ và vùng",
+          "paragraphs": [
+            "Ghi toàn bộ màn hình, một cửa sổ ứng dụng cụ thể hoặc một vùng chuẩn hóa của màn hình đã chọn. Bạn có thể mở lại bộ chọn vùng để điều chỉnh phần cắt đã lưu trước khi ghi."
+          ]
+        },
+        {
+          "title": "Micrô và âm thanh hệ thống",
+          "paragraphs": [
+            "Micrô và âm thanh hệ thống được ghi độc lập khi cả hai khả dụng. Các track riêng cho phép trình chỉnh sửa thay đổi trạng thái bật và âm lượng của chúng riêng lẻ."
+          ]
+        },
+        {
+          "title": "Lớp phủ webcam",
+          "paragraphs": [
+            "Camera đã chọn sẽ mở lớp phủ riêng có thể đặt cho bài trình bày. Quyền truy cập camera phụ thuộc vào quyền của hệ điều hành và tính khả dụng của thiết bị."
+          ]
+        },
+        {
+          "title": "Máy nhắc chữ",
+          "paragraphs": [
+            "Viết kịch bản, chuyển giữa đọc liên tục và đọc từng dòng, đồng thời điều chỉnh cuộn tự động, tốc độ, cỡ chữ, khoảng cách dòng, căn chỉnh và chủ đề. Phím tắt toàn cục có thể hiển thị máy nhắc chữ, tạm dừng cuộn tự động hoặc chuyển giữa các dòng."
+          ],
+          "screenshot": {
+            "path": "recorder/teleprompter.webp",
+            "alt": "Máy nhắc chữ Beam với kịch bản và điều khiển phát",
+            "caption": "Máy nhắc chữ được điều khiển độc lập với HUD của trình quay."
+          }
+        },
+        {
+          "title": "Điều khiển ghi trực tiếp",
+          "bullets": [
+            "Tạm dừng và tiếp tục bản ghi đang hoạt động.",
+            "Bật tắt micrô, camera và âm thanh hệ thống khi phiên hiện tại hỗ trợ.",
+            "Dừng và hoàn tất bản ghi, hoặc hủy và xóa bản ghi đang hoạt động."
+          ]
+        },
+        {
+          "title": "Siêu dữ liệu tương tác và quyền riêng tư",
+          "paragraphs": [
+            "Khi được cho phép rõ ràng, Beam ghi lại các mã phím tắt an toàn. Quyền tương tác trên Linux cũng có thể bật siêu dữ liệu nhấp chuột. Văn bản đã nhập không bao giờ được lưu."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Cần cấp quyền",
+            "text": "Ghi tương tác là tùy chọn và có thể bật hoặc tắt trong Tùy chọn. Tính khả dụng phụ thuộc vào hệ điều hành."
+          }
+        }
+      ]
+    }
+  ]
+}

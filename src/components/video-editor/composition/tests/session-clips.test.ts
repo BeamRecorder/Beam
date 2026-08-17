@@ -93,7 +93,7 @@ describe('synchronizeRecordingClips', () => {
     } as unknown as ClipComposition;
 
     expect(synchronizeRecordingClips(legacy, null)).toEqual({
-      schemaVersion: 6,
+      schemaVersion: 8,
       assets: [],
       clips: [],
       keyboardCaptionSessions: [],
@@ -137,6 +137,8 @@ describe('synchronizeRecordingClips', () => {
     expect(screenClip.id).toBe('screen');
     expect(cameraClip).toMatchObject({
       transform: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
+      cameraLayoutPreset: 'custom',
+      cameraFramingPreset: 'squircle',
     });
     expect(cameraClip.groupId).toBe(screenClip.groupId);
     expect(cameraClip.groupId).toContain('recording:session-1:0:2000');
@@ -280,7 +282,7 @@ describe('synchronizeRecordingClips', () => {
 
     const first = synchronizeRecordingClips(emptyComposition(), data);
     const keyboardCaptions = first.clips.filter((clip) => clip.kind === 'caption');
-    expect(first.schemaVersion).toBe(6);
+    expect(first.schemaVersion).toBe(8);
     expect(first.keyboardCaptionSessions).toEqual(['session-1']);
     expect(keyboardCaptions).toHaveLength(1);
     expect(keyboardCaptions[0]).toMatchObject({

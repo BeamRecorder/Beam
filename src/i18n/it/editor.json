@@ -142,8 +142,12 @@
     "audioDisabledFromExport": "Audio disattivato per l’esportazione",
     "unlinkMicrophoneTrack": "Scollega traccia microfono",
     "waveformUnavailable": "Forma d'onda non disponibile",
-    "trimStart": "Taglia inizio",
-    "trimEnd": "Taglia fine",
+    "trimStart": "Ritaglia inizio",
+    "trimEnd": "Ritaglia fine",
+    "holdSegment": "Blocca segmento",
+    "copy": "Copia",
+    "paste": "Incolla",
+    "delete": "Elimina",
     "keyboardCaptions": "Scorciatoie da tastiera",
     "textCaptions": "Didascalie di testo"
   },
@@ -196,7 +200,13 @@
     "showDetails": "Dettagli errore"
   },
   "VideoEditor": {
-    "exportBanner": "Esportazione in corso. Le modifiche live non influiranno sul file attualmente esportato."
+    "exportBanner": "Esportazione in corso. Le modifiche live non influiranno sul file attualmente esportato.",
+    "timelineCopied": "Copiato",
+    "timelinePasted": "Incollato",
+    "timelineCopiedItem": "Copiato: {item}",
+    "timelinePastedItem": "Incollato: {item}",
+    "timelineClipboardCaption": "Didascalia “{text}”",
+    "timelineClipboardZoom": "Zoom {number}"
   },
   "BlurPropertiesPanel": {
     "presets": "Predefiniti",
