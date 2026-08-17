@@ -27,7 +27,8 @@ const activeOption = computed(() => options.value.find((option) => option.id ===
         size="sm"
         icon-only
         class="preview-quality-trigger"
-        :tooltip="isOpen ? '' : `${t('previewQuality')}: ${activeOption.indicator}`"
+        :tooltip="`${t('previewQuality')}: ${activeOption.indicator}`"
+        :tooltip-disabled="isOpen"
         :aria-label="`${t('previewQuality')}: ${activeOption.label}`"
       >
         <template #icon>

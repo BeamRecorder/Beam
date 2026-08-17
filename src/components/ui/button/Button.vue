@@ -20,6 +20,7 @@ const props = withDefaults(
     tooltipPosition?: 'top' | 'bottom' | 'left' | 'right';
     tooltipVariant?: 'default' | 'error';
     tooltipDelay?: number;
+    tooltipDisabled?: boolean;
     type?: 'button' | 'submit' | 'reset';
     icon?: Component;
     iconOnly?: boolean;
@@ -34,6 +35,7 @@ const props = withDefaults(
     tooltipPosition: 'top',
     tooltipVariant: 'default',
     tooltipDelay: 100,
+    tooltipDisabled: false,
     type: 'button',
     iconOnly: false,
   },
@@ -101,6 +103,7 @@ const handleClick = (event: MouseEvent) => {
             position: tooltipPosition,
             variant: disabled ? 'error' : tooltipVariant,
             delay: tooltipDelay,
+            disabled: tooltipDisabled,
           }
         : {}
     "

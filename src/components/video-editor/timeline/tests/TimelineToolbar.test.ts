@@ -26,10 +26,10 @@ const BigSlider = {
 };
 const Button = {
   inheritAttrs: true,
-  props: ['disabled', 'iconOnly', 'tooltip', 'icon'],
+  props: ['disabled', 'iconOnly', 'tooltip', 'tooltipDisabled', 'icon'],
   emits: ['click'],
   template:
-    '<button v-bind="$attrs" :disabled="disabled" :data-icon-only="iconOnly ? \'true\' : undefined" :data-tooltip="tooltip || undefined" @click="$emit(\'click\')"><component v-if="icon" :is="icon" class="stub-icon" /><slot name="icon" /><slot /></button>',
+    '<button v-bind="$attrs" :disabled="disabled" :data-icon-only="iconOnly ? \'true\' : undefined" :data-tooltip="tooltip || undefined" :data-tooltip-disabled="tooltipDisabled ? \'true\' : undefined" @click="$emit(\'click\')"><component v-if="icon" :is="icon" class="stub-icon" /><slot name="icon" /><slot /></button>',
 };
 
 describe('TimelineToolbar', () => {
@@ -149,7 +149,7 @@ describe('TimelineToolbar', () => {
     },
   );
 
-  it('hides the trigger tooltip while the quality popover is open', () => {
+  it('disables the trigger tooltip while the quality popover is open', () => {
     const wrapper = mount(TimelineToolbar, {
       props: { currentTime: 0, duration: 100, isPlaying: false, zoomLevel: 100, previewQuality: 'quarter' },
       global: { stubs: { PopoverMenuButton, Popover: OpenPopover, BigSlider, Button } },
@@ -157,7 +157,8 @@ describe('TimelineToolbar', () => {
 
     const trigger = wrapper.get('.preview-quality-trigger');
     expect(trigger.get('.preview-quality-indicator').text()).toBe('1/4');
-    expect(trigger.attributes('data-tooltip')).toBeUndefined();
+    expect(trigger.attributes('data-tooltip')).toBe('Preview quality: 1/4');
+    expect(trigger.attributes('data-tooltip-disabled')).toBe('true');
   });
 
   it('keeps the popover light while exposing the hint through an info tooltip', async () => {
