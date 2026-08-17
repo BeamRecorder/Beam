@@ -2,12 +2,19 @@ import { computed, ref } from 'vue';
 import { ZOOM_DEPTH_SCALES, type ZoomElement, type ZoomMotionBlurSettings } from '../../zoom/zoom-types';
 import { createCompositionCameraEvaluator } from '../../zoom/composition-camera';
 import { clampFocusToScale } from '../../zoom/zoom-playback';
+import { createZoomMotionBlurSamplePlan, ZOOM_MOTION_BLUR_SHUTTER_MS } from '../../zoom/zoom-motion-blur';
 import {
-  createZoomMotionBlurSamplePlan,
-  sourceOverAlpha,
-  ZOOM_MOTION_BLUR_SHUTTER_MS,
-} from '../../zoom/zoom-motion-blur';
-import { OUTPUT_PREVIEW_RADIUS, outputPreviewRect, type OutputCanvasSettings } from '../output-canvas';
+  compositeIsolatedMotionBlurSample,
+  createMotionBlurSurface,
+  resizeMotionBlurSurface,
+  type MotionBlurSurface,
+} from '../../zoom/zoom-motion-blur-compositor';
+import {
+  OUTPUT_FALLBACK_COLOR,
+  OUTPUT_PREVIEW_RADIUS,
+  outputPreviewRect,
+  type OutputCanvasSettings,
+} from '../output-canvas';
 import type { ProjectEditorData } from '~/api/types/capture-api';
 import { activeClipsAt } from '~/media/shared';
 import type { MediaFrame } from '~/media/shared';
@@ -68,6 +75,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
   const draftFocus = ref<{ cx: number; cy: number } | null>(null);
   let pendingZoomPreview: ZoomElement | null = null;
   let zoomPreviewFrame: number | null = null;
+  let motionBlurSurface: MotionBlurSurface | null = null;
 
   const screenClip = (): VisualClip | null =>
     activeClipsAt(options.composition(), options.currentTime() * 1_000).find(
@@ -234,6 +242,8 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       ctx.fillText(options.videoError() || 'Loading media metadata…', width / 2, height / 2);
       ctx.restore();
       videoWindowBounds.value = null;
+      screenHitBounds.value = null;
+      overlayWindowBounds.value = null;
       return null;
     }
     const { x: dx, y: dy, width: dw, height: dh } = preview;
@@ -302,10 +312,10 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       focusX: camera.focusX,
       focusY: camera.focusY,
     };
-    const drawScreen = () => {
+    const drawScreen = (target = ctx) => {
       if (!screen) return;
       if (frame) {
-        drawDecoratedMedia(ctx, {
+        drawDecoratedMedia(target, {
           source: frame.bitmap,
           sourceRect: source,
           rect: { x: dx + positioned.x, y: dy + positioned.y, width: positioned.width, height: positioned.height },
@@ -331,12 +341,12 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
           mask: screenGeometry?.mask,
         });
       } else if (options.videoError()) {
-        ctx.fillStyle = '#334155';
-        ctx.fillRect(dx, dy, dw, dh);
-        ctx.fillStyle = '#fff';
-        ctx.font = '14px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(options.videoError()!, width / 2, height / 2);
+        target.fillStyle = '#334155';
+        target.fillRect(dx, dy, dw, dh);
+        target.fillStyle = '#fff';
+        target.font = '14px sans-serif';
+        target.textAlign = 'center';
+        target.fillText(options.videoError()!, width / 2, height / 2);
       }
     };
     const halfShutterMs = ZOOM_MOTION_BLUR_SHUTTER_MS / 2;
@@ -355,24 +365,69 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
         : 0,
       deltaMs: halfShutterMs * 2,
     });
-    let accumulatedWeight = 0;
-    for (const blurSample of blurPlan) {
+    const drawSample = (
+      target: CanvasRenderingContext2D,
+      blurSample: (typeof blurPlan)[number],
+      fillFallback = false,
+    ) => {
       const projectedCamera = {
         focusX: dx + blurSample.camera.focusX * dw,
         focusY: dy + blurSample.camera.focusY * dh,
         scale: blurSample.camera.scale,
       };
       const sampleWindow = { ...renderedWindow, ...projectedCamera };
-      ctx.save();
-      ctx.globalAlpha = sourceOverAlpha(blurSample.weight, accumulatedWeight);
-      accumulatedWeight += blurSample.weight;
-      ctx.translate(dx + dw / 2, dy + dh / 2);
-      ctx.scale(projectedCamera.scale, projectedCamera.scale);
-      ctx.translate(-projectedCamera.focusX, -projectedCamera.focusY);
-      options.drawBackground(ctx, { x: dx, y: dy, width: dw, height: dh });
-      if (options.renderVisualStack) options.renderVisualStack(ctx, sampleWindow, drawScreen);
-      else drawScreen();
-      ctx.restore();
+      target.save();
+      target.beginPath();
+      target.roundRect(dx, dy, dw, dh, OUTPUT_PREVIEW_RADIUS);
+      target.clip();
+      if (fillFallback) {
+        target.fillStyle = OUTPUT_FALLBACK_COLOR;
+        target.fillRect(dx, dy, dw, dh);
+      }
+      target.translate(dx + dw / 2, dy + dh / 2);
+      target.scale(projectedCamera.scale, projectedCamera.scale);
+      target.translate(-projectedCamera.focusX, -projectedCamera.focusY);
+      options.drawBackground(target, { x: dx, y: dy, width: dw, height: dh });
+      if (options.renderVisualStack) options.renderVisualStack(target, sampleWindow, () => drawScreen(target));
+      else drawScreen(target);
+      target.restore();
+    };
+    if (blurPlan.length === 1) {
+      drawSample(ctx, blurPlan[0]!);
+    } else {
+      const pixelScale = Math.max(1, options.canvasRef()?.width ?? width) / Math.max(1, width);
+      motionBlurSurface ??= createMotionBlurSurface(
+        Math.max(1, Math.round(width * pixelScale)),
+        Math.max(1, Math.round(height * pixelScale)),
+      );
+      if (!motionBlurSurface) {
+        drawSample(ctx, blurPlan[Math.floor(blurPlan.length / 2)]!);
+      } else {
+        resizeMotionBlurSurface(
+          motionBlurSurface,
+          Math.max(1, Math.round(width * pixelScale)),
+          Math.max(1, Math.round(height * pixelScale)),
+        );
+        let accumulatedWeight = 0;
+        let composited = false;
+        for (const blurSample of blurPlan) {
+          const rendered = compositeIsolatedMotionBlurSample({
+            target: ctx,
+            surface: motionBlurSurface,
+            logicalWidth: width,
+            logicalHeight: height,
+            pixelScale,
+            sample: blurSample,
+            accumulatedWeight,
+            draw: (target, sampleToDraw) => drawSample(target as CanvasRenderingContext2D, sampleToDraw, true),
+          });
+          if (rendered) {
+            composited = true;
+            accumulatedWeight += blurSample.weight;
+          }
+        }
+        if (!composited) drawSample(ctx, blurPlan[Math.floor(blurPlan.length / 2)]!);
+      }
     }
     ctx.restore();
 
