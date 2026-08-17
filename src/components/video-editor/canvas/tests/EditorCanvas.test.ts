@@ -10,6 +10,7 @@ import type { MediaFrame } from '~/media/shared';
 import type { CursorClickEffects } from '../../../../api/types/cursor-settings';
 import ResizeHandle from '../../../ui/ResizeHandle/ResizeHandle.vue';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { resolveCompositionSceneLayers } from '../../composition/scene-layers';
 
 const { state } = vi.hoisted(() => ({
   state: {
@@ -407,7 +408,7 @@ describe('EditorCanvas', () => {
     await nextTick();
     expect(mounted.findComponent(ResizeHandle).props('corners')).toEqual(['left', 'right']);
 
-    state.renderVisualStack?.(contextMock, bounds, vi.fn());
+    state.renderVisualStack?.(contextMock, bounds, vi.fn(), resolveCompositionSceneLayers(composition(), 500));
     expect(state.drawWebcamClips).toHaveBeenCalledWith(expect.anything(), bounds);
     expect(state.drawComposition).toHaveBeenCalledWith(contextMock, bounds, 'image');
 

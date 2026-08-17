@@ -24,6 +24,7 @@ import { resolvePublicAssetUrl } from '~/utils/public-asset';
 import { useCanvasTransitionRenderer } from './composables/useCanvasTransitionRenderer';
 import { measureCanvasCaptionText } from './canvas-text-measure';
 import { useCanvasLoadingState } from './composables/useCanvasLoadingState';
+import { useCanvasClipToggleTransition } from './composables/useCanvasClipToggleTransition';
 const { t } = useTranslate('EditorCanvas');
 const props = defineProps<EditorCanvasProps>();
 const emit = defineEmits<EditorCanvasEmits>();
@@ -83,6 +84,11 @@ const outputAspectRatio = computed(() => props.outputCanvas.width / props.output
 function renderOnce() {
   if (animationFrameId === null) animationFrameId = requestAnimationFrame(draw);
 }
+const clipToggleTransition = useCanvasClipToggleTransition({
+  canvas: () => canvasRef.value,
+  composition: () => props.composition,
+  onRenderOnce: renderOnce,
+});
 const { drawBackground, syncPlayback, isTransitioningBackground } = useCanvasBackground(
   () => props.selectedBackground,
   () => props.backgroundBlurPercent,
@@ -167,7 +173,6 @@ const compositionMedia = useCompositionMedia({
       : null,
   onRenderOnce: renderOnce,
 });
-
 const drawNonScreenVisuals = (
   ctx: CanvasRenderingContext2D,
   window: { dx: number; dy: number; dw: number; dh: number; scale: number; focusX: number; focusY: number },
@@ -175,7 +180,6 @@ const drawNonScreenVisuals = (
   if (compositionMedia.drawVisualStack) compositionMedia.drawVisualStack(ctx, window, () => undefined);
   else compositionMedia.drawWebcamClips(ctx, window);
 };
-
 drawVisualStack = (ctx, window, drawScreen, layers) => {
   if (compositionMedia.drawVisualStack) {
     compositionMedia.drawVisualStack(ctx, window, drawScreen, layers);
@@ -186,7 +190,6 @@ drawVisualStack = (ctx, window, drawScreen, layers) => {
     else compositionMedia.drawComposition(ctx, window, clip.id);
   }
 };
-
 const cursorOverlay = useCursorOverlay({
   selectedCursor: () => props.selectedCursor,
   cursorSize: () => props.cursorSize,
@@ -207,7 +210,6 @@ const cursorOverlay = useCursorOverlay({
   showBackground: () => props.outputCanvas.showBackground,
   onRenderOnce: renderOnce,
 });
-
 watch(
   () => `${props.outputCanvas.width}:${props.outputCanvas.height}:${props.outputCanvas.showBackground}`,
   () => {
@@ -241,7 +243,6 @@ watch(
 );
 watch(transformAndCrop.transformDraft, renderOnce, { deep: true });
 watch(isMasterPlaying, renderOnce);
-
 const resizeCanvas = () => {
   const canvas = canvasRef.value;
   const container = containerRef.value;
@@ -255,7 +256,6 @@ const resizeCanvas = () => {
   canvas.height = Math.max(1, Math.round(height * dpr));
   renderCanvas();
 };
-
 const drawCanvasScene = (ctx: CanvasRenderingContext2D) => {
   const window = cameraZoom.drawVideoWindow(ctx, logicalSize.value.width, logicalSize.value.height, screenFrame.value);
   if (window) {
@@ -308,6 +308,7 @@ const renderCanvas = () => {
   ctx.imageSmoothingQuality = 'high';
   ctx.clearRect(0, 0, logicalSize.value.width, logicalSize.value.height);
   canvasTransitionRenderer.render(ctx, drawCanvasScene);
+  clipToggleTransition.blendPreviousFrame(ctx, logicalSize.value.width, logicalSize.value.height);
 };
 const commitCrop = () => {
   transformAndCrop.commitCrop();
@@ -318,7 +319,6 @@ function draw() {
   renderCanvas();
   if (props.isPlaying || isTransitioningBackground.value) animationFrameId = requestAnimationFrame(draw);
 }
-
 const handleIslandPointerDown = (event: PointerEvent) => {
   if (event.button === 0 && transformAndCrop.selectVisualAt(event, canvasRef.value)) return;
   if (viewportZoom.beginPan(event, containerRef.value)) return;
@@ -349,7 +349,6 @@ const handleIslandPointerUp = (event: PointerEvent) => {
   }
   cameraZoom.endSelectionMove(event);
 };
-
 const handleIslandWheel = (event: WheelEvent) => {
   viewportZoom.handleWheel(event, containerRef.value?.getBoundingClientRect());
 };
@@ -498,5 +497,4 @@ defineExpose({
     <UndoRedoToast :action="historyAction ?? null" />
   </div>
 </template>
-
 <style scoped src="./EditorCanvas.css"></style>
