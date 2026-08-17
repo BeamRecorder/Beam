@@ -10,14 +10,16 @@ export const createHomeJsonLd = (): readonly [WithContext<WebSite>, WithContext<
     '@type': 'WebSite',
     name: SITE_NAME,
     url: SITE_URL,
-    description: 'Open-source screen recorder and video editor for polished product demos.',
+    description:
+      'Free, open-source screen recorder and video editor for polished product demos on Windows, macOS, and Linux.',
   },
   {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
     name: SITE_NAME,
     url: SITE_URL,
-    description: 'Open-source screen recorder and video editor for polished product demos.',
+    description:
+      'Free, open-source screen recorder and video editor for polished product demos on Windows, macOS, and Linux.',
     applicationCategory: 'MultimediaApplication',
     operatingSystem: 'Windows, macOS, Linux',
     downloadUrl: RELEASES_URL,
