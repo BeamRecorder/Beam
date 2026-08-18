@@ -16,7 +16,7 @@ function initializeSingleInstance({ app, initialize, restoreHud, handleShortcut 
   }
   app.on('second-instance', (_event, commandLine) => {
     const id = shortcutId(commandLine);
-    if (id && handleShortcut) return handleShortcut(id);
+    if (id && handleShortcut && handleShortcut(id)) return;
     restoreHud();
   });
   initialize();

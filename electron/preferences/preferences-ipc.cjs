@@ -19,18 +19,24 @@ function registerPreferencesIpc({
       .catch(() => {})
       .then(async () => {
         globalShortcut.unregisterAll();
-        let registeredByLinux = false;
+        let fallbackIds = Object.entries(preferences.shortcuts)
+          .filter(([, entry]) => entry.scope === 'global')
+          .map(([id]) => id);
         if (linuxShortcutSource) {
           try {
-            registeredByLinux = await linuxShortcutSource.register(preferences);
-            if (!registeredByLinux) await linuxShortcutSource.cleanup();
+            const result = await linuxShortcutSource.register(preferences);
+            if (result === null) {
+              await linuxShortcutSource.cleanup().catch(() => {});
+            } else {
+              fallbackIds = result.fallbackIds;
+            }
           } catch {
             await linuxShortcutSource.cleanup().catch(() => {});
           }
         }
-        if (registeredByLinux) return;
-        for (const [id, entry] of Object.entries(preferences.shortcuts)) {
-          if (entry.scope !== 'global') continue;
+        for (const id of fallbackIds) {
+          const entry = preferences.shortcuts[id];
+          if (!entry || entry.scope !== 'global') continue;
           globalShortcut.register(entry.keys, () => dispatch(id));
         }
       });

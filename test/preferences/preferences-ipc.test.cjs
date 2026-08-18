@@ -43,13 +43,13 @@ function storeWith(preferences) {
   };
 }
 
-function linuxSourceWith(active) {
+function linuxSourceWith(result) {
   const calls = { register: [], cleanup: 0 };
   return {
     calls,
     register: async (preferences) => {
       calls.register.push(preferences.shortcuts['hud.startStopRecording'].keys);
-      return active;
+      return result;
     },
     cleanup: async () => {
       calls.cleanup += 1;
@@ -62,7 +62,10 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
 test('an active Linux source owns registration instead of Electron globalShortcut', async () => {
   const handlers = new Map();
   const registered = [];
-  const source = linuxSourceWith(true);
+  const source = linuxSourceWith({
+    gnomeIds: ['hud.startStopRecording', 'teleprompter.toggleVisibility'],
+    fallbackIds: [],
+  });
   const cleanup = registerPreferencesIpc({
     ipcMain: ipcMainWith(handlers),
     BrowserWindow: { getAllWindows: () => [] },
@@ -81,10 +84,14 @@ test('an active Linux source owns registration instead of Electron globalShortcu
   assert.equal(source.calls.cleanup, 1);
 });
 
-test('fallback registers global entries and dispatches them to windows', async () => {
+test('a Linux source owns convertible shortcuts while the rest fall back to globalShortcut', async () => {
   const handlers = new Map();
   const sent = [];
   const registered = [];
+  const source = linuxSourceWith({
+    gnomeIds: ['hud.startStopRecording'],
+    fallbackIds: ['teleprompter.toggleVisibility'],
+  });
   const cleanup = registerPreferencesIpc({
     ipcMain: ipcMainWith(handlers),
     BrowserWindow: { getAllWindows: () => [windowWith(sent)] },
@@ -93,24 +100,49 @@ test('fallback registers global entries and dispatches them to windows', async (
       unregisterAll: () => {},
     },
     store: storeWith(shortcutPreferences()),
-    linuxShortcutSource: linuxSourceWith(false),
+    linuxShortcutSource: source,
   });
   await flush();
 
-  assert.deepEqual(registered.map(({ keys }) => keys).sort(), ['Alt+Shift+R', 'Alt+Shift+T'].sort());
+  assert.deepEqual(
+    registered.map(({ keys }) => keys),
+    ['Alt+Shift+T'],
+  );
   registered.forEach(({ callback }) => callback());
-  assert.deepEqual(sent, [
-    { channel: 'preferences:shortcut', id: 'hud.startStopRecording' },
-    { channel: 'preferences:shortcut', id: 'teleprompter.toggleVisibility' },
-  ]);
+  assert.deepEqual(sent, [{ channel: 'preferences:shortcut', id: 'teleprompter.toggleVisibility' }]);
+  assert.equal(source.calls.cleanup, 0);
   await cleanup();
+  assert.equal(source.calls.cleanup, 1);
+});
+
+test('a failed Linux registration cleans GNOME bindings and falls back entirely', async () => {
+  const handlers = new Map();
+  const registered = [];
+  const source = linuxSourceWith(null);
+  registerPreferencesIpc({
+    ipcMain: ipcMainWith(handlers),
+    BrowserWindow: { getAllWindows: () => [] },
+    globalShortcut: {
+      register: (keys, callback) => registered.push({ keys, callback }),
+      unregisterAll: () => {},
+    },
+    store: storeWith(shortcutPreferences()),
+    linuxShortcutSource: source,
+  });
+  await flush();
+
+  assert.equal(source.calls.cleanup, 1);
+  assert.deepEqual(registered.map(({ keys }) => keys).sort(), ['Alt+Shift+R', 'Alt+Shift+T'].sort());
 });
 
 test('preference updates serialize registration and use newest shortcuts', async () => {
   const handlers = new Map();
   const registered = [];
   const preferences = shortcutPreferences();
-  const source = linuxSourceWith(false);
+  const source = linuxSourceWith({
+    gnomeIds: [],
+    fallbackIds: ['hud.startStopRecording', 'teleprompter.toggleVisibility'],
+  });
   registerPreferencesIpc({
     ipcMain: ipcMainWith(handlers),
     BrowserWindow: { getAllWindows: () => [] },

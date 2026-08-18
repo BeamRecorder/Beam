@@ -83,7 +83,10 @@ let showExistingHud = () => false;
 let pendingHudRestore = false;
 let shortcutReady = false;
 const pendingExternalShortcuts = [];
-let externalShortcutHandler = (id) => pendingExternalShortcuts.push(id);
+let externalShortcutHandler = (id) => {
+  pendingExternalShortcuts.push(id);
+  return false;
+};
 
 function restoreCanonicalHud() {
   if (showExistingHud()) pendingHudRestore = false;
@@ -258,13 +261,15 @@ function initializeApplication() {
     const dispatchShortcut = (id) => {
       if (id.startsWith('teleprompter.')) return teleprompterWindow.handleShortcut(id);
       BrowserWindow.getAllWindows().forEach((win) => win.webContents.send('preferences:shortcut', id));
+      return true;
     };
     externalShortcutHandler = (id) => {
       if (!shortcutReady) {
         pendingExternalShortcuts.push(id);
-        return;
+        return false;
       }
-      if (preferencesStore.read().shortcuts[id]?.scope === 'global') dispatchShortcut(id);
+      if (preferencesStore.read().shortcuts[id]?.scope === 'global') return dispatchShortcut(id);
+      return false;
     };
     const preferencesCleanup = registerPreferencesIpc({
       ipcMain: applicationIpc,

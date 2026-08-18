@@ -56,7 +56,10 @@ test('registers only global shortcuts and preserves unrelated GNOME bindings', a
     execFile: fake.execFile,
   });
 
-  assert.equal(await source.register(preferences), true);
+  assert.deepEqual(await source.register(preferences), {
+    gnomeIds: ['hud.startStopRecording', 'teleprompter.nextLine'],
+    fallbackIds: [],
+  });
   const sets = fake.calls.filter(({ args }) => args[0] === 'set');
   const list = sets.find(({ args }) => args[2] === 'custom-keybindings');
   assert.match(list.args[3], /\/user\/custom\//);
@@ -64,6 +67,29 @@ test('registers only global shortcuts and preserves unrelated GNOME bindings', a
   assert.equal(sets.filter(({ args }) => args[2] === 'binding').length, 2);
   assert.ok(sets.some(({ args }) => args[2] === 'binding' && args[3] === "'<Alt><Shift>r'"));
   assert.ok(sets.some(({ args }) => args[2] === 'command' && args[3].includes('beam-shortcut=hud.startStopRecording')));
+});
+
+test('splits mixed accelerators into GNOME-owned and Electron-fallback lists', async () => {
+  const fake = fakeGsettings();
+  const source = createLinuxShortcutSource({
+    app,
+    applicationRoot: '/opt/Beam',
+    platform: 'linux',
+    env,
+    execFile: fake.execFile,
+  });
+
+  const result = await source.register({
+    shortcuts: {
+      'hud.startStopRecording': { keys: 'Alt+Shift+R', scope: 'global' },
+      'editor.playPause': { keys: 'MediaPlayPause', scope: 'global' },
+    },
+  });
+  assert.deepEqual(result, { gnomeIds: ['hud.startStopRecording'], fallbackIds: ['editor.playPause'] });
+  const sets = fake.calls.filter(({ args }) => args[0] === 'set');
+  assert.equal(sets.filter(({ args }) => args[2] === 'binding').length, 1);
+  assert.ok(sets.some(({ args }) => args[2] === 'command' && args[3].includes('beam-shortcut=hud.startStopRecording')));
+  assert.ok(sets.find(({ args }) => args[2] === 'custom-keybindings').args[3].includes('beam-'));
 });
 
 test('disables the dev Electron sandbox when GNOME launches a shortcut', async () => {
@@ -100,7 +126,7 @@ test('cleanup removes only Beam-owned bindings', async () => {
   assert.equal(list.args[3], "['/user/custom/']");
 });
 
-test('falls back when GNOME cannot accept a shortcut', async () => {
+test('reports a GSettings failure instead of claiming GNOME ownership', async () => {
   const fake = fakeGsettings();
   fake.execFile = (file, args, options, callback) => {
     fake.calls.push({ file, args });
@@ -114,5 +140,5 @@ test('falls back when GNOME cannot accept a shortcut', async () => {
     execFile: fake.execFile,
   });
 
-  assert.equal(await source.register(preferences), false);
+  assert.equal(await source.register(preferences), null);
 });

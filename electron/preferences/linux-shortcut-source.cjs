@@ -135,14 +135,14 @@ function createLinuxShortcutSource({
     const entries = Object.entries(preferences.shortcuts)
       .filter(([, entry]) => entry.scope === 'global')
       .map(([id, entry]) => ({ id, path: customPath(id), binding: gnomeAccelerator(entry.keys) }));
-    if (entries.some((entry) => !entry.binding)) return false;
+    const gnomeEntries = entries.filter((entry) => entry.binding);
     try {
       const currentPaths = await readCurrentPaths();
       const paths = [
         ...currentPaths.filter((path) => !path.startsWith(BEAM_ROOT)),
-        ...entries.map((entry) => entry.path),
+        ...gnomeEntries.map((entry) => entry.path),
       ];
-      for (const entry of entries) {
+      for (const entry of gnomeEntries) {
         const schema = `${CUSTOM_SCHEMA}:${entry.path}`;
         await run(execFile, ['set', schema, 'name', gvariantString(`Beam ${entry.id}`)]);
         await run(execFile, [
@@ -154,9 +154,12 @@ function createLinuxShortcutSource({
         await run(execFile, ['set', schema, 'binding', gvariantString(entry.binding)]);
       }
       await setPaths(paths);
-      return true;
+      return {
+        gnomeIds: gnomeEntries.map((entry) => entry.id),
+        fallbackIds: entries.filter((entry) => !entry.binding).map((entry) => entry.id),
+      };
     } catch {
-      return false;
+      return null;
     }
   };
 

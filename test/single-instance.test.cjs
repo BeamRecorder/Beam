@@ -34,7 +34,7 @@ test('a second launch restores the canonical HUD path without reinitializing Bea
   assert.equal(restored, 1);
 });
 
-test('a second launch can forward a shortcut id without restoring the HUD', () => {
+test('a second launch can forward a handled shortcut id without restoring the HUD', () => {
   const app = new EventEmitter();
   const received = [];
   let restored = 0;
@@ -43,11 +43,33 @@ test('a second launch can forward a shortcut id without restoring the HUD', () =
     app,
     initialize: () => {},
     restoreHud: () => (restored += 1),
-    handleShortcut: (id) => received.push(id),
+    handleShortcut: (id) => {
+      received.push(id);
+      return true;
+    },
   });
   app.emit('second-instance', {}, ['beam', '--beam-shortcut=teleprompter.toggleVisibility']);
   assert.deepEqual(received, ['teleprompter.toggleVisibility']);
   assert.equal(restored, 0);
+});
+
+test('a second launch with an unhandled shortcut still restores the HUD', () => {
+  const app = new EventEmitter();
+  const received = [];
+  let restored = 0;
+  app.requestSingleInstanceLock = () => true;
+  initializeSingleInstance({
+    app,
+    initialize: () => {},
+    restoreHud: () => (restored += 1),
+    handleShortcut: (id) => {
+      received.push(id);
+      return false;
+    },
+  });
+  app.emit('second-instance', {}, ['beam', '--beam-shortcut=unknown.id']);
+  assert.deepEqual(received, ['unknown.id']);
+  assert.equal(restored, 1);
 });
 
 test('a shortcut can start the first Beam instance', () => {
