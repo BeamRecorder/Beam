@@ -71,7 +71,14 @@ const accessibleLabel = computed(
 </script>
 
 <template>
-  <Tooltip :content="accessibleLabel" position="bottom" :delay="100" :max-width="300" interactive>
+  <Tooltip
+    class="preview-performance-tooltip"
+    :content="accessibleLabel"
+    position="bottom"
+    :delay="100"
+    :max-width="300"
+    interactive
+  >
     <div class="performance-widget" :class="`is-${overallLevel}`">
       <MiniPerformanceGraph
         class="performance-overview-graph"
@@ -143,6 +150,12 @@ const accessibleLabel = computed(
 </template>
 
 <style scoped>
+.preview-performance-tooltip {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+
 .performance-widget {
   position: relative;
   width: 96px;

@@ -259,7 +259,9 @@ defineExpose({
 <style scoped>
 .popover-container {
   position: relative;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
 }
 
 .popover-container.popover-block {
@@ -268,7 +270,8 @@ defineExpose({
 }
 
 .popover-trigger {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   cursor: pointer;
 }
 
