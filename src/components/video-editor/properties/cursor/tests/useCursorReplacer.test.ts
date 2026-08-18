@@ -75,6 +75,7 @@ describe('useCursorReplacer', () => {
     expect(cursor.packs.value.map((pack) => pack.id)).toEqual([
       'builtin:macos',
       'builtin:bibata-material-noir',
+      'builtin:bibata-material-white',
       'builtin:noir',
       'builtin:noir-white',
       'builtin:moga-dark',

@@ -1355,6 +1355,1361 @@
     }
   },
   {
+    "id": "builtin:bibata-material-white",
+    "name": "Material Bibata White",
+    "source": "builtin",
+    "colorMode": "original",
+    "defaultCursorId": "default",
+    "cursors": [
+      {
+        "id": "alias",
+        "label": "Alias",
+        "url": "/cursorPacks/assets/26d1b14fa9a8faffbed517f72807a0502cbdbb7436b986e30123c84de857ba05.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 37,
+          "y": 24
+        }
+      },
+      {
+        "id": "all-scroll",
+        "label": "All Scroll",
+        "url": "/cursorPacks/assets/18e3ba26ed653a1372d0c666581c0982351809436ec714ad6c7f214c3ae315e9.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 48
+        }
+      },
+      {
+        "id": "arrow",
+        "label": "Arrow",
+        "url": "/cursorPacks/assets/097915420f6523b7abbbb340085c345c5b8164c19304e4f4f055721abba5cc4b.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 20,
+          "y": 6
+        }
+      },
+      {
+        "id": "bd_double_arrow",
+        "label": "Bd Double Arrow",
+        "url": "/cursorPacks/assets/125d6bf0e4aac0312120d69f5afeacaf8377945e11414986af7c6bf92b7a9f7d.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 48
+        }
+      },
+      {
+        "id": "bottom_left_corner",
+        "label": "Bottom Left Corner",
+        "url": "/cursorPacks/assets/8d9d0a9024f253f0ae256055e6c37eca2c69e11b7e123c2e19ea11c7d7c935d0.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 9,
+          "y": 87
+        }
+      },
+      {
+        "id": "bottom_right_corner",
+        "label": "Bottom Right Corner",
+        "url": "/cursorPacks/assets/795df040e672a0bee7f7516208dc3d52073fc1b5b637b846a1aee02235a6efca.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 85,
+          "y": 87
+        }
+      },
+      {
+        "id": "bottom_side",
+        "label": "Bottom Side",
+        "url": "/cursorPacks/assets/b536d3c13cb862a309e3158330b953ac4ad1f6ac520a5e94ec72a7b9f61e0f3e.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 87
+        }
+      },
+      {
+        "id": "bottom_tee",
+        "label": "Bottom Tee",
+        "url": "/cursorPacks/assets/ec153638030b40cfc342b6e99360c4bd6f762a2c1f53c1e8c9e4b187447c3560.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 86
+        }
+      },
+      {
+        "id": "cell",
+        "label": "Cell",
+        "url": "/cursorPacks/assets/8df78bb42da9540a52d361678e2590e53bb9439a33802704f7aeee8a6fcaef9c.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 48
+        }
+      },
+      {
+        "id": "center_ptr",
+        "label": "Center Ptr",
+        "url": "/cursorPacks/assets/f9e33ec8a5e98ee0afffc7bb0d460f6c9daa1f81d10056c2dbb0004957f13cb5.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 47,
+          "y": 6
+        }
+      },
+      {
+        "id": "circle",
+        "label": "Circle",
+        "url": "/cursorPacks/assets/ed57dbf11517359e8b1f83f627812e4b7734113ff784dd4994652f7ec72833c5.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 20,
+          "y": 6
+        }
+      },
+      {
+        "id": "col-resize",
+        "label": "Col Resize",
+        "url": "/cursorPacks/assets/43eb555e33fb86b1fc370643a08895ee5af744683c75904e1279ed0f91c7809f.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 48
+        }
+      },
+      {
+        "id": "context-menu",
+        "label": "Context Menu",
+        "url": "/cursorPacks/assets/cce1b7124469e59f740cd4850aa40b67e41596e1bf3e00edb87d64f3770c13f2.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 21,
+          "y": 6
+        }
+      },
+      {
+        "id": "copy",
+        "label": "Copy",
+        "url": "/cursorPacks/assets/ad44c9f09cb395759f731f45fc661e1f89e328dfae94927f3f7439e432f3183d.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 20,
+          "y": 6
+        }
+      },
+      {
+        "id": "cross",
+        "label": "Cross",
+        "url": "/cursorPacks/assets/3ad1be66d46071d542159bf6b12e40450c1de2804ab0953dfbdc21cd4e106b6d.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 48
+        }
+      },
+      {
+        "id": "cross_reverse",
+        "label": "Cross Reverse",
+        "url": "/cursorPacks/assets/3ad1be66d46071d542159bf6b12e40450c1de2804ab0953dfbdc21cd4e106b6d.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 48
+        }
+      },
+      {
+        "id": "crossed_circle",
+        "label": "Crossed Circle",
+        "url": "/cursorPacks/assets/0be9956af0e27d4ea9cb9ac74148958dcacac938f89904476ff25870e40958ef.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 48
+        }
+      },
+      {
+        "id": "crosshair",
+        "label": "Crosshair",
+        "url": "/cursorPacks/assets/54ec5273554553549b046ed8dbe344d52e99af98c7160db8a65e4f33fc234b27.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 48
+        }
+      },
+      {
+        "id": "default",
+        "label": "Default",
+        "url": "/cursorPacks/assets/097915420f6523b7abbbb340085c345c5b8164c19304e4f4f055721abba5cc4b.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 20,
+          "y": 6
+        }
+      },
+      {
+        "id": "diamond_cross",
+        "label": "Diamond Cross",
+        "url": "/cursorPacks/assets/3ad1be66d46071d542159bf6b12e40450c1de2804ab0953dfbdc21cd4e106b6d.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 48
+        }
+      },
+      {
+        "id": "dnd_no_drop",
+        "label": "Dnd No Drop",
+        "url": "/cursorPacks/assets/28d108f143a3325b837519ed0228119a8abd53c464b4fd5b0be96a8efc711afe.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 37,
+          "y": 24
+        }
+      },
+      {
+        "id": "dnd-ask",
+        "label": "Dnd Ask",
+        "url": "/cursorPacks/assets/ee7c01e77a56d473abfe604c948013640e800898f64afc50d44922bc23ef9122.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 37,
+          "y": 24
+        }
+      },
+      {
+        "id": "dnd-copy",
+        "label": "Dnd Copy",
+        "url": "/cursorPacks/assets/53c181f7df52514e04f2c84859777c34a056fe0bba4fc1b75dd2c9e05ff9fa5e.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 37,
+          "y": 24
+        }
+      },
+      {
+        "id": "dnd-link",
+        "label": "Dnd Link",
+        "url": "/cursorPacks/assets/26d1b14fa9a8faffbed517f72807a0502cbdbb7436b986e30123c84de857ba05.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 37,
+          "y": 24
+        }
+      },
+      {
+        "id": "dnd-move",
+        "label": "Dnd Move",
+        "url": "/cursorPacks/assets/7c2c454ab947a1520d8d3f01d5ddfb3e36bb0cb1e05229f729df179101ca16a7.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 24
+        }
+      },
+      {
+        "id": "dotbox",
+        "label": "Dotbox",
+        "url": "/cursorPacks/assets/521c80c1adc5528be293fb2048d40630f685bf6ba1de82fa2fc49314639a4b67.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 48
+        }
+      },
+      {
+        "id": "e-resize",
+        "label": "E Resize",
+        "url": "/cursorPacks/assets/e0a238a74ae4c9c9972e781b8194c5d4684b2033c1c4016edcea7eb75e0c4c6b.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 87,
+          "y": 48
+        }
+      },
+      {
+        "id": "ew-resize",
+        "label": "Ew Resize",
+        "url": "/cursorPacks/assets/43eb555e33fb86b1fc370643a08895ee5af744683c75904e1279ed0f91c7809f.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 48
+        }
+      },
+      {
+        "id": "fd_double_arrow",
+        "label": "Fd Double Arrow",
+        "url": "/cursorPacks/assets/f7112a6b23b633ffdd4a505e5c1895b634f4fb29f55dc96dc529191e6777c5aa.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 48
+        }
+      },
+      {
+        "id": "fleur",
+        "label": "Fleur",
+        "url": "/cursorPacks/assets/18e3ba26ed653a1372d0c666581c0982351809436ec714ad6c7f214c3ae315e9.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 48
+        }
+      },
+      {
+        "id": "grab",
+        "label": "Grab",
+        "url": "/cursorPacks/assets/c21128ab2ca13684ed6dbf5b66bd44ce3253f645c4c8a2681c49dbee07dc78ec.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 54,
+          "y": 29
+        }
+      },
+      {
+        "id": "grabbing",
+        "label": "Grabbing",
+        "url": "/cursorPacks/assets/7c2c454ab947a1520d8d3f01d5ddfb3e36bb0cb1e05229f729df179101ca16a7.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 24
+        }
+      },
+      {
+        "id": "hand1",
+        "label": "Hand1",
+        "url": "/cursorPacks/assets/c21128ab2ca13684ed6dbf5b66bd44ce3253f645c4c8a2681c49dbee07dc78ec.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 54,
+          "y": 29
+        }
+      },
+      {
+        "id": "hand2",
+        "label": "Hand2",
+        "url": "/cursorPacks/assets/5ab7e8c531c6742e7099c0817a1885c6f9aa4b0962b07f930783dff9b6df190d.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 42,
+          "y": 6
+        }
+      },
+      {
+        "id": "help",
+        "label": "Help",
+        "url": "/cursorPacks/assets/7069d3778915fa5df3ef418098dc12829d08665bac47c417aeb0993aa3f3c202.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 15,
+          "y": 32
+        }
+      },
+      {
+        "id": "left_ptr",
+        "label": "Left Ptr",
+        "url": "/cursorPacks/assets/097915420f6523b7abbbb340085c345c5b8164c19304e4f4f055721abba5cc4b.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 20,
+          "y": 6
+        }
+      },
+      {
+        "id": "left_side",
+        "label": "Left Side",
+        "url": "/cursorPacks/assets/1d02da68e7d602fd04d93e7c3428c33a71c67c50dadc1a37ac13550b14635d8c.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 7,
+          "y": 48
+        }
+      },
+      {
+        "id": "left_tee",
+        "label": "Left Tee",
+        "url": "/cursorPacks/assets/ed71875bd829601c22c242a00c2cfd66f2ca684d04ec86cfdb6ba397fbdbc339.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 86,
+          "y": 48
+        }
+      },
+      {
+        "id": "link",
+        "label": "Link",
+        "url": "/cursorPacks/assets/522eba39cc2c78d2e15c64db519f3d137ebbdc5eab7dcce0bbae6180b22f4c4a.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 20,
+          "y": 6
+        }
+      },
+      {
+        "id": "ll_angle",
+        "label": "Ll Angle",
+        "url": "/cursorPacks/assets/1bb9eb9390d2a0e1820b53ef87690f76e39bf67e70e3e4793fc588c86672e2f3.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 11,
+          "y": 83
+        }
+      },
+      {
+        "id": "lr_angle",
+        "label": "Lr Angle",
+        "url": "/cursorPacks/assets/1f74402fd98c5b7c7a605a194b4236985ec7ab193e4f5ebdc5c59ca098f70de4.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 84,
+          "y": 86
+        }
+      },
+      {
+        "id": "move",
+        "label": "Move",
+        "url": "/cursorPacks/assets/18e3ba26ed653a1372d0c666581c0982351809436ec714ad6c7f214c3ae315e9.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 48
+        }
+      },
+      {
+        "id": "n-resize",
+        "label": "N Resize",
+        "url": "/cursorPacks/assets/1299af9720bfab5de68b18419198be5ae272d0229b48d4272f6207c7e1a6b04d.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 8
+        }
+      },
+      {
+        "id": "ne-resize",
+        "label": "Ne Resize",
+        "url": "/cursorPacks/assets/15bc21e235fbc0c15fd8fbb7fff95d248f5dad5a40bd059c3489479c00eab835.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 85,
+          "y": 9
+        }
+      },
+      {
+        "id": "nesw-resize",
+        "label": "Nesw Resize",
+        "url": "/cursorPacks/assets/f7112a6b23b633ffdd4a505e5c1895b634f4fb29f55dc96dc529191e6777c5aa.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 48
+        }
+      },
+      {
+        "id": "no-drop",
+        "label": "No Drop",
+        "url": "/cursorPacks/assets/28d108f143a3325b837519ed0228119a8abd53c464b4fd5b0be96a8efc711afe.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 37,
+          "y": 24
+        }
+      },
+      {
+        "id": "not-allowed",
+        "label": "Not Allowed",
+        "url": "/cursorPacks/assets/0be9956af0e27d4ea9cb9ac74148958dcacac938f89904476ff25870e40958ef.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 48
+        }
+      },
+      {
+        "id": "ns-resize",
+        "label": "Ns Resize",
+        "url": "/cursorPacks/assets/d96c208688ed4482968e41804b88ff92f413a6d559f8175731743bb281c2959d.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 48
+        }
+      },
+      {
+        "id": "nw-resize",
+        "label": "Nw Resize",
+        "url": "/cursorPacks/assets/d1291823c4397993ede2cee6fbf1c819d03a28d74a118b3e6a34677e7b002e4c.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 10,
+          "y": 9
+        }
+      },
+      {
+        "id": "nwse-resize",
+        "label": "Nwse Resize",
+        "url": "/cursorPacks/assets/125d6bf0e4aac0312120d69f5afeacaf8377945e11414986af7c6bf92b7a9f7d.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 48
+        }
+      },
+      {
+        "id": "pencil",
+        "label": "Pencil",
+        "url": "/cursorPacks/assets/1972c348d4367fab72c98b5c63874ea8df405b4614db8505efb485ae6d0d6d64.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 17,
+          "y": 79
+        }
+      },
+      {
+        "id": "plus",
+        "label": "Plus",
+        "url": "/cursorPacks/assets/8df78bb42da9540a52d361678e2590e53bb9439a33802704f7aeee8a6fcaef9c.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 48
+        }
+      },
+      {
+        "id": "pointer",
+        "label": "Pointer",
+        "url": "/cursorPacks/assets/5ab7e8c531c6742e7099c0817a1885c6f9aa4b0962b07f930783dff9b6df190d.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 42,
+          "y": 6
+        }
+      },
+      {
+        "id": "pointer-move",
+        "label": "Pointer Move",
+        "url": "/cursorPacks/assets/79b16cca528d18d17530c9346699d1149adfc32324f348eaf9682c0515860c2c.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 20,
+          "y": 6
+        }
+      },
+      {
+        "id": "question_arrow",
+        "label": "Question Arrow",
+        "url": "/cursorPacks/assets/7069d3778915fa5df3ef418098dc12829d08665bac47c417aeb0993aa3f3c202.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 15,
+          "y": 32
+        }
+      },
+      {
+        "id": "right_ptr",
+        "label": "Right Ptr",
+        "url": "/cursorPacks/assets/6e9f7b2a85926f3232169852e431b81d5db0acf6389d97be3deaab3414d5a938.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 76,
+          "y": 6
+        }
+      },
+      {
+        "id": "right_side",
+        "label": "Right Side",
+        "url": "/cursorPacks/assets/e0a238a74ae4c9c9972e781b8194c5d4684b2033c1c4016edcea7eb75e0c4c6b.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 87,
+          "y": 48
+        }
+      },
+      {
+        "id": "right_tee",
+        "label": "Right Tee",
+        "url": "/cursorPacks/assets/25450f5dc1bbf7a5c4e20456ceb4ec8d5adba2e46e3b40a7fe4aca969b006d30.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 10,
+          "y": 48
+        }
+      },
+      {
+        "id": "row-resize",
+        "label": "Row Resize",
+        "url": "/cursorPacks/assets/d96c208688ed4482968e41804b88ff92f413a6d559f8175731743bb281c2959d.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 48
+        }
+      },
+      {
+        "id": "s-resize",
+        "label": "S Resize",
+        "url": "/cursorPacks/assets/b536d3c13cb862a309e3158330b953ac4ad1f6ac520a5e94ec72a7b9f61e0f3e.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 87
+        }
+      },
+      {
+        "id": "sb_down_arrow",
+        "label": "Sb Down Arrow",
+        "url": "/cursorPacks/assets/a80d22519699d92fc462338156dc8427cbb2793f35ba6a7a0d0f56d2e5bebb23.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 83
+        }
+      },
+      {
+        "id": "sb_h_double_arrow",
+        "label": "Sb H Double Arrow",
+        "url": "/cursorPacks/assets/43eb555e33fb86b1fc370643a08895ee5af744683c75904e1279ed0f91c7809f.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 48
+        }
+      },
+      {
+        "id": "sb_left_arrow",
+        "label": "Sb Left Arrow",
+        "url": "/cursorPacks/assets/723688e2224ad47e3c6a72eb2157f8839afa7d607ab5951abf5982fb8e581dde.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 12,
+          "y": 48
+        }
+      },
+      {
+        "id": "sb_right_arrow",
+        "label": "Sb Right Arrow",
+        "url": "/cursorPacks/assets/2afee68b68f76394ffd53de77ba597a00d8597bc569b334bb3625a74ee6132b8.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 83,
+          "y": 48
+        }
+      },
+      {
+        "id": "sb_up_arrow",
+        "label": "Sb Up Arrow",
+        "url": "/cursorPacks/assets/4e073207fb0422d3607bb8b9252ac0319937fea574b9b0d3ddcaef642acd2a3a.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 12
+        }
+      },
+      {
+        "id": "sb_v_double_arrow",
+        "label": "Sb V Double Arrow",
+        "url": "/cursorPacks/assets/d96c208688ed4482968e41804b88ff92f413a6d559f8175731743bb281c2959d.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 48
+        }
+      },
+      {
+        "id": "se-resize",
+        "label": "Se Resize",
+        "url": "/cursorPacks/assets/795df040e672a0bee7f7516208dc3d52073fc1b5b637b846a1aee02235a6efca.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 85,
+          "y": 87
+        }
+      },
+      {
+        "id": "sw-resize",
+        "label": "Sw Resize",
+        "url": "/cursorPacks/assets/8d9d0a9024f253f0ae256055e6c37eca2c69e11b7e123c2e19ea11c7d7c935d0.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 9,
+          "y": 87
+        }
+      },
+      {
+        "id": "tcross",
+        "label": "Tcross",
+        "url": "/cursorPacks/assets/cb63846809e253c989c99aa3ed6272f61d7eb8dda008830c02abf80d1bb99db7.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 48
+        }
+      },
+      {
+        "id": "text",
+        "label": "Text",
+        "url": "/cursorPacks/assets/6b9b9e57e45870d6d4bd5e3e098f9d406b3df71514261e5c96f91ed6120a2d1f.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 48
+        }
+      },
+      {
+        "id": "top_left_arrow",
+        "label": "Top Left Arrow",
+        "url": "/cursorPacks/assets/097915420f6523b7abbbb340085c345c5b8164c19304e4f4f055721abba5cc4b.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 20,
+          "y": 6
+        }
+      },
+      {
+        "id": "top_left_corner",
+        "label": "Top Left Corner",
+        "url": "/cursorPacks/assets/d1291823c4397993ede2cee6fbf1c819d03a28d74a118b3e6a34677e7b002e4c.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 10,
+          "y": 9
+        }
+      },
+      {
+        "id": "top_right_corner",
+        "label": "Top Right Corner",
+        "url": "/cursorPacks/assets/15bc21e235fbc0c15fd8fbb7fff95d248f5dad5a40bd059c3489479c00eab835.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 85,
+          "y": 9
+        }
+      },
+      {
+        "id": "top_side",
+        "label": "Top Side",
+        "url": "/cursorPacks/assets/1299af9720bfab5de68b18419198be5ae272d0229b48d4272f6207c7e1a6b04d.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 8
+        }
+      },
+      {
+        "id": "top_tee",
+        "label": "Top Tee",
+        "url": "/cursorPacks/assets/20c1604c1fd4d1c68844e09d4a66f43d9a768b27c7ca4bebc28f23956e988b3f.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 10
+        }
+      },
+      {
+        "id": "ul_angle",
+        "label": "Ul Angle",
+        "url": "/cursorPacks/assets/c1fe131621db2574950ce6013cbcd768fa9c4b262b9d3d94a0817256e25897ec.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 12,
+          "y": 12
+        }
+      },
+      {
+        "id": "ur_angle",
+        "label": "Ur Angle",
+        "url": "/cursorPacks/assets/7a205983895d8d426ec1eab54ba5fc3b05ae36a97a2fcf9db3e4aaa3f98136ee.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 84,
+          "y": 12
+        }
+      },
+      {
+        "id": "vertical-text",
+        "label": "Vertical Text",
+        "url": "/cursorPacks/assets/a6c91dd4f42c1c70e601e13ab41ec0482e91cfde4982ac0468da7ee6e2d2474e.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 48
+        }
+      },
+      {
+        "id": "w-resize",
+        "label": "W Resize",
+        "url": "/cursorPacks/assets/1d02da68e7d602fd04d93e7c3428c33a71c67c50dadc1a37ac13550b14635d8c.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 7,
+          "y": 48
+        }
+      },
+      {
+        "id": "wayland-cursor",
+        "label": "Wayland Cursor",
+        "url": "/cursorPacks/assets/66f570de930642a69946438ecca43d2975337b29cb8577d3bd6eb9dbae22a538.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 48
+        }
+      },
+      {
+        "id": "X_cursor",
+        "label": "X Cursor",
+        "url": "/cursorPacks/assets/d22cea8b96c8a34d034e5913d08787fb855eea0a8bb6f6ed65b6bd7d865b18fc.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 48
+        }
+      },
+      {
+        "id": "xterm",
+        "label": "Xterm",
+        "url": "/cursorPacks/assets/6b9b9e57e45870d6d4bd5e3e098f9d406b3df71514261e5c96f91ed6120a2d1f.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 48,
+          "y": 48
+        }
+      },
+      {
+        "id": "zoom-in",
+        "label": "Zoom In",
+        "url": "/cursorPacks/assets/3287407629bbc5d1c4d7943c37e560a0353a35464d650ebca585ec30bf0e7993.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 43,
+          "y": 43
+        }
+      },
+      {
+        "id": "zoom-out",
+        "label": "Zoom Out",
+        "url": "/cursorPacks/assets/8e6a7c87593ad616e396c4bce02b14ac049a33cf9dd6d63e20881974beea2f28.png",
+        "format": "png",
+        "intrinsicSize": {
+          "width": 96,
+          "height": 96
+        },
+        "nominalSize": 96,
+        "hotspot": {
+          "x": 43,
+          "y": 43
+        }
+      }
+    ],
+    "automaticMap": {
+      "alias": "alias",
+      "all-scroll": "all-scroll",
+      "arrow": "arrow",
+      "bd_double_arrow": "bd_double_arrow",
+      "bottom_left_corner": "bottom_left_corner",
+      "bottom_right_corner": "bottom_right_corner",
+      "bottom_side": "bottom_side",
+      "bottom_tee": "bottom_tee",
+      "cell": "cell",
+      "center_ptr": "center_ptr",
+      "circle": "circle",
+      "col-resize": "col-resize",
+      "context-menu": "context-menu",
+      "copy": "copy",
+      "cross": "cross",
+      "cross_reverse": "cross_reverse",
+      "crossed_circle": "crossed_circle",
+      "crosshair": "crosshair",
+      "default": "default",
+      "diamond_cross": "diamond_cross",
+      "dnd_no_drop": "dnd_no_drop",
+      "dnd-ask": "dnd-ask",
+      "dnd-copy": "dnd-copy",
+      "dnd-link": "dnd-link",
+      "dnd-move": "dnd-move",
+      "dotbox": "dotbox",
+      "e-resize": "e-resize",
+      "ew-resize": "ew-resize",
+      "fd_double_arrow": "fd_double_arrow",
+      "fleur": "fleur",
+      "grab": "grab",
+      "grabbing": "grabbing",
+      "hand1": "hand1",
+      "hand2": "hand2",
+      "help": "help",
+      "left_ptr": "left_ptr",
+      "left_side": "left_side",
+      "left_tee": "left_tee",
+      "link": "link",
+      "ll_angle": "ll_angle",
+      "lr_angle": "lr_angle",
+      "move": "move",
+      "n-resize": "n-resize",
+      "ne-resize": "ne-resize",
+      "nesw-resize": "nesw-resize",
+      "no-drop": "no-drop",
+      "not-allowed": "not-allowed",
+      "ns-resize": "ns-resize",
+      "nw-resize": "nw-resize",
+      "nwse-resize": "nwse-resize",
+      "pencil": "pencil",
+      "plus": "plus",
+      "pointer": "pointer",
+      "pointer-move": "pointer-move",
+      "question_arrow": "question_arrow",
+      "right_ptr": "right_ptr",
+      "right_side": "right_side",
+      "right_tee": "right_tee",
+      "row-resize": "row-resize",
+      "s-resize": "s-resize",
+      "sb_down_arrow": "sb_down_arrow",
+      "sb_h_double_arrow": "sb_h_double_arrow",
+      "sb_left_arrow": "sb_left_arrow",
+      "sb_right_arrow": "sb_right_arrow",
+      "sb_up_arrow": "sb_up_arrow",
+      "sb_v_double_arrow": "sb_v_double_arrow",
+      "se-resize": "se-resize",
+      "sw-resize": "sw-resize",
+      "tcross": "tcross",
+      "text": "text",
+      "top_left_arrow": "top_left_arrow",
+      "top_left_corner": "top_left_corner",
+      "top_right_corner": "top_right_corner",
+      "top_side": "top_side",
+      "top_tee": "top_tee",
+      "ul_angle": "ul_angle",
+      "ur_angle": "ur_angle",
+      "vertical-text": "vertical-text",
+      "w-resize": "w-resize",
+      "wayland-cursor": "wayland-cursor",
+      "X_cursor": "X_cursor",
+      "xterm": "xterm",
+      "zoom-in": "zoom-in",
+      "zoom-out": "zoom-out"
+    }
+  },
+  {
     "id": "builtin:noir",
     "name": "Noir",
     "source": "builtin",

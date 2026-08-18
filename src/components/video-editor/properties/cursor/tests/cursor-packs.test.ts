@@ -8,6 +8,7 @@ import { MACOS_CURSOR_PACK, orderedCursorPacks, resolveCursorAsset } from '../cu
 const BUILTIN_PACKS = [
   ['builtin:macos', 'macOS'],
   ['builtin:bibata-material-noir', 'Material Bibata Noir'],
+  ['builtin:bibata-material-white', 'Material Bibata White'],
   ['builtin:noir', 'Noir'],
   ['builtin:noir-white', 'Noir White'],
   ['builtin:moga-dark', 'Moga Dark'],
@@ -38,7 +39,7 @@ const bundledAssetPath = (url: string) =>
   resolve(process.cwd(), 'public', new URL(url, 'http://beam.test').pathname.slice(1));
 
 describe('cursor pack catalog', () => {
-  it('ships the five non-macOS builtins while keeping macOS first and default', () => {
+  it('ships the six non-macOS builtins while keeping macOS first and default', () => {
     const packs = orderedCursorPacks([]);
 
     expect(packs.map((pack) => [pack.id, pack.name])).toEqual(BUILTIN_PACKS);
@@ -65,7 +66,7 @@ describe('cursor pack catalog', () => {
   it('resolves every non-macOS builtin asset as a bundled PNG URL', () => {
     const builtinPacks = orderedCursorPacks([]).slice(1);
 
-    expect(builtinPacks).toHaveLength(5);
+    expect(builtinPacks).toHaveLength(6);
     for (const pack of builtinPacks) {
       expect(pack.source).toBe('builtin');
       expect(pack.colorMode).toBe('original');
