@@ -1,6 +1,10 @@
 import type { CompositionSnapshot } from '../export-types';
 import { isBlurClip, type BlurClip, type CaptionClip, type VisualClip } from '~/media/shared/composition-types';
-import { drawWebcamOverlay, webcamSettingsForAppearance } from '../../video-editor/composition/webcam/webcam-zoom';
+import {
+  drawWebcamOverlay,
+  webcamReactsToZoom,
+  webcamSettingsForAppearance,
+} from '../../video-editor/composition/webcam/webcam-zoom';
 import { drawDecoratedMedia } from '../../video-editor/composition/appearance/render-decorated-media';
 import { createCursorMotionPlayer } from '../../video-editor/composables/cursor-motion';
 import { cursorStateAt } from '../../video-editor/composables/cursorPlayback';
@@ -22,7 +26,6 @@ import { drawBeamWatermark, WATERMARK_LOGO_KEY } from '../../video-editor/canvas
 import { drawWithClipTransition } from '../../video-editor/composition/transitions/render-transition';
 import { EMPTY_CLIP_TRANSITIONS, resolveCanvasTransitionState } from '~/media/shared/clip-transitions';
 import { drawCanvasTransitionFrame } from '../../video-editor/composition/transitions/render-canvas-transition';
-import { isSplitCameraLayout } from '~/media/shared/camera-layout-types';
 import { mapSourcePointToScreen, resolveScreenRenderGeometry } from '../../video-editor/composition/camera-layout';
 import { resolveVisualClipFraming } from '../../video-editor/composition/visual-framing';
 import { OUTPUT_FALLBACK_COLOR } from '../../video-editor/canvas/output-canvas';
@@ -153,7 +156,7 @@ function drawWebcamClip(
     scale,
     {
       ...webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY),
-      reactToZoom: !isSplitCameraLayout(clip.cameraLayoutPreset ?? 'custom'),
+      reactToZoom: webcamReactsToZoom(clip),
     },
     clip.transform,
     clip.crop,

@@ -1,4 +1,4 @@
-import { ref, watch } from 'vue';
+import { ref, shallowRef, watch } from 'vue';
 import type { ProjectEditorData } from '~/api/types/capture-session';
 import { buttonEventsBetween, cursorStateAt } from '../../composables/cursorPlayback';
 import { useCursorReplacer } from '../../properties/cursor/useCursorReplacer';
@@ -6,10 +6,17 @@ import { ZOOM_DEPTH_SCALES } from '../../zoom/zoom-types';
 import { cursorClickSpringScale } from '../../composables/cursor-click-spring';
 import { cursorShadowOffset } from '../../properties/cursor/cursor-shadow';
 import type { ShadowDirection } from '../../properties/cursor/shadow-types';
-import { cursorAssetAt, cursorGeometryAtSize, cursorPositionAt } from '../../properties/cursor/cursor-rendering';
+import {
+  cursorAssetAt,
+  cursorCanvasBounds,
+  cursorGeometryAtSize,
+  cursorPositionAt,
+  type CursorCanvasBounds,
+} from '../../properties/cursor/cursor-rendering';
 import type { CursorPackDescriptor, CursorSelection } from '../../../../api/types/cursor-pack';
 import { MACOS_CURSOR_PACK } from '../../properties/cursor/cursor-packs';
 import type { VisualClip } from '~/media/shared/composition-types';
+import { CURSOR_SIZE_MAX } from '../../properties/cursor/cursor-size';
 import { createCursorMotionPlayer, motionBlurTrail } from '../../composables/cursor-motion';
 import {
   effectButtonForRecordedButton,
@@ -54,6 +61,7 @@ export const getRippleStyleColor = (hex: string, alpha: number) => {
 export function useCursorOverlay(options: UseCursorOverlayOptions) {
   const { getCursorImage } = useCursorReplacer();
   const customCursorImage = ref<HTMLImageElement | null>(null);
+  const cursorBounds = shallowRef<CursorCanvasBounds | null>(null);
   let motionPlayer: ReturnType<typeof createCursorMotionPlayer> | null = null;
   let motionPlayerEvents: ProjectEditorData['cursor']['events'] | null = null;
   let motionPlayerKey = '';
@@ -62,6 +70,23 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
   let sampledMotion: ReturnType<ReturnType<typeof createCursorMotionPlayer>['sample']> = null;
   let imageRequestId = 0;
   const maxZoomScale = Math.max(...Object.values(ZOOM_DEPTH_SCALES));
+
+  const updateCursorBounds = (bounds: CursorCanvasBounds | null) => {
+    const current = cursorBounds.value;
+    if (
+      current === bounds ||
+      (current &&
+        bounds &&
+        current.x === bounds.x &&
+        current.y === bounds.y &&
+        current.width === bounds.width &&
+        current.height === bounds.height &&
+        current.hotspot.x === bounds.hotspot.x &&
+        current.hotspot.y === bounds.hotspot.y)
+    )
+      return;
+    cursorBounds.value = bounds;
+  };
 
   const cursorTime = () => {
     const timelineTime = options.currentTime();
@@ -78,7 +103,6 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
         options.cursorSelection().mode,
         options.cursorSelection().cursorId,
         cursorTime(),
-        options.cursorSize(),
         options.cursorColor(),
         options.deviceScale(),
       ] as const,
@@ -93,7 +117,7 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
           ? options.cursorSelection()
           : { packId: MACOS_CURSOR_PACK.id, mode: 'automatic' as const, cursorId: null };
         const asset = cursorAssetAt(pack, selection, state);
-        const geometry = cursorGeometryAtSize(asset, options.cursorSize() * maxZoomScale * options.deviceScale());
+        const geometry = cursorGeometryAtSize(asset, CURSOR_SIZE_MAX * maxZoomScale * options.deviceScale());
         const image = await getCursorImage(pack, asset, geometry.width, geometry.height, options.cursorColor());
         if (requestId !== imageRequestId) return;
         customCursorImage.value = image;
@@ -190,12 +214,16 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
   ) => {
     const cursorData = options.editorData()?.cursor;
     if (!cursorData?.available) {
+      updateCursorBounds(null);
       if (options.isScreenEnabled() && cursorData && !cursorData.available)
         warning(ctx, 'Cursor data missing', logicalWidth);
       return;
     }
     if (!options.cursorPack()) warning(ctx, 'Cursor pack unavailable — import it again', logicalWidth);
-    if (!(videoWidth > 0) || !(videoHeight > 0)) return;
+    if (!(videoWidth > 0) || !(videoHeight > 0)) {
+      updateCursorBounds(null);
+      return;
+    }
     const time = cursorTime();
     const state = cursorStateAt(cursorData.events, time);
     const { player, motion: motionState } = motionStateAt(cursorData.events, time, videoWidth, videoHeight);
@@ -222,8 +250,10 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
         ctx.stroke();
       }
       const image = customCursorImage.value;
-      if (!state?.visible || !image?.complete || image.naturalWidth <= 0) return;
-      if (!motionState) return;
+      if (!state?.visible || !image?.complete || image.naturalWidth <= 0 || !motionState) {
+        updateCursorBounds(null);
+        return;
+      }
       const size = options.cursorSize() * previewScale;
       const pack = options.cursorPack() ?? MACOS_CURSOR_PACK;
       const selection = options.cursorPack()
@@ -236,6 +266,8 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
       const age = click ? Math.max(0, time - click.sessionNs / 1_000_000_000) : Infinity;
       const spring = click ? settingsForButton(click.button) : null;
       const scale = cursorClickSpringScale(age, Boolean(spring?.springEnabled), spring?.springIntensity ?? 0);
+      const cursorPosition = positionAt(motionState, videoWindow, videoWidth, videoHeight);
+      updateCursorBounds(cursorCanvasBounds(cursorPosition, geometry, videoWindow, scale));
       const trail = motionBlurTrail(
         { x: motionState.x, y: motionState.y },
         { x: motionState.previousX, y: motionState.previousY },
@@ -286,5 +318,11 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
     };
   };
 
-  return { customCursorImage, cursorPositionForKeyboardCaption, updateAndDrawRipplesAndCursor };
+  return {
+    cursorBounds,
+    customCursorImage,
+    clearCursorBounds: () => updateCursorBounds(null),
+    cursorPositionForKeyboardCaption,
+    updateAndDrawRipplesAndCursor,
+  };
 }

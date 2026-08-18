@@ -54,6 +54,7 @@ const props = defineProps<{
     cameraFramingPreset?: CameraFramingPreset;
     cameraSplitRatio?: number;
     cameraSplitPadding?: number;
+    reactToZoom?: boolean;
     hasLinkedScreen?: boolean;
   } | null;
 }>();
@@ -87,6 +88,7 @@ const emit = defineEmits<{
   (e: 'update:cameraFraming', preset: Exclude<CameraFramingPreset, 'custom'>): void;
   (e: 'update:cameraSplitRatio', ratio: number): void;
   (e: 'update:cameraSplitPadding', padding: number): void;
+  (e: 'update:reactToZoom', enabled: boolean): void;
   (e: 'reset:clipTransform'): void;
   (e: 'unlink'): void;
   (e: 'delete'): void;
@@ -232,11 +234,13 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
         :has-linked-screen="selectedClip.hasLinkedScreen ?? false"
         :split-ratio="selectedClip.cameraSplitRatio ?? 0.5"
         :split-padding="selectedClip.cameraSplitPadding ?? 0"
+        :react-to-zoom="selectedClip.reactToZoom ?? true"
         :supports-split-layouts="selectedClip.kind === 'webcam'"
         @update:layout="emit('update:cameraLayout', $event)"
         @update:framing="emit('update:cameraFraming', $event)"
         @update:split-ratio="emit('update:cameraSplitRatio', $event)"
         @update:split-padding="emit('update:cameraSplitPadding', $event)"
+        @update:react-to-zoom="emit('update:reactToZoom', $event)"
       />
       <Divider v-if="['screen', 'video', 'image', 'webcam'].includes(selectedClip.kind)" spacing="xs" />
 

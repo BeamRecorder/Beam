@@ -225,9 +225,14 @@ describe('ProjectPicker', () => {
     expect(refreshBtn.classes()).not.toContain('is-success');
 
     await refreshBtn.trigger('click');
+    await wrapper.vm.$nextTick();
+    expect(wrapper.get('.projects-viewport').classes()).toContain('is-refreshing');
+
+    await vi.advanceTimersByTimeAsync(350);
     await flushPromises();
     expect(refreshBtn.classes()).toContain('is-success');
     expect(refreshBtn.attributes('aria-label')).toBe('Projects refreshed');
+    expect(wrapper.get('.projects-viewport').classes()).not.toContain('is-refreshing');
 
     // After timer expires, success state resets
     await vi.advanceTimersByTimeAsync(1700);

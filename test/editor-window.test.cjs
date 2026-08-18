@@ -278,7 +278,20 @@ test('restores and persists editor window dimensions via preferencesStore', asyn
     assert.deepEqual(patches.at(-1)?.extras?.editorWindow, {
       width: 1600,
       height: 950,
+      isMaximized: false,
     });
+
+    editor.maximize();
+    editor.emit('maximize');
+    assert.equal(patches.at(-1)?.extras?.editorWindow?.isMaximized, true);
+    assert.equal(patches.at(-1)?.extras?.editorWindow?.width, 1600);
+    assert.equal(patches.at(-1)?.extras?.editorWindow?.height, 950);
+
+    manager.showHud();
+
+    // Reopen editor to verify maximized state is restored
+    manager.open(projectId);
+    assert.ok(calls.some((call) => call[0] === 'maximize'));
   } finally {
     Module._load = originalLoad;
   }

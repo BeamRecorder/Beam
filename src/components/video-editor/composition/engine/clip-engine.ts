@@ -87,6 +87,7 @@ export const createComposition = (
                   ? {
                       cameraSplitRatio: clip.cameraSplitRatio ?? 0.5,
                       cameraSplitPadding: clip.cameraSplitPadding ?? 0,
+                      reactToZoom: clip.reactToZoom ?? !(clip.cameraLayoutPreset ?? 'custom').startsWith('split-'),
                     }
                   : {}),
               }
@@ -324,6 +325,17 @@ export function setCameraFraming(
   return updateClip(composition, clipId, (clip) => {
     if (!isVisualClip(clip)) throw new CompositionEngineError('Only visual clips have framing presets.');
     return { ...clip, cameraFramingPreset: preset, crop: undefined };
+  });
+}
+
+export function setWebcamReactToZoom(
+  composition: ClipComposition,
+  clipId: string,
+  reactToZoom: boolean,
+): ClipComposition {
+  return updateClip(composition, clipId, (clip) => {
+    if (clip.kind !== 'webcam') throw new CompositionEngineError('Only webcam clips can react to zoom.');
+    return { ...clip, reactToZoom };
   });
 }
 

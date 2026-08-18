@@ -1,4 +1,8 @@
 {
+  "CameraLayoutPanel": {
+    "reactToZoom": "ज़ूम पर प्रतिक्रिया दें",
+    "reactToZoomDescription": "वेबकैम को स्थिर रखते हुए उसका आकार कैनवास के ज़ूम के अनुसार समायोजित करें।"
+  },
   "ShadowDirectionGroup": {
     "shadowDirection": "छाया की दिशा",
     "around": "चारों ओर",

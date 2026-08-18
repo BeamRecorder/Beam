@@ -55,6 +55,7 @@ const visualDefaults = (kind: VisualClip['kind'], value: unknown): VisualClipDef
       ? {
           cameraSplitRatio: Math.min(0.8, Math.max(0.2, finite(input.cameraSplitRatio, 0.5))),
           cameraSplitPadding: Math.min(0.08, Math.max(0, finite(input.cameraSplitPadding, 0))),
+          reactToZoom: typeof input.reactToZoom === 'boolean' ? input.reactToZoom : true,
         }
       : {}),
   };
@@ -154,7 +155,11 @@ export const visualClipDefaultProps = (
     cameraLayoutPreset: value.cameraLayoutPreset,
     cameraFramingPreset: value.cameraFramingPreset,
     ...(kind === 'webcam'
-      ? { cameraSplitRatio: value.cameraSplitRatio ?? 0.5, cameraSplitPadding: value.cameraSplitPadding ?? 0 }
+      ? {
+          cameraSplitRatio: value.cameraSplitRatio ?? 0.5,
+          cameraSplitPadding: value.cameraSplitPadding ?? 0,
+          reactToZoom: value.reactToZoom ?? true,
+        }
       : {}),
   };
 };

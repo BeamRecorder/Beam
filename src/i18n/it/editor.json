@@ -1,4 +1,8 @@
 {
+  "CameraLayoutPanel": {
+    "reactToZoom": "Reagisci allo zoom",
+    "reactToZoomDescription": "Mantieni la webcam ancorata adattandone le dimensioni allo zoom della tela."
+  },
   "ShadowDirectionGroup": {
     "shadowDirection": "Direzione ombra",
     "around": "Tutto intorno",

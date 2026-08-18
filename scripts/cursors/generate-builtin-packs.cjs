@@ -39,10 +39,7 @@ function generate() {
   const temporaryOutput = fs.mkdtempSync(path.join(path.dirname(outputRoot), '.cursorPacks-'));
   const assetRoot = path.join(temporaryOutput, 'assets');
   fs.mkdirSync(assetRoot, { recursive: true });
-  fs.copyFileSync(
-    path.join(__dirname, 'THIRD_PARTY_NOTICES.md'),
-    path.join(temporaryOutput, 'THIRD_PARTY_NOTICES.md'),
-  );
+  fs.copyFileSync(path.join(__dirname, 'THIRD_PARTY_NOTICES.md'), path.join(temporaryOutput, 'THIRD_PARTY_NOTICES.md'));
 
   try {
     const library = createCursorPackLibrary(temporaryLibrary);

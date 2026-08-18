@@ -113,12 +113,48 @@ describe('useCursorOverlay', () => {
     expect(getCursorImage).toHaveBeenCalledWith(
       MACOS_CURSOR_PACK,
       MACOS_CURSOR_PACK.cursors.find((cursor) => cursor.id === 'default'),
-      120,
-      120,
+      640,
+      640,
       '#ffffff',
     );
     expect(options.onRenderOnce).toHaveBeenCalled();
     expect(overlay.customCursorImage.value).not.toBeNull();
+  });
+
+  it('keeps the loaded image while cursor size changes, then updates bounds on the next draw', async () => {
+    getCursorImage.mockClear();
+    const image = { complete: true, naturalWidth: 32 } as HTMLImageElement;
+    getCursorImage.mockResolvedValue(image);
+    const cursorSize = ref(24);
+    const options = baseOptions();
+    options.cursorSize = () => cursorSize.value;
+    const overlay = useCursorOverlay(options);
+    await nextTick();
+    await Promise.resolve();
+
+    const draw = () =>
+      overlay.updateAndDrawRipplesAndCursor(
+        createContext(),
+        { dx: 0, dy: 0, dw: 800, dh: 450, focusX: 0, focusY: 0, scale: 1 },
+        1920,
+        1080,
+        800,
+        (drawContent) => drawContent(),
+      );
+    draw();
+    const firstBounds = overlay.cursorBounds.value;
+    expect(firstBounds).not.toBeNull();
+    expect(overlay.customCursorImage.value).toMatchObject({ complete: true, naturalWidth: 32 });
+    expect(getCursorImage).toHaveBeenCalledOnce();
+
+    cursorSize.value = 48;
+    await nextTick();
+    expect(overlay.customCursorImage.value).toMatchObject({ complete: true, naturalWidth: 32 });
+    expect(getCursorImage).toHaveBeenCalledOnce();
+
+    draw();
+    expect(overlay.cursorBounds.value?.width).toBeGreaterThan(firstBounds!.width);
+    expect(overlay.cursorBounds.value?.height).toBeGreaterThan(firstBounds!.height);
   });
 
   it('draws a Beam fallback for custom cursors without a canvas warning', async () => {
@@ -131,8 +167,8 @@ describe('useCursorOverlay', () => {
     expect(getCursorImage).toHaveBeenLastCalledWith(
       MACOS_CURSOR_PACK,
       MACOS_CURSOR_PACK.cursors.find((cursor) => cursor.id === 'default'),
-      120,
-      120,
+      640,
+      640,
       '#ffffff',
     );
     const ctx = createContext();
@@ -185,6 +221,45 @@ describe('useCursorOverlay', () => {
     expect(ctx.arc).not.toHaveBeenCalled();
   });
 
+  it('clears stale canvas bounds when the cursor becomes unavailable or hidden', async () => {
+    getCursorImage.mockResolvedValue({ complete: true, naturalWidth: 32 } as HTMLImageElement);
+    const options = baseOptions();
+    const overlay = useCursorOverlay(options);
+    await nextTick();
+    await Promise.resolve();
+
+    const draw = (data: ReturnType<UseCursorOverlayOptions['editorData']>) => {
+      options.editorData = () => data;
+      overlay.updateAndDrawRipplesAndCursor(
+        createContext(),
+        { dx: 0, dy: 0, dw: 800, dh: 450, focusX: 0, focusY: 0, scale: 1 },
+        1920,
+        1080,
+        800,
+        (drawContent) => drawContent(),
+      );
+    };
+
+    draw(options.editorData());
+    expect(overlay.cursorBounds.value).toEqual(
+      expect.objectContaining({ width: expect.any(Number), height: expect.any(Number) }),
+    );
+
+    draw({ cursor: { available: false, events: [] } } as never);
+    expect(overlay.cursorBounds.value).toBeNull();
+
+    draw({
+      cursor: {
+        available: true,
+        events: [
+          { event: 'shape', sessionNs: 0, cursorId: 'custom:arrow', cursorKind: 'custom', hotspot: { x: 2, y: 3 } },
+          { event: 'move', sessionNs: 0, pixelX: 0, pixelY: 0, normalizedX: 0.25, normalizedY: 0.35, visible: false },
+        ],
+      },
+    } as never);
+    expect(overlay.cursorBounds.value).toBeNull();
+  });
+
   it('clears the image when the cursor replacement fails', async () => {
     getCursorImage.mockRejectedValue(new Error('cursor unavailable'));
     const options = baseOptions();
@@ -229,7 +304,7 @@ describe('useCursorOverlay', () => {
     await nextTick();
     await Promise.resolve();
     const image = overlay.customCursorImage.value;
-    expect(getCursorImage).toHaveBeenLastCalledWith(pack, pack.cursors[0], 240, 120, '#ffffff');
+    expect(getCursorImage).toHaveBeenLastCalledWith(pack, pack.cursors[0], 1280, 640, '#ffffff');
     expect(image).not.toBeNull();
 
     const ctx = createContext();
@@ -273,7 +348,7 @@ describe('useCursorOverlay', () => {
 
     expect(options.currentTime()).toBe(time);
     expect(selection.value).toEqual(unchangedSelection);
-    expect(getCursorImage).toHaveBeenCalledWith(pack, pack.cursors[0], 240, 120, '#ffffff');
+    expect(getCursorImage).toHaveBeenCalledWith(pack, pack.cursors[0], 1280, 640, '#ffffff');
     expect(overlay.customCursorImage.value).not.toBeNull();
     expect(options.onRenderOnce).toHaveBeenCalled();
   });

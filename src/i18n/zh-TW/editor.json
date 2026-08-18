@@ -1,4 +1,8 @@
 {
+  "CameraLayoutPanel": {
+    "reactToZoom": "跟隨縮放",
+    "reactToZoomDescription": "保持攝影機位置固定，同時依照畫布縮放調整大小。"
+  },
   "ShadowDirectionGroup": {
     "shadowDirection": "陰影方向",
     "around": "四周",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cursorAssetAt, cursorGeometryAtSize, cursorPositionAt } from '../cursor-rendering';
+import { cursorAssetAt, cursorCanvasBounds, cursorGeometryAtSize, cursorPositionAt } from '../cursor-rendering';
 import { frameContentRect } from '../../../composition/appearance/frames';
 import type { CursorPackDescriptor, CursorSelection } from '~/api/types/cursor-pack';
 import type { CursorPlaybackState } from '../../../composables/cursorPlayback';
@@ -52,6 +52,26 @@ const renderingPack: CursorPackDescriptor = {
 const automatic: CursorSelection = { packId: renderingPack.id, mode: 'automatic', cursorId: null };
 
 describe('cursor rendering', () => {
+  it('projects a non-square cursor bounds through the camera and click spring scale', () => {
+    const asset = renderingPack.cursors.find((cursor) => cursor.id === 'text')!;
+    const geometry = cursorGeometryAtSize(asset, 40);
+    const result = cursorCanvasBounds(
+      { x: 110, y: 90 },
+      geometry,
+      { dx: 10, dy: 20, dw: 200, dh: 100, focusX: 110, focusY: 70, scale: 2 },
+      1.5,
+    );
+
+    // The hotspot is camera-scaled, while the rendered asset is scaled by both camera and spring.
+    expect(result).toEqual({
+      x: 92,
+      y: 86,
+      width: 60,
+      height: 30,
+      hotspot: { x: 110, y: 110 },
+    });
+  });
+
   it('maps automatic roles, honours valid fixed selections and falls back to the pack default', () => {
     expect(cursorAssetAt(renderingPack, automatic, state(0.5, 0.5, 'textcursor')).id).toBe('text');
     expect(

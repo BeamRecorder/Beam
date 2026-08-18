@@ -13,6 +13,36 @@ export const cursorAssetAt = (
 
 export const cursorGeometryAtSize = cursorGeometry;
 
+export interface CursorCanvasBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  hotspot: { x: number; y: number };
+}
+
+export function cursorCanvasBounds(
+  position: { x: number; y: number },
+  geometry: ReturnType<typeof cursorGeometryAtSize>,
+  camera: { dx: number; dy: number; dw: number; dh: number; focusX: number; focusY: number; scale: number },
+  cursorScale = 1,
+): CursorCanvasBounds {
+  const centerX = camera.dx + camera.dw / 2;
+  const centerY = camera.dy + camera.dh / 2;
+  const scale = camera.scale * cursorScale;
+  const hotspot = {
+    x: centerX + camera.scale * (position.x - camera.focusX),
+    y: centerY + camera.scale * (position.y - camera.focusY),
+  };
+  return {
+    x: hotspot.x - geometry.hotspot.x * scale,
+    y: hotspot.y - geometry.hotspot.y * scale,
+    width: geometry.width * scale,
+    height: geometry.height * scale,
+    hotspot,
+  };
+}
+
 export function cursorPositionAt(
   state: CursorPlaybackState,
   source: { width: number; height: number },

@@ -279,11 +279,22 @@ const handleRefresh = async () => {
   if (refreshSuccessTimeout) clearTimeout(refreshSuccessTimeout);
   try {
     cachedProjects = null;
-    await loadProjects();
+    const [nextProjects] = await Promise.all([
+      capture.listProjects(),
+      new Promise((resolve) => setTimeout(resolve, 350)),
+    ]);
+    cachedProjects = nextProjects;
+    projects.value = [...nextProjects];
+    selectedProjectId.value = projects.value.some((project) => project.id === props.currentProjectId)
+      ? props.currentProjectId
+      : (projects.value[0]?.id ?? null);
+    void generateThumbnailsForProjects(projects.value);
     isRefreshSuccess.value = true;
     refreshSuccessTimeout = setTimeout(() => {
       isRefreshSuccess.value = false;
     }, 1600);
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : String(error);
   } finally {
     isRefreshing.value = false;
   }
@@ -706,7 +717,7 @@ defineExpose({
       v-else
       v-bind="containerProps"
       class="projects-viewport"
-      :class="{ 'is-scrolling': isScrolling }"
+      :class="{ 'is-scrolling': isScrolling, 'is-refreshing': isRefreshing }"
       :style="maskStyle"
       @scroll.passive="handleScroll"
     >
@@ -1079,14 +1090,23 @@ defineExpose({
 
 .project-search-bar {
   flex-shrink: 0;
-  padding-right: 16px;
+  display: flex;
+  align-items: center;
+  margin-right: 16px;
   margin-bottom: 12px;
+  height: 32px;
+  box-sizing: border-box;
   overflow: hidden;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .project-picker.compact .project-search-bar {
-  padding-right: 12px;
+  margin-right: 12px;
   margin-bottom: 8px;
+  height: 28px;
 }
 
 .project-search-input {
@@ -1123,22 +1143,6 @@ defineExpose({
   height: 12px;
 }
 
-/* Motion transition for search bar */
-.search-expand-enter-active,
-.search-expand-leave-active {
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  max-height: 40px;
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.search-expand-enter-from,
-.search-expand-leave-to {
-  max-height: 0;
-  opacity: 0;
-  transform: translateY(-4px);
-}
-
 .project-picker-heading h1 {
   color: var(--text-primary);
   font-size: 18px;
@@ -1158,6 +1162,19 @@ defineExpose({
   overflow-y: auto;
   overflow-x: hidden;
   padding: 4px 12px 4px 4px;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  transition:
+    filter 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.projects-viewport.is-refreshing {
+  filter: blur(6px);
+  opacity: 0.55;
+  transform: scale(0.985);
+  pointer-events: none;
 }
 
 .project-picker.compact .projects-viewport {

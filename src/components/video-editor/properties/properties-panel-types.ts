@@ -30,6 +30,7 @@ export interface SelectedClipProperties {
   cameraFramingPreset?: CameraFramingPreset;
   cameraSplitRatio?: number;
   cameraSplitPadding?: number;
+  reactToZoom?: boolean;
   hasLinkedScreen?: boolean;
   volume?: number;
   blurMode?: BlurEffectMode;

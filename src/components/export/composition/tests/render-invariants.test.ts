@@ -437,6 +437,59 @@ describe('composition rendering invariants', () => {
     }
   });
 
+  it.each([
+    { reactToZoom: true, expectedWidth: 150, expectedHeight: 100 },
+    { reactToZoom: false, expectedWidth: 300, expectedHeight: 200 },
+  ])('exports webcam geometry with reactToZoom=$reactToZoom', ({ reactToZoom, expectedWidth, expectedHeight }) => {
+    const value = snapshot();
+    value.canvas = { ...value.canvas, width: 1_000, height: 500 };
+    const webcamMedia: RenderableMedia = { source: {} as CanvasImageSource, width: 300, height: 200 };
+    const webcam: VisualClip = {
+      id: 'webcam',
+      kind: 'webcam',
+      name: 'Webcam',
+      assetId: 'webcam-asset',
+      timelineStartMs: 0,
+      timelineDurationMs: 1_000,
+      sourceInMs: 0,
+      sourceDurationMs: 1_000,
+      playbackRate: 1,
+      enabled: true,
+      order: -1,
+      transform: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
+      appearance,
+      isMirrored: false,
+      isMirroredY: false,
+      reactToZoom,
+    };
+    value.composition.clips.push(webcam);
+    const ctx = context();
+    const screenMedia: RenderableMedia = { source: {} as CanvasImageSource, width: 1_000, height: 500 };
+    const cameraEvaluator = {
+      sample: vi.fn(() => ({ focus: { cx: 0.5, cy: 0.5 }, scale: 2 })),
+      invalidate: vi.fn(),
+    };
+
+    renderCompositionFrame(
+      ctx,
+      screenMedia,
+      value,
+      0,
+      null,
+      undefined,
+      new Map([[webcam.id, webcamMedia]]),
+      undefined,
+      cameraEvaluator,
+    );
+
+    const webcamDraw = (ctx.drawImage as ReturnType<typeof vi.fn>).mock.calls.find(
+      ([source]) => source === webcamMedia.source,
+    );
+    expect(webcamDraw).toBeDefined();
+    expect(webcamDraw?.at(-2)).toBeCloseTo(expectedWidth);
+    expect(webcamDraw?.at(-1)).toBeCloseTo(expectedHeight);
+  });
+
   it('keeps a clip entry transition scoped to a clip that starts at zero', () => {
     const value = snapshot();
     const screen = value.composition.clips[0];

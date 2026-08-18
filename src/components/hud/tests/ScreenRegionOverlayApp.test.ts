@@ -134,10 +134,7 @@ describe('ScreenRegionOverlayApp', () => {
   });
 
   it('applies a selected preset and persists it to preferences', async () => {
-    let configure!: (value: {
-      mode: 'select';
-      bounds: { width: number; height: number };
-    }) => void;
+    let configure!: (value: { mode: 'select'; bounds: { width: number; height: number } }) => void;
     capture.onScreenRegionConfigure.mockImplementation((next: typeof configure) => {
       configure = next;
       return vi.fn();
@@ -173,10 +170,7 @@ describe('ScreenRegionOverlayApp', () => {
       extras: { screenRegionPreset: '800x600' },
     });
 
-    let configure!: (value: {
-      mode: 'select';
-      bounds: { width: number; height: number };
-    }) => void;
+    let configure!: (value: { mode: 'select'; bounds: { width: number; height: number } }) => void;
     capture.onScreenRegionConfigure.mockImplementation((next: typeof configure) => {
       configure = next;
       return vi.fn();

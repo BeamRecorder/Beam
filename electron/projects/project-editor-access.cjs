@@ -14,11 +14,11 @@ const {
 function createProjectEditorAccess(options) {
   const migrateEditor = (directory, manifest) => {
     const current = manifest.editor;
-  if (
-    current?.schemaVersion === 3 &&
-    current.composition?.schemaVersion === 9 &&
-    current.presentation?.cursor?.selection
-  ) {
+    if (
+      current?.schemaVersion === 3 &&
+      current.composition?.schemaVersion === 9 &&
+      current.presentation?.cursor?.selection
+    ) {
       const composition = normalizeComposition(current.composition);
       if (JSON.stringify(composition) === JSON.stringify(current.composition)) return current;
       manifest.editor = { ...current, composition };

@@ -1,4 +1,8 @@
 {
+  "CameraLayoutPanel": {
+    "reactToZoom": "ズームに追従",
+    "reactToZoomDescription": "ウェブカメラを固定したまま、キャンバスのズームに合わせてサイズを調整します。"
+  },
   "ShadowDirectionGroup": {
     "shadowDirection": "影の方向",
     "around": "全周",

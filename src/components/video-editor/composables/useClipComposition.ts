@@ -39,6 +39,7 @@ import {
   setCameraLayout,
   setCameraSplitRatio,
   setCameraSplitPadding,
+  setWebcamReactToZoom,
   setMirrored,
   setMirroredY,
   setPlaybackRate,
@@ -51,7 +52,11 @@ import {
 import { synchronizeRecordingClips } from '../composition/session-clips';
 import { cameraScreenPartner } from '../composition/camera-screen-link';
 import { useTranslate } from '~/i18n/useTranslate';
-import type { CameraFramingPreset, CameraLayoutPreset } from '~/media/shared/camera-layout-types';
+import {
+  isSplitCameraLayout,
+  type CameraFramingPreset,
+  type CameraLayoutPreset,
+} from '~/media/shared/camera-layout-types';
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const endMs = (clip: Clip) => clip.timelineStartMs + clip.timelineDurationMs;
@@ -97,6 +102,7 @@ export function useClipComposition(options: {
               ? {
                   cameraSplitRatio: clip.cameraSplitRatio ?? 0.5,
                   cameraSplitPadding: clip.cameraSplitPadding ?? 0,
+                  reactToZoom: clip.reactToZoom ?? !isSplitCameraLayout(clip.cameraLayoutPreset ?? 'custom'),
                   hasLinkedScreen: Boolean(cameraScreenPartner(composition.value, clip, true)),
                 }
               : {}),
@@ -412,6 +418,8 @@ export function useClipComposition(options: {
     updateSelectedVisual((id) => setCameraSplitRatio(composition.value, id, ratio));
   const updateSelectedCameraSplitPadding = (padding: number) =>
     updateSelectedVisual((id) => setCameraSplitPadding(composition.value, id, padding));
+  const updateSelectedWebcamReactToZoom = (reactToZoom: boolean) =>
+    updateSelectedVisual((id) => setWebcamReactToZoom(composition.value, id, reactToZoom));
   const updateSelectedMirrored = (mirrored: boolean) => {
     if (selectedClipId.value) composition.value = setMirrored(composition.value, selectedClipId.value, mirrored);
   };
@@ -472,6 +480,7 @@ export function useClipComposition(options: {
     updateSelectedCameraFraming,
     updateSelectedCameraSplitRatio,
     updateSelectedCameraSplitPadding,
+    updateSelectedWebcamReactToZoom,
     updateSelectedMirrored,
     updateSelectedMirroredY,
     updateSelectedRate,

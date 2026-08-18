@@ -66,12 +66,19 @@ function createEditorWindowManager({
     persistTimer = null;
     if (!preferencesStore || !window || window.isDestroyed()) return;
     try {
-      if (window.isMaximized() || window.isMinimized() || window.isFullScreen()) return;
+      if (window.isMinimized()) return;
+      const current = preferencesStore.read()?.extras?.editorWindow || {};
+      const isMax = window.isMaximized();
+      if (isMax) {
+        preferencesStore.patch({ extras: { editorWindow: { ...current, isMaximized: true } } });
+        return;
+      }
+      if (window.isFullScreen()) return;
       const bounds = window.getBounds();
       const width = Math.round(bounds.width);
       const height = Math.round(bounds.height);
       if (width >= EDITOR_MIN_SIZE.width && height >= EDITOR_MIN_SIZE.height) {
-        preferencesStore.patch({ extras: { editorWindow: { width, height } } });
+        preferencesStore.patch({ extras: { editorWindow: { ...current, width, height, isMaximized: false } } });
       }
     } catch {
       // Window persistence is best effort and must not affect the window.
@@ -80,7 +87,7 @@ function createEditorWindowManager({
 
   const scheduleBoundsPersistence = () => {
     if (!preferencesStore || !window || window.isDestroyed()) return;
-    if (window.isMaximized() || window.isMinimized() || window.isFullScreen()) return;
+    if (window.isMinimized() || window.isFullScreen()) return;
     if (persistTimer) clearTimeout(persistTimer);
     persistTimer = setTimeout(() => {
       persistTimer = null;
@@ -116,8 +123,7 @@ function createEditorWindowManager({
     window.webContents.send('editor:context', { projectId: currentProjectId });
   };
 
-  const hideHudBeforePresentingEditor = () =>
-    hudController.setVisible(false) === true && !hudWindow.isVisible();
+  const hideHudBeforePresentingEditor = () => hudController.setVisible(false) === true && !hudWindow.isVisible();
 
   const showHud = () => {
     if (!canAcceptWork()) return false;
@@ -144,6 +150,7 @@ function createEditorWindowManager({
       typeof savedWindow?.height === 'number' && savedWindow.height >= EDITOR_MIN_SIZE.height
         ? Math.round(savedWindow.height)
         : EDITOR_DEFAULT_SIZE.height;
+    const shouldMaximize = Boolean(savedWindow?.isMaximized);
     window = new BrowserWindow({
       width: initialWidth,
       height: initialHeight,
@@ -171,8 +178,19 @@ function createEditorWindowManager({
         webSecurity: false,
       },
     });
+    if (shouldMaximize) {
+      window.maximize();
+    }
     window.on('resize', scheduleBoundsPersistence);
     window.on('resized', () => {
+      scheduleBoundsPersistence();
+      flushBounds();
+    });
+    window.on('maximize', () => {
+      scheduleBoundsPersistence();
+      flushBounds();
+    });
+    window.on('unmaximize', () => {
       scheduleBoundsPersistence();
       flushBounds();
     });

@@ -63,12 +63,12 @@ export const MACOS_CURSOR_PACK: CursorPackDescriptor = {
   automaticMap: Object.fromEntries(Object.keys(HOTSPOTS).map((id) => [id, id])),
 };
 
-export const BUNDLED_CURSOR_PACKS: CursorPackDescriptor[] = (builtinCursorPacks as unknown as CursorPackDescriptor[]).map(
-  (pack) => ({
-    ...pack,
-    cursors: pack.cursors.map((cursor) => ({ ...cursor, url: resolvePublicAssetUrl(cursor.url) })),
-  }),
-);
+export const BUNDLED_CURSOR_PACKS: CursorPackDescriptor[] = (
+  builtinCursorPacks as unknown as CursorPackDescriptor[]
+).map((pack) => ({
+  ...pack,
+  cursors: pack.cursors.map((cursor) => ({ ...cursor, url: resolvePublicAssetUrl(cursor.url) })),
+}));
 
 export const BUILTIN_CURSOR_PACKS = [MACOS_CURSOR_PACK, ...BUNDLED_CURSOR_PACKS];
 

@@ -27,4 +27,25 @@ describe('ResizeHandle', () => {
     expect(wrapper.findAll('.resize-handle')).toHaveLength(2);
     expect(wrapper.findAll('.resize-handle').every((handle) => handle.attributes('disabled') !== undefined)).toBe(true);
   });
+
+  it('marks every configured handle when resizing reaches a size limit', () => {
+    const wrapper = mount(ResizeHandle, { props: { corners: ['top-left', 'bottom-right'], isAtLimit: true } });
+    const handles = wrapper.findAll('.resize-handle');
+
+    expect(handles).toHaveLength(2);
+    expect(handles.every((handle) => handle.classes().includes('is-at-limit'))).toBe(true);
+  });
+
+  it('ends a captured resize when the pointer capture is lost', async () => {
+    const wrapper = mount(ResizeHandle, { props: { corners: ['bottom-right'] } });
+    const handle = wrapper.get('.resize-handle');
+    const setPointerCapture = vi.fn();
+    Object.defineProperty(handle.element, 'setPointerCapture', { value: setPointerCapture });
+
+    await handle.trigger('pointerdown', { pointerId: 17, buttons: 1 });
+    await handle.trigger('lostpointercapture', { pointerId: 17 });
+
+    expect(setPointerCapture).toHaveBeenCalledWith(17);
+    expect(wrapper.emitted('resize-end')).toHaveLength(1);
+  });
 });

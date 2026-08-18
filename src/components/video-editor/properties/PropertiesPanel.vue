@@ -226,6 +226,7 @@ const emit = defineEmits<{
   (event: 'update:camera-framing', preset: Exclude<CameraFramingPreset, 'custom'>): void;
   (event: 'update:camera-split-ratio', ratio: number): void;
   (event: 'update:camera-split-padding', padding: number): void;
+  (event: 'update:webcam-react-to-zoom', enabled: boolean): void;
   (event: 'reset:clip-transform'): void;
   (event: 'unlink-clip'): void;
   (event: 'delete-clip'): void;
@@ -407,6 +408,7 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
               @update:camera-framing="emit('update:camera-framing', $event)"
               @update:camera-split-ratio="emit('update:camera-split-ratio', $event)"
               @update:camera-split-padding="emit('update:camera-split-padding', $event)"
+              @update:react-to-zoom="emit('update:webcam-react-to-zoom', $event)"
               @reset:clip-transform="emit('reset:clip-transform')"
               @unlink="emit('unlink-clip')"
               @delete="emit('delete-clip')"

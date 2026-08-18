@@ -151,6 +151,7 @@ const {
   updateSelectedCameraFraming,
   updateSelectedCameraSplitRatio,
   updateSelectedCameraSplitPadding,
+  updateSelectedWebcamReactToZoom,
   updateSelectedMirrored,
   updateSelectedMirroredY,
   updateSelectedRate,
@@ -228,6 +229,12 @@ const selectEditorCanvas = () => {
   activeTab.value = 'canvas';
   isCropping.value = false;
 };
+const selectEditorCursor = () => {
+  selectedClipId.value = null;
+  selectedZoomId.value = null;
+  isCropping.value = false;
+  activeTab.value = 'cursor';
+};
 const propertiesPanelRef = ref<InstanceType<typeof PropertiesPanel> | null>(null);
 const openCanvasTransition = (edge: 'entry' | 'exit') => {
   selectEditorCanvas();
@@ -284,7 +291,7 @@ const handleSeekIntent = (time: number, mode: 'seek' | 'scrub' = 'seek') => {
 
 // Editor state only contains JSON data. Serializing first unwraps Vue proxies, so
 // history snapshots stay cloneable after any reactive edit.
-const cloneSerializable = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+const cloneSerializable = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const createEditorSnapshot = (): EditorStateSnapshot => ({
   composition: cloneSerializable(composition.value),
   zoomElements: cloneSerializable(zoomElements.value),
@@ -600,6 +607,7 @@ onBeforeUnmount(() => {
           @update:camera-framing="updateSelectedCameraFraming"
           @update:camera-split-ratio="updateSelectedCameraSplitRatio"
           @update:camera-split-padding="updateSelectedCameraSplitPadding"
+          @update:webcam-react-to-zoom="updateSelectedWebcamReactToZoom"
           @reset:clip-transform="commitSelectedTransform({ x: 0, y: 0, width: 1, height: 1 })"
           @back-to-hud="emit('back-to-hud')"
           @start-recording="emit('start-recording', $event)"
@@ -659,6 +667,8 @@ onBeforeUnmount(() => {
             @preview:zoom="previewZoom"
             @select:clip="selectEditorClip"
             @select:canvas="selectEditorCanvas"
+            @select:cursor="selectEditorCursor"
+            @update:cursor-size="cursorSize = $event"
             @deselect:transform-clip="deselectTransformClip"
             @update:clip-transform="commitSelectedTransform"
             @update:clip-crop="commitSelectedCrop"

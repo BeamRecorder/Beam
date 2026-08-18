@@ -9,7 +9,15 @@ import { resolvePublicAssetUrl } from '~/utils/public-asset';
 const { t } = useTranslate('Onboarding');
 
 export type FeatureKey =
-  'mic' | 'camera' | 'teleprompter' | 'systemAudio' | 'source' | 'tabs' | 'projects' | 'topbar' | 'record';
+  | 'mic'
+  | 'camera'
+  | 'teleprompter'
+  | 'systemAudio'
+  | 'source'
+  | 'tabs'
+  | 'projects'
+  | 'topbar'
+  | 'record';
 
 const activeFeature = ref<FeatureKey | null>(null);
 

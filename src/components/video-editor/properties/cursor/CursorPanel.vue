@@ -26,6 +26,7 @@ import type { CursorPackDescriptor, CursorSelection } from '../../../../api/type
 import { capture } from '../../../../api/capture';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useToastStore } from '~/ui/toast/toastStore';
+import { CURSOR_SIZE_DEFAULT, CURSOR_SIZE_MAX, CURSOR_SIZE_MIN } from './cursor-size';
 
 const { t } = useTranslate('CursorPanel');
 const toast = useToastStore();
@@ -121,7 +122,7 @@ const openDiscovery = () => {
 
 const reset = () => {
   emit('update:selection', { packId: props.selection.packId, mode: 'automatic', cursorId: null });
-  emit('update:cursorSize', 45);
+  emit('update:cursorSize', CURSOR_SIZE_DEFAULT);
   emit('update:cursorColor', '#000000');
   emit('update:enableShadow', true);
   emit('update:shadowBlur', 6);
@@ -195,9 +196,9 @@ const selectMotionPreset = (preset: CursorMotionPreset) =>
     <BigSlider
       class="cursor-size-control"
       :model-value="cursorSize"
-      :default-value="45"
-      :min="16"
-      :max="128"
+      :default-value="CURSOR_SIZE_DEFAULT"
+      :min="CURSOR_SIZE_MIN"
+      :max="CURSOR_SIZE_MAX"
       :label="t('cursorSize')"
       :format-value="(value) => `${value}px`"
       @update:model-value="emit('update:cursorSize', $event)"

@@ -3,6 +3,7 @@ import type { ShadowDirection } from './shadow-types';
 import { createDefaultCursorClickEffects, type CursorClickEffects } from '../../../../api/types/cursor-settings';
 import type { CursorAssetDescriptor, CursorPackDescriptor, CursorSelection } from '~/api/types/cursor-pack';
 import { MACOS_CURSOR_PACK, orderedCursorPacks } from './cursor-packs';
+import { CURSOR_SIZE_DEFAULT } from './cursor-size';
 
 const imageCache = new Map<string, Promise<HTMLImageElement>>();
 
@@ -27,7 +28,7 @@ export function useCursorReplacer() {
   const importedPacks = ref<CursorPackDescriptor[]>([]);
   const packs = computed(() => orderedCursorPacks(importedPacks.value));
   const selectedPack = computed(() => packs.value.find((pack) => pack.id === selection.value.packId) ?? null);
-  const cursorSize = ref(45);
+  const cursorSize = ref(CURSOR_SIZE_DEFAULT);
   const cursorColor = ref('#000000');
   const enableShadow = ref(true);
   const shadowBlur = ref(6);

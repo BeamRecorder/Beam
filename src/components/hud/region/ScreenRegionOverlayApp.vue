@@ -6,11 +6,7 @@ import Select from '~/ui/select/Select.vue';
 import { capture } from '../../../api/capture';
 import type { ScreenRegionOverlayOptions, ScreenRegion } from '../../../api/types/screen-region';
 import { useTranslate } from '~/i18n/useTranslate';
-import {
-  SCREEN_REGION_PRESETS,
-  computePresetRegion,
-  findMatchingPreset,
-} from './screen-region-presets';
+import { SCREEN_REGION_PRESETS, computePresetRegion, findMatchingPreset } from './screen-region-presets';
 
 const { t } = useTranslate('ScreenRegionOverlay');
 
@@ -90,12 +86,7 @@ const updatePresetMatch = () => {
 const applyPreset = (presetValue: string | number) => {
   const value = String(presetValue);
   const bounds = getEffectiveBounds();
-  const nextRegion = computePresetRegion(
-    value,
-    bounds,
-    region.value,
-    isFullScreenRegion(region.value),
-  );
+  const nextRegion = computePresetRegion(value, bounds, region.value, isFullScreenRegion(region.value));
   if (nextRegion) {
     region.value = nextRegion;
     selectedPreset.value = value;

@@ -1,4 +1,8 @@
 {
+  "CameraLayoutPanel": {
+    "reactToZoom": "Reaguj na powiększenie",
+    "reactToZoomDescription": "Utrzymuj kamerę internetową zakotwiczoną, dopasowując jej rozmiar do powiększenia obszaru roboczego."
+  },
   "ShadowDirectionGroup": {
     "shadowDirection": "Kierunek cienia",
     "around": "Wokół",

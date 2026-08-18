@@ -18,6 +18,8 @@
     "splitRequiresScreen": "Aucun enregistrement d’écran correspondant n’est disponible à cet endroit de la timeline.",
     "splitRatio": "Part de la caméra",
     "splitPadding": "Espacement du fond",
+    "reactToZoom": "Réagir au zoom",
+    "reactToZoomDescription": "Garde la webcam ancrée tout en adaptant sa taille au zoom du canvas.",
     "framing": "Cadrage",
     "fill": "Fill",
     "fit": "Fit",

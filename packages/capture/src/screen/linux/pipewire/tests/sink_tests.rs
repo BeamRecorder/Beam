@@ -1,5 +1,7 @@
 use super::*;
 
+use std::sync::mpsc;
+
 #[derive(Default)]
 struct SinkLog {
     calls: Arc<Mutex<Vec<&'static str>>>,
@@ -85,13 +87,14 @@ fn sink_worker_orders_messages_and_always_finishes() {
         fail_push: false,
     };
     let (sender, receiver) = crossbeam_channel::unbounded();
+    let (_cursor_sender, cursor_receiver) = crossbeam_channel::unbounded();
     sender
         .send(SinkMessage::Format(video_format(&sample().frame)))
         .expect("format");
     sender.send(SinkMessage::Sample(sample())).expect("sample");
     sender.send(SinkMessage::Finish).expect("finish");
     let fatal = Arc::new(Mutex::new(None));
-    sink_worker(Box::new(sink), receiver, fatal).expect("sink succeeds");
+    sink_worker(Box::new(sink), receiver, cursor_receiver, fatal).expect("sink succeeds");
     assert_eq!(
         *calls.lock().expect("log lock"),
         ["format", "push", "finish"]
@@ -99,7 +102,7 @@ fn sink_worker_orders_messages_and_always_finishes() {
 }
 
 #[test]
-fn sink_worker_routes_cursor_only_messages_in_order() {
+fn sink_worker_routes_cursor_messages_through_the_separate_queue() {
     let calls = Arc::new(Mutex::new(Vec::new()));
     let cursor_samples = Arc::new(Mutex::new(Vec::new()));
     let sink = SinkLog {
@@ -118,25 +121,117 @@ fn sink_worker_routes_cursor_only_messages_in_order() {
         hotspot: None,
     };
     let (sender, receiver) = crossbeam_channel::unbounded();
+    let (cursor_sender, cursor_receiver) = crossbeam_channel::unbounded();
     sender
         .send(SinkMessage::Format(video_format(&sample().frame)))
         .expect("format");
-    sender
-        .send(SinkMessage::Cursor(12, cursor.clone()))
-        .expect("cursor-only update");
     sender.send(SinkMessage::Sample(sample())).expect("sample");
+    cursor_sender
+        .send(CursorMessage {
+            session_ns: 12,
+            cursor: cursor.clone(),
+        })
+        .expect("cursor-only update");
     sender.send(SinkMessage::Finish).expect("finish");
     let fatal = Arc::new(Mutex::new(None));
-    sink_worker(Box::new(sink), receiver, fatal).expect("sink succeeds");
+    sink_worker(Box::new(sink), receiver, cursor_receiver, fatal).expect("sink succeeds");
 
-    assert_eq!(
-        *calls.lock().expect("log lock"),
-        ["format", "cursor", "push", "finish"]
-    );
+    let calls = calls.lock().expect("log lock");
+    assert_eq!(calls.last(), Some(&"finish"));
+    assert!(calls.contains(&"format"));
+    assert!(calls.contains(&"push"));
+    assert!(calls.contains(&"cursor"));
     assert_eq!(
         *cursor_samples.lock().expect("cursor log lock"),
         [(12, cursor)]
     );
+}
+
+#[test]
+fn sink_worker_drains_cursor_queue_before_end_segment() {
+    let calls = Arc::new(Mutex::new(Vec::new()));
+    let cursor_samples = Arc::new(Mutex::new(Vec::new()));
+    let sink = SinkLog {
+        calls: calls.clone(),
+        cursor_samples,
+        fail_push: false,
+    };
+    let (sender, receiver) = crossbeam_channel::unbounded();
+    let (cursor_sender, cursor_receiver) = crossbeam_channel::unbounded();
+    let cursor = CursorSampleState::Unknown;
+    cursor_sender
+        .send(CursorMessage {
+            session_ns: 44,
+            cursor,
+        })
+        .expect("cursor");
+    let (reply_sender, reply_receiver) = mpsc::sync_channel(1);
+    sender
+        .send(SinkMessage::EndSegment(reply_sender))
+        .expect("end segment");
+    sender.send(SinkMessage::Finish).expect("finish");
+    let fatal = Arc::new(Mutex::new(None));
+
+    sink_worker(Box::new(sink), receiver, cursor_receiver, fatal).expect("sink succeeds");
+    reply_receiver
+        .recv()
+        .expect("end segment reply")
+        .expect("end segment succeeds");
+
+    let calls = calls.lock().expect("log lock");
+    let cursor_index = calls
+        .iter()
+        .position(|call| *call == "cursor")
+        .expect("cursor is drained");
+    let end_index = calls
+        .iter()
+        .position(|call| *call == "end")
+        .expect("end segment is called");
+    assert!(cursor_index < end_index);
+    assert_eq!(calls.last(), Some(&"finish"));
+}
+
+#[test]
+fn sink_worker_drains_cursor_queue_before_finish() {
+    let calls = Arc::new(Mutex::new(Vec::new()));
+    let sink = SinkLog {
+        calls: calls.clone(),
+        ..Default::default()
+    };
+    let (sender, receiver) = crossbeam_channel::unbounded();
+    let (cursor_sender, cursor_receiver) = crossbeam_channel::unbounded();
+    cursor_sender
+        .send(CursorMessage {
+            session_ns: 45,
+            cursor: CursorSampleState::Unknown,
+        })
+        .expect("cursor");
+    sender.send(SinkMessage::Finish).expect("finish");
+    let fatal = Arc::new(Mutex::new(None));
+
+    sink_worker(Box::new(sink), receiver, cursor_receiver, fatal).expect("sink succeeds");
+
+    let calls = calls.lock().expect("log lock");
+    assert_eq!(*calls, ["cursor", "finish"]);
+}
+
+#[test]
+fn saturated_cursor_queue_coalesces_to_the_latest_position() {
+    let (sender, receiver) = crossbeam_channel::bounded(1);
+    let mut pending = None;
+    let message = |session_ns| CursorMessage {
+        session_ns,
+        cursor: CursorSampleState::Unknown,
+    };
+
+    enqueue_cursor_message(&sender, &mut pending, message(1)).expect("first cursor");
+    enqueue_cursor_message(&sender, &mut pending, message(2)).expect("pending cursor");
+    enqueue_cursor_message(&sender, &mut pending, message(3)).expect("coalesced cursor");
+
+    assert_eq!(receiver.recv().expect("queued cursor").session_ns, 1);
+    flush_cursor_message(&sender, &mut pending).expect("flush latest cursor");
+    assert_eq!(receiver.recv().expect("latest cursor").session_ns, 3);
+    assert!(pending.is_none());
 }
 
 #[test]
@@ -178,10 +273,11 @@ fn sink_failure_is_stable_and_backpressure_is_visible() {
         ..Default::default()
     };
     let (sender, receiver) = crossbeam_channel::unbounded();
+    let (_cursor_sender, cursor_receiver) = crossbeam_channel::unbounded();
     sender.send(SinkMessage::Sample(sample())).expect("sample");
     sender.send(SinkMessage::Finish).expect("finish");
     let fatal = Arc::new(Mutex::new(None));
-    assert!(sink_worker(Box::new(sink), receiver, fatal.clone()).is_err());
+    assert!(sink_worker(Box::new(sink), receiver, cursor_receiver, fatal.clone()).is_err());
     assert_eq!(
         fatal
             .lock()
