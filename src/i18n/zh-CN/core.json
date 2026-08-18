@@ -446,6 +446,7 @@
   },
   "ScreenRegionOverlay": {
     "instruction": "选择要录制的区域",
+    "preset": "预设",
     "reset": "重置",
     "cancel": "取消",
     "useThisArea": "使用此区域"

@@ -485,6 +485,69 @@ describe('useClipComposition', () => {
     expect(mounted.state.composition.value.clips.filter((clip) => clip.kind === 'video')).toHaveLength(1);
   });
 
+  it('holds an imported video at the playhead and selects the freeze segment', () => {
+    const mounted = mountComposable();
+    const videoId = mounted.state.addImportedAsset(videoAsset(), videoInspection(false), 0);
+
+    mounted.state.holdClip(videoId, 1_000);
+
+    const videoClips = mounted.state.composition.value.clips
+      .filter((clip): clip is VisualClip => clip.kind === 'video')
+      .sort((left, right) => left.timelineStartMs - right.timelineStartMs);
+    expect(videoClips).toHaveLength(3);
+    expect(videoClips.map((clip) => [clip.timelineStartMs, clip.timelineDurationMs])).toEqual([
+      [0, 1_000],
+      [1_000, 1_000],
+      [2_000, 1_500],
+    ]);
+
+    const freeze = videoClips.find((clip) => clip.freezeFrameSourceMs !== undefined);
+    expect(freeze).toMatchObject({
+      timelineStartMs: 1_000,
+      timelineDurationMs: 1_000,
+      sourceInMs: 1_000,
+      sourceDurationMs: 1_000,
+      playbackRate: 1,
+      freezeFrameSourceMs: 1_000,
+    });
+    expect(mounted.state.selectedClipId.value).toBe(freeze?.id);
+    expect(mounted.state.selectedClip.value?.id).toBe(freeze?.id);
+  });
+
+  it('deletes both fragments of a grouped imported video after splitting the selected right video', () => {
+    const mounted = mountComposable();
+    const videoId = mounted.state.addImportedAsset(
+      { ...videoAsset(), durationMs: 127_000 },
+      { ...videoInspection(true), durationMs: 127_000 },
+      0,
+    );
+    const originalVideo = mounted.state.composition.value.clips.find((clip) => clip.id === videoId)!;
+    const groupId = originalVideo.groupId;
+    expect(groupId).toBeTruthy();
+    expect(mounted.state.composition.value.clips.filter((clip) => clip.groupId === groupId)).toHaveLength(2);
+
+    mounted.currentTimeSec.value = 120;
+    mounted.state.splitSelectedClip();
+    const rightVideo = mounted.state.composition.value.clips.find(
+      (clip) => clip.kind === 'video' && clip.timelineStartMs === 120_000,
+    )!;
+    const rightAudio = mounted.state.composition.value.clips.find(
+      (clip) => clip.kind === 'audio' && clip.timelineStartMs === 120_000,
+    );
+    expect(rightAudio?.groupId).toBe(rightVideo.groupId);
+
+    mounted.state.selectClip(rightVideo.id);
+    mounted.state.deleteSelectedClip();
+
+    expect(mounted.state.composition.value.clips.some((clip) => clip.id === rightVideo.id)).toBe(false);
+    expect(rightAudio && mounted.state.composition.value.clips.some((clip) => clip.id === rightAudio.id)).toBe(false);
+    const maxEnd = Math.max(
+      0,
+      ...mounted.state.composition.value.clips.map((clip) => clip.timelineStartMs + clip.timelineDurationMs),
+    );
+    expect(maxEnd).toBe(120_000);
+  });
+
   it('places imported visuals above existing visuals and links audio only when decodable', () => {
     const mounted = mountComposable();
     const existingVisual: VisualClip = {

@@ -23,7 +23,9 @@ function isClip(value: unknown): value is PlaybackClipDescriptor {
     value.sourceInSeconds >= 0 &&
     finite(value.playbackRate) &&
     value.playbackRate >= 0.25 &&
-    value.playbackRate <= 4
+    value.playbackRate <= 4 &&
+    (value.freezeFrameSourceSeconds === undefined ||
+      (finite(value.freezeFrameSourceSeconds) && value.freezeFrameSourceSeconds >= 0))
   );
 }
 

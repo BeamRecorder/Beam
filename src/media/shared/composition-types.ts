@@ -1,6 +1,6 @@
 import type { CameraFramingPreset, CameraLayoutPreset } from './camera-layout-types';
 
-export const COMPOSITION_SCHEMA_VERSION = 8 as const;
+export const COMPOSITION_SCHEMA_VERSION = 9 as const;
 export const SCREEN_CLIP_ID = 'screen';
 
 export type MediaKind = 'video' | 'image' | 'audio';
@@ -176,6 +176,8 @@ export interface VisualClip extends ClipBase {
   appearance: ClipAppearance;
   isMirrored: boolean;
   isMirroredY: boolean;
+  /** Holds one decoded video frame for the whole clip duration when present. */
+  freezeFrameSourceMs?: number;
   /** Persisted layout preset for visual clips; legacy clips default to custom. */
   cameraLayoutPreset?: CameraLayoutPreset;
   /** Persisted framing preset for visual clips; legacy clips default to custom. */

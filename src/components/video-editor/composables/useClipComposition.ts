@@ -25,9 +25,10 @@ import { audioDefaultsFor, blurDefaultsFor, captionDefaultsFor, visualClipDefaul
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import {
   addClip,
+  clipTrimBounds,
   deleteClip,
   detachClip,
-  MIN_CLIP_DURATION_MS,
+  holdClipAtPlayhead,
   moveClip,
   reorderClip,
   setAppearance,
@@ -334,39 +335,9 @@ export function useClipComposition(options: {
   const previewClipEdge = (clipId: string, edge: 'start' | 'end', timeMs: number) => {
     const clip = composition.value.clips.find((entry) => entry.id === clipId);
     if (!clip) return;
-    const asset =
-      clip.kind === 'caption' || isBlurClip(clip)
-        ? undefined
-        : composition.value.assets.find((entry) => entry.id === clip.assetId);
-    const originalStartMs = clip.timelineStartMs;
-    const originalEndMs = endMs(clip);
-
-    if (edge === 'start') {
-      const maxLeftExpansionMs =
-        asset?.durationMs != null && clip.kind !== 'caption'
-          ? Math.round(clip.sourceInMs / Math.max(0.01, clip.playbackRate))
-          : originalStartMs;
-      const minStartMs = Math.max(0, originalStartMs - maxLeftExpansionMs);
-      const maxStartMs = originalEndMs - MIN_CLIP_DURATION_MS;
-      const clamped = Math.max(minStartMs, Math.min(maxStartMs, Math.round(timeMs)));
-      composition.value = trimClip(composition.value, clipId, edge, clamped);
-    } else {
-      const remainingSourceMs =
-        asset?.durationMs != null && clip.kind !== 'caption'
-          ? Math.max(0, asset.durationMs - (clip.sourceInMs + clip.sourceDurationMs))
-          : Infinity;
-      const maxRightExpansionMs =
-        asset?.durationMs != null && clip.kind !== 'caption'
-          ? Math.round(remainingSourceMs / Math.max(0.01, clip.playbackRate))
-          : Infinity;
-      const minEndMs = originalStartMs + MIN_CLIP_DURATION_MS;
-      const maxEndMs = Number.isFinite(maxRightExpansionMs) ? originalEndMs + maxRightExpansionMs : Infinity;
-      const clamped = Math.max(
-        minEndMs,
-        Number.isFinite(maxEndMs) ? Math.min(maxEndMs, Math.round(timeMs)) : Math.round(timeMs),
-      );
-      composition.value = trimClip(composition.value, clipId, edge, clamped);
-    }
+    const bounds = clipTrimBounds(composition.value, clipId, edge);
+    const clamped = Math.max(bounds.minMs, Math.min(bounds.maxMs, Math.round(timeMs)));
+    composition.value = trimClip(composition.value, clipId, edge, clamped);
   };
 
   const trimClipEdge = (clipId: string, edge: 'start' | 'end', timeMs: number) => previewClipEdge(clipId, edge, timeMs);
@@ -380,9 +351,22 @@ export function useClipComposition(options: {
     if (!clip || timeMs <= clip.timelineStartMs || timeMs >= endMs(clip)) return;
     composition.value = splitClip(composition.value, clip.id, timeMs);
   };
+  const holdClip = (clipId: string, timeMs: number) => {
+    const clip = composition.value.clips.find((entry) => entry.id === clipId);
+    if (!clip) return;
+    composition.value = holdClipAtPlayhead(composition.value, clipId, timeMs);
+    const hold = composition.value.clips.find(
+      (entry) =>
+        isVisualClip(entry) &&
+        entry.trackId === clip.trackId &&
+        entry.timelineStartMs === Math.round(timeMs) &&
+        entry.freezeFrameSourceMs !== undefined,
+    );
+    if (hold) selectedClipId.value = hold.id;
+  };
   const deleteSelectedClip = () => {
     if (!selectedClipId.value) return;
-    composition.value = deleteClip(composition.value, selectedClipId.value);
+    composition.value = deleteClip(composition.value, selectedClipId.value, true);
     selectedClipId.value = null;
   };
   const reorderVisualClip = (clipId: string, targetIndex: number) => {
@@ -477,6 +461,7 @@ export function useClipComposition(options: {
     previewMoveClip,
     moveClipTo,
     splitSelectedClip,
+    holdClip,
     deleteSelectedClip,
     reorderVisualClip,
     updateSelectedAppearance,

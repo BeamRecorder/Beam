@@ -14,7 +14,7 @@ const {
 function createProjectEditorAccess(options) {
   const migrateEditor = (directory, manifest) => {
     const current = manifest.editor;
-    if (current?.schemaVersion === 3 && current.composition?.schemaVersion === 8) {
+    if (current?.schemaVersion === 3 && current.composition?.schemaVersion === 9) {
       const composition = normalizeComposition(current.composition);
       if (JSON.stringify(composition) === JSON.stringify(current.composition)) return current;
       manifest.editor = { ...current, composition };
@@ -28,7 +28,7 @@ function createProjectEditorAccess(options) {
     const editor = {
       schemaVersion: 3,
       composition:
-        legacyComposition.schemaVersion === 8
+        legacyComposition.schemaVersion === 9
           ? normalizeComposition(legacyComposition)
           : migrateComposition(
               legacyComposition,

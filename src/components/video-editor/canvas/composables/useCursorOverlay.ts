@@ -17,6 +17,7 @@ import {
 } from '../../../../api/types/cursor-settings';
 import type { OutputCanvasSettings } from '../output-canvas';
 import { cursorRippleAt } from '../../composables/cursor-ripple';
+import { sourceTimeAt } from '~/media/shared';
 
 export interface UseCursorOverlayOptions {
   selectedCursor: () => CursorType;
@@ -171,7 +172,10 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
       return;
     }
     if (!(videoWidth > 0) || !(videoHeight > 0)) return;
-    const time = options.currentTime();
+    const timelineTime = options.currentTime();
+    const screen = options.screenClip();
+    const mappedTime = screen ? sourceTimeAt(screen, timelineTime * 1_000) : null;
+    const time = mappedTime !== null && Number.isFinite(mappedTime) ? mappedTime / 1_000 : timelineTime;
     const state = cursorStateAt(cursorData.events, time);
     const { player, motion: motionState } = motionStateAt(cursorData.events, time, videoWidth, videoHeight);
     drawInCameraSpace(() => {
@@ -245,7 +249,8 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
     const image = customCursorImage.value;
     if (!cursorData?.available || !screen || !options.isScreenEnabled() || !image?.complete || image.naturalWidth <= 0)
       return null;
-    const time = options.currentTime();
+    const timelineTime = options.currentTime();
+    const time = (sourceTimeAt(screen, timelineTime * 1_000) ?? timelineTime * 1_000) / 1_000;
     const state = cursorStateAt(cursorData.events, time);
     const motionState = motionStateAt(cursorData.events, time, videoWidth, videoHeight).motion;
     if (!state?.visible || !motionState?.visible) return null;

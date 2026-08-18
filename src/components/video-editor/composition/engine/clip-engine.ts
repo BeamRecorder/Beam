@@ -22,7 +22,6 @@ import {
   normalizeClipOrders,
   reorderClipOrders,
   visualMoveDeltaBounds,
-  visualTrimBounds,
 } from './visual-track-layout';
 import {
   CompositionEngineError,
@@ -32,6 +31,8 @@ import {
   validateComposition,
 } from './clip-composition-validation';
 export { setCameraLayout, setCameraSplitPadding, setCameraSplitRatio } from './camera-layout-operations';
+export { HOLD_SEGMENT_DURATION_MS, holdClipAtPlayhead } from './hold-clip';
+export { clipTrimBounds, trimClip } from './trim-clip';
 export {
   CompositionEngineError,
   MAX_PLAYBACK_RATE,
@@ -184,82 +185,6 @@ export function setPlaybackRate(composition: ClipComposition, clipId: string, pl
   return next;
 }
 
-export function trimClip(
-  composition: ClipComposition,
-  clipId: string,
-  edge: 'start' | 'end',
-  timelineTimeMs: number,
-): ClipComposition {
-  const next = clone(composition);
-  const source = byId(next, clipId);
-  const target = integer(timelineTimeMs);
-  if (!finite(target)) throw new CompositionEngineError('Invalid trim target time.');
-  const originalEnd = clipEndMs(source);
-
-  if (edge === 'start') {
-    if (target < 0 || target > originalEnd - MIN_CLIP_DURATION_MS) {
-      throw new CompositionEngineError('Invalid start trim boundary.');
-    }
-  } else {
-    if (target < source.timelineStartMs + MIN_CLIP_DURATION_MS) {
-      throw new CompositionEngineError('Invalid end trim boundary.');
-    }
-  }
-
-  const ids = new Set(targetIds(next, clipId));
-  const trackBounds = visualTrimBounds(next.clips, ids, edge);
-  if ((edge === 'start' && target < trackBounds.min) || (edge === 'end' && target > trackBounds.max)) {
-    throw new CompositionEngineError('Trim would overlap another fragment on the same visual track.');
-  }
-  next.clips = next.clips.map((clip) => {
-    if (!ids.has(clip.id)) return clip;
-    const rate = Math.max(0.01, clip.playbackRate);
-    if (edge === 'start') {
-      const startDelta = target - clip.timelineStartMs;
-      const newTimelineDuration = clip.timelineStartMs + clip.timelineDurationMs - target;
-      const newSourceDuration = integer(newTimelineDuration * rate);
-      if (clip.kind === 'caption') {
-        return {
-          ...clip,
-          timelineStartMs: target,
-          timelineDurationMs: newTimelineDuration,
-          sourceInMs: 0,
-          sourceDurationMs: newSourceDuration,
-          transitions: normalizeClipTransitions(
-            clip.transitions ?? EMPTY_CLIP_TRANSITIONS,
-            newTimelineDuration,
-            clip.kind,
-          ),
-        };
-      }
-      const sourceDelta = integer(startDelta * rate);
-      const newSourceInMs = Math.max(0, clip.sourceInMs + sourceDelta);
-      return {
-        ...clip,
-        timelineStartMs: target,
-        timelineDurationMs: newTimelineDuration,
-        sourceInMs: newSourceInMs,
-        sourceDurationMs: newSourceDuration,
-        transitions: normalizeClipTransitions(
-          clip.transitions ?? EMPTY_CLIP_TRANSITIONS,
-          newTimelineDuration,
-          clip.kind,
-        ),
-      };
-    }
-    const newTimelineDuration = target - clip.timelineStartMs;
-    const newSourceDuration = integer(newTimelineDuration * rate);
-    return {
-      ...clip,
-      timelineDurationMs: newTimelineDuration,
-      sourceDurationMs: newSourceDuration,
-      transitions: normalizeClipTransitions(clip.transitions ?? EMPTY_CLIP_TRANSITIONS, newTimelineDuration, clip.kind),
-    };
-  });
-  validateComposition(next);
-  return next;
-}
-
 export function splitClip(
   composition: ClipComposition,
   clipId: string,
@@ -278,13 +203,14 @@ export function splitClip(
   next.clips = next.clips.map((clip) => {
     if (!ids.has(clip.id)) return clip;
     const leftSourceDuration = integer(offset * clip.playbackRate);
+    const freezeFrameSourceMs = isVisualClip(clip) ? clip.freezeFrameSourceMs : undefined;
     const right: Clip = {
       ...clip,
       id: idFactory(),
       groupId: rightGroupId,
       timelineStartMs: target,
       timelineDurationMs: clip.timelineDurationMs - offset,
-      sourceInMs: clip.sourceInMs + leftSourceDuration,
+      sourceInMs: freezeFrameSourceMs ?? clip.sourceInMs + leftSourceDuration,
       sourceDurationMs: clip.sourceDurationMs - leftSourceDuration,
       transitions: normalizeClipTransitions(
         { entry: null, exit: clip.transitions?.exit ?? null },

@@ -133,7 +133,8 @@ describe('TimelineClip', () => {
     });
 
     expect(wrapper.get('.timeline-clip').classes()).toEqual(expect.arrayContaining(['selected', 'kind-video']));
-    expect(wrapper.get('.timeline-clip').attributes('style')).toContain('left: 10%');
+    expect(wrapper.get('.timeline-clip').attributes('style')).toContain('left: 0px');
+    expect(wrapper.get('.timeline-clip').attributes('style')).toContain('transform: translate3d(50%, 0, 0)');
     expect(wrapper.get('.timeline-clip').attributes('style')).toContain('width: 20%');
     expect(wrapper.get('.speed-badge').text()).toBe('1.25×');
     expect(wrapper.get('.trim-side-badge').text()).toBe('01.2s');
@@ -228,6 +229,18 @@ describe('TimelineClip', () => {
     await wrapper.setProps({ deferThumbnailRequests: false });
 
     expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([0, 1.25]);
+  });
+
+  it('uses translate3d positioning when the timeline width is provided', () => {
+    const wrapper = mount(TimelineClip, {
+      props: { ...baseProps, timelineWidthPx: 2_000 },
+      global: { stubs: { Skeleton, WaveformCanvas } },
+    });
+
+    const style = wrapper.get('.timeline-clip').attributes('style') ?? '';
+    expect(style).toMatch(/transform:\s*translate3d\(200px,\s*0(?:px)?,\s*0(?:px)?\)/);
+    expect(style).toMatch(/(?:^|;)\s*left:\s*0px/);
+    expect(style).not.toMatch(/left:\s*10%/);
   });
 
   it('renders audio waveforms, a dark loading state, and an explicit unavailable error', async () => {

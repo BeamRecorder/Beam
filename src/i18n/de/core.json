@@ -446,6 +446,7 @@
   },
   "ScreenRegionOverlay": {
     "instruction": "Wähle einen Bereich zur Aufnahme aus",
+    "preset": "Voreinstellung",
     "reset": "Zurücksetzen",
     "cancel": "Abbrechen",
     "useThisArea": "Diesen Bereich verwenden"

@@ -20,10 +20,10 @@ let editorComponent: Component | null = null;
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
-    callback(0);
-    return 1;
-  });
+  vi.stubGlobal(
+    'requestAnimationFrame',
+    vi.fn(() => 1),
+  );
   vi.stubGlobal('cancelAnimationFrame', vi.fn());
   editorState.store = undefined;
 });

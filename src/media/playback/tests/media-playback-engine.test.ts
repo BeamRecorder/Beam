@@ -6,6 +6,7 @@ import type { AudioClip, ClipComposition } from '../../shared';
 import {
   cleanupPlaybackGlobals,
   composition,
+  asset,
   FakeAudio,
   FakeImageBitmap,
   FakeWorker,
@@ -57,6 +58,29 @@ const compositionWithAudio = (enabled: boolean): ClipComposition => {
     assets: [...value.assets, audioAsset],
     clips: [...value.clips, audioClip(enabled)],
   };
+};
+
+const loadAt = async (
+  engine: MediaPlaybackEngine,
+  worker: FakeWorker,
+  value: ClipComposition,
+  timelineSeconds: number,
+) => {
+  const pending = engine.loadComposition(value, timelineSeconds);
+  const loadRequest = worker.requests.find(
+    (request): request is Extract<PlaybackWorkerRequest, { type: 'load' }> => request.type === 'load',
+  );
+  worker.emit({ type: 'ready', generation: loadRequest!.generation });
+  for (let index = 0; index < 4; index += 1) await Promise.resolve();
+  const request = latestSeekRequest(worker)!;
+  worker.emit({
+    type: 'seek-result',
+    generation: request.generation,
+    requestId: request.requestId,
+    result: 'presented',
+    latencyMs: 1,
+  });
+  await pending;
 };
 
 describe('MediaPlaybackEngine', () => {
@@ -197,8 +221,9 @@ describe('MediaPlaybackEngine', () => {
     await Promise.resolve();
     const request = worker.requests.at(-1);
     expect(request?.type).toBe('retime');
+    if (!request || request.type !== 'retime') throw new Error('Expected a retime request.');
     expect(worker.requests.filter((entry) => entry.type === 'load')).toHaveLength(0);
-    worker.emit({ type: 'ready', generation: request!.generation });
+    worker.emit({ type: 'ready', generation: request.generation });
     for (let index = 0; index < 4; index += 1) await Promise.resolve();
     const seek = latestSeekRequest(worker)!;
     worker.emit({
@@ -233,8 +258,9 @@ describe('MediaPlaybackEngine', () => {
     await Promise.resolve();
     const request = worker.requests.at(-1);
     expect(request?.type).toBe('retime');
+    if (!request || request.type !== 'retime') throw new Error('Expected a retime request.');
     expect(worker.requests.filter((entry) => entry.type === 'load')).toHaveLength(0);
-    worker.emit({ type: 'ready', generation: request!.generation });
+    worker.emit({ type: 'ready', generation: request.generation });
     for (let index = 0; index < 4; index += 1) await Promise.resolve();
     const seek = latestSeekRequest(worker)!;
     worker.emit({
@@ -269,8 +295,9 @@ describe('MediaPlaybackEngine', () => {
     const pending = engine.setPreviewQuality('quarter');
     const configure = worker.requests.at(-1);
     expect(configure).toMatchObject({ type: 'configure-preview', previewQuality: 'quarter' });
+    if (!configure || configure.type !== 'configure-preview') throw new Error('Expected a preview request.');
     expect(engine.frameFor('clip-1')?.bitmap).toBe(previousFrame);
-    worker.emit({ type: 'ready', generation: configure!.generation });
+    worker.emit({ type: 'ready', generation: configure.generation });
     for (let index = 0; index < 4; index += 1) await Promise.resolve();
 
     const seek = [...worker.requests]
@@ -450,6 +477,197 @@ describe('MediaPlaybackEngine', () => {
     worker.emit({ type: 'disposed', generation: 3 });
     expect(worker.terminate).toHaveBeenCalledOnce();
     expect(engine.state).toBe('disposed');
+  });
+
+  it('reuses the previous frame for a contiguous fragment on the same track and asset', async () => {
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const engine = new MediaPlaybackEngine({
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+    const first = videoClip('first', 'asset-1', {
+      trackId: 'video-track',
+      timelineStartMs: 0,
+      timelineDurationMs: 1_000,
+      sourceDurationMs: 1_000,
+    });
+    const second = videoClip('second', 'asset-1', {
+      trackId: 'video-track',
+      timelineStartMs: 1_000,
+      timelineDurationMs: 1_000,
+      sourceDurationMs: 1_000,
+    });
+    const value = composition([first, second]);
+    await loadAt(engine, worker, value, 1.5);
+
+    const previous = new FakeImageBitmap();
+    worker.emit(frameResponse(latestSeekRequest(worker)!.generation, first.id, 0.5, previous));
+
+    expect(engine.frameFor(second.id)?.bitmap).toBe(previous);
+    engine.dispose();
+  });
+
+  it('provides continuity immediately at both VIDEO/HOLD boundaries', async () => {
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const engine = new MediaPlaybackEngine({
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+    const previous = videoClip('previous', 'asset-1', {
+      trackId: 'video-track',
+      timelineStartMs: 0,
+      timelineDurationMs: 1_000,
+      sourceDurationMs: 1_000,
+    });
+    const hold = videoClip('hold', 'asset-1', {
+      trackId: 'video-track',
+      timelineStartMs: 1_000,
+      timelineDurationMs: 1_000,
+      sourceInMs: 1_000,
+      sourceDurationMs: 1_000,
+      freezeFrameSourceMs: 1_000,
+    });
+    const following = videoClip('following', 'asset-1', {
+      trackId: 'video-track',
+      timelineStartMs: 2_000,
+      timelineDurationMs: 1_000,
+      sourceInMs: 2_000,
+      sourceDurationMs: 1_000,
+    });
+    await loadAt(engine, worker, composition([previous, hold, following]), 1.5);
+
+    const generation = latestSeekRequest(worker)!.generation;
+    const previousFrame = new FakeImageBitmap();
+    worker.emit(frameResponse(generation, previous.id, 0.99, previousFrame));
+    expect(engine.frameFor(hold.id)?.bitmap).toBe(previousFrame);
+
+    const holdFrame = new FakeImageBitmap();
+    worker.emit(frameResponse(generation, hold.id, 1, holdFrame));
+    const pending = engine.seek(2, 'seek');
+    await Promise.resolve();
+
+    // The following fragment can paint from the cached HOLD frame while its
+    // worker seek is still pending; no extra decode/presentation latency at
+    // either boundary is required.
+    expect(engine.frameFor(following.id)?.bitmap).toBe(holdFrame);
+
+    const request = latestSeekRequest(worker)!;
+    worker.emit({
+      type: 'seek-result',
+      generation: request.generation,
+      requestId: request.requestId,
+      result: 'presented',
+      latencyMs: 1,
+    });
+    await expect(pending).resolves.toBe('presented');
+    engine.dispose();
+  });
+
+  it('does not reuse a previous frame across a real timeline gap', async () => {
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const engine = new MediaPlaybackEngine({
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+    const first = videoClip('first', 'asset-1', {
+      trackId: 'video-track',
+      timelineStartMs: 0,
+      timelineDurationMs: 1_000,
+      sourceDurationMs: 1_000,
+    });
+    const second = videoClip('second', 'asset-1', {
+      trackId: 'video-track',
+      timelineStartMs: 1_500,
+      timelineDurationMs: 1_000,
+      sourceDurationMs: 1_000,
+    });
+    await loadAt(engine, worker, composition([first, second]), 1.75);
+
+    const previous = new FakeImageBitmap();
+    worker.emit(frameResponse(latestSeekRequest(worker)!.generation, first.id, 0.5, previous));
+
+    expect(engine.frameFor(second.id)).toBeNull();
+    engine.dispose();
+  });
+
+  it('does not reuse a previous frame when contiguous fragments reference different assets', async () => {
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const engine = new MediaPlaybackEngine({
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+    const first = videoClip('first', 'asset-1', {
+      trackId: 'video-track',
+      timelineStartMs: 0,
+      timelineDurationMs: 1_000,
+      sourceDurationMs: 1_000,
+    });
+    const second = videoClip('second', 'asset-2', {
+      trackId: 'video-track',
+      timelineStartMs: 1_000,
+      timelineDurationMs: 1_000,
+      sourceDurationMs: 1_000,
+    });
+    const value = composition([first, second]);
+    value.assets = [asset('asset-1'), asset('asset-2')];
+    await loadAt(engine, worker, value, 1.5);
+
+    const previous = new FakeImageBitmap();
+    worker.emit(frameResponse(latestSeekRequest(worker)!.generation, first.id, 0.5, previous));
+
+    expect(engine.frameFor(second.id)).toBeNull();
+    engine.dispose();
+  });
+
+  it('does not keep a HOLD frame after seeking slightly backward into the previous fragment', async () => {
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const engine = new MediaPlaybackEngine({
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+    const previous = videoClip('previous', 'asset-1', {
+      trackId: 'video-track',
+      timelineStartMs: 0,
+      timelineDurationMs: 1_000,
+      sourceInMs: 0,
+      sourceDurationMs: 1_000,
+    });
+    const hold = videoClip('hold', 'asset-1', {
+      trackId: 'video-track',
+      timelineStartMs: 1_000,
+      timelineDurationMs: 1_000,
+      sourceInMs: 1_000,
+      sourceDurationMs: 1_000,
+      freezeFrameSourceMs: 1_000,
+    });
+    await loadAt(engine, worker, composition([previous, hold]), 1.25);
+
+    const holdFrame = new FakeImageBitmap();
+    worker.emit(frameResponse(latestSeekRequest(worker)!.generation, hold.id, 1, holdFrame));
+    expect(engine.frameFor(hold.id)?.bitmap).toBe(holdFrame);
+
+    const backward = engine.seek(0.99, 'seek');
+    await Promise.resolve();
+    const request = latestSeekRequest(worker)!;
+    const previousFrame = new FakeImageBitmap();
+    worker.emit(frameResponse(request.generation, previous.id, 0.99, previousFrame));
+    worker.emit({
+      type: 'seek-result',
+      generation: request.generation,
+      requestId: request.requestId,
+      result: 'presented',
+      latencyMs: 1,
+    });
+    await expect(backward).resolves.toBe('presented');
+
+    expect(engine.frameFor(previous.id)?.bitmap).toBe(previousFrame);
+    expect(engine.frameFor(hold.id)).toBeNull();
+    engine.dispose();
   });
 
   it('waits for the worker disposed acknowledgement before terminating', async () => {

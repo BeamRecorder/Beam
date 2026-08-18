@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ref } from 'vue';
-import type { Clip, ClipComposition, MediaAsset, VisualClip } from '~/media/shared/composition-types';
+import type { AudioClip, Clip, ClipComposition, MediaAsset, VisualClip } from '~/media/shared/composition-types';
 import { COMPOSITION_SCHEMA_VERSION } from '~/media/shared/composition-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import type { ZoomElement } from '../../../zoom/zoom-types';
@@ -40,6 +40,29 @@ const clip = (): VisualClip => ({
   isMirroredY: false,
 });
 
+const visualClip = (kind: VisualClip['kind']): VisualClip => ({
+  ...clip(),
+  id: `${kind}-clip`,
+  kind,
+});
+
+const audioClip = (): AudioClip => ({
+  id: 'audio-clip',
+  kind: 'audio',
+  name: 'Demo audio',
+  assetId: asset.id,
+  timelineStartMs: 0,
+  timelineDurationMs: 2_000,
+  sourceInMs: 0,
+  sourceDurationMs: 2_000,
+  playbackRate: 1,
+  transitions: { entry: null, exit: null },
+  enabled: true,
+  order: 0,
+  role: 'system',
+  volume: 1,
+});
+
 const zoom = (id: string, startMs: number): ZoomElement => ({
   id,
   sessionId: 'session-1',
@@ -75,6 +98,9 @@ const createMenu = (overrides: Partial<Parameters<typeof useTimelineContextMenu>
   };
   return { ...useTimelineContextMenu(options), options, emitSpy, sourceClip, sourceZoom };
 };
+
+const contextMenuItem = (menu: ReturnType<typeof createMenu>, id: string) =>
+  menu.contextMenuItems.value.find((item) => !('isDivider' in item) && item.id === id);
 
 afterEach(() => {
   useTimelineClipboard().clearClipboard();
@@ -128,5 +154,49 @@ describe('useTimelineContextMenu', () => {
 
     expect(menu.emitSpy).toHaveBeenCalledWith('paste:error', 'Copy an item first.');
     expect(menu.emitSpy).not.toHaveBeenCalledWith('paste:item', expect.anything());
+  });
+
+  it.each(['screen', 'video', 'webcam'] as const)(
+    'offers Hold Segment at Playhead for %s clips when the playhead is inside the clip',
+    (kind) => {
+      const menu = createMenu({ currentTimeMs: ref(1_000) });
+
+      menu.openClipContextMenu(new MouseEvent('contextmenu'), visualClip(kind));
+
+      expect(contextMenuItem(menu, 'hold')).toEqual(
+        expect.objectContaining({ id: 'hold', label: 'holdSegment', disabled: false }),
+      );
+    },
+  );
+
+  it.each([
+    ['image', visualClip('image')],
+    ['audio', audioClip()],
+  ] as const)('does not offer Hold Segment for %s clips', (_kind, source) => {
+    const menu = createMenu({ currentTimeMs: ref(1_000) });
+
+    menu.openClipContextMenu(new MouseEvent('contextmenu'), source);
+
+    expect(contextMenuItem(menu, 'hold')).toBeUndefined();
+  });
+
+  it.each([39, 1_961, -1, 2_001])(
+    'disables Hold Segment at playhead time %s near or outside the clip boundary',
+    (timeMs) => {
+      const menu = createMenu({ currentTimeMs: ref(timeMs) });
+
+      menu.openClipContextMenu(new MouseEvent('contextmenu'), menu.sourceClip);
+
+      expect(contextMenuItem(menu, 'hold')).toEqual(expect.objectContaining({ id: 'hold', disabled: true }));
+    },
+  );
+
+  it('emits hold:clip with the selected clip and current playhead time', () => {
+    const menu = createMenu({ currentTimeMs: ref(1_000) });
+
+    menu.openClipContextMenu(new MouseEvent('contextmenu'), menu.sourceClip);
+    menu.handleContextMenuSelect('hold');
+
+    expect(menu.emitSpy).toHaveBeenCalledWith('hold:clip', { id: menu.sourceClip.id, timeMs: 1_000 });
   });
 });

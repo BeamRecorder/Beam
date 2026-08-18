@@ -445,7 +445,8 @@
     "turnSystemAudioOn": "開啟系統音訊"
   },
   "ScreenRegionOverlay": {
-    "instruction": "選取要錄影的區域",
+    "instruction": "選擇要錄製的區域",
+    "preset": "預設",
     "reset": "重設",
     "cancel": "取消",
     "useThisArea": "使用此區域"

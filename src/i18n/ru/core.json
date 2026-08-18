@@ -446,6 +446,7 @@
   },
   "ScreenRegionOverlay": {
     "instruction": "Выберите область для записи",
+    "preset": "Пресет",
     "reset": "Сбросить",
     "cancel": "Отмена",
     "useThisArea": "Использовать эту область"

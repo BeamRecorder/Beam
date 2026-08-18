@@ -586,8 +586,11 @@ describe('canonical composition rendering', () => {
     expect(ctx.drawImage).toHaveBeenLastCalledWith(image, expect.any(Number), expect.any(Number), 50, 50);
   });
 
-  it('samples cursor motion once per exported frame', () => {
+  it('samples cursor motion at the frozen screen source time once per exported frame', () => {
     const value = snapshot();
+    const screen = value.composition.clips[0]!;
+    if (screen.kind !== 'screen') throw new Error('Expected a screen clip fixture.');
+    screen.freezeFrameSourceMs = 250;
     value.cursor = {
       available: true,
       telemetry: [],
@@ -625,6 +628,6 @@ describe('canonical composition rendering', () => {
     }
 
     expect(sample).toHaveBeenCalledTimes(frames.length);
-    expect(sample.mock.calls.map(([time]) => time)).toEqual(frames);
+    expect(sample.mock.calls.map(([time]) => time)).toEqual([0.25, 0.25, 0.25]);
   });
 });

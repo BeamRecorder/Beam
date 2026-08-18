@@ -180,7 +180,7 @@
     "waveformUnavailable": "Waveform unavailable",
     "trimStart": "Trim start",
     "trimEnd": "Trim end",
-    "holdSegment": "Hold segment",
+    "holdSegment": "Hold Segment at Playhead",
     "copy": "Copy",
     "paste": "Paste",
     "delete": "Delete",

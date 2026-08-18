@@ -101,6 +101,16 @@
   flex-direction: column;
   min-height: 100%;
   min-width: 100%;
+  transition:
+    width 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    min-width 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.timeline-viewport.is-trimming {
+  transition: none;
+}
+.timeline-viewport.is-trimming .timeline-clip {
+  will-change: transform, width;
+  transition: none;
 }
 .timeline-ruler {
   height: 28px;
@@ -483,6 +493,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .timeline-viewport,
   .timeline-clip,
   .sidebar-track-item .track-info,
   .track-row .track-content {

@@ -65,7 +65,15 @@ const baseOptions = () => ({
         ],
       },
     }) as never,
-  screenClip: () => ({ transform: { x: 0, y: 0, width: 1, height: 1 }, isMirrored: false }) as never,
+  screenClip: () =>
+    ({
+      timelineStartMs: 0,
+      timelineDurationMs: 10_000,
+      sourceInMs: 0,
+      playbackRate: 1,
+      transform: { x: 0, y: 0, width: 1, height: 1 },
+      isMirrored: false,
+    }) as never,
   isScreenEnabled: () => true,
   showBackground: () => false,
   onRenderOnce: vi.fn(),

@@ -446,6 +446,7 @@
   },
   "ScreenRegionOverlay": {
     "instruction": "녹화할 영역을 선택하세요",
+    "preset": "프리셋",
     "reset": "초기화",
     "cancel": "취소",
     "useThisArea": "이 영역 사용"

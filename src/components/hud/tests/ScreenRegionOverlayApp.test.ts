@@ -2,7 +2,13 @@ import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { capture } = vi.hoisted(() => ({
-  capture: { onScreenRegionConfigure: vi.fn(), confirmScreenRegion: vi.fn(), cancelScreenRegion: vi.fn() },
+  capture: {
+    onScreenRegionConfigure: vi.fn(),
+    confirmScreenRegion: vi.fn(),
+    cancelScreenRegion: vi.fn(),
+    getPreferences: vi.fn().mockResolvedValue({ extras: {} }),
+    updatePreferences: vi.fn().mockResolvedValue({ extras: {} }),
+  },
 }));
 vi.mock('../../../api/capture', () => ({ capture }));
 vi.mock('~/i18n/useTranslate', () => ({
@@ -17,9 +23,21 @@ const Button = {
   template: '<button :disabled="disabled" @click="$emit(\'click\')"><slot /></button>',
 };
 
+const Select = {
+  props: ['modelValue', 'options', 'placeholder'],
+  emits: ['update:modelValue'],
+  template: `
+    <select :value="modelValue" @change="$emit('update:modelValue', $event.target.value)">
+      <option v-for="opt in options" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+    </select>
+  `,
+};
+
 describe('ScreenRegionOverlayApp', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    capture.getPreferences.mockResolvedValue({ extras: {} });
+    capture.updatePreferences.mockResolvedValue({ extras: {} });
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1000 });
     Object.defineProperty(window, 'innerHeight', { configurable: true, value: 500 });
   });
@@ -35,7 +53,7 @@ describe('ScreenRegionOverlayApp', () => {
       configure = next;
       return unsubscribe;
     });
-    const wrapper = mount(ScreenRegionOverlayApp, { global: { stubs: { Button } } });
+    const wrapper = mount(ScreenRegionOverlayApp, { global: { stubs: { Button, Select } } });
     configure({ mode: 'select', bounds: { width: 1000, height: 500 } });
     await wrapper.vm.$nextTick();
     expect(wrapper.find('.region-empty-backdrop').exists()).toBe(false);
@@ -68,7 +86,7 @@ describe('ScreenRegionOverlayApp', () => {
       configure = next;
       return vi.fn();
     });
-    const wrapper = mount(ScreenRegionOverlayApp, { global: { stubs: { Button } } });
+    const wrapper = mount(ScreenRegionOverlayApp, { global: { stubs: { Button, Select } } });
     configure({
       mode: 'select',
       bounds: { width: 1000, height: 500 },
@@ -88,6 +106,9 @@ describe('ScreenRegionOverlayApp', () => {
     await main.trigger('pointercancel');
     await wrapper.findAll('.region-actions button')[0].trigger('click');
     expect(wrapper.get('.region-frame').attributes('style')).toContain('width: 100%');
+    expect(capture.updatePreferences).toHaveBeenCalledWith({
+      extras: { screenRegionPreset: null },
+    });
   });
 
   it('cancels selection and ignores pointer input outside select mode', async () => {
@@ -96,7 +117,7 @@ describe('ScreenRegionOverlayApp', () => {
       configure = next;
       return vi.fn();
     });
-    const wrapper = mount(ScreenRegionOverlayApp, { global: { stubs: { Button } } });
+    const wrapper = mount(ScreenRegionOverlayApp, { global: { stubs: { Button, Select } } });
     configure({ mode: 'record', bounds: { width: 100, height: 100 } });
     await wrapper.vm.$nextTick();
     expect(wrapper.find('.region-toolbar').exists()).toBe(false);
@@ -110,5 +131,65 @@ describe('ScreenRegionOverlayApp', () => {
     await wrapper.vm.$nextTick();
     await wrapper.findAll('.region-actions button')[1].trigger('click');
     expect(capture.cancelScreenRegion).toHaveBeenCalledOnce();
+  });
+
+  it('applies a selected preset and persists it to preferences', async () => {
+    let configure!: (value: {
+      mode: 'select';
+      bounds: { width: number; height: number };
+    }) => void;
+    capture.onScreenRegionConfigure.mockImplementation((next: typeof configure) => {
+      configure = next;
+      return vi.fn();
+    });
+    const wrapper = mount(ScreenRegionOverlayApp, { global: { stubs: { Button, Select } } });
+    configure({ mode: 'select', bounds: { width: 2000, height: 1000 } });
+    await wrapper.vm.$nextTick();
+
+    const select = wrapper.getComponent(Select);
+    expect(select.props('options')).toHaveLength(6);
+    expect(select.props('options').map((o: { value: string }) => o.value)).toEqual([
+      '640x480',
+      '800x600',
+      '1024x768',
+      '1366x768',
+      '1440x990',
+      '1920x1080',
+    ]);
+
+    await select.vm.$emit('update:modelValue', '1024x768');
+    await wrapper.vm.$nextTick();
+
+    // 1024 / 2000 = 0.512 (51.2%), 768 / 1000 = 0.768 (76.8%)
+    expect(wrapper.get('.region-frame').attributes('style')).toContain('width: 51.2%');
+    expect(wrapper.get('.region-frame').attributes('style')).toContain('height: 76.8%');
+    expect(capture.updatePreferences).toHaveBeenCalledWith({
+      extras: { screenRegionPreset: '1024x768' },
+    });
+  });
+
+  it('loads saved preset from preferences when mounted', async () => {
+    capture.getPreferences.mockResolvedValue({
+      extras: { screenRegionPreset: '800x600' },
+    });
+
+    let configure!: (value: {
+      mode: 'select';
+      bounds: { width: number; height: number };
+    }) => void;
+    capture.onScreenRegionConfigure.mockImplementation((next: typeof configure) => {
+      configure = next;
+      return vi.fn();
+    });
+
+    const wrapper = mount(ScreenRegionOverlayApp, { global: { stubs: { Button, Select } } });
+    configure({ mode: 'select', bounds: { width: 1600, height: 1200 } });
+    await wrapper.vm.$nextTick();
+    await Promise.resolve();
+    await wrapper.vm.$nextTick();
+
+    // 800 / 1600 = 50%, 600 / 1200 = 50%
+    expect(wrapper.get('.region-frame').attributes('style')).toContain('width: 50%');
+    expect(wrapper.get('.region-frame').attributes('style')).toContain('height: 50%');
   });
 });

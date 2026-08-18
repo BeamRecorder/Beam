@@ -446,6 +446,7 @@
   },
   "ScreenRegionOverlay": {
     "instruction": "録画する範囲を選択",
+    "preset": "プリセット",
     "reset": "リセット",
     "cancel": "キャンセル",
     "useThisArea": "この範囲を使用"

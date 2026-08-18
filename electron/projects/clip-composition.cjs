@@ -10,7 +10,8 @@ const {
   validateTrackLayout,
 } = require('./composition-tracks.cjs');
 
-const schemaVersion = 8;
+const schemaVersion = 9;
+const previousCompositionSchemaVersion = 8;
 const cameraLayoutSchemaVersion = 7;
 const transitionSchemaVersion = 6;
 const typographySchemaVersion = 5;
@@ -304,6 +305,14 @@ function normalizeComposition(value) {
         volume: finite(clip.volume) ? Math.max(0, Math.min(200, clip.volume)) : 100,
       };
     if (!id(clip.trackId)) throw new Error('Identifiant de piste visuelle invalide');
+    if (
+      clip.freezeFrameSourceMs !== undefined &&
+      (clip.kind === 'image' ||
+        !finite(clip.freezeFrameSourceMs) ||
+        Math.round(clip.freezeFrameSourceMs) !== common.sourceInMs ||
+        assets.find((asset) => asset.id === clip.assetId)?.kind !== 'video')
+    )
+      throw new Error('Image figée invalide');
     const cameraPresets = ['screen', 'video', 'image', 'webcam'].includes(clip.kind)
       ? (() => {
           const cameraLayoutPreset = clip.cameraLayoutPreset === undefined ? 'custom' : clip.cameraLayoutPreset;
@@ -329,6 +338,7 @@ function normalizeComposition(value) {
       transform: rectangle(clip.transform, 'Transformation'),
       ...(clip.crop ? { crop: rectangle(clip.crop, 'Recadrage') } : {}),
       appearance: appearance(clip.appearance),
+      ...(clip.freezeFrameSourceMs !== undefined ? { freezeFrameSourceMs: Math.round(clip.freezeFrameSourceMs) } : {}),
       ...cameraPresets,
       ...(typeof clip.isMirrored === 'boolean' && typeof clip.isMirroredY === 'boolean'
         ? { isMirrored: clip.isMirrored, isMirroredY: clip.isMirroredY }
@@ -369,15 +379,20 @@ function migrateComposition(value, showBackground, historicalSessionIds = []) {
       typographySchemaVersion,
       transitionSchemaVersion,
       cameraLayoutSchemaVersion,
+      previousCompositionSchemaVersion,
     ].includes(value.schemaVersion) ||
     !Array.isArray(value.assets) ||
     !Array.isArray(value.clips)
   )
     throw new Error(`Version de composition inconnue: ${String(value?.schemaVersion)}`);
   if (
-    [visualTrackSchemaVersion, typographySchemaVersion, transitionSchemaVersion, cameraLayoutSchemaVersion].includes(
-      value.schemaVersion,
-    )
+    [
+      visualTrackSchemaVersion,
+      typographySchemaVersion,
+      transitionSchemaVersion,
+      cameraLayoutSchemaVersion,
+      previousCompositionSchemaVersion,
+    ].includes(value.schemaVersion)
   ) {
     return normalizeComposition({
       ...value,
@@ -385,25 +400,28 @@ function migrateComposition(value, showBackground, historicalSessionIds = []) {
       keyboardCaptionSessions: Array.isArray(value.keyboardCaptionSessions)
         ? value.keyboardCaptionSessions
         : historicalSessionIds,
-      clips: (value.schemaVersion === cameraLayoutSchemaVersion
-        ? repairMigratedTrackIds(value.clips)
-        : repairMigratedTrackIds(value.clips).map(withHistoricalTypography)
-      ).map((clip) => ({
-        ...clip,
-        ...(value.schemaVersion < cameraLayoutSchemaVersion ? { transitions: { entry: null, exit: null } } : {}),
-        ...(['screen', 'video', 'image', 'webcam'].includes(clip.kind)
-          ? {
-              cameraLayoutPreset: 'custom',
-              cameraFramingPreset: 'custom',
-              ...(clip.kind === 'webcam'
+      clips:
+        value.schemaVersion === previousCompositionSchemaVersion
+          ? repairMigratedTrackIds(value.clips)
+          : (value.schemaVersion === cameraLayoutSchemaVersion
+              ? repairMigratedTrackIds(value.clips)
+              : repairMigratedTrackIds(value.clips).map(withHistoricalTypography)
+            ).map((clip) => ({
+              ...clip,
+              ...(value.schemaVersion < cameraLayoutSchemaVersion ? { transitions: { entry: null, exit: null } } : {}),
+              ...(['screen', 'video', 'image', 'webcam'].includes(clip.kind)
                 ? {
-                    cameraSplitRatio: 0.5,
-                    cameraSplitPadding: 0,
+                    cameraLayoutPreset: 'custom',
+                    cameraFramingPreset: 'custom',
+                    ...(clip.kind === 'webcam'
+                      ? {
+                          cameraSplitRatio: 0.5,
+                          cameraSplitPadding: 0,
+                        }
+                      : {}),
                   }
                 : {}),
-            }
-          : {}),
-      })),
+            })),
     });
   }
   return normalizeComposition({
