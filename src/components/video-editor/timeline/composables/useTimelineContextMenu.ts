@@ -1,11 +1,12 @@
 import { computed, ref, type Ref } from 'vue';
-import { ClipboardPaste, Copy, Trash2 } from '@lucide/vue';
+import { ClipboardPaste, Copy, Pause, Trash2 } from '@lucide/vue';
 import type { Clip, ClipComposition, MediaAsset } from '~/media/shared/composition-types';
 import type { ZoomElement } from '../../zoom/zoom-types';
 import type { ContextMenuItemOrDivider } from '~/components/ui/context-menu';
 import { getClipCategory, useTimelineClipboard } from './useTimelineClipboard';
 import type { TimelineClipboardItem, TimelineItemCategory, TimelinePasteTarget } from './timeline-clipboard-types';
 import type { TimelineTracksEmits } from './timeline-tracks-types';
+import { MIN_CLIP_DURATION_MS } from '../../composition/engine/clip-engine';
 
 export interface TimelineContextMenuState {
   isOpen: boolean;
@@ -119,10 +120,24 @@ export function useTimelineContextMenu(options: {
     options.emit('paste:item', { item, timeMs: options.currentTimeMs.value, target });
   };
 
+  const canHoldClip = (clip: Clip | null) =>
+    clip !== null &&
+    clip.enabled &&
+    (clip.kind === 'screen' || clip.kind === 'video' || clip.kind === 'webcam') &&
+    options.assetFor(clip)?.kind === 'video' &&
+    clip.freezeFrameSourceMs === undefined &&
+    options.currentTimeMs.value >= clip.timelineStartMs + MIN_CLIP_DURATION_MS &&
+    options.currentTimeMs.value <= clip.timelineStartMs + clip.timelineDurationMs - MIN_CLIP_DURATION_MS;
+
   const contextMenuItems = computed<ContextMenuItemOrDivider[]>(() => {
     const { category, clip, zoom } = contextMenuState.value;
     const canCopy = Boolean(options.scopeId.value && (category === 'zoom' ? zoom : clip));
-    const items: ContextMenuItemOrDivider[] = [
+    const canHold = canHoldClip(clip);
+    const items: ContextMenuItemOrDivider[] = [];
+    if (clip && (clip.kind === 'screen' || clip.kind === 'video' || clip.kind === 'webcam')) {
+      items.push({ id: 'hold', label: options.t('holdSegment'), icon: Pause, disabled: !canHold }, { isDivider: true });
+    }
+    items.push(
       { id: 'copy', label: options.t('copy'), icon: Copy, shortcut: 'Ctrl+C', disabled: !canCopy },
       {
         id: 'paste',
@@ -140,13 +155,15 @@ export function useTimelineContextMenu(options: {
         shortcut: 'Del',
         disabled: category === 'zoom' ? !zoom : !clip,
       },
-    ];
+    );
     return items;
   });
 
   const handleContextMenuSelect = (actionId: string) => {
     const { category, clip, zoom, trackId } = contextMenuState.value;
-    if (actionId === 'copy') copyItem(clip, zoom);
+    if (actionId === 'hold' && clip && canHoldClip(clip))
+      options.emit('hold:clip', { id: clip.id, timeMs: options.currentTimeMs.value });
+    else if (actionId === 'copy') copyItem(clip, zoom);
     else if (actionId === 'paste') pasteClipboard({ category, trackId });
     else if (actionId === 'delete') {
       if (category === 'zoom' && zoom) options.emit('delete:zoom', zoom.id);

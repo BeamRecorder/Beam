@@ -473,6 +473,7 @@
   },
   "ScreenRegionOverlay": {
     "instruction": "Sélectionnez une zone à enregistrer",
+    "preset": "Préréglage",
     "reset": "Réinitialiser",
     "cancel": "Annuler",
     "useThisArea": "Utiliser cette zone"

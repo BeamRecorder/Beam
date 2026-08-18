@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ProjectEditorData, SessionTrackAsset, SessionTrackData } from '../../../../api/types/capture-api';
 import type { InputEventSidecar } from '../../../../api/types/capture-session';
-import { emptyComposition, type ClipComposition } from '~/media/shared/composition-types';
+import { COMPOSITION_SCHEMA_VERSION, emptyComposition, type ClipComposition } from '~/media/shared/composition-types';
 import { synchronizeRecordingClips } from '../session-clips';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 
@@ -93,7 +93,7 @@ describe('synchronizeRecordingClips', () => {
     } as unknown as ClipComposition;
 
     expect(synchronizeRecordingClips(legacy, null)).toEqual({
-      schemaVersion: 8,
+      schemaVersion: COMPOSITION_SCHEMA_VERSION,
       assets: [],
       clips: [],
       keyboardCaptionSessions: [],
@@ -282,7 +282,7 @@ describe('synchronizeRecordingClips', () => {
 
     const first = synchronizeRecordingClips(emptyComposition(), data);
     const keyboardCaptions = first.clips.filter((clip) => clip.kind === 'caption');
-    expect(first.schemaVersion).toBe(8);
+    expect(first.schemaVersion).toBe(COMPOSITION_SCHEMA_VERSION);
     expect(first.keyboardCaptionSessions).toEqual(['session-1']);
     expect(keyboardCaptions).toHaveLength(1);
     expect(keyboardCaptions[0]).toMatchObject({

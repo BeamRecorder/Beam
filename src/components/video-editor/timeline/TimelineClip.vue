@@ -1,18 +1,19 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue';
 import type { Clip, MediaAsset } from '~/media/shared/composition-types';
-import type { MediaError } from '~/media/shared';
+import { sourceTimeAt, type MediaError } from '~/media/shared';
 import { useThumbnails } from './waveform/useThumbnails';
 import { useTranslate } from '~/i18n/useTranslate';
 import type { TimelineThumbnailSlot } from './composables/timeline-viewport';
 import type { AudioWaveformStatus } from './composables/useCompositionAudioWaveforms';
 import WaveformCanvas from './waveform/WaveformCanvas.vue';
-
+import { timelineClipStyle, timelineFrameStyle, timelineTransitionStyle } from './timeline-clip-geometry';
 const { t } = useTranslate('TimelineTracks');
 const props = defineProps<{
   clip: Clip;
   asset?: MediaAsset | null;
   duration: number;
+  timelineWidthPx?: number;
   thumbnailSlots: readonly TimelineThumbnailSlot[];
   selected: boolean;
   waveformBars?: number[];
@@ -31,7 +32,6 @@ const emit = defineEmits<{
   (event: 'trim', value: { event: PointerEvent; edge: 'start' | 'end' }): void;
   (event: 'contextmenu', value: MouseEvent): void;
 }>();
-
 const videoAsset = computed(() => (props.clip.kind !== 'audio' && props.asset?.kind === 'video' ? props.asset : null));
 const { thumbnails, requestVisibleFrames } = useThumbnails(videoAsset);
 const clipEndMs = computed(() => props.clip.timelineStartMs + props.clip.timelineDurationMs);
@@ -44,7 +44,8 @@ const frames = computed<TimelineFrame[]>(() =>
     const timelineMs = Math.max(slotStartMs, props.clip.timelineStartMs);
     const timelineEndMs = Math.min(slotEndMs, clipEndMs.value);
     if (timelineEndMs <= timelineMs) return [];
-    const sourceMs = props.clip.sourceInMs + (timelineMs - props.clip.timelineStartMs) * props.clip.playbackRate;
+    const sourceMs = sourceTimeAt(props.clip, timelineMs);
+    if (sourceMs === null) return [];
     return [
       {
         timelineSecond: slot.timelineSeconds,
@@ -57,9 +58,6 @@ const frames = computed<TimelineFrame[]>(() =>
 );
 const frozenFrames = ref<TimelineFrame[]>([]);
 const displayedFrames = computed(() => (frozenFrames.value.length ? frozenFrames.value : frames.value));
-// Moving a clip changes only its timeline placement. The thumbnail content is
-// still the same source segment, so do not replace it (or show skeletons) on a
-// move commit. Refresh only when the viewport or source timing actually changes.
 const thumbnailRefreshKey = computed(() =>
   [
     props.thumbnailSlots.map((slot) => `${slot.timelineSeconds}:${slot.durationSeconds}`).join(','),
@@ -67,6 +65,7 @@ const thumbnailRefreshKey = computed(() =>
     props.clip.sourceInMs,
     props.clip.sourceDurationMs,
     props.clip.playbackRate,
+    'freezeFrameSourceMs' in props.clip ? props.clip.freezeFrameSourceMs : '',
   ].join('|'),
 );
 watch(
@@ -79,18 +78,9 @@ watch(
   },
   { immediate: true },
 );
-
-const clipStyle = computed(() => ({
-  left: `${props.duration > 0 ? (props.clip.timelineStartMs / (props.duration * 1_000)) * 100 : 0}%`,
-  width: `${props.duration > 0 ? (props.clip.timelineDurationMs / (props.duration * 1_000)) * 100 : 0}%`,
-}));
-const frameStyle = (frame: TimelineFrame) => ({
-  left: `${(frame.relativeMs / Math.max(1, props.clip.timelineDurationMs)) * 100}%`,
-  width: `${(frame.durationMs / Math.max(1, props.clip.timelineDurationMs)) * 100}%`,
-});
-const transitionStyle = (edge: 'entry' | 'exit') => ({
-  width: `${((props.clip.transitions?.[edge]?.durationMs ?? 0) / Math.max(1, props.clip.timelineDurationMs)) * 100}%`,
-});
+const clipStyle = computed(() => timelineClipStyle(props.clip, props.duration, props.timelineWidthPx));
+const frameStyle = (frame: TimelineFrame) => timelineFrameStyle(props.clip, frame.relativeMs, frame.durationMs);
+const transitionStyle = (edge: 'entry' | 'exit') => timelineTransitionStyle(props.clip, edge);
 const thumbnailFor = (frame: TimelineFrame) => {
   const exact = thumbnails[frame.mediaSecond];
   if (exact) return exact;
@@ -108,7 +98,6 @@ const formatTrimTime = (milliseconds: number) => {
   const tenths = Math.floor((seconds % 1) * 10);
   return `${minutes > 0 ? `${minutes}:` : ''}${wholeSeconds.toString().padStart(2, '0')}.${tenths}s`;
 };
-
 let marqueeFrame = 0;
 let marqueeTimer = 0;
 const stopMarquee = (target?: HTMLElement | null) => {
@@ -140,7 +129,6 @@ const startMarquee = (event: PointerEvent) => {
 };
 onUnmounted(() => stopMarquee());
 </script>
-
 <template>
   <button
     type="button"
@@ -223,7 +211,7 @@ onUnmounted(() => stopMarquee());
       }}</span>
     </span>
     <span class="clip-label-overlay">
-      <span class="clip-label-text">{{ clip.name }}</span>
+      <span class="clip-label-text">{{ 'freezeFrameSourceMs' in clip ? t('holdSegment') : clip.name }}</span>
       <span v-if="Math.abs(clip.playbackRate - 1) > 0.01" class="speed-badge">{{ clip.playbackRate.toFixed(2) }}×</span>
     </span>
     <span
@@ -238,7 +226,6 @@ onUnmounted(() => stopMarquee());
     </span>
   </button>
 </template>
-
 <style scoped>
 .timeline-clip {
   position: absolute;
@@ -253,8 +240,12 @@ onUnmounted(() => stopMarquee());
   color: var(--text-primary);
   cursor: grab;
   isolation: isolate;
+  contain: layout paint style;
   box-sizing: border-box;
-  transition: opacity var(--fast) ease;
+  transition:
+    opacity var(--fast) ease,
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    width 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .timeline-clip:active {
   cursor: grabbing;

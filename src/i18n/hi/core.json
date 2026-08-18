@@ -446,6 +446,7 @@
   },
   "ScreenRegionOverlay": {
     "instruction": "रिकॉर्ड करने के लिए क्षेत्र चुनें",
+    "preset": "प्रीसेट",
     "reset": "रीसेट",
     "cancel": "रद्द करें",
     "useThisArea": "इस क्षेत्र का उपयोग करें"

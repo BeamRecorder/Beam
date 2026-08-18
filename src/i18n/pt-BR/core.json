@@ -446,6 +446,7 @@
   },
   "ScreenRegionOverlay": {
     "instruction": "Selecione uma área para gravar",
+    "preset": "Predefinição",
     "reset": "Redefinir",
     "cancel": "Cancelar",
     "useThisArea": "Usar esta área"

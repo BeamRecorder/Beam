@@ -28,6 +28,9 @@ export function videoPlaybackPlan(composition: ClipComposition): {
         timelineDurationSeconds: clip.timelineDurationMs / 1_000,
         sourceInSeconds: clip.sourceInMs / 1_000,
         playbackRate: clip.playbackRate,
+        ...(clip.freezeFrameSourceMs !== undefined
+          ? { freezeFrameSourceSeconds: clip.freezeFrameSourceMs / 1_000 }
+          : {}),
       },
     ];
   });

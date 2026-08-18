@@ -445,6 +445,7 @@
   },
   "ScreenRegionOverlay": {
     "instruction": "Chọn một khu vực để ghi",
+    "preset": "Cài đặt trước",
     "reset": "Đặt lại",
     "cancel": "Hủy",
     "useThisArea": "Sử dụng khu vực này"

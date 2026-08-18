@@ -34,6 +34,7 @@ import {
   type MotionBlurSurface,
 } from '../../video-editor/zoom/zoom-motion-blur-compositor';
 import { normalizeZoomMotionBlur } from '../../video-editor/zoom/zoom-types';
+import { sourceTimeAt } from '~/media/shared';
 
 export interface RenderableMedia {
   source: CanvasImageSource;
@@ -241,6 +242,7 @@ function renderCompositionFrameContent(
   const timeMs = time * 1_000;
   const layers = resolvedLayers ?? resolveCompositionSceneLayers(snapshot.composition, timeMs);
   const screen = layers.screen;
+  const screenTime = screen ? (sourceTimeAt(screen, timeMs) ?? timeMs) / 1_000 : time;
   const sourceWidth = video?.width ?? width;
   const sourceHeight = video?.height ?? height;
   const screenGeometry = screen
@@ -356,13 +358,13 @@ function renderCompositionFrameContent(
       createCursorMotionPlayer(snapshot.cursor.events, snapshot.cursorSettings.motion, sourceWidth, sourceHeight))
     : null;
   const cursorMotion = resolvedCursorMotionPlayer
-    ? resolvedCursorMotionPlayer.sample(time, cursorStateAt(snapshot.cursor.events, time))
+    ? resolvedCursorMotionPlayer.sample(screenTime, cursorStateAt(snapshot.cursor.events, screenTime))
     : null;
   const keyboardCursorPosition =
     screen && resolvedCursorMotionPlayer
       ? cursorPositionForKeyboardCaption(
           snapshot,
-          time,
+          screenTime,
           screen,
           sourceWidth,
           sourceHeight,
@@ -386,7 +388,7 @@ function renderCompositionFrameContent(
     drawCursorLayer(
       ctx,
       snapshot,
-      time,
+      screenTime,
       screen,
       sourceWidth,
       sourceHeight,

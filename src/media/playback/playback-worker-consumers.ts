@@ -7,6 +7,7 @@ export const PLAYBACK_DECODER_OPTIONS = {
   hardwareAcceleration: 'prefer-hardware' as const,
   optimizeForLatency: true,
 };
+export const PLAYBACK_TICK_PRELOAD_SECONDS = 0.12;
 
 export type QueuedFrame = {
   bitmap: ImageBitmap;
@@ -69,4 +70,21 @@ export const activeAt = (clip: PlaybackClipDescriptor, timelineSeconds: number) 
   timelineSeconds < clip.timelineStartSeconds + clip.timelineDurationSeconds;
 
 export const sourceTime = (clip: PlaybackClipDescriptor, timelineSeconds: number) =>
+  clip.freezeFrameSourceSeconds ??
   clip.sourceInSeconds + (timelineSeconds - clip.timelineStartSeconds) * clip.playbackRate;
+
+export const shouldDecodeTickFrame = (consumer: ClipConsumer, targetSeconds: number) =>
+  consumer.lastTargetSeconds !== targetSeconds;
+
+export function activeConsumersForTick(consumers: Iterable<ClipConsumer>, timelineSeconds: number, preloadSeconds = 0) {
+  const active: ClipConsumer[] = [];
+  for (const consumer of consumers) {
+    const startsIn = consumer.clip.timelineStartSeconds - timelineSeconds;
+    if (activeAt(consumer.clip, timelineSeconds) || (startsIn > 0 && startsIn <= preloadSeconds)) {
+      active.push(consumer);
+    } else {
+      consumer.lastTargetSeconds = null;
+    }
+  }
+  return active;
+}

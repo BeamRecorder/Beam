@@ -446,6 +446,7 @@
   },
   "ScreenRegionOverlay": {
     "instruction": "Изберете област за запис",
+    "preset": "Шаблон",
     "reset": "Нулиране",
     "cancel": "Отказ",
     "useThisArea": "Използване на тази област"

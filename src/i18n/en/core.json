@@ -473,6 +473,7 @@
   },
   "ScreenRegionOverlay": {
     "instruction": "Select an area to record",
+    "preset": "Preset",
     "reset": "Reset",
     "cancel": "Cancel",
     "useThisArea": "Use this area"

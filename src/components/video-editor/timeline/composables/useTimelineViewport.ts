@@ -10,6 +10,7 @@ export function useTimelineViewport(
   emit: TimelineTracksEmits,
   durationMs: Ref<number>,
   activeSnapTimeMs: Ref<number | null>,
+  isMediaPreviewFrozen: Ref<boolean>,
 ) {
   const tracksScrollRef = ref<HTMLDivElement | null>(null);
   const sidebarScrollRef = ref<HTMLDivElement | null>(null);
@@ -20,9 +21,13 @@ export function useTimelineViewport(
     const ms = typeof durationMs.value === 'number' && Number.isFinite(durationMs.value) ? durationMs.value : 1_000;
     return Math.max(1, ms / 1_000);
   });
+  const previewWidthScale = computed(() => {
+    const baseDurationMs = Math.round(Math.max(0, props.duration) * 1_000);
+    return baseDurationMs > 0 ? durationMs.value / baseDurationMs : 1;
+  });
   const tracksWidthStyle = computed(() => ({
-    width: `calc(${props.zoomLevel}% + 230px)`,
-    minWidth: 'calc(100% + 230px)',
+    width: `calc(${props.zoomLevel * previewWidthScale.value}% + 230px)`,
+    minWidth: `calc(${100 * previewWidthScale.value}% + 230px)`,
   }));
   const scrubPreviewTime = ref<number | null>(null);
   const displayedPlayheadTime = computed(() => scrubPreviewTime.value ?? props.currentTime);
@@ -63,19 +68,28 @@ export function useTimelineViewport(
   const visibleStartSecond = ref(0);
   const visibleEndSecond = ref(0);
   const viewportReady = ref(false);
+  const liveMediaViewport = computed(() => ({
+    startSeconds: viewportReady.value ? visibleStartSecond.value : 0,
+    endSeconds: viewportReady.value ? visibleEndSecond.value : 0,
+    pixelsPerSecond: rulerWidth.value / Math.max(1, currentDuration.value),
+  }));
+  const mediaViewport = ref(liveMediaViewport.value);
+  watch(
+    [liveMediaViewport, isMediaPreviewFrozen],
+    ([viewport, frozen]) => {
+      if (!frozen) mediaViewport.value = viewport;
+    },
+    { immediate: true },
+  );
   const {
     slices: audioWaveforms,
     errors: audioWaveformErrors,
     status: audioWaveformStatus,
   } = useCompositionAudioWaveforms(
     () => props.composition,
-    () => ({
-      startSeconds: viewportReady.value ? visibleStartSecond.value : 0,
-      endSeconds: viewportReady.value ? visibleEndSecond.value : 0,
-      pixelsPerSecond: rulerWidth.value / Math.max(1, currentDuration.value),
-    }),
+    () => mediaViewport.value,
   );
-  const thumbnailSlots = computed(() =>
+  const liveThumbnailSlots = computed(() =>
     viewportReady.value
       ? timelineThumbnailSlots(
           currentDuration.value,
@@ -85,6 +99,15 @@ export function useTimelineViewport(
         )
       : [],
   );
+  const stableThumbnailSlots = ref(liveThumbnailSlots.value);
+  watch(
+    [liveThumbnailSlots, isMediaPreviewFrozen],
+    ([slots, frozen]) => {
+      if (!frozen) stableThumbnailSlots.value = slots;
+    },
+    { immediate: true },
+  );
+  const thumbnailSlots = computed(() => stableThumbnailSlots.value);
 
   let scrollFrame: number | null = null;
   let scrubFrame: number | null = null;
@@ -134,25 +157,36 @@ export function useTimelineViewport(
     updateVisibleRange();
   };
   let autoScrollRaf: number | null = null;
-  let autoScrollSpeed = 0;
-  let autoScrollUpdate: (() => void) | null = null;
-  const runAutoScroll = () => {
+  let autoScrollVelocity = 0;
+  let lastAutoScrollTime: number | null = null;
+  let autoScrollUpdate: ((deltaPx: number) => void) | null = null;
+  const runAutoScroll = (timestamp?: number) => {
     autoScrollRaf = null;
     const scrollEl = tracksScrollRef.value;
-    if (!scrollEl || autoScrollSpeed === 0) return;
+    if (!scrollEl || autoScrollVelocity === 0) return;
+    const reportedFrameTime =
+      typeof timestamp === 'number' && Number.isFinite(timestamp) ? timestamp : (lastAutoScrollTime ?? 0) + 16;
+    const frameTime =
+      lastAutoScrollTime !== null && reportedFrameTime <= lastAutoScrollTime
+        ? lastAutoScrollTime + 16
+        : reportedFrameTime;
+    const elapsedMs = lastAutoScrollTime === null ? 16 : Math.max(1, Math.min(32, frameTime - lastAutoScrollTime));
+    lastAutoScrollTime = frameTime;
     const previousScrollLeft = scrollEl.scrollLeft;
-    scrollEl.scrollLeft += autoScrollSpeed;
-    if (scrollEl.scrollLeft === previousScrollLeft) {
-      autoScrollSpeed = 0;
+    scrollEl.scrollLeft += (autoScrollVelocity * elapsedMs) / 1_000;
+    const scrollDeltaPx = scrollEl.scrollLeft - previousScrollLeft;
+    if (scrollDeltaPx === 0) {
+      autoScrollVelocity = 0;
+      lastAutoScrollTime = null;
       return;
     }
     updateVisibleRange();
-    autoScrollUpdate?.();
-    if (autoScrollUpdate && autoScrollSpeed !== 0) {
+    autoScrollUpdate?.(scrollDeltaPx);
+    if (autoScrollUpdate && autoScrollVelocity !== 0) {
       autoScrollRaf = requestAnimationFrame(runAutoScroll);
     }
   };
-  const updateAutoScroll = (clientX: number, onScroll: (() => void) | null = null) => {
+  const updateAutoScroll = (clientX: number, onScroll: ((deltaPx: number) => void) | null = null) => {
     const scrollEl = tracksScrollRef.value;
     if (!scrollEl) return;
     const rect = scrollEl.getBoundingClientRect();
@@ -162,23 +196,25 @@ export function useTimelineViewport(
     const leftZone = rect.left + 50;
     if (clientX > rightZone) {
       const intensity = Math.min(1, (clientX - rightZone) / 50);
-      autoScrollSpeed = Math.round(4 + intensity * 10);
+      autoScrollVelocity = 60 + intensity * 300;
     } else if (clientX < leftZone) {
       const intensity = Math.min(1, (leftZone - clientX) / 50);
-      autoScrollSpeed = -Math.round(4 + intensity * 10);
+      autoScrollVelocity = -(60 + intensity * 300);
     } else {
-      autoScrollSpeed = 0;
+      autoScrollVelocity = 0;
+      lastAutoScrollTime = null;
     }
-    if (autoScrollSpeed === 0 && autoScrollRaf !== null) {
+    if (autoScrollVelocity === 0 && autoScrollRaf !== null) {
       cancelAnimationFrame(autoScrollRaf);
       autoScrollRaf = null;
     }
-    if (autoScrollSpeed !== 0 && autoScrollRaf === null) {
+    if (autoScrollVelocity !== 0 && autoScrollRaf === null) {
       autoScrollRaf = requestAnimationFrame(runAutoScroll);
     }
   };
   const stopAutoScroll = () => {
-    autoScrollSpeed = 0;
+    autoScrollVelocity = 0;
+    lastAutoScrollTime = null;
     autoScrollUpdate = null;
     if (autoScrollRaf !== null) {
       cancelAnimationFrame(autoScrollRaf);

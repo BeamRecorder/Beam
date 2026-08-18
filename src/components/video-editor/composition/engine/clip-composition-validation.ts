@@ -101,7 +101,12 @@ export function validateComposition(composition: ClipComposition): void {
     }
     if (
       isVisualClip(clip) &&
-      ((clip.cameraLayoutPreset !== undefined && !isCameraLayoutPreset(clip.cameraLayoutPreset)) ||
+      ((clip.freezeFrameSourceMs !== undefined &&
+        (!finite(clip.freezeFrameSourceMs) ||
+          clip.freezeFrameSourceMs !== clip.sourceInMs ||
+          composition.assets.find((asset) => asset.id === clip.assetId)?.kind !== 'video')) ||
+        (clip.kind === 'image' && clip.freezeFrameSourceMs !== undefined) ||
+        (clip.cameraLayoutPreset !== undefined && !isCameraLayoutPreset(clip.cameraLayoutPreset)) ||
         (clip.cameraFramingPreset !== undefined && !isCameraFramingPreset(clip.cameraFramingPreset)) ||
         (clip.kind !== 'webcam' &&
           clip.cameraLayoutPreset !== undefined &&

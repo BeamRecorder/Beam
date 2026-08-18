@@ -2,8 +2,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { effectScope, nextTick } from 'vue';
 import { createBackgroundMedia } from '../backgroundCatalog';
 import { useVideoPlayer } from '../useVideoPlayer';
-import type { ClipComposition } from '~/media/shared';
+import type { ClipComposition, VisualClip } from '~/media/shared';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { deleteClip, splitClip } from '../../composition/engine/clip-engine';
 
 const playback = vi.hoisted(() => {
   const instances: FakePlayback[] = [];
@@ -113,6 +114,47 @@ describe('useVideoPlayer', () => {
     await player.setPlaying(false);
     expect(engine.pause).toHaveBeenCalled();
     expect(player.isPlaying.value).toBe(false);
+  });
+
+  it('recomputes duration after deleting the final fragment created by a split', async () => {
+    const player = useVideoPlayer([]);
+    const longComposition: ClipComposition = {
+      ...composition,
+      schemaVersion: 9,
+      assets: [
+        {
+          id: 'asset',
+          kind: 'video',
+          name: 'Asset',
+          fileName: 'asset.mp4',
+          durationMs: 127_000,
+          width: 1_920,
+          height: 1_080,
+          src: 'project-media://asset',
+          origin: 'project',
+        },
+      ],
+      clips: [
+        {
+          ...(composition.clips[0]! as VisualClip),
+          kind: 'video',
+          trackId: 'video-track',
+          timelineStartMs: 0,
+          timelineDurationMs: 127_000,
+          sourceDurationMs: 127_000,
+          transitions: { entry: null, exit: null },
+          crop: { x: 0, y: 0, width: 1, height: 1 },
+        },
+      ],
+    };
+    const split = splitClip(longComposition, 'clip', 120_000, () => 'final-fragment');
+    const shortened = deleteClip(split, 'final-fragment');
+
+    await player.loadComposition(split);
+    expect(player.duration.value).toBe(127);
+
+    await player.loadComposition(shortened);
+    expect(player.duration.value).toBe(120);
   });
 
   it('exposes playback and audio performance metrics as reactive refs', async () => {

@@ -12,6 +12,7 @@ export function sourceTimeAt(clip: Clip, timelineTimeMs: number): number | null 
   if (!Number.isFinite(timelineTimeMs) || timelineTimeMs < clip.timelineStartMs || timelineTimeMs >= clipEndMs(clip)) {
     return null;
   }
+  if ('freezeFrameSourceMs' in clip && clip.freezeFrameSourceMs !== undefined) return clip.freezeFrameSourceMs;
   return Math.round(clip.sourceInMs + (timelineTimeMs - clip.timelineStartMs) * clip.playbackRate);
 }
 

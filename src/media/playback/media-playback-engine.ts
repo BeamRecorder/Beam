@@ -12,6 +12,7 @@ import { FrameLruCache } from './frame-cache';
 import { isPlaybackWorkerResponse } from './playback-protocol';
 import { audioPlaybackTopology, videoPlaybackTopology } from './playback-composition-topology';
 import { videoPlaybackPlan } from './playback-composition-plan';
+import { previousContiguousVisualClipId } from './playback-frame-continuity';
 import { isPreviewQuality, type PreviewQuality } from './playback-preview';
 import type {
   PlaybackEventMap,
@@ -210,8 +211,11 @@ export class MediaPlaybackEngine {
         if (isVisualClip(clip) && clip.enabled) {
           const clipStartSec = clip.timelineStartMs / 1_000;
           const clipEndSec = (clip.timelineStartMs + clip.timelineDurationMs) / 1_000;
-          if (target >= clipStartSec && target <= clipEndSec) {
-            const srcSec = (clip.sourceInMs + (target - clipStartSec) * 1_000 * (clip.playbackRate ?? 1)) / 1_000;
+          if (target >= clipStartSec && target < clipEndSec) {
+            const srcSec =
+              clip.freezeFrameSourceMs !== undefined
+                ? clip.freezeFrameSourceMs / 1_000
+                : (clip.sourceInMs + (target - clipStartSec) * 1_000 * (clip.playbackRate ?? 1)) / 1_000;
             const cachedKey = this.cache.findMatchingKey(clip.id, srcSec, `${this.previewQuality}:`);
             if (cachedKey) {
               this.currentFrameKeys.set(clip.id, cachedKey);
@@ -232,8 +236,22 @@ export class MediaPlaybackEngine {
   }
 
   frameFor(clipId: string): MediaFrame | null {
+    const clip = this.composition?.clips.find((entry) => entry.id === clipId);
+    const timelineTimeMs = this.currentSeconds * 1_000;
+    if (
+      !clip ||
+      !clip.enabled ||
+      !isVisualClip(clip) ||
+      timelineTimeMs < clip.timelineStartMs ||
+      timelineTimeMs >= clip.timelineStartMs + clip.timelineDurationMs
+    ) {
+      return null;
+    }
     const key = this.currentFrameKeys.get(clipId);
-    return key ? (this.cache.get(key) ?? null) : null;
+    if (key) return this.cache.get(key) ?? null;
+    const previousClipId = previousContiguousVisualClipId(this.composition!, clipId, timelineTimeMs);
+    const previousKey = previousClipId ? this.currentFrameKeys.get(previousClipId) : null;
+    return previousKey ? (this.cache.get(previousKey) ?? null) : null;
   }
 
   on<K extends keyof PlaybackEventMap>(event: K, listener: Listener<K>): () => void {

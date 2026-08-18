@@ -445,7 +445,8 @@
     "turnSystemAudioOn": "Activar audio del sistema"
   },
   "ScreenRegionOverlay": {
-    "instruction": "Selecciona un área para grabar",
+    "instruction": "Seleccione un área para grabar",
+    "preset": "Preajuste",
     "reset": "Restablecer",
     "cancel": "Cancelar",
     "useThisArea": "Usar esta área"
