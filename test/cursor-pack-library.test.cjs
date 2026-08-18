@@ -105,10 +105,19 @@ test('ignores animated roles while retaining static roles', () => {
 });
 
 test('marks a pack with fixed colors as original instead of tintable', () => {
-  const item = fixture(test, { roles: importableRoles({ left_ptr: { fill: '#000000' } }) });
+  const item = fixture(test, { roles: importableRoles({ left_ptr: { fill: '#123456' } }) });
   const result = item.library.importDirectory(item.theme);
 
   assert.equal(result.pack.colorMode, 'original');
+});
+
+test('marks black and white cursor artwork as tintable', (t) => {
+  const item = fixture(t, {
+    roles: { default: { svg: '<svg viewBox="0 0 32 32"><path fill="#fff"/><path fill="#000"/></svg>' } },
+  });
+  const result = item.library.importDirectory(item.theme);
+
+  assert.equal(result.pack.colorMode, 'tintable');
 });
 
 test('rejects packs without a static default role', () => {

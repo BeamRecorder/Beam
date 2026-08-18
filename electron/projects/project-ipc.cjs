@@ -1,5 +1,5 @@
 const fs = require('fs');
-const CURSOR_PACK_DISCOVERY_URL = 'https://github.com/search?q=cursors_scalable&type=code';
+const CURSOR_PACK_DISCOVERY_URL = 'https://store.kde.org/browse/cat/107/';
 
 function registerProjectIpc(
   ipcMain,

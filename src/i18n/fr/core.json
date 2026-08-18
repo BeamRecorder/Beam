@@ -268,8 +268,8 @@
     "motionBlur": "Flou de mouvement",
     "cursorPack": "Pack de curseurs",
     "packInfo": "À propos des packs compatibles",
-    "packDescription": "Beam accepte les thèmes de curseurs SVG contenant un dossier cursors_scalable.",
-    "findCursorPacks": "Trouver des packs",
+    "packDescription": "Parcourez les thèmes du KDE Store. Beam peut importer ceux qui contiennent un dossier cursors_scalable.",
+    "findCursorPacks": "Parcourir les thèmes",
     "compatibleFormat": "Format compatible",
     "import": "Importer",
     "advanced": "Avancé",
@@ -281,7 +281,7 @@
     "importSuccess": "{count} curseurs statiques importés.",
     "importIgnoredAnimated": "Rôles animés ignorés : {roles}.",
     "importFailed": "Impossible d’importer le pack de curseurs.",
-    "discoveryFailed": "Impossible d’ouvrir la recherche de packs."
+    "discoveryFailed": "Impossible d’ouvrir le catalogue de thèmes."
   },
   "EditorCanvas": {
     "videoPreviewLoading": "Chargement de l'aperçu vidéo",

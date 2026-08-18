@@ -136,32 +136,40 @@ describe('CursorPanel', () => {
     expect(packSelect.text()).toContain('Alpha');
     expect(packSelect.text()).toContain('Zeta');
 
-    const trigger = wrapper.get('.accordion-trigger');
+    const trigger = wrapper.get('.advanced-toggle');
     expect(trigger.attributes('aria-expanded')).toBe('false');
-    expect(wrapper.get('.accordion-content').attributes('style')).toContain('display: none');
+    expect(wrapper.find('#cursor-advanced-panel').exists()).toBe(false);
+    expect(wrapper.find('.cursor-size-control').exists()).toBe(true);
   });
 
-  it('opens Advanced accessibly and keeps manual controls inside it', async () => {
+  it('keeps presentation controls visible and limits Advanced to cursor style and clicks', async () => {
     const wrapper = mountPanel();
-    const trigger = wrapper.get('.accordion-trigger');
+    const trigger = wrapper.get('.advanced-toggle');
+
+    expect(wrapper.find('.cursor-size-control').exists()).toBe(true);
+    expect(wrapper.find('.motion-options').exists()).toBe(true);
+    expect(wrapper.find('.cursor-color').exists()).toBe(true);
+    expect(wrapper.find('.cursor-switch').exists()).toBe(true);
+    expect(wrapper.find('#cursor-advanced-panel').exists()).toBe(false);
 
     await trigger.trigger('click');
     await flushPromises();
 
     expect(trigger.attributes('aria-expanded')).toBe('true');
-    expect(trigger.attributes('aria-controls')).toMatch(/^accordion-content-/);
-    expect(wrapper.get('.accordion-content').attributes('style') ?? '').not.toContain('display: none');
+    expect(trigger.attributes('aria-controls')).toBe('cursor-advanced-panel');
+    expect(wrapper.get('#cursor-advanced-panel')).toBeDefined();
     expect(wrapper.get('.advanced-options .cursor-select')).toBeDefined();
-    expect(wrapper.get('.advanced-options .cursor-slider')).toBeDefined();
-    expect(wrapper.get('.advanced-options .cursor-switch')).toBeDefined();
     expect(wrapper.get('.advanced-options .click-effects-stub')).toBeDefined();
-    // The built-in pack keeps its original colours; only this control is disabled.
-    expect(wrapper.get('.advanced-options .cursor-color').attributes('disabled')).toBeDefined();
+    expect(wrapper.find('.advanced-options .cursor-slider').exists()).toBe(false);
+    expect(wrapper.find('.advanced-options .cursor-switch').exists()).toBe(false);
+    expect(wrapper.find('.advanced-options .cursor-color').exists()).toBe(false);
+    expect(wrapper.find('.advanced-options .motion-options').exists()).toBe(false);
+    expect(wrapper.get('.cursor-color').attributes('disabled')).toBeUndefined();
   });
 
   it('previews fixed cursor selection and commits it only when selected', async () => {
     const wrapper = mountPanel();
-    await wrapper.get('.accordion-trigger').trigger('click');
+    await wrapper.get('.advanced-toggle').trigger('click');
     await flushPromises();
 
     const cursorSelect = wrapper.findAll('.advanced-options .cursor-select')[0]!;
@@ -190,10 +198,10 @@ describe('CursorPanel', () => {
       cursorColor: '#abcabc',
       enableShadow: false,
     });
-    await wrapper.get('.accordion-trigger').trigger('click');
+    await wrapper.get('.advanced-toggle').trigger('click');
     await flushPromises();
 
-    await wrapper.get('.advanced-options .cursor-button').trigger('click');
+    await wrapper.get('.reset-automatic-button').trigger('click');
 
     expect(wrapper.emitted('update:selection')).toContainEqual([
       { packId: selectedPack.id, mode: 'automatic', cursorId: null },
@@ -248,7 +256,11 @@ describe('CursorPanel', () => {
     });
     const wrapper = mountPanel();
 
-    await wrapper.get('.pack-row .cursor-button').trigger('click');
+    const importButton = wrapper.get('.pack-import-button');
+    expect(importButton.attributes('aria-label')).toBe('Import');
+    expect(importButton.attributes('tooltip')).toBe('Import');
+    expect(importButton.text()).toBe('');
+    await importButton.trigger('click');
     await flushPromises();
 
     expect(wrapper.emitted('update:selection')).toEqual([[{ packId: imported.id, mode: 'automatic', cursorId: null }]]);
@@ -259,13 +271,13 @@ describe('CursorPanel', () => {
   it('leaves state untouched when import is cancelled and reports import failures', async () => {
     capture.pickCursorPackImport.mockResolvedValueOnce(null);
     const wrapper = mountPanel();
-    await wrapper.get('.pack-row .cursor-button').trigger('click');
+    await wrapper.get('.pack-import-button').trigger('click');
     await flushPromises();
     expect(wrapper.emitted('update:selection')).toBeUndefined();
     expect(useToastStore().toasts).toHaveLength(0);
 
     capture.pickCursorPackImport.mockRejectedValueOnce(new Error('Invalid cursor pack'));
-    await wrapper.get('.pack-row .cursor-button').trigger('click');
+    await wrapper.get('.pack-import-button').trigger('click');
     await flushPromises();
     expect(useToastStore().toasts.at(-1)).toMatchObject({ type: 'error', message: 'Invalid cursor pack' });
   });

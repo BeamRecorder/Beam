@@ -42,15 +42,6 @@
   margin-top: -0.15rem;
 }
 
-.advanced-toggle {
-  color: var(--text-muted);
-}
-
-.advanced-toggle[aria-expanded='true'] {
-  color: var(--color-primary);
-  background: var(--color-primary-light);
-}
-
 .appearance-advanced-panel {
   display: grid;
   gap: 0.75rem;

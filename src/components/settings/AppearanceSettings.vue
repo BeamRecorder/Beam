@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { Check, Maximize2, Palette, RotateCcw, Shapes, SlidersHorizontal, Sparkles } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
+import AdvancedButton from '~/ui/button/AdvancedButton.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue';
 import Select from '~/ui/select/Select.vue';
@@ -178,17 +179,12 @@ const isCustomSecondaryColor = computed(() => {
         </Button>
       </ButtonGroup>
       <div class="advanced-toggle-row">
-        <Button
-          class="advanced-toggle"
-          variant="ghost"
-          size="xs"
-          :icon="SlidersHorizontal"
-          :aria-expanded="advancedOpen"
-          aria-controls="appearance-advanced-panel"
-          @click="advancedOpen = !advancedOpen"
-        >
-          {{ t('advanced') }}
-        </Button>
+        <AdvancedButton
+          :open="advancedOpen"
+          controls="appearance-advanced-panel"
+          :label="t('advanced')"
+          @update:open="advancedOpen = $event"
+        />
       </div>
     </div>
 

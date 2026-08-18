@@ -23,6 +23,13 @@ describe('Popover', () => {
     expect(wrapper.emitted('toggle')?.at(-1)).toEqual([false]);
     wrapper.unmount();
   });
+  it('does not open when disabled', async () => {
+    const wrapper = mountPopover({ disabled: true });
+    await wrapper.get('.popover-trigger').trigger('click');
+    expect(wrapper.emitted('toggle')).toBeUndefined();
+    expect(document.querySelector('.popover-content')).toBeNull();
+    wrapper.unmount();
+  });
   it('closes when a click starts and ends outside', async () => {
     const wrapper = mountPopover();
     await wrapper.get('.popover-trigger').trigger('click');

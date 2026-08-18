@@ -146,7 +146,7 @@ function validateSvg(svg, role) {
 }
 
 function isTintColor(value) {
-  return /^(?:currentcolor|none|transparent|#fff(?:fff)?|white)$/i.test(String(value).trim());
+  return /^(?:currentcolor|none|transparent|#(?:000|000000|fff|ffffff)|black|white)$/i.test(String(value).trim());
 }
 
 function resolveScalableRoot(selected) {
@@ -263,7 +263,7 @@ function createCursorPackLibrary(root) {
         id,
         name: themeName(themeRoot, scalableRoot),
         source: 'imported',
-        colorMode: staticRoles.every((role) => role.tintable && role.hasCurrentColor) ? 'tintable' : 'original',
+        colorMode: staticRoles.every((role) => role.tintable) ? 'tintable' : 'original',
         defaultCursorId,
         cursors,
         automaticMap: Object.fromEntries(cursors.map((cursor) => [cursor.id, cursor.id])),

@@ -7,7 +7,12 @@ import { MACOS_CURSOR_PACK, orderedCursorPacks } from './cursor-packs';
 const imageCache = new Map<string, Promise<HTMLImageElement>>();
 
 const svgAtRasterSize = (svg: string, width: number, height: number, color: string, tintable: boolean) => {
-  let output = svg.replace(/<svg\b([^>]*)>/i, (_tag, attributes: string) => {
+  const tintReadySvg = tintable
+    ? svg
+        .replace(/(fill|stroke|stop-color)\s*=\s*(["'])(?:#000(?:000)?|black)\2/gi, '$1=$2currentColor$2')
+        .replace(/((?:fill|stroke|stop-color)\s*:\s*)(?:#000(?:000)?|black)(?=\s*(?:;|["']))/gi, '$1currentColor')
+    : svg;
+  return tintReadySvg.replace(/<svg\b([^>]*)>/i, (_tag, attributes: string) => {
     const clean = attributes.replace(/\s(?:width|height)=["'][^"']*["']/gi, '');
     return (
       `<svg${clean} width="${Math.max(1, Math.ceil(width))}" height="${Math.max(1, Math.ceil(height))}"` +
@@ -15,7 +20,6 @@ const svgAtRasterSize = (svg: string, width: number, height: number, color: stri
       '>'
     );
   });
-  return output;
 };
 
 export function useCursorReplacer() {

@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { Info, Search } from '@lucide/vue';
+import { FolderUp, Info, Search } from '@lucide/vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
 import Switch from '~/ui/switch/Switch.vue';
 import Select from '~/ui/select/Select.vue';
 import ColorInput from '~/ui/input/ColorInput.vue';
 import Button from '~/ui/button/Button.vue';
-import Accordion from '~/ui/accordion/Accordion.vue';
+import AdvancedButton from '~/ui/button/AdvancedButton.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import ShadowDirectionGroup from './ShadowDirectionGroup.vue';
 import CursorClickEffectsPanel from './CursorClickEffectsPanel.vue';
@@ -174,126 +174,150 @@ const selectMotionPreset = (preset: CursorMotionPreset) =>
         :options="packOptions"
         @update:model-value="selectPack"
       />
-      <Button size="sm" variant="outline" :loading="importing" @click="importPack">{{ t('import') }}</Button>
+      <Button
+        class="pack-import-button"
+        size="sm"
+        variant="outline"
+        :icon="FolderUp"
+        icon-only
+        :tooltip="t('import')"
+        :aria-label="t('import')"
+        :loading="importing"
+        @click="importPack"
+      />
     </div>
     <div v-if="!selectedPack" class="missing-pack" role="alert">
       {{ t('missingPack') }}
       <Button size="xs" variant="link" @click="importPack">{{ t('importPack') }}</Button>
     </div>
 
-    <Accordion v-model="advancedOpen" :title="t('advanced')" :bordered="false">
-      <div class="advanced-options">
-        <Button size="sm" variant="ghost" block @click="reset">{{ t('resetAutomaticDefaults') }}</Button>
-        <div class="prop-item">
-          <label class="prop-label">{{ t('cursorStyle') }}</label>
-          <Select
-            :model-value="selectedCursorOption"
-            :options="cursorOptions"
-            :disabled="!selectedPack"
-            @preview:model-value="
-              (value) =>
-                emit(
-                  'preview:selection',
-                  typeof value === 'string' && value !== '__automatic__'
-                    ? { packId: selection.packId, mode: 'fixed', cursorId: value }
-                    : null,
-                )
-            "
-            @update:model-value="selectCursor"
-          />
-        </div>
-        <BigSlider
-          :model-value="cursorSize"
-          :default-value="45"
-          :min="16"
-          :max="128"
-          :label="t('cursorSize')"
-          :format-value="(value) => `${value}px`"
-          @update:model-value="emit('update:cursorSize', $event)"
-        />
-        <ColorInput
-          :label="t('cursorColor')"
-          :model-value="cursorColor"
-          :disabled="selectedPack?.colorMode !== 'tintable'"
-          @update:model-value="emit('update:cursorColor', $event)"
-        />
-        <p v-if="selectedPack?.colorMode === 'original'" class="color-note">{{ t('originalColors') }}</p>
-        <Divider spacing="none" />
-        <div class="prop-row">
-          <span class="prop-label">{{ t('dropShadow') }}</span>
-          <Switch :model-value="enableShadow" @update:model-value="emit('update:enableShadow', $event)" />
-        </div>
-        <div v-if="enableShadow" class="nested-options">
-          <BigSlider
-            :model-value="shadowBlur"
-            :min="1"
-            :max="24"
-            :label="t('shadowBlur')"
-            :format-value="(value) => `${value}px`"
-            @update:model-value="emit('update:shadowBlur', $event)"
-          />
-          <ColorInput
-            :label="t('shadowColor')"
-            :model-value="shadowColor"
-            @update:model-value="emit('update:shadowColor', $event)"
-          />
-          <div class="prop-item">
-            <span class="sub-label">{{ t('direction') }}</span>
-            <ShadowDirectionGroup
-              :model-value="shadowDirection"
-              @update:model-value="emit('update:shadowDirection', $event)"
-            />
-          </div>
-        </div>
-        <Divider spacing="none" />
-        <section class="motion-options">
-          <div class="section-heading">
-            <span class="section-title">{{ t('cursorMotion') }}</span>
-            <span class="section-description">{{ t('cursorMotionDescription') }}</span>
-          </div>
-          <div class="prop-item">
-            <label class="prop-label">{{ t('motionPreset') }}</label>
-            <Select
-              :model-value="motion.preset"
-              :options="motionPresetOptions"
-              @update:model-value="selectMotionPreset($event as CursorMotionPreset)"
-            />
-          </div>
-          <BigSlider
-            :model-value="motion.smoothing"
-            :min="0"
-            :max="1"
-            :step="0.01"
-            :label="t('cursorSmoothing')"
-            :format-value="(value) => `${Math.round(value * 100)}%`"
-            @update:model-value="updateMotion({ smoothing: $event })"
-          />
-          <BigSlider
-            :model-value="motion.springMassMultiplier"
-            :min="0.5"
-            :max="2"
-            :step="0.01"
-            :label="t('springMassMultiplier')"
-            :format-value="(value) => value.toFixed(2)"
-            @update:model-value="updateMotion({ springMassMultiplier: $event })"
-          />
-          <BigSlider
-            :model-value="motion.motionBlur"
-            :min="0"
-            :max="1"
-            :step="0.01"
-            :label="t('motionBlur')"
-            :format-value="(value) => `${Math.round(value * 100)}%`"
-            @update:model-value="updateMotion({ motionBlur: $event })"
-          />
-        </section>
-        <Divider spacing="none" />
-        <CursorClickEffectsPanel
-          :model-value="clickEffects"
-          @update:model-value="emit('update:clickEffects', $event)"
+    <Divider spacing="none" />
+    <BigSlider
+      class="cursor-size-control"
+      :model-value="cursorSize"
+      :default-value="45"
+      :min="16"
+      :max="128"
+      :label="t('cursorSize')"
+      :format-value="(value) => `${value}px`"
+      @update:model-value="emit('update:cursorSize', $event)"
+    />
+
+    <div class="advanced-toggle-row">
+      <AdvancedButton
+        :open="advancedOpen"
+        controls="cursor-advanced-panel"
+        :label="t('advanced')"
+        @update:open="advancedOpen = $event"
+      />
+    </div>
+    <div v-if="advancedOpen" id="cursor-advanced-panel" class="advanced-options">
+      <div class="prop-item">
+        <label class="prop-label">{{ t('cursorStyle') }}</label>
+        <Select
+          :model-value="selectedCursorOption"
+          :options="cursorOptions"
+          :disabled="!selectedPack"
+          @preview:model-value="
+            (value) =>
+              emit(
+                'preview:selection',
+                typeof value === 'string' && value !== '__automatic__'
+                  ? { packId: selection.packId, mode: 'fixed', cursorId: value }
+                  : null,
+              )
+          "
+          @update:model-value="selectCursor"
         />
       </div>
-    </Accordion>
+      <Divider spacing="none" />
+      <CursorClickEffectsPanel :model-value="clickEffects" @update:model-value="emit('update:clickEffects', $event)" />
+    </div>
+
+    <Divider spacing="none" />
+    <ColorInput
+      :label="t('cursorColor')"
+      :model-value="cursorColor"
+      :disabled="selectedPack?.colorMode !== 'tintable'"
+      @update:model-value="emit('update:cursorColor', $event)"
+    />
+    <p v-if="selectedPack?.colorMode === 'original'" class="color-note">{{ t('originalColors') }}</p>
+
+    <Divider spacing="none" />
+    <div class="prop-row">
+      <span class="prop-label">{{ t('dropShadow') }}</span>
+      <Switch :model-value="enableShadow" @update:model-value="emit('update:enableShadow', $event)" />
+    </div>
+    <div v-if="enableShadow" class="nested-options">
+      <BigSlider
+        :model-value="shadowBlur"
+        :min="1"
+        :max="24"
+        :label="t('shadowBlur')"
+        :format-value="(value) => `${value}px`"
+        @update:model-value="emit('update:shadowBlur', $event)"
+      />
+      <ColorInput
+        :label="t('shadowColor')"
+        :model-value="shadowColor"
+        @update:model-value="emit('update:shadowColor', $event)"
+      />
+      <div class="prop-item">
+        <span class="sub-label">{{ t('direction') }}</span>
+        <ShadowDirectionGroup
+          :model-value="shadowDirection"
+          @update:model-value="emit('update:shadowDirection', $event)"
+        />
+      </div>
+    </div>
+
+    <Divider spacing="none" />
+    <section class="motion-options">
+      <div class="section-heading">
+        <span class="section-title">{{ t('cursorMotion') }}</span>
+        <span class="section-description">{{ t('cursorMotionDescription') }}</span>
+      </div>
+      <div class="prop-item">
+        <label class="prop-label">{{ t('motionPreset') }}</label>
+        <Select
+          :model-value="motion.preset"
+          :options="motionPresetOptions"
+          @update:model-value="selectMotionPreset($event as CursorMotionPreset)"
+        />
+      </div>
+      <BigSlider
+        :model-value="motion.smoothing"
+        :min="0"
+        :max="1"
+        :step="0.01"
+        :label="t('cursorSmoothing')"
+        :format-value="(value) => `${Math.round(value * 100)}%`"
+        @update:model-value="updateMotion({ smoothing: $event })"
+      />
+      <BigSlider
+        :model-value="motion.springMassMultiplier"
+        :min="0.5"
+        :max="2"
+        :step="0.01"
+        :label="t('springMassMultiplier')"
+        :format-value="(value) => value.toFixed(2)"
+        @update:model-value="updateMotion({ springMassMultiplier: $event })"
+      />
+      <BigSlider
+        :model-value="motion.motionBlur"
+        :min="0"
+        :max="1"
+        :step="0.01"
+        :label="t('motionBlur')"
+        :format-value="(value) => `${Math.round(value * 100)}%`"
+        @update:model-value="updateMotion({ motionBlur: $event })"
+      />
+    </section>
+
+    <Divider spacing="none" />
+    <Button class="reset-automatic-button" size="sm" variant="ghost" block @click="reset">
+      {{ t('resetAutomaticDefaults') }}
+    </Button>
   </div>
 </template>
 
@@ -316,13 +340,17 @@ const selectMotionPreset = (preset: CursorMotionPreset) =>
 }
 .pack-heading,
 .pack-row,
-.prop-row {
+.prop-row,
+.advanced-toggle-row {
   display: flex;
   align-items: center;
 }
 .pack-heading,
 .prop-row {
   justify-content: space-between;
+}
+.advanced-toggle-row {
+  justify-content: flex-end;
 }
 .pack-row {
   gap: 8px;

@@ -49,7 +49,7 @@ export const MACOS_CURSOR_PACK: CursorPackDescriptor = {
   id: 'builtin:macos',
   name: 'macOS',
   source: 'builtin',
-  colorMode: 'original',
+  colorMode: 'tintable',
   defaultCursorId: 'default',
   cursors: Object.entries(HOTSPOTS).map(([id, hotspot]) => ({
     id,

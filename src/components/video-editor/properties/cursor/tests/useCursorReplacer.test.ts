@@ -68,11 +68,35 @@ describe('useCursorReplacer', () => {
     expect(cursor.shadowBlur.value).toBe(6);
     expect(cursor.shadowColor.value).toBe('#000000');
     expect(cursor.shadowDirection.value).toBe('bottom');
+    expect(cursor.selectedPack.value?.colorMode).toBe('tintable');
 
     cursor.importedPacks.value = [makePack('pack:zeta', 'Zeta'), makePack('pack:alpha', 'Alpha')];
 
     expect(cursor.packs.value.map((pack) => pack.id)).toEqual(['builtin:macos', 'pack:alpha', 'pack:zeta']);
     expect(cursor.selectedPack.value?.id).toBe('builtin:macos');
+  });
+
+  it('makes the fixed black layer of the built-in macOS SVG tintable while preserving its white outline', async () => {
+    const pack = useCursorReplacer().packs.value[0]!;
+    const asset = pack.cursors[0]!;
+    const createObjectURL = vi.fn().mockReturnValue('blob:macos');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        text: vi.fn().mockResolvedValue('<svg viewBox="0 0 32 32"><path fill="#fff"/><path fill="#000"/></svg>'),
+      }),
+    );
+    vi.stubGlobal('Image', LoadingImage);
+    vi.stubGlobal('Blob', SvgBlob);
+    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL: vi.fn() });
+
+    await useCursorReplacer().getCursorImage(pack, asset, 32, 32, '#ff00ff');
+    const svg = (createObjectURL.mock.calls[0]?.[0] as SvgBlob).value;
+
+    expect(svg).toContain('fill="#fff"');
+    expect(svg).toContain('fill="currentColor"');
+    expect(svg).toContain('color="#ff00ff"');
   });
 
   it('loads a resized tintable SVG and caches it by pack, asset, dimensions and colour', async () => {

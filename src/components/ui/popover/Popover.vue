@@ -11,6 +11,7 @@ const props = withDefaults(
     closeOnWindowBlur?: boolean;
     interaction?: 'click' | 'hover-focus-click';
     closeDelay?: number;
+    disabled?: boolean;
   }>(),
   {
     align: 'left',
@@ -21,6 +22,7 @@ const props = withDefaults(
     closeOnWindowBlur: true,
     interaction: 'click',
     closeDelay: 180,
+    disabled: false,
   },
 );
 
@@ -41,6 +43,7 @@ const popoverId = `popover-${Math.random().toString(36).slice(2)}`;
 provide('popover-owner-id', popoverId);
 
 const toggle = () => {
+  if (props.disabled) return;
   if (props.interaction === 'hover-focus-click') {
     pinned.value = !pinned.value;
     isOpen.value = pinned.value || isOpen.value;
@@ -59,7 +62,7 @@ const cancelClose = () => {
   closeTimer = null;
 };
 const openTransient = () => {
-  if (props.interaction !== 'hover-focus-click') return;
+  if (props.disabled || props.interaction !== 'hover-focus-click') return;
   cancelClose();
   isOpen.value = true;
 };
@@ -148,6 +151,12 @@ watch(isOpen, (val) => {
   emit('toggle', val);
 });
 
+watch(
+  () => props.disabled,
+  (disabled) => {
+    if (disabled) close();
+  },
+);
 watch(
   () => props.direction,
   (val) => {
