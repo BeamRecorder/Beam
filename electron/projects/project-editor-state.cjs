@@ -47,6 +47,7 @@ const PRESETS = {
 };
 const finite = (value) => typeof value === 'number' && Number.isFinite(value);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+const defaultZoomMotionBlur = () => ({ enabled: true, intensity: 0.55 });
 const canvasTransitionKinds = new Set(['fade', 'slide', 'zoom', 'blur']);
 
 const canvasTransition = (value) => {
@@ -126,7 +127,16 @@ const zoomState = (value) => {
       throw new Error('Métadonnées de génération invalides');
     return { sessionId: record.sessionId, algorithmVersion: record.algorithmVersion, generatedAt: record.generatedAt };
   });
-  return { elements, generatedSessions };
+  const motionBlurInput = value.motionBlur;
+  if (
+    motionBlurInput !== undefined &&
+    (!motionBlurInput || typeof motionBlurInput.enabled !== 'boolean' || !finite(motionBlurInput.intensity))
+  )
+    throw new Error('Flou de mouvement du zoom invalide');
+  const motionBlur = motionBlurInput
+    ? { enabled: motionBlurInput.enabled, intensity: clamp(motionBlurInput.intensity, 0, 1) }
+    : defaultZoomMotionBlur();
+  return { elements, generatedSessions, motionBlur };
 };
 
 const clickEffect = (value) => {
@@ -320,4 +330,10 @@ const migratePresentation = (value) => {
 
 const createDefaultPresentation = () => migratePresentation(null);
 
-module.exports = { createDefaultPresentation, migratePresentation, presentationState, zoomState };
+module.exports = {
+  createDefaultPresentation,
+  defaultZoomMotionBlur,
+  migratePresentation,
+  presentationState,
+  zoomState,
+};

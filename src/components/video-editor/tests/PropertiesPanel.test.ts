@@ -8,6 +8,7 @@ import { DEFAULT_WATERMARK, type OutputCanvasSettings } from '../canvas/output-c
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import {
   emptyComposition as createEmptyComposition,
+  type AudioClip,
   type CaptionClip,
   type ClipComposition,
 } from '~/media/shared/composition-types';
@@ -60,12 +61,9 @@ const ZoomPanel = { template: '<div class="zoom-panel-stub">Zoom</div>' };
 const SettingsPanel = { template: '<div class="settings-panel-stub">Settings</div>' };
 const AudioClipPropertiesPanel = {
   props: ['clip'],
-  emits: ['update:enabled', 'delete'],
   template: `
     <div class="audio-clip-stub">
       {{ clip?.kind || "audio" }}
-      <button class="audio-toggle" @click="$emit('update:enabled', false)">Toggle</button>
-      <button class="audio-delete" @click="$emit('delete')">Delete</button>
     </div>
   `,
 };
@@ -119,13 +117,22 @@ const captionClip: CaptionClip = {
   },
 };
 
-const audioClip = {
+const audioClip: AudioClip = {
   id: 'audio',
   kind: 'audio',
   name: 'Audio',
   timelineStartMs: 0,
-  timelineDurationMs: 100,
-} as const;
+  timelineDurationMs: 2_000,
+  sourceInMs: 0,
+  sourceDurationMs: 2_000,
+  playbackRate: 1,
+  transitions: { entry: null, exit: null },
+  enabled: true,
+  order: 0,
+  assetId: 'audio-asset',
+  role: 'system',
+  volume: 100,
+};
 
 const screenClip = {
   id: 'screen',
@@ -162,6 +169,23 @@ const webcamClip = {
 
 const emptyBackgroundGroups: BackgroundMediaGroup[] = [];
 const composition: ClipComposition = createEmptyComposition();
+const audioComposition: ClipComposition = {
+  ...composition,
+  assets: [
+    {
+      id: 'audio-asset',
+      kind: 'audio',
+      name: 'Audio',
+      fileName: 'audio.wav',
+      durationMs: 2_000,
+      width: null,
+      height: null,
+      src: 'audio.wav',
+      origin: 'project',
+    },
+  ],
+  clips: [audioClip],
+};
 const noBackground: BackgroundValue | null = null;
 const noZoom: ZoomElement | null = null;
 const noEditorData: ProjectEditorData | null = null;
@@ -442,14 +466,9 @@ describe('PropertiesPanel', () => {
     await wrapper.setProps({
       activeTab: 'clip',
       selectedClip: audioClip,
+      composition: audioComposition,
     });
     expect(wrapper.find('.audio-clip-stub').exists()).toBe(true);
-    expect(wrapper.find('.panel-header-actions').exists()).toBe(false);
-
-    await wrapper.get('.audio-toggle').trigger('click');
-    expect(wrapper.emitted('update:clip-enabled')).toEqual([[false]]);
-    await wrapper.get('.audio-delete').trigger('click');
-    expect(wrapper.emitted('delete-clip')).toHaveLength(1);
 
     await wrapper.setProps({ selectedClip: null, selectedCaptionClip: captionClip });
     expect(wrapper.find('.caption-clip-stub').exists()).toBe(true);
@@ -458,6 +477,46 @@ describe('PropertiesPanel', () => {
       selectedClip: screenClip,
     });
     expect(wrapper.find('.clip-panel-stub').text()).toBe('video');
+  });
+
+  it('renders audio actions in the header and opens audio transitions with None and Fade', async () => {
+    const wrapper = mount(PropertiesPanel, {
+      props: { ...baseProps, activeTab: 'clip', selectedClip: audioClip, composition: audioComposition },
+      global,
+    });
+
+    const buttons = wrapper.findAll('.panel-header-actions button');
+    expect(buttons).toHaveLength(3);
+
+    await buttons[0]!.trigger('click');
+    expect(wrapper.emitted('update:clip-enabled')).toEqual([[false]]);
+    await buttons[2]!.trigger('click');
+    expect(wrapper.emitted('delete-clip')).toHaveLength(1);
+
+    await buttons[1]!.trigger('click');
+    expect(wrapper.get('.panel-title').text()).toBe('Audio Transitions');
+    expect(wrapper.findAll('.preset-card-info strong').map((label) => label.text())).toEqual(['None', 'Fade']);
+    expect(wrapper.get('.duration-control').text()).toContain('Select a transition');
+
+    await wrapper.findAll('.preset-card')[1]!.trigger('click');
+    expect(wrapper.emitted('update:composition')).toContainEqual([
+      expect.objectContaining({
+        clips: [
+          expect.objectContaining({
+            transitions: { entry: { preset: { kind: 'fade' }, durationMs: 500 }, exit: null },
+          }),
+        ],
+      }),
+    ]);
+
+    await wrapper.setProps({
+      composition: {
+        ...audioComposition,
+        clips: [{ ...audioClip, transitions: { entry: { preset: { kind: 'fade' }, durationMs: 500 }, exit: null } }],
+      },
+    });
+    expect(wrapper.find('.duration-slider').exists()).toBe(true);
+    expect(wrapper.get('.big-slider-value').text()).toBe('500 ms');
   });
 
   it('keeps non-audio clip actions in the header and toggles/deletes them', async () => {

@@ -284,6 +284,11 @@
     "exportVideoAria": "動画を書き出す",
     "video": "動画",
     "resolution": "解像度",
+    "frameRate": "フレームレート",
+    "frameRateDesc": "映画らしい24 fps、標準的な30 fps、または最も滑らかな60 fpsを選べます。",
+    "frameRate24Desc": "映画らしい動きと小さめのファイルサイズ。24 fpsの素材に最適です。",
+    "frameRate30Desc": "標準的な動画向けに、滑らかさとファイルサイズを両立します。",
+    "frameRate60Desc": "速い動きを最も滑らかに表現しますが、ファイルは大きくなります。60 fpsの素材に最適です。",
     "resMax": "最大",
     "res1080p": "1080p",
     "res720p": "720p",
@@ -430,7 +435,10 @@
     "searchPlaceholder": "プロジェクトを検索...",
     "noSearchResults": "一致するプロジェクトが見つかりません。",
     "clearSearch": "検索をクリア",
-    "refreshed": "更新完了！"
+    "refreshed": "更新しました！",
+    "selectProjects": "プロジェクトを選択",
+    "exitSelectionMode": "選択を解除",
+    "selectAll": "すべて選択"
   },
   "PropertiesPanel": {
     "properties": "プロパティ",

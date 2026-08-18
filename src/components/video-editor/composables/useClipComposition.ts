@@ -206,8 +206,6 @@ export function useClipComposition(options: {
       timelineDurationMs: duration / defaults.playbackRate,
       sourceInMs: 0,
       sourceDurationMs: duration,
-      playbackRate: defaults.playbackRate,
-      transitions: defaults.transitions,
       enabled: true,
       order: topVisualOrder,
       groupId,

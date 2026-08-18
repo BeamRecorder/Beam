@@ -1,7 +1,8 @@
 import type { WrappedCanvas } from 'mediabunny';
-import { MediaInputError, openMediaInput, type MediaError } from '../shared';
+import { MediaInputError, type MediaError } from '../shared';
 import { assertPlaybackWorkerRequest, assertPlaybackWorkerResponse } from './playback-protocol';
-import { playbackPreviewDimensions } from './playback-preview';
+import type { PreviewQuality } from './playback-preview';
+import { loadPlaybackAsset } from './playback-worker-assets';
 import type {
   PlaybackFrameMessage,
   PlaybackMetrics,
@@ -9,9 +10,9 @@ import type {
   PlaybackWorkerResponse,
 } from './playback-types';
 import {
-  PLAYBACK_DECODER_OPTIONS,
   activeAt,
   createPlaybackConsumer,
+  createPlaybackSink,
   disposeLoadedAssets,
   sourceTime,
   type AssetDecoder,
@@ -31,6 +32,7 @@ let processingSeek = false;
 let pendingTick: Extract<PlaybackWorkerRequest, { type: 'tick' }> | null = null;
 let processingTick = false;
 let loadVersion = 0;
+let previewQuality: PreviewQuality = 'full';
 const loadTasks = new Set<Promise<void>>();
 const processingIdleWaiters = new Set<() => void>();
 
@@ -71,6 +73,10 @@ function receive(message: PlaybackWorkerRequest) {
     const task = retime(message);
     loadTasks.add(task);
     void task.finally(() => loadTasks.delete(task));
+  } else if (message.type === 'configure-preview') {
+    const task = configurePreview(message);
+    loadTasks.add(task);
+    void task.finally(() => loadTasks.delete(task));
   } else if (message.type === 'seek') {
     if (pendingSeek) supersede(pendingSeek);
     pendingSeek = message;
@@ -86,6 +92,28 @@ function receive(message: PlaybackWorkerRequest) {
   }
 }
 
+async function configurePreview(message: Extract<PlaybackWorkerRequest, { type: 'configure-preview' }>) {
+  const version = ++loadVersion;
+  if (pendingSeek) supersede(pendingSeek);
+  pendingSeek = null;
+  pendingTick = null;
+  await waitForProcessingIdle();
+  if (isStaleLoad(version)) return;
+  try {
+    previewQuality = message.previewQuality;
+    await Promise.all(
+      [...consumers.values()].map(async (consumer) => {
+        await resetConsumer(consumer);
+        consumer.sink = createPlaybackSink(consumer.asset, previewQuality);
+      }),
+    );
+    updateQueueMetric();
+    post({ type: 'ready', generation: message.generation });
+  } catch (error) {
+    if (!isStaleLoad(version)) postError(mediaError(error, 'playback'), message.generation);
+  }
+}
+
 async function retime(message: Extract<PlaybackWorkerRequest, { type: 'retime' }>) {
   const version = ++loadVersion;
   pendingSeek = null;
@@ -93,24 +121,28 @@ async function retime(message: Extract<PlaybackWorkerRequest, { type: 'retime' }
   await waitForProcessingIdle();
   if (isStaleLoad(version)) return;
   try {
-    if (
-      message.clips.length !== consumers.size ||
-      message.clips.some((clip) => consumers.get(clip.clipId)?.asset.assetId !== clip.assetId)
-    ) {
-      throw new Error('Playback topology changed during a timing-only update.');
+    const nextClips = new Map(message.clips.map((clip) => [clip.clipId, clip]));
+    for (const [clipId, consumer] of consumers) {
+      if (nextClips.has(clipId)) continue;
+      await closeIterator(consumer.iterator);
+      consumer.iteratorGeneration += 1;
+      for (const frame of consumer.queue) closeFrame(frame);
+      consumers.delete(clipId);
     }
-    await Promise.all(
-      message.clips.map(async (clip) => {
-        const consumer = consumers.get(clip.clipId)!;
-        await closeIterator(consumer.iterator);
-        consumer.iteratorGeneration += 1;
-        consumer.iterator = null;
-        consumer.lastTargetSeconds = null;
-        for (const frame of consumer.queue) closeFrame(frame);
-        consumer.queue.length = 0;
+    for (const clip of message.clips) {
+      const existing = consumers.get(clip.clipId);
+      if (existing) {
+        if (existing.asset.assetId !== clip.assetId)
+          throw new Error('Playback asset changed during a timing-only update.');
+        const consumer = existing;
+        await resetConsumer(consumer);
         consumer.clip = clip;
-      }),
-    );
+        continue;
+      }
+      const asset = assets.get(clip.assetId);
+      if (!asset) throw new Error('Playback asset is unavailable during a timing-only update.');
+      consumers.set(clip.clipId, createPlaybackConsumer(clip, asset, previewQuality));
+    }
     updateQueueMetric();
     post({ type: 'ready', generation: message.generation });
   } catch (error) {
@@ -121,6 +153,7 @@ async function retime(message: Extract<PlaybackWorkerRequest, { type: 'retime' }
 
 async function load(message: Extract<PlaybackWorkerRequest, { type: 'load' }>) {
   const version = ++loadVersion;
+  previewQuality = message.previewQuality;
   await disposeAll(false);
   await waitForProcessingIdle();
   if (isStaleLoad(version)) return;
@@ -128,65 +161,9 @@ async function load(message: Extract<PlaybackWorkerRequest, { type: 'load' }>) {
   let committed = false;
   try {
     for (const descriptor of message.assets) {
-      const opened = await openMediaInput(descriptor);
-      if (isStaleLoad(version)) return disposeLoadedAssets(loadedAssets, opened);
-      const track = await opened.input.getPrimaryVideoTrack();
-      if (isStaleLoad(version)) return disposeLoadedAssets(loadedAssets, opened);
-      if (!track) {
-        opened.dispose();
-        throw new MediaInputError({
-          kind: 'missing-track',
-          sourceId: descriptor.assetId,
-          track: 'video',
-          message: 'The playback asset has no video track.',
-        });
-      }
-      const codec = await track.getCodec();
-      if (isStaleLoad(version)) return disposeLoadedAssets(loadedAssets, opened);
-      const canDecode = await track.canDecode();
-      if (isStaleLoad(version)) return disposeLoadedAssets(loadedAssets, opened);
-      if (!canDecode) {
-        opened.dispose();
-        throw new MediaInputError({
-          kind: 'unsupported-codec',
-          sourceId: descriptor.assetId,
-          track: 'video',
-          codec,
-          message: 'The playback video codec is unsupported.',
-        });
-      }
-      const decoderConfig = await track.getDecoderConfig();
-      const baseConfigSupported =
-        typeof VideoDecoder !== 'undefined' &&
-        decoderConfig !== null &&
-        (await VideoDecoder.isConfigSupported(decoderConfig)).supported;
-      if (!baseConfigSupported) {
-        opened.dispose();
-        throw new MediaInputError({
-          kind: 'unsupported-codec',
-          sourceId: descriptor.assetId,
-          track: 'video',
-          codec,
-          message: 'The playback video decoder configuration is unsupported.',
-        });
-      }
-      const optimizedConfigSupported =
-        typeof VideoDecoder !== 'undefined' &&
-        decoderConfig !== null &&
-        (await VideoDecoder.isConfigSupported({ ...decoderConfig, ...PLAYBACK_DECODER_OPTIONS })).supported;
-      const displayWidth = await track.getDisplayWidth();
-      if (isStaleLoad(version)) return disposeLoadedAssets(loadedAssets, opened);
-      const displayHeight = await track.getDisplayHeight();
-      if (isStaleLoad(version)) return disposeLoadedAssets(loadedAssets, opened);
-      const preview = playbackPreviewDimensions(displayWidth, displayHeight);
-      loadedAssets.set(descriptor.assetId, {
-        assetId: descriptor.assetId,
-        opened,
-        sinkTrack: track,
-        previewWidth: preview.width,
-        previewHeight: preview.height,
-        decoderOptions: optimizedConfigSupported ? PLAYBACK_DECODER_OPTIONS : undefined,
-      });
+      const asset = await loadPlaybackAsset(descriptor, () => isStaleLoad(version));
+      if (!asset) return disposeLoadedAssets(loadedAssets);
+      loadedAssets.set(descriptor.assetId, asset);
     }
     if (isStaleLoad(version)) return disposeLoadedAssets(loadedAssets);
     for (const [assetId, asset] of loadedAssets) assets.set(assetId, asset);
@@ -200,7 +177,7 @@ async function load(message: Extract<PlaybackWorkerRequest, { type: 'load' }>) {
           message: 'A playback clip references an unavailable asset.',
         });
       }
-      consumers.set(clip.clipId, createPlaybackConsumer(clip, asset));
+      consumers.set(clip.clipId, createPlaybackConsumer(clip, asset, previewQuality));
     }
     post({ type: 'ready', generation: message.generation });
   } catch (error) {
@@ -238,6 +215,15 @@ async function closeIterator(iterator: AsyncIterator<WrappedCanvas> | null) {
   } catch (error) {
     reportPlaybackWorkerError('Canvas iterator cleanup failed.', error);
   }
+}
+
+async function resetConsumer(consumer: ClipConsumer) {
+  await closeIterator(consumer.iterator);
+  consumer.iteratorGeneration += 1;
+  consumer.iterator = null;
+  consumer.lastTargetSeconds = null;
+  for (const frame of consumer.queue) closeFrame(frame);
+  consumer.queue.length = 0;
 }
 
 async function resetSequential(consumer: ClipConsumer, startSeconds: number) {

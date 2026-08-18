@@ -1,7 +1,7 @@
 import { ref, watch, onUnmounted } from 'vue';
 import type { BackgroundMedia, BackgroundValue } from '../../composables/backgroundCatalog';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
-import { MediaPlaybackEngine } from '~/media/playback';
+import { MediaPlaybackEngine, type PreviewQuality } from '~/media/playback';
 import { inspectMedia, mediaSourceDescriptor, type MediaError, type MediaFrame } from '~/media/shared';
 import { COMPOSITION_SCHEMA_VERSION, type ClipComposition, type MediaAsset } from '~/media/shared/composition-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
@@ -51,6 +51,7 @@ const backgroundComposition = (asset: MediaAsset, durationMs: number): ClipCompo
 export function useCanvasBackground(
   selectedBackground: () => BackgroundValue | null,
   backgroundBlurPercent: () => number | undefined,
+  previewQuality: () => PreviewQuality,
   renderCanvas: () => void,
 ) {
   const activeBgState = ref<BackgroundValue | null>(null);
@@ -102,7 +103,7 @@ export function useCanvasBackground(
       const inspection = await inspectMedia(descriptor);
       if (loadVersion !== backgroundLoadVersion) return;
       const durationMs = Math.max(1, Math.round(inspection.metadata.durationSeconds * 1_000));
-      const createdEngine = new MediaPlaybackEngine();
+      const createdEngine = new MediaPlaybackEngine({ previewQuality: previewQuality() });
       engine = createdEngine;
       backgroundEngine = createdEngine;
       stopFrameListener = createdEngine.on('frame', ({ clipId }) => {
@@ -202,6 +203,11 @@ export function useCanvasBackground(
 
   watch(selectedBackground, loadBackground, { immediate: true, deep: true });
   watch(backgroundBlurPercent, renderCanvas);
+  watch(previewQuality, (quality) => {
+    void backgroundEngine?.setPreviewQuality(quality).catch((error) => {
+      console.error('[Beam media:background] Failed to update preview quality.', error);
+    });
+  });
 
   onUnmounted(() => {
     backgroundLoadVersion += 1;

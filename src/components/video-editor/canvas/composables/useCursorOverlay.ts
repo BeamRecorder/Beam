@@ -53,10 +53,12 @@ export const getRippleStyleColor = (hex: string, alpha: number) => {
 export function useCursorOverlay(options: UseCursorOverlayOptions) {
   const { getCursorImage } = useCursorReplacer();
   const customCursorImage = ref<HTMLImageElement | null>(null);
-  let lastDrawTime = 0;
   let motionPlayer: ReturnType<typeof createCursorMotionPlayer> | null = null;
   let motionPlayerEvents: ProjectEditorData['cursor']['events'] | null = null;
   let motionPlayerKey = '';
+  let sampledPlayer: ReturnType<typeof createCursorMotionPlayer> | null = null;
+  let sampledTime = Number.NaN;
+  let sampledMotion: ReturnType<ReturnType<typeof createCursorMotionPlayer>['sample']> = null;
   const maxZoomScale = Math.max(...Object.values(ZOOM_DEPTH_SCALES));
 
   watch(
@@ -147,8 +149,24 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
       motionPlayer = createCursorMotionPlayer(events, motion, videoWidth, videoHeight);
       motionPlayerEvents = events;
       motionPlayerKey = key;
+      sampledPlayer = null;
     }
     return motionPlayer;
+  };
+
+  const motionStateAt = (
+    events: ProjectEditorData['cursor']['events'],
+    time: number,
+    width: number,
+    height: number,
+  ) => {
+    const player = playerFor(events, width, height);
+    if (sampledPlayer !== player || sampledTime !== time) {
+      sampledPlayer = player;
+      sampledTime = time;
+      sampledMotion = player.sample(time, cursorStateAt(events, time));
+    }
+    return { player, motion: sampledMotion };
   };
 
   const updateAndDrawRipplesAndCursor = (
@@ -168,13 +186,8 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
     if (!options.cursorPack()) warning(ctx, 'Cursor pack unavailable — import it again', logicalWidth);
     if (!(videoWidth > 0) || !(videoHeight > 0)) return;
     const time = options.currentTime();
-    const player = playerFor(cursorData.events, videoWidth, videoHeight);
-    if (time < lastDrawTime) {
-      player.reset();
-    }
-    lastDrawTime = time;
     const state = cursorStateAt(cursorData.events, time);
-    const motionState = player.sample(time, state);
+    const { player, motion: motionState } = motionStateAt(cursorData.events, time, videoWidth, videoHeight);
     drawInCameraSpace(() => {
       const previewScale = previewScaleFor(videoWindow);
       for (const button of buttonEventsBetween(cursorData.events, Math.max(0, time - 0.5), time)) {
@@ -252,7 +265,7 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
       return null;
     const time = options.currentTime();
     const state = cursorStateAt(cursorData.events, time);
-    const motionState = playerFor(cursorData.events, videoWidth, videoHeight).sample(time, state);
+    const motionState = motionStateAt(cursorData.events, time, videoWidth, videoHeight).motion;
     if (!state?.visible || !motionState?.visible) return null;
     const raw = positionAt(motionState, videoWindow, videoWidth, videoHeight);
     return {

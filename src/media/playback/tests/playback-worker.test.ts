@@ -149,7 +149,7 @@ const messages = () => workerSelf.postMessage.mock.calls.map(([message]) => mess
 
 describe('playback worker', () => {
   it('validates the decoder configuration before creating playback sinks', async () => {
-    send({ type: 'load', generation: 2, assets: [source('asset-1')], clips: [clip('clip-a')] });
+    send({ type: 'load', generation: 2, assets: [source('asset-1')], clips: [clip('clip-a')], previewQuality: 'full' });
     await flush();
 
     expect(runtime.decoderSupport).toHaveBeenCalledWith(expect.objectContaining({ codec: 'avc1.640028' }));
@@ -168,7 +168,7 @@ describe('playback worker', () => {
 
   it('falls back to default decoder options when performance hints are unsupported', async () => {
     runtime.decoderSupport.mockResolvedValueOnce({ supported: true }).mockResolvedValueOnce({ supported: false });
-    send({ type: 'load', generation: 2, assets: [source('asset-1')], clips: [clip('clip-a')] });
+    send({ type: 'load', generation: 2, assets: [source('asset-1')], clips: [clip('clip-a')], previewQuality: 'full' });
     await flush();
 
     expect(runtime.CanvasSink).toHaveBeenCalledWith(
@@ -180,7 +180,7 @@ describe('playback worker', () => {
 
   it('rejects an unsupported decoder configuration before creating a sink', async () => {
     runtime.decoderSupport.mockResolvedValueOnce({ supported: false });
-    send({ type: 'load', generation: 2, assets: [source('asset-1')], clips: [clip('clip-a')] });
+    send({ type: 'load', generation: 2, assets: [source('asset-1')], clips: [clip('clip-a')], previewQuality: 'full' });
     await flush();
 
     expect(runtime.CanvasSink).not.toHaveBeenCalled();
@@ -192,7 +192,13 @@ describe('playback worker', () => {
   });
 
   it('loads one decoder per asset, creates consumers per clip, and disposes everything', async () => {
-    send({ type: 'load', generation: 3, assets: [source('asset-1')], clips: [clip('clip-a'), clip('clip-b')] });
+    send({
+      type: 'load',
+      generation: 3,
+      assets: [source('asset-1')],
+      clips: [clip('clip-a'), clip('clip-b')],
+      previewQuality: 'full',
+    });
     await flush();
 
     expect(runtime.openMediaInput).toHaveBeenCalledOnce();
@@ -207,8 +213,8 @@ describe('playback worker', () => {
     expect(workerSelf.postMessage).toHaveBeenCalledTimes(1);
   });
 
-  it('bounds preview sink output for a 4K source and requests low-latency hardware decoding', async () => {
-    send({ type: 'load', generation: 4, assets: [source('asset-1')], clips: [clip('clip-a')] });
+  it('uses full source dimensions and requests low-latency hardware decoding', async () => {
+    send({ type: 'load', generation: 4, assets: [source('asset-1')], clips: [clip('clip-a')], previewQuality: 'full' });
     await flush();
 
     const options = runtime.CanvasSink.mock.calls[0]?.[1] as {
@@ -217,10 +223,8 @@ describe('playback worker', () => {
       fit?: string;
       decoderOptions?: Record<string, unknown>;
     };
-    expect(options.width).toBeGreaterThan(0);
-    expect(options.height).toBeGreaterThan(0);
-    expect(options.width).toBeLessThanOrEqual(1_920);
-    expect(options.height).toBeLessThanOrEqual(1_080);
+    expect(options.width).toBe(3_840);
+    expect(options.height).toBe(1_920);
     expect(options.fit).toBe('contain');
     expect(options.decoderOptions).toMatchObject({
       hardwareAcceleration: 'prefer-hardware',
@@ -228,16 +232,34 @@ describe('playback worker', () => {
     });
   });
 
-  it('never upscales a low-resolution preview sink', async () => {
-    runtime.openMediaInput.mockReset().mockResolvedValue(openedVideo(videoTrack(640, 480)));
-    send({ type: 'load', generation: 5, assets: [source('asset-1')], clips: [clip('clip-a')] });
+  it.each([
+    ['full', 1_920, 1_080],
+    ['half', 960, 540],
+    ['quarter', 480, 270],
+  ] as const)('uses %s preview dimensions when loading a source', async (previewQuality, width, height) => {
+    runtime.openMediaInput.mockReset().mockResolvedValue(openedVideo(videoTrack(1_920, 1_080)));
+    send({
+      type: 'load',
+      generation: 40,
+      assets: [source('asset-1')],
+      clips: [clip('clip-a')],
+      previewQuality,
+    });
     await flush();
 
     const options = runtime.CanvasSink.mock.calls[0]?.[1] as { width?: number; height?: number };
-    expect(options.width).toBeGreaterThan(0);
-    expect(options.height).toBeGreaterThan(0);
-    expect(options.width).toBeLessThanOrEqual(640);
-    expect(options.height).toBeLessThanOrEqual(480);
+    expect(options.width).toBe(width);
+    expect(options.height).toBe(height);
+  });
+
+  it('keeps a low-resolution full preview sink at source dimensions', async () => {
+    runtime.openMediaInput.mockReset().mockResolvedValue(openedVideo(videoTrack(640, 480)));
+    send({ type: 'load', generation: 5, assets: [source('asset-1')], clips: [clip('clip-a')], previewQuality: 'full' });
+    await flush();
+
+    const options = runtime.CanvasSink.mock.calls[0]?.[1] as { width?: number; height?: number };
+    expect(options.width).toBe(640);
+    expect(options.height).toBe(480);
   });
 
   it('shares the asset decoder when two clips reference the same asset', async () => {
@@ -246,11 +268,98 @@ describe('playback worker', () => {
       generation: 1,
       assets: [source('asset-1'), source('asset-2')],
       clips: [clip('clip-a', 'asset-1'), clip('clip-b', 'asset-1'), clip('clip-c', 'asset-2')],
+      previewQuality: 'full',
     });
     await flush();
 
     expect(runtime.openMediaInput).toHaveBeenCalledTimes(2);
     expect(runtime.CanvasSink).toHaveBeenCalledTimes(3);
+  });
+
+  it('retimes video consumers while keeping other asset decoders preloaded', async () => {
+    const firstOpened = openedVideo();
+    const secondOpened = openedVideo();
+    runtime.openMediaInput.mockReset().mockResolvedValueOnce(firstOpened).mockResolvedValueOnce(secondOpened);
+
+    send({
+      type: 'load',
+      generation: 1,
+      assets: [source('asset-1'), source('asset-2')],
+      clips: [clip('clip-a', 'asset-1')],
+      previewQuality: 'full',
+    });
+    await flush();
+
+    expect(runtime.openMediaInput).toHaveBeenCalledTimes(2);
+    expect(runtime.CanvasSink).toHaveBeenCalledTimes(1);
+    expect(messages()).toContainEqual({ type: 'ready', generation: 1 });
+
+    send({
+      type: 'retime',
+      generation: 2,
+      clips: [clip('clip-a', 'asset-1'), clip('clip-b', 'asset-2')],
+    });
+    await flush();
+
+    expect(runtime.openMediaInput).toHaveBeenCalledTimes(2);
+    expect(runtime.CanvasSink).toHaveBeenCalledTimes(2);
+    expect(messages()).toContainEqual({ type: 'ready', generation: 2 });
+    expect(firstOpened.dispose).not.toHaveBeenCalled();
+    expect(secondOpened.dispose).not.toHaveBeenCalled();
+
+    send({ type: 'retime', generation: 3, clips: [clip('clip-a', 'asset-1')] });
+    await flush();
+
+    expect(runtime.openMediaInput).toHaveBeenCalledTimes(2);
+    expect(messages()).toContainEqual({ type: 'ready', generation: 3 });
+    expect(firstOpened.dispose).not.toHaveBeenCalled();
+    expect(secondOpened.dispose).not.toHaveBeenCalled();
+    send({ type: 'dispose' });
+    await flush();
+  });
+
+  it('reconfigures preview sinks without reopening assets and cleans iterators and queued frames', async () => {
+    runtime.openMediaInput.mockReset().mockResolvedValue(openedVideo(videoTrack(1_920, 1_080)));
+    const firstFrame = bitmap();
+    const queuedFrame = bitmap();
+    const secondQueuedFrame = bitmap();
+    const iterator = {
+      next: vi
+        .fn()
+        .mockResolvedValueOnce({ value: wrapped(0, firstFrame), done: false })
+        .mockResolvedValueOnce({ value: wrapped(0.04, queuedFrame), done: false })
+        .mockResolvedValueOnce({ value: wrapped(0.08, secondQueuedFrame), done: false }),
+      return: vi.fn().mockResolvedValue({ value: undefined, done: true }),
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+    };
+    send({
+      type: 'load',
+      generation: 1,
+      assets: [source('asset-1')],
+      clips: [clip('clip-a')],
+      previewQuality: 'full',
+    });
+    await flush();
+    const firstSink = runtime.sinkInstances[0]!;
+    firstSink.canvases.mockReturnValueOnce(iterator);
+    send({ type: 'tick', generation: 1, timelineSeconds: 0 });
+    await flush();
+
+    expect(iterator.next).toHaveBeenCalledTimes(3);
+    expect(messages()).toContainEqual(expect.objectContaining({ type: 'frame', clipId: 'clip-a' }));
+    send({ type: 'configure-preview', generation: 2, previewQuality: 'half' });
+    await flush();
+
+    expect(iterator.return).toHaveBeenCalledOnce();
+    expect(firstFrame.close).not.toHaveBeenCalled();
+    expect(queuedFrame.close).toHaveBeenCalledOnce();
+    expect(secondQueuedFrame.close).toHaveBeenCalledOnce();
+    expect(runtime.openMediaInput).toHaveBeenCalledOnce();
+    expect(runtime.CanvasSink).toHaveBeenCalledTimes(2);
+    expect(runtime.CanvasSink.mock.calls[1]?.[1]).toMatchObject({ width: 960, height: 540 });
+    expect(messages()).toContainEqual({ type: 'ready', generation: 2 });
   });
 
   it('starts active consumer iterators in parallel instead of waiting for the first decode', async () => {
@@ -281,6 +390,7 @@ describe('playback worker', () => {
       generation: 6,
       assets: [source('asset-1'), source('asset-2')],
       clips: [clip('clip-a', 'asset-1'), clip('clip-b', 'asset-2')],
+      previewQuality: 'full',
     });
     await flush();
     const firstSink = runtime.sinkInstances[0]!;
@@ -311,6 +421,7 @@ describe('playback worker', () => {
       generation: 7,
       assets: [source('asset-1'), source('asset-2')],
       clips: [clip('clip-a', 'asset-1'), clip('clip-b', 'asset-2')],
+      previewQuality: 'full',
     });
     await flush();
     const firstSink = runtime.sinkInstances[0]!;
@@ -338,7 +449,13 @@ describe('playback worker', () => {
   });
 
   it('resolves project-media assets by id at the initial seek and reports unavailable assets explicitly', async () => {
-    send({ type: 'load', generation: 7, assets: [source('asset-1')], clips: [clip('clip-a', 'asset-1')] });
+    send({
+      type: 'load',
+      generation: 7,
+      assets: [source('asset-1')],
+      clips: [clip('clip-a', 'asset-1')],
+      previewQuality: 'full',
+    });
     await flush();
 
     expect(runtime.openMediaInput).toHaveBeenCalledWith(
@@ -403,7 +520,13 @@ describe('playback worker', () => {
         message: 'The media asset is unavailable.',
       }),
     );
-    send({ type: 'load', generation: 8, assets: [source('asset-1')], clips: [clip('clip-a', 'asset-1')] });
+    send({
+      type: 'load',
+      generation: 8,
+      assets: [source('asset-1')],
+      clips: [clip('clip-a', 'asset-1')],
+      previewQuality: 'full',
+    });
     await flush();
     expect(messages()).toContainEqual({
       type: 'error',
@@ -415,7 +538,7 @@ describe('playback worker', () => {
   it('supersedes a seek that is still decoding and presents only the latest request', async () => {
     const first = deferred<Wrapped | null>();
     const second = deferred<Wrapped | null>();
-    send({ type: 'load', generation: 1, assets: [source('asset-1')], clips: [clip('clip-a')] });
+    send({ type: 'load', generation: 1, assets: [source('asset-1')], clips: [clip('clip-a')], previewQuality: 'full' });
     await flush();
     const sink = runtime.sinkInstances[0]!;
     sink.getCanvas.mockImplementationOnce(() => first.promise).mockImplementationOnce(() => second.promise);
@@ -450,10 +573,47 @@ describe('playback worker', () => {
     expect(current.close).not.toHaveBeenCalled();
   });
 
+  it('supersedes a pending seek when preview configuration changes', async () => {
+    const firstCanvas = deferred<Wrapped | null>();
+    send({
+      type: 'load',
+      generation: 1,
+      assets: [source('asset-1')],
+      clips: [clip('clip-a')],
+      previewQuality: 'full',
+    });
+    await flush();
+    const sink = runtime.sinkInstances[0]!;
+    sink.getCanvas.mockImplementationOnce(() => firstCanvas.promise);
+
+    send({ type: 'seek', generation: 1, requestId: 101, timelineSeconds: 1, mode: 'seek' });
+    await flush();
+    send({ type: 'seek', generation: 1, requestId: 102, timelineSeconds: 1.5, mode: 'scrub' });
+    send({ type: 'configure-preview', generation: 2, previewQuality: 'half' });
+
+    expect(messages()).toContainEqual({
+      type: 'seek-result',
+      generation: 1,
+      requestId: 102,
+      result: 'superseded',
+      latencyMs: expect.any(Number),
+    });
+    firstCanvas.resolve(wrapped(1, bitmap()));
+    await flush();
+    expect(messages()).toContainEqual({
+      type: 'seek-result',
+      generation: 1,
+      requestId: 101,
+      result: 'superseded',
+      latencyMs: expect.any(Number),
+    });
+    expect(messages()).toContainEqual({ type: 'ready', generation: 2 });
+  });
+
   it('transfers a decoded scrub frame before superseding it and continues with the newest scrub', async () => {
     const first = deferred<Wrapped | null>();
     const second = deferred<Wrapped | null>();
-    send({ type: 'load', generation: 1, assets: [source('asset-1')], clips: [clip('clip-a')] });
+    send({ type: 'load', generation: 1, assets: [source('asset-1')], clips: [clip('clip-a')], previewQuality: 'full' });
     await flush();
     const sink = runtime.sinkInstances[0]!;
     sink.getCanvas.mockImplementationOnce(() => first.promise).mockImplementationOnce(() => second.promise);
@@ -497,7 +657,7 @@ describe('playback worker', () => {
   });
 
   it('associates decode failures with the active seek request id', async () => {
-    send({ type: 'load', generation: 4, assets: [source('asset-1')], clips: [clip('clip-a')] });
+    send({ type: 'load', generation: 4, assets: [source('asset-1')], clips: [clip('clip-a')], previewQuality: 'full' });
     await flush();
     runtime.sinkInstances[0]!.getCanvas.mockRejectedValue(new Error('decoder exploded'));
 
@@ -516,7 +676,7 @@ describe('playback worker', () => {
     const next = deferred<IteratorResult<Wrapped>>();
     const stale = bitmap();
     const current = bitmap();
-    send({ type: 'load', generation: 1, assets: [source('asset-1')], clips: [clip('clip-a')] });
+    send({ type: 'load', generation: 1, assets: [source('asset-1')], clips: [clip('clip-a')], previewQuality: 'full' });
     await flush();
     const sink = runtime.sinkInstances[0]!;
     sink.canvases.mockReturnValue({
@@ -557,7 +717,7 @@ describe('playback worker', () => {
         return this;
       },
     };
-    send({ type: 'load', generation: 2, assets: [source('asset-1')], clips: [clip('clip-a')] });
+    send({ type: 'load', generation: 2, assets: [source('asset-1')], clips: [clip('clip-a')], previewQuality: 'full' });
     await flush();
     runtime.sinkInstances[0]!.canvases.mockReturnValue(iterator);
 
@@ -592,7 +752,13 @@ describe('playback worker', () => {
         return this;
       },
     };
-    send({ type: 'load', generation: 12, assets: [source('asset-1')], clips: [clip('clip-a')] });
+    send({
+      type: 'load',
+      generation: 12,
+      assets: [source('asset-1')],
+      clips: [clip('clip-a')],
+      previewQuality: 'full',
+    });
     await flush();
     const sink = runtime.sinkInstances[0]!;
     sink.canvases.mockReturnValueOnce(firstIterator).mockReturnValueOnce(replacementIterator);
@@ -607,7 +773,13 @@ describe('playback worker', () => {
   });
 
   it('returns the temporary CanvasSink iterator used by seek fallback', async () => {
-    send({ type: 'load', generation: 13, assets: [source('asset-1')], clips: [clip('clip-a')] });
+    send({
+      type: 'load',
+      generation: 13,
+      assets: [source('asset-1')],
+      clips: [clip('clip-a')],
+      previewQuality: 'full',
+    });
     await flush();
     const sink = runtime.sinkInstances[0]!;
     const temporaryIterator = {
@@ -643,14 +815,26 @@ describe('playback worker', () => {
     const secondOpened = openedVideo();
     runtime.openMediaInput.mockReset().mockResolvedValueOnce(firstOpened).mockResolvedValueOnce(secondOpened);
 
-    send({ type: 'load', generation: 14, assets: [source('asset-1')], clips: [clip('clip-a')] });
+    send({
+      type: 'load',
+      generation: 14,
+      assets: [source('asset-1')],
+      clips: [clip('clip-a')],
+      previewQuality: 'full',
+    });
     await flush();
     const firstSink = runtime.sinkInstances[0]!;
     firstSink.canvases.mockReturnValueOnce(firstIterator);
     send({ type: 'tick', generation: 14, timelineSeconds: 0 });
     await flush();
 
-    send({ type: 'load', generation: 15, assets: [source('asset-1')], clips: [clip('clip-a')] });
+    send({
+      type: 'load',
+      generation: 15,
+      assets: [source('asset-1')],
+      clips: [clip('clip-a')],
+      previewQuality: 'full',
+    });
     await flush();
 
     expect(firstIterator.return).toHaveBeenCalledOnce();
@@ -675,7 +859,13 @@ describe('playback worker', () => {
         return this;
       },
     };
-    send({ type: 'load', generation: 16, assets: [source('asset-1')], clips: [clip('clip-a')] });
+    send({
+      type: 'load',
+      generation: 16,
+      assets: [source('asset-1')],
+      clips: [clip('clip-a')],
+      previewQuality: 'full',
+    });
     await flush();
     const sink = runtime.sinkInstances[0]!;
     sink.canvases.mockReturnValueOnce(iterator);
@@ -722,11 +912,23 @@ describe('playback worker', () => {
       .mockImplementationOnce(() => firstOpen.promise)
       .mockResolvedValueOnce(secondOpened);
 
-    send({ type: 'load', generation: 10, assets: [source('asset-1')], clips: [clip('old-clip')] });
+    send({
+      type: 'load',
+      generation: 10,
+      assets: [source('asset-1')],
+      clips: [clip('old-clip')],
+      previewQuality: 'full',
+    });
     firstOpen.resolve(firstOpened);
     await flush();
 
-    send({ type: 'load', generation: 11, assets: [source('asset-1')], clips: [clip('current-clip')] });
+    send({
+      type: 'load',
+      generation: 11,
+      assets: [source('asset-1')],
+      clips: [clip('current-clip')],
+      previewQuality: 'full',
+    });
     await flush();
     firstTrack.resolve(videoTrack());
     await flush();

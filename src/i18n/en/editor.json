@@ -65,6 +65,7 @@
     "keyboardCaptions": "Keyboard Captions",
     "textCaptions": "Text Captions",
     "audio": "Audio",
+    "media": "Media",
     "settings": "Settings",
     "logo": "Logo"
   },
@@ -130,7 +131,14 @@
     "snappingOn": "Magnet Snapping Enabled",
     "snappingOff": "Magnet Snapping Disabled",
     "zoom": "Zoom",
-    "resetZoom": "Reset Zoom"
+    "resetZoom": "Reset Zoom",
+    "previewQuality": "Preview quality",
+    "previewQualityFull": "Full resolution",
+    "previewQualityHalf": "Half resolution",
+    "previewQualityQuarter": "Quarter resolution",
+    "previewQualityExportHint": "Preview only. Export stays full quality.",
+    "previewQualitySuggestion": "Preview is struggling. Try a lighter proxy.",
+    "previewQualityCriticalSuggestion": "Preview is still struggling. Reduce proxy quality."
   },
   "TimelineTracks": {
     "clickToToggleVideo": "Click to toggle Video track",
@@ -182,6 +190,20 @@
   "TimelineVideoClip": {
     "trimStart": "Trim start",
     "trimEnd": "Trim end"
+  },
+  "PreviewPerformance": {
+    "title": "Performance",
+    "ui": "UI",
+    "worker": "Playback",
+    "audio": "Audio",
+    "media": "Media",
+    "warning": "Preview may stutter.",
+    "criticalWarning": "Preview performance is still limited.",
+    "reduceQuality": "Switch to {quality}",
+    "higherIsWorse": "Higher curve means more load",
+    "good": "OK",
+    "high": "High",
+    "critical": "Critical"
   },
   "Topbar": {
     "exitToHUD": "Exit to HUD",
@@ -303,6 +325,9 @@
     "autoHint": "Auto mode continuously follows the recorded cursor movement.",
     "magnification": "Magnification",
     "zoomLevel": "Zoom Level",
+    "motionBlur": "Zoom motion blur",
+    "motionBlurDesc": "Adds a cinematic shutter blur while the camera zooms or pans. Applied identically in preview and export.",
+    "motionBlurIntensity": "Motion blur intensity",
     "deleteZoom": "Delete Zoom",
     "noZoomSelected": "No Zoom Selected",
     "noZoomSelectedDesc": "Click a zoom block on the timeline track to adjust its depth, mode, or position."

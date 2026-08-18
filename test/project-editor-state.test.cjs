@@ -1,6 +1,11 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { migratePresentation, presentationState } = require('../electron/projects/project-editor-state.cjs');
+const {
+  defaultZoomMotionBlur,
+  migratePresentation,
+  presentationState,
+  zoomState,
+} = require('../electron/projects/project-editor-state.cjs');
 
 const cursor = () => ({
   selection: { packId: 'builtin:macos', mode: 'automatic', cursorId: null },
@@ -67,13 +72,15 @@ test('migrates every watermark presentation field from legacy editor state', () 
 });
 
 test('migrates the legacy automatic cursor selection to the builtin macOS pack', () => {
+  const legacyCursor = { ...cursor(), selectedCursor: 'automatic' };
+  delete legacyCursor.selection;
   const state = presentationState({
     canvas: canvas(undefined),
     selectedBackgroundId: null,
     background: null,
     blurPercent: 0,
     importedBackgrounds: [],
-    cursor: { ...cursor(), selectedCursor: 'automatic' },
+    cursor: legacyCursor,
   });
 
   assert.deepEqual(state.cursor.selection, {
@@ -144,5 +151,28 @@ test('rejects a fixed cursor selection without a cursor id', () => {
         cursor: { ...cursor(), selection: { packId: 'builtin:macos', mode: 'fixed', cursorId: null } },
       }),
     /curseur|présentation/i,
+  );
+});
+
+test('defaults zoom motion blur when loading legacy editor state', () => {
+  const state = zoomState({ elements: [], generatedSessions: [] });
+
+  assert.deepEqual(state.motionBlur, defaultZoomMotionBlur());
+});
+
+test('normalizes persisted zoom motion blur enabled state and intensity', () => {
+  const state = zoomState({
+    elements: [],
+    generatedSessions: [],
+    motionBlur: { enabled: false, intensity: 4 },
+  });
+
+  assert.deepEqual(state.motionBlur, { enabled: false, intensity: 1 });
+});
+
+test('rejects malformed persisted zoom motion blur settings', () => {
+  assert.throws(
+    () => zoomState({ elements: [], generatedSessions: [], motionBlur: { enabled: 'yes', intensity: 0.5 } }),
+    /Flou de mouvement du zoom invalide/,
   );
 });

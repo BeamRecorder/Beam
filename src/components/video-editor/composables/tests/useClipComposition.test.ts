@@ -400,7 +400,9 @@ describe('useClipComposition', () => {
     );
 
     const existingAfter = mounted.state.composition.value.clips.find((clip) => clip.id === existingVisual.id);
-    const inserted = mounted.state.composition.value.clips.find((clip) => clip.assetId === 'image-asset');
+    const inserted = mounted.state.composition.value.clips.find(
+      (clip) => 'assetId' in clip && clip.assetId === 'image-asset',
+    );
     expect(existingAfter).toMatchObject({
       transform: existingVisual.transform,
       appearance: existingVisual.appearance,

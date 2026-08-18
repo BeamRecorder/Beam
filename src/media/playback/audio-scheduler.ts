@@ -11,6 +11,7 @@ import {
   type OpenedMediaInput,
 } from '../shared';
 import { audioTransitionGainAt } from '../shared/clip-transitions';
+import { emptyAudioPlaybackMetrics, type AudioPlaybackMetrics } from './audio-playback-metrics';
 
 const SCHEDULE_AHEAD_SECONDS = 1;
 const SCHEDULE_INTERVAL_MS = 100;
@@ -47,6 +48,7 @@ export class AudioPlaybackScheduler {
   private anchorContextSeconds = 0;
   private pausedTimelineSeconds = 0;
   private readonly onPlaybackError?: (error: MediaError) => void;
+  private readonly metrics = emptyAudioPlaybackMetrics();
 
   constructor(onPlaybackError?: (error: MediaError) => void) {
     this.onPlaybackError = onPlaybackError;
@@ -61,7 +63,7 @@ export class AudioPlaybackScheduler {
     this.stopPlayback();
     this.disposeDecoders();
     this.composition = composition;
-    const clips = composition.clips.filter((clip): clip is AudioClip => isAudioClip(clip) && clip.enabled);
+    const clips = composition.clips.filter(isAudioClip);
     const assetIds = new Set(clips.map((clip) => clip.assetId));
     const issues: MediaError[] = [];
     const loadedDecoders = new Map<string, AudioAssetDecoder>();
@@ -127,11 +129,7 @@ export class AudioPlaybackScheduler {
   }
 
   updateComposition(composition: ClipComposition): void {
-    const assetIds = new Set(
-      composition.clips
-        .filter((clip): clip is AudioClip => isAudioClip(clip) && clip.enabled)
-        .map((clip) => clip.assetId),
-    );
+    const assetIds = new Set(composition.clips.filter(isAudioClip).map((clip) => clip.assetId));
     if (assetIds.size !== this.decoders.size || [...assetIds].some((assetId) => !this.decoders.has(assetId))) {
       throw new Error('Audio assets changed during a timing-only composition update.');
     }
@@ -141,22 +139,12 @@ export class AudioPlaybackScheduler {
 
   private canUpdateComposition(composition: ClipComposition): boolean {
     if (!this.composition) return false;
-    const nextAssetIds = new Set(
-      composition.clips
-        .filter((clip): clip is AudioClip => isAudioClip(clip) && clip.enabled)
-        .map((clip) => clip.assetId),
-    );
+    const nextAssetIds = new Set(composition.clips.filter(isAudioClip).map((clip) => clip.assetId));
     if (nextAssetIds.size !== this.decoders.size || [...nextAssetIds].some((assetId) => !this.decoders.has(assetId))) {
       return false;
     }
     const topology = (value: ClipComposition) => {
-      const assetIds = [
-        ...new Set(
-          value.clips
-            .filter((clip): clip is AudioClip => isAudioClip(clip) && clip.enabled)
-            .map((clip) => clip.assetId),
-        ),
-      ].sort();
+      const assetIds = [...new Set(value.clips.filter(isAudioClip).map((clip) => clip.assetId))].sort();
       return JSON.stringify(
         assetIds.map((assetId) => {
           const asset = value.assets.find((entry) => entry.id === assetId);
@@ -202,6 +190,7 @@ export class AudioPlaybackScheduler {
   }
 
   currentTime(): number {
+    if (this.context) this.metrics.contextState = this.context.state;
     if (!this.playing || !this.context) return this.pausedTimelineSeconds;
     return this.anchorTimelineSeconds + (this.context.currentTime - this.anchorContextSeconds);
   }
@@ -210,6 +199,10 @@ export class AudioPlaybackScheduler {
     const value = Math.max(0, Math.min(1, percent / 100));
     const context = this.ensureContext();
     this.masterGain?.gain.setTargetAtTime(value, context.currentTime, 0.004);
+  }
+
+  get performanceMetrics(): AudioPlaybackMetrics {
+    return { ...this.metrics };
   }
 
   dispose(): void {
@@ -228,6 +221,7 @@ export class AudioPlaybackScheduler {
   private ensureContext(): AudioContext {
     if (this.context) return this.context;
     this.context = new AudioContext();
+    this.metrics.contextState = this.context.state;
     this.masterGain = this.context.createGain();
     this.limiter = this.context.createDynamicsCompressor();
     this.limiter.threshold.value = -1;
@@ -266,6 +260,8 @@ export class AudioPlaybackScheduler {
 
   private async schedule(requestGeneration: number) {
     if (!this.playing || requestGeneration !== this.generation || !this.context) return;
+    this.metrics.contextState = this.context.state;
+    this.metrics.schedulePasses += 1;
     const horizon = this.currentTime() + SCHEDULE_AHEAD_SECONDS;
     await Promise.all(this.consumers.map((consumer) => this.scheduleConsumer(consumer, horizon, requestGeneration)));
   }
@@ -306,6 +302,11 @@ export class AudioPlaybackScheduler {
       if (segmentEnd <= segmentStart) continue;
       let when = this.anchorContextSeconds + (timelineStart - this.anchorTimelineSeconds);
       if (when < this.context!.currentTime) {
+        const latenessMs = (this.context!.currentTime - when) * 1_000;
+        if (latenessMs >= 20) {
+          this.metrics.lateBuffers += 1;
+          this.metrics.maxLatenessMs = Math.max(this.metrics.maxLatenessMs, latenessMs);
+        }
         segmentStart += (this.context!.currentTime - when) * clip.playbackRate;
         timelineStart = clip.timelineStartMs / 1_000 + (segmentStart - clipSourceStart) / clip.playbackRate;
         when = this.anchorContextSeconds + (timelineStart - this.anchorTimelineSeconds);
@@ -365,6 +366,7 @@ export class AudioPlaybackScheduler {
       this.scheduled.delete(node);
     };
     source.start(when, segmentStart - wrapped.timestamp, segmentEnd - segmentStart);
+    this.metrics.scheduledBuffers += 1;
   }
 
   private stopPlayback() {
@@ -427,6 +429,7 @@ export class AudioPlaybackScheduler {
 
   private handleScheduleError(error: unknown, requestGeneration: number) {
     if (!this.playing || requestGeneration !== this.generation) return;
+    this.metrics.scheduleErrors += 1;
     const detail = this.mediaError(error, 'audio-playback');
     this.stopPlayback();
     if (this.onPlaybackError) this.onPlaybackError(detail);

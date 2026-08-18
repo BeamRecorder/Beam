@@ -33,12 +33,11 @@ const cloneState = (state: SimulationState): SimulationState => ({
 
 export function createCompositionCameraEvaluator(inputs: CompositionCameraInputs): CompositionCameraEvaluator {
   const checkpoints = new Map<number, SimulationState>();
-  const zoomAt = createZoomTimeEvaluator(inputs.zooms, inputs.telemetry);
+  const zoomAt = createZoomTimeEvaluator(inputs.zooms, inputs.telemetry, inputs.mapFocus);
   const targetAt = (timeMs: number): CameraTransform => {
     const zoom = zoomAt(timeMs);
     if (!zoom) return { focusX: 0.5, focusY: 0.5, scale: 1 };
-    const mapped = inputs.mapFocus ? inputs.mapFocus(zoom.focus, zoom, timeMs) : zoom.focus;
-    const focus = clampFocusToScale(mapped, zoom.scale);
+    const focus = clampFocusToScale(zoom.focus, zoom.scale);
     return { focusX: focus.cx, focusY: focus.cy, scale: zoom.scale };
   };
   const initialState = (): SimulationState => ({ camera: targetAt(0), velocity: createCameraVelocity() });

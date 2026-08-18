@@ -7,6 +7,7 @@ import CanvasLoadingSkeleton from './CanvasLoadingSkeleton.vue';
 import UndoRedoToast from './UndoRedoToast.vue';
 import { activeClipsAt } from '~/media/shared';
 import type { VisualClip } from '~/media/shared/composition-types';
+import type { CompositionSceneLayers } from '../composition/scene-layers';
 import { OUTPUT_FALLBACK_COLOR, OUTPUT_PREVIEW_RADIUS, outputPreviewRect } from './output-canvas';
 import { useCanvasBackground } from './composables/useCanvasBackground';
 import { useCompositionMedia } from './composables/useCompositionMedia';
@@ -15,16 +16,18 @@ import { useCameraZoom, type RenderedVideoWindow } from './composables/useCamera
 import { useLayerTransformAndCrop } from './composables/useLayerTransformAndCrop';
 import { useViewportZoom } from './composables/useViewportZoom';
 import { useTranslate } from '~/i18n/useTranslate';
-import { resolveCompositionSceneLayers } from '../composition/scene-layers';
 import { canvasGuideLines } from './canvas-guides';
 import type { EditorCanvasEmits, EditorCanvasProps } from './editor-canvas-types';
+import { DEFAULT_ZOOM_MOTION_BLUR } from '../zoom/zoom-types';
 import { drawBeamWatermark, WATERMARK_LOGO_PATH } from './watermark-render';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
 import { useCanvasTransitionRenderer } from './composables/useCanvasTransitionRenderer';
 import { measureCanvasCaptionText } from './canvas-text-measure';
 import { useCanvasLoadingState } from './composables/useCanvasLoadingState';
+import { useCanvasClipToggleTransition } from './composables/useCanvasClipToggleTransition';
+import { previewRenderScale } from '~/media/playback';
 const { t } = useTranslate('EditorCanvas');
-const props = defineProps<EditorCanvasProps>();
+const props = withDefaults(defineProps<EditorCanvasProps>(), { previewQuality: 'full' });
 const emit = defineEmits<EditorCanvasEmits>();
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const containerRef = ref<HTMLDivElement | null>(null);
@@ -44,7 +47,13 @@ let resizeObserver: ResizeObserver | null = null;
 let animationFrameId: number | null = null;
 let watermarkLogo: HTMLImageElement | null = null;
 let drawVisualStack:
-  ((ctx: CanvasRenderingContext2D, videoWindow: RenderedVideoWindow, drawScreen: () => void) => void) | null = null;
+  | ((
+      ctx: CanvasRenderingContext2D,
+      videoWindow: RenderedVideoWindow,
+      drawScreen: () => void,
+      layers: CompositionSceneLayers,
+    ) => void)
+  | null = null;
 const viewportZoom = useViewportZoom();
 const liveScreenClip = computed<VisualClip | null>(
   () =>
@@ -76,9 +85,15 @@ const outputAspectRatio = computed(() => props.outputCanvas.width / props.output
 function renderOnce() {
   if (animationFrameId === null) animationFrameId = requestAnimationFrame(draw);
 }
+const clipToggleTransition = useCanvasClipToggleTransition({
+  canvas: () => canvasRef.value,
+  composition: () => props.composition,
+  onRenderOnce: renderOnce,
+});
 const { drawBackground, syncPlayback, isTransitioningBackground } = useCanvasBackground(
   () => props.selectedBackground,
   () => props.backgroundBlurPercent,
+  () => props.previewQuality,
   renderOnce,
 );
 let cameraZoom: ReturnType<typeof useCameraZoom>;
@@ -107,6 +122,7 @@ cameraZoom = useCameraZoom({
   canvasRef: () => canvasRef.value,
   outputCanvas: () => props.outputCanvas,
   zoomElements: () => props.zoomElements,
+  zoomMotionBlur: () => props.zoomMotionBlur ?? DEFAULT_ZOOM_MOTION_BLUR,
   selectedZoom: () => props.selectedZoom,
   currentTime: () => props.currentTime,
   isPlaying: () => props.isPlaying,
@@ -118,7 +134,7 @@ cameraZoom = useCameraZoom({
   isCropping: () => props.isCropping,
   drawBackground,
   videoError: () => props.playbackError?.message ?? null,
-  renderVisualStack: (ctx, window, drawScreen) => drawVisualStack?.(ctx, window, drawScreen),
+  renderVisualStack: (ctx, window, drawScreen, layers) => drawVisualStack?.(ctx, window, drawScreen, layers),
   onUpdateZoom: (zoom) => emit('update:zoom', zoom),
   onPreviewZoom: (zoom) => emit('preview:zoom', zoom),
   onSelectScreenClip: (clipId) => emit('select:clip', clipId),
@@ -127,15 +143,15 @@ cameraZoom = useCameraZoom({
   onDeselectZoom: () => emit('deselect:zoom'),
   selectVisualAt: (event) => transformAndCrop.selectVisualAt(event, canvasRef.value),
   selectedTransformClipExists: () => Boolean(props.selectedTransformClip),
+  onRenderOnce: renderOnce,
 });
 watch(
   () => props.isPlaying,
   (playing) => {
     syncPlayback(playing);
-    if (!playing) cameraZoom.resetCamera();
+    cameraZoom.resetCamera();
   },
 );
-const isMasterPlaying = () => props.isPlaying;
 let currentRenderWindow: RenderedVideoWindow | null = null;
 const compositionMedia = useCompositionMedia({
   composition: () => props.composition,
@@ -159,7 +175,6 @@ const compositionMedia = useCompositionMedia({
       : null,
   onRenderOnce: renderOnce,
 });
-
 const drawNonScreenVisuals = (
   ctx: CanvasRenderingContext2D,
   window: { dx: number; dy: number; dw: number; dh: number; scale: number; focusX: number; focusY: number },
@@ -167,19 +182,16 @@ const drawNonScreenVisuals = (
   if (compositionMedia.drawVisualStack) compositionMedia.drawVisualStack(ctx, window, () => undefined);
   else compositionMedia.drawWebcamClips(ctx, window);
 };
-
-drawVisualStack = (ctx, window, drawScreen) => {
+drawVisualStack = (ctx, window, drawScreen, layers) => {
   if (compositionMedia.drawVisualStack) {
-    compositionMedia.drawVisualStack(ctx, window, drawScreen);
+    compositionMedia.drawVisualStack(ctx, window, drawScreen, layers);
     return;
   }
-  const layers = resolveCompositionSceneLayers(props.composition, props.currentTime * 1_000);
   for (const clip of layers.cameraVisuals) {
     if (clip.kind === 'screen') drawScreen();
     else compositionMedia.drawComposition(ctx, window, clip.id);
   }
 };
-
 const cursorOverlay = useCursorOverlay({
   cursorSelection: () => props.cursorSelection,
   cursorPack: () => props.cursorPack,
@@ -201,7 +213,6 @@ const cursorOverlay = useCursorOverlay({
   showBackground: () => props.outputCanvas.showBackground,
   onRenderOnce: renderOnce,
 });
-
 watch(
   () => `${props.outputCanvas.width}:${props.outputCanvas.height}:${props.outputCanvas.showBackground}`,
   () => {
@@ -217,6 +228,7 @@ watch(() => props.outputCanvas, renderOnce, { deep: true });
 watch(() => [props.composition, props.currentTime, props.frameVersion, props.isCropping] as const, renderOnce, {
   deep: true,
 });
+watch(() => [props.zoomElements, props.selectedZoom] as const, cameraZoom.resetCameraUnlessDragging, { deep: true });
 watch(
   () =>
     [
@@ -235,8 +247,6 @@ watch(
   { deep: true },
 );
 watch(transformAndCrop.transformDraft, renderOnce, { deep: true });
-watch(isMasterPlaying, renderOnce);
-
 const resizeCanvas = () => {
   const canvas = canvasRef.value;
   const container = containerRef.value;
@@ -244,13 +254,14 @@ const resizeCanvas = () => {
   const width = Math.max(1, container.clientWidth);
   const height = Math.max(1, container.clientHeight);
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  deviceScale.value = dpr;
+  const renderScale = previewRenderScale(width, height, dpr, props.previewQuality);
+  deviceScale.value = renderScale;
   logicalSize.value = { width, height };
-  canvas.width = Math.max(1, Math.round(width * dpr));
-  canvas.height = Math.max(1, Math.round(height * dpr));
+  canvas.width = Math.max(1, Math.round(width * renderScale));
+  canvas.height = Math.max(1, Math.round(height * renderScale));
   renderCanvas();
 };
-
+watch(() => props.previewQuality, resizeCanvas);
 const drawCanvasScene = (ctx: CanvasRenderingContext2D) => {
   const window = cameraZoom.drawVideoWindow(ctx, logicalSize.value.width, logicalSize.value.height, screenFrame.value);
   if (window) {
@@ -303,6 +314,7 @@ const renderCanvas = () => {
   ctx.imageSmoothingQuality = 'high';
   ctx.clearRect(0, 0, logicalSize.value.width, logicalSize.value.height);
   canvasTransitionRenderer.render(ctx, drawCanvasScene);
+  clipToggleTransition.blendPreviousFrame(ctx, logicalSize.value.width, logicalSize.value.height);
 };
 const commitCrop = () => {
   transformAndCrop.commitCrop();
@@ -313,7 +325,6 @@ function draw() {
   renderCanvas();
   if (props.isPlaying || isTransitioningBackground.value) animationFrameId = requestAnimationFrame(draw);
 }
-
 const handleIslandPointerDown = (event: PointerEvent) => {
   if (event.button === 0 && transformAndCrop.selectVisualAt(event, canvasRef.value)) return;
   if (viewportZoom.beginPan(event, containerRef.value)) return;
@@ -344,11 +355,9 @@ const handleIslandPointerUp = (event: PointerEvent) => {
   }
   cameraZoom.endSelectionMove(event);
 };
-
 const handleIslandWheel = (event: WheelEvent) => {
   viewportZoom.handleWheel(event, containerRef.value?.getBoundingClientRect());
 };
-
 onMounted(() => {
   watermarkLogo = new Image();
   watermarkLogo.onload = renderOnce;
@@ -363,12 +372,8 @@ onUnmounted(() => {
   if (animationFrameId !== null) cancelAnimationFrame(animationFrameId);
   if (formatTransitionTimer) clearTimeout(formatTransitionTimer);
 });
-
-defineExpose({
-  viewportZoom,
-});
+defineExpose({ viewportZoom });
 </script>
-
 <template>
   <div
     class="canvas-island"
@@ -398,7 +403,14 @@ defineExpose({
       </div>
     </Transition>
     <div class="canvas-viewport" :style="viewportZoom.viewportStyle.value">
-      <div class="preview-frame" :style="{ '--preview-aspect-ratio': outputAspectRatio }" />
+      <div class="preview-frame" :style="{ '--preview-aspect-ratio': outputAspectRatio }">
+        <div
+          class="zoom-selection-box"
+          :class="{ locked: selectedZoom?.mode !== 'manual' }"
+          :style="cameraZoom.focusTargetStyle.value"
+          aria-hidden="true"
+        />
+      </div>
       <canvas
         ref="canvasRef"
         class="editor-canvas"
@@ -450,12 +462,6 @@ defineExpose({
         </div>
       </div>
       <div
-        class="zoom-selection-box"
-        :class="{ locked: selectedZoom?.mode !== 'manual' }"
-        :style="cameraZoom.focusTargetStyle.value"
-        aria-hidden="true"
-      />
-      <div
         v-if="isCropping && selectedTransformClip"
         class="crop-container"
         :style="transformAndCrop.cropContainerStyle.value"
@@ -493,5 +499,4 @@ defineExpose({
     <UndoRedoToast :action="historyAction ?? null" />
   </div>
 </template>
-
 <style scoped src="./EditorCanvas.css"></style>

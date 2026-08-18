@@ -11,8 +11,15 @@ const Button = {
 };
 const ButtonGroup = { template: '<div class="button-group"><slot /></div>' };
 const BigSlider = {
+  props: ['label'],
   emits: ['update:modelValue'],
-  template: '<button class="depth-slider" @click="$emit(\'update:modelValue\', 4)">Slider</button>',
+  template:
+    "<button :class=\"label?.toLowerCase().includes('motion') ? 'motion-blur-slider' : 'depth-slider'\" @click=\"$emit('update:modelValue', label?.toLowerCase().includes('motion') ? 80 : 4)\">Slider</button>",
+};
+const Switch = {
+  props: ['modelValue'],
+  emits: ['update:modelValue'],
+  template: '<button class="motion-blur-switch" @click="$emit(\'update:modelValue\', !modelValue)">Switch</button>',
 };
 
 const selectedZoom: ZoomElement = {
@@ -32,8 +39,9 @@ describe('ZoomPanel', () => {
         selectedZoom: null,
         canGenerate: true,
         hasAutomaticZooms: false,
+        motionBlur: { enabled: true, intensity: 0.55 },
       },
-      global: { stubs: { Button, ButtonGroup, BigSlider } },
+      global: { stubs: { Button, ButtonGroup, BigSlider, Switch } },
     });
     expect(wrapper.find('.empty-state').exists()).toBe(true);
     await wrapper.get('.header-action button').trigger('click');
@@ -42,8 +50,13 @@ describe('ZoomPanel', () => {
 
   it('updates modes and depth, including the clamped slider range', async () => {
     const wrapper = mount(ZoomPanel, {
-      props: { selectedZoom, canGenerate: true, hasAutomaticZooms: false },
-      global: { stubs: { Button, ButtonGroup, BigSlider } },
+      props: {
+        selectedZoom,
+        canGenerate: true,
+        hasAutomaticZooms: false,
+        motionBlur: { enabled: true, intensity: 0.55 },
+      },
+      global: { stubs: { Button, ButtonGroup, BigSlider, Switch } },
     });
     await wrapper.get('.depth-slider').trigger('click');
     await wrapper.get('.preset-pill').trigger('click');
@@ -55,13 +68,34 @@ describe('ZoomPanel', () => {
 
   it('offers a confirmation before regenerating existing automatic zooms', async () => {
     const wrapper = mount(ZoomPanel, {
-      props: { selectedZoom: null, canGenerate: true, hasAutomaticZooms: true },
-      global: { stubs: { Button, ButtonGroup, BigSlider } },
+      props: {
+        selectedZoom: null,
+        canGenerate: true,
+        hasAutomaticZooms: true,
+        motionBlur: { enabled: true, intensity: 0.55 },
+      },
+      global: { stubs: { Button, ButtonGroup, BigSlider, Switch } },
       attachTo: document.body,
     });
     await wrapper.find('.popover-trigger').trigger('click');
     expect(document.body.textContent).toContain('Regenerate Auto Zooms');
     expect(document.body.textContent).toContain('Cancel');
     wrapper.unmount();
+  });
+
+  it('toggles dedicated zoom motion blur and updates its intensity', async () => {
+    const motionBlur = { enabled: true, intensity: 0.55 };
+    const wrapper = mount(ZoomPanel, {
+      props: { selectedZoom, canGenerate: true, hasAutomaticZooms: false, motionBlur },
+      global: { stubs: { Button, ButtonGroup, BigSlider, Switch } },
+    });
+
+    await wrapper.get('.motion-blur-slider').trigger('click');
+    await wrapper.get('.motion-blur-switch').trigger('click');
+
+    expect(wrapper.emitted('update:motionBlur')).toEqual([
+      [{ enabled: true, intensity: 0.8 }],
+      [{ enabled: false, intensity: 0.55 }],
+    ]);
   });
 });

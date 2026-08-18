@@ -1,13 +1,27 @@
 import { computed, ref } from 'vue';
-import type { ZoomElement } from '../../zoom/zoom-types';
+import { ZOOM_DEPTH_SCALES, type ZoomElement, type ZoomMotionBlurSettings } from '../../zoom/zoom-types';
 import { createCompositionCameraEvaluator } from '../../zoom/composition-camera';
-import { OUTPUT_PREVIEW_RADIUS, outputPreviewRect, type OutputCanvasSettings } from '../output-canvas';
+import { clampFocusToScale } from '../../zoom/zoom-playback';
+import { createZoomMotionBlurSamplePlan, ZOOM_MOTION_BLUR_SHUTTER_MS } from '../../zoom/zoom-motion-blur';
+import {
+  compositeIsolatedMotionBlurSample,
+  createMotionBlurSurface,
+  resizeMotionBlurSurface,
+  type MotionBlurSurface,
+} from '../../zoom/zoom-motion-blur-compositor';
+import {
+  OUTPUT_FALLBACK_COLOR,
+  OUTPUT_PREVIEW_RADIUS,
+  outputPreviewRect,
+  type OutputCanvasSettings,
+} from '../output-canvas';
 import type { ProjectEditorData } from '~/api/types/capture-api';
 import { activeClipsAt } from '~/media/shared';
 import type { MediaFrame } from '~/media/shared';
 import type { ClipComposition, NormalizedTransform, VisualClip } from '~/media/shared/composition-types';
 import { drawDecoratedMedia } from '../../composition/appearance/render-decorated-media';
 import { mapSourcePointToScreen, resolveScreenRenderGeometry } from '../../composition/camera-layout';
+import { resolveCompositionSceneLayers, type CompositionSceneLayers } from '../../composition/scene-layers';
 
 export interface VideoWindowBounds {
   dx: number;
@@ -27,6 +41,7 @@ export interface UseCameraZoomOptions {
   canvasRef: () => HTMLCanvasElement | null;
   outputCanvas: () => OutputCanvasSettings;
   zoomElements: () => ZoomElement[];
+  zoomMotionBlur?: () => ZoomMotionBlurSettings;
   selectedZoom: () => ZoomElement | null;
   currentTime: () => number;
   isPlaying: () => boolean;
@@ -40,7 +55,12 @@ export interface UseCameraZoomOptions {
     bounds: { x: number; y: number; width: number; height: number },
   ) => void;
   videoError: () => string | null;
-  renderVisualStack?: (ctx: CanvasRenderingContext2D, videoWindow: RenderedVideoWindow, drawScreen: () => void) => void;
+  renderVisualStack?: (
+    ctx: CanvasRenderingContext2D,
+    videoWindow: RenderedVideoWindow,
+    drawScreen: () => void,
+    layers: CompositionSceneLayers,
+  ) => void;
   onUpdateZoom: (zoom: ZoomElement) => void;
   onPreviewZoom?: (zoom: ZoomElement) => void;
   onSelectScreenClip: (clipId: string) => void;
@@ -49,6 +69,7 @@ export interface UseCameraZoomOptions {
   onDeselectZoom: () => void;
   selectVisualAt: (event: PointerEvent) => boolean;
   selectedTransformClipExists: () => boolean;
+  onRenderOnce?: () => void;
 }
 
 export function useCameraZoom(options: UseCameraZoomOptions) {
@@ -61,6 +82,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
   const draftFocus = ref<{ cx: number; cy: number } | null>(null);
   let pendingZoomPreview: ZoomElement | null = null;
   let zoomPreviewFrame: number | null = null;
+  let motionBlurSurface: MotionBlurSurface | null = null;
 
   const screenClip = (): VisualClip | null =>
     activeClipsAt(options.composition(), options.currentTime() * 1_000).find(
@@ -69,13 +91,17 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
 
   const resetCamera = () => {
     cameraEvaluator?.invalidate();
+    options.onRenderOnce?.();
+  };
+  const resetCameraUnlessDragging = () => {
+    if (!isMovingSelection.value) resetCamera();
   };
 
   const focusTargetStyle = computed(() => {
-    const bounds = videoWindowBounds.value;
+    const bounds = overlayWindowBounds.value;
     const selected = options.selectedZoom();
     if (!selected || selected.mode !== 'manual' || options.isPlaying() || !bounds) return { display: 'none' };
-    const selectionScale = [1.25, 1.5, 1.8, 2.2, 3.5, 5][selected.depth - 1];
+    const selectionScale = ZOOM_DEPTH_SCALES[selected.depth];
     const scale = bounds.scale || 1;
     const centerX = bounds.dx + bounds.dw / 2;
     const centerY = bounds.dy + bounds.dh / 2;
@@ -83,14 +109,14 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     const focusY = bounds.focusY ?? centerY;
     const targetWidth = bounds.dw / selectionScale;
     const targetHeight = bounds.dh / selectionScale;
-    const cx = draftFocus.value?.cx ?? selected.focus.cx;
-    const cy = draftFocus.value?.cy ?? selected.focus.cy;
+    const focus = clampFocusToScale(draftFocus.value ?? selected.focus, selectionScale);
+    const { cx, cy } = focus;
     const left = bounds.dx + cx * bounds.dw - targetWidth / 2;
     const top = bounds.dy + cy * bounds.dh - targetHeight / 2;
     return {
       width: `${targetWidth * scale}px`,
       height: `${targetHeight * scale}px`,
-      transform: `translate3d(${centerX + (left - focusX) * scale}px, ${centerY + (top - focusY) * scale}px, 0)`,
+      transform: `translate3d(${centerX + (left - focusX) * scale - bounds.dx}px, ${centerY + (top - focusY) * scale - bounds.dy}px, 0)`,
       willChange: isMovingSelection.value ? 'transform' : 'auto',
     };
   });
@@ -109,7 +135,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
 
   const updateFocus = (event: PointerEvent, final: boolean) => {
     const canvas = options.canvasRef();
-    const bounds = videoWindowBounds.value;
+    const bounds = overlayWindowBounds.value;
     const selected = options.selectedZoom();
     if (!canvas || !bounds || !selected || selected.mode !== 'manual') return;
     const rect = canvas.getBoundingClientRect();
@@ -123,8 +149,14 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     const focusY = bounds.focusY ?? centerY;
     const unzoomedX = (canvasX - centerX) / scale + focusX;
     const unzoomedY = (canvasY - centerY) / scale + focusY;
-    const cx = Math.min(1, Math.max(0, (unzoomedX - bounds.dx) / bounds.dw));
-    const cy = Math.min(1, Math.max(0, (unzoomedY - bounds.dy) / bounds.dh));
+    const focus = clampFocusToScale(
+      {
+        cx: (unzoomedX - bounds.dx) / bounds.dw,
+        cy: (unzoomedY - bounds.dy) / bounds.dh,
+      },
+      ZOOM_DEPTH_SCALES[selected.depth],
+    );
+    const { cx, cy } = focus;
 
     draftFocus.value = { cx, cy };
     const updated: ZoomElement = {
@@ -195,10 +227,9 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
   ): RenderedVideoWindow | null => {
     const output = options.outputCanvas();
     const preview = outputPreviewRect(width, height, output);
-    const screen = screenClip();
-    const hasCameraVisual = activeClipsAt(options.composition(), options.currentTime() * 1_000).some(
-      (clip) => clip.kind === 'screen' || clip.kind === 'video' || clip.kind === 'image',
-    );
+    const sceneLayers = resolveCompositionSceneLayers(options.composition(), options.currentTime() * 1_000);
+    const screen = sceneLayers.screen;
+    const hasCameraVisual = sceneLayers.cameraVisuals.length > 0;
     if (!hasCameraVisual) {
       videoWindowBounds.value = null;
       screenHitBounds.value = null;
@@ -221,6 +252,8 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       ctx.fillText(options.videoError() || 'Loading media metadata…', width / 2, height / 2);
       ctx.restore();
       videoWindowBounds.value = null;
+      screenHitBounds.value = null;
+      overlayWindowBounds.value = null;
       return null;
     }
     const { x: dx, y: dy, width: dw, height: dh } = preview;
@@ -249,17 +282,22 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     ctx.clip();
     const currentTime = options.currentTime();
     const telemetry = options.editorData()?.cursor.telemetry ?? [];
+    const selectedZoom = options.selectedZoom();
+    const previewZooms =
+      !options.isPlaying() && selectedZoom?.mode === 'manual'
+        ? options.zoomElements().filter((zoom) => zoom.id !== selectedZoom.id)
+        : options.zoomElements();
     const key = JSON.stringify({
-      zooms: options.zoomElements(),
+      zooms: previewZooms,
       telemetry,
       canvas: output,
       source: screen ? [videoWidth, videoHeight] : null,
-      screen: screen ? [screen.transform, screen.crop] : null,
+      screen: screen ? [screen.transform, screen.crop, screen.cameraFramingPreset] : null,
     });
     if (!cameraEvaluator || key !== cameraEvaluatorKey) {
       cameraEvaluatorKey = key;
       cameraEvaluator = createCompositionCameraEvaluator({
-        zooms: options.zoomElements(),
+        zooms: previewZooms,
         telemetry,
         mapFocus: (focus, zoom, timeMs) => {
           const activeScreen = activeClipsAt(options.composition(), timeMs).find(
@@ -289,10 +327,10 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       focusX: camera.focusX,
       focusY: camera.focusY,
     };
-    const drawScreen = () => {
+    const drawScreen = (target = ctx) => {
       if (!screen) return;
       if (frame) {
-        drawDecoratedMedia(ctx, {
+        drawDecoratedMedia(target, {
           source: frame.bitmap,
           sourceRect: source,
           rect: { x: dx + positioned.x, y: dy + positioned.y, width: positioned.width, height: positioned.height },
@@ -318,22 +356,100 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
           mask: screenGeometry?.mask,
         });
       } else if (options.videoError()) {
-        ctx.fillStyle = '#334155';
-        ctx.fillRect(dx, dy, dw, dh);
-        ctx.fillStyle = '#fff';
-        ctx.font = '14px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(options.videoError()!, width / 2, height / 2);
+        target.fillStyle = '#334155';
+        target.fillRect(dx, dy, dw, dh);
+        target.fillStyle = '#fff';
+        target.font = '14px sans-serif';
+        target.textAlign = 'center';
+        target.fillText(options.videoError()!, width / 2, height / 2);
       }
     };
-    ctx.save();
-    ctx.translate(dx + dw / 2, dy + dh / 2);
-    ctx.scale(camera.scale, camera.scale);
-    ctx.translate(-camera.focusX, -camera.focusY);
-    options.drawBackground(ctx, { x: dx, y: dy, width: dw, height: dh });
-    if (options.renderVisualStack) options.renderVisualStack(ctx, renderedWindow, drawScreen);
-    else drawScreen();
-    ctx.restore();
+    const centerCamera = { focusX: sample.focus.cx, focusY: sample.focus.cy, scale: sample.scale };
+    const blurSettings = options.zoomMotionBlur?.();
+    const blurIntensity = blurSettings?.enabled ? blurSettings.intensity : 0;
+    const blurPlan = (() => {
+      if (!(blurIntensity > 0)) return [{ camera: centerCamera, weight: 1 }];
+      const halfShutterMs = ZOOM_MOTION_BLUR_SHUTTER_MS / 2;
+      const cameraAt = (timeMs: number) => {
+        const value = cameraEvaluator!.sample(Math.max(0, timeMs));
+        return { focusX: value.focus.cx, focusY: value.focus.cy, scale: value.scale };
+      };
+      return createZoomMotionBlurSamplePlan({
+        previous: cameraAt(currentTime * 1_000 - halfShutterMs),
+        center: centerCamera,
+        current: cameraAt(currentTime * 1_000 + halfShutterMs),
+        intensity: blurIntensity,
+        deltaMs: halfShutterMs * 2,
+        viewportWidth: dw,
+        viewportHeight: dh,
+      });
+    })();
+    const drawSample = (
+      target: CanvasRenderingContext2D,
+      blurSample: (typeof blurPlan)[number],
+      fillFallback = false,
+    ) => {
+      const projectedCamera = {
+        focusX: dx + blurSample.camera.focusX * dw,
+        focusY: dy + blurSample.camera.focusY * dh,
+        scale: blurSample.camera.scale,
+      };
+      const sampleWindow = { ...renderedWindow, ...projectedCamera };
+      target.save();
+      target.beginPath();
+      target.roundRect(dx, dy, dw, dh, OUTPUT_PREVIEW_RADIUS);
+      target.clip();
+      if (fillFallback) {
+        target.fillStyle = OUTPUT_FALLBACK_COLOR;
+        target.fillRect(dx, dy, dw, dh);
+      }
+      target.translate(dx + dw / 2, dy + dh / 2);
+      target.scale(projectedCamera.scale, projectedCamera.scale);
+      target.translate(-projectedCamera.focusX, -projectedCamera.focusY);
+      options.drawBackground(target, { x: dx, y: dy, width: dw, height: dh });
+      if (options.renderVisualStack)
+        options.renderVisualStack(target, sampleWindow, () => drawScreen(target), sceneLayers);
+      else drawScreen(target);
+      target.restore();
+    };
+    if (blurPlan.length === 1) {
+      drawSample(ctx, blurPlan[0]!);
+    } else {
+      const canvasPixelScale = Math.max(1, options.canvasRef()?.width ?? width) / Math.max(1, width);
+      const pixelScale = Math.min(1.25, canvasPixelScale);
+      motionBlurSurface ??= createMotionBlurSurface(
+        Math.max(1, Math.round(width * pixelScale)),
+        Math.max(1, Math.round(height * pixelScale)),
+      );
+      if (!motionBlurSurface) {
+        drawSample(ctx, blurPlan[Math.floor(blurPlan.length / 2)]!);
+      } else {
+        resizeMotionBlurSurface(
+          motionBlurSurface,
+          Math.max(1, Math.round(width * pixelScale)),
+          Math.max(1, Math.round(height * pixelScale)),
+        );
+        let accumulatedWeight = 0;
+        let composited = false;
+        for (const blurSample of blurPlan) {
+          const rendered = compositeIsolatedMotionBlurSample({
+            target: ctx,
+            surface: motionBlurSurface,
+            logicalWidth: width,
+            logicalHeight: height,
+            pixelScale,
+            sample: blurSample,
+            accumulatedWeight,
+            draw: (target, sampleToDraw) => drawSample(target as CanvasRenderingContext2D, sampleToDraw, true),
+          });
+          if (rendered) {
+            composited = true;
+            accumulatedWeight += blurSample.weight;
+          }
+        }
+        if (!composited) drawSample(ctx, blurPlan[Math.floor(blurPlan.length / 2)]!);
+      }
+    }
     ctx.restore();
 
     videoWindowBounds.value = {
@@ -374,6 +490,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     overlayWindowBounds,
     focusTargetStyle,
     resetCamera,
+    resetCameraUnlessDragging,
     beginSelectionMove,
     moveSelection,
     endSelectionMove,

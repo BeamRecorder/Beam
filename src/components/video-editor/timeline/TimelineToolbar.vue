@@ -23,6 +23,9 @@ import BigSlider from '~/ui/slider/BigSlider.vue';
 import Skeleton from '~/ui/skeleton/Skeleton.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { MAX_TIMELINE_ZOOM, MIN_TIMELINE_ZOOM, zoomTimelineByButton } from './composables/timeline-zoom';
+import type { PreviewQuality } from '~/media/playback';
+import PreviewQualityPopover from './PreviewQualityPopover.vue';
+import type { PreviewPerformanceSnapshot } from '../performance/preview-performance-types';
 
 const { t } = useTranslate('TimelineToolbar');
 
@@ -35,8 +38,10 @@ const props = withDefaults(
     canSplit?: boolean;
     isSnappingEnabled?: boolean;
     loading?: boolean;
+    previewQuality?: PreviewQuality;
+    performanceSnapshot?: PreviewPerformanceSnapshot | null;
   }>(),
-  { zoomLevel: 100, canSplit: false, isSnappingEnabled: true, loading: false },
+  { zoomLevel: 100, canSplit: false, isSnappingEnabled: true, loading: false, previewQuality: 'full' },
 );
 
 const emit = defineEmits<{
@@ -44,6 +49,7 @@ const emit = defineEmits<{
   (e: 'update:currentTime', value: number): void;
   (e: 'update:zoomLevel', value: number): void;
   (e: 'update:isSnappingEnabled', value: boolean): void;
+  (e: 'update:previewQuality', value: PreviewQuality): void;
   (e: 'add:element', type: 'video' | 'image' | 'sound' | 'caption' | 'blur'): void;
   (e: 'split'): void;
 }>();
@@ -65,7 +71,6 @@ const addItems = computed(
 const zoomPercentageText = computed(() => {
   return `${Math.round(props.zoomLevel)}%`;
 });
-
 const formatTime = (time: number) => {
   if (!Number.isFinite(time) || time < 0) time = 0;
   const totalSeconds = Math.floor(time);
@@ -173,6 +178,11 @@ const handleZoomOut = () => {
 
       <!-- Right Section: Compact Segmented Zoom with Popover -->
       <div class="right-section">
+        <PreviewQualityPopover
+          :model-value="previewQuality"
+          :performance-snapshot="performanceSnapshot"
+          @update:model-value="emit('update:previewQuality', $event)"
+        />
         <div class="zoom-controls">
           <Button
             variant="ghost"
@@ -330,6 +340,7 @@ const handleZoomOut = () => {
   align-items: center;
   justify-content: flex-end;
   min-width: 0;
+  gap: 10px;
 }
 
 .zoom-controls {

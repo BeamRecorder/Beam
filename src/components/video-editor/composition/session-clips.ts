@@ -7,6 +7,7 @@ import {
   type ClipComposition,
   type MediaAsset,
   type VisualClip,
+  isVisualClip,
 } from '~/media/shared/composition-types';
 import { createComposition, setCameraLayout, updateClip } from './engine/clip-engine';
 import { keyboardCaptionClipsFromInput } from '~/media/shared/keyboard-captions';
@@ -225,11 +226,8 @@ export function synchronizeRecordingClips(
       timelineDurationMs: durationMs,
       sourceInMs: 0,
       sourceDurationMs: durationMs,
-      playbackRate: 1,
-      transitions: { entry: null, exit: null },
       enabled: true,
       order: 30_000,
-      transform: { x: 0, y: 0, width: 1, height: 1 },
       ...visualClipDefaultProps(defaults, 'screen', durationMs),
       playbackRate: 1,
       transitions: { entry: null, exit: null },
@@ -281,15 +279,22 @@ export function synchronizeRecordingClips(
     return canonicalComposition;
   let next = createComposition([...assets.values()], [...clips, ...candidates], keyboardCaptionSessions);
   for (const candidate of candidates) {
-    if (candidate.kind !== 'webcam' || !isSplitCameraLayout(candidate.cameraLayoutPreset ?? 'custom')) continue;
+    if (!isVisualClip(candidate) || candidate.kind !== 'webcam') continue;
+    const preset = candidate.cameraLayoutPreset;
+    if (!preset || preset === 'custom' || !isSplitCameraLayout(preset)) continue;
     if (cameraScreenPartner(next, candidate, true)) {
-      next = setCameraLayout(next, candidate.id, candidate.cameraLayoutPreset!);
+      next = setCameraLayout(next, candidate.id, preset);
       continue;
     }
-    next = updateClip(next, candidate.id, {
-      cameraLayoutPreset: 'floating-bottom-right',
-      transform: cameraLayoutTransform('floating-bottom-right'),
-    });
+    next = updateClip(next, candidate.id, (clip) =>
+      isVisualClip(clip)
+        ? {
+            ...clip,
+            cameraLayoutPreset: 'floating-bottom-right',
+            transform: cameraLayoutTransform('floating-bottom-right'),
+          }
+        : clip,
+    );
   }
   return next;
 }

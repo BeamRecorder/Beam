@@ -14,7 +14,14 @@ function safeExportName(name, extension) {
   return `${cleaned || 'Beam export'}.${extension}`;
 }
 
-function registerExportIpc({ ipcMain, dialog, BrowserWindow, fsModule = fs, pathModule = path }) {
+function registerExportIpc({
+  ipcMain,
+  dialog,
+  BrowserWindow,
+  defaultExportDirectory = null,
+  fsModule = fs,
+  pathModule = path,
+}) {
   const jobs = new Map();
   const ownerId = (event) => event.sender.id;
   const requireJob = (event, jobId) => {
@@ -36,9 +43,10 @@ function registerExportIpc({ ipcMain, dialog, BrowserWindow, fsModule = fs, path
     const format = payload.format === 'mp4' ? 'mp4' : payload.format === 'webm' ? 'webm' : null;
     if (!format) throw new Error('Format d’export invalide.');
     const window = BrowserWindow.fromWebContents(event.sender);
+    const defaultName = safeExportName(payload.projectName, format);
     const result = await dialog.showSaveDialog(window, {
       title: 'Export video',
-      defaultPath: safeExportName(payload.projectName, format),
+      defaultPath: defaultExportDirectory ? pathModule.resolve(defaultExportDirectory, defaultName) : defaultName,
       filters: [{ name: format.toUpperCase(), extensions: [format] }],
       properties: ['showOverwriteConfirmation'],
     });

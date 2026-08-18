@@ -2,18 +2,18 @@ import PlaybackWorker from './playback.worker?worker';
 import {
   MediaInputError,
   isVisualClip,
-  mediaSourceDescriptor,
   ownedMediaFrame,
   type ClipComposition,
   type MediaError,
   type MediaFrame,
-  type MediaSourceDescriptor,
 } from '../shared';
 import { AudioPlaybackScheduler } from './audio-scheduler';
 import { FrameLruCache } from './frame-cache';
 import { isPlaybackWorkerResponse } from './playback-protocol';
+import { audioPlaybackTopology, videoPlaybackTopology } from './playback-composition-topology';
+import { videoPlaybackPlan } from './playback-composition-plan';
+import { isPreviewQuality, type PreviewQuality } from './playback-preview';
 import type {
-  PlaybackClipDescriptor,
   PlaybackEventMap,
   PlaybackMetrics,
   PlaybackSeekMode,
@@ -47,6 +47,7 @@ export class MediaPlaybackEngine {
   private workerTerminated = false;
   private currentSeconds = 0;
   private playbackState: PlaybackState = 'idle';
+  private previewQuality: PreviewQuality;
   private metrics: PlaybackMetrics = {
     decodedFrames: 0,
     presentedFrames: 0,
@@ -58,7 +59,11 @@ export class MediaPlaybackEngine {
     seekLatencyMs: [],
   };
 
-  constructor(options: { workerFactory?: () => WorkerLike; audio?: AudioPlaybackScheduler } = {}) {
+  constructor(
+    options: { workerFactory?: () => WorkerLike; audio?: AudioPlaybackScheduler; previewQuality?: PreviewQuality } = {},
+  ) {
+    if (!isPreviewQuality(options.previewQuality ?? 'full')) throw new RangeError('Invalid playback preview quality.');
+    this.previewQuality = options.previewQuality ?? 'full';
     this.worker = options.workerFactory?.() ?? new PlaybackWorker();
     this.audio = options.audio ?? new AudioPlaybackScheduler((error) => this.fail(error));
     this.worker.onmessage = (event: MessageEvent<unknown>) => this.receive(event.data);
@@ -94,11 +99,11 @@ export class MediaPlaybackEngine {
     for (const pending of this.pendingLoads.values()) pending.resolve();
     this.pendingLoads.clear();
     try {
-      const { clips, assets, issues } = this.videoPlaybackPlan(composition);
+      const { clips, assets, issues } = videoPlaybackPlan(composition);
       const workerReady = new Promise<void>((resolve, reject) => {
         this.pendingLoads.set(requestGeneration, { resolve, reject });
       });
-      this.post({ type: 'load', generation: requestGeneration, assets, clips });
+      this.post({ type: 'load', generation: requestGeneration, assets, clips, previewQuality: this.previewQuality });
       const [, audioIssues] = await Promise.all([workerReady, this.audio.loadComposition(composition)]);
       if (requestGeneration !== this.generation) return;
       this.setState('paused');
@@ -119,7 +124,7 @@ export class MediaPlaybackEngine {
       this.composition !== null &&
       this.playbackState !== 'idle' &&
       this.playbackState !== 'loading' &&
-      this.playbackTopology(this.composition) === this.playbackTopology(composition)
+      videoPlaybackTopology(this.composition) === videoPlaybackTopology(composition)
     );
   }
 
@@ -127,6 +132,8 @@ export class MediaPlaybackEngine {
     this.assertActive();
     if (!this.canRetimeComposition(composition)) throw new Error('Playback topology changed during retiming.');
     if (!Number.isFinite(timelineSeconds)) throw new RangeError('Playback time must be finite.');
+    const previousComposition = this.composition!;
+    const shouldReloadAudio = audioPlaybackTopology(previousComposition) !== audioPlaybackTopology(composition);
     this.pause();
     this.composition = composition;
     this.currentSeconds = this.clampTime(timelineSeconds);
@@ -134,15 +141,23 @@ export class MediaPlaybackEngine {
     for (const pending of this.pendingLoads.values()) pending.resolve();
     this.pendingLoads.clear();
     try {
-      const { clips, issues } = this.videoPlaybackPlan(composition);
+      const { clips, issues } = videoPlaybackPlan(composition);
+      const activeClipIds = new Set(clips.map((clip) => clip.clipId));
+      for (const clipId of this.currentFrameKeys.keys())
+        if (!activeClipIds.has(clipId)) this.currentFrameKeys.delete(clipId);
       const workerReady = new Promise<void>((resolve, reject) => {
         this.pendingLoads.set(requestGeneration, { resolve, reject });
       });
-      this.audio.updateComposition(composition);
+      const audioReady = shouldReloadAudio
+        ? this.audio.loadComposition(composition)
+        : Promise.resolve().then(() => {
+            this.audio.updateComposition(composition);
+            return [];
+          });
       this.post({ type: 'retime', generation: requestGeneration, clips });
-      await workerReady;
+      const [, audioIssues] = await Promise.all([workerReady, audioReady]);
       if (requestGeneration !== this.generation) return;
-      for (const issue of issues) this.reportIssue(issue);
+      for (const issue of [...issues, ...audioIssues]) this.reportIssue(issue);
       await this.seek(this.currentSeconds, 'seek');
     } catch (error) {
       if (requestGeneration !== this.generation) return;
@@ -197,7 +212,7 @@ export class MediaPlaybackEngine {
           const clipEndSec = (clip.timelineStartMs + clip.timelineDurationMs) / 1_000;
           if (target >= clipStartSec && target <= clipEndSec) {
             const srcSec = (clip.sourceInMs + (target - clipStartSec) * 1_000 * (clip.playbackRate ?? 1)) / 1_000;
-            const cachedKey = this.cache.findMatchingKey(clip.id, srcSec);
+            const cachedKey = this.cache.findMatchingKey(clip.id, srcSec, `${this.previewQuality}:`);
             if (cachedKey) {
               this.currentFrameKeys.set(clip.id, cachedKey);
               this.emit('frame', { clipId: clip.id });
@@ -245,6 +260,32 @@ export class MediaPlaybackEngine {
 
   setVolume(percent: number): void {
     this.audio.setVolume(percent);
+  }
+
+  async setPreviewQuality(quality: PreviewQuality): Promise<void> {
+    this.assertActive();
+    if (!isPreviewQuality(quality)) throw new RangeError('Invalid playback preview quality.');
+    if (quality === this.previewQuality) return;
+    this.previewQuality = quality;
+    if (!this.composition || this.playbackState === 'idle' || this.playbackState === 'loading') return;
+    const resume = this.playbackState === 'playing';
+    this.pause();
+    const targetTime = this.currentSeconds;
+    const requestGeneration = ++this.generation;
+    for (const pending of this.pendingLoads.values()) pending.resolve();
+    this.pendingLoads.clear();
+    const workerReady = new Promise<void>((resolve, reject) => {
+      this.pendingLoads.set(requestGeneration, { resolve, reject });
+    });
+    try {
+      this.post({ type: 'configure-preview', generation: requestGeneration, previewQuality: quality });
+      await workerReady;
+      if (requestGeneration !== this.generation) return;
+      await this.seek(targetTime, 'seek');
+      if (resume && quality === this.previewQuality) await this.play(targetTime);
+    } finally {
+      this.pendingLoads.delete(requestGeneration);
+    }
   }
 
   dispose(): void {
@@ -309,6 +350,7 @@ export class MediaPlaybackEngine {
       if (message.generation !== this.generation) return;
       this.metrics = { ...message.metrics, cacheBytes: this.cache.byteSize };
       this.emit('metrics', this.developmentMetrics);
+      this.emit('audio-metrics', this.audio.performanceMetrics);
       return;
     }
     const pendingSeek = message.requestId === undefined ? null : this.pendingSeeks.get(message.requestId);
@@ -320,7 +362,9 @@ export class MediaPlaybackEngine {
       return;
     }
     const frame = ownedMediaFrame(message.clipId, message.bitmap, message.timestampSeconds, message.durationSeconds);
-    const key = `${message.clipId}:${message.timestampSeconds}`;
+    const key = `${this.previewQuality}:${message.clipId}:${message.timestampSeconds}`;
+    const previousKey = this.currentFrameKeys.get(message.clipId);
+    if (previousKey && !previousKey.startsWith(`${this.previewQuality}:`)) this.cache.delete(previousKey);
     this.currentFrameKeys.set(message.clipId, key);
     const evicted = this.cache.set(key, frame);
     for (const evictedKey of evicted) {
@@ -349,73 +393,6 @@ export class MediaPlaybackEngine {
   private stopClock() {
     if (this.animationFrame !== null) cancelAnimationFrame(this.animationFrame);
     this.animationFrame = null;
-  }
-
-  private videoClips(composition: ClipComposition): PlaybackClipDescriptor[] {
-    return composition.clips.flatMap((clip) => {
-      if (!clip.enabled || !isVisualClip(clip) || clip.kind === 'image') return [];
-      return [
-        {
-          clipId: clip.id,
-          assetId: clip.assetId,
-          timelineStartSeconds: clip.timelineStartMs / 1_000,
-          timelineDurationSeconds: clip.timelineDurationMs / 1_000,
-          sourceInSeconds: clip.sourceInMs / 1_000,
-          playbackRate: clip.playbackRate,
-        },
-      ];
-    });
-  }
-
-  private playbackTopology(composition: ClipComposition): string {
-    const clips = composition.clips
-      .flatMap((clip) => {
-        if (!clip.enabled) return [];
-        if (isVisualClip(clip) && clip.kind !== 'image') return [{ id: clip.id, assetId: clip.assetId, type: 'video' }];
-        if (clip.kind === 'audio') return [{ id: clip.id, assetId: clip.assetId, type: 'audio' }];
-        return [];
-      })
-      .sort((left, right) => left.id.localeCompare(right.id));
-    const assetIds = new Set(clips.map((clip) => clip.assetId));
-    const assets = composition.assets
-      .filter((asset) => assetIds.has(asset.id))
-      .map((asset) => ({ id: asset.id, kind: asset.kind, src: asset.src }))
-      .sort((left, right) => left.id.localeCompare(right.id));
-    return JSON.stringify({ clips, assets });
-  }
-
-  private videoPlaybackPlan(composition: ClipComposition): {
-    clips: PlaybackClipDescriptor[];
-    assets: MediaSourceDescriptor[];
-    issues: MediaError[];
-  } {
-    const requestedClips = this.videoClips(composition);
-    const assetsById = new Map(composition.assets.map((asset) => [asset.id, asset]));
-    const descriptors = new Map<string, MediaSourceDescriptor>();
-    const issues = new Map<string, MediaError>();
-    for (const assetId of new Set(requestedClips.map((clip) => clip.assetId))) {
-      const asset = assetsById.get(assetId);
-      if (!asset) {
-        issues.set(assetId, {
-          kind: 'missing',
-          sourceId: assetId,
-          message: 'A playback clip references a missing media asset.',
-        });
-        continue;
-      }
-      try {
-        const descriptor = mediaSourceDescriptor(asset);
-        if (descriptor.kind !== 'video') throw new Error('The playback asset is not a video.');
-        descriptors.set(assetId, descriptor);
-      } catch (error) {
-        issues.set(assetId, this.toMediaError(error, assetId));
-      }
-    }
-    return {
-      assets: [...descriptors.values()],
-      clips: requestedClips.filter((clip) => descriptors.has(clip.assetId)),
-      issues: [...issues.values()],
-    };
   }
 
   private get durationSeconds(): number {

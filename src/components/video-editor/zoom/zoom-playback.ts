@@ -7,6 +7,7 @@ export interface AppliedZoom {
   strength: number;
   mode: ZoomElement['mode'];
 }
+export type ZoomFocusMapper = (focus: ZoomFocus, zoom: AppliedZoom, timeMs: number) => ZoomFocus;
 export const ZOOM_IN_MS = 1522.575;
 export const ZOOM_OUT_MS = 1015.05;
 const LEAD_MS = 200;
@@ -84,6 +85,7 @@ function zoomAtSortedTime(
   elements: readonly ZoomElement[],
   timeMs: number,
   telemetry: readonly CursorTelemetryPoint[],
+  mapFocus: ZoomFocusMapper = (focus) => focus,
 ): AppliedZoom | null {
   const pair = elements.find((current, index) => {
     const next = elements[index + 1];
@@ -102,13 +104,19 @@ function zoomAtSortedTime(
       const t = easeOut((timeMs - pair.endMs - LEAD_MS) / CONNECTED_PAN_MS);
       const startScale = ZOOM_DEPTH_SCALES[pair.depth];
       const endScale = ZOOM_DEPTH_SCALES[next.depth];
-      const startFocus = clampFocusToScale(pair.focus, startScale);
-      const endFocus = clampFocusToScale(next.focus, endScale);
+      const startFocus = clampFocusToScale(
+        mapFocus(pair.focus, { focus: pair.focus, mode: pair.mode, scale: startScale, strength: 1 }, timeMs),
+        startScale,
+      );
+      const endFocus = clampFocusToScale(
+        mapFocus(next.focus, { focus: next.focus, mode: next.mode, scale: endScale, strength: 1 }, timeMs),
+        endScale,
+      );
       return {
         scale: lerp(startScale, endScale, t),
         focus: { cx: lerp(startFocus.cx, endFocus.cx, t), cy: lerp(startFocus.cy, endFocus.cy, t) },
         strength: 1,
-        mode: 'auto',
+        mode: pair.mode === 'auto' || next.mode === 'auto' ? 'auto' : 'manual',
       };
     }
   }
@@ -129,7 +137,19 @@ function zoomAtSortedTime(
     (candidate) =>
       candidate.startMs >= current.element.endMs && candidate.startMs - current.element.endMs <= CONNECTED_GAP_MS,
   );
-  let focus = clampFocusToScale(current.element.focus, currentScale);
+  let focus = clampFocusToScale(
+    mapFocus(
+      current.element.focus,
+      {
+        focus: current.element.focus,
+        scale: currentScale,
+        strength: current.strength,
+        mode: current.element.mode,
+      },
+      timeMs,
+    ),
+    currentScale,
+  );
   let scale = currentScale;
   if (
     next &&
@@ -138,14 +158,22 @@ function zoomAtSortedTime(
   ) {
     const t = easeOut((timeMs - current.element.endMs - LEAD_MS) / CONNECTED_PAN_MS);
     const nextScale = ZOOM_DEPTH_SCALES[next.depth];
+    const nextFocus = clampFocusToScale(
+      mapFocus(next.focus, { focus: next.focus, scale: nextScale, strength: 1, mode: next.mode }, timeMs),
+      nextScale,
+    );
     focus = {
-      cx: lerp(focus.cx, clampFocusToScale(next.focus, nextScale).cx, t),
-      cy: lerp(focus.cy, clampFocusToScale(next.focus, nextScale).cy, t),
+      cx: lerp(focus.cx, nextFocus.cx, t),
+      cy: lerp(focus.cy, nextFocus.cy, t),
     };
     scale = lerp(scale, nextScale, t);
   } else if (current.element.mode === 'auto') {
     const cursor = smoothedCursorFocusAt(telemetry, timeMs);
-    if (cursor) focus = clampFocusToScale(cursor, scale);
+    if (cursor)
+      focus = clampFocusToScale(
+        mapFocus(cursor, { focus: cursor, scale, strength: current.strength, mode: 'auto' }, timeMs),
+        scale,
+      );
   }
   return { scale: 1 + (scale - 1) * current.strength, focus, strength: current.strength, mode: current.element.mode };
 }
@@ -153,10 +181,11 @@ function zoomAtSortedTime(
 export function createZoomTimeEvaluator(
   elements: readonly ZoomElement[],
   telemetry: readonly CursorTelemetryPoint[] = [],
+  mapFocus?: ZoomFocusMapper,
 ) {
   const sortedElements = [...elements].sort((left, right) => left.startMs - right.startMs);
   const sortedTelemetry = [...telemetry].sort((left, right) => left.timeMs - right.timeMs);
-  return (timeMs: number) => zoomAtSortedTime(sortedElements, timeMs, sortedTelemetry);
+  return (timeMs: number) => zoomAtSortedTime(sortedElements, timeMs, sortedTelemetry, mapFocus);
 }
 
 export function zoomAtTime(

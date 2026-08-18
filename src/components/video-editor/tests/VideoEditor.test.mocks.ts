@@ -100,6 +100,9 @@ vi.mock('../composables/useVideoEditor', async () => {
         playbackState: ref('idle'),
         playbackError: ref(null),
         frameVersion: ref(0),
+        previewQuality: ref('full'),
+        playbackMetrics: ref(null),
+        audioMetrics: ref(null),
         selectedBackground: ref(null),
         selectedBackgroundMedia: ref(null),
         backgroundBlurPercent: ref(0),
@@ -207,10 +210,13 @@ vi.mock('../composables/useVideoEditor', async () => {
         },
         zoomState,
         exportRequest: computed(() => ({ projectName: 'Demo', snapshot: {}, format: 'webm', preset: 'medium' })),
+        includeAudioInExport: ref(true),
+        editorDefaults: ref({}),
         outputCanvas,
         handleSelectTab: vi.fn((tab: string) => {
           activeTab.value = tab;
         }),
+        initialPlaybackSettled: ref(true),
       };
       editorState.store = store;
       return store;

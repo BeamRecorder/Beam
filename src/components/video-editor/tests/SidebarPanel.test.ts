@@ -135,7 +135,7 @@ describe('SidebarPanel', () => {
         global: { stubs: { UpdateAvailableBadge } },
       });
       expect(wrapper.findAll('.nav-label').map((label) => label.text())).toEqual([
-        'Khung vẽ',
+        'Khung nền',
         'Đoạn clip',
         'Thu phóng',
         'Con trỏ',

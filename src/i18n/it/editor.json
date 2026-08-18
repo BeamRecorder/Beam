@@ -39,6 +39,7 @@
     "keyboardCaptions": "Scorciatoie da tastiera",
     "textCaptions": "Didascalie di testo",
     "audio": "Audio",
+    "media": "Media",
     "settings": "Impostazioni",
     "logo": "Logo"
   },
@@ -104,7 +105,14 @@
     "snappingOn": "Aggancio magnetico attivato",
     "snappingOff": "Aggancio magnetico disattivato",
     "zoom": "Zoom",
-    "resetZoom": "Reimposta zoom"
+    "resetZoom": "Reimposta zoom",
+    "previewQuality": "Qualità anteprima",
+    "previewQualityFull": "Risoluzione completa",
+    "previewQualityHalf": "Metà risoluzione",
+    "previewQualityQuarter": "Un quarto di risoluzione",
+    "previewQualityExportHint": "Solo anteprima. L’esportazione resta a piena qualità.",
+    "previewQualitySuggestion": "L’anteprima rallenta. Prova un proxy più leggero.",
+    "previewQualityCriticalSuggestion": "L’anteprima rallenta ancora. Riduci la qualità del proxy."
   },
   "TimelineTracks": {
     "clickToToggleVideo": "Fai clic per attivare/disattivare la traccia video",
@@ -154,6 +162,20 @@
   "TimelineVideoClip": {
     "trimStart": "Taglia inizio",
     "trimEnd": "Taglia fine"
+  },
+  "PreviewPerformance": {
+    "title": "Prestazioni",
+    "ui": "Interfaccia",
+    "worker": "Riproduzione",
+    "audio": "Audio",
+    "media": "Media",
+    "warning": "L’anteprima potrebbe scattare.",
+    "criticalWarning": "Le prestazioni dell’anteprima restano limitate.",
+    "reduceQuality": "Passa a {quality}",
+    "higherIsWorse": "Una curva più alta indica più carico",
+    "good": "OK",
+    "high": "Alto",
+    "critical": "Critico"
   },
   "Topbar": {
     "exitToHUD": "Esci dall'HUD",
@@ -253,6 +275,9 @@
     "autoHint": "La modalità automatica segue continuamente il movimento registrato del cursore.",
     "magnification": "Ingrandimento",
     "zoomLevel": "Livello zoom",
+    "motionBlur": "Sfocatura movimento zoom",
+    "motionBlurDesc": "Aggiunge una sfocatura cinematografica durante zoom e panoramiche, identica nell’anteprima e nell’esportazione.",
+    "motionBlurIntensity": "Intensità sfocatura movimento",
     "deleteZoom": "Elimina zoom",
     "noZoomSelected": "Nessuno zoom selezionato",
     "noZoomSelectedDesc": "Fai clic su un blocco zoom nella traccia per regolarne profondità, modalità o posizione."

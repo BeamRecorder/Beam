@@ -77,6 +77,19 @@ afterEach(() => {
 });
 
 describe('TimelineClip', () => {
+  it('keeps the disabled state stable while a video clip is toggled', async () => {
+    const wrapper = mount(TimelineClip, {
+      props: baseProps,
+      global: { stubs: { Skeleton, WaveformCanvas } },
+    });
+
+    expect(wrapper.get('.timeline-clip').classes()).not.toContain('disabled');
+    await wrapper.setProps({ clip: clip({ enabled: false }) });
+    expect(wrapper.get('.timeline-clip').classes()).toContain('disabled');
+    await wrapper.setProps({ clip: clip({ enabled: true }) });
+    expect(wrapper.get('.timeline-clip').classes()).not.toContain('disabled');
+  });
+
   it('renders transition indicators proportional to each edge duration', () => {
     const wrapper = mount(TimelineClip, {
       props: {

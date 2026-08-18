@@ -284,6 +284,11 @@
     "exportVideoAria": "匯出影片",
     "video": "影片",
     "resolution": "解析度",
+    "frameRate": "影格率",
+    "frameRateDesc": "24 fps 適合電影感節奏，30 fps 適合標準影片，60 fps 可獲得最流暢的動態。",
+    "frameRate24Desc": "電影感節奏，檔案較小。最適合 24 fps 素材。",
+    "frameRate30Desc": "兼顧流暢度與檔案大小，適合標準影片。",
+    "frameRate60Desc": "快速動作最流暢，但檔案較大。最適合 60 fps 素材。",
     "resMax": "最大",
     "res1080p": "1080p",
     "res720p": "720p",
@@ -430,7 +435,10 @@
     "searchPlaceholder": "搜尋專案...",
     "noSearchResults": "找不到相符的專案。",
     "clearSearch": "清除搜尋",
-    "refreshed": "已重新整理！"
+    "refreshed": "已重新整理！",
+    "selectProjects": "選取專案",
+    "exitSelectionMode": "結束選取",
+    "selectAll": "全選"
   },
   "PropertiesPanel": {
     "properties": "屬性",

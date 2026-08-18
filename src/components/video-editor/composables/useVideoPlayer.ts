@@ -1,5 +1,11 @@
 import { computed, onScopeDispose, ref, watch } from 'vue';
-import { MediaPlaybackEngine, type PlaybackState } from '~/media/playback';
+import {
+  MediaPlaybackEngine,
+  type AudioPlaybackMetrics,
+  type PlaybackMetrics,
+  type PlaybackState,
+  type PreviewQuality,
+} from '~/media/playback';
 import type { ClipComposition, MediaError } from '~/media/shared';
 import {
   BACKGROUND_MEDIA,
@@ -18,6 +24,9 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
   const playbackState = ref<PlaybackState>('idle');
   const playbackError = ref<MediaError | null>(null);
   const frameVersion = ref(0);
+  const previewQuality = ref<PreviewQuality>('full');
+  const playbackMetrics = ref<PlaybackMetrics | null>(null);
+  const audioMetrics = ref<AudioPlaybackMetrics | null>(null);
   let engine: MediaPlaybackEngine | null = null;
   let loadGeneration = 0;
   let playingIntent = false;
@@ -25,7 +34,7 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
   const ensureEngine = () => {
     if (disposed) throw new Error('Video player is disposed.');
     if (engine) return engine;
-    engine = new MediaPlaybackEngine();
+    engine = new MediaPlaybackEngine({ previewQuality: previewQuality.value });
     engine.on('time', (value) => {
       currentTime.value = value;
     });
@@ -39,6 +48,12 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
     engine.on('error', (value) => {
       playingIntent = false;
       playbackError.value = value;
+    });
+    engine.on('metrics', (value) => {
+      playbackMetrics.value = value;
+    });
+    engine.on('audio-metrics', (value) => {
+      audioMetrics.value = value;
     });
     engine.setVolume(volume.value);
     return engine;
@@ -139,6 +154,9 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
     playbackState,
     playbackError,
     frameVersion,
+    previewQuality,
+    playbackMetrics,
+    audioMetrics,
     selectedBackground,
     backgroundBlurPercent,
     selectedBackgroundMedia,
@@ -158,6 +176,11 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
   };
 
   watch(volume, (value) => engine?.setVolume(value));
+  watch(previewQuality, (value) => {
+    void engine?.setPreviewQuality(value).catch((error) => {
+      console.error('[Beam media:editor] Failed to update preview quality.', error);
+    });
+  });
   onScopeDispose(() => {
     disposed = true;
     playingIntent = false;

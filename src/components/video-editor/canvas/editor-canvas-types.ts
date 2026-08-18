@@ -4,7 +4,7 @@ import type { HistoryAction } from '../composables/useEditorUndoRedo';
 import type { BackgroundValue } from '../composables/backgroundCatalog';
 import type { CursorPackDescriptor, CursorSelection } from '../../../api/types/cursor-pack';
 import type { ShadowDirection } from '../properties/cursor/shadow-types';
-import type { ZoomElement } from '../zoom/zoom-types';
+import type { ZoomElement, ZoomMotionBlurSettings } from '../zoom/zoom-types';
 import type { MediaError, MediaFrame } from '~/media/shared';
 import type {
   CaptionClip,
@@ -15,6 +15,7 @@ import type {
   VisualClip,
 } from '~/media/shared/composition-types';
 import type { OutputCanvasSettings } from './output-canvas';
+import type { PreviewQuality } from '~/media/playback';
 
 export type TransformClip = VisualClip | BlurClip | CaptionClip;
 
@@ -36,10 +37,12 @@ export interface EditorCanvasProps {
   backgroundBlurPercent?: number;
   frameFor: (clipId: string) => MediaFrame | null;
   frameVersion: number;
+  previewQuality: PreviewQuality;
   playbackState: 'idle' | 'loading' | 'paused' | 'playing' | 'error' | 'disposed';
   playbackError: MediaError | null;
   editorData?: ProjectEditorData | null;
   zoomElements: ZoomElement[];
+  zoomMotionBlur?: ZoomMotionBlurSettings;
   selectedZoom: ZoomElement | null;
   composition: ClipComposition;
   outputCanvas: OutputCanvasSettings;

@@ -1,3 +1,4 @@
+import { nextTick } from 'vue';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import Button from './Button.vue';
@@ -26,5 +27,33 @@ describe('Button', () => {
       expect(wrapper.emitted('click')).toBeUndefined();
       expect(wrapper.get('button').attributes('disabled')).toBeDefined();
     }
+  });
+
+  it('keeps the tooltip wrapper mounted while tooltipDisabled fades the content out', async () => {
+    const wrapper = mount(Button, {
+      attachTo: document.body,
+      props: { tooltip: 'Preview quality', tooltipDelay: 0, tooltipDisabled: true },
+      slots: { default: 'Quality' },
+    });
+    const tooltipWrapper = wrapper.get('.tooltip-wrapper');
+
+    await tooltipWrapper.trigger('mouseenter');
+    expect(document.body.querySelector('.tooltip-content')).toBeNull();
+
+    await wrapper.setProps({ tooltipDisabled: false });
+    await tooltipWrapper.trigger('mouseenter');
+    await nextTick();
+    expect(document.body.querySelector('.tooltip-content')?.textContent).toContain('Preview quality');
+
+    await wrapper.setProps({ tooltipDisabled: true });
+    await nextTick();
+    expect(wrapper.get('.tooltip-wrapper').exists()).toBe(true);
+    expect(document.body.querySelector('.tooltip-content')).toBeNull();
+
+    await wrapper.setProps({ tooltipDisabled: false });
+    await wrapper.get('.tooltip-wrapper').trigger('mouseenter');
+    await nextTick();
+    expect(document.body.querySelector('.tooltip-content')?.textContent).toContain('Preview quality');
+    wrapper.unmount();
   });
 });

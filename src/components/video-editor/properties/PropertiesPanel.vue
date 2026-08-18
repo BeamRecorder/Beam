@@ -24,7 +24,11 @@ import { setClipTransition } from '~/components/video-editor/composition/engine/
 import type { ClipTransition } from '~/media/shared/composition-types';
 import { EMPTY_CLIP_TRANSITIONS, normalizeCanvasTransitions } from '~/media/shared/clip-transitions';
 import ScrollShadow from '~/ui/scroll-shadow/ScrollShadow.vue';
-import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
+import {
+  DEFAULT_ZOOM_MOTION_BLUR,
+  type ZoomElement,
+  type ZoomMotionBlurSettings,
+} from '~/components/video-editor/zoom/zoom-types';
 import type {
   BlurEffectMode,
   BlurEffectShape,
@@ -52,6 +56,7 @@ const { t: tBlur } = useTranslate('BlurPropertiesPanel');
 const { t: tSidebar } = useTranslate('SidebarPanel');
 const { t: tTimeline } = useTranslate('TimelineTracks');
 const { t: tTransitions } = useTranslate('TransitionsPanel');
+const { t: tAudioClip } = useTranslate('AudioClipPropertiesPanel');
 const props = withDefaults(
   defineProps<{
     activeTab: string;
@@ -80,13 +85,14 @@ const props = withDefaults(
     selectedZoom: ZoomElement | null;
     canGenerateZooms: boolean;
     hasAutomaticZooms: boolean;
+    zoomMotionBlur?: ZoomMotionBlurSettings;
     composition: ClipComposition;
     editorData?: ProjectEditorData | null;
     timelineDurationMs: number;
     projectId?: string | null;
     canvas: OutputCanvasSettings;
   }>(),
-  { hasSystemAudio: false, hasMicAudio: false },
+  { hasSystemAudio: false, hasMicAudio: false, zoomMotionBlur: () => ({ ...DEFAULT_ZOOM_MOTION_BLUR }) },
 );
 const normalizedSelectedClip = computed(() =>
   props.selectedClip
@@ -174,6 +180,7 @@ const emit = defineEmits<{
   (event: 'import:background', value: BackgroundMedia): void;
   (event: 'update:canvas', value: OutputCanvasSettings): void;
   (event: 'update:zoom', value: ZoomElement): void;
+  (event: 'update:zoomMotionBlur', value: ZoomMotionBlurSettings): void;
   (event: 'delete:zoom'): void;
   (event: 'generate:zooms'): void;
   (event: 'update:caption', value: CaptionClip): void;
@@ -246,7 +253,6 @@ const isCurrentClipEnabled = computed(() => {
 
 const isDeletable = computed(() => {
   if (props.activeTab === 'zoom' && props.selectedZoom) return true;
-  if (props.activeTab === 'clip' && props.selectedClip?.kind === 'audio') return false;
   if (props.activeTab === 'clip' && (props.selectedClip || props.selectedCaptionClip)) return true;
   return false;
 });
@@ -263,6 +269,9 @@ const deleteTooltip = computed(() => {
     return tCaption('deleteCaptionClip') || 'Delete caption';
   }
   if (props.selectedClip) {
+    if (props.selectedClip.kind === 'audio') {
+      return tAudioClip('deleteAudioClip') || 'Delete audio clip';
+    }
     if (props.selectedClip.kind === 'blur') {
       return tBlur('delete') ? `${tBlur('delete')} (${panelTitle.value.toLowerCase()})` : 'Delete blur';
     }
@@ -354,8 +363,6 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
               v-else-if="activeTab === 'clip' && normalizedSelectedClip?.kind === 'audio'"
               :clip="normalizedSelectedClip"
               @update:volume="emit('update:clip-volume', $event)"
-              @update:enabled="emit('update:clip-enabled', $event)"
-              @delete="emit('delete-clip')"
             />
             <BlurPropertiesPanel
               v-else-if="activeTab === 'clip' && normalizedSelectedClip?.kind === 'blur'"
@@ -450,7 +457,9 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
               :selected-zoom="selectedZoom"
               :can-generate="canGenerateZooms"
               :has-automatic-zooms="hasAutomaticZooms"
+              :motion-blur="zoomMotionBlur"
               @update="emit('update:zoom', $event)"
+              @update:motion-blur="emit('update:zoomMotionBlur', $event)"
               @delete="emit('delete:zoom')"
               @generate="emit('generate:zooms')"
             />

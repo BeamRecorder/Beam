@@ -10,6 +10,8 @@ const playback = vi.hoisted(() => {
     state: 'paused' | 'loading';
     currentTime: number;
     loadComposition: ReturnType<typeof vi.fn>;
+    setPreviewQuality: ReturnType<typeof vi.fn>;
+    previewQuality: string;
     play: ReturnType<typeof vi.fn>;
     pause: ReturnType<typeof vi.fn>;
     dispose: ReturnType<typeof vi.fn>;
@@ -24,6 +26,7 @@ const playback = vi.hoisted(() => {
     state: 'paused' | 'loading' = 'paused';
     currentTime = 0;
     readonly loadComposition = vi.fn(() => loadCompositionImpl.current?.() ?? Promise.resolve());
+    readonly setPreviewQuality = vi.fn(async (_quality: string) => undefined);
     readonly play = vi.fn(async () => undefined);
     readonly pause = vi.fn();
     readonly dispose = vi.fn();
@@ -31,7 +34,10 @@ const playback = vi.hoisted(() => {
     readonly listeners = new Map<string, (value: unknown) => void>();
     frame: MediaFrameLike | null = null;
 
-    constructor() {
+    previewQuality = 'full';
+
+    constructor(options: { previewQuality?: string } = {}) {
+      this.previewQuality = options.previewQuality ?? 'full';
       instances.push(this as (typeof instances)[number]);
     }
 
@@ -130,18 +136,21 @@ const context = () =>
 let wrapper: VueWrapper | undefined;
 let selected!: Ref<BackgroundValue | null>;
 let blur!: Ref<number | undefined>;
+let previewQuality!: Ref<'full' | 'half' | 'quarter'>;
 let renderCanvas!: ReturnType<typeof vi.fn>;
 let state!: ReturnType<typeof useCanvasBackground>;
 
 const mountComposable = () => {
   selected = ref<BackgroundValue | null>(null);
   blur = ref<number | undefined>(0);
+  previewQuality = ref<'full' | 'half' | 'quarter'>('full');
   renderCanvas = vi.fn();
   const Harness = defineComponent({
     setup() {
       state = useCanvasBackground(
         () => selected.value,
         () => blur.value,
+        () => previewQuality.value,
         renderCanvas as unknown as () => void,
       );
       return () => h('div');
@@ -241,6 +250,7 @@ describe('useCanvasBackground', () => {
     await flushPromises();
     const engine = playback.instances[0]!;
     expect(engine.loadComposition).toHaveBeenCalledOnce();
+    expect(engine.previewQuality).toBe('full');
     expect(vi.mocked(document.createElement).mock.calls.some(([tag]) => tag === 'video')).toBe(false);
 
     const bitmap = {} as CanvasImageSource;
@@ -263,6 +273,9 @@ describe('useCanvasBackground', () => {
     expect(engine.play).toHaveBeenCalledWith(0);
     state.syncPlayback(false);
     expect(engine.pause).toHaveBeenCalled();
+    previewQuality.value = 'quarter';
+    await nextTick();
+    expect(engine.setPreviewQuality).toHaveBeenCalledWith('quarter');
     selected.value = color();
     await nextTick();
     expect(engine.dispose).toHaveBeenCalledOnce();

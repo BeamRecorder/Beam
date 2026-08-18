@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   Captions,
   Check,
+  CheckSquare,
   Film,
   FolderOpen,
   Monitor,
@@ -20,11 +21,14 @@ import {
 } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
+import Checkbox from '~/ui/checkbox/Checkbox.vue';
+import Divider from '~/ui/divider/Divider.vue';
 import Dialog from '~/ui/dialog/Dialog.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import Input from '~/ui/input/Input.vue';
 import Skeleton from '~/ui/skeleton/Skeleton.vue';
 import ProgressBar from '../ui/progressbar/ProgressBar.vue';
+import BlurRevealTransition from '~/ui/transitions/BlurRevealTransition.vue';
 import { useScrollShadow } from '../ui/scroll-shadow/useScrollShadow';
 import { capture } from '../../api/capture';
 import type { CaptureProject } from '../../api/types/capture-api';
@@ -61,7 +65,92 @@ const isSearchOpen = ref(false);
 const searchQuery = ref('');
 const searchInputRef = ref<InstanceType<typeof Input> | null>(null);
 
+const isSelectionMode = ref(false);
+const selectedBatchIds = ref<Set<string>>(new Set());
+const isDeletingBatch = ref(false);
+const deleteBatchError = ref('');
+
+const isAllSelected = computed(() => {
+  const list = filteredProjects.value;
+  return list.length > 0 && list.every((p) => selectedBatchIds.value.has(p.id));
+});
+
+const isSomeSelected = computed(() => {
+  const list = filteredProjects.value;
+  const count = list.filter((p) => selectedBatchIds.value.has(p.id)).length;
+  return count > 0 && count < list.length;
+});
+
+const toggleSelectionMode = () => {
+  if (isSearchOpen.value) {
+    isSearchOpen.value = false;
+    searchQuery.value = '';
+  }
+  isSelectionMode.value = !isSelectionMode.value;
+  if (!isSelectionMode.value) {
+    selectedBatchIds.value = new Set();
+  }
+};
+
+const cancelSelectionMode = () => {
+  isSelectionMode.value = false;
+  selectedBatchIds.value = new Set();
+};
+
+const toggleBatchSelect = (id: string) => {
+  const next = new Set(selectedBatchIds.value);
+  if (next.has(id)) {
+    next.delete(id);
+  } else {
+    next.add(id);
+  }
+  selectedBatchIds.value = next;
+};
+
+const toggleSelectAll = () => {
+  if (isAllSelected.value) {
+    selectedBatchIds.value = new Set();
+  } else {
+    selectedBatchIds.value = new Set(filteredProjects.value.map((p) => p.id));
+  }
+};
+
+const handleDeleteBatch = async () => {
+  if (selectedBatchIds.value.size === 0 || isDeletingBatch.value) return;
+  isDeletingBatch.value = true;
+  deleteBatchError.value = '';
+  try {
+    const ids = Array.from(selectedBatchIds.value);
+    for (const id of ids) {
+      await capture.deleteProject(id);
+    }
+    const wasSelectedDeleted = selectedProjectId.value && selectedBatchIds.value.has(selectedProjectId.value);
+    selectedBatchIds.value = new Set();
+    isSelectionMode.value = false;
+    cachedProjects = null;
+    await loadProjects();
+
+    if (wasSelectedDeleted) {
+      const remaining = projects.value;
+      const nextProject = remaining[0] ?? null;
+      if (nextProject) {
+        selectedProjectId.value = nextProject.id;
+        emit('select-project', nextProject);
+      } else {
+        selectedProjectId.value = null;
+      }
+    }
+  } catch (error) {
+    deleteBatchError.value = error instanceof Error ? error.message : String(error);
+  } finally {
+    isDeletingBatch.value = false;
+  }
+};
+
 const toggleSearch = () => {
+  if (isSelectionMode.value) {
+    cancelSelectionMode();
+  }
   isSearchOpen.value = !isSearchOpen.value;
   if (isSearchOpen.value) {
     void nextTick(() => {
@@ -470,10 +559,10 @@ defineExpose({
         </p>
       </div>
       <div class="heading-actions">
-        <ButtonGroup class="heading-actions-group">
+        <ButtonGroup size="xs" class="heading-actions-group">
           <Button
             variant="ghost"
-            size="sm"
+            size="xs"
             class="search-toggle-button"
             :class="{ 'is-active': isSearchOpen }"
             :icon="Search"
@@ -482,9 +571,22 @@ defineExpose({
             :tooltip="t('searchProjects')"
             @click="toggleSearch"
           />
+          <Divider orientation="vertical" spacing="none" />
           <Button
             variant="ghost"
-            size="sm"
+            size="xs"
+            class="select-toggle-button"
+            :class="{ 'is-active': isSelectionMode }"
+            :icon="CheckSquare"
+            icon-only
+            :aria-label="isSelectionMode ? t('exitSelectionMode') : t('selectProjects')"
+            :tooltip="isSelectionMode ? t('exitSelectionMode') : t('selectProjects')"
+            @click="toggleSelectionMode"
+          />
+          <Divider orientation="vertical" spacing="none" />
+          <Button
+            variant="ghost"
+            size="xs"
             class="new-project-button"
             :icon="Plus"
             icon-only
@@ -492,9 +594,10 @@ defineExpose({
             :tooltip="t('newProject')"
             @click="openNewProjectDialog"
           />
+          <Divider orientation="vertical" spacing="none" />
           <Button
             variant="ghost"
-            size="sm"
+            size="xs"
             class="refresh-button"
             :class="{ 'is-success': isRefreshSuccess }"
             :icon="isRefreshSuccess ? Check : RefreshCw"
@@ -508,8 +611,39 @@ defineExpose({
       </div>
     </div>
 
-    <Transition name="search-expand">
-      <div v-if="isSearchOpen" class="project-search-bar">
+    <BlurRevealTransition transition-mode="out-in">
+      <div v-if="isSelectionMode" class="project-selection-bar">
+        <div class="selection-bar-left">
+          <Checkbox
+            size="sm"
+            :model-value="isAllSelected"
+            :indeterminate="isSomeSelected"
+            :label="
+              selectedBatchIds.size > 0
+                ? `${selectedBatchIds.size} ${selectedBatchIds.size === 1 ? t('selected') : t('selected')}`
+                : t('selectAll')
+            "
+            @change="toggleSelectAll"
+          />
+        </div>
+        <div class="selection-bar-right">
+          <Button variant="ghost" size="xs" :tooltip="t('cancel')" @click="cancelSelectionMode">
+            {{ t('cancel') }}
+          </Button>
+          <Button
+            variant="danger"
+            size="xs"
+            :icon="Trash2"
+            :disabled="selectedBatchIds.size === 0"
+            :loading="isDeletingBatch"
+            :tooltip="t('delete')"
+            @click="handleDeleteBatch"
+          >
+            {{ t('delete') }} ({{ selectedBatchIds.size }})
+          </Button>
+        </div>
+      </div>
+      <div v-else-if="isSearchOpen" class="project-search-bar">
         <Input
           ref="searchInputRef"
           v-model="searchQuery"
@@ -534,7 +668,7 @@ defineExpose({
           </template>
         </Input>
       </div>
-    </Transition>
+    </BlurRevealTransition>
 
     <div v-if="isLoading" class="project-grid project-skeleton-grid" :aria-label="t('loadingProjects')">
       <div v-for="index in 6" :key="index" class="project-card-skeleton">
@@ -586,16 +720,19 @@ defineExpose({
           >
             <div
               class="btn btn-card project-card"
-              :class="{ 'is-selected': project.id === selectedProjectId }"
-              :aria-pressed="project.id === selectedProjectId"
+              :class="{
+                'is-selected': isSelectionMode ? selectedBatchIds.has(project.id) : project.id === selectedProjectId,
+                'is-selection-mode': isSelectionMode,
+              }"
+              :aria-pressed="isSelectionMode ? selectedBatchIds.has(project.id) : project.id === selectedProjectId"
               role="button"
               tabindex="0"
               @mouseenter="handleProjectMouseEnter(project, $event)"
               @mouseleave="handleProjectMouseLeave(project, $event)"
-              @click="selectProject(project)"
-              @dblclick="handleProjectOpen(project)"
-              @keydown.enter.self="handleProjectOpen(project)"
-              @keydown.space.self="selectProject(project)"
+              @click="isSelectionMode ? toggleBatchSelect(project.id) : selectProject(project)"
+              @dblclick="isSelectionMode ? toggleBatchSelect(project.id) : handleProjectOpen(project)"
+              @keydown.enter.self="isSelectionMode ? toggleBatchSelect(project.id) : handleProjectOpen(project)"
+              @keydown.space.self="isSelectionMode ? toggleBatchSelect(project.id) : selectProject(project)"
             >
               <div class="project-preview project-card-media">
                 <img
@@ -649,22 +786,35 @@ defineExpose({
                     <Captions />
                   </span>
                 </div>
-                <span v-if="project.id === currentProjectId" class="current-indicator" :aria-label="t('current')">
-                  {{ t('current') }}
-                </span>
-                <span
-                  v-else-if="project.id === selectedProjectId"
-                  class="selected-indicator"
-                  :aria-label="t('selected')"
-                >
-                  <Check />
-                </span>
+                <template v-if="!isSelectionMode">
+                  <span v-if="project.id === currentProjectId" class="current-indicator" :aria-label="t('current')">
+                    {{ t('current') }}
+                  </span>
+                  <span
+                    v-else-if="project.id === selectedProjectId"
+                    class="selected-indicator"
+                    :aria-label="t('selected')"
+                  >
+                    <Check />
+                  </span>
+                </template>
                 <div v-if="project.previewSrc && videoProgress[project.id]" class="preview-progress-overlay">
                   <ProgressBar :value="videoProgress[project.id].current" :max="videoProgress[project.id].total" />
                 </div>
               </div>
               <div class="project-card-info">
                 <div class="project-title-row">
+                  <BlurRevealTransition mode="horizontal">
+                    <Checkbox
+                      v-if="isSelectionMode"
+                      size="sm"
+                      class="project-title-checkbox"
+                      :model-value="selectedBatchIds.has(project.id)"
+                      :aria-label="project.name"
+                      @click.stop
+                      @change="toggleBatchSelect(project.id)"
+                    />
+                  </BlurRevealTransition>
                   <Input
                     v-if="renameProjectId === project.id"
                     autofocus
@@ -680,7 +830,12 @@ defineExpose({
                     @blur="handleRenameProject"
                   />
                   <span v-else class="project-card-name" :title="project.name">{{ project.name }}</span>
-                  <div v-if="renameProjectId !== project.id" class="project-card-actions" @click.stop @mousedown.stop>
+                  <div
+                    v-if="renameProjectId !== project.id && !isSelectionMode"
+                    class="project-card-actions"
+                    @click.stop
+                    @mousedown.stop
+                  >
                     <Popover
                       align="right"
                       direction="down"
@@ -788,7 +943,7 @@ defineExpose({
           variant="primary"
           size="sm"
           :icon="FolderOpen"
-          :disabled="!selectedProject || selectedProject.id === currentProjectId"
+          :disabled="!selectedProject || selectedProject.id === currentProjectId || isSelectionMode"
           @click="openSelectedProject"
         >
           {{ t('openProject') }}
@@ -828,7 +983,6 @@ defineExpose({
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 12px;
   padding: 16px 0 16px 16px;
   overflow: hidden;
 }
@@ -837,7 +991,6 @@ defineExpose({
   height: 336px;
   flex: none;
   padding: 12px 0 12px 12px;
-  gap: 8px;
 }
 
 .project-picker.compact .project-picker-heading h1 {
@@ -855,10 +1008,12 @@ defineExpose({
   gap: 8px;
   flex-shrink: 0;
   padding-right: 16px;
+  margin-bottom: 12px;
 }
 
 .project-picker.compact .project-picker-heading {
   padding-right: 12px;
+  margin-bottom: 8px;
 }
 
 .heading-actions {
@@ -867,7 +1022,8 @@ defineExpose({
   gap: 6px;
 }
 
-.search-toggle-button.is-active {
+.search-toggle-button.is-active,
+.select-toggle-button.is-active {
   color: var(--color-primary);
   background: var(--color-primary-light);
 }
@@ -876,14 +1032,61 @@ defineExpose({
   color: var(--color-success) !important;
 }
 
+.project-selection-bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 6px;
+  background: var(--color-bg-surface-hover);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-right: 16px;
+  margin-bottom: 12px;
+  height: 32px;
+  box-sizing: border-box;
+  overflow: hidden;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.project-picker.compact .project-selection-bar {
+  padding: 2px 6px;
+  margin-right: 12px;
+  margin-bottom: 8px;
+  height: 28px;
+}
+
+.selection-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 2px;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.selection-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
 .project-search-bar {
   flex-shrink: 0;
   padding-right: 16px;
+  margin-bottom: 12px;
   overflow: hidden;
 }
 
 .project-picker.compact .project-search-bar {
   padding-right: 12px;
+  margin-bottom: 8px;
 }
 
 .project-search-input {
@@ -1257,7 +1460,13 @@ defineExpose({
   justify-content: space-between;
   width: 100%;
   min-width: 0;
-  gap: 4px;
+  gap: 0;
+  min-height: 18px;
+}
+
+.project-title-checkbox {
+  flex-shrink: 0;
+  margin-right: 4px;
 }
 
 .project-card-name,
@@ -1274,6 +1483,8 @@ defineExpose({
   font-weight: 700;
   flex: 1;
   line-height: 1.2;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
 }
 
 .project-rename-input {
@@ -1360,6 +1571,11 @@ defineExpose({
   justify-content: space-between;
   gap: 8px;
   flex-shrink: 0;
+  margin-top: 12px;
+}
+
+.compact .project-picker-footer {
+  margin-top: 8px;
 }
 
 .project-footer-actions {

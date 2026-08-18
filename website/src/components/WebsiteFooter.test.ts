@@ -35,7 +35,7 @@ describe('WebsiteFooter', () => {
     [
       'en',
       {
-        footer: 'Open-source screen recorder and editor.',
+        footer: 'Free, open-source screen recorder and video editor.',
         productAria: 'Beam links',
         productHeading: 'Product',
         compareNav: 'Compare Beam',
@@ -47,7 +47,7 @@ describe('WebsiteFooter', () => {
     [
       'fr',
       {
-        footer: 'Enregistreur d’écran et éditeur open source.',
+        footer: 'Enregistreur d’écran et éditeur vidéo gratuits et open source.',
         productAria: 'Liens Beam',
         productHeading: 'Produit',
         compareNav: 'Comparatifs Beam',

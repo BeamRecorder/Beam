@@ -234,4 +234,60 @@ describe('ProjectPicker', () => {
     await wrapper.vm.$nextTick();
     expect(refreshBtn.classes()).not.toContain('is-success');
   });
+  it('supports multi-selection mode with checkboxes in front of project titles and batch delete', async () => {
+    capture.listProjects.mockResolvedValue(projects);
+    capture.deleteProject.mockResolvedValue(undefined);
+    const wrapper = mount(ProjectPicker, { global: { stubs } });
+    await settle();
+
+    // Initially selection mode is not active
+    expect(wrapper.find('.project-selection-bar').exists()).toBe(false);
+    expect(wrapper.findAll('.project-title-checkbox')).toHaveLength(0);
+
+    // Toggle selection mode via header button
+    const selectToggleBtn = wrapper.get('.select-toggle-button');
+    await selectToggleBtn.trigger('click');
+    await settle();
+
+    // Selection bar is visible, checkboxes exist in front of project titles
+    expect(wrapper.find('.project-selection-bar').exists()).toBe(true);
+    const titleCheckboxes = wrapper.findAll('.project-title-checkbox');
+    expect(titleCheckboxes).toHaveLength(2);
+
+    // Click first project card to select it
+    await wrapper.findAll('.project-card')[0].trigger('click');
+    await settle();
+    expect(wrapper.find('.selection-bar-right button.btn-danger').text()).toContain('Delete (1)');
+
+    // Select all via selection bar checkbox
+    const selectAllCheckbox = wrapper.find('.selection-bar-left .checkbox-container');
+    await selectAllCheckbox.trigger('click');
+    await settle();
+    expect(wrapper.find('.selection-bar-right button.btn-danger').text()).toContain('Delete (2)');
+
+    // Delete batch
+    const deleteBatchBtn = wrapper.get('.selection-bar-right button.btn-danger');
+    await deleteBatchBtn.trigger('click');
+    await settle();
+
+    expect(capture.deleteProject).toHaveBeenCalledWith('one');
+    expect(capture.deleteProject).toHaveBeenCalledWith('two');
+    expect(wrapper.find('.project-selection-bar').exists()).toBe(false);
+  });
+  it('cancels multi-selection mode when cancel button is clicked', async () => {
+    capture.listProjects.mockResolvedValue(projects);
+    const wrapper = mount(ProjectPicker, { global: { stubs } });
+    await settle();
+
+    await wrapper.get('.select-toggle-button').trigger('click');
+    await settle();
+    expect(wrapper.find('.project-selection-bar').exists()).toBe(true);
+
+    const cancelBtn = wrapper.findAll('.selection-bar-right button').find((b) => b.text().includes('Cancel'));
+    await cancelBtn?.trigger('click');
+    await settle();
+
+    expect(wrapper.find('.project-selection-bar').exists()).toBe(false);
+    expect(wrapper.findAll('.project-title-checkbox')).toHaveLength(0);
+  });
 });
