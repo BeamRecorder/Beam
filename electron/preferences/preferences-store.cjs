@@ -26,7 +26,6 @@ const defaults = (platform = process.platform) => ({
   recordingBar: { visibility: platform === 'linux' ? 'hover-only' : 'always' },
   recordingInteractions: { enabled: false, noticeDismissed: false },
   onboardingCompleted: false,
-  alwaysOnTop: true,
   devices: {},
   shortcuts: {
     'hud.startStopRecording': { keys: 'Alt+Shift+R', scope: 'global', category: 'hud' },
@@ -167,7 +166,6 @@ const normalize = (value, platform = process.platform) => {
     },
     onboardingCompleted:
       typeof next.onboardingCompleted === 'boolean' ? next.onboardingCompleted : base.onboardingCompleted,
-    alwaysOnTop: typeof next.alwaysOnTop === 'boolean' ? next.alwaysOnTop : base.alwaysOnTop,
     devices: next.devices && typeof next.devices === 'object' && !Array.isArray(next.devices) ? next.devices : {},
     shortcuts,
     backgroundPresets: presets(next.backgroundPresets),

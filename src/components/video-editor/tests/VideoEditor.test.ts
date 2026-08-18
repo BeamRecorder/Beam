@@ -120,6 +120,59 @@ describe('VideoEditor', () => {
     expect(editorState.store.outputCanvas.value.preset).toBe('1:1');
   });
 
+  it('deletes a grouped video fragment and its linked audio through the timeline event', async () => {
+    const mounted = mountEditor();
+    const state = editorState.store;
+    const current = state.compositionState.composition.value as ClipComposition;
+    const video = current.clips.find((clip) => clip.id === 'screen')!;
+    const audio = current.clips.find((clip) => clip.id === 'audio')!;
+    const leftVideo = {
+      ...video,
+      id: 'left-video',
+      groupId: 'left-group',
+      timelineDurationMs: 120_000,
+      sourceDurationMs: 120_000,
+    };
+    const rightVideo = {
+      ...video,
+      id: 'right-video',
+      groupId: 'right-group',
+      timelineStartMs: 120_000,
+      timelineDurationMs: 7_000,
+      sourceInMs: 120_000,
+      sourceDurationMs: 7_000,
+    };
+    const leftAudio = {
+      ...audio,
+      id: 'left-audio',
+      groupId: 'left-group',
+      timelineDurationMs: 120_000,
+      sourceDurationMs: 120_000,
+    };
+    const rightAudio = {
+      ...audio,
+      id: 'right-audio',
+      groupId: 'right-group',
+      timelineStartMs: 120_000,
+      timelineDurationMs: 7_000,
+      sourceInMs: 120_000,
+      sourceDurationMs: 7_000,
+    };
+    state.compositionState.composition.value = {
+      ...current,
+      assets: current.assets.map((asset) => ({ ...asset, durationMs: 127_000 })),
+      clips: [leftVideo, rightVideo, leftAudio, rightAudio],
+    };
+    await mounted.vm.$nextTick();
+
+    mounted.findComponent({ name: 'MockEditorTimeline' }).vm.$emit('delete:clips', ['right-video']);
+    await mounted.vm.$nextTick();
+
+    const remaining = state.compositionState.composition.value.clips as ClipComposition['clips'];
+    expect(remaining.some((clip) => clip.id === 'right-video' || clip.id === 'right-audio')).toBe(false);
+    expect(Math.max(...remaining.map((clip) => clip.timelineStartMs + clip.timelineDurationMs))).toBe(120_000);
+  });
+
   it('applies composition previews without saving or recording history, while final updates save', async () => {
     const mounted = mountEditor();
     await flushPromises();
@@ -140,6 +193,29 @@ describe('VideoEditor', () => {
     expect(editorState.store.compositionState.composition.value.clips[0].transform.x).toBe(0.5);
     expect(mounted.get('.mock-canvas').attributes('data-composition-transform-x')).toBe('0.5');
     expect(scheduleSave).toHaveBeenCalledOnce();
+  });
+
+  it('shows the preview composition duration in the timeline toolbar and restores the canonical duration', async () => {
+    const mounted = mountEditor();
+    const composition = editorState.store.compositionState.composition.value as ClipComposition;
+    const preview = {
+      ...composition,
+      clips: composition.clips.map((clip) =>
+        clip.id === 'screen' ? { ...clip, timelineDurationMs: 3_500, sourceDurationMs: 3_500 } : clip,
+      ),
+    } satisfies ClipComposition;
+    const timeline = mounted.findComponent({ name: 'MockEditorTimeline' });
+    const toolbar = () => mounted.findComponent({ name: 'MockTimelineToolbar' });
+
+    expect(toolbar().attributes('duration')).toBe('2');
+
+    timeline.vm.$emit('preview:composition', preview);
+    await mounted.vm.$nextTick();
+    expect(toolbar().attributes('duration')).toBe('3.5');
+
+    timeline.vm.$emit('preview:composition', null);
+    await mounted.vm.$nextTick();
+    expect(toolbar().attributes('duration')).toBe('2');
   });
 
   it('keeps the canvas background enabled when changing the output format', async () => {

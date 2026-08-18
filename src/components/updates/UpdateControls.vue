@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { Check, Copy, Download, ExternalLink, RefreshCw, RotateCcw } from '@lucide/vue';
 import { capture } from '~/api/capture';
 import type { AppUpdateState } from '~/api/types/capture-api';
@@ -23,6 +23,24 @@ const state = ref<AppUpdateState | null>(null);
 const copiedError = ref(false);
 let copiedErrorTimeout: ReturnType<typeof setTimeout> | undefined;
 let stopListening: (() => void) | undefined;
+
+const checkForUpdatesDisabled = computed(
+  () => !state.value || ['checking', 'downloading', 'unsupported'].includes(state.value.status),
+);
+
+const checkForUpdatesTooltip = computed(() => {
+  if (!state.value) return undefined;
+  if (state.value.status === 'unsupported') {
+    return t('availableInInstalledApp');
+  }
+  if (state.value.status === 'checking') {
+    return t('checking');
+  }
+  if (state.value.status === 'downloading') {
+    return t('downloading', { percent: state.value.percent ?? 0 });
+  }
+  return undefined;
+});
 
 const refresh = async () => {
   state.value = await capture.checkForUpdates();
@@ -80,7 +98,10 @@ onBeforeUnmount(() => {
       <div v-if="showIcon" class="update-icon-wrap">
         <RefreshCw class="update-top-icon" :class="{ 'icon-spin': state?.status === 'checking' }" />
       </div>
-      <span class="update-title">{{ t('title') }}</span>
+      <span class="update-title">
+        {{ t('title') }}
+        <span v-if="state?.currentVersion" class="update-version">v{{ state.currentVersion }}</span>
+      </span>
       <p class="update-description">
         <template v-if="state?.status === 'downloaded'">{{
           t('readyToRestart', { version: state.availableVersion })
@@ -134,9 +155,8 @@ onBeforeUnmount(() => {
         v-else
         variant="secondary"
         size="xs"
-        :disabled="
-          !state || state.status === 'checking' || state.status === 'downloading' || state.status === 'unsupported'
-        "
+        :disabled="checkForUpdatesDisabled"
+        :tooltip="checkForUpdatesTooltip"
         @click="refresh"
         class="update-btn"
       >
@@ -207,6 +227,22 @@ onBeforeUnmount(() => {
   margin: 0;
 }
 
+.update-version {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--color-bg-surface-hover);
+  border: 1px solid var(--color-border);
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  margin-left: 6px;
+  letter-spacing: 0.2px;
+  vertical-align: middle;
+  display: inline-block;
+  line-height: 14px;
+}
+
 .update-description {
   margin: 3px 0 0;
   font-size: 11px;
@@ -221,13 +257,15 @@ onBeforeUnmount(() => {
 
 .update-actions {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
   gap: 6px;
   width: 100%;
 }
 
 .update-btn {
-  width: 100%;
+  flex: 1 1 120px;
+  min-width: 0;
   justify-content: center;
 }
 

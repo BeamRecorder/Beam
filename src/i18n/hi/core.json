@@ -241,7 +241,7 @@
     "motionBlur": "मोशन ब्लर",
     "cursorPack": "कर्सर पैक",
     "packInfo": "संगत कर्सर पैक के बारे में",
-    "packDescription": "Beam उन SVG कर्सर थीम को स्वीकार करता है जिनमें cursors_scalable फ़ोल्डर हो।",
+    "packDescription": "Beam मानक XCursor थीम और KDE SVG स्रोतों का समर्थन करता है।",
     "findCursorPacks": "कर्सर पैक खोजें",
     "compatibleFormat": "संगत प्रारूप",
     "import": "आयात करें",
@@ -462,6 +462,7 @@
   },
   "ScreenRegionOverlay": {
     "instruction": "रिकॉर्ड करने के लिए क्षेत्र चुनें",
+    "preset": "प्रीसेट",
     "reset": "रीसेट",
     "cancel": "रद्द करें",
     "useThisArea": "इस क्षेत्र का उपयोग करें"

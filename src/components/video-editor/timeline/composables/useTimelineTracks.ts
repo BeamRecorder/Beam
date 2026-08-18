@@ -13,20 +13,21 @@ import {
   type BlurClip,
   type VisualClip,
 } from '~/media/shared/composition-types';
-import { calculateSnapThresholdMs, collectSnapTargets, snapSpan, snapValue } from './timeline-snap';
+import { calculateSnapThresholdMs, collectSnapTargets, snapSpan } from './timeline-snap';
 import { createAnimationFrameCoalescer } from './animation-frame-coalescer';
 import { useTimelineViewport } from './useTimelineViewport';
 import { useTimelineZoomInteractions } from './useTimelineZoomInteractions';
 import type { TimelineTracksEmits, TimelineTracksProps } from './timeline-tracks-types';
 import { groupVisualTimelineTracks, previewVisualTrackOrder } from './visual-timeline-tracks';
-import { visualMoveDeltaBounds, visualTrimBounds } from '../../composition/engine/visual-track-layout';
-import { previewClipMove, previewClipTrim } from './timeline-composition-preview';
+import { visualMoveDeltaBounds } from '../../composition/engine/visual-track-layout';
+import { previewClipMove } from './timeline-composition-preview';
 import { useVisualTrackReorder } from './useVisualTrackReorder';
+import { useTimelineClipTrim } from './useTimelineClipTrim';
+import { groupImportedAudioTimelineTracks } from './audio-timeline-tracks';
 export type { TimelineTracksEmits, TimelineTracksProps } from './timeline-tracks-types';
 
 export { DEFAULT_ZOOM_DURATION_MS } from '../../zoom/zoom-types';
 export const DEFAULT_CAPTION_DURATION_MS = 2_000;
-export const MIN_DURATION_MS = 40;
 
 export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTracksEmits, t: (key: string) => string) {
   const newZoomDurationMs = computed(() =>
@@ -35,14 +36,20 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
       : DEFAULT_ZOOM_DURATION_MS,
   );
   const previewDurationMs = ref<number | null>(null);
+  const canonicalDurationMs = computed(() =>
+    Math.max(
+      1_000,
+      Math.round(typeof props.duration === 'number' && Number.isFinite(props.duration) ? props.duration * 1_000 : 0),
+    ),
+  );
   const durationMs = computed(() => {
-    const raw = typeof props.duration === 'number' && Number.isFinite(props.duration) ? props.duration * 1_000 : 0;
     const preview =
       typeof previewDurationMs.value === 'number' && Number.isFinite(previewDurationMs.value)
         ? previewDurationMs.value
-        : 0;
-    return Math.max(1_000, Math.round(Math.max(raw, preview)));
+        : null;
+    return Math.max(1_000, Math.round(preview ?? canonicalDurationMs.value));
   });
+  const layoutDurationMs = computed(() => Math.max(canonicalDurationMs.value, durationMs.value));
   const orderedClips = computed(() => [...props.composition.clips].sort((left, right) => left.order - right.order));
   const baseVisualClips = computed(() => orderedClips.value.filter(isCompositingClip));
   const baseVisualTracks = computed(() => groupVisualTimelineTracks(baseVisualClips.value));
@@ -57,14 +64,19 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
   const microphoneClips = computed(() =>
     orderedClips.value.filter((clip): clip is AudioClip => isAudioClip(clip) && clip.role === 'microphone'),
   );
-  const importedAudioClips = computed(() =>
-    orderedClips.value.filter((clip): clip is AudioClip => isAudioClip(clip) && clip.role === 'imported'),
+  const importedAudioTracks = computed(() =>
+    groupImportedAudioTimelineTracks(
+      orderedClips.value.filter((clip): clip is AudioClip => isAudioClip(clip) && clip.role === 'imported'),
+    ),
   );
   const assets = computed(() => new Map(props.composition.assets.map((asset: MediaAsset) => [asset.id, asset])));
   const assetFor = (clip: Clip) =>
     isCaptionClip(clip) || clip.kind === 'blur' ? null : (assets.value.get(clip.assetId) ?? null);
 
   const activeSnapTimeMs = ref<number | null>(null);
+  const activeTrimState = ref<{ ids: string[]; edge: 'start' | 'end'; durationMs: number; atLimit?: boolean } | null>(
+    null,
+  );
   const {
     tracksScrollRef,
     sidebarScrollRef,
@@ -93,13 +105,16 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     centeredStartAt,
     beginScrub,
     handleWheel,
-  } = useTimelineViewport(props, emit, durationMs, activeSnapTimeMs);
+  } = useTimelineViewport(
+    props,
+    emit,
+    layoutDurationMs,
+    activeSnapTimeMs,
+    computed(() => activeTrimState.value !== null),
+  );
 
   const clipPreview = ref<Record<string, { startMs: number; durationMs: number }>>({});
   const zoomPreview = ref<Record<string, { startMs: number; endMs: number }>>({});
-  const activeTrimState = ref<{ ids: string[]; edge: 'start' | 'end'; durationMs: number; atLimit?: boolean } | null>(
-    null,
-  );
   const movingClipIds = ref<string[]>([]);
   const displayedClip = (clip: Clip): Clip => {
     const preview = clipPreview.value[clip.id];
@@ -254,98 +269,21 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     window.addEventListener('pointerup', end, { once: true });
     window.addEventListener('pointercancel', cancel, { once: true });
   };
-  const beginClipTrim = (event: PointerEvent, clip: Clip, edge: 'start' | 'end') => {
-    event.preventDefault();
-    event.stopPropagation();
-    const ids = linkedIdsFor(clip);
-    const pointerStartX = event.clientX;
-    const initialScrollLeft = tracksScrollRef.value?.scrollLeft ?? 0;
-    const { baseDurationMs, width: baseRulerWidth, msPerPx } = resolveMsPerPx();
-    const originalStartMs = clip.timelineStartMs;
-    const originalEndMs = clip.timelineStartMs + clip.timelineDurationMs;
-    const asset = assetFor(clip);
-    const maxLeftExpansionMs =
-      asset?.durationMs != null ? Math.round(clip.sourceInMs / Math.max(0.01, clip.playbackRate)) : Infinity;
-    const trackBounds = visualTrimBounds(props.composition.clips, new Set(ids), edge);
-    const minStartMs = Math.max(0, originalStartMs - maxLeftExpansionMs, trackBounds.min);
-
-    const remainingSourceMs =
-      asset?.durationMs != null ? Math.max(0, asset.durationMs - (clip.sourceInMs + clip.sourceDurationMs)) : Infinity;
-    const maxRightExpansionMs =
-      asset?.durationMs != null ? Math.round(remainingSourceMs / Math.max(0.01, clip.playbackRate)) : Infinity;
-    const maxEndMs = Math.min(originalEndMs + maxRightExpansionMs, trackBounds.max);
-
-    const snapTargets = collectSnapTargets({
-      composition: props.composition,
-      zoomElements: props.zoomElements,
-      currentTime: displayedPlayheadTime.value,
-      duration: props.duration,
-      ignoreClipIds: ids,
-    });
-    const snapThresholdMs = calculateSnapThresholdMs(baseDurationMs, baseRulerWidth);
-
-    let finalTimeMs = edge === 'start' ? originalStartMs : originalEndMs;
-    const applyMove = (next: PointerEvent) => {
-      updateAutoScroll(next.clientX);
-      const currentScrollLeft = tracksScrollRef.value?.scrollLeft ?? 0;
-      const deltaPx = next.clientX - pointerStartX + (currentScrollLeft - initialScrollLeft);
-      const deltaMs = Math.round(deltaPx * msPerPx);
-      const raw = edge === 'start' ? originalStartMs + deltaMs : originalEndMs + deltaMs;
-      let proposedTimeMs =
-        edge === 'start'
-          ? Math.max(minStartMs, Math.min(originalEndMs - MIN_DURATION_MS, raw))
-          : Math.max(originalStartMs + MIN_DURATION_MS, Math.min(maxEndMs, raw));
-
-      const snap = props.isSnappingEnabled !== false ? snapValue(proposedTimeMs, snapTargets, snapThresholdMs) : null;
-      if (snap) {
-        proposedTimeMs =
-          edge === 'start'
-            ? Math.max(minStartMs, Math.min(originalEndMs - MIN_DURATION_MS, snap.snappedValueMs))
-            : Math.max(originalStartMs + MIN_DURATION_MS, Math.min(maxEndMs, snap.snappedValueMs));
-        activeSnapTimeMs.value = snap.targetMs;
-      } else {
-        activeSnapTimeMs.value = null;
-      }
-
-      finalTimeMs = proposedTimeMs;
-      const isAtLimit =
-        (edge === 'start' && raw <= minStartMs && Number.isFinite(minStartMs)) ||
-        (edge === 'end' && raw >= maxEndMs && Number.isFinite(maxEndMs));
-
-      const startMs = edge === 'start' ? finalTimeMs : originalStartMs;
-      const endMs = edge === 'end' ? finalTimeMs : originalEndMs;
-      previewDurationMs.value = endMs > baseDurationMs ? endMs : null;
-      previewLinked(ids, startMs, endMs - startMs);
-      emit('preview:composition', previewClipTrim(props.composition, clip, edge, finalTimeMs));
-      activeTrimState.value = { ids, edge, durationMs: endMs - startMs, atLimit: isAtLimit };
-    };
-    const moveUpdates = createAnimationFrameCoalescer(applyMove);
-    const move = moveUpdates.schedule;
-    const cleanup = () => {
-      stopAutoScroll();
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', end);
-      window.removeEventListener('pointercancel', cancel);
-      clearLinkedPreview(ids);
-      previewDurationMs.value = null;
-      activeTrimState.value = null;
-      activeSnapTimeMs.value = null;
-      emit('preview:composition', null);
-    };
-    const end = () => {
-      moveUpdates.flush();
-      cleanup();
-      const original = edge === 'start' ? originalStartMs : originalEndMs;
-      if (finalTimeMs !== original) emit('trim:clip', { id: clip.id, edge, timeMs: finalTimeMs });
-    };
-    const cancel = () => {
-      moveUpdates.cancel();
-      cleanup();
-    };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', end, { once: true });
-    window.addEventListener('pointercancel', cancel, { once: true });
-  };
+  const { beginClipTrim } = useTimelineClipTrim({
+    props,
+    emit,
+    tracksScrollRef,
+    displayedPlayheadTime,
+    activeSnapTimeMs,
+    previewDurationMs,
+    clipPreview,
+    activeTrimState,
+    linkedIdsFor,
+    clearLinkedPreview,
+    resolveMsPerPx,
+    updateAutoScroll,
+    stopAutoScroll,
+  });
 
   const { beginZoomMove, beginZoomTrim } = useTimelineZoomInteractions({
     props,
@@ -438,6 +376,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
 
   return {
     durationMs,
+    layoutDurationMs,
     orderedClips,
     baseVisualClips,
     baseVisualTracks,
@@ -448,7 +387,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     textCaptionClips,
     systemAudioClips,
     microphoneClips,
-    importedAudioClips,
+    importedAudioTracks,
     assets,
     assetFor,
     audioWaveforms,

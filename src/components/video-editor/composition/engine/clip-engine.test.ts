@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   CompositionEngineError,
   createComposition,
+  HOLD_SEGMENT_DURATION_MS,
+  holdClipAtPlayhead,
   setCameraFraming,
   setCameraLayout,
   setCameraSplitRatio,
@@ -12,6 +14,7 @@ import {
 } from './clip-engine';
 import type { AudioClip, ClipComposition, MediaAsset, VisualClip } from '~/media/shared/composition-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { sourceTimeAt } from '~/media/shared/timeline-mapping';
 
 const videoAsset = (id: string, kind: MediaAsset['kind'] = 'video'): MediaAsset => ({
   id,
@@ -522,5 +525,179 @@ describe('camera layout engine operations', () => {
       width: 1,
       height: 0.5,
     });
+  });
+});
+
+describe('hold clip engine operation', () => {
+  it('captures the exact source frame and inserts a one-second frozen segment', () => {
+    const composition = createComposition(
+      [videoAsset('video-asset')],
+      [
+        visual('video', 'video', 'video-asset', {
+          groupId: undefined,
+          trackId: 'video-track',
+          timelineStartMs: 1_000,
+          timelineDurationMs: 4_000,
+          sourceInMs: 125,
+          sourceDurationMs: 5_000,
+          playbackRate: 1.25,
+        }),
+      ],
+    );
+    let id = 0;
+    const sourceAtPlayhead = sourceTimeAt(composition.clips[0]!, 2_400)!;
+
+    const held = holdClipAtPlayhead(composition, 'video', 2_400, () => `generated-${++id}`);
+    const segments = held.clips
+      .filter((clip): clip is VisualClip => clip.kind === 'video')
+      .sort((left, right) => left.timelineStartMs - right.timelineStartMs);
+    const [left, freeze, right] = segments;
+
+    expect(segments).toHaveLength(3);
+    expect(left).toMatchObject({
+      timelineStartMs: 1_000,
+      timelineDurationMs: 1_400,
+      sourceInMs: 125,
+      sourceDurationMs: 1_750,
+    });
+    expect(freeze).toMatchObject({
+      timelineStartMs: 2_400,
+      timelineDurationMs: HOLD_SEGMENT_DURATION_MS,
+      sourceInMs: sourceAtPlayhead,
+      sourceDurationMs: HOLD_SEGMENT_DURATION_MS,
+      playbackRate: 1,
+      freezeFrameSourceMs: sourceAtPlayhead,
+    });
+    expect(sourceAtPlayhead).toBe(1_875);
+    expect(sourceTimeAt(freeze!, 2_400)).toBe(sourceAtPlayhead);
+    expect(sourceTimeAt(freeze!, 3_399)).toBe(sourceAtPlayhead);
+    expect(right).toMatchObject({
+      timelineStartMs: 3_400,
+      timelineDurationMs: 2_600,
+      sourceInMs: 1_875,
+      sourceDurationMs: 3_250,
+      playbackRate: 1.25,
+    });
+    expect(right?.freezeFrameSourceMs).toBeUndefined();
+  });
+
+  it('splits linked screen, webcam, and audio while leaving a one-second audio gap', () => {
+    let id = 0;
+    const held = holdClipAtPlayhead(compositionFixture(), 'camera', 400, () => `generated-${++id}`);
+    const left = held.clips.filter((clip) => clip.timelineStartMs === 0);
+    const holds = held.clips.filter(
+      (clip): clip is VisualClip => 'freezeFrameSourceMs' in clip && clip.freezeFrameSourceMs !== undefined,
+    );
+    const right = held.clips.filter((clip) => clip.timelineStartMs === 1_400);
+
+    expect(held.clips).toHaveLength(8);
+    expect(left.map((clip) => clip.kind).sort()).toEqual(['audio', 'screen', 'webcam']);
+    expect(holds.map((clip) => clip.kind).sort()).toEqual(['screen', 'webcam']);
+    expect(right.map((clip) => clip.kind).sort()).toEqual(['audio', 'screen', 'webcam']);
+    expect(new Set(left.map((clip) => clip.groupId))).toEqual(new Set(['recording-segment']));
+    const holdGroupId = holds[0]?.groupId;
+    const rightGroupId = right[0]?.groupId;
+    expect(holdGroupId).toBeTruthy();
+    expect(rightGroupId).toBeTruthy();
+    expect(new Set(holds.map((clip) => clip.groupId))).toEqual(new Set([holdGroupId]));
+    expect(new Set(right.map((clip) => clip.groupId))).toEqual(new Set([rightGroupId]));
+    expect(rightGroupId).not.toBe(holdGroupId);
+    expect(rightGroupId).not.toBe('recording-segment');
+
+    for (const clip of holds) {
+      expect(clip).toMatchObject({
+        timelineStartMs: 400,
+        timelineDurationMs: HOLD_SEGMENT_DURATION_MS,
+        sourceInMs: 400,
+        sourceDurationMs: HOLD_SEGMENT_DURATION_MS,
+        playbackRate: 1,
+        freezeFrameSourceMs: 400,
+      });
+    }
+
+    const audioSegments = held.clips.filter((clip): clip is AudioClip => clip.kind === 'audio');
+    const audioLeft = audioSegments.find((clip) => clip.timelineStartMs === 0)!;
+    const audioRight = audioSegments.find((clip) => clip.timelineStartMs === 1_400)!;
+    expect(audioLeft).toMatchObject({ timelineDurationMs: 400, sourceInMs: 0, sourceDurationMs: 400 });
+    expect(audioRight).toMatchObject({ timelineDurationMs: 600, sourceInMs: 400, sourceDurationMs: 600 });
+    expect(sourceTimeAt(audioLeft, 399)).toBe(399);
+    expect(sourceTimeAt(audioLeft, 400)).toBeNull();
+    expect(sourceTimeAt(audioRight, 1_399)).toBeNull();
+    expect(sourceTimeAt(audioRight, 1_400)).toBe(400);
+  });
+
+  it('pushes downstream fragments and their grouped companions while leaving other tracks in place', () => {
+    const composition = createComposition(
+      [
+        videoAsset('main-asset'),
+        videoAsset('later-asset'),
+        videoAsset('later-companion-asset'),
+        videoAsset('other-asset'),
+      ],
+      [
+        visual('main', 'video', 'main-asset', {
+          groupId: undefined,
+          trackId: 'video-track',
+          timelineDurationMs: 2_000,
+          sourceDurationMs: 2_000,
+        }),
+        visual('later', 'video', 'later-asset', {
+          groupId: 'later-group',
+          trackId: 'video-track',
+          timelineStartMs: 2_000,
+          timelineDurationMs: 500,
+          sourceDurationMs: 500,
+        }),
+        visual('later-companion', 'webcam', 'later-companion-asset', {
+          groupId: 'later-group',
+          trackId: 'camera-track',
+          timelineStartMs: 2_000,
+          timelineDurationMs: 500,
+          sourceDurationMs: 500,
+        }),
+        visual('other-track', 'video', 'other-asset', {
+          groupId: undefined,
+          trackId: 'other-track',
+          timelineStartMs: 2_000,
+          timelineDurationMs: 500,
+          sourceDurationMs: 500,
+        }),
+      ],
+    );
+
+    let id = 0;
+    const held = holdClipAtPlayhead(composition, 'main', 1_000, () => `generated-${++id}`);
+    const later = held.clips.find((clip) => clip.id === 'later')!;
+    const laterCompanion = held.clips.find((clip) => clip.id === 'later-companion')!;
+    const otherTrack = held.clips.find((clip) => clip.id === 'other-track')!;
+    const right = held.clips.find((clip) => clip.id === 'generated-1')!;
+
+    expect(right).toMatchObject({ timelineStartMs: 2_000, timelineDurationMs: 1_000 });
+    expect(later).toMatchObject({ timelineStartMs: 3_000, timelineDurationMs: 500 });
+    expect(laterCompanion).toMatchObject({ timelineStartMs: 3_000, timelineDurationMs: 500 });
+    expect(otherTrack).toMatchObject({ timelineStartMs: 2_000, timelineDurationMs: 500 });
+    expect(later.sourceInMs).toBe(0);
+    expect(later.sourceDurationMs).toBe(500);
+  });
+
+  it('rejects images, existing holds, and playhead boundary positions', () => {
+    const composition = visualPresetComposition();
+
+    expect(() => holdClipAtPlayhead(composition, 'image-clip', 500, () => 'unused')).toThrow(
+      'Only video clips can be held.',
+    );
+    expect(() => holdClipAtPlayhead(composition, 'video-clip', 0, () => 'unused')).toThrow(
+      'Hold must be inside the clip.',
+    );
+    expect(() => holdClipAtPlayhead(composition, 'video-clip', 1_000, () => 'unused')).toThrow(
+      'Hold must be inside the clip.',
+    );
+
+    let id = 0;
+    const held = holdClipAtPlayhead(composition, 'video-clip', 500, () => `generated-${++id}`);
+    const freeze = held.clips.find(
+      (clip): clip is VisualClip => 'freezeFrameSourceMs' in clip && clip.freezeFrameSourceMs !== undefined,
+    )!;
+    expect(() => holdClipAtPlayhead(held, freeze.id, 750, () => 'unused')).toThrow('Only video clips can be held.');
   });
 });

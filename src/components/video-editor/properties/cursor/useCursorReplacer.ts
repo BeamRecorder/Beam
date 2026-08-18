@@ -48,16 +48,16 @@ export function useCursorReplacer() {
     const loading = (async () => {
       const response = await fetch(asset.url);
       if (!response.ok) throw new Error(`Unable to load cursor asset: ${asset.url} (${response.status})`);
-      const svg = svgAtRasterSize(
-        await response.text(),
-        rasterWidth,
-        rasterHeight,
-        color,
-        pack.colorMode === 'tintable',
-      );
+      const blob =
+        asset.format === 'png'
+          ? await response.blob()
+          : new Blob(
+              [svgAtRasterSize(await response.text(), rasterWidth, rasterHeight, color, pack.colorMode === 'tintable')],
+              { type: 'image/svg+xml;charset=utf-8' },
+            );
       return new Promise<HTMLImageElement>((resolve, reject) => {
         const image = new Image();
-        const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
+        const url = URL.createObjectURL(blob);
         image.onload = () => {
           URL.revokeObjectURL(url);
           resolve(image);

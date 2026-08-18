@@ -125,8 +125,8 @@ describe('preview performance health hysteresis', () => {
   });
 
   it('reports only channels at or above the warning threshold', () => {
-    expect(previewPerformanceIssues({ ui: 0.55, worker: 0.54, audio: 1 })).toEqual(['ui', 'audio']);
-    expect(previewPerformanceIssues({ ui: Number.NaN, worker: 0, audio: 0 })).toEqual([]);
+    expect(previewPerformanceIssues({ ui: 0.55, worker: 0.54, audio: 1, media: 0 })).toEqual(['ui', 'audio']);
+    expect(previewPerformanceIssues({ ui: Number.NaN, worker: 0, audio: 0, media: 0 })).toEqual([]);
   });
 });
 

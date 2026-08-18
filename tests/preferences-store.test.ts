@@ -30,7 +30,6 @@ describe('preferences background presets', () => {
     expect(normalize({ schemaVersion: 1, theme: 'dark' })).toMatchObject({
       schemaVersion: 3,
       theme: 'dark',
-      alwaysOnTop: true,
       backgroundPresets: { colors: [], gradients: [] },
       recordingInteractions: { enabled: false, noticeDismissed: false },
     });
@@ -95,15 +94,6 @@ describe('preferences background presets', () => {
     });
   });
 
-  it('normalizes alwaysOnTop preference setting', () => {
-    expect(normalize({ alwaysOnTop: false })).toMatchObject({
-      alwaysOnTop: false,
-    });
-    expect(normalize({ alwaysOnTop: true })).toMatchObject({
-      alwaysOnTop: true,
-    });
-  });
-
   it('normalizes onboardingCompleted preference setting', () => {
     expect(normalize({ onboardingCompleted: false })).toMatchObject({
       onboardingCompleted: false,
@@ -111,6 +101,12 @@ describe('preferences background presets', () => {
     expect(normalize({ onboardingCompleted: true })).toMatchObject({
       onboardingCompleted: true,
     });
+  });
+
+  it('drops the removed alwaysOnTop preference from legacy settings', () => {
+    expect(normalize({ alwaysOnTop: true })).not.toHaveProperty('alwaysOnTop');
+    expect(normalize({ alwaysOnTop: false })).not.toHaveProperty('alwaysOnTop');
+    expect(normalize({})).not.toHaveProperty('alwaysOnTop');
   });
 
   it('normalizes valid presets and deduplicates equivalent values', () => {

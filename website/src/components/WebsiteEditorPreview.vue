@@ -313,6 +313,7 @@ defineExpose({ play });
             :background-blur-percent="0"
             :frame-for="player.frameFor"
             :frame-version="player.frameVersion.value"
+            preview-quality="full"
             :playback-state="player.playbackState.value"
             :playback-error="player.playbackError.value"
             :editor-data="editorData"

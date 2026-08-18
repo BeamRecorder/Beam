@@ -241,7 +241,7 @@
     "motionBlur": "モーションブラー",
     "cursorPack": "カーソルパック",
     "packInfo": "互換カーソルパックについて",
-    "packDescription": "Beam は cursors_scalable フォルダーを含む SVG カーソルテーマに対応しています。",
+    "packDescription": "Beam は標準 XCursor テーマと KDE の SVG ソースに対応しています。",
     "findCursorPacks": "カーソルパックを探す",
     "compatibleFormat": "互換形式",
     "import": "インポート",
@@ -462,6 +462,7 @@
   },
   "ScreenRegionOverlay": {
     "instruction": "録画する範囲を選択",
+    "preset": "プリセット",
     "reset": "リセット",
     "cancel": "キャンセル",
     "useThisArea": "この範囲を使用"

@@ -8,7 +8,8 @@ const snapshot = (
   recommendation: PreviewPerformanceSnapshot['recommendation'],
 ): PreviewPerformanceSnapshot => ({
   status,
-  scores: { ui: 0.8, worker: 0.1, audio: 0.1 },
+  scores: { ui: 0.8, worker: 0.1, audio: 0.1, media: 0.1 },
+  activity: { playback: true, media: true },
   samples: [],
   issues: ['ui'],
   recommendation,
@@ -53,7 +54,7 @@ describe('PreviewPerformanceWarning', () => {
       props: { snapshot: snapshot('critical', null) },
     });
 
-    expect(wrapper.get('.performance-warning').exists()).toBe(true);
+    expect(wrapper.find('.performance-warning').exists()).toBe(true);
     expect(wrapper.find('button').exists()).toBe(false);
     expect(wrapper.text()).not.toContain('Switch to');
   });

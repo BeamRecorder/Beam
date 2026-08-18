@@ -10,6 +10,7 @@ export interface CursorAssetDescriptor {
   id: string;
   label: string;
   url: string;
+  format?: 'svg' | 'png';
   intrinsicSize: { width: number; height: number };
   nominalSize: number;
   hotspot: CursorPoint;

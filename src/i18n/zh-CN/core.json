@@ -241,7 +241,7 @@
     "motionBlur": "运动模糊",
     "cursorPack": "光标包",
     "packInfo": "关于兼容的光标包",
-    "packDescription": "Beam 支持包含 cursors_scalable 文件夹的 SVG 光标主题。",
+    "packDescription": "Beam 支持标准 XCursor 主题和 KDE SVG 源文件。",
     "findCursorPacks": "查找光标包",
     "compatibleFormat": "兼容格式",
     "import": "导入",
@@ -462,6 +462,7 @@
   },
   "ScreenRegionOverlay": {
     "instruction": "选择要录制的区域",
+    "preset": "预设",
     "reset": "重置",
     "cancel": "取消",
     "useThisArea": "使用此区域"

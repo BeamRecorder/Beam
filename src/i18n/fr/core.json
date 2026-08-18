@@ -268,7 +268,7 @@
     "motionBlur": "Flou de mouvement",
     "cursorPack": "Pack de curseurs",
     "packInfo": "À propos des packs compatibles",
-    "packDescription": "Parcourez les thèmes du KDE Store. Beam peut importer ceux qui contiennent un dossier cursors_scalable.",
+    "packDescription": "Parcourez les thèmes du KDE Store. Beam accepte les thèmes XCursor standards et les sources SVG de KDE.",
     "findCursorPacks": "Parcourir les thèmes",
     "compatibleFormat": "Format compatible",
     "import": "Importer",
@@ -489,6 +489,7 @@
   },
   "ScreenRegionOverlay": {
     "instruction": "Sélectionnez une zone à enregistrer",
+    "preset": "Préréglage",
     "reset": "Réinitialiser",
     "cancel": "Annuler",
     "useThisArea": "Utiliser cette zone"

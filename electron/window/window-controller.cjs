@@ -245,12 +245,11 @@ class WindowController {
 
   applyZOrderPolicy() {
     if (this.window.isDestroyed()) return;
-    const isOverlay = this.mode === 'hud' || this.mode === 'recorder';
-    const alwaysOnTop = this.preferencesStore?.read()?.alwaysOnTop ?? true;
-    // Keep the state while hidden so the compositor maps the surface directly
-    // into the topmost layer on the next show instead of promoting it after a
-    // normal frame has already been presented.
-    this.setOverlayAlwaysOnTop(this.ready && alwaysOnTop && isOverlay && !this.window.isMinimized());
+    // HUD and Recorder are persistent capture controls while visible. The
+    // editor transition explicitly hides and demotes this window before the
+    // editor is presented, so the overlay can never cover the loaded editor.
+    const overlayIsVisible = ['hud', 'recorder'].includes(this.mode) && this.window.isVisible();
+    this.setOverlayAlwaysOnTop(this.ready && overlayIsVisible && !this.window.isMinimized());
   }
 
   applyModePolicy({ restoreMaximized = true } = {}) {
@@ -282,14 +281,20 @@ class WindowController {
   }
 
   setVisible(visible) {
-    if (this.window.isDestroyed()) return;
+    if (this.window.isDestroyed()) return false;
     if (visible) {
       if (this.mode === 'hud') this.hudOverInteractive = false;
       this.window.showInactive();
       this.applyModePolicy();
-      return;
+      return this.window.isVisible();
     }
+    // Demote before hiding. On Windows, hiding a screen-saver-level window and
+    // demoting it afterwards can leave a topmost compositor surface in front
+    // of the editor for a frame (or indefinitely on a failed transition).
+    this.setOverlayAlwaysOnTop(false);
+    this.window.setIgnoreMouseEvents(true);
     this.window.hide();
+    return !this.window.isVisible();
   }
 
   applyInteractionPolicy() {

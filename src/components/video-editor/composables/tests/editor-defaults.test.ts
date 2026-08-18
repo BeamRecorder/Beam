@@ -3,6 +3,7 @@ import { DEFAULT_OUTPUT_CANVAS } from '../../canvas/output-canvas';
 import { createDefaultCursorPresentation } from '../../../../api/types/cursor-presentation';
 import type { ProjectEditorState } from '../../../../api/types/capture-api';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { COMPOSITION_SCHEMA_VERSION } from '~/media/shared/composition-types';
 import type { AudioClip, BlurClip, CaptionClip, ClipComposition, VisualClip } from '~/media/shared/composition-types';
 import type { EditorPreferenceDefaults } from '../editor-default-types';
 import {
@@ -17,7 +18,7 @@ import {
 } from '../editor-defaults';
 
 const composition = (): ClipComposition => ({
-  schemaVersion: 8,
+  schemaVersion: COMPOSITION_SCHEMA_VERSION,
   assets: [],
   clips: [],
   keyboardCaptionSessions: [],

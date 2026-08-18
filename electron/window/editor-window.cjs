@@ -116,6 +116,9 @@ function createEditorWindowManager({
     window.webContents.send('editor:context', { projectId: currentProjectId });
   };
 
+  const hideHudBeforePresentingEditor = () =>
+    hudController.setVisible(false) === true && !hudWindow.isVisible();
+
   const showHud = () => {
     if (!canAcceptWork()) return false;
     returningToHud = true;
@@ -229,9 +232,11 @@ function createEditorWindowManager({
     if (rendererReady) {
       sendContext();
       if (target.isMinimized()) target.restore();
+      if (!hideHudBeforePresentingEditor()) {
+        throw new Error('La fenêtre HUD n’a pas pu être masquée avant la présentation de l’éditeur');
+      }
       target.show();
       target.focus();
-      hudWindow.hide();
       return Promise.resolve(true);
     }
     if (rejectPresentation) rejectPresentation(new Error('La demande précédente a été remplacée'));
@@ -244,10 +249,17 @@ function createEditorWindowManager({
   const markReady = (event) => {
     if (!window || window.isDestroyed() || event.sender !== window.webContents) return false;
     rendererReady = true;
+    // Remove the native HUD surface before presenting the editor. This order
+    // prevents a transparent HUD from remaining above the focused editor.
+    if (!hideHudBeforePresentingEditor()) {
+      rejectPresentation?.(new Error('La fenêtre HUD n’a pas pu être masquée avant la présentation de l’éditeur'));
+      resolvePresentation = null;
+      rejectPresentation = null;
+      return false;
+    }
     sendProgress('ready');
     window.show();
     window.focus();
-    hudWindow.hide();
     resolvePresentation?.(true);
     resolvePresentation = null;
     rejectPresentation = null;

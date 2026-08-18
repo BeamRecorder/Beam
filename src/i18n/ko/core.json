@@ -241,7 +241,7 @@
     "motionBlur": "모션 블러",
     "cursorPack": "커서 팩",
     "packInfo": "호환 커서 팩 정보",
-    "packDescription": "Beam은 cursors_scalable 폴더가 포함된 SVG 커서 테마를 지원합니다.",
+    "packDescription": "Beam은 표준 XCursor 테마와 KDE SVG 소스를 지원합니다.",
     "findCursorPacks": "커서 팩 찾기",
     "compatibleFormat": "호환 형식",
     "import": "가져오기",
@@ -462,6 +462,7 @@
   },
   "ScreenRegionOverlay": {
     "instruction": "녹화할 영역을 선택하세요",
+    "preset": "프리셋",
     "reset": "초기화",
     "cancel": "취소",
     "useThisArea": "이 영역 사용"

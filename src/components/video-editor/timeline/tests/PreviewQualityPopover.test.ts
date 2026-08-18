@@ -75,7 +75,7 @@ describe('PreviewQualityPopover', () => {
   it('shows one anchored recommendation for three seconds, then leaves only the warning icon state', async () => {
     const wrapper = mountPopover(snapshot('warning', 'half'));
 
-    expect(wrapper.get('.preview-quality-suggestion').exists()).toBe(true);
+    expect(wrapper.find('.preview-quality-suggestion').exists()).toBe(true);
     expect(wrapper.get('.preview-quality-suggestion').text()).toContain('1/2');
     expect(wrapper.get('.preview-quality-trigger').classes()).toContain('is-warning');
 

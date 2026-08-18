@@ -241,7 +241,7 @@
     "motionBlur": "Sfocatura movimento",
     "cursorPack": "Pacchetto cursori",
     "packInfo": "Informazioni sui pacchetti compatibili",
-    "packDescription": "Beam accetta temi cursore SVG che contengono una cartella cursors_scalable.",
+    "packDescription": "Beam supporta temi XCursor standard e sorgenti SVG di KDE.",
     "findCursorPacks": "Trova pacchetti cursori",
     "compatibleFormat": "Formato compatibile",
     "import": "Importa",
@@ -462,6 +462,7 @@
   },
   "ScreenRegionOverlay": {
     "instruction": "Seleziona un'area da registrare",
+    "preset": "Preimpostazione",
     "reset": "Reimposta",
     "cancel": "Annulla",
     "useThisArea": "Usa quest'area"

@@ -323,7 +323,7 @@ const mountEditor = (overrides: Record<string, unknown> = {}) => {
 
 describe('EditorCanvas', () => {
   it('defaults to full preview quality', async () => {
-    const mounted = mountEditor();
+    mountEditor();
     await nextTick();
 
     expect(state.canvasBackgroundOptions?.previewQuality?.()).toBe('full');

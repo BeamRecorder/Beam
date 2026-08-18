@@ -241,7 +241,7 @@
     "motionBlur": "Làm mờ chuyển động",
     "cursorPack": "Gói con trỏ",
     "packInfo": "Giới thiệu gói con trỏ tương thích",
-    "packDescription": "Beam chấp nhận chủ đề con trỏ SVG có thư mục cursors_scalable.",
+    "packDescription": "Beam hỗ trợ chủ đề XCursor tiêu chuẩn và nguồn SVG của KDE.",
     "findCursorPacks": "Tìm gói con trỏ",
     "compatibleFormat": "Định dạng tương thích",
     "import": "Nhập",
@@ -461,6 +461,7 @@
   },
   "ScreenRegionOverlay": {
     "instruction": "Chọn một khu vực để ghi",
+    "preset": "Cài đặt trước",
     "reset": "Đặt lại",
     "cancel": "Hủy",
     "useThisArea": "Sử dụng khu vực này"

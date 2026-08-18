@@ -140,6 +140,7 @@ const {
   trimClipEdge,
   moveClipTo,
   splitSelectedClip,
+  holdClip,
   deleteSelectedClip,
   reorderVisualClip,
   updateSelectedAppearance,
@@ -189,6 +190,13 @@ const zoomMotionBlur = zoomState.zoomMotionBlur ?? ref({ ...DEFAULT_ZOOM_MOTION_
 const newZoomDurationMs = computed(() => editorDefaults.value.zoom?.durationMs ?? DEFAULT_ZOOM_DURATION_MS);
 const { isExporting, progress: exportProgress } = useExportJob();
 const timelineCompositionPreview = ref<typeof composition.value | null>(null);
+const timelinePreviewDuration = computed(() => {
+  const previewDurationMs = timelineCompositionPreview.value?.clips.reduce(
+    (maximum, clip) => Math.max(maximum, clip.timelineStartMs + clip.timelineDurationMs),
+    0,
+  );
+  return previewDurationMs === undefined ? duration.value : previewDurationMs / 1_000;
+});
 const timelineCanvasPreview = ref<OutputCanvasSettings | null>(null);
 const captionCompositionPreview = ref<typeof composition.value | null>(null);
 const cursorPreview = ref<CursorSelection | null>(null);
@@ -250,16 +258,19 @@ const updateRoleVolume = (role: 'system' | 'microphone', value: number) => {
   for (const clip of next.clips) if (isAudioClip(clip) && clip.role === role) next = setVolume(next, clip.id, value);
   composition.value = next;
 };
-const deleteTimelineClips = (clipIds: string[]) => {
+const deleteTimelineClips = (clipIds: string[], grouped = true) => {
   const ids = new Set(clipIds);
   let next = composition.value;
-  for (const clipId of ids) next = deleteClip(next, clipId);
+  for (const clipId of ids) {
+    if (next.clips.some((clip) => clip.id === clipId)) next = deleteClip(next, clipId, grouped);
+  }
   if (selectedClipId.value && ids.has(selectedClipId.value)) selectedClipId.value = null;
   composition.value = next;
 };
 const deleteAudioRole = (role: 'system' | 'microphone') => {
   deleteTimelineClips(
     composition.value.clips.filter((clip) => isAudioClip(clip) && clip.role === role).map((clip) => clip.id),
+    false,
   );
 };
 watch(systemVolume, (value) => updateRoleVolume('system', value));
@@ -656,7 +667,7 @@ onBeforeUnmount(() => {
           />
           <TimelineToolbar
             :current-time="currentTime"
-            :duration="duration"
+            :duration="timelinePreviewDuration"
             :is-playing="isPlaying"
             :loading="!initialPlaybackSettled"
             :can-split="Boolean(selectedClipId)"
@@ -702,6 +713,7 @@ onBeforeUnmount(() => {
           @toggle:clip="toggleClip"
           @delete:clips="deleteTimelineClips"
           @delete:zoom="deleteZoomById"
+          @hold:clip="holdClip($event.id, $event.timeMs)"
           @trim:clip="trimClipEdge($event.id, $event.edge, $event.timeMs)"
           @move:clip="moveClipTo($event.id, $event.startMs)"
           @preview:composition="timelineCompositionPreview = $event"

@@ -2,11 +2,13 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { DOMParser } = require('@xmldom/xmldom');
+const { parseXcursor, xcursorImageToPng } = require('./xcursor-parser.cjs');
 
 const MAX_ROLES = 256;
 const MAX_SVG_BYTES = 2 * 1024 * 1024;
 const MAX_PACK_BYTES = 32 * 1024 * 1024;
 const MAX_XML_NODES = 10_000;
+const MAX_XCURSOR_BYTES = 8 * 1024 * 1024;
 const DEFAULT_ROLES = ['default', 'left_ptr', 'arrow'];
 const ALLOWED_ELEMENTS = new Set([
   'svg',
@@ -149,17 +151,39 @@ function isTintColor(value) {
   return /^(?:currentcolor|none|transparent|#(?:000|000000|fff|ffffff)|black|white)$/i.test(String(value).trim());
 }
 
-function resolveScalableRoot(selected) {
+function resolveImportRoot(selected, allowNested = true) {
   if (fs.lstatSync(selected).isSymbolicLink()) throw new Error('Lien symbolique de pack externe interdit');
   const root = fs.realpathSync(selected);
   if (!fs.statSync(root).isDirectory()) throw new Error('Le pack de curseurs doit être un dossier');
-  if (path.basename(root) === 'cursors_scalable') return { themeRoot: path.dirname(root), scalableRoot: root };
+  if (path.basename(root) === 'cursors_scalable')
+    return { themeRoot: path.dirname(root), assetRoot: root, kind: 'svg' };
+  if (path.basename(root) === 'cursors') return { themeRoot: path.dirname(root), assetRoot: root, kind: 'xcursor' };
   const scalable = path.join(root, 'cursors_scalable');
-  if (!fs.existsSync(scalable) || !fs.statSync(scalable).isDirectory())
-    throw new Error('Dossier cursors_scalable introuvable');
-  const scalableRoot = fs.realpathSync(scalable);
-  if (!within(root, scalableRoot)) throw new Error('Lien symbolique cursors_scalable externe interdit');
-  return { themeRoot: root, scalableRoot };
+  if (fs.existsSync(scalable) && fs.statSync(scalable).isDirectory()) {
+    const assetRoot = fs.realpathSync(scalable);
+    if (!within(root, assetRoot)) throw new Error('Lien symbolique cursors_scalable externe interdit');
+    return { themeRoot: root, assetRoot, kind: 'svg' };
+  }
+  const cursors = path.join(root, 'cursors');
+  if (fs.existsSync(cursors) && fs.statSync(cursors).isDirectory()) {
+    const assetRoot = fs.realpathSync(cursors);
+    if (!within(root, assetRoot)) throw new Error('Lien symbolique cursors externe interdit');
+    return { themeRoot: root, assetRoot, kind: 'xcursor' };
+  }
+  if (allowNested) {
+    const candidates = fs
+      .readdirSync(root, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => path.join(root, entry.name))
+      .filter(
+        (directory) =>
+          fs.existsSync(path.join(directory, 'cursors_scalable')) || fs.existsSync(path.join(directory, 'cursors')),
+      );
+    if (candidates.length === 1) return resolveImportRoot(candidates[0], false);
+    if (candidates.length > 1)
+      throw new Error('Plusieurs thèmes trouvés. Sélectionnez le dossier du thème à importer.');
+  }
+  throw new Error('Aucun dossier cursors_scalable ou cursors compatible trouvé');
 }
 
 function readRole(scalableRoot, roleEntry) {
@@ -200,7 +224,44 @@ function readRole(scalableRoot, roleEntry) {
   const validated = validateSvg(fs.readFileSync(realSvg, 'utf8'), roleEntry.name);
   if (frame.hotspot_x > validated.width || frame.hotspot_y > validated.height)
     throw new Error(`Rôle ${roleEntry.name}: hotspot hors des dimensions SVG`);
-  return { animated: false, role: roleEntry.name, frame, ...validated, bytes: stat.size + metadataBytes };
+  return {
+    animated: false,
+    role: roleEntry.name,
+    contents: Buffer.from(validated.svg),
+    format: 'svg',
+    width: validated.width,
+    height: validated.height,
+    nominalSize: frame.nominal_size,
+    hotspot: { x: frame.hotspot_x, y: frame.hotspot_y },
+    tintable: validated.tintable,
+    bytes: stat.size + metadataBytes,
+  };
+}
+
+function readXcursorRole(cursorsRoot, roleEntry) {
+  const rolePath = path.join(cursorsRoot, roleEntry.name);
+  const realRole = fs.realpathSync(rolePath);
+  if (!within(cursorsRoot, realRole)) throw new Error(`Rôle ${roleEntry.name}: lien symbolique externe interdit`);
+  const stat = fs.statSync(realRole);
+  if (!stat.isFile()) return null;
+  if (stat.size > MAX_XCURSOR_BYTES) throw new Error(`Rôle ${roleEntry.name}: fichier XCursor trop volumineux`);
+  const source = fs.readFileSync(realRole);
+  const parsed = parseXcursor(source);
+  if (parsed.animated) return { animated: true, role: roleEntry.name, source, bytes: source.length };
+  const image = parsed.image;
+  return {
+    animated: false,
+    role: roleEntry.name,
+    contents: xcursorImageToPng(image),
+    format: 'png',
+    width: image.width,
+    height: image.height,
+    nominalSize: image.nominalSize,
+    hotspot: image.hotspot,
+    tintable: false,
+    bytes: source.length,
+    source,
+  };
 }
 
 function createCursorPackLibrary(root) {
@@ -219,24 +280,43 @@ function createCursorPackLibrary(root) {
   };
 
   const importDirectory = (selected) => {
-    const { themeRoot, scalableRoot } = resolveScalableRoot(selected);
-    assertPackSize(scalableRoot);
+    const { themeRoot, assetRoot, kind } = resolveImportRoot(selected);
+    if (kind === 'svg') assertPackSize(assetRoot);
     const roleEntries = fs
-      .readdirSync(scalableRoot, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory() || entry.isSymbolicLink())
+      .readdirSync(assetRoot, { withFileTypes: true })
+      .filter((entry) =>
+        kind === 'svg' ? entry.isDirectory() || entry.isSymbolicLink() : entry.isFile() || entry.isSymbolicLink(),
+      )
       .sort((a, b) => a.name.localeCompare(b.name));
     if (roleEntries.length > MAX_ROLES) throw new Error(`Le pack dépasse la limite de ${MAX_ROLES} rôles`);
-    const roles = roleEntries.map((entry) => readRole(scalableRoot, entry)).filter(Boolean);
+    const roles = [];
+    const uniqueSources = new Set();
+    let totalSourceBytes = 0;
+    for (const entry of roleEntries) {
+      const role = kind === 'svg' ? readRole(assetRoot, entry) : readXcursorRole(assetRoot, entry);
+      if (!role) continue;
+      if (kind === 'xcursor') {
+        const sourceHash = crypto.createHash('sha256').update(role.source).digest('hex');
+        if (!uniqueSources.has(sourceHash)) {
+          uniqueSources.add(sourceHash);
+          totalSourceBytes += role.bytes;
+          if (totalSourceBytes > MAX_PACK_BYTES) throw new Error('Le pack dépasse la limite de 32 Mio');
+        }
+      }
+      roles.push(role);
+    }
     const animated = roles.filter((role) => role.animated).map((role) => role.role);
     const staticRoles = roles.filter((role) => !role.animated);
     if (!DEFAULT_ROLES.some((role) => staticRoles.some((entry) => entry.role === role)))
       throw new Error('Le pack doit contenir un curseur statique default, left_ptr ou arrow');
-    const totalBytes = staticRoles.reduce((sum, role) => sum + role.bytes, 0);
-    if (totalBytes > MAX_PACK_BYTES) throw new Error('Le pack dépasse la limite de 32 Mio');
-
     const hash = crypto.createHash('sha256');
     for (const role of staticRoles)
-      hash.update(role.role).update('\0').update(role.svg).update('\0').update(JSON.stringify(role.frame));
+      hash
+        .update(role.role)
+        .update('\0')
+        .update(role.contents)
+        .update('\0')
+        .update(JSON.stringify({ nominalSize: role.nominalSize, hotspot: role.hotspot }));
     const id = hash.digest('hex');
     fs.mkdirSync(libraryRoot, { recursive: true });
     const target = path.join(libraryRoot, id);
@@ -248,20 +328,21 @@ function createCursorPackLibrary(root) {
     try {
       const cursors = staticRoles.map((role, index) => {
         const assetId = `${String(index).padStart(3, '0')}-${role.role.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
-        fs.writeFileSync(path.join(temporary, `${assetId}.svg`), role.svg, 'utf8');
+        fs.writeFileSync(path.join(temporary, `${assetId}.${role.format}`), role.contents);
         return {
           id: role.role,
           label: role.role.replace(/[_-]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()),
           url: `project-media://cursor/${id}/${assetId}`,
+          format: role.format,
           intrinsicSize: { width: role.width, height: role.height },
-          nominalSize: role.frame.nominal_size,
-          hotspot: { x: role.frame.hotspot_x, y: role.frame.hotspot_y },
+          nominalSize: role.nominalSize,
+          hotspot: role.hotspot,
         };
       });
       const defaultCursorId = DEFAULT_ROLES.find((role) => cursors.some((cursor) => cursor.id === role));
       const pack = {
         id,
-        name: themeName(themeRoot, scalableRoot),
+        name: themeName(themeRoot, assetRoot),
         source: 'imported',
         colorMode: staticRoles.every((role) => role.tintable) ? 'tintable' : 'original',
         defaultCursorId,
@@ -284,8 +365,12 @@ function createCursorPackLibrary(root) {
       const parts = url.pathname.split('/').filter(Boolean).map(decodeURIComponent);
       if (parts.length !== 2 || !/^[a-f0-9]{64}$/.test(parts[0]) || !/^\d{3}-[a-zA-Z0-9_-]+$/.test(parts[1]))
         return null;
-      const file = path.join(libraryRoot, parts[0], `${parts[1]}.svg`);
-      const realRoot = fs.realpathSync(path.join(libraryRoot, parts[0]));
+      const packRoot = path.join(libraryRoot, parts[0]);
+      const manifest = manifestFor(packRoot);
+      const asset = manifest.cursors?.find((cursor) => cursor.url === rawUrl);
+      if (!asset || (asset.format !== undefined && asset.format !== 'svg' && asset.format !== 'png')) return null;
+      const file = path.join(packRoot, `${parts[1]}.${asset.format ?? 'svg'}`);
+      const realRoot = fs.realpathSync(packRoot);
       const realFile = fs.realpathSync(file);
       return within(realRoot, realFile) && fs.statSync(realFile).isFile() ? realFile : null;
     } catch {

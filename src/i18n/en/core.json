@@ -268,7 +268,7 @@
     "motionBlur": "Motion Blur",
     "cursorPack": "Cursor pack",
     "packInfo": "About compatible cursor packs",
-    "packDescription": "Browse cursor themes on KDE Store. Beam can import themes that contain a cursors_scalable folder.",
+    "packDescription": "Browse cursor themes on KDE Store. Beam supports standard XCursor themes and KDE SVG sources.",
     "findCursorPacks": "Browse cursor themes",
     "compatibleFormat": "Compatible format",
     "import": "Import",
@@ -489,6 +489,7 @@
   },
   "ScreenRegionOverlay": {
     "instruction": "Select an area to record",
+    "preset": "Preset",
     "reset": "Reset",
     "cancel": "Cancel",
     "useThisArea": "Use this area"

@@ -17,6 +17,7 @@ type PlaybackClipSignature = {
   sourceDurationMs: number;
   playbackRate: number;
   enabled: boolean;
+  freezeFrameSourceMs?: number;
   transitions: Clip['transitions'];
   volume?: number;
 };
@@ -40,6 +41,9 @@ const playbackClip = (clip: Clip): PlaybackClipSignature | null => {
     sourceDurationMs: clip.sourceDurationMs,
     playbackRate: clip.playbackRate,
     enabled: clip.enabled,
+    ...(isVisualClip(clip) && clip.freezeFrameSourceMs !== undefined
+      ? { freezeFrameSourceMs: clip.freezeFrameSourceMs }
+      : {}),
     transitions: clip.transitions,
     ...(isAudioClip(clip) ? { volume: clip.volume } : {}),
   };

@@ -195,6 +195,9 @@ vi.mock('../composables/useVideoEditor', async () => {
       const outputCanvas = ref({ preset: '16:9', width: 1920, height: 1080, showBackground: false });
       const store = {
         activeTab,
+        initialPlaybackSettled: ref(true),
+        includeAudioInExport: ref(true),
+        editorDefaults: ref({ zoom: { durationMs: 1_500 } }),
         systemVolume: ref(100),
         micVolume: ref(100),
         sourceSize: ref({ width: 1280, height: 720 }),
@@ -210,13 +213,10 @@ vi.mock('../composables/useVideoEditor', async () => {
         },
         zoomState,
         exportRequest: computed(() => ({ projectName: 'Demo', snapshot: {}, format: 'webm', preset: 'medium' })),
-        includeAudioInExport: ref(true),
-        editorDefaults: ref({}),
         outputCanvas,
         handleSelectTab: vi.fn((tab: string) => {
           activeTab.value = tab;
         }),
-        initialPlaybackSettled: ref(true),
       };
       editorState.store = store;
       return store;
@@ -515,6 +515,7 @@ vi.mock('../timeline/EditorTimeline.vue', async () => {
         'add:caption',
         'delete:clips',
         'reorder:clip',
+        'preview:composition',
         'paste:item',
         'clipboard:copied',
       ],

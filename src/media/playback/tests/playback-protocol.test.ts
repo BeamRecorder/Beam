@@ -108,6 +108,19 @@ describe('isPlaybackWorkerRequest', () => {
     expect(boundaryClip({ timelineStartSeconds: Number.MAX_VALUE, sourceInSeconds: Number.MAX_VALUE })).toBe(true);
   });
 
+  it('accepts a freeze-frame source timestamp on a playback clip descriptor', () => {
+    const request = {
+      type: 'load' as const,
+      generation: 1,
+      assets: [source()],
+      clips: [clip({ timelineStartSeconds: 3, timelineDurationSeconds: 1, freezeFrameSourceSeconds: 2.5 })],
+      previewQuality: 'full' as const,
+    };
+
+    expect(isPlaybackWorkerRequest(request)).toBe(true);
+    expect(() => assertPlaybackWorkerRequest(request)).not.toThrow();
+  });
+
   it('rejects unknown, null, and incomplete request objects', () => {
     expect(isPlaybackWorkerRequest(null)).toBe(false);
     expect(isPlaybackWorkerRequest({})).toBe(false);

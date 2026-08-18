@@ -269,7 +269,7 @@ describe('App', () => {
     expect(wrapper.get('.mock-hud').attributes('data-editor-progress')).toBe('65');
 
     mocks.controller.editorProgress?.({ stage: 'ready', value: 100 });
-    expect(mocks.capture.setWindowVisible).toHaveBeenCalledWith(false);
+    expect(mocks.capture.setWindowVisible).not.toHaveBeenCalledWith(false);
 
     finishOpening(true);
     await settle();

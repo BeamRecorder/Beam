@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { COMPOSITION_SCHEMA_VERSION } from '~/media/shared/composition-types';
 import type {
   AudioClip,
   CaptionClip,
@@ -121,7 +122,7 @@ const caption = (
 });
 
 const composition = (clips: Clip[], assets: MediaAsset[]): ClipComposition => ({
-  schemaVersion: 8,
+  schemaVersion: COMPOSITION_SCHEMA_VERSION,
   assets,
   clips,
   keyboardCaptionSessions: [],

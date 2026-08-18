@@ -37,6 +37,7 @@ export interface TimelineTracksEmits {
   (event: 'toggle:clip', clipId: string): void;
   (event: 'delete:clips', clipIds: string[]): void;
   (event: 'delete:zoom', zoomId: string): void;
+  (event: 'hold:clip', payload: { id: string; timeMs: number }): void;
   (event: 'trim:clip', payload: { id: string; edge: 'start' | 'end'; timeMs: number }): void;
   (event: 'move:clip', payload: { id: string; startMs: number }): void;
   (event: 'preview:composition', value: ClipComposition | null): void;

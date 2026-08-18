@@ -241,7 +241,7 @@
     "motionBlur": "Bewegungsunschärfe",
     "cursorPack": "Cursor-Paket",
     "packInfo": "Über kompatible Cursor-Pakete",
-    "packDescription": "Beam akzeptiert SVG-Cursor-Themes mit einem Ordner cursors_scalable.",
+    "packDescription": "Beam unterstützt Standard-XCursor-Themes und KDE-SVG-Quellen.",
     "findCursorPacks": "Cursor-Pakete finden",
     "compatibleFormat": "Kompatibles Format",
     "import": "Importieren",
@@ -462,6 +462,7 @@
   },
   "ScreenRegionOverlay": {
     "instruction": "Wähle einen Bereich zur Aufnahme aus",
+    "preset": "Voreinstellung",
     "reset": "Zurücksetzen",
     "cancel": "Abbrechen",
     "useThisArea": "Diesen Bereich verwenden"

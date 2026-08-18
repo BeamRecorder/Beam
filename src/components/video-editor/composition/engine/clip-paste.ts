@@ -74,7 +74,11 @@ const fragmentAt = (
     groupId: undefined,
     timelineStartMs: startMs,
     timelineDurationMs: durationMs,
-    sourceInMs: isCaptionClip(clip) ? 0 : clip.sourceInMs + Math.round(elapsedMs * clip.playbackRate),
+    sourceInMs: isCaptionClip(clip)
+      ? 0
+      : 'freezeFrameSourceMs' in clip && clip.freezeFrameSourceMs !== undefined
+        ? clip.freezeFrameSourceMs
+        : clip.sourceInMs + Math.round(elapsedMs * clip.playbackRate),
     sourceDurationMs,
     transitions: transitionEdges(clip, keepEntry, keepExit, durationMs),
   };

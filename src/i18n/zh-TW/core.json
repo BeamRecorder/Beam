@@ -241,7 +241,7 @@
     "motionBlur": "動態模糊",
     "cursorPack": "游標套件",
     "packInfo": "關於相容的游標套件",
-    "packDescription": "Beam 支援包含 cursors_scalable 資料夾的 SVG 游標主題。",
+    "packDescription": "Beam 支援標準 XCursor 主題和 KDE SVG 原始檔。",
     "findCursorPacks": "尋找游標套件",
     "compatibleFormat": "相容格式",
     "import": "匯入",
@@ -461,7 +461,8 @@
     "turnSystemAudioOn": "開啟系統音訊"
   },
   "ScreenRegionOverlay": {
-    "instruction": "選取要錄影的區域",
+    "instruction": "選擇要錄製的區域",
+    "preset": "預設",
     "reset": "重設",
     "cancel": "取消",
     "useThisArea": "使用此區域"

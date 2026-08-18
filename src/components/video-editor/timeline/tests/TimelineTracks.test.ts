@@ -2,39 +2,51 @@ import { defineComponent } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ZoomElement } from '../../zoom/zoom-types';
-import type { CaptionClip, ClipComposition, MediaAsset, VisualClip } from '~/media/shared/composition-types';
+import type { AudioClip, CaptionClip, ClipComposition, MediaAsset, VisualClip } from '~/media/shared/composition-types';
 import type { MediaError } from '~/media/shared/media-types';
 import TimelineTracks from '../TimelineTracks.vue';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import { DEFAULT_OUTPUT_CANVAS } from '../../canvas/output-canvas';
 import { useTimelineClipboard } from '../composables/useTimelineClipboard';
+import { clipTrimBounds } from '../../composition/engine/trim-clip';
+
+const waveformTestState = vi.hoisted(() => ({
+  viewport: null as null | (() => { startSeconds: number; endSeconds: number; pixelsPerSecond: number }),
+}));
 
 vi.mock('../composables/useCompositionAudioWaveforms', () => ({
-  useCompositionAudioWaveforms: () => ({
-    slices: {
-      'system-audio': { bars: [4, 12, 20], leftPercent: 0, widthPercent: 100 },
-      'microphone-audio': undefined,
-      'imported-audio': undefined,
-    },
-    status: {
-      'system-audio': 'ready',
-      'microphone-audio': 'loading',
-      'imported-audio': 'error',
-    },
-    errors: {
-      'imported-audio': {
-        kind: 'decode-failure',
-        sourceId: 'imported-asset',
-        message: 'The waveform could not be decoded.',
-      } satisfies MediaError,
-    },
-  }),
+  useCompositionAudioWaveforms: (
+    _composition: unknown,
+    viewport: () => { startSeconds: number; endSeconds: number; pixelsPerSecond: number },
+  ) => {
+    waveformTestState.viewport = viewport;
+    return {
+      slices: {
+        'system-audio': { bars: [4, 12, 20], leftPercent: 0, widthPercent: 100 },
+        'microphone-audio': undefined,
+        'imported-audio': undefined,
+      },
+      status: {
+        'system-audio': 'ready',
+        'microphone-audio': 'loading',
+        'imported-audio': 'error',
+      },
+      errors: {
+        'imported-audio': {
+          kind: 'decode-failure',
+          sourceId: 'imported-asset',
+          message: 'The waveform could not be decoded.',
+        } satisfies MediaError,
+      },
+    };
+  },
 }));
 
 const TimelineClipStub = defineComponent({
   name: 'TimelineClip',
   props: {
     clip: { type: Object, required: true },
+    duration: { type: Number, required: true },
     selected: { type: Boolean, default: false },
     trimState: { type: Object, default: null },
     thumbnailSlots: { type: Array, default: () => [] },
@@ -43,6 +55,7 @@ const TimelineClipStub = defineComponent({
     waveformWidthPercent: { type: Number, default: 100 },
     waveformStatus: { type: String, default: undefined },
     waveformError: { type: Object, default: undefined },
+    deferThumbnailRequests: { type: Boolean, default: false },
     pasteHighlight: { type: Boolean, default: false },
   },
   emits: ['select', 'move', 'trim', 'contextmenu'],
@@ -102,6 +115,23 @@ const visual = (overrides: Partial<VisualClip>): VisualClip => ({
   appearance: createDefaultClipAppearance('screen'),
   isMirrored: false,
   isMirroredY: false,
+  ...overrides,
+});
+
+const importedAudio = (overrides: Partial<AudioClip> = {}): AudioClip => ({
+  id: 'imported-audio-fragment',
+  kind: 'audio',
+  role: 'imported',
+  name: 'Imported audio',
+  assetId: 'imported-asset',
+  timelineStartMs: 0,
+  timelineDurationMs: 2_000,
+  sourceInMs: 0,
+  sourceDurationMs: 2_000,
+  playbackRate: 1,
+  enabled: true,
+  order: 6,
+  volume: 80,
   ...overrides,
 });
 
@@ -610,6 +640,47 @@ describe('TimelineTracks', () => {
     expect(mounted!.emitted('select:zoom')).toContainEqual(['zoom-1']);
   });
 
+  it('renders contiguous imported audio fragments from one asset in a single lane', async () => {
+    const base = composition();
+    const mounted = await mountTracks({
+      composition: {
+        ...base,
+        clips: [
+          ...base.clips.filter((clip) => clip.id !== 'imported-audio'),
+          importedAudio({ id: 'audio-left', timelineStartMs: 0, sourceDurationMs: 2_000 }),
+          importedAudio({ id: 'audio-right', timelineStartMs: 2_000, sourceInMs: 2_000, sourceDurationMs: 2_000 }),
+        ],
+      },
+    });
+
+    const importedRows = mounted!
+      .findAll('.tracks-stack > .audio-track')
+      .filter((row) => row.findAll('.timeline-clip').some((clip) => clip.text().includes('Imported audio')));
+    expect(importedRows).toHaveLength(1);
+    expect(importedRows[0]!.findAll('.timeline-clip')).toHaveLength(2);
+  });
+
+  it('keeps imported audio clips from different assets on separate lanes', async () => {
+    const base = composition();
+    const mounted = await mountTracks({
+      composition: {
+        ...base,
+        assets: [...base.assets, asset('imported-asset-2', 'audio')],
+        clips: [
+          ...base.clips.filter((clip) => clip.id !== 'imported-audio'),
+          importedAudio({ id: 'audio-one', assetId: 'imported-asset' }),
+          importedAudio({ id: 'audio-two', assetId: 'imported-asset-2' }),
+        ],
+      },
+    });
+
+    const importedRows = mounted!
+      .findAll('.tracks-stack > .audio-track')
+      .filter((row) => row.findAll('.timeline-clip').some((clip) => clip.text().includes('Imported audio')));
+    expect(importedRows).toHaveLength(2);
+    expect(importedRows.every((row) => row.findAll('.timeline-clip').length === 1)).toBe(true);
+  });
+
   it('only renders the Canvas transition track when at least one global transition exists', async () => {
     const mounted = await mountTracks();
     expect(mounted!.find('.canvas-sidebar-row').exists()).toBe(false);
@@ -858,8 +929,8 @@ describe('TimelineTracks', () => {
     await cursor.trigger('mousemove', { clientX: 700 });
 
     const ghost = mounted!.get('.cursor-zoom-indicator.preview-ghost');
-    expect(ghost.element.style.left).toBe('33%');
-    expect(ghost.element.style.width).toBe('50%');
+    expect((ghost.element as HTMLElement).style.left).toBe('33%');
+    expect((ghost.element as HTMLElement).style.width).toBe('50%');
   });
 
   it('uses the configured zoom duration when checking hover collisions', async () => {
@@ -950,6 +1021,314 @@ describe('TimelineTracks', () => {
     window.dispatchEvent(pointerEvent('pointerup', 900));
     expect(mounted!.emitted('preview:composition')?.at(-1)).toEqual([null]);
     expect(mounted!.emitted('trim:clip')).toContainEqual([expect.objectContaining({ id: 'screen-clip', edge: 'end' })]);
+  });
+
+  it('grows the timeline proportionally and keeps auto-scrolling while extending a hold at the edge', async () => {
+    const hold = visual({
+      id: 'hold-clip',
+      kind: 'video',
+      name: 'Hold segment',
+      trackId: 'hold-track',
+      timelineStartMs: 4_000,
+      timelineDurationMs: 1_000,
+      sourceInMs: 2_000,
+      sourceDurationMs: 1_000,
+      freezeFrameSourceMs: 2_000,
+      order: 0,
+    });
+    const following = visual({
+      id: 'following-clip',
+      kind: 'video',
+      name: 'Following segment',
+      trackId: 'hold-track',
+      timelineStartMs: 5_000,
+      timelineDurationMs: 1_000,
+      sourceInMs: 3_000,
+      sourceDurationMs: 1_000,
+      order: 0,
+    });
+    const holdComposition: ClipComposition = {
+      ...composition(),
+      clips: [hold, following],
+    };
+    const mounted = await mountTracks({
+      composition: holdComposition,
+      duration: 5,
+      selectedClipId: hold.id,
+      isSnappingEnabled: false,
+    });
+    const scroll = setScrubViewportGeometry(mounted!);
+    scroll.dispatchEvent(new Event('scroll'));
+    await flushPromises();
+    const { pendingFrames, flushNextFrame } = queueAnimationFrames();
+    const viewport = mounted!.get('.timeline-viewport').element as HTMLElement;
+    const initialWaveformViewport = waveformTestState.viewport?.();
+    if (!initialWaveformViewport) throw new Error('Expected the waveform viewport probe.');
+    expect(viewport.style.width).toBe('calc(120% + 230px)');
+    expect(viewport.style.minWidth).toBe('calc(100% + 230px)');
+
+    const holdClip = mounted!
+      .findAllComponents(TimelineClipStub)
+      .find((component) => (component.props('clip') as VisualClip).id === hold.id);
+    if (!holdClip) throw new Error('Expected the hold timeline clip stub.');
+    const initialThumbnailSlots = holdClip.props('thumbnailSlots');
+    expect(holdClip.props('deferThumbnailRequests')).toBe(false);
+
+    await holdClip.find('.trim-handle.end').trigger('pointerdown', { clientX: 220 });
+    window.dispatchEvent(pointerEvent('pointermove', 900));
+    flushNextFrame();
+    await flushPromises();
+
+    const preview = mounted!.emitted('preview:composition')?.at(-1)?.[0] as ClipComposition | undefined;
+    expect(preview?.clips.find((clip) => clip.id === hold.id)).toMatchObject({
+      timelineStartMs: 4_000,
+      timelineDurationMs: 2_000,
+      sourceInMs: 2_000,
+      freezeFrameSourceMs: 2_000,
+    });
+    expect(preview?.clips.find((clip) => clip.id === following.id)).toMatchObject({ timelineStartMs: 6_000 });
+    expect(holdClip.props('duration')).toBe(7);
+    expect(viewport.style.width).toBe('calc(168% + 230px)');
+    expect(viewport.style.minWidth).toBe('calc(140% + 230px)');
+    expect(viewport.classList).toContain('is-trimming');
+    expect(holdClip.props('thumbnailSlots')).toBe(initialThumbnailSlots);
+    expect(holdClip.props('deferThumbnailRequests')).toBe(true);
+    expect(waveformTestState.viewport?.()).toBe(initialWaveformViewport);
+    expect(pendingFrames).toHaveLength(1);
+
+    const firstScrollLeft = scroll.scrollLeft;
+    flushNextFrame();
+    await flushPromises();
+    const secondScrollLeft = scroll.scrollLeft;
+    const previewAfterFirstScroll = mounted!.emitted('preview:composition')?.at(-1)?.[0] as ClipComposition | undefined;
+    expect(previewAfterFirstScroll?.clips.find((clip) => clip.id === hold.id)?.timelineDurationMs).toBeGreaterThan(
+      2_000,
+    );
+    flushNextFrame();
+    await flushPromises();
+    const thirdScrollLeft = scroll.scrollLeft;
+
+    expect(secondScrollLeft).toBeGreaterThan(firstScrollLeft);
+    expect(thirdScrollLeft).toBeGreaterThan(secondScrollLeft);
+    expect(holdClip.props('thumbnailSlots')).toBe(initialThumbnailSlots);
+    expect(holdClip.props('deferThumbnailRequests')).toBe(true);
+    expect(waveformTestState.viewport?.()).toBe(initialWaveformViewport);
+    expect(pendingFrames).toHaveLength(1);
+    window.dispatchEvent(pointerEvent('pointerup', 900));
+    await flushPromises();
+
+    const stoppedScrollLeft = scroll.scrollLeft;
+    expect(viewport.classList).not.toContain('is-trimming');
+    expect(holdClip.props('deferThumbnailRequests')).toBe(false);
+    expect(waveformTestState.viewport?.()).not.toBe(initialWaveformViewport);
+    expect(pendingFrames).toHaveLength(0);
+    await flushPromises();
+    expect(scroll.scrollLeft).toBe(stoppedScrollLeft);
+  });
+
+  it('keeps the timeline scale stable so a shortening hold follows the pointer', async () => {
+    const hold = visual({
+      id: 'shorten-hold',
+      kind: 'video',
+      name: 'Hold segment',
+      trackId: 'shorten-hold-track',
+      timelineStartMs: 5_000,
+      timelineDurationMs: 3_000,
+      sourceInMs: 2_000,
+      sourceDurationMs: 3_000,
+      freezeFrameSourceMs: 2_000,
+      order: 0,
+    });
+    const mounted = await mountTracks({
+      composition: { ...composition(), clips: [hold] },
+      duration: 8,
+      selectedClipId: hold.id,
+      isSnappingEnabled: false,
+    });
+    const scroll = setScrubViewportGeometry(mounted!);
+    scroll.dispatchEvent(new Event('scroll'));
+    await flushPromises();
+    scroll.scrollLeft = 500;
+    const { pendingFrames, flushNextFrame } = queueAnimationFrames();
+    const viewport = mounted!.get('.timeline-viewport').element as HTMLElement;
+    expect(viewport.style.width).toBe('calc(120% + 230px)');
+    expect(viewport.style.minWidth).toBe('calc(100% + 230px)');
+    expect(mounted!.findAll('.marker-label').at(-1)?.text()).toBe('8s');
+
+    const holdClip = mounted!
+      .findAllComponents(TimelineClipStub)
+      .find((component) => (component.props('clip') as VisualClip).id === hold.id);
+    if (!holdClip) throw new Error('Expected the hold timeline clip stub.');
+
+    await holdClip.find('.trim-handle.end').trigger('pointerdown', { clientX: 620 });
+    window.dispatchEvent(pointerEvent('pointermove', 120));
+    flushNextFrame();
+    await flushPromises();
+
+    const preview = mounted!.emitted('preview:composition')?.at(-1)?.[0] as ClipComposition | undefined;
+    expect(preview?.clips.find((clip) => clip.id === hold.id)).toMatchObject({
+      timelineStartMs: 5_000,
+      timelineDurationMs: 1_000,
+      sourceInMs: 2_000,
+      freezeFrameSourceMs: 2_000,
+    });
+    expect(holdClip.props('duration')).toBe(8);
+    expect(viewport.style.width).toBe('calc(120% + 230px)');
+    expect(viewport.style.minWidth).toBe('calc(100% + 230px)');
+    expect(mounted!.findAll('.marker-label').at(-1)?.text()).toBe('8s');
+    expect(viewport.classList).toContain('is-trimming');
+    expect(pendingFrames).toHaveLength(1);
+
+    const firstScrollLeft = scroll.scrollLeft;
+    flushNextFrame();
+    await flushPromises();
+    expect(scroll.scrollLeft).toBeLessThan(firstScrollLeft);
+    expect(mounted!.emitted('preview:composition')?.at(-1)?.[0]).toMatchObject({
+      clips: expect.arrayContaining([expect.objectContaining({ id: hold.id, timelineDurationMs: expect.any(Number) })]),
+    });
+
+    window.dispatchEvent(pointerEvent('pointerup', 120));
+    await flushPromises();
+    const stoppedScrollLeft = scroll.scrollLeft;
+    expect(viewport.classList).not.toContain('is-trimming');
+    expect(pendingFrames).toHaveLength(0);
+    await flushPromises();
+    expect(scroll.scrollLeft).toBe(stoppedScrollLeft);
+  });
+
+  it('keeps the last hold trim preview bounded when viewport shrink clamps scrollLeft', async () => {
+    const hold = visual({
+      id: 'clamped-hold',
+      kind: 'video',
+      name: 'Last hold segment',
+      trackId: 'clamped-hold-track',
+      timelineStartMs: 5_000,
+      timelineDurationMs: 3_000,
+      sourceInMs: 2_000,
+      sourceDurationMs: 3_000,
+      freezeFrameSourceMs: 2_000,
+      order: 0,
+    });
+    const mounted = await mountTracks({
+      composition: { ...composition(), clips: [hold] },
+      duration: 8,
+      selectedClipId: hold.id,
+      isSnappingEnabled: false,
+    });
+    const scroll = setScrubViewportGeometry(mounted!);
+    scroll.dispatchEvent(new Event('scroll'));
+    await flushPromises();
+    let browserScrollLeft = 500;
+    Object.defineProperty(scroll, 'scrollLeft', {
+      configurable: true,
+      get: () => browserScrollLeft,
+      set: (value: number) => {
+        browserScrollLeft = Math.max(0, value);
+      },
+    });
+    scroll.scrollLeft = browserScrollLeft;
+    const { pendingFrames, flushNextFrame } = queueAnimationFrames();
+    const viewport = mounted!.get('.timeline-viewport').element as HTMLElement;
+    const holdClip = mounted!
+      .findAllComponents(TimelineClipStub)
+      .find((component) => (component.props('clip') as VisualClip).id === hold.id);
+    if (!holdClip) throw new Error('Expected the hold timeline clip stub.');
+
+    await holdClip.find('.trim-handle.end').trigger('pointerdown', { clientX: 620 });
+    window.dispatchEvent(pointerEvent('pointermove', 120));
+    flushNextFrame();
+    await flushPromises();
+
+    const previewBeforeClamp = mounted!.emitted('preview:composition')?.at(-1)?.[0] as ClipComposition | undefined;
+    const holdBeforeClamp = previewBeforeClamp?.clips.find((clip) => clip.id === hold.id);
+    if (!holdBeforeClamp) throw new Error('Expected the initial last-hold trim preview.');
+    const previewEventCount = mounted!.emitted('preview:composition')?.length ?? 0;
+    expect(holdBeforeClamp.timelineStartMs + holdBeforeClamp.timelineDurationMs).toBe(6_000);
+    expect(holdClip.props('duration')).toBe(8);
+
+    // Browser scroll containers clamp scrollLeft when the just-shortened viewport shrinks.
+    scroll.scrollLeft = 0;
+    scroll.dispatchEvent(new Event('scroll'));
+    while (pendingFrames.size > 0) {
+      flushNextFrame();
+      await flushPromises();
+    }
+
+    const previewAfterClamp = mounted!.emitted('preview:composition')?.at(-1)?.[0] as ClipComposition | undefined;
+    const holdAfterClamp = previewAfterClamp?.clips.find((clip) => clip.id === hold.id);
+    expect(holdAfterClamp).toMatchObject({ timelineStartMs: 5_000, timelineDurationMs: 1_000 });
+    expect(mounted!.emitted('preview:composition')).toHaveLength(previewEventCount);
+    expect(holdClip.props('duration')).toBe(8);
+    expect(viewport.style.width).toBe('calc(120% + 230px)');
+    expect(viewport.style.minWidth).toBe('calc(100% + 230px)');
+
+    window.dispatchEvent(pointerEvent('pointerup', 120));
+    await flushPromises();
+    expect(pendingFrames).toHaveLength(0);
+  });
+
+  it('clamps a grouped video trim preview to the shortest source bound without snapping back on pointerup', async () => {
+    const groupedComposition: ClipComposition = {
+      schemaVersion: 6,
+      keyboardCaptionSessions: [],
+      assets: [
+        { ...asset('long-video', 'video'), durationMs: 8_000 },
+        { ...asset('short-video', 'video'), durationMs: 3_000 },
+      ],
+      clips: [
+        visual({
+          id: 'grouped-video',
+          kind: 'video',
+          name: 'Grouped video',
+          assetId: 'long-video',
+          timelineDurationMs: 2_000,
+          sourceDurationMs: 2_000,
+          groupId: 'source-group',
+          trackId: 'video-track',
+        }),
+        visual({
+          id: 'grouped-short',
+          kind: 'webcam',
+          name: 'Grouped short source',
+          assetId: 'short-video',
+          timelineDurationMs: 2_000,
+          sourceDurationMs: 2_000,
+          groupId: 'source-group',
+          trackId: 'webcam-track',
+        }),
+      ],
+    };
+    const mounted = await mountTracks({
+      composition: groupedComposition,
+      selectedClipId: 'grouped-video',
+      isSnappingEnabled: false,
+    });
+    const bounds = clipTrimBounds(groupedComposition, 'grouped-video', 'end');
+    expect(bounds.maxMs).toBe(3_000);
+    const videoClip = mounted!
+      .findAllComponents(TimelineClipStub)
+      .find((component) => (component.props('clip') as VisualClip).id === 'grouped-video');
+    if (!videoClip) throw new Error('Expected the grouped video timeline clip stub.');
+
+    await videoClip.find('.trim-handle.end').trigger('pointerdown', { clientX: 200 });
+    window.dispatchEvent(pointerEvent('pointermove', 600));
+    await flushPromises();
+
+    const previews = mounted!.emitted('preview:composition') ?? [];
+    const preview = previews.at(-1)?.[0] as ClipComposition | undefined;
+    const previewClip = preview?.clips.find((clip) => clip.id === 'grouped-video');
+    if (!previewClip) throw new Error('Expected a grouped video trim preview.');
+    expect(previewClip.timelineStartMs + previewClip.timelineDurationMs).toBe(bounds.maxMs);
+    expect(preview?.clips.find((clip) => clip.id === 'grouped-short')).toMatchObject({
+      timelineStartMs: 0,
+      timelineDurationMs: bounds.maxMs,
+    });
+    expect(mounted!.emitted('trim:clip') ?? []).toHaveLength(0);
+
+    window.dispatchEvent(pointerEvent('pointerup', 600));
+
+    const trimEvents = mounted!.emitted('trim:clip') ?? [];
+    expect(trimEvents.at(-1)?.[0]).toEqual({ id: 'grouped-video', edge: 'end', timeMs: bounds.maxMs });
   });
 
   it('releases the zoom trim preview when the trim ends so later props control the indicator', async () => {

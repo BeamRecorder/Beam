@@ -2,9 +2,15 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { Check, Move, RotateCcw, X } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
+import Select from '~/ui/select/Select.vue';
 import { capture } from '../../../api/capture';
 import type { ScreenRegionOverlayOptions, ScreenRegion } from '../../../api/types/screen-region';
 import { useTranslate } from '~/i18n/useTranslate';
+import {
+  SCREEN_REGION_PRESETS,
+  computePresetRegion,
+  findMatchingPreset,
+} from './screen-region-presets';
 
 const { t } = useTranslate('ScreenRegionOverlay');
 
@@ -17,6 +23,7 @@ type Handle = 'nw' | 'ne' | 'sw' | 'se';
 
 const options = ref<(ScreenRegionOverlayOptions & { mode?: 'select' | 'record' }) | null>(null);
 const region = ref<ScreenRegion | null>(null);
+const selectedPreset = ref<string | null>(null);
 let interaction: Interaction = null;
 let unsubscribe: (() => void) | null = null;
 
@@ -49,6 +56,53 @@ const isFullScreenRegion = (r: ScreenRegion | null): boolean => {
   return r.x <= 0.01 && r.y <= 0.01 && r.width >= 0.98 && r.height >= 0.98;
 };
 
+const getEffectiveBounds = () =>
+  options.value?.bounds || {
+    x: 0,
+    y: 0,
+    width: window.innerWidth,
+    height: window.innerHeight,
+  };
+
+const persistPreset = async (presetValue: string | null) => {
+  try {
+    const prefs = await capture.getPreferences();
+    await capture.updatePreferences({
+      extras: {
+        ...prefs.extras,
+        screenRegionPreset: presetValue,
+      },
+    });
+  } catch {
+    // Ignored if preferences are unavailable
+  }
+};
+
+const updatePresetMatch = () => {
+  if (!region.value || isFullScreenRegion(region.value)) {
+    selectedPreset.value = null;
+    return;
+  }
+  const bounds = getEffectiveBounds();
+  selectedPreset.value = findMatchingPreset(region.value, bounds);
+};
+
+const applyPreset = (presetValue: string | number) => {
+  const value = String(presetValue);
+  const bounds = getEffectiveBounds();
+  const nextRegion = computePresetRegion(
+    value,
+    bounds,
+    region.value,
+    isFullScreenRegion(region.value),
+  );
+  if (nextRegion) {
+    region.value = nextRegion;
+    selectedPreset.value = value;
+    void persistPreset(value);
+  }
+};
+
 const begin = (event: PointerEvent) => {
   if (!isSelecting.value) return;
   const target = event.target as HTMLElement;
@@ -78,6 +132,7 @@ const move = (event: PointerEvent) => {
   const next = point(event);
   if (interaction.kind === 'draw') {
     region.value = normalize(interaction.startX, interaction.startY, next.x, next.y);
+    updatePresetMatch();
     return;
   }
   if (interaction.kind === 'move') {
@@ -105,15 +160,21 @@ const move = (event: PointerEvent) => {
     width: Math.min(1, right) - Math.max(0, left),
     height: Math.min(1, bottom) - Math.max(0, top),
   };
+  updatePresetMatch();
 };
 
 const FULL_SCREEN_REGION: ScreenRegion = { x: 0, y: 0, width: 1, height: 1 };
 
 const end = () => {
+  if (interaction && (interaction.kind === 'draw' || interaction.kind === 'resize')) {
+    updatePresetMatch();
+  }
   interaction = null;
 };
 const reset = () => {
   region.value = { ...FULL_SCREEN_REGION };
+  selectedPreset.value = null;
+  void persistPreset(null);
 };
 const confirm = () => {
   if (!region.value || region.value.width <= 0 || region.value.height <= 0) return;
@@ -121,11 +182,35 @@ const confirm = () => {
 };
 const cancel = () => capture.cancelScreenRegion();
 
+const loadSavedPreset = async () => {
+  try {
+    const prefs = await capture.getPreferences();
+    const saved = prefs.extras?.screenRegionPreset;
+    if (typeof saved === 'string' && SCREEN_REGION_PRESETS.some((p) => p.value === saved)) {
+      selectedPreset.value = saved;
+      if (!region.value || isFullScreenRegion(region.value)) {
+        applyPreset(saved);
+      }
+    }
+  } catch {
+    // Ignored if preferences are unavailable
+  }
+};
+
 onMounted(() => {
   unsubscribe = capture.onScreenRegionConfigure((next) => {
     options.value = next;
-    region.value = next.region ? { ...next.region } : { ...FULL_SCREEN_REGION };
+    if (next.region) {
+      region.value = { ...next.region };
+      updatePresetMatch();
+    } else if (selectedPreset.value) {
+      applyPreset(selectedPreset.value);
+    } else {
+      region.value = { ...FULL_SCREEN_REGION };
+      updatePresetMatch();
+    }
   });
+  void loadSavedPreset();
 });
 onBeforeUnmount(() => unsubscribe?.());
 </script>
@@ -145,6 +230,16 @@ onBeforeUnmount(() => unsubscribe?.());
     </div>
     <aside v-if="isSelecting" class="region-toolbar" @pointerdown.stop>
       <span class="region-instruction"><Move :size="16" /> {{ t('instruction') }}</span>
+      <div class="region-preset-picker">
+        <Select
+          :model-value="selectedPreset"
+          :options="SCREEN_REGION_PRESETS"
+          :placeholder="t('preset')"
+          size="sm"
+          direction="up"
+          @update:model-value="applyPreset"
+        />
+      </div>
       <div class="region-actions">
         <Button variant="ghost" size="sm" :icon="RotateCcw" @click="reset">{{ t('reset') }}</Button>
         <Button variant="ghost" size="sm" :icon="X" @click="cancel">{{ t('cancel') }}</Button>
@@ -229,7 +324,7 @@ onBeforeUnmount(() => unsubscribe?.());
   bottom: 24px;
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
   padding: 10px 12px 10px 16px;
   border: 1px solid color-mix(in srgb, var(--color-border-strong) 76%, transparent);
   border-radius: var(--radius-lg);
@@ -246,6 +341,10 @@ onBeforeUnmount(() => unsubscribe?.());
   gap: 8px;
   font: 600 13px var(--font-sans);
   white-space: nowrap;
+}
+.region-preset-picker {
+  width: 140px;
+  flex-shrink: 0;
 }
 .region-actions {
   display: flex;

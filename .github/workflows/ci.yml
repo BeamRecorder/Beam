@@ -129,7 +129,7 @@ jobs:
           dpkg-deb --contents "$deb" | grep 'resources/package-type'
           rpm --query --package --list "$rpm_package" | grep "resources/capture-engine/capture-engine-$version"
           rpm --query --package --list "$rpm_package" | grep 'resources/package-type'
-          sudo apt-get install --yes "$deb"
+          sudo apt-get install --yes "./$deb"
           test -x /usr/libexec/beam-input-helper
           test -f /usr/share/polkit-1/actions/com.beam.input-monitor.policy
           node scripts/release/artifacts.cjs metadata dist_electron latest-linux.yml

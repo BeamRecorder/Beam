@@ -11,15 +11,17 @@ import type {
 } from './playback-types';
 import {
   activeAt,
+  activeConsumersForTick,
   createPlaybackConsumer,
   createPlaybackSink,
   disposeLoadedAssets,
+  PLAYBACK_TICK_PRELOAD_SECONDS,
+  shouldDecodeTickFrame,
   sourceTime,
   type AssetDecoder,
   type ClipConsumer,
   type QueuedFrame,
 } from './playback-worker-consumers';
-
 const reportPlaybackWorkerError = (message: string, error?: unknown) =>
   console.error(`[Beam media:playback-worker] ${message}`, error ?? '');
 
@@ -266,7 +268,6 @@ async function sequentialFrame(consumer: ClipConsumer, targetSeconds: number): P
   await fillQueue(consumer);
   return frame;
 }
-
 async function processTicks() {
   if (processingTick || processingSeek) return;
   processingTick = true;
@@ -275,14 +276,22 @@ async function processTicks() {
       const request = pendingTick;
       pendingTick = null;
       if (request.generation !== generation) continue;
-      const activeConsumers = [...consumers.values()].filter((consumer) =>
-        activeAt(consumer.clip, request.timelineSeconds),
+      const activeConsumers = activeConsumersForTick(
+        consumers.values(),
+        request.timelineSeconds,
+        PLAYBACK_TICK_PRELOAD_SECONDS,
       );
       const decoded = await Promise.allSettled(
-        activeConsumers.map(async (consumer) => ({
-          consumer,
-          frame: await sequentialFrame(consumer, sourceTime(consumer.clip, request.timelineSeconds)),
-        })),
+        activeConsumers.map(async (consumer) => {
+          const sampleTimelineSeconds = Math.max(request.timelineSeconds, consumer.clip.timelineStartSeconds);
+          const targetSeconds = sourceTime(consumer.clip, sampleTimelineSeconds);
+          return {
+            consumer,
+            frame: shouldDecodeTickFrame(consumer, targetSeconds)
+              ? await sequentialFrame(consumer, targetSeconds)
+              : null,
+          };
+        }),
       );
       const failure = decoded.find((result): result is PromiseRejectedResult => result.status === 'rejected');
       if (failure) {
@@ -467,19 +476,15 @@ function waitForProcessingIdle() {
   if (!processingSeek && !processingTick) return Promise.resolve();
   return new Promise<void>((resolve) => processingIdleWaiters.add(resolve));
 }
-
 function resolveProcessingIdle() {
   if (processingSeek || processingTick) return;
   for (const resolve of processingIdleWaiters) resolve();
   processingIdleWaiters.clear();
 }
-
 async function shutdown() {
   await disposeAll();
   await waitForProcessingIdle();
   await Promise.allSettled([...loadTasks]);
-  // Let Mediabunny's iterator pumps observe disposal and synchronously close
-  // their WebCodecs decoders before the renderer terminates this worker.
   await new Promise<void>((resolve) => setTimeout(resolve, 0));
   post({ type: 'disposed', generation });
 }

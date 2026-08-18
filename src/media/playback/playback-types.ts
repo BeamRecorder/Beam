@@ -13,6 +13,7 @@ export interface PlaybackClipDescriptor {
   timelineDurationSeconds: number;
   sourceInSeconds: number;
   playbackRate: number;
+  freezeFrameSourceSeconds?: number;
 }
 
 export type PlaybackWorkerRequest =

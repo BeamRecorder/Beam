@@ -241,7 +241,7 @@
     "motionBlur": "Rozmycie ruchu",
     "cursorPack": "Pakiet kursorów",
     "packInfo": "O zgodnych pakietach kursorów",
-    "packDescription": "Beam obsługuje motywy kursorów SVG zawierające folder cursors_scalable.",
+    "packDescription": "Beam obsługuje standardowe motywy XCursor i źródła SVG KDE.",
     "findCursorPacks": "Znajdź pakiety kursorów",
     "compatibleFormat": "Zgodny format",
     "import": "Importuj",
@@ -462,6 +462,7 @@
   },
   "ScreenRegionOverlay": {
     "instruction": "Wybierz obszar do nagrania",
+    "preset": "Preset",
     "reset": "Resetuj",
     "cancel": "Anuluj",
     "useThisArea": "Użyj tego obszaru"

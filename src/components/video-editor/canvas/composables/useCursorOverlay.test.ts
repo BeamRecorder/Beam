@@ -1,4 +1,4 @@
-import { nextTick } from 'vue';
+import { nextTick, ref } from 'vue';
 import { describe, expect, it, vi } from 'vitest';
 import type { CursorPackDescriptor } from '../../../../api/types/cursor-pack';
 import { MACOS_CURSOR_PACK } from '../../properties/cursor/cursor-packs';
@@ -87,7 +87,15 @@ const baseOptions = (): UseCursorOverlayOptions => ({
         ],
       },
     }) as never,
-  screenClip: () => ({ transform: { x: 0, y: 0, width: 1, height: 1 }, isMirrored: false }) as never,
+  screenClip: () =>
+    ({
+      timelineStartMs: 0,
+      timelineDurationMs: 10_000,
+      sourceInMs: 0,
+      playbackRate: 1,
+      transform: { x: 0, y: 0, width: 1, height: 1 },
+      isMirrored: false,
+    }) as never,
   isScreenEnabled: () => true,
   showBackground: () => false,
   onRenderOnce: vi.fn(),
@@ -241,5 +249,78 @@ describe('useCursorOverlay', () => {
       expect.closeTo(20, 0.001),
       expect.closeTo(10, 0.001),
     );
+  });
+
+  it('reloads the selected pack when it becomes available without a time or selection change', async () => {
+    getCursorImage.mockResolvedValue({ complete: true, naturalWidth: 32 } as HTMLImageElement);
+    const pack = wideCursorPack();
+    const selectedPack = ref<CursorPackDescriptor | null>(null);
+    const selection = ref({ packId: pack.id, mode: 'automatic' as const, cursorId: null });
+    const options = baseOptions();
+    options.cursorPack = () => selectedPack.value;
+    options.cursorSelection = () => selection.value;
+    const overlay = useCursorOverlay(options);
+
+    await nextTick();
+    await Promise.resolve();
+    getCursorImage.mockClear();
+    const time = options.currentTime();
+    const unchangedSelection = { ...selection.value };
+
+    selectedPack.value = pack;
+    await nextTick();
+    await Promise.resolve();
+
+    expect(options.currentTime()).toBe(time);
+    expect(selection.value).toEqual(unchangedSelection);
+    expect(getCursorImage).toHaveBeenCalledWith(pack, pack.cursors[0], 240, 120, '#ffffff');
+    expect(overlay.customCursorImage.value).not.toBeNull();
+    expect(options.onRenderOnce).toHaveBeenCalled();
+  });
+
+  it('keeps the newest cursor image when an older image request resolves later', async () => {
+    getCursorImage.mockClear();
+    const firstPack = wideCursorPack();
+    const secondPack = { ...wideCursorPack(), id: 'imported:newer' };
+    const firstImage = { id: 'first', complete: true, naturalWidth: 32 } as HTMLImageElement;
+    const secondImage = { id: 'second', complete: true, naturalWidth: 32 } as HTMLImageElement;
+    let resolveFirst: ((image: HTMLImageElement) => void) | undefined;
+    let resolveSecond: ((image: HTMLImageElement) => void) | undefined;
+    getCursorImage.mockImplementation((pack: CursorPackDescriptor) => {
+      if (pack.id === firstPack.id)
+        return new Promise<HTMLImageElement>((resolve) => {
+          resolveFirst = resolve;
+        });
+      return new Promise<HTMLImageElement>((resolve) => {
+        resolveSecond = resolve;
+      });
+    });
+    const selectedPack = ref<CursorPackDescriptor | null>(firstPack);
+    const selection = ref({ packId: firstPack.id, mode: 'automatic' as const, cursorId: null });
+    const options = baseOptions();
+    options.cursorPack = () => selectedPack.value;
+    options.cursorSelection = () => selection.value;
+    const overlay = useCursorOverlay(options);
+
+    await nextTick();
+    expect(resolveFirst).toBeTypeOf('function');
+
+    selectedPack.value = secondPack;
+    selection.value = { packId: secondPack.id, mode: 'automatic', cursorId: null };
+    await nextTick();
+    expect(resolveSecond).toBeTypeOf('function');
+    expect(getCursorImage).toHaveBeenCalledTimes(2);
+
+    resolveSecond?.(secondImage);
+    await Promise.resolve();
+    await Promise.resolve();
+    await nextTick();
+    expect(overlay.customCursorImage.value).toMatchObject({ id: 'second' });
+
+    resolveFirst?.(firstImage);
+    await Promise.resolve();
+    await Promise.resolve();
+    await nextTick();
+    expect(overlay.customCursorImage.value).toMatchObject({ id: 'second' });
   });
 });

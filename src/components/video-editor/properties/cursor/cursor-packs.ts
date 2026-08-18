@@ -1,5 +1,6 @@
 import type { CursorAssetDescriptor, CursorPackDescriptor, CursorSelection } from '~/api/types/cursor-pack';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
+import builtinCursorPacks from './builtin-cursor-packs.json';
 
 const HOTSPOTS: Record<string, { x: number; y: number }> = {
   default: { x: 10, y: 7 },
@@ -62,6 +63,15 @@ export const MACOS_CURSOR_PACK: CursorPackDescriptor = {
   automaticMap: Object.fromEntries(Object.keys(HOTSPOTS).map((id) => [id, id])),
 };
 
+export const BUNDLED_CURSOR_PACKS: CursorPackDescriptor[] = (builtinCursorPacks as unknown as CursorPackDescriptor[]).map(
+  (pack) => ({
+    ...pack,
+    cursors: pack.cursors.map((cursor) => ({ ...cursor, url: resolvePublicAssetUrl(cursor.url) })),
+  }),
+);
+
+export const BUILTIN_CURSOR_PACKS = [MACOS_CURSOR_PACK, ...BUNDLED_CURSOR_PACKS];
+
 const ROLE_CANDIDATES: Record<string, string[]> = {
   default: ['default', 'left_ptr', 'arrow'],
   handpointing: ['handpointing', 'pointer', 'hand2'],
@@ -108,6 +118,8 @@ export function cursorGeometry(asset: CursorAssetDescriptor, size: number) {
 }
 
 export const orderedCursorPacks = (imported: CursorPackDescriptor[]) => [
-  MACOS_CURSOR_PACK,
-  ...imported.filter((pack) => pack.id !== MACOS_CURSOR_PACK.id).sort((a, b) => a.name.localeCompare(b.name)),
+  ...BUILTIN_CURSOR_PACKS,
+  ...imported
+    .filter((pack) => !BUILTIN_CURSOR_PACKS.some((builtin) => builtin.id === pack.id))
+    .sort((a, b) => a.name.localeCompare(b.name)),
 ];

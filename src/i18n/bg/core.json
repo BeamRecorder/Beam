@@ -241,7 +241,7 @@
     "motionBlur": "Замъгляване при движение",
     "cursorPack": "Пакет курсори",
     "packInfo": "За съвместимите пакети курсори",
-    "packDescription": "Beam приема SVG теми за курсори, които съдържат папка cursors_scalable.",
+    "packDescription": "Beam поддържа стандартни XCursor теми и KDE SVG източници.",
     "findCursorPacks": "Намиране на пакети",
     "compatibleFormat": "Съвместим формат",
     "import": "Импортиране",
@@ -462,6 +462,7 @@
   },
   "ScreenRegionOverlay": {
     "instruction": "Изберете област за запис",
+    "preset": "Шаблон",
     "reset": "Нулиране",
     "cancel": "Отказ",
     "useThisArea": "Използване на тази област"

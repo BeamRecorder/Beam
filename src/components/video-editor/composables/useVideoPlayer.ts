@@ -6,7 +6,7 @@ import {
   type PlaybackState,
   type PreviewQuality,
 } from '~/media/playback';
-import type { ClipComposition, MediaError } from '~/media/shared';
+import { compositionDurationMs, type ClipComposition, type MediaError } from '~/media/shared';
 import {
   BACKGROUND_MEDIA,
   getRandomBackgroundImage,
@@ -100,10 +100,7 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
     const generation = ++loadGeneration;
     const previousTime = currentTime.value;
     const wasPlaying = playingIntent;
-    duration.value = composition.clips.reduce(
-      (end, clip) => Math.max(end, (clip.timelineStartMs + clip.timelineDurationMs) / 1_000),
-      0,
-    );
+    duration.value = compositionDurationMs(composition) / 1_000;
     playbackError.value = null;
     const playback = ensureEngine();
     const targetTime = Math.min(previousTime, duration.value);

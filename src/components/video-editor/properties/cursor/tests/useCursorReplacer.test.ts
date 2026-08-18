@@ -72,7 +72,16 @@ describe('useCursorReplacer', () => {
 
     cursor.importedPacks.value = [makePack('pack:zeta', 'Zeta'), makePack('pack:alpha', 'Alpha')];
 
-    expect(cursor.packs.value.map((pack) => pack.id)).toEqual(['builtin:macos', 'pack:alpha', 'pack:zeta']);
+    expect(cursor.packs.value.map((pack) => pack.id)).toEqual([
+      'builtin:macos',
+      'builtin:bibata-material-noir',
+      'builtin:noir',
+      'builtin:noir-white',
+      'builtin:moga-dark',
+      'builtin:moga-white',
+      'pack:alpha',
+      'pack:zeta',
+    ]);
     expect(cursor.selectedPack.value?.id).toBe('builtin:macos');
   });
 
@@ -128,6 +137,53 @@ describe('useCursorReplacer', () => {
     expect(svg).toContain('color="#ff00ff"');
     expect(svg).toContain('currentColor');
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:tintable');
+  });
+
+  it('loads PNG assets as the fetched Blob without SVG transformation and caches the image', async () => {
+    const pack = makePack('pack:png');
+    const asset = { ...pack.cursors[0]!, format: 'png' as const };
+    const pngBlob = { type: 'image/png', marker: 'png' };
+    const blobResponse = vi.fn().mockResolvedValue(pngBlob);
+    const textResponse = vi.fn();
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, blob: blobResponse, text: textResponse });
+    const blobConstructor = vi.fn();
+    const createObjectURL = vi.fn().mockReturnValue('blob:png');
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('Image', LoadingImage);
+    vi.stubGlobal('Blob', blobConstructor);
+    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL });
+
+    const cursor = useCursorReplacer();
+    const image = await cursor.getCursorImage(pack, asset, 80, 40, '#ff00ff');
+    const secondImage = await cursor.getCursorImage(pack, asset, 80, 40, '#ff00ff');
+
+    expect(secondImage).toBe(image);
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(blobResponse).toHaveBeenCalledOnce();
+    expect(textResponse).not.toHaveBeenCalled();
+    expect(blobConstructor).not.toHaveBeenCalled();
+    expect(createObjectURL).toHaveBeenCalledOnce();
+    expect(createObjectURL).toHaveBeenCalledWith(pngBlob);
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:png');
+  });
+
+  it('reports a PNG fetch failure and does not cache the rejected request', async () => {
+    const pack = makePack('pack:png-failure');
+    const asset = { ...pack.cursors[0]!, format: 'png' as const };
+    const failure = new Error('PNG unavailable');
+    const blobResponse = vi.fn().mockRejectedValueOnce(failure).mockResolvedValue({ type: 'image/png' });
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, blob: blobResponse });
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('Image', LoadingImage);
+    vi.stubGlobal('URL', { createObjectURL: vi.fn().mockReturnValue('blob:png-retry'), revokeObjectURL: vi.fn() });
+
+    const cursor = useCursorReplacer();
+    await expect(cursor.getCursorImage(pack, asset, 80, 40, '#ff00ff')).rejects.toBe(failure);
+    await cursor.getCursorImage(pack, asset, 80, 40, '#ff00ff');
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(blobResponse).toHaveBeenCalledTimes(2);
   });
 
   it('preserves original colours and does not split the cache by requested colour', async () => {

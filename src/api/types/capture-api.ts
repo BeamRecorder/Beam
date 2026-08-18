@@ -240,7 +240,6 @@ export interface PreferenceSettings {
   recordingBar: { visibility: RecordingBarVisibility };
   recordingInteractions: { enabled: boolean; noticeDismissed: boolean };
   onboardingCompleted?: boolean;
-  alwaysOnTop: boolean;
   devices: Record<string, unknown>;
   shortcuts: Record<string, PreferenceShortcut>;
   backgroundPresets: { colors: string[]; gradients: GradientBackground[] };

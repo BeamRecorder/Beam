@@ -180,6 +180,29 @@ test('serves cursor-pack SVG assets with the SVG MIME type and range semantics',
   }
 });
 
+test('serves cursor-pack PNG assets with the PNG MIME type and range semantics', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-cursor-media-'));
+  const file = path.join(root, '000-default.png');
+  const url = 'project-media://cursor/pack-id/000-default';
+  fs.writeFileSync(file, Buffer.from('png-cursor'));
+  const handler = createProjectMediaHandler({
+    projectStore: { mediaFileForUrl: () => null },
+    cursorLibrary: {
+      fileForUrl: (candidate) => (candidate === url ? file : null),
+    },
+  });
+
+  try {
+    const response = await handler(request(url, 'bytes=1-3'));
+    assert.equal(response.status, 206);
+    assert.equal(response.headers.get('content-type'), 'image/png');
+    assert.equal(response.headers.get('content-range'), 'bytes 1-3/10');
+    assert.deepEqual(await responseBody(response), Buffer.from('ng-'));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('uses image MIME types for AVIF and BMP assets', () => {
   assert.equal(mimeTypeFor('/tmp/background.avif'), 'image/avif');
   assert.equal(mimeTypeFor('/tmp/background.bmp'), 'image/bmp');
