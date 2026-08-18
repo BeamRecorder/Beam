@@ -36,6 +36,7 @@ const { createWhisperModelStore } = require('./captions/whisper-model-store.cjs'
 const { registerWhisperIpc } = require('./captions/whisper-ipc.cjs');
 const { createPreferencesStore } = require('./preferences/preferences-store.cjs');
 const { registerPreferencesIpc } = require('./preferences/preferences-ipc.cjs');
+const { createLinuxShortcutSource } = require('./preferences/linux-shortcut-source.cjs');
 const { createTeleprompterWindow } = require('./teleprompter/teleprompter-window.cjs');
 const { registerTeleprompterIpc } = require('./teleprompter/teleprompter-ipc.cjs');
 const { createTeleprompterStorage } = require('./teleprompter/teleprompter-storage.cjs');
@@ -70,12 +71,19 @@ const logStartup = (step) => {
 };
 
 const applicationRoot = path.join(__dirname, '..');
+if (process.platform === 'linux') {
+  // Use Chromium's XDG GlobalShortcuts portal on desktops that provide it.
+  app.commandLine.appendSwitch('enable-features', 'GlobalShortcutsPortal');
+}
 const controllers = new WeakMap();
 let captureEngine = null;
 let coordinator = null;
 let quitting = false;
 let showExistingHud = () => false;
 let pendingHudRestore = false;
+let shortcutReady = false;
+const pendingExternalShortcuts = [];
+let externalShortcutHandler = (id) => pendingExternalShortcuts.push(id);
 
 function restoreCanonicalHud() {
   if (showExistingHud()) pendingHudRestore = false;
@@ -247,12 +255,28 @@ function initializeApplication() {
       appIconPath,
     });
     setTimeout(() => teleprompterWindow.prepare(), 0);
+    const dispatchShortcut = (id) => {
+      if (id.startsWith('teleprompter.')) return teleprompterWindow.handleShortcut(id);
+      BrowserWindow.getAllWindows().forEach((win) => win.webContents.send('preferences:shortcut', id));
+    };
+    externalShortcutHandler = (id) => {
+      if (!shortcutReady) {
+        pendingExternalShortcuts.push(id);
+        return;
+      }
+      if (preferencesStore.read().shortcuts[id]?.scope === 'global') dispatchShortcut(id);
+    };
     const preferencesCleanup = registerPreferencesIpc({
       ipcMain: applicationIpc,
       BrowserWindow,
       globalShortcut,
       store: preferencesStore,
-      shortcutHandler: (id) => teleprompterWindow.handleShortcut(id),
+      shortcutHandler: dispatchShortcut,
+      linuxShortcutSource: createLinuxShortcutSource({
+        app,
+        applicationRoot,
+        platform: process.platform,
+      }),
       onPreferencesChanged: (preferences) => {
         for (const win of BrowserWindow.getAllWindows()) {
           const controller = controllers.get(win);
@@ -379,6 +403,10 @@ function initializeApplication() {
       if (coordinator.canAcceptWork()) app.quit();
     });
     const win = createWindow(preferencesStore, appIconPath);
+    win.webContents.once('did-finish-load', () => {
+      shortcutReady = true;
+      for (const id of pendingExternalShortcuts.splice(0)) externalShortcutHandler(id);
+    });
     const selectedTheme = preferencesStore.read().theme;
     const editorWindow = createEditorWindowManager({
       applicationRoot,
@@ -472,4 +500,5 @@ initializeSingleInstance({
   app,
   initialize: initializeApplication,
   restoreHud: restoreCanonicalHud,
+  handleShortcut: (id) => externalShortcutHandler(id),
 });
