@@ -1,4 +1,8 @@
 {
+  "CameraLayoutPanel": {
+    "reactToZoom": "Reaccionar al zoom",
+    "reactToZoomDescription": "Mantén la webcam anclada mientras adaptas su tamaño al zoom del lienzo."
+  },
   "ShadowDirectionGroup": {
     "shadowDirection": "Dirección de la sombra",
     "around": "Alrededor",

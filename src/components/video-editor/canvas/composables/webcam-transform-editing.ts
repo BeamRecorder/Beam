@@ -1,16 +1,15 @@
 import type { ClipComposition, NormalizedTransform, VisualClip } from '~/media/shared/composition-types';
-import { isSplitCameraLayout, type CameraFramingPreset } from '~/media/shared/camera-layout-types';
+import type { CameraFramingPreset } from '~/media/shared/camera-layout-types';
 import type { VideoWindowBounds } from './useCameraZoom';
 import {
   clampWebcamTransformToVisibleBounds,
   computeWebcamLayout,
   getWebcamZoomFactor,
   normalizeWebcamTransformToVisibleFraming,
+  webcamReactsToZoom,
   webcamSettingsForAppearance,
 } from '../../composition/webcam/webcam-zoom';
 import { resolveCameraFraming } from '../../composition/camera-layout';
-
-const reactsToZoom = (clip: VisualClip) => !isSplitCameraLayout(clip.cameraLayoutPreset ?? 'custom');
 
 export function webcamDisplayLayout(
   composition: ClipComposition,
@@ -26,7 +25,7 @@ export function webcamDisplayLayout(
     bounds.scale,
     {
       ...webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY),
-      reactToZoom: reactsToZoom(clip),
+      reactToZoom: webcamReactsToZoom(clip),
     },
     transform,
   );
@@ -58,7 +57,7 @@ export function editableWebcamTransform(
     bounds.scale,
     {
       ...webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY),
-      reactToZoom: reactsToZoom(clip),
+      reactToZoom: webcamReactsToZoom(clip),
     },
     transform,
     clip.cameraFramingPreset ?? 'custom',
@@ -68,7 +67,7 @@ export function editableWebcamTransform(
 }
 
 export const webcamResizePointerScale = (clip: VisualClip, boundsScale: number) =>
-  getWebcamZoomFactor(boundsScale, reactsToZoom(clip));
+  getWebcamZoomFactor(boundsScale, webcamReactsToZoom(clip));
 
 export const clampEditedWebcamTransform = (clip: VisualClip, transform: NormalizedTransform, boundsScale: number) =>
-  clampWebcamTransformToVisibleBounds(transform, boundsScale, reactsToZoom(clip));
+  clampWebcamTransformToVisibleBounds(transform, boundsScale, webcamReactsToZoom(clip));

@@ -577,7 +577,8 @@ describe('TimelineTracks', () => {
     await mounted!.setProps({ zoomLevel: 240 });
     expect(mounted!.get('.timeline-viewport').attributes('style')).toContain('width: calc(240% + 230px)');
     const thumbnailSlots = screen.props('thumbnailSlots') as
-      Array<{ timelineSeconds: number; durationSeconds: number }> | undefined;
+      | Array<{ timelineSeconds: number; durationSeconds: number }>
+      | undefined;
     if (!thumbnailSlots) throw new Error('Expected thumbnail slots after viewport zoom.');
     expect(thumbnailSlots).toHaveLength(8);
     expect(thumbnailSlots[0]!).toEqual({ timelineSeconds: 2, durationSeconds: 1 });
@@ -1519,7 +1520,8 @@ describe('TimelineTracks', () => {
     await flushPromises();
 
     const pastePayload = mounted!.emitted('paste:item')?.at(-1)?.[0] as
-      { item: { type: string; clip?: { id: string } }; timeMs: number; target?: { category: string } } | undefined;
+      | { item: { type: string; clip?: { id: string } }; timeMs: number; target?: { category: string } }
+      | undefined;
     expect(pastePayload?.timeMs).toBe(2_000);
     expect(pastePayload?.item).toEqual(expect.objectContaining({ type: 'clip' }));
     expect(pastePayload?.item.clip?.id).toBe('image-clip');
@@ -1553,7 +1555,8 @@ describe('TimelineTracks', () => {
     pasteBtn?.click();
     await flushPromises();
     let pastePayload = mounted!.emitted('paste:item')?.at(-1)?.[0] as
-      { item: { type: string }; target?: { category: string } } | undefined;
+      | { item: { type: string }; target?: { category: string } }
+      | undefined;
     expect(pastePayload?.item.type).toBe('clip');
     expect(pastePayload?.target?.category).toBe('caption');
 
@@ -1572,7 +1575,8 @@ describe('TimelineTracks', () => {
     pasteBtn?.click();
     await flushPromises();
     pastePayload = mounted!.emitted('paste:item')?.at(-1)?.[0] as
-      { item: { type: string }; target?: { category: string; trackId?: string | null } } | undefined;
+      | { item: { type: string }; target?: { category: string; trackId?: string | null } }
+      | undefined;
     expect(pastePayload?.item.type).toBe('zoom');
     expect(pastePayload?.target).toEqual({ category: 'visual', trackId: 'screen-track' });
 
@@ -1599,7 +1603,8 @@ describe('TimelineTracks', () => {
     await flushPromises();
 
     let pastePayload = mounted!.emitted('paste:item')?.at(-1)?.[0] as
-      { item: { type: string; clip?: { id: string } }; timeMs: number } | undefined;
+      | { item: { type: string; clip?: { id: string } }; timeMs: number }
+      | undefined;
     expect(pastePayload?.timeMs).toBe(6_000);
     expect(pastePayload?.item).toEqual(expect.objectContaining({ type: 'clip' }));
     expect(pastePayload?.item.clip?.id).toBe('screen-clip');

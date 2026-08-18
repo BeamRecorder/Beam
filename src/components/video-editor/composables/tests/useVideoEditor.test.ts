@@ -7,6 +7,8 @@ import type { AudioClip, ClipComposition, MediaAsset, VisualClip } from '~/media
 const capture = vi.hoisted(() => ({
   listBackgroundLibrary: vi.fn(),
   onBackgroundLibraryChanged: vi.fn(),
+  listCursorPacks: vi.fn(),
+  onCursorPacksChanged: vi.fn(),
 }));
 const toast = vi.hoisted(() => ({
   error: vi.fn(),
@@ -94,11 +96,14 @@ vi.mock('../useProjectEditorState', () => ({
   },
 }));
 vi.mock('../../properties/cursor/useCursorReplacer', async () => {
-  const { ref } = await import('vue');
+  const { computed, ref } = await import('vue');
   return {
     useCursorReplacer: () => {
       const value = {
-        selectedCursor: ref('automatic'),
+        selection: ref({ packId: 'builtin:macos', mode: 'automatic', cursorId: null }),
+        importedPacks: ref([]),
+        packs: computed(() => []),
+        selectedPack: computed(() => null),
         cursorSize: ref(24),
         cursorColor: ref('#ffffff'),
         enableShadow: ref(true),
@@ -333,6 +338,8 @@ describe('useVideoEditor', () => {
     state.zoomOptions = undefined;
     capture.listBackgroundLibrary.mockResolvedValue([{ id: 'background-1' }]);
     capture.onBackgroundLibraryChanged.mockReturnValue(() => undefined);
+    capture.listCursorPacks.mockResolvedValue([]);
+    capture.onCursorPacksChanged.mockReturnValue(() => undefined);
     state.compositionDurationMs.mockReturnValue(2000);
   });
 
@@ -366,7 +373,7 @@ describe('useVideoEditor', () => {
     );
 
     state.cursor.cursorSize.value = 17;
-    state.cursor.selectedCursor.value = 'handpointing';
+    state.cursor.selection.value = { packId: 'builtin:macos', mode: 'fixed', cursorId: 'handpointing' };
     api.cursorMotion.value = {
       preset: 'custom',
       smoothing: 0,
@@ -377,7 +384,7 @@ describe('useVideoEditor', () => {
     expect(state.createCompositionSnapshot).toHaveBeenLastCalledWith(
       expect.objectContaining({
         cursorSettings: expect.objectContaining({
-          selectedCursor: 'handpointing',
+          selection: { packId: 'builtin:macos', mode: 'fixed', cursorId: 'handpointing' },
           size: 17,
           motion: {
             preset: 'custom',

@@ -18,13 +18,14 @@ use crate::{
 };
 
 use super::{
-    CursorState, ProcessState, SinkMessage, TimestampMapper, backpressure_event, format_error,
-    format_parameter, join, parse_format, pipewire_error, process_buffer, send_ready_error,
-    send_ready_ok, set_fatal, sink_error, sink_worker, stream_error, take_fatal,
-    update_buffer_params,
+    CursorMessage, CursorState, ProcessState, SinkMessage, TimestampMapper, backpressure_event,
+    flush_pending_cursor, format_error, format_parameter, join, parse_format, pipewire_error,
+    process_buffer, send_ready_error, send_ready_ok, set_fatal, sink_error, sink_worker,
+    stream_error, take_fatal, update_buffer_params,
 };
 
 const PIPEWIRE_READY_TIMEOUT: Duration = Duration::from_secs(10);
+const CURSOR_QUEUE_CAPACITY: usize = 256;
 
 enum PipewireCommand {
     Start {
@@ -81,11 +82,12 @@ impl PipewireCapture {
             ));
         }
         let (sink_sender, sink_receiver) = crossbeam_channel::bounded(queue_capacity);
+        let (cursor_sender, cursor_receiver) = crossbeam_channel::bounded(CURSOR_QUEUE_CAPACITY);
         let fatal = Arc::new(Mutex::new(None));
         let sink_fatal = fatal.clone();
         let sink_thread = thread::Builder::new()
             .name("beam-linux-screen-sink".into())
-            .spawn(move || sink_worker(sink, sink_receiver, sink_fatal))
+            .spawn(move || sink_worker(sink, sink_receiver, cursor_receiver, sink_fatal))
             .map_err(|error| sink_error(error.to_string()))?;
         let (commands, receiver) = pw::channel::channel();
         let (ready_sender, ready_receiver) = mpsc::sync_channel(1);
@@ -104,6 +106,7 @@ impl PipewireCapture {
                     stream_scope,
                     receiver,
                     sink_sender,
+                    cursor_sender,
                     worker_fatal,
                     worker_metrics,
                     start_ns,
@@ -260,6 +263,7 @@ fn pipewire_worker(
     stream_scope: String,
     commands: pw::channel::Receiver<PipewireCommand>,
     sink: Sender<SinkMessage>,
+    cursor_sink: Sender<CursorMessage>,
     fatal: Arc<Mutex<Option<CaptureError>>>,
     metrics: Arc<ScreenCaptureMetrics>,
     start_ns: u64,
@@ -293,6 +297,8 @@ fn pipewire_worker(
         stopping: false,
         clock: Instant::now(),
         sink,
+        cursor_sink,
+        pending_cursor: None,
         metrics,
         fatal,
         pending_drops: 0,
@@ -414,6 +420,7 @@ fn pipewire_worker(
             PipewireCommand::Pause { reply } => {
                 let mut state = command_state.borrow_mut();
                 state.active = false;
+                flush_pending_cursor(&mut state);
                 let result = stream
                     .set_active(false)
                     .and_then(|()| stream.flush(false))
@@ -427,6 +434,7 @@ fn pipewire_worker(
                 let mut state = command_state.borrow_mut();
                 state.active = false;
                 state.stopping = true;
+                flush_pending_cursor(&mut state);
                 drop(state);
                 let _ = stream.set_active(false);
                 let _ = stream.disconnect();

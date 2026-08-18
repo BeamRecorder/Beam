@@ -85,6 +85,8 @@ test('editor window is opaque and routes native editor lifecycle without changin
       TITLEBAR_SYMBOL_COLOR,
       createEditorWindowManager,
     } = require('../electron/window/editor-window.cjs');
+    let hudVisible = true;
+    let hudCanHide = true;
     const hudWindow = {
       webContents: { send: (...args) => calls.push(['hud-send', ...args]) },
       hide: () => calls.push(['hud-hide']),
@@ -92,12 +94,19 @@ test('editor window is opaque and routes native editor lifecycle without changin
       focus: () => calls.push(['hud-focus']),
       close: () => calls.push(['hud-close']),
       isDestroyed: () => false,
+      isVisible: () => hudVisible,
       isMinimized: () => false,
       restore: () => calls.push(['hud-restore']),
     };
     const hudController = {
       showHud: () => calls.push(['show-hud']),
       setHudInteractive: (value) => calls.push(['hud-interactive', value]),
+      setVisible: (value) => {
+        if (!value && !hudCanHide) return false;
+        hudVisible = value;
+        calls.push(['hud-visible', value]);
+        return true;
+      },
     };
     const ipcMain = {
       handle: (channel, listener) => ipcHandlers.set(channel, listener),
@@ -152,8 +161,29 @@ test('editor window is opaque and routes native editor lifecycle without changin
     assert.deepEqual(ipcHandlers.get('editor:context')({ sender: editor.webContents }), { projectId });
     ipcListeners.get('editor:ready')({ sender: editor.webContents });
     await opening;
-    assert.ok(calls.some((call) => call[0] === 'hud-hide'));
-    assert.ok(calls.some((call) => call[0] === 'show'));
+    const hudHiddenIndex = calls.findIndex((call) => call[0] === 'hud-visible' && call[1] === false);
+    const readyProgressIndex = calls.findIndex(
+      (call) => call[0] === 'hud-send' && call[1] === 'editor:loading-progress' && call[2]?.stage === 'ready',
+    );
+    const editorShowIndex = calls.findIndex((call) => call[0] === 'show');
+    const editorFocusIndex = calls.findIndex((call) => call[0] === 'focus');
+    assert.ok(hudHiddenIndex >= 0);
+    assert.equal(hudWindow.isVisible(), false);
+    assert.ok(hudHiddenIndex < readyProgressIndex, 'the HUD must be hidden before ready progress is sent');
+    assert.ok(readyProgressIndex < editorShowIndex, 'ready progress must precede editor.show()');
+    assert.ok(editorShowIndex < editorFocusIndex, 'editor.show() must precede editor.focus()');
+
+    const editorShows = calls.filter((call) => call[0] === 'show').length;
+    hudVisible = true;
+    hudCanHide = false;
+    assert.throws(
+      () => manager.open(projectId),
+      /HUD n’a pas pu être masquée/,
+      'the editor must not be presented if the native HUD remains visible',
+    );
+    assert.equal(calls.filter((call) => call[0] === 'show').length, editorShows);
+    hudCanHide = true;
+    hudVisible = false;
 
     ipcListeners.get('editor:titlebar-theme')({ sender: editor.webContents }, true);
     assert.equal(
@@ -248,7 +278,20 @@ test('restores and persists editor window dimensions via preferencesStore', asyn
     assert.deepEqual(patches.at(-1)?.extras?.editorWindow, {
       width: 1600,
       height: 950,
+      isMaximized: false,
     });
+
+    editor.maximize();
+    editor.emit('maximize');
+    assert.equal(patches.at(-1)?.extras?.editorWindow?.isMaximized, true);
+    assert.equal(patches.at(-1)?.extras?.editorWindow?.width, 1600);
+    assert.equal(patches.at(-1)?.extras?.editorWindow?.height, 950);
+
+    manager.showHud();
+
+    // Reopen editor to verify maximized state is restored
+    manager.open(projectId);
+    assert.ok(calls.some((call) => call[0] === 'maximize'));
   } finally {
     Module._load = originalLoad;
   }

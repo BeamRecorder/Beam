@@ -2,7 +2,9 @@ import type { GradientBackground } from '../../composables/backgroundCatalog';
 import type { Canvas2DContext } from '~/types/canvas';
 
 export type RenderBackgroundValue =
-  { kind: 'color'; color: string } | { kind: 'gradient'; gradient: GradientBackground } | { kind: 'image' | 'video' };
+  | { kind: 'color'; color: string }
+  | { kind: 'gradient'; gradient: GradientBackground }
+  | { kind: 'image' | 'video' };
 
 const sourceDimensions = (source: CanvasImageSource) => {
   const value = source as {

@@ -1,4 +1,8 @@
 {
+  "CameraLayoutPanel": {
+    "reactToZoom": "확대/축소에 반응",
+    "reactToZoomDescription": "웹캠을 고정한 상태로 캔버스 확대/축소에 맞춰 크기를 조정합니다."
+  },
   "ShadowDirectionGroup": {
     "shadowDirection": "그림자 방향",
     "around": "전체",

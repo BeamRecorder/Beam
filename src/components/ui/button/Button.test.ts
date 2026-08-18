@@ -47,7 +47,7 @@ describe('Button', () => {
 
     await wrapper.setProps({ tooltipDisabled: true });
     await nextTick();
-    expect(wrapper.get('.tooltip-wrapper').exists()).toBe(true);
+    expect(wrapper.find('.tooltip-wrapper').exists()).toBe(true);
     expect(document.body.querySelector('.tooltip-content')).toBeNull();
 
     await wrapper.setProps({ tooltipDisabled: false });

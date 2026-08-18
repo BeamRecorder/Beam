@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import Popover from './Popover.vue';
 
 const mountPopover = (props = {}) =>
@@ -9,6 +9,10 @@ const mountPopover = (props = {}) =>
     slots: { trigger: '<button>Open</button>', default: '<p>Content</p>' },
   });
 describe('Popover', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('opens, emits state and closes with the exposed API', async () => {
     const wrapper = mountPopover();
     await wrapper.get('.popover-trigger').trigger('click');
@@ -17,6 +21,13 @@ describe('Popover', () => {
     (wrapper.vm as unknown as { close: () => void }).close();
     await wrapper.vm.$nextTick();
     expect(wrapper.emitted('toggle')?.at(-1)).toEqual([false]);
+    wrapper.unmount();
+  });
+  it('does not open when disabled', async () => {
+    const wrapper = mountPopover({ disabled: true });
+    await wrapper.get('.popover-trigger').trigger('click');
+    expect(wrapper.emitted('toggle')).toBeUndefined();
+    expect(document.querySelector('.popover-content')).toBeNull();
     wrapper.unmount();
   });
   it('closes when a click starts and ends outside', async () => {
@@ -37,6 +48,65 @@ describe('Popover', () => {
     expect(document.body.textContent).toContain('Content');
     wrapper.unmount();
   });
+
+  it('opens on hover and keeps the teleported content open while it is hovered', async () => {
+    vi.useFakeTimers();
+    const wrapper = mountPopover({ interaction: 'hover-focus-click', closeDelay: 25 });
+    const trigger = wrapper.get('.popover-trigger');
+
+    await trigger.trigger('mouseenter');
+    expect(document.querySelector('.popover-content')).not.toBeNull();
+
+    await trigger.trigger('mouseleave');
+    const content = document.querySelector('.popover-content') as HTMLElement;
+    content.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    vi.advanceTimersByTime(50);
+    await wrapper.vm.$nextTick();
+    expect(document.querySelector('.popover-content')).not.toBeNull();
+
+    content.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+    vi.advanceTimersByTime(25);
+    await wrapper.vm.$nextTick();
+    expect(wrapper.emitted('toggle')?.at(-1)).toEqual([false]);
+    wrapper.unmount();
+  });
+
+  it('opens on focus and closes on Escape or focus loss', async () => {
+    vi.useFakeTimers();
+    const wrapper = mountPopover({ interaction: 'hover-focus-click', closeDelay: 25 });
+    const trigger = wrapper.get('.popover-trigger');
+
+    await trigger.trigger('focusin');
+    expect(wrapper.emitted('toggle')).toContainEqual([true]);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await wrapper.vm.$nextTick();
+    expect(wrapper.emitted('toggle')?.at(-1)).toEqual([false]);
+
+    await trigger.trigger('focusin');
+    await trigger.trigger('focusout');
+    vi.advanceTimersByTime(25);
+    await wrapper.vm.$nextTick();
+    expect(wrapper.emitted('toggle')?.at(-1)).toEqual([false]);
+    wrapper.unmount();
+  });
+
+  it('pins hover content on click and unpins it on the next click', async () => {
+    vi.useFakeTimers();
+    const wrapper = mountPopover({ interaction: 'hover-focus-click', closeDelay: 25 });
+    const trigger = wrapper.get('.popover-trigger');
+
+    await trigger.trigger('click');
+    await trigger.trigger('mouseleave');
+    vi.advanceTimersByTime(50);
+    await wrapper.vm.$nextTick();
+    expect(wrapper.emitted('toggle')?.at(-1)).toEqual([true]);
+
+    await trigger.trigger('click');
+    await wrapper.vm.$nextTick();
+    expect(wrapper.emitted('toggle')?.at(-1)).toEqual([false]);
+    wrapper.unmount();
+  });
+
   it('positions upward and clamps inside the viewport when space requires it', async () => {
     const wrapper = mountPopover({ align: 'right', direction: 'down', matchTriggerWidth: false });
     Object.defineProperty(wrapper.get('.popover-trigger').element, 'getBoundingClientRect', {

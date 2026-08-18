@@ -21,6 +21,7 @@ export interface VisualClipDefaults {
   cameraFramingPreset: CameraFramingPreset;
   cameraSplitRatio?: number;
   cameraSplitPadding?: number;
+  reactToZoom?: boolean;
 }
 
 export interface EditorPreferenceDefaults {

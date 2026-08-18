@@ -1,4 +1,8 @@
 {
+  "CameraLayoutPanel": {
+    "reactToZoom": "Реагировать на масштабирование",
+    "reactToZoomDescription": "Закрепить веб-камеру и подстраивать её размер под масштаб холста."
+  },
   "ShadowDirectionGroup": {
     "shadowDirection": "Направление тени",
     "around": "Со всех сторон",

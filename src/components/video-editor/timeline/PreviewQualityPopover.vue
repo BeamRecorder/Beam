@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { Gauge, Info } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
+import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import type { PreviewQuality } from '~/media/playback';
@@ -114,15 +115,15 @@ onBeforeUnmount(() => {
               :aria-label="t('previewQualityExportHint')"
             />
           </div>
-          <div class="preview-quality-options">
+          <ButtonGroup full size="xs" class="preview-quality-options">
             <Button
               v-for="option in options"
               :key="option.id"
-              variant="ghost"
+              variant="tab"
               size="xs"
               class="preview-quality-option"
               :class="{ active: modelValue === option.id }"
-              :tooltip="option.indicator"
+              :tooltip="option.label"
               tooltip-position="top"
               role="radio"
               :aria-label="option.label"
@@ -131,7 +132,7 @@ onBeforeUnmount(() => {
             >
               {{ option.indicator }}
             </Button>
-          </div>
+          </ButtonGroup>
         </div>
       </template>
     </Popover>
@@ -250,28 +251,6 @@ onBeforeUnmount(() => {
   max-width: 112px;
 }
 .preview-quality-options {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 3px;
-}
-.preview-quality-option {
   width: 100%;
-  height: 30px;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text-secondary);
-  font: 700 13px var(--font-sans);
-  cursor: pointer;
-}
-.preview-quality-option:hover {
-  background: var(--color-bg-surface-hover);
-  color: var(--text-primary);
-}
-.preview-quality-option.active {
-  background: var(--color-primary-light);
-  border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
-  color: var(--color-primary);
 }
 </style>

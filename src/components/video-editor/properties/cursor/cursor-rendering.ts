@@ -2,58 +2,46 @@ import type { CursorPlaybackState } from '../../composables/cursorPlayback';
 import { framedMediaRect, outputPoint, type CanvasRect } from '../../canvas/output-canvas';
 import type { ClipAppearance, NormalizedCrop, NormalizedTransform } from '~/media/shared/composition-types';
 import { frameContentRect } from '../../composition/appearance/frames';
-import { cursorTypeForKind } from './cursor-kind';
-import type { CursorType } from '../../../../api/types/cursor-presentation';
+import type { CursorPackDescriptor, CursorSelection } from '../../../../api/types/cursor-pack';
+import { cursorGeometry, resolveCursorAsset } from './cursor-packs';
 
-export const CURSOR_REFERENCE_SIZE = 32;
+export const cursorAssetAt = (
+  pack: CursorPackDescriptor,
+  selection: CursorSelection,
+  state: CursorPlaybackState | null,
+) => resolveCursorAsset(pack, selection, state?.cursorKind);
 
-export const cursorHotspots: Record<CursorType, { x: number; y: number }> = {
-  automatic: { x: 0, y: 0 },
-  default: { x: 10, y: 7 },
-  beachball: { x: 16, y: 16 },
-  busy: { x: 7, y: 0 },
-  cell: { x: 16, y: 16 },
-  contextualmenu: { x: 8, y: 7 },
-  copy: { x: 7, y: 0 },
-  cross: { x: 16, y: 16 },
-  handgrabbing: { x: 16, y: 16 },
-  handopen: { x: 16, y: 16 },
-  handpointing: { x: 12, y: 10 },
-  help: { x: 7, y: 0 },
-  makealias: { x: 7, y: 0 },
-  move: { x: 16, y: 16 },
-  notallowed: { x: 7, y: 0 },
-  poof: { x: 7, y: 0 },
-  resizenorth: { x: 16, y: 16 },
-  resizenortheast: { x: 16, y: 16 },
-  resizenortheastsouthwest: { x: 16, y: 16 },
-  resizenorthsouth: { x: 16, y: 16 },
-  resizenorthwest: { x: 16, y: 16 },
-  resizenorthwestsoutheast: { x: 16, y: 16 },
-  resizeright: { x: 16, y: 16 },
-  resizesouth: { x: 16, y: 16 },
-  resizesoutheast: { x: 16, y: 16 },
-  resizesouthwest: { x: 16, y: 16 },
-  resizeup: { x: 16, y: 16 },
-  resizeupdown: { x: 16, y: 16 },
-  resizewest: { x: 16, y: 16 },
-  resizewesteast: { x: 16, y: 16 },
-  screenshotselection: { x: 16, y: 16 },
-  screenshotwindow: { x: 16, y: 16 },
-  textcursor: { x: 16, y: 16 },
-  textcursorvertical: { x: 16, y: 16 },
-  zoomin: { x: 16, y: 16 },
-  zoomout: { x: 16, y: 16 },
-};
+export const cursorGeometryAtSize = cursorGeometry;
 
-export const cursorTypeAt = (selectedCursor: CursorType, state: CursorPlaybackState | null): CursorType =>
-  selectedCursor === 'automatic' ? cursorTypeForKind(state?.cursorKind) : selectedCursor;
+export interface CursorCanvasBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  hotspot: { x: number; y: number };
+}
 
-export const cursorHotspotAtSize = (type: CursorType, size: number) => {
-  const scale = size / CURSOR_REFERENCE_SIZE;
-  const hotspot = cursorHotspots[type];
-  return { x: hotspot.x * scale, y: hotspot.y * scale };
-};
+export function cursorCanvasBounds(
+  position: { x: number; y: number },
+  geometry: ReturnType<typeof cursorGeometryAtSize>,
+  camera: { dx: number; dy: number; dw: number; dh: number; focusX: number; focusY: number; scale: number },
+  cursorScale = 1,
+): CursorCanvasBounds {
+  const centerX = camera.dx + camera.dw / 2;
+  const centerY = camera.dy + camera.dh / 2;
+  const scale = camera.scale * cursorScale;
+  const hotspot = {
+    x: centerX + camera.scale * (position.x - camera.focusX),
+    y: centerY + camera.scale * (position.y - camera.focusY),
+  };
+  return {
+    x: hotspot.x - geometry.hotspot.x * scale,
+    y: hotspot.y - geometry.hotspot.y * scale,
+    width: geometry.width * scale,
+    height: geometry.height * scale,
+    hotspot,
+  };
+}
 
 export function cursorPositionAt(
   state: CursorPlaybackState,

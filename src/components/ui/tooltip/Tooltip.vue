@@ -179,7 +179,9 @@ onBeforeUnmount(() => {
 <style scoped>
 .tooltip-wrapper {
   position: relative;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
 }
 
 .tooltip-content {

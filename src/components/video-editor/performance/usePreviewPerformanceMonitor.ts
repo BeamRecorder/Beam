@@ -16,7 +16,6 @@ import type { MediaProcessingMetrics } from './media-processing-pressure';
 
 const SAMPLE_INTERVAL_MS = 500;
 const STARTUP_COOLDOWN_MS = 1_000;
-const INITIAL_WARMUP_MS = 1_500;
 const MAX_SAMPLES = 48;
 
 type MonitorOptions = {

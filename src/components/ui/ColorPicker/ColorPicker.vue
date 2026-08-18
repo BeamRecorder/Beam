@@ -115,7 +115,14 @@ function handleDragEnd() {
     />
 
     <!-- Trigger Mode: color bubble + popover -->
-    <Popover v-else align="left" :match-trigger-width="false" block @toggle="isPopoverOpen = $event">
+    <Popover
+      v-else
+      align="left"
+      :match-trigger-width="false"
+      :disabled="props.disabled"
+      block
+      @toggle="isPopoverOpen = $event"
+    >
       <template #trigger="{ isOpen }">
         <div
           class="color-picker-trigger-container"

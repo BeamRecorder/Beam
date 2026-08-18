@@ -26,7 +26,6 @@ const emit = defineEmits<{
   (e: 'change', value: boolean): void;
 }>();
 
-const containerRef = ref<HTMLElement | null>(null);
 const labelWrapperRef = ref<HTMLElement | null>(null);
 const labelRef = ref<HTMLElement | null>(null);
 
@@ -108,7 +107,6 @@ const handleKeyDown = (event: KeyboardEvent) => {
 
 <template>
   <div
-    ref="containerRef"
     class="checkbox-container"
     :class="[
       `size-${size}`,

@@ -7,7 +7,6 @@ const settings = (theme: PreferenceSettings['theme'] = 'light'): PreferenceSetti
   theme,
   recordingBar: { visibility: 'always' },
   recordingInteractions: { enabled: false, noticeDismissed: false },
-  alwaysOnTop: true,
   devices: {},
   shortcuts: {},
   backgroundPresets: { colors: [], gradients: [] },

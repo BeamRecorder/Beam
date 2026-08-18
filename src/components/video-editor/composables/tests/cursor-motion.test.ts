@@ -59,16 +59,49 @@ describe('cursor motion', () => {
     });
   });
 
-  it('retimes a long movement into a bounded segment and uses spline easing', () => {
+  it('interpolates a sparse movement throughout its recorded gap', () => {
     const settings = createDefaultCursorMotionSettings();
     const timeline = createCursorMotionTimeline(events(move(0, 0, 0), move(2, 1, 1)), settings);
     expect(timeline.segments[0].endSeconds).toBe(2);
-    expect(timeline.segments[0].startSeconds).toBeGreaterThan(1.5);
+    expect(timeline.segments[0].startSeconds).toBeLessThan(1.55);
     expect(timeline.targetAt(0)).toEqual({ x: 0, y: 0 });
+    expect(timeline.targetAt(1)?.x).toBeGreaterThan(0);
     expect(timeline.targetAt(2)).toEqual({ x: 1, y: 1 });
     const middle = timeline.targetAt(1.85);
     expect(middle?.x).toBeGreaterThan(0);
     expect(middle?.x).toBeLessThan(1);
+  });
+
+  it('does not extend a burst timeline beyond the final recorded move', () => {
+    const settings = createDefaultCursorMotionSettings();
+    const recorded = events(move(0, 0, 0), move(0.05, 0.5, 0.2), move(0.1, 1, 0));
+    const timeline = createCursorMotionTimeline(recorded, settings);
+    const finalMoveTime = 0.1;
+
+    expect(Math.max(...timeline.segments.map((segment) => segment.endSeconds))).toBeLessThanOrEqual(finalMoveTime);
+    expect(timeline.targetAt(finalMoveTime)?.x).toBeCloseTo(1);
+    expect(timeline.targetAt(finalMoveTime)?.y).toBeCloseTo(0);
+  });
+
+  it('keeps motion progressing monotonically across irregular sample timestamps', () => {
+    const settings = createDefaultCursorMotionSettings();
+    const timeline = createCursorMotionTimeline(
+      events(
+        move(0, 0, 0),
+        move(0.013, 0.2, 0.1),
+        move(0.071, 0.35, 0.2),
+        move(0.103, 0.6, 0.4),
+        move(0.22, 0.9, 0.7),
+        move(0.47, 1, 1),
+      ),
+      settings,
+    );
+    const timestamps = [0, 0.013, 0.071, 0.103, 0.22, 0.3, 0.4, 0.47];
+    const positions = timestamps.map((time) => timeline.targetAt(time)?.x ?? Number.NaN);
+
+    positions.slice(1).forEach((position, index) => {
+      expect(position).toBeGreaterThanOrEqual(positions[index]! - 0.000001);
+    });
   });
 
   it('enforces the minimum travel time for a short movement', () => {

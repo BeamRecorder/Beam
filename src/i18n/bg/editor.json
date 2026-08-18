@@ -1,4 +1,8 @@
 {
+  "CameraLayoutPanel": {
+    "reactToZoom": "Реагирай на мащабирането",
+    "reactToZoomDescription": "Запази уебкамерата фиксирана, като адаптираш размера ѝ към мащабирането на платното."
+  },
   "ShadowDirectionGroup": {
     "shadowDirection": "Посока на сянката",
     "around": "От всички страни",

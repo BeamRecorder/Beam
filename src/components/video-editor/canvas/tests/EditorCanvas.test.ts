@@ -32,6 +32,7 @@ const { state } = vi.hoisted(() => ({
     moveCropDrag: vi.fn(),
     endCropDrag: vi.fn(),
     commitCrop: vi.fn(),
+    clearCursorBounds: vi.fn(),
     clipIdAt: vi.fn(),
     selectVisualAt: vi.fn(),
     transformDraft: undefined as { value: unknown } | undefined,
@@ -42,6 +43,7 @@ const { state } = vi.hoisted(() => ({
     canvasBackgroundOptions: undefined as
       | { previewQuality?: () => string; selectedBackground?: () => unknown; backgroundBlurPercent?: () => number }
       | undefined,
+    cursorBounds: undefined as { value: unknown } | undefined,
   },
 }));
 
@@ -75,9 +77,19 @@ vi.mock('../composables/useCompositionMedia', async () => {
   };
 });
 
-vi.mock('../composables/useCursorOverlay', () => ({
-  useCursorOverlay: () => ({ updateAndDrawRipplesAndCursor: state.updateCursor }),
-}));
+vi.mock('../composables/useCursorOverlay', async () => {
+  const { ref } = await import('vue');
+  return {
+    useCursorOverlay: () => {
+      state.cursorBounds = ref(null);
+      return {
+        updateAndDrawRipplesAndCursor: state.updateCursor,
+        cursorBounds: state.cursorBounds,
+        clearCursorBounds: state.clearCursorBounds,
+      };
+    },
+  };
+});
 
 vi.mock('../composables/useCameraZoom', async () => {
   const { ref } = await import('vue');
@@ -228,7 +240,8 @@ const props = () => ({
   isPlaying: false,
   currentTime: 0.5,
   duration: 2,
-  selectedCursor: 'automatic' as const,
+  cursorSelection: { packId: 'builtin:macos', mode: 'automatic' as const, cursorId: null },
+  cursorPack: null,
   cursorSize: 24,
   cursorColor: '#ffffff',
   enableShadow: true,
@@ -322,7 +335,7 @@ const mountEditor = (overrides: Record<string, unknown> = {}) => {
 
 describe('EditorCanvas', () => {
   it('defaults to full preview quality', async () => {
-    const mounted = mountEditor();
+    mountEditor();
     await nextTick();
 
     expect(state.canvasBackgroundOptions?.previewQuality?.()).toBe('full');
@@ -389,6 +402,81 @@ describe('EditorCanvas', () => {
     expect(state.beginSelectionMove).toHaveBeenCalled();
     expect(state.moveSelection).toHaveBeenCalled();
     expect(state.endSelectionMove).toHaveBeenCalled();
+  });
+
+  it('shows the cursor selection only on the cursor tab while paused', async () => {
+    const mounted = mountEditor({ activeTab: 'cursor', isPlaying: false });
+    state.cursorBounds!.value = { x: 200, y: 100, width: 40, height: 20, hotspot: { x: 220, y: 110 } };
+    await nextTick();
+    expect(mounted.find('.cursor-canvas-selection').exists()).toBe(true);
+
+    await mounted.setProps({ activeTab: 'canvas' });
+    expect(mounted.find('.cursor-canvas-selection').exists()).toBe(false);
+    await mounted.setProps({ activeTab: 'cursor', isPlaying: true });
+    expect(mounted.find('.cursor-canvas-selection').exists()).toBe(false);
+  });
+
+  it('prioritizes cursor hit-testing over canvas selection and preserves outside-cursor handling', async () => {
+    const mounted = mountEditor({ activeTab: 'cursor', isPlaying: false });
+    state.cursorBounds!.value = { x: 200, y: 100, width: 40, height: 20, hotspot: { x: 220, y: 110 } };
+    const canvas = mounted.get('canvas');
+    Object.defineProperty(canvas.element, 'clientWidth', { configurable: true, value: 800 });
+    Object.defineProperty(canvas.element, 'clientHeight', { configurable: true, value: 450 });
+    vi.spyOn(canvas.element, 'getBoundingClientRect').mockReturnValue({
+      x: 0,
+      y: 0,
+      left: 0,
+      top: 0,
+      right: 800,
+      bottom: 450,
+      width: 800,
+      height: 450,
+      toJSON: () => ({}),
+    });
+    await nextTick();
+
+    await canvas.trigger('pointerdown', { button: 0, clientX: 220, clientY: 110 });
+    expect(mounted.emitted('select:cursor')).toHaveLength(1);
+    expect(state.selectVisualAt).not.toHaveBeenCalled();
+
+    state.selectVisualAt.mockReturnValue(true);
+    await canvas.trigger('pointerdown', { button: 0, clientX: 600, clientY: 400 });
+    expect(mounted.emitted('select:cursor')).toHaveLength(1);
+    expect(state.selectVisualAt).toHaveBeenCalled();
+  });
+
+  it('resizes the paused cursor selection and clamps emitted size at both limits', async () => {
+    const mounted = mountEditor({ activeTab: 'cursor', isPlaying: false, cursorSize: 24 });
+    state.cursorBounds!.value = { x: 200, y: 100, width: 40, height: 20, hotspot: { x: 220, y: 110 } };
+    const canvas = mounted.get('canvas');
+    Object.defineProperty(canvas.element, 'clientWidth', { configurable: true, value: 800 });
+    Object.defineProperty(canvas.element, 'clientHeight', { configurable: true, value: 450 });
+    vi.spyOn(canvas.element, 'getBoundingClientRect').mockReturnValue({
+      x: 0,
+      y: 0,
+      left: 0,
+      top: 0,
+      right: 800,
+      bottom: 450,
+      width: 800,
+      height: 450,
+      toJSON: () => ({}),
+    });
+    await nextTick();
+
+    const handle = mounted.find('.cursor-canvas-selection .is-top-left');
+    await handle.trigger('pointerdown', { pointerId: 1, clientX: 200, clientY: 100 });
+    await handle.trigger('pointermove', { pointerId: 1, clientX: 800, clientY: 450 });
+    expect(mounted.emitted('update:cursor-size')).toContainEqual([16]);
+    await handle.trigger('pointerup', { pointerId: 1 });
+
+    await handle.trigger('pointerdown', { pointerId: 2, clientX: 200, clientY: 100 });
+    await handle.trigger('pointermove', { pointerId: 2, clientX: 0, clientY: 0 });
+    expect(mounted.emitted('update:cursor-size')).toContainEqual([128]);
+
+    await mounted.setProps({ isPlaying: true });
+    await handle.trigger('pointermove', { pointerId: 2, clientX: 300, clientY: 200 });
+    expect(mounted.emitted('update:cursor-size')).toHaveLength(2);
   });
 
   it('re-reads the playback frame when frameVersion advances', async () => {

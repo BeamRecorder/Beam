@@ -2,9 +2,10 @@
 import type { ResizeCorner } from './types';
 export type { ResizeCorner };
 
-withDefaults(defineProps<{ corners?: ResizeCorner[]; disabled?: boolean }>(), {
+withDefaults(defineProps<{ corners?: ResizeCorner[]; disabled?: boolean; isAtLimit?: boolean }>(), {
   corners: () => ['top-left', 'top', 'top-right', 'right', 'bottom-right', 'bottom', 'bottom-left', 'left'],
   disabled: false,
+  isAtLimit: false,
 });
 
 const emit = defineEmits<{
@@ -26,13 +27,14 @@ const start = (corner: ResizeCorner, event: PointerEvent) => {
     :key="corner"
     type="button"
     class="resize-handle"
-    :class="`is-${corner}`"
+    :class="[`is-${corner}`, { 'is-at-limit': isAtLimit }]"
     :disabled="disabled"
     :aria-label="`Resize from ${corner}`"
     @pointerdown.stop="start(corner, $event)"
     @pointermove="emit('resize-move', corner, $event)"
     @pointerup="emit('resize-end', corner, $event)"
     @pointercancel="emit('resize-end', corner, $event)"
+    @lostpointercapture="emit('resize-end', corner, $event)"
   />
 </template>
 
@@ -46,6 +48,10 @@ const start = (corner: ResizeCorner, event: PointerEvent) => {
   border-radius: 3px;
   background: var(--color-primary);
   z-index: 1;
+}
+.resize-handle.is-at-limit {
+  border-color: var(--color-error);
+  box-shadow: 0 0 0 1px var(--color-error);
 }
 .is-top-left {
   top: -7px;

@@ -26,6 +26,9 @@ import { measureCanvasCaptionText } from './canvas-text-measure';
 import { useCanvasLoadingState } from './composables/useCanvasLoadingState';
 import { useCanvasClipToggleTransition } from './composables/useCanvasClipToggleTransition';
 import { previewRenderScale } from '~/media/playback';
+import CursorCanvasSelection from './CursorCanvasSelection.vue';
+import { useCursorCanvasInteraction } from './composables/useCursorCanvasInteraction';
+import { CURSOR_SIZE_MAX, CURSOR_SIZE_MIN } from '../properties/cursor/cursor-size';
 const { t } = useTranslate('EditorCanvas');
 const props = withDefaults(defineProps<EditorCanvasProps>(), { previewQuality: 'full' });
 const emit = defineEmits<EditorCanvasEmits>();
@@ -193,7 +196,8 @@ drawVisualStack = (ctx, window, drawScreen, layers) => {
   }
 };
 const cursorOverlay = useCursorOverlay({
-  selectedCursor: () => props.selectedCursor,
+  cursorSelection: () => props.cursorSelection,
+  cursorPack: () => props.cursorPack,
   cursorSize: () => props.cursorSize,
   cursorColor: () => props.cursorColor,
   enableShadow: () => props.enableShadow,
@@ -211,6 +215,15 @@ const cursorOverlay = useCursorOverlay({
   isScreenEnabled: () => Boolean(liveScreenClip.value),
   showBackground: () => props.outputCanvas.showBackground,
   onRenderOnce: renderOnce,
+});
+const cursorInteraction = useCursorCanvasInteraction({
+  bounds: cursorOverlay.cursorBounds,
+  canvas: () => canvasRef.value,
+  cursorSize: () => props.cursorSize,
+  isPlaying: () => props.isPlaying,
+  canResize: () => props.activeTab === 'cursor' && !props.isPlaying && !props.isCropping,
+  onSelect: () => emit('select:cursor'),
+  onResize: (size) => emit('update:cursor-size', size),
 });
 watch(
   () => `${props.outputCanvas.width}:${props.outputCanvas.height}:${props.outputCanvas.showBackground}`,
@@ -231,7 +244,8 @@ watch(() => [props.zoomElements, props.selectedZoom] as const, cameraZoom.resetC
 watch(
   () =>
     [
-      props.selectedCursor,
+      props.cursorSelection,
+      props.cursorPack,
       props.cursorSize,
       props.cursorColor,
       props.enableShadow,
@@ -276,6 +290,7 @@ const drawCanvasScene = (ctx: CanvasRenderingContext2D) => {
     );
   } else {
     currentRenderWindow = null;
+    cursorOverlay.clearCursorBounds();
     const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas);
     const fallbackWindow = {
       dx: preview.x,
@@ -327,6 +342,10 @@ const handleIslandPointerDown = (event: PointerEvent) => {
   if (event.button === 0 && transformAndCrop.selectVisualAt(event, canvasRef.value)) return;
   if (viewportZoom.beginPan(event, containerRef.value)) return;
   cameraZoom.beginSelectionMove(event);
+};
+const handleIslandPointerDownCapture = (event: PointerEvent) => {
+  if (props.isCropping || (event.target as Element | null)?.closest('.cursor-canvas-selection')) return;
+  if (cursorInteraction.selectAt(event)) event.stopPropagation();
 };
 const handleTransformPointerDown = (event: PointerEvent) => {
   if (event.button === 0) {
@@ -382,6 +401,7 @@ defineExpose({ viewportZoom });
       'is-selection-editable': selectedZoom?.mode === 'manual',
     }"
     @wheel="handleIslandWheel"
+    @pointerdown.capture="handleIslandPointerDownCapture"
     @pointerdown="handleIslandPointerDown"
     @pointermove="handleIslandPointerMove"
     @pointerup="handleIslandPointerUp"
@@ -436,6 +456,15 @@ defineExpose({ viewportZoom });
         :label="t('videoPreviewLoading')"
         :aspect-ratio="outputCanvas.width / outputCanvas.height"
         @reveal="isCanvasCovered = false"
+      />
+      <CursorCanvasSelection
+        v-if="activeTab === 'cursor' && !isPlaying && !isCropping && cursorOverlay.cursorBounds.value"
+        :bounds="cursorOverlay.cursorBounds.value"
+        :resizing="cursorInteraction.resizing.value"
+        :is-at-limit="cursorSize <= CURSOR_SIZE_MIN || cursorSize >= CURSOR_SIZE_MAX"
+        @resize-start="cursorInteraction.beginResize"
+        @resize-move="cursorInteraction.moveResize"
+        @resize-end="cursorInteraction.endResize"
       />
       <div
         v-if="selectedTransformClip && !selectedCaptionFollowsCursor && !isCropping && selectedZoom?.mode !== 'manual'"

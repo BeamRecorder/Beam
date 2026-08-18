@@ -18,7 +18,7 @@ import {
   updateClip as updateCompositionClip,
 } from '~/components/video-editor/composition/engine/clip-engine';
 import { compositionPlaybackSignature } from '~/components/video-editor/composables/composition-playback-signature';
-import { cursorUrls } from '~/components/video-editor/properties/cursor/useCursorReplacer';
+import { MACOS_CURSOR_PACK } from '~/components/video-editor/properties/cursor/cursor-packs';
 import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
 import { createDefaultCursorClickEffects, createDefaultCursorMotionSettings } from '~/api/types/cursor-settings';
 import {
@@ -62,7 +62,12 @@ const player = useWebsiteDemoPlayer();
 const notice = ref(t('Website.editor.checking'));
 let generatedId = 0;
 
-cursorUrls.default = demoMedia.defaultCursorUrl;
+const websiteCursorPack = {
+  ...MACOS_CURSOR_PACK,
+  cursors: MACOS_CURSOR_PACK.cursors.map((cursor) =>
+    cursor.id === 'default' ? { ...cursor, url: demoMedia.defaultCursorUrl } : cursor,
+  ),
+};
 
 const supportsEditorPlayback =
   typeof globalThis.Worker !== 'undefined' &&
@@ -294,7 +299,8 @@ defineExpose({ play });
             ref="editorCanvasRef"
             :is-playing="player.isPlaying.value"
             :current-time="player.currentTime.value"
-            selected-cursor="automatic"
+            :cursor-selection="{ packId: 'builtin:macos', mode: 'automatic', cursorId: null }"
+            :cursor-pack="websiteCursorPack"
             :cursor-size="45"
             cursor-color="#000000"
             enable-shadow
@@ -307,6 +313,7 @@ defineExpose({ play });
             :background-blur-percent="0"
             :frame-for="player.frameFor"
             :frame-version="player.frameVersion.value"
+            preview-quality="full"
             :playback-state="player.playbackState.value"
             :playback-error="player.playbackError.value"
             :editor-data="editorData"

@@ -166,3 +166,57 @@ fn interval_boundaries_discard_the_start_include_the_target_and_keep_the_future(
         vec![30]
     );
 }
+
+#[test]
+fn sparse_pipewire_anchors_replay_dense_input_at_original_times_without_anchor_burst() {
+    let mut fusion = CursorFusion::default();
+    fusion.reconcile(anchor(0, 0, 0));
+
+    for session_ns in (100..1_000).step_by(100) {
+        fusion.push(CursorInputEvent {
+            session_ns,
+            delta_x: 1,
+            delta_y: 0,
+        });
+    }
+
+    let first_reconciliation = fusion.reconcile(anchor(1_000, 100, 0));
+    assert_eq!(
+        first_reconciliation
+            .iter()
+            .map(|event| event.session_ns)
+            .collect::<Vec<_>>(),
+        (100..1_000).step_by(100).collect::<Vec<_>>()
+    );
+    assert!(
+        first_reconciliation
+            .windows(2)
+            .all(|pair| pair[0].session_ns < pair[1].session_ns)
+    );
+    assert!(
+        first_reconciliation
+            .iter()
+            .all(|event| event.session_ns < 1_000)
+    );
+
+    for session_ns in (1_100..2_000).step_by(100) {
+        fusion.push(CursorInputEvent {
+            session_ns,
+            delta_x: 1,
+            delta_y: 0,
+        });
+    }
+    let second_reconciliation = fusion.reconcile(anchor(2_000, 200, 0));
+    assert_eq!(
+        second_reconciliation
+            .iter()
+            .map(|event| event.session_ns)
+            .collect::<Vec<_>>(),
+        (1_100..2_000).step_by(100).collect::<Vec<_>>()
+    );
+    assert!(
+        second_reconciliation
+            .iter()
+            .all(|event| event.session_ns < 2_000)
+    );
+}

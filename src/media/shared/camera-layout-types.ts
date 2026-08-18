@@ -12,7 +12,14 @@ export type CameraLayoutPreset =
   | 'split-bottom';
 
 export type CameraFramingPreset =
-  'custom' | 'fill' | 'fit' | 'square' | 'portrait' | 'landscape' | 'squircle' | 'circle';
+  | 'custom'
+  | 'fill'
+  | 'fit'
+  | 'square'
+  | 'portrait'
+  | 'landscape'
+  | 'squircle'
+  | 'circle';
 
 export const CAMERA_LAYOUT_PRESETS: readonly CameraLayoutPreset[] = [
   'custom',

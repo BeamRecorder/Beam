@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import Slider from '~/ui/slider/Slider.vue';
+import Switch from '~/ui/switch/Switch.vue';
 import type { CameraFramingPreset, CameraLayoutPreset } from '~/media/shared/camera-layout-types';
 import { isSplitCameraLayout } from '~/media/shared/camera-layout-types';
 import { useTranslate } from '~/i18n/useTranslate';
@@ -14,6 +15,7 @@ const props = withDefaults(
     hasLinkedScreen: boolean;
     splitRatio: number;
     splitPadding: number;
+    reactToZoom?: boolean;
     supportsSplitLayouts?: boolean;
   }>(),
   { supportsSplitLayouts: true },
@@ -24,6 +26,7 @@ const emit = defineEmits<{
   (event: 'update:framing', preset: Exclude<CameraFramingPreset, 'custom'>): void;
   (event: 'update:splitRatio', ratio: number): void;
   (event: 'update:splitPadding', padding: number): void;
+  (event: 'update:reactToZoom', enabled: boolean): void;
 }>();
 
 const { t } = useTranslate('CameraLayoutPanel');
@@ -113,6 +116,18 @@ const splitUnavailable = computed(() => props.supportsSplitLayouts !== false && 
         value-suffix="%"
         size="compact"
         @update:model-value="emit('update:splitPadding', $event / 100)"
+      />
+    </div>
+
+    <div v-if="supportsSplitLayouts !== false" class="zoom-reaction-setting">
+      <div class="setting-copy">
+        <span class="section-title">{{ t('reactToZoom') }}</span>
+        <span class="setting-description">{{ t('reactToZoomDescription') }}</span>
+      </div>
+      <Switch
+        :model-value="reactToZoom ?? true"
+        :aria-label="t('reactToZoom')"
+        @update:model-value="emit('update:reactToZoom', $event)"
       />
     </div>
 
@@ -263,6 +278,26 @@ const splitUnavailable = computed(() => props.supportsSplitLayouts !== false && 
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.zoom-reaction-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.setting-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.setting-description {
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.35;
 }
 
 .framing-header {

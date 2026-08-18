@@ -328,7 +328,10 @@ function normalizeComposition(value) {
             throw new Error('Répartition de caméra invalide');
           if (!finite(cameraSplitPadding) || cameraSplitPadding < 0 || cameraSplitPadding > 0.08)
             throw new Error('Espacement de caméra invalide');
-          return { cameraLayoutPreset, cameraFramingPreset, cameraSplitRatio, cameraSplitPadding };
+          const reactToZoom =
+            clip.reactToZoom === undefined ? !cameraLayoutPreset.startsWith('split-') : clip.reactToZoom;
+          if (typeof reactToZoom !== 'boolean') throw new Error('Réaction de caméra au zoom invalide');
+          return { cameraLayoutPreset, cameraFramingPreset, cameraSplitRatio, cameraSplitPadding, reactToZoom };
         })()
       : {};
     return {
@@ -417,6 +420,7 @@ function migrateComposition(value, showBackground, historicalSessionIds = []) {
                       ? {
                           cameraSplitRatio: 0.5,
                           cameraSplitPadding: 0,
+                          reactToZoom: true,
                         }
                       : {}),
                   }

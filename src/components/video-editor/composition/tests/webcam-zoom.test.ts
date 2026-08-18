@@ -55,6 +55,33 @@ describe('webcam zoom layout', () => {
     expect(getWebcamZoomFactor(Number.NaN, true)).toBe(1);
   });
 
+  it('scales the overlay with zoom only when reactToZoom is enabled', () => {
+    const transform = { x: 0.1, y: 0.2, width: 0.3, height: 0.4 };
+    const reacts = computeWebcamLayout(
+      1_000,
+      500,
+      2,
+      { ...webcamSettingsForAppearance(undefined), reactToZoom: true },
+      transform,
+    );
+    const fixed = computeWebcamLayout(
+      1_000,
+      500,
+      2,
+      { ...webcamSettingsForAppearance(undefined), reactToZoom: false },
+      transform,
+    );
+
+    expect(reacts.x).toBeCloseTo(250);
+    expect(reacts.y).toBeCloseTo(200);
+    expect(reacts.width).toBeCloseTo(150);
+    expect(reacts.height).toBeCloseTo(100);
+    expect(fixed.x).toBeCloseTo(100);
+    expect(fixed.y).toBeCloseTo(100);
+    expect(fixed.width).toBeCloseTo(300);
+    expect(fixed.height).toBeCloseTo(200);
+  });
+
   it('turns an inset squircle frame into the editable camera transform without moving it', () => {
     const settings = webcamSettingsForAppearance(undefined);
     const original = { x: 0.68, y: 0.68, width: 0.28, height: 0.28 };

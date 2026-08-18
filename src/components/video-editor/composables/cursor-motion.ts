@@ -232,8 +232,8 @@ export function createCursorMotionTimeline(
         .map((anchor, offset) => desiredDuration(anchors[index + offset - 1], anchor));
       const totalDuration = durations.reduce((total, duration) => total + duration, 0);
       const availableDuration = Math.max(0, anchors[clickIndex].timeSeconds - cursorTime);
-      const scale = totalDuration > 0 ? Math.min(1, availableDuration / totalDuration) : 1;
-      let segmentStart = Math.max(cursorTime, anchors[clickIndex].timeSeconds - totalDuration * scale);
+      const scale = totalDuration > 0 ? availableDuration / totalDuration : 1;
+      let segmentStart = cursorTime;
       for (let offset = 0; offset < durations.length; offset += 1) {
         const segmentIndex = blockStartIndex + offset + 1;
         const segmentDuration = durations[offset] * scale;
@@ -247,11 +247,12 @@ export function createCursorMotionTimeline(
       continue;
     }
 
-    const start = anchors[index - 1];
     const end = anchors[index];
-    const segmentEnd = Math.max(end.timeSeconds, cursorTime + desiredDuration(start, end));
-    const segmentStart =
-      segmentEnd === end.timeSeconds ? Math.max(cursorTime, end.timeSeconds - desiredDuration(start, end)) : cursorTime;
+    // Preserve the recorded interval. Retiming every move to a fixed
+    // 180–450 ms window makes sparse Linux cursor samples look frozen and
+    // then rush to catch up near the next PipeWire anchor.
+    const segmentStart = cursorTime;
+    const segmentEnd = Math.max(segmentStart, end.timeSeconds);
     addSegment(index, segmentStart, segmentEnd);
     cursorTime = segmentEnd;
     index += 1;

@@ -55,7 +55,7 @@ export function useVideoEditor(options: {
     canvas: outputCanvas,
     cursorEffects: cursor.clickEffects,
     cursorMotion,
-    selectedCursor: cursor.selectedCursor,
+    cursorSelection: cursor.selection,
     cursorSize: cursor.cursorSize,
     cursorColor: cursor.cursorColor,
     cursorShadowEnabled: cursor.enableShadow,
@@ -74,6 +74,14 @@ export function useVideoEditor(options: {
     void refreshBackgroundLibrary().catch(() => console.error('Failed to refresh background library.'));
   });
   onScopeDispose(stopBackgroundSubscription);
+  const refreshCursorPacks = async () => {
+    cursor.importedPacks.value = await capture.listCursorPacks();
+  };
+  void refreshCursorPacks().catch(() => console.error('Failed to load cursor packs.'));
+  const stopCursorSubscription = capture.onCursorPacksChanged(() => {
+    void refreshCursorPacks().catch(() => console.error('Failed to refresh cursor packs.'));
+  });
+  onScopeDispose(stopCursorSubscription);
 
   const sourceFps = computed(() => {
     const screen = editorData.value?.tracks.find((track) => track.kind === 'screen');
@@ -96,7 +104,7 @@ export function useVideoEditor(options: {
         zoomMotionBlur: normalizeZoomMotionBlur(zoomState.zoomMotionBlur?.value),
         composition: compositionState.composition.value,
         cursorSettings: {
-          selectedCursor: cursor.selectedCursor.value,
+          selection: cursor.selection.value,
           size: cursor.cursorSize.value,
           color: cursor.cursorColor.value,
           shadow: {
@@ -108,6 +116,7 @@ export function useVideoEditor(options: {
           clickEffects: cursor.clickEffects.value,
           motion: cursorMotion.value,
         },
+        cursorPack: cursor.selectedPack.value,
       }),
     };
   });

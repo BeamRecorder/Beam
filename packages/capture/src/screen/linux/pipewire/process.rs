@@ -31,10 +31,14 @@ pub(super) enum SinkMessage {
     BeginSegment(ScreenSegment, mpsc::SyncSender<Result<(), CaptureError>>),
     Format(VideoFormat),
     Sample(OwnedScreenSample),
-    Cursor(u64, CursorSampleState),
     Discontinuity(ScreenDiscontinuity),
     EndSegment(mpsc::SyncSender<Result<(), CaptureError>>),
     Finish,
+}
+
+pub(super) struct CursorMessage {
+    pub(super) session_ns: u64,
+    pub(super) cursor: CursorSampleState,
 }
 
 pub(super) struct ProcessState {
@@ -47,6 +51,8 @@ pub(super) struct ProcessState {
     pub stopping: bool,
     pub clock: Instant,
     pub sink: Sender<SinkMessage>,
+    pub cursor_sink: Sender<CursorMessage>,
+    pub pending_cursor: Option<CursorMessage>,
     pub metrics: Arc<ScreenCaptureMetrics>,
     pub fatal: Arc<Mutex<Option<CaptureError>>>,
     pub pending_drops: u64,
@@ -102,6 +108,14 @@ impl FrameGeometry {
         cursor.y = scale_coordinate(cursor.y, cursor_height, self.height);
         Some(cursor)
     }
+}
+
+pub(super) fn should_defer_timestamp_origin(
+    has_frame_geometry: bool,
+    corrupted: bool,
+    chunk_size: u32,
+) -> bool {
+    !has_frame_geometry && (corrupted || chunk_size == 0)
 }
 
 fn scale_coordinate(value: i32, source: u32, destination: u32) -> i32 {
@@ -160,6 +174,26 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
     let has_cursor_metadata = cursor.as_ref().is_some_and(|cursor| cursor.id != 0);
     let reported_crop = metadata::crop(&buffer);
     let transform = metadata::transform(&buffer);
+    // Mutter may publish cursor-only buffers before the first window frame.
+    // They cannot be mapped without frame geometry and must not establish the
+    // session clock origin, otherwise the cursor timeline starts ahead of the
+    // encoded video by the wait for that first usable frame.
+    let defer_unusable_preroll = {
+        let datas = buffer.datas_mut();
+        if datas.len() != 1 {
+            false
+        } else {
+            let chunk = datas[0].chunk();
+            should_defer_timestamp_origin(
+                state.last_frame_geometry.is_some(),
+                chunk.flags().contains(ChunkFlags::CORRUPTED),
+                chunk.size(),
+            )
+        }
+    };
+    if defer_unusable_preroll {
+        return;
+    }
     let arrival_ns = u64::try_from(state.clock.elapsed().as_nanos()).unwrap_or(u64::MAX);
     let timestamp = match state.timestamp.map(header, arrival_ns) {
         Ok(timestamp) => timestamp,
@@ -288,12 +322,15 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
     }
     flush_pending_drops(&mut state, timestamp.session_ns);
     let has_cursor = matches!(sample_cursor, CursorSampleState::Known { .. });
+    if has_cursor {
+        try_cursor_sample(&mut state, timestamp.session_ns, sample_cursor.clone());
+    }
     let native_pts = timestamp.native_pts_ns;
     let sample = OwnedScreenSample {
         frame,
         timestamp,
         sequence: header.sequence,
-        cursor: sample_cursor,
+        cursor: CursorSampleState::Unknown,
     };
     match state.sink.try_send(SinkMessage::Sample(sample)) {
         Ok(()) => state.metrics.received_frame(native_pts, has_cursor),
@@ -308,16 +345,58 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
 }
 
 fn try_cursor_sample(state: &mut ProcessState, session_ns: u64, cursor: CursorSampleState) {
-    match state.sink.try_send(SinkMessage::Cursor(session_ns, cursor)) {
-        Ok(()) => {}
-        Err(TrySendError::Full(_)) => {
-            state.metrics.dropped_frames(1);
-            state.pending_drops = state.pending_drops.saturating_add(1);
-        }
-        Err(TrySendError::Disconnected(_)) => {
-            set_fatal(&state.fatal, sink_error("screen sink channel disconnected"));
+    if enqueue_cursor_message(
+        &state.cursor_sink,
+        &mut state.pending_cursor,
+        CursorMessage { session_ns, cursor },
+    )
+    .is_err()
+    {
+        set_fatal(&state.fatal, sink_error("cursor sink channel disconnected"));
+    }
+}
+
+pub(super) fn flush_pending_cursor(state: &mut ProcessState) {
+    if flush_cursor_message(&state.cursor_sink, &mut state.pending_cursor).is_err() {
+        set_fatal(&state.fatal, sink_error("cursor sink channel disconnected"));
+    }
+}
+
+pub(super) fn enqueue_cursor_message(
+    sink: &Sender<CursorMessage>,
+    pending: &mut Option<CursorMessage>,
+    message: CursorMessage,
+) -> Result<(), ()> {
+    if let Some(previous) = pending.take() {
+        match sink.try_send(previous) {
+            Ok(()) => {}
+            Err(TrySendError::Full(_)) => {
+                // The worker is still behind. Keep only the freshest cursor
+                // state so the callback remains realtime-safe.
+                *pending = Some(message);
+                return Ok(());
+            }
+            Err(TrySendError::Disconnected(_)) => return Err(()),
         }
     }
+    match sink.try_send(message) {
+        Ok(()) => Ok(()),
+        Err(TrySendError::Full(message)) => {
+            *pending = Some(message);
+            Ok(())
+        }
+        Err(TrySendError::Disconnected(_)) => Err(()),
+    }
+}
+
+pub(super) fn flush_cursor_message(
+    sink: &Sender<CursorMessage>,
+    pending: &mut Option<CursorMessage>,
+) -> Result<(), ()> {
+    let Some(message) = pending.take() else {
+        return Ok(());
+    };
+    sink.send(message).map_err(|_| ())
 }
 
 fn invalid_buffer(state: &mut ProcessState, session_ns: u64, message: &str) {

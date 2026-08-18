@@ -17,6 +17,20 @@ describe('VideoEditor', () => {
     expect(mounted.emitted('open-project')).toHaveLength(1);
   });
 
+  it('opens Cursor and clears clip and zoom selection when the canvas cursor is clicked', async () => {
+    const mounted = mountEditor();
+    editorState.store.compositionState.selectedClipId.value = 'screen';
+    editorState.store.zoomState.selectedZoomId.value = 'existing-zoom';
+    await mounted.vm.$nextTick();
+
+    mounted.findComponent({ name: 'MockEditorCanvas' }).vm.$emit('select:cursor');
+    await mounted.vm.$nextTick();
+
+    expect(editorState.store.activeTab.value).toBe('cursor');
+    expect(editorState.store.compositionState.selectedClipId.value).toBeNull();
+    expect(editorState.store.zoomState.selectedZoomId.value).toBeNull();
+  });
+
   it('passes selectedBackgroundMedia to the ambient layer independently from the canvas grid', async () => {
     const mounted = mountEditor();
     const ambient = mounted.get('.mock-editor-ambient');

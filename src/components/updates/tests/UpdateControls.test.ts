@@ -17,10 +17,10 @@ const captureMock = vi.hoisted(() => ({
 vi.mock('~/api/capture', () => ({ capture: captureMock }));
 
 const Button = {
-  props: ['disabled'],
+  props: ['disabled', 'tooltip'],
   emits: ['click'],
   template:
-    '<button class="action-button" :disabled="disabled" @click="$emit(\'click\')"><slot name="icon" /><slot /></button>',
+    '<button class="action-button" :disabled="disabled" :data-tooltip="tooltip" @click="$emit(\'click\')"><slot name="icon" /><slot /></button>',
 };
 
 const state = (status: AppUpdateState['status'], overrides: Partial<AppUpdateState> = {}): AppUpdateState => ({
@@ -57,6 +57,7 @@ describe('UpdateControls', () => {
     captureMock.getUpdateState.mockResolvedValue(state('idle', { availableVersion: null }));
     const wrapper = mount(UpdateControls, { global: { stubs: { Button } } });
     await flushPromises();
+    expect(wrapper.get('.update-version').text()).toBe('v1.0.0');
     expect(wrapper.get('.update-description').text()).toContain('1.0.0');
     const buttons = wrapper.findAll('.action-button');
     await buttons[0]!.trigger('click');
@@ -97,7 +98,9 @@ describe('UpdateControls', () => {
         expect(wrapper.find('.error-copy').exists()).toBe(true);
       }
       if (current.status === 'checking' || current.status === 'downloading' || current.status === 'unsupported') {
-        expect(wrapper.findAll('.action-button')[1]!.attributes('disabled')).toBeDefined();
+        const actionBtn = wrapper.findAll('.action-button')[1]!;
+        expect(actionBtn.attributes('disabled')).toBeDefined();
+        expect(actionBtn.attributes('data-tooltip')).toBeTruthy();
       }
       wrapper.unmount();
     }

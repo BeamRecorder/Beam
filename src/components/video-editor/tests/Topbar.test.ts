@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Topbar from '../Topbar.vue';
+import type { PreviewPerformanceSnapshot } from '../performance/preview-performance-types';
 
 const capture = vi.hoisted(() => ({
   openDiscordInvite: vi.fn(),
@@ -55,7 +56,7 @@ describe('VideoEditor Topbar', () => {
       samples: [],
       issues: ['ui'],
       recommendation: 'half',
-    };
+    } satisfies PreviewPerformanceSnapshot;
 
     const idleWrapper = mount(Topbar, {
       props: {

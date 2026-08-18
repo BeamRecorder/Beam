@@ -165,13 +165,13 @@ describe('HudPreferences', () => {
     expect(unavailable.find('.input-access-actions [role="switch"]').exists()).toBe(false);
   });
 
-  it('relays alwaysOnTop toggle events', async () => {
+  it('does not render or emit the removed always-on-top preference', async () => {
     const wrapper = mount(HudPreferences, {
-      props: { countdownSeconds: 3, alwaysOnTop: true },
+      props: { countdownSeconds: 3 },
       global: { stubs: { Select } },
     });
-    const switchEl = wrapper.find('.switch-container');
-    await switchEl.trigger('click');
-    expect(wrapper.emitted('update:alwaysOnTop')).toContainEqual([false]);
+
+    expect(wrapper.findAll('.preference-title').some((title) => title.text() === 'Always on top')).toBe(false);
+    expect(wrapper.emitted('update:alwaysOnTop')).toBeUndefined();
   });
 });

@@ -119,7 +119,9 @@ export function validateComposition(composition: ClipComposition): void {
             clip.cameraSplitRatio! > 0.8 ||
             !finite(clip.cameraSplitPadding ?? Number.NaN) ||
             clip.cameraSplitPadding! < 0 ||
-            clip.cameraSplitPadding! > 0.08)))
+            clip.cameraSplitPadding! > 0.08 ||
+            (clip.reactToZoom !== undefined && typeof clip.reactToZoom !== 'boolean'))) ||
+        (clip.kind !== 'webcam' && clip.reactToZoom !== undefined))
     ) {
       throw new CompositionEngineError('Invalid visual preset.');
     }

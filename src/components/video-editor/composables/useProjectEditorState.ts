@@ -18,7 +18,8 @@ import {
 } from './backgroundCatalog';
 import type { OutputCanvasSettings } from '../canvas/output-canvas';
 import { type CursorClickEffects, type CursorMotionSettings } from '../../../api/types/cursor-settings';
-import type { CursorType, CursorShadowDirection } from '../../../api/types/cursor-presentation';
+import type { CursorShadowDirection } from '../../../api/types/cursor-presentation';
+import type { CursorSelection } from '../../../api/types/cursor-pack';
 import { propertyInteractionActive } from '../../../composables/property-interaction';
 import type { EditorPreferenceDefaults } from './editor-default-types';
 import {
@@ -41,7 +42,7 @@ export function useProjectEditorState(options: {
   canvas: Ref<OutputCanvasSettings>;
   cursorEffects: Ref<CursorClickEffects>;
   cursorMotion: Ref<CursorMotionSettings>;
-  selectedCursor: Ref<CursorType>;
+  cursorSelection: Ref<CursorSelection>;
   cursorSize: Ref<number>;
   cursorColor: Ref<string>;
   cursorShadowEnabled: Ref<boolean>;
@@ -83,7 +84,7 @@ export function useProjectEditorState(options: {
       blurPercent: Math.max(0, Math.min(100, Math.round(options.backgroundBlurPercent.value))),
       importedBackgrounds: [],
       cursor: {
-        selectedCursor: options.selectedCursor.value,
+        selection: clone(options.cursorSelection.value),
         size: options.cursorSize.value,
         color: options.cursorColor.value,
         shadow: {
@@ -186,7 +187,7 @@ export function useProjectEditorState(options: {
       options.backgroundBlurPercent.value = Math.max(0, Math.min(100, Number(state.presentation.blurPercent) || 0));
       options.canvas.value = state.presentation.canvas;
       const cursor = state.presentation.cursor;
-      options.selectedCursor.value = cursor.selectedCursor;
+      options.cursorSelection.value = clone(cursor.selection);
       options.cursorSize.value = cursor.size;
       options.cursorColor.value = cursor.color;
       options.cursorShadowEnabled.value = cursor.shadow.enabled;
@@ -222,7 +223,7 @@ export function useProjectEditorState(options: {
       options.canvas,
       options.cursorEffects,
       options.cursorMotion,
-      options.selectedCursor,
+      options.cursorSelection,
       options.cursorSize,
       options.cursorColor,
       options.cursorShadowEnabled,

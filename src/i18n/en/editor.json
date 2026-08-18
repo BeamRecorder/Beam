@@ -18,6 +18,8 @@
     "splitRequiresScreen": "No matching screen recording is available at this point in the timeline.",
     "splitRatio": "Camera share",
     "splitPadding": "Background spacing",
+    "reactToZoom": "React to zoom",
+    "reactToZoomDescription": "Keep the webcam anchored while adapting its size to canvas zoom.",
     "framing": "Framing",
     "fill": "Fill",
     "fit": "Fit",

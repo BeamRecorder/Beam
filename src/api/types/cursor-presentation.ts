@@ -1,4 +1,5 @@
 import type { CursorClickEffects, CursorMotionSettings } from './cursor-settings';
+import type { CursorSelection } from './cursor-pack';
 
 export const CURSOR_TYPES = [
   'automatic',
@@ -43,7 +44,7 @@ export type CursorType = (typeof CURSOR_TYPES)[number];
 export type CursorShadowDirection = 'all' | 'bottom' | 'bottom-right' | 'top-left';
 
 export interface CursorPresentationSettings {
-  selectedCursor: CursorType;
+  selection: CursorSelection;
   size: number;
   color: string;
   shadow: {
@@ -57,7 +58,7 @@ export interface CursorPresentationSettings {
 }
 
 export const createDefaultCursorPresentation = (): CursorPresentationSettings => ({
-  selectedCursor: 'automatic',
+  selection: { packId: 'builtin:macos', mode: 'automatic', cursorId: null },
   size: 45,
   color: '#000000',
   shadow: { enabled: true, blur: 6, color: '#000000', direction: 'bottom' },

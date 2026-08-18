@@ -4,7 +4,9 @@ import type { ZoomElement } from '../../zoom/zoom-types';
 export type TimelineItemCategory = 'visual' | 'audio' | 'caption' | 'zoom';
 
 export type TimelineClipboardDescriptor =
-  { kind: 'item'; name: string } | { kind: 'caption'; text: string } | { kind: 'zoom'; number: number };
+  | { kind: 'item'; name: string }
+  | { kind: 'caption'; text: string }
+  | { kind: 'zoom'; number: number };
 
 export type TimelineClipboardItem =
   | {

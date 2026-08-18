@@ -179,7 +179,7 @@ describe('PreviewPerformanceWidget', () => {
     ['good', { ui: 0.4, worker: 0.4, audio: 0.4, media: 0.4 }, 'var(--color-success)', 'is-good'],
     ['warning', { ui: 0.6, worker: 0.2, audio: 0.2, media: 0.2 }, 'var(--color-warning)', 'is-high'],
     ['critical', { ui: 0.8, worker: 0.2, audio: 0.2, media: 0.2 }, 'var(--color-error)', 'is-critical'],
-  ] as const)('uses the instant score threshold for %s graph color', (status, scores, color, levelClass) => {
+  ] as const)('uses the instant score threshold for %s graph color', (_status, scores, color, levelClass) => {
     const wrapper = mountWidget(snapshot('good', scores));
 
     expect(wrapper.get('.graph-stub').attributes('data-color')).toBe(color);

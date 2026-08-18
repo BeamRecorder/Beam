@@ -2,7 +2,7 @@ import type { ProjectEditorData } from '../../../api/types/capture-api';
 import type { CursorClickEffects, CursorMotionSettings } from '../../../api/types/cursor-settings';
 import type { HistoryAction } from '../composables/useEditorUndoRedo';
 import type { BackgroundValue } from '../composables/backgroundCatalog';
-import type { CursorType } from '../properties/cursor/useCursorReplacer';
+import type { CursorPackDescriptor, CursorSelection } from '../../../api/types/cursor-pack';
 import type { ShadowDirection } from '../properties/cursor/shadow-types';
 import type { ZoomElement, ZoomMotionBlurSettings } from '../zoom/zoom-types';
 import type { MediaError, MediaFrame } from '~/media/shared';
@@ -23,7 +23,8 @@ export interface EditorCanvasProps {
   isPlaying: boolean;
   currentTime: number;
   duration?: number;
-  selectedCursor: CursorType;
+  cursorSelection: CursorSelection;
+  cursorPack: CursorPackDescriptor | null;
   cursorSize: number;
   cursorColor: string;
   enableShadow: boolean;
@@ -63,5 +64,7 @@ export interface EditorCanvasEmits {
   (event: 'update:clip-transform', transform: NormalizedTransform): void;
   (event: 'update:clip-crop', crop: NormalizedCrop): void;
   (event: 'select:canvas'): void;
+  (event: 'select:cursor'): void;
+  (event: 'update:cursor-size', value: number): void;
   (event: 'done:crop'): void;
 }

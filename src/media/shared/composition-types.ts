@@ -186,6 +186,8 @@ export interface VisualClip extends ClipBase {
   cameraSplitRatio?: number;
   /** Inset around both split regions, normalized against the canvas. */
   cameraSplitPadding?: number;
+  /** Whether a webcam overlay keeps its screen-relative size while the canvas zooms. */
+  reactToZoom?: boolean;
 }
 
 export interface BlurClip extends ClipBase {

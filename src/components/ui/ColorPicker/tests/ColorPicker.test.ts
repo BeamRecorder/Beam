@@ -36,6 +36,17 @@ describe('ColorPicker', () => {
     expect(wrapper.attributes('title')).toBe('Locked');
     expect(wrapper.attributes('data-disabled-reason-key')).toBe('recording');
   });
+  it('does not open the trigger popover when disabled', async () => {
+    const wrapper = mount(ColorPicker, {
+      attachTo: document.body,
+      props: { modelValue: '#ff0000', disabled: true },
+      global: { stubs: { ColorPickerCustom: Custom } },
+    });
+
+    await wrapper.get('.popover-trigger').trigger('click');
+    expect(document.querySelector('.popover-picker-content')).toBeNull();
+    wrapper.unmount();
+  });
   it('uses uppercase text input and emits alpha in trigger mode', async () => {
     const Popover = {
       template: '<div><slot name="trigger" :isOpen="false" /><slot :close="() => {}" /></div>',

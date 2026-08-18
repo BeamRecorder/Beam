@@ -1,4 +1,8 @@
 {
+  "CameraLayoutPanel": {
+    "reactToZoom": "Auf Zoom reagieren",
+    "reactToZoomDescription": "Webcam verankert halten und ihre Größe an den Canvas-Zoom anpassen."
+  },
   "ShadowDirectionGroup": {
     "shadowDirection": "Schattenrichtung",
     "around": "Rundum",

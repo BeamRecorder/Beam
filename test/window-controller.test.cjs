@@ -61,6 +61,11 @@ function fakeWindow() {
       calls.push(['show']);
       listeners.get('show')?.();
     },
+    hide: () => {
+      visible = false;
+      calls.push(['hide']);
+      listeners.get('hide')?.();
+    },
     focus: () => calls.push(['focus']),
     moveTop: () => calls.push(['moveTop']),
     restore: () => {
@@ -273,30 +278,48 @@ test('recorder position persistence stores the compact bar position', () => {
   controller.setMode('hud');
 });
 
-test('window controller respects alwaysOnTop preference', () => {
-  let currentAlwaysOnTop = true;
+test('HUD and Recorder stay topmost independently of a legacy preference', () => {
   const preferencesStore = {
-    read: () => ({ alwaysOnTop: currentAlwaysOnTop }),
+    read: () => ({ alwaysOnTop: false }),
+    patch: () => undefined,
+  };
+  const display = {
+    id: 1,
+    bounds: { x: 0, y: 0, width: 1000, height: 800 },
+    workArea: { x: 0, y: 0, width: 1000, height: 800 },
   };
   const win = fakeWindow();
-  const controller = new WindowController(win, { preferencesStore });
+  const controller = new WindowController(win, {
+    preferencesStore,
+    screenModule: {
+      getCursorScreenPoint: () => ({ x: 500, y: 400 }),
+      getDisplayNearestPoint: () => display,
+    },
+  });
 
-  // HUD mode when ready, with alwaysOnTop: true
+  // The removed preference no longer controls native overlay policy.
   controller.markReadyToShow();
-  const alwaysOnTopCallsTrue = win.calls.filter((call) => call[0] === 'top');
-  assert.equal(alwaysOnTopCallsTrue.at(-1)[1], true);
-
-  // Toggle alwaysOnTop to false, apply policy again
-  currentAlwaysOnTop = false;
-  controller.applyModePolicy();
-  const alwaysOnTopCallsFalse = win.calls.filter((call) => call[0] === 'top');
-  assert.equal(alwaysOnTopCallsFalse.at(-1)[1], false);
-
-  // A focus transition must not re-enable a disabled preference.
-  win.emit('blur');
-  assert.equal(topCalls(win).at(-1)[1], false);
-  currentAlwaysOnTop = true;
-  win.emit('focus');
   assert.equal(topCalls(win).at(-1)[1], true);
-  assert.equal(topCalls(win).at(-1)[2], expectedAlwaysOnTopLevel());
+
+  controller.setMode('recorder');
+  assert.equal(topCalls(win).at(-1)[1], true);
+
+  // Returning to the visible HUD restores its fixed topmost policy.
+  controller.setMode('hud');
+  assert.equal(topCalls(win).at(-1)[1], true);
+});
+
+test('editor transition demotes and hides the HUD until it is explicitly shown again', () => {
+  const win = fakeWindow();
+  const controller = new WindowController(win);
+
+  controller.markReadyToShow();
+  assert.equal(topCalls(win).at(-1)[1], true);
+
+  controller.setVisible(false);
+  assert.equal(topCalls(win).at(-1)[1], false);
+  assert.deepEqual(win.calls.filter((call) => call[0] === 'mouse').at(-1), ['mouse', true]);
+
+  controller.setVisible(true);
+  assert.equal(topCalls(win).at(-1)[1], true);
 });

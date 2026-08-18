@@ -69,7 +69,7 @@ const canvasTransitions = (value) => {
 };
 
 const defaultCursor = () => ({
-  selectedCursor: 'automatic',
+  selection: { packId: 'builtin:macos', mode: 'automatic', cursorId: null },
   size: 45,
   color: '#000000',
   shadow: { enabled: true, blur: 6, color: '#000000', direction: 'bottom' },
@@ -160,9 +160,25 @@ const clickEffect = (value) => {
 };
 
 const cursorState = (value) => {
+  const legacyCursor = value?.selectedCursor;
+  const selection =
+    value?.selection && typeof value.selection === 'object'
+      ? value.selection
+      : CURSOR_TYPES.has(legacyCursor)
+        ? {
+            packId: 'builtin:macos',
+            mode: legacyCursor === 'automatic' ? 'automatic' : 'fixed',
+            cursorId: legacyCursor === 'automatic' ? null : legacyCursor,
+          }
+        : null;
   if (
     !value ||
-    !CURSOR_TYPES.has(value.selectedCursor) ||
+    !selection ||
+    typeof selection.packId !== 'string' ||
+    !selection.packId ||
+    !['automatic', 'fixed'].includes(selection.mode) ||
+    (selection.mode === 'fixed' && (typeof selection.cursorId !== 'string' || !selection.cursorId)) ||
+    (selection.mode === 'automatic' && selection.cursorId !== null && selection.cursorId !== undefined) ||
     !finite(value.size) ||
     typeof value.color !== 'string' ||
     !value.color ||
@@ -181,7 +197,11 @@ const cursorState = (value) => {
   )
     throw new Error('Présentation du curseur invalide');
   return {
-    selectedCursor: value.selectedCursor,
+    selection: {
+      packId: selection.packId,
+      mode: selection.mode,
+      cursorId: selection.mode === 'fixed' ? selection.cursorId : null,
+    },
     size: clamp(value.size, 1, 256),
     color: value.color,
     shadow: {
@@ -281,6 +301,16 @@ const migratePresentation = (value) => {
   }
   if (input.cursorMotion && typeof input.cursorMotion === 'object')
     cursor.motion = { ...cursor.motion, ...input.cursorMotion };
+  if (input.cursor && typeof input.cursor === 'object') {
+    Object.assign(cursor, input.cursor);
+    if (!input.cursor.selection && CURSOR_TYPES.has(input.cursor.selectedCursor)) {
+      cursor.selection = {
+        packId: 'builtin:macos',
+        mode: input.cursor.selectedCursor === 'automatic' ? 'automatic' : 'fixed',
+        cursorId: input.cursor.selectedCursor === 'automatic' ? null : input.cursor.selectedCursor,
+      };
+    }
+  }
   return presentationState({
     canvas: {
       preset,

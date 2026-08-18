@@ -43,6 +43,7 @@ const { createTeleprompterStorage } = require('./teleprompter/teleprompter-stora
 const { createUserPaths } = require('./storage/user-paths.cjs');
 const { createBackgroundLibrary } = require('./backgrounds/background-library.cjs');
 const { createFontLibrary } = require('./fonts/font-library.cjs');
+const { createCursorPackLibrary } = require('./cursors/cursor-pack-library.cjs');
 const { createAutoUpdater, registerUpdateIpc } = require('./updates/auto-updater.cjs');
 const { createUpdateCache, updaterCacheDirectory } = require('./updates/update-cache.cjs');
 const { createTrayManager } = require('./tray/tray-manager.cjs');
@@ -310,6 +311,7 @@ function initializeApplication() {
     const projectStore = createProjectStore(userPaths.projects);
     const backgroundLibrary = createBackgroundLibrary(userPaths);
     const fontLibrary = createFontLibrary(userPaths.fonts);
+    const cursorLibrary = createCursorPackLibrary(userPaths.cursors);
     const teleprompterStorage = createTeleprompterStorage({ projectStore });
     registerTeleprompterIpc({ ipcMain: applicationIpc, teleprompterWindow, storage: teleprompterStorage });
     registerProjectIpc(
@@ -320,8 +322,12 @@ function initializeApplication() {
       require('electron').dialog,
       BrowserWindow,
       isTrustedRenderer,
+      cursorLibrary,
     );
-    protocol.handle('project-media', createProjectMediaHandler({ projectStore, backgroundLibrary, fontLibrary }));
+    protocol.handle(
+      'project-media',
+      createProjectMediaHandler({ projectStore, backgroundLibrary, fontLibrary, cursorLibrary }),
+    );
     logStartup('Project IPC registered.');
     const whisperStore = createWhisperModelStore(userPaths.whisperModels);
     protocol.handle('whisper-model', (request) => {

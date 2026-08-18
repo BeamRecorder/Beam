@@ -10,14 +10,17 @@ import {
   type VisualClip,
 } from '~/media/shared/composition-types';
 import { captionContentAt } from '~/media/shared/caption-text-layout';
-import { drawWebcamOverlay, webcamSettingsForAppearance } from '../../composition/webcam/webcam-zoom';
+import {
+  drawWebcamOverlay,
+  webcamReactsToZoom,
+  webcamSettingsForAppearance,
+} from '../../composition/webcam/webcam-zoom';
 import { drawDecoratedMedia } from '../../composition/appearance/render-decorated-media';
 import { drawCaptionText, type CaptionViewport } from '../../composition/captions/render-caption-text';
 import type { OutputCanvasSettings } from '../output-canvas';
 import { applyBlurEffect } from '../../composition/effects/blur-effect';
 import { resolveCompositionSceneLayers, type CompositionSceneLayers } from '../../composition/scene-layers';
 import { drawWithClipTransition } from '../../composition/transitions/render-transition';
-import { isSplitCameraLayout } from '~/media/shared/camera-layout-types';
 import { resolveVisualClipFraming } from '../../composition/visual-framing';
 
 export interface UseCompositionMediaOptions {
@@ -173,7 +176,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
       scale,
       {
         ...webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY),
-        reactToZoom: !isSplitCameraLayout(clip.cameraLayoutPreset ?? 'custom'),
+        reactToZoom: webcamReactsToZoom(clip),
       },
       clip.id === selected?.id && options.transformDraft() ? options.transformDraft()! : clip.transform,
       options.isCropping?.() && clip.id === selected?.id ? undefined : clip.crop,
@@ -243,7 +246,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
         window.scale,
         {
           ...webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY),
-          reactToZoom: !isSplitCameraLayout(clip.cameraLayoutPreset ?? 'custom'),
+          reactToZoom: webcamReactsToZoom(clip),
         },
         clip.id === selected?.id && options.transformDraft() ? options.transformDraft()! : clip.transform,
         options.isCropping?.() && clip.id === selected?.id ? undefined : clip.crop,

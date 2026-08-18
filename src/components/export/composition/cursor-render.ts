@@ -12,9 +12,9 @@ import {
 } from '../../video-editor/composables/cursorPlayback';
 import { cursorShadowOffset } from '../../video-editor/properties/cursor/cursor-shadow';
 import {
-  cursorHotspotAtSize,
+  cursorAssetAt,
+  cursorGeometryAtSize,
   cursorPositionAt,
-  cursorTypeAt,
 } from '../../video-editor/properties/cursor/cursor-rendering';
 import { effectButtonForRecordedButton, type CursorClickEffectSettings } from '../../../api/types/cursor-settings';
 import type { CompositionSnapshot } from '../export-types';
@@ -40,8 +40,10 @@ export function cursorPositionForKeyboardCaption(
   motionState: CursorMotionSample | null,
   camera: { scale: number; focus: { cx: number; cy: number } },
 ) {
-  const cursorType = cursorTypeAt(snapshot.cursorSettings.selectedCursor, motionState);
-  const image = cursorImages?.get(cursorType);
+  const asset = snapshot.cursorPack
+    ? cursorAssetAt(snapshot.cursorPack, snapshot.cursorSettings.selection, motionState)
+    : null;
+  const image = asset ? cursorImages?.get(asset.id) : undefined;
   if (!snapshot.cursor.available || !motionState?.visible || !usableImage(image)) return null;
   const raw = cursorPositionAt(
     motionState,
@@ -115,10 +117,10 @@ export function drawCursorLayer(
     ctx.restore();
   }
 
-  const cursorType = cursorTypeAt(settings.selectedCursor, motionCursor);
-  const image = cursorImages?.get(cursorType);
+  const asset = snapshot.cursorPack ? cursorAssetAt(snapshot.cursorPack, settings.selection, motionCursor) : null;
+  const image = asset ? cursorImages?.get(asset.id) : undefined;
   if (!motionCursor?.visible || !usableImage(image)) return;
-  const hotspot = cursorHotspotAtSize(cursorType, cursorSize);
+  const geometry = cursorGeometryAtSize(asset!, cursorSize);
   const click = buttonEventsBetween(snapshot.cursor.events, Math.max(0, time - 0.28), time)
     .reverse()
     .find((event) => settingsForButton(event.button)?.springEnabled);
@@ -145,7 +147,7 @@ export function drawCursorLayer(
     }
     ctx.translate(samplePosition.x, samplePosition.y);
     ctx.scale(clickScale, clickScale);
-    ctx.drawImage(image!, -hotspot.x, -hotspot.y, cursorSize, cursorSize);
+    ctx.drawImage(image!, -geometry.hotspot.x, -geometry.hotspot.y, geometry.width, geometry.height);
     ctx.restore();
   }
 }

@@ -55,7 +55,7 @@ const stubs = {
   HudPreferences: {
     props: ['inputAccess', 'recordInteractions', 'requestingInputAccess'],
     template:
-      '<div class="preferences-stub"><span class="preferences-input-access">{{ inputAccess?.state }}</span><button class="preference-update" @click="$emit(\'update:countdown-seconds\', 10)"/><button class="preference-visibility" @click="$emit(\'update:recording-bar-visibility\', \'auto-fade\')"/><button @click="$emit(\'close\')">Return</button></div>',
+      '<div class="preferences-stub"><span class="preferences-input-access">{{ inputAccess?.state }}</span><button class="preference-update" @click="$emit(\'update:countdown-seconds\', 10)"/><button class="preference-visibility" @click="$emit(\'update:recording-bar-visibility\', \'auto-fade\')"/><button class="preference-legacy-top" @click="$emit(\'update:always-on-top\', true)"/><button @click="$emit(\'close\')">Return</button></div>',
   },
   CameraPreviewOverlay: { template: '<div class="camera-preview-stub" />' },
 };
@@ -358,7 +358,26 @@ describe('HUD', () => {
     await wrapper.get('.project-btn').trigger('click');
     expect(wrapper.find('.project-picker-stub').exists()).toBe(true);
     await wrapper.get('[aria-label="Close"]').trigger('click');
-    expect(capture.quit).toHaveBeenCalledOnce();
+    expect(capture.close).toHaveBeenCalledOnce();
+    expect(capture.quit).not.toHaveBeenCalled();
+  });
+
+  it('closes the HUD immediately while the editor loading card is visible', async () => {
+    const wrapper = mount(HUD, {
+      props: { preparingEditor: true, editorLoadingProgress: { stage: 'openingWindow', value: 10 } },
+      global: { stubs },
+    });
+    await ready();
+
+    expect(capture.setInteractive).toHaveBeenCalledWith(true);
+    await wrapper.get('[aria-label="Minimize"]').trigger('click');
+    vi.advanceTimersByTime(160);
+    expect(capture.minimize).toHaveBeenCalledOnce();
+
+    await wrapper.get('[aria-label="Close"]').trigger('click');
+
+    expect(capture.close).toHaveBeenCalledOnce();
+    expect(capture.quit).not.toHaveBeenCalled();
   });
 
   it('keeps available interaction access out of the main HUD and preserves its height', async () => {
@@ -910,7 +929,9 @@ describe('HUD', () => {
     await wrapper.get('[aria-label="Preferences"]').trigger('click');
     await wrapper.get('.preference-update').trigger('click');
     await wrapper.get('.preference-visibility').trigger('click');
+    await wrapper.get('.preference-legacy-top').trigger('click');
     expect(capture.updatePreferences).toHaveBeenCalledWith({ recordingBar: { visibility: 'auto-fade' } });
+    expect(capture.updatePreferences).not.toHaveBeenCalledWith({ alwaysOnTop: expect.anything() });
     await wrapper.get('[aria-label="Back"]').trigger('click');
     await wrapper.get('.project-btn').trigger('click');
     await wrapper.get('.project-toggle').trigger('click');

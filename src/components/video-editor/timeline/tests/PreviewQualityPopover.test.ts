@@ -75,7 +75,7 @@ describe('PreviewQualityPopover', () => {
   it('shows one anchored recommendation for three seconds, then leaves only the warning icon state', async () => {
     const wrapper = mountPopover(snapshot('warning', 'half'));
 
-    expect(wrapper.get('.preview-quality-suggestion').exists()).toBe(true);
+    expect(wrapper.find('.preview-quality-suggestion').exists()).toBe(true);
     expect(wrapper.get('.preview-quality-suggestion').text()).toContain('1/2');
     expect(wrapper.get('.preview-quality-trigger').classes()).toContain('is-warning');
 
@@ -127,5 +127,27 @@ describe('PreviewQualityPopover', () => {
       'Quarter resolution',
     ]);
     expect(options[0]?.classes()).toContain('active');
+    expect(options[1]?.classes()).not.toContain('active');
+    expect(options[2]?.classes()).not.toContain('active');
+  });
+
+  it('updates the active option when modelValue prop changes and emits click', async () => {
+    const wrapper = mount(PreviewQualityPopover, {
+      props: { modelValue: 'half', performanceSnapshot: snapshot('good', null) },
+      global: {
+        stubs: {
+          Popover: PopoverStub,
+          Button: ButtonStub,
+          BlurRevealTransition: BlurRevealTransitionStub,
+        },
+      },
+    });
+
+    const options = wrapper.findAll('.preview-quality-option');
+    expect(options[1]?.classes()).toContain('active');
+    expect(options[0]?.classes()).not.toContain('active');
+
+    await options[2]?.trigger('click');
+    expect(wrapper.emitted('update:modelValue')).toEqual([['quarter']]);
   });
 });

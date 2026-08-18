@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import type { CursorType } from '~/components/video-editor/properties/cursor/useCursorReplacer';
+import type { CursorPackDescriptor, CursorSelection } from '~/api/types/cursor-pack';
 import type {
   BackgroundMedia,
   BackgroundValue,
@@ -62,7 +62,8 @@ const props = withDefaults(
     activeTab: string;
     selectedClip?: SelectedClipProperties | null;
     selectedCaptionClip?: CaptionClip | null;
-    selectedCursor: CursorType;
+    cursorSelection: CursorSelection;
+    cursorPacks: CursorPackDescriptor[];
     cursorSize: number;
     cursorColor: string;
     enableShadow: boolean;
@@ -159,8 +160,8 @@ const panelTitle = computed(() => {
   return titleKey ? tSidebar(titleKey) : t('properties');
 });
 const emit = defineEmits<{
-  (event: 'update:selectedCursor', value: CursorType): void;
-  (event: 'preview:selectedCursor', value: CursorType | null): void;
+  (event: 'update:cursorSelection', value: CursorSelection): void;
+  (event: 'preview:cursorSelection', value: CursorSelection | null): void;
   (event: 'update:cursorSize', value: number): void;
   (event: 'update:cursorColor', value: string): void;
   (event: 'update:enableShadow', value: boolean): void;
@@ -225,6 +226,7 @@ const emit = defineEmits<{
   (event: 'update:camera-framing', preset: Exclude<CameraFramingPreset, 'custom'>): void;
   (event: 'update:camera-split-ratio', ratio: number): void;
   (event: 'update:camera-split-padding', padding: number): void;
+  (event: 'update:webcam-react-to-zoom', enabled: boolean): void;
   (event: 'reset:clip-transform'): void;
   (event: 'unlink-clip'): void;
   (event: 'delete-clip'): void;
@@ -406,6 +408,7 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
               @update:camera-framing="emit('update:camera-framing', $event)"
               @update:camera-split-ratio="emit('update:camera-split-ratio', $event)"
               @update:camera-split-padding="emit('update:camera-split-padding', $event)"
+              @update:react-to-zoom="emit('update:webcam-react-to-zoom', $event)"
               @reset:clip-transform="emit('reset:clip-transform')"
               @unlink="emit('unlink-clip')"
               @delete="emit('delete-clip')"
@@ -413,7 +416,8 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
             />
             <CursorPanel
               v-else-if="activeTab === 'cursor'"
-              :selected-cursor="selectedCursor"
+              :selection="cursorSelection"
+              :packs="cursorPacks"
               :cursor-size="cursorSize"
               :cursor-color="cursorColor"
               :enable-shadow="enableShadow"
@@ -422,8 +426,8 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
               :shadow-direction="shadowDirection"
               :click-effects="clickEffects"
               :motion="motion"
-              @update:selected-cursor="emit('update:selectedCursor', $event)"
-              @preview:selected-cursor="emit('preview:selectedCursor', $event)"
+              @update:selection="emit('update:cursorSelection', $event)"
+              @preview:selection="emit('preview:cursorSelection', $event)"
               @update:cursor-size="emit('update:cursorSize', $event)"
               @update:cursor-color="emit('update:cursorColor', $event)"
               @update:enable-shadow="emit('update:enableShadow', $event)"

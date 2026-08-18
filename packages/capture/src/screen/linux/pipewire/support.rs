@@ -6,14 +6,14 @@ use std::{
     thread::JoinHandle,
 };
 
-use crossbeam_channel::Receiver;
+use crossbeam_channel::{Receiver, select};
 
 use crate::{
     CaptureError, NativeCaptureErrorCode,
     screen::{PixelFormat, ScreenSampleSink, VideoFormat},
 };
 
-use super::{NegotiatedFormat, SinkMessage};
+use super::{CursorMessage, NegotiatedFormat, SinkMessage};
 
 pub(super) type ReadySender =
     Rc<RefCell<Option<mpsc::SyncSender<Result<VideoFormat, CaptureError>>>>>;
@@ -21,12 +21,35 @@ pub(super) type ReadySender =
 pub(super) fn sink_worker(
     mut sink: Box<dyn ScreenSampleSink>,
     receiver: Receiver<SinkMessage>,
+    cursor_receiver: Receiver<CursorMessage>,
     fatal: Arc<Mutex<Option<CaptureError>>>,
 ) -> Result<(), CaptureError> {
     let mut first_error = None;
-    for message in receiver {
+    let mut cursor_open = true;
+    loop {
+        let message = if cursor_open {
+            select! {
+                recv(cursor_receiver) -> message => match message {
+                    Ok(message) => WorkerMessage::Cursor(message),
+                    Err(_) => {
+                        cursor_open = false;
+                        continue;
+                    }
+                },
+                recv(receiver) -> message => match message {
+                    Ok(message) => WorkerMessage::Sink(message),
+                    Err(_) => break,
+                },
+            }
+        } else {
+            match receiver.recv() {
+                Ok(message) => WorkerMessage::Sink(message),
+                Err(_) => break,
+            }
+        };
         let result = match message {
-            SinkMessage::BeginSegment(segment, reply) => {
+            WorkerMessage::Cursor(message) => sink.push_cursor(message.session_ns, message.cursor),
+            WorkerMessage::Sink(SinkMessage::BeginSegment(segment, reply)) => {
                 let result = sink.begin_segment(segment);
                 let reply_result = match &result {
                     Ok(()) => Ok(()),
@@ -35,11 +58,11 @@ pub(super) fn sink_worker(
                 let _ = reply.send(reply_result);
                 result
             }
-            SinkMessage::Format(format) => sink.format_changed(format),
-            SinkMessage::Sample(sample) => sink.push(sample),
-            SinkMessage::Cursor(session_ns, cursor) => sink.push_cursor(session_ns, cursor),
-            SinkMessage::Discontinuity(event) => sink.discontinuity(event),
-            SinkMessage::EndSegment(reply) => {
+            WorkerMessage::Sink(SinkMessage::Format(format)) => sink.format_changed(format),
+            WorkerMessage::Sink(SinkMessage::Sample(sample)) => sink.push(sample),
+            WorkerMessage::Sink(SinkMessage::Discontinuity(event)) => sink.discontinuity(event),
+            WorkerMessage::Sink(SinkMessage::EndSegment(reply)) => {
+                drain_cursor_messages(&mut *sink, &cursor_receiver, &mut first_error, &fatal);
                 let result = sink.end_segment();
                 let reply_result = match &result {
                     Ok(()) => Ok(()),
@@ -48,7 +71,8 @@ pub(super) fn sink_worker(
                 let _ = reply.send(reply_result);
                 result
             }
-            SinkMessage::Finish => {
+            WorkerMessage::Sink(SinkMessage::Finish) => {
+                drain_cursor_messages(&mut *sink, &cursor_receiver, &mut first_error, &fatal);
                 let finish = sink.finish();
                 if first_error.is_none() {
                     first_error = finish.err();
@@ -56,15 +80,43 @@ pub(super) fn sink_worker(
                 break;
             }
         };
-        if first_error.is_none() {
-            first_error = result.err();
-            if let Some(error) = first_error.take() {
-                set_fatal(&fatal, sink_error(error.to_string()));
-                first_error = Some(error);
-            }
-        }
+        retain_first_error(&mut first_error, result, &fatal);
     }
     first_error.map_or(Ok(()), Err)
+}
+
+enum WorkerMessage {
+    Sink(SinkMessage),
+    Cursor(CursorMessage),
+}
+
+fn drain_cursor_messages(
+    sink: &mut dyn ScreenSampleSink,
+    cursor_receiver: &Receiver<CursorMessage>,
+    first_error: &mut Option<CaptureError>,
+    fatal: &Arc<Mutex<Option<CaptureError>>>,
+) {
+    for message in cursor_receiver.try_iter() {
+        retain_first_error(
+            first_error,
+            sink.push_cursor(message.session_ns, message.cursor),
+            fatal,
+        );
+    }
+}
+
+fn retain_first_error(
+    first_error: &mut Option<CaptureError>,
+    result: Result<(), CaptureError>,
+    fatal: &Arc<Mutex<Option<CaptureError>>>,
+) {
+    if first_error.is_none() {
+        *first_error = result.err();
+        if let Some(error) = first_error.take() {
+            set_fatal(fatal, sink_error(error.to_string()));
+            *first_error = Some(error);
+        }
+    }
 }
 
 pub(super) fn send_ready_ok(ready: &ReadySender, format: NegotiatedFormat) {

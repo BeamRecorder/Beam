@@ -1,4 +1,8 @@
 {
+  "CameraLayoutPanel": {
+    "reactToZoom": "Phản hồi theo thu phóng",
+    "reactToZoomDescription": "Giữ webcam cố định và điều chỉnh kích thước theo mức thu phóng của canvas."
+  },
   "ShadowDirectionGroup": {
     "shadowDirection": "Hướng đổ bóng",
     "around": "Bao quanh",

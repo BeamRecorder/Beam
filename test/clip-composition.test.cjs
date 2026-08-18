@@ -1586,6 +1586,26 @@ test('marks a newly created project editor state as fresh', () => {
   assert.equal(store.editorState(project.id).isFresh, true);
 });
 
+test('preserves the fresh marker while migrating a legacy cursor selection', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-editor-fresh-cursor-migration-'));
+  const store = createProjectStore(root);
+  const project = store.create({ name: 'Fresh cursor migration' });
+  const manifestPath = path.join(store.directoryFor(project.id), 'project.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  delete manifest.editor.presentation.cursor.selection;
+  manifest.editor.presentation.cursor.selectedCursor = 'automatic';
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+
+  const state = store.editorState(project.id);
+
+  assert.equal(state.isFresh, true);
+  assert.deepEqual(state.presentation.cursor.selection, {
+    packId: 'builtin:macos',
+    mode: 'automatic',
+    cursorId: null,
+  });
+});
+
 test('clears the fresh marker after the first editor-state save', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-editor-fresh-save-'));
   const store = createProjectStore(root);

@@ -1,8 +1,0 @@
-node_modules
-dist
-dist_electron
-target
-coverage
-.vite
-*.map
-public/wallpapers

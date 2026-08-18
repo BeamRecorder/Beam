@@ -38,7 +38,7 @@ import {
   DEFAULT_ZOOM_MOTION_BLUR,
   type ZoomElement,
 } from '~/components/video-editor/zoom/zoom-types';
-import type { CursorType } from '~/components/video-editor/properties/cursor/useCursorReplacer';
+import type { CursorSelection } from '~/api/types/cursor-pack';
 import { pasteClipAt } from '~/components/video-editor/composition/engine/clip-paste';
 import type { TimelinePasteRequest } from '~/components/video-editor/timeline/composables/timeline-clipboard-types';
 import { useTimelineClipboardFeedback } from '~/components/video-editor/timeline/composables/useTimelineClipboardFeedback';
@@ -110,7 +110,9 @@ const { snapshot: performanceSnapshot } = usePreviewPerformanceMonitor({
   isReady: initialPlaybackSettled,
 });
 const {
-  selectedCursor,
+  selection: cursorSelection,
+  packs: cursorPacks,
+  selectedPack: cursorPack,
   cursorSize,
   cursorColor,
   enableShadow,
@@ -149,6 +151,7 @@ const {
   updateSelectedCameraFraming,
   updateSelectedCameraSplitRatio,
   updateSelectedCameraSplitPadding,
+  updateSelectedWebcamReactToZoom,
   updateSelectedMirrored,
   updateSelectedMirroredY,
   updateSelectedRate,
@@ -197,7 +200,7 @@ const timelinePreviewDuration = computed(() => {
 });
 const timelineCanvasPreview = ref<OutputCanvasSettings | null>(null);
 const captionCompositionPreview = ref<typeof composition.value | null>(null);
-const cursorPreview = ref<CursorType | null>(null);
+const cursorPreview = ref<CursorSelection | null>(null);
 const transformHandlesMuted = ref(false);
 const canvasComposition = computed(
   () => captionCompositionPreview.value ?? timelineCompositionPreview.value ?? composition.value,
@@ -225,6 +228,12 @@ const selectEditorCanvas = () => {
   selectedClipId.value = null;
   activeTab.value = 'canvas';
   isCropping.value = false;
+};
+const selectEditorCursor = () => {
+  selectedClipId.value = null;
+  selectedZoomId.value = null;
+  isCropping.value = false;
+  activeTab.value = 'cursor';
 };
 const propertiesPanelRef = ref<InstanceType<typeof PropertiesPanel> | null>(null);
 const openCanvasTransition = (edge: 'entry' | 'exit') => {
@@ -282,7 +291,7 @@ const handleSeekIntent = (time: number, mode: 'seek' | 'scrub' = 'seek') => {
 
 // Editor state only contains JSON data. Serializing first unwraps Vue proxies, so
 // history snapshots stay cloneable after any reactive edit.
-const cloneSerializable = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+const cloneSerializable = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const createEditorSnapshot = (): EditorStateSnapshot => ({
   composition: cloneSerializable(composition.value),
   zoomElements: cloneSerializable(zoomElements.value),
@@ -522,8 +531,9 @@ onBeforeUnmount(() => {
           :active-tab="activeTab"
           :selected-clip="selectedClipInfo"
           :selected-caption-clip="selectedCaptionClip"
-          v-model:selected-cursor="selectedCursor"
-          @preview:selected-cursor="cursorPreview = $event"
+          v-model:cursor-selection="cursorSelection"
+          :cursor-packs="cursorPacks"
+          @preview:cursor-selection="cursorPreview = $event"
           v-model:cursor-size="cursorSize"
           v-model:cursor-color="cursorColor"
           v-model:enable-shadow="enableShadow"
@@ -597,6 +607,7 @@ onBeforeUnmount(() => {
           @update:camera-framing="updateSelectedCameraFraming"
           @update:camera-split-ratio="updateSelectedCameraSplitRatio"
           @update:camera-split-padding="updateSelectedCameraSplitPadding"
+          @update:webcam-react-to-zoom="updateSelectedWebcamReactToZoom"
           @reset:clip-transform="commitSelectedTransform({ x: 0, y: 0, width: 1, height: 1 })"
           @back-to-hud="emit('back-to-hud')"
           @start-recording="emit('start-recording', $event)"
@@ -623,7 +634,8 @@ onBeforeUnmount(() => {
             :is-playing="isPlaying"
             :current-time="currentTime"
             :duration="duration"
-            :selected-cursor="cursorPreview ?? selectedCursor"
+            :cursor-selection="cursorPreview ?? cursorSelection"
+            :cursor-pack="cursorPack"
             :cursor-size="cursorSize"
             :cursor-color="cursorColor"
             :enable-shadow="enableShadow"
@@ -655,6 +667,8 @@ onBeforeUnmount(() => {
             @preview:zoom="previewZoom"
             @select:clip="selectEditorClip"
             @select:canvas="selectEditorCanvas"
+            @select:cursor="selectEditorCursor"
+            @update:cursor-size="cursorSize = $event"
             @deselect:transform-clip="deselectTransformClip"
             @update:clip-transform="commitSelectedTransform"
             @update:clip-crop="commitSelectedCrop"

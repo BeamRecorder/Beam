@@ -1,25 +1,41 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue';
+import { FolderUp, Info, Search } from '@lucide/vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
 import Switch from '~/ui/switch/Switch.vue';
 import Select from '~/ui/select/Select.vue';
 import ColorInput from '~/ui/input/ColorInput.vue';
-import ShadowDirectionGroup from '~/components/video-editor/properties/cursor/ShadowDirectionGroup.vue';
-import CursorClickEffectsPanel from '~/components/video-editor/properties/cursor/CursorClickEffectsPanel.vue';
+import Button from '~/ui/button/Button.vue';
+import AdvancedButton from '~/ui/button/AdvancedButton.vue';
+import Popover from '~/ui/popover/Popover.vue';
+import ShadowDirectionGroup from './ShadowDirectionGroup.vue';
+import CursorClickEffectsPanel from './CursorClickEffectsPanel.vue';
 import Divider from '~/ui/divider/Divider.vue';
 import type { ShadowDirection } from './shadow-types';
-import { cursorOptions, type CursorType } from './useCursorReplacer';
-import type { CursorClickEffects } from '../../../../api/types/cursor-settings';
-import {
-  cursorMotionPreset,
-  type CursorMotionPreset,
-  type CursorMotionSettings,
+import type {
+  CursorClickEffects,
+  CursorMotionPreset,
+  CursorMotionSettings,
 } from '../../../../api/types/cursor-settings';
+import {
+  createDefaultCursorClickEffects,
+  createDefaultCursorMotionSettings,
+  cursorMotionPreset,
+} from '../../../../api/types/cursor-settings';
+import type { CursorPackDescriptor, CursorSelection } from '../../../../api/types/cursor-pack';
+import { capture } from '../../../../api/capture';
 import { useTranslate } from '~/i18n/useTranslate';
+import { useToastStore } from '~/ui/toast/toastStore';
+import { CURSOR_SIZE_DEFAULT, CURSOR_SIZE_MAX, CURSOR_SIZE_MIN } from './cursor-size';
 
 const { t } = useTranslate('CursorPanel');
+const toast = useToastStore();
+const advancedOpen = ref(false);
+const importing = ref(false);
 
 const props = defineProps<{
-  selectedCursor: CursorType;
+  selection: CursorSelection;
+  packs: CursorPackDescriptor[];
   cursorSize: number;
   cursorColor: string;
   enableShadow: boolean;
@@ -31,125 +47,245 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'update:selectedCursor', value: CursorType): void;
-  (e: 'preview:selectedCursor', value: CursorType | null): void;
-  (e: 'update:cursorSize', value: number): void;
-  (e: 'update:cursorColor', value: string): void;
-  (e: 'update:enableShadow', value: boolean): void;
-  (e: 'update:shadowBlur', value: number): void;
-  (e: 'update:shadowColor', value: string): void;
-  (e: 'update:shadowDirection', value: ShadowDirection): void;
-  (e: 'update:clickEffects', value: CursorClickEffects): void;
-  (e: 'update:motion', value: CursorMotionSettings): void;
+  (event: 'update:selection', value: CursorSelection): void;
+  (event: 'preview:selection', value: CursorSelection | null): void;
+  (event: 'update:cursorSize', value: number): void;
+  (event: 'update:cursorColor', value: string): void;
+  (event: 'update:enableShadow', value: boolean): void;
+  (event: 'update:shadowBlur', value: number): void;
+  (event: 'update:shadowColor', value: string): void;
+  (event: 'update:shadowDirection', value: ShadowDirection): void;
+  (event: 'update:clickEffects', value: CursorClickEffects): void;
+  (event: 'update:motion', value: CursorMotionSettings): void;
 }>();
 
-const motionPresetOptions: Array<{ value: CursorMotionPreset; label: string }> = [
+const selectedPack = computed(() => props.packs.find((pack) => pack.id === props.selection.packId) ?? null);
+const packOptions = computed(() =>
+  props.packs.map((pack) => ({
+    value: pack.id,
+    label: pack.name,
+    thumbnail: pack.cursors.find((cursor) => cursor.id === pack.defaultCursorId)?.url,
+  })),
+);
+const cursorOptions = computed(() => [
+  { value: '__automatic__', label: t('automaticRecommended'), thumbnail: selectedPack.value?.cursors[0]?.url },
+  ...(selectedPack.value?.cursors.map((cursor) => ({ value: cursor.id, label: cursor.label, thumbnail: cursor.url })) ??
+    []),
+]);
+const selectedCursorOption = computed(() =>
+  props.selection.mode === 'automatic' ? '__automatic__' : (props.selection.cursorId ?? '__automatic__'),
+);
+
+const selectPack = (value: string | number) => {
+  if (typeof value !== 'string') return;
+  const pack = props.packs.find((candidate) => candidate.id === value);
+  if (!pack) return;
+  const cursorId =
+    props.selection.mode === 'fixed' &&
+    props.selection.cursorId &&
+    pack.cursors.some((cursor) => cursor.id === props.selection.cursorId)
+      ? props.selection.cursorId
+      : null;
+  emit('update:selection', { packId: pack.id, mode: cursorId ? 'fixed' : 'automatic', cursorId });
+};
+
+const selectCursor = (value: string | number) => {
+  if (typeof value !== 'string') return;
+  emit('preview:selection', null);
+  emit(
+    'update:selection',
+    value === '__automatic__'
+      ? { packId: props.selection.packId, mode: 'automatic', cursorId: null }
+      : { packId: props.selection.packId, mode: 'fixed', cursorId: value },
+  );
+};
+
+const importPack = async () => {
+  importing.value = true;
+  try {
+    const result = await capture.pickCursorPackImport();
+    if (!result) return;
+    emit('update:selection', { packId: result.pack.id, mode: 'automatic', cursorId: null });
+    const ignored = result.ignoredAnimatedRoles.length
+      ? t('importIgnoredAnimated', { roles: result.ignoredAnimatedRoles.join(', ') })
+      : '';
+    toast.success(`${t('importSuccess', { count: result.importedCount })}${ignored ? ` ${ignored}` : ''}`);
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : t('importFailed'));
+  } finally {
+    importing.value = false;
+  }
+};
+const openDiscovery = () => {
+  void capture.openCursorPackDiscovery().catch(() => toast.error(t('discoveryFailed')));
+};
+
+const reset = () => {
+  emit('update:selection', { packId: props.selection.packId, mode: 'automatic', cursorId: null });
+  emit('update:cursorSize', CURSOR_SIZE_DEFAULT);
+  emit('update:cursorColor', '#000000');
+  emit('update:enableShadow', true);
+  emit('update:shadowBlur', 6);
+  emit('update:shadowColor', '#000000');
+  emit('update:shadowDirection', 'bottom');
+  emit('update:clickEffects', createDefaultCursorClickEffects());
+  emit('update:motion', createDefaultCursorMotionSettings());
+};
+
+const motionPresetOptions = computed(() => [
   { value: 'focused', label: t('focusedPreset') },
   { value: 'smooth', label: t('smoothPreset') },
   { value: 'custom', label: t('customPreset') },
-];
-
-const updateMotion = (patch: Partial<CursorMotionSettings>) => {
+]);
+const updateMotion = (patch: Partial<CursorMotionSettings>) =>
   emit('update:motion', {
     ...props.motion,
     ...patch,
     preset: patch.preset ?? 'custom',
   });
-};
-
-const selectMotionPreset = (preset: CursorMotionPreset) => {
+const selectMotionPreset = (preset: CursorMotionPreset) =>
   emit('update:motion', preset === 'custom' ? { ...props.motion, preset } : cursorMotionPreset(preset));
-};
-const commitCursor = (value: string | number) => {
-  if (typeof value !== 'string') return;
-  emit('preview:selectedCursor', null);
-  emit('update:selectedCursor', value as CursorType);
-};
 </script>
 
 <template>
   <div class="options-group">
-    <div class="prop-item">
-      <label class="prop-label">{{ t('cursorStyle') }}</label>
+    <div class="pack-heading">
+      <label class="prop-label">{{ t('cursorPack') }}</label>
+      <Popover interaction="hover-focus-click" :match-trigger-width="false" align="right">
+        <template #trigger>
+          <button type="button" class="info-button" :aria-label="t('packInfo')"><Info :size="14" /></button>
+        </template>
+        <div class="discovery-popover">
+          <p>{{ t('packDescription') }}</p>
+          <Button size="sm" :icon="Search" @click="openDiscovery">{{ t('findCursorPacks') }}</Button>
+          <a
+            href="https://github.com/KDE/breeze/blob/master/cursors/svg-cursor-format.md"
+            target="_blank"
+            rel="noreferrer"
+          >
+            {{ t('compatibleFormat') }}
+          </a>
+        </div>
+      </Popover>
+    </div>
+    <div class="pack-row">
       <Select
-        :model-value="selectedCursor"
-        :options="cursorOptions"
-        @preview:model-value="(value) => emit('preview:selectedCursor', value as CursorType | null)"
-        @update:modelValue="commitCursor"
+        class="pack-select"
+        :model-value="selection.packId"
+        :options="packOptions"
+        @update:model-value="selectPack"
+      />
+      <Button
+        class="pack-import-button"
+        size="sm"
+        variant="outline"
+        :icon="FolderUp"
+        icon-only
+        :tooltip="t('import')"
+        :aria-label="t('import')"
+        :loading="importing"
+        @click="importPack"
       />
     </div>
-
-    <div class="prop-item">
-      <BigSlider
-        :model-value="cursorSize"
-        :default-value="24"
-        :min="16"
-        :max="128"
-        :label="t('cursorSize')"
-        :format-value="(val) => `${val}px`"
-        @update:modelValue="emit('update:cursorSize', $event)"
-      />
+    <div v-if="!selectedPack" class="missing-pack" role="alert">
+      {{ t('missingPack') }}
+      <Button size="xs" variant="link" @click="importPack">{{ t('importPack') }}</Button>
     </div>
 
+    <Divider spacing="none" />
+    <BigSlider
+      class="cursor-size-control"
+      :model-value="cursorSize"
+      :default-value="CURSOR_SIZE_DEFAULT"
+      :min="CURSOR_SIZE_MIN"
+      :max="CURSOR_SIZE_MAX"
+      :label="t('cursorSize')"
+      :format-value="(value) => `${value}px`"
+      @update:model-value="emit('update:cursorSize', $event)"
+    />
+
+    <div class="advanced-toggle-row">
+      <AdvancedButton
+        :open="advancedOpen"
+        controls="cursor-advanced-panel"
+        :label="t('advanced')"
+        @update:open="advancedOpen = $event"
+      />
+    </div>
+    <div v-if="advancedOpen" id="cursor-advanced-panel" class="advanced-options">
+      <div class="prop-item">
+        <label class="prop-label">{{ t('cursorStyle') }}</label>
+        <Select
+          :model-value="selectedCursorOption"
+          :options="cursorOptions"
+          :disabled="!selectedPack"
+          @preview:model-value="
+            (value) =>
+              emit(
+                'preview:selection',
+                typeof value === 'string' && value !== '__automatic__'
+                  ? { packId: selection.packId, mode: 'fixed', cursorId: value }
+                  : null,
+              )
+          "
+          @update:model-value="selectCursor"
+        />
+      </div>
+      <Divider spacing="none" />
+      <CursorClickEffectsPanel :model-value="clickEffects" @update:model-value="emit('update:clickEffects', $event)" />
+    </div>
+
+    <Divider spacing="none" />
     <ColorInput
       :label="t('cursorColor')"
       :model-value="cursorColor"
-      @update:modelValue="emit('update:cursorColor', $event)"
+      :disabled="selectedPack?.colorMode !== 'tintable'"
+      @update:model-value="emit('update:cursorColor', $event)"
     />
+    <p v-if="selectedPack?.colorMode === 'original'" class="color-note">{{ t('originalColors') }}</p>
 
     <Divider spacing="none" />
-
     <div class="prop-row">
       <span class="prop-label">{{ t('dropShadow') }}</span>
-      <Switch :model-value="enableShadow" @update:modelValue="emit('update:enableShadow', $event)" />
+      <Switch :model-value="enableShadow" @update:model-value="emit('update:enableShadow', $event)" />
+    </div>
+    <div v-if="enableShadow" class="nested-options">
+      <BigSlider
+        :model-value="shadowBlur"
+        :min="1"
+        :max="24"
+        :label="t('shadowBlur')"
+        :format-value="(value) => `${value}px`"
+        @update:model-value="emit('update:shadowBlur', $event)"
+      />
+      <ColorInput
+        :label="t('shadowColor')"
+        :model-value="shadowColor"
+        @update:model-value="emit('update:shadowColor', $event)"
+      />
+      <div class="prop-item">
+        <span class="sub-label">{{ t('direction') }}</span>
+        <ShadowDirectionGroup
+          :model-value="shadowDirection"
+          @update:model-value="emit('update:shadowDirection', $event)"
+        />
+      </div>
     </div>
 
-    <Transition name="slide-fade">
-      <div v-if="enableShadow" class="nested-options">
-        <div class="prop-item">
-          <BigSlider
-            :model-value="shadowBlur"
-            :min="1"
-            :max="24"
-            :label="t('shadowBlur')"
-            :format-value="(val) => `${val}px`"
-            @update:modelValue="emit('update:shadowBlur', $event)"
-          />
-        </div>
-
-        <ColorInput
-          :label="t('shadowColor')"
-          :model-value="shadowColor"
-          @update:modelValue="emit('update:shadowColor', $event)"
-        />
-
-        <div class="prop-item">
-          <span class="sub-label">{{ t('direction') }}</span>
-          <ShadowDirectionGroup
-            :model-value="shadowDirection"
-            @update:model-value="emit('update:shadowDirection', $event)"
-          />
-        </div>
-      </div>
-    </Transition>
-
     <Divider spacing="none" />
-
-    <section class="motion-options" aria-labelledby="cursor-motion-title">
+    <section class="motion-options">
       <div class="section-heading">
-        <span id="cursor-motion-title" class="section-title">{{ t('cursorMotion') }}</span>
+        <span class="section-title">{{ t('cursorMotion') }}</span>
         <span class="section-description">{{ t('cursorMotionDescription') }}</span>
       </div>
-
       <div class="prop-item">
         <label class="prop-label">{{ t('motionPreset') }}</label>
         <Select
           :model-value="motion.preset"
           :options="motionPresetOptions"
-          @update:modelValue="selectMotionPreset($event as CursorMotionPreset)"
+          @update:model-value="selectMotionPreset($event as CursorMotionPreset)"
         />
       </div>
-
       <BigSlider
         :model-value="motion.smoothing"
         :min="0"
@@ -157,7 +293,7 @@ const commitCursor = (value: string | number) => {
         :step="0.01"
         :label="t('cursorSmoothing')"
         :format-value="(value) => `${Math.round(value * 100)}%`"
-        @update:modelValue="updateMotion({ smoothing: $event })"
+        @update:model-value="updateMotion({ smoothing: $event })"
       />
       <BigSlider
         :model-value="motion.springMassMultiplier"
@@ -166,7 +302,7 @@ const commitCursor = (value: string | number) => {
         :step="0.01"
         :label="t('springMassMultiplier')"
         :format-value="(value) => value.toFixed(2)"
-        @update:modelValue="updateMotion({ springMassMultiplier: $event })"
+        @update:model-value="updateMotion({ springMassMultiplier: $event })"
       />
       <BigSlider
         :model-value="motion.motionBlur"
@@ -175,65 +311,110 @@ const commitCursor = (value: string | number) => {
         :step="0.01"
         :label="t('motionBlur')"
         :format-value="(value) => `${Math.round(value * 100)}%`"
-        @update:modelValue="updateMotion({ motionBlur: $event })"
+        @update:model-value="updateMotion({ motionBlur: $event })"
       />
     </section>
 
     <Divider spacing="none" />
-
-    <CursorClickEffectsPanel :model-value="clickEffects" @update:model-value="emit('update:clickEffects', $event)" />
+    <Button class="reset-automatic-button" size="sm" variant="ghost" block @click="reset">
+      {{ t('resetAutomaticDefaults') }}
+    </Button>
   </div>
 </template>
 
 <style scoped>
-.options-group {
+.options-group,
+.advanced-options,
+.nested-options,
+.motion-options,
+.section-heading {
   display: flex;
   flex-direction: column;
+  gap: 12px;
+}
+.options-group {
+  gap: 10px;
+}
+.advanced-options {
+  padding-top: 8px;
   gap: 16px;
 }
-
+.pack-heading,
+.pack-row,
+.prop-row,
+.advanced-toggle-row {
+  display: flex;
+  align-items: center;
+}
+.pack-heading,
+.prop-row {
+  justify-content: space-between;
+}
+.advanced-toggle-row {
+  justify-content: flex-end;
+}
+.pack-row {
+  gap: 8px;
+}
+.pack-select {
+  min-width: 0;
+  flex: 1;
+}
 .prop-item {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
-
-.nested-options {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 4px 0 0 0;
-}
-
-.prop-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 4px 0;
-}
-
 .prop-label {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-secondary);
 }
-
-.sub-label {
+.sub-label,
+.color-note {
   color: var(--text-muted);
   font-size: 11px;
 }
-
-.motion-options,
-.section-heading {
+.info-button {
+  display: grid;
+  place-items: center;
+  padding: 3px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.info-button:focus-visible {
+  outline: 2px solid var(--color-primary);
+}
+.discovery-popover {
+  width: 260px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
+  font-size: 12px;
+  line-height: 1.45;
 }
-
+.discovery-popover p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+.discovery-popover a {
+  color: var(--color-primary);
+  font-size: 11px;
+}
+.missing-pack {
+  padding: 8px;
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 11px;
+}
 .section-heading {
   gap: 3px;
 }
-
 .section-title {
   color: var(--text-secondary);
   font-size: 11px;
@@ -241,29 +422,11 @@ const commitCursor = (value: string | number) => {
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-
 .section-description {
   color: var(--text-muted);
   font-size: 10px;
 }
-
-/* Slide fade transition for switch toggling */
-.slide-fade-enter-active,
-.slide-fade-leave-active {
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  max-height: 250px;
-  overflow: hidden;
-}
-
-.slide-fade-enter-from,
-.slide-fade-leave-to {
-  opacity: 0;
-  max-height: 0;
-  transform: translateY(-8px);
-  padding-top: 0;
-  padding-bottom: 0;
-  margin-top: 0;
-  margin-bottom: 0;
-  border-color: transparent;
+.color-note {
+  margin: -10px 0 0;
 }
 </style>

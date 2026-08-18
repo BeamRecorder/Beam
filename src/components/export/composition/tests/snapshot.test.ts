@@ -4,6 +4,7 @@ import { createCompositionSnapshot } from '../snapshot';
 import { DEFAULT_OUTPUT_CANVAS } from '../../../video-editor/canvas/output-canvas';
 import type { ClipComposition } from '~/media/shared/composition-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { MACOS_CURSOR_PACK } from '../../../video-editor/properties/cursor/cursor-packs';
 
 const composition = (): ClipComposition => ({
   schemaVersion: 6,
@@ -42,7 +43,7 @@ const composition = (): ClipComposition => ({
   ],
 });
 
-const base = () => ({
+const base = (): Parameters<typeof createCompositionSnapshot>[0] => ({
   duration: 4,
   fps: 30,
   canvas: DEFAULT_OUTPUT_CANVAS,
@@ -53,7 +54,7 @@ const base = () => ({
   zoomMotionBlur: { enabled: true, intensity: 0.55 },
   composition: composition(),
   cursorSettings: {
-    selectedCursor: 'automatic' as const,
+    selection: { packId: MACOS_CURSOR_PACK.id, mode: 'automatic' as const, cursorId: null },
     size: 24,
     color: '#000000',
     shadow: { enabled: true, blur: 6, color: '#000000', direction: 'bottom' as const },
@@ -63,6 +64,7 @@ const base = () => ({
     },
     motion: { preset: 'smooth' as const, smoothing: 0.67, springMassMultiplier: 1.29, motionBlur: 0.4 },
   },
+  cursorPack: MACOS_CURSOR_PACK,
 });
 
 describe('createCompositionSnapshot', () => {
@@ -218,6 +220,51 @@ describe('createCompositionSnapshot', () => {
     reactiveComposition.clips[0].timelineDurationMs = 1_000;
     expect(snapshot.cursor.events[0]).toMatchObject({ hotspot: { x: 2, y: 3 } });
     expect(snapshot.composition.clips[0].timelineDurationMs).toBe(4_000);
+  });
+
+  it('snapshots the resolved cursor pack without retaining its asset references', () => {
+    const input = base();
+    const pack = {
+      ...MACOS_CURSOR_PACK,
+      id: 'imported:wide',
+      name: 'Wide pack',
+      cursors: MACOS_CURSOR_PACK.cursors.map((cursor, index) =>
+        index === 0
+          ? {
+              ...cursor,
+              id: 'wide-default',
+              intrinsicSize: { width: 40, height: 20 },
+              nominalSize: 20,
+              hotspot: { x: 5, y: 4 },
+            }
+          : cursor,
+      ),
+      defaultCursorId: 'wide-default',
+    };
+    input.cursorPack = pack;
+    input.cursorSettings.selection = { packId: pack.id, mode: 'fixed', cursorId: pack.defaultCursorId };
+
+    const snapshot = createCompositionSnapshot(input);
+    pack.cursors[0]!.hotspot.x = 99;
+    input.cursorSettings.selection.cursorId = 'mutated';
+
+    expect(snapshot.cursorPack?.cursors[0]?.hotspot).toEqual({ x: 5, y: 4 });
+    expect(snapshot.cursorSettings.selection).toEqual({
+      packId: 'imported:wide',
+      mode: 'fixed',
+      cursorId: 'wide-default',
+    });
+  });
+
+  it('preserves a missing selected pack instead of silently replacing it', () => {
+    const input = base();
+    input.cursorPack = null;
+    input.cursorSettings.selection = { packId: 'imported:missing', mode: 'automatic', cursorId: null };
+
+    const snapshot = createCompositionSnapshot(input);
+
+    expect(snapshot.cursorPack).toBeNull();
+    expect(snapshot.cursorSettings.selection.packId).toBe('imported:missing');
   });
 
   it('does not create a second video or render-layer representation', () => {

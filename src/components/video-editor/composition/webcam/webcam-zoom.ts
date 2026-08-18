@@ -3,8 +3,9 @@ import type {
   NormalizedCrop,
   NormalizedTransform,
   WebcamAppearance,
+  VisualClip,
 } from '~/media/shared/composition-types';
-import type { CameraFramingPreset } from '~/media/shared/camera-layout-types';
+import { isSplitCameraLayout, type CameraFramingPreset } from '~/media/shared/camera-layout-types';
 import { DEFAULT_CLIP_APPEARANCE, drawDecoratedMedia } from '../appearance/render-decorated-media';
 import type { MediaRect } from '../appearance/appearance-types';
 import type { Canvas2DContext } from '~/types/canvas';
@@ -86,6 +87,9 @@ export function webcamSettingsForAppearance(
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 export const getWebcamZoomFactor = (appliedZoomScale: number, reactToZoom: boolean) =>
   reactToZoom ? 1 / (Number.isFinite(appliedZoomScale) && appliedZoomScale > 0 ? appliedZoomScale : 1) : 1;
+
+export const webcamReactsToZoom = (clip: Pick<VisualClip, 'reactToZoom' | 'cameraLayoutPreset'>): boolean =>
+  clip.reactToZoom ?? !isSplitCameraLayout(clip.cameraLayoutPreset ?? 'custom');
 
 export const clampWebcamTransformToVisibleBounds = (
   value: NormalizedTransform,

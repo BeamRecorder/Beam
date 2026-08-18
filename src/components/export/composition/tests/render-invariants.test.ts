@@ -4,6 +4,7 @@ import type { ClipAppearance, ClipComposition } from '~/media/shared/composition
 import { drawCompositionLayers, renderCompositionFrame, type RenderableMedia } from '../render';
 import type { CompositionSnapshot } from '../../export-types';
 import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
+import { MACOS_CURSOR_PACK } from '../../../video-editor/properties/cursor/cursor-packs';
 import { resolveCameraFraming } from '../../../video-editor/composition/camera-layout';
 import { drawCanvasTransitionFrame } from '../../../video-editor/composition/transitions/render-canvas-transition';
 import type { VisualClip } from '~/media/shared/composition-types';
@@ -72,7 +73,7 @@ const snapshot = (): CompositionSnapshot => ({
   zooms: [],
   cursor: { available: false, telemetry: [], missing: [], shapes: {}, catalog: {}, events: [] },
   cursorSettings: {
-    selectedCursor: 'automatic',
+    selection: { packId: MACOS_CURSOR_PACK.id, mode: 'automatic', cursorId: null },
     size: 24,
     color: '#000',
     shadow: { enabled: false, blur: 0, color: '#000', direction: 'bottom' },
@@ -87,6 +88,7 @@ const snapshot = (): CompositionSnapshot => ({
       motionBlur: 0.4,
     },
   },
+  cursorPack: MACOS_CURSOR_PACK,
   composition: composition(),
 });
 
@@ -435,6 +437,59 @@ describe('composition rendering invariants', () => {
     }
   });
 
+  it.each([
+    { reactToZoom: true, expectedWidth: 150, expectedHeight: 100 },
+    { reactToZoom: false, expectedWidth: 300, expectedHeight: 200 },
+  ])('exports webcam geometry with reactToZoom=$reactToZoom', ({ reactToZoom, expectedWidth, expectedHeight }) => {
+    const value = snapshot();
+    value.canvas = { ...value.canvas, width: 1_000, height: 500 };
+    const webcamMedia: RenderableMedia = { source: {} as CanvasImageSource, width: 300, height: 200 };
+    const webcam: VisualClip = {
+      id: 'webcam',
+      kind: 'webcam',
+      name: 'Webcam',
+      assetId: 'webcam-asset',
+      timelineStartMs: 0,
+      timelineDurationMs: 1_000,
+      sourceInMs: 0,
+      sourceDurationMs: 1_000,
+      playbackRate: 1,
+      enabled: true,
+      order: -1,
+      transform: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
+      appearance,
+      isMirrored: false,
+      isMirroredY: false,
+      reactToZoom,
+    };
+    value.composition.clips.push(webcam);
+    const ctx = context();
+    const screenMedia: RenderableMedia = { source: {} as CanvasImageSource, width: 1_000, height: 500 };
+    const cameraEvaluator = {
+      sample: vi.fn(() => ({ focus: { cx: 0.5, cy: 0.5 }, scale: 2 })),
+      invalidate: vi.fn(),
+    };
+
+    renderCompositionFrame(
+      ctx,
+      screenMedia,
+      value,
+      0,
+      null,
+      undefined,
+      new Map([[webcam.id, webcamMedia]]),
+      undefined,
+      cameraEvaluator,
+    );
+
+    const webcamDraw = (ctx.drawImage as ReturnType<typeof vi.fn>).mock.calls.find(
+      ([source]) => source === webcamMedia.source,
+    );
+    expect(webcamDraw).toBeDefined();
+    expect(webcamDraw?.at(-2)).toBeCloseTo(expectedWidth);
+    expect(webcamDraw?.at(-1)).toBeCloseTo(expectedHeight);
+  });
+
   it('keeps a clip entry transition scoped to a clip that starts at zero', () => {
     const value = snapshot();
     const screen = value.composition.clips[0];
@@ -681,5 +736,44 @@ describe('composition rendering invariants', () => {
     expect(renderRadius(0.001)).toBeCloseTo(2, 3);
     expect(renderRadius(0.251)).toBeGreaterThan(22);
     expect(renderRadius(0.5)).toBeCloseTo(42, 1);
+  });
+
+  it('does not fall back to macOS when the selected cursor pack is missing', () => {
+    const value = snapshot();
+    value.cursorPack = null;
+    value.cursorSettings.selection = { packId: 'imported:missing', mode: 'automatic', cursorId: null };
+    value.cursor = {
+      available: true,
+      telemetry: [],
+      missing: [],
+      shapes: {},
+      catalog: {},
+      events: [
+        {
+          event: 'move',
+          sessionNs: 0,
+          pixelX: 50,
+          pixelY: 25,
+          normalizedX: 0.5,
+          normalizedY: 0.5,
+          visible: true,
+        },
+      ],
+    };
+    const cursorImage = { complete: true, naturalWidth: 32 } as HTMLImageElement;
+    const ctx = context();
+
+    renderCompositionFrame(
+      ctx,
+      { source: {} as CanvasImageSource, width: 100, height: 50 },
+      value,
+      0,
+      null,
+      new Map([['default', cursorImage]]),
+    );
+
+    expect((ctx.drawImage as ReturnType<typeof vi.fn>).mock.calls.some(([source]) => source === cursorImage)).toBe(
+      false,
+    );
   });
 });
