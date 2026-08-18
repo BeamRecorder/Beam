@@ -67,6 +67,12 @@ export default defineConfig({
       '~': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  // The AAC encoder is first imported dynamically from the export worker.
+  // Pre-bundle it at dev-server startup so the first export does not trigger
+  // Vite's late dependency discovery and a full renderer reload.
+  optimizeDeps: {
+    include: ['@mediabunny/aac-encoder'],
+  },
   build: {
     rollupOptions: {
       input: {
