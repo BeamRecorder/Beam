@@ -25,6 +25,7 @@ fn incompatible_source_kinds_are_rejected() {
         created_at_utc: "2026-01-01T00:00:00Z".into(),
         capabilities: CaptureCapabilities::default(),
         permissions: PermissionSnapshot::default(),
+        diagnostics: Default::default(),
         limitations: Vec::new(),
         sources: vec![window.clone()],
     };
@@ -50,6 +51,7 @@ fn snapshot_filters_sources_by_kind() {
         created_at_utc: "2026-01-01T00:00:00Z".into(),
         capabilities: CaptureCapabilities::default(),
         permissions: PermissionSnapshot::default(),
+        diagnostics: Default::default(),
         limitations: Vec::new(),
         sources: vec![
             source("window:1", SourceKind::Window),
@@ -73,6 +75,7 @@ fn unsupported_cursor_mode_is_rejected_by_runtime_capabilities() {
             ..CaptureCapabilities::default()
         },
         permissions: PermissionSnapshot::default(),
+        diagnostics: Default::default(),
         limitations: Vec::new(),
         sources: vec![display.clone()],
     };
@@ -111,6 +114,7 @@ fn supported_cursor_shape_mode_is_accepted_by_runtime_capabilities() {
             ..CaptureCapabilities::default()
         },
         permissions: PermissionSnapshot::default(),
+        diagnostics: Default::default(),
         limitations: Vec::new(),
         sources: vec![display.clone()],
     };
@@ -162,6 +166,7 @@ fn portal_kind_requires_the_matching_runtime_capability() {
             ..CaptureCapabilities::default()
         },
         permissions: PermissionSnapshot::default(),
+        diagnostics: Default::default(),
         limitations: Vec::new(),
         sources: Vec::new(),
     };
@@ -188,6 +193,7 @@ fn combined_portal_kind_requires_both_monitor_and_window() {
             ..CaptureCapabilities::default()
         },
         permissions: PermissionSnapshot::default(),
+        diagnostics: Default::default(),
         limitations: Vec::new(),
         sources: Vec::new(),
     };

@@ -18,6 +18,7 @@ fn prepare_reuses_the_successful_portal_discovery_snapshot() -> Result<(), captu
             ..CaptureCapabilities::default()
         },
         permissions: PermissionSnapshot::default(),
+        diagnostics: Default::default(),
         limitations: vec!["discovered once".into()],
         sources: Vec::new(),
     };

@@ -1,6 +1,7 @@
 mod capabilities;
 mod cursor_buttons;
 mod cursor_fusion;
+mod diagnostics;
 mod ffmpeg;
 mod ffmpeg_encoder;
 mod ffmpeg_process;
@@ -18,6 +19,7 @@ mod recording;
 mod runtime;
 
 pub use capabilities::*;
+pub(crate) use diagnostics::*;
 pub(crate) use ffmpeg::*;
 pub(crate) use ffmpeg_encoder::*;
 pub(crate) use ffmpeg_sink::*;

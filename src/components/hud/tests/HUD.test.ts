@@ -55,7 +55,7 @@ const stubs = {
   HudPreferences: {
     props: ['inputAccess', 'recordInteractions', 'requestingInputAccess'],
     template:
-      '<div class="preferences-stub"><span class="preferences-input-access">{{ inputAccess?.state }}</span><button class="preference-update" @click="$emit(\'update:countdown-seconds\', 10)"/><button class="preference-visibility" @click="$emit(\'update:recording-bar-visibility\', \'auto-fade\')"/><button class="preference-legacy-top" @click="$emit(\'update:always-on-top\', true)"/><button @click="$emit(\'close\')">Return</button></div>',
+      '<div class="preferences-stub"><span class="preferences-input-access">{{ inputAccess?.state }}</span><span v-if="inputAccess?.state === \'available\'" class="preferences-switch">Switch</span><button v-else-if="inputAccess?.canRequest" class="preferences-allow">Allow</button><button class="preference-update" @click="$emit(\'update:countdown-seconds\', 10)"/><button class="preference-visibility" @click="$emit(\'update:recording-bar-visibility\', \'auto-fade\')"/><button class="preference-legacy-top" @click="$emit(\'update:always-on-top\', true)"/><button @click="$emit(\'close\')">Return</button></div>',
   },
   CameraPreviewOverlay: { template: '<div class="camera-preview-stub" />' },
 };
@@ -215,6 +215,253 @@ describe('HUD', () => {
 
     expect(wrapper.emitted('start-recording')).toBeUndefined();
     expect(capture.startRecording).not.toHaveBeenCalled();
+  });
+
+  it('shows Linux requirement diagnostics when recording is unavailable and no source exists', async () => {
+    const linuxCapture = { ...capture, platform: 'linux' };
+    Object.defineProperty(window, 'capture', { configurable: true, value: linuxCapture });
+    capture.platform = 'linux';
+    capture.discover.mockResolvedValueOnce({
+      sources: [],
+      capabilities: {},
+      diagnostics: {
+        platform: 'linux',
+        linux: {
+          distribution: 'Debian GNU/Linux 13',
+          distributionId: 'debian',
+          distributionLike: [],
+          distributionVersion: '13',
+          kernel: '6.12.0',
+          architecture: 'x86_64',
+          desktop: 'GNOME',
+          sessionType: 'x11',
+          displayServer: 'x11',
+          backend: 'xdg-portal-pipewire',
+          portal: {
+            available: false,
+            version: null,
+            monitor: null,
+            window: null,
+            metadataCursor: null,
+            errorCode: 'portal-unavailable',
+            detail: 'ScreenCast portal is unavailable',
+          },
+          pipewire: { available: true, errorCode: null, detail: null },
+          ffmpeg: {
+            available: false,
+            encoder: null,
+            codec: null,
+            hardware: null,
+            errorCode: 'ffmpeg-unavailable',
+            detail: 'FFmpeg is unavailable',
+          },
+          recordingAvailable: false,
+        },
+      },
+    });
+    capture.getSources.mockResolvedValueOnce([]);
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+
+    const wrapper = mount(HUD, { global: { stubs } });
+    await ready();
+
+    const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording'));
+    expect(record).toBeDefined();
+    expect(record!.element).toHaveProperty('disabled', true);
+    const issue = wrapper.get('.hud-issue-error');
+    expect(issue.get('.hud-issue-title').text()).toBe('Linux setup required');
+    expect(issue.text()).toContain('XDG ScreenCast Portal: ScreenCast portal is unavailable');
+    expect(issue.text()).toContain('FFmpeg: FFmpeg is unavailable');
+    const copyButton = issue.get('.copy-button-idle');
+    expect(copyButton.attributes('aria-label')).toBe('Copy fix');
+    expect(copyButton.attributes('data-state')).toBe('idle');
+    await copyButton.trigger('click');
+    await ready();
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Beam Linux requirement: XDG ScreenCast Portal'));
+    expect(issue.get('.copy-button-copied').attributes('aria-label')).toBe('Copied');
+    expect(issue.get('.copy-button-copied').attributes('data-state')).toBe('copied');
+    await record!.trigger('click');
+    expect(wrapper.emitted('start-recording')).toBeUndefined();
+    expect(capture.startRecording).not.toHaveBeenCalled();
+  });
+
+  it('shows Enable for required Linux access and keeps Start disabled until authorization succeeds', async () => {
+    capture.platform = 'linux';
+    Object.defineProperty(window, 'capture', { configurable: true, value: capture });
+    capture.inputAccessStatus.mockResolvedValueOnce({
+      state: 'permission-required',
+      canRequest: true,
+      clicks: false,
+      shortcuts: false,
+      recordsText: false,
+    });
+    let resolveRequest!: (value: {
+      state: 'available';
+      canRequest: false;
+      clicks: true;
+      shortcuts: true;
+      recordsText: false;
+    }) => void;
+    capture.requestInputAccess.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveRequest = resolve;
+      }),
+    );
+
+    const wrapper = mount(HUD, { global: { stubs } });
+    await ready();
+
+    const issue = wrapper.get('.hud-issue-warning');
+    expect(issue.get('.hud-issue-title').text()).toBe('Allow keyboard shortcut recording');
+    expect(issue.get('.hud-issue-action').text()).toContain('Enable');
+    expect(issue.find('.copy-button-idle').exists()).toBe(false);
+    const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording'))!;
+    expect(record.element).toHaveProperty('disabled', true);
+
+    const authorization = issue.get('.hud-issue-action').trigger('click');
+    await ready();
+    expect(capture.requestInputAccess).toHaveBeenCalledOnce();
+    expect(wrapper.get('.hud-issue-warning .hud-issue-action').attributes('disabled')).toBeDefined();
+    expect(wrapper.get('.hud-issue-warning .hud-issue-action').find('.icon-spin').exists()).toBe(true);
+
+    resolveRequest({
+      state: 'available',
+      canRequest: false,
+      clicks: true,
+      shortcuts: true,
+      recordsText: false,
+    });
+    await authorization;
+    await ready();
+
+    const success = wrapper.get('.hud-issue-success');
+    expect(success.get('.hud-issue-title').text()).toBe('Interaction access enabled');
+    expect(success.text()).toContain('Mouse clicks and keyboard shortcuts can now be recorded');
+    expect(wrapper.find('.hud-issue-warning').exists()).toBe(false);
+    expect(record.element).toHaveProperty('disabled', false);
+  });
+
+  it('auto-starts persisted Linux authorization and removes Enable after success', async () => {
+    capture.platform = 'linux';
+    Object.defineProperty(window, 'capture', { configurable: true, value: capture });
+    capture.getPreferences.mockResolvedValueOnce({
+      schemaVersion: 3,
+      theme: 'system',
+      recordingBar: { visibility: 'always' },
+      recordingInteractions: { enabled: true, noticeDismissed: true },
+      alwaysOnTop: true,
+      devices: { cameraId: 'camera:chromium:device-1', micId: 'microphone:chromium:device-1', systemAudioMode: 'off' },
+      shortcuts: {},
+      backgroundPresets: { colors: [], gradients: [] },
+      extras: {},
+    });
+    capture.inputAccessStatus.mockResolvedValueOnce({
+      state: 'permission-required',
+      canRequest: true,
+      clicks: false,
+      shortcuts: false,
+      recordsText: false,
+    });
+    capture.requestInputAccess.mockResolvedValueOnce({
+      state: 'available',
+      canRequest: false,
+      clicks: true,
+      shortcuts: true,
+      recordsText: false,
+    });
+
+    const wrapper = mount(HUD, { global: { stubs } });
+    await ready();
+
+    expect(capture.requestInputAccess).toHaveBeenCalledOnce();
+    expect(wrapper.find('.hud-issue-warning').exists()).toBe(false);
+    expect(wrapper.find('.hud-issue .hud-issue-action').exists()).toBe(false);
+    const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording'))!;
+    expect(record.element).toHaveProperty('disabled', false);
+  });
+
+  it('keeps Linux Start blocked when permission is still required after the notice was dismissed', async () => {
+    capture.platform = 'linux';
+    Object.defineProperty(window, 'capture', { configurable: true, value: capture });
+    capture.getPreferences.mockResolvedValueOnce({
+      schemaVersion: 3,
+      theme: 'system',
+      recordingBar: { visibility: 'always' },
+      recordingInteractions: { enabled: false, noticeDismissed: true },
+      alwaysOnTop: true,
+      devices: { cameraId: 'camera:chromium:device-1', micId: 'microphone:chromium:device-1', systemAudioMode: 'off' },
+      shortcuts: {},
+      backgroundPresets: { colors: [], gradients: [] },
+      extras: {},
+    });
+    capture.inputAccessStatus.mockResolvedValueOnce({
+      state: 'permission-required',
+      canRequest: true,
+      clicks: false,
+      shortcuts: false,
+      recordsText: false,
+    });
+
+    const wrapper = mount(HUD, { global: { stubs } });
+    await ready();
+
+    const issue = wrapper.get('.hud-issue-warning');
+    expect(issue.get('.hud-issue-action').text()).toContain('Enable');
+    const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording'))!;
+    expect(record.element).toHaveProperty('disabled', true);
+  });
+
+  it('resynchronizes interaction access when Settings opens after HUD authorization', async () => {
+    capture.platform = 'linux';
+    Object.defineProperty(window, 'capture', { configurable: true, value: capture });
+    capture.inputAccessStatus
+      .mockResolvedValueOnce({
+        state: 'permission-required',
+        canRequest: true,
+        clicks: false,
+        shortcuts: false,
+        recordsText: false,
+      })
+      .mockResolvedValueOnce({
+        state: 'available',
+        canRequest: false,
+        clicks: true,
+        shortcuts: true,
+        recordsText: false,
+      });
+
+    const wrapper = mount(HUD, { global: { stubs } });
+    await ready();
+
+    await wrapper.get('[aria-label="Preferences"]').trigger('click');
+    await ready();
+
+    expect(capture.inputAccessStatus).toHaveBeenCalledTimes(2);
+    expect(wrapper.get('.preferences-input-access').text()).toBe('available');
+    expect(wrapper.find('.preferences-allow').exists()).toBe(false);
+    expect(wrapper.find('.preferences-switch').exists()).toBe(true);
+  });
+
+  it('blocks Start and offers diagnostics when Linux interaction access is unavailable', async () => {
+    capture.platform = 'linux';
+    Object.defineProperty(window, 'capture', { configurable: true, value: capture });
+    capture.inputAccessStatus.mockResolvedValueOnce({
+      state: 'unavailable',
+      canRequest: false,
+      clicks: false,
+      shortcuts: false,
+      recordsText: false,
+    });
+
+    const wrapper = mount(HUD, { global: { stubs } });
+    await ready();
+
+    expect(wrapper.get('.hud-issue-info').text()).toContain('Interaction recording unavailable');
+    expect(wrapper.find('.hud-issue-info .copy-button-idle').exists()).toBe(true);
+    expect(wrapper.get('.hud-issue-info').text()).not.toContain('Enable');
+    const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording'))!;
+    expect(record.element).toHaveProperty('disabled', true);
   });
 
   it('does not acquire system audio for an idle HUD when the preference is restored as on', async () => {
@@ -391,6 +638,32 @@ describe('HUD', () => {
 
     await wrapper.get('[aria-label="Preferences"]').trigger('click');
     expect(wrapper.get('.preferences-input-access').text()).toBe('available');
+  });
+
+  it('keeps the normal HUD height when an issue appears and disappears', async () => {
+    const wrapper = mount(HUD, {
+      props: { externalError: 'Temporary recording failure' },
+      global: { stubs },
+    });
+    await ready();
+
+    expect(wrapper.find('.hud-issue-error').exists()).toBe(true);
+    expect(wrapper.get('.recording-action-stack').classes()).toContain('has-issues');
+    expect(wrapper.find('.hud-issues').exists()).toBe(true);
+    expect(wrapper.get('.hud-wrapper').attributes('style')).toContain('height: 480px');
+    expect(capture.setSize.mock.calls.map(([, height]) => height)).toContain(512);
+    expect(capture.setSize.mock.calls.map(([, height]) => height)).not.toContain(628);
+
+    await wrapper.setProps({ externalError: undefined });
+    await ready();
+    vi.advanceTimersByTime(220);
+    await ready();
+
+    expect(wrapper.find('.hud-issue-error').exists()).toBe(false);
+    expect(wrapper.get('.recording-action-stack').classes()).not.toContain('has-issues');
+    expect(wrapper.find('.hud-issues').exists()).toBe(false);
+    expect(wrapper.get('.hud-wrapper').attributes('style')).toContain('height: 480px');
+    expect(capture.setSize.mock.calls.map(([, height]) => height)).not.toContain(628);
   });
 
   it('replaces the HUD body with editor loading progress inside the same card', async () => {
@@ -812,25 +1085,22 @@ describe('HUD', () => {
     expect(capture.setInteractive).toHaveBeenLastCalledWith(true);
     expect(wrapper.get('[role="alert"]').text()).toContain('The object could not be cloned.');
 
-    await wrapper.get('.capture-error-copy').trigger('click');
+    await wrapper.get('[aria-label="Copy error"]').trigger('click');
     await ready();
     expect(writeText).toHaveBeenCalledWith(String(cloneError));
   });
 
-  it('copies discovery errors through the clipboard fallback and clears copied state', async () => {
+  it('copies discovery errors through the clipboard fallback and reports copied state', async () => {
     capture.discover.mockRejectedValueOnce(new Error('discover failed'));
     const writeText = vi.fn().mockRejectedValue(new Error('clipboard unavailable'));
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
     Object.defineProperty(document, 'execCommand', { configurable: true, value: vi.fn().mockReturnValue(true) });
     const wrapper = mount(HUD, { global: { stubs } });
     await ready();
-    await wrapper.get('.capture-error-copy').trigger('click');
+    await wrapper.get('[aria-label="Copy error"]').trigger('click');
     await ready();
     expect(writeText).toHaveBeenCalledWith('discover failed');
-    expect(wrapper.get('.capture-error-copy').text()).toContain('Copied');
-    vi.advanceTimersByTime(2_000);
-    await ready();
-    expect(wrapper.get('.capture-error-copy').text()).toContain('Copy error');
+    expect(wrapper.get('[aria-label="Copied"]').attributes('data-state')).toBe('copied');
   });
 
   it('stops an active session and reports the stop event', async () => {

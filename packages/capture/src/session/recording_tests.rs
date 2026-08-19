@@ -33,6 +33,7 @@ fn cancelling_a_failed_session_removes_project_and_session_artifacts() {
         created_at_utc: "2026-01-01T00:00:00Z".into(),
         capabilities: CaptureCapabilities::default(),
         permissions: PermissionSnapshot::default(),
+        diagnostics: Default::default(),
         limitations: Vec::new(),
         sources: Vec::new(),
     };

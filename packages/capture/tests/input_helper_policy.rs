@@ -45,7 +45,7 @@ fn helper_version_command_reports_the_current_policy_revision() {
         value
             .get("policyVersion")
             .and_then(serde_json::Value::as_u64),
-        Some(3)
+        Some(5)
     );
     let policy = policy_asset();
     let policy_version = value
@@ -59,7 +59,7 @@ fn helper_version_command_reports_the_current_policy_revision() {
 }
 
 #[test]
-fn policy_limits_implicit_authorization_to_stream() {
+fn policy_allows_only_the_installed_stream_in_active_sessions() {
     let policy = policy_asset();
     assert!(policy.contains("<allow_any>no</allow_any>"));
     assert!(policy.contains("<allow_inactive>no</allow_inactive>"));
@@ -81,15 +81,13 @@ fn policy_limits_implicit_authorization_to_stream() {
 }
 
 #[test]
-fn install_and_uninstall_have_no_automatic_authorization() {
+fn install_update_and_uninstall_have_no_automatic_authorization() {
     let policy = policy_asset();
-    for block in action_blocks(&policy) {
-        let is_install_or_uninstall = block.contains("argv1\">install</annotate>")
-            || block.contains("argv1\">uninstall</annotate>");
-        if is_install_or_uninstall {
-            assert!(!block.contains("<allow_active>yes</allow_active>"));
-        }
-    }
+    let blocks: Vec<&str> = action_blocks(&policy).collect();
+    assert_eq!(blocks.len(), 1);
+    assert!(blocks[0].contains("<allow_active>yes</allow_active>"));
+    assert!(blocks[0].contains("argv1\">stream</annotate>"));
     assert!(!policy.contains("argv1\">install</annotate>"));
+    assert!(!policy.contains("argv1\">install-stream</annotate>"));
     assert!(!policy.contains("argv1\">uninstall</annotate>"));
 }

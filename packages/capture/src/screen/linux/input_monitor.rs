@@ -12,7 +12,7 @@ use std::{
 
 use crate::{
     CaptureError,
-    input::{InputAccessStatus, NativeInputEvent},
+    input::{InputAccessStatus, InputAccessUnavailableReason, NativeInputEvent},
 };
 
 use super::owned_child;
@@ -104,8 +104,18 @@ pub(crate) fn input_helper_supported() -> bool {
 
 #[must_use]
 pub fn linux_input_access_status() -> InputAccessStatus {
+    if input_helper_path().is_none() {
+        return InputAccessStatus::unavailable_for(
+            InputAccessUnavailableReason::InputHelperUnavailable,
+        );
+    }
+    if !command_on_path("pkexec") {
+        return InputAccessStatus::unavailable_for(InputAccessUnavailableReason::PolkitUnavailable);
+    }
     let Ok(broker) = broker().lock() else {
-        return InputAccessStatus::unavailable();
+        return InputAccessStatus::unavailable_for(
+            InputAccessUnavailableReason::InputBrokerUnavailable,
+        );
     };
     if broker.shared.ready.load(Ordering::Acquire) {
         return InputAccessStatus::available(
@@ -113,10 +123,12 @@ pub fn linux_input_access_status() -> InputAccessStatus {
             Some(broker.shared.keyboard_devices.load(Ordering::Acquire)),
         );
     }
-    if input_helper_supported() {
-        InputAccessStatus::required()
-    } else {
-        InputAccessStatus::unavailable()
+    match helper_launch() {
+        Ok((_, "install-stream")) => InputAccessStatus::installation_required(),
+        Ok(_) => InputAccessStatus::required(),
+        Err(_) => {
+            InputAccessStatus::unavailable_for(InputAccessUnavailableReason::InputHelperUnavailable)
+        }
     }
 }
 
@@ -126,7 +138,7 @@ pub fn request_linux_input_access() -> Result<InputAccessStatus, CaptureError> {
             "Polkit pkexec is not available".into(),
         ));
     }
-    let helper = ensure_installed_helper()?;
+    let (helper, helper_command) = helper_launch()?;
     let mut broker = broker()
         .lock()
         .map_err(|_| CaptureError::Backend("input broker lock was poisoned".into()))?;
@@ -138,7 +150,7 @@ pub fn request_linux_input_access() -> Result<InputAccessStatus, CaptureError> {
     let mut command = Command::new("pkexec");
     command
         .arg(helper)
-        .arg("stream")
+        .arg(helper_command)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::null());
@@ -325,33 +337,16 @@ fn bundled_input_helper_path() -> Option<PathBuf> {
         .filter(|path| executable_file(path))
 }
 
-fn ensure_installed_helper() -> Result<PathBuf, CaptureError> {
+fn helper_launch() -> Result<(PathBuf, &'static str), CaptureError> {
     let installed = PathBuf::from(INSTALLED_HELPER);
     if let Some(bundled) = bundled_input_helper_path()
         && bundled != installed
         && (!executable_file(&installed) || helper_version(&bundled) != helper_version(&installed))
     {
-        let mut command = Command::new("pkexec");
-        command
-            .arg(&bundled)
-            .arg("install")
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null());
-        owned_child::configure(&mut command);
-        let status = command.status().map_err(|error| {
-            CaptureError::Backend(format!(
-                "input helper installation failed to start: {error}"
-            ))
-        })?;
-        if !status.success() {
-            return Err(CaptureError::PermissionDenied(
-                "interaction access installation was not authorized".into(),
-            ));
-        }
+        return Ok((bundled, "install-stream"));
     }
     executable_file(&installed)
-        .then_some(installed)
+        .then_some((installed, "stream"))
         .ok_or_else(|| CaptureError::Unsupported("Beam input helper is not installed".into()))
 }
 
