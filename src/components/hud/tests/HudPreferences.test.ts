@@ -121,23 +121,32 @@ describe('HudPreferences', () => {
   });
 
   it.each(['darwin', 'win32'] as const)(
-    'uses the generic keyboard-shortcut description on %s without Linux click metadata',
+    'uses generic keyboard-shortcut labels on %s without Linux or mouse metadata',
     (platform) => {
       const wrapper = mountPreferences({ platform });
+      const title = wrapper.get('.input-access-item .preference-title').text();
       const description = wrapper.get('.input-access-item .preference-description').text();
 
+      expect(title).toContain('Record keyboard shortcuts');
+      expect(title).not.toContain('Linux');
+      expect(title).not.toContain('mouse');
       expect(description).toContain('Records safe keyboard shortcuts.');
       expect(description).not.toContain('Linux');
-      expect(description).not.toContain('click');
+      expect(description).not.toContain('mouse');
     },
   );
 
-  it('mentions Linux click metadata in the platform-specific description', () => {
+  it('uses the Linux keyboard-and-mouse title and explains its recorded events', () => {
     const wrapper = mountPreferences({ platform: 'linux' });
+    const title = wrapper.get('.input-access-item .preference-title').text();
     const description = wrapper.get('.input-access-item .preference-description').text();
 
-    expect(description).toContain('Records safe keyboard shortcuts.');
-    expect(description).toContain('mouse click metadata');
+    expect(title).toContain('Record keyboard & mouse events on Linux');
+    expect(description).toContain('On Linux');
+    expect(description).toContain('mouse clicks');
+    expect(description).toContain('captions');
+    expect(description).toContain('automatic zooms');
+    expect(description).not.toContain('Typed text is stored');
   });
 
   it('emits an access request and exposes a busy state while it is pending', async () => {

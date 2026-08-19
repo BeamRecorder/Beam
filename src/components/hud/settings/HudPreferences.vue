@@ -70,6 +70,9 @@ const inputDescription = computed(() => {
   }
   return t(props.platform === 'linux' ? 'interactionAccessDescriptionLinux' : 'interactionAccessDescription');
 });
+const interactionTitle = computed(() =>
+  t(props.platform === 'linux' ? 'recordInteractionsLinux' : 'recordInteractions'),
+);
 
 const countdownOptions = [
   { value: 0, label: t('off') },
@@ -134,7 +137,7 @@ const openOnboarding = () => {
 
           <div class="preference-item input-access-item">
             <div class="preference-copy">
-              <p class="preference-title">{{ t('recordInteractions') }}</p>
+              <p class="preference-title">{{ interactionTitle }}</p>
               <p class="preference-description">{{ inputDescription }}</p>
             </div>
             <div class="input-access-actions" role="status" aria-live="polite">
