@@ -1,7 +1,7 @@
 import type { LinuxCaptureDiagnostics, RequirementDiagnostic } from './types/capture-api';
 import type { InputAccessStatus } from './types/capture-api';
 
-const LINUX_GUIDE_URL = 'https://github.com/ExtraBinoss/Beam/blob/main/docs/dev/linux.md';
+const LINUX_GUIDE_URL = 'https://github.com/BeamRecorder/Beam/blob/main/docs/dev/linux.md';
 
 export type LinuxRequirementId = 'portal' | 'pipewire' | 'ffmpeg';
 

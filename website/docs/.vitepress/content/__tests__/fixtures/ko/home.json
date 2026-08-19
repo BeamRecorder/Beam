@@ -8,7 +8,7 @@
     "imageAlt": "Beam 앱 아이콘",
     "actions": [
       { "theme": "brand", "text": "시작하기", "link": "/getting-started" },
-      { "theme": "alt", "text": "GitHub에서 보기", "link": "https://github.com/ExtraBinoss/Beam" },
+      { "theme": "alt", "text": "GitHub에서 보기", "link": "https://github.com/BeamRecorder/Beam" },
       { "theme": "alt", "text": "Discord 참여", "link": "https://discord.gg/6Q6v2xUCB" }
     ]
   },

@@ -9,7 +9,7 @@
         {
           "title": "安裝 Beam",
           "paragraphs": [
-            "從 [Beam 發布頁面](https://github.com/ExtraBinoss/Beam/releases/latest) 下載最新版本。選擇適合你作業系統的套件。"
+            "從 [Beam 發布頁面](https://github.com/BeamRecorder/Beam/releases/latest) 下載最新版本。選擇適合你作業系統的套件。"
           ],
           "bullets": [
             "Windows 使用原生安裝程式。",
@@ -86,7 +86,7 @@
         {
           "title": "更新工具失敗時",
           "paragraphs": [
-            "使用「複製錯誤」保留診斷訊息，然後從[最新 Beam 發布頁面](https://github.com/ExtraBinoss/Beam/releases/latest)手動下載正確的套件。你的專案與應用程式安裝位置分開儲存。"
+            "使用「複製錯誤」保留診斷訊息，然後從[最新 Beam 發布頁面](https://github.com/BeamRecorder/Beam/releases/latest)手動下載正確的套件。你的專案與應用程式安裝位置分開儲存。"
           ]
         }
       ]

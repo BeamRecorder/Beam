@@ -39,7 +39,7 @@ const englishFaqItems: readonly FaqItem[] = [
     question: 'Is Beam really free and open source?',
     answer:
       'Yes. Beam is released under the MIT License with no subscription required. Its public GitHub repository lets the community inspect the code, report bugs, request features, and contribute improvements.',
-    sourceUrl: 'https://github.com/ExtraBinoss/Beam',
+    sourceUrl: 'https://github.com/BeamRecorder/Beam',
     sourceLabel: 'View Beam on GitHub',
   },
   {
@@ -127,7 +127,7 @@ const englishFaqItems: readonly FaqItem[] = [
     question: 'How can I contribute to Beam?',
     answer:
       'You can inspect the source, report issues, propose features, contribute code through GitHub, and join the Beam Discord community for help and project updates.',
-    sourceUrl: 'https://github.com/ExtraBinoss/Beam',
+    sourceUrl: 'https://github.com/BeamRecorder/Beam',
     sourceLabel: 'Contribute to Beam on GitHub',
   },
 ] as const;
@@ -146,7 +146,7 @@ const frenchFaqItems: readonly FaqItem[] = [
     question: 'Beam est-il vraiment gratuit et open source ?',
     answer:
       'Oui. Beam est publié sous licence MIT et ne nécessite aucun abonnement. Son dépôt GitHub public permet à la communauté de consulter le code, signaler des bugs, proposer des fonctionnalités et contribuer.',
-    sourceUrl: 'https://github.com/ExtraBinoss/Beam',
+    sourceUrl: 'https://github.com/BeamRecorder/Beam',
     sourceLabel: 'Voir Beam sur GitHub',
   },
   {
@@ -234,7 +234,7 @@ const frenchFaqItems: readonly FaqItem[] = [
     question: 'Comment contribuer à Beam ?',
     answer:
       'Vous pouvez consulter le code, signaler un problème, proposer une fonctionnalité, contribuer sur GitHub et rejoindre la communauté Discord de Beam.',
-    sourceUrl: 'https://github.com/ExtraBinoss/Beam',
+    sourceUrl: 'https://github.com/BeamRecorder/Beam',
     sourceLabel: 'Contribuer à Beam sur GitHub',
   },
 ] as const;

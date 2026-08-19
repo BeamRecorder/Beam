@@ -46,7 +46,7 @@
         {
           "title": "Ouvrir le résultat",
           "paragraphs": [
-            "Après un export réussi, Beam indique le nom du fichier enregistré et propose une action pour l'ouvrir. Si l'export échoue, copiez le rapport technique avant de demander de l'aide sur [Discord](https://discord.gg/6Q6v2xUCB) ou [GitHub](https://github.com/ExtraBinoss/Beam/issues)."
+            "Après un export réussi, Beam indique le nom du fichier enregistré et propose une action pour l'ouvrir. Si l'export échoue, copiez le rapport technique avant de demander de l'aide sur [Discord](https://discord.gg/6Q6v2xUCB) ou [GitHub](https://github.com/BeamRecorder/Beam/issues)."
           ]
         }
       ]

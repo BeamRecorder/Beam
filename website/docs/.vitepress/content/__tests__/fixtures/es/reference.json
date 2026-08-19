@@ -46,7 +46,7 @@
         {
           "title": "Abrir el resultado",
           "paragraphs": [
-            "Después de una exportación correcta, Beam muestra el nombre del archivo guardado y ofrece una acción para abrirlo. Si la exportación falla, copia el informe técnico antes de pedir ayuda en [Discord](https://discord.gg/6Q6v2xUCB) o [GitHub](https://github.com/ExtraBinoss/Beam/issues)."
+            "Después de una exportación correcta, Beam muestra el nombre del archivo guardado y ofrece una acción para abrirlo. Si la exportación falla, copia el informe técnico antes de pedir ayuda en [Discord](https://discord.gg/6Q6v2xUCB) o [GitHub](https://github.com/BeamRecorder/Beam/issues)."
           ]
         }
       ]

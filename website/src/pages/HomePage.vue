@@ -47,7 +47,7 @@ const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
             <a class="hero-primary-action" href="/install">
               <Download aria-hidden="true" /> {{ t('Website.home.downloadFree') }}
             </a>
-            <a class="secondary-action" href="https://github.com/ExtraBinoss/Beam" target="_blank" rel="noreferrer">
+            <a class="secondary-action" href="https://github.com/BeamRecorder/Beam" target="_blank" rel="noreferrer">
               <Code2 aria-hidden="true" /> {{ t('Website.home.viewGitHub') }}
             </a>
           </div>
@@ -97,7 +97,7 @@ const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
           <h2>{{ t('Website.home.openSourceTitle') }}</h2>
           <p>{{ t('Website.home.openSourceText') }}</p>
           <div class="open-source__actions">
-            <Button variant="frosted" :icon="Code2" @click="openExternal('https://github.com/ExtraBinoss/Beam')">
+            <Button variant="frosted" :icon="Code2" @click="openExternal('https://github.com/BeamRecorder/Beam')">
               {{ t('Website.home.viewGitHub') }}
             </Button>
             <Button class="discord-join" variant="frosted" @click="openExternal('https://discord.gg/6Q6v2xUCB')">
@@ -109,12 +109,12 @@ const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
         </div>
         <a
           class="contributors"
-          href="https://github.com/ExtraBinoss/Beam/graphs/contributors"
+          href="https://github.com/BeamRecorder/Beam/graphs/contributors"
           target="_blank"
           rel="noreferrer"
         >
           <img
-            src="https://contrib.rocks/image?repo=ExtraBinoss/Beam"
+            src="https://contrib.rocks/image?repo=BeamRecorder/Beam"
             :alt="t('Website.home.contributorsAlt')"
             loading="lazy"
           />

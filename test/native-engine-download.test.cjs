@@ -200,7 +200,7 @@ test('downloadNativeFiles downloads and atomically installs all Linux files from
     assert.equal(requested.length, 3);
     assert.equal(requested[1].url, `${release}/${encodeURIComponent(required[0].asset)}`);
     assert.equal(requested[2].url, `${release}/${encodeURIComponent(required[1].asset)}`);
-    assert.equal(RELEASE_BASE_URL, 'https://github.com/ExtraBinoss/Beam/releases/download');
+    assert.equal(RELEASE_BASE_URL, 'https://github.com/BeamRecorder/Beam/releases/download');
     for (const file of required) {
       assert.equal(
         fs.readdirSync(path.dirname(file.destination)).some((name) => name.endsWith('.tmp')),

@@ -31,7 +31,7 @@ function createAutoUpdater({
   };
   const openChangelog = () =>
     openExternal(
-      `https://github.com/ExtraBinoss/Beam/releases/tag/${encodeURIComponent(state.availableVersion || state.currentVersion)}`,
+      `https://github.com/BeamRecorder/Beam/releases/tag/${encodeURIComponent(state.availableVersion || state.currentVersion)}`,
     );
 
   if (!isPackaged)

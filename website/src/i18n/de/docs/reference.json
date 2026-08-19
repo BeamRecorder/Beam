@@ -46,7 +46,7 @@
         {
           "title": "Ergebnis öffnen",
           "paragraphs": [
-            "Nach einem erfolgreichen Export meldet Beam den Namen der gespeicherten Datei und bietet eine Aktion zum Öffnen an. Wenn der Export fehlschlägt, kopiere den technischen Bericht, bevor du auf [Discord](https://discord.gg/6Q6v2xUCB) oder [GitHub](https://github.com/ExtraBinoss/Beam/issues) um Hilfe bittest."
+            "Nach einem erfolgreichen Export meldet Beam den Namen der gespeicherten Datei und bietet eine Aktion zum Öffnen an. Wenn der Export fehlschlägt, kopiere den technischen Bericht, bevor du auf [Discord](https://discord.gg/6Q6v2xUCB) oder [GitHub](https://github.com/BeamRecorder/Beam/issues) um Hilfe bittest."
           ]
         }
       ]

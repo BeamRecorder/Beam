@@ -9,7 +9,7 @@ const {
   prebuiltInputHelperPath,
 } = require('../../electron/capture/capture-engine-path.cjs');
 
-const RELEASE_BASE_URL = 'https://github.com/ExtraBinoss/Beam/releases/download';
+const RELEASE_BASE_URL = 'https://github.com/BeamRecorder/Beam/releases/download';
 
 function requiredNativeFiles(applicationRoot, version, platform = process.platform, arch = process.arch) {
   const engineAsset = captureEngineAssetName(version, platform, arch);

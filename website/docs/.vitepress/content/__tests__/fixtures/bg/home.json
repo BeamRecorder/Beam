@@ -8,7 +8,7 @@
     "imageAlt": "Икона на приложението Beam",
     "actions": [
       { "theme": "brand", "text": "Първи стъпки", "link": "/getting-started" },
-      { "theme": "alt", "text": "Вижте в GitHub", "link": "https://github.com/ExtraBinoss/Beam" },
+      { "theme": "alt", "text": "Вижте в GitHub", "link": "https://github.com/BeamRecorder/Beam" },
       { "theme": "alt", "text": "Присъединете се към Discord", "link": "https://discord.gg/6Q6v2xUCB" }
     ]
   },

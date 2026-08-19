@@ -59,7 +59,7 @@ describe('linuxRequirementGuidance', () => {
       `Install or repair the detected desktop portal: sudo apt update && sudo apt install xdg-desktop-portal xdg-desktop-portal-gnome`,
     );
     expect(result[0]?.copyText).toContain(
-      'Linux guide: https://github.com/ExtraBinoss/Beam/blob/main/docs/dev/linux.md',
+      'Linux guide: https://github.com/BeamRecorder/Beam/blob/main/docs/dev/linux.md',
     );
   });
 

@@ -54,7 +54,7 @@ const { registerFatalLifecycle } = require('./lifecycle/fatal-events.cjs');
 const { initializeSingleInstance } = require('./lifecycle/single-instance.cjs');
 
 const DISCORD_INVITE_URL = 'https://discord.gg/6Q6v2xUCB';
-const GITHUB_REPOSITORY_URL = 'https://github.com/ExtraBinoss/Beam';
+const GITHUB_REPOSITORY_URL = 'https://github.com/BeamRecorder/Beam';
 
 // Set to true only while diagnosing Electron startup or renderer requests.
 const ENABLE_ELECTRON_DIAGNOSTIC_LOGS = !app.isPackaged;

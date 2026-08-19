@@ -9,7 +9,7 @@
         {
           "title": "Cài đặt Beam",
           "paragraphs": [
-            "Tải bản phát hành mới nhất từ [trang phát hành Beam](https://github.com/ExtraBinoss/Beam/releases/latest). Chọn gói dành cho hệ điều hành của bạn."
+            "Tải bản phát hành mới nhất từ [trang phát hành Beam](https://github.com/BeamRecorder/Beam/releases/latest). Chọn gói dành cho hệ điều hành của bạn."
           ],
           "bullets": [
             "Windows sử dụng trình cài đặt gốc.",
@@ -88,7 +88,7 @@
         {
           "title": "Nếu trình cập nhật thất bại",
           "paragraphs": [
-            "Dùng Sao chép lỗi để lưu thông báo chẩn đoán, sau đó tải thủ công gói chính xác từ [bản phát hành Beam mới nhất](https://github.com/ExtraBinoss/Beam/releases/latest). Các dự án được lưu riêng với nơi cài đặt ứng dụng."
+            "Dùng Sao chép lỗi để lưu thông báo chẩn đoán, sau đó tải thủ công gói chính xác từ [bản phát hành Beam mới nhất](https://github.com/BeamRecorder/Beam/releases/latest). Các dự án được lưu riêng với nơi cài đặt ứng dụng."
           ]
         }
       ]

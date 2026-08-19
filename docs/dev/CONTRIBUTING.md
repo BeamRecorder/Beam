@@ -9,7 +9,7 @@ This document explains how to contribute to **Beam**, either using an AI assista
 Copy and paste the prompt below directly into your AI coding assistant (Cursor, Claude Code, Antigravity, Copilot Workspace, etc.) to set up and develop autonomously:
 
 ```markdown
-You are an autonomous senior software engineer working on Beam (https://github.com/ExtraBinoss/Beam).
+You are an autonomous senior software engineer working on Beam (https://github.com/BeamRecorder/Beam).
 
 Follow these exact steps to prepare your workspace, fork the repository, and deliver changes:
 
@@ -19,7 +19,7 @@ Follow these exact steps to prepare your workspace, fork the repository, and del
 
 2. **Fork & Clone**:
    - Fork and clone the upstream repository:
-     `gh repo fork ExtraBinoss/Beam --clone`
+     `gh repo fork BeamRecorder/Beam --clone`
    - Enter the cloned directory:
      `cd Beam`
 
@@ -87,7 +87,7 @@ OS-specific setup instructions:
 
 2. **Fork and clone Beam**:
    ```bash
-   gh repo fork ExtraBinoss/Beam --clone
+   gh repo fork BeamRecorder/Beam --clone
    cd Beam
    ```
 

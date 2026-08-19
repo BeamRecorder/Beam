@@ -8,7 +8,7 @@
     "imageAlt": "Icona dell'app Beam",
     "actions": [
       { "theme": "brand", "text": "Primi passi", "link": "/getting-started" },
-      { "theme": "alt", "text": "Vedi su GitHub", "link": "https://github.com/ExtraBinoss/Beam" },
+      { "theme": "alt", "text": "Vedi su GitHub", "link": "https://github.com/BeamRecorder/Beam" },
       { "theme": "alt", "text": "Unisciti a Discord", "link": "https://discord.gg/6Q6v2xUCB" }
     ]
   },

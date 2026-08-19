@@ -2,7 +2,7 @@ import { readonly, ref } from 'vue';
 import type { GitHubRelease } from '@website/lib/platform-downloads';
 import { websiteI18n } from '@website/i18n';
 
-const REPOSITORY_API = 'https://api.github.com/repos/ExtraBinoss/Beam';
+const REPOSITORY_API = 'https://api.github.com/repos/BeamRecorder/Beam';
 const t = websiteI18n.global.t;
 
 const stars = ref<number | null>(null);
