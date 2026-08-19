@@ -105,15 +105,25 @@ export function drawCursorLayer(
     const target = cursorMotionPlayer.timeline.targetAt(click.sessionNs / 1_000_000_000);
     const position = positionAt(target ? { ...state, x: target.x, y: target.y } : state);
     const age = Math.max(0, time - click.sessionNs / 1_000_000_000);
-    const ripple = cursorRippleAt(age, effect.rippleSize);
+    const style = effect.rippleStyle ?? 'single';
+    const ripple = cursorRippleAt(age, effect.rippleSize, style);
     if (!ripple) continue;
     ctx.save();
-    ctx.globalAlpha = ripple.opacity;
-    ctx.strokeStyle = effect.rippleColor;
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(position.x, position.y, ripple.radius, 0, Math.PI * 2);
-    ctx.stroke();
+    for (const ring of ripple.rings) {
+      ctx.globalAlpha = ring.opacity;
+      if (ring.filled) {
+        ctx.fillStyle = effect.rippleColor;
+        ctx.beginPath();
+        ctx.arc(position.x, position.y, ring.radius, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.strokeStyle = effect.rippleColor;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(position.x, position.y, ring.radius, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
     ctx.restore();
   }
 

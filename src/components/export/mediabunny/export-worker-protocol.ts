@@ -1,8 +1,9 @@
 import type { ExportProgress, ExportRequest, ExportValidationIssue } from '../export-types';
 import type { ExportRuntimeDiagnostics } from '../export-diagnostics-types';
+import type { PreparedCursorImage } from './export-cursor-images';
 
 export type ExportWorkerRequest =
-  | { type: 'start'; request: ExportRequest }
+  | { type: 'start'; request: ExportRequest; cursorImages: PreparedCursorImage[] }
   | { type: 'cancel' }
   | { type: 'chunkAck'; sequence: number }
   | { type: 'chunkError'; sequence: number; message: string };
@@ -62,8 +63,18 @@ const runtimeDiagnostics = (value: unknown): value is ExportRuntimeDiagnostics =
 export function isExportWorkerRequest(value: unknown): value is ExportWorkerRequest {
   if (!record(value) || typeof value.type !== 'string') return false;
   if (value.type === 'start') {
-    if (!record(value.request) || !record(value.request.snapshot)) return false;
+    if (!record(value.request) || !record(value.request.snapshot) || !Array.isArray(value.cursorImages)) return false;
+    const cursorIds = new Set<string>();
+    const validCursorImages = value.cursorImages.every((image) => {
+      if (!record(image) || typeof image.id !== 'string' || !image.id || cursorIds.has(image.id)) return false;
+      if (!record(image.bitmap)) return false;
+      cursorIds.add(image.id);
+      const width = image.bitmap.width;
+      const height = image.bitmap.height;
+      return sequence(width) && (width as number) > 0 && sequence(height) && (height as number) > 0;
+    });
     return (
+      validCursorImages &&
       typeof value.request.projectName === 'string' &&
       (value.request.format === 'webm' || value.request.format === 'mp4') &&
       ['low', 'medium', 'high'].includes(value.request.preset as string) &&

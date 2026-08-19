@@ -1,9 +1,9 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { CursorPackDescriptor } from '~/api/types/cursor-pack';
+import type { CursorAssetDescriptor, CursorPackDescriptor } from '~/api/types/cursor-pack';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
-import { MACOS_CURSOR_PACK, orderedCursorPacks, resolveCursorAsset } from '../cursor-packs';
+import { cursorAssetSupportsTint, MACOS_CURSOR_PACK, orderedCursorPacks, resolveCursorAsset } from '../cursor-packs';
 
 const BUILTIN_PACKS = [
   ['builtin:macos', 'macOS'],
@@ -37,6 +37,17 @@ const importedPack = (id: string, name: string): CursorPackDescriptor => ({
 
 const bundledAssetPath = (url: string) =>
   resolve(process.cwd(), 'public', new URL(url, 'http://beam.test').pathname.slice(1));
+
+const fixtureAsset = (id: string, format: 'svg' | 'png', tintable: boolean): CursorAssetDescriptor => ({
+  id,
+  label: id,
+  url: `project-media://cursor/${id}.${format}`,
+  format,
+  tintable,
+  intrinsicSize: { width: 32, height: 32 },
+  nominalSize: 32,
+  hotspot: { x: 0, y: 0 },
+});
 
 describe('cursor pack catalog', () => {
   it('ships the six non-macOS builtins while keeping macOS first and default', () => {
@@ -78,6 +89,51 @@ describe('cursor pack catalog', () => {
         expect(existsSync(bundledAssetPath(asset.url))).toBe(true);
       }
     }
+  });
+
+  it('uses each bundled macOS SVG as the sole cursor source', () => {
+    expect(MACOS_CURSOR_PACK.colorMode).toBe('tintable');
+    for (const asset of MACOS_CURSOR_PACK.cursors) {
+      expect(asset.format).toBe('svg');
+      expect(asset.url).toMatch(new RegExp(`/macOsSvgCursors/${asset.id}\\.svg$`));
+      expect(asset.url).not.toContain('macOsPngCursors');
+      const svgPath = bundledAssetPath(asset.url);
+      expect(existsSync(svgPath)).toBe(true);
+      expect(readFileSync(svgPath, 'utf8').trimStart()).toMatch(/^<svg\b/i);
+    }
+  });
+
+  it('resolves tintability per asset for mixed packs', () => {
+    const pack: CursorPackDescriptor = {
+      id: 'pack:mixed-tintability',
+      name: 'Mixed tintability',
+      source: 'imported',
+      colorMode: 'tintable',
+      defaultCursorId: 'black-svg',
+      cursors: [
+        fixtureAsset('black-svg', 'svg', true),
+        fixtureAsset('coloured-svg', 'svg', false),
+        fixtureAsset('png', 'png', false),
+      ],
+      automaticMap: { default: 'black-svg' },
+    };
+
+    expect(cursorAssetSupportsTint(pack, pack.cursors[0]!)).toBe(true);
+    expect(cursorAssetSupportsTint(pack, pack.cursors[1]!)).toBe(false);
+    expect(cursorAssetSupportsTint(pack, pack.cursors[2]!)).toBe(false);
+  });
+
+  it('marks only the original-colour macOS beachball non-tintable', () => {
+    const byId = new Map(MACOS_CURSOR_PACK.cursors.map((asset) => [asset.id, asset]));
+
+    expect(byId.get('default')?.tintable).toBe(true);
+    expect(byId.get('textcursor')?.tintable).toBe(true);
+    expect(byId.get('beachball')?.tintable).toBe(false);
+    expect(byId.get('cross')?.tintable).toBe(true);
+    expect(byId.get('screenshotselection')?.tintable).toBe(true);
+    expect(cursorAssetSupportsTint(MACOS_CURSOR_PACK, byId.get('beachball')!)).toBe(false);
+    expect(cursorAssetSupportsTint(MACOS_CURSOR_PACK, byId.get('cross')!)).toBe(true);
+    expect(cursorAssetSupportsTint(MACOS_CURSOR_PACK, byId.get('screenshotselection')!)).toBe(true);
   });
 
   it('validates builtin mappings and falls back to each pack default', () => {

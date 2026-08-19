@@ -27,7 +27,7 @@ const emit = defineEmits<{
     :style="
       open
         ? { color: 'var(--color-primary)', background: 'var(--color-primary-light)' }
-        : { color: 'var(--text-muted)' }
+        : { color: 'var(--text-secondary)' }
     "
     @click="emit('update:open', !props.open)"
   >

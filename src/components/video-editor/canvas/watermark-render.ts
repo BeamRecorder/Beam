@@ -22,7 +22,11 @@ export function drawBeamWatermark(
   const logoSize = settings.showLogo && logo ? 22 * scale : 0;
   const gap = logoSize ? 7 * scale : 0;
   const text =
-    settings.text === 'none' ? '' : settings.renderedText || (settings.text === 'beam' ? 'Beam' : 'Made with Beam.');
+    settings.text === 'none'
+      ? ''
+      : settings.text === 'custom'
+        ? (settings.renderedText !== undefined ? settings.renderedText : (settings.customText ?? ''))
+        : settings.renderedText || (settings.text === 'beam' ? 'Beam' : 'Made with Beam.');
   const margin = 18 * viewportScale;
 
   context.save();
@@ -31,7 +35,8 @@ export function drawBeamWatermark(
   context.shadowColor = 'transparent';
   context.shadowBlur = 0;
   context.font = `600 ${fontSize}px Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
-  context.textBaseline = 'alphabetic';
+  context.textBaseline = 'middle';
+  context.textAlign = 'left';
   const textMetrics = text ? context.measureText(text) : null;
   const textWidth = textMetrics?.width ?? 0;
   if (!logoSize && !textWidth) {
@@ -69,11 +74,9 @@ export function drawBeamWatermark(
     );
     contentX += logoSize + gap;
   }
-  if (text && textMetrics) {
+  if (text) {
     context.fillStyle = '#ffffff';
-    const ascent = textMetrics.actualBoundingBoxAscent || fontSize * 0.72;
-    const descent = textMetrics.actualBoundingBoxDescent || fontSize * 0.2;
-    context.fillText(text, contentX, y + height / 2 + (ascent - descent) / 2);
+    context.fillText(text, contentX, y + height / 2);
   }
   context.restore();
 }

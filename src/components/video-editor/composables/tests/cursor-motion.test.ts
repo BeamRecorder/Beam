@@ -83,6 +83,17 @@ describe('cursor motion', () => {
     expect(timeline.targetAt(finalMoveTime)?.y).toBeCloseTo(0);
   });
 
+  it('keeps boundary and non-finite timeline sampling deterministic', () => {
+    const timeline = createCursorMotionTimeline(
+      events(move(0, 0, 0), move(1, 0.5, 0.25), move(2, 1, 1)),
+      createDefaultCursorMotionSettings(),
+    );
+    expect(timeline.targetAt(Number.NEGATIVE_INFINITY)).toEqual({ x: 0, y: 0 });
+    expect(timeline.targetAt(Number.NaN)).toEqual({ x: 1, y: 1 });
+    expect(timeline.targetAt(Number.POSITIVE_INFINITY)).toEqual({ x: 1, y: 1 });
+    expect(timeline.targetAt(timeline.segments[0]!.endSeconds)).toEqual({ x: 0.5, y: 0.25 });
+  });
+
   it('keeps motion progressing monotonically across irregular sample timestamps', () => {
     const settings = createDefaultCursorMotionSettings();
     const timeline = createCursorMotionTimeline(

@@ -16,7 +16,7 @@ const emit = defineEmits<{
   (event: 'preview', clip: CaptionClip | null): void;
 }>();
 
-const { draft, flush, update } = useCaptionDraft(toRef(props, 'clip'), (clip) => emit('update', clip));
+const { draft, update } = useCaptionDraft(toRef(props, 'clip'), (clip) => emit('update', clip));
 const captionStyle = computed<CaptionStyle>(() => ({
   ...createDefaultCaptionStyle(36),
   shadowDirection: 'bottom-right',
@@ -52,8 +52,8 @@ const previewStyle = (patch: Partial<CaptionStyle> | null) => {
             :model-value="displayText"
             :placeholder="t('typeCustomText')"
             size="md"
+            :debounce="150"
             @update:model-value="updateStyle('customText', String($event))"
-            @blur="flush"
           />
           <p class="section-desc">{{ t('customTextDescription') }}</p>
         </div>

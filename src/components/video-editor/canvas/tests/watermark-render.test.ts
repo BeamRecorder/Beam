@@ -94,11 +94,12 @@ describe('drawBeamWatermark', () => {
 
     drawBeamWatermark(context, canvas({ text: 'beam', showLogo: true, position: 'top-left' }), viewport, logo);
 
+    expect(context.textBaseline).toBe('middle');
     expect(context.drawImage).toHaveBeenCalledWith(logo, 93, 93, 1068, 1068, 38, 45, 22, 22);
     const [text, textX, textY] = (context.fillText as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]!;
     expect(text).toBe('Beam');
     expect(textX).toBe(67);
-    expect(textY).toBeCloseTo(60, 0);
+    expect(textY).toBe(56);
   });
 
   it('renders Made with Beam without a logo and uses the sans-serif fallback stack', () => {
@@ -109,6 +110,7 @@ describe('drawBeamWatermark', () => {
     expect(context.font).toContain('Inter');
     expect(context.font).toContain('ui-sans-serif');
     expect(context.font).toContain('system-ui');
+    expect(context.textBaseline).toBe('middle');
     expect(context.fillText).toHaveBeenCalledWith('Made with Beam.', expect.any(Number), expect.any(Number));
     expect(context.drawImage).not.toHaveBeenCalled();
   });
@@ -120,6 +122,25 @@ describe('drawBeamWatermark', () => {
 
     expect(context.fillText).toHaveBeenCalledWith('Beam', expect.any(Number), expect.any(Number));
     expect(context.drawImage).not.toHaveBeenCalled();
+  });
+
+  it('renders custom watermark text without a logo', () => {
+    const { context } = createContext();
+
+    drawBeamWatermark(context, canvas({ text: 'custom', customText: 'My Channel', showLogo: false }), viewport);
+
+    expect(context.fillText).toHaveBeenCalledWith('My Channel', expect.any(Number), expect.any(Number));
+    expect(context.drawImage).not.toHaveBeenCalled();
+  });
+
+  it('renders custom watermark text with a logo', () => {
+    const { context } = createContext();
+    const logo = {} as CanvasImageSource;
+
+    drawBeamWatermark(context, canvas({ text: 'custom', customText: 'My Channel', showLogo: true }), viewport, logo);
+
+    expect(context.drawImage).toHaveBeenCalled();
+    expect(context.fillText).toHaveBeenCalledWith('My Channel', expect.any(Number), expect.any(Number));
   });
 
   it.each([
@@ -143,7 +164,7 @@ describe('drawBeamWatermark', () => {
     expect(context.roundRect).toHaveBeenCalledWith(632, 664, 80, 58, expect.any(Number));
     const [, textX, textY] = (context.fillText as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]!;
     expect(textX).toBe(652);
-    expect(textY).toBeCloseTo(700.8, 1);
+    expect(textY).toBe(693);
   });
 
   it('keeps the corner margin fixed when the watermark size changes', () => {

@@ -334,6 +334,7 @@ function createCursorPackLibrary(root) {
           label: role.role.replace(/[_-]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()),
           url: `project-media://cursor/${id}/${assetId}`,
           format: role.format,
+          tintable: role.tintable,
           intrinsicSize: { width: role.width, height: role.height },
           nominalSize: role.nominalSize,
           hotspot: role.hotspot,

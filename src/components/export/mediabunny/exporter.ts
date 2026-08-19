@@ -3,6 +3,7 @@ import { ExportValidationError } from '../export-types';
 import type { ExportDiagnostics } from '../export-diagnostics-types';
 import { collectExportEnvironment } from '../export-diagnostics';
 import { isExportWorkerResponse, type ExportWorkerRequest } from './export-worker-protocol';
+import { prepareExportCursorImages } from './export-cursor-images';
 
 const abortError = () => new DOMException('Export cancelled.', 'AbortError');
 
@@ -14,27 +15,65 @@ export async function exportWithMediabunny(
 ): Promise<ExportResult> {
   if (signal.aborted) throw abortError();
   if (typeof Worker === 'undefined') throw new Error('Web Workers are unavailable; export cannot run on this device.');
+  const cursorImages = await prepareExportCursorImages(request, signal);
+  const closeCursorImages = () => {
+    for (const image of cursorImages) image.bitmap.close();
+  };
+  if (signal.aborted) {
+    closeCursorImages();
+    throw abortError();
+  }
 
   const startedAt = new Date().toISOString();
   const environmentPromise = collectExportEnvironment();
   const dialogStarted = performance.now();
-  const opened = await window.capture?.beginExport({ projectName: request.projectName, format: request.format });
+  let opened: Awaited<ReturnType<NonNullable<typeof window.capture>['beginExport']>> | undefined;
+  try {
+    opened = await window.capture?.beginExport({ projectName: request.projectName, format: request.format });
+  } catch (error) {
+    closeCursorImages();
+    throw error;
+  }
   const destinationDialogMs = performance.now() - dialogStarted;
-  if (!opened || opened.canceled) throw abortError();
-  const diagnostics: ExportDiagnostics = {
-    schemaVersion: 1,
-    startedAt,
-    completedAt: null,
-    destinationDialogMs,
-    environment: await environmentPromise,
-    runtime: null,
-  };
-  onStarted?.(diagnostics);
+  if (!opened || opened.canceled) {
+    closeCursorImages();
+    throw abortError();
+  }
+  let diagnostics: ExportDiagnostics;
+  try {
+    diagnostics = {
+      schemaVersion: 1,
+      startedAt,
+      completedAt: null,
+      destinationDialogMs,
+      environment: await environmentPromise,
+      runtime: null,
+    };
+  } catch (error) {
+    closeCursorImages();
+    await window.capture!.abortExport(opened.jobId).catch(() => undefined);
+    throw error;
+  }
+  try {
+    onStarted?.(diagnostics);
+  } catch (error) {
+    closeCursorImages();
+    await window.capture!.abortExport(opened.jobId).catch(() => undefined);
+    throw error;
+  }
   if (signal.aborted) {
+    closeCursorImages();
     await window.capture!.abortExport(opened.jobId).catch(() => undefined);
     throw abortError();
   }
-  const worker = new Worker(new URL('./export.worker.ts', import.meta.url), { type: 'module' });
+  let worker: Worker;
+  try {
+    worker = new Worker(new URL('./export.worker.ts', import.meta.url), { type: 'module' });
+  } catch (error) {
+    closeCursorImages();
+    await window.capture!.abortExport(opened.jobId).catch(() => undefined);
+    throw error;
+  }
 
   return new Promise<ExportResult>((resolve, reject) => {
     let settled = false;
@@ -132,6 +171,14 @@ export async function exportWithMediabunny(
         (error: unknown) => void abortNative(error),
       );
     };
-    worker.postMessage({ type: 'start', request } satisfies ExportWorkerRequest);
+    try {
+      worker.postMessage(
+        { type: 'start', request, cursorImages } satisfies ExportWorkerRequest,
+        cursorImages.map((image) => image.bitmap),
+      );
+    } catch (error) {
+      closeCursorImages();
+      void abortNative(error);
+    }
   });
 }

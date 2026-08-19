@@ -86,6 +86,9 @@
     "watermarkBackgroundRadius": "圆角",
     "watermarkBackgroundPadding": "内边距",
     "noWatermarkText": "无文字",
+    "custom": "自定义",
+    "customWatermarkText": "自定义文字",
+    "watermarkCustomTextPlaceholder": "输入水印文字...",
     "translateWatermark": "翻译水印文字"
   },
   "CanvasToolbar": {
@@ -111,6 +114,8 @@
     "customTextDescription": "编辑此内容会用自定义文本替换定时转录内容。",
     "typography": "排版",
     "importFont": "导入字体",
+    "searchFonts": "搜索字体...",
+    "noFontsFound": "没有匹配的字体",
     "fontSample": "Aa Bb Cc 123",
     "textAlignment": "文本对齐",
     "alignLeft": "左对齐",

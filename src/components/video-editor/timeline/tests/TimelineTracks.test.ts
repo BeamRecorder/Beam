@@ -1625,7 +1625,7 @@ describe('TimelineTracks', () => {
     expect(mounted!.emitted('paste:error')).toContainEqual(['Copy a timeline item before pasting.']);
   });
 
-  it('displays real-time caption text, triggers throbber on edit, and supports hover marquee', async () => {
+  it('displays real-time caption text and triggers a smooth throbber indicator on edit', async () => {
     const initialComp = composition();
     const targetCaption = initialComp.clips.find((c) => c.id === 'caption-clip') as CaptionClip;
     targetCaption.caption = {
@@ -1654,21 +1654,43 @@ describe('TimelineTracks', () => {
     await mounted!.setProps({ composition: updatedComp });
     await flushPromises();
 
-    // Throbber is displayed while commit is in progress
+    // While editing: full caption text is animated as a Throbber
     const throbber = mounted!.find('.text-caption-track .editor-loading-throbber');
     expect(throbber.exists()).toBe(true);
+    expect(throbber.attributes('aria-label')).toBe('Updated subtitle text');
 
-    // Wait 70ms to complete the edit debounce
-    await new Promise((resolve) => setTimeout(resolve, 70));
+    // Wait for the edit throbber timeout and settling transition
+    await new Promise((resolve) => setTimeout(resolve, 550));
     await flushPromises();
 
-    // Throbber disappears and updated text is shown
+    // Throbber settles back to crisp static caption text with validated settling animation
     expect(mounted!.find('.text-caption-track .editor-loading-throbber').exists()).toBe(false);
-    expect(mounted!.find('.text-caption-track .caption-label-text').text()).toBe('Updated subtitle text');
+    const settledLabel = mounted!.find('.text-caption-track .caption-label-text');
+    expect(settledLabel.exists()).toBe(true);
+    expect(settledLabel.text()).toBe('Updated subtitle text');
+    expect(settledLabel.classes()).toContain('caption-settled');
 
     // Hover marquee triggers
     const indicator = mounted!.find('.text-caption-track .annotation-indicator');
     await indicator.trigger('pointerenter');
     await indicator.trigger('pointerleave');
+  });
+
+  it('renders entry and exit transition zones on caption clips in the timeline', async () => {
+    const comp = composition();
+    const targetCaption = comp.clips.find((c) => c.id === 'caption-clip') as CaptionClip;
+    targetCaption.transitions = {
+      entry: { preset: { kind: 'fade' }, durationMs: 500 },
+      exit: { preset: { kind: 'fade' }, durationMs: 400 },
+    };
+
+    const mounted = await mountTracks({
+      composition: comp,
+    });
+
+    const entryZone = mounted!.find('.text-caption-track .annotation-indicator .transition-zone.entry');
+    const exitZone = mounted!.find('.text-caption-track .annotation-indicator .transition-zone.exit');
+    expect(entryZone.exists()).toBe(true);
+    expect(exitZone.exists()).toBe(true);
   });
 });

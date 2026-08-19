@@ -241,11 +241,9 @@ export class AudioPlaybackScheduler {
       .filter((clip): clip is AudioClip => isAudioClip(clip) && clip.enabled)
       .flatMap((clip) => {
         const decoder = this.decoders.get(clip.assetId);
-        if (!decoder || timelineSeconds >= clip.timelineStartMs / 1_000 + clip.timelineDurationMs / 1_000) return [];
-        const sourceStart = Math.max(
-          clip.sourceInMs / 1_000,
-          sourceTimeAt(clip, Math.max(clip.timelineStartMs, timelineSeconds * 1_000))! / 1_000,
-        );
+        const sourceTimeMs = sourceTimeAt(clip, Math.max(clip.timelineStartMs, timelineSeconds * 1_000));
+        if (!decoder || sourceTimeMs === null) return [];
+        const sourceStart = Math.max(clip.sourceInMs / 1_000, sourceTimeMs / 1_000);
         const sourceEnd = (clip.sourceInMs + clip.sourceDurationMs) / 1_000;
         return [
           {

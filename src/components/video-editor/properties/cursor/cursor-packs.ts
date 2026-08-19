@@ -40,6 +40,8 @@ const HOTSPOTS: Record<string, { x: number; y: number }> = {
   zoomout: { x: 16, y: 16 },
 };
 
+const ORIGINAL_COLOR_MACOS_CURSORS = new Set(['beachball']);
+
 const labelFor = (id: string) =>
   id
     .replace(/([a-z])([A-Z])/g, '$1 $2')
@@ -56,6 +58,8 @@ export const MACOS_CURSOR_PACK: CursorPackDescriptor = {
     id,
     label: `macOS ${labelFor(id)}`,
     url: resolvePublicAssetUrl(`/macOsSvgCursors/${id}.svg`),
+    format: 'svg',
+    tintable: !ORIGINAL_COLOR_MACOS_CURSORS.has(id),
     intrinsicSize: { width: 32, height: 32 },
     nominalSize: 32,
     hotspot,
@@ -71,6 +75,9 @@ export const BUNDLED_CURSOR_PACKS: CursorPackDescriptor[] = (
 }));
 
 export const BUILTIN_CURSOR_PACKS = [MACOS_CURSOR_PACK, ...BUNDLED_CURSOR_PACKS];
+
+export const cursorAssetSupportsTint = (pack: CursorPackDescriptor, asset: CursorAssetDescriptor) =>
+  (asset.format ?? 'svg') === 'svg' && (asset.tintable ?? pack.colorMode === 'tintable');
 
 const ROLE_CANDIDATES: Record<string, string[]> = {
   default: ['default', 'left_ptr', 'arrow'],
@@ -92,12 +99,22 @@ const ROLE_CANDIDATES: Record<string, string[]> = {
   resizenortheastsouthwest: ['resizenortheastsouthwest', 'nesw-resize'],
 };
 
+const cursorLookupCache = new WeakMap<CursorAssetDescriptor[], Map<string, CursorAssetDescriptor>>();
+
+const cursorLookupFor = (cursors: CursorAssetDescriptor[]) => {
+  const cached = cursorLookupCache.get(cursors);
+  if (cached) return cached;
+  const lookup = new Map(cursors.map((cursor) => [cursor.id, cursor]));
+  cursorLookupCache.set(cursors, lookup);
+  return lookup;
+};
+
 export function resolveCursorAsset(
   pack: CursorPackDescriptor,
   selection: CursorSelection,
   recordedRole?: string | null,
 ): CursorAssetDescriptor {
-  const byId = new Map(pack.cursors.map((cursor) => [cursor.id, cursor]));
+  const byId = cursorLookupFor(pack.cursors);
   if (selection.mode === 'fixed' && selection.cursorId && byId.has(selection.cursorId))
     return byId.get(selection.cursorId)!;
   const mapped = recordedRole ? pack.automaticMap[recordedRole] : undefined;

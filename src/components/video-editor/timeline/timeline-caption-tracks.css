@@ -60,16 +60,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 6px;
+  padding: 0 8px;
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   color: #fff;
-  font-size: 8px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 650;
   cursor: grab;
   box-shadow: var(--shadow-sm);
   transition: border-color var(--fast) ease;
-  overflow: visible;
+  overflow: hidden;
   box-sizing: border-box;
   background: var(--color-track-annotation);
 }
@@ -87,9 +87,30 @@
   border: 1.5px dashed var(--color-primary);
   pointer-events: none;
 }
+.transition-zone {
+  position: absolute;
+  inset-block: 0;
+  z-index: 10;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, #ffffff 32%, transparent) 0 4px,
+    transparent 4px 8px
+  );
+}
+.transition-zone.entry {
+  left: 0;
+}
+.transition-zone.exit {
+  right: 0;
+}
+.annotation-indicator.disabled .transition-zone {
+  opacity: 0.65;
+}
 .trim-handle {
   position: absolute;
   inset-block: 0;
+  z-index: 30;
   width: 10px;
   max-width: 28%;
   cursor: col-resize;
@@ -128,6 +149,8 @@
   right: 8px;
 }
 .clip-center-title {
+  position: relative;
+  z-index: 20;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -136,6 +159,11 @@
   white-space: nowrap;
   overflow: hidden;
   max-width: calc(100% - 16px);
+  width: 100%;
+}
+
+.clip-center-title.is-editing {
+  justify-content: flex-end;
 }
 
 .caption-label-text {
@@ -144,10 +172,54 @@
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.3;
+  transition: transform 0.05s linear;
+  will-change: transform, filter;
+}
+
+.caption-label-text.is-marqueeing {
+  overflow: visible;
+  text-overflow: clip;
+  max-width: none;
 }
 
 .sparkles-icon {
   flex-shrink: 0;
+}
+
+.caption-edit-throbber {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+@keyframes caption-settle-in {
+  0% {
+    transform: scale(1.05);
+    filter: brightness(1.35);
+    text-shadow: 0 0 6px rgba(255, 255, 255, 0.7);
+  }
+  50% {
+    transform: scale(0.99);
+    filter: brightness(1.1);
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+    text-shadow: none;
+  }
+}
+
+.caption-label-text.caption-settled {
+  animation: caption-settle-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .caption-item-enter-active {

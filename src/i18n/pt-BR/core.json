@@ -86,6 +86,9 @@
     "watermarkBackgroundRadius": "Raio dos cantos",
     "watermarkBackgroundPadding": "Espaçamento interno",
     "noWatermarkText": "Sem texto",
+    "custom": "Personalizado",
+    "customWatermarkText": "Texto personalizado",
+    "watermarkCustomTextPlaceholder": "Digite o texto da marca d’água...",
     "translateWatermark": "Traduzir texto da marca d’água"
   },
   "CanvasToolbar": {
@@ -111,6 +114,8 @@
     "customTextDescription": "Editar isto substitui a transcrição sincronizada pelo seu texto personalizado.",
     "typography": "Tipografia",
     "importFont": "Importar fonte",
+    "searchFonts": "Pesquisar fontes...",
+    "noFontsFound": "Nenhuma fonte correspondente",
     "fontSample": "Aa Bb Cc 123",
     "textAlignment": "Alinhamento do texto",
     "alignLeft": "Alinhar à esquerda",

@@ -6,20 +6,22 @@ export function drawWithClipTransition(
   ctx: Canvas2DContext,
   clip: Clip,
   timeMs: number,
-  canvas: { width: number; height: number },
+  frame: { x?: number; y?: number; width: number; height: number },
   draw: () => void,
 ) {
   if (!clip.transitions?.entry && !clip.transitions?.exit) return draw();
   const state = resolveClipTransitionState(clip, timeMs);
+  const centerX = (frame.x ?? 0) + frame.width / 2;
+  const centerY = (frame.y ?? 0) + frame.height / 2;
   ctx.save();
   ctx.globalAlpha *= state.opacity;
-  ctx.translate(state.translateX * canvas.width, state.translateY * canvas.height);
+  ctx.translate(state.translateX * frame.width, state.translateY * frame.height);
   if (state.scale !== 1) {
-    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.translate(centerX, centerY);
     ctx.scale(state.scale, state.scale);
-    ctx.translate(-canvas.width / 2, -canvas.height / 2);
+    ctx.translate(-centerX, -centerY);
   }
-  if (state.blur > 0) ctx.filter = `blur(${state.blur * (canvas.height / 1080)}px)`;
+  if (state.blur > 0) ctx.filter = `blur(${state.blur * (frame.height / 1080)}px)`;
   draw();
   ctx.restore();
 }

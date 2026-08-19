@@ -3,6 +3,7 @@ import {
   MediaInputError,
   isVisualClip,
   ownedMediaFrame,
+  sourceTimeAt,
   type ClipComposition,
   type MediaError,
   type MediaFrame,
@@ -238,13 +239,7 @@ export class MediaPlaybackEngine {
   frameFor(clipId: string): MediaFrame | null {
     const clip = this.composition?.clips.find((entry) => entry.id === clipId);
     const timelineTimeMs = this.currentSeconds * 1_000;
-    if (
-      !clip ||
-      !clip.enabled ||
-      !isVisualClip(clip) ||
-      timelineTimeMs < clip.timelineStartMs ||
-      timelineTimeMs >= clip.timelineStartMs + clip.timelineDurationMs
-    ) {
+    if (!clip || !clip.enabled || !isVisualClip(clip) || sourceTimeAt(clip, timelineTimeMs) === null) {
       return null;
     }
     const key = this.currentFrameKeys.get(clipId);

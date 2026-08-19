@@ -378,11 +378,6 @@ function renderCompositionFrameContent(
           camera,
         )
       : null;
-  for (const clip of layers.captions)
-    drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () =>
-      drawCaption(ctx, clip, timeMs, snapshot, keyboardCursorPosition),
-    );
-
   if (screen && resolvedCursorMotionPlayer) {
     ctx.save();
     ctx.translate(width / 2, height / 2);
@@ -403,6 +398,10 @@ function renderCompositionFrameContent(
     );
     ctx.restore();
   }
+  for (const clip of layers.captions)
+    drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () =>
+      drawCaption(ctx, clip, timeMs, snapshot, keyboardCursorPosition),
+    );
   drawBeamWatermark(
     ctx,
     snapshot.canvas,

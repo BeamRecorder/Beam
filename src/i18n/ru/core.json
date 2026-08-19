@@ -86,6 +86,9 @@
     "watermarkBackgroundRadius": "Скругление углов",
     "watermarkBackgroundPadding": "Внутренний отступ",
     "noWatermarkText": "Без текста",
+    "custom": "Свой",
+    "customWatermarkText": "Пользовательский текст",
+    "watermarkCustomTextPlaceholder": "Введите текст водяного знака...",
     "translateWatermark": "Перевести текст водяного знака"
   },
   "CanvasToolbar": {
@@ -111,6 +114,8 @@
     "customTextDescription": "Редактирование заменит синхронизированную расшифровку вашим текстом.",
     "typography": "Типографика",
     "importFont": "Импортировать шрифт",
+    "searchFonts": "Поиск шрифтов...",
+    "noFontsFound": "Подходящие шрифты не найдены",
     "fontSample": "Aa Bb Cc 123",
     "textAlignment": "Выравнивание текста",
     "alignLeft": "По левому краю",

@@ -1,31 +1,27 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue';
+import { computed, nextTick, onUnmounted, ref, useId } from 'vue';
 import { useVirtualList } from '@vueuse/core';
 import Popover from '../popover/Popover.vue';
 import Skeleton from '../skeleton/Skeleton.vue';
-import { ChevronDown, Check, Eye } from '@lucide/vue';
-
-interface Option {
-  value: string | number;
-  label: string;
-  thumbnail?: string;
-  appIcon?: string | null;
-  color?: string;
-  loading?: boolean;
-}
+import Input from '../input/Input.vue';
+import { ChevronDown, Check, Eye, Search } from '@lucide/vue';
+import { createFuzzySearchEngine } from './fuzzy-search';
+import type { SelectOption } from './select-types';
 
 const props = withDefaults(
   defineProps<{
     modelValue: string | number | null;
-    options?: Option[];
-    items?: Option[];
+    options?: SelectOption[];
+    items?: SelectOption[];
     placeholder?: string;
     disabled?: boolean;
     direction?: 'up' | 'down';
     optionHeight?: number;
     loading?: boolean;
     emptyLabel?: string;
-    variant?: 'default' | 'source';
+    noResultsLabel?: string;
+    searchPlaceholder?: string;
+    variant?: 'default' | 'source' | 'search';
     size?: 'sm' | 'md' | 'lg' | 'small' | 'medium' | 'large';
   }>(),
   {
@@ -35,6 +31,8 @@ const props = withDefaults(
     optionHeight: 38,
     loading: false,
     emptyLabel: '',
+    noResultsLabel: '',
+    searchPlaceholder: 'Search options',
     variant: 'default',
     size: 'lg',
   },
@@ -48,10 +46,21 @@ const emit = defineEmits<{
 
 const hoveredValue = ref<string | number | null>(null);
 const listbox = ref<HTMLElement | null>(null);
+const selectTrigger = ref<HTMLButtonElement | null>(null);
+const searchInput = ref<InstanceType<typeof Input> | null>(null);
+const searchQuery = ref('');
+const listboxId = useId();
+let restoreFocusOnClose = false;
 
-const normalizedOptions = computed<Option[]>(() => {
+const normalizedOptions = computed<SelectOption[]>(() => {
   return props.options ?? props.items ?? [];
 });
+const searchEngine = computed(() =>
+  createFuzzySearchEngine(normalizedOptions.value, (option) => [option.label, ...(option.keywords ?? [])]),
+);
+const visibleOptions = computed(() =>
+  props.variant === 'search' ? searchEngine.value.search(searchQuery.value) : normalizedOptions.value,
+);
 
 const selectedOption = computed(() => {
   return normalizedOptions.value.find((opt) => opt.value === props.modelValue) || null;
@@ -60,20 +69,32 @@ const selectedOption = computed(() => {
 const handleToggle = (isOpen: boolean) => {
   emit('toggle', isOpen);
   if (isOpen) {
-    void nextTick(() => listbox.value?.querySelector<HTMLElement>('[aria-selected="true"], [role="option"]')?.focus());
+    void nextTick(() => {
+      if (props.variant === 'search') searchInput.value?.focus();
+      else listbox.value?.querySelector<HTMLElement>('[aria-selected="true"], [role="option"]')?.focus();
+    });
   } else {
     emit('preview:modelValue', null);
     hoveredValue.value = null;
+    searchQuery.value = '';
+    scrollTo(0);
+    for (const option of listbox.value?.querySelectorAll<HTMLElement>('[role="option"]') ?? []) stopMarqueeRun(option);
+    if (restoreFocusOnClose) {
+      restoreFocusOnClose = false;
+      void nextTick(() => selectTrigger.value?.focus());
+    }
   }
 };
 
-const handleSelect = (option: Option, close: () => void) => {
+const handleSelect = (option: SelectOption, close: () => void) => {
   if (props.disabled) return;
   emit('update:modelValue', option.value);
+  searchQuery.value = '';
+  restoreFocusOnClose = true;
   close();
 };
 
-const handleMouseEnterOption = (option: Option, event: PointerEvent) => {
+const handleMouseEnterOption = (option: SelectOption, event: PointerEvent) => {
   hoveredValue.value = option.value;
   emit('preview:modelValue', option.value);
   startMarquee(event);
@@ -98,12 +119,17 @@ const itemHeight = computed(() => {
   return props.optionHeight;
 });
 
-const handleOptionFocus = (option: Option) => {
+const handleSearchInput = (value: string | number) => {
+  searchQuery.value = String(value);
+  scrollTo(0);
+};
+
+const handleOptionFocus = (option: SelectOption) => {
   hoveredValue.value = option.value;
   emit('preview:modelValue', option.value);
 };
 
-const handleOptionKeydown = (event: KeyboardEvent, option: Option, close: () => void) => {
+const handleOptionKeydown = (event: KeyboardEvent, option: SelectOption, close: () => void) => {
   const current = event.currentTarget as HTMLElement;
   if (event.key === 'Enter' || event.key === ' ') {
     event.preventDefault();
@@ -111,16 +137,43 @@ const handleOptionKeydown = (event: KeyboardEvent, option: Option, close: () => 
   } else if (event.key === 'Escape') {
     event.preventDefault();
     emit('preview:modelValue', null);
+    restoreFocusOnClose = true;
     close();
   } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
     event.preventDefault();
-    const options = Array.from(current.parentElement?.querySelectorAll<HTMLElement>('[role="option"]') ?? []);
-    const index = options.indexOf(current);
-    options[(index + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length]?.focus();
+    const currentIndex = Number(current.dataset.optionIndex);
+    if (props.variant === 'search' && event.key === 'ArrowUp' && currentIndex === 0) {
+      searchInput.value?.focus();
+      return;
+    }
+    const count = visibleOptions.value.length;
+    const nextIndex = (currentIndex + (event.key === 'ArrowDown' ? 1 : -1) + count) % count;
+    scrollTo(nextIndex);
+    void nextTick(() => listbox.value?.querySelector<HTMLElement>(`[data-option-index="${nextIndex}"]`)?.focus());
   }
 };
 
-const { list, containerProps, wrapperProps } = useVirtualList(normalizedOptions, {
+const handleSearchKeydown = (event: KeyboardEvent, close: () => void) => {
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    restoreFocusOnClose = true;
+    close();
+    return;
+  }
+  if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp' && event.key !== 'Enter') return;
+  const first = visibleOptions.value[0];
+  if (!first) return;
+  event.preventDefault();
+  if (event.key === 'Enter') {
+    handleSelect(first, close);
+    return;
+  }
+  const targetIndex = event.key === 'ArrowUp' ? visibleOptions.value.length - 1 : 0;
+  scrollTo(targetIndex);
+  void nextTick(() => listbox.value?.querySelector<HTMLElement>(`[data-option-index="${targetIndex}"]`)?.focus());
+};
+
+const { list, containerProps, wrapperProps, scrollTo } = useVirtualList(visibleOptions, {
   itemHeight: () => itemHeight.value,
 });
 
@@ -195,12 +248,17 @@ const stopMarquee = (event: PointerEvent) => {
   const option = event.currentTarget as HTMLElement;
   stopMarqueeRun(option);
 };
+
+onUnmounted(() => {
+  for (const option of listbox.value?.querySelectorAll<HTMLElement>('[role="option"]') ?? []) stopMarqueeRun(option);
+});
 </script>
 
 <template>
   <Popover align="left" :direction="direction" :block="true" class="select-popover" @toggle="handleToggle">
     <template #trigger="{ isOpen }">
       <button
+        ref="selectTrigger"
         type="button"
         class="select-trigger"
         :class="[
@@ -210,6 +268,7 @@ const stopMarquee = (event: PointerEvent) => {
         :disabled="disabled"
         aria-haspopup="listbox"
         :aria-expanded="isOpen"
+        :aria-controls="listboxId"
       >
         <div class="trigger-content-wrapper">
           <!-- Thumbnail preview -->
@@ -231,7 +290,10 @@ const stopMarquee = (event: PointerEvent) => {
           ></div>
 
           <!-- Skeleton preview -->
-          <div v-else-if="loading || selectedOption?.loading" class="selected-thumbnail-wrapper">
+          <div
+            v-else-if="variant !== 'search' && (loading || selectedOption?.loading)"
+            class="selected-thumbnail-wrapper"
+          >
             <Skeleton variant="linear" width="100%" height="100%" />
           </div>
 
@@ -244,61 +306,96 @@ const stopMarquee = (event: PointerEvent) => {
     </template>
 
     <template #default="{ close }">
-      <div v-if="normalizedOptions.length === 0" class="options-empty">{{ emptyLabel || placeholder }}</div>
-      <div
-        v-else
-        v-bind="containerProps"
-        class="virtual-scroll-container"
-        :class="{ 'is-source': variant === 'source' }"
-        @pointerleave="handleMouseLeaveList"
-      >
-        <ul ref="listbox" v-bind="wrapperProps" class="select-options" role="listbox">
-          <li
-            v-for="item in list"
-            :key="item.data.value"
-            class="select-option"
-            :class="{
-              'is-selected': item.data.value === modelValue,
-              'is-hovered': item.data.value === hoveredValue,
-            }"
-            @click="handleSelect(item.data, close)"
-            @pointerenter="handleMouseEnterOption(item.data, $event)"
-            @pointerleave="handleMouseLeaveOption"
-            role="option"
-            :aria-selected="item.data.value === modelValue"
-            :tabindex="item.data.value === modelValue ? 0 : -1"
-            @focus="handleOptionFocus(item.data)"
-            @keydown="handleOptionKeydown($event, item.data, close)"
-            :style="{ height: `${itemHeight}px` }"
+      <div class="select-menu" :class="{ 'is-searchable': variant === 'search' }">
+        <div v-if="variant === 'search'" class="select-search-row">
+          <Input
+            ref="searchInput"
+            :model-value="searchQuery"
+            :placeholder="searchPlaceholder"
+            :aria-label="searchPlaceholder"
+            :aria-controls="listboxId"
+            aria-expanded="true"
+            aria-autocomplete="list"
+            autocomplete="off"
+            role="combobox"
+            size="sm"
+            spellcheck="false"
+            @update:model-value="handleSearchInput"
+            @keydown.stop="handleSearchKeydown($event, close)"
           >
-            <div class="option-content">
-              <!-- Thumbnail preview -->
-              <div v-if="item.data.thumbnail" class="thumbnail-wrapper">
-                <img :src="item.data.thumbnail" class="thumbnail-img" draggable="false" />
-                <img v-if="item.data.appIcon" :src="item.data.appIcon" class="app-icon" draggable="false" />
+            <template #prefix><Search :size="14" aria-hidden="true" /></template>
+          </Input>
+        </div>
+        <div v-if="visibleOptions.length === 0" :id="listboxId" class="options-empty" role="listbox">
+          <span role="status">{{
+            normalizedOptions.length === 0
+              ? emptyLabel || placeholder
+              : noResultsLabel || emptyLabel || 'No matching options'
+          }}</span>
+        </div>
+        <div
+          v-else
+          v-bind="containerProps"
+          class="virtual-scroll-container"
+          :class="{ 'is-source': variant === 'source' }"
+          @pointerleave="handleMouseLeaveList"
+        >
+          <ul :id="listboxId" ref="listbox" v-bind="wrapperProps" class="select-options" role="listbox">
+            <li
+              v-for="item in list"
+              :key="item.data.value"
+              class="select-option"
+              :class="{
+                'is-selected': item.data.value === modelValue,
+                'is-hovered': item.data.value === hoveredValue,
+              }"
+              @click="handleSelect(item.data, close)"
+              @pointerenter="handleMouseEnterOption(item.data, $event)"
+              @pointerleave="handleMouseLeaveOption"
+              role="option"
+              :id="`${listboxId}-option-${item.index}`"
+              :data-option-index="item.index"
+              :aria-selected="item.data.value === modelValue"
+              :aria-posinset="item.index + 1"
+              :aria-setsize="visibleOptions.length"
+              :tabindex="item.data.value === modelValue ? 0 : -1"
+              @focus="handleOptionFocus(item.data)"
+              @keydown="handleOptionKeydown($event, item.data, close)"
+              :style="{ height: `${itemHeight}px` }"
+            >
+              <div class="option-content">
+                <!-- Thumbnail preview -->
+                <div v-if="item.data.thumbnail" class="thumbnail-wrapper">
+                  <img :src="item.data.thumbnail" class="thumbnail-img" draggable="false" />
+                  <img v-if="item.data.appIcon" :src="item.data.appIcon" class="app-icon" draggable="false" />
+                </div>
+
+                <!-- Color preview -->
+                <div
+                  v-else-if="item.data.color"
+                  class="color-badge"
+                  :style="{ backgroundColor: item.data.color }"
+                ></div>
+
+                <!-- Skeleton loader -->
+                <div v-else-if="item.data.loading" class="thumbnail-wrapper">
+                  <Skeleton variant="linear" width="100%" height="100%" />
+                </div>
+
+                <slot name="option" :option="item.data" :previewing="item.data.value === hoveredValue">
+                  <span class="option-label">{{ item.data.label }}</span>
+                </slot>
               </div>
 
-              <!-- Color preview -->
-              <div v-else-if="item.data.color" class="color-badge" :style="{ backgroundColor: item.data.color }"></div>
-
-              <!-- Skeleton loader -->
-              <div v-else-if="item.data.loading" class="thumbnail-wrapper">
-                <Skeleton variant="linear" width="100%" height="100%" />
-              </div>
-
-              <slot name="option" :option="item.data" :previewing="item.data.value === hoveredValue">
-                <span class="option-label">{{ item.data.label }}</span>
-              </slot>
-            </div>
-
-            <template v-if="item.data.value === hoveredValue && item.data.value !== modelValue">
-              <Eye class="option-check option-eye" />
-            </template>
-            <template v-else-if="item.data.value === modelValue">
-              <Check class="option-check" />
-            </template>
-          </li>
-        </ul>
+              <template v-if="item.data.value === hoveredValue && item.data.value !== modelValue">
+                <Eye class="option-check option-eye" />
+              </template>
+              <template v-else-if="item.data.value === modelValue">
+                <Check class="option-check" />
+              </template>
+            </li>
+          </ul>
+        </div>
       </div>
     </template>
   </Popover>

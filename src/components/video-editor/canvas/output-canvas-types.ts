@@ -5,7 +5,8 @@ export type WatermarkPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bott
 
 export interface WatermarkSettings {
   enabled: boolean;
-  text: 'none' | 'made-with-beam' | 'beam';
+  text: 'none' | 'made-with-beam' | 'beam' | 'custom';
+  customText?: string;
   showLogo: boolean;
   localized: boolean;
   renderedText?: string;

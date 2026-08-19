@@ -18,6 +18,7 @@ const props = withDefaults(
     speed?: ThrobberSpeed;
     weight?: ThrobberWeight;
     dots?: boolean;
+    nowrap?: boolean;
     tag?: string;
   }>(),
   {
@@ -28,6 +29,7 @@ const props = withDefaults(
     speed: 'normal',
     weight: 'semibold',
     dots: false,
+    nowrap: false,
     tag: 'span',
   },
 );
@@ -134,7 +136,7 @@ const dotStyle = (dotIndex: number) => {
     aria-atomic="true"
     :aria-label="displayText"
   >
-    <span aria-hidden="true" class="throbber-content">
+    <span aria-hidden="true" class="throbber-content" :class="{ 'is-nowrap': nowrap }">
       <span
         v-for="(glyph, index) in glyphs"
         :key="`${variant}-${index}-${glyph}`"
@@ -160,6 +162,11 @@ const dotStyle = (dotIndex: number) => {
   display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
+}
+
+.throbber-content.is-nowrap {
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
 .throbber-glyph {

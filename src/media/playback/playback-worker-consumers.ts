@@ -1,5 +1,6 @@
 import { CanvasSink, type WrappedCanvas } from 'mediabunny';
 import type { OpenedMediaInput } from '../shared';
+import { snapTimeToBoundary } from '../shared/time-boundary';
 import type { PlaybackClipDescriptor } from './playback-types';
 import { playbackPreviewDimensions, type PreviewQuality } from './playback-preview';
 
@@ -65,9 +66,11 @@ export function disposeLoadedAssets(loadedAssets: Map<string, AssetDecoder>, cur
   loadedAssets.clear();
 }
 
-export const activeAt = (clip: PlaybackClipDescriptor, timelineSeconds: number) =>
-  timelineSeconds >= clip.timelineStartSeconds &&
-  timelineSeconds < clip.timelineStartSeconds + clip.timelineDurationSeconds;
+export const activeAt = (clip: PlaybackClipDescriptor, timelineSeconds: number) => {
+  const endSeconds = clip.timelineStartSeconds + clip.timelineDurationSeconds;
+  const timeSeconds = snapTimeToBoundary(timelineSeconds, clip.timelineStartSeconds, endSeconds);
+  return timeSeconds >= clip.timelineStartSeconds && timeSeconds < endSeconds;
+};
 
 export const sourceTime = (clip: PlaybackClipDescriptor, timelineSeconds: number) =>
   clip.freezeFrameSourceSeconds ??

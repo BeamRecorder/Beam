@@ -328,7 +328,21 @@ const run = async () => {
             </ButtonGroup>
           </div>
 
-          <p v-if="displayError" class="error" role="alert">{{ displayError }}</p>
+          <div v-if="displayError" class="error-box" role="alert">
+            <div class="error-header">
+              <p class="error-message">{{ displayError }}</p>
+              <CopyButton
+                :text="exportReport || displayError"
+                display="icon"
+                variant="ghost"
+                size="sm"
+                :label="t('copyError')"
+                :copied-label="t('copied')"
+                :error-label="t('copyFailed')"
+                class="copy-error-icon-btn"
+              />
+            </div>
+          </div>
           <div v-if="result" class="result-box">
             <div class="result-header">
               <p class="success" role="status">{{ t('savedTo', { path: result.path }) }}</p>
@@ -361,19 +375,21 @@ const run = async () => {
 <style scoped>
 .export-popover {
   width: 320px;
+  max-width: 100%;
   max-height: calc(100vh - 24px);
   padding: 16px;
   box-sizing: border-box;
   display: grid;
   gap: 14px;
+  overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-gutter: stable;
 }
 .field {
   display: grid;
   gap: 6px;
   width: 100%;
+  min-width: 0;
 }
 .field-heading {
   display: flex;
@@ -381,6 +397,7 @@ const run = async () => {
   justify-content: space-between;
   min-height: 20px;
   gap: 8px;
+  min-width: 0;
 }
 .field :deep(.btn-group) {
   width: 100% !important;
@@ -405,6 +422,9 @@ const run = async () => {
   color: var(--text-muted);
   line-height: 1.35;
   margin-top: 1px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
 }
 .job-status {
   display: grid;
@@ -414,17 +434,54 @@ const run = async () => {
   font-size: 0.75rem;
   color: var(--text-muted);
   text-transform: capitalize;
+  min-width: 0;
 }
-.error {
-  color: var(--color-danger, #ef4444);
+.error-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  background: var(--color-error-light, rgba(239, 68, 68, 0.1));
+  border: 1px solid color-mix(in srgb, var(--color-error, #ef4444) 30%, transparent);
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+.error-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
+}
+.error-message {
+  color: var(--color-error, #ef4444);
   font-size: 0.75rem;
+  line-height: 1.35;
   margin: 0;
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.copy-error-icon-btn {
+  flex-shrink: 0;
 }
 .success {
   color: var(--color-success, #22c55e);
   font-size: 0.75rem;
   margin: 0;
   overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
 }
 .result-box {
   display: flex;
@@ -434,12 +491,17 @@ const run = async () => {
   background: var(--color-bg-element);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
 }
 .result-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  min-width: 0;
+  width: 100%;
 }
 .copy-report-icon-btn {
   flex-shrink: 0;
@@ -451,16 +513,19 @@ const run = async () => {
 }
 .more-options {
   display: grid;
+  min-width: 0;
 }
 .more-options-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  min-width: 0;
 }
 .audio-option-copy {
   display: grid;
   gap: 2px;
+  min-width: 0;
 }
 .audio-option-title {
   color: var(--text-primary);
@@ -472,6 +537,8 @@ const run = async () => {
   flex-direction: column;
   gap: 12px;
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .progress-header {
@@ -479,6 +546,7 @@ const run = async () => {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  min-width: 0;
 }
 
 .progress-title {
@@ -493,11 +561,13 @@ const run = async () => {
   justify-content: space-between;
   min-height: 24px;
   gap: 12px;
+  min-width: 0;
 }
 
 .progress-actions {
   display: flex;
   align-items: center;
+  min-width: 0;
 }
 
 .progress-details {

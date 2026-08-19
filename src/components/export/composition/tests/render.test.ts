@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { drawCompositionLayers, renderCompositionFrame, type RenderableMedia } from '../render';
 import type { CompositionSnapshot } from '../../export-types';
 import { DEFAULT_OUTPUT_CANVAS } from '../../../video-editor/canvas/output-canvas';
-import type { ClipComposition, ClipAppearance } from '~/media/shared/composition-types';
+import type { ClipComposition, ClipAppearance, VisualClip } from '~/media/shared/composition-types';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import type { CursorPackDescriptor } from '../../../../api/types/cursor-pack';
 import { MACOS_CURSOR_PACK } from '../../../video-editor/properties/cursor/cursor-packs';
@@ -215,6 +215,64 @@ describe('canonical composition rendering', () => {
     const ctx = context();
     drawCompositionLayers(ctx, value, 0.2, new Map([['logo', image]]));
     expect(ctx.drawImage).toHaveBeenCalledWith(image.source, 10, 10, 30, 20);
+  });
+
+  it.each([30, 60])('does not export an empty frame at a contiguous exit cut (%s fps)', (fps) => {
+    const value = snapshot();
+    const first: VisualClip = {
+      id: 'first',
+      kind: 'video',
+      name: 'First',
+      assetId: 'first-asset',
+      timelineStartMs: 0,
+      timelineDurationMs: 1_000,
+      sourceInMs: 0,
+      sourceDurationMs: 1_000,
+      playbackRate: 1,
+      transitions: { entry: null, exit: { preset: { kind: 'fade' }, durationMs: 500 } },
+      enabled: true,
+      order: 1,
+      transform: { x: 0, y: 0, width: 1, height: 1 },
+      appearance: createDefaultClipAppearance('video'),
+      isMirrored: false,
+      isMirroredY: false,
+    };
+    const second: VisualClip = {
+      ...first,
+      id: 'second',
+      name: 'Second',
+      assetId: 'second-asset',
+      timelineStartMs: 1_000,
+      transitions: { entry: null, exit: null },
+    };
+    value.composition.clips.push(first, second);
+    const firstSource = {} as CanvasImageSource;
+    const secondSource = {} as CanvasImageSource;
+    const visuals = new Map([
+      ['first', { source: firstSource, width: 100, height: 50 }],
+      ['second', { source: secondSource, width: 100, height: 50 }],
+    ] satisfies ReadonlyArray<[string, RenderableMedia]>);
+    const renderAt = (timeMs: number) => {
+      const ctx = context();
+      const calls: Array<{ source: CanvasImageSource; alpha: number }> = [];
+      (ctx.drawImage as ReturnType<typeof vi.fn>).mockImplementation((source: CanvasImageSource) => {
+        if (source === firstSource || source === secondSource) calls.push({ source, alpha: ctx.globalAlpha });
+      });
+      drawCompositionLayers(ctx, value, timeMs / 1_000, visuals);
+      return calls;
+    };
+    const frameMs = 1_000 / fps;
+
+    const before = renderAt(1_000 - frameMs);
+    expect(before).toHaveLength(1);
+    expect(before[0]?.source).toBe(firstSource);
+    expect(before[0]?.alpha).toBeCloseTo(1 - (1 - frameMs / 500) ** 3, 8);
+
+    const atCut = renderAt(1_000);
+    expect(atCut).toEqual([{ source: secondSource, alpha: 1 }]);
+
+    const after = renderAt(1_000 + frameMs);
+    expect(after).toEqual([{ source: secondSource, alpha: 1 }]);
   });
 
   it('exports webcam placement, crop, mirror and complete appearance settings', () => {
@@ -506,6 +564,73 @@ describe('canonical composition rendering', () => {
     expect(followedX).not.toBe(fixedX);
   });
 
+  it('renders export captions after the cursor layer so captions stay above the cursor', () => {
+    const value = snapshot();
+    value.composition.clips.push({
+      id: 'caption-above-cursor',
+      kind: 'caption',
+      name: 'Caption above cursor',
+      timelineStartMs: 0,
+      timelineDurationMs: 1_000,
+      sourceInMs: 0,
+      sourceDurationMs: 1_000,
+      playbackRate: 1,
+      enabled: true,
+      order: 1,
+      transform: { x: 0.2, y: 0.2, width: 0.5, height: 0.2 },
+      caption: {
+        type: 'text',
+        sentences: [{ id: 'sentence', text: 'Caption above cursor', startMs: 0, endMs: 1_000, words: [] }],
+        style: {
+          ...createDefaultCaptionStyle(20),
+          customText: 'Caption above cursor',
+          wrap: false,
+          outlineWidth: 0,
+          extrusionDepth: 0,
+          shadowBlur: 0,
+        },
+      },
+    });
+    const cursorImage = { complete: true, naturalWidth: 24 } as HTMLImageElement;
+    value.cursor = {
+      ...value.cursor,
+      available: true,
+      events: [
+        {
+          event: 'move',
+          sessionNs: 0,
+          pixelX: 50,
+          pixelY: 25,
+          normalizedX: 0.5,
+          normalizedY: 0.5,
+          visible: true,
+        },
+      ],
+    };
+    const ctx = context();
+
+    renderCompositionFrame(
+      ctx,
+      { source: {} as CanvasImageSource, width: 100, height: 50 },
+      value,
+      0.2,
+      null,
+      new Map([['default', cursorImage]]),
+    );
+
+    const captionCall = (ctx.fillText as ReturnType<typeof vi.fn>).mock.calls.findIndex(
+      ([text]) => text === 'Caption above cursor',
+    );
+    const cursorCall = (ctx.drawImage as ReturnType<typeof vi.fn>).mock.calls.findIndex(
+      ([source]) => source === cursorImage,
+    );
+    expect(captionCall).toBeGreaterThanOrEqual(0);
+    expect(cursorCall).toBeGreaterThanOrEqual(0);
+    expect((ctx.fillText as ReturnType<typeof vi.fn>).mock.invocationCallOrder[captionCall]).toBeGreaterThan(
+      (ctx.drawImage as ReturnType<typeof vi.fn>).mock.invocationCallOrder[cursorCall]!,
+    );
+  });
+
   it('exports a right click with its own ripple and rebound settings', () => {
     const value = snapshot();
     value.cursor = {
@@ -571,6 +696,59 @@ describe('canonical composition rendering', () => {
     expect(ctx.scale).toHaveBeenCalledWith(expect.closeTo(0.707, 3), expect.closeTo(0.707, 3));
     expect(ctx.drawImage).toHaveBeenCalled();
   });
+
+  it.each([
+    ['single', 1, 0],
+    ['double', 2, 0],
+    ['solid', 2, 1],
+    ['none', 0, 0],
+  ] as const)(
+    'exports the %s global ripple shape as the expected rings',
+    (style, expectedRings, expectedFilledRings) => {
+      const value = snapshot();
+      value.cursor = {
+        available: true,
+        telemetry: [],
+        missing: [],
+        shapes: {},
+        catalog: {},
+        events: [
+          {
+            event: 'move',
+            sessionNs: 0,
+            pixelX: 25,
+            pixelY: 25,
+            normalizedX: 0.25,
+            normalizedY: 0.5,
+            visible: true,
+          },
+          {
+            event: 'button',
+            sessionNs: 100_000_000,
+            button: 1,
+            pressed: true,
+            normalizedX: 0.25,
+            normalizedY: 0.5,
+          },
+        ],
+      };
+      value.cursorSettings.clickEffects.left = {
+        springEnabled: false,
+        springIntensity: 0,
+        rippleEnabled: style !== 'none',
+        rippleStyle: style,
+        rippleSize: 40,
+        rippleColor: '#f00',
+      };
+      const ctx = context();
+
+      renderCompositionFrame(ctx, { source: {} as CanvasImageSource, width: 100, height: 50 }, value, 0.25, null);
+
+      expect(ctx.arc).toHaveBeenCalledTimes(expectedRings);
+      expect(ctx.fill).toHaveBeenCalledTimes(expectedFilledRings);
+      expect(ctx.stroke).toHaveBeenCalledTimes(expectedRings - expectedFilledRings);
+    },
+  );
 
   it('uses the configured cursor size as output pixels', () => {
     const value = snapshot();

@@ -20,6 +20,7 @@ export type {
 export const DEFAULT_WATERMARK: WatermarkSettings = {
   enabled: false,
   text: 'made-with-beam',
+  customText: '',
   showLogo: true,
   localized: false,
   position: 'bottom-right',
@@ -33,7 +34,8 @@ export const DEFAULT_WATERMARK: WatermarkSettings = {
 
 export const normalizeWatermark = (value: Partial<WatermarkSettings> | null | undefined): WatermarkSettings => ({
   enabled: value?.enabled === true,
-  text: value?.text === 'none' || value?.text === 'beam' ? value.text : 'made-with-beam',
+  text: value?.text === 'none' || value?.text === 'beam' || value?.text === 'custom' ? value.text : 'made-with-beam',
+  customText: typeof value?.customText === 'string' ? value.customText.slice(0, 80) : '',
   showLogo: value?.showLogo !== false,
   localized: value?.localized === true,
   renderedText: typeof value?.renderedText === 'string' ? value.renderedText.slice(0, 80) : undefined,

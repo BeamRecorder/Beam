@@ -411,7 +411,9 @@ describe('ExportPopover', () => {
       action: { label: expect.stringMatching(/copy/i), copyText: expect.any(String) },
     });
     const copied = String(toast?.action?.copyText);
-    expect(wrapper.get('[role="alert"]').text()).toContain('The source image could not be decoded.');
+    expect(wrapper.get('.error-box .error-message').text()).toContain('The source image could not be decoded.');
+    expect(wrapper.find('.error-box .copy-progress-button').exists()).toBe(true);
+    expect(wrapper.get('.error-box .copy-progress-button').attributes('data-copy-text')).toContain('=== Beam Export ===');
     expect(copied).toContain('decode-failure');
     expect(copied).toContain('vivid-horizon');
     expect(copied).not.toContain('/home/albi');

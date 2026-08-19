@@ -86,6 +86,9 @@
     "watermarkBackgroundRadius": "Raggio degli angoli",
     "watermarkBackgroundPadding": "Spaziatura interna",
     "noWatermarkText": "Senza testo",
+    "custom": "Personalizzato",
+    "customWatermarkText": "Testo personalizzato",
+    "watermarkCustomTextPlaceholder": "Inserisci testo filigrana...",
     "translateWatermark": "Traduci il testo della filigrana"
   },
   "CanvasToolbar": {
@@ -111,6 +114,8 @@
     "customTextDescription": "La modifica sostituisce la trascrizione sincronizzata con il testo personalizzato.",
     "typography": "Tipografia",
     "importFont": "Importa font",
+    "searchFonts": "Cerca font...",
+    "noFontsFound": "Nessun font corrispondente",
     "fontSample": "Aa Bb Cc 123",
     "textAlignment": "Allineamento del testo",
     "alignLeft": "Allinea a sinistra",

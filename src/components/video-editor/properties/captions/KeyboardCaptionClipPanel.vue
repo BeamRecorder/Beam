@@ -18,7 +18,7 @@ const emit = defineEmits<{
   (event: 'delete', clipId: string): void;
   (event: 'preview', clip: CaptionClip | null): void;
 }>();
-const { draft, flush, update } = useCaptionDraft(toRef(props, 'clip'), (clip) => emit('update', clip));
+const { draft, update } = useCaptionDraft(toRef(props, 'clip'), (clip) => emit('update', clip));
 const keyboardDraft = computed(() => (draft.value && isKeyboardCaptionClip(draft.value) ? draft.value : null));
 const style = computed<CaptionStyle>(() => ({
   ...createDefaultCaptionStyle(28),
@@ -54,8 +54,8 @@ const previewStyle = (patch: Partial<CaptionStyle> | null) => {
           :model-value="displayText"
           :placeholder="t('typeCustomText')"
           size="md"
+          :debounce="150"
           @update:model-value="updateStyle('customText', String($event))"
-          @blur="flush"
         />
         <p class="section-desc">{{ t('customTextDescription') }}</p>
         <div class="follow-cursor-setting">

@@ -86,6 +86,9 @@
     "watermarkBackgroundRadius": "모서리 둥글기",
     "watermarkBackgroundPadding": "내부 여백",
     "noWatermarkText": "텍스트 없음",
+    "custom": "사용자 지정",
+    "customWatermarkText": "사용자 지정 텍스트",
+    "watermarkCustomTextPlaceholder": "워터마크 텍스트 입력...",
     "translateWatermark": "워터마크 텍스트 번역"
   },
   "CanvasToolbar": {
@@ -111,6 +114,8 @@
     "customTextDescription": "편집하면 시간 지정된 전사가 사용자 지정 텍스트로 바뀝니다.",
     "typography": "타이포그래피",
     "importFont": "글꼴 가져오기",
+    "searchFonts": "글꼴 검색...",
+    "noFontsFound": "일치하는 글꼴 없음",
     "fontSample": "Aa Bb Cc 123",
     "textAlignment": "텍스트 정렬",
     "alignLeft": "왼쪽 정렬",

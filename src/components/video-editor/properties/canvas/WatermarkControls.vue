@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { ArrowDownLeft, ArrowDownRight, ArrowUpLeft, ArrowUpRight } from '@lucide/vue';
+import { ArrowDownLeft, ArrowDownRight, ArrowUpLeft, ArrowUpRight, SlidersHorizontal } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
 import Switch from '~/ui/switch/Switch.vue';
+import Input from '~/ui/input/Input.vue';
 import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
@@ -14,19 +15,27 @@ const props = defineProps<{ modelValue?: WatermarkSettings }>();
 const emit = defineEmits<{ (event: 'update:modelValue', value: WatermarkSettings): void }>();
 const { t } = useTranslate('CanvasPanel');
 const value = computed(() => normalizeWatermark(props.modelValue ?? DEFAULT_WATERMARK));
-const renderedText = (text: WatermarkSettings['text'], localized: boolean) =>
+const renderedText = (text: WatermarkSettings['text'], localized: boolean, customText?: string) =>
   text === 'none'
     ? ''
-    : localized
-      ? t(text === 'beam' ? 'beam' : 'madeWithBeam')
-      : text === 'beam'
-        ? 'Beam'
-        : 'Made with Beam.';
+    : text === 'custom'
+      ? (customText ?? '')
+      : localized
+        ? t(text === 'beam' ? 'beam' : 'madeWithBeam')
+        : text === 'beam'
+          ? 'Beam'
+          : 'Made with Beam.';
 const update = (patch: Partial<WatermarkSettings>) => {
   const next = { ...value.value, ...patch };
-  next.renderedText = renderedText(next.text, next.localized);
+  next.renderedText = renderedText(next.text, next.localized, next.customText);
   emit('update:modelValue', next);
 };
+const textChoices = computed(() => [
+  { value: 'none' as const, label: t('noWatermarkText') },
+  { value: 'made-with-beam' as const, label: t('madeWithBeam') },
+  { value: 'beam' as const, label: t('beam') },
+  { value: 'custom' as const, icon: SlidersHorizontal, tooltip: t('custom') },
+]);
 const positions = [
   { value: 'top-left' as const, icon: ArrowUpLeft, label: 'watermarkTopLeft' },
   { value: 'top-right' as const, icon: ArrowUpRight, label: 'watermarkTopRight' },
@@ -56,17 +65,29 @@ const positions = [
         <span class="option-label">{{ t('watermarkText') }}</span>
         <ButtonGroup full>
           <Button
-            v-for="choice in ['none', 'made-with-beam', 'beam'] as const"
-            :key="choice"
-            variant="tab"
+            v-for="choice in textChoices"
+            :key="choice.value"
+            :variant="value.text === choice.value ? 'primary' : 'ghost'"
             size="xs"
-            block
-            :class="{ active: value.text === choice }"
-            @click="update({ text: choice })"
+            :icon="choice.icon"
+            :icon-only="!!choice.icon"
+            :tooltip="choice.tooltip"
+            :aria-label="choice.tooltip || choice.label"
+            @click="update({ text: choice.value })"
           >
-            {{ choice === 'none' ? t('noWatermarkText') : choice === 'beam' ? t('beam') : t('madeWithBeam') }}
+            <span v-if="choice.label">{{ choice.label }}</span>
           </Button>
         </ButtonGroup>
+      </div>
+      <div v-if="value.text === 'custom'" class="option">
+        <span class="option-label">{{ t('customWatermarkText') }}</span>
+        <Input
+          size="sm"
+          :model-value="value.customText ?? ''"
+          :placeholder="t('watermarkCustomTextPlaceholder')"
+          :debounce="150"
+          @update:model-value="update({ customText: String($event) })"
+        />
       </div>
       <div class="toggle-row compact">
         <span class="option-label">{{ t('showBeamLogo') }}</span
@@ -76,7 +97,7 @@ const positions = [
           @update:model-value="update({ showLogo: $event })"
         />
       </div>
-      <div v-if="value.text !== 'none'" class="toggle-row compact">
+      <div v-if="value.text !== 'none' && value.text !== 'custom'" class="toggle-row compact">
         <span class="option-label">{{ t('translateWatermark') }}</span
         ><Switch
           :model-value="value.localized"
@@ -93,8 +114,7 @@ const positions = [
             :icon="position.icon"
             icon-only
             size="xs"
-            variant="tab"
-            :class="{ active: value.position === position.value }"
+            :variant="value.position === position.value ? 'primary' : 'ghost'"
             :tooltip="t(position.label)"
             :aria-label="t(position.label)"
             @click="update({ position: position.value })"

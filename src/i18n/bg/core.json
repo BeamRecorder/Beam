@@ -86,6 +86,9 @@
     "watermarkBackgroundRadius": "Заобляне на ъглите",
     "watermarkBackgroundPadding": "Вътрешно отстояние",
     "noWatermarkText": "Без текст",
+    "custom": "Персонализирано",
+    "customWatermarkText": "Персонализиран текст",
+    "watermarkCustomTextPlaceholder": "Въведете текст за воден знак...",
     "translateWatermark": "Превод на текста на водния знак"
   },
   "CanvasToolbar": {
@@ -111,6 +114,8 @@
     "customTextDescription": "Редактирането заменя синхронизирания транскрипт с вашия текст.",
     "typography": "Типография",
     "importFont": "Импортиране на шрифт",
+    "searchFonts": "Търсене на шрифтове...",
+    "noFontsFound": "Няма съответстващи шрифтове",
     "fontSample": "Aa Bb Cc 123",
     "textAlignment": "Подравняване на текста",
     "alignLeft": "Подравняване вляво",

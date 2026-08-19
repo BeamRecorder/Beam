@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { isExportWorkerRequest } from '../export-worker-protocol';
+import type { PreparedCursorImage } from '../export-cursor-images';
 import type { ExportRequest } from '../../export-types';
 import { BUNDLED_CURSOR_PACKS } from '../../../video-editor/properties/cursor/cursor-packs';
 
@@ -93,19 +94,29 @@ const request = (overrides: Record<string, unknown> = {}) =>
         id: 'builtin:macos',
         name: 'macOS',
         source: 'builtin',
-        colorMode: 'original',
+        colorMode: 'tintable',
         defaultCursorId: 'default',
         cursors: [
           {
             id: 'default',
             label: 'Default',
-            url: '/cursor.svg',
+            url: '/macOsSvgCursors/default.svg',
+            format: 'svg',
             intrinsicSize: { width: 32, height: 32 },
             nominalSize: 32,
             hotspot: { x: 10, y: 7 },
           },
+          {
+            id: 'textcursor',
+            label: 'Text Cursor',
+            url: '/macOsSvgCursors/textcursor.svg',
+            format: 'svg',
+            intrinsicSize: { width: 32, height: 32 },
+            nominalSize: 32,
+            hotspot: { x: 16, y: 16 },
+          },
         ],
-        automaticMap: { default: 'default' },
+        automaticMap: { default: 'default', textcursor: 'textcursor' },
       },
       composition: { assets: [], clips: [] },
     },
@@ -142,9 +153,24 @@ const importWorker = async () => {
   };
 };
 
-const startWorker = (worker: Awaited<ReturnType<typeof importWorker>>, value = request()) => {
-  expect(isExportWorkerRequest({ type: 'start', request: value })).toBe(true);
-  worker.onmessage?.({ data: { type: 'start', request: value } } as MessageEvent<unknown>);
+const startWorker = (
+  worker: Awaited<ReturnType<typeof importWorker>>,
+  value = request(),
+  cursorImages: PreparedCursorImage[] = [],
+) => {
+  const message = { type: 'start', request: value, cursorImages } satisfies {
+    type: 'start';
+    request: ExportRequest;
+    cursorImages: PreparedCursorImage[];
+  };
+  expect(isExportWorkerRequest(message)).toBe(true);
+  worker.onmessage?.({ data: message } as MessageEvent<unknown>);
+};
+
+const preparedCursorImage = (id: string) => {
+  const close = vi.fn();
+  const bitmap = { width: 144, height: 144, close } as unknown as ImageBitmap;
+  return { prepared: { id, bitmap } satisfies PreparedCursorImage, close };
 };
 
 beforeEach(() => {
@@ -208,8 +234,9 @@ afterEach(() => {
 
 describe('export worker', () => {
   it('fails explicitly when OffscreenCanvas is unavailable', async () => {
+    const prepared = preparedCursorImage('default');
     const worker = await importWorker();
-    startWorker(worker);
+    startWorker(worker, request(), [prepared.prepared]);
     await flush();
 
     expect(worker.postMessage).toHaveBeenCalledWith({
@@ -217,6 +244,7 @@ describe('export worker', () => {
       error: expect.objectContaining({ message: 'OffscreenCanvas is required for export.' }),
     });
     expect(runtime.openExportAssets).not.toHaveBeenCalled();
+    expect(prepared.close).toHaveBeenCalledOnce();
   });
 
   it('publishes the validating-assets progress message before opening assets', async () => {
@@ -308,9 +336,47 @@ describe('export worker', () => {
     expect(runtime.output.start).not.toHaveBeenCalled();
   });
 
-  it('loads SVG cursor assets from the resolved pack without using legacy PNGs', async () => {
+  it.each([
+    ['default', 'webm'],
+    ['default', 'mp4'],
+    ['textcursor', 'webm'],
+    ['textcursor', 'mp4'],
+  ] as const)(
+    'successfully exports the prepared macOS %s bitmap in %s without worker decoding',
+    async (cursorId, format) => {
+      installCanvasRuntime();
+      const prepared = preparedCursorImage(cursorId);
+      const base = request();
+      const worker = await importWorker();
+      startWorker(
+        worker,
+        request({
+          format,
+          snapshot: {
+            ...base.snapshot,
+            cursor: {
+              ...base.snapshot.cursor,
+              available: true,
+              events: [{ event: 'shape', cursorKind: cursorId, sessionNs: 0 }],
+            },
+          },
+        }),
+        [prepared.prepared],
+      );
+
+      await vi.waitFor(() => expect(runtime.output.start).toHaveBeenCalledOnce());
+      await vi.waitFor(() => expect(runtime.output.finalize).toHaveBeenCalledOnce());
+      await vi.waitFor(() =>
+        expect(worker.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'complete' })),
+      );
+      expect(fetch).not.toHaveBeenCalled();
+      expect(createImageBitmap).not.toHaveBeenCalled();
+      await vi.waitFor(() => expect(prepared.close).toHaveBeenCalledOnce());
+    },
+  );
+
+  it('reports a deterministic decode failure when a required prepared cursor bitmap is missing', async () => {
     installCanvasRuntime();
-    runtime.output.start.mockRejectedValueOnce(new Error('encoder startup failed'));
     const base = request();
     const worker = await importWorker();
     startWorker(
@@ -323,30 +389,58 @@ describe('export worker', () => {
             available: true,
             events: [{ event: 'shape', cursorKind: 'default', sessionNs: 0 }],
           },
-          cursorSettings: {
-            ...base.snapshot.cursorSettings,
-            selection: { packId: 'builtin:macos', mode: 'automatic', cursorId: null },
-          },
         },
       }),
     );
 
-    await vi.waitFor(() => expect(runtime.output.start).toHaveBeenCalledOnce());
-    expect(fetch).toHaveBeenCalledWith('/cursor.svg');
-    expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('macOsPngCursors'));
-    expect(createImageBitmap).toHaveBeenCalledWith(
-      expect.any(Blob),
-      expect.objectContaining({ resizeWidth: 144, resizeHeight: 144 }),
+    await vi.waitFor(() =>
+      expect(worker.postMessage).toHaveBeenCalledWith({
+        type: 'error',
+        error: expect.objectContaining({
+          message: 'Cursor "default" was not rasterized before export.',
+          issue: expect.objectContaining({ code: 'decode-failure', assetId: 'default' }),
+        }),
+      }),
     );
-    await vi.waitFor(() => expect(worker.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' })));
+    expect(runtime.output.start).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+    expect(createImageBitmap).not.toHaveBeenCalled();
   });
 
-  it('loads mapped and fallback PNG cursors at the expected raster dimensions in automatic mode', async () => {
+  it('closes a transferred cursor bitmap after a successful export', async () => {
+    installCanvasRuntime();
+    const prepared = preparedCursorImage('default');
+    const base = request();
+    const worker = await importWorker();
+    startWorker(
+      worker,
+      request({
+        snapshot: {
+          ...base.snapshot,
+          cursor: {
+            ...base.snapshot.cursor,
+            available: true,
+            events: [{ event: 'shape', cursorKind: 'default', sessionNs: 0 }],
+          },
+        },
+      }),
+      [prepared.prepared],
+    );
+
+    await vi.waitFor(() => expect(runtime.output.finalize).toHaveBeenCalledOnce());
+    await vi.waitFor(() => expect(prepared.close).toHaveBeenCalledOnce());
+    expect(fetch).not.toHaveBeenCalled();
+    expect(createImageBitmap).not.toHaveBeenCalled();
+  });
+
+  it('uses prepared mapped and fallback cursor images in automatic mode without worker decoding', async () => {
     installCanvasRuntime();
     runtime.output.start.mockRejectedValueOnce(new Error('encoder startup failed'));
     const pack = BUNDLED_CURSOR_PACKS.find((entry) => entry.id === 'builtin:bibata-material-noir')!;
     const pointer = pack.cursors.find((asset) => asset.id === 'pointer')!;
     const fallback = pack.cursors.find((asset) => asset.id === pack.defaultCursorId)!;
+    const preparedPointer = preparedCursorImage(pointer.id);
+    const preparedFallback = preparedCursorImage(fallback.id);
     const base = request();
     const worker = await importWorker();
     startWorker(
@@ -369,44 +463,22 @@ describe('export worker', () => {
           cursorPack: pack,
         },
       }),
+      [preparedPointer.prepared, preparedFallback.prepared],
     );
 
     await vi.waitFor(() => expect(runtime.output.start).toHaveBeenCalledOnce());
-    expect(fetch).toHaveBeenCalledWith(pointer.url);
-    expect(fetch).toHaveBeenCalledWith(fallback.url);
-    expect(createImageBitmap).toHaveBeenCalledTimes(2);
-    expect(createImageBitmap).toHaveBeenNthCalledWith(
-      1,
-      expect.any(Blob),
-      expect.objectContaining({ resizeWidth: 144, resizeHeight: 144 }),
-    );
-    expect(createImageBitmap).toHaveBeenNthCalledWith(
-      2,
-      expect.any(Blob),
-      expect.objectContaining({ resizeWidth: 144, resizeHeight: 144 }),
-    );
+    expect(fetch).not.toHaveBeenCalled();
+    expect(createImageBitmap).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(preparedPointer.close).toHaveBeenCalledOnce());
+    await vi.waitFor(() => expect(preparedFallback.close).toHaveBeenCalledOnce());
   });
 
-  it('loads the selected builtin PNG in fixed mode without recoloring original artwork before export starts', async () => {
+  it('uses the prepared selected cursor image in fixed mode without worker recoloring', async () => {
     installCanvasRuntime();
     runtime.output.start.mockRejectedValueOnce(new Error('encoder startup failed'));
-    const canvases: unknown[] = [];
-    class TrackedOffscreenCanvas {
-      readonly width = 2;
-      readonly height = 2;
-
-      constructor() {
-        canvases.push(this);
-      }
-
-      getContext() {
-        return {};
-      }
-    }
-    vi.stubGlobal('OffscreenCanvas', TrackedOffscreenCanvas);
     const pack = BUNDLED_CURSOR_PACKS.find((entry) => entry.id === 'builtin:bibata-material-noir')!;
     const selected = pack.cursors.find((asset) => asset.id === 'pointer')!;
-    const fallback = pack.cursors.find((asset) => asset.id === pack.defaultCursorId)!;
+    const preparedSelected = preparedCursorImage(selected.id);
     const base = request();
     const worker = await importWorker();
     startWorker(
@@ -427,17 +499,13 @@ describe('export worker', () => {
           cursorPack: pack,
         },
       }),
+      [preparedSelected.prepared],
     );
 
     await vi.waitFor(() => expect(runtime.output.start).toHaveBeenCalledOnce());
-    expect(fetch).toHaveBeenCalledWith(selected.url);
-    expect(fetch).not.toHaveBeenCalledWith(fallback.url);
-    expect(createImageBitmap).toHaveBeenCalledOnce();
-    expect(createImageBitmap).toHaveBeenCalledWith(
-      expect.any(Blob),
-      expect.objectContaining({ resizeWidth: 144, resizeHeight: 144 }),
-    );
-    expect(canvases).toHaveLength(1);
+    expect(fetch).not.toHaveBeenCalled();
+    expect(createImageBitmap).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(preparedSelected.close).toHaveBeenCalledOnce());
   });
 
   it('uses one persistent timestamp/sample iterator instead of getSample for every video image', async () => {

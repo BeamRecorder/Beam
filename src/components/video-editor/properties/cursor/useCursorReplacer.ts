@@ -4,24 +4,7 @@ import { createDefaultCursorClickEffects, type CursorClickEffects } from '../../
 import type { CursorAssetDescriptor, CursorPackDescriptor, CursorSelection } from '~/api/types/cursor-pack';
 import { MACOS_CURSOR_PACK, orderedCursorPacks } from './cursor-packs';
 import { CURSOR_SIZE_DEFAULT } from './cursor-size';
-
-const imageCache = new Map<string, Promise<HTMLImageElement>>();
-
-const svgAtRasterSize = (svg: string, width: number, height: number, color: string, tintable: boolean) => {
-  const tintReadySvg = tintable
-    ? svg
-        .replace(/(fill|stroke|stop-color)\s*=\s*(["'])(?:#000(?:000)?|black)\2/gi, '$1=$2currentColor$2')
-        .replace(/((?:fill|stroke|stop-color)\s*:\s*)(?:#000(?:000)?|black)(?=\s*(?:;|["']))/gi, '$1currentColor')
-    : svg;
-  return tintReadySvg.replace(/<svg\b([^>]*)>/i, (_tag, attributes: string) => {
-    const clean = attributes.replace(/\s(?:width|height)=["'][^"']*["']/gi, '');
-    return (
-      `<svg${clean} width="${Math.max(1, Math.ceil(width))}" height="${Math.max(1, Math.ceil(height))}"` +
-      (tintable ? ` color="${color}"` : '') +
-      '>'
-    );
-  });
-};
+import { loadCursorImage } from './cursor-image-loader';
 
 export function useCursorReplacer() {
   const selection = ref<CursorSelection>({ packId: MACOS_CURSOR_PACK.id, mode: 'automatic', cursorId: null });
@@ -43,40 +26,7 @@ export function useCursorReplacer() {
     rasterHeight: number,
     color: string,
   ): Promise<HTMLImageElement> => {
-    const key = `${pack.id}:${asset.id}:${Math.ceil(rasterWidth)}x${Math.ceil(rasterHeight)}:${pack.colorMode === 'tintable' ? color : 'original'}`;
-    const cached = imageCache.get(key);
-    if (cached) return cached;
-    const loading = (async () => {
-      const response = await fetch(asset.url);
-      if (!response.ok) throw new Error(`Unable to load cursor asset: ${asset.url} (${response.status})`);
-      const blob =
-        asset.format === 'png'
-          ? await response.blob()
-          : new Blob(
-              [svgAtRasterSize(await response.text(), rasterWidth, rasterHeight, color, pack.colorMode === 'tintable')],
-              { type: 'image/svg+xml;charset=utf-8' },
-            );
-      return new Promise<HTMLImageElement>((resolve, reject) => {
-        const image = new Image();
-        const url = URL.createObjectURL(blob);
-        image.onload = () => {
-          URL.revokeObjectURL(url);
-          resolve(image);
-        };
-        image.onerror = () => {
-          URL.revokeObjectURL(url);
-          reject(new Error(`Unable to decode cursor asset: ${asset.url}`));
-        };
-        image.src = url;
-      });
-    })();
-    imageCache.set(key, loading);
-    try {
-      return await loading;
-    } catch (error) {
-      imageCache.delete(key);
-      throw error;
-    }
+    return loadCursorImage(pack, asset, rasterWidth, rasterHeight, color);
   };
 
   return {

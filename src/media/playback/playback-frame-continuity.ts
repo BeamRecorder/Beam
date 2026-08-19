@@ -1,4 +1,4 @@
-import { clipEndMs, isVisualClip, type ClipComposition } from '../shared';
+import { clipEndMs, isVisualClip, sourceTimeAt, type ClipComposition } from '../shared';
 
 export function previousContiguousVisualClipId(
   composition: ClipComposition,
@@ -6,7 +6,7 @@ export function previousContiguousVisualClipId(
   timelineTimeMs: number,
 ): string | null {
   const clip = composition.clips.find((entry) => entry.id === clipId);
-  if (!clip || !isVisualClip(clip) || timelineTimeMs < clip.timelineStartMs || timelineTimeMs >= clipEndMs(clip)) {
+  if (!clip || !isVisualClip(clip) || sourceTimeAt(clip, timelineTimeMs) === null) {
     return null;
   }
   const previous = composition.clips.find(

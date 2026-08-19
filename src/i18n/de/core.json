@@ -86,6 +86,9 @@
     "watermarkBackgroundRadius": "Eckenradius",
     "watermarkBackgroundPadding": "Innenabstand",
     "noWatermarkText": "Kein Text",
+    "custom": "Benutzerdefiniert",
+    "customWatermarkText": "Benutzerdefinierter Text",
+    "watermarkCustomTextPlaceholder": "Wasserzeichen-Text eingeben...",
     "translateWatermark": "Wasserzeichentext übersetzen"
   },
   "CanvasToolbar": {
@@ -111,6 +114,8 @@
     "customTextDescription": "Durch die Bearbeitung wird die zeitgesteuerte Transkription durch deinen eigenen Text ersetzt.",
     "typography": "Typografie",
     "importFont": "Schrift importieren",
+    "searchFonts": "Schriftarten suchen...",
+    "noFontsFound": "Keine passenden Schriftarten",
     "fontSample": "Aa Bb Cc 123",
     "textAlignment": "Textausrichtung",
     "alignLeft": "Linksbündig",

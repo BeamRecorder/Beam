@@ -28,10 +28,10 @@ const BigSlider = {
     '<button class="caption-slider" :data-label="label" @click="$emit(\'update:modelValue\', 42)">Slider</button>',
 };
 const Select = {
-  props: ['options', 'items'],
+  props: ['options', 'items', 'variant'],
   emits: ['update:modelValue', 'preview:modelValue'],
   template:
-    '<div><button v-if="options" class="font-select" @pointerenter="$emit(\'preview:modelValue\', \'serif\')" @click="$emit(\'update:modelValue\', \'serif\')">Font</button><button v-else class="shadow-select" @click="$emit(\'update:modelValue\', \'top-left\')">Select</button></div>',
+    '<div><button v-if="options" class="font-select" :data-variant="variant" @pointerenter="$emit(\'preview:modelValue\', \'serif\')" @click="$emit(\'update:modelValue\', \'serif\')">Font</button><button v-else class="shadow-select" @click="$emit(\'update:modelValue\', \'top-left\')">Select</button></div>',
 };
 const Switch = {
   inheritAttrs: true,
@@ -117,6 +117,7 @@ describe('CaptionClipPanel', () => {
     expect(wrapper.findAll('.caption-slider')).toHaveLength(7);
     expect(wrapper.findAll('.color-picker-stub')).toHaveLength(3);
     expect(wrapper.get('.wrap-switch').attributes('aria-checked')).toBe('true');
+    expect(wrapper.get('.font-select').attributes('data-variant')).toBe('search');
     expect(wrapper.find('.follow-cursor-setting').exists()).toBe(false);
     await wrapper.get('.wrap-switch').trigger('click');
     await wrapper.find('input[placeholder="Type custom text..."]').setValue('Custom caption');

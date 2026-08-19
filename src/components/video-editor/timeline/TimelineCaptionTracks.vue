@@ -5,6 +5,7 @@ import type { CaptionClip } from '~/media/shared/composition-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import Throbber from '~/components/ui/throbber/Throbber.vue';
 import type { TimelinePasteHighlight } from './composables/timeline-clipboard-types';
+import { timelineTransitionStyle } from './timeline-clip-geometry';
 
 const { t } = useTranslate('TimelineTracks');
 const props = defineProps<{
@@ -59,10 +60,14 @@ const getCaptionText = (clip: CaptionClip): string => {
 };
 
 const editingClipIds = ref<Set<string>>(new Set());
+const settlingClipIds = ref<Set<string>>(new Set());
 const editTimers: Record<string, number> = {};
+const settleTimers: Record<string, number> = {};
 const previousTexts: Record<string, string> = {};
 
 let isInitialMount = true;
+const EDIT_THROBBER_TIMEOUT_MS = 500;
+const SETTLE_ANIMATION_MS = 450;
 
 watch(
   () => [...props.textClips, ...props.keyboardClips].map((clip) => ({ id: clip.id, text: getCaptionText(clip) })),
@@ -78,13 +83,24 @@ watch(
     for (const item of newItems) {
       if (previousTexts[item.id] !== undefined && previousTexts[item.id] !== item.text) {
         editingClipIds.value.add(item.id);
+        settlingClipIds.value.delete(item.id);
         if (editTimers[item.id]) {
           window.clearTimeout(editTimers[item.id]);
+        }
+        if (settleTimers[item.id]) {
+          window.clearTimeout(settleTimers[item.id]);
+          delete settleTimers[item.id];
         }
         editTimers[item.id] = window.setTimeout(() => {
           editingClipIds.value.delete(item.id);
           delete editTimers[item.id];
-        }, 50);
+
+          settlingClipIds.value.add(item.id);
+          settleTimers[item.id] = window.setTimeout(() => {
+            settlingClipIds.value.delete(item.id);
+            delete settleTimers[item.id];
+          }, SETTLE_ANIMATION_MS);
+        }, EDIT_THROBBER_TIMEOUT_MS);
       }
       previousTexts[item.id] = item.text;
     }
@@ -101,33 +117,45 @@ const stopMarquee = (target?: HTMLElement | null) => {
   marqueeFrame = 0;
   marqueeTimer = 0;
   const label = target?.querySelector<HTMLElement>('.caption-label-text');
-  if (label) label.style.transform = '';
+  if (label) {
+    label.style.transform = '';
+    label.classList.remove('is-marqueeing');
+  }
 };
 
 const stopMarqueeForEvent = (event: PointerEvent) => stopMarquee(event.currentTarget as HTMLElement | null);
 
 const startMarquee = (event: PointerEvent) => {
   const target = event.currentTarget as HTMLElement;
+  const container = target.querySelector<HTMLElement>('.clip-center-title');
   const label = target.querySelector<HTMLElement>('.caption-label-text');
-  if (!label) return;
-  const distance = label.scrollWidth - label.clientWidth;
-  if (distance <= 0) return;
+  if (!container || !label) return;
+  label.classList.add('is-marqueeing');
+  const distance = label.scrollWidth - container.clientWidth;
+  if (distance <= 0) {
+    label.classList.remove('is-marqueeing');
+    return;
+  }
   stopMarquee(target);
+  label.classList.add('is-marqueeing');
   marqueeTimer = window.setTimeout(() => {
     const startedAt = performance.now();
-    const travelMs = Math.max(2_500, (distance / 32) * 1_000);
+    const travelMs = Math.max(3_000, (distance / 36) * 1_000);
     const tick = (now: number) => {
       const phase = ((now - startedAt) % (travelMs * 2)) / travelMs;
       label.style.transform = `translateX(${-distance * (phase <= 1 ? phase : 2 - phase)}px)`;
       marqueeFrame = window.requestAnimationFrame(tick);
     };
     marqueeFrame = window.requestAnimationFrame(tick);
-  }, 300);
+  }, 250);
 };
 
 onUnmounted(() => {
   stopMarquee();
   for (const timer of Object.values(editTimers)) {
+    window.clearTimeout(timer);
+  }
+  for (const timer of Object.values(settleTimers)) {
     window.clearTimeout(timer);
   }
 });
@@ -159,6 +187,18 @@ onUnmounted(() => {
           @pointerleave="stopMarqueeForEvent"
         >
           <span
+            v-if="clip.transitions?.entry"
+            class="transition-zone entry"
+            :style="timelineTransitionStyle(clip, 'entry')"
+            aria-hidden="true"
+          />
+          <span
+            v-if="clip.transitions?.exit"
+            class="transition-zone exit"
+            :style="timelineTransitionStyle(clip, 'exit')"
+            aria-hidden="true"
+          />
+          <span
             class="trim-handle start"
             :title="t('trimStart')"
             @pointerdown.stop="beginClipTrim($event, clip, 'start')"
@@ -167,9 +207,26 @@ onUnmounted(() => {
               {{ (trimStateFor(clip.id)!.durationMs / 1000).toFixed(1) }}s
             </span>
           </span>
-          <span class="clip-center-title">
-            <Throbber v-if="editingClipIds.has(clip.id)" variant="wave" size="xs" :dots="true" text="..." />
-            <span v-else class="caption-label-text">{{ getCaptionText(clip) }}</span>
+          <span
+            class="clip-center-title"
+            :class="{ 'is-editing': editingClipIds.has(clip.id), 'is-settling': settlingClipIds.has(clip.id) }"
+          >
+            <Throbber
+              v-if="editingClipIds.has(clip.id)"
+              :text="getCaptionText(clip)"
+              variant="wave"
+              color="white"
+              size="xs"
+              weight="semibold"
+              :dots="true"
+              :nowrap="true"
+              class="caption-edit-throbber"
+            />
+            <span
+              v-else
+              class="caption-label-text"
+              :class="{ 'caption-settled': settlingClipIds.has(clip.id) }"
+            >{{ getCaptionText(clip) }}</span>
           </span>
           <span class="trim-handle end" :title="t('trimEnd')" @pointerdown.stop="beginClipTrim($event, clip, 'end')">
             <span v-if="trimStateFor(clip.id)?.edge === 'end'" class="trim-side-badge">
@@ -216,6 +273,18 @@ onUnmounted(() => {
           @pointerleave="stopMarqueeForEvent"
         >
           <span
+            v-if="clip.transitions?.entry"
+            class="transition-zone entry"
+            :style="timelineTransitionStyle(clip, 'entry')"
+            aria-hidden="true"
+          />
+          <span
+            v-if="clip.transitions?.exit"
+            class="transition-zone exit"
+            :style="timelineTransitionStyle(clip, 'exit')"
+            aria-hidden="true"
+          />
+          <span
             class="trim-handle start"
             :title="t('trimStart')"
             @pointerdown.stop="beginClipTrim($event, clip, 'start')"
@@ -224,10 +293,27 @@ onUnmounted(() => {
               {{ (trimStateFor(clip.id)!.durationMs / 1000).toFixed(1) }}s
             </span>
           </span>
-          <span class="clip-center-title">
-            <Sparkles v-if="clip.isAiGenerated" :size="11" class="sparkles-icon" />
-            <Throbber v-if="editingClipIds.has(clip.id)" variant="wave" size="xs" :dots="true" text="..." />
-            <span v-else class="caption-label-text">{{ getCaptionText(clip) }}</span>
+          <span
+            class="clip-center-title"
+            :class="{ 'is-editing': editingClipIds.has(clip.id), 'is-settling': settlingClipIds.has(clip.id) }"
+          >
+            <Sparkles v-if="clip.isAiGenerated" :size="12" class="sparkles-icon" />
+            <Throbber
+              v-if="editingClipIds.has(clip.id)"
+              :text="getCaptionText(clip)"
+              variant="wave"
+              color="white"
+              size="xs"
+              weight="semibold"
+              :dots="true"
+              :nowrap="true"
+              class="caption-edit-throbber"
+            />
+            <span
+              v-else
+              class="caption-label-text"
+              :class="{ 'caption-settled': settlingClipIds.has(clip.id) }"
+            >{{ getCaptionText(clip) }}</span>
           </span>
           <span class="trim-handle end" :title="t('trimEnd')" @pointerdown.stop="beginClipTrim($event, clip, 'end')">
             <span v-if="trimStateFor(clip.id)?.edge === 'end'" class="trim-side-badge">

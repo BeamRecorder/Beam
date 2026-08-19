@@ -12,11 +12,22 @@ const validProgress = {
 } as const;
 
 describe('export worker protocol', () => {
-  it('accepts start, cancel, chunk acknowledgements and chunk errors', () => {
+  it.each(['webm', 'mp4'] as const)('accepts a %s start with prepared cursor images', (format) => {
+    expect(
+      isExportWorkerRequest({
+        type: 'start',
+        request: { projectName: 'Demo', format, preset: 'medium', snapshot: { duration: 1 } },
+        cursorImages: [{ id: 'default', bitmap: { width: 144, height: 144 } }],
+      }),
+    ).toBe(true);
+  });
+
+  it('accepts start without cursor images when cursor rendering has no data', () => {
     expect(
       isExportWorkerRequest({
         type: 'start',
         request: { projectName: 'Demo', format: 'webm', preset: 'medium', snapshot: { duration: 1 } },
+        cursorImages: [],
       }),
     ).toBe(true);
     expect(isExportWorkerRequest({ type: 'cancel' })).toBe(true);
@@ -26,6 +37,36 @@ describe('export worker protocol', () => {
 
   it('rejects malformed requests and unsafe chunk sequence values', () => {
     expect(isExportWorkerRequest({ type: 'start' })).toBe(false);
+    expect(
+      isExportWorkerRequest({
+        type: 'start',
+        request: { projectName: 'Demo', format: 'webm', preset: 'medium', snapshot: { duration: 1 } },
+      }),
+    ).toBe(false);
+    expect(
+      isExportWorkerRequest({
+        type: 'start',
+        request: { projectName: 'Demo', format: 'webm', preset: 'medium', snapshot: { duration: 1 } },
+        cursorImages: [{ id: 'default', bitmap: { width: Number.NaN, height: 144 } }],
+      }),
+    ).toBe(false);
+    expect(
+      isExportWorkerRequest({
+        type: 'start',
+        request: { projectName: 'Demo', format: 'webm', preset: 'medium', snapshot: { duration: 1 } },
+        cursorImages: [{ id: 42, bitmap: { width: 144, height: 144 } }],
+      }),
+    ).toBe(false);
+    expect(
+      isExportWorkerRequest({
+        type: 'start',
+        request: { projectName: 'Demo', format: 'webm', preset: 'medium', snapshot: { duration: 1 } },
+        cursorImages: [
+          { id: 'default', bitmap: { width: 144, height: 144 } },
+          { id: 'default', bitmap: { width: 144, height: 144 } },
+        ],
+      }),
+    ).toBe(false);
     expect(isExportWorkerRequest({ type: 'chunkAck', sequence: -1 })).toBe(false);
     expect(isExportWorkerRequest({ type: 'chunkAck', sequence: 1.5 })).toBe(false);
     expect(isExportWorkerRequest({ type: 'chunkError', sequence: 0, message: 42 })).toBe(false);
