@@ -85,8 +85,10 @@ test('after-install makes chrome-sandbox root-owned with the SUID bit', { skip: 
     const sandbox = path.join(directory, '/opt/Beam/chrome-sandbox');
 
     assert.equal(result.status, 0, result.stderr);
-    assert.ok(shimCalls(directory).includes(`chown: root:root ${sandbox}`));
-    assert.ok(shimCalls(directory).includes(`chmod: 4755 ${sandbox}`));
+    assert.deepEqual(shimCalls(directory), [
+      `chown: root:root ${sandbox}`,
+      `chmod: 4755 ${sandbox}`,
+    ]);
   });
 });
 
@@ -97,8 +99,10 @@ test('after-install fixes chrome-sandbox even without the input helper', { skip:
 
     assert.equal(result.status, 1);
     assert.match(result.stderr, /Beam input helper was not found/);
-    assert.ok(shimCalls(directory).includes(`chown: root:root ${sandbox}`));
-    assert.ok(shimCalls(directory).includes(`chmod: 4755 ${sandbox}`));
+    assert.deepEqual(shimCalls(directory), [
+      `chown: root:root ${sandbox}`,
+      `chmod: 4755 ${sandbox}`,
+    ]);
   });
 });
 
