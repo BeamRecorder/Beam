@@ -19,6 +19,7 @@ export interface CaptureSession {
   manifestPath?: string | null;
   videoSrc?: string | null;
   systemAudioLevel?: number | null;
+  screenAvailable?: boolean;
 }
 
 export interface CaptureProject {

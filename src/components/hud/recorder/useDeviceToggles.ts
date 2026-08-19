@@ -26,6 +26,7 @@ export interface DeviceToggleContext {
   setMicrophone(recorder: BrowserMicrophoneRecorder | null): void;
   getSystemAudio(): BrowserSystemAudioRecorder | null;
   setSystemAudio(recorder: BrowserSystemAudioRecorder | null): void;
+  registerSystemAudioRecorder(recorder: BrowserSystemAudioRecorder): void;
   setCameraEnabled(enabled: boolean): void;
   setMicrophoneEnabled(enabled: boolean): void;
   setSystemAudioEnabled(enabled: boolean): void;
@@ -142,6 +143,7 @@ export function useDeviceToggles(ctx: DeviceToggleContext) {
     }
     try {
       const nextSystemAudio = await BrowserSystemAudioRecorder.request();
+      ctx.registerSystemAudioRecorder(nextSystemAudio);
       try {
         await nextSystemAudio.start(sessionId);
       } catch (reason) {

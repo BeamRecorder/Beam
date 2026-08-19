@@ -42,6 +42,12 @@ impl ActiveRecordings {
         self.screen.is_some()
     }
 
+    pub(super) fn screen_available(&self) -> bool {
+        self.screen
+            .as_ref()
+            .is_none_or(crate::screen::ScreenRecording::is_available)
+    }
+
     pub(super) fn system_audio_level(&self) -> Option<f32> {
         self.system_audio
             .as_ref()

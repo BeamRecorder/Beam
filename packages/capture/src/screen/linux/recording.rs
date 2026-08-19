@@ -154,6 +154,16 @@ impl LinuxRecording {
         pipewire_result.and(portal_result)
     }
 
+    pub fn is_available(&self) -> bool {
+        self.portal
+            .as_ref()
+            .is_none_or(PreparedPortal::is_available)
+            && self
+                .pipewire
+                .as_ref()
+                .is_none_or(PipewireCapture::is_available)
+    }
+
     #[must_use]
     pub fn metrics(&self) -> Arc<ScreenCaptureMetrics> {
         self.metrics.clone()

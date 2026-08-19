@@ -3,6 +3,7 @@ import type { RecordingConfiguration } from './recording-types';
 
 const mocks = vi.hoisted(() => {
   const makeRecorder = () => ({
+    onFatal: vi.fn(),
     start: vi.fn(async () => undefined),
     stop: vi.fn(async () => undefined),
     pause: vi.fn(async () => undefined),
@@ -27,6 +28,7 @@ const mocks = vi.hoisted(() => {
       stop: vi.fn(async () => ({ sessionId: 'session-1' })),
       stopNativeRecording: vi.fn(async () => ({ sessionId: 'session-1' })),
       completeNativeRecording: vi.fn(async () => ({ sessionId: 'session-1', videoSrc: 'file:///v.mp4' })),
+      status: vi.fn(async () => ({ state: 'recording', screenAvailable: true })),
       pause: vi.fn(async () => ({ sessionId: 'session-1' })),
       resume: vi.fn(async () => ({ sessionId: 'session-1' })),
       setTeleprompterSession: vi.fn(),

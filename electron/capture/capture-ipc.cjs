@@ -148,7 +148,15 @@ function registerCaptureIpc({
     if (command === 'stop-native-recording') {
       if (deferredStoppedSession)
         throw new Error('A native recording is already waiting for its sidecar tracks to finish.');
-      deferredStoppedSession = await requestEngine('stop');
+      try {
+        deferredStoppedSession = await requestEngine('stop');
+      } catch (error) {
+        // A source can disappear before native finalization. The engine still
+        // writes the completed manifest, so keep that partial recording usable.
+        const status = await requestEngine('status').catch(() => null);
+        if (status?.state !== 'completed' || !status.manifestPath) throw error;
+        deferredStoppedSession = status;
+      }
       return withProjectId(deferredStoppedSession);
     }
     if (command === 'complete-native-recording') {

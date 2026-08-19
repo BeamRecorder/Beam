@@ -1,4 +1,10 @@
-use std::{path::Path, sync::Arc};
+use std::{
+    path::Path,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+};
 
 use screencapturekit::{
     cm::CMTime,
@@ -8,8 +14,8 @@ use screencapturekit::{
     },
     shareable_content::SCShareableContent,
     stream::{
-        SCStream, configuration::SCStreamConfiguration, content_filter::SCContentFilter,
-        output_type::SCStreamOutputType,
+        SCStream, StreamCallbacks, configuration::SCStreamConfiguration,
+        content_filter::SCContentFilter, output_type::SCStreamOutputType,
     },
 };
 
@@ -26,6 +32,7 @@ pub struct MacRecording {
     output: std::path::PathBuf,
     frame_handler: usize,
     metrics: Arc<ScreenCaptureMetrics>,
+    unavailable: Arc<AtomicBool>,
 }
 
 impl MacRecording {
@@ -89,9 +96,15 @@ impl MacRecording {
             )
         })?;
         let metrics = Arc::new(ScreenCaptureMetrics::default());
+        let unavailable = Arc::new(AtomicBool::new(false));
         let callback_metrics = metrics.clone();
         let callback_gate = start_gate;
-        let mut stream = SCStream::new(&filter, &configuration);
+        let error_unavailable = unavailable.clone();
+        let inactive_unavailable = unavailable.clone();
+        let delegate = StreamCallbacks::new()
+            .on_error(move |_| error_unavailable.store(true, Ordering::Release))
+            .on_inactive(move || inactive_unavailable.store(true, Ordering::Release));
+        let mut stream = SCStream::new_with_delegate(&filter, &configuration, delegate);
         let frame_handler = stream
             .add_output_handler(
                 move |_, _| {
@@ -116,6 +129,7 @@ impl MacRecording {
             output: output.to_owned(),
             frame_handler,
             metrics,
+            unavailable,
         })
     }
 
@@ -126,6 +140,11 @@ impl MacRecording {
     #[must_use]
     pub fn recorded_file_size(&self) -> i64 {
         self.recording.recorded_file_size()
+    }
+
+    #[must_use]
+    pub fn is_available(&self) -> bool {
+        !self.unavailable.load(Ordering::Acquire)
     }
 
     #[must_use]
