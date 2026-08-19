@@ -383,6 +383,9 @@
     "hiddenUntilHovered": "Ẩn cho đến khi di chuột",
     "language": "Ngôn ngữ",
     "chooseLanguage": "Chọn ngôn ngữ hiển thị",
+    "advanced": "Nâng cao",
+    "spellCheck": "Kiểm tra chính tả",
+    "spellCheckDescription": "Gạch chân các từ sai chính tả bằng ngôn ngữ đã chọn khi được hỗ trợ.",
     "interactionAccess": "Quyền truy cập tương tác",
     "interactionAccessReadyDescription": "Ghi nhận nhấp chuột và các tổ hợp phím tắt. Văn bản gõ không bao giờ được lưu trữ.",
     "interactionAccessUnavailableDescription": "Tính năng ghi nhận tương tác không khả dụng trên hệ thống này.",
@@ -448,7 +451,8 @@
   },
   "PropertiesPanel": {
     "properties": "Thuộc tính",
-    "background": "Hình nền"
+    "background": "Hình nền",
+    "selectionAndMore": "… và {count} mục khác"
   },
   "RecorderBar": {
     "recordingControls": "Điều khiển ghi hình",

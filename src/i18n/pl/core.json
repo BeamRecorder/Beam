@@ -383,6 +383,9 @@
     "hiddenUntilHovered": "Ukryta do najechania",
     "language": "Język",
     "chooseLanguage": "Wybierz język interfejsu",
+    "advanced": "Zaawansowane",
+    "spellCheck": "Sprawdzanie pisowni",
+    "spellCheckDescription": "Podkreśla błędnie napisane słowa w wybranym języku, jeśli jest obsługiwany.",
     "interactionAccess": "Dostęp do interakcji",
     "interactionAccessReadyDescription": "Rejestruje kliknięcia i skróty. Wpisywany tekst nigdy nie jest zapisywany.",
     "interactionAccessUnavailableDescription": "Rejestrowanie interakcji jest niedostępne w tym systemie.",
@@ -448,7 +451,8 @@
   },
   "PropertiesPanel": {
     "properties": "Właściwości",
-    "background": "Tło"
+    "background": "Tło",
+    "selectionAndMore": "… i jeszcze {count}"
   },
   "RecorderBar": {
     "recordingControls": "Sterowanie nagrywaniem",

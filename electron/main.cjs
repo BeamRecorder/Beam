@@ -1,6 +1,7 @@
 const {
   app,
   BrowserWindow,
+  Menu,
   desktopCapturer,
   ipcMain,
   session,
@@ -36,6 +37,8 @@ const { createWhisperModelStore } = require('./captions/whisper-model-store.cjs'
 const { registerWhisperIpc } = require('./captions/whisper-ipc.cjs');
 const { createPreferencesStore } = require('./preferences/preferences-store.cjs');
 const { registerPreferencesIpc } = require('./preferences/preferences-ipc.cjs');
+const { applySpellCheckPreferences } = require('./preferences/spell-check.cjs');
+const { registerSpellCheckContextMenu } = require('./preferences/spell-check-context-menu.cjs');
 const { createLinuxShortcutSource } = require('./preferences/linux-shortcut-source.cjs');
 const { createTeleprompterWindow } = require('./teleprompter/teleprompter-window.cjs');
 const { registerTeleprompterIpc } = require('./teleprompter/teleprompter-ipc.cjs');
@@ -251,6 +254,21 @@ function initializeApplication() {
     registerInputAccessIpc(applicationIpc, inputAccess);
     const userPaths = createUserPaths(app.getPath('videos'));
     const preferencesStore = createPreferencesStore(userPaths.preferences, { platform: process.platform });
+    const applySpellCheck = (preferences) =>
+      applySpellCheckPreferences({
+        electronSession: session.defaultSession,
+        preferences,
+        platform: process.platform,
+        systemLocale: app.getLocale(),
+      });
+    applySpellCheck(preferencesStore.read());
+    const spellCheckContextMenuCleanup = registerSpellCheckContextMenu({
+      app,
+      Menu,
+      BrowserWindow,
+      isTrustedRenderer,
+      getLocale: () => preferencesStore.read()?.extras?.locale || app.getLocale(),
+    });
     const appIconPath = getAppIconPath();
     const teleprompterWindow = createTeleprompterWindow({
       applicationRoot,
@@ -284,6 +302,7 @@ function initializeApplication() {
         platform: process.platform,
       }),
       onPreferencesChanged: (preferences) => {
+        applySpellCheck(preferences);
         for (const win of BrowserWindow.getAllWindows()) {
           const controller = controllers.get(win);
           if (controller) {
@@ -471,6 +490,7 @@ function initializeApplication() {
     coordinator.registerCleanup({ id: 'onboarding', cleanup: () => onboardingWindow.destroy() });
     coordinator.registerCleanup({ id: 'tray', cleanup: () => trayManager.destroy() });
     coordinator.registerCleanup({ id: 'teleprompter', cleanup: () => teleprompterWindow.destroy() });
+    coordinator.registerCleanup({ id: 'spell-check-context-menu', cleanup: spellCheckContextMenuCleanup });
     coordinator.registerCleanup({ id: 'countdown', cleanup: () => countdownOverlay.destroy() });
     coordinator.registerCleanup({ id: 'camera-overlay', cleanup: () => cameraOverlay.destroy() });
     coordinator.registerCleanup({ id: 'screen-region', cleanup: () => screenRegionOverlay.destroy() });

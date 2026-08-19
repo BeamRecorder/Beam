@@ -46,8 +46,10 @@ import { isKeyboardCaptionClip } from '~/media/shared/composition-types';
 import { usePropertiesPanelNavigation } from './usePropertiesPanelNavigation';
 import type { SelectedClipProperties } from './properties-panel-types';
 import type { CameraFramingPreset, CameraLayoutPreset } from '~/media/shared/camera-layout-types';
+import { selectedClipNames } from './clip-selection-names';
+import { propertiesPanelTitle } from './properties-panel-title';
+import { applyCaptionSelectionUpdate } from '../composition/caption-selection';
 export type { SelectedClipProperties } from './properties-panel-types';
-
 const { t } = useTranslate('PropertiesPanel');
 const { t: tClip } = useTranslate('ClipPropertiesPanel');
 const { t: tCaption } = useTranslate('CaptionClipPanel');
@@ -55,6 +57,7 @@ const { t: tZoom } = useTranslate('ZoomPanel');
 const { t: tBlur } = useTranslate('BlurPropertiesPanel');
 const { t: tSidebar } = useTranslate('SidebarPanel');
 const { t: tTimeline } = useTranslate('TimelineTracks');
+const { t: tTimelineToolbar } = useTranslate('TimelineToolbar');
 const { t: tTransitions } = useTranslate('TransitionsPanel');
 const { t: tAudioClip } = useTranslate('AudioClipPropertiesPanel');
 const props = withDefaults(
@@ -62,6 +65,7 @@ const props = withDefaults(
     activeTab: string;
     selectedClip?: SelectedClipProperties | null;
     selectedCaptionClip?: CaptionClip | null;
+    selectedClipIds?: string[];
     cursorSelection: CursorSelection;
     cursorPacks: CursorPackDescriptor[];
     cursorSize: number;
@@ -92,7 +96,12 @@ const props = withDefaults(
     projectId?: string | null;
     canvas: OutputCanvasSettings;
   }>(),
-  { hasSystemAudio: false, hasMicAudio: false, zoomMotionBlur: () => ({ ...DEFAULT_ZOOM_MOTION_BLUR }) },
+  {
+    hasSystemAudio: false,
+    hasMicAudio: false,
+    selectedClipIds: () => [],
+    zoomMotionBlur: () => ({ ...DEFAULT_ZOOM_MOTION_BLUR }),
+  },
 );
 const normalizedSelectedClip = computed(() =>
   props.selectedClip
@@ -106,6 +115,17 @@ const selectedDomainClip = computed(() => {
   const id = props.selectedClip?.id ?? props.selectedCaptionClip?.id;
   return id ? (props.composition.clips.find((clip) => clip.id === id) ?? null) : null;
 });
+const selectedDomainClips = computed(() => {
+  const ids = new Set(
+    props.selectedClipIds?.length
+      ? props.selectedClipIds
+      : selectedDomainClip.value
+        ? [selectedDomainClip.value.id]
+        : [],
+  );
+  return props.composition.clips.filter((clip) => ids.has(clip.id));
+});
+const selectionClipNames = computed(() => selectedClipNames(selectedDomainClips.value, tTimeline('holdSegment')));
 const panelHeader = ref<InstanceType<typeof PropertiesPanelHeader> | null>(null);
 const transitionEdge = ref<'entry' | 'exit'>('entry');
 const { transitionsOpen, navigationDirection, openTransitions, closeTransitions } = usePropertiesPanelNavigation({
@@ -122,7 +142,9 @@ const openTransitionEdge = (edge: 'entry' | 'exit' = 'entry') => {
 };
 const updateTransition = (edge: 'entry' | 'exit', value: ClipTransition | null) => {
   if (!selectedDomainClip.value) return;
-  emit('update:composition', setClipTransition(props.composition, selectedDomainClip.value.id, edge, value));
+  let next = props.composition;
+  for (const clip of selectedDomainClips.value) next = setClipTransition(next, clip.id, edge, value);
+  emit('update:composition', next);
 };
 const updateCanvasTransition = (edge: 'entry' | 'exit', value: ClipTransition | null) => {
   const transitions = normalizeCanvasTransitions(
@@ -141,24 +163,13 @@ const transitionPanelTitle = computed(() => {
   if (kind === 'webcam') return 'Webcam Transitions';
   return 'Video Transitions';
 });
-const panelTitle = computed(() => {
-  if (props.activeTab === 'clip') {
-    const clip = props.selectedClip;
-    if (!clip) return tSidebar('clip');
-    if (clip.kind === 'screen') return tTimeline('video');
-    if (clip.kind === 'webcam') return tTimeline('webcam');
-    if (clip.kind === 'blur') return tTimeline('blur');
-    return clip.name?.trim() || (clip.kind === 'audio' ? tSidebar('audio') : tSidebar('clip'));
-  }
-
-  const titleKey =
-    props.activeTab === 'caption'
-      ? 'captions'
-      : ['canvas', 'zoom', 'cursor', 'audio', 'settings'].includes(props.activeTab)
-        ? props.activeTab
-        : null;
-  return titleKey ? tSidebar(titleKey) : t('properties');
-});
+const panelTitle = computed(() =>
+  propertiesPanelTitle(
+    props.activeTab,
+    selectedDomainClip.value?.kind ?? props.selectedClip?.kind ?? props.selectedCaptionClip?.kind ?? null,
+    { t, tSidebar, tTimeline, tTimelineToolbar },
+  ),
+);
 const emit = defineEmits<{
   (event: 'update:cursorSelection', value: CursorSelection): void;
   (event: 'preview:cursorSelection', value: CursorSelection | null): void;
@@ -238,14 +249,9 @@ const emit = defineEmits<{
 }>();
 const previewCaption = (clip: CaptionClip | null) => {
   if (!clip) return emit('preview:composition', null);
-  const original = props.selectedCaptionClip;
-  if (!original) return;
-  emit('preview:composition', {
-    ...props.composition,
-    clips: props.composition.clips.map((item) => (item.id === original.id ? clip : item)),
-  });
+  if (!props.selectedCaptionClip) return;
+  emit('preview:composition', applyCaptionSelectionUpdate(props.composition, props.selectedClipIds ?? [], clip));
 };
-
 const isCurrentClipEnabled = computed(() => {
   if (props.selectedClip) return props.selectedClip.enabled ?? true;
   if (props.selectedCaptionClip) return props.selectedCaptionClip.enabled ?? true;
@@ -288,11 +294,7 @@ const deleteTooltip = computed(() => {
 
 const handleToggleClipEnabled = () => {
   const nextValue = !isCurrentClipEnabled.value;
-  if (props.selectedClip) {
-    emit('update:clip-enabled', nextValue);
-  } else if (props.selectedCaptionClip) {
-    emit('update:caption', { ...props.selectedCaptionClip, enabled: nextValue });
-  }
+  emit('update:clip-enabled', nextValue);
 };
 
 const handleDelete = () => {
@@ -310,6 +312,7 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
       <PropertiesPanelHeader
         ref="panelHeader"
         :title="panelTitle"
+        :selection-names="selectionClipNames"
         :transition-title="transitionPanelTitle"
         :transition-name="panelTransitionName"
         :transitions-open="transitionsOpen"

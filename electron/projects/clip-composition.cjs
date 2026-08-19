@@ -10,7 +10,9 @@ const {
   validateTrackLayout,
 } = require('./composition-tracks.cjs');
 
-const schemaVersion = 9;
+const schemaVersion = 11;
+const captionPreferenceRepairSchemaVersion = 10;
+const keyboardCaptionRetrySchemaVersion = 9;
 const previousCompositionSchemaVersion = 8;
 const cameraLayoutSchemaVersion = 7;
 const transitionSchemaVersion = 6;
@@ -55,6 +57,11 @@ const id = (value) => typeof value === 'string' && value.length > 0 && value.len
 const color = (value, fallback) =>
   typeof value === 'string' && /^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/i.test(value) ? value : fallback;
 const emptyComposition = () => ({ schemaVersion, assets: [], clips: [], keyboardCaptionSessions: [] });
+const withoutInheritedKeyboardText = (clip) => {
+  if (clip?.kind !== 'caption' || clip.caption?.type !== 'keyboard' || !clip.caption.style) return clip;
+  const { customText: _customText, ...style } = clip.caption.style;
+  return { ...clip, caption: { ...clip.caption, style } };
+};
 const transitionKinds = new Set(['fade', 'slide', 'zoom', 'blur']);
 const transition = (value, clipKind) => {
   if (value === null) return null;
@@ -383,6 +390,8 @@ function migrateComposition(value, showBackground, historicalSessionIds = []) {
       transitionSchemaVersion,
       cameraLayoutSchemaVersion,
       previousCompositionSchemaVersion,
+      keyboardCaptionRetrySchemaVersion,
+      captionPreferenceRepairSchemaVersion,
     ].includes(value.schemaVersion) ||
     !Array.isArray(value.assets) ||
     !Array.isArray(value.clips)
@@ -395,37 +404,58 @@ function migrateComposition(value, showBackground, historicalSessionIds = []) {
       transitionSchemaVersion,
       cameraLayoutSchemaVersion,
       previousCompositionSchemaVersion,
+      keyboardCaptionRetrySchemaVersion,
+      captionPreferenceRepairSchemaVersion,
     ].includes(value.schemaVersion)
   ) {
+    const keyboardCaptionSessions = Array.isArray(value.keyboardCaptionSessions)
+      ? value.keyboardCaptionSessions
+      : historicalSessionIds;
+    const repairedKeyboardCaptionSessions =
+      value.schemaVersion === keyboardCaptionRetrySchemaVersion
+        ? keyboardCaptionSessions.filter((sessionId) =>
+            value.clips.some(
+              (clip) =>
+                clip?.kind === 'caption' &&
+                clip.caption?.type === 'keyboard' &&
+                clip.caption.sourceSessionId === sessionId,
+            ),
+          )
+        : keyboardCaptionSessions;
     return normalizeComposition({
       ...value,
       schemaVersion,
-      keyboardCaptionSessions: Array.isArray(value.keyboardCaptionSessions)
-        ? value.keyboardCaptionSessions
-        : historicalSessionIds,
-      clips:
-        value.schemaVersion === previousCompositionSchemaVersion
-          ? repairMigratedTrackIds(value.clips)
-          : (value.schemaVersion === cameraLayoutSchemaVersion
-              ? repairMigratedTrackIds(value.clips)
-              : repairMigratedTrackIds(value.clips).map(withHistoricalTypography)
-            ).map((clip) => ({
-              ...clip,
-              ...(value.schemaVersion < cameraLayoutSchemaVersion ? { transitions: { entry: null, exit: null } } : {}),
-              ...(['screen', 'video', 'image', 'webcam'].includes(clip.kind)
-                ? {
-                    cameraLayoutPreset: 'custom',
-                    cameraFramingPreset: 'custom',
-                    ...(clip.kind === 'webcam'
-                      ? {
-                          cameraSplitRatio: 0.5,
-                          cameraSplitPadding: 0,
-                          reactToZoom: true,
-                        }
-                      : {}),
-                  }
-                : {}),
-            })),
+      keyboardCaptionSessions: repairedKeyboardCaptionSessions,
+      clips: [
+        previousCompositionSchemaVersion,
+        keyboardCaptionRetrySchemaVersion,
+        captionPreferenceRepairSchemaVersion,
+      ].includes(value.schemaVersion)
+        ? repairMigratedTrackIds(value.clips).map((clip) =>
+            [keyboardCaptionRetrySchemaVersion, captionPreferenceRepairSchemaVersion].includes(value.schemaVersion)
+              ? withoutInheritedKeyboardText(clip)
+              : clip,
+          )
+        : (value.schemaVersion === cameraLayoutSchemaVersion
+            ? repairMigratedTrackIds(value.clips)
+            : repairMigratedTrackIds(value.clips).map(withHistoricalTypography)
+          ).map((clip) => ({
+            ...clip,
+            ...(value.schemaVersion < cameraLayoutSchemaVersion ? { transitions: { entry: null, exit: null } } : {}),
+            ...(['screen', 'video', 'image', 'webcam'].includes(clip.kind)
+              ? {
+                  cameraLayoutPreset: 'custom',
+                  cameraFramingPreset: 'custom',
+                  ...(clip.kind === 'webcam'
+                    ? {
+                        cameraSplitRatio: 0.5,
+                        cameraSplitPadding: 0,
+                        reactToZoom: true,
+                      }
+                    : {}),
+                }
+              : {}),
+          })),
     });
   }
   return normalizeComposition({

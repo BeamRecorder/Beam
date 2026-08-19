@@ -3,9 +3,16 @@ import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useClipComposition } from '../useClipComposition';
 import type { CaptureProject, ProjectEditorData } from '../../../../api/types/capture-api';
-import type { ClipComposition, MediaAsset, VisualClip } from '~/media/shared/composition-types';
+import type {
+  AudioClip,
+  BlurClip,
+  CaptionClip,
+  ClipComposition,
+  MediaAsset,
+  VisualClip,
+} from '~/media/shared/composition-types';
 import type { DroppedMediaInspection } from '~/media/shared/media-types';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import { normalizeEditorPreferenceDefaults } from '../editor-defaults';
 
 const { capture, getAudioTracks } = vi.hoisted(() => ({
@@ -150,6 +157,101 @@ const videoInspection = (canDecodeAudio: boolean): DroppedMediaInspection => ({
   hasAudio: true,
   canDecodeAudio,
   audioCodec: 'opus',
+});
+
+const visualClip = (id: string, overrides: Partial<VisualClip> = {}): VisualClip => ({
+  id,
+  trackId: id,
+  kind: 'image',
+  name: id,
+  assetId: `${id}-asset`,
+  timelineStartMs: 0,
+  timelineDurationMs: 2_000,
+  sourceInMs: 0,
+  sourceDurationMs: 2_000,
+  playbackRate: 1,
+  transitions: { entry: null, exit: null },
+  enabled: true,
+  order: 0,
+  transform: { x: 0.1, y: 0.1, width: 0.5, height: 0.5 },
+  appearance: createDefaultClipAppearance('image'),
+  isMirrored: false,
+  isMirroredY: false,
+  ...overrides,
+});
+
+const audioClip = (id: string, overrides: Partial<AudioClip> = {}): AudioClip => ({
+  id,
+  kind: 'audio',
+  name: id,
+  assetId: `${id}-asset`,
+  role: 'imported',
+  timelineStartMs: 0,
+  timelineDurationMs: 2_000,
+  sourceInMs: 0,
+  sourceDurationMs: 2_000,
+  playbackRate: 1,
+  transitions: { entry: null, exit: null },
+  enabled: true,
+  order: 0,
+  volume: 100,
+  ...overrides,
+});
+
+const blurClip = (id: string, overrides: Partial<BlurClip> = {}): BlurClip => ({
+  id,
+  trackId: id,
+  kind: 'blur',
+  name: id,
+  assetId: '',
+  timelineStartMs: 0,
+  timelineDurationMs: 2_000,
+  sourceInMs: 0,
+  sourceDurationMs: 2_000,
+  playbackRate: 1,
+  transitions: { entry: null, exit: null },
+  enabled: true,
+  order: -1,
+  transform: { x: 0.2, y: 0.2, width: 0.3, height: 0.3 },
+  shape: 'rectangle',
+  mode: 'blur',
+  strength: 40,
+  feather: 0,
+  cornerRadius: 0,
+  tintOpacity: 0,
+  color: '#000000',
+  ...overrides,
+});
+
+const textCaptionClip = (id: string, text: string, color: string, customText: string): CaptionClip => ({
+  id,
+  kind: 'caption',
+  name: id,
+  timelineStartMs: 0,
+  timelineDurationMs: 2_000,
+  sourceInMs: 0,
+  sourceDurationMs: 2_000,
+  playbackRate: 1,
+  transitions: { entry: null, exit: null },
+  enabled: true,
+  order: 0,
+  caption: {
+    type: 'text',
+    sentences: [{ id: `${id}-sentence`, text, startMs: 0, endMs: 2_000, words: [] }],
+    style: { ...createDefaultCaptionStyle(), color, customText },
+  },
+});
+
+const mediaAssetFor = (id: string, kind: MediaAsset['kind']): MediaAsset => ({
+  id,
+  kind,
+  name: id,
+  fileName: `${id}.${kind === 'audio' ? 'wav' : kind === 'video' ? 'mp4' : 'png'}`,
+  durationMs: 2_000,
+  width: kind === 'audio' ? null : 1_920,
+  height: kind === 'audio' ? null : 1_080,
+  src: `${id}.asset`,
+  origin: 'project',
 });
 
 const editorData = (): ProjectEditorData => ({
@@ -304,6 +406,7 @@ describe('useClipComposition', () => {
     expect(mounted.state.selectedClip.value?.name).toBe('Edited caption');
     mounted.state.selectClip('missing');
     expect(mounted.state.selectedClipId.value).toBe(caption.id);
+    expect(mounted.state.selectedClipIds.value).toEqual([caption.id]);
 
     mounted.editorRef.value = editorData();
     mounted.state.synchronizeRecording();
@@ -311,6 +414,134 @@ describe('useClipComposition', () => {
     const count = mounted.state.composition.value.clips.length;
     mounted.state.synchronizeRecording();
     expect(mounted.state.composition.value.clips).toHaveLength(count);
+  });
+
+  it('deduplicates valid multi-selection IDs and returns to one clip with selectClip', () => {
+    const mounted = mountComposable();
+    const first = visualClip('first');
+    const second = visualClip('second');
+    mounted.state.composition.value = { ...mounted.state.composition.value, clips: [first, second] };
+
+    mounted.state.selectClips(['first', 'missing', 'first', 'second'], 'second');
+
+    expect(mounted.state.selectedClipIds.value).toEqual(['first', 'second']);
+    expect(mounted.state.selectedClipId.value).toBe('second');
+    mounted.state.selectClip('first');
+    expect(mounted.state.selectedClipIds.value).toEqual(['first']);
+    expect(mounted.state.selectedClipId.value).toBe('first');
+  });
+
+  it('applies enabled, appearance, volume, and blur updates to every selected compatible clip', () => {
+    const mounted = mountComposable();
+    const firstVisual = visualClip('visual-first');
+    const secondVisual = visualClip('visual-second', { enabled: false });
+    const firstAudio = audioClip('audio-first');
+    const secondAudio = audioClip('audio-second', { volume: 35 });
+    const firstBlur = blurClip('blur-first');
+    const secondBlur = blurClip('blur-second', { mode: 'frosted', strength: 20 });
+    mounted.state.composition.value = {
+      ...mounted.state.composition.value,
+      assets: [
+        mediaAssetFor('visual-first-asset', 'image'),
+        mediaAssetFor('visual-second-asset', 'image'),
+        mediaAssetFor('audio-first-asset', 'audio'),
+        mediaAssetFor('audio-second-asset', 'audio'),
+      ],
+      clips: [firstVisual, secondVisual, firstAudio, secondAudio, firstBlur, secondBlur],
+    };
+
+    mounted.state.selectClips(['visual-first', 'visual-second']);
+    mounted.state.updateSelectedEnabled(false);
+    mounted.state.updateSelectedAppearance({ borderEnabled: true, frame: 'safari' });
+    expect(mounted.state.composition.value.clips.filter((clip) => clip.kind === 'image')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'visual-first',
+          enabled: false,
+          appearance: expect.objectContaining({ borderEnabled: true, frame: 'safari' }),
+        }),
+        expect.objectContaining({
+          id: 'visual-second',
+          enabled: false,
+          appearance: expect.objectContaining({ borderEnabled: true, frame: 'safari' }),
+        }),
+      ]),
+    );
+
+    mounted.state.selectClips(['audio-first', 'audio-second']);
+    mounted.state.updateSelectedVolume(65);
+    expect(mounted.state.composition.value.clips.filter((clip) => clip.kind === 'audio')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'audio-first', volume: 65 }),
+        expect.objectContaining({ id: 'audio-second', volume: 65 }),
+      ]),
+    );
+
+    mounted.state.selectClips(['blur-first', 'blur-second']);
+    mounted.state.updateSelectedBlur({ mode: 'pixelated', strength: 90, feather: 12 });
+    expect(mounted.state.composition.value.clips.filter((clip) => clip.kind === 'blur')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'blur-first', mode: 'pixelated', strength: 90, feather: 12 }),
+        expect.objectContaining({ id: 'blur-second', mode: 'pixelated', strength: 90, feather: 12 }),
+      ]),
+    );
+  });
+
+  it('deletes all selected clips, including linked group members', () => {
+    const mounted = mountComposable();
+    const groupedVisual = visualClip('grouped-visual', { kind: 'video', groupId: 'group-1' });
+    const groupedAudio = audioClip('grouped-audio', { groupId: 'group-1' });
+    const independent = visualClip('independent');
+    mounted.state.composition.value = {
+      ...mounted.state.composition.value,
+      assets: [
+        mediaAssetFor('grouped-visual-asset', 'video'),
+        mediaAssetFor('grouped-audio-asset', 'audio'),
+        mediaAssetFor('independent-asset', 'image'),
+      ],
+      clips: [groupedVisual, groupedAudio, independent],
+    };
+
+    mounted.state.selectClips(['grouped-visual', 'independent']);
+    mounted.state.deleteSelectedClip();
+
+    expect(mounted.state.composition.value.clips).toEqual([]);
+    expect(mounted.state.selectedClipId.value).toBeNull();
+    expect(mounted.state.selectedClipIds.value).toEqual([]);
+  });
+
+  it('batches caption style changes without copying text content or customText', () => {
+    const mounted = mountComposable();
+    const first = textCaptionClip('caption-first', 'First sentence', '#ffffff', 'First custom text');
+    const second = textCaptionClip('caption-second', 'Second sentence', '#00ff00', 'Second custom text');
+    mounted.state.composition.value = { ...mounted.state.composition.value, clips: [first, second] };
+    mounted.state.selectClips(['caption-first', 'caption-second'], 'caption-first');
+
+    const updatedPrimary = mounted.state.selectedCaptionClip.value!;
+    if (updatedPrimary.caption.type !== 'text') throw new Error('Expected a text caption');
+    mounted.state.updateCaption({
+      ...updatedPrimary,
+      caption: {
+        ...updatedPrimary.caption,
+        sentences: [{ id: 'changed', text: 'Changed primary sentence', startMs: 0, endMs: 2_000, words: [] }],
+        style: { ...updatedPrimary.caption.style, color: '#ff00aa', customText: 'Changed primary custom text' },
+      },
+    });
+
+    const updatedFirst = mounted.state.composition.value.clips.find((clip) => clip.id === 'caption-first')!;
+    const updatedSecond = mounted.state.composition.value.clips.find((clip) => clip.id === 'caption-second')!;
+    expect(updatedFirst).toMatchObject({
+      caption: {
+        sentences: [expect.objectContaining({ text: 'Changed primary sentence' })],
+        style: { color: '#ff00aa', customText: 'Changed primary custom text' },
+      },
+    });
+    expect(updatedSecond).toMatchObject({
+      caption: {
+        sentences: [expect.objectContaining({ text: 'Second sentence' })],
+        style: { color: '#ff00aa', customText: 'Second custom text' },
+      },
+    });
   });
 
   it('adds images and audio, handles missing projects/assets, and applies media duration rules', async () => {
@@ -621,7 +852,7 @@ describe('useClipComposition', () => {
     mounted.state.updateSelectedCrop({ x: 0.1, y: 0.1, width: 0.8, height: 0.8 });
     mounted.state.updateSelectedMirrored(true);
     mounted.state.updateSelectedRate(2);
-    expect(() => mounted.state.updateSelectedVolume(150)).toThrow('Only audio');
+    expect(() => mounted.state.updateSelectedVolume(150)).not.toThrow();
     mounted.state.updateSelectedEnabled(false);
     expect(mounted.state.selectedClipInfo.value).toMatchObject({
       borderEnabled: true,

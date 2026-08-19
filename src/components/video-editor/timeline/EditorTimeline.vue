@@ -11,6 +11,7 @@ import type {
   TimelinePasteHighlight,
   TimelinePasteRequest,
 } from './composables/timeline-clipboard-types';
+import type { TrackClipSelection } from './composables/timeline-tracks-types';
 
 const props = withDefaults(
   defineProps<{
@@ -24,6 +25,7 @@ const props = withDefaults(
     selectedZoomId: string | null;
     composition: ClipComposition;
     selectedClipId: string | null;
+    selectedClipIds?: string[];
     zoomLevel: number;
     isSnappingEnabled?: boolean;
     projectId?: string | null;
@@ -35,6 +37,7 @@ const props = withDefaults(
     includeAudioInExport: true,
     newZoomDurationMs: DEFAULT_ZOOM_DURATION_MS,
     canvas: () => ({ ...DEFAULT_OUTPUT_CANVAS, transitions: { ...EMPTY_CLIP_TRANSITIONS } }),
+    selectedClipIds: () => [],
   },
 );
 const emit = defineEmits<{
@@ -43,6 +46,7 @@ const emit = defineEmits<{
   (event: 'update:zoomLevel', value: number): void;
   (event: 'select:zoom', zoomId: string): void;
   (event: 'select:clip', clipId: string): void;
+  (event: 'select:track', selection: TrackClipSelection): void;
   (event: 'toggle:clip', clipId: string): void;
   (event: 'delete:clips', clipIds: string[]): void;
   (event: 'delete:zoom', zoomId: string): void;
@@ -92,6 +96,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
         :selected-zoom-id="selectedZoomId"
         :composition="composition"
         :selected-clip-id="selectedClipId"
+        :selected-clip-ids="selectedClipIds"
         :is-snapping-enabled="isSnappingEnabled"
         :project-id="projectId"
         :recent-paste="recentPaste"
@@ -100,6 +105,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
         @update:zoom-level="emit('update:zoomLevel', $event)"
         @select:zoom="emit('select:zoom', $event)"
         @select:clip="emit('select:clip', $event)"
+        @select:track="emit('select:track', $event)"
         @toggle:clip="emit('toggle:clip', $event)"
         @delete:clips="emit('delete:clips', $event)"
         @delete:zoom="emit('delete:zoom', $event)"

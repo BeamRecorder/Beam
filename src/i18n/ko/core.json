@@ -383,6 +383,9 @@
     "hiddenUntilHovered": "가리킬 때까지 숨김",
     "language": "언어",
     "chooseLanguage": "표시 언어 선택",
+    "advanced": "고급",
+    "spellCheck": "맞춤법 검사",
+    "spellCheckDescription": "선택한 언어가 지원되는 경우 맞춤법이 틀린 단어에 밑줄을 표시합니다.",
     "interactionAccess": "상호작용 접근",
     "interactionAccessReadyDescription": "클릭과 단축키를 캡처합니다. 입력한 텍스트는 저장하지 않습니다.",
     "interactionAccessUnavailableDescription": "이 시스템에서는 상호작용 캡처를 사용할 수 없습니다.",
@@ -448,7 +451,8 @@
   },
   "PropertiesPanel": {
     "properties": "속성",
-    "background": "배경"
+    "background": "배경",
+    "selectionAndMore": "… 외 {count}개"
   },
   "RecorderBar": {
     "recordingControls": "녹화 컨트롤",

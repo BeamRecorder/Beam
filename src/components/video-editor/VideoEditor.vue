@@ -125,6 +125,7 @@ const renderedBackground = computed(() => (outputCanvas.value.showBackground ? s
 const {
   composition,
   selectedClipId,
+  selectedClipIds,
   selectedClip,
   selectedClipInfo,
   selectedCaptionClip,
@@ -133,6 +134,7 @@ const {
   hasSystemAudio,
   hasMicAudio,
   selectClip,
+  selectClips,
   addElement,
   addImportedAsset,
   addCaptionAtTime,
@@ -207,6 +209,7 @@ const canvasComposition = computed(
 );
 const renderedOutputCanvas = computed(() => timelineCanvasPreview.value ?? outputCanvas.value);
 const selectedTransformClip = computed(() => {
+  if (selectedClipIds.value.length !== 1) return null;
   const clip = selectedClip.value;
   return clip && (isVisualClip(clip) || isBlurClip(clip) || isCaptionClip(clip)) ? clip : null;
 });
@@ -218,6 +221,14 @@ const selectEditorClip = (clipId: string) => {
   selectedZoomId.value = null;
   selectClip(clipId);
   activeTab.value = 'clip';
+};
+const selectEditorTrack = (selection: { clipIds: string[]; primaryClipId: string | null; additive?: boolean }) => {
+  selectedZoomId.value = null;
+  isCropping.value = false;
+  selectClips(
+    selection.additive ? [...selectedClipIds.value, ...selection.clipIds] : selection.clipIds,
+    selection.primaryClipId,
+  );
 };
 const selectEditorZoom = (zoomId: string) => {
   selectedClipId.value = null;
@@ -531,6 +542,7 @@ onBeforeUnmount(() => {
           :active-tab="activeTab"
           :selected-clip="selectedClipInfo"
           :selected-caption-clip="selectedCaptionClip"
+          :selected-clip-ids="selectedClipIds"
           v-model:cursor-selection="cursorSelection"
           :cursor-packs="cursorPacks"
           @preview:cursor-selection="cursorPreview = $event"
@@ -680,7 +692,7 @@ onBeforeUnmount(() => {
             :duration="timelinePreviewDuration"
             :is-playing="isPlaying"
             :loading="!initialPlaybackSettled"
-            :can-split="Boolean(selectedClipId)"
+            :can-split="selectedClipIds.length === 1"
             v-model:zoom-level="timelineZoomLevel"
             v-model:is-snapping-enabled="isSnappingEnabled"
             v-model:preview-quality="previewQuality"
@@ -716,10 +728,12 @@ onBeforeUnmount(() => {
           :selected-zoom-id="selectedZoomId"
           :composition="composition"
           :selected-clip-id="selectedClipId"
+          :selected-clip-ids="selectedClipIds"
           :recent-paste="recentPaste"
           :canvas="outputCanvas"
           @select:zoom="selectEditorZoom"
           @select:clip="selectEditorClip"
+          @select:track="selectEditorTrack"
           @toggle:clip="toggleClip"
           @delete:clips="deleteTimelineClips"
           @delete:zoom="deleteZoomById"

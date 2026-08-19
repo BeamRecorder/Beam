@@ -383,6 +383,9 @@
     "hiddenUntilHovered": "悬停前隐藏",
     "language": "语言",
     "chooseLanguage": "选择显示语言",
+    "advanced": "高级",
+    "spellCheck": "拼写检查",
+    "spellCheckDescription": "所选语言受支持时，为拼写错误的单词添加下划线。",
     "interactionAccess": "交互访问",
     "interactionAccessReadyDescription": "捕获点击和快捷键。绝不会保存输入的文本。",
     "interactionAccessUnavailableDescription": "此系统不支持交互捕获。",
@@ -448,7 +451,8 @@
   },
   "PropertiesPanel": {
     "properties": "属性",
-    "background": "背景"
+    "background": "背景",
+    "selectionAndMore": "… 及其他 {count} 项"
   },
   "RecorderBar": {
     "recordingControls": "录制控制",

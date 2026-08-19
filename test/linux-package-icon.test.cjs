@@ -167,6 +167,16 @@ test('desktop packages use the Beam PNG icon and stable desktop identity', () =>
   assertIcns(build.mac.icon, ['icp4', 'icp5', 'icp6', 'ic07', 'ic08', 'ic09', 'ic10']);
   assertPng('public/brand/BeamTray.png', 24, 24);
   assertPng('public/brand/BeamTray@2x.png', 48, 48);
+  assert.equal(
+    fs.readFileSync(path.join(build.linux.icon, '48x48.png')).equals(fs.readFileSync('public/brand/BeamTray@2x.png')),
+    false,
+    'Linux app and tray icons must differ byte-for-byte',
+  );
+  assert.equal(
+    fs.readFileSync(build.win.icon).equals(fs.readFileSync('public/brand/BeamTray.ico')),
+    false,
+    'Windows app and tray icons must differ byte-for-byte',
+  );
   assertPng('public/brand/BeamTrayTemplate.png', 16, 16);
   assertPng('public/brand/BeamTrayTemplate@2x.png', 32, 32);
 });

@@ -383,6 +383,9 @@
     "hiddenUntilHovered": "ホバーするまで非表示",
     "language": "言語",
     "chooseLanguage": "表示言語を選択",
+    "advanced": "詳細",
+    "spellCheck": "スペルチェック",
+    "spellCheckDescription": "選択した言語が対応している場合、スペルミスのある単語に下線を表示します。",
     "interactionAccess": "操作へのアクセス",
     "interactionAccessReadyDescription": "クリックとショートカットを記録します。入力したテキストは保存されません。",
     "interactionAccessUnavailableDescription": "このシステムでは操作の記録を利用できません。",
@@ -448,7 +451,8 @@
   },
   "PropertiesPanel": {
     "properties": "プロパティ",
-    "background": "背景"
+    "background": "背景",
+    "selectionAndMore": "… 他{count}件"
   },
   "RecorderBar": {
     "recordingControls": "録画コントロール",

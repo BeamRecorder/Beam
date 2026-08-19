@@ -215,6 +215,38 @@ describe('editor defaults', () => {
     if (selected.kind === 'audio') expect(result.audio).toEqual(expected);
   });
 
+  it('never persists caption custom text while preserving visual caption preferences', () => {
+    const normalized = normalizeEditorPreferenceDefaults({
+      caption: {
+        style: { ...createDefaultCaptionStyle(42), customText: 'stale caption', color: '#12ab34' },
+        transform: { x: 0.1, y: 0.2, width: 0.7, height: 0.2 },
+        durationMs: 1_000,
+      },
+    });
+
+    expect(normalized.caption?.style).not.toHaveProperty('customText');
+    expect(normalized.caption?.style.color).toBe('#12ab34');
+
+    const selected = caption();
+    selected.caption.style.customText = 'caption from the selected clip';
+    selected.caption.style.color = '#abcdef';
+    const extracted = defaultsFromEditorState(normalized, state(), selected, null);
+
+    expect(extracted.caption?.style).not.toHaveProperty('customText');
+    expect(extracted.caption?.style.color).toBe('#abcdef');
+
+    const applied = captionDefaultsFor({
+      ...extracted,
+      caption: {
+        ...extracted.caption!,
+        style: { ...extracted.caption!.style, customText: 'should never become a new caption' },
+      },
+    } as unknown as EditorPreferenceDefaults);
+
+    expect(applied.style).not.toHaveProperty('customText');
+    expect(applied.style.color).toBe('#abcdef');
+  });
+
   it('applies presentation defaults to a fresh state, normalizes its canvas, and clears imported backgrounds', () => {
     const editorState = state();
     editorState.presentation.importedBackgrounds = [

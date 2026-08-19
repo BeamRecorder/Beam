@@ -383,6 +383,9 @@
     "hiddenUntilHovered": "Скрита до посочване",
     "language": "Език",
     "chooseLanguage": "Изберете езика на интерфейса",
+    "advanced": "Разширени",
+    "spellCheck": "Проверка на правописа",
+    "spellCheckDescription": "Подчертава сгрешените думи на избрания език, когато той се поддържа.",
     "interactionAccess": "Достъп до взаимодействия",
     "interactionAccessReadyDescription": "Записва кликове и клавишни комбинации. Въведеният текст никога не се съхранява.",
     "interactionAccessUnavailableDescription": "Записването на взаимодействия не е достъпно на тази система.",
@@ -448,7 +451,8 @@
   },
   "PropertiesPanel": {
     "properties": "Свойства",
-    "background": "Фон"
+    "background": "Фон",
+    "selectionAndMore": "… и още {count}"
   },
   "RecorderBar": {
     "recordingControls": "Контроли за запис",

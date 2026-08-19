@@ -383,6 +383,9 @@
     "hiddenUntilHovered": "Bis zum Darüberfahren ausgeblendet",
     "language": "Sprache",
     "chooseLanguage": "Anzeigesprache auswählen",
+    "advanced": "Erweitert",
+    "spellCheck": "Rechtschreibprüfung",
+    "spellCheckDescription": "Unterstreicht falsch geschriebene Wörter in der ausgewählten Sprache, wenn sie unterstützt wird.",
     "interactionAccess": "Interaktionszugriff",
     "interactionAccessReadyDescription": "Erfasst Klicks und Tastenkürzel. Eingegebener Text wird nie gespeichert.",
     "interactionAccessUnavailableDescription": "Die Interaktionserfassung ist auf diesem System nicht verfügbar.",
@@ -448,7 +451,8 @@
   },
   "PropertiesPanel": {
     "properties": "Eigenschaften",
-    "background": "Hintergrund"
+    "background": "Hintergrund",
+    "selectionAndMore": "… und {count} weitere"
   },
   "RecorderBar": {
     "recordingControls": "Aufnahmesteuerung",

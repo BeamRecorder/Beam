@@ -12,6 +12,7 @@ const props = defineProps<{
   keyboardClips: CaptionClip[];
   textClips: CaptionClip[];
   selectedClipId: string | null;
+  selectedClipIds: string[];
   hoverCaptionTimeMs: number | null;
   defaultCaptionDurationMs: number;
   percentageStyle: (startMs: number, durationMs: number) => Record<string, string>;
@@ -175,7 +176,7 @@ onUnmounted(() => {
           type="button"
           class="annotation-indicator"
           :class="{
-            selected: selectedClipId === clip.id,
+            selected: selectedClipIds.includes(clip.id) || selectedClipId === clip.id,
             disabled: !clip.enabled,
             'paste-arrival': recentPaste?.type === 'clip' && recentPaste.id === clip.id,
           }"
@@ -222,11 +223,9 @@ onUnmounted(() => {
               :nowrap="true"
               class="caption-edit-throbber"
             />
-            <span
-              v-else
-              class="caption-label-text"
-              :class="{ 'caption-settled': settlingClipIds.has(clip.id) }"
-            >{{ getCaptionText(clip) }}</span>
+            <span v-else class="caption-label-text" :class="{ 'caption-settled': settlingClipIds.has(clip.id) }">{{
+              getCaptionText(clip)
+            }}</span>
           </span>
           <span class="trim-handle end" :title="t('trimEnd')" @pointerdown.stop="beginClipTrim($event, clip, 'end')">
             <span v-if="trimStateFor(clip.id)?.edge === 'end'" class="trim-side-badge">
@@ -261,7 +260,7 @@ onUnmounted(() => {
           type="button"
           class="annotation-indicator"
           :class="{
-            selected: selectedClipId === clip.id,
+            selected: selectedClipIds.includes(clip.id) || selectedClipId === clip.id,
             disabled: !clip.enabled,
             'paste-arrival': recentPaste?.type === 'clip' && recentPaste.id === clip.id,
           }"
@@ -309,11 +308,9 @@ onUnmounted(() => {
               :nowrap="true"
               class="caption-edit-throbber"
             />
-            <span
-              v-else
-              class="caption-label-text"
-              :class="{ 'caption-settled': settlingClipIds.has(clip.id) }"
-            >{{ getCaptionText(clip) }}</span>
+            <span v-else class="caption-label-text" :class="{ 'caption-settled': settlingClipIds.has(clip.id) }">{{
+              getCaptionText(clip)
+            }}</span>
           </span>
           <span class="trim-handle end" :title="t('trimEnd')" @pointerdown.stop="beginClipTrim($event, clip, 'end')">
             <span v-if="trimStateFor(clip.id)?.edge === 'end'" class="trim-side-badge">

@@ -383,6 +383,9 @@
     "hiddenUntilHovered": "游標懸停前隱藏",
     "language": "語言",
     "chooseLanguage": "選擇顯示語言",
+    "advanced": "進階",
+    "spellCheck": "拼字檢查",
+    "spellCheckDescription": "所選語言受支援時，為拼字錯誤的單字加上底線。",
     "interactionAccess": "互動存取",
     "interactionAccessReadyDescription": "擷取點擊和快捷鍵。絕不會儲存輸入的文字。",
     "interactionAccessUnavailableDescription": "此系統不支援互動擷取。",
@@ -448,7 +451,8 @@
   },
   "PropertiesPanel": {
     "properties": "屬性",
-    "background": "背景"
+    "background": "背景",
+    "selectionAndMore": "… 以及其他 {count} 個"
   },
   "RecorderBar": {
     "recordingControls": "錄影控制",

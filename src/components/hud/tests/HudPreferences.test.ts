@@ -85,6 +85,27 @@ describe('HudPreferences', () => {
     expect(wrapper.find('.appearance-settings').exists()).toBe(true);
     expect(wrapper.find('.theme-mode-group').exists()).toBe(true);
   });
+
+  it('opens language advanced settings and toggles spell check', async () => {
+    const wrapper = mountPreferences();
+    const advanced = wrapper.get('.language-title-row .advanced-toggle');
+
+    expect(advanced.attributes('aria-expanded')).toBe('false');
+    expect(wrapper.find('#hud-language-advanced-panel').exists()).toBe(false);
+
+    await advanced.trigger('click');
+
+    expect(advanced.attributes('aria-expanded')).toBe('true');
+    const spellCheck = wrapper.get('#hud-language-advanced-panel [role="switch"]');
+    expect(spellCheck.attributes('aria-checked')).toBe('true');
+
+    capture.updatePreferences.mockResolvedValueOnce({ spellCheck: { enabled: false } });
+    await spellCheck.trigger('click');
+
+    expect(capture.updatePreferences).toHaveBeenCalledWith({ spellCheck: { enabled: false } });
+    expect(spellCheck.attributes('aria-checked')).toBe('false');
+  });
+
   it('shows the interaction switch only when input access is available', async () => {
     const wrapper = mountPreferences({ recordInteractions: true });
 

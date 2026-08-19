@@ -28,7 +28,7 @@ export interface EditorPreferenceDefaults {
   schemaVersion: 1;
   presentation?: Omit<ProjectEditorPresentation, 'importedBackgrounds'>;
   visual?: Partial<Record<VisualClip['kind'], VisualClipDefaults>>;
-  caption?: { style: CaptionStyle; transform?: NormalizedTransform; durationMs: number };
+  caption?: { style: Omit<CaptionStyle, 'customText'>; transform?: NormalizedTransform; durationMs: number };
   blur?: Pick<
     BlurClip,
     'transform' | 'shape' | 'mode' | 'strength' | 'feather' | 'cornerRadius' | 'tintOpacity' | 'color'

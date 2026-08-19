@@ -383,6 +383,9 @@
     "hiddenUntilHovered": "Скрыта до наведения",
     "language": "Язык",
     "chooseLanguage": "Выберите язык интерфейса",
+    "advanced": "Расширенные",
+    "spellCheck": "Проверка орфографии",
+    "spellCheckDescription": "Подчёркивает слова с ошибками на выбранном языке, если он поддерживается.",
     "interactionAccess": "Доступ к взаимодействиям",
     "interactionAccessReadyDescription": "Записывает клики и сочетания клавиш. Введённый текст никогда не сохраняется.",
     "interactionAccessUnavailableDescription": "Запись взаимодействий недоступна в этой системе.",
@@ -448,7 +451,8 @@
   },
   "PropertiesPanel": {
     "properties": "Свойства",
-    "background": "Фон"
+    "background": "Фон",
+    "selectionAndMore": "… и ещё {count}"
   },
   "RecorderBar": {
     "recordingControls": "Управление записью",

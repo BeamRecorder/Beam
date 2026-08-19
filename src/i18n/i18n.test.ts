@@ -223,6 +223,20 @@ describe('internationalization', () => {
     }
   });
 
+  it('resolves the language advanced settings in every supported locale', () => {
+    const keys = ['advanced', 'spellCheck', 'spellCheckDescription'];
+
+    for (const locale of SUPPORTED_LOCALES) {
+      setCurrentLocale(locale);
+      for (const key of keys) {
+        const path = `HudPreferences.${key}`;
+        expect(i18n.global.te(path, locale), `${locale}: missing ${path}`).toBe(true);
+        expect(i18n.global.t(path), `${locale}: unresolved ${path}`).not.toBe(path);
+        expect(i18n.global.t(path), `${locale}: empty ${path}`).not.toBe('');
+      }
+    }
+  });
+
   it('registers every live-HUD onboarding instruction in every supported locale', () => {
     for (const locale of SUPPORTED_LOCALES) {
       setCurrentLocale(locale);
