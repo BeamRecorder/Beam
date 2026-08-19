@@ -46,7 +46,7 @@
         {
           "title": "打开结果",
           "paragraphs": [
-            "导出成功后，Beam 会报告保存的文件名，并提供打开文件的操作。如果导出失败，请先复制技术报告，再在 [Discord](https://discord.gg/6Q6v2xUCB) 或 [GitHub](https://github.com/ExtraBinoss/Beam/issues) 上寻求帮助。"
+            "导出成功后，Beam 会报告保存的文件名，并提供打开文件的操作。如果导出失败，请先复制技术报告，再在 [Discord](https://discord.gg/6Q6v2xUCB) 或 [GitHub](https://github.com/BeamRecorder/Beam/issues) 上寻求帮助。"
           ]
         }
       ]

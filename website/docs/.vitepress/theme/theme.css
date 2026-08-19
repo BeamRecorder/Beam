@@ -137,7 +137,7 @@ body::-webkit-scrollbar-thumb:hover,
 /* External destinations use the richer Beam action group on desktop, while
    remaining available in VitePress's native mobile navigation drawer. */
 .VPNavBarMenuLink[href='https://beam.plinka.eu'],
-.VPNavBarMenuLink[href='https://github.com/ExtraBinoss/Beam'],
+.VPNavBarMenuLink[href='https://github.com/BeamRecorder/Beam'],
 .VPNavBarMenuLink[href='https://discord.gg/6Q6v2xUCB'] {
   display: none;
 }

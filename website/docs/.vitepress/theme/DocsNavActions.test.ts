@@ -65,7 +65,7 @@ describe('DocsNavActions', () => {
 
     await flushPromises();
 
-    expect(fetchMock).toHaveBeenCalledWith('https://api.github.com/repos/ExtraBinoss/Beam', {
+    expect(fetchMock).toHaveBeenCalledWith('https://api.github.com/repos/BeamRecorder/Beam', {
       headers: { Accept: 'application/vnd.github+json' },
     });
     expect(wrapper.get('.github-link strong').text()).toBe('1.2K');
@@ -77,7 +77,7 @@ describe('DocsNavActions', () => {
     await flushPromises();
 
     const githubLink = wrapper.get<HTMLAnchorElement>('.github-link');
-    expect(githubLink.attributes('href')).toBe('https://github.com/ExtraBinoss/Beam');
+    expect(githubLink.attributes('href')).toBe('https://github.com/BeamRecorder/Beam');
     expect(githubLink.attributes('target')).toBe('_blank');
     expect(githubLink.attributes('rel')).toBe('noreferrer');
     expect(githubLink.get('strong').text()).toBe('…');
@@ -87,7 +87,7 @@ describe('DocsNavActions', () => {
     wrapper = mountActions();
 
     expect(wrapper.get('.website-link').attributes('href')).toBe('https://beam.plinka.eu');
-    expect(wrapper.get('.github-link').attributes('href')).toBe('https://github.com/ExtraBinoss/Beam');
+    expect(wrapper.get('.github-link').attributes('href')).toBe('https://github.com/BeamRecorder/Beam');
     expect(wrapper.get('.discord-link').attributes('href')).toBe('https://discord.gg/6Q6v2xUCB');
     expect(wrapper.find('.docs-theme-toggle').exists()).toBe(true);
   });

@@ -19,13 +19,15 @@ fi
 
 for directory in /opt/Beam/resources/input-helper /opt/beam/resources/input-helper
 do
-  for helper in "$directory"/beam-input-helper-*
-  do
-    if [ -x "$helper" ]; then
-      "$helper" install >/dev/null
-      exit 0
-    fi
-  done
+  helper=$(
+    find "$directory" -maxdepth 1 -type f -name 'beam-input-helper-*' -perm /111 -print 2>/dev/null \
+      | sort -V \
+      | tail -n 1
+  )
+  if [ -n "$helper" ]; then
+    "$helper" install >/dev/null
+    exit 0
+  fi
 done
 
 echo "Beam input helper was not found in the installed application" >&2

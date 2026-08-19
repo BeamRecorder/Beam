@@ -56,7 +56,7 @@ describe('DocsProductCard', () => {
   });
 
   it('does not rewrite external product links', () => {
-    const link = 'https://github.com/ExtraBinoss/Beam';
+    const link = 'https://github.com/BeamRecorder/Beam';
     const wrapper = mountCard({ link });
 
     expect(wrapper.get('a').attributes('href')).toBe(link);

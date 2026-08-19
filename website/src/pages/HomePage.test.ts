@@ -82,6 +82,6 @@ describe('HomePage', () => {
     expect(community.text()).toContain('View on GitHub');
     expect(community.text()).toContain('Join Discord');
     expect(wrapper.text()).toContain('Download Beam — Free');
-    expect(wrapper.find('a[href="https://github.com/ExtraBinoss/Beam"]').exists()).toBe(true);
+    expect(wrapper.find('a[href="https://github.com/BeamRecorder/Beam"]').exists()).toBe(true);
   });
 });

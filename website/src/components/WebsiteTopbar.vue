@@ -38,7 +38,7 @@ onMounted(() => void github.load());
         </a>
         <a
           class="github-stars"
-          href="https://github.com/ExtraBinoss/Beam"
+          href="https://github.com/BeamRecorder/Beam"
           target="_blank"
           rel="noreferrer"
           :aria-label="t('Website.nav.starAria')"

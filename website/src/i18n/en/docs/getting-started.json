@@ -9,7 +9,7 @@
         {
           "title": "Install Beam",
           "paragraphs": [
-            "Download the latest release from the [Beam releases page](https://github.com/ExtraBinoss/Beam/releases/latest). Choose the package for your operating system."
+            "Download the latest release from the [Beam releases page](https://github.com/BeamRecorder/Beam/releases/latest). Choose the package for your operating system."
           ],
           "bullets": [
             "Windows uses the native installer.",
@@ -88,7 +88,7 @@
         {
           "title": "If the updater fails",
           "paragraphs": [
-            "Use Copy error to keep the diagnostic message, then download the correct package manually from the [latest Beam release](https://github.com/ExtraBinoss/Beam/releases/latest). Your projects are stored separately from the application installation."
+            "Use Copy error to keep the diagnostic message, then download the correct package manually from the [latest Beam release](https://github.com/BeamRecorder/Beam/releases/latest). Your projects are stored separately from the application installation."
           ]
         }
       ]

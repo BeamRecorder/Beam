@@ -46,7 +46,7 @@
         {
           "title": "結果を開く",
           "paragraphs": [
-            "書き出しが成功すると、Beamは保存したファイル名を表示し、ファイルを開く操作を提供します。書き出しに失敗した場合は、[Discord](https://discord.gg/6Q6v2xUCB)または[GitHub](https://github.com/ExtraBinoss/Beam/issues)で助けを求める前に技術レポートをコピーしてください。"
+            "書き出しが成功すると、Beamは保存したファイル名を表示し、ファイルを開く操作を提供します。書き出しに失敗した場合は、[Discord](https://discord.gg/6Q6v2xUCB)または[GitHub](https://github.com/BeamRecorder/Beam/issues)で助けを求める前に技術レポートをコピーしてください。"
           ]
         }
       ]

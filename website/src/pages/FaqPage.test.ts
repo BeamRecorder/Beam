@@ -150,7 +150,7 @@ describe('FaqPage', () => {
     expect(actions).toHaveLength(3);
     expect(actions.map((action) => action.attributes('href'))).toEqual([
       '/docs/',
-      'https://github.com/ExtraBinoss/Beam',
+      'https://github.com/BeamRecorder/Beam',
       'https://discord.gg/6Q6v2xUCB',
     ]);
     expect(actions[0]?.find('svg').exists()).toBe(true);

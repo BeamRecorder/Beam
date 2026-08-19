@@ -81,7 +81,7 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "ExtraBinoss",
+        "owner": "BeamRecorder",
         "repo": "Beam"
       }
     ],
@@ -124,7 +124,7 @@
         "deb",
         "rpm"
       ],
-      "icon": "public/brand/BeamIcon.png",
+      "icon": "build/icons/linux",
       "syncDesktopName": true,
       "category": "AudioVideo",
       "artifactName": "${productName}-${version}-linux-${arch}.${ext}",

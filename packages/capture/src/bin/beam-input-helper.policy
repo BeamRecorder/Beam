@@ -3,7 +3,7 @@
   "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
 <policyconfig>
   <vendor>Beam</vendor>
-  <vendor_url>https://github.com/ExtraBinoss/Beam</vendor_url>
+  <vendor_url>https://github.com/BeamRecorder/Beam</vendor_url>
   <action id="com.beam.input-monitor">
     <description>Allow Beam to capture clicks and keyboard shortcuts</description>
     <message>Authorization is required to update Beam interaction access</message>

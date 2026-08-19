@@ -9,7 +9,7 @@
         {
           "title": "Beam 설치",
           "paragraphs": [
-            "[Beam 릴리스 페이지](https://github.com/ExtraBinoss/Beam/releases/latest)에서 최신 릴리스를 다운로드하세요. 운영체제에 맞는 패키지를 선택하세요."
+            "[Beam 릴리스 페이지](https://github.com/BeamRecorder/Beam/releases/latest)에서 최신 릴리스를 다운로드하세요. 운영체제에 맞는 패키지를 선택하세요."
           ],
           "bullets": [
             "Windows는 네이티브 설치 프로그램을 사용합니다.",
@@ -88,7 +88,7 @@
         {
           "title": "업데이트 프로그램이 실패한 경우",
           "paragraphs": [
-            "오류 복사를 사용해 진단 메시지를 보관한 다음 [최신 Beam 릴리스](https://github.com/ExtraBinoss/Beam/releases/latest)에서 올바른 패키지를 직접 다운로드하세요. 프로젝트는 애플리케이션 설치 위치와 별도로 저장됩니다."
+            "오류 복사를 사용해 진단 메시지를 보관한 다음 [최신 Beam 릴리스](https://github.com/BeamRecorder/Beam/releases/latest)에서 올바른 패키지를 직접 다운로드하세요. 프로젝트는 애플리케이션 설치 위치와 별도로 저장됩니다."
           ]
         }
       ]

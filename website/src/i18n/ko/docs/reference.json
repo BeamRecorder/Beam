@@ -46,7 +46,7 @@
         {
           "title": "결과 열기",
           "paragraphs": [
-            "내보내기가 성공하면 Beam은 저장된 파일 이름을 표시하고 파일을 여는 작업을 제공합니다. 내보내기가 실패하면 [Discord](https://discord.gg/6Q6v2xUCB) 또는 [GitHub](https://github.com/ExtraBinoss/Beam/issues)에서 도움을 요청하기 전에 기술 보고서를 복사하세요."
+            "내보내기가 성공하면 Beam은 저장된 파일 이름을 표시하고 파일을 여는 작업을 제공합니다. 내보내기가 실패하면 [Discord](https://discord.gg/6Q6v2xUCB) 또는 [GitHub](https://github.com/BeamRecorder/Beam/issues)에서 도움을 요청하기 전에 기술 보고서를 복사하세요."
           ]
         }
       ]

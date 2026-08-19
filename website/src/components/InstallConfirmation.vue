@@ -71,7 +71,7 @@ const startDownload = (platform = selectedPlatform.value) => {
   link.remove();
 };
 
-const openRelease = () => window.open('https://github.com/ExtraBinoss/Beam/releases/latest', '_blank', 'noopener');
+const openRelease = () => window.open('https://github.com/BeamRecorder/Beam/releases/latest', '_blank', 'noopener');
 const openDiscord = () => window.open('https://discord.gg/6Q6v2xUCB', '_blank', 'noopener');
 
 watch(
