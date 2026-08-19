@@ -240,6 +240,7 @@ export interface PreferenceSettings {
   appearance?: AppearanceSettings;
   recordingBar: { visibility: RecordingBarVisibility };
   recordingInteractions: { enabled: boolean; noticeDismissed: boolean };
+  spellCheck?: { enabled: boolean };
   onboardingCompleted?: boolean;
   devices: Record<string, unknown>;
   shortcuts: Record<string, PreferenceShortcut>;
@@ -247,8 +248,11 @@ export interface PreferenceSettings {
   extras: Record<string, unknown>;
 }
 
-export type PreferencePatch = Partial<Omit<PreferenceSettings, 'recordingInteractions' | 'appearance'>> & {
+export type PreferencePatch = Partial<
+  Omit<PreferenceSettings, 'recordingInteractions' | 'spellCheck' | 'appearance'>
+> & {
   recordingInteractions?: Partial<PreferenceSettings['recordingInteractions']>;
+  spellCheck?: Partial<PreferenceSettings['spellCheck']>;
   appearance?: Partial<AppearanceSettings>;
 };
 

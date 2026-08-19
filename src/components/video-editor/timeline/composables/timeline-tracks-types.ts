@@ -23,10 +23,18 @@ export interface TimelineTracksProps {
   selectedZoomId: string | null;
   composition: ClipComposition;
   selectedClipId: string | null;
+  selectedClipIds?: string[];
   isSnappingEnabled?: boolean;
   projectId?: string | null;
   recentPaste?: TimelinePasteHighlight | null;
   canvas?: OutputCanvasSettings;
+}
+
+export interface TrackClipSelection {
+  clipIds: string[];
+  primaryClipId: string | null;
+  trackNames: string[];
+  additive?: boolean;
 }
 
 export interface TimelineTracksEmits {
@@ -34,6 +42,7 @@ export interface TimelineTracksEmits {
   (event: 'update:zoomLevel', value: number): void;
   (event: 'select:zoom', zoomId: string): void;
   (event: 'select:clip', clipId: string): void;
+  (event: 'select:track', selection: TrackClipSelection): void;
   (event: 'toggle:clip', clipId: string): void;
   (event: 'delete:clips', clipIds: string[]): void;
   (event: 'delete:zoom', zoomId: string): void;

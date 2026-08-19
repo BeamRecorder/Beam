@@ -16,7 +16,7 @@ function createProjectEditorAccess(options) {
     const current = manifest.editor;
     if (
       current?.schemaVersion === 3 &&
-      current.composition?.schemaVersion === 9 &&
+      current.composition?.schemaVersion === 11 &&
       current.presentation?.cursor?.selection
     ) {
       const composition = normalizeComposition(current.composition);
@@ -33,7 +33,7 @@ function createProjectEditorAccess(options) {
       schemaVersion: 3,
       ...(current?.applyGlobalDefaults === true ? { applyGlobalDefaults: true } : {}),
       composition:
-        legacyComposition.schemaVersion === 9
+        legacyComposition.schemaVersion === 11
           ? normalizeComposition(legacyComposition)
           : migrateComposition(
               legacyComposition,

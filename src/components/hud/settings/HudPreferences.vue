@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { Keyboard, Info, Sparkles } from '@lucide/vue';
 import { useLocaleStore } from '~/stores/locale';
 import { useTranslate } from '~/i18n/useTranslate';
 import { capture } from '~/api/capture';
 import Button from '~/ui/button/Button.vue';
+import AdvancedButton from '~/ui/button/AdvancedButton.vue';
 import Select from '~/ui/select/Select.vue';
 import Divider from '~/ui/divider/Divider.vue';
 import ShortcutPreferences from './ShortcutPreferences.vue';
@@ -16,6 +17,7 @@ import { isSupportedLocale, localeOptions } from '~/i18n/locales';
 import type { RecordingBarVisibility } from '../recorder/recording-types';
 import type { InteractionAccessViewState } from '../interactions/interaction-access-types';
 import InteractionAccessControl from '../interactions/InteractionAccessControl.vue';
+import SpellCheckPreference from '~/components/settings/SpellCheckPreference.vue';
 
 const { t } = useTranslate('HudPreferences');
 const { t: tHud } = useTranslate('HUD');
@@ -56,6 +58,7 @@ const emit = defineEmits<{
 }>();
 
 const localeStore = useLocaleStore();
+const languageAdvancedOpen = ref(false);
 const currentView = computed({
   get: () => props.view,
   set: (val) => emit('update:view', val),
@@ -186,19 +189,32 @@ const openOnboarding = () => {
             <Divider :label="t('categoryGeneral')" spacing="none" />
           </div>
 
-          <div class="preference-item">
-            <div class="preference-copy">
-              <p class="preference-title">{{ t('language') }}</p>
-              <p class="preference-description">{{ t('chooseLanguage') }}</p>
+          <div class="preference-item language-preference-item">
+            <div class="language-preference-main">
+              <div class="language-title-row">
+                <p class="preference-title">{{ t('language') }}</p>
+                <AdvancedButton
+                  :open="languageAdvancedOpen"
+                  controls="hud-language-advanced-panel"
+                  :label="t('advanced')"
+                  @update:open="languageAdvancedOpen = $event"
+                />
+              </div>
+              <div class="language-control-row">
+                <p class="preference-description">{{ t('chooseLanguage') }}</p>
+                <div class="language-select preference-control">
+                  <Select
+                    :model-value="localeStore.locale"
+                    :options="localeOptions"
+                    size="sm"
+                    direction="up"
+                    @update:model-value="updateLocale"
+                  />
+                </div>
+              </div>
             </div>
-            <div class="language-select preference-control">
-              <Select
-                :model-value="localeStore.locale"
-                :options="localeOptions"
-                size="sm"
-                direction="up"
-                @update:model-value="updateLocale"
-              />
+            <div v-if="languageAdvancedOpen" id="hud-language-advanced-panel" class="hud-language-advanced-panel">
+              <SpellCheckPreference />
             </div>
           </div>
 
@@ -312,6 +328,32 @@ const openOnboarding = () => {
 .preference-appearance-item {
   flex-direction: column;
   align-items: stretch;
+}
+.language-preference-item {
+  align-items: stretch;
+  flex-direction: column;
+}
+.language-preference-main,
+.language-title-row,
+.language-control-row {
+  display: flex;
+}
+.language-preference-main {
+  flex-direction: column;
+  gap: 4px;
+}
+.language-title-row,
+.language-control-row {
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.language-title-row {
+  min-height: 24px;
+}
+.hud-language-advanced-panel {
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
 }
 .preference-copy {
   flex: 1 1 auto;

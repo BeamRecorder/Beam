@@ -4,6 +4,7 @@ import { ArrowLeft, Blend } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import ClipActionGroup from './clip/ClipActionGroup.vue';
+import PropertiesSelectionSummary from './PropertiesSelectionSummary.vue';
 
 defineProps<{
   title: string;
@@ -19,6 +20,7 @@ defineProps<{
   disabledLabel: string;
   deleteLabel: string;
   transitionButtonLabel: string;
+  selectionNames?: string[];
 }>();
 const emit = defineEmits<{
   (event: 'back'): void;
@@ -44,7 +46,10 @@ defineExpose({ focusTransitionButton });
           <Button variant="ghost" size="xs" :icon="ArrowLeft" icon-only aria-label="Back" @click="emit('back')" />
           <h3 class="panel-title">{{ transitionTitle }}</h3>
         </div>
-        <h3 v-else class="panel-title">{{ title }}</h3>
+        <div v-else class="panel-title-block">
+          <h3 class="panel-title">{{ title }}</h3>
+          <PropertiesSelectionSummary v-if="selectionNames?.length" :names="selectionNames" />
+        </div>
         <ClipActionGroup
           v-if="showClipActions && !transitionsOpen"
           ref="transitionButton"
@@ -83,9 +88,9 @@ defineExpose({ focusTransitionButton });
   flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
-  height: 56px;
-  min-height: 56px;
-  max-height: 56px;
+  height: 64px;
+  min-height: 64px;
+  max-height: 64px;
   padding: 0 20px;
   box-sizing: border-box;
 }
@@ -106,6 +111,11 @@ defineExpose({ focusTransitionButton });
   line-height: 24px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.panel-title-block {
+  display: grid;
+  width: 50%;
+  min-width: 0;
 }
 .panel-title-navigation {
   display: flex;

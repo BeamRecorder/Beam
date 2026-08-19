@@ -422,6 +422,9 @@
     "hiddenUntilHovered": "Masquée jusqu’au survol",
     "language": "Langue",
     "chooseLanguage": "Choisir la langue d'affichage",
+    "advanced": "Avancé",
+    "spellCheck": "Correction orthographique",
+    "spellCheckDescription": "Souligne les mots mal orthographiés dans la langue sélectionnée lorsqu’elle est prise en charge.",
     "interactionAccess": "Accès aux interactions",
     "interactionAccessReadyDescription": "Capture les clics et les raccourcis. Le texte saisi n’est jamais conservé.",
     "interactionAccessUnavailableDescription": "La capture des interactions est indisponible sur ce système.",
@@ -487,7 +490,8 @@
   },
   "PropertiesPanel": {
     "properties": "Propriétés",
-    "background": "Arrière-plan"
+    "background": "Arrière-plan",
+    "selectionAndMore": "… et {count} de plus"
   },
   "RecorderBar": {
     "recordingControls": "Contrôles d'enregistrement",

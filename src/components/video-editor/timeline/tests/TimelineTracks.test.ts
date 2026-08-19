@@ -584,7 +584,7 @@ describe('TimelineTracks', () => {
     expect(thumbnailSlots[0]!).toEqual({ timelineSeconds: 2, durationSeconds: 1 });
   });
 
-  it('renders ordered visual/audio/caption tracks and scrubs, zooms, selects, and toggles them', async () => {
+  it('renders ordered visual/audio/caption tracks and scrubs, zooms, and selects them', async () => {
     const mounted = await mountTracks();
     expect(mounted!.findAll('.tracks-stack .visual-track')).toHaveLength(3);
     expect(mounted!.find('.ruler-export-progress-bar').attributes('style')).toContain('25%');
@@ -629,8 +629,11 @@ describe('TimelineTracks', () => {
     expect(pendingFrames).toHaveLength(1);
     flushAnimationFrames();
     expect(mounted!.emitted('update:zoomLevel')).toContainEqual([3_200]);
-    await mounted!.get('.sidebar-tracks-stack .visual-track .track-info').trigger('click');
-    expect(mounted!.emitted('toggle:clip')).toContainEqual(['image-clip']);
+    await mounted!.get('[data-track-id="image-track"] .track-info').trigger('click');
+    expect(mounted!.emitted('select:track')).toContainEqual([
+      { clipIds: ['image-clip'], primaryClipId: 'image-clip', trackNames: ['Poster'] },
+    ]);
+    expect(mounted!.emitted('toggle:clip') ?? []).toHaveLength(0);
 
     expect(mounted!.find('.audio-track-actions').exists()).toBe(false);
 
@@ -794,30 +797,108 @@ describe('TimelineTracks', () => {
 
     const sidebarRows = mounted!.findAll('.sidebar-tracks-stack .visual-track');
     expect(sidebarRows).toHaveLength(3);
-    await sidebarRows[0]!.get('.track-info').trigger('click');
-    expect(mounted!.emitted('toggle:clip')).toHaveLength(1);
+    const screenHeader = sidebarRows.find((row) => row.attributes('data-track-id') === 'screen-track');
+    if (!screenHeader) throw new Error('Expected the segmented screen track header.');
+    await screenHeader.get('.track-info').trigger('click');
+    expect(mounted!.emitted('select:track')).toContainEqual([
+      expect.objectContaining({
+        clipIds: expect.arrayContaining(['screen-left', 'screen-right']),
+        primaryClipId: 'screen-right',
+      }),
+    ]);
+    expect(mounted!.emitted('toggle:clip') ?? []).toHaveLength(0);
   });
 
-  it('selects the webcam segment at the playhead from its track header, then falls back to the nearest segment', async () => {
+  it('selects every webcam segment and uses the segment nearest the playhead as primary', async () => {
     const mounted = await mountTracks({ composition: cameraTrackComposition(), currentTime: 1 });
     const cameraHeader = mounted!.get('[data-track-id="camera-track"] .track-info');
 
     await cameraHeader.trigger('click');
-    expect(mounted!.emitted('select:clip')).toContainEqual(['camera-left']);
+    expect(mounted!.emitted('select:track')).toContainEqual([
+      {
+        clipIds: ['camera-left', 'camera-right'],
+        primaryClipId: 'camera-left',
+        trackNames: ['Webcam'],
+      },
+    ]);
     expect(mounted!.emitted('toggle:clip') ?? []).toHaveLength(0);
 
     await mounted!.setProps({ currentTime: 6.5 });
     await cameraHeader.trigger('click');
-    expect(mounted!.emitted('select:clip')).toContainEqual(['camera-right']);
+    expect(mounted!.emitted('select:track')).toContainEqual([
+      {
+        clipIds: ['camera-right', 'camera-left'],
+        primaryClipId: 'camera-right',
+        trackNames: ['Webcam'],
+      },
+    ]);
   });
 
-  it('keeps non-camera track headers on their existing toggle behavior', async () => {
-    const mounted = await mountTracks();
-    const imageHeader = mounted!.get('[data-track-id="image-track"] .track-info');
+  it('selects all keyboard and text caption clips from their headers', async () => {
+    const base = composition();
+    const secondKeyboard = {
+      ...keyboardCaption(),
+      id: 'keyboard-caption-2',
+      timelineStartMs: 7_000,
+      sourceDurationMs: 1_000,
+    } satisfies CaptionClip;
+    const textCaption = base.clips.find((clip): clip is CaptionClip => clip.id === 'caption-clip');
+    if (!textCaption) throw new Error('Expected the base text caption clip.');
+    const secondText = {
+      ...textCaption,
+      id: 'caption-clip-2',
+      timelineStartMs: 8_000,
+    } satisfies CaptionClip;
+    const mounted = await mountTracks({
+      composition: { ...base, clips: [...base.clips, keyboardCaption(), secondKeyboard, secondText] },
+    });
 
-    await imageHeader.trigger('click');
-    expect(mounted!.emitted('toggle:clip')).toContainEqual(['image-clip']);
-    expect(mounted!.emitted('select:clip') ?? []).toHaveLength(0);
+    await mounted!.get('.sidebar-tracks-stack .keyboard-caption-track .track-info').trigger('click');
+    expect(mounted!.emitted('select:track')).toContainEqual([
+      {
+        clipIds: ['keyboard-caption', 'keyboard-caption-2'],
+        primaryClipId: 'keyboard-caption',
+        trackNames: ['Keyboard Captions'],
+      },
+    ]);
+
+    await mounted!.get('.sidebar-tracks-stack .text-caption-track .track-info').trigger('click');
+    expect(mounted!.emitted('select:track')).toContainEqual([
+      {
+        clipIds: ['caption-clip', 'caption-clip-2'],
+        primaryClipId: 'caption-clip',
+        trackNames: ['Text Captions'],
+      },
+    ]);
+    expect(mounted!.emitted('toggle:clip') ?? []).toHaveLength(0);
+  });
+
+  it('selects all clips in an audio header without toggling the track', async () => {
+    const base = composition();
+    const mounted = await mountTracks({
+      composition: {
+        ...base,
+        clips: [
+          ...base.clips.filter((clip) => clip.id !== 'imported-audio'),
+          importedAudio({ id: 'audio-left', timelineStartMs: 0, sourceDurationMs: 2_000 }),
+          importedAudio({ id: 'audio-right', timelineStartMs: 2_000, sourceInMs: 2_000, sourceDurationMs: 2_000 }),
+        ],
+      },
+    });
+    const importedHeader = mounted!
+      .findAll('.sidebar-tracks-stack .audio-track')
+      .find((row) => row.text().includes('Imported audio'));
+    if (!importedHeader) throw new Error('Expected the imported audio header.');
+
+    await importedHeader.get('.track-info').trigger('click');
+    expect(mounted!.emitted('select:track')).toContainEqual([
+      {
+        clipIds: ['audio-left', 'audio-right'],
+        primaryClipId: 'audio-left',
+        trackNames: ['Imported audio'],
+      },
+    ]);
+    expect(mounted!.emitted('toggle:clip') ?? []).toHaveLength(0);
   });
 
   it('keeps the keyboard track above text, uses Lucide icons, and reserves manual additions for text', async () => {
@@ -845,6 +926,22 @@ describe('TimelineTracks', () => {
     const mounted = await mountTracks();
     expect(mounted!.find('.keyboard-caption-track').exists()).toBe(false);
     expect(mounted!.find('.text-caption-track').exists()).toBe(true);
+  });
+
+  it('highlights every clip listed in selectedClipIds at the same time', async () => {
+    const mounted = await mountTracks({
+      selectedClipId: 'screen-clip',
+      selectedClipIds: ['screen-clip', 'image-clip', 'caption-clip', 'system-audio'],
+    });
+
+    const clips = mounted!.findAllComponents(TimelineClipStub);
+    expect(clips.find((clip) => clip.props('clip').id === 'screen-clip')?.props('selected')).toBe(true);
+    expect(clips.find((clip) => clip.props('clip').id === 'image-clip')?.props('selected')).toBe(true);
+    expect(clips.find((clip) => clip.props('clip').id === 'system-audio')?.props('selected')).toBe(true);
+    expect(clips.find((clip) => clip.props('clip').id === 'webcam-clip')?.props('selected')).toBe(false);
+    expect(mounted!.get('.text-caption-track .annotation-indicator:not(.preview-ghost)').classes()).toContain(
+      'selected',
+    );
   });
 
   it('forwards per-clip waveform slices, loading status, and real errors to TimelineClip', async () => {

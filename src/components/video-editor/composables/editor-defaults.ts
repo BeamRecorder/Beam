@@ -4,6 +4,7 @@ import {
   isBlurClip,
   isCaptionClip,
   isVisualClip,
+  type CaptionStyle,
   type Clip,
   type VisualClip,
 } from '~/media/shared/composition-types';
@@ -28,6 +29,11 @@ const transform = (value: unknown, fallback: VisualClipDefaults['transform']) =>
     height: finite(input.height, fallback.height),
   };
   return next.width > 0 && next.height > 0 ? next : fallback;
+};
+
+const captionPreferenceStyle = (value: unknown): Omit<CaptionStyle, 'customText'> => {
+  const { customText: _customText, ...style } = record(value);
+  return clone(style) as Omit<CaptionStyle, 'customText'>;
 };
 
 const visualDefaults = (kind: VisualClip['kind'], value: unknown): VisualClipDefaults => {
@@ -76,7 +82,12 @@ export const normalizeEditorPreferenceDefaults = (value: unknown): EditorPrefere
       : {}),
     ...(Object.keys(visual).length ? { visual } : {}),
     ...(input.caption && typeof input.caption === 'object'
-      ? { caption: clone(input.caption as EditorPreferenceDefaults['caption']) }
+      ? {
+          caption: {
+            ...clone(record(input.caption)),
+            style: captionPreferenceStyle(record(input.caption).style),
+          } as EditorPreferenceDefaults['caption'],
+        }
       : {}),
     ...(input.blur && typeof input.blur === 'object'
       ? { blur: clone(input.blur as EditorPreferenceDefaults['blur']) }
@@ -103,7 +114,7 @@ export function defaultsFromEditorState(
     next.visual = { ...next.visual, [selectedClip.kind]: visualDefaults(selectedClip.kind, selectedClip) };
   } else if (selectedClip && isCaptionClip(selectedClip)) {
     next.caption = {
-      style: clone(selectedClip.caption.style),
+      style: captionPreferenceStyle(selectedClip.caption.style),
       ...(selectedClip.transform ? { transform: clone(selectedClip.transform) } : {}),
       durationMs: selectedClip.timelineDurationMs,
     };
@@ -165,7 +176,10 @@ export const visualClipDefaultProps = (
 };
 
 export const captionDefaultsFor = (defaults: EditorPreferenceDefaults, fontSize = 42) => ({
-  style: { ...createDefaultCaptionStyle(fontSize), ...defaults.caption?.style },
+  style: {
+    ...createDefaultCaptionStyle(fontSize),
+    ...captionPreferenceStyle(defaults.caption?.style),
+  },
   transform: defaults.caption?.transform ? clone(defaults.caption.transform) : undefined,
   durationMs: Math.max(200, defaults.caption?.durationMs ?? 2_000),
 });

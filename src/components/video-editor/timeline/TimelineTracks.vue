@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { GripVertical, Keyboard, Mic, MousePointer, Type, Volume2 } from '@lucide/vue';
 import TimelineClip from './TimelineClip.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useTimelineTracks } from './composables/useTimelineTracks';
@@ -12,12 +11,14 @@ import TimelineCanvasTransitionTrack from './TimelineCanvasTransitionTrack.vue';
 import { EMPTY_CLIP_TRANSITIONS } from '~/media/shared/clip-transitions';
 import { DEFAULT_OUTPUT_CANVAS } from '../canvas/output-canvas';
 import { useTimelineClipboardShortcuts } from './composables/useTimelineClipboardShortcuts';
+import TimelineTrackHeaders from './TimelineTrackHeaders.vue';
 const { t } = useTranslate('TimelineTracks');
 const props = withDefaults(defineProps<TimelineTracksProps>(), {
   isSnappingEnabled: true,
   includeAudioInExport: true,
   projectId: null,
   recentPaste: null,
+  selectedClipIds: () => [],
   canvas: () => ({ ...DEFAULT_OUTPUT_CANVAS, transitions: { ...EMPTY_CLIP_TRANSITIONS } }),
 });
 const emit = defineEmits<TimelineTracksEmits>();
@@ -64,15 +65,13 @@ const {
   hoverAt,
   leaveTrack,
   addAt,
-  handleVisualTrackHeader,
-  iconForVisual,
-  labelForVisual,
+  selectTrack,
   zoomScale,
   draggedTrackId,
   beginReorder,
   newZoomDurationMs,
   DEFAULT_CAPTION_DURATION_MS,
-} = useTimelineTracks(props, emit, t);
+} = useTimelineTracks(props, emit);
 void [tracksScrollRef, sidebarScrollRef, tracksViewportRef, ticksAreaRef];
 const {
   contextMenuState,
@@ -109,6 +108,10 @@ const exportProgressPercent = computed(() => {
   return Math.min(100, Math.max(0, (current / total) * 100));
 });
 const canvasTransitions = computed(() => props.canvas.transitions ?? EMPTY_CLIP_TRANSITIONS);
+const selectedClipIdSet = computed(
+  () =>
+    new Set(props.selectedClipIds?.length ? props.selectedClipIds : props.selectedClipId ? [props.selectedClipId] : []),
+);
 const hasCanvasTransitions = computed(() => Boolean(canvasTransitions.value.entry || canvasTransitions.value.exit));
 const updateCanvasTransitions = (transitions: NonNullable<typeof props.canvas.transitions>) =>
   emit('update:canvas', { ...props.canvas, transitions });
@@ -128,92 +131,19 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
             :duration-ms="layoutDurationMs"
             @open="emit('open:canvas-transition', $event)"
           />
-          <TransitionGroup name="track-reorder" tag="div" class="visual-tracks-group">
-            <div
-              v-for="track in visualTracks"
-              :key="track.id"
-              class="sidebar-track-item visual-track"
-              :data-track-id="track.id"
-              :class="{ disabled: !track.clips.some((clip) => clip.enabled), dragging: draggedTrackId === track.id }"
-              @contextmenu="openTrackContextMenu($event, 'visual', track.id)"
-            >
-              <button
-                type="button"
-                class="track-info"
-                :title="track.representative.name"
-                @click="handleVisualTrackHeader(track.clips)"
-                @pointerdown="beginReorder($event, track.id, track.representative.id)"
-              >
-                <span class="track-drag-handle" @click.stop>
-                  <GripVertical class="track-grip" />
-                </span>
-                <component :is="iconForVisual(track.representative)" class="track-icon" />
-                <span class="track-title">{{ labelForVisual(track.representative) }}</span>
-              </button>
-            </div>
-          </TransitionGroup>
-          <div class="sidebar-track-item cursor-track" @contextmenu="openTrackContextMenu($event, 'zoom')">
-            <div class="track-info static-info">
-              <MousePointer class="track-icon" /><span class="track-title">{{ t('zooms') }}</span>
-            </div>
-          </div>
-          <div
-            v-if="keyboardCaptionClips.length"
-            class="sidebar-track-item annotation-track keyboard-caption-track"
-            @contextmenu="openTrackContextMenu($event, 'caption')"
-          >
-            <div class="track-info static-info">
-              <Keyboard class="track-icon" /><span class="track-title">{{ t('keyboardCaptions') }}</span>
-            </div>
-          </div>
-          <div
-            class="sidebar-track-item annotation-track text-caption-track"
-            @contextmenu="openTrackContextMenu($event, 'caption')"
-          >
-            <div class="track-info static-info">
-              <Type class="track-icon" /><span class="track-title">{{ t('textCaptions') }}</span>
-            </div>
-          </div>
-          <div
-            v-if="systemAudioClips.length"
-            class="sidebar-track-item audio-track"
-            :class="{ disabled: !includeAudioInExport || !systemAudioClips.some((clip) => clip.enabled) }"
-            @contextmenu="openTrackContextMenu($event, 'audio')"
-          >
-            <div class="track-info">
-              <Volume2 class="track-icon" /><span class="track-title">{{ t('system') }}</span>
-              <span v-if="!includeAudioInExport" class="export-disabled-status">{{
-                t('audioDisabledFromExport')
-              }}</span>
-            </div>
-          </div>
-          <div
-            v-if="microphoneClips.length"
-            class="sidebar-track-item audio-track"
-            :class="{ disabled: !includeAudioInExport || !microphoneClips.some((clip) => clip.enabled) }"
-            @contextmenu="openTrackContextMenu($event, 'audio')"
-          >
-            <div class="track-info">
-              <Mic class="track-icon" /><span class="track-title">{{ t('mic') }}</span>
-              <span v-if="!includeAudioInExport" class="export-disabled-status">{{
-                t('audioDisabledFromExport')
-              }}</span>
-            </div>
-          </div>
-          <div
-            v-for="track in importedAudioTracks"
-            :key="track.id"
-            class="sidebar-track-item audio-track"
-            :class="{ disabled: !includeAudioInExport || !track.clips.some((clip) => clip.enabled) }"
-            @contextmenu="openTrackContextMenu($event, 'audio')"
-          >
-            <div class="track-info">
-              <Volume2 class="track-icon" /><span class="track-title">{{ track.representative.name }}</span>
-              <span v-if="!includeAudioInExport" class="export-disabled-status">{{
-                t('audioDisabledFromExport')
-              }}</span>
-            </div>
-          </div>
+          <TimelineTrackHeaders
+            :visual-tracks="visualTracks"
+            :keyboard-caption-clips="keyboardCaptionClips"
+            :text-caption-clips="textCaptionClips"
+            :system-audio-clips="systemAudioClips"
+            :microphone-clips="microphoneClips"
+            :imported-audio-tracks="importedAudioTracks"
+            :include-audio-in-export="includeAudioInExport"
+            :dragged-track-id="draggedTrackId"
+            :select-track="selectTrack"
+            :begin-reorder="beginReorder"
+            :open-track-context-menu="openTrackContextMenu"
+          />
         </div>
       </div>
     </div>
@@ -292,7 +222,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                   :timeline-width-px="rulerWidth"
                   :thumbnail-slots="thumbnailSlots"
                   :defer-thumbnail-requests="activeTrimState !== null || movingClipIds.includes(clip.id)"
-                  :selected="selectedClipId === clip.id"
+                  :selected="selectedClipIdSet.has(clip.id)"
                   :trim-state="trimStateFor(clip.id)"
                   :paste-highlight="recentPaste?.type === 'clip' && recentPaste.id === clip.id"
                   @select="emit('select:clip', clip.id)"
@@ -361,6 +291,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
             :keyboard-clips="keyboardCaptionClips"
             :text-clips="textCaptionClips"
             :selected-clip-id="selectedClipId"
+            :selected-clip-ids="[...selectedClipIdSet]"
             :hover-caption-time-ms="hoverCaptionTimeMs"
             :default-caption-duration-ms="DEFAULT_CAPTION_DURATION_MS"
             :percentage-style="percentageStyle"
@@ -393,7 +324,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 :timeline-width-px="rulerWidth"
                 :thumbnail-slots="thumbnailSlots"
                 :defer-thumbnail-requests="activeTrimState !== null"
-                :selected="selectedClipId === clip.id"
+                :selected="selectedClipIdSet.has(clip.id)"
                 :waveform-bars="audioWaveforms[clip.id]?.bars"
                 :waveform-left-percent="audioWaveforms[clip.id]?.leftPercent"
                 :waveform-width-percent="audioWaveforms[clip.id]?.widthPercent"
@@ -426,7 +357,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 :timeline-width-px="rulerWidth"
                 :thumbnail-slots="thumbnailSlots"
                 :defer-thumbnail-requests="activeTrimState !== null"
-                :selected="selectedClipId === clip.id"
+                :selected="selectedClipIdSet.has(clip.id)"
                 :waveform-bars="audioWaveforms[clip.id]?.bars"
                 :waveform-left-percent="audioWaveforms[clip.id]?.leftPercent"
                 :waveform-width-percent="audioWaveforms[clip.id]?.widthPercent"
@@ -460,7 +391,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 :timeline-width-px="rulerWidth"
                 :thumbnail-slots="thumbnailSlots"
                 :defer-thumbnail-requests="activeTrimState !== null"
-                :selected="selectedClipId === clip.id"
+                :selected="selectedClipIdSet.has(clip.id)"
                 :waveform-bars="audioWaveforms[clip.id]?.bars"
                 :waveform-left-percent="audioWaveforms[clip.id]?.leftPercent"
                 :waveform-width-percent="audioWaveforms[clip.id]?.widthPercent"

@@ -25,7 +25,9 @@ export function drawBeamWatermark(
     settings.text === 'none'
       ? ''
       : settings.text === 'custom'
-        ? (settings.renderedText !== undefined ? settings.renderedText : (settings.customText ?? ''))
+        ? settings.renderedText !== undefined
+          ? settings.renderedText
+          : (settings.customText ?? '')
         : settings.renderedText || (settings.text === 'beam' ? 'Beam' : 'Made with Beam.');
   const margin = 18 * viewportScale;
 
@@ -35,7 +37,8 @@ export function drawBeamWatermark(
   context.shadowColor = 'transparent';
   context.shadowBlur = 0;
   context.font = `600 ${fontSize}px Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
-  context.textBaseline = 'middle';
+  const alignTextToLogo = logoSize > 0 && Boolean(text);
+  context.textBaseline = alignTextToLogo ? 'alphabetic' : 'middle';
   context.textAlign = 'left';
   const textMetrics = text ? context.measureText(text) : null;
   const textWidth = textMetrics?.width ?? 0;
@@ -76,7 +79,13 @@ export function drawBeamWatermark(
   }
   if (text) {
     context.fillStyle = '#ffffff';
-    context.fillText(text, contentX, y + height / 2);
+    const centerY = y + height / 2;
+    const ascent = textMetrics?.actualBoundingBoxAscent;
+    const descent = textMetrics?.actualBoundingBoxDescent;
+    const hasVisualMetrics = alignTextToLogo && Number.isFinite(ascent) && Number.isFinite(descent);
+    if (!hasVisualMetrics) context.textBaseline = 'middle';
+    const textY = hasVisualMetrics ? centerY + ((ascent ?? 0) - (descent ?? 0)) / 2 : centerY;
+    context.fillText(text, contentX, textY);
   }
   context.restore();
 }

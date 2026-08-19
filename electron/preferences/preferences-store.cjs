@@ -25,6 +25,7 @@ const defaults = (platform = process.platform) => ({
   appearance: defaultAppearance(),
   recordingBar: { visibility: platform === 'linux' ? 'hover-only' : 'always' },
   recordingInteractions: { enabled: false, noticeDismissed: false },
+  spellCheck: { enabled: true },
   onboardingCompleted: false,
   devices: {},
   shortcuts: {
@@ -164,6 +165,9 @@ const normalize = (value, platform = process.platform) => {
           ? next.recordingInteractions.noticeDismissed
           : base.recordingInteractions.noticeDismissed,
     },
+    spellCheck: {
+      enabled: typeof next.spellCheck?.enabled === 'boolean' ? next.spellCheck.enabled : base.spellCheck.enabled,
+    },
     onboardingCompleted:
       typeof next.onboardingCompleted === 'boolean' ? next.onboardingCompleted : base.onboardingCompleted,
     devices: next.devices && typeof next.devices === 'object' && !Array.isArray(next.devices) ? next.devices : {},
@@ -206,6 +210,7 @@ function createPreferencesStore(file, { platform = process.platform } = {}) {
         ...current.recordingInteractions,
         ...(value?.recordingInteractions || {}),
       },
+      spellCheck: { ...current.spellCheck, ...(value?.spellCheck || {}) },
       devices: { ...current.devices, ...(value?.devices || {}) },
       shortcuts: { ...current.shortcuts, ...(value?.shortcuts || {}) },
       backgroundPresets: { ...current.backgroundPresets, ...(value?.backgroundPresets || {}) },

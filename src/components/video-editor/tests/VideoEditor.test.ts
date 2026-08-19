@@ -134,6 +134,20 @@ describe('VideoEditor', () => {
     expect(editorState.store.outputCanvas.value.preset).toBe('1:1');
   });
 
+  it('relays timeline track selection to grouped and additive clip selection', async () => {
+    const mounted = mountEditor();
+    const timeline = mounted.findComponent({ name: 'MockEditorTimeline' });
+
+    await mounted.get('.timeline-select-track').trigger('click');
+    expect(editorState.store.compositionState.selectClips).toHaveBeenLastCalledWith(['screen'], 'screen');
+    expect(editorState.store.compositionState.selectedClipIds.value).toEqual(['screen']);
+
+    await mounted.get('.timeline-additive-track').trigger('click');
+    expect(editorState.store.compositionState.selectClips).toHaveBeenLastCalledWith(['screen', 'audio'], 'audio');
+    expect(editorState.store.compositionState.selectedClipIds.value).toEqual(['screen', 'audio']);
+    expect(timeline.emitted('select:track')).toHaveLength(2);
+  });
+
   it('deletes a grouped video fragment and its linked audio through the timeline event', async () => {
     const mounted = mountEditor();
     const state = editorState.store;

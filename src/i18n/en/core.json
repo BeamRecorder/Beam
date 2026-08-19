@@ -422,6 +422,9 @@
     "hiddenUntilHovered": "Hidden until hovered",
     "language": "Language",
     "chooseLanguage": "Select display language",
+    "advanced": "Advanced",
+    "spellCheck": "Spell check",
+    "spellCheckDescription": "Underline misspelled words using the selected language when supported.",
     "interactionAccess": "Interaction access",
     "interactionAccessReadyDescription": "Captures clicks and shortcut tokens. Typed text is never stored.",
     "interactionAccessUnavailableDescription": "Interaction capture is unavailable on this system.",
@@ -487,7 +490,8 @@
   },
   "PropertiesPanel": {
     "properties": "Properties",
-    "background": "Background"
+    "background": "Background",
+    "selectionAndMore": "… and {count} more"
   },
   "RecorderBar": {
     "recordingControls": "Recording controls",

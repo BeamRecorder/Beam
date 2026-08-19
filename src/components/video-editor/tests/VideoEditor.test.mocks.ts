@@ -89,6 +89,7 @@ vi.mock('../composables/useVideoEditor', async () => {
         ],
       } as ClipComposition);
       const selectedClipId = ref<string | null>(null);
+      const selectedClipIds = ref<string[]>([]);
       const selectedClip = computed(
         () => composition.value.clips.find((clip) => clip.id === selectedClipId.value) ?? null,
       );
@@ -129,6 +130,7 @@ vi.mock('../composables/useVideoEditor', async () => {
       const compositionState = {
         composition,
         selectedClipId,
+        selectedClipIds,
         selectedClip,
         selectedClipInfo: computed(() =>
           selectedClip.value ? { id: selectedClip.value.id, kind: selectedClip.value.kind } : null,
@@ -138,8 +140,15 @@ vi.mock('../composables/useVideoEditor', async () => {
         isWebcamEnabled: ref(true),
         isSystemAudioEnabled: ref(true),
         isMicAudioEnabled: ref(true),
+        selectClips: vi.fn((ids: string[], primaryClipId?: string | null) => {
+          selectedClipIds.value = [...ids];
+          selectedClipId.value = primaryClipId ?? ids[0] ?? null;
+          if (ids.length) activeTab.value = 'clip';
+        }),
         selectClip: vi.fn((id: string) => {
+          selectedClipIds.value = [id];
           selectedClipId.value = id;
+          activeTab.value = 'clip';
         }),
         addElement: vi.fn().mockResolvedValue(undefined),
         addCaptionAtTime: vi.fn(),
@@ -506,6 +515,7 @@ vi.mock('../timeline/EditorTimeline.vue', async () => {
       emits: [
         'select:zoom',
         'select:clip',
+        'select:track',
         'toggle:clip',
         'trim:clip',
         'move:clip',
@@ -553,6 +563,25 @@ vi.mock('../timeline/EditorTimeline.vue', async () => {
             [
               h('button', { class: 'timeline-select-zoom', onClick: () => emit('select:zoom', 'z') }),
               h('button', { class: 'timeline-select-clip', onClick: () => emit('select:clip', 'audio') }),
+              h('button', {
+                class: 'timeline-select-track',
+                onClick: () =>
+                  emit('select:track', {
+                    clipIds: ['screen'],
+                    primaryClipId: 'screen',
+                    trackNames: ['Screen'],
+                  }),
+              }),
+              h('button', {
+                class: 'timeline-additive-track',
+                onClick: () =>
+                  emit('select:track', {
+                    clipIds: ['audio'],
+                    primaryClipId: 'audio',
+                    trackNames: ['Audio'],
+                    additive: true,
+                  }),
+              }),
               h('button', { class: 'timeline-toggle', onClick: () => emit('toggle:clip', 'audio') }),
               h('button', { class: 'timeline-add-caption', onClick: () => emit('add:caption', 500) }),
               h('button', { class: 'timeline-delete-clips', onClick: () => emit('delete:clips', ['audio']) }),

@@ -7,12 +7,34 @@ import {
 } from '../output-canvas';
 import { drawBeamWatermark } from '../watermark-render';
 
-const createContext = () => {
+type TextMetricsOverrides = {
+  actualBoundingBoxAscent?: number;
+  actualBoundingBoxDescent?: number;
+};
+
+const createContext = (textMetrics: TextMetricsOverrides = {}) => {
   const shadows = {
-    fill: [] as Array<{ color: unknown; blur: unknown; offsetX: unknown; offsetY: unknown }>,
-    logo: [] as Array<{ color: unknown; blur: unknown; offsetX: unknown; offsetY: unknown }>,
-    text: [] as Array<{ color: unknown; blur: unknown; offsetX: unknown; offsetY: unknown }>,
+    fill: [] as Array<{
+      color: unknown;
+      blur: unknown;
+      offsetX: unknown;
+      offsetY: unknown;
+    }>,
+    logo: [] as Array<{
+      color: unknown;
+      blur: unknown;
+      offsetX: unknown;
+      offsetY: unknown;
+    }>,
+    text: [] as Array<{
+      color: unknown;
+      blur: unknown;
+      offsetX: unknown;
+      offsetY: unknown;
+    }>,
   };
+  const textBaselines: string[] = [];
+  const measurementBaselines: string[] = [];
   const context = {
     font: '',
     textBaseline: '',
@@ -23,7 +45,10 @@ const createContext = () => {
     shadowOffsetY: 0,
     save: vi.fn(),
     restore: vi.fn(),
-    measureText: vi.fn((text: string) => ({ width: text.length * 10 })),
+    measureText: vi.fn((text: string) => {
+      measurementBaselines.push(context.textBaseline);
+      return { width: text.length * 10, ...textMetrics };
+    }),
     beginPath: vi.fn(),
     roundRect: vi.fn(),
     fill: vi.fn(() =>
@@ -34,14 +59,15 @@ const createContext = () => {
         offsetY: context.shadowOffsetY,
       }),
     ),
-    fillText: vi.fn(() =>
+    fillText: vi.fn(() => {
+      textBaselines.push(context.textBaseline);
       shadows.text.push({
         color: context.shadowColor,
         blur: context.shadowBlur,
         offsetX: context.shadowOffsetX,
         offsetY: context.shadowOffsetY,
-      }),
-    ),
+      });
+    }),
     drawImage: vi.fn(() =>
       shadows.logo.push({
         color: context.shadowColor,
@@ -51,7 +77,7 @@ const createContext = () => {
       }),
     ),
   } as unknown as CanvasRenderingContext2D;
-  return { context, shadows };
+  return { context, shadows, textBaselines, measurementBaselines };
 };
 
 const canvas = (watermark: Partial<WatermarkSettings>): OutputCanvasSettings => ({
@@ -69,7 +95,14 @@ describe('drawBeamWatermark', () => {
   it('does not touch the canvas when the watermark is disabled', () => {
     const { context } = createContext();
 
-    drawBeamWatermark(context, { ...canvas({}), watermark: { ...canvas({}).watermark!, enabled: false } }, viewport);
+    drawBeamWatermark(
+      context,
+      {
+        ...canvas({}),
+        watermark: { ...canvas({}).watermark!, enabled: false },
+      },
+      viewport,
+    );
 
     expect(context.save).not.toHaveBeenCalled();
     expect(context.roundRect).not.toHaveBeenCalled();
@@ -77,29 +110,68 @@ describe('drawBeamWatermark', () => {
     expect(context.drawImage).not.toHaveBeenCalled();
   });
 
-  it('renders a logo-only watermark without a text stack', () => {
+  it.each([100, 200])('keeps a logo-only watermark centered at size %s', (size) => {
     const { context } = createContext();
     const logo = {} as CanvasImageSource;
 
-    drawBeamWatermark(context, canvas({ text: 'none', showLogo: true }), viewport, logo);
+    drawBeamWatermark(context, canvas({ text: 'none', showLogo: true, size }), viewport, logo);
 
-    expect(context.drawImage).toHaveBeenCalledWith(logo, 93, 93, 1068, 1068, 680, 693, 22, 22);
+    const [
+      image,
+      sourceX,
+      sourceY,
+      sourceWidth,
+      sourceHeight,
+      destinationX,
+      destinationY,
+      destinationWidth,
+      destinationHeight,
+    ] = (context.drawImage as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]!;
+    const [badgeX, badgeY, , badgeHeight] = (context.roundRect as unknown as { mock: { calls: number[][] } }).mock
+      .calls[0]!;
+
+    expect(image).toBe(logo);
+    expect([sourceX, sourceY, sourceWidth, sourceHeight]).toEqual([93, 93, 1068, 1068]);
+    expect(destinationX).toBeGreaterThan(badgeX);
+    expect(destinationY).toBeCloseTo(badgeY + (badgeHeight - Number(destinationHeight)) / 2, 5);
+    expect(destinationWidth).toBe(destinationHeight);
     expect(context.fillText).not.toHaveBeenCalled();
     expect(context.roundRect).toHaveBeenCalledOnce();
   });
 
-  it('keeps the cropped logo aligned with the badge and optically offsets its text', () => {
-    const { context } = createContext();
+  it.each([100, 200])('uses visual text metrics to center logo and text at size %s', (size) => {
+    const ascent = 10 * (size / 100);
+    const descent = 4 * (size / 100);
+    const { context, textBaselines, measurementBaselines } = createContext({
+      actualBoundingBoxAscent: ascent,
+      actualBoundingBoxDescent: descent,
+    });
     const logo = {} as CanvasImageSource;
 
-    drawBeamWatermark(context, canvas({ text: 'beam', showLogo: true, position: 'top-left' }), viewport, logo);
+    drawBeamWatermark(context, canvas({ text: 'beam', showLogo: true, position: 'top-left', size }), viewport, logo);
 
-    expect(context.textBaseline).toBe('middle');
-    expect(context.drawImage).toHaveBeenCalledWith(logo, 93, 93, 1068, 1068, 38, 45, 22, 22);
+    expect(measurementBaselines).toEqual(['alphabetic']);
+    expect(textBaselines).toEqual(['alphabetic']);
     const [text, textX, textY] = (context.fillText as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]!;
+    const [, badgeY, , badgeHeight] = (context.roundRect as unknown as { mock: { calls: number[][] } }).mock.calls[0]!;
     expect(text).toBe('Beam');
-    expect(textX).toBe(67);
-    expect(textY).toBe(56);
+    expect(textX).toBeGreaterThan(0);
+    expect(textY).toBeCloseTo(badgeY + badgeHeight / 2 + (ascent - descent) / 2, 5);
+  });
+
+  it.each([100, 200])('keeps text-only baseline and Y centered at size %s', (size) => {
+    const { context, textBaselines, measurementBaselines } = createContext({
+      actualBoundingBoxAscent: 10,
+      actualBoundingBoxDescent: 4,
+    });
+
+    drawBeamWatermark(context, canvas({ text: 'beam', showLogo: false, size }), viewport);
+
+    const [, badgeY, , badgeHeight] = (context.roundRect as unknown as { mock: { calls: number[][] } }).mock.calls[0]!;
+    const [, , textY] = (context.fillText as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]!;
+    expect(measurementBaselines).toEqual(['middle']);
+    expect(textBaselines).toEqual(['middle']);
+    expect(textY).toBeCloseTo(badgeY + badgeHeight / 2, 5);
   });
 
   it('renders Made with Beam without a logo and uses the sans-serif fallback stack', () => {

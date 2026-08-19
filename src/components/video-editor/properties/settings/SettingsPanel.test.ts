@@ -72,13 +72,35 @@ describe('SettingsPanel', () => {
       'Dark',
       'System',
     ]);
-    const advanced = wrapper.get('.advanced-toggle');
+    const advanced = wrapper.get('.appearance-setting .advanced-toggle');
     expect(advanced.attributes('aria-expanded')).toBe('false');
     expect(wrapper.find('.appearance-advanced-panel').exists()).toBe(false);
     await advanced.trigger('click');
     wrapper.get('.appearance-advanced-panel .ui-scale-setting');
     wrapper.get('.appearance-advanced-panel .theme-customization-section');
     expect(wrapper.find('.appearance-advanced-panel .accordion').exists()).toBe(false);
+  });
+
+  it('opens language advanced settings and toggles spell check', async () => {
+    const wrapper = mount(SettingsPanel, {
+      global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } },
+    });
+
+    const advanced = wrapper.get('.language-setting .advanced-toggle');
+    expect(advanced.attributes('aria-expanded')).toBe('false');
+    expect(wrapper.find('#language-advanced-panel').exists()).toBe(false);
+
+    await advanced.trigger('click');
+
+    expect(advanced.attributes('aria-expanded')).toBe('true');
+    const spellCheck = wrapper.get('#language-advanced-panel [role="switch"]');
+    expect(spellCheck.attributes('aria-checked')).toBe('true');
+
+    capture.updatePreferences.mockResolvedValueOnce({ spellCheck: { enabled: false } });
+    await spellCheck.trigger('click');
+
+    expect(capture.updatePreferences).toHaveBeenCalledWith({ spellCheck: { enabled: false } });
+    expect(spellCheck.attributes('aria-checked')).toBe('false');
   });
 
   it('renders the update controls section', () => {

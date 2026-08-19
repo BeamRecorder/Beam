@@ -5,60 +5,32 @@ import { inspectMedia, mediaSourceDescriptor, type DroppedMediaInspection } from
 import {
   emptyComposition,
   isAudioClip,
-  isBlurClip,
   isCompositingClip,
-  isCaptionClip,
   isVisualClip,
   type AudioClip,
   type BlurClip,
   type CaptionClip,
   type Clip,
-  type ClipAppearance,
   type ClipComposition,
   type MediaAsset,
-  type NormalizedCrop,
-  type NormalizedTransform,
   type VisualClip,
 } from '~/media/shared/composition-types';
 import type { EditorPreferenceDefaults } from './editor-default-types';
 import { audioDefaultsFor, blurDefaultsFor, captionDefaultsFor, visualClipDefaultProps } from './editor-defaults';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import {
   addClip,
   clipTrimBounds,
-  deleteClip,
-  detachClip,
   holdClipAtPlayhead,
   moveClip,
   reorderClip,
-  setAppearance,
-  setBlurEffect,
   setClipEnabled,
-  setCrop,
-  setCameraFraming,
-  setCameraLayout,
-  setCameraSplitRatio,
-  setCameraSplitPadding,
-  setWebcamReactToZoom,
-  setMirrored,
-  setMirroredY,
-  setPlaybackRate,
-  setTransform,
-  setVolume,
   splitClip,
   trimClip,
-  updateClip,
 } from '../composition/engine/clip-engine';
 import { synchronizeRecordingClips } from '../composition/session-clips';
-import { cameraScreenPartner } from '../composition/camera-screen-link';
 import { useTranslate } from '~/i18n/useTranslate';
-import {
-  isSplitCameraLayout,
-  type CameraFramingPreset,
-  type CameraLayoutPreset,
-} from '~/media/shared/camera-layout-types';
+import { useSelectedClips } from './useSelectedClips';
 
-const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const endMs = (clip: Clip) => clip.timelineStartMs + clip.timelineDurationMs;
 export function useClipComposition(options: {
   project: Ref<CaptureProject | null | undefined>;
@@ -69,59 +41,34 @@ export function useClipComposition(options: {
 }) {
   const { t } = useTranslate('TimelineToolbar');
   const composition = ref<ClipComposition>(emptyComposition());
-  const selectedClipId = ref<string | null>(null);
-
-  const selectedClip = computed(() => composition.value.clips.find((clip) => clip.id === selectedClipId.value) ?? null);
-  const selectedCaptionClip = computed(() =>
-    selectedClip.value && isCaptionClip(selectedClip.value) ? selectedClip.value : null,
-  );
-  const selectedWebcamClip = computed(() => (selectedClip.value?.kind === 'webcam' ? selectedClip.value : null));
-
-  const selectedClipInfo = computed(() => {
-    const clip = selectedClip.value;
-    if (!clip) return null;
-    return {
-      id: clip.id,
-      kind: clip.kind,
-      name: clip.name,
-      timelineStartMs: clip.timelineStartMs,
-      timelineDurationMs: clip.timelineDurationMs,
-      playbackRate: clip.playbackRate,
-      enabled: clip.enabled,
-      isLinked: Boolean(clip.groupId),
-      ...(isAudioClip(clip) ? { volume: clip.volume } : {}),
-      ...(isVisualClip(clip)
-        ? {
-            isMirrored: clip.isMirrored,
-            isMirroredY: clip.isMirroredY,
-            clipTransform: clip.transform,
-            ...clip.appearance,
-            cameraLayoutPreset: clip.cameraLayoutPreset ?? 'custom',
-            cameraFramingPreset: clip.cameraFramingPreset ?? 'custom',
-            ...(clip.kind === 'webcam'
-              ? {
-                  cameraSplitRatio: clip.cameraSplitRatio ?? 0.5,
-                  cameraSplitPadding: clip.cameraSplitPadding ?? 0,
-                  reactToZoom: clip.reactToZoom ?? !isSplitCameraLayout(clip.cameraLayoutPreset ?? 'custom'),
-                  hasLinkedScreen: Boolean(cameraScreenPartner(composition.value, clip, true)),
-                }
-              : {}),
-          }
-        : {}),
-      ...(isBlurClip(clip)
-        ? {
-            clipTransform: clip.transform,
-            blurShape: clip.shape,
-            blurMode: clip.mode,
-            blurStrength: clip.strength,
-            blurFeather: clip.feather,
-            blurCornerRadius: clip.cornerRadius,
-            blurTintOpacity: clip.tintOpacity,
-            blurColor: clip.color,
-          }
-        : {}),
-    };
-  });
+  const selection = useSelectedClips({ composition, activeTab: options.activeTab });
+  const {
+    selectedClipId,
+    selectedClipIds,
+    selectedClip,
+    selectedClipInfo,
+    selectedCaptionClip,
+    selectedWebcamClip,
+    selectClip,
+    selectClips,
+    updateCaption,
+    deleteSelectedClip,
+    updateSelectedAppearance,
+    updateSelectedTransform,
+    updateSelectedBlur,
+    updateSelectedCrop,
+    updateSelectedCameraLayout,
+    updateSelectedCameraFraming,
+    updateSelectedCameraSplitRatio,
+    updateSelectedCameraSplitPadding,
+    updateSelectedWebcamReactToZoom,
+    updateSelectedMirrored,
+    updateSelectedMirroredY,
+    updateSelectedRate,
+    updateSelectedVolume,
+    updateSelectedEnabled,
+    detachSelectedClip,
+  } = selection;
 
   const clipsBy = (predicate: (clip: Clip) => boolean) => computed(() => composition.value.clips.filter(predicate));
   const screenClips = clipsBy((clip) => clip.kind === 'screen');
@@ -143,12 +90,6 @@ export function useClipComposition(options: {
   const isWebcamEnabled = everyEnabled(webcamClips);
   const isSystemAudioEnabled = everyEnabled(systemAudioClips);
   const isMicAudioEnabled = everyEnabled(microphoneClips);
-
-  const selectClip = (clipId: string) => {
-    if (!composition.value.clips.some((clip) => clip.id === clipId)) return;
-    selectedClipId.value = clipId;
-    options.activeTab.value = 'clip';
-  };
 
   const synchronizeRecording = () => {
     composition.value = synchronizeRecordingClips(
@@ -334,10 +275,6 @@ export function useClipComposition(options: {
 
   const addCaptionAtTime = (startMs: number) => addElement('caption', startMs);
 
-  const updateCaption = (caption: CaptionClip) => {
-    composition.value = updateClip(composition.value, caption.id, () => clone(caption));
-  };
-
   const previewClipEdge = (clipId: string, edge: 'start' | 'end', timeMs: number) => {
     const clip = composition.value.clips.find((entry) => entry.id === clipId);
     if (!clip) return;
@@ -370,11 +307,6 @@ export function useClipComposition(options: {
     );
     if (hold) selectedClipId.value = hold.id;
   };
-  const deleteSelectedClip = () => {
-    if (!selectedClipId.value) return;
-    composition.value = deleteClip(composition.value, selectedClipId.value, true);
-    selectedClipId.value = null;
-  };
   const reorderVisualClip = (clipId: string, targetIndex: number) => {
     if (!Number.isInteger(targetIndex)) return;
     const clip = composition.value.clips.find((entry) => entry.id === clipId);
@@ -382,72 +314,16 @@ export function useClipComposition(options: {
     composition.value = reorderClip(composition.value, clipId, targetIndex);
   };
 
-  const updateSelectedAppearance = (patch: Partial<ClipAppearance>) => {
-    const clip = selectedClip.value;
-    if (!clip || !isVisualClip(clip)) return;
-    composition.value = setAppearance(composition.value, clip.id, {
-      ...createDefaultClipAppearance(clip.kind),
-      ...clip.appearance,
-      ...patch,
-    });
-  };
-  const updateSelectedTransform = (transform: NormalizedTransform) => {
-    if (selectedClipId.value) composition.value = setTransform(composition.value, selectedClipId.value, transform);
-  };
-  const updateSelectedBlur = (
-    patch: Partial<
-      Pick<BlurClip, 'shape' | 'mode' | 'strength' | 'feather' | 'cornerRadius' | 'tintOpacity' | 'color'>
-    >,
-  ) => {
-    const clip = selectedClip.value;
-    if (!clip || !isBlurClip(clip)) return;
-    composition.value = setBlurEffect(composition.value, clip.id, patch);
-  };
-  const updateSelectedCrop = (crop: NormalizedCrop) => {
-    if (selectedClipId.value) composition.value = setCrop(composition.value, selectedClipId.value, crop);
-  };
-  const updateSelectedVisual = (update: (clipId: string) => ClipComposition) => {
-    const clip = selectedClip.value;
-    if (clip && isVisualClip(clip)) composition.value = update(clip.id);
-  };
-  const updateSelectedCameraLayout = (preset: Exclude<CameraLayoutPreset, 'custom'>) =>
-    updateSelectedVisual((id) => setCameraLayout(composition.value, id, preset));
-  const updateSelectedCameraFraming = (preset: Exclude<CameraFramingPreset, 'custom'>) =>
-    updateSelectedVisual((id) => setCameraFraming(composition.value, id, preset));
-  const updateSelectedCameraSplitRatio = (ratio: number) =>
-    updateSelectedVisual((id) => setCameraSplitRatio(composition.value, id, ratio));
-  const updateSelectedCameraSplitPadding = (padding: number) =>
-    updateSelectedVisual((id) => setCameraSplitPadding(composition.value, id, padding));
-  const updateSelectedWebcamReactToZoom = (reactToZoom: boolean) =>
-    updateSelectedVisual((id) => setWebcamReactToZoom(composition.value, id, reactToZoom));
-  const updateSelectedMirrored = (mirrored: boolean) => {
-    if (selectedClipId.value) composition.value = setMirrored(composition.value, selectedClipId.value, mirrored);
-  };
-  const updateSelectedMirroredY = (mirroredY: boolean) => {
-    if (selectedClipId.value) composition.value = setMirroredY(composition.value, selectedClipId.value, mirroredY);
-  };
-  const updateSelectedRate = (rate: number) => {
-    if (selectedClipId.value) composition.value = setPlaybackRate(composition.value, selectedClipId.value, rate);
-  };
-  const updateSelectedVolume = (volume: number) => {
-    if (selectedClipId.value) composition.value = setVolume(composition.value, selectedClipId.value, volume);
-  };
-  const updateSelectedEnabled = (enabled: boolean) => {
-    if (selectedClipId.value) composition.value = setClipEnabled(composition.value, selectedClipId.value, enabled);
-  };
   const toggleClip = (clipId: string) => {
     const clip = composition.value.clips.find((entry) => entry.id === clipId);
     if (!clip) return;
     selectedClipId.value = clipId;
     composition.value = setClipEnabled(composition.value, clipId, !clip.enabled);
   };
-  const detachSelectedClip = () => {
-    if (selectedClipId.value) composition.value = detachClip(composition.value, selectedClipId.value);
-  };
-
   return {
     composition,
     selectedClipId,
+    selectedClipIds,
     selectedClip,
     selectedClipInfo,
     selectedCaptionClip,
@@ -460,6 +336,7 @@ export function useClipComposition(options: {
     hasMicAudio,
     synchronizeRecording,
     selectClip,
+    selectClips,
     addElement,
     addImportedAsset,
     addCaptionAtTime,

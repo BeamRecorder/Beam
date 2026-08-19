@@ -3,7 +3,7 @@ import type { ProjectEditorData, SessionTrackAsset, SessionTrackData } from '../
 import type { InputEventSidecar } from '../../../../api/types/capture-session';
 import { COMPOSITION_SCHEMA_VERSION, emptyComposition, type ClipComposition } from '~/media/shared/composition-types';
 import { synchronizeRecordingClips } from '../session-clips';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 
 const segment = (overrides: Partial<SessionTrackAsset> = {}): SessionTrackAsset => ({
   path: 'segment.webm',
@@ -37,6 +37,7 @@ const editorData = (
   videoSrc: string | null = null,
   options: {
     interactions?: InputEventSidecar;
+    omitInteractions?: boolean;
     recordedPlatform?: ProjectEditorData['recordedPlatform'];
   } = {},
 ): ProjectEditorData => ({
@@ -65,7 +66,7 @@ const editorData = (
     catalog: {},
     missing: [],
   },
-  interactions: options.interactions ?? { version: 1, events: [] },
+  interactions: options.omitInteractions ? undefined : (options.interactions ?? { version: 1, events: [] }),
   recordedPlatform: options.recordedPlatform ?? null,
   zoom: { elements: [], generatedSessions: [] },
 });
@@ -264,8 +265,8 @@ describe('synchronizeRecordingClips', () => {
       editorData([track('screen', [segment({ src: '/editor-data/segment.webm' })])]),
     );
 
-    expect(result).not.toBe(composition);
-    expect(result.keyboardCaptionSessions).toEqual(['session-1']);
+    expect(result).toBe(composition);
+    expect(result.keyboardCaptionSessions).toEqual([]);
     expect(result.clips.filter((clip) => clip.kind === 'caption')).toHaveLength(0);
     expect(result.assets[0]?.src).toBe('project-media://project-1/session-1/screen/segment.webm');
   });
@@ -303,16 +304,76 @@ describe('synchronizeRecordingClips', () => {
     expect(synchronizeRecordingClips(withoutCaption, data)).toBe(withoutCaption);
   });
 
-  it('marks a materialized session as processed even when its input sidecar has no events', () => {
-    const data = editorData([track('screen', [segment()])], null, {
-      interactions: { version: 1, events: [] },
+  it('does not carry legacy caption custom text into generated keyboard captions', () => {
+    const result = synchronizeRecordingClips(
+      emptyComposition(),
+      editorData([track('screen', [segment()])], null, {
+        interactions: { version: 1, events: [shortcut(500_000_000, 'a')] },
+        recordedPlatform: 'windows',
+      }),
+      {
+        schemaVersion: 1,
+        caption: {
+          style: {
+            ...createDefaultCaptionStyle(28),
+            color: '#00ff00',
+            customText: 'Old user caption text',
+          },
+          durationMs: 2_000,
+        },
+      } as unknown as Parameters<typeof synchronizeRecordingClips>[2],
+    );
+    const caption = result.clips.find((clip) => clip.kind === 'caption');
+
+    expect(caption).toMatchObject({
+      name: 'Ctrl + A',
+      caption: {
+        type: 'keyboard',
+        steps: [{ offsetMs: 0, modifiers: ['control'], key: 'a' }],
+        style: { color: '#00ff00' },
+      },
+    });
+    expect(caption?.caption.style).not.toHaveProperty('customText');
+  });
+
+  it.each([
+    ['missing interactions', { omitInteractions: true }],
+    ['empty interactions', { interactions: { version: 1 as const, events: [] } }],
+  ])('does not mark a materialized session as processed with %s and retries later', (_label, options) => {
+    const source = [track('screen', [segment()])];
+    const initialData = editorData(source, null, {
+      ...options,
       recordedPlatform: 'linux',
     });
 
-    const result = synchronizeRecordingClips(emptyComposition(), data);
+    const initial = synchronizeRecordingClips(emptyComposition(), initialData);
 
-    expect(result.keyboardCaptionSessions).toEqual(['session-1']);
-    expect(result.clips.some((clip) => clip.kind === 'caption')).toBe(false);
+    expect(initial.keyboardCaptionSessions).toEqual([]);
+    expect(initial.clips.some((clip) => clip.kind === 'caption')).toBe(false);
+
+    const dataWithShortcut = editorData(source, null, {
+      interactions: { version: 1, events: [shortcut(500_000_000, 'a')] },
+      recordedPlatform: 'linux',
+    });
+    const generated = synchronizeRecordingClips(initial, dataWithShortcut);
+    const keyboardCaptions = generated.clips.filter((clip) => clip.kind === 'caption');
+
+    expect(generated.keyboardCaptionSessions).toEqual(['session-1']);
+    expect(keyboardCaptions).toHaveLength(1);
+    expect(keyboardCaptions[0]).toMatchObject({
+      timelineStartMs: 500,
+      caption: {
+        type: 'keyboard',
+        recordedPlatform: 'linux',
+        sourceSessionId: 'session-1',
+      },
+    });
+
+    const withoutCaption = {
+      ...generated,
+      clips: generated.clips.filter((clip) => clip.kind !== 'caption'),
+    };
+    expect(synchronizeRecordingClips(withoutCaption, dataWithShortcut)).toBe(withoutCaption);
   });
 
   it('never groups a keyboard caption with media that has the same timing', () => {

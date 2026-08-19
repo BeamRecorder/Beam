@@ -240,13 +240,14 @@ export function synchronizeRecordingClips(
       track.assets.some((asset) => asset.complete && asset.exists && Boolean(asset.src)),
     );
   if (sessionHasMaterializedSource && !keyboardCaptionSessions.includes(editorData.sessionId)) {
-    keyboardCaptionSessions.push(editorData.sessionId);
     if (editorData.recordedPlatform && editorData.interactions) {
-      for (const clip of keyboardCaptionClipsFromInput(
+      const keyboardCaptions = keyboardCaptionClipsFromInput(
         editorData.interactions,
         editorData.sessionId,
         editorData.recordedPlatform,
-      )) {
+      );
+      if (keyboardCaptions.length > 0) keyboardCaptionSessions.push(editorData.sessionId);
+      for (const clip of keyboardCaptions) {
         const captionDefaults = captionDefaultsFor(defaults, clip.caption.style.fontSize);
         clip.caption.style = captionDefaults.style;
         if (captionDefaults.transform) clip.transform = captionDefaults.transform;

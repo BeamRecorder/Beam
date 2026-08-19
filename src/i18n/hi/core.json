@@ -383,6 +383,9 @@
     "hiddenUntilHovered": "होवर तक छिपी हुई",
     "language": "भाषा",
     "chooseLanguage": "प्रदर्शन भाषा चुनें",
+    "advanced": "उन्नत",
+    "spellCheck": "वर्तनी जाँच",
+    "spellCheckDescription": "समर्थित होने पर चुनी गई भाषा में गलत वर्तनी वाले शब्दों को रेखांकित करता है।",
     "interactionAccess": "इंटरैक्शन एक्सेस",
     "interactionAccessReadyDescription": "क्लिक और शॉर्टकट कैप्चर करता है। टाइप किया गया टेक्स्ट कभी सहेजा नहीं जाता।",
     "interactionAccessUnavailableDescription": "इस सिस्टम पर इंटरैक्शन कैप्चर उपलब्ध नहीं है।",
@@ -448,7 +451,8 @@
   },
   "PropertiesPanel": {
     "properties": "गुण",
-    "background": "बैकग्राउंड"
+    "background": "बैकग्राउंड",
+    "selectionAndMore": "… और {count} अन्य"
   },
   "RecorderBar": {
     "recordingControls": "रिकॉर्डिंग नियंत्रण",

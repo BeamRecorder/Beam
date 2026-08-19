@@ -1,6 +1,6 @@
 import type { CameraFramingPreset, CameraLayoutPreset } from './camera-layout-types';
 
-export const COMPOSITION_SCHEMA_VERSION = 9 as const;
+export const COMPOSITION_SCHEMA_VERSION = 11 as const;
 export const SCREEN_CLIP_ID = 'screen';
 
 export type MediaKind = 'video' | 'image' | 'audio';

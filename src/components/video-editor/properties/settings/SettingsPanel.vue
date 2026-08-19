@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import Button from '~/ui/button/Button.vue';
+import AdvancedButton from '~/ui/button/AdvancedButton.vue';
 import Select from '~/ui/select/Select.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import HUD from '~/components/hud/HUD.vue';
@@ -14,10 +15,13 @@ import UpdateControls from '~/components/updates/UpdateControls.vue';
 import SocialLinks from '~/components/socials/SocialLinks.vue';
 import { isSupportedLocale, localeOptions } from '~/i18n/locales';
 import { useCopySystemInformation } from '~/composables/useCopySystemInformation';
+import SpellCheckPreference from '~/components/settings/SpellCheckPreference.vue';
 
 const { t } = useTranslate('SettingsPanel');
+const { t: tPreferences } = useTranslate('HudPreferences');
 const { t: tAppearance } = useTranslate('AppearanceSettings');
 const localeStore = useLocaleStore();
+const languageAdvancedOpen = ref(false);
 const updateLocale = (value: string | number) => {
   if (typeof value === 'string' && isSupportedLocale(value)) localeStore.setLocale(value);
 };
@@ -48,13 +52,24 @@ const { copied: isCopiedSysInfo, copy: copySystemInfo } = useCopySystemInformati
 <template>
   <div class="options-group">
     <div class="prop-item language-setting">
-      <span class="prop-label">{{ t('language') }}</span>
+      <div class="language-heading">
+        <span class="prop-label">{{ t('language') }}</span>
+        <AdvancedButton
+          :open="languageAdvancedOpen"
+          controls="language-advanced-panel"
+          :label="tPreferences('advanced')"
+          @update:open="languageAdvancedOpen = $event"
+        />
+      </div>
       <Select
         :model-value="localeStore.locale"
         :options="localeOptions"
         direction="up"
         @update:model-value="updateLocale"
       />
+      <div v-if="languageAdvancedOpen" id="language-advanced-panel" class="language-advanced-panel">
+        <SpellCheckPreference />
+      </div>
     </div>
 
     <Divider spacing="xs" />
@@ -176,6 +191,21 @@ const { copied: isCopiedSysInfo, copy: copySystemInfo } = useCopySystemInformati
 .prop-desc {
   font-size: 11px;
   color: var(--text-muted);
+}
+
+.language-heading,
+.language-advanced-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.language-advanced-panel {
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
 }
 
 .theme-button-group {

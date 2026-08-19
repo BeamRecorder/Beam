@@ -383,6 +383,9 @@
     "hiddenUntilHovered": "Oculta até passar o mouse",
     "language": "Idioma",
     "chooseLanguage": "Selecione o idioma da interface",
+    "advanced": "Avançado",
+    "spellCheck": "Verificação ortográfica",
+    "spellCheckDescription": "Sublinha palavras com erros no idioma selecionado quando houver suporte.",
     "interactionAccess": "Acesso às interações",
     "interactionAccessReadyDescription": "Captura cliques e atalhos. O texto digitado nunca é salvo.",
     "interactionAccessUnavailableDescription": "A captura de interações não está disponível neste sistema.",
@@ -448,7 +451,8 @@
   },
   "PropertiesPanel": {
     "properties": "Propriedades",
-    "background": "Plano de fundo"
+    "background": "Plano de fundo",
+    "selectionAndMore": "… e mais {count}"
   },
   "RecorderBar": {
     "recordingControls": "Controles de gravação",

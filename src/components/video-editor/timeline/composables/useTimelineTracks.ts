@@ -1,5 +1,4 @@
 import { computed, ref } from 'vue';
-import { Camera, CircleDashed, Image as ImageIcon, Video } from '@lucide/vue';
 import { DEFAULT_ZOOM_DURATION_MS, type ZoomElement } from '../../zoom/zoom-types';
 import {
   isAudioClip,
@@ -10,8 +9,6 @@ import {
   type AudioClip,
   type Clip,
   type MediaAsset,
-  type BlurClip,
-  type VisualClip,
 } from '~/media/shared/composition-types';
 import { calculateSnapThresholdMs, collectSnapTargets, snapSpan } from './timeline-snap';
 import { createAnimationFrameCoalescer } from './animation-frame-coalescer';
@@ -29,7 +26,7 @@ export type { TimelineTracksEmits, TimelineTracksProps } from './timeline-tracks
 export { DEFAULT_ZOOM_DURATION_MS } from '../../zoom/zoom-types';
 export const DEFAULT_CAPTION_DURATION_MS = 2_000;
 
-export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTracksEmits, t: (key: string) => string) {
+export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTracksEmits) {
   const newZoomDurationMs = computed(() =>
     Number.isFinite(props.newZoomDurationMs)
       ? Math.max(200, Math.round(props.newZoomDurationMs ?? DEFAULT_ZOOM_DURATION_MS))
@@ -338,38 +335,25 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     if (!occupied(startMs, startMs + DEFAULT_CAPTION_DURATION_MS, captions)) emit('add:caption', startMs);
   };
 
-  const toggleGroup = (clips: Clip[]) => {
-    const enabled = !clips.some((clip) => clip.enabled);
-    for (const clip of clips) if (clip.enabled !== enabled) emit('toggle:clip', clip.id);
-  };
-  const handleVisualTrackHeader = (clips: Clip[]) => {
-    if (clips[0]?.kind !== 'webcam') {
-      toggleGroup(clips);
-      return;
-    }
+  const selectTrack = (clips: Clip[], trackName: string, event?: MouseEvent) => {
+    if (!clips.length) return;
     const timeMs = props.currentTime * 1_000;
-    const cameraClips = clips.filter((clip): clip is VisualClip => clip.kind === 'webcam');
-    const selected = [...cameraClips].sort((left, right) => {
-      const distance = (clip: VisualClip) =>
+    const ordered = [...clips].sort((left, right) => {
+      const distance = (clip: Clip) =>
         timeMs < clip.timelineStartMs
           ? clip.timelineStartMs - timeMs
           : timeMs >= clip.timelineStartMs + clip.timelineDurationMs
             ? timeMs - (clip.timelineStartMs + clip.timelineDurationMs)
             : 0;
       return distance(left) - distance(right) || left.timelineStartMs - right.timelineStartMs;
-    })[0];
-    if (selected) emit('select:clip', selected.id);
+    });
+    emit('select:track', {
+      clipIds: ordered.map((clip) => clip.id),
+      primaryClipId: ordered[0]?.id ?? null,
+      trackNames: [trackName],
+      ...(event?.ctrlKey || event?.metaKey || event?.shiftKey ? { additive: true } : {}),
+    });
   };
-  const iconForVisual = (clip: VisualClip | BlurClip) =>
-    clip.kind === 'blur' ? CircleDashed : clip.kind === 'image' ? ImageIcon : clip.kind === 'webcam' ? Camera : Video;
-  const labelForVisual = (clip: VisualClip | BlurClip) =>
-    clip.kind === 'blur'
-      ? t('blur')
-      : clip.kind === 'screen'
-        ? t('video')
-        : clip.kind === 'webcam'
-          ? t('webcam')
-          : clip.name;
   const zoomScale = (depth: number) => [1.25, 1.5, 1.8, 2.2, 3.5, 5][Math.max(0, Math.min(5, depth - 1))] ?? 1.25;
 
   const { draggedTrackId, beginReorder } = useVisualTrackReorder({ baseVisualTracks, visualOrderPreview, emit });
@@ -433,10 +417,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     hoverAt,
     leaveTrack,
     addAt,
-    toggleGroup,
-    handleVisualTrackHeader,
-    iconForVisual,
-    labelForVisual,
+    selectTrack,
     zoomScale,
     draggedTrackId,
     beginReorder,

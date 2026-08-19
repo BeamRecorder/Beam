@@ -75,6 +75,19 @@ test('preserves an explicit recorder visibility preference on Linux', () => {
   }
 });
 
+test('defaults spell check to enabled and persists an explicit disabled preference', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-preferences-spell-check-'));
+  const store = createPreferencesStore(directory);
+
+  assert.deepEqual(store.read().spellCheck, { enabled: true });
+
+  const saved = store.patch({ spellCheck: { enabled: false } });
+
+  assert.deepEqual(saved.spellCheck, { enabled: false });
+  assert.deepEqual(store.read().spellCheck, { enabled: false });
+  assert.deepEqual(JSON.parse(fs.readFileSync(store.file, 'utf8')).spellCheck, { enabled: false });
+});
+
 test('applies the injected platform default to missing and corrupt preference files', () => {
   const linuxStore = createPreferencesStore(fs.mkdtempSync(path.join(os.tmpdir(), 'demo-preferences-linux-')), {
     platform: 'linux',
