@@ -69,8 +69,22 @@ test('Linux returns unavailable without starting the native engine when no exact
     });
 
     assert.equal(inputAccess.helperForCapture(), null);
-    assert.equal((await inputAccess.status()).state, 'unavailable');
-    assert.equal((await inputAccess.request()).state, 'unavailable');
+    assert.deepEqual(await inputAccess.status(), {
+      state: 'unavailable',
+      canRequest: false,
+      clicks: false,
+      shortcuts: false,
+      recordsText: false,
+      unavailableReason: 'input-helper-unavailable',
+    });
+    assert.deepEqual(await inputAccess.request(), {
+      state: 'unavailable',
+      canRequest: false,
+      clicks: false,
+      shortcuts: false,
+      recordsText: false,
+      unavailableReason: 'input-helper-unavailable',
+    });
     assert.equal(requests, 0);
   } finally {
     fs.statSync = originalStatSync;
@@ -95,10 +109,39 @@ test('Linux resolves the exact versioned cache helper and only requests authoriz
     });
 
     assert.equal(inputAccess.helperForCapture(), helper);
-    assert.equal((await inputAccess.status()).state, 'permission-required');
+    const status = await inputAccess.status();
+    assert.equal(status.state, 'permission-required');
+    assert.equal(status.unavailableReason, undefined);
     assert.deepEqual(commands, ['input-access-status']);
     assert.deepEqual(await inputAccess.request(), available);
     assert.deepEqual(commands, ['input-access-status', 'request-input-access']);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('Linux preserves the broker-unavailable fallback when the helper exists but native status fails', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-input-access-'));
+  const helper = prebuiltInputHelperPath(root, version, 'linux', process.arch);
+  try {
+    writeExecutable(helper);
+    const inputAccess = new InputAccess({
+      app: app(),
+      applicationRoot: root,
+      platform: 'linux',
+      nativeRequest: async () => {
+        throw new Error('input broker unavailable');
+      },
+    });
+
+    assert.deepEqual(await inputAccess.status(), {
+      state: 'unavailable',
+      canRequest: false,
+      clicks: false,
+      shortcuts: false,
+      recordsText: false,
+      unavailableReason: 'input-broker-unavailable',
+    });
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

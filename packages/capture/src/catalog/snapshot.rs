@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use crate::model::{CaptureCapabilities, PermissionSnapshot, SourceDescriptor, SourceKind};
+use crate::model::{
+    CaptureCapabilities, CaptureDiagnostics, PermissionSnapshot, SourceDescriptor, SourceKind,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -9,6 +11,8 @@ pub struct CatalogSnapshot {
     pub created_at_utc: String,
     pub capabilities: CaptureCapabilities,
     pub permissions: PermissionSnapshot,
+    #[serde(default)]
+    pub diagnostics: CaptureDiagnostics,
     pub limitations: Vec<String>,
     pub sources: Vec<SourceDescriptor>,
 }

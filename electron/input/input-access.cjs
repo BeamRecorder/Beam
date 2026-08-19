@@ -20,7 +20,7 @@ class InputAccess {
   }
 
   async status() {
-    if (this.platform === 'linux' && !this.helperForCapture()) return unavailableStatus();
+    if (this.platform === 'linux' && !this.helperForCapture()) return unavailableStatus('input-helper-unavailable');
     try {
       return await this.nativeRequest('input-access-status');
     } catch {
@@ -29,7 +29,7 @@ class InputAccess {
   }
 
   async request() {
-    if (this.platform === 'linux' && !this.helperForCapture()) return unavailableStatus();
+    if (this.platform === 'linux' && !this.helperForCapture()) return unavailableStatus('input-helper-unavailable');
     return this.nativeRequest('request-input-access');
   }
 
@@ -50,13 +50,14 @@ class InputAccess {
   }
 }
 
-function unavailableStatus() {
+function unavailableStatus(unavailableReason = 'input-broker-unavailable') {
   return {
     state: 'unavailable',
     canRequest: false,
     clicks: false,
     shortcuts: false,
     recordsText: false,
+    unavailableReason,
   };
 }
 

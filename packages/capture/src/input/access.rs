@@ -12,6 +12,14 @@ pub enum InputAccessState {
     Denied,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum InputAccessUnavailableReason {
+    InputHelperUnavailable,
+    PolkitUnavailable,
+    InputBrokerUnavailable,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InputAccessStatus {
@@ -20,6 +28,8 @@ pub struct InputAccessStatus {
     pub clicks: bool,
     pub shortcuts: bool,
     pub records_text: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unavailable_reason: Option<InputAccessUnavailableReason>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mouse_devices: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -35,6 +45,7 @@ impl InputAccessStatus {
             clicks: mouse_devices.is_none_or(|count| count > 0),
             shortcuts: keyboard_devices.is_none_or(|count| count > 0),
             records_text: false,
+            unavailable_reason: None,
             mouse_devices,
             keyboard_devices,
         }
@@ -48,8 +59,17 @@ impl InputAccessStatus {
             clicks: false,
             shortcuts: false,
             records_text: false,
+            unavailable_reason: None,
             mouse_devices: None,
             keyboard_devices: None,
+        }
+    }
+
+    #[must_use]
+    pub fn installation_required() -> Self {
+        Self {
+            state: InputAccessState::InstallationRequired,
+            ..Self::required()
         }
     }
 
@@ -61,8 +81,17 @@ impl InputAccessStatus {
             clicks: false,
             shortcuts: false,
             records_text: false,
+            unavailable_reason: None,
             mouse_devices: None,
             keyboard_devices: None,
+        }
+    }
+
+    #[must_use]
+    pub fn unavailable_for(reason: InputAccessUnavailableReason) -> Self {
+        Self {
+            unavailable_reason: Some(reason),
+            ..Self::unavailable()
         }
     }
 }

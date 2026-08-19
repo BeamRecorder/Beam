@@ -3,8 +3,8 @@
 use std::collections::HashSet;
 
 use capture::input::{
-    INPUT_SIDECAR_VERSION, InputAccessStatus, InputEvent, InputEventSidecar, InputKey,
-    InputModifier, ShortcutSampler,
+    INPUT_SIDECAR_VERSION, InputAccessState, InputAccessStatus, InputEvent, InputEventSidecar,
+    InputKey, InputModifier, ShortcutSampler,
 };
 
 fn pressed(keys: &[InputKey]) -> HashSet<InputKey> {
@@ -142,4 +142,15 @@ fn input_access_availability_reflects_known_device_counters() {
     let unknown_devices = InputAccessStatus::available(None, None);
     assert!(unknown_devices.clicks);
     assert!(unknown_devices.shortcuts);
+}
+
+#[test]
+fn input_access_distinguishes_an_explicit_helper_installation() {
+    let status = InputAccessStatus::installation_required();
+
+    assert_eq!(status.state, InputAccessState::InstallationRequired);
+    assert!(status.can_request);
+    assert!(!status.clicks);
+    assert!(!status.shortcuts);
+    assert!(!status.records_text);
 }

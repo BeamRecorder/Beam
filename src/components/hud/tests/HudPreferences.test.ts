@@ -121,14 +121,15 @@ describe('HudPreferences', () => {
 
   it('emits an access request and exposes a busy state while it is pending', async () => {
     const wrapper = mountPreferences({ inputAccess: permissionRequiredAccess });
-    const authorize = wrapper.get('.input-access-actions .btn-secondary');
+    const enable = wrapper.get('.input-access-actions .btn-secondary');
 
-    await authorize.trigger('click');
+    expect(enable.text()).toContain('Enable');
+    await enable.trigger('click');
     expect(wrapper.emitted('requestInputAccess')).toHaveLength(1);
 
     await wrapper.setProps({ requestingInputAccess: true });
-    expect(authorize.attributes('disabled')).toBeDefined();
-    expect(authorize.text()).toContain('Authorizing');
+    expect(enable.attributes('disabled')).toBeDefined();
+    expect(enable.find('.icon-spin').exists()).toBe(true);
     expect(wrapper.find('.input-access-actions [role="switch"]').exists()).toBe(false);
   });
 
@@ -145,9 +146,10 @@ describe('HudPreferences', () => {
     const wrapper = mountPreferences({ inputAccess: deniedAccess });
 
     expect(wrapper.emitted('requestInputAccess')).toBeUndefined();
-    const authorize = wrapper.get('.input-access-actions .btn-secondary');
-    await authorize.trigger('click');
-    await authorize.trigger('click');
+    const enable = wrapper.get('.input-access-actions .btn-secondary');
+    expect(enable.text()).toContain('Enable');
+    await enable.trigger('click');
+    await enable.trigger('click');
     expect(wrapper.emitted('requestInputAccess')).toHaveLength(2);
   });
 
@@ -157,12 +159,14 @@ describe('HudPreferences', () => {
     });
     expect(checking.get('.input-access-actions').text()).toContain('Checking');
     expect(checking.find('.input-access-actions [role="switch"]').exists()).toBe(false);
+    expect(checking.find('.input-access-actions button').exists()).toBe(false);
 
     const unavailable = mountPreferences({
       inputAccess: { state: 'unavailable', canRequest: false, clicks: false, shortcuts: false, recordsText: false },
     });
     expect(unavailable.get('.input-access-actions').text()).toContain('Unavailable');
     expect(unavailable.find('.input-access-actions [role="switch"]').exists()).toBe(false);
+    expect(unavailable.find('.input-access-actions button').exists()).toBe(false);
   });
 
   it('does not render or emit the removed always-on-top preference', async () => {

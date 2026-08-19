@@ -438,6 +438,7 @@ mod tests {
             created_at_utc: String::new(),
             capabilities: CaptureCapabilities::default(),
             permissions: PermissionSnapshot::default(),
+            diagnostics: Default::default(),
             limitations: Vec::new(),
             sources,
         };

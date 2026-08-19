@@ -23,7 +23,7 @@ mod linux {
     const POLL_INTERVAL: Duration = Duration::from_millis(4);
     const INSTALLED_HELPER: &str = "/usr/libexec/beam-input-helper";
     const INSTALLED_POLICY: &str = "/usr/share/polkit-1/actions/com.beam.input-monitor.policy";
-    const POLICY_VERSION: u32 = 3;
+    const POLICY_VERSION: u32 = 5;
     const POLICY: &str = include_str!("beam-input-helper.policy");
 
     #[derive(Serialize)]
@@ -57,6 +57,7 @@ mod linux {
             "probe" => probe(),
             "stream" => stream(),
             "install" => install(),
+            "install-stream" => install_stream(),
             "uninstall" => uninstall(),
             "version" => write_json(&serde_json::json!({
                 "version": env!("CARGO_PKG_VERSION"),
@@ -179,14 +180,25 @@ mod linux {
 
     fn install() -> Result<(), Box<dyn std::error::Error>> {
         require_privileged()?;
-        let source = std::env::current_exe()?;
-        install_file(&source, Path::new(INSTALLED_HELPER), 0o755)?;
-        install_bytes(POLICY.as_bytes(), Path::new(INSTALLED_POLICY), 0o644)?;
+        install_assets()?;
         write_json(&serde_json::json!({
             "installed": true,
             "version": env!("CARGO_PKG_VERSION"),
             "policyVersion": POLICY_VERSION
         }))
+    }
+
+    fn install_stream() -> Result<(), Box<dyn std::error::Error>> {
+        require_privileged()?;
+        install_assets()?;
+        stream()
+    }
+
+    fn install_assets() -> Result<(), Box<dyn std::error::Error>> {
+        let source = std::env::current_exe()?;
+        install_file(&source, Path::new(INSTALLED_HELPER), 0o755)?;
+        install_bytes(POLICY.as_bytes(), Path::new(INSTALLED_POLICY), 0o644)?;
+        Ok(())
     }
 
     fn uninstall() -> Result<(), Box<dyn std::error::Error>> {
