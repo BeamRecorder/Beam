@@ -9,7 +9,7 @@
         {
           "title": "Instalar Beam",
           "paragraphs": [
-            "Descarga la versión más reciente desde la [página de versiones de Beam](https://github.com/ExtraBinoss/Beam/releases/latest). Elige el paquete correspondiente a tu sistema operativo."
+            "Descarga la versión más reciente desde la [página de versiones de Beam](https://github.com/BeamRecorder/Beam/releases/latest). Elige el paquete correspondiente a tu sistema operativo."
           ],
           "bullets": [
             "Windows utiliza el instalador nativo.",
@@ -88,7 +88,7 @@
         {
           "title": "Si falla el actualizador",
           "paragraphs": [
-            "Usa Copiar error para conservar el mensaje de diagnóstico y descarga manualmente el paquete correcto desde la [última versión de Beam](https://github.com/ExtraBinoss/Beam/releases/latest). Tus proyectos se almacenan por separado de la instalación de la aplicación."
+            "Usa Copiar error para conservar el mensaje de diagnóstico y descarga manualmente el paquete correcto desde la [última versión de Beam](https://github.com/BeamRecorder/Beam/releases/latest). Tus proyectos se almacenan por separado de la instalación de la aplicación."
           ]
         }
       ]

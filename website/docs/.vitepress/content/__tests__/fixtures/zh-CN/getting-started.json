@@ -9,7 +9,7 @@
         {
           "title": "安装 Beam",
           "paragraphs": [
-            "从 [Beam 发布页面](https://github.com/ExtraBinoss/Beam/releases/latest) 下载最新版本。选择适合你操作系统的软件包。"
+            "从 [Beam 发布页面](https://github.com/BeamRecorder/Beam/releases/latest) 下载最新版本。选择适合你操作系统的软件包。"
           ],
           "bullets": [
             "Windows 使用原生安装程序。",
@@ -88,7 +88,7 @@
         {
           "title": "更新器失败时",
           "paragraphs": [
-            "使用“复制错误”保留诊断消息，然后从[最新 Beam 发布页面](https://github.com/ExtraBinoss/Beam/releases/latest)手动下载正确的软件包。你的项目与应用安装位置分开存储。"
+            "使用“复制错误”保留诊断消息，然后从[最新 Beam 发布页面](https://github.com/BeamRecorder/Beam/releases/latest)手动下载正确的软件包。你的项目与应用安装位置分开存储。"
           ]
         }
       ]

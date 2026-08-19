@@ -81,7 +81,7 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "ExtraBinoss",
+        "owner": "BeamRecorder",
         "repo": "Beam"
       }
     ],

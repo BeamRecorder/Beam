@@ -56,7 +56,7 @@ const localeConfig = Object.fromEntries(
           siteTitle: localeCommon.siteTitle,
           nav: [
             { text: localeCommon.nav.website, link: siteUrl },
-            { text: 'GitHub', link: 'https://github.com/ExtraBinoss/Beam' },
+            { text: 'GitHub', link: 'https://github.com/BeamRecorder/Beam' },
             { text: 'Discord', link: 'https://discord.gg/6Q6v2xUCB' },
           ],
           sidebar: localeCommon.sidebar.map((group) => ({

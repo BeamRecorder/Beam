@@ -7,7 +7,7 @@ const githubState = vi.hoisted(() => ({
   release: {
     value: {
       tag_name: 'v1.2.3',
-      html_url: 'https://github.com/ExtraBinoss/Beam/releases/tag/v1.2.3',
+      html_url: 'https://github.com/BeamRecorder/Beam/releases/tag/v1.2.3',
       published_at: '2026-08-16T12:00:00Z',
       assets: [
         {

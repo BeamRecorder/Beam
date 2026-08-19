@@ -9,7 +9,7 @@ const jsonResponse = (value: unknown, status = 200) =>
 describe('useGitHubRepository', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
 
-  const repositoryUrl = 'https://api.github.com/repos/ExtraBinoss/Beam';
+  const repositoryUrl = 'https://api.github.com/repos/BeamRecorder/Beam';
   const releaseUrl = `${repositoryUrl}/releases/latest`;
   const contributorsUrl = `${repositoryUrl}/contributors?per_page=100&anon=1`;
 
@@ -28,7 +28,7 @@ describe('useGitHubRepository', () => {
     const repository = { stargazers_count: 128 };
     const release = {
       tag_name: 'v1.2.3',
-      html_url: 'https://github.com/ExtraBinoss/Beam/releases/tag/v1.2.3',
+      html_url: 'https://github.com/BeamRecorder/Beam/releases/tag/v1.2.3',
       published_at: '2026-08-16T12:00:00Z',
       assets: [
         {
@@ -87,7 +87,7 @@ describe('useGitHubRepository', () => {
     const repository = { stargazers_count: 256 };
     const release = {
       tag_name: 'v2.0.0',
-      html_url: 'https://github.com/ExtraBinoss/Beam/releases/tag/v2.0.0',
+      html_url: 'https://github.com/BeamRecorder/Beam/releases/tag/v2.0.0',
       published_at: '2026-08-16T13:00:00Z',
       assets: [],
     };

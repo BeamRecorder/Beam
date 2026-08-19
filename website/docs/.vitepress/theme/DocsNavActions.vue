@@ -7,7 +7,7 @@ import githubIconUrl from '../../../../public/github.svg';
 import DocsThemeToggle from './DocsThemeToggle.vue';
 import DocsLanguageSelector from './DocsLanguageSelector.vue';
 
-const githubUrl = 'https://github.com/ExtraBinoss/Beam';
+const githubUrl = 'https://github.com/BeamRecorder/Beam';
 const discordUrl = 'https://discord.gg/6Q6v2xUCB';
 const websiteUrl = 'https://beam.plinka.eu';
 const stars = ref<number | null>(null);
@@ -22,7 +22,7 @@ const openSearch = () => {
 
 onMounted(async () => {
   try {
-    const response = await fetch('https://api.github.com/repos/ExtraBinoss/Beam', {
+    const response = await fetch('https://api.github.com/repos/BeamRecorder/Beam', {
       headers: { Accept: 'application/vnd.github+json' },
     });
     if (!response.ok) return;

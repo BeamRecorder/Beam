@@ -3,7 +3,7 @@
   <h1>Beam</h1>
   <p>A Screen Recorder for clear, polished product demo, similar to Recordly or ScreenStudio.</p>
   <p>
-    <a href="https://github.com/ExtraBinoss/Beam/releases/latest">Download Beam for Windows, macOS, or Linux</a>
+    <a href="https://github.com/BeamRecorder/Beam/releases/latest">Download Beam for Windows, macOS, or Linux</a>
     ·
     <a href="https://discord.gg/6Q6v2xUCB"><img src="./public/discord_svg.svg" alt="Discord" width="18" height="20" valign="middle" /> Join Beam on Discord</a>
   </p>
@@ -132,7 +132,7 @@ Have feedback, ideas, or questions? Join the Beam community on Discord and follo
 <p>
   <a href="https://discord.gg/6Q6v2xUCB"><img src="./public/discord_svg.svg" alt="Discord" width="18" height="20" valign="middle" /> Join Beam on Discord</a>
   ·
-  <a href="https://github.com/ExtraBinoss/Beam"><img src="./public/github.svg" alt="GitHub" width="18" height="18" valign="middle" /> Beam on GitHub</a>
+  <a href="https://github.com/BeamRecorder/Beam"><img src="./public/github.svg" alt="GitHub" width="18" height="18" valign="middle" /> Beam on GitHub</a>
 </p>
 
 ## 💖 Acknowledgements

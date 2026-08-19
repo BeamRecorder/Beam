@@ -8,7 +8,7 @@
     "imageAlt": "Biểu tượng ứng dụng Beam",
     "actions": [
       { "theme": "brand", "text": "Bắt đầu sử dụng", "link": "/getting-started" },
-      { "theme": "alt", "text": "Xem trên GitHub", "link": "https://github.com/ExtraBinoss/Beam" },
+      { "theme": "alt", "text": "Xem trên GitHub", "link": "https://github.com/BeamRecorder/Beam" },
       { "theme": "alt", "text": "Tham gia Discord", "link": "https://discord.gg/6Q6v2xUCB" }
     ]
   },

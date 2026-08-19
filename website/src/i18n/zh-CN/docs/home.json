@@ -8,7 +8,7 @@
     "imageAlt": "Beam 应用图标",
     "actions": [
       { "theme": "brand", "text": "开始使用", "link": "/getting-started" },
-      { "theme": "alt", "text": "在 GitHub 上查看", "link": "https://github.com/ExtraBinoss/Beam" },
+      { "theme": "alt", "text": "在 GitHub 上查看", "link": "https://github.com/BeamRecorder/Beam" },
       { "theme": "alt", "text": "加入 Discord", "link": "https://discord.gg/6Q6v2xUCB" }
     ]
   },

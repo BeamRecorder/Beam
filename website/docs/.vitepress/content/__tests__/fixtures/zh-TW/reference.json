@@ -46,7 +46,7 @@
         {
           "title": "開啟結果",
           "paragraphs": [
-            "匯出成功後，Beam 會報告儲存的檔案名稱，並提供開啟檔案的操作。如果匯出失敗，請先複製技術報告，再在 [Discord](https://discord.gg/6Q6v2xUCB) 或 [GitHub](https://github.com/ExtraBinoss/Beam/issues) 上尋求協助。"
+            "匯出成功後，Beam 會報告儲存的檔案名稱，並提供開啟檔案的操作。如果匯出失敗，請先複製技術報告，再在 [Discord](https://discord.gg/6Q6v2xUCB) 或 [GitHub](https://github.com/BeamRecorder/Beam/issues) 上尋求協助。"
           ]
         }
       ]

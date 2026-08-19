@@ -8,7 +8,7 @@
     "imageAlt": "Beam ऐप आइकन",
     "actions": [
       { "theme": "brand", "text": "शुरुआत करें", "link": "/getting-started" },
-      { "theme": "alt", "text": "GitHub पर देखें", "link": "https://github.com/ExtraBinoss/Beam" },
+      { "theme": "alt", "text": "GitHub पर देखें", "link": "https://github.com/BeamRecorder/Beam" },
       { "theme": "alt", "text": "Discord से जुड़ें", "link": "https://discord.gg/6Q6v2xUCB" }
     ]
   },

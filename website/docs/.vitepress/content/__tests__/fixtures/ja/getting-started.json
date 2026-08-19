@@ -9,7 +9,7 @@
         {
           "title": "Beamをインストール",
           "paragraphs": [
-            "[Beamのリリースページ](https://github.com/ExtraBinoss/Beam/releases/latest)から最新リリースをダウンロードします。お使いのOS用のパッケージを選択してください。"
+            "[Beamのリリースページ](https://github.com/BeamRecorder/Beam/releases/latest)から最新リリースをダウンロードします。お使いのOS用のパッケージを選択してください。"
           ],
           "bullets": [
             "Windowsではネイティブインストーラーを使用します。",
@@ -88,7 +88,7 @@
         {
           "title": "アップデーターが失敗した場合",
           "paragraphs": [
-            "「エラーをコピー」を使って診断メッセージを保存し、[Beamの最新リリース](https://github.com/ExtraBinoss/Beam/releases/latest)から正しいパッケージを手動でダウンロードします。プロジェクトはアプリケーションのインストール先とは別に保存されています。"
+            "「エラーをコピー」を使って診断メッセージを保存し、[Beamの最新リリース](https://github.com/BeamRecorder/Beam/releases/latest)から正しいパッケージを手動でダウンロードします。プロジェクトはアプリケーションのインストール先とは別に保存されています。"
           ]
         }
       ]

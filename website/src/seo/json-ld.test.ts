@@ -16,7 +16,7 @@ describe('website JSON-LD', () => {
     expect(software).toMatchObject({
       url: 'https://beam.plinka.eu',
       image: 'https://beam.plinka.eu/Beam-showcase.png',
-      downloadUrl: 'https://github.com/ExtraBinoss/Beam/releases/latest',
+      downloadUrl: 'https://github.com/BeamRecorder/Beam/releases/latest',
     });
   });
 
