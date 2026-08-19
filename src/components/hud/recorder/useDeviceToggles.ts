@@ -143,14 +143,15 @@ export function useDeviceToggles(ctx: DeviceToggleContext) {
     }
     try {
       const nextSystemAudio = await BrowserSystemAudioRecorder.request();
+      ctx.setSystemAudio(nextSystemAudio);
       ctx.registerSystemAudioRecorder(nextSystemAudio);
       try {
         await nextSystemAudio.start(sessionId);
       } catch (reason) {
+        ctx.setSystemAudio(null);
         await stopRecorder(nextSystemAudio);
         throw reason;
       }
-      ctx.setSystemAudio(nextSystemAudio);
       ctx.setSystemAudioEnabled(true);
     } catch (reason) {
       setToggleError(reason);
