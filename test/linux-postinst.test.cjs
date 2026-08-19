@@ -7,12 +7,12 @@ const test = require('node:test');
 
 const AFTER_INSTALL = path.join(__dirname, '..', 'build', 'linux', 'after-install.sh');
 
-function runAfterInstall(directory, withHelper) {
+function runAfterInstall(directory, helperVersions) {
   const helperDirectory = path.join(directory, '/opt/Beam/resources/input-helper');
   fs.mkdirSync(helperDirectory, { recursive: true });
-  if (withHelper) {
-    const helper = path.join(helperDirectory, 'beam-input-helper-1.2.3');
-    fs.writeFileSync(helper, '#!/bin/sh\nprintf "%s" "$1" > "$MARKER"\n');
+  for (const version of helperVersions) {
+    const helper = path.join(helperDirectory, `beam-input-helper-${version}`);
+    fs.writeFileSync(helper, '#!/bin/sh\nprintf "%s %s" "${0##*/}" "$1" > "$MARKER"\n');
     fs.chmodSync(helper, 0o755);
   }
   const script = path.join(directory, 'after-install.sh');
@@ -40,16 +40,29 @@ function withTempDirectory(callback) {
 
 test('after-install runs the versioned input helper install', { skip: process.platform === 'win32' }, () => {
   withTempDirectory((directory) => {
-    const result = runAfterInstall(directory, true);
+    const result = runAfterInstall(directory, ['1.2.3']);
 
     assert.equal(result.status, 0, result.stderr);
-    assert.equal(fs.readFileSync(path.join(directory, 'called'), 'utf8'), 'install');
+    assert.equal(fs.readFileSync(path.join(directory, 'called'), 'utf8'), 'beam-input-helper-1.2.3 install');
   });
 });
 
+test(
+  'after-install selects the newest helper while RPM versions coexist',
+  { skip: process.platform === 'win32' },
+  () => {
+    withTempDirectory((directory) => {
+      const result = runAfterInstall(directory, ['1.2.3', '1.2.4', '1.10.0']);
+
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(fs.readFileSync(path.join(directory, 'called'), 'utf8'), 'beam-input-helper-1.10.0 install');
+    });
+  },
+);
+
 test('after-install fails when no input helper is packaged', { skip: process.platform === 'win32' }, () => {
   withTempDirectory((directory) => {
-    const result = runAfterInstall(directory, false);
+    const result = runAfterInstall(directory, []);
 
     assert.equal(result.status, 1);
     assert.match(result.stderr, /Beam input helper was not found/);
