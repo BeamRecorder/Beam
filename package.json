@@ -1,7 +1,7 @@
 {
   "name": "beam",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.1",
   "desktopName": "com.beam.app",
   "description": "Beam - Screen recorder to create product demos.",
   "author": {

@@ -1,4 +1,4 @@
-import { ref, shallowRef, watch } from 'vue';
+import { ref, shallowRef, watchEffect } from 'vue';
 import type { ProjectEditorData } from '~/api/types/capture-session';
 import { buttonEventsBetween, cursorStateAt } from '../../composables/cursorPlayback';
 import { useCursorReplacer } from '../../properties/cursor/useCursorReplacer';
@@ -14,7 +14,7 @@ import {
   type CursorCanvasBounds,
 } from '../../properties/cursor/cursor-rendering';
 import type { CursorPackDescriptor, CursorSelection } from '../../../../api/types/cursor-pack';
-import { MACOS_CURSOR_PACK } from '../../properties/cursor/cursor-packs';
+import { cursorAssetSupportsTint, MACOS_CURSOR_PACK } from '../../properties/cursor/cursor-packs';
 import type { VisualClip } from '~/media/shared/composition-types';
 import { CURSOR_SIZE_MAX } from '../../properties/cursor/cursor-size';
 import { createCursorMotionPlayer, motionBlurTrail } from '../../composables/cursor-motion';
@@ -69,6 +69,8 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
   let sampledTime = Number.NaN;
   let sampledMotion: ReturnType<ReturnType<typeof createCursorMotionPlayer>['sample']> = null;
   let imageRequestId = 0;
+  let imageRequestKey = '';
+  let loadedImageKey = '';
   const maxZoomScale = Math.max(...Object.values(ZOOM_DEPTH_SCALES));
 
   const updateCursorBounds = (bounds: CursorCanvasBounds | null) => {
@@ -95,42 +97,39 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
     return mappedTime !== null && Number.isFinite(mappedTime) ? mappedTime / 1_000 : timelineTime;
   };
 
-  watch(
-    () =>
-      [
-        options.cursorPack()?.id ?? null,
-        options.cursorSelection().packId,
-        options.cursorSelection().mode,
-        options.cursorSelection().cursorId,
-        cursorTime(),
-        options.cursorColor(),
-        options.deviceScale(),
-      ] as const,
-    async () => {
-      const requestId = ++imageRequestId;
-      customCursorImage.value = null;
+  watchEffect(async () => {
+    let requestId = imageRequestId;
+    try {
+      const cursorData = options.editorData()?.cursor;
+      const state = cursorStateAt(cursorData?.events ?? [], cursorTime());
+      const selectedPack = options.cursorPack();
+      const pack = selectedPack ?? MACOS_CURSOR_PACK;
+      const selection = selectedPack
+        ? options.cursorSelection()
+        : { packId: MACOS_CURSOR_PACK.id, mode: 'automatic' as const, cursorId: null };
+      const asset = cursorAssetAt(pack, selection, state);
+      const geometry = cursorGeometryAtSize(asset, CURSOR_SIZE_MAX * maxZoomScale * options.deviceScale());
+      const tint = cursorAssetSupportsTint(pack, asset) ? options.cursorColor() : 'original';
+      const key = `${pack.id}:${asset.id}:${asset.format ?? 'svg'}:${asset.url}:${Math.ceil(geometry.width)}x${Math.ceil(geometry.height)}:${tint}`;
+      if (key === imageRequestKey) return;
+      imageRequestKey = key;
+      requestId = ++imageRequestId;
       options.onRenderOnce?.();
-      try {
-        const state = cursorStateAt(options.editorData()?.cursor.events ?? [], cursorTime());
-        const pack = options.cursorPack() ?? MACOS_CURSOR_PACK;
-        const selection = options.cursorPack()
-          ? options.cursorSelection()
-          : { packId: MACOS_CURSOR_PACK.id, mode: 'automatic' as const, cursorId: null };
-        const asset = cursorAssetAt(pack, selection, state);
-        const geometry = cursorGeometryAtSize(asset, CURSOR_SIZE_MAX * maxZoomScale * options.deviceScale());
-        const image = await getCursorImage(pack, asset, geometry.width, geometry.height, options.cursorColor());
-        if (requestId !== imageRequestId) return;
-        customCursorImage.value = image;
-        options.onRenderOnce?.();
-      } catch {
-        if (requestId !== imageRequestId) return;
-        console.error('Failed to load custom cursor image.');
-        customCursorImage.value = null;
-        options.onRenderOnce?.();
-      }
-    },
-    { immediate: true },
-  );
+      const image = await getCursorImage(pack, asset, geometry.width, geometry.height, options.cursorColor());
+      if (requestId !== imageRequestId) return;
+      customCursorImage.value = image;
+      loadedImageKey = key;
+      options.onRenderOnce?.();
+    } catch {
+      if (requestId !== imageRequestId) return;
+      console.error('Failed to load custom cursor image.');
+      customCursorImage.value = null;
+      loadedImageKey = '';
+      options.onRenderOnce?.();
+    }
+  });
+
+  const activeCursorImage = () => (loadedImageKey === imageRequestKey ? customCursorImage.value : null);
 
   const warning = (ctx: CanvasRenderingContext2D, message: string, width: number) => {
     ctx.save();
@@ -194,12 +193,13 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
     time: number,
     width: number,
     height: number,
+    rawState: ReturnType<typeof cursorStateAt>,
   ) => {
     const player = playerFor(events, width, height);
     if (sampledPlayer !== player || sampledTime !== time) {
       sampledPlayer = player;
       sampledTime = time;
-      sampledMotion = player.sample(time, cursorStateAt(events, time));
+      sampledMotion = player.sample(time, rawState);
     }
     return { player, motion: sampledMotion };
   };
@@ -226,13 +226,14 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
     }
     const time = cursorTime();
     const state = cursorStateAt(cursorData.events, time);
-    const { player, motion: motionState } = motionStateAt(cursorData.events, time, videoWidth, videoHeight);
+    const { player, motion: motionState } = motionStateAt(cursorData.events, time, videoWidth, videoHeight, state);
     drawInCameraSpace(() => {
       const previewScale = previewScaleFor(videoWindow);
       for (const button of buttonEventsBetween(cursorData.events, Math.max(0, time - 0.5), time)) {
         const effect = settingsForButton(button.button);
+        const style = effect?.rippleStyle ?? (effect?.rippleEnabled ? 'single' : 'none');
         const ripple = effect?.rippleEnabled
-          ? cursorRippleAt(time - button.sessionNs / 1_000_000_000, effect.rippleSize)
+          ? cursorRippleAt(time - button.sessionNs / 1_000_000_000, effect.rippleSize, style)
           : null;
         const stateAtClick = cursorStateAt(cursorData.events, button.sessionNs / 1_000_000_000);
         if (!effect || !ripple || !stateAtClick) continue;
@@ -243,13 +244,22 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
           videoWidth,
           videoHeight,
         );
-        ctx.strokeStyle = getRippleStyleColor(effect.rippleColor, ripple.opacity);
-        ctx.lineWidth = Math.max(1, 3 * previewScale);
-        ctx.beginPath();
-        ctx.arc(position.x, position.y, ripple.radius * previewScale, 0, Math.PI * 2);
-        ctx.stroke();
+        for (const ring of ripple.rings) {
+          if (ring.filled) {
+            ctx.fillStyle = getRippleStyleColor(effect.rippleColor, ring.opacity);
+            ctx.beginPath();
+            ctx.arc(position.x, position.y, ring.radius * previewScale, 0, Math.PI * 2);
+            ctx.fill();
+          } else {
+            ctx.strokeStyle = getRippleStyleColor(effect.rippleColor, ring.opacity);
+            ctx.lineWidth = Math.max(1, 2.5 * previewScale);
+            ctx.beginPath();
+            ctx.arc(position.x, position.y, ring.radius * previewScale, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+        }
       }
-      const image = customCursorImage.value;
+      const image = activeCursorImage();
       if (!state?.visible || !image?.complete || image.naturalWidth <= 0 || !motionState) {
         updateCursorBounds(null);
         return;
@@ -303,13 +313,13 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
   ) => {
     const cursorData = options.editorData()?.cursor;
     const screen = options.screenClip();
-    const image = customCursorImage.value;
+    const image = activeCursorImage();
     if (!cursorData?.available || !screen || !options.isScreenEnabled() || !image?.complete || image.naturalWidth <= 0)
       return null;
     const timelineTime = options.currentTime();
     const time = (sourceTimeAt(screen, timelineTime * 1_000) ?? timelineTime * 1_000) / 1_000;
     const state = cursorStateAt(cursorData.events, time);
-    const motionState = motionStateAt(cursorData.events, time, videoWidth, videoHeight).motion;
+    const motionState = motionStateAt(cursorData.events, time, videoWidth, videoHeight, state).motion;
     if (!state?.visible || !motionState?.visible) return null;
     const raw = positionAt(motionState, videoWindow, videoWidth, videoHeight);
     return {

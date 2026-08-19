@@ -79,83 +79,170 @@ const moveState = (event: CursorMoveEvent): CursorPlaybackState => ({
   hotspot: { x: 0, y: 0 },
 });
 
+interface CursorStateCheckpoint {
+  visible: boolean;
+  cursorIdAssigned: boolean;
+  cursorId: string | null;
+  cursorKind: CursorKind | null;
+  hotspot: { x: number; y: number } | null;
+}
+
+export interface CursorEventIndex {
+  stateAt(
+    timeSeconds: number,
+    initialCursorId?: string | null,
+    initialHotspot?: { x: number; y: number },
+  ): CursorPlaybackState | null;
+  buttonsBetween(startSeconds: number, endSeconds: number, button?: CursorClickButton): CursorButtonEvent[];
+}
+
+const upperBound = (values: readonly number[], target: number) => {
+  let low = 0;
+  let high = values.length;
+  while (low < high) {
+    const middle = low + Math.floor((high - low) / 2);
+    if (values[middle]! <= target) low = middle + 1;
+    else high = middle;
+  }
+  return low;
+};
+
+export function createCursorEventIndex(events: CursorEvent[]): CursorEventIndex {
+  const chronological = events.every((event, index) => index === 0 || events[index - 1]!.sessionNs <= event.sessionNs);
+  const ordered = chronological
+    ? events
+    : events
+        .map((event, order) => ({ event, order }))
+        .sort((left, right) => left.event.sessionNs - right.event.sessionNs || left.order - right.order)
+        .map(({ event }) => event);
+  const moves = ordered.filter(isMove);
+  const moveTimes = moves.map(eventTime);
+  const pressedButtons = ordered.filter((event): event is CursorButtonEvent => isButton(event) && event.pressed);
+  const buttonTimes = pressedButtons.map(eventTime);
+  const checkpointTimes: number[] = [];
+  const checkpoints: CursorStateCheckpoint[] = [];
+  let checkpoint: CursorStateCheckpoint = {
+    visible: true,
+    cursorIdAssigned: false,
+    cursorId: null,
+    cursorKind: null,
+    hotspot: null,
+  };
+
+  for (const event of ordered) {
+    if (isMove(event)) {
+      checkpoint = {
+        ...checkpoint,
+        visible: event.visible,
+        cursorIdAssigned: checkpoint.cursorIdAssigned || event.cursorId != null,
+        cursorId: event.cursorId ?? checkpoint.cursorId,
+      };
+    } else if (isShape(event)) {
+      checkpoint = {
+        ...checkpoint,
+        cursorIdAssigned: true,
+        cursorId: event.cursorId ?? event.shapeId ?? null,
+        cursorKind: event.cursorKind ?? null,
+        hotspot: event.hotspot,
+      };
+    } else if (event.event === 'visibility') {
+      checkpoint = { ...checkpoint, visible: event.visible };
+    } else {
+      continue;
+    }
+    checkpointTimes.push(eventTime(event));
+    checkpoints.push(checkpoint);
+  }
+
+  return {
+    stateAt(timeSeconds, initialCursorId = null, initialHotspot = { x: 0, y: 0 }) {
+      const isTimelineStart = timeSeconds === 0;
+      const time = Number.isNaN(timeSeconds) ? Number.POSITIVE_INFINITY : Math.max(0, timeSeconds);
+      const nextMoveIndex = upperBound(moveTimes, time);
+      const previousMove = moves[nextMoveIndex - 1] ?? null;
+      const beforePreviousMove = moves[nextMoveIndex - 2] ?? null;
+      const nextMove = moves[nextMoveIndex] ?? null;
+      const afterNextMove = moves[nextMoveIndex + 1] ?? null;
+      const stateCheckpoint = checkpoints[upperBound(checkpointTimes, time) - 1];
+      const visible = stateCheckpoint?.visible ?? true;
+      const cursorId = stateCheckpoint?.cursorIdAssigned ? stateCheckpoint.cursorId : initialCursorId;
+      const cursorKind = stateCheckpoint?.cursorKind ?? null;
+      const hotspot = stateCheckpoint?.hotspot ?? initialHotspot;
+
+      if (!previousMove) {
+        if (isTimelineStart && nextMove) {
+          const state = moveState(nextMove);
+          state.visible = visible;
+          state.cursorId = cursorId;
+          state.shapeId = cursorId;
+          state.cursorKind = cursorKind;
+          state.hotspot = hotspot;
+          return state;
+        }
+        return null;
+      }
+
+      const state = moveState(previousMove);
+      state.visible = visible;
+      state.cursorId = cursorId;
+      state.shapeId = cursorId;
+      state.cursorKind = cursorKind;
+      state.hotspot = hotspot;
+      if (nextMove && eventTime(nextMove) > eventTime(previousMove)) {
+        state.x = smoothCoordinateAt(
+          beforePreviousMove,
+          previousMove,
+          nextMove,
+          afterNextMove,
+          time,
+          (event) => event.normalizedX,
+        );
+        state.y = smoothCoordinateAt(
+          beforePreviousMove,
+          previousMove,
+          nextMove,
+          afterNextMove,
+          time,
+          (event) => event.normalizedY,
+        );
+      }
+      return state;
+    },
+    buttonsBetween(startSeconds, endSeconds, button) {
+      if (Number.isNaN(startSeconds) || Number.isNaN(endSeconds) || endSeconds < startSeconds) return [];
+      const start = upperBound(buttonTimes, startSeconds);
+      const end = upperBound(buttonTimes, endSeconds);
+      const matches = pressedButtons.slice(start, end);
+      return button === undefined
+        ? matches
+        : matches.filter((event) => clickButtonForRecordedButton(event.button) === button);
+    },
+  };
+}
+
+const cachedIndexes = new WeakMap<
+  CursorEvent[],
+  { length: number; last: CursorEvent | undefined; index: CursorEventIndex }
+>();
+
+export function cursorEventIndexFor(events: CursorEvent[]): CursorEventIndex {
+  // Captured cursor events are immutable session data. A replaced array builds a
+  // new index, while every playback frame reuses the existing one.
+  const cached = cachedIndexes.get(events);
+  const last = events.at(-1);
+  if (cached && cached.length === events.length && cached.last === last) return cached.index;
+  const index = createCursorEventIndex(events);
+  cachedIndexes.set(events, { length: events.length, last, index });
+  return index;
+}
+
 export function cursorStateAt(
   events: CursorEvent[],
   timeSeconds: number,
   initialCursorId: string | null = null,
   initialHotspot = { x: 0, y: 0 },
 ): CursorPlaybackState | null {
-  const isTimelineStart = timeSeconds === 0;
-  const time = Math.max(0, timeSeconds);
-  let previousMove: CursorMoveEvent | null = null;
-  let beforePreviousMove: CursorMoveEvent | null = null;
-  let nextMove: CursorMoveEvent | null = null;
-  let afterNextMove: CursorMoveEvent | null = null;
-  let visible = true;
-  let cursorId = initialCursorId;
-  let cursorKind: CursorKind | null = null;
-  let hotspot = initialHotspot;
-
-  for (const event of events) {
-    if (eventTime(event) > time) {
-      if (isMove(event)) {
-        if (!nextMove) nextMove = event;
-        else if (!afterNextMove) afterNextMove = event;
-      }
-      continue;
-    }
-    if (isMove(event)) {
-      beforePreviousMove = previousMove;
-      previousMove = event;
-      visible = event.visible;
-      cursorId = event.cursorId ?? cursorId;
-    } else if (isShape(event)) {
-      cursorId = event.cursorId ?? event.shapeId ?? null;
-      cursorKind = event.cursorKind ?? null;
-      hotspot = event.hotspot;
-    } else if (event.event === 'visibility') {
-      visible = event.visible;
-    }
-  }
-
-  if (!previousMove) {
-    if (isTimelineStart && nextMove) {
-      const state = moveState(nextMove);
-      state.visible = visible;
-      state.cursorId = cursorId;
-      state.shapeId = cursorId;
-      state.cursorKind = cursorKind;
-      state.hotspot = hotspot;
-      return state;
-    }
-    return null;
-  }
-
-  const state = moveState(previousMove);
-  state.visible = visible;
-  state.cursorId = cursorId;
-  state.shapeId = cursorId;
-  state.cursorKind = cursorKind;
-  state.hotspot = hotspot;
-  if (nextMove && eventTime(nextMove) > eventTime(previousMove)) {
-    state.x = smoothCoordinateAt(
-      beforePreviousMove,
-      previousMove,
-      nextMove,
-      afterNextMove,
-      time,
-      (event) => event.normalizedX,
-    );
-    state.y = smoothCoordinateAt(
-      beforePreviousMove,
-      previousMove,
-      nextMove,
-      afterNextMove,
-      time,
-      (event) => event.normalizedY,
-    );
-  }
-  return state;
+  return cursorEventIndexFor(events).stateAt(timeSeconds, initialCursorId, initialHotspot);
 }
 
 export function buttonEventsBetween(
@@ -164,15 +251,7 @@ export function buttonEventsBetween(
   endSeconds: number,
   button?: CursorClickButton,
 ): CursorButtonEvent[] {
-  if (endSeconds < startSeconds) return [];
-  return events.filter(
-    (event): event is CursorButtonEvent =>
-      isButton(event) &&
-      event.pressed &&
-      eventTime(event) > startSeconds &&
-      eventTime(event) <= endSeconds &&
-      (button === undefined || clickButtonForRecordedButton(event.button) === button),
-  );
+  return cursorEventIndexFor(events).buttonsBetween(startSeconds, endSeconds, button);
 }
 
 export function cursorAssetForState(state: CursorPlaybackState | null, shapes: Record<string, CursorShapeAsset>) {

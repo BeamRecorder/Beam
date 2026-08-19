@@ -86,6 +86,9 @@
     "watermarkBackgroundRadius": "角の丸み",
     "watermarkBackgroundPadding": "内側の余白",
     "noWatermarkText": "テキストなし",
+    "custom": "カスタム",
+    "customWatermarkText": "カスタムテキスト",
+    "watermarkCustomTextPlaceholder": "ウォーターマークのテキストを入力...",
     "translateWatermark": "ウォーターマークを翻訳"
   },
   "CanvasToolbar": {
@@ -111,6 +114,8 @@
     "customTextDescription": "編集すると、時間付きの文字起こしがカスタムテキストに置き換わります。",
     "typography": "タイポグラフィ",
     "importFont": "フォントを読み込む",
+    "searchFonts": "フォントを検索...",
+    "noFontsFound": "一致するフォントがありません",
     "fontSample": "Aa Bb Cc 123",
     "textAlignment": "テキストの配置",
     "alignLeft": "左揃え",

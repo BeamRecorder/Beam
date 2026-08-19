@@ -11,6 +11,8 @@ import {
 describe('cursor click settings', () => {
   it('keeps left and right defaults independent', () => {
     const defaults = createDefaultCursorClickEffects();
+    expect(defaults.left).toMatchObject({ springEnabled: true, rippleEnabled: false, rippleStyle: 'single' });
+    expect(defaults.right).toMatchObject({ springEnabled: true, rippleEnabled: false, rippleStyle: 'single' });
     defaults.left.rippleSize = 42;
     expect(defaults.right.rippleSize).toBe(30);
   });
@@ -22,8 +24,41 @@ describe('cursor click settings', () => {
         right: { springEnabled: false, rippleColor: '#00ff00' },
       }),
     ).toEqual({
-      left: { springEnabled: true, springIntensity: 100, rippleEnabled: true, rippleSize: 10, rippleColor: '#ff5a1f' },
-      right: { springEnabled: false, springIntensity: 50, rippleEnabled: true, rippleSize: 30, rippleColor: '#00ff00' },
+      left: {
+        springEnabled: true,
+        springIntensity: 100,
+        rippleEnabled: false,
+        rippleStyle: 'single',
+        rippleSize: 10,
+        rippleColor: '#ff5a1f',
+      },
+      right: {
+        springEnabled: false,
+        springIntensity: 50,
+        rippleEnabled: false,
+        rippleStyle: 'single',
+        rippleSize: 30,
+        rippleColor: '#00ff00',
+      },
+    });
+  });
+
+  it('uses spring-on and ripple-off defaults when both persisted button records are empty', () => {
+    expect(normalizeCursorClickEffects({ left: {}, right: {} })).toMatchObject({
+      left: { springEnabled: true, rippleEnabled: false, rippleStyle: 'single' },
+      right: { springEnabled: true, rippleEnabled: false, rippleStyle: 'single' },
+    });
+  });
+
+  it('normalizes one shared wave shape while preserving left and right activation', () => {
+    expect(
+      normalizeCursorClickEffects({
+        left: { rippleEnabled: false, rippleStyle: 'double' },
+        right: { rippleEnabled: true, rippleStyle: 'solid' },
+      }),
+    ).toMatchObject({
+      left: { rippleEnabled: false, rippleStyle: 'double' },
+      right: { rippleEnabled: true, rippleStyle: 'double' },
     });
   });
 

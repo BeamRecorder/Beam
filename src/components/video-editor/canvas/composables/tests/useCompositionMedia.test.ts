@@ -372,6 +372,50 @@ describe('useCompositionMedia', () => {
     expect(offsetContext.globalAlpha).toBeCloseTo(0.874248499, 6);
   });
 
+  it.each([30, 60])('does not leave an empty preview frame at a contiguous exit cut (%s fps)', (fps) => {
+    const first = visual('video', 'first', 'video-asset', 0);
+    first.timelineDurationMs = 1_000;
+    first.playbackRate = 1;
+    first.transitions = { entry: null, exit: { preset: { kind: 'fade' }, durationMs: 500 } };
+    const second = visual('video', 'second', 'video-asset', 1);
+    second.timelineStartMs = 1_000;
+    second.timelineDurationMs = 1_000;
+    second.playbackRate = 1;
+    second.transitions = { entry: null, exit: null };
+    const mounted = mountComposable({ ...composition(), clips: [first, second] });
+    mounted.frames.set('first', mediaFrame('first', 640, 360));
+    mounted.frames.set('second', mediaFrame('second', 640, 360));
+
+    const renderAt = (timeMs: number) => {
+      mounted.currentTime.value = timeMs / 1_000;
+      const ctx = context();
+      drawDecoratedMedia.mockClear();
+      state.drawVisualStack(ctx, { dx: 0, dy: 0, dw: 800, dh: 400, scale: 1 }, vi.fn());
+      const call = drawDecoratedMedia.mock.calls[0];
+      return {
+        source: (call?.[1] as { source?: unknown } | undefined)?.source,
+        alpha: ctx.globalAlpha,
+        count: drawDecoratedMedia.mock.calls.length,
+      };
+    };
+    const frameMs = 1_000 / fps;
+
+    const before = renderAt(1_000 - frameMs);
+    expect(before.source).toMatchObject({ clipId: 'first' });
+    expect(before.count).toBe(1);
+    expect(before.alpha).toBeCloseTo(1 - (1 - frameMs / 500) ** 3, 8);
+
+    const atCut = renderAt(1_000);
+    expect(atCut.source).toMatchObject({ clipId: 'second' });
+    expect(atCut.count).toBe(1);
+    expect(atCut.alpha).toBe(1);
+
+    const after = renderAt(1_000 + frameMs);
+    expect(after.source).toMatchObject({ clipId: 'second' });
+    expect(after.count).toBe(1);
+    expect(after.alpha).toBe(1);
+  });
+
   it('keeps loading frames absent and renders captions and loaded images', () => {
     const mounted = mountComposable();
     const image = state.images.get('image-asset')!;

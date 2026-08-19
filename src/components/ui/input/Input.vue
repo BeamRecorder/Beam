@@ -21,20 +21,61 @@ const props = withDefaults(
     step?: number;
     autofocus?: boolean;
     selectOnFocus?: boolean;
+    debounce?: number;
   }>(),
   {
     type: 'text',
     step: 1,
     autofocus: false,
     selectOnFocus: false,
+    debounce: 0,
   },
 );
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string | number): void;
+  (e: 'blur', event: FocusEvent): void;
 }>();
 
 const inputRef = ref<HTMLInputElement | null>(null);
+let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+let pendingValue: string | number | null = null;
+let isDirty = false;
+
+const flushDebounce = () => {
+  if (debounceTimer) {
+    clearTimeout(debounceTimer);
+    debounceTimer = null;
+  }
+  if (isDirty && pendingValue !== null) {
+    isDirty = false;
+    emit('update:modelValue', pendingValue);
+    pendingValue = null;
+  }
+};
+
+const handleInput = (event: Event) => {
+  const val = (event.target as HTMLInputElement).value;
+  if (!props.debounce || props.debounce <= 0) {
+    emit('update:modelValue', val);
+    return;
+  }
+  pendingValue = val;
+  isDirty = true;
+  if (debounceTimer) clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(flushDebounce, props.debounce);
+};
+
+const handleBlur = (event: FocusEvent) => {
+  flushDebounce();
+  emit('blur', event);
+};
+
+const handleKeyDown = (event: KeyboardEvent) => {
+  if (event.key === 'Enter') {
+    flushDebounce();
+  }
+};
 
 const focusInput = () => {
   if (!inputRef.value) return;
@@ -54,6 +95,7 @@ onMounted(() => {
 defineExpose({
   focus: focusInput,
   select: () => inputRef.value?.select(),
+  flush: flushDebounce,
   inputRef,
 });
 
@@ -116,12 +158,18 @@ const handleMouseDown = (e: MouseEvent) => {
     if (hasDragged) {
       isDragging.value = false;
       endPropertyInteraction();
-      document.body.style.cursor = '';
-      document.body.classList.remove('is-dragging-input');
-      window.addEventListener('click', preventClick, true);
-      setTimeout(() => {
-        window.removeEventListener('click', preventClick, true);
-      }, 50);
+      if (typeof document !== 'undefined') {
+        document.body.style.cursor = '';
+        document.body.classList.remove('is-dragging-input');
+      }
+      if (typeof window !== 'undefined') {
+        window.addEventListener('click', preventClick, true);
+        setTimeout(() => {
+          if (typeof window !== 'undefined') {
+            window.removeEventListener('click', preventClick, true);
+          }
+        }, 50);
+      }
     }
   };
 
@@ -159,7 +207,9 @@ const handleMouseDown = (e: MouseEvent) => {
       :max="max"
       :step="step"
       class="input-element"
-      @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
+      @input="handleInput"
+      @blur="handleBlur"
+      @keydown="handleKeyDown"
       @mousedown="handleMouseDown"
     />
     <div v-if="$slots.suffix" class="input-suffix">

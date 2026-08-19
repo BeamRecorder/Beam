@@ -2,23 +2,33 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ExportRequest } from '../../export-types';
 import type { ExportWorkerResponse } from '../export-worker-protocol';
 import type { ExportRuntimeDiagnostics } from '../../export-diagnostics-types';
+
+const { prepareExportCursorImages } = vi.hoisted(() => ({
+  prepareExportCursorImages: vi.fn(),
+}));
+vi.mock('../export-cursor-images', () => ({ prepareExportCursorImages }));
+
 import { exportWithMediabunny } from '../exporter';
 
 type WorkerMessage = { type: string; [key: string]: unknown };
 
 class FakeWorker {
   static instances: FakeWorker[] = [];
+  static startFailure: Error | null = null;
   onmessage: ((event: MessageEvent<unknown>) => void) | null = null;
   onerror: ((event: ErrorEvent) => void) | null = null;
   readonly posted: WorkerMessage[] = [];
+  readonly transfers: Transferable[][] = [];
   readonly terminate = vi.fn();
 
   constructor(_url: URL, _options: WorkerOptions) {
     FakeWorker.instances.push(this);
   }
 
-  postMessage(message: WorkerMessage) {
+  postMessage(message: WorkerMessage, options?: Transferable[] | { transfer?: Transferable[] }) {
+    if (message.type === 'start' && FakeWorker.startFailure) throw FakeWorker.startFailure;
     this.posted.push(message);
+    this.transfers.push(Array.isArray(options) ? options : (options?.transfer ?? []));
   }
 
   emit(message: ExportWorkerResponse) {
@@ -91,6 +101,8 @@ let abortExport: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   FakeWorker.instances = [];
+  FakeWorker.startFailure = null;
+  prepareExportCursorImages.mockReset().mockResolvedValue([]);
   vi.stubGlobal('Worker', FakeWorker);
   beginExport = vi.fn().mockResolvedValue({ canceled: false, jobId: 'job-1' });
   writeExportChunk = vi.fn().mockResolvedValue(undefined);
@@ -107,6 +119,88 @@ afterEach(() => {
 });
 
 describe('export worker client', () => {
+  it.each(['webm', 'mp4'] as const)('prepares and transfers cursor bitmaps for %s', async (format) => {
+    const defaultBitmap = { width: 144, height: 144, close: vi.fn() } as unknown as ImageBitmap;
+    const pointerBitmap = { width: 72, height: 36, close: vi.fn() } as unknown as ImageBitmap;
+    const value = { ...request(), format };
+    prepareExportCursorImages.mockResolvedValueOnce([
+      { id: 'default', bitmap: defaultBitmap },
+      { id: 'pointer', bitmap: pointerBitmap },
+    ]);
+
+    const running = exportWithMediabunny(value, vi.fn(), new AbortController().signal);
+    await flush();
+    const worker = FakeWorker.instances[0]!;
+    const startIndex = worker.posted.findIndex((message) => message.type === 'start');
+
+    expect(prepareExportCursorImages).toHaveBeenCalledWith(value, expect.any(AbortSignal));
+    expect(worker.posted[startIndex]).toMatchObject({
+      type: 'start',
+      request: expect.objectContaining({ format }),
+      cursorImages: [
+        { id: 'default', bitmap: defaultBitmap },
+        { id: 'pointer', bitmap: pointerBitmap },
+      ],
+    });
+    expect(worker.transfers[startIndex]).toEqual([defaultBitmap, pointerBitmap]);
+
+    worker.emit({ type: 'complete', diagnostics: diagnostics() });
+    await expect(running).resolves.toMatchObject({ format });
+    expect(defaultBitmap.close).not.toHaveBeenCalled();
+    expect(pointerBitmap.close).not.toHaveBeenCalled();
+  });
+
+  it('closes prepared cursor bitmaps when destination selection is cancelled', async () => {
+    const bitmap = { width: 144, height: 144, close: vi.fn() } as unknown as ImageBitmap;
+    prepareExportCursorImages.mockResolvedValueOnce([{ id: 'default', bitmap }]);
+    beginExport.mockResolvedValueOnce({ canceled: true, jobId: 'job-cancelled' });
+
+    await expect(exportWithMediabunny(request(), vi.fn(), new AbortController().signal)).rejects.toMatchObject({
+      name: 'AbortError',
+    });
+
+    expect(bitmap.close).toHaveBeenCalledOnce();
+    expect(FakeWorker.instances).toHaveLength(0);
+  });
+
+  it('closes prepared cursor bitmaps and aborts native export when transfer posting fails', async () => {
+    const bitmap = { width: 144, height: 144, close: vi.fn() } as unknown as ImageBitmap;
+    prepareExportCursorImages.mockResolvedValueOnce([{ id: 'default', bitmap }]);
+    FakeWorker.startFailure = new Error('cursor transfer failed');
+
+    await expect(exportWithMediabunny(request(), vi.fn(), new AbortController().signal)).rejects.toThrow(
+      'cursor transfer failed',
+    );
+
+    expect(bitmap.close).toHaveBeenCalledOnce();
+    expect(abortExport).toHaveBeenCalledWith('job-1');
+    expect(FakeWorker.instances[0]?.terminate).toHaveBeenCalledOnce();
+  });
+
+  it('propagates cancellation while cursor preparation is pending before opening a destination', async () => {
+    const controller = new AbortController();
+    let rejectPreparation!: (error: unknown) => void;
+    prepareExportCursorImages.mockImplementationOnce(
+      (_value: ExportRequest, signal: AbortSignal) =>
+        new Promise((_resolve, reject) => {
+          rejectPreparation = reject;
+          signal.addEventListener(
+            'abort',
+            () => rejectPreparation(new DOMException('Cursor image loading was cancelled.', 'AbortError')),
+            { once: true },
+          );
+        }),
+    );
+
+    const running = exportWithMediabunny(request(), vi.fn(), controller.signal);
+    await flush();
+    controller.abort();
+
+    await expect(running).rejects.toMatchObject({ name: 'AbortError' });
+    expect(beginExport).not.toHaveBeenCalled();
+    expect(FakeWorker.instances).toHaveLength(0);
+  });
+
   it('forwards throttled worker progress and reports 100% only after native finalization', async () => {
     const reported: number[] = [];
     const running = exportWithMediabunny(

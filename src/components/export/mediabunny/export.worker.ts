@@ -5,10 +5,11 @@ import type { ExportRuntimeDiagnostics } from '../export-diagnostics-types';
 import { isExportWorkerRequest, type ExportWorkerResponse } from './export-worker-protocol';
 import { loadBitmap, openExportAssets, type ExportAssets } from './export-worker-assets';
 import { ExportWorkerOutput } from './export-worker-output';
-import { resolveCursorAsset } from '../../video-editor/properties/cursor/cursor-packs';
 import { renderExportAudio, renderExportVideo } from './export-worker-pipelines';
 import { loadExportFonts } from './export-worker-fonts';
 import { WATERMARK_LOGO_KEY, WATERMARK_LOGO_PATH } from '../../video-editor/canvas/watermark-render';
+import type { PreparedCursorImage } from './export-cursor-images';
+import { requiredExportCursorAssets } from './export-cursor-selection';
 
 let controller: AbortController | null = null;
 let output: ExportWorkerOutput | null = null;
@@ -34,7 +35,7 @@ self.onmessage = (event: MessageEvent<unknown>) => {
   else if (message.type === 'chunkError') output?.reject(message.sequence, message.message);
   else if (!controller) {
     controller = new AbortController();
-    activeRun = run(message.request, controller.signal)
+    activeRun = run(message.request, message.cursorImages, controller.signal)
       .catch(postError)
       .finally(() => {
         activeRun = null;
@@ -56,10 +57,7 @@ const cancelOutput = () => {
   return outputCancelPromise;
 };
 
-async function run(request: ExportRequest, signal: AbortSignal) {
-  if (typeof OffscreenCanvas === 'undefined') throw new Error('OffscreenCanvas is required for export.');
-  if (typeof VideoEncoder === 'undefined' || typeof VideoDecoder === 'undefined')
-    throw new Error('WebCodecs is required for export.');
+async function run(request: ExportRequest, preparedCursorImages: PreparedCursorImage[], signal: AbortSignal) {
   const started = performance.now();
   const totalTimeMs = Math.round(request.snapshot.duration * 1_000);
   const audioClips =
@@ -68,11 +66,16 @@ async function run(request: ExportRequest, signal: AbortSignal) {
           (clip): clip is AudioClip => isAudioClip(clip) && clip.enabled && clip.timelineDurationMs > 0,
         )
       : [];
-  if (audioClips.length && (typeof AudioEncoder === 'undefined' || typeof AudioDecoder === 'undefined'))
-    throw new Error('WebCodecs audio support is required for export.');
   const totalFrames = Math.max(1, Math.ceil(request.snapshot.duration * request.snapshot.render.fps));
   let assets: ExportAssets | null = null;
   const bitmaps = new Map<string, ImageBitmap>();
+  const transferredCursors = new Map<string, ImageBitmap>();
+  for (const image of preparedCursorImages) {
+    const previous = transferredCursors.get(image.id);
+    previous?.close();
+    transferredCursors.set(image.id, image.bitmap);
+    bitmaps.set(`cursor:${image.id}`, image.bitmap);
+  }
   const measured: Omit<ExportRuntimeDiagnostics, 'elapsedMs' | 'phase'> = {
     validationMs: null,
     assetLoadingMs: null,
@@ -103,6 +106,11 @@ async function run(request: ExportRequest, signal: AbortSignal) {
   const report = (value: ExportProgress, force = false) =>
     progress({ ...value, diagnostics: diagnostics(value.stage) }, force);
   try {
+    if (typeof OffscreenCanvas === 'undefined') throw new Error('OffscreenCanvas is required for export.');
+    if (typeof VideoEncoder === 'undefined' || typeof VideoDecoder === 'undefined')
+      throw new Error('WebCodecs is required for export.');
+    if (audioClips.length && (typeof AudioEncoder === 'undefined' || typeof AudioDecoder === 'undefined'))
+      throw new Error('WebCodecs audio support is required for export.');
     report(baseProgress('validating_assets', 0, totalFrames, audioClips.length > 0, totalTimeMs), true);
     await loadExportFonts(request.snapshot.composition);
     assets = await openExportAssets(request, signal, (completed, total) => {
@@ -123,7 +131,7 @@ async function run(request: ExportRequest, signal: AbortSignal) {
     report(baseProgress('loading_assets', 0.05, totalFrames, audioClips.length > 0, totalTimeMs), true);
     const loadingStarted = performance.now();
     const images = await loadImages(request, bitmaps);
-    const cursorImages = await loadCursors(request, bitmaps);
+    const cursorImages = loadCursors(request, transferredCursors);
     measured.assetLoadingMs = performance.now() - loadingStarted;
     console.info('[Beam export] asset loading', { elapsedMs: Math.round(measured.assetLoadingMs) });
     report(baseProgress('loading_assets', 0.08, totalFrames, audioClips.length > 0, totalTimeMs), true);
@@ -304,89 +312,20 @@ async function loadImages(request: ExportRequest, owned: Map<string, ImageBitmap
   return images;
 }
 
-async function loadCursors(request: ExportRequest, owned: Map<string, ImageBitmap>) {
-  const pack = request.snapshot.cursorPack;
-  if (!pack)
-    throw new ExportValidationError({
-      code: 'missing-asset',
-      message: `Cursor pack "${request.snapshot.cursorSettings.selection.packId}" is unavailable. Import it again before exporting.`,
-      assetId: request.snapshot.cursorSettings.selection.packId,
-    });
-  if (!request.snapshot.cursor.available || request.snapshot.cursor.events.length === 0) return new Map();
-  const selection = request.snapshot.cursorSettings.selection;
-  const assets = new Map();
-  if (selection.mode === 'fixed') {
-    const asset = pack.cursors.find((cursor) => cursor.id === selection.cursorId);
-    if (asset) assets.set(asset.id, asset);
-  } else {
-    for (const event of request.snapshot.cursor.events) {
-      if (event.event !== 'shape') continue;
-      const asset = resolveCursorAsset(pack, selection, event.cursorKind);
-      assets.set(asset.id, asset);
-    }
-  }
-  if (!assets.size) {
-    const fallback = resolveCursorAsset(pack, selection);
-    assets.set(fallback.id, fallback);
-  }
+function loadCursors(request: ExportRequest, prepared: Map<string, ImageBitmap>) {
+  const assets = requiredExportCursorAssets(request);
   const result = new Map<string, ImageBitmap>();
-  await Promise.all(
-    [...assets.values()].map(async (asset) => {
-      const response = await fetch(asset.url);
-      if (!response.ok)
-        throw new ExportValidationError({
-          code: 'missing-asset',
-          message: `Unable to load cursor ${asset.id}.`,
-          assetId: asset.id,
-        });
-      const scale = request.snapshot.cursorSettings.size / asset.nominalSize;
-      const rasterWidth = Math.max(1, Math.ceil(asset.intrinsicSize.width * scale * 6));
-      const rasterHeight = Math.max(1, Math.ceil(asset.intrinsicSize.height * scale * 6));
-      let bitmap: ImageBitmap;
-      try {
-        bitmap = await createImageBitmap(await response.blob(), {
-          resizeWidth: rasterWidth,
-          resizeHeight: rasterHeight,
-          resizeQuality: 'high',
-        });
-      } catch (error) {
-        const decoder = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
-        throw new Error(`Unable to decode cursor "${asset.id}" from ${asset.url}; decoder: ${decoder}`, {
-          cause: error,
-        });
-      }
-      if (pack.colorMode === 'tintable') bitmap = recolorCursor(bitmap, request.snapshot.cursorSettings.color);
-      owned.set(`cursor:${pack.id}:${asset.id}`, bitmap);
-      result.set(asset.id, bitmap);
-    }),
-  );
-  return result;
-}
-
-function recolorCursor(bitmap: ImageBitmap, color: string) {
-  if (color.toLowerCase() === '#000000') return bitmap;
-  const match = /^#([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(color);
-  if (!match) return bitmap;
-  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-  const context = canvas.getContext('2d');
-  if (!context) return bitmap;
-  try {
-    context.drawImage(bitmap, 0, 0);
-    const pixels = context.getImageData(0, 0, bitmap.width, bitmap.height);
-    const red = Number.parseInt(match[1]!, 16);
-    const green = Number.parseInt(match[2]!, 16);
-    const blue = Number.parseInt(match[3]!, 16);
-    for (let index = 0; index < pixels.data.length; index += 4) {
-      if (pixels.data[index]! > 8 || pixels.data[index + 1]! > 8 || pixels.data[index + 2]! > 8) continue;
-      pixels.data[index] = red;
-      pixels.data[index + 1] = green;
-      pixels.data[index + 2] = blue;
-    }
-    context.putImageData(pixels, 0, 0);
-    return canvas.transferToImageBitmap();
-  } finally {
-    bitmap.close();
+  for (const asset of assets) {
+    const bitmap = prepared.get(asset.id);
+    if (!bitmap)
+      throw new ExportValidationError({
+        code: 'decode-failure',
+        message: `Cursor "${asset.id}" was not rasterized before export.`,
+        assetId: asset.id,
+      });
+    result.set(asset.id, bitmap);
   }
+  return result;
 }
 
 function postError(error: unknown) {

@@ -86,6 +86,9 @@
     "watermarkBackgroundRadius": "Zaokrąglenie rogów",
     "watermarkBackgroundPadding": "Odstęp wewnętrzny",
     "noWatermarkText": "Bez tekstu",
+    "custom": "Własny",
+    "customWatermarkText": "Własny tekst",
+    "watermarkCustomTextPlaceholder": "Wprowadź tekst znaku wodnego...",
     "translateWatermark": "Tłumacz tekst znaku wodnego"
   },
   "CanvasToolbar": {
@@ -111,6 +114,8 @@
     "customTextDescription": "Edycja zastąpi transkrypcję z synchronizacją czasową własnym tekstem.",
     "typography": "Typografia",
     "importFont": "Importuj czcionkę",
+    "searchFonts": "Szukaj czcionek...",
+    "noFontsFound": "Brak pasujących czcionek",
     "fontSample": "Aa Bb Cc 123",
     "textAlignment": "Wyrównanie tekstu",
     "alignLeft": "Wyrównaj do lewej",

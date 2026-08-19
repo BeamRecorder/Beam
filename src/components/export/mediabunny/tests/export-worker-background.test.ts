@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { isExportWorkerRequest } from '../export-worker-protocol';
+import type { PreparedCursorImage } from '../export-cursor-images';
 import type { ExportRequest } from '../../export-types';
 
 const runtime = vi.hoisted(() => ({
@@ -145,9 +146,18 @@ const importWorker = async () => {
   };
 };
 
-const startWorker = (worker: Awaited<ReturnType<typeof importWorker>>, value = request()) => {
-  expect(isExportWorkerRequest({ type: 'start', request: value })).toBe(true);
-  worker.onmessage?.({ data: { type: 'start', request: value } } as MessageEvent<unknown>);
+const startWorker = (
+  worker: Awaited<ReturnType<typeof importWorker>>,
+  value = request(),
+  cursorImages: PreparedCursorImage[] = [],
+) => {
+  const message = { type: 'start', request: value, cursorImages } satisfies {
+    type: 'start';
+    request: ExportRequest;
+    cursorImages: PreparedCursorImage[];
+  };
+  expect(isExportWorkerRequest(message)).toBe(true);
+  worker.onmessage?.({ data: message } as MessageEvent<unknown>);
 };
 
 beforeEach(() => {

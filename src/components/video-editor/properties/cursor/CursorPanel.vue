@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { FolderUp, Info, Search } from '@lucide/vue';
+import { CircleDot, FolderUp, Info, Radio, Search, Sparkles } from '@lucide/vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
 import Switch from '~/ui/switch/Switch.vue';
 import Select from '~/ui/select/Select.vue';
 import ColorInput from '~/ui/input/ColorInput.vue';
 import Button from '~/ui/button/Button.vue';
+import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import AdvancedButton from '~/ui/button/AdvancedButton.vue';
+import BlurRevealTransition from '~/ui/transitions/BlurRevealTransition.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import ShadowDirectionGroup from './ShadowDirectionGroup.vue';
 import CursorClickEffectsPanel from './CursorClickEffectsPanel.vue';
@@ -16,6 +18,7 @@ import type {
   CursorClickEffects,
   CursorMotionPreset,
   CursorMotionSettings,
+  CursorRippleStyle,
 } from '../../../../api/types/cursor-settings';
 import {
   createDefaultCursorClickEffects,
@@ -23,6 +26,7 @@ import {
   cursorMotionPreset,
 } from '../../../../api/types/cursor-settings';
 import type { CursorPackDescriptor, CursorSelection } from '../../../../api/types/cursor-pack';
+import { cursorAssetSupportsTint } from './cursor-packs';
 import { capture } from '../../../../api/capture';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useToastStore } from '~/ui/toast/toastStore';
@@ -30,7 +34,8 @@ import { CURSOR_SIZE_DEFAULT, CURSOR_SIZE_MAX, CURSOR_SIZE_MIN } from './cursor-
 
 const { t } = useTranslate('CursorPanel');
 const toast = useToastStore();
-const advancedOpen = ref(false);
+const cursorAdvancedOpen = ref(false);
+const clickAdvancedOpen = ref(false);
 const importing = ref(false);
 
 const props = defineProps<{
@@ -75,6 +80,40 @@ const cursorOptions = computed(() => [
 const selectedCursorOption = computed(() =>
   props.selection.mode === 'automatic' ? '__automatic__' : (props.selection.cursorId ?? '__automatic__'),
 );
+const selectedColorAsset = computed(() => {
+  const pack = selectedPack.value;
+  if (!pack) return null;
+  const cursorId = props.selection.mode === 'fixed' ? props.selection.cursorId : pack.defaultCursorId;
+  return pack.cursors.find((cursor) => cursor.id === cursorId) ?? null;
+});
+const cursorColorAvailable = computed(() => {
+  const pack = selectedPack.value;
+  const asset = selectedColorAsset.value;
+  return Boolean(pack && asset && cursorAssetSupportsTint(pack, asset));
+});
+
+const ripplePresets = computed(() => [
+  { id: 'single' as const, label: t('presetSingle'), icon: CircleDot },
+  { id: 'double' as const, label: t('presetDouble'), icon: Radio },
+  { id: 'solid' as const, label: t('presetSolid'), icon: Sparkles },
+]);
+
+type GlobalRippleStyle = Exclude<CursorRippleStyle, 'none'>;
+
+const currentRipplePreset = computed<GlobalRippleStyle>(() => {
+  const left = props.clickEffects.left;
+  const right = props.clickEffects.right;
+  const configured = [left.rippleStyle, right.rippleStyle].find(
+    (style): style is GlobalRippleStyle => style === 'single' || style === 'double' || style === 'solid',
+  );
+  return configured ?? 'single';
+});
+
+const selectRipplePreset = (preset: GlobalRippleStyle) =>
+  emit('update:clickEffects', {
+    left: { ...props.clickEffects.left, rippleStyle: preset },
+    right: { ...props.clickEffects.right, rippleStyle: preset },
+  });
 
 const selectPack = (value: string | number) => {
   if (typeof value !== 'string') return;
@@ -149,48 +188,80 @@ const selectMotionPreset = (preset: CursorMotionPreset) =>
 
 <template>
   <div class="options-group">
-    <div class="pack-heading">
-      <label class="prop-label">{{ t('cursorPack') }}</label>
-      <Popover interaction="hover-focus-click" :match-trigger-width="false" align="right">
-        <template #trigger>
-          <button type="button" class="info-button" :aria-label="t('packInfo')"><Info :size="14" /></button>
-        </template>
-        <div class="discovery-popover">
-          <p>{{ t('packDescription') }}</p>
-          <Button size="sm" :icon="Search" @click="openDiscovery">{{ t('findCursorPacks') }}</Button>
-          <a
-            href="https://github.com/KDE/breeze/blob/master/cursors/svg-cursor-format.md"
-            target="_blank"
-            rel="noreferrer"
-          >
-            {{ t('compatibleFormat') }}
-          </a>
+    <section class="pack-section">
+      <div class="pack-heading">
+        <label class="prop-label">{{ t('cursorPack') }}</label>
+        <div class="heading-actions">
+          <AdvancedButton
+            :open="cursorAdvancedOpen"
+            controls="cursor-advanced-panel"
+            :label="t('advanced')"
+            @update:open="cursorAdvancedOpen = $event"
+          />
+          <Popover interaction="hover-focus-click" :match-trigger-width="false" align="right">
+            <template #trigger>
+              <button type="button" class="info-button" :aria-label="t('packInfo')"><Info :size="14" /></button>
+            </template>
+            <div class="discovery-popover">
+              <p>{{ t('packDescription') }}</p>
+              <Button size="sm" :icon="Search" @click="openDiscovery">{{ t('findCursorPacks') }}</Button>
+              <a
+                href="https://github.com/KDE/breeze/blob/master/cursors/svg-cursor-format.md"
+                target="_blank"
+                rel="noreferrer"
+              >
+                {{ t('compatibleFormat') }}
+              </a>
+            </div>
+          </Popover>
         </div>
-      </Popover>
-    </div>
-    <div class="pack-row">
-      <Select
-        class="pack-select"
-        :model-value="selection.packId"
-        :options="packOptions"
-        @update:model-value="selectPack"
-      />
-      <Button
-        class="pack-import-button"
-        size="sm"
-        variant="outline"
-        :icon="FolderUp"
-        icon-only
-        :tooltip="t('import')"
-        :aria-label="t('import')"
-        :loading="importing"
-        @click="importPack"
-      />
-    </div>
-    <div v-if="!selectedPack" class="missing-pack" role="alert">
-      {{ t('missingPack') }}
-      <Button size="xs" variant="link" @click="importPack">{{ t('importPack') }}</Button>
-    </div>
+      </div>
+      <div class="pack-row">
+        <Select
+          class="pack-select"
+          :model-value="selection.packId"
+          :options="packOptions"
+          @update:model-value="selectPack"
+        />
+        <Button
+          class="pack-import-button"
+          size="sm"
+          variant="outline"
+          :icon="FolderUp"
+          icon-only
+          :tooltip="t('import')"
+          :aria-label="t('import')"
+          :loading="importing"
+          @click="importPack"
+        />
+      </div>
+      <div v-if="!selectedPack" class="missing-pack" role="alert">
+        {{ t('missingPack') }}
+        <Button size="xs" variant="link" @click="importPack">{{ t('importPack') }}</Button>
+      </div>
+      <BlurRevealTransition>
+        <div v-if="cursorAdvancedOpen" id="cursor-advanced-panel" class="advanced-options">
+          <div class="prop-item">
+            <label class="prop-label">{{ t('cursorStyle') }}</label>
+            <Select
+              :model-value="selectedCursorOption"
+              :options="cursorOptions"
+              :disabled="!selectedPack"
+              @preview:model-value="
+                (value) =>
+                  emit(
+                    'preview:selection',
+                    typeof value === 'string' && value !== '__automatic__'
+                      ? { packId: selection.packId, mode: 'fixed', cursorId: value }
+                      : null,
+                  )
+              "
+              @update:model-value="selectCursor"
+            />
+          </div>
+        </div>
+      </BlurRevealTransition>
+    </section>
 
     <Divider spacing="none" />
     <BigSlider
@@ -204,45 +275,14 @@ const selectMotionPreset = (preset: CursorMotionPreset) =>
       @update:model-value="emit('update:cursorSize', $event)"
     />
 
-    <div class="advanced-toggle-row">
-      <AdvancedButton
-        :open="advancedOpen"
-        controls="cursor-advanced-panel"
-        :label="t('advanced')"
-        @update:open="advancedOpen = $event"
-      />
-    </div>
-    <div v-if="advancedOpen" id="cursor-advanced-panel" class="advanced-options">
-      <div class="prop-item">
-        <label class="prop-label">{{ t('cursorStyle') }}</label>
-        <Select
-          :model-value="selectedCursorOption"
-          :options="cursorOptions"
-          :disabled="!selectedPack"
-          @preview:model-value="
-            (value) =>
-              emit(
-                'preview:selection',
-                typeof value === 'string' && value !== '__automatic__'
-                  ? { packId: selection.packId, mode: 'fixed', cursorId: value }
-                  : null,
-              )
-          "
-          @update:model-value="selectCursor"
-        />
-      </div>
+    <template v-if="cursorColorAvailable">
       <Divider spacing="none" />
-      <CursorClickEffectsPanel :model-value="clickEffects" @update:model-value="emit('update:clickEffects', $event)" />
-    </div>
-
-    <Divider spacing="none" />
-    <ColorInput
-      :label="t('cursorColor')"
-      :model-value="cursorColor"
-      :disabled="selectedPack?.colorMode !== 'tintable'"
-      @update:model-value="emit('update:cursorColor', $event)"
-    />
-    <p v-if="selectedPack?.colorMode === 'original'" class="color-note">{{ t('originalColors') }}</p>
+      <ColorInput
+        :label="t('cursorColor')"
+        :model-value="cursorColor"
+        @update:model-value="emit('update:cursorColor', $event)"
+      />
+    </template>
 
     <Divider spacing="none" />
     <div class="prop-row">
@@ -270,6 +310,42 @@ const selectMotionPreset = (preset: CursorMotionPreset) =>
           @update:model-value="emit('update:shadowDirection', $event)"
         />
       </div>
+    </div>
+
+    <Divider spacing="none" />
+    <div class="prop-item click-effects-control">
+      <div class="section-control-heading">
+        <span class="prop-label">{{ t('rippleStyle') }}</span>
+        <AdvancedButton
+          :open="clickAdvancedOpen"
+          controls="click-effects-advanced-panel"
+          :label="t('advanced')"
+          @update:open="clickAdvancedOpen = $event"
+        />
+      </div>
+      <ButtonGroup full>
+        <Button
+          v-for="preset in ripplePresets"
+          :key="preset.id"
+          variant="tab"
+          size="sm"
+          block
+          :class="{ active: currentRipplePreset === preset.id }"
+          :tooltip="preset.label"
+          :aria-label="preset.label"
+          :icon="preset.icon"
+          icon-only
+          @click="selectRipplePreset(preset.id)"
+        />
+      </ButtonGroup>
+      <BlurRevealTransition>
+        <div v-if="clickAdvancedOpen" id="click-effects-advanced-panel" class="advanced-options">
+          <CursorClickEffectsPanel
+            :model-value="clickEffects"
+            @update:model-value="emit('update:clickEffects', $event)"
+          />
+        </div>
+      </BlurRevealTransition>
     </div>
 
     <Divider spacing="none" />
@@ -322,111 +398,4 @@ const selectMotionPreset = (preset: CursorMotionPreset) =>
   </div>
 </template>
 
-<style scoped>
-.options-group,
-.advanced-options,
-.nested-options,
-.motion-options,
-.section-heading {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.options-group {
-  gap: 10px;
-}
-.advanced-options {
-  padding-top: 8px;
-  gap: 16px;
-}
-.pack-heading,
-.pack-row,
-.prop-row,
-.advanced-toggle-row {
-  display: flex;
-  align-items: center;
-}
-.pack-heading,
-.prop-row {
-  justify-content: space-between;
-}
-.advanced-toggle-row {
-  justify-content: flex-end;
-}
-.pack-row {
-  gap: 8px;
-}
-.pack-select {
-  min-width: 0;
-  flex: 1;
-}
-.prop-item {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.prop-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-.sub-label,
-.color-note {
-  color: var(--text-muted);
-  font-size: 11px;
-}
-.info-button {
-  display: grid;
-  place-items: center;
-  padding: 3px;
-  border: 0;
-  background: transparent;
-  color: var(--text-muted);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-}
-.info-button:focus-visible {
-  outline: 2px solid var(--color-primary);
-}
-.discovery-popover {
-  width: 260px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  font-size: 12px;
-  line-height: 1.45;
-}
-.discovery-popover p {
-  margin: 0;
-  color: var(--text-secondary);
-}
-.discovery-popover a {
-  color: var(--color-primary);
-  font-size: 11px;
-}
-.missing-pack {
-  padding: 8px;
-  border: 1px solid var(--color-warning);
-  border-radius: var(--radius-md);
-  color: var(--text-secondary);
-  font-size: 11px;
-}
-.section-heading {
-  gap: 3px;
-}
-.section-title {
-  color: var(--text-secondary);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-.section-description {
-  color: var(--text-muted);
-  font-size: 10px;
-}
-.color-note {
-  margin: -10px 0 0;
-}
-</style>
+<style scoped src="./cursor-panel.css"></style>

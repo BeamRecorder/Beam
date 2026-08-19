@@ -575,6 +575,33 @@ describe('EditorCanvas', () => {
     expect(mounted.emitted('done:crop')).toHaveLength(1);
   });
 
+  it('renders playback captions after the cursor overlay so captions stay above the cursor', async () => {
+    const bounds = { dx: 0, dy: 0, dw: 800, dh: 450, scale: 1, focusX: 400, focusY: 225 };
+    state.drawVideoWindow.mockReturnValue(bounds);
+    state.drawInCameraSpace.mockImplementation(
+      (_ctx: unknown, _window: unknown, drawContent: (() => void) | undefined) => drawContent?.(),
+    );
+    state.updateCursor.mockImplementation(
+      (
+        _ctx: unknown,
+        _window: unknown,
+        _sourceWidth: unknown,
+        _sourceHeight: unknown,
+        _logicalWidth: unknown,
+        drawInCameraSpace: ((drawContent: () => void) => void) | undefined,
+      ) => drawInCameraSpace?.(() => undefined),
+    );
+
+    mountEditor({ isPlaying: true });
+    await nextTick();
+
+    const cursorOrder = state.updateCursor.mock.invocationCallOrder[0];
+    const captionOrder = state.drawComposition.mock.invocationCallOrder[0];
+    expect(cursorOrder).toBeDefined();
+    expect(captionOrder).toBeDefined();
+    expect(captionOrder).toBeGreaterThan(cursorOrder!);
+  });
+
   it('raycasts layers above an already selected recording before starting its drag', async () => {
     const mounted = mountEditor({ selectedTransformClip: screen() });
     await flushPromises();

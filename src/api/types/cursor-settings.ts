@@ -48,10 +48,13 @@ export const normalizeCursorMotionSettings = (value: unknown): CursorMotionSetti
   };
 };
 
+export type CursorRippleStyle = 'none' | 'single' | 'double' | 'solid';
+
 export interface CursorClickEffectSettings {
   springEnabled: boolean;
   springIntensity: number;
   rippleEnabled: boolean;
+  rippleStyle?: CursorRippleStyle;
   rippleSize: number;
   rippleColor: string;
 }
@@ -64,7 +67,8 @@ export interface CursorClickEffects {
 const DEFAULT_LEFT: CursorClickEffectSettings = {
   springEnabled: true,
   springIntensity: 50,
-  rippleEnabled: true,
+  rippleEnabled: false,
+  rippleStyle: 'single',
   rippleSize: 30,
   rippleColor: '#ff5a1f',
 };
@@ -72,7 +76,8 @@ const DEFAULT_LEFT: CursorClickEffectSettings = {
 const DEFAULT_RIGHT: CursorClickEffectSettings = {
   springEnabled: true,
   springIntensity: 50,
-  rippleEnabled: true,
+  rippleEnabled: false,
+  rippleStyle: 'single',
   rippleSize: 30,
   rippleColor: '#6366f1',
 };
@@ -93,10 +98,18 @@ const stringValue = (value: unknown, fallback: string) => (typeof value === 'str
 
 const normalizeEffect = (value: unknown, fallback: CursorClickEffectSettings): CursorClickEffectSettings => {
   const input = isRecord(value) ? value : {};
+  const rawStyle = typeof input.rippleStyle === 'string' ? input.rippleStyle : undefined;
+  const rippleStyle: CursorRippleStyle =
+    rawStyle === 'none' || rawStyle === 'single' || rawStyle === 'double' || rawStyle === 'solid'
+      ? rawStyle
+      : (fallback.rippleStyle ?? (booleanValue(input.rippleEnabled, fallback.rippleEnabled) ? 'single' : 'none'));
+  const rippleEnabled = booleanValue(input.rippleEnabled, fallback.rippleEnabled);
+
   return {
     springEnabled: booleanValue(input.springEnabled, fallback.springEnabled),
     springIntensity: Math.min(100, Math.max(0, finiteNumber(input.springIntensity, fallback.springIntensity))),
-    rippleEnabled: booleanValue(input.rippleEnabled, fallback.rippleEnabled),
+    rippleEnabled,
+    rippleStyle,
     rippleSize: Math.min(80, Math.max(10, finiteNumber(input.rippleSize, fallback.rippleSize))),
     rippleColor: stringValue(input.rippleColor, fallback.rippleColor),
   };
@@ -104,9 +117,16 @@ const normalizeEffect = (value: unknown, fallback: CursorClickEffectSettings): C
 
 export const normalizeCursorClickEffects = (value: unknown): CursorClickEffects => {
   const input = isRecord(value) ? value : {};
+  const left = normalizeEffect(input.left, DEFAULT_LEFT);
+  const right = normalizeEffect(input.right, DEFAULT_RIGHT);
+  const sharedStyle =
+    [left.rippleStyle, right.rippleStyle].find(
+      (style): style is Exclude<CursorRippleStyle, 'none'> =>
+        style === 'single' || style === 'double' || style === 'solid',
+    ) ?? 'single';
   return {
-    left: normalizeEffect(input.left, DEFAULT_LEFT),
-    right: normalizeEffect(input.right, DEFAULT_RIGHT),
+    left: { ...left, rippleStyle: sharedStyle },
+    right: { ...right, rippleStyle: sharedStyle },
   };
 };
 

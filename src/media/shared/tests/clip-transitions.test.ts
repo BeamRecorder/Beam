@@ -10,6 +10,7 @@ import {
 } from '../clip-transitions';
 import type { Clip, VisualClip } from '../composition-types';
 import { createDefaultClipAppearance } from '../composition-defaults';
+import { activeClipsAt } from '../timeline-mapping';
 
 const visualClip = (id: string, order: number, overrides: Partial<VisualClip> = {}): VisualClip => ({
   id,
@@ -71,7 +72,7 @@ describe('clip transition evaluator', () => {
     expect(resolveClipTransitionState(slide, 600)).toMatchObject({ opacity: 1, translateX: 0 });
   });
 
-  it('uses ease-in for exits and returns identity outside a clip', () => {
+  it('mirrors entry easing for exits and returns identity outside a clip', () => {
     const clip = timedClip({ entry: null, exit: { preset: { kind: 'slide', direction: 'down' }, durationMs: 500 } });
     expect(resolveClipTransitionState(clip, 99)).toEqual({
       opacity: 1,
@@ -80,8 +81,52 @@ describe('clip transition evaluator', () => {
       scale: 1,
       blur: 0,
     });
-    expect(resolveClipTransitionState(clip, 900).opacity).toBeCloseTo(0.064);
+    expect(resolveClipTransitionState(clip, 900).opacity).toBeCloseTo(0.784);
     expect(resolveClipTransitionState(clip, 1_100).opacity).toBe(0);
+  });
+
+  it.each([30, 60])('keeps the final exit frame visible at a contiguous cut (%s fps)', (fps) => {
+    const cutMs = 1_000;
+    const frameMs = 1_000 / fps;
+    const first = visualClip('first', 0, {
+      timelineDurationMs: cutMs,
+      transitions: { entry: null, exit: { preset: { kind: 'fade' }, durationMs: 500 } },
+    });
+    const second = visualClip('second', 1, { timelineStartMs: cutMs });
+    const composition = {
+      schemaVersion: 6,
+      keyboardCaptionSessions: [],
+      assets: [],
+      clips: [first, second],
+    };
+    const before = cutMs - frameMs;
+    const after = cutMs + frameMs;
+
+    expect(activeClipsAt(composition, before).map((clip) => clip.id)).toEqual(['first']);
+    expect(resolveClipTransitionState(first, before).opacity).toBeCloseTo(1 - (1 - frameMs / 500) ** 3, 8);
+    expect(activeClipsAt(composition, cutMs).map((clip) => clip.id)).toEqual(['second']);
+    expect(resolveClipTransitionState(second, cutMs).opacity).toBe(1);
+    expect(activeClipsAt(composition, after).map((clip) => clip.id)).toEqual(['second']);
+    expect(resolveClipTransitionState(second, after).opacity).toBe(1);
+  });
+
+  it('snaps a nominal 30 fps boundary before evaluating the outgoing transition', () => {
+    const cutMs = 32_300;
+    const frameTimeMs = (969 / 30) * 1_000;
+    const first = visualClip('first', 0, {
+      timelineDurationMs: cutMs,
+      transitions: { entry: null, exit: { preset: { kind: 'fade' }, durationMs: 500 } },
+    });
+
+    expect(frameTimeMs).toBeLessThan(cutMs);
+    expect(resolveClipTransitionState(first, frameTimeMs)).toEqual(resolveClipTransitionState(first, cutMs));
+    expect(resolveClipTransitionState(first, frameTimeMs)).toEqual({
+      opacity: 0,
+      translateX: 0,
+      translateY: 0,
+      scale: 1,
+      blur: 0,
+    });
   });
 
   it('normalizes durations, rejects unsupported audio presets, and fits short clips', () => {

@@ -1,4 +1,5 @@
 import type { Clip, ClipKind, ClipTransition, ClipTransitions, TransitionPreset } from './composition-types';
+import { snapTimeToBoundary } from './time-boundary';
 
 export const DEFAULT_TRANSITION_DURATION_MS = 500;
 export const MAX_TRANSITION_DURATION_MS = 5_000;
@@ -91,9 +92,11 @@ export function resolveClipTransitionState(
   clip: Pick<Clip, 'timelineStartMs' | 'timelineDurationMs' | 'transitions'>,
   timeMs: number,
 ) {
+  const endMs = clip.timelineStartMs + clip.timelineDurationMs;
+  const normalizedTimeMs = snapTimeToBoundary(timeMs, clip.timelineStartMs, endMs);
   return resolveTransitionState(
     clip.transitions ?? EMPTY_CLIP_TRANSITIONS,
-    timeMs - clip.timelineStartMs,
+    normalizedTimeMs - clip.timelineStartMs,
     clip.timelineDurationMs,
   );
 }
@@ -103,15 +106,16 @@ export function resolveTransitionState(
   localTimeMs: number,
   timelineDurationMs: number,
 ): ClipTransitionState {
-  if (localTimeMs < 0 || localTimeMs > timelineDurationMs) return identity();
-  if (transitions.entry && localTimeMs < transitions.entry.durationMs) {
-    const linear = clamp01(localTimeMs / transitions.entry.durationMs);
+  const timeMs = snapTimeToBoundary(localTimeMs, 0, timelineDurationMs);
+  if (timeMs < 0 || timeMs > timelineDurationMs) return identity();
+  if (transitions.entry && timeMs < transitions.entry.durationMs) {
+    const linear = clamp01(timeMs / transitions.entry.durationMs);
     return evaluatePreset(transitions.entry.preset, 1 - (1 - linear) ** 3);
   }
-  const remaining = timelineDurationMs - localTimeMs;
+  const remaining = timelineDurationMs - timeMs;
   if (transitions.exit && remaining < transitions.exit.durationMs) {
     const linear = clamp01(remaining / transitions.exit.durationMs);
-    return evaluatePreset(transitions.exit.preset, linear ** 3);
+    return evaluatePreset(transitions.exit.preset, 1 - (1 - linear) ** 3);
   }
   return identity();
 }
@@ -122,18 +126,20 @@ export function resolveCanvasTransitionState(
   timelineDurationMs: number,
 ): ClipTransitionState | null {
   const normalized = normalizeCanvasTransitions(transitions, timelineDurationMs);
-  const remaining = timelineDurationMs - timeMs;
+  const localTimeMs = snapTimeToBoundary(timeMs, 0, timelineDurationMs);
+  const remaining = timelineDurationMs - localTimeMs;
   const active =
-    (normalized.entry && timeMs >= 0 && timeMs < normalized.entry.durationMs) ||
+    (normalized.entry && localTimeMs >= 0 && localTimeMs < normalized.entry.durationMs) ||
     (normalized.exit && remaining >= 0 && remaining < normalized.exit.durationMs);
-  return active ? resolveTransitionState(normalized, timeMs, timelineDurationMs) : null;
+  return active ? resolveTransitionState(normalized, localTimeMs, timelineDurationMs) : null;
 }
 
 export function audioTransitionGainAt(
   clip: Pick<Clip, 'timelineStartMs' | 'timelineDurationMs' | 'transitions'>,
   timeMs: number,
 ) {
-  const local = timeMs - clip.timelineStartMs;
+  const endMs = clip.timelineStartMs + clip.timelineDurationMs;
+  const local = snapTimeToBoundary(timeMs, clip.timelineStartMs, endMs) - clip.timelineStartMs;
   if (local < 0 || local > clip.timelineDurationMs) return 0;
   const entry = clip.transitions?.entry;
   const exit = clip.transitions?.exit;

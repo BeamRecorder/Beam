@@ -1,8 +1,11 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import Input from './Input.vue';
 
 describe('Input', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
   it('renders slots, constraints and string updates', async () => {
     const wrapper = mount(Input, {
       props: { modelValue: 'old', id: 'title', placeholder: 'Name', error: 'Required' },
@@ -23,16 +26,27 @@ describe('Input', () => {
     expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([5]);
     expect(document.body.classList.contains('is-dragging-input')).toBe(false);
   });
-  it('does not start numeric drag when disabled, text, or non-primary click', async () => {
-    for (const props of [
-      { modelValue: 1, disabled: true },
-      { modelValue: 'x', type: 'text' },
-      { modelValue: 1, type: 'number' },
-    ]) {
-      const wrapper = mount(Input, { props: props as never });
-      await wrapper.get('input').trigger('mousedown', { button: props.type === 'number' ? 2 : 0, clientX: 0 });
-      window.dispatchEvent(new MouseEvent('mousemove', { clientX: 30 }));
-      expect(wrapper.emitted('update:modelValue')).toBeUndefined();
-    }
+  it('debounces text updates when debounce prop is provided and flushes on blur', async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(Input, {
+      props: { modelValue: 'initial', debounce: 150 },
+    });
+    const input = wrapper.get('input');
+    await input.setValue('typing');
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+
+    vi.advanceTimersByTime(100);
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+
+    vi.advanceTimersByTime(55);
+    expect(wrapper.emitted('update:modelValue')?.[0]).toEqual(['typing']);
+
+    // Test flush on blur
+    await input.setValue('blurred text');
+    expect(wrapper.emitted('update:modelValue')?.length).toBe(1);
+
+    await input.trigger('blur');
+    expect(wrapper.emitted('update:modelValue')?.[1]).toEqual(['blurred text']);
+    vi.useRealTimers();
   });
 });

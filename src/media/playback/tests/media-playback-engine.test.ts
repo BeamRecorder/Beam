@@ -508,6 +508,38 @@ describe('MediaPlaybackEngine', () => {
     engine.dispose();
   });
 
+  it('reuses the previous frame at a nominal 30 fps boundary despite millisecond rounding residue', async () => {
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const engine = new MediaPlaybackEngine({
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+    const cutMs = 32_300;
+    const frameTimeMs = (969 / 30) * 1_000;
+    const first = videoClip('first', 'asset-1', {
+      trackId: 'video-track',
+      timelineStartMs: 0,
+      timelineDurationMs: cutMs,
+      sourceDurationMs: cutMs,
+    });
+    const second = videoClip('second', 'asset-1', {
+      trackId: 'video-track',
+      timelineStartMs: cutMs,
+      timelineDurationMs: 1_000,
+      sourceInMs: cutMs,
+      sourceDurationMs: 1_000,
+    });
+    await loadAt(engine, worker, composition([first, second]), frameTimeMs / 1_000);
+
+    const previous = new FakeImageBitmap();
+    worker.emit(frameResponse(latestSeekRequest(worker)!.generation, first.id, 32.2, previous));
+
+    expect(engine.frameFor(first.id)).toBeNull();
+    expect(engine.frameFor(second.id)?.bitmap).toBe(previous);
+    engine.dispose();
+  });
+
   it('provides continuity immediately at both VIDEO/HOLD boundaries', async () => {
     const worker = new FakeWorker();
     const audio = new FakeAudio();

@@ -74,8 +74,22 @@ const defaultCursor = () => ({
   color: '#000000',
   shadow: { enabled: true, blur: 6, color: '#000000', direction: 'bottom' },
   clickEffects: {
-    left: { springEnabled: true, springIntensity: 50, rippleEnabled: true, rippleSize: 30, rippleColor: '#ff5a1f' },
-    right: { springEnabled: true, springIntensity: 50, rippleEnabled: true, rippleSize: 30, rippleColor: '#6366f1' },
+    left: {
+      springEnabled: true,
+      springIntensity: 50,
+      rippleEnabled: false,
+      rippleStyle: 'single',
+      rippleSize: 30,
+      rippleColor: '#ff5a1f',
+    },
+    right: {
+      springEnabled: true,
+      springIntensity: 50,
+      rippleEnabled: false,
+      rippleStyle: 'single',
+      rippleSize: 30,
+      rippleColor: '#6366f1',
+    },
   },
   motion: { preset: 'smooth', smoothing: 0.67, springMassMultiplier: 1.29, motionBlur: 0.4 },
 });
@@ -150,10 +164,12 @@ const clickEffect = (value) => {
     !value.rippleColor
   )
     throw new Error('Effet de clic curseur invalide');
+  const rippleStyle = ['none', 'single', 'double', 'solid'].includes(value.rippleStyle) ? value.rippleStyle : 'single';
   return {
     springEnabled: value.springEnabled,
     springIntensity: clamp(value.springIntensity, 0, 100),
     rippleEnabled: value.rippleEnabled,
+    rippleStyle,
     rippleSize: clamp(value.rippleSize, 10, 80),
     rippleColor: value.rippleColor,
   };
@@ -196,6 +212,12 @@ const cursorState = (value) => {
     !finite(value.motion.motionBlur)
   )
     throw new Error('Présentation du curseur invalide');
+  const leftClickEffect = clickEffect(value.clickEffects.left);
+  const rightClickEffect = clickEffect(value.clickEffects.right);
+  const sharedRippleStyle =
+    [leftClickEffect.rippleStyle, rightClickEffect.rippleStyle].find(
+      (style) => style === 'single' || style === 'double' || style === 'solid',
+    ) || 'single';
   return {
     selection: {
       packId: selection.packId,
@@ -210,7 +232,10 @@ const cursorState = (value) => {
       color: value.shadow.color,
       direction: value.shadow.direction,
     },
-    clickEffects: { left: clickEffect(value.clickEffects.left), right: clickEffect(value.clickEffects.right) },
+    clickEffects: {
+      left: { ...leftClickEffect, rippleStyle: sharedRippleStyle },
+      right: { ...rightClickEffect, rippleStyle: sharedRippleStyle },
+    },
     motion: {
       preset: value.motion.preset,
       smoothing: clamp(value.motion.smoothing, 0, 1),

@@ -86,6 +86,9 @@
     "watermarkBackgroundRadius": "कोनों की गोलाई",
     "watermarkBackgroundPadding": "आंतरिक दूरी",
     "noWatermarkText": "कोई टेक्स्ट नहीं",
+    "custom": "कस्टम",
+    "customWatermarkText": "कस्टम टेक्स्ट",
+    "watermarkCustomTextPlaceholder": "वॉटरमार्क टेक्स्ट दर्ज करें...",
     "translateWatermark": "वॉटरमार्क टेक्स्ट का अनुवाद करें"
   },
   "CanvasToolbar": {
@@ -111,6 +114,8 @@
     "customTextDescription": "इसे एडिट करने पर टाइम्ड ट्रांसक्रिप्शन की जगह कस्टम टेक्स्ट आएगा।",
     "typography": "टाइपोग्राफ़ी",
     "importFont": "फ़ॉन्ट आयात करें",
+    "searchFonts": "फ़ॉन्ट खोजें...",
+    "noFontsFound": "कोई मेल खाता फ़ॉन्ट नहीं",
     "fontSample": "Aa Bb Cc 123",
     "textAlignment": "टेक्स्ट संरेखण",
     "alignLeft": "बाएँ संरेखित करें",

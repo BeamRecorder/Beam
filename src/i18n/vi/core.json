@@ -86,6 +86,9 @@
     "watermarkBackgroundRadius": "Bo góc",
     "watermarkBackgroundPadding": "Khoảng cách bên trong",
     "noWatermarkText": "Không có chữ",
+    "custom": "Tùy chỉnh",
+    "customWatermarkText": "Văn bản tùy chỉnh",
+    "watermarkCustomTextPlaceholder": "Nhập văn bản hình mờ...",
     "translateWatermark": "Dịch chữ hình mờ"
   },
   "CanvasToolbar": {
@@ -111,6 +114,8 @@
     "customTextDescription": "Chỉnh sửa ở đây sẽ thay thế bản phiên âm theo thời gian bằng văn bản tùy chỉnh của bạn.",
     "typography": "Kiểu chữ",
     "importFont": "Nhập phông chữ",
+    "searchFonts": "Tìm phông chữ...",
+    "noFontsFound": "Không có phông chữ phù hợp",
     "fontSample": "Aa Bb Cc 123",
     "textAlignment": "Căn chỉnh văn bản",
     "alignLeft": "Căn trái",

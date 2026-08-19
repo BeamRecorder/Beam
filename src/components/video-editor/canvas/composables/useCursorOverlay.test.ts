@@ -121,6 +121,37 @@ describe('useCursorOverlay', () => {
     expect(overlay.customCursorImage.value).not.toBeNull();
   });
 
+  it.each([
+    ['single', 1, 0],
+    ['double', 2, 0],
+    ['solid', 2, 1],
+    ['none', 0, 0],
+  ] as const)('draws the %s global ripple shape in playback', async (style, expectedRings, expectedFilledRings) => {
+    getCursorImage.mockClear().mockResolvedValue({ complete: true, naturalWidth: 32 } as HTMLImageElement);
+    const options = baseOptions();
+    options.clickEffects = () => ({
+      left: { ...effects.left, rippleEnabled: style !== 'none', rippleStyle: style },
+      right: { ...effects.right, rippleEnabled: false, rippleStyle: 'none' },
+    });
+    const overlay = useCursorOverlay(options);
+    await nextTick();
+    await Promise.resolve();
+
+    const ctx = createContext();
+    overlay.updateAndDrawRipplesAndCursor(
+      ctx,
+      { dx: 0, dy: 0, dw: 800, dh: 450, focusX: 0, focusY: 0, scale: 1 },
+      1920,
+      1080,
+      800,
+      (draw) => draw(),
+    );
+
+    expect(ctx.arc).toHaveBeenCalledTimes(expectedRings);
+    expect(ctx.fill).toHaveBeenCalledTimes(expectedFilledRings);
+    expect(ctx.stroke).toHaveBeenCalledTimes(expectedRings - expectedFilledRings);
+  });
+
   it('keeps the loaded image while cursor size changes, then updates bounds on the next draw', async () => {
     getCursorImage.mockClear();
     const image = { complete: true, naturalWidth: 32 } as HTMLImageElement;
@@ -397,5 +428,55 @@ describe('useCursorOverlay', () => {
     await Promise.resolve();
     await nextTick();
     expect(overlay.customCursorImage.value).toMatchObject({ id: 'second' });
+  });
+
+  it('keeps the image across time changes for one asset and reloads once when cursorId changes', async () => {
+    const image = { id: 'stable', complete: true, naturalWidth: 32 } as HTMLImageElement;
+    getCursorImage.mockClear().mockResolvedValue(image);
+    const time = ref(0.25);
+    const selection = ref({ packId: MACOS_CURSOR_PACK.id, mode: 'fixed' as const, cursorId: 'default' });
+    const options = baseOptions();
+    options.currentTime = () => time.value;
+    options.cursorSelection = () => selection.value;
+    options.editorData = () =>
+      ({
+        cursor: {
+          available: true,
+          events: [
+            { event: 'shape', sessionNs: 0, cursorId: 'default', cursorKind: 'default', hotspot: { x: 10, y: 7 } },
+            { event: 'move', sessionNs: 0, pixelX: 0, pixelY: 0, normalizedX: 0.25, normalizedY: 0.35, visible: true },
+          ],
+        },
+      }) as never;
+    const overlay = useCursorOverlay(options);
+
+    await nextTick();
+    await Promise.resolve();
+    await nextTick();
+    expect(getCursorImage).toHaveBeenCalledOnce();
+    const firstImage = overlay.customCursorImage.value;
+    expect(firstImage).toMatchObject({ id: 'stable' });
+
+    getCursorImage.mockClear();
+    time.value = 0.75;
+    await nextTick();
+    await Promise.resolve();
+    await nextTick();
+    expect(getCursorImage).not.toHaveBeenCalled();
+    expect(overlay.customCursorImage.value).toBe(firstImage);
+
+    selection.value = { packId: MACOS_CURSOR_PACK.id, mode: 'fixed', cursorId: 'handpointing' };
+    await nextTick();
+    await Promise.resolve();
+    await nextTick();
+    expect(getCursorImage).toHaveBeenCalledOnce();
+    expect(getCursorImage).toHaveBeenLastCalledWith(
+      MACOS_CURSOR_PACK,
+      MACOS_CURSOR_PACK.cursors.find((cursor) => cursor.id === 'handpointing'),
+      640,
+      640,
+      '#ffffff',
+    );
+    expect(overlay.customCursorImage.value).toMatchObject({ id: 'stable' });
   });
 });

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
 import { Check, RotateCcw } from '@lucide/vue';
 import Button from '../../ui/button/Button.vue';
 import ResizeHandle from '~/ui/ResizeHandle/ResizeHandle.vue';
@@ -19,8 +19,7 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { canvasGuideLines } from './canvas-guides';
 import type { EditorCanvasEmits, EditorCanvasProps } from './editor-canvas-types';
 import { DEFAULT_ZOOM_MOTION_BLUR } from '../zoom/zoom-types';
-import { drawBeamWatermark, WATERMARK_LOGO_PATH } from './watermark-render';
-import { resolvePublicAssetUrl } from '~/utils/public-asset';
+import { drawBeamWatermark } from './watermark-render';
 import { useCanvasTransitionRenderer } from './composables/useCanvasTransitionRenderer';
 import { measureCanvasCaptionText } from './canvas-text-measure';
 import { useCanvasLoadingState } from './composables/useCanvasLoadingState';
@@ -29,6 +28,8 @@ import { previewRenderScale } from '~/media/playback';
 import CursorCanvasSelection from './CursorCanvasSelection.vue';
 import { useCursorCanvasInteraction } from './composables/useCursorCanvasInteraction';
 import { CURSOR_SIZE_MAX, CURSOR_SIZE_MIN } from '../properties/cursor/cursor-size';
+import { useEditorCanvasPointerInteractions } from './composables/useEditorCanvasPointerInteractions';
+import { useEditorCanvasAssets } from './composables/useEditorCanvasAssets';
 const { t } = useTranslate('EditorCanvas');
 const props = withDefaults(defineProps<EditorCanvasProps>(), { previewQuality: 'full' });
 const emit = defineEmits<EditorCanvasEmits>();
@@ -46,9 +47,7 @@ const canvasTransitionRenderer = useCanvasTransitionRenderer({
 });
 const isFormatTransitioning = ref(false);
 let formatTransitionTimer: ReturnType<typeof setTimeout> | null = null;
-let resizeObserver: ResizeObserver | null = null;
 let animationFrameId: number | null = null;
-let watermarkLogo: HTMLImageElement | null = null;
 let drawVisualStack:
   | ((
       ctx: CanvasRenderingContext2D,
@@ -274,12 +273,12 @@ const resizeCanvas = () => {
   renderCanvas();
 };
 watch(() => props.previewQuality, resizeCanvas);
+const watermarkLogo = useEditorCanvasAssets(containerRef, resizeCanvas, renderOnce);
 const drawCanvasScene = (ctx: CanvasRenderingContext2D) => {
   const window = cameraZoom.drawVideoWindow(ctx, logicalSize.value.width, logicalSize.value.height, screenFrame.value);
   if (window) {
     currentRenderWindow = window;
     if (!compositionMedia.drawVisualStack) compositionMedia.drawWebcamClips(ctx, window);
-    compositionMedia.drawComposition(ctx, window);
     cursorOverlay.updateAndDrawRipplesAndCursor(
       ctx,
       window,
@@ -288,6 +287,7 @@ const drawCanvasScene = (ctx: CanvasRenderingContext2D) => {
       logicalSize.value.width,
       (drawContent) => cameraZoom.drawInCameraSpace(ctx, window, drawContent),
     );
+    compositionMedia.drawComposition(ctx, window);
   } else {
     currentRenderWindow = null;
     cursorOverlay.clearCursorBounds();
@@ -315,7 +315,7 @@ const drawCanvasScene = (ctx: CanvasRenderingContext2D) => {
     ctx,
     props.outputCanvas,
     { x: preview.x, y: preview.y, width: preview.width, height: preview.height },
-    watermarkLogo,
+    watermarkLogo.value,
   );
 };
 const renderCanvas = () => {
@@ -329,63 +329,32 @@ const renderCanvas = () => {
   canvasTransitionRenderer.render(ctx, drawCanvasScene);
   clipToggleTransition.blendPreviousFrame(ctx, logicalSize.value.width, logicalSize.value.height);
 };
-const commitCrop = () => {
-  transformAndCrop.commitCrop();
-  emit('done:crop');
-};
 function draw() {
   animationFrameId = null;
   renderCanvas();
   if (props.isPlaying || isTransitioningBackground.value) animationFrameId = requestAnimationFrame(draw);
 }
-const handleIslandPointerDown = (event: PointerEvent) => {
-  if (event.button === 0 && transformAndCrop.selectVisualAt(event, canvasRef.value)) return;
-  if (viewportZoom.beginPan(event, containerRef.value)) return;
-  cameraZoom.beginSelectionMove(event);
-};
-const handleIslandPointerDownCapture = (event: PointerEvent) => {
-  if (props.isCropping || (event.target as Element | null)?.closest('.cursor-canvas-selection')) return;
-  if (cursorInteraction.selectAt(event)) event.stopPropagation();
-};
-const handleTransformPointerDown = (event: PointerEvent) => {
-  if (event.button === 0) {
-    const clipId = transformAndCrop.clipIdAt(event, canvasRef.value);
-    if (clipId && clipId !== props.selectedTransformClip?.id) {
-      event.stopPropagation();
-      emit('select:clip', clipId);
-      return;
-    }
-  }
-  transformAndCrop.beginTransformDrag(event, 'move');
-};
-const handleIslandPointerMove = (event: PointerEvent) => {
-  if (viewportZoom.isPanning.value) {
-    viewportZoom.movePan(event);
-    return;
-  }
-  cameraZoom.moveSelection(event);
-};
-const handleIslandPointerUp = (event: PointerEvent) => {
-  if (viewportZoom.isPanning.value) {
-    viewportZoom.endPan(event, containerRef.value);
-    return;
-  }
-  cameraZoom.endSelectionMove(event);
-};
-const handleIslandWheel = (event: WheelEvent) => {
-  viewportZoom.handleWheel(event, containerRef.value?.getBoundingClientRect());
-};
-onMounted(() => {
-  watermarkLogo = new Image();
-  watermarkLogo.onload = renderOnce;
-  watermarkLogo.src = resolvePublicAssetUrl(WATERMARK_LOGO_PATH);
-  resizeCanvas();
-  resizeObserver = new ResizeObserver(resizeCanvas);
-  if (containerRef.value) resizeObserver.observe(containerRef.value);
-  renderOnce();
+const {
+  commitCrop,
+  handleIslandPointerDown,
+  handleIslandPointerDownCapture,
+  handleIslandPointerMove,
+  handleIslandPointerUp,
+  handleIslandWheel,
+  handleTransformPointerDown,
+} = useEditorCanvasPointerInteractions({
+  canvas: () => canvasRef.value,
+  container: () => containerRef.value,
+  isCropping: () => Boolean(props.isCropping),
+  selectedClipId: () => props.selectedTransformClip?.id ?? null,
+  viewportZoom,
+  cameraZoom,
+  transformAndCrop,
+  cursorInteraction,
+  onSelectClip: (clipId) => emit('select:clip', clipId),
+  onDoneCrop: () => emit('done:crop'),
 });
 onUnmounted(() => {
-  resizeObserver?.disconnect();
   if (animationFrameId !== null) cancelAnimationFrame(animationFrameId);
   if (formatTransitionTimer) clearTimeout(formatTransitionTimer);
 });

@@ -86,6 +86,9 @@
     "watermarkBackgroundRadius": "圓角",
     "watermarkBackgroundPadding": "內距",
     "noWatermarkText": "無文字",
+    "custom": "自訂",
+    "customWatermarkText": "自訂文字",
+    "watermarkCustomTextPlaceholder": "輸入浮水印文字...",
     "translateWatermark": "翻譯浮水印文字"
   },
   "CanvasToolbar": {
@@ -111,6 +114,8 @@
     "customTextDescription": "編輯此內容會以自訂文字取代定時轉錄內容。",
     "typography": "排版",
     "importFont": "匯入字型",
+    "searchFonts": "搜尋字型...",
+    "noFontsFound": "沒有符合的字型",
     "fontSample": "Aa Bb Cc 123",
     "textAlignment": "文字對齊",
     "alignLeft": "靠左對齊",

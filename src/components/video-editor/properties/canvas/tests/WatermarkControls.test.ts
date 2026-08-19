@@ -53,6 +53,13 @@ const BigSliderStub = {
     '<button class="slider-stub" type="button" :aria-label="label" @click="$emit(\'update:modelValue\', 140)">{{ modelValue }}</button>',
 };
 
+const InputStub = {
+  props: ['modelValue', 'placeholder'],
+  emits: ['update:modelValue'],
+  template:
+    '<input class="input-stub" :value="modelValue" :placeholder="placeholder" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+};
+
 const mountControls = (modelValue: Partial<WatermarkSettings> = {}) =>
   mount(WatermarkControls, {
     props: { modelValue: { ...DEFAULT_WATERMARK, ...modelValue } },
@@ -62,6 +69,7 @@ const mountControls = (modelValue: Partial<WatermarkSettings> = {}) =>
         Button: ButtonStub,
         ButtonGroup: ButtonGroupStub,
         BigSlider: BigSliderStub,
+        Input: InputStub,
       },
     },
   });
@@ -92,6 +100,22 @@ describe('WatermarkControls', () => {
     expect(emittedValue(wrapper).text).toBe('beam');
     expect(emittedValue(wrapper).renderedText).toBe('Beam');
     expect(emittedValue(wrapper).enabled).toBe(true);
+
+    await choices[3]!.trigger('click');
+    expect(emittedValue(wrapper).text).toBe('custom');
+    expect(emittedValue(wrapper).renderedText).toBe('');
+    expect(emittedValue(wrapper).enabled).toBe(true);
+  });
+
+  it('shows input box and emits custom watermark text updates', async () => {
+    const wrapper = mountControls({ enabled: true, text: 'custom', customText: 'My Channel' });
+    const input = wrapper.find('input.input-stub');
+    expect(input.exists()).toBe(true);
+    expect((input.element as HTMLInputElement).value).toBe('My Channel');
+
+    await input.setValue('Custom Watermark Text');
+    expect(emittedValue(wrapper).customText).toBe('Custom Watermark Text');
+    expect(emittedValue(wrapper).renderedText).toBe('Custom Watermark Text');
   });
 
   it('emits logo and localized text changes', async () => {
@@ -110,7 +134,7 @@ describe('WatermarkControls', () => {
     const wrapper = mountControls({ enabled: true });
     const buttons = wrapper.findAll('.button-stub');
 
-    await buttons[5]!.trigger('click');
+    await buttons[6]!.trigger('click');
     expect(emittedValue(wrapper).position).toBe('bottom-left');
 
     await wrapper.get('.slider-stub').trigger('click');

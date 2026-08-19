@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buttonEventsBetween, cursorAssetForState, cursorStateAt } from '../cursorPlayback';
+import { buttonEventsBetween, cursorAssetForState, cursorEventIndexFor, cursorStateAt } from '../cursorPlayback';
 import type { CursorEvent, CursorShapeAsset } from '../../../../api/types/capture-api';
 
 const second = (value: number) => value * 1_000_000_000;
@@ -12,6 +12,14 @@ const move = (time: number, x: number, y: number, visible = true, cursorId?: str
   normalizedX: x,
   normalizedY: y,
   visible,
+});
+const button = (time: number, buttonId = 0, pressed = true): CursorEvent => ({
+  event: 'button',
+  sessionNs: second(time),
+  button: buttonId,
+  pressed,
+  normalizedX: 0.5,
+  normalizedY: 0.5,
 });
 
 describe('cursor playback', () => {
@@ -99,6 +107,124 @@ describe('cursor playback', () => {
     expect(buttonEventsBetween(events, 0, 3, 'right')).toEqual([events[2]]);
     expect(buttonEventsBetween(events, 0, 3, 'left')).toEqual([events[0]]);
     expect(buttonEventsBetween(events, 3, 1)).toEqual([]);
+  });
+
+  it('caches one temporal index per event list and invalidates it after an append', () => {
+    const events: CursorEvent[] = [move(0, 0, 0), button(1), move(2, 1, 1)];
+    const first = cursorEventIndexFor(events);
+
+    expect(cursorEventIndexFor(events)).toBe(first);
+
+    events.push(move(3, 0.25, 0.75));
+    expect(cursorEventIndexFor(events)).not.toBe(first);
+  });
+
+  it('keeps indexed state and button queries equivalent to the public helpers', () => {
+    const events: CursorEvent[] = [
+      {
+        event: 'shape',
+        sessionNs: second(0),
+        cursorId: 'default',
+        cursorKind: 'default',
+        hotspot: { x: 1, y: 2 },
+      },
+      move(0, 0, 0),
+      button(1, 0),
+      button(1, 0, false),
+      button(2, 2),
+      move(3, 1, 1),
+    ];
+    const index = cursorEventIndexFor(events);
+
+    for (const time of [-1, 0, 0.5, 1, 1.5, 3, 4]) {
+      expect(index.stateAt(time, 'initial', { x: 9, y: 8 })).toEqual(
+        cursorStateAt(events, time, 'initial', { x: 9, y: 8 }),
+      );
+    }
+    for (const [start, end, semanticButton] of [
+      [0, 1, undefined],
+      [1, 2, undefined],
+      [0, 3, 'left'],
+      [0, 3, 'right'],
+      [3, 1, undefined],
+    ] as const) {
+      expect(index.buttonsBetween(start, end, semanticButton)).toEqual(
+        buttonEventsBetween(events, start, end, semanticButton),
+      );
+    }
+  });
+
+  it('uses stable last-write semantics for identical timestamps without invalid interpolation', () => {
+    const events: CursorEvent[] = [
+      move(0, 0.1, 0.2, true, 'first'),
+      {
+        event: 'shape',
+        sessionNs: second(0),
+        cursorId: 'first',
+        cursorKind: 'default',
+        hotspot: { x: 1, y: 2 },
+      },
+      move(0, 0.4, 0.5, false, 'second'),
+      {
+        event: 'shape',
+        sessionNs: second(0),
+        cursorId: 'second',
+        cursorKind: 'handpointing',
+        hotspot: { x: 5, y: 6 },
+      },
+      move(1, 1, 1, true, 'third'),
+    ];
+
+    expect(cursorStateAt(events, 0)).toMatchObject({
+      x: 0.4,
+      y: 0.5,
+      visible: false,
+      cursorId: 'second',
+      cursorKind: 'handpointing',
+      hotspot: { x: 5, y: 6 },
+    });
+    const interpolated = cursorStateAt(events, 0.5);
+    expect(interpolated?.x).toBeCloseTo(0.7, 5);
+    expect(interpolated?.y).toBeCloseTo(0.75, 5);
+    expect(Number.isFinite(interpolated?.x)).toBe(true);
+    expect(Number.isFinite(interpolated?.y)).toBe(true);
+  });
+
+  it('remains correct when seeking backward and forward through a cached index', () => {
+    const events: CursorEvent[] = [move(0, 0, 0), move(1, 0.5, 0.25), move(2, 1, 0.5)];
+    const late = cursorStateAt(events, 2.5);
+    const early = cursorStateAt(events, 0.5);
+    const middle = cursorStateAt(events, 1.5);
+    const lateAgain = cursorStateAt(events, 2.5);
+
+    expect(early?.x).toBeCloseTo(0.25, 5);
+    expect(early?.y).toBeCloseTo(0.125, 5);
+    expect(middle?.x).toBeCloseTo(0.75, 5);
+    expect(middle?.y).toBeCloseTo(0.375, 5);
+    expect(late).toEqual(lateAgain);
+    expect(late).toMatchObject({ x: 1, y: 0.5 });
+  });
+
+  it('preserves legacy non-finite time behavior', () => {
+    const events: CursorEvent[] = [move(0, 0, 0), button(0.5), move(1, 1, 1)];
+    expect(cursorStateAt(events, Number.NaN)).toMatchObject({ x: 1, y: 1 });
+    expect(cursorStateAt(events, Number.POSITIVE_INFINITY)).toMatchObject({ x: 1, y: 1 });
+    expect(cursorStateAt(events, Number.NEGATIVE_INFINITY)).toMatchObject({ x: 0, y: 0 });
+    expect(buttonEventsBetween(events, Number.NaN, 1)).toEqual([]);
+    expect(buttonEventsBetween(events, 0, Number.NaN)).toEqual([]);
+  });
+
+  it('handles long event lists while preserving the final state and button interval', () => {
+    const moveCount = 5_000;
+    const events: CursorEvent[] = Array.from({ length: moveCount }, (_, index) => {
+      const progress = index / (moveCount - 1);
+      return move(index / 30, progress, 1 - progress);
+    });
+    events.push(button(100, 2));
+
+    const finalState = cursorStateAt(events, (moveCount - 1) / 30);
+    expect(finalState).toMatchObject({ x: 1, y: 0, visible: true });
+    expect(buttonEventsBetween(events, 99, 100)).toEqual([events.at(-1)]);
   });
 
   it('resolves shape assets only for known shape ids', () => {

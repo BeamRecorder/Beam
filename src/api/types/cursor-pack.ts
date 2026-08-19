@@ -11,6 +11,7 @@ export interface CursorAssetDescriptor {
   label: string;
   url: string;
   format?: 'svg' | 'png';
+  tintable?: boolean;
   intrinsicSize: { width: number; height: number };
   nominalSize: number;
   hotspot: CursorPoint;

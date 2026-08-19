@@ -198,12 +198,18 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
       resolvedLayers ?? resolveCompositionSceneLayers(options.composition(), options.currentTime() * 1_000);
     const timeMs = options.currentTime() * 1_000;
     for (const clip of layers.visualStack) {
-      drawWithClipTransition(ctx, clip, timeMs, { width: window.dw, height: window.dh }, () => {
-        if (clip.kind === 'screen') drawScreen();
-        else if (clip.kind === 'blur') drawBlur(ctx, clip, window);
-        else if (clip.kind === 'webcam') drawWebcam(ctx, clip, window);
-        else drawVisual(ctx, clip, window);
-      });
+      drawWithClipTransition(
+        ctx,
+        clip,
+        timeMs,
+        { x: window.dx, y: window.dy, width: window.dw, height: window.dh },
+        () => {
+          if (clip.kind === 'screen') drawScreen();
+          else if (clip.kind === 'blur') drawBlur(ctx, clip, window);
+          else if (clip.kind === 'webcam') drawWebcam(ctx, clip, window);
+          else drawVisual(ctx, clip, window);
+        },
+      );
     }
   };
 
@@ -217,11 +223,17 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
       .filter((clip) => (onlyClipId ? clip.id === onlyClipId : clip.kind === 'caption'))
       .sort((left, right) => right.order - left.order);
     for (const clip of clips) {
-      drawWithClipTransition(ctx, clip, timeMs, { width: window.dw, height: window.dh }, () => {
-        if (clip.kind === 'caption') drawCaption(ctx, clip, timeMs);
-        else if (isBlurClip(clip)) drawBlur(ctx, clip, window);
-        else if (isVisualClip(clip) && clip.kind !== 'webcam') drawVisual(ctx, clip, window);
-      });
+      drawWithClipTransition(
+        ctx,
+        clip,
+        timeMs,
+        { x: window.dx, y: window.dy, width: window.dw, height: window.dh },
+        () => {
+          if (clip.kind === 'caption') drawCaption(ctx, clip, timeMs);
+          else if (isBlurClip(clip)) drawBlur(ctx, clip, window);
+          else if (isVisualClip(clip) && clip.kind !== 'webcam') drawVisual(ctx, clip, window);
+        },
+      );
     }
   };
 

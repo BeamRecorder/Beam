@@ -1,7 +1,7 @@
 import type { CursorButtonEvent, CursorEvent } from '../../../api/types/capture-api';
 import type { CursorMotionSettings } from '../../../api/types/cursor-settings';
 import type { CursorPlaybackState } from './cursorPlayback';
-import { cursorStateAt } from './cursorPlayback';
+import { cursorEventIndexFor, cursorStateAt } from './cursorPlayback';
 import { createDeterministicCursorMotionEvaluator } from './cursor-motion-evaluator';
 
 export { stepSpringAxis } from './cursor-motion-evaluator';
@@ -220,11 +220,15 @@ export function createCursorMotionTimeline(
   };
 
   let cursorTime = anchors[0]?.timeSeconds ?? 0;
+  const nextClickIndexes = Array.from({ length: anchors.length + 1 }, () => -1);
+  let nextClickIndex = -1;
+  for (let candidate = anchors.length - 1; candidate >= 0; candidate -= 1) {
+    if (anchors[candidate]!.kind === 'click') nextClickIndex = candidate;
+    nextClickIndexes[candidate] = nextClickIndex;
+  }
   let index = 1;
   while (index < anchors.length) {
-    const clickIndex = anchors.findIndex(
-      (anchor, candidateIndex) => candidateIndex >= index && anchor.kind === 'click',
-    );
+    const clickIndex = nextClickIndexes[index] ?? -1;
     if (clickIndex >= 0) {
       const blockStartIndex = index - 1;
       const durations = anchors
@@ -262,15 +266,20 @@ export function createCursorMotionTimeline(
     segments,
     targetAt(timeSeconds) {
       if (!anchors.length) return null;
-      const time = Math.max(0, timeSeconds);
+      const time = Number.isNaN(timeSeconds) ? Number.POSITIVE_INFINITY : Math.max(0, timeSeconds);
       if (time <= anchors[0].timeSeconds) return { x: anchors[0].x, y: anchors[0].y };
-      for (const segment of segments) {
+      let low = 0;
+      let high = segments.length;
+      while (low < high) {
+        const middle = low + Math.floor((high - low) / 2);
+        if (segments[middle]!.endSeconds < time) low = middle + 1;
+        else high = middle;
+      }
+      const segment = segments[low];
+      if (segment) {
         if (time < segment.startSeconds) return { x: segment.startX, y: segment.startY };
-        if (time <= segment.endSeconds) {
-          const progress =
-            (time - segment.startSeconds) / Math.max(0.000001, segment.endSeconds - segment.startSeconds);
-          return catmullRom(segment.previous, segment.start, segment.end, segment.after, minimumJerk(progress));
-        }
+        const progress = (time - segment.startSeconds) / Math.max(0.000001, segment.endSeconds - segment.startSeconds);
+        return catmullRom(segment.previous, segment.start, segment.end, segment.after, minimumJerk(progress));
       }
       const last = anchors[anchors.length - 1];
       return { x: last.x, y: last.y };
@@ -285,13 +294,14 @@ export function createCursorMotionPlayer(
   sourceHeight = 1080,
 ) {
   const timeline = createCursorMotionTimeline(events, settings, sourceWidth, sourceHeight);
+  const eventIndex = cursorEventIndexFor(events);
   const buttonTimes = buttonEvents(events).map(eventTime);
   const drags = dragRanges(events);
   const evaluator = createDeterministicCursorMotionEvaluator({
     settings,
     targetAt: timeline.targetAt,
     directTargetAt: (timeSeconds) => {
-      const state = cursorStateAt(events, timeSeconds);
+      const state = eventIndex.stateAt(timeSeconds);
       return state ? { x: state.x, y: state.y } : null;
     },
     isDraggingAt: (timeSeconds) =>

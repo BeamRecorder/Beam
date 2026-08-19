@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const {
+  createDefaultPresentation,
   defaultZoomMotionBlur,
   migratePresentation,
   presentationState,
@@ -40,6 +41,29 @@ const canvas = (value) => ({
   height: 1080,
   showBackground: true,
   watermark: value,
+});
+
+test('defaults new cursor presentations to spring-on and ripple-off for both buttons', () => {
+  const state = createDefaultPresentation();
+
+  assert.deepEqual(state.cursor.clickEffects, {
+    left: {
+      springEnabled: true,
+      springIntensity: 50,
+      rippleEnabled: false,
+      rippleStyle: 'single',
+      rippleSize: 30,
+      rippleColor: '#ff5a1f',
+    },
+    right: {
+      springEnabled: true,
+      springIntensity: 50,
+      rippleEnabled: false,
+      rippleStyle: 'single',
+      rippleSize: 30,
+      rippleColor: '#6366f1',
+    },
+  });
 });
 
 test('preserves every watermark presentation field', () => {

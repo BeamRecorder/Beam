@@ -179,6 +179,7 @@ test('imports static XCursor roles as original-color PNG assets', () => {
   assert.equal(result.importedCount, 2);
   const asset = result.pack.cursors.find((cursor) => cursor.id === 'default');
   assert.ok(asset);
+  assert.equal(asset.tintable, false);
   assert.equal(asset.intrinsicSize.width, 2);
   assert.equal(asset.intrinsicSize.height, 2);
   assert.deepEqual(asset.hotspot, { x: 1, y: 0 });
@@ -401,6 +402,7 @@ test('marks a pack with fixed colors as original instead of tintable', () => {
   const result = item.library.importDirectory(item.theme);
 
   assert.equal(result.pack.colorMode, 'original');
+  assert.equal(result.pack.cursors.find((cursor) => cursor.id === 'left_ptr').tintable, false);
 });
 
 test('marks black and white cursor artwork as tintable', (t) => {
@@ -410,6 +412,7 @@ test('marks black and white cursor artwork as tintable', (t) => {
   const result = item.library.importDirectory(item.theme);
 
   assert.equal(result.pack.colorMode, 'tintable');
+  assert.equal(result.pack.cursors[0].tintable, true);
 });
 
 test('rejects packs without a static default role', () => {

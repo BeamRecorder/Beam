@@ -170,6 +170,16 @@
   overflow-x: hidden;
 }
 
+.select-menu {
+  width: 100%;
+}
+
+.select-search-row {
+  padding: 6px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--text-muted);
+}
+
 .select-options {
   list-style: none;
   padding: 0 4px;

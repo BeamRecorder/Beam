@@ -86,27 +86,64 @@ describe('useCursorReplacer', () => {
     expect(cursor.selectedPack.value?.id).toBe('builtin:macos');
   });
 
-  it('makes the fixed black layer of the built-in macOS SVG tintable while preserving its white outline', async () => {
+  it('loads the built-in macOS SVG, tints it, preserves white, and caches the transformed image', async () => {
     const pack = useCursorReplacer().packs.value[0]!;
     const asset = pack.cursors[0]!;
+    expect(asset.format).toBe('svg');
+    expect(asset.url).toContain('/macOsSvgCursors/');
+    const textResponse = vi
+      .fn()
+      .mockResolvedValue(
+        '<svg width="32" height="16" viewBox="0 0 32 16"><path fill="#fff"/><path fill="#000"/></svg>',
+      );
+    const blobResponse = vi.fn();
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, text: textResponse, blob: blobResponse });
     const createObjectURL = vi.fn().mockReturnValue('blob:macos');
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: true,
-        text: vi.fn().mockResolvedValue('<svg viewBox="0 0 32 32"><path fill="#fff"/><path fill="#000"/></svg>'),
-      }),
-    );
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
     vi.stubGlobal('Image', LoadingImage);
     vi.stubGlobal('Blob', SvgBlob);
-    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL: vi.fn() });
+    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL });
 
-    await useCursorReplacer().getCursorImage(pack, asset, 32, 32, '#ff00ff');
-    const svg = (createObjectURL.mock.calls[0]?.[0] as SvgBlob).value;
+    const cursor = useCursorReplacer();
+    const image = await cursor.getCursorImage(pack, asset, 80.01, 40.01, '#ff00ff');
+    const cachedImage = await cursor.getCursorImage(pack, asset, 80.01, 40.01, '#ff00ff');
+    const svg = (createObjectURL.mock.calls[0]![0] as SvgBlob).value;
 
+    expect(cachedImage).toBe(image);
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(textResponse).toHaveBeenCalledOnce();
+    expect(blobResponse).not.toHaveBeenCalled();
+    expect(createObjectURL).toHaveBeenCalledOnce();
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:macos');
+    expect(svg).toContain('width="81"');
+    expect(svg).toContain('height="41"');
     expect(svg).toContain('fill="#fff"');
     expect(svg).toContain('fill="currentColor"');
     expect(svg).toContain('color="#ff00ff"');
+  });
+
+  it('tints the implicit fill of the macOS text cursor while preserving its white contour', async () => {
+    const pack = useCursorReplacer().packs.value[0]!;
+    const asset = pack.cursors.find((cursor) => cursor.id === 'textcursor')!;
+    const textResponse = vi
+      .fn()
+      .mockResolvedValue('<svg viewBox="0 0 32 32"><path stroke="#fff" d="M0 0h32v32z" /></svg>');
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, text: textResponse });
+    const createObjectURL = vi.fn().mockReturnValue('blob:textcursor');
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('Image', LoadingImage);
+    vi.stubGlobal('Blob', SvgBlob);
+    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL });
+
+    const cursor = useCursorReplacer();
+    await cursor.getCursorImage(pack, asset, 32, 32, '#ff00ff');
+    const svg = (createObjectURL.mock.calls[0]![0] as SvgBlob).value;
+
+    expect(svg).toContain('fill="currentColor"');
+    expect(svg).toContain('color="#ff00ff"');
+    expect(svg).toContain('stroke="#fff"');
   });
 
   it('loads a resized tintable SVG and caches it by pack, asset, dimensions and colour', async () => {
@@ -203,7 +240,7 @@ describe('useCursorReplacer', () => {
     const cursor = useCursorReplacer();
     const firstImage = await cursor.getCursorImage(pack, asset, 64, 32, '#ff00ff');
     const secondImage = await cursor.getCursorImage(pack, asset, 64, 32, '#0000ff');
-    const svg = (createObjectURL.mock.calls[0]?.[0] as SvgBlob).value;
+    const svg = (createObjectURL.mock.calls[0]![0] as SvgBlob).value;
 
     expect(secondImage).toBe(firstImage);
     expect(fetchMock).toHaveBeenCalledOnce();
