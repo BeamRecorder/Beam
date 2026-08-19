@@ -224,6 +224,7 @@ export interface InputAccessStatus {
   clicks: boolean;
   shortcuts: boolean;
   recordsText: false;
+  unavailableReason?: 'input-helper-unavailable' | 'polkit-unavailable' | 'input-broker-unavailable';
   mouseDevices?: number;
   keyboardDevices?: number;
 }
@@ -342,8 +343,45 @@ export interface CaptureSource {
   displayId?: string;
   selectionMode?: 'direct' | 'system-picker' | 'portal';
 }
+export interface RequirementDiagnostic {
+  available: boolean;
+  errorCode: string | null;
+  detail: string | null;
+}
+export interface PortalDiagnostic extends RequirementDiagnostic {
+  version: number | null;
+  monitor: boolean | null;
+  window: boolean | null;
+  metadataCursor: boolean | null;
+}
+export interface FfmpegDiagnostic extends RequirementDiagnostic {
+  encoder: string | null;
+  codec: string | null;
+  hardware: boolean | null;
+}
+export interface LinuxCaptureDiagnostics {
+  distribution: string | null;
+  distributionId: string | null;
+  distributionLike?: string[];
+  distributionVersion: string | null;
+  kernel: string | null;
+  architecture: string;
+  desktop: string | null;
+  sessionType: string;
+  displayServer: string;
+  backend: string;
+  portal: PortalDiagnostic;
+  pipewire: RequirementDiagnostic;
+  ffmpeg: FfmpegDiagnostic;
+  recordingAvailable: boolean;
+}
+export interface CaptureDiagnostics {
+  platform: string;
+  linux?: LinuxCaptureDiagnostics;
+}
 export interface CaptureCatalog {
   sources: CaptureSource[];
   capabilities: Record<string, boolean>;
+  diagnostics?: CaptureDiagnostics;
   limitations?: string[];
 }

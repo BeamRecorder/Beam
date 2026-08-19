@@ -6,8 +6,6 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { capture } from '~/api/capture';
 import Button from '~/ui/button/Button.vue';
 import Select from '~/ui/select/Select.vue';
-import Badge from '~/ui/badge/Badge.vue';
-import Switch from '~/ui/switch/Switch.vue';
 import Divider from '~/ui/divider/Divider.vue';
 import ShortcutPreferences from './ShortcutPreferences.vue';
 import About from './About.vue';
@@ -17,8 +15,10 @@ import AppearanceSettings from '~/components/settings/AppearanceSettings.vue';
 import { isSupportedLocale, localeOptions } from '~/i18n/locales';
 import type { RecordingBarVisibility } from '../recorder/recording-types';
 import type { InteractionAccessViewState } from '../interactions/interaction-access-types';
+import InteractionAccessControl from '../interactions/InteractionAccessControl.vue';
 
 const { t } = useTranslate('HudPreferences');
+const { t: tHud } = useTranslate('HUD');
 
 const props = withDefaults(
   defineProps<{
@@ -135,25 +135,17 @@ const openOnboarding = () => {
               <p class="preference-description">{{ inputDescription }}</p>
             </div>
             <div class="input-access-actions" role="status" aria-live="polite">
-              <Switch
-                v-if="props.inputAccess.state === 'available'"
-                :model-value="recordInteractions"
-                @update:model-value="emit('update:recordInteractions', $event)"
+              <InteractionAccessControl
+                :status="props.inputAccess"
+                :enabled="recordInteractions"
+                :requesting="requestingInputAccess"
+                :enable-label="tHud('authorizeInteractions')"
+                :enabling-label="tHud('authorizingInteractions')"
+                :checking-label="t('checkingAccess')"
+                :unavailable-label="t('accessUnavailable')"
+                @request="emit('requestInputAccess')"
+                @update:enabled="emit('update:recordInteractions', $event)"
               />
-              <Badge v-else-if="props.inputAccess.state === 'checking'" variant="outline">
-                {{ t('checkingAccess') }}
-              </Badge>
-              <Button
-                v-else-if="props.inputAccess.canRequest"
-                variant="secondary"
-                size="sm"
-                :disabled="requestingInputAccess"
-                @click="emit('requestInputAccess')"
-              >
-                <template #icon><Keyboard class="button-icon" /></template>
-                {{ requestingInputAccess ? t('requestingAccess') : t('allowAccess') }}
-              </Button>
-              <Badge v-else variant="outline">{{ t('accessUnavailable') }}</Badge>
             </div>
           </div>
 

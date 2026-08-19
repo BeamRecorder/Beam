@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { capture } from '../../api/capture';
+import { rememberCaptureCatalog } from '../../api/capture-diagnostics';
+import { linuxInteractionGuidance, linuxRequirementGuidance } from '../../api/linux-requirement-guidance';
 import {
   BrowserCameraRecorder,
   listBrowserCameras,
@@ -19,6 +21,7 @@ import {
 } from '../../api/system-audio-recorder';
 import type {
   CapturePreview,
+  CaptureCatalog,
   CaptureProject,
   CaptureSession,
   CaptureSource,
@@ -32,15 +35,18 @@ import Skeleton from '~/ui/skeleton/Skeleton.vue';
 import TopbarHUD from './TopbarHUD.vue';
 import SourceSelect from './SourceSelect.vue';
 import { matchScreenPreview } from './source-preview';
-import { Monitor, Layout, ArrowUpRight, Video, VideoOff, Crop, ScrollText, Copy, Check } from '@lucide/vue';
+import { Monitor, Layout, ArrowUpRight, Video, VideoOff, Crop, ScrollText, Check } from '@lucide/vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useAudioLevelMeter } from './audio/useAudioLevelMeter';
 import AudioIconMeter from './audio/AudioIconMeter.vue';
 import EditorPreparingHud from './EditorPreparingHud.vue';
 import type { RecordingBarVisibility } from './recorder/recording-types';
 import { useInteractionAccess } from './interactions/useInteractionAccess';
+import InteractionAccessControl from './interactions/InteractionAccessControl.vue';
 import { useHudNavigation } from './navigation/useHudNavigation';
 import { useNativeSystemAudioPreview } from './recorder/useNativeSystemAudioPreview';
+import HudIssue from './HudIssue.vue';
+import type { HudIssueModel } from './hud-issue-types';
 
 const { t } = useTranslate('HUD');
 const { t: tPrefs } = useTranslate('HudPreferences');
@@ -79,8 +85,6 @@ const isRecording = ref(false);
 const isBusy = ref(false);
 const errorMessage = ref('');
 const shownError = computed(() => props.externalError || errorMessage.value);
-const copiedError = ref(false);
-let copiedErrorTimeout: ReturnType<typeof setTimeout> | null = null;
 const sources = ref<CaptureSource[]>([]);
 const sourceDiscoveryCompleted = ref(false);
 
@@ -95,6 +99,81 @@ const countdownSeconds = ref(3); // 0 for Off, 3, 5, 10
 const recordingBarVisibility = ref<RecordingBarVisibility>('always');
 watch(recordingBarVisibility, (value) => void capture.updatePreferences({ recordingBar: { visibility: value } }));
 const interactionAccess = useInteractionAccess(desktopPlatform);
+const captureCatalog = ref<CaptureCatalog | null>(null);
+const interactionAuthorizedFeedback = ref(false);
+let interactionFeedbackTimeout: ReturnType<typeof setTimeout> | null = null;
+
+const requirementGuidance = computed(() => linuxRequirementGuidance(captureCatalog.value?.diagnostics?.linux));
+const interactionGuidance = computed(() => {
+  const status = interactionAccess.status.value;
+  if (status.state === 'checking') return null;
+  return linuxInteractionGuidance(captureCatalog.value?.diagnostics?.linux, status);
+});
+const interactionReadyForRecording = computed(
+  () => desktopPlatform !== 'linux' || interactionAccess.status.value.state === 'available',
+);
+const hudIssues = computed<HudIssueModel[]>(() => {
+  const issues: HudIssueModel[] = [];
+  if (requirementGuidance.value.length > 0) {
+    issues.push({
+      id: 'linux-requirements',
+      title: t('linuxRequirementsTitle'),
+      details: requirementGuidance.value.map((item) => `${item.title}: ${item.description}`),
+      tone: 'error',
+      copyText: requirementGuidance.value.map((item) => item.copyText).join('\n\n'),
+      copyLabel: t('copyFix'),
+      copiedLabel: t('copied'),
+    });
+  }
+  if (shownError.value) {
+    issues.push({
+      id: 'recording-error',
+      title: t('recordingErrorTitle'),
+      details: [shownError.value],
+      tone: 'error',
+      copyText: shownError.value,
+      copyLabel: t('copyError'),
+      copiedLabel: t('copied'),
+    });
+  }
+  if (desktopPlatform === 'linux' && interactionAuthorizedFeedback.value) {
+    issues.push({
+      id: 'interaction-success',
+      title: t('interactionAccessGranted'),
+      details: [t('interactionAccessGrantedDescription')],
+      tone: 'success',
+    });
+  } else if (
+    desktopPlatform === 'linux' &&
+    ['permission-required', 'installation-required', 'denied'].includes(interactionAccess.status.value.state)
+  ) {
+    issues.push({
+      id: 'interaction-access',
+      title: t('interactionAccessNoticeTitle'),
+      details: [
+        interactionAccess.status.value.state === 'denied'
+          ? t('interactionAccessDeniedDescription')
+          : t('interactionAccessNoticeDescription'),
+      ],
+      tone: 'warning',
+      actionLabel: interactionAccess.requesting.value ? t('authorizingInteractions') : t('authorizeInteractions'),
+      actionLoading: interactionAccess.requesting.value,
+      actionDisabled: interactionAccess.requesting.value,
+    });
+  } else if (desktopPlatform === 'linux' && interactionAccess.status.value.state === 'unavailable') {
+    const guidance = interactionGuidance.value;
+    issues.push({
+      id: 'interaction-unavailable',
+      title: guidance?.title || t('interactionAccessUnavailableTitle'),
+      details: [guidance?.description || t('interactionAccessUnavailableDescription')],
+      tone: 'info',
+      copyText: guidance?.copyText,
+      copyLabel: t('copyFix'),
+      copiedLabel: t('copied'),
+    });
+  }
+  return issues;
+});
 
 // Previews
 const windowPreviews = ref<CapturePreview[]>([]);
@@ -366,7 +445,6 @@ const updateWindowSize = () => {
   if (props.embedded) return;
   const isDropdownOpen = activeDropdowns.value > 0;
   let targetHeight = 480;
-  const errorHeight = !showSettings.value && !showProjectPicker.value && shownError.value ? 116 : 0;
   if (props.preparingEditor) {
     targetHeight = 480;
   } else if (showSettings.value) {
@@ -381,7 +459,6 @@ const updateWindowSize = () => {
     }
   }
 
-  targetHeight += errorHeight;
   // Popovers are teleported and viewport-bounded; resizing the HUD horizontally
   // makes the card jump to the right without creating usable space.
   const targetWidth = 320;
@@ -397,7 +474,6 @@ const updateWindowSize = () => {
     setTimeout(() => {
       const currentDropdownOpen = activeDropdowns.value > 0;
       let currentTargetHeight = 480;
-      const errorHeight = !showSettings.value && !showProjectPicker.value && shownError.value ? 116 : 0;
       if (props.preparingEditor) {
         currentTargetHeight = 480;
       } else if (showSettings.value) {
@@ -411,7 +487,6 @@ const updateWindowSize = () => {
           currentTargetHeight = currentDropdownOpen ? 640 : 480;
         }
       }
-      currentTargetHeight += errorHeight;
       const currentTargetWidth = 320;
 
       // Only apply if the situation hasn't changed (don't override a subsequent open)
@@ -430,11 +505,10 @@ const updateWindowSize = () => {
 
 const hudHeight = computed(() => {
   if (props.preparingEditor) return 480;
-  const errorHeight = !showSettings.value && !showProjectPicker.value && shownError.value ? 116 : 0;
   if (showSettings.value || showProjectPicker.value) {
-    return 520 + errorHeight;
+    return 520;
   }
-  return (activeTab.value === 'window' ? 500 : 480) + errorHeight;
+  return activeTab.value === 'window' ? 500 : 480;
 });
 
 const handleDropdownToggle = (isOpen: boolean) => {
@@ -482,42 +556,36 @@ watch(selectedScreenId, () => {
 });
 
 // Watch settings view toggle to update window size
-watch(showSettings, () => {
+watch(showSettings, (isOpen) => {
   updateWindowSize();
+  if (isOpen) void interactionAccess.refresh();
 });
 
 watch(showProjectPicker, () => {
   updateWindowSize();
 });
 
-watch(shownError, () => {
-  copiedError.value = false;
-  updateWindowSize();
-});
+watch(
+  () => hudIssues.value.length,
+  () => updateWindowSize(),
+);
 
-const copyError = async () => {
-  if (!shownError.value) return;
-  try {
-    await navigator.clipboard.writeText(shownError.value);
-  } catch {
-    const text = document.createElement('textarea');
-    text.value = shownError.value;
-    text.setAttribute('readonly', '');
-    text.style.position = 'fixed';
-    text.style.opacity = '0';
-    document.body.append(text);
-    try {
-      text.select();
-      if (!document.execCommand('copy')) throw new Error('Unable to copy the error.');
-    } finally {
-      text.remove();
-    }
+watch(shownError, () => updateWindowSize());
+
+const authorizeInteractionAccess = async () => {
+  await interactionAccess.request();
+  if (interactionAccess.status.value.state !== 'available') return;
+  interactionAuthorizedFeedback.value = true;
+  if (interactionFeedbackTimeout) clearTimeout(interactionFeedbackTimeout);
+  interactionFeedbackTimeout = setTimeout(() => {
+    interactionAuthorizedFeedback.value = false;
+  }, 1800);
+};
+
+const handleHudIssueAction = async (issueId: string) => {
+  if (issueId === 'interaction-access') {
+    await authorizeInteractionAccess();
   }
-  copiedError.value = true;
-  if (copiedErrorTimeout) clearTimeout(copiedErrorTimeout);
-  copiedErrorTimeout = setTimeout(() => {
-    copiedError.value = false;
-  }, 2000);
 };
 
 // Control functions
@@ -525,6 +593,8 @@ const toggleRecording = async () => {
   if (isBusy.value) return;
   // Recording ownership lives in App.vue.  The HUD only collects configuration.
   if (!isRecording.value) {
+    if (requirementGuidance.value.length > 0) return;
+    if (!interactionReadyForRecording.value) return;
     if (sourceDiscoveryCompleted.value && !hasSelectedCaptureSource.value) {
       errorMessage.value = activeTab.value === 'screen' ? t('noScreensDetected') : t('noWindowsDetected');
       return;
@@ -781,6 +851,8 @@ const discoverSources = async () => {
       listBrowserCameras(),
       capture.discover(),
     ]);
+    captureCatalog.value = catalog;
+    rememberCaptureCatalog(catalog);
     sources.value = [
       ...(Array.isArray(catalog.sources) ? catalog.sources : []),
       ...cameras,
@@ -901,7 +973,7 @@ onBeforeUnmount(() => {
   void activeCamera?.stop();
   void activeMicrophone?.stop();
   void activeSystemAudio?.stop();
-  if (copiedErrorTimeout) clearTimeout(copiedErrorTimeout);
+  if (interactionFeedbackTimeout) clearTimeout(interactionFeedbackTimeout);
   activeCameraSessionId = null;
   activeMicrophoneSessionId = null;
   activeSystemAudioSessionId = null;
@@ -1009,7 +1081,7 @@ const openProject = (project: CaptureProject) => {
         @update:countdown-seconds="countdownSeconds = $event"
         @update:recording-bar-visibility="recordingBarVisibility = $event"
         @update:record-interactions="interactionAccess.setEnabled"
-        @request-input-access="interactionAccess.request"
+        @request-input-access="authorizeInteractionAccess"
         @close="showSettings = false"
       />
 
@@ -1183,40 +1255,57 @@ const openProject = (project: CaptureProject) => {
           </Transition>
         </div>
 
-        <div v-if="shownError" class="capture-error" role="alert">
-          <p class="capture-error-message">{{ shownError }}</p>
-          <Button
-            variant="ghost"
-            size="sm"
-            class="capture-error-copy"
-            :icon="copiedError ? Check : Copy"
-            @click="copyError"
-          >
-            {{ copiedError ? t('copied') : t('copyError') }}
-          </Button>
-        </div>
+        <div class="recording-action-stack" :class="{ 'has-issues': hudIssues.length > 0 }">
+          <TransitionGroup v-if="hudIssues.length > 0" name="hud-issue" tag="div" class="hud-issues">
+            <HudIssue v-for="issue in hudIssues" :key="issue.id" :issue="issue" @action="handleHudIssueAction">
+              <template v-if="issue.id === 'interaction-access'" #action>
+                <InteractionAccessControl
+                  class="hud-issue-action"
+                  :status="interactionAccess.status.value"
+                  :enabled="interactionAccess.enabled.value"
+                  :requesting="interactionAccess.requesting.value"
+                  :enable-label="t('authorizeInteractions')"
+                  :enabling-label="t('authorizingInteractions')"
+                  :checking-label="tPrefs('checkingAccess')"
+                  :unavailable-label="tPrefs('accessUnavailable')"
+                  @request="authorizeInteractionAccess"
+                  @update:enabled="interactionAccess.setEnabled"
+                />
+              </template>
+            </HudIssue>
+          </TransitionGroup>
 
-        <!-- Action Button (Centered Capsule) -->
-        <div class="action-section">
-          <Button
-            :variant="isRecording ? 'outline' : 'primary'"
-            size="md"
-            :block="true"
-            class="record-btn-override"
-            :class="{ recording: isRecording }"
-            :disabled="isBusy || (!isRecording && sourceDiscoveryCompleted && !hasSelectedCaptureSource)"
-            @click="
-              toggleRecording();
-              emit('focus-feature', 'record');
-            "
-          >
-            <template #icon>
-              <span class="pulse-dot" v-if="isRecording"></span>
-            </template>
-            {{
-              isBusy ? t('pleaseWait') : isRecording ? t('stopRecording', { time: recordingTime }) : t('startRecording')
-            }}
-          </Button>
+          <!-- Action Button (Centered Capsule) -->
+          <div class="action-section">
+            <Button
+              :variant="isRecording ? 'outline' : 'primary'"
+              size="md"
+              :block="true"
+              class="record-btn-override"
+              :class="{ recording: isRecording }"
+              :disabled="
+                isBusy ||
+                interactionAccess.requesting.value ||
+                (!isRecording && !interactionReadyForRecording) ||
+                (!isRecording && sourceDiscoveryCompleted && !hasSelectedCaptureSource)
+              "
+              @click="
+                toggleRecording();
+                emit('focus-feature', 'record');
+              "
+            >
+              <template #icon>
+                <span class="pulse-dot" v-if="isRecording"></span>
+              </template>
+              {{
+                isBusy
+                  ? t('pleaseWait')
+                  : isRecording
+                    ? t('stopRecording', { time: recordingTime })
+                    : t('startRecording')
+              }}
+            </Button>
+          </div>
         </div>
 
         <!-- Open existing project button (Subtle style) -->
@@ -1671,11 +1760,34 @@ const openProject = (project: CaptureProject) => {
 }
 
 /* Record Button (Full-width Style) */
+.recording-action-stack {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 6px;
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: auto;
+}
+
+.recording-action-stack.has-issues {
+  padding-top: 6px;
+}
+
+.hud-issues {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 104px;
+  padding-right: 3px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
 .action-section {
   display: flex;
   flex: 0 0 auto;
   width: 100%;
-  margin-top: auto;
 }
 
 .record-btn-override {
@@ -1686,35 +1798,24 @@ const openProject = (project: CaptureProject) => {
   box-shadow: var(--shadow-md);
 }
 
-.capture-error {
-  flex: 0 0 auto;
-  margin: 0;
-  max-height: 104px;
-  overflow: auto;
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 8px;
-  border: 1px solid color-mix(in srgb, var(--color-error) 45%, transparent);
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--color-error) 10%, transparent);
-  color: var(--color-error);
-  font-size: 11px;
-  line-height: 1.3;
-  text-align: left;
-  -webkit-app-region: no-drag;
+.hud-issue-enter-active,
+.hud-issue-leave-active {
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.capture-error-message {
-  margin: 0;
-  flex: 1;
-  min-width: 0;
-  overflow-wrap: anywhere;
+.hud-issue-enter-from,
+.hud-issue-leave-to {
+  opacity: 0;
+  transform: translateY(4px);
 }
 
-.capture-error-copy {
-  flex: 0 0 auto;
-  color: var(--color-error) !important;
+@media (prefers-reduced-motion: reduce) {
+  .hud-issue-enter-active,
+  .hud-issue-leave-active {
+    transition: none;
+  }
 }
 
 .pulse-dot {

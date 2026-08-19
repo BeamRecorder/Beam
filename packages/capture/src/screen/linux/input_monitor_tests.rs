@@ -7,13 +7,13 @@ use super::input_monitor::{INPUT_QUEUE_CAPACITY, InputEventQueue, parse_helper_v
 #[test]
 fn parses_current_helper_version_and_policy_revision() {
     let output = format!(
-        r#"{{"version":"{}","policyVersion":3}}"#,
+        r#"{{"version":"{}","policyVersion":5}}"#,
         env!("CARGO_PKG_VERSION")
     );
 
     assert_eq!(
         parse_helper_version(output.as_bytes()),
-        Some((env!("CARGO_PKG_VERSION").to_owned(), 3))
+        Some((env!("CARGO_PKG_VERSION").to_owned(), 5))
     );
 }
 
@@ -48,7 +48,7 @@ fn rejects_invalid_helper_version_json() {
 fn policy_revision_change_is_detected_even_when_package_version_matches() {
     let current = parse_helper_version(
         format!(
-            r#"{{"version":"{}","policyVersion":3}}"#,
+            r#"{{"version":"{}","policyVersion":5}}"#,
             env!("CARGO_PKG_VERSION")
         )
         .as_bytes(),

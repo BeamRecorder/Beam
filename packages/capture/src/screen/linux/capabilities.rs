@@ -62,8 +62,17 @@ pub fn evaluate_capabilities(
 pub fn probe_native_capabilities(
     timeout: Duration,
 ) -> Result<LinuxNativeCapabilities, CaptureError> {
+    let portal = probe_portal_properties(timeout)?;
+    Ok(evaluate_capabilities(
+        portal,
+        probe_pipewire(),
+        super::probe_ffmpeg().is_ok(),
+    ))
+}
+
+pub(super) fn probe_portal_properties(timeout: Duration) -> Result<PortalProperties, CaptureError> {
     let runtime = super::runtime::portal_runtime()?;
-    let portal = runtime.block_on(async {
+    runtime.block_on(async {
         tokio::time::timeout(timeout, query_portal_properties())
             .await
             .map_err(|_| {
@@ -72,12 +81,7 @@ pub fn probe_native_capabilities(
                     "ScreenCast portal capability probe timed out",
                 )
             })?
-    })?;
-    Ok(evaluate_capabilities(
-        portal,
-        probe_pipewire(),
-        super::probe_ffmpeg().is_ok(),
-    ))
+    })
 }
 
 async fn query_portal_properties() -> Result<PortalProperties, CaptureError> {
@@ -107,7 +111,7 @@ async fn query_portal_properties() -> Result<PortalProperties, CaptureError> {
     })
 }
 
-fn probe_pipewire() -> bool {
+pub(super) fn probe_pipewire() -> bool {
     use std::{cell::Cell, rc::Rc};
 
     let Ok(mainloop) = pipewire::main_loop::MainLoopRc::new(None) else {

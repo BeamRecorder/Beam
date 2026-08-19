@@ -33,6 +33,7 @@ fn native_session_finalizes_storage_and_supports_pause_segments() {
         created_at_utc: "2026-01-01T00:00:00Z".into(),
         capabilities: CaptureCapabilities::default(),
         permissions: PermissionSnapshot::default(),
+        diagnostics: Default::default(),
         limitations: Vec::new(),
         sources: Vec::new(),
     };
@@ -77,6 +78,7 @@ fn native_session_discard_removes_the_project_and_session() {
         created_at_utc: "2026-01-01T00:00:00Z".into(),
         capabilities: CaptureCapabilities::default(),
         permissions: PermissionSnapshot::default(),
+        diagnostics: Default::default(),
         limitations: Vec::new(),
         sources: Vec::new(),
     };
