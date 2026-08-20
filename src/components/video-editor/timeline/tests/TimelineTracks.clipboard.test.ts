@@ -241,24 +241,29 @@ describe('TimelineTracks', () => {
       style: createDefaultCaptionStyle(),
     };
 
-    await mounted!.setProps({ composition: updatedComp });
-    await flushPromises();
+    vi.useFakeTimers();
+    try {
+      await mounted!.setProps({ composition: updatedComp });
+      await flushPromises();
 
-    // While editing: full caption text is animated as a Throbber
-    const throbber = mounted!.find('.text-caption-track .editor-loading-throbber');
-    expect(throbber.exists()).toBe(true);
-    expect(throbber.attributes('aria-label')).toBe('Updated subtitle text');
+      // While editing: full caption text is animated as a Throbber
+      const throbber = mounted!.find('.text-caption-track .editor-loading-throbber');
+      expect(throbber.exists()).toBe(true);
+      expect(throbber.attributes('aria-label')).toBe('Updated subtitle text');
 
-    // Wait for the edit throbber timeout and settling transition
-    await new Promise((resolve) => setTimeout(resolve, 550));
-    await flushPromises();
+      // Wait for the edit throbber timeout and settling transition.
+      await vi.advanceTimersByTimeAsync(550);
+      await flushPromises();
 
-    // Throbber settles back to crisp static caption text with validated settling animation
-    expect(mounted!.find('.text-caption-track .editor-loading-throbber').exists()).toBe(false);
-    const settledLabel = mounted!.find('.text-caption-track .caption-label-text');
-    expect(settledLabel.exists()).toBe(true);
-    expect(settledLabel.text()).toBe('Updated subtitle text');
-    expect(settledLabel.classes()).toContain('caption-settled');
+      // Throbber settles back to crisp static caption text with validated settling animation.
+      expect(mounted!.find('.text-caption-track .editor-loading-throbber').exists()).toBe(false);
+      const settledLabel = mounted!.find('.text-caption-track .caption-label-text');
+      expect(settledLabel.exists()).toBe(true);
+      expect(settledLabel.text()).toBe('Updated subtitle text');
+      expect(settledLabel.classes()).toContain('caption-settled');
+    } finally {
+      vi.useRealTimers();
+    }
 
     // Hover marquee triggers
     const indicator = mounted!.find('.text-caption-track .annotation-indicator');

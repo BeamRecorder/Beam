@@ -412,7 +412,13 @@ export const queueAnimationFrames = () => {
     pendingFrames.delete(id);
     callback(0);
   };
-  return { pendingFrames, flushNextFrame };
+  const flushAllFrames = () => {
+    for (let flushed = 0; pendingFrames.size > 0; flushed += 1) {
+      if (flushed >= 100) throw new Error('Expected animation frames to settle.');
+      flushNextFrame();
+    }
+  };
+  return { pendingFrames, flushNextFrame, flushAllFrames };
 };
 
 export const pointerEvent = (type: string, clientX: number, clientY = 10) => {

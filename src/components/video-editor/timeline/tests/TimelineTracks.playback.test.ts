@@ -80,7 +80,7 @@ describe('TimelineTracks', () => {
     window.dispatchEvent(pointerEvent(endEvent, 615));
     const emittedAtStop = mounted!.emitted('update:currentTime')?.length ?? 0;
 
-    expect(pendingFrames).toHaveLength(0);
+    expect(pendingFrames.size).toBe(0);
     expect(scroll.scrollLeft).toBe(stoppedScrollLeft);
     expect(mounted!.emitted('update:currentTime')).toHaveLength(emittedAtStop);
   });
@@ -95,7 +95,7 @@ describe('TimelineTracks', () => {
     window.dispatchEvent(pointerEvent('pointermove', 370));
 
     expect(scroll.scrollLeft).toBe(0);
-    expect(pendingFrames).toHaveLength(1);
+    expect(pendingFrames.size).toBe(1);
     flushNextFrame();
     expect(scroll.scrollLeft).toBe(0);
 

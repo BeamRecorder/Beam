@@ -68,7 +68,7 @@ describe('TimelineTracks', () => {
     // Browser scroll containers clamp scrollLeft when the just-shortened viewport shrinks.
     scroll.scrollLeft = 0;
     scroll.dispatchEvent(new Event('scroll'));
-    while (pendingFrames.size > 0) {
+    for (let frame = 0; frame < 20 && pendingFrames.size > 0; frame += 1) {
       flushNextFrame();
       await flushPromises();
     }
@@ -83,7 +83,7 @@ describe('TimelineTracks', () => {
 
     window.dispatchEvent(pointerEvent('pointerup', 120));
     await flushPromises();
-    expect(pendingFrames).toHaveLength(0);
+    expect(pendingFrames.size).toBe(0);
   });
 
   it('clamps a grouped video trim preview to the shortest source bound without snapping back on pointerup', async () => {

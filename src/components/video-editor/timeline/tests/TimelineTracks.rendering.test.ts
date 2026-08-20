@@ -10,6 +10,7 @@ import {
   keyboardCaption,
   mountTracks,
   pointerEvent,
+  queueAnimationFrames,
   visual,
 } from './TimelineTracks.test-support';
 
@@ -28,18 +29,7 @@ describe('TimelineTracks', () => {
     expect(mounted!.emitted('update:currentTime')).toBeTruthy();
 
     const tracksContainer = mounted!.get('.timeline-tracks-container').element;
-    const pendingFrames = new Map<number, FrameRequestCallback>();
-    let nextFrameId = 0;
-    vi.mocked(window.requestAnimationFrame).mockImplementation((callback) => {
-      const id = ++nextFrameId;
-      pendingFrames.set(id, callback);
-      return id;
-    });
-    const flushAnimationFrames = () => {
-      const frames = [...pendingFrames.values()];
-      pendingFrames.clear();
-      frames.forEach((callback) => callback(0));
-    };
+    const { pendingFrames, flushAllFrames } = queueAnimationFrames();
 
     const emittedBeforeWheel = mounted!.emitted('update:zoomLevel')?.length ?? 0;
     tracksContainer.dispatchEvent(new WheelEvent('wheel', { ctrlKey: false, deltaY: -100, bubbles: true }));
@@ -47,17 +37,17 @@ describe('TimelineTracks', () => {
     tracksContainer.dispatchEvent(new WheelEvent('wheel', { ctrlKey: true, deltaY: -100, bubbles: true }));
     tracksContainer.dispatchEvent(new WheelEvent('wheel', { ctrlKey: true, deltaY: -100, bubbles: true }));
     expect(mounted!.emitted('update:zoomLevel')?.length ?? 0).toBe(emittedBeforeWheel);
-    expect(pendingFrames).toHaveLength(1);
-    flushAnimationFrames();
+    expect(pendingFrames.size).toBe(1);
+    flushAllFrames();
     expect(mounted!.emitted('update:zoomLevel')).toContainEqual([170]);
 
     await mounted!.setProps({ zoomLevel: 3_190 });
-    flushAnimationFrames();
+    flushAllFrames();
     tracksContainer.dispatchEvent(new WheelEvent('wheel', { ctrlKey: true, deltaY: -100, bubbles: true }));
     tracksContainer.dispatchEvent(new WheelEvent('wheel', { ctrlKey: true, deltaY: -100, bubbles: true }));
     expect(mounted!.emitted('update:zoomLevel')).toHaveLength(emittedBeforeWheel + 1);
-    expect(pendingFrames).toHaveLength(1);
-    flushAnimationFrames();
+    expect(pendingFrames.size).toBe(1);
+    flushAllFrames();
     expect(mounted!.emitted('update:zoomLevel')).toContainEqual([3_200]);
     await mounted!.get('[data-track-id="image-track"] .track-info').trigger('click');
     expect(mounted!.emitted('select:track')).toContainEqual([

@@ -155,7 +155,7 @@ describe('TimelineTracks', () => {
     expect(holdClip.props('thumbnailSlots')).toBe(initialThumbnailSlots);
     expect(holdClip.props('deferThumbnailRequests')).toBe(true);
     expect(getWaveformTestState().viewport?.()).toBe(initialWaveformViewport);
-    expect(pendingFrames).toHaveLength(1);
+    expect(pendingFrames.size).toBe(1);
 
     const firstScrollLeft = scroll.scrollLeft;
     flushNextFrame();
@@ -174,7 +174,7 @@ describe('TimelineTracks', () => {
     expect(holdClip.props('thumbnailSlots')).toBe(initialThumbnailSlots);
     expect(holdClip.props('deferThumbnailRequests')).toBe(true);
     expect(getWaveformTestState().viewport?.()).toBe(initialWaveformViewport);
-    expect(pendingFrames).toHaveLength(1);
+    expect(pendingFrames.size).toBe(1);
     window.dispatchEvent(pointerEvent('pointerup', 900));
     await flushPromises();
 
@@ -182,7 +182,7 @@ describe('TimelineTracks', () => {
     expect(viewport.classList).not.toContain('is-trimming');
     expect(holdClip.props('deferThumbnailRequests')).toBe(false);
     expect(getWaveformTestState().viewport?.()).not.toBe(initialWaveformViewport);
-    expect(pendingFrames).toHaveLength(0);
+    expect(pendingFrames.size).toBe(0);
     await flushPromises();
     expect(scroll.scrollLeft).toBe(stoppedScrollLeft);
   });
@@ -238,7 +238,7 @@ describe('TimelineTracks', () => {
     expect(viewport.style.minWidth).toBe('calc(100% + 230px)');
     expect(mounted!.findAll('.marker-label').at(-1)?.text()).toBe('8s');
     expect(viewport.classList).toContain('is-trimming');
-    expect(pendingFrames).toHaveLength(1);
+    expect(pendingFrames.size).toBe(1);
 
     const firstScrollLeft = scroll.scrollLeft;
     flushNextFrame();
@@ -252,7 +252,7 @@ describe('TimelineTracks', () => {
     await flushPromises();
     const stoppedScrollLeft = scroll.scrollLeft;
     expect(viewport.classList).not.toContain('is-trimming');
-    expect(pendingFrames).toHaveLength(0);
+    expect(pendingFrames.size).toBe(0);
     await flushPromises();
     expect(scroll.scrollLeft).toBe(stoppedScrollLeft);
   });
