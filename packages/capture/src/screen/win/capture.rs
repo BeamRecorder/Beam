@@ -1,7 +1,10 @@
 use std::{
     ffi::c_void,
     path::{Path, PathBuf},
-    sync::Arc,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
 };
 
 use parking_lot::Mutex;
@@ -39,6 +42,7 @@ struct HandlerFlags {
     metrics: Arc<ScreenCaptureMetrics>,
     start_gate: Arc<StartGate>,
     crop: Option<PixelCrop>,
+    unavailable: Arc<AtomicBool>,
 }
 
 struct CaptureHandler {
@@ -46,6 +50,7 @@ struct CaptureHandler {
     metrics: Arc<ScreenCaptureMetrics>,
     start_gate: Arc<StartGate>,
     crop: Option<PixelCrop>,
+    unavailable: Arc<AtomicBool>,
 }
 
 impl CaptureHandler {
@@ -81,6 +86,7 @@ impl GraphicsCaptureApiHandler for CaptureHandler {
             metrics: flags.metrics,
             start_gate: flags.start_gate,
             crop: flags.crop,
+            unavailable: flags.unavailable,
         })
     }
 
@@ -127,6 +133,7 @@ impl GraphicsCaptureApiHandler for CaptureHandler {
     }
 
     fn on_closed(&mut self) -> Result<(), Self::Error> {
+        self.unavailable.store(true, Ordering::Release);
         self.finish().map_err(|error| error.to_string())
     }
 }
@@ -149,6 +156,7 @@ pub struct WindowsRecording {
     callback: Arc<Mutex<CaptureHandler>>,
     metrics: Arc<ScreenCaptureMetrics>,
     output: PathBuf,
+    unavailable: Arc<AtomicBool>,
 }
 
 impl WindowsRecording {
@@ -272,6 +280,10 @@ impl WindowsRecording {
         result
     }
 
+    pub fn is_available(&self) -> bool {
+        !self.unavailable.load(Ordering::Acquire)
+    }
+
     #[must_use]
     pub fn metrics(&self) -> Arc<ScreenCaptureMetrics> {
         self.metrics.clone()
@@ -311,6 +323,7 @@ where
         start_gate,
     } = config;
     let metrics = Arc::new(ScreenCaptureMetrics::default());
+    let unavailable = Arc::new(AtomicBool::new(false));
     let crop = region
         .map(|region| normalize_crop(region, size.0, size.1))
         .transpose()?;
@@ -331,6 +344,7 @@ where
         metrics: metrics.clone(),
         start_gate,
         crop,
+        unavailable: unavailable.clone(),
     };
     let compatibility = compatible_settings(exclude_cursor, fps);
     let settings = Settings::new(
@@ -350,6 +364,7 @@ where
         callback,
         metrics,
         output: output.to_owned(),
+        unavailable,
     })
 }
 

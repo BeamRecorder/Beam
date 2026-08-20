@@ -39,6 +39,10 @@ impl PreparedPortal {
     pub(super) fn close(&mut self) -> Result<(), CaptureError> {
         self.control.close()
     }
+
+    pub(super) fn is_available(&self) -> bool {
+        self.control.is_available()
+    }
 }
 
 enum PortalCommand {
@@ -70,6 +74,12 @@ impl PortalControl {
                 )
             })?
         })
+    }
+
+    fn is_available(&self) -> bool {
+        self.thread
+            .as_ref()
+            .is_none_or(|thread| !thread.is_finished())
     }
 }
 

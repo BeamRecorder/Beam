@@ -19,9 +19,9 @@ use crate::{
 
 use super::{
     CursorMessage, CursorState, ProcessState, SinkMessage, TimestampMapper, backpressure_event,
-    flush_pending_cursor, format_error, format_parameter, join, parse_format, pipewire_error,
-    process_buffer, send_ready_error, send_ready_ok, set_fatal, sink_error, sink_worker,
-    stream_error, take_fatal, update_buffer_params,
+    flush_pending_cursor, format_error, format_parameter, has_fatal, join, parse_format,
+    pipewire_error, process_buffer, send_ready_error, send_ready_ok, set_fatal, sink_error,
+    sink_worker, stream_error, take_fatal, update_buffer_params,
 };
 
 const PIPEWIRE_READY_TIMEOUT: Duration = Duration::from_secs(10);
@@ -215,6 +215,14 @@ impl PipewireCapture {
         worker_result?;
         sink_result?;
         take_fatal(&self.fatal)
+    }
+
+    pub(crate) fn is_available(&self) -> bool {
+        !has_fatal(&self.fatal)
+            && self
+                .thread
+                .as_ref()
+                .is_none_or(|thread| !thread.is_finished())
     }
 
     fn send(&self, command: PipewireCommand) -> Result<(), CaptureError> {

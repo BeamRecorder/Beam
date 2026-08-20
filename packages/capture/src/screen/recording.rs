@@ -253,4 +253,16 @@ impl ScreenRecording {
             PlatformScreenRecording::Linux(recording) => recording.stop(),
         }
     }
+
+    #[must_use]
+    pub fn is_available(&self) -> bool {
+        match &self.backend {
+            #[cfg(windows)]
+            PlatformScreenRecording::Windows(recording) => recording.is_available(),
+            #[cfg(target_os = "macos")]
+            PlatformScreenRecording::Mac(recording) => recording.is_available(),
+            #[cfg(target_os = "linux")]
+            PlatformScreenRecording::Linux(recording) => recording.is_available(),
+        }
+    }
 }

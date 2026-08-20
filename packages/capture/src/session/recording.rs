@@ -134,6 +134,11 @@ impl RecordingSession {
         self.active.system_audio_level()
     }
 
+    #[must_use]
+    pub fn screen_available(&self) -> bool {
+        self.active.screen_available()
+    }
+
     pub fn start(&mut self) -> Result<(), CaptureError> {
         if self.state != super::SessionState::Armed {
             return Err(invalid_transition(self.state, "Recording"));

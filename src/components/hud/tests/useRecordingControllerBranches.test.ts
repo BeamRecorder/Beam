@@ -16,6 +16,7 @@ const { capture, cameraApi, microphoneApi, systemApi } = vi.hoisted(() => ({
     cancelPreparedRecording: vi.fn(),
     discardRecording: vi.fn(),
     stop: vi.fn(),
+    status: vi.fn(),
     pause: vi.fn(),
     resume: vi.fn(),
     setTeleprompterSession: vi.fn(),
@@ -53,6 +54,7 @@ const configuration = (overrides: Partial<RecordingConfiguration> = {}): Recordi
 });
 
 const recorder = () => ({
+  onFatal: vi.fn(),
   start: vi.fn().mockResolvedValue(undefined),
   stop: vi.fn().mockResolvedValue(undefined),
   pause: vi.fn().mockResolvedValue(undefined),
@@ -86,6 +88,7 @@ beforeEach(() => {
   microphone = recorder();
   systemAudio = recorder();
   vi.clearAllMocks();
+  capture.status.mockReset();
   capture.getCameraOverlayState.mockResolvedValue({
     shadowSize: 'md',
     cornerRadius: 'lg',
@@ -143,6 +146,28 @@ describe('useRecordingController branch behavior', () => {
     await controller.toggleSystemAudio();
     expect(systemApi.request).not.toHaveBeenCalled();
     expect(controller.error.value).toBe('System audio on Linux must be selected before recording starts.');
+  });
+
+  it('stops and completes when native screen sharing becomes unavailable', async () => {
+    capture.platform = 'linux';
+    const complete = vi.fn();
+    const controller = useRecordingController(complete);
+
+    await controller.start(configuration({ systemAudio: true }));
+    await waitForRecording(controller);
+    capture.status.mockResolvedValue({
+      state: 'recording',
+      screenAvailable: false,
+    });
+
+    await vi.advanceTimersByTimeAsync(300);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(capture.stopNativeRecording).toHaveBeenCalledOnce();
+    expect(capture.completeNativeRecording).toHaveBeenCalledOnce();
+    expect(complete).toHaveBeenCalledWith(expect.objectContaining({ sessionId: 'session-1' }));
+    expect(controller.phase.value).toBe('idle');
   });
 
   it('starts sidecars, tracks elapsed time, pauses/resumes, and completes', async () => {
