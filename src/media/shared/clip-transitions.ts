@@ -86,17 +86,18 @@ export function normalizeCanvasTransitions(transitions: ClipTransitions, timelin
 
 const identity = (): ClipTransitionState => ({ opacity: 1, translateX: 0, translateY: 0, scale: 1, blur: 0 });
 
-function evaluatePreset(preset: TransitionPreset, progress: number): ClipTransitionState {
+function evaluatePreset(preset: TransitionPreset, progress: number, edge: 'entry' | 'exit'): ClipTransitionState {
   const state = identity();
   state.opacity = progress;
   const remaining = 1 - progress;
+  const arrival = edge === 'entry' ? 1 : -1;
   if (preset.kind === 'slide') {
-    if (preset.direction === 'left') state.translateX = -0.08 * remaining;
-    if (preset.direction === 'right') state.translateX = 0.08 * remaining;
-    if (preset.direction === 'up') state.translateY = -0.08 * remaining;
-    if (preset.direction === 'down') state.translateY = 0.08 * remaining;
+    if (preset.direction === 'left') state.translateX = arrival * 0.08 * remaining;
+    if (preset.direction === 'right') state.translateX = -arrival * 0.08 * remaining;
+    if (preset.direction === 'up') state.translateY = arrival * 0.08 * remaining;
+    if (preset.direction === 'down') state.translateY = -arrival * 0.08 * remaining;
   } else if (preset.kind === 'zoom') {
-    state.scale = 1 + (preset.direction === 'in' ? -0.04 : 0.04) * remaining;
+    state.scale = 1 + (preset.direction === 'in' ? -arrival : arrival) * 0.1 * remaining;
   } else if (preset.kind === 'blur') state.blur = 12 * remaining;
   return state;
 }
@@ -124,13 +125,13 @@ export function resolveTransitionState(
   if (transitions.entry && timeMs < transitions.entry.durationMs) {
     const linear = clamp01(timeMs / transitions.entry.durationMs);
     const power = transitions.entry.easingPower ?? DEFAULT_TRANSITION_EASING_POWER;
-    return evaluatePreset(transitions.entry.preset, 1 - (1 - linear) ** power);
+    return evaluatePreset(transitions.entry.preset, 1 - (1 - linear) ** power, 'entry');
   }
   const remaining = timelineDurationMs - timeMs;
   if (transitions.exit && remaining < transitions.exit.durationMs) {
     const linear = clamp01(remaining / transitions.exit.durationMs);
     const power = transitions.exit.easingPower ?? DEFAULT_TRANSITION_EASING_POWER;
-    return evaluatePreset(transitions.exit.preset, linear ** power);
+    return evaluatePreset(transitions.exit.preset, linear ** power, 'exit');
   }
   return identity();
 }

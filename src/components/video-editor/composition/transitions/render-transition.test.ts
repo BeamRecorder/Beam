@@ -45,7 +45,7 @@ describe('drawWithClipTransition', () => {
     drawWithClipTransition(ctx, clipWithEntry({ kind: 'zoom', direction: 'in' }), 250, frame, draw);
 
     expect(ctx.translate).toHaveBeenCalledWith(500, 250);
-    expect(ctx.scale).toHaveBeenCalledWith(0.995, 0.995);
+    expect(ctx.scale).toHaveBeenCalledWith(0.9875, 0.9875);
     expect(ctx.translate).toHaveBeenCalledWith(-500, -250);
     expect(draw).toHaveBeenCalledOnce();
   });
@@ -62,7 +62,7 @@ describe('drawWithClipTransition', () => {
     );
 
     expect(ctx.translate).toHaveBeenCalledOnce();
-    expect(ctx.translate).toHaveBeenCalledWith(-8, 0);
+    expect(ctx.translate).toHaveBeenCalledWith(8, 0);
     expect(ctx.scale).not.toHaveBeenCalled();
   });
 
@@ -72,8 +72,8 @@ describe('drawWithClipTransition', () => {
 
     const mapped = transitionPointWithClip(clipWithEntry({ kind: 'slide', direction: 'left' }, 2), 250, frame, point);
 
-    // Entry progress is 1 - (1 - .5)^2 = .75, leaving a -2% frame offset.
-    expect(mapped).toEqual({ x: 484, y: 250 });
+    // Entry progress is 1 - (1 - .5)^2 = .75, leaving a +2% frame offset.
+    expect(mapped).toEqual({ x: 516, y: 250 });
   });
 
   it('maps a point through an exit transition using its easing power and centered scale', () => {
@@ -85,8 +85,8 @@ describe('drawWithClipTransition', () => {
 
     const mapped = transitionPointWithClip(clip, 750, frame, { x: 700, y: 350 });
 
-    // Exit progress is .5^2 = .25, leaving 75% of the preset's 4% scale offset.
-    expect(mapped.x).toBeCloseTo(694);
-    expect(mapped.y).toBeCloseTo(347);
+    // Exit progress is .5^2 = .25, leaving 75% of the preset's 10% scale overshoot.
+    expect(mapped.x).toBeCloseTo(715);
+    expect(mapped.y).toBeCloseTo(357.5);
   });
 });
