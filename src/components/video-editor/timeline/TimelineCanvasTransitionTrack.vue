@@ -4,6 +4,7 @@ import { PanelsTopLeft } from '@lucide/vue';
 import type { ClipTransition, ClipTransitions } from '~/media/shared/composition-types';
 import { normalizeCanvasTransitions } from '~/media/shared/clip-transitions';
 import { useTranslate } from '~/i18n/useTranslate';
+import TimelineTransitionCurve from './TimelineTransitionCurve.vue';
 
 const props = defineProps<{
   mode: 'sidebar' | 'track';
@@ -88,6 +89,7 @@ const beginResize = (event: PointerEvent, edge: 'entry' | 'exit') => {
         :aria-label="label('entry', activeTransitions.entry)"
         @click.stop="emit('open', 'entry')"
       >
+        <TimelineTransitionCurve edge="entry" :transition="activeTransitions.entry" />
         <span class="zone-label">{{ t('entry') }} · {{ activeTransitions.entry.durationMs }} ms</span>
         <span class="duration-handle end" @pointerdown="beginResize($event, 'entry')" />
       </button>
@@ -99,6 +101,7 @@ const beginResize = (event: PointerEvent, edge: 'entry' | 'exit') => {
         :aria-label="label('exit', activeTransitions.exit)"
         @click.stop="emit('open', 'exit')"
       >
+        <TimelineTransitionCurve edge="exit" :transition="activeTransitions.exit" />
         <span class="duration-handle start" @pointerdown="beginResize($event, 'exit')" />
         <span class="zone-label">{{ t('exit') }} · {{ activeTransitions.exit.durationMs }} ms</span>
       </button>
@@ -162,13 +165,10 @@ const beginResize = (event: PointerEvent, edge: 'entry' | 'exit') => {
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--color-primary) 58%, var(--color-border));
   border-radius: var(--radius-sm);
-  background: repeating-linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--color-primary) 34%, transparent) 0 4px,
-    transparent 4px 8px
-  );
+  background: color-mix(in srgb, var(--color-primary) 7%, var(--color-bg-surface));
   color: var(--text-primary);
   cursor: pointer;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 .canvas-transition-zone:hover,
 .canvas-transition-zone:focus-visible {
@@ -183,6 +183,8 @@ const beginResize = (event: PointerEvent, edge: 'entry' | 'exit') => {
   right: 0;
 }
 .zone-label {
+  position: relative;
+  z-index: 2;
   padding-inline: 5px;
   font-size: 8px;
   font-weight: 800;

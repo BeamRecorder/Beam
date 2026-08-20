@@ -50,6 +50,9 @@
     "lg": "grande",
     "full": "completo"
   },
+  "TransitionsPanel": {
+    "curve": "Curva"
+  },
   "CanvasPanel": {
     "backgroundType": "Tipo de plano de fundo",
     "image": "Imagem",

@@ -397,7 +397,9 @@ impl ActiveRecordings {
         #[cfg(all(windows, feature = "cursor"))]
         if let Some(recording) = self.cursor.take() {
             let metrics = recording.metrics();
-            record_result(recording.stop(), &mut first_error);
+            let result = recording.stop();
+            mark_track_failed(tracks, TrackKind::Cursor, &result);
+            record_result(result, &mut first_error);
             if let Some(track) = track_mut(tracks, TrackKind::Cursor) {
                 track.metrics.frames_received += metrics.events();
                 track.metrics.interruptions += metrics.interruptions();
@@ -406,7 +408,9 @@ impl ActiveRecordings {
         #[cfg(all(target_os = "macos", feature = "cursor"))]
         if let Some(recording) = self.cursor.take() {
             let metrics = recording.metrics();
-            record_result(recording.stop(), &mut first_error);
+            let result = recording.stop();
+            mark_track_failed(tracks, TrackKind::Cursor, &result);
+            record_result(result, &mut first_error);
             if let Some(track) = track_mut(tracks, TrackKind::Cursor) {
                 track.metrics.frames_received += metrics.events();
                 track.metrics.interruptions += metrics.interruptions();
@@ -428,17 +432,5 @@ impl ActiveRecordings {
             return Err(error);
         }
         Ok(())
-    }
-}
-
-fn mark_track_failed(
-    tracks: &mut [TrackMetadata],
-    kind: TrackKind,
-    result: &Result<(), CaptureError>,
-) {
-    let Err(error) = result else { return };
-    if let Some(track) = track_mut(tracks, kind) {
-        track.status = TrackStatus::Failed;
-        track.termination_reason = Some(error.to_string());
     }
 }

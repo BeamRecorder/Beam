@@ -62,6 +62,34 @@ describe('buildAutomaticZoomElements', () => {
       }),
     ).toEqual([]);
   });
+
+  it('fits an automatic click zoom into the free gap after a reserved eight-second zoom', () => {
+    const reserved = [
+      {
+        id: 'manual',
+        sessionId: 'session',
+        startMs: 0,
+        endMs: 8_000,
+        focus: { cx: 0.5, cy: 0.5 },
+        depth: 2 as const,
+        mode: 'manual' as const,
+      },
+    ];
+    expect(
+      buildAutomaticZoomElements({
+        telemetry: [sample(8_100, 0.25, 0.75, 'click')],
+        sessionId: 'session',
+        durationMs: 10_000,
+        reserved,
+      }),
+    ).toEqual([
+      expect.objectContaining({
+        startMs: 8_000,
+        endMs: 9_000,
+        focus: { cx: 0.25, cy: 0.75 },
+      }),
+    ]);
+  });
 });
 
 describe('normalizeCursorTelemetry', () => {

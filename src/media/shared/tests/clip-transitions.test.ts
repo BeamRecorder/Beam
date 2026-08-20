@@ -39,6 +39,11 @@ const timedClip = (transitions: Clip['transitions'], duration = 1_000) => ({
   transitions,
 });
 
+const poweredTransition = (transition: unknown, easingPower: number) => {
+  if (!transition || typeof transition !== 'object') throw new Error('Transition is required.');
+  return { ...transition, easingPower } as never;
+};
+
 describe('clip transition evaluator', () => {
   it('registers the four visual presets and exposes the shared default duration', () => {
     expect(Object.keys(TRANSITION_DEFINITIONS)).toEqual(['fade', 'slide', 'zoom', 'blur']);
@@ -72,7 +77,7 @@ describe('clip transition evaluator', () => {
     expect(resolveClipTransitionState(slide, 600)).toMatchObject({ opacity: 1, translateX: 0 });
   });
 
-  it('mirrors entry easing for exits and returns identity outside a clip', () => {
+  it('uses cubic remaining progress for exits and returns identity outside a clip', () => {
     const clip = timedClip({ entry: null, exit: { preset: { kind: 'slide', direction: 'down' }, durationMs: 500 } });
     expect(resolveClipTransitionState(clip, 99)).toEqual({
       opacity: 1,
@@ -81,8 +86,69 @@ describe('clip transition evaluator', () => {
       scale: 1,
       blur: 0,
     });
-    expect(resolveClipTransitionState(clip, 900).opacity).toBeCloseTo(0.784);
+    expect(resolveClipTransitionState(clip, 900).opacity).toBeCloseTo(0.4 ** 3);
     expect(resolveClipTransitionState(clip, 1_100).opacity).toBe(0);
+    expect(resolveClipTransitionState(clip, 1_101).opacity).toBe(1);
+  });
+
+  it('applies cubic exit progress at exact start, quarter elapsed, midpoint, and end for long durations', () => {
+    const durationMs = 4_000;
+    const clip = timedClip({ entry: null, exit: { preset: { kind: 'fade' }, durationMs } }, 8_000);
+    const clipEndMs = clip.timelineStartMs + clip.timelineDurationMs;
+    const exitStartMs = clipEndMs - durationMs;
+
+    expect(resolveClipTransitionState(clip, exitStartMs).opacity).toBe(1);
+    expect(resolveClipTransitionState(clip, exitStartMs + durationMs * 0.25).opacity).toBeCloseTo(0.75 ** 3);
+    expect(resolveClipTransitionState(clip, exitStartMs + durationMs * 0.5).opacity).toBeCloseTo(0.5 ** 3);
+    expect(resolveClipTransitionState(clip, clipEndMs).opacity).toBe(0);
+    expect(resolveClipTransitionState(clip, clipEndMs + 1).opacity).toBe(1);
+  });
+
+  it('defaults visual easing power to three and supports linear and sharper powers', () => {
+    const linearEntry = timedClip({
+      entry: poweredTransition({ preset: { kind: 'fade' }, durationMs: 500 }, 1),
+      exit: null,
+    });
+    const sharpEntry = timedClip({
+      entry: poweredTransition({ preset: { kind: 'fade' }, durationMs: 500 }, 5),
+      exit: null,
+    });
+    const defaultEntry = timedClip({ entry: { preset: { kind: 'fade' }, durationMs: 500 }, exit: null });
+    expect(resolveClipTransitionState(defaultEntry, 350).opacity).toBeCloseTo(1 - 0.5 ** 3);
+    expect(resolveClipTransitionState(linearEntry, 350).opacity).toBeCloseTo(0.5);
+    expect(resolveClipTransitionState(sharpEntry, 350).opacity).toBeCloseTo(1 - 0.5 ** 5);
+
+    const linearExit = timedClip({
+      entry: null,
+      exit: poweredTransition({ preset: { kind: 'fade' }, durationMs: 500 }, 1),
+    });
+    const sharpExit = timedClip({
+      entry: null,
+      exit: poweredTransition({ preset: { kind: 'fade' }, durationMs: 500 }, 5),
+    });
+    expect(resolveClipTransitionState(linearExit, 850).opacity).toBeCloseTo(0.5);
+    expect(resolveClipTransitionState(sharpExit, 850).opacity).toBeCloseTo(0.5 ** 5);
+  });
+
+  it('clamps easing power to the supported visual range while keeping audio transitions linear', () => {
+    const normalized = normalizeClipTransitions(
+      {
+        entry: poweredTransition({ preset: { kind: 'fade' }, durationMs: 300 }, 0),
+        exit: poweredTransition({ preset: { kind: 'fade' }, durationMs: 300 }, 9),
+      },
+      1_000,
+      'video',
+    );
+    expect(normalized).toEqual({
+      entry: { preset: { kind: 'fade' }, durationMs: 300, easingPower: 1 },
+      exit: { preset: { kind: 'fade' }, durationMs: 300, easingPower: 5 },
+    });
+
+    const audioWithPower = {
+      entry: null,
+      exit: poweredTransition({ preset: { kind: 'fade' }, durationMs: 300 }, 5),
+    } as never;
+    expect(audioTransitionGainAt(timedClip(audioWithPower), 950)).toBeCloseTo(0.5);
   });
 
   it.each([30, 60])('keeps the final exit frame visible at a contiguous cut (%s fps)', (fps) => {
@@ -103,7 +169,7 @@ describe('clip transition evaluator', () => {
     const after = cutMs + frameMs;
 
     expect(activeClipsAt(composition, before).map((clip) => clip.id)).toEqual(['first']);
-    expect(resolveClipTransitionState(first, before).opacity).toBeCloseTo(1 - (1 - frameMs / 500) ** 3, 8);
+    expect(resolveClipTransitionState(first, before).opacity).toBeCloseTo((frameMs / 500) ** 3, 8);
     expect(activeClipsAt(composition, cutMs).map((clip) => clip.id)).toEqual(['second']);
     expect(resolveClipTransitionState(second, cutMs).opacity).toBe(1);
     expect(activeClipsAt(composition, after).map((clip) => clip.id)).toEqual(['second']);

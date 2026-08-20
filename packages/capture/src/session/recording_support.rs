@@ -35,6 +35,18 @@ pub(super) fn record_result(result: Result<(), CaptureError>, first: &mut Option
     }
 }
 
+pub(super) fn mark_track_failed(
+    tracks: &mut [TrackMetadata],
+    kind: TrackKind,
+    result: &Result<(), CaptureError>,
+) {
+    let Err(error) = result else { return };
+    if let Some(track) = track_mut(tracks, kind) {
+        track.status = TrackStatus::Failed;
+        track.termination_reason = Some(error.to_string());
+    }
+}
+
 pub(super) fn track_metadata(
     request: &CaptureRequest,
     snapshot: &CatalogSnapshot,

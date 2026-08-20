@@ -9,14 +9,8 @@ import {
   resizeMotionBlurSurface,
   type MotionBlurSurface,
 } from '../../zoom/zoom-motion-blur-compositor';
-import {
-  OUTPUT_FALLBACK_COLOR,
-  OUTPUT_PREVIEW_RADIUS,
-  outputPreviewRect,
-  type OutputCanvasSettings,
-} from '../output-canvas';
+import { OUTPUT_PREVIEW_RADIUS, outputPreviewRect, type OutputCanvasSettings } from '../output-canvas';
 import type { ProjectEditorData } from '~/api/types/capture-api';
-import { activeClipsAt } from '~/media/shared';
 import type { MediaFrame } from '~/media/shared';
 import type { ClipComposition, NormalizedTransform, VisualClip } from '~/media/shared/composition-types';
 import { drawDecoratedMedia } from '../../composition/appearance/render-decorated-media';
@@ -85,9 +79,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
   let motionBlurSurface: MotionBlurSurface | null = null;
 
   const screenClip = (): VisualClip | null =>
-    activeClipsAt(options.composition(), options.currentTime() * 1_000).find(
-      (clip): clip is VisualClip => clip.kind === 'screen',
-    ) ?? null;
+    resolveCompositionSceneLayers(options.composition(), options.currentTime() * 1_000).screen;
 
   const resetCamera = () => {
     cameraEvaluator?.invalidate();
@@ -300,9 +292,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
         zooms: previewZooms,
         telemetry,
         mapFocus: (focus, zoom, timeMs) => {
-          const activeScreen = activeClipsAt(options.composition(), timeMs).find(
-            (clip): clip is VisualClip => clip.kind === 'screen',
-          );
+          const activeScreen = resolveCompositionSceneLayers(options.composition(), timeMs).screen;
           if (!activeScreen || zoom.mode !== 'auto') return focus;
           const activeGeometry = resolveScreenRenderGeometry(
             activeScreen,
@@ -384,11 +374,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
         viewportHeight: dh,
       });
     })();
-    const drawSample = (
-      target: CanvasRenderingContext2D,
-      blurSample: (typeof blurPlan)[number],
-      fillFallback = false,
-    ) => {
+    const drawSample = (target: CanvasRenderingContext2D, blurSample: (typeof blurPlan)[number]) => {
       const projectedCamera = {
         focusX: dx + blurSample.camera.focusX * dw,
         focusY: dy + blurSample.camera.focusY * dh,
@@ -399,10 +385,6 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       target.beginPath();
       target.roundRect(dx, dy, dw, dh, OUTPUT_PREVIEW_RADIUS);
       target.clip();
-      if (fillFallback) {
-        target.fillStyle = OUTPUT_FALLBACK_COLOR;
-        target.fillRect(dx, dy, dw, dh);
-      }
       target.translate(dx + dw / 2, dy + dh / 2);
       target.scale(projectedCamera.scale, projectedCamera.scale);
       target.translate(-projectedCamera.focusX, -projectedCamera.focusY);
@@ -440,7 +422,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
             pixelScale,
             sample: blurSample,
             accumulatedWeight,
-            draw: (target, sampleToDraw) => drawSample(target as CanvasRenderingContext2D, sampleToDraw, true),
+            draw: (target, sampleToDraw) => drawSample(target as CanvasRenderingContext2D, sampleToDraw),
           });
           if (rendered) {
             composited = true;

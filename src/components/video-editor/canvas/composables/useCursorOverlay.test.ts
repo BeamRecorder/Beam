@@ -13,8 +13,20 @@ import { getRippleStyleColor, useCursorOverlay, type UseCursorOverlayOptions } f
 
 const second = (value: number) => value * 1_000_000_000;
 const effects = {
-  left: { springEnabled: true, springIntensity: 80, rippleEnabled: true, rippleSize: 30, rippleColor: '#ff0000' },
-  right: { springEnabled: false, springIntensity: 0, rippleEnabled: false, rippleSize: 20, rippleColor: '#0000ff' },
+  left: {
+    springEnabled: true,
+    springIntensity: 80,
+    rippleEnabled: true,
+    rippleSize: 30,
+    rippleColor: '#ff0000',
+  },
+  right: {
+    springEnabled: false,
+    springIntensity: 0,
+    rippleEnabled: false,
+    rippleSize: 20,
+    rippleColor: '#0000ff',
+  },
 };
 
 const wideCursorPack = (): CursorPackDescriptor => ({
@@ -50,6 +62,7 @@ const createContext = () =>
     drawImage: vi.fn(),
     translate: vi.fn(),
     scale: vi.fn(),
+    globalAlpha: 1,
     font: '',
     textAlign: '',
     fillStyle: '',
@@ -62,17 +75,31 @@ const createContext = () =>
   }) as unknown as CanvasRenderingContext2D;
 
 const baseOptions = (): UseCursorOverlayOptions => ({
-  cursorSelection: () => ({ packId: MACOS_CURSOR_PACK.id, mode: 'automatic' as const, cursorId: null }),
+  cursorSelection: () => ({
+    packId: MACOS_CURSOR_PACK.id,
+    mode: 'automatic' as const,
+    cursorId: null,
+  }),
   cursorPack: () => MACOS_CURSOR_PACK,
   cursorSize: () => 24,
   cursorColor: () => '#ffffff',
   enableShadow: () => true,
   clickEffects: () => effects,
-  motion: () => ({ preset: 'smooth' as const, smoothing: 0.67, springMassMultiplier: 1.29, motionBlur: 0.4 }),
+  motion: () => ({
+    preset: 'smooth' as const,
+    smoothing: 0.67,
+    springMassMultiplier: 1.29,
+    motionBlur: 0.4,
+  }),
   shadowBlur: () => 8,
   shadowColor: () => '#000000',
   shadowDirection: () => 'bottom-right' as const,
-  outputCanvas: () => ({ preset: '16:9' as const, width: 1920, height: 1080, showBackground: false }),
+  outputCanvas: () => ({
+    preset: '16:9' as const,
+    width: 1920,
+    height: 1080,
+    showBackground: false,
+  }),
   deviceScale: () => 1,
   currentTime: () => 0.75,
   isPlaying: () => true,
@@ -81,9 +108,30 @@ const baseOptions = (): UseCursorOverlayOptions => ({
       cursor: {
         available: true,
         events: [
-          { event: 'shape', sessionNs: 0, cursorId: 'custom:arrow', cursorKind: 'custom', hotspot: { x: 2, y: 3 } },
-          { event: 'move', sessionNs: 0, pixelX: 0, pixelY: 0, normalizedX: 0.25, normalizedY: 0.35, visible: true },
-          { event: 'button', sessionNs: second(0.5), button: 1, pressed: true, normalizedX: 0.25, normalizedY: 0.35 },
+          {
+            event: 'shape',
+            sessionNs: 0,
+            cursorId: 'custom:arrow',
+            cursorKind: 'custom',
+            hotspot: { x: 2, y: 3 },
+          },
+          {
+            event: 'move',
+            sessionNs: 0,
+            pixelX: 0,
+            pixelY: 0,
+            normalizedX: 0.25,
+            normalizedY: 0.35,
+            visible: true,
+          },
+          {
+            event: 'button',
+            sessionNs: second(0.5),
+            button: 1,
+            pressed: true,
+            normalizedX: 0.25,
+            normalizedY: 0.35,
+          },
         ],
       },
     }) as never,
@@ -105,7 +153,10 @@ describe('useCursorOverlay', () => {
   it('formats ripple colors and loads the current cursor image', async () => {
     expect(getRippleStyleColor('#12ab34', 0.5)).toBe('rgba(18, 171, 52, 0.5)');
     expect(getRippleStyleColor('var(--cursor)', 0.5)).toBe('var(--cursor)');
-    getCursorImage.mockResolvedValue({ complete: true, naturalWidth: 32 } as HTMLImageElement);
+    getCursorImage.mockResolvedValue({
+      complete: true,
+      naturalWidth: 32,
+    } as HTMLImageElement);
     const options = baseOptions();
     const overlay = useCursorOverlay(options);
     await nextTick();
@@ -127,10 +178,17 @@ describe('useCursorOverlay', () => {
     ['solid', 2, 1],
     ['none', 0, 0],
   ] as const)('draws the %s global ripple shape in playback', async (style, expectedRings, expectedFilledRings) => {
-    getCursorImage.mockClear().mockResolvedValue({ complete: true, naturalWidth: 32 } as HTMLImageElement);
+    getCursorImage.mockClear().mockResolvedValue({
+      complete: true,
+      naturalWidth: 32,
+    } as HTMLImageElement);
     const options = baseOptions();
     options.clickEffects = () => ({
-      left: { ...effects.left, rippleEnabled: style !== 'none', rippleStyle: style },
+      left: {
+        ...effects.left,
+        rippleEnabled: style !== 'none',
+        rippleStyle: style,
+      },
       right: { ...effects.right, rippleEnabled: false, rippleStyle: 'none' },
     });
     const overlay = useCursorOverlay(options);
@@ -150,6 +208,145 @@ describe('useCursorOverlay', () => {
     expect(ctx.arc).toHaveBeenCalledTimes(expectedRings);
     expect(ctx.fill).toHaveBeenCalledTimes(expectedFilledRings);
     expect(ctx.stroke).toHaveBeenCalledTimes(expectedRings - expectedFilledRings);
+  });
+
+  it.each([
+    ['entry', 1, 0.5],
+    ['entry', 5, 1 - 0.5 ** 5],
+    ['exit', 1, 0.5],
+    ['exit', 5, 0.5 ** 5],
+  ] as const)(
+    'multiplies playback cursor and ripple alpha by the %s easing curve (power %s)',
+    async (edge, power, expectedAlpha) => {
+      getCursorImage.mockClear().mockResolvedValue({
+        complete: true,
+        naturalWidth: 32,
+      } as HTMLImageElement);
+      const options = baseOptions();
+      options.currentTime = () => 0.5;
+      options.motion = () => ({
+        preset: 'smooth',
+        smoothing: 0.67,
+        springMassMultiplier: 1.29,
+        motionBlur: 0,
+      });
+      options.editorData = () =>
+        ({
+          cursor: {
+            available: true,
+            events: [
+              {
+                event: 'shape',
+                sessionNs: 0,
+                cursorId: 'custom:arrow',
+                cursorKind: 'custom',
+                hotspot: { x: 2, y: 3 },
+              },
+              {
+                event: 'move',
+                sessionNs: 0,
+                pixelX: 0,
+                pixelY: 0,
+                normalizedX: 0.25,
+                normalizedY: 0.35,
+                visible: true,
+              },
+              {
+                event: 'button',
+                sessionNs: second(0.25),
+                button: 1,
+                pressed: true,
+                normalizedX: 0.25,
+                normalizedY: 0.35,
+              },
+            ],
+          },
+        }) as never;
+      options.screenClip = () =>
+        ({
+          timelineStartMs: 0,
+          timelineDurationMs: 1_000,
+          sourceInMs: 0,
+          sourceDurationMs: 1_000,
+          playbackRate: 1,
+          transform: { x: 0, y: 0, width: 1, height: 1 },
+          isMirrored: false,
+          transitions:
+            edge === 'entry'
+              ? {
+                  entry: {
+                    preset: { kind: 'fade' },
+                    durationMs: 1_000,
+                    easingPower: power,
+                  },
+                  exit: null,
+                }
+              : {
+                  entry: null,
+                  exit: {
+                    preset: { kind: 'fade' },
+                    durationMs: 1_000,
+                    easingPower: power,
+                  },
+                },
+        }) as never;
+      const overlay = useCursorOverlay(options);
+      await nextTick();
+      await Promise.resolve();
+
+      const ctx = createContext();
+      const rippleAlphas: number[] = [];
+      const cursorAlphas: number[] = [];
+      (ctx.arc as ReturnType<typeof vi.fn>).mockImplementation(() => rippleAlphas.push(ctx.globalAlpha));
+      (ctx.drawImage as ReturnType<typeof vi.fn>).mockImplementation(() => cursorAlphas.push(ctx.globalAlpha));
+      overlay.updateAndDrawRipplesAndCursor(
+        ctx,
+        { dx: 0, dy: 0, dw: 800, dh: 450, focusX: 0, focusY: 0, scale: 1 },
+        1920,
+        1080,
+        800,
+        (draw) => draw(),
+      );
+
+      expect(rippleAlphas.length).toBeGreaterThan(0);
+      expect(cursorAlphas).toEqual([expect.closeTo(expectedAlpha, 8)]);
+      expect(rippleAlphas).toEqual(rippleAlphas.map(() => expect.closeTo(expectedAlpha, 8)));
+    },
+  );
+
+  it.each([
+    ['no active screen', null, true],
+    ['disabled screen', 'screen', false],
+  ] as const)('does not draw playback cursor/ripples with %s', (_, screen, enabled) => {
+    const options = baseOptions();
+    options.screenClip = () =>
+      screen
+        ? ({
+            timelineStartMs: 0,
+            timelineDurationMs: 1_000,
+            sourceInMs: 0,
+            sourceDurationMs: 1_000,
+            playbackRate: 1,
+            transform: { x: 0, y: 0, width: 1, height: 1 },
+            isMirrored: false,
+          } as never)
+        : null;
+    options.isScreenEnabled = () => enabled;
+    const overlay = useCursorOverlay(options);
+    const ctx = createContext();
+
+    overlay.updateAndDrawRipplesAndCursor(
+      ctx,
+      { dx: 0, dy: 0, dw: 800, dh: 450, focusX: 0, focusY: 0, scale: 1 },
+      1920,
+      1080,
+      800,
+      (draw) => draw(),
+    );
+
+    expect(ctx.arc).not.toHaveBeenCalled();
+    expect(ctx.drawImage).not.toHaveBeenCalled();
+    expect(overlay.cursorBounds.value).toBeNull();
   });
 
   it('keeps the loaded image while cursor size changes, then updates bounds on the next draw', async () => {
@@ -175,12 +372,18 @@ describe('useCursorOverlay', () => {
     draw();
     const firstBounds = overlay.cursorBounds.value;
     expect(firstBounds).not.toBeNull();
-    expect(overlay.customCursorImage.value).toMatchObject({ complete: true, naturalWidth: 32 });
+    expect(overlay.customCursorImage.value).toMatchObject({
+      complete: true,
+      naturalWidth: 32,
+    });
     expect(getCursorImage).toHaveBeenCalledOnce();
 
     cursorSize.value = 48;
     await nextTick();
-    expect(overlay.customCursorImage.value).toMatchObject({ complete: true, naturalWidth: 32 });
+    expect(overlay.customCursorImage.value).toMatchObject({
+      complete: true,
+      naturalWidth: 32,
+    });
     expect(getCursorImage).toHaveBeenCalledOnce();
 
     draw();
@@ -190,7 +393,10 @@ describe('useCursorOverlay', () => {
 
   it('draws a Beam fallback for custom cursors without a canvas warning', async () => {
     getCursorImage.mockClear();
-    getCursorImage.mockResolvedValue({ complete: true, naturalWidth: 32 } as HTMLImageElement);
+    getCursorImage.mockResolvedValue({
+      complete: true,
+      naturalWidth: 32,
+    } as HTMLImageElement);
     const options = baseOptions();
     const overlay = useCursorOverlay(options);
     await nextTick();
@@ -253,7 +459,10 @@ describe('useCursorOverlay', () => {
   });
 
   it('clears stale canvas bounds when the cursor becomes unavailable or hidden', async () => {
-    getCursorImage.mockResolvedValue({ complete: true, naturalWidth: 32 } as HTMLImageElement);
+    getCursorImage.mockResolvedValue({
+      complete: true,
+      naturalWidth: 32,
+    } as HTMLImageElement);
     const options = baseOptions();
     const overlay = useCursorOverlay(options);
     await nextTick();
@@ -273,7 +482,10 @@ describe('useCursorOverlay', () => {
 
     draw(options.editorData());
     expect(overlay.cursorBounds.value).toEqual(
-      expect.objectContaining({ width: expect.any(Number), height: expect.any(Number) }),
+      expect.objectContaining({
+        width: expect.any(Number),
+        height: expect.any(Number),
+      }),
     );
 
     draw({ cursor: { available: false, events: [] } } as never);
@@ -283,8 +495,22 @@ describe('useCursorOverlay', () => {
       cursor: {
         available: true,
         events: [
-          { event: 'shape', sessionNs: 0, cursorId: 'custom:arrow', cursorKind: 'custom', hotspot: { x: 2, y: 3 } },
-          { event: 'move', sessionNs: 0, pixelX: 0, pixelY: 0, normalizedX: 0.25, normalizedY: 0.35, visible: false },
+          {
+            event: 'shape',
+            sessionNs: 0,
+            cursorId: 'custom:arrow',
+            cursorKind: 'custom',
+            hotspot: { x: 2, y: 3 },
+          },
+          {
+            event: 'move',
+            sessionNs: 0,
+            pixelX: 0,
+            pixelY: 0,
+            normalizedX: 0.25,
+            normalizedY: 0.35,
+            visible: false,
+          },
         ],
       },
     } as never);
@@ -304,7 +530,10 @@ describe('useCursorOverlay', () => {
   });
 
   it('warns while rendering a temporary macOS fallback for a missing pack', async () => {
-    getCursorImage.mockResolvedValue({ complete: true, naturalWidth: 32 } as HTMLImageElement);
+    getCursorImage.mockResolvedValue({
+      complete: true,
+      naturalWidth: 32,
+    } as HTMLImageElement);
     const options = baseOptions();
     options.cursorPack = () => null;
     const overlay = useCursorOverlay(options);
@@ -327,10 +556,17 @@ describe('useCursorOverlay', () => {
 
   it('preserves a non-square asset ratio and hotspot in the canvas preview', async () => {
     const pack = wideCursorPack();
-    getCursorImage.mockResolvedValue({ complete: true, naturalWidth: 40 } as HTMLImageElement);
+    getCursorImage.mockResolvedValue({
+      complete: true,
+      naturalWidth: 40,
+    } as HTMLImageElement);
     const options = baseOptions();
     options.cursorPack = () => pack;
-    options.cursorSelection = () => ({ packId: pack.id, mode: 'fixed' as const, cursorId: 'wide-default' });
+    options.cursorSelection = () => ({
+      packId: pack.id,
+      mode: 'fixed' as const,
+      cursorId: 'wide-default',
+    });
     const overlay = useCursorOverlay(options);
     await nextTick();
     await Promise.resolve();
@@ -358,10 +594,17 @@ describe('useCursorOverlay', () => {
   });
 
   it('reloads the selected pack when it becomes available without a time or selection change', async () => {
-    getCursorImage.mockResolvedValue({ complete: true, naturalWidth: 32 } as HTMLImageElement);
+    getCursorImage.mockResolvedValue({
+      complete: true,
+      naturalWidth: 32,
+    } as HTMLImageElement);
     const pack = wideCursorPack();
     const selectedPack = ref<CursorPackDescriptor | null>(null);
-    const selection = ref({ packId: pack.id, mode: 'automatic' as const, cursorId: null });
+    const selection = ref({
+      packId: pack.id,
+      mode: 'automatic' as const,
+      cursorId: null,
+    });
     const options = baseOptions();
     options.cursorPack = () => selectedPack.value;
     options.cursorSelection = () => selection.value;
@@ -388,8 +631,16 @@ describe('useCursorOverlay', () => {
     getCursorImage.mockClear();
     const firstPack = wideCursorPack();
     const secondPack = { ...wideCursorPack(), id: 'imported:newer' };
-    const firstImage = { id: 'first', complete: true, naturalWidth: 32 } as HTMLImageElement;
-    const secondImage = { id: 'second', complete: true, naturalWidth: 32 } as HTMLImageElement;
+    const firstImage = {
+      id: 'first',
+      complete: true,
+      naturalWidth: 32,
+    } as HTMLImageElement;
+    const secondImage = {
+      id: 'second',
+      complete: true,
+      naturalWidth: 32,
+    } as HTMLImageElement;
     let resolveFirst: ((image: HTMLImageElement) => void) | undefined;
     let resolveSecond: ((image: HTMLImageElement) => void) | undefined;
     getCursorImage.mockImplementation((pack: CursorPackDescriptor) => {
@@ -402,7 +653,11 @@ describe('useCursorOverlay', () => {
       });
     });
     const selectedPack = ref<CursorPackDescriptor | null>(firstPack);
-    const selection = ref({ packId: firstPack.id, mode: 'automatic' as const, cursorId: null });
+    const selection = ref({
+      packId: firstPack.id,
+      mode: 'automatic' as const,
+      cursorId: null,
+    });
     const options = baseOptions();
     options.cursorPack = () => selectedPack.value;
     options.cursorSelection = () => selection.value;
@@ -412,7 +667,11 @@ describe('useCursorOverlay', () => {
     expect(resolveFirst).toBeTypeOf('function');
 
     selectedPack.value = secondPack;
-    selection.value = { packId: secondPack.id, mode: 'automatic', cursorId: null };
+    selection.value = {
+      packId: secondPack.id,
+      mode: 'automatic',
+      cursorId: null,
+    };
     await nextTick();
     expect(resolveSecond).toBeTypeOf('function');
     expect(getCursorImage).toHaveBeenCalledTimes(2);
@@ -431,10 +690,18 @@ describe('useCursorOverlay', () => {
   });
 
   it('keeps the image across time changes for one asset and reloads once when cursorId changes', async () => {
-    const image = { id: 'stable', complete: true, naturalWidth: 32 } as HTMLImageElement;
+    const image = {
+      id: 'stable',
+      complete: true,
+      naturalWidth: 32,
+    } as HTMLImageElement;
     getCursorImage.mockClear().mockResolvedValue(image);
     const time = ref(0.25);
-    const selection = ref({ packId: MACOS_CURSOR_PACK.id, mode: 'fixed' as const, cursorId: 'default' });
+    const selection = ref({
+      packId: MACOS_CURSOR_PACK.id,
+      mode: 'fixed' as const,
+      cursorId: 'default',
+    });
     const options = baseOptions();
     options.currentTime = () => time.value;
     options.cursorSelection = () => selection.value;
@@ -443,8 +710,22 @@ describe('useCursorOverlay', () => {
         cursor: {
           available: true,
           events: [
-            { event: 'shape', sessionNs: 0, cursorId: 'default', cursorKind: 'default', hotspot: { x: 10, y: 7 } },
-            { event: 'move', sessionNs: 0, pixelX: 0, pixelY: 0, normalizedX: 0.25, normalizedY: 0.35, visible: true },
+            {
+              event: 'shape',
+              sessionNs: 0,
+              cursorId: 'default',
+              cursorKind: 'default',
+              hotspot: { x: 10, y: 7 },
+            },
+            {
+              event: 'move',
+              sessionNs: 0,
+              pixelX: 0,
+              pixelY: 0,
+              normalizedX: 0.25,
+              normalizedY: 0.35,
+              visible: true,
+            },
           ],
         },
       }) as never;
@@ -465,7 +746,11 @@ describe('useCursorOverlay', () => {
     expect(getCursorImage).not.toHaveBeenCalled();
     expect(overlay.customCursorImage.value).toBe(firstImage);
 
-    selection.value = { packId: MACOS_CURSOR_PACK.id, mode: 'fixed', cursorId: 'handpointing' };
+    selection.value = {
+      packId: MACOS_CURSOR_PACK.id,
+      mode: 'fixed',
+      cursorId: 'handpointing',
+    };
     await nextTick();
     await Promise.resolve();
     await nextTick();

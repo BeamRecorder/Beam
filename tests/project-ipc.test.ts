@@ -175,8 +175,8 @@ describe('background import IPC', () => {
 });
 
 describe('cursor pack IPC', () => {
-  it('uses a constant GitHub code-search URL', () => {
-    expect(CURSOR_PACK_DISCOVERY_URL).toBe('https://github.com/search?q=cursors_scalable&type=code');
+  it('uses the KDE cursor-pack discovery URL', () => {
+    expect(CURSOR_PACK_DISCOVERY_URL).toBe('https://store.kde.org/browse/cat/107/');
   });
 
   it('picks only a directory, imports it globally and notifies renderers', async () => {

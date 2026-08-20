@@ -56,6 +56,7 @@
     "entry": "Entrée",
     "exit": "Sortie",
     "duration": "Durée",
+    "curve": "Courbe",
     "selectDuration": "Sélectionnez une transition pour régler sa durée.",
     "presetLabel": "Preset de transition {edge}",
     "none": "Aucune",

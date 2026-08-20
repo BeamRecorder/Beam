@@ -336,12 +336,24 @@ describe('clip composition engine', () => {
     expect(new Set(segments.map((clip) => clip.order))).toEqual(new Set([0]));
   });
 
-  it('blocks moving or trimming a split segment across its sibling on the same track', () => {
+  it('blocks moving but ripples a split sibling when extending a segment', () => {
     const source = compositionFor([visualClip('source', 'video', { trackId: 'video-track' })]);
     const split = splitClip(source, 'source', 3_000, () => 'source-right');
 
     expect(() => moveClip(split, 'source-right', 2_000)).toThrow(CompositionEngineError);
-    expect(() => trimClip(split, 'source', 'end', 3_500)).toThrow(CompositionEngineError);
+
+    const trimmed = trimClip(split, 'source', 'end', 3_500);
+    expect(trimmed.clips.find((clip) => clip.id === 'source')).toMatchObject({
+      timelineStartMs: 1_000,
+      timelineDurationMs: 2_500,
+      sourceDurationMs: 2_500,
+    });
+    expect(trimmed.clips.find((clip) => clip.id === 'source-right')).toMatchObject({
+      timelineStartMs: 3_500,
+      timelineDurationMs: 2_000,
+      sourceInMs: 2_200,
+      sourceDurationMs: 2_000,
+    });
   });
 
   it('limits a slower playback rate at the next fragment boundary', () => {

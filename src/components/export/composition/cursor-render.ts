@@ -20,6 +20,7 @@ import { effectButtonForRecordedButton, type CursorClickEffectSettings } from '.
 import type { CompositionSnapshot } from '../export-types';
 import { cursorRippleAt } from '../../video-editor/composables/cursor-ripple';
 import type { Canvas2DContext } from '~/types/canvas';
+import { transitionPointWithClip } from '../../video-editor/composition/transitions/render-transition';
 
 type CursorImage = HTMLImageElement | ImageBitmap;
 const usableImage = (image: CursorImage | undefined) => {
@@ -30,7 +31,7 @@ const usableImage = (image: CursorImage | undefined) => {
 
 export function cursorPositionForKeyboardCaption(
   snapshot: CompositionSnapshot,
-  _time: number,
+  timelineTimeMs: number,
   screen: VisualClip,
   sourceWidth: number,
   sourceHeight: number,
@@ -45,16 +46,21 @@ export function cursorPositionForKeyboardCaption(
     : null;
   const image = asset ? cursorImages?.get(asset.id) : undefined;
   if (!snapshot.cursor.available || !motionState?.visible || !usableImage(image)) return null;
-  const raw = cursorPositionAt(
-    motionState,
-    { width: sourceWidth, height: sourceHeight },
-    { x: 0, y: 0, width, height },
-    snapshot.canvas.showBackground,
-    screen.transform,
-    screen.isMirrored ?? false,
-    screen.isMirroredY ?? false,
-    screen.appearance,
-    screen.crop,
+  const raw = transitionPointWithClip(
+    screen,
+    timelineTimeMs,
+    { width, height },
+    cursorPositionAt(
+      motionState,
+      { width: sourceWidth, height: sourceHeight },
+      { x: 0, y: 0, width, height },
+      snapshot.canvas.showBackground,
+      screen.transform,
+      screen.isMirrored ?? false,
+      screen.isMirroredY ?? false,
+      screen.appearance,
+      screen.crop,
+    ),
   );
   return {
     x: width / 2 + camera.scale * (raw.x - camera.focus.cx * width),
@@ -109,8 +115,9 @@ export function drawCursorLayer(
     const ripple = cursorRippleAt(age, effect.rippleSize, style);
     if (!ripple) continue;
     ctx.save();
+    const baseAlpha = ctx.globalAlpha;
     for (const ring of ripple.rings) {
-      ctx.globalAlpha = ring.opacity;
+      ctx.globalAlpha = baseAlpha * ring.opacity;
       if (ring.filled) {
         ctx.fillStyle = effect.rippleColor;
         ctx.beginPath();
@@ -147,7 +154,7 @@ export function drawCursorLayer(
   for (const sample of trail) {
     const samplePosition = positionAt({ ...motionCursor, x: sample.x, y: sample.y });
     ctx.save();
-    ctx.globalAlpha = sample.alpha;
+    ctx.globalAlpha *= sample.alpha;
     if (settings.shadow.enabled) {
       ctx.shadowColor = settings.shadow.color;
       ctx.shadowBlur = shadowBlur;

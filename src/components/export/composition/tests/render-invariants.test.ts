@@ -1,137 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { DEFAULT_OUTPUT_CANVAS } from '../../../video-editor/canvas/output-canvas';
-import type { ClipAppearance, ClipComposition } from '~/media/shared/composition-types';
 import { drawCompositionLayers, renderCompositionFrame, type RenderableMedia } from '../render';
-import type { CompositionSnapshot } from '../../export-types';
 import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
-import { MACOS_CURSOR_PACK } from '../../../video-editor/properties/cursor/cursor-packs';
 import { resolveCameraFraming } from '../../../video-editor/composition/camera-layout';
 import { drawCanvasTransitionFrame } from '../../../video-editor/composition/transitions/render-canvas-transition';
 import type { VisualClip } from '~/media/shared/composition-types';
-
-const appearance: ClipAppearance = {
-  cornerRadius: 'none',
-  shadowSize: 'none',
-  shadowBlur: 0,
-  shadowMode: 'solid',
-  shadowColor: '#000000',
-  shadowDirection: 'all',
-  borderEnabled: false,
-  borderColor: '#000000',
-  borderWidth: 1,
-  frame: 'none',
-  frameTitle: '',
-  frameColor: '#c0c0c0',
-  frameShowMenu: true,
-  frameShowScrollbars: true,
-  frameChromeScale: 1,
-};
-
-const composition = (): ClipComposition => ({
-  schemaVersion: 6,
-  keyboardCaptionSessions: [],
-  assets: [
-    {
-      id: 'screen-asset',
-      kind: 'video',
-      name: 'Screen',
-      fileName: null,
-      durationMs: 1_000,
-      width: 100,
-      height: 50,
-      src: 'file:///screen.mp4',
-      origin: 'session',
-    },
-  ],
-  clips: [
-    {
-      id: 'screen',
-      kind: 'screen',
-      name: 'Screen',
-      assetId: 'screen-asset',
-      timelineStartMs: 0,
-      timelineDurationMs: 1_000,
-      sourceInMs: 0,
-      sourceDurationMs: 1_000,
-      playbackRate: 1,
-      enabled: true,
-      order: 0,
-      transform: { x: 0, y: 0, width: 1, height: 1 },
-      appearance,
-      isMirrored: false,
-      isMirroredY: false,
-    },
-  ],
-});
-
-const snapshot = (): CompositionSnapshot => ({
-  duration: 1,
-  render: { sourceWidth: 100, sourceHeight: 50, fps: 30 },
-  canvas: { ...DEFAULT_OUTPUT_CANVAS, width: 100, height: 50 },
-  background: null,
-  blurPercent: 0,
-  zooms: [],
-  cursor: { available: false, telemetry: [], missing: [], shapes: {}, catalog: {}, events: [] },
-  cursorSettings: {
-    selection: { packId: MACOS_CURSOR_PACK.id, mode: 'automatic', cursorId: null },
-    size: 24,
-    color: '#000',
-    shadow: { enabled: false, blur: 0, color: '#000', direction: 'bottom' },
-    clickEffects: {
-      left: { springEnabled: true, springIntensity: 50, rippleEnabled: false, rippleSize: 30, rippleColor: '#f00' },
-      right: { springEnabled: true, springIntensity: 50, rippleEnabled: false, rippleSize: 30, rippleColor: '#00f' },
-    },
-    motion: {
-      preset: 'smooth',
-      smoothing: 0.67,
-      springMassMultiplier: 1.29,
-      motionBlur: 0.4,
-    },
-  },
-  cursorPack: MACOS_CURSOR_PACK,
-  composition: composition(),
-});
-
-const context = () =>
-  ({
-    fillStyle: '',
-    strokeStyle: '',
-    filter: '',
-    font: '',
-    textAlign: '',
-    textBaseline: '',
-    lineJoin: '',
-    shadowColor: '',
-    shadowBlur: 0,
-    shadowOffsetX: 0,
-    shadowOffsetY: 0,
-    globalAlpha: 1,
-    lineWidth: 0,
-    fillRect: vi.fn(),
-    fill: vi.fn(),
-    clearRect: vi.fn(),
-    fillText: vi.fn(),
-    strokeText: vi.fn(),
-    measureText: vi.fn((value: string) => ({ width: value.length * 10 })),
-    drawImage: vi.fn(),
-    save: vi.fn(),
-    setTransform: vi.fn(),
-    translate: vi.fn(),
-    scale: vi.fn(),
-    globalCompositeOperation: 'source-over',
-    restore: vi.fn(),
-    beginPath: vi.fn(),
-    roundRect: vi.fn(),
-    clip: vi.fn(),
-    arc: vi.fn(),
-    stroke: vi.fn(),
-    strokeRect: vi.fn(),
-    moveTo: vi.fn(),
-    lineTo: vi.fn(),
-    closePath: vi.fn(),
-    createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
-    createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
-  }) as unknown as CanvasRenderingContext2D;
+import * as decoratedMedia from '../../../video-editor/composition/appearance/render-decorated-media';
+import { context, screenAppearance as appearance, snapshot } from './render.test-support';
 
 const image = (): RenderableMedia => ({ source: {} as CanvasImageSource, width: 10, height: 10 });
 
@@ -252,6 +126,62 @@ describe('composition rendering invariants', () => {
     expect(visualDrawStates.every(Boolean)).toBe(true);
   });
 
+  it('propagates alpha-aware shadow rendering for imported image export clips', () => {
+    const value = snapshot();
+    value.composition.clips = [];
+    value.composition.assets.push({
+      id: 'image',
+      kind: 'image',
+      name: 'Logo',
+      fileName: 'logo.png',
+      durationMs: 1_000,
+      width: 10,
+      height: 10,
+      src: 'file:///logo.png',
+      origin: 'project',
+    });
+    const clip: VisualClip = {
+      id: 'logo',
+      kind: 'image',
+      name: 'Logo',
+      assetId: 'image',
+      timelineStartMs: 0,
+      timelineDurationMs: 1_000,
+      sourceInMs: 0,
+      sourceDurationMs: 1_000,
+      playbackRate: 1,
+      enabled: true,
+      order: 0,
+      transform: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
+      appearance: { ...appearance, shadowSize: 'md', shadowBlur: 12 },
+      isMirrored: false,
+      isMirroredY: false,
+    };
+    value.composition.clips = [clip];
+    const visual = image();
+    const ctx = context();
+    const drawSpy = vi.spyOn(decoratedMedia, 'drawDecoratedMedia');
+    class FakeOffscreenCanvas {
+      width = 0;
+      height = 0;
+      private readonly surfaceContext = context();
+
+      getContext = vi.fn(() => this.surfaceContext);
+    }
+
+    try {
+      vi.stubGlobal('OffscreenCanvas', FakeOffscreenCanvas);
+      renderCompositionFrame(ctx, null, value, 0, null, undefined, new Map([['logo', visual]]));
+      expect(drawSpy).toHaveBeenCalledWith(
+        ctx,
+        expect.objectContaining({ source: visual.source, shadowFollowsSourceAlpha: true }),
+      );
+    } finally {
+      vi.unstubAllGlobals();
+      drawSpy.mockRestore();
+    }
+  });
+
   it('composites each motion-blur sample as an isolated scene before drawing clip shadows', () => {
     const value = snapshot();
     value.zoomMotionBlur = { enabled: true, intensity: 1 };
@@ -265,7 +195,7 @@ describe('composition rendering invariants', () => {
     };
 
     const source = { source: {} as CanvasImageSource, width: 100, height: 50 };
-    const operations: Array<{ kind: 'shadow' | 'video' | 'composite'; context: string }> = [];
+    const operations: Array<{ kind: 'shadow' | 'video' | 'composite' | 'clear' | 'fill'; context: string }> = [];
     const surfaces: FakeOffscreenCanvas[] = [];
     const trackedContext = (name: string) => {
       const tracked = context();
@@ -300,6 +230,12 @@ describe('composition rendering invariants', () => {
       });
       vi.mocked(tracked.fill).mockImplementation(() => {
         if (shadowBlur > 0 && shadowColor !== 'transparent') operations.push({ kind: 'shadow', context: name });
+      });
+      vi.mocked(tracked.clearRect).mockImplementation(() => {
+        operations.push({ kind: 'clear', context: name });
+      });
+      vi.mocked(tracked.fillRect).mockImplementation(() => {
+        operations.push({ kind: 'fill', context: name });
       });
       vi.mocked(tracked.drawImage).mockImplementation(((drawn) => {
         if (drawn === source.source) operations.push({ kind: 'video', context: name });
@@ -339,6 +275,12 @@ describe('composition rendering invariants', () => {
       .map((operation, index) => (operation.kind === 'composite' ? index : -1))
       .filter((index) => index >= 0);
     expect(compositeIndexes.length).toBeGreaterThanOrEqual(3);
+    const sampleContexts = new Set(surfaces.map((_surface, index) => `sample-${index}`));
+    for (const sampleContext of sampleContexts) {
+      const sampleOperations = operations.filter(({ context }) => context === sampleContext);
+      expect(sampleOperations.some(({ kind }) => kind === 'clear')).toBe(true);
+      expect(sampleOperations.some(({ kind }) => kind === 'fill')).toBe(false);
+    }
     expect(operations.filter(({ kind }) => kind === 'shadow').every(({ context }) => context !== 'target')).toBe(true);
     expect(operations.filter(({ kind }) => kind === 'video').every(({ context }) => context !== 'target')).toBe(true);
     let previousComposite = -1;

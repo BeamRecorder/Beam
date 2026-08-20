@@ -6,7 +6,12 @@ import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
 import TransitionPresetPreview from './TransitionPresetPreview.vue';
 import type { ClipTransition, ClipTransitions, TransitionPreset } from '~/media/shared/composition-types';
-import { DEFAULT_TRANSITION_DURATION_MS } from '~/media/shared/clip-transitions';
+import {
+  DEFAULT_TRANSITION_DURATION_MS,
+  DEFAULT_TRANSITION_EASING_POWER,
+  MAX_TRANSITION_EASING_POWER,
+  MIN_TRANSITION_EASING_POWER,
+} from '~/media/shared/clip-transitions';
 import { useTranslate } from '~/i18n/useTranslate';
 
 type Edge = 'entry' | 'exit';
@@ -65,14 +70,16 @@ const cards = computed<PresetCard[]>(() => [
 ]);
 const presetKey = (preset: TransitionPreset | null) => JSON.stringify(preset);
 const selected = (card: PresetCard) => presetKey(current.value?.preset ?? null) === presetKey(card.preset);
-const choose = (preset: TransitionPreset | null) =>
-  emit(
-    'update',
-    edge.value,
-    preset
-      ? { preset, durationMs: Math.min(current.value?.durationMs ?? DEFAULT_TRANSITION_DURATION_MS, maxDuration.value) }
-      : null,
-  );
+const choose = (preset: TransitionPreset | null) => {
+  if (!preset) return emit('update', edge.value, null);
+  const easingPower =
+    current.value?.easingPower ?? (props.domain === 'visual' ? DEFAULT_TRANSITION_EASING_POWER : null);
+  emit('update', edge.value, {
+    preset,
+    durationMs: Math.min(current.value?.durationMs ?? DEFAULT_TRANSITION_DURATION_MS, maxDuration.value),
+    ...(easingPower === null ? {} : { easingPower }),
+  });
+};
 </script>
 
 <template>
@@ -104,6 +111,19 @@ const choose = (preset: TransitionPreset | null) =>
       />
       <span v-else>{{ t('selectDuration') }}</span>
     </div>
+
+    <BigSlider
+      v-if="current && domain === 'visual'"
+      class="curve-slider"
+      :model-value="current.easingPower ?? DEFAULT_TRANSITION_EASING_POWER"
+      :default-value="DEFAULT_TRANSITION_EASING_POWER"
+      :min="MIN_TRANSITION_EASING_POWER"
+      :max="MAX_TRANSITION_EASING_POWER"
+      :step="1"
+      :label="t('curve')"
+      :format-value="(value) => `×${value}`"
+      @update:model-value="emit('update', edge, { ...current, easingPower: $event })"
+    />
 
     <div class="preset-gallery" role="radiogroup" :aria-label="t('presetLabel', { edge: t(edge) })">
       <Button

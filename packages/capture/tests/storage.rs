@@ -156,13 +156,21 @@ fn recovery_repairs_truncated_health_timing_and_cursor_jsonl() {
     let cursor = layout
         .track_dir(TrackKind::Cursor)
         .join("cursor.partial.jsonl");
-    for path in [layout.health(), layout.timing(), cursor.clone()] {
+    let input = layout
+        .track_dir(TrackKind::Cursor)
+        .join("input.partial.jsonl");
+    for path in [
+        layout.health(),
+        layout.timing(),
+        cursor.clone(),
+        input.clone(),
+    ] {
         std::fs::write(&path, "{\"valid\":true}\n{\"truncated\":").expect("write truncated JSONL");
     }
 
     let report = recover_session(&layout).expect("recover session");
-    assert_eq!(report.ignored_trailing_jsonl_lines, 3);
-    for path in [layout.health(), layout.timing(), cursor] {
+    assert_eq!(report.ignored_trailing_jsonl_lines, 4);
+    for path in [layout.health(), layout.timing(), cursor, input] {
         assert_eq!(
             std::fs::read_to_string(path).expect("read repaired JSONL"),
             "{\"valid\":true}\n"
@@ -206,4 +214,39 @@ fn recovery_marks_a_missing_or_incomplete_media_segment_interrupted() {
             .is_some_and(|reason| reason.contains("finalized"))
     );
     assert!(!report.manifest.tracks[0].segments[0].complete);
+}
+
+#[test]
+fn recovery_preserves_a_failed_cursor_track_and_its_diagnostic_reason() {
+    let temporary = tempfile::tempdir().expect("temporary directory");
+    let project = ProjectId::new();
+    let session = SessionId::new();
+    let layout = ProjectLayout::new(temporary.path(), project).session(session);
+    layout.create().expect("layout");
+    let reason = "macOS cursor worker stopped: CGEventCreate failed";
+    let mut value = manifest(project, session);
+    value.tracks.push(TrackMetadata {
+        track_id: TrackId::new(),
+        kind: TrackKind::Cursor,
+        source_id: None,
+        format: TrackFormat::Events {
+            format: "json".into(),
+        },
+        segments: vec![segment("cursor/cursor.json".into(), 0)],
+        metrics: TrackMetrics {
+            frames_received: 1,
+            ..TrackMetrics::default()
+        },
+        status: TrackStatus::Failed,
+        termination_reason: Some(reason.into()),
+    });
+
+    ManifestWriter::new(layout.clone())
+        .checkpoint(&value)
+        .expect("checkpoint failed cursor track");
+    let report = recover_session(&layout).expect("recover failed cursor session");
+    let track = &report.manifest.tracks[0];
+    assert_eq!(track.status, TrackStatus::Failed);
+    assert_eq!(track.termination_reason.as_deref(), Some(reason));
+    assert_eq!(track.metrics.frames_received, 1);
 }

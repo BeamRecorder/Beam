@@ -33,6 +33,7 @@ import type {
   BlurEffectMode,
   BlurEffectShape,
   CaptionClip,
+  ClipKind,
   ClipFrame,
   ClipComposition,
   NormalizedTransform,
@@ -166,7 +167,10 @@ const transitionPanelTitle = computed(() => {
 const panelTitle = computed(() =>
   propertiesPanelTitle(
     props.activeTab,
-    selectedDomainClip.value?.kind ?? props.selectedClip?.kind ?? props.selectedCaptionClip?.kind ?? null,
+    (selectedDomainClip.value?.kind ??
+      props.selectedClip?.kind ??
+      props.selectedCaptionClip?.kind ??
+      null) as ClipKind | null,
     { t, tSidebar, tTimeline, tTimelineToolbar },
   ),
 );

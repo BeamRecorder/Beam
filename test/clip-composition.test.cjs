@@ -270,6 +270,24 @@ test('round-trips text and keyboard captions in the canonical composition schema
   assert.deepEqual(normalized.clips[1].caption, keyboardCaption({ style: canonicalCaptionStyle() }));
 });
 
+test('keeps 256px caption fonts and clamps larger persisted values', () => {
+  const normalized = normalizeComposition({
+    schemaVersion: 11,
+    assets: [],
+    keyboardCaptionSessions: ['session-keyboard'],
+    clips: [
+      captionClip(textCaption({ style: canonicalCaptionStyle({ fontSize: 256 }) })),
+      captionClip(keyboardCaption({ style: canonicalCaptionStyle({ fontSize: 512 }) }), {
+        id: 'clip-keyboard',
+        order: 1,
+      }),
+    ],
+  });
+
+  assert.equal(normalized.clips[0].caption.style.fontSize, 256);
+  assert.equal(normalized.clips[1].caption.style.fontSize, 256);
+});
+
 test('round-trips an assetless blur overlay with its effect settings', () => {
   const normalized = normalizeComposition({
     schemaVersion: 11,
@@ -963,11 +981,22 @@ test('validates canonical transition presets, durations, domains, and edge budge
     normalizeComposition({ schemaVersion: 11, assets: [asset], clips: [clip], keyboardCaptionSessions: [] });
   const valid = visualClip(asset.id, {
     transitions: {
-      entry: { preset: { kind: 'slide', direction: 'left' }, durationMs: 250 },
-      exit: { preset: { kind: 'zoom', direction: 'out' }, durationMs: 250 },
+      entry: { preset: { kind: 'slide', direction: 'left' }, durationMs: 250, easingPower: 1 },
+      exit: { preset: { kind: 'zoom', direction: 'out' }, durationMs: 250, easingPower: 5 },
     },
   });
   assert.deepEqual(canonical(valid).clips[0].transitions, valid.transitions);
+  for (const easingPower of [0, 6, 1.5]) {
+    assert.throws(
+      () =>
+        canonical(
+          visualClip(asset.id, {
+            transitions: { entry: { preset: { kind: 'fade' }, durationMs: 100, easingPower }, exit: null },
+          }),
+        ),
+      /puissance|power|transition/i,
+    );
+  }
   assert.throws(
     () =>
       canonical(
@@ -1102,6 +1131,48 @@ test('persists and normalizes global canvas transitions without changing legacy 
       entry: null,
       exit: { preset: { kind: 'fade' }, durationMs: 5_000 },
     },
+  });
+});
+
+test('persists easing power on clip and Canvas transitions while keeping old records without it valid', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-editor-easing-power-'));
+  const store = createProjectStore(root);
+  const project = store.create({ name: 'Easing power' });
+  const source = path.join(root, 'clip.mp4');
+  fs.writeFileSync(source, 'video');
+  const asset = store.importEditorMedia(project.id, { kind: 'video', source });
+  const state = store.editorState(project.id);
+  const transitions = {
+    entry: { preset: { kind: 'fade' }, durationMs: 200, easingPower: 1 },
+    exit: { preset: { kind: 'fade' }, durationMs: 300, easingPower: 5 },
+  };
+  state.composition = {
+    schemaVersion: 11,
+    keyboardCaptionSessions: [],
+    assets: [{ ...asset, durationMs: 1_000 }],
+    clips: [visualClip(asset.id, { transitions })],
+  };
+  state.presentation.canvas = { ...state.presentation.canvas, transitions };
+
+  const saved = store.saveEditorState(project.id, state);
+  assert.deepEqual(saved.composition.clips[0].transitions, transitions);
+  assert.deepEqual(saved.presentation.canvas.transitions, transitions);
+  assert.deepEqual(store.editorState(project.id).composition.clips[0].transitions, transitions);
+  assert.deepEqual(store.editorState(project.id).presentation.canvas.transitions, transitions);
+
+  const legacy = store.editorState(project.id);
+  delete legacy.composition.clips[0].transitions.entry.easingPower;
+  delete legacy.composition.clips[0].transitions.exit.easingPower;
+  delete legacy.presentation.canvas.transitions.entry.easingPower;
+  delete legacy.presentation.canvas.transitions.exit.easingPower;
+  const legacySaved = store.saveEditorState(project.id, legacy);
+  assert.deepEqual(legacySaved.composition.clips[0].transitions, {
+    entry: { preset: { kind: 'fade' }, durationMs: 200 },
+    exit: { preset: { kind: 'fade' }, durationMs: 300 },
+  });
+  assert.deepEqual(legacySaved.presentation.canvas.transitions, {
+    entry: { preset: { kind: 'fade' }, durationMs: 200 },
+    exit: { preset: { kind: 'fade' }, durationMs: 300 },
   });
 });
 

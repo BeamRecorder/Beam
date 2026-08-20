@@ -307,6 +307,34 @@ describe('useCompositionMedia', () => {
     );
   });
 
+  it('marks imported image playback as alpha-aware while retaining geometric video shadows', async () => {
+    const mounted = mountComposable();
+    const image = state.images.get('image-asset')!;
+    Object.defineProperties(image, {
+      complete: { configurable: true, value: true },
+      naturalWidth: { configurable: true, value: 100 },
+      naturalHeight: { configurable: true, value: 80 },
+    });
+    await nextTick();
+
+    const ctx = context();
+    state.drawComposition(ctx, { dx: 0, dy: 0, dw: 800, dh: 400 }, 'image');
+    expect(drawDecoratedMedia).toHaveBeenLastCalledWith(
+      ctx,
+      expect.objectContaining({ source: image, shadowFollowsSourceAlpha: true }),
+    );
+
+    drawDecoratedMedia.mockClear();
+    state.drawComposition(ctx, { dx: 0, dy: 0, dw: 800, dh: 400 }, 'video');
+    expect(drawDecoratedMedia).toHaveBeenLastCalledWith(
+      ctx,
+      expect.objectContaining({
+        source: mounted.frames.get('video')!.bitmap,
+        shadowFollowsSourceAlpha: false,
+      }),
+    );
+  });
+
   it('keeps webcam overlays screen-anchored while a higher blur affects the composed pixels below it', () => {
     const base = composition();
     const mounted = mountComposable({ ...base, clips: [...base.clips, blur()] });
@@ -403,7 +431,7 @@ describe('useCompositionMedia', () => {
     const before = renderAt(1_000 - frameMs);
     expect(before.source).toMatchObject({ clipId: 'first' });
     expect(before.count).toBe(1);
-    expect(before.alpha).toBeCloseTo(1 - (1 - frameMs / 500) ** 3, 8);
+    expect(before.alpha).toBeCloseTo((frameMs / 500) ** 3, 8);
 
     const atCut = renderAt(1_000);
     expect(atCut.source).toMatchObject({ clipId: 'second' });

@@ -1,5 +1,6 @@
 import type { CursorTelemetryPoint } from '../../../api/types/capture-session';
 import { DEFAULT_ZOOM_DEPTH, type ZoomElement, type ZoomFocus } from './zoom-types';
+import { fitZoomPlacement } from './zoom-placement';
 
 export const CLICK_CLUSTER_GAP_MS = 2500;
 export const ZOOM_REGION_PADDING_MS = 500;
@@ -67,15 +68,21 @@ export function buildAutomaticZoomElements(params: {
   if (params.durationMs <= 0) return [];
   const reserved = params.reserved ?? [];
   return clusterClicks(normalizeCursorTelemetry(params.telemetry, params.durationMs)).flatMap((cluster) => {
-    const startMs = Math.round(clamp(cluster.firstMs - ZOOM_REGION_PADDING_MS, 0, params.durationMs));
-    const endMs = Math.round(clamp(cluster.lastMs + ZOOM_REGION_PADDING_MS, 0, params.durationMs));
-    if (endMs <= startMs || reserved.some((zoom) => endMs > zoom.startMs && startMs < zoom.endMs)) return [];
+    const requestedStartMs = Math.round(clamp(cluster.firstMs - ZOOM_REGION_PADDING_MS, 0, params.durationMs));
+    const requestedEndMs = Math.round(clamp(cluster.lastMs + ZOOM_REGION_PADDING_MS, 0, params.durationMs));
+    const placement = fitZoomPlacement({
+      anchorMs: (cluster.firstMs + cluster.lastMs) / 2,
+      preferredDurationMs: requestedEndMs - requestedStartMs,
+      timelineDurationMs: params.durationMs,
+      occupied: reserved,
+    });
+    if (!placement) return [];
     return [
       {
         id: `auto:${params.sessionId}:${Math.round(cluster.firstMs)}`,
         sessionId: params.sessionId,
-        startMs,
-        endMs,
+        startMs: placement.startMs,
+        endMs: placement.endMs,
         focus: cluster.focus,
         depth: DEFAULT_ZOOM_DEPTH,
         mode: 'auto' as const,

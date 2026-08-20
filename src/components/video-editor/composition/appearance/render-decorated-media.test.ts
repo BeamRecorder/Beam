@@ -43,6 +43,8 @@ const context = () =>
     stroke: vi.fn(),
     clip: vi.fn(),
     drawImage: vi.fn(),
+    clearRect: vi.fn(),
+    setTransform: vi.fn(),
     fillRect: vi.fn(),
     fillText: vi.fn(),
     arc: vi.fn(),
@@ -96,6 +98,130 @@ describe('decorated media rendering', () => {
     expect(ctx.stroke).toHaveBeenCalledOnce();
     expect(ctx.drawImage).toHaveBeenCalledWith(source, 2, 3, 100, 60);
   });
+  it('uses a transparent source surface as the shadow caster for alpha-aware images', () => {
+    const ctx = context();
+    const alphaContext = context();
+    const alphaSurface = {
+      width: 0,
+      height: 0,
+      getContext: vi.fn(() => alphaContext),
+    } as unknown as OffscreenCanvas;
+    const surfaces: unknown[] = [alphaSurface];
+    class FakeOffscreenCanvas {
+      width = 0;
+      height = 0;
+      getContext = vi.fn(() => alphaContext);
+
+      constructor() {
+        surfaces.push(this);
+      }
+    }
+    vi.stubGlobal('OffscreenCanvas', FakeOffscreenCanvas);
+    vi.stubGlobal('document', { createElement: vi.fn(() => alphaSurface) });
+
+    try {
+      drawDecoratedMedia(ctx, {
+        source,
+        sourceRect: { x: 64, y: 36, width: 512, height: 288 },
+        rect: { x: 2, y: 3, width: 100, height: 60 },
+        appearance: appearance({ shadowSize: 'md' }),
+        shadowFollowsSourceAlpha: true,
+        title: 'Transparent image',
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+
+    expect(ctx.fill).not.toHaveBeenCalled();
+    expect(alphaContext.fill).not.toHaveBeenCalled();
+    const alphaDrawImage = alphaContext.drawImage as ReturnType<typeof vi.fn>;
+    const targetDrawImage = ctx.drawImage as ReturnType<typeof vi.fn>;
+    expect(
+      alphaDrawImage.mock.calls.some((call) => {
+        const [drawn, x, y, width, height] = call;
+        return drawn === source && x === 64 && y === 36 && width === 512 && height === 288;
+      }),
+    ).toBe(true);
+    expect(alphaContext.imageSmoothingEnabled).toBe(true);
+    expect(alphaContext.imageSmoothingQuality).toBe('high');
+    expect(targetDrawImage.mock.calls.some((call) => surfaces.includes(call[0]))).toBe(true);
+  });
+
+  it('scales a custom corner radius and alpha shadow caster with the preview scale', () => {
+    const ctx = context();
+    const alphaContext = context();
+    const scaledSource = {} as CanvasImageSource;
+    class FakeOffscreenCanvas {
+      width = 0;
+      height = 0;
+      getContext = vi.fn(() => alphaContext);
+    }
+    vi.stubGlobal('OffscreenCanvas', FakeOffscreenCanvas);
+
+    try {
+      drawDecoratedMedia(ctx, {
+        source: scaledSource,
+        rect: { x: 4, y: 6, width: 240, height: 160 },
+        appearance: appearance({ cornerRadius: 72, shadowSize: 'custom', shadowBlur: 40 }),
+        shadowScale: 0.5,
+        shadowFollowsSourceAlpha: true,
+        title: 'Scaled image',
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+
+    expect(alphaContext.roundRect).toHaveBeenCalledWith(0, 0, 240, 160, 36);
+    expect(ctx.drawImage).toHaveBeenCalledWith(expect.any(FakeOffscreenCanvas), 4, 6, 240, 160);
+  });
+
+  it('keeps a custom corner radius at output scale for export shadow casting', () => {
+    const ctx = context();
+    const alphaContext = context();
+    const exportSource = {} as CanvasImageSource;
+    class FakeOffscreenCanvas {
+      width = 0;
+      height = 0;
+      getContext = vi.fn(() => alphaContext);
+    }
+    vi.stubGlobal('OffscreenCanvas', FakeOffscreenCanvas);
+
+    try {
+      drawDecoratedMedia(ctx, {
+        source: exportSource,
+        rect: { x: 4, y: 6, width: 240, height: 160 },
+        appearance: appearance({ cornerRadius: 72, shadowSize: 'custom', shadowBlur: 40 }),
+        shadowFollowsSourceAlpha: true,
+        title: 'Export image',
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+
+    expect(alphaContext.roundRect).toHaveBeenCalledWith(0, 0, 240, 160, 72);
+    expect(ctx.drawImage).toHaveBeenCalledWith(expect.any(FakeOffscreenCanvas), 4, 6, 240, 160);
+  });
+
+  it('keeps the geometric shadow caster for opaque video fallback rendering', () => {
+    const ctx = context();
+    drawDecoratedMedia(ctx, {
+      source,
+      rect: { x: 2, y: 3, width: 100, height: 60 },
+      appearance: appearance({ shadowSize: 'md' }),
+      shadowFollowsSourceAlpha: false,
+      title: 'Video',
+    });
+
+    const clip = ctx.clip as ReturnType<typeof vi.fn>;
+    const fill = ctx.fill as ReturnType<typeof vi.fn>;
+    const evenOddClipCall = clip.mock.calls.findIndex((call) => call[0] === 'evenodd');
+    expect(evenOddClipCall).toBeGreaterThanOrEqual(0);
+    expect(ctx.fill).toHaveBeenCalledOnce();
+    expect(fill.mock.invocationCallOrder[0]).toBeGreaterThan(
+      clip.mock.invocationCallOrder[evenOddClipCall] ?? Number.POSITIVE_INFINITY,
+    );
+    expect(ctx.drawImage).toHaveBeenCalledWith(source, 2, 3, 100, 60);
+  });
   it('draws an explicit source crop at frame dimensions and mirrors it', () => {
     const ctx = context();
     drawDecoratedMedia(ctx, {
@@ -103,11 +229,13 @@ describe('decorated media rendering', () => {
       sourceRect: { x: 64, y: 36, width: 512, height: 288 },
       rect: { x: 10, y: 20, width: 400, height: 240 },
       appearance: appearance({ shadowSize: 'none' }),
+      shadowFollowsSourceAlpha: true,
       mirrored: true,
       mirroredY: true,
       title: 'Cropped',
     });
     expect(ctx.scale).toHaveBeenCalledWith(-1, -1);
+    expect(vi.mocked(ctx.clip).mock.calls).toEqual([[]]);
     expect(ctx.drawImage).toHaveBeenCalledWith(source, 64, 36, 512, 288, 10, 20, 400, 240);
   });
   it('clips circular framing with a real circular path', () => {
@@ -123,6 +251,7 @@ describe('decorated media rendering', () => {
     expect(ctx.arc).toHaveBeenCalledWith(210, 140, 120, 0, Math.PI * 2);
     expect(ctx.roundRect).not.toHaveBeenCalled();
     expect(ctx.clip).toHaveBeenCalledOnce();
+    expect(vi.mocked(ctx.clip).mock.calls).toEqual([[]]);
     expect(ctx.drawImage).toHaveBeenCalledWith(source, 10, 20, 400, 240);
   });
   it('clips squircle framing with a superellipse path', () => {

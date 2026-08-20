@@ -122,6 +122,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
       mirrored: clip.isMirrored,
       mirroredY: clip.isMirroredY,
       mask: framing.mask,
+      shadowFollowsSourceAlpha: clip.kind === 'image',
     });
   };
 

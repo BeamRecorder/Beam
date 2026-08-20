@@ -107,10 +107,49 @@ describe('TimelineClip', () => {
 
     const entry = wrapper.get('.transition-zone.entry');
     const exit = wrapper.get('.transition-zone.exit');
+    expect(wrapper.findAll('.transition-zone')).toHaveLength(2);
     expect(entry.attributes('aria-hidden')).toBe('true');
     expect(exit.attributes('aria-hidden')).toBe('true');
     expect(entry.attributes('style')).toContain('width: 20%');
     expect(exit.attributes('style')).toContain('width: 30%');
+  });
+
+  it('renders distinct easing curves for each edge and updates the path when easing power changes', async () => {
+    const wrapper = mount(TimelineClip, {
+      props: {
+        ...baseProps,
+        clip: clip({
+          timelineDurationMs: 1_000,
+          transitions: {
+            entry: { preset: { kind: 'fade' }, durationMs: 200, easingPower: 1 },
+            exit: { preset: { kind: 'fade' }, durationMs: 300, easingPower: 5 },
+          },
+        }),
+      },
+      global: { stubs: { Skeleton, WaveformCanvas } },
+    });
+
+    const entryPath = wrapper.get('.transition-zone.entry svg.timeline-transition-curve path.curve-line');
+    const exitPath = wrapper.get('.transition-zone.exit svg.timeline-transition-curve path.curve-line');
+    const hatchedArea = wrapper.get('.transition-zone.entry svg.timeline-transition-curve path.curve-hatched-area');
+    const entryD = entryPath.attributes('d');
+    const exitD = exitPath.attributes('d');
+    expect(entryD).toBeTruthy();
+    expect(exitD).toBeTruthy();
+    expect(hatchedArea.attributes('d')).toBeTruthy();
+    expect(hatchedArea.attributes('fill')).toContain('transition-hatch-');
+    expect(entryD).not.toBe(exitD);
+
+    await wrapper.setProps({
+      clip: clip({
+        timelineDurationMs: 1_000,
+        transitions: {
+          entry: { preset: { kind: 'fade' }, durationMs: 200, easingPower: 5 },
+          exit: { preset: { kind: 'fade' }, durationMs: 300, easingPower: 5 },
+        },
+      }),
+    });
+    expect(entryPath.attributes('d')).not.toBe(entryD);
   });
 
   it('marks a newly pasted clip with the arrival highlight and clears it when the prop is removed', async () => {
@@ -309,7 +348,8 @@ describe('TimelineClip', () => {
       },
       global: { stubs: { Skeleton, WaveformCanvas } },
     });
-    expect(image.get('.image-preview').attributes('src')).toBe('/poster.png');
+    const imagePreview = image.get('.image-preview');
+    expect(imagePreview.attributes('style')).toContain('background-image: url("/poster.png")');
     audio.unmount();
     loading.unmount();
     unavailable.unmount();

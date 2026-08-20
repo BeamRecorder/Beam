@@ -50,6 +50,9 @@
     "lg": "大",
     "full": "全体"
   },
+  "TransitionsPanel": {
+    "curve": "カーブ"
+  },
   "CanvasPanel": {
     "backgroundType": "背景タイプ",
     "image": "画像",

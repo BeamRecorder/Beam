@@ -196,7 +196,7 @@ fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
             "sessionId": engine.session.as_ref().map(RecordingSession::session_id),
             "manifestPath": engine.session.as_ref().map(RecordingSession::manifest_path),
             "systemAudioLevel": engine.session.as_ref().and_then(RecordingSession::system_audio_level),
-            "screenAvailable": engine.session.as_ref().map_or(true, RecordingSession::screen_available),
+            "screenAvailable": engine.session.as_ref().is_none_or(RecordingSession::screen_available),
         })),
         Command::StartSystemAudioPreview => {
             if !matches!(

@@ -180,7 +180,7 @@ const shadowDirectionOptions = computed(() => [
       :label="t('fontSize')"
       :model-value="style.fontSize"
       :min="12"
-      :max="120"
+      :max="256"
       :step="1"
       :default-value="defaultFontSize"
       :format-value="(value) => `${value}px`"

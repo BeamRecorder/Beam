@@ -3,6 +3,7 @@ import { effectScope, nextTick } from 'vue';
 import { createBackgroundMedia } from '../backgroundCatalog';
 import { useVideoPlayer } from '../useVideoPlayer';
 import type { ClipComposition, VisualClip } from '~/media/shared';
+import { COMPOSITION_SCHEMA_VERSION } from '~/media/shared/composition-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import { deleteClip, splitClip } from '../../composition/engine/clip-engine';
 
@@ -50,7 +51,7 @@ vi.mock('~/media/playback', () => ({ MediaPlaybackEngine: playback.FakePlayback 
 
 const backgrounds = createBackgroundMedia(['/built-in.png', '/clip.mp4']);
 const composition: ClipComposition = {
-  schemaVersion: 6,
+  schemaVersion: COMPOSITION_SCHEMA_VERSION,
   keyboardCaptionSessions: [],
   assets: [],
   clips: [
@@ -120,7 +121,7 @@ describe('useVideoPlayer', () => {
     const player = useVideoPlayer([]);
     const longComposition: ClipComposition = {
       ...composition,
-      schemaVersion: 9,
+      schemaVersion: COMPOSITION_SCHEMA_VERSION,
       assets: [
         {
           id: 'asset',

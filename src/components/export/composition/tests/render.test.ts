@@ -1,112 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { drawCompositionLayers, renderCompositionFrame, type RenderableMedia } from '../render';
-import type { CompositionSnapshot } from '../../export-types';
-import { DEFAULT_OUTPUT_CANVAS } from '../../../video-editor/canvas/output-canvas';
-import type { ClipComposition, ClipAppearance, VisualClip } from '~/media/shared/composition-types';
+import type { VisualClip } from '~/media/shared/composition-types';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import type { CursorPackDescriptor } from '../../../../api/types/cursor-pack';
-import { MACOS_CURSOR_PACK } from '../../../video-editor/properties/cursor/cursor-packs';
 import { createCursorMotionPlayer } from '../../../video-editor/composables/cursor-motion';
-
-const screenAppearance: ClipAppearance = {
-  cornerRadius: 'none',
-  shadowSize: 'none',
-  shadowBlur: 0,
-  shadowMode: 'solid',
-  shadowColor: '#000000',
-  shadowDirection: 'all',
-  borderEnabled: false,
-  borderColor: '#000000',
-  borderWidth: 1,
-  frame: 'none',
-  frameTitle: '',
-  frameColor: '#c0c0c0',
-  frameShowMenu: true,
-  frameShowScrollbars: true,
-  frameChromeScale: 1,
-};
-const composition = (): ClipComposition => ({
-  schemaVersion: 6,
-  keyboardCaptionSessions: [],
-  assets: [
-    {
-      id: 'screen-asset',
-      kind: 'video',
-      name: 'Screen',
-      fileName: null,
-      durationMs: 1_000,
-      width: 100,
-      height: 50,
-      src: 'file:///screen.mp4',
-      origin: 'session',
-    },
-  ],
-  clips: [
-    {
-      id: 'screen',
-      kind: 'screen',
-      name: 'Screen',
-      assetId: 'screen-asset',
-      timelineStartMs: 0,
-      timelineDurationMs: 1_000,
-      sourceInMs: 0,
-      sourceDurationMs: 1_000,
-      playbackRate: 1,
-      enabled: true,
-      order: 0,
-      transform: { x: 0, y: 0, width: 1, height: 1 },
-      appearance: screenAppearance,
-      isMirrored: false,
-      isMirroredY: false,
-    },
-  ],
-});
-const snapshot = (): CompositionSnapshot => ({
-  duration: 1,
-  render: { sourceWidth: 100, sourceHeight: 50, fps: 30 },
-  canvas: { ...DEFAULT_OUTPUT_CANVAS, width: 100, height: 50 },
-  background: null,
-  blurPercent: 0,
-  zooms: [],
-  cursor: {
-    available: false,
-    telemetry: [],
-    missing: [],
-    shapes: {},
-    catalog: {},
-    events: [],
-  },
-  cursorSettings: {
-    selection: { packId: MACOS_CURSOR_PACK.id, mode: 'automatic', cursorId: null },
-    size: 24,
-    color: '#000',
-    shadow: { enabled: false, blur: 0, color: '#000', direction: 'bottom' },
-    clickEffects: {
-      left: {
-        springEnabled: true,
-        springIntensity: 50,
-        rippleEnabled: false,
-        rippleSize: 30,
-        rippleColor: '#f00',
-      },
-      right: {
-        springEnabled: true,
-        springIntensity: 50,
-        rippleEnabled: false,
-        rippleSize: 30,
-        rippleColor: '#00f',
-      },
-    },
-    motion: {
-      preset: 'smooth' as const,
-      smoothing: 0.67,
-      springMassMultiplier: 1.29,
-      motionBlur: 0.4,
-    },
-  },
-  cursorPack: MACOS_CURSOR_PACK,
-  composition: composition(),
-});
+import { context, screenAppearance, snapshot } from './render.test-support';
 
 const wideCursorPack = (): CursorPackDescriptor => ({
   id: 'imported:wide',
@@ -126,44 +24,6 @@ const wideCursorPack = (): CursorPackDescriptor => ({
   ],
   automaticMap: { default: 'wide-default' },
 });
-const context = () =>
-  ({
-    fillStyle: '',
-    strokeStyle: '',
-    filter: '',
-    font: '',
-    textAlign: '',
-    textBaseline: '',
-    lineJoin: '',
-    shadowColor: '',
-    shadowBlur: 0,
-    shadowOffsetX: 0,
-    shadowOffsetY: 0,
-    globalAlpha: 1,
-    lineWidth: 0,
-    fillRect: vi.fn(),
-    fill: vi.fn(),
-    fillText: vi.fn(),
-    strokeText: vi.fn(),
-    measureText: vi.fn((value: string) => ({ width: value.length * 10 })),
-    drawImage: vi.fn(),
-    save: vi.fn(),
-    translate: vi.fn(),
-    scale: vi.fn(),
-    restore: vi.fn(),
-    beginPath: vi.fn(),
-    roundRect: vi.fn(),
-    clip: vi.fn(),
-    arc: vi.fn(),
-    stroke: vi.fn(),
-    strokeRect: vi.fn(),
-    moveTo: vi.fn(),
-    lineTo: vi.fn(),
-    closePath: vi.fn(),
-    createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
-    createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
-  }) as unknown as CanvasRenderingContext2D;
-
 describe('canonical composition rendering', () => {
   it('paints the fallback canvas when the screen clip has no available frame', () => {
     const ctx = context();
@@ -211,7 +71,11 @@ describe('canonical composition rendering', () => {
       isMirrored: false,
       isMirroredY: false,
     });
-    const image = { source: {} as CanvasImageSource, width: 10, height: 10 } as RenderableMedia;
+    const image = {
+      source: {} as CanvasImageSource,
+      width: 10,
+      height: 10,
+    } as RenderableMedia;
     const ctx = context();
     drawCompositionLayers(ctx, value, 0.2, new Map([['logo', image]]));
     expect(ctx.drawImage).toHaveBeenCalledWith(image.source, 10, 10, 30, 20);
@@ -229,7 +93,10 @@ describe('canonical composition rendering', () => {
       sourceInMs: 0,
       sourceDurationMs: 1_000,
       playbackRate: 1,
-      transitions: { entry: null, exit: { preset: { kind: 'fade' }, durationMs: 500 } },
+      transitions: {
+        entry: null,
+        exit: { preset: { kind: 'fade' }, durationMs: 500 },
+      },
       enabled: true,
       order: 1,
       transform: { x: 0, y: 0, width: 1, height: 1 },
@@ -266,7 +133,7 @@ describe('canonical composition rendering', () => {
     const before = renderAt(1_000 - frameMs);
     expect(before).toHaveLength(1);
     expect(before[0]?.source).toBe(firstSource);
-    expect(before[0]?.alpha).toBeCloseTo(1 - (1 - frameMs / 500) ** 3, 8);
+    expect(before[0]?.alpha).toBeCloseTo((frameMs / 500) ** 3, 8);
 
     const atCut = renderAt(1_000);
     expect(atCut).toEqual([{ source: secondSource, alpha: 1 }]);
@@ -324,11 +191,19 @@ describe('canonical composition rendering', () => {
         frameChromeScale: 1,
       },
     });
-    const source = { source: {} as CanvasImageSource, width: 100, height: 50 } as RenderableMedia;
+    const source = {
+      source: {} as CanvasImageSource,
+      width: 100,
+      height: 50,
+    } as RenderableMedia;
     const ctx = context();
     renderCompositionFrame(
       ctx,
-      { source: {} as CanvasImageSource, width: 100, height: 50 } as RenderableMedia,
+      {
+        source: {} as CanvasImageSource,
+        width: 100,
+        height: 50,
+      } as RenderableMedia,
       value,
       0,
       null,
@@ -383,7 +258,11 @@ describe('canonical composition rendering', () => {
       isMirrored: false,
       isMirroredY: false,
     });
-    const source = { source: {} as CanvasImageSource, width: 100, height: 50 } as RenderableMedia;
+    const source = {
+      source: {} as CanvasImageSource,
+      width: 100,
+      height: 50,
+    } as RenderableMedia;
     const ctx = context();
     renderCompositionFrame(ctx, null, value, 0, null, undefined, new Map([['webcam', source]]));
     expect(ctx.drawImage).toHaveBeenCalledWith(source.source, 100, expect.closeTo(100, 0.001), 300, 200);
@@ -437,7 +316,15 @@ describe('canonical composition rendering', () => {
       transform: { x: 0.1, y: 0.1, width: 0.2, height: 0.2 },
       caption: {
         type: 'text',
-        sentences: [{ id: 's', text: 'One two three four', startMs: 0, endMs: 1_000, words: [] }],
+        sentences: [
+          {
+            id: 's',
+            text: 'One two three four',
+            startMs: 0,
+            endMs: 1_000,
+            words: [],
+          },
+        ],
         style: {
           ...createDefaultCaptionStyle(20),
           color: '#fff',
@@ -472,7 +359,15 @@ describe('canonical composition rendering', () => {
       transform: { x: 0.1, y: 0.1, width: 0.2, height: 0.2 },
       caption: {
         type: 'text',
-        sentences: [{ id: 's', text: 'One two three four', startMs: 0, endMs: 1_000, words: [] }],
+        sentences: [
+          {
+            id: 's',
+            text: 'One two three four',
+            startMs: 0,
+            endMs: 1_000,
+            words: [],
+          },
+        ],
         style: {
           ...createDefaultCaptionStyle(20),
           color: '#fff',
@@ -544,7 +439,10 @@ describe('canonical composition rendering', () => {
         };
       }
       const ctx = context();
-      const cursorImage = { complete: true, naturalWidth: 24 } as HTMLImageElement;
+      const cursorImage = {
+        complete: true,
+        naturalWidth: 24,
+      } as HTMLImageElement;
       renderCompositionFrame(
         ctx,
         { source: {} as CanvasImageSource, width: 100, height: 50 },
@@ -580,7 +478,15 @@ describe('canonical composition rendering', () => {
       transform: { x: 0.2, y: 0.2, width: 0.5, height: 0.2 },
       caption: {
         type: 'text',
-        sentences: [{ id: 'sentence', text: 'Caption above cursor', startMs: 0, endMs: 1_000, words: [] }],
+        sentences: [
+          {
+            id: 'sentence',
+            text: 'Caption above cursor',
+            startMs: 0,
+            endMs: 1_000,
+            words: [],
+          },
+        ],
         style: {
           ...createDefaultCaptionStyle(20),
           customText: 'Caption above cursor',
@@ -591,7 +497,10 @@ describe('canonical composition rendering', () => {
         },
       },
     });
-    const cursorImage = { complete: true, naturalWidth: 24 } as HTMLImageElement;
+    const cursorImage = {
+      complete: true,
+      naturalWidth: 24,
+    } as HTMLImageElement;
     value.cursor = {
       ...value.cursor,
       available: true,
@@ -679,7 +588,11 @@ describe('canonical composition rendering', () => {
     const image = { complete: true, naturalWidth: 24 } as HTMLImageElement;
     renderCompositionFrame(
       ctx,
-      { source: {} as CanvasImageSource, width: 100, height: 50 } as RenderableMedia,
+      {
+        source: {} as CanvasImageSource,
+        width: 100,
+        height: 50,
+      } as RenderableMedia,
       value,
       0.15,
       null,
@@ -776,7 +689,11 @@ describe('canonical composition rendering', () => {
 
     renderCompositionFrame(
       ctx,
-      { source: {} as CanvasImageSource, width: 100, height: 50 } as RenderableMedia,
+      {
+        source: {} as CanvasImageSource,
+        width: 100,
+        height: 50,
+      } as RenderableMedia,
       value,
       0,
       null,
@@ -790,7 +707,11 @@ describe('canonical composition rendering', () => {
     const value = snapshot();
     const pack = wideCursorPack();
     value.cursorPack = pack;
-    value.cursorSettings.selection = { packId: pack.id, mode: 'fixed', cursorId: 'wide-default' };
+    value.cursorSettings.selection = {
+      packId: pack.id,
+      mode: 'fixed',
+      cursorId: 'wide-default',
+    };
     value.cursorSettings.size = 20;
     value.cursor = {
       available: true,
@@ -815,7 +736,11 @@ describe('canonical composition rendering', () => {
 
     renderCompositionFrame(
       ctx,
-      { source: {} as CanvasImageSource, width: 100, height: 50 } as RenderableMedia,
+      {
+        source: {} as CanvasImageSource,
+        width: 100,
+        height: 50,
+      } as RenderableMedia,
       value,
       0,
       null,

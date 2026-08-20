@@ -34,8 +34,41 @@ describe('TimelineCanvasTransitionTrack', () => {
     expect(entry.attributes('aria-label')).toContain('200 ms');
     expect(exit.attributes('aria-label')).toContain('blur');
     expect(exit.attributes('aria-label')).toContain('300 ms');
+    expect(entry.find('.duration-handle.end').exists()).toBe(true);
+    expect(entry.find('.duration-handle.start').exists()).toBe(false);
+    expect(exit.find('.duration-handle.start').exists()).toBe(true);
+    expect(exit.find('.duration-handle.end').exists()).toBe(false);
     expect(entry.attributes('style')).toContain('width: 20%');
     expect(exit.attributes('style')).toContain('width: 30%');
+  });
+
+  it('renders distinct easing curves for each edge and updates the path when easing power changes', async () => {
+    wrapper = mount(TimelineCanvasTransitionTrack, {
+      props: {
+        mode: 'track',
+        durationMs: 1_000,
+        transitions: {
+          entry: { preset: { kind: 'fade' }, durationMs: 200, easingPower: 1 },
+          exit: { preset: { kind: 'fade' }, durationMs: 300, easingPower: 5 },
+        },
+      },
+    });
+
+    const entryPath = wrapper.get('.canvas-transition-zone.entry svg.timeline-transition-curve path.curve-line');
+    const exitPath = wrapper.get('.canvas-transition-zone.exit svg.timeline-transition-curve path.curve-line');
+    const entryD = entryPath.attributes('d');
+    const exitD = exitPath.attributes('d');
+    expect(entryD).toBeTruthy();
+    expect(exitD).toBeTruthy();
+    expect(entryD).not.toBe(exitD);
+
+    await wrapper.setProps({
+      transitions: {
+        entry: { preset: { kind: 'fade' }, durationMs: 200, easingPower: 5 },
+        exit: { preset: { kind: 'fade' }, durationMs: 300, easingPower: 5 },
+      },
+    });
+    expect(entryPath.attributes('d')).not.toBe(entryD);
   });
 
   it('previews an entry resize and commits it only on pointerup', async () => {

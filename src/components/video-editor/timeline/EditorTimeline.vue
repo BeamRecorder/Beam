@@ -11,7 +11,7 @@ import type {
   TimelinePasteHighlight,
   TimelinePasteRequest,
 } from './composables/timeline-clipboard-types';
-import type { TrackClipSelection } from './composables/timeline-tracks-types';
+import type { TimelinePlacementRequest, TrackClipSelection } from './composables/timeline-tracks-types';
 
 const props = withDefaults(
   defineProps<{
@@ -56,8 +56,8 @@ const emit = defineEmits<{
   (event: 'preview:composition', value: ClipComposition | null): void;
   (event: 'trim:zoom', payload: { id: string; edge: 'start' | 'end'; timeMs: number }): void;
   (event: 'move:zoom', payload: { id: string; startMs: number; endMs: number }): void;
-  (event: 'add:zoom', timeMs: number): void;
-  (event: 'add:caption', timeMs: number): void;
+  (event: 'add:zoom', placement: TimelinePlacementRequest): void;
+  (event: 'add:caption', placement: TimelinePlacementRequest): void;
   (event: 'reorder:clip', payload: { id: string; targetIndex: number }): void;
   (event: 'paste:item', payload: TimelinePasteRequest): void;
   (event: 'paste:error', message: string): void;
