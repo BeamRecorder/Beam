@@ -11,8 +11,7 @@ use crate::{
 use super::RecordingSession;
 use crate::session::SessionState;
 
-#[test]
-fn cancelling_a_failed_session_removes_project_and_session_artifacts() {
+fn prepared_session_without_screen() -> (tempfile::TempDir, RecordingSession) {
     let temporary = tempfile::tempdir().expect("temporary directory");
     let request = CaptureRequest {
         project_id: ProjectId::new(),
@@ -37,7 +36,28 @@ fn cancelling_a_failed_session_removes_project_and_session_artifacts() {
         limitations: Vec::new(),
         sources: Vec::new(),
     };
-    let mut session = RecordingSession::prepare(request, snapshot).expect("prepare native session");
+    let session = RecordingSession::prepare(request, snapshot).expect("prepare native session");
+    (temporary, session)
+}
+
+#[test]
+fn screen_availability_is_true_without_a_screen_recording() {
+    let (_temporary, session) = prepared_session_without_screen();
+
+    assert!(session.screen_available());
+}
+
+#[test]
+fn screen_availability_is_false_for_an_active_unavailable_screen_recording() {
+    let (_temporary, mut session) = prepared_session_without_screen();
+    session.active.set_screen_availability_for_test(false);
+
+    assert!(!session.screen_available());
+}
+
+#[test]
+fn cancelling_a_failed_session_removes_project_and_session_artifacts() {
+    let (temporary, mut session) = prepared_session_without_screen();
     session.state = SessionState::Failed;
 
     session.cancel().expect("cancel failed session");

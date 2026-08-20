@@ -20,6 +20,8 @@ use source_watches::source_watches;
 pub(super) struct ActiveRecordings {
     reporter: Option<PeriodicReporter>,
     screen: Option<crate::screen::ScreenRecording>,
+    #[cfg(test)]
+    test_screen_availability: Option<bool>,
     system_audio: Option<crate::system_audio::SystemAudioRecording>,
     #[cfg(all(windows, feature = "cursor"))]
     cursor: Option<crate::cursor::win::WindowsCursorRecording>,
@@ -39,13 +41,26 @@ pub(super) struct OpenContext<'a> {
 
 impl ActiveRecordings {
     pub(super) fn has_screen(&self) -> bool {
+        #[cfg(test)]
+        if self.test_screen_availability.is_some() {
+            return true;
+        }
         self.screen.is_some()
     }
 
     pub(super) fn screen_available(&self) -> bool {
+        #[cfg(test)]
+        if let Some(available) = self.test_screen_availability {
+            return available;
+        }
         self.screen
             .as_ref()
             .is_none_or(crate::screen::ScreenRecording::is_available)
+    }
+
+    #[cfg(test)]
+    pub(super) fn set_screen_availability_for_test(&mut self, available: bool) {
+        self.test_screen_availability = Some(available);
     }
 
     pub(super) fn system_audio_level(&self) -> Option<f32> {
