@@ -3,13 +3,16 @@
 mod input_motion;
 
 #[cfg(target_os = "linux")]
+#[path = "beam_input_helper/install.rs"]
+mod input_install;
+
+#[cfg(target_os = "linux")]
 mod linux {
     use std::{
         collections::{HashMap, HashSet},
         fs,
         io::{self, BufWriter, Write},
-        os::unix::fs::PermissionsExt,
-        path::{Path, PathBuf},
+        path::PathBuf,
         thread,
         time::Duration,
     };
@@ -18,13 +21,13 @@ mod linux {
     use evdev::{Device, EventSummary, KeyCode, SynchronizationCode};
     use serde::Serialize;
 
-    use super::input_motion::MotionAccumulator;
+    use super::{
+        input_install::{INSTALLED_HELPER, INSTALLED_POLICY, install_assets},
+        input_motion::MotionAccumulator,
+    };
 
     const POLL_INTERVAL: Duration = Duration::from_millis(4);
-    const INSTALLED_HELPER: &str = "/usr/libexec/beam-input-helper";
-    const INSTALLED_POLICY: &str = "/usr/share/polkit-1/actions/com.beam.input-monitor.policy";
     const POLICY_VERSION: u32 = 5;
-    const POLICY: &str = include_str!("beam-input-helper.policy");
 
     #[derive(Serialize)]
     #[serde(rename_all = "camelCase")]
@@ -194,13 +197,6 @@ mod linux {
         stream()
     }
 
-    fn install_assets() -> Result<(), Box<dyn std::error::Error>> {
-        let source = std::env::current_exe()?;
-        install_file(&source, Path::new(INSTALLED_HELPER), 0o755)?;
-        install_bytes(POLICY.as_bytes(), Path::new(INSTALLED_POLICY), 0o644)?;
-        Ok(())
-    }
-
     fn uninstall() -> Result<(), Box<dyn std::error::Error>> {
         require_privileged()?;
         for path in [INSTALLED_POLICY, INSTALLED_HELPER] {
@@ -211,38 +207,6 @@ mod linux {
             }
         }
         write_json(&serde_json::json!({ "installed": false }))
-    }
-
-    fn install_file(
-        source: &Path,
-        destination: &Path,
-        mode: u32,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        let bytes = fs::read(source)?;
-        install_bytes(&bytes, destination, mode)
-    }
-
-    fn install_bytes(
-        bytes: &[u8],
-        destination: &Path,
-        mode: u32,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        let parent = destination
-            .parent()
-            .ok_or("system helper destination has no parent directory")?;
-        fs::create_dir_all(parent)?;
-        let temporary = parent.join(format!(
-            ".{}.{}.tmp",
-            destination
-                .file_name()
-                .and_then(|name| name.to_str())
-                .unwrap_or("beam-input-helper"),
-            std::process::id()
-        ));
-        fs::write(&temporary, bytes)?;
-        fs::set_permissions(&temporary, fs::Permissions::from_mode(mode))?;
-        fs::rename(temporary, destination)?;
-        Ok(())
     }
 
     fn require_privileged() -> Result<(), Box<dyn std::error::Error>> {

@@ -1,6 +1,11 @@
 use std::{
     collections::VecDeque,
+    fs::{self, File, OpenOptions},
     io::{BufRead, BufReader},
+    os::{
+        fd::{AsRawFd, FromRawFd},
+        unix::fs::{OpenOptionsExt, PermissionsExt},
+    },
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
     sync::{
@@ -19,6 +24,11 @@ use super::owned_child;
 
 const INSTALLED_HELPER: &str = "/usr/libexec/beam-input-helper";
 pub(super) const INPUT_QUEUE_CAPACITY: usize = 4_096;
+
+pub(super) struct ElevatedHelperExecutable {
+    path: PathBuf,
+    _sealed_file: Option<File>,
+}
 
 pub(super) struct InputEventQueue {
     pub(super) events: VecDeque<NativeInputEvent>,
@@ -149,7 +159,7 @@ pub fn request_linux_input_access() -> Result<InputAccessStatus, CaptureError> {
 
     let mut command = Command::new("pkexec");
     command
-        .arg(helper)
+        .arg(helper.path())
         .arg(helper_command)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -182,6 +192,9 @@ pub fn request_linux_input_access() -> Result<InputAccessStatus, CaptureError> {
         }
         Ok(_) => {}
     }
+    // The sealed memfd must outlive Polkit authentication and the helper's
+    // exec. A readiness line proves the privileged process has started.
+    drop(helper);
     let ready: serde_json::Value = match serde_json::from_str(&ready_line) {
         Ok(ready) => ready,
         Err(error) => {
@@ -337,17 +350,100 @@ fn bundled_input_helper_path() -> Option<PathBuf> {
         .filter(|path| executable_file(path))
 }
 
-fn helper_launch() -> Result<(PathBuf, &'static str), CaptureError> {
+fn helper_launch() -> Result<(ElevatedHelperExecutable, &'static str), CaptureError> {
     let installed = PathBuf::from(INSTALLED_HELPER);
     if let Some(bundled) = bundled_input_helper_path()
         && bundled != installed
         && (!executable_file(&installed) || helper_version(&bundled) != helper_version(&installed))
     {
-        return Ok((bundled, "install-stream"));
+        // AppImage resources live on a user-mounted FUSE filesystem that the
+        // privileged pkexec child cannot traverse. Copy it into an immutable,
+        // sealed memory file that remains open until pkexec starts the helper.
+        return Ok((
+            ElevatedHelperExecutable::from_bundled(&bundled)?,
+            "install-stream",
+        ));
     }
     executable_file(&installed)
-        .then_some((installed, "stream"))
+        .then_some((ElevatedHelperExecutable::installed(installed), "stream"))
         .ok_or_else(|| CaptureError::Unsupported("Beam input helper is not installed".into()))
+}
+
+impl ElevatedHelperExecutable {
+    fn installed(path: PathBuf) -> Self {
+        Self {
+            path,
+            _sealed_file: None,
+        }
+    }
+
+    pub(super) fn from_bundled(source: &Path) -> Result<Self, CaptureError> {
+        let mut input = OpenOptions::new()
+            .read(true)
+            .custom_flags(libc::O_NOFOLLOW)
+            .open(source)
+            .map_err(|error| CaptureError::storage(source, error))?;
+        if !input
+            .metadata()
+            .map_err(|error| CaptureError::storage(source, error))?
+            .is_file()
+        {
+            return Err(CaptureError::InvalidConfiguration(format!(
+                "input helper is not a regular file: {}",
+                source.display()
+            )));
+        }
+
+        // SAFETY: the C string is static and valid; memfd_create returns a new
+        // owned descriptor or -1 without aliasing any Rust-managed resource.
+        let descriptor = unsafe {
+            libc::memfd_create(
+                c"beam-input-helper".as_ptr(),
+                libc::MFD_CLOEXEC | libc::MFD_ALLOW_SEALING,
+            )
+        };
+        if descriptor < 0 {
+            return Err(CaptureError::Backend(format!(
+                "input helper memory file could not be created: {}",
+                std::io::Error::last_os_error()
+            )));
+        }
+        // SAFETY: descriptor was freshly returned by memfd_create and ownership
+        // is transferred exactly once to File, which closes it on every exit.
+        let mut sealed_file = unsafe { File::from_raw_fd(descriptor) };
+        std::io::copy(&mut input, &mut sealed_file)
+            .and_then(|_| sealed_file.sync_all())
+            .map_err(|error| CaptureError::storage(source, error))?;
+        // SAFETY: fchmod only mutates the mode of this owned descriptor.
+        if unsafe { libc::fchmod(sealed_file.as_raw_fd(), 0o500) } != 0 {
+            return Err(CaptureError::Backend(format!(
+                "input helper memory permissions could not be set: {}",
+                std::io::Error::last_os_error()
+            )));
+        }
+        let seals =
+            libc::F_SEAL_SEAL | libc::F_SEAL_SHRINK | libc::F_SEAL_GROW | libc::F_SEAL_WRITE;
+        // SAFETY: fcntl applies immutable seals to this owned memfd descriptor.
+        if unsafe { libc::fcntl(sealed_file.as_raw_fd(), libc::F_ADD_SEALS, seals) } != 0 {
+            return Err(CaptureError::Backend(format!(
+                "input helper memory file could not be sealed: {}",
+                std::io::Error::last_os_error()
+            )));
+        }
+        let path = PathBuf::from(format!(
+            "/proc/{}/fd/{}",
+            std::process::id(),
+            sealed_file.as_raw_fd()
+        ));
+        Ok(Self {
+            path,
+            _sealed_file: Some(sealed_file),
+        })
+    }
+
+    pub(super) fn path(&self) -> &Path {
+        &self.path
+    }
 }
 
 fn helper_version(path: &Path) -> Option<(String, u64)> {
@@ -370,9 +466,7 @@ pub(super) fn parse_helper_version(output: &[u8]) -> Option<(String, u64)> {
 }
 
 fn executable_file(path: &Path) -> bool {
-    use std::os::unix::fs::PermissionsExt;
-
-    std::fs::metadata(path)
+    fs::metadata(path)
         .is_ok_and(|metadata| metadata.is_file() && metadata.permissions().mode() & 0o111 != 0)
 }
 
