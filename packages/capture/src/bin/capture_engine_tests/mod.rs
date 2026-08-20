@@ -1,9 +1,32 @@
 use capture::{
     catalog::CatalogSnapshot,
     model::{CaptureCapabilities, PermissionSnapshot},
+    protocol::{Command, RequestEnvelope},
 };
 
-use super::{Engine, prepare_snapshot};
+use super::{Engine, handle, prepare_snapshot};
+
+#[test]
+fn idle_status_reports_screen_available() {
+    let mut engine = Engine::default();
+    let response = handle(
+        RequestEnvelope {
+            id: "status-idle".into(),
+            command: Command::Status,
+        },
+        &mut engine,
+    );
+
+    assert!(response.ok);
+    assert_eq!(
+        response
+            .result
+            .as_ref()
+            .and_then(|result| result.get("screenAvailable"))
+            .and_then(serde_json::Value::as_bool),
+        Some(true)
+    );
+}
 
 #[cfg(target_os = "linux")]
 #[test]

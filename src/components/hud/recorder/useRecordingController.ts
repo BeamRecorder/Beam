@@ -4,6 +4,7 @@ import { BrowserCameraRecorder, isCameraUnavailableError } from '../../../api/ca
 import { BrowserMicrophoneRecorder } from '../../../api/microphone-recorder';
 import { BrowserSystemAudioRecorder } from '../../../api/system-audio-recorder';
 import { useDeviceToggles } from './useDeviceToggles';
+import { useRecordingHealth } from './useRecordingHealth';
 import { useNativeSystemAudioLevel } from './useNativeSystemAudioLevel';
 import { recordingCameraMetadata } from './recording-camera-metadata';
 import { formatRecordingTime, isRecordingActivePhase } from './recording-types';
@@ -18,6 +19,7 @@ import type {
 
 type Recorder = BrowserCameraRecorder | BrowserMicrophoneRecorder | BrowserSystemAudioRecorder;
 type SidecarKind = 'camera' | 'microphone' | 'systemAudio';
+type SidecarStates = Record<SidecarKind, StartupSidecarState>;
 const inactiveCamera = 'off';
 const inactiveMicrophone = 'no-audio';
 export function useRecordingController(
@@ -54,12 +56,8 @@ export function useRecordingController(
   let nativeStarted = false;
   let cancelling = false;
   let nativeCleanupBlocked = false;
-  const sidecarStates: Record<SidecarKind, StartupSidecarState> = {
-    camera: 'disabled',
-    microphone: 'disabled',
-    systemAudio: 'disabled',
-  };
-
+  const sidecarStates = { camera: 'disabled', microphone: 'disabled', systemAudio: 'disabled' } as SidecarStates;
+  const recordingHealth = useRecordingHealth(phase, error, () => systemAudio, cancel, stop);
   const deviceToggles = useDeviceToggles({
     getConfiguration: () => configuration,
     setConfigurationCameraId: (id) => {
@@ -82,6 +80,7 @@ export function useRecordingController(
     setSystemAudio: (recorder) => {
       systemAudio = recorder;
     },
+    registerSystemAudioRecorder: recordingHealth.registerSystemAudioRecorder,
     setCameraEnabled: (enabled) => {
       cameraEnabled.value = enabled;
     },
@@ -97,7 +96,6 @@ export function useRecordingController(
     },
     cameraMetadata: recordingCameraMetadata,
   });
-
   const isActive = computed(() => isRecordingActivePhase(phase.value));
   const cleanupStaleNativeStart = async (session: { sessionId?: string | null }) => {
     try {
@@ -132,7 +130,6 @@ export function useRecordingController(
   const stopRecorderStrict = async (recorder: Recorder | null, endNs?: number) => {
     await recorder?.stop(endNs);
   };
-
   const prepareSources = async () => {
     if (!configuration) return;
     if (configuration.cameraId !== inactiveCamera) {
@@ -159,6 +156,7 @@ export function useRecordingController(
     if (configuration.systemAudio && !nativeSystemAudio) {
       try {
         systemAudio = await BrowserSystemAudioRecorder.request();
+        recordingHealth.registerSystemAudioRecorder(systemAudio);
         sidecarStates.systemAudio = 'prepared';
       } catch (reason) {
         sidecarStates.systemAudio = 'failed';
@@ -331,6 +329,7 @@ export function useRecordingController(
         capture.showScreenRegionOverlay({ ...next.regionOverlay, region: next.region });
       secondsRemaining.value = Math.max(0, next.countdownSeconds);
       phase.value = 'countdown';
+      recordingHealth.start();
       stage = 'prepare-native';
       const preparation = prewarmNativeRecording(generation);
       prewarm = preparation;
@@ -370,6 +369,7 @@ export function useRecordingController(
     await capture.setCountdown(null);
     capture.hideScreenRegionOverlay();
     clearTimer();
+    recordingHealth.reset();
     if (!sidecarsAlreadyStopped)
       await Promise.all([stopRecorder(camera), stopRecorder(microphone), stopRecorder(systemAudio)]);
     camera = null;
@@ -395,7 +395,7 @@ export function useRecordingController(
     phase.value = 'idle';
   };
 
-  const cancel = async () => {
+  async function cancel() {
     if (cancelling) return;
     cancelling = true;
     const nativeRecording = sessionId !== null;
@@ -417,9 +417,9 @@ export function useRecordingController(
     } finally {
       cancelling = false;
     }
-  };
+  }
 
-  const stop = async () => {
+  async function stop() {
     if (phase.value === 'countdown' || phase.value === 'starting') return cancel();
     if (phase.value !== 'recording' && phase.value !== 'paused') return;
     const wasRecording = phase.value === 'recording';
@@ -449,7 +449,7 @@ export function useRecordingController(
         startTimer();
       }
     }
-  };
+  }
 
   const togglePause = async () => {
     if (!sessionId) return;
