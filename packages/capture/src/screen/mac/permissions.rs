@@ -9,7 +9,7 @@ pub fn capabilities() -> CaptureCapabilities {
         portal_selection: false,
         embedded_cursor: true,
         separate_cursor: true,
-        cursor_shapes: false,
+        cursor_shapes: true,
         cursor_clicks: true,
         input_shortcuts: true,
         hardware_h264: true,

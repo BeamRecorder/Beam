@@ -37,6 +37,8 @@ pub(super) struct OpenContext<'a> {
     pub(super) start_ns: u64,
     pub(super) tracks: &'a mut Vec<TrackMetadata>,
     pub(super) start_gate: &'a Arc<super::StartGate>,
+    #[cfg(all(target_os = "macos", feature = "cursor"))]
+    pub(super) cursor_shape_source: &'a crate::cursor::mac::MacCursorShapeSource,
 }
 
 impl ActiveRecordings {
@@ -78,6 +80,8 @@ impl ActiveRecordings {
             start_ns,
             tracks,
             start_gate,
+            #[cfg(all(target_os = "macos", feature = "cursor"))]
+            cursor_shape_source,
         } = context;
         #[cfg(all(windows, feature = "cursor"))]
         if let CursorSelection::Separate {
@@ -121,12 +125,7 @@ impl ActiveRecordings {
             track.status = TrackStatus::Recording;
         }
         #[cfg(all(target_os = "macos", feature = "cursor"))]
-        if let CursorSelection::Separate {
-            capture_clicks,
-            capture_shortcuts,
-            ..
-        } = request.cursor
-        {
+        if matches!(request.cursor, CursorSelection::Separate { .. }) {
             let region = match &request.screen {
                 Some(ScreenSelection::Source { source_id }) => crate::cursor::crop_region(
                     crate::cursor::mac::source_region(source_id)?,
@@ -147,8 +146,8 @@ impl ActiveRecordings {
             self.cursor = Some(crate::cursor::mac::MacCursorRecording::start(
                 &layout.track_dir(TrackKind::Cursor),
                 region,
-                capture_clicks,
-                capture_shortcuts,
+                request.cursor,
+                cursor_shape_source.clone(),
                 start_ns,
                 start_gate.clone(),
             )?);

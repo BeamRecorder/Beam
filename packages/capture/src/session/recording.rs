@@ -31,6 +31,8 @@ pub struct RecordingSession {
     project_layout: ProjectLayout,
     project_existed: bool,
     prepared_start_gate: Option<Arc<super::StartGate>>,
+    #[cfg(all(target_os = "macos", feature = "cursor"))]
+    cursor_shape_source: crate::cursor::mac::MacCursorShapeSource,
 }
 
 impl RecordingSession {
@@ -90,6 +92,8 @@ impl RecordingSession {
             project_layout,
             project_existed,
             prepared_start_gate: None,
+            #[cfg(all(target_os = "macos", feature = "cursor"))]
+            cursor_shape_source: crate::cursor::mac::MacCursorShapeSource::default(),
         };
         #[cfg(target_os = "linux")]
         let mut session = session;
@@ -137,6 +141,21 @@ impl RecordingSession {
     #[must_use]
     pub fn screen_available(&self) -> bool {
         self.active.screen_available()
+    }
+
+    #[cfg(all(target_os = "macos", feature = "cursor"))]
+    pub fn refresh_cursor_shape(&self) -> bool {
+        if matches!(
+            self.request.cursor,
+            crate::model::CursorSelection::Separate {
+                capture_shape: true,
+                ..
+            }
+        ) {
+            self.cursor_shape_source.refresh_on_main_thread()
+        } else {
+            false
+        }
     }
 
     pub fn start(&mut self) -> Result<(), CaptureError> {
@@ -334,6 +353,8 @@ impl RecordingSession {
             start_ns,
             tracks: &mut self.manifest.tracks,
             start_gate,
+            #[cfg(all(target_os = "macos", feature = "cursor"))]
+            cursor_shape_source: &self.cursor_shape_source,
         });
         if let Err(error) = result {
             start_gate.cancel();

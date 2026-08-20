@@ -1,40 +1,85 @@
-use objc2::rc::autoreleasepool;
+use std::sync::{
+    Arc,
+    atomic::{AtomicU64, Ordering},
+};
+
+use objc2::{MainThreadMarker, rc::autoreleasepool};
 use objc2_app_kit::{NSCursor, NSCursorFrameResizeDirections, NSCursorFrameResizePosition};
 
-use crate::cursor::{CursorKind, Hotspot};
+use crate::{
+    CaptureError,
+    cursor::{CursorKind, Hotspot, resilient_source::ResilientSource},
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct MacCursorShape {
-    pub cursor_id: String,
-    pub cursor_kind: CursorKind,
-    pub native_cursor_id: String,
-    pub hotspot: Hotspot,
+    pub(crate) cursor_id: String,
+    pub(crate) cursor_kind: CursorKind,
+    pub(crate) native_cursor_id: String,
+    pub(crate) hotspot: Hotspot,
 }
 
-/// Reads the system-wide cursor from AppKit on the cursor recording thread.
-///
-/// `currentSystemCursor` is the only AppKit API that exposes the cursor drawn
-/// by another application. It can return `nil`, so that case remains explicit
-/// as an unknown cursor instead of pretending it is the arrow cursor.
+#[derive(Debug, Clone)]
+pub(crate) struct MacCursorShapeSource {
+    latest: ResilientSource<MacCursorShape>,
+    failures: Arc<AtomicU64>,
+}
+
+impl Default for MacCursorShapeSource {
+    fn default() -> Self {
+        Self {
+            latest: ResilientSource::new(system_descriptor(
+                CursorKind::Default,
+                Hotspot { x: 10, y: 7 },
+            )),
+            failures: Arc::new(AtomicU64::new(0)),
+        }
+    }
+}
+
+impl MacCursorShapeSource {
+    pub(crate) fn current(&self) -> MacCursorShape {
+        self.latest.current()
+    }
+
+    /// Samples AppKit only when called by the capture engine's main thread.
+    /// Errors and Objective-C exceptions leave the last valid shape untouched.
+    pub(crate) fn refresh_on_main_thread(&self) -> bool {
+        let refreshed = self.latest.refresh(current_system_shape);
+        if !refreshed {
+            self.failures.fetch_add(1, Ordering::Relaxed);
+        }
+        refreshed
+    }
+
+    pub(crate) fn failures(&self) -> u64 {
+        self.failures.load(Ordering::Relaxed)
+    }
+}
+
 #[allow(deprecated)]
-pub(crate) fn current_system_shape() -> MacCursorShape {
-    autoreleasepool(|_| match NSCursor::currentSystemCursor() {
-        Some(cursor) => descriptor_for(&cursor),
-        None => custom_descriptor(0, Hotspot { x: 0, y: 0 }),
+fn current_system_shape() -> Result<MacCursorShape, CaptureError> {
+    MainThreadMarker::new().ok_or_else(|| {
+        CaptureError::Backend("macOS cursor shape sampling requires the main thread".into())
+    })?;
+    autoreleasepool(|_| {
+        NSCursor::currentSystemCursor()
+            .as_deref()
+            .map(descriptor_for)
+            .ok_or_else(|| CaptureError::Backend("AppKit returned no current cursor".into()))
     })
 }
 
 fn descriptor_for(cursor: &NSCursor) -> MacCursorShape {
     let hotspot = hotspot(cursor);
-    match classify(cursor) {
-        Some(kind) => system_descriptor(kind, hotspot),
-        None => custom_descriptor(cursor as *const NSCursor as usize, hotspot),
-    }
+    classify(cursor).map_or_else(
+        || custom_descriptor(cursor as *const NSCursor as usize, hotspot),
+        |kind| system_descriptor(kind, hotspot),
+    )
 }
 
 fn system_descriptor(cursor_kind: CursorKind, hotspot: Hotspot) -> MacCursorShape {
-    let name = portable_name(cursor_kind);
-    let native_cursor_id = format!("macos:{name}");
+    let native_cursor_id = format!("macos:{}", portable_name(cursor_kind));
     MacCursorShape {
         cursor_id: native_cursor_id.clone(),
         cursor_kind,
@@ -60,7 +105,7 @@ fn classify(cursor: &NSCursor) -> Option<CursorKind> {
 }
 
 fn standard_cursors() -> Vec<(CursorKind, objc2::rc::Retained<NSCursor>)> {
-    let all_directions = NSCursorFrameResizeDirections::All;
+    let directions = NSCursorFrameResizeDirections::All;
     vec![
         (CursorKind::Default, NSCursor::arrowCursor()),
         (CursorKind::Textcursor, NSCursor::IBeamCursor()),
@@ -80,63 +125,58 @@ fn standard_cursors() -> Vec<(CursorKind, objc2::rc::Retained<NSCursor>)> {
         ),
         (CursorKind::Resizewesteast, NSCursor::columnResizeCursor()),
         (CursorKind::Resizenorthsouth, NSCursor::rowResizeCursor()),
-        (
+        frame_cursor(
             CursorKind::Resizewesteast,
-            NSCursor::frameResizeCursorFromPosition_inDirections(
-                NSCursorFrameResizePosition::Left,
-                all_directions,
-            ),
+            NSCursorFrameResizePosition::Left,
+            directions,
         ),
-        (
+        frame_cursor(
             CursorKind::Resizewesteast,
-            NSCursor::frameResizeCursorFromPosition_inDirections(
-                NSCursorFrameResizePosition::Right,
-                all_directions,
-            ),
+            NSCursorFrameResizePosition::Right,
+            directions,
         ),
-        (
+        frame_cursor(
             CursorKind::Resizenorthsouth,
-            NSCursor::frameResizeCursorFromPosition_inDirections(
-                NSCursorFrameResizePosition::Top,
-                all_directions,
-            ),
+            NSCursorFrameResizePosition::Top,
+            directions,
         ),
-        (
+        frame_cursor(
             CursorKind::Resizenorthsouth,
-            NSCursor::frameResizeCursorFromPosition_inDirections(
-                NSCursorFrameResizePosition::Bottom,
-                all_directions,
-            ),
+            NSCursorFrameResizePosition::Bottom,
+            directions,
         ),
-        (
+        frame_cursor(
             CursorKind::Resizenortheastsouthwest,
-            NSCursor::frameResizeCursorFromPosition_inDirections(
-                NSCursorFrameResizePosition::TopRight,
-                all_directions,
-            ),
+            NSCursorFrameResizePosition::TopRight,
+            directions,
         ),
-        (
+        frame_cursor(
             CursorKind::Resizenortheastsouthwest,
-            NSCursor::frameResizeCursorFromPosition_inDirections(
-                NSCursorFrameResizePosition::BottomLeft,
-                all_directions,
-            ),
+            NSCursorFrameResizePosition::BottomLeft,
+            directions,
         ),
-        (
+        frame_cursor(
             CursorKind::Resizenorthwestsoutheast,
-            NSCursor::frameResizeCursorFromPosition_inDirections(
-                NSCursorFrameResizePosition::TopLeft,
-                all_directions,
-            ),
+            NSCursorFrameResizePosition::TopLeft,
+            directions,
         ),
-        (
+        frame_cursor(
             CursorKind::Resizenorthwestsoutheast,
-            NSCursor::frameResizeCursorFromPosition_inDirections(
-                NSCursorFrameResizePosition::BottomRight,
-                all_directions,
-            ),
+            NSCursorFrameResizePosition::BottomRight,
+            directions,
         ),
     ]
+}
+
+fn frame_cursor(
+    kind: CursorKind,
+    position: NSCursorFrameResizePosition,
+    directions: NSCursorFrameResizeDirections,
+) -> (CursorKind, objc2::rc::Retained<NSCursor>) {
+    (
+        kind,
+        NSCursor::frameResizeCursorFromPosition_inDirections(position, directions),
+    )
 }
 
 fn hotspot(cursor: &NSCursor) -> Hotspot {
@@ -173,6 +213,14 @@ fn portable_name(kind: CursorKind) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn shape_source_starts_with_a_renderable_arrow() {
+        let shape = MacCursorShapeSource::default().current();
+        assert_eq!(shape.cursor_id, "macos:arrow");
+        assert_eq!(shape.cursor_kind, CursorKind::Default);
+        assert_eq!(shape.hotspot, Hotspot { x: 10, y: 7 });
+    }
 
     #[test]
     fn system_descriptor_is_traceable_and_portable() {

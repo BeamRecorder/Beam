@@ -17,30 +17,45 @@ use foreign_types::ForeignType;
 
 use crate::{
     CaptureError,
-    cursor::mac::appkit::current_system_shape,
     cursor::{
         CaptureRegion, CursorEvent, CursorEventWriter, CursorRecordingPaths, finalize_after_worker,
         map_coordinates, move_sample_due,
     },
     input::{InputEvent, InputEventWriter, ShortcutSampler},
-    model::SourceId,
+    model::{CursorSelection, SourceId},
     session::StartGate,
 };
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct MacCursorMetrics {
     events: AtomicU64,
     interruptions: AtomicU64,
+    shape_source: super::MacCursorShapeSource,
+    shape_failure_baseline: u64,
 }
 
 impl MacCursorMetrics {
+    fn new(shape_source: super::MacCursorShapeSource) -> Self {
+        let shape_failure_baseline = shape_source.failures();
+        Self {
+            events: AtomicU64::new(0),
+            interruptions: AtomicU64::new(0),
+            shape_source,
+            shape_failure_baseline,
+        }
+    }
+
     #[must_use]
     pub fn events(&self) -> u64 {
         self.events.load(Ordering::Relaxed)
     }
     #[must_use]
     pub fn interruptions(&self) -> u64 {
-        self.interruptions.load(Ordering::Relaxed)
+        self.interruptions.load(Ordering::Relaxed).saturating_add(
+            self.shape_source
+                .failures()
+                .saturating_sub(self.shape_failure_baseline),
+        )
     }
 }
 
@@ -57,14 +72,24 @@ pub struct MacCursorRecording {
 }
 
 impl MacCursorRecording {
-    pub fn start(
+    pub(crate) fn start(
         directory: &Path,
         region: CaptureRegion,
-        capture_clicks: bool,
-        capture_shortcuts: bool,
+        selection: CursorSelection,
+        shape_source: super::MacCursorShapeSource,
         segment_start_ns: u64,
         start_gate: Arc<StartGate>,
     ) -> Result<Self, CaptureError> {
+        let CursorSelection::Separate {
+            capture_clicks,
+            capture_shortcuts,
+            capture_shape,
+        } = selection
+        else {
+            return Err(CaptureError::InvalidConfiguration(
+                "macOS cursor recording requires separate cursor mode".into(),
+            ));
+        };
         std::fs::create_dir_all(directory)
             .map_err(|error| CaptureError::storage(directory, error))?;
         let partial = directory.join("cursor.partial.jsonl");
@@ -75,7 +100,7 @@ impl MacCursorRecording {
         let input_path = directory.join("input.json");
         let cancel = Arc::new(AtomicBool::new(false));
         let thread_cancel = cancel.clone();
-        let metrics = Arc::new(MacCursorMetrics::default());
+        let metrics = Arc::new(MacCursorMetrics::new(shape_source.clone()));
         let thread_metrics = metrics.clone();
         let thread_path = partial.clone();
         let thread_input_path = input_partial_path.clone();
@@ -89,6 +114,8 @@ impl MacCursorRecording {
                     region,
                     capture_clicks,
                     capture_shortcuts,
+                    capture_shape,
+                    shape_source,
                     segment_start_ns,
                     &thread_cancel,
                     &thread_metrics,
@@ -202,6 +229,8 @@ fn capture_loop(
     region: CaptureRegion,
     capture_clicks: bool,
     capture_shortcuts: bool,
+    capture_shape: bool,
+    shape_source: super::MacCursorShapeSource,
     segment_start_ns: u64,
     cancel: &AtomicBool,
     metrics: &MacCursorMetrics,
@@ -244,21 +273,26 @@ fn capture_loop(
                 continue;
             }
         };
-        let shape = current_system_shape();
-        if previous_shape.as_ref() != Some(&shape.cursor_id) {
-            push(
-                &mut writer,
-                metrics,
-                CursorEvent::Shape {
-                    session_ns,
-                    cursor_id: shape.cursor_id.clone(),
-                    cursor_kind: shape.cursor_kind,
-                    native_cursor_id: shape.native_cursor_id,
-                    hotspot: shape.hotspot,
-                },
-            )?;
-            previous_shape = Some(shape.cursor_id.clone());
-        }
+        let cursor_id = if capture_shape {
+            let shape = shape_source.current();
+            if previous_shape.as_ref() != Some(&shape.cursor_id) {
+                push(
+                    &mut writer,
+                    metrics,
+                    CursorEvent::Shape {
+                        session_ns,
+                        cursor_id: shape.cursor_id.clone(),
+                        cursor_kind: shape.cursor_kind,
+                        native_cursor_id: shape.native_cursor_id,
+                        hotspot: shape.hotspot,
+                    },
+                )?;
+                previous_shape = Some(shape.cursor_id.clone());
+            }
+            Some(shape.cursor_id)
+        } else {
+            None
+        };
         let location = event.location();
         let x = coordinate(location.x);
         let y = coordinate(location.y);
@@ -269,7 +303,7 @@ fn capture_loop(
                 metrics,
                 CursorEvent::Move {
                     session_ns,
-                    cursor_id: Some(shape.cursor_id.clone()),
+                    cursor_id: cursor_id.clone(),
                     pixel_x: position.pixel_x,
                     pixel_y: position.pixel_y,
                     normalized_x: position.normalized_x,

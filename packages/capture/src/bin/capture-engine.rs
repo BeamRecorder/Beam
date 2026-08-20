@@ -1,4 +1,6 @@
 use std::io::{self, BufReader, Write};
+#[cfg(target_os = "macos")]
+use std::{sync::mpsc, time::Duration};
 
 use capture::{
     catalog::{CatalogSnapshot, NativeCatalog, SourceCatalog},
@@ -21,6 +23,14 @@ fn main() {
 
 fn run() -> Result<(), capture::CaptureError> {
     capture::parent_watch::install_parent_death_guard()?;
+    #[cfg(target_os = "macos")]
+    return run_with_main_thread_cursor_sampling();
+    #[cfg(not(target_os = "macos"))]
+    run_blocking_protocol()
+}
+
+#[cfg(not(target_os = "macos"))]
+fn run_blocking_protocol() -> Result<(), capture::CaptureError> {
     let mut reader = BufReader::new(io::stdin().lock());
     let mut output = io::stdout().lock();
     let mut engine = Engine::default();
@@ -44,6 +54,55 @@ fn run() -> Result<(), capture::CaptureError> {
     }
     capture::input::shutdown_input_access();
     Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn run_with_main_thread_cursor_sampling() -> Result<(), capture::CaptureError> {
+    let (requests, incoming) = mpsc::channel();
+    std::thread::Builder::new()
+        .name("capture-protocol-reader".into())
+        .spawn(move || read_requests(requests))
+        .map_err(|error| {
+            capture::CaptureError::Backend(format!("protocol reader failed: {error}"))
+        })?;
+
+    let mut output = io::stdout().lock();
+    let mut engine = Engine::default();
+    loop {
+        if capture::parent_watch::parent_death_requested() {
+            break;
+        }
+        #[cfg(feature = "cursor")]
+        if let Some(session) = &engine.session {
+            let _refreshed = session.refresh_cursor_shape();
+        }
+        match incoming.recv_timeout(Duration::from_millis(16)) {
+            Ok(Ok(Some(request))) => {
+                let response = handle(request, &mut engine);
+                write_json_line(&mut output, &response)?;
+            }
+            Ok(Ok(None)) | Err(mpsc::RecvTimeoutError::Disconnected) => break,
+            Ok(Err(error)) => write_json_line(
+                &mut output,
+                &ResponseEnvelope::failure("unknown", "invalid-json", error.to_string()),
+            )?,
+            Err(mpsc::RecvTimeoutError::Timeout) => {}
+        }
+    }
+    capture::input::shutdown_input_access();
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn read_requests(sender: mpsc::Sender<Result<Option<RequestEnvelope>, capture::CaptureError>>) {
+    let mut reader = BufReader::new(io::stdin().lock());
+    loop {
+        let request = read_json_line::<RequestEnvelope>(&mut reader);
+        let finished = matches!(request, Ok(None));
+        if sender.send(request).is_err() || finished {
+            break;
+        }
+    }
 }
 
 #[derive(Default)]
