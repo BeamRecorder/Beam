@@ -125,6 +125,27 @@ describe('useProjectZoom', () => {
     });
   });
 
+  it('fits a requested manual zoom into the free gap after an existing eight-second zoom', () => {
+    const { state } = create(null, 10_000);
+    state.zoomElements.value = [zoom('existing', 'manual')];
+    state.zoomElements.value[0] = { ...state.zoomElements.value[0]!, startMs: 0, endMs: 8_000 };
+
+    state.addZoomAtTime({ startMs: 7_500, durationMs: 1_200 });
+
+    expect(state.zoomElements.value).toHaveLength(2);
+    expect(state.zoomElements.value[1]).toMatchObject({ startMs: 8_000, endMs: 9_200 });
+  });
+
+  it('does not create a zoom when the requested gap is shorter than 200 ms', () => {
+    const { state } = create(null, 10_000);
+    state.zoomElements.value = [zoom('existing', 'manual')];
+    state.zoomElements.value[0] = { ...state.zoomElements.value[0]!, startMs: 100, endMs: 10_000 };
+
+    state.addZoomAtTime(100);
+
+    expect(state.zoomElements.value).toHaveLength(1);
+  });
+
   it('replaces only automatic zooms for the active session', () => {
     const { state } = create(data());
     state.zoomElements.value = [
@@ -149,6 +170,29 @@ describe('useProjectZoom', () => {
         expect.objectContaining({ sessionId: 'session', algorithmVersion: ZOOM_ALGORITHM_VERSION }),
         expect.objectContaining({ sessionId: 'other' }),
       ]),
+    );
+  });
+
+  it('generates an automatic zoom in the free gap after a reserved eight-second zoom', () => {
+    const { state } = create(
+      data({
+        cursor: {
+          available: true,
+          events: [],
+          telemetry: [{ timeMs: 8_100, cx: 0.25, cy: 0.75, interactionType: 'click' }],
+          shapes: {},
+          catalog: {},
+          missing: [],
+        },
+      }),
+      10_000,
+    );
+    state.zoomElements.value = [{ ...zoom('manual'), startMs: 0, endMs: 8_000 }];
+
+    state.generateZooms();
+
+    expect(state.zoomElements.value).toContainEqual(
+      expect.objectContaining({ mode: 'auto', startMs: 8_000, endMs: 9_000 }),
     );
   });
 

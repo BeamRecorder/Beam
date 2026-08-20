@@ -7,7 +7,7 @@ const BigSlider = {
   props: { modelValue: { type: Number, default: 0 }, max: { type: Number, default: 0 } },
   emits: ['update:modelValue'],
   template:
-    '<button class="duration-slider" :data-max="max" @click="$emit(\'update:modelValue\', max)">Duration</button>',
+    '<button class="duration-slider" :class="$attrs.class" :data-max="max" :data-model-value="modelValue" @click="$emit(\'update:modelValue\', max)">Duration</button>',
 };
 
 const clip = (kind: Clip['kind'], overrides: Record<string, unknown> = {}) =>
@@ -95,5 +95,39 @@ describe('ClipTransitionsPanel', () => {
     await wrapper.find('.edge-selector .btn-container:nth-child(1) button').trigger('click');
     await wrapper.find('.preset-gallery .btn-container:nth-child(1) button').trigger('click');
     expect(wrapper.emitted('update')).toContainEqual(['entry', null]);
+  });
+
+  it('exposes the visual easing power with a default of three and emits the selected value', async () => {
+    const wrapper = mount(ClipTransitionsPanel, {
+      props: {
+        clip: clip('image', {
+          transitions: { entry: { preset: { kind: 'fade' }, durationMs: 300 }, exit: null },
+        }),
+      },
+      global: { stubs: { BigSlider } },
+    });
+
+    const powerSlider = wrapper.get('.curve-slider');
+    expect(powerSlider.attributes('data-model-value')).toBe('3');
+    expect(powerSlider.attributes('data-max')).toBe('5');
+    await powerSlider.trigger('click');
+    expect(wrapper.emitted('update')).toContainEqual([
+      'entry',
+      { preset: { kind: 'fade' }, durationMs: 300, easingPower: 5 },
+    ]);
+  });
+
+  it('does not expose visual easing power controls for audio transitions', () => {
+    const wrapper = mount(ClipTransitionsPanel, {
+      props: {
+        clip: clip('audio', {
+          transitions: { entry: { preset: { kind: 'fade' }, durationMs: 300 }, exit: null },
+        }),
+      },
+      global: { stubs: { BigSlider } },
+    });
+
+    expect(wrapper.find('.curve-slider').exists()).toBe(false);
+    expect(wrapper.find('.duration-slider').exists()).toBe(true);
   });
 });

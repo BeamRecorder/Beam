@@ -129,12 +129,16 @@ const flush = async () => {
 };
 
 const installCanvasRuntime = () => {
+  const context = {
+    imageSmoothingEnabled: false,
+    imageSmoothingQuality: 'low',
+  };
   class FakeOffscreenCanvas {
     readonly width = 2;
     readonly height = 2;
 
     getContext() {
-      return {};
+      return context;
     }
   }
   vi.stubGlobal('OffscreenCanvas', FakeOffscreenCanvas);
@@ -142,6 +146,7 @@ const installCanvasRuntime = () => {
   vi.stubGlobal('VideoDecoder', class VideoDecoder {});
   vi.stubGlobal('AudioEncoder', class AudioEncoder {});
   vi.stubGlobal('AudioDecoder', class AudioDecoder {});
+  return context;
 };
 
 const importWorker = async () => {
@@ -233,6 +238,17 @@ afterEach(() => {
 });
 
 describe('export worker', () => {
+  it('configures the export canvas for high-quality image smoothing', async () => {
+    const context = installCanvasRuntime();
+    const worker = await importWorker();
+    startWorker(worker);
+
+    await vi.waitFor(() => expect(runtime.output.start).toHaveBeenCalledOnce());
+
+    expect(context.imageSmoothingEnabled).toBe(true);
+    expect(context.imageSmoothingQuality).toBe('high');
+  });
+
   it('fails explicitly when OffscreenCanvas is unavailable', async () => {
     const prepared = preparedCursorImage('default');
     const worker = await importWorker();

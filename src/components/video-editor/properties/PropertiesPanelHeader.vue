@@ -130,25 +130,33 @@ defineExpose({ focusTransitionButton });
 }
 .properties-panel-forward-enter-active,
 .properties-panel-backward-enter-active {
+  will-change: transform, opacity;
   transition:
     opacity 110ms cubic-bezier(0.16, 1, 0.3, 1),
     transform 130ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .properties-panel-forward-leave-active,
 .properties-panel-backward-leave-active {
+  will-change: transform, opacity;
   transition:
     opacity 70ms ease-in,
     transform 80ms ease-in;
 }
+.properties-panel-forward-enter-to,
+.properties-panel-forward-leave-from,
+.properties-panel-backward-enter-to,
+.properties-panel-backward-leave-from {
+  transform: translate3d(0, 0, 0);
+}
 .properties-panel-forward-enter-from,
 .properties-panel-backward-leave-to {
   opacity: 0;
-  transform: translateX(14px);
+  transform: translate3d(14px, 0, 0);
 }
 .properties-panel-forward-leave-to,
 .properties-panel-backward-enter-from {
   opacity: 0;
-  transform: translateX(-9px);
+  transform: translate3d(-9px, 0, 0);
 }
 @media (prefers-reduced-motion: reduce) {
   .properties-panel-forward-enter-active,

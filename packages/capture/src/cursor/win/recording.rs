@@ -12,12 +12,11 @@ use std::{
 use crate::{
     CaptureError,
     cursor::{
-        CaptureRegion, CursorEvent, CursorEventWriter, CursorShapeCatalogEntry, move_sample_due,
-        telemetry_from_events,
+        CaptureRegion, CursorEvent, CursorEventWriter, CursorRecordingPaths, finalize_after_worker,
+        move_sample_due,
     },
-    input::{InputEvent, InputEventWriter, ShortcutSampler, finalize_input_events},
+    input::{InputEvent, InputEventWriter, ShortcutSampler},
     session::StartGate,
-    storage::write_atomic,
 };
 
 use super::{sample_cursor, shortcut_key_pressed, shortcut_modifier_pressed};
@@ -123,13 +122,21 @@ impl WindowsCursorRecording {
     fn finish(&mut self) -> Result<(), CaptureError> {
         self.cancel.store(true, Ordering::Release);
         if let Some(thread) = self.thread.take() {
-            thread
+            let worker_result = thread
                 .join()
-                .map_err(|_| CaptureError::Backend("cursor capture thread panicked".into()))??;
-            finalize_events(&self.partial_path, &self.final_path)?;
-            finalize_telemetry(&self.final_path, &self.telemetry_path)?;
-            finalize_shapes(&self.final_path, &self.shapes_path)?;
-            finalize_input_events(&self.input_partial_path, &self.input_path)?;
+                .map_err(|_| CaptureError::Backend("cursor capture thread panicked".into()))
+                .and_then(|result| result);
+            return finalize_after_worker(
+                worker_result,
+                CursorRecordingPaths {
+                    partial: self.partial_path.clone(),
+                    final_path: self.final_path.clone(),
+                    telemetry: self.telemetry_path.clone(),
+                    shapes: self.shapes_path.clone(),
+                    input_partial: self.input_partial_path.clone(),
+                    input: self.input_path.clone(),
+                },
+            );
         }
         Ok(())
     }
@@ -281,54 +288,6 @@ fn push(
     writer.push(event)?;
     metrics.events.fetch_add(1, Ordering::Relaxed);
     Ok(())
-}
-
-fn finalize_events(partial: &Path, destination: &Path) -> Result<(), CaptureError> {
-    let contents =
-        std::fs::read_to_string(partial).map_err(|error| CaptureError::storage(partial, error))?;
-    let events = contents
-        .lines()
-        .filter(|line| !line.trim().is_empty())
-        .map(serde_json::from_str::<CursorEvent>)
-        .collect::<Result<Vec<_>, _>>()?;
-    write_atomic(destination, &serde_json::to_vec_pretty(&events)?)
-}
-
-fn finalize_telemetry(cursor_path: &Path, destination: &Path) -> Result<(), CaptureError> {
-    let events: Vec<CursorEvent> = serde_json::from_slice(
-        &std::fs::read(cursor_path).map_err(|error| CaptureError::storage(cursor_path, error))?,
-    )?;
-    write_atomic(
-        destination,
-        &serde_json::to_vec_pretty(&telemetry_from_events(&events))?,
-    )
-}
-
-fn finalize_shapes(cursor_path: &Path, destination: &Path) -> Result<(), CaptureError> {
-    let events: Vec<CursorEvent> = serde_json::from_slice(
-        &std::fs::read(cursor_path).map_err(|error| CaptureError::storage(cursor_path, error))?,
-    )?;
-    let shapes = events
-        .into_iter()
-        .filter_map(|event| match event {
-            CursorEvent::Shape {
-                cursor_id,
-                cursor_kind,
-                native_cursor_id,
-                hotspot,
-                ..
-            } => Some((
-                cursor_id,
-                CursorShapeCatalogEntry {
-                    cursor_kind,
-                    native_cursor_id,
-                    hotspot,
-                },
-            )),
-            _ => None,
-        })
-        .collect::<std::collections::BTreeMap<_, _>>();
-    write_atomic(destination, &serde_json::to_vec_pretty(&shapes)?)
 }
 
 fn backend_error(error: impl std::fmt::Display) -> CaptureError {

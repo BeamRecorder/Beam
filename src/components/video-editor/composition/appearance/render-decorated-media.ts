@@ -30,7 +30,7 @@ export function shadowBlurForAppearance(appearance: ClipAppearance | undefined) 
   return SHADOW_BLURS[style.shadowSize];
 }
 
-export const radiusForAppearance = (appearance: ClipAppearance | undefined) => {
+export const radiusForAppearance = (appearance: ClipAppearance | undefined, scale = 1) => {
   const value = appearance?.cornerRadius ?? DEFAULT_CLIP_APPEARANCE.cornerRadius;
   const radii: Record<string, number> = {
     none: 0,
@@ -39,7 +39,8 @@ export const radiusForAppearance = (appearance: ClipAppearance | undefined) => {
     lg: 24,
     full: Number.MAX_SAFE_INTEGER,
   };
-  return typeof value === 'number' ? value : (radii[value] ?? 16);
+  const radius = typeof value === 'number' ? value : (radii[value] ?? 16);
+  return radius * Math.max(0, scale);
 };
 export function applyClipShadow(
   ctx: Canvas2DContext,
@@ -61,8 +62,7 @@ export function applyClipShadow(
     style.shadowDirection === 'top-left' ? -offset : style.shadowDirection === 'bottom-right' ? offset : 0;
   ctx.shadowOffsetY = style.shadowDirection === 'top-left' ? -offset : style.shadowDirection === 'all' ? 0 : offset;
 }
-const mediaPath = (ctx: Canvas2DContext, rect: MediaRect, radius: number, mask?: 'circle' | 'squircle') => {
-  ctx.beginPath();
+const appendMediaPath = (ctx: Canvas2DContext, rect: MediaRect, radius: number, mask?: 'circle' | 'squircle') => {
   if (mask === 'circle') {
     ctx.arc(rect.x + rect.width / 2, rect.y + rect.height / 2, Math.min(rect.width, rect.height) / 2, 0, Math.PI * 2);
   } else if (mask === 'squircle') {
@@ -80,35 +80,50 @@ const mediaPath = (ctx: Canvas2DContext, rect: MediaRect, radius: number, mask?:
     ctx.roundRect(rect.x, rect.y, rect.width, rect.height, Math.min(radius, rect.width / 2, rect.height / 2));
   }
 };
+const mediaPath = (ctx: Canvas2DContext, rect: MediaRect, radius: number, mask?: 'circle' | 'squircle') => {
+  ctx.beginPath();
+  appendMediaPath(ctx, rect, radius, mask);
+};
+const clipOutsideMedia = (
+  ctx: Canvas2DContext,
+  rect: MediaRect,
+  radius: number,
+  mask: 'circle' | 'squircle' | undefined,
+  shadowBlur: number,
+) => {
+  // Canvas shadows need an opaque caster. Keep only the pixels outside the
+  // media shape so transparent image pixels never reveal that caster.
+  const edgeGuard = 1;
+  const padding = Math.max(2, shadowBlur * 4 + edgeGuard);
+  ctx.beginPath();
+  appendMediaPath(
+    ctx,
+    {
+      x: rect.x - padding,
+      y: rect.y - padding,
+      width: rect.width + padding * 2,
+      height: rect.height + padding * 2,
+    },
+    0,
+  );
+  appendMediaPath(
+    ctx,
+    {
+      x: rect.x - edgeGuard,
+      y: rect.y - edgeGuard,
+      width: rect.width + edgeGuard * 2,
+      height: rect.height + edgeGuard * 2,
+    },
+    radius + edgeGuard,
+    mask,
+  );
+  ctx.clip('evenodd');
+};
 const clipRect = (ctx: Canvas2DContext, rect: MediaRect, radius: number, mask?: 'circle' | 'squircle') => {
   mediaPath(ctx, rect, radius, mask);
   ctx.clip();
 };
-export function drawDecoratedMedia(ctx: Canvas2DContext, options: DecoratedMediaOptions) {
-  const appearance = { ...DEFAULT_CLIP_APPEARANCE, ...options.appearance };
-  const windowsOptions = {
-    showMenu: appearance.frameShowMenu,
-    showScrollbars: appearance.frameShowScrollbars,
-    chromeScale: appearance.frameChromeScale,
-  };
-  const content = frameContentRect(options.rect, appearance.frame, windowsOptions);
-  const outerRadius = Math.min(
-    options.mask === 'circle' ? Number.MAX_SAFE_INTEGER : radiusForAppearance(appearance),
-    options.rect.width / 2,
-    options.rect.height / 2,
-  );
-  if (appearance.shadowSize !== 'none') {
-    ctx.save();
-    applyClipShadow(ctx, appearance, options.source, options.sourceRect, options.shadowScale);
-    ctx.fillStyle = appearance.frame !== 'none' ? appearance.frameColor : '#000000';
-    mediaPath(ctx, options.rect, outerRadius, options.mask);
-    ctx.fill();
-    ctx.restore();
-  }
-  const title = appearance.frameTitle.trim() || options.title;
-  ctx.save();
-  clipRect(ctx, options.rect, outerRadius, options.mask);
-  drawFrameChrome(ctx, options.rect, appearance.frame, title, true, appearance.frameColor, windowsOptions);
+const drawMediaSource = (ctx: Canvas2DContext, options: DecoratedMediaOptions, content: MediaRect) => {
   ctx.save();
   const scaleX = options.mirrored ? -1 : 1;
   const scaleY = options.mirroredY ? -1 : 1;
@@ -134,6 +149,99 @@ export function drawDecoratedMedia(ctx: Canvas2DContext, options: DecoratedMedia
     );
   else ctx.drawImage(options.source, content.x, content.y, content.width, content.height);
   ctx.restore();
+};
+
+type AlphaShadowSurface = OffscreenCanvas | HTMLCanvasElement;
+const alphaShadowSurfaces = new WeakMap<object, { key: string; surface: AlphaShadowSurface }>();
+const MAX_ALPHA_SHADOW_SURFACE_SIZE = 4_096;
+
+const createAlphaShadowSurface = (width: number, height: number): AlphaShadowSurface | null => {
+  if (typeof OffscreenCanvas !== 'undefined') return new OffscreenCanvas(width, height);
+  if (typeof document === 'undefined') return null;
+  const surface = document.createElement('canvas');
+  surface.width = width;
+  surface.height = height;
+  return surface;
+};
+
+const alphaShadowSurface = (options: DecoratedMediaOptions, radius: number): AlphaShadowSurface | null => {
+  const logicalWidth = Math.max(1, options.rect.width);
+  const logicalHeight = Math.max(1, options.rect.height);
+  const renderScale = Math.min(1, MAX_ALPHA_SHADOW_SURFACE_SIZE / Math.max(logicalWidth, logicalHeight));
+  const width = Math.max(1, Math.ceil(logicalWidth * renderScale));
+  const height = Math.max(1, Math.ceil(logicalHeight * renderScale));
+  const source = options.sourceRect;
+  const key = [
+    width,
+    height,
+    radius,
+    options.mask ?? '',
+    options.mirrored === true,
+    options.mirroredY === true,
+    source?.x ?? '',
+    source?.y ?? '',
+    source?.width ?? '',
+    source?.height ?? '',
+  ].join(':');
+  const sourceKey = options.source as object;
+  const cached = alphaShadowSurfaces.get(sourceKey);
+  if (cached?.key === key) return cached.surface;
+  const surface = createAlphaShadowSurface(width, height);
+  const context = surface?.getContext('2d') as Canvas2DContext | null | undefined;
+  if (!surface || !context) return null;
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = 'high';
+  context.clearRect(0, 0, width, height);
+  context.save();
+  context.scale(width / logicalWidth, height / logicalHeight);
+  const rect = { x: 0, y: 0, width: logicalWidth, height: logicalHeight };
+  clipRect(context, rect, radius, options.mask);
+  drawMediaSource(context, { ...options, rect }, rect);
+  context.restore();
+  alphaShadowSurfaces.set(sourceKey, { key, surface });
+  return surface;
+};
+
+export function drawDecoratedMedia(ctx: Canvas2DContext, options: DecoratedMediaOptions) {
+  const appearance = { ...DEFAULT_CLIP_APPEARANCE, ...options.appearance };
+  const appearanceScale = Math.max(0, options.shadowScale ?? 1);
+  const windowsOptions = {
+    showMenu: appearance.frameShowMenu,
+    showScrollbars: appearance.frameShowScrollbars,
+    chromeScale: appearance.frameChromeScale,
+  };
+  const content = frameContentRect(options.rect, appearance.frame, windowsOptions);
+  const outerRadius = Math.min(
+    options.mask === 'circle' ? Number.MAX_SAFE_INTEGER : radiusForAppearance(appearance, appearanceScale),
+    options.rect.width / 2,
+    options.rect.height / 2,
+  );
+  const shadowBlur = shadowBlurForAppearance(appearance) * appearanceScale;
+  let sourceDrawn = false;
+  if (shadowBlur > 0) {
+    const alphaSurface =
+      options.shadowFollowsSourceAlpha && appearance.frame === 'none' ? alphaShadowSurface(options, outerRadius) : null;
+    if (alphaSurface) {
+      ctx.save();
+      applyClipShadow(ctx, appearance, options.source, options.sourceRect, options.shadowScale);
+      ctx.drawImage(alphaSurface, options.rect.x, options.rect.y, options.rect.width, options.rect.height);
+      ctx.restore();
+      sourceDrawn = true;
+    } else {
+      ctx.save();
+      applyClipShadow(ctx, appearance, options.source, options.sourceRect, options.shadowScale);
+      clipOutsideMedia(ctx, options.rect, outerRadius, options.mask, shadowBlur);
+      ctx.fillStyle = appearance.frame !== 'none' ? appearance.frameColor : '#000000';
+      mediaPath(ctx, options.rect, outerRadius, options.mask);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+  const title = appearance.frameTitle.trim() || options.title;
+  ctx.save();
+  clipRect(ctx, options.rect, outerRadius, options.mask);
+  drawFrameChrome(ctx, options.rect, appearance.frame, title, true, appearance.frameColor, windowsOptions);
+  if (!sourceDrawn) drawMediaSource(ctx, options, content);
   if (appearance.frame !== 'none')
     drawFrameChrome(ctx, options.rect, appearance.frame, title, false, appearance.frameColor, windowsOptions);
   ctx.restore();

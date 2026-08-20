@@ -167,6 +167,7 @@ dependencies = [
  "core-graphics",
  "crossbeam-channel",
  "evdev",
+ "foreign-types",
  "fs2",
  "futures-util",
  "libc",

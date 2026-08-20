@@ -50,6 +50,9 @@
     "lg": "大",
     "full": "完整"
   },
+  "TransitionsPanel": {
+    "curve": "曲线"
+  },
   "CanvasPanel": {
     "backgroundType": "背景类型",
     "image": "图片",

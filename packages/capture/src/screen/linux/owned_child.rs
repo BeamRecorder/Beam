@@ -15,7 +15,7 @@ pub(super) fn test_lock() -> std::sync::MutexGuard<'static, ()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
     LOCK.get_or_init(|| Mutex::new(()))
         .lock()
-        .expect("owned child test lock")
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 /// Put a native helper in its own process group and bind it to the capture

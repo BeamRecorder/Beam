@@ -61,7 +61,9 @@ const {
   beginZoomMove,
   beginZoomTrim,
   hoverZoomTimeMs,
+  hoverZoomDurationMs,
   hoverCaptionTimeMs,
+  hoverCaptionDurationMs,
   hoverAt,
   leaveTrack,
   addAt,
@@ -69,8 +71,6 @@ const {
   zoomScale,
   draggedTrackId,
   beginReorder,
-  newZoomDurationMs,
-  DEFAULT_CAPTION_DURATION_MS,
 } = useTimelineTracks(props, emit);
 void [tracksScrollRef, sidebarScrollRef, tracksViewportRef, ticksAreaRef];
 const {
@@ -245,7 +245,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
               <div
                 v-if="hoverZoomTimeMs !== null"
                 class="cursor-zoom-indicator preview-ghost"
-                :style="percentageStyle(hoverZoomTimeMs, newZoomDurationMs)"
+                :style="percentageStyle(hoverZoomTimeMs, hoverZoomDurationMs)"
               >
                 {{ t('addZoom') }}
               </div>
@@ -293,7 +293,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
             :selected-clip-id="selectedClipId"
             :selected-clip-ids="[...selectedClipIdSet]"
             :hover-caption-time-ms="hoverCaptionTimeMs"
-            :default-caption-duration-ms="DEFAULT_CAPTION_DURATION_MS"
+            :hover-caption-duration-ms="hoverCaptionDurationMs"
             :percentage-style="percentageStyle"
             :displayed-clip="displayedClip"
             :trim-state-for="trimStateFor"

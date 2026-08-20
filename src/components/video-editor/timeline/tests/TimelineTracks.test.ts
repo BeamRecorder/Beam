@@ -919,7 +919,7 @@ describe('TimelineTracks', () => {
     await mounted!.get('.keyboard-caption-track .track-content').trigger('click', { clientX: 950 });
     expect(mounted!.emitted('add:caption') ?? []).toHaveLength(0);
     await mounted!.get('.text-caption-track .track-content').trigger('click', { clientX: 950 });
-    expect(mounted!.emitted('add:caption')).toContainEqual([7_300]);
+    expect(mounted!.emitted('add:caption')).toContainEqual([{ startMs: 7_300, durationMs: 2_000 }]);
   });
 
   it('does not render a keyboard track when the composition has no keyboard caption', async () => {
@@ -992,7 +992,7 @@ describe('TimelineTracks', () => {
     expect(mounted!.get('.cursor-zoom-indicator:not(.preview-ghost)').classes()).not.toContain('paste-arrival');
   });
 
-  it('previews and adds zooms/captions only in available gaps', async () => {
+  it('previews and adds zooms/captions fitted into available gaps', async () => {
     const mounted = await mountTracks();
     const cursor = mounted!.get('.cursor-content');
     const annotation = mounted!.get('.annotation-content');
@@ -1000,23 +1000,23 @@ describe('TimelineTracks', () => {
     await cursor.trigger('mousemove', { clientX: 900 });
     expect(mounted!.find('.cursor-zoom-indicator.preview-ghost').exists()).toBe(true);
     await cursor.trigger('click', { clientX: 900 });
-    expect(mounted!.emitted('add:zoom')).toContainEqual([7_200]);
+    expect(mounted!.emitted('add:zoom')).toContainEqual([{ startMs: 7_200, durationMs: 1_200 }]);
     await cursor.trigger('mouseleave');
     expect(mounted!.find('.cursor-zoom-indicator.preview-ghost').exists()).toBe(false);
 
     await cursor.trigger('mousemove', { clientX: 300 });
-    expect(mounted!.find('.cursor-zoom-indicator.preview-ghost').exists()).toBe(false);
+    expect(mounted!.find('.cursor-zoom-indicator.preview-ghost').exists()).toBe(true);
     await cursor.trigger('click', { clientX: 300 });
-    expect(mounted!.emitted('add:zoom')).toHaveLength(1);
+    expect(mounted!.emitted('add:zoom')).toContainEqual([{ startMs: 800, durationMs: 1_200 }]);
 
     await annotation.trigger('mousemove', { clientX: 600 });
-    expect(mounted!.find('.annotation-indicator.preview-ghost').exists()).toBe(false);
+    expect(mounted!.find('.annotation-indicator.preview-ghost').exists()).toBe(true);
     await annotation.trigger('click', { clientX: 600 });
-    expect(mounted!.emitted('add:caption') ?? []).toHaveLength(0);
+    expect(mounted!.emitted('add:caption')).toContainEqual([{ startMs: 3_000, durationMs: 2_000 }]);
     await annotation.trigger('mousemove', { clientX: 950 });
     expect(mounted!.find('.annotation-indicator.preview-ghost').exists()).toBe(true);
     await annotation.trigger('click', { clientX: 950 });
-    expect(mounted!.emitted('add:caption')).toContainEqual([7_300]);
+    expect(mounted!.emitted('add:caption')).toContainEqual([{ startMs: 7_300, durationMs: 2_000 }]);
     await annotation.trigger('mouseleave');
   });
 
@@ -1031,14 +1031,16 @@ describe('TimelineTracks', () => {
     expect((ghost.element as HTMLElement).style.width).toBe('50%');
   });
 
-  it('uses the configured zoom duration when checking hover collisions', async () => {
+  it('shifts the configured zoom duration into the free gap around a collision', async () => {
     const mounted = await mountTracks({ newZoomDurationMs: 5_000 });
     const cursor = mounted!.get('.cursor-content');
 
     await cursor.trigger('mousemove', { clientX: 700 });
-    expect(mounted!.find('.cursor-zoom-indicator.preview-ghost').exists()).toBe(false);
+    const ghost = mounted!.get('.cursor-zoom-indicator.preview-ghost');
+    expect((ghost.element as HTMLElement).style.left).toBe('35%');
+    expect((ghost.element as HTMLElement).style.width).toBe('50%');
     await cursor.trigger('click', { clientX: 700 });
-    expect(mounted!.emitted('add:zoom') ?? []).toHaveLength(0);
+    expect(mounted!.emitted('add:zoom')).toContainEqual([{ startMs: 3_500, durationMs: 5_000 }]);
   });
 
   it('emits the centered start for the configured zoom duration', async () => {
@@ -1047,7 +1049,23 @@ describe('TimelineTracks', () => {
 
     await cursor.trigger('click', { clientX: 700 });
 
-    expect(mounted!.emitted('add:zoom')).toContainEqual([3_300]);
+    expect(mounted!.emitted('add:zoom')).toContainEqual([{ startMs: 3_300, durationMs: 5_000 }]);
+  });
+
+  it('shows and emits a shortened zoom fitted into the free gap after an existing eight-second zoom', async () => {
+    const mounted = await mountTracks({
+      zoomElements: [zoom({ startMs: 0, endMs: 8_000 })],
+      newZoomDurationMs: 5_000,
+    });
+    const cursor = mounted!.get('.cursor-content');
+
+    await cursor.trigger('mousemove', { clientX: 1_020 });
+    const ghost = mounted!.get('.cursor-zoom-indicator.preview-ghost');
+    expect(ghost.attributes('style')).toContain('left: 80%');
+    expect(ghost.attributes('style')).toContain('width: 20%');
+
+    await cursor.trigger('click', { clientX: 1_020 });
+    expect(mounted!.emitted('add:zoom')).toContainEqual([{ startMs: 8_000, durationMs: 2_000 }]);
   });
 
   it('moves and trims linked clips and zooms with clamped timeline bounds', async () => {
@@ -1734,6 +1752,10 @@ describe('TimelineTracks', () => {
     const mounted = await mountTracks({
       composition: initialComp,
     });
+    // Keep the shared throbber clock deterministic: the suite's default RAF
+    // mock runs callbacks in microtasks, while the throbber intentionally
+    // schedules another RAF from each callback.
+    queueAnimationFrames();
 
     const captionLabel = mounted!.find('.text-caption-track .caption-label-text');
     expect(captionLabel.exists()).toBe(true);

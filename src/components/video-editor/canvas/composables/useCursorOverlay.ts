@@ -27,6 +27,8 @@ import {
 import type { OutputCanvasSettings } from '../output-canvas';
 import { cursorRippleAt } from '../../composables/cursor-ripple';
 import { sourceTimeAt } from '~/media/shared';
+import { resolveClipTransitionState } from '~/media/shared/clip-transitions';
+import { drawWithClipTransition, transitionPointWithClip } from '../../composition/transitions/render-transition';
 
 export interface UseCursorOverlayOptions {
   cursorSelection: () => CursorSelection;
@@ -212,6 +214,11 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
     logicalWidth: number,
     drawInCameraSpace: (drawContent: () => void) => void,
   ) => {
+    const screen = options.screenClip();
+    if (!screen || !options.isScreenEnabled()) {
+      updateCursorBounds(null);
+      return;
+    }
     const cursorData = options.editorData()?.cursor;
     if (!cursorData?.available) {
       updateCursorBounds(null);
@@ -225,85 +232,104 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
       return;
     }
     const time = cursorTime();
+    const screenTransition = resolveClipTransitionState(screen, options.currentTime() * 1_000);
     const state = cursorStateAt(cursorData.events, time);
     const { player, motion: motionState } = motionStateAt(cursorData.events, time, videoWidth, videoHeight, state);
-    drawInCameraSpace(() => {
-      const previewScale = previewScaleFor(videoWindow);
-      for (const button of buttonEventsBetween(cursorData.events, Math.max(0, time - 0.5), time)) {
-        const effect = settingsForButton(button.button);
-        const style = effect?.rippleStyle ?? (effect?.rippleEnabled ? 'single' : 'none');
-        const ripple = effect?.rippleEnabled
-          ? cursorRippleAt(time - button.sessionNs / 1_000_000_000, effect.rippleSize, style)
-          : null;
-        const stateAtClick = cursorStateAt(cursorData.events, button.sessionNs / 1_000_000_000);
-        if (!effect || !ripple || !stateAtClick) continue;
-        const target = player.timeline.targetAt(button.sessionNs / 1_000_000_000);
-        const position = positionAt(
-          target ? { ...stateAtClick, x: target.x, y: target.y } : stateAtClick,
-          videoWindow,
-          videoWidth,
-          videoHeight,
-        );
-        for (const ring of ripple.rings) {
-          if (ring.filled) {
-            ctx.fillStyle = getRippleStyleColor(effect.rippleColor, ring.opacity);
-            ctx.beginPath();
-            ctx.arc(position.x, position.y, ring.radius * previewScale, 0, Math.PI * 2);
-            ctx.fill();
-          } else {
-            ctx.strokeStyle = getRippleStyleColor(effect.rippleColor, ring.opacity);
-            ctx.lineWidth = Math.max(1, 2.5 * previewScale);
-            ctx.beginPath();
-            ctx.arc(position.x, position.y, ring.radius * previewScale, 0, Math.PI * 2);
-            ctx.stroke();
+    drawInCameraSpace(() =>
+      drawWithClipTransition(
+        ctx,
+        screen,
+        options.currentTime() * 1_000,
+        { x: videoWindow.dx, y: videoWindow.dy, width: videoWindow.dw, height: videoWindow.dh },
+        () => {
+          const previewScale = previewScaleFor(videoWindow);
+          for (const button of buttonEventsBetween(cursorData.events, Math.max(0, time - 0.5), time)) {
+            const effect = settingsForButton(button.button);
+            const style = effect?.rippleStyle ?? (effect?.rippleEnabled ? 'single' : 'none');
+            const ripple = effect?.rippleEnabled
+              ? cursorRippleAt(time - button.sessionNs / 1_000_000_000, effect.rippleSize, style)
+              : null;
+            const stateAtClick = cursorStateAt(cursorData.events, button.sessionNs / 1_000_000_000);
+            if (!effect || !ripple || !stateAtClick) continue;
+            const target = player.timeline.targetAt(button.sessionNs / 1_000_000_000);
+            const position = positionAt(
+              target ? { ...stateAtClick, x: target.x, y: target.y } : stateAtClick,
+              videoWindow,
+              videoWidth,
+              videoHeight,
+            );
+            for (const ring of ripple.rings) {
+              if (ring.filled) {
+                ctx.fillStyle = getRippleStyleColor(effect.rippleColor, ring.opacity);
+                ctx.beginPath();
+                ctx.arc(position.x, position.y, ring.radius * previewScale, 0, Math.PI * 2);
+                ctx.fill();
+              } else {
+                ctx.strokeStyle = getRippleStyleColor(effect.rippleColor, ring.opacity);
+                ctx.lineWidth = Math.max(1, 2.5 * previewScale);
+                ctx.beginPath();
+                ctx.arc(position.x, position.y, ring.radius * previewScale, 0, Math.PI * 2);
+                ctx.stroke();
+              }
+            }
           }
-        }
-      }
-      const image = activeCursorImage();
-      if (!state?.visible || !image?.complete || image.naturalWidth <= 0 || !motionState) {
-        updateCursorBounds(null);
-        return;
-      }
-      const size = options.cursorSize() * previewScale;
-      const pack = options.cursorPack() ?? MACOS_CURSOR_PACK;
-      const selection = options.cursorPack()
-        ? options.cursorSelection()
-        : { packId: MACOS_CURSOR_PACK.id, mode: 'automatic' as const, cursorId: null };
-      const geometry = cursorGeometryAtSize(cursorAssetAt(pack, selection, motionState), size);
-      const click = buttonEventsBetween(cursorData.events, Math.max(0, time - 0.28), time)
-        .reverse()
-        .find((event) => settingsForButton(event.button)?.springEnabled);
-      const age = click ? Math.max(0, time - click.sessionNs / 1_000_000_000) : Infinity;
-      const spring = click ? settingsForButton(click.button) : null;
-      const scale = cursorClickSpringScale(age, Boolean(spring?.springEnabled), spring?.springIntensity ?? 0);
-      const cursorPosition = positionAt(motionState, videoWindow, videoWidth, videoHeight);
-      updateCursorBounds(cursorCanvasBounds(cursorPosition, geometry, videoWindow, scale));
-      const trail = motionBlurTrail(
-        { x: motionState.x, y: motionState.y },
-        { x: motionState.previousX, y: motionState.previousY },
-        motionState.deltaSeconds,
-        options.motion().motionBlur,
-        { width: videoWindow.dw, height: videoWindow.dh },
-      );
-      for (const sample of trail) {
-        const sampleState = { ...motionState, x: sample.x, y: sample.y };
-        const samplePosition = positionAt(sampleState, videoWindow, videoWidth, videoHeight);
-        ctx.save();
-        ctx.globalAlpha = sample.alpha;
-        if (options.enableShadow()) {
-          ctx.shadowColor = options.shadowColor();
-          const shadowBlur = options.shadowBlur() * previewScale;
-          ctx.shadowBlur = shadowBlur;
-          const offset = cursorShadowOffset(shadowBlur, options.shadowDirection());
-          ctx.shadowOffsetX = offset.x;
-          ctx.shadowOffsetY = offset.y;
-        }
-        ctx.translate(samplePosition.x, samplePosition.y);
-        ctx.scale(scale, scale);
-        ctx.drawImage(image, -geometry.hotspot.x, -geometry.hotspot.y, geometry.width, geometry.height);
-        ctx.restore();
-      }
-    });
+          const image = activeCursorImage();
+          if (!state?.visible || !image?.complete || image.naturalWidth <= 0 || !motionState) {
+            updateCursorBounds(null);
+            return;
+          }
+          const size = options.cursorSize() * previewScale;
+          const pack = options.cursorPack() ?? MACOS_CURSOR_PACK;
+          const selection = options.cursorPack()
+            ? options.cursorSelection()
+            : { packId: MACOS_CURSOR_PACK.id, mode: 'automatic' as const, cursorId: null };
+          const geometry = cursorGeometryAtSize(cursorAssetAt(pack, selection, motionState), size);
+          const click = buttonEventsBetween(cursorData.events, Math.max(0, time - 0.28), time)
+            .reverse()
+            .find((event) => settingsForButton(event.button)?.springEnabled);
+          const age = click ? Math.max(0, time - click.sessionNs / 1_000_000_000) : Infinity;
+          const spring = click ? settingsForButton(click.button) : null;
+          const scale = cursorClickSpringScale(age, Boolean(spring?.springEnabled), spring?.springIntensity ?? 0);
+          const cursorPosition = positionAt(motionState, videoWindow, videoWidth, videoHeight);
+          const transitionedCursorPosition = transitionPointWithClip(
+            screen,
+            options.currentTime() * 1_000,
+            { x: videoWindow.dx, y: videoWindow.dy, width: videoWindow.dw, height: videoWindow.dh },
+            cursorPosition,
+          );
+          updateCursorBounds(
+            screenTransition.opacity > 0
+              ? cursorCanvasBounds(transitionedCursorPosition, geometry, videoWindow, scale * screenTransition.scale)
+              : null,
+          );
+          const trail = motionBlurTrail(
+            { x: motionState.x, y: motionState.y },
+            { x: motionState.previousX, y: motionState.previousY },
+            motionState.deltaSeconds,
+            options.motion().motionBlur,
+            { width: videoWindow.dw, height: videoWindow.dh },
+          );
+          for (const sample of trail) {
+            const sampleState = { ...motionState, x: sample.x, y: sample.y };
+            const samplePosition = positionAt(sampleState, videoWindow, videoWidth, videoHeight);
+            ctx.save();
+            ctx.globalAlpha *= sample.alpha;
+            if (options.enableShadow()) {
+              ctx.shadowColor = options.shadowColor();
+              const shadowBlur = options.shadowBlur() * previewScale;
+              ctx.shadowBlur = shadowBlur;
+              const offset = cursorShadowOffset(shadowBlur, options.shadowDirection());
+              ctx.shadowOffsetX = offset.x;
+              ctx.shadowOffsetY = offset.y;
+            }
+            ctx.translate(samplePosition.x, samplePosition.y);
+            ctx.scale(scale, scale);
+            ctx.drawImage(image, -geometry.hotspot.x, -geometry.hotspot.y, geometry.width, geometry.height);
+            ctx.restore();
+          }
+        },
+      ),
+    );
   };
 
   const cursorPositionForKeyboardCaption = (
@@ -321,7 +347,12 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
     const state = cursorStateAt(cursorData.events, time);
     const motionState = motionStateAt(cursorData.events, time, videoWidth, videoHeight, state).motion;
     if (!state?.visible || !motionState?.visible) return null;
-    const raw = positionAt(motionState, videoWindow, videoWidth, videoHeight);
+    const raw = transitionPointWithClip(
+      screen,
+      timelineTime * 1_000,
+      { x: videoWindow.dx, y: videoWindow.dy, width: videoWindow.dw, height: videoWindow.dh },
+      positionAt(motionState, videoWindow, videoWidth, videoHeight),
+    );
     return {
       x: videoWindow.dx + videoWindow.dw / 2 + videoWindow.scale * (raw.x - videoWindow.focusX),
       y: videoWindow.dy + videoWindow.dh / 2 + videoWindow.scale * (raw.y - videoWindow.focusY),

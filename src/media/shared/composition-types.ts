@@ -18,6 +18,8 @@ export type TransitionPreset =
 export interface ClipTransition {
   preset: TransitionPreset;
   durationMs: number;
+  /** Visual easing exponent. Omitted projects use the shared default. */
+  easingPower?: number;
 }
 
 export interface ClipTransitions {

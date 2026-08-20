@@ -22,7 +22,8 @@ pub fn finalize_input_events(partial: &Path, destination: &Path) -> Result<(), C
     write_atomic(
         destination,
         &serde_json::to_vec_pretty(&InputEventSidecar::new(events))?,
-    )
+    )?;
+    std::fs::remove_file(partial).map_err(|error| CaptureError::storage(partial, error))
 }
 
 impl InputEventWriter {

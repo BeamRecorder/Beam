@@ -49,6 +49,8 @@ const finite = (value) => typeof value === 'number' && Number.isFinite(value);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const defaultZoomMotionBlur = () => ({ enabled: true, intensity: 0.55 });
 const canvasTransitionKinds = new Set(['fade', 'slide', 'zoom', 'blur']);
+const canvasTransitionEasingPower = (value) =>
+  value === undefined || !finite(value) ? undefined : clamp(Math.round(value), 1, 5);
 
 const canvasTransition = (value) => {
   if (!value || typeof value !== 'object' || !value.preset || !canvasTransitionKinds.has(value.preset.kind))
@@ -60,7 +62,12 @@ const canvasTransition = (value) => {
     return null;
   if (!finite(value.durationMs)) return null;
   const durationMs = clamp(Math.round(value.durationMs), 1, 5000);
-  return { preset: { ...preset }, durationMs };
+  const easingPower = canvasTransitionEasingPower(value.easingPower);
+  return {
+    preset: { ...preset },
+    durationMs,
+    ...(easingPower === undefined ? {} : { easingPower }),
+  };
 };
 
 const canvasTransitions = (value) => {

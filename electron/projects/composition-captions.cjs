@@ -52,7 +52,7 @@ const normalizeCaptionStyle = (value) => {
     lineHeight: finite(style.lineHeight) ? Math.max(0.8, Math.min(2, style.lineHeight)) : 1.2,
     letterSpacing: finite(style.letterSpacing) ? Math.max(-5, Math.min(20, style.letterSpacing)) : 0,
     color: style.color,
-    fontSize: Math.max(1, style.fontSize),
+    fontSize: Math.max(1, Math.min(256, style.fontSize)),
     wrap: style.wrap,
     shadowColor: style.shadowColor,
     shadowBlur: Math.max(0, style.shadowBlur),

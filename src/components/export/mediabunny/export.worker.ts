@@ -139,6 +139,8 @@ async function run(request: ExportRequest, preparedCursorImages: PreparedCursorI
     const canvas = new OffscreenCanvas(request.snapshot.canvas.width, request.snapshot.canvas.height);
     const context = canvas.getContext('2d');
     if (!context) throw new Error('OffscreenCanvas 2D context is unavailable.');
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
     const setupStarted = performance.now();
     output = await ExportWorkerOutput.create(request, canvas, audioClips.length > 0);
     outputCancelPromise = null;

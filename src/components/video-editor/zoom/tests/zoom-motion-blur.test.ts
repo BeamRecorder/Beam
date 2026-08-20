@@ -120,6 +120,130 @@ describe('zoom motion-blur sample plan', () => {
     expect(target.drawImage).toHaveBeenCalledTimes(2);
   });
 
+  it('requests an alpha-enabled context so transparent scene pixels stay transparent', () => {
+    const sampleContext = {
+      setTransform: vi.fn(),
+      clearRect: vi.fn(),
+      globalAlpha: 1,
+      globalCompositeOperation: 'source-over',
+      filter: 'none',
+      shadowColor: 'transparent',
+      shadowBlur: 0,
+      shadowOffsetX: 0,
+      shadowOffsetY: 0,
+    } as unknown as Canvas2DContext;
+    const surface = {
+      width: 32,
+      height: 18,
+      getContext: vi.fn(() => sampleContext),
+    } as unknown as MotionBlurSurface;
+    const target = {
+      globalAlpha: 1,
+      save: vi.fn(),
+      drawImage: vi.fn(),
+      restore: vi.fn(),
+    } as unknown as Canvas2DContext;
+
+    compositeIsolatedMotionBlurSample({
+      target,
+      surface,
+      logicalWidth: 32,
+      logicalHeight: 18,
+      pixelScale: 1,
+      sample: { camera: camera(0.5, 0.5, 1), weight: 1 },
+      accumulatedWeight: 0,
+      draw: vi.fn(),
+    });
+
+    expect(surface.getContext).toHaveBeenCalledWith('2d', { alpha: true, desynchronized: true });
+  });
+
+  it('clears the alpha surface before drawing every isolated sample', () => {
+    const sampleContext = {
+      setTransform: vi.fn(),
+      clearRect: vi.fn(),
+      globalAlpha: 1,
+      globalCompositeOperation: 'source-over',
+      filter: 'none',
+      shadowColor: 'transparent',
+      shadowBlur: 0,
+      shadowOffsetX: 0,
+      shadowOffsetY: 0,
+    } as unknown as Canvas2DContext;
+    const surface = {
+      width: 32,
+      height: 18,
+      getContext: vi.fn(() => sampleContext),
+    } as unknown as MotionBlurSurface;
+    const target = {
+      globalAlpha: 1,
+      save: vi.fn(),
+      drawImage: vi.fn(),
+      restore: vi.fn(),
+    } as unknown as Canvas2DContext;
+    const draw = vi.fn();
+    const sample = { camera: camera(0.5, 0.5, 1), weight: 0.5 };
+
+    compositeIsolatedMotionBlurSample({
+      target,
+      surface,
+      logicalWidth: 32,
+      logicalHeight: 18,
+      pixelScale: 1,
+      sample,
+      accumulatedWeight: 0,
+      draw,
+    });
+
+    expect(sampleContext.clearRect).toHaveBeenCalledWith(0, 0, 32, 18);
+    const clearRect = sampleContext.clearRect as ReturnType<typeof vi.fn>;
+    expect(clearRect.mock.invocationCallOrder[0]).toBeLessThan(
+      draw.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY,
+    );
+  });
+
+  it('composites a transparent sample with the accumulated source-over alpha', () => {
+    const sampleContext = {
+      setTransform: vi.fn(),
+      clearRect: vi.fn(),
+      globalAlpha: 1,
+      globalCompositeOperation: 'source-over',
+      filter: 'none',
+      shadowColor: 'transparent',
+      shadowBlur: 0,
+      shadowOffsetX: 0,
+      shadowOffsetY: 0,
+    } as unknown as Canvas2DContext;
+    const surface = {
+      width: 32,
+      height: 18,
+      getContext: vi.fn(() => sampleContext),
+    } as unknown as MotionBlurSurface;
+    const target = {
+      globalAlpha: 1,
+      save: vi.fn(),
+      drawImage: vi.fn(),
+      restore: vi.fn(),
+    } as unknown as Canvas2DContext;
+    const sample = { camera: camera(0.5, 0.5, 1), weight: 0.25 };
+
+    compositeIsolatedMotionBlurSample({
+      target,
+      surface,
+      logicalWidth: 32,
+      logicalHeight: 18,
+      pixelScale: 1,
+      sample,
+      accumulatedWeight: 0.5,
+      draw: vi.fn(),
+    });
+
+    expect(target.globalAlpha).toBeCloseTo(1 / 3, 12);
+    expect(target.save).toHaveBeenCalledOnce();
+    expect(target.drawImage).toHaveBeenCalledWith(surface, 0, 0, 32, 18, 0, 0, 32, 18);
+    expect(target.restore).toHaveBeenCalledOnce();
+  });
+
   it('returns false without drawing when the motion-blur surface has no 2D context', () => {
     const target = {
       globalAlpha: 1,

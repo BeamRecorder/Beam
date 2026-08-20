@@ -6,13 +6,16 @@ import * as compositionCamera from '../../../zoom/composition-camera';
 import type { ClipComposition, NormalizedTransform, VisualClip } from '~/media/shared/composition-types';
 import type { MediaFrame } from '~/media/shared';
 import type { ZoomElement } from '../../../zoom/zoom-types';
+import type { compositeIsolatedMotionBlurSample } from '../../../zoom/zoom-motion-blur-compositor';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+
+type CompositeMotionBlurOptions = Parameters<typeof compositeIsolatedMotionBlurSample>[0];
 
 const drawDecoratedMedia = vi.hoisted(() => vi.fn());
 const motionBlurCompositor = vi.hoisted(() => ({
   createMotionBlurSurface: vi.fn((width: number, height: number) => ({ width, height })),
   resizeMotionBlurSurface: vi.fn(),
-  compositeIsolatedMotionBlurSample: vi.fn(() => true),
+  compositeIsolatedMotionBlurSample: vi.fn((_options: CompositeMotionBlurOptions) => true),
 }));
 vi.mock('../../../composition/appearance/render-decorated-media', () => ({ drawDecoratedMedia }));
 vi.mock('../../../zoom/zoom-motion-blur-compositor', () => motionBlurCompositor);
@@ -78,6 +81,7 @@ const context = () =>
     beginPath: vi.fn(),
     roundRect: vi.fn(),
     clip: vi.fn(),
+    clearRect: vi.fn(),
     fillRect: vi.fn(),
     fillText: vi.fn(),
     translate: vi.fn(),
@@ -450,6 +454,22 @@ describe('useCameraZoom', () => {
 
     expect(motionBlurCompositor.createMotionBlurSurface).toHaveBeenCalledWith(1_000, 563);
     expect(motionBlurCompositor.resizeMotionBlurSurface).toHaveBeenCalledWith(expect.anything(), 1_000, 563);
+  });
+
+  it('clears isolated preview motion-blur samples without filling them opaque before drawing layers', () => {
+    mountComposable({ enabled: true, intensity: 1 });
+    const sampleContext = context();
+    vi.mocked(motionBlurCompositor.compositeIsolatedMotionBlurSample).mockImplementation(({ draw, sample }) => {
+      sampleContext.clearRect(0, 0, 800, 450);
+      draw(sampleContext, sample);
+      return true;
+    });
+
+    state.drawVideoWindow(context(), 800, 450, frame());
+
+    expect(sampleContext.clearRect).toHaveBeenCalledWith(0, 0, 800, 450);
+    expect(sampleContext.fillRect).not.toHaveBeenCalled();
+    expect(drawDecoratedMedia).toHaveBeenCalled();
   });
 
   it('does not sample shutter endpoints when zoom motion blur is disabled', () => {

@@ -11,20 +11,20 @@ use std::{
 
 use core_graphics::{
     event::{CGEvent, CGMouseButton},
-    event_source::{CGEventSource, CGEventSourceStateID},
+    event_source::CGEventSourceStateID,
 };
+use foreign_types::ForeignType;
 
 use crate::{
     CaptureError,
     cursor::mac::appkit::current_system_shape,
     cursor::{
-        CaptureRegion, CursorEvent, CursorEventWriter, CursorShapeCatalogEntry, map_coordinates,
-        move_sample_due, telemetry_from_events,
+        CaptureRegion, CursorEvent, CursorEventWriter, CursorRecordingPaths, finalize_after_worker,
+        map_coordinates, move_sample_due,
     },
-    input::{InputEvent, InputEventWriter, ShortcutSampler, finalize_input_events},
+    input::{InputEvent, InputEventWriter, ShortcutSampler},
     model::SourceId,
     session::StartGate,
-    storage::write_atomic,
 };
 
 #[derive(Debug, Default)]
@@ -51,6 +51,7 @@ pub struct MacCursorRecording {
     partial: PathBuf,
     final_path: PathBuf,
     telemetry_path: PathBuf,
+    shapes_path: PathBuf,
     input_partial_path: PathBuf,
     input_path: PathBuf,
 }
@@ -69,6 +70,7 @@ impl MacCursorRecording {
         let partial = directory.join("cursor.partial.jsonl");
         let final_path = directory.join("cursor.json");
         let telemetry_path = directory.join("telemetry.json");
+        let shapes_path = directory.join("shapes.json");
         let input_partial_path = directory.join("input.partial.jsonl");
         let input_path = directory.join("input.json");
         let cancel = Arc::new(AtomicBool::new(false));
@@ -105,6 +107,7 @@ impl MacCursorRecording {
             partial,
             final_path,
             telemetry_path,
+            shapes_path,
             input_partial_path,
             input_path,
         })
@@ -122,16 +125,21 @@ impl MacCursorRecording {
     fn finish(&mut self) -> Result<(), CaptureError> {
         self.cancel.store(true, Ordering::Release);
         if let Some(thread) = self.thread.take() {
-            thread
+            let worker_result = thread
                 .join()
-                .map_err(|_| CaptureError::Backend("macOS cursor thread panicked".into()))??;
-            finalize(&self.partial, &self.final_path)?;
-            finalize_telemetry(&self.final_path, &self.telemetry_path)?;
-            finalize_shapes(
-                &self.final_path,
-                &self.final_path.with_file_name("shapes.json"),
-            )?;
-            finalize_input_events(&self.input_partial_path, &self.input_path)?;
+                .map_err(|_| CaptureError::Backend("macOS cursor thread panicked".into()))
+                .and_then(|result| result);
+            return finalize_after_worker(
+                worker_result,
+                CursorRecordingPaths {
+                    partial: self.partial.clone(),
+                    final_path: self.final_path.clone(),
+                    telemetry: self.telemetry_path.clone(),
+                    shapes: self.shapes_path.clone(),
+                    input_partial: self.input_partial_path.clone(),
+                    input: self.input_path.clone(),
+                },
+            );
         }
         Ok(())
     }
@@ -187,6 +195,7 @@ impl Drop for MacCursorRecording {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn capture_loop(
     path: &Path,
     input_path: &Path,
@@ -218,13 +227,23 @@ fn capture_loop(
     )?;
     let mut previous_shape = None;
     let mut shortcuts = ShortcutSampler::default();
+    let mut successful_samples = 0_u64;
+    let mut last_sampling_error = None;
     while !cancel.load(Ordering::Acquire) {
         let session_ns = segment_start_ns
             .saturating_add(u64::try_from(started.elapsed().as_nanos()).unwrap_or(u64::MAX));
-        let source = CGEventSource::new(CGEventSourceStateID::CombinedSessionState)
-            .map_err(|_| CaptureError::Backend("CGEventSourceCreate failed".into()))?;
-        let event = CGEvent::new(source)
-            .map_err(|_| CaptureError::Backend("CGEventCreate failed".into()))?;
+        let event = match current_cursor_event() {
+            Ok(event) => {
+                successful_samples = successful_samples.saturating_add(1);
+                event
+            }
+            Err(error) => {
+                metrics.interruptions.fetch_add(1, Ordering::Relaxed);
+                last_sampling_error = Some(error.to_string());
+                std::thread::sleep(Duration::from_millis(8));
+                continue;
+            }
+        };
         let shape = current_system_shape();
         if previous_shape.as_ref() != Some(&shape.cursor_id) {
             push(
@@ -303,7 +322,30 @@ fn capture_loop(
         std::thread::sleep(Duration::from_millis(8));
     }
     writer.flush()?;
-    input_writer.flush()
+    input_writer.flush()?;
+    if successful_samples == 0
+        && let Some(error) = last_sampling_error
+    {
+        return Err(CaptureError::Backend(format!(
+            "macOS cursor sampling produced no samples; last error: {error}"
+        )));
+    }
+    Ok(())
+}
+
+fn current_cursor_event() -> Result<CGEvent, CaptureError> {
+    // A null source asks CoreGraphics for an event populated from the current
+    // session state. Beam only reads its location and does not need to create a
+    // synthetic event source first.
+    // SAFETY: CGEventCreate accepts a nullable source. A non-null result follows
+    // the Create rule and is transferred to CGEvent for release on drop.
+    let event = unsafe { CGEventCreate(std::ptr::null_mut()) };
+    if event.is_null() {
+        Err(CaptureError::Backend("CGEventCreate failed".into()))
+    } else {
+        // SAFETY: event is a non-null owned CGEventRef returned by CGEventCreate.
+        Ok(unsafe { CGEvent::from_ptr(event) })
+    }
 }
 
 fn push(
@@ -314,54 +356,6 @@ fn push(
     writer.push(event)?;
     metrics.events.fetch_add(1, Ordering::Relaxed);
     Ok(())
-}
-
-fn finalize(partial: &Path, destination: &Path) -> Result<(), CaptureError> {
-    let contents =
-        std::fs::read_to_string(partial).map_err(|error| CaptureError::storage(partial, error))?;
-    let events = contents
-        .lines()
-        .filter(|line| !line.trim().is_empty())
-        .map(serde_json::from_str::<CursorEvent>)
-        .collect::<Result<Vec<_>, _>>()?;
-    write_atomic(destination, &serde_json::to_vec_pretty(&events)?)
-}
-
-fn finalize_telemetry(cursor_path: &Path, destination: &Path) -> Result<(), CaptureError> {
-    let events: Vec<CursorEvent> = serde_json::from_slice(
-        &std::fs::read(cursor_path).map_err(|error| CaptureError::storage(cursor_path, error))?,
-    )?;
-    write_atomic(
-        destination,
-        &serde_json::to_vec_pretty(&telemetry_from_events(&events))?,
-    )
-}
-
-fn finalize_shapes(cursor_path: &Path, destination: &Path) -> Result<(), CaptureError> {
-    let events: Vec<CursorEvent> = serde_json::from_slice(
-        &std::fs::read(cursor_path).map_err(|error| CaptureError::storage(cursor_path, error))?,
-    )?;
-    let shapes = events
-        .into_iter()
-        .filter_map(|event| match event {
-            CursorEvent::Shape {
-                cursor_id,
-                cursor_kind,
-                native_cursor_id,
-                hotspot,
-                ..
-            } => Some((
-                cursor_id,
-                CursorShapeCatalogEntry {
-                    cursor_kind,
-                    native_cursor_id,
-                    hotspot,
-                },
-            )),
-            _ => None,
-        })
-        .collect::<std::collections::BTreeMap<_, _>>();
-    write_atomic(destination, &serde_json::to_vec_pretty(&shapes)?)
 }
 
 #[allow(clippy::cast_possible_truncation)]
@@ -376,6 +370,9 @@ fn button_state(button: CGMouseButton) -> bool {
 
 #[link(name = "CoreGraphics", kind = "framework")]
 unsafe extern "C" {
+    fn CGEventCreate(
+        source: core_graphics::sys::CGEventSourceRef,
+    ) -> core_graphics::sys::CGEventRef;
     fn CGEventSourceButtonState(state: CGEventSourceStateID, button: CGMouseButton) -> bool;
 }
 

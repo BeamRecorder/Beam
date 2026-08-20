@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import type { TransitionPreset, VisualClip } from '~/media/shared/composition-types';
-import { drawWithClipTransition } from './render-transition';
+import type { ClipTransitions, TransitionPreset, VisualClip } from '~/media/shared/composition-types';
+import { drawWithClipTransition, transitionPointWithClip } from './render-transition';
 
-const clipWithEntry = (preset: TransitionPreset) =>
+const clipWithTransitions = (transitions: ClipTransitions) =>
   ({
     id: 'transition-clip',
     kind: 'video',
@@ -14,7 +14,7 @@ const clipWithEntry = (preset: TransitionPreset) =>
     sourceInMs: 0,
     sourceDurationMs: 1_000,
     playbackRate: 1,
-    transitions: { entry: { preset, durationMs: 500 }, exit: null },
+    transitions,
     enabled: true,
     order: 0,
     transform: { x: 0, y: 0, width: 1, height: 1 },
@@ -22,6 +22,9 @@ const clipWithEntry = (preset: TransitionPreset) =>
     isMirrored: false,
     isMirroredY: false,
   }) as VisualClip;
+
+const clipWithEntry = (preset: TransitionPreset, easingPower?: number) =>
+  clipWithTransitions({ entry: { preset, durationMs: 500, easingPower }, exit: null });
 
 const context = () =>
   ({
@@ -61,5 +64,29 @@ describe('drawWithClipTransition', () => {
     expect(ctx.translate).toHaveBeenCalledOnce();
     expect(ctx.translate).toHaveBeenCalledWith(-8, 0);
     expect(ctx.scale).not.toHaveBeenCalled();
+  });
+
+  it('maps a point through an entry transition using the same slide transform as the renderer', () => {
+    const frame = { x: 100, y: 50, width: 800, height: 400 };
+    const point = { x: 500, y: 250 };
+
+    const mapped = transitionPointWithClip(clipWithEntry({ kind: 'slide', direction: 'left' }, 2), 250, frame, point);
+
+    // Entry progress is 1 - (1 - .5)^2 = .75, leaving a -2% frame offset.
+    expect(mapped).toEqual({ x: 484, y: 250 });
+  });
+
+  it('maps a point through an exit transition using its easing power and centered scale', () => {
+    const frame = { x: 100, y: 50, width: 800, height: 400 };
+    const clip = clipWithTransitions({
+      entry: null,
+      exit: { preset: { kind: 'zoom', direction: 'in' }, durationMs: 500, easingPower: 2 },
+    });
+
+    const mapped = transitionPointWithClip(clip, 750, frame, { x: 700, y: 350 });
+
+    // Exit progress is .5^2 = .25, leaving 75% of the preset's 4% scale offset.
+    expect(mapped.x).toBeCloseTo(694);
+    expect(mapped.y).toBeCloseTo(347);
   });
 });

@@ -137,7 +137,10 @@ export async function loadBitmap(src: string, label = 'image asset'): Promise<Im
   if (!response.ok) throw new Error(`Unable to load ${label}: HTTP ${response.status}. Source: ${src}`);
   const blob = await response.blob();
   try {
-    return await createImageBitmap(blob);
+    return await createImageBitmap(blob, {
+      premultiplyAlpha: 'premultiply',
+      colorSpaceConversion: 'default',
+    });
   } catch (error) {
     const decoder = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
     const mime = response.headers?.get('content-type') || blob.type || 'unknown';

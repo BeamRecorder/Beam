@@ -8,6 +8,7 @@ import type { TimelineThumbnailSlot } from './composables/timeline-viewport';
 import type { AudioWaveformStatus } from './composables/useCompositionAudioWaveforms';
 import WaveformCanvas from './waveform/WaveformCanvas.vue';
 import { timelineClipStyle, timelineFrameStyle, timelineTransitionStyle } from './timeline-clip-geometry';
+import TimelineTransitionCurve from './TimelineTransitionCurve.vue';
 const { t } = useTranslate('TimelineTracks');
 const props = defineProps<{
   clip: Clip;
@@ -79,6 +80,10 @@ watch(
   { immediate: true },
 );
 const clipStyle = computed(() => timelineClipStyle(props.clip, props.duration, props.timelineWidthPx));
+const imagePreviewStyle = computed(() => ({
+  backgroundImage:
+    props.asset?.kind === 'image' && props.asset.src ? `url(${JSON.stringify(props.asset.src)})` : undefined,
+}));
 const frameStyle = (frame: TimelineFrame) => timelineFrameStyle(props.clip, frame.relativeMs, frame.durationMs);
 const transitionStyle = (edge: 'entry' | 'exit') => timelineTransitionStyle(props.clip, edge);
 const thumbnailFor = (frame: TimelineFrame) => {
@@ -147,13 +152,17 @@ onUnmounted(() => stopMarquee());
       class="transition-zone entry"
       :style="transitionStyle('entry')"
       aria-hidden="true"
-    />
+    >
+      <TimelineTransitionCurve edge="entry" :transition="clip.transitions.entry" />
+    </span>
     <span
       v-if="clip.transitions?.exit"
       class="transition-zone exit"
       :style="transitionStyle('exit')"
       aria-hidden="true"
-    />
+    >
+      <TimelineTransitionCurve edge="exit" :transition="clip.transitions.exit" />
+    </span>
     <div v-if="clip.kind === 'audio'" class="waveform" aria-hidden="true">
       <div
         v-if="waveformBars?.length"
@@ -193,12 +202,11 @@ onUnmounted(() => stopMarquee());
         <span v-if="!thumbnails[frame.mediaSecond]" class="thumbnail-loading-overlay" />
       </div>
     </div>
-    <img
+    <span
       v-else-if="asset?.kind === 'image' && asset.src"
-      :src="asset.src"
       class="image-preview"
-      alt=""
-      draggable="false"
+      :style="imagePreviewStyle"
+      aria-hidden="true"
     />
     <span
       class="trim-handle start"
@@ -265,11 +273,8 @@ onUnmounted(() => stopMarquee());
   inset-block: 0;
   z-index: 30;
   pointer-events: none;
-  background: repeating-linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--color-primary) 34%, transparent) 0 4px,
-    transparent 4px 8px
-  );
+  background: color-mix(in srgb, var(--color-primary) 7%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 .transition-zone.entry {
   left: 0;
@@ -310,12 +315,17 @@ onUnmounted(() => stopMarquee());
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: center;
 }
 .thumbnail-img {
   position: absolute;
   inset: 0;
+  object-fit: cover;
+  object-position: center;
+}
+.image-preview {
+  background-position: left center;
+  background-repeat: repeat-x;
+  background-size: contain;
 }
 .thumbnail-crossfade-enter-active,
 .thumbnail-crossfade-leave-active {

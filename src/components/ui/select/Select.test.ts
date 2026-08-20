@@ -1,7 +1,9 @@
-import { mount } from '@vue/test-utils';
+import { enableAutoUnmount, mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it } from 'vitest';
 import { h, nextTick } from 'vue';
 import Select from './Select.vue';
+
+enableAutoUnmount(afterEach);
 
 const options = [
   { value: 'one', label: 'First option', color: '#ff0000' },

@@ -16,7 +16,7 @@ export function resizeMotionBlurSurface(surface: MotionBlurSurface, width: numbe
 const contextForSurface = (surface: MotionBlurSurface) => {
   const cached = surfaceContexts.get(surface);
   if (cached) return cached;
-  const context = surface.getContext('2d', { alpha: false, desynchronized: true }) as Canvas2DContext | null;
+  const context = surface.getContext('2d', { alpha: true, desynchronized: true }) as Canvas2DContext | null;
   if (context) surfaceContexts.set(surface, context);
   return context;
 };

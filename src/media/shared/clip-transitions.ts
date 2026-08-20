@@ -3,6 +3,9 @@ import { snapTimeToBoundary } from './time-boundary';
 
 export const DEFAULT_TRANSITION_DURATION_MS = 500;
 export const MAX_TRANSITION_DURATION_MS = 5_000;
+export const DEFAULT_TRANSITION_EASING_POWER = 3;
+export const MIN_TRANSITION_EASING_POWER = 1;
+export const MAX_TRANSITION_EASING_POWER = 5;
 export const EMPTY_CLIP_TRANSITIONS: ClipTransitions = Object.freeze({ entry: null, exit: null });
 
 export interface ClipTransitionState {
@@ -47,7 +50,17 @@ export function normalizeClipTransitions(
     const durationMs = Number.isFinite(transition.durationMs)
       ? Math.max(0, Math.min(MAX_TRANSITION_DURATION_MS, Math.round(transition.durationMs)))
       : 0;
-    return durationMs > 0 ? { preset: { ...transition.preset }, durationMs } : null;
+    if (durationMs <= 0) return null;
+    const requestedEasingPower = transition.easingPower;
+    const easingPower =
+      typeof requestedEasingPower === 'number' && Number.isFinite(requestedEasingPower)
+        ? Math.max(MIN_TRANSITION_EASING_POWER, Math.min(MAX_TRANSITION_EASING_POWER, Math.round(requestedEasingPower)))
+        : undefined;
+    return {
+      preset: { ...transition.preset },
+      durationMs,
+      ...(easingPower === undefined ? {} : { easingPower }),
+    };
   };
   const next = { entry: normalize(transitions.entry), exit: normalize(transitions.exit) };
   const total = (next.entry?.durationMs ?? 0) + (next.exit?.durationMs ?? 0);
@@ -110,12 +123,14 @@ export function resolveTransitionState(
   if (timeMs < 0 || timeMs > timelineDurationMs) return identity();
   if (transitions.entry && timeMs < transitions.entry.durationMs) {
     const linear = clamp01(timeMs / transitions.entry.durationMs);
-    return evaluatePreset(transitions.entry.preset, 1 - (1 - linear) ** 3);
+    const power = transitions.entry.easingPower ?? DEFAULT_TRANSITION_EASING_POWER;
+    return evaluatePreset(transitions.entry.preset, 1 - (1 - linear) ** power);
   }
   const remaining = timelineDurationMs - timeMs;
   if (transitions.exit && remaining < transitions.exit.durationMs) {
     const linear = clamp01(remaining / transitions.exit.durationMs);
-    return evaluatePreset(transitions.exit.preset, 1 - (1 - linear) ** 3);
+    const power = transitions.exit.easingPower ?? DEFAULT_TRANSITION_EASING_POWER;
+    return evaluatePreset(transitions.exit.preset, linear ** power);
   }
   return identity();
 }

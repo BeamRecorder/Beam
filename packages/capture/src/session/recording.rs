@@ -297,14 +297,6 @@ impl RecordingSession {
         write_health_snapshot(&self.layout, &self.manifest.tracks, now)?;
         checkpoint_tracks(&self.layout, &self.manifest.tracks)?;
         let path = self.writer.finalize(&mut self.manifest)?;
-        let cursor_partial = self
-            .layout
-            .track_dir(TrackKind::Cursor)
-            .join("cursor.partial.jsonl");
-        if cursor_partial.exists() {
-            std::fs::remove_file(&cursor_partial)
-                .map_err(|error| CaptureError::storage(&cursor_partial, error))?;
-        }
         self.state = super::SessionState::Completed;
         if let Some(error) = close_error
             && (required_screen_failed

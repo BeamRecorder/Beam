@@ -50,6 +50,9 @@
     "lg": "बड़ा",
     "full": "पूर्ण"
   },
+  "TransitionsPanel": {
+    "curve": "वक्र"
+  },
   "CanvasPanel": {
     "backgroundType": "बैकग्राउंड का प्रकार",
     "image": "इमेज",

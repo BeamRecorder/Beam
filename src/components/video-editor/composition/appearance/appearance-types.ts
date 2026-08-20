@@ -11,8 +11,10 @@ export interface DecoratedMediaOptions {
   sourceRect?: MediaRect;
   rect: MediaRect;
   appearance?: ClipAppearance;
-  /** Shadow values are stored in output pixels; preview callers provide their display scale. */
+  /** Pixel-based appearance values are stored in output pixels; preview callers provide their display scale. */
   shadowScale?: number;
+  /** Derive the shadow silhouette from the rendered source pixels instead of its bounding box. */
+  shadowFollowsSourceAlpha?: boolean;
   title: string;
   mirrored?: boolean;
   mirroredY?: boolean;

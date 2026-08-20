@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ExportRequest } from '../../export-types';
-import { openExportAssets } from '../export-worker-assets';
+import { loadBitmap, openExportAssets } from '../export-worker-assets';
 
 const runtime = vi.hoisted(() => ({
   mediaSourceDescriptor: vi.fn(),
@@ -139,6 +139,7 @@ describe('openExportAssets', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('does not require or open audio-only assets when audio is excluded', async () => {
@@ -279,5 +280,31 @@ describe('openExportAssets', () => {
     await expect(opening).rejects.toThrow('late asset validation failed');
     expect(Math.max(0, ...validated.mock.calls.map(([count]) => count as number))).toBeLessThan(5);
     for (const handle of handles.values()) expect(handle.dispose).toHaveBeenCalledOnce();
+  });
+});
+
+describe('loadBitmap', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('decodes exported images with premultiplied alpha and the default color space', async () => {
+    const blob = new Blob(['image']);
+    const bitmap = { width: 2, height: 2, close: vi.fn() } as unknown as ImageBitmap;
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      blob: vi.fn().mockResolvedValue(blob),
+    });
+    const createImageBitmapMock = vi.fn().mockResolvedValue(bitmap);
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('createImageBitmap', createImageBitmapMock);
+
+    await expect(loadBitmap('project-media://transparent.png', 'Transparent image')).resolves.toBe(bitmap);
+
+    expect(fetchMock).toHaveBeenCalledWith('project-media://transparent.png');
+    expect(createImageBitmapMock).toHaveBeenCalledWith(blob, {
+      premultiplyAlpha: 'premultiply',
+      colorSpaceConversion: 'default',
+    });
   });
 });

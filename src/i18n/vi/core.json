@@ -50,6 +50,9 @@
     "lg": "lớn",
     "full": "tròn"
   },
+  "TransitionsPanel": {
+    "curve": "Đường cong"
+  },
   "CanvasPanel": {
     "backgroundType": "Loại nền",
     "image": "Hình ảnh",

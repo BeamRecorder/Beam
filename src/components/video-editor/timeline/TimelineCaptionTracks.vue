@@ -6,6 +6,7 @@ import { useTranslate } from '~/i18n/useTranslate';
 import Throbber from '~/components/ui/throbber/Throbber.vue';
 import type { TimelinePasteHighlight } from './composables/timeline-clipboard-types';
 import { timelineTransitionStyle } from './timeline-clip-geometry';
+import TimelineTransitionCurve from './TimelineTransitionCurve.vue';
 
 const { t } = useTranslate('TimelineTracks');
 const props = defineProps<{
@@ -14,7 +15,7 @@ const props = defineProps<{
   selectedClipId: string | null;
   selectedClipIds: string[];
   hoverCaptionTimeMs: number | null;
-  defaultCaptionDurationMs: number;
+  hoverCaptionDurationMs: number;
   percentageStyle: (startMs: number, durationMs: number) => Record<string, string>;
   displayedClip: (clip: CaptionClip) => Pick<CaptionClip, 'timelineStartMs' | 'timelineDurationMs'>;
   trimStateFor: (clipId: string) => { edge: 'start' | 'end'; durationMs: number; atLimit?: boolean } | null;
@@ -192,13 +193,17 @@ onUnmounted(() => {
             class="transition-zone entry"
             :style="timelineTransitionStyle(clip, 'entry')"
             aria-hidden="true"
-          />
+          >
+            <TimelineTransitionCurve edge="entry" :transition="clip.transitions.entry" />
+          </span>
           <span
             v-if="clip.transitions?.exit"
             class="transition-zone exit"
             :style="timelineTransitionStyle(clip, 'exit')"
             aria-hidden="true"
-          />
+          >
+            <TimelineTransitionCurve edge="exit" :transition="clip.transitions.exit" />
+          </span>
           <span
             class="trim-handle start"
             :title="t('trimStart')"
@@ -249,7 +254,7 @@ onUnmounted(() => {
       <div
         v-if="hoverCaptionTimeMs !== null"
         class="annotation-indicator preview-ghost"
-        :style="percentageStyle(hoverCaptionTimeMs, defaultCaptionDurationMs)"
+        :style="percentageStyle(hoverCaptionTimeMs, hoverCaptionDurationMs)"
       >
         {{ t('addCaption') }}
       </div>
@@ -276,13 +281,17 @@ onUnmounted(() => {
             class="transition-zone entry"
             :style="timelineTransitionStyle(clip, 'entry')"
             aria-hidden="true"
-          />
+          >
+            <TimelineTransitionCurve edge="entry" :transition="clip.transitions.entry" />
+          </span>
           <span
             v-if="clip.transitions?.exit"
             class="transition-zone exit"
             :style="timelineTransitionStyle(clip, 'exit')"
             aria-hidden="true"
-          />
+          >
+            <TimelineTransitionCurve edge="exit" :transition="clip.transitions.exit" />
+          </span>
           <span
             class="trim-handle start"
             :title="t('trimStart')"

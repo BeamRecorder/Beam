@@ -63,6 +63,11 @@ const withoutInheritedKeyboardText = (clip) => {
   return { ...clip, caption: { ...clip.caption, style } };
 };
 const transitionKinds = new Set(['fade', 'slide', 'zoom', 'blur']);
+const transitionEasingPower = (value) => {
+  if (value === undefined) return undefined;
+  if (!Number.isInteger(value) || value < 1 || value > 5) throw new Error('Courbe de transition invalide');
+  return value;
+};
 const transition = (value, clipKind) => {
   if (value === null) return null;
   if (
@@ -82,7 +87,12 @@ const transition = (value, clipKind) => {
     throw new Error('Direction de transition invalide');
   if ((preset.kind === 'fade' || preset.kind === 'blur') && Object.keys(preset).some((key) => key !== 'kind'))
     throw new Error('Paramètres de transition invalides');
-  return { preset: { ...preset }, durationMs: value.durationMs };
+  const easingPower = transitionEasingPower(value.easingPower);
+  return {
+    preset: { ...preset },
+    durationMs: value.durationMs,
+    ...(easingPower === undefined ? {} : { easingPower }),
+  };
 };
 const transitions = (value, clipKind, durationMs) => {
   if (!value || typeof value !== 'object' || !Object.hasOwn(value, 'entry') || !Object.hasOwn(value, 'exit'))

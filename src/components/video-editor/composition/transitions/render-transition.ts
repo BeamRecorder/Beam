@@ -2,11 +2,33 @@ import type { Clip } from '~/media/shared/composition-types';
 import { resolveClipTransitionState } from '~/media/shared/clip-transitions';
 import type { Canvas2DContext } from '~/types/canvas';
 
+export interface TransitionFrame {
+  x?: number;
+  y?: number;
+  width: number;
+  height: number;
+}
+
+export function transitionPointWithClip(
+  clip: Clip,
+  timeMs: number,
+  frame: TransitionFrame,
+  point: { x: number; y: number },
+) {
+  const state = resolveClipTransitionState(clip, timeMs);
+  const centerX = (frame.x ?? 0) + frame.width / 2;
+  const centerY = (frame.y ?? 0) + frame.height / 2;
+  return {
+    x: centerX + (point.x - centerX) * state.scale + state.translateX * frame.width,
+    y: centerY + (point.y - centerY) * state.scale + state.translateY * frame.height,
+  };
+}
+
 export function drawWithClipTransition(
   ctx: Canvas2DContext,
   clip: Clip,
   timeMs: number,
-  frame: { x?: number; y?: number; width: number; height: number },
+  frame: TransitionFrame,
   draw: () => void,
 ) {
   if (!clip.transitions?.entry && !clip.transitions?.exit) return draw();

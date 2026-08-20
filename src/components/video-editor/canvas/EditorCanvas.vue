@@ -5,9 +5,8 @@ import Button from '../../ui/button/Button.vue';
 import ResizeHandle from '~/ui/ResizeHandle/ResizeHandle.vue';
 import CanvasLoadingSkeleton from './CanvasLoadingSkeleton.vue';
 import UndoRedoToast from './UndoRedoToast.vue';
-import { activeClipsAt } from '~/media/shared';
 import type { VisualClip } from '~/media/shared/composition-types';
-import type { CompositionSceneLayers } from '../composition/scene-layers';
+import { resolveCompositionSceneLayers, type CompositionSceneLayers } from '../composition/scene-layers';
 import { OUTPUT_FALLBACK_COLOR, OUTPUT_PREVIEW_RADIUS, outputPreviewRect } from './output-canvas';
 import { useCanvasBackground } from './composables/useCanvasBackground';
 import { useCompositionMedia } from './composables/useCompositionMedia';
@@ -58,10 +57,7 @@ let drawVisualStack:
   | null = null;
 const viewportZoom = useViewportZoom();
 const liveScreenClip = computed<VisualClip | null>(
-  () =>
-    activeClipsAt(props.composition, props.currentTime * 1_000).find(
-      (clip): clip is VisualClip => clip.kind === 'screen',
-    ) ?? null,
+  () => resolveCompositionSceneLayers(props.composition, props.currentTime * 1_000).screen,
 );
 const selectedCaptionFollowsCursor = computed(
   () =>
@@ -211,7 +207,7 @@ const cursorOverlay = useCursorOverlay({
   isPlaying: () => props.isPlaying,
   editorData: () => props.editorData,
   screenClip: () => liveScreenClip.value,
-  isScreenEnabled: () => Boolean(liveScreenClip.value),
+  isScreenEnabled: () => Boolean(liveScreenClip.value && screenFrame.value),
   showBackground: () => props.outputCanvas.showBackground,
   onRenderOnce: renderOnce,
 });

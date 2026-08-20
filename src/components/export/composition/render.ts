@@ -121,6 +121,7 @@ function drawVisualClip(
     mirrored: clip.isMirrored,
     mirroredY: clip.isMirroredY,
     mask: framing.mask,
+    shadowFollowsSourceAlpha: clip.kind === 'image',
   });
 }
 
@@ -277,12 +278,8 @@ function renderCompositionFrameContent(
       viewportHeight: height,
     });
   })();
-  const drawCameraSample = (target: Canvas2DContext, blurSample: (typeof blurPlan)[number], fillFallback = false) => {
+  const drawCameraSample = (target: Canvas2DContext, blurSample: (typeof blurPlan)[number]) => {
     const sampleCamera = blurSample.camera;
-    if (fillFallback) {
-      target.fillStyle = OUTPUT_FALLBACK_COLOR;
-      target.fillRect(0, 0, width, height);
-    }
     target.save();
     target.translate(width / 2, height / 2);
     target.scale(sampleCamera.scale, sampleCamera.scale);
@@ -346,7 +343,7 @@ function renderCompositionFrameContent(
           pixelScale: 1,
           sample: blurSample,
           accumulatedWeight,
-          draw: (target, sampleToDraw) => drawCameraSample(target, sampleToDraw, true),
+          draw: (target, sampleToDraw) => drawCameraSample(target, sampleToDraw),
         });
         if (rendered) {
           composited = true;
@@ -356,7 +353,8 @@ function renderCompositionFrameContent(
       if (!composited) drawCameraSample(ctx, blurPlan[Math.floor(blurPlan.length / 2)]!);
     }
   }
-  const resolvedCursorMotionPlayer = screen
+  const hasRenderableScreen = Boolean(screen && video && positionedMedia && source);
+  const resolvedCursorMotionPlayer = hasRenderableScreen
     ? (cursorMotionPlayer ??
       createCursorMotionPlayer(snapshot.cursor.events, snapshot.cursorSettings.motion, sourceWidth, sourceHeight))
     : null;
@@ -364,10 +362,10 @@ function renderCompositionFrameContent(
     ? resolvedCursorMotionPlayer.sample(screenTime, cursorStateAt(snapshot.cursor.events, screenTime))
     : null;
   const keyboardCursorPosition =
-    screen && resolvedCursorMotionPlayer
+    hasRenderableScreen && screen && resolvedCursorMotionPlayer
       ? cursorPositionForKeyboardCaption(
           snapshot,
-          screenTime,
+          timeMs,
           screen,
           sourceWidth,
           sourceHeight,
@@ -378,23 +376,25 @@ function renderCompositionFrameContent(
           camera,
         )
       : null;
-  if (screen && resolvedCursorMotionPlayer) {
+  if (hasRenderableScreen && screen && resolvedCursorMotionPlayer) {
     ctx.save();
     ctx.translate(width / 2, height / 2);
     ctx.scale(scale, scale);
     ctx.translate(-cameraFocus.cx * width, -cameraFocus.cy * height);
-    drawCursorLayer(
-      ctx,
-      snapshot,
-      screenTime,
-      screen,
-      sourceWidth,
-      sourceHeight,
-      width,
-      height,
-      cursorImages,
-      resolvedCursorMotionPlayer,
-      cursorMotion,
+    drawWithClipTransition(ctx, screen, timeMs, snapshot.canvas, () =>
+      drawCursorLayer(
+        ctx,
+        snapshot,
+        screenTime,
+        screen,
+        sourceWidth,
+        sourceHeight,
+        width,
+        height,
+        cursorImages,
+        resolvedCursorMotionPlayer,
+        cursorMotion,
+      ),
     );
     ctx.restore();
   }

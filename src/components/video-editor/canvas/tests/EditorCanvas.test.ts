@@ -41,9 +41,14 @@ const { state } = vi.hoisted(() => ({
     transition: undefined as { value: boolean } | undefined,
     renderVisualStack: undefined as ((...args: unknown[]) => void) | undefined,
     canvasBackgroundOptions: undefined as
-      | { previewQuality?: () => string; selectedBackground?: () => unknown; backgroundBlurPercent?: () => number }
+      | {
+          previewQuality?: () => string;
+          selectedBackground?: () => unknown;
+          backgroundBlurPercent?: () => number;
+        }
       | undefined,
     cursorBounds: undefined as { value: unknown } | undefined,
+    isScreenEnabled: undefined as (() => boolean) | undefined,
   },
 }));
 
@@ -55,7 +60,11 @@ vi.mock('../composables/useCanvasBackground', async () => {
       backgroundBlurPercent: () => number,
       previewQuality: () => string,
     ) => {
-      state.canvasBackgroundOptions = { selectedBackground, backgroundBlurPercent, previewQuality };
+      state.canvasBackgroundOptions = {
+        selectedBackground,
+        backgroundBlurPercent,
+        previewQuality,
+      };
       state.transition = ref(false);
       return {
         drawBackground: state.drawBackground,
@@ -80,7 +89,8 @@ vi.mock('../composables/useCompositionMedia', async () => {
 vi.mock('../composables/useCursorOverlay', async () => {
   const { ref } = await import('vue');
   return {
-    useCursorOverlay: () => {
+    useCursorOverlay: (options: { isScreenEnabled: () => boolean }) => {
+      state.isScreenEnabled = options.isScreenEnabled;
       state.cursorBounds = ref(null);
       return {
         updateAndDrawRipplesAndCursor: state.updateCursor,
@@ -97,7 +107,12 @@ vi.mock('../composables/useCameraZoom', async () => {
     useCameraZoom: (options: { renderVisualStack: (...args: unknown[]) => void; onRenderOnce?: () => void }) => {
       state.renderVisualStack = options.renderVisualStack;
       return {
-        focusTargetStyle: ref({ left: '10px', top: '20px', width: '30px', height: '40px' }),
+        focusTargetStyle: ref({
+          left: '10px',
+          top: '20px',
+          width: '30px',
+          height: '40px',
+        }),
         videoWindowBounds: ref(null),
         overlayWindowBounds: ref(null),
         drawVideoWindow: state.drawVideoWindow,
@@ -123,13 +138,33 @@ vi.mock('../composables/useLayerTransformAndCrop', async () => {
   return {
     useLayerTransformAndCrop: () => {
       state.transformDraft = ref(null);
-      state.transformSelectionViewportStyle = ref({ left: '0px', top: '0px', width: '800px', height: '450px' });
+      state.transformSelectionViewportStyle = ref({
+        left: '0px',
+        top: '0px',
+        width: '800px',
+        height: '450px',
+      });
       state.transformResizeCorners = ref(undefined);
       return {
         transformSelectionViewportStyle: state.transformSelectionViewportStyle,
-        transformHandleStyle: ref({ left: '1px', top: '2px', width: '100px', height: '80px' }),
-        cropContainerStyle: ref({ left: '3px', top: '4px', width: '90px', height: '70px' }),
-        cropOverlayStyle: ref({ left: '3px', top: '4px', width: '90px', height: '70px' }),
+        transformHandleStyle: ref({
+          left: '1px',
+          top: '2px',
+          width: '100px',
+          height: '80px',
+        }),
+        cropContainerStyle: ref({
+          left: '3px',
+          top: '4px',
+          width: '90px',
+          height: '70px',
+        }),
+        cropOverlayStyle: ref({
+          left: '3px',
+          top: '4px',
+          width: '90px',
+          height: '70px',
+        }),
         activeGuideLines: ref([]),
         transformDraft: state.transformDraft,
         transformResizeCorners: state.transformResizeCorners,
@@ -148,8 +183,20 @@ vi.mock('../composables/useLayerTransformAndCrop', async () => {
 });
 
 const effects: CursorClickEffects = {
-  left: { springEnabled: true, springIntensity: 50, rippleEnabled: true, rippleSize: 30, rippleColor: '#f00' },
-  right: { springEnabled: true, springIntensity: 50, rippleEnabled: false, rippleSize: 30, rippleColor: '#00f' },
+  left: {
+    springEnabled: true,
+    springIntensity: 50,
+    rippleEnabled: true,
+    rippleSize: 30,
+    rippleColor: '#f00',
+  },
+  right: {
+    springEnabled: true,
+    springIntensity: 50,
+    rippleEnabled: false,
+    rippleSize: 30,
+    rippleColor: '#00f',
+  },
 };
 
 const screen = (): VisualClip => ({
@@ -240,7 +287,11 @@ const props = () => ({
   isPlaying: false,
   currentTime: 0.5,
   duration: 2,
-  cursorSelection: { packId: 'builtin:macos', mode: 'automatic' as const, cursorId: null },
+  cursorSelection: {
+    packId: 'builtin:macos',
+    mode: 'automatic' as const,
+    cursorId: null,
+  },
   cursorPack: null,
   cursorSize: 24,
   cursorColor: '#ffffff',
@@ -249,7 +300,12 @@ const props = () => ({
   shadowColor: '#000000',
   shadowDirection: 'bottom' as const,
   clickEffects: effects,
-  motion: { preset: 'smooth' as const, smoothing: 0.67, springMassMultiplier: 1.29, motionBlur: 0.4 },
+  motion: {
+    preset: 'smooth' as const,
+    smoothing: 0.67,
+    springMassMultiplier: 1.29,
+    motionBlur: 0.4,
+  },
   selectedBackground: null,
   backgroundBlurPercent: 0,
   frameFor: (clipId: string) => (clipId === 'screen' ? frame('screen') : null),
@@ -313,23 +369,38 @@ beforeEach(() => {
     },
   );
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(contextMock);
-  Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 800 });
-  Object.defineProperty(HTMLElement.prototype, 'clientHeight', { configurable: true, get: () => 450 });
+  Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+    configurable: true,
+    get: () => 800,
+  });
+  Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
+    configurable: true,
+    get: () => 450,
+  });
   state.drawVideoWindow.mockReturnValue(null);
-  Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: 1 });
+  Object.defineProperty(window, 'devicePixelRatio', {
+    configurable: true,
+    value: 1,
+  });
 });
 
 afterEach(() => {
   wrapper?.unmount();
   wrapper = undefined;
   vi.useRealTimers();
-  Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: 1 });
+  Object.defineProperty(window, 'devicePixelRatio', {
+    configurable: true,
+    value: 1,
+  });
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
 
 const mountEditor = (overrides: Record<string, unknown> = {}) => {
-  wrapper = mount(EditorCanvas, { props: { ...props(), ...overrides }, global: { plugins: [MotionPlugin] } });
+  wrapper = mount(EditorCanvas, {
+    props: { ...props(), ...overrides },
+    global: { plugins: [MotionPlugin] },
+  });
   return wrapper;
 };
 
@@ -342,7 +413,10 @@ describe('EditorCanvas', () => {
   });
 
   it('uses a quality-scaled backing canvas while keeping the CSS preview and logical coordinates unchanged', async () => {
-    Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: 2 });
+    Object.defineProperty(window, 'devicePixelRatio', {
+      configurable: true,
+      value: 2,
+    });
     const mounted = mountEditor({ previewQuality: 'quarter' });
     await nextTick();
 
@@ -358,7 +432,10 @@ describe('EditorCanvas', () => {
   });
 
   it('resizes the backing canvas and render scale when preview quality changes at runtime', async () => {
-    Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: 2 });
+    Object.defineProperty(window, 'devicePixelRatio', {
+      configurable: true,
+      value: 2,
+    });
     const mounted = mountEditor({ previewQuality: 'full' });
     await nextTick();
     const canvas = mounted.get('canvas').element as HTMLCanvasElement;
@@ -381,7 +458,14 @@ describe('EditorCanvas', () => {
     const mounted = mountEditor({
       frameFor: () => null,
       playbackState: 'loading',
-      selectedZoom: { id: 'zoom', mode: 'manual', start: 0, end: 1, focus: { x: 0.5, y: 0.5 }, strength: 1 },
+      selectedZoom: {
+        id: 'zoom',
+        mode: 'manual',
+        start: 0,
+        end: 1,
+        focus: { x: 0.5, y: 0.5 },
+        strength: 1,
+      },
     });
     await flushPromises();
     runFrame();
@@ -406,7 +490,13 @@ describe('EditorCanvas', () => {
 
   it('shows the cursor selection only on the cursor tab while paused', async () => {
     const mounted = mountEditor({ activeTab: 'cursor', isPlaying: false });
-    state.cursorBounds!.value = { x: 200, y: 100, width: 40, height: 20, hotspot: { x: 220, y: 110 } };
+    state.cursorBounds!.value = {
+      x: 200,
+      y: 100,
+      width: 40,
+      height: 20,
+      hotspot: { x: 220, y: 110 },
+    };
     await nextTick();
     expect(mounted.find('.cursor-canvas-selection').exists()).toBe(true);
 
@@ -418,10 +508,22 @@ describe('EditorCanvas', () => {
 
   it('prioritizes cursor hit-testing over canvas selection and preserves outside-cursor handling', async () => {
     const mounted = mountEditor({ activeTab: 'cursor', isPlaying: false });
-    state.cursorBounds!.value = { x: 200, y: 100, width: 40, height: 20, hotspot: { x: 220, y: 110 } };
+    state.cursorBounds!.value = {
+      x: 200,
+      y: 100,
+      width: 40,
+      height: 20,
+      hotspot: { x: 220, y: 110 },
+    };
     const canvas = mounted.get('canvas');
-    Object.defineProperty(canvas.element, 'clientWidth', { configurable: true, value: 800 });
-    Object.defineProperty(canvas.element, 'clientHeight', { configurable: true, value: 450 });
+    Object.defineProperty(canvas.element, 'clientWidth', {
+      configurable: true,
+      value: 800,
+    });
+    Object.defineProperty(canvas.element, 'clientHeight', {
+      configurable: true,
+      value: 450,
+    });
     vi.spyOn(canvas.element, 'getBoundingClientRect').mockReturnValue({
       x: 0,
       y: 0,
@@ -435,22 +537,46 @@ describe('EditorCanvas', () => {
     });
     await nextTick();
 
-    await canvas.trigger('pointerdown', { button: 0, clientX: 220, clientY: 110 });
+    await canvas.trigger('pointerdown', {
+      button: 0,
+      clientX: 220,
+      clientY: 110,
+    });
     expect(mounted.emitted('select:cursor')).toHaveLength(1);
     expect(state.selectVisualAt).not.toHaveBeenCalled();
 
     state.selectVisualAt.mockReturnValue(true);
-    await canvas.trigger('pointerdown', { button: 0, clientX: 600, clientY: 400 });
+    await canvas.trigger('pointerdown', {
+      button: 0,
+      clientX: 600,
+      clientY: 400,
+    });
     expect(mounted.emitted('select:cursor')).toHaveLength(1);
     expect(state.selectVisualAt).toHaveBeenCalled();
   });
 
   it('resizes the paused cursor selection and clamps emitted size at both limits', async () => {
-    const mounted = mountEditor({ activeTab: 'cursor', isPlaying: false, cursorSize: 24 });
-    state.cursorBounds!.value = { x: 200, y: 100, width: 40, height: 20, hotspot: { x: 220, y: 110 } };
+    const mounted = mountEditor({
+      activeTab: 'cursor',
+      isPlaying: false,
+      cursorSize: 24,
+    });
+    state.cursorBounds!.value = {
+      x: 200,
+      y: 100,
+      width: 40,
+      height: 20,
+      hotspot: { x: 220, y: 110 },
+    };
     const canvas = mounted.get('canvas');
-    Object.defineProperty(canvas.element, 'clientWidth', { configurable: true, value: 800 });
-    Object.defineProperty(canvas.element, 'clientHeight', { configurable: true, value: 450 });
+    Object.defineProperty(canvas.element, 'clientWidth', {
+      configurable: true,
+      value: 800,
+    });
+    Object.defineProperty(canvas.element, 'clientHeight', {
+      configurable: true,
+      value: 450,
+    });
     vi.spyOn(canvas.element, 'getBoundingClientRect').mockReturnValue({
       x: 0,
       y: 0,
@@ -465,17 +591,37 @@ describe('EditorCanvas', () => {
     await nextTick();
 
     const handle = mounted.find('.cursor-canvas-selection .is-top-left');
-    await handle.trigger('pointerdown', { pointerId: 1, clientX: 200, clientY: 100 });
-    await handle.trigger('pointermove', { pointerId: 1, clientX: 800, clientY: 450 });
+    await handle.trigger('pointerdown', {
+      pointerId: 1,
+      clientX: 200,
+      clientY: 100,
+    });
+    await handle.trigger('pointermove', {
+      pointerId: 1,
+      clientX: 800,
+      clientY: 450,
+    });
     expect(mounted.emitted('update:cursor-size')).toContainEqual([16]);
     await handle.trigger('pointerup', { pointerId: 1 });
 
-    await handle.trigger('pointerdown', { pointerId: 2, clientX: 200, clientY: 100 });
-    await handle.trigger('pointermove', { pointerId: 2, clientX: 0, clientY: 0 });
+    await handle.trigger('pointerdown', {
+      pointerId: 2,
+      clientX: 200,
+      clientY: 100,
+    });
+    await handle.trigger('pointermove', {
+      pointerId: 2,
+      clientX: 0,
+      clientY: 0,
+    });
     expect(mounted.emitted('update:cursor-size')).toContainEqual([128]);
 
     await mounted.setProps({ isPlaying: true });
-    await handle.trigger('pointermove', { pointerId: 2, clientX: 300, clientY: 200 });
+    await handle.trigger('pointermove', {
+      pointerId: 2,
+      clientX: 300,
+      clientY: 200,
+    });
     expect(mounted.emitted('update:cursor-size')).toHaveLength(2);
   });
 
@@ -499,6 +645,27 @@ describe('EditorCanvas', () => {
     await vi.advanceTimersByTimeAsync(2_000);
     await flushPromises();
     expect(mounted.find('.canvas-loading-skeleton').exists()).toBe(true);
+  });
+
+  it('disables the cursor overlay while an active screen has no frame, then re-enables it when the frame arrives', async () => {
+    let available: MediaFrame | null = null;
+    const mounted = mountEditor({
+      frameFor: () => available,
+      playbackState: 'paused',
+    });
+    await nextTick();
+
+    expect(state.isScreenEnabled?.()).toBe(false);
+
+    available = frame('screen');
+    await mounted.setProps({ frameVersion: 1 });
+    await nextTick();
+    expect(state.isScreenEnabled?.()).toBe(true);
+
+    available = null;
+    await mounted.setProps({ frameVersion: 2 });
+    await nextTick();
+    expect(state.isScreenEnabled?.()).toBe(false);
   });
 
   it('does not flash a loading skeleton when an already rendered screen track is toggled', async () => {
@@ -529,7 +696,15 @@ describe('EditorCanvas', () => {
   });
 
   it('draws through the camera window and exposes transform and crop interactions', async () => {
-    const bounds = { dx: 0, dy: 0, dw: 800, dh: 450, scale: 1, focusX: 400, focusY: 225 };
+    const bounds = {
+      dx: 0,
+      dy: 0,
+      dw: 800,
+      dh: 450,
+      scale: 1,
+      focusX: 400,
+      focusY: 225,
+    };
     state.drawVideoWindow.mockReturnValue(bounds);
     state.updateCursor.mockImplementation((_ctx, _window, _sourceWidth, _sourceHeight, _width, drawContent) => {
       drawContent?.(() => undefined);
@@ -576,7 +751,15 @@ describe('EditorCanvas', () => {
   });
 
   it('renders playback captions after the cursor overlay so captions stay above the cursor', async () => {
-    const bounds = { dx: 0, dy: 0, dw: 800, dh: 450, scale: 1, focusX: 400, focusY: 225 };
+    const bounds = {
+      dx: 0,
+      dy: 0,
+      dw: 800,
+      dh: 450,
+      scale: 1,
+      focusX: 400,
+      focusY: 225,
+    };
     state.drawVideoWindow.mockReturnValue(bounds);
     state.drawInCameraSpace.mockImplementation(
       (_ctx: unknown, _window: unknown, drawContent: (() => void) | undefined) => drawContent?.(),
@@ -617,10 +800,20 @@ describe('EditorCanvas', () => {
   });
 
   it('draws global visuals with the active camera bounds', async () => {
-    const cameraBounds = { dx: 20, dy: 30, dw: 400, dh: 300, scale: 2, focusX: 220, focusY: 180 };
+    const cameraBounds = {
+      dx: 20,
+      dy: 30,
+      dw: 400,
+      dh: 300,
+      scale: 2,
+      focusX: 220,
+      focusY: 180,
+    };
     state.drawVideoWindow.mockReturnValue(cameraBounds);
 
-    mountEditor({ outputCanvas: { ...DEFAULT_OUTPUT_CANVAS, width: 600, height: 600 } });
+    mountEditor({
+      outputCanvas: { ...DEFAULT_OUTPUT_CANVAS, width: 600, height: 600 },
+    });
     await flushPromises();
     runFrame();
 
@@ -660,7 +853,15 @@ describe('EditorCanvas', () => {
   });
 
   it('passes the sampled camera scale to the viewport-anchored webcam overlay', async () => {
-    const cameraBounds = { dx: 20, dy: 30, dw: 400, dh: 300, scale: 2, focusX: 220, focusY: 180 };
+    const cameraBounds = {
+      dx: 20,
+      dy: 30,
+      dw: 400,
+      dh: 300,
+      scale: 2,
+      focusX: 220,
+      focusY: 180,
+    };
     state.drawVideoWindow.mockReturnValue(cameraBounds);
 
     mountEditor();
@@ -674,7 +875,9 @@ describe('EditorCanvas', () => {
     const mounted = mountEditor();
     runFrame();
     vi.useFakeTimers();
-    await mounted.setProps({ outputCanvas: { ...DEFAULT_OUTPUT_CANVAS, width: 600, height: 600 } });
+    await mounted.setProps({
+      outputCanvas: { ...DEFAULT_OUTPUT_CANVAS, width: 600, height: 600 },
+    });
     await nextTick();
     expect(mounted.find('canvas').classes()).toContain('is-format-transitioning');
     vi.advanceTimersByTime(260);
@@ -682,7 +885,11 @@ describe('EditorCanvas', () => {
     expect(mounted.find('canvas').classes()).not.toContain('is-format-transitioning');
     vi.useRealTimers();
 
-    await mounted.setProps({ isPlaying: true, duration: 0, playbackState: 'playing' });
+    await mounted.setProps({
+      isPlaying: true,
+      duration: 0,
+      playbackState: 'playing',
+    });
     await nextTick();
     runFrame();
     expect(state.syncPlayback).toHaveBeenCalledWith(true);
@@ -690,7 +897,12 @@ describe('EditorCanvas', () => {
     expect(mounted.emitted('update:currentTime')).toBeUndefined();
 
     vi.useFakeTimers();
-    await mounted.setProps({ isPlaying: true, duration: 2, currentTime: 1.5, playbackState: 'playing' });
+    await mounted.setProps({
+      isPlaying: true,
+      duration: 2,
+      currentTime: 1.5,
+      playbackState: 'playing',
+    });
     await nextTick();
     vi.advanceTimersByTime(600);
     runFrame();
@@ -698,7 +910,12 @@ describe('EditorCanvas', () => {
     expect(mounted.emitted('update:isPlaying')).toBeUndefined();
     vi.useRealTimers();
 
-    await mounted.setProps({ isPlaying: false, duration: 3, currentTime: 1, playbackState: 'paused' });
+    await mounted.setProps({
+      isPlaying: false,
+      duration: 3,
+      currentTime: 1,
+      playbackState: 'paused',
+    });
     await nextTick();
     expect(state.syncPlayback).toHaveBeenLastCalledWith(false);
     expect(state.resetCamera).toHaveBeenCalled();

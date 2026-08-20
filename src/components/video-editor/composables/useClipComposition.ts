@@ -186,7 +186,11 @@ export function useClipComposition(options: {
     return visual.id;
   };
 
-  const addElement = async (kind: 'video' | 'image' | 'sound' | 'caption' | 'blur', requestedStartMs?: number) => {
+  const addElement = async (
+    kind: 'video' | 'image' | 'sound' | 'caption' | 'blur',
+    requestedStartMs?: number,
+    requestedDurationMs?: number,
+  ) => {
     const startMs = Math.max(0, Math.round(requestedStartMs ?? options.currentTimeSec.value * 1_000));
     if (kind === 'blur') {
       const defaults = blurDefaultsFor(options.editorDefaults.value);
@@ -213,14 +217,15 @@ export function useClipComposition(options: {
     }
     if (kind === 'caption') {
       const defaults = captionDefaultsFor(options.editorDefaults.value);
+      const captionDurationMs = Math.max(200, Math.round(requestedDurationMs ?? defaults.durationMs));
       const clip: CaptionClip = {
         id: crypto.randomUUID(),
         kind: 'caption',
         name: 'Caption',
         timelineStartMs: startMs,
-        timelineDurationMs: defaults.durationMs,
+        timelineDurationMs: captionDurationMs,
         sourceInMs: 0,
-        sourceDurationMs: defaults.durationMs,
+        sourceDurationMs: captionDurationMs,
         playbackRate: 1,
         transitions: { entry: null, exit: null },
         enabled: true,
@@ -273,7 +278,10 @@ export function useClipComposition(options: {
     );
   };
 
-  const addCaptionAtTime = (startMs: number) => addElement('caption', startMs);
+  const addCaptionAtTime = (request: number | { startMs: number; durationMs: number }) =>
+    typeof request === 'number'
+      ? addElement('caption', request)
+      : addElement('caption', request.startMs, request.durationMs);
 
   const previewClipEdge = (clipId: string, edge: 'start' | 'end', timeMs: number) => {
     const clip = composition.value.clips.find((entry) => entry.id === clipId);

@@ -8,6 +8,7 @@ import { MACOS_CURSOR_PACK } from '../../../video-editor/properties/cursor/curso
 import { resolveCameraFraming } from '../../../video-editor/composition/camera-layout';
 import { drawCanvasTransitionFrame } from '../../../video-editor/composition/transitions/render-canvas-transition';
 import type { VisualClip } from '~/media/shared/composition-types';
+import * as decoratedMedia from '../../../video-editor/composition/appearance/render-decorated-media';
 
 const appearance: ClipAppearance = {
   cornerRadius: 'none',
@@ -252,6 +253,62 @@ describe('composition rendering invariants', () => {
     expect(visualDrawStates.every(Boolean)).toBe(true);
   });
 
+  it('propagates alpha-aware shadow rendering for imported image export clips', () => {
+    const value = snapshot();
+    value.composition.clips = [];
+    value.composition.assets.push({
+      id: 'image',
+      kind: 'image',
+      name: 'Logo',
+      fileName: 'logo.png',
+      durationMs: 1_000,
+      width: 10,
+      height: 10,
+      src: 'file:///logo.png',
+      origin: 'project',
+    });
+    const clip: VisualClip = {
+      id: 'logo',
+      kind: 'image',
+      name: 'Logo',
+      assetId: 'image',
+      timelineStartMs: 0,
+      timelineDurationMs: 1_000,
+      sourceInMs: 0,
+      sourceDurationMs: 1_000,
+      playbackRate: 1,
+      enabled: true,
+      order: 0,
+      transform: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
+      appearance: { ...appearance, shadowSize: 'md', shadowBlur: 12 },
+      isMirrored: false,
+      isMirroredY: false,
+    };
+    value.composition.clips = [clip];
+    const visual = image();
+    const ctx = context();
+    const drawSpy = vi.spyOn(decoratedMedia, 'drawDecoratedMedia');
+    class FakeOffscreenCanvas {
+      width = 0;
+      height = 0;
+      private readonly surfaceContext = context();
+
+      getContext = vi.fn(() => this.surfaceContext);
+    }
+
+    try {
+      vi.stubGlobal('OffscreenCanvas', FakeOffscreenCanvas);
+      renderCompositionFrame(ctx, null, value, 0, null, undefined, new Map([['logo', visual]]));
+      expect(drawSpy).toHaveBeenCalledWith(
+        ctx,
+        expect.objectContaining({ source: visual.source, shadowFollowsSourceAlpha: true }),
+      );
+    } finally {
+      vi.unstubAllGlobals();
+      drawSpy.mockRestore();
+    }
+  });
+
   it('composites each motion-blur sample as an isolated scene before drawing clip shadows', () => {
     const value = snapshot();
     value.zoomMotionBlur = { enabled: true, intensity: 1 };
@@ -265,7 +322,7 @@ describe('composition rendering invariants', () => {
     };
 
     const source = { source: {} as CanvasImageSource, width: 100, height: 50 };
-    const operations: Array<{ kind: 'shadow' | 'video' | 'composite'; context: string }> = [];
+    const operations: Array<{ kind: 'shadow' | 'video' | 'composite' | 'clear' | 'fill'; context: string }> = [];
     const surfaces: FakeOffscreenCanvas[] = [];
     const trackedContext = (name: string) => {
       const tracked = context();
@@ -300,6 +357,12 @@ describe('composition rendering invariants', () => {
       });
       vi.mocked(tracked.fill).mockImplementation(() => {
         if (shadowBlur > 0 && shadowColor !== 'transparent') operations.push({ kind: 'shadow', context: name });
+      });
+      vi.mocked(tracked.clearRect).mockImplementation(() => {
+        operations.push({ kind: 'clear', context: name });
+      });
+      vi.mocked(tracked.fillRect).mockImplementation(() => {
+        operations.push({ kind: 'fill', context: name });
       });
       vi.mocked(tracked.drawImage).mockImplementation(((drawn) => {
         if (drawn === source.source) operations.push({ kind: 'video', context: name });
@@ -339,6 +402,12 @@ describe('composition rendering invariants', () => {
       .map((operation, index) => (operation.kind === 'composite' ? index : -1))
       .filter((index) => index >= 0);
     expect(compositeIndexes.length).toBeGreaterThanOrEqual(3);
+    const sampleContexts = new Set(surfaces.map((_surface, index) => `sample-${index}`));
+    for (const sampleContext of sampleContexts) {
+      const sampleOperations = operations.filter(({ context }) => context === sampleContext);
+      expect(sampleOperations.some(({ kind }) => kind === 'clear')).toBe(true);
+      expect(sampleOperations.some(({ kind }) => kind === 'fill')).toBe(false);
+    }
     expect(operations.filter(({ kind }) => kind === 'shadow').every(({ context }) => context !== 'target')).toBe(true);
     expect(operations.filter(({ kind }) => kind === 'video').every(({ context }) => context !== 'target')).toBe(true);
     let previousComposite = -1;

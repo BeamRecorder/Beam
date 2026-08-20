@@ -9,6 +9,7 @@ import {
 } from '../zoom/zoom-types';
 import { buildAutomaticZoomElements, ZOOM_ALGORITHM_VERSION } from '../zoom/zoom-suggestions';
 import { pasteZoomAt } from '../zoom/zoom-paste';
+import { fitZoomPlacement } from '../zoom/zoom-placement';
 import type { EditorPreferenceDefaults } from './editor-default-types';
 
 export function useProjectZoom(options: {
@@ -28,19 +29,27 @@ export function useProjectZoom(options: {
   const canGenerateZooms = computed(() => Boolean(editorData.value?.cursor.available && editorData.value.sessionId));
   const hasAutomaticZooms = computed(() => zoomElements.value.some((element) => element.mode === 'auto'));
 
-  const addZoomAtTime = (startMs: number) => {
-    if (!Number.isFinite(startMs)) return;
-    const clampedStartMs = Math.max(0, Math.min(durationMs.value, Math.round(startMs)));
-    if (clampedStartMs >= durationMs.value) return;
+  const addZoomAtTime = (request: number | { startMs: number; durationMs: number }) => {
+    const requestedStartMs = typeof request === 'number' ? request : request.startMs;
+    if (!Number.isFinite(requestedStartMs)) return;
+    if (requestedStartMs >= durationMs.value) return;
     const defaults = options.editorDefaults.value.zoom;
+    const preferredDurationMs =
+      typeof request === 'number'
+        ? Math.max(200, defaults?.durationMs ?? DEFAULT_ZOOM_DURATION_MS)
+        : Math.max(200, request.durationMs);
+    const placement = fitZoomPlacement({
+      anchorMs: Math.max(0, requestedStartMs) + preferredDurationMs / 2,
+      preferredDurationMs,
+      timelineDurationMs: durationMs.value,
+      occupied: zoomElements.value,
+    });
+    if (!placement) return;
     const zoom: ZoomElement = {
       id: crypto.randomUUID(),
       sessionId: editorData.value?.sessionId ?? 'manual',
-      startMs: clampedStartMs,
-      endMs: Math.min(
-        durationMs.value,
-        clampedStartMs + Math.max(200, defaults?.durationMs ?? DEFAULT_ZOOM_DURATION_MS),
-      ),
+      startMs: placement.startMs,
+      endMs: placement.endMs,
       depth: defaults?.depth ?? 2,
       mode: defaults?.mode ?? 'manual',
       focus: { cx: 0.5, cy: 0.5 },

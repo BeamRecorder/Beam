@@ -50,6 +50,9 @@
     "lg": "크게",
     "full": "전체"
   },
+  "TransitionsPanel": {
+    "curve": "곡선"
+  },
   "CanvasPanel": {
     "backgroundType": "배경 유형",
     "image": "이미지",

@@ -50,6 +50,9 @@
     "lg": "голям",
     "full": "пълен"
   },
+  "TransitionsPanel": {
+    "curve": "Крива"
+  },
   "CanvasPanel": {
     "backgroundType": "Тип фон",
     "image": "Изображение",
