@@ -217,7 +217,9 @@ export function useClipComposition(options: {
     }
     if (kind === 'caption') {
       const defaults = captionDefaultsFor(options.editorDefaults.value);
-      const captionDurationMs = Math.max(200, Math.round(requestedDurationMs ?? defaults.durationMs));
+      const roundedCaptionDurationMs = Math.round(requestedDurationMs ?? defaults.durationMs);
+      if (!Number.isFinite(roundedCaptionDurationMs)) return;
+      const captionDurationMs = Math.max(200, roundedCaptionDurationMs);
       const clip: CaptionClip = {
         id: crypto.randomUUID(),
         kind: 'caption',

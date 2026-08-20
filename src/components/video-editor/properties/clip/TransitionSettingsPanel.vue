@@ -70,14 +70,16 @@ const cards = computed<PresetCard[]>(() => [
 ]);
 const presetKey = (preset: TransitionPreset | null) => JSON.stringify(preset);
 const selected = (card: PresetCard) => presetKey(current.value?.preset ?? null) === presetKey(card.preset);
-const choose = (preset: TransitionPreset | null) =>
-  emit(
-    'update',
-    edge.value,
-    preset
-      ? { preset, durationMs: Math.min(current.value?.durationMs ?? DEFAULT_TRANSITION_DURATION_MS, maxDuration.value) }
-      : null,
-  );
+const choose = (preset: TransitionPreset | null) => {
+  if (!preset) return emit('update', edge.value, null);
+  const easingPower =
+    current.value?.easingPower ?? (props.domain === 'visual' ? DEFAULT_TRANSITION_EASING_POWER : null);
+  emit('update', edge.value, {
+    preset,
+    durationMs: Math.min(current.value?.durationMs ?? DEFAULT_TRANSITION_DURATION_MS, maxDuration.value),
+    ...(easingPower === null ? {} : { easingPower }),
+  });
+};
 </script>
 
 <template>

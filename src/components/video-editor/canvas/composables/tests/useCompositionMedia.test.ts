@@ -328,7 +328,10 @@ describe('useCompositionMedia', () => {
     state.drawComposition(ctx, { dx: 0, dy: 0, dw: 800, dh: 400 }, 'video');
     expect(drawDecoratedMedia).toHaveBeenLastCalledWith(
       ctx,
-      expect.objectContaining({ source: mounted.frames.get('video')!.bitmap }),
+      expect.objectContaining({
+        source: mounted.frames.get('video')!.bitmap,
+        shadowFollowsSourceAlpha: false,
+      }),
     );
   });
 

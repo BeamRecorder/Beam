@@ -50,7 +50,27 @@ describe('ClipTransitionsPanel', () => {
     ]);
 
     await wrapper.find('.preset-gallery .btn-container:nth-child(2) button').trigger('click');
-    expect(wrapper.emitted('update')).toEqual([['entry', { preset: { kind: 'fade' }, durationMs: 500 }]]);
+    expect(wrapper.emitted('update')).toEqual([
+      ['entry', { preset: { kind: 'fade' }, durationMs: 500, easingPower: 3 }],
+    ]);
+  });
+
+  it('preserves a custom easing power when replacing a visual preset', async () => {
+    const wrapper = mount(ClipTransitionsPanel, {
+      props: {
+        clip: clip('image', {
+          transitions: { entry: { preset: { kind: 'fade' }, durationMs: 300, easingPower: 5 }, exit: null },
+        }),
+      },
+      global: { stubs: { BigSlider } },
+    });
+
+    await wrapper.find('.preset-gallery .btn-container:nth-child(3) button').trigger('click');
+
+    expect(wrapper.emitted('update')).toContainEqual([
+      'entry',
+      { preset: { kind: 'slide', direction: 'left' }, durationMs: 300, easingPower: 5 },
+    ]);
   });
 
   it('limits audio to None/Fade and keeps the second edge within clip duration', async () => {

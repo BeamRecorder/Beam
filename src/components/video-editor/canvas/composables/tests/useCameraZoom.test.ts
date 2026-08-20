@@ -6,10 +6,8 @@ import * as compositionCamera from '../../../zoom/composition-camera';
 import type { ClipComposition, NormalizedTransform, VisualClip } from '~/media/shared/composition-types';
 import type { MediaFrame } from '~/media/shared';
 import type { ZoomElement } from '../../../zoom/zoom-types';
-import type { compositeIsolatedMotionBlurSample } from '../../../zoom/zoom-motion-blur-compositor';
+import type { CompositeMotionBlurOptions } from './use-camera-zoom-test-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-
-type CompositeMotionBlurOptions = Parameters<typeof compositeIsolatedMotionBlurSample>[0];
 
 const drawDecoratedMedia = vi.hoisted(() => vi.fn());
 const motionBlurCompositor = vi.hoisted(() => ({

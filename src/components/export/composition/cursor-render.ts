@@ -115,8 +115,9 @@ export function drawCursorLayer(
     const ripple = cursorRippleAt(age, effect.rippleSize, style);
     if (!ripple) continue;
     ctx.save();
+    const baseAlpha = ctx.globalAlpha;
     for (const ring of ripple.rings) {
-      ctx.globalAlpha *= ring.opacity;
+      ctx.globalAlpha = baseAlpha * ring.opacity;
       if (ring.filled) {
         ctx.fillStyle = effect.rippleColor;
         ctx.beginPath();

@@ -908,4 +908,20 @@ describe('useClipComposition', () => {
     expect(mounted.state.selectedClip.value?.timelineStartMs).toBe(0);
     expect(mounted.state.selectedClip.value?.timelineDurationMs).toBe(3_000);
   });
+
+  it('clamps finite caption durations to 200ms and ignores non-finite requests', async () => {
+    const mounted = mountComposable();
+
+    await mounted.state.addCaptionAtTime({ startMs: 1_000, durationMs: 100 });
+    expect(mounted.state.composition.value.clips).toHaveLength(1);
+    expect(mounted.state.selectedCaptionClip.value).toMatchObject({
+      timelineDurationMs: 200,
+      sourceDurationMs: 200,
+    });
+
+    await mounted.state.addCaptionAtTime({ startMs: 2_000, durationMs: Number.NaN });
+    await mounted.state.addCaptionAtTime({ startMs: 3_000, durationMs: Number.POSITIVE_INFINITY });
+
+    expect(mounted.state.composition.value.clips).toHaveLength(1);
+  });
 });
