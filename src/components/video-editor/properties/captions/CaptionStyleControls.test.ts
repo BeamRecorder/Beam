@@ -52,9 +52,7 @@ describe('CaptionStyleControls', () => {
       },
     });
 
-    const fontSizeSlider = wrapper
-      .findAllComponents(BigSlider)
-      .find((slider) => slider.props('modelValue') === 42);
+    const fontSizeSlider = wrapper.findAllComponents(BigSlider).find((slider) => slider.props('modelValue') === 42);
 
     expect(fontSizeSlider).toBeDefined();
     expect(fontSizeSlider!.props('max')).toBe(256);
