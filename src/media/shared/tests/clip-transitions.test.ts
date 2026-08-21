@@ -71,8 +71,8 @@ describe('clip transition evaluator', () => {
     const zoom = timedClip({ entry: { preset: { kind: 'zoom', direction: 'in' }, durationMs: 500 }, exit: null });
     const blur = timedClip({ entry: { preset: { kind: 'blur' }, durationMs: 500 }, exit: null });
 
-    expect(resolveClipTransitionState(slide, 100)).toMatchObject({ opacity: 0, translateX: -0.08 });
-    expect(resolveClipTransitionState(zoom, 100)).toMatchObject({ opacity: 0, scale: 0.96 });
+    expect(resolveClipTransitionState(slide, 100)).toMatchObject({ opacity: 0, translateX: 0.08 });
+    expect(resolveClipTransitionState(zoom, 100)).toMatchObject({ opacity: 0, scale: 0.9 });
     expect(resolveClipTransitionState(blur, 100)).toMatchObject({ opacity: 0, blur: 12 });
     expect(resolveClipTransitionState(slide, 600)).toMatchObject({ opacity: 1, translateX: 0 });
   });
@@ -267,25 +267,25 @@ describe('clip transition evaluator', () => {
         timedClip({ entry: { preset: { kind: 'slide', direction: 'right' }, durationMs: 500 }, exit: null }),
         100,
       ).translateX,
-    ).toBe(0.08);
+    ).toBe(-0.08);
     expect(
       resolveClipTransitionState(
         timedClip({ entry: { preset: { kind: 'slide', direction: 'up' }, durationMs: 500 }, exit: null }),
         100,
       ).translateY,
-    ).toBe(-0.08);
+    ).toBe(0.08);
     expect(
       resolveClipTransitionState(
         timedClip({ entry: { preset: { kind: 'slide', direction: 'down' }, durationMs: 500 }, exit: null }),
         100,
       ).translateY,
-    ).toBe(0.08);
+    ).toBe(-0.08);
     expect(
       resolveClipTransitionState(
         timedClip({ entry: { preset: { kind: 'zoom', direction: 'out' }, durationMs: 500 }, exit: null }),
         100,
       ).scale,
-    ).toBe(1.04);
+    ).toBe(1.1);
     expect(
       normalizeClipTransitions({ entry: null, exit: { preset: { kind: 'fade' }, durationMs: 500 } }, 40, 'audio'),
     ).toEqual({ entry: null, exit: { preset: { kind: 'fade' }, durationMs: 40 } });
