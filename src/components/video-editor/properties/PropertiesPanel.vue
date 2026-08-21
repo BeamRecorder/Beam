@@ -483,7 +483,6 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
               :editor-data="editorData"
               :timeline-duration-ms="timelineDurationMs"
               @update:composition="emit('update:composition', $event)"
-              @preview:composition="emit('preview:composition', $event)"
               @select-caption="emit('select-caption', $event)"
             />
           </div>

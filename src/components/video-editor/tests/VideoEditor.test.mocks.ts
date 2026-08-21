@@ -2,6 +2,7 @@ import { vi } from 'vitest';
 import type { ClipComposition } from '~/media/shared/composition-types';
 import { COMPOSITION_SCHEMA_VERSION, isAudioClip } from '~/media/shared/composition-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { setVolume } from '~/components/video-editor/composition/engine/clip-engine';
 import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
 
 const { editorState } = vi.hoisted(() => ({ editorState: { store: undefined as any } }));
@@ -206,12 +207,11 @@ vi.mock('../composables/useVideoEditor', async () => {
         computed({
           get: () => composition.value.clips.filter(isAudioClip).find((clip) => clip.role === role)?.volume ?? 100,
           set: (volume: number) => {
-            composition.value = {
-              ...composition.value,
-              clips: composition.value.clips.map((clip) =>
-                isAudioClip(clip) && clip.role === role ? { ...clip, volume } : clip,
-              ),
-            };
+            let next = composition.value;
+            for (const clip of next.clips) {
+              if (isAudioClip(clip) && clip.role === role) next = setVolume(next, clip.id, volume);
+            }
+            composition.value = next;
           },
         });
       const store = {
@@ -290,7 +290,7 @@ vi.mock('../EditorAmbientBackground.vue', async () => {
 });
 
 vi.mock('../LinkedClipsDeleteDialog.vue', async () => {
-  const { defineComponent, h } = await import('vue');
+  const { defineComponent, h, onMounted, onUnmounted } = await import('vue');
   return {
     default: defineComponent({
       name: 'MockLinkedClipsDeleteDialog',
@@ -300,6 +300,14 @@ vi.mock('../LinkedClipsDeleteDialog.vue', async () => {
       },
       emits: ['close', 'delete'],
       setup(props, { emit }) {
+        const handleKeyDown = (event: KeyboardEvent) => {
+          if (!props.isOpen || event.key !== 'Escape') return;
+          event.preventDefault();
+          emit('close');
+        };
+        onMounted(() => window.addEventListener('keydown', handleKeyDown));
+        onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
+
         return () => {
           if (!props.isOpen) return null;
           const clips = props.clips as Array<{ id: string }>;

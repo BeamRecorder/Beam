@@ -51,12 +51,22 @@ describe('VideoEditor diagnostics and keyboard behavior', () => {
 
   it('updates role volumes and protects editable fields from destructive keyboard shortcuts', async () => {
     const mounted = mountEditor();
-    editorState.store.systemVolume.value = 150;
-    editorState.store.micVolume.value = 125;
+    const current = editorState.store.compositionState.composition.value;
+    const systemClip = current.clips.find((clip: any) => clip.role === 'system');
+    editorState.store.compositionState.composition.value = {
+      ...current,
+      clips: [...current.clips, { ...systemClip, id: 'microphone', name: 'Microphone', role: 'microphone', order: 2 }],
+    };
+    editorState.store.systemVolume.value = 250;
+    editorState.store.micVolume.value = -25;
     await mounted.vm.$nextTick();
     expect(
       editorState.store.compositionState.composition.value.clips.find((clip: any) => clip.role === 'system')?.volume,
-    ).toBe(150);
+    ).toBe(200);
+    expect(
+      editorState.store.compositionState.composition.value.clips.find((clip: any) => clip.role === 'microphone')
+        ?.volume,
+    ).toBe(0);
 
     editorState.store.compositionState.selectedClipId.value = 'audio';
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', cancelable: true }));
@@ -96,6 +106,8 @@ describe('VideoEditor diagnostics and keyboard behavior', () => {
     expect(mounted.findComponent({ name: 'MockLinkedClipsDeleteDialog' }).props('isOpen')).toBe(true);
 
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', cancelable: true }));
+    await mounted.vm.$nextTick();
+    expect(mounted.findComponent({ name: 'MockLinkedClipsDeleteDialog' }).props('isOpen')).toBe(false);
     expect(state.selectedClipId.value).toBe('screen');
   });
 });

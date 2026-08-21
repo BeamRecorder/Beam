@@ -1,5 +1,6 @@
 export type EditorState = {
   schemaVersion: number;
+  isFresh: boolean;
   composition: {
     schemaVersion: number;
     assets: Array<Record<string, unknown>>;
@@ -22,14 +23,27 @@ export type ProjectStore = {
   ) => { id: string; fileName: string; [key: string]: unknown };
 };
 
+export type UserPaths = {
+  user: string;
+  preferences: string;
+  projects: string;
+  wallpapers: string;
+  wallpaperImages: string;
+  wallpaperVideos: string;
+  fonts: string;
+  cursors: string;
+  whisperModels: string;
+};
+
 export const { createUserPaths } = require('../electron/storage/user-paths.cjs') as {
-  createUserPaths: (videos: string) => Record<string, string>;
+  createUserPaths: (videos: string) => UserPaths;
 };
 
 export const { createBackgroundLibrary } = require('../electron/backgrounds/background-library.cjs') as {
-  createBackgroundLibrary: (paths: Record<string, string>) => {
+  createBackgroundLibrary: (paths: UserPaths) => {
     list: () => Array<{ kind: string; path: string; fileName: string }>;
     importFile: (source: string) => { kind: string; path: string; fileName: string };
+    fileForUrl: (url: string) => string | null;
   };
 };
 
