@@ -10,6 +10,8 @@ import { useProjectEditorState } from './useProjectEditorState';
 import { createCompositionSnapshot } from '../../export/composition/snapshot';
 import { DEFAULT_OUTPUT_CANVAS, type OutputCanvasSettings } from '../canvas/output-canvas';
 import { compositionDurationMs } from '~/media/shared';
+import { isAudioClip, type AudioClip, type AudioRole } from '~/media/shared/composition-types';
+import { setVolume } from '../composition/engine/clip-engine';
 import { createDefaultCursorMotionSettings } from '../../../api/types/cursor-settings';
 import { compositionPlaybackSignature } from './composition-playback-signature';
 import { useToastStore } from '~/ui/toast/toastStore';
@@ -22,8 +24,6 @@ export function useVideoEditor(options: {
   const { project, editorData } = options;
   const toastStore = useToastStore();
   const activeTab = ref('canvas');
-  const systemVolume = ref(100);
-  const micVolume = ref(100);
   const outputCanvas = ref<OutputCanvasSettings>({ ...DEFAULT_OUTPUT_CANVAS });
   const player = useVideoPlayer();
   const initialPlaybackSettled = ref(false);
@@ -39,6 +39,22 @@ export function useVideoEditor(options: {
     activeTab,
     editorDefaults,
   });
+  const roleVolume = (role: Extract<AudioRole, 'system' | 'microphone'>) =>
+    computed({
+      get: () =>
+        compositionState.composition.value.clips.find(
+          (clip): clip is AudioClip => isAudioClip(clip) && clip.role === role,
+        )?.volume ?? 100,
+      set: (volume: number) => {
+        let next = compositionState.composition.value;
+        for (const clip of next.clips) {
+          if (isAudioClip(clip) && clip.role === role) next = setVolume(next, clip.id, volume);
+        }
+        compositionState.composition.value = next;
+      },
+    });
+  const systemVolume = roleVolume('system');
+  const micVolume = roleVolume('microphone');
   // Composition state is available before the asynchronous playback engine has
   // decoded metadata, so it is the authoritative duration for zoom generation.
   const durationMs = computed(() => compositionDurationMs(compositionState.composition.value));

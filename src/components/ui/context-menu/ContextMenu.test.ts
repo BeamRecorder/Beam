@@ -1,4 +1,5 @@
 import { mount } from '@vue/test-utils';
+import { Trash2 } from '@lucide/vue';
 import { describe, expect, it, vi } from 'vitest';
 import ContextMenu from './ContextMenu.vue';
 import ContextMenuItem from './ContextMenuItem.vue';
@@ -106,13 +107,14 @@ describe('ContextMenu', () => {
   it('ContextMenuItem renders slot content, danger state and emits click', async () => {
     const clickSpy = vi.fn();
     const wrapper = mount(ContextMenuItem, {
-      props: { label: 'Delete Clip', danger: true, shortcut: 'Del' },
+      props: { label: 'Delete Clip', icon: Trash2, danger: true, shortcut: 'Del' },
       attrs: { onClick: clickSpy },
     });
 
     expect(wrapper.classes()).toContain('is-danger');
     expect(wrapper.text()).toContain('Delete Clip');
     expect(wrapper.text()).toContain('Del');
+    expect(wrapper.get('.item-icon-wrapper').attributes('aria-hidden')).toBe('true');
 
     await wrapper.trigger('click');
     expect(clickSpy).toHaveBeenCalled();

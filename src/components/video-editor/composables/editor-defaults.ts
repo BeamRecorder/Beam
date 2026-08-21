@@ -12,7 +12,7 @@ import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/
 import { isCameraFramingPreset, isCameraLayoutPreset } from '~/media/shared/camera-layout-types';
 import { normalizeClipTransitions } from '~/media/shared/clip-transitions';
 import { normalizeOutputCanvas } from '../canvas/output-canvas';
-import type { ZoomElement } from '../zoom/zoom-types';
+import { normalizeZoomMotionBlur, type ZoomElement } from '../zoom/zoom-types';
 import type { EditorPreferenceDefaults, VisualClipDefaults } from './editor-default-types';
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
@@ -98,6 +98,9 @@ export const normalizeEditorPreferenceDefaults = (value: unknown): EditorPrefere
     ...(input.zoom && typeof input.zoom === 'object'
       ? { zoom: clone(input.zoom as EditorPreferenceDefaults['zoom']) }
       : {}),
+    ...(input.zoomMotionBlur && typeof input.zoomMotionBlur === 'object'
+      ? { zoomMotionBlur: normalizeZoomMotionBlur(input.zoomMotionBlur) }
+      : {}),
   };
 };
 
@@ -131,6 +134,7 @@ export function defaultsFromEditorState(
       mode: selectedZoom.mode,
     };
   }
+  next.zoomMotionBlur = normalizeZoomMotionBlur(state.zoom.motionBlur);
   return next;
 }
 
@@ -143,6 +147,17 @@ export function applyFreshPresentationDefaults(state: ProjectEditorState, defaul
       ...clone(defaults.presentation),
       canvas: normalizeOutputCanvas(defaults.presentation.canvas),
       importedBackgrounds: [],
+    },
+  };
+}
+
+export function applyGlobalCursorDefaults(state: ProjectEditorState, defaults: EditorPreferenceDefaults) {
+  if (!defaults.presentation?.cursor) return state;
+  return {
+    ...state,
+    presentation: {
+      ...state.presentation,
+      cursor: clone(defaults.presentation.cursor),
     },
   };
 }

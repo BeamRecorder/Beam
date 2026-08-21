@@ -1,8 +1,14 @@
 import { defineComponent, ref } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import type { AudioClip, ClipComposition, MediaAsset, VisualClip } from '~/media/shared/composition-types';
+import type { AudioClip, ClipComposition } from '~/media/shared/composition-types';
+import {
+  audioClip,
+  cloneComposition,
+  createCompositionFixture,
+  playbackMutations,
+  visualMutations,
+} from './useVideoEditor.test-support';
 
 const capture = vi.hoisted(() => ({
   listBackgroundLibrary: vi.fn(),
@@ -90,6 +96,7 @@ vi.mock('../useProjectEditorState', () => ({
     const value = {
       load: vi.fn().mockResolvedValue(undefined),
       scheduleSave: vi.fn(),
+      enableDefaultCapture: vi.fn(),
     };
     state.editorState = value;
     return value;
@@ -127,209 +134,6 @@ import { useVideoEditor } from '../useVideoEditor';
 
 const project = { id: 'project-1', name: 'Demo project' } as any;
 const makeEditorData = () => ({ tracks: [{ kind: 'screen', format: { frameRate: 60 } }] }) as any;
-
-const cloneComposition = (value: ClipComposition): ClipComposition =>
-  JSON.parse(JSON.stringify(value)) as ClipComposition;
-
-const mediaAsset = (id: string, kind: MediaAsset['kind'], overrides: Partial<MediaAsset> = {}): MediaAsset => ({
-  id,
-  kind,
-  name: id,
-  fileName: `${id}.${kind === 'audio' ? 'wav' : kind === 'image' ? 'png' : 'mp4'}`,
-  durationMs: 5_000,
-  width: kind === 'audio' ? null : 1_920,
-  height: kind === 'audio' ? null : 1_080,
-  src: `project-media://project-1/${id}`,
-  origin: 'project',
-  ...overrides,
-});
-
-const videoClip = (id: string, assetId: string, overrides: Partial<VisualClip> = {}): VisualClip => ({
-  id,
-  kind: 'video',
-  name: id,
-  assetId,
-  timelineStartMs: 1_000,
-  timelineDurationMs: 3_000,
-  sourceInMs: 0,
-  sourceDurationMs: 3_000,
-  playbackRate: 1,
-  enabled: true,
-  order: -1,
-  transform: { x: 0.1, y: 0.1, width: 0.5, height: 0.5 },
-  crop: { x: 0, y: 0, width: 1, height: 1 },
-  appearance: createDefaultClipAppearance('video'),
-  isMirrored: false,
-  isMirroredY: false,
-  ...overrides,
-});
-
-const audioClip = (id: string, assetId: string, overrides: Partial<AudioClip> = {}): AudioClip => ({
-  id,
-  kind: 'audio',
-  name: id,
-  assetId,
-  role: 'imported',
-  timelineStartMs: 1_000,
-  timelineDurationMs: 3_000,
-  sourceInMs: 0,
-  sourceDurationMs: 3_000,
-  playbackRate: 1,
-  enabled: true,
-  order: 2,
-  volume: 100,
-  ...overrides,
-});
-
-const createCompositionFixture = (): ClipComposition => ({
-  schemaVersion: 6,
-  keyboardCaptionSessions: [],
-  assets: [
-    mediaAsset('screen-asset', 'video', { origin: 'session', sessionId: 'session-1' }),
-    mediaAsset('video-asset', 'video'),
-    mediaAsset('audio-asset', 'audio'),
-  ],
-  clips: [
-    videoClip('screen', 'screen-asset', {
-      kind: 'screen',
-      name: 'Screen recording',
-      timelineStartMs: 0,
-      timelineDurationMs: 5_000,
-      sourceDurationMs: 5_000,
-      order: 0,
-      transform: { x: 0, y: 0, width: 1, height: 1 },
-      appearance: createDefaultClipAppearance('screen'),
-    }),
-    videoClip('imported-video', 'video-asset'),
-    audioClip('imported-audio', 'audio-asset'),
-  ],
-});
-
-type CompositionMutation = (composition: ClipComposition) => void;
-
-const visualMutations: Array<[string, CompositionMutation]> = [
-  [
-    'transform',
-    (composition) => {
-      const clip = composition.clips.find((entry) => entry.id === 'imported-video') as VisualClip;
-      clip.transform = { x: 0.2, y: 0.15, width: 0.4, height: 0.35 };
-    },
-  ],
-  [
-    'appearance',
-    (composition) => {
-      const clip = composition.clips.find((entry) => entry.id === 'imported-video') as VisualClip;
-      clip.appearance = { ...clip.appearance, frame: 'safari', shadowSize: 'lg' };
-    },
-  ],
-  [
-    'crop',
-    (composition) => {
-      const clip = composition.clips.find((entry) => entry.id === 'imported-video') as VisualClip;
-      clip.crop = { x: 0.1, y: 0.15, width: 0.75, height: 0.7 };
-    },
-  ],
-  [
-    'mirror',
-    (composition) => {
-      const clip = composition.clips.find((entry) => entry.id === 'imported-video') as VisualClip;
-      clip.isMirrored = true;
-      clip.isMirroredY = true;
-    },
-  ],
-  [
-    'order',
-    (composition) => {
-      const clip = composition.clips.find((entry) => entry.id === 'imported-video') as VisualClip;
-      clip.order = -4;
-    },
-  ],
-  [
-    'name',
-    (composition) => {
-      const clip = composition.clips.find((entry) => entry.id === 'imported-video') as VisualClip;
-      clip.name = 'Renamed imported video';
-    },
-  ],
-];
-
-const playbackMutations: Array<[string, CompositionMutation]> = [
-  [
-    'asset source',
-    (composition) => {
-      composition.assets.find((asset) => asset.id === 'video-asset')!.src =
-        'project-media://project-1/replaced-video.mp4';
-    },
-  ],
-  [
-    'timeline start',
-    (composition) => {
-      composition.clips.find((clip) => clip.id === 'imported-video')!.timelineStartMs = 1_250;
-    },
-  ],
-  [
-    'source in',
-    (composition) => {
-      composition.clips.find((clip) => clip.id === 'imported-video')!.sourceInMs = 500;
-    },
-  ],
-  [
-    'timeline duration',
-    (composition) => {
-      const clip = composition.clips.find((entry) => entry.id === 'imported-video')!;
-      clip.timelineDurationMs = 2_500;
-      clip.sourceDurationMs = 2_500;
-    },
-  ],
-  [
-    'playback rate',
-    (composition) => {
-      const clip = composition.clips.find((entry) => entry.id === 'imported-video')!;
-      clip.playbackRate = 1.5;
-      clip.timelineDurationMs = 2_000;
-    },
-  ],
-  [
-    'enabled',
-    (composition) => {
-      composition.clips.find((clip) => clip.id === 'imported-video')!.enabled = false;
-    },
-  ],
-  [
-    'audio volume',
-    (composition) => {
-      (composition.clips.find((clip) => clip.id === 'imported-audio') as AudioClip).volume = 55;
-    },
-  ],
-  [
-    'add video',
-    (composition) => {
-      composition.assets.push(mediaAsset('added-video-asset', 'video'));
-      composition.clips.push(videoClip('added-video', 'added-video-asset', { timelineStartMs: 0 }));
-    },
-  ],
-  [
-    'add audio',
-    (composition) => {
-      composition.assets.push(mediaAsset('added-audio-asset', 'audio'));
-      composition.clips.push(audioClip('added-audio', 'added-audio-asset', { timelineStartMs: 0 }));
-    },
-  ],
-  [
-    'remove video',
-    (composition) => {
-      composition.clips = composition.clips.filter((clip) => clip.id !== 'imported-video');
-      composition.assets = composition.assets.filter((asset) => asset.id !== 'video-asset');
-    },
-  ],
-  [
-    'remove audio',
-    (composition) => {
-      composition.clips = composition.clips.filter((clip) => clip.id !== 'imported-audio');
-      composition.assets = composition.assets.filter((asset) => asset.id !== 'audio-asset');
-    },
-  ],
-];
 
 describe('useVideoEditor', () => {
   beforeEach(() => {
@@ -495,8 +299,8 @@ describe('useVideoEditor', () => {
     wrapper.unmount();
   });
 
-  const mountWithComposition = async () => {
-    state.initialComposition = createCompositionFixture();
+  const mountWithComposition = async (initialComposition = createCompositionFixture()) => {
+    state.initialComposition = initialComposition;
     let api!: ReturnType<typeof useVideoEditor>;
     const projectRef = ref(project);
     const editorData = ref(makeEditorData());
@@ -515,6 +319,39 @@ describe('useVideoEditor', () => {
     await wrapper.vm.$nextTick();
     await flushPromises();
   };
+
+  it('derives system and microphone volumes from loaded clips and updates only their own roles', async () => {
+    const composition = createCompositionFixture();
+    composition.clips.push(
+      audioClip('system-audio-a', 'audio-asset', { role: 'system', volume: 63 }),
+      audioClip('system-audio-b', 'audio-asset', { role: 'system', volume: 63 }),
+      audioClip('microphone-audio-a', 'audio-asset', { role: 'microphone', volume: 41 }),
+      audioClip('microphone-audio-b', 'audio-asset', { role: 'microphone', volume: 41 }),
+    );
+    const { api, wrapper } = await mountWithComposition(composition);
+    const volumeOf = (id: string) =>
+      (state.compositionState.composition.value.clips.find((clip: { id: string }) => clip.id === id) as AudioClip)
+        .volume;
+
+    expect(api.systemVolume.value).toBe(63);
+    expect(api.micVolume.value).toBe(41);
+
+    api.systemVolume.value = 77;
+    await wrapper.vm.$nextTick();
+    expect(volumeOf('system-audio-a')).toBe(77);
+    expect(volumeOf('system-audio-b')).toBe(77);
+    expect(volumeOf('microphone-audio-a')).toBe(41);
+    expect(volumeOf('microphone-audio-b')).toBe(41);
+
+    api.micVolume.value = 29;
+    await wrapper.vm.$nextTick();
+    expect(volumeOf('system-audio-a')).toBe(77);
+    expect(volumeOf('system-audio-b')).toBe(77);
+    expect(volumeOf('microphone-audio-a')).toBe(29);
+    expect(volumeOf('microphone-audio-b')).toBe(29);
+    expect(volumeOf('imported-audio')).toBe(100);
+    wrapper.unmount();
+  });
 
   it.each(visualMutations)('keeps the loaded media for a visual-only %s mutation', async (_name, mutate) => {
     const { wrapper } = await mountWithComposition();

@@ -38,25 +38,31 @@ pub fn validate_request(
         };
         require_capability(supported, "selected screen source")?;
     } else if let Some(ScreenSelection::Portal { kind, .. }) = &request.screen {
-        require_capability(snapshot.capabilities.portal_selection, "portal selection")?;
-        match kind {
-            crate::model::PortalSourceKind::Monitor => {
-                require_capability(
-                    snapshot.capabilities.display_capture,
-                    "portal monitor capture",
-                )?;
-            }
-            crate::model::PortalSourceKind::Window => {
-                require_capability(
-                    snapshot.capabilities.window_capture,
-                    "portal window capture",
-                )?;
-            }
-            crate::model::PortalSourceKind::MonitorOrWindow => {
-                require_capability(
-                    snapshot.capabilities.display_capture && snapshot.capabilities.window_capture,
-                    "combined portal monitor/window capture",
-                )?;
+        // Linux capability discovery is advisory: Portal, PipeWire and encoder
+        // probes can fail transiently even though the real Portal request works.
+        // Let the capture backend perform the authoritative check at start time.
+        if snapshot.diagnostics.platform != "linux" {
+            require_capability(snapshot.capabilities.portal_selection, "portal selection")?;
+            match kind {
+                crate::model::PortalSourceKind::Monitor => {
+                    require_capability(
+                        snapshot.capabilities.display_capture,
+                        "portal monitor capture",
+                    )?;
+                }
+                crate::model::PortalSourceKind::Window => {
+                    require_capability(
+                        snapshot.capabilities.window_capture,
+                        "portal window capture",
+                    )?;
+                }
+                crate::model::PortalSourceKind::MonitorOrWindow => {
+                    require_capability(
+                        snapshot.capabilities.display_capture
+                            && snapshot.capabilities.window_capture,
+                        "combined portal monitor/window capture",
+                    )?;
+                }
             }
         }
     }

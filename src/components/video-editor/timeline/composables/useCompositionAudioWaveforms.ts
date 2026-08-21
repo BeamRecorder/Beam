@@ -9,6 +9,7 @@ const MAX_BAR_HEIGHT = 38;
 const MAX_POINTS = 1_200;
 const PIXELS_PER_POINT = 3;
 const WAVEFORM_WORKER_COUNT = 3;
+const VIEWPORT_REFINEMENT_DEBOUNCE_MS = 120;
 
 export interface AudioWaveformViewport {
   startSeconds: number;
@@ -144,6 +145,7 @@ export function useCompositionAudioWaveforms(
   let generation = 0;
   let nextWorkerStart = 0;
   let publishFrame = 0;
+  let refinementTimer = 0;
   let currentRequests = new Map<string, WaveformRequest>();
 
   const updatePressure = () => {
@@ -186,13 +188,19 @@ export function useCompositionAudioWaveforms(
   const requestSignature = computed(() =>
     requests.value
       .map(
-        ({ clip, asset, sourceStartSeconds, sourceEndSeconds, pointCount }) =>
-          `${clip.id}:${asset?.src ?? ''}:${sourceStartSeconds}:${sourceEndSeconds}:${pointCount}`,
+        ({ clip, asset, sourceStartSeconds, sourceEndSeconds, pointCount, leftPercent, widthPercent }) =>
+          `${clip.id}:${asset?.id ?? ''}:${asset?.src ?? ''}:${sourceStartSeconds}:${sourceEndSeconds}:${pointCount}:${leftPercent}:${widthPercent}`,
       )
       .join('|'),
   );
 
   const sourceKey = (request: WaveformRequest) => `${request.asset?.id ?? ''}:${request.asset?.src ?? ''}`;
+  const sliceMatchesRequestRange = (slice: StoredWaveformSlice | undefined, request: WaveformRequest) =>
+    slice?.sourceKey === sourceKey(request) &&
+    slice.sourceStartSeconds === request.sourceStartSeconds &&
+    slice.sourceEndSeconds === request.sourceEndSeconds &&
+    slice.leftPercent === request.leftPercent &&
+    slice.widthPercent === request.widthPercent;
   const cacheKey = (request: WaveformRequest) =>
     [
       request.clip.id,
@@ -348,7 +356,12 @@ export function useCompositionAudioWaveforms(
     batch.receivedPoints.set(segment.index, chunkEnd);
     if (message.segmentComplete) batch.pending.delete(segment.index);
     const complete = batch.pending.size === 0;
-    publish(message.clipId, request, batch.peaks, loadingSegmentsFor(batch));
+    const visibleSlice = rawSlices.value[message.clipId];
+    const isVisibleSliceForRequest =
+      sliceMatchesRequestRange(visibleSlice, request) && visibleSlice?.peaks.length === request.pointCount * 2;
+    if (complete || !visibleSlice || isVisibleSliceForRequest) {
+      publish(message.clipId, request, batch.peaks, loadingSegmentsFor(batch));
+    }
     updatePressure();
     if (!complete) return;
     cacheSlice(request, sliceFrom(request, batch.peaks, []));
@@ -372,56 +385,74 @@ export function useCompositionAudioWaveforms(
     }
   };
 
+  const reconcileRequests = () => {
+    refinementTimer = 0;
+    generation += 1;
+    refinementBatches.clear();
+    pendingPublishes.clear();
+    updatePressure();
+    cancelAnimationFrame(publishFrame);
+    publishFrame = 0;
+    const active = requests.value;
+    currentRequests = new Map(active.map((request) => [request.clip.id, request]));
+    const nextSlices: Record<string, StoredWaveformSlice> = {};
+    errors.value = {};
+    const nextStatus: Record<string, AudioWaveformStatus> = {};
+    for (const worker of workers) worker.postMessage({ type: 'clear', generation } satisfies WaveformWorkerRequest);
+    for (const request of active) {
+      if (!request.asset) {
+        const error = new MediaInputError({
+          kind: 'missing',
+          sourceId: request.clip.assetId,
+          message: 'The waveform source asset is missing.',
+        });
+        fail(request.clip.id, error.detail);
+        nextStatus[request.clip.id] = 'error';
+        continue;
+      }
+      const cached = waveformCache.get(cacheKey(request));
+      if (cached) {
+        waveformCache.delete(cacheKey(request));
+        waveformCache.set(cacheKey(request), cached);
+        nextSlices[request.clip.id] = cached;
+        nextStatus[request.clip.id] = 'ready';
+        continue;
+      }
+      const visibleSlice = rawSlices.value[request.clip.id];
+      if (sliceMatchesRequestRange(visibleSlice, request)) {
+        nextSlices[request.clip.id] = visibleSlice;
+      }
+      nextStatus[request.clip.id] = 'loading';
+      try {
+        initWorkers();
+        beginExtraction(request);
+      } catch (error) {
+        fail(request.clip.id, {
+          kind: 'decode-failure',
+          sourceId: request.clip.assetId,
+          message: error instanceof Error ? error.message : 'The waveform request could not be created.',
+        });
+        nextStatus[request.clip.id] = 'error';
+      }
+    }
+    rawSlices.value = nextSlices;
+    status.value = nextStatus;
+    updatePressure();
+  };
+
   watch(
     requestSignature,
     () => {
-      generation += 1;
-      refinementBatches.clear();
-      pendingPublishes.clear();
-      updatePressure();
-      cancelAnimationFrame(publishFrame);
-      publishFrame = 0;
+      window.clearTimeout(refinementTimer);
       const active = requests.value;
-      currentRequests = new Map(active.map((request) => [request.clip.id, request]));
-      const nextSlices: Record<string, StoredWaveformSlice> = {};
-      errors.value = {};
-      const nextStatus: Record<string, AudioWaveformStatus> = {};
-      for (const worker of workers) worker.postMessage({ type: 'clear', generation } satisfies WaveformWorkerRequest);
-      for (const request of active) {
-        if (!request.asset) {
-          const error = new MediaInputError({
-            kind: 'missing',
-            sourceId: request.clip.assetId,
-            message: 'The waveform source asset is missing.',
-          });
-          fail(request.clip.id, error.detail);
-          nextStatus[request.clip.id] = 'error';
-          continue;
-        }
-        const cached = waveformCache.get(cacheKey(request));
-        if (cached) {
-          waveformCache.delete(cacheKey(request));
-          waveformCache.set(cacheKey(request), cached);
-          nextSlices[request.clip.id] = cached;
-          nextStatus[request.clip.id] = 'ready';
-          continue;
-        }
-        nextStatus[request.clip.id] = 'loading';
-        try {
-          initWorkers();
-          beginExtraction(request);
-        } catch (error) {
-          fail(request.clip.id, {
-            kind: 'decode-failure',
-            sourceId: request.clip.assetId,
-            message: error instanceof Error ? error.message : 'The waveform request could not be created.',
-          });
-          nextStatus[request.clip.id] = 'error';
-        }
+      const canKeepEveryVisibleWaveform =
+        active.length > 0 &&
+        active.every((request) => sliceMatchesRequestRange(rawSlices.value[request.clip.id], request));
+      if (canKeepEveryVisibleWaveform) {
+        refinementTimer = window.setTimeout(reconcileRequests, VIEWPORT_REFINEMENT_DEBOUNCE_MS);
+        return;
       }
-      rawSlices.value = nextSlices;
-      status.value = nextStatus;
-      updatePressure();
+      reconcileRequests();
     },
     { immediate: true },
   );
@@ -431,6 +462,7 @@ export function useCompositionAudioWaveforms(
     refinementBatches.clear();
     pendingPublishes.clear();
     cancelAnimationFrame(publishFrame);
+    window.clearTimeout(refinementTimer);
     currentRequests.clear();
     rawSlices.value = {};
     errors.value = {};

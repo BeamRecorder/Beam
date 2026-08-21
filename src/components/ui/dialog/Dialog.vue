@@ -26,6 +26,7 @@ const close = () => {
 
 const handleKeyDown = (event: KeyboardEvent) => {
   if (event.key === 'Escape' && props.isOpen) {
+    event.preventDefault();
     close();
   }
 };

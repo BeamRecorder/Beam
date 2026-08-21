@@ -15,6 +15,7 @@ export interface TimelineContextMenuState {
   category: TimelineItemCategory;
   clip: Clip | null;
   zoom: ZoomElement | null;
+  clipIds: string[];
   trackId?: string | null;
 }
 
@@ -24,6 +25,7 @@ export function useTimelineContextMenu(options: {
   composition: Ref<ClipComposition>;
   zoomElements: Ref<ZoomElement[]>;
   selectedClipId: Ref<string | null>;
+  selectedClipIds: Ref<string[]>;
   selectedZoomId: Ref<string | null>;
   assetFor: (clip: Clip) => MediaAsset | null;
   emit: TimelineTracksEmits;
@@ -37,6 +39,7 @@ export function useTimelineContextMenu(options: {
     category: 'visual',
     clip: null,
     zoom: null,
+    clipIds: [],
     trackId: null,
   });
 
@@ -51,6 +54,7 @@ export function useTimelineContextMenu(options: {
       category: getClipCategory(clip),
       clip,
       zoom: null,
+      clipIds: [clip.id],
       trackId: clip.trackId ?? null,
     };
   };
@@ -66,19 +70,22 @@ export function useTimelineContextMenu(options: {
       category: 'zoom',
       clip: null,
       zoom,
+      clipIds: [],
       trackId: null,
     };
   };
 
   const openTrackContextMenu = (event: MouseEvent, category: TimelineItemCategory, trackId?: string) => {
     event.preventDefault();
+    const selected = selectedItem();
     contextMenuState.value = {
       isOpen: true,
       x: event.clientX,
       y: event.clientY,
       category,
-      clip: null,
-      zoom: null,
+      clip: selected.clip,
+      zoom: selected.zoom,
+      clipIds: selected.clipIds,
       trackId: trackId ?? null,
     };
   };
@@ -91,11 +98,20 @@ export function useTimelineContextMenu(options: {
     const zoom = options.selectedZoomId.value
       ? (options.zoomElements.value.find((item) => item.id === options.selectedZoomId.value) ?? null)
       : null;
-    if (zoom) return { zoom, clip: null };
-    const clip = options.selectedClipId.value
-      ? (options.composition.value.clips.find((item) => item.id === options.selectedClipId.value) ?? null)
-      : null;
-    return { zoom: null, clip };
+    if (zoom) return { zoom, clip: null, clipIds: [] };
+    const clipsById = new Map(options.composition.value.clips.map((clip) => [clip.id, clip]));
+    const requestedIds = options.selectedClipIds.value.length
+      ? options.selectedClipIds.value
+      : options.selectedClipId.value
+        ? [options.selectedClipId.value]
+        : [];
+    const clipIds = [...new Set(requestedIds)].filter((id) => clipsById.has(id));
+    const primaryId = options.selectedClipId.value;
+    const clip =
+      (primaryId && clipIds.includes(primaryId) ? clipsById.get(primaryId) : null) ??
+      clipsById.get(clipIds[0] ?? '') ??
+      null;
+    return { zoom: null, clip, clipIds };
   };
 
   const copyItem = (clip: Clip | null, zoom: ZoomElement | null): boolean => {
@@ -130,8 +146,8 @@ export function useTimelineContextMenu(options: {
     options.currentTimeMs.value <= clip.timelineStartMs + clip.timelineDurationMs - MIN_CLIP_DURATION_MS;
 
   const contextMenuItems = computed<ContextMenuItemOrDivider[]>(() => {
-    const { category, clip, zoom } = contextMenuState.value;
-    const canCopy = Boolean(options.scopeId.value && (category === 'zoom' ? zoom : clip));
+    const { clip, zoom, clipIds } = contextMenuState.value;
+    const canCopy = Boolean(options.scopeId.value && (zoom || clip));
     const canHold = canHoldClip(clip);
     const items: ContextMenuItemOrDivider[] = [];
     if (clip && (clip.kind === 'screen' || clip.kind === 'video' || clip.kind === 'webcam')) {
@@ -153,21 +169,21 @@ export function useTimelineContextMenu(options: {
         icon: Trash2,
         danger: true,
         shortcut: 'Del',
-        disabled: category === 'zoom' ? !zoom : !clip,
+        disabled: !zoom && clipIds.length === 0,
       },
     );
     return items;
   });
 
   const handleContextMenuSelect = (actionId: string) => {
-    const { category, clip, zoom, trackId } = contextMenuState.value;
+    const { category, clip, zoom, clipIds, trackId } = contextMenuState.value;
     if (actionId === 'hold' && clip && canHoldClip(clip))
       options.emit('hold:clip', { id: clip.id, timeMs: options.currentTimeMs.value });
     else if (actionId === 'copy') copyItem(clip, zoom);
     else if (actionId === 'paste') pasteClipboard({ category, trackId });
     else if (actionId === 'delete') {
-      if (category === 'zoom' && zoom) options.emit('delete:zoom', zoom.id);
-      else if (clip) options.emit('delete:clips', [clip.id]);
+      if (zoom) options.emit('delete:zoom', zoom.id);
+      else if (clipIds.length) options.emit('delete:clips', clipIds);
     }
     closeContextMenu();
   };

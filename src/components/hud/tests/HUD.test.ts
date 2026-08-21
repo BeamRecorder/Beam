@@ -217,12 +217,20 @@ describe('HUD', () => {
     expect(capture.startRecording).not.toHaveBeenCalled();
   });
 
-  it('shows Linux requirement diagnostics when recording is unavailable and no source exists', async () => {
+  it('shows Linux requirement diagnostics without blocking an optimistic Portal attempt', async () => {
     const linuxCapture = { ...capture, platform: 'linux' };
     Object.defineProperty(window, 'capture', { configurable: true, value: linuxCapture });
     capture.platform = 'linux';
     capture.discover.mockResolvedValueOnce({
-      sources: [],
+      sources: [
+        {
+          id: 'portal:monitor',
+          kind: 'display',
+          label: 'Choose a screen with the system picker',
+          isDefault: true,
+          selectionMode: 'portal',
+        },
+      ],
       capabilities: {},
       diagnostics: {
         platform: 'linux',
@@ -268,7 +276,7 @@ describe('HUD', () => {
 
     const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording'));
     expect(record).toBeDefined();
-    expect(record!.element).toHaveProperty('disabled', true);
+    expect(record!.element).toHaveProperty('disabled', false);
     const issue = wrapper.get('.hud-issue-error');
     expect(issue.get('.hud-issue-title').text()).toBe('Linux setup required');
     expect(issue.text()).toContain('XDG ScreenCast Portal: ScreenCast portal is unavailable');
@@ -282,11 +290,13 @@ describe('HUD', () => {
     expect(issue.get('.copy-button-copied').attributes('aria-label')).toBe('Copied');
     expect(issue.get('.copy-button-copied').attributes('data-state')).toBe('copied');
     await record!.trigger('click');
-    expect(wrapper.emitted('start-recording')).toBeUndefined();
+    expect(wrapper.emitted('start-recording')).toEqual([
+      [expect.objectContaining({ screenKind: 'display', screenId: 'portal:monitor' })],
+    ]);
     expect(capture.startRecording).not.toHaveBeenCalled();
   });
 
-  it('shows Enable for required Linux access and keeps Start disabled until authorization succeeds', async () => {
+  it('shows Enable for optional Linux interaction access without blocking Start', async () => {
     capture.platform = 'linux';
     Object.defineProperty(window, 'capture', { configurable: true, value: capture });
     capture.inputAccessStatus.mockResolvedValueOnce({
@@ -317,7 +327,7 @@ describe('HUD', () => {
     expect(issue.get('.hud-issue-action').text()).toContain('Enable');
     expect(issue.find('.copy-button-idle').exists()).toBe(false);
     const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording'))!;
-    expect(record.element).toHaveProperty('disabled', true);
+    expect(record.element).toHaveProperty('disabled', false);
 
     const authorization = issue.get('.hud-issue-action').trigger('click');
     await ready();
@@ -381,7 +391,7 @@ describe('HUD', () => {
     expect(record.element).toHaveProperty('disabled', false);
   });
 
-  it('keeps Linux Start blocked when permission is still required after the notice was dismissed', async () => {
+  it('keeps Linux Start available when interaction permission is still required', async () => {
     capture.platform = 'linux';
     Object.defineProperty(window, 'capture', { configurable: true, value: capture });
     capture.getPreferences.mockResolvedValueOnce({
@@ -409,7 +419,7 @@ describe('HUD', () => {
     const issue = wrapper.get('.hud-issue-warning');
     expect(issue.get('.hud-issue-action').text()).toContain('Enable');
     const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording'))!;
-    expect(record.element).toHaveProperty('disabled', true);
+    expect(record.element).toHaveProperty('disabled', false);
   });
 
   it('resynchronizes interaction access when Settings opens after HUD authorization', async () => {
@@ -443,7 +453,7 @@ describe('HUD', () => {
     expect(wrapper.find('.preferences-switch').exists()).toBe(true);
   });
 
-  it('blocks Start and offers diagnostics when Linux interaction access is unavailable', async () => {
+  it('offers interaction diagnostics without blocking Start when access is unavailable', async () => {
     capture.platform = 'linux';
     Object.defineProperty(window, 'capture', { configurable: true, value: capture });
     capture.inputAccessStatus.mockResolvedValueOnce({
@@ -461,7 +471,9 @@ describe('HUD', () => {
     expect(wrapper.find('.hud-issue-info .copy-button-idle').exists()).toBe(true);
     expect(wrapper.get('.hud-issue-info').text()).not.toContain('Enable');
     const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording'))!;
-    expect(record.element).toHaveProperty('disabled', true);
+    expect(record.element).toHaveProperty('disabled', false);
+    await record.trigger('click');
+    expect(wrapper.emitted('start-recording')).toEqual([[expect.objectContaining({ recordInteractions: false })]]);
   });
 
   it('does not acquire system audio for an idle HUD when the preference is restored as on', async () => {

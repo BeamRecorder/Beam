@@ -69,12 +69,9 @@ const AudioClipPropertiesPanel = {
 };
 const CaptionClipPanel = { template: '<div class="caption-clip-stub">Caption clip</div>' };
 const CaptionPanel = {
-  emits: ['preview:composition', 'update:composition'],
+  emits: ['update:composition'],
   template: `
     <div class="caption-panel-stub">
-      <button class="caption-preview" @click="$emit('preview:composition', { assets: [], clips: [] })">
-        Preview
-      </button>
       <button class="caption-update" @click="$emit('update:composition', { assets: [], clips: [] })">
         Update
       </button>
@@ -674,13 +671,11 @@ describe('PropertiesPanel', () => {
     expect(wrapper.emitted('update:canvas')).toEqual([[{ ...canvasWithWatermark, showBackground: false }]]);
   });
 
-  it('forwards composition previews separately from final composition updates', async () => {
+  it('forwards final composition updates from the caption panel', async () => {
     const wrapper = mount(PropertiesPanel, { props: { ...baseProps, activeTab: 'caption' }, global });
 
-    await wrapper.get('.caption-preview').trigger('click');
     await wrapper.get('.caption-update').trigger('click');
 
-    expect(wrapper.emitted('preview:composition')).toEqual([[{ assets: [], clips: [] }]]);
     expect(wrapper.emitted('update:composition')).toEqual([[{ assets: [], clips: [] }]]);
   });
 

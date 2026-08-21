@@ -1,5 +1,10 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { nextTick } from 'vue';
+import { describe, expect, it, vi } from 'vitest';
+
+const reducedMotion = vi.hoisted(() => ({ value: true }));
+vi.mock('@vueuse/motion', () => ({ useReducedMotion: () => reducedMotion }));
+
 import Throbber from './Throbber.vue';
 import { getThrobberGlobalTime } from './useThrobberSync';
 
@@ -10,6 +15,57 @@ describe('Throbber', () => {
     expect(wrapper.get('.throbber').attributes('role')).toBe('status');
     expect(wrapper.get('.throbber').attributes('aria-label')).toBe('Loading demo');
     expect(wrapper.findAll('.throbber-glyph')).toHaveLength(12);
+  });
+
+  it('keeps text in one stable node while retaining animated dots', () => {
+    const wrapper = mount(Throbber, {
+      props: { text: 'Transcribing…', animateText: false, inheritTypography: true, dots: true },
+    });
+
+    expect(wrapper.findAll('.throbber-static-text')).toHaveLength(1);
+    expect(wrapper.get('.throbber-static-text').text()).toBe('Transcribing…');
+    expect(wrapper.findAll('.throbber-glyph')).toHaveLength(0);
+    expect(wrapper.get('.throbber').classes()).toContain('throbber-inherit-typography');
+    expect(wrapper.get('.throbber-content').attributes('aria-hidden')).toBe('true');
+    expect(wrapper.findAll('.throbber-dot')).toHaveLength(3);
+  });
+
+  it('animates dots when reduced motion is detected but explicitly ignored', async () => {
+    const globalTime = getThrobberGlobalTime();
+    globalTime.value = 0;
+    const wrapper = mount(Throbber, {
+      props: { text: 'Transcribing…', animateText: false, dots: true, respectReducedMotion: false },
+    });
+    const dot = wrapper.find('.throbber-dot');
+    const initialStyle = dot.attributes('style');
+
+    globalTime.value = 700;
+    await nextTick();
+
+    expect(dot.attributes('style')).not.toBe(initialStyle);
+  });
+
+  it('keeps highlight glyph geometry fixed while only its color animates', async () => {
+    const globalTime = getThrobberGlobalTime();
+    globalTime.value = 0;
+    const wrapper = mount(Throbber, {
+      props: { text: 'A', variant: 'highlight', respectReducedMotion: false },
+    });
+    const glyph = wrapper.get('.throbber-glyph');
+    const initialStyle = glyph.attributes('style');
+
+    expect(initialStyle).toContain('opacity: 1');
+    expect(initialStyle).toContain('transform: translateY(0)');
+    expect(initialStyle).not.toContain('filter:');
+
+    globalTime.value = 700;
+    await nextTick();
+
+    const updatedStyle = glyph.attributes('style');
+    expect(updatedStyle).toContain('opacity: 1');
+    expect(updatedStyle).toContain('transform: translateY(0)');
+    expect(updatedStyle).not.toContain('filter:');
+    expect(updatedStyle).not.toBe(initialStyle);
   });
 
   it('handles spaces correctly with non-breaking space glyphs', () => {

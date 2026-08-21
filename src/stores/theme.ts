@@ -231,7 +231,6 @@ export const useThemeStore = defineStore('theme', () => {
   });
 
   capture.onPreferencesChanged((preferences) => {
-    logTheme('preference broadcast received', { appearance: preferences.appearance, theme: preferences.theme });
     const next = preferences.appearance;
     if (
       preferences.theme === theme.value &&

@@ -182,6 +182,24 @@ fn portal_kind_requires_the_matching_runtime_capability() {
 }
 
 #[test]
+fn linux_portal_probe_failures_are_advisory_until_capture_starts() {
+    let snapshot = CatalogSnapshot {
+        generation: 1,
+        created_at_utc: "2026-01-01T00:00:00Z".into(),
+        capabilities: CaptureCapabilities::default(),
+        permissions: PermissionSnapshot::default(),
+        diagnostics: CaptureDiagnostics {
+            platform: "linux".into(),
+            linux: None,
+        },
+        limitations: Vec::new(),
+        sources: Vec::new(),
+    };
+
+    assert!(validate_request(&portal_request(PortalSourceKind::Monitor), &snapshot).is_ok());
+}
+
+#[test]
 fn combined_portal_kind_requires_both_monitor_and_window() {
     let snapshot = CatalogSnapshot {
         generation: 1,

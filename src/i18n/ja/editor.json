@@ -1,4 +1,21 @@
 {
+  "LinkedClipsDeleteDialog": {
+    "title": "リンクされたクリップを削除",
+    "description": "この項目にはリンクされたクリップがあります。削除するクリップを選択してください。",
+    "deleteAll": "すべて削除（{count}）",
+    "delete": "削除",
+    "deleteOne": "「{name}」を削除",
+    "allDeleted": "リンクされたクリップをすべて削除しました。",
+    "kind": {
+      "screen": "画面",
+      "video": "動画",
+      "image": "画像",
+      "webcam": "ウェブカメラ",
+      "blur": "ぼかし",
+      "audio": "音声",
+      "caption": "字幕"
+    }
+  },
   "CameraLayoutPanel": {
     "reactToZoom": "ズームに追従",
     "reactToZoomDescription": "ウェブカメラを固定したまま、キャンバスのズームに合わせてサイズを調整します。"

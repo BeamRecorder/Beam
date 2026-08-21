@@ -10,12 +10,14 @@ import TimelineToolbar from '~/components/video-editor/timeline/TimelineToolbar.
 import Topbar from '~/components/video-editor/Topbar.vue';
 import EditorAmbientBackground from '~/components/video-editor/EditorAmbientBackground.vue';
 import EditorMediaDropOverlay from '~/components/video-editor/EditorMediaDropOverlay.vue';
+import LinkedClipsDeleteDialog from '~/components/video-editor/LinkedClipsDeleteDialog.vue';
 import { useVideoEditor } from '~/components/video-editor/composables/useVideoEditor';
 import { useEditorMediaDrop } from '~/components/video-editor/composables/useEditorMediaDrop';
 import { usePlaybackErrorToast } from '~/components/video-editor/composables/usePlaybackErrorToast';
 import { useEditorUndoRedo, type EditorStateSnapshot } from '~/components/video-editor/composables/useEditorUndoRedo';
 import { useTimelineResize } from '~/components/video-editor/composables/useTimelineResize';
 import { useTimelineZoom } from '~/components/video-editor/timeline/composables/useTimelineZoom';
+import { useLinkedClipDeletion } from '~/components/video-editor/composables/useLinkedClipDeletion';
 import { Sparkles } from '@lucide/vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useExportJob } from '~/components/export/useExportJob';
@@ -24,7 +26,6 @@ import {
   type OutputCanvasPreset,
   type OutputCanvasSettings,
 } from '~/components/video-editor/canvas/output-canvas';
-import { deleteClip, setVolume } from '~/components/video-editor/composition/engine/clip-engine';
 import {
   isAudioClip,
   isBlurClip,
@@ -143,7 +144,6 @@ const {
   moveClipTo,
   splitSelectedClip,
   holdClip,
-  deleteSelectedClip,
   reorderVisualClip,
   updateSelectedAppearance,
   updateSelectedTransform,
@@ -162,6 +162,8 @@ const {
   toggleClip,
   detachSelectedClip,
 } = compositionState;
+const { isDeleteDialogOpen, linkedDeleteClips, requestClipDeletion, deleteFromDialog, closeDeleteDialog } =
+  useLinkedClipDeletion({ composition, selectedClipId, selectedClipIds });
 const mediaDrop = useEditorMediaDrop({
   projectId: () => props.project?.id ?? null,
   currentTimeSeconds: () => currentTime.value,
@@ -271,28 +273,11 @@ const commitCaption = (clip: Parameters<typeof updateCaption>[0]) => {
   captionCompositionPreview.value = null;
   updateCaption(clip);
 };
-const updateRoleVolume = (role: 'system' | 'microphone', value: number) => {
-  let next = composition.value;
-  for (const clip of next.clips) if (isAudioClip(clip) && clip.role === role) next = setVolume(next, clip.id, value);
-  composition.value = next;
-};
-const deleteTimelineClips = (clipIds: string[], grouped = true) => {
-  const ids = new Set(clipIds);
-  let next = composition.value;
-  for (const clipId of ids) {
-    if (next.clips.some((clip) => clip.id === clipId)) next = deleteClip(next, clipId, grouped);
-  }
-  if (selectedClipId.value && ids.has(selectedClipId.value)) selectedClipId.value = null;
-  composition.value = next;
-};
 const deleteAudioRole = (role: 'system' | 'microphone') => {
-  deleteTimelineClips(
+  requestClipDeletion(
     composition.value.clips.filter((clip) => isAudioClip(clip) && clip.role === role).map((clip) => clip.id),
-    false,
   );
 };
-watch(systemVolume, (value) => updateRoleVolume('system', value));
-watch(micVolume, (value) => updateRoleVolume('microphone', value));
 const handlePlayingIntent = (playing: boolean) => {
   void player.setPlaying(playing).catch(() => console.error('Unable to change playback state.'));
 };
@@ -464,6 +449,7 @@ const selectCanvasPreset = (preset: Exclude<OutputCanvasPreset, 'custom'>) => {
   };
 };
 const handleKeyDown = (event: KeyboardEvent) => {
+  if (event.defaultPrevented || isDeleteDialogOpen.value) return;
   if (event.key === 'Escape') {
     if (isCropping.value) isCropping.value = false;
     else if (selectedZoomId.value) selectedZoomId.value = null;
@@ -482,7 +468,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
   if (event.key !== 'Delete' && event.key !== 'Backspace') return;
   if (selectedClipId.value) {
     event.preventDefault();
-    deleteSelectedClip();
+    requestClipDeletion(selectedClipIds.value.length ? selectedClipIds.value : [selectedClipId.value]);
   } else if (selectedZoom.value && activeTab.value === 'zoom') {
     event.preventDefault();
     deleteSelectedZoom();
@@ -585,7 +571,9 @@ onBeforeUnmount(() => {
           @update:composition="replaceComposition"
           @preview:composition="previewComposition"
           @select-caption="selectEditorClip"
-          @delete-clip="deleteSelectedClip"
+          @delete-clip="
+            requestClipDeletion(selectedClipIds.length ? selectedClipIds : selectedClipId ? [selectedClipId] : [])
+          "
           @delete:system-audio="deleteAudioRole('system')"
           @delete:mic-audio="deleteAudioRole('microphone')"
           @split-clip="splitSelectedClip"
@@ -735,7 +723,7 @@ onBeforeUnmount(() => {
           @select:clip="selectEditorClip"
           @select:track="selectEditorTrack"
           @toggle:clip="toggleClip"
-          @delete:clips="deleteTimelineClips"
+          @delete:clips="requestClipDeletion"
           @delete:zoom="deleteZoomById"
           @hold:clip="holdClip($event.id, $event.timeMs)"
           @trim:clip="trimClipEdge($event.id, $event.edge, $event.timeMs)"
@@ -760,6 +748,12 @@ onBeforeUnmount(() => {
         />
       </div>
     </div>
+    <LinkedClipsDeleteDialog
+      :is-open="isDeleteDialogOpen"
+      :clips="linkedDeleteClips"
+      @delete="deleteFromDialog"
+      @close="closeDeleteDialog"
+    />
   </div>
 </template>
 

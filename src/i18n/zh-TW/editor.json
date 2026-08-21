@@ -1,4 +1,21 @@
 {
+  "LinkedClipsDeleteDialog": {
+    "title": "刪除連結片段",
+    "description": "此項目包含連結片段。請選擇要刪除的特定片段。",
+    "deleteAll": "全部刪除（{count}）",
+    "delete": "刪除",
+    "deleteOne": "刪除「{name}」",
+    "allDeleted": "所有連結片段均已刪除。",
+    "kind": {
+      "screen": "螢幕",
+      "video": "影片",
+      "image": "圖片",
+      "webcam": "攝影機",
+      "blur": "模糊",
+      "audio": "音訊",
+      "caption": "字幕"
+    }
+  },
   "CameraLayoutPanel": {
     "reactToZoom": "跟隨縮放",
     "reactToZoomDescription": "保持攝影機位置固定，同時依照畫布縮放調整大小。"

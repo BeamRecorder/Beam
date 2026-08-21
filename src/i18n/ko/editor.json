@@ -1,4 +1,21 @@
 {
+  "LinkedClipsDeleteDialog": {
+    "title": "연결된 클립 삭제",
+    "description": "이 항목에는 연결된 클립이 있습니다. 삭제할 클립을 정확히 선택하세요.",
+    "deleteAll": "모두 삭제 ({count})",
+    "delete": "삭제",
+    "deleteOne": "“{name}” 삭제",
+    "allDeleted": "연결된 클립을 모두 삭제했습니다.",
+    "kind": {
+      "screen": "화면",
+      "video": "동영상",
+      "image": "이미지",
+      "webcam": "웹캠",
+      "blur": "흐림",
+      "audio": "오디오",
+      "caption": "자막"
+    }
+  },
   "CameraLayoutPanel": {
     "reactToZoom": "확대/축소에 반응",
     "reactToZoomDescription": "웹캠을 고정한 상태로 캔버스 확대/축소에 맞춰 크기를 조정합니다."

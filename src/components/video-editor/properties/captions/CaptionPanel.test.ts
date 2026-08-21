@@ -61,8 +61,19 @@ const Select = {
 };
 const ProgressBar = { template: '<div class="progress-stub" />' };
 const Throbber = {
-  props: ['text'],
-  template: '<span class="throbber-stub">{{ text }}</span>',
+  props: {
+    text: String,
+    inheritTypography: Boolean,
+    dots: Boolean,
+    respectReducedMotion: Boolean,
+    variant: String,
+  },
+  template: `<span class="throbber-stub">
+    <span class="throbber-static-text">{{ text }}</span>
+    <span v-if="dots" class="throbber-dots" aria-hidden="true">
+      <span v-for="dot in 3" :key="dot" class="throbber-dot">.</span>
+    </span>
+  </span>`,
 };
 const CopyButton = {
   inheritAttrs: true,
@@ -285,6 +296,15 @@ describe('CaptionPanel', () => {
     whisper.diagnostics!.value = createDiagnostics({ status: 'transcribing', elapsedMs: 1_500 });
     await wrapper.vm.$nextTick();
     expect(wrapper.find('.transcription-throbber-row').exists()).toBe(true);
+    const throbber = wrapper.getComponent(Throbber);
+    expect(throbber.props('text')).toBe('Transcribing…');
+    expect(throbber.props('inheritTypography')).toBe(true);
+    expect(throbber.props('respectReducedMotion')).toBe(false);
+    expect(throbber.props('variant')).toBe('highlight');
+    expect(throbber.props('dots')).toBe(false);
+    expect(throbber.props('animateText')).toBeUndefined();
+    expect(throbber.get('.throbber-static-text').text()).toBe('Transcribing…');
+    expect(throbber.findAll('.throbber-dot')).toHaveLength(0);
     expect(wrapper.find('.transcription-diagnostics-row').exists()).toBe(false);
 
     const cancelButton = wrapper.find('.cancel-transcription-btn');
@@ -309,7 +329,7 @@ describe('CaptionPanel', () => {
     wrapper.unmount();
   });
 
-  it('emits progressive caption compositions with stable clip ids and selects only after the final result', async () => {
+  it('emits progressive caption compositions as persistent updates with stable clip ids', async () => {
     capture.whisperModels.mockResolvedValue([
       { id: 'Xenova/whisper-tiny', status: 'ready', downloadedBytes: 100, totalBytes: 100 },
     ]);
@@ -362,18 +382,18 @@ describe('CaptionPanel', () => {
     onPartial(firstPartial);
     await wrapper.vm.$nextTick();
     expect(wrapper.emitted('select-caption')).toBeUndefined();
-    expect(wrapper.emitted('update:composition')).toBeUndefined();
-    let previews = wrapper.emitted('preview:composition') as Array<[ClipComposition]>;
-    expect(previews).toHaveLength(1);
-    const firstClipId = previews[0]![0].clips.find((clip) => clip.kind === 'caption')!.id;
+    expect(wrapper.emitted('preview:composition')).toBeUndefined();
+    let updates = wrapper.emitted('update:composition') as Array<[ClipComposition]>;
+    expect(updates).toHaveLength(1);
+    const firstClipId = updates[0]![0].clips.find((clip) => clip.kind === 'caption')!.id;
 
     onPartial(secondPartial);
     await wrapper.vm.$nextTick();
     expect(wrapper.emitted('select-caption')).toBeUndefined();
-    expect(wrapper.emitted('update:composition')).toBeUndefined();
-    previews = wrapper.emitted('preview:composition') as Array<[ClipComposition]>;
-    expect(previews).toHaveLength(2);
-    const progressiveCaptions = previews[1]![0].clips.filter((clip) => clip.kind === 'caption');
+    expect(wrapper.emitted('preview:composition')).toBeUndefined();
+    updates = wrapper.emitted('update:composition') as Array<[ClipComposition]>;
+    expect(updates).toHaveLength(2);
+    const progressiveCaptions = updates[1]![0].clips.filter((clip) => clip.kind === 'caption');
     expect(progressiveCaptions).toHaveLength(2);
     expect(progressiveCaptions.map((clip) => clip.id)).toEqual([firstClipId, expect.any(String)]);
     expect(new Set(progressiveCaptions.map((clip) => clip.id)).size).toBe(progressiveCaptions.length);
@@ -384,11 +404,70 @@ describe('CaptionPanel', () => {
 
     resolveTranscription(secondPartial);
     await vi.waitFor(() => expect(wrapper.emitted('select-caption')).toHaveLength(1));
-    const updates = wrapper.emitted('update:composition') as Array<[ClipComposition]>;
-    expect(updates).toHaveLength(1);
+    updates = wrapper.emitted('update:composition') as Array<[ClipComposition]>;
+    expect(updates).toHaveLength(3);
     expect(wrapper.emitted('select-caption')![0]).toEqual([firstClipId]);
-    const finalCaptions = updates[0]![0].clips.filter((clip) => clip.kind === 'caption');
+    const finalCaptions = updates[2]![0].clips.filter((clip) => clip.kind === 'caption');
     expect(finalCaptions.map((clip) => clip.id)).toEqual(progressiveCaptions.map((clip) => clip.id));
+    wrapper.unmount();
+  });
+
+  it('keeps completed caption chunks after transcription is cancelled', async () => {
+    capture.whisperModels.mockResolvedValue([
+      { id: 'Xenova/whisper-tiny', status: 'ready', downloadedBytes: 100, totalBytes: 100 },
+    ]);
+    const partial: WhisperResult = {
+      words: [{ text: 'Hello', startMs: 100, endMs: 200 }],
+      sentences: [
+        {
+          id: 'sentence-1',
+          text: 'Hello',
+          startMs: 100,
+          endMs: 200,
+          words: [{ text: 'Hello', startMs: 100, endMs: 200 }],
+        },
+      ],
+    };
+    let onPartial!: (result: WhisperResult) => void;
+    let resolveTranscription!: (result: WhisperResult) => void;
+    whisper.transcribe.mockImplementation(
+      (_src: string, _model: string, _duration: number, partialResult?: (result: WhisperResult) => void) => {
+        onPartial = partialResult!;
+        return new Promise<WhisperResult>((resolve) => {
+          resolveTranscription = resolve;
+        });
+      },
+    );
+    const wrapper = mount(CaptionPanel, {
+      props: { composition: audioComposition, timelineDurationMs: 2000 },
+      global: { stubs },
+    });
+    await vi.waitFor(() => expect(wrapper.find('.model-ready-text').exists()).toBe(true));
+    await wrapper.get('button[variant="primary"]').trigger('click');
+    await vi.waitFor(() => expect(whisper.transcribe).toHaveBeenCalledOnce());
+
+    onPartial(partial);
+    await wrapper.vm.$nextTick();
+    const updatesBeforeCancel = wrapper.emitted('update:composition') as Array<[ClipComposition]>;
+    expect(updatesBeforeCancel).toHaveLength(1);
+    await wrapper.get('.cancel-transcription-btn').trigger('click');
+
+    expect(whisper.cancel).toHaveBeenCalledOnce();
+    onPartial({ ...partial, sentences: [{ ...partial.sentences[0]!, text: 'Late partial' }] });
+    resolveTranscription({ ...partial, sentences: [{ ...partial.sentences[0]!, text: 'Late final' }] });
+    await Promise.resolve();
+    await wrapper.vm.$nextTick();
+    expect(wrapper.emitted('preview:composition')).toBeUndefined();
+    const updatesAfterCancel = wrapper.emitted('update:composition') as Array<[ClipComposition]>;
+    expect(updatesAfterCancel).toHaveLength(1);
+    expect(updatesAfterCancel[0]![0]).toBe(updatesBeforeCancel[0]![0]);
+    const captions = updatesAfterCancel[0]![0].clips.filter((clip) => clip.kind === 'caption');
+    expect(captions).toHaveLength(1);
+    expect(captions[0]!.caption.type).toBe('text');
+    if (captions[0]!.caption.type === 'text') {
+      expect(captions[0]!.caption.sentences[0]!.text).toBe('Hello');
+    }
+    expect(wrapper.emitted('select-caption')).toBeUndefined();
     wrapper.unmount();
   });
 

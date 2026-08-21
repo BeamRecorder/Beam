@@ -9,10 +9,11 @@ import {
 import type { CaptureProject, ProjectEditorState } from '../../../../api/types/capture-api';
 import type { CursorSelection } from '../../../../api/types/cursor-pack';
 import type { BackgroundMedia, BackgroundValue } from '../backgroundCatalog';
-import type { ZoomElement } from '../../zoom/zoom-types';
+import { DEFAULT_ZOOM_MOTION_BLUR, type ZoomElement } from '../../zoom/zoom-types';
 import { createDefaultCursorPresentation } from '../../../../api/types/cursor-presentation';
 import type { EditorPreferenceDefaults } from '../editor-default-types';
 import { normalizeEditorPreferenceDefaults } from '../editor-defaults';
+import { existingZoom, globalCursor, projectCursor } from './useProjectEditorState.test-support';
 import {
   beginPropertyInteraction,
   endPropertyInteraction,
@@ -43,6 +44,7 @@ const createState = () => {
     composition: ref(emptyComposition()),
     zoomElements: ref<ZoomElement[]>([]),
     generatedSessions: ref<ProjectEditorState['zoom']['generatedSessions']>([]),
+    zoomMotionBlur: ref({ ...DEFAULT_ZOOM_MOTION_BLUR }),
     importedBackgrounds: ref<BackgroundMedia[]>([]),
     selectedBackground: ref<BackgroundValue | null>(null),
     backgroundBlurPercent: ref(0),
@@ -78,8 +80,9 @@ const editorDefaults = () =>
       selectedBackgroundId: preferredBackground.id,
       background: null,
       blurPercent: 37,
-      cursor: { ...createDefaultCursorPresentation(), size: 64, color: '#123456' },
+      cursor: globalCursor(),
     },
+    zoomMotionBlur: { enabled: false, intensity: 0.82 },
   });
 
 describe('useProjectEditorState property persistence', () => {
@@ -220,7 +223,7 @@ describe('useProjectEditorState property persistence', () => {
     expect(state.cursorMotion.value).toEqual(defaults.presentation!.cursor.motion);
   });
 
-  it('preserves an existing project presentation even when global defaults differ', async () => {
+  it('uses global cursor and zoom motion blur preferences for an existing project while preserving its canvas, background, and zoom elements', async () => {
     const state = createState();
     const defaults = editorDefaults();
     const existingPresentation: ProjectEditorState['presentation'] = {
@@ -229,14 +232,18 @@ describe('useProjectEditorState property persistence', () => {
       background: { id: 'saved-color', name: '#abcdef', kind: 'color', color: '#abcdef' },
       blurPercent: 12,
       importedBackgrounds: [],
-      cursor: { ...createDefaultCursorPresentation(), size: 29, color: '#fedcba' },
+      cursor: projectCursor(),
     };
     mocks.getPreferences.mockResolvedValue({ extras: { editorDefaults: defaults } });
     mocks.getProjectEditorState.mockResolvedValue({
       schemaVersion: 3,
       isFresh: false,
       composition: emptyComposition(),
-      zoom: { elements: [], generatedSessions: [] },
+      zoom: {
+        elements: [existingZoom],
+        generatedSessions: [],
+        motionBlur: { enabled: true, intensity: 0.11 },
+      },
       presentation: existingPresentation,
     } satisfies ProjectEditorState);
 
@@ -246,15 +253,18 @@ describe('useProjectEditorState property persistence', () => {
     expect(state.canvas.value).toEqual(existingPresentation.canvas);
     expect(state.selectedBackground.value).toEqual(existingPresentation.background);
     expect(state.backgroundBlurPercent.value).toBe(existingPresentation.blurPercent);
-    expect(state.cursorSize.value).toBe(existingPresentation.cursor.size);
-    expect(state.cursorColor.value).toBe(existingPresentation.cursor.color);
+    expect(state.zoomElements.value).toEqual([existingZoom]);
+    expect(state.zoomMotionBlur.value).toEqual(defaults.zoomMotionBlur);
+    expect(state.cursorSelection.value).toEqual(defaults.presentation!.cursor.selection);
+    expect(state.cursorSize.value).toBe(defaults.presentation!.cursor.size);
+    expect(state.cursorColor.value).toBe(defaults.presentation!.cursor.color);
     expect(state.importedBackgrounds.value).toEqual(existingPresentation.importedBackgrounds);
-    expect(state.cursorEffects.value).toEqual(existingPresentation.cursor.clickEffects);
-    expect(state.cursorMotion.value).toEqual(existingPresentation.cursor.motion);
-    expect(state.cursorShadowEnabled.value).toBe(existingPresentation.cursor.shadow.enabled);
-    expect(state.cursorShadowBlur.value).toBe(existingPresentation.cursor.shadow.blur);
-    expect(state.cursorShadowColor.value).toBe(existingPresentation.cursor.shadow.color);
-    expect(state.cursorShadowDirection.value).toBe(existingPresentation.cursor.shadow.direction);
+    expect(state.cursorEffects.value).toEqual(defaults.presentation!.cursor.clickEffects);
+    expect(state.cursorMotion.value).toEqual(defaults.presentation!.cursor.motion);
+    expect(state.cursorShadowEnabled.value).toBe(defaults.presentation!.cursor.shadow.enabled);
+    expect(state.cursorShadowBlur.value).toBe(defaults.presentation!.cursor.shadow.blur);
+    expect(state.cursorShadowColor.value).toBe(defaults.presentation!.cursor.shadow.color);
+    expect(state.cursorShadowDirection.value).toBe(defaults.presentation!.cursor.shadow.direction);
   });
 
   it('does not capture defaults for a technical save after load until default capture is enabled', async () => {

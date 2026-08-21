@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { useReducedMotion } from '@vueuse/motion';
 import { useThrobberSync, THROBBER_BASE_PERIOD_MS } from './useThrobberSync';
 
-export type ThrobberVariant = 'wave' | 'breathe' | 'ripple' | 'glow' | 'bounce' | 'pulse';
+export type ThrobberVariant = 'wave' | 'breathe' | 'ripple' | 'glow' | 'bounce' | 'pulse' | 'highlight';
 export type ThrobberColor = 'default' | 'primary' | 'muted' | 'secondary' | 'gradient' | 'white';
 export type ThrobberSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 export type ThrobberSpeed = 'slow' | 'normal' | 'fast';
@@ -19,6 +19,9 @@ const props = withDefaults(
     weight?: ThrobberWeight;
     dots?: boolean;
     nowrap?: boolean;
+    animateText?: boolean;
+    inheritTypography?: boolean;
+    respectReducedMotion?: boolean;
     tag?: string;
   }>(),
   {
@@ -30,6 +33,9 @@ const props = withDefaults(
     weight: 'semibold',
     dots: false,
     nowrap: false,
+    animateText: true,
+    inheritTypography: false,
+    respectReducedMotion: true,
     tag: 'span',
   },
 );
@@ -66,7 +72,7 @@ const staggerMs = computed(() => {
 });
 
 const calculateWave = (offsetMs: number): number => {
-  if (reducedMotion.value) return 1;
+  if (props.respectReducedMotion && reducedMotion.value) return 1;
   const time = globalTime.value - offsetMs;
   const period = periodMs.value;
   const progress = (((time % period) + period) % period) / period;
@@ -78,6 +84,7 @@ const glyphStyle = (index: number) => {
   let opacity = 0.35 + 0.65 * wave;
   let transform = 'translateY(0)';
   let filter: string | undefined;
+  let color: string | undefined;
 
   switch (props.variant) {
     case 'breathe':
@@ -97,6 +104,10 @@ const glyphStyle = (index: number) => {
       opacity = 0.3 + 0.7 * wave;
       filter = `brightness(${(0.8 + 0.8 * wave).toFixed(2)})`;
       break;
+    case 'highlight':
+      opacity = 1;
+      color = `color-mix(in srgb, var(--text-secondary), var(--color-primary) ${(wave * 100).toFixed(1)}%)`;
+      break;
     case 'wave':
     default:
       opacity = 0.35 + 0.65 * wave;
@@ -108,6 +119,7 @@ const glyphStyle = (index: number) => {
     opacity,
     transform,
     filter,
+    color,
   };
 };
 
@@ -130,6 +142,7 @@ const dotStyle = (dotIndex: number) => {
       `throbber-color-${color}`,
       `throbber-size-${size}`,
       `throbber-weight-${weight}`,
+      { 'throbber-inherit-typography': inheritTypography },
     ]"
     role="status"
     aria-live="polite"
@@ -137,8 +150,9 @@ const dotStyle = (dotIndex: number) => {
     :aria-label="displayText"
   >
     <span aria-hidden="true" class="throbber-content" :class="{ 'is-nowrap': nowrap }">
+      <span v-if="!animateText" class="throbber-static-text">{{ displayText }}</span>
       <span
-        v-for="(glyph, index) in glyphs"
+        v-for="(glyph, index) in animateText ? glyphs : []"
         :key="`${variant}-${index}-${glyph}`"
         class="throbber-glyph editor-loading-glyph"
         :style="glyphStyle(index)"
@@ -175,6 +189,11 @@ const dotStyle = (dotIndex: number) => {
   transition: none;
 }
 
+.throbber.throbber-inherit-typography {
+  font: inherit;
+  letter-spacing: inherit;
+}
+
 .throbber-dots {
   display: inline-flex;
   margin-left: 1px;
@@ -184,6 +203,10 @@ const dotStyle = (dotIndex: number) => {
   display: inline-block;
   will-change: opacity, transform;
   transition: none;
+}
+
+.throbber-variant-highlight .throbber-dot {
+  color: var(--color-primary);
 }
 
 /* Colors */

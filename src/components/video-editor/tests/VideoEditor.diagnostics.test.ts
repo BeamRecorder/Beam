@@ -51,16 +51,37 @@ describe('VideoEditor diagnostics and keyboard behavior', () => {
 
   it('updates role volumes and protects editable fields from destructive keyboard shortcuts', async () => {
     const mounted = mountEditor();
+    const current = editorState.store.compositionState.composition.value;
+    const systemClip = current.clips.find((clip: any) => clip.role === 'system');
+    editorState.store.compositionState.composition.value = {
+      ...current,
+      clips: [...current.clips, { ...systemClip, id: 'microphone', name: 'Microphone', role: 'microphone', order: 2 }],
+    };
+    editorState.store.systemVolume.value = 250;
+    editorState.store.micVolume.value = -25;
+    await mounted.vm.$nextTick();
+    expect(
+      editorState.store.compositionState.composition.value.clips.find((clip: any) => clip.role === 'system')?.volume,
+    ).toBe(200);
+    expect(
+      editorState.store.compositionState.composition.value.clips.find((clip: any) => clip.role === 'microphone')
+        ?.volume,
+    ).toBe(0);
+
     editorState.store.compositionState.selectedClipId.value = 'audio';
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', cancelable: true }));
-    expect(editorState.store.compositionState.deleteSelectedClip).toHaveBeenCalled();
+    await mounted.vm.$nextTick();
+    expect(editorState.store.compositionState.composition.value.clips).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: 'audio' })]),
+    );
 
-    editorState.store.compositionState.deleteSelectedClip.mockClear();
+    const compositionAfterDelete = JSON.stringify(editorState.store.compositionState.composition.value);
     const input = document.createElement('input');
     document.body.appendChild(input);
     input.focus();
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', cancelable: true }));
-    expect(editorState.store.compositionState.deleteSelectedClip).not.toHaveBeenCalled();
+    await mounted.vm.$nextTick();
+    expect(JSON.stringify(editorState.store.compositionState.composition.value)).toBe(compositionAfterDelete);
     input.remove();
 
     editorState.store.compositionState.selectedClipId.value = null;
@@ -68,12 +89,25 @@ describe('VideoEditor diagnostics and keyboard behavior', () => {
     editorState.store.zoomState.selectedZoom.value = { id: 'z', mode: 'manual' };
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', cancelable: true }));
     expect(editorState.store.zoomState.deleteSelectedZoom).toHaveBeenCalled();
+  });
 
-    editorState.store.systemVolume.value = 150;
-    editorState.store.micVolume.value = 125;
+  it('does not change the editor selection when Escape closes a linked deletion dialog', async () => {
+    const mounted = mountEditor();
+    const state = editorState.store.compositionState;
+    state.composition.value = {
+      ...state.composition.value,
+      clips: state.composition.value.clips.map((clip: any) => ({ ...clip, groupId: 'import-1' })),
+    };
+    state.selectedClipId.value = 'screen';
     await mounted.vm.$nextTick();
-    expect(
-      editorState.store.compositionState.composition.value.clips.find((clip: any) => clip.role === 'system')?.volume,
-    ).toBe(150);
+
+    mounted.findComponent({ name: 'MockEditorTimeline' }).vm.$emit('delete:clips', ['audio']);
+    await mounted.vm.$nextTick();
+    expect(mounted.findComponent({ name: 'MockLinkedClipsDeleteDialog' }).props('isOpen')).toBe(true);
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', cancelable: true }));
+    await mounted.vm.$nextTick();
+    expect(mounted.findComponent({ name: 'MockLinkedClipsDeleteDialog' }).props('isOpen')).toBe(false);
+    expect(state.selectedClipId.value).toBe('screen');
   });
 });

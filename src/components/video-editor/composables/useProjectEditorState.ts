@@ -24,6 +24,7 @@ import { propertyInteractionActive } from '../../../composables/property-interac
 import type { EditorPreferenceDefaults } from './editor-default-types';
 import {
   applyFreshPresentationDefaults,
+  applyGlobalCursorDefaults,
   defaultsFromEditorState,
   normalizeEditorPreferenceDefaults,
 } from './editor-defaults';
@@ -164,13 +165,16 @@ export function useProjectEditorState(options: {
       ]);
       if (generation !== loadGeneration) return;
       options.editorDefaults.value = normalizeEditorPreferenceDefaults(preferences?.extras?.editorDefaults);
-      const state = loadedState.isFresh
-        ? applyFreshPresentationDefaults(loadedState, options.editorDefaults.value)
-        : loadedState;
+      const state = applyGlobalCursorDefaults(
+        loadedState.isFresh ? applyFreshPresentationDefaults(loadedState, options.editorDefaults.value) : loadedState,
+        options.editorDefaults.value,
+      );
       options.composition.value = state.composition;
       options.zoomElements.value = state.zoom.elements;
       options.generatedSessions.value = state.zoom.generatedSessions;
-      zoomMotionBlur.value = normalizeZoomMotionBlur(state.zoom.motionBlur);
+      zoomMotionBlur.value = normalizeZoomMotionBlur(
+        options.editorDefaults.value.zoomMotionBlur ?? state.zoom.motionBlur,
+      );
       options.importedBackgrounds.value = state.presentation.importedBackgrounds;
       const globalBackgrounds = options.availableBackgrounds.value.flatMap((group) => group.items);
       savedBackgroundId = state.presentation.selectedBackgroundId;

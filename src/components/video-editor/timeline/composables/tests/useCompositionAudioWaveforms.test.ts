@@ -2,8 +2,17 @@ import { defineComponent, h, nextTick, ref } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { useCompositionAudioWaveforms, type AudioWaveformViewport } from '../useCompositionAudioWaveforms';
-import type { ClipComposition } from '~/media/shared/composition-types';
-import type { MediaError, MediaSourceDescriptor } from '~/media/shared/media-types';
+import {
+  composition,
+  extractRequests,
+  latestGeneration,
+  respond,
+  respondAllSegments,
+  respondChunk,
+  respondSegment,
+  segmentOffset,
+  twoAudioClipComposition,
+} from './useCompositionAudioWaveforms.test-support';
 
 type FakeWaveformWorkerInstance = {
   onmessage?: (event: MessageEvent) => void;
@@ -31,78 +40,6 @@ vi.mock('~/media/playback/waveform.worker?worker', () => ({
   default: waveformWorkerState.FakeWaveformWorker,
 }));
 
-type WaveformWorkerRequest =
-  | {
-      type: 'extract';
-      generation: number;
-      clipId: string;
-      source: MediaSourceDescriptor;
-      startSeconds: number;
-      endSeconds: number;
-      pointCount: number;
-      segmentIndex: number;
-      segmentCount: number;
-    }
-  | { type: 'clear'; generation: number };
-type ExtractWaveformWorkerRequest = Extract<WaveformWorkerRequest, { type: 'extract' }>;
-
-type WaveformWorkerResponse =
-  | {
-      type: 'result';
-      generation: number;
-      clipId: string;
-      peaks: Float32Array;
-      segmentIndex: number;
-      segmentCount: number;
-      segmentPointOffset: number;
-      segmentComplete: boolean;
-    }
-  | { type: 'error'; generation: number; clipId: string; error: MediaError };
-
-const composition = (volume = 100, source = 'https://media.test/sound.mp4'): ClipComposition => ({
-  schemaVersion: 6,
-  keyboardCaptionSessions: [],
-  assets: [
-    {
-      id: 'audio',
-      kind: 'audio',
-      name: 'Sound',
-      fileName: 'sound.mp4',
-      durationMs: 2_000,
-      width: null,
-      height: null,
-      src: source,
-      origin: 'project',
-    },
-  ],
-  clips: [
-    {
-      id: 'clip',
-      kind: 'audio',
-      name: 'Sound',
-      assetId: 'audio',
-      role: 'imported',
-      timelineStartMs: 0,
-      timelineDurationMs: 1_000,
-      sourceInMs: 250,
-      sourceDurationMs: 1_000,
-      playbackRate: 1,
-      enabled: true,
-      order: 0,
-      volume,
-    },
-  ],
-});
-
-const twoAudioClipComposition = () => {
-  const value = composition();
-  const firstAsset = value.assets[0]!;
-  const secondAsset = { ...firstAsset, id: 'audio-2', src: 'https://media.test/second.mp4' };
-  const firstClip = value.clips[0]!;
-  const secondClip = { ...firstClip, id: 'clip-2', assetId: secondAsset.id, name: 'Second sound' };
-  return { ...value, assets: [...value.assets, secondAsset], clips: [firstClip, secondClip] };
-};
-
 let wrapper: VueWrapper | undefined;
 let state!: ReturnType<typeof useCompositionAudioWaveforms>;
 
@@ -125,99 +62,14 @@ const mountComposable = (
   return { compositionRef, viewportRef };
 };
 
-type WaveformWorkerPool = { terminate: Mock<() => void> };
-
-const workerPool = (): WaveformWorkerPool => {
+const workerPool = () => {
   if (waveformWorkerState.instances.length === 0) throw new Error('Expected a waveform worker pool.');
-  return { terminate: vi.fn<() => void>() };
-};
-
-const requests = (_pool = workerPool()) =>
-  waveformWorkerState.instances.flatMap((instance) =>
-    instance.postMessage.mock.calls.map(([message]) => message as WaveformWorkerRequest),
-  );
-
-const extractRequests = (
-  pool: WaveformWorkerPool,
-  clipId: string,
-  generation?: number,
-): ExtractWaveformWorkerRequest[] =>
-  requests(pool)
-    .filter(
-      (message): message is ExtractWaveformWorkerRequest =>
-        message.type === 'extract' &&
-        message.clipId === clipId &&
-        (generation === undefined || message.generation === generation),
-    )
-    .sort((left, right) => left.segmentIndex - right.segmentIndex);
-
-const latestGeneration = (pool: WaveformWorkerPool, clipId = 'clip') => {
-  const values = extractRequests(pool, clipId).map((request) => request.generation);
-  if (values.length === 0) throw new Error(`No extraction request found for ${clipId}.`);
-  return Math.max(...values);
-};
-
-const segmentPeaks = (pointCount: number, maximum: number) =>
-  Float32Array.from({ length: pointCount * 2 }, (_, index) => (index % 2 === 0 ? 0 : maximum));
-
-const segmentOffset = (segments: readonly ExtractWaveformWorkerRequest[], index: number) =>
-  segments.slice(0, index).reduce((sum, segment) => sum + segment.pointCount, 0);
-
-const respond = (_pool: WaveformWorkerPool, response: WaveformWorkerResponse) => {
-  // Every fake worker receives the same composable callback; route through one
-  // instance so a response cannot be delivered twice.
-  waveformWorkerState.instances[0]?.onmessage?.({ data: response } as MessageEvent<WaveformWorkerResponse>);
+  return waveformWorkerState.instances;
 };
 
 const flushPublished = async () => {
   await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
   await nextTick();
-};
-
-const respondChunk = (
-  pool: WaveformWorkerPool,
-  request: ExtractWaveformWorkerRequest,
-  pointOffset: number,
-  pointCount: number,
-  maximum: number,
-  complete: boolean,
-) => {
-  respond(pool, {
-    type: 'result',
-    generation: request.generation,
-    clipId: request.clipId,
-    segmentIndex: request.segmentIndex,
-    segmentCount: request.segmentCount,
-    segmentPointOffset: pointOffset,
-    segmentComplete: complete,
-    peaks: segmentPeaks(pointCount, maximum),
-  });
-};
-
-const respondSegment = (pool: WaveformWorkerPool, request: ExtractWaveformWorkerRequest, maximum: number) => {
-  respond(pool, {
-    type: 'result',
-    generation: request.generation,
-    clipId: request.clipId,
-    segmentIndex: request.segmentIndex,
-    segmentCount: request.segmentCount,
-    segmentPointOffset: 0,
-    segmentComplete: true,
-    peaks: segmentPeaks(request.pointCount, maximum),
-  });
-};
-
-const respondAllSegments = (
-  pool: WaveformWorkerPool,
-  clipId: string,
-  generation: number,
-  maximums: readonly number[] = [2, 2, 2],
-  order: readonly number[] = [0, 1, 2],
-) => {
-  const segments = extractRequests(pool, clipId, generation);
-  expect(segments).toHaveLength(3);
-  for (const index of order) respondSegment(pool, segments[index]!, maximums[index] ?? 2);
-  return segments;
 };
 
 afterEach(() => {
@@ -449,6 +301,7 @@ describe('useCompositionAudioWaveforms', () => {
 
     mounted.viewportRef.value = { startSeconds: 2.1, endSeconds: 4.1, pixelsPerSecond: 120 };
     await nextTick();
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 125));
     await flushPromises();
     expect(extractRequests(pool, 'clip')).toHaveLength(3);
 
@@ -459,6 +312,7 @@ describe('useCompositionAudioWaveforms', () => {
 
     mounted.viewportRef.value = { startSeconds: 4, endSeconds: 6, pixelsPerSecond: 120 };
     await nextTick();
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 125));
     await flushPromises();
     const secondGeneration = latestGeneration(pool);
     expect(secondGeneration).toBeGreaterThan(firstGeneration);
@@ -469,14 +323,23 @@ describe('useCompositionAudioWaveforms', () => {
     expect(second[0]?.startSeconds).not.toBe(first[0]?.startSeconds);
     expect(second.reduce((sum, request) => sum + request.pointCount, 0)).toBe(firstPointCount);
     expect(second.reduce((sum, request) => sum + request.pointCount, 0)).toBe(240);
+    expect(state.slices.value.clip).toBeUndefined();
 
-    respondAllSegments(pool, 'clip', secondGeneration, [2, 1, 0.5]);
+    respondSegment(pool, second[0]!, 2);
+    await flushPublished();
+    expect(state.status.value.clip).toBe('loading');
+    expect(state.slices.value.clip).toEqual(expect.objectContaining({ leftPercent: 25, widthPercent: 75 }));
+    expect(state.slices.value.clip?.bars).not.toEqual(pageABars);
+
+    respondSegment(pool, second[1]!, 1);
+    respondSegment(pool, second[2]!, 0.5);
     await flushPublished();
     expect(state.status.value.clip).toBe('ready');
     expect(extractRequests(pool, 'clip')).toHaveLength(6);
 
     mounted.viewportRef.value = { startSeconds: 2, endSeconds: 4, pixelsPerSecond: 120 };
     await nextTick();
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 125));
     await flushPublished();
     expect(extractRequests(pool, 'clip')).toHaveLength(6);
     expect(state.status.value.clip).toBe('ready');
@@ -484,12 +347,110 @@ describe('useCompositionAudioWaveforms', () => {
 
     mounted.viewportRef.value = { startSeconds: 2, endSeconds: 4, pixelsPerSecond: 240 };
     await nextTick();
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 125));
     await flushPromises();
     const zoomGeneration = latestGeneration(pool);
     const zoomed = extractRequests(pool, 'clip', zoomGeneration);
     expect(zoomed).toHaveLength(3);
     expect(zoomed.reduce((sum, request) => sum + request.pointCount, 0)).toBeGreaterThan(firstPointCount);
     expect(zoomed.reduce((sum, request) => sum + request.pointCount, 0)).toBe(480);
+  });
+
+  it('keeps the ready waveform visible while an uncached zoom request loads', async () => {
+    const value = composition();
+    const clip = value.clips[0];
+    if (clip?.kind !== 'audio') throw new Error('audio fixture missing');
+    clip.timelineDurationMs = 8_000;
+    clip.sourceDurationMs = 8_000;
+    const mounted = mountComposable(value, { startSeconds: 2, endSeconds: 4, pixelsPerSecond: 120 });
+    await flushPromises();
+
+    const pool = workerPool();
+    const initialGeneration = latestGeneration(pool);
+    respondAllSegments(pool, 'clip', initialGeneration, [0.5, 1, 2]);
+    await flushPublished();
+    const readyBars = state.slices.value.clip?.bars;
+    expect(state.status.value.clip).toBe('ready');
+    expect(readyBars).toHaveLength(240);
+
+    vi.useFakeTimers();
+    try {
+      mounted.viewportRef.value = { startSeconds: 2, endSeconds: 4, pixelsPerSecond: 240 };
+      await nextTick();
+      expect(state.status.value.clip).toBe('ready');
+      expect(state.slices.value.clip?.bars).toEqual(readyBars);
+      expect(extractRequests(pool, 'clip')).toHaveLength(3);
+
+      await vi.advanceTimersByTimeAsync(119);
+      expect(extractRequests(pool, 'clip')).toHaveLength(3);
+      expect(state.slices.value.clip?.bars).toEqual(readyBars);
+
+      await vi.advanceTimersByTimeAsync(1);
+      await flushPromises();
+      const zoomGeneration = latestGeneration(pool);
+      expect(zoomGeneration).toBeGreaterThan(initialGeneration);
+      const zoomed = extractRequests(pool, 'clip', zoomGeneration);
+      expect(zoomed).toHaveLength(3);
+      expect(state.status.value.clip).toBe('loading');
+      expect(state.slices.value.clip?.bars).toEqual(readyBars);
+
+      respondSegment(pool, zoomed[0]!, 2);
+      await vi.runOnlyPendingTimersAsync();
+      await nextTick();
+      expect(state.slices.value.clip?.bars).toEqual(readyBars);
+
+      respondSegment(pool, zoomed[1]!, 1);
+      respondSegment(pool, zoomed[2]!, 0.5);
+      await vi.runOnlyPendingTimersAsync();
+      await nextTick();
+      expect(state.status.value.clip).toBe('ready');
+      expect(state.slices.value.clip?.bars).toEqual([
+        ...Array.from({ length: zoomed[0]!.pointCount }, () => 38),
+        ...Array.from({ length: zoomed[1]!.pointCount }, () => 19),
+        ...Array.from({ length: zoomed[2]!.pointCount }, () => 10),
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('immediately reconciles rapid viewport changes to incompatible buffered ranges', async () => {
+    const value = composition();
+    const clip = value.clips[0];
+    if (clip?.kind !== 'audio') throw new Error('audio fixture missing');
+    clip.timelineDurationMs = 8_000;
+    clip.sourceDurationMs = 8_000;
+    const mounted = mountComposable(value, { startSeconds: 2, endSeconds: 4, pixelsPerSecond: 120 });
+    await flushPromises();
+
+    const pool = workerPool();
+    const initialGeneration = latestGeneration(pool);
+    respondAllSegments(pool, 'clip', initialGeneration);
+    await flushPublished();
+    vi.useFakeTimers();
+    try {
+      mounted.viewportRef.value = { startSeconds: 2.1, endSeconds: 4.1, pixelsPerSecond: 120 };
+      await nextTick();
+      mounted.viewportRef.value = { startSeconds: 4, endSeconds: 6, pixelsPerSecond: 120 };
+      await nextTick();
+      mounted.viewportRef.value = { startSeconds: 6, endSeconds: 8, pixelsPerSecond: 120 };
+      await nextTick();
+
+      expect(extractRequests(pool, 'clip')).toHaveLength(9);
+      await vi.advanceTimersByTimeAsync(119);
+      expect(extractRequests(pool, 'clip')).toHaveLength(9);
+
+      await vi.advanceTimersByTimeAsync(1);
+      await flushPromises();
+      const latest = extractRequests(pool, 'clip');
+      expect(latest).toHaveLength(9);
+      const latestGenerationRequests = extractRequests(pool, 'clip', latestGeneration(pool));
+      expect(latestGenerationRequests).toHaveLength(3);
+      expect(latestGenerationRequests[0]?.startSeconds).toBeCloseTo(4.25, 8);
+      expect(latestGenerationRequests[2]?.endSeconds).toBeCloseTo(8.25, 8);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('keeps empty compositions inert and disposes all workers on unmount', async () => {

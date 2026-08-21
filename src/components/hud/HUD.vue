@@ -109,9 +109,6 @@ const interactionGuidance = computed(() => {
   if (status.state === 'checking') return null;
   return linuxInteractionGuidance(captureCatalog.value?.diagnostics?.linux, status);
 });
-const interactionReadyForRecording = computed(
-  () => desktopPlatform !== 'linux' || interactionAccess.status.value.state === 'available',
-);
 const hudIssues = computed<HudIssueModel[]>(() => {
   const issues: HudIssueModel[] = [];
   if (requirementGuidance.value.length > 0) {
@@ -593,8 +590,6 @@ const toggleRecording = async () => {
   if (isBusy.value) return;
   // Recording ownership lives in App.vue.  The HUD only collects configuration.
   if (!isRecording.value) {
-    if (requirementGuidance.value.length > 0) return;
-    if (!interactionReadyForRecording.value) return;
     if (sourceDiscoveryCompleted.value && !hasSelectedCaptureSource.value) {
       errorMessage.value = activeTab.value === 'screen' ? t('noScreensDetected') : t('noWindowsDetected');
       return;
@@ -1286,7 +1281,6 @@ const openProject = (project: CaptureProject) => {
               :disabled="
                 isBusy ||
                 interactionAccess.requesting.value ||
-                (!isRecording && !interactionReadyForRecording) ||
                 (!isRecording && sourceDiscoveryCompleted && !hasSelectedCaptureSource)
               "
               @click="

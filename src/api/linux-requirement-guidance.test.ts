@@ -59,7 +59,7 @@ describe('linuxRequirementGuidance', () => {
       `Install or repair the detected desktop portal: sudo apt update && sudo apt install xdg-desktop-portal xdg-desktop-portal-gnome`,
     );
     expect(result[0]?.copyText).toContain(
-      'Linux guide: https://github.com/BeamRecorder/Beam/blob/main/docs/dev/linux.md',
+      'Linux guide: https://github.com/BeamRecorder/Beam/blob/master/docs/dev/linux.md',
     );
   });
 
@@ -100,6 +100,9 @@ describe('linuxRequirementGuidance', () => {
     expect(result[0]?.instructions).toContain('Verify the user service: systemctl --user status xdg-desktop-portal');
     expect(result[1]?.instructions).toContain(
       'Restart the user services: systemctl --user restart pipewire wireplumber',
+    );
+    expect(result[2]?.instructions).toContain(
+      "Verify FFmpeg, a supported encoder, and the MP4 muxer: ffmpeg -hide_banner -version && ffmpeg -hide_banner -encoders | awk '$2 ~ /^(h264_nvenc|h264_qsv|h264_vaapi|h264_amf|av1_nvenc|av1_qsv|av1_vaapi|vp9_vaapi|av1_amf|vp9_qsv|libx264|libopenh264)$/ { found=1 } END { exit !found }' && ffmpeg -hide_banner -muxers | grep -w mp4",
     );
   });
 
@@ -147,10 +150,10 @@ describe('linuxRequirementGuidance', () => {
     expect(result).toHaveLength(1);
     expect(result[0]?.errorCode).toBe('ffmpeg-encoder-unavailable');
     expect(result[0]?.instructions).toContain(
-      "Verify a supported encoder: ffmpeg -hide_banner -encoders | grep -E 'libx264|libopenh264'",
+      "Verify a supported encoder: ffmpeg -hide_banner -encoders | awk '$2 ~ /^(h264_nvenc|h264_qsv|h264_vaapi|h264_amf|av1_nvenc|av1_qsv|av1_vaapi|vp9_vaapi|av1_amf|vp9_qsv|libx264|libopenh264)$/ { found=1 } END { exit !found }'",
     );
     expect(result[0]?.instructions).not.toContain(
-      'Verify FFmpeg and the MP4 muxer: ffmpeg -hide_banner -version && ffmpeg -hide_banner -muxers | grep -w mp4',
+      "Verify FFmpeg, a supported encoder, and the MP4 muxer: ffmpeg -hide_banner -version && ffmpeg -hide_banner -encoders | awk '$2 ~ /^(h264_nvenc|h264_qsv|h264_vaapi|h264_amf|av1_nvenc|av1_qsv|av1_vaapi|vp9_vaapi|av1_amf|vp9_qsv|libx264|libopenh264)$/ { found=1 } END { exit !found }' && ffmpeg -hide_banner -muxers | grep -w mp4",
     );
   });
 

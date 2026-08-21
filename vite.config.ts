@@ -62,6 +62,9 @@ export default defineConfig({
   cacheDir: 'node_modules/.vite',
   plugins: [publicBackgroundMediaPlugin(), vue({})],
   resolve: {
+    // Keep libraries such as Lucide on the renderer's Vue instance even when
+    // the dependency tree was installed by a different package manager.
+    dedupe: ['vue'],
     alias: {
       '~/ui': fileURLToPath(new URL('./src/components/ui', import.meta.url)),
       '~': fileURLToPath(new URL('./src', import.meta.url)),

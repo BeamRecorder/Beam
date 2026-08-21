@@ -148,7 +148,7 @@ describe('VideoEditor', () => {
     expect(timeline.emitted('select:track')).toHaveLength(2);
   });
 
-  it('deletes a grouped video fragment and its linked audio through the timeline event', async () => {
+  it('opens linked deletion and keeps the dialog available for one or all linked clips', async () => {
     const mounted = mountEditor();
     const state = editorState.store;
     const current = state.compositionState.composition.value as ClipComposition;
@@ -196,9 +196,41 @@ describe('VideoEditor', () => {
     mounted.findComponent({ name: 'MockEditorTimeline' }).vm.$emit('delete:clips', ['right-video']);
     await mounted.vm.$nextTick();
 
-    const remaining = state.compositionState.composition.value.clips as ClipComposition['clips'];
+    const dialog = mounted.findComponent({ name: 'MockLinkedClipsDeleteDialog' });
+    expect(dialog.exists()).toBe(true);
+    expect(dialog.props('isOpen')).toBe(true);
+    expect(dialog.attributes('data-clip-ids')).toBe('right-video,right-audio');
+
+    await dialog.get('.dialog-delete-one').trigger('click');
+    await mounted.vm.$nextTick();
+
+    let remaining = state.compositionState.composition.value.clips as ClipComposition['clips'];
+    expect(remaining.some((clip) => clip.id === 'right-video')).toBe(false);
+    expect(remaining.some((clip) => clip.id === 'right-audio')).toBe(true);
+    expect(dialog.props('isOpen')).toBe(true);
+    expect(dialog.attributes('data-clip-ids')).toBe('right-audio');
+
+    await dialog.get('.dialog-delete-all').trigger('click');
+    await mounted.vm.$nextTick();
+
+    remaining = state.compositionState.composition.value.clips as ClipComposition['clips'];
     expect(remaining.some((clip) => clip.id === 'right-video' || clip.id === 'right-audio')).toBe(false);
     expect(Math.max(...remaining.map((clip) => clip.timelineStartMs + clip.timelineDurationMs))).toBe(120_000);
+    expect(dialog.props('isOpen')).toBe(true);
+    expect(dialog.attributes('data-clip-ids')).toBe('');
+  });
+
+  it('deletes an unlinked clip immediately without opening the linked deletion dialog', async () => {
+    const mounted = mountEditor();
+    const timeline = mounted.findComponent({ name: 'MockEditorTimeline' });
+
+    timeline.vm.$emit('delete:clips', ['audio']);
+    await mounted.vm.$nextTick();
+
+    expect(editorState.store.compositionState.composition.value.clips).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: 'audio' })]),
+    );
+    expect(mounted.findComponent({ name: 'MockLinkedClipsDeleteDialog' }).props('isOpen')).toBe(false);
   });
 
   it('applies composition previews without saving or recording history, while final updates save', async () => {

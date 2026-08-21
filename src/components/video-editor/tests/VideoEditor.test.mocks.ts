@@ -1,7 +1,8 @@
 import { vi } from 'vitest';
 import type { ClipComposition } from '~/media/shared/composition-types';
-import { COMPOSITION_SCHEMA_VERSION } from '~/media/shared/composition-types';
+import { COMPOSITION_SCHEMA_VERSION, isAudioClip } from '~/media/shared/composition-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { setVolume } from '~/components/video-editor/composition/engine/clip-engine';
 import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
 
 const { editorState } = vi.hoisted(() => ({ editorState: { store: undefined as any } }));
@@ -202,13 +203,24 @@ vi.mock('../composables/useVideoEditor', async () => {
         deleteSelectedZoom: vi.fn(),
       };
       const outputCanvas = ref({ preset: '16:9', width: 1920, height: 1080, showBackground: false });
+      const roleVolume = (role: 'system' | 'microphone') =>
+        computed({
+          get: () => composition.value.clips.filter(isAudioClip).find((clip) => clip.role === role)?.volume ?? 100,
+          set: (volume: number) => {
+            let next = composition.value;
+            for (const clip of next.clips) {
+              if (isAudioClip(clip) && clip.role === role) next = setVolume(next, clip.id, volume);
+            }
+            composition.value = next;
+          },
+        });
       const store = {
         activeTab,
         initialPlaybackSettled: ref(true),
         includeAudioInExport: ref(true),
         editorDefaults: ref({ zoom: { durationMs: 1_500 } }),
-        systemVolume: ref(100),
-        micVolume: ref(100),
+        systemVolume: roleVolume('system'),
+        micVolume: roleVolume('microphone'),
         sourceSize: ref({ width: 1280, height: 720 }),
         player,
         cursor,
@@ -271,6 +283,59 @@ vi.mock('../EditorAmbientBackground.vue', async () => {
             'data-background-id': background?.id ?? '',
             'data-background-path': background?.path ?? '',
           });
+        };
+      },
+    }),
+  };
+});
+
+vi.mock('../LinkedClipsDeleteDialog.vue', async () => {
+  const { defineComponent, h, onMounted, onUnmounted } = await import('vue');
+  return {
+    default: defineComponent({
+      name: 'MockLinkedClipsDeleteDialog',
+      props: {
+        isOpen: { type: Boolean, default: false },
+        clips: { type: Array, default: () => [] },
+      },
+      emits: ['close', 'delete'],
+      setup(props, { emit }) {
+        const handleKeyDown = (event: KeyboardEvent) => {
+          if (!props.isOpen || event.key !== 'Escape') return;
+          event.preventDefault();
+          emit('close');
+        };
+        onMounted(() => window.addEventListener('keydown', handleKeyDown));
+        onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
+
+        return () => {
+          if (!props.isOpen) return null;
+          const clips = props.clips as Array<{ id: string }>;
+          return h('div', { class: 'linked-delete-dialog', 'data-clip-ids': clips.map((clip) => clip.id).join(',') }, [
+            h(
+              'button',
+              {
+                class: 'dialog-delete-one',
+                disabled: clips.length === 0,
+                onClick: () => clips[0] && emit('delete', [clips[0].id]),
+              },
+              'Delete one',
+            ),
+            h(
+              'button',
+              {
+                class: 'dialog-delete-all',
+                disabled: clips.length === 0,
+                onClick: () =>
+                  emit(
+                    'delete',
+                    clips.map((clip) => clip.id),
+                  ),
+              },
+              'Delete all',
+            ),
+            h('button', { class: 'dialog-close', onClick: () => emit('close') }, 'Close'),
+          ]);
         };
       },
     }),

@@ -1,4 +1,21 @@
 {
+  "LinkedClipsDeleteDialog": {
+    "title": "लिंक किए गए क्लिप हटाएँ",
+    "description": "इस आइटम में लिंक किए गए क्लिप हैं। ठीक वही क्लिप चुनें जिन्हें आप हटाना चाहते हैं।",
+    "deleteAll": "सभी हटाएँ ({count})",
+    "delete": "हटाएँ",
+    "deleteOne": "“{name}” हटाएँ",
+    "allDeleted": "सभी लिंक किए गए क्लिप हटा दिए गए हैं।",
+    "kind": {
+      "screen": "स्क्रीन",
+      "video": "वीडियो",
+      "image": "छवि",
+      "webcam": "वेबकैम",
+      "blur": "धुंधला",
+      "audio": "ऑडियो",
+      "caption": "कैप्शन"
+    }
+  },
   "CameraLayoutPanel": {
     "reactToZoom": "ज़ूम पर प्रतिक्रिया दें",
     "reactToZoomDescription": "वेबकैम को स्थिर रखते हुए उसका आकार कैनवास के ज़ूम के अनुसार समायोजित करें।"

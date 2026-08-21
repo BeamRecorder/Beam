@@ -357,7 +357,7 @@ fn canonical_bitmap(
             output_y
         };
         let row = pixels.get(source_y * stride_bytes..source_y * stride_bytes + row_bytes)?;
-        for pixel in row.chunks_exact(4) {
+        for pixel in row.as_chunks::<4>().0 {
             let channels = match format {
                 VideoFormat::RGBA => [pixel[0], pixel[1], pixel[2], pixel[3]],
                 VideoFormat::BGRA => [pixel[2], pixel[1], pixel[0], pixel[3]],
@@ -373,7 +373,7 @@ fn canonical_bitmap(
 
 fn xcursor_pixels_to_rgba(pixels: &[u8]) -> Vec<u8> {
     let mut rgba = Vec::with_capacity(pixels.len());
-    for pixel in pixels.chunks_exact(4) {
+    for pixel in pixels.as_chunks::<4>().0 {
         push_normalized_pixel(&mut rgba, [pixel[2], pixel[1], pixel[0], pixel[3]]);
     }
     rgba
