@@ -128,6 +128,10 @@ const handleClick = (e: MouseEvent) => {
   color: var(--text-primary);
 }
 
+.context-menu-item.is-danger:not(:disabled) .item-icon-wrapper {
+  color: inherit;
+}
+
 .context-menu-item.is-disabled .item-icon-wrapper,
 .context-menu-item.is-disabled .item-shortcut {
   color: currentColor;
