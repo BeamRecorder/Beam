@@ -120,6 +120,7 @@ describe('editor defaults', () => {
     expect(normalizeEditorPreferenceDefaults(null)).toEqual({ schemaVersion: 1 });
 
     const normalized = normalizeEditorPreferenceDefaults({
+      zoomMotionBlur: { enabled: false, intensity: 2 },
       visual: {
         video: {
           transform: { x: Number.NaN, y: 'bad', width: -1, height: 0 },
@@ -140,6 +141,7 @@ describe('editor defaults', () => {
     });
 
     expect(normalized.schemaVersion).toBe(1);
+    expect(normalized.zoomMotionBlur).toEqual({ enabled: false, intensity: 1 });
     expect(normalized.visual?.video).toMatchObject({
       transform: { x: 0, y: 0, width: 1, height: 1 },
       playbackRate: 4,
@@ -157,6 +159,17 @@ describe('editor defaults', () => {
       cameraSplitRatio: 0.8,
       cameraSplitPadding: 0,
     });
+  });
+
+  it('captures normalized zoom motion blur from the editor state without sharing values', () => {
+    const editorState = state();
+    editorState.zoom.motionBlur = { enabled: false, intensity: 0.77 };
+
+    const result = defaultsFromEditorState(normalizeEditorPreferenceDefaults(undefined), editorState, null, null);
+
+    expect(result.zoomMotionBlur).toEqual({ enabled: false, intensity: 0.77 });
+    result.zoomMotionBlur!.intensity = 0.2;
+    expect(editorState.zoom.motionBlur?.intensity).toBe(0.77);
   });
 
   it('extracts presentation and the selected visual or zoom defaults without sharing mutable values', () => {

@@ -26,7 +26,6 @@ import {
   type OutputCanvasPreset,
   type OutputCanvasSettings,
 } from '~/components/video-editor/canvas/output-canvas';
-import { setVolume } from '~/components/video-editor/composition/engine/clip-engine';
 import {
   isAudioClip,
   isBlurClip,
@@ -274,18 +273,11 @@ const commitCaption = (clip: Parameters<typeof updateCaption>[0]) => {
   captionCompositionPreview.value = null;
   updateCaption(clip);
 };
-const updateRoleVolume = (role: 'system' | 'microphone', value: number) => {
-  let next = composition.value;
-  for (const clip of next.clips) if (isAudioClip(clip) && clip.role === role) next = setVolume(next, clip.id, value);
-  composition.value = next;
-};
 const deleteAudioRole = (role: 'system' | 'microphone') => {
   requestClipDeletion(
     composition.value.clips.filter((clip) => isAudioClip(clip) && clip.role === role).map((clip) => clip.id),
   );
 };
-watch(systemVolume, (value) => updateRoleVolume('system', value));
-watch(micVolume, (value) => updateRoleVolume('microphone', value));
 const handlePlayingIntent = (playing: boolean) => {
   void player.setPlaying(playing).catch(() => console.error('Unable to change playback state.'));
 };

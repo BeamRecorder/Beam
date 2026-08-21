@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import ClipActionGroup from '~/components/video-editor/properties/clip/ClipActionGroup.vue';
@@ -35,16 +34,11 @@ const emit = defineEmits<{
   (e: 'delete:microphone'): void;
 }>();
 
-const localSystemVolume = ref(props.systemVolume);
-const localMicVolume = ref(props.micVolume);
-
 const handleSystemVolChange = (val: number) => {
-  localSystemVolume.value = val;
   emit('update:systemVolume', val);
 };
 
 const handleMicVolChange = (val: number) => {
-  localMicVolume.value = val;
   emit('update:micVolume', val);
 };
 </script>
@@ -77,7 +71,7 @@ const handleMicVolChange = (val: number) => {
       </div>
       <div v-if="isSystemAudioEnabled" class="prop-item sub-slider">
         <BigSlider
-          :model-value="localSystemVolume"
+          :model-value="systemVolume"
           :default-value="100"
           :min="0"
           :max="100"
@@ -102,7 +96,7 @@ const handleMicVolChange = (val: number) => {
       </div>
       <div v-if="isMicAudioEnabled" class="prop-item sub-slider">
         <BigSlider
-          :model-value="localMicVolume"
+          :model-value="micVolume"
           :default-value="100"
           :min="0"
           :max="100"
