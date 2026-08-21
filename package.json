@@ -13,6 +13,9 @@
   "workspaces": [
     "website"
   ],
+  "overrides": {
+    "onnxruntime-web": "1.27.0"
+  },
   "scripts": {
     "test": "node --test test/*.test.cjs",
     "test:coverage": "vitest run --coverage",

@@ -28,7 +28,6 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{
   (event: 'update:composition', composition: ClipComposition): void;
-  (event: 'preview:composition', composition: ClipComposition): void;
   (event: 'select-caption', clipId: string): void;
 }>();
 
@@ -136,7 +135,7 @@ const runTranscription = async () => {
   isTranscribing.value = true;
   transcriptionSourceLabel.value = selectedSource.value.label;
   const captionIds = new Map<string, string>();
-  const applySentences = (sentences: CaptionSentence[], preview = false) => {
+  const applySentences = (sentences: CaptionSentence[]) => {
     if (!sentences.length) return [];
     const preserved = props.composition.clips.filter((clip) => clip.kind !== 'caption' || !clip.isAiGenerated);
     const captions: CaptionClip[] = sentences.map((sentence, index) => {
@@ -176,13 +175,12 @@ const runTranscription = async () => {
       [...preserved, ...captions],
       props.composition.keyboardCaptionSessions,
     );
-    if (preview) emit('preview:composition', composition);
-    else emit('update:composition', composition);
+    emit('update:composition', composition);
     return captions;
   };
   try {
     const result = await transcribe(selectedSource.value.src, model.value, props.timelineDurationMs, (partial) =>
-      applySentences(partial.sentences, true),
+      applySentences(partial.sentences),
     );
     const captions = applySentences(result.sentences);
     if (captions.length) emit('select-caption', captions[0]!.id);
@@ -258,11 +256,10 @@ const runTranscription = async () => {
           <div class="transcription-throbber-row">
             <Throbber
               :text="progress.message || t('processing')"
-              size="xs"
-              variant="pulse"
+              :respect-reduced-motion="false"
+              inherit-typography
+              variant="highlight"
               speed="slow"
-              color="primary"
-              dots
             />
           </div>
           <ProgressBar :value="progress.progress ?? 0" />
@@ -445,8 +442,13 @@ const runTranscription = async () => {
 .transcription-throbber-row {
   display: flex;
   align-items: center;
+  gap: 3px;
   min-height: 18px;
   padding: 2px 0;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.35;
 }
 
 .cancel-transcription-btn {

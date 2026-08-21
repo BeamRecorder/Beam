@@ -51,16 +51,27 @@ describe('VideoEditor diagnostics and keyboard behavior', () => {
 
   it('updates role volumes and protects editable fields from destructive keyboard shortcuts', async () => {
     const mounted = mountEditor();
+    editorState.store.systemVolume.value = 150;
+    editorState.store.micVolume.value = 125;
+    await mounted.vm.$nextTick();
+    expect(
+      editorState.store.compositionState.composition.value.clips.find((clip: any) => clip.role === 'system')?.volume,
+    ).toBe(150);
+
     editorState.store.compositionState.selectedClipId.value = 'audio';
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', cancelable: true }));
-    expect(editorState.store.compositionState.deleteSelectedClip).toHaveBeenCalled();
+    await mounted.vm.$nextTick();
+    expect(editorState.store.compositionState.composition.value.clips).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: 'audio' })]),
+    );
 
-    editorState.store.compositionState.deleteSelectedClip.mockClear();
+    const compositionAfterDelete = JSON.stringify(editorState.store.compositionState.composition.value);
     const input = document.createElement('input');
     document.body.appendChild(input);
     input.focus();
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', cancelable: true }));
-    expect(editorState.store.compositionState.deleteSelectedClip).not.toHaveBeenCalled();
+    await mounted.vm.$nextTick();
+    expect(JSON.stringify(editorState.store.compositionState.composition.value)).toBe(compositionAfterDelete);
     input.remove();
 
     editorState.store.compositionState.selectedClipId.value = null;
@@ -68,12 +79,5 @@ describe('VideoEditor diagnostics and keyboard behavior', () => {
     editorState.store.zoomState.selectedZoom.value = { id: 'z', mode: 'manual' };
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', cancelable: true }));
     expect(editorState.store.zoomState.deleteSelectedZoom).toHaveBeenCalled();
-
-    editorState.store.systemVolume.value = 150;
-    editorState.store.micVolume.value = 125;
-    await mounted.vm.$nextTick();
-    expect(
-      editorState.store.compositionState.composition.value.clips.find((clip: any) => clip.role === 'system')?.volume,
-    ).toBe(150);
   });
 });

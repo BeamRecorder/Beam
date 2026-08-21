@@ -3,7 +3,6 @@ import { onUnmounted, ref, watch } from 'vue';
 import { Sparkles } from '@lucide/vue';
 import type { CaptionClip } from '~/media/shared/composition-types';
 import { useTranslate } from '~/i18n/useTranslate';
-import Throbber from '~/components/ui/throbber/Throbber.vue';
 import type { TimelinePasteHighlight } from './composables/timeline-clipboard-types';
 import { timelineTransitionStyle } from './timeline-clip-geometry';
 import TimelineTransitionCurve from './TimelineTransitionCurve.vue';
@@ -25,6 +24,7 @@ const props = defineProps<{
   leaveTrack: (kind: 'caption') => void;
   addAt: (event: MouseEvent, kind: 'caption') => void;
   recentPaste?: TimelinePasteHighlight | null;
+  reduceMotion?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -61,15 +61,12 @@ const getCaptionText = (clip: CaptionClip): string => {
   return t('keyboardCaptions') || 'Keyboard';
 };
 
-const editingClipIds = ref<Set<string>>(new Set());
 const settlingClipIds = ref<Set<string>>(new Set());
-const editTimers: Record<string, number> = {};
 const settleTimers: Record<string, number> = {};
 const previousTexts: Record<string, string> = {};
 
 let isInitialMount = true;
-const EDIT_THROBBER_TIMEOUT_MS = 500;
-const SETTLE_ANIMATION_MS = 450;
+const SETTLE_ANIMATION_MS = 320;
 
 watch(
   () => [...props.textClips, ...props.keyboardClips].map((clip) => ({ id: clip.id, text: getCaptionText(clip) })),
@@ -82,27 +79,25 @@ watch(
       return;
     }
 
+    const currentIds = new Set(newItems.map((item) => item.id));
+    for (const id of Object.keys(previousTexts)) {
+      if (currentIds.has(id)) continue;
+      delete previousTexts[id];
+      if (settleTimers[id]) window.clearTimeout(settleTimers[id]);
+      delete settleTimers[id];
+      settlingClipIds.value.delete(id);
+    }
+
     for (const item of newItems) {
       if (previousTexts[item.id] !== undefined && previousTexts[item.id] !== item.text) {
-        editingClipIds.value.add(item.id);
-        settlingClipIds.value.delete(item.id);
-        if (editTimers[item.id]) {
-          window.clearTimeout(editTimers[item.id]);
-        }
+        settlingClipIds.value.add(item.id);
         if (settleTimers[item.id]) {
           window.clearTimeout(settleTimers[item.id]);
-          delete settleTimers[item.id];
         }
-        editTimers[item.id] = window.setTimeout(() => {
-          editingClipIds.value.delete(item.id);
-          delete editTimers[item.id];
-
-          settlingClipIds.value.add(item.id);
-          settleTimers[item.id] = window.setTimeout(() => {
-            settlingClipIds.value.delete(item.id);
-            delete settleTimers[item.id];
-          }, SETTLE_ANIMATION_MS);
-        }, EDIT_THROBBER_TIMEOUT_MS);
+        settleTimers[item.id] = window.setTimeout(() => {
+          settlingClipIds.value.delete(item.id);
+          delete settleTimers[item.id];
+        }, SETTLE_ANIMATION_MS);
       }
       previousTexts[item.id] = item.text;
     }
@@ -154,9 +149,6 @@ const startMarquee = (event: PointerEvent) => {
 
 onUnmounted(() => {
   stopMarquee();
-  for (const timer of Object.values(editTimers)) {
-    window.clearTimeout(timer);
-  }
   for (const timer of Object.values(settleTimers)) {
     window.clearTimeout(timer);
   }
@@ -167,6 +159,7 @@ onUnmounted(() => {
   <div
     v-if="keyboardClips.length"
     class="track-row annotation-track keyboard-caption-track"
+    :class="{ 'motion-reduced': reduceMotion }"
     @contextmenu="emit('contextmenu:track', $event)"
   >
     <div class="track-content annotation-content">
@@ -213,22 +206,8 @@ onUnmounted(() => {
               {{ (trimStateFor(clip.id)!.durationMs / 1000).toFixed(1) }}s
             </span>
           </span>
-          <span
-            class="clip-center-title"
-            :class="{ 'is-editing': editingClipIds.has(clip.id), 'is-settling': settlingClipIds.has(clip.id) }"
-          >
-            <Throbber
-              v-if="editingClipIds.has(clip.id)"
-              :text="getCaptionText(clip)"
-              variant="wave"
-              color="white"
-              size="xs"
-              weight="semibold"
-              :dots="true"
-              :nowrap="true"
-              class="caption-edit-throbber"
-            />
-            <span v-else class="caption-label-text" :class="{ 'caption-settled': settlingClipIds.has(clip.id) }">{{
+          <span class="clip-center-title">
+            <span class="caption-label-text" :class="{ 'caption-settled': settlingClipIds.has(clip.id) }">{{
               getCaptionText(clip)
             }}</span>
           </span>
@@ -242,7 +221,11 @@ onUnmounted(() => {
     </div>
   </div>
 
-  <div class="track-row annotation-track text-caption-track" @contextmenu="emit('contextmenu:track', $event)">
+  <div
+    class="track-row annotation-track text-caption-track"
+    :class="{ 'motion-reduced': reduceMotion }"
+    @contextmenu="emit('contextmenu:track', $event)"
+  >
     <div
       class="track-content annotation-content"
       :title="t('clickToAddCaption')"
@@ -301,23 +284,9 @@ onUnmounted(() => {
               {{ (trimStateFor(clip.id)!.durationMs / 1000).toFixed(1) }}s
             </span>
           </span>
-          <span
-            class="clip-center-title"
-            :class="{ 'is-editing': editingClipIds.has(clip.id), 'is-settling': settlingClipIds.has(clip.id) }"
-          >
+          <span class="clip-center-title">
             <Sparkles v-if="clip.isAiGenerated" :size="12" class="sparkles-icon" />
-            <Throbber
-              v-if="editingClipIds.has(clip.id)"
-              :text="getCaptionText(clip)"
-              variant="wave"
-              color="white"
-              size="xs"
-              weight="semibold"
-              :dots="true"
-              :nowrap="true"
-              class="caption-edit-throbber"
-            />
-            <span v-else class="caption-label-text" :class="{ 'caption-settled': settlingClipIds.has(clip.id) }">{{
+            <span class="caption-label-text" :class="{ 'caption-settled': settlingClipIds.has(clip.id) }">{{
               getCaptionText(clip)
             }}</span>
           </span>

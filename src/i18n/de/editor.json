@@ -1,4 +1,21 @@
 {
+  "LinkedClipsDeleteDialog": {
+    "title": "Verknüpfte Clips löschen",
+    "description": "Dieses Element enthält verknüpfte Clips. Wähle genau aus, welche Clips gelöscht werden sollen.",
+    "deleteAll": "Alle löschen ({count})",
+    "delete": "Löschen",
+    "deleteOne": "„{name}“ löschen",
+    "allDeleted": "Alle verknüpften Clips wurden gelöscht.",
+    "kind": {
+      "screen": "Bildschirm",
+      "video": "Video",
+      "image": "Bild",
+      "webcam": "Webcam",
+      "blur": "Unschärfe",
+      "audio": "Audio",
+      "caption": "Untertitel"
+    }
+  },
   "CameraLayoutPanel": {
     "reactToZoom": "Auf Zoom reagieren",
     "reactToZoomDescription": "Webcam verankert halten und ihre Größe an den Canvas-Zoom anpassen."

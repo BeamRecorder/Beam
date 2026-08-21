@@ -88,12 +88,15 @@ export function useEditorUndoRedo(options: {
     if (!canUndo.value) return;
     cancel();
     restoring = true;
-    const current = undoStack.value.pop();
-    if (current) redoStack.value.push(current);
-    const previous = undoStack.value.at(-1);
-    if (previous) await options.onRestoreSnapshot(clone(previous));
-    restoring = false;
-    lastAction.value = { type: 'undo', timestamp: Date.now() };
+    try {
+      const current = undoStack.value.pop();
+      if (current) redoStack.value.push(current);
+      const previous = undoStack.value.at(-1);
+      if (previous) await options.onRestoreSnapshot(clone(previous));
+      lastAction.value = { type: 'undo', timestamp: Date.now() };
+    } finally {
+      restoring = false;
+    }
   };
 
   const redo = async () => {
@@ -101,14 +104,17 @@ export function useEditorUndoRedo(options: {
     if (!canRedo.value) return;
     cancel();
     restoring = true;
-    const next = redoStack.value.pop();
-    if (next) {
-      const restored = clone(next);
-      undoStack.value.push(restored);
-      await options.onRestoreSnapshot(restored);
+    try {
+      const next = redoStack.value.pop();
+      if (next) {
+        const restored = clone(next);
+        undoStack.value.push(restored);
+        await options.onRestoreSnapshot(restored);
+      }
+      lastAction.value = { type: 'redo', timestamp: Date.now() };
+    } finally {
+      restoring = false;
     }
-    restoring = false;
-    lastAction.value = { type: 'redo', timestamp: Date.now() };
   };
 
   const handleKeyDown = (event: KeyboardEvent) => {

@@ -10,4 +10,12 @@ describe('Vite development configuration', () => {
     if (!loaded) throw new Error('Vite configuration could not be loaded');
     expect(loaded.config.optimizeDeps?.include).toContain('@mediabunny/aac-encoder');
   });
+
+  it('deduplicates Vue across Vite dependency entry points', async () => {
+    const loaded = await loadConfigFromFile({ command: 'serve', mode: 'test' }, resolve('vite.config.ts'));
+
+    expect(loaded).not.toBeNull();
+    if (!loaded) throw new Error('Vite configuration could not be loaded');
+    expect(loaded.config.resolve?.dedupe).toContain('vue');
+  });
 });

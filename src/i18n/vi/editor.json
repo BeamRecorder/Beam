@@ -1,4 +1,21 @@
 {
+  "LinkedClipsDeleteDialog": {
+    "title": "Xóa các clip được liên kết",
+    "description": "Mục này có các clip được liên kết. Hãy chọn chính xác những clip bạn muốn xóa.",
+    "deleteAll": "Xóa tất cả ({count})",
+    "delete": "Xóa",
+    "deleteOne": "Xóa “{name}”",
+    "allDeleted": "Tất cả clip được liên kết đã được xóa.",
+    "kind": {
+      "screen": "Màn hình",
+      "video": "Video",
+      "image": "Hình ảnh",
+      "webcam": "Webcam",
+      "blur": "Làm mờ",
+      "audio": "Âm thanh",
+      "caption": "Phụ đề"
+    }
+  },
   "CameraLayoutPanel": {
     "reactToZoom": "Phản hồi theo thu phóng",
     "reactToZoomDescription": "Giữ webcam cố định và điều chỉnh kích thước theo mức thu phóng của canvas."

@@ -89,6 +89,35 @@ describe('internationalization', () => {
     }
   });
 
+  it('provides translated linked-clip deletion copy for every locale', () => {
+    const keys = [
+      'title',
+      'description',
+      'delete',
+      'deleteAll',
+      'deleteOne',
+      'allDeleted',
+      'kind.screen',
+      'kind.video',
+      'kind.image',
+      'kind.webcam',
+      'kind.blur',
+      'kind.audio',
+      'kind.caption',
+    ];
+
+    for (const locale of SUPPORTED_LOCALES) {
+      setCurrentLocale(locale);
+      for (const key of keys) {
+        const path = `LinkedClipsDeleteDialog.${key}`;
+        expect(i18n.global.te(path, locale), `${locale}: missing ${path}`).toBe(true);
+        expect(i18n.global.t(path), `${locale}: unresolved ${path}`).not.toBe(path);
+      }
+      expect(i18n.global.t('LinkedClipsDeleteDialog.deleteAll', { count: 2 })).toContain('2');
+      expect(i18n.global.t('LinkedClipsDeleteDialog.deleteOne', { name: 'clip.mp4' })).toContain('clip.mp4');
+    }
+  });
+
   it('provides every preview quality label in every supported locale', () => {
     const keys = [
       'previewQuality',

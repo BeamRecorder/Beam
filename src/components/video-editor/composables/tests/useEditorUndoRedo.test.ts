@@ -53,6 +53,56 @@ describe('useEditorUndoRedo', () => {
     wrapper.unmount();
   });
 
+  it('releases the restoring guard when undo restoration rejects', async () => {
+    let api!: ReturnType<typeof useEditorUndoRedo>;
+    const Harness = defineComponent({
+      setup: () => (
+        (api = useEditorUndoRedo({
+          onRestoreSnapshot: async () => {
+            throw new Error('undo restore failed');
+          },
+        })),
+        {}
+      ),
+      template: '<div />',
+    });
+    const wrapper = mount(Harness);
+    api.recordSnapshot(snapshot(1));
+    api.recordSnapshot(snapshot(2));
+
+    await expect(api.undo()).rejects.toThrow('undo restore failed');
+
+    api.recordSnapshot(snapshot(3));
+    expect(api.undoStack.value.at(-1)?.backgroundBlurPercent).toBe(3);
+    expect(api.redoStack.value).toHaveLength(0);
+    wrapper.unmount();
+  });
+
+  it('releases the restoring guard when redo restoration rejects', async () => {
+    let api!: ReturnType<typeof useEditorUndoRedo>;
+    const restore = vi
+      .fn<() => void>()
+      .mockImplementationOnce(() => undefined)
+      .mockImplementationOnce(() => {
+        throw new Error('redo restore failed');
+      });
+    const Harness = defineComponent({
+      setup: () => ((api = useEditorUndoRedo({ onRestoreSnapshot: restore })), {}),
+      template: '<div />',
+    });
+    const wrapper = mount(Harness);
+    api.recordSnapshot(snapshot(1));
+    api.recordSnapshot(snapshot(2));
+
+    await api.undo();
+    await expect(api.redo()).rejects.toThrow('redo restore failed');
+
+    api.recordSnapshot(snapshot(3));
+    expect(api.undoStack.value.at(-1)?.backgroundBlurPercent).toBe(3);
+    expect(api.redoStack.value).toHaveLength(0);
+    wrapper.unmount();
+  });
+
   it('flushes pending debounced snapshots on undo/redo before rolling back', async () => {
     const restored: unknown[] = [];
     let api!: ReturnType<typeof useEditorUndoRedo>;

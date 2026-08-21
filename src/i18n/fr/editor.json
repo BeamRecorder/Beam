@@ -1,4 +1,21 @@
 {
+  "LinkedClipsDeleteDialog": {
+    "title": "Supprimer des clips liés",
+    "description": "Cet élément contient des clips liés. Choisissez précisément les clips à supprimer.",
+    "deleteAll": "Tout supprimer ({count})",
+    "delete": "Supprimer",
+    "deleteOne": "Supprimer « {name} »",
+    "allDeleted": "Tous les clips liés ont été supprimés.",
+    "kind": {
+      "screen": "Écran",
+      "video": "Vidéo",
+      "image": "Image",
+      "webcam": "Webcam",
+      "blur": "Flou",
+      "audio": "Audio",
+      "caption": "Sous-titre"
+    }
+  },
   "CameraLayoutPanel": {
     "title": "Camera Layout",
     "visualTitle": "Mise en page du clip",

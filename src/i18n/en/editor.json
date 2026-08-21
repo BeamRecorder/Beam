@@ -1,4 +1,21 @@
 {
+  "LinkedClipsDeleteDialog": {
+    "title": "Delete linked clips",
+    "description": "This item has linked clips. Choose exactly which clips you want to delete.",
+    "deleteAll": "Delete all ({count})",
+    "delete": "Delete",
+    "deleteOne": "Delete “{name}”",
+    "allDeleted": "All linked clips were deleted.",
+    "kind": {
+      "screen": "Screen",
+      "video": "Video",
+      "image": "Image",
+      "webcam": "Webcam",
+      "blur": "Blur",
+      "audio": "Audio",
+      "caption": "Caption"
+    }
+  },
   "CameraLayoutPanel": {
     "title": "Camera Layout",
     "visualTitle": "Clip Layout",

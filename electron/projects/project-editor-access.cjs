@@ -1,9 +1,4 @@
-const {
-  migrateComposition,
-  normalizeComposition,
-  materializeComposition,
-  pruneProjectMedia,
-} = require('./clip-composition.cjs');
+const { migrateComposition, normalizeComposition, materializeComposition } = require('./clip-composition.cjs');
 const {
   defaultZoomMotionBlur,
   migratePresentation,
@@ -73,11 +68,11 @@ function createProjectEditorAccess(options) {
     const directory = options.directoryFor(id);
     editorState(id);
     const manifest = options.readManifest(directory);
-    const previous = normalizeComposition(manifest.editor.composition);
     const composition = normalizeComposition(value.composition);
     const zoom = zoomState(value.zoom);
     const presentation = presentationState(value.presentation);
-    pruneProjectMedia(directory, previous, composition);
+    // Imported files must remain available while renderer undo/redo snapshots
+    // can still restore an older composition that references them.
     manifest.editor = { schemaVersion: 3, composition, zoom, presentation };
     manifest.updatedAtUtc = new Date().toISOString();
     options.writeManifest(directory, manifest);

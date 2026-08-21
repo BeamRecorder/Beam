@@ -1,4 +1,21 @@
 {
+  "LinkedClipsDeleteDialog": {
+    "title": "Usuń połączone klipy",
+    "description": "Ten element zawiera połączone klipy. Wybierz dokładnie, które klipy chcesz usunąć.",
+    "deleteAll": "Usuń wszystko ({count})",
+    "delete": "Usuń",
+    "deleteOne": "Usuń „{name}”",
+    "allDeleted": "Wszystkie połączone klipy zostały usunięte.",
+    "kind": {
+      "screen": "Ekran",
+      "video": "Wideo",
+      "image": "Obraz",
+      "webcam": "Kamera",
+      "blur": "Rozmycie",
+      "audio": "Dźwięk",
+      "caption": "Napisy"
+    }
+  },
   "CameraLayoutPanel": {
     "reactToZoom": "Reaguj na powiększenie",
     "reactToZoomDescription": "Utrzymuj kamerę internetową zakotwiczoną, dopasowując jej rozmiar do powiększenia obszaru roboczego."

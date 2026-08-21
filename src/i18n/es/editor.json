@@ -1,4 +1,21 @@
 {
+  "LinkedClipsDeleteDialog": {
+    "title": "Eliminar clips vinculados",
+    "description": "Este elemento contiene clips vinculados. Elige exactamente cuáles quieres eliminar.",
+    "deleteAll": "Eliminar todo ({count})",
+    "delete": "Eliminar",
+    "deleteOne": "Eliminar «{name}»",
+    "allDeleted": "Se eliminaron todos los clips vinculados.",
+    "kind": {
+      "screen": "Pantalla",
+      "video": "Vídeo",
+      "image": "Imagen",
+      "webcam": "Cámara web",
+      "blur": "Desenfoque",
+      "audio": "Audio",
+      "caption": "Subtítulo"
+    }
+  },
   "CameraLayoutPanel": {
     "reactToZoom": "Reaccionar al zoom",
     "reactToZoomDescription": "Mantén la webcam anclada mientras adaptas su tamaño al zoom del lienzo."

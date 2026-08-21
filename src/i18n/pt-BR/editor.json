@@ -1,4 +1,21 @@
 {
+  "LinkedClipsDeleteDialog": {
+    "title": "Excluir clipes vinculados",
+    "description": "Este item contém clipes vinculados. Escolha exatamente quais clipes deseja excluir.",
+    "deleteAll": "Excluir tudo ({count})",
+    "delete": "Excluir",
+    "deleteOne": "Excluir “{name}”",
+    "allDeleted": "Todos os clipes vinculados foram excluídos.",
+    "kind": {
+      "screen": "Tela",
+      "video": "Vídeo",
+      "image": "Imagem",
+      "webcam": "Webcam",
+      "blur": "Desfoque",
+      "audio": "Áudio",
+      "caption": "Legenda"
+    }
+  },
   "CameraLayoutPanel": {
     "reactToZoom": "Reagir ao zoom",
     "reactToZoomDescription": "Manter a webcam ancorada enquanto ajusta seu tamanho ao zoom da tela."

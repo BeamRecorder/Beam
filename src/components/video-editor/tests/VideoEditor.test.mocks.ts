@@ -277,6 +277,51 @@ vi.mock('../EditorAmbientBackground.vue', async () => {
   };
 });
 
+vi.mock('../LinkedClipsDeleteDialog.vue', async () => {
+  const { defineComponent, h } = await import('vue');
+  return {
+    default: defineComponent({
+      name: 'MockLinkedClipsDeleteDialog',
+      props: {
+        isOpen: { type: Boolean, default: false },
+        clips: { type: Array, default: () => [] },
+      },
+      emits: ['close', 'delete'],
+      setup(props, { emit }) {
+        return () => {
+          if (!props.isOpen) return null;
+          const clips = props.clips as Array<{ id: string }>;
+          return h('div', { class: 'linked-delete-dialog', 'data-clip-ids': clips.map((clip) => clip.id).join(',') }, [
+            h(
+              'button',
+              {
+                class: 'dialog-delete-one',
+                disabled: clips.length === 0,
+                onClick: () => clips[0] && emit('delete', [clips[0].id]),
+              },
+              'Delete one',
+            ),
+            h(
+              'button',
+              {
+                class: 'dialog-delete-all',
+                disabled: clips.length === 0,
+                onClick: () =>
+                  emit(
+                    'delete',
+                    clips.map((clip) => clip.id),
+                  ),
+              },
+              'Delete all',
+            ),
+            h('button', { class: 'dialog-close', onClick: () => emit('close') }, 'Close'),
+          ]);
+        };
+      },
+    }),
+  };
+});
+
 vi.mock('../Topbar.vue', async () => {
   const { defineComponent, h } = await import('vue');
   return {

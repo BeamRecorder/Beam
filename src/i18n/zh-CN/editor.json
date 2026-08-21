@@ -1,4 +1,21 @@
 {
+  "LinkedClipsDeleteDialog": {
+    "title": "删除关联片段",
+    "description": "此项目包含关联片段。请选择要删除的具体片段。",
+    "deleteAll": "全部删除（{count}）",
+    "delete": "删除",
+    "deleteOne": "删除“{name}”",
+    "allDeleted": "所有关联片段均已删除。",
+    "kind": {
+      "screen": "屏幕",
+      "video": "视频",
+      "image": "图像",
+      "webcam": "摄像头",
+      "blur": "模糊",
+      "audio": "音频",
+      "caption": "字幕"
+    }
+  },
   "CameraLayoutPanel": {
     "reactToZoom": "跟随缩放",
     "reactToZoomDescription": "保持摄像头位置固定，同时根据画布缩放调整其大小。"
