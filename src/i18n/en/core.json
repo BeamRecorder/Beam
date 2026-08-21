@@ -72,9 +72,9 @@
     "slideDown": "Slide down",
     "slideDownDetail": "From above",
     "zoomIn": "Zoom in",
-    "zoomInDetail": "Scale from 96%",
+    "zoomInDetail": "Scale from 90%",
     "zoomOut": "Zoom out",
-    "zoomOutDetail": "Scale from 104%",
+    "zoomOutDetail": "Scale from 110%",
     "blur": "Blur",
     "blurDetail": "Soft focus"
   },

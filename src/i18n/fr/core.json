@@ -72,9 +72,9 @@
     "slideDown": "Glissement vers le bas",
     "slideDownDetail": "Depuis le haut",
     "zoomIn": "Zoom avant",
-    "zoomInDetail": "Échelle depuis 96 %",
+    "zoomInDetail": "Échelle depuis 90 %",
     "zoomOut": "Zoom arrière",
-    "zoomOutDetail": "Échelle depuis 104 %",
+    "zoomOutDetail": "Échelle depuis 110 %",
     "blur": "Flou",
     "blurDetail": "Mise au point douce"
   },
