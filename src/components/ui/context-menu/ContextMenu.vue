@@ -225,9 +225,11 @@ defineExpose({
   flex-direction: column;
   background-color: var(--color-bg-element, #1c1c1f);
   color: var(--text-primary);
-  border: 1px solid var(--color-border-strong, rgba(255, 255, 255, 0.12));
+  border: 1px solid color-mix(in srgb, var(--color-border-strong) 84%, var(--color-bg-element));
   border-radius: var(--radius-md, 8px);
-  box-shadow: var(--shadow-lg, 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5));
+  box-shadow:
+    var(--shadow-lg),
+    inset 0 1px 0 color-mix(in srgb, var(--text-primary) 7%, transparent);
   padding: 4px;
   box-sizing: border-box;
   overflow: hidden;

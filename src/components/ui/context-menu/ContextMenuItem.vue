@@ -48,7 +48,7 @@ const handleClick = (e: MouseEvent) => {
     role="menuitem"
     @click="handleClick"
   >
-    <span v-if="icon || $slots.icon" class="item-icon-wrapper">
+    <span v-if="icon || $slots.icon" class="item-icon-wrapper" aria-hidden="true">
       <slot name="icon">
         <component :is="icon" v-if="icon" class="item-icon" />
       </slot>
@@ -68,7 +68,7 @@ const handleClick = (e: MouseEvent) => {
 .context-menu-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   width: 100%;
   height: 28px;
   padding: 0 8px;
@@ -78,6 +78,7 @@ const handleClick = (e: MouseEvent) => {
   font-family: var(--font-sans);
   font-size: 12px;
   font-weight: 500;
+  line-height: 16px;
   text-align: left;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -89,26 +90,32 @@ const handleClick = (e: MouseEvent) => {
 }
 
 .context-menu-item:hover:not(:disabled),
-.context-menu-item:focus-visible:not(:disabled),
 .context-menu-item.is-active:not(:disabled) {
-  background-color: var(--color-bg-surface-hover, rgba(255, 255, 255, 0.08));
+  background-color: color-mix(in srgb, var(--color-bg-surface-hover) 86%, var(--color-bg-element));
+  color: var(--text-primary);
+  outline: none;
+}
+
+.context-menu-item:focus-visible:not(:disabled) {
+  background-color: color-mix(in srgb, var(--color-bg-surface-hover) 86%, var(--color-bg-element));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 42%, transparent);
   color: var(--text-primary);
   outline: none;
 }
 
 .context-menu-item.is-danger {
-  color: var(--color-error, #f43f5e);
+  color: color-mix(in srgb, var(--color-error) 82%, var(--text-primary));
 }
 
 .context-menu-item.is-danger:hover:not(:disabled),
 .context-menu-item.is-danger:focus-visible:not(:disabled) {
-  background-color: var(--color-error-light, rgba(244, 63, 94, 0.12));
-  color: var(--color-error, #f43f5e);
+  background-color: color-mix(in srgb, var(--color-error-light) 82%, var(--color-bg-element));
+  color: color-mix(in srgb, var(--color-error) 82%, var(--text-primary));
 }
 
 .context-menu-item.is-disabled {
-  opacity: 0.42;
-  cursor: not-allowed;
+  color: color-mix(in srgb, var(--text-secondary) 68%, var(--color-bg-element));
+  cursor: default;
 }
 
 .item-icon-wrapper {
@@ -116,26 +123,26 @@ const handleClick = (e: MouseEvent) => {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 14px;
-  height: 14px;
-  color: var(--text-muted);
-}
-
-.context-menu-item:hover:not(:disabled) .item-icon-wrapper {
+  width: 16px;
+  height: 16px;
   color: var(--text-primary);
 }
 
-.context-menu-item.is-danger .item-icon-wrapper,
-.context-menu-item.is-danger:hover:not(:disabled) .item-icon-wrapper {
-  color: var(--color-error, #f43f5e);
+.context-menu-item.is-disabled .item-icon-wrapper,
+.context-menu-item.is-disabled .item-shortcut {
+  color: currentColor;
 }
 
 .item-icon {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.8;
 }
 
 .item-label {
+  display: flex;
+  align-items: center;
+  height: 16px;
   flex: 1;
   min-width: 0;
   white-space: nowrap;
@@ -148,7 +155,7 @@ const handleClick = (e: MouseEvent) => {
   margin-left: auto;
   font-size: 10px;
   font-weight: 500;
-  color: var(--text-muted);
-  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  letter-spacing: 0.01em;
 }
 </style>
