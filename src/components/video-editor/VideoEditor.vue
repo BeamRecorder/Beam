@@ -449,6 +449,7 @@ const selectCanvasPreset = (preset: Exclude<OutputCanvasPreset, 'custom'>) => {
   };
 };
 const handleKeyDown = (event: KeyboardEvent) => {
+  if (event.defaultPrevented || isDeleteDialogOpen.value) return;
   if (event.key === 'Escape') {
     if (isCropping.value) isCropping.value = false;
     else if (selectedZoomId.value) selectedZoomId.value = null;
@@ -459,7 +460,6 @@ const handleKeyDown = (event: KeyboardEvent) => {
     const tag = active.tagName.toLowerCase();
     if (['input', 'textarea', 'select'].includes(tag) || active.getAttribute('contenteditable') === 'true') return;
   }
-  if (isDeleteDialogOpen.value) return;
   if ((event.key === 's' || event.key === 'S') && selectedClipId.value) {
     event.preventDefault();
     splitSelectedClip();

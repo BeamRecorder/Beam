@@ -43,8 +43,10 @@ const isDownloading = ref(false);
 const isDeleting = ref(false);
 const isTranscribing = ref(false);
 const transcriptionSourceLabel = ref<string | null>(null);
+let transcriptionRun = 0;
 
 const cancelTranscription = () => {
+  transcriptionRun += 1;
   cancel();
   isTranscribing.value = false;
 };
@@ -117,6 +119,7 @@ onMounted(async () => {
   });
 });
 onBeforeUnmount(() => {
+  transcriptionRun += 1;
   unsubscribe?.();
 });
 
@@ -132,10 +135,12 @@ const sourceSelectItems = computed(() => sources.value.map((item) => ({ value: i
 
 const runTranscription = async () => {
   if (!selectedSource.value || isTranscribing.value) return;
+  const run = ++transcriptionRun;
   isTranscribing.value = true;
   transcriptionSourceLabel.value = selectedSource.value.label;
   const captionIds = new Map<string, string>();
   const applySentences = (sentences: CaptionSentence[]) => {
+    if (run !== transcriptionRun) return [];
     if (!sentences.length) return [];
     const preserved = props.composition.clips.filter((clip) => clip.kind !== 'caption' || !clip.isAiGenerated);
     const captions: CaptionClip[] = sentences.map((sentence, index) => {
@@ -182,12 +187,13 @@ const runTranscription = async () => {
     const result = await transcribe(selectedSource.value.src, model.value, props.timelineDurationMs, (partial) =>
       applySentences(partial.sentences),
     );
+    if (run !== transcriptionRun) return;
     const captions = applySentences(result.sentences);
-    if (captions.length) emit('select-caption', captions[0]!.id);
+    if (run === transcriptionRun && captions.length) emit('select-caption', captions[0]!.id);
   } catch {
     // The composable exposes the actionable worker error through progress.
   } finally {
-    isTranscribing.value = false;
+    if (run === transcriptionRun) isTranscribing.value = false;
   }
 };
 </script>

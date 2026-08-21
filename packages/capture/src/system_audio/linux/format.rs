@@ -56,8 +56,10 @@ pub(super) fn audio_format_parameter() -> Result<Vec<u8>, CaptureError> {
 
 pub(super) fn peak_f32le(bytes: &[u8]) -> f32 {
     bytes
-        .chunks_exact(4)
-        .filter_map(|sample| <[u8; 4]>::try_from(sample).ok())
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .copied()
         .map(f32::from_le_bytes)
         .filter(|sample| sample.is_finite())
         .fold(0.0_f32, |peak, sample| peak.max(sample.abs()))

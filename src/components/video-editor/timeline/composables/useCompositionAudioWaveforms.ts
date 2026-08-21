@@ -188,13 +188,19 @@ export function useCompositionAudioWaveforms(
   const requestSignature = computed(() =>
     requests.value
       .map(
-        ({ clip, asset, sourceStartSeconds, sourceEndSeconds, pointCount }) =>
-          `${clip.id}:${asset?.src ?? ''}:${sourceStartSeconds}:${sourceEndSeconds}:${pointCount}`,
+        ({ clip, asset, sourceStartSeconds, sourceEndSeconds, pointCount, leftPercent, widthPercent }) =>
+          `${clip.id}:${asset?.id ?? ''}:${asset?.src ?? ''}:${sourceStartSeconds}:${sourceEndSeconds}:${pointCount}:${leftPercent}:${widthPercent}`,
       )
       .join('|'),
   );
 
   const sourceKey = (request: WaveformRequest) => `${request.asset?.id ?? ''}:${request.asset?.src ?? ''}`;
+  const sliceMatchesRequestRange = (slice: StoredWaveformSlice | undefined, request: WaveformRequest) =>
+    slice?.sourceKey === sourceKey(request) &&
+    slice.sourceStartSeconds === request.sourceStartSeconds &&
+    slice.sourceEndSeconds === request.sourceEndSeconds &&
+    slice.leftPercent === request.leftPercent &&
+    slice.widthPercent === request.widthPercent;
   const cacheKey = (request: WaveformRequest) =>
     [
       request.clip.id,
@@ -352,10 +358,7 @@ export function useCompositionAudioWaveforms(
     const complete = batch.pending.size === 0;
     const visibleSlice = rawSlices.value[message.clipId];
     const isVisibleSliceForRequest =
-      visibleSlice?.sourceKey === sourceKey(request) &&
-      visibleSlice.sourceStartSeconds === request.sourceStartSeconds &&
-      visibleSlice.sourceEndSeconds === request.sourceEndSeconds &&
-      visibleSlice.peaks.length === request.pointCount * 2;
+      sliceMatchesRequestRange(visibleSlice, request) && visibleSlice?.peaks.length === request.pointCount * 2;
     if (complete || !visibleSlice || isVisibleSliceForRequest) {
       publish(message.clipId, request, batch.peaks, loadingSegmentsFor(batch));
     }
@@ -416,7 +419,7 @@ export function useCompositionAudioWaveforms(
         continue;
       }
       const visibleSlice = rawSlices.value[request.clip.id];
-      if (visibleSlice?.sourceKey === sourceKey(request)) {
+      if (sliceMatchesRequestRange(visibleSlice, request)) {
         nextSlices[request.clip.id] = visibleSlice;
       }
       nextStatus[request.clip.id] = 'loading';
@@ -444,7 +447,7 @@ export function useCompositionAudioWaveforms(
       const active = requests.value;
       const canKeepEveryVisibleWaveform =
         active.length > 0 &&
-        active.every((request) => rawSlices.value[request.clip.id]?.sourceKey === sourceKey(request));
+        active.every((request) => sliceMatchesRequestRange(rawSlices.value[request.clip.id], request));
       if (canKeepEveryVisibleWaveform) {
         refinementTimer = window.setTimeout(reconcileRequests, VIEWPORT_REFINEMENT_DEBOUNCE_MS);
         return;

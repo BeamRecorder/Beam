@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
 import type { ClipComposition } from '~/media/shared/composition-types';
-import { COMPOSITION_SCHEMA_VERSION } from '~/media/shared/composition-types';
+import { COMPOSITION_SCHEMA_VERSION, isAudioClip } from '~/media/shared/composition-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
 
@@ -202,13 +202,25 @@ vi.mock('../composables/useVideoEditor', async () => {
         deleteSelectedZoom: vi.fn(),
       };
       const outputCanvas = ref({ preset: '16:9', width: 1920, height: 1080, showBackground: false });
+      const roleVolume = (role: 'system' | 'microphone') =>
+        computed({
+          get: () => composition.value.clips.filter(isAudioClip).find((clip) => clip.role === role)?.volume ?? 100,
+          set: (volume: number) => {
+            composition.value = {
+              ...composition.value,
+              clips: composition.value.clips.map((clip) =>
+                isAudioClip(clip) && clip.role === role ? { ...clip, volume } : clip,
+              ),
+            };
+          },
+        });
       const store = {
         activeTab,
         initialPlaybackSettled: ref(true),
         includeAudioInExport: ref(true),
         editorDefaults: ref({ zoom: { durationMs: 1_500 } }),
-        systemVolume: ref(100),
-        micVolume: ref(100),
+        systemVolume: roleVolume('system'),
+        micVolume: roleVolume('microphone'),
         sourceSize: ref({ width: 1280, height: 720 }),
         player,
         cursor,

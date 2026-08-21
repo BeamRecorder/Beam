@@ -80,4 +80,22 @@ describe('VideoEditor diagnostics and keyboard behavior', () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', cancelable: true }));
     expect(editorState.store.zoomState.deleteSelectedZoom).toHaveBeenCalled();
   });
+
+  it('does not change the editor selection when Escape closes a linked deletion dialog', async () => {
+    const mounted = mountEditor();
+    const state = editorState.store.compositionState;
+    state.composition.value = {
+      ...state.composition.value,
+      clips: state.composition.value.clips.map((clip: any) => ({ ...clip, groupId: 'import-1' })),
+    };
+    state.selectedClipId.value = 'screen';
+    await mounted.vm.$nextTick();
+
+    mounted.findComponent({ name: 'MockEditorTimeline' }).vm.$emit('delete:clips', ['audio']);
+    await mounted.vm.$nextTick();
+    expect(mounted.findComponent({ name: 'MockLinkedClipsDeleteDialog' }).props('isOpen')).toBe(true);
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', cancelable: true }));
+    expect(state.selectedClipId.value).toBe('screen');
+  });
 });

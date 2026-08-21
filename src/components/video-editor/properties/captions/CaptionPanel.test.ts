@@ -429,10 +429,13 @@ describe('CaptionPanel', () => {
       ],
     };
     let onPartial!: (result: WhisperResult) => void;
+    let resolveTranscription!: (result: WhisperResult) => void;
     whisper.transcribe.mockImplementation(
       (_src: string, _model: string, _duration: number, partialResult?: (result: WhisperResult) => void) => {
         onPartial = partialResult!;
-        return new Promise<WhisperResult>(() => {});
+        return new Promise<WhisperResult>((resolve) => {
+          resolveTranscription = resolve;
+        });
       },
     );
     const wrapper = mount(CaptionPanel, {
@@ -450,6 +453,10 @@ describe('CaptionPanel', () => {
     await wrapper.get('.cancel-transcription-btn').trigger('click');
 
     expect(whisper.cancel).toHaveBeenCalledOnce();
+    onPartial({ ...partial, sentences: [{ ...partial.sentences[0]!, text: 'Late partial' }] });
+    resolveTranscription({ ...partial, sentences: [{ ...partial.sentences[0]!, text: 'Late final' }] });
+    await Promise.resolve();
+    await wrapper.vm.$nextTick();
     expect(wrapper.emitted('preview:composition')).toBeUndefined();
     const updatesAfterCancel = wrapper.emitted('update:composition') as Array<[ClipComposition]>;
     expect(updatesAfterCancel).toHaveLength(1);

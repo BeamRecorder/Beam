@@ -323,8 +323,16 @@ describe('useCompositionAudioWaveforms', () => {
     expect(second[0]?.startSeconds).not.toBe(first[0]?.startSeconds);
     expect(second.reduce((sum, request) => sum + request.pointCount, 0)).toBe(firstPointCount);
     expect(second.reduce((sum, request) => sum + request.pointCount, 0)).toBe(240);
+    expect(state.slices.value.clip).toBeUndefined();
 
-    respondAllSegments(pool, 'clip', secondGeneration, [2, 1, 0.5]);
+    respondSegment(pool, second[0]!, 2);
+    await flushPublished();
+    expect(state.status.value.clip).toBe('loading');
+    expect(state.slices.value.clip).toEqual(expect.objectContaining({ leftPercent: 25, widthPercent: 75 }));
+    expect(state.slices.value.clip?.bars).not.toEqual(pageABars);
+
+    respondSegment(pool, second[1]!, 1);
+    respondSegment(pool, second[2]!, 0.5);
     await flushPublished();
     expect(state.status.value.clip).toBe('ready');
     expect(extractRequests(pool, 'clip')).toHaveLength(6);
@@ -406,7 +414,7 @@ describe('useCompositionAudioWaveforms', () => {
     }
   });
 
-  it('debounces rapid viewport changes and extracts only the latest request', async () => {
+  it('immediately reconciles rapid viewport changes to incompatible buffered ranges', async () => {
     const value = composition();
     const clip = value.clips[0];
     if (clip?.kind !== 'audio') throw new Error('audio fixture missing');
@@ -428,14 +436,14 @@ describe('useCompositionAudioWaveforms', () => {
       mounted.viewportRef.value = { startSeconds: 6, endSeconds: 8, pixelsPerSecond: 120 };
       await nextTick();
 
-      expect(extractRequests(pool, 'clip')).toHaveLength(3);
+      expect(extractRequests(pool, 'clip')).toHaveLength(9);
       await vi.advanceTimersByTimeAsync(119);
-      expect(extractRequests(pool, 'clip')).toHaveLength(3);
+      expect(extractRequests(pool, 'clip')).toHaveLength(9);
 
       await vi.advanceTimersByTimeAsync(1);
       await flushPromises();
       const latest = extractRequests(pool, 'clip');
-      expect(latest).toHaveLength(6);
+      expect(latest).toHaveLength(9);
       const latestGenerationRequests = extractRequests(pool, 'clip', latestGeneration(pool));
       expect(latestGenerationRequests).toHaveLength(3);
       expect(latestGenerationRequests[0]?.startSeconds).toBeCloseTo(4.25, 8);

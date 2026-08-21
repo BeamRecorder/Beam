@@ -151,7 +151,7 @@ pub(crate) fn copy_frame(
             let destination_row = &mut pixels[destination..destination + output_stride];
             destination_row.copy_from_slice(source_row);
             if format.pixel_format == NativePixelFormat::Bgrx {
-                for pixel in destination_row.chunks_exact_mut(4) {
+                for pixel in destination_row.as_chunks_mut::<4>().0 {
                     pixel[3] = 255;
                 }
             }
@@ -264,8 +264,8 @@ pub(crate) fn expand_crop_to_content(
         let row = payload
             .get(row_start..row_end)
             .ok_or_else(|| buffer_error("source row exceeds payload"))?;
-        for (x, pixel) in row.chunks_exact(4).enumerate() {
-            if pixel == [0, 0, 0, 0] {
+        for (x, pixel) in row.as_chunks::<4>().0.iter().enumerate() {
+            if *pixel == [0, 0, 0, 0] {
                 continue;
             }
             let x = u32::try_from(x).map_err(|_| buffer_error("pixel x exceeds limits"))?;

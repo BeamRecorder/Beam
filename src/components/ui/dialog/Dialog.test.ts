@@ -41,8 +41,10 @@ describe('Dialog', () => {
 
     await wrapper.setProps({ isOpen: true });
     expect(document.body.style.overflow).toBe('hidden');
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    const escape = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
+    window.dispatchEvent(escape);
     expect(wrapper.emitted('close')).toHaveLength(1);
+    expect(escape.defaultPrevented).toBe(true);
     wrapper.unmount();
   });
 

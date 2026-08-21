@@ -102,7 +102,9 @@ fn applies_crop_and_each_transform_without_borrowing_input() {
         assert_eq!(
             frame
                 .pixels
-                .chunks_exact(4)
+                .as_chunks::<4>()
+                .0
+                .iter()
                 .map(|pixel| pixel[0])
                 .collect::<Vec<_>>(),
             expected_blue
