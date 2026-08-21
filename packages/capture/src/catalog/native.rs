@@ -51,7 +51,7 @@ fn platform_catalog() -> Result<PlatformCatalog, CaptureError> {
     let probe = crate::screen::linux::probe_capture_environment(Duration::from_secs(2));
     let native = &probe.capabilities;
     let mut sources = Vec::new();
-    if native.recording_available && native.display_capture {
+    if should_offer_portal_source(native.portal_selection, native.display_capture) {
         sources.push(portal_source(
             "portal:monitor",
             SourceKind::Display,
@@ -59,7 +59,7 @@ fn platform_catalog() -> Result<PlatformCatalog, CaptureError> {
             true,
         )?);
     }
-    if native.recording_available && native.window_capture {
+    if should_offer_portal_source(native.portal_selection, native.window_capture) {
         sources.push(portal_source(
             "portal:window",
             SourceKind::Window,
@@ -152,6 +152,11 @@ fn platform_catalog() -> Result<PlatformCatalog, CaptureError> {
 }
 
 #[cfg(target_os = "linux")]
+fn should_offer_portal_source(portal_selection: bool, source_available: bool) -> bool {
+    source_available || !portal_selection
+}
+
+#[cfg(target_os = "linux")]
 fn portal_source(
     id: &str,
     kind: SourceKind,
@@ -167,6 +172,22 @@ fn portal_source(
         display_id: None,
         capabilities: SourceCapabilities::default(),
     })
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod tests {
+    use super::should_offer_portal_source;
+
+    #[test]
+    fn transient_portal_probe_failures_keep_an_optimistic_source_available() {
+        assert!(should_offer_portal_source(false, false));
+    }
+
+    #[test]
+    fn successful_portal_probes_keep_reported_source_types_exact() {
+        assert!(should_offer_portal_source(true, true));
+        assert!(!should_offer_portal_source(true, false));
+    }
 }
 
 #[cfg(target_os = "macos")]
