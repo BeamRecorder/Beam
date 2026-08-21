@@ -81,8 +81,10 @@ export class ExportWorkerOutput {
           this.chunkCount += 1;
           this.bytesWritten += data.byteLength;
           this.pending.set(sequence, { resolve, reject, sentAt: performance.now() });
-          const message: ExportWorkerResponse = { type: 'chunk', sequence, position, data };
-          self.postMessage(message, { transfer: [data.buffer] });
+          // StreamTarget may retain this view until mux finalization; only detach an owned copy.
+          const transferredData = data.slice();
+          const message: ExportWorkerResponse = { type: 'chunk', sequence, position, data: transferredData };
+          self.postMessage(message, { transfer: [transferredData.buffer] });
         }),
     });
     this.output = new Output({
