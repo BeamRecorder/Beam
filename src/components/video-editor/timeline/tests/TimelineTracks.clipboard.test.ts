@@ -121,6 +121,27 @@ describe('TimelineTracks', () => {
     expect(mounted!.emitted('delete:clips')).toContainEqual([['image-clip']]);
   });
 
+  it('highlights and deletes the current selection when right-clicking a timeline gap', async () => {
+    const mounted = await mountTracks({
+      selectedZoomId: null,
+      selectedClipId: 'screen-clip',
+      selectedClipIds: ['screen-clip'],
+    });
+
+    const emptyTrackArea = mounted!.find('.tracks-stack .cursor-track');
+    await emptyTrackArea.trigger('contextmenu', { clientX: 400, clientY: 350 });
+    await flushPromises();
+
+    const deleteButton = contextMenuButton('Delete');
+    expect(deleteButton?.disabled).toBe(false);
+    expect(deleteButton?.classList.contains('is-danger')).toBe(true);
+    deleteButton?.click();
+    await flushPromises();
+
+    expect(mounted!.emitted('delete:clips')).toContainEqual([['screen-clip']]);
+    expect(mounted!.emitted('select:clip')).toBeUndefined();
+  });
+
   it('allows cross-category pasting from the context menu', async () => {
     const mounted = await mountTracks();
     const clipEl = mounted!.find('.tracks-stack .timeline-clip');

@@ -90,6 +90,7 @@ const createMenu = (overrides: Partial<Parameters<typeof useTimelineContextMenu>
     composition: ref(composition()),
     zoomElements: ref([zoom('zoom-before', 0), sourceZoom, zoom('zoom-after', 8_000)]),
     selectedClipId: ref<string | null>(sourceClip.id),
+    selectedClipIds: ref([sourceClip.id]),
     selectedZoomId: ref<string | null>(null),
     assetFor: (candidate: Clip) => ('assetId' in candidate && candidate.assetId === asset.id ? asset : null),
     emit: emitSpy as unknown as TimelineTracksEmits,
@@ -154,6 +155,80 @@ describe('useTimelineContextMenu', () => {
 
     expect(menu.emitSpy).toHaveBeenCalledWith('paste:error', 'Copy an item first.');
     expect(menu.emitSpy).not.toHaveBeenCalledWith('paste:item', expect.anything());
+  });
+
+  it('enables highlighted deletion for the selected clip when opening a timeline gap', () => {
+    const menu = createMenu();
+
+    menu.openTrackContextMenu(new MouseEvent('contextmenu'), 'audio');
+
+    expect(contextMenuItem(menu, 'delete')).toEqual(
+      expect.objectContaining({ id: 'delete', danger: true, disabled: false }),
+    );
+    expect(menu.emitSpy).not.toHaveBeenCalledWith('select:clip', expect.anything());
+    menu.handleContextMenuSelect('delete');
+    expect(menu.emitSpy).toHaveBeenCalledWith('delete:clips', [menu.sourceClip.id]);
+  });
+
+  it('deletes the complete clip selection from a timeline gap', () => {
+    const first = clip();
+    const second = { ...clip(), id: 'clip-2', timelineStartMs: 2_500 };
+    const menu = createMenu({
+      composition: ref({ ...composition(), clips: [first, second] }),
+      selectedClipId: ref(first.id),
+      selectedClipIds: ref([first.id, second.id]),
+    });
+
+    menu.openTrackContextMenu(new MouseEvent('contextmenu'), 'visual', 'empty-track');
+    menu.handleContextMenuSelect('delete');
+
+    expect(menu.emitSpy).toHaveBeenCalledWith('delete:clips', [first.id, second.id]);
+  });
+
+  it('uses the valid selected list when the primary clip id is inconsistent', () => {
+    const first = clip();
+    const second = { ...clip(), id: 'clip-2', timelineStartMs: 2_500 };
+    const menu = createMenu({
+      composition: ref({ ...composition(), clips: [first, second] }),
+      selectedClipId: ref(first.id),
+      selectedClipIds: ref([second.id]),
+    });
+
+    menu.openTrackContextMenu(new MouseEvent('contextmenu'), 'visual');
+
+    expect(menu.contextMenuState.value.clip?.id).toBe(second.id);
+    menu.handleContextMenuSelect('delete');
+    expect(menu.emitSpy).toHaveBeenCalledWith('delete:clips', [second.id]);
+  });
+
+  it('deletes the selected zoom when opening a gap in another track', () => {
+    const menu = createMenu({
+      selectedClipId: ref(null),
+      selectedClipIds: ref([]),
+      selectedZoomId: ref('zoom-1'),
+    });
+
+    menu.openTrackContextMenu(new MouseEvent('contextmenu'), 'caption');
+
+    expect(contextMenuItem(menu, 'delete')).toEqual(expect.objectContaining({ danger: true, disabled: false }));
+    menu.handleContextMenuSelect('delete');
+    expect(menu.emitSpy).toHaveBeenCalledWith('delete:zoom', 'zoom-1');
+  });
+
+  it.each([
+    ['without a selection', null, []],
+    ['with a stale selection', 'missing-clip', ['missing-clip']],
+  ] as const)('keeps deletion disabled in a timeline gap %s', (_label, selectedClipId, selectedClipIds) => {
+    const menu = createMenu({
+      selectedClipId: ref(selectedClipId),
+      selectedClipIds: ref([...selectedClipIds]),
+    });
+
+    menu.openTrackContextMenu(new MouseEvent('contextmenu'), 'visual');
+
+    expect(contextMenuItem(menu, 'delete')).toEqual(expect.objectContaining({ danger: true, disabled: true }));
+    menu.handleContextMenuSelect('delete');
+    expect(menu.emitSpy).not.toHaveBeenCalledWith('delete:clips', expect.anything());
   });
 
   it.each(['screen', 'video', 'webcam'] as const)(

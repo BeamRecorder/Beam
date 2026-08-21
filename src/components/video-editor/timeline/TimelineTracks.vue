@@ -73,6 +73,10 @@ const {
   beginReorder,
 } = useTimelineTracks(props, emit);
 void [tracksScrollRef, sidebarScrollRef, tracksViewportRef, ticksAreaRef];
+const selectedClipIdSet = computed(
+  () =>
+    new Set(props.selectedClipIds?.length ? props.selectedClipIds : props.selectedClipId ? [props.selectedClipId] : []),
+);
 const {
   contextMenuState,
   contextMenuItems,
@@ -89,6 +93,7 @@ const {
   composition: computed(() => props.composition),
   zoomElements: computed(() => props.zoomElements),
   selectedClipId: computed(() => props.selectedClipId),
+  selectedClipIds: computed(() => [...selectedClipIdSet.value]),
   selectedZoomId: computed(() => props.selectedZoomId),
   assetFor,
   emit,
@@ -108,10 +113,6 @@ const exportProgressPercent = computed(() => {
   return Math.min(100, Math.max(0, (current / total) * 100));
 });
 const canvasTransitions = computed(() => props.canvas.transitions ?? EMPTY_CLIP_TRANSITIONS);
-const selectedClipIdSet = computed(
-  () =>
-    new Set(props.selectedClipIds?.length ? props.selectedClipIds : props.selectedClipId ? [props.selectedClipId] : []),
-);
 const hasCanvasTransitions = computed(() => Boolean(canvasTransitions.value.entry || canvasTransitions.value.exit));
 const updateCanvasTransitions = (transitions: NonNullable<typeof props.canvas.transitions>) =>
   emit('update:canvas', { ...props.canvas, transitions });
