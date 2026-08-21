@@ -326,9 +326,21 @@ mod tests {
 
     #[test]
     fn component_parser_matches_the_name_column_only() {
-        assert!(has_named_component(" E mp4 MP4 muxer", "mp4"));
+        assert!(has_named_component(
+            "  E  mp4             MP4 (MPEG-4 Part 14)",
+            "mp4"
+        ));
         assert!(!has_named_component(" E mov MP4 muxer", "mp4"));
         assert!(!has_named_component("mp4", "mp4"));
+    }
+
+    #[test]
+    fn probe_accepts_ffmpeg_eight_output() {
+        let (_directory, path) = executable(
+            "#!/bin/sh\ncase \"$2\" in\n-version) printf 'ffmpeg version 8.0.1-3ubuntu2+esm1 Copyright (c) 2000-2025 the FFmpeg developers\\n' ;;\n-encoders) printf ' V....D libx264              libx264 H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10\\n' ;;\n-muxers) printf '  E  mp4             MP4 (MPEG-4 Part 14)\\n' ;;\nesac\n",
+        );
+        let capabilities = probe_ffmpeg_at(path).expect("Ubuntu FFmpeg 8 output");
+        assert_eq!(capabilities.encoder.name, "libx264");
     }
 
     #[test]

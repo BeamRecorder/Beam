@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Video, VideoOff, GripVertical, Pause, Play, Square, Trash2 } from '@lucide/vue';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import type { RecordingBarVisibility, RecordingPhase } from './recording-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useAudioLevelMeter } from '../audio/useAudioLevelMeter';
@@ -23,6 +23,7 @@ const props = defineProps<{
 
 const isMicEnabled = computed(() => props.microphoneEnabled && props.phase !== 'finalizing');
 const { level: micLevel } = useAudioLevelMeter(isMicEnabled);
+const isPointerOver = ref(false);
 
 const emit = defineEmits<{
   stop: [];
@@ -40,8 +41,11 @@ const emit = defineEmits<{
     :class="{
       'auto-fade': visibility === 'auto-fade',
       'hover-only': visibility === 'hover-only' && hoverOnlyActive,
+      'pointer-over': isPointerOver,
     }"
     :aria-label="t('recordingControls')"
+    @pointerenter="isPointerOver = true"
+    @pointerleave="isPointerOver = false"
   >
     <button class="drag-handle" type="button" :aria-label="t('moveRecorderBar')" :title="t('moveRecorderBar')">
       <GripVertical aria-hidden="true" />
@@ -146,8 +150,8 @@ const emit = defineEmits<{
   background: var(--color-bg-surface);
   box-shadow: var(--shadow-lg);
   overflow: hidden;
-  -webkit-app-region: drag;
-  cursor: grab;
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
   transition: opacity 0.18s ease;
 }
 .drag-handle {
@@ -162,6 +166,7 @@ const emit = defineEmits<{
   color: var(--text-muted);
   cursor: grab;
   -webkit-app-region: drag;
+  app-region: drag;
 }
 .drag-handle:hover,
 .drag-handle:focus-visible {
@@ -177,6 +182,7 @@ const emit = defineEmits<{
   opacity: 0.15;
 }
 .recorder-bar.auto-fade:hover,
+.recorder-bar.auto-fade.pointer-over,
 .recorder-bar.auto-fade:focus-within {
   opacity: 1;
 }
@@ -184,6 +190,7 @@ const emit = defineEmits<{
   opacity: 0;
 }
 .recorder-bar.hover-only:hover,
+.recorder-bar.hover-only.pointer-over,
 .recorder-bar.hover-only:focus-within {
   opacity: 1;
 }
@@ -198,6 +205,7 @@ const emit = defineEmits<{
   color: var(--text-primary);
   cursor: pointer;
   -webkit-app-region: no-drag;
+  app-region: no-drag;
 }
 .control:hover:not(:disabled) {
   background: var(--color-bg-element);

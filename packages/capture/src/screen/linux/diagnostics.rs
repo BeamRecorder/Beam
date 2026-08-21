@@ -60,13 +60,7 @@ pub(crate) fn probe_capture_environment(timeout: Duration) -> LinuxCaptureProbe 
         },
         Err(error) => FfmpegDiagnostic {
             error_code: Some(error.code().into()),
-            detail: Some(match error.code() {
-                "ffmpeg-encoder-unavailable" => {
-                    "FFmpeg has no supported working encoder (libx264, libopenh264, or hardware)"
-                }
-                _ => "FFmpeg is unavailable or does not provide the required MP4 muxer",
-            }
-            .into()),
+            detail: Some(ffmpeg_failure_detail(error)),
             ..FfmpegDiagnostic::default()
         },
     };
@@ -94,6 +88,13 @@ pub(crate) fn probe_capture_environment(timeout: Duration) -> LinuxCaptureProbe 
                 recording_available,
             }),
         },
+    }
+}
+
+fn ffmpeg_failure_detail(error: &crate::CaptureError) -> String {
+    match error {
+        crate::CaptureError::Native { message, .. } => message.clone(),
+        _ => error.to_string(),
     }
 }
 
@@ -196,7 +197,42 @@ fn report_value(value: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{os_release_value, report_value};
+    use crate::{CaptureError, NativeCaptureErrorCode};
+
+    use super::{ffmpeg_failure_detail, os_release_value, report_value};
+
+    #[test]
+    fn ffmpeg_failure_detail_preserves_executable_errors() {
+        let error = CaptureError::Native {
+            code: NativeCaptureErrorCode::FfmpegUnavailable,
+            message: "failed to execute /opt/ffmpeg".into(),
+        };
+        assert_eq!(
+            ffmpeg_failure_detail(&error),
+            "failed to execute /opt/ffmpeg"
+        );
+    }
+
+    #[test]
+    fn ffmpeg_failure_detail_distinguishes_encoder_errors() {
+        let error = CaptureError::Native {
+            code: NativeCaptureErrorCode::FfmpegEncoderUnavailable,
+            message: "FFmpeg has no working supported encoder".into(),
+        };
+        assert_eq!(
+            ffmpeg_failure_detail(&error),
+            "FFmpeg has no working supported encoder"
+        );
+    }
+
+    #[test]
+    fn ffmpeg_failure_detail_retains_non_native_context() {
+        let error = CaptureError::Backend("capability probe failed".into());
+        assert_eq!(
+            ffmpeg_failure_detail(&error),
+            "backend error: capability probe failed"
+        );
+    }
 
     #[test]
     fn os_release_parser_accepts_quoted_and_plain_values() {

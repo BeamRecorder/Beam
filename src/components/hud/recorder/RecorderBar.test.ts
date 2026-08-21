@@ -109,13 +109,20 @@ describe('RecorderBar', () => {
     wrapper.unmount();
   });
 
-  it('keeps the bar transparent until hover in hover-only mode, except during countdown', async () => {
+  it('tracks pointer entry and exit for hover-only and auto-fade visibility', async () => {
     const wrapper = mount(RecorderBar, {
       props: { ...props, visibility: 'hover-only', hoverOnlyActive: true },
     });
 
     expect(wrapper.get('.recorder-bar').classes()).toContain('hover-only');
-    await wrapper.setProps({ hoverOnlyActive: false });
+    await wrapper.get('.recorder-bar').trigger('pointerenter');
+    expect(wrapper.get('.recorder-bar').classes()).toContain('pointer-over');
+    await wrapper.get('.recorder-bar').trigger('pointerleave');
+    expect(wrapper.get('.recorder-bar').classes()).not.toContain('pointer-over');
+    await wrapper.setProps({ visibility: 'auto-fade' });
+    await wrapper.get('.recorder-bar').trigger('pointerenter');
+    expect(wrapper.get('.recorder-bar').classes()).toEqual(expect.arrayContaining(['auto-fade', 'pointer-over']));
+    await wrapper.setProps({ visibility: 'hover-only', hoverOnlyActive: false });
     expect(wrapper.get('.recorder-bar').classes()).not.toContain('hover-only');
   });
 

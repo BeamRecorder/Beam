@@ -1,7 +1,7 @@
 import type { LinuxCaptureDiagnostics, RequirementDiagnostic } from './types/capture-api';
 import type { InputAccessStatus } from './types/capture-api';
 
-const LINUX_GUIDE_URL = 'https://github.com/BeamRecorder/Beam/blob/main/docs/dev/linux.md';
+const LINUX_GUIDE_URL = 'https://github.com/BeamRecorder/Beam/blob/master/docs/dev/linux.md';
 
 export type LinuxRequirementId = 'portal' | 'pipewire' | 'ffmpeg';
 
@@ -121,7 +121,7 @@ export const linuxRequirementGuidance = (diagnostics?: LinuxCaptureDiagnostics):
         ...(install ? [`Install the distribution FFmpeg package: ${install}`] : []),
         encoderUnavailable
           ? "Verify a supported encoder: ffmpeg -hide_banner -encoders | grep -E 'libx264|libopenh264'"
-          : 'Verify FFmpeg and the MP4 muxer: ffmpeg -hide_banner -version && ffmpeg -hide_banner -muxers | grep -w mp4',
+          : "Verify FFmpeg, a supported encoder, and the MP4 muxer: ffmpeg -hide_banner -version && ffmpeg -hide_banner -encoders | grep -E 'libx264|libopenh264' && ffmpeg -hide_banner -muxers | grep -w mp4",
       ]),
     );
   }
