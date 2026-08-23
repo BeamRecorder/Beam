@@ -4,14 +4,14 @@ This guide covers the basic local development and verification workflow for Beam
 
 ## Prerequisites
 
-- Node.js 22 or newer with npm
+- Node.js 22 or newer and Bun 1.4.0
 - [Rust stable with the MSVC toolchain](./INSTALL_RUST.md) for native rebuilds
 - Git
 
 Install the project dependencies once after cloning or when the lockfile changes:
 
 ```powershell
-npm ci
+bun install --frozen-lockfile
 ```
 
 ## Run Beam locally
@@ -21,25 +21,25 @@ Use two PowerShell terminals. Keeping the Vite server running separately lets El
 In the first terminal, start the Vite server:
 
 ```powershell
-npm run dev
+bun run dev
 ```
 
 In a second terminal, start Electron:
 
 ```powershell
-npm run electron:dev
+bun run electron:dev
 ```
 
 Keep both terminals open while developing. Stop the processes with `Ctrl+C`.
 
-`npm run electron:dev` checks Cargo before starting. When Cargo is available, it rebuilds the engine and stops if compilation fails. Without Cargo, it looks for the exact application version and CPU architecture in [`packages/native-recorder`](../../packages/native-recorder/README.md). If the engine is missing in an interactive terminal, confirm the verified download with `Y`; answer `N` to stop. A non-interactive process never prompts and downloads only when `BEAM_DOWNLOAD_CAPTURE_ENGINE=1` is set explicitly.
+`bun run electron:dev` checks Cargo before starting. When Cargo is available, it rebuilds the engine and stops if compilation fails. Without Cargo, it looks for the exact application version and CPU architecture in [`packages/native-recorder`](../../packages/native-recorder/README.md). If the engine is missing in an interactive terminal, confirm the verified download with `Y`; answer `N` to stop. A non-interactive process never prompts and downloads only when `BEAM_DOWNLOAD_CAPTURE_ENGINE=1` is set explicitly.
 
 ## Build a Windows executable
 
 Create the Windows NSIS installer without publishing a release:
 
 ```powershell
-npm run electron:build -- --win nsis --publish never
+bun run electron:build -- --win nsis --publish never
 ```
 
 The installer and its build metadata are written to `dist_electron/`.
@@ -49,16 +49,16 @@ The installer and its build metadata are written to `dist_electron/`.
 Run the JavaScript tests, the Vitest suite with coverage, and the TypeScript check with:
 
 ```powershell
-npm run test
-npm run test:coverage
-npm run typecheck
+bun run test
+bun run test:coverage
+bun run typecheck
 ```
 
 The TypeScript coverage gate is 90% for statements, branches, functions, and lines. Rust changes should also be checked with:
 
 ```powershell
-npm run rust-test
-npm run rust-test:coverage
+bun run rust-test
+bun run rust-test:coverage
 ```
 
 ## Before changing code

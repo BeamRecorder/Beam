@@ -1,6 +1,6 @@
 # Install Rust for Beam
 
-Beam uses the Rust stable toolchain for its native capture engine. Rust is needed for native tests and local installer builds. `npm run electron:dev` detects Cargo automatically: when Cargo is unavailable, it can use or download a versioned engine from [`packages/native-recorder`](../../packages/native-recorder/README.md) after confirmation.
+Beam uses the Rust stable toolchain for its native capture engine. Rust is needed for native tests and local installer builds. `bun run electron:dev` detects Cargo automatically: when Cargo is unavailable, it can use or download a versioned engine from [`packages/native-recorder`](../../packages/native-recorder/README.md) after confirmation.
 
 ## Windows
 

@@ -4,7 +4,7 @@ Beam records screens and windows on Linux through the XDG ScreenCast Portal, Pip
 
 ## Prerequisites
 
-- Node.js 22 or newer with npm
+- Node.js 22 or newer and Bun 1.4.0
 - [Rust stable](./INSTALL_RUST.md)
 - Git
 - a C/C++ compiler, Clang development libraries and pkg-config
@@ -43,10 +43,10 @@ sudo pacman -S --needed \
   xdg-desktop-portal xdg-desktop-portal-gnome
 ```
 
-Install the project dependencies once after cloning or when `package-lock.json` changes:
+Install the project dependencies once after cloning or when `bun.lock` changes:
 
 ```bash
-npm ci
+bun install --frozen-lockfile
 ```
 
 Verify the native runtime before launching Beam:
@@ -68,7 +68,7 @@ Beam checks these capabilities before opening the Portal picker. If FFmpeg is in
 Start Electron from the second development terminal with:
 
 ```bash
-npm run electron:dev
+bun run electron:dev
 ```
 
 The command checks Cargo first. When Cargo is available, it builds both `capture-engine` and the filtered `beam-input-helper`, and stops if compilation fails. Without Cargo, it looks for the exact application version under `packages/native-recorder/linux/x64/`. If either native file is missing in an interactive terminal, confirm the verified download with `Y`; answer `N` to stop. Non-interactive execution never prompts and downloads only with the explicit `BEAM_DOWNLOAD_CAPTURE_ENGINE=1` opt-in.

@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
-const { runNpmCi } = require('../scripts/ci/npm-ci-retry.cjs');
+const { runBunInstall } = require('../scripts/ci/bun-install-retry.cjs');
 
 function fixture(statuses, options = {}) {
   const calls = [];
@@ -19,7 +19,7 @@ function fixture(statuses, options = {}) {
     delays,
     logs,
     run: () =>
-      runNpmCi({
+      runBunInstall({
         spawn,
         pause: (delay) => delays.push(delay),
         log: (message) => logs.push(message),
@@ -28,22 +28,22 @@ function fixture(statuses, options = {}) {
   };
 }
 
-test('returns after the first successful npm ci attempt', () => {
+test('returns after the first successful Bun install attempt', () => {
   const fixtureState = fixture([0]);
 
   fixtureState.run();
 
   assert.equal(fixtureState.calls.length, 1);
   assert.deepEqual(fixtureState.calls[0], {
-    command: 'npm',
-    args: ['ci'],
+    command: 'bun',
+    args: ['install', '--frozen-lockfile'],
     spawnOptions: { stdio: 'inherit' },
   });
   assert.deepEqual(fixtureState.delays, []);
-  assert.deepEqual(fixtureState.logs, ['[CI] npm ci attempt 1/3']);
+  assert.deepEqual(fixtureState.logs, ['[CI] bun install attempt 1/3']);
 });
 
-test('retries a failed npm ci and uses the expected backoff delays', () => {
+test('retries a failed Bun install and uses the expected backoff delays', () => {
   const fixtureState = fixture([1, 1, 0]);
 
   fixtureState.run();
@@ -51,27 +51,27 @@ test('retries a failed npm ci and uses the expected backoff delays', () => {
   assert.equal(fixtureState.calls.length, 3);
   assert.deepEqual(fixtureState.delays, [5_000, 15_000]);
   assert.deepEqual(fixtureState.logs, [
-    '[CI] npm ci attempt 1/3',
-    '[CI] npm ci failed; retrying in 5s',
-    '[CI] npm ci attempt 2/3',
-    '[CI] npm ci failed; retrying in 15s',
-    '[CI] npm ci attempt 3/3',
+    '[CI] bun install attempt 1/3',
+    '[CI] bun install failed; retrying in 5s',
+    '[CI] bun install attempt 2/3',
+    '[CI] bun install failed; retrying in 15s',
+    '[CI] bun install attempt 3/3',
   ]);
 });
 
-test('selects npm.cmd on Windows runners', () => {
+test('selects bun.exe on Windows runners', () => {
   const fixtureState = fixture([0], { platform: 'win32' });
 
   fixtureState.run();
 
-  assert.equal(fixtureState.calls[0].command, 'npm.cmd');
+  assert.equal(fixtureState.calls[0].command, 'bun.exe');
   assert.deepEqual(fixtureState.calls[0].spawnOptions, {
     stdio: 'inherit',
     shell: true,
   });
 });
 
-test('keeps the Windows shell when retrying npm ci', () => {
+test('keeps the Windows shell when retrying Bun install', () => {
   const fixtureState = fixture([1, 0], { platform: 'win32' });
 
   fixtureState.run();
@@ -81,8 +81,8 @@ test('keeps the Windows shell when retrying npm ci', () => {
   assert.deepEqual(
     fixtureState.calls.map(({ command, spawnOptions }) => ({ command, spawnOptions })),
     [
-      { command: 'npm.cmd', spawnOptions: { stdio: 'inherit', shell: true } },
-      { command: 'npm.cmd', spawnOptions: { stdio: 'inherit', shell: true } },
+      { command: 'bun.exe', spawnOptions: { stdio: 'inherit', shell: true } },
+      { command: 'bun.exe', spawnOptions: { stdio: 'inherit', shell: true } },
     ],
   );
 });
@@ -90,13 +90,13 @@ test('keeps the Windows shell when retrying npm ci', () => {
 test('fails after the configured three attempts and does not pause again', () => {
   const fixtureState = fixture([1, 1, 1]);
 
-  assert.throws(fixtureState.run, /npm ci failed after 3 attempts/);
+  assert.throws(fixtureState.run, /bun install failed after 3 attempts/);
   assert.equal(fixtureState.calls.length, 3);
   assert.deepEqual(fixtureState.delays, [5_000, 15_000]);
 });
 
-test('surfaces a spawn error without retrying a missing npm executable', () => {
-  const spawnError = new Error('npm executable not found');
+test('surfaces a spawn error without retrying a missing Bun executable', () => {
+  const spawnError = new Error('bun executable not found');
   const fixtureState = fixture([{ error: spawnError }]);
 
   assert.throws(fixtureState.run, spawnError);

@@ -1,6 +1,6 @@
 # Versioned native-engine cache
 
-`npm run electron:dev` uses this ignored local cache only when Cargo is not installed. Every filename is tied to the version in the repository root `package.json` and to the current operating system and architecture:
+`bun run electron:dev` uses this ignored local cache only when Cargo is not installed. Every filename is tied to the version in the repository root `package.json` and to the current operating system and architecture:
 
 ```text
 packages/native-recorder/win/x64/capture-engine-<version>.exe

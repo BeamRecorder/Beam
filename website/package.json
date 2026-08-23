@@ -7,10 +7,10 @@
     "dev": "node scripts/dev.mjs",
     "dev:marketing": "vite --config vite.config.ts",
     "dev:docs": "vitepress dev docs --host 127.0.0.1 --port 7001 --strictPort",
-    "docs:dev": "npm run dev:docs",
+    "docs:dev": "bun run dev:docs",
     "build:marketing": "vite-ssg build -c vite.config.ts",
     "build:docs": "vitepress build docs",
-    "build": "npm run build:marketing && npm run build:docs && node scripts/finalize-build.mjs",
+    "build": "bun run build:marketing && bun run build:docs && node scripts/finalize-build.mjs",
     "preview": "vite preview --config vite.config.ts",
     "typecheck": "vue-tsc -p tsconfig.json --noEmit --pretty false",
     "test": "vitest run --config vite.config.ts"

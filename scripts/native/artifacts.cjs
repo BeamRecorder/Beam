@@ -142,7 +142,7 @@ async function main() {
   const options = parseOptions(arguments);
   const { version } = require('../../package.json');
   if (command === 'build') {
-    if (!cargoAvailable()) throw new Error('Cargo is required by npm run build and npm run electron:build');
+    if (!cargoAvailable()) throw new Error('Cargo is required by bun run build and bun run electron:build');
     await buildCaptureEngine({ release: true });
     stageNativeFiles({ version });
     return;

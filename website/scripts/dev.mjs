@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 
-const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+const bunCommand = process.platform === 'win32' ? 'bun.exe' : 'bun';
 const commands = [
   ['website', 'dev:marketing'],
   ['docs', 'dev:docs'],
@@ -17,7 +17,7 @@ const stop = (signal = 'SIGTERM') => {
 };
 
 for (const [name, script] of commands) {
-  const child = spawn(npmCommand, ['run', script], {
+  const child = spawn(bunCommand, ['run', script], {
     cwd: new URL('..', import.meta.url),
     stdio: 'inherit',
   });

@@ -9,6 +9,7 @@
     "email": "ExtraBinoss@users.noreply.github.com"
   },
   "type": "module",
+  "packageManager": "bun@1.4.0",
   "main": "electron/main.cjs",
   "workspaces": [
     "website"
@@ -16,6 +17,12 @@
   "overrides": {
     "onnxruntime-web": "1.27.0"
   },
+  "trustedDependencies": [
+    "electron-winstaller",
+    "esbuild",
+    "fsevents",
+    "sharp"
+  ],
   "scripts": {
     "test": "node --test test/*.test.cjs",
     "test:coverage": "vitest run --coverage",
@@ -27,16 +34,16 @@
     "format:check": "oxfmt --check \"src/**/*.{vue,ts}\" \"website/**/*.{vue,ts,css,html,json,jsonc}\" \"electron/**/*.cjs\" \"scripts/**/*.cjs\" \"test/**/*.cjs\"",
     "lint": "oxlint --vue-plugin",
     "dev": "vite",
-    "website:dev": "npm run dev --workspace @beam/website",
-    "website:docs:dev": "npm run docs:dev --workspace @beam/website",
-    "website:build": "npm run build --workspace @beam/website",
-    "website:preview": "npm run preview --workspace @beam/website",
-    "website:typecheck": "npm run typecheck --workspace @beam/website",
-    "website:test": "npm run test --workspace @beam/website",
+    "website:dev": "bun run --filter @beam/website dev",
+    "website:docs:dev": "bun run --filter @beam/website docs:dev",
+    "website:build": "bun run --filter @beam/website build",
+    "website:preview": "bun run --filter @beam/website preview",
+    "website:typecheck": "bun run --filter @beam/website typecheck",
+    "website:test": "bun run --filter @beam/website test",
     "build": "node scripts/native/artifacts.cjs build && vite build",
     "electron:dev": "node scripts/dev/electron.cjs",
     "electron:dev:no-rust": "node scripts/dev/electron.cjs --force-no-rust",
-    "electron:build": "npm run build && electron-builder --publish never"
+    "electron:build": "bun run build && electron-builder --publish never"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.2.0",
