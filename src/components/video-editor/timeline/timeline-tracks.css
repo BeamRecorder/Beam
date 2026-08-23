@@ -152,7 +152,7 @@
   top: 4px;
   font-size: 8px;
   font-weight: 700;
-  color: var(--text-muted);
+  color: var(--text-primary);
   font-family: monospace;
 }
 .marker-tick {
