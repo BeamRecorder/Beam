@@ -138,6 +138,7 @@ const runTranscription = async () => {
   const run = ++transcriptionRun;
   isTranscribing.value = true;
   transcriptionSourceLabel.value = selectedSource.value.label;
+  const captionLayerId = crypto.randomUUID();
   const captionIds = new Map<string, string>();
   const applySentences = (sentences: CaptionSentence[]) => {
     if (run !== transcriptionRun) return [];
@@ -163,6 +164,7 @@ const runTranscription = async () => {
         enabled: true,
         order: preserved.length + index,
         isAiGenerated: true,
+        captionLayerId,
         caption: {
           type: 'text',
           sentences: [sentence],

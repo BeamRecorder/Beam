@@ -6,6 +6,7 @@ import {
   emptyComposition,
   isAudioClip,
   isCompositingClip,
+  isTextCaptionClip,
   isVisualClip,
   type AudioClip,
   type BlurClip,
@@ -23,6 +24,7 @@ import {
   holdClipAtPlayhead,
   moveClip,
   reorderClip,
+  reorderTextCaption,
   setClipEnabled,
   splitClip,
   trimClip,
@@ -231,7 +233,7 @@ export function useClipComposition(options: {
         playbackRate: 1,
         transitions: { entry: null, exit: null },
         enabled: true,
-        order: 0,
+        order: Math.min(0, ...composition.value.clips.filter(isTextCaptionClip).map((entry) => entry.order)) - 1,
         caption: {
           type: 'text',
           sentences: [],
@@ -323,6 +325,12 @@ export function useClipComposition(options: {
     if (!clip || !isCompositingClip(clip)) return;
     composition.value = reorderClip(composition.value, clipId, targetIndex);
   };
+  const reorderCaptionClip = (clipId: string, targetIndex: number) => {
+    if (!Number.isInteger(targetIndex)) return;
+    const clip = composition.value.clips.find((entry) => entry.id === clipId);
+    if (!clip || !isTextCaptionClip(clip)) return;
+    composition.value = reorderTextCaption(composition.value, clipId, targetIndex);
+  };
 
   const toggleClip = (clipId: string) => {
     const clip = composition.value.clips.find((entry) => entry.id === clipId);
@@ -359,6 +367,7 @@ export function useClipComposition(options: {
     holdClip,
     deleteSelectedClip,
     reorderVisualClip,
+    reorderCaptionClip,
     updateSelectedAppearance,
     updateSelectedTransform,
     updateSelectedBlur,

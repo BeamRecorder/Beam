@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isCaptionWrapEnabled, layoutCaptionText, wrapCaptionLines } from '../caption-text-layout';
+import { captionTextAt, isCaptionWrapEnabled, layoutCaptionText, wrapCaptionLines } from '../caption-text-layout';
 import type { CaptionClip } from '../composition-types';
 import { createDefaultCaptionStyle } from '../composition-defaults';
 
@@ -32,6 +32,49 @@ const measureByCharacter = (text: string) => text.length;
 const measureByTenPixels = (text: string) => text.length * 10;
 
 describe('caption text layout', () => {
+  it('resolves each timed sentence at its inclusive boundaries', () => {
+    const clip = caption();
+    if (clip.caption.type !== 'text') throw new Error('Expected a text caption');
+
+    clip.caption.sentences = [
+      { id: 'first', text: 'First sentence', startMs: 100, endMs: 200, words: [] },
+      { id: 'second', text: 'Second sentence', startMs: 300, endMs: 400, words: [] },
+    ];
+
+    expect(captionTextAt(clip, 100)).toBe('First sentence');
+    expect(captionTextAt(clip, 200)).toBe('First sentence');
+    expect(captionTextAt(clip, 300)).toBe('Second sentence');
+    expect(captionTextAt(clip, 400)).toBe('Second sentence');
+  });
+
+  it('leaves gaps before, between, and after timed sentences empty', () => {
+    const clip = caption();
+    if (clip.caption.type !== 'text') throw new Error('Expected a text caption');
+
+    clip.caption.sentences = [
+      { id: 'first', text: 'First sentence', startMs: 100, endMs: 200, words: [] },
+      { id: 'second', text: 'Second sentence', startMs: 300, endMs: 400, words: [] },
+    ];
+
+    expect(captionTextAt(clip, 99)).toBe('');
+    expect(captionTextAt(clip, 250)).toBe('');
+    expect(captionTextAt(clip, 401)).toBe('');
+  });
+
+  it('prefers custom text over timed sentences', () => {
+    const clip = caption();
+    if (clip.caption.type !== 'text') throw new Error('Expected a text caption');
+
+    clip.caption.sentences = [
+      { id: 'first', text: 'First sentence', startMs: 100, endMs: 200, words: [] },
+      { id: 'second', text: 'Second sentence', startMs: 300, endMs: 400, words: [] },
+    ];
+    clip.caption.style.customText = 'Custom caption';
+
+    expect(captionTextAt(clip, 150)).toBe('Custom caption');
+    expect(captionTextAt(clip, 250)).toBe('Custom caption');
+  });
+
   it('uses the canonical wrap setting', () => {
     expect(isCaptionWrapEnabled({ wrap: true })).toBe(true);
     expect(

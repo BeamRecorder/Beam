@@ -336,7 +336,7 @@ describe('TimelineTracks', () => {
     ]);
   });
 
-  it('selects all keyboard and text caption clips from their headers', async () => {
+  it('selects the keyboard track and each independent text layer from their headers', async () => {
     const base = composition();
     const secondKeyboard = {
       ...keyboardCaption(),
@@ -350,6 +350,8 @@ describe('TimelineTracks', () => {
       ...textCaption,
       id: 'caption-clip-2',
       timelineStartMs: 8_000,
+      isAiGenerated: false,
+      captionLayerId: undefined,
     } satisfies CaptionClip;
     const mounted = await mountTracks({
       composition: { ...base, clips: [...base.clips, keyboardCaption(), secondKeyboard, secondText] },
@@ -367,7 +369,7 @@ describe('TimelineTracks', () => {
     await mounted!.get('.sidebar-tracks-stack .text-caption-track .track-info').trigger('click');
     expect(mounted!.emitted('select:track')).toContainEqual([
       {
-        clipIds: ['caption-clip', 'caption-clip-2'],
+        clipIds: ['caption-clip'],
         primaryClipId: 'caption-clip',
         trackNames: ['Text Captions'],
       },
@@ -405,7 +407,7 @@ describe('TimelineTracks', () => {
 
   it('keeps the keyboard track above text, uses Lucide icons, and reserves manual additions for text', async () => {
     const mounted = await mountTracks({ composition: composition([keyboardCaption()]) });
-    const rows = mounted!.findAll('.tracks-stack > .track-row');
+    const rows = mounted!.findAll('.tracks-stack .track-row');
     const keyboardIndex = rows.findIndex((row) => row.classes().includes('keyboard-caption-track'));
     const textIndex = rows.findIndex((row) => row.classes().includes('text-caption-track'));
 

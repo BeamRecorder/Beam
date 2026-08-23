@@ -2,6 +2,7 @@ import {
   COMPOSITION_SCHEMA_VERSION,
   isAudioClip,
   isBlurClip,
+  isCaptionClip,
   isVisualClip,
   type ClipComposition,
 } from '~/media/shared/composition-types';
@@ -147,6 +148,12 @@ export function validateComposition(composition: ClipComposition): void {
     }
     if (isAudioClip(clip) && (!finite(clip.volume) || clip.volume < 0 || clip.volume > 200))
       throw new CompositionEngineError('Invalid clip volume.');
+    if (
+      isCaptionClip(clip) &&
+      clip.captionLayerId !== undefined &&
+      (typeof clip.captionLayerId !== 'string' || !clip.captionLayerId.trim())
+    )
+      throw new CompositionEngineError('Invalid caption layer identity.');
     if (clip.groupId) {
       const timing = `${clip.timelineStartMs}:${clip.timelineDurationMs}:${clip.playbackRate}`;
       const known = groupTiming.get(clip.groupId);

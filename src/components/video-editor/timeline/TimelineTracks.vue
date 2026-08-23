@@ -26,7 +26,7 @@ const {
   layoutDurationMs,
   visualTracks,
   keyboardCaptionClips,
-  textCaptionClips,
+  textCaptionLayers,
   systemAudioClips,
   microphoneClips,
   importedAudioTracks,
@@ -72,6 +72,8 @@ const {
   zoomScale,
   draggedTrackId,
   beginReorder,
+  draggedCaptionId,
+  beginCaptionReorder,
 } = useTimelineTracks(props, emit);
 void [tracksScrollRef, sidebarScrollRef, tracksViewportRef, ticksAreaRef];
 const selectedClipIdSet = computed(
@@ -136,14 +138,16 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
           <TimelineTrackHeaders
             :visual-tracks="visualTracks"
             :keyboard-caption-clips="keyboardCaptionClips"
-            :text-caption-clips="textCaptionClips"
+            :text-caption-layers="textCaptionLayers"
             :system-audio-clips="systemAudioClips"
             :microphone-clips="microphoneClips"
             :imported-audio-tracks="importedAudioTracks"
             :include-audio-in-export="includeAudioInExport"
             :dragged-track-id="draggedTrackId"
+            :dragged-caption-id="draggedCaptionId"
             :select-track="selectTrack"
             :begin-reorder="beginReorder"
+            :begin-caption-reorder="beginCaptionReorder"
             :open-track-context-menu="openTrackContextMenu"
           />
         </div>
@@ -294,7 +298,8 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
           </div>
           <TimelineCaptionTracks
             :keyboard-clips="keyboardCaptionClips"
-            :text-clips="textCaptionClips"
+            :text-layers="textCaptionLayers"
+            :dragged-caption-id="draggedCaptionId"
             :selected-clip-id="selectedClipId"
             :selected-clip-ids="[...selectedClipIdSet]"
             :hover-caption-time-ms="hoverCaptionTimeMs"

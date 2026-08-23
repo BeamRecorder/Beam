@@ -416,6 +416,81 @@ describe('useClipComposition', () => {
     expect(mounted.state.composition.value.clips).toHaveLength(count);
   });
 
+  it('adds a new text layer above existing captions and selects it', async () => {
+    const mounted = mountComposable();
+    const existingCaption = textCaptionClip('existing-caption', 'Existing', '#ffffff', 'Existing');
+    const existingVisual = visualClip('existing-visual', { order: 1 });
+    mounted.state.composition.value = {
+      ...mounted.state.composition.value,
+      assets: [mediaAssetFor(existingVisual.assetId, 'image')],
+      clips: [existingCaption, existingVisual],
+    };
+
+    await mounted.state.addElement('caption', 400);
+
+    const addedCaption = mounted.state.selectedCaptionClip.value;
+    expect(addedCaption).toMatchObject({
+      kind: 'caption',
+      timelineStartMs: 400,
+      caption: { type: 'text', style: { customText: 'Hello' } },
+    });
+    expect(mounted.state.selectedClipId.value).toBe(addedCaption?.id);
+    expect(mounted.activeTab.value).toBe('clip');
+
+    const textLayers = mounted.state.composition.value.clips
+      .filter((clip) => clip.kind === 'caption' && clip.caption.type === 'text')
+      .sort((left, right) => left.order - right.order);
+    expect(textLayers.map((clip) => clip.id)).toEqual([addedCaption?.id, existingCaption.id]);
+    const persistedExistingCaption = mounted.state.composition.value.clips.find(
+      (clip) => clip.id === existingCaption.id,
+    );
+    expect(addedCaption?.order).toBeLessThan(persistedExistingCaption?.order ?? Number.POSITIVE_INFINITY);
+    expect(mounted.state.composition.value.clips.find((clip) => clip.id === existingVisual.id)?.order).toBeGreaterThan(
+      persistedExistingCaption?.order ?? Number.NEGATIVE_INFINITY,
+    );
+  });
+
+  it('reorders text captions within their layer stack, clamps indices, and ignores non-text clips', () => {
+    const mounted = mountComposable();
+    const first = textCaptionClip('caption-first', 'First', '#ffffff', 'First');
+    const middle = textCaptionClip('caption-middle', 'Middle', '#ffffff', 'Middle');
+    const last = textCaptionClip('caption-last', 'Last', '#ffffff', 'Last');
+    const visual = visualClip('visual', { order: 3 });
+    const audio = audioClip('audio', { order: 4 });
+    mounted.state.composition.value = {
+      ...mounted.state.composition.value,
+      assets: [mediaAssetFor(visual.assetId, 'image'), mediaAssetFor(audio.assetId, 'audio')],
+      clips: [first, middle, last, visual, audio],
+    };
+    mounted.state.selectClip(middle.id);
+
+    mounted.state.reorderCaptionClip(middle.id, 100);
+    let textLayers = mounted.state.composition.value.clips
+      .filter((clip) => clip.kind === 'caption' && clip.caption.type === 'text')
+      .sort((left, right) => left.order - right.order);
+    expect(textLayers.map((clip) => clip.id)).toEqual([first.id, last.id, middle.id]);
+    expect(mounted.state.selectedClipId.value).toBe(middle.id);
+
+    mounted.state.reorderCaptionClip(middle.id, -100);
+    textLayers = mounted.state.composition.value.clips
+      .filter((clip) => clip.kind === 'caption' && clip.caption.type === 'text')
+      .sort((left, right) => left.order - right.order);
+    expect(textLayers.map((clip) => clip.id)).toEqual([middle.id, first.id, last.id]);
+    expect(
+      mounted.state.composition.value.clips
+        .filter((clip) => clip.id === visual.id || clip.id === audio.id)
+        .sort((left, right) => left.order - right.order)
+        .map((clip) => clip.id),
+    ).toEqual([visual.id, audio.id]);
+
+    mounted.state.reorderCaptionClip(visual.id, 0);
+    mounted.state.reorderCaptionClip('missing', 0);
+    expect(mounted.state.composition.value.clips.find((clip) => clip.id === visual.id)?.order).toBeGreaterThan(
+      last.order,
+    );
+    expect(mounted.state.selectedClipId.value).toBe(middle.id);
+  });
+
   it('deduplicates valid multi-selection IDs and returns to one clip with selectClip', () => {
     const mounted = mountComposable();
     const first = visualClip('first');

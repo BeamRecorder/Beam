@@ -217,6 +217,8 @@ export interface AudioClip extends ClipBase {
 export interface CaptionClip extends ClipBase {
   kind: 'caption';
   caption: CaptionData;
+  /** Captions sharing this identity render and reorder on one logical text layer. */
+  captionLayerId?: string;
   transform?: NormalizedTransform;
   isAiGenerated?: boolean;
 }
@@ -252,6 +254,13 @@ export const isTextCaptionClip = (clip: Clip): clip is CaptionClip & { caption: 
   clip.kind === 'caption' && clip.caption.type === 'text';
 export const isKeyboardCaptionClip = (clip: Clip): clip is CaptionClip & { caption: KeyboardCaptionData } =>
   clip.kind === 'caption' && clip.caption.type === 'keyboard';
+
+export const captionLayerKey = (clip: CaptionClip): string =>
+  clip.captionLayerId
+    ? `caption-layer:${clip.captionLayerId}`
+    : clip.isAiGenerated
+      ? 'caption-layer:legacy-ai'
+      : `caption-clip:${clip.id}`;
 
 export const getCaptionTransform = (clip: CaptionClip): NormalizedTransform => {
   if (clip.transform) return clip.transform;

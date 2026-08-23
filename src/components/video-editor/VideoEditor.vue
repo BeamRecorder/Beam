@@ -145,6 +145,7 @@ const {
   splitSelectedClip,
   holdClip,
   reorderVisualClip,
+  reorderCaptionClip,
   updateSelectedAppearance,
   updateSelectedTransform,
   updateSelectedBlur,
@@ -732,6 +733,7 @@ onBeforeUnmount(() => {
           @add:zoom="addZoomAtTime"
           @add:caption="addCaptionAtTime"
           @reorder:clip="reorderVisualClip($event.id, $event.targetIndex)"
+          @reorder:caption="reorderCaptionClip($event.id, $event.targetIndex)"
           @paste:item="pasteTimelineItem"
           @paste:error="reportTimelinePasteError"
           @clipboard:copied="reportTimelineCopySuccess"

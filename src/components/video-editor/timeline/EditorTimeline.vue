@@ -59,6 +59,7 @@ const emit = defineEmits<{
   (event: 'add:zoom', placement: TimelinePlacementRequest): void;
   (event: 'add:caption', placement: TimelinePlacementRequest): void;
   (event: 'reorder:clip', payload: { id: string; targetIndex: number }): void;
+  (event: 'reorder:caption', payload: { id: string; targetIndex: number }): void;
   (event: 'paste:item', payload: TimelinePasteRequest): void;
   (event: 'paste:error', message: string): void;
   (event: 'clipboard:copied', item: TimelineClipboardItem): void;
@@ -118,6 +119,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
         @add:zoom="emit('add:zoom', $event)"
         @add:caption="emit('add:caption', $event)"
         @reorder:clip="emit('reorder:clip', $event)"
+        @reorder:caption="emit('reorder:caption', $event)"
         @paste:item="emit('paste:item', $event)"
         @paste:error="emit('paste:error', $event)"
         @clipboard:copied="emit('clipboard:copied', $event)"

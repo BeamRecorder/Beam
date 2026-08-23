@@ -20,6 +20,9 @@
 .visual-tracks-group {
   display: contents;
 }
+.text-caption-layers-group {
+  display: contents;
+}
 .track-reorder-move {
   transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }

@@ -4,6 +4,7 @@ import {
   emptyComposition,
   isAudioClip,
   isBlurClip,
+  isTextCaptionClip,
   isVisualClip,
   type Clip,
   type ClipAppearance,
@@ -23,6 +24,7 @@ import {
   reorderClipOrders,
   visualMoveDeltaBounds,
 } from './visual-track-layout';
+import { reorderTextCaptionOrders } from './caption-layer-layout';
 import {
   CompositionEngineError,
   MAX_PLAYBACK_RATE,
@@ -383,6 +385,17 @@ export function reorderClip(composition: ClipComposition, clipId: string, target
   const next = clone(composition);
   const reordered = reorderClipOrders(next.clips, clipId, targetIndex);
   if (!reordered) throw new CompositionEngineError('Invalid clip reorder.');
+  next.clips = reordered;
+  validateComposition(next);
+  return next;
+}
+
+export function reorderTextCaption(composition: ClipComposition, clipId: string, targetIndex: number): ClipComposition {
+  const source = byId(composition, clipId);
+  if (!isTextCaptionClip(source)) throw new CompositionEngineError('Only text captions can be reordered here.');
+  const reordered = reorderTextCaptionOrders(composition.clips, clipId, targetIndex);
+  if (!reordered) throw new CompositionEngineError('Invalid text caption reorder.');
+  const next = clone(composition);
   next.clips = reordered;
   validateComposition(next);
   return next;

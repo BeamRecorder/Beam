@@ -1,6 +1,8 @@
 import {
   clipEndMs,
+  captionLayerKey,
   isCompositingClip,
+  isTextCaptionClip,
   type Clip,
   type VisualClip,
   type BlurClip,
@@ -15,7 +17,11 @@ const byOrderAndTime = (left: Clip, right: Clip) =>
 export const normalizeClipOrders = (clips: Clip[]): Clip[] => {
   const buckets = new Map<string, Clip[]>();
   for (const clip of [...clips].sort(byOrderAndTime)) {
-    const key = isCompositingClip(clip) ? `track:${clip.trackId}` : `clip:${clip.id}`;
+    const key = isCompositingClip(clip)
+      ? `track:${clip.trackId}`
+      : isTextCaptionClip(clip)
+        ? captionLayerKey(clip)
+        : `clip:${clip.id}`;
     const bucket = buckets.get(key);
     if (bucket) bucket.push(clip);
     else buckets.set(key, [clip]);

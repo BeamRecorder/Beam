@@ -15,18 +15,21 @@ import type { AudioClip, CaptionClip, Clip, VisualClip, BlurClip } from '~/media
 import type { ImportedAudioTimelineTrack } from './composables/audio-timeline-tracks';
 import type { VisualTimelineTrack } from './composables/timeline-tracks-types';
 import { useTranslate } from '~/i18n/useTranslate';
+import type { TextCaptionLayer } from '../composition/engine/caption-layer-layout';
 
 defineProps<{
   visualTracks: VisualTimelineTrack[];
   keyboardCaptionClips: CaptionClip[];
-  textCaptionClips: CaptionClip[];
+  textCaptionLayers: TextCaptionLayer[];
   systemAudioClips: AudioClip[];
   microphoneClips: AudioClip[];
   importedAudioTracks: ImportedAudioTimelineTrack[];
   includeAudioInExport: boolean;
   draggedTrackId: string | null;
+  draggedCaptionId: string | null;
   selectTrack: (clips: Clip[], trackName: string, event?: MouseEvent) => void;
   beginReorder: (event: PointerEvent, trackId: string, clipId: string) => void;
+  beginCaptionReorder: (event: PointerEvent, layerId: string, representativeClipId: string) => void;
   openTrackContextMenu: (event: MouseEvent, kind: 'visual' | 'zoom' | 'caption' | 'audio', id?: string) => void;
 }>();
 const { t } = useTranslate('TimelineTracks');
@@ -40,6 +43,8 @@ const labelForVisual = (clip: VisualClip | BlurClip) =>
       : clip.kind === 'webcam'
         ? t('webcam')
         : clip.name;
+const labelForCaption = (clip: CaptionClip) =>
+  clip.caption.type === 'text' ? clip.caption.style.customText?.trim() || t('textCaptions') : clip.name;
 </script>
 
 <template>
@@ -79,13 +84,31 @@ const labelForVisual = (clip: VisualClip | BlurClip) =>
       <Keyboard class="track-icon" /><span class="track-title">{{ t('keyboardCaptions') }}</span>
     </button>
   </div>
-  <div
-    class="sidebar-track-item annotation-track text-caption-track"
-    @contextmenu="openTrackContextMenu($event, 'caption')"
-  >
-    <button type="button" class="track-info" @click="selectTrack(textCaptionClips, t('textCaptions'), $event)">
+  <TransitionGroup v-if="textCaptionLayers.length" name="track-reorder" tag="div" class="text-caption-layers-group">
+    <div
+      v-for="layer in textCaptionLayers"
+      :key="layer.id"
+      class="sidebar-track-item annotation-track text-caption-track text-caption-layer"
+      :data-caption-id="layer.id"
+      :class="{ disabled: !layer.clips.some((clip) => clip.enabled), dragging: draggedCaptionId === layer.id }"
+      @contextmenu="openTrackContextMenu($event, 'caption')"
+    >
+      <button
+        type="button"
+        class="track-info"
+        :title="labelForCaption(layer.representative)"
+        @click="selectTrack(layer.clips, labelForCaption(layer.representative), $event)"
+        @pointerdown="beginCaptionReorder($event, layer.id, layer.representative.id)"
+      >
+        <span class="track-drag-handle" @click.stop><GripVertical class="track-grip" /></span>
+        <Type class="track-icon" /><span class="track-title">{{ labelForCaption(layer.representative) }}</span>
+      </button>
+    </div>
+  </TransitionGroup>
+  <div v-else class="sidebar-track-item annotation-track text-caption-track">
+    <div class="track-info static-info">
       <Type class="track-icon" /><span class="track-title">{{ t('textCaptions') }}</span>
-    </button>
+    </div>
   </div>
   <div
     v-if="systemAudioClips.length"
