@@ -37,7 +37,6 @@ usePageSeo({
 <template>
   <main class="site-shell content-page">
     <header class="page-intro">
-      <p class="eyebrow">{{ catalog.intro.eyebrow }}</p>
       <h1>{{ catalog.intro.title }}</h1>
       <p class="lede">{{ catalog.intro.lede }}</p>
     </header>
@@ -69,7 +68,6 @@ usePageSeo({
       <div class="page-callout__copy">
         <img class="page-callout__logo" :src="demoMedia.iconUrl" alt="" />
         <div>
-          <p class="eyebrow">{{ catalog.callout.eyebrow }}</p>
           <h2>{{ catalog.callout.title }}</h2>
         </div>
       </div>

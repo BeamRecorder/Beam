@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted } from 'vue';
 import { Code2, ExternalLink } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import Button from '~/ui/button/Button.vue';
-import WebsiteEditorPreview from '@website/components/WebsiteEditorPreview.vue';
 import WebsiteCommunityShader from '@website/components/WebsiteCommunityShader.vue';
 import WebsiteHeroDrag from '@website/components/WebsiteHeroDrag.vue';
 import { useGitHubRepository } from '@website/composables/useGitHubRepository';
@@ -11,7 +10,6 @@ import { createHomeJsonLd } from '@website/seo/json-ld';
 import { usePageSeo } from '@website/seo/use-page-seo';
 import discordIconUrl from '../../../public/discord_svg.svg';
 
-const editorRef = ref<InstanceType<typeof WebsiteEditorPreview> | null>(null);
 const github = useGitHubRepository();
 const { t } = useI18n();
 onMounted(() => void github.load());
@@ -27,38 +25,28 @@ usePageSeo({
   jsonLd: createHomeJsonLd(),
 });
 
-const playDemo = () => {
-  document.querySelector('#editor-demo')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  void editorRef.value?.play();
-};
-
 const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
 </script>
 
 <template>
   <div class="site-shell">
     <main id="top">
-      <WebsiteHeroDrag @explore="playDemo" />
+      <WebsiteHeroDrag />
 
-      <section class="availability" aria-label="Beam availability">
-        <strong>{{ t('Website.home.availabilityTitle') }}</strong>
-        <span>{{ t('Website.home.availabilityPlatforms') }}</span>
-      </section>
-
-      <section id="editor-demo" class="content-section">
+      <section id="editor-demo" class="content-section showcase-section">
         <div class="section-intro">
           <h2>{{ t('Website.home.editorTitle') }}</h2>
           <p>{{ t('Website.home.editorText') }}</p>
         </div>
-        <ClientOnly>
-          <WebsiteEditorPreview ref="editorRef" />
-          <template #placeholder>
-            <article class="demo-placeholder">
-              <h2>Polish timing, zooms, captions, and presentation.</h2>
-              <p>Beam keeps the original capture intact while you shape the final product demo.</p>
-            </article>
-          </template>
-        </ClientOnly>
+        <img
+          class="showcase-image"
+          src="/Beam-showcase.png"
+          :alt="t('Website.home.showcaseAlt')"
+          width="1672"
+          height="941"
+          loading="lazy"
+          decoding="async"
+        />
       </section>
 
       <section class="free-statement" aria-labelledby="free-title">

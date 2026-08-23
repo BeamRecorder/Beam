@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { Code2, Download, Play } from '@lucide/vue';
+import { Code2, Download } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import EditorCanvas from '~/components/video-editor/canvas/EditorCanvas.vue';
 import { DEFAULT_OUTPUT_CANVAS } from '~/components/video-editor/canvas/output-canvas';
@@ -23,8 +23,16 @@ import defaultCursorUrl from '../../../public/macOsSvgCursors/default.svg';
 import handOpenCursorUrl from '../../../public/macOsSvgCursors/handopen.svg';
 import handGrabbingCursorUrl from '../../../public/macOsSvgCursors/handgrabbing.svg';
 
-const emit = defineEmits<{ explore: [] }>();
 const { t } = useI18n();
+
+const HERO_PUNCTUATION = /([.!?。！？।]+)/u;
+const ONLY_HERO_PUNCTUATION = /^[.!?。！？।]+$/u;
+const heroTitleParts = computed(() =>
+  t('Website.home.heroLine1')
+    .split(HERO_PUNCTUATION)
+    .filter(Boolean)
+    .map((text) => ({ text, punctuation: ONLY_HERO_PUNCTUATION.test(text) })),
+);
 
 const CURSOR_URLS: Record<Exclude<HeroCursorKind, null>, string> = {
   pointer: defaultCursorUrl,
@@ -142,9 +150,19 @@ onBeforeUnmount(() => {
 <template>
   <section class="hero-drag" aria-labelledby="hero-title">
     <div class="hero-drag__copy">
-      <p class="hero-eyebrow">{{ t('Website.home.heroEyebrow') }}</p>
-      <h1 id="hero-title">{{ t('Website.home.heroLine1') }}</h1>
+      <h1 id="hero-title">
+        <span
+          v-for="(part, index) in heroTitleParts"
+          :key="`${part.text}-${index}`"
+          :class="{ 'hero-title__punctuation': part.punctuation }"
+          >{{ part.text }}</span
+        >
+      </h1>
       <p class="lede">{{ t('Website.home.lede') }}</p>
+      <div class="hero-availability">
+        <strong>{{ t('Website.home.availabilityTitle') }}</strong>
+        <span>{{ t('Website.home.availabilityPlatforms') }}</span>
+      </div>
       <div class="hero-actions">
         <a class="hero-primary-action" href="/install">
           <Download aria-hidden="true" /> {{ t('Website.home.downloadFree') }}
@@ -152,9 +170,6 @@ onBeforeUnmount(() => {
         <a class="secondary-action" href="https://github.com/BeamRecorder/Beam" target="_blank" rel="noreferrer">
           <Code2 aria-hidden="true" /> {{ t('Website.home.viewGitHub') }}
         </a>
-        <button class="secondary-action hero-drag__explore" type="button" @click="emit('explore')">
-          <Play aria-hidden="true" /> {{ t('Website.home.openDemo') }}
-        </button>
       </div>
     </div>
 
@@ -219,19 +234,42 @@ onBeforeUnmount(() => {
 <style scoped>
 .hero-drag {
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  grid-template-columns: minmax(440px, 0.68fr) minmax(0, 1.32fr);
   align-items: center;
-  gap: clamp(40px, 6vw, 80px);
+  gap: 32px;
+  width: min(calc(100vw - 120px), 1400px);
+  margin-left: 50%;
   min-height: calc(100dvh - 72px);
   padding: 88px 0 48px;
+  transform: translateX(calc(-50% + clamp(40px, 4vw, 60px)));
 }
 
 .hero-drag__copy {
-  max-width: 620px;
+  max-width: 520px;
 }
 
 .hero-drag__copy h1 {
-  word-spacing: 0.12em;
+  font-size: clamp(62px, 5.2vw, 78px);
+}
+
+.hero-title__punctuation {
+  display: inline-block;
+  margin: 0 0.14em 0 0.08em;
+}
+
+.hero-availability {
+  display: grid;
+  gap: 2px;
+  margin-top: 24px;
+}
+
+.hero-availability strong {
+  font-size: 16px;
+}
+
+.hero-availability span {
+  color: var(--text-secondary);
+  font-size: 14px;
 }
 
 .hero-drag__media {
@@ -272,15 +310,14 @@ onBeforeUnmount(() => {
   will-change: transform, opacity;
 }
 
-.hero-drag__explore {
-  cursor: pointer;
-}
-
-@media (max-width: 900px) {
+@media (max-width: 1050px) {
   .hero-drag {
     grid-template-columns: 1fr;
     gap: 32px;
+    width: 100%;
+    margin-left: 0;
     padding: 64px 0 40px;
+    transform: none;
   }
 }
 

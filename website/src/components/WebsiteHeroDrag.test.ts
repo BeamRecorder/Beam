@@ -17,7 +17,12 @@ describe('WebsiteHeroDrag', () => {
     const wrapper = mountHero();
     await nextTick();
 
-    expect(wrapper.get('#hero-title').text()).toBe('Record. Edit. Share.');
+    const title = wrapper.get('#hero-title');
+    expect(title.text()).toBe('Record. Edit. Share.');
+    expect(title.findAll('.hero-title__punctuation').map((part) => part.text())).toEqual(['.', '.', '.']);
+    expect(wrapper.find('.hero-eyebrow').exists()).toBe(false);
+    expect(wrapper.get('.hero-availability').text()).toContain('Free on every desktop.');
+    expect(wrapper.get('.hero-availability').text()).toContain('Available for Windows, macOS, and Linux.');
     expect(wrapper.text()).toContain('Download Beam — Free');
 
     const columns = wrapper.findAll('.hero-drag > div');
@@ -42,10 +47,13 @@ describe('WebsiteHeroDrag', () => {
     expect(wrapper.find('.hero-drag__cursor').exists()).toBe(false);
   });
 
-  it('emits explore when the demo button is clicked', async () => {
+  it('does not render the removed explore action or emit its event', async () => {
     const wrapper = mountHero();
+    await nextTick();
 
-    await wrapper.get('.hero-drag__explore').trigger('click');
-    expect(wrapper.emitted('explore')).toHaveLength(1);
+    expect(wrapper.find('.hero-drag__explore').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain('See Beam in action');
+    expect(wrapper.text()).not.toContain('Explore the editor');
+    expect(wrapper.emitted('explore')).toBeUndefined();
   });
 });

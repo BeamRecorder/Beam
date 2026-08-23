@@ -84,19 +84,6 @@ textarea {
   width: 19px;
 }
 
-.hero-eyebrow {
-  width: fit-content;
-  margin-bottom: 18px;
-  padding: 7px 11px;
-  border: 1px solid var(--color-primary-border);
-  border-radius: var(--radius-full);
-  background: var(--color-primary-light);
-  color: var(--color-primary);
-  font-size: 13px;
-  font-weight: 720;
-  letter-spacing: 0.01em;
-}
-
 h1,
 h2,
 h3,
@@ -152,25 +139,6 @@ h1 {
   padding: 88px 0;
 }
 
-.availability {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 22px 0;
-  border-top: 1px solid var(--color-border-strong);
-  border-bottom: 1px solid var(--color-border-strong);
-}
-
-.availability strong {
-  font-family: var(--font-headline);
-  font-size: 19px;
-}
-
-.availability span {
-  color: var(--text-secondary);
-}
-
 .section-intro {
   display: grid;
   gap: 18px;
@@ -192,25 +160,16 @@ h1 {
   line-height: 1.65;
 }
 
-.demo-placeholder {
-  display: grid;
-  gap: 16px;
-  padding: clamp(32px, 6vw, 64px);
-  border: 1px solid var(--color-border);
-  border-radius: 24px;
-  background: var(--color-bg-element);
-}
-
-.demo-placeholder h2 {
-  max-width: 800px;
-  font-size: clamp(32px, 5vw, 56px);
-  line-height: 1.05;
-}
-
-.demo-placeholder > p:not(.eyebrow) {
-  max-width: 720px;
-  color: var(--text-secondary);
-  font-size: 18px;
+.showcase-image {
+  display: block;
+  width: min(calc(100vw - 40px), 1440px);
+  max-width: none;
+  height: auto;
+  margin-left: 50%;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 22px;
+  box-shadow: var(--shadow-lg);
+  transform: translateX(-50%);
 }
 
 .content-page {
@@ -402,17 +361,16 @@ h1 {
   .site-shell {
     width: min(100% - 24px, 1240px);
   }
-  .availability {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 4px;
-  }
   .content-section,
   .free-statement {
     padding: 64px 0;
   }
   h1 {
     font-size: clamp(46px, 15vw, 66px);
+  }
+  .showcase-image {
+    width: calc(100vw - 24px);
+    border-radius: var(--radius-lg);
   }
 }
 
