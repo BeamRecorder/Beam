@@ -40,16 +40,16 @@ Follow these exact steps to prepare your workspace, fork the repository, and del
      - `docs/electron_window.md` (Mandatory before touching window sizes, transparent regions, or IPC)
 
 5. **Environment & Dependencies**:
-   - Run `npm install` to install frontend & Electron packages.
-   - If the user does not have Rust installed, you can still launch the app with `npm run dev`, but the Rust capture engine will never be rebuilded (and will be downloaded via Internet).
+   - Run `bun install` to install frontend & Electron packages.
+   - If the user does not have Rust installed, you can still launch the app with `bun run dev`, but the Rust capture engine will never be rebuilded (and will be downloaded via Internet).
    - Verify Rust toolchain availability (`cargo --version`). Refer to `docs/dev/INSTALL_RUST.md` if Rust is missing.
 
 6. **Development & Verification**:
    - Run localized/targeted tests for changed code:
-     - Vue/TypeScript: `npx vitest run <path-to-test>`
+     - Vue/TypeScript: `bunx vitest run <path-to-test>`
      - Electron/Node: `node --test <path-to-test>`
-     - Typecheck: `npx vue-tsc --noEmit`
-   - Run `npm run build` to validate end-to-end compilation before submitting.
+     - Typecheck: `bunx vue-tsc --noEmit`
+   - Run `bun run build` to validate end-to-end compilation before submitting.
 
 7. **Submitting Changes**:
    - Use conventional commit messages (`feat: ...`, `fix: ...`, `refactor: ...`).
@@ -66,7 +66,7 @@ Follow these exact steps to prepare your workspace, fork the repository, and del
 
 Make sure you have the following installed on your machine:
 - **Node.js**: `v20.x` or later (LTS recommended)
-- **npm**: `v10.x` or later
+- **Bun**: `v1.4.0`
 - **Rust Toolchain**: `cargo` & `rustc` (see [docs/dev/INSTALL_RUST.md](INSTALL_RUST.md))
 - **GitHub CLI (`gh`)**: Install from [https://cli.github.com/](https://cli.github.com/)
 - **Git**: Standard git CLI
@@ -113,14 +113,14 @@ git checkout -b feat/your-feature-name
 
 ### 4. Installing Dependencies & Running Locally
 
-1. **Install npm dependencies**:
+1. **Install Bun dependencies**:
    ```bash
-   npm install
+   bun install
    ```
 
 2. **Start Development Environment**:
    ```bash
-   npm run dev
+   bun run dev
    ```
    This compiles the Rust native capture addon and starts both Vite and Electron in development mode.
 
@@ -144,7 +144,7 @@ Run focused tests directly related to the code you modified:
 
 - **Vue / Frontend tests**:
   ```bash
-  npx vitest run src/components/video-editor/timeline/tests/
+  bunx vitest run src/components/video-editor/timeline/tests/
   ```
 - **Electron / Node tests**:
   ```bash
@@ -152,11 +152,11 @@ Run focused tests directly related to the code you modified:
   ```
 - **Type Checking**:
   ```bash
-  npx vue-tsc --noEmit
+  bunx vue-tsc --noEmit
   ```
 - **Production Build Validation**:
   ```bash
-  npm run build
+  bun run build
   ```
 
 ---

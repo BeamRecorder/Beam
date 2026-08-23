@@ -64,9 +64,9 @@ Do not lower the threshold to make a change pass. If a module is difficult to te
 Use the relevant commands before handoff:
 
 ```bash
-npm run test
-npx vitest run --coverage
-npm run build
+bun run test
+bunx vitest run --coverage
+bun run build
 cargo fmt --all --check
 cargo test --workspace --all-features
 cargo clippy --workspace --all-targets --all-features -- -D warnings

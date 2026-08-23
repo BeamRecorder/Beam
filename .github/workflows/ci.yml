@@ -28,6 +28,7 @@ jobs:
             packaging:
               - '.github/workflows/**'
               - 'build/**'
+              - 'bun.lock'
               - 'Cargo.*'
               - 'electron/**'
               - 'packages/**'
@@ -49,7 +50,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
@@ -61,12 +64,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --yes clang libclang-dev libpipewire-0.3-dev pkg-config
-      - run: node scripts/ci/npm-ci-retry.cjs
-      - run: npm run format:check
-      - run: npm run typecheck
-      - run: npm run typecheck:vue
-      - run: npm run test
-      # - run: npm run test:coverage
+      - run: node scripts/ci/bun-install-retry.cjs
+      - run: bun run format:check
+      - run: bun run typecheck
+      - run: bun run typecheck:vue
+      - run: bun run test
+      # - run: bun run test:coverage
       - run: cargo fmt --all --check
       - run: cargo test -p capture --all-features
       - run: cargo clippy -p capture --all-targets --all-features -- -D warnings
@@ -83,14 +86,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
       - name: Cache Electron packaging binaries
         uses: actions/cache@v4
         with:
           path: |
             ${{ env.ELECTRON_BUILDER_CACHE }}
             ${{ env.electron_config_cache }}
-          key: ${{ runner.os }}-${{ runner.arch }}-electron-builder-${{ hashFiles('package-lock.json') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-electron-builder-${{ hashFiles('bun.lock') }}
           restore-keys: ${{ runner.os }}-${{ runner.arch }}-electron-builder-
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
@@ -104,9 +109,9 @@ jobs:
             clang cpio ffmpeg libclang-dev libpipewire-0.3-dev \
             p7zip-full pipewire pkg-config rpm wireplumber \
             xdg-desktop-portal xdg-desktop-portal-gnome
-      - run: node scripts/ci/npm-ci-retry.cjs
-      - run: npm run build
-      - run: npx electron-builder --linux AppImage deb rpm --x64 --publish never
+      - run: node scripts/ci/bun-install-retry.cjs
+      - run: bun run build
+      - run: bunx electron-builder --linux AppImage deb rpm --x64 --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       - run: node scripts/native/artifacts.cjs collect --output dist_native
@@ -159,14 +164,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
       - name: Cache Electron packaging binaries
         uses: actions/cache@v4
         with:
           path: |
             ${{ env.ELECTRON_BUILDER_CACHE }}
             ${{ env.electron_config_cache }}
-          key: ${{ runner.os }}-${{ runner.arch }}-electron-builder-${{ hashFiles('package-lock.json') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-electron-builder-${{ hashFiles('bun.lock') }}
           restore-keys: ${{ runner.os }}-${{ runner.arch }}-electron-builder-
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -175,7 +182,7 @@ jobs:
         with:
           shared-key: cargo-package-windows-x64-arm64-release
           cache-on-failure: true
-      - run: node scripts/ci/npm-ci-retry.cjs
+      - run: node scripts/ci/bun-install-retry.cjs
       - name: Build and stage both Windows engines
         shell: pwsh
         run: |
@@ -183,8 +190,8 @@ jobs:
           cargo build -p capture --bin capture-engine --release --target aarch64-pc-windows-msvc
           node scripts/native/artifacts.cjs stage --platform win32 --arch x64 --target x86_64-pc-windows-msvc
           node scripts/native/artifacts.cjs stage --platform win32 --arch arm64 --target aarch64-pc-windows-msvc
-          npx vite build
-      - run: npx electron-builder --win nsis --x64 --arm64 --publish never
+          bunx vite build
+      - run: bunx electron-builder --win nsis --x64 --arm64 --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       - run: node scripts/native/artifacts.cjs collect --output dist_native
@@ -265,14 +272,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
       - name: Cache Electron packaging binaries
         uses: actions/cache@v4
         with:
           path: |
             ${{ env.ELECTRON_BUILDER_CACHE }}
             ${{ env.electron_config_cache }}
-          key: ${{ runner.os }}-${{ runner.arch }}-electron-builder-${{ hashFiles('package-lock.json') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-electron-builder-${{ hashFiles('bun.lock') }}
           restore-keys: ${{ runner.os }}-${{ runner.arch }}-electron-builder-
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -281,13 +290,13 @@ jobs:
         with:
           shared-key: cargo-package-macos-aarch64-apple-darwin-release
           cache-on-failure: true
-      - run: node scripts/ci/npm-ci-retry.cjs
+      - run: node scripts/ci/bun-install-retry.cjs
       - name: Build the Apple Silicon engine and renderer
         run: |
           cargo build -p capture --bin capture-engine --release --target aarch64-apple-darwin
           node scripts/native/artifacts.cjs stage --platform darwin --arch arm64 --target aarch64-apple-darwin
-          npx vite build
-      - run: npx electron-builder --mac dmg zip --arm64 --publish never
+          bunx vite build
+      - run: bunx electron-builder --mac dmg zip --arm64 --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       - run: node scripts/native/artifacts.cjs collect --output dist_native

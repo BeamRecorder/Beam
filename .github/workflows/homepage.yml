@@ -26,16 +26,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
       - name: Install repository dependencies
-        run: node scripts/ci/npm-ci-retry.cjs
+        run: node scripts/ci/bun-install-retry.cjs
       - name: Verify homepage
         run: |
-          npm run website:typecheck
-          npm run website:test
-          npm run website:build
+          bun run website:typecheck
+          bun run website:test
+          bun run website:build
       - name: Install pinned Wrangler CLI
-        run: npm install --global wrangler@4.123.0
+        run: bun add --global wrangler@4.123.0
       - name: Deploy homepage to Cloudflare Pages
         working-directory: website
         env:

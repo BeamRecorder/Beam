@@ -59,4 +59,4 @@ Recorder mode enables Electron content protection. Camera and Recorder windows m
 4. Verify transparent regions do not steal clicks or focus.
 5. Verify popovers at each screen edge and with nested selects.
 6. Verify HUD → Recorder → Editor → HUD restores the intended bounds and position.
-7. Run `npm run build` and the focused tests.
+7. Run `bun run build` and the focused tests.
