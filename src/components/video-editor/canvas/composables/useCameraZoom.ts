@@ -1,5 +1,5 @@
 import { computed, getCurrentScope, onScopeDispose, ref } from 'vue';
-import { ZOOM_DEPTH_SCALES, type ZoomElement, type ZoomMotionBlurSettings } from '../../zoom/zoom-types';
+import { ZOOM_DEPTH_SCALES } from '../../zoom/zoom-types';
 import { createCompositionCameraEvaluator } from '../../zoom/composition-camera';
 import { clampFocusToScale } from '../../zoom/zoom-playback';
 import { createZoomMotionBlurSamplePlan, ZOOM_MOTION_BLUR_SHUTTER_MS } from '../../zoom/zoom-motion-blur';
@@ -9,65 +9,19 @@ import {
   resizeMotionBlurSurface,
   type MotionBlurSurface,
 } from '../../zoom/zoom-motion-blur-compositor';
-import { OUTPUT_PREVIEW_RADIUS, outputPreviewRect, type OutputCanvasSettings } from '../output-canvas';
-import type { ProjectEditorData } from '~/api/types/capture-api';
+import { OUTPUT_PREVIEW_RADIUS, outputPreviewRect } from '../output-canvas';
 import type { MediaFrame } from '~/media/shared';
-import type { ClipComposition, NormalizedTransform, VisualClip } from '~/media/shared/composition-types';
+import type { VisualClip } from '~/media/shared/composition-types';
 import { drawDecoratedMedia } from '../../composition/appearance/render-decorated-media';
 import { mapSourcePointToScreen, resolveScreenRenderGeometry } from '../../composition/camera-layout';
 import { resolveCompositionSceneLayers, type CompositionSceneLayers } from '../../composition/scene-layers';
+import type { RenderedVideoWindow, UseCameraZoomOptions, VideoWindowBounds } from './useCameraZoom.types';
 
-export interface VideoWindowBounds {
-  dx: number;
-  dy: number;
-  dw: number;
-  dh: number;
-  scale: number;
-  focusX?: number;
-  focusY?: number;
-}
-export interface RenderedVideoWindow extends VideoWindowBounds {
-  focusX: number;
-  focusY: number;
-}
-
-export interface UseCameraZoomOptions {
-  canvasRef: () => HTMLCanvasElement | null;
-  outputCanvas: () => OutputCanvasSettings;
-  zoomElements: () => ZoomElement[];
-  zoomMotionBlur?: () => ZoomMotionBlurSettings;
-  selectedZoom: () => ZoomElement | null;
-  currentTime: () => number;
-  isPlaying: () => boolean;
-  editorData: () => ProjectEditorData | null | undefined;
-  activeTab: () => string;
-  composition: () => ClipComposition;
-  screenTransformDraft?: () => NormalizedTransform | null;
-  isCropping?: () => boolean | undefined;
-  drawBackground: (
-    ctx: CanvasRenderingContext2D,
-    bounds: { x: number; y: number; width: number; height: number },
-  ) => void;
-  videoError: () => string | null;
-  renderVisualStack?: (
-    ctx: CanvasRenderingContext2D,
-    videoWindow: RenderedVideoWindow,
-    drawScreen: () => void,
-    layers: CompositionSceneLayers,
-  ) => void;
-  onUpdateZoom: (zoom: ZoomElement) => void;
-  onSelectScreenClip: (clipId: string) => void;
-  onSelectCanvas: () => void;
-  onDeselectTransformClip: () => void;
-  onDeselectZoom: () => void;
-  selectVisualAt: (event: PointerEvent) => boolean;
-  selectedTransformClipExists: () => boolean;
-  onRenderOnce?: () => void;
-}
+export type { RenderedVideoWindow, UseCameraZoomOptions, VideoWindowBounds } from './useCameraZoom.types';
 
 export function useCameraZoom(options: UseCameraZoomOptions) {
   let cameraEvaluator: ReturnType<typeof createCompositionCameraEvaluator> | null = null;
-  let cameraEvaluatorKey = '';
+  let cameraEvaluatorInputs: readonly unknown[] | null = null;
   const videoWindowBounds = ref<VideoWindowBounds | null>(null);
   const screenHitBounds = ref<{ dx: number; dy: number; dw: number; dh: number } | null>(null);
   const overlayWindowBounds = ref<VideoWindowBounds | null>(null);
@@ -87,7 +41,8 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     resolveCompositionSceneLayers(options.composition(), options.currentTime() * 1_000).screen;
 
   const resetCamera = () => {
-    cameraEvaluator?.invalidate();
+    cameraEvaluator = null;
+    cameraEvaluatorInputs = null;
     options.onRenderOnce?.();
   };
   const resetCameraUnlessDragging = () => {
@@ -228,10 +183,12 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     width: number,
     height: number,
     frame: MediaFrame | null,
+    resolvedLayers?: CompositionSceneLayers,
   ): RenderedVideoWindow | null => {
     const output = options.outputCanvas();
     const preview = outputPreviewRect(width, height, output);
-    const sceneLayers = resolveCompositionSceneLayers(options.composition(), options.currentTime() * 1_000);
+    const sceneLayers =
+      resolvedLayers ?? resolveCompositionSceneLayers(options.composition(), options.currentTime() * 1_000);
     const screen = sceneLayers.screen;
     const hasCameraVisual = sceneLayers.cameraVisuals.length > 0;
     if (!hasCameraVisual) {
@@ -287,19 +244,27 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     const currentTime = options.currentTime();
     const telemetry = options.editorData()?.cursor.telemetry ?? [];
     const selectedZoom = options.selectedZoom();
-    const previewZooms =
-      !options.isPlaying() && selectedZoom?.mode === 'manual'
-        ? options.zoomElements().filter((zoom) => zoom.id !== selectedZoom.id)
-        : options.zoomElements();
-    const key = JSON.stringify({
-      zooms: previewZooms,
+    const zooms = options.zoomElements();
+    const evaluatorInputs = [
+      zooms,
       telemetry,
-      canvas: output,
-      source: screen ? [videoWidth, videoHeight] : null,
-      screen: screen ? [screen.transform, screen.crop, screen.cameraFramingPreset] : null,
-    });
-    if (!cameraEvaluator || key !== cameraEvaluatorKey) {
-      cameraEvaluatorKey = key;
+      output,
+      screen,
+      selectedZoom?.id,
+      selectedZoom?.mode,
+      options.isPlaying(),
+      videoWidth,
+      videoHeight,
+      dw,
+      dh,
+    ] as const;
+    const inputsChanged = evaluatorInputs.some((value, index) => value !== cameraEvaluatorInputs?.[index]);
+    if (!cameraEvaluator || !cameraEvaluatorInputs || inputsChanged) {
+      cameraEvaluatorInputs = evaluatorInputs;
+      const previewZooms =
+        !options.isPlaying() && selectedZoom?.mode === 'manual'
+          ? zooms.filter((zoom) => zoom.id !== selectedZoom.id)
+          : zooms;
       cameraEvaluator = createCompositionCameraEvaluator({
         zooms: previewZooms,
         telemetry,
@@ -382,6 +347,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
         current: cameraAt(currentTime * 1_000 + halfShutterMs),
         intensity: blurIntensity,
         deltaMs: halfShutterMs * 2,
+        sampleCount: options.isPlaying() ? 3 : undefined,
         viewportWidth: dw,
         viewportHeight: dh,
       });

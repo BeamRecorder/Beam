@@ -6,6 +6,7 @@ import type { MediaFrame } from '~/media/shared';
 import type { BlurClip, ClipComposition, CaptionClip, VisualClip } from '~/media/shared/composition-types';
 import { DEFAULT_OUTPUT_CANVAS } from '../../output-canvas';
 import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
+import * as mediaShared from '~/media/shared';
 import * as sceneLayers from '../../../composition/scene-layers';
 
 const drawDecoratedMedia = vi.hoisted(() => vi.fn());
@@ -377,6 +378,31 @@ describe('useCompositionMedia', () => {
 
     expect(resolveLayers).not.toHaveBeenCalled();
     expect(drawDecoratedMedia).toHaveBeenCalled();
+  });
+
+  it('uses supplied caption layers without querying active clips or resolving the scene again', () => {
+    const mounted = mountComposable();
+    const captionClip = mounted.compositionRef.value.clips.find((clip) => clip.kind === 'caption') as CaptionClip;
+    const resolvedLayers = {
+      screen: null,
+      cameraVisuals: [],
+      webcams: [],
+      visualStack: [],
+      captions: [captionClip],
+    };
+    const activeClips = vi.spyOn(mediaShared, 'activeClipsAt').mockImplementation(() => {
+      throw new Error('drawComposition should reuse the supplied captions');
+    });
+    const resolveLayers = vi.spyOn(sceneLayers, 'resolveCompositionSceneLayers').mockImplementation(() => {
+      throw new Error('drawComposition should not resolve the scene when layers are supplied');
+    });
+    const ctx = context();
+
+    state.drawComposition(ctx, { dx: 0, dy: 0, dw: 800, dh: 400 }, undefined, resolvedLayers);
+
+    expect(activeClips).not.toHaveBeenCalled();
+    expect(resolveLayers).not.toHaveBeenCalled();
+    expect(ctx.fillText).toHaveBeenCalledWith('Hello', expect.any(Number), expect.any(Number));
   });
 
   it('plays the same preview entry transition at timeline zero and after a small offset', () => {

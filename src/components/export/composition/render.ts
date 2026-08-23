@@ -86,12 +86,13 @@ function drawCaption(
 ) {
   const { text, runs } = captionContentAt(clip, timeMs);
   if (!text) return;
+  const referenceCanvas = snapshot.referenceCanvas ?? snapshot.canvas;
   drawCaptionText(ctx, {
     clip,
     text,
     runs,
     cursorPosition,
-    canvas: snapshot.canvas,
+    canvas: referenceCanvas,
     viewport: { x: 0, y: 0, width: snapshot.canvas.width, height: snapshot.canvas.height },
   });
 }

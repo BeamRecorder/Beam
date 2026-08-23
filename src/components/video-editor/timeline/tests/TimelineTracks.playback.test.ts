@@ -3,12 +3,19 @@ import { describe, expect, it, vi } from 'vitest';
 import type { VisualClip } from '~/media/shared/composition-types';
 import {
   TimelineClipStub,
+  getWaveformTestState,
   mountTracks,
   pointerEvent,
   queueAnimationFrames,
   setPlaybackViewportGeometry,
   setScrubViewportGeometry,
 } from './TimelineTracks.test-support';
+
+const wheelZoomEvent = (deltaY = -100) => {
+  const event = new WheelEvent('wheel', { ctrlKey: true, deltaY, bubbles: true, cancelable: true });
+  Object.defineProperty(event, 'timeStamp', { configurable: true, value: 0 });
+  return event;
+};
 
 describe('TimelineTracks', () => {
   it('scrolls the playhead into view when playback crosses the right boundary', async () => {
@@ -18,6 +25,24 @@ describe('TimelineTracks', () => {
     await mounted!.setProps({ currentTime: 8 });
 
     expect(scroll.scrollLeft).toBeGreaterThan(0);
+  });
+
+  it('coalesces playback follow-scroll measurement with the resulting scroll event', async () => {
+    const mounted = await mountTracks({ isPlaying: true });
+    const scroll = setPlaybackViewportGeometry(mounted!);
+    const ticks = mounted!.get('.ruler-ticks-area').element;
+    const scrollRect = vi.mocked(scroll.getBoundingClientRect);
+    const ticksRect = vi.mocked(ticks.getBoundingClientRect);
+    const { pendingFrames, flushNextFrame } = queueAnimationFrames();
+
+    await mounted!.setProps({ currentTime: 8 });
+    scroll.dispatchEvent(new Event('scroll'));
+
+    expect(pendingFrames.size).toBe(1);
+    flushNextFrame();
+
+    expect(scrollRect).toHaveBeenCalledTimes(2);
+    expect(ticksRect).toHaveBeenCalledTimes(2);
   });
 
   it('does not move the timeline when a paused playhead crosses the right boundary', async () => {
@@ -139,5 +164,109 @@ describe('TimelineTracks', () => {
     if (!thumbnailSlots) throw new Error('Expected thumbnail slots after viewport zoom.');
     expect(thumbnailSlots).toHaveLength(8);
     expect(thumbnailSlots[0]!).toEqual({ timelineSeconds: 2, durationSeconds: 1 });
+  });
+
+  it('freezes thumbnail slots and the waveform viewport during wheel zoom until idle', async () => {
+    const mounted = await mountTracks();
+    const scroll = setScrubViewportGeometry(mounted!);
+    scroll.dispatchEvent(new Event('scroll'));
+    await flushPromises();
+
+    const screen = mounted!
+      .findAllComponents(TimelineClipStub)
+      .find((component) => (component.props('clip') as VisualClip).id === 'screen-clip');
+    if (!screen) throw new Error('Expected the screen timeline clip stub to be mounted.');
+    const initialThumbnailSlots = screen.props('thumbnailSlots');
+    const initialWaveformViewport = getWaveformTestState().viewport?.();
+    if (!initialWaveformViewport) throw new Error('Expected the waveform viewport probe.');
+
+    const { pendingFrames, flushNextFrame } = queueAnimationFrames();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      scroll.dispatchEvent(wheelZoomEvent());
+      await mounted!.vm.$nextTick();
+      expect(mounted!.get('.timeline-viewport').classes()).toContain('is-wheel-zooming');
+      expect(pendingFrames.size).toBe(1);
+
+      flushNextFrame();
+      await mounted!.setProps({ zoomLevel: 145 });
+      scroll.scrollLeft = 250;
+      scroll.dispatchEvent(new Event('scroll'));
+      expect(pendingFrames.size).toBe(1);
+      flushNextFrame();
+      await flushPromises();
+
+      expect(screen.props('thumbnailSlots')).toBe(initialThumbnailSlots);
+      expect(getWaveformTestState().viewport?.()).toBe(initialWaveformViewport);
+
+      await vi.advanceTimersByTimeAsync(119);
+      await mounted!.vm.$nextTick();
+      expect(mounted!.get('.timeline-viewport').classes()).toContain('is-wheel-zooming');
+      expect(screen.props('thumbnailSlots')).toBe(initialThumbnailSlots);
+      expect(getWaveformTestState().viewport?.()).toBe(initialWaveformViewport);
+
+      await vi.advanceTimersByTimeAsync(1);
+      await flushPromises();
+      expect(mounted!.get('.timeline-viewport').classes()).not.toContain('is-wheel-zooming');
+      expect(screen.props('thumbnailSlots')).not.toBe(initialThumbnailSlots);
+      expect(getWaveformTestState().viewport?.()).not.toBe(initialWaveformViewport);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('reconciles the frozen media inputs once after a wheel burst settles', async () => {
+    const mounted = await mountTracks();
+    const scroll = setScrubViewportGeometry(mounted!);
+    scroll.dispatchEvent(new Event('scroll'));
+    await flushPromises();
+
+    const screen = mounted!
+      .findAllComponents(TimelineClipStub)
+      .find((component) => (component.props('clip') as VisualClip).id === 'screen-clip');
+    if (!screen) throw new Error('Expected the screen timeline clip stub to be mounted.');
+    const initialThumbnailSlots = screen.props('thumbnailSlots');
+    const initialWaveformViewport = getWaveformTestState().viewport?.();
+    if (!initialWaveformViewport) throw new Error('Expected the waveform viewport probe.');
+
+    const { pendingFrames, flushNextFrame } = queueAnimationFrames();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      scroll.dispatchEvent(wheelZoomEvent());
+      scroll.dispatchEvent(wheelZoomEvent());
+      expect(pendingFrames.size).toBe(1);
+      flushNextFrame();
+      await mounted!.setProps({ zoomLevel: 145 });
+
+      scroll.scrollLeft = 250;
+      scroll.dispatchEvent(new Event('scroll'));
+      expect(pendingFrames.size).toBe(1);
+      flushNextFrame();
+      await flushPromises();
+      expect(screen.props('thumbnailSlots')).toBe(initialThumbnailSlots);
+      expect(getWaveformTestState().viewport?.()).toBe(initialWaveformViewport);
+
+      scroll.scrollLeft = 450;
+      scroll.dispatchEvent(new Event('scroll'));
+      expect(pendingFrames.size).toBe(1);
+      flushNextFrame();
+      await flushPromises();
+      expect(screen.props('thumbnailSlots')).toBe(initialThumbnailSlots);
+      expect(getWaveformTestState().viewport?.()).toBe(initialWaveformViewport);
+
+      await vi.advanceTimersByTimeAsync(120);
+      await flushPromises();
+      const reconciledThumbnailSlots = screen.props('thumbnailSlots');
+      const reconciledWaveformViewport = getWaveformTestState().viewport?.();
+      expect(reconciledThumbnailSlots).not.toBe(initialThumbnailSlots);
+      expect(reconciledWaveformViewport).not.toBe(initialWaveformViewport);
+
+      await vi.advanceTimersByTimeAsync(240);
+      await flushPromises();
+      expect(screen.props('thumbnailSlots')).toBe(reconciledThumbnailSlots);
+      expect(getWaveformTestState().viewport?.()).toBe(reconciledWaveformViewport);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

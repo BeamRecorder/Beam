@@ -119,6 +119,25 @@ const mountComposable = (motionBlurSettings = { enabled: false, intensity: 0.55 
   const output = ref({ preset: '16:9' as const, width: 800, height: 450, showBackground: false });
   const screenTransformDraft = ref<NormalizedTransform | null>(null);
   const videoError = ref<string | null>('recording unavailable');
+  const editorData = {
+    cursor: {
+      telemetry: [
+        { timeMs: 400, cx: 0.1, cy: 0.9 },
+        { timeMs: 900, cx: 0.9, cy: 0.1 },
+      ],
+      events: [
+        {
+          event: 'move',
+          sessionNs: 500_000_000,
+          pixelX: 10,
+          pixelY: 10,
+          normalizedX: 0.2,
+          normalizedY: 0.8,
+          visible: true,
+        },
+      ],
+    },
+  } as any;
   const canvas = document.createElement('canvas');
   canvas.getBoundingClientRect = () => ({
     left: 0,
@@ -154,26 +173,7 @@ const mountComposable = (motionBlurSettings = { enabled: false, intensity: 0.55 
         zoomMotionBlur: () => motionBlur.value,
         currentTime: () => currentTime.value,
         isPlaying: () => playing.value,
-        editorData: () =>
-          ({
-            cursor: {
-              telemetry: [
-                { timeMs: 400, cx: 0.1, cy: 0.9 },
-                { timeMs: 900, cx: 0.9, cy: 0.1 },
-              ],
-              events: [
-                {
-                  event: 'move',
-                  sessionNs: 500_000_000,
-                  pixelX: 10,
-                  pixelY: 10,
-                  normalizedX: 0.2,
-                  normalizedY: 0.8,
-                  visible: true,
-                },
-              ],
-            },
-          }) as any,
+        editorData: () => editorData,
         activeTab: () => activeTab.value,
         composition: () => compositionRef.value,
         screenTransformDraft: () => screenTransformDraft.value,
@@ -396,6 +396,53 @@ describe('useCameraZoom', () => {
     );
   });
 
+  it('reuses the camera evaluator for stable inputs and invalidates changed geometry', () => {
+    const createEvaluator = vi.spyOn(compositionCamera, 'createCompositionCameraEvaluator');
+    mountComposable();
+    const stringify = vi.spyOn(JSON, 'stringify');
+    const stableFrame = frame();
+    const render = () => state.drawVideoWindow(context(), 800, 450, stableFrame);
+    const cameraKeySerializations = () =>
+      stringify.mock.calls.filter(([value]) => {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+        const key = value as Record<string, unknown>;
+        return 'zooms' in key && 'telemetry' in key && 'canvas' in key && 'source' in key && 'screen' in key;
+      }).length;
+
+    render();
+    expect(createEvaluator).toHaveBeenCalledOnce();
+    const firstKeySerializations = cameraKeySerializations();
+
+    for (let index = 0; index < 12; index += 1) render();
+
+    expect(createEvaluator).toHaveBeenCalledOnce();
+    expect(cameraKeySerializations()).toBeLessThanOrEqual(firstKeySerializations);
+
+    options.zooms.value = [{ ...autoZoom, depth: 1 }];
+    render();
+    expect(createEvaluator).toHaveBeenCalledTimes(2);
+
+    const currentOutput = options.output.value!;
+    options.output.value = {
+      preset: currentOutput.preset,
+      width: 720,
+      height: currentOutput.height,
+      showBackground: currentOutput.showBackground,
+    };
+    render();
+    expect(createEvaluator).toHaveBeenCalledTimes(3);
+
+    const currentComposition = options.compositionRef.value!;
+    options.compositionRef.value = {
+      schemaVersion: currentComposition.schemaVersion,
+      assets: currentComposition.assets,
+      keyboardCaptionSessions: currentComposition.keyboardCaptionSessions,
+      clips: [{ ...screenClip(), transform: { x: 0.1, y: 0.2, width: 0.7, height: 0.8 } }],
+    };
+    render();
+    expect(createEvaluator).toHaveBeenCalledTimes(4);
+  });
+
   it('applies auto zoom, computes manual target focus, and updates pointer focus', async () => {
     mountComposable();
     const ctx = context();
@@ -600,6 +647,16 @@ describe('useCameraZoom', () => {
     expect(sampleContext.clearRect).toHaveBeenCalledWith(0, 0, 800, 450);
     expect(sampleContext.fillRect).not.toHaveBeenCalled();
     expect(drawDecoratedMedia).toHaveBeenCalled();
+  });
+
+  it('limits enabled high-intensity playback motion blur to three composited samples', () => {
+    mountComposable({ enabled: true, intensity: 1 });
+    options.playing.value = true;
+
+    state.drawVideoWindow(context(), 800, 450, frame());
+
+    expect(motionBlurCompositor.compositeIsolatedMotionBlurSample.mock.calls.length).toBeLessThanOrEqual(3);
+    expect(motionBlurCompositor.compositeIsolatedMotionBlurSample).toHaveBeenCalled();
   });
 
   it('does not sample shutter endpoints when zoom motion blur is disabled', () => {

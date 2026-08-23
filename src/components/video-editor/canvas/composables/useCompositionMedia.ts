@@ -218,9 +218,10 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     ctx: CanvasRenderingContext2D,
     window: { dx: number; dy: number; dw: number; dh: number },
     onlyClipId?: string,
+    resolvedLayers?: CompositionSceneLayers,
   ) => {
     const timeMs = options.currentTime() * 1_000;
-    const clips = activeClipsAt(options.composition(), timeMs)
+    const clips = (resolvedLayers?.captions ?? activeClipsAt(options.composition(), timeMs))
       .filter((clip) => (onlyClipId ? clip.id === onlyClipId : clip.kind === 'caption'))
       .sort((left, right) => right.order - left.order);
     for (const clip of clips) {

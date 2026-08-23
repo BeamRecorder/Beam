@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { drawCompositionLayers, renderCompositionFrame, type RenderableMedia } from '../render';
-import type { VisualClip } from '~/media/shared/composition-types';
+import type { CaptionClip, VisualClip } from '~/media/shared/composition-types';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import type { CursorPackDescriptor } from '../../../../api/types/cursor-pack';
 import { createCursorMotionPlayer } from '../../../video-editor/composables/cursor-motion';
@@ -24,6 +24,34 @@ const wideCursorPack = (): CursorPackDescriptor => ({
   ],
   automaticMap: { default: 'wide-default' },
 });
+
+const resolutionCaption = (): CaptionClip => ({
+  id: 'resolution-caption',
+  kind: 'caption',
+  name: 'Resolution caption',
+  timelineStartMs: 0,
+  timelineDurationMs: 1_000,
+  sourceInMs: 0,
+  sourceDurationMs: 1_000,
+  playbackRate: 1,
+  enabled: true,
+  order: 1,
+  transform: { x: 0.1, y: 0.1, width: 0.12, height: 0.2 },
+  caption: {
+    type: 'text',
+    sentences: [],
+    style: {
+      ...createDefaultCaptionStyle(42),
+      customText: 'one two three four five six',
+      wrap: true,
+      shadowBlur: 0,
+      outlineWidth: 0,
+      extrusionDepth: 0,
+      backdropBlur: 0,
+    },
+  },
+});
+
 describe('canonical composition rendering', () => {
   it('paints the fallback canvas when the screen clip has no available frame', () => {
     const ctx = context();
@@ -341,6 +369,33 @@ describe('canonical composition rendering', () => {
     expect(fillText.mock.calls.length).toBeGreaterThan(1);
     expect(fillText.mock.calls.every((call: unknown[]) => call.length === 3)).toBe(true);
     expect(ctx.font).toBe('normal 800 20px sans-serif');
+  });
+
+  it('scales exported caption fonts to 720p while preserving reference wrapping', () => {
+    const renderAt = (width: number, height: number) => {
+      const value = snapshot();
+      value.referenceCanvas = { width: 1_920, height: 1_080 };
+      value.canvas = { ...value.canvas, width, height };
+      value.composition.clips.push(resolutionCaption());
+      const ctx = context();
+      const lines: string[] = [];
+      const fonts: string[] = [];
+      (ctx.fillText as ReturnType<typeof vi.fn>).mockImplementation(((text: string) => {
+        lines.push(text);
+        fonts.push(ctx.font);
+      }) as CanvasRenderingContext2D['fillText']);
+
+      renderCompositionFrame(ctx, null, value, 0.2);
+      return { lines, fonts };
+    };
+
+    const native = renderAt(1_920, 1_080);
+    const hd = renderAt(1_280, 720);
+
+    expect(native.lines).toEqual(['one two three four', 'five six']);
+    expect(hd.lines).toEqual(native.lines);
+    expect(native.fonts).toEqual(['normal 800 42px sans-serif', 'normal 800 42px sans-serif']);
+    expect(hd.fonts).toEqual(['normal 800 28px sans-serif', 'normal 800 28px sans-serif']);
   });
 
   it('keeps constrained rendering when wrapping is disabled', () => {

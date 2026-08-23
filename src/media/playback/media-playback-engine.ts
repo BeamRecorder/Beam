@@ -48,6 +48,7 @@ export class MediaPlaybackEngine {
   private workerDisposeTimer: ReturnType<typeof setTimeout> | null = null;
   private workerTerminated = false;
   private currentSeconds = 0;
+  private durationSeconds = 0;
   private playbackState: PlaybackState = 'idle';
   private previewQuality: PreviewQuality;
   private metrics: PlaybackMetrics = {
@@ -93,6 +94,7 @@ export class MediaPlaybackEngine {
     if (this.canRetimeComposition(composition)) return this.retimeComposition(composition, timelineSeconds);
     this.pause();
     this.composition = composition;
+    this.durationSeconds = this.compositionDuration(composition);
     this.currentSeconds = this.clampTime(timelineSeconds);
     this.cache.clear();
     this.currentFrameKeys.clear();
@@ -138,6 +140,7 @@ export class MediaPlaybackEngine {
     const shouldReloadAudio = audioPlaybackTopology(previousComposition) !== audioPlaybackTopology(composition);
     this.pause();
     this.composition = composition;
+    this.durationSeconds = this.compositionDuration(composition);
     this.currentSeconds = this.clampTime(timelineSeconds);
     const requestGeneration = ++this.generation;
     for (const pending of this.pendingLoads.values()) pending.resolve();
@@ -314,6 +317,7 @@ export class MediaPlaybackEngine {
     for (const pending of this.pendingLoads.values()) pending.reject(new Error('Playback engine disposed.'));
     this.pendingLoads.clear();
     this.composition = null;
+    this.durationSeconds = 0;
     this.setState('disposed');
     this.listeners.clear();
   }
@@ -408,12 +412,9 @@ export class MediaPlaybackEngine {
     this.animationFrame = null;
   }
 
-  private get durationSeconds(): number {
+  private compositionDuration(composition: ClipComposition): number {
     return (
-      (this.composition?.clips.reduce(
-        (end, clip) => Math.max(end, clip.timelineStartMs + clip.timelineDurationMs),
-        0,
-      ) ?? 0) / 1_000
+      composition.clips.reduce((end, clip) => Math.max(end, clip.timelineStartMs + clip.timelineDurationMs), 0) / 1_000
     );
   }
 

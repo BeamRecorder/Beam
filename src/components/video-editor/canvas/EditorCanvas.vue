@@ -29,6 +29,7 @@ import { useCursorCanvasInteraction } from './composables/useCursorCanvasInterac
 import { CURSOR_SIZE_MAX, CURSOR_SIZE_MIN } from '../properties/cursor/cursor-size';
 import { useEditorCanvasPointerInteractions } from './composables/useEditorCanvasPointerInteractions';
 import { useEditorCanvasAssets } from './composables/useEditorCanvasAssets';
+import { useEditorCanvasInvalidation } from './composables/useEditorCanvasInvalidation';
 const { t } = useTranslate('EditorCanvas');
 const props = withDefaults(defineProps<EditorCanvasProps>(), { previewQuality: 'full' });
 const emit = defineEmits<EditorCanvasEmits>();
@@ -56,9 +57,8 @@ let drawVisualStack:
     ) => void)
   | null = null;
 const viewportZoom = useViewportZoom();
-const liveScreenClip = computed<VisualClip | null>(
-  () => resolveCompositionSceneLayers(props.composition, props.currentTime * 1_000).screen,
-);
+const currentSceneLayers = computed(() => resolveCompositionSceneLayers(props.composition, props.currentTime * 1_000));
+const liveScreenClip = computed<VisualClip | null>(() => currentSceneLayers.value.screen);
 const selectedCaptionFollowsCursor = computed(
   () =>
     props.selectedTransformClip?.kind === 'caption' &&
@@ -230,29 +230,12 @@ watch(
     renderOnce();
   },
 );
-watch(() => props.outputCanvas, renderOnce, { deep: true });
-watch(() => [props.composition, props.currentTime, props.frameVersion, props.isCropping] as const, renderOnce, {
-  deep: true,
-});
-watch(() => [props.zoomElements, props.selectedZoom] as const, cameraZoom.resetCameraUnlessDragging, { deep: true });
-watch(
-  () =>
-    [
-      props.cursorSelection,
-      props.cursorPack,
-      props.cursorSize,
-      props.cursorColor,
-      props.enableShadow,
-      props.shadowBlur,
-      props.shadowColor,
-      props.shadowDirection,
-      props.clickEffects,
-      props.motion,
-    ] as const,
+useEditorCanvasInvalidation({
+  props,
+  transformDraft: () => transformAndCrop.transformDraft.value,
   renderOnce,
-  { deep: true },
-);
-watch(transformAndCrop.transformDraft, renderOnce, { deep: true });
+  resetCamera: cameraZoom.resetCameraUnlessDragging,
+});
 const resizeCanvas = () => {
   const canvas = canvasRef.value;
   const container = containerRef.value;
@@ -270,7 +253,14 @@ const resizeCanvas = () => {
 watch(() => props.previewQuality, resizeCanvas);
 const watermarkLogo = useEditorCanvasAssets(containerRef, resizeCanvas, renderOnce);
 const drawCanvasScene = (ctx: CanvasRenderingContext2D) => {
-  const window = cameraZoom.drawVideoWindow(ctx, logicalSize.value.width, logicalSize.value.height, screenFrame.value);
+  const layers = currentSceneLayers.value;
+  const window = cameraZoom.drawVideoWindow(
+    ctx,
+    logicalSize.value.width,
+    logicalSize.value.height,
+    screenFrame.value,
+    layers,
+  );
   if (window) {
     currentRenderWindow = window;
     if (!compositionMedia.drawVisualStack) compositionMedia.drawWebcamClips(ctx, window);
@@ -282,7 +272,7 @@ const drawCanvasScene = (ctx: CanvasRenderingContext2D) => {
       logicalSize.value.width,
       (drawContent) => cameraZoom.drawInCameraSpace(ctx, window, drawContent),
     );
-    compositionMedia.drawComposition(ctx, window);
+    compositionMedia.drawComposition(ctx, window, undefined, layers);
   } else {
     currentRenderWindow = null;
     cursorOverlay.clearCursorBounds();
@@ -302,7 +292,7 @@ const drawCanvasScene = (ctx: CanvasRenderingContext2D) => {
     ctx.clip();
     drawBackground(ctx, preview);
     drawNonScreenVisuals(ctx, fallbackWindow);
-    compositionMedia.drawComposition(ctx, fallbackWindow);
+    compositionMedia.drawComposition(ctx, fallbackWindow, undefined, layers);
     ctx.restore();
   }
   const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas);

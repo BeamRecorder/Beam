@@ -936,6 +936,66 @@ describe('playback worker', () => {
     expect(messages().filter((message) => message.type === 'frame')).toHaveLength(2);
   });
 
+  it('rate-limits repeated tick metrics while allowing a later tick to report', async () => {
+    const now = vi.spyOn(performance, 'now').mockReturnValue(100);
+    send({
+      type: 'load',
+      generation: 21,
+      assets: [source('asset-1')],
+      clips: [clip('clip-a')],
+      previewQuality: 'full',
+    });
+    await flush();
+
+    const metricCount = () => messages().filter((message) => message.type === 'metrics').length;
+
+    send({ type: 'tick', generation: 21, timelineSeconds: 0 });
+    await flush();
+    expect(metricCount()).toBe(1);
+
+    now.mockReturnValue(200);
+    send({ type: 'tick', generation: 21, timelineSeconds: 0 });
+    await flush();
+    expect(metricCount()).toBe(1);
+
+    now.mockReturnValue(351);
+    send({ type: 'tick', generation: 21, timelineSeconds: 0 });
+    await flush();
+    expect(metricCount()).toBe(2);
+  });
+
+  it('reports seek metrics immediately even when a tick was just reported', async () => {
+    const now = vi.spyOn(performance, 'now').mockReturnValue(100);
+    send({
+      type: 'load',
+      generation: 22,
+      assets: [source('asset-1')],
+      clips: [clip('clip-a')],
+      previewQuality: 'full',
+    });
+    await flush();
+
+    const sink = runtime.sinkInstances[0]!;
+    const metricCount = () => messages().filter((message) => message.type === 'metrics').length;
+    send({ type: 'tick', generation: 22, timelineSeconds: 0 });
+    await flush();
+    expect(metricCount()).toBe(1);
+
+    now.mockReturnValue(150);
+    sink.getCanvas.mockResolvedValueOnce(wrapped(0.5));
+    send({ type: 'seek', generation: 22, requestId: 220, timelineSeconds: 0.5, mode: 'seek' });
+    await flush();
+
+    expect(metricCount()).toBe(2);
+    expect(messages()).toContainEqual({
+      type: 'seek-result',
+      generation: 22,
+      requestId: 220,
+      result: 'presented',
+      latencyMs: expect.any(Number),
+    });
+  });
+
   it('returns the previous CanvasSink iterator when a sequential tick jumps', async () => {
     const firstIterator = {
       next: vi

@@ -105,10 +105,12 @@
     width 180ms cubic-bezier(0.22, 1, 0.36, 1),
     min-width 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
-.timeline-viewport.is-trimming {
+.timeline-viewport.is-trimming,
+.timeline-viewport.is-wheel-zooming {
   transition: none;
 }
-.timeline-viewport.is-trimming .timeline-clip {
+.timeline-viewport.is-trimming .timeline-clip,
+.timeline-viewport.is-wheel-zooming .timeline-clip {
   will-change: transform, width;
   transition: none;
 }

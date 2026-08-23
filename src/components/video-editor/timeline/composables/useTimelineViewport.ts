@@ -2,8 +2,11 @@ import { computed, onMounted, onUnmounted, ref, watch, type Ref } from 'vue';
 import { useCompositionAudioWaveforms } from './useCompositionAudioWaveforms';
 import { calculateSnapThresholdMs, collectSnapTargets, snapValue } from './timeline-snap';
 import { timelinePlaybackScrollDelta, timelineThumbnailSlots } from './timeline-viewport';
-import { clampTimelineZoom, zoomTimelineByWheel } from './timeline-zoom';
+import { zoomTimelineByWheel } from './timeline-zoom';
 import type { TimelineTracksEmits, TimelineTracksProps } from './timeline-tracks-types';
+
+const MAX_WHEEL_EVENT_AGE_MS = 200;
+const WHEEL_ZOOM_IDLE_MS = 120;
 
 export function useTimelineViewport(
   props: TimelineTracksProps,
@@ -68,6 +71,7 @@ export function useTimelineViewport(
   const visibleStartSecond = ref(0);
   const visibleEndSecond = ref(0);
   const viewportReady = ref(false);
+  const isWheelZooming = ref(false);
   const liveMediaViewport = computed(() => ({
     startSeconds: viewportReady.value ? visibleStartSecond.value : 0,
     endSeconds: viewportReady.value ? visibleEndSecond.value : 0,
@@ -75,9 +79,9 @@ export function useTimelineViewport(
   }));
   const mediaViewport = ref(liveMediaViewport.value);
   watch(
-    [liveMediaViewport, isMediaPreviewFrozen],
-    ([viewport, frozen]) => {
-      if (!frozen) mediaViewport.value = viewport;
+    [liveMediaViewport, isMediaPreviewFrozen, isWheelZooming],
+    ([viewport, frozen, wheelZooming]) => {
+      if (!frozen && !wheelZooming) mediaViewport.value = viewport;
     },
     { immediate: true },
   );
@@ -101,9 +105,9 @@ export function useTimelineViewport(
   );
   const stableThumbnailSlots = ref(liveThumbnailSlots.value);
   watch(
-    [liveThumbnailSlots, isMediaPreviewFrozen],
-    ([slots, frozen]) => {
-      if (!frozen) stableThumbnailSlots.value = slots;
+    [liveThumbnailSlots, isMediaPreviewFrozen, isWheelZooming],
+    ([slots, frozen, wheelZooming]) => {
+      if (!frozen && !wheelZooming) stableThumbnailSlots.value = slots;
     },
     { immediate: true },
   );
@@ -112,7 +116,10 @@ export function useTimelineViewport(
   let scrollFrame: number | null = null;
   let scrubFrame: number | null = null;
   let zoomFrame: number | null = null;
-  let pendingZoom: number | null = null;
+  let pendingZoomDeltaY: number | null = null;
+  let requestedZoomLevel = props.zoomLevel;
+  const unacknowledgedZoomLevels = new Set<number>();
+  let wheelZoomIdleTimer: ReturnType<typeof setTimeout> | null = null;
   let pendingScrubTime: number | null = null;
   let resizeObserver: ResizeObserver | null = null;
   const updateVisibleRange = () => {
@@ -154,7 +161,7 @@ export function useTimelineViewport(
     const delta = timelinePlaybackScrollDelta(playheadX, scrollRect.left, scrollRect.right);
     if (Math.abs(delta) < 1) return;
     scroll.scrollLeft += delta;
-    updateVisibleRange();
+    onScroll();
   };
   let autoScrollRaf: number | null = null;
   let autoScrollVelocity = 0;
@@ -240,6 +247,13 @@ export function useTimelineViewport(
     },
     { flush: 'post' },
   );
+  watch(
+    () => props.zoomLevel,
+    (zoomLevel) => {
+      if (unacknowledgedZoomLevels.delete(zoomLevel)) return;
+      requestedZoomLevel = zoomLevel;
+    },
+  );
   watch(() => [props.currentTime, props.isPlaying], followPlayback, { flush: 'post' });
   onUnmounted(() => {
     resizeObserver?.disconnect();
@@ -247,6 +261,9 @@ export function useTimelineViewport(
     if (scrollFrame !== null) cancelAnimationFrame(scrollFrame);
     if (scrubFrame !== null) cancelAnimationFrame(scrubFrame);
     if (zoomFrame !== null) cancelAnimationFrame(zoomFrame);
+    if (wheelZoomIdleTimer !== null) clearTimeout(wheelZoomIdleTimer);
+    pendingZoomDeltaY = null;
+    unacknowledgedZoomLevels.clear();
   });
 
   const percentageStyle = (startMs: number, lengthMs: number) => ({
@@ -344,12 +361,26 @@ export function useTimelineViewport(
   const handleWheel = (event: WheelEvent) => {
     if (!event.ctrlKey) return;
     event.preventDefault();
-    pendingZoom = clampTimelineZoom(zoomTimelineByWheel(pendingZoom ?? props.zoomLevel, event.deltaY));
+    const eventAgeMs = performance.now() - event.timeStamp;
+    if (event.timeStamp > 0 && eventAgeMs > MAX_WHEEL_EVENT_AGE_MS) return;
+    isWheelZooming.value = true;
+    if (wheelZoomIdleTimer !== null) clearTimeout(wheelZoomIdleTimer);
+    wheelZoomIdleTimer = setTimeout(() => {
+      wheelZoomIdleTimer = null;
+      isWheelZooming.value = false;
+      unacknowledgedZoomLevels.clear();
+      requestedZoomLevel = props.zoomLevel;
+    }, WHEEL_ZOOM_IDLE_MS);
+    pendingZoomDeltaY = (pendingZoomDeltaY ?? 0) + event.deltaY;
     if (zoomFrame !== null) return;
     zoomFrame = requestAnimationFrame(() => {
       zoomFrame = null;
-      if (pendingZoom !== null) emit('update:zoomLevel', pendingZoom);
-      pendingZoom = null;
+      const deltaY = pendingZoomDeltaY;
+      pendingZoomDeltaY = null;
+      if (deltaY === null || deltaY === 0) return;
+      requestedZoomLevel = zoomTimelineByWheel(requestedZoomLevel, deltaY);
+      unacknowledgedZoomLevels.add(requestedZoomLevel);
+      emit('update:zoomLevel', requestedZoomLevel);
     });
   };
 
@@ -373,6 +404,7 @@ export function useTimelineViewport(
     audioWaveformErrors,
     audioWaveformStatus,
     thumbnailSlots,
+    isWheelZooming,
     onScroll,
     updateAutoScroll,
     stopAutoScroll,

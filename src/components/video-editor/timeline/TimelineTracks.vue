@@ -46,6 +46,7 @@ const {
   isRulerLabel,
   formatRulerLabel,
   thumbnailSlots,
+  isWheelZooming,
   onScroll,
   percentageStyle,
   beginScrub,
@@ -152,7 +153,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
       <div
         ref="tracksViewportRef"
         class="timeline-viewport"
-        :class="{ 'is-trimming': activeTrimState !== null }"
+        :class="{ 'is-trimming': activeTrimState !== null, 'is-wheel-zooming': isWheelZooming }"
         :style="tracksWidthStyle"
       >
         <div class="timeline-ruler">
@@ -222,7 +223,10 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                   :duration="layoutDurationMs / 1000"
                   :timeline-width-px="rulerWidth"
                   :thumbnail-slots="thumbnailSlots"
-                  :defer-thumbnail-requests="activeTrimState !== null || movingClipIds.includes(clip.id)"
+                  :defer-thumbnail-requests="
+                    isWheelZooming || activeTrimState !== null || movingClipIds.includes(clip.id)
+                  "
+                  :defer-waveform-draw="isWheelZooming"
                   :selected="selectedClipIdSet.has(clip.id)"
                   :trim-state="trimStateFor(clip.id)"
                   :paste-highlight="recentPaste?.type === 'clip' && recentPaste.id === clip.id"
@@ -324,7 +328,8 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 :duration="layoutDurationMs / 1000"
                 :timeline-width-px="rulerWidth"
                 :thumbnail-slots="thumbnailSlots"
-                :defer-thumbnail-requests="activeTrimState !== null"
+                :defer-thumbnail-requests="isWheelZooming || activeTrimState !== null"
+                :defer-waveform-draw="isWheelZooming"
                 :selected="selectedClipIdSet.has(clip.id)"
                 :waveform-bars="audioWaveforms[clip.id]?.bars"
                 :waveform-left-percent="audioWaveforms[clip.id]?.leftPercent"
@@ -357,7 +362,8 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 :duration="layoutDurationMs / 1000"
                 :timeline-width-px="rulerWidth"
                 :thumbnail-slots="thumbnailSlots"
-                :defer-thumbnail-requests="activeTrimState !== null"
+                :defer-thumbnail-requests="isWheelZooming || activeTrimState !== null"
+                :defer-waveform-draw="isWheelZooming"
                 :selected="selectedClipIdSet.has(clip.id)"
                 :waveform-bars="audioWaveforms[clip.id]?.bars"
                 :waveform-left-percent="audioWaveforms[clip.id]?.leftPercent"
@@ -391,7 +397,8 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 :duration="layoutDurationMs / 1000"
                 :timeline-width-px="rulerWidth"
                 :thumbnail-slots="thumbnailSlots"
-                :defer-thumbnail-requests="activeTrimState !== null"
+                :defer-thumbnail-requests="isWheelZooming || activeTrimState !== null"
+                :defer-waveform-draw="isWheelZooming"
                 :selected="selectedClipIdSet.has(clip.id)"
                 :waveform-bars="audioWaveforms[clip.id]?.bars"
                 :waveform-left-percent="audioWaveforms[clip.id]?.leftPercent"

@@ -4,6 +4,7 @@ import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 const props = defineProps<{
   bars: readonly number[];
   selected: boolean;
+  deferDraw?: boolean;
 }>();
 
 const canvas = ref<HTMLCanvasElement | null>(null);
@@ -56,11 +57,23 @@ const draw = () => {
 };
 
 const scheduleDraw = () => {
+  if (props.deferDraw) return;
   window.cancelAnimationFrame(animationFrame);
   animationFrame = window.requestAnimationFrame(draw);
 };
 
 watch([() => props.bars, () => props.selected], () => void nextTick(scheduleDraw), { deep: true });
+watch(
+  () => props.deferDraw,
+  (deferDraw) => {
+    if (deferDraw) {
+      window.cancelAnimationFrame(animationFrame);
+      animationFrame = 0;
+      return;
+    }
+    void nextTick(scheduleDraw);
+  },
+);
 
 onMounted(() => {
   if (!canvas.value) return;

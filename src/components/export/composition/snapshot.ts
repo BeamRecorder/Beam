@@ -56,6 +56,7 @@ export function createCompositionSnapshot(input: {
       sourceWidth: null,
       sourceHeight: null,
     },
+    referenceCanvas: { width: canvas.width, height: canvas.height },
     canvas,
     background: !canvas.showBackground
       ? null

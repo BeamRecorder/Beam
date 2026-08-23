@@ -738,7 +738,7 @@ describe('EditorCanvas', () => {
     await flushPromises();
     runFrame();
 
-    expect(state.drawComposition).toHaveBeenCalledWith(expect.anything(), bounds);
+    expect(state.drawComposition.mock.calls.some((call) => call[1] === bounds)).toBe(true);
     expect(state.updateCursor).toHaveBeenCalled();
     expect(mounted.find('.webcam-selection').exists()).toBe(true);
     await mounted.find('.webcam-selection').trigger('pointerdown');
@@ -842,7 +842,7 @@ describe('EditorCanvas', () => {
     await flushPromises();
     runFrame();
 
-    expect(state.drawComposition).toHaveBeenCalledWith(contextMock, cameraBounds);
+    expect(state.drawComposition.mock.calls).toContainEqual(expect.arrayContaining([contextMock, cameraBounds]));
   });
 
   it('renders watermark-only output changes immediately without playback or seeking', async () => {
@@ -968,6 +968,33 @@ describe('EditorCanvas', () => {
     expect(frames.length).toBeGreaterThan(0);
     runFrame();
     expect(state.drawVideoWindow).toHaveBeenCalled();
+  });
+
+  it('coalesces playback invalidations without traversing unrelated composition data', async () => {
+    const stableComposition = composition();
+    let unrelatedReadCount = 0;
+    Object.defineProperty(stableComposition, 'unrelatedNestedData', {
+      configurable: true,
+      enumerable: true,
+      get: () => {
+        unrelatedReadCount += 1;
+        return { nested: { value: 1 } };
+      },
+    });
+    const mounted = mountEditor({ composition: stableComposition, playbackState: 'paused', isPlaying: false });
+    await flushPromises();
+    while (frames.length) runFrame();
+    const readsAfterInitialRender = unrelatedReadCount;
+    state.drawComposition.mockClear();
+
+    await mounted.setProps({ currentTime: 0.75, frameVersion: 1 });
+    await nextTick();
+
+    expect(unrelatedReadCount).toBe(readsAfterInitialRender);
+    expect(frames).toHaveLength(1);
+
+    runFrame();
+    expect(state.drawComposition).toHaveBeenCalledTimes(1);
   });
 
   it('shows floating recenter button when zoomed and resets zoom on click', async () => {
