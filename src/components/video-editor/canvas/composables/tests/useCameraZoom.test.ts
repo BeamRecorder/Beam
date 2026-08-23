@@ -8,6 +8,8 @@ import type { MediaFrame } from '~/media/shared';
 import type { ZoomElement } from '../../../zoom/zoom-types';
 import type { CompositeMotionBlurOptions } from './use-camera-zoom-test-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { clampFocusToScale } from '../../../zoom/zoom-playback';
+import { ZOOM_DEPTH_SCALES } from '../../../zoom/zoom-types';
 
 const drawDecoratedMedia = vi.hoisted(() => vi.fn());
 const motionBlurCompositor = vi.hoisted(() => ({
@@ -215,6 +217,66 @@ const frame = (width = 1_280, height = 720): MediaFrame => ({
   close: vi.fn(),
 });
 
+const pointer = (type: string, x: number, y: number, pointerId = 1) =>
+  Object.assign(new MouseEvent(type, { clientX: x, clientY: y, button: 0 }), { pointerId }) as unknown as PointerEvent;
+
+const prepareManualDrag = () => {
+  Object.defineProperty(options.canvas, 'clientWidth', { configurable: true, value: 800 });
+  Object.defineProperty(options.canvas, 'clientHeight', { configurable: true, value: 450 });
+  state.drawVideoWindow(context(), 800, 450, frame());
+  expect(state.overlayWindowBounds.value).not.toBeNull();
+};
+
+const focusForPointer = (point: { x: number; y: number }) => {
+  const bounds = state.overlayWindowBounds.value!;
+  const rect = options.canvas.getBoundingClientRect();
+  const scaleRatio = rect.width / (options.canvas.clientWidth || 1) || 1;
+  const canvasX = (point.x - rect.left) / scaleRatio;
+  const canvasY = (point.y - rect.top) / scaleRatio;
+  const scale = bounds.scale || 1;
+  const centerX = bounds.dx + bounds.dw / 2;
+  const centerY = bounds.dy + bounds.dh / 2;
+  const focusX = bounds.focusX ?? centerX;
+  const focusY = bounds.focusY ?? centerY;
+  return clampFocusToScale(
+    {
+      cx: ((canvasX - centerX) / scale + focusX - bounds.dx) / bounds.dw,
+      cy: ((canvasY - centerY) / scale + focusY - bounds.dy) / bounds.dh,
+    },
+    ZOOM_DEPTH_SCALES[manualZoom.depth],
+  );
+};
+
+const focusTargetStyleFor = (focus: { cx: number; cy: number }) => {
+  const bounds = state.overlayWindowBounds.value!;
+  const selectionScale = ZOOM_DEPTH_SCALES[manualZoom.depth];
+  const scale = bounds.scale || 1;
+  const centerX = bounds.dx + bounds.dw / 2;
+  const centerY = bounds.dy + bounds.dh / 2;
+  const focusX = bounds.focusX ?? centerX;
+  const focusY = bounds.focusY ?? centerY;
+  const targetWidth = bounds.dw / selectionScale;
+  const targetHeight = bounds.dh / selectionScale;
+  const left = bounds.dx + focus.cx * bounds.dw - targetWidth / 2;
+  const top = bounds.dy + focus.cy * bounds.dh - targetHeight / 2;
+  return {
+    width: `${targetWidth * scale}px`,
+    height: `${targetHeight * scale}px`,
+    transform: `translate3d(${centerX + (left - focusX) * scale - bounds.dx}px, ${centerY + (top - focusY) * scale - bounds.dy}px, 0)`,
+  };
+};
+
+const mockAnimationFrameQueue = () => {
+  const callbacks: FrameRequestCallback[] = [];
+  let nextFrameId = 41;
+  const requestAnimationFrame = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+    callbacks.push(callback);
+    return nextFrameId++;
+  });
+  const cancelAnimationFrame = vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined);
+  return { callbacks, requestAnimationFrame, cancelAnimationFrame };
+};
+
 beforeEach(() => vi.clearAllMocks());
 afterEach(() => {
   wrapper?.unmount();
@@ -353,6 +415,76 @@ describe('useCameraZoom', () => {
     expect(options.canvas.setPointerCapture).toHaveBeenCalledWith(4);
     expect(options.callbacks.onUpdateZoom).toHaveBeenCalled();
     expect(options.canvas.releasePointerCapture).toHaveBeenCalledWith(4);
+  });
+
+  it('coalesces manual drag moves into one RAF and uses the latest pointer', () => {
+    const raf = mockAnimationFrameQueue();
+    mountComposable();
+    prepareManualDrag();
+    const latest = { x: 700, y: 90 };
+
+    state.beginSelectionMove(pointer('pointerdown', 400, 225));
+    state.moveSelection(pointer('pointermove', 450, 250));
+    state.moveSelection(pointer('pointermove', latest.x, latest.y));
+
+    expect(raf.requestAnimationFrame).toHaveBeenCalledOnce();
+    expect(options.callbacks.onUpdateZoom).not.toHaveBeenCalled();
+
+    raf.callbacks.shift()!(0);
+
+    expect(state.focusTargetStyle.value).toMatchObject({
+      ...focusTargetStyleFor(focusForPointer(latest)),
+      willChange: 'transform',
+    });
+    expect(options.callbacks.onUpdateZoom).not.toHaveBeenCalled();
+  });
+
+  it('commits exactly once on pointerup and cancels the pending drag RAF', () => {
+    const raf = mockAnimationFrameQueue();
+    mountComposable();
+    prepareManualDrag();
+
+    state.beginSelectionMove(pointer('pointerdown', 400, 225, 12));
+    state.moveSelection(pointer('pointermove', 620, 120, 12));
+    expect(options.callbacks.onUpdateZoom).not.toHaveBeenCalled();
+
+    state.endSelectionMove(pointer('pointerup', 640, 140, 12));
+    state.endSelectionMove(pointer('pointerup', 640, 140, 12));
+
+    expect(raf.cancelAnimationFrame).toHaveBeenCalledOnce();
+    expect(raf.cancelAnimationFrame).toHaveBeenCalledWith(41);
+    expect(options.callbacks.onUpdateZoom).toHaveBeenCalledOnce();
+  });
+
+  it('reads the canvas bounds once and reuses them throughout a manual drag', () => {
+    const raf = mockAnimationFrameQueue();
+    mountComposable();
+    const rect = options.canvas.getBoundingClientRect();
+    const getBoundingClientRect = vi.fn(() => rect);
+    options.canvas.getBoundingClientRect = getBoundingClientRect;
+    prepareManualDrag();
+
+    state.beginSelectionMove(pointer('pointerdown', 400, 225));
+    state.moveSelection(pointer('pointermove', 500, 180));
+    state.moveSelection(pointer('pointermove', 600, 140));
+    state.endSelectionMove(pointer('pointerup', 620, 120));
+    raf.callbacks.shift()?.(0);
+
+    expect(getBoundingClientRect).toHaveBeenCalledOnce();
+  });
+
+  it('cancels a pending manual drag RAF when the composable scope is disposed', () => {
+    const raf = mockAnimationFrameQueue();
+    mountComposable();
+    prepareManualDrag();
+
+    state.beginSelectionMove(pointer('pointerdown', 400, 225));
+    expect(raf.requestAnimationFrame).toHaveBeenCalledOnce();
+
+    wrapper?.unmount();
+    wrapper = undefined;
+
+    expect(raf.cancelAnimationFrame).toHaveBeenCalledWith(41);
   });
 
   it('keeps the selected manual zoom inactive while paused so its full target is visible', () => {

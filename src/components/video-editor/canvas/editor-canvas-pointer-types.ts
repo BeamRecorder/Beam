@@ -4,6 +4,7 @@ export interface EditorCanvasPointerOptions {
   canvas: () => HTMLCanvasElement | null;
   container: () => HTMLDivElement | null;
   isCropping: () => boolean;
+  isManualZoom: () => boolean;
   selectedClipId: () => string | null;
   viewportZoom: {
     isPanning: Ref<boolean>;

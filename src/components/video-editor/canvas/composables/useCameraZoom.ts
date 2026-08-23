@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue';
+import { computed, getCurrentScope, onScopeDispose, ref } from 'vue';
 import { ZOOM_DEPTH_SCALES, type ZoomElement, type ZoomMotionBlurSettings } from '../../zoom/zoom-types';
 import { createCompositionCameraEvaluator } from '../../zoom/composition-camera';
 import { clampFocusToScale } from '../../zoom/zoom-playback';
@@ -56,7 +56,6 @@ export interface UseCameraZoomOptions {
     layers: CompositionSceneLayers,
   ) => void;
   onUpdateZoom: (zoom: ZoomElement) => void;
-  onPreviewZoom?: (zoom: ZoomElement) => void;
   onSelectScreenClip: (clipId: string) => void;
   onSelectCanvas: () => void;
   onDeselectTransformClip: () => void;
@@ -74,8 +73,14 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
   const overlayWindowBounds = ref<VideoWindowBounds | null>(null);
   const isMovingSelection = ref(false);
   const draftFocus = ref<{ cx: number; cy: number } | null>(null);
-  let pendingZoomPreview: ZoomElement | null = null;
-  let zoomPreviewFrame: number | null = null;
+  let pendingFocusPoint: { x: number; y: number } | null = null;
+  let zoomDragFrame: number | null = null;
+  let zoomDragGeometry: {
+    canvasLeft: number;
+    canvasTop: number;
+    scaleRatio: number;
+    bounds: VideoWindowBounds;
+  } | null = null;
   let motionBlurSurface: MotionBlurSurface | null = null;
 
   const screenClip = (): VisualClip | null =>
@@ -113,27 +118,26 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     };
   });
 
-  const scheduleZoomPreview = (updated: ZoomElement) => {
-    pendingZoomPreview = updated;
-    if (zoomPreviewFrame !== null) return;
-    zoomPreviewFrame = requestAnimationFrame(() => {
-      zoomPreviewFrame = null;
-      if (pendingZoomPreview) {
-        (options.onPreviewZoom ?? options.onUpdateZoom)(pendingZoomPreview);
-        pendingZoomPreview = null;
-      }
-    });
-  };
-
-  const updateFocus = (event: PointerEvent, final: boolean) => {
+  const createZoomDragGeometry = () => {
     const canvas = options.canvasRef();
     const bounds = overlayWindowBounds.value;
-    const selected = options.selectedZoom();
-    if (!canvas || !bounds || !selected || selected.mode !== 'manual') return;
+    if (!canvas || !bounds) return null;
     const rect = canvas.getBoundingClientRect();
-    const scaleRatio = rect.width / (canvas.clientWidth || 1);
-    const canvasX = (event.clientX - rect.left) / (scaleRatio || 1);
-    const canvasY = (event.clientY - rect.top) / (scaleRatio || 1);
+    return {
+      canvasLeft: rect.left,
+      canvasTop: rect.top,
+      scaleRatio: rect.width / (canvas.clientWidth || 1) || 1,
+      bounds: { ...bounds },
+    };
+  };
+
+  const focusAt = (point: { x: number; y: number }) => {
+    const geometry = zoomDragGeometry;
+    const selected = options.selectedZoom();
+    if (!geometry || !selected || selected.mode !== 'manual') return null;
+    const { bounds, scaleRatio } = geometry;
+    const canvasX = (point.x - geometry.canvasLeft) / scaleRatio;
+    const canvasY = (point.y - geometry.canvasTop) / scaleRatio;
     const scale = bounds.scale || 1;
     const centerX = bounds.dx + bounds.dw / 2;
     const centerY = bounds.dy + bounds.dh / 2;
@@ -141,31 +145,25 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     const focusY = bounds.focusY ?? centerY;
     const unzoomedX = (canvasX - centerX) / scale + focusX;
     const unzoomedY = (canvasY - centerY) / scale + focusY;
-    const focus = clampFocusToScale(
+    return clampFocusToScale(
       {
         cx: (unzoomedX - bounds.dx) / bounds.dw,
         cy: (unzoomedY - bounds.dy) / bounds.dh,
       },
       ZOOM_DEPTH_SCALES[selected.depth],
     );
-    const { cx, cy } = focus;
+  };
 
-    draftFocus.value = { cx, cy };
-    const updated: ZoomElement = {
-      ...selected,
-      focus: { cx, cy },
-    };
-
-    if (final) {
-      if (zoomPreviewFrame !== null) {
-        cancelAnimationFrame(zoomPreviewFrame);
-        zoomPreviewFrame = null;
-      }
-      pendingZoomPreview = null;
-      options.onUpdateZoom(updated);
-    } else {
-      scheduleZoomPreview(updated);
-    }
+  const scheduleDraftFocus = (event: PointerEvent) => {
+    pendingFocusPoint = { x: event.clientX, y: event.clientY };
+    if (zoomDragFrame !== null) return;
+    zoomDragFrame = requestAnimationFrame(() => {
+      zoomDragFrame = null;
+      if (!pendingFocusPoint) return;
+      const focus = focusAt(pendingFocusPoint);
+      pendingFocusPoint = null;
+      if (focus) draftFocus.value = focus;
+    });
   };
 
   const beginSelectionMove = (event: PointerEvent) => {
@@ -173,10 +171,12 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     const selectedZoom = options.selectedZoom();
     const isManualZoom = selectedZoom?.mode === 'manual';
     if (isManualZoom) {
+      zoomDragGeometry = createZoomDragGeometry();
+      if (!zoomDragGeometry) return;
       isMovingSelection.value = true;
       const target = (event.currentTarget as HTMLElement) ?? options.canvasRef();
       if (target?.setPointerCapture) target.setPointerCapture(event.pointerId);
-      updateFocus(event, false);
+      scheduleDraftFocus(event);
       return;
     }
 
@@ -199,17 +199,29 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     if (selectedZoom) options.onDeselectZoom();
   };
   const moveSelection = (event: PointerEvent) => {
-    if (isMovingSelection.value) updateFocus(event, false);
+    if (isMovingSelection.value) scheduleDraftFocus(event);
   };
   const endSelectionMove = (event: PointerEvent) => {
     if (isMovingSelection.value) {
-      updateFocus(event, true);
+      if (zoomDragFrame !== null) cancelAnimationFrame(zoomDragFrame);
+      zoomDragFrame = null;
+      pendingFocusPoint = null;
+      const selected = options.selectedZoom();
+      const focus = focusAt({ x: event.clientX, y: event.clientY });
       isMovingSelection.value = false;
       draftFocus.value = null;
+      zoomDragGeometry = null;
+      if (selected?.mode === 'manual' && focus) options.onUpdateZoom({ ...selected, focus });
       const target = (event.currentTarget as HTMLElement) ?? options.canvasRef();
       if (target?.hasPointerCapture?.(event.pointerId)) target.releasePointerCapture(event.pointerId);
     }
   };
+
+  if (getCurrentScope()) {
+    onScopeDispose(() => {
+      if (zoomDragFrame !== null) cancelAnimationFrame(zoomDragFrame);
+    });
+  }
 
   const drawVideoWindow = (
     ctx: CanvasRenderingContext2D,

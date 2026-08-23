@@ -57,7 +57,6 @@ export interface EditorCanvasProps {
 
 export interface EditorCanvasEmits {
   (event: 'update:zoom', value: ZoomElement): void;
-  (event: 'preview:zoom', value: ZoomElement): void;
   (event: 'select:clip', clipId: string): void;
   (event: 'deselect:transform-clip'): void;
   (event: 'deselect:zoom'): void;

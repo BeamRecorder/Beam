@@ -187,7 +187,6 @@ const {
   trimZoomEdge,
   moveZoom,
   pasteZoomAtTime,
-  previewZoom,
   deleteSelectedZoom,
   deleteZoomById,
 } = zoomState;
@@ -664,7 +663,6 @@ onBeforeUnmount(() => {
             :is-grid-visible="isGridVisible"
             :history-action="historyAction"
             @update:zoom="commitZoom"
-            @preview:zoom="previewZoom"
             @select:clip="selectEditorClip"
             @select:canvas="selectEditorCanvas"
             @select:cursor="selectEditorCursor"

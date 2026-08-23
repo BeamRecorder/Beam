@@ -488,6 +488,31 @@ describe('EditorCanvas', () => {
     expect(state.endSelectionMove).toHaveBeenCalled();
   });
 
+  it('lets Manual Zoom move over composited media without selecting the media first', async () => {
+    const mounted = mountEditor({
+      selectedZoom: {
+        id: 'manual-zoom',
+        sessionId: 'session',
+        startMs: 0,
+        endMs: 2_000,
+        focus: { cx: 0.5, cy: 0.5 },
+        depth: 2,
+        mode: 'manual',
+      },
+    });
+    await flushPromises();
+    state.selectVisualAt.mockReturnValue(true);
+
+    await mounted.find('canvas').trigger('pointerdown', { button: 0, clientX: 400, clientY: 225 });
+    await mounted.find('canvas').trigger('pointermove', { clientX: 500, clientY: 280 });
+    await mounted.find('canvas').trigger('pointerup', { clientX: 500, clientY: 280 });
+
+    expect(state.selectVisualAt).not.toHaveBeenCalled();
+    expect(state.beginSelectionMove).toHaveBeenCalledOnce();
+    expect(state.moveSelection).toHaveBeenCalledOnce();
+    expect(state.endSelectionMove).toHaveBeenCalledOnce();
+  });
+
   it('shows the cursor selection only on the cursor tab while paused', async () => {
     const mounted = mountEditor({ activeTab: 'cursor', isPlaying: false });
     state.cursorBounds!.value = {

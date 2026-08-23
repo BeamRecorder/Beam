@@ -2,7 +2,12 @@ import type { EditorCanvasPointerOptions } from '../editor-canvas-pointer-types'
 
 export function useEditorCanvasPointerInteractions(options: EditorCanvasPointerOptions) {
   const handleIslandPointerDown = (event: PointerEvent) => {
-    if (event.button === 0 && options.transformAndCrop.selectVisualAt(event, options.canvas())) return;
+    if (
+      !options.isManualZoom() &&
+      event.button === 0 &&
+      options.transformAndCrop.selectVisualAt(event, options.canvas())
+    )
+      return;
     if (options.viewportZoom.beginPan(event, options.container())) return;
     options.cameraZoom.beginSelectionMove(event);
   };
