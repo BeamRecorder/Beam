@@ -36,6 +36,14 @@ afterEach(() => {
 });
 
 describe('DocsLanguageSelector', () => {
+  it('uses the Languages icon for its trigger', () => {
+    const wrapper = mountSelector();
+    const icon = wrapper.get('button.docs-language-trigger svg');
+
+    expect(icon.classes()).toContain('lucide-languages');
+    expect(wrapper.find('.lucide-earth').exists()).toBe(false);
+  });
+
   it('keeps the current documentation page while switching locale', async () => {
     pageState.value = { relativePath: 'fr/recorder/interface.md' };
     const wrapper = mountSelector();

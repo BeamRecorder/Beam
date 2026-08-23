@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('./DocsLanguageSelector.vue', () => ({
   default: {
-    template: '<button class="docs-language-selector" type="button">Language</button>',
+    template: '<button class="docs-language-trigger" type="button"><svg class="lucide-languages" /></button>',
   },
 }));
 
@@ -24,7 +24,6 @@ const mountActions = () =>
       stubs: {
         ClientOnly: ClientOnlyStub,
         DocsThemeToggle: DocsThemeToggleStub,
-        DocsLanguageSelector: true,
       },
     },
   });
@@ -89,6 +88,8 @@ describe('DocsNavActions', () => {
     expect(wrapper.get('.website-link').attributes('href')).toBe('https://beam.plinka.eu');
     expect(wrapper.get('.github-link').attributes('href')).toBe('https://github.com/BeamRecorder/Beam');
     expect(wrapper.get('.discord-link').attributes('href')).toBe('https://discord.gg/6Q6v2xUCB');
+    expect(wrapper.find('.docs-language-trigger').exists()).toBe(true);
+    expect(wrapper.find('.docs-language-trigger .lucide-languages').exists()).toBe(true);
     expect(wrapper.find('.docs-theme-toggle').exists()).toBe(true);
   });
 });

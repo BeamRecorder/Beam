@@ -33,6 +33,16 @@ afterEach(() => {
 });
 
 describe('WebsiteLanguageSelector', () => {
+  it('uses the Languages icon for the language trigger', () => {
+    const { wrapper } = mountSelector();
+    const trigger = wrapper.get('button.language-trigger');
+    const icon = trigger.get('svg');
+
+    expect(trigger.classes()).toContain('btn-ghost');
+    expect(icon.classes()).toContain('lucide-languages');
+    expect(wrapper.find('.lucide-earth').exists()).toBe(false);
+  });
+
   it('lists every supported website locale and marks the active locale', async () => {
     const { wrapper } = mountSelector('fr');
     const menu = await openLanguageMenu(wrapper);

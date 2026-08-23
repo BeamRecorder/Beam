@@ -111,6 +111,12 @@ body::-webkit-scrollbar-thumb:hover,
   }
 }
 
+.VPNavBarTranslations,
+.VPNavBarExtra,
+.VPNavScreenTranslations {
+  display: none !important;
+}
+
 .VPNavBarTitle .title {
   font-family: var(--font-headline);
   font-size: 17px;

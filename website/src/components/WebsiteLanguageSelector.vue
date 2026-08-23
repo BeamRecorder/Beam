@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Check, Globe2 } from '@lucide/vue';
+import { Check, Languages } from '@lucide/vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from '~/ui/button/Button.vue';
@@ -45,7 +45,7 @@ const selectLocale = (nextLocale: WebsiteLocale, close: () => void) => {
         variant="ghost"
         size="md"
         icon-only
-        :icon="Globe2"
+        :icon="Languages"
         :tooltip="selectorLabel"
         tooltip-position="bottom"
         :aria-label="selectorLabel"
@@ -76,8 +76,8 @@ const selectLocale = (nextLocale: WebsiteLocale, close: () => void) => {
   width: 42px;
   height: 42px;
   padding: 0;
-  border: 1px solid var(--color-border-strong);
-  background: var(--color-header-control);
+  border: 1px solid transparent;
+  background: transparent;
   color: var(--text-secondary);
 }
 

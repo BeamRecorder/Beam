@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Check, Globe2 } from '@lucide/vue';
+import { Check, Languages } from '@lucide/vue';
 import { computed } from 'vue';
 import { useData, withBase } from 'vitepress';
 import Button from '../../../../src/components/ui/button/Button.vue';
@@ -42,7 +42,7 @@ const currentLabel = computed(() => getDocsCatalogs(currentLocale.value).common.
         variant="ghost"
         size="md"
         icon-only
-        :icon="Globe2"
+        :icon="Languages"
         :tooltip="currentLabel"
         tooltip-position="bottom"
         :aria-label="`Language: ${currentLabel}`"
