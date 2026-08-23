@@ -84,19 +84,6 @@ textarea {
   width: 19px;
 }
 
-.hero {
-  display: grid;
-  grid-template-columns: minmax(0, 0.86fr) minmax(420px, 1.14fr);
-  align-items: center;
-  gap: clamp(40px, 7vw, 96px);
-  min-height: calc(100dvh - 72px);
-  padding: 80px 0;
-}
-
-.hero-copy {
-  max-width: 620px;
-}
-
 .hero-eyebrow {
   width: fit-content;
   margin-bottom: 18px;
@@ -159,52 +146,6 @@ h1 {
 
 .secondary-action svg {
   width: 19px;
-}
-
-.hero-media {
-  position: relative;
-  overflow: hidden;
-  padding: 0;
-  border: 1px solid var(--color-border-strong);
-  border-radius: 22px;
-  background: var(--color-media-surface);
-  box-shadow: var(--shadow-lg);
-  cursor: pointer;
-  transform: rotate(1.2deg);
-  transition:
-    transform 240ms cubic-bezier(0.16, 1, 0.3, 1),
-    border-color 240ms ease;
-}
-
-.hero-media:hover {
-  border-color: var(--color-primary-border);
-  transform: rotate(0.4deg) translateY(-3px);
-}
-
-.hero-media img {
-  display: block;
-  width: 100%;
-  aspect-ratio: 16 / 10;
-  object-fit: cover;
-}
-
-.hero-media span {
-  position: absolute;
-  right: 18px;
-  bottom: 18px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 11px 14px;
-  border-radius: var(--radius-full);
-  background: rgba(20, 19, 16, 0.86);
-  color: white;
-  font-weight: 650;
-  backdrop-filter: blur(10px);
-}
-
-.hero-media span svg {
-  width: 17px;
 }
 
 .content-section {
@@ -449,13 +390,6 @@ h1 {
 }
 
 @media (max-width: 900px) {
-  .hero {
-    grid-template-columns: 1fr;
-    min-height: auto;
-  }
-  .hero-media {
-    transform: none;
-  }
   .open-source {
     grid-template-columns: 1fr;
   }
@@ -467,9 +401,6 @@ h1 {
 @media (max-width: 620px) {
   .site-shell {
     width: min(100% - 24px, 1240px);
-  }
-  .hero {
-    padding: 56px 0 36px;
   }
   .availability {
     align-items: flex-start;

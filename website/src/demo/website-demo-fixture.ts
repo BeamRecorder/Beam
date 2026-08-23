@@ -4,6 +4,7 @@ import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
 import demoThumbnailUrl from '../../../docs/assets/Beam-showcase.png';
 import beamIconUrl from '../../../public/brand/BeamIcon.webp';
 import defaultCursorUrl from '../../../public/macOsSvgCursors/default.svg';
+import { WEBSITE_DEMO_ROOT } from '@website/demo/website-demo-project';
 import { websiteI18n } from '@website/i18n';
 
 const t = websiteI18n.global.t;
@@ -12,6 +13,7 @@ export const demoMedia = {
   thumbnailUrl: demoThumbnailUrl,
   iconUrl: beamIconUrl,
   defaultCursorUrl,
+  heroVideoUrl: `${WEBSITE_DEMO_ROOT}/website-demo.webm`,
 } as const;
 
 export const demoCaptureSources: CaptureSource[] = [

@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { Code2, Download, ExternalLink, Play } from '@lucide/vue';
+import { Code2, ExternalLink } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import Button from '~/ui/button/Button.vue';
 import WebsiteEditorPreview from '@website/components/WebsiteEditorPreview.vue';
 import WebsiteCommunityShader from '@website/components/WebsiteCommunityShader.vue';
+import WebsiteHeroDrag from '@website/components/WebsiteHeroDrag.vue';
 import { useGitHubRepository } from '@website/composables/useGitHubRepository';
-import { demoMedia } from '@website/demo/website-demo-fixture';
 import { createHomeJsonLd } from '@website/seo/json-ld';
 import { usePageSeo } from '@website/seo/use-page-seo';
 import discordIconUrl from '../../../public/discord_svg.svg';
@@ -38,25 +38,7 @@ const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
 <template>
   <div class="site-shell">
     <main id="top">
-      <section class="hero" aria-labelledby="hero-title">
-        <div class="hero-copy">
-          <p class="hero-eyebrow">{{ t('Website.home.heroEyebrow') }}</p>
-          <h1 id="hero-title">{{ t('Website.home.heroLine1') }}</h1>
-          <p class="lede">{{ t('Website.home.lede') }}</p>
-          <div class="hero-actions">
-            <a class="hero-primary-action" href="/install">
-              <Download aria-hidden="true" /> {{ t('Website.home.downloadFree') }}
-            </a>
-            <a class="secondary-action" href="https://github.com/BeamRecorder/Beam" target="_blank" rel="noreferrer">
-              <Code2 aria-hidden="true" /> {{ t('Website.home.viewGitHub') }}
-            </a>
-          </div>
-        </div>
-        <button class="hero-media" type="button" :aria-label="t('Website.home.playDemoAria')" @click="playDemo">
-          <img :src="demoMedia.thumbnailUrl" :alt="t('Website.home.demoAlt')" />
-          <span><Play aria-hidden="true" /> {{ t('Website.home.openDemo') }}</span>
-        </button>
-      </section>
+      <WebsiteHeroDrag @explore="playDemo" />
 
       <section class="availability" aria-label="Beam availability">
         <strong>{{ t('Website.home.availabilityTitle') }}</strong>
@@ -124,9 +106,3 @@ const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
     </main>
   </div>
 </template>
-
-<style scoped>
-.hero h1 {
-  word-spacing: 0.12em;
-}
-</style>
