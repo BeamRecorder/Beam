@@ -7,6 +7,7 @@ import {
 } from '../../video-editor/composables/cursor-motion';
 import {
   buttonEventsBetween,
+  cursorAutoHiddenAt,
   cursorStateAt,
   type CursorPlaybackState,
 } from '../../video-editor/composables/cursorPlayback';
@@ -136,7 +137,12 @@ export function drawCursorLayer(
 
   const asset = snapshot.cursorPack ? cursorAssetAt(snapshot.cursorPack, settings.selection, motionCursor) : null;
   const image = asset ? cursorImages?.get(asset.id) : undefined;
-  if (!motionCursor?.visible || !usableImage(image)) return;
+  if (
+    !motionCursor?.visible ||
+    cursorAutoHiddenAt(snapshot.cursor.events, time, settings.autoHide) ||
+    !usableImage(image)
+  )
+    return;
   const geometry = cursorGeometryAtSize(asset!, cursorSize);
   const click = buttonEventsBetween(snapshot.cursor.events, Math.max(0, time - 0.28), time)
     .reverse()

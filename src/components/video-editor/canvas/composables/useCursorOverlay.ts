@@ -1,6 +1,6 @@
 import { ref, shallowRef } from 'vue';
 import type { ProjectEditorData } from '~/api/types/capture-session';
-import { buttonEventsBetween, cursorStateAt } from '../../composables/cursorPlayback';
+import { buttonEventsBetween, cursorAutoHiddenAt, cursorStateAt } from '../../composables/cursorPlayback';
 import { useCursorReplacer } from '../../properties/cursor/useCursorReplacer';
 import { ZOOM_DEPTH_SCALES } from '../../zoom/zoom-types';
 import { cursorClickSpringScale } from '../../composables/cursor-click-spring';
@@ -22,6 +22,7 @@ import {
   effectButtonForRecordedButton,
   type CursorClickEffectSettings,
   type CursorClickEffects,
+  type CursorAutoHideSettings,
   type CursorMotionSettings,
 } from '../../../../api/types/cursor-settings';
 import type { OutputCanvasSettings } from '../output-canvas';
@@ -38,6 +39,7 @@ export interface UseCursorOverlayOptions {
   enableShadow: () => boolean;
   clickEffects: () => CursorClickEffects;
   motion: () => CursorMotionSettings;
+  autoHide: () => CursorAutoHideSettings;
   shadowBlur: () => number;
   shadowColor: () => string;
   shadowDirection: () => ShadowDirection;
@@ -282,7 +284,8 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
             }
           }
           const image = activeCursorImage();
-          if (!state?.visible || !image?.complete || image.naturalWidth <= 0 || !motionState) {
+          const autoHidden = cursorAutoHiddenAt(cursorData.events, time, options.autoHide());
+          if (!state?.visible || autoHidden || !image?.complete || image.naturalWidth <= 0 || !motionState) {
             updateCursorBounds(null);
             return;
           }

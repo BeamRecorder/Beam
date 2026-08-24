@@ -38,6 +38,7 @@ export function useEditorCanvasInvalidation(options: {
         options.props.shadowDirection,
         options.props.clickEffects,
         options.props.motion,
+        options.props.autoHide,
       ] as const,
     options.renderOnce,
     { deep: true },

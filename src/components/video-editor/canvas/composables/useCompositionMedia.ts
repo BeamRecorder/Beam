@@ -63,7 +63,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
   );
 
   const drawCaption = (ctx: CanvasRenderingContext2D, clip: CaptionClip, timeMs: number) => {
-    const { text, runs } = captionContentAt(clip, timeMs);
+    const { text, runs, wordHighlight } = captionContentAt(clip, timeMs);
     if (!text) return;
     const selected = options.selectedTransformClip();
     const transformDraft = clip.id === selected?.id ? options.transformDraft() : null;
@@ -72,6 +72,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
       clip: renderClip,
       text,
       runs,
+      wordHighlight,
       cursorPosition:
         clip.caption.type === 'keyboard' && clip.caption.followCursor ? options.keyboardCursorPosition?.() : null,
       canvas: options.outputCanvas(),

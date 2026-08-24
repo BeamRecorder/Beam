@@ -1,7 +1,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import type { ResizeCorner } from '~/ui/ResizeHandle/types';
 import type { VideoWindowBounds } from './useCameraZoom';
-import { activeClipsAt } from '~/media/shared';
+import { activeClipsAt, sourceTimeAt } from '~/media/shared';
 import {
   getCaptionTransform,
   isBlurClip,
@@ -167,9 +167,7 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
   const transformSelection = computed(() => {
     const clip = options.selectedTransformClip();
     if (!clip) return null;
-    const active = activeClipsAt(options.composition(), options.currentTime() * 1_000).some(
-      (candidate) => candidate.id === clip.id,
-    );
+    const active = clip.enabled && sourceTimeAt(clip, options.currentTime() * 1_000) !== null;
     if (!active) return null;
     const transform = transformDraft.value ?? transformFor(clip);
     const layout = displayLayoutFor(clip, transform);

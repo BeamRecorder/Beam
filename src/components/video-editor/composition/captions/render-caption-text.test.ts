@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { CaptionClip } from '~/media/shared/composition-types';
+import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
 import { drawCaptionText } from './render-caption-text';
 
 const caption = (): CaptionClip => ({
@@ -34,6 +35,7 @@ const caption = (): CaptionClip => ({
       outlineColor: '#ff5a1f',
       outlineWidth: 6,
       extrusionDepth: 8,
+      wordHighlight: createDefaultCaptionStyle(40).wordHighlight,
     },
   },
 });

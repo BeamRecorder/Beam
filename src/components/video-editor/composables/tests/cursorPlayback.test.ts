@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { buttonEventsBetween, cursorAssetForState, cursorEventIndexFor, cursorStateAt } from '../cursorPlayback';
+import {
+  buttonEventsBetween,
+  cursorAssetForState,
+  cursorAutoHiddenAt,
+  cursorEventIndexFor,
+  cursorStateAt,
+} from '../cursorPlayback';
 import type { CursorEvent, CursorShapeAsset } from '../../../../api/types/capture-api';
 
 const second = (value: number) => value * 1_000_000_000;
@@ -307,5 +313,55 @@ describe('cursor playback', () => {
       move(1, 0.5, 0.5),
     ];
     expect(cursorStateAt(events, 1)?.cursorKind).toBe('custom');
+  });
+});
+
+describe('cursor auto-hide', () => {
+  it('does not treat repeated identical move events as activity', () => {
+    const events: CursorEvent[] = [move(0, 0.25, 0.5), move(1, 0.25, 0.5), move(2, 0.25, 0.5)];
+    const settings = { enabled: true, delaySeconds: 2 };
+
+    expect(cursorAutoHiddenAt(events, 1.99, settings)).toBe(false);
+    expect(cursorAutoHiddenAt(events, 2, settings)).toBe(true);
+  });
+
+  it('resets the idle timer when the cursor position changes', () => {
+    const events: CursorEvent[] = [move(0, 0.25, 0.5), move(1, 0.5, 0.5)];
+    const settings = { enabled: true, delaySeconds: 2 };
+
+    expect(cursorAutoHiddenAt(events, 2.99, settings)).toBe(false);
+    expect(cursorAutoHiddenAt(events, 3, settings)).toBe(true);
+  });
+
+  it('resets the idle timer for a pressed click', () => {
+    const events: CursorEvent[] = [move(0, 0.25, 0.5), button(1)];
+    const settings = { enabled: true, delaySeconds: 2 };
+
+    expect(cursorAutoHiddenAt(events, 2.99, settings)).toBe(false);
+    expect(cursorAutoHiddenAt(events, 3, settings)).toBe(true);
+  });
+
+  it('resets the idle timer when visibility becomes true', () => {
+    const events: CursorEvent[] = [
+      move(0, 0.25, 0.5),
+      { event: 'visibility', sessionNs: second(1), visible: false },
+      { event: 'visibility', sessionNs: second(2), visible: true },
+    ];
+    const settings = { enabled: true, delaySeconds: 2 };
+
+    expect(cursorAutoHiddenAt(events, 3.99, settings)).toBe(false);
+    expect(cursorAutoHiddenAt(events, 4, settings)).toBe(true);
+  });
+
+  it('never hides the cursor when auto-hide is disabled', () => {
+    expect(cursorAutoHiddenAt([move(0, 0.25, 0.5)], 100, { enabled: false, delaySeconds: 0.5 })).toBe(false);
+  });
+
+  it('hides exactly at the configured delay boundary', () => {
+    const settings = { enabled: true, delaySeconds: 1.25 };
+    const events = [move(0, 0.25, 0.5)];
+
+    expect(cursorAutoHiddenAt(events, 1.25 - 1e-9, settings)).toBe(false);
+    expect(cursorAutoHiddenAt(events, 1.25, settings)).toBe(true);
   });
 });

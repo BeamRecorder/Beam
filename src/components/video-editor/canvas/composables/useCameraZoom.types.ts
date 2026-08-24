@@ -30,6 +30,7 @@ export interface UseCameraZoomOptions {
   editorData: () => ProjectEditorData | null | undefined;
   activeTab: () => string;
   composition: () => ClipComposition;
+  sceneLayersAt?: (timeMs: number) => CompositionSceneLayers;
   screenTransformDraft?: () => NormalizedTransform | null;
   isCropping?: () => boolean | undefined;
   drawBackground: (

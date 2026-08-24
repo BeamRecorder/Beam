@@ -56,6 +56,54 @@ describe('cursor and ripple composition rendering', () => {
     expect((ctx.drawImage as ReturnType<typeof vi.fn>).mock.calls.some(([drawn]) => drawn === cursorImage)).toBe(false);
   });
 
+  it('omits an auto-hidden cursor while preserving a click ripple during the idle window', () => {
+    const value = snapshot();
+    value.cursor = {
+      ...value.cursor,
+      available: true,
+      events: [
+        {
+          event: 'move',
+          sessionNs: 0,
+          pixelX: 25,
+          pixelY: 25,
+          normalizedX: 0.25,
+          normalizedY: 0.5,
+          visible: true,
+        },
+        {
+          event: 'button',
+          sessionNs: 100_000_000,
+          button: 1,
+          pressed: true,
+          normalizedX: 0.25,
+          normalizedY: 0.5,
+        },
+      ],
+    };
+    value.cursorSettings.autoHide = { enabled: true, delaySeconds: 0.2 };
+    value.cursorSettings.motion.motionBlur = 0;
+    value.cursorSettings.clickEffects.left = {
+      ...value.cursorSettings.clickEffects.left,
+      rippleEnabled: true,
+      rippleSize: 40,
+    };
+    const cursorImage = { complete: true, naturalWidth: 24 } as HTMLImageElement;
+    const ctx = context();
+
+    renderCompositionFrame(
+      ctx,
+      { source: {} as CanvasImageSource, width: 100, height: 50 },
+      value,
+      0.4,
+      null,
+      new Map([['default', cursorImage]]),
+    );
+
+    expect((ctx.drawImage as ReturnType<typeof vi.fn>).mock.calls.some(([drawn]) => drawn === cursorImage)).toBe(false);
+    expect(ctx.arc).toHaveBeenCalled();
+  });
+
   it.each([
     ['entry', 1, 0.5],
     ['entry', 5, 1 - 0.5 ** 5],

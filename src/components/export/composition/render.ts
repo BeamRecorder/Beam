@@ -84,13 +84,14 @@ function drawCaption(
   snapshot: CompositionSnapshot,
   cursorPosition?: { x: number; y: number } | null,
 ) {
-  const { text, runs } = captionContentAt(clip, timeMs);
+  const { text, runs, wordHighlight } = captionContentAt(clip, timeMs);
   if (!text) return;
   const referenceCanvas = snapshot.referenceCanvas ?? snapshot.canvas;
   drawCaptionText(ctx, {
     clip,
     text,
     runs,
+    wordHighlight,
     cursorPosition,
     canvas: referenceCanvas,
     viewport: { x: 0, y: 0, width: snapshot.canvas.width, height: snapshot.canvas.height },

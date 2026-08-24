@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { BlurClip, Clip, ClipComposition, VisualClip } from '~/media/shared/composition-types';
+import type { AudioClip, BlurClip, Clip, ClipComposition, VisualClip } from '~/media/shared/composition-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { resolveCompositionSceneLayers } from '../scene-layers';
+import { createCompositionSceneLayerResolver, resolveCompositionSceneLayers } from '../scene-layers';
 
 const visual = (kind: VisualClip['kind'], id: string, order: number, enabled = true, trackId = id): VisualClip => ({
   id,
@@ -44,6 +44,22 @@ const blur = (order: number): BlurClip => ({
   color: '#000000',
 });
 
+const audio = (id: string, order: number): AudioClip => ({
+  id,
+  kind: 'audio',
+  name: id,
+  assetId: `${id}-asset`,
+  role: 'system',
+  timelineStartMs: 0,
+  timelineDurationMs: 1_000,
+  sourceInMs: 0,
+  sourceDurationMs: 1_000,
+  playbackRate: 1,
+  enabled: true,
+  order,
+  volume: 100,
+});
+
 const composition = (...clips: Clip[]): ClipComposition => ({
   schemaVersion: 6,
   keyboardCaptionSessions: [],
@@ -52,6 +68,57 @@ const composition = (...clips: Clip[]): ClipComposition => ({
 });
 
 describe('resolveCompositionSceneLayers', () => {
+  it('preserves the original order when clips share the same z-order', () => {
+    const resolver = createCompositionSceneLayerResolver(
+      composition(
+        visual('video', 'video-first', 2),
+        visual('video', 'video-second', 2),
+        visual('screen', 'screen-first', 2),
+        visual('screen', 'screen-second', 2),
+      ),
+    );
+
+    const layers = resolver(500);
+
+    expect(layers.screen?.id).toBe('screen-first');
+    expect(layers.cameraVisuals.map((clip) => clip.id)).toEqual([
+      'video-first',
+      'video-second',
+      'screen-first',
+      'screen-second',
+    ]);
+    expect(layers.visualStack.map((clip) => clip.id)).toEqual([
+      'video-first',
+      'video-second',
+      'screen-first',
+      'screen-second',
+    ]);
+  });
+
+  it('reuses one resolver across timeline times and follows a clip cut', () => {
+    const first = visual('video', 'first', 0);
+    const second = visual('video', 'second', 1);
+    second.timelineStartMs = 1_000;
+    const resolver = createCompositionSceneLayerResolver(composition(first, second));
+
+    expect(resolver(500).cameraVisuals.map((clip) => clip.id)).toEqual(['first']);
+    expect(resolver(999).cameraVisuals.map((clip) => clip.id)).toEqual(['first']);
+    expect(resolver(1_000).cameraVisuals.map((clip) => clip.id)).toEqual(['second']);
+    expect(resolver(1_500).cameraVisuals.map((clip) => clip.id)).toEqual(['second']);
+  });
+
+  it('omits audio clips from every scene layer', () => {
+    const resolver = createCompositionSceneLayerResolver(composition(audio('audio', -1), visual('video', 'video', 0)));
+
+    const layers = resolver(500);
+
+    expect(layers.screen).toBeNull();
+    expect(layers.cameraVisuals.map((clip) => clip.id)).toEqual(['video']);
+    expect(layers.visualStack.map((clip) => clip.id)).toEqual(['video']);
+    expect(layers.webcams).toEqual([]);
+    expect(layers.captions).toEqual([]);
+  });
+
   it('keeps screen recordings and imported video/image clips in global camera space', () => {
     const layers = resolveCompositionSceneLayers(
       composition(

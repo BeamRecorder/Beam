@@ -7,6 +7,7 @@ const { emptyComposition, importMedia } = require('./clip-composition.cjs');
 const { normalizeInputSidecar, recordedPlatform } = require('./input-sidecar.cjs');
 const { createDefaultPresentation, defaultZoomMotionBlur, zoomState } = require('./project-editor-state.cjs');
 const { createProjectEditorAccess } = require('./project-editor-access.cjs');
+const { createProjectFeatureDetector } = require('./project-feature-detection.cjs');
 
 function createProjectStore(root) {
   const safePath = (directory, relativePath) => {
@@ -147,116 +148,15 @@ function createProjectStore(root) {
     }
     return null;
   };
-  const hasVideoFiles = (dir) => {
-    try {
-      if (!dir || !fs.existsSync(dir)) return false;
-      const stats = fs.statSync(dir);
-      if (!stats.isDirectory()) return false;
-      const entries = fs.readdirSync(dir);
-      return entries.some(
-        (entry) => /\.(mp4|webm|mov|mkv)$/i.test(entry) && fs.statSync(path.join(dir, entry)).size > 0,
-      );
-    } catch {
-      return false;
-    }
-  };
-  const assetFileExists = (directory, asset) => {
-    if (!asset) return false;
-    try {
-      const target =
-        asset.origin === 'session'
-          ? sessionFileFor(directory, asset.sessionId, asset.sessionPath)
-          : path.join(directory, 'media', asset.fileName);
-      return Boolean(target && fs.existsSync(target) && fs.statSync(target).size > 0);
-    } catch {
-      return false;
-    }
-  };
-  const hasCaptionContent = (clip) => {
-    if (!clip || clip.kind !== 'caption') return false;
-    if (clip.caption?.type === 'text' || Array.isArray(clip.caption?.sentences)) {
-      const sentences = clip.caption?.sentences;
-      return (
-        Array.isArray(sentences) &&
-        sentences.some(
-          (s) =>
-            (Array.isArray(s?.words) && s.words.length > 0) ||
-            (typeof s?.text === 'string' && s.text.trim().length > 0),
-        )
-      );
-    }
-    if (clip.caption?.type === 'keyboard' || Array.isArray(clip.caption?.steps)) {
-      const steps = clip.caption?.steps;
-      return Array.isArray(steps) && steps.length > 0;
-    }
-    return false;
-  };
-  const hasKeyboardCaptionEvents = (directory, sessionIds) => {
-    if (!Array.isArray(sessionIds) || sessionIds.length === 0) return false;
-    return sessionIds.some((sessionId) => {
-      try {
-        const file = sessionFileFor(directory, sessionId, path.join('cursor', 'input.json'));
-        if (!file || !fs.existsSync(file)) return false;
-        const data = JSON.parse(fs.readFileSync(file, 'utf8'));
-        return Array.isArray(data?.events) && data.events.length > 0;
-      } catch {
-        return false;
-      }
-    });
-  };
-  const detectProjectFeatures = (directory, manifest, sessions) => {
-    let hasScreen = false;
-    let hasCamera = false;
-    let hasCaption = false;
-
-    const assets = Array.isArray(manifest.editor?.composition?.assets) ? manifest.editor.composition.assets : [];
-    const assetsMap = new Map(assets.map((a) => [a.id, a]));
-
-    const clips = Array.isArray(manifest.editor?.composition?.clips) ? manifest.editor.composition.clips : [];
-    for (const clip of clips) {
-      if (!clip) continue;
-      if (clip.kind === 'screen' || clip.kind === 'video') {
-        if (!hasScreen && clip.assetId && assetFileExists(directory, assetsMap.get(clip.assetId))) {
-          hasScreen = true;
-        }
-      } else if (clip.kind === 'webcam') {
-        if (!hasCamera && clip.assetId && assetFileExists(directory, assetsMap.get(clip.assetId))) {
-          hasCamera = true;
-        }
-      } else if (clip.kind === 'caption') {
-        if (!hasCaption && hasCaptionContent(clip)) {
-          hasCaption = true;
-        }
-      }
-    }
-
-    if (
-      !hasCaption &&
-      Array.isArray(manifest.editor?.composition?.keyboardCaptionSessions) &&
-      manifest.editor.composition.keyboardCaptionSessions.length > 0
-    ) {
-      hasCaption = hasKeyboardCaptionEvents(directory, manifest.editor.composition.keyboardCaptionSessions);
-    }
-
-    if ((!hasScreen || !hasCamera) && Array.isArray(sessions) && sessions.length > 0) {
-      for (const session of sessions) {
-        const sessionDirectory = safePath(directory, session?.relativePath);
-        if (!sessionDirectory) continue;
-        if (!hasScreen && hasVideoFiles(path.join(sessionDirectory, 'screen'))) {
-          hasScreen = true;
-        }
-        if (!hasCamera && hasVideoFiles(path.join(sessionDirectory, 'camera'))) {
-          hasCamera = true;
-        }
-      }
-    }
-
-    return { hasScreen, hasCamera, hasCaption };
-  };
+  const detectProjectFeatures = createProjectFeatureDetector({ safePath, sessionFileFor });
   const summary = (directory, manifest, fallbackId) => {
     const sessions = Array.isArray(manifest.sessions) ? manifest.sessions : [];
     const id = typeof manifest.projectId === 'string' ? manifest.projectId : fallbackId;
-    const { hasScreen, hasCamera, hasCaption } = detectProjectFeatures(directory, manifest, sessions);
+    const { hasScreen, hasCamera, hasCaption, hasSystemAudio, hasMicrophone } = detectProjectFeatures(
+      directory,
+      manifest,
+      sessions,
+    );
     return {
       id,
       name:
@@ -269,6 +169,8 @@ function createProjectStore(root) {
       hasScreen,
       hasCamera,
       hasCaption,
+      hasSystemAudio,
+      hasMicrophone,
     };
   };
   const readJsonArray = (file) => {

@@ -41,7 +41,11 @@ import type {
 import type { ProjectEditorData } from '../../../api/types/capture-api';
 import type { OutputCanvasSettings } from '../canvas/output-canvas';
 import type { ShadowDirection } from './cursor/shadow-types';
-import type { CursorClickEffects, CursorMotionSettings } from '../../../api/types/cursor-settings';
+import type {
+  CursorAutoHideSettings,
+  CursorClickEffects,
+  CursorMotionSettings,
+} from '../../../api/types/cursor-settings';
 import { useTranslate } from '~/i18n/useTranslate';
 import { isKeyboardCaptionClip } from '~/media/shared/composition-types';
 import { usePropertiesPanelNavigation } from './usePropertiesPanelNavigation';
@@ -77,6 +81,7 @@ const props = withDefaults(
     shadowDirection: ShadowDirection;
     clickEffects: CursorClickEffects;
     motion: CursorMotionSettings;
+    autoHide: CursorAutoHideSettings;
     volume: number;
     isSystemAudioEnabled: boolean;
     isMicAudioEnabled: boolean;
@@ -185,6 +190,7 @@ const emit = defineEmits<{
   (event: 'update:shadowDirection', value: ShadowDirection): void;
   (event: 'update:clickEffects', value: CursorClickEffects): void;
   (event: 'update:motion', value: CursorMotionSettings): void;
+  (event: 'update:autoHide', value: CursorAutoHideSettings): void;
   (event: 'update:volume', value: number): void;
   (event: 'update:isSystemAudioEnabled', value: boolean): void;
   (event: 'update:isMicAudioEnabled', value: boolean): void;
@@ -433,6 +439,7 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
               :shadow-direction="shadowDirection"
               :click-effects="clickEffects"
               :motion="motion"
+              :auto-hide="autoHide"
               @update:selection="emit('update:cursorSelection', $event)"
               @preview:selection="emit('preview:cursorSelection', $event)"
               @update:cursor-size="emit('update:cursorSize', $event)"
@@ -443,6 +450,7 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
               @update:shadow-direction="emit('update:shadowDirection', $event)"
               @update:click-effects="emit('update:clickEffects', $event)"
               @update:motion="emit('update:motion', $event)"
+              @update:auto-hide="emit('update:autoHide', $event)"
             />
             <AudioPanel
               v-else-if="activeTab === 'audio'"

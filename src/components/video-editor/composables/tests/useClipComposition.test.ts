@@ -619,6 +619,60 @@ describe('useClipComposition', () => {
     });
   });
 
+  it('propagates word highlight style across a caption layer without copying phrase content', () => {
+    const mounted = mountComposable();
+    const first = {
+      ...textCaptionClip('caption-first', 'First sentence', '#ffffff', 'First custom text'),
+      captionLayerId: 'shared-layer',
+    } satisfies CaptionClip;
+    const second = {
+      ...textCaptionClip('caption-second', 'Second sentence', '#00ff00', 'Second custom text'),
+      captionLayerId: 'shared-layer',
+    } satisfies CaptionClip;
+    const otherLayer = {
+      ...textCaptionClip('caption-other-layer', 'Other layer sentence', '#0000ff', 'Other custom text'),
+      captionLayerId: 'other-layer',
+    } satisfies CaptionClip;
+    mounted.state.composition.value = { ...mounted.state.composition.value, clips: [first, second, otherLayer] };
+    mounted.state.selectClip(first.id);
+
+    if (first.caption.type !== 'text') throw new Error('Expected a text caption');
+    mounted.state.updateCaption({
+      ...first,
+      caption: {
+        ...first.caption,
+        sentences: [{ id: 'changed', text: 'Changed primary sentence', startMs: 0, endMs: 2_000, words: [] }],
+        style: {
+          ...first.caption.style,
+          customText: 'Changed primary custom text',
+          wordHighlight: { ...first.caption.style.wordHighlight, enabled: true },
+        },
+      },
+    });
+
+    const updatedFirst = mounted.state.composition.value.clips.find((clip) => clip.id === first.id)!;
+    const updatedSecond = mounted.state.composition.value.clips.find((clip) => clip.id === second.id)!;
+    const updatedOtherLayer = mounted.state.composition.value.clips.find((clip) => clip.id === otherLayer.id)!;
+    expect(updatedFirst).toMatchObject({
+      caption: {
+        sentences: [expect.objectContaining({ text: 'Changed primary sentence' })],
+        style: { customText: 'Changed primary custom text', wordHighlight: { enabled: true } },
+      },
+    });
+    expect(updatedSecond).toMatchObject({
+      caption: {
+        sentences: [expect.objectContaining({ text: 'Second sentence' })],
+        style: { customText: 'Second custom text', wordHighlight: { enabled: true } },
+      },
+    });
+    expect(updatedOtherLayer).toMatchObject({
+      caption: {
+        sentences: [expect.objectContaining({ text: 'Other layer sentence' })],
+        style: { customText: 'Other custom text', wordHighlight: { enabled: false } },
+      },
+    });
+  });
+
   it('adds images and audio, handles missing projects/assets, and applies media duration rules', async () => {
     const mounted = mountComposable();
     mounted.projectRef.value = null;

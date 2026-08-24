@@ -1,13 +1,15 @@
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
-import type { CaptionClip } from '~/media/shared/composition-types';
+import type { CaptionClip, TextCaptionData } from '~/media/shared/composition-types';
 import { composition, keyboardCaption, mountTracks, pointerEvent } from './TimelineTracks.test-support';
+
+type TextCaptionClip = Omit<CaptionClip, 'caption'> & { caption: TextCaptionData };
 
 const withMultiClipAiCaption = () => {
   const base = composition();
   const aiCaption = base.clips.find((clip): clip is CaptionClip => clip.id === 'caption-clip');
   if (!aiCaption || aiCaption.caption.type !== 'text') throw new Error('Expected the base AI caption clip.');
-  const first: CaptionClip = {
+  const first: TextCaptionClip = {
     ...aiCaption,
     captionLayerId: 'ai-caption-layer',
     caption: {
@@ -15,7 +17,7 @@ const withMultiClipAiCaption = () => {
       sentences: [{ id: 'first', text: 'First sentence', startMs: 5_000, endMs: 6_000, words: [] }],
     },
   };
-  const second: CaptionClip = {
+  const second: TextCaptionClip = {
     ...first,
     id: 'caption-clip-2',
     name: 'AI Caption 2',

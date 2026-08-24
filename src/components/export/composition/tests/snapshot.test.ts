@@ -5,6 +5,7 @@ import { DEFAULT_OUTPUT_CANVAS } from '../../../video-editor/canvas/output-canva
 import type { ClipComposition } from '~/media/shared/composition-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import { MACOS_CURSOR_PACK } from '../../../video-editor/properties/cursor/cursor-packs';
+import { createDefaultCursorAutoHideSettings } from '../../../../api/types/cursor-settings';
 
 const composition = (): ClipComposition => ({
   schemaVersion: 6,
@@ -63,6 +64,7 @@ const base = (): Parameters<typeof createCompositionSnapshot>[0] => ({
       right: { springEnabled: true, springIntensity: 50, rippleEnabled: true, rippleSize: 30, rippleColor: '#6366f1' },
     },
     motion: { preset: 'smooth' as const, smoothing: 0.67, springMassMultiplier: 1.29, motionBlur: 0.4 },
+    autoHide: createDefaultCursorAutoHideSettings(),
   },
   cursorPack: MACOS_CURSOR_PACK,
 });
@@ -170,6 +172,16 @@ describe('createCompositionSnapshot', () => {
       springMassMultiplier: 0.5,
       motionBlur: 0,
     });
+  });
+
+  it('copies auto-hide settings into the export snapshot', () => {
+    const input = base();
+    input.cursorSettings.autoHide = { enabled: true, delaySeconds: 4.5 };
+
+    const snapshot = createCompositionSnapshot(input);
+    input.cursorSettings.autoHide.delaySeconds = 1;
+
+    expect(snapshot.cursorSettings.autoHide).toEqual({ enabled: true, delaySeconds: 4.5 });
   });
 
   it('keeps an immutable copy of zooms and composition', () => {

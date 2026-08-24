@@ -1,5 +1,23 @@
 import type { CaptionStyle, ClipAppearance, VisualClip } from './composition-types';
 
+export const createDefaultCaptionHighlight = (): CaptionStyle['wordHighlight'] => ({
+  enabled: false,
+  displayMode: 'sentence',
+  fill: 'solid',
+  color: '#facc15',
+  gradient: {
+    type: 'linear',
+    angle: 90,
+    stops: [
+      { id: 'highlight-start', position: 0, color: '#facc15', alpha: 1 },
+      { id: 'highlight-end', position: 1, color: '#fb7185', alpha: 1 },
+    ],
+  },
+  effect: 'pop',
+  intensity: 55,
+  inactiveOpacity: 72,
+});
+
 export const createDefaultClipAppearance = (kind: VisualClip['kind'], showBackground = false): ClipAppearance => ({
   cornerRadius: kind === 'screen' ? (showBackground ? 'md' : 'none') : 'sm',
   shadowSize: 'md',
@@ -36,4 +54,5 @@ export const createDefaultCaptionStyle = (fontSize = 42): CaptionStyle => ({
   outlineWidth: 6,
   extrusionDepth: 4,
   placement: 'bottom',
+  wordHighlight: createDefaultCaptionHighlight(),
 });

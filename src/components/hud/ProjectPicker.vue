@@ -3,12 +3,10 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useVirtualList } from '@vueuse/core';
 import {
   ArrowLeft,
-  Captions,
   Check,
   CheckSquare,
   Film,
   FolderOpen,
-  Monitor,
   RefreshCw,
   MoreVertical,
   Plus,
@@ -16,7 +14,6 @@ import {
   Search,
   ExternalLink,
   Trash2,
-  Video,
   X,
 } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
@@ -33,6 +30,7 @@ import { useScrollShadow } from '../ui/scroll-shadow/useScrollShadow';
 import { capture } from '../../api/capture';
 import type { CaptureProject } from '../../api/types/capture-api';
 import { useTranslate } from '~/i18n/useTranslate';
+import ProjectFeatureBadges from '../projects/ProjectFeatureBadges.vue';
 
 const { t } = useTranslate('ProjectPicker');
 
@@ -767,36 +765,7 @@ defineExpose({
                   @playing="isVideoLoaded[project.id] = true"
                   @timeupdate="handleVideoTimeUpdate(project.id, $event)"
                 />
-                <div
-                  v-if="project.hasScreen || project.hasCamera || project.hasCaption"
-                  class="project-badges-overlay"
-                  data-testid="project-badges"
-                >
-                  <span
-                    v-if="project.hasScreen"
-                    class="project-badge-icon"
-                    :title="t('screenRecord')"
-                    :aria-label="t('screenRecord')"
-                  >
-                    <Monitor />
-                  </span>
-                  <span
-                    v-if="project.hasCamera"
-                    class="project-badge-icon"
-                    :title="t('camera')"
-                    :aria-label="t('camera')"
-                  >
-                    <Video />
-                  </span>
-                  <span
-                    v-if="project.hasCaption"
-                    class="project-badge-icon"
-                    :title="t('captions')"
-                    :aria-label="t('captions')"
-                  >
-                    <Captions />
-                  </span>
-                </div>
+                <ProjectFeatureBadges :project="project" />
                 <template v-if="!isSelectionMode">
                   <span v-if="project.id === currentProjectId" class="current-indicator" :aria-label="t('current')">
                     {{ t('current') }}
@@ -1385,46 +1354,6 @@ defineExpose({
   left: 0;
   right: 0;
   z-index: 10;
-}
-
-.project-badges-overlay {
-  position: absolute;
-  top: 5px;
-  left: 5px;
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  padding: 2px 4px;
-  border-radius: var(--radius-sm);
-  background: rgba(18, 17, 15, 0.55);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
-  z-index: 3;
-}
-
-:root.dark .project-badges-overlay {
-  background: rgba(14, 13, 11, 0.65);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.project-badge-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #f4f4f5;
-  opacity: 0.88;
-  transition: opacity var(--fast, 0.15s) ease;
-}
-
-.project-badge-icon:hover {
-  opacity: 1;
-}
-
-.project-badge-icon svg {
-  width: 11px;
-  height: 11px;
 }
 
 .current-indicator {

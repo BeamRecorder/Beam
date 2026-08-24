@@ -6,7 +6,11 @@ import type {
   CursorShapeAsset,
   CursorKind,
 } from '../../../api/types/capture-api';
-import { clickButtonForRecordedButton, type CursorClickButton } from '../../../api/types/cursor-settings';
+import {
+  clickButtonForRecordedButton,
+  type CursorAutoHideSettings,
+  type CursorClickButton,
+} from '../../../api/types/cursor-settings';
 
 export interface CursorPlaybackState {
   x: number;
@@ -94,6 +98,7 @@ export interface CursorEventIndex {
     initialHotspot?: { x: number; y: number },
   ): CursorPlaybackState | null;
   buttonsBetween(startSeconds: number, endSeconds: number, button?: CursorClickButton): CursorButtonEvent[];
+  idleSecondsAt(timeSeconds: number): number;
 }
 
 const upperBound = (values: readonly number[], target: number) => {
@@ -119,6 +124,22 @@ export function createCursorEventIndex(events: CursorEvent[]): CursorEventIndex 
   const moveTimes = moves.map(eventTime);
   const pressedButtons = ordered.filter((event): event is CursorButtonEvent => isButton(event) && event.pressed);
   const buttonTimes = pressedButtons.map(eventTime);
+  const activityTimes: number[] = [];
+  let previousMove: CursorMoveEvent | null = null;
+  for (const event of ordered) {
+    if (isMove(event)) {
+      if (
+        !previousMove ||
+        event.normalizedX !== previousMove.normalizedX ||
+        event.normalizedY !== previousMove.normalizedY ||
+        (event.visible && !previousMove.visible)
+      )
+        activityTimes.push(eventTime(event));
+      previousMove = event;
+    } else if ((isButton(event) && event.pressed) || (event.event === 'visibility' && event.visible)) {
+      activityTimes.push(eventTime(event));
+    }
+  }
   const checkpointTimes: number[] = [];
   const checkpoints: CursorStateCheckpoint[] = [];
   let checkpoint: CursorStateCheckpoint = {
@@ -217,6 +238,11 @@ export function createCursorEventIndex(events: CursorEvent[]): CursorEventIndex 
         ? matches
         : matches.filter((event) => clickButtonForRecordedButton(event.button) === button);
     },
+    idleSecondsAt(timeSeconds) {
+      const time = Number.isNaN(timeSeconds) ? Number.POSITIVE_INFINITY : Math.max(0, timeSeconds);
+      const lastActivity = activityTimes[upperBound(activityTimes, time) - 1] ?? 0;
+      return Math.max(0, time - lastActivity);
+    },
   };
 }
 
@@ -252,6 +278,14 @@ export function buttonEventsBetween(
   button?: CursorClickButton,
 ): CursorButtonEvent[] {
   return cursorEventIndexFor(events).buttonsBetween(startSeconds, endSeconds, button);
+}
+
+export function cursorAutoHiddenAt(
+  events: CursorEvent[],
+  timeSeconds: number,
+  settings: CursorAutoHideSettings,
+): boolean {
+  return settings.enabled && cursorEventIndexFor(events).idleSecondsAt(timeSeconds) >= settings.delaySeconds;
 }
 
 export function cursorAssetForState(state: CursorPlaybackState | null, shapes: Record<string, CursorShapeAsset>) {

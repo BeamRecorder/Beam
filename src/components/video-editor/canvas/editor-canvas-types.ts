@@ -1,5 +1,9 @@
 import type { ProjectEditorData } from '../../../api/types/capture-api';
-import type { CursorClickEffects, CursorMotionSettings } from '../../../api/types/cursor-settings';
+import type {
+  CursorAutoHideSettings,
+  CursorClickEffects,
+  CursorMotionSettings,
+} from '../../../api/types/cursor-settings';
 import type { HistoryAction } from '../composables/useEditorUndoRedo';
 import type { BackgroundValue } from '../composables/backgroundCatalog';
 import type { CursorPackDescriptor, CursorSelection } from '../../../api/types/cursor-pack';
@@ -33,6 +37,7 @@ export interface EditorCanvasProps {
   shadowDirection: ShadowDirection;
   clickEffects: CursorClickEffects;
   motion: CursorMotionSettings;
+  autoHide: CursorAutoHideSettings;
   selectedBackground: BackgroundValue | null;
   backgroundBlurPercent?: number;
   frameFor: (clipId: string) => MediaFrame | null;

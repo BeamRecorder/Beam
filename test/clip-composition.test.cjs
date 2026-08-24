@@ -165,6 +165,17 @@ const captionClip = (caption, overrides = {}) => ({
   ...overrides,
 });
 
+test('preserves the logical caption layer identity during normalization', () => {
+  const normalized = normalizeComposition({
+    schemaVersion: 11,
+    assets: [],
+    keyboardCaptionSessions: [],
+    clips: [captionClip(textCaption(), { captionLayerId: 'ai-caption-layer' })],
+  });
+
+  assert.equal(normalized.clips[0].captionLayerId, 'ai-caption-layer');
+});
+
 test('imports allowed project media and rejects unsupported extensions', () => {
   const { directory } = setup();
   const source = path.join(directory, 'voice.wav');
@@ -1626,7 +1637,7 @@ test('migrates Golden Canvas 2 v4 screen fragments to v11 without losing visual 
   assert.deepEqual(store.editorState(project.id), migrated);
 });
 
-test('project store reports hasScreen, hasCamera, and hasCaption only when actual files exist', () => {
+test('project store reports media feature badges only when actual files exist', () => {
   const { directory: root } = setup();
   const store = createProjectStore(root);
   const project = store.create({ name: 'Feature Detection' });
@@ -1635,6 +1646,8 @@ test('project store reports hasScreen, hasCamera, and hasCaption only when actua
   fs.mkdirSync(mediaDir, { recursive: true });
   fs.writeFileSync(path.join(mediaDir, 'screen.mp4'), 'dummy-screen-data');
   fs.writeFileSync(path.join(mediaDir, 'webcam.mp4'), 'dummy-webcam-data');
+  fs.writeFileSync(path.join(mediaDir, 'system-audio.webm'), 'dummy-system-audio-data');
+  fs.writeFileSync(path.join(mediaDir, 'microphone.webm'), 'dummy-microphone-data');
 
   const manifestPath = path.join(directory, 'project.json');
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
@@ -1644,6 +1657,14 @@ test('project store reports hasScreen, hasCamera, and hasCaption only when actua
     assets: [
       { id: 'screen-asset', kind: 'video', name: 'Screen', fileName: 'screen.mp4', origin: 'project' },
       { id: 'webcam-asset', kind: 'video', name: 'Webcam', fileName: 'webcam.mp4', origin: 'project' },
+      {
+        id: 'system-audio-asset',
+        kind: 'audio',
+        name: 'System audio',
+        fileName: 'system-audio.webm',
+        origin: 'project',
+      },
+      { id: 'microphone-asset', kind: 'audio', name: 'Microphone', fileName: 'microphone.webm', origin: 'project' },
       { id: 'missing-asset', kind: 'video', name: 'Missing', fileName: 'missing.mp4', origin: 'project' },
     ],
     keyboardCaptionSessions: [],
@@ -1709,6 +1730,28 @@ test('project store reports hasScreen, hasCamera, and hasCaption only when actua
         order: 3,
         transitions: { entry: null, exit: null },
       },
+      {
+        id: 'system-audio-clip',
+        trackId: 'track-4',
+        kind: 'audio',
+        timeRange: { startMs: 0, endMs: 1000 },
+        sourceTimeRange: { startMs: 0, endMs: 1000 },
+        assetId: 'system-audio-asset',
+        role: 'system',
+        order: 4,
+        volume: 1,
+      },
+      {
+        id: 'microphone-clip',
+        trackId: 'track-5',
+        kind: 'audio',
+        timeRange: { startMs: 0, endMs: 1000 },
+        sourceTimeRange: { startMs: 0, endMs: 1000 },
+        assetId: 'microphone-asset',
+        role: 'microphone',
+        order: 5,
+        volume: 1,
+      },
     ],
   };
   fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
@@ -1719,6 +1762,8 @@ test('project store reports hasScreen, hasCamera, and hasCaption only when actua
   assert.equal(summary.hasScreen, true);
   assert.equal(summary.hasCamera, true);
   assert.equal(summary.hasCaption, true);
+  assert.equal(summary.hasSystemAudio, true);
+  assert.equal(summary.hasMicrophone, true);
 
   // When webcam asset file is removed, hasCamera becomes false
   fs.rmSync(path.join(mediaDir, 'webcam.mp4'));
@@ -1727,6 +1772,68 @@ test('project store reports hasScreen, hasCamera, and hasCaption only when actua
   assert.equal(summaryAfterRemoval.hasCamera, false);
   assert.equal(summaryAfterRemoval.hasScreen, true);
   assert.equal(summaryAfterRemoval.hasCaption, true);
+
+  fs.rmSync(path.join(mediaDir, 'microphone.webm'));
+  const listAfterMicrophoneRemoval = store.list();
+  const summaryAfterMicrophoneRemoval = listAfterMicrophoneRemoval.find((p) => p.id === project.id);
+  assert.equal(summaryAfterMicrophoneRemoval.hasSystemAudio, true);
+  assert.equal(summaryAfterMicrophoneRemoval.hasMicrophone, false);
+});
+
+test('project store detects recorded audio features from session manifests without synced composition clips', () => {
+  const { directory: root } = setup();
+  const store = createProjectStore(root);
+  const project = store.create({ name: 'Session audio feature detection' });
+  const directory = store.directoryFor(project.id);
+  const sessionId = 'session-audio-features';
+  const sessionDirectory = path.join(directory, 'sessions', sessionId);
+  const systemAudioPath = path.join(sessionDirectory, 'system-audio', 'segment-0001.webm');
+  const microphonePath = path.join(sessionDirectory, 'microphone', 'segment-0001.webm');
+  fs.mkdirSync(path.dirname(systemAudioPath), { recursive: true });
+  fs.mkdirSync(path.dirname(microphonePath), { recursive: true });
+  fs.writeFileSync(systemAudioPath, 'system-audio-segment');
+  fs.writeFileSync(microphonePath, 'microphone-segment');
+
+  const sessionManifestPath = path.join(sessionDirectory, 'manifest.json');
+  const sessionManifest = {
+    sessionId,
+    tracks: [
+      {
+        kind: 'system-audio',
+        status: 'completed',
+        segments: [{ path: 'system-audio/segment-0001.webm', complete: true }],
+      },
+      {
+        kind: 'microphone',
+        status: 'completed',
+        segments: [{ path: 'microphone/segment-0001.webm', complete: true }],
+      },
+    ],
+  };
+  fs.writeFileSync(sessionManifestPath, `${JSON.stringify(sessionManifest, null, 2)}\n`);
+
+  const projectManifestPath = path.join(directory, 'project.json');
+  const projectManifest = JSON.parse(fs.readFileSync(projectManifestPath, 'utf8'));
+  projectManifest.sessions = [{ sessionId, relativePath: path.join('sessions', sessionId) }];
+  fs.writeFileSync(projectManifestPath, `${JSON.stringify(projectManifest, null, 2)}\n`);
+
+  const withRecordedAudio = store.list().find((entry) => entry.id === project.id);
+  assert(withRecordedAudio);
+  assert.equal(withRecordedAudio.hasSystemAudio, true);
+  assert.equal(withRecordedAudio.hasMicrophone, true);
+
+  fs.rmSync(systemAudioPath);
+  const afterMissingSegment = store.list().find((entry) => entry.id === project.id);
+  assert(afterMissingSegment);
+  assert.equal(afterMissingSegment.hasSystemAudio, false);
+  assert.equal(afterMissingSegment.hasMicrophone, true);
+
+  sessionManifest.tracks.find((track) => track.kind === 'microphone').status = 'failed';
+  fs.writeFileSync(sessionManifestPath, `${JSON.stringify(sessionManifest, null, 2)}\n`);
+  const afterFailedTrack = store.list().find((entry) => entry.id === project.id);
+  assert(afterFailedTrack);
+  assert.equal(afterFailedTrack.hasSystemAudio, false);
+  assert.equal(afterFailedTrack.hasMicrophone, false);
 });
 
 test('marks a newly created project editor state as fresh', () => {

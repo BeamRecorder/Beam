@@ -37,8 +37,9 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
   } | null = null;
   let motionBlurSurface: MotionBlurSurface | null = null;
 
-  const screenClip = (): VisualClip | null =>
-    resolveCompositionSceneLayers(options.composition(), options.currentTime() * 1_000).screen;
+  const sceneLayersAt = (timeMs: number) =>
+    options.sceneLayersAt?.(timeMs) ?? resolveCompositionSceneLayers(options.composition(), timeMs);
+  const screenClip = (): VisualClip | null => sceneLayersAt(options.currentTime() * 1_000).screen;
 
   const resetCamera = () => {
     cameraEvaluator = null;
@@ -187,8 +188,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
   ): RenderedVideoWindow | null => {
     const output = options.outputCanvas();
     const preview = outputPreviewRect(width, height, output);
-    const sceneLayers =
-      resolvedLayers ?? resolveCompositionSceneLayers(options.composition(), options.currentTime() * 1_000);
+    const sceneLayers = resolvedLayers ?? sceneLayersAt(options.currentTime() * 1_000);
     const screen = sceneLayers.screen;
     const hasCameraVisual = sceneLayers.cameraVisuals.length > 0;
     if (!hasCameraVisual) {
@@ -269,7 +269,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
         zooms: previewZooms,
         telemetry,
         mapFocus: (focus, zoom, timeMs) => {
-          const activeScreen = resolveCompositionSceneLayers(options.composition(), timeMs).screen;
+          const activeScreen = sceneLayersAt(timeMs).screen;
           if (!activeScreen || zoom.mode !== 'auto') return focus;
           const activeGeometry = resolveScreenRenderGeometry(
             activeScreen,

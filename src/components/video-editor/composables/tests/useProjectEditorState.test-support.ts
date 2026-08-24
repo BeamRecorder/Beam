@@ -39,6 +39,7 @@ export const globalCursor = (): CursorPresentation => ({
     },
   },
   motion: { preset: 'custom', smoothing: 0.31, springMassMultiplier: 1.72, motionBlur: 0.18 },
+  autoHide: { enabled: true, delaySeconds: 6.5 },
 });
 
 export const projectCursor = (): CursorPresentation => ({
@@ -66,4 +67,5 @@ export const projectCursor = (): CursorPresentation => ({
     },
   },
   motion: { preset: 'focused', smoothing: 0.91, springMassMultiplier: 0.61, motionBlur: 0.73 },
+  autoHide: { enabled: true, delaySeconds: 4.25 },
 });

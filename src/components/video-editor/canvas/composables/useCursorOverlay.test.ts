@@ -1,6 +1,7 @@
 import { nextTick, ref } from 'vue';
 import { describe, expect, it, vi } from 'vitest';
 import type { CursorPackDescriptor } from '../../../../api/types/cursor-pack';
+import { createDefaultCursorAutoHideSettings } from '../../../../api/types/cursor-settings';
 import { MACOS_CURSOR_PACK } from '../../properties/cursor/cursor-packs';
 
 const getCursorImage = vi.hoisted(() => vi.fn());
@@ -112,6 +113,7 @@ const baseOptions = (): UseCursorOverlayOptions => ({
     springMassMultiplier: 1.29,
     motionBlur: 0.4,
   }),
+  autoHide: () => createDefaultCursorAutoHideSettings(),
   shadowBlur: () => 8,
   shadowColor: () => '#000000',
   shadowDirection: () => 'bottom-right' as const,
@@ -354,6 +356,70 @@ describe('useCursorOverlay', () => {
     expect(ctx.arc).not.toHaveBeenCalled();
     expect(ctx.drawImage).not.toHaveBeenCalled();
     expect(overlay.cursorBounds.value).toBeNull();
+  });
+
+  it('stops drawing and clears bounds after auto-hide idle time, then resumes after a real movement', async () => {
+    getCursorImage.mockClear().mockResolvedValue({
+      complete: true,
+      naturalWidth: 32,
+    } as HTMLImageElement);
+    const time = ref(0.2);
+    const options = baseOptions();
+    options.currentTime = () => time.value;
+    options.autoHide = () => ({ enabled: true, delaySeconds: 0.5 });
+    options.editorData = () =>
+      ({
+        cursor: {
+          available: true,
+          events: [
+            {
+              event: 'shape',
+              sessionNs: 0,
+              cursorId: 'custom:arrow',
+              cursorKind: 'custom',
+              hotspot: { x: 2, y: 3 },
+            },
+            {
+              event: 'move',
+              sessionNs: 0,
+              pixelX: 0,
+              pixelY: 0,
+              normalizedX: 0.25,
+              normalizedY: 0.35,
+              visible: true,
+            },
+            {
+              event: 'move',
+              sessionNs: second(1),
+              pixelX: 0,
+              pixelY: 0,
+              normalizedX: 0.75,
+              normalizedY: 0.65,
+              visible: true,
+            },
+          ],
+        },
+      }) as never;
+    const overlay = useCursorOverlay(options);
+
+    drawOverlay(overlay);
+    await settleCursorImage();
+    const visibleContext = createContext();
+    drawOverlay(overlay, visibleContext);
+    expect(visibleContext.drawImage).toHaveBeenCalled();
+    expect(overlay.cursorBounds.value).not.toBeNull();
+
+    time.value = 0.75;
+    const idleContext = createContext();
+    drawOverlay(overlay, idleContext);
+    expect(idleContext.drawImage).not.toHaveBeenCalled();
+    expect(overlay.cursorBounds.value).toBeNull();
+
+    time.value = 1.2;
+    const resumedContext = createContext();
+    drawOverlay(overlay, resumedContext);
+    expect(resumedContext.drawImage).toHaveBeenCalled();
+    expect(overlay.cursorBounds.value).not.toBeNull();
   });
 
   it('keeps the loaded image while cursor size changes, then updates bounds on the next draw', async () => {

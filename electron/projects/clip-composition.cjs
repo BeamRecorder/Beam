@@ -279,6 +279,7 @@ function normalizeComposition(value) {
       return {
         ...common,
         caption: normalizeCaption(clip.caption),
+        ...(id(clip.captionLayerId) ? { captionLayerId: clip.captionLayerId } : {}),
         ...(clip.transform ? { transform: rectangle(clip.transform, 'Transformation') } : {}),
         ...(typeof clip.isAiGenerated === 'boolean' ? { isAiGenerated: clip.isAiGenerated } : {}),
       };

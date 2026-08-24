@@ -1,12 +1,48 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CURSOR_AUTO_HIDE_DELAY_DEFAULT,
+  CURSOR_AUTO_HIDE_DELAY_MAX,
+  CURSOR_AUTO_HIDE_DELAY_MIN,
   clickButtonForRecordedButton,
   createDefaultCursorClickEffects,
+  createDefaultCursorAutoHideSettings,
   effectButtonForRecordedButton,
   createDefaultCursorMotionSettings,
+  normalizeCursorAutoHideSettings,
   normalizeCursorClickEffects,
   normalizeCursorMotionSettings,
 } from '../types/cursor-settings';
+
+describe('cursor auto-hide settings', () => {
+  it('defaults to disabled with the default delay', () => {
+    expect(createDefaultCursorAutoHideSettings()).toEqual({
+      enabled: false,
+      delaySeconds: CURSOR_AUTO_HIDE_DELAY_DEFAULT,
+    });
+  });
+
+  it('normalizes malformed values to safe defaults', () => {
+    expect(normalizeCursorAutoHideSettings({ enabled: 'yes', delaySeconds: Number.NaN })).toEqual({
+      enabled: false,
+      delaySeconds: CURSOR_AUTO_HIDE_DELAY_DEFAULT,
+    });
+    expect(normalizeCursorAutoHideSettings(null)).toEqual({
+      enabled: false,
+      delaySeconds: CURSOR_AUTO_HIDE_DELAY_DEFAULT,
+    });
+  });
+
+  it('clamps the delay to the supported slider range', () => {
+    expect(normalizeCursorAutoHideSettings({ enabled: true, delaySeconds: CURSOR_AUTO_HIDE_DELAY_MIN - 1 })).toEqual({
+      enabled: true,
+      delaySeconds: CURSOR_AUTO_HIDE_DELAY_MIN,
+    });
+    expect(normalizeCursorAutoHideSettings({ enabled: true, delaySeconds: CURSOR_AUTO_HIDE_DELAY_MAX + 1 })).toEqual({
+      enabled: true,
+      delaySeconds: CURSOR_AUTO_HIDE_DELAY_MAX,
+    });
+  });
+});
 
 describe('cursor click settings', () => {
   it('keeps left and right defaults independent', () => {

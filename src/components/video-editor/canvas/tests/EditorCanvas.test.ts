@@ -7,7 +7,7 @@ import CanvasLoadingSkeleton from '../CanvasLoadingSkeleton.vue';
 import { DEFAULT_OUTPUT_CANVAS } from '../output-canvas';
 import type { ClipComposition, VisualClip } from '~/media/shared/composition-types';
 import type { MediaFrame } from '~/media/shared';
-import type { CursorClickEffects } from '../../../../api/types/cursor-settings';
+import type { CursorAutoHideSettings, CursorClickEffects } from '../../../../api/types/cursor-settings';
 import ResizeHandle from '../../../ui/ResizeHandle/ResizeHandle.vue';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import { resolveCompositionSceneLayers } from '../../composition/scene-layers';
@@ -39,6 +39,7 @@ const { state } = vi.hoisted(() => ({
     transformSelectionViewportStyle: undefined as { value: unknown } | undefined,
     transformResizeCorners: undefined as { value: unknown } | undefined,
     transition: undefined as { value: boolean } | undefined,
+    onRenderOnce: undefined as (() => void) | undefined,
     renderVisualStack: undefined as ((...args: unknown[]) => void) | undefined,
     canvasBackgroundOptions: undefined as
       | {
@@ -106,6 +107,7 @@ vi.mock('../composables/useCameraZoom', async () => {
   return {
     useCameraZoom: (options: { renderVisualStack: (...args: unknown[]) => void; onRenderOnce?: () => void }) => {
       state.renderVisualStack = options.renderVisualStack;
+      state.onRenderOnce = options.onRenderOnce;
       return {
         focusTargetStyle: ref({
           left: '10px',
@@ -198,6 +200,7 @@ const effects: CursorClickEffects = {
     rippleColor: '#00f',
   },
 };
+const autoHide: CursorAutoHideSettings = { enabled: false, delaySeconds: 2 };
 
 const screen = (): VisualClip => ({
   id: 'screen',
@@ -300,6 +303,7 @@ const props = () => ({
   shadowColor: '#000000',
   shadowDirection: 'bottom' as const,
   clickEffects: effects,
+  autoHide,
   motion: {
     preset: 'smooth' as const,
     smoothing: 0.67,
@@ -354,6 +358,7 @@ const runFrame = () => {
 beforeEach(() => {
   vi.clearAllMocks();
   frames = [];
+  state.onRenderOnce = undefined;
   contextMock = context();
   vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
     frames.push(callback);
@@ -944,6 +949,73 @@ describe('EditorCanvas', () => {
     await nextTick();
     expect(state.syncPlayback).toHaveBeenLastCalledWith(false);
     expect(state.resetCamera).toHaveBeenCalled();
+  });
+
+  it('keeps one playback frame scheduled while a clip-toggle transition requests redraws during rendering', async () => {
+    const mounted = mountEditor({ isPlaying: false, playbackState: 'paused' });
+    await flushPromises();
+    while (frames.length) runFrame();
+
+    await mounted.setProps({ isPlaying: true, playbackState: 'playing' });
+    await nextTick();
+    expect(frames).toHaveLength(1);
+
+    runFrame();
+    expect(frames).toHaveLength(1);
+
+    const disabledComposition = composition();
+    disabledComposition.clips = disabledComposition.clips.map((clip) =>
+      clip.kind === 'screen' ? { ...clip, enabled: false } : clip,
+    );
+    await mounted.setProps({ composition: disabledComposition });
+    await nextTick();
+
+    // The transition capture and composition invalidation both request a redraw,
+    // but they must coalesce with the frame already scheduled for playback.
+    expect(frames).toHaveLength(1);
+
+    runFrame();
+    expect(frames).toHaveLength(1);
+    const drawCountAfterTransitionFrame = state.drawComposition.mock.calls.length;
+
+    // The fade's onRenderOnce callback runs from inside this draw. Playback must
+    // continue with one pending frame instead of creating a second RAF chain.
+    runFrame();
+    expect(frames).toHaveLength(1);
+    expect(state.drawComposition.mock.calls.length).toBeGreaterThan(drawCountAfterTransitionFrame);
+  });
+
+  it('coalesces a render-once request raised from inside a playback draw', async () => {
+    const mounted = mountEditor({ isPlaying: false, playbackState: 'paused' });
+    await flushPromises();
+    while (frames.length) runFrame();
+
+    const cameraBounds = {
+      dx: 0,
+      dy: 0,
+      dw: 800,
+      dh: 450,
+      scale: 1,
+      focusX: 400,
+      focusY: 225,
+    };
+    state.drawVideoWindow.mockImplementation(() => {
+      state.onRenderOnce?.();
+      return cameraBounds;
+    });
+    expect(state.onRenderOnce).toBeDefined();
+
+    await mounted.setProps({ isPlaying: true, playbackState: 'playing' });
+    await nextTick();
+    expect(frames).toHaveLength(1);
+
+    runFrame();
+    expect(frames).toHaveLength(1);
+
+    const drawCountAfterFirstFrame = state.drawVideoWindow.mock.calls.length;
+    runFrame();
+    expect(frames).toHaveLength(1);
+    expect(state.drawVideoWindow.mock.calls.length).toBeGreaterThan(drawCountAfterFirstFrame);
   });
 
   it('redraws the paused canvas when the selected manual zoom changes', async () => {

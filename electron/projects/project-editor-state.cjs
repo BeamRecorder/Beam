@@ -99,6 +99,7 @@ const defaultCursor = () => ({
     },
   },
   motion: { preset: 'smooth', smoothing: 0.67, springMassMultiplier: 1.29, motionBlur: 0.4 },
+  autoHide: { enabled: false, delaySeconds: 2 },
 });
 
 const zoomState = (value) => {
@@ -248,6 +249,10 @@ const cursorState = (value) => {
       smoothing: clamp(value.motion.smoothing, 0, 1),
       springMassMultiplier: clamp(value.motion.springMassMultiplier, 0.5, 2),
       motionBlur: clamp(value.motion.motionBlur, 0, 1),
+    },
+    autoHide: {
+      enabled: value.autoHide?.enabled === true,
+      delaySeconds: finite(value.autoHide?.delaySeconds) ? clamp(value.autoHide.delaySeconds, 0.5, 10) : 2,
     },
   };
 };

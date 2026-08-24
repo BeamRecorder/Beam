@@ -1,7 +1,12 @@
 import { mount } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import { describe, expect, it, vi } from 'vitest';
-import { createDefaultCursorClickEffects, createDefaultCursorMotionSettings } from '~/api/types/cursor-settings';
+import {
+  createDefaultCursorAutoHideSettings,
+  createDefaultCursorClickEffects,
+  createDefaultCursorMotionSettings,
+  type CursorAutoHideSettings,
+} from '~/api/types/cursor-settings';
 import { MACOS_CURSOR_PACK } from '../properties/cursor/cursor-packs';
 import type { BackgroundMediaGroup, BackgroundValue } from '../composables/backgroundCatalog';
 import { DEFAULT_WATERMARK, type OutputCanvasSettings } from '../canvas/output-canvas';
@@ -78,7 +83,22 @@ const CaptionPanel = {
     </div>
   `,
 };
-const CursorPanel = { template: '<div class="cursor-panel-stub">Cursor</div>' };
+const CursorPanel = {
+  props: ['autoHide'],
+  emits: ['update:autoHide'],
+  template: `
+    <div class="cursor-panel-stub" :data-auto-hide="JSON.stringify(autoHide)">
+      Cursor
+      <button
+        class="auto-hide-update"
+        type="button"
+        @click="$emit('update:autoHide', { enabled: true, delaySeconds: 4 })"
+      >
+        Update auto hide
+      </button>
+    </div>
+  `,
+};
 const ClipPropertiesPanel = {
   props: ['selectedClip'],
   template: '<div class="clip-panel-stub">{{ selectedClip?.kind }}</div>',
@@ -193,6 +213,7 @@ const canvas: OutputCanvasSettings = {
   showBackground: false,
 };
 const shadowDirection: ShadowDirection = 'bottom-right';
+const autoHide: CursorAutoHideSettings = createDefaultCursorAutoHideSettings();
 
 const baseProps = {
   activeTab: 'canvas',
@@ -208,6 +229,7 @@ const baseProps = {
   shadowDirection,
   clickEffects: createDefaultCursorClickEffects(),
   motion: createDefaultCursorMotionSettings(),
+  autoHide,
   volume: 100,
   isSystemAudioEnabled: false,
   isMicAudioEnabled: false,
@@ -645,6 +667,16 @@ describe('PropertiesPanel', () => {
 
     await wrapper.setProps({ activeTab: 'cursor' });
     expect(wrapper.get('.panel-title').text()).toBe('Cursor');
+  });
+
+  it('forwards cursor auto-hide settings and emits updates from the cursor panel', async () => {
+    const wrapper = mount(PropertiesPanel, { props: { ...baseProps, activeTab: 'cursor' }, global });
+    const cursorPanel = wrapper.get('.cursor-panel-stub');
+
+    expect(JSON.parse(cursorPanel.attributes('data-auto-hide') ?? '')).toEqual(autoHide);
+
+    await cursorPanel.get('.auto-hide-update').trigger('click');
+    expect(wrapper.emitted('update:autoHide')).toEqual([[{ enabled: true, delaySeconds: 4 }]]);
   });
 
   it('forwards child events through the parent contract', async () => {

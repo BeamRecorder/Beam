@@ -3,6 +3,7 @@ import { DEFAULT_OUTPUT_CANVAS } from '../../../video-editor/canvas/output-canva
 import type { CompositionSnapshot } from '../../export-types';
 import type { ClipAppearance, ClipComposition } from '~/media/shared/composition-types';
 import { MACOS_CURSOR_PACK } from '../../../video-editor/properties/cursor/cursor-packs';
+import { createDefaultCursorAutoHideSettings } from '../../../../api/types/cursor-settings';
 
 export const screenAppearance: ClipAppearance = {
   cornerRadius: 'none',
@@ -105,6 +106,7 @@ export const snapshot = (): CompositionSnapshot => ({
       springMassMultiplier: 1.29,
       motionBlur: 0.4,
     },
+    autoHide: createDefaultCursorAutoHideSettings(),
   },
   cursorPack: MACOS_CURSOR_PACK,
   composition: composition(),

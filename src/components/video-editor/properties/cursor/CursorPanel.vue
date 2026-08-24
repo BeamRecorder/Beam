@@ -15,15 +15,21 @@ import CursorClickEffectsPanel from './CursorClickEffectsPanel.vue';
 import Divider from '~/ui/divider/Divider.vue';
 import type { ShadowDirection } from './shadow-types';
 import type {
+  CursorAutoHideSettings,
   CursorClickEffects,
   CursorMotionPreset,
   CursorMotionSettings,
   CursorRippleStyle,
 } from '../../../../api/types/cursor-settings';
 import {
+  CURSOR_AUTO_HIDE_DELAY_DEFAULT,
+  CURSOR_AUTO_HIDE_DELAY_MAX,
+  CURSOR_AUTO_HIDE_DELAY_MIN,
+  createDefaultCursorAutoHideSettings,
   createDefaultCursorClickEffects,
   createDefaultCursorMotionSettings,
   cursorMotionPreset,
+  normalizeCursorAutoHideSettings,
 } from '../../../../api/types/cursor-settings';
 import type { CursorPackDescriptor, CursorSelection } from '../../../../api/types/cursor-pack';
 import { cursorAssetSupportsTint } from './cursor-packs';
@@ -49,6 +55,7 @@ const props = defineProps<{
   shadowDirection: ShadowDirection;
   clickEffects: CursorClickEffects;
   motion: CursorMotionSettings;
+  autoHide: CursorAutoHideSettings;
 }>();
 
 const emit = defineEmits<{
@@ -62,6 +69,7 @@ const emit = defineEmits<{
   (event: 'update:shadowDirection', value: ShadowDirection): void;
   (event: 'update:clickEffects', value: CursorClickEffects): void;
   (event: 'update:motion', value: CursorMotionSettings): void;
+  (event: 'update:autoHide', value: CursorAutoHideSettings): void;
 }>();
 
 const selectedPack = computed(() => props.packs.find((pack) => pack.id === props.selection.packId) ?? null);
@@ -169,6 +177,7 @@ const reset = () => {
   emit('update:shadowDirection', 'bottom');
   emit('update:clickEffects', createDefaultCursorClickEffects());
   emit('update:motion', createDefaultCursorMotionSettings());
+  emit('update:autoHide', createDefaultCursorAutoHideSettings());
 };
 
 const motionPresetOptions = computed(() => [
@@ -182,6 +191,8 @@ const updateMotion = (patch: Partial<CursorMotionSettings>) =>
     ...patch,
     preset: patch.preset ?? 'custom',
   });
+const updateAutoHide = (patch: Partial<CursorAutoHideSettings>) =>
+  emit('update:autoHide', normalizeCursorAutoHideSettings({ ...props.autoHide, ...patch }));
 const selectMotionPreset = (preset: CursorMotionPreset) =>
   emit('update:motion', preset === 'custom' ? { ...props.motion, preset } : cursorMotionPreset(preset));
 </script>
@@ -283,6 +294,30 @@ const selectMotionPreset = (preset: CursorMotionPreset) =>
         @update:model-value="emit('update:cursorColor', $event)"
       />
     </template>
+
+    <Divider spacing="none" />
+    <div class="prop-row">
+      <span class="prop-label">{{ t('autoHideCursor') }}</span>
+      <Switch
+        :model-value="autoHide.enabled"
+        :aria-label="t('autoHideCursor')"
+        @update:model-value="updateAutoHide({ enabled: $event })"
+      />
+    </div>
+    <BlurRevealTransition>
+      <div v-if="autoHide.enabled" class="nested-options">
+        <BigSlider
+          :model-value="autoHide.delaySeconds"
+          :default-value="CURSOR_AUTO_HIDE_DELAY_DEFAULT"
+          :min="CURSOR_AUTO_HIDE_DELAY_MIN"
+          :max="CURSOR_AUTO_HIDE_DELAY_MAX"
+          :step="0.5"
+          :label="t('autoHideDelay')"
+          :format-value="(value) => t('secondsValue', { value: value.toFixed(1) })"
+          @update:model-value="updateAutoHide({ delaySeconds: $event })"
+        />
+      </div>
+    </BlurRevealTransition>
 
     <Divider spacing="none" />
     <div class="prop-row">

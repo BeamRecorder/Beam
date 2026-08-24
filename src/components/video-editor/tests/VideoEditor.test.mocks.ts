@@ -126,6 +126,7 @@ vi.mock('../composables/useVideoEditor', async () => {
         shadowColor: ref('#000'),
         shadowDirection: ref('bottom'),
         clickEffects: ref({}),
+        autoHide: ref({ enabled: false, delaySeconds: 2 }),
       };
       const cursorMotion = ref({ preset: 'smooth', smoothing: 0.67, springMassMultiplier: 1.29, motionBlur: 0.4 });
       const compositionState = {

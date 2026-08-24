@@ -12,9 +12,19 @@ import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import { AlignCenter, AlignLeft, AlignRight, Bold, Italic, Strikethrough, Upload } from '@lucide/vue';
 import { loadCaptionFont, useFontCatalog } from './useFontCatalog';
+import CaptionHighlightControls from './CaptionHighlightControls.vue';
 
 const { t } = useTranslate('CaptionClipPanel');
-const props = defineProps<{ style: CaptionStyle; defaultFontSize: number; sampleText?: string }>();
+const props = withDefaults(
+  defineProps<{
+    style: CaptionStyle;
+    defaultFontSize: number;
+    sampleText?: string;
+    showWordHighlight?: boolean;
+    wordHighlightAvailable?: boolean;
+  }>(),
+  { showWordHighlight: false, wordHighlightAvailable: false },
+);
 const emit = defineEmits<{
   (event: 'update', key: keyof CaptionStyle, value: CaptionStyle[keyof CaptionStyle]): void;
   (event: 'preview', patch: Partial<CaptionStyle> | null): void;
@@ -200,6 +210,16 @@ const shadowDirectionOptions = computed(() => [
   </div>
 
   <Divider spacing="xs" />
+
+  <CaptionHighlightControls
+    v-if="showWordHighlight"
+    :model-value="style.wordHighlight"
+    :available="wordHighlightAvailable"
+    :custom-text="Boolean(style.customText)"
+    @update:model-value="emit('update', 'wordHighlight', $event)"
+  />
+
+  <Divider v-if="showWordHighlight" spacing="xs" />
 
   <div class="section-block">
     <span class="section-title">{{ t('outlineExtrusion') }}</span>

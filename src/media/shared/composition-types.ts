@@ -1,4 +1,5 @@
 import type { CameraFramingPreset, CameraLayoutPreset } from './camera-layout-types';
+import type { CaptionHighlightStyle } from './caption-highlight-types';
 
 export const COMPOSITION_SCHEMA_VERSION = 11 as const;
 export const SCREEN_CLIP_ID = 'screen';
@@ -81,6 +82,7 @@ export interface CaptionStyle {
   outlineWidth: number;
   extrusionDepth: number;
   placement: 'top' | 'center' | 'bottom';
+  wordHighlight: CaptionHighlightStyle;
   customText?: string;
 }
 

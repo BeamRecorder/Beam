@@ -51,6 +51,7 @@ const createState = () => {
     canvas: ref({ ...DEFAULT_OUTPUT_CANVAS }),
     cursorEffects: ref(createDefaultCursorClickEffects()),
     cursorMotion: ref(createDefaultCursorMotionSettings()),
+    cursorAutoHide: ref({ ...cursor.autoHide }),
     cursorSelection: ref<CursorSelection>({ ...cursor.selection }),
     cursorSize: ref(cursor.size),
     cursorColor: ref(cursor.color),
@@ -188,6 +189,7 @@ describe('useProjectEditorState property persistence', () => {
       springMassMultiplier: 1.1,
       motionBlur: 0.2,
     });
+    expect(state.cursorAutoHide.value).toEqual({ enabled: false, delaySeconds: 2 });
     expect(editor.loading.value).toBe(false);
   });
 
@@ -221,6 +223,7 @@ describe('useProjectEditorState property persistence', () => {
     expect(state.cursorColor.value).toBe('#123456');
     expect(state.cursorEffects.value).toEqual(defaults.presentation!.cursor.clickEffects);
     expect(state.cursorMotion.value).toEqual(defaults.presentation!.cursor.motion);
+    expect(state.cursorAutoHide.value).toEqual(defaults.presentation!.cursor.autoHide);
   });
 
   it('uses global cursor and zoom motion blur preferences for an existing project while preserving its canvas, background, and zoom elements', async () => {
@@ -261,6 +264,7 @@ describe('useProjectEditorState property persistence', () => {
     expect(state.importedBackgrounds.value).toEqual(existingPresentation.importedBackgrounds);
     expect(state.cursorEffects.value).toEqual(defaults.presentation!.cursor.clickEffects);
     expect(state.cursorMotion.value).toEqual(defaults.presentation!.cursor.motion);
+    expect(state.cursorAutoHide.value).toEqual(defaults.presentation!.cursor.autoHide);
     expect(state.cursorShadowEnabled.value).toBe(defaults.presentation!.cursor.shadow.enabled);
     expect(state.cursorShadowBlur.value).toBe(defaults.presentation!.cursor.shadow.blur);
     expect(state.cursorShadowColor.value).toBe(defaults.presentation!.cursor.shadow.color);
@@ -333,6 +337,24 @@ describe('useProjectEditorState property persistence', () => {
     await editor.saveNow();
     expect(mocks.saveProjectEditorState).toHaveBeenCalledTimes(2);
     expect(editor.isSaving.value).toBe(false);
+  });
+
+  it('round-trips cursor auto-hide settings through save and load', async () => {
+    const savedState = createState();
+    savedState.cursorAutoHide.value = { enabled: true, delaySeconds: 7.5 };
+    mocks.saveProjectEditorState.mockResolvedValue(undefined);
+
+    const savingEditor = useProjectEditorState(savedState);
+    await savingEditor.saveNow();
+    const persistedState = mocks.saveProjectEditorState.mock.calls[0][1] as ProjectEditorState;
+    expect(persistedState.presentation.cursor.autoHide).toEqual({ enabled: true, delaySeconds: 7.5 });
+
+    const loadingState = createState();
+    mocks.getProjectEditorState.mockResolvedValue(persistedState);
+    const loadingEditor = useProjectEditorState(loadingState);
+    await loadingEditor.load('project');
+
+    expect(loadingState.cursorAutoHide.value).toEqual({ enabled: true, delaySeconds: 7.5 });
   });
 
   it('persists editor defaults alongside the first successful editor save', async () => {

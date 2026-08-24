@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from 'vue';
+import { computed, onUnmounted, ref, shallowRef, toRaw, watch } from 'vue';
 import { Check, RotateCcw } from '@lucide/vue';
 import Button from '../../ui/button/Button.vue';
 import ResizeHandle from '~/ui/ResizeHandle/ResizeHandle.vue';
 import CanvasLoadingSkeleton from './CanvasLoadingSkeleton.vue';
 import UndoRedoToast from './UndoRedoToast.vue';
 import type { VisualClip } from '~/media/shared/composition-types';
-import { resolveCompositionSceneLayers, type CompositionSceneLayers } from '../composition/scene-layers';
+import { createCompositionSceneLayerResolver, type CompositionSceneLayers } from '../composition/scene-layers';
 import { OUTPUT_FALLBACK_COLOR, OUTPUT_PREVIEW_RADIUS, outputPreviewRect } from './output-canvas';
 import { useCanvasBackground } from './composables/useCanvasBackground';
 import { useCompositionMedia } from './composables/useCompositionMedia';
+import { createCanvasFrameScheduler } from './composables/canvas-frame-scheduler';
 import { useCursorOverlay } from './composables/useCursorOverlay';
 import { useCameraZoom, type RenderedVideoWindow } from './composables/useCameraZoom';
 import { useLayerTransformAndCrop } from './composables/useLayerTransformAndCrop';
@@ -47,7 +48,6 @@ const canvasTransitionRenderer = useCanvasTransitionRenderer({
 });
 const isFormatTransitioning = ref(false);
 let formatTransitionTimer: ReturnType<typeof setTimeout> | null = null;
-let animationFrameId: number | null = null;
 let drawVisualStack:
   | ((
       ctx: CanvasRenderingContext2D,
@@ -57,7 +57,17 @@ let drawVisualStack:
     ) => void)
   | null = null;
 const viewportZoom = useViewportZoom();
-const currentSceneLayers = computed(() => resolveCompositionSceneLayers(props.composition, props.currentTime * 1_000));
+let renderComposition = toRaw(props.composition);
+const sceneLayersAt = shallowRef(createCompositionSceneLayerResolver(renderComposition));
+watch(
+  () => props.composition,
+  (composition) => {
+    renderComposition = toRaw(composition);
+    sceneLayersAt.value = createCompositionSceneLayerResolver(renderComposition);
+  },
+  { deep: true, flush: 'sync' },
+);
+const currentSceneLayers = computed(() => sceneLayersAt.value(props.currentTime * 1_000));
 const liveScreenClip = computed<VisualClip | null>(() => currentSceneLayers.value.screen);
 const selectedCaptionFollowsCursor = computed(
   () =>
@@ -80,9 +90,11 @@ const previewFrameStyle = computed(() => {
   return { left: `${preview.x}px`, top: `${preview.y}px`, width: `${preview.width}px`, height: `${preview.height}px` };
 });
 const outputAspectRatio = computed(() => props.outputCanvas.width / props.outputCanvas.height);
-function renderOnce() {
-  if (animationFrameId === null) animationFrameId = requestAnimationFrame(draw);
-}
+const frameScheduler = createCanvasFrameScheduler(
+  () => renderCanvas(),
+  () => props.isPlaying || isTransitioningBackground.value,
+);
+const renderOnce = frameScheduler.requestRender;
 const clipToggleTransition = useCanvasClipToggleTransition({
   canvas: () => canvasRef.value,
   composition: () => props.composition,
@@ -126,7 +138,8 @@ cameraZoom = useCameraZoom({
   isPlaying: () => props.isPlaying,
   editorData: () => props.editorData,
   activeTab: () => props.activeTab,
-  composition: () => props.composition,
+  composition: () => renderComposition,
+  sceneLayersAt: (timeMs) => sceneLayersAt.value(timeMs),
   screenTransformDraft: () =>
     props.selectedTransformClip?.kind === 'screen' ? transformAndCrop.transformDraft.value : null,
   isCropping: () => props.isCropping,
@@ -175,8 +188,9 @@ const compositionMedia = useCompositionMedia({
 const drawNonScreenVisuals = (
   ctx: CanvasRenderingContext2D,
   window: { dx: number; dy: number; dw: number; dh: number; scale: number; focusX: number; focusY: number },
+  layers: CompositionSceneLayers,
 ) => {
-  if (compositionMedia.drawVisualStack) compositionMedia.drawVisualStack(ctx, window, () => undefined);
+  if (compositionMedia.drawVisualStack) compositionMedia.drawVisualStack(ctx, window, () => undefined, layers);
   else compositionMedia.drawWebcamClips(ctx, window);
 };
 drawVisualStack = (ctx, window, drawScreen, layers) => {
@@ -197,6 +211,7 @@ const cursorOverlay = useCursorOverlay({
   enableShadow: () => props.enableShadow,
   clickEffects: () => props.clickEffects,
   motion: () => props.motion,
+  autoHide: () => props.autoHide,
   shadowBlur: () => props.shadowBlur,
   shadowColor: () => props.shadowColor,
   shadowDirection: () => props.shadowDirection,
@@ -291,7 +306,7 @@ const drawCanvasScene = (ctx: CanvasRenderingContext2D) => {
     ctx.roundRect(preview.x, preview.y, preview.width, preview.height, OUTPUT_PREVIEW_RADIUS);
     ctx.clip();
     drawBackground(ctx, preview);
-    drawNonScreenVisuals(ctx, fallbackWindow);
+    drawNonScreenVisuals(ctx, fallbackWindow, layers);
     compositionMedia.drawComposition(ctx, fallbackWindow, undefined, layers);
     ctx.restore();
   }
@@ -314,11 +329,6 @@ const renderCanvas = () => {
   canvasTransitionRenderer.render(ctx, drawCanvasScene);
   clipToggleTransition.blendPreviousFrame(ctx, logicalSize.value.width, logicalSize.value.height);
 };
-function draw() {
-  animationFrameId = null;
-  renderCanvas();
-  if (props.isPlaying || isTransitioningBackground.value) animationFrameId = requestAnimationFrame(draw);
-}
 const {
   commitCrop,
   handleIslandPointerDown,
@@ -341,7 +351,7 @@ const {
   onDoneCrop: () => emit('done:crop'),
 });
 onUnmounted(() => {
-  if (animationFrameId !== null) cancelAnimationFrame(animationFrameId);
+  frameScheduler.dispose();
   if (formatTransitionTimer) clearTimeout(formatTransitionTimer);
 });
 defineExpose({ viewportZoom });

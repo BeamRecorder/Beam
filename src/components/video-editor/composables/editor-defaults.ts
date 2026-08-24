@@ -13,6 +13,7 @@ import { isCameraFramingPreset, isCameraLayoutPreset } from '~/media/shared/came
 import { normalizeClipTransitions } from '~/media/shared/clip-transitions';
 import { normalizeOutputCanvas } from '../canvas/output-canvas';
 import { normalizeZoomMotionBlur, type ZoomElement } from '../zoom/zoom-types';
+import { normalizeCursorAutoHideSettings } from '~/api/types/cursor-settings';
 import type { EditorPreferenceDefaults, VisualClipDefaults } from './editor-default-types';
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
@@ -157,7 +158,10 @@ export function applyGlobalCursorDefaults(state: ProjectEditorState, defaults: E
     ...state,
     presentation: {
       ...state.presentation,
-      cursor: clone(defaults.presentation.cursor),
+      cursor: {
+        ...clone(defaults.presentation.cursor),
+        autoHide: normalizeCursorAutoHideSettings(defaults.presentation.cursor.autoHide),
+      },
     },
   };
 }

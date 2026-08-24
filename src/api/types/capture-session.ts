@@ -33,6 +33,8 @@ export interface CaptureProject {
   hasScreen?: boolean;
   hasCamera?: boolean;
   hasCaption?: boolean;
+  hasSystemAudio?: boolean;
+  hasMicrophone?: boolean;
 }
 
 export interface CursorMoveEvent {

@@ -64,6 +64,8 @@ const previewStyle = (patch: Partial<CaptionStyle> | null) => {
         :style="captionStyle"
         :default-font-size="36"
         :sample-text="displayText"
+        show-word-highlight
+        :word-highlight-available="sentences.some((sentence) => sentence.words.length > 0)"
         @update="updateStyle"
         @preview="previewStyle"
       />

@@ -17,7 +17,11 @@ import {
   type BackgroundValue,
 } from './backgroundCatalog';
 import type { OutputCanvasSettings } from '../canvas/output-canvas';
-import { type CursorClickEffects, type CursorMotionSettings } from '../../../api/types/cursor-settings';
+import {
+  type CursorAutoHideSettings,
+  type CursorClickEffects,
+  type CursorMotionSettings,
+} from '../../../api/types/cursor-settings';
 import type { CursorShadowDirection } from '../../../api/types/cursor-presentation';
 import type { CursorSelection } from '../../../api/types/cursor-pack';
 import { propertyInteractionActive } from '../../../composables/property-interaction';
@@ -43,6 +47,7 @@ export function useProjectEditorState(options: {
   canvas: Ref<OutputCanvasSettings>;
   cursorEffects: Ref<CursorClickEffects>;
   cursorMotion: Ref<CursorMotionSettings>;
+  cursorAutoHide: Ref<CursorAutoHideSettings>;
   cursorSelection: Ref<CursorSelection>;
   cursorSize: Ref<number>;
   cursorColor: Ref<string>;
@@ -96,6 +101,7 @@ export function useProjectEditorState(options: {
         },
         clickEffects: clone(options.cursorEffects.value),
         motion: clone(options.cursorMotion.value),
+        autoHide: clone(options.cursorAutoHide.value),
       },
     },
   });
@@ -200,6 +206,7 @@ export function useProjectEditorState(options: {
       options.cursorShadowDirection.value = cursor.shadow.direction;
       options.cursorEffects.value = clone(cursor.clickEffects);
       options.cursorMotion.value = clone(cursor.motion);
+      options.cursorAutoHide.value = clone(cursor.autoHide);
     } finally {
       if (generation === loadGeneration) loading.value = false;
     }
@@ -227,6 +234,7 @@ export function useProjectEditorState(options: {
       options.canvas,
       options.cursorEffects,
       options.cursorMotion,
+      options.cursorAutoHide,
       options.cursorSelection,
       options.cursorSize,
       options.cursorColor,

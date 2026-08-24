@@ -121,6 +121,7 @@ const {
   shadowColor,
   shadowDirection,
   clickEffects,
+  autoHide: cursorAutoHide,
 } = cursor;
 const renderedBackground = computed(() => (outputCanvas.value.showBackground ? selectedBackgroundMedia.value : null));
 const {
@@ -540,6 +541,7 @@ onBeforeUnmount(() => {
           v-model:shadow-direction="shadowDirection"
           v-model:click-effects="clickEffects"
           v-model:motion="cursorMotion"
+          v-model:auto-hide="cursorAutoHide"
           v-model:volume="volume"
           v-model:system-volume="systemVolume"
           v-model:mic-volume="micVolume"
@@ -644,6 +646,7 @@ onBeforeUnmount(() => {
             :shadow-direction="shadowDirection"
             :click-effects="clickEffects"
             :motion="cursorMotion"
+            :auto-hide="cursorAutoHide"
             :selected-background="renderedBackground"
             :background-blur-percent="backgroundBlurPercent"
             :frame-for="player.frameFor"
