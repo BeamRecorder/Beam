@@ -3,6 +3,7 @@ import { createReadStream, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { BreadcrumbList, ListItem, WebPage, WithContext } from 'schema-dts';
 import common from '../../src/i18n/en/docs/common.json';
+import type { DocsSidebarItem } from './content/docs-content-types';
 import { enabledDocsLocales, getDocsCatalogs } from './content/docs-routes';
 
 const siteUrl = 'https://beam.plinka.eu';
@@ -43,6 +44,12 @@ const localizeLink = (link: string, locale: (typeof enabledDocsLocales)[number])
   return `/${locale}${link}`;
 };
 
+const localizeSidebarItem = (item: DocsSidebarItem, locale: (typeof enabledDocsLocales)[number]): DocsSidebarItem => ({
+  ...item,
+  ...(item.link ? { link: localizeLink(item.link, locale) } : {}),
+  ...(item.items ? { items: item.items.map((child) => localizeSidebarItem(child, locale)) } : {}),
+});
+
 const localeConfig = Object.fromEntries(
   enabledDocsLocales.map((locale) => {
     const localeCommon = getDocsCatalogs(locale).common;
@@ -61,7 +68,7 @@ const localeConfig = Object.fromEntries(
           ],
           sidebar: localeCommon.sidebar.map((group) => ({
             ...group,
-            items: group.items.map((item) => ({ ...item, link: localizeLink(item.link, locale) })),
+            items: group.items.map((item) => localizeSidebarItem(item, locale)),
           })),
           footer: localeCommon.footer,
         },

@@ -5,7 +5,7 @@ import { useI18n } from 'vue-i18n';
 import Accordion from '~/ui/accordion/Accordion.vue';
 import discordIconUrl from '../../../public/discord_svg.svg';
 import githubIconUrl from '../../../public/github.svg';
-import { demoMedia } from '@website/demo/website-demo-fixture';
+import beamIconUrl from '../../../public/brand/BeamIcon.webp';
 import { normalizeWebsiteLocale } from '@website/i18n';
 import { getFaqCatalog } from '@website/seo/faq-content';
 import { createFaqJsonLd } from '@website/seo/json-ld';
@@ -66,7 +66,7 @@ usePageSeo({
 
     <aside class="page-callout">
       <div class="page-callout__copy">
-        <img class="page-callout__logo" :src="demoMedia.iconUrl" alt="" />
+        <img class="page-callout__logo" :src="beamIconUrl" alt="" />
         <div>
           <h2>{{ catalog.callout.title }}</h2>
         </div>

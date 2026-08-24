@@ -11,11 +11,17 @@ export interface DocsNoticeContent {
   text: string;
 }
 
+export interface DocsTableContent {
+  headers: string[];
+  rows: string[][];
+}
+
 export interface DocsSectionContent {
   title: string;
   paragraphs?: string[];
   bullets?: string[];
   steps?: string[];
+  tables?: DocsTableContent[];
   notice?: DocsNoticeContent;
   screenshot?: DocsScreenshotContent;
   subsections?: DocsSectionContent[];
@@ -55,7 +61,7 @@ export interface DocsCommonContent {
   };
   sidebar: Array<{
     text: string;
-    items: Array<{ text: string; link: string }>;
+    items: DocsSidebarItem[];
   }>;
   social: {
     github: string;
@@ -69,6 +75,12 @@ export interface DocsCommonContent {
     message: string;
     copyright: string;
   };
+}
+
+export interface DocsSidebarItem {
+  text: string;
+  link?: string;
+  items?: DocsSidebarItem[];
 }
 
 export interface DocsLocaleCatalogs {

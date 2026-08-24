@@ -42,7 +42,7 @@ describe('HomePage', () => {
 
   it('presents the concise English hero and static Beam showcase', () => {
     const wrapper = mountHome();
-    const hero = wrapper.get('.hero-drag');
+    const hero = wrapper.get('.website-hero');
     const showcase = wrapper.get('#editor-demo');
     const image = showcase.get('img');
 
@@ -67,6 +67,9 @@ describe('HomePage', () => {
     expect(wrapper.find('[data-testid="hud-preview"]').exists()).toBe(false);
     expect(wrapper.find('#capture').exists()).toBe(false);
     expect(wrapper.find('[data-testid="editor-preview"]').exists()).toBe(false);
+    expect(wrapper.find('.hero-drag').exists()).toBe(false);
+    expect(wrapper.find('.hero-drag__cursor').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="project-loader"]').exists()).toBe(false);
     expect(image.attributes('src')).toBe('/Beam-showcase.png');
     expect(image.attributes('alt')).toBe('Beam recorder and video editor shown side by side');
     expect(image.attributes('width')).toBe('1672');

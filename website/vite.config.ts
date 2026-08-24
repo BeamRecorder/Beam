@@ -33,7 +33,6 @@ export default defineConfig({
   },
   ssgOptions: {
     dirStyle: 'flat',
-    formatting: 'prettify',
   } satisfies ViteSSGOptions,
   server: {
     host: '127.0.0.1',

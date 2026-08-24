@@ -3,7 +3,7 @@ import { computed, onMounted } from 'vue';
 import { BookOpen, CircleHelp, Download, Star } from '@lucide/vue';
 import { useGitHubRepository } from '@website/composables/useGitHubRepository';
 import { detectPlatform, type WebsitePlatform } from '@website/lib/platform-downloads';
-import { demoMedia } from '@website/demo/website-demo-fixture';
+import beamIconUrl from '../../../public/brand/BeamIcon.webp';
 import discordIconUrl from '../../../public/discord_svg.svg';
 import githubIconUrl from '../../../public/github.svg';
 import WebsiteThemeSelector from '@website/components/WebsiteThemeSelector.vue';
@@ -23,7 +23,7 @@ onMounted(() => void github.load());
   <header class="site-header">
     <div class="site-header__inner">
       <a class="brand" href="/" :aria-label="t('Website.nav.homeAria')" @click.prevent="emit('home')">
-        <img :src="demoMedia.iconUrl" alt="" />
+        <img :src="beamIconUrl" alt="" />
         <span>Beam</span>
       </a>
 

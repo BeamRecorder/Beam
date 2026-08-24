@@ -4,7 +4,7 @@ import { Code2, ExternalLink } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import Button from '~/ui/button/Button.vue';
 import WebsiteCommunityShader from '@website/components/WebsiteCommunityShader.vue';
-import WebsiteHeroDrag from '@website/components/WebsiteHeroDrag.vue';
+import WebsiteHero from '@website/components/WebsiteHero.vue';
 import { useGitHubRepository } from '@website/composables/useGitHubRepository';
 import { createHomeJsonLd } from '@website/seo/json-ld';
 import { usePageSeo } from '@website/seo/use-page-seo';
@@ -31,7 +31,7 @@ const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
 <template>
   <div class="site-shell">
     <main id="top">
-      <WebsiteHeroDrag />
+      <WebsiteHero />
 
       <section id="editor-demo" class="content-section showcase-section">
         <div class="section-intro">

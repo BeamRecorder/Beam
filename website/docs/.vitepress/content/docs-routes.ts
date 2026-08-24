@@ -1,9 +1,12 @@
 import commonEn from '../../../src/i18n/en/docs/common.json';
 import editorEn from '../../../src/i18n/en/docs/editor.json';
+import editorShowcaseEn from '../../../src/i18n/en/docs/editor-showcase.json';
 import filesystemEn from '../../../src/i18n/en/docs/filesystem.json';
 import gettingStartedEn from '../../../src/i18n/en/docs/getting-started.json';
 import homeEn from '../../../src/i18n/en/docs/home.json';
+import recorderCaptureEn from '../../../src/i18n/en/docs/recorder-capture.json';
 import recorderEn from '../../../src/i18n/en/docs/recorder.json';
+import recorderWorkspaceEn from '../../../src/i18n/en/docs/recorder-workspace.json';
 import referenceEn from '../../../src/i18n/en/docs/reference.json';
 import commonBg from '../../../src/i18n/bg/docs/common.json';
 import editorBg from '../../../src/i18n/bg/docs/editor.json';
@@ -111,7 +114,16 @@ const createCatalogs = (common: unknown, home: unknown, catalogs: readonly unkno
   ({ common, home, catalogs }) as DocsLocaleCatalogs;
 
 const locales: Partial<Record<WebsiteLocale, DocsLocaleCatalogs>> = {
-  en: createCatalogs(commonEn, homeEn, [gettingStartedEn, recorderEn, editorEn, referenceEn, filesystemEn]),
+  en: createCatalogs(commonEn, homeEn, [
+    gettingStartedEn,
+    recorderEn,
+    recorderCaptureEn,
+    recorderWorkspaceEn,
+    editorEn,
+    editorShowcaseEn,
+    referenceEn,
+    filesystemEn,
+  ]),
   bg: createCatalogs(commonBg, homeBg, [gettingStartedBg, recorderBg, editorBg, referenceBg, filesystemBg]),
   de: createCatalogs(commonDe, homeDe, [gettingStartedDe, recorderDe, editorDe, referenceDe, filesystemDe]),
   es: createCatalogs(commonEs, homeEs, [gettingStartedEs, recorderEs, editorEs, referenceEs, filesystemEs]),
@@ -150,10 +162,24 @@ export type DocsLocale = WebsiteLocale;
 
 export const enabledDocsLocales = Object.keys(locales) as DocsLocale[];
 
+const englishFallbackCatalogs = [
+  recorderCaptureEn,
+  recorderWorkspaceEn,
+  editorShowcaseEn,
+] as DocsLocaleCatalogs['catalogs'];
+
+const addEnglishFallbackPages = (catalogs: DocsLocaleCatalogs): DocsLocaleCatalogs => {
+  const translatedSlugs = new Set(catalogs.catalogs.flatMap((catalog) => catalog.pages.map((page) => page.slug)));
+  const fallbackPages = englishFallbackCatalogs
+    .flatMap((catalog) => catalog.pages)
+    .filter((page) => !translatedSlugs.has(page.slug));
+  return fallbackPages.length ? { ...catalogs, catalogs: [...catalogs.catalogs, { pages: fallbackPages }] } : catalogs;
+};
+
 export const getDocsCatalogs = (locale: DocsLocale): DocsLocaleCatalogs => {
   const catalogs = locales[locale];
   if (!catalogs) throw new Error(`Documentation locale is not enabled: ${locale}.`);
-  return catalogs;
+  return locale === 'en' ? catalogs : addEnglishFallbackPages(catalogs);
 };
 
 export const createDocsRoutes = (locale: DocsLocale) => {

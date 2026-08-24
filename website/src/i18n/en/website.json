@@ -39,7 +39,11 @@
     "starsAria": "GitHub stars",
     "install": "Install"
   },
-  "theme": { "switchTo": "Switch to {theme} theme", "light": "light", "dark": "dark" },
+  "theme": {
+    "switchTo": "Switch to {theme} theme",
+    "light": "light",
+    "dark": "dark"
+  },
   "install": {
     "downloadTitle": "Download Beam {version} for {platform}",
     "preparingTitle": "Preparing Beam {version} for {platform}",
@@ -66,54 +70,6 @@
     "linuxFormat": "AppImage",
     "sizeUnavailable": "Size unavailable",
     "megabytes": "{count} MB"
-  },
-  "hud": {
-    "aria": "Beam capture controls demo",
-    "title": "Choose what to record",
-    "sourceType": "Capture source type",
-    "screen": "Screen",
-    "window": "Window",
-    "microphone": "Microphone",
-    "systemAudio": "System audio",
-    "playRecording": "Play the real recording",
-    "mainDisplay": "Main display",
-    "chooseWindow": "Choose a window",
-    "demoName": "Beam demo - 1920 × 1080"
-  },
-  "editor": {
-    "aria": "Interactive Beam editor demo",
-    "title": "Explore the Beam editor",
-    "checking": "Checking the public Beam demo project...",
-    "webCodecsUnavailable": "WebCodecs is unavailable in this browser. The original MP4 remains playable below.",
-    "ready": "Edit a real Beam project directly in your browser.",
-    "decodeFailed": "Beam could not decode the demo MP4 in your browser. The original recording remains available.",
-    "filesMissing": "{count} public demo file is missing or invalid. | {count} public demo files are missing or invalid.",
-    "invalidEdit": "This edit is outside the valid media boundaries.",
-    "playbackFailed": "Playback could not be changed.",
-    "frameFailed": "The selected frame could not be decoded.",
-    "importDisabled": "{type} import requires native file access and stays disabled in the browser demo.",
-    "splitHint": "Move the playhead inside the selected clip before splitting.",
-    "fallback": "The full canvas needs WebCodecs. This is the unmodified source recording.",
-    "mp4Unsupported": "Your browser does not support MP4 video playback.",
-    "captionName": "Product demo caption",
-    "captionText": "Record. Edit. Share."
-  },
-  "missing": {
-    "checking": "Checking the project files...",
-    "title": "The editor is waiting for its recording",
-    "instructions": "Add these files to the repository at the exact paths below. The real player and timeline will appear only after the complete project can be loaded.",
-    "missing": "Missing",
-    "invalid": "Invalid",
-    "project": "Beam editor state and captions",
-    "manifest": "recording manifest",
-    "video": "screen recording",
-    "cursor": "cursor events",
-    "telemetry": "cursor telemetry",
-    "shapes": "cursor shape catalog",
-    "invalidJson": "Invalid JSON",
-    "emptyCursor": "Empty cursor event stream",
-    "requestFailed": "Request failed",
-    "expectedMp4": "Expected MP4, received {type}"
   },
   "errors": {
     "githubStatus": "GitHub API returned {status}.",

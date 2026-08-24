@@ -3,14 +3,14 @@
     {
       "slug": "export",
       "title": "Export and sharing",
-      "description": "Export a Beam composition to MP4 or WebM with the right resolution and quality preset.",
-      "lead": "Export renders the current composition directly to a local file using the settings supported by the machine.",
+      "description": "Export a Beam composition to WebM or MP4 with resolution, frame rate, quality, and audio controls.",
+      "lead": "Export renders the current composition directly to a local file and reports each stage of the job.",
       "sections": [
         {
           "title": "Choose a format",
           "bullets": [
-            "WebM uses the WebM container with an encoder available on the current machine.",
-            "MP4 uses the MP4 container when Beam finds a compatible hardware or software encoder."
+            "WebM is the default format.",
+            "MP4 is available when Beam finds a compatible hardware or software encoder."
           ],
           "notice": {
             "kind": "info",
@@ -21,32 +21,40 @@
         {
           "title": "Choose a resolution",
           "bullets": [
-            "720p scales down to an HD output when the native canvas is large enough.",
-            "1080p scales down to Full HD when the native canvas is large enough.",
-            "Max keeps the native output canvas dimensions."
+            "720p is available when the native canvas is at least 720 pixels high.",
+            "1080p is available when the native canvas is at least 1080 pixels high.",
+            "Max keeps the native output canvas dimensions.",
+            "Beam preserves the canvas aspect ratio and rounds output dimensions to even numbers."
           ]
         },
         {
-          "title": "Choose quality and bitrate",
+          "title": "Choose frame rate and quality",
           "paragraphs": [
-            "Low, medium, and high presets calculate a bitrate from the output dimensions and frame rate. Medium balances clarity and file size, while high prioritizes visual fidelity."
+            "Choose 24, 30, or 60 fps. Beam recommends a value from the source recording: 60 for sources at or above 50 fps, 24 for sources at or below 27 fps, and 30 otherwise. Low, Medium, and High calculate a bitrate from the output dimensions and frame rate; Medium is the default."
           ],
           "screenshot": {
-            "path": "reference/export-settings.webp",
-            "alt": "Beam export settings for format, resolution, and quality",
-            "caption": "Select format, resolution, and quality before choosing the destination file."
+            "path": "reference/export-panel.webp",
+            "alt": "Beam export panel with format, resolution, frame rate, quality, and audio controls",
+            "caption": "Choose the rendering settings before selecting the destination file.",
+            "aspectRatio": "361 / 560"
           }
+        },
+        {
+          "title": "More options",
+          "paragraphs": [
+            "Include Audio is enabled by default. Disable it to render a silent video; audio progress is omitted when audio is disabled or the composition has no enabled audio clip with a positive duration."
+          ]
         },
         {
           "title": "Monitor the export",
           "paragraphs": [
-            "Beam displays frame progress while rendering. You can cancel an active export or copy its diagnostic report. Live editor changes do not modify a file that is already rendering."
+            "Beam validates assets, loads media, encodes frames, and finalizes the file. The progress view reports the active phase and frame count. You can cancel an active export; closing or cancelling the destination picker also ends the job without reporting an error."
           ]
         },
         {
-          "title": "Open the result",
+          "title": "Result and diagnostics",
           "paragraphs": [
-            "After a successful export, Beam reports the saved filename and provides an action to open the file. If export fails, copy the technical report before asking for help on [Discord](https://discord.gg/6Q6v2xUCB) or [GitHub](https://github.com/BeamRecorder/Beam/issues)."
+            "After a successful export, Beam reports the saved filename and provides Open File and Copy Report actions. If export fails, the user-facing message hides local filesystem paths while the detailed report retains configuration, codec, environment, progress, and bottleneck information for troubleshooting. Copy that report before asking for help on [Discord](https://discord.gg/6Q6v2xUCB) or [GitHub](https://github.com/BeamRecorder/Beam/issues)."
           ]
         }
       ]
