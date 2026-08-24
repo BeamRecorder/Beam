@@ -2,6 +2,8 @@ export * from './composition-types';
 export * from './camera-layout-types';
 export * from './clip-transitions';
 export * from './composition-defaults';
+export * from './caption-shape-types';
+export * from './color-fill-types';
 export * from './dropped-media';
 export * from './media-frame';
 export * from './media-input';

@@ -18,6 +18,7 @@ const cursor = () => ({
     right: { springEnabled: true, springIntensity: 50, rippleEnabled: true, rippleSize: 30, rippleColor: '#6366f1' },
   },
   motion: { preset: 'smooth', smoothing: 0.67, springMassMultiplier: 1.29, motionBlur: 0.4 },
+  autoHide: { enabled: true, delaySeconds: 3.5, fadeDurationMs: 640 },
 });
 
 const watermark = () => ({
@@ -112,6 +113,53 @@ test('migrates the legacy automatic cursor selection to the builtin macOS pack',
     mode: 'automatic',
     cursorId: null,
   });
+});
+
+test('defaults cursor auto-hide to disabled after migrating a legacy presentation', () => {
+  const state = migratePresentation({
+    canvas: canvas(undefined),
+    selectedBackgroundId: null,
+    background: null,
+    blurPercent: 0,
+    importedBackgrounds: [],
+  });
+
+  assert.deepEqual(state.cursor.autoHide, { enabled: false, delaySeconds: 2, fadeDurationMs: 250 });
+});
+
+test('clamps cursor auto-hide delay to the supported range during Electron normalization', () => {
+  const belowMinimum = presentationState({
+    canvas: canvas(undefined),
+    selectedBackgroundId: null,
+    background: null,
+    blurPercent: 0,
+    importedBackgrounds: [],
+    cursor: { ...cursor(), autoHide: { enabled: true, delaySeconds: 0.1, fadeDurationMs: -1 } },
+  });
+  const aboveMaximum = presentationState({
+    canvas: canvas(undefined),
+    selectedBackgroundId: null,
+    background: null,
+    blurPercent: 0,
+    importedBackgrounds: [],
+    cursor: { ...cursor(), autoHide: { enabled: true, delaySeconds: 25, fadeDurationMs: 2_000 } },
+  });
+
+  assert.deepEqual(belowMinimum.cursor.autoHide, { enabled: true, delaySeconds: 0.5, fadeDurationMs: 0 });
+  assert.deepEqual(aboveMaximum.cursor.autoHide, { enabled: true, delaySeconds: 10, fadeDurationMs: 1_000 });
+});
+
+test('preserves cursor auto-hide settings in the normalized presentation', () => {
+  const state = presentationState({
+    canvas: canvas(undefined),
+    selectedBackgroundId: null,
+    background: null,
+    blurPercent: 0,
+    importedBackgrounds: [],
+    cursor: cursor(),
+  });
+
+  assert.deepEqual(state.cursor.autoHide, { enabled: true, delaySeconds: 3.5, fadeDurationMs: 640 });
 });
 
 test('migrates a legacy fixed macOS cursor without discarding presentation settings', () => {

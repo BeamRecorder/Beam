@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { buttonEventsBetween, cursorAssetForState, cursorEventIndexFor, cursorStateAt } from '../cursorPlayback';
+import {
+  buttonEventsBetween,
+  cursorAssetForState,
+  cursorAutoHiddenAt,
+  cursorAutoHideOpacityAt,
+  cursorEventIndexFor,
+  cursorStateAt,
+} from '../cursorPlayback';
 import type { CursorEvent, CursorShapeAsset } from '../../../../api/types/capture-api';
 
 const second = (value: number) => value * 1_000_000_000;
@@ -307,5 +314,119 @@ describe('cursor playback', () => {
       move(1, 0.5, 0.5),
     ];
     expect(cursorStateAt(events, 1)?.cursorKind).toBe('custom');
+  });
+});
+
+describe('cursor auto-hide', () => {
+  it('does not treat repeated identical move events as activity', () => {
+    const events: CursorEvent[] = [move(0, 0.25, 0.5), move(1, 0.25, 0.5), move(2, 0.25, 0.5)];
+    const settings = { enabled: true, delaySeconds: 2, fadeDurationMs: 0 };
+
+    expect(cursorAutoHiddenAt(events, 1.99, settings)).toBe(false);
+    expect(cursorAutoHiddenAt(events, 2, settings)).toBe(true);
+  });
+
+  it('resets the idle timer when the cursor position changes', () => {
+    const events: CursorEvent[] = [move(0, 0.25, 0.5), move(1, 0.5, 0.5)];
+    const settings = { enabled: true, delaySeconds: 2, fadeDurationMs: 0 };
+
+    expect(cursorAutoHiddenAt(events, 2.99, settings)).toBe(false);
+    expect(cursorAutoHiddenAt(events, 3, settings)).toBe(true);
+  });
+
+  it('resets the idle timer for a pressed click', () => {
+    const events: CursorEvent[] = [move(0, 0.25, 0.5), button(1)];
+    const settings = { enabled: true, delaySeconds: 2, fadeDurationMs: 0 };
+
+    expect(cursorAutoHiddenAt(events, 2.99, settings)).toBe(false);
+    expect(cursorAutoHiddenAt(events, 3, settings)).toBe(true);
+  });
+
+  it('resets the idle timer when visibility becomes true', () => {
+    const events: CursorEvent[] = [
+      move(0, 0.25, 0.5),
+      { event: 'visibility', sessionNs: second(1), visible: false },
+      { event: 'visibility', sessionNs: second(2), visible: true },
+    ];
+    const settings = { enabled: true, delaySeconds: 2, fadeDurationMs: 0 };
+
+    expect(cursorAutoHiddenAt(events, 3.99, settings)).toBe(false);
+    expect(cursorAutoHiddenAt(events, 4, settings)).toBe(true);
+  });
+
+  it('never hides the cursor when auto-hide is disabled', () => {
+    expect(
+      cursorAutoHiddenAt([move(0, 0.25, 0.5)], 100, { enabled: false, delaySeconds: 0.5, fadeDurationMs: 0 }),
+    ).toBe(false);
+  });
+
+  it('hides exactly at the configured delay boundary', () => {
+    const settings = { enabled: true, delaySeconds: 1.25, fadeDurationMs: 0 };
+    const events = [move(0, 0.25, 0.5)];
+
+    expect(cursorAutoHiddenAt(events, 1.25 - 1e-9, settings)).toBe(false);
+    expect(cursorAutoHiddenAt(events, 1.25, settings)).toBe(true);
+  });
+
+  it('fades linearly from fully visible to hidden after the idle delay', () => {
+    const events = [move(0, 0.25, 0.5)];
+    const settings = { enabled: true, delaySeconds: 2, fadeDurationMs: 1_000 };
+
+    expect(cursorAutoHideOpacityAt(events, 1.99, settings)).toBe(1);
+    expect(cursorAutoHideOpacityAt(events, 2, settings)).toBe(1);
+    expect(cursorAutoHideOpacityAt(events, 2.5, settings)).toBeCloseTo(0.5);
+    expect(cursorAutoHideOpacityAt(events, 3, settings)).toBe(0);
+    expect(cursorAutoHiddenAt(events, 2.5, settings)).toBe(false);
+    expect(cursorAutoHiddenAt(events, 3, settings)).toBe(true);
+  });
+
+  it('fades back in from zero after a real movement follows a fully hidden period', () => {
+    const events = [move(0, 0.25, 0.5), move(3, 0.75, 0.5)];
+    const settings = { enabled: true, delaySeconds: 1, fadeDurationMs: 1_000 };
+
+    expect(cursorAutoHideOpacityAt(events, 2, settings)).toBe(0);
+    expect(cursorAutoHideOpacityAt(events, 3, settings)).toBe(0);
+    expect(cursorAutoHideOpacityAt(events, 3.5, settings)).toBeCloseTo(0.5);
+    expect(cursorAutoHideOpacityAt(events, 4, settings)).toBe(1);
+  });
+
+  it('keeps the same fade-in progression across additional movement events', () => {
+    const events = [move(0, 0.25, 0.5), move(3, 0.5, 0.5), move(3.25, 0.75, 0.5)];
+    const settings = { enabled: true, delaySeconds: 1, fadeDurationMs: 1_000 };
+
+    expect(cursorAutoHideOpacityAt(events, 3.25, settings)).toBeCloseTo(0.25);
+    expect(cursorAutoHideOpacityAt(events, 3.5, settings)).toBeCloseTo(0.5);
+  });
+
+  it('does not fade in the first cursor activity when it was never previously hidden', () => {
+    const events = [move(3, 0.25, 0.5)];
+    const settings = { enabled: true, delaySeconds: 1, fadeDurationMs: 1_000 };
+
+    expect(cursorAutoHideOpacityAt(events, 3.01, settings)).toBe(1);
+    expect(cursorAutoHideOpacityAt(events, 3.5, settings)).toBe(1);
+  });
+
+  it('returns to full opacity immediately when activity interrupts the fade-out', () => {
+    const events = [move(0, 0.25, 0.5), move(1.5, 0.75, 0.5)];
+    const settings = { enabled: true, delaySeconds: 1, fadeDurationMs: 1_000 };
+
+    expect(cursorAutoHideOpacityAt(events, 1.25, settings)).toBeCloseTo(0.75);
+    expect(cursorAutoHideOpacityAt(events, 1.5, settings)).toBe(1);
+  });
+
+  it('hides instantly when the fade duration is zero', () => {
+    const events = [move(0, 0.25, 0.5)];
+    const settings = { enabled: true, delaySeconds: 2, fadeDurationMs: 0 };
+
+    expect(cursorAutoHideOpacityAt(events, 1.999, settings)).toBe(1);
+    expect(cursorAutoHideOpacityAt(events, 2, settings)).toBe(0);
+  });
+
+  it('reappears instantly after a fully hidden period when the fade duration is zero', () => {
+    const events = [move(0, 0.25, 0.5), move(3, 0.75, 0.5)];
+    const settings = { enabled: true, delaySeconds: 1, fadeDurationMs: 0 };
+
+    expect(cursorAutoHideOpacityAt(events, 2, settings)).toBe(0);
+    expect(cursorAutoHideOpacityAt(events, 3, settings)).toBe(1);
   });
 });

@@ -1,4 +1,9 @@
-import type { CursorClickEffects, CursorMotionSettings } from './cursor-settings';
+import {
+  createDefaultCursorAutoHideSettings,
+  type CursorAutoHideSettings,
+  type CursorClickEffects,
+  type CursorMotionSettings,
+} from './cursor-settings';
 import type { CursorSelection } from './cursor-pack';
 
 export const CURSOR_TYPES = [
@@ -55,6 +60,7 @@ export interface CursorPresentationSettings {
   };
   clickEffects: CursorClickEffects;
   motion: CursorMotionSettings;
+  autoHide: CursorAutoHideSettings;
 }
 
 export const createDefaultCursorPresentation = (): CursorPresentationSettings => ({
@@ -81,4 +87,5 @@ export const createDefaultCursorPresentation = (): CursorPresentationSettings =>
     },
   },
   motion: { preset: 'smooth', smoothing: 0.67, springMassMultiplier: 1.29, motionBlur: 0.4 },
+  autoHide: createDefaultCursorAutoHideSettings(),
 });

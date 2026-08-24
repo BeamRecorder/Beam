@@ -118,6 +118,7 @@ vi.mock('../../properties/cursor/useCursorReplacer', async () => {
         shadowColor: ref('#000000'),
         shadowDirection: ref('bottom-right'),
         clickEffects: ref({ left: {}, right: {} }),
+        autoHide: ref({ enabled: false, delaySeconds: 2, fadeDurationMs: 250 }),
       };
       state.cursor = value;
       return value;
@@ -178,6 +179,7 @@ describe('useVideoEditor', () => {
 
     state.cursor.cursorSize.value = 17;
     state.cursor.selection.value = { packId: 'builtin:macos', mode: 'fixed', cursorId: 'handpointing' };
+    state.cursor.autoHide.value = { enabled: true, delaySeconds: 4, fadeDurationMs: 500 };
     api.cursorMotion.value = {
       preset: 'custom',
       smoothing: 0,
@@ -190,6 +192,7 @@ describe('useVideoEditor', () => {
         cursorSettings: expect.objectContaining({
           selection: { packId: 'builtin:macos', mode: 'fixed', cursorId: 'handpointing' },
           size: 17,
+          autoHide: { enabled: true, delaySeconds: 4, fadeDurationMs: 500 },
           motion: {
             preset: 'custom',
             smoothing: 0,

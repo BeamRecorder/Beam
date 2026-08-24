@@ -126,6 +126,7 @@ vi.mock('../composables/useVideoEditor', async () => {
         shadowColor: ref('#000'),
         shadowDirection: ref('bottom'),
         clickEffects: ref({}),
+        autoHide: ref({ enabled: false, delaySeconds: 2, fadeDurationMs: 250 }),
       };
       const cursorMotion = ref({ preset: 'smooth', smoothing: 0.67, springMassMultiplier: 1.29, motionBlur: 0.4 });
       const compositionState = {
@@ -159,6 +160,7 @@ vi.mock('../composables/useVideoEditor', async () => {
         splitSelectedClip: vi.fn(),
         deleteSelectedClip: vi.fn(),
         reorderVisualClip: vi.fn(),
+        reorderCaptionClip: vi.fn(),
         updateSelectedAppearance: vi.fn(),
         updateSelectedTransform: vi.fn(),
         previewSelectedTransform: vi.fn(),
@@ -590,6 +592,7 @@ vi.mock('../timeline/EditorTimeline.vue', async () => {
         'add:caption',
         'delete:clips',
         'reorder:clip',
+        'reorder:caption',
         'preview:composition',
         'paste:item',
         'clipboard:copied',

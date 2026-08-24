@@ -12,6 +12,7 @@ import { capture } from '../../../../api/capture';
 import {
   customColor,
   customGradient,
+  gradientCssBackground,
   type BackgroundMedia,
   type BackgroundMediaGroup,
   type BackgroundValue,
@@ -468,7 +469,7 @@ onUnmounted(() => {
             class="swatch-tile"
             :class="{ active: isSelected(item), editing: isEditing(item.id) }"
             :style="{
-              background: `linear-gradient(${item.gradient.angle}deg, ${item.gradient.stops.map((s: { color: string; position: number }) => `${s.color} ${s.position * 100}%`).join(', ')})`,
+              background: gradientCssBackground(item.gradient),
             }"
             :aria-label="item.name"
             @click="emit('update:selectedBackground', item)"

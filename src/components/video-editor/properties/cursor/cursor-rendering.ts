@@ -1,7 +1,7 @@
 import type { CursorPlaybackState } from '../../composables/cursorPlayback';
 import { framedMediaRect, outputPoint, type CanvasRect } from '../../canvas/output-canvas';
 import type { ClipAppearance, NormalizedCrop, NormalizedTransform } from '~/media/shared/composition-types';
-import { frameContentRect } from '../../composition/appearance/frames';
+import { frameMediaRect } from '../../composition/appearance/frames';
 import type { CursorPackDescriptor, CursorSelection } from '../../../../api/types/cursor-pack';
 import { cursorGeometry, resolveCursorAsset } from './cursor-packs';
 
@@ -73,7 +73,7 @@ export function cursorPositionAt(
     width: media.width * transform.width,
     height: media.height * transform.height,
   };
-  const content = frameContentRect(outer, appearance?.frame ?? 'none', {
+  const content = frameMediaRect(outer, appearance?.frame ?? 'none', sourceWidth, sourceHeight, {
     showMenu: appearance?.frameShowMenu,
     showScrollbars: appearance?.frameShowScrollbars,
     chromeScale: appearance?.frameChromeScale,

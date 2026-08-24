@@ -37,6 +37,8 @@ const directionClass = ref(props.direction);
 const floatingStyle = ref<Record<string, string>>({});
 const pinned = ref(false);
 let closeTimer: ReturnType<typeof setTimeout> | null = null;
+let gestureResetTimer: ReturnType<typeof setTimeout> | null = null;
+let gestureStartedInOwnedPopover = false;
 const VIEWPORT_MARGIN = 8;
 const parentPopoverId = inject<string | null>('popover-owner-id', null);
 const popoverId = `popover-${Math.random().toString(36).slice(2)}`;
@@ -180,20 +182,43 @@ const isClickInsideThisOrChildPopover = (target: Element | null) => {
   return false;
 };
 
+const isOwnedPopoverTarget = (target: Element | null) =>
+  target?.closest('[data-popover-owner]')?.getAttribute('data-popover-owner') === popoverId;
+
+const handleInteractionStart = (event: Event) => {
+  const target = event.target as Element | null;
+  gestureStartedInOwnedPopover = isOwnedPopoverTarget(target);
+  handleOutsideInteraction(event);
+};
+
+const scheduleGestureReset = () => {
+  if (gestureResetTimer) clearTimeout(gestureResetTimer);
+  gestureResetTimer = setTimeout(() => {
+    gestureStartedInOwnedPopover = false;
+    gestureResetTimer = null;
+  });
+};
+
 const handleOutsideInteraction = (event: Event) => {
   if (!isOpen.value) return;
   const target = event.target as Element | null;
-  if (!isClickInsideThisOrChildPopover(target)) {
-    close();
+  if (isClickInsideThisOrChildPopover(target)) return;
+  if (event.type === 'click' && gestureStartedInOwnedPopover) {
+    gestureStartedInOwnedPopover = false;
+    return;
   }
+  close();
 };
 const handleEscape = (event: KeyboardEvent) => {
   if (props.interaction === 'hover-focus-click' && event.key === 'Escape' && isOpen.value) close();
 };
 
 onMounted(() => {
-  window.addEventListener('pointerdown', handleOutsideInteraction, true);
-  window.addEventListener('mousedown', handleOutsideInteraction, true);
+  window.addEventListener('pointerdown', handleInteractionStart, true);
+  window.addEventListener('mousedown', handleInteractionStart, true);
+  window.addEventListener('pointerup', scheduleGestureReset, true);
+  window.addEventListener('mouseup', scheduleGestureReset, true);
+  window.addEventListener('pointercancel', scheduleGestureReset, true);
   window.addEventListener('click', handleOutsideInteraction, true);
   window.addEventListener('resize', repositionOpenPopover);
   window.addEventListener('scroll', repositionOpenPopover, true);
@@ -204,14 +229,18 @@ onMounted(() => {
 onUnmounted(() => {
   resizeObserver?.disconnect();
   resizeObserver = null;
-  window.removeEventListener('pointerdown', handleOutsideInteraction, true);
-  window.removeEventListener('mousedown', handleOutsideInteraction, true);
+  window.removeEventListener('pointerdown', handleInteractionStart, true);
+  window.removeEventListener('mousedown', handleInteractionStart, true);
+  window.removeEventListener('pointerup', scheduleGestureReset, true);
+  window.removeEventListener('mouseup', scheduleGestureReset, true);
+  window.removeEventListener('pointercancel', scheduleGestureReset, true);
   window.removeEventListener('click', handleOutsideInteraction, true);
   window.removeEventListener('resize', repositionOpenPopover);
   window.removeEventListener('scroll', repositionOpenPopover, true);
   window.removeEventListener('blur', closeOnWindowBlur);
   document.removeEventListener('keydown', handleEscape);
   cancelClose();
+  if (gestureResetTimer) clearTimeout(gestureResetTimer);
 });
 
 defineExpose({

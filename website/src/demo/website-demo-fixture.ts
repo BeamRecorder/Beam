@@ -77,7 +77,6 @@ export const addDemoCaption = (composition: ClipComposition, timeMs: number, dur
         wrap: true,
         shadowColor: '#000000',
         shadowBlur: 8,
-        backdropBlur: 0,
         outlineColor: '#000000',
         outlineWidth: 0,
         extrusionDepth: 0,

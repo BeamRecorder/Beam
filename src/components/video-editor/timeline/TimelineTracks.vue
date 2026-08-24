@@ -26,7 +26,7 @@ const {
   layoutDurationMs,
   visualTracks,
   keyboardCaptionClips,
-  textCaptionClips,
+  textCaptionLayers,
   systemAudioClips,
   microphoneClips,
   importedAudioTracks,
@@ -46,6 +46,7 @@ const {
   isRulerLabel,
   formatRulerLabel,
   thumbnailSlots,
+  isWheelZooming,
   onScroll,
   percentageStyle,
   beginScrub,
@@ -71,6 +72,8 @@ const {
   zoomScale,
   draggedTrackId,
   beginReorder,
+  draggedCaptionId,
+  beginCaptionReorder,
 } = useTimelineTracks(props, emit);
 void [tracksScrollRef, sidebarScrollRef, tracksViewportRef, ticksAreaRef];
 const selectedClipIdSet = computed(
@@ -135,14 +138,16 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
           <TimelineTrackHeaders
             :visual-tracks="visualTracks"
             :keyboard-caption-clips="keyboardCaptionClips"
-            :text-caption-clips="textCaptionClips"
+            :text-caption-layers="textCaptionLayers"
             :system-audio-clips="systemAudioClips"
             :microphone-clips="microphoneClips"
             :imported-audio-tracks="importedAudioTracks"
             :include-audio-in-export="includeAudioInExport"
             :dragged-track-id="draggedTrackId"
+            :dragged-caption-id="draggedCaptionId"
             :select-track="selectTrack"
             :begin-reorder="beginReorder"
+            :begin-caption-reorder="beginCaptionReorder"
             :open-track-context-menu="openTrackContextMenu"
           />
         </div>
@@ -152,7 +157,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
       <div
         ref="tracksViewportRef"
         class="timeline-viewport"
-        :class="{ 'is-trimming': activeTrimState !== null }"
+        :class="{ 'is-trimming': activeTrimState !== null, 'is-wheel-zooming': isWheelZooming }"
         :style="tracksWidthStyle"
       >
         <div class="timeline-ruler">
@@ -222,7 +227,10 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                   :duration="layoutDurationMs / 1000"
                   :timeline-width-px="rulerWidth"
                   :thumbnail-slots="thumbnailSlots"
-                  :defer-thumbnail-requests="activeTrimState !== null || movingClipIds.includes(clip.id)"
+                  :defer-thumbnail-requests="
+                    isWheelZooming || activeTrimState !== null || movingClipIds.includes(clip.id)
+                  "
+                  :defer-waveform-draw="isWheelZooming"
                   :selected="selectedClipIdSet.has(clip.id)"
                   :trim-state="trimStateFor(clip.id)"
                   :paste-highlight="recentPaste?.type === 'clip' && recentPaste.id === clip.id"
@@ -290,7 +298,8 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
           </div>
           <TimelineCaptionTracks
             :keyboard-clips="keyboardCaptionClips"
-            :text-clips="textCaptionClips"
+            :text-layers="textCaptionLayers"
+            :dragged-caption-id="draggedCaptionId"
             :selected-clip-id="selectedClipId"
             :selected-clip-ids="[...selectedClipIdSet]"
             :hover-caption-time-ms="hoverCaptionTimeMs"
@@ -324,7 +333,8 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 :duration="layoutDurationMs / 1000"
                 :timeline-width-px="rulerWidth"
                 :thumbnail-slots="thumbnailSlots"
-                :defer-thumbnail-requests="activeTrimState !== null"
+                :defer-thumbnail-requests="isWheelZooming || activeTrimState !== null"
+                :defer-waveform-draw="isWheelZooming"
                 :selected="selectedClipIdSet.has(clip.id)"
                 :waveform-bars="audioWaveforms[clip.id]?.bars"
                 :waveform-left-percent="audioWaveforms[clip.id]?.leftPercent"
@@ -357,7 +367,8 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 :duration="layoutDurationMs / 1000"
                 :timeline-width-px="rulerWidth"
                 :thumbnail-slots="thumbnailSlots"
-                :defer-thumbnail-requests="activeTrimState !== null"
+                :defer-thumbnail-requests="isWheelZooming || activeTrimState !== null"
+                :defer-waveform-draw="isWheelZooming"
                 :selected="selectedClipIdSet.has(clip.id)"
                 :waveform-bars="audioWaveforms[clip.id]?.bars"
                 :waveform-left-percent="audioWaveforms[clip.id]?.leftPercent"
@@ -391,7 +402,8 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 :duration="layoutDurationMs / 1000"
                 :timeline-width-px="rulerWidth"
                 :thumbnail-slots="thumbnailSlots"
-                :defer-thumbnail-requests="activeTrimState !== null"
+                :defer-thumbnail-requests="isWheelZooming || activeTrimState !== null"
+                :defer-waveform-draw="isWheelZooming"
                 :selected="selectedClipIdSet.has(clip.id)"
                 :waveform-bars="audioWaveforms[clip.id]?.bars"
                 :waveform-left-percent="audioWaveforms[clip.id]?.leftPercent"

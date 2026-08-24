@@ -36,6 +36,8 @@ export type CursorRenderSettings = CursorPresentationSettings;
 export interface CompositionSnapshot {
   duration: number;
   render: ExportRenderSettings;
+  /** Canvas size used while laying out resolution-dependent overlays in the editor. */
+  referenceCanvas?: { width: number; height: number };
   canvas: OutputCanvasSettings;
   background:
     | { kind: 'color'; color: string }

@@ -6,15 +6,18 @@ import {
   emptyComposition,
   isAudioClip,
   isCompositingClip,
+  isTextCaptionClip,
   isVisualClip,
   type AudioClip,
   type BlurClip,
   type CaptionClip,
   type Clip,
   type ClipComposition,
+  type ColorClip,
   type MediaAsset,
   type VisualClip,
 } from '~/media/shared/composition-types';
+import { DEFAULT_COLOR_FILL } from '~/media/shared/color-fill-types';
 import type { EditorPreferenceDefaults } from './editor-default-types';
 import { audioDefaultsFor, blurDefaultsFor, captionDefaultsFor, visualClipDefaultProps } from './editor-defaults';
 import {
@@ -23,6 +26,7 @@ import {
   holdClipAtPlayhead,
   moveClip,
   reorderClip,
+  reorderTextCaption,
   setClipEnabled,
   splitClip,
   trimClip,
@@ -32,6 +36,7 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { useSelectedClips } from './useSelectedClips';
 
 const endMs = (clip: Clip) => clip.timelineStartMs + clip.timelineDurationMs;
+const DEFAULT_GENERATED_CLIP_DURATION_MS = 3_000;
 export function useClipComposition(options: {
   project: Ref<CaptureProject | null | undefined>;
   editorData: Ref<ProjectEditorData | null | undefined>;
@@ -40,6 +45,7 @@ export function useClipComposition(options: {
   editorDefaults: Ref<EditorPreferenceDefaults>;
 }) {
   const { t } = useTranslate('TimelineToolbar');
+  const { t: tCanvas } = useTranslate('CanvasPanel');
   const composition = ref<ClipComposition>(emptyComposition());
   const selection = useSelectedClips({ composition, activeTab: options.activeTab });
   const {
@@ -187,11 +193,35 @@ export function useClipComposition(options: {
   };
 
   const addElement = async (
-    kind: 'video' | 'image' | 'sound' | 'caption' | 'blur',
+    kind: 'video' | 'image' | 'sound' | 'caption' | 'color' | 'blur',
     requestedStartMs?: number,
     requestedDurationMs?: number,
   ) => {
     const startMs = Math.max(0, Math.round(requestedStartMs ?? options.currentTimeSec.value * 1_000));
+    if (kind === 'color') {
+      const clipId = crypto.randomUUID();
+      const durationMs = DEFAULT_GENERATED_CLIP_DURATION_MS;
+      const clip: ColorClip = {
+        id: clipId,
+        trackId: clipId,
+        kind: 'color',
+        assetId: '',
+        name: tCanvas('color'),
+        timelineStartMs: startMs,
+        timelineDurationMs: durationMs,
+        sourceInMs: 0,
+        sourceDurationMs: durationMs,
+        playbackRate: 1,
+        transitions: { entry: null, exit: null },
+        enabled: true,
+        order: Math.min(0, ...composition.value.clips.filter(isCompositingClip).map((clip) => clip.order)) - 1,
+        transform: { x: 0, y: 0, width: 1, height: 1 },
+        fill: structuredClone(DEFAULT_COLOR_FILL),
+      };
+      composition.value = addClip(composition.value, clip);
+      selectClip(clip.id);
+      return;
+    }
     if (kind === 'blur') {
       const defaults = blurDefaultsFor(options.editorDefaults.value);
       const clipId = crypto.randomUUID();
@@ -202,9 +232,9 @@ export function useClipComposition(options: {
         assetId: '',
         name: t('blur'),
         timelineStartMs: startMs,
-        timelineDurationMs: 5_000,
+        timelineDurationMs: DEFAULT_GENERATED_CLIP_DURATION_MS,
         sourceInMs: 0,
-        sourceDurationMs: 5_000,
+        sourceDurationMs: DEFAULT_GENERATED_CLIP_DURATION_MS,
         playbackRate: 1,
         transitions: { entry: null, exit: null },
         enabled: true,
@@ -231,7 +261,7 @@ export function useClipComposition(options: {
         playbackRate: 1,
         transitions: { entry: null, exit: null },
         enabled: true,
-        order: 0,
+        order: Math.min(0, ...composition.value.clips.filter(isTextCaptionClip).map((entry) => entry.order)) - 1,
         caption: {
           type: 'text',
           sentences: [],
@@ -323,6 +353,12 @@ export function useClipComposition(options: {
     if (!clip || !isCompositingClip(clip)) return;
     composition.value = reorderClip(composition.value, clipId, targetIndex);
   };
+  const reorderCaptionClip = (clipId: string, targetIndex: number) => {
+    if (!Number.isInteger(targetIndex)) return;
+    const clip = composition.value.clips.find((entry) => entry.id === clipId);
+    if (!clip || !isTextCaptionClip(clip)) return;
+    composition.value = reorderTextCaption(composition.value, clipId, targetIndex);
+  };
 
   const toggleClip = (clipId: string) => {
     const clip = composition.value.clips.find((entry) => entry.id === clipId);
@@ -359,6 +395,7 @@ export function useClipComposition(options: {
     holdClip,
     deleteSelectedClip,
     reorderVisualClip,
+    reorderCaptionClip,
     updateSelectedAppearance,
     updateSelectedTransform,
     updateSelectedBlur,

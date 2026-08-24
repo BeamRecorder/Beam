@@ -2,10 +2,12 @@ import { onUnmounted, watch } from 'vue';
 import { activeClipsAt, type MediaFrame } from '~/media/shared';
 import {
   isBlurClip,
+  isColorClip,
   isVisualClip,
   type BlurClip,
   type CaptionClip,
   type ClipComposition,
+  type ColorClip,
   type NormalizedTransform,
   type VisualClip,
 } from '~/media/shared/composition-types';
@@ -16,23 +18,27 @@ import {
   webcamSettingsForAppearance,
 } from '../../composition/webcam/webcam-zoom';
 import { drawDecoratedMedia } from '../../composition/appearance/render-decorated-media';
+import { isPhoneFrame } from '../../composition/appearance/phone-frames';
+import { drawFrameOverlay, frameOuterRect } from '../../composition/appearance/frames';
 import { drawCaptionText, type CaptionViewport } from '../../composition/captions/render-caption-text';
 import type { OutputCanvasSettings } from '../output-canvas';
 import { applyBlurEffect } from '../../composition/effects/blur-effect';
 import { resolveCompositionSceneLayers, type CompositionSceneLayers } from '../../composition/scene-layers';
 import { drawWithClipTransition } from '../../composition/transitions/render-transition';
 import { resolveVisualClipFraming } from '../../composition/visual-framing';
+import { drawColorClip } from '../../composition/color/render-color-clip';
 
 export interface UseCompositionMediaOptions {
   composition: () => ClipComposition;
   currentTime: () => number;
   frameFor: (clipId: string) => MediaFrame | null;
-  selectedTransformClip: () => VisualClip | BlurClip | CaptionClip | null;
+  selectedTransformClip: () => VisualClip | ColorClip | BlurClip | CaptionClip | null;
   transformDraft: () => NormalizedTransform | null;
   isCropping?: () => boolean | undefined;
   outputCanvas: () => OutputCanvasSettings;
   captionViewport: () => CaptionViewport;
   keyboardCursorPosition?: () => { x: number; y: number } | null;
+  editingCaptionId?: () => string | null;
   onRenderOnce: () => void;
 }
 
@@ -63,7 +69,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
   );
 
   const drawCaption = (ctx: CanvasRenderingContext2D, clip: CaptionClip, timeMs: number) => {
-    const { text, runs } = captionContentAt(clip, timeMs);
+    const { text, runs, wordHighlight } = captionContentAt(clip, timeMs);
     if (!text) return;
     const selected = options.selectedTransformClip();
     const transformDraft = clip.id === selected?.id ? options.transformDraft() : null;
@@ -72,8 +78,10 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
       clip: renderClip,
       text,
       runs,
+      wordHighlight,
       cursorPosition:
         clip.caption.type === 'keyboard' && clip.caption.followCursor ? options.keyboardCursorPosition?.() : null,
+      hideText: options.editingCaptionId?.() === clip.id,
       canvas: options.outputCanvas(),
       viewport: options.captionViewport(),
     });
@@ -93,7 +101,9 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     const transform = clip.id === selected?.id && options.transformDraft() ? options.transformDraft()! : clip.transform;
     const sourceWidth = frame?.width ?? image?.naturalWidth ?? 0;
     const sourceHeight = frame?.height ?? image?.naturalHeight ?? 0;
-    const crop = options.isCropping?.() && clip.id === selected?.id ? undefined : clip.crop;
+    const editingCrop = Boolean(options.isCropping?.() && clip.id === selected?.id);
+    const editingPhoneCrop = editingCrop && isPhoneFrame(clip.appearance.frame);
+    const crop = editingCrop ? { x: 0, y: 0, width: 1, height: 1 } : clip.crop;
     const layout = {
       x: window.dx + transform.x * window.dw,
       y: window.dy + transform.y * window.dh,
@@ -106,7 +116,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
       sourceWidth,
       sourceHeight,
       crop,
-      options.isCropping?.() && clip.id === selected?.id ? 'custom' : (clip.cameraFramingPreset ?? 'custom'),
+      editingPhoneCrop ? 'fit' : editingCrop ? 'custom' : (clip.cameraFramingPreset ?? 'custom'),
     );
     const output = options.outputCanvas?.();
     const shadowScale = output
@@ -116,7 +126,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
       source,
       sourceRect: framing.sourceRect,
       rect: framing.rect,
-      appearance: clip.appearance,
+      appearance: editingPhoneCrop ? { ...clip.appearance, frame: 'none' } : clip.appearance,
       shadowScale,
       title: clip.name,
       mirrored: clip.isMirrored,
@@ -124,6 +134,19 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
       mask: framing.mask,
       shadowFollowsSourceAlpha: clip.kind === 'image',
     });
+    if (editingPhoneCrop)
+      drawFrameOverlay(
+        ctx,
+        frameOuterRect(layout, clip.appearance.frame),
+        clip.appearance.frame,
+        clip.name,
+        clip.appearance.frameColor,
+        {
+          showMenu: clip.appearance.frameShowMenu,
+          showScrollbars: clip.appearance.frameShowScrollbars,
+          chromeScale: clip.appearance.frameChromeScale,
+        },
+      );
   };
 
   const drawBlur = (
@@ -139,6 +162,16 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
       width: transform.width * window.dw,
       height: transform.height * window.dh,
     });
+  };
+
+  const drawColor = (
+    ctx: CanvasRenderingContext2D,
+    clip: ColorClip,
+    window: { dx: number; dy: number; dw: number; dh: number },
+  ) => {
+    const selected = options.selectedTransformClip();
+    const transform = clip.id === selected?.id && options.transformDraft() ? options.transformDraft()! : clip.transform;
+    drawColorClip(ctx, clip, { x: window.dx, y: window.dy, width: window.dw, height: window.dh }, transform);
   };
 
   const drawWebcam = (
@@ -206,6 +239,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
         { x: window.dx, y: window.dy, width: window.dw, height: window.dh },
         () => {
           if (clip.kind === 'screen') drawScreen();
+          else if (clip.kind === 'color') drawColor(ctx, clip, window);
           else if (clip.kind === 'blur') drawBlur(ctx, clip, window);
           else if (clip.kind === 'webcam') drawWebcam(ctx, clip, window);
           else drawVisual(ctx, clip, window);
@@ -218,9 +252,10 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     ctx: CanvasRenderingContext2D,
     window: { dx: number; dy: number; dw: number; dh: number },
     onlyClipId?: string,
+    resolvedLayers?: CompositionSceneLayers,
   ) => {
     const timeMs = options.currentTime() * 1_000;
-    const clips = activeClipsAt(options.composition(), timeMs)
+    const clips = (resolvedLayers?.captions ?? activeClipsAt(options.composition(), timeMs))
       .filter((clip) => (onlyClipId ? clip.id === onlyClipId : clip.kind === 'caption'))
       .sort((left, right) => right.order - left.order);
     for (const clip of clips) {
@@ -231,6 +266,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
         { x: window.dx, y: window.dy, width: window.dw, height: window.dh },
         () => {
           if (clip.kind === 'caption') drawCaption(ctx, clip, timeMs);
+          else if (isColorClip(clip)) drawColor(ctx, clip, window);
           else if (isBlurClip(clip)) drawBlur(ctx, clip, window);
           else if (isVisualClip(clip) && clip.kind !== 'webcam') drawVisual(ctx, clip, window);
         },

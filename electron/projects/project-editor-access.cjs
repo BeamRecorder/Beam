@@ -1,4 +1,9 @@
-const { migrateComposition, normalizeComposition, materializeComposition } = require('./clip-composition.cjs');
+const {
+  compositionSchemaVersion,
+  migrateComposition,
+  normalizeComposition,
+  materializeComposition,
+} = require('./clip-composition.cjs');
 const {
   defaultZoomMotionBlur,
   migratePresentation,
@@ -11,7 +16,7 @@ function createProjectEditorAccess(options) {
     const current = manifest.editor;
     if (
       current?.schemaVersion === 3 &&
-      current.composition?.schemaVersion === 11 &&
+      current.composition?.schemaVersion === compositionSchemaVersion &&
       current.presentation?.cursor?.selection
     ) {
       const composition = normalizeComposition(current.composition);
@@ -28,7 +33,7 @@ function createProjectEditorAccess(options) {
       schemaVersion: 3,
       ...(current?.applyGlobalDefaults === true ? { applyGlobalDefaults: true } : {}),
       composition:
-        legacyComposition.schemaVersion === 11
+        legacyComposition.schemaVersion === compositionSchemaVersion
           ? normalizeComposition(legacyComposition)
           : migrateComposition(
               legacyComposition,

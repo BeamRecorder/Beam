@@ -5,6 +5,7 @@ import { DEFAULT_OUTPUT_CANVAS } from '../../../video-editor/canvas/output-canva
 import type { ClipComposition } from '~/media/shared/composition-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import { MACOS_CURSOR_PACK } from '../../../video-editor/properties/cursor/cursor-packs';
+import { createDefaultCursorAutoHideSettings } from '../../../../api/types/cursor-settings';
 
 const composition = (): ClipComposition => ({
   schemaVersion: 6,
@@ -63,6 +64,7 @@ const base = (): Parameters<typeof createCompositionSnapshot>[0] => ({
       right: { springEnabled: true, springIntensity: 50, rippleEnabled: true, rippleSize: 30, rippleColor: '#6366f1' },
     },
     motion: { preset: 'smooth' as const, smoothing: 0.67, springMassMultiplier: 1.29, motionBlur: 0.4 },
+    autoHide: createDefaultCursorAutoHideSettings(),
   },
   cursorPack: MACOS_CURSOR_PACK,
 });
@@ -134,6 +136,12 @@ describe('createCompositionSnapshot', () => {
     expect(snapshot.canvas).toMatchObject({ width: 1080, height: 1350, showBackground: false });
   });
 
+  it('records the native canvas as the reference for resolution-scaled exports', () => {
+    const snapshot = createCompositionSnapshot({ ...base(), canvas: DEFAULT_OUTPUT_CANVAS });
+
+    expect(snapshot.referenceCanvas).toEqual({ width: 1_920, height: 1_080 });
+  });
+
   it('omits the selected background when the output canvas background is disabled', () => {
     const snapshot = createCompositionSnapshot({
       ...base(),
@@ -164,6 +172,16 @@ describe('createCompositionSnapshot', () => {
       springMassMultiplier: 0.5,
       motionBlur: 0,
     });
+  });
+
+  it('copies auto-hide settings into the export snapshot', () => {
+    const input = base();
+    input.cursorSettings.autoHide = { enabled: true, delaySeconds: 4.5, fadeDurationMs: 600 };
+
+    const snapshot = createCompositionSnapshot(input);
+    input.cursorSettings.autoHide.delaySeconds = 1;
+
+    expect(snapshot.cursorSettings.autoHide).toEqual({ enabled: true, delaySeconds: 4.5, fadeDurationMs: 600 });
   });
 
   it('keeps an immutable copy of zooms and composition', () => {

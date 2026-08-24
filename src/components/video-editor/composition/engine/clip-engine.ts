@@ -4,6 +4,8 @@ import {
   emptyComposition,
   isAudioClip,
   isBlurClip,
+  isColorClip,
+  isTextCaptionClip,
   isVisualClip,
   type Clip,
   type ClipAppearance,
@@ -16,6 +18,7 @@ import {
 } from '~/media/shared/composition-types';
 import { normalizeClipTransitions } from '~/media/shared/clip-transitions';
 import type { CameraFramingPreset } from '~/media/shared/camera-layout-types';
+import type { ColorFill } from '~/media/shared/color-fill-types';
 import { EMPTY_CLIP_TRANSITIONS } from '~/media/shared/clip-transitions';
 import {
   maximumVisualTrackDuration,
@@ -23,6 +26,7 @@ import {
   reorderClipOrders,
   visualMoveDeltaBounds,
 } from './visual-track-layout';
+import { reorderTextCaptionOrders } from './caption-layer-layout';
 import {
   CompositionEngineError,
   MAX_PLAYBACK_RATE,
@@ -109,7 +113,11 @@ export function addAsset(composition: ClipComposition, asset: MediaAsset): ClipC
   validateComposition({
     ...next,
     clips: next.clips.filter(
-      (clip) => clip.kind === 'caption' || isBlurClip(clip) || next.assets.some((entry) => entry.id === clip.assetId),
+      (clip) =>
+        clip.kind === 'caption' ||
+        isColorClip(clip) ||
+        isBlurClip(clip) ||
+        next.assets.some((entry) => entry.id === clip.assetId),
     ),
   });
   return next;
@@ -251,7 +259,9 @@ export function deleteClip(composition: ClipComposition, clipId: string, grouped
   byId(next, clipId);
   next.clips = normalizeClipOrders(normalizeGroups(next.clips.filter((clip) => !ids.has(clip.id))));
   const usedAssets = new Set(
-    next.clips.flatMap((clip) => (clip.kind === 'caption' || isBlurClip(clip) ? [] : [clip.assetId])),
+    next.clips.flatMap((clip) =>
+      clip.kind === 'caption' || isColorClip(clip) || isBlurClip(clip) ? [] : [clip.assetId],
+    ),
   );
   next.assets = next.assets.filter((asset) => usedAssets.has(asset.id));
   validateComposition(next);
@@ -297,6 +307,13 @@ export function setBlurEffect(
   return updateClip(composition, clipId, (clip) => {
     if (!isBlurClip(clip)) throw new CompositionEngineError('Only blur clips have blur settings.');
     return { ...clip, ...patch };
+  });
+}
+
+export function setColorFill(composition: ClipComposition, clipId: string, fill: ColorFill): ClipComposition {
+  return updateClip(composition, clipId, (clip) => {
+    if (!isColorClip(clip)) throw new CompositionEngineError('Only color clips have color fill settings.');
+    return { ...clip, fill: cloneValue(fill) };
   });
 }
 
@@ -383,6 +400,17 @@ export function reorderClip(composition: ClipComposition, clipId: string, target
   const next = clone(composition);
   const reordered = reorderClipOrders(next.clips, clipId, targetIndex);
   if (!reordered) throw new CompositionEngineError('Invalid clip reorder.');
+  next.clips = reordered;
+  validateComposition(next);
+  return next;
+}
+
+export function reorderTextCaption(composition: ClipComposition, clipId: string, targetIndex: number): ClipComposition {
+  const source = byId(composition, clipId);
+  if (!isTextCaptionClip(source)) throw new CompositionEngineError('Only text captions can be reordered here.');
+  const reordered = reorderTextCaptionOrders(composition.clips, clipId, targetIndex);
+  if (!reordered) throw new CompositionEngineError('Invalid text caption reorder.');
+  const next = clone(composition);
   next.clips = reordered;
   validateComposition(next);
   return next;

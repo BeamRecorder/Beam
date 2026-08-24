@@ -57,6 +57,64 @@ export interface WindowsFrameGeometry {
   showText: boolean;
 }
 
+export interface PhoneFrameGeometry {
+  outer: MediaRect;
+  content: MediaRect;
+  outerRadius: number;
+  contentRadius: number;
+  unit: number;
+}
+
+export function resolvePhoneFrameRect(rect: MediaRect, frame: 'iphone-16-max' | 'pixel-9-pro'): MediaRect {
+  const aspect = frame === 'iphone-16-max' ? 415 / 843 : 353 / 745;
+  const width = Math.min(rect.width, rect.height * aspect);
+  const height = width / aspect;
+  return {
+    x: rect.x + (rect.width - width) / 2,
+    y: rect.y + (rect.height - height) / 2,
+    width,
+    height,
+  };
+}
+
+export function resolveContainedRect(bounds: MediaRect, sourceWidth: number, sourceHeight: number): MediaRect {
+  const aspect = Math.max(1, sourceWidth) / Math.max(1, sourceHeight);
+  const width = Math.min(bounds.width, bounds.height * aspect);
+  const height = width / aspect;
+  return {
+    x: bounds.x + (bounds.width - width) / 2,
+    y: bounds.y + (bounds.height - height) / 2,
+    width,
+    height,
+  };
+}
+
+export function resolvePhoneFrameGeometry(rect: MediaRect, frame: 'iphone-16-max' | 'pixel-9-pro'): PhoneFrameGeometry {
+  const outer = resolvePhoneFrameRect(rect, frame);
+  const iphone = frame === 'iphone-16-max';
+  const leftRatio = iphone ? 0.034 : 0.041;
+  const rightRatio = iphone ? 0.034 : 0.048;
+  const topRatio = iphone ? 0.0132 : 0.0205;
+  const bottomRatio = iphone ? 0.0132 : 0.018;
+  const left = outer.width * leftRatio;
+  const right = outer.width * rightRatio;
+  const top = outer.height * topRatio;
+  const bottom = outer.height * bottomRatio;
+  const content = {
+    x: outer.x + left,
+    y: outer.y + top,
+    width: Math.max(0, outer.width - left - right),
+    height: Math.max(0, outer.height - top - bottom),
+  };
+  return {
+    outer,
+    content,
+    outerRadius: Math.min(outer.width * (iphone ? 0.1494 : 0.17), outer.width / 2, outer.height / 2),
+    contentRadius: Math.min(outer.width * (iphone ? 0.122126436781609 : 0.126666666666667), content.width / 2),
+    unit: Math.max(0.25, outer.width / (iphone ? 415 : 353)),
+  };
+}
+
 export function resolveWindowsFrameGeometry(rect: MediaRect, options: FrameOptions = {}): WindowsFrameGeometry {
   const scale = normalizeFrameChromeScale(options.chromeScale);
   const naturalUnit = Math.min(rect.width / 800, rect.height / 520) * scale;

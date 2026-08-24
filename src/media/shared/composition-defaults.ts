@@ -1,4 +1,23 @@
 import type { CaptionStyle, ClipAppearance, VisualClip } from './composition-types';
+import { DEFAULT_PHONE_FRAME_FILL } from './color-fill-types';
+
+export const createDefaultCaptionHighlight = (): CaptionStyle['wordHighlight'] => ({
+  enabled: false,
+  displayMode: 'sentence',
+  fill: 'solid',
+  color: '#facc15',
+  gradient: {
+    type: 'linear',
+    angle: 90,
+    stops: [
+      { id: 'highlight-start', position: 0, color: '#facc15', alpha: 1 },
+      { id: 'highlight-end', position: 1, color: '#fb7185', alpha: 1 },
+    ],
+  },
+  effect: 'pop',
+  intensity: 55,
+  inactiveOpacity: 72,
+});
 
 export const createDefaultClipAppearance = (kind: VisualClip['kind'], showBackground = false): ClipAppearance => ({
   cornerRadius: kind === 'screen' ? (showBackground ? 'md' : 'none') : 'sm',
@@ -16,6 +35,7 @@ export const createDefaultClipAppearance = (kind: VisualClip['kind'], showBackgr
   frameShowMenu: true,
   frameShowScrollbars: true,
   frameChromeScale: 1,
+  phoneFrameFill: DEFAULT_PHONE_FRAME_FILL,
 });
 
 export const createDefaultCaptionStyle = (fontSize = 42): CaptionStyle => ({
@@ -31,9 +51,17 @@ export const createDefaultCaptionStyle = (fontSize = 42): CaptionStyle => ({
   wrap: true,
   shadowColor: '#000000',
   shadowBlur: 4,
-  backdropBlur: 0,
+  shape: {
+    preset: 'rounded',
+    radius: 35,
+    color: '#000000',
+    opacity: 50,
+    blur: 8,
+    padding: 30,
+  },
   outlineColor: '#000000',
   outlineWidth: 6,
   extrusionDepth: 4,
   placement: 'bottom',
+  wordHighlight: createDefaultCaptionHighlight(),
 });

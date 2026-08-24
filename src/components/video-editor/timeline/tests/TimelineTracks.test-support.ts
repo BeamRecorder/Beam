@@ -2,14 +2,27 @@ import { defineComponent } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, vi } from 'vitest';
 import type { ZoomElement } from '../../zoom/zoom-types';
-import type { AudioClip, CaptionClip, ClipComposition, MediaAsset, VisualClip } from '~/media/shared/composition-types';
+import {
+  COMPOSITION_SCHEMA_VERSION,
+  type AudioClip,
+  type CaptionClip,
+  type ClipComposition,
+  type MediaAsset,
+  type VisualClip,
+} from '~/media/shared/composition-types';
 import type { MediaError } from '~/media/shared/media-types';
 import TimelineTracks from '../TimelineTracks.vue';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import { useTimelineClipboard } from '../composables/useTimelineClipboard';
 
 const waveformTestState = vi.hoisted(() => ({
-  viewport: null as null | (() => { startSeconds: number; endSeconds: number; pixelsPerSecond: number }),
+  viewport: null as
+    | null
+    | (() => {
+        startSeconds: number;
+        endSeconds: number;
+        pixelsPerSecond: number;
+      }),
 }));
 
 export const getWaveformTestState = () => waveformTestState;
@@ -17,12 +30,20 @@ export const getWaveformTestState = () => waveformTestState;
 vi.mock('../composables/useCompositionAudioWaveforms', () => ({
   useCompositionAudioWaveforms: (
     _composition: unknown,
-    viewport: () => { startSeconds: number; endSeconds: number; pixelsPerSecond: number },
+    viewport: () => {
+      startSeconds: number;
+      endSeconds: number;
+      pixelsPerSecond: number;
+    },
   ) => {
     waveformTestState.viewport = viewport;
     return {
       slices: {
-        'system-audio': { bars: [4, 12, 20], leftPercent: 0, widthPercent: 100 },
+        'system-audio': {
+          bars: [4, 12, 20],
+          leftPercent: 0,
+          widthPercent: 100,
+        },
         'microphone-audio': undefined,
         'imported-audio': undefined,
       },
@@ -56,6 +77,7 @@ export const TimelineClipStub = defineComponent({
     waveformStatus: { type: String, default: undefined },
     waveformError: { type: Object, default: undefined },
     deferThumbnailRequests: { type: Boolean, default: false },
+    deferWaveformDraw: { type: Boolean, default: false },
     pasteHighlight: { type: Boolean, default: false },
   },
   emits: ['select', 'move', 'trim', 'contextmenu'],
@@ -152,12 +174,15 @@ export const keyboardCaption = (): CaptionClip => ({
     followCursor: true,
     recordedPlatform: 'linux',
     sourceSessionId: 'session-1',
-    style: { ...createDefaultCaptionStyle(28), shadowDirection: 'bottom-right' },
+    style: {
+      ...createDefaultCaptionStyle(28),
+      shadowDirection: 'bottom-right',
+    },
   },
 });
 
 export const composition = (extraClips: ClipComposition['clips'] = []): ClipComposition => ({
-  schemaVersion: 6,
+  schemaVersion: COMPOSITION_SCHEMA_VERSION,
   keyboardCaptionSessions: [],
   assets: [
     asset('screen-asset', 'video'),
@@ -168,7 +193,13 @@ export const composition = (extraClips: ClipComposition['clips'] = []): ClipComp
     asset('imported-asset', 'audio'),
   ],
   clips: [
-    visual({ id: 'screen-clip', order: 2, groupId: 'linked', trackId: 'screen-track', name: 'Main screen' }),
+    visual({
+      id: 'screen-clip',
+      order: 2,
+      groupId: 'linked',
+      trackId: 'screen-track',
+      name: 'Main screen',
+    }),
     visual({
       id: 'webcam-clip',
       kind: 'webcam',
@@ -345,9 +376,15 @@ export const mountTracks = async (overrides: Record<string, unknown> = {}) => {
     right: 1_120,
     bottom: 28,
   } as DOMRect);
-  Object.defineProperty(ticks, 'clientWidth', { configurable: true, value: 1_000 });
+  Object.defineProperty(ticks, 'clientWidth', {
+    configurable: true,
+    value: 1_000,
+  });
   const scroll = wrapper.get('.timeline-tracks-container').element;
-  Object.defineProperty(scroll, 'clientWidth', { configurable: true, value: 1_000 });
+  Object.defineProperty(scroll, 'clientWidth', {
+    configurable: true,
+    value: 1_000,
+  });
   await flushPromises();
   return wrapper;
 };
@@ -371,8 +408,14 @@ export const setPlaybackViewportGeometry = (mounted: VueWrapper) => {
     right: 620,
     bottom: 200,
   } as DOMRect);
-  Object.defineProperty(scroll, 'clientWidth', { configurable: true, value: 500 });
-  Object.defineProperty(scroll, 'scrollWidth', { configurable: true, value: 2_000 });
+  Object.defineProperty(scroll, 'clientWidth', {
+    configurable: true,
+    value: 500,
+  });
+  Object.defineProperty(scroll, 'scrollWidth', {
+    configurable: true,
+    value: 2_000,
+  });
   scroll.scrollLeft = 0;
   return scroll;
 };

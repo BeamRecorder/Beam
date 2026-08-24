@@ -15,6 +15,7 @@ import {
   Volume2,
   Type,
   CircleDashed,
+  Palette,
 } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import Popover from '~/ui/popover/Popover.vue';
@@ -28,6 +29,7 @@ import PreviewQualityPopover from './PreviewQualityPopover.vue';
 import type { PreviewPerformanceSnapshot } from '../performance/preview-performance-types';
 
 const { t } = useTranslate('TimelineToolbar');
+const { t: tCanvas } = useTranslate('CanvasPanel');
 
 const props = withDefaults(
   defineProps<{
@@ -50,11 +52,11 @@ const emit = defineEmits<{
   (e: 'update:zoomLevel', value: number): void;
   (e: 'update:isSnappingEnabled', value: boolean): void;
   (e: 'update:previewQuality', value: PreviewQuality): void;
-  (e: 'add:element', type: 'video' | 'image' | 'sound' | 'caption' | 'blur'): void;
+  (e: 'add:element', type: 'video' | 'image' | 'sound' | 'caption' | 'color' | 'blur'): void;
   (e: 'split'): void;
 }>();
 
-const handleAdd = (type: 'video' | 'image' | 'sound' | 'caption' | 'blur') => {
+const handleAdd = (type: 'video' | 'image' | 'sound' | 'caption' | 'color' | 'blur') => {
   emit('add:element', type);
 };
 const addItems = computed(
@@ -62,6 +64,7 @@ const addItems = computed(
     [
       { id: 'video', label: t('video'), icon: Video },
       { id: 'image', label: t('image'), icon: ImageIcon },
+      { id: 'color', label: tCanvas('color'), icon: Palette },
       { id: 'sound', label: t('sound'), icon: Volume2 },
       { id: 'caption', label: t('text'), icon: Type },
       { id: 'blur', label: t('blur'), icon: CircleDashed },
@@ -114,7 +117,7 @@ const handleZoomOut = () => {
           :label="t('add')"
           :icon="Plus"
           :items="addItems"
-          @select="handleAdd($event as 'video' | 'image' | 'sound' | 'caption' | 'blur')"
+          @select="handleAdd($event as 'video' | 'image' | 'sound' | 'caption' | 'color' | 'blur')"
         />
         <div class="tools-group">
           <Button

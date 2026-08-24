@@ -1,4 +1,4 @@
-const compositingKinds = new Set(['screen', 'video', 'image', 'webcam', 'blur']);
+const compositingKinds = new Set(['screen', 'video', 'image', 'webcam', 'color', 'blur']);
 
 const isCompositing = (clip) => compositingKinds.has(clip?.kind);
 const endMs = (clip) => clip.timelineStartMs + clip.timelineDurationMs;
@@ -18,15 +18,15 @@ const visualSignature = (clip) =>
   });
 
 const isCertainSplitContinuation = (left, right) =>
-  left.kind !== 'blur' &&
-  right.kind !== 'blur' &&
+  !['blur', 'color'].includes(left.kind) &&
+  !['blur', 'color'].includes(right.kind) &&
   visualSignature(left) === visualSignature(right) &&
   endMs(left) === right.timelineStartMs &&
   left.sourceInMs + left.sourceDurationMs === right.sourceInMs;
 
 const isTechnicalSplitContinuation = (left, right) =>
-  left.kind !== 'blur' &&
-  right.kind !== 'blur' &&
+  !['blur', 'color'].includes(left.kind) &&
+  !['blur', 'color'].includes(right.kind) &&
   left.kind === right.kind &&
   left.assetId === right.assetId &&
   endMs(left) === right.timelineStartMs &&

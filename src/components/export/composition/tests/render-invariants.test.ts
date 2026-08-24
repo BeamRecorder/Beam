@@ -1,11 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
 import { drawCompositionLayers, renderCompositionFrame, type RenderableMedia } from '../render';
-import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
 import { resolveCameraFraming } from '../../../video-editor/composition/camera-layout';
 import { drawCanvasTransitionFrame } from '../../../video-editor/composition/transitions/render-canvas-transition';
 import type { VisualClip } from '~/media/shared/composition-types';
 import * as decoratedMedia from '../../../video-editor/composition/appearance/render-decorated-media';
 import { context, screenAppearance as appearance, snapshot } from './render.test-support';
+import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
+
+const testCaptionStyle = (fontSize: number) => {
+  const style = createDefaultCaptionStyle(fontSize);
+  return { ...style, shape: { ...style.shape, opacity: 0, blur: 0 } };
+};
 
 const image = (): RenderableMedia => ({ source: {} as CanvasImageSource, width: 10, height: 10 });
 
@@ -473,7 +478,7 @@ describe('composition rendering invariants', () => {
       caption: {
         type: 'text',
         sentences: [{ id: 'sentence', text: 'Canvas layer', startMs: 0, endMs: 1_000, words: [] }],
-        style: { ...createDefaultCaptionStyle(20), wrap: false },
+        style: { ...testCaptionStyle(20), wrap: false },
       },
     });
     const surfaceContext = context();
@@ -581,14 +586,14 @@ describe('composition rendering invariants', () => {
           type: 'text',
           sentences: [{ id: 's', text: 'Foreground', startMs: 0, endMs: 1_000, words: [] }],
           style: {
-            ...createDefaultCaptionStyle(20),
+            ...testCaptionStyle(20),
             color: '#fff',
             fontSize: 20,
             shadowColor: '#000',
             shadowBlur: 0,
             placement: 'center',
             wrap: false,
-            backdropBlur: 0,
+            shape: testCaptionStyle(42).shape,
             outlineColor: 'transparent',
             outlineWidth: 0,
             extrusionDepth: 0,

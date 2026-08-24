@@ -27,13 +27,11 @@ export function applyCaptionSelectionUpdate(
   let next = updateClip(composition, updatedPrimary.id, () => clone(updatedPrimary));
 
   for (const clip of composition.clips) {
-    if (
-      clip.id === updatedPrimary.id ||
-      !selected.has(clip.id) ||
-      clip.kind !== 'caption' ||
-      clip.caption.type !== currentPrimary.caption.type
-    )
+    if (clip.id === updatedPrimary.id || clip.kind !== 'caption' || clip.caption.type !== currentPrimary.caption.type)
       continue;
+    const sharesCaptionLayer =
+      currentPrimary.captionLayerId !== undefined && clip.captionLayerId === currentPrimary.captionLayerId;
+    if (!selected.has(clip.id) && !sharesCaptionLayer) continue;
     next = updateClip(next, clip.id, (target) => {
       if (target.kind !== 'caption') return target;
       const updated = {

@@ -14,6 +14,12 @@ import {
   visual,
 } from './TimelineTracks.test-support';
 
+const ctrlWheelEvent = (deltaY: number, timeStamp?: number) => {
+  const event = new WheelEvent('wheel', { ctrlKey: true, deltaY, bubbles: true, cancelable: true });
+  if (timeStamp !== undefined) Object.defineProperty(event, 'timeStamp', { configurable: true, value: timeStamp });
+  return event;
+};
+
 describe('TimelineTracks', () => {
   it('renders ordered visual/audio/caption tracks and scrubs, zooms, and selects them', async () => {
     const mounted = await mountTracks();
@@ -39,7 +45,7 @@ describe('TimelineTracks', () => {
     expect(mounted!.emitted('update:zoomLevel')?.length ?? 0).toBe(emittedBeforeWheel);
     expect(pendingFrames.size).toBe(1);
     flushAllFrames();
-    expect(mounted!.emitted('update:zoomLevel')).toContainEqual([170]);
+    expect(mounted!.emitted('update:zoomLevel')).toContainEqual([145]);
 
     await mounted!.setProps({ zoomLevel: 3_190 });
     flushAllFrames();
@@ -62,6 +68,82 @@ describe('TimelineTracks', () => {
     expect(mounted!.emitted('select:clip')).toContainEqual(['screen-clip']);
     await mounted!.get('.cursor-zoom-indicator:not(.preview-ghost)').trigger('click');
     expect(mounted!.emitted('select:zoom')).toContainEqual(['zoom-1']);
+  });
+
+  it('coalesces a large fresh ctrl-wheel burst into one zoom step and emission', async () => {
+    const mounted = await mountTracks();
+    const tracksContainer = mounted!.get('.timeline-tracks-container').element;
+    const { pendingFrames, flushAllFrames } = queueAnimationFrames();
+
+    for (let event = 0; event < 40; event += 1) tracksContainer.dispatchEvent(ctrlWheelEvent(-100));
+
+    expect(pendingFrames.size).toBe(1);
+    expect(mounted!.emitted('update:zoomLevel')).toBeUndefined();
+
+    flushAllFrames();
+
+    expect(mounted!.emitted('update:zoomLevel')).toEqual([[145]]);
+  });
+
+  it('keeps the dominant direction for mixed wheel deltas in one frame', async () => {
+    const mounted = await mountTracks();
+    const tracksContainer = mounted!.get('.timeline-tracks-container').element;
+    const { pendingFrames, flushAllFrames } = queueAnimationFrames();
+
+    tracksContainer.dispatchEvent(ctrlWheelEvent(-100));
+    tracksContainer.dispatchEvent(ctrlWheelEvent(-100));
+    tracksContainer.dispatchEvent(ctrlWheelEvent(-100));
+    tracksContainer.dispatchEvent(ctrlWheelEvent(1));
+
+    expect(pendingFrames.size).toBe(1);
+    flushAllFrames();
+
+    expect(mounted!.emitted('update:zoomLevel')).toEqual([[145]]);
+  });
+
+  it('uses the last requested zoom across consecutive frames before prop synchronization', async () => {
+    const mounted = await mountTracks();
+    const tracksContainer = mounted!.get('.timeline-tracks-container').element;
+    const { pendingFrames, flushNextFrame } = queueAnimationFrames();
+
+    tracksContainer.dispatchEvent(ctrlWheelEvent(-100));
+    expect(pendingFrames.size).toBe(1);
+    flushNextFrame();
+    expect(mounted!.emitted('update:zoomLevel')).toEqual([[145]]);
+
+    tracksContainer.dispatchEvent(ctrlWheelEvent(-100));
+    expect(pendingFrames.size).toBe(1);
+    flushNextFrame();
+
+    expect(mounted!.emitted('update:zoomLevel')).toEqual([[145], [170]]);
+  });
+
+  it('ignores a stale ctrl-wheel event without scheduling a zoom frame', async () => {
+    const mounted = await mountTracks();
+    const tracksContainer = mounted!.get('.timeline-tracks-container').element;
+    const { pendingFrames, flushAllFrames } = queueAnimationFrames();
+
+    tracksContainer.dispatchEvent(ctrlWheelEvent(-100, performance.now() - 1_000));
+
+    expect(pendingFrames.size).toBe(0);
+    expect(mounted!.emitted('update:zoomLevel')).toBeUndefined();
+    flushAllFrames();
+    expect(mounted!.emitted('update:zoomLevel')).toBeUndefined();
+  });
+
+  it('cancels a pending zoom frame on unmount', async () => {
+    const mounted = await mountTracks();
+    const tracksContainer = mounted!.get('.timeline-tracks-container').element;
+    const { pendingFrames, flushAllFrames } = queueAnimationFrames();
+
+    tracksContainer.dispatchEvent(ctrlWheelEvent(-100));
+    expect(pendingFrames.size).toBe(1);
+
+    mounted!.unmount();
+    expect(pendingFrames.size).toBe(0);
+
+    flushAllFrames();
+    expect(mounted!.emitted('update:zoomLevel')).toBeUndefined();
   });
 
   it('renders contiguous imported audio fragments from one asset in a single lane', async () => {
@@ -254,7 +336,7 @@ describe('TimelineTracks', () => {
     ]);
   });
 
-  it('selects all keyboard and text caption clips from their headers', async () => {
+  it('selects the keyboard track and each independent text layer from their headers', async () => {
     const base = composition();
     const secondKeyboard = {
       ...keyboardCaption(),
@@ -268,6 +350,8 @@ describe('TimelineTracks', () => {
       ...textCaption,
       id: 'caption-clip-2',
       timelineStartMs: 8_000,
+      isAiGenerated: false,
+      captionLayerId: undefined,
     } satisfies CaptionClip;
     const mounted = await mountTracks({
       composition: { ...base, clips: [...base.clips, keyboardCaption(), secondKeyboard, secondText] },
@@ -285,7 +369,7 @@ describe('TimelineTracks', () => {
     await mounted!.get('.sidebar-tracks-stack .text-caption-track .track-info').trigger('click');
     expect(mounted!.emitted('select:track')).toContainEqual([
       {
-        clipIds: ['caption-clip', 'caption-clip-2'],
+        clipIds: ['caption-clip'],
         primaryClipId: 'caption-clip',
         trackNames: ['Text Captions'],
       },
@@ -323,7 +407,7 @@ describe('TimelineTracks', () => {
 
   it('keeps the keyboard track above text, uses Lucide icons, and reserves manual additions for text', async () => {
     const mounted = await mountTracks({ composition: composition([keyboardCaption()]) });
-    const rows = mounted!.findAll('.tracks-stack > .track-row');
+    const rows = mounted!.findAll('.tracks-stack .track-row');
     const keyboardIndex = rows.findIndex((row) => row.classes().includes('keyboard-caption-track'));
     const textIndex = rows.findIndex((row) => row.classes().includes('text-caption-track'));
 

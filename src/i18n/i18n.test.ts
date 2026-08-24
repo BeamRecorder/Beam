@@ -81,6 +81,16 @@ describe('internationalization', () => {
     }
   });
 
+  it('provides the AI caption editing warning in every supported locale', () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      setCurrentLocale(locale);
+      const path = 'CaptionClipPanel.aiTimingEditWarning';
+      expect(i18n.global.te(path, locale), `${locale}: missing ${path}`).toBe(true);
+      expect(i18n.global.t(path), `${locale}: unresolved ${path}`).not.toBe(path);
+      expect(i18n.global.t(path), `${locale}: empty ${path}`).not.toBe('');
+    }
+  });
+
   it('keeps the blur track label available in every supported locale', () => {
     for (const locale of SUPPORTED_LOCALES) {
       setCurrentLocale(locale);

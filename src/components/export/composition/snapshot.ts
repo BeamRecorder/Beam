@@ -9,7 +9,7 @@ import type { ClipComposition } from '~/media/shared/composition-types';
 import type { CursorRenderSettings, CompositionSnapshot } from '../export-types';
 import type { OutputCanvasSettings } from '../../video-editor/canvas/output-canvas';
 import { normalizeOutputCanvas } from '../../video-editor/canvas/output-canvas';
-import { normalizeCursorMotionSettings } from '../../../api/types/cursor-settings';
+import { normalizeCursorAutoHideSettings, normalizeCursorMotionSettings } from '../../../api/types/cursor-settings';
 import type { CursorPackDescriptor } from '../../../api/types/cursor-pack';
 
 const cloneJson = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
@@ -56,6 +56,7 @@ export function createCompositionSnapshot(input: {
       sourceWidth: null,
       sourceHeight: null,
     },
+    referenceCanvas: { width: canvas.width, height: canvas.height },
     canvas,
     background: !canvas.showBackground
       ? null
@@ -73,6 +74,7 @@ export function createCompositionSnapshot(input: {
     cursorSettings: cloneJson({
       ...input.cursorSettings,
       motion: normalizeCursorMotionSettings(input.cursorSettings.motion),
+      autoHide: normalizeCursorAutoHideSettings(input.cursorSettings.autoHide),
     }),
     cursorPack: input.cursorPack ? cloneJson(input.cursorPack) : null,
     composition: cloneJson(input.composition),

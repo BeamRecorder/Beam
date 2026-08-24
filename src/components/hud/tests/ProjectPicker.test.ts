@@ -134,6 +134,8 @@ describe('ProjectPicker', () => {
         hasScreen: true,
         hasCamera: true,
         hasCaption: true,
+        hasSystemAudio: true,
+        hasMicrophone: true,
       },
       {
         id: 'screen-only',
@@ -145,6 +147,8 @@ describe('ProjectPicker', () => {
         hasScreen: true,
         hasCamera: false,
         hasCaption: false,
+        hasSystemAudio: false,
+        hasMicrophone: false,
       },
       {
         id: 'none',
@@ -156,6 +160,8 @@ describe('ProjectPicker', () => {
         hasScreen: false,
         hasCamera: false,
         hasCaption: false,
+        hasSystemAudio: false,
+        hasMicrophone: false,
       },
     ];
     capture.listProjects.mockResolvedValue(featuredProjects);
@@ -171,6 +177,8 @@ describe('ProjectPicker', () => {
     expect(firstBadges.find('[aria-label="Screen recording"]').exists()).toBe(true);
     expect(firstBadges.find('[aria-label="Camera"]').exists()).toBe(true);
     expect(firstBadges.find('[aria-label="Captions"]').exists()).toBe(true);
+    expect(firstBadges.find('[aria-label="System audio"]').exists()).toBe(true);
+    expect(firstBadges.find('[aria-label="Microphone"]').exists()).toBe(true);
 
     // Card 1: screen only
     const secondBadges = cards[1].find('[data-testid="project-badges"]');
@@ -178,6 +186,8 @@ describe('ProjectPicker', () => {
     expect(secondBadges.find('[aria-label="Screen recording"]').exists()).toBe(true);
     expect(secondBadges.find('[aria-label="Camera"]').exists()).toBe(false);
     expect(secondBadges.find('[aria-label="Captions"]').exists()).toBe(false);
+    expect(secondBadges.find('[aria-label="System audio"]').exists()).toBe(false);
+    expect(secondBadges.find('[aria-label="Microphone"]').exists()).toBe(false);
 
     // Card 2: none
     const thirdBadges = cards[2].find('[data-testid="project-badges"]');

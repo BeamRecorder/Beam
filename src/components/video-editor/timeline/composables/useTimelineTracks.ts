@@ -3,6 +3,7 @@ import { DEFAULT_ZOOM_DURATION_MS, type ZoomElement } from '../../zoom/zoom-type
 import {
   isAudioClip,
   isCaptionClip,
+  isColorClip,
   isCompositingClip,
   isKeyboardCaptionClip,
   isTextCaptionClip,
@@ -22,6 +23,8 @@ import { useVisualTrackReorder } from './useVisualTrackReorder';
 import { useTimelineClipTrim } from './useTimelineClipTrim';
 import { groupImportedAudioTimelineTracks } from './audio-timeline-tracks';
 import { fitZoomPlacement } from '../../zoom/zoom-placement';
+import { useCaptionLayerReorder } from './useCaptionLayerReorder';
+import { groupTextCaptionLayers } from '../../composition/engine/caption-layer-layout';
 export type { TimelineTracksEmits, TimelineTracksProps } from './timeline-tracks-types';
 
 export { DEFAULT_ZOOM_DURATION_MS } from '../../zoom/zoom-types';
@@ -56,6 +59,14 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
   const captionClips = computed(() => orderedClips.value.filter(isCaptionClip));
   const keyboardCaptionClips = computed(() => orderedClips.value.filter(isKeyboardCaptionClip));
   const textCaptionClips = computed(() => orderedClips.value.filter(isTextCaptionClip));
+  const baseTextCaptionLayers = computed(() => groupTextCaptionLayers(textCaptionClips.value));
+  const textCaptionOrderPreview = ref<string[] | null>(null);
+  const textCaptionLayers = computed(() => {
+    const preview = textCaptionOrderPreview.value;
+    if (!preview) return baseTextCaptionLayers.value;
+    const byId = new Map(baseTextCaptionLayers.value.map((layer) => [layer.id, layer]));
+    return preview.flatMap((id) => (byId.has(id) ? [byId.get(id)!] : []));
+  });
   const systemAudioClips = computed(() =>
     orderedClips.value.filter((clip): clip is AudioClip => isAudioClip(clip) && clip.role === 'system'),
   );
@@ -69,7 +80,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
   );
   const assets = computed(() => new Map(props.composition.assets.map((asset: MediaAsset) => [asset.id, asset])));
   const assetFor = (clip: Clip) =>
-    isCaptionClip(clip) || clip.kind === 'blur' ? null : (assets.value.get(clip.assetId) ?? null);
+    isCaptionClip(clip) || isColorClip(clip) || clip.kind === 'blur' ? null : (assets.value.get(clip.assetId) ?? null);
 
   const activeSnapTimeMs = ref<number | null>(null);
   const activeTrimState = ref<{ ids: string[]; edge: 'start' | 'end'; durationMs: number; atLimit?: boolean } | null>(
@@ -95,6 +106,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     audioWaveformErrors,
     audioWaveformStatus,
     thumbnailSlots,
+    isWheelZooming,
     onScroll,
     updateAutoScroll,
     stopAutoScroll,
@@ -363,6 +375,11 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
   const zoomScale = (depth: number) => [1.25, 1.5, 1.8, 2.2, 3.5, 5][Math.max(0, Math.min(5, depth - 1))] ?? 1.25;
 
   const { draggedTrackId, beginReorder } = useVisualTrackReorder({ baseVisualTracks, visualOrderPreview, emit });
+  const { draggedCaptionId, beginCaptionReorder } = useCaptionLayerReorder({
+    layers: baseTextCaptionLayers,
+    orderPreview: textCaptionOrderPreview,
+    emit,
+  });
 
   return {
     durationMs,
@@ -375,6 +392,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     captionClips,
     keyboardCaptionClips,
     textCaptionClips,
+    textCaptionLayers,
     systemAudioClips,
     microphoneClips,
     importedAudioTracks,
@@ -399,6 +417,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     isRulerLabel,
     formatRulerLabel,
     thumbnailSlots,
+    isWheelZooming,
     onScroll,
     percentageStyle,
     timeAt,
@@ -429,6 +448,8 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     zoomScale,
     draggedTrackId,
     beginReorder,
+    draggedCaptionId,
+    beginCaptionReorder,
     newZoomDurationMs,
     DEFAULT_CAPTION_DURATION_MS,
   };

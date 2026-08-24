@@ -1,13 +1,13 @@
 import type { ExportProgress } from '../../../export/export-types';
 import type { ZoomElement } from '../../zoom/zoom-types';
-import type { BlurClip, ClipComposition, VisualClip } from '~/media/shared/composition-types';
+import type { BlurClip, ClipComposition, ColorClip, VisualClip } from '~/media/shared/composition-types';
 import type { TimelineClipboardItem, TimelinePasteHighlight, TimelinePasteRequest } from './timeline-clipboard-types';
 import type { OutputCanvasSettings } from '../../canvas/output-canvas';
 
 export interface VisualTimelineTrack {
   id: string;
-  clips: Array<VisualClip | BlurClip>;
-  representative: VisualClip | BlurClip;
+  clips: Array<VisualClip | ColorClip | BlurClip>;
+  representative: VisualClip | ColorClip | BlurClip;
   order: number;
 }
 
@@ -60,6 +60,7 @@ export interface TimelineTracksEmits {
   (event: 'add:zoom', placement: TimelinePlacementRequest): void;
   (event: 'add:caption', placement: TimelinePlacementRequest): void;
   (event: 'reorder:clip', payload: { id: string; targetIndex: number }): void;
+  (event: 'reorder:caption', payload: { id: string; targetIndex: number }): void;
   (event: 'paste:item', payload: TimelinePasteRequest): void;
   (event: 'paste:error', message: string): void;
   (event: 'clipboard:copied', item: TimelineClipboardItem): void;

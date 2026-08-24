@@ -6,11 +6,13 @@ import { useTranslate } from '~/i18n/useTranslate';
 import type { TimelinePasteHighlight } from './composables/timeline-clipboard-types';
 import { timelineTransitionStyle } from './timeline-clip-geometry';
 import TimelineTransitionCurve from './TimelineTransitionCurve.vue';
+import type { TextCaptionLayer } from '../composition/engine/caption-layer-layout';
 
 const { t } = useTranslate('TimelineTracks');
 const props = defineProps<{
   keyboardClips: CaptionClip[];
-  textClips: CaptionClip[];
+  textLayers: TextCaptionLayer[];
+  draggedCaptionId?: string | null;
   selectedClipId: string | null;
   selectedClipIds: string[];
   hoverCaptionTimeMs: number | null;
@@ -32,6 +34,16 @@ const emit = defineEmits<{
   (event: 'contextmenu:clip', payload: { event: MouseEvent; clip: CaptionClip }): void;
   (event: 'contextmenu:track', mouseEvent: MouseEvent): void;
 }>();
+
+const hoveredTextLayerId = ref<string | null>(null);
+const hoverTextLayer = (event: MouseEvent, clipId: string) => {
+  hoveredTextLayerId.value = clipId;
+  props.hoverAt(event, 'caption');
+};
+const leaveTextLayer = () => {
+  hoveredTextLayerId.value = null;
+  props.leaveTrack('caption');
+};
 
 const getCaptionText = (clip: CaptionClip): string => {
   if (clip.caption.type === 'text') {
@@ -69,7 +81,11 @@ let isInitialMount = true;
 const SETTLE_ANIMATION_MS = 320;
 
 watch(
-  () => [...props.textClips, ...props.keyboardClips].map((clip) => ({ id: clip.id, text: getCaptionText(clip) })),
+  () =>
+    [...props.textLayers.flatMap((layer) => layer.clips), ...props.keyboardClips].map((clip) => ({
+      id: clip.id,
+      text: getCaptionText(clip),
+    })),
   (newItems) => {
     if (isInitialMount) {
       for (const item of newItems) {
@@ -221,29 +237,32 @@ onUnmounted(() => {
     </div>
   </div>
 
-  <div
-    class="track-row annotation-track text-caption-track"
-    :class="{ 'motion-reduced': reduceMotion }"
-    @contextmenu="emit('contextmenu:track', $event)"
-  >
+  <TransitionGroup v-if="textLayers.length" name="track-reorder" tag="div" class="text-caption-layers-group">
     <div
-      class="track-content annotation-content"
-      :title="t('clickToAddCaption')"
-      @pointerdown.stop
-      @mousemove="hoverAt($event, 'caption')"
-      @mouseleave="leaveTrack('caption')"
-      @click.stop="addAt($event, 'caption')"
+      v-for="layer in textLayers"
+      :key="layer.id"
+      class="track-row annotation-track text-caption-track text-caption-layer"
+      :data-caption-id="layer.id"
+      :class="{ 'motion-reduced': reduceMotion, dragging: draggedCaptionId === layer.id }"
+      @contextmenu="emit('contextmenu:track', $event)"
     >
       <div
-        v-if="hoverCaptionTimeMs !== null"
-        class="annotation-indicator preview-ghost"
-        :style="percentageStyle(hoverCaptionTimeMs, hoverCaptionDurationMs)"
+        class="track-content annotation-content"
+        :title="t('clickToAddCaption')"
+        @pointerdown.stop
+        @mousemove="hoverTextLayer($event, layer.id)"
+        @mouseleave="leaveTextLayer"
+        @click.stop="addAt($event, 'caption')"
       >
-        {{ t('addCaption') }}
-      </div>
-      <TransitionGroup name="caption-item">
+        <div
+          v-if="hoverCaptionTimeMs !== null && hoveredTextLayerId === layer.id"
+          class="annotation-indicator preview-ghost"
+          :style="percentageStyle(hoverCaptionTimeMs, hoverCaptionDurationMs)"
+        >
+          {{ t('addCaption') }}
+        </div>
         <button
-          v-for="clip in textClips"
+          v-for="clip in layer.clips"
           :key="clip.id"
           type="button"
           class="annotation-indicator"
@@ -296,7 +315,30 @@ onUnmounted(() => {
             </span>
           </span>
         </button>
-      </TransitionGroup>
+      </div>
+    </div>
+  </TransitionGroup>
+  <div
+    v-else
+    class="track-row annotation-track text-caption-track"
+    :class="{ 'motion-reduced': reduceMotion }"
+    @contextmenu="emit('contextmenu:track', $event)"
+  >
+    <div
+      class="track-content annotation-content"
+      :title="t('clickToAddCaption')"
+      @pointerdown.stop
+      @mousemove="hoverTextLayer($event, 'empty')"
+      @mouseleave="leaveTextLayer"
+      @click.stop="addAt($event, 'caption')"
+    >
+      <div
+        v-if="hoverCaptionTimeMs !== null"
+        class="annotation-indicator preview-ghost"
+        :style="percentageStyle(hoverCaptionTimeMs, hoverCaptionDurationMs)"
+      >
+        {{ t('addCaption') }}
+      </div>
     </div>
   </div>
 </template>

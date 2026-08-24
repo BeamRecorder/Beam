@@ -50,7 +50,7 @@ const keyboardClip = (): CaptionClip => ({
       wrap: true,
       shadowColor: '#000',
       shadowBlur: 0,
-      backdropBlur: 0,
+      shape: createDefaultCaptionStyle(28).shape,
       outlineColor: '#000',
       outlineWidth: 0,
       extrusionDepth: 0,

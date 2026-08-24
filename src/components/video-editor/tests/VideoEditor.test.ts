@@ -1,11 +1,52 @@
 import './VideoEditor.test.setup';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
-import type { ClipComposition } from '~/media/shared/composition-types';
+import type { CaptionClip, ClipComposition } from '~/media/shared/composition-types';
+import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
 import { editorState, historyState, mountEditor, setEditorComponent, toast } from './VideoEditor.test.setup';
 
 const { default: VideoEditor } = await import('../VideoEditor.vue');
 setEditorComponent(VideoEditor);
+
+const addInlineCaption = (): CaptionClip => {
+  const composition = editorState.store.compositionState.composition.value as ClipComposition;
+  const caption: CaptionClip = {
+    id: 'caption-inline',
+    kind: 'caption',
+    name: 'Inline caption',
+    timelineStartMs: 0,
+    timelineDurationMs: 2_000,
+    sourceInMs: 0,
+    sourceDurationMs: 2_000,
+    playbackRate: 1,
+    transitions: { entry: null, exit: null },
+    enabled: true,
+    order: 2,
+    caption: {
+      type: 'text',
+      sentences: [
+        {
+          id: 'caption-inline-sentence',
+          text: 'Original caption',
+          startMs: 0,
+          endMs: 2_000,
+          words: [],
+        },
+      ],
+      style: { ...createDefaultCaptionStyle(36), customText: 'Original caption' },
+    },
+  };
+  composition.clips.push(caption);
+  return caption;
+};
+
+const updateCaptionState = (clip: CaptionClip) => {
+  const composition = editorState.store.compositionState.composition.value as ClipComposition;
+  editorState.store.compositionState.composition.value = {
+    ...composition,
+    clips: composition.clips.map((candidate) => (candidate.id === clip.id ? clip : candidate)),
+  };
+};
 
 describe('VideoEditor', () => {
   it('initializes editor window state and emits topbar navigation events', async () => {
@@ -253,6 +294,110 @@ describe('VideoEditor', () => {
     expect(editorState.store.compositionState.composition.value.clips[0].transform.x).toBe(0.5);
     expect(mounted.get('.mock-canvas').attributes('data-composition-transform-x')).toBe('0.5');
     expect(scheduleSave).toHaveBeenCalledOnce();
+  });
+
+  it('groups spaced inline caption updates into one final history entry', async () => {
+    const mounted = mountEditor();
+    const caption = addInlineCaption();
+    await mounted.vm.$nextTick();
+
+    editorState.store.compositionState.updateCaption.mockImplementation((nextClip: CaptionClip) => {
+      updateCaptionState(nextClip);
+    });
+    historyState.commitNow.mockClear();
+    const canvas = mounted.findComponent({ name: 'MockEditorCanvas' });
+
+    canvas.vm.$emit('caption-editing-start');
+    canvas.vm.$emit('update:caption-text', { clipId: caption.id, customText: 'First edit' });
+    await mounted.vm.$nextTick();
+    canvas.vm.$emit('update:caption-text', { clipId: caption.id, customText: 'Second edit' });
+    await mounted.vm.$nextTick();
+    canvas.vm.$emit('update:caption-text', { clipId: caption.id, customText: 'Final edit' });
+    await mounted.vm.$nextTick();
+
+    expect(historyState.commitNow).toHaveBeenCalledTimes(1);
+
+    canvas.vm.$emit('caption-editing-end', { cancelled: false });
+    await mounted.vm.$nextTick();
+
+    expect(historyState.commitNow).toHaveBeenCalledTimes(2);
+    expect(historyState.commitNow.mock.calls[1]?.[0]).toEqual(
+      expect.objectContaining({
+        composition: expect.objectContaining({
+          clips: expect.arrayContaining([
+            expect.objectContaining({
+              id: caption.id,
+              caption: expect.objectContaining({
+                style: expect.objectContaining({ customText: 'Final edit' }),
+              }),
+            }),
+          ]),
+        }),
+      }),
+    );
+  });
+
+  it('commits once when inline caption editing finishes normally', async () => {
+    const mounted = mountEditor();
+    const caption = addInlineCaption();
+    await mounted.vm.$nextTick();
+    editorState.store.compositionState.updateCaption.mockImplementation((nextClip: CaptionClip) => {
+      updateCaptionState(nextClip);
+    });
+    historyState.commitNow.mockClear();
+    const canvas = mounted.findComponent({ name: 'MockEditorCanvas' });
+
+    canvas.vm.$emit('caption-editing-start');
+    canvas.vm.$emit('update:caption-text', { clipId: caption.id, customText: 'Committed edit' });
+    await mounted.vm.$nextTick();
+    canvas.vm.$emit('caption-editing-end', { cancelled: false });
+    await mounted.vm.$nextTick();
+
+    expect(historyState.commitNow).toHaveBeenCalledTimes(2);
+    expect(historyState.commitNow.mock.calls[1]?.[0]).toEqual(
+      expect.objectContaining({
+        composition: expect.objectContaining({
+          clips: expect.arrayContaining([
+            expect.objectContaining({
+              id: caption.id,
+              caption: expect.objectContaining({
+                style: expect.objectContaining({ customText: 'Committed edit' }),
+              }),
+            }),
+          ]),
+        }),
+      }),
+    );
+  });
+
+  it('does not commit a second history entry when inline caption editing is cancelled', async () => {
+    const mounted = mountEditor();
+    const caption = addInlineCaption();
+    await mounted.vm.$nextTick();
+    editorState.store.compositionState.updateCaption.mockImplementation((nextClip: CaptionClip) => {
+      updateCaptionState(nextClip);
+    });
+    historyState.commitNow.mockClear();
+    const canvas = mounted.findComponent({ name: 'MockEditorCanvas' });
+
+    canvas.vm.$emit('caption-editing-start');
+    canvas.vm.$emit('update:caption-text', { clipId: caption.id, customText: 'Discarded edit' });
+    await mounted.vm.$nextTick();
+    canvas.vm.$emit('update:caption-text', { clipId: caption.id, customText: 'Original caption' });
+    canvas.vm.$emit('caption-editing-end', { cancelled: true });
+    await mounted.vm.$nextTick();
+
+    expect(historyState.commitNow).toHaveBeenCalledTimes(1);
+    expect(editorState.store.compositionState.composition.value.clips).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: caption.id,
+          caption: expect.objectContaining({
+            style: expect.objectContaining({ customText: 'Original caption' }),
+          }),
+        }),
+      ]),
+    );
   });
 
   it('shows the preview composition duration in the timeline toolbar and restores the canonical duration', async () => {

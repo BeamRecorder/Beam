@@ -164,6 +164,55 @@ describe('WaveformCanvas', () => {
     wrapper.unmount();
   });
 
+  it('does not schedule redraws for bars or resize changes while drawing is deferred', async () => {
+    const wrapper = mount(WaveformCanvas, { props: { bars: [8, 16], selected: false, deferDraw: true } });
+    await nextTick();
+
+    bounds = { width: 200, height: 60 };
+    notifyResize();
+    await wrapper.setProps({ bars: [4, 10, 20], selected: true });
+    await nextTick();
+
+    expect(window.requestAnimationFrame).not.toHaveBeenCalled();
+    expect(pendingFrames.size).toBe(0);
+    expect(context.clearRect).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('schedules one redraw when deferred drawing resumes and uses the latest props', async () => {
+    const wrapper = mount(WaveformCanvas, { props: { bars: [8], selected: false, deferDraw: true } });
+
+    await wrapper.setProps({ bars: [4, 10, 20], selected: true });
+    await wrapper.setProps({ deferDraw: false });
+    await nextTick();
+    await nextTick();
+
+    expect(window.requestAnimationFrame).toHaveBeenCalledTimes(1);
+    expect(pendingFrames.size).toBe(1);
+
+    flushAnimationFrames();
+
+    expect(context.clearRect).toHaveBeenCalledTimes(1);
+    expect(context.strokeStyle).toBe('#056247');
+    expect(context.moveTo.mock.calls).toHaveLength(3);
+    wrapper.unmount();
+  });
+
+  it('cancels the pending redraw when unmounted after deferred drawing resumes', async () => {
+    const wrapper = mount(WaveformCanvas, { props: { bars: [8, 16], selected: false, deferDraw: true } });
+    await wrapper.setProps({ deferDraw: false });
+    await nextTick();
+    await nextTick();
+
+    expect(pendingFrames.size).toBe(1);
+    wrapper.unmount();
+
+    expect(window.cancelAnimationFrame).toHaveBeenLastCalledWith(expect.any(Number));
+    expect(pendingFrames.size).toBe(0);
+    flushAnimationFrames();
+    expect(context.clearRect).not.toHaveBeenCalled();
+  });
+
   it('redraws on a resize and cancels the pending frame and observer on unmount', async () => {
     const wrapper = mount(WaveformCanvas, { props: { bars: [8, 16], selected: false } });
     await waitForDraw();

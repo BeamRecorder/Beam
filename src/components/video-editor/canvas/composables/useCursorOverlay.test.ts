@@ -1,6 +1,7 @@
 import { nextTick, ref } from 'vue';
 import { describe, expect, it, vi } from 'vitest';
 import type { CursorPackDescriptor } from '../../../../api/types/cursor-pack';
+import { createDefaultCursorAutoHideSettings } from '../../../../api/types/cursor-settings';
 import { MACOS_CURSOR_PACK } from '../../properties/cursor/cursor-packs';
 
 const getCursorImage = vi.hoisted(() => vi.fn());
@@ -74,6 +75,27 @@ const createContext = () =>
     shadowOffsetY: 0,
   }) as unknown as CanvasRenderingContext2D;
 
+const drawOverlay = (
+  overlay: ReturnType<typeof useCursorOverlay>,
+  ctx = createContext(),
+  drawInCameraSpace: (draw: () => void) => void = (draw) => draw(),
+) => {
+  overlay.updateAndDrawRipplesAndCursor(
+    ctx,
+    { dx: 0, dy: 0, dw: 800, dh: 450, focusX: 0, focusY: 0, scale: 1 },
+    1920,
+    1080,
+    800,
+    drawInCameraSpace,
+  );
+  return ctx;
+};
+
+const settleCursorImage = async () => {
+  await Promise.resolve();
+  await nextTick();
+};
+
 const baseOptions = (): UseCursorOverlayOptions => ({
   cursorSelection: () => ({
     packId: MACOS_CURSOR_PACK.id,
@@ -91,6 +113,7 @@ const baseOptions = (): UseCursorOverlayOptions => ({
     springMassMultiplier: 1.29,
     motionBlur: 0.4,
   }),
+  autoHide: () => createDefaultCursorAutoHideSettings(),
   shadowBlur: () => 8,
   shadowColor: () => '#000000',
   shadowDirection: () => 'bottom-right' as const,
@@ -159,8 +182,8 @@ describe('useCursorOverlay', () => {
     } as HTMLImageElement);
     const options = baseOptions();
     const overlay = useCursorOverlay(options);
-    await nextTick();
-    await Promise.resolve();
+    drawOverlay(overlay);
+    await settleCursorImage();
     expect(getCursorImage).toHaveBeenCalledWith(
       MACOS_CURSOR_PACK,
       MACOS_CURSOR_PACK.cursors.find((cursor) => cursor.id === 'default'),
@@ -192,18 +215,11 @@ describe('useCursorOverlay', () => {
       right: { ...effects.right, rippleEnabled: false, rippleStyle: 'none' },
     });
     const overlay = useCursorOverlay(options);
-    await nextTick();
-    await Promise.resolve();
+    drawOverlay(overlay);
+    await settleCursorImage();
 
     const ctx = createContext();
-    overlay.updateAndDrawRipplesAndCursor(
-      ctx,
-      { dx: 0, dy: 0, dw: 800, dh: 450, focusX: 0, focusY: 0, scale: 1 },
-      1920,
-      1080,
-      800,
-      (draw) => draw(),
-    );
+    drawOverlay(overlay, ctx);
 
     expect(ctx.arc).toHaveBeenCalledTimes(expectedRings);
     expect(ctx.fill).toHaveBeenCalledTimes(expectedFilledRings);
@@ -291,22 +307,15 @@ describe('useCursorOverlay', () => {
                 },
         }) as never;
       const overlay = useCursorOverlay(options);
-      await nextTick();
-      await Promise.resolve();
+      drawOverlay(overlay);
+      await settleCursorImage();
 
       const ctx = createContext();
       const rippleAlphas: number[] = [];
       const cursorAlphas: number[] = [];
       (ctx.arc as ReturnType<typeof vi.fn>).mockImplementation(() => rippleAlphas.push(ctx.globalAlpha));
       (ctx.drawImage as ReturnType<typeof vi.fn>).mockImplementation(() => cursorAlphas.push(ctx.globalAlpha));
-      overlay.updateAndDrawRipplesAndCursor(
-        ctx,
-        { dx: 0, dy: 0, dw: 800, dh: 450, focusX: 0, focusY: 0, scale: 1 },
-        1920,
-        1080,
-        800,
-        (draw) => draw(),
-      );
+      drawOverlay(overlay, ctx);
 
       expect(rippleAlphas.length).toBeGreaterThan(0);
       expect(cursorAlphas).toEqual([expect.closeTo(expectedAlpha, 8)]);
@@ -349,6 +358,239 @@ describe('useCursorOverlay', () => {
     expect(overlay.cursorBounds.value).toBeNull();
   });
 
+  it('stops drawing and clears bounds after auto-hide idle time, then resumes after a real movement', async () => {
+    getCursorImage.mockClear().mockResolvedValue({
+      complete: true,
+      naturalWidth: 32,
+    } as HTMLImageElement);
+    const time = ref(0.2);
+    const options = baseOptions();
+    options.currentTime = () => time.value;
+    options.autoHide = () => ({ enabled: true, delaySeconds: 0.5, fadeDurationMs: 0 });
+    options.editorData = () =>
+      ({
+        cursor: {
+          available: true,
+          events: [
+            {
+              event: 'shape',
+              sessionNs: 0,
+              cursorId: 'custom:arrow',
+              cursorKind: 'custom',
+              hotspot: { x: 2, y: 3 },
+            },
+            {
+              event: 'move',
+              sessionNs: 0,
+              pixelX: 0,
+              pixelY: 0,
+              normalizedX: 0.25,
+              normalizedY: 0.35,
+              visible: true,
+            },
+            {
+              event: 'move',
+              sessionNs: second(1),
+              pixelX: 0,
+              pixelY: 0,
+              normalizedX: 0.75,
+              normalizedY: 0.65,
+              visible: true,
+            },
+          ],
+        },
+      }) as never;
+    const overlay = useCursorOverlay(options);
+
+    drawOverlay(overlay);
+    await settleCursorImage();
+    const visibleContext = createContext();
+    drawOverlay(overlay, visibleContext);
+    expect(visibleContext.drawImage).toHaveBeenCalled();
+    expect(overlay.cursorBounds.value).not.toBeNull();
+
+    time.value = 0.75;
+    const idleContext = createContext();
+    drawOverlay(overlay, idleContext);
+    expect(idleContext.drawImage).not.toHaveBeenCalled();
+    expect(overlay.cursorBounds.value).toBeNull();
+
+    time.value = 1.2;
+    const resumedContext = createContext();
+    drawOverlay(overlay, resumedContext);
+    expect(resumedContext.drawImage).toHaveBeenCalled();
+    expect(overlay.cursorBounds.value).not.toBeNull();
+  });
+
+  it('fades the preview cursor while retaining its bounds until the fade completes', async () => {
+    getCursorImage.mockClear().mockResolvedValue({
+      complete: true,
+      naturalWidth: 32,
+    } as HTMLImageElement);
+    const time = ref(0.5);
+    const options = baseOptions();
+    options.currentTime = () => time.value;
+    options.motion = () => ({
+      preset: 'smooth',
+      smoothing: 0.67,
+      springMassMultiplier: 1.29,
+      motionBlur: 0,
+    });
+    options.autoHide = () => ({ enabled: true, delaySeconds: 0.5, fadeDurationMs: 1_000 });
+    const overlay = useCursorOverlay(options);
+
+    drawOverlay(overlay);
+    await settleCursorImage();
+
+    const fullyVisibleContext = createContext();
+    const fullyVisibleAlphas: number[] = [];
+    (fullyVisibleContext.drawImage as ReturnType<typeof vi.fn>).mockImplementation(() =>
+      fullyVisibleAlphas.push(fullyVisibleContext.globalAlpha),
+    );
+    drawOverlay(overlay, fullyVisibleContext);
+    expect(fullyVisibleAlphas).toEqual([1]);
+
+    time.value = 1.5;
+    const halfVisibleContext = createContext();
+    const halfVisibleAlphas: number[] = [];
+    (halfVisibleContext.drawImage as ReturnType<typeof vi.fn>).mockImplementation(() =>
+      halfVisibleAlphas.push(halfVisibleContext.globalAlpha),
+    );
+    drawOverlay(overlay, halfVisibleContext);
+    expect(halfVisibleAlphas).toEqual([expect.closeTo(0.5, 8)]);
+    expect(overlay.cursorBounds.value).not.toBeNull();
+
+    time.value = 2;
+    const hiddenContext = createContext();
+    drawOverlay(overlay, hiddenContext);
+    expect(hiddenContext.drawImage).not.toHaveBeenCalled();
+    expect(overlay.cursorBounds.value).toBeNull();
+  });
+
+  it('fades the preview cursor back in after a complete hide and resumes instantly with a zero fade', async () => {
+    getCursorImage.mockClear().mockResolvedValue({
+      complete: true,
+      naturalWidth: 32,
+    } as HTMLImageElement);
+    const time = ref(0);
+    const fadeDurationMs = ref(1_000);
+    const options = baseOptions();
+    options.currentTime = () => time.value;
+    options.motion = () => ({
+      preset: 'smooth',
+      smoothing: 0.67,
+      springMassMultiplier: 1.29,
+      motionBlur: 0,
+    });
+    options.autoHide = () => ({ enabled: true, delaySeconds: 1, fadeDurationMs: fadeDurationMs.value });
+    options.editorData = () =>
+      ({
+        cursor: {
+          available: true,
+          events: [
+            {
+              event: 'move',
+              sessionNs: 0,
+              pixelX: 0,
+              pixelY: 0,
+              normalizedX: 0.25,
+              normalizedY: 0.35,
+              visible: true,
+            },
+            {
+              event: 'move',
+              sessionNs: second(3),
+              pixelX: 0,
+              pixelY: 0,
+              normalizedX: 0.75,
+              normalizedY: 0.65,
+              visible: true,
+            },
+          ],
+        },
+      }) as never;
+    const overlay = useCursorOverlay(options);
+
+    drawOverlay(overlay);
+    await settleCursorImage();
+
+    const drawAlphaAt = (nextTime: number) => {
+      time.value = nextTime;
+      const ctx = createContext();
+      const alphas: number[] = [];
+      (ctx.drawImage as ReturnType<typeof vi.fn>).mockImplementation(() => alphas.push(ctx.globalAlpha));
+      drawOverlay(overlay, ctx);
+      return { ctx, alphas };
+    };
+
+    expect(drawAlphaAt(0).alphas).toEqual([1]);
+    expect(drawAlphaAt(2).ctx.drawImage).not.toHaveBeenCalled();
+    expect(drawAlphaAt(3.25).alphas).toEqual([expect.closeTo(0.25, 8)]);
+    expect(drawAlphaAt(3.5).alphas).toEqual([expect.closeTo(0.5, 8)]);
+    expect(drawAlphaAt(4).alphas).toEqual([1]);
+
+    fadeDurationMs.value = 0;
+    expect(drawAlphaAt(3.25).alphas).toEqual([1]);
+  });
+
+  it('does not fade in activity that interrupts the fade-out before the cursor is fully hidden', async () => {
+    getCursorImage.mockClear().mockResolvedValue({
+      complete: true,
+      naturalWidth: 32,
+    } as HTMLImageElement);
+    const time = ref(0);
+    const options = baseOptions();
+    options.currentTime = () => time.value;
+    options.motion = () => ({
+      preset: 'smooth',
+      smoothing: 0.67,
+      springMassMultiplier: 1.29,
+      motionBlur: 0,
+    });
+    options.autoHide = () => ({ enabled: true, delaySeconds: 1, fadeDurationMs: 1_000 });
+    options.editorData = () =>
+      ({
+        cursor: {
+          available: true,
+          events: [
+            {
+              event: 'move',
+              sessionNs: 0,
+              pixelX: 0,
+              pixelY: 0,
+              normalizedX: 0.25,
+              normalizedY: 0.35,
+              visible: true,
+            },
+            {
+              event: 'move',
+              sessionNs: second(1.5),
+              pixelX: 0,
+              pixelY: 0,
+              normalizedX: 0.75,
+              normalizedY: 0.65,
+              visible: true,
+            },
+          ],
+        },
+      }) as never;
+    const overlay = useCursorOverlay(options);
+    drawOverlay(overlay);
+    await settleCursorImage();
+
+    const drawAlphaAt = (nextTime: number) => {
+      time.value = nextTime;
+      const ctx = createContext();
+      const alphas: number[] = [];
+      (ctx.drawImage as ReturnType<typeof vi.fn>).mockImplementation(() => alphas.push(ctx.globalAlpha));
+      drawOverlay(overlay, ctx);
+      return alphas;
+    };
+
+    expect(drawAlphaAt(1.25)).toEqual([expect.closeTo(0.75, 8)]);
+    expect(drawAlphaAt(1.5)).toEqual([1]);
+  });
+
   it('keeps the loaded image while cursor size changes, then updates bounds on the next draw', async () => {
     getCursorImage.mockClear();
     const image = { complete: true, naturalWidth: 32 } as HTMLImageElement;
@@ -357,8 +599,8 @@ describe('useCursorOverlay', () => {
     const options = baseOptions();
     options.cursorSize = () => cursorSize.value;
     const overlay = useCursorOverlay(options);
-    await nextTick();
-    await Promise.resolve();
+    drawOverlay(overlay);
+    await settleCursorImage();
 
     const draw = () =>
       overlay.updateAndDrawRipplesAndCursor(
@@ -369,6 +611,8 @@ describe('useCursorOverlay', () => {
         800,
         (drawContent) => drawContent(),
       );
+    draw();
+    await settleCursorImage();
     draw();
     const firstBounds = overlay.cursorBounds.value;
     expect(firstBounds).not.toBeNull();
@@ -399,8 +643,8 @@ describe('useCursorOverlay', () => {
     } as HTMLImageElement);
     const options = baseOptions();
     const overlay = useCursorOverlay(options);
-    await nextTick();
-    await Promise.resolve();
+    drawOverlay(overlay);
+    await settleCursorImage();
     expect(getCursorImage).toHaveBeenLastCalledWith(
       MACOS_CURSOR_PACK,
       MACOS_CURSOR_PACK.cursors.find((cursor) => cursor.id === 'default'),
@@ -410,14 +654,7 @@ describe('useCursorOverlay', () => {
     );
     const ctx = createContext();
     const drawContent = vi.fn((draw: () => void) => draw());
-    overlay.updateAndDrawRipplesAndCursor(
-      ctx,
-      { dx: 0, dy: 0, dw: 800, dh: 450, focusX: 0, focusY: 0, scale: 1 },
-      1920,
-      1080,
-      800,
-      drawContent,
-    );
+    drawOverlay(overlay, ctx, drawContent);
     expect(ctx.arc).toHaveBeenCalled();
     expect(ctx.drawImage).toHaveBeenCalled();
     expect(ctx.shadowColor).toBe('#000000');
@@ -465,8 +702,8 @@ describe('useCursorOverlay', () => {
     } as HTMLImageElement);
     const options = baseOptions();
     const overlay = useCursorOverlay(options);
-    await nextTick();
-    await Promise.resolve();
+    drawOverlay(overlay);
+    await settleCursorImage();
 
     const draw = (data: ReturnType<UseCursorOverlayOptions['editorData']>) => {
       options.editorData = () => data;
@@ -522,8 +759,8 @@ describe('useCursorOverlay', () => {
     const options = baseOptions();
     const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const overlay = useCursorOverlay(options);
-    await nextTick();
-    await Promise.resolve();
+    drawOverlay(overlay);
+    await settleCursorImage();
     expect(overlay.customCursorImage.value).toBeNull();
     expect(error).toHaveBeenCalledWith('Failed to load custom cursor image.');
     error.mockRestore();
@@ -537,18 +774,11 @@ describe('useCursorOverlay', () => {
     const options = baseOptions();
     options.cursorPack = () => null;
     const overlay = useCursorOverlay(options);
-    await nextTick();
-    await Promise.resolve();
+    drawOverlay(overlay);
+    await settleCursorImage();
 
     const ctx = createContext();
-    overlay.updateAndDrawRipplesAndCursor(
-      ctx,
-      { dx: 0, dy: 0, dw: 800, dh: 450, focusX: 0, focusY: 0, scale: 1 },
-      1920,
-      1080,
-      800,
-      (draw) => draw(),
-    );
+    drawOverlay(overlay, ctx);
 
     expect(ctx.fillText).toHaveBeenCalledWith('Cursor pack unavailable — import it again', expect.any(Number), 29);
     expect(ctx.drawImage).toHaveBeenCalled();
@@ -568,21 +798,14 @@ describe('useCursorOverlay', () => {
       cursorId: 'wide-default',
     });
     const overlay = useCursorOverlay(options);
-    await nextTick();
-    await Promise.resolve();
+    drawOverlay(overlay);
+    await settleCursorImage();
     const image = overlay.customCursorImage.value;
     expect(getCursorImage).toHaveBeenLastCalledWith(pack, pack.cursors[0], 1280, 640, '#ffffff');
     expect(image).not.toBeNull();
 
     const ctx = createContext();
-    overlay.updateAndDrawRipplesAndCursor(
-      ctx,
-      { dx: 0, dy: 0, dw: 800, dh: 450, focusX: 0, focusY: 0, scale: 1 },
-      1920,
-      1080,
-      800,
-      (draw) => draw(),
-    );
+    drawOverlay(overlay, ctx);
 
     expect(ctx.drawImage).toHaveBeenCalledWith(
       image,
@@ -610,15 +833,15 @@ describe('useCursorOverlay', () => {
     options.cursorSelection = () => selection.value;
     const overlay = useCursorOverlay(options);
 
-    await nextTick();
-    await Promise.resolve();
+    drawOverlay(overlay);
+    await settleCursorImage();
     getCursorImage.mockClear();
     const time = options.currentTime();
     const unchangedSelection = { ...selection.value };
 
     selectedPack.value = pack;
-    await nextTick();
-    await Promise.resolve();
+    drawOverlay(overlay);
+    await settleCursorImage();
 
     expect(options.currentTime()).toBe(time);
     expect(selection.value).toEqual(unchangedSelection);
@@ -663,7 +886,8 @@ describe('useCursorOverlay', () => {
     options.cursorSelection = () => selection.value;
     const overlay = useCursorOverlay(options);
 
-    await nextTick();
+    drawOverlay(overlay);
+    await settleCursorImage();
     expect(resolveFirst).toBeTypeOf('function');
 
     selectedPack.value = secondPack;
@@ -672,7 +896,7 @@ describe('useCursorOverlay', () => {
       mode: 'automatic',
       cursorId: null,
     };
-    await nextTick();
+    drawOverlay(overlay);
     expect(resolveSecond).toBeTypeOf('function');
     expect(getCursorImage).toHaveBeenCalledTimes(2);
 
@@ -731,18 +955,16 @@ describe('useCursorOverlay', () => {
       }) as never;
     const overlay = useCursorOverlay(options);
 
-    await nextTick();
-    await Promise.resolve();
-    await nextTick();
+    drawOverlay(overlay);
+    await settleCursorImage();
     expect(getCursorImage).toHaveBeenCalledOnce();
     const firstImage = overlay.customCursorImage.value;
     expect(firstImage).toMatchObject({ id: 'stable' });
 
     getCursorImage.mockClear();
     time.value = 0.75;
-    await nextTick();
-    await Promise.resolve();
-    await nextTick();
+    drawOverlay(overlay);
+    await settleCursorImage();
     expect(getCursorImage).not.toHaveBeenCalled();
     expect(overlay.customCursorImage.value).toBe(firstImage);
 
@@ -751,9 +973,8 @@ describe('useCursorOverlay', () => {
       mode: 'fixed',
       cursorId: 'handpointing',
     };
-    await nextTick();
-    await Promise.resolve();
-    await nextTick();
+    drawOverlay(overlay);
+    await settleCursorImage();
     expect(getCursorImage).toHaveBeenCalledOnce();
     expect(getCursorImage).toHaveBeenLastCalledWith(
       MACOS_CURSOR_PACK,
@@ -763,5 +984,55 @@ describe('useCursorOverlay', () => {
       '#ffffff',
     );
     expect(overlay.customCursorImage.value).toMatchObject({ id: 'stable' });
+  });
+
+  it('does not reload the cursor image for repeated playback draws until the asset key changes', async () => {
+    const image = {
+      id: 'cached',
+      complete: true,
+      naturalWidth: 32,
+    } as HTMLImageElement;
+    getCursorImage.mockClear().mockResolvedValue(image);
+    const time = ref(0);
+    const selection = ref({
+      packId: MACOS_CURSOR_PACK.id,
+      mode: 'fixed' as const,
+      cursorId: 'default',
+    });
+    const options = baseOptions();
+    options.currentTime = () => time.value;
+    options.cursorSelection = () => selection.value;
+    const overlay = useCursorOverlay(options);
+
+    const drawAt = async (nextTime: number) => {
+      time.value = nextTime;
+      drawOverlay(overlay);
+      await settleCursorImage();
+    };
+
+    await drawAt(0);
+    expect(getCursorImage).toHaveBeenCalledOnce();
+    getCursorImage.mockClear();
+
+    await drawAt(0.25);
+    await drawAt(0.5);
+    await drawAt(0.75);
+    expect(getCursorImage).not.toHaveBeenCalled();
+    expect(overlay.customCursorImage.value).toMatchObject(image);
+
+    selection.value = {
+      packId: MACOS_CURSOR_PACK.id,
+      mode: 'fixed',
+      cursorId: 'handpointing',
+    };
+    await drawAt(1);
+    expect(getCursorImage).toHaveBeenCalledOnce();
+    expect(getCursorImage).toHaveBeenLastCalledWith(
+      MACOS_CURSOR_PACK,
+      MACOS_CURSOR_PACK.cursors.find((cursor) => cursor.id === 'handpointing'),
+      640,
+      640,
+      '#ffffff',
+    );
   });
 });

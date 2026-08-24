@@ -1,32 +1,14 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue';
-import type { Clip, MediaAsset } from '~/media/shared/composition-types';
-import { sourceTimeAt, type MediaError } from '~/media/shared';
+import { sourceTimeAt } from '~/media/shared';
 import { useThumbnails } from './waveform/useThumbnails';
 import { useTranslate } from '~/i18n/useTranslate';
-import type { TimelineThumbnailSlot } from './composables/timeline-viewport';
-import type { AudioWaveformStatus } from './composables/useCompositionAudioWaveforms';
 import WaveformCanvas from './waveform/WaveformCanvas.vue';
 import { timelineClipStyle, timelineFrameStyle, timelineTransitionStyle } from './timeline-clip-geometry';
 import TimelineTransitionCurve from './TimelineTransitionCurve.vue';
+import type { TimelineClipProps } from './timeline-clip-types';
 const { t } = useTranslate('TimelineTracks');
-const props = defineProps<{
-  clip: Clip;
-  asset?: MediaAsset | null;
-  duration: number;
-  timelineWidthPx?: number;
-  thumbnailSlots: readonly TimelineThumbnailSlot[];
-  selected: boolean;
-  waveformBars?: number[];
-  waveformLeftPercent?: number;
-  waveformWidthPercent?: number;
-  waveformLoadingSegments?: Array<{ leftPercent: number; widthPercent: number }>;
-  waveformStatus?: AudioWaveformStatus;
-  waveformError?: MediaError;
-  trimState?: { edge: 'start' | 'end'; durationMs: number; atLimit?: boolean } | null;
-  deferThumbnailRequests?: boolean;
-  pasteHighlight?: boolean;
-}>();
+const props = defineProps<TimelineClipProps>();
 const emit = defineEmits<{
   (event: 'select'): void;
   (event: 'move', value: PointerEvent): void;
@@ -84,6 +66,25 @@ const imagePreviewStyle = computed(() => ({
   backgroundImage:
     props.asset?.kind === 'image' && props.asset.src ? `url(${JSON.stringify(props.asset.src)})` : undefined,
 }));
+const colorPreviewStyle = computed(() => {
+  if (props.clip.kind !== 'color') return {};
+  if (props.clip.fill.kind === 'color') return { background: props.clip.fill.color };
+  const gradient = props.clip.fill.gradient;
+  const stops = gradient.stops
+    .map(
+      (stop) =>
+        `${stop.color}${Math.round(stop.alpha * 255)
+          .toString(16)
+          .padStart(2, '0')} ${stop.position * 100}%`,
+    )
+    .join(', ');
+  return {
+    background:
+      gradient.type === 'radial'
+        ? `radial-gradient(circle, ${stops})`
+        : `linear-gradient(${gradient.angle}deg, ${stops})`,
+  };
+});
 const frameStyle = (frame: TimelineFrame) => timelineFrameStyle(props.clip, frame.relativeMs, frame.durationMs);
 const transitionStyle = (edge: 'entry' | 'exit') => timelineTransitionStyle(props.clip, edge);
 const thumbnailFor = (frame: TimelineFrame) => {
@@ -169,7 +170,7 @@ onUnmounted(() => stopMarquee());
         class="waveform-slice"
         :style="{ left: `${waveformLeftPercent ?? 0}%`, width: `${waveformWidthPercent ?? 100}%` }"
       >
-        <WaveformCanvas :bars="waveformBars" :selected="selected" />
+        <WaveformCanvas :bars="waveformBars" :selected="selected" :defer-draw="deferWaveformDraw" />
         <span
           v-for="(segment, index) in waveformLoadingSegments"
           :key="`loading:${index}`"
@@ -208,6 +209,7 @@ onUnmounted(() => stopMarquee());
       :style="imagePreviewStyle"
       aria-hidden="true"
     />
+    <span v-else-if="clip.kind === 'color'" class="color-preview" :style="colorPreviewStyle" aria-hidden="true" />
     <span
       class="trim-handle start"
       :class="{ 'at-limit': trimState?.edge === 'start' && trimState?.atLimit }"
@@ -293,6 +295,10 @@ onUnmounted(() => stopMarquee());
   background: linear-gradient(110deg, var(--color-track-blur), var(--color-track-blur-highlight));
   color: #fff;
 }
+.timeline-clip.kind-color {
+  background: var(--color-bg-surface);
+  color: #fff;
+}
 .timeline-clip.kind-audio {
   background: var(--color-track-audio-light);
 }
@@ -311,7 +317,8 @@ onUnmounted(() => stopMarquee());
   border-right: 1px solid rgba(0, 0, 0, 0.08);
 }
 .thumbnail-img,
-.image-preview {
+.image-preview,
+.color-preview {
   display: block;
   width: 100%;
   height: 100%;
@@ -326,6 +333,10 @@ onUnmounted(() => stopMarquee());
   background-position: left center;
   background-repeat: repeat-x;
   background-size: contain;
+}
+.color-preview {
+  position: absolute;
+  inset: 0;
 }
 .thumbnail-crossfade-enter-active,
 .thumbnail-crossfade-leave-active {

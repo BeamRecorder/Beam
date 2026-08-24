@@ -1,5 +1,5 @@
 import { computed, getCurrentScope, onScopeDispose, ref } from 'vue';
-import { ZOOM_DEPTH_SCALES, type ZoomElement, type ZoomMotionBlurSettings } from '../../zoom/zoom-types';
+import { ZOOM_DEPTH_SCALES } from '../../zoom/zoom-types';
 import { createCompositionCameraEvaluator } from '../../zoom/composition-camera';
 import { clampFocusToScale } from '../../zoom/zoom-playback';
 import { createZoomMotionBlurSamplePlan, ZOOM_MOTION_BLUR_SHUTTER_MS } from '../../zoom/zoom-motion-blur';
@@ -9,65 +9,24 @@ import {
   resizeMotionBlurSurface,
   type MotionBlurSurface,
 } from '../../zoom/zoom-motion-blur-compositor';
-import { OUTPUT_PREVIEW_RADIUS, outputPreviewRect, type OutputCanvasSettings } from '../output-canvas';
-import type { ProjectEditorData } from '~/api/types/capture-api';
+import { OUTPUT_PREVIEW_RADIUS, outputPreviewRect } from '../output-canvas';
 import type { MediaFrame } from '~/media/shared';
-import type { ClipComposition, NormalizedTransform, VisualClip } from '~/media/shared/composition-types';
+import type { VisualClip } from '~/media/shared/composition-types';
 import { drawDecoratedMedia } from '../../composition/appearance/render-decorated-media';
+import {
+  drawFrameOverlay,
+  frameMediaRect,
+  frameOuterRect,
+  transformedFrameOuterRect,
+} from '../../composition/appearance/frames';
+import { isPhoneFrame } from '../../composition/appearance/phone-frames';
 import { mapSourcePointToScreen, resolveScreenRenderGeometry } from '../../composition/camera-layout';
 import { resolveCompositionSceneLayers, type CompositionSceneLayers } from '../../composition/scene-layers';
-
-export interface VideoWindowBounds {
-  dx: number;
-  dy: number;
-  dw: number;
-  dh: number;
-  scale: number;
-  focusX?: number;
-  focusY?: number;
-}
-export interface RenderedVideoWindow extends VideoWindowBounds {
-  focusX: number;
-  focusY: number;
-}
-
-export interface UseCameraZoomOptions {
-  canvasRef: () => HTMLCanvasElement | null;
-  outputCanvas: () => OutputCanvasSettings;
-  zoomElements: () => ZoomElement[];
-  zoomMotionBlur?: () => ZoomMotionBlurSettings;
-  selectedZoom: () => ZoomElement | null;
-  currentTime: () => number;
-  isPlaying: () => boolean;
-  editorData: () => ProjectEditorData | null | undefined;
-  activeTab: () => string;
-  composition: () => ClipComposition;
-  screenTransformDraft?: () => NormalizedTransform | null;
-  isCropping?: () => boolean | undefined;
-  drawBackground: (
-    ctx: CanvasRenderingContext2D,
-    bounds: { x: number; y: number; width: number; height: number },
-  ) => void;
-  videoError: () => string | null;
-  renderVisualStack?: (
-    ctx: CanvasRenderingContext2D,
-    videoWindow: RenderedVideoWindow,
-    drawScreen: () => void,
-    layers: CompositionSceneLayers,
-  ) => void;
-  onUpdateZoom: (zoom: ZoomElement) => void;
-  onSelectScreenClip: (clipId: string) => void;
-  onSelectCanvas: () => void;
-  onDeselectTransformClip: () => void;
-  onDeselectZoom: () => void;
-  selectVisualAt: (event: PointerEvent) => boolean;
-  selectedTransformClipExists: () => boolean;
-  onRenderOnce?: () => void;
-}
-
+import type { RenderedVideoWindow, UseCameraZoomOptions, VideoWindowBounds } from './useCameraZoom.types';
+export type { RenderedVideoWindow, UseCameraZoomOptions, VideoWindowBounds } from './useCameraZoom.types';
 export function useCameraZoom(options: UseCameraZoomOptions) {
   let cameraEvaluator: ReturnType<typeof createCompositionCameraEvaluator> | null = null;
-  let cameraEvaluatorKey = '';
+  let cameraEvaluatorInputs: readonly unknown[] | null = null;
   const videoWindowBounds = ref<VideoWindowBounds | null>(null);
   const screenHitBounds = ref<{ dx: number; dy: number; dw: number; dh: number } | null>(null);
   const overlayWindowBounds = ref<VideoWindowBounds | null>(null);
@@ -82,12 +41,12 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     bounds: VideoWindowBounds;
   } | null = null;
   let motionBlurSurface: MotionBlurSurface | null = null;
-
-  const screenClip = (): VisualClip | null =>
-    resolveCompositionSceneLayers(options.composition(), options.currentTime() * 1_000).screen;
-
+  const sceneLayersAt = (timeMs: number) =>
+    options.sceneLayersAt?.(timeMs) ?? resolveCompositionSceneLayers(options.composition(), timeMs);
+  const screenClip = (): VisualClip | null => sceneLayersAt(options.currentTime() * 1_000).screen;
   const resetCamera = () => {
-    cameraEvaluator?.invalidate();
+    cameraEvaluator = null;
+    cameraEvaluatorInputs = null;
     options.onRenderOnce?.();
   };
   const resetCameraUnlessDragging = () => {
@@ -228,10 +187,11 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     width: number,
     height: number,
     frame: MediaFrame | null,
+    resolvedLayers?: CompositionSceneLayers,
   ): RenderedVideoWindow | null => {
     const output = options.outputCanvas();
     const preview = outputPreviewRect(width, height, output);
-    const sceneLayers = resolveCompositionSceneLayers(options.composition(), options.currentTime() * 1_000);
+    const sceneLayers = resolvedLayers ?? sceneLayersAt(options.currentTime() * 1_000);
     const screen = sceneLayers.screen;
     const hasCameraVisual = sceneLayers.cameraVisuals.length > 0;
     if (!hasCameraVisual) {
@@ -263,6 +223,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     const { x: dx, y: dy, width: dw, height: dh } = preview;
     const screenTransform = options.screenTransformDraft?.() ??
       screen?.transform ?? { x: 0, y: 0, width: 1, height: 1 };
+    const editingPhoneCrop = Boolean(options.isCropping?.() && screen && isPhoneFrame(screen.appearance.frame));
     const screenGeometry = screen
       ? resolveScreenRenderGeometry(
           screen,
@@ -272,13 +233,15 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
           dh,
           output.showBackground,
           screenTransform,
-          options.isCropping?.() ? undefined : screen.crop,
-          options.isCropping?.() ? 'custom' : (screen.cameraFramingPreset ?? 'custom'),
+          options.isCropping?.() ? { x: 0, y: 0, width: 1, height: 1 } : screen.crop,
+          editingPhoneCrop ? 'fit' : options.isCropping?.() ? 'custom' : (screen.cameraFramingPreset ?? 'custom'),
         )
       : null;
     const source = screenGeometry?.source ?? { x: 0, y: 0, width: videoWidth, height: videoHeight };
     const media = screenGeometry?.media ?? { x: 0, y: 0, width: dw, height: dh };
     const positioned = screenGeometry?.positioned ?? media;
+    const cropFrame =
+      editingPhoneCrop && screen ? transformedFrameOuterRect(media, screenTransform, screen.appearance.frame) : null;
 
     ctx.save();
     ctx.beginPath();
@@ -287,24 +250,32 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     const currentTime = options.currentTime();
     const telemetry = options.editorData()?.cursor.telemetry ?? [];
     const selectedZoom = options.selectedZoom();
-    const previewZooms =
-      !options.isPlaying() && selectedZoom?.mode === 'manual'
-        ? options.zoomElements().filter((zoom) => zoom.id !== selectedZoom.id)
-        : options.zoomElements();
-    const key = JSON.stringify({
-      zooms: previewZooms,
+    const zooms = options.zoomElements();
+    const evaluatorInputs = [
+      zooms,
       telemetry,
-      canvas: output,
-      source: screen ? [videoWidth, videoHeight] : null,
-      screen: screen ? [screen.transform, screen.crop, screen.cameraFramingPreset] : null,
-    });
-    if (!cameraEvaluator || key !== cameraEvaluatorKey) {
-      cameraEvaluatorKey = key;
+      output,
+      screen,
+      selectedZoom?.id,
+      selectedZoom?.mode,
+      options.isPlaying(),
+      videoWidth,
+      videoHeight,
+      dw,
+      dh,
+    ] as const;
+    const inputsChanged = evaluatorInputs.some((value, index) => value !== cameraEvaluatorInputs?.[index]);
+    if (!cameraEvaluator || !cameraEvaluatorInputs || inputsChanged) {
+      cameraEvaluatorInputs = evaluatorInputs;
+      const previewZooms =
+        !options.isPlaying() && selectedZoom?.mode === 'manual'
+          ? zooms.filter((zoom) => zoom.id !== selectedZoom.id)
+          : zooms;
       cameraEvaluator = createCompositionCameraEvaluator({
         zooms: previewZooms,
         telemetry,
         mapFocus: (focus, zoom, timeMs) => {
-          const activeScreen = resolveCompositionSceneLayers(options.composition(), timeMs).screen;
+          const activeScreen = sceneLayersAt(timeMs).screen;
           if (!activeScreen || zoom.mode !== 'auto') return focus;
           const activeGeometry = resolveScreenRenderGeometry(
             activeScreen,
@@ -314,7 +285,15 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
             dh,
             output.showBackground,
           );
-          return mapSourcePointToScreen(focus, videoWidth, videoHeight, dw, dh, activeGeometry);
+          const positioned = isPhoneFrame(activeScreen.appearance.frame)
+            ? frameMediaRect(
+                activeGeometry.positioned,
+                activeScreen.appearance.frame,
+                activeGeometry.source.width,
+                activeGeometry.source.height,
+              )
+            : activeGeometry.positioned;
+          return mapSourcePointToScreen(focus, videoWidth, videoHeight, dw, dh, { ...activeGeometry, positioned });
         },
       });
     }
@@ -336,27 +315,47 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
           source: frame.bitmap,
           sourceRect: source,
           rect: { x: dx + positioned.x, y: dy + positioned.y, width: positioned.width, height: positioned.height },
-          appearance: screen.appearance ?? {
-            cornerRadius: output.showBackground ? 'md' : 'none',
-            shadowSize: 'md',
-            shadowColor: '#000000',
-            shadowDirection: 'bottom',
-            borderEnabled: false,
-            borderColor: '#000000',
-            borderWidth: 1,
-            frame: 'none',
-            frameTitle: '',
-            frameColor: '#c0c0c0',
-            frameShowMenu: true,
-            frameShowScrollbars: true,
-            frameChromeScale: 1,
-          },
+          appearance: editingPhoneCrop
+            ? { ...screen.appearance, frame: 'none' }
+            : (screen.appearance ?? {
+                cornerRadius: output.showBackground ? 'md' : 'none',
+                shadowSize: 'md',
+                shadowColor: '#000000',
+                shadowDirection: 'bottom',
+                borderEnabled: false,
+                borderColor: '#000000',
+                borderWidth: 1,
+                frame: 'none',
+                frameTitle: '',
+                frameColor: '#c0c0c0',
+                frameShowMenu: true,
+                frameShowScrollbars: true,
+                frameChromeScale: 1,
+              }),
           shadowScale: Math.min(dw / Math.max(1, output.width), dh / Math.max(1, output.height)),
           title: screen.name,
           mirrored: screen.isMirrored,
           mirroredY: screen.isMirroredY,
           mask: screenGeometry?.mask,
         });
+        if (cropFrame)
+          drawFrameOverlay(
+            target,
+            {
+              x: dx + cropFrame.x,
+              y: dy + cropFrame.y,
+              width: cropFrame.width,
+              height: cropFrame.height,
+            },
+            screen.appearance.frame,
+            screen.name,
+            screen.appearance.frameColor,
+            {
+              showMenu: screen.appearance.frameShowMenu,
+              showScrollbars: screen.appearance.frameShowScrollbars,
+              chromeScale: screen.appearance.frameChromeScale,
+            },
+          );
       } else if (options.videoError()) {
         target.fillStyle = '#334155';
         target.fillRect(dx, dy, dw, dh);
@@ -382,6 +381,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
         current: cameraAt(currentTime * 1_000 + halfShutterMs),
         intensity: blurIntensity,
         deltaMs: halfShutterMs * 2,
+        sampleCount: options.isPlaying() ? 3 : undefined,
         viewportWidth: dw,
         viewportHeight: dh,
       });
@@ -455,12 +455,17 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       focusX: camera.focusX,
       focusY: camera.focusY,
     };
-    screenHitBounds.value = screen
+    const screenBounds = screen
+      ? editingPhoneCrop
+        ? positioned
+        : frameOuterRect(positioned, screen.appearance.frame)
+      : null;
+    screenHitBounds.value = screenBounds
       ? {
-          dx: dx + positioned.x,
-          dy: dy + positioned.y,
-          dw: positioned.width,
-          dh: positioned.height,
+          dx: dx + screenBounds.x,
+          dy: dy + screenBounds.y,
+          dw: screenBounds.width,
+          dh: screenBounds.height,
         }
       : null;
     overlayWindowBounds.value = { dx, dy, dw, dh, scale: camera.scale, focusX: camera.focusX, focusY: camera.focusY };

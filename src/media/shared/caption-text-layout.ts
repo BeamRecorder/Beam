@@ -1,5 +1,6 @@
 import type { CaptionClip, CaptionStyle, NormalizedTransform } from './composition-types';
 import { getCaptionTransform } from './composition-types';
+import type { CaptionHighlightWordRun, CaptionWordHighlightContent } from './caption-highlight-types';
 import { keyboardCaptionRunsAt, type KeyboardCaptionRun } from './keyboard-captions';
 
 export const CAPTION_LINE_HEIGHT = 1.2;
@@ -20,7 +21,7 @@ export interface CaptionTextLayout {
 export const isCaptionWrapEnabled = (style: Pick<CaptionStyle, 'wrap'>) => style.wrap;
 
 export function captionTextAt(clip: CaptionClip, timeMs: number): string {
-  if (clip.caption.style.customText) return clip.caption.style.customText;
+  if (clip.caption.style.customText !== undefined) return clip.caption.style.customText;
   if (clip.caption.type === 'keyboard')
     return keyboardCaptionRunsAt(clip, timeMs)
       .map((run) => run.text)
@@ -31,10 +32,46 @@ export function captionTextAt(clip: CaptionClip, timeMs: number): string {
 export function captionContentAt(
   clip: CaptionClip,
   timeMs: number,
-): { text: string; runs: KeyboardCaptionRun[] | null } {
-  if (clip.caption.type !== 'keyboard') return { text: captionTextAt(clip, timeMs), runs: null };
+): {
+  text: string;
+  runs: KeyboardCaptionRun[] | null;
+  wordHighlight: CaptionWordHighlightContent | null;
+} {
+  if (clip.caption.type !== 'keyboard') {
+    const text = captionTextAt(clip, timeMs);
+    const style = clip.caption.style;
+    if (!text || style.customText !== undefined || !style.wordHighlight.enabled)
+      return { text, runs: null, wordHighlight: null };
+    const sentence = [...clip.caption.sentences]
+      .reverse()
+      .find((candidate) => candidate.startMs <= timeMs && timeMs <= candidate.endMs);
+    const words =
+      sentence?.words.map((word) => ({ ...word, text: word.text.trim() })).filter((word) => word.text.length > 0) ?? [];
+    if (!words.length) return { text, runs: null, wordHighlight: null };
+    const activeIndex = words.findIndex((word) => word.startMs <= timeMs && timeMs < word.endMs);
+    if (style.wordHighlight.displayMode === 'word' && activeIndex < 0)
+      return { text: '', runs: null, wordHighlight: null };
+    const visibleWords = style.wordHighlight.displayMode === 'word' ? [words[activeIndex]!] : words;
+    const highlightWords = visibleWords.map<CaptionHighlightWordRun>((word) => ({
+      text: word.text,
+      active: word === words[activeIndex],
+      progress:
+        word === words[activeIndex]
+          ? Math.max(0, Math.min(1, (timeMs - word.startMs) / Math.max(1, word.endMs - word.startMs)))
+          : 0,
+    }));
+    return {
+      text: highlightWords.map((word) => word.text).join(' '),
+      runs: null,
+      wordHighlight: { words: highlightWords },
+    };
+  }
   const runs = keyboardCaptionRunsAt(clip, timeMs);
-  return { text: runs.map((run) => run.text).join(''), runs };
+  return {
+    text: runs.map((run) => run.text).join(''),
+    runs,
+    wordHighlight: null,
+  };
 }
 
 export const approximateCaptionTextWidth: CaptionTextMeasurer = (text, fontSize, style) =>
@@ -54,6 +91,37 @@ const splitLongWord = (word: string, maxWidth: number, measure: (text: string) =
   if (chunk) chunks.push(chunk);
   return chunks;
 };
+
+export function wrapCaptionHighlightLines(
+  words: CaptionHighlightWordRun[],
+  maxWidth: number,
+  measure: (text: string) => number,
+): CaptionHighlightWordRun[][] {
+  if (!words.length) return [];
+  const width = Math.max(1, maxWidth);
+  const lines: CaptionHighlightWordRun[][] = [];
+  let line: CaptionHighlightWordRun[] = [];
+  for (const word of words) {
+    const lineText = line.map((item) => item.text).join(' ');
+    const candidate = lineText ? `${lineText} ${word.text}` : word.text;
+    if (measure(candidate) <= width) {
+      line.push(word);
+      continue;
+    }
+    if (line.length) {
+      lines.push(line);
+      line = [];
+    }
+    const chunks = splitLongWord(word.text, width, measure).map((text) => ({
+      ...word,
+      text,
+    }));
+    if (chunks.length > 1) lines.push(...chunks.slice(0, -1).map((chunk) => [chunk]));
+    line = chunks.length ? [chunks.at(-1)!] : [];
+  }
+  if (line.length) lines.push(line);
+  return lines;
+}
 
 export function wrapCaptionLines(text: string, maxWidth: number, measure: (text: string) => number): string[] {
   if (!text) return [];

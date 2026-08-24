@@ -103,23 +103,6 @@
 .editor-canvas.is-selection-editable {
   cursor: crosshair !important;
 }
-.transform-selection-viewport {
-  position: absolute;
-  z-index: 2;
-  overflow: hidden;
-  pointer-events: none;
-}
-.webcam-selection {
-  position: absolute;
-  border: 2px solid var(--color-primary);
-  box-sizing: border-box;
-  cursor: move;
-  pointer-events: auto;
-  transition: opacity var(--fast) ease;
-}
-.webcam-selection.is-muted {
-  opacity: 0.16;
-}
 .zoom-selection-box {
   position: absolute;
   top: 0;
@@ -137,90 +120,6 @@
   border-style: solid;
   border-color: rgba(255, 255, 255, 0.4);
   background: rgba(255, 255, 255, 0.03);
-}
-.crop-container {
-  position: absolute;
-  z-index: 20;
-  pointer-events: none;
-}
-.crop-mask-wrapper {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  border-radius: var(--radius-sm, 4px);
-}
-.crop-mask-hole {
-  position: absolute;
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
-  pointer-events: none;
-}
-.crop-overlay-box {
-  position: absolute;
-  border: 2px solid var(--color-primary, #ff5a1f);
-  cursor: move;
-  box-sizing: border-box;
-  pointer-events: auto;
-}
-.crop-overlay-box :deep(.resize-handle) {
-  z-index: 25 !important;
-}
-.crop-done-wrapper {
-  position: absolute;
-  bottom: 8px;
-  right: 8px;
-  z-index: 10;
-  white-space: nowrap;
-  pointer-events: auto;
-}
-.crop-done-wrapper :deep(button),
-.crop-done-wrapper :deep(.btn) {
-  background: #ff5a1f !important;
-  background-color: #ff5a1f !important;
-  color: #ffffff !important;
-  font-weight: 700 !important;
-  padding: 0 12px !important;
-  height: 26px !important;
-  min-height: 26px !important;
-  border-radius: var(--radius-md, 6px) !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
-  border: 1px solid rgba(255, 255, 255, 0.3) !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 4px !important;
-}
-.crop-done-wrapper :deep(button:hover),
-.crop-done-wrapper :deep(.btn:hover) {
-  background: #e04810 !important;
-  background-color: #e04810 !important;
-}
-.crop-grid {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-.grid-line {
-  position: absolute;
-  background: rgba(255, 255, 255, 0.35);
-}
-.grid-line.vertical {
-  top: 0;
-  bottom: 0;
-  width: 1px;
-}
-.grid-line.vertical.line-1 {
-  left: 33.333%;
-}
-.grid-line.vertical.line-2 {
-  left: 66.666%;
-}
-.grid-line.horizontal {
-  left: 0;
-  right: 0;
-  height: 1px;
-}
-.grid-line.horizontal.line-1 {
-  top: 33.333%;
 }
 .is-format-transitioning {
   transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
