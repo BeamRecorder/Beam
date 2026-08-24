@@ -219,6 +219,28 @@ describe('useRecordingController branch behavior', () => {
     expect(controller.phase.value).toBe('idle');
   });
 
+  it('shows the recording area marker only after native recording starts', async () => {
+    const controller = useRecordingController(vi.fn());
+
+    await controller.start(
+      configuration({
+        region: { x: 0.1, y: 0.2, width: 0.5, height: 0.4 },
+        regionOverlay: { bounds: { x: 10, y: 20, width: 100, height: 80 } },
+      }),
+    );
+    await waitForRecording(controller);
+
+    expect(capture.prepareRecordingSurface).toHaveBeenCalledOnce();
+    expect(capture.startPreparedRecording).toHaveBeenCalledOnce();
+    expect(capture.showScreenRegionOverlay).toHaveBeenCalledOnce();
+    expect(capture.prepareRecordingSurface.mock.invocationCallOrder[0]).toBeLessThan(
+      capture.startPreparedRecording.mock.invocationCallOrder[0],
+    );
+    expect(capture.startPreparedRecording.mock.invocationCallOrder[0]).toBeLessThan(
+      capture.showScreenRegionOverlay.mock.invocationCallOrder[0],
+    );
+  });
+
   it('starts the sidecar timeline after delayed native startup', async () => {
     capture.startPreparedRecording.mockImplementationOnce(
       () =>

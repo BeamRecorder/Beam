@@ -133,6 +133,31 @@ describe('ScreenRegionOverlayApp', () => {
     expect(capture.cancelScreenRegion).toHaveBeenCalledOnce();
   });
 
+  it('renders a non-interactive recording marker without selection controls', async () => {
+    let configure!: (value: {
+      mode: 'record';
+      bounds: { width: number; height: number };
+      region: { x: number; y: number; width: number; height: number };
+    }) => void;
+    capture.onScreenRegionConfigure.mockImplementation((next: typeof configure) => {
+      configure = next;
+      return vi.fn();
+    });
+    const wrapper = mount(ScreenRegionOverlayApp, { global: { stubs: { Button, Select } } });
+    configure({
+      mode: 'record',
+      bounds: { width: 1920, height: 1080 },
+      region: { x: 0.1, y: 0.2, width: 0.5, height: 0.4 },
+    });
+    await wrapper.vm.$nextTick();
+
+    const frame = wrapper.get('.region-frame');
+    expect(frame.classes()).toContain('recording');
+    expect(frame.classes()).not.toContain('selecting');
+    expect(wrapper.find('.region-toolbar').exists()).toBe(false);
+    expect(wrapper.findAll('.resize-handle')).toHaveLength(0);
+  });
+
   it('applies a selected preset and persists it to preferences', async () => {
     let configure!: (value: { mode: 'select'; bounds: { width: number; height: number } }) => void;
     capture.onScreenRegionConfigure.mockImplementation((next: typeof configure) => {

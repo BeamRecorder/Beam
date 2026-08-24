@@ -411,6 +411,66 @@ describe('camera layout engine operations', () => {
     expect(next.clips.find((clip) => clip.id === 'audio')).toEqual(before.find(({ id }) => id === 'audio')?.clip);
   });
 
+  it('keeps a webcam framing preset and custom size when its position is moved manually', () => {
+    const customTransform = { x: 0.23, y: 0.18, width: 0.41, height: 0.29 };
+    const composition = createComposition(
+      [videoAsset('screen-asset'), videoAsset('camera-asset')],
+      [
+        visual('screen', 'screen', 'screen-asset', { trackId: 'screen-track' }),
+        visual('camera', 'webcam', 'camera-asset', {
+          trackId: 'camera-track',
+          transform: customTransform,
+          cameraLayoutPreset: 'custom',
+          cameraFramingPreset: 'circle',
+        }),
+      ],
+    );
+    const movedTransform = { ...customTransform, x: 0.12, y: 0.34 };
+
+    const moved = setTransform(composition, 'camera', movedTransform);
+    const camera = moved.clips.find((clip): clip is VisualClip => clip.id === 'camera');
+
+    expect(camera).toMatchObject({
+      cameraLayoutPreset: 'custom',
+      cameraFramingPreset: 'circle',
+      transform: movedTransform,
+    });
+  });
+
+  it.each([
+    ['floating-top-left', 0.04, 0.04],
+    ['floating-bottom-right', 0.55, 0.67],
+    ['floating-center', 0.295, 0.355],
+  ] as const)('keeps a custom webcam frame and dimensions when switching to %s', (preset, x, y) => {
+    const customTransform = { x: 0.47, y: 0.32, width: 0.41, height: 0.29 };
+    const crop = { x: 0.1, y: 0.15, width: 0.8, height: 0.7 };
+    const composition = createComposition(
+      [videoAsset('screen-asset'), videoAsset('camera-asset')],
+      [
+        visual('screen', 'screen', 'screen-asset', { trackId: 'screen-track' }),
+        visual('camera', 'webcam', 'camera-asset', {
+          trackId: 'camera-track',
+          transform: customTransform,
+          cameraLayoutPreset: 'floating-bottom-right',
+          cameraFramingPreset: 'circle',
+          crop,
+        }),
+      ],
+    );
+
+    const moved = setCameraLayout(composition, 'camera', preset);
+    const camera = moved.clips.find((clip): clip is VisualClip => clip.id === 'camera');
+
+    expect(camera).toMatchObject({
+      cameraLayoutPreset: preset,
+      cameraFramingPreset: 'circle',
+      crop,
+      transform: { width: customTransform.width, height: customTransform.height },
+    });
+    expect(camera?.transform.x).toBeCloseTo(x);
+    expect(camera?.transform.y).toBeCloseTo(y);
+  });
+
   it('adjusts the camera share and complementary screen area for a split', () => {
     const split = setCameraLayout(compositionFixture(), 'camera', 'split-right');
     const beforeAudio = split.clips.find((clip): clip is AudioClip => clip.kind === 'audio');

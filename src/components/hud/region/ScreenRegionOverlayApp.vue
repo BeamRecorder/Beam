@@ -209,7 +209,12 @@ onBeforeUnmount(() => unsubscribe?.());
 <template>
   <main class="region-overlay" @pointerdown.prevent="begin" @pointermove="move" @pointerup="end" @pointercancel="end">
     <div v-if="isSelecting && !region" class="region-empty-backdrop" />
-    <div v-if="region" class="region-frame" :style="regionStyle" :class="{ selecting: isSelecting }">
+    <div
+      v-if="region"
+      class="region-frame"
+      :style="regionStyle"
+      :class="{ selecting: isSelecting, recording: !isSelecting }"
+    >
       <span v-if="isSelecting" class="resize-handle nw" data-handle="nw" />
       <span v-if="isSelecting" class="resize-handle ne" data-handle="ne" />
       <span v-if="isSelecting" class="resize-handle sw" data-handle="sw" />
@@ -266,6 +271,10 @@ onBeforeUnmount(() => unsubscribe?.());
 }
 .region-frame.selecting {
   box-shadow: 0 0 0 9999px rgb(8 12 20 / 42%);
+}
+.region-frame.recording {
+  border: 0;
+  outline: 2px solid var(--color-primary);
 }
 .resize-handle {
   position: absolute;

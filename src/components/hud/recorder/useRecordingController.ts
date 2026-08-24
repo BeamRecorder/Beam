@@ -274,6 +274,8 @@ export function useRecordingController(
       if (!session.sessionId) throw new Error('The capture session did not provide an identifier.');
       sessionId = session.sessionId;
       projectId = session.projectId ?? null;
+      if (configuration.region && configuration.regionOverlay)
+        capture.showScreenRegionOverlay({ ...configuration.regionOverlay, region: configuration.region });
       if (projectId) capture.setTeleprompterSession({ projectId, sessionId });
       stage = 'start-sidecars';
       await startSidecars();
@@ -325,8 +327,6 @@ export function useRecordingController(
     try {
       await prepareSources();
       if (generation !== recordingGeneration) return;
-      if (next.region && next.regionOverlay)
-        capture.showScreenRegionOverlay({ ...next.regionOverlay, region: next.region });
       secondsRemaining.value = Math.max(0, next.countdownSeconds);
       phase.value = 'countdown';
       recordingHealth.start();
