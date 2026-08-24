@@ -3,6 +3,9 @@ import {
   CURSOR_AUTO_HIDE_DELAY_DEFAULT,
   CURSOR_AUTO_HIDE_DELAY_MAX,
   CURSOR_AUTO_HIDE_DELAY_MIN,
+  CURSOR_AUTO_HIDE_FADE_DURATION_DEFAULT,
+  CURSOR_AUTO_HIDE_FADE_DURATION_MAX,
+  CURSOR_AUTO_HIDE_FADE_DURATION_MIN,
   clickButtonForRecordedButton,
   createDefaultCursorClickEffects,
   createDefaultCursorAutoHideSettings,
@@ -18,6 +21,7 @@ describe('cursor auto-hide settings', () => {
     expect(createDefaultCursorAutoHideSettings()).toEqual({
       enabled: false,
       delaySeconds: CURSOR_AUTO_HIDE_DELAY_DEFAULT,
+      fadeDurationMs: CURSOR_AUTO_HIDE_FADE_DURATION_DEFAULT,
     });
   });
 
@@ -25,21 +29,43 @@ describe('cursor auto-hide settings', () => {
     expect(normalizeCursorAutoHideSettings({ enabled: 'yes', delaySeconds: Number.NaN })).toEqual({
       enabled: false,
       delaySeconds: CURSOR_AUTO_HIDE_DELAY_DEFAULT,
+      fadeDurationMs: CURSOR_AUTO_HIDE_FADE_DURATION_DEFAULT,
     });
     expect(normalizeCursorAutoHideSettings(null)).toEqual({
       enabled: false,
       delaySeconds: CURSOR_AUTO_HIDE_DELAY_DEFAULT,
+      fadeDurationMs: CURSOR_AUTO_HIDE_FADE_DURATION_DEFAULT,
     });
   });
 
-  it('clamps the delay to the supported slider range', () => {
+  it('clamps the delay and fade duration to their supported slider ranges', () => {
     expect(normalizeCursorAutoHideSettings({ enabled: true, delaySeconds: CURSOR_AUTO_HIDE_DELAY_MIN - 1 })).toEqual({
       enabled: true,
       delaySeconds: CURSOR_AUTO_HIDE_DELAY_MIN,
+      fadeDurationMs: CURSOR_AUTO_HIDE_FADE_DURATION_DEFAULT,
     });
     expect(normalizeCursorAutoHideSettings({ enabled: true, delaySeconds: CURSOR_AUTO_HIDE_DELAY_MAX + 1 })).toEqual({
       enabled: true,
       delaySeconds: CURSOR_AUTO_HIDE_DELAY_MAX,
+      fadeDurationMs: CURSOR_AUTO_HIDE_FADE_DURATION_DEFAULT,
+    });
+    expect(
+      normalizeCursorAutoHideSettings({
+        enabled: true,
+        fadeDurationMs: CURSOR_AUTO_HIDE_FADE_DURATION_MIN - 1,
+      }),
+    ).toMatchObject({
+      enabled: true,
+      fadeDurationMs: CURSOR_AUTO_HIDE_FADE_DURATION_MIN,
+    });
+    expect(
+      normalizeCursorAutoHideSettings({
+        enabled: true,
+        fadeDurationMs: CURSOR_AUTO_HIDE_FADE_DURATION_MAX + 1,
+      }),
+    ).toMatchObject({
+      enabled: true,
+      fadeDurationMs: CURSOR_AUTO_HIDE_FADE_DURATION_MAX,
     });
   });
 });

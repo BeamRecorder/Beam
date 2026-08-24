@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, shallowRef, toRaw, watch } from 'vue';
-import { Check, RotateCcw } from '@lucide/vue';
+import { RotateCcw } from '@lucide/vue';
 import Button from '../../ui/button/Button.vue';
-import ResizeHandle from '~/ui/ResizeHandle/ResizeHandle.vue';
 import CanvasLoadingSkeleton from './CanvasLoadingSkeleton.vue';
 import UndoRedoToast from './UndoRedoToast.vue';
 import type { VisualClip } from '~/media/shared/composition-types';
@@ -17,7 +16,7 @@ import { useLayerTransformAndCrop } from './composables/useLayerTransformAndCrop
 import { useViewportZoom } from './composables/useViewportZoom';
 import { useTranslate } from '~/i18n/useTranslate';
 import { canvasGuideLines } from './canvas-guides';
-import type { EditorCanvasEmits, EditorCanvasProps } from './editor-canvas-types';
+import { transformCaptionFollowsCursor, type EditorCanvasEmits, type EditorCanvasProps } from './editor-canvas-types';
 import { DEFAULT_ZOOM_MOTION_BLUR } from '../zoom/zoom-types';
 import { drawBeamWatermark } from './watermark-render';
 import { useCanvasTransitionRenderer } from './composables/useCanvasTransitionRenderer';
@@ -31,6 +30,9 @@ import { CURSOR_SIZE_MAX, CURSOR_SIZE_MIN } from '../properties/cursor/cursor-si
 import { useEditorCanvasPointerInteractions } from './composables/useEditorCanvasPointerInteractions';
 import { useEditorCanvasAssets } from './composables/useEditorCanvasAssets';
 import { useEditorCanvasInvalidation } from './composables/useEditorCanvasInvalidation';
+import { CaptionInlineEditor, useCaptionInlineEditing } from './caption-inline-editing';
+import CanvasLayerSelection from './CanvasLayerSelection.vue';
+import CanvasCropSelection from './CanvasCropSelection.vue';
 const { t } = useTranslate('EditorCanvas');
 const props = withDefaults(defineProps<EditorCanvasProps>(), { previewQuality: 'full' });
 const emit = defineEmits<EditorCanvasEmits>();
@@ -69,12 +71,6 @@ watch(
 );
 const currentSceneLayers = computed(() => sceneLayersAt.value(props.currentTime * 1_000));
 const liveScreenClip = computed<VisualClip | null>(() => currentSceneLayers.value.screen);
-const selectedCaptionFollowsCursor = computed(
-  () =>
-    props.selectedTransformClip?.kind === 'caption' &&
-    props.selectedTransformClip.caption.type === 'keyboard' &&
-    props.selectedTransformClip.caption.followCursor,
-);
 const screenFrame = computed(() => {
   void props.frameVersion;
   return liveScreenClip.value ? props.frameFor(liveScreenClip.value.id) : null;
@@ -162,6 +158,24 @@ watch(
     cameraZoom.resetCamera();
   },
 );
+const captionEditing = useCaptionInlineEditing({
+  composition: () => props.composition,
+  selectedClip: () => props.selectedTransformClip,
+  isPlaying: () => props.isPlaying,
+  isCropping: () => Boolean(props.isCropping),
+  isManualZoom: () => props.selectedZoom?.mode === 'manual',
+  logicalSize,
+  outputCanvas: () => props.outputCanvas,
+  selectionViewportStyle: () => transformAndCrop.transformSelectionViewportStyle.value,
+  selectionLayoutStyle: () => transformAndCrop.transformHandleStyle.value,
+  clipIdAt: (event) => transformAndCrop.clipIdAt(event, canvasRef.value),
+  activeCaptionIds: () => currentSceneLayers.value.captions.map((clip) => clip.id),
+  onSelect: (clipId) => emit('select:clip', clipId),
+  onUpdate: (value) => emit('update:caption-text', value),
+  onStart: () => emit('caption-editing-start'),
+  onEnd: (cancelled) => emit('caption-editing-end', { cancelled }),
+  onRender: renderOnce,
+});
 let currentRenderWindow: RenderedVideoWindow | null = null;
 const compositionMedia = useCompositionMedia({
   composition: () => props.composition,
@@ -183,6 +197,7 @@ const compositionMedia = useCompositionMedia({
           screenFrame.value?.height ?? 0,
         )
       : null,
+  editingCaptionId: () => captionEditing.editingCaptionId.value,
   onRenderOnce: renderOnce,
 });
 const drawNonScreenVisuals = (
@@ -332,7 +347,7 @@ const renderCanvas = () => {
 const {
   commitCrop,
   handleIslandPointerDown,
-  handleIslandPointerDownCapture,
+  handleIslandPointerDownCapture: handleCanvasPointerDownCapture,
   handleIslandPointerMove,
   handleIslandPointerUp,
   handleIslandWheel,
@@ -350,6 +365,10 @@ const {
   onSelectClip: (clipId) => emit('select:clip', clipId),
   onDoneCrop: () => emit('done:crop'),
 });
+const handleIslandPointerDownCapture = (event: PointerEvent) => {
+  if ((event.target as Element | null)?.closest('.caption-text-editor')) return;
+  handleCanvasPointerDownCapture(event);
+};
 onUnmounted(() => {
   frameScheduler.dispose();
   if (formatTransitionTimer) clearTimeout(formatTransitionTimer);
@@ -371,6 +390,7 @@ defineExpose({ viewportZoom });
     @pointermove="handleIslandPointerMove"
     @pointerup="handleIslandPointerUp"
     @pointercancel="handleIslandPointerUp"
+    @dblclick="captionEditing.begin"
   >
     <Transition name="fade-slide">
       <div v-if="viewportZoom.isOutOfBounds.value" class="canvas-recenter-float">
@@ -431,62 +451,48 @@ defineExpose({ viewportZoom });
         @resize-move="cursorInteraction.moveResize"
         @resize-end="cursorInteraction.endResize"
       />
-      <div
-        v-if="selectedTransformClip && !selectedCaptionFollowsCursor && !isCropping && selectedZoom?.mode !== 'manual'"
-        class="transform-selection-viewport"
-        :style="transformAndCrop.transformSelectionViewportStyle.value"
-      >
-        <div
-          class="webcam-selection"
-          :class="{ 'is-muted': transformHandlesMuted }"
-          :style="transformAndCrop.transformHandleStyle.value"
-          @pointerdown="handleTransformPointerDown"
-          @pointermove="transformAndCrop.moveTransformDrag"
-          @pointerup="transformAndCrop.endTransformDrag"
-          @pointercancel="transformAndCrop.endTransformDrag"
-        >
-          <ResizeHandle
-            :corners="transformAndCrop.transformResizeCorners.value"
-            @resize-start="(corner, event) => transformAndCrop.beginTransformDrag(event, 'resize', corner)"
-            @resize-move="(_corner, event) => transformAndCrop.moveTransformDrag(event)"
-            @resize-end="(_corner, event) => transformAndCrop.endTransformDrag(event)"
-          />
-        </div>
-      </div>
-      <div
+      <CaptionInlineEditor
+        v-if="captionEditing.editingCaption.value"
+        :clip="captionEditing.editingCaption.value"
+        :viewport-style="transformAndCrop.transformSelectionViewportStyle.value"
+        :layout-style="transformAndCrop.transformHandleStyle.value"
+        :render-scale="captionEditing.renderScale.value"
+        :warning-placement="captionEditing.warningPlacement.value"
+        @update="captionEditing.update"
+        @finish="captionEditing.finish"
+        @cancel="captionEditing.cancel"
+      />
+      <CanvasLayerSelection
+        v-if="
+          selectedTransformClip &&
+          selectedTransformClip.id !== captionEditing.editingCaptionId.value &&
+          !transformCaptionFollowsCursor(selectedTransformClip) &&
+          !isCropping &&
+          selectedZoom?.mode !== 'manual'
+        "
+        :viewport-style="transformAndCrop.transformSelectionViewportStyle.value"
+        :handle-style="transformAndCrop.transformHandleStyle.value"
+        :muted="transformHandlesMuted"
+        :resize-corners="transformAndCrop.transformResizeCorners.value"
+        @pointer-down="handleTransformPointerDown"
+        @pointer-move="transformAndCrop.moveTransformDrag"
+        @pointer-up="transformAndCrop.endTransformDrag"
+        @resize-start="(corner, event) => transformAndCrop.beginTransformDrag(event, 'resize', corner)"
+        @resize-move="transformAndCrop.moveTransformDrag"
+        @resize-end="transformAndCrop.endTransformDrag"
+      />
+      <CanvasCropSelection
         v-if="isCropping && selectedTransformClip"
-        class="crop-container"
-        :style="transformAndCrop.cropContainerStyle.value"
-      >
-        <div class="crop-mask-wrapper">
-          <div class="crop-mask-hole" :style="transformAndCrop.cropOverlayStyle.value" />
-        </div>
-        <div
-          class="crop-overlay-box"
-          :style="transformAndCrop.cropOverlayStyle.value"
-          @pointerdown="transformAndCrop.beginCropDrag($event, 'move')"
-          @pointermove="transformAndCrop.moveCropDrag"
-          @pointerup="transformAndCrop.endCropDrag"
-          @pointercancel="transformAndCrop.endCropDrag"
-        >
-          <div class="crop-grid">
-            <div class="grid-line vertical line-1" />
-            <div class="grid-line vertical line-2" />
-            <div class="grid-line horizontal line-1" />
-            <div class="grid-line horizontal line-2" />
-          </div>
-          <div class="crop-done-wrapper" @pointerdown.stop @mousedown.stop>
-            <Button variant="primary" size="xs" :icon="Check" class="crop-ok-button" @click.stop="commitCrop">{{
-              t('ok')
-            }}</Button>
-          </div>
-          <ResizeHandle
-            @resize-start="(corner, event) => transformAndCrop.beginCropDrag(event, 'resize', corner)"
-            @resize-move="(_corner, event) => transformAndCrop.moveCropDrag(event)"
-            @resize-end="(_corner, event) => transformAndCrop.endCropDrag(event)"
-          />
-        </div>
-      </div>
+        :container-style="transformAndCrop.cropContainerStyle.value"
+        :overlay-style="transformAndCrop.cropOverlayStyle.value"
+        @move-start="transformAndCrop.beginCropDrag($event, 'move')"
+        @move="transformAndCrop.moveCropDrag"
+        @move-end="transformAndCrop.endCropDrag"
+        @resize-start="(corner, event) => transformAndCrop.beginCropDrag(event, 'resize', corner)"
+        @resize-move="transformAndCrop.moveCropDrag"
+        @resize-end="transformAndCrop.endCropDrag"
+        @done="commitCrop"
+      />
     </div>
     <UndoRedoToast :action="historyAction ?? null" />
   </div>

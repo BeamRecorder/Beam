@@ -9,6 +9,7 @@ import type { KeyboardCaptionRun } from '~/media/shared/keyboard-captions';
 import { keyboardCaptionTransformAtCursor } from '~/media/shared/keyboard-caption-position';
 import type { Canvas2DContext } from '~/types/canvas';
 import { applyCanvasCaptionFont } from '~/media/shared/caption-font';
+import { drawCaptionShape } from './render-caption-shape';
 
 export interface CaptionViewport {
   x: number;
@@ -80,47 +81,6 @@ const highlightFillStyle = (
   return gradient;
 };
 
-const createScratchCanvas = (width: number, height: number): OffscreenCanvas | HTMLCanvasElement | null => {
-  if (typeof OffscreenCanvas !== 'undefined') return new OffscreenCanvas(width, height);
-  if (typeof document === 'undefined') return null;
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  return canvas;
-};
-
-function drawBackdropBlur(
-  ctx: Canvas2DContext,
-  rect: { x: number; y: number; width: number; height: number },
-  blur: number,
-) {
-  if (blur <= 0 || rect.width <= 0 || rect.height <= 0) return;
-  const canvas = ctx.canvas;
-  const transform =
-    typeof ctx.getTransform === 'function' ? ctx.getTransform() : { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 };
-  const scaleX = Math.hypot(transform.a, transform.b);
-  const scaleY = Math.hypot(transform.c, transform.d);
-  const x = Math.max(0, Math.floor(rect.x * scaleX + transform.e));
-  const y = Math.max(0, Math.floor(rect.y * scaleY + transform.f));
-  const right = Math.min(canvas.width, Math.ceil((rect.x + rect.width) * scaleX + transform.e));
-  const bottom = Math.min(canvas.height, Math.ceil((rect.y + rect.height) * scaleY + transform.f));
-  const width = right - x;
-  const height = bottom - y;
-  if (width <= 0 || height <= 0) return;
-  const scratch = createScratchCanvas(width, height);
-  const scratchContext = scratch?.getContext('2d');
-  if (!scratch || !scratchContext) throw new Error('Caption backdrop blur requires a 2D scratch canvas.');
-  scratchContext.drawImage(canvas, x, y, width, height, 0, 0, width, height);
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(rect.x, rect.y, rect.width, rect.height);
-  ctx.clip();
-  ctx.filter = `blur(${blur}px)`;
-  const overscan = blur * 2;
-  ctx.drawImage(scratch, rect.x - overscan, rect.y - overscan, rect.width + overscan * 2, rect.height + overscan * 2);
-  ctx.restore();
-}
-
 export function drawCaptionText(
   ctx: Canvas2DContext,
   options: {
@@ -129,6 +89,7 @@ export function drawCaptionText(
     runs?: KeyboardCaptionRun[] | null;
     wordHighlight?: CaptionWordHighlightContent | null;
     cursorPosition?: { x: number; y: number } | null;
+    hideText?: boolean;
     canvas: { width: number; height: number };
     viewport: CaptionViewport;
   },
@@ -186,6 +147,20 @@ export function drawCaptionText(
   const maxTextWidth = layout.maxTextWidth * scale;
   const strokeWidth = Math.max(0, style.outlineWidth) * scale;
   const extrusion = Math.max(0, style.extrusionDepth) * scale;
+  const shapePadding = (clamp(style.shape.padding, 0, 100) / 100) * fontSize;
+  const shapeInset = strokeWidth + extrusion + shapePadding;
+  const drawShapeForText = (rect: { x: number; y: number; width: number; height: number }) =>
+    drawCaptionShape(
+      ctx,
+      {
+        x: rect.x - shapeInset,
+        y: rect.y - shapeInset,
+        width: rect.width + shapeInset * 2,
+        height: rect.height + shapeInset * 2,
+      },
+      style.shape,
+      scale,
+    );
   const shadowBlur = Math.max(0, style.shadowBlur) * scale;
   const offsets = shadowOffsets(shadowBlur, style.shadowDirection);
   applyCanvasCaptionFont(ctx, style, fontSize);
@@ -221,19 +196,16 @@ export function drawCaptionText(
         : style.textAlign === 'right'
           ? centerX + maxTextWidth / 2
           : centerX;
-    const backdropX =
-      (style.textAlign === 'left' ? textX : style.textAlign === 'right' ? textX - widestLine : textX - widestLine / 2) -
-      strokeWidth;
-    drawBackdropBlur(
-      ctx,
-      {
-        x: backdropX,
-        y: firstY - fontSize / 2 - strokeWidth,
-        width: widestLine + strokeWidth * 2 + extrusion,
-        height: Math.max(fontSize, lines.length * lineHeight) + strokeWidth * 2 + extrusion,
-      },
-      style.backdropBlur * scale,
-    );
+    drawShapeForText({
+      x: style.textAlign === 'left' ? textX : style.textAlign === 'right' ? textX - widestLine : textX - widestLine / 2,
+      y: firstY - fontSize / 2,
+      width: widestLine,
+      height: fontSize + Math.max(0, lines.length - 1) * lineHeight,
+    });
+    if (options.hideText) {
+      ctx.restore();
+      return;
+    }
     ctx.textAlign = 'left';
     lines.forEach((line, lineIndex) => {
       const lineWidth = lineWidths[lineIndex] ?? 0;
@@ -302,16 +274,11 @@ export function drawCaptionText(
         : style.textAlign === 'right'
           ? centerX + maxTextWidth / 2 - renderedWidth
           : centerX - renderedWidth / 2;
-    drawBackdropBlur(
-      ctx,
-      {
-        x: alignedStart - strokeWidth,
-        y: centerY - fontSize / 2 - strokeWidth,
-        width: renderedWidth + strokeWidth * 2 + extrusion,
-        height: fontSize + strokeWidth * 2 + extrusion,
-      },
-      style.backdropBlur * scale,
-    );
+    drawShapeForText({ x: alignedStart, y: centerY - fontSize / 2, width: renderedWidth, height: fontSize });
+    if (options.hideText) {
+      ctx.restore();
+      return;
+    }
     let x = alignedStart;
     ctx.textAlign = 'left';
     for (const run of measured) {
@@ -360,18 +327,16 @@ export function drawCaptionText(
       layout.wrap ? ctx.measureText(line).width : Math.min(maxTextWidth, ctx.measureText(line).width),
     ),
   );
-  drawBackdropBlur(
-    ctx,
-    {
-      x:
-        (style.textAlign === 'left' ? textX : style.textAlign === 'right' ? textX - textWidth : textX - textWidth / 2) -
-        strokeWidth,
-      y: firstY - fontSize / 2 - strokeWidth,
-      width: textWidth + strokeWidth * 2 + extrusion,
-      height: Math.max(fontSize, layout.lines.length * lineHeight) + strokeWidth * 2 + extrusion,
-    },
-    style.backdropBlur * scale,
-  );
+  drawShapeForText({
+    x: style.textAlign === 'left' ? textX : style.textAlign === 'right' ? textX - textWidth : textX - textWidth / 2,
+    y: firstY - fontSize / 2,
+    width: textWidth,
+    height: fontSize + Math.max(0, layout.lines.length - 1) * lineHeight,
+  });
+  if (options.hideText) {
+    ctx.restore();
+    return;
+  }
   const drawLine = (line: string, y: number) => {
     if (extrusion > 0) {
       ctx.save();

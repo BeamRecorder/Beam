@@ -14,14 +14,14 @@ import SettingsPanel from '~/components/video-editor/properties/settings/Setting
 import ClipPropertiesPanel from '~/components/video-editor/properties/clip/ClipPropertiesPanel.vue';
 import AudioClipPropertiesPanel from '~/components/video-editor/properties/clip/AudioClipPropertiesPanel.vue';
 import BlurPropertiesPanel from '~/components/video-editor/properties/clip/BlurPropertiesPanel.vue';
+import ColorLayerPropertiesPanel from '~/components/video-editor/properties/clip/ColorLayerPropertiesPanel.vue';
 import CaptionPanel from '~/components/video-editor/properties/captions/CaptionPanel.vue';
 import CaptionClipPanel from '~/components/video-editor/properties/captions/CaptionClipPanel.vue';
 import KeyboardCaptionClipPanel from '~/components/video-editor/properties/captions/KeyboardCaptionClipPanel.vue';
 import ClipTransitionsPanel from '~/components/video-editor/properties/clip/ClipTransitionsPanel.vue';
 import TransitionSettingsPanel from '~/components/video-editor/properties/clip/TransitionSettingsPanel.vue';
 import PropertiesPanelHeader from './PropertiesPanelHeader.vue';
-import { setClipTransition } from '~/components/video-editor/composition/engine/clip-engine';
-import type { ClipTransition } from '~/media/shared/composition-types';
+import { setClipTransition, setColorFill } from '~/components/video-editor/composition/engine/clip-engine';
 import { EMPTY_CLIP_TRANSITIONS, normalizeCanvasTransitions } from '~/media/shared/clip-transitions';
 import ScrollShadow from '~/ui/scroll-shadow/ScrollShadow.vue';
 import {
@@ -37,6 +37,7 @@ import type {
   ClipFrame,
   ClipComposition,
   NormalizedTransform,
+  ClipTransition,
 } from '~/media/shared/composition-types';
 import type { ProjectEditorData } from '../../../api/types/capture-api';
 import type { OutputCanvasSettings } from '../canvas/output-canvas';
@@ -47,14 +48,13 @@ import type {
   CursorMotionSettings,
 } from '../../../api/types/cursor-settings';
 import { useTranslate } from '~/i18n/useTranslate';
-import { isKeyboardCaptionClip } from '~/media/shared/composition-types';
+import { isColorClip, isKeyboardCaptionClip } from '~/media/shared/composition-types';
 import { usePropertiesPanelNavigation } from './usePropertiesPanelNavigation';
 import type { SelectedClipProperties } from './properties-panel-types';
 import type { CameraFramingPreset, CameraLayoutPreset } from '~/media/shared/camera-layout-types';
 import { selectedClipNames } from './clip-selection-names';
-import { propertiesPanelTitle } from './properties-panel-title';
+import { clipTransitionPanelTitle, propertiesPanelTitle } from './properties-panel-title';
 import { applyCaptionSelectionUpdate } from '../composition/caption-selection';
-export type { SelectedClipProperties } from './properties-panel-types';
 const { t } = useTranslate('PropertiesPanel');
 const { t: tClip } = useTranslate('ClipPropertiesPanel');
 const { t: tCaption } = useTranslate('CaptionClipPanel');
@@ -65,6 +65,7 @@ const { t: tTimeline } = useTranslate('TimelineTracks');
 const { t: tTimelineToolbar } = useTranslate('TimelineToolbar');
 const { t: tTransitions } = useTranslate('TransitionsPanel');
 const { t: tAudioClip } = useTranslate('AudioClipPropertiesPanel');
+const { t: tCanvas } = useTranslate('CanvasPanel');
 const props = withDefaults(
   defineProps<{
     activeTab: string;
@@ -139,9 +140,6 @@ const { transitionsOpen, navigationDirection, openTransitions, closeTransitions 
   canOpenTransitions: () => props.activeTab === 'canvas' || Boolean(selectedDomainClip.value),
 });
 const panelTransitionName = computed(() => `properties-panel-${navigationDirection.value}`);
-const focusTransitionButton = () => {
-  if (!transitionsOpen.value) panelHeader.value?.focusTransitionButton();
-};
 const openTransitionEdge = (edge: 'entry' | 'exit' = 'entry') => {
   transitionEdge.value = edge;
   return openTransitions();
@@ -161,13 +159,7 @@ const updateCanvasTransition = (edge: 'entry' | 'exit', value: ClipTransition | 
 };
 const transitionPanelTitle = computed(() => {
   if (props.activeTab === 'canvas') return tTransitions('canvasTransitions');
-  const kind = selectedDomainClip.value?.kind;
-  if (kind === 'caption') return 'Caption Transitions';
-  if (kind === 'audio') return 'Audio Transitions';
-  if (kind === 'blur') return 'Blur Transitions';
-  if (kind === 'image') return 'Image Transitions';
-  if (kind === 'webcam') return 'Webcam Transitions';
-  return 'Video Transitions';
+  return clipTransitionPanelTitle(selectedDomainClip.value?.kind, () => tTransitions('clipTransitions'));
 });
 const panelTitle = computed(() =>
   propertiesPanelTitle(
@@ -176,7 +168,7 @@ const panelTitle = computed(() =>
       props.selectedClip?.kind ??
       props.selectedCaptionClip?.kind ??
       null) as ClipKind | null,
-    { t, tSidebar, tTimeline, tTimelineToolbar },
+    { t, tSidebar, tTimeline, tTimelineToolbar, tCanvas },
   ),
 );
 const emit = defineEmits<{
@@ -341,7 +333,7 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
         @toggle="handleToggleClipEnabled"
         @delete="handleDelete"
         @transition="openTransitionEdge()"
-        @after-enter="focusTransitionButton"
+        @after-enter="!transitionsOpen && panelHeader?.focusTransitionButton()"
       />
       <ScrollShadow class="panel-scroll-shadow">
         <Transition :name="panelTransitionName" mode="out-in">
@@ -377,6 +369,11 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
               v-else-if="activeTab === 'clip' && normalizedSelectedClip?.kind === 'audio'"
               :clip="normalizedSelectedClip"
               @update:volume="emit('update:clip-volume', $event)"
+            />
+            <ColorLayerPropertiesPanel
+              v-else-if="activeTab === 'clip' && selectedDomainClip && isColorClip(selectedDomainClip)"
+              :clip="selectedDomainClip"
+              @update="emit('update:composition', setColorFill(composition, selectedDomainClip.id, $event))"
             />
             <BlurPropertiesPanel
               v-else-if="activeTab === 'clip' && normalizedSelectedClip?.kind === 'blur'"

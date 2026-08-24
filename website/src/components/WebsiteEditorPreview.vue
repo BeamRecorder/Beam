@@ -20,7 +20,11 @@ import {
 import { compositionPlaybackSignature } from '~/components/video-editor/composables/composition-playback-signature';
 import { MACOS_CURSOR_PACK } from '~/components/video-editor/properties/cursor/cursor-packs';
 import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
-import { createDefaultCursorClickEffects, createDefaultCursorMotionSettings } from '~/api/types/cursor-settings';
+import {
+  createDefaultCursorAutoHideSettings,
+  createDefaultCursorClickEffects,
+  createDefaultCursorMotionSettings,
+} from '~/api/types/cursor-settings';
 import {
   emptyComposition,
   isBlurClip,
@@ -58,6 +62,7 @@ const projectIssues = ref<WebsiteDemoFileIssue[]>([]);
 const outputCanvas = ref({ ...DEFAULT_OUTPUT_CANVAS });
 const cursorClickEffects = createDefaultCursorClickEffects();
 const cursorMotion = createDefaultCursorMotionSettings();
+const cursorAutoHide = createDefaultCursorAutoHideSettings();
 const player = useWebsiteDemoPlayer();
 const notice = ref(t('Website.editor.checking'));
 let generatedId = 0;
@@ -208,7 +213,7 @@ const addCaption = (timeMs: number) => {
   selectClip(composition.value.clips.at(-1)?.id ?? '');
 };
 
-const addTimelineElement = (type: 'video' | 'image' | 'sound' | 'caption' | 'blur') => {
+const addTimelineElement = (type: 'video' | 'image' | 'sound' | 'caption' | 'color' | 'blur') => {
   if (type === 'caption') {
     addCaption(Math.round(player.currentTime.value * 1_000));
     return;
@@ -309,6 +314,7 @@ defineExpose({ play });
             shadow-direction="bottom"
             :click-effects="cursorClickEffects"
             :motion="cursorMotion"
+            :auto-hide="cursorAutoHide"
             :selected-background="null"
             :background-blur-percent="0"
             :frame-for="player.frameFor"

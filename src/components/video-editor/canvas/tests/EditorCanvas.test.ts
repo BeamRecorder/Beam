@@ -5,11 +5,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import EditorCanvas from '../EditorCanvas.vue';
 import CanvasLoadingSkeleton from '../CanvasLoadingSkeleton.vue';
 import { DEFAULT_OUTPUT_CANVAS } from '../output-canvas';
-import type { ClipComposition, VisualClip } from '~/media/shared/composition-types';
+import type { CaptionClip, ClipComposition, VisualClip } from '~/media/shared/composition-types';
 import type { MediaFrame } from '~/media/shared';
 import type { CursorAutoHideSettings, CursorClickEffects } from '../../../../api/types/cursor-settings';
 import ResizeHandle from '../../../ui/ResizeHandle/ResizeHandle.vue';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import { resolveCompositionSceneLayers } from '../../composition/scene-layers';
 
 const { state } = vi.hoisted(() => ({
@@ -200,7 +200,7 @@ const effects: CursorClickEffects = {
     rippleColor: '#00f',
   },
 };
-const autoHide: CursorAutoHideSettings = { enabled: false, delaySeconds: 2 };
+const autoHide: CursorAutoHideSettings = { enabled: false, delaySeconds: 2, fadeDurationMs: 250 };
 
 const screen = (): VisualClip => ({
   id: 'screen',
@@ -254,6 +254,36 @@ const image = (): VisualClip => ({
   appearance: createDefaultClipAppearance('image'),
   isMirrored: false,
   isMirroredY: false,
+});
+
+const caption = (): CaptionClip => ({
+  id: 'caption',
+  kind: 'caption',
+  name: 'Caption',
+  timelineStartMs: 0,
+  timelineDurationMs: 2_000,
+  sourceInMs: 0,
+  sourceDurationMs: 2_000,
+  playbackRate: 1,
+  enabled: true,
+  order: -1,
+  isAiGenerated: false,
+  caption: {
+    type: 'text',
+    sentences: [
+      {
+        id: 'sentence',
+        text: 'Original sentence',
+        startMs: 0,
+        endMs: 2_000,
+        words: [],
+      },
+    ],
+    style: {
+      ...createDefaultCaptionStyle(40),
+      customText: 'Original caption',
+    },
+  },
 });
 
 const frame = (clipId: string, width = 1_280, height = 720): MediaFrame => ({
@@ -813,6 +843,55 @@ describe('EditorCanvas', () => {
     expect(cursorOrder).toBeDefined();
     expect(captionOrder).toBeDefined();
     expect(captionOrder).toBeGreaterThan(cursorOrder!);
+  });
+
+  it('opens the native caption editor from the caption hit-test and restores text on Escape', async () => {
+    const testCaption = caption();
+    const testComposition = composition();
+    testComposition.clips.push(testCaption);
+    state.clipIdAt.mockReturnValue('caption');
+    wrapper = mount(EditorCanvas, {
+      props: {
+        ...props(),
+        composition: testComposition,
+        selectedTransformClip: screen(),
+      },
+      global: { plugins: [MotionPlugin] },
+      attachTo: document.body,
+    });
+    const mounted = wrapper;
+    const island = mounted.get('.canvas-island');
+
+    await island.trigger('dblclick', { button: 0, clientX: 400, clientY: 225 });
+    await nextTick();
+
+    expect(state.clipIdAt).toHaveBeenCalledWith(
+      expect.objectContaining({ clientX: 400, clientY: 225 }),
+      expect.any(HTMLCanvasElement),
+    );
+    expect(mounted.emitted('select:clip')).toContainEqual(['caption']);
+    expect(mounted.emitted('caption-editing-start')).toHaveLength(1);
+    const textarea = mounted.get('textarea').element as HTMLTextAreaElement;
+    expect(document.activeElement).toBe(textarea);
+    expect(textarea.selectionStart).toBe(textarea.value.length);
+    expect(textarea.selectionEnd).toBe(textarea.value.length);
+
+    vi.useFakeTimers();
+    await mounted.get('textarea').setValue('Edited caption');
+    vi.advanceTimersByTime(150);
+    await nextTick();
+    expect(mounted.emitted('update:caption-text')).toContainEqual([
+      { clipId: 'caption', customText: 'Edited caption' },
+    ]);
+
+    await mounted.get('textarea').trigger('keydown', { key: 'Escape' });
+    await nextTick();
+
+    expect(mounted.find('textarea').exists()).toBe(false);
+    expect(mounted.emitted('caption-editing-end')).toContainEqual([{ cancelled: true }]);
+    expect(mounted.emitted('update:caption-text')).toContainEqual([
+      { clipId: 'caption', customText: 'Original caption' },
+    ]);
   });
 
   it('raycasts layers above an already selected recording before starting its drag', async () => {

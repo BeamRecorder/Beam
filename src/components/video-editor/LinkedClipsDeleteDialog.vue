@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, watch, type Component } from 'vue';
-import { Captions, Camera, Check, Film, Image, Layers, Monitor, Trash2, Volume2 } from '@lucide/vue';
+import { Captions, Camera, Check, Film, Image, Layers, Monitor, Palette, Trash2, Volume2 } from '@lucide/vue';
 import Button from '~/components/ui/button/Button.vue';
 import Dialog from '~/components/ui/dialog/Dialog.vue';
 import type { Clip, ClipKind } from '~/media/shared/composition-types';
@@ -15,17 +15,19 @@ const emit = defineEmits<{
   (event: 'delete', clipIds: string[]): void;
 }>();
 const { t } = useTranslate('LinkedClipsDeleteDialog');
+const { t: tCanvas } = useTranslate('CanvasPanel');
 
 const kindIcons: Record<ClipKind, Component> = {
   screen: Monitor,
   video: Film,
   image: Image,
   webcam: Camera,
+  color: Palette,
   blur: Layers,
   audio: Volume2,
   caption: Captions,
 };
-const kindLabel = (kind: ClipKind) => t(`kind.${kind}`);
+const kindLabel = (kind: ClipKind) => (kind === 'color' ? tCanvas('color') : t(`kind.${kind}`));
 const allClipIds = computed(() => props.clips.map((clip) => clip.id));
 const COMPLETION_CLOSE_DELAY_MS = 900;
 let hadClips = false;

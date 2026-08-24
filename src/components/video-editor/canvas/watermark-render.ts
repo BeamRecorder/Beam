@@ -3,7 +3,6 @@ import type { Canvas2DContext } from '~/types/canvas';
 
 export const WATERMARK_LOGO_KEY = '__beam-watermark-logo';
 export const WATERMARK_LOGO_PATH = '/brand/BeamIcon.webp';
-const BEAM_LOGO_CROP = { x: 93, y: 93, size: 1068 } as const;
 
 export function drawBeamWatermark(
   context: Canvas2DContext,
@@ -64,17 +63,7 @@ export function drawBeamWatermark(
   context.shadowBlur = 0;
   let contentX = x + paddingX;
   if (logoSize && logo) {
-    context.drawImage(
-      logo,
-      BEAM_LOGO_CROP.x,
-      BEAM_LOGO_CROP.y,
-      BEAM_LOGO_CROP.size,
-      BEAM_LOGO_CROP.size,
-      contentX,
-      y + (height - logoSize) / 2,
-      logoSize,
-      logoSize,
-    );
+    context.drawImage(logo, contentX, y + (height - logoSize) / 2, logoSize, logoSize);
     contentX += logoSize + gap;
   }
   if (text) {

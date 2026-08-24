@@ -2,7 +2,7 @@ import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick, reactive } from 'vue';
 import TimelineClip from '../TimelineClip.vue';
-import type { Clip, MediaAsset } from '~/media/shared/composition-types';
+import type { Clip, ColorClip, MediaAsset } from '~/media/shared/composition-types';
 import type { MediaError } from '~/media/shared/media-types';
 
 const thumbnailState = vi.hoisted(() => ({
@@ -45,6 +45,18 @@ const clip = (overrides: Partial<Clip> = {}): Clip =>
     transform: { x: 0, y: 0, width: 1, height: 1 },
     ...overrides,
   }) as Clip;
+
+const colorLayerClip = (fill: ColorClip['fill'] = { kind: 'color', color: '#111827' }): ColorClip =>
+  ({
+    ...clip(),
+    id: 'color-clip',
+    kind: 'color',
+    name: 'Color board',
+    timelineDurationMs: 3_000,
+    sourceDurationMs: 3_000,
+    assetId: '',
+    fill,
+  }) as ColorClip;
 
 const baseProps = {
   clip: clip(),
@@ -204,6 +216,40 @@ describe('TimelineClip', () => {
     expect(wrapper.get('.timeline-clip').classes()).toContain('trim-at-limit');
     expect(wrapper.get('.trim-handle.end').classes()).toContain('at-limit');
     expect(wrapper.get('.trim-side-badge').classes()).toContain('at-limit');
+  });
+
+  it('renders solid and radial color layers without media thumbnails', async () => {
+    const wrapper = mount(TimelineClip, {
+      props: {
+        ...baseProps,
+        clip: colorLayerClip(),
+        asset: null,
+        thumbnailSlots: [],
+      },
+      global: { stubs: { Skeleton, WaveformCanvas } },
+    });
+
+    expect(wrapper.get('.timeline-clip').classes()).toEqual(expect.arrayContaining(['kind-color', 'selected']));
+    expect(wrapper.find('.color-preview').attributes('style')).toContain('background: rgb(17, 24, 39)');
+    expect(wrapper.findAll('.thumbnail-frame')).toHaveLength(0);
+    expect(wrapper.find('.waveform').exists()).toBe(false);
+
+    await wrapper.setProps({
+      clip: colorLayerClip({
+        kind: 'gradient',
+        gradient: {
+          type: 'radial',
+          angle: 0,
+          stops: [
+            { id: 'inner', position: 0, color: '#000000', alpha: 1 },
+            { id: 'outer', position: 1, color: '#ffffff', alpha: 0.5 },
+          ],
+        },
+      }),
+    });
+
+    expect(wrapper.find('.color-preview').attributes('style')).toContain('radial-gradient(circle');
+    wrapper.unmount();
   });
 
   it('requests only frames in the virtualized viewport and refreshes after a zoom-derived range changes', async () => {

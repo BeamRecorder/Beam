@@ -80,6 +80,30 @@ const normalizeWordHighlight = (value) => {
   };
 };
 
+const normalizeCaptionShape = (value, legacyBlur) => {
+  const hasShape = value && typeof value === 'object';
+  const shape = hasShape ? value : {};
+  const preset = ['square', 'rounded', 'pill', 'custom'].includes(shape.preset)
+    ? shape.preset
+    : finite(legacyBlur) && legacyBlur > 0
+      ? 'square'
+      : 'rounded';
+  return {
+    preset,
+    radius: finite(shape.radius) ? Math.max(0, Math.min(100, shape.radius)) : 35,
+    color: typeof shape.color === 'string' ? shape.color : '#000000',
+    opacity: finite(shape.opacity) ? Math.max(0, Math.min(100, shape.opacity)) : hasShape ? 50 : 0,
+    blur: finite(shape.blur)
+      ? Math.max(0, Math.min(48, shape.blur))
+      : finite(legacyBlur)
+        ? Math.max(0, Math.min(48, legacyBlur))
+        : hasShape
+          ? 8
+          : 0,
+    padding: finite(shape.padding) ? Math.max(0, Math.min(100, shape.padding)) : hasShape ? 30 : 0,
+  };
+};
+
 const normalizeCaptionStyle = (value) => {
   const style = value || {};
   if (
@@ -88,7 +112,6 @@ const normalizeCaptionStyle = (value) => {
     typeof style.wrap !== 'boolean' ||
     typeof style.shadowColor !== 'string' ||
     !finite(style.shadowBlur) ||
-    !finite(style.backdropBlur) ||
     typeof style.outlineColor !== 'string' ||
     !finite(style.outlineWidth) ||
     !finite(style.extrusionDepth) ||
@@ -112,7 +135,7 @@ const normalizeCaptionStyle = (value) => {
     wrap: style.wrap,
     shadowColor: style.shadowColor,
     shadowBlur: Math.max(0, style.shadowBlur),
-    backdropBlur: Math.max(0, Math.min(48, style.backdropBlur)),
+    shape: normalizeCaptionShape(style.shape, style.backdropBlur),
     outlineColor: style.outlineColor,
     outlineWidth: Math.max(0, Math.min(30, style.outlineWidth)),
     extrusionDepth: Math.max(0, Math.min(20, style.extrusionDepth)),

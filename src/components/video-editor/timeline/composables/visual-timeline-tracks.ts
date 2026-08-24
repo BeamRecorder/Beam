@@ -1,7 +1,7 @@
-import type { BlurClip, VisualClip } from '~/media/shared/composition-types';
+import type { BlurClip, ColorClip, VisualClip } from '~/media/shared/composition-types';
 import type { VisualTimelineTrack } from './timeline-tracks-types';
 
-type CompositingClip = VisualClip | BlurClip;
+type CompositingClip = VisualClip | ColorClip | BlurClip;
 
 export const groupVisualTimelineTracks = (clips: CompositingClip[]): VisualTimelineTrack[] => {
   const grouped = new Map<string, CompositingClip[]>();

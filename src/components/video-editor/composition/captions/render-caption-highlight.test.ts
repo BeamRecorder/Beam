@@ -4,6 +4,11 @@ import type { CaptionClip } from '~/media/shared/composition-types';
 import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
 import { drawCaptionText } from './render-caption-text';
 
+const testCaptionStyle = (fontSize: number) => {
+  const style = createDefaultCaptionStyle(fontSize);
+  return { ...style, shape: { ...style.shape, opacity: 0, blur: 0 } };
+};
+
 const highlightClip = (overrides: Partial<CaptionClip['caption']['style']['wordHighlight']> = {}): CaptionClip => ({
   id: 'caption',
   kind: 'caption',
@@ -19,16 +24,16 @@ const highlightClip = (overrides: Partial<CaptionClip['caption']['style']['wordH
     type: 'text',
     sentences: [],
     style: {
-      ...createDefaultCaptionStyle(40),
+      ...testCaptionStyle(40),
       textAlign: 'center',
       color: '#ffffff',
       shadowBlur: 0,
-      backdropBlur: 0,
+      shape: testCaptionStyle(40).shape,
       outlineWidth: 0,
       extrusionDepth: 0,
       placement: 'center',
       wordHighlight: {
-        ...createDefaultCaptionStyle(40).wordHighlight,
+        ...testCaptionStyle(40).wordHighlight,
         enabled: true,
         effect: 'none',
         ...overrides,

@@ -176,12 +176,12 @@ describe('createCompositionSnapshot', () => {
 
   it('copies auto-hide settings into the export snapshot', () => {
     const input = base();
-    input.cursorSettings.autoHide = { enabled: true, delaySeconds: 4.5 };
+    input.cursorSettings.autoHide = { enabled: true, delaySeconds: 4.5, fadeDurationMs: 600 };
 
     const snapshot = createCompositionSnapshot(input);
     input.cursorSettings.autoHide.delaySeconds = 1;
 
-    expect(snapshot.cursorSettings.autoHide).toEqual({ enabled: true, delaySeconds: 4.5 });
+    expect(snapshot.cursorSettings.autoHide).toEqual({ enabled: true, delaySeconds: 4.5, fadeDurationMs: 600 });
   });
 
   it('keeps an immutable copy of zooms and composition', () => {

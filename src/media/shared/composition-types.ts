@@ -1,13 +1,15 @@
 import type { CameraFramingPreset, CameraLayoutPreset } from './camera-layout-types';
 import type { CaptionHighlightStyle } from './caption-highlight-types';
+import type { CaptionShapeStyle } from './caption-shape-types';
+import type { ColorFill } from './color-fill-types';
 
-export const COMPOSITION_SCHEMA_VERSION = 11 as const;
+export const COMPOSITION_SCHEMA_VERSION = 12 as const;
 export const SCREEN_CLIP_ID = 'screen';
 
 export type MediaKind = 'video' | 'image' | 'audio';
 export type BlurEffectShape = 'rectangle' | 'square' | 'circle';
 export type BlurEffectMode = 'blur' | 'frosted' | 'pixelated' | 'opaque';
-export type ClipKind = 'screen' | 'video' | 'image' | 'webcam' | 'blur' | 'audio' | 'caption';
+export type ClipKind = 'screen' | 'video' | 'image' | 'webcam' | 'color' | 'blur' | 'audio' | 'caption';
 export type AudioRole = 'system' | 'microphone' | 'imported';
 
 export type TransitionPreset =
@@ -77,7 +79,7 @@ export interface CaptionStyle {
   shadowDirection?: 'all' | 'bottom' | 'bottom-right' | 'top-left';
   shadowOffsetX?: number;
   shadowOffsetY?: number;
-  backdropBlur: number;
+  shape: CaptionShapeStyle;
   outlineColor: string;
   outlineWidth: number;
   extrusionDepth: number;
@@ -209,6 +211,14 @@ export interface BlurClip extends ClipBase {
   color: string;
 }
 
+export interface ColorClip extends ClipBase {
+  kind: 'color';
+  /** Kept empty because generated color clips have no media asset. */
+  assetId: string;
+  transform: NormalizedTransform;
+  fill: ColorFill;
+}
+
 export interface AudioClip extends ClipBase {
   kind: 'audio';
   assetId: string;
@@ -225,7 +235,7 @@ export interface CaptionClip extends ClipBase {
   isAiGenerated?: boolean;
 }
 
-export type Clip = VisualClip | BlurClip | AudioClip | CaptionClip;
+export type Clip = VisualClip | ColorClip | BlurClip | AudioClip | CaptionClip;
 
 export interface ClipComposition {
   schemaVersion: number;
@@ -248,7 +258,9 @@ export const isVisualClip = (clip: Clip): clip is VisualClip =>
   clip.kind === 'screen' || clip.kind === 'video' || clip.kind === 'image' || clip.kind === 'webcam';
 
 export const isBlurClip = (clip: Clip): clip is BlurClip => clip.kind === 'blur';
-export const isCompositingClip = (clip: Clip): clip is VisualClip | BlurClip => isVisualClip(clip) || isBlurClip(clip);
+export const isColorClip = (clip: Clip): clip is ColorClip => clip.kind === 'color';
+export const isCompositingClip = (clip: Clip): clip is VisualClip | ColorClip | BlurClip =>
+  isVisualClip(clip) || isColorClip(clip) || isBlurClip(clip);
 
 export const isAudioClip = (clip: Clip): clip is AudioClip => clip.kind === 'audio';
 export const isCaptionClip = (clip: Clip): clip is CaptionClip => clip.kind === 'caption';

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import type { AudioClip, BlurClip, Clip, ClipComposition, VisualClip } from '~/media/shared/composition-types';
+import type {
+  AudioClip,
+  BlurClip,
+  Clip,
+  ClipComposition,
+  ColorClip,
+  VisualClip,
+} from '~/media/shared/composition-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import { createCompositionSceneLayerResolver, resolveCompositionSceneLayers } from '../scene-layers';
 
@@ -42,6 +49,23 @@ const blur = (order: number): BlurClip => ({
   cornerRadius: 0,
   tintOpacity: 0,
   color: '#000000',
+});
+
+const color = (order: number, id = 'color'): ColorClip => ({
+  id,
+  kind: 'color',
+  assetId: '',
+  name: 'Color',
+  trackId: `${id}-track`,
+  timelineStartMs: 0,
+  timelineDurationMs: 1_000,
+  sourceInMs: 0,
+  sourceDurationMs: 1_000,
+  playbackRate: 1,
+  enabled: true,
+  order,
+  transform: { x: 0, y: 0, width: 1, height: 1 },
+  fill: { kind: 'color', color: '#111827' },
 });
 
 const audio = (id: string, order: number): AudioClip => ({
@@ -164,6 +188,20 @@ describe('resolveCompositionSceneLayers', () => {
     );
 
     expect(layers.visualStack.map((clip) => clip.id)).toEqual(['screen', 'below', 'blur', 'above']);
+  });
+
+  it('keeps color layers in compositing z-order without exposing them as camera visuals', () => {
+    const layers = resolveCompositionSceneLayers(
+      composition(visual('video', 'video', 1), color(3), visual('screen', 'screen', 0)),
+      500,
+    );
+
+    expect(layers.cameraVisuals.map((clip) => clip.id)).toEqual(['video', 'screen']);
+    expect(layers.visualStack.map((clip) => clip.id)).toEqual(['color', 'video', 'screen']);
+    expect(layers.visualStack.find((clip) => clip.kind === 'color')).toMatchObject({
+      order: 3,
+      transform: { x: 0, y: 0, width: 1, height: 1 },
+    });
   });
 
   it('omits disabled and inactive clips from every scene layer', () => {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, toRef } from 'vue';
+import { TriangleAlert } from '@lucide/vue';
 import Input from '~/ui/input/Input.vue';
 import Divider from '~/ui/divider/Divider.vue';
 import type { CaptionClip, CaptionStyle } from '~/media/shared/composition-types';
@@ -24,7 +25,7 @@ const captionStyle = computed<CaptionStyle>(() => ({
 }));
 const sentences = computed(() => (draft.value?.caption.type === 'text' ? draft.value.caption.sentences : []));
 const displayText = computed(
-  () => captionStyle.value.customText || sentences.value.map((sentence) => sentence.text).join(' '),
+  () => captionStyle.value.customText ?? sentences.value.map((sentence) => sentence.text).join(' '),
 );
 
 const updateStyle = (key: keyof CaptionStyle, value: CaptionStyle[keyof CaptionStyle]) =>
@@ -55,6 +56,10 @@ const previewStyle = (patch: Partial<CaptionStyle> | null) => {
             :debounce="150"
             @update:model-value="updateStyle('customText', String($event))"
           />
+          <div v-if="draft.isAiGenerated" class="ai-edit-warning" role="status" aria-live="polite">
+            <TriangleAlert :size="14" aria-hidden="true" />
+            <span>{{ t('aiTimingEditWarning') }}</span>
+          </div>
           <p class="section-desc">{{ t('customTextDescription') }}</p>
         </div>
       </div>
@@ -64,7 +69,7 @@ const previewStyle = (patch: Partial<CaptionStyle> | null) => {
         :style="captionStyle"
         :default-font-size="36"
         :sample-text="displayText"
-        show-word-highlight
+        :show-word-highlight="draft.isAiGenerated === true"
         :word-highlight-available="sentences.some((sentence) => sentence.words.length > 0)"
         @update="updateStyle"
         @preview="previewStyle"
@@ -108,6 +113,22 @@ const previewStyle = (patch: Partial<CaptionStyle> | null) => {
   color: var(--text-muted);
   line-height: 1.4;
   margin: 0;
+}
+.ai-edit-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 7px 8px;
+  border: 1px solid color-mix(in srgb, var(--color-warning) 38%, var(--color-border));
+  border-radius: var(--radius-md);
+  background: var(--color-warning-light);
+  color: var(--text-secondary);
+  font-size: 10px;
+  line-height: 1.4;
+}
+.ai-edit-warning svg {
+  flex: 0 0 auto;
+  color: var(--color-warning);
 }
 .sub-label {
   font-size: 10px;

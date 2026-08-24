@@ -6,6 +6,7 @@ const translations = {
   tSidebar: (key: string) => `sidebar:${key}`,
   tTimeline: (key: string) => `timeline:${key}`,
   tTimelineToolbar: (key: string) => `toolbar:${key}`,
+  tCanvas: (key: string) => `canvas:${key}`,
 };
 
 describe('propertiesPanelTitle', () => {
@@ -14,6 +15,7 @@ describe('propertiesPanelTitle', () => {
     ['video', 'timeline:video'],
     ['image', 'toolbar:image'],
     ['webcam', 'timeline:webcam'],
+    ['color', 'canvas:color'],
     ['blur', 'timeline:blur'],
     ['caption', 'sidebar:captions'],
     ['audio', 'sidebar:audio'],

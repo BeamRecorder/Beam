@@ -1,6 +1,6 @@
 import { ref, shallowRef } from 'vue';
 import type { ProjectEditorData } from '~/api/types/capture-session';
-import { buttonEventsBetween, cursorAutoHiddenAt, cursorStateAt } from '../../composables/cursorPlayback';
+import { buttonEventsBetween, cursorAutoHideOpacityAt, cursorStateAt } from '../../composables/cursorPlayback';
 import { useCursorReplacer } from '../../properties/cursor/useCursorReplacer';
 import { ZOOM_DEPTH_SCALES } from '../../zoom/zoom-types';
 import { cursorClickSpringScale } from '../../composables/cursor-click-spring';
@@ -284,8 +284,8 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
             }
           }
           const image = activeCursorImage();
-          const autoHidden = cursorAutoHiddenAt(cursorData.events, time, options.autoHide());
-          if (!state?.visible || autoHidden || !image?.complete || image.naturalWidth <= 0 || !motionState) {
+          const autoHideOpacity = cursorAutoHideOpacityAt(cursorData.events, time, options.autoHide());
+          if (!state?.visible || autoHideOpacity <= 0 || !image?.complete || image.naturalWidth <= 0 || !motionState) {
             updateCursorBounds(null);
             return;
           }
@@ -324,7 +324,7 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
             const sampleState = { ...motionState, x: sample.x, y: sample.y };
             const samplePosition = positionAt(sampleState, videoWindow, videoWidth, videoHeight);
             ctx.save();
-            ctx.globalAlpha *= sample.alpha;
+            ctx.globalAlpha *= sample.alpha * autoHideOpacity;
             if (options.enableShadow()) {
               ctx.shadowColor = options.shadowColor();
               const shadowBlur = options.shadowBlur() * previewScale;

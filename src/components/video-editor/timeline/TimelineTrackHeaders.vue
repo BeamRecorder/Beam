@@ -2,6 +2,7 @@
 import {
   Camera,
   CircleDashed,
+  Palette,
   GripVertical,
   Image as ImageIcon,
   Keyboard,
@@ -11,7 +12,7 @@ import {
   Video,
   Volume2,
 } from '@lucide/vue';
-import type { AudioClip, CaptionClip, Clip, VisualClip, BlurClip } from '~/media/shared/composition-types';
+import type { AudioClip, CaptionClip, Clip, ColorClip, VisualClip, BlurClip } from '~/media/shared/composition-types';
 import type { ImportedAudioTimelineTrack } from './composables/audio-timeline-tracks';
 import type { VisualTimelineTrack } from './composables/timeline-tracks-types';
 import { useTranslate } from '~/i18n/useTranslate';
@@ -33,16 +34,27 @@ defineProps<{
   openTrackContextMenu: (event: MouseEvent, kind: 'visual' | 'zoom' | 'caption' | 'audio', id?: string) => void;
 }>();
 const { t } = useTranslate('TimelineTracks');
-const iconForVisual = (clip: VisualClip | BlurClip) =>
-  clip.kind === 'blur' ? CircleDashed : clip.kind === 'image' ? ImageIcon : clip.kind === 'webcam' ? Camera : Video;
-const labelForVisual = (clip: VisualClip | BlurClip) =>
-  clip.kind === 'blur'
-    ? t('blur')
-    : clip.kind === 'screen'
-      ? t('video')
-      : clip.kind === 'webcam'
-        ? t('webcam')
-        : clip.name;
+const { t: tCanvas } = useTranslate('CanvasPanel');
+const iconForVisual = (clip: VisualClip | ColorClip | BlurClip) =>
+  clip.kind === 'color'
+    ? Palette
+    : clip.kind === 'blur'
+      ? CircleDashed
+      : clip.kind === 'image'
+        ? ImageIcon
+        : clip.kind === 'webcam'
+          ? Camera
+          : Video;
+const labelForVisual = (clip: VisualClip | ColorClip | BlurClip) =>
+  clip.kind === 'color'
+    ? tCanvas('color')
+    : clip.kind === 'blur'
+      ? t('blur')
+      : clip.kind === 'screen'
+        ? t('video')
+        : clip.kind === 'webcam'
+          ? t('webcam')
+          : clip.name;
 const labelForCaption = (clip: CaptionClip) =>
   clip.caption.type === 'text' ? clip.caption.style.customText?.trim() || t('textCaptions') : clip.name;
 </script>

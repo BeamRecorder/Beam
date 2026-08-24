@@ -366,7 +366,7 @@ describe('useCursorOverlay', () => {
     const time = ref(0.2);
     const options = baseOptions();
     options.currentTime = () => time.value;
-    options.autoHide = () => ({ enabled: true, delaySeconds: 0.5 });
+    options.autoHide = () => ({ enabled: true, delaySeconds: 0.5, fadeDurationMs: 0 });
     options.editorData = () =>
       ({
         cursor: {
@@ -420,6 +420,175 @@ describe('useCursorOverlay', () => {
     drawOverlay(overlay, resumedContext);
     expect(resumedContext.drawImage).toHaveBeenCalled();
     expect(overlay.cursorBounds.value).not.toBeNull();
+  });
+
+  it('fades the preview cursor while retaining its bounds until the fade completes', async () => {
+    getCursorImage.mockClear().mockResolvedValue({
+      complete: true,
+      naturalWidth: 32,
+    } as HTMLImageElement);
+    const time = ref(0.5);
+    const options = baseOptions();
+    options.currentTime = () => time.value;
+    options.motion = () => ({
+      preset: 'smooth',
+      smoothing: 0.67,
+      springMassMultiplier: 1.29,
+      motionBlur: 0,
+    });
+    options.autoHide = () => ({ enabled: true, delaySeconds: 0.5, fadeDurationMs: 1_000 });
+    const overlay = useCursorOverlay(options);
+
+    drawOverlay(overlay);
+    await settleCursorImage();
+
+    const fullyVisibleContext = createContext();
+    const fullyVisibleAlphas: number[] = [];
+    (fullyVisibleContext.drawImage as ReturnType<typeof vi.fn>).mockImplementation(() =>
+      fullyVisibleAlphas.push(fullyVisibleContext.globalAlpha),
+    );
+    drawOverlay(overlay, fullyVisibleContext);
+    expect(fullyVisibleAlphas).toEqual([1]);
+
+    time.value = 1.5;
+    const halfVisibleContext = createContext();
+    const halfVisibleAlphas: number[] = [];
+    (halfVisibleContext.drawImage as ReturnType<typeof vi.fn>).mockImplementation(() =>
+      halfVisibleAlphas.push(halfVisibleContext.globalAlpha),
+    );
+    drawOverlay(overlay, halfVisibleContext);
+    expect(halfVisibleAlphas).toEqual([expect.closeTo(0.5, 8)]);
+    expect(overlay.cursorBounds.value).not.toBeNull();
+
+    time.value = 2;
+    const hiddenContext = createContext();
+    drawOverlay(overlay, hiddenContext);
+    expect(hiddenContext.drawImage).not.toHaveBeenCalled();
+    expect(overlay.cursorBounds.value).toBeNull();
+  });
+
+  it('fades the preview cursor back in after a complete hide and resumes instantly with a zero fade', async () => {
+    getCursorImage.mockClear().mockResolvedValue({
+      complete: true,
+      naturalWidth: 32,
+    } as HTMLImageElement);
+    const time = ref(0);
+    const fadeDurationMs = ref(1_000);
+    const options = baseOptions();
+    options.currentTime = () => time.value;
+    options.motion = () => ({
+      preset: 'smooth',
+      smoothing: 0.67,
+      springMassMultiplier: 1.29,
+      motionBlur: 0,
+    });
+    options.autoHide = () => ({ enabled: true, delaySeconds: 1, fadeDurationMs: fadeDurationMs.value });
+    options.editorData = () =>
+      ({
+        cursor: {
+          available: true,
+          events: [
+            {
+              event: 'move',
+              sessionNs: 0,
+              pixelX: 0,
+              pixelY: 0,
+              normalizedX: 0.25,
+              normalizedY: 0.35,
+              visible: true,
+            },
+            {
+              event: 'move',
+              sessionNs: second(3),
+              pixelX: 0,
+              pixelY: 0,
+              normalizedX: 0.75,
+              normalizedY: 0.65,
+              visible: true,
+            },
+          ],
+        },
+      }) as never;
+    const overlay = useCursorOverlay(options);
+
+    drawOverlay(overlay);
+    await settleCursorImage();
+
+    const drawAlphaAt = (nextTime: number) => {
+      time.value = nextTime;
+      const ctx = createContext();
+      const alphas: number[] = [];
+      (ctx.drawImage as ReturnType<typeof vi.fn>).mockImplementation(() => alphas.push(ctx.globalAlpha));
+      drawOverlay(overlay, ctx);
+      return { ctx, alphas };
+    };
+
+    expect(drawAlphaAt(0).alphas).toEqual([1]);
+    expect(drawAlphaAt(2).ctx.drawImage).not.toHaveBeenCalled();
+    expect(drawAlphaAt(3.25).alphas).toEqual([expect.closeTo(0.25, 8)]);
+    expect(drawAlphaAt(3.5).alphas).toEqual([expect.closeTo(0.5, 8)]);
+    expect(drawAlphaAt(4).alphas).toEqual([1]);
+
+    fadeDurationMs.value = 0;
+    expect(drawAlphaAt(3.25).alphas).toEqual([1]);
+  });
+
+  it('does not fade in activity that interrupts the fade-out before the cursor is fully hidden', async () => {
+    getCursorImage.mockClear().mockResolvedValue({
+      complete: true,
+      naturalWidth: 32,
+    } as HTMLImageElement);
+    const time = ref(0);
+    const options = baseOptions();
+    options.currentTime = () => time.value;
+    options.motion = () => ({
+      preset: 'smooth',
+      smoothing: 0.67,
+      springMassMultiplier: 1.29,
+      motionBlur: 0,
+    });
+    options.autoHide = () => ({ enabled: true, delaySeconds: 1, fadeDurationMs: 1_000 });
+    options.editorData = () =>
+      ({
+        cursor: {
+          available: true,
+          events: [
+            {
+              event: 'move',
+              sessionNs: 0,
+              pixelX: 0,
+              pixelY: 0,
+              normalizedX: 0.25,
+              normalizedY: 0.35,
+              visible: true,
+            },
+            {
+              event: 'move',
+              sessionNs: second(1.5),
+              pixelX: 0,
+              pixelY: 0,
+              normalizedX: 0.75,
+              normalizedY: 0.65,
+              visible: true,
+            },
+          ],
+        },
+      }) as never;
+    const overlay = useCursorOverlay(options);
+    drawOverlay(overlay);
+    await settleCursorImage();
+
+    const drawAlphaAt = (nextTime: number) => {
+      time.value = nextTime;
+      const ctx = createContext();
+      const alphas: number[] = [];
+      (ctx.drawImage as ReturnType<typeof vi.fn>).mockImplementation(() => alphas.push(ctx.globalAlpha));
+      drawOverlay(overlay, ctx);
+      return alphas;
+    };
+
+    expect(drawAlphaAt(1.25)).toEqual([expect.closeTo(0.75, 8)]);
+    expect(drawAlphaAt(1.5)).toEqual([1]);
   });
 
   it('keeps the loaded image while cursor size changes, then updates bounds on the next draw', async () => {

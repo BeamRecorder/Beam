@@ -1,5 +1,6 @@
 import {
   clipEndMs,
+  isColorClip,
   isVisualClip,
   type Clip,
   type ClipComposition,
@@ -23,12 +24,13 @@ const targetIds = (composition: ClipComposition, clip: Clip) =>
   );
 
 const assetDurationFor = (composition: ClipComposition, clip: Clip) =>
-  clip.kind === 'caption' || clip.kind === 'blur'
+  clip.kind === 'caption' || isColorClip(clip) || clip.kind === 'blur'
     ? null
     : (composition.assets.find((asset) => asset.id === clip.assetId)?.durationMs ?? null);
 
 const hasUnlimitedDuration = (clip: Clip) =>
   clip.kind === 'caption' ||
+  isColorClip(clip) ||
   clip.kind === 'blur' ||
   (isVisualClip(clip) && (clip.kind === 'image' || clip.freezeFrameSourceMs !== undefined));
 

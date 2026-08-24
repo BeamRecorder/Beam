@@ -81,7 +81,7 @@ describe('cursor and ripple composition rendering', () => {
         },
       ],
     };
-    value.cursorSettings.autoHide = { enabled: true, delaySeconds: 0.2 };
+    value.cursorSettings.autoHide = { enabled: true, delaySeconds: 0.2, fadeDurationMs: 0 };
     value.cursorSettings.motion.motionBlur = 0;
     value.cursorSettings.clickEffects.left = {
       ...value.cursorSettings.clickEffects.left,
@@ -102,6 +102,151 @@ describe('cursor and ripple composition rendering', () => {
 
     expect((ctx.drawImage as ReturnType<typeof vi.fn>).mock.calls.some(([drawn]) => drawn === cursorImage)).toBe(false);
     expect(ctx.arc).toHaveBeenCalled();
+  });
+
+  it('fades the exported cursor after the idle delay', () => {
+    const value = snapshot();
+    value.cursor = {
+      ...value.cursor,
+      available: true,
+      events: [
+        {
+          event: 'move',
+          sessionNs: 0,
+          pixelX: 25,
+          pixelY: 25,
+          normalizedX: 0.25,
+          normalizedY: 0.5,
+          visible: true,
+        },
+      ],
+    };
+    value.cursorSettings.autoHide = { enabled: true, delaySeconds: 0.2, fadeDurationMs: 1_000 };
+    value.cursorSettings.motion.motionBlur = 0;
+    const cursorImage = { complete: true, naturalWidth: 24 } as HTMLImageElement;
+    const ctx = transitionContext();
+    const cursorAlphas: number[] = [];
+    (ctx.drawImage as ReturnType<typeof vi.fn>).mockImplementation((drawn: CanvasImageSource) => {
+      if (drawn === cursorImage) cursorAlphas.push(ctx.globalAlpha);
+    });
+
+    renderCompositionFrame(
+      ctx,
+      { source: {} as CanvasImageSource, width: 100, height: 50 },
+      value,
+      0.7,
+      null,
+      new Map([['default', cursorImage]]),
+    );
+
+    expect(cursorAlphas).toEqual([expect.closeTo(0.5, 8)]);
+  });
+
+  it('fades the exported cursor back in after a complete hide and resumes instantly with a zero fade', () => {
+    const value = snapshot();
+    value.cursor = {
+      ...value.cursor,
+      available: true,
+      events: [
+        {
+          event: 'move',
+          sessionNs: 0,
+          pixelX: 25,
+          pixelY: 25,
+          normalizedX: 0.25,
+          normalizedY: 0.5,
+          visible: true,
+        },
+        {
+          event: 'move',
+          sessionNs: 750_000_000,
+          pixelX: 75,
+          pixelY: 25,
+          normalizedX: 0.75,
+          normalizedY: 0.5,
+          visible: true,
+        },
+      ],
+    };
+    value.cursorSettings.autoHide = { enabled: true, delaySeconds: 0.5, fadeDurationMs: 200 };
+    value.cursorSettings.motion.motionBlur = 0;
+    const cursorImage = { complete: true, naturalWidth: 24 } as HTMLImageElement;
+    const renderAt = (time: number) => {
+      const ctx = transitionContext();
+      const cursorAlphas: number[] = [];
+      (ctx.drawImage as ReturnType<typeof vi.fn>).mockImplementation((drawn: CanvasImageSource) => {
+        if (drawn === cursorImage) cursorAlphas.push(ctx.globalAlpha);
+      });
+      renderCompositionFrame(
+        ctx,
+        { source: {} as CanvasImageSource, width: 100, height: 50 },
+        value,
+        time,
+        null,
+        new Map([['default', cursorImage]]),
+      );
+      return { ctx, cursorAlphas };
+    };
+
+    expect(renderAt(0).cursorAlphas).toEqual([1]);
+    expect(renderAt(0.7).cursorAlphas).toEqual([]);
+    expect(renderAt(0.8).cursorAlphas).toEqual([expect.closeTo(0.25, 8)]);
+    expect(renderAt(0.85).cursorAlphas).toEqual([expect.closeTo(0.5, 8)]);
+    expect(renderAt(0.95).cursorAlphas).toEqual([expect.closeTo(1, 8)]);
+
+    value.cursorSettings.autoHide.fadeDurationMs = 0;
+    expect(renderAt(0.8).cursorAlphas).toEqual([1]);
+  });
+
+  it('keeps an initial cursor fully visible and does not fade in activity before a complete hide', () => {
+    const value = snapshot();
+    value.cursor = {
+      ...value.cursor,
+      available: true,
+      events: [
+        {
+          event: 'move',
+          sessionNs: 0,
+          pixelX: 25,
+          pixelY: 25,
+          normalizedX: 0.25,
+          normalizedY: 0.5,
+          visible: true,
+        },
+        {
+          event: 'move',
+          sessionNs: 250_000_000,
+          pixelX: 75,
+          pixelY: 25,
+          normalizedX: 0.75,
+          normalizedY: 0.5,
+          visible: true,
+        },
+      ],
+    };
+    value.cursorSettings.autoHide = { enabled: true, delaySeconds: 0.1, fadeDurationMs: 200 };
+    value.cursorSettings.motion.motionBlur = 0;
+    const cursorImage = { complete: true, naturalWidth: 24 } as HTMLImageElement;
+    const renderAt = (time: number) => {
+      const ctx = transitionContext();
+      const cursorAlphas: number[] = [];
+      (ctx.drawImage as ReturnType<typeof vi.fn>).mockImplementation((drawn: CanvasImageSource) => {
+        if (drawn === cursorImage) cursorAlphas.push(ctx.globalAlpha);
+      });
+      renderCompositionFrame(
+        ctx,
+        { source: {} as CanvasImageSource, width: 100, height: 50 },
+        value,
+        time,
+        null,
+        new Map([['default', cursorImage]]),
+      );
+      return cursorAlphas;
+    };
+
+    expect(renderAt(0)).toEqual([1]);
+    expect(renderAt(0.2)).toEqual([expect.closeTo(0.5, 8)]);
+    expect(renderAt(0.25)).toEqual([1]);
   });
 
   it.each([

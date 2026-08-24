@@ -106,6 +106,31 @@ describe('caption text layout', () => {
     expect(captionTextAt(clip, 250)).toBe('Custom caption');
   });
 
+  it('keeps an empty custom text override empty in layout and disables AI word highlighting', () => {
+    const clip = timedCaption();
+    if (clip.caption.type !== 'text') throw new Error('Expected a text caption');
+
+    clip.isAiGenerated = true;
+    clip.caption.style.customText = '';
+    const transform = { x: 0.1, y: 0.2, width: 0.5, height: 0.25 };
+    const textAtSentence = captionTextAt(clip, 120);
+    const textBetweenSentences = captionTextAt(clip, 320);
+    const layout = layoutCaptionText({
+      clip,
+      text: textAtSentence,
+      canvasWidth: 1_920,
+      canvasHeight: 1_080,
+      measureText: measureByCharacter,
+      transform,
+    });
+
+    expect(textAtSentence).toBe('');
+    expect(textBetweenSentences).toBe('');
+    expect(layout.lines).toEqual([]);
+    expect(layout.transform).toEqual(transform);
+    expect(captionContentAt(clip, 120)).toEqual({ text: '', runs: null, wordHighlight: null });
+  });
+
   it('resolves active words with half-open boundaries and leaves timing gaps unhighlighted', () => {
     const clip = timedCaption();
 

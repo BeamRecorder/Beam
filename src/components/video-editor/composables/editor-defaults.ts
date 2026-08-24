@@ -33,8 +33,35 @@ const transform = (value: unknown, fallback: VisualClipDefaults['transform']) =>
 };
 
 const captionPreferenceStyle = (value: unknown): Omit<CaptionStyle, 'customText'> => {
-  const { customText: _customText, ...style } = record(value);
-  return clone(style) as Omit<CaptionStyle, 'customText'>;
+  const input = record(value);
+  const { customText: _customText, backdropBlur: legacyBlur, shape: shapeValue, ...style } = input;
+  const shape = record(shapeValue);
+  const hasShape = shapeValue !== null && typeof shapeValue === 'object' && !Array.isArray(shapeValue);
+  const fallback = createDefaultCaptionStyle().shape;
+  return clone({
+    ...style,
+    shape: {
+      preset: ['square', 'rounded', 'pill', 'custom'].includes(String(shape.preset))
+        ? shape.preset
+        : typeof legacyBlur === 'number' && Number.isFinite(legacyBlur) && legacyBlur > 0
+          ? 'square'
+          : fallback.preset,
+      radius: Math.min(100, Math.max(0, finite(shape.radius, fallback.radius))),
+      color: typeof shape.color === 'string' ? shape.color : fallback.color,
+      opacity: Math.min(100, Math.max(0, finite(shape.opacity, hasShape ? fallback.opacity : 0))),
+      blur: Math.min(
+        48,
+        Math.max(
+          0,
+          finite(
+            shape.blur,
+            typeof legacyBlur === 'number' && Number.isFinite(legacyBlur) ? legacyBlur : hasShape ? fallback.blur : 0,
+          ),
+        ),
+      ),
+      padding: Math.min(100, Math.max(0, finite(shape.padding, hasShape ? fallback.padding : 0))),
+    },
+  }) as Omit<CaptionStyle, 'customText'>;
 };
 
 const visualDefaults = (kind: VisualClip['kind'], value: unknown): VisualClipDefaults => {
@@ -197,7 +224,7 @@ export const visualClipDefaultProps = (
 export const captionDefaultsFor = (defaults: EditorPreferenceDefaults, fontSize = 42) => ({
   style: {
     ...createDefaultCaptionStyle(fontSize),
-    ...captionPreferenceStyle(defaults.caption?.style),
+    ...(defaults.caption?.style ? captionPreferenceStyle(defaults.caption.style) : {}),
   },
   transform: defaults.caption?.transform ? clone(defaults.caption.transform) : undefined,
   durationMs: Math.max(200, defaults.caption?.durationMs ?? 2_000),

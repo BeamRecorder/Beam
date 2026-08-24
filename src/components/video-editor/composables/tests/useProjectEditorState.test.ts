@@ -189,7 +189,7 @@ describe('useProjectEditorState property persistence', () => {
       springMassMultiplier: 1.1,
       motionBlur: 0.2,
     });
-    expect(state.cursorAutoHide.value).toEqual({ enabled: false, delaySeconds: 2 });
+    expect(state.cursorAutoHide.value).toEqual({ enabled: false, delaySeconds: 2, fadeDurationMs: 250 });
     expect(editor.loading.value).toBe(false);
   });
 
@@ -341,20 +341,24 @@ describe('useProjectEditorState property persistence', () => {
 
   it('round-trips cursor auto-hide settings through save and load', async () => {
     const savedState = createState();
-    savedState.cursorAutoHide.value = { enabled: true, delaySeconds: 7.5 };
+    savedState.cursorAutoHide.value = { enabled: true, delaySeconds: 7.5, fadeDurationMs: 750 };
     mocks.saveProjectEditorState.mockResolvedValue(undefined);
 
     const savingEditor = useProjectEditorState(savedState);
     await savingEditor.saveNow();
     const persistedState = mocks.saveProjectEditorState.mock.calls[0][1] as ProjectEditorState;
-    expect(persistedState.presentation.cursor.autoHide).toEqual({ enabled: true, delaySeconds: 7.5 });
+    expect(persistedState.presentation.cursor.autoHide).toEqual({
+      enabled: true,
+      delaySeconds: 7.5,
+      fadeDurationMs: 750,
+    });
 
     const loadingState = createState();
     mocks.getProjectEditorState.mockResolvedValue(persistedState);
     const loadingEditor = useProjectEditorState(loadingState);
     await loadingEditor.load('project');
 
-    expect(loadingState.cursorAutoHide.value).toEqual({ enabled: true, delaySeconds: 7.5 });
+    expect(loadingState.cursorAutoHide.value).toEqual({ enabled: true, delaySeconds: 7.5, fadeDurationMs: 750 });
   });
 
   it('persists editor defaults alongside the first successful editor save', async () => {

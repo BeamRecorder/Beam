@@ -25,6 +25,9 @@ import {
   CURSOR_AUTO_HIDE_DELAY_DEFAULT,
   CURSOR_AUTO_HIDE_DELAY_MAX,
   CURSOR_AUTO_HIDE_DELAY_MIN,
+  CURSOR_AUTO_HIDE_FADE_DURATION_DEFAULT,
+  CURSOR_AUTO_HIDE_FADE_DURATION_MAX,
+  CURSOR_AUTO_HIDE_FADE_DURATION_MIN,
   createDefaultCursorAutoHideSettings,
   createDefaultCursorClickEffects,
   createDefaultCursorMotionSettings,
@@ -315,6 +318,16 @@ const selectMotionPreset = (preset: CursorMotionPreset) =>
           :label="t('autoHideDelay')"
           :format-value="(value) => t('secondsValue', { value: value.toFixed(1) })"
           @update:model-value="updateAutoHide({ delaySeconds: $event })"
+        />
+        <BigSlider
+          :model-value="autoHide.fadeDurationMs"
+          :default-value="CURSOR_AUTO_HIDE_FADE_DURATION_DEFAULT"
+          :min="CURSOR_AUTO_HIDE_FADE_DURATION_MIN"
+          :max="CURSOR_AUTO_HIDE_FADE_DURATION_MAX"
+          :step="50"
+          :label="t('autoHideFadeDuration')"
+          :format-value="(value) => t('millisecondsValue', { value })"
+          @update:model-value="updateAutoHide({ fadeDurationMs: $event })"
         />
       </div>
     </BlurRevealTransition>

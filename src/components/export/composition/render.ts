@@ -1,5 +1,11 @@
 import type { CompositionSnapshot } from '../export-types';
-import { isBlurClip, type BlurClip, type CaptionClip, type VisualClip } from '~/media/shared/composition-types';
+import {
+  isBlurClip,
+  isColorClip,
+  type BlurClip,
+  type CaptionClip,
+  type VisualClip,
+} from '~/media/shared/composition-types';
 import {
   drawWebcamOverlay,
   webcamReactsToZoom,
@@ -38,6 +44,7 @@ import {
 } from '../../video-editor/zoom/zoom-motion-blur-compositor';
 import { normalizeZoomMotionBlur } from '../../video-editor/zoom/zoom-types';
 import { sourceTimeAt } from '~/media/shared';
+import { drawColorClip } from '../../video-editor/composition/color/render-color-clip';
 
 export interface RenderableMedia {
   source: CanvasImageSource;
@@ -181,6 +188,12 @@ export function drawCompositionLayers(
   const layers = resolveCompositionSceneLayers(snapshot.composition, timeMs);
   for (const clip of layers.visualStack) {
     if (clip.kind === 'screen') continue;
+    if (isColorClip(clip)) {
+      drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () =>
+        drawColorClip(ctx, clip, { x: 0, y: 0, width: snapshot.canvas.width, height: snapshot.canvas.height }),
+      );
+      continue;
+    }
     if (isBlurClip(clip)) {
       drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () => drawBlurClip(ctx, clip, snapshot.canvas));
       continue;
@@ -301,6 +314,12 @@ function renderCompositionFrameContent(
             mirroredY: screen.isMirroredY,
             mask: screenGeometry?.mask,
           }),
+        );
+        continue;
+      }
+      if (isColorClip(clip)) {
+        drawWithClipTransition(target, clip, timeMs, snapshot.canvas, () =>
+          drawColorClip(target, clip, { x: 0, y: 0, width, height }),
         );
         continue;
       }

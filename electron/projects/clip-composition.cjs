@@ -1,8 +1,9 @@
-const { randomUUID } = require('crypto');
-const fs = require('fs');
 const path = require('path');
-const { pathToFileURL } = require('url');
 const { normalizeCaption } = require('./composition-captions.cjs');
+const { normalizeColorFill } = require('./composition-color-fill.cjs');
+const { historicalAppearance } = require('./composition-appearance.cjs');
+const { normalizeClipTransitions } = require('./composition-clip-transitions.cjs');
+const { materializeComposition, importMedia, pruneProjectMedia } = require('./composition-project-media.cjs');
 const {
   assignMigratedTrackIds,
   repairMigratedTrackIds,
@@ -10,10 +11,11 @@ const {
   validateTrackLayout,
 } = require('./composition-tracks.cjs');
 
-const schemaVersion = 11;
+const schemaVersion = 12;
+const previousCompositionSchemaVersion = 11;
 const captionPreferenceRepairSchemaVersion = 10;
 const keyboardCaptionRetrySchemaVersion = 9;
-const previousCompositionSchemaVersion = 8;
+const captionHighlightSchemaVersion = 8;
 const cameraLayoutSchemaVersion = 7;
 const transitionSchemaVersion = 6;
 const typographySchemaVersion = 5;
@@ -22,7 +24,7 @@ const previousSchemaVersion = 3;
 const captionTypeSchemaVersion = 2;
 const legacySchemaVersion = 1;
 const mediaKinds = new Set(['video', 'image', 'audio']);
-const clipKinds = new Set(['screen', 'video', 'image', 'webcam', 'blur', 'audio', 'caption']);
+const clipKinds = new Set(['screen', 'video', 'image', 'webcam', 'color', 'blur', 'audio', 'caption']);
 const cameraLayoutPresets = new Set([
   'custom',
   'floating-top-left',
@@ -46,11 +48,6 @@ const cameraFramingPresets = new Set([
   'squircle',
   'circle',
 ]);
-const extensions = {
-  video: new Set(['.mp4', '.webm', '.mov', '.mkv']),
-  image: new Set(['.png', '.jpg', '.jpeg', '.webp']),
-  audio: new Set(['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.webm']),
-};
 const finite = (value) => typeof value === 'number' && Number.isFinite(value);
 const text = (value, max = 160) => (typeof value === 'string' ? value.slice(0, max) : '');
 const id = (value) => typeof value === 'string' && value.length > 0 && value.length <= 600;
@@ -61,46 +58,6 @@ const withoutInheritedKeyboardText = (clip) => {
   if (clip?.kind !== 'caption' || clip.caption?.type !== 'keyboard' || !clip.caption.style) return clip;
   const { customText: _customText, ...style } = clip.caption.style;
   return { ...clip, caption: { ...clip.caption, style } };
-};
-const transitionKinds = new Set(['fade', 'slide', 'zoom', 'blur']);
-const transitionEasingPower = (value) => {
-  if (value === undefined) return undefined;
-  if (!Number.isInteger(value) || value < 1 || value > 5) throw new Error('Courbe de transition invalide');
-  return value;
-};
-const transition = (value, clipKind) => {
-  if (value === null) return null;
-  if (
-    !value ||
-    typeof value !== 'object' ||
-    !Number.isInteger(value.durationMs) ||
-    value.durationMs <= 0 ||
-    value.durationMs > 5000
-  )
-    throw new Error('Transition de clip invalide');
-  const preset = value.preset;
-  if (!preset || !transitionKinds.has(preset.kind) || (clipKind === 'audio' && preset.kind !== 'fade'))
-    throw new Error('Preset de transition invalide');
-  if (preset.kind === 'slide' && !['left', 'right', 'up', 'down'].includes(preset.direction))
-    throw new Error('Direction de transition invalide');
-  if (preset.kind === 'zoom' && !['in', 'out'].includes(preset.direction))
-    throw new Error('Direction de transition invalide');
-  if ((preset.kind === 'fade' || preset.kind === 'blur') && Object.keys(preset).some((key) => key !== 'kind'))
-    throw new Error('Paramètres de transition invalides');
-  const easingPower = transitionEasingPower(value.easingPower);
-  return {
-    preset: { ...preset },
-    durationMs: value.durationMs,
-    ...(easingPower === undefined ? {} : { easingPower }),
-  };
-};
-const transitions = (value, clipKind, durationMs) => {
-  if (!value || typeof value !== 'object' || !Object.hasOwn(value, 'entry') || !Object.hasOwn(value, 'exit'))
-    throw new Error('Transitions de clip invalides');
-  const next = { entry: transition(value.entry, clipKind), exit: transition(value.exit, clipKind) };
-  if ((next.entry?.durationMs || 0) + (next.exit?.durationMs || 0) > durationMs)
-    throw new Error('Durée de transitions invalide');
-  return next;
 };
 const withHistoricalTypography = (clip) =>
   clip.kind === 'caption'
@@ -121,24 +78,6 @@ const withHistoricalTypography = (clip) =>
         },
       }
     : clip;
-
-const historicalAppearance = (kind, showBackground) => ({
-  cornerRadius: kind === 'screen' ? (showBackground ? 'md' : 'none') : 'sm',
-  shadowSize: 'md',
-  shadowBlur: kind === 'screen' ? 40 : 20,
-  shadowMode: 'solid',
-  shadowColor: '#000000',
-  shadowDirection: kind === 'screen' ? 'bottom' : 'all',
-  borderEnabled: false,
-  borderColor: '#000000',
-  borderWidth: 1,
-  frame: 'none',
-  frameTitle: '',
-  frameColor: '#c0c0c0',
-  frameShowMenu: true,
-  frameShowScrollbars: true,
-  frameChromeScale: 1,
-});
 
 const rectangle = (value, label) => {
   const next = value || {};
@@ -265,7 +204,7 @@ function normalizeComposition(value) {
       sourceInMs: Math.round(clip.sourceInMs),
       sourceDurationMs: Math.round(clip.sourceDurationMs),
       playbackRate: clip.playbackRate,
-      transitions: transitions(clip.transitions, clip.kind, Math.round(clip.timelineDurationMs)),
+      transitions: normalizeClipTransitions(clip.transitions, clip.kind, Math.round(clip.timelineDurationMs)),
       enabled: clip.enabled,
       order: clip.order,
       ...(id(clip.groupId) ? { groupId: clip.groupId } : {}),
@@ -283,6 +222,16 @@ function normalizeComposition(value) {
         ...(clip.transform ? { transform: rectangle(clip.transform, 'Transformation') } : {}),
         ...(typeof clip.isAiGenerated === 'boolean' ? { isAiGenerated: clip.isAiGenerated } : {}),
       };
+    if (clip.kind === 'color') {
+      if (!id(clip.trackId)) throw new Error('Identifiant de piste visuelle invalide');
+      return {
+        ...common,
+        trackId: clip.trackId,
+        assetId: '',
+        transform: rectangle(clip.transform, 'Transformation'),
+        fill: normalizeColorFill(clip.fill),
+      };
+    }
     if (clip.kind === 'blur') {
       if (!id(clip.trackId)) throw new Error('Identifiant de piste visuelle invalide');
       const effectColor = color(clip.color, null);
@@ -390,6 +339,7 @@ function normalizeComposition(value) {
 }
 
 function migrateComposition(value, showBackground, historicalSessionIds = []) {
+  if (value?.schemaVersion === schemaVersion) return normalizeComposition(value);
   if (
     !value ||
     ![
@@ -400,9 +350,10 @@ function migrateComposition(value, showBackground, historicalSessionIds = []) {
       typographySchemaVersion,
       transitionSchemaVersion,
       cameraLayoutSchemaVersion,
-      previousCompositionSchemaVersion,
+      captionHighlightSchemaVersion,
       keyboardCaptionRetrySchemaVersion,
       captionPreferenceRepairSchemaVersion,
+      previousCompositionSchemaVersion,
     ].includes(value.schemaVersion) ||
     !Array.isArray(value.assets) ||
     !Array.isArray(value.clips)
@@ -414,9 +365,10 @@ function migrateComposition(value, showBackground, historicalSessionIds = []) {
       typographySchemaVersion,
       transitionSchemaVersion,
       cameraLayoutSchemaVersion,
-      previousCompositionSchemaVersion,
+      captionHighlightSchemaVersion,
       keyboardCaptionRetrySchemaVersion,
       captionPreferenceRepairSchemaVersion,
+      previousCompositionSchemaVersion,
     ].includes(value.schemaVersion)
   ) {
     const keyboardCaptionSessions = Array.isArray(value.keyboardCaptionSessions)
@@ -438,9 +390,10 @@ function migrateComposition(value, showBackground, historicalSessionIds = []) {
       schemaVersion,
       keyboardCaptionSessions: repairedKeyboardCaptionSessions,
       clips: [
-        previousCompositionSchemaVersion,
+        captionHighlightSchemaVersion,
         keyboardCaptionRetrySchemaVersion,
         captionPreferenceRepairSchemaVersion,
+        previousCompositionSchemaVersion,
       ].includes(value.schemaVersion)
         ? repairMigratedTrackIds(value.clips).map((clip) =>
             [keyboardCaptionRetrySchemaVersion, captionPreferenceRepairSchemaVersion].includes(value.schemaVersion)
@@ -516,7 +469,7 @@ function migrateComposition(value, showBackground, historicalSessionIds = []) {
           if (!['screen', 'video', 'image', 'webcam'].includes(clip.kind)) return clip;
           return {
             ...clip,
-            appearance: { ...historicalAppearance(clip.kind, showBackground), ...(clip.appearance || {}) },
+            appearance: { ...historicalAppearance(clip.kind, showBackground), ...clip.appearance },
             isMirrored: typeof clip.isMirrored === 'boolean' ? clip.isMirrored : false,
             isMirroredY: typeof clip.isMirroredY === 'boolean' ? clip.isMirroredY : false,
           };
@@ -526,50 +479,8 @@ function migrateComposition(value, showBackground, historicalSessionIds = []) {
   });
 }
 
-const materializeComposition = (directory, composition, sessionFileFor, mediaUrlFor) => ({
-  ...composition,
-  assets: composition.assets.map((asset) => {
-    const target =
-      asset.origin === 'session'
-        ? sessionFileFor(directory, asset.sessionId, asset.sessionPath)
-        : path.join(directory, 'media', asset.fileName);
-    const fileUrl = target && fs.existsSync(target) ? pathToFileURL(target).href : null;
-    return { ...asset, src: fileUrl ? mediaUrlFor(fileUrl) || '' : '' };
-  }),
-});
-
-const importMedia = (directory, input) => {
-  if (!input || typeof input.source !== 'string' || !mediaKinds.has(input.kind))
-    throw new Error('Import de média invalide');
-  const extension = path.extname(input.source).toLowerCase();
-  if (extension === '.gif') throw new Error('GIF not supported');
-  if (!extensions[input.kind].has(extension)) throw new Error('Type de média non autorisé');
-  const targetDirectory = path.join(directory, 'media');
-  fs.mkdirSync(targetDirectory, { recursive: true });
-  const fileName = `${randomUUID()}${extension}`;
-  fs.copyFileSync(input.source, path.join(targetDirectory, fileName));
-  return {
-    id: randomUUID(),
-    kind: input.kind,
-    name: path.basename(input.source, extension).slice(0, 160),
-    fileName,
-    durationMs: 0,
-    width: null,
-    height: null,
-    src: pathToFileURL(path.join(targetDirectory, fileName)).href,
-    origin: 'project',
-  };
-};
-
-const pruneProjectMedia = (directory, previous, next) => {
-  const used = new Set(next.assets.filter((asset) => asset.origin === 'project').map((asset) => asset.fileName));
-  for (const asset of previous.assets || []) {
-    if (asset.origin !== 'project' || used.has(asset.fileName)) continue;
-    fs.rmSync(path.join(directory, 'media', asset.fileName), { force: true });
-  }
-};
-
 module.exports = {
+  compositionSchemaVersion: schemaVersion,
   emptyComposition,
   normalizeComposition,
   migrateComposition,

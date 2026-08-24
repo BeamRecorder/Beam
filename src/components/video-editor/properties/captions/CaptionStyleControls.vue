@@ -7,12 +7,12 @@ import Switch from '~/ui/switch/Switch.vue';
 import Divider from '~/ui/divider/Divider.vue';
 import type { CaptionStyle } from '~/media/shared/composition-types';
 import { useTranslate } from '~/i18n/useTranslate';
-import BackdropBlurControl from './BackdropBlurControl.vue';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import { AlignCenter, AlignLeft, AlignRight, Bold, Italic, Strikethrough, Upload } from '@lucide/vue';
 import { loadCaptionFont, useFontCatalog } from './useFontCatalog';
 import CaptionHighlightControls from './CaptionHighlightControls.vue';
+import CaptionShapeControls from './CaptionShapeControls.vue';
 
 const { t } = useTranslate('CaptionClipPanel');
 const props = withDefaults(
@@ -215,11 +215,15 @@ const shadowDirectionOptions = computed(() => [
     v-if="showWordHighlight"
     :model-value="style.wordHighlight"
     :available="wordHighlightAvailable"
-    :custom-text="Boolean(style.customText)"
+    :custom-text="style.customText !== undefined"
     @update:model-value="emit('update', 'wordHighlight', $event)"
   />
 
   <Divider v-if="showWordHighlight" spacing="xs" />
+
+  <CaptionShapeControls :model-value="style.shape" @update:model-value="emit('update', 'shape', $event)" />
+
+  <Divider spacing="xs" />
 
   <div class="section-block">
     <span class="section-title">{{ t('outlineExtrusion') }}</span>
@@ -250,10 +254,6 @@ const shadowDirectionOptions = computed(() => [
       :default-value="4"
       :format-value="(value) => `${value}px`"
       @update:model-value="emit('update', 'extrusionDepth', $event)"
-    />
-    <BackdropBlurControl
-      :model-value="style.backdropBlur"
-      @update:model-value="emit('update', 'backdropBlur', $event)"
     />
   </div>
 

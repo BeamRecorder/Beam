@@ -16,6 +16,7 @@ import {
   type AudioClip,
   type CaptionClip,
   type ClipComposition,
+  type ColorClip,
 } from '~/media/shared/composition-types';
 import type { ZoomElement } from '../zoom/zoom-types';
 import type { ShadowDirection } from '../properties/cursor/shadow-types';
@@ -92,7 +93,7 @@ const CursorPanel = {
       <button
         class="auto-hide-update"
         type="button"
-        @click="$emit('update:autoHide', { enabled: true, delaySeconds: 4 })"
+        @click="$emit('update:autoHide', { enabled: true, delaySeconds: 4, fadeDurationMs: 500 })"
       >
         Update auto hide
       </button>
@@ -102,6 +103,32 @@ const CursorPanel = {
 const ClipPropertiesPanel = {
   props: ['selectedClip'],
   template: '<div class="clip-panel-stub">{{ selectedClip?.kind }}</div>',
+};
+const ColorLayerPropertiesPanel = {
+  props: ['clip'],
+  emits: ['update'],
+  template: `
+    <div class="color-layer-panel-stub">
+      <span>{{ clip?.fill?.kind }}</span>
+      <button
+        class="color-layer-update"
+        type="button"
+        @click="$emit('update', {
+          kind: 'gradient',
+          gradient: {
+            type: 'radial',
+            angle: 30,
+            stops: [
+              { id: 'inner', position: 0, color: '#000000', alpha: 1 },
+              { id: 'outer', position: 1, color: '#ffffff', alpha: 0.5 },
+            ],
+          },
+        })"
+      >
+        Update color layer
+      </button>
+    </div>
+  `,
 };
 
 const captionClip: CaptionClip = {
@@ -126,7 +153,7 @@ const captionClip: CaptionClip = {
       shadowColor: '#000000',
       shadowBlur: 0,
       placement: 'center',
-      backdropBlur: 0,
+      shape: createDefaultCaptionStyle(36).shape,
       outlineColor: '#000000',
       outlineWidth: 0,
       extrusionDepth: 0,
@@ -174,6 +201,24 @@ const transitionScreenClip = {
   isMirrored: false,
   isMirroredY: false,
 } as const;
+
+const colorClip: ColorClip = {
+  id: 'color',
+  kind: 'color',
+  name: 'Color layer',
+  timelineStartMs: 0,
+  timelineDurationMs: 3_000,
+  sourceInMs: 0,
+  sourceDurationMs: 3_000,
+  playbackRate: 1,
+  transitions: { entry: null, exit: null },
+  enabled: true,
+  order: 0,
+  trackId: 'color-track',
+  assetId: '',
+  transform: { x: 0, y: 0, width: 1, height: 1 },
+  fill: { kind: 'color', color: '#111827' },
+};
 
 const webcamClip = {
   id: 'webcam',
@@ -257,6 +302,7 @@ const global = {
     CaptionPanel,
     CursorPanel,
     ClipPropertiesPanel,
+    ColorLayerPropertiesPanel,
   },
 };
 
@@ -402,7 +448,7 @@ describe('PropertiesPanel', () => {
     await wrapper.findAll('.preset-card')[1]!.trigger('click');
     expect(wrapper.emitted('update:canvas')).toContainEqual([
       expect.objectContaining({
-        transitions: { entry: { preset: { kind: 'fade' }, durationMs: 500 }, exit: null },
+        transitions: { entry: { preset: { kind: 'fade' }, durationMs: 500, easingPower: 3 }, exit: null },
       }),
     ]);
   });
@@ -432,7 +478,7 @@ describe('PropertiesPanel', () => {
       expect.objectContaining({
         transitions: {
           entry: { preset: { kind: 'fade' }, durationMs: 200 },
-          exit: { preset: { kind: 'fade' }, durationMs: 500 },
+          exit: { preset: { kind: 'fade' }, durationMs: 500, easingPower: 3 },
         },
       }),
     ]);
@@ -496,6 +542,45 @@ describe('PropertiesPanel', () => {
       selectedClip: screenClip,
     });
     expect(wrapper.find('.clip-panel-stub').text()).toBe('video');
+  });
+
+  it('routes a selected color clip to the color layer panel and applies fill updates', async () => {
+    const colorComposition: ClipComposition = { ...composition, clips: [colorClip] };
+    const wrapper = mount(PropertiesPanel, {
+      props: {
+        ...baseProps,
+        activeTab: 'clip',
+        selectedClip: colorClip,
+        composition: colorComposition,
+      },
+      global,
+    });
+
+    expect(wrapper.find('.color-layer-panel-stub').exists()).toBe(true);
+    expect(wrapper.find('.clip-panel-stub').exists()).toBe(false);
+    expect(wrapper.find('.blur-properties-panel').exists()).toBe(false);
+
+    await wrapper.get('.color-layer-update').trigger('click');
+    expect(wrapper.emitted('update:composition')).toContainEqual([
+      expect.objectContaining({
+        clips: [
+          expect.objectContaining({
+            id: 'color',
+            fill: {
+              kind: 'gradient',
+              gradient: {
+                type: 'radial',
+                angle: 30,
+                stops: [
+                  { id: 'inner', position: 0, color: '#000000', alpha: 1 },
+                  { id: 'outer', position: 1, color: '#ffffff', alpha: 0.5 },
+                ],
+              },
+            },
+          }),
+        ],
+      }),
+    ]);
   });
 
   it('renders audio actions in the header and opens audio transitions with None and Fade', async () => {
@@ -676,7 +761,7 @@ describe('PropertiesPanel', () => {
     expect(JSON.parse(cursorPanel.attributes('data-auto-hide') ?? '')).toEqual(autoHide);
 
     await cursorPanel.get('.auto-hide-update').trigger('click');
-    expect(wrapper.emitted('update:autoHide')).toEqual([[{ enabled: true, delaySeconds: 4 }]]);
+    expect(wrapper.emitted('update:autoHide')).toEqual([[{ enabled: true, delaySeconds: 4, fadeDurationMs: 500 }]]);
   });
 
   it('forwards child events through the parent contract', async () => {

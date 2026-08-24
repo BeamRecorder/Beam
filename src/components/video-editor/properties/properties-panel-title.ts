@@ -10,6 +10,7 @@ export function propertiesPanelTitle(
     tSidebar: Translate;
     tTimeline: Translate;
     tTimelineToolbar: Translate;
+    tCanvas: Translate;
   },
 ): string {
   if (activeTab === 'clip') {
@@ -17,6 +18,7 @@ export function propertiesPanelTitle(
     if (clipKind === 'screen' || clipKind === 'video') return translations.tTimeline('video');
     if (clipKind === 'image') return translations.tTimelineToolbar('image');
     if (clipKind === 'webcam') return translations.tTimeline('webcam');
+    if (clipKind === 'color') return translations.tCanvas('color');
     if (clipKind === 'blur') return translations.tTimeline('blur');
     if (clipKind === 'caption') return translations.tSidebar('captions');
     return translations.tSidebar('audio');
@@ -29,4 +31,14 @@ export function propertiesPanelTitle(
         ? activeTab
         : null;
   return sidebarKey ? translations.tSidebar(sidebarKey) : translations.t('properties');
+}
+
+export function clipTransitionPanelTitle(kind: ClipKind | undefined, tClipTransitions: () => string): string {
+  if (kind === 'color') return tClipTransitions();
+  if (kind === 'caption') return 'Caption Transitions';
+  if (kind === 'audio') return 'Audio Transitions';
+  if (kind === 'blur') return 'Blur Transitions';
+  if (kind === 'image') return 'Image Transitions';
+  if (kind === 'webcam') return 'Webcam Transitions';
+  return 'Video Transitions';
 }

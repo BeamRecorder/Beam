@@ -66,6 +66,25 @@ const imagePreviewStyle = computed(() => ({
   backgroundImage:
     props.asset?.kind === 'image' && props.asset.src ? `url(${JSON.stringify(props.asset.src)})` : undefined,
 }));
+const colorPreviewStyle = computed(() => {
+  if (props.clip.kind !== 'color') return {};
+  if (props.clip.fill.kind === 'color') return { background: props.clip.fill.color };
+  const gradient = props.clip.fill.gradient;
+  const stops = gradient.stops
+    .map(
+      (stop) =>
+        `${stop.color}${Math.round(stop.alpha * 255)
+          .toString(16)
+          .padStart(2, '0')} ${stop.position * 100}%`,
+    )
+    .join(', ');
+  return {
+    background:
+      gradient.type === 'radial'
+        ? `radial-gradient(circle, ${stops})`
+        : `linear-gradient(${gradient.angle}deg, ${stops})`,
+  };
+});
 const frameStyle = (frame: TimelineFrame) => timelineFrameStyle(props.clip, frame.relativeMs, frame.durationMs);
 const transitionStyle = (edge: 'entry' | 'exit') => timelineTransitionStyle(props.clip, edge);
 const thumbnailFor = (frame: TimelineFrame) => {
@@ -190,6 +209,7 @@ onUnmounted(() => stopMarquee());
       :style="imagePreviewStyle"
       aria-hidden="true"
     />
+    <span v-else-if="clip.kind === 'color'" class="color-preview" :style="colorPreviewStyle" aria-hidden="true" />
     <span
       class="trim-handle start"
       :class="{ 'at-limit': trimState?.edge === 'start' && trimState?.atLimit }"
@@ -275,6 +295,10 @@ onUnmounted(() => stopMarquee());
   background: linear-gradient(110deg, var(--color-track-blur), var(--color-track-blur-highlight));
   color: #fff;
 }
+.timeline-clip.kind-color {
+  background: var(--color-bg-surface);
+  color: #fff;
+}
 .timeline-clip.kind-audio {
   background: var(--color-track-audio-light);
 }
@@ -293,7 +317,8 @@ onUnmounted(() => stopMarquee());
   border-right: 1px solid rgba(0, 0, 0, 0.08);
 }
 .thumbnail-img,
-.image-preview {
+.image-preview,
+.color-preview {
   display: block;
   width: 100%;
   height: 100%;
@@ -308,6 +333,10 @@ onUnmounted(() => stopMarquee());
   background-position: left center;
   background-repeat: repeat-x;
   background-size: contain;
+}
+.color-preview {
+  position: absolute;
+  inset: 0;
 }
 .thumbnail-crossfade-enter-active,
 .thumbnail-crossfade-leave-active {

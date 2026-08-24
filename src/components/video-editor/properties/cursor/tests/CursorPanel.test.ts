@@ -40,10 +40,10 @@ const Select = {
 };
 
 const BigSlider = {
-  props: ['label', 'modelValue'],
+  props: ['label', 'modelValue', 'defaultValue', 'min', 'max', 'step'],
   emits: ['update:modelValue'],
   template:
-    '<button type="button" class="cursor-slider" :data-label="label" :data-model-value="modelValue" @click="$emit(\'update:modelValue\', 30)">Slider</button>',
+    '<button type="button" class="cursor-slider" :data-label="label" :data-model-value="modelValue" :data-default-value="defaultValue" :data-min="min" :data-max="max" :data-step="step" @click="$emit(\'update:modelValue\', 30)">Slider</button>',
 };
 
 const ColorInput = {
@@ -229,9 +229,9 @@ describe('CursorPanel', () => {
     );
 
     await wrapper.get('.cursor-switch').trigger('click');
-    expect(wrapper.emitted('update:autoHide')).toEqual([[{ enabled: true, delaySeconds: 2 }]]);
+    expect(wrapper.emitted('update:autoHide')).toEqual([[{ enabled: true, delaySeconds: 2, fadeDurationMs: 250 }]]);
 
-    await wrapper.setProps({ autoHide: { enabled: true, delaySeconds: 2 } });
+    await wrapper.setProps({ autoHide: { enabled: true, delaySeconds: 2, fadeDurationMs: 250 } });
     const delaySlider = wrapper
       .findAll('.cursor-slider')
       .find((slider) => slider.attributes('data-label') === 'Hide after');
@@ -239,7 +239,24 @@ describe('CursorPanel', () => {
     expect(delaySlider?.attributes('data-model-value')).toBe('2');
 
     await delaySlider!.trigger('click');
-    expect(wrapper.emitted('update:autoHide')?.at(-1)).toEqual([{ enabled: true, delaySeconds: 10 }]);
+    expect(wrapper.emitted('update:autoHide')?.at(-1)).toEqual([
+      { enabled: true, delaySeconds: 10, fadeDurationMs: 250 },
+    ]);
+    await wrapper.setProps({ autoHide: { enabled: true, delaySeconds: 10, fadeDurationMs: 250 } });
+
+    const fadeSlider = wrapper
+      .findAll('.cursor-slider')
+      .find((slider) => slider.attributes('data-model-value') === '250');
+    expect(fadeSlider).toBeDefined();
+    expect(fadeSlider?.attributes('data-default-value')).toBe('250');
+    expect(fadeSlider?.attributes('data-min')).toBe('0');
+    expect(fadeSlider?.attributes('data-max')).toBe('1000');
+    expect(fadeSlider?.attributes('data-step')).toBe('50');
+
+    await fadeSlider!.trigger('click');
+    expect(wrapper.emitted('update:autoHide')?.at(-1)).toEqual([
+      { enabled: true, delaySeconds: 10, fadeDurationMs: 30 },
+    ]);
   });
 
   it.each([

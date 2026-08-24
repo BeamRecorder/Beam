@@ -99,6 +99,7 @@ export interface CursorEventIndex {
   ): CursorPlaybackState | null;
   buttonsBetween(startSeconds: number, endSeconds: number, button?: CursorClickButton): CursorButtonEvent[];
   idleSecondsAt(timeSeconds: number): number;
+  recentWakeTime(timeSeconds: number, hiddenAfterSeconds: number, maxAgeSeconds: number): number | null;
 }
 
 const upperBound = (values: readonly number[], target: number) => {
@@ -125,6 +126,7 @@ export function createCursorEventIndex(events: CursorEvent[]): CursorEventIndex 
   const pressedButtons = ordered.filter((event): event is CursorButtonEvent => isButton(event) && event.pressed);
   const buttonTimes = pressedButtons.map(eventTime);
   const activityTimes: number[] = [];
+  const wakeTimesByHiddenThreshold = new Map<number, number[]>();
   let previousMove: CursorMoveEvent | null = null;
   for (const event of ordered) {
     if (isMove(event)) {
@@ -243,6 +245,18 @@ export function createCursorEventIndex(events: CursorEvent[]): CursorEventIndex 
       const lastActivity = activityTimes[upperBound(activityTimes, time) - 1] ?? 0;
       return Math.max(0, time - lastActivity);
     },
+    recentWakeTime(timeSeconds, hiddenAfterSeconds, maxAgeSeconds) {
+      const time = Number.isNaN(timeSeconds) ? Number.POSITIVE_INFINITY : Math.max(0, timeSeconds);
+      let wakeTimes = wakeTimesByHiddenThreshold.get(hiddenAfterSeconds);
+      if (!wakeTimes) {
+        wakeTimes = activityTimes.filter(
+          (activityTime, index) => index > 0 && activityTime - activityTimes[index - 1]! >= hiddenAfterSeconds,
+        );
+        wakeTimesByHiddenThreshold.set(hiddenAfterSeconds, wakeTimes);
+      }
+      const wakeTime = wakeTimes[upperBound(wakeTimes, time) - 1];
+      return wakeTime !== undefined && time - wakeTime <= Math.max(0, maxAgeSeconds) ? wakeTime : null;
+    },
   };
 }
 
@@ -285,7 +299,27 @@ export function cursorAutoHiddenAt(
   timeSeconds: number,
   settings: CursorAutoHideSettings,
 ): boolean {
-  return settings.enabled && cursorEventIndexFor(events).idleSecondsAt(timeSeconds) >= settings.delaySeconds;
+  return cursorAutoHideOpacityAt(events, timeSeconds, settings) <= 0;
+}
+
+export function cursorAutoHideOpacityAt(
+  events: CursorEvent[],
+  timeSeconds: number,
+  settings: CursorAutoHideSettings,
+): number {
+  if (!settings.enabled) return 1;
+  const index = cursorEventIndexFor(events);
+  const idleSeconds = index.idleSecondsAt(timeSeconds);
+  const fadeSeconds = settings.fadeDurationMs / 1_000;
+  if (fadeSeconds <= 0) return idleSeconds < settings.delaySeconds ? 1 : 0;
+  const fadeOutOpacity =
+    idleSeconds >= settings.delaySeconds + fadeSeconds
+      ? 0
+      : Math.min(1, Math.max(0, 1 - (idleSeconds - settings.delaySeconds) / fadeSeconds));
+  const wakeTime = index.recentWakeTime(timeSeconds, settings.delaySeconds + fadeSeconds, fadeSeconds);
+  const fadeInElapsed = wakeTime === null ? fadeSeconds : timeSeconds - wakeTime;
+  const fadeInOpacity = fadeInElapsed >= fadeSeconds ? 1 : Math.min(1, Math.max(0, fadeInElapsed / fadeSeconds));
+  return Math.min(fadeInOpacity, fadeOutOpacity);
 }
 
 export function cursorAssetForState(state: CursorPlaybackState | null, shapes: Record<string, CursorShapeAsset>) {

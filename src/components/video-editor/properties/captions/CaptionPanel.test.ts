@@ -142,7 +142,7 @@ const aiCaption: CaptionClip = {
       wrap: true,
       shadowColor: '#000',
       shadowBlur: 8,
-      backdropBlur: 0,
+      shape: createDefaultCaptionStyle(36).shape,
       outlineColor: '#000',
       outlineWidth: 6,
       extrusionDepth: 4,

@@ -4,15 +4,18 @@ import {
   createComposition,
   HOLD_SEGMENT_DURATION_MS,
   holdClipAtPlayhead,
+  reorderClip,
   setCameraFraming,
   setCameraLayout,
   setCameraSplitRatio,
   setCameraSplitPadding,
+  setColorFill,
   setCrop,
   setTransform,
+  trimClip,
   splitClip,
 } from './clip-engine';
-import type { AudioClip, ClipComposition, MediaAsset, VisualClip } from '~/media/shared/composition-types';
+import type { AudioClip, ClipComposition, ColorClip, MediaAsset, VisualClip } from '~/media/shared/composition-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import { sourceTimeAt } from '~/media/shared/timeline-mapping';
 
@@ -83,6 +86,25 @@ const audio = (assetId: string): AudioClip => ({
   groupId: 'recording-segment',
 });
 
+const color = (id: string, order = 1, overrides: Partial<ColorClip> = {}): ColorClip => ({
+  id,
+  kind: 'color',
+  assetId: '',
+  name: id,
+  trackId: `${id}-track`,
+  timelineStartMs: 0,
+  timelineDurationMs: 3_000,
+  sourceInMs: 0,
+  sourceDurationMs: 3_000,
+  playbackRate: 1,
+  transitions: { entry: null, exit: null },
+  enabled: true,
+  order,
+  transform: { x: 0, y: 0, width: 1, height: 1 },
+  fill: { kind: 'color', color: '#111827' },
+  ...overrides,
+});
+
 const compositionFixture = (): ClipComposition => {
   const assets = [videoAsset('screen-asset'), videoAsset('camera-asset'), videoAsset('audio-asset', 'audio')];
   return createComposition(assets, [
@@ -134,6 +156,70 @@ const visualPresetComposition = (): ClipComposition =>
       }),
     ],
   );
+
+describe('color layer engine operations', () => {
+  it('updates a color fill, reorders the layer, trims it, and splits it', () => {
+    const initial = createComposition(
+      [videoAsset('background-asset'), videoAsset('foreground-asset')],
+      [
+        visual('background', 'video', 'background-asset', { order: 0, trackId: 'background-track' }),
+        color('color', 1),
+        visual('foreground', 'image', 'foreground-asset', { order: 2, trackId: 'foreground-track' }),
+      ],
+    );
+    const gradient = {
+      kind: 'gradient' as const,
+      gradient: {
+        type: 'radial' as const,
+        angle: 0,
+        stops: [
+          { id: 'start', position: 0, color: '#ffffff', alpha: 1 },
+          { id: 'end', position: 1, color: '#000000', alpha: 0.5 },
+        ],
+      },
+    };
+
+    const filled = setColorFill(initial, 'color', gradient);
+    expect(filled.clips.find((clip) => clip.id === 'color')).toMatchObject({ fill: gradient });
+
+    const reordered = reorderClip(filled, 'color', 2);
+    const reorderedColor = reordered.clips.find((clip): clip is ColorClip => clip.id === 'color')!;
+    expect(reorderedColor.order).toBeGreaterThan(reordered.clips.find((clip) => clip.id === 'background')!.order);
+    expect(reorderedColor.order).toBeGreaterThan(reordered.clips.find((clip) => clip.id === 'foreground')!.order);
+
+    const trimmed = trimClip(reordered, 'color', 'start', 500);
+    expect(trimmed.clips.find((clip) => clip.id === 'color')).toMatchObject({
+      timelineStartMs: 500,
+      timelineDurationMs: 2_500,
+      sourceInMs: 500,
+      sourceDurationMs: 2_500,
+    });
+
+    const split = splitClip(trimmed, 'color', 1_500, () => 'color-right');
+    expect(split.clips.filter((clip) => clip.kind === 'color')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'color',
+          timelineStartMs: 500,
+          timelineDurationMs: 1_000,
+          sourceInMs: 500,
+          sourceDurationMs: 1_000,
+          order: reorderedColor.order,
+        }),
+        expect.objectContaining({
+          id: 'color-right',
+          trackId: 'color-track',
+          timelineStartMs: 1_500,
+          timelineDurationMs: 1_500,
+          sourceInMs: 1_500,
+          sourceDurationMs: 1_500,
+          order: reorderedColor.order,
+          fill: gradient,
+        }),
+      ]),
+    );
+  });
+});
 
 describe('camera layout engine operations', () => {
   it.each([

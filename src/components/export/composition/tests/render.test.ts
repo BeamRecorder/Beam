@@ -1,10 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
 import { drawCompositionLayers, renderCompositionFrame, type RenderableMedia } from '../render';
 import type { CaptionClip, VisualClip } from '~/media/shared/composition-types';
-import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import type { CursorPackDescriptor } from '../../../../api/types/cursor-pack';
 import { createCursorMotionPlayer } from '../../../video-editor/composables/cursor-motion';
 import { context, screenAppearance, snapshot } from './render.test-support';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+
+const testCaptionStyle = (fontSize: number) => {
+  const style = createDefaultCaptionStyle(fontSize);
+  return { ...style, shape: { ...style.shape, opacity: 0, blur: 0 } };
+};
 
 const wideCursorPack = (): CursorPackDescriptor => ({
   id: 'imported:wide',
@@ -41,13 +46,13 @@ const resolutionCaption = (): CaptionClip => ({
     type: 'text',
     sentences: [],
     style: {
-      ...createDefaultCaptionStyle(42),
+      ...testCaptionStyle(42),
       customText: 'one two three four five six',
       wrap: true,
       shadowBlur: 0,
       outlineWidth: 0,
       extrusionDepth: 0,
-      backdropBlur: 0,
+      shape: testCaptionStyle(42).shape,
     },
   },
 });
@@ -313,7 +318,7 @@ describe('canonical composition rendering', () => {
         type: 'text',
         sentences: [{ id: 's', text: 'Visible', startMs: 100, endMs: 300, words: [] }],
         style: {
-          ...createDefaultCaptionStyle(20),
+          ...testCaptionStyle(20),
           color: '#fff',
           shadowColor: '#000',
           shadowBlur: 0,
@@ -325,6 +330,86 @@ describe('canonical composition rendering', () => {
     const ctx = context();
     drawCompositionLayers(ctx, value, 0.2);
     expect(ctx.fillText).toHaveBeenCalledWith('Visible', expect.any(Number), expect.any(Number), expect.any(Number));
+  });
+
+  it('passes caption shape padding, color, opacity and blur through export rendering', () => {
+    const value = snapshot();
+    value.composition.clips.push({
+      id: 'shaped-caption',
+      kind: 'caption',
+      name: 'Shaped caption',
+      timelineStartMs: 0,
+      timelineDurationMs: 1_000,
+      sourceInMs: 0,
+      sourceDurationMs: 1_000,
+      playbackRate: 1,
+      enabled: true,
+      order: 1,
+      caption: {
+        type: 'text',
+        sentences: [{ id: 's', text: 'AA', startMs: 0, endMs: 1_000, words: [] }],
+        style: {
+          ...testCaptionStyle(20),
+          shape: {
+            ...testCaptionStyle(20).shape,
+            preset: 'custom',
+            radius: 30,
+            color: '#123456',
+            opacity: 42,
+            blur: 6,
+            padding: 40,
+          },
+        },
+      },
+    });
+
+    const ctx = context();
+    const fillStyleWrites: string[] = [];
+    const filterWrites: string[] = [];
+    Object.defineProperty(ctx, 'canvas', { configurable: true, value: value.canvas });
+    Object.defineProperty(ctx, 'fillStyle', {
+      configurable: true,
+      get: () => fillStyleWrites.at(-1) ?? '#ffffff',
+      set: (next: string) => fillStyleWrites.push(next),
+    });
+    Object.defineProperty(ctx, 'filter', {
+      configurable: true,
+      get: () => filterWrites.at(-1) ?? 'none',
+      set: (next: string) => filterWrites.push(next),
+    });
+    vi.stubGlobal(
+      'OffscreenCanvas',
+      class OffscreenCanvas {
+        readonly width: number;
+        readonly height: number;
+
+        constructor(width: number, height: number) {
+          this.width = width;
+          this.height = height;
+        }
+
+        getContext() {
+          return { drawImage: vi.fn() };
+        }
+      },
+    );
+
+    try {
+      drawCompositionLayers(ctx, value, 0.2);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+
+    const shape = (ctx.roundRect as ReturnType<typeof vi.fn>).mock.calls[0] as
+      | [number, number, number, number, number]
+      | undefined;
+    expect(shape).toBeDefined();
+    expect(shape?.[4]).toBeGreaterThan(0);
+    expect(shape?.[2]).toBeGreaterThan(20);
+    expect(fillStyleWrites).toContain('#123456');
+    expect(ctx.globalAlpha).toBeCloseTo(0.42);
+    expect(filterWrites).toContain('blur(6px)');
+    expect(ctx.fill).toHaveBeenCalled();
   });
 
   it('wraps captions into separate unconstrained lines when enabled', () => {
@@ -354,7 +439,7 @@ describe('canonical composition rendering', () => {
           },
         ],
         style: {
-          ...createDefaultCaptionStyle(20),
+          ...testCaptionStyle(20),
           color: '#fff',
           shadowColor: '#000',
           shadowBlur: 0,
@@ -424,7 +509,7 @@ describe('canonical composition rendering', () => {
           },
         ],
         style: {
-          ...createDefaultCaptionStyle(20),
+          ...testCaptionStyle(20),
           color: '#fff',
           shadowColor: '#000',
           shadowBlur: 0,
@@ -467,9 +552,9 @@ describe('canonical composition rendering', () => {
           recordedPlatform: 'windows',
           sourceSessionId: 'session-1',
           style: {
-            ...createDefaultCaptionStyle(20),
+            ...testCaptionStyle(20),
             wrap: false,
-            backdropBlur: 0,
+            shape: testCaptionStyle(42).shape,
             outlineWidth: 0,
             extrusionDepth: 0,
             shadowBlur: 0,
@@ -543,7 +628,7 @@ describe('canonical composition rendering', () => {
           },
         ],
         style: {
-          ...createDefaultCaptionStyle(20),
+          ...testCaptionStyle(20),
           customText: 'Caption above cursor',
           wrap: false,
           outlineWidth: 0,

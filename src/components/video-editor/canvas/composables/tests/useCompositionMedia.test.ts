@@ -5,9 +5,14 @@ import { useCompositionMedia } from '../useCompositionMedia';
 import type { MediaFrame } from '~/media/shared';
 import type { BlurClip, ClipComposition, CaptionClip, VisualClip } from '~/media/shared/composition-types';
 import { DEFAULT_OUTPUT_CANVAS } from '../../output-canvas';
-import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
 import * as mediaShared from '~/media/shared';
 import * as sceneLayers from '../../../composition/scene-layers';
+import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
+
+const testCaptionStyle = (fontSize: number) => {
+  const style = createDefaultCaptionStyle(fontSize);
+  return { ...style, shape: { ...style.shape, opacity: 0, blur: 0 } };
+};
 
 const drawDecoratedMedia = vi.hoisted(() => vi.fn());
 const applyBlurEffect = vi.hoisted(() => vi.fn());
@@ -73,14 +78,14 @@ const caption = (): CaptionClip => ({
     type: 'text',
     sentences: [{ id: 'sentence', text: 'Hello', startMs: 200, endMs: 900, words: [] }],
     style: {
-      ...createDefaultCaptionStyle(42),
+      ...testCaptionStyle(42),
       color: '#fff',
       fontSize: 32,
       shadowColor: '#000',
       shadowBlur: 4,
       placement: 'center',
       wrap: true,
-      backdropBlur: 0,
+      shape: testCaptionStyle(42).shape,
       outlineColor: '#111',
       outlineWidth: 8,
       extrusionDepth: 0,

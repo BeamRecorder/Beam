@@ -5,10 +5,12 @@ import { activeClipsAt, sourceTimeAt } from '~/media/shared';
 import {
   getCaptionTransform,
   isBlurClip,
+  isColorClip,
   isVisualClip,
   type CaptionClip,
   type BlurClip,
   type ClipComposition,
+  type ColorClip,
   type NormalizedCrop,
   type NormalizedTransform,
   type VisualClip,
@@ -24,14 +26,7 @@ import type { OutputCanvasSettings } from '../output-canvas';
 
 import { computeCanvasAlignmentSnapping, type AlignmentGuide } from './canvas-alignment';
 import { effectShapeRect } from '../../composition/effects/blur-effect';
-import {
-  pointInsideEllipse,
-  pointInsideRect,
-  pointInsideSquircle,
-  projectCameraRect,
-  clampNormalizedCrop,
-  mirrorCrop,
-} from './layer-transform-geometry';
+import { projectCameraRect, clampNormalizedCrop, mirrorCrop } from './layer-transform-geometry';
 import { editableVisualClipTransform, visualClipDisplayLayout } from '../../composition/visual-framing';
 import {
   clampEditedWebcamTransform,
@@ -39,12 +34,12 @@ import {
   webcamDisplayLayout,
   webcamResizePointerScale,
 } from './webcam-transform-editing';
+import { topmostClipIdAtPoint } from './layer-hit-testing';
 
 const TRANSFORM_MIN = -3;
 const TRANSFORM_MAX = 3;
 const SIZE_MAX = 4;
-const RAYCAST_SLOP_PX = 4;
-type TransformClip = VisualClip | BlurClip | CaptionClip;
+type TransformClip = VisualClip | ColorClip | BlurClip | CaptionClip;
 
 export interface UseLayerTransformAndCropOptions {
   composition: () => ClipComposition;
@@ -95,8 +90,15 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
   };
   const baseTransformFor = (clip: TransformClip) =>
     clip.kind === 'caption' ? captionTransformFor(clip) : clip.transform;
-  const usesGlobalCamera = (clip: TransformClip | null): clip is VisualClip | BlurClip =>
-    Boolean(clip && (clip.kind === 'screen' || clip.kind === 'video' || clip.kind === 'image' || clip.kind === 'blur'));
+  const usesGlobalCamera = (clip: TransformClip | null): clip is VisualClip | ColorClip | BlurClip =>
+    Boolean(
+      clip &&
+      (clip.kind === 'screen' ||
+        clip.kind === 'video' ||
+        clip.kind === 'image' ||
+        clip.kind === 'color' ||
+        clip.kind === 'blur'),
+    );
   const boundsFor = (clip: TransformClip | null) => {
     if (clip?.kind === 'screen') return options.videoWindowBounds();
     return options.overlayWindowBounds() ?? options.videoWindowBounds();
@@ -343,7 +345,9 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
       const otherTargets = activeClipsAt(options.composition(), currentTimeMs)
         .filter(
           (c): c is TransformClip =>
-            (c.kind === 'caption' || isVisualClip(c) || isBlurClip(c)) && c.id !== clip.id && c.enabled,
+            (c.kind === 'caption' || isVisualClip(c) || isColorClip(c) || isBlurClip(c)) &&
+            c.id !== clip.id &&
+            c.enabled,
         )
         .map((c) => {
           const t = transformFor(c);
@@ -413,7 +417,10 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     if (target.hasPointerCapture(event.pointerId)) target.releasePointerCapture(event.pointerId);
   };
 
-  const clipIdAt = (event: PointerEvent, canvas: HTMLCanvasElement | null): string | null => {
+  const clipIdAt = (
+    event: Pick<PointerEvent, 'clientX' | 'clientY'>,
+    canvas: HTMLCanvasElement | null,
+  ): string | null => {
     if (!canvas) return null;
     const canvasRect = canvas.getBoundingClientRect();
     if (canvasRect.width <= 0 || canvasRect.height <= 0) return null;
@@ -437,23 +444,14 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     // order values are drawn last and are therefore the first raycast target.
     const clips = [
       ...active.filter((clip): clip is CaptionClip => clip.kind === 'caption'),
-      ...active.filter((clip): clip is VisualClip | BlurClip => isVisualClip(clip) || isBlurClip(clip)),
+      ...active.filter(
+        (clip): clip is VisualClip | ColorClip | BlurClip =>
+          isVisualClip(clip) || isColorClip(clip) || isBlurClip(clip),
+      ),
     ];
-    for (const clip of clips) {
-      const layout = displayLayoutFor(clip);
-      if (!layout) continue;
-      const insideShape =
-        isVisualClip(clip) && clip.cameraFramingPreset === 'squircle'
-          ? pointInsideSquircle(x, y, layout, RAYCAST_SLOP_PX)
-          : (clip.kind === 'blur' && clip.shape === 'circle') ||
-              (isVisualClip(clip) && clip.cameraFramingPreset === 'circle')
-            ? pointInsideEllipse(x, y, layout, RAYCAST_SLOP_PX)
-            : pointInsideRect(x, y, layout, RAYCAST_SLOP_PX);
-      // The screen layer participates in occlusion, but its existing dedicated
-      // selection path owns the actual screen selection.
-      if (insideShape) return clip.kind === 'screen' ? null : clip.id;
-    }
-    return null;
+    // The screen layer participates in occlusion, but its existing dedicated
+    // selection path owns the actual screen selection.
+    return topmostClipIdAtPoint(clips, { x, y }, displayLayoutFor);
   };
 
   const selectVisualAt = (event: PointerEvent, canvas: HTMLCanvasElement | null) => {

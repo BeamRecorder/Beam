@@ -8,7 +8,14 @@ const baseStyle = () => ({
   wrap: true,
   shadowColor: '#000000',
   shadowBlur: 8,
-  backdropBlur: 0,
+  shape: {
+    preset: 'rounded',
+    radius: 35,
+    color: '#000000',
+    opacity: 0,
+    blur: 0,
+    padding: 30,
+  },
   outlineColor: '#000000',
   outlineWidth: 0,
   extrusionDepth: 0,
@@ -65,6 +72,69 @@ test('preserves a valid radial gradient and its stops and alpha values', () => {
   const normalized = normalizeCaption(textCaption({ ...baseStyle(), wordHighlight }));
 
   assert.deepEqual(normalized.style.wordHighlight, wordHighlight);
+});
+
+test('normalizes and preserves the grouped caption shape style', () => {
+  const shape = {
+    preset: 'pill',
+    radius: 92,
+    color: '#123456',
+    opacity: 68,
+    blur: 24,
+    padding: 64,
+  };
+
+  const normalized = normalizeCaption(textCaption({ ...baseStyle(), shape }));
+
+  assert.deepEqual(normalized.style.shape, shape);
+  assert.equal(Object.hasOwn(normalized.style, 'backdropBlur'), false);
+});
+
+test('clamps invalid caption shape values and falls back to the default shape', () => {
+  const normalized = normalizeCaption(
+    textCaption({
+      ...baseStyle(),
+      shape: {
+        preset: 'invalid',
+        radius: 120,
+        color: null,
+        opacity: -10,
+        blur: 999,
+        padding: 140,
+      },
+    }),
+  );
+
+  assert.deepEqual(normalized.style.shape, {
+    preset: 'rounded',
+    radius: 100,
+    color: '#000000',
+    opacity: 0,
+    blur: 48,
+    padding: 100,
+  });
+
+  const fallback = normalizeCaption(textCaption({ ...baseStyle(), shape: null }));
+  assert.deepEqual(fallback.style.shape, {
+    preset: 'rounded',
+    radius: 35,
+    color: '#000000',
+    opacity: 0,
+    blur: 0,
+    padding: 0,
+  });
+
+  const lowerClamped = normalizeCaption(textCaption({ ...baseStyle(), shape: { ...baseStyle().shape, padding: -10 } }));
+  assert.equal(lowerClamped.style.shape.padding, 0);
+});
+
+test('maps legacy backdropBlur into shape.blur without retaining the legacy field', () => {
+  const { shape: _shape, ...legacyStyle } = baseStyle();
+  const normalized = normalizeCaption(textCaption({ ...legacyStyle, backdropBlur: 32 }));
+
+  assert.equal(normalized.style.shape.blur, 32);
+  assert.equal(normalized.style.shape.padding, 0);
+  assert.equal(Object.hasOwn(normalized.style, 'backdropBlur'), false);
 });
 
 test('clamps out-of-range numeric values and defaults an invalid gradient', () => {

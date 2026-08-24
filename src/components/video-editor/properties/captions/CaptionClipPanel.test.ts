@@ -1,5 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
+import type { CaptionClip } from '~/media/shared/composition-types';
 
 const capture = vi.hoisted(() => ({
   listImportedFonts: vi.fn(),
@@ -82,7 +84,7 @@ const clip = {
       shadowBlur: 8,
       shadowDirection: 'bottom-right',
       placement: 'bottom',
-      backdropBlur: 0,
+      shape: createDefaultCaptionStyle(36).shape,
       outlineColor: '#000000',
       outlineWidth: 6,
       extrusionDepth: 4,
@@ -94,7 +96,7 @@ const clip = {
       letterSpacing: 0,
     },
   },
-} as never;
+} as unknown as CaptionClip;
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -114,8 +116,8 @@ describe('CaptionClipPanel', () => {
       props: { clip },
       global: { stubs: { Input, ColorPicker, BigSlider, Select, Switch, Button, ButtonGroup, Divider } },
     });
-    expect(wrapper.findAll('.caption-slider')).toHaveLength(7);
-    expect(wrapper.findAll('.color-picker-stub')).toHaveLength(3);
+    expect(wrapper.findAll('.caption-slider')).toHaveLength(9);
+    expect(wrapper.findAll('.color-picker-stub')).toHaveLength(4);
     expect(wrapper.get('.wrap-switch').attributes('aria-checked')).toBe('true');
     expect(wrapper.get('.font-select').attributes('data-variant')).toBe('search');
     expect(wrapper.find('.follow-cursor-setting').exists()).toBe(false);
@@ -201,5 +203,89 @@ describe('CaptionClipPanel', () => {
       global: { stubs: { Input, ColorPicker, BigSlider, Select, Switch, Button, ButtonGroup, Divider } },
     });
     expect(wrapper.find('.caption-clip-panel').exists()).toBe(false);
+  });
+
+  it('hides highlight controls for non-AI text captions', () => {
+    const nonAiClip = Object.assign({}, clip as object, { isAiGenerated: false }) as never;
+    const wrapper = mount(CaptionClipPanel, {
+      props: { clip: nonAiClip },
+      global: { stubs: { Input, ColorPicker, BigSlider, Select, Switch, Button, ButtonGroup, Divider } },
+    });
+
+    expect(wrapper.find('.highlight-controls').exists()).toBe(false);
+  });
+
+  it('shows available highlight controls for AI captions with word timings', () => {
+    const wrapper = mount(CaptionClipPanel, {
+      props: { clip },
+      global: { stubs: { Input, ColorPicker, BigSlider, Select, Switch, Button, ButtonGroup, Divider } },
+    });
+
+    expect(wrapper.find('.highlight-controls').exists()).toBe(true);
+    expect(wrapper.find('.highlight-controls .availability-note').exists()).toBe(false);
+    expect(wrapper.get('.highlight-controls [role="switch"]').attributes('disabled')).toBeUndefined();
+  });
+
+  it('shows the AI timing warning directly below the text input', () => {
+    const wrapper = mount(CaptionClipPanel, {
+      props: { clip },
+      global: { stubs: { Input, ColorPicker, BigSlider, Select, Switch, Button, ButtonGroup, Divider } },
+    });
+
+    const input = wrapper.get('input[placeholder="Type custom text..."]');
+    const warning = wrapper.get('.ai-edit-warning');
+    expect(input.element.parentElement).toBe(warning.element.parentElement);
+    expect(input.element.compareDocumentPosition(warning.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(warning.text()).toBe('Editing an AI caption can disrupt its synchronized word timings.');
+  });
+
+  it('does not show the AI timing warning for a manual caption', () => {
+    const manualClip = { ...clip, isAiGenerated: false };
+    const wrapper = mount(CaptionClipPanel, {
+      props: { clip: manualClip },
+      global: { stubs: { Input, ColorPicker, BigSlider, Select, Switch, Button, ButtonGroup, Divider } },
+    });
+
+    expect(wrapper.find('.ai-edit-warning').exists()).toBe(false);
+  });
+
+  it('treats an empty custom text value as an override and disables AI word highlighting', () => {
+    const emptyCustomTextClip = {
+      ...clip,
+      caption: {
+        ...clip.caption,
+        style: { ...clip.caption.style, customText: '' },
+      },
+    } as CaptionClip;
+    const wrapper = mount(CaptionClipPanel, {
+      props: { clip: emptyCustomTextClip },
+      global: { stubs: { Input, ColorPicker, BigSlider, Select, Switch, Button, ButtonGroup, Divider } },
+    });
+
+    const highlightSwitch = wrapper.get('.highlight-controls [role="switch"]');
+    expect(highlightSwitch.attributes('disabled')).toBeDefined();
+    expect(wrapper.get('.highlight-controls .availability-note').text()).toBe(
+      'Remove the custom text to use the original word timings.',
+    );
+  });
+
+  it('disables highlight controls and explains the AI-only limitation when word timings are missing', () => {
+    const aiClipWithoutWords = Object.assign({}, clip as object, {
+      caption: {
+        type: 'text',
+        sentences: [],
+        style: createDefaultCaptionStyle(36),
+      },
+    }) as never;
+    const wrapper = mount(CaptionClipPanel, {
+      props: { clip: aiClipWithoutWords },
+      global: { stubs: { Input, ColorPicker, BigSlider, Select, Switch, Button, ButtonGroup, Divider } },
+    });
+
+    expect(wrapper.find('.highlight-controls').exists()).toBe(true);
+    expect(wrapper.get('.highlight-controls [role="switch"]').attributes('disabled')).toBeDefined();
+    expect(wrapper.get('.highlight-controls .availability-note').text()).toBe(
+      'Highlight text is only available for AI captions for now.',
+    );
   });
 });

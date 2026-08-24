@@ -1,11 +1,18 @@
 import { sourceTimeAt } from '~/media/shared';
-import type { BlurClip, CaptionClip, Clip, ClipComposition, VisualClip } from '~/media/shared/composition-types';
+import type {
+  BlurClip,
+  CaptionClip,
+  Clip,
+  ClipComposition,
+  ColorClip,
+  VisualClip,
+} from '~/media/shared/composition-types';
 
 export interface CompositionSceneLayers {
   screen: VisualClip | null;
   cameraVisuals: VisualClip[];
   webcams: VisualClip[];
-  visualStack: Array<VisualClip | BlurClip>;
+  visualStack: Array<VisualClip | ColorClip | BlurClip>;
   captions: CaptionClip[];
 }
 
@@ -19,7 +26,7 @@ export function createCompositionSceneLayerResolver(composition: ClipComposition
   return (timeMs) => {
     const cameraVisuals: VisualClip[] = [];
     const webcams: VisualClip[] = [];
-    const visualStack: Array<VisualClip | BlurClip> = [];
+    const visualStack: Array<VisualClip | ColorClip | BlurClip> = [];
     const captions: CaptionClip[] = [];
     let screen: VisualClip | null = null;
 
@@ -29,7 +36,7 @@ export function createCompositionSceneLayerResolver(composition: ClipComposition
         captions.push(clip);
         continue;
       }
-      if (clip.kind === 'blur') {
+      if (clip.kind === 'color' || clip.kind === 'blur') {
         visualStack.push(clip);
         continue;
       }

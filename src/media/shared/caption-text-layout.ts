@@ -21,7 +21,7 @@ export interface CaptionTextLayout {
 export const isCaptionWrapEnabled = (style: Pick<CaptionStyle, 'wrap'>) => style.wrap;
 
 export function captionTextAt(clip: CaptionClip, timeMs: number): string {
-  if (clip.caption.style.customText) return clip.caption.style.customText;
+  if (clip.caption.style.customText !== undefined) return clip.caption.style.customText;
   if (clip.caption.type === 'keyboard')
     return keyboardCaptionRunsAt(clip, timeMs)
       .map((run) => run.text)
@@ -40,7 +40,8 @@ export function captionContentAt(
   if (clip.caption.type !== 'keyboard') {
     const text = captionTextAt(clip, timeMs);
     const style = clip.caption.style;
-    if (!text || style.customText || !style.wordHighlight.enabled) return { text, runs: null, wordHighlight: null };
+    if (!text || style.customText !== undefined || !style.wordHighlight.enabled)
+      return { text, runs: null, wordHighlight: null };
     const sentence = [...clip.caption.sentences]
       .reverse()
       .find((candidate) => candidate.startMs <= timeMs && timeMs <= candidate.endMs);
