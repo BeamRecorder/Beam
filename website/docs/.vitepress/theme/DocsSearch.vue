@@ -4,6 +4,7 @@ import MiniSearch from 'minisearch';
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
 import { useData, withBase } from 'vitepress';
 import Dialog from '../../../../src/components/ui/dialog/Dialog.vue';
+import KeyboardChip from '../../../../src/components/ui/Kbd/KeyboardChip.vue';
 import {
   enabledDocsLocales,
   getDocsCatalogs,
@@ -98,7 +99,13 @@ onUnmounted(() => window.removeEventListener('keydown', handleShortcut));
 
 <template>
   <button class="docs-search-trigger" type="button" aria-label="Search Beam documentation" @click="open">
-    <span>Search</span>
+    <Search class="docs-search-trigger__icon" aria-hidden="true" />
+    <span class="docs-search-trigger__label docs-search-trigger__label--full">Search documentation</span>
+    <span class="docs-search-trigger__label docs-search-trigger__label--compact">Search</span>
+    <ClientOnly>
+      <KeyboardChip shortcut="CommandOrControl+K" />
+      <template #fallback><KeyboardChip :keys="['Ctrl', 'K']" /></template>
+    </ClientOnly>
   </button>
 
   <Dialog :is-open="isOpen" title="Search Beam Docs" size="md" @close="close">
@@ -158,6 +165,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleShortcut));
   padding: 0 16px;
   transform: translateX(-50%);
   align-items: center;
+  gap: 10px;
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
   background: var(--color-header-control);
@@ -179,10 +187,16 @@ onUnmounted(() => window.removeEventListener('keydown', handleShortcut));
   flex: 0 0 auto;
 }
 
-.docs-search-trigger > span {
-  width: 100%;
-  text-align: center;
+.docs-search-trigger__label {
+  overflow: hidden;
+  flex: 1;
+  text-align: left;
+  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.docs-search-trigger__label--compact {
+  display: none;
 }
 
 .docs-search-field {
@@ -284,15 +298,43 @@ onUnmounted(() => window.removeEventListener('keydown', handleShortcut));
   text-align: center;
 }
 
+@media (max-width: 1199px) {
+  .docs-search-trigger {
+    width: min(220px, 23vw);
+  }
+
+  .docs-search-trigger :deep(.keyboard-chip-group) {
+    display: none;
+  }
+}
+
+@media (max-width: 1079px) {
+  .docs-search-trigger {
+    width: 128px;
+  }
+
+  .docs-search-trigger__label--full {
+    display: none;
+  }
+
+  .docs-search-trigger__label--compact {
+    display: inline;
+  }
+}
+
 @media (max-width: 959px) {
   .docs-search-trigger {
-    position: fixed;
-    width: 68px;
-    padding: 0 8px;
+    position: static;
+    width: 40px;
+    padding: 0;
     border-color: transparent;
-    transform: translateX(-50%);
+    transform: none;
     justify-content: center;
     background: transparent;
+  }
+
+  .docs-search-trigger__label {
+    display: none;
   }
 }
 

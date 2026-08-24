@@ -68,12 +68,14 @@ afterEach(() => {
 });
 
 describe('DocsSearch', () => {
-  it('uses a centered Search label without rendering the keyboard shortcut', () => {
+  it('renders the full, compact, and icon-only responsive search content', () => {
     const wrapper = mountSearch();
     const trigger = wrapper.get('.docs-search-trigger');
 
-    expect(trigger.text()).toBe('Search');
-    expect(trigger.find('.keyboard-chip').exists()).toBe(false);
+    expect(trigger.find('.docs-search-trigger__icon').exists()).toBe(true);
+    expect(trigger.get('.docs-search-trigger__label--full').text()).toBe('Search documentation');
+    expect(trigger.get('.docs-search-trigger__label--compact').text()).toBe('Search');
+    expect(trigger.find('.keyboard-chip-group').exists()).toBe(true);
   });
 
   it('starts with the Recorder and Video editor sections', async () => {

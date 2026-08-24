@@ -30,6 +30,7 @@ describe('DocsMobileMenu', () => {
     const trigger = wrapper.get('.docs-mobile-menu-trigger');
 
     expect(trigger.attributes('aria-expanded')).toBe('false');
+    expect(wrapper.find('.tooltip').exists()).toBe(false);
     await trigger.trigger('click');
     await flushPromises();
 

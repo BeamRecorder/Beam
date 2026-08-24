@@ -151,7 +151,7 @@ const websiteUrl = 'https://beam.plinka.eu';
   }
 }
 
-@media (max-width: 639px) {
+@media (max-width: 767px) {
   .docs-theme-control {
     display: none;
   }

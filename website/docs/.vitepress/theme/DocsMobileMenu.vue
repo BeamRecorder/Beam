@@ -45,8 +45,6 @@ const documentationLinks = computed(() => {
           size="md"
           icon-only
           :icon="Menu"
-          tooltip="Menu"
-          tooltip-position="bottom"
           aria-label="Open navigation menu"
           :aria-expanded="isOpen"
         />
