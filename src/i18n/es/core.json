@@ -92,6 +92,11 @@
     "curve": "Curva"
   },
   "CanvasPanel": {
+    "colorLayerAppearance": "Apariencia",
+    "colorLayerOpacity": "Opacidad",
+    "colorLayerCornerRadius": "Radio de esquina",
+    "colorLayerShadow": "Sombra",
+    "colorLayerBackdropBlur": "Desenfoque de fondo",
     "backgroundType": "Tipo de fondo",
     "image": "Imagen",
     "video": "Vídeo",

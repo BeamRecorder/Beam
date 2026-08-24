@@ -92,6 +92,11 @@
     "curve": "Krzywa"
   },
   "CanvasPanel": {
+    "colorLayerAppearance": "Wygląd",
+    "colorLayerOpacity": "Krycie",
+    "colorLayerCornerRadius": "Zaokrąglenie rogów",
+    "colorLayerShadow": "Cień",
+    "colorLayerBackdropBlur": "Rozmycie tła",
     "backgroundType": "Typ tła",
     "image": "Obraz",
     "video": "Wideo",

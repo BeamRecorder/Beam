@@ -37,6 +37,8 @@ const { state } = vi.hoisted(() => ({
     selectVisualAt: vi.fn(),
     transformDraft: undefined as { value: unknown } | undefined,
     transformSelectionViewportStyle: undefined as { value: unknown } | undefined,
+    transformHandlePositions: undefined as { value: unknown } | undefined,
+    transformPerspectiveCorners: undefined as { value: unknown } | undefined,
     transformResizeCorners: undefined as { value: unknown } | undefined,
     transition: undefined as { value: boolean } | undefined,
     onRenderOnce: undefined as (() => void) | undefined,
@@ -172,6 +174,8 @@ vi.mock('../composables/useLayerTransformAndCrop', async () => {
         width: '800px',
         height: '450px',
       });
+      state.transformHandlePositions = ref(undefined);
+      state.transformPerspectiveCorners = ref(undefined);
       state.transformResizeCorners = ref(undefined);
       return {
         transformSelectionViewportStyle: state.transformSelectionViewportStyle,
@@ -181,6 +185,8 @@ vi.mock('../composables/useLayerTransformAndCrop', async () => {
           width: '100px',
           height: '80px',
         }),
+        transformHandlePositions: state.transformHandlePositions,
+        transformPerspectiveCorners: state.transformPerspectiveCorners,
         cropContainerStyle: ref({
           left: '3px',
           top: '4px',
@@ -894,6 +900,18 @@ describe('EditorCanvas', () => {
     state.transformResizeCorners!.value = ['left', 'right'];
     await nextTick();
     expect(mounted.findComponent(ResizeHandle).props('corners')).toEqual(['left', 'right']);
+
+    const positions = { 'top-left': { x: 8, y: 12 }, right: { x: 104, y: 44 } };
+    state.transformHandlePositions!.value = positions;
+    state.transformPerspectiveCorners!.value = [
+      { x: 8, y: 12 },
+      { x: 96, y: 4 },
+      { x: 104, y: 44 },
+      { x: 12, y: 52 },
+    ];
+    await nextTick();
+    expect(mounted.findComponent(ResizeHandle).props('positions')).toEqual(positions);
+    expect(mounted.find('.perspective-border polygon').attributes('points')).toBe('8,12 96,4 104,44 12,52');
 
     state.renderVisualStack?.(contextMock, bounds, vi.fn(), resolveCompositionSceneLayers(composition(), 500));
     expect(state.drawWebcamClips).toHaveBeenCalledWith(expect.anything(), bounds);

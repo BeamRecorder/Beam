@@ -15,6 +15,19 @@ const suggestionFor = (telemetry: CursorTelemetryPoint[]) =>
 const AUTO_TILT_MIN_INTENSITY = 0.12;
 const AUTO_TILT_MAX_INTENSITY = 0.32;
 
+const expectAutoTiltMetadata = (zoom: ReturnType<typeof suggestionFor>) => {
+  expect(zoom).toMatchObject({ mode: 'auto', projection: '2d', tiltPreset: 'custom' });
+  for (const value of [zoom?.tiltIntensity, zoom?.tiltHorizontal, zoom?.tiltVertical]) {
+    expect(Number.isFinite(value)).toBe(true);
+  }
+  expect(zoom?.tiltIntensity).toBeGreaterThanOrEqual(0);
+  expect(zoom?.tiltIntensity).toBeLessThanOrEqual(1);
+  expect(zoom?.tiltHorizontal).toBeGreaterThanOrEqual(-1);
+  expect(zoom?.tiltHorizontal).toBeLessThanOrEqual(1);
+  expect(zoom?.tiltVertical).toBeGreaterThanOrEqual(-1);
+  expect(zoom?.tiltVertical).toBeLessThanOrEqual(1);
+};
+
 describe('buildAutomaticZoomElements', () => {
   it('creates a sensible size region for an explicit click', () => {
     const zooms = buildAutomaticZoomElements({
@@ -29,8 +42,11 @@ describe('buildAutomaticZoomElements', () => {
         focus: { cx: 0.25, cy: 0.75 },
         depth: 2,
         mode: 'auto',
+        projection: '2d',
+        tiltPreset: 'custom',
       }),
     ]);
+    expectAutoTiltMetadata(zooms[0]);
   });
 
   it('clusters explicit clicks separated by at most 2500 ms regardless of position', () => {
@@ -45,6 +61,7 @@ describe('buildAutomaticZoomElements', () => {
       endMs: 3_900,
       focus: { cx: 0.9, cy: 0.9 },
     });
+    expectAutoTiltMetadata(zooms[0]);
   });
 
   it('ignores moves and regions overlapping a reserved manual zoom', () => {
@@ -81,20 +98,20 @@ describe('buildAutomaticZoomElements', () => {
         mode: 'manual' as const,
       },
     ];
-    expect(
-      buildAutomaticZoomElements({
-        telemetry: [sample(8_100, 0.25, 0.75, 'click')],
-        sessionId: 'session',
-        durationMs: 10_000,
-        reserved,
-      }),
-    ).toEqual([
+    const zooms = buildAutomaticZoomElements({
+      telemetry: [sample(8_100, 0.25, 0.75, 'click')],
+      sessionId: 'session',
+      durationMs: 10_000,
+      reserved,
+    });
+    expect(zooms).toEqual([
       expect.objectContaining({
         startMs: 8_000,
         endMs: 9_000,
         focus: { cx: 0.25, cy: 0.75 },
       }),
     ]);
+    expectAutoTiltMetadata(zooms[0]);
   });
 
   it.each([
@@ -107,7 +124,8 @@ describe('buildAutomaticZoomElements', () => {
     (_direction, moves, axis) => {
       const zoom = suggestionFor([...moves, sample(3_000, 0.5, 0.5, 'click')]);
 
-      expect(zoom?.projection).toBe('2d');
+      expectAutoTiltMetadata(zoom);
+      expect(zoom?.tiltPreset).toBe('custom');
       expect(zoom?.tiltIntensity).toBeGreaterThanOrEqual(AUTO_TILT_MIN_INTENSITY);
       expect(zoom?.tiltIntensity).toBeLessThanOrEqual(AUTO_TILT_MAX_INTENSITY);
       expect(zoom?.[axis as 'tiltHorizontal' | 'tiltVertical']).toBeDefined();
@@ -155,6 +173,7 @@ describe('buildAutomaticZoomElements', () => {
     const fast = suggestionFor([sample(2_900, 0.1, 0.5, 'move'), sample(3_000, 0.5, 0.5, 'click')]);
 
     expect(fast?.projection).toBe('2d');
+    expectAutoTiltMetadata(fast);
     expect(fast?.tiltIntensity).toBeGreaterThan(slow?.tiltIntensity ?? 0);
     expect(fast?.tiltIntensity).toBeLessThanOrEqual(AUTO_TILT_MAX_INTENSITY);
     expect(slow?.tiltIntensity).toBeGreaterThanOrEqual(AUTO_TILT_MIN_INTENSITY);
@@ -169,7 +188,7 @@ describe('buildAutomaticZoomElements', () => {
   ])('keeps %s movement in the default 2D projection', (_label, telemetry) => {
     const zoom = suggestionFor(telemetry);
 
-    expect(zoom?.projection).toBe('2d');
+    expectAutoTiltMetadata(zoom);
   });
 
   it('keeps absent movement in 2D with the default perspective metadata', () => {
@@ -180,6 +199,7 @@ describe('buildAutomaticZoomElements', () => {
       tiltIntensity: DEFAULT_ZOOM_TILT_INTENSITY,
       tiltHorizontal: DEFAULT_ZOOM_TILT_HORIZONTAL,
       tiltVertical: DEFAULT_ZOOM_TILT_VERTICAL,
+      tiltPreset: 'custom',
     });
   });
 
@@ -190,7 +210,7 @@ describe('buildAutomaticZoomElements', () => {
       sample(3_000, 0.5, 0.5, 'click'),
     ]);
 
-    expect(zoom?.projection).toBe('2d');
+    expectAutoTiltMetadata(zoom);
     expect(Number.isFinite(zoom?.tiltIntensity)).toBe(true);
     expect(zoom?.tiltIntensity).toBeGreaterThanOrEqual(AUTO_TILT_MIN_INTENSITY);
     expect(zoom?.tiltIntensity).toBeLessThanOrEqual(AUTO_TILT_MAX_INTENSITY);
@@ -201,7 +221,7 @@ describe('buildAutomaticZoomElements', () => {
   });
 
   it('increments the automatic zoom algorithm version for perspective metadata', () => {
-    expect(ZOOM_ALGORITHM_VERSION).toBe(7);
+    expect(ZOOM_ALGORITHM_VERSION).toBe(8);
   });
 });
 

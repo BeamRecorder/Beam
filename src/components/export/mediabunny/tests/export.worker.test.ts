@@ -47,6 +47,7 @@ vi.mock('../export-worker-output', () => ({
 }));
 vi.mock('../../composition/render', () => ({
   createSnapshotCameraEvaluator: vi.fn(),
+  disposeCompositionRenderer: vi.fn(),
   renderCompositionFrame: vi.fn(),
 }));
 vi.mock('../../../video-editor/properties/cursor/useCursorReplacer', () => ({

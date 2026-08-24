@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { Plus, SlidersHorizontal } from '@lucide/vue';
+import { SlidersHorizontal } from '@lucide/vue';
+import AddTileButton from '~/ui/button/AddTileButton.vue';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
+import Divider from '~/ui/divider/Divider.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import BackgroundPresetComposer from '../canvas/BackgroundPresetComposer.vue';
 import { useBackgroundPresets } from '../canvas/useBackgroundPresets';
@@ -14,10 +16,16 @@ import {
 } from '../../composables/backgroundCatalog';
 import type { ColorClip } from '~/media/shared/composition-types';
 import type { ColorFill } from '~/media/shared/color-fill-types';
+import type { ColorLayerStyle } from '~/media/shared/color-layer-style';
 import { useTranslate } from '~/i18n/useTranslate';
+import ColorLayerAppearanceControls from './ColorLayerAppearanceControls.vue';
 
 const props = defineProps<{ clip: ColorClip }>();
-const emit = defineEmits<{ (event: 'update', fill: ColorFill): void }>();
+const emit = defineEmits<{
+  (event: 'update', fill: ColorFill): void;
+  (event: 'update:style', patch: Partial<ColorLayerStyle>): void;
+  (event: 'corner-radius-interaction', interacting: boolean): void;
+}>();
 const { t } = useTranslate('CanvasPanel');
 const activeKind = ref<'color' | 'gradient'>(props.clip.fill.kind);
 watch(
@@ -39,6 +47,7 @@ const {
   editingPresetId,
   toggleColor,
   toggleGradient,
+  beginAdd,
   isEditing,
   close: closeCustomEditor,
   saveColor,
@@ -94,20 +103,13 @@ const gradientStyle = (gradient: GradientBackground) => ({ background: gradientC
       <div class="preset-grid">
         <Popover block :match-trigger-width="false" flush @toggle="(open) => !open && closeCustomEditor()">
           <template #trigger>
-            <button
-              type="button"
-              class="preset-tile custom-tile"
-              :aria-label="t('customColor')"
-              @click="editingPresetId = null"
-            >
-              <Plus :size="16" />
-            </button>
+            <AddTileButton :label="t('customColor')" @click="beginAdd('color')" />
           </template>
           <template #default="{ close }">
             <BackgroundPresetComposer
               kind="color"
-              :color="selectedColorPreset?.color ?? customColorValue"
-              :gradient="selectedGradientPreset?.gradient ?? customGradientValue"
+              :color="customColorValue"
+              :gradient="customGradientValue"
               @add-color="
                 (value) => {
                   void saveColor(value);
@@ -177,20 +179,13 @@ const gradientStyle = (gradient: GradientBackground) => ({ background: gradientC
       <div class="preset-grid">
         <Popover block :match-trigger-width="false" flush @toggle="(open) => !open && closeCustomEditor()">
           <template #trigger>
-            <button
-              type="button"
-              class="preset-tile custom-tile"
-              :aria-label="t('customGradient')"
-              @click="editingPresetId = null"
-            >
-              <Plus :size="16" />
-            </button>
+            <AddTileButton :label="t('customGradient')" @click="beginAdd('gradient')" />
           </template>
           <template #default="{ close }">
             <BackgroundPresetComposer
               kind="gradient"
-              :color="selectedColorPreset?.color ?? customColorValue"
-              :gradient="selectedGradientPreset?.gradient ?? customGradientValue"
+              :color="customColorValue"
+              :gradient="customGradientValue"
               @add-gradient="
                 (value) => {
                   void saveGradient(value);
@@ -255,6 +250,13 @@ const gradientStyle = (gradient: GradientBackground) => ({ background: gradientC
         </template>
       </Popover>
     </div>
+
+    <Divider spacing="xs" />
+    <ColorLayerAppearanceControls
+      :clip="clip"
+      @update="emit('update:style', $event)"
+      @corner-radius-interaction="emit('corner-radius-interaction', $event)"
+    />
   </section>
 </template>
 
@@ -313,13 +315,6 @@ const gradientStyle = (gradient: GradientBackground) => ({ background: gradientC
   border: 1px dashed color-mix(in srgb, var(--text-primary) 70%, transparent);
   border-radius: calc(var(--radius-md) - 3px);
   content: '';
-}
-
-.custom-tile {
-  display: grid;
-  place-items: center;
-  color: var(--text-secondary);
-  background: var(--color-bg-surface);
 }
 
 @media (prefers-reduced-motion: reduce) {

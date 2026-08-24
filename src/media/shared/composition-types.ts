@@ -2,6 +2,7 @@ import type { CameraFramingPreset, CameraLayoutPreset } from './camera-layout-ty
 import type { CaptionHighlightStyle } from './caption-highlight-types';
 import type { CaptionShapeStyle } from './caption-shape-types';
 import type { ColorFill, PhoneFrameFill } from './color-fill-types';
+import type { ColorLayerStyle } from './color-layer-style';
 
 export const COMPOSITION_SCHEMA_VERSION = 12 as const;
 export const SCREEN_CLIP_ID = 'screen';
@@ -218,6 +219,17 @@ export interface ColorClip extends ClipBase {
   assetId: string;
   transform: NormalizedTransform;
   fill: ColorFill;
+  /** Optional for color layers saved before appearance controls were introduced. */
+  opacityEnabled?: ColorLayerStyle['opacityEnabled'];
+  opacity?: ColorLayerStyle['opacity'];
+  cornerRadius?: ColorLayerStyle['cornerRadius'];
+  shadowSize?: ColorLayerStyle['shadowSize'];
+  shadowBlur?: ColorLayerStyle['shadowBlur'];
+  shadowMode?: ColorLayerStyle['shadowMode'];
+  shadowColor?: ColorLayerStyle['shadowColor'];
+  shadowDirection?: ColorLayerStyle['shadowDirection'];
+  backdropBlurEnabled?: ColorLayerStyle['backdropBlurEnabled'];
+  backdropBlur?: ColorLayerStyle['backdropBlur'];
 }
 
 export interface AudioClip extends ClipBase {

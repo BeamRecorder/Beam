@@ -71,7 +71,10 @@ const setProjection = (projection: '2d' | '3d') => {
     tiltIntensity: normalizeZoomTiltIntensity(props.selectedZoom.tiltIntensity),
     tiltHorizontal: normalizeZoomTiltAxis(props.selectedZoom.tiltHorizontal, DEFAULT_ZOOM_TILT_HORIZONTAL),
     tiltVertical: normalizeZoomTiltAxis(props.selectedZoom.tiltVertical, DEFAULT_ZOOM_TILT_VERTICAL),
-    tiltPreset: normalizeZoomTiltPreset(props.selectedZoom.tiltPreset, props.selectedZoom.tiltIntensity),
+    tiltPreset:
+      projection === '3d' && props.selectedZoom.mode === 'auto'
+        ? 'custom'
+        : normalizeZoomTiltPreset(props.selectedZoom.tiltPreset, props.selectedZoom.tiltIntensity),
   });
 };
 

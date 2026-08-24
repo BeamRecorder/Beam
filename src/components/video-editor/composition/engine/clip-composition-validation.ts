@@ -8,6 +8,7 @@ import {
   type ClipComposition,
 } from '~/media/shared/composition-types';
 import { isColorFill, isPhoneFrameFill } from '~/media/shared/color-fill-types';
+import { isColorLayerStyle } from '~/media/shared/color-layer-style';
 import { normalizeClipTransitions } from '~/media/shared/clip-transitions';
 import { isCameraFramingPreset, isCameraLayoutPreset, isSplitCameraLayout } from '~/media/shared/camera-layout-types';
 import { assertValidVisualTracks } from './visual-track-layout';
@@ -154,7 +155,7 @@ export function validateComposition(composition: ClipComposition): void {
       )
         throw new CompositionEngineError('Invalid blur effect settings.');
     }
-    if (isColorClip(clip) && (clip.assetId !== '' || !isColorFill(clip.fill)))
+    if (isColorClip(clip) && (clip.assetId !== '' || !isColorFill(clip.fill) || !isColorLayerStyle(clip)))
       throw new CompositionEngineError('Invalid color clip settings.');
     if (isAudioClip(clip) && (!finite(clip.volume) || clip.volume < 0 || clip.volume > 200))
       throw new CompositionEngineError('Invalid clip volume.');

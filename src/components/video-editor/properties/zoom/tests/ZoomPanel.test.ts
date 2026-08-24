@@ -100,10 +100,17 @@ describe('ZoomPanel', () => {
     ]);
   });
 
-  it('switches between 2D and 3D, restores the default tilt, and clamps intensity', async () => {
+  it('activates 3D with the existing metadata, marks it custom, and preserves it when returning to 2D', async () => {
     const wrapper = mount(ZoomPanel, {
       props: {
-        selectedZoom: { ...selectedZoom, projection: '2d' },
+        selectedZoom: {
+          ...selectedZoom,
+          projection: '2d',
+          tiltIntensity: 0.42,
+          tiltHorizontal: -0.3,
+          tiltVertical: 0.7,
+          tiltPreset: 'medium',
+        },
         canGenerate: true,
         hasAutomaticZooms: false,
         motionBlur: { enabled: true, intensity: 0.55 },
@@ -117,19 +124,45 @@ describe('ZoomPanel', () => {
       {
         ...selectedZoom,
         projection: '3d',
-        tiltIntensity: 0.6,
-        tiltHorizontal: 0.65,
-        tiltVertical: -0.35,
-        tiltPreset: 'medium',
+        tiltIntensity: 0.42,
+        tiltHorizontal: -0.3,
+        tiltVertical: 0.7,
+        tiltPreset: 'custom',
       },
     ]);
 
-    await wrapper.setProps({ selectedZoom: { ...selectedZoom, projection: '3d', tiltIntensity: 0.4 } });
+    await wrapper.setProps({
+      selectedZoom: {
+        ...selectedZoom,
+        projection: '3d',
+        tiltIntensity: 0.4,
+        tiltHorizontal: 0.2,
+        tiltVertical: -0.5,
+        tiltPreset: 'custom',
+      },
+    });
     await wrapper.get('.tilt-slider').trigger('click');
     expect(wrapper.emitted('update')).toContainEqual([
-      { ...selectedZoom, projection: '3d', tiltIntensity: 1, tiltPreset: 'custom' },
+      {
+        ...selectedZoom,
+        projection: '3d',
+        tiltIntensity: 1,
+        tiltHorizontal: 0.2,
+        tiltVertical: -0.5,
+        tiltPreset: 'custom',
+      },
     ]);
 
+    await wrapper.setProps({
+      selectedZoom: {
+        ...selectedZoom,
+        projection: '3d',
+        tiltIntensity: 0.4,
+        tiltHorizontal: 0.2,
+        tiltVertical: -0.5,
+        tiltPreset: 'custom',
+      },
+    });
     const updatedProjectionButtons = wrapper.findAll('.button-group')[1]!.findAll('button');
     await updatedProjectionButtons[0]!.trigger('click');
     expect(wrapper.emitted('update')).toContainEqual([
@@ -137,8 +170,8 @@ describe('ZoomPanel', () => {
         ...selectedZoom,
         projection: '2d',
         tiltIntensity: 0.4,
-        tiltHorizontal: 0.65,
-        tiltVertical: -0.35,
+        tiltHorizontal: 0.2,
+        tiltVertical: -0.5,
         tiltPreset: 'custom',
       },
     ]);
@@ -204,6 +237,19 @@ describe('ZoomPanel', () => {
       global: { stubs: { Button, ButtonGroup, BigSlider, Switch } },
     });
 
+    expect(wrapper.emitted('update')).toBeUndefined();
+    await wrapper.setProps({
+      selectedZoom: {
+        ...selectedZoom,
+        projection: '3d',
+        tiltIntensity: 0.9,
+        tiltHorizontal: -0.25,
+        tiltVertical: 0.45,
+        tiltPreset: 'custom',
+      },
+    });
+    expect(wrapper.emitted('update')).toBeUndefined();
+
     const presetButtons = wrapper.findAll('.button-group')[2]!.findAll('button');
     await presetButtons[0]!.trigger('click');
     expect(wrapper.emitted('update')).toContainEqual([
@@ -216,17 +262,27 @@ describe('ZoomPanel', () => {
     ]);
     await presetButtons[1]!.trigger('click');
     expect(wrapper.emitted('update')).toContainEqual([
-      expect.objectContaining({ tiltPreset: 'medium', tiltIntensity: 0.6 }),
+      expect.objectContaining({
+        tiltPreset: 'medium',
+        tiltIntensity: 0.6,
+        tiltHorizontal: -0.25,
+        tiltVertical: 0.45,
+      }),
     ]);
     await presetButtons[2]!.trigger('click');
     expect(wrapper.emitted('update')).toContainEqual([
-      expect.objectContaining({ tiltPreset: 'large', tiltIntensity: 1 }),
+      expect.objectContaining({
+        tiltPreset: 'large',
+        tiltIntensity: 1,
+        tiltHorizontal: -0.25,
+        tiltVertical: 0.45,
+      }),
     ]);
     await presetButtons[3]!.trigger('click');
     expect(wrapper.emitted('update')).toContainEqual([
       expect.objectContaining({
         tiltPreset: 'custom',
-        tiltIntensity: 0.8,
+        tiltIntensity: 0.9,
         tiltHorizontal: -0.25,
         tiltVertical: 0.45,
       }),

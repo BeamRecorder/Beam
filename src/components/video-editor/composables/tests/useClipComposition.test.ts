@@ -830,7 +830,7 @@ describe('useClipComposition', () => {
     });
   });
 
-  it('adds a full-canvas solid color layer for three seconds and selects it', async () => {
+  it('adds an inset solid color layer with appearance defaults for three seconds and selects it', async () => {
     const mounted = mountComposable();
     mounted.currentTimeSec.value = 2;
 
@@ -844,8 +844,18 @@ describe('useClipComposition', () => {
       timelineDurationMs: 3_000,
       sourceInMs: 0,
       sourceDurationMs: 3_000,
-      transform: { x: 0, y: 0, width: 1, height: 1 },
+      transform: { x: 0.15, y: 0.2, width: 0.7, height: 0.6 },
       fill: { kind: 'color', color: '#111827' },
+      opacityEnabled: false,
+      opacity: 70,
+      cornerRadius: 'none',
+      shadowSize: 'none',
+      shadowBlur: 40,
+      shadowMode: 'solid',
+      shadowColor: '#000000',
+      shadowDirection: 'all',
+      backdropBlurEnabled: false,
+      backdropBlur: 35,
     });
     expect(color?.id).toBe(mounted.state.selectedClipId.value);
     expect(mounted.activeTab.value).toBe('clip');

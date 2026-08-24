@@ -1,5 +1,5 @@
 import { mount, flushPromises } from '@vue/test-utils';
-import { defineComponent, type ComponentPublicInstance } from 'vue';
+import { defineComponent, reactive, type ComponentPublicInstance } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PreferenceSettings } from '../../../../api/types/capture-api';
 import { useBackgroundPresets } from './useBackgroundPresets';
@@ -130,6 +130,88 @@ describe('background presets', () => {
         backgroundPresets: expect.objectContaining({ gradients: [expect.objectContaining({ angle: 90 })] }),
       }),
     );
+  });
+
+  it('keeps reactive editor defaults cloneable while adding and resyncing custom presets', async () => {
+    const colorLayerStyle = reactive({
+      opacityEnabled: true,
+      opacity: 62,
+      cornerRadius: 'md',
+      shadowSize: 'lg',
+      shadowBlur: 24,
+      shadowMode: 'adaptive',
+      shadowColor: '#123456',
+      shadowDirection: 'bottom-right',
+      backdropBlurEnabled: true,
+      backdropBlur: 36,
+    });
+    const loaded = reactive({
+      ...preferences(),
+      extras: reactive({
+        backgroundPresetOverrides: reactive({}),
+        editorDefaults: reactive({ colorLayer: reactive({ style: colorLayerStyle }) }),
+      }),
+    });
+    capture.getPreferences.mockResolvedValue(loaded);
+    capture.updatePreferences.mockImplementation(async (patch) => reactive({ ...preferences(), ...patch }));
+    const wrapper = await mountPresets();
+    const initialColorIds = wrapper.vm.presets.colorPresets.value.map((item) => item.id);
+    const initialGradientIds = wrapper.vm.presets.gradientPresets.value.map((item) => item.id);
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
+
+    try {
+      wrapper.vm.presets.beginAdd('color');
+      const color = wrapper.vm.presets.customColorValue.value;
+      expect(color).toMatch(/^#[0-9a-f]{6}$/);
+      await wrapper.vm.presets.saveColor(color);
+
+      const colorPayload = capture.updatePreferences.mock.calls[0]?.[0];
+      expect(colorPayload).toBeDefined();
+      expect(() => structuredClone(colorPayload)).not.toThrow();
+      expect(colorPayload).toEqual(JSON.parse(JSON.stringify(colorPayload)));
+      expect(colorPayload.backgroundPresets.colors).toEqual(['#abcdef', '#000000']);
+      expect(wrapper.vm.presets.colorPresets.value.map((item) => item.id)).toEqual(
+        expect.arrayContaining(initialColorIds),
+      );
+      expect(wrapper.vm.presets.colorPresets.value).toContainEqual(
+        expect.objectContaining({ id: 'color:custom:#000000', color: '#000000' }),
+      );
+
+      wrapper.vm.presets.beginAdd('gradient');
+      const generatedGradient = wrapper.vm.presets.customGradientValue.value;
+      expect(generatedGradient.stops).toHaveLength(2);
+      expect(
+        generatedGradient.stops.every((stop) =>
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(stop.id),
+        ),
+      ).toBe(true);
+      await wrapper.vm.presets.saveGradient(generatedGradient);
+
+      const gradientPayload = capture.updatePreferences.mock.calls[1]?.[0];
+      expect(gradientPayload).toBeDefined();
+      expect(() => structuredClone(gradientPayload)).not.toThrow();
+      expect(gradientPayload).toEqual(JSON.parse(JSON.stringify(gradientPayload)));
+      expect(gradientPayload.backgroundPresets.gradients).toHaveLength(2);
+      expect(wrapper.vm.presets.gradientPresets.value.map((item) => item.id)).toEqual(
+        expect.arrayContaining(initialGradientIds),
+      );
+      expect(wrapper.vm.presets.gradientPresets.value.map((item) => item.id)).toContain('gradient:custom:1');
+      expect(wrapper.vm.presets.gradientPresets.value).toHaveLength(initialGradientIds.length + 1);
+      expect(gradientPayload.extras.editorDefaults.colorLayer.style).toEqual({
+        opacityEnabled: true,
+        opacity: 62,
+        cornerRadius: 'md',
+        shadowSize: 'lg',
+        shadowBlur: 24,
+        shadowMode: 'adaptive',
+        shadowColor: '#123456',
+        shadowDirection: 'bottom-right',
+        backdropBlurEnabled: true,
+        backdropBlur: 36,
+      });
+    } finally {
+      randomSpy.mockRestore();
+    }
   });
 
   it('toggles editors closed, creates a new value when no preset is being edited, and ignores failed hydration', async () => {

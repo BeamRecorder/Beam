@@ -133,5 +133,36 @@ export function projectPerspectivePoint(
   };
 }
 
+export function unprojectPerspectivePoint(
+  point: ProjectedPoint,
+  bounds: { x: number; y: number; width: number; height: number },
+  transform: PerspectiveTransform,
+  coverScale = perspectiveCoverScale(bounds.width, bounds.height, transform),
+): ProjectedPoint {
+  const width = Math.max(1e-6, bounds.width);
+  const height = Math.max(1e-6, bounds.height);
+  const aspect = width / height;
+  const tiltX = clampTilt(transform.tiltX);
+  const tiltY = clampTilt(transform.tiltY);
+  const projectedX = (((point.x - bounds.x) / width) * 2 - 1) / Math.max(1e-6, coverScale);
+  const projectedY = (1 - ((point.y - bounds.y) / height) * 2) / Math.max(1e-6, coverScale);
+  const sinX = Math.sin(tiltX);
+  const cosX = Math.cos(tiltX);
+  const sinY = Math.sin(tiltY);
+  const cosY = Math.cos(tiltY);
+  const a = cosY / aspect + (projectedX * cosX * sinY) / CAMERA_DISTANCE;
+  const b = (-projectedX * sinX) / CAMERA_DISTANCE;
+  const c = sinX * sinY + (projectedY * cosX * sinY) / CAMERA_DISTANCE;
+  const d = cosX - (projectedY * sinX) / CAMERA_DISTANCE;
+  const determinant = a * d - b * c;
+  if (Math.abs(determinant) < 1e-8) return { x: bounds.x + width / 2, y: bounds.y + height / 2 };
+  const x = (projectedX * d - b * projectedY) / determinant;
+  const y = (a * projectedY - projectedX * c) / determinant;
+  return {
+    x: bounds.x + ((x / aspect + 1) / 2) * width,
+    y: bounds.y + ((1 - y) / 2) * height,
+  };
+}
+
 export const hasPerspectiveTilt = (transform: PerspectiveTransform) =>
   Math.abs(transform.tiltX) > 0.000_01 || Math.abs(transform.tiltY) > 0.000_01;

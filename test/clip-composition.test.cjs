@@ -666,6 +666,194 @@ test('normalizes assetless color layers and preserves their visual track orderin
   assert.equal(normalized.clips[1].fill.gradient.stops[1].alpha, 0.6);
 });
 
+test('persists color layer appearance values through an editor-state round trip', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-color-layer-style-'));
+  const store = createProjectStore(root);
+  const project = store.create({ name: 'Color layer style' });
+  const state = store.editorState(project.id);
+  state.composition = {
+    schemaVersion: 12,
+    assets: [],
+    keyboardCaptionSessions: [],
+    clips: [
+      colorClip({
+        opacityEnabled: true,
+        opacity: 64,
+        cornerRadius: 28,
+        shadowSize: 'lg',
+        shadowBlur: 46,
+        shadowMode: 'adaptive',
+        shadowColor: '#112233cc',
+        shadowDirection: 'bottom-right',
+        backdropBlurEnabled: true,
+        backdropBlur: 72,
+      }),
+    ],
+  };
+
+  const saved = store.saveEditorState(project.id, state);
+  const color = saved.composition.clips[0];
+  assert.deepEqual(
+    {
+      opacityEnabled: color.opacityEnabled,
+      opacity: color.opacity,
+      cornerRadius: color.cornerRadius,
+      shadowSize: color.shadowSize,
+      shadowBlur: color.shadowBlur,
+      shadowMode: color.shadowMode,
+      shadowColor: color.shadowColor,
+      shadowDirection: color.shadowDirection,
+      backdropBlurEnabled: color.backdropBlurEnabled,
+      backdropBlur: color.backdropBlur,
+    },
+    {
+      opacityEnabled: true,
+      opacity: 64,
+      cornerRadius: 28,
+      shadowSize: 'lg',
+      shadowBlur: 46,
+      shadowMode: 'adaptive',
+      shadowColor: '#112233cc',
+      shadowDirection: 'bottom-right',
+      backdropBlurEnabled: true,
+      backdropBlur: 72,
+    },
+  );
+
+  const persisted = JSON.parse(fs.readFileSync(path.join(store.directoryFor(project.id), 'project.json'), 'utf8'));
+  assert.deepEqual(persisted.editor.composition.clips[0], saved.composition.clips[0]);
+  assert.deepEqual(store.editorState(project.id).composition.clips[0], saved.composition.clips[0]);
+});
+
+test('keeps legacy color layers without appearance fields compatible', () => {
+  const legacy = colorClip({ id: 'legacy-color' });
+  const normalized = normalizeComposition({
+    schemaVersion: 12,
+    assets: [],
+    keyboardCaptionSessions: [],
+    clips: [legacy],
+  });
+  const normalizedColor = normalized.clips[0];
+
+  for (const key of [
+    'opacityEnabled',
+    'opacity',
+    'cornerRadius',
+    'shadowSize',
+    'shadowBlur',
+    'shadowMode',
+    'shadowColor',
+    'shadowDirection',
+    'backdropBlurEnabled',
+    'backdropBlur',
+  ]) {
+    assert.equal(Object.hasOwn(normalizedColor, key), false, `legacy color layer unexpectedly gained ${key}`);
+  }
+
+  const migrated = migrateComposition(
+    {
+      schemaVersion: 11,
+      assets: [],
+      keyboardCaptionSessions: [],
+      clips: [legacy],
+    },
+    true,
+    [],
+  );
+  for (const key of [
+    'opacityEnabled',
+    'opacity',
+    'cornerRadius',
+    'shadowSize',
+    'shadowBlur',
+    'shadowMode',
+    'shadowColor',
+    'shadowDirection',
+    'backdropBlurEnabled',
+    'backdropBlur',
+  ]) {
+    assert.equal(Object.hasOwn(migrated.clips[0], key), false, `legacy migration unexpectedly added ${key}`);
+  }
+});
+
+test('accepts color layer radius and shadow presets shared by visual clips', () => {
+  const fields = {
+    cornerRadius: ['none', 'sm', 'md', 'lg', 42],
+    shadowSize: ['none', 'sm', 'md', 'lg', 'custom'],
+    shadowBlur: [0, 96],
+    shadowMode: ['solid', 'adaptive'],
+    shadowColor: ['#112233', '#112233cc'],
+    shadowDirection: ['all', 'bottom', 'bottom-right', 'top-left'],
+  };
+
+  for (const [key, values] of Object.entries(fields)) {
+    for (const value of values) {
+      const normalized = normalizeComposition({
+        schemaVersion: 12,
+        assets: [],
+        keyboardCaptionSessions: [],
+        clips: [
+          colorClip({
+            opacityEnabled: false,
+            opacity: 100,
+            cornerRadius: 0,
+            shadowSize: 'none',
+            shadowBlur: 0,
+            shadowMode: 'solid',
+            shadowColor: '#000000',
+            shadowDirection: 'all',
+            backdropBlurEnabled: false,
+            backdropBlur: 0,
+            [key]: value,
+          }),
+        ],
+      });
+      assert.equal(normalized.clips[0][key], value, `${key} should accept ${String(value)}`);
+    }
+  }
+});
+
+test('rejects invalid color layer appearance values', () => {
+  const invalidFields = [
+    ['opacityEnabled', 'yes'],
+    ['opacity', -1],
+    ['opacity', 101],
+    ['opacity', Number.NaN],
+    ['opacity', '50'],
+    ['cornerRadius', 'full'],
+    ['cornerRadius', 'custom'],
+    ['cornerRadius', -1],
+    ['cornerRadius', 10_000],
+    ['cornerRadius', Number.NaN],
+    ['shadowSize', 'full'],
+    ['shadowBlur', -1],
+    ['shadowBlur', 97],
+    ['shadowBlur', Number.NaN],
+    ['shadowMode', 'soft'],
+    ['shadowColor', '#fff'],
+    ['shadowColor', 'transparent'],
+    ['shadowDirection', 'top-right'],
+    ['backdropBlurEnabled', 1],
+    ['backdropBlur', -1],
+    ['backdropBlur', 101],
+    ['backdropBlur', Number.POSITIVE_INFINITY],
+    ['backdropBlur', '50'],
+  ];
+
+  for (const [key, value] of invalidFields)
+    assert.throws(
+      () =>
+        normalizeComposition({
+          schemaVersion: 12,
+          assets: [],
+          keyboardCaptionSessions: [],
+          clips: [colorClip({ [key]: value })],
+        }),
+      /Apparence de calque couleur invalide/,
+      `${key} should reject ${String(value)}`,
+    );
+});
+
 test('rejects invalid color layer fills', () => {
   const invalidFills = [
     null,

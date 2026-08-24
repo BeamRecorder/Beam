@@ -17,6 +17,7 @@ import {
   type MediaAsset,
   type VisualClip,
 } from '~/media/shared/composition-types';
+import { DEFAULT_COLOR_LAYER_STYLE } from '~/media/shared/color-layer-style';
 import { DEFAULT_COLOR_FILL } from '~/media/shared/color-fill-types';
 import type { EditorPreferenceDefaults } from './editor-default-types';
 import { audioDefaultsFor, blurDefaultsFor, captionDefaultsFor, visualClipDefaultProps } from './editor-defaults';
@@ -215,8 +216,9 @@ export function useClipComposition(options: {
         transitions: { entry: null, exit: null },
         enabled: true,
         order: Math.min(0, ...composition.value.clips.filter(isCompositingClip).map((clip) => clip.order)) - 1,
-        transform: { x: 0, y: 0, width: 1, height: 1 },
+        transform: { x: 0.15, y: 0.2, width: 0.7, height: 0.6 },
         fill: structuredClone(DEFAULT_COLOR_FILL),
+        ...DEFAULT_COLOR_LAYER_STYLE,
       };
       composition.value = addClip(composition.value, clip);
       selectClip(clip.id);

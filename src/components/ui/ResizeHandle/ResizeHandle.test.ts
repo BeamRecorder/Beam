@@ -36,6 +36,28 @@ describe('ResizeHandle', () => {
     expect(handles.every((handle) => handle.classes().includes('is-at-limit'))).toBe(true);
   });
 
+  it('uses custom positions for perspective anchors', () => {
+    const positions = {
+      'top-left': { x: 12, y: 18 },
+      top: { x: 48, y: 9 },
+      'top-right': { x: 84, y: 16 },
+      right: { x: 91, y: 52 },
+      'bottom-right': { x: 86, y: 88 },
+      bottom: { x: 47, y: 96 },
+      'bottom-left': { x: 10, y: 87 },
+      left: { x: 5, y: 51 },
+    } as const;
+    const wrapper = mount(ResizeHandle, { props: { positions } });
+
+    for (const [corner, position] of Object.entries(positions)) {
+      const style = wrapper.get(`.is-${corner}`).attributes('style');
+      expect(style).toContain(`left: ${position.x}px`);
+      expect(style).toContain(`top: ${position.y}px`);
+      expect(style).toContain('right: auto');
+      expect(style).toContain('bottom: auto');
+    }
+  });
+
   it('ends a captured resize when the pointer capture is lost', async () => {
     const wrapper = mount(ResizeHandle, { props: { corners: ['bottom-right'] } });
     const handle = wrapper.get('.resize-handle');

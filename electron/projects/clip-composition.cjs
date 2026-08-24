@@ -1,6 +1,7 @@
 const path = require('path');
 const { normalizeCaption } = require('./composition-captions.cjs');
 const { normalizeColorFill } = require('./composition-color-fill.cjs');
+const { normalizeColorLayerStyle } = require('./composition-color-layer.cjs');
 const { normalizePhoneFrameFill } = require('./composition-phone-frame-fill.cjs');
 const { historicalAppearance } = require('./composition-appearance.cjs');
 const { withoutInheritedKeyboardText, withHistoricalTypography } = require('./composition-migration-helpers.cjs');
@@ -213,6 +214,7 @@ function normalizeComposition(value) {
         assetId: '',
         transform: rectangle(clip.transform, 'Transformation'),
         fill: normalizeColorFill(clip.fill),
+        ...normalizeColorLayerStyle(clip),
       };
     }
     if (clip.kind === 'blur') {

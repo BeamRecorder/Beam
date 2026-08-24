@@ -1,11 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import type { CursorPackDescriptor, CursorSelection } from '~/api/types/cursor-pack';
-import type {
-  BackgroundMedia,
-  BackgroundValue,
-  BackgroundMediaGroup,
-} from '~/components/video-editor/composables/backgroundCatalog';
+import type { BackgroundMedia, BackgroundMediaGroup, BackgroundValue } from '../composables/backgroundCatalog';
 import CursorPanel from '~/components/video-editor/properties/cursor/CursorPanel.vue';
 import CanvasPanel from '~/components/video-editor/properties/canvas/CanvasPanel.vue';
 import AudioPanel from '~/components/video-editor/properties/audio/AudioPanel.vue';
@@ -21,7 +17,7 @@ import KeyboardCaptionClipPanel from '~/components/video-editor/properties/capti
 import ClipTransitionsPanel from '~/components/video-editor/properties/clip/ClipTransitionsPanel.vue';
 import TransitionSettingsPanel from '~/components/video-editor/properties/clip/TransitionSettingsPanel.vue';
 import PropertiesPanelHeader from './PropertiesPanelHeader.vue';
-import { setClipTransition, setColorFill } from '~/components/video-editor/composition/engine/clip-engine';
+import { setClipTransition, setColorFill, setColorLayerStyle } from '../composition/engine/clip-engine';
 import { EMPTY_CLIP_TRANSITIONS, normalizeCanvasTransitions } from '~/media/shared/clip-transitions';
 import ScrollShadow from '~/ui/scroll-shadow/ScrollShadow.vue';
 import {
@@ -374,6 +370,8 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
               v-else-if="activeTab === 'clip' && selectedDomainClip && isColorClip(selectedDomainClip)"
               :clip="selectedDomainClip"
               @update="emit('update:composition', setColorFill(composition, selectedDomainClip.id, $event))"
+              @update:style="emit('update:composition', setColorLayerStyle(composition, selectedDomainClip.id, $event))"
+              @corner-radius-interaction="emit('corner-radius-interaction', $event)"
             />
             <BlurPropertiesPanel
               v-else-if="activeTab === 'clip' && normalizedSelectedClip?.kind === 'blur'"

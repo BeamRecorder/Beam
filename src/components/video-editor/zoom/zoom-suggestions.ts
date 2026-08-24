@@ -12,7 +12,7 @@ import { suggestAutomaticTilt } from './automatic-tilt';
 
 export const CLICK_CLUSTER_GAP_MS = 2500;
 export const ZOOM_REGION_PADDING_MS = 500;
-export const ZOOM_ALGORITHM_VERSION = 7;
+export const ZOOM_ALGORITHM_VERSION = 8;
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const explicitClickTypes = new Set(['click', 'double-click', 'right-click', 'middle-click']);
@@ -102,7 +102,7 @@ export function buildAutomaticZoomElements(params: {
         tiltIntensity: tilt?.intensity ?? DEFAULT_ZOOM_TILT_INTENSITY,
         tiltHorizontal: tilt?.horizontal ?? DEFAULT_ZOOM_TILT_HORIZONTAL,
         tiltVertical: tilt?.vertical ?? DEFAULT_ZOOM_TILT_VERTICAL,
-        tiltPreset: tilt ? ('custom' as const) : ('medium' as const),
+        tiltPreset: 'custom' as const,
       },
     ];
   });

@@ -19,6 +19,7 @@ import {
 import { normalizeClipTransitions } from '~/media/shared/clip-transitions';
 import type { CameraFramingPreset } from '~/media/shared/camera-layout-types';
 import type { ColorFill } from '~/media/shared/color-fill-types';
+import { normalizeColorLayerStyle, type ColorLayerStyle } from '~/media/shared/color-layer-style';
 import { EMPTY_CLIP_TRANSITIONS } from '~/media/shared/clip-transitions';
 import {
   maximumVisualTrackDuration,
@@ -314,6 +315,17 @@ export function setColorFill(composition: ClipComposition, clipId: string, fill:
   return updateClip(composition, clipId, (clip) => {
     if (!isColorClip(clip)) throw new CompositionEngineError('Only color clips have color fill settings.');
     return { ...clip, fill: cloneValue(fill) };
+  });
+}
+
+export function setColorLayerStyle(
+  composition: ClipComposition,
+  clipId: string,
+  patch: Partial<ColorLayerStyle>,
+): ClipComposition {
+  return updateClip(composition, clipId, (clip) => {
+    if (!isColorClip(clip)) throw new CompositionEngineError('Only color clips have color layer styles.');
+    return { ...clip, ...normalizeColorLayerStyle({ ...normalizeColorLayerStyle(clip), ...patch }) };
   });
 }
 

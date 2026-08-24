@@ -92,6 +92,11 @@
     "blurDetail": "Mise au point douce"
   },
   "CanvasPanel": {
+    "colorLayerAppearance": "Apparence",
+    "colorLayerOpacity": "Opacité",
+    "colorLayerCornerRadius": "Arrondi des coins",
+    "colorLayerShadow": "Ombre",
+    "colorLayerBackdropBlur": "Flou arrière",
     "backgroundType": "Type de fond",
     "image": "Image",
     "video": "Vidéo",

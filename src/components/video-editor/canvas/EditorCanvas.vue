@@ -465,6 +465,8 @@ defineExpose({ viewportZoom });
         :handle-style="transformAndCrop.transformHandleStyle.value"
         :muted="transformHandlesMuted"
         :resize-corners="transformAndCrop.transformResizeCorners.value"
+        :resize-handle-positions="transformAndCrop.transformHandlePositions.value"
+        :perspective-corners="transformAndCrop.transformPerspectiveCorners.value"
         @pointer-down="handleTransformPointerDown"
         @pointer-move="transformAndCrop.moveTransformDrag"
         @pointer-up="transformAndCrop.endTransformDrag"

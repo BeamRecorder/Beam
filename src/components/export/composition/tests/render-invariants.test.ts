@@ -31,7 +31,7 @@ vi.mock('../../../video-editor/zoom/perspective-scene-compositor', () => ({
 import { drawCompositionLayers, renderCompositionFrame, type RenderableMedia } from '../render';
 import { resolveCameraFraming } from '../../../video-editor/composition/camera-layout';
 import { drawCanvasTransitionFrame } from '../../../video-editor/composition/transitions/render-canvas-transition';
-import type { VisualClip } from '~/media/shared/composition-types';
+import type { ColorClip, VisualClip } from '~/media/shared/composition-types';
 import * as decoratedMedia from '../../../video-editor/composition/appearance/render-decorated-media';
 import { context, screenAppearance as appearance, snapshot } from './render.test-support';
 import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
@@ -533,6 +533,44 @@ describe('composition rendering invariants', () => {
     expect((ctx.drawImage as ReturnType<typeof vi.fn>).mock.calls.some(([drawn]) => drawn === source.source)).toBe(
       true,
     );
+  });
+
+  it('exports a styled color layer through the canonical composition renderer', () => {
+    const value = snapshot();
+    const color: ColorClip = {
+      id: 'color-layer',
+      kind: 'color',
+      name: 'Color layer',
+      assetId: '',
+      timelineStartMs: 0,
+      timelineDurationMs: 1_000,
+      sourceInMs: 0,
+      sourceDurationMs: 1_000,
+      playbackRate: 1,
+      enabled: true,
+      order: 1,
+      transform: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
+      fill: { kind: 'color', color: '#123456' },
+      opacityEnabled: true,
+      opacity: 42,
+      cornerRadius: 'md',
+      shadowSize: 'custom',
+      shadowBlur: 24,
+      shadowMode: 'solid',
+      shadowColor: '#010203',
+      shadowDirection: 'bottom-right',
+      backdropBlurEnabled: false,
+      backdropBlur: 0,
+    };
+    value.composition.clips.push(color);
+    const ctx = context();
+
+    renderCompositionFrame(ctx, null, value, 0);
+
+    expect(ctx.roundRect).toHaveBeenCalledWith(10, 10, 30, 20, expect.any(Number));
+    expect(ctx.fill).toHaveBeenCalled();
+    expect(ctx.shadowColor).toBe('#010203');
+    expect(ctx.shadowBlur).toBeGreaterThan(0);
   });
 
   it('renders clip, background and captions into one surface before applying a Canvas transition', () => {

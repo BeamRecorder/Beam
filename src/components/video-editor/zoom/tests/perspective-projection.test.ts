@@ -4,6 +4,7 @@ import {
   hasPerspectiveTilt,
   perspectiveCoverScale,
   projectPerspectivePoint,
+  unprojectPerspectivePoint,
 } from '../perspective-projection';
 import { cameraTiltForControls } from '../composition-camera';
 
@@ -11,6 +12,40 @@ const identity = { tiltX: 0, tiltY: 0 };
 const PROJECTION_MAX_TILT = (65 * Math.PI) / 180;
 
 describe('perspective projection geometry', () => {
+  const bounds = { x: 120, y: 80, width: 1_920, height: 1_080 };
+  const points = [
+    { x: bounds.x, y: bounds.y },
+    { x: bounds.x + bounds.width, y: bounds.y },
+    { x: bounds.x + bounds.width, y: bounds.y + bounds.height },
+    { x: bounds.x, y: bounds.y + bounds.height },
+    { x: bounds.x + bounds.width * 0.37, y: bounds.y + bounds.height * 0.62 },
+  ];
+
+  it('round-trips multiple points through the identity projection', () => {
+    const coverScale = perspectiveCoverScale(bounds.width, bounds.height, identity);
+
+    for (const point of points) {
+      const projected = projectPerspectivePoint(point, bounds, identity, coverScale);
+      const restored = unprojectPerspectivePoint(projected, bounds, identity, coverScale);
+
+      expect(restored.x).toBeCloseTo(point.x, 10);
+      expect(restored.y).toBeCloseTo(point.y, 10);
+    }
+  });
+
+  it('round-trips multiple points at strong tilt with the compositor cover scale', () => {
+    const transform = { tiltX: PROJECTION_MAX_TILT, tiltY: -PROJECTION_MAX_TILT };
+    const geometry = createPerspectiveGeometry(bounds.width, bounds.height, transform);
+
+    for (const point of points) {
+      const projected = projectPerspectivePoint(point, bounds, transform, geometry.coverScale);
+      const restored = unprojectPerspectivePoint(projected, bounds, transform, geometry.coverScale);
+
+      expect(restored.x).toBeCloseTo(point.x, 7);
+      expect(restored.y).toBeCloseTo(point.y, 7);
+    }
+  });
+
   it('keeps the identity projection unchanged', () => {
     const geometry = createPerspectiveGeometry(1_920, 1_080, identity);
 

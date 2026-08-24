@@ -92,6 +92,11 @@
     "blurDetail": "Soft focus"
   },
   "CanvasPanel": {
+    "colorLayerAppearance": "Appearance",
+    "colorLayerOpacity": "Opacity",
+    "colorLayerCornerRadius": "Corner radius",
+    "colorLayerShadow": "Shadow",
+    "colorLayerBackdropBlur": "Background blur",
     "backgroundType": "Background type",
     "image": "Image",
     "video": "Video",

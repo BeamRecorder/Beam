@@ -35,6 +35,7 @@ import {
 } from './webcam-transform-editing';
 import { topmostClipIdAtPoint } from './layer-hit-testing';
 import { transformClipDisplayLayout } from './layer-display-layout';
+import { layerSelectionPresentation, perspectivePointerDelta } from './layer-selection-presentation';
 
 const TRANSFORM_MIN = -3;
 const TRANSFORM_MAX = 3;
@@ -147,12 +148,7 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     const layout = displayLayoutFor(clip, transform);
     const viewport = options.overlayWindowBounds() ?? options.videoWindowBounds();
     if (!layout || !viewport) return null;
-    const intersects =
-      layout.left + layout.width > viewport.dx &&
-      layout.left < viewport.dx + viewport.dw &&
-      layout.top + layout.height > viewport.dy &&
-      layout.top < viewport.dy + viewport.dh;
-    return intersects ? { layout, viewport } : null;
+    return { layout, viewport };
   });
   const transformSelectionViewportStyle = computed(() => {
     const selection = transformSelection.value;
@@ -164,16 +160,12 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
       height: `${selection.viewport.dh}px`,
     };
   });
-  const transformHandleStyle = computed(() => {
-    const selection = transformSelection.value;
-    if (!selection) return { display: 'none' };
-    return {
-      left: `${selection.layout.left - selection.viewport.dx}px`,
-      top: `${selection.layout.top - selection.viewport.dy}px`,
-      width: `${selection.layout.width}px`,
-      height: `${selection.layout.height}px`,
-    };
-  });
+  const transformSelectionPresentation = computed(() =>
+    layerSelectionPresentation(transformSelection.value, options.selectedTransformClip()?.kind !== 'caption'),
+  );
+  const transformHandleStyle = computed(() => transformSelectionPresentation.value.handleStyle);
+  const transformHandlePositions = computed(() => transformSelectionPresentation.value.handlePositions);
+  const transformPerspectiveCorners = computed(() => transformSelectionPresentation.value.perspectiveCorners);
   const transformResizeCorners = computed<ResizeCorner[] | undefined>(() => {
     const clip = options.selectedTransformClip();
     if (clip?.kind === 'caption' && isCaptionWrapEnabled(clip.caption.style)) return ['left', 'right'];
@@ -321,9 +313,23 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
       clip.kind === 'webcam' && transformDrag.kind === 'resize' ? webcamResizePointerScale(clip, bounds.scale) : 1;
     const scale = usesGlobalCamera(clip) ? bounds.scale || 1 : webcamResizeScale;
     const vScale = options.zoomScale?.() ?? 1;
-    const dx = (clientX - transformDrag.startX) / Math.max(1, bounds.dw * scale * vScale);
-    const dy = (clientY - transformDrag.startY) / Math.max(1, bounds.dh * scale * vScale);
     const initial = transformDrag.transform;
+    const projectionBounds = options.overlayWindowBounds() ?? bounds;
+    const screenDelta = {
+      x: (clientX - transformDrag.startX) / vScale,
+      y: (clientY - transformDrag.startY) / vScale,
+    };
+    const pointerDelta =
+      clip.kind === 'caption'
+        ? screenDelta
+        : perspectivePointerDelta(
+            displayLayoutFor(clip, initial),
+            projectionBounds,
+            transformDrag.kind === 'resize' ? transformDrag.corner : undefined,
+            screenDelta,
+          );
+    const dx = pointerDelta.x / Math.max(1, bounds.dw * scale);
+    const dy = pointerDelta.y / Math.max(1, bounds.dh * scale);
     if (transformDrag.kind === 'move') {
       let moved = {
         ...initial,
@@ -474,6 +480,8 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     cropDraft,
     transformSelectionViewportStyle,
     transformHandleStyle,
+    transformHandlePositions,
+    transformPerspectiveCorners,
     transformResizeCorners,
     cropContainerStyle,
     cropOverlayStyle,
