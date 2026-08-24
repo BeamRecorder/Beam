@@ -10,6 +10,8 @@
     "viewSource": "查看源代码",
     "playDemoAria": "播放 Beam 演示",
     "demoAlt": "显示产品录制内容的 Beam 视频编辑器",
+    "pauseDemo": "暂停演示",
+    "playDemo": "播放演示",
     "showcaseAlt": "并排显示的 Beam 屏幕录制器和视频编辑器",
     "openSourceTitle": "开放构建。",
     "openSourceText": "Beam 由使用它的人共同塑造。在 GitHub 上关注开发、参与项目贡献，或加入 Discord 社区。",

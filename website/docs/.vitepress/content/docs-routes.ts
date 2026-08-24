@@ -194,7 +194,7 @@ import recorderZhTw from '../../../src/i18n/zh-TW/docs/recorder.json';
 import recorderWorkspaceZhTw from '../../../src/i18n/zh-TW/docs/recorder-workspace.json';
 import referenceZhTw from '../../../src/i18n/zh-TW/docs/reference.json';
 import type { WebsiteLocale } from '../../../src/i18n';
-import type { DocsLocaleCatalogs, DocsSectionContent } from './docs-content-types';
+import type { DocsLocaleCatalogs, DocsSearchEntry, DocsSectionContent } from './docs-content-types';
 import { renderDocsHome, renderDocsPage, validateDocsCatalogs } from './docs-renderer';
 
 const createCatalogs = (common: unknown, home: unknown, catalogs: readonly unknown[]): DocsLocaleCatalogs =>
@@ -435,13 +435,6 @@ export const docsRoutePaths = (locale: DocsLocale = 'en') =>
   createDocsRoutes(locale).map((route) =>
     route.params.page === 'index' ? '/' : route.params.page.replace(/\/index$/, '/'),
   );
-
-export interface DocsSearchEntry {
-  title: string;
-  description: string;
-  path: string;
-  text: string;
-}
 
 const sectionSearchText = (section: DocsSectionContent): string =>
   [

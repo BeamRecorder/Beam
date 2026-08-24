@@ -254,7 +254,7 @@
                 ],
                 [
                   "Enquadramento",
-                  "Preencher, Ajustar, Quadrado, Retrato 9:16, Paisagem 16:9, Esquilo, Círculo",
+                  "Preencher, Ajustar, Quadrado, Retrato 9:16, Paisagem 16:9, Quadrado arredondado, Círculo",
                   "Controla a apresentação do corte e da máscara."
                 ],
                 ["Posição X/Y", "−300% a 300%", "Move o visual na tela."],
@@ -340,7 +340,7 @@
                 ],
                 [
                   "Nova webcam",
-                  "x 72%, y 72%, largura 24%, altura 24%; Esquilo",
+                  "x 72%, y 72%, largura 24%, altura 24%; Quadrado arredondado",
                   "Os padrões de aparência da webcam serão aplicados."
                 ]
               ]

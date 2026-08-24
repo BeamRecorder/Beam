@@ -116,7 +116,7 @@
           "title": "Schowek i usuwanie",
           "tables": [
             {
-              "headers": ["Akcja", "Dostępność", "Obudowa Edge"],
+              "headers": ["Akcja", "Dostępność", "Przypadek brzegowy"],
               "rows": [
                 [
                   "Kopiuj",
@@ -313,7 +313,9 @@
         },
         {
           "title": "Przytnij klip wizualny",
-          "paragraphs": ["Crop to bezpośredni edytor obszaru roboczego, a nie numeryczna grupa paneli Clip."],
+          "paragraphs": [
+            "Przycinanie korzysta z bezpośredniego edytora obszaru roboczego, a nie z numerycznej grupy w panelu Klip."
+          ],
           "steps": [
             "Wybierz dokładnie jeden ekran, wideo, obraz lub klip z kamery internetowej.",
             "Wybierz opcję Przytnij na pasku narzędzi obszaru roboczego.",
@@ -405,7 +407,7 @@
           "tables": [
             {
               "headers": ["Własność", "Zasięg", "Domyślne"],
-              "rows": [["Objętość", "0%–200%", "100%"]]
+              "rows": [["Głośność", "0%–200%", "100%"]]
             }
           ],
           "paragraphs": [

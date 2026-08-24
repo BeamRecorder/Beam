@@ -251,9 +251,9 @@
                   "Beam Sunset, Cyber Violet, Emerald Forest, Crimson Velvet, Oceanic Breeze, Amber Studio, Sakura Bloom, Slate Precision",
                   "Beam Sunset"
                 ],
-                ["Primärfarbe", "10 presets or a custom color picker", "#ff5a1f"],
-                ["Sekundärfarbe", "8 presets or a custom color picker", "#6366f1"],
-                ["Eckenradius", "0, 6, 10, 16, 24 px, or Custom 0–32 px", "10 px"],
+                ["Primärfarbe", "10 Voreinstellungen oder eine benutzerdefinierte Farbauswahl", "#ff5a1f"],
+                ["Sekundärfarbe", "8 Voreinstellungen oder eine benutzerdefinierte Farbauswahl", "#6366f1"],
+                ["Eckenradius", "0, 6, 10, 16, 24 px oder benutzerdefiniert 0–32 px", "10 px"],
                 ["Pillenradius", "Ein oder Aus", "Aus"],
                 ["Oberfläche", "Standard, Neutral, Schiefer, Tief", "Standard"],
                 ["Globale UI-Skalierung", "50%, 75%, 100%, 125%", "100%"]

@@ -5,13 +5,8 @@ import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
 import { useData, withBase } from 'vitepress';
 import Dialog from '../../../../src/components/ui/dialog/Dialog.vue';
 import KeyboardChip from '../../../../src/components/ui/Kbd/KeyboardChip.vue';
-import {
-  enabledDocsLocales,
-  getDocsCatalogs,
-  getDocsSearchEntries,
-  type DocsLocale,
-  type DocsSearchEntry,
-} from '../content/docs-routes';
+import type { DocsSearchEntry } from '../content/docs-content-types';
+import { enabledDocsLocales, getDocsCatalogs, getDocsSearchEntries, type DocsLocale } from '../content/docs-routes';
 
 const { page } = useData();
 const isOpen = ref(false);

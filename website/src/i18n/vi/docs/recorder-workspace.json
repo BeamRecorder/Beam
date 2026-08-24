@@ -123,8 +123,8 @@
                 ["Ghi âm", "Chuyển đổi âm thanh hệ thống", "Alt+Shift+A"],
                 ["Máy nhắc chữ", "Hiển thị / Ẩn", "Alt+Shift+T"],
                 ["Máy nhắc chữ", "Tạm dừng / Tiếp tục", "Alt+Shift+O"],
-                ["Máy nhắc chữ", "Dòng tiếp theo", "Ctrl+Shift+Phải"],
-                ["Máy nhắc chữ", "Dòng trước", "Ctrl+Shift+Trái"]
+                ["Máy nhắc chữ", "Dòng tiếp theo", "Ctrl+Shift+Right"],
+                ["Máy nhắc chữ", "Dòng trước", "Ctrl+Shift+Left"]
               ]
             }
           ],
@@ -165,7 +165,7 @@
             {
               "headers": ["Nền tảng", "Tệp tùy chọn"],
               "rows": [
-                ["cửa sổ", "`%USERPROFILE%\\Videos\\Beam\\user\\preferences.json`"],
+                ["Windows", "`%USERPROFILE%\\Videos\\Beam\\user\\preferences.json`"],
                 ["macOS", "`~/Movies/Beam/user/preferences.json`"],
                 ["Linux", "`${XDG_VIDEOS_DIR:-~/Videos}/Beam/user/preferences.json`"]
               ]
@@ -173,11 +173,11 @@
             {
               "headers": ["Phím bổ sung", "Mục đích"],
               "rows": [
-                ["ngôn ngữ", "Ngôn ngữ ứng dụng đã chọn."],
-                ["màn hìnhKhu vực", "Vùng ghi tùy chỉnh được chuẩn hóa."],
-                ["màn hìnhKhu vực cài sẵn", "Đặt trước vùng được chọn lần cuối."],
-                ["teleprompterCài đặt", "Chế độ Teleprompter được chia sẻ và cài đặt trình đọc."],
-                ["máy ảnhLớp phủ", "Cài đặt lớp phủ máy ảnh được chia sẻ với người chỉnh sửa."],
+                ["locale", "Ngôn ngữ ứng dụng đã chọn."],
+                ["screenRegion", "Vùng ghi tùy chỉnh được chuẩn hóa."],
+                ["screenRegionPreset", "Đặt trước vùng được chọn lần cuối."],
+                ["teleprompterSettings", "Chế độ Teleprompter được chia sẻ và cài đặt trình đọc."],
+                ["cameraOverlay", "Cài đặt lớp phủ máy ảnh được chia sẻ với người chỉnh sửa."],
                 ["teleprompterWindow", "Trạng thái cửa sổ Teleprompter."]
               ]
             }
@@ -240,7 +240,7 @@
             {
               "headers": ["Nền tảng", "Dự án gốc"],
               "rows": [
-                ["cửa sổ", "`%USERPROFILE%\\Videos\\Beam\\user\\projects`"],
+                ["Windows", "`%USERPROFILE%\\Videos\\Beam\\user\\projects`"],
                 ["macOS", "`~/Movies/Beam/user/projects`"],
                 ["Linux", "`${XDG_VIDEOS_DIR:-~/Videos}/Beam/user/projects`"]
               ]
@@ -283,7 +283,7 @@
       "lead": "Beam chỉ yêu cầu các khả năng được bảo vệ thông qua các đường dẫn hệ điều hành mà các nguồn đã chọn cần. Ghi lại tương tác là tùy chọn và không lưu trữ văn bản đã nhập.",
       "sections": [
         {
-          "title": "cửa sổ",
+          "title": "Windows",
           "bullets": [
             "Chụp màn hình và cửa sổ sử dụng Windows Graphics Capture.",
             "Khả năng của con trỏ và nhấp chuột phụ thuộc vào đường dẫn chụp Windows hiển thị.",

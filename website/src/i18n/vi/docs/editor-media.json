@@ -48,15 +48,15 @@
             {
               "headers": ["người mẫu", "Ngôn ngữ", "Hướng dẫn thực hiện"],
               "rows": [
-                ["Nhỏ bé", "Đa ngôn ngữ", "Mô hình mặc định."],
-                ["Nhỏ .en", "Tiếng Việt", "Model chỉ có tiếng Anh."],
-                ["Căn cứ", "Đa ngôn ngữ", "Không có cảnh báo bổ sung."],
-                ["Cơ sở .en", "Tiếng Việt", "Model chỉ có tiếng Anh."],
-                ["nhỏ", "Đa ngôn ngữ", "Có thể chậm nếu không có WebGPU."],
-                [".en nhỏ", "Tiếng Việt", "Có thể chậm nếu không có WebGPU."],
-                ["Trung bình", "Đa ngôn ngữ", "Tải xuống lớn; Khuyến nghị WebGPU."],
-                ["Trung bình .en", "Tiếng Việt", "Tải xuống lớn; Khuyến nghị WebGPU."],
-                ["v3 lớn", "Đa ngôn ngữ", "Rất lớn và chậm khi không có WebGPU."]
+                ["Tiny", "Đa ngôn ngữ", "Mô hình mặc định."],
+                ["Tiny.en", "Tiếng Anh", "Model chỉ có tiếng Anh."],
+                ["Base", "Đa ngôn ngữ", "Không có cảnh báo bổ sung."],
+                ["Base.en", "Tiếng Anh", "Model chỉ có tiếng Anh."],
+                ["Small", "Đa ngôn ngữ", "Có thể chậm nếu không có WebGPU."],
+                ["Small.en", "Tiếng Anh", "Có thể chậm nếu không có WebGPU."],
+                ["Medium", "Đa ngôn ngữ", "Tải xuống lớn; Khuyến nghị WebGPU."],
+                ["Medium.en", "Tiếng Anh", "Tải xuống lớn; Khuyến nghị WebGPU."],
+                ["Large v3", "Đa ngôn ngữ", "Rất lớn và chậm khi không có WebGPU."]
               ]
             }
           ]

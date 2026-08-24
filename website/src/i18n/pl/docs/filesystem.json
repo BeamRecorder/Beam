@@ -12,7 +12,7 @@
             "Beam odnajduje systemowy folder Wideo i tworzy w nim `Beam/user`. Przekierowany lub zlokalizowany folder Wideo zmienia rozwiązaną lokalizację, dlatego poniższe ścieżki są typowymi wartościami domyślnymi, a nie lokalizacjami zapisanymi na stałe."
           ],
           "bullets": [
-            "Okna: `%USERPROFILE%\\Videos\\Beam\\user`",
+            "Windows: `%USERPROFILE%\\Videos\\Beam\\user`",
             "macOS: `~/Movies/Beam/user`",
             "Linux: `${XDG_VIDEOS_DIR:-~/Videos}/Beam/user`"
           ],
@@ -121,7 +121,7 @@
             "Pobrane aktualizacje są przechowywane w pamięci podręcznej systemu operacyjnego, osobno od projektów. Katalog `pending/` może zawierać instalator lub archiwum aktualizacji oraz `update-info.json`. Beam czyści pamięć podręczną aktualizatora po pomyślnym uruchomieniu nowej wersji, zachowując aktualizację oczekującą na instalację."
           ],
           "bullets": [
-            "Okna: `%LOCALAPPDATA%\\beam-updater\\pending`",
+            "Windows: `%LOCALAPPDATA%\\beam-updater\\pending`",
             "macOS: `~/Library/Caches/beam-updater/pending`",
             "Linux: `${XDG_CACHE_HOME:-~/.cache}/beam-updater/pending`"
           ],

@@ -178,7 +178,7 @@
       "lead": "Beam có trên Windows, macOS và Linux. Quyền gốc và khả năng của hệ thống cửa sổ tạo ra một số khác biệt giữa các nền tảng.",
       "sections": [
         {
-          "title": "cửa sổ",
+          "title": "Windows",
           "bullets": [
             "Beam được phân phối dưới dạng trình cài đặt Windows gốc.",
             "Hỗ trợ ghi màn hình, cửa sổ, vùng, camera, micrô và âm thanh hệ thống.",

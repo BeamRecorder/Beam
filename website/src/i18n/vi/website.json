@@ -10,6 +10,8 @@
     "viewSource": "Xem mã nguồn",
     "playDemoAria": "Phát bản demo Beam",
     "demoAlt": "Trình chỉnh sửa video Beam hiển thị bản ghi sản phẩm",
+    "pauseDemo": "Tạm dừng bản demo",
+    "playDemo": "Phát bản demo",
     "showcaseAlt": "Trình quay màn hình và trình chỉnh sửa video Beam đặt cạnh nhau",
     "openSourceTitle": "Được xây dựng công khai.",
     "openSourceText": "Beam phát triển nhờ những người sử dụng nó. Theo dõi quá trình phát triển trên GitHub, đóng góp cho dự án hoặc tham gia cộng đồng trên Discord.",

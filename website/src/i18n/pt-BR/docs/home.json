@@ -8,17 +8,17 @@
     "imageAlt": "Ícone do aplicativo Beam",
     "actions": [
       {
-        "theme": "marca",
+        "theme": "brand",
         "text": "Primeiros passos",
         "link": "/getting-started"
       },
       {
-        "theme": "alternativo",
+        "theme": "alt",
         "text": "Ver no GitHub",
         "link": "https://github.com/BeamRecorder/Beam"
       },
       {
-        "theme": "alternativo",
+        "theme": "alt",
         "text": "Entrar no Discord",
         "link": "https://discord.gg/6Q6v2xUCB"
       }
@@ -29,7 +29,7 @@
       "title": "Aplicativo de gravação",
       "details": "Escolha uma fonte, prepare as faixas de áudio e câmera e controle a gravação pelo HUD compacto.",
       "link": "/recorder/",
-      "visual": "gravador"
+      "visual": "recorder"
     },
     {
       "title": "Editor de vídeo",

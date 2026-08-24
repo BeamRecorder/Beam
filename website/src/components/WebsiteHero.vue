@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { Code2, Download } from '@lucide/vue';
+import { computed, ref } from 'vue';
+import { Code2, Download, Pause, Play } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 
 const { t } = useI18n();
+const video = ref<HTMLVideoElement | null>(null);
+const isVideoPaused = ref(false);
 
 const HERO_VIDEO_URL = '/website-demo.webm';
 const HERO_PUNCTUATION = /([.!?。！？।]+)/u;
@@ -14,6 +16,19 @@ const heroTitleParts = computed(() =>
     .filter(Boolean)
     .map((text) => ({ text, punctuation: ONLY_HERO_PUNCTUATION.test(text) })),
 );
+
+const toggleVideo = async () => {
+  if (!video.value) return;
+  if (isVideoPaused.value) {
+    try {
+      await video.value.play();
+    } catch {
+      isVideoPaused.value = true;
+    }
+    return;
+  }
+  video.value.pause();
+};
 </script>
 
 <template>
@@ -44,6 +59,7 @@ const heroTitleParts = computed(() =>
 
     <div class="website-hero__media">
       <video
+        ref="video"
         class="website-hero__video"
         :aria-label="t('Website.home.demoAlt')"
         autoplay
@@ -51,9 +67,21 @@ const heroTitleParts = computed(() =>
         loop
         playsinline
         preload="auto"
+        @pause="isVideoPaused = true"
+        @play="isVideoPaused = false"
       >
         <source :src="HERO_VIDEO_URL" type="video/webm" />
       </video>
+      <button
+        class="website-hero__video-control"
+        type="button"
+        :aria-label="t(isVideoPaused ? 'Website.home.playDemo' : 'Website.home.pauseDemo')"
+        :title="t(isVideoPaused ? 'Website.home.playDemo' : 'Website.home.pauseDemo')"
+        @click="toggleVideo"
+      >
+        <Play v-if="isVideoPaused" aria-hidden="true" />
+        <Pause v-else aria-hidden="true" />
+      </button>
     </div>
   </section>
 </template>
@@ -98,6 +126,7 @@ const heroTitleParts = computed(() =>
 }
 
 .website-hero__media {
+  position: relative;
   display: flex;
   overflow: hidden;
   width: 100%;
@@ -108,11 +137,43 @@ const heroTitleParts = computed(() =>
   box-shadow: var(--shadow-lg);
 }
 
+.website-hero__video-control {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 22%);
+  border-radius: var(--radius-md);
+  background: rgb(17 16 14 / 76%);
+  box-shadow: var(--shadow-sm);
+  color: white;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+}
+
+.website-hero__video-control:hover {
+  background: rgb(17 16 14 / 90%);
+}
+
+.website-hero__video-control:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 2px;
+}
+
+.website-hero__video-control svg {
+  width: 17px;
+  height: 17px;
+}
+
 .website-hero__video {
   display: block;
   width: 100%;
   height: 100%;
-  background: #11100e;
+  background: var(--color-media-surface);
   object-fit: cover;
 }
 

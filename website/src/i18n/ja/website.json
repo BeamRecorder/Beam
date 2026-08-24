@@ -10,6 +10,8 @@
     "viewSource": "ソースを見る",
     "playDemoAria": "Beamのデモを再生",
     "demoAlt": "プロダクト録画を表示しているBeamの動画エディター",
+    "pauseDemo": "デモを一時停止",
+    "playDemo": "デモを再生",
     "showcaseAlt": "Beamの画面録画ツールと動画エディターを並べた画面",
     "openSourceTitle": "オープンに開発。",
     "openSourceText": "Beamは利用する人たちとともに進化します。GitHubで開発を追い、プロジェクトに貢献するか、Discordのコミュニティに参加してください。",

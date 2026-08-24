@@ -11,6 +11,8 @@
     "viewSource": "View on GitHub",
     "playDemoAria": "Play the Beam demo",
     "demoAlt": "Beam video editor showing a product recording",
+    "pauseDemo": "Pause demo",
+    "playDemo": "Play demo",
     "showcaseAlt": "Beam recorder and video editor shown side by side",
     "availabilityTitle": "Free on every desktop.",
     "availabilityPlatforms": "Available for Windows, macOS, and Linux.",

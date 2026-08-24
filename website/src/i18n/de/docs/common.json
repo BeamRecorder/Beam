@@ -18,7 +18,7 @@
           "link": "/getting-started"
         },
         {
-          "text": "Strahl wird aktualisiert",
+          "text": "Beam aktualisieren",
           "link": "/updates"
         }
       ]
@@ -35,7 +35,7 @@
           "link": "/recorder/interface"
         },
         {
-          "text": "Angebote,",
+          "text": "Funktionen",
           "link": "/recorder/capabilities/",
           "items": [
             {
@@ -86,7 +86,7 @@
           "link": "/editor/showcase"
         },
         {
-          "text": "Angebote,",
+          "text": "Funktionen",
           "link": "/editor/capabilities",
           "items": [
             {
@@ -94,7 +94,7 @@
               "link": "/editor/capabilities/timeline"
             },
             {
-              "text": "Canvas ",
+              "text": "Canvas",
               "link": "/editor/capabilities/canvas"
             },
             {
@@ -130,14 +130,14 @@
       ]
     },
     {
-      "text": "Zeugis",
+      "text": "Referenz",
       "items": [
         {
           "text": "Exportieren und teilen",
           "link": "/export"
         },
         {
-          "text": "Träger Plattform",
+          "text": "Plattformunterstützung",
           "link": "/platforms"
         },
         {
@@ -148,15 +148,15 @@
     }
   ],
   "social": {
-    "github": "Auf Github anschauen",
-    "discord": "Dem Discord beitreten"
+    "github": "Beam auf GitHub ansehen",
+    "discord": "Dem Beam-Discord beitreten"
   },
   "theme": {
     "switchToLight": "Zum hellen Design wechseln",
-    "switchToDark": "Zum dunklen Theme wechseln"
+    "switchToDark": "Zum dunklen Design wechseln"
   },
   "footer": {
     "message": "Open-Source-Bildschirmaufnahme und -bearbeitung.",
-    "copyright": "* Released under the MIT license."
+    "copyright": "Veröffentlicht unter der MIT-Lizenz."
   }
 }

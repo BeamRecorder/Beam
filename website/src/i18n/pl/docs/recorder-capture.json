@@ -74,7 +74,7 @@
         {
           "title": "Wybór źródła Linuksa",
           "paragraphs": [
-            "W systemie Linux portal dla komputerów stacjonarnych wyświetla własny selektor po rozpoczęciu przechwytywania. HUD nie udostępnia selektora źródła elektronów i dla sesji wybierane jest tylko jedno źródło portalu."
+            "W systemie Linux portal dla komputerów stacjonarnych wyświetla własny selektor po rozpoczęciu przechwytywania. HUD nie udostępnia selektora źródła Electron i dla sesji wybierane jest tylko jedno źródło portalu."
           ],
           "notice": {
             "kind": "warning",
@@ -272,10 +272,10 @@
           "title": "Dostępność akcji",
           "tables": [
             {
-              "headers": ["Akcja", "Niepełnosprawny w trakcie"],
+              "headers": ["Akcja", "Wyłączone podczas"],
               "rows": [
                 ["Wstrzymaj / Wznów", "Odliczanie, rozpoczynanie, finalizowanie"],
-                ["Zatrzymaj się", "Finalizowanie"],
+                ["Zatrzymaj", "Finalizowanie"],
                 ["Anuluj i usuń", "Finalizowanie"],
                 ["Mikrofon / Kamera / Dźwięk systemowy", "Odliczanie, rozpoczynanie, finalizowanie"],
                 ["Dźwięk systemu Linux", "Cała aktywna sesja; wybierz go przed rozpoczęciem"]

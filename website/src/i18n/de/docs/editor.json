@@ -9,29 +9,29 @@
         {
           "title": "Ein Bearbeitungsarbeitsbereich",
           "paragraphs": [
-            "Beam Behält project Steuerungen at der oben, capability navigation und properties auf der links, der output preview in der center, und timing Steuerungen in der resizable Timeline below. Selecting ein Clip, zoom, cursor, oder der Canvas opens der Steuerungen that apply zu it."
+            "Beam platziert die Projektsteuerungen oben, die Funktionsnavigation und Eigenschaften links, die Ausgabevorschau in der Mitte und die Zeitsteuerungen in der größenveränderbaren Timeline darunter. Wenn du einen Clip, Zoom, Cursor oder das Canvas auswählst, werden die dafür geltenden Steuerungen geöffnet."
           ],
           "screenshot": {
             "path": "editor/interface-overview.webp",
             "alt": "Vollständige Beam-Videoeditor-Oberfläche",
-            "caption": "der Canvas, properties, playback Steuerungen, und multi-track Timeline remain visible together.",
+            "caption": "Canvas, Eigenschaften, Wiedergabesteuerungen und Multitrack-Timeline bleiben gemeinsam sichtbar.",
             "aspectRatio": "1920 / 1053"
           }
         },
         {
           "title": "Von der Aufnahme zum Export",
           "steps": [
-            "Öffnen der editor after recording oder choose ein existing project.",
-            "Arrange, trim, split, und Stil Clips auf der Timeline.",
-            "Set der Canvas Hintergrund, zooms, cursor Verhalten, captions, und Audio.",
-            "Preview der composition at ein suitable playback quality.",
-            "Export der finished Video as WebM oder MP4."
+            "Öffne den Editor nach der Aufnahme oder wähle ein vorhandenes Projekt.",
+            "Ordne Clips auf der Timeline an, trimme und teile sie und lege ihren Stil fest.",
+            "Lege den Canvas-Hintergrund, Zooms, das Cursorverhalten, Untertitel und Audio fest.",
+            "Sieh dir die Komposition mit einer geeigneten Wiedergabequalität an.",
+            "Exportiere das fertige Video als WebM oder MP4."
           ]
         },
         {
           "title": "Editor-Technologie",
           "paragraphs": [
-            "der desktop interface ist built mit Electron und Vue. Beam Verwendet Mediabunny für media playback und export, und der Canvas 2D API zu composite visuell layers."
+            "Die Desktop-Oberfläche ist mit Electron und Vue erstellt. Beam verwendet Mediabunny für die Medienwiedergabe und den Export sowie die Canvas-2D-API zum Zusammensetzen visueller Ebenen."
           ]
         }
       ]
@@ -40,7 +40,7 @@
       "slug": "editor/interface",
       "title": "Videoeditor-Oberfläche",
       "description": "Lerne Topbar, Seitenleiste, Canvas- und Timeline-Werkzeugleiste, Spuren, Auswahl und Wiedergabesteuerung kennen.",
-      "lead": "der interface separates project-level Aktionen, visuell composition, item properties, und time-based editing without hiding der current output.",
+      "lead": "Die Oberfläche trennt projektweite Aktionen, visuelle Komposition, Elementeigenschaften und zeitbasierte Bearbeitung, ohne die aktuelle Ausgabe auszublenden.",
       "sections": [
         {
           "title": "Topbar",
@@ -48,28 +48,28 @@
             {
               "headers": ["Steuerung", "Aktion", "Wichtiges Verhalten"],
               "rows": [
-                ["Zum HUD zurückkehren", "Kehrt zum Rekorder zurück.", "der current project remains Verfügbar."],
+                ["Zum HUD zurückkehren", "Kehrt zum Rekorder zurück.", "Das aktuelle Projekt bleibt verfügbar."],
                 [
                   "Projektauswahl",
-                  "Zeigt der current project und opens another project.",
-                  "Unavailable project data ist handled by der project-loading state."
+                  "Zeigt das aktuelle Projekt und öffnet ein anderes Projekt.",
+                  "Nicht verfügbare Projektdaten werden vom Projekt-Ladezustand behandelt."
                 ],
                 [
                   "Rückgängig / Wiederholen",
                   "Durchläuft Bearbeitungs-Snapshots.",
-                  "Up zu 50 snapshots in der current editor session; history ist not restored after reopening."
+                  "Bis zu 50 Snapshots in der aktuellen Editorsitzung; der Verlauf wird nach dem erneuten Öffnen nicht wiederhergestellt."
                 ],
                 [
                   "Leistungsmonitor",
                   "Meldet den Zustand der Vorschau.",
-                  "States sind Idle, Good, Warning, und Critical."
+                  "Die Statuswerte sind Idle, Good, Warning und Critical."
                 ],
-                ["Discord", "Opens der Beam community.", "Externer Link."],
-                ["Export", "Öffnet die Exporteinstellungen.", "Verfügbar when ein project ist loaded."],
+                ["Discord", "Öffnet die Beam-Community.", "Externer Link."],
+                ["Export", "Öffnet die Exporteinstellungen.", "Verfügbar, sobald ein Projekt geladen ist."],
                 [
                   "Fenstersteuerung",
-                  "Minimize, maximize oder restore, und Schließen.",
-                  "Native desktop-window Aktionen."
+                  "Minimiert, maximiert oder stellt das Fenster wieder her und schließt es.",
+                  "Native Desktop-Fensteraktionen."
                 ]
               ]
             }
@@ -78,17 +78,20 @@
         {
           "title": "Seitenleiste und Eigenschaften",
           "paragraphs": [
-            "der sidebar opens Canvas, Clip, Zooms, Cursor, Captions, Audio, und Settings. der adjacent panel Ändert mit der active category und current selection. auf narrow oder short windows, labels collapse while their icons remain Verfügbar."
+            "Die Seitenleiste öffnet Canvas, Clip, Zooms, Cursor, Captions, Audio und Settings. Das benachbarte Panel ändert sich mit der aktiven Kategorie und der aktuellen Auswahl. Bei schmalen oder niedrigen Fenstern werden die Beschriftungen eingeklappt, während ihre Symbole verfügbar bleiben."
           ],
           "tables": [
             {
               "headers": ["Auswahl", "Panel Verhalten"],
               "rows": [
-                ["Clip", "Opens properties compatible mit der primary ausgewählt Clip."],
-                ["Zoom", "Opens der ausgewählt zoom's focus und magnification Steuerungen."],
-                ["Canvas", "Opens composition-wide Hintergrund und branding Steuerungen."],
-                ["Cursor", "Opens global cursor presentation without requiring ein Clip selection."],
-                ["Multiple Clips", "Verwendet one primary Clip und Gilt ein change nur zu compatible ausgewählt Clips."]
+                ["Clip", "Öffnet Eigenschaften, die mit dem primär ausgewählten Clip kompatibel sind."],
+                ["Zoom", "Öffnet die Fokus- und Vergrößerungssteuerungen des ausgewählten Zooms."],
+                ["Canvas", "Öffnet die kompositionsweiten Hintergrund- und Branding-Steuerungen."],
+                ["Cursor", "Öffnet die globale Cursor-Darstellung, ohne dass ein Clip ausgewählt sein muss."],
+                [
+                  "Mehrere Clips",
+                  "Verwendet einen primären Clip und wendet eine Änderung nur auf kompatible ausgewählte Clips an."
+                ]
               ]
             }
           ]
@@ -99,11 +102,23 @@
             {
               "headers": ["Steuerung", "Werte", "Effekt"],
               "rows": [
-                ["Seitenverhältnis", "16:9, 9:16, 1:1, 4:5, 3:4, 4:3, 21:9", "Ändert der output Canvas ratio."],
-                ["Crop", "Zuschneide-Editor öffnen", "Verfügbar nur für exactly one ausgewählt visuell Clip."],
-                ["Grid", "auf oder Off", "Zeigt die 3×3-Ausrichtungshilfe an oder blendet sie aus."],
-                ["Ansichtszoom", "25%–500%; reset to 100%", "Ändert nur der editor view, never export."],
-                ["Pan", "Middle-drag oder Leertaste-drag", "Verschiebt den vergrößerten Editor-Ansichtsbereich."]
+                [
+                  "Seitenverhältnis",
+                  "16:9, 9:16, 1:1, 4:5, 3:4, 4:3, 21:9",
+                  "Ändert das Seitenverhältnis des Ausgabe-Canvas."
+                ],
+                ["Crop", "Zuschneide-Editor öffnen", "Nur verfügbar, wenn genau ein visueller Clip ausgewählt ist."],
+                ["Raster", "Ein oder Aus", "Zeigt die 3×3-Ausrichtungshilfe an oder blendet sie aus."],
+                [
+                  "Ansichtszoom",
+                  "25%–500%; auf 100% zurücksetzen",
+                  "Ändert nur die Editoransicht, niemals den Export."
+                ],
+                [
+                  "Verschieben",
+                  "Ziehen mit der mittleren Maustaste oder mit der Leertaste",
+                  "Verschiebt den vergrößerten Editor-Ansichtsbereich."
+                ]
               ]
             }
           ]
@@ -112,32 +127,36 @@
           "title": "Timeline-Werkzeugleiste",
           "tables": [
             {
-              "headers": ["Steuerung", "Aktion", "Constraint oder Standard"],
+              "headers": ["Steuerung", "Aktion", "Einschränkung oder Standard"],
               "rows": [
                 [
                   "Hinzufügen",
-                  "Importierens Video, Bild, oder Audio; Erstellt Text oder Unschärfe.",
+                  "Importiert Video, Bild oder Audio und erstellt Text oder Unschärfe.",
                   "Wird am Abspielkopf hinzugefügt."
                 ],
                 [
                   "Teilen",
-                  "Divides one ausgewählt Clip at der playhead.",
-                  "Erfordert der playhead strictly inside der Clip; shortcut S."
+                  "Teilt einen ausgewählten Clip am Abspielkopf.",
+                  "Der Abspielkopf muss sich strikt innerhalb des Clips befinden; Tastenkürzel S."
                 ],
-                ["Magnet", "Snaps edits zu useful boundaries.", "Standardmäßig aktiviert."],
+                ["Magnet", "Rastet Bearbeitungen an sinnvollen Grenzen ein.", "Standardmäßig aktiviert."],
                 [
                   "Zurück / Vorwärts",
-                  "Moves der playhead zu Timeline start oder end.",
+                  "Verschiebt den Abspielkopf zum Anfang oder Ende der Timeline.",
                   "Hängt von der Projektdauer ab."
                 ],
                 [
                   "Wiedergabe / Pause",
-                  "Previews oder pauses der composition.",
+                  "Zeigt die Komposition in der Vorschau an oder pausiert sie.",
                   "Tastenkürzel Leertaste außerhalb bearbeitbarer Felder."
                 ],
-                ["Zeitanzeige", "Zeigt current und total time.", "MM:SS unter einer Stunde; HH:MM:SS ab einer Stunde."],
+                [
+                  "Zeitanzeige",
+                  "Zeigt die aktuelle und die gesamte Zeit.",
+                  "MM:SS unter einer Stunde; HH:MM:SS ab einer Stunde."
+                ],
                 ["Wiedergabequalität", "Voll, Halb, Viertel", "Nur Vorschau; der Export bleibt in voller Qualität."],
-                ["Timeline-Zoom", "100%–3200%", "Also controlled mit Ctrl+mouse wheel."]
+                ["Timeline-Zoom", "100%–3200%", "Wird auch mit Ctrl+mouse wheel gesteuert."]
               ]
             }
           ]
@@ -145,33 +164,33 @@
         {
           "title": "Timeline-Spuren",
           "paragraphs": [
-            "Beam Erstellt Spuren für grouped visuell media, zooms, text captions, keyboard captions, system Audio, microphone Audio, und imported Audio when those sources exist."
+            "Beam erstellt Spuren für gruppierte visuelle Medien, Zooms, Textuntertitel, Tastaturuntertitel, Systemaudio, Mikrofonaudio und importiertes Audio, wenn diese Quellen vorhanden sind."
           ],
           "bullets": [
-            "Clip anklicken zu make it der current selection.",
-            "Spurkopf anklicken zu Auswählen every Clip auf that Spur; use Ctrl, Cmd, oder Shift auf Spur headers zu build ein additive Spur selection. der Clip nearest der playhead becomes primary.",
-            "Ziehen visuell Spur headers zu reorder their layer order.",
-            "Verschieben ein Clip oder trim its start und end handles. Linked recording media Verschieben together.",
-            "Dragging media beyond der current end extends der Timeline.",
-            "Klicken der Zoom Spur zu Hinzufügen ein manual zoom oder der text-caption Spur zu Hinzufügen ein empty caption.",
-            "Right-click ein Clip für der supported Kopieren, Einfügen, Löschen, und Standbild Aktionen."
+            "Klicke auf einen Clip, um ihn zur aktuellen Auswahl zu machen.",
+            "Klicke auf einen Spurkopf, um jeden Clip dieser Spur auszuwählen; verwende Ctrl, Cmd oder Shift auf Spurköpfen, um eine additive Spurauswahl aufzubauen. Der Clip, der dem Abspielkopf am nächsten liegt, wird zum primären Clip.",
+            "Ziehe visuelle Spurköpfe, um ihre Ebenenreihenfolge neu zu ordnen.",
+            "Verschiebe einen Clip oder trimme seine Start- und Endgriffe. Verknüpfte Aufnahmemedien werden gemeinsam verschoben.",
+            "Wenn du Medien über das aktuelle Ende hinaus ziehst, wird die Timeline verlängert.",
+            "Klicke auf die Zoom-Spur, um einen manuellen Zoom hinzuzufügen, oder auf die Textuntertitel-Spur, um einen leeren Untertitel hinzuzufügen.",
+            "Klicke mit der rechten Maustaste auf einen Clip, um die unterstützten Aktionen Kopieren, Einfügen, Löschen und Standbild zu verwenden."
           ],
           "notice": {
             "kind": "info",
             "title": "Leertaste hat zwei Canvas-Rollen",
-            "text": "Leertaste toggles playback, while holding Leertaste during ein Ziehen pans ein zoomed Canvas. Editable fields ignore these global shortcuts."
+            "text": "Leertaste schaltet die Wiedergabe um; wenn du beim Ziehen die Leertaste gedrückt hältst, verschiebst du ein vergrößertes Canvas. Bearbeitbare Felder ignorieren diese globalen Tastenkürzel."
           }
         },
         {
           "title": "Direkt- und Mehrfachauswahl",
           "paragraphs": [
-            "Klicken ein supported visuell, caption, blur layer, cursor, oder Bildschirm area directly auf der Canvas, oder Auswählen der same item auf der Timeline. ein multiple selection Verwendet one primary Clip für der panel."
+            "Klicke direkt auf dem Canvas auf ein unterstütztes visuelles Element, einen Untertitel, eine Unschärfeebene, den Cursor oder einen Bildschirmbereich oder wähle dasselbe Element in der Timeline aus. Bei einer Mehrfachauswahl wird ein primärer Clip für das Panel verwendet."
           ],
           "bullets": [
             "Visuelles Aussehen und Transformationen werden nur auf kompatible visuelle Clips übertragen.",
             "Unschärfeeigenschaften werden nur auf ausgewählte Unschärfeclips übertragen.",
             "Die Lautstärke wird nur auf ausgewählte Audioclips übertragen.",
-            "Caption styling propagates nur zu captions von der same text oder keyboard subtype.",
+            "Die Untertitelgestaltung wird nur auf Untertitel desselben Text- oder Tastaturuntertyps übertragen.",
             "Benutzerdefinierter Untertiteltext und „Cursor folgen“ werden nie auf eine Mehrfachauswahl übertragen.",
             "Zuschneide- und Canvas-Transformationsgriffe erfordern genau einen ausgewählten visuellen Clip."
           ]
@@ -181,7 +200,7 @@
     {
       "slug": "editor/capabilities",
       "title": "Funktionen des Videoeditors",
-      "description": "Öffnen ein focused reference für every Video Editor capability und its exact settings.",
+      "description": "Öffne eine fokussierte Referenz für jede Funktion des Videoeditors und ihre genauen Einstellungen.",
       "lead": "Jede Funktion besitzt eine eigene Seite, damit Eigenschaften, Standards, Auswahlregeln und Sonderfälle leicht erfassbar bleiben.",
       "sections": [
         {

@@ -12,7 +12,7 @@
             "O Beam localiza a pasta Vídeos do sistema operacional e cria `Beam/user` dentro dela. Uma pasta Vídeos redirecionada ou localizada altera o local resolvido; por isso, os caminhos abaixo são padrões usuais, não locais codificados."
           ],
           "bullets": [
-            "Janelas: `%USERPROFILE%\\Videos\\Beam\\user`",
+            "Windows: `%USERPROFILE%\\Videos\\Beam\\user`",
             "macOS: `~/Movies/Beam/user`",
             "Linux: `${XDG_VIDEOS_DIR:-~/Videos}/Beam/user`"
           ],
@@ -121,7 +121,7 @@
             "As atualizações baixadas são armazenadas no cache do sistema operacional, separadas dos projetos. O diretório `pending/` pode conter o instalador ou arquivo da atualização e `update-info.json`. O Beam limpa o cache do atualizador depois que a nova versão inicia com sucesso, preservando uma atualização que ainda aguarda instalação."
           ],
           "bullets": [
-            "Janelas: `%LOCALAPPDATA%\\beam-updater\\pending`",
+            "Windows: `%LOCALAPPDATA%\\beam-updater\\pending`",
             "macOS: `~/Library/Caches/beam-updater/pending`",
             "Linux: `${XDG_CACHE_HOME:-~/.cache}/beam-updater/pending`"
           ],

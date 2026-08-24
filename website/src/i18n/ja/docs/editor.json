@@ -64,7 +64,7 @@
                   "プレビューの健全性をレポートします。",
                   "状態には、アイドル、正常、警告、および重大があります。"
                 ],
-                ["不和", "Beam コミュニティを開きます。", "外部リンク。"],
+                ["Discord", "Beam コミュニティを開きます。", "外部リンク。"],
                 ["書き出し", "エクスポート設定を開きます。", "プロジェクトがロードされているときに使用できます。"],
                 [
                   "ウィンドウコントロール",
@@ -201,13 +201,13 @@
             {
               "headers": ["能力", "リファレンス"],
               "rows": [
-                ["タイムライン編集", "[タイムライン編集を開く](/editor/capabilities/timeline)]"],
-                ["キャンバス", "[キャンバスを開く](/editor/capabilities/canvas)]"],
-                ["クリップ", "[クリップを開く](/editor/capabilities/clips)]"],
-                ["ズーム", "[ズームを開く](/editor/capabilities/zooms)]"],
+                ["タイムライン編集", "[タイムライン編集を開く](/editor/capabilities/timeline)"],
+                ["キャンバス", "[キャンバスを開く](/editor/capabilities/canvas)"],
+                ["クリップ", "[クリップを開く](/editor/capabilities/clips)"],
+                ["ズーム", "[ズームを開く](/editor/capabilities/zooms)"],
                 ["カーソル", "[カーソル](/editor/capabilities/cursor)を開く"],
-                ["キャプション", "[オープンキャプション](/editor/capabilities/captions)]"],
-                ["オーディオ", "[オーディオを開く](/editor/capabilities/audio)]"],
+                ["キャプション", "[オープンキャプション](/editor/capabilities/captions)"],
+                ["オーディオ", "[オーディオを開く](/editor/capabilities/audio)"],
                 ["設定", "[設定を開く](/editor/capabilities/settings)"],
                 ["書き出し", "[エクスポートと共有を開く](/export)"]
               ]

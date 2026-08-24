@@ -103,11 +103,7 @@
             {
               "headers": ["Własność", "Wartości lub zakres", "Domyślne lub ograniczenie"],
               "rows": [
-                [
-                  "Tekst",
-                  "Brak tekstu znaku wodnego, wykonane przy użyciu Beam., Beam, niestandardowe",
-                  "Wykonane z Beam."
-                ],
+                ["Tekst", "Brak tekstu, Made with Beam., Beam, Niestandardowy", "Made with Beam."],
                 ["Tekst niestandardowy", "Do 80 znaków", "Pusty; dostępne w wersji niestandardowej."],
                 ["Pokaż logo Beam", "Włączone lub wyłączone", "Włączone"],
                 [

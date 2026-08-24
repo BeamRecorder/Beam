@@ -10,6 +10,8 @@
     "viewSource": "소스 코드 보기",
     "playDemoAria": "Beam 데모 재생",
     "demoAlt": "제품 녹화 화면을 보여 주는 Beam 동영상 편집기",
+    "pauseDemo": "데모 일시 정지",
+    "playDemo": "데모 재생",
     "showcaseAlt": "나란히 표시된 Beam 화면 녹화 도구와 동영상 편집기",
     "openSourceTitle": "열린 방식으로 함께 만듭니다.",
     "openSourceText": "Beam은 실제 사용자의 의견을 바탕으로 발전합니다. GitHub에서 개발 과정을 확인하고 프로젝트에 기여하거나 Discord 커뮤니티에 참여하세요.",

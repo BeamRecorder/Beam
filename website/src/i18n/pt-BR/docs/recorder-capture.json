@@ -290,9 +290,9 @@
           ]
         },
         {
-          "title": "Pare em comparação com cancelar",
+          "title": "Parar em comparação com cancelar",
           "paragraphs": [
-            "Stop mantém a captura e entra em Finalizing antes de o projeto ser aberto. Cancelar e excluir abandona a gravação ativa e remove a sessão inacabada. Estas são ações deliberadamente separadas."
+            "Parar mantém a captura e entra em Finalizando antes de o projeto ser aberto. Cancelar e excluir abandona a gravação ativa e remove a sessão inacabada. Estas são ações deliberadamente separadas."
           ],
           "notice": {
             "kind": "warning",

@@ -28,7 +28,7 @@
             "Abra o teleprompter e prepare um script quando necessário.",
             "Selecione Iniciar gravação. Beam aplica a contagem regressiva configurada antes do início da captura.",
             "Use a barra de gravação flutuante para pausar, retomar, alternar dispositivos suportados, parar ou cancelar.",
-            "Após Stop, Beam finaliza a sessão e abre o projeto no editor."
+            "Após Parar, Beam finaliza a sessão e abre o projeto no editor."
           ]
         },
         {

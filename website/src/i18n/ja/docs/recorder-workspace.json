@@ -128,8 +128,8 @@
                 ["録音", "システムオーディオの切り替え", "Alt+Shift+A"],
                 ["テレプロンプター", "表示/非表示", "Alt+Shift+T"],
                 ["テレプロンプター", "一時停止/再開", "Alt+Shift+O"],
-                ["テレプロンプター", "次の行", "Ctrl+Shift+右"],
-                ["テレプロンプター", "前の行", "Ctrl+Shift+左"]
+                ["テレプロンプター", "次の行", "Ctrl+Shift+Right"],
+                ["テレプロンプター", "前の行", "Ctrl+Shift+Left"]
               ]
             }
           ],
@@ -170,7 +170,7 @@
             {
               "headers": ["プラットフォーム", "環境設定ファイル"],
               "rows": [
-                ["窓", "`%USERPROFILE%\\Videos\\Beam\\user\\preferences.json`"],
+                ["Windows", "`%USERPROFILE%\\Videos\\Beam\\user\\preferences.json`"],
                 ["macOS", "`~/Movies/Beam/user/preferences.json`"],
                 ["Linux", "`${XDG_VIDEOS_DIR:-~/Videos}/Beam/user/preferences.json`"]
               ]
@@ -251,7 +251,7 @@
             {
               "headers": ["プラットフォーム", "プロジェクトルート"],
               "rows": [
-                ["窓", "`%USERPROFILE%\\Videos\\Beam\\user\\projects`"],
+                ["Windows", "`%USERPROFILE%\\Videos\\Beam\\user\\projects`"],
                 ["macOS", "`~/Movies/Beam/user/projects`"],
                 ["Linux", "`${XDG_VIDEOS_DIR:-~/Videos}/Beam/user/projects`"]
               ]
@@ -366,7 +366,7 @@
           "notice": {
             "kind": "info",
             "title": "詳細な設定",
-            "text": "オペレーティング システムのセットアップとトラブルシューティングについては、[プラットフォーム サポート リファレンス](/platforms)] を使用してください。"
+            "text": "オペレーティング システムのセットアップとトラブルシューティングについては、[プラットフォーム サポート リファレンス](/platforms) を使用してください。"
           }
         }
       ]

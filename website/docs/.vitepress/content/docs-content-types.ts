@@ -89,3 +89,10 @@ export interface DocsLocaleCatalogs {
   home: DocsHomeContent;
   catalogs: DocsCatalog[];
 }
+
+export interface DocsSearchEntry {
+  title: string;
+  description: string;
+  path: string;
+  text: string;
+}

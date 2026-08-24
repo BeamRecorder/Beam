@@ -9,11 +9,11 @@
         {
           "title": "Was der Rekorder aufnimmt",
           "paragraphs": [
-            "Beam can record ein full display, one application Fenster, oder ein Benutzerdefiniert region von ein display. Camera, microphone, und system Audio can be added as separate sources when der platform makes them Verfügbar."
+            "Beam kann einen vollständigen Bildschirm, ein Anwendungsfenster oder einen benutzerdefinierten Bereich eines Bildschirms aufnehmen. Kamera, Mikrofon und Systemaudio können als separate Quellen hinzugefügt werden, wenn die Plattform sie bereitstellt."
           ],
           "screenshot": {
             "path": "recorder/hud-overview.webp",
-            "alt": "Beam Recorder HUD mit source, Audio, camera, teleprompter, und recording Steuerungen",
+            "alt": "Beam-Rekorder-HUD mit Quellen-, Audio-, Kamera-, Teleprompter- und Aufnahmesteuerungen",
             "caption": "Das Rekorder-HUD hält die vollständige Aufnahmevorbereitung in einem kompakten Fenster zusammen.",
             "aspectRatio": "2 / 3"
           }
@@ -35,16 +35,20 @@
           "title": "Quellenübersicht",
           "tables": [
             {
-              "headers": ["Source", "Was aufgenommen wird", "Standard"],
+              "headers": ["Quelle", "Was aufgenommen wird", "Standard"],
               "rows": [
-                ["Bildschirm", "ein complete display, optionally limited zu ein region", "Ausgewählter Modus"],
-                ["Fenster", "One application Fenster", "Aus bis zur Auswahl"],
-                ["Microphone", "Audio von ein ausgewählt input device", "Kein Audio"],
-                ["Camera", "Video von ein ausgewählt camera", "Kamera aus"],
-                ["System Audio", "Sound produced by der computer", "Off"],
                 [
-                  "Interactions",
-                  "Supported Klicken metadata und safe shortcut tokens",
+                  "Bildschirm",
+                  "Ein vollständiger Bildschirm, optional auf einen Bereich begrenzt",
+                  "Ausgewählter Modus"
+                ],
+                ["Fenster", "Ein Anwendungsfenster", "Aus bis zur Auswahl"],
+                ["Mikrofon", "Audio von einem ausgewählten Eingabegerät", "Kein Audio"],
+                ["Kamera", "Video von einer ausgewählten Kamera", "Kamera aus"],
+                ["Systemaudio", "Vom Computer erzeugter Ton", "Aus"],
+                [
+                  "Interaktionen",
+                  "Unterstützte Klick-Metadaten und sichere Tastenkürzel-Tokens",
                   "Hängt von Einstellung und Berechtigung ab"
                 ]
               ]
@@ -56,24 +60,24 @@
           "notice": {
             "kind": "info",
             "title": "Linux-Aufnahme",
-            "text": "Beam Verwendet der system capture picker auf Linux. Region cropping ist unavailable, und Beam cannot hide its own windows von ein full-screen capture. Bildschirm mode remains der recommended capture mode auf Linux."
+            "text": "Beam verwendet unter Linux den Systemauswahldialog für Aufnahmen. Das Zuschneiden auf einen Bereich ist nicht verfügbar, und Beam kann seine eigenen Fenster bei einer Vollbildaufnahme nicht ausblenden. Der Bildschirmmodus bleibt unter Linux der empfohlene Aufnahmemodus."
           }
         },
         {
           "title": "Getrennte Medienquellen",
           "paragraphs": [
-            "System Audio ist der sound produced by der computer, such as ein browser Video oder ein Discord call. Microphone Audio ist der sound received von der ausgewählt input device. Beam Behält supported Bildschirm, camera, microphone, und system-audio media separate so they can be processed independently later."
+            "Systemaudio ist der vom Computer erzeugte Ton, etwa ein Browservideo oder ein Discord-Anruf. Mikrofonaudio ist der Ton vom ausgewählten Eingabegerät. Beam hält unterstützte Bildschirm-, Kamera-, Mikrofon- und Systemaudiomedien getrennt, damit sie später unabhängig verarbeitet werden können."
           ],
           "notice": {
             "kind": "tip",
             "title": "Rückkopplung vermeiden",
-            "text": "When recording system Audio und ein microphone together, use headphones oder lower der speaker volume so der microphone does not record der computer output ein second time."
+            "text": "Wenn du Systemaudio und ein Mikrofon gleichzeitig aufnimmst, verwende Kopfhörer oder verringere die Lautsprecherlautstärke, damit das Mikrofon die Computerausgabe nicht ein zweites Mal aufnimmt."
           }
         },
         {
           "title": "Implementierungsübersicht",
           "paragraphs": [
-            "Bildschirm recording Verwendet der native capture path für der operating system. auf Linux, Bildschirm und system-audio capture use der portal und PipeWire stack. Camera und microphone capture sind managed by der Electron application. Beam's capture-domain code ist written in Rust, und its cross-platform interface ist built mit Electron und Vue."
+            "Die Bildschirmaufnahme verwendet den nativen Aufnahmepfad des Betriebssystems. Unter Linux nutzen Bildschirm- und Systemaudioaufnahme das Portal und PipeWire. Kamera- und Mikrofonaufnahme werden von der Electron-Anwendung verwaltet. Beams Aufnahmedomäne ist in Rust geschrieben, die plattformübergreifende Oberfläche mit Electron und Vue."
           ]
         }
       ]
@@ -82,7 +86,7 @@
       "slug": "recorder/interface",
       "title": "Rekorder-Oberfläche",
       "description": "Verstehe jeden Bereich des Rekorder-HUDs und die während einer Aufnahme angezeigten Steuerungen.",
-      "lead": "der HUD ist organized around capture setup. Once recording starts, der compact Aufnahmeleiste exposes nur der Steuerungen that remain useful during der session.",
+      "lead": "Das HUD ist rund um die Aufnahmevorbereitung aufgebaut. Sobald die Aufnahme beginnt, zeigt die kompakte Aufnahmeleiste nur die während der Sitzung nützlichen Steuerungen.",
       "sections": [
         {
           "title": "Topbar",
@@ -90,9 +94,9 @@
             {
               "headers": ["Steuerung", "Aktion"],
               "rows": [
-                ["Preferences", "Opens Recording, General, Shortcuts, About, und update settings."],
-                ["Minimize", "Minimizes der Recorder Fenster."],
-                ["Schließen", "Closes der Recorder Fenster."]
+                ["Einstellungen", "Öffnet die Einstellungen für Aufnahme, Allgemein, Tastenkürzel, Über und Updates."],
+                ["Minimieren", "Minimiert das Rekorder-Fenster."],
+                ["Schließen", "Schließt das Rekorder-Fenster."]
               ]
             }
           ]
@@ -103,37 +107,37 @@
             {
               "headers": ["Steuerung", "Aktion", "Verfügbarkeit"],
               "rows": [
-                ["Bildschirm / Fenster", "Ändert der capture mode.", "Vor der Aufnahme."],
+                ["Bildschirm / Fenster", "Ändert den Aufnahmemodus.", "Vor der Aufnahme."],
                 [
                   "Quellenauswahl",
-                  "Chooses ein display oder application Fenster.",
-                  "der Linux portal provides its own picker."
+                  "Wählt einen Bildschirm oder ein Anwendungsfenster aus.",
+                  "Das Linux-Portal stellt einen eigenen Auswahldialog bereit."
                 ],
                 [
                   "Bereich auswählen",
-                  "Opens der Benutzerdefiniert region overlay.",
-                  "Bildschirm mode nur; unavailable auf Linux."
+                  "Öffnet das Overlay für einen benutzerdefinierten Bereich.",
+                  "Nur im Bildschirmmodus; unter Linux nicht verfügbar."
                 ],
                 [
                   "System Audio",
-                  "Turns computer-output capture auf oder off.",
+                  "Schaltet die Aufnahme der Computerausgabe ein oder aus.",
                   "Die Plattformunterstützung unterscheidet sich."
                 ],
                 [
-                  "Microphone",
-                  "Chooses ein input device oder Kein Audio.",
+                  "Mikrofon",
+                  "Wählt ein Eingabegerät oder „Kein Audio“ aus.",
                   "Vor der Aufnahme; während unterstützter Phasen umschaltbar."
                 ],
                 [
-                  "Camera",
-                  "Chooses ein camera oder Kamera aus.",
+                  "Kamera",
+                  "Wählt eine Kamera oder „Kamera aus“ aus.",
                   "Vor der Aufnahme; während unterstützter Phasen umschaltbar."
                 ],
-                ["Teleprompter", "Opens oder Blendet aus der script Fenster.", "Before und during recording."],
+                ["Teleprompter", "Öffnet oder verbirgt das Skriptfenster.", "Vor und während der Aufnahme."],
                 [
                   "Aufnahme starten",
-                  "Starts der configured countdown und capture.",
-                  "When setup ist ready und Beam ist not busy."
+                  "Startet den konfigurierten Countdown und die Aufnahme.",
+                  "Wenn die Vorbereitung abgeschlossen und Beam nicht beschäftigt ist."
                 ]
               ]
             }
@@ -142,43 +146,43 @@
         {
           "title": "Projektaktion",
           "paragraphs": [
-            "Öffnen ein existing project opens der Project Manager instead von starting ein new capture. von there, projects can be searched, created, opened, renamed, revealed, refreshed, ausgewählt in batches, oder deleted."
+            "„Vorhandenes Projekt öffnen“ öffnet den Projektmanager, statt eine neue Aufnahme zu starten. Dort können Projekte gesucht, erstellt, geöffnet, umbenannt, im Dateimanager angezeigt, aktualisiert, gesammelt ausgewählt oder gelöscht werden."
           ]
         },
         {
           "title": "Aufnahmeleiste",
           "paragraphs": [
-            "der floating bar Ersetzt der setup HUD during capture. It Zeigt Ready oder Preparing states und then exposes der Steuerungen permitted by der current recording phase."
+            "Die schwebende Leiste ersetzt während der Aufnahme das Vorbereitungs-HUD. Sie zeigt die Zustände „Bereit“ oder „Vorbereitung“ und danach die in der aktuellen Aufnahmephase zulässigen Steuerungen."
           ],
           "tables": [
             {
-              "headers": ["Steuerung", "Aktion", "Importierenant constraint"],
+              "headers": ["Steuerung", "Aktion", "Wichtige Einschränkung"],
               "rows": [
                 [
                   "Aufnahmeleiste verschieben",
-                  "Drags der bar zu another Position.",
-                  "der visibility preference still Gilt."
+                  "Zieht die Leiste an eine andere Position.",
+                  "Die Sichtbarkeitseinstellung gilt weiterhin."
                 ],
                 [
                   "Pausieren / Fortsetzen",
-                  "Pauses oder resumes der session.",
-                  "deaktiviert during countdown, startup, und finalization."
+                  "Pausiert die Sitzung oder setzt sie fort.",
+                  "Während Countdown, Start und Finalisierung deaktiviert."
                 ],
-                ["Stop", "Finalizes der recording und Behält der session.", "deaktiviert while finalizing."],
+                ["Stopp", "Finalisiert die Aufnahme und behält die Sitzung.", "Während der Finalisierung deaktiviert."],
                 [
                   "Abbrechen und löschen",
-                  "Cancels der recording und Entfernt der unfinished session.",
-                  "deaktiviert while finalizing."
+                  "Bricht die Aufnahme ab und entfernt die unfertige Sitzung.",
+                  "Während der Finalisierung deaktiviert."
                 ],
                 [
                   "Mikrofon / Kamera",
-                  "Turns der ausgewählt source auf oder off.",
-                  "deaktiviert during countdown, startup, und finalization."
+                  "Schaltet die ausgewählte Quelle ein oder aus.",
+                  "Während Countdown, Start und Finalisierung deaktiviert."
                 ],
                 [
                   "System Audio",
-                  "Turns system Audio auf oder off where supported.",
-                  "Cannot be changed after start auf Linux."
+                  "Schaltet Systemaudio ein oder aus, sofern unterstützt.",
+                  "Kann unter Linux nach dem Start nicht geändert werden."
                 ]
               ]
             }
@@ -189,20 +193,20 @@
     {
       "slug": "recorder/capabilities/index",
       "title": "Rekorder-Funktionen",
-      "description": "Öffnen ein focused reference für every Recorder capability und its exact settings.",
-      "lead": "Each capability has its own page so settings, defaults, platform constraints, und edge cases remain easy zu scan.",
+      "description": "Öffne eine gezielte Referenz für jede Rekorder-Funktion und ihre genauen Einstellungen.",
+      "lead": "Jede Funktion besitzt eine eigene Seite, damit Einstellungen, Standards, Plattformbeschränkungen und Sonderfälle leicht erfassbar bleiben.",
       "sections": [
         {
           "title": "Funktionsübersicht",
           "tables": [
             {
-              "headers": ["Capability", "Referenz"],
+              "headers": ["Funktion", "Referenz"],
               "rows": [
                 ["Aufnahmequellen und Bereiche", "[Aufnahmequellen öffnen](/recorder/capabilities/capture-sources)"],
                 ["Audio und Kamera", "[Audio und Kamera öffnen](/recorder/capabilities/audio-camera)"],
                 ["Teleprompter", "[Teleprompter öffnen](/recorder/capabilities/teleprompter)"],
                 ["Live Aufnahmeleiste", "[Live-Steuerung öffnen](/recorder/capabilities/live-controls)"],
-                ["Preferences", "[Einstellungen öffnen](/recorder/capabilities/preferences)"],
+                ["Einstellungen", "[Einstellungen öffnen](/recorder/capabilities/preferences)"],
                 ["Projektmanager", "[Projektmanager öffnen](/recorder/capabilities/project-manager)"],
                 [
                   "Berechtigungen und Datenschutz",

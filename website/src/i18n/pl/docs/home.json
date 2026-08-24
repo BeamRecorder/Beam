@@ -8,7 +8,7 @@
     "imageAlt": "Ikona aplikacji Beam",
     "actions": [
       {
-        "theme": "marka",
+        "theme": "brand",
         "text": "Pierwsze kroki",
         "link": "/getting-started"
       },
@@ -29,13 +29,13 @@
       "title": "Aplikacja do nagrywania",
       "details": "Wybierz źródło, przygotuj ścieżki dźwięku i kamery, a następnie steruj nagrywaniem z kompaktowego HUD-u.",
       "link": "/recorder/",
-      "visual": "rejestrator"
+      "visual": "recorder"
     },
     {
       "title": "Edytor wideo",
       "details": "Kształtuj tempo, kadr, powiększenia, ruch kursora, napisy, dźwięk i eksport w jednym obszarze roboczym.",
       "link": "/editor/",
-      "visual": "redaktor"
+      "visual": "editor"
     }
   ]
 }

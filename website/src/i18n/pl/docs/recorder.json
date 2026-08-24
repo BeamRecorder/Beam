@@ -164,7 +164,7 @@
                   "Wstrzymuje lub wznawia sesję.",
                   "Wyłączone podczas odliczania, uruchamiania i finalizowania."
                 ],
-                ["Zatrzymaj się", "Kończy nagrywanie i utrzymuje sesję.", "Wyłączone podczas finalizowania."],
+                ["Zatrzymaj", "Kończy nagrywanie i zachowuje sesję.", "Wyłączone podczas finalizowania."],
                 [
                   "Anuluj i usuń",
                   "Anuluje nagrywanie i usuwa niedokończoną sesję.",

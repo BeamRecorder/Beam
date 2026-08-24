@@ -10,6 +10,8 @@
     "viewSource": "Quellcode ansehen",
     "playDemoAria": "Beam-Demo abspielen",
     "demoAlt": "Beam-Videoeditor mit einer Produktaufnahme",
+    "pauseDemo": "Demo pausieren",
+    "playDemo": "Demo abspielen",
     "showcaseAlt": "Beam-Bildschirmrekorder und Videoeditor nebeneinander",
     "openSourceTitle": "Offen entwickelt.",
     "openSourceText": "Beam wird von den Menschen geprägt, die es nutzen. Folge der Entwicklung auf GitHub, trage zum Projekt bei oder werde Teil der Community auf Discord.",

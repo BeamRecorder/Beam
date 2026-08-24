@@ -128,8 +128,8 @@
                 ["Nagrywanie", "Przełącz dźwięk systemowy", "Alt+Shift+A"],
                 ["Teleprompter", "Pokaż/Ukryj", "Alt+Shift+T"],
                 ["Teleprompter", "Wstrzymaj / Wznów", "Alt+Shift+O"],
-                ["Teleprompter", "Następna linia", "Ctrl+Shift+Prawo"],
-                ["Teleprompter", "Poprzednia linia", "Ctrl+Shift+W lewo"]
+                ["Teleprompter", "Następna linia", "Ctrl+Shift+Right"],
+                ["Teleprompter", "Poprzednia linia", "Ctrl+Shift+Left"]
               ]
             }
           ],
@@ -170,7 +170,7 @@
             {
               "headers": ["Platforma", "Plik preferencji"],
               "rows": [
-                ["Okna", "`%USERPROFILE%\\Videos\\Beam\\user\\preferences.json`"],
+                ["Windows", "`%USERPROFILE%\\Videos\\Beam\\user\\preferences.json`"],
                 ["macOS", "`~/Movies/Beam/user/preferences.json`"],
                 ["Linuksa", "`${XDG_VIDEOS_DIR:-~/Videos}/Beam/user/preferences.json`"]
               ]
@@ -248,7 +248,7 @@
             {
               "headers": ["Platforma", "Katalog główny projektu"],
               "rows": [
-                ["Okna", "`%USERPROFILE%\\Videos\\Beam\\user\\projects`"],
+                ["Windows", "`%USERPROFILE%\\Videos\\Beam\\user\\projects`"],
                 ["macOS", "`~/Movies/Beam/user/projects`"],
                 ["Linuksa", "`${XDG_VIDEOS_DIR:-~/Videos}/Beam/user/projects`"]
               ]
@@ -291,7 +291,7 @@
       "lead": "Beam żąda chronionych możliwości tylko poprzez ścieżki systemu operacyjnego wymagane przez wybrane źródła. Nagrywanie interakcji jest opcjonalne i nie przechowuje wpisywanego tekstu.",
       "sections": [
         {
-          "title": "Okna",
+          "title": "Windows",
           "bullets": [
             "Przechwytywanie ekranu i okien wykorzystuje funkcję Przechwytywanie grafiki systemu Windows.",
             "Możliwości kursora i kliknięcia zależą od tego, co ujawnia ścieżka przechwytywania systemu Windows.",

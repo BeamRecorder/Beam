@@ -48,15 +48,15 @@
             {
               "headers": ["Modelo", "Idiomas", "Orientação de desempenho"],
               "rows": [
-                ["Minúsculo", "Multilíngue", "Modelo padrão."],
-                ["Minúsculo .en", "Português (Brasil)", "Modelo somente em inglês."],
-                ["base", "Multilíngue", "Nenhum aviso adicional."],
-                ["Base .en", "Português (Brasil)", "Modelo somente em inglês."],
-                ["Pequeno", "Multilíngue", "Pode ser lento sem WebGPU."],
-                ["Pequeno .en", "Português (Brasil)", "Pode ser lento sem WebGPU."],
-                ["Médio", "Multilíngue", "Grande download; WebGPU recomendado."],
-                ["Médio .en", "Português (Brasil)", "Grande download; WebGPU recomendado."],
-                ["Grande v3", "Multilíngue", "Muito grande e lento sem WebGPU."]
+                ["Tiny", "Multilíngue", "Modelo padrão."],
+                ["Tiny.en", "Inglês", "Modelo somente em inglês."],
+                ["Base", "Multilíngue", "Nenhum aviso adicional."],
+                ["Base.en", "Inglês", "Modelo somente em inglês."],
+                ["Small", "Multilíngue", "Pode ser lento sem WebGPU."],
+                ["Small.en", "Inglês", "Pode ser lento sem WebGPU."],
+                ["Medium", "Multilíngue", "Grande download; WebGPU recomendado."],
+                ["Medium.en", "Inglês", "Grande download; WebGPU recomendado."],
+                ["Large v3", "Multilíngue", "Muito grande e lento sem WebGPU."]
               ]
             }
           ]

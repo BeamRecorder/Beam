@@ -7,10 +7,10 @@
       "lead": "Öffne die Einstellungen über die Topbar des Rekorders. Die Einstellungen sind in Aufnahme, Allgemein, Tastenkürzel und Über gruppiert; je nach Bereich gibt es erweiterte Darstellungs- und Update-Steuerungen.",
       "sections": [
         {
-          "title": "Preferences Fenster",
+          "title": "Einstellungsfenster",
           "screenshot": {
             "path": "recorder/preferences.webp",
-            "alt": "Beam Preferences Fenster showing Recorder settings",
+            "alt": "Beam-Einstellungsfenster mit Rekorder-Einstellungen",
             "caption": "Die Rekorder-Einstellungen decken das Aufnahmeverhalten und mit dem Editor geteilte Einstellungen ab.",
             "aspectRatio": "308 / 517"
           }
@@ -19,37 +19,37 @@
           "title": "Aufnahmeeinstellungen",
           "tables": [
             {
-              "headers": ["Setting", "Werte", "Standard", "Notes"],
+              "headers": ["Einstellung", "Werte", "Standard", "Hinweise"],
               "rows": [
                 [
                   "Countdown",
                   "Aus, 3 Sekunden, 5 Sekunden, 10 Sekunden",
-                  "3 seconds",
+                  "3 Sekunden",
                   "Wird vor Beginn der Aufnahme angewendet."
                 ],
                 [
-                  "Recorder Bar",
-                  "Always visible, Auto-fade, Ausgeblendet, bis der Mauszeiger darüber bewegt wird.",
-                  "Always auf Windows/macOS; Ausgeblendet, bis der Mauszeiger darüber bewegt wird. auf Linux",
-                  "Steuerungen der floating bar during capture."
+                  "Aufnahmeleiste",
+                  "Immer sichtbar, automatisch ausblenden, bis zum Darüberfahren ausgeblendet",
+                  "Immer sichtbar unter Windows/macOS; bis zum Darüberfahren ausgeblendet unter Linux",
+                  "Steuert die schwebende Leiste während der Aufnahme."
                 ],
                 [
                   "Interaktionszugriff",
-                  "Checking, Verfügbar, Permission required, Installation required, Denied, Unavailable",
-                  "Off",
-                  "Linux labels this Record keyboard & mouse events auf Linux."
+                  "Wird geprüft, Verfügbar, Berechtigung erforderlich, Installation erforderlich, Verweigert, Nicht verfügbar",
+                  "Aus",
+                  "Unter Linux heißt diese Option „Tastatur- und Mausereignisse aufzeichnen“."
                 ],
                 [
                   "Interaktionen aufzeichnen",
-                  "auf oder Off when Verfügbar",
+                  "Ein oder Aus, wenn verfügbar",
                   "Plattformabhängig",
-                  "Stores supported clicks und safe shortcut tokens, never typed text."
+                  "Speichert unterstützte Klicks und sichere Tastenkürzel-Tokens, niemals eingegebenen Text."
                 ],
                 [
-                  "Shortcuts",
-                  "Öffnen Shortcuts subview",
+                  "Tastenkürzel",
+                  "Öffnet die Tastenkürzel-Unteransicht",
                   "Nicht zutreffend",
-                  "Opens der Recording und Teleprompter shortcut groups."
+                  "Öffnet die Tastenkürzelgruppen für Aufnahme und Teleprompter."
                 ]
               ]
             }
@@ -59,33 +59,33 @@
           "title": "Allgemeine Einstellungen",
           "tables": [
             {
-              "headers": ["Setting", "Werte", "Standard"],
+              "headers": ["Einstellung", "Werte", "Standard"],
               "rows": [
                 [
-                  "Language",
+                  "Sprache",
                   "Bulgarisch, Deutsch, Englisch, Spanisch, Französisch, Hindi, Italienisch, Japanisch, Koreanisch, Polnisch, Portugiesisch (Brasilien), Russisch, Vietnamesisch, Vereinfachtes Chinesisch, Traditionelles Chinesisch",
-                  "ein supported system oder browser language; English fallback"
+                  "Eine unterstützte System- oder Browsersprache; Englisch als Fallback"
                 ],
-                ["Theme mode", "Hell, Dunkel, System", "Light"],
-                ["Spell check", "auf oder Off under Advanced", "auf"],
-                ["Primary Farbe", "Voreinstellung palette oder Benutzerdefiniert Farbe picker", "#ff5a1f"],
-                ["Secondary Farbe", "Voreinstellung palette oder Benutzerdefiniert Farbe picker", "#6366f1"],
-                ["Corner Radius", "0, 6, 10, 16, 24 px, or Custom", "10 px"],
-                ["Pill Radius", "auf oder Off", "Off"],
-                ["Surface tone", "Standard, Neutral, Slate, Deep", "Standard"],
+                ["Designmodus", "Hell, Dunkel, System", "Hell"],
+                ["Rechtschreibprüfung", "Ein oder Aus unter Erweitert", "Ein"],
+                ["Primärfarbe", "Voreinstellungspalette oder benutzerdefinierte Farbauswahl", "#ff5a1f"],
+                ["Sekundärfarbe", "Voreinstellungspalette oder benutzerdefinierte Farbauswahl", "#6366f1"],
+                ["Eckenradius", "0, 6, 10, 16, 24 px oder Benutzerdefiniert", "10 px"],
+                ["Pillenradius", "Ein oder Aus", "Aus"],
+                ["Oberflächenton", "Standard, Neutral, Slate, Deep", "Standard"],
                 ["Globale UI-Skalierung", "50%, 75%, 100%, 125%", "100%"]
               ]
             }
           ]
         },
         {
-          "title": "Theme-Voreinstellungen",
+          "title": "Design-Voreinstellungen",
           "paragraphs": [
-            "Applying ein Voreinstellung sets both colors, corner Radius, pill Verhalten, und surface tone together. Individual Steuerungen can then be changed."
+            "Eine Voreinstellung legt beide Farben, den Eckenradius, das Pillenverhalten und den Oberflächenton gemeinsam fest. Einzelne Steuerungen können danach angepasst werden."
           ],
           "tables": [
             {
-              "headers": ["Voreinstellung", "Primary", "Secondary", "Radius", "Surface"],
+              "headers": ["Voreinstellung", "Primär", "Sekundär", "Radius", "Oberfläche"],
               "rows": [
                 ["Beam Sunset", "#ff5a1f", "#6366f1", "10 px", "Standard"],
                 ["Cyber Violet", "#8b5cf6", "#06b6d4", "12 px", "Slate"],
@@ -102,16 +102,16 @@
         {
           "title": "Überschreibungen der Oberflächenskalierung",
           "paragraphs": [
-            "oben bar, Seitebar, Properties, Canvas Steuerungen, und Timeline can each use der global scale oder override it mit 50%, 75%, 100%, oder 125%. Use global ist represented by ein empty override, so changing der global scale continues zu affect that region."
+            "Topbar, Seitenleiste, Eigenschaften, Canvas-Steuerungen und Timeline können jeweils die globale Skalierung verwenden oder sie mit 50%, 75%, 100% oder 125% überschreiben. „Global verwenden“ wird durch eine leere Überschreibung dargestellt, damit Änderungen der globalen Skalierung den Bereich weiterhin beeinflussen."
           ],
           "tables": [
             {
-              "headers": ["Region", "Choices"],
+              "headers": ["Bereich", "Auswahl"],
               "rows": [
-                ["oben bar", "Global verwenden, 50 %, 75 %, 100 %, 125 %"],
-                ["Seitebar", "Global verwenden, 50 %, 75 %, 100 %, 125 %"],
-                ["Properties", "Global verwenden, 50 %, 75 %, 100 %, 125 %"],
-                ["Canvas Steuerungen", "Global verwenden, 50 %, 75 %, 100 %, 125 %"],
+                ["Topbar", "Global verwenden, 50 %, 75 %, 100 %, 125 %"],
+                ["Seitenleiste", "Global verwenden, 50 %, 75 %, 100 %, 125 %"],
+                ["Eigenschaften", "Global verwenden, 50 %, 75 %, 100 %, 125 %"],
+                ["Canvas-Steuerungen", "Global verwenden, 50 %, 75 %, 100 %, 125 %"],
                 ["Timeline", "Global verwenden, 50 %, 75 %, 100 %, 125 %"]
               ]
             }
@@ -120,47 +120,47 @@
         {
           "title": "Tastenkürzel-Standards",
           "paragraphs": [
-            "Global shortcut conflicts sind compared without case sensitivity. ein duplicate global shortcut ist rejected."
+            "Konflikte globaler Tastenkürzel werden ohne Berücksichtigung der Groß- und Kleinschreibung verglichen. Ein doppeltes globales Tastenkürzel wird abgelehnt."
           ],
           "tables": [
             {
-              "headers": ["Category", "Aktion", "Standard shortcut"],
+              "headers": ["Kategorie", "Aktion", "Standardtastenkürzel"],
               "rows": [
-                ["Recording", "Aufnahme starten / stoppen", "Alt+Shift+R"],
-                ["Recording", "Pausieren / Fortsetzen", "Alt+Shift+P"],
-                ["Recording", "Mikrofon umschalten", "Alt+Shift+M"],
-                ["Recording", "Kamera umschalten", "Alt+Shift+C"],
-                ["Recording", "Toggle system Audio", "Alt+Shift+ein"],
-                ["Teleprompter", "Show / Hide", "Alt+Shift+T"],
+                ["Aufnahme", "Aufnahme starten / stoppen", "Alt+Shift+R"],
+                ["Aufnahme", "Pausieren / Fortsetzen", "Alt+Shift+P"],
+                ["Aufnahme", "Mikrofon umschalten", "Alt+Shift+M"],
+                ["Aufnahme", "Kamera umschalten", "Alt+Shift+C"],
+                ["Aufnahme", "Systemaudio umschalten", "Alt+Shift+A"],
+                ["Teleprompter", "Anzeigen / Ausblenden", "Alt+Shift+T"],
                 ["Teleprompter", "Pausieren / Fortsetzen", "Alt+Shift+O"],
-                ["Teleprompter", "Next line", "Ctrl+Shift+rechts"],
-                ["Teleprompter", "Vorherige Zeile", "Ctrl+Shift+links"]
+                ["Teleprompter", "Nächste Zeile", "Ctrl+Shift+Right"],
+                ["Teleprompter", "Vorherige Zeile", "Ctrl+Shift+Left"]
               ]
             }
           ],
           "notice": {
             "kind": "info",
             "title": "Editor-Tastenkürzel",
-            "text": "der preferences schema also contains der editor Play/Pause shortcut, Leertaste, but der Recorder shortcut subview does not display it."
+            "text": "Das Einstellungsschema enthält auch das Editor-Tastenkürzel für Wiedergabe/Pause, die Leertaste; die Tastenkürzel-Unteransicht des Rekorders zeigt es jedoch nicht an."
           }
         },
         {
-          "title": "About und updates",
+          "title": "Über und Updates",
           "tables": [
             {
-              "headers": ["Area", "Verfügbar Aktionen oder states"],
+              "headers": ["Bereich", "Verfügbare Aktionen oder Zustände"],
               "rows": [
                 [
-                  "About",
-                  "View der application version, copy system information, Öffnen der changelog, und restart der Welcome Tour."
+                  "Über",
+                  "Zeigt die Anwendungsversion, kopiert Systeminformationen, öffnet das Änderungsprotokoll und startet die Willkommenstour neu."
                 ],
                 [
                   "Update-Status",
-                  "Idle, Checking, Verfügbar, Downloading, Downloaded, Not Verfügbar, Error, Unsupported."
+                  "Inaktiv, Wird geprüft, Verfügbar, Wird heruntergeladen, Heruntergeladen, Nicht verfügbar, Fehler, Nicht unterstützt."
                 ],
                 [
-                  "Update Aktionen",
-                  "Check, download when Verfügbar, copy ein error message, und restart nur after ein update reaches Downloaded."
+                  "Update-Aktionen",
+                  "Prüfen, bei Verfügbarkeit herunterladen, eine Fehlermeldung kopieren und erst neu starten, wenn das Update den Zustand „Heruntergeladen“ erreicht."
                 ]
               ]
             }
@@ -169,11 +169,11 @@
         {
           "title": "Gespeicherte Einstellungsdaten",
           "paragraphs": [
-            "der normalized preference schema ist version 3. in addition zu visible Steuerungen, it stores onboarding completion, ausgewählt devices, saved Hintergrund Farbe und gradient presets, und whether der interaction notice was dismissed."
+            "Das normalisierte Einstellungsschema hat Version 3. Zusätzlich zu den sichtbaren Steuerungen speichert es den Abschluss des Onboardings, ausgewählte Geräte, gespeicherte Hintergrundfarben und Verlaufsvoreinstellungen sowie das Ausblenden des Interaktionshinweises."
           ],
           "tables": [
             {
-              "headers": ["Platform", "Einstellungsdatei"],
+              "headers": ["Plattform", "Einstellungsdatei"],
               "rows": [
                 ["Windows", "`%USERPROFILE%\\Videos\\Beam\\user\\preferences.json`"],
                 ["macOS", "`~/Movies/Beam/user/preferences.json`"],
@@ -181,14 +181,14 @@
               ]
             },
             {
-              "headers": ["Extra key", "Purpose"],
+              "headers": ["Zusätzlicher Schlüssel", "Zweck"],
               "rows": [
-                ["locale", "ausgewählt application language."],
-                ["screenRegion", "Normalized Benutzerdefiniert recording region."],
-                ["screenRegionPreset", "Last ausgewählt region Voreinstellung."],
-                ["teleprompterSettings", "Shared Teleprompter mode und reader settings."],
-                ["cameraOverlay", "Camera overlay settings shared mit der editor."],
-                ["teleprompterWindow", "Teleprompter Fenster state."]
+                ["locale", "Ausgewählte Anwendungssprache."],
+                ["screenRegion", "Normalisierter benutzerdefinierter Aufnahmebereich."],
+                ["screenRegionPreset", "Zuletzt ausgewählte Bereichsvoreinstellung."],
+                ["teleprompterSettings", "Gemeinsamer Teleprompter-Modus und Lesereinstellungen."],
+                ["cameraOverlay", "Mit dem Editor geteilte Kamera-Overlay-Einstellungen."],
+                ["teleprompterWindow", "Zustand des Teleprompter-Fensters."]
               ]
             }
           ]

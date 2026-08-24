@@ -44,15 +44,15 @@
             {
               "headers": ["Modelka", "Języki", "Wskazówki dotyczące wydajności"],
               "rows": [
-                ["Malutki", "Wielojęzyczny", "Domyślny model."],
-                ["Tiny.en", "Polski", "Model wyłącznie w języku angielskim."],
-                ["Baza", "Wielojęzyczny", "Brak dodatkowego ostrzeżenia."],
-                ["Baza.en", "Polski", "Model wyłącznie w języku angielskim."],
-                ["Mały", "Wielojęzyczny", "Może działać wolno bez WebGPU."],
-                ["Mały.en", "Polski", "Może działać wolno bez WebGPU."],
-                ["Średni", "Wielojęzyczny", "Duży plik do pobrania; Zalecane WebGPU."],
-                ["Średni .en", "Polski", "Duży plik do pobrania; Zalecane WebGPU."],
-                ["Duży v3", "Wielojęzyczny", "Bardzo duży i wolny bez WebGPU."]
+                ["Tiny", "Wielojęzyczny", "Domyślny model."],
+                ["Tiny.en", "Angielski", "Model wyłącznie w języku angielskim."],
+                ["Base", "Wielojęzyczny", "Brak dodatkowego ostrzeżenia."],
+                ["Base.en", "Angielski", "Model wyłącznie w języku angielskim."],
+                ["Small", "Wielojęzyczny", "Może działać wolno bez WebGPU."],
+                ["Small.en", "Angielski", "Może działać wolno bez WebGPU."],
+                ["Medium", "Wielojęzyczny", "Duży plik do pobrania; Zalecane WebGPU."],
+                ["Medium.en", "Angielski", "Duży plik do pobrania; Zalecane WebGPU."],
+                ["Large v3", "Wielojęzyczny", "Bardzo duży i wolny bez WebGPU."]
               ]
             }
           ]

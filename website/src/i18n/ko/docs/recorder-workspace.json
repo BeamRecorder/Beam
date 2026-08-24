@@ -123,8 +123,8 @@
                 ["녹음", "시스템 오디오 전환", "Alt+Shift+A"],
                 ["텔레프롬프터", "표시 / 숨기기", "Alt+Shift+T"],
                 ["텔레프롬프터", "일시 중지 / 재개", "Alt+Shift+O"],
-                ["텔레프롬프터", "다음 줄", "Ctrl+Shift+오른쪽"],
-                ["텔레프롬프터", "이전 줄", "Ctrl+Shift+왼쪽"]
+                ["텔레프롬프터", "다음 줄", "Ctrl+Shift+Right"],
+                ["텔레프롬프터", "이전 줄", "Ctrl+Shift+Left"]
               ]
             }
           ],
@@ -165,20 +165,20 @@
             {
               "headers": ["플랫폼", "환경설정 파일"],
               "rows": [
-                ["윈도우", "`%USERPROFILE%\\Videos\\Beam\\user\\preferences.json`"],
+                ["Windows", "`%USERPROFILE%\\Videos\\Beam\\user\\preferences.json`"],
                 ["macOS", "`~/Movies/Beam/user/preferences.json`"],
-                ["리눅스", "`${XDG_VIDEOS_DIR:-~/Videos}/Beam/user/preferences.json`"]
+                ["Linux", "`${XDG_VIDEOS_DIR:-~/Videos}/Beam/user/preferences.json`"]
               ]
             },
             {
-              "headers": ["추가 열쇠", "목적"],
+              "headers": ["추가 키", "목적"],
               "rows": [
-                ["로케일", "선택된 애플리케이션 언어."],
-                ["화면지역", "표준화된 사용자 정의 기록 영역."],
-                ["화면지역사전설정", "마지막으로 선택한 지역 사전 설정입니다."],
-                ["텔레프롬프터설정", "공유 텔레프롬프터 모드 및 리더 설정."],
-                ["카메라오버레이", "카메라 오버레이 설정이 편집자와 공유됩니다."],
-                ["텔레프롬프터창", "텔레프롬프터 창 상태."]
+                ["`locale`", "선택된 애플리케이션 언어."],
+                ["`screenRegion`", "표준화된 사용자 정의 기록 영역."],
+                ["`screenRegionPreset`", "마지막으로 선택한 지역 사전 설정입니다."],
+                ["`teleprompterSettings`", "공유 텔레프롬프터 모드 및 리더 설정."],
+                ["`cameraOverlay`", "카메라 오버레이 설정이 편집자와 공유됩니다."],
+                ["`teleprompterWindow`", "텔레프롬프터 창 상태."]
               ]
             }
           ]
@@ -195,7 +195,7 @@
           "title": "프로젝트 활동",
           "tables": [
             {
-              "headers": ["동작", "동작"],
+              "headers": ["작업", "동작"],
               "rows": [
                 ["프로젝트 검색", "대소문자를 구분하지 않고 프로젝트 이름을 필터링합니다."],
                 ["프로젝트 선택", "하나 이상의 프로젝트에 대한 선택 모드로 들어갑니다."],
@@ -240,9 +240,9 @@
             {
               "headers": ["플랫폼", "프로젝트 루트"],
               "rows": [
-                ["윈도우", "`%USERPROFILE%\\Videos\\Beam\\user\\projects`"],
+                ["Windows", "`%USERPROFILE%\\Videos\\Beam\\user\\projects`"],
                 ["macOS", "`~/Movies/Beam/user/projects`"],
-                ["리눅스", "`${XDG_VIDEOS_DIR:-~/Videos}/Beam/user/projects`"]
+                ["Linux", "`${XDG_VIDEOS_DIR:-~/Videos}/Beam/user/projects`"]
               ]
             }
           ]

@@ -139,6 +139,7 @@ body {
 
   .VPLocalNav .menu-icon {
     /* Official Lucide Menu glyph, applied to VitePress's fixed icon slot. */
+
     --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='currentColor' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpath d='M4 6h16M4 12h16M4 18h16'/%3E%3C/svg%3E");
     width: 18px;
     height: 18px;

@@ -15,7 +15,7 @@
                 [
                   "WebM",
                   "Primeiro codificável de VP9, VP8, AV1",
-                  "obra",
+                  "Opus",
                   "Formato padrão; requer um codec de vídeo codificável e, quando o áudio está incluído, Opus."
                 ],
                 [
@@ -176,7 +176,7 @@
       "lead": "O Beam está disponível no Windows, macOS e Linux. Permissões nativas e recursos do sistema de janelas criam algumas diferenças entre as plataformas.",
       "sections": [
         {
-          "title": "Janelas",
+          "title": "Windows",
           "bullets": [
             "O Beam é distribuído como instalador nativo do Windows.",
             "A gravação de tela, janela, região, câmera, microfone e áudio do sistema é compatível.",

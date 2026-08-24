@@ -10,6 +10,8 @@
     "viewSource": "Vedi il codice sorgente",
     "playDemoAria": "Riproduci la demo di Beam",
     "demoAlt": "Editor video Beam che mostra una registrazione di prodotto",
+    "pauseDemo": "Metti in pausa la demo",
+    "playDemo": "Riproduci la demo",
     "showcaseAlt": "Registratore dello schermo ed editor video Beam affiancati",
     "openSourceTitle": "Costruito apertamente.",
     "openSourceText": "Beam cresce insieme alle persone che lo usano. Segui lo sviluppo su GitHub, contribuisci al progetto o unisciti alla community su Discord.",

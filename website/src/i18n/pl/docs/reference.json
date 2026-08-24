@@ -10,7 +10,7 @@
           "title": "Wybierz format",
           "tables": [
             {
-              "headers": ["Sformatuj", "Wybór kodeka wideo", "Kodek audio", "Dostępność"],
+              "headers": ["Format", "Wybór kodeka wideo", "Kodek audio", "Dostępność"],
               "rows": [
                 [
                   "WebM",
@@ -173,7 +173,7 @@
       "lead": "Beam jest dostępny w systemach Windows, macOS i Linux. Natywne uprawnienia i możliwości systemu okien powodują pewne różnice między platformami.",
       "sections": [
         {
-          "title": "Okna",
+          "title": "Windows",
           "bullets": [
             "Beam jest rozpowszechniany jako natywny instalator Windows.",
             "Obsługiwane jest nagrywanie ekranu, okna, obszaru, kamery, mikrofonu i dźwięku systemowego.",

@@ -133,8 +133,8 @@
                 ["Registrazione", "Attiva audio di sistema", "Alt+Shift+A"],
                 ["Teleprompter", "Mostra / Nascondi", "Alt+Shift+T"],
                 ["Teleprompter", "Pausa / Riprendi", "Alt+Shift+O"],
-                ["Teleprompter", "Riga successiva", "Ctrl+Shift+Destra"],
-                ["Teleprompter", "Riga precedente", "Ctrl+Shift+Sinistra"]
+                ["Teleprompter", "Riga successiva", "Ctrl+Shift+Right"],
+                ["Teleprompter", "Riga precedente", "Ctrl+Shift+Left"]
               ]
             }
           ],
@@ -175,9 +175,9 @@
             {
               "headers": ["Piattaforma", "File delle preferenze"],
               "rows": [
-                ["Windows", "`%USERPROFILE%\\\\Videos\\\\Beam\\\\user\\\\preferences.json`"],
+                ["Windows", "`%USERPROFILE%\\Videos\\Beam\\user\\preferences.json`"],
                 ["macOS", "`~/Movies/Beam/user/preferences.json`"],
-                ["Linux", "`${XDG_VIDEOS_DIR:-~/Videos}`/Beam/user/preferences.json"]
+                ["Linux", "`${XDG_VIDEOS_DIR:-~/Videos}/Beam/user/preferences.json`"]
               ]
             },
             {
@@ -259,9 +259,9 @@
             {
               "headers": ["Piattaforma", "Radice dei progetti"],
               "rows": [
-                ["Windows", "`%USERPROFILE%\\\\Videos\\\\Beam\\\\user\\\\projects`"],
+                ["Windows", "`%USERPROFILE%\\Videos\\Beam\\user\\projects`"],
                 ["macOS", "`~/Movies/Beam/user/projects`"],
-                ["Linux", "`${XDG_VIDEOS_DIR:-~/Videos}`/Beam/user/projects"]
+                ["Linux", "`${XDG_VIDEOS_DIR:-~/Videos}/Beam/user/projects`"]
               ]
             }
           ]

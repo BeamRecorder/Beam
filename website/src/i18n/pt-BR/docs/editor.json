@@ -64,7 +64,7 @@
                   "Os relatórios visualizam a integridade.",
                   "Os estados são ocioso, bom, alerta e crítico."
                 ],
-                ["Discórdia", "Abre a comunidade Beam.", "Link externo."],
+                ["Discord", "Abre a comunidade Beam.", "Link externo."],
                 ["Exportação", "Abre as configurações de exportação.", "Disponível quando um projeto é carregado."],
                 [
                   "Controles de janela",
@@ -110,7 +110,7 @@
                   "25%–500%; redefinir para 100%",
                   "Altera apenas a visualização do editor, nunca exporta."
                 ],
-                ["Panela", "Arrastar com o meio ou arrastar com espaço", "Move a viewport do editor ampliado."]
+                ["Panorâmica", "Arrastar com o botão do meio ou com Espaço", "Move a viewport ampliada do editor."]
               ]
             }
           ]

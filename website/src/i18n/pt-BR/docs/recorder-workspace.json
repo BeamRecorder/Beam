@@ -133,8 +133,8 @@
                 ["Gravação", "Alternar áudio do sistema", "Alt+Shift+A"],
                 ["Teleprompter", "Mostrar/Ocultar", "Alt+Shift+T"],
                 ["Teleprompter", "Pausar/Retomar", "Alt+Shift+O"],
-                ["Teleprompter", "Próxima linha", "Ctrl+Shift+Direita"],
-                ["Teleprompter", "Linha anterior", "Ctrl+Shift+Esquerda"]
+                ["Teleprompter", "Próxima linha", "Ctrl+Shift+Right"],
+                ["Teleprompter", "Linha anterior", "Ctrl+Shift+Left"]
               ]
             }
           ],
@@ -175,7 +175,7 @@
             {
               "headers": ["Plataforma", "Arquivo de preferências"],
               "rows": [
-                ["Janelas", "`%USERPROFILE%\\Videos\\Beam\\user\\preferences.json`"],
+                ["Windows", "`%USERPROFILE%\\Videos\\Beam\\user\\preferences.json`"],
                 ["macOS", "`~/Movies/Beam/user/preferences.json`"],
                 ["Linux", "`${XDG_VIDEOS_DIR:-~/Videos}/Beam/user/preferences.json`"]
               ]
@@ -183,12 +183,12 @@
             {
               "headers": ["Chave extra", "Objetivo"],
               "rows": [
-                ["localidade", "Idioma do aplicativo selecionado."],
-                ["região da tela", "Região de gravação personalizada normalizada."],
+                ["locale", "Idioma do aplicativo selecionado."],
+                ["screenRegion", "Região de gravação personalizada normalizada."],
                 ["screenRegionPreset", "Última predefinição de região selecionada."],
-                ["configurações do teleprompter", "Modo Teleprompter compartilhado e configurações do leitor."],
-                ["câmeraOverlay", "Configurações de sobreposição de câmera compartilhadas com o editor."],
-                ["teleprompterJanela", "Estado da janela do teleprompter."]
+                ["teleprompterSettings", "Modo Teleprompter compartilhado e configurações do leitor."],
+                ["cameraOverlay", "Configurações de sobreposição de câmera compartilhadas com o editor."],
+                ["teleprompterWindow", "Estado da janela do teleprompter."]
               ]
             }
           ]
@@ -259,7 +259,7 @@
             {
               "headers": ["Plataforma", "Raiz do projeto"],
               "rows": [
-                ["Janelas", "`%USERPROFILE%\\Videos\\Beam\\user\\projects`"],
+                ["Windows", "`%USERPROFILE%\\Videos\\Beam\\user\\projects`"],
                 ["macOS", "`~/Movies/Beam/user/projects`"],
                 ["Linux", "`${XDG_VIDEOS_DIR:-~/Videos}/Beam/user/projects`"]
               ]
@@ -302,7 +302,7 @@
       "lead": "Beam solicita recursos protegidos apenas por meio dos caminhos do sistema operacional necessários às fontes selecionadas. A gravação da interação é opcional e não armazena texto digitado.",
       "sections": [
         {
-          "title": "Janelas",
+          "title": "Windows",
           "bullets": [
             "A captura de tela e janela usa o Windows Graphics Capture.",
             "Os recursos de cursor e clique dependem do que o caminho de captura do Windows expõe.",

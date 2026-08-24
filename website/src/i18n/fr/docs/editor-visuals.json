@@ -105,7 +105,7 @@
         {
           "title": "Filigrane",
           "paragraphs": [
-            "Le filigrane est désactivé par défaut. Activez-le pour placer la marque Beam, un libellé ou un logo au-dessus de la composition."
+            "Le filigrane est désactivé par défaut. Les valeurs du tableau ci-dessous s'appliquent après son activation pour placer la marque Beam, un libellé ou un logo au-dessus de la composition."
           ],
           "tables": [
             {
