@@ -167,9 +167,16 @@ impl CaptureRequest {
         }
         if let Some(region) = self.region {
             region.validate()?;
-            if !matches!(self.screen, Some(ScreenSelection::Source { .. })) {
+            if !matches!(
+                self.screen,
+                Some(ScreenSelection::Source { .. })
+                    | Some(ScreenSelection::Portal {
+                        kind: PortalSourceKind::Monitor,
+                        ..
+                    })
+            ) {
                 return Err(crate::CaptureError::InvalidConfiguration(
-                    "screen region requires a direct screen source".into(),
+                    "screen region requires a display source".into(),
                 ));
             }
         }

@@ -39,5 +39,6 @@ fn copy_pixel(format: NativePixelFormat, bytes: &[u8]) -> Vec<u8> {
 
 mod cursor_tests;
 mod format_tests;
+mod region_tests;
 mod sink_tests;
 mod timestamp_tests;

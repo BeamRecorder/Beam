@@ -868,7 +868,10 @@ describe('HUD', () => {
         displayBounds: { x: 10, y: 20, width: 1920, height: 1080 },
       },
     ]);
-    capture.selectScreenRegion.mockResolvedValue({ x: 0.2, y: 0.25, width: 0.4, height: 0.3 });
+    capture.selectScreenRegion.mockResolvedValue({
+      bounds: { x: 10, y: 20, width: 1920, height: 1080 },
+      region: { x: 0.2, y: 0.25, width: 0.4, height: 0.3 },
+    });
     const wrapper = mount(HUD, { global: { stubs } });
     await ready();
     const regionButton = wrapper.get('[aria-label="Select an area of the screen"]');
@@ -885,6 +888,19 @@ describe('HUD', () => {
     });
     expect(capture.setWindowVisible).toHaveBeenLastCalledWith(true);
     expect(wrapper.find('[aria-label="Screen area selected"]').exists()).toBe(true);
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('Start Recording'))
+      ?.trigger('click');
+    expect(wrapper.emitted('start-recording')).toContainEqual([
+      expect.objectContaining({
+        region: { x: 0.2, y: 0.25, width: 0.4, height: 0.3 },
+        regionOverlay: {
+          bounds: { x: 10, y: 20, width: 1920, height: 1080 },
+          region: { x: 0.2, y: 0.25, width: 0.4, height: 0.3 },
+        },
+      }),
+    ]);
     vi.advanceTimersByTime(700);
     capture.selectScreenRegion.mockRejectedValueOnce(new Error('region denied'));
     await wrapper.get('[aria-label="Screen area selected"]').trigger('click');
@@ -917,7 +933,10 @@ describe('HUD', () => {
       },
     ]);
     capture.getDisplayBounds.mockResolvedValue({ x: 24, y: 48, width: 2560, height: 1440 });
-    capture.selectScreenRegion.mockResolvedValue({ x: 0.1, y: 0.2, width: 0.5, height: 0.4 });
+    capture.selectScreenRegion.mockResolvedValue({
+      bounds: { x: 24, y: 48, width: 2560, height: 1440 },
+      region: { x: 0.1, y: 0.2, width: 0.5, height: 0.4 },
+    });
 
     const wrapper = mount(HUD, { global: { stubs } });
     await ready();
@@ -934,6 +953,55 @@ describe('HUD', () => {
       bounds: { x: 24, y: 48, width: 2560, height: 1440 },
       region: null,
     });
+  });
+
+  it('keeps a textual Linux crop action enabled without a selected display and propagates the Portal result', async () => {
+    capture.platform = 'linux';
+    Object.defineProperty(window, 'capture', { configurable: true, value: capture });
+    capture.discover.mockResolvedValue({
+      sources: [
+        {
+          id: 'portal:monitor',
+          kind: 'display',
+          label: 'Choose a screen with the system picker',
+          isDefault: true,
+          selectionMode: 'portal',
+        },
+      ],
+      capabilities: {},
+    });
+    capture.getSources.mockResolvedValue([]);
+    const bounds = { x: -1920, y: 0, width: 1920, height: 1080 };
+    const region = { x: 0.2, y: 0.25, width: 0.4, height: 0.3 };
+    capture.selectScreenRegion.mockResolvedValue({ bounds, region });
+
+    const wrapper = mount(HUD, { global: { stubs } });
+    await ready();
+
+    const regionButton = wrapper.get('[aria-label="Select an area of the screen"]');
+    expect(regionButton.attributes('disabled')).toBeUndefined();
+    expect(regionButton.classes()).toContain('btn-block');
+    expect(regionButton.classes()).not.toContain('btn-icon-only');
+    expect(regionButton.text()).toContain('Select an area of the screen');
+
+    await regionButton.trigger('click');
+    vi.advanceTimersByTime(180);
+    await ready();
+
+    expect(capture.getDisplayBounds).not.toHaveBeenCalled();
+    expect(capture.selectScreenRegion).toHaveBeenCalledWith({ region: null });
+    expect(wrapper.find('[aria-label="Screen area selected"]').exists()).toBe(true);
+
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('Start Recording'))
+      ?.trigger('click');
+    expect(wrapper.emitted('start-recording')).toContainEqual([
+      expect.objectContaining({
+        region,
+        regionOverlay: { bounds, region },
+      }),
+    ]);
   });
 
   it('shows the matching screen thumbnail without replacing the native screen id', async () => {
@@ -1226,12 +1294,13 @@ describe('HUD', () => {
     expect(wrapper.get('[aria-label="Select an area of the screen"]').attributes('disabled')).toBeDefined();
   });
 
-  it('keeps screen and window tabs but omits source selector list on Linux', async () => {
+  it('keeps screen and window tabs while exposing the Linux crop action without a source selector', async () => {
     Object.defineProperty(window, 'capture', { configurable: true, value: { ...capture, platform: 'linux' } });
     const wrapper = mount(HUD, { global: { stubs } });
     await ready();
     expect(wrapper.find('.mode-tabs').exists()).toBe(true);
-    expect(wrapper.find('.screen-select-controls').exists()).toBe(false);
+    expect(wrapper.find('.screen-select-controls').exists()).toBe(true);
+    expect(wrapper.get('[aria-label="Select an area of the screen"]').classes()).toContain('btn-block');
   });
 
   it('supports mouse back (button 3) and forward (button 4) navigation across HUD views', async () => {

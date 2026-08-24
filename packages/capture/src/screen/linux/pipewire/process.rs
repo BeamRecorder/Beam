@@ -14,6 +14,7 @@ use pipewire::{
 
 use crate::{
     CaptureError, NativeCaptureErrorCode,
+    model::ScreenRegion,
     screen::{
         CursorSampleState, OwnedScreenSample, ScreenCaptureMetrics, ScreenDiscontinuity,
         ScreenSegment, VideoFormat,
@@ -22,8 +23,8 @@ use crate::{
 };
 
 use super::{
-    BufferLayout, CropRect, CursorState, NegotiatedFormat, TimestampMapper, VideoTransform,
-    copy_frame, expand_crop_to_content, has_fatal, map_cursor_metadata, metadata, set_fatal,
+    BufferLayout, CursorState, FrameGeometry, NegotiatedFormat, TimestampMapper, copy_frame,
+    crop_frame, expand_crop_to_content, has_fatal, metadata, repaired_window_crop, set_fatal,
     sink_error, video_format,
 };
 
@@ -58,56 +59,7 @@ pub(super) struct ProcessState {
     pub pending_drops: u64,
     pub last_frame_geometry: Option<FrameGeometry>,
     pub repair_window_crop: bool,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) struct FrameGeometry {
-    frame_crop: Option<CropRect>,
-    cursor_crop: Option<CropRect>,
-    transform: VideoTransform,
-    width: u32,
-    height: u32,
-}
-
-impl FrameGeometry {
-    pub(super) fn from_frame(
-        format: NegotiatedFormat,
-        frame_crop: Option<CropRect>,
-        cursor_crop: Option<CropRect>,
-        transform: VideoTransform,
-        frame: &crate::screen::OwnedVideoFrame,
-    ) -> Self {
-        debug_assert_eq!(
-            super::output_dimensions(format, frame_crop, transform).ok(),
-            Some((frame.width, frame.height))
-        );
-        Self {
-            frame_crop,
-            cursor_crop,
-            transform,
-            width: frame.width,
-            height: frame.height,
-        }
-    }
-
-    pub(super) fn map_cursor(
-        self,
-        cursor: Option<super::CursorMetadata>,
-        format: NegotiatedFormat,
-    ) -> Option<super::CursorMetadata> {
-        let mut cursor = map_cursor_metadata(
-            cursor,
-            format.width,
-            format.height,
-            self.cursor_crop,
-            self.transform,
-        )?;
-        let (cursor_width, cursor_height) =
-            super::output_dimensions(format, self.cursor_crop, self.transform).ok()?;
-        cursor.x = scale_coordinate(cursor.x, cursor_width, self.width);
-        cursor.y = scale_coordinate(cursor.y, cursor_height, self.height);
-        Some(cursor)
-    }
+    pub region: Option<ScreenRegion>,
 }
 
 pub(super) fn should_defer_timestamp_origin(
@@ -116,35 +68,6 @@ pub(super) fn should_defer_timestamp_origin(
     chunk_size: u32,
 ) -> bool {
     !has_frame_geometry && (corrupted || chunk_size == 0)
-}
-
-fn scale_coordinate(value: i32, source: u32, destination: u32) -> i32 {
-    if source == destination || source == 0 {
-        return value;
-    }
-    let scaled = i64::from(value)
-        .saturating_mul(i64::from(destination))
-        .checked_div(i64::from(source))
-        .unwrap_or_default();
-    i32::try_from(scaled).unwrap_or(if scaled < 0 { i32::MIN } else { i32::MAX })
-}
-
-pub(super) fn repaired_window_crop(
-    reported: Option<CropRect>,
-    content: Option<CropRect>,
-) -> Option<CropRect> {
-    let (Some(reported), Some(content)) = (reported, content) else {
-        return reported;
-    };
-    let width_scale = f64::from(content.width) / f64::from(reported.width.max(1));
-    let height_scale = f64::from(content.height) / f64::from(reported.height.max(1));
-    let uniform_scale = (width_scale - height_scale).abs() <= 0.05;
-    let materially_larger = width_scale >= 1.1 && height_scale >= 1.1;
-    if uniform_scale && materially_larger {
-        Some(content)
-    } else {
-        Some(reported)
-    }
 }
 
 pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<ProcessState>>) {
@@ -224,7 +147,7 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
         let cursor = geometry.map_cursor(cursor, format);
         let sample_cursor = state
             .cursor
-            .resolve(cursor, geometry.width, geometry.height);
+            .resolve(cursor, geometry.width(), geometry.height());
         if has_cursor_metadata && matches!(sample_cursor, CursorSampleState::Known { .. }) {
             try_cursor_sample(&mut state, timestamp.session_ns, sample_cursor);
         } else {
@@ -289,15 +212,28 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
         transform: frame_transform,
         ..layout
     };
-    let frame = match copy_frame(memory, format, layout) {
+    let uncropped_frame = match copy_frame(memory, format, layout) {
         Ok(frame) => frame,
         Err(error) => {
             invalid_buffer(&mut state, timestamp.session_ns, &error.to_string());
             return;
         }
     };
-    let geometry =
-        FrameGeometry::from_frame(format, frame_crop, cursor_crop, frame_transform, &frame);
+    let (frame, region_crop) = match crop_frame(uncropped_frame, state.region) {
+        Ok(result) => result,
+        Err(error) => {
+            set_fatal(&state.fatal, error);
+            return;
+        }
+    };
+    let geometry = FrameGeometry::from_frame(
+        format,
+        frame_crop,
+        cursor_crop,
+        frame_transform,
+        region_crop,
+        &frame,
+    );
     let cursor = geometry.map_cursor(cursor, format);
     let sample_cursor = state.cursor.resolve(cursor, frame.width, frame.height);
     state.last_frame_geometry = Some(geometry);
