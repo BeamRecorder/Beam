@@ -10,14 +10,20 @@ import type { CompositeMotionBlurOptions } from './use-camera-zoom-test-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import { clampFocusToScale } from '../../../zoom/zoom-playback';
 import { ZOOM_DEPTH_SCALES } from '../../../zoom/zoom-types';
+import { frameOuterRect } from '../../../composition/appearance/frames';
 
 const drawDecoratedMedia = vi.hoisted(() => vi.fn());
+const drawFrameOverlay = vi.hoisted(() => vi.fn());
 const motionBlurCompositor = vi.hoisted(() => ({
   createMotionBlurSurface: vi.fn((width: number, height: number) => ({ width, height })),
   resizeMotionBlurSurface: vi.fn(),
   compositeIsolatedMotionBlurSample: vi.fn((_options: CompositeMotionBlurOptions) => true),
 }));
 vi.mock('../../../composition/appearance/render-decorated-media', () => ({ drawDecoratedMedia }));
+vi.mock('../../../composition/appearance/frames', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../composition/appearance/frames')>()),
+  drawFrameOverlay,
+}));
 vi.mock('../../../zoom/zoom-motion-blur-compositor', () => motionBlurCompositor);
 
 const screenClip = (enabled = true): VisualClip => ({
@@ -104,11 +110,12 @@ let options!: {
   zooms: ReturnType<typeof ref<ZoomElement[]>>;
   screenTransformDraft: ReturnType<typeof ref<NormalizedTransform | null>>;
   videoError: ReturnType<typeof ref<string | null>>;
+  cropping: ReturnType<typeof ref<boolean>>;
   canvas: HTMLCanvasElement;
   callbacks: Record<string, ReturnType<typeof vi.fn>>;
 };
 
-const mountComposable = (motionBlurSettings = { enabled: false, intensity: 0.55 }) => {
+const mountComposable = (motionBlurSettings = { enabled: false, intensity: 0.55 }, croppingEnabled = false) => {
   const compositionRef = ref(composition());
   const currentTime = ref(0.5);
   const playing = ref(false);
@@ -119,6 +126,7 @@ const mountComposable = (motionBlurSettings = { enabled: false, intensity: 0.55 
   const output = ref({ preset: '16:9' as const, width: 800, height: 450, showBackground: false });
   const screenTransformDraft = ref<NormalizedTransform | null>(null);
   const videoError = ref<string | null>('recording unavailable');
+  const cropping = ref(croppingEnabled);
   const editorData = {
     cursor: {
       telemetry: [
@@ -177,7 +185,7 @@ const mountComposable = (motionBlurSettings = { enabled: false, intensity: 0.55 
         activeTab: () => activeTab.value,
         composition: () => compositionRef.value,
         screenTransformDraft: () => screenTransformDraft.value,
-        isCropping: () => false,
+        isCropping: () => cropping.value,
         videoError: () => videoError.value,
         renderVisualStack: (ctx, bounds, drawScreen) => {
           drawScreen();
@@ -201,6 +209,7 @@ const mountComposable = (motionBlurSettings = { enabled: false, intensity: 0.55 
     zooms,
     screenTransformDraft,
     videoError,
+    cropping,
     canvas,
     callbacks,
   };
@@ -376,6 +385,111 @@ describe('useCameraZoom', () => {
         expect(rendered.sourceRect!.y).toBeCloseTo((source.height - rendered.sourceRect!.height) / 2, 8);
       }
     }
+  });
+
+  it.each(['iphone-16-max', 'pixel-9-pro'] as const)('keeps the %s phone frame in normal screen mode', (frameModel) => {
+    mountComposable();
+    const screen = options.compositionRef.value!.clips[0] as VisualClip;
+    screen.cameraFramingPreset = 'fit';
+    screen.appearance = { ...screen.appearance, frame: frameModel };
+    options.output.value = { preset: '16:9', width: 800, height: 450, showBackground: true };
+
+    drawDecoratedMedia.mockClear();
+    state.drawVideoWindow(context(), 800, 450, frame(720, 1_280));
+    const rendered = drawDecoratedMedia.mock.calls.at(-1)?.[1] as {
+      appearance: { frame: string };
+    };
+
+    expect(rendered.appearance.frame).toBe(frameModel);
+  });
+
+  it.each(['iphone-16-max', 'pixel-9-pro'] as const)(
+    'uses a source-fit rectangle without the %s phone frame while cropping',
+    (frameModel) => {
+      mountComposable({ enabled: false, intensity: 0.55 }, true);
+      const screen = options.compositionRef.value!.clips[0] as VisualClip;
+      screen.cameraFramingPreset = 'custom';
+      screen.appearance = { ...screen.appearance, frame: frameModel };
+      options.output.value = { preset: '16:9', width: 800, height: 450, showBackground: true };
+
+      drawDecoratedMedia.mockClear();
+      state.drawVideoWindow(context(), 800, 450, frame(720, 1_280));
+      const rendered = drawDecoratedMedia.mock.calls.at(-1)?.[1] as {
+        appearance: { frame: string };
+        rect: { width: number; height: number };
+      };
+
+      expect(rendered.appearance.frame).toBe('none');
+      expect(rendered.rect.width / rendered.rect.height).toBeCloseTo(720 / 1_280, 8);
+    },
+  );
+
+  it.each(['iphone-16-max', 'pixel-9-pro'] as const)(
+    'draws the unframed source and one fixed %s chrome overlay while cropping',
+    (frameModel) => {
+      mountComposable({ enabled: false, intensity: 0.55 }, true);
+      const screen = options.compositionRef.value!.clips[0] as VisualClip;
+      screen.cameraFramingPreset = 'custom';
+      screen.appearance = { ...screen.appearance, frame: frameModel };
+      options.output.value = { preset: '16:9', width: 800, height: 450, showBackground: true };
+
+      drawDecoratedMedia.mockClear();
+      drawFrameOverlay.mockClear();
+      state.drawVideoWindow(context(), 800, 450, frame(720, 1_280));
+
+      expect(drawDecoratedMedia).toHaveBeenCalledTimes(1);
+      expect(drawDecoratedMedia.mock.calls[0]?.[1]).toEqual(
+        expect.objectContaining({ appearance: expect.objectContaining({ frame: 'none' }) }),
+      );
+      expect(drawFrameOverlay).toHaveBeenCalledTimes(1);
+      const [, overlayRect, overlayFrame] = drawFrameOverlay.mock.calls[0] as [
+        unknown,
+        { x: number; y: number; width: number; height: number },
+        string,
+        string,
+      ];
+      expect(overlayFrame).toBe(frameModel);
+      expect(overlayRect).toEqual(frameOuterRect(overlayRect, frameModel));
+      expect(overlayRect.width / overlayRect.height).toBeCloseTo(
+        frameModel === 'iphone-16-max' ? 415 / 843 : 353 / 745,
+        8,
+      );
+    },
+  );
+
+  it.each(['iphone-16-max', 'pixel-9-pro'] as const)(
+    'does not add a second %s chrome guide pass in normal mode',
+    (frameModel) => {
+      mountComposable();
+      const screen = options.compositionRef.value!.clips[0] as VisualClip;
+      screen.appearance = { ...screen.appearance, frame: frameModel };
+
+      drawDecoratedMedia.mockClear();
+      drawFrameOverlay.mockClear();
+      state.drawVideoWindow(context(), 800, 450, frame(720, 1_280));
+
+      expect(drawDecoratedMedia).toHaveBeenCalledTimes(1);
+      expect(drawFrameOverlay).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['safari', 'windows-95'] as const)('keeps the %s frame as the only render while cropping', (frameModel) => {
+    mountComposable({ enabled: false, intensity: 0.55 }, true);
+    const screen = options.compositionRef.value!.clips[0] as VisualClip;
+    screen.cameraFramingPreset = 'custom';
+    screen.appearance = { ...screen.appearance, frame: frameModel };
+    options.output.value = { preset: '16:9', width: 800, height: 450, showBackground: true };
+
+    drawDecoratedMedia.mockClear();
+    drawFrameOverlay.mockClear();
+    state.drawVideoWindow(context(), 800, 450, frame(720, 1_280));
+
+    expect(drawDecoratedMedia).toHaveBeenCalledTimes(1);
+    const rendered = drawDecoratedMedia.mock.calls[0]?.[1] as {
+      appearance: { frame: string };
+    };
+    expect(rendered.appearance.frame).toBe(frameModel);
+    expect(drawFrameOverlay).not.toHaveBeenCalled();
   });
 
   it('updates a transform draft without rebuilding the camera evaluator', () => {

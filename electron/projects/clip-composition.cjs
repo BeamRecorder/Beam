@@ -1,7 +1,9 @@
 const path = require('path');
 const { normalizeCaption } = require('./composition-captions.cjs');
 const { normalizeColorFill } = require('./composition-color-fill.cjs');
+const { normalizePhoneFrameFill } = require('./composition-phone-frame-fill.cjs');
 const { historicalAppearance } = require('./composition-appearance.cjs');
+const { withoutInheritedKeyboardText, withHistoricalTypography } = require('./composition-migration-helpers.cjs');
 const { normalizeClipTransitions } = require('./composition-clip-transitions.cjs');
 const { materializeComposition, importMedia, pruneProjectMedia } = require('./composition-project-media.cjs');
 const {
@@ -53,32 +55,12 @@ const text = (value, max = 160) => (typeof value === 'string' ? value.slice(0, m
 const id = (value) => typeof value === 'string' && value.length > 0 && value.length <= 600;
 const color = (value, fallback) =>
   typeof value === 'string' && /^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/i.test(value) ? value : fallback;
-const emptyComposition = () => ({ schemaVersion, assets: [], clips: [], keyboardCaptionSessions: [] });
-const withoutInheritedKeyboardText = (clip) => {
-  if (clip?.kind !== 'caption' || clip.caption?.type !== 'keyboard' || !clip.caption.style) return clip;
-  const { customText: _customText, ...style } = clip.caption.style;
-  return { ...clip, caption: { ...clip.caption, style } };
-};
-const withHistoricalTypography = (clip) =>
-  clip.kind === 'caption'
-    ? {
-        ...clip,
-        caption: {
-          ...clip.caption,
-          style: {
-            ...clip.caption.style,
-            fontFamily: 'sans-serif',
-            fontWeight: 800,
-            fontStyle: 'normal',
-            textDecoration: 'none',
-            textAlign: 'center',
-            lineHeight: 1.2,
-            letterSpacing: 0,
-          },
-        },
-      }
-    : clip;
-
+const emptyComposition = () => ({
+  schemaVersion,
+  assets: [],
+  clips: [],
+  keyboardCaptionSessions: [],
+});
 const rectangle = (value, label) => {
   const next = value || {};
   if (![next.x, next.y, next.width, next.height].every(finite) || next.width <= 0 || next.height <= 0)
@@ -103,7 +85,7 @@ const appearance = (value) => {
     typeof value.borderEnabled !== 'boolean' ||
     color(value.borderColor, null) === null ||
     !finite(value.borderWidth) ||
-    !['none', 'safari', 'windows-95'].includes(value.frame) ||
+    !['none', 'safari', 'windows-95', 'iphone-16-max', 'pixel-9-pro'].includes(value.frame) ||
     color(value.frameColor, null) === null ||
     typeof value.frameShowMenu !== 'boolean' ||
     typeof value.frameShowScrollbars !== 'boolean' ||
@@ -126,6 +108,7 @@ const appearance = (value) => {
     frameShowMenu: value.frameShowMenu,
     frameShowScrollbars: value.frameShowScrollbars,
     frameChromeScale: Math.max(0.5, Math.min(2, value.frameChromeScale)),
+    phoneFrameFill: normalizePhoneFrameFill(value.phoneFrameFill),
   };
 };
 
@@ -298,7 +281,13 @@ function normalizeComposition(value) {
           const reactToZoom =
             clip.reactToZoom === undefined ? !cameraLayoutPreset.startsWith('split-') : clip.reactToZoom;
           if (typeof reactToZoom !== 'boolean') throw new Error('Réaction de caméra au zoom invalide');
-          return { cameraLayoutPreset, cameraFramingPreset, cameraSplitRatio, cameraSplitPadding, reactToZoom };
+          return {
+            cameraLayoutPreset,
+            cameraFramingPreset,
+            cameraSplitRatio,
+            cameraSplitPadding,
+            reactToZoom,
+          };
         })()
       : {};
     return {
@@ -429,10 +418,16 @@ function migrateComposition(value, showBackground, historicalSessionIds = []) {
     clips: repairMigratedTrackIds(
       assignMigratedTrackIds(
         value.clips.map((sourceClip) => {
-          const clip = { ...sourceClip, transitions: { entry: null, exit: null } };
+          const clip = {
+            ...sourceClip,
+            transitions: { entry: null, exit: null },
+          };
           if (clip.kind === 'caption') {
             if (value.schemaVersion === captionTypeSchemaVersion)
-              return withHistoricalTypography({ ...clip, caption: { ...clip.caption, type: 'text' } });
+              return withHistoricalTypography({
+                ...clip,
+                caption: { ...clip.caption, type: 'text' },
+              });
             if (value.schemaVersion === previousSchemaVersion) return withHistoricalTypography(clip);
             const style = clip.caption?.style || {};
             return {
@@ -469,7 +464,10 @@ function migrateComposition(value, showBackground, historicalSessionIds = []) {
           if (!['screen', 'video', 'image', 'webcam'].includes(clip.kind)) return clip;
           return {
             ...clip,
-            appearance: { ...historicalAppearance(clip.kind, showBackground), ...clip.appearance },
+            appearance: {
+              ...historicalAppearance(clip.kind, showBackground),
+              ...clip.appearance,
+            },
             isMirrored: typeof clip.isMirrored === 'boolean' ? clip.isMirrored : false,
             isMirroredY: typeof clip.isMirroredY === 'boolean' ? clip.isMirroredY : false,
           };

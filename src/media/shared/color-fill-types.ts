@@ -13,7 +13,35 @@ export interface ColorGradient {
 
 export type ColorFill = { kind: 'color'; color: string } | { kind: 'gradient'; gradient: ColorGradient };
 
-export const DEFAULT_COLOR_FILL: ColorFill = { kind: 'color', color: '#111827' };
+export type PhoneFrameFill =
+  | ColorFill
+  | { kind: 'adaptive' }
+  | { kind: 'continuity'; blur: number; brightness: number };
+
+export const DEFAULT_COLOR_FILL: ColorFill = {
+  kind: 'color',
+  color: '#111827',
+};
+
+export const DEFAULT_PHONE_FRAME_FILL: PhoneFrameFill = {
+  kind: 'color',
+  color: '#000000',
+};
+
+export const DEFAULT_PHONE_FRAME_GRADIENT: ColorGradient = {
+  type: 'linear',
+  angle: 135,
+  stops: [
+    { id: 'phone-fill-start', position: 0, color: '#111827', alpha: 1 },
+    { id: 'phone-fill-end', position: 1, color: '#4f46e5', alpha: 1 },
+  ],
+};
+
+export const DEFAULT_PHONE_FRAME_CONTINUITY: Extract<PhoneFrameFill, { kind: 'continuity' }> = {
+  kind: 'continuity',
+  blur: 32,
+  brightness: 72,
+};
 
 const isHexColor = (value: unknown): value is string => typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value);
 
@@ -48,3 +76,17 @@ export const isColorFill = (value: unknown): value is ColorFill => {
     ? isHexColor('color' in fill ? fill.color : undefined)
     : fill.kind === 'gradient' && isColorGradient('gradient' in fill ? fill.gradient : undefined);
 };
+
+export const isPhoneFrameFill = (value: unknown): value is PhoneFrameFill =>
+  Boolean(
+    value &&
+    typeof value === 'object' &&
+    ((value as { kind?: unknown }).kind === 'adaptive' ||
+      ((value as { kind?: unknown }).kind === 'continuity' &&
+        Number.isFinite((value as { blur?: unknown }).blur) &&
+        Number((value as { blur: number }).blur) >= 0 &&
+        Number((value as { blur: number }).blur) <= 48 &&
+        Number.isFinite((value as { brightness?: unknown }).brightness) &&
+        Number((value as { brightness: number }).brightness) >= 20 &&
+        Number((value as { brightness: number }).brightness) <= 100)),
+  ) || isColorFill(value);

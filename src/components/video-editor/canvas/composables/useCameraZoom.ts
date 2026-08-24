@@ -13,12 +13,17 @@ import { OUTPUT_PREVIEW_RADIUS, outputPreviewRect } from '../output-canvas';
 import type { MediaFrame } from '~/media/shared';
 import type { VisualClip } from '~/media/shared/composition-types';
 import { drawDecoratedMedia } from '../../composition/appearance/render-decorated-media';
+import {
+  drawFrameOverlay,
+  frameMediaRect,
+  frameOuterRect,
+  transformedFrameOuterRect,
+} from '../../composition/appearance/frames';
+import { isPhoneFrame } from '../../composition/appearance/phone-frames';
 import { mapSourcePointToScreen, resolveScreenRenderGeometry } from '../../composition/camera-layout';
 import { resolveCompositionSceneLayers, type CompositionSceneLayers } from '../../composition/scene-layers';
 import type { RenderedVideoWindow, UseCameraZoomOptions, VideoWindowBounds } from './useCameraZoom.types';
-
 export type { RenderedVideoWindow, UseCameraZoomOptions, VideoWindowBounds } from './useCameraZoom.types';
-
 export function useCameraZoom(options: UseCameraZoomOptions) {
   let cameraEvaluator: ReturnType<typeof createCompositionCameraEvaluator> | null = null;
   let cameraEvaluatorInputs: readonly unknown[] | null = null;
@@ -36,11 +41,9 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     bounds: VideoWindowBounds;
   } | null = null;
   let motionBlurSurface: MotionBlurSurface | null = null;
-
   const sceneLayersAt = (timeMs: number) =>
     options.sceneLayersAt?.(timeMs) ?? resolveCompositionSceneLayers(options.composition(), timeMs);
   const screenClip = (): VisualClip | null => sceneLayersAt(options.currentTime() * 1_000).screen;
-
   const resetCamera = () => {
     cameraEvaluator = null;
     cameraEvaluatorInputs = null;
@@ -220,6 +223,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     const { x: dx, y: dy, width: dw, height: dh } = preview;
     const screenTransform = options.screenTransformDraft?.() ??
       screen?.transform ?? { x: 0, y: 0, width: 1, height: 1 };
+    const editingPhoneCrop = Boolean(options.isCropping?.() && screen && isPhoneFrame(screen.appearance.frame));
     const screenGeometry = screen
       ? resolveScreenRenderGeometry(
           screen,
@@ -229,13 +233,15 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
           dh,
           output.showBackground,
           screenTransform,
-          options.isCropping?.() ? undefined : screen.crop,
-          options.isCropping?.() ? 'custom' : (screen.cameraFramingPreset ?? 'custom'),
+          options.isCropping?.() ? { x: 0, y: 0, width: 1, height: 1 } : screen.crop,
+          editingPhoneCrop ? 'fit' : options.isCropping?.() ? 'custom' : (screen.cameraFramingPreset ?? 'custom'),
         )
       : null;
     const source = screenGeometry?.source ?? { x: 0, y: 0, width: videoWidth, height: videoHeight };
     const media = screenGeometry?.media ?? { x: 0, y: 0, width: dw, height: dh };
     const positioned = screenGeometry?.positioned ?? media;
+    const cropFrame =
+      editingPhoneCrop && screen ? transformedFrameOuterRect(media, screenTransform, screen.appearance.frame) : null;
 
     ctx.save();
     ctx.beginPath();
@@ -279,7 +285,15 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
             dh,
             output.showBackground,
           );
-          return mapSourcePointToScreen(focus, videoWidth, videoHeight, dw, dh, activeGeometry);
+          const positioned = isPhoneFrame(activeScreen.appearance.frame)
+            ? frameMediaRect(
+                activeGeometry.positioned,
+                activeScreen.appearance.frame,
+                activeGeometry.source.width,
+                activeGeometry.source.height,
+              )
+            : activeGeometry.positioned;
+          return mapSourcePointToScreen(focus, videoWidth, videoHeight, dw, dh, { ...activeGeometry, positioned });
         },
       });
     }
@@ -301,27 +315,47 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
           source: frame.bitmap,
           sourceRect: source,
           rect: { x: dx + positioned.x, y: dy + positioned.y, width: positioned.width, height: positioned.height },
-          appearance: screen.appearance ?? {
-            cornerRadius: output.showBackground ? 'md' : 'none',
-            shadowSize: 'md',
-            shadowColor: '#000000',
-            shadowDirection: 'bottom',
-            borderEnabled: false,
-            borderColor: '#000000',
-            borderWidth: 1,
-            frame: 'none',
-            frameTitle: '',
-            frameColor: '#c0c0c0',
-            frameShowMenu: true,
-            frameShowScrollbars: true,
-            frameChromeScale: 1,
-          },
+          appearance: editingPhoneCrop
+            ? { ...screen.appearance, frame: 'none' }
+            : (screen.appearance ?? {
+                cornerRadius: output.showBackground ? 'md' : 'none',
+                shadowSize: 'md',
+                shadowColor: '#000000',
+                shadowDirection: 'bottom',
+                borderEnabled: false,
+                borderColor: '#000000',
+                borderWidth: 1,
+                frame: 'none',
+                frameTitle: '',
+                frameColor: '#c0c0c0',
+                frameShowMenu: true,
+                frameShowScrollbars: true,
+                frameChromeScale: 1,
+              }),
           shadowScale: Math.min(dw / Math.max(1, output.width), dh / Math.max(1, output.height)),
           title: screen.name,
           mirrored: screen.isMirrored,
           mirroredY: screen.isMirroredY,
           mask: screenGeometry?.mask,
         });
+        if (cropFrame)
+          drawFrameOverlay(
+            target,
+            {
+              x: dx + cropFrame.x,
+              y: dy + cropFrame.y,
+              width: cropFrame.width,
+              height: cropFrame.height,
+            },
+            screen.appearance.frame,
+            screen.name,
+            screen.appearance.frameColor,
+            {
+              showMenu: screen.appearance.frameShowMenu,
+              showScrollbars: screen.appearance.frameShowScrollbars,
+              chromeScale: screen.appearance.frameChromeScale,
+            },
+          );
       } else if (options.videoError()) {
         target.fillStyle = '#334155';
         target.fillRect(dx, dy, dw, dh);
@@ -421,12 +455,17 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       focusX: camera.focusX,
       focusY: camera.focusY,
     };
-    screenHitBounds.value = screen
+    const screenBounds = screen
+      ? editingPhoneCrop
+        ? positioned
+        : frameOuterRect(positioned, screen.appearance.frame)
+      : null;
+    screenHitBounds.value = screenBounds
       ? {
-          dx: dx + positioned.x,
-          dy: dy + positioned.y,
-          dw: positioned.width,
-          dh: positioned.height,
+          dx: dx + screenBounds.x,
+          dy: dy + screenBounds.y,
+          dw: screenBounds.width,
+          dh: screenBounds.height,
         }
       : null;
     overlayWindowBounds.value = { dx, dy, dw, dh, scale: camera.scale, focusX: camera.focusX, focusY: camera.focusY };

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue';
@@ -9,6 +9,9 @@ import Input from '~/ui/input/Input.vue';
 import Divider from '~/ui/divider/Divider.vue';
 import type { ClipFrame } from '~/media/shared/composition-types';
 import { useTranslate } from '~/i18n/useTranslate';
+import { isPhoneFrame } from '~/components/video-editor/composition/appearance/phone-frames';
+import PhoneFrameFillControls from './PhoneFrameFillControls.vue';
+import type { PhoneFrameFill } from '~/media/shared/color-fill-types';
 
 const { t } = useTranslate('BorderAndFrameControls');
 
@@ -22,6 +25,7 @@ const props = defineProps<{
   frameShowMenu?: boolean;
   frameShowScrollbars?: boolean;
   frameChromeScale?: number;
+  phoneFrameFill?: PhoneFrameFill;
 }>();
 const emit = defineEmits<{
   (
@@ -36,15 +40,29 @@ const emit = defineEmits<{
       frameShowMenu?: boolean;
       frameShowScrollbars?: boolean;
       frameChromeScale?: number;
+      phoneFrameFill?: PhoneFrameFill;
     },
   ): void;
 }>();
 const activeFrame = computed(() => props.frame ?? 'none');
-const frames = computed(() => [
-  { id: 'none' as ClipFrame, label: t('none') },
+const frameEnabled = computed(() => activeFrame.value !== 'none');
+const activeFrameType = computed(() => (isPhoneFrame(activeFrame.value) ? 'phone' : 'desktop'));
+const lastEnabledFrame = ref<Exclude<ClipFrame, 'none'>>(activeFrame.value === 'none' ? 'safari' : activeFrame.value);
+watch(activeFrame, (frame) => {
+  if (frame !== 'none') lastEnabledFrame.value = frame;
+});
+const desktopFrames = computed(() => [
   { id: 'safari' as ClipFrame, label: 'Safari' },
   { id: 'windows-95' as ClipFrame, label: 'Windows 95' },
 ]);
+const phoneFrames = computed(() => [
+  { id: 'iphone-16-max' as ClipFrame, label: 'iPhone 16 Pro Max' },
+  { id: 'pixel-9-pro' as ClipFrame, label: 'Pixel 9 Pro' },
+]);
+const frames = computed(() => (activeFrameType.value === 'phone' ? phoneFrames.value : desktopFrames.value));
+const toggleFrame = (enabled: boolean) => emit('update', { frame: enabled ? lastEnabledFrame.value : 'none' });
+const selectFrameType = (type: 'desktop' | 'phone') =>
+  emit('update', { frame: type === 'phone' ? 'iphone-16-max' : 'safari' });
 </script>
 
 <template>
@@ -74,35 +92,55 @@ const frames = computed(() => [
       />
     </div>
     <Divider spacing="sm" />
-    <div class="section-header">
-      <span class="section-title">{{ t('frame') }}</span>
+    <div class="prop-row">
+      <span class="prop-label">{{ t('frame') }}</span>
+      <Switch :model-value="frameEnabled" :aria-label="t('frame')" @update:modelValue="toggleFrame" />
     </div>
-    <ButtonGroup full>
-      <Button
-        v-for="item in frames"
-        :key="item.id"
-        :variant="activeFrame === item.id ? 'primary' : 'ghost'"
-        size="xs"
-        @click="emit('update', { frame: item.id })"
-        >{{ item.label }}</Button
-      >
-    </ButtonGroup>
-    <div v-if="activeFrame !== 'none'" class="sub-group margin-top-sm">
-      <label class="sub-label" for="frame-title">{{ t('windowTitle') }}</label>
-      <Input
-        id="frame-title"
-        :model-value="frameTitle ?? ''"
-        :placeholder="t('screenRecording')"
-        @update:modelValue="emit('update', { frameTitle: String($event) })"
-      />
-      <BigSlider
-        :model-value="(frameChromeScale ?? 1) * 100"
-        :min="50"
-        :max="200"
-        :step="5"
-        :label="t('windowSize')"
-        :format-value="(value) => `${Math.round(value)}%`"
-        @update:modelValue="emit('update', { frameChromeScale: $event / 100 })"
+    <div v-if="frameEnabled" class="sub-group margin-top-sm">
+      <span class="sub-label">{{ t('frameType') }}</span>
+      <ButtonGroup full>
+        <Button
+          v-for="type in ['desktop', 'phone'] as const"
+          :key="type"
+          :variant="activeFrameType === type ? 'primary' : 'ghost'"
+          size="xs"
+          @click="selectFrameType(type)"
+          >{{ t(type) }}</Button
+        >
+      </ButtonGroup>
+      <span class="sub-label">{{ t('frameModel') }}</span>
+      <ButtonGroup full>
+        <Button
+          v-for="item in frames"
+          :key="item.id"
+          :variant="activeFrame === item.id ? 'primary' : 'ghost'"
+          size="xs"
+          @click="emit('update', { frame: item.id })"
+          >{{ item.label }}</Button
+        >
+      </ButtonGroup>
+      <template v-if="activeFrameType === 'desktop'">
+        <label class="sub-label" for="frame-title">{{ t('windowTitle') }}</label>
+        <Input
+          id="frame-title"
+          :model-value="frameTitle ?? ''"
+          :placeholder="t('screenRecording')"
+          @update:modelValue="emit('update', { frameTitle: String($event) })"
+        />
+        <BigSlider
+          :model-value="(frameChromeScale ?? 1) * 100"
+          :min="50"
+          :max="200"
+          :step="5"
+          :label="t('windowSize')"
+          :format-value="(value) => `${Math.round(value)}%`"
+          @update:modelValue="emit('update', { frameChromeScale: $event / 100 })"
+        />
+      </template>
+      <PhoneFrameFillControls
+        v-else
+        :model-value="phoneFrameFill"
+        @update:modelValue="emit('update', { phoneFrameFill: $event })"
       />
       <template v-if="activeFrame === 'windows-95'">
         <span class="sub-label">{{ t('windowColor') }}</span>

@@ -7,7 +7,7 @@ import {
   isVisualClip,
   type ClipComposition,
 } from '~/media/shared/composition-types';
-import { isColorFill } from '~/media/shared/color-fill-types';
+import { isColorFill, isPhoneFrameFill } from '~/media/shared/color-fill-types';
 import { normalizeClipTransitions } from '~/media/shared/clip-transitions';
 import { isCameraFramingPreset, isCameraLayoutPreset, isSplitCameraLayout } from '~/media/shared/camera-layout-types';
 import { assertValidVisualTracks } from './visual-track-layout';
@@ -128,6 +128,12 @@ export function validateComposition(composition: ClipComposition): void {
     ) {
       throw new CompositionEngineError('Invalid visual preset.');
     }
+    if (
+      isVisualClip(clip) &&
+      clip.appearance.phoneFrameFill !== undefined &&
+      !isPhoneFrameFill(clip.appearance.phoneFrameFill)
+    )
+      throw new CompositionEngineError('Invalid phone frame fill.');
     if (isBlurClip(clip)) {
       if (
         !['rectangle', 'square', 'circle'].includes(clip.shape) ||

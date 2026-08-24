@@ -52,6 +52,7 @@ import { isColorClip, isKeyboardCaptionClip } from '~/media/shared/composition-t
 import { usePropertiesPanelNavigation } from './usePropertiesPanelNavigation';
 import type { SelectedClipProperties } from './properties-panel-types';
 import type { CameraFramingPreset, CameraLayoutPreset } from '~/media/shared/camera-layout-types';
+import type { PhoneFrameFill } from '~/media/shared/color-fill-types';
 import { selectedClipNames } from './clip-selection-names';
 import { clipTransitionPanelTitle, propertiesPanelTitle } from './properties-panel-title';
 import { applyCaptionSelectionUpdate } from '../composition/caption-selection';
@@ -232,6 +233,7 @@ const emit = defineEmits<{
       frameShowMenu?: boolean;
       frameShowScrollbars?: boolean;
       frameChromeScale?: number;
+      phoneFrameFill?: PhoneFrameFill;
     },
   ): void;
   (event: 'update:clip-transform', transform: NormalizedTransform): void;
@@ -259,13 +261,11 @@ const isCurrentClipEnabled = computed(() => {
   if (props.selectedCaptionClip) return props.selectedCaptionClip.enabled ?? true;
   return true;
 });
-
 const isDeletable = computed(() => {
   if (props.activeTab === 'zoom' && props.selectedZoom) return true;
   if (props.activeTab === 'clip' && (props.selectedClip || props.selectedCaptionClip)) return true;
   return false;
 });
-
 const isToggleable = computed(() => {
   return props.activeTab === 'clip' && Boolean(props.selectedClip || props.selectedCaptionClip);
 });

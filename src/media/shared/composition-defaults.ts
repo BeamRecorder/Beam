@@ -1,4 +1,5 @@
 import type { CaptionStyle, ClipAppearance, VisualClip } from './composition-types';
+import { DEFAULT_PHONE_FRAME_FILL } from './color-fill-types';
 
 export const createDefaultCaptionHighlight = (): CaptionStyle['wordHighlight'] => ({
   enabled: false,
@@ -34,6 +35,7 @@ export const createDefaultClipAppearance = (kind: VisualClip['kind'], showBackgr
   frameShowMenu: true,
   frameShowScrollbars: true,
   frameChromeScale: 1,
+  phoneFrameFill: DEFAULT_PHONE_FRAME_FILL,
 });
 
 export const createDefaultCaptionStyle = (fontSize = 42): CaptionStyle => ({

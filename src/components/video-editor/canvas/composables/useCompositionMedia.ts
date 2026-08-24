@@ -18,6 +18,8 @@ import {
   webcamSettingsForAppearance,
 } from '../../composition/webcam/webcam-zoom';
 import { drawDecoratedMedia } from '../../composition/appearance/render-decorated-media';
+import { isPhoneFrame } from '../../composition/appearance/phone-frames';
+import { drawFrameOverlay, frameOuterRect } from '../../composition/appearance/frames';
 import { drawCaptionText, type CaptionViewport } from '../../composition/captions/render-caption-text';
 import type { OutputCanvasSettings } from '../output-canvas';
 import { applyBlurEffect } from '../../composition/effects/blur-effect';
@@ -99,7 +101,9 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     const transform = clip.id === selected?.id && options.transformDraft() ? options.transformDraft()! : clip.transform;
     const sourceWidth = frame?.width ?? image?.naturalWidth ?? 0;
     const sourceHeight = frame?.height ?? image?.naturalHeight ?? 0;
-    const crop = options.isCropping?.() && clip.id === selected?.id ? undefined : clip.crop;
+    const editingCrop = Boolean(options.isCropping?.() && clip.id === selected?.id);
+    const editingPhoneCrop = editingCrop && isPhoneFrame(clip.appearance.frame);
+    const crop = editingCrop ? { x: 0, y: 0, width: 1, height: 1 } : clip.crop;
     const layout = {
       x: window.dx + transform.x * window.dw,
       y: window.dy + transform.y * window.dh,
@@ -112,7 +116,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
       sourceWidth,
       sourceHeight,
       crop,
-      options.isCropping?.() && clip.id === selected?.id ? 'custom' : (clip.cameraFramingPreset ?? 'custom'),
+      editingPhoneCrop ? 'fit' : editingCrop ? 'custom' : (clip.cameraFramingPreset ?? 'custom'),
     );
     const output = options.outputCanvas?.();
     const shadowScale = output
@@ -122,7 +126,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
       source,
       sourceRect: framing.sourceRect,
       rect: framing.rect,
-      appearance: clip.appearance,
+      appearance: editingPhoneCrop ? { ...clip.appearance, frame: 'none' } : clip.appearance,
       shadowScale,
       title: clip.name,
       mirrored: clip.isMirrored,
@@ -130,6 +134,19 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
       mask: framing.mask,
       shadowFollowsSourceAlpha: clip.kind === 'image',
     });
+    if (editingPhoneCrop)
+      drawFrameOverlay(
+        ctx,
+        frameOuterRect(layout, clip.appearance.frame),
+        clip.appearance.frame,
+        clip.name,
+        clip.appearance.frameColor,
+        {
+          showMenu: clip.appearance.frameShowMenu,
+          showScrollbars: clip.appearance.frameShowScrollbars,
+          chromeScale: clip.appearance.frameChromeScale,
+        },
+      );
   };
 
   const drawBlur = (

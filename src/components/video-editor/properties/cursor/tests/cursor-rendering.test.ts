@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { cursorAssetAt, cursorCanvasBounds, cursorGeometryAtSize, cursorPositionAt } from '../cursor-rendering';
+import { containedMediaRect, framedMediaRect } from '../../../canvas/output-canvas';
 import { frameContentRect } from '../../../composition/appearance/frames';
+import { resolvePhoneFrameGeometry } from '../../../composition/appearance/frame-geometry';
 import type { CursorPackDescriptor, CursorSelection } from '~/api/types/cursor-pack';
 import type { CursorPlaybackState } from '../../../composables/cursorPlayback';
 
@@ -50,6 +52,21 @@ const renderingPack: CursorPackDescriptor = {
 };
 
 const automatic: CursorSelection = { packId: renderingPack.id, mode: 'automatic', cursorId: null };
+const phoneFrames = ['iphone-16-max', 'pixel-9-pro'] as const;
+const nativePhoneSize = (frame: (typeof phoneFrames)[number]) =>
+  frame === 'iphone-16-max' ? { width: 415, height: 843 } : { width: 353, height: 745 };
+const fittedPhoneRect = (
+  bounds: { x: number; y: number; width: number; height: number },
+  frame: (typeof phoneFrames)[number],
+) => {
+  const fit = containedMediaRect(
+    nativePhoneSize(frame).width,
+    nativePhoneSize(frame).height,
+    bounds.width,
+    bounds.height,
+  );
+  return { x: bounds.x + fit.x, y: bounds.y + fit.y, width: fit.width, height: fit.height };
+};
 
 describe('cursor rendering', () => {
   it('projects a non-square cursor bounds through the camera and click spring scale', () => {
@@ -170,6 +187,27 @@ describe('cursor rendering', () => {
     ).toEqual({
       x: content.x + content.width / 2,
       y: content.y + content.height / 2,
+    });
+  });
+
+  it.each(phoneFrames)('maps the cursor to the contained 16:9 media inside the fitted %s phone', (frame) => {
+    const viewport = { x: 0, y: 0, width: 1_000, height: 500 };
+    const source = { width: 1_920, height: 1_080 };
+    const backgroundMedia = framedMediaRect(source.width, source.height, viewport.width, viewport.height);
+    const outer = fittedPhoneRect(backgroundMedia, frame);
+    const content = resolvePhoneFrameGeometry(outer, frame).content;
+    const media = containedMediaRect(source.width, source.height, content.width, content.height);
+
+    expect(
+      cursorPositionAt(state(0, 0), source, viewport, true, undefined, false, false, {
+        frame,
+        frameShowMenu: true,
+        frameShowScrollbars: true,
+        frameChromeScale: 1,
+      }),
+    ).toEqual({
+      x: content.x + media.x,
+      y: content.y + media.y,
     });
   });
 

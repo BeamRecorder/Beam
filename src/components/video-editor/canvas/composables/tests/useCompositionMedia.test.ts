@@ -7,6 +7,7 @@ import type { BlurClip, ClipComposition, CaptionClip, VisualClip } from '~/media
 import { DEFAULT_OUTPUT_CANVAS } from '../../output-canvas';
 import * as mediaShared from '~/media/shared';
 import * as sceneLayers from '../../../composition/scene-layers';
+import { frameContentRect, frameOuterRect } from '../../../composition/appearance/frames';
 import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
 
 const testCaptionStyle = (fontSize: number) => {
@@ -15,10 +16,15 @@ const testCaptionStyle = (fontSize: number) => {
 };
 
 const drawDecoratedMedia = vi.hoisted(() => vi.fn());
+const drawFrameOverlay = vi.hoisted(() => vi.fn());
 const applyBlurEffect = vi.hoisted(() => vi.fn());
 vi.mock('../../../composition/appearance/render-decorated-media', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../../composition/appearance/render-decorated-media')>()),
   drawDecoratedMedia,
+}));
+vi.mock('../../../composition/appearance/frames', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../composition/appearance/frames')>()),
+  drawFrameOverlay,
 }));
 vi.mock('../../../composition/effects/blur-effect', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../../composition/effects/blur-effect')>()),
@@ -224,11 +230,12 @@ const context = () =>
 let wrapper: VueWrapper | undefined;
 let state!: ReturnType<typeof useCompositionMedia>;
 
-const mountComposable = (initialComposition = composition()) => {
+const mountComposable = (initialComposition = composition(), initiallyCropping = false) => {
   const compositionRef = ref(initialComposition);
   const currentTime = ref(0.5);
   const selected = ref<VisualClip | CaptionClip | null>(null);
   const draft = ref<VisualClip['transform'] | null>(null);
+  const cropping = ref(initiallyCropping);
   const frames = new Map([
     ['video', mediaFrame('video', 640, 360)],
     ['webcam', mediaFrame('webcam', 320, 240)],
@@ -244,7 +251,7 @@ const mountComposable = (initialComposition = composition()) => {
         frameFor,
         selectedTransformClip: () => selected.value,
         transformDraft: () => draft.value,
-        isCropping: () => false,
+        isCropping: () => cropping.value,
         outputCanvas: () => ({ ...DEFAULT_OUTPUT_CANVAS, width: 1_600, height: 900 }),
         captionViewport: () => ({ x: 0, y: 0, width: 800, height: 450 }),
         keyboardCursorPosition: () => keyboardCursorPosition.value,
@@ -254,7 +261,17 @@ const mountComposable = (initialComposition = composition()) => {
     },
   });
   wrapper = mount(Harness);
-  return { compositionRef, currentTime, selected, draft, frameFor, frames, onRenderOnce, keyboardCursorPosition };
+  return {
+    compositionRef,
+    currentTime,
+    selected,
+    draft,
+    cropping,
+    frameFor,
+    frames,
+    onRenderOnce,
+    keyboardCursorPosition,
+  };
 };
 
 beforeEach(() => vi.clearAllMocks());
@@ -539,6 +556,151 @@ describe('useCompositionMedia', () => {
         }
       }
     }
+  });
+
+  it('temporarily removes a selected phone frame and uses source-fit geometry while cropping', () => {
+    const phone = {
+      ...visual('video', 'phone', 'video-asset', 2),
+      appearance: { ...appearance, frame: 'iphone-16-max' as const },
+    };
+    const mounted = mountComposable({ ...composition(), clips: [phone] }, true);
+    mounted.selected.value = phone;
+    mounted.frames.set('phone', mediaFrame('phone', 640, 360));
+    const bounds = { dx: 10, dy: 20, dw: 800, dh: 400 };
+
+    state.drawComposition(context(), bounds, 'phone');
+    const cropped = drawDecoratedMedia.mock.calls.at(-1)?.[1] as {
+      appearance: VisualClip['appearance'];
+      rect: { x: number; y: number; width: number; height: number };
+      sourceRect?: unknown;
+    };
+
+    expect(cropped.appearance).toMatchObject({ frame: 'none' });
+    expect(cropped.sourceRect).toBeUndefined();
+    expect(cropped.rect.width / cropped.rect.height).toBeCloseTo(16 / 9, 8);
+    expect(cropped.rect).toMatchObject({ x: expect.any(Number), y: 100, height: 160 });
+    expect(cropped.rect.x).toBeCloseTo(90 + (400 - cropped.rect.width) / 2, 8);
+
+    mounted.cropping.value = false;
+    drawDecoratedMedia.mockClear();
+    state.drawComposition(context(), bounds, 'phone');
+    const normal = drawDecoratedMedia.mock.calls.at(-1)?.[1] as {
+      appearance: VisualClip['appearance'];
+      rect: { x: number; y: number; width: number; height: number };
+    };
+    expect(normal.appearance).toMatchObject({ frame: 'iphone-16-max' });
+    expect(normal.rect).toEqual({ x: 90, y: 100, width: 400, height: 160 });
+  });
+
+  it.each(['iphone-16-max', 'pixel-9-pro'] as const)(
+    'renders the full source first and overlays the fixed %s chrome while cropping',
+    (frame) => {
+      const phone = {
+        ...visual('video', `phone-${frame}`, 'video-asset', 2),
+        appearance: { ...appearance, frame },
+      };
+      const mounted = mountComposable({ ...composition(), clips: [phone] }, true);
+      mounted.selected.value = phone;
+      mounted.frames.set(phone.id, mediaFrame(phone.id, 640, 360));
+      const ctx = context();
+      const bounds = { dx: 10, dy: 20, dw: 800, dh: 400 };
+      const layout = { x: 90, y: 100, width: 400, height: 160 };
+      const expectedOuter = frameOuterRect(layout, frame);
+
+      drawDecoratedMedia.mockClear();
+      drawFrameOverlay.mockClear();
+      state.drawComposition(ctx, bounds, phone.id);
+
+      const mediaCall = drawDecoratedMedia.mock.calls.at(-1)?.[1] as {
+        source: unknown;
+        sourceRect?: unknown;
+        appearance: VisualClip['appearance'];
+        rect: { x: number; y: number; width: number; height: number };
+      };
+      expect(mediaCall.source).toBe(mounted.frames.get(phone.id)!.bitmap);
+      expect(mediaCall.sourceRect).toBeUndefined();
+      expect(mediaCall.appearance).toMatchObject({ frame: 'none' });
+      expect(mediaCall.rect.width / mediaCall.rect.height).toBeCloseTo(16 / 9, 8);
+      expect(mediaCall.rect.x).toBeCloseTo(layout.x + (layout.width - mediaCall.rect.width) / 2, 8);
+      expect(mediaCall.rect.y).toBeCloseTo(layout.y, 8);
+
+      expect(drawFrameOverlay).toHaveBeenCalledTimes(1);
+      const [overlayContext, overlayRect, overlayFrame, overlayTitle, overlayFrameColor, overlayWindows] =
+        drawFrameOverlay.mock.calls[0]!;
+      expect(overlayContext).toBe(ctx);
+      expect(overlayFrame).toBe(frame);
+      expect(overlayTitle).toBe(phone.name);
+      expect(overlayFrameColor).toBe(phone.appearance.frameColor);
+      expect(overlayWindows).toMatchObject({
+        showMenu: phone.appearance.frameShowMenu,
+        showScrollbars: phone.appearance.frameShowScrollbars,
+        chromeScale: phone.appearance.frameChromeScale,
+      });
+      expect(overlayRect.x).toBeCloseTo(expectedOuter.x, 8);
+      expect(overlayRect.y).toBeCloseTo(expectedOuter.y, 8);
+      expect(overlayRect.width).toBeCloseTo(expectedOuter.width, 8);
+      expect(overlayRect.height).toBeCloseTo(expectedOuter.height, 8);
+      expect(drawDecoratedMedia.mock.invocationCallOrder[0]).toBeLessThan(drawFrameOverlay.mock.invocationCallOrder[0]);
+
+      mounted.cropping.value = false;
+      drawDecoratedMedia.mockClear();
+      drawFrameOverlay.mockClear();
+      state.drawComposition(ctx, bounds, phone.id);
+      const normalCall = drawDecoratedMedia.mock.calls.at(-1)?.[1] as {
+        appearance: VisualClip['appearance'];
+        rect: { x: number; y: number; width: number; height: number };
+      };
+      expect(normalCall.appearance).toMatchObject({ frame });
+      expect(normalCall.rect).toEqual(layout);
+      expect(drawFrameOverlay).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['safari', 'windows-95'] as const)('keeps the %s frame while cropping into its content viewport', (frame) => {
+    const clip = {
+      ...visual('video', `desktop-${frame}`, 'video-asset', 2),
+      appearance: { ...appearance, frame },
+    };
+    const mounted = mountComposable({ ...composition(), clips: [clip] }, true);
+    mounted.selected.value = clip;
+    mounted.frames.set(clip.id, mediaFrame(clip.id, 640, 360));
+    const ctx = context();
+    const bounds = { dx: 10, dy: 20, dw: 800, dh: 400 };
+    const layout = { x: 90, y: 100, width: 400, height: 160 };
+
+    drawDecoratedMedia.mockClear();
+    drawFrameOverlay.mockClear();
+    state.drawComposition(ctx, bounds, clip.id);
+    const cropped = drawDecoratedMedia.mock.calls.at(-1)?.[1] as {
+      sourceRect?: { x: number; y: number; width: number; height: number };
+      appearance: VisualClip['appearance'];
+      rect: { x: number; y: number; width: number; height: number };
+    };
+    const content = frameContentRect(layout, frame, {
+      showMenu: clip.appearance.frameShowMenu,
+      showScrollbars: clip.appearance.frameShowScrollbars,
+      chromeScale: clip.appearance.frameChromeScale,
+    });
+    expect(cropped.appearance).toMatchObject({ frame });
+    expect(cropped.rect).toEqual(layout);
+    expect(cropped.sourceRect ?? { x: 0, y: 0, width: 640, height: 360 }).toEqual({
+      x: 0,
+      y: 0,
+      width: 640,
+      height: 360,
+    });
+    expect(content.x).toBeGreaterThanOrEqual(layout.x);
+    expect(content.y).toBeGreaterThanOrEqual(layout.y);
+    expect(content.width).toBeLessThanOrEqual(layout.width);
+    expect(content.height).toBeLessThanOrEqual(layout.height);
+    expect(drawFrameOverlay).not.toHaveBeenCalled();
+
+    mounted.cropping.value = false;
+    drawDecoratedMedia.mockClear();
+    drawFrameOverlay.mockClear();
+    state.drawComposition(ctx, bounds, clip.id);
+    expect(drawDecoratedMedia.mock.calls.at(-1)?.[1]).toMatchObject({ appearance: { frame } });
+    expect(drawFrameOverlay).not.toHaveBeenCalled();
   });
 
   it('wraps caption text into multiple lines without passing a max width when enabled', () => {

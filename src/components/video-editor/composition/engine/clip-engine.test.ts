@@ -16,8 +16,10 @@ import {
   splitClip,
 } from './clip-engine';
 import type { AudioClip, ClipComposition, ColorClip, MediaAsset, VisualClip } from '~/media/shared/composition-types';
+import type { PhoneFrameFill } from '~/media/shared/color-fill-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import { sourceTimeAt } from '~/media/shared/timeline-mapping';
+import { validateComposition } from './clip-composition-validation';
 
 const videoAsset = (id: string, kind: MediaAsset['kind'] = 'video'): MediaAsset => ({
   id,
@@ -217,6 +219,71 @@ describe('color layer engine operations', () => {
           fill: gradient,
         }),
       ]),
+    );
+  });
+});
+
+describe('phone frame fill validation', () => {
+  const validFills: Array<[string, PhoneFrameFill]> = [
+    ['color', { kind: 'color', color: '#0f172a' }],
+    [
+      'gradient',
+      {
+        kind: 'gradient',
+        gradient: {
+          type: 'radial',
+          angle: 225,
+          stops: [
+            { id: 'start', position: 0, color: '#0f172a', alpha: 1 },
+            { id: 'end', position: 1, color: '#6366f1', alpha: 0.8 },
+          ],
+        },
+      },
+    ],
+    ['adaptive', { kind: 'adaptive' }],
+    ['continuity', { kind: 'continuity', blur: 32, brightness: 72 }],
+  ];
+
+  it.each(validFills)('accepts a %s phone frame fill', (_kind, phoneFrameFill) => {
+    const composition = visualPresetComposition();
+    const clip = composition.clips.find((entry): entry is VisualClip => entry.id === 'video-clip')!;
+    clip.appearance = { ...clip.appearance, frame: 'iphone-16-max', phoneFrameFill };
+
+    expect(() => validateComposition(composition)).not.toThrow();
+  });
+
+  it('rejects an invalid phone frame fill', () => {
+    const composition = visualPresetComposition();
+    const clip = composition.clips.find((entry): entry is VisualClip => entry.id === 'video-clip')!;
+    clip.appearance = {
+      ...clip.appearance,
+      frame: 'pixel-9-pro',
+      phoneFrameFill: {
+        kind: 'gradient',
+        gradient: { type: 'radial', angle: 0, stops: [] },
+      } as unknown as PhoneFrameFill,
+    };
+
+    expect(() => validateComposition(composition)).toThrowError(
+      new CompositionEngineError('Invalid phone frame fill.'),
+    );
+  });
+
+  it.each([
+    { kind: 'continuity', blur: -1, brightness: 72 },
+    { kind: 'continuity', blur: 32, brightness: 101 },
+    { kind: 'continuity', blur: Number.NaN, brightness: 72 },
+  ] as const)('rejects invalid continuity settings: %o', (phoneFrameFill) => {
+    const composition = visualPresetComposition();
+    const clip = composition.clips.find((entry): entry is VisualClip => entry.id === 'video-clip')!;
+    clip.appearance = {
+      ...clip.appearance,
+      frame: 'iphone-16-max',
+      phoneFrameFill: phoneFrameFill as unknown as PhoneFrameFill,
+    };
+
+    expect(() => validateComposition(composition)).toThrowError(
+      new CompositionEngineError('Invalid phone frame fill.'),
     );
   });
 });

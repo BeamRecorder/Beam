@@ -19,9 +19,8 @@ import {
   type CameraLayoutPreset,
 } from '~/media/shared/camera-layout-types';
 import { useClipCornerRadius } from './useClipCornerRadius';
-
+import type { PhoneFrameFill } from '~/media/shared/color-fill-types';
 const { t } = useTranslate('ClipPropertiesPanel');
-
 const props = defineProps<{
   selectedClip: {
     id: string;
@@ -47,6 +46,7 @@ const props = defineProps<{
     frameShowMenu?: boolean;
     frameShowScrollbars?: boolean;
     frameChromeScale?: number;
+    phoneFrameFill?: PhoneFrameFill;
     clipTransform?: NormalizedTransform;
     isMirrored?: boolean;
     isMirroredY?: boolean;
@@ -58,7 +58,6 @@ const props = defineProps<{
     hasLinkedScreen?: boolean;
   } | null;
 }>();
-
 const emit = defineEmits<{
   (e: 'update:playbackRate', rate: number): void;
   (e: 'update:isMirrored', isMirrored: boolean): void;
@@ -67,7 +66,13 @@ const emit = defineEmits<{
   (e: 'corner-radius-interaction', interacting: boolean): void;
   (
     e: 'update:shadow',
-    shadow: { size: ClipShadowSize; blur?: number; mode?: ClipShadowMode; color?: string; direction?: string },
+    shadow: {
+      size: ClipShadowSize;
+      blur?: number;
+      mode?: ClipShadowMode;
+      color?: string;
+      direction?: string;
+    },
   ): void;
   (
     e: 'update:appearance',
@@ -81,6 +86,7 @@ const emit = defineEmits<{
       frameShowMenu?: boolean;
       frameShowScrollbars?: boolean;
       frameChromeScale?: number;
+      phoneFrameFill?: PhoneFrameFill;
     },
   ): void;
   (e: 'update:clipTransform', transform: NormalizedTransform): void;
@@ -94,7 +100,6 @@ const emit = defineEmits<{
   (e: 'delete'): void;
   (e: 'split'): void;
 }>();
-
 const speedPresets = [0.5, 1.0, 1.5, 2.0, 3.0];
 
 const radiusPresets = computed(() => [
@@ -437,6 +442,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
           :frame-show-menu="selectedClip.frameShowMenu"
           :frame-show-scrollbars="selectedClip.frameShowScrollbars"
           :frame-chrome-scale="selectedClip.frameChromeScale"
+          :phone-frame-fill="selectedClip.phoneFrameFill"
           @update="emit('update:appearance', $event)"
         />
       </div>

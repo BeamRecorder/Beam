@@ -13,6 +13,8 @@ import type { VideoWindowBounds } from '../useCameraZoom';
 import { DEFAULT_OUTPUT_CANVAS } from '../../output-canvas';
 import { computeWebcamLayout, webcamSettingsForAppearance } from '../../../composition/webcam/webcam-zoom';
 import { resolveCameraFraming } from '../../../composition/camera-layout';
+import { frameOuterRect } from '../../../composition/appearance/frames';
+import { projectCameraRect } from '../layer-transform-geometry';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 
 const screenClip = (): VisualClip => ({
@@ -75,6 +77,17 @@ const imageClip = (): VisualClip => ({
   appearance: createDefaultClipAppearance('image'),
   isMirrored: false,
   isMirroredY: false,
+});
+
+const phoneImageClip = (
+  frame: 'iphone-16-max' | 'pixel-9-pro' = 'iphone-16-max',
+  cameraFramingPreset: VisualClip['cameraFramingPreset'] = 'fit',
+): VisualClip => ({
+  ...imageClip(),
+  id: 'phone-image',
+  transform: { x: 0.25, y: 0.2, width: 0.5, height: 0.4 },
+  appearance: { ...createDefaultClipAppearance('image'), frame },
+  ...(cameraFramingPreset === undefined ? {} : { cameraFramingPreset }),
 });
 
 const blurClip = (overrides: Partial<BlurClip> = {}): BlurClip => ({
@@ -251,6 +264,12 @@ type SelectionStyle = {
   height?: string;
 };
 const stylePixels = (style: SelectionStyle, property: keyof SelectionStyle) => Number.parseFloat(style[property] ?? '');
+const selectionRect = (style: SelectionStyle) => ({
+  left: stylePixels(style, 'left'),
+  top: stylePixels(style, 'top'),
+  width: stylePixels(style, 'width'),
+  height: stylePixels(style, 'height'),
+});
 
 beforeEach(() => {
   vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
@@ -327,6 +346,199 @@ describe('useLayerTransformAndCrop', () => {
     await nextTick();
     expect(mounted.state.transformHandleStyle.value).toEqual({ display: 'none' });
   });
+
+  it('uses an unframed source-fit crop layout for phone frames and restores the outer frame outside crop mode', async () => {
+    const clip = phoneImageClip();
+    const scene = composition();
+    scene.clips = [screenClip(), clip];
+    const mounted = mountComposable(clip, false, scene);
+    const windowBounds = bounds();
+    const layout = {
+      left: windowBounds.dx + clip.transform.x * windowBounds.dw,
+      top: windowBounds.dy + clip.transform.y * windowBounds.dh,
+      width: clip.transform.width * windowBounds.dw,
+      height: clip.transform.height * windowBounds.dh,
+    };
+    const phoneOuter = frameOuterRect(
+      { x: layout.left, y: layout.top, width: layout.width, height: layout.height },
+      'iphone-16-max',
+    );
+    const expectedOuter = projectCameraRect(windowBounds, {
+      left: phoneOuter.x,
+      top: phoneOuter.y,
+      width: phoneOuter.width,
+      height: phoneOuter.height,
+    });
+
+    expect(mounted.state.transformHandleStyle.value).toMatchObject({
+      left: `${expectedOuter.left - windowBounds.dx}px`,
+      top: `${expectedOuter.top - windowBounds.dy}px`,
+      width: `${expectedOuter.width}px`,
+      height: `${expectedOuter.height}px`,
+    });
+
+    mounted.croppingRef.value = true;
+    await nextTick();
+    const fit = resolveCameraFraming(
+      'fit',
+      { x: layout.left, y: layout.top, width: layout.width, height: layout.height },
+      800,
+      600,
+    ).rect;
+    const expectedFit = projectCameraRect(windowBounds, {
+      left: fit.x,
+      top: fit.y,
+      width: fit.width,
+      height: fit.height,
+    });
+
+    expect(mounted.state.cropContainerStyle.value).toEqual({
+      left: `${expectedFit.left}px`,
+      top: `${expectedFit.top}px`,
+      width: `${expectedFit.width}px`,
+      height: `${expectedFit.height}px`,
+    });
+    expect(mounted.state.cropOverlayStyle.value).toEqual({
+      left: '10%',
+      top: '20%',
+      width: '70%',
+      height: '60%',
+    });
+
+    mounted.croppingRef.value = false;
+    await nextTick();
+    expect(mounted.state.transformHandleStyle.value).toMatchObject({
+      left: `${expectedOuter.left - windowBounds.dx}px`,
+      top: `${expectedOuter.top - windowBounds.dy}px`,
+      width: `${expectedOuter.width}px`,
+      height: `${expectedOuter.height}px`,
+    });
+  });
+
+  it.each([
+    ['iphone-16-max', 'bottom-right'],
+    ['iphone-16-max', 'top-left'],
+    ['pixel-9-pro', 'bottom-right'],
+    ['pixel-9-pro', 'top-left'],
+  ] as const)(
+    'keeps the opposite anchor stable and preserves the preview after committing a %s fit resize from %s',
+    async (frame, corner) => {
+      const clip = phoneImageClip(frame);
+      const scene = composition();
+      scene.clips = [screenClip(), clip];
+      const mounted = mountComposable(clip, false, scene);
+      const target = document.createElement('div');
+      Object.assign(target, {
+        setPointerCapture: vi.fn(),
+        hasPointerCapture: vi.fn().mockReturnValue(true),
+        releasePointerCapture: vi.fn(),
+      });
+      const initial = selectionRect(mounted.state.transformHandleStyle.value);
+      const initialRight = initial.left + initial.width;
+      const initialBottom = initial.top + initial.height;
+      const pointerPosition = corner === 'bottom-right' ? { clientX: 180, clientY: 180 } : { clientX: 20, clientY: 20 };
+
+      mounted.state.beginTransformDrag(pointer(target, { clientX: 100, clientY: 100 }), 'resize', corner);
+      mounted.state.moveTransformDrag(pointer(target, pointerPosition));
+      const preview = selectionRect(mounted.state.transformHandleStyle.value);
+
+      expect(preview.width).toBeGreaterThan(initial.width);
+      expect(preview.height).toBeGreaterThan(initial.height);
+      if (corner === 'bottom-right') {
+        expect(preview.left).toBeCloseTo(initial.left, 5);
+        expect(preview.top).toBeCloseTo(initial.top, 5);
+      } else {
+        expect(preview.left + preview.width).toBeCloseTo(initialRight, 5);
+        expect(preview.top + preview.height).toBeCloseTo(initialBottom, 5);
+      }
+
+      mounted.state.endTransformDrag(pointer(target, pointerPosition));
+      const committedTransform = vi.mocked(mounted.options.onUpdateTransform).mock.calls.at(-1)?.[0];
+      expect(committedTransform).toBeDefined();
+
+      const committedClip = { ...clip, transform: committedTransform! };
+      mounted.compositionRef.value = { ...scene, clips: [screenClip(), committedClip] };
+      mounted.selectedRef.value = committedClip;
+      await nextTick();
+      const committed = selectionRect(mounted.state.transformHandleStyle.value);
+
+      expect(committed.left).toBeCloseTo(preview.left, 5);
+      expect(committed.top).toBeCloseTo(preview.top, 5);
+      expect(committed.width).toBeCloseTo(preview.width, 5);
+      expect(committed.height).toBeCloseTo(preview.height, 5);
+    },
+  );
+
+  it.each([
+    ['iphone-16-max', 'custom'],
+    ['iphone-16-max', undefined],
+    ['pixel-9-pro', 'custom'],
+    ['pixel-9-pro', undefined],
+  ] as const)('exposes only the four corner resize handles for a %s phone with %s framing', (frame, preset) => {
+    const clip = phoneImageClip(frame, preset);
+    const scene = composition();
+    scene.clips = [screenClip(), clip];
+    const mounted = mountComposable(clip, false, scene);
+
+    expect(mounted.state.transformResizeCorners.value).toEqual([
+      'top-left',
+      'top-right',
+      'bottom-right',
+      'bottom-left',
+    ]);
+  });
+
+  it.each([
+    ['iphone-16-max', 'custom', 'top-left', { clientX: 20, clientY: 20 }, 'bottom-right'],
+    ['iphone-16-max', 'custom', 'top-right', { clientX: 180, clientY: 20 }, 'bottom-left'],
+    ['iphone-16-max', 'custom', 'bottom-right', { clientX: 180, clientY: 180 }, 'top-left'],
+    ['iphone-16-max', 'custom', 'bottom-left', { clientX: 20, clientY: 180 }, 'top-right'],
+    ['iphone-16-max', undefined, 'top-left', { clientX: 20, clientY: 20 }, 'bottom-right'],
+    ['iphone-16-max', undefined, 'top-right', { clientX: 180, clientY: 20 }, 'bottom-left'],
+    ['iphone-16-max', undefined, 'bottom-right', { clientX: 180, clientY: 180 }, 'top-left'],
+    ['iphone-16-max', undefined, 'bottom-left', { clientX: 20, clientY: 180 }, 'top-right'],
+    ['pixel-9-pro', 'custom', 'top-left', { clientX: 20, clientY: 20 }, 'bottom-right'],
+    ['pixel-9-pro', 'custom', 'top-right', { clientX: 180, clientY: 20 }, 'bottom-left'],
+    ['pixel-9-pro', 'custom', 'bottom-right', { clientX: 180, clientY: 180 }, 'top-left'],
+    ['pixel-9-pro', 'custom', 'bottom-left', { clientX: 20, clientY: 180 }, 'top-right'],
+    ['pixel-9-pro', undefined, 'top-left', { clientX: 20, clientY: 20 }, 'bottom-right'],
+    ['pixel-9-pro', undefined, 'top-right', { clientX: 180, clientY: 20 }, 'bottom-left'],
+    ['pixel-9-pro', undefined, 'bottom-right', { clientX: 180, clientY: 180 }, 'top-left'],
+    ['pixel-9-pro', undefined, 'bottom-left', { clientX: 20, clientY: 180 }, 'top-right'],
+  ] as const)(
+    'resizes the %s phone from its %s corner with %s framing while keeping the %s anchor fixed',
+    async (frame, preset, corner, pointerPosition, oppositeCorner) => {
+      const clip = phoneImageClip(frame, preset);
+      const scene = composition();
+      scene.clips = [screenClip(), clip];
+      const mounted = mountComposable(clip, false, scene);
+      const target = document.createElement('div');
+      Object.assign(target, {
+        setPointerCapture: vi.fn(),
+        hasPointerCapture: vi.fn().mockReturnValue(true),
+        releasePointerCapture: vi.fn(),
+      });
+      const initial = selectionRect(mounted.state.transformHandleStyle.value);
+      const initialRight = initial.left + initial.width;
+      const initialBottom = initial.top + initial.height;
+
+      mounted.state.beginTransformDrag(pointer(target, { clientX: 100, clientY: 100 }), 'resize', corner);
+      mounted.state.moveTransformDrag(pointer(target, pointerPosition));
+      const resized = selectionRect(mounted.state.transformHandleStyle.value);
+
+      expect(resized.width).toBeGreaterThan(initial.width);
+      expect(resized.height).toBeGreaterThan(initial.height);
+      if (oppositeCorner.includes('left')) expect(resized.left).toBeCloseTo(initial.left, 5);
+      if (oppositeCorner.includes('top')) expect(resized.top).toBeCloseTo(initial.top, 5);
+      if (oppositeCorner.includes('right')) expect(resized.left + resized.width).toBeCloseTo(initialRight, 5);
+      if (oppositeCorner.includes('bottom')) expect(resized.top + resized.height).toBeCloseTo(initialBottom, 5);
+
+      mounted.state.endTransformDrag(pointer(target, pointerPosition));
+      expect(mounted.options.onUpdateTransform).toHaveBeenCalledWith(
+        expect.objectContaining({ width: expect.any(Number) }),
+      );
+    },
+  );
 
   it('projects blur handles through camera zoom and uses the visible circle bounds', async () => {
     const clip = blurClip();

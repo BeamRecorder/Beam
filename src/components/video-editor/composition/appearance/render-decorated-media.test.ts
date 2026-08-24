@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { frameContentRect } from './frames';
+import { frameContentRect, frameMediaRect } from './frames';
 import { resolveSafariFrameGeometry, resolveWindowsFrameGeometry } from './frame-geometry';
 import { applyClipShadow, drawDecoratedMedia, shadowBlurForAppearance } from './render-decorated-media';
+import { adaptivePhoneFillColors } from './phone-frame-fill';
 import type { ClipAppearance } from '~/media/shared/composition-types';
 
 const appearance = (patch: Partial<ClipAppearance> = {}): ClipAppearance => ({
@@ -22,9 +23,13 @@ const appearance = (patch: Partial<ClipAppearance> = {}): ClipAppearance => ({
   frameChromeScale: 1,
   ...patch,
 });
-const context = () =>
-  ({
+const context = () => {
+  const fillStyles: unknown[] = [];
+  const filterWrites: unknown[] = [];
+  const value = {
     fillStyle: '',
+    globalAlpha: 1,
+    filter: 'none',
     strokeStyle: '',
     lineWidth: 0,
     shadowColor: '',
@@ -55,7 +60,22 @@ const context = () =>
     lineTo: vi.fn(),
     closePath: vi.fn(),
     createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
-  }) as unknown as CanvasRenderingContext2D;
+    createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
+    fillStyles,
+    filterWrites,
+  };
+  Object.defineProperty(value, 'fillStyle', {
+    configurable: true,
+    get: () => fillStyles.at(-1),
+    set: (next: unknown) => fillStyles.push(next),
+  });
+  Object.defineProperty(value, 'filter', {
+    configurable: true,
+    get: () => filterWrites.at(-1) ?? 'none',
+    set: (next: unknown) => filterWrites.push(next),
+  });
+  return value as unknown as CanvasRenderingContext2D & { fillStyles: unknown[]; filterWrites: unknown[] };
+};
 const source = {} as CanvasImageSource;
 
 const frameFormats = [
@@ -439,6 +459,179 @@ describe('decorated media rendering', () => {
       expect(titleHeight! / titleButton![2]!).toBeCloseTo(31 / 18, 1);
     },
   );
+  it('paints a solid phone fit background across the inner screen before contained media', () => {
+    const ctx = context();
+    const rect = { x: 12, y: 8, width: 415, height: 843 };
+    const phoneSource = { videoWidth: 1_920, videoHeight: 1_080 } as unknown as CanvasImageSource;
+    const screen = frameContentRect(rect, 'iphone-16-max');
+    const media = frameMediaRect(rect, 'iphone-16-max', 1_920, 1_080);
+
+    drawDecoratedMedia(ctx, {
+      source: phoneSource,
+      rect,
+      appearance: appearance({
+        frame: 'iphone-16-max',
+        shadowSize: 'none',
+        phoneFrameFill: { kind: 'color', color: '#123456' },
+      }),
+      title: 'Phone fit',
+    });
+
+    expect(ctx.fillStyles).toContain('#123456');
+    expect(ctx.fillRect).toHaveBeenCalledWith(screen.x, screen.y, screen.width, screen.height);
+    expect(ctx.drawImage).toHaveBeenCalledWith(phoneSource, media.x, media.y, media.width, media.height);
+  });
+
+  it('renders a radial phone fit gradient with alpha stops over the inner screen', () => {
+    const ctx = context();
+    const rect = { x: 0, y: 0, width: 353, height: 745 };
+    const screen = frameContentRect(rect, 'pixel-9-pro');
+    const phoneSource = { videoWidth: 1_080, videoHeight: 1_920 } as unknown as CanvasImageSource;
+
+    drawDecoratedMedia(ctx, {
+      source: phoneSource,
+      rect,
+      appearance: appearance({
+        frame: 'pixel-9-pro',
+        shadowSize: 'none',
+        phoneFrameFill: {
+          kind: 'gradient',
+          gradient: {
+            type: 'radial',
+            angle: 180,
+            stops: [
+              { id: 'inner', position: 0, color: '#ffffff', alpha: 0.25 },
+              { id: 'outer', position: 1, color: '#000000', alpha: 0.75 },
+            ],
+          },
+        },
+      }),
+      title: 'Phone gradient',
+    });
+
+    const radial = vi.mocked(ctx.createRadialGradient);
+    expect(radial).toHaveBeenCalledOnce();
+    const gradient = radial.mock.results[0]?.value as { addColorStop: ReturnType<typeof vi.fn> };
+    expect(gradient.addColorStop.mock.calls).toEqual([
+      [0, '#ffffff40'],
+      [1, '#000000bf'],
+    ]);
+    expect(ctx.fillRect).toHaveBeenCalledWith(screen.x, screen.y, screen.width, screen.height);
+  });
+
+  it('samples the source for an adaptive phone fit gradient', () => {
+    const ctx = context();
+    const samplingContext = {
+      clearRect: vi.fn(),
+      drawImage: vi.fn(),
+      getImageData: vi.fn(() => ({
+        data: new Uint8ClampedArray([255, 24, 24, 255, 255, 24, 24, 255, 24, 24, 255, 255, 24, 24, 255, 255]),
+      })),
+    };
+    class FakeOffscreenCanvas {
+      width = 0;
+      height = 0;
+      getContext = vi.fn(() => samplingContext);
+    }
+    vi.stubGlobal('OffscreenCanvas', FakeOffscreenCanvas);
+
+    try {
+      const phoneSource = { videoWidth: 1_920, videoHeight: 1_080 } as unknown as CanvasImageSource;
+      drawDecoratedMedia(ctx, {
+        source: phoneSource,
+        rect: { x: 0, y: 0, width: 415, height: 843 },
+        appearance: appearance({
+          frame: 'iphone-16-max',
+          shadowSize: 'none',
+          phoneFrameFill: { kind: 'adaptive' },
+        }),
+        title: 'Adaptive phone',
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+
+    expect(samplingContext.drawImage).toHaveBeenCalled();
+    expect(samplingContext.getImageData).toHaveBeenCalled();
+    expect(ctx.createLinearGradient).toHaveBeenCalled();
+    const gradients = vi
+      .mocked(ctx.createLinearGradient)
+      .mock.results.map((result) => result.value as { addColorStop: ReturnType<typeof vi.fn> });
+    expect(gradients.some((gradient) => gradient.addColorStop.mock.calls.length >= 2)).toBe(true);
+  });
+
+  it('keeps rendering a phone when adaptive sampling is unavailable', () => {
+    const ctx = context();
+    class NoContextOffscreenCanvas {
+      width = 0;
+      height = 0;
+      getContext = vi.fn(() => null);
+    }
+    vi.stubGlobal('OffscreenCanvas', NoContextOffscreenCanvas);
+
+    try {
+      const phoneSource = { videoWidth: 1_920, videoHeight: 1_080 } as unknown as CanvasImageSource;
+      expect(() =>
+        drawDecoratedMedia(ctx, {
+          source: phoneSource,
+          rect: { x: 0, y: 0, width: 415, height: 843 },
+          appearance: appearance({
+            frame: 'iphone-16-max',
+            shadowSize: 'none',
+            phoneFrameFill: { kind: 'adaptive' },
+          }),
+          title: 'Adaptive fallback',
+        }),
+      ).not.toThrow();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+
+    expect(ctx.drawImage).toHaveBeenCalled();
+    expect(adaptivePhoneFillColors(new Uint8ClampedArray())).toEqual(['#111827', '#312e81', '#0f172a']);
+  });
+
+  it('covers the phone screen with a filtered continuity copy before contained media', () => {
+    const ctx = context();
+    const rect = { x: 12, y: 8, width: 415, height: 843 };
+    const screen = frameContentRect(rect, 'iphone-16-max');
+    const sourceWidth = 1_920;
+    const sourceHeight = 1_080;
+    const phoneSource = { videoWidth: sourceWidth, videoHeight: sourceHeight } as unknown as CanvasImageSource;
+
+    drawDecoratedMedia(ctx, {
+      source: phoneSource,
+      rect,
+      appearance: appearance({
+        frame: 'iphone-16-max',
+        shadowSize: 'none',
+        phoneFrameFill: { kind: 'continuity', blur: 32, brightness: 72 },
+      }),
+      title: 'Continuity phone',
+    });
+
+    const sourceDraws = vi.mocked(ctx.drawImage).mock.calls.filter(([drawn]) => drawn === phoneSource);
+    expect(sourceDraws).toHaveLength(2);
+    const [backgroundDraw, containedDraw] = sourceDraws;
+    const destination = backgroundDraw?.length === 9 ? backgroundDraw.slice(5) : backgroundDraw?.slice(1);
+    expect(destination).toHaveLength(4);
+    const [x, y, width, height] = destination as number[];
+    const destinationIsContained =
+      x === screen.x && y === screen.y && width === screen.width && height === screen.height;
+    if (destinationIsContained && backgroundDraw?.length === 9) {
+      expect(backgroundDraw[3] / backgroundDraw[4]).toBeCloseTo(screen.width / screen.height, 5);
+    } else {
+      expect(x).toBeLessThanOrEqual(screen.x);
+      expect(y).toBeLessThanOrEqual(screen.y);
+      expect(x + width).toBeGreaterThanOrEqual(screen.x + screen.width);
+      expect(y + height).toBeGreaterThanOrEqual(screen.y + screen.height);
+      expect(width / height).toBeCloseTo(sourceWidth / sourceHeight, 5);
+    }
+    expect(containedDraw).toHaveLength(5);
+    expect(ctx.filterWrites).toEqual(
+      expect.arrayContaining([expect.stringContaining('blur(32px)'), expect.stringContaining('brightness(72%)')]),
+    );
+  });
   it('keeps adaptive color independent from the selected shadow size', () => {
     expect(shadowBlurForAppearance(appearance({ shadowSize: 'none', shadowMode: 'adaptive' }))).toBe(0);
     expect(shadowBlurForAppearance(appearance({ shadowSize: 'sm', shadowMode: 'adaptive' }))).toBe(16);

@@ -25,16 +25,16 @@ import {
 import type { OutputCanvasSettings } from '../output-canvas';
 
 import { computeCanvasAlignmentSnapping, type AlignmentGuide } from './canvas-alignment';
-import { effectShapeRect } from '../../composition/effects/blur-effect';
-import { projectCameraRect, clampNormalizedCrop, mirrorCrop } from './layer-transform-geometry';
-import { editableVisualClipTransform, visualClipDisplayLayout } from '../../composition/visual-framing';
+import { clampNormalizedCrop, mirrorCrop } from './layer-transform-geometry';
+import { editableVisualClipTransform, resizePhoneFrameTransform } from '../../composition/visual-framing';
+import { isPhoneFrame } from '../../composition/appearance/phone-frames';
 import {
   clampEditedWebcamTransform,
   editableWebcamTransform,
-  webcamDisplayLayout,
   webcamResizePointerScale,
 } from './webcam-transform-editing';
 import { topmostClipIdAtPoint } from './layer-hit-testing';
+import { transformClipDisplayLayout } from './layer-display-layout';
 
 const TRANSFORM_MIN = -3;
 const TRANSFORM_MAX = 3;
@@ -121,41 +121,13 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
   const displayLayoutFor = (clip: TransformClip, transform = transformFor(clip)) => {
     const bounds = boundsFor(clip);
     if (!bounds) return null;
-    if (clip.kind === 'webcam') {
-      return webcamDisplayLayout(
-        options.composition(),
-        clip,
-        bounds,
-        transform,
-        options.isCropping() ? 'custom' : (clip.cameraFramingPreset ?? 'custom'),
-      );
-    }
-    if (isVisualClip(clip)) {
-      const asset = options.composition().assets.find((entry) => entry.id === clip.assetId);
-      const visible = visualClipDisplayLayout(
-        clip,
-        transform,
-        { x: bounds.dx, y: bounds.dy, width: bounds.dw, height: bounds.dh },
-        asset?.width ?? bounds.dw,
-        asset?.height ?? bounds.dh,
-        options.isCropping() ? 'custom' : (clip.cameraFramingPreset ?? 'custom'),
-      );
-      return usesGlobalCamera(clip) ? projectCameraRect(bounds, visible) : visible;
-    }
-    const rect = {
-      left: bounds.dx + transform.x * bounds.dw,
-      top: bounds.dy + transform.y * bounds.dh,
-      width: transform.width * bounds.dw,
-      height: transform.height * bounds.dh,
-    };
-    const effectRect =
-      clip.kind === 'blur'
-        ? effectShapeRect(clip.shape, { x: rect.left, y: rect.top, width: rect.width, height: rect.height })
-        : null;
-    const visibleRect = effectRect
-      ? { left: effectRect.x, top: effectRect.y, width: effectRect.width, height: effectRect.height }
-      : rect;
-    return usesGlobalCamera(clip) ? projectCameraRect(bounds, visibleRect) : visibleRect;
+    return transformClipDisplayLayout({
+      composition: options.composition(),
+      clip,
+      transform,
+      bounds,
+      isCropping: Boolean(options.isCropping()),
+    });
   };
 
   watch(
@@ -205,6 +177,8 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
   const transformResizeCorners = computed<ResizeCorner[] | undefined>(() => {
     const clip = options.selectedTransformClip();
     if (clip?.kind === 'caption' && isCaptionWrapEnabled(clip.caption.style)) return ['left', 'right'];
+    if (clip && isVisualClip(clip) && isPhoneFrame(clip.appearance.frame))
+      return ['top-left', 'top-right', 'bottom-right', 'bottom-left'];
     if (clip?.kind === 'blur' && clip.shape !== 'rectangle')
       return ['top-left', 'top-right', 'bottom-right', 'bottom-left'];
     return undefined;
@@ -213,7 +187,13 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
   const cropValue = computed<NormalizedCrop>(() => {
     const clip = options.selectedTransformClip();
     return (
-      cropDraft.value ?? (clip && isVisualClip(clip) ? clip.crop : undefined) ?? { x: 0, y: 0, width: 1, height: 1 }
+      cropDraft.value ??
+      (clip && isVisualClip(clip) ? clip.crop : undefined) ?? {
+        x: 0,
+        y: 0,
+        width: 1,
+        height: 1,
+      }
     );
   });
   const displayCrop = (crop: NormalizedCrop) => {
@@ -255,7 +235,13 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
   });
   const beginCropDrag = (event: PointerEvent, kind: 'move' | 'resize', corner?: ResizeCorner) => {
     if (event.button !== 0) return;
-    cropDrag = { kind, corner, startX: event.clientX, startY: event.clientY, value: displayCrop(cropValue.value) };
+    cropDrag = {
+      kind,
+      corner,
+      startX: event.clientX,
+      startY: event.clientY,
+      value: displayCrop(cropValue.value),
+    };
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
   };
   const moveCropDrag = (event: PointerEvent) => {
@@ -267,7 +253,11 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     const dy = (event.clientY - cropDrag.startY) / Math.max(1, layout.height * vScale);
     if (cropDrag.kind === 'move') {
       cropDraft.value = sourceCrop(
-        clampNormalizedCrop({ ...cropDrag.value, x: cropDrag.value.x + dx, y: cropDrag.value.y + dy }),
+        clampNormalizedCrop({
+          ...cropDrag.value,
+          x: cropDrag.value.x + dx,
+          y: cropDrag.value.y + dy,
+        }),
       );
       return;
     }
@@ -362,6 +352,15 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
       transformDraft.value = clip.kind === 'webcam' ? clampEditedWebcamTransform(clip, moved, bounds.scale) : moved;
       return;
     }
+    if (isVisualClip(clip) && isPhoneFrame(clip.appearance.frame))
+      return void (transformDraft.value = resizePhoneFrameTransform(
+        options.composition(),
+        clip,
+        initial,
+        bounds,
+        { x: dx, y: dy },
+        transformDrag.corner,
+      ));
     const left = transformDrag.corner?.includes('left');
     const top = transformDrag.corner?.includes('top');
     const horizontal = Boolean(left || transformDrag.corner?.includes('right'));

@@ -48,6 +48,7 @@ const visualClip = (assetId, overrides = {}) => ({
     frameShowMenu: true,
     frameShowScrollbars: true,
     frameChromeScale: 1,
+    phoneFrameFill: { kind: 'color', color: '#000000' },
   },
   isMirrored: false,
   isMirroredY: false,
@@ -301,8 +302,215 @@ test('normalizes canonical clip timing, linked groups and appearance', () => {
     frameShowMenu: true,
     frameShowScrollbars: true,
     frameChromeScale: 1,
+    phoneFrameFill: { kind: 'color', color: '#000000' },
     shadowBlur: 40,
     shadowMode: 'solid',
+  });
+});
+
+test('normalizes the supported phone frame values and rejects unknown frames', () => {
+  const asset = {
+    id: 'asset-phone-frame',
+    kind: 'video',
+    name: 'Phone recording',
+    fileName: 'phone-recording.mp4',
+    durationMs: 1_000,
+    width: 1_920,
+    height: 1_080,
+    origin: 'project',
+  };
+
+  for (const frame of ['iphone-16-max', 'pixel-9-pro']) {
+    const normalized = normalizeComposition({
+      schemaVersion: 12,
+      assets: [asset],
+      keyboardCaptionSessions: [],
+      clips: [
+        visualClip(asset.id, {
+          appearance: { ...visualClip(asset.id).appearance, frame },
+        }),
+      ],
+    });
+    assert.equal(normalized.clips[0].appearance.frame, frame);
+  }
+
+  for (const frame of ['iphone-16-pro', 'pixel', ''])
+    assert.throws(
+      () =>
+        normalizeComposition({
+          schemaVersion: 12,
+          assets: [asset],
+          keyboardCaptionSessions: [],
+          clips: [visualClip(asset.id, { appearance: { ...visualClip(asset.id).appearance, frame } })],
+        }),
+      /Apparence|invalide/i,
+    );
+});
+
+test('persists solid, radial-gradient, adaptive and continuity phone fit backgrounds', () => {
+  const asset = {
+    id: 'asset-phone-fill',
+    kind: 'video',
+    name: 'Phone recording',
+    fileName: 'phone-fill.mp4',
+    durationMs: 1_000,
+    width: 1_920,
+    height: 1_080,
+    origin: 'project',
+  };
+  const fills = [
+    { kind: 'color', color: '#102030' },
+    {
+      kind: 'gradient',
+      gradient: {
+        type: 'radial',
+        angle: 270,
+        stops: [
+          { id: 'inner', position: 0, color: '#ffffff', alpha: 0.3 },
+          { id: 'outer', position: 1, color: '#123456', alpha: 0.85 },
+        ],
+      },
+    },
+    { kind: 'adaptive' },
+    { kind: 'continuity', blur: 32, brightness: 72 },
+  ];
+
+  for (const phoneFrameFill of fills) {
+    const normalized = normalizeComposition({
+      schemaVersion: 12,
+      assets: [asset],
+      keyboardCaptionSessions: [],
+      clips: [
+        visualClip(asset.id, {
+          appearance: { ...visualClip(asset.id).appearance, frame: 'iphone-16-max', phoneFrameFill },
+        }),
+      ],
+    });
+    assert.deepEqual(normalized.clips[0].appearance.phoneFrameFill, phoneFrameFill);
+  }
+});
+
+test('defaults omitted phone fit backgrounds for legacy appearances', () => {
+  const asset = {
+    id: 'asset-phone-legacy-fill',
+    kind: 'video',
+    name: 'Legacy phone recording',
+    fileName: 'legacy-phone.mp4',
+    durationMs: 1_000,
+    width: 1_920,
+    height: 1_080,
+    origin: 'project',
+  };
+  const appearance = { ...visualClip(asset.id).appearance };
+  delete appearance.phoneFrameFill;
+  const source = visualClip(asset.id, {
+    appearance: { ...appearance, frame: 'pixel-9-pro' },
+  });
+  const normalized = normalizeComposition({
+    schemaVersion: 12,
+    assets: [asset],
+    keyboardCaptionSessions: [],
+    clips: [source],
+  });
+  assert.deepEqual(normalized.clips[0].appearance.phoneFrameFill, { kind: 'color', color: '#000000' });
+
+  const migrated = migrateComposition(
+    {
+      schemaVersion: 11,
+      assets: [asset],
+      keyboardCaptionSessions: [],
+      clips: [source],
+    },
+    true,
+    [],
+  );
+  assert.deepEqual(migrated.clips[0].appearance.phoneFrameFill, { kind: 'color', color: '#000000' });
+});
+
+test('rejects invalid phone fit backgrounds while accepting only adaptive as a special mode', () => {
+  const asset = {
+    id: 'asset-invalid-phone-fill',
+    kind: 'video',
+    name: 'Phone recording',
+    fileName: 'invalid-phone-fill.mp4',
+    durationMs: 1_000,
+    width: 1_920,
+    height: 1_080,
+    origin: 'project',
+  };
+  const invalidFills = [
+    null,
+    { kind: 'color', color: '#fff' },
+    { kind: 'gradient', gradient: { type: 'radial', angle: 0, stops: [] } },
+    {
+      kind: 'gradient',
+      gradient: {
+        type: 'radial',
+        angle: 0,
+        stops: [
+          { id: 'inner', position: 0, color: '#ffffff', alpha: 1 },
+          { id: 'outer', position: 1, color: '#000000', alpha: 1.1 },
+        ],
+      },
+    },
+    { kind: 'continuity', blur: '32', brightness: 72 },
+    { kind: 'continuity', blur: 32 },
+  ];
+  for (const phoneFrameFill of invalidFills)
+    assert.throws(
+      () =>
+        normalizeComposition({
+          schemaVersion: 12,
+          assets: [asset],
+          keyboardCaptionSessions: [],
+          clips: [visualClip(asset.id, { appearance: { ...visualClip(asset.id).appearance, phoneFrameFill } })],
+        }),
+      /remplissage|couleur|dégradé|étape|invalide/i,
+    );
+
+  const adaptive = normalizeComposition({
+    schemaVersion: 12,
+    assets: [asset],
+    keyboardCaptionSessions: [],
+    clips: [
+      visualClip(asset.id, {
+        appearance: { ...visualClip(asset.id).appearance, phoneFrameFill: { kind: 'adaptive' } },
+      }),
+    ],
+  });
+  assert.deepEqual(adaptive.clips[0].appearance.phoneFrameFill, { kind: 'adaptive' });
+});
+
+test('clamps continuity phone fit background settings during normalization', () => {
+  const asset = {
+    id: 'asset-clamped-phone-fill',
+    kind: 'video',
+    name: 'Phone recording',
+    fileName: 'clamped-phone-fill.mp4',
+    durationMs: 1_000,
+    width: 1_920,
+    height: 1_080,
+    origin: 'project',
+  };
+  const normalized = normalizeComposition({
+    schemaVersion: 12,
+    assets: [asset],
+    keyboardCaptionSessions: [],
+    clips: [
+      visualClip(asset.id, {
+        appearance: {
+          ...visualClip(asset.id).appearance,
+          frame: 'iphone-16-max',
+          phoneFrameFill: { kind: 'continuity', blur: -12, brightness: 130 },
+        },
+      }),
+    ],
+  });
+
+  assert.deepEqual(normalized.clips[0].appearance.phoneFrameFill, {
+    kind: 'continuity',
+    blur: 0,
+    brightness: 100,
   });
 });
 

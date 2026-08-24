@@ -1,7 +1,7 @@
 import type { CameraFramingPreset, CameraLayoutPreset } from './camera-layout-types';
 import type { CaptionHighlightStyle } from './caption-highlight-types';
 import type { CaptionShapeStyle } from './caption-shape-types';
-import type { ColorFill } from './color-fill-types';
+import type { ColorFill, PhoneFrameFill } from './color-fill-types';
 
 export const COMPOSITION_SCHEMA_VERSION = 12 as const;
 export const SCREEN_CLIP_ID = 'screen';
@@ -136,9 +136,10 @@ export interface ClipAppearance extends WebcamAppearance {
   frameShowMenu: boolean;
   frameShowScrollbars: boolean;
   frameChromeScale: number;
+  phoneFrameFill?: PhoneFrameFill;
 }
 
-export type ClipFrame = 'none' | 'safari' | 'windows-95';
+export type ClipFrame = 'none' | 'safari' | 'windows-95' | 'iphone-16-max' | 'pixel-9-pro';
 
 export interface MediaAsset {
   id: string;
