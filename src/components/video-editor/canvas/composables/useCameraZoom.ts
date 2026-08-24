@@ -2,7 +2,7 @@ import { computed, getCurrentScope, onScopeDispose, ref } from 'vue';
 import { ZOOM_DEPTH_SCALES } from '../../zoom/zoom-types';
 import { createCompositionCameraEvaluator } from '../../zoom/composition-camera';
 import { clampFocusToScale } from '../../zoom/zoom-playback';
-import { createZoomMotionBlurSamplePlan, ZOOM_MOTION_BLUR_SHUTTER_MS } from '../../zoom/zoom-motion-blur';
+import { createCameraMotionBlurPlan } from '../../zoom/zoom-motion-blur';
 import {
   compositeIsolatedMotionBlurSample,
   createMotionBlurSurface,
@@ -12,6 +12,7 @@ import {
 import { OUTPUT_PREVIEW_RADIUS, outputPreviewRect } from '../output-canvas';
 import type { MediaFrame } from '~/media/shared';
 import type { VisualClip } from '~/media/shared/composition-types';
+import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import { drawDecoratedMedia } from '../../composition/appearance/render-decorated-media';
 import {
   drawFrameOverlay,
@@ -23,6 +24,7 @@ import { isPhoneFrame } from '../../composition/appearance/phone-frames';
 import { mapSourcePointToScreen, resolveScreenRenderGeometry } from '../../composition/camera-layout';
 import { resolveCompositionSceneLayers, type CompositionSceneLayers } from '../../composition/scene-layers';
 import type { RenderedVideoWindow, UseCameraZoomOptions, VideoWindowBounds } from './useCameraZoom.types';
+import { selectedZoomPreviewTilt } from './camera-preview-tilt';
 export type { RenderedVideoWindow, UseCameraZoomOptions, VideoWindowBounds } from './useCameraZoom.types';
 export function useCameraZoom(options: UseCameraZoomOptions) {
   let cameraEvaluator: ReturnType<typeof createCompositionCameraEvaluator> | null = null;
@@ -298,7 +300,14 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       });
     }
     const sample = cameraEvaluator.sample(currentTime * 1_000);
-    const camera = { focusX: dx + sample.focus.cx * dw, focusY: dy + sample.focus.cy * dh, scale: sample.scale };
+    const selectedPerspectivePreview = selectedZoomPreviewTilt(selectedZoom, options.isPlaying());
+    const camera = {
+      focusX: dx + sample.focus.cx * dw,
+      focusY: dy + sample.focus.cy * dh,
+      scale: sample.scale,
+      tiltX: selectedPerspectivePreview?.tiltX ?? sample.tiltX ?? 0,
+      tiltY: selectedPerspectivePreview?.tiltY ?? sample.tiltY ?? 0,
+    };
     const renderedWindow: RenderedVideoWindow = {
       dx,
       dy,
@@ -307,6 +316,8 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       scale: camera.scale,
       focusX: camera.focusX,
       focusY: camera.focusY,
+      tiltX: camera.tiltX,
+      tiltY: camera.tiltY,
     };
     const drawScreen = (target = ctx) => {
       if (!screen) return;
@@ -317,21 +328,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
           rect: { x: dx + positioned.x, y: dy + positioned.y, width: positioned.width, height: positioned.height },
           appearance: editingPhoneCrop
             ? { ...screen.appearance, frame: 'none' }
-            : (screen.appearance ?? {
-                cornerRadius: output.showBackground ? 'md' : 'none',
-                shadowSize: 'md',
-                shadowColor: '#000000',
-                shadowDirection: 'bottom',
-                borderEnabled: false,
-                borderColor: '#000000',
-                borderWidth: 1,
-                frame: 'none',
-                frameTitle: '',
-                frameColor: '#c0c0c0',
-                frameShowMenu: true,
-                frameShowScrollbars: true,
-                frameChromeScale: 1,
-              }),
+            : (screen.appearance ?? createDefaultClipAppearance('screen', output.showBackground)),
           shadowScale: Math.min(dw / Math.max(1, output.width), dh / Math.max(1, output.height)),
           title: screen.name,
           mirrored: screen.isMirrored,
@@ -365,32 +362,24 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
         target.fillText(options.videoError()!, width / 2, height / 2);
       }
     };
-    const centerCamera = { focusX: sample.focus.cx, focusY: sample.focus.cy, scale: sample.scale };
     const blurSettings = options.zoomMotionBlur?.();
     const blurIntensity = blurSettings?.enabled ? blurSettings.intensity : 0;
-    const blurPlan = (() => {
-      if (!(blurIntensity > 0)) return [{ camera: centerCamera, weight: 1 }];
-      const halfShutterMs = ZOOM_MOTION_BLUR_SHUTTER_MS / 2;
-      const cameraAt = (timeMs: number) => {
-        const value = cameraEvaluator!.sample(Math.max(0, timeMs));
-        return { focusX: value.focus.cx, focusY: value.focus.cy, scale: value.scale };
-      };
-      return createZoomMotionBlurSamplePlan({
-        previous: cameraAt(currentTime * 1_000 - halfShutterMs),
-        center: centerCamera,
-        current: cameraAt(currentTime * 1_000 + halfShutterMs),
-        intensity: blurIntensity,
-        deltaMs: halfShutterMs * 2,
-        sampleCount: options.isPlaying() ? 3 : undefined,
-        viewportWidth: dw,
-        viewportHeight: dh,
-      });
-    })();
+    const blurPlan = createCameraMotionBlurPlan({
+      sampleAt: (timeMs) => cameraEvaluator!.sample(timeMs),
+      center: sample,
+      timeMs: currentTime * 1_000,
+      intensity: blurIntensity,
+      sampleCount: options.isPlaying() ? 3 : undefined,
+      viewportWidth: dw,
+      viewportHeight: dh,
+    });
     const drawSample = (target: CanvasRenderingContext2D, blurSample: (typeof blurPlan)[number]) => {
       const projectedCamera = {
         focusX: dx + blurSample.camera.focusX * dw,
         focusY: dy + blurSample.camera.focusY * dh,
         scale: blurSample.camera.scale,
+        tiltX: blurSample.camera.tiltX ?? 0,
+        tiltY: blurSample.camera.tiltY ?? 0,
       };
       const sampleWindow = { ...renderedWindow, ...projectedCamera };
       target.save();
@@ -454,6 +443,8 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       scale: camera.scale,
       focusX: camera.focusX,
       focusY: camera.focusY,
+      tiltX: camera.tiltX,
+      tiltY: camera.tiltY,
     };
     const screenBounds = screen
       ? editingPhoneCrop
@@ -468,7 +459,17 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
           dh: screenBounds.height,
         }
       : null;
-    overlayWindowBounds.value = { dx, dy, dw, dh, scale: camera.scale, focusX: camera.focusX, focusY: camera.focusY };
+    overlayWindowBounds.value = {
+      dx,
+      dy,
+      dw,
+      dh,
+      scale: camera.scale,
+      focusX: camera.focusX,
+      focusY: camera.focusY,
+      tiltX: camera.tiltX,
+      tiltY: camera.tiltY,
+    };
     return renderedWindow;
   };
 

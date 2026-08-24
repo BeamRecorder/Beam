@@ -1,4 +1,33 @@
 import { describe, expect, it, vi } from 'vitest';
+
+const perspectiveState = vi.hoisted(() => ({
+  render: vi.fn(),
+  dispose: vi.fn(),
+}));
+
+vi.mock('../../../video-editor/zoom/perspective-scene-compositor', () => ({
+  PerspectiveSceneCompositor: class {
+    render(options: {
+      target: CanvasRenderingContext2D;
+      bounds: { x: number; y: number; width: number; height: number };
+      draw: (context: CanvasRenderingContext2D) => unknown;
+    }) {
+      perspectiveState.render(options);
+      options.draw(context());
+      options.target.drawImage(
+        { projected: true } as unknown as CanvasImageSource,
+        options.bounds.x,
+        options.bounds.y,
+        options.bounds.width,
+        options.bounds.height,
+      );
+    }
+
+    dispose() {
+      perspectiveState.dispose();
+    }
+  },
+}));
 import { drawCompositionLayers, renderCompositionFrame, type RenderableMedia } from '../render';
 import { resolveCameraFraming } from '../../../video-editor/composition/camera-layout';
 import { drawCanvasTransitionFrame } from '../../../video-editor/composition/transitions/render-canvas-transition';
@@ -15,6 +44,60 @@ const testCaptionStyle = (fontSize: number) => {
 const image = (): RenderableMedia => ({ source: {} as CanvasImageSource, width: 10, height: 10 });
 
 describe('composition rendering invariants', () => {
+  it('keeps the 2D export path on the target canvas without allocating a perspective projector', () => {
+    perspectiveState.render.mockClear();
+    const value = snapshot();
+    value.zoomMotionBlur = { enabled: false, intensity: 0 };
+    const ctx = context();
+    const cameraEvaluator = {
+      sample: vi.fn(() => ({ focus: { cx: 0.5, cy: 0.5 }, scale: 1, tiltX: 0, tiltY: 0 })),
+      invalidate: vi.fn(),
+    };
+
+    renderCompositionFrame(ctx, null, value, 0, null, undefined, undefined, undefined, cameraEvaluator);
+
+    expect(perspectiveState.render).not.toHaveBeenCalled();
+    expect(ctx.drawImage).not.toHaveBeenCalledWith(expect.objectContaining({ projected: true }), 0, 0, 100, 50);
+    expect(ctx.fillRect).toHaveBeenCalledWith(0, 0, 100, 50);
+  });
+
+  it('projects only the camera surface in 3D and leaves captions as flat target overlays', () => {
+    perspectiveState.render.mockClear();
+    const value = snapshot();
+    value.zoomMotionBlur = { enabled: false, intensity: 0 };
+    value.composition.clips.push({
+      id: 'flat-caption',
+      kind: 'caption',
+      name: 'Flat caption',
+      timelineStartMs: 0,
+      timelineDurationMs: 1_000,
+      sourceInMs: 0,
+      sourceDurationMs: 1_000,
+      playbackRate: 1,
+      enabled: true,
+      order: 1,
+      caption: {
+        type: 'text',
+        sentences: [{ id: 'sentence', text: 'Flat overlay', startMs: 0, endMs: 1_000, words: [] }],
+        style: { ...testCaptionStyle(16), customText: 'Flat overlay' },
+      },
+    });
+    const ctx = context();
+    const cameraEvaluator = {
+      sample: vi.fn(() => ({ focus: { cx: 0.5, cy: 0.5 }, scale: 1, tiltX: 0.12, tiltY: -0.08 })),
+      invalidate: vi.fn(),
+    };
+
+    renderCompositionFrame(ctx, null, value, 0.2, null, undefined, undefined, undefined, cameraEvaluator);
+
+    expect(perspectiveState.render).toHaveBeenCalledOnce();
+    expect(ctx.drawImage).toHaveBeenCalledWith(expect.objectContaining({ projected: true }), 0, 0, 100, 50);
+    expect((ctx.fillText as ReturnType<typeof vi.fn>).mock.calls.some(([text]) => text === 'Flat')).toBe(true);
+    expect((ctx.fillText as ReturnType<typeof vi.fn>).mock.invocationCallOrder.at(-1)).toBeGreaterThan(
+      (ctx.drawImage as ReturnType<typeof vi.fn>).mock.invocationCallOrder.at(-1) ?? 0,
+    );
+  });
+
   it('positions imported visuals in the full output canvas, not inside the transformed screen', () => {
     const value = snapshot();
     const screen = value.composition.clips[0];

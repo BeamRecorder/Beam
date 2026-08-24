@@ -11,13 +11,14 @@ import { useCanvasBackground } from './composables/useCanvasBackground';
 import { useCompositionMedia } from './composables/useCompositionMedia';
 import { createCanvasFrameScheduler } from './composables/canvas-frame-scheduler';
 import { useCursorOverlay } from './composables/useCursorOverlay';
-import { useCameraZoom, type RenderedVideoWindow } from './composables/useCameraZoom';
+import { useCameraZoom, type RenderedVideoWindow, type VideoWindowBounds } from './composables/useCameraZoom';
 import { useLayerTransformAndCrop } from './composables/useLayerTransformAndCrop';
 import { useViewportZoom } from './composables/useViewportZoom';
 import { useTranslate } from '~/i18n/useTranslate';
 import { canvasGuideLines } from './canvas-guides';
 import { transformCaptionFollowsCursor, type EditorCanvasEmits, type EditorCanvasProps } from './editor-canvas-types';
 import { DEFAULT_ZOOM_MOTION_BLUR } from '../zoom/zoom-types';
+import { PerspectivePreviewRenderer } from '../zoom/perspective-preview-renderer';
 import { drawBeamWatermark } from './watermark-render';
 import { useCanvasTransitionRenderer } from './composables/useCanvasTransitionRenderer';
 import { measureCanvasCaptionText } from './canvas-text-measure';
@@ -33,6 +34,8 @@ import { useEditorCanvasInvalidation } from './composables/useEditorCanvasInvali
 import { CaptionInlineEditor, useCaptionInlineEditing } from './caption-inline-editing';
 import CanvasLayerSelection from './CanvasLayerSelection.vue';
 import CanvasCropSelection from './CanvasCropSelection.vue';
+import { drawFallbackPreviewScene } from './fallback-preview-scene';
+import { createEditorVisualStackRenderer } from './editor-visual-stack-renderer';
 const { t } = useTranslate('EditorCanvas');
 const props = withDefaults(defineProps<EditorCanvasProps>(), { previewQuality: 'full' });
 const emit = defineEmits<EditorCanvasEmits>();
@@ -40,6 +43,7 @@ const canvasRef = ref<HTMLCanvasElement | null>(null);
 const containerRef = ref<HTMLDivElement | null>(null);
 const logicalSize = ref({ width: 0, height: 0 });
 const deviceScale = ref(1);
+const perspectivePreviewRenderer = new PerspectivePreviewRenderer();
 const canvasTransitionRenderer = useCanvasTransitionRenderer({
   outputCanvas: () => props.outputCanvas,
   currentTime: () => props.currentTime,
@@ -200,24 +204,9 @@ const compositionMedia = useCompositionMedia({
   editingCaptionId: () => captionEditing.editingCaptionId.value,
   onRenderOnce: renderOnce,
 });
-const drawNonScreenVisuals = (
-  ctx: CanvasRenderingContext2D,
-  window: { dx: number; dy: number; dw: number; dh: number; scale: number; focusX: number; focusY: number },
-  layers: CompositionSceneLayers,
-) => {
-  if (compositionMedia.drawVisualStack) compositionMedia.drawVisualStack(ctx, window, () => undefined, layers);
-  else compositionMedia.drawWebcamClips(ctx, window);
-};
-drawVisualStack = (ctx, window, drawScreen, layers) => {
-  if (compositionMedia.drawVisualStack) {
-    compositionMedia.drawVisualStack(ctx, window, drawScreen, layers);
-    return;
-  }
-  for (const clip of layers.cameraVisuals) {
-    if (clip.kind === 'screen') drawScreen();
-    else compositionMedia.drawComposition(ctx, window, clip.id);
-  }
-};
+const visualStackRenderer = createEditorVisualStackRenderer(compositionMedia);
+const drawNonScreenVisuals = visualStackRenderer.drawNonScreenVisuals;
+drawVisualStack = visualStackRenderer.drawVisualStack;
 const cursorOverlay = useCursorOverlay({
   cursorSelection: () => props.cursorSelection,
   cursorPack: () => props.cursorPack,
@@ -282,7 +271,7 @@ const resizeCanvas = () => {
 };
 watch(() => props.previewQuality, resizeCanvas);
 const watermarkLogo = useEditorCanvasAssets(containerRef, resizeCanvas, renderOnce);
-const drawCanvasScene = (ctx: CanvasRenderingContext2D) => {
+const drawCameraScene = (ctx: CanvasRenderingContext2D): VideoWindowBounds => {
   const layers = currentSceneLayers.value;
   const window = cameraZoom.drawVideoWindow(
     ctx,
@@ -302,30 +291,31 @@ const drawCanvasScene = (ctx: CanvasRenderingContext2D) => {
       logicalSize.value.width,
       (drawContent) => cameraZoom.drawInCameraSpace(ctx, window, drawContent),
     );
-    compositionMedia.drawComposition(ctx, window, undefined, layers);
+    return window;
   } else {
     currentRenderWindow = null;
     cursorOverlay.clearCursorBounds();
     const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas);
-    const fallbackWindow = {
-      dx: preview.x,
-      dy: preview.y,
-      dw: preview.width,
-      dh: preview.height,
-      scale: 1,
-      focusX: preview.x + preview.width / 2,
-      focusY: preview.y + preview.height / 2,
-    };
-    ctx.save();
-    ctx.beginPath();
-    ctx.roundRect(preview.x, preview.y, preview.width, preview.height, OUTPUT_PREVIEW_RADIUS);
-    ctx.clip();
-    drawBackground(ctx, preview);
-    drawNonScreenVisuals(ctx, fallbackWindow, layers);
-    compositionMedia.drawComposition(ctx, fallbackWindow, undefined, layers);
-    ctx.restore();
+    return drawFallbackPreviewScene({
+      context: ctx,
+      preview,
+      radius: OUTPUT_PREVIEW_RADIUS,
+      drawBackground: () => drawBackground(ctx, preview),
+      drawVisuals: (window) => drawNonScreenVisuals(ctx, window, layers),
+    });
   }
+};
+const drawCanvasScene = (ctx: CanvasRenderingContext2D) => {
   const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas);
+  const contentWindow = perspectivePreviewRenderer.render({
+    target: ctx,
+    bounds: preview,
+    pixelScale: deviceScale.value,
+    timeMs: props.currentTime * 1_000,
+    zooms: props.zoomElements,
+    drawScene: drawCameraScene,
+  });
+  compositionMedia.drawComposition(ctx, contentWindow, undefined, currentSceneLayers.value);
   drawBeamWatermark(
     ctx,
     props.outputCanvas,
@@ -371,6 +361,7 @@ const handleIslandPointerDownCapture = (event: PointerEvent) => {
 };
 onUnmounted(() => {
   frameScheduler.dispose();
+  perspectivePreviewRenderer.dispose();
   if (formatTransitionTimer) clearTimeout(formatTransitionTimer);
 });
 defineExpose({ viewportZoom });

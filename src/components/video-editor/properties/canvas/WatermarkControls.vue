@@ -147,7 +147,7 @@ const positions = [
         :model-value="value.backgroundOpacity"
         :min="0"
         :max="100"
-        :step="5"
+        :step="1"
         :label="t('watermarkBackgroundOpacity')"
         :format-value="(opacity: number) => `${Math.round(opacity)}%`"
         @update:model-value="update({ backgroundOpacity: $event })"

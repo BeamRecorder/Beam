@@ -1,11 +1,23 @@
 import type { CursorTelemetryPoint } from '../../../api/types/capture-session';
-import { ZOOM_DEPTH_SCALES, type ZoomElement, type ZoomFocus } from './zoom-types';
+import {
+  DEFAULT_ZOOM_TILT_HORIZONTAL,
+  DEFAULT_ZOOM_TILT_VERTICAL,
+  normalizeZoomProjection,
+  normalizeZoomTiltAxis,
+  normalizeZoomTiltIntensity,
+  ZOOM_DEPTH_SCALES,
+  type ZoomElement,
+  type ZoomFocus,
+} from './zoom-types';
 
 export interface AppliedZoom {
   scale: number;
   focus: ZoomFocus;
   strength: number;
   mode: ZoomElement['mode'];
+  tilt: number;
+  tiltHorizontal?: number;
+  tiltVertical?: number;
 }
 export type ZoomFocusMapper = (focus: ZoomFocus, zoom: AppliedZoom, timeMs: number) => ZoomFocus;
 export const ZOOM_IN_MS = 1522.575;
@@ -20,6 +32,11 @@ const CURSOR_HISTORY_MS = 600;
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 const easeOut = (value: number) => 1 - (1 - clamp01(value)) ** 3;
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+const tiltFor = (zoom: ZoomElement) =>
+  normalizeZoomProjection(zoom.projection) === '3d' ? normalizeZoomTiltIntensity(zoom.tiltIntensity) : 0;
+const horizontalTiltFor = (zoom: ZoomElement) =>
+  normalizeZoomTiltAxis(zoom.tiltHorizontal, DEFAULT_ZOOM_TILT_HORIZONTAL);
+const verticalTiltFor = (zoom: ZoomElement) => normalizeZoomTiltAxis(zoom.tiltVertical, DEFAULT_ZOOM_TILT_VERTICAL);
 
 export function clampFocusToScale(focus: ZoomFocus, scale: number): ZoomFocus {
   const margin = 1 / (2 * Math.max(1, scale));
@@ -105,11 +122,19 @@ function zoomAtSortedTime(
       const startScale = ZOOM_DEPTH_SCALES[pair.depth];
       const endScale = ZOOM_DEPTH_SCALES[next.depth];
       const startFocus = clampFocusToScale(
-        mapFocus(pair.focus, { focus: pair.focus, mode: pair.mode, scale: startScale, strength: 1 }, timeMs),
+        mapFocus(
+          pair.focus,
+          { focus: pair.focus, mode: pair.mode, scale: startScale, strength: 1, tilt: tiltFor(pair) },
+          timeMs,
+        ),
         startScale,
       );
       const endFocus = clampFocusToScale(
-        mapFocus(next.focus, { focus: next.focus, mode: next.mode, scale: endScale, strength: 1 }, timeMs),
+        mapFocus(
+          next.focus,
+          { focus: next.focus, mode: next.mode, scale: endScale, strength: 1, tilt: tiltFor(next) },
+          timeMs,
+        ),
         endScale,
       );
       return {
@@ -117,6 +142,9 @@ function zoomAtSortedTime(
         focus: { cx: lerp(startFocus.cx, endFocus.cx, t), cy: lerp(startFocus.cy, endFocus.cy, t) },
         strength: 1,
         mode: pair.mode === 'auto' || next.mode === 'auto' ? 'auto' : 'manual',
+        tilt: lerp(tiltFor(pair), tiltFor(next), t),
+        tiltHorizontal: lerp(horizontalTiltFor(pair), horizontalTiltFor(next), t),
+        tiltVertical: lerp(verticalTiltFor(pair), verticalTiltFor(next), t),
       };
     }
   }
@@ -145,6 +173,7 @@ function zoomAtSortedTime(
         scale: currentScale,
         strength: current.strength,
         mode: current.element.mode,
+        tilt: tiltFor(current.element) * current.strength,
       },
       timeMs,
     ),
@@ -159,7 +188,11 @@ function zoomAtSortedTime(
     const t = easeOut((timeMs - current.element.endMs - LEAD_MS) / CONNECTED_PAN_MS);
     const nextScale = ZOOM_DEPTH_SCALES[next.depth];
     const nextFocus = clampFocusToScale(
-      mapFocus(next.focus, { focus: next.focus, scale: nextScale, strength: 1, mode: next.mode }, timeMs),
+      mapFocus(
+        next.focus,
+        { focus: next.focus, scale: nextScale, strength: 1, mode: next.mode, tilt: tiltFor(next) },
+        timeMs,
+      ),
       nextScale,
     );
     focus = {
@@ -167,15 +200,36 @@ function zoomAtSortedTime(
       cy: lerp(focus.cy, nextFocus.cy, t),
     };
     scale = lerp(scale, nextScale, t);
+    return {
+      scale,
+      focus,
+      strength: current.strength,
+      mode: current.element.mode === 'auto' || next.mode === 'auto' ? 'auto' : 'manual',
+      tilt: lerp(tiltFor(current.element), tiltFor(next), t),
+      tiltHorizontal: lerp(horizontalTiltFor(current.element), horizontalTiltFor(next), t),
+      tiltVertical: lerp(verticalTiltFor(current.element), verticalTiltFor(next), t),
+    };
   } else if (current.element.mode === 'auto') {
     const cursor = smoothedCursorFocusAt(telemetry, timeMs);
     if (cursor)
       focus = clampFocusToScale(
-        mapFocus(cursor, { focus: cursor, scale, strength: current.strength, mode: 'auto' }, timeMs),
+        mapFocus(
+          cursor,
+          { focus: cursor, scale, strength: current.strength, mode: 'auto', tilt: tiltFor(current.element) },
+          timeMs,
+        ),
         scale,
       );
   }
-  return { scale: 1 + (scale - 1) * current.strength, focus, strength: current.strength, mode: current.element.mode };
+  return {
+    scale: 1 + (scale - 1) * current.strength,
+    focus,
+    strength: current.strength,
+    mode: current.element.mode,
+    tilt: tiltFor(current.element) * current.strength,
+    tiltHorizontal: horizontalTiltFor(current.element),
+    tiltVertical: verticalTiltFor(current.element),
+  };
 }
 
 export function createZoomTimeEvaluator(

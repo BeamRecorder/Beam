@@ -11,6 +11,7 @@ import {
   mountTracks,
   pointerEvent,
   queueAnimationFrames,
+  zoom,
   visual,
 } from './TimelineTracks.test-support';
 
@@ -68,6 +69,33 @@ describe('TimelineTracks', () => {
     expect(mounted!.emitted('select:clip')).toContainEqual(['screen-clip']);
     await mounted!.get('.cursor-zoom-indicator:not(.preview-ghost)').trigger('click');
     expect(mounted!.emitted('select:zoom')).toContainEqual(['zoom-1']);
+  });
+
+  it('renders zoom metadata left-to-right around the persistent center Zoom label', async () => {
+    const mounted = await mountTracks({
+      zoomElements: [
+        zoom({ projection: '2d', mode: 'manual' }),
+        zoom({ id: 'zoom-2', startMs: 4_000, endMs: 5_500, projection: '3d', mode: 'auto', depth: 3 }),
+      ],
+      selectedZoomId: null,
+    });
+
+    const indicators = mounted!.findAll('.cursor-zoom-indicator:not(.preview-ghost)');
+    expect(indicators).toHaveLength(2);
+
+    expect(indicators[0]!.find('.zoom-clip-labels').findAll('.zoom-meta-badge')[0]!.text()).toBe('2D');
+    expect(indicators[0]!.find('.zoom-title').text()).toBe('Zoom 5.00×');
+    expect(indicators[0]!.find('.zoom-clip-labels').findAll('.zoom-meta-badge')[1]!.text()).toBe('Manual');
+    expect(indicators[1]!.find('.zoom-clip-labels').findAll('.zoom-meta-badge')[0]!.text()).toBe('3D');
+    expect(indicators[1]!.find('.zoom-title').text()).toBe('Zoom 1.80×');
+    expect(indicators[1]!.find('.zoom-clip-labels').findAll('.zoom-meta-badge')[1]!.text()).toBe('Auto');
+
+    for (const indicator of indicators) {
+      expect(indicator.find('.zoom-clip-labels').classes()).toContain('zoom-clip-labels');
+      expect(indicator.find('.zoom-projection-badge').classes()).toContain('zoom-meta-badge');
+      expect(indicator.find('.zoom-mode-badge').classes()).toContain('zoom-meta-badge');
+      expect(indicator.find('.zoom-title').exists()).toBe(true);
+    }
   });
 
   it('coalesces a large fresh ctrl-wheel burst into one zoom step and emission', async () => {

@@ -22,6 +22,23 @@ const zoom: ZoomElement = {
 describe('zoom playback', () => {
   it('returns null outside the envelope', () => expect(zoomAtTime([zoom], 100)).toBeNull());
   it('uses the Depth scale at full strength', () => expect(zoomAtTime([zoom], 4_000)?.scale).toBe(1.5));
+  it('defaults legacy zooms to a flat projection', () => expect(zoomAtTime([zoom], 4_000)?.tilt).toBe(0));
+  it('applies normalized 3D tilt intensity', () => {
+    const threeD = { ...zoom, projection: '3d' as const, tiltIntensity: 2 };
+
+    expect(zoomAtTime([threeD], 4_000)?.tilt).toBe(1);
+  });
+  it('preserves signed horizontal and vertical tilt axes', () => {
+    const threeD: ZoomElement = {
+      ...zoom,
+      projection: '3d',
+      tiltIntensity: 1,
+      tiltHorizontal: -1,
+      tiltVertical: 1,
+    };
+
+    expect(zoomAtTime([threeD], 4_000)).toMatchObject({ tiltHorizontal: -1, tiltVertical: 1 });
+  });
   it('clamps camera focus to visible bounds', () =>
     expect(clampFocusToScale({ cx: 0, cy: 1 }, 2)).toEqual({
       cx: 0.25,
@@ -125,6 +142,46 @@ describe('zoom playback', () => {
     const result = zoomAtTime([zoom, next], 6_700);
     expect(result?.scale).toBeGreaterThan(1.5);
     expect(result?.scale).toBeLessThan(2.2);
+  });
+  it('interpolates tilt across a 2D-to-3D connected transition', () => {
+    const next: ZoomElement = {
+      ...zoom,
+      id: 'three-d-next',
+      startMs: 6_800,
+      endMs: 10_000,
+      focus: { cx: 0.7, cy: 0.3 },
+      depth: 4,
+      projection: '3d',
+      tiltIntensity: 0.8,
+    };
+    const result = zoomAtTime([zoom, next], 6_700);
+
+    expect(result?.tilt).toBeCloseTo(0.8 * (1 - 0.5 ** 3), 12);
+    expect(result?.tilt).toBeGreaterThan(0);
+    expect(result?.tilt).toBeLessThan(0.8);
+  });
+  it('interpolates signed tilt axes between connected zooms', () => {
+    const first: ZoomElement = {
+      ...zoom,
+      projection: '3d',
+      tiltHorizontal: -1,
+      tiltVertical: -1,
+    };
+    const next: ZoomElement = {
+      ...zoom,
+      id: 'axis-next',
+      startMs: 6_800,
+      endMs: 10_000,
+      focus: { cx: 0.7, cy: 0.3 },
+      depth: 4,
+      projection: '3d',
+      tiltHorizontal: 1,
+      tiltVertical: 1,
+    };
+    const result = zoomAtTime([first, next], 6_700);
+
+    expect(result?.tiltHorizontal).toBeCloseTo(0.75, 12);
+    expect(result?.tiltVertical).toBeCloseTo(0.75, 12);
   });
   it('keeps manual mode when connected manual regions pan into each other', () => {
     const next: ZoomElement = {

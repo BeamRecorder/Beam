@@ -7,7 +7,7 @@ import type {
   VisualClip,
 } from '~/media/shared/composition-types';
 import type { ProjectEditorPresentation } from '~/api/types/capture-api';
-import type { ZoomDepth, ZoomMode, ZoomMotionBlurSettings } from '../zoom/zoom-types';
+import type { ZoomDepth, ZoomMode, ZoomMotionBlurSettings, ZoomProjection, ZoomTiltPreset } from '../zoom/zoom-types';
 import type { CameraFramingPreset, CameraLayoutPreset } from '~/media/shared/camera-layout-types';
 
 export interface VisualClipDefaults {
@@ -34,6 +34,15 @@ export interface EditorPreferenceDefaults {
     'transform' | 'shape' | 'mode' | 'strength' | 'feather' | 'cornerRadius' | 'tintOpacity' | 'color'
   >;
   audio?: { volume: number; playbackRate: number };
-  zoom?: { durationMs: number; depth: ZoomDepth; mode: ZoomMode };
+  zoom?: {
+    durationMs: number;
+    depth: ZoomDepth;
+    mode: ZoomMode;
+    projection?: ZoomProjection;
+    tiltIntensity?: number;
+    tiltHorizontal?: number;
+    tiltVertical?: number;
+    tiltPreset?: ZoomTiltPreset;
+  };
   zoomMotionBlur?: ZoomMotionBlurSettings;
 }

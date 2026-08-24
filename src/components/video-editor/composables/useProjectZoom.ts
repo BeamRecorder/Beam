@@ -3,6 +3,11 @@ import type { ProjectEditorData } from '../../../api/types/capture-api';
 import {
   DEFAULT_ZOOM_DURATION_MS,
   DEFAULT_ZOOM_MOTION_BLUR,
+  DEFAULT_ZOOM_PROJECTION,
+  DEFAULT_ZOOM_TILT_INTENSITY,
+  DEFAULT_ZOOM_TILT_HORIZONTAL,
+  DEFAULT_ZOOM_TILT_VERTICAL,
+  DEFAULT_ZOOM_TILT_PRESET,
   normalizeZoomMotionBlur,
   type ZoomElement,
   type ZoomMotionBlurSettings,
@@ -52,6 +57,11 @@ export function useProjectZoom(options: {
       endMs: placement.endMs,
       depth: defaults?.depth ?? 2,
       mode: defaults?.mode ?? 'manual',
+      projection: defaults?.projection ?? DEFAULT_ZOOM_PROJECTION,
+      tiltIntensity: defaults?.tiltIntensity ?? DEFAULT_ZOOM_TILT_INTENSITY,
+      tiltHorizontal: defaults?.tiltHorizontal ?? DEFAULT_ZOOM_TILT_HORIZONTAL,
+      tiltVertical: defaults?.tiltVertical ?? DEFAULT_ZOOM_TILT_VERTICAL,
+      tiltPreset: defaults?.tiltPreset ?? DEFAULT_ZOOM_TILT_PRESET,
       focus: { cx: 0.5, cy: 0.5 },
     };
     zoomElements.value.push(zoom);

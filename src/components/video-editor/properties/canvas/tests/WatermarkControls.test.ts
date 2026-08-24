@@ -47,10 +47,10 @@ const ButtonGroupStub = {
 };
 
 const BigSliderStub = {
-  props: ['modelValue', 'label'],
+  props: ['modelValue', 'label', 'min', 'max', 'step'],
   emits: ['update:modelValue'],
   template:
-    '<button class="slider-stub" type="button" :aria-label="label" @click="$emit(\'update:modelValue\', 140)">{{ modelValue }}</button>',
+    '<button class="slider-stub" type="button" :aria-label="label" :data-min="min" :data-max="max" :data-step="step" @click="$emit(\'update:modelValue\', 140)">{{ modelValue }}</button>',
 };
 
 const InputStub = {
@@ -139,6 +139,19 @@ describe('WatermarkControls', () => {
 
     await wrapper.get('.slider-stub').trigger('click');
     expect(emittedValue(wrapper).size).toBe(140);
+  });
+
+  it('keeps the default background opacity exactly representable by the range step', () => {
+    const wrapper = mountControls({ enabled: true });
+    const opacitySlider = wrapper
+      .findAll('.slider-stub')
+      .find((slider) => slider.attributes('aria-label') === 'watermarkBackgroundOpacity');
+
+    expect(opacitySlider).toBeDefined();
+    expect(opacitySlider!.text()).toBe('78');
+    expect(opacitySlider!.attributes('data-min')).toBe('0');
+    expect(opacitySlider!.attributes('data-max')).toBe('100');
+    expect(opacitySlider!.attributes('data-step')).toBe('1');
   });
 
   it('toggles the watermark and initializes the default text', async () => {

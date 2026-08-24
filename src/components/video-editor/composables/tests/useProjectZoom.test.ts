@@ -125,6 +125,57 @@ describe('useProjectZoom', () => {
     });
   });
 
+  it('creates flat 2D zooms by default and persists configured 3D defaults', () => {
+    const flat = create(null, 5_000);
+    flat.state.addZoomAtTime(0);
+    expect(flat.state.zoomElements.value[0]).toMatchObject({
+      projection: '2d',
+      tiltIntensity: 0.6,
+      tiltHorizontal: 0.65,
+      tiltVertical: -0.35,
+      tiltPreset: 'medium',
+    });
+
+    const defaults = normalizeEditorPreferenceDefaults({
+      zoom: {
+        durationMs: 1_200,
+        depth: 3,
+        mode: 'manual',
+        projection: '3d',
+        tiltIntensity: 2,
+        tiltHorizontal: 2,
+        tiltVertical: -2,
+        tiltPreset: 'large',
+      },
+    });
+    const perspective = create(null, 5_000, defaults);
+    perspective.state.addZoomAtTime(0);
+    expect(perspective.state.zoomElements.value[0]).toMatchObject({
+      projection: '3d',
+      tiltIntensity: 1,
+      tiltHorizontal: 1,
+      tiltVertical: -1,
+      tiltPreset: 'large',
+    });
+
+    const created = perspective.state.zoomElements.value[0]!;
+    perspective.state.updateZoom({
+      ...created,
+      projection: '2d',
+      tiltIntensity: 0.25,
+      tiltHorizontal: -0.2,
+      tiltVertical: 0.8,
+      tiltPreset: 'custom',
+    });
+    expect(perspective.state.selectedZoom.value).toMatchObject({
+      projection: '2d',
+      tiltIntensity: 0.25,
+      tiltHorizontal: -0.2,
+      tiltVertical: 0.8,
+      tiltPreset: 'custom',
+    });
+  });
+
   it('fits a requested manual zoom into the free gap after an existing eight-second zoom', () => {
     const { state } = create(null, 10_000);
     state.zoomElements.value = [zoom('existing', 'manual')];
@@ -170,6 +221,54 @@ describe('useProjectZoom', () => {
         expect.objectContaining({ sessionId: 'session', algorithmVersion: ZOOM_ALGORITHM_VERSION }),
         expect.objectContaining({ sessionId: 'other' }),
       ]),
+    );
+  });
+
+  it('regenerates stale version six automatic zooms as flat 2D without changing manual zooms', () => {
+    const { state } = create(
+      data({
+        cursor: {
+          available: true,
+          events: [],
+          telemetry: [
+            { timeMs: 1_400, cx: 0.1, cy: 0.5, interactionType: 'move' },
+            { timeMs: 1_600, cx: 0.2, cy: 0.5, interactionType: 'move' },
+            { timeMs: 2_000, cx: 0.8, cy: 0.5, interactionType: 'click' },
+          ],
+          shapes: {},
+          catalog: {},
+          missing: [],
+        },
+      }),
+    );
+    const manual = {
+      ...zoom('manual', 'manual'),
+      startMs: 0,
+      endMs: 1_000,
+      projection: '3d' as const,
+      tiltIntensity: 0.8,
+      tiltHorizontal: -0.4,
+      tiltVertical: 0.7,
+    };
+    const staleAutomatic = {
+      ...zoom('stale-auto', 'auto'),
+      projection: '3d' as const,
+      tiltIntensity: 1,
+      tiltHorizontal: 0.9,
+      tiltVertical: -0.9,
+    };
+    state.zoomElements.value = [manual, staleAutomatic];
+    state.generatedSessions.value = [{ sessionId: 'session', algorithmVersion: 6, generatedAt: 'old' }];
+
+    state.ensureAutomaticZooms();
+
+    expect(state.zoomElements.value).toContainEqual(manual);
+    expect(state.zoomElements.value.find((item) => item.id === 'stale-auto')).toBeUndefined();
+    expect(state.zoomElements.value).toContainEqual(
+      expect.objectContaining({ id: 'auto:session:2000', mode: 'auto', projection: '2d', tiltPreset: 'custom' }),
+    );
+    expect(state.generatedSessions.value).toContainEqual(
+      expect.objectContaining({ sessionId: 'session', algorithmVersion: ZOOM_ALGORITHM_VERSION }),
     );
   });
 

@@ -1,0 +1,44 @@
+.cursor-zoom-indicator {
+  background: color-mix(in srgb, var(--color-track-cursor) 90%, #000 10%);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  container-type: inline-size;
+}
+
+.zoom-clip-labels {
+  display: grid;
+  grid-template-columns: auto minmax(0, auto) auto;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  gap: 4px;
+  pointer-events: none;
+}
+
+.zoom-meta-badge {
+  padding: 1px 3px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 7px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.zoom-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@container (max-width: 118px) {
+  .zoom-mode-badge {
+    display: none;
+  }
+}
+
+@container (max-width: 78px) {
+  .zoom-projection-badge {
+    display: none;
+  }
+}

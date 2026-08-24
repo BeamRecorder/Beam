@@ -363,10 +363,6 @@
   overflow: visible;
   box-sizing: border-box;
 }
-.cursor-zoom-indicator {
-  background: color-mix(in srgb, var(--color-track-cursor) 90%, #000 10%);
-  border: 1px solid rgba(255, 255, 255, 0.28);
-}
 .annotation-indicator {
   background: var(--color-track-annotation);
 }

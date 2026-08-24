@@ -5,8 +5,23 @@ import BigSlider from '~/ui/slider/BigSlider.vue';
 import Switch from '~/ui/switch/Switch.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import ZoomClickEmptyState from '~/components/video-editor/properties/zoom/ZoomClickEmptyState.vue';
-import { MousePointer, Sparkles } from '@lucide/vue';
-import type { ZoomDepth, ZoomElement, ZoomMotionBlurSettings } from '~/components/video-editor/zoom/zoom-types';
+import { MousePointer, SlidersHorizontal, Sparkles } from '@lucide/vue';
+import type {
+  ZoomDepth,
+  ZoomElement,
+  ZoomMotionBlurSettings,
+  ZoomTiltPreset,
+} from '~/components/video-editor/zoom/zoom-types';
+import {
+  DEFAULT_ZOOM_TILT_HORIZONTAL,
+  DEFAULT_ZOOM_TILT_INTENSITY,
+  DEFAULT_ZOOM_TILT_VERTICAL,
+  normalizeZoomProjection,
+  normalizeZoomTiltAxis,
+  normalizeZoomTiltIntensity,
+  normalizeZoomTiltPreset,
+  ZOOM_TILT_PRESET_INTENSITIES,
+} from '~/components/video-editor/zoom/zoom-types';
 import { useTranslate } from '~/i18n/useTranslate';
 
 const { t } = useTranslate('ZoomPanel');
@@ -26,6 +41,13 @@ const emit = defineEmits<{
 }>();
 
 const magnificationValues = [1.25, 1.5, 1.8, 2.2, 3.5, 5.0];
+const tiltPresets: ZoomTiltPreset[] = ['small', 'medium', 'large', 'custom'];
+const tiltPresetLabels: Record<ZoomTiltPreset, string> = {
+  small: 'tiltPresetSmall',
+  medium: 'tiltPresetMedium',
+  large: 'tiltPresetLarge',
+  custom: 'tiltPresetCustom',
+};
 
 const updateDepth = (depth: number) => {
   if (!props.selectedZoom) return;
@@ -40,6 +62,47 @@ const setMode = (mode: ZoomElement['mode']) => {
     mode,
   });
 };
+
+const setProjection = (projection: '2d' | '3d') => {
+  if (!props.selectedZoom || normalizeZoomProjection(props.selectedZoom.projection) === projection) return;
+  emit('update', {
+    ...props.selectedZoom,
+    projection,
+    tiltIntensity: normalizeZoomTiltIntensity(props.selectedZoom.tiltIntensity),
+    tiltHorizontal: normalizeZoomTiltAxis(props.selectedZoom.tiltHorizontal, DEFAULT_ZOOM_TILT_HORIZONTAL),
+    tiltVertical: normalizeZoomTiltAxis(props.selectedZoom.tiltVertical, DEFAULT_ZOOM_TILT_VERTICAL),
+    tiltPreset: normalizeZoomTiltPreset(props.selectedZoom.tiltPreset, props.selectedZoom.tiltIntensity),
+  });
+};
+
+const setTiltPreset = (preset: ZoomTiltPreset) => {
+  if (!props.selectedZoom) return;
+  emit('update', {
+    ...props.selectedZoom,
+    tiltPreset: preset,
+    ...(preset === 'custom' ? {} : { tiltIntensity: ZOOM_TILT_PRESET_INTENSITIES[preset] }),
+  });
+};
+
+const updateTiltIntensity = (value: number) => {
+  if (!props.selectedZoom) return;
+  emit('update', {
+    ...props.selectedZoom,
+    tiltIntensity: Math.min(1, Math.max(0, value / 100)),
+    tiltPreset: 'custom',
+  });
+};
+
+const updateTiltAxis = (axis: 'tiltHorizontal' | 'tiltVertical', value: number) => {
+  if (!props.selectedZoom) return;
+  emit('update', {
+    ...props.selectedZoom,
+    [axis]: Math.min(1, Math.max(-1, value / 100)),
+    tiltPreset: 'custom',
+  });
+};
+
+const formatSignedPercent = (value: number) => `${value > 0 ? '+' : ''}${Math.round(value)}%`;
 
 const updateMotionBlur = (patch: Partial<ZoomMotionBlurSettings>) => {
   emit('update:motionBlur', { ...props.motionBlur, ...patch });
@@ -132,6 +195,84 @@ const updateMotionBlur = (patch: Partial<ZoomMotionBlurSettings>) => {
             {{ selectedZoom.mode === 'manual' ? t('manualHint') : t('autoHint') }}
           </span>
         </div>
+      </div>
+
+      <div class="section-block">
+        <span class="section-title">{{ t('projection') }}</span>
+        <ButtonGroup full>
+          <Button
+            size="xs"
+            :variant="normalizeZoomProjection(selectedZoom.projection) === '2d' ? 'primary' : 'ghost'"
+            @click="setProjection('2d')"
+          >
+            {{ t('projection2d') }}
+          </Button>
+          <Button
+            size="xs"
+            :variant="normalizeZoomProjection(selectedZoom.projection) === '3d' ? 'primary' : 'ghost'"
+            @click="setProjection('3d')"
+          >
+            {{ t('projection3d') }}
+          </Button>
+        </ButtonGroup>
+        <template v-if="normalizeZoomProjection(selectedZoom.projection) === '3d'">
+          <span class="section-title">{{ t('tiltPreset') }}</span>
+          <ButtonGroup full>
+            <Button
+              v-for="preset in tiltPresets"
+              :key="preset"
+              size="xs"
+              :variant="
+                normalizeZoomTiltPreset(selectedZoom.tiltPreset, selectedZoom.tiltIntensity) === preset
+                  ? 'primary'
+                  : 'ghost'
+              "
+              :icon="preset === 'custom' ? SlidersHorizontal : undefined"
+              :icon-only="preset === 'custom'"
+              :aria-label="preset === 'custom' ? t(tiltPresetLabels[preset]) : undefined"
+              :tooltip="preset === 'custom' ? t(tiltPresetLabels[preset]) : ''"
+              @click="setTiltPreset(preset)"
+            >
+              <template v-if="preset !== 'custom'">
+                {{ t(tiltPresetLabels[preset]) }}
+              </template>
+            </Button>
+          </ButtonGroup>
+        </template>
+        <BigSlider
+          v-if="normalizeZoomProjection(selectedZoom.projection) === '3d'"
+          :model-value="normalizeZoomTiltIntensity(selectedZoom.tiltIntensity) * 100"
+          :min="0"
+          :max="100"
+          :step="1"
+          :default-value="DEFAULT_ZOOM_TILT_INTENSITY * 100"
+          :label="t('tiltIntensity')"
+          :format-value="(value) => `${Math.round(value)}%`"
+          @update:model-value="updateTiltIntensity"
+        />
+        <BigSlider
+          v-if="normalizeZoomProjection(selectedZoom.projection) === '3d'"
+          :model-value="normalizeZoomTiltAxis(selectedZoom.tiltHorizontal, DEFAULT_ZOOM_TILT_HORIZONTAL) * 100"
+          :min="-100"
+          :max="100"
+          :step="1"
+          :default-value="DEFAULT_ZOOM_TILT_HORIZONTAL * 100"
+          :label="t('tiltHorizontal')"
+          :format-value="formatSignedPercent"
+          @update:model-value="updateTiltAxis('tiltHorizontal', $event)"
+        />
+        <BigSlider
+          v-if="normalizeZoomProjection(selectedZoom.projection) === '3d'"
+          :model-value="normalizeZoomTiltAxis(selectedZoom.tiltVertical, DEFAULT_ZOOM_TILT_VERTICAL) * 100"
+          :min="-100"
+          :max="100"
+          :step="1"
+          :default-value="DEFAULT_ZOOM_TILT_VERTICAL * 100"
+          :label="t('tiltVertical')"
+          :format-value="formatSignedPercent"
+          @update:model-value="updateTiltAxis('tiltVertical', $event)"
+        />
+        <span class="section-description">{{ t('projectionDesc') }}</span>
       </div>
 
       <!-- Zoom Level / Depth -->

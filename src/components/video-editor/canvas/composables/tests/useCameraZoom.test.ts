@@ -665,6 +665,31 @@ describe('useCameraZoom', () => {
     expect(playingWindow?.scale).toBeGreaterThan(1);
   });
 
+  it('keeps a selected paused 3D manual zoom at scale one while exposing intensity-scaled tilt', () => {
+    mountComposable();
+    const perspectiveZoom: ZoomElement = {
+      ...manualZoom,
+      projection: '3d',
+      tiltIntensity: 0.6,
+    };
+    options.zooms.value = [perspectiveZoom];
+    options.selected.value = perspectiveZoom;
+    options.currentTime.value = 1.5;
+
+    const pausedAt60 = state.drawVideoWindow(context(), 800, 450, frame());
+    const tiltAt60 = Math.hypot(pausedAt60?.tiltX ?? 0, pausedAt60?.tiltY ?? 0);
+
+    expect(pausedAt60?.scale).toBeCloseTo(1, 6);
+    expect(tiltAt60).toBeGreaterThan(0);
+
+    options.selected.value = { ...perspectiveZoom, tiltIntensity: 1 };
+    const pausedAt100 = state.drawVideoWindow(context(), 800, 450, frame());
+    const tiltAt100 = Math.hypot(pausedAt100?.tiltX ?? 0, pausedAt100?.tiltY ?? 0);
+
+    expect(pausedAt100?.scale).toBeCloseTo(1, 6);
+    expect(tiltAt100).toBeGreaterThan(tiltAt60 * 1.5);
+  });
+
   it('clamps a manual focus near the output edge when the preview has an inset background frame', () => {
     mountComposable();
     options.playing.value = true;

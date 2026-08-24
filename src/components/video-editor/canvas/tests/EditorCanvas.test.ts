@@ -50,6 +50,32 @@ const { state } = vi.hoisted(() => ({
       | undefined,
     cursorBounds: undefined as { value: unknown } | undefined,
     isScreenEnabled: undefined as (() => boolean) | undefined,
+    perspectiveRender: vi.fn(),
+    perspectiveDispose: vi.fn(),
+  },
+}));
+
+vi.mock('../../zoom/perspective-scene-compositor', () => ({
+  PerspectiveSceneCompositor: class {
+    render(options: {
+      target: CanvasRenderingContext2D;
+      bounds: { x: number; y: number; width: number; height: number };
+      draw: (context: CanvasRenderingContext2D) => unknown;
+    }) {
+      state.perspectiveRender(options);
+      options.draw(options.target);
+      options.target.drawImage(
+        { perspectiveSurface: true } as unknown as CanvasImageSource,
+        options.bounds.x,
+        options.bounds.y,
+        options.bounds.width,
+        options.bounds.height,
+      );
+    }
+
+    dispose() {
+      state.perspectiveDispose();
+    }
   },
 }));
 
@@ -445,6 +471,83 @@ describe('EditorCanvas', () => {
     await nextTick();
 
     expect(state.canvasBackgroundOptions?.previewQuality?.()).toBe('full');
+  });
+
+  it('keeps a 2D zoom on the direct Canvas2D preview path', async () => {
+    const cameraBounds = {
+      dx: 0,
+      dy: 0,
+      dw: 800,
+      dh: 450,
+      scale: 1,
+      focusX: 400,
+      focusY: 225,
+    };
+    state.drawVideoWindow.mockReturnValue(cameraBounds);
+    const mounted = mountEditor({
+      zoomElements: [
+        {
+          id: 'flat-zoom',
+          sessionId: 'session',
+          startMs: 0,
+          endMs: 2_000,
+          focus: { cx: 0.5, cy: 0.5 },
+          depth: 2,
+          mode: 'manual',
+          projection: '2d',
+          tiltIntensity: 1,
+        },
+      ],
+    });
+    await flushPromises();
+    while (frames.length) runFrame();
+
+    expect(state.perspectiveRender).not.toHaveBeenCalled();
+    expect(state.drawComposition.mock.calls.some(([ctx]) => ctx === contextMock)).toBe(true);
+    mounted.unmount();
+    wrapper = undefined;
+  });
+
+  it('routes an active 3D zoom through the perspective surface while keeping composition overlays on target', async () => {
+    const cameraBounds = {
+      dx: 0,
+      dy: 0,
+      dw: 800,
+      dh: 450,
+      scale: 1,
+      focusX: 400,
+      focusY: 225,
+    };
+    state.drawVideoWindow.mockReturnValue(cameraBounds);
+    const mounted = mountEditor({
+      zoomElements: [
+        {
+          id: 'perspective-zoom',
+          sessionId: 'session',
+          startMs: 0,
+          endMs: 2_000,
+          focus: { cx: 0.75, cy: 0.25 },
+          depth: 2,
+          mode: 'manual',
+          projection: '3d',
+          tiltIntensity: 1,
+        },
+      ],
+    });
+    await flushPromises();
+    while (frames.length) runFrame();
+
+    expect(state.perspectiveRender).toHaveBeenCalled();
+    expect(state.perspectiveRender).toHaveBeenCalledWith(
+      expect.objectContaining({
+        target: contextMock,
+        bounds: expect.objectContaining({ width: 800, height: 450 }),
+      }),
+    );
+    expect(state.drawComposition).toHaveBeenCalledWith(contextMock, cameraBounds, undefined, expect.anything());
+    mounted.unmount();
+    wrapper = undefined;
+    expect(state.perspectiveDispose).toHaveBeenCalled();
   });
 
   it('uses a quality-scaled backing canvas while keeping the CSS preview and logical coordinates unchanged', async () => {
