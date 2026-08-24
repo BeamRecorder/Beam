@@ -376,25 +376,37 @@ const snapshotScreenBounds = (bounds: ScreenRegionBounds): ScreenRegionBounds =>
 
 const selectScreenRegion = async () => {
   if (props.embedded) return;
-  if (isBusy.value || isRecording.value || isRegionSelectionLeaving.value || !selectedScreenBounds.value) return;
-  const resolvedBounds = (await refreshSelectedScreenBounds()) ?? selectedScreenBounds.value;
-  if (!resolvedBounds || isBusy.value || isRecording.value || isRegionSelectionLeaving.value) return;
+  const linuxPortalSelection = desktopPlatform === 'linux';
+  if (
+    isBusy.value ||
+    isRecording.value ||
+    isRegionSelectionLeaving.value ||
+    (!linuxPortalSelection && !selectedScreenBounds.value)
+  )
+    return;
+  const resolvedBounds = linuxPortalSelection
+    ? null
+    : ((await refreshSelectedScreenBounds()) ?? selectedScreenBounds.value);
+  if ((!linuxPortalSelection && !resolvedBounds) || isBusy.value || isRecording.value || isRegionSelectionLeaving.value)
+    return;
   // Values read from Vue refs/computed values can be reactive proxies. Electron
   // IPC cannot structured-clone those proxies, so always send a plain snapshot.
-  const bounds = snapshotScreenBounds(resolvedBounds);
+  const bounds = resolvedBounds ? snapshotScreenBounds(resolvedBounds) : null;
   errorMessage.value = '';
   isRegionSelectionLeaving.value = true;
   await wait(180);
-  capture.setWindowVisible(false);
+  if (!linuxPortalSelection) capture.setWindowVisible(false);
   try {
     // The saved region is only a starting point for the next selection. It
     // must not activate crop mode just because the HUD was opened.
     const currentRegion = selectedScreenRegion.value ?? savedScreenRegion.value;
-    const region = await capture.selectScreenRegion({
-      bounds,
+    const selection = await capture.selectScreenRegion({
+      ...(bounds ? { bounds } : {}),
       region: currentRegion ? { ...currentRegion } : null,
     });
-    if (!region) return;
+    if (!selection) return;
+    const region = selection.region;
+    const selectionBounds = snapshotScreenBounds(selection.bounds);
     const isFullScreen = region.x <= 0.01 && region.y <= 0.01 && region.width >= 0.98 && region.height >= 0.98;
     if (isFullScreen) {
       selectedScreenRegion.value = null;
@@ -404,7 +416,7 @@ const selectScreenRegion = async () => {
     } else {
       const plainRegion = { ...region };
       selectedScreenRegion.value = plainRegion;
-      selectedScreenOverlay.value = { bounds, region: plainRegion };
+      selectedScreenOverlay.value = { bounds: selectionBounds, region: plainRegion };
       savedScreenRegion.value = plainRegion;
       void capture.updatePreferences({ extras: { screenRegion: plainRegion } });
     }
@@ -1111,9 +1123,9 @@ const openProject = (project: CaptureProject) => {
         <div class="form-inputs-area">
           <Transition name="fade-slide" mode="out-in">
             <div :key="activeTab" class="tab-content-container">
-              <!-- Capture source (macOS / Windows only, on Linux PipeWire portal handles source selection on record) -->
-              <template v-if="desktopPlatform !== 'linux'">
-                <template v-if="activeTab === 'window'">
+              <!-- Linux uses the system Portal picker at recording start, but region selection remains available here. -->
+              <template v-if="activeTab === 'window'">
+                <template v-if="desktopPlatform !== 'linux'">
                   <div class="device-row">
                     <Layout class="device-icon" />
                     <SourceSelect
@@ -1130,42 +1142,48 @@ const openProject = (project: CaptureProject) => {
                     />
                   </div>
                 </template>
-
-                <div v-else class="device-row">
-                  <Monitor class="device-icon" />
-                  <div class="screen-select-controls">
-                    <SourceSelect
-                      v-model="selectedScreenId"
-                      kind="screen"
-                      :sources="sources"
-                      :previews="screenPreviews"
-                      :loading="screenPreviewsLoading"
-                      :disabled="isRecording || isBusy || displaySources.length === 0"
-                      @toggle="
-                        handleDropdownToggle($event);
-                        if ($event) emit('focus-feature', 'source');
-                      "
-                    />
-                    <Button
-                      :variant="selectedScreenRegion ? 'primary' : 'secondary'"
-                      size="sm"
-                      icon-only
-                      :icon="isRegionConfirmationAnimating ? Check : Crop"
-                      :aria-label="selectedScreenRegion ? t('screenRegionSelected') : t('selectScreenRegion')"
-                      :tooltip="selectedScreenRegion ? t('editScreenRegion') : t('selectScreenRegion')"
-                      :disabled="isRecording || isBusy || !selectedScreenBounds"
-                      :class="{
-                        'screen-region-confirmed': Boolean(selectedScreenRegion),
-                        'screen-region-checkmark': isRegionConfirmationAnimating,
-                      }"
-                      @click="
-                        selectScreenRegion();
-                        emit('focus-feature', 'source');
-                      "
-                    />
-                  </div>
-                </div>
               </template>
+
+              <div v-else class="device-row">
+                <Monitor class="device-icon" />
+                <div class="screen-select-controls">
+                  <SourceSelect
+                    v-if="desktopPlatform !== 'linux'"
+                    v-model="selectedScreenId"
+                    kind="screen"
+                    :sources="sources"
+                    :previews="screenPreviews"
+                    :loading="screenPreviewsLoading"
+                    :disabled="isRecording || isBusy || displaySources.length === 0"
+                    @toggle="
+                      handleDropdownToggle($event);
+                      if ($event) emit('focus-feature', 'source');
+                    "
+                  />
+                  <Button
+                    :variant="selectedScreenRegion ? 'primary' : 'secondary'"
+                    size="sm"
+                    :icon-only="desktopPlatform !== 'linux'"
+                    :block="desktopPlatform === 'linux'"
+                    :icon="isRegionConfirmationAnimating ? Check : Crop"
+                    :aria-label="selectedScreenRegion ? t('screenRegionSelected') : t('selectScreenRegion')"
+                    :tooltip="selectedScreenRegion ? t('editScreenRegion') : t('selectScreenRegion')"
+                    :disabled="isRecording || isBusy || (desktopPlatform !== 'linux' && !selectedScreenBounds)"
+                    :class="{
+                      'screen-region-confirmed': Boolean(selectedScreenRegion),
+                      'screen-region-checkmark': isRegionConfirmationAnimating,
+                    }"
+                    @click="
+                      selectScreenRegion();
+                      emit('focus-feature', 'source');
+                    "
+                  >
+                    <template v-if="desktopPlatform === 'linux'">
+                      {{ selectedScreenRegion ? t('editScreenRegion') : t('selectScreenRegion') }}
+                    </template>
+                  </Button>
+                </div>
+              </div>
 
               <!-- Audio and input devices -->
               <div class="selectors-stack">

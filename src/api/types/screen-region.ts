@@ -16,3 +16,13 @@ export interface ScreenRegionOverlayOptions {
   bounds: ScreenRegionBounds;
   region?: ScreenRegion | null;
 }
+
+export interface ScreenRegionSelectionOptions {
+  bounds?: ScreenRegionBounds;
+  region?: ScreenRegion | null;
+}
+
+export interface ScreenRegionSelectionResult {
+  bounds: ScreenRegionBounds;
+  region: ScreenRegion;
+}

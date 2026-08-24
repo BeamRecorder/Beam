@@ -1,4 +1,5 @@
 import { vi } from 'vitest';
+import type { ScreenRegionSelectionOptions, ScreenRegionSelectionResult } from '../../../api/types/screen-region';
 
 export const captureMock = {
   platform: 'darwin',
@@ -22,7 +23,7 @@ export const captureMock = {
     shortcuts: true,
     recordsText: false,
   }),
-  selectScreenRegion: vi.fn(),
+  selectScreenRegion: vi.fn<(options: ScreenRegionSelectionOptions) => Promise<ScreenRegionSelectionResult | null>>(),
   startRecording: vi.fn(),
   stop: vi.fn(),
   discardRecording: vi.fn(),

@@ -207,7 +207,14 @@ onBeforeUnmount(() => unsubscribe?.());
 </script>
 
 <template>
-  <main class="region-overlay" @pointerdown.prevent="begin" @pointermove="move" @pointerup="end" @pointercancel="end">
+  <main
+    class="region-overlay"
+    :class="{ selecting: isSelecting, recording: !isSelecting }"
+    @pointerdown.prevent="begin"
+    @pointermove="move"
+    @pointerup="end"
+    @pointercancel="end"
+  >
     <div v-if="isSelecting && !region" class="region-empty-backdrop" />
     <div
       v-if="region"
@@ -252,10 +259,13 @@ onBeforeUnmount(() => unsubscribe?.());
   position: fixed;
   inset: 0;
   overflow: hidden;
-  cursor: crosshair;
+  cursor: default;
   background: transparent;
   user-select: none;
   touch-action: none;
+}
+.region-overlay.selecting {
+  cursor: crosshair;
 }
 .region-empty-backdrop {
   position: absolute;
@@ -274,6 +284,7 @@ onBeforeUnmount(() => unsubscribe?.());
 }
 .region-frame.recording {
   border: 0;
+  cursor: default;
   outline: 2px solid var(--color-primary);
 }
 .resize-handle {

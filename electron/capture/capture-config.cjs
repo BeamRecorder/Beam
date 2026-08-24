@@ -108,8 +108,7 @@ function buildDefaultCaptureConfig(catalog, options, environment) {
     selectSource(sources, screenKind, options.screenId, environment.platform);
   if (!screen) throw new Error('Aucun écran ou fenêtre capturable n’est disponible');
   const portalSelection = screen.selectionMode === 'portal';
-  if (portalSelection && options.region != null)
-    throw new Error('La sélection de zone n’est pas disponible avec le picker système Linux');
+  const region = screenRegion(options.region, screenKind);
   return {
     projectId: options.projectId || randomUUID(),
     screen: portalSelection
@@ -140,7 +139,7 @@ function buildDefaultCaptureConfig(catalog, options, environment) {
       minimumFreeBytes: options.minimumFreeBytes ?? 536_870_912,
     },
     failurePolicy: options.failurePolicy || 'continue-without-optional-tracks',
-    region: portalSelection ? null : screenRegion(options.region, screenKind),
+    region,
     excludedProcessId: environment.excludedProcessId,
   };
 }

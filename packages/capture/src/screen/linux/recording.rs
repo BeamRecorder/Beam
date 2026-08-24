@@ -36,9 +36,9 @@ impl LinuxRecording {
                 "Linux Portal restore tokens are not supported in non-persistent mode".into(),
             ));
         }
-        if request.region.is_some() {
+        if request.region.is_some() && !matches!(kind, crate::model::PortalSourceKind::Monitor) {
             return Err(CaptureError::InvalidConfiguration(
-                "a normalized screen region is not supported by the Portal picker".into(),
+                "screen region requires a Portal monitor source".into(),
             ));
         }
         let (sink, encoded_output, encoded_codec): (
@@ -97,6 +97,7 @@ impl LinuxRecording {
             start_gate: request.start_gate,
             metrics: metrics.clone(),
             repair_window_crop,
+            region: request.region,
         })?;
         Ok(Self {
             portal: Some(portal),
