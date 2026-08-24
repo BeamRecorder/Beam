@@ -116,60 +116,7 @@ body {
 
 @media (max-width: 767px) {
   .VPNavBarHamburger {
-    width: 40px !important;
-    height: 40px !important;
-    border-radius: var(--radius-md);
-    background: transparent;
-  }
-
-  .VPNavBarHamburger:hover {
-    background: var(--color-header-control-hover);
-  }
-
-  .VPNavBarHamburger .container {
-    width: 18px !important;
-    height: 14px !important;
-  }
-
-  .VPNavBarHamburger:not(.active) .top,
-  .VPNavBarHamburger:not(.active) .middle,
-  .VPNavBarHamburger:not(.active) .bottom {
-    left: 0 !important;
-    width: 18px !important;
-    transform: none !important;
-  }
-
-  .VPNavBarHamburger .top {
-    top: 0 !important;
-  }
-
-  .VPNavBarHamburger .middle {
-    top: 6px !important;
-  }
-
-  .VPNavBarHamburger .bottom {
-    top: 12px !important;
-  }
-
-  .VPNavBarHamburger.active .top,
-  .VPNavBarHamburger.active .bottom {
-    top: 6px !important;
-  }
-
-  .VPNavScreen {
-    padding: 0 16px !important;
-    background: var(--color-bg-app) !important;
-  }
-
-  .VPNavScreen > .container {
-    max-width: none !important;
-    padding-top: 16px !important;
-  }
-
-  .VPNavScreenMenuLink {
-    padding: 15px 4px 14px !important;
-    font-size: 15px !important;
-    font-weight: 650 !important;
+    display: none !important;
   }
 
   .VPLocalNav .container {

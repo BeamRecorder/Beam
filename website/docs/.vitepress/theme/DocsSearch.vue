@@ -4,7 +4,6 @@ import MiniSearch from 'minisearch';
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
 import { useData, withBase } from 'vitepress';
 import Dialog from '../../../../src/components/ui/dialog/Dialog.vue';
-import KeyboardChip from '../../../../src/components/ui/Kbd/KeyboardChip.vue';
 import {
   enabledDocsLocales,
   getDocsCatalogs,
@@ -99,12 +98,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleShortcut));
 
 <template>
   <button class="docs-search-trigger" type="button" aria-label="Search Beam documentation" @click="open">
-    <Search aria-hidden="true" />
-    <span>Search documentation</span>
-    <ClientOnly>
-      <KeyboardChip shortcut="CommandOrControl+K" />
-      <template #fallback><KeyboardChip :keys="['Ctrl', 'K']" /></template>
-    </ClientOnly>
+    <span>Search</span>
   </button>
 
   <Dialog :is-open="isOpen" title="Search Beam Docs" size="md" @close="close">
@@ -161,10 +155,9 @@ onUnmounted(() => window.removeEventListener('keydown', handleShortcut));
   display: flex;
   width: min(272px, 26vw);
   height: 40px;
-  padding: 0 10px 0 13px;
+  padding: 0 16px;
   transform: translateX(-50%);
   align-items: center;
-  gap: 10px;
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
   background: var(--color-header-control);
@@ -187,10 +180,8 @@ onUnmounted(() => window.removeEventListener('keydown', handleShortcut));
 }
 
 .docs-search-trigger > span {
-  overflow: hidden;
-  flex: 1;
-  text-align: left;
-  text-overflow: ellipsis;
+  width: 100%;
+  text-align: center;
   white-space: nowrap;
 }
 
@@ -295,18 +286,13 @@ onUnmounted(() => window.removeEventListener('keydown', handleShortcut));
 
 @media (max-width: 959px) {
   .docs-search-trigger {
-    position: static;
-    width: 40px;
-    padding: 0;
+    position: fixed;
+    width: 68px;
+    padding: 0 8px;
     border-color: transparent;
-    transform: none;
+    transform: translateX(-50%);
     justify-content: center;
     background: transparent;
-  }
-
-  .docs-search-trigger > span,
-  .docs-search-trigger :deep(.keyboard-chip) {
-    display: none;
   }
 }
 

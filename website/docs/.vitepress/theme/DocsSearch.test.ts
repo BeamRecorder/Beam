@@ -68,6 +68,14 @@ afterEach(() => {
 });
 
 describe('DocsSearch', () => {
+  it('uses a centered Search label without rendering the keyboard shortcut', () => {
+    const wrapper = mountSearch();
+    const trigger = wrapper.get('.docs-search-trigger');
+
+    expect(trigger.text()).toBe('Search');
+    expect(trigger.find('.keyboard-chip').exists()).toBe(false);
+  });
+
   it('starts with the Recorder and Video editor sections', async () => {
     const wrapper = mountSearch();
     await openSearch(wrapper);

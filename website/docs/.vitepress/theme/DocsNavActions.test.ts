@@ -13,6 +13,12 @@ vi.mock('./DocsSearch.vue', () => ({
   },
 }));
 
+vi.mock('./DocsMobileMenu.vue', () => ({
+  default: {
+    template: '<button class="docs-mobile-menu-trigger" type="button">Menu</button>',
+  },
+}));
+
 import DocsNavActions from './DocsNavActions.vue';
 
 const ClientOnlyStub = {
@@ -70,6 +76,7 @@ describe('DocsNavActions', () => {
     expect(wrapper.find('.docs-language-trigger').exists()).toBe(true);
     expect(wrapper.find('.docs-language-trigger .lucide-languages').exists()).toBe(true);
     expect(wrapper.find('.docs-theme-toggle').exists()).toBe(true);
+    expect(wrapper.find('.docs-mobile-menu-trigger').exists()).toBe(true);
   });
 
   it('keeps the language menu available outside the mobile-removable theme control', () => {

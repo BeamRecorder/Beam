@@ -4,6 +4,7 @@ import discordIconUrl from '../../../../public/discord_svg.svg';
 import githubIconUrl from '../../../../public/github.svg';
 import DocsThemeToggle from './DocsThemeToggle.vue';
 import DocsLanguageSelector from './DocsLanguageSelector.vue';
+import DocsMobileMenu from './DocsMobileMenu.vue';
 import DocsSearch from './DocsSearch.vue';
 
 const githubUrl = 'https://github.com/BeamRecorder/Beam';
@@ -43,6 +44,10 @@ const websiteUrl = 'https://beam.plinka.eu';
       <template #fallback><span class="language-placeholder" aria-hidden="true" /></template>
     </ClientOnly>
     <span class="docs-theme-control"><DocsThemeToggle /></span>
+    <ClientOnly>
+      <DocsMobileMenu />
+      <template #fallback><span class="mobile-menu-placeholder" aria-hidden="true" /></template>
+    </ClientOnly>
   </div>
 </template>
 
@@ -59,6 +64,12 @@ const websiteUrl = 'https://beam.plinka.eu';
 }
 
 .language-placeholder {
+  width: 40px;
+  height: 40px;
+}
+
+.mobile-menu-placeholder {
+  display: none;
   width: 40px;
   height: 40px;
 }
@@ -131,6 +142,12 @@ const websiteUrl = 'https://beam.plinka.eu';
 
   .website-link {
     padding-inline: 10px;
+  }
+}
+
+@media (max-width: 767px) {
+  .mobile-menu-placeholder {
+    display: inline-block;
   }
 }
 
