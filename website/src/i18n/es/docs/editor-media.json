@@ -1,0 +1,296 @@
+{
+  "pages": [
+    {
+      "slug": "editor/capabilities/captions",
+      "title": "Subtítulos con IA",
+      "description": "Referencia completa de los modelos Whisper locales, las fuentes de audio, las descargas, la transcripción, la regeneración, la cancelación y los diagnósticos.",
+      "lead": "Beam genera subtítulos de voz localmente a partir de un clip de audio activado. Descarga el modelo Whisper seleccionado, transcribe en el dispositivo y crea clips de subtítulos editables en la línea de tiempo.",
+      "sections": [
+        {
+          "title": "Panel Captions",
+          "screenshot": {
+            "path": "editor/captions-panel.webp",
+            "alt": "Panel Captions de IA de Beam con controles de fuente de audio y modelo Whisper",
+            "caption": "Selecciona una fuente de audio activada y un modelo Whisper local antes de generar subtítulos.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Fuentes de audio",
+          "tables": [
+            {
+              "headers": ["Fuente", "Cuándo aparece", "Regla de selección"],
+              "rows": [
+                ["System audio", "Existe un clip activado con el rol System.", "Se identifica como System Audio."],
+                ["Microphone", "Existe un clip activado con el rol Microphone.", "Se identifica como Microphone."],
+                ["Imported audio", "Existe un clip de audio importado activado.", "Utiliza el nombre del clip."],
+                [
+                  "URL de contenido multimedia duplicada",
+                  "Dos clips activados hacen referencia a la misma URL de audio.",
+                  "Solo se ofrece la primera fuente."
+                ],
+                [
+                  "Ninguna fuente utilizable",
+                  "Ningún clip de audio activado tiene una URL de recurso legible.",
+                  "Generate sigue sin estar disponible."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Modelos Whisper",
+          "tables": [
+            {
+              "headers": ["Modelo", "Idiomas", "Orientación sobre el rendimiento"],
+              "rows": [
+                ["Tiny", "Multilingüe", "Modelo predeterminado."],
+                ["Tiny .en", "Inglés", "Modelo exclusivo para inglés."],
+                ["Base", "Multilingüe", "No hay ninguna advertencia adicional."],
+                ["Base .en", "Inglés", "Modelo exclusivo para inglés."],
+                ["Small", "Multilingüe", "Puede ser lento sin WebGPU."],
+                ["Small .en", "Inglés", "Puede ser lento sin WebGPU."],
+                ["Medium", "Multilingüe", "Descarga grande; se recomienda WebGPU."],
+                ["Medium .en", "Inglés", "Descarga grande; se recomienda WebGPU."],
+                ["Large v3", "Multilingüe", "Muy grande y lento sin WebGPU."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Descarga y eliminación de modelos",
+          "tables": [
+            {
+              "headers": ["Estado o acción", "Comportamiento"],
+              "rows": [
+                ["Missing", "Download Model está disponible para el modelo seleccionado."],
+                ["Downloading", "Beam muestra los bytes descargados y el total mediante una barra de progreso."],
+                [
+                  "Ready",
+                  "Una marca de verificación identifica el modelo instalado y Delete Model pasa a estar disponible."
+                ],
+                ["Delete Model", "No disponible durante la descarga, la eliminación o la transcripción."],
+                ["Download error", "El error se muestra y se puede copiar para el diagnóstico."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Generar y regenerar",
+          "steps": [
+            "Elige una de las fuentes de audio activadas.",
+            "Elige y descarga un modelo Whisper si aún no está listo.",
+            "Selecciona Generate Captions. Beam decodifica la fuente, la convierte en audio mono de 16 kHz y la limita a la duración de la línea de tiempo.",
+            "Los resultados parciales de la transcripción actualizan la composición mientras el procesamiento continúa.",
+            "Cuando termina, se selecciona el primer subtítulo generado para editarlo."
+          ],
+          "tables": [
+            {
+              "headers": ["Comportamiento", "Regla"],
+              "rows": [
+                [
+                  "Agrupación de frases",
+                  "La frase de subtítulos termina al encontrar un signo de puntuación o después de 12 palabras."
+                ],
+                ["Duración mínima del clip generado", "40 ms."],
+                [
+                  "Regenerate",
+                  "Reemplaza los subtítulos generados por IA existentes y conserva los subtítulos manuales."
+                ],
+                ["Cancel", "Detiene la carga del modelo o la transcripción."],
+                ["Close panel", "Cancela la ejecución de transcripción activa."],
+                [
+                  "Diagnostics",
+                  "Informa del tiempo transcurrido y muestra un informe de transcripción que se puede copiar después del procesamiento."
+                ]
+              ]
+            }
+          ],
+          "notice": {
+            "kind": "tip",
+            "title": "Transcripción local",
+            "text": "Whisper se ejecuta en el dispositivo. La generación de subtítulos no requiere subir contenido a la nube ni utilizar una clave de API."
+          }
+        },
+        {
+          "title": "Editar subtítulos generados",
+          "paragraphs": [
+            "Los subtítulos generados son clips de subtítulos editables normales marcados como generados por IA. Después de generarlos, su texto, temporización y estilo visual se pueden ajustar mediante el panel Clip y la línea de tiempo."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/audio",
+      "title": "Audio",
+      "description": "Referencia completa de la salida global, los roles del sistema y del micrófono, el audio importado, los estados de activación, la eliminación y el volumen.",
+      "lead": "El panel Audio separa la salida de toda la composición de los roles de sistema y micrófono grabados. El audio importado se controla como un clip seleccionado en la línea de tiempo.",
+      "sections": [
+        {
+          "title": "Panel Audio",
+          "screenshot": {
+            "path": "editor/audio-panel.webp",
+            "alt": "Panel Audio de Beam con controles de volumen global, del sistema y del micrófono",
+            "caption": "La salida global y los roles de audio grabados se pueden ajustar de forma independiente.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Controles de volumen",
+          "tables": [
+            {
+              "headers": ["Control", "Rango", "Valor inicial o predeterminado", "Ámbito"],
+              "rows": [
+                [
+                  "Global Volume",
+                  "0%–100%",
+                  "Un reproductor recién cargado comienza al 70%",
+                  "Toda la salida de reproducción del editor."
+                ],
+                ["System Volume", "0%–100%", "100%", "Cada clip asignado al rol System."],
+                ["Microphone Volume", "0%–100%", "100%", "Cada clip asignado al rol Microphone."],
+                [
+                  "Selected audio clip Volume",
+                  "0%–200%",
+                  "100%",
+                  "Solo el clip de sistema, micrófono o audio importado seleccionado."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Controles de roles",
+          "tables": [
+            {
+              "headers": ["Rol", "Cuándo se muestra", "Acciones"],
+              "rows": [
+                [
+                  "System Sound Track",
+                  "Existe al menos un clip de audio con el rol del sistema.",
+                  "Permite activar o desactivar, cambiar el volumen del rol o eliminar todos los clips System."
+                ],
+                [
+                  "Microphone Track",
+                  "Existe al menos un clip de audio con el rol del micrófono.",
+                  "Permite activar o desactivar, cambiar el volumen del rol o eliminar todos los clips Microphone."
+                ],
+                [
+                  "Imported audio",
+                  "Existe un clip de audio importado.",
+                  "Selecciona el clip en la línea de tiempo y usa Clip Volume; no tiene una sección de rol específica."
+                ],
+                [
+                  "Sin roles",
+                  "No existe ningún rol System ni Microphone.",
+                  "El panel indica que no se han detectado pistas de audio."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Activar frente a eliminar",
+          "paragraphs": [
+            "Desactivar un rol conserva sus clips, pero los excluye de la reproducción y la exportación. Eliminar un rol quita de la composición todos los clips asignados a ese rol."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "La eliminación de un rol afecta a varios clips",
+            "text": "Delete System Track y Delete Microphone Track actúan sobre el rol completo, no solo sobre el clip más cercano al cabezal de reproducción."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/settings",
+      "title": "Ajustes del editor",
+      "description": "Referencia completa del idioma, la corrección ortográfica, la apariencia, las actualizaciones, los enlaces sociales y los controles de desarrollo.",
+      "lead": "Editor Settings contiene las preferencias de toda la aplicación que comparte con el grabador, además de controles de desarrollo exclusivos del editor.",
+      "sections": [
+        {
+          "title": "Panel Settings",
+          "screenshot": {
+            "path": "editor/settings-panel.webp",
+            "alt": "Panel Settings de Beam con controles de idioma y apariencia",
+            "caption": "Settings aplica las preferencias de idioma y apariencia a toda la aplicación.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Idioma y escritura",
+          "tables": [
+            {
+              "headers": ["Ajuste", "Valores", "Predeterminado"],
+              "rows": [
+                [
+                  "Language",
+                  "Búlgaro, alemán, inglés, español, francés, hindi, italiano, japonés, coreano, polaco, portugués (Brasil), ruso, vietnamita, chino simplificado, chino tradicional",
+                  "Un idioma del sistema o del navegador compatible; inglés como alternativa"
+                ],
+                ["Spell Check", "On u Off en Advanced", "On"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Apariencia",
+          "tables": [
+            {
+              "headers": ["Ajuste", "Valores", "Predeterminado"],
+              "rows": [
+                ["Theme mode", "Light, Dark, System", "Light"],
+                [
+                  "Theme preset",
+                  "Beam Sunset, Cyber Violet, Emerald Forest, Crimson Velvet, Oceanic Breeze, Amber Studio, Sakura Bloom, Slate Precision",
+                  "Beam Sunset"
+                ],
+                ["Primary color", "10 preajustes o un selector de color personalizado", "#ff5a1f"],
+                ["Secondary color", "8 preajustes o un selector de color personalizado", "#6366f1"],
+                ["Corner radius", "0, 6, 10, 16, 24 px o Custom 0–32 px", "10 px"],
+                ["Pill radius", "On u Off", "Off"],
+                ["Surface", "Default, Neutral, Slate, Deep", "Default"],
+                ["Global UI scale", "50%, 75%, 100%, 125%", "100%"]
+              ]
+            }
+          ],
+          "paragraphs": [
+            "Top bar, Sidebar, Properties, Canvas controls y Timeline pueden utilizar la escala global o sustituirla por 50%, 75%, 100% o 125%. Consulta la [referencia de preferencias del grabador](/recorder/capabilities/preferences) para ver todos los valores de color y radio de los preajustes."
+          ]
+        },
+        {
+          "title": "Actualizaciones y enlaces",
+          "tables": [
+            {
+              "headers": ["Área", "Acciones y estados"],
+              "rows": [
+                ["Updates", "Check, Available, Downloading, Downloaded, Not available, Error, Unsupported."],
+                ["Actualización descargada", "Restart now está disponible cuando termina la descarga."],
+                ["Error", "Muestra o copia los detalles de diagnóstico."],
+                ["Changelog", "Abre el registro de cambios de la actualización actual."],
+                ["Discord / GitHub", "Abre la comunidad de Beam o el repositorio del código fuente."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Dev Mode",
+          "paragraphs": [
+            "Dev Mode se almacena localmente en el editor. Está pensado para el desarrollo y la solución de problemas, no para la edición normal."
+          ],
+          "tables": [
+            {
+              "headers": ["Control", "Comportamiento"],
+              "rows": [
+                ["Dev Mode", "Muestra u oculta las opciones de desarrollo."],
+                ["Recorder Tool", "Abre un HUD del grabador integrado y puede iniciar una grabación desde el popover."],
+                ["Copy system info", "Copia información diagnóstica del entorno."],
+                ["Open DevTools", "Activa o desactiva las herramientas de desarrollo de Electron."]
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

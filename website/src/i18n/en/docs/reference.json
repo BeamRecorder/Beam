@@ -183,6 +183,7 @@
               ],
               "screenshot": {
                 "path": "platforms/macos-screen-system-audio.webp",
+                "hidden": true,
                 "alt": "macOS Screen and System Audio Recording privacy settings with Beam enabled",
                 "caption": "Enable Beam under Screen & System Audio Recording."
               }
@@ -194,6 +195,7 @@
               ],
               "screenshot": {
                 "path": "platforms/macos-microphone-camera.webp",
+                "hidden": true,
                 "alt": "macOS Microphone and Camera privacy settings for Beam",
                 "caption": "Beam must be enabled in the privacy list for each source you want to capture."
               }

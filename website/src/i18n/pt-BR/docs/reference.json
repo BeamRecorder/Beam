@@ -3,14 +3,29 @@
     {
       "slug": "export",
       "title": "Exportação e compartilhamento",
-      "description": "Exporte uma composição do Beam para MP4 ou WebM com a resolução e o preset de qualidade adequados.",
-      "lead": "A exportação renderiza a composição atual diretamente em um arquivo local usando as configurações compatíveis com a máquina.",
+      "description": "Exporte uma composição Beam para WebM ou MP4 com resolução, taxa de quadros, qualidade e controles de áudio.",
+      "lead": "A exportação renderiza a composição atual diretamente em um arquivo local e relata cada estágio do trabalho.",
       "sections": [
         {
           "title": "Escolha um formato",
-          "bullets": [
-            "O WebM usa o contêiner WebM com um codificador disponível na máquina atual.",
-            "O MP4 usa o contêiner MP4 quando o Beam encontra um codificador de hardware ou software compatível."
+          "tables": [
+            {
+              "headers": ["Formato", "Seleção de codec de vídeo", "Codec de áudio", "Disponibilidade"],
+              "rows": [
+                [
+                  "WebM",
+                  "Primeiro codificável de VP9, VP8, AV1",
+                  "obra",
+                  "Formato padrão; requer um codec de vídeo codificável e, quando o áudio está incluído, Opus."
+                ],
+                [
+                  "MP4",
+                  "AVC/H.264",
+                  "AAC",
+                  "Requer um codificador AVC. AAC usa WebCodecs quando disponível e, em seguida, o substituto do codificador Mediabunny AAC de Beam."
+                ]
+              ]
+            }
           ],
           "notice": {
             "kind": "info",
@@ -20,33 +35,136 @@
         },
         {
           "title": "Escolha uma resolução",
-          "bullets": [
-            "720p reduz a escala para uma saída HD quando o canvas nativo é grande o suficiente.",
-            "1080p reduz a escala para Full HD quando o canvas nativo é grande o suficiente.",
-            "Máxima mantém as dimensões do canvas de saída nativo."
+          "tables": [
+            {
+              "headers": ["Opção", "Disponibilidade", "Comportamento de saída"],
+              "rows": [
+                [
+                  "720p",
+                  "A altura da tela nativa é de pelo menos 720 px",
+                  "Almeja 720 px de altura sem aumento de escala."
+                ],
+                [
+                  "1080p",
+                  "A altura da tela nativa é de pelo menos 1.080 px",
+                  "Almeja 1080 px de altura sem aumento de escala."
+                ],
+                ["Máx.", "Sempre", "Mantém o tamanho nativo da tela de saída."],
+                [
+                  "Todas as opções",
+                  "Não aplicável",
+                  "Preservar a proporção e arredondar a largura e a altura para números pares positivos."
+                ]
+              ]
+            }
           ]
         },
         {
-          "title": "Escolha qualidade e taxa de bits",
-          "paragraphs": [
-            "Os presets baixo, médio e alto calculam uma taxa de bits a partir das dimensões de saída e da taxa de quadros. Médio equilibra nitidez e tamanho do arquivo, enquanto alto prioriza a fidelidade visual."
+          "title": "Escolha a taxa de quadros e a qualidade",
+          "tables": [
+            {
+              "headers": ["Configuração", "Valores", "Padrão ou recomendação"],
+              "rows": [
+                [
+                  "Taxa de quadros",
+                  "24, 30, 60fps",
+                  "60 para uma fonte igual ou superior a 50 fps; 24 igual ou inferior a 27 fps; caso contrário, 30."
+                ],
+                ["Qualidade", "Baixo, Médio, Alto", "Médio"],
+                ["Fator de taxa de bits baixa", "0,055 × largura × altura × fps", "Fixado em 0,5–40 Mbps."],
+                ["Fator de taxa de bits médio", "0,095 × largura × altura × fps", "Fixado em 0,5–40 Mbps."],
+                ["Fator de taxa de bits alto", "0,16 × largura × altura × fps", "Fixado em 0,5–40 Mbps."]
+              ]
+            }
           ],
           "screenshot": {
-            "path": "reference/export-settings.webp",
-            "alt": "Configurações de exportação do Beam para formato, resolução e qualidade",
-            "caption": "Selecione formato, resolução e qualidade antes de escolher o arquivo de destino."
+            "path": "reference/export-panel.webp",
+            "alt": "Beam painel de exportação com formato, resolução, taxa de quadros, qualidade e controles de áudio",
+            "caption": "Escolha as configurações de renderização antes de selecionar o arquivo de destino.",
+            "aspectRatio": "361/560"
           }
         },
         {
-          "title": "Acompanhe a exportação",
-          "paragraphs": [
-            "O Beam exibe o progresso dos quadros durante a renderização. Você pode cancelar uma exportação ativa ou copiar seu relatório de diagnóstico. Alterações ao vivo no editor não modificam um arquivo que já está sendo renderizado."
+          "title": "Mais opções",
+          "tables": [
+            {
+              "headers": ["Opção", "Valores", "Padrão", "Comportamento"],
+              "rows": [
+                [
+                  "Incluir áudio",
+                  "Ligado ou desligado",
+                  "Ligado",
+                  "Off cria um arquivo silencioso. O áudio também é omitido quando nenhum clipe de áudio habilitado tem duração positiva."
+                ],
+                [
+                  "Saída de áudio",
+                  "48 kHz, estéreo, 128 kbps",
+                  "Quando o áudio está incluído",
+                  "Os clipes de áudio habilitados são mixados progressivamente no codec contêiner selecionado."
+                ]
+              ]
+            }
           ]
         },
         {
-          "title": "Abra o resultado",
+          "title": "Acompanhe a exportação",
+          "tables": [
+            {
+              "headers": ["Palco", "O que Beam faz"],
+              "rows": [
+                [
+                  "Validando ativos",
+                  "Verifica o instantâneo, ativos locais, formatos, codecs e invariantes de renderização."
+                ],
+                ["Carregando recursos", "Carrega recursos visuais, de áudio, cursor, fonte e plano de fundo."],
+                ["Codificação", "Renderiza quadros de composição, mixa áudio habilitado e grava pedaços codificados."],
+                ["Finalizando", "Fecha trilhas e finaliza o contêiner de mídia e o arquivo de destino."]
+              ]
+            }
+          ],
           "paragraphs": [
-            "Após uma exportação bem-sucedida, o Beam informa o nome do arquivo salvo e oferece uma ação para abri-lo. Se a exportação falhar, copie o relatório técnico antes de pedir ajuda no [Discord](https://discord.gg/6Q6v2xUCB) ou no [GitHub](https://github.com/BeamRecorder/Beam/issues)."
+            "A visualização do progresso informa a porcentagem e a contagem de quadros concluídos e fornece Relatório de Cópia. Cancelar interrompe uma exportação ativa. Fechar ou cancelar o seletor de destino encerra o trabalho sem relatar um erro. As edições ao vivo feitas após o início da exportação não alteram o arquivo em andamento porque Beam exporta um instantâneo."
+          ]
+        },
+        {
+          "title": "Validação e casos extremos",
+          "tables": [
+            {
+              "headers": ["Condição", "Resultado"],
+              "rows": [
+                [
+                  "Recurso ausente",
+                  "A exportação é interrompida com um problema de validação que identifica o ativo ou clipe relevante."
+                ],
+                [
+                  "Fonte ou codec não suportado",
+                  "A exportação relata um formato não suportado, codec ou falha de decodificação."
+                ],
+                [
+                  "Nenhum codificador de saída compatível",
+                  "O formato WebM ou MP4 selecionado é relatado como não codificável no dispositivo."
+                ],
+                ["GIF animado", "GIFs animados ainda não são exportáveis de forma determinística."],
+                [
+                  "Tela 2D indisponível",
+                  "A exportação é interrompida porque os quadros de composição não podem ser renderizados."
+                ],
+                [
+                  "Cancelamento",
+                  "O trabalhador ativo e o fluxo de saída são abortados e a exportação incompleta não é relatada como uma falha."
+                ],
+                [
+                  "Mixer de áudio indisponível",
+                  "Beam relata que a mixagem de áudio offline não está disponível na versão do Chromium."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Resultado e diagnóstico",
+          "paragraphs": [
+            "Após uma exportação bem-sucedida, Beam informa o nome do arquivo salvo e fornece ações Abrir Arquivo e Copiar Relatório. Se a exportação falhar, a mensagem voltada ao usuário oculta os caminhos do sistema de arquivos local, enquanto o relatório detalhado retém informações de configuração, codec, ambiente, progresso e gargalos para solução de problemas. Copie esse relatório antes de pedir ajuda no [Discord](https://discord.gg/6Q6v2xUCB) ou [GitHub](https://github.com/BeamRecorder/Beam/issues)."
           ]
         }
       ]
@@ -58,7 +176,7 @@
       "lead": "O Beam está disponível no Windows, macOS e Linux. Permissões nativas e recursos do sistema de janelas criam algumas diferenças entre as plataformas.",
       "sections": [
         {
-          "title": "Windows",
+          "title": "Janelas",
           "bullets": [
             "O Beam é distribuído como instalador nativo do Windows.",
             "A gravação de tela, janela, região, câmera, microfone e áudio do sistema é compatível.",
@@ -85,6 +203,7 @@
               ],
               "screenshot": {
                 "path": "platforms/macos-screen-system-audio.webp",
+                "hidden": true,
                 "alt": "Configurações de privacidade do macOS para Gravação de Tela e Áudio do Sistema com o Beam ativado",
                 "caption": "Ative o Beam em Gravação de Tela e Áudio do Sistema."
               }
@@ -96,6 +215,7 @@
               ],
               "screenshot": {
                 "path": "platforms/macos-microphone-camera.webp",
+                "hidden": true,
                 "alt": "Configurações de privacidade do macOS para Microfone e Câmera do Beam",
                 "caption": "O Beam precisa estar ativado na lista de privacidade para cada fonte que você deseja capturar."
               }

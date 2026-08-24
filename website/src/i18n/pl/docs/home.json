@@ -7,9 +7,21 @@
     "tagline": "Praktyczne poradniki dotyczące przechwytywania i dopracowywania prezentacji produktów w Beam.",
     "imageAlt": "Ikona aplikacji Beam",
     "actions": [
-      { "theme": "brand", "text": "Pierwsze kroki", "link": "/getting-started" },
-      { "theme": "alt", "text": "Zobacz na GitHubie", "link": "https://github.com/BeamRecorder/Beam" },
-      { "theme": "alt", "text": "Dołącz do Discorda", "link": "https://discord.gg/6Q6v2xUCB" }
+      {
+        "theme": "marka",
+        "text": "Pierwsze kroki",
+        "link": "/getting-started"
+      },
+      {
+        "theme": "alt",
+        "text": "Zobacz na GitHubie",
+        "link": "https://github.com/BeamRecorder/Beam"
+      },
+      {
+        "theme": "alt",
+        "text": "Dołącz do Discorda",
+        "link": "https://discord.gg/6Q6v2xUCB"
+      }
     ]
   },
   "categories": [
@@ -17,13 +29,13 @@
       "title": "Aplikacja do nagrywania",
       "details": "Wybierz źródło, przygotuj ścieżki dźwięku i kamery, a następnie steruj nagrywaniem z kompaktowego HUD-u.",
       "link": "/recorder/",
-      "visual": "recorder"
+      "visual": "rejestrator"
     },
     {
       "title": "Edytor wideo",
       "details": "Kształtuj tempo, kadr, powiększenia, ruch kursora, napisy, dźwięk i eksport w jednym obszarze roboczym.",
       "link": "/editor/",
-      "visual": "editor"
+      "visual": "redaktor"
     }
   ]
 }

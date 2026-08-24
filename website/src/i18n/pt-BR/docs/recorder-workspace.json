@@ -1,0 +1,383 @@
+{
+  "pages": [
+    {
+      "slug": "recorder/capabilities/preferences",
+      "title": "Preferências do gravador",
+      "description": "Referência completa para comportamento de gravação, aparência, idioma, atalhos, atualizações e configurações persistentes do Gravador.",
+      "lead": "Abra Preferências na barra superior do Gravador. As configurações são agrupadas em Gravação, Geral, Atalhos e Sobre, com aparência avançada e controles de atualização quando aplicável.",
+      "sections": [
+        {
+          "title": "Janela de preferências",
+          "screenshot": {
+            "path": "recorder/preferences.webp",
+            "alt": "Beam Janela de preferências mostrando as configurações do gravador",
+            "caption": "As preferências do gravador abrangem o comportamento de captura e as configurações compartilhadas com o editor.",
+            "aspectRatio": "308/517"
+          }
+        },
+        {
+          "title": "Configurações de gravação",
+          "tables": [
+            {
+              "headers": ["Configuração", "Valores", "Padrão", "Notas"],
+              "rows": [
+                [
+                  "Contagem regressiva",
+                  "Desligado, 3 segundos, 5 segundos, 10 segundos",
+                  "3 segundos",
+                  "Aplicado antes do início da captura."
+                ],
+                [
+                  "Barra do gravador",
+                  "Sempre visível, Auto-fade, Oculto até passar o mouse",
+                  "Sempre em Windows/macOS; Oculto até pairar no Linux",
+                  "Controla a barra flutuante durante a captura."
+                ],
+                [
+                  "Acesso à interação",
+                  "Verificando, Disponível, Permissão necessária, Instalação necessária, Negado, Indisponível",
+                  "Desligado",
+                  "O Linux rotula isso como Gravar eventos de teclado e mouse no Linux."
+                ],
+                [
+                  "Registrar interações",
+                  "Ativado ou desativado quando disponível",
+                  "Dependente da plataforma",
+                  "Armazena cliques suportados e tokens de atalho seguros, texto nunca digitado."
+                ],
+                [
+                  "Atalhos",
+                  "Abrir subvisão Atalhos",
+                  "Não aplicável",
+                  "Abre os grupos de atalhos Gravação e Teleprompter."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Configurações gerais",
+          "tables": [
+            {
+              "headers": ["Configuração", "Valores", "Padrão"],
+              "rows": [
+                [
+                  "Idioma",
+                  "Búlgaro, Alemão, Inglês, Espanhol, Francês, Hindi, Italiano, Japonês, Coreano, Polonês, Português (Brasil), Russo, Vietnamita, Chinês Simplificado, Chinês Tradicional",
+                  "Um sistema ou idioma de navegador compatível; Alternativa inglesa"
+                ],
+                ["Modo tema", "Claro, Escuro, Sistema", "Luz"],
+                ["Verificação ortográfica", "Ativado ou desativado em Avançado", "Ligado"],
+                ["Cor primária", "Paleta predefinida ou seletor de cores personalizado", "#ff5a1f"],
+                ["Cor secundária", "Paleta predefinida ou seletor de cores personalizado", "#6366f1"],
+                ["Raio de canto", "0, 6, 10, 16, 24 px ou Personalizado", "10 pixels"],
+                ["Raio da pílula", "Ligado ou desligado", "Desligado"],
+                ["Tom de superfície", "Padrão, Neutro, Ardósia, Profundo", "Padrão"],
+                ["Escala global da IU", "50%, 75%, 100%, 125%", "100%"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Predefinições de tema",
+          "paragraphs": [
+            "A aplicação de uma predefinição define as cores, o raio do canto, o comportamento da pílula e o tom da superfície juntos. Os controles individuais podem então ser alterados."
+          ],
+          "tables": [
+            {
+              "headers": ["Predefinido", "Primário", "Secundário", "Raio", "Superfície"],
+              "rows": [
+                ["Beam Pôr do sol", "#ff5a1f", "#6366f1", "10 pixels", "Padrão"],
+                ["Violeta cibernética", "#8b5cf6", "#06b6d4", "12px", "Ardósia"],
+                ["Floresta Esmeralda", "#10b981", "#f59e0b", "8 pixels", "Neutro"],
+                ["Veludo Carmesim", "#f43f5e", "#a855f7", "14px", "Profundo"],
+                ["Brisa Oceânica", "#0284c7", "#14b8a6", "10 pixels", "Ardósia"],
+                ["Estúdio Âmbar", "#f59e0b", "#ec4899", "4 pixels", "Neutro"],
+                ["Sakura Flor", "#ec4899", "#8b5cf6", "18 pixels", "Padrão"],
+                ["Precisão de ardósia", "#0ea5e9", "#64748b", "2 pixels", "Ardósia"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Substituições de escala de interface",
+          "paragraphs": [
+            "A barra superior, a barra lateral, as propriedades, os controles do Canvas e a linha do tempo podem usar a escala global ou substituí-la por 50%, 75%, 100% ou 125%. O uso global é representado por uma substituição vazia, portanto, a alteração da escala global continua a afetar essa região."
+          ],
+          "tables": [
+            {
+              "headers": ["Região", "Escolhas"],
+              "rows": [
+                ["Barra superior", "Usar global, 50%, 75%, 100%, 125%"],
+                ["Barra lateral", "Usar global, 50%, 75%, 100%, 125%"],
+                ["Propriedades", "Usar global, 50%, 75%, 100%, 125%"],
+                ["Controles de tela", "Usar global, 50%, 75%, 100%, 125%"],
+                ["Linha do tempo", "Usar global, 50%, 75%, 100%, 125%"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Padrões de atalho",
+          "paragraphs": [
+            "Os conflitos de atalho globais são comparados sem distinção entre maiúsculas e minúsculas. Um atalho global duplicado é rejeitado."
+          ],
+          "tables": [
+            {
+              "headers": ["Categoria", "Ação", "Atalho padrão"],
+              "rows": [
+                ["Gravação", "Iniciar/parar gravação", "Alt+Shift+R"],
+                ["Gravação", "Pausar/Retomar", "Alt+Shift+P"],
+                ["Gravação", "Alternar microfone", "Alt+Shift+M"],
+                ["Gravação", "Alternar câmera", "Alt+Shift+C"],
+                ["Gravação", "Alternar áudio do sistema", "Alt+Shift+A"],
+                ["Teleprompter", "Mostrar/Ocultar", "Alt+Shift+T"],
+                ["Teleprompter", "Pausar/Retomar", "Alt+Shift+O"],
+                ["Teleprompter", "Próxima linha", "Ctrl+Shift+Direita"],
+                ["Teleprompter", "Linha anterior", "Ctrl+Shift+Esquerda"]
+              ]
+            }
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Atalho do editor",
+            "text": "O esquema de preferências também contém o atalho Reproduzir/Pausar do editor, Espaço, mas a subvisualização Atalho do Gravador não o exibe."
+          }
+        },
+        {
+          "title": "Sobre e atualizações",
+          "tables": [
+            {
+              "headers": ["Área", "Ações ou estados disponíveis"],
+              "rows": [
+                [
+                  "Sobre",
+                  "Visualize a versão do aplicativo, copie as informações do sistema, abra o changelog e reinicie o Welcome Tour."
+                ],
+                [
+                  "Atualizar estados",
+                  "Inativo, Verificando, Disponível, Baixando, Baixado, Não disponível, Erro, Não suportado."
+                ],
+                [
+                  "Atualizar ações",
+                  "Verifique, baixe quando disponível, copie uma mensagem de erro e reinicie somente depois que uma atualização for baixada."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Dados de preferência armazenados",
+          "paragraphs": [
+            "O esquema de preferência normalizado é a versão 3. Além dos controles visíveis, ele armazena a conclusão da integração, os dispositivos selecionados, a cor de fundo salva e as predefinições de gradiente e se o aviso de interação foi dispensado."
+          ],
+          "tables": [
+            {
+              "headers": ["Plataforma", "Arquivo de preferências"],
+              "rows": [
+                ["Janelas", "`%USERPROFILE%\\Videos\\Beam\\user\\preferences.json`"],
+                ["macOS", "`~/Movies/Beam/user/preferences.json`"],
+                ["Linux", "`${XDG_VIDEOS_DIR:-~/Videos}/Beam/user/preferences.json`"]
+              ]
+            },
+            {
+              "headers": ["Chave extra", "Objetivo"],
+              "rows": [
+                ["localidade", "Idioma do aplicativo selecionado."],
+                ["região da tela", "Região de gravação personalizada normalizada."],
+                ["screenRegionPreset", "Última predefinição de região selecionada."],
+                ["configurações do teleprompter", "Modo Teleprompter compartilhado e configurações do leitor."],
+                ["câmeraOverlay", "Configurações de sobreposição de câmera compartilhadas com o editor."],
+                ["teleprompterJanela", "Estado da janela do teleprompter."]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/project-manager",
+      "title": "Gerente de Projetos",
+      "description": "Referência para pesquisar, visualizar, selecionar, criar, renomear, abrir, revelar e excluir Beam projetos.",
+      "lead": "Selecione Abrir um projeto existente abaixo de Iniciar gravação para navegar pelos projetos armazenados no computador.",
+      "sections": [
+        {
+          "title": "Ações do projeto",
+          "tables": [
+            {
+              "headers": ["Ação", "Comportamento"],
+              "rows": [
+                ["Pesquisar projetos", "Filtra nomes de projetos sem distinção entre maiúsculas e minúsculas."],
+                ["Selecione projetos", "Entra no modo de seleção para um ou mais projetos."],
+                ["Selecionar tudo", "Seleciona todos os projetos atualmente disponíveis para visualização."],
+                ["Sair da seleção", "Sai do modo de seleção de lote."],
+                ["Novo projeto", "Cria um projeto em branco sem criar uma gravação."],
+                [
+                  "Atualizar projetos",
+                  "Recarrega a lista do armazenamento e relata brevemente os projetos atualizados."
+                ],
+                ["Abrir projeto", "Abre o projeto selecionado no editor."],
+                ["Renomear", "Altera o nome do projeto."],
+                ["Explorar", "Revela a pasta do projeto no gerenciador de arquivos da plataforma."],
+                [
+                  "Excluir",
+                  "Uma exclusão de projeto único solicita confirmação. A exclusão em lote começa diretamente para os projetos selecionados."
+                ],
+                ["Voltar", "Retorna ao HUD do gravador."],
+                ["Criar/Cancelar", "Confirma ou abandona a criação do projeto em branco."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Listar estados",
+          "tables": [
+            {
+              "headers": ["Estado", "O que a interface mostra"],
+              "rows": [
+                ["Carregando", "Cartões de projeto esqueleto enquanto o armazenamento é lido."],
+                ["Erro", "Um estado de erro com Tente novamente."],
+                ["Vazio", "Nenhum projeto quando o armazenamento não contém nenhum."],
+                ["Nenhum resultado de pesquisa", "Uma mensagem dedicada quando o filtro não corresponde a nada."],
+                [
+                  "Data desconhecida",
+                  "Texto substituto quando os metadados de tempo do projeto não estão disponíveis."
+                ],
+                ["Atual", "Marca o projeto atualmente aberto."],
+                ["Selecionado", "Marca um projeto incluído na seleção atual."],
+                ["Lista grande", "Os cartões são virtualizados para que apenas o intervalo visível seja renderizado."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Nomes, pastas e sessões",
+          "paragraphs": [
+            "Novas gravações recebem nomes gerados como Clever Comet ou Rapid Signal. Um sufixo numérico é adicionado quando já existe um nome gerado. Um projeto é uma pasta que pode conter diversas sessões de gravação e suas trilhas de mídia separadas."
+          ],
+          "tables": [
+            {
+              "headers": ["Plataforma", "Raiz do projeto"],
+              "rows": [
+                ["Janelas", "`%USERPROFILE%\\Videos\\Beam\\user\\projects`"],
+                ["macOS", "`~/Movies/Beam/user/projects`"],
+                ["Linux", "`${XDG_VIDEOS_DIR:-~/Videos}/Beam/user/projects`"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Visualização e emblemas",
+          "paragraphs": [
+            "Beam prefere o `thumbnail.webp` persistente. Se estiver faltando, Beam pode gerar uma miniatura WebP a partir da fonte de visualização disponível. Passar o mouse sobre um projeto reproduz sua gravação de tela sem som, automaticamente e em loop; a rolagem cancela a visualização instantânea e interrompe a reprodução."
+          ],
+          "tables": [
+            {
+              "headers": ["Distintivo", "Significado"],
+              "rows": [
+                ["Monitorar", "O projeto contém uma gravação de tela."],
+                ["Vídeo", "O projeto contém imagens de câmera."],
+                ["Legendas", "O projeto contém legendas ou uma camada de texto."]
+              ]
+            }
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Escopo do selo",
+            "text": "O gerente de projeto atual não mostra emblemas separados de microfone ou áudio do sistema."
+          }
+        },
+        {
+          "title": "Exclusão em lote",
+          "paragraphs": [
+            "Uma exclusão de projeto único pede confirmação. A exclusão em lote começa diretamente no modo de seleção e exclui projetos sequencialmente, em vez de iniciar todas as operações do sistema de arquivos de uma só vez."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/permissions-privacy",
+      "title": "Permissões e privacidade",
+      "description": "Requisitos de plataforma e comportamento de privacidade para captura de tela, áudio, câmera e interação.",
+      "lead": "Beam solicita recursos protegidos apenas por meio dos caminhos do sistema operacional necessários às fontes selecionadas. A gravação da interação é opcional e não armazena texto digitado.",
+      "sections": [
+        {
+          "title": "Janelas",
+          "bullets": [
+            "A captura de tela e janela usa o Windows Graphics Capture.",
+            "Os recursos de cursor e clique dependem do que o caminho de captura do Windows expõe.",
+            "O acesso à interação não requer o auxiliar Linux Polkit."
+          ]
+        },
+        {
+          "title": "macOS",
+          "tables": [
+            {
+              "headers": ["Capacidade", "Requisito"],
+              "rows": [
+                ["Captura de tela, janela ou aplicativo", "Permissão ScreenCaptureKit e gravação de tela."],
+                ["Acesso à interação", "Permissão de acessibilidade CoreGraphics."],
+                ["Captura direta de MP4", "macOS 15 ou posterior."],
+                [
+                  "Áudio do sistema Chromium",
+                  "macOS 13 ou posterior; `NSAudioCaptureUsageDescription` é necessário no macOS 14.2."
+                ],
+                ["Microfone e câmera", "As permissões de privacidade correspondentes do macOS."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Linux",
+          "tables": [
+            {
+              "headers": ["Requisito", "Objetivo ou restrição"],
+              "rows": [
+                [
+                  "Portal de desktop XDG v2 ou posterior",
+                  "Exibe o seletor de origem do sistema e obtém consentimento de gravação."
+                ],
+                ["PipeWire", "Carrega a tela selecionada e os fluxos de áudio do sistema nativo."],
+                ["FFmpeg mais um codificador MP4 compatível", "Codifica a sessão capturada."],
+                ["Beam auxiliar de entrada", "Fornece metadados opcionais de atalho de teclado e clique do mouse."],
+                ["Polkit / pkexec e corretor", "Pode ser necessário autorizar e operar o auxiliar de entrada."],
+                [
+                  "Fonte de portal único",
+                  "Uma tela ou janela é selecionada para a sessão; a captura de região não está disponível."
+                ]
+              ]
+            }
+          ],
+          "paragraphs": [
+            "Os atalhos de teclado e cliques do mouse podem ter disponibilidade diferente dependendo dos dispositivos de entrada acessíveis. A captura de interação do Linux sempre informa que o texto digitado não é gravado."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Beam janelas em captura de tela inteira",
+            "text": "Beam não pode ocultar suas próprias janelas de uma captura de tela inteira do Linux. O modo de tela ainda é recomendado; organize Beam antes de confirmar a seleção do portal."
+          }
+        },
+        {
+          "title": "Privacidade de interação",
+          "bullets": [
+            "A captura de interação é opcional.",
+            "Ele é executado apenas enquanto uma sessão de gravação está ativa.",
+            "Ele armazena metadados de cliques suportados e tokens de atalho seguros.",
+            "Nunca armazena o texto digitado pelo usuário."
+          ]
+        },
+        {
+          "title": "Isolamento de mídia e limites de falha",
+          "paragraphs": [
+            "Câmera, microfone e áudio do sistema são armazenados como trilhas separadas ou sidecars, quando houver suporte. Fora do Linux, o áudio do sistema usa captura de mídia de exibição do Chromium. Electron concede acesso à mídia apenas para renderizadores de aplicativos confiáveis. Uma câmera informada como indisponível durante a preparação pode ser omitida enquanto a captura continua; outros erros de câmera ou sidecar e falha de um microfone selecionado ou fonte de áudio do sistema podem interromper a inicialização da gravação."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Configuração detalhada",
+            "text": "Use a [referência de suporte da plataforma](/platforms) para configuração e solução de problemas do sistema operacional."
+          }
+        }
+      ]
+    }
+  ]
+}

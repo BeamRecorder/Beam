@@ -3,6 +3,7 @@ export interface DocsScreenshotContent {
   alt: string;
   caption?: string;
   aspectRatio?: string;
+  hidden?: boolean;
 }
 
 export interface DocsNoticeContent {

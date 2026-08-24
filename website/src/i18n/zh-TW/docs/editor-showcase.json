@@ -1,0 +1,24 @@
+{
+  "pages": [
+    {
+      "slug": "editor/showcase",
+      "title": "錄製專案展示",
+      "description": "檢視錄製的 Beam 會話在影片編輯器中的呈現方式。",
+      "lead": "錄製的會話會作為完整編排開啟，其中捕獲的媒體已經排列好，可以繼續編輯。",
+      "sections": [
+        {
+          "title": "準備編輯的專案",
+          "paragraphs": [
+            "畫布顯示編排後的輸出，而時間線則讓錄製媒體和編輯圖層保持可見，便於調整時序、構圖、字幕、音訊和匯出。"
+          ],
+          "screenshot": {
+            "path": "editor/showcase.webp",
+            "alt": "Beam 編輯器顯示包含畫布和時間線的錄製專案",
+            "caption": "準備調整時序、構圖、字幕、音訊和匯出的錄製專案。",
+            "aspectRatio": "1586 / 992"
+          }
+        }
+      ]
+    }
+  ]
+}

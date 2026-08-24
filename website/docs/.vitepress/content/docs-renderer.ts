@@ -90,7 +90,7 @@ const renderSection = (section: DocsSectionContent, depth = 2): string => {
   if (section.notice) {
     lines.push(`::: ${section.notice.kind} ${section.notice.title}`, section.notice.text, ':::', '');
   }
-  if (section.screenshot) lines.push(renderScreenshot(section.screenshot), '');
+  if (section.screenshot && !section.screenshot.hidden) lines.push(renderScreenshot(section.screenshot), '');
   for (const subsection of section.subsections ?? []) lines.push(renderSection(subsection, depth + 1));
   return lines.join('\n');
 };
@@ -122,6 +122,8 @@ export const renderDocsHome = (home: DocsHomeContent): string => {
     '  image:',
     '    src: /favicon.webp',
     `    alt: ${quote(home.hero.imageAlt)}`,
+    '    width: 192',
+    '    height: 192',
     '  actions:',
   ];
   for (const action of home.hero.actions) {

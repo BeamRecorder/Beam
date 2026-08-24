@@ -1,5 +1,5 @@
 import type { FAQPage, Question, SoftwareApplication, WebSite, WithContext } from 'schema-dts';
-import { faqItems, type FaqItem } from './faq-content';
+import type { FaqItem } from './faq-content';
 import { absoluteSiteUrl, RELEASES_URL, REPOSITORY_URL, SITE_NAME, SITE_URL, SOCIAL_IMAGE_PATH } from './site';
 
 export type WebsiteJsonLd = WithContext<WebSite> | WithContext<SoftwareApplication> | WithContext<FAQPage>;
@@ -28,7 +28,7 @@ export const createHomeJsonLd = (): readonly [WithContext<WebSite>, WithContext<
   },
 ];
 
-export const createFaqJsonLd = (items: readonly FaqItem[] = faqItems): WithContext<FAQPage> => ({
+export const createFaqJsonLd = (items: readonly FaqItem[]): WithContext<FAQPage> => ({
   '@context': 'https://schema.org',
   '@type': 'FAQPage',
   mainEntity: items.map(({ question, answer }): Question => ({

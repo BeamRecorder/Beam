@@ -11,10 +11,37 @@ const props = defineProps<{
 }>();
 
 const href = computed(() => withBase(props.link));
-const backdropUrl = withBase('/showcase/amber-l.jpg');
-const screenshotUrl = computed(() =>
-  withBase(props.visual === 'recorder' ? '/showcase/Beam-showcase-hud.png' : '/showcase/Beam-showcase-editor.png'),
-);
+const backdropUrl = withBase('/showcase/amber-800.webp');
+const screenshot = computed(() => {
+  const visual =
+    props.visual === 'recorder'
+      ? {
+          src: '/showcase/Beam-showcase-hud-160.webp',
+          sources: [
+            ['/showcase/Beam-showcase-hud-160.webp', 160],
+            ['/showcase/Beam-showcase-hud-320.webp', 320],
+          ] as const,
+          sizes: '160px',
+          width: 160,
+          height: 240,
+        }
+      : {
+          src: '/showcase/Beam-showcase-editor-400.webp',
+          sources: [
+            ['/showcase/Beam-showcase-editor-400.webp', 400],
+            ['/showcase/Beam-showcase-editor-800.webp', 800],
+          ] as const,
+          sizes: '(max-width: 720px) 90vw, 326px',
+          width: 400,
+          height: 250,
+        };
+
+  return {
+    ...visual,
+    src: withBase(visual.src),
+    srcset: visual.sources.map(([path, width]) => `${withBase(path)} ${width}w`).join(', '),
+  };
+});
 </script>
 
 <template>
@@ -35,7 +62,16 @@ const screenshotUrl = computed(() =>
         class="docs-product-card__backdrop"
         :style="{ backgroundImage: `url(${backdropUrl})` }"
       />
-      <img aria-hidden="true" class="docs-product-card__screenshot" :src="screenshotUrl" alt="" />
+      <img
+        aria-hidden="true"
+        class="docs-product-card__screenshot"
+        :src="screenshot.src"
+        :srcset="screenshot.srcset"
+        :sizes="screenshot.sizes"
+        :width="screenshot.width"
+        :height="screenshot.height"
+        alt=""
+      />
     </span>
   </a>
 </template>

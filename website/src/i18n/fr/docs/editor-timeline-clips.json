@@ -1,0 +1,476 @@
+{
+  "pages": [
+    {
+      "slug": "editor/capabilities/timeline",
+      "title": "Montage sur la timeline",
+      "description": "Référence complète des outils de timeline, des pistes, de la sélection, de l'aimantation, du rognage, du découpage, des actions du presse-papiers et des images figées.",
+      "lead": "La timeline réunit les pistes visuelles, d'annotation, de zoom et audio sur une même tête de lecture. Les règles de montage dépendent de la sélection, du type de clip, de la propriété du projet et de la durée disponible.",
+      "sections": [
+        {
+          "title": "Ajouter des médias et des calques",
+          "tables": [
+            {
+              "headers": ["Élément", "Méthode d'ajout", "Durée initiale ou comportement"],
+              "rows": [
+                [
+                  "Vidéo",
+                  "Ajouter → Vidéo ou glisser-déposer",
+                  "Durée de la ressource divisée par sa vitesse de lecture initiale."
+                ],
+                ["Image", "Ajouter → Image ou glisser-déposer", "5 secondes."],
+                [
+                  "Audio",
+                  "Ajouter → Audio ou glisser-déposer",
+                  "Durée de la ressource divisée par sa vitesse de lecture initiale."
+                ],
+                [
+                  "Texte",
+                  "Ajouter → Texte ou cliquer sur la piste des sous-titres textuels",
+                  "Préférence de durée des sous-titres enregistrée ; valeur de secours de 2 secondes et minimum de 200 ms."
+                ],
+                ["Flou", "Ajouter → Flou", "5 secondes."],
+                [
+                  "Zoom",
+                  "Cliquer sur un point disponible de la piste des zooms",
+                  "Préférence de durée des zooms enregistrée ou valeur de secours de 1,2 seconde ; ajustée à l'espace avec un minimum de 200 ms."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Contrôles de la timeline",
+          "tables": [
+            {
+              "headers": ["Contrôle", "Plage ou raccourci", "Comportement"],
+              "rows": [
+                [
+                  "Split",
+                  "S",
+                  "Nécessite un clip sélectionné et une tête de lecture strictement à l'intérieur de celui-ci."
+                ],
+                [
+                  "Magnet",
+                  "Activé par défaut",
+                  "S'aligne sur le début/la fin de la timeline, les bords des clips, les bords des zooms et la tête de lecture lorsque l'opération le permet. Le seuil dérivé de la règle ne descend jamais sous 20 ms."
+                ],
+                ["Lecture / Pause", "Space", "Ignoré lorsque le focus se trouve dans un champ modifiable."],
+                ["Reculer / Avancer", "Boutons de la barre d'outils", "Va au début ou à la fin de la timeline."],
+                ["Qualité de lecture", "Full, Half, Quarter", "Modifie uniquement la résolution de l'aperçu."],
+                [
+                  "Zoom de la timeline",
+                  "100%–3200%",
+                  "Les boutons avancent par pas de 50 sous 500 %, de 100 sous 1000 %, puis de 250 ; Ctrl + molette utilise des pas de 25/50/100. La valeur est enregistrée après modification."
+                ],
+                ["Affichage du temps", "MM:SS or HH:MM:SS", "Change de format lorsque la durée atteint une heure."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Sélection",
+          "tables": [
+            {
+              "headers": ["Geste", "Résultat"],
+              "rows": [
+                ["Cliquer sur un clip", "Sélectionne ce clip comme élément principal."],
+                ["Cliquer sur un autre clip", "Remplace la sélection actuelle de clips."],
+                [
+                  "Cliquer sur l'en-tête d'une piste",
+                  "Sélectionne tous les clips de la piste ; le clip le plus proche de la tête de lecture devient principal."
+                ],
+                [
+                  "Ctrl, Cmd ou Maj + en-tête de piste",
+                  "Ajoute les clips de cette piste à la sélection actuelle de pistes ou les en retire."
+                ],
+                [
+                  "Cliquer sur un élément du canevas",
+                  "Sélectionne le clip, le sous-titre, le flou, le curseur ou la zone d'écran correspondante prise en charge."
+                ],
+                ["Cliquer dans un espace vide", "Efface la sélection incompatible lorsque l'outil actif l'autorise."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Déplacer, rogner et gérer les calques",
+          "bullets": [
+            "Faites glisser un clip pour modifier son début dans la timeline ; les fichiers associés à l'enregistrement se déplacent ensemble jusqu'à leur dissociation.",
+            "Faites glisser la poignée de début ou de fin pour rogner la plage active. Un clip doit rester long d'au moins 40 ms et les clips partageant un identifiant de groupe sont rognés ensemble.",
+            "Faire glisser un média au-delà de la fin actuelle étend la durée de la composition.",
+            "Faites glisser les en-têtes des pistes visuelles pour modifier l'ordre des calques.",
+            "Déplacer un clip visuel vers une autre ligne visuelle peut également réordonner les pistes visuelles.",
+            "Les clips désactivés restent dans la timeline, mais ne contribuent ni à l'aperçu ni à l'export.",
+            "Une modification sur une sélection multiple ne s'applique qu'aux clips sélectionnés compatibles avec la propriété du clip principal."
+          ]
+        },
+        {
+          "title": "Presse-papiers et suppression",
+          "tables": [
+            {
+              "headers": ["Action", "Disponibilité", "Cas limite"],
+              "rows": [
+                [
+                  "Copier",
+                  "Un clip ou zoom principal sélectionné pris en charge",
+                  "Copie uniquement l'élément principal, même lorsque plusieurs clips sont sélectionnés ; la charge utile reste associée à son projet."
+                ],
+                [
+                  "Coller",
+                  "Un projet est chargé et les données du presse-papiers sont compatibles",
+                  "Les éléments copiés depuis un autre projet sont refusés."
+                ],
+                [
+                  "Supprimer",
+                  "Éléments de timeline sélectionnés pris en charge",
+                  "Supprime l'élément sélectionné de la composition."
+                ],
+                [
+                  "Dissocier",
+                  "Un élément sélectionné possède un lien vers un fichier associé à l'enregistrement",
+                  "Après dissociation, il peut être déplacé indépendamment."
+                ],
+                [
+                  "Activer / Désactiver",
+                  "Clips pris en charge",
+                  "Les médias désactivés sont ignorés par la lecture et l'export."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Transitions de clip et de canevas",
+          "tables": [
+            {
+              "headers": ["Propriété", "Valeurs", "Valeur par défaut ou contrainte"],
+              "rows": [
+                ["Côté", "Entry and Exit", "Configurées indépendamment."],
+                [
+                  "Préréglage visuel",
+                  "None, Fade, Slide left, Slide right, Slide up, Slide down, Zoom in, Zoom out, Blur",
+                  "Disponible pour les clips visuels et les transitions du canevas."
+                ],
+                [
+                  "Préréglage audio",
+                  "None or Fade",
+                  "Les autres préréglages de transition ne sont pas disponibles pour l'audio."
+                ],
+                ["Durée", "1–5000 ms", "500 ms ; plafonnée par la durée du clip moins la transition du côté opposé."],
+                ["Courbe visuelle", "1×–5×", "3× ; non affichée pour les transitions audio."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Image figée",
+          "paragraphs": [
+            "L'action Image figée immobilise la vidéo sélectionnée à la tête de lecture et prolonge la partie fixe comme élément de la timeline."
+          ],
+          "tables": [
+            {
+              "headers": ["Condition requise", "Règle"],
+              "rows": [
+                ["Type de clip", "Clip d'écran, de vidéo ou de webcam activé contenant un média vidéo."],
+                ["Sélection", "Un clip compatible doit être sélectionné."],
+                ["Tête de lecture", "De début + 40 ms à fin − 40 ms, bornes incluses."],
+                ["Segment figé", "1000 ms."],
+                [
+                  "Médias liés",
+                  "Les clips liés sont découpés ensemble et le segment figé peut rester groupé avec son fichier audio associé."
+                ],
+                ["Menu", "Disponible dans le menu contextuel du clip pris en charge."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Échecs des médias importés",
+          "paragraphs": [
+            "Les fichiers déposés sont validés avant l'importation. Beam signale les extensions ou codecs non pris en charge, les médias invalides ou vides, les échecs de décodage, les sources non locales et les échecs d'importation du projet. Si une vidéo importée contient un audio non pris en charge, la vidéo peut être ajoutée tandis que son audio est ignoré."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Une seule importation à la fois",
+            "text": "Une nouvelle importation par glisser-déposer est refusée lorsqu'une autre importation de média est déjà en cours."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/clips",
+      "title": "Propriétés des clips",
+      "description": "Référence complète des propriétés des clips visuels, webcam, flou, audio, texte et sous-titres clavier.",
+      "lead": "Le panneau Clip suit la sélection principale. Les contrôles communs apparaissent uniquement pour les types de clips compatibles, et une modification multiple ne se propage qu'aux clips sélectionnés compatibles.",
+      "sections": [
+        {
+          "title": "Aucune sélection",
+          "paragraphs": [
+            "Lorsqu'aucun clip n'est sélectionné, le panneau affiche un état vide explicatif. Sélectionnez un élément dans le canevas ou la timeline pour afficher ses propriétés."
+          ],
+          "screenshot": {
+            "path": "editor/clip-empty.webp",
+            "alt": "Panneau Clip de Beam sans clip sélectionné",
+            "caption": "Le panneau Clip reste vide jusqu'à la sélection d'un élément compatible de la timeline ou du canevas.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Types de clips",
+          "tables": [
+            {
+              "headers": ["Type de clip", "Propriétés exposées"],
+              "rows": [
+                [
+                  "Écran / Vidéo",
+                  "Mise en page visuelle, cadrage, transformation, apparence, vitesse de lecture, transitions, activation, suppression et dissociation lorsqu'il est lié."
+                ],
+                [
+                  "Image",
+                  "Mise en page visuelle, cadrage, transformation, apparence, transitions, activation et suppression."
+                ],
+                ["Webcam", "Contrôles visuels communs, mise en page fractionnée et Réagir au zoom."],
+                [
+                  "Flou",
+                  "Contrôles d'effet, de forme, d'intensité, d'adoucissement, de rayon, de teinte et de couleur."
+                ],
+                [
+                  "Système / Microphone / Audio importé",
+                  "Volume du clip, transitions Fondu d'entrée et de sortie, activation et suppression."
+                ],
+                [
+                  "Sous-titre textuel",
+                  "Contenu du texte, typographie, alignement, couleur, contour, extrusion, arrière-plan et ombre."
+                ],
+                ["Sous-titre clavier", "Style des sous-titres et Suivre le curseur."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Mise en page visuelle commune",
+          "tables": [
+            {
+              "headers": ["Propriété", "Valeurs ou plage", "Comportement"],
+              "rows": [
+                [
+                  "Mise en page",
+                  "Floating top-left, top-right, bottom-left, bottom-right; Floating center; Fullscreen",
+                  "La webcam prend également en charge la séparation à gauche, à droite, en haut et en bas."
+                ],
+                [
+                  "Cadrage",
+                  "Fill, Fit, Square, Portrait 9:16, Landscape 16:9, Squircle, Circle",
+                  "Contrôle le recadrage et la présentation du masque."
+                ],
+                ["Position X / Y", "−300 % à 300 %", "Déplace le visuel sur le canevas."],
+                ["Largeur", "2%–400%", "La hauteur reste proportionnelle lorsque seule la largeur change."],
+                ["Rayon des angles", "None, 8, 16, 24 px, or Custom 0–200 px", "Arrondit le masque visuel."],
+                ["Miroir", "Horizontal and Vertical", "Retourne le visuel rendu."],
+                [
+                  "Vitesse de lecture",
+                  "0.25×–4×; presets 0.5×, 1×, 1.5×, 2×, 3×",
+                  "Disponible pour les clips d'écran, de vidéo et de webcam."
+                ],
+                [
+                  "Activer / Désactiver",
+                  "On or Off",
+                  "Les clips désactivés restent dans la timeline, mais ne sont pas rendus."
+                ],
+                [
+                  "Transitions",
+                  "Ouvrir depuis l'en-tête des propriétés",
+                  "Les transitions d'entrée et de sortie sont stockées par clip."
+                ],
+                ["Supprimer", "Action de l'en-tête des propriétés", "Supprime le clip sélectionné."],
+                [
+                  "Dissocier",
+                  "Disponible pour les fichiers associés liés",
+                  "Sépare le clip des déplacements synchronisés de la timeline."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Ombre, bordure et cadre",
+          "tables": [
+            {
+              "headers": ["Groupe", "Propriété", "Valeurs ou plage"],
+              "rows": [
+                ["Ombre", "Préréglage", "None, Soft, Medium, Strong, Custom"],
+                ["Ombre", "Mode", "Solid or Adaptive"],
+                ["Ombre", "Flou personnalisé", "4–96 px"],
+                ["Ombre", "Direction", "All, Bottom, Bottom-right, Top-left"],
+                ["Bordure", "Activée", "On or Off"],
+                ["Bordure", "Couleur", "Sélecteur de couleur"],
+                ["Bordure", "Largeur", "1–32 px"],
+                ["Cadre", "Style", "None, Safari, Windows 95"],
+                ["Cadre", "Titre", "Titre de cadre personnalisé"],
+                ["Cadre", "Échelle du chrome", "50%–200%"],
+                ["Cadre", "Contrôles spécifiques", "Menu, barre de défilement ou couleurs selon le style du cadre"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Recadrer un clip visuel",
+          "paragraphs": [
+            "Le recadrage est un éditeur direct du canevas plutôt qu'un groupe numérique du panneau Clip."
+          ],
+          "steps": [
+            "Sélectionnez exactement un clip d'écran, de vidéo, d'image ou de webcam.",
+            "Sélectionnez Recadrage dans la barre d'outils du canevas.",
+            "Déplacez ou redimensionnez directement le rectangle de recadrage sur le visuel sélectionné.",
+            "Sélectionnez OK pour enregistrer le recadrage normalisé sur ce clip."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Sélection unique requise",
+            "text": "Le recadrage est indisponible sans une sélection visuelle compatible unique et ne fonctionne pas sur une sélection multiple."
+          }
+        },
+        {
+          "title": "Valeurs visuelles initiales",
+          "tables": [
+            {
+              "headers": ["Clip", "Transformation et cadrage", "Angles et ombre"],
+              "rows": [
+                [
+                  "Écran",
+                  "Canevas complet",
+                  "Aucun rayon d'angle sans arrière-plan ; ombre Moyenne, flou de 40 px, direction bas."
+                ],
+                [
+                  "Vidéo / Image",
+                  "Canevas complet",
+                  "Petit rayon d'angle ; ombre Moyenne, flou de 20 px, toutes les directions."
+                ],
+                [
+                  "Nouvelle webcam",
+                  "x 72 %, y 72 %, largeur 24 %, hauteur 24 % ; Squircle",
+                  "Les valeurs par défaut d'apparence de la webcam sont ensuite appliquées."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Clips de webcam",
+          "screenshot": {
+            "path": "editor/webcam-properties.webp",
+            "alt": "Propriétés Beam d'un clip de webcam sélectionné",
+            "caption": "Les clips de webcam ajoutent des mises en page fractionnées et un comportement de réaction au zoom aux contrôles visuels communs.",
+            "aspectRatio": "199 / 326"
+          },
+          "tables": [
+            {
+              "headers": ["Propriété", "Valeurs", "Valeur par défaut ou contrainte"],
+              "rows": [
+                [
+                  "Mise en page fractionnée",
+                  "Left, Right, Top, Bottom",
+                  "Nécessite un clip d'écran lié. Sinon : « Aucun enregistrement d'écran correspondant n'est disponible à ce point de la timeline. »"
+                ],
+                ["Ratio de séparation", "20%–80%", "50%"],
+                ["Marge interne de la séparation", "0%–8%", "0%"],
+                ["Réagir au zoom", "On or Off", "On"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Clips de flou",
+          "tables": [
+            {
+              "headers": ["Propriété", "Valeurs ou plage", "Comportement conditionnel"],
+              "rows": [
+                ["Préréglage léger", "Blur", "Intensité 30, adoucissement 14, teinte 0."],
+                ["Préréglage confidentialité", "Pixelated", "Intensité 72, adoucissement 2, teinte 0."],
+                ["Préréglage fort", "Opaque", "Intensité 100, adoucissement 0, teinte 0, couleur #000000."],
+                ["Effet", "Blur, Frosted, Pixelated, Opaque", "Modifie les contrôles qui restent visibles."],
+                ["Forme", "Rectangle, Square, Circle", "Le cercle masque le rayon des angles."],
+                ["Intensité", "0%–100%", "Masqué pour Opaque."],
+                ["Adoucissement des bords", "0%–100%", "Contrôle l'adoucissement."],
+                ["Rayon des angles", "0%–100%", "Masqué pour Cercle."],
+                [
+                  "Intensité de la teinte",
+                  "0%–100%",
+                  "Dépoli uniquement ; sélectionner Dépoli applique au moins 24 %."
+                ],
+                ["Couleur", "Sélecteur de couleur", "Dépoli et Opaque uniquement."]
+              ]
+            }
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Effet de confidentialité",
+            "text": "L'effet est intégré à la vidéo exportée. Augmentez l'intensité ou utilisez Opaque pour les informations sensibles."
+          }
+        },
+        {
+          "title": "Volume d'un clip audio",
+          "tables": [
+            {
+              "headers": ["Propriété", "Plage", "Valeur par défaut"],
+              "rows": [["Volume", "0%–200%", "100%"]]
+            }
+          ],
+          "paragraphs": [
+            "Ce volume au niveau du clip s'applique aux clips audio système, microphone ou importés sélectionnés. Les contrôles de volume de la composition et des rôles sont documentés sur la page Audio."
+          ]
+        },
+        {
+          "title": "Sous-titres texte et clavier",
+          "tables": [
+            {
+              "headers": ["Propriété", "Valeurs ou plage", "Valeur par défaut ou règle"],
+              "rows": [
+                [
+                  "Contenu",
+                  "Texte personnalisé ou phrase générée / étape de clavier",
+                  "Le texte personnalisé ne se propage pas dans une sélection multiple."
+                ],
+                [
+                  "Police",
+                  "Rechercher des polices installées ou importer une police",
+                  "Enregistré avec le style des sous-titres."
+                ],
+                ["Style", "Bold, Italic, Strike-through", "Options indépendantes."],
+                ["Alignement", "Left, Center, Right", "Alignement du texte des sous-titres."],
+                ["Couleur", "Sélecteur de couleur", "Couleur de remplissage du texte."],
+                ["Hauteur de ligne", "0.8–2.0", "Valeur du style des sous-titres."],
+                ["Espacement des lettres", "−5 à 20 px", "Valeur du style des sous-titres."],
+                [
+                  "Taille de police",
+                  "12–256 px",
+                  "Préférence de sous-titres manuels avec valeur de création de secours de 42 px ; valeur de secours du panneau de 36 px pour le texte / 28 px pour le clavier ; les sous-titres IA utilisent 36 px."
+                ],
+                ["Retour à la ligne", "On or Off", "On"],
+                ["Contour", "0–30 px", "Largeur de contour facultative."],
+                [
+                  "Couleur du contour",
+                  "Sélecteur de couleur",
+                  "Utilisée lorsque la largeur du contour est supérieure à zéro."
+                ],
+                ["Extrusion", "0–20 px", "Effet de profondeur facultatif."],
+                ["Flou de l'arrière-plan", "0–48 px", "Floute l'arrière-plan derrière le sous-titre."],
+                ["Flou de l'ombre du texte", "0–50 px", "Direction : toutes, bas, bas à droite, haut à gauche."],
+                [
+                  "Couleur de l'ombre du texte",
+                  "Sélecteur de couleur",
+                  "Appliquée avec le flou et la direction d'ombre configurés."
+                ],
+                [
+                  "Suivre le curseur",
+                  "On or Off",
+                  "Sous-titres clavier uniquement ; ne se propage jamais dans une sélection multiple."
+                ]
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

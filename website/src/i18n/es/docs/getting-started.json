@@ -4,7 +4,7 @@
       "slug": "getting-started",
       "title": "Primeros pasos",
       "description": "Instala Beam, concede los permisos necesarios y crea tu primera grabación.",
-      "lead": "Beam combina un grabador enfocado y un editor de vídeo no destructivo en una única aplicación de escritorio.",
+      "lead": "Beam combina un grabador especializado y un editor de vídeo no destructivo en una única aplicación de escritorio.",
       "sections": [
         {
           "title": "Instalar Beam",
@@ -20,7 +20,7 @@
         {
           "title": "Crear tu primera grabación",
           "steps": [
-            "Abre Beam y elige Pantalla o Ventana en el HUD del grabador.",
+            "Abre Beam y elige Screen o Window en el HUD del grabador.",
             "Selecciona una pantalla, una ventana de aplicación o una región personalizada.",
             "Elige las fuentes de micrófono, audio del sistema y cámara que necesites.",
             "Inicia la grabación y usa la barra del grabador para pausarla, reanudarla o detenerla.",
@@ -28,6 +28,7 @@
           ],
           "screenshot": {
             "path": "getting-started/first-recording.webp",
+            "hidden": true,
             "alt": "Grabador de Beam preparado para una primera grabación",
             "caption": "Selecciona las fuentes de captura y multimedia antes de empezar."
           }
@@ -47,7 +48,7 @@
           "title": "Seguir aprendiendo",
           "bullets": [
             "Aprende a usar la [interfaz del grabador](/recorder/interface).",
-            "Consulta todas las [funciones del grabador](/recorder/capabilities).",
+            "Consulta todas las [funciones del grabador](/recorder/capabilities/).",
             "Conoce la [interfaz del editor de vídeo](/editor/interface).",
             "Prepara el archivo final con [exportación y uso compartido](/export)."
           ]
@@ -63,10 +64,11 @@
         {
           "title": "Abrir los controles de actualización",
           "paragraphs": [
-            "Desde el HUD del grabador, abre Ajustes y busca la sección Actualizaciones. Los mismos controles están disponibles en Ajustes dentro del editor de vídeo. Las versiones de desarrollo indican que las actualizaciones solo están disponibles en la aplicación instalada."
+            "Desde el HUD del grabador, abre Settings y busca la sección Updates. Los mismos controles están disponibles en Settings dentro del editor de vídeo. Las versiones de desarrollo indican que las actualizaciones solo están disponibles en la aplicación instalada."
           ],
           "screenshot": {
             "path": "getting-started/update-controls.webp",
+            "aspectRatio": "16 / 9",
             "alt": "Ajustes de Beam mostrando los controles de actualización",
             "caption": "El panel de actualización muestra la versión instalada y las acciones disponibles."
           }
@@ -74,21 +76,21 @@
         {
           "title": "Instalar una actualización",
           "steps": [
-            "Elige Buscar actualizaciones.",
-            "Cuando haya una versión disponible, revisa su registro de cambios y elige Descargar.",
+            "Elige Check for updates.",
+            "Cuando haya una versión disponible, revisa su registro de cambios y elige Download.",
             "Mantén Beam abierto mientras el indicador de progreso descarga la actualización.",
-            "Cuando la actualización esté lista, guarda tu trabajo y elige Reiniciar para cerrar Beam y ejecutar el instalador."
+            "Cuando la actualización esté lista, guarda tu trabajo y elige Restart para cerrar Beam y ejecutar el instalador."
           ],
           "notice": {
             "kind": "info",
             "title": "Las actualizaciones siguen bajo tu control",
-            "text": "Beam no descarga automáticamente una actualización disponible ni la instala cuando sales normalmente. La instalación comienza solo después de elegir Reiniciar desde el estado descargado."
+            "text": "Beam no descarga automáticamente una actualización disponible ni la instala cuando cierras la aplicación normalmente. La instalación comienza solo después de elegir Restart cuando la actualización ya se ha descargado."
           }
         },
         {
           "title": "Si falla el actualizador",
           "paragraphs": [
-            "Usa Copiar error para conservar el mensaje de diagnóstico y descarga manualmente el paquete correcto desde la [última versión de Beam](https://github.com/BeamRecorder/Beam/releases/latest). Tus proyectos se almacenan por separado de la instalación de la aplicación."
+            "Usa Copy error para conservar el mensaje de diagnóstico y descarga manualmente el paquete correcto desde la [última versión de Beam](https://github.com/BeamRecorder/Beam/releases/latest). Tus proyectos se almacenan por separado de la instalación de la aplicación."
           ]
         }
       ]

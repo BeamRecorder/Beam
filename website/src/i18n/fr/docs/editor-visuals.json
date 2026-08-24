@@ -1,0 +1,336 @@
+{
+  "pages": [
+    {
+      "slug": "editor/capabilities/canvas",
+      "title": "Canevas",
+      "description": "Référence complète de la taille de sortie, des arrière-plans, du flou, de la suppression de l'arrière-plan, des dégradés et du filigrane.",
+      "lead": "Le canevas contrôle la zone de sortie autour et derrière les clips visuels. Les réglages d'arrière-plan et de filigrane s'appliquent à toute la composition.",
+      "sections": [
+        {
+          "title": "Panneau du canevas",
+          "screenshot": {
+            "path": "editor/canvas-panel.webp",
+            "alt": "Propriétés du canevas Beam avec les onglets d'arrière-plan et les contrôles de présentation",
+            "caption": "Le canevas regroupe les arrière-plans média, couleur et dégradé avec les contrôles de présentation et de marque.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Canevas de sortie",
+          "tables": [
+            {
+              "headers": ["Propriété", "Valeurs", "Valeur par défaut ou comportement"],
+              "rows": [
+                ["Taille native", "Largeur × hauteur", "1920×1080"],
+                ["16:9", "1920×1080", "Préréglage par défaut."],
+                ["9:16", "1080×1920", "Préréglage portrait."],
+                ["1:1", "1080×1080", "Préréglage carré."],
+                ["4:5", "1080×1350", "Préréglage portrait."],
+                ["3:4", "1080×1440", "Préréglage portrait."],
+                ["4:3", "1440×1080", "Préréglage paysage."],
+                ["21:9", "2520×1080", "Préréglage ultra-large."],
+                [
+                  "Visibilité de l'arrière-plan",
+                  "Visible or Remove Background",
+                  "Arrière-plan masqué dans le canevas par défaut."
+                ],
+                ["Flou de l'arrière-plan", "0%–100%", "Floute l'arrière-plan sélectionné, pas le sujet d'une vidéo."],
+                [
+                  "Transitions globales",
+                  "Action de l'en-tête des propriétés",
+                  "Ouvre les contrôles de transition du canevas."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Arrière-plans image et vidéo",
+          "tables": [
+            {
+              "headers": ["Arrière-plan", "Fichiers pris en charge", "Comportement de la bibliothèque"],
+              "rows": [
+                [
+                  "Image",
+                  "AVIF, BMP, JPEG, JPG, PNG, WebP",
+                  "Affiche d'abord 15 éléments ; Afficher plus révèle des lots supplémentaires."
+                ],
+                [
+                  "Vidéo",
+                  "M4V, MOV, MP4, OGV, WebM",
+                  "Affiche d'abord 15 éléments ; Afficher plus révèle des lots supplémentaires."
+                ],
+                [
+                  "Importer",
+                  "Un fichier d'arrière-plan local pris en charge",
+                  "Ajoute le fichier sélectionné à la bibliothèque d'arrière-plans correspondante."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Arrière-plans de couleur",
+          "paragraphs": [
+            "Choisissez une couleur intégrée ou modifiez une valeur hexadécimale personnalisée. L'éditeur personnalisé met à jour l'aperçu de l'arrière-plan en direct."
+          ],
+          "tables": [
+            {
+              "headers": ["Contrôle", "Valeurs"],
+              "rows": [
+                ["Préréglage", "#111827, #ffffff, #0f766e, #1d4ed8, #7c3aed, #be123c"],
+                ["Couleur personnalisée", "Éditeur de couleurs hexadécimales"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Arrière-plans en dégradé",
+          "tables": [
+            {
+              "headers": ["Contrôle", "Valeurs ou contrainte"],
+              "rows": [
+                [
+                  "Préréglage",
+                  "Dégradés intégrés : Violet, Fire, Ocean, Sunset, Neon, Forest, Gold, Ice, Vaporwave et Aurora."
+                ],
+                ["Type", "Linear or Radial"],
+                ["Angle", "0°–360° selon la direction du dégradé concernée"],
+                ["Points", "Au moins deux points de couleur"],
+                ["Dégradé personnalisé", "Type, angle, points et couleurs modifiables"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Filigrane",
+          "paragraphs": [
+            "Le filigrane est désactivé par défaut. Activez-le pour placer la marque Beam, un libellé ou un logo au-dessus de la composition."
+          ],
+          "tables": [
+            {
+              "headers": ["Propriété", "Valeurs ou plage", "Valeur par défaut ou contrainte"],
+              "rows": [
+                ["Texte", "No watermark text, Made with Beam., Beam, Custom", "Made with Beam."],
+                ["Texte personnalisé", "Jusqu'à 80 caractères", "Vide ; disponible avec Custom."],
+                ["Afficher le logo Beam", "On or Off", "On"],
+                ["Traduire le filigrane", "On or Off", "Off ; disponible pour les libellés Beam et Made with Beam."],
+                ["Position", "Top-left, Top-right, Bottom-left, Bottom-right", "Bottom-right"],
+                ["Taille", "50 %–200 % ; pas de 10 %", "100%"],
+                ["Ombre", "0 %–100 % ; pas de 5 %", "20%"],
+                ["Couleur d'arrière-plan", "Sélecteur de couleur hexadécimale", "#111114"],
+                ["Opacité de l'arrière-plan", "0 %–100 % ; pas de 5 %", "78%"],
+                ["Rayon de l'arrière-plan", "0 %–100 % ; pas de 5 %", "100%"],
+                ["Marge interne de l'arrière-plan", "50 %–150 % ; pas de 5 %", "100%"]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/zooms",
+      "title": "Zooms",
+      "description": "Référence complète des zooms manuels et automatiques, des modes de focus, de la profondeur, de la régénération et du flou de mouvement.",
+      "lead": "Les blocs de zoom attirent l'attention sur une zone de l'enregistrement. Ajoutez-les manuellement dans la timeline ou générez des suggestions à partir des clics du curseur capturés.",
+      "sections": [
+        {
+          "title": "Aucun zoom sélectionné",
+          "paragraphs": [
+            "La génération et le flou de mouvement global restent disponibles sans zoom sélectionné. Sélectionnez un bloc de zoom dans la timeline pour modifier sa profondeur, son mode ou sa position."
+          ],
+          "screenshot": {
+            "path": "editor/zoom-empty.webp",
+            "alt": "Panneau Zoom de Beam sans zoom sélectionné",
+            "caption": "La génération automatique et le flou de mouvement global ne nécessitent pas de zoom sélectionné.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Générer des zooms automatiques",
+          "tables": [
+            {
+              "headers": ["Action", "Exigence", "Comportement"],
+              "rows": [
+                [
+                  "Générer des zooms automatiques",
+                  "Une session d'enregistrement avec télémétrie des clics du curseur",
+                  "Crée des blocs de zoom automatiques à partir des clics enregistrés."
+                ],
+                [
+                  "Régénérer les zooms automatiques",
+                  "La génération automatique des zooms est disponible",
+                  "Demande une confirmation, conserve les zooms manuels et remplace les zooms automatiques de la session actuelle."
+                ],
+                [
+                  "État indisponible",
+                  "Aucune session ou aucune télémétrie du curseur",
+                  "La génération reste désactivée."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Ajouter un zoom manuel",
+          "paragraphs": [
+            "Cliquez sur un point libre de la piste des zooms. Un nouveau zoom manuel dure par défaut 1,2 seconde et n'est ajouté que lorsqu'il reste au moins 200 ms de durée disponible dans la timeline."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Plages occupées de la timeline",
+            "text": "Beam choisit une durée disponible autour du clic et ne chevauche pas un bloc de zoom existant."
+          }
+        },
+        {
+          "title": "Zoom sélectionné",
+          "screenshot": {
+            "path": "editor/zoom-properties.webp",
+            "alt": "Propriétés Beam d'un zoom sélectionné",
+            "caption": "Un zoom sélectionné expose le mode de focus et la profondeur de grossissement.",
+            "aspectRatio": "199 / 326"
+          },
+          "tables": [
+            {
+              "headers": ["Propriété", "Valeurs", "Valeur par défaut ou comportement"],
+              "rows": [
+                [
+                  "Mode",
+                  "Auto Cursor or Manual Focus",
+                  "Auto Cursor suit les mouvements du pointeur enregistrés ; Manual Focus utilise un point fixe."
+                ],
+                [
+                  "Cible manuelle",
+                  "Glissement du canevas",
+                  "Faites glisser la cible en pointillés directement sur le canevas."
+                ],
+                ["Profondeur 1", "1.25×", "Correspondance du grossissement."],
+                ["Profondeur 2", "1.5×", "Par défaut."],
+                ["Profondeur 3", "1.8×", "Correspondance du grossissement."],
+                ["Profondeur 4", "2.2×", "Correspondance du grossissement."],
+                ["Profondeur 5", "3.5×", "Correspondance du grossissement."],
+                ["Profondeur 6", "5×", "Correspondance du grossissement."],
+                ["Supprimer le zoom", "Action de l'en-tête des propriétés", "Supprime le bloc de zoom sélectionné."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Flou de mouvement du zoom",
+          "tables": [
+            {
+              "headers": ["Propriété", "Plage", "Valeur par défaut", "Portée"],
+              "rows": [
+                ["Activé", "On or Off", "On", "Réglage global de la composition."],
+                [
+                  "Intensité du flou de mouvement",
+                  "0%–100%",
+                  "55%",
+                  "Appliqué de la même manière dans l'aperçu et l'export."
+                ]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/cursor",
+      "title": "Curseur",
+      "description": "Référence complète des packs de curseur, de l'apparence, des ombres, des effets de clic, du lissage, du ressort et du flou de mouvement.",
+      "lead": "Les réglages du curseur contrôlent la superposition du pointeur sur toute la composition et n'exigent pas la sélection d'un clip.",
+      "sections": [
+        {
+          "title": "Panneau du curseur",
+          "screenshot": {
+            "path": "editor/cursor-panel.webp",
+            "alt": "Panneau Curseur Beam avec les contrôles du pack, de l'apparence, des clics et du mouvement",
+            "caption": "La présentation du curseur est configurée globalement pour la composition.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Sélection du pack et du curseur",
+          "tables": [
+            {
+              "headers": ["Propriété", "Valeurs", "Comportement"],
+              "rows": [
+                [
+                  "Pack de curseur",
+                  "Pack intégré ou importé",
+                  "Automatique reste Automatique. Un curseur fixe est conservé uniquement si le même identifiant de curseur existe dans le nouveau pack ; sinon Beam revient à Automatique."
+                ],
+                [
+                  "Mode du curseur",
+                  "Automatique ou curseur fixe issu du pack sélectionné",
+                  "Automatique utilise les changements de forme du curseur enregistrés."
+                ],
+                [
+                  "Importer un pack",
+                  "Fichiers de pack de curseurs pris en charge",
+                  "Ajoute un pack personnalisé aux choix disponibles."
+                ],
+                [
+                  "Réinitialiser",
+                  "Réinitialiser la présentation du curseur",
+                  "Conserve le pack sélectionné et restaure toutes les autres valeurs par défaut du curseur."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Apparence",
+          "tables": [
+            {
+              "headers": ["Propriété", "Valeurs ou plage", "Valeur par défaut"],
+              "rows": [
+                ["Taille", "16–128 px", "45 px"],
+                ["Ombre portée", "On or Off", "On"],
+                ["Flou de l'ombre", "1–24 px", "6 px après Reset"],
+                ["Couleur de l'ombre", "Sélecteur de couleur", "#000000 après Reset"],
+                ["Direction de l'ombre", "All, Bottom, Bottom-right, Top-left", "Bottom après Reset"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Effets de clic",
+          "tables": [
+            {
+              "headers": ["Propriété", "Valeurs ou plage", "Valeur par défaut ou comportement"],
+              "rows": [
+                [
+                  "Préréglage de style d'ondulation",
+                  "Single Ring, Double Wave, Burst",
+                  "Modifie le style d'ondulation des clics gauche et droit ; n'active pas l'ondulation."
+                ],
+                ["Côtés avancés", "Left and Right", "Configure les deux boutons indépendamment."],
+                ["Ressort", "On or Off", "On"],
+                ["Intensité du ressort", "0%–100%", "50%"],
+                ["Ondulation", "On or Off", "Désactivée pour les deux côtés de clic."],
+                ["Taille de l'ondulation", "10–80 px", "30 px"],
+                ["Couleur de l'ondulation", "Sélecteur de couleur", "Un côté par clic."],
+                ["Clic du milieu", "Aucun contrôle séparé dans l'éditeur", "Utilise la présentation du clic gauche."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Mouvement",
+          "tables": [
+            {
+              "headers": ["Propriété", "Valeurs ou plage", "Préréglage fluide"],
+              "rows": [
+                ["Préréglage", "Focused, Smooth, Custom", "Fluide"],
+                ["Lissage", "0–1", "0.67"],
+                ["Masse du ressort", "0.5–2", "1.29"],
+                ["Flou de mouvement", "0–1", "0.4"]
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

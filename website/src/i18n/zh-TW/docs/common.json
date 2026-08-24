@@ -1,43 +1,162 @@
 {
-  "locale": "zh-TW",
-  "label": "繁體中文",
+  "locale": "zh-CN",
+  "label": "簡體中文",
   "siteTitle": "Beam 文件",
-  "nav": { "website": "Beam 網站" },
+  "nav": {
+    "website": "Beam 網站"
+  },
   "sidebar": [
     {
       "text": "從這裡開始",
       "items": [
-        { "text": "簡介", "link": "/" },
-        { "text": "開始使用", "link": "/getting-started" },
-        { "text": "更新 Beam", "link": "/updates" }
+        {
+          "text": "簡介",
+          "link": "/"
+        },
+        {
+          "text": "入門",
+          "link": "/getting-started"
+        },
+        {
+          "text": "更新 Beam",
+          "link": "/updates"
+        }
       ]
     },
     {
-      "text": "錄影工具",
+      "text": "錄製器應用",
       "items": [
-        { "text": "概覽", "link": "/recorder/" },
-        { "text": "介面", "link": "/recorder/interface" },
-        { "text": "功能", "link": "/recorder/capabilities" }
+        {
+          "text": "概覽",
+          "link": "/recorder/"
+        },
+        {
+          "text": "介面",
+          "link": "/recorder/interface"
+        },
+        {
+          "text": "功能",
+          "link": "/recorder/capabilities/",
+          "items": [
+            {
+              "text": "捕獲來源",
+              "link": "/recorder/capabilities/capture-sources"
+            },
+            {
+              "text": "音訊和攝像頭",
+              "link": "/recorder/capabilities/audio-camera"
+            },
+            {
+              "text": "提詞器",
+              "link": "/recorder/capabilities/teleprompter"
+            },
+            {
+              "text": "實時控制",
+              "link": "/recorder/capabilities/live-controls"
+            },
+            {
+              "text": "偏好設定",
+              "link": "/recorder/capabilities/preferences"
+            },
+            {
+              "text": "專案管理器",
+              "link": "/recorder/capabilities/project-manager"
+            },
+            {
+              "text": "許可權與隱私",
+              "link": "/recorder/capabilities/permissions-privacy"
+            }
+          ]
+        }
       ]
     },
     {
       "text": "影片編輯器",
       "items": [
-        { "text": "概覽", "link": "/editor/" },
-        { "text": "介面", "link": "/editor/interface" },
-        { "text": "功能", "link": "/editor/capabilities" }
+        {
+          "text": "概覽",
+          "link": "/editor/"
+        },
+        {
+          "text": "介面",
+          "link": "/editor/interface"
+        },
+        {
+          "text": "專案展示",
+          "link": "/editor/showcase"
+        },
+        {
+          "text": "功能",
+          "link": "/editor/capabilities",
+          "items": [
+            {
+              "text": "時間線編輯",
+              "link": "/editor/capabilities/timeline"
+            },
+            {
+              "text": "畫布",
+              "link": "/editor/capabilities/canvas"
+            },
+            {
+              "text": "片段",
+              "link": "/editor/capabilities/clips"
+            },
+            {
+              "text": "縮放",
+              "link": "/editor/capabilities/zooms"
+            },
+            {
+              "text": "游標",
+              "link": "/editor/capabilities/cursor"
+            },
+            {
+              "text": "字幕",
+              "link": "/editor/capabilities/captions"
+            },
+            {
+              "text": "音訊",
+              "link": "/editor/capabilities/audio"
+            },
+            {
+              "text": "設定",
+              "link": "/editor/capabilities/settings"
+            },
+            {
+              "text": "匯出",
+              "link": "/export"
+            }
+          ]
+        }
       ]
     },
     {
       "text": "參考",
       "items": [
-        { "text": "匯出與分享", "link": "/export" },
-        { "text": "平台支援", "link": "/platforms" },
-        { "text": "檔案系統", "link": "/filesystem" }
+        {
+          "text": "匯出與分享",
+          "link": "/export"
+        },
+        {
+          "text": "平臺支援",
+          "link": "/platforms"
+        },
+        {
+          "text": "檔案系統",
+          "link": "/filesystem"
+        }
       ]
     }
   ],
-  "social": { "github": "在 GitHub 上查看 Beam", "discord": "加入 Beam Discord" },
-  "theme": { "switchToLight": "切換至淺色主題", "switchToDark": "切換至深色主題" },
-  "footer": { "message": "開源螢幕錄影與編輯工具。", "copyright": "依 MIT 授權條款發布。" }
+  "social": {
+    "github": "在 GitHub 上檢視 Beam",
+    "discord": "加入 Beam Discord"
+  },
+  "theme": {
+    "switchToLight": "切換到淺色主題",
+    "switchToDark": "切換到深色主題"
+  },
+  "footer": {
+    "message": "開源螢幕錄製與編輯工具。",
+    "copyright": "依據 MIT 許可證釋出。"
+  }
 }

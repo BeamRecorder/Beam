@@ -72,7 +72,12 @@ describe('documentation locale routes', () => {
         for (const slug of [...recorderCapabilitySlugs, ...editorCapabilitySlugs]) {
           const localizedPage = localePages.find((page) => page.slug === slug);
           const englishPage = englishPages.find((page) => page.slug === slug);
-          expect(localizedPage, `${locale} fallback page ${slug}`).toEqual(englishPage);
+          expect(localizedPage, `${locale} localized page ${slug}`).toBeDefined();
+          expect(englishPage, `English source page ${slug}`).toBeDefined();
+          expect(
+            [localizedPage?.title, localizedPage?.description, localizedPage?.lead],
+            `${locale} translated page ${slug}`,
+          ).not.toEqual([englishPage?.title, englishPage?.description, englishPage?.lead]);
         }
       }
     }

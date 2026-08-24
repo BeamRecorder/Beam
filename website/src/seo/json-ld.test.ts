@@ -21,14 +21,14 @@ describe('website JSON-LD', () => {
   });
 
   it('creates one schema question for every visible FAQ item', () => {
-    const schema = createFaqJsonLd();
+    const schema = createFaqJsonLd(faqItems);
     const questions = schema.mainEntity as Question[];
     expect(questions).toHaveLength(faqItems.length);
     expect(questions.map((item) => item.name)).toEqual(faqItems.map((item) => item.question));
   });
 
   it('keeps FAQ answers identical to visible copy', () => {
-    const schema = createFaqJsonLd();
+    const schema = createFaqJsonLd(faqItems);
     const questions = schema.mainEntity as Question[];
     expect(questions.map((item) => item.acceptedAnswer)).toEqual(
       faqItems.map((item) => ({ '@type': 'Answer', text: item.answer })),

@@ -3,34 +3,35 @@
     {
       "slug": "editor/index",
       "title": "Visão geral do editor de vídeo",
-      "description": "Entenda o espaço de trabalho do editor de vídeo do Beam e o fluxo de edição não destrutivo.",
-      "lead": "O editor transforma sessões gravadas e mídias importadas em uma demonstração de produto composta, mantendo o material de origem intacto.",
+      "description": "Entenda o espaço de trabalho de edição Beam, a linha do tempo, as propriedades, a visualização e o fluxo de trabalho de exportação.",
+      "lead": "O Editor de Vídeo transforma sessões gravadas e mídia importada em uma composição refinada, preservando os arquivos de origem originais.",
       "sections": [
         {
-          "title": "Um espaço de trabalho",
+          "title": "Um espaço de trabalho de edição",
           "paragraphs": [
-            "O editor combina um canvas de prévia, uma linha do tempo multipista, um painel de propriedades focado, controles de reprodução, ações do projeto e exportação. Selecionar um item revela os controles relevantes para ele."
+            "Beam mantém os controles do projeto na parte superior, a navegação de recursos e as propriedades à esquerda, a visualização da saída no centro e os controles de tempo na linha do tempo redimensionável abaixo. Selecionar um clipe, zoom, cursor ou tela abre os controles que se aplicam a ele."
           ],
           "screenshot": {
-            "path": "editor/editor-overview.webp",
-            "alt": "Visão geral do espaço de trabalho do editor de vídeo do Beam",
-            "caption": "Canvas, propriedades, reprodução e linha do tempo permanecem visíveis no espaço de trabalho de edição."
+            "path": "editor/interface-overview.webp",
+            "alt": "Interface completa do Editor de Vídeo Beam",
+            "caption": "A tela, as propriedades, os controles de reprodução e a linha do tempo multitrilha permanecem visíveis juntos.",
+            "aspectRatio": "1920/1053"
           }
-        },
-        {
-          "title": "Composição não destrutiva",
-          "paragraphs": [
-            "As edições na linha do tempo descrevem como os clipes de origem são organizados e apresentados. Cortar, dividir, transformar, aplicar zooms, legendas e estilos visuais não substitui os arquivos de gravação originais."
-          ]
         },
         {
           "title": "Da gravação à exportação",
           "steps": [
-            "Abra o editor após uma gravação ou selecione um projeto existente.",
-            "Organize clipes e tempo na linha do tempo.",
-            "Estilize canvas, clipes, cursor, zooms, legendas e áudio.",
-            "Visualize a composição completa.",
-            "Escolha um formato de exportação, resolução e preset de qualidade."
+            "Abra o editor após a gravação ou escolha um projeto existente.",
+            "Organize, corte, divida e estilize clipes na linha do tempo.",
+            "Defina o plano de fundo da tela, zooms, comportamento do cursor, legendas e áudio.",
+            "Visualize a composição com uma qualidade de reprodução adequada.",
+            "Exporte o vídeo finalizado como WebM ou MP4."
+          ]
+        },
+        {
+          "title": "Tecnologia de edição",
+          "paragraphs": [
+            "A interface do desktop é construída com Electron e Vue. Beam usa Mediabunny para reprodução e exportação de mídia e a API Canvas 2D para compor camadas visuais."
           ]
         }
       ]
@@ -38,134 +39,179 @@
     {
       "slug": "editor/interface",
       "title": "Interface do editor de vídeo",
-      "description": "Aprenda sobre canvas, barra lateral, propriedades, linha do tempo, reprodução e controles de exportação no Beam.",
-      "lead": "O editor mantém os controles globais do projeto no topo, o trabalho visual no centro, as propriedades ao lado e o tempo na parte inferior.",
+      "description": "Aprenda a barra superior, barra lateral, barra de ferramentas de tela, barra de ferramentas da linha do tempo, faixas, seleção e controles de reprodução.",
+      "lead": "A interface separa ações em nível de projeto, composição visual, propriedades de itens e edição baseada em tempo sem ocultar a saída atual.",
       "sections": [
         {
           "title": "Barra superior",
-          "bullets": [
-            "Sair para o HUD retorna ao gravador.",
-            "Desfazer e Refazer percorrem ações de edição compatíveis.",
-            "O título e o estado de salvamento identificam o projeto atual.",
-            "O Discord abre a comunidade do Beam.",
-            "Exportar vídeo abre os controles de exportação."
+          "tables": [
+            {
+              "headers": ["Controle", "Ação", "Comportamento importante"],
+              "rows": [
+                ["Sair para o HUD", "Retorna ao gravador.", "O projeto atual permanece disponível."],
+                [
+                  "Seletor de projetos",
+                  "Mostra o projeto atual e abre outro projeto.",
+                  "Os dados indisponíveis do projeto são tratados pelo estado de carregamento do projeto."
+                ],
+                [
+                  "Desfazer/Refazer",
+                  "Percorre a edição de instantâneos.",
+                  "Até 50 instantâneos na sessão atual do editor; o histórico não é restaurado após a reabertura."
+                ],
+                [
+                  "Monitor de desempenho",
+                  "Os relatórios visualizam a integridade.",
+                  "Os estados são ocioso, bom, alerta e crítico."
+                ],
+                ["Discórdia", "Abre a comunidade Beam.", "Link externo."],
+                ["Exportação", "Abre as configurações de exportação.", "Disponível quando um projeto é carregado."],
+                [
+                  "Controles de janela",
+                  "Minimize, maximize ou restaure e feche.",
+                  "Ações nativas da janela da área de trabalho."
+                ]
+              ]
+            }
           ]
         },
         {
-          "title": "Canvas e barra de ferramentas",
+          "title": "Barra lateral e propriedades",
           "paragraphs": [
-            "O canvas exibe uma prévia do quadro composto. Sua barra de ferramentas altera a proporção de saída, entra no modo de recorte, alterna a grade de alinhamento e controla o zoom da viewport sem alterar a composição exportada."
+            "A barra lateral abre Tela, Clipe, Zooms, Cursor, Legendas, Áudio e Configurações. O painel adjacente muda com a categoria ativa e a seleção atual. Em janelas estreitas ou curtas, os rótulos são recolhidos enquanto seus ícones permanecem disponíveis."
           ],
-          "screenshot": {
-            "path": "editor/canvas-properties.webp",
-            "alt": "Canvas do Beam ao lado do painel de propriedades ativo",
-            "caption": "Selecione o canvas ou um item da linha do tempo para revelar seus controles de edição."
-          }
+          "tables": [
+            {
+              "headers": ["Seleção", "Comportamento do painel"],
+              "rows": [
+                ["Clipe", "Abre propriedades compatíveis com o clipe principal selecionado."],
+                ["Zoom", "Abre os controles de foco e ampliação do zoom selecionado."],
+                ["Tela", "Abre controles de plano de fundo e marca em toda a composição."],
+                ["Cursor", "Abre a apresentação do cursor global sem exigir uma seleção de clipe."],
+                [
+                  "Vários clipes",
+                  "Usa um clipe principal e aplica uma alteração somente aos clipes selecionados compatíveis."
+                ]
+              ]
+            }
+          ]
         },
         {
-          "title": "Barra lateral e propriedades",
-          "bullets": [
-            "Canvas controla o fundo de saída e a superfície de apresentação.",
-            "Clipe controla o clipe de vídeo, webcam, áudio, desfoque, imagem ou legenda selecionado.",
-            "Zoom edita um bloco de zoom selecionado ou gera zooms automáticos.",
-            "Cursor controla aparência, resposta aos cliques e movimento.",
-            "Legendas gera ou estiliza texto e legendas de teclado.",
-            "Áudio controla os níveis global, do sistema e do microfone.",
-            "Configurações controla preferências do aplicativo e acesso do gravador."
+          "title": "Barra de ferramentas de tela",
+          "tables": [
+            {
+              "headers": ["Controle", "Valores", "Efeito"],
+              "rows": [
+                ["Proporção", "16:9, 9:16, 1:1, 4:5, 3:4, 4:3, 21:9", "Altera a proporção da tela de saída."],
+                ["Cortar", "Abra o editor de corte", "Disponível apenas para exatamente um clipe visual selecionado."],
+                ["Grade", "Ligado ou desligado", "Mostra ou oculta a guia de alinhamento 3×3."],
+                [
+                  "Zoom da janela de visualização",
+                  "25%–500%; redefinir para 100%",
+                  "Altera apenas a visualização do editor, nunca exporta."
+                ],
+                ["Panela", "Arrastar com o meio ou arrastar com espaço", "Move a viewport do editor ampliado."]
+              ]
+            }
           ]
         },
         {
           "title": "Barra de ferramentas da linha do tempo",
-          "bullets": [
-            "Adicionar importa itens de vídeo, imagem, som, texto ou desfoque.",
-            "Dividir divide o clipe selecionado no indicador de reprodução.",
-            "O encaixe magnético alinha edições aos limites próximos.",
-            "Os controles de reprodução pulam para o início ou fim e reproduzem ou pausam.",
-            "O zoom da linha do tempo altera a escala de tempo visível."
+          "tables": [
+            {
+              "headers": ["Controle", "Ação", "Restrição ou padrão"],
+              "rows": [
+                ["Adicionar", "Importa vídeo, imagem ou áudio; cria texto ou desfoque.", "Adiciona no playhead."],
+                [
+                  "Dividir",
+                  "Divide um clipe selecionado no playhead.",
+                  "Requer a reprodução estritamente dentro do clipe; atalho S."
+                ],
+                ["Ímã", "Encaixa as edições em limites úteis.", "Habilitado por padrão."],
+                [
+                  "Pular para trás/avançar",
+                  "Move o cursor de reprodução para o início ou fim da linha do tempo.",
+                  "Depende da duração do projeto."
+                ],
+                [
+                  "Reproduzir/Pausar",
+                  "Pré-visualiza ou pausa a composição.",
+                  "Espaço de atalho fora dos campos editáveis."
+                ],
+                [
+                  "Exibição de hora",
+                  "Mostra o tempo atual e total.",
+                  "MM:SS abaixo de uma hora; HH:MM:SS em uma hora ou mais."
+                ],
+                [
+                  "Qualidade de reprodução",
+                  "Cheio, Meio, Trimestre",
+                  "Apenas visualização; a exportação permanece com qualidade total."
+                ],
+                ["Zoom na linha do tempo", "100%–3200%", "Também controlado com Ctrl+roda do mouse."]
+              ]
+            }
           ]
         },
         {
           "title": "Faixas da linha do tempo",
           "paragraphs": [
-            "As faixas representam vídeo, webcam, desfoque, zoom, legendas de texto, legendas de teclado, áudio do sistema e áudio do microfone quando essas fontes existem. Selecione, mova, reordene, corte, divida, ative, desative ou desvincule itens compatíveis da composição."
+            "Beam cria trilhas para mídia visual agrupada, zooms, legendas de texto, legendas de teclado, áudio do sistema, áudio do microfone e áudio importado quando essas fontes existem."
           ],
-          "screenshot": {
-            "path": "editor/timeline.webp",
-            "alt": "Linha do tempo multipista do Beam com faixas visuais, de zoom, legendas e áudio",
-            "caption": "A linha do tempo mantém apresentação, legendas e som alinhados a um indicador de reprodução."
+          "bullets": [
+            "Clique em um clipe para torná-lo a seleção atual.",
+            "Clique no cabeçalho de uma trilha para selecionar cada clipe dessa trilha; use Ctrl, Cmd ou Shift nos cabeçalhos das trilhas para criar uma seleção aditiva de trilhas. O clipe mais próximo do cursor de reprodução se torna o principal.",
+            "Arraste os cabeçalhos das trilhas visuais para reordenar a ordem das camadas.",
+            "Mova um clipe ou corte suas alças inicial e final. Mídias de gravação vinculadas movem-se juntas.",
+            "Arrastar a mídia além do final atual estende a linha do tempo.",
+            "Clique na faixa Zoom para adicionar um zoom manual ou na faixa de legenda de texto para adicionar uma legenda vazia.",
+            "Clique com o botão direito em um clipe para as ações suportadas Copiar, Colar, Excluir e Manter quadro."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "O espaço tem duas funções de tela",
+            "text": "Espaço alterna a reprodução, enquanto segurar Espaço durante o arrasto movimenta uma tela ampliada. Os campos editáveis ​​ignoram esses atalhos globais."
           }
+        },
+        {
+          "title": "Seleção direta e múltipla",
+          "paragraphs": [
+            "Clique em um visual, legenda, camada de desfoque, cursor ou área da tela compatível diretamente na tela ou selecione o mesmo item na linha do tempo. Uma seleção múltipla utiliza um clipe primário para o painel."
+          ],
+          "bullets": [
+            "A aparência visual e as transformações se propagam apenas para clipes visuais compatíveis.",
+            "As propriedades de desfoque se propagam somente para clipes de desfoque selecionados.",
+            "O volume se propaga apenas para os clipes de áudio selecionados.",
+            "O estilo de legenda se propaga apenas para legendas do mesmo texto ou subtipo de teclado.",
+            "O texto da legenda personalizado e o Cursor Seguir nunca se propagam em uma seleção múltipla.",
+            "As alças de corte e transformação da tela exigem exatamente um clipe visual selecionado."
+          ]
         }
       ]
     },
     {
       "slug": "editor/capabilities",
       "title": "Recursos do editor de vídeo",
-      "description": "Edite tempo, estilo do canvas, zooms, movimento do cursor, legendas, áudio, desfoque e mídia importada no Beam.",
-      "lead": "O Beam combina operações precisas na linha do tempo com controles de apresentação criados para demonstrações de produtos.",
+      "description": "Abra uma referência específica para cada recurso do Editor de Vídeo e suas configurações exatas.",
+      "lead": "Cada recurso tem sua própria página para que propriedades, padrões, regras de seleção e casos extremos permaneçam fáceis de verificar.",
       "sections": [
         {
-          "title": "Edição da linha do tempo",
-          "bullets": [
-            "Mova e reordene clipes visuais compatíveis.",
-            "Corte os limites dos clipes e divida no indicador de reprodução.",
-            "Ative o encaixe para obter alinhamento preciso.",
-            "Aplique zoom à linha do tempo sem alterar a saída.",
-            "Ative, desative, desvincule ou exclua itens compatíveis da composição."
-          ]
-        },
-        {
-          "title": "Mídia importada",
-          "paragraphs": [
-            "Adicione arquivos de vídeo, imagem e áudio compatíveis pelo menu Adicionar da linha do tempo ou arrastando mídia local para o editor. Os itens importados são inseridos no indicador de reprodução após a validação."
-          ],
-          "notice": {
-            "kind": "info",
-            "title": "Suporte a codecs",
-            "text": "A importação e reprodução de mídia dependem dos codecs disponíveis para o Beam. Arquivos incompatíveis ou inválidos são rejeitados com o motivo."
-          }
-        },
-        {
-          "title": "Aparência do canvas e dos clipes",
-          "bullets": [
-            "Escolha fundos de imagem, vídeo, cor ou gradiente e importe mídias de fundo personalizadas.",
-            "Ajuste o desfoque do fundo e a apresentação do canvas de saída.",
-            "Posicione, redimensione, recorte e espelhe clipes visuais compatíveis.",
-            "Aplique raio de canto, sombras sólidas ou adaptativas, bordas e molduras no estilo de janela.",
-            "Ajuste a velocidade de reprodução dos clipes compatíveis."
-          ]
-        },
-        {
-          "title": "Zooms e apresentação do cursor",
-          "paragraphs": [
-            "Gere blocos de zoom automáticos a partir de eventos de clique gravados ou adicione pontos de foco manuais. O modo automático segue o cursor gravado enquanto um zoom está ativo. Cada bloco controla tempo, modo de foco, posição e ampliação. Os controles do cursor alteram estilo, tamanho, cor, sombra, quique no clique, efeitos de ondulação esquerdo e direito, suavização, massa da mola e desfoque de movimento."
-          ],
-          "screenshot": {
-            "path": "editor/zoom-cursor-captions.webp",
-            "alt": "Controles de edição de zoom, cursor e legendas do Beam",
-            "caption": "Controles de foco e apresentação ajudam a direcionar a atenção sem alterar a captura original."
-          }
-        },
-        {
-          "title": "Legendas",
-          "paragraphs": [
-            "Gere legendas de fala para texto localmente com o Whisper a partir do microfone ou áudio do sistema. Baixe e verifique um modelo compatível, gere as legendas e edite os clipes resultantes e seu estilo visual. Legendas de atalhos de teclado usam metadados seguros de interação gravados com permissão."
-          ],
-          "notice": {
-            "kind": "tip",
-            "title": "Transcrição local",
-            "text": "A transcrição do Whisper é executada no dispositivo. Ela não requer upload para a nuvem nem chave de API."
-          }
-        },
-        {
-          "title": "Áudio e desfoque",
-          "paragraphs": [
-            "Controle o volume global de saída e o estado ou nível das faixas do sistema e do microfone. Adicione clipes de desfoque para ocultar ou suavizar parte da composição com controles de forma, intensidade, difusão, raio de canto, tonalidade e cor."
-          ]
-        },
-        {
-          "title": "Exportação",
-          "paragraphs": [
-            "Renderize a composição atual em MP4 ou WebM com controles de resolução e qualidade. Consulte [exportação e compartilhamento](/export) para ver o fluxo completo."
+          "title": "Índice de capacidade",
+          "tables": [
+            {
+              "headers": ["Capacidade", "Referência"],
+              "rows": [
+                ["Edição da linha do tempo", "[Abrir edição da linha do tempo](/editor/capabilities/timeline)"],
+                ["Tela", "[Abrir tela](/editor/capabilities/canvas)"],
+                ["Clipes", "[Abrir clipes](/editor/capabilities/clips)"],
+                ["Ampliações", "[Abrir Zoom](/editor/capabilities/zooms)"],
+                ["Cursor", "[Abrir Cursor](/editor/capabilities/cursor)"],
+                ["Legendas", "[Legendas abertas](/editor/capabilities/captions)"],
+                ["Áudio", "[Abrir Áudio](/editor/capabilities/audio)"],
+                ["Configurações", "[Abrir Configurações](/editor/capabilities/settings)"],
+                ["Exportação", "[Abrir exportação e compartilhamento](/export)"]
+              ]
+            }
           ]
         }
       ]

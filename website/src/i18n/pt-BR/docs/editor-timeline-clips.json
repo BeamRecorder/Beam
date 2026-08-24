@@ -1,0 +1,460 @@
+{
+  "pages": [
+    {
+      "slug": "editor/capabilities/timeline",
+      "title": "Edição da linha do tempo",
+      "description": "Referência completa para ferramentas de linha do tempo, trilhas, seleção, encaixe, corte, divisão, ações da área de transferência e retenção de quadros.",
+      "lead": "A linha do tempo combina trilhas visuais, de anotação, zoom e áudio em um único indicador de reprodução. As regras de edição dependem da seleção, tipo de clipe, propriedade do projeto e duração disponível.",
+      "sections": [
+        {
+          "title": "Adicione mídia e camadas",
+          "tables": [
+            {
+              "headers": ["Artigo", "Como é adicionado", "Duração ou comportamento inicial"],
+              "rows": [
+                [
+                  "Vídeo",
+                  "Adicionar → Vídeo ou arrastar e soltar",
+                  "Duração do ativo dividida pela velocidade inicial de reprodução."
+                ],
+                ["Imagem", "Adicionar → Imagem ou arrastar e soltar", "5 segundos."],
+                [
+                  "Áudio",
+                  "Adicionar → Áudio ou arrastar e soltar",
+                  "Duração do ativo dividida pela velocidade inicial de reprodução."
+                ],
+                [
+                  "Texto",
+                  "Adicionar → Texto ou clique na faixa de legenda de texto",
+                  "Preferência de duração da legenda salva; Fallback de 2 segundos e mínimo de 200 ms."
+                ],
+                ["Desfoque", "Adicionar → Desfocar", "5 segundos."],
+                [
+                  "Zoom",
+                  "Clique em um ponto disponível na trilha Zoom",
+                  "Preferência de duração do zoom salva ou reserva de 1,2 segundo; ajustado ao intervalo com um mínimo de 200 ms."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Controles de linha do tempo",
+          "tables": [
+            {
+              "headers": ["Controle", "Intervalo ou atalho", "Comportamento"],
+              "rows": [
+                [
+                  "Dividir",
+                  "S",
+                  "Requer um clipe selecionado e um indicador de reprodução estritamente dentro desse clipe."
+                ],
+                [
+                  "Ímã",
+                  "Ativado por padrão",
+                  "Ajusta-se ao início/fim da linha do tempo, às bordas do clipe, às bordas do zoom e ao indicador de reprodução quando a operação suporta isso. O limite derivado da régua nunca cai abaixo de 20 ms."
+                ],
+                ["Reproduzir/Pausar", "Espaço", "Ignorado quando o foco está em um campo editável."],
+                [
+                  "Pular para trás/avançar",
+                  "Botões da barra de ferramentas",
+                  "Move para o início ou fim da linha do tempo."
+                ],
+                ["Qualidade de reprodução", "Cheio, Meio, Trimestre", "Altera apenas a resolução de visualização."],
+                [
+                  "Zoom na linha do tempo",
+                  "100%–3200%",
+                  "Os botões aumentam 50 abaixo de 500%, 100 abaixo de 1000% e depois 250; Ctrl+wheel usa 25/50/100 passos. Salvo após alterações."
+                ],
+                ["Exibição de hora", "MM:SS ou HH:MM:SS", "Muda o formato quando a duração atinge uma hora."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Seleção",
+          "tables": [
+            {
+              "headers": ["Gesto", "Resultado"],
+              "rows": [
+                ["Clique em um clipe", "Seleciona esse clipe como item principal."],
+                ["Clique em outro clipe", "Substitui a seleção de clipe atual."],
+                [
+                  "Clique no cabeçalho de uma faixa",
+                  "Seleciona todos os clipes da trilha; o clipe mais próximo do cursor de reprodução se torna o principal."
+                ],
+                [
+                  "Ctrl, Cmd ou Shift + cabeçalho da faixa",
+                  "Adiciona ou remove os clipes dessa trilha da seleção de trilha atual."
+                ],
+                [
+                  "Clique em um elemento de tela",
+                  "Seleciona o clipe, legenda, desfoque, cursor ou área da tela compatível correspondente."
+                ],
+                ["Clique no espaço vazio", "Limpa a seleção conflitante onde a ferramenta ativa permitir."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Mover, cortar e sobrepor",
+          "bullets": [
+            "Arraste um clipe para alterar o início da linha do tempo; sidecars de gravação vinculados se movem juntos até serem desvinculados.",
+            "Arraste a alça inicial ou final para cortar o intervalo ativo. Um clipe deve ter pelo menos 40 ms de duração e os clipes que compartilham um ID de grupo são cortados juntos.",
+            "Arrastar a mídia além do final atual estende a duração da composição.",
+            "Arraste os cabeçalhos das trilhas visuais para alterar a ordem das camadas.",
+            "Mover um clipe visual para outra linha visual também pode reordenar trilhas visuais.",
+            "Os clipes desativados permanecem na linha do tempo, mas não contribuem para a visualização ou exportação.",
+            "Uma alteração de seleção múltipla é aplicada somente aos clipes selecionados compatíveis com a propriedade do clipe principal."
+          ]
+        },
+        {
+          "title": "Área de transferência e exclusão",
+          "tables": [
+            {
+              "headers": ["Ação", "Disponibilidade", "Caso extremo"],
+              "rows": [
+                [
+                  "Copiar",
+                  "Um clipe ou zoom selecionado principal compatível",
+                  "Copia apenas o item principal, mesmo quando vários clipes são selecionados; a carga útil permanece associada ao seu projeto."
+                ],
+                [
+                  "Colar",
+                  "Um projeto é carregado e os dados da área de transferência são compatíveis",
+                  "Os itens copiados de outro projeto são rejeitados."
+                ],
+                [
+                  "Excluir",
+                  "Itens de linha do tempo selecionados com suporte",
+                  "Remove o item selecionado da composição."
+                ],
+                [
+                  "Desvincular",
+                  "Um item selecionado tem um link de arquivo secundário de gravação",
+                  "Após desvincular, ele pode se mover de forma independente."
+                ],
+                ["Ativar/Desativar", "Clipes suportados", "A mídia desativada é ignorada pela reprodução e exportação."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Transições de clipe e tela",
+          "tables": [
+            {
+              "headers": ["Propriedade", "Valores", "Padrão ou restrição"],
+              "rows": [
+                ["Lado", "Entrada e Saída", "Configurado de forma independente."],
+                [
+                  "Predefinição visual",
+                  "Nenhum, Desvanecer, Deslizar para a esquerda, Deslizar para a direita, Deslizar para cima, Deslizar para baixo, Aumentar o zoom, Diminuir o zoom, Desfocar",
+                  "Disponível para clipes visuais e transições de tela."
+                ],
+                [
+                  "Predefinição de áudio",
+                  "Nenhum ou Desaparecer",
+                  "Outras predefinições de transição não estão disponíveis para áudio."
+                ],
+                ["Duração", "1–5000ms", "500ms; limitado pela duração do clipe menos a transição no lado oposto."],
+                ["Curva visual", "1×–5×", "3×; não mostrado para transições de áudio."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Manter quadro",
+          "paragraphs": [
+            "Hold Frame congela o vídeo selecionado na reprodução e estende a parte estática como um item da linha do tempo."
+          ],
+          "tables": [
+            {
+              "headers": ["Requisito", "Regra"],
+              "rows": [
+                ["Tipo de clipe", "Clipe de tela, vídeo ou webcam ativado com mídia de vídeo."],
+                ["Seleção", "Um clipe compatível deve ser selecionado."],
+                ["Indicador de reprodução", "Do início + 40 ms até o final - 40 ms, inclusive."],
+                ["Segmento congelado", "1000 ms."],
+                [
+                  "Mídia vinculada",
+                  "Os clipes vinculados são divididos e o segmento congelado pode permanecer agrupado com seu arquivo secundário de áudio."
+                ],
+                ["Cardápio", "Disponível no menu de contexto do clipe compatível."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Falhas na mídia importada",
+          "paragraphs": [
+            "Os arquivos descartados são validados antes da importação. Beam relata extensões ou codecs não suportados, mídia inválida ou vazia, falhas de decodificação, fontes não locais e falhas na importação de projetos. Se um vídeo importado contiver áudio não compatível, o vídeo poderá ser adicionado enquanto seu áudio for ignorado."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Uma importação por vez",
+            "text": "Uma nova importação de arrastar e soltar é rejeitada enquanto outra importação de mídia já está em execução."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/clips",
+      "title": "Propriedades do clipe",
+      "description": "Referência completa para propriedades visuais, de webcam, desfoque, áudio, texto e clipe de legenda de teclado.",
+      "lead": "O painel Clip segue a seleção primária. Os controles compartilhados aparecem apenas para tipos de clipes compatíveis e uma edição de seleção múltipla se propaga somente para clipes selecionados compatíveis.",
+      "sections": [
+        {
+          "title": "Nenhuma seleção",
+          "paragraphs": [
+            "Quando nenhum clipe é selecionado, o painel mostra um estado instrucional vazio. Selecione um item na tela ou na linha do tempo para revelar suas propriedades."
+          ],
+          "screenshot": {
+            "path": "editor/clip-empty.webp",
+            "alt": "Beam Painel de clipe sem nenhum clipe selecionado",
+            "caption": "O painel Clipe permanece vazio até que uma linha de tempo ou item de tela compatível seja selecionado.",
+            "aspectRatio": "199/326"
+          }
+        },
+        {
+          "title": "Tipos de clipe",
+          "tables": [
+            {
+              "headers": ["Tipo de clipe", "Propriedades expostas"],
+              "rows": [
+                [
+                  "Tela / Vídeo",
+                  "Layout visual, enquadramento, transformação, aparência, velocidade de reprodução, transições, ativação, exclusão e desvinculação quando vinculados."
+                ],
+                ["Imagem", "Layout visual, enquadramento, transformação, aparência, transições, ativação e exclusão."],
+                ["Webcam", "Controles visuais compartilhados, layout dividido e React to Zoom."],
+                ["Desfoque", "Controles de efeito, forma, força, difusão, raio, matiz e cor."],
+                [
+                  "Sistema / Microfone / Áudio importado",
+                  "Volume do clipe, transições de entrada e saída Fade, ativação e exclusão."
+                ],
+                [
+                  "Legenda do texto",
+                  "Conteúdo de texto, tipografia, alinhamento, cor, contorno, extrusão, pano de fundo e sombra."
+                ],
+                ["Legenda do teclado", "Estilo de legenda mais Cursor de Seguimento."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Layout visual compartilhado",
+          "tables": [
+            {
+              "headers": ["Propriedade", "Valores ou intervalo", "Comportamento"],
+              "rows": [
+                [
+                  "Disposição",
+                  "Flutuante superior esquerdo, superior direito, inferior esquerdo, inferior direito; Centro flutuante; Tela cheia",
+                  "A webcam também suporta divisão esquerda, direita, superior e inferior."
+                ],
+                [
+                  "Enquadramento",
+                  "Preencher, Ajustar, Quadrado, Retrato 9:16, Paisagem 16:9, Esquilo, Círculo",
+                  "Controla a apresentação do corte e da máscara."
+                ],
+                ["Posição X/Y", "−300% a 300%", "Move o visual na tela."],
+                ["Largura", "2%–400%", "A altura permanece proporcional quando apenas a largura muda."],
+                ["Raio de canto", "Nenhum, 8, 16, 24 px ou Personalizado de 0 a 200 px", "Arredonda a máscara visual."],
+                ["Espelho", "Horizontais e Verticais", "Inverte o visual renderizado."],
+                [
+                  "Velocidade de reprodução",
+                  "0,25×–4×; predefinições 0,5×, 1×, 1,5×, 2×, 3×",
+                  "Disponível para clipes de tela, vídeo e webcam."
+                ],
+                [
+                  "Ativar/Desativar",
+                  "Ligado ou desligado",
+                  "Os clipes desativados permanecem na linha do tempo, mas não são renderizados."
+                ],
+                [
+                  "Transições",
+                  "Abra no cabeçalho de propriedades",
+                  "As transições de entrada e saída são armazenadas por clipe."
+                ],
+                ["Excluir", "Ação do cabeçalho de propriedades", "Remove o clipe selecionado."],
+                [
+                  "Desvincular",
+                  "Disponível para sidecars vinculados",
+                  "Separa o clipe do movimento vinculado da linha de tempo."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Sombra, borda e moldura",
+          "tables": [
+            {
+              "headers": ["Grupo", "Propriedade", "Valores ou intervalo"],
+              "rows": [
+                ["Sombra", "Predefinido", "Nenhum, Suave, Médio, Forte, Personalizado"],
+                ["Sombra", "Modo", "Sólido ou Adaptativo"],
+                ["Sombra", "Desfoque personalizado", "4–96 pixels"],
+                ["Sombra", "Direção", "Todos, inferior, inferior direito, superior esquerdo"],
+                ["Fronteira", "Habilitado", "Ligado ou desligado"],
+                ["Fronteira", "Cor", "Seletor de cores"],
+                ["Fronteira", "Largura", "1–32 pixels"],
+                ["Quadro", "Estilo", "Nenhum, Safari, Windows 95"],
+                ["Quadro", "Título", "Título do quadro personalizado"],
+                ["Quadro", "Escala cromada", "50%–200%"],
+                ["Quadro", "Controles específicos", "Menu, barra de rolagem ou cores dependendo do estilo do quadro"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Cortar um clipe visual",
+          "paragraphs": ["Crop é um editor de tela direto em vez de um grupo numérico de painéis de clipe."],
+          "steps": [
+            "Selecione exatamente uma tela, vídeo, imagem ou clipe de webcam.",
+            "Selecione Cortar na barra de ferramentas da tela.",
+            "Mova ou redimensione o retângulo de corte diretamente sobre o visual selecionado.",
+            "Selecione OK para armazenar o corte normalizado nesse clipe."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Seleção única necessária",
+            "text": "O corte não está disponível sem uma seleção visual compatível e não funciona em uma seleção múltipla."
+          }
+        },
+        {
+          "title": "Padrões visuais iniciais",
+          "tables": [
+            {
+              "headers": ["Clipe", "Transformar e enquadrar", "Canto e sombra"],
+              "rows": [
+                [
+                  "Tela",
+                  "Tela completa",
+                  "Nenhum raio de canto quando não há fundo; Sombra média, desfoque de 40 px, direção inferior."
+                ],
+                [
+                  "Vídeo / Imagem",
+                  "Tela completa",
+                  "Raio de canto pequeno; Sombra média, desfoque de 20 px, todas as direções."
+                ],
+                [
+                  "Nova webcam",
+                  "x 72%, y 72%, largura 24%, altura 24%; Esquilo",
+                  "Os padrões de aparência da webcam serão aplicados."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Clipes de webcam",
+          "screenshot": {
+            "path": "editor/webcam-properties.webp",
+            "alt": "Beam propriedades para um clipe de webcam selecionado",
+            "caption": "Clipes de webcam adicionam layouts divididos e comportamento de reação de zoom a controles visuais compartilhados.",
+            "aspectRatio": "199/326"
+          },
+          "tables": [
+            {
+              "headers": ["Propriedade", "Valores", "Padrão ou restrição"],
+              "rows": [
+                [
+                  "Layout dividido",
+                  "Esquerda, Direita, Superior, Inferior",
+                  "Requer um clipe de tela vinculado. Caso contrário: “Nenhuma gravação de tela correspondente está disponível neste ponto da linha do tempo”."
+                ],
+                ["Proporção de divisão", "20%–80%", "50%"],
+                ["Preenchimento dividido", "0%–8%", "0%"],
+                ["Reaja ao zoom", "Ligado ou desligado", "Ligado"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Desfocar clipes",
+          "tables": [
+            {
+              "headers": ["Propriedade", "Valores ou intervalo", "Comportamento condicional"],
+              "rows": [
+                ["Predefinição de luz", "Desfoque", "Força 30, pena 14, tonalidade 0."],
+                ["Predefinição de privacidade", "Pixelizado", "Força 72, pena 2, tonalidade 0."],
+                ["Predefinição forte", "Opaco", "Força 100, pena 0, matiz 0, cor #000000."],
+                ["Efeito", "Desfoque, fosco, pixelizado, opaco", "Alterações cujos controles permanecem visíveis."],
+                ["Forma", "Retângulo, Quadrado, Círculo", "O círculo oculta o raio do canto."],
+                ["Força", "0%–100%", "Oculto para Opaco."],
+                ["Suavidade nas bordas", "0%–100%", "Controla a difusão."],
+                ["Raio de canto", "0%–100%", "Oculto para Círculo."],
+                ["Intensidade de tonalidade", "0%–100%", "Apenas fosco; entrar no Frosted usa pelo menos 24%."],
+                ["Cor", "Seletor de cores", "Apenas fosco e opaco."]
+              ]
+            }
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Efeito de privacidade",
+            "text": "O efeito é incorporado ao vídeo exportado. Aumente a resistência ou use Opaco para informações confidenciais."
+          }
+        },
+        {
+          "title": "Volume do clipe de áudio",
+          "tables": [
+            {
+              "headers": ["Propriedade", "Alcance", "Padrão"],
+              "rows": [["Volume", "0%–200%", "100%"]]
+            }
+          ],
+          "paragraphs": [
+            "Este volume no nível do clipe se aplica ao sistema selecionado, microfone ou clipes de áudio importados. Os controles de volume em toda a composição e em nível de função estão documentados na página Áudio."
+          ]
+        },
+        {
+          "title": "Legendas de texto e teclado",
+          "tables": [
+            {
+              "headers": ["Propriedade", "Valores ou intervalo", "Padrão ou regra"],
+              "rows": [
+                [
+                  "Conteúdo",
+                  "Texto personalizado ou frase gerada/etapa do teclado",
+                  "O texto personalizado não se propaga pela seleção múltipla."
+                ],
+                ["Fonte", "Pesquise fontes instaladas ou importe uma fonte", "Armazenado com estilo de legenda."],
+                ["Estilo", "Negrito, Itálico, Tachado", "Alternadores independentes."],
+                ["Alinhamento", "Esquerda, Centro, Direita", "Alinhamento do texto da legenda."],
+                ["Cor", "Seletor de cores", "Cor de preenchimento do texto."],
+                ["Altura da linha", "0,8–2,0", "Valor do estilo da legenda."],
+                ["Espaçamento entre letras", "−5 a 20 px", "Valor do estilo da legenda."],
+                [
+                  "Tamanho da fonte",
+                  "12–256 pixels",
+                  "Preferência de legenda manual com fallback de criação de 42 px; painel substituto de texto de 36 px / teclado de 28 px; As legendas de IA usam 36 px."
+                ],
+                ["Embrulhar", "Ligado ou desligado", "Ligado"],
+                ["Esboço", "0–30 pixels", "Largura do contorno opcional."],
+                ["Cor do contorno", "Seletor de cores", "Usado quando a largura do contorno está acima de zero."],
+                ["Extrusão", "0–20 pixels", "Efeito de profundidade opcional."],
+                ["Desfoque de fundo", "0–48 pixels", "Desfoque atrás da legenda."],
+                [
+                  "Desfoque de sombra de texto",
+                  "0–50 pixels",
+                  "Direção: Todos, Inferior, Inferior direito, Superior esquerdo."
+                ],
+                [
+                  "Cor da sombra do texto",
+                  "Seletor de cores",
+                  "Aplicado com o desfoque e a direção da sombra configurados."
+                ],
+                [
+                  "Siga o cursor",
+                  "Ligado ou desligado",
+                  "Apenas legendas de teclado; nunca propagado através da seleção múltipla."
+                ]
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

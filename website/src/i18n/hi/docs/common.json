@@ -2,42 +2,161 @@
   "locale": "hi-IN",
   "label": "हिन्दी",
   "siteTitle": "Beam दस्तावेज़",
-  "nav": { "website": "Beam वेबसाइट" },
+  "nav": {
+    "website": "Beam वेबसाइट"
+  },
   "sidebar": [
     {
       "text": "यहाँ से शुरू करें",
       "items": [
-        { "text": "परिचय", "link": "/" },
-        { "text": "शुरुआत करें", "link": "/getting-started" },
-        { "text": "Beam अपडेट करें", "link": "/updates" }
+        {
+          "text": "परिचय",
+          "link": "/"
+        },
+        {
+          "text": "शुरुआत करें",
+          "link": "/getting-started"
+        },
+        {
+          "text": "Beam अपडेट करना",
+          "link": "/updates"
+        }
       ]
     },
     {
       "text": "रिकॉर्डर ऐप",
       "items": [
-        { "text": "अवलोकन", "link": "/recorder/" },
-        { "text": "इंटरफ़ेस", "link": "/recorder/interface" },
-        { "text": "सुविधाएँ", "link": "/recorder/capabilities" }
+        {
+          "text": "अवलोकन",
+          "link": "/recorder/"
+        },
+        {
+          "text": "इंटरफ़ेस",
+          "link": "/recorder/interface"
+        },
+        {
+          "text": "सुविधाएँ",
+          "link": "/recorder/capabilities/",
+          "items": [
+            {
+              "text": "स्रोतों को कैप्चर करें",
+              "link": "/recorder/capabilities/capture-sources"
+            },
+            {
+              "text": "ऑडियो और कैमरा",
+              "link": "/recorder/capabilities/audio-camera"
+            },
+            {
+              "text": "टेलीप्रॉम्प्टर",
+              "link": "/recorder/capabilities/teleprompter"
+            },
+            {
+              "text": "लाइव नियंत्रण",
+              "link": "/recorder/capabilities/live-controls"
+            },
+            {
+              "text": "प्राथमिकताएँ",
+              "link": "/recorder/capabilities/preferences"
+            },
+            {
+              "text": "प्रोजेक्ट मैनेजर",
+              "link": "/recorder/capabilities/project-manager"
+            },
+            {
+              "text": "अनुमतियाँ और गोपनीयता",
+              "link": "/recorder/capabilities/permissions-privacy"
+            }
+          ]
+        }
       ]
     },
     {
       "text": "वीडियो एडिटर",
       "items": [
-        { "text": "अवलोकन", "link": "/editor/" },
-        { "text": "इंटरफ़ेस", "link": "/editor/interface" },
-        { "text": "सुविधाएँ", "link": "/editor/capabilities" }
+        {
+          "text": "अवलोकन",
+          "link": "/editor/"
+        },
+        {
+          "text": "इंटरफ़ेस",
+          "link": "/editor/interface"
+        },
+        {
+          "text": "प्रोजेक्ट शोकेस",
+          "link": "/editor/showcase"
+        },
+        {
+          "text": "सुविधाएँ",
+          "link": "/editor/capabilities",
+          "items": [
+            {
+              "text": "टाइमलाइन एडिटिंग",
+              "link": "/editor/capabilities/timeline"
+            },
+            {
+              "text": "कैनवास",
+              "link": "/editor/capabilities/canvas"
+            },
+            {
+              "text": "क्लिप्स",
+              "link": "/editor/capabilities/clips"
+            },
+            {
+              "text": "ज़ूम",
+              "link": "/editor/capabilities/zooms"
+            },
+            {
+              "text": "कर्सर",
+              "link": "/editor/capabilities/cursor"
+            },
+            {
+              "text": "कैप्शन",
+              "link": "/editor/capabilities/captions"
+            },
+            {
+              "text": "ऑडियो",
+              "link": "/editor/capabilities/audio"
+            },
+            {
+              "text": "सेटिंग्स",
+              "link": "/editor/capabilities/settings"
+            },
+            {
+              "text": "एक्सपोर्ट",
+              "link": "/export"
+            }
+          ]
+        }
       ]
     },
     {
       "text": "संदर्भ",
       "items": [
-        { "text": "एक्सपोर्ट और शेयर करना", "link": "/export" },
-        { "text": "प्लेटफ़ॉर्म सपोर्ट", "link": "/platforms" },
-        { "text": "फ़ाइल सिस्टम", "link": "/filesystem" }
+        {
+          "text": "एक्सपोर्ट और शेयर करना",
+          "link": "/export"
+        },
+        {
+          "text": "प्लेटफ़ॉर्म सपोर्ट",
+          "link": "/platforms"
+        },
+        {
+          "text": "फ़ाइल सिस्टम",
+          "link": "/filesystem"
+        }
       ]
     }
   ],
-  "social": { "github": "GitHub पर Beam देखें", "discord": "Beam Discord से जुड़ें" },
-  "theme": { "switchToLight": "लाइट थीम पर जाएँ", "switchToDark": "डार्क थीम पर जाएँ" },
-  "footer": { "message": "ओपन-सोर्स स्क्रीन रिकॉर्डिंग और एडिटिंग।", "copyright": "MIT लाइसेंस के तहत जारी।" }
+  "social": {
+    "github": "GitHub पर Beam देखें",
+    "discord": "Beam Discord से जुड़ें"
+  },
+  "theme": {
+    "switchToLight": "लाइट थीम पर जाएँ",
+    "switchToDark": "डार्क थीम पर जाएँ"
+  },
+  "footer": {
+    "message": "ओपन-सोर्स स्क्रीन रिकॉर्डिंग और एडिटिंग।",
+    "copyright": "MIT लाइसेंस के तहत जारी।"
+  }
 }

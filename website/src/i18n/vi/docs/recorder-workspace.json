@@ -1,0 +1,364 @@
+{
+  "pages": [
+    {
+      "slug": "recorder/capabilities/preferences",
+      "title": "Tùy chọn Trình ghi",
+      "description": "Tham khảo đầy đủ về hành vi ghi, giao diện, ngôn ngữ, phím tắt, cập nhật và cài đặt Trình ghi liên tục.",
+      "lead": "Mở Tùy chọn từ thanh trên cùng của Trình ghi. Cài đặt được nhóm thành Ghi âm, Chung, Phím tắt và Giới thiệu, với các điều khiển cập nhật và giao diện nâng cao nếu có.",
+      "sections": [
+        {
+          "title": "Cửa sổ tùy chọn",
+          "screenshot": {
+            "path": "recorder/preferences.webp",
+            "alt": "Beam Cửa sổ tùy chọn hiển thị cài đặt Trình ghi",
+            "caption": "Tùy chọn trình ghi bao gồm hành vi chụp và cài đặt được chia sẻ với người chỉnh sửa.",
+            "aspectRatio": "308 / 517"
+          }
+        },
+        {
+          "title": "Cài đặt ghi âm",
+          "tables": [
+            {
+              "headers": ["Cài đặt", "Giá trị", "Mặc định", "Ghi chú"],
+              "rows": [
+                ["Đếm ngược", "Tắt, 3 giây, 5 giây, 10 giây", "3 giây", "Áp dụng trước khi bắt đầu chụp."],
+                [
+                  "Thanh ghi âm",
+                  "Luôn hiển thị, Tự động mờ dần, Ẩn cho đến khi di chuột",
+                  "Luôn có trên Windows/macOS; Ẩn cho đến khi di chuột trên Linux",
+                  "Điều khiển thanh nổi trong quá trình chụp."
+                ],
+                [
+                  "Truy cập tương tác",
+                  "Đang kiểm tra, Có sẵn, Cần có quyền, Yêu cầu cài đặt, Bị từ chối, Không có sẵn",
+                  "Tắt",
+                  "Linux gắn nhãn này Ghi lại các sự kiện bàn phím và chuột trên Linux."
+                ],
+                [
+                  "Ghi lại các tương tác",
+                  "Bật hoặc Tắt khi có sẵn",
+                  "Phụ thuộc vào nền tảng",
+                  "Lưu trữ các lần nhấp được hỗ trợ và mã thông báo lối tắt an toàn, văn bản không bao giờ được nhập."
+                ],
+                ["Phím tắt", "Mở chế độ xem phụ Phím tắt", "Không áp dụng", "Mở nhóm phím tắt Ghi âm và Teleprompter."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Cài đặt chung",
+          "tables": [
+            {
+              "headers": ["Cài đặt", "Giá trị", "Mặc định"],
+              "rows": [
+                [
+                  "Ngôn ngữ",
+                  "Tiếng Bulgaria, tiếng Đức, tiếng Anh, tiếng Tây Ban Nha, tiếng Pháp, tiếng Hindi, tiếng Ý, tiếng Nhật, tiếng Hàn, tiếng Ba Lan, tiếng Bồ Đào Nha (Brazil), tiếng Nga, tiếng Việt, tiếng Trung giản thể, tiếng Trung phồn thể",
+                  "Một hệ thống hoặc ngôn ngữ trình duyệt được hỗ trợ; dự phòng tiếng Anh"
+                ],
+                ["Chế độ chủ đề", "Ánh sáng, bóng tối, hệ thống", "Ánh sáng"],
+                ["Kiểm tra chính tả", "Bật hoặc Tắt trong phần Nâng cao", "Bật"],
+                ["Màu cơ bản", "Bảng màu cài sẵn hoặc bộ chọn màu tùy chỉnh", "#ff5a1f"],
+                ["Màu thứ cấp", "Bảng màu cài sẵn hoặc bộ chọn màu tùy chỉnh", "#6366f1"],
+                ["Bán kính góc", "0, 6, 10, 16, 24 px hoặc Tùy chỉnh", "10px"],
+                ["Bán kính viên thuốc", "Bật hoặc Tắt", "Tắt"],
+                ["Tông màu bề mặt", "Mặc định, Trung tính, Đá phiến, Sâu", "Mặc định"],
+                ["Quy mô giao diện người dùng toàn cầu", "50%, 75%, 100%, 125%", "100%"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Cài đặt trước chủ đề",
+          "paragraphs": [
+            "Việc áp dụng giá trị đặt sẵn sẽ đặt cả màu sắc, bán kính góc, hành vi của viên thuốc và tông màu bề mặt cùng nhau. Sau đó, các điều khiển riêng lẻ có thể được thay đổi."
+          ],
+          "tables": [
+            {
+              "headers": ["cài sẵn", "Chính", "Trung học", "Bán kính", "bề mặt"],
+              "rows": [
+                ["Beam Hoàng hôn", "#ff5a1f", "#6366f1", "10px", "Mặc định"],
+                ["Tím điện tử", "#8b5cf6", "#06b6d4", "12px", "Đá phiến"],
+                ["Rừng ngọc lục bảo", "#10b981", "#f59e0b", "8px", "trung tính"],
+                ["Nhung đỏ thẫm", "#f43f5e", "#a855f7", "14px", "sâu"],
+                ["Gió Đại Dương", "#0284c7", "#14b8a6", "10px", "Đá phiến"],
+                ["Xưởng hổ phách", "#f59e0b", "#ec4899", "4px", "trung tính"],
+                ["hoa anh đào nở", "#ec4899", "#8b5cf6", "18px", "Mặc định"],
+                ["Độ chính xác của đá phiến", "#0ea5e9", "#64748b", "2px", "Đá phiến"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Ghi đè quy mô giao diện",
+          "paragraphs": [
+            "Mỗi thanh trên cùng, Thanh bên, Thuộc tính, điều khiển Canvas và Dòng thời gian đều có thể sử dụng tỷ lệ chung hoặc ghi đè tỷ lệ đó bằng 50%, 75%, 100% hoặc 125%. Việc sử dụng toàn cầu được thể hiện bằng một ghi đè trống, do đó việc thay đổi quy mô toàn cầu tiếp tục ảnh hưởng đến khu vực đó."
+          ],
+          "tables": [
+            {
+              "headers": ["Vùng", "Lựa chọn"],
+              "rows": [
+                ["Thanh trên cùng", "Sử dụng toàn cầu, 50%, 75%, 100%, 125%"],
+                ["Thanh bên", "Sử dụng toàn cầu, 50%, 75%, 100%, 125%"],
+                ["Thuộc tính", "Sử dụng toàn cầu, 50%, 75%, 100%, 125%"],
+                ["Điều khiển canvas", "Sử dụng toàn cầu, 50%, 75%, 100%, 125%"],
+                ["Dòng thời gian", "Sử dụng toàn cầu, 50%, 75%, 100%, 125%"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Mặc định phím tắt",
+          "paragraphs": [
+            "Xung đột phím tắt chung được so sánh mà không phân biệt chữ hoa chữ thường. Một lối tắt chung trùng lặp bị từ chối."
+          ],
+          "tables": [
+            {
+              "headers": ["Danh mục", "hành động", "Phím tắt mặc định"],
+              "rows": [
+                ["Ghi âm", "Bắt đầu/Dừng ghi âm", "Alt+Shift+R"],
+                ["Ghi âm", "Tạm dừng / Tiếp tục", "Alt+Shift+P"],
+                ["Ghi âm", "Chuyển đổi micrô", "Alt+Shift+M"],
+                ["Ghi âm", "Chuyển đổi máy ảnh", "Alt+Shift+C"],
+                ["Ghi âm", "Chuyển đổi âm thanh hệ thống", "Alt+Shift+A"],
+                ["Máy nhắc chữ", "Hiển thị / Ẩn", "Alt+Shift+T"],
+                ["Máy nhắc chữ", "Tạm dừng / Tiếp tục", "Alt+Shift+O"],
+                ["Máy nhắc chữ", "Dòng tiếp theo", "Ctrl+Shift+Phải"],
+                ["Máy nhắc chữ", "Dòng trước", "Ctrl+Shift+Trái"]
+              ]
+            }
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Phím tắt trình soạn thảo",
+            "text": "Lược đồ tùy chọn cũng chứa phím tắt Phát/Tạm dừng của trình soạn thảo, Dấu cách, nhưng chế độ xem phụ phím tắt Trình ghi không hiển thị nó."
+          }
+        },
+        {
+          "title": "Giới thiệu và cập nhật",
+          "tables": [
+            {
+              "headers": ["Khu vực", "Các hành động hoặc trạng thái sẵn có"],
+              "rows": [
+                [
+                  "Giới thiệu",
+                  "Xem phiên bản ứng dụng, sao chép thông tin hệ thống, mở nhật ký thay đổi và khởi động lại Chuyến tham quan chào mừng."
+                ],
+                [
+                  "Cập nhật trạng thái",
+                  "Không hoạt động, Đang kiểm tra, Có sẵn, Đang tải xuống, Đã tải xuống, Không có sẵn, Lỗi, Không được hỗ trợ."
+                ],
+                [
+                  "Cập nhật hành động",
+                  "Kiểm tra, tải xuống khi có sẵn, sao chép thông báo lỗi và chỉ khởi động lại sau khi bản cập nhật đạt đến Đã tải xuống."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Dữ liệu ưu tiên được lưu trữ",
+          "paragraphs": [
+            "Lược đồ tùy chọn được chuẩn hóa là phiên bản 3. Ngoài các điều khiển hiển thị, lược đồ này còn lưu trữ thông tin hoàn tất quá trình triển khai, các thiết bị đã chọn, màu nền đã lưu và cài đặt trước độ chuyển màu cũng như liệu thông báo tương tác có bị loại bỏ hay không."
+          ],
+          "tables": [
+            {
+              "headers": ["Nền tảng", "Tệp tùy chọn"],
+              "rows": [
+                ["cửa sổ", "`%USERPROFILE%\\Videos\\Beam\\user\\preferences.json`"],
+                ["macOS", "`~/Movies/Beam/user/preferences.json`"],
+                ["Linux", "`${XDG_VIDEOS_DIR:-~/Videos}/Beam/user/preferences.json`"]
+              ]
+            },
+            {
+              "headers": ["Phím bổ sung", "Mục đích"],
+              "rows": [
+                ["ngôn ngữ", "Ngôn ngữ ứng dụng đã chọn."],
+                ["màn hìnhKhu vực", "Vùng ghi tùy chỉnh được chuẩn hóa."],
+                ["màn hìnhKhu vực cài sẵn", "Đặt trước vùng được chọn lần cuối."],
+                ["teleprompterCài đặt", "Chế độ Teleprompter được chia sẻ và cài đặt trình đọc."],
+                ["máy ảnhLớp phủ", "Cài đặt lớp phủ máy ảnh được chia sẻ với người chỉnh sửa."],
+                ["teleprompterWindow", "Trạng thái cửa sổ Teleprompter."]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/project-manager",
+      "title": "Người quản lý dự án",
+      "description": "Tham khảo để tìm kiếm, xem trước, chọn, tạo, đổi tên, mở, hiển thị và xóa các dự án Beam.",
+      "lead": "Chọn Mở dự án hiện có bên dưới Bắt đầu ghi để duyệt các dự án được lưu trữ trên máy tính.",
+      "sections": [
+        {
+          "title": "Hành động dự án",
+          "tables": [
+            {
+              "headers": ["hành động", "Hành vi"],
+              "rows": [
+                ["Tìm kiếm dự án", "Lọc tên dự án không phân biệt chữ hoa chữ thường."],
+                ["Chọn dự án", "Vào chế độ lựa chọn cho một hoặc nhiều dự án."],
+                ["Chọn tất cả", "Chọn tất cả các dự án hiện có sẵn để xem."],
+                ["Thoát khỏi lựa chọn", "Rời khỏi chế độ chọn hàng loạt."],
+                ["Dự án mới", "Tạo một dự án trống mà không tạo bản ghi."],
+                ["Làm mới dự án", "Tải lại danh sách từ bộ lưu trữ và báo cáo ngắn gọn các Dự án được làm mới."],
+                ["Dự án mở", "Mở dự án đã chọn trong trình chỉnh sửa."],
+                ["Đổi tên", "Thay đổi tên dự án."],
+                ["Khám phá", "Hiển thị thư mục dự án trong trình quản lý tệp nền tảng."],
+                ["Xóa", "Xác nhận yêu cầu xóa một dự án. Xóa hàng loạt bắt đầu trực tiếp cho các dự án đã chọn."],
+                ["Quay lại", "Quay lại HUD ghi âm."],
+                ["Tạo / Hủy", "Xác nhận hoặc từ bỏ việc tạo dự án trống."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Liệt kê các tiểu bang",
+          "tables": [
+            {
+              "headers": ["tiểu bang", "Giao diện hiển thị những gì"],
+              "rows": [
+                ["Đang tải", "Thẻ dự án Skeleton trong khi bộ nhớ được đọc."],
+                ["Lỗi", "Trạng thái lỗi với Thử lại."],
+                ["trống", "Không có dự án nào khi bộ nhớ không chứa dự án nào."],
+                ["Không có kết quả tìm kiếm", "Một thông báo dành riêng khi bộ lọc không khớp với gì."],
+                ["Ngày không xác định", "Văn bản dự phòng khi siêu dữ liệu thời gian dự án không có sẵn."],
+                ["hiện tại", "Đánh dấu dự án hiện đang mở."],
+                ["Đã chọn", "Đánh dấu một dự án có trong lựa chọn hiện tại."],
+                ["Danh sách lớn", "Thẻ được ảo hóa nên chỉ hiển thị phạm vi hiển thị."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Tên, thư mục và phiên",
+          "paragraphs": [
+            "Các bản ghi mới nhận được các tên được tạo như Sao chổi thông minh hoặc Tín hiệu nhanh. Hậu tố số được thêm vào khi tên được tạo đã tồn tại. Dự án là một thư mục có thể chứa nhiều phiên ghi và các bản nhạc đa phương tiện riêng biệt của chúng."
+          ],
+          "tables": [
+            {
+              "headers": ["Nền tảng", "Dự án gốc"],
+              "rows": [
+                ["cửa sổ", "`%USERPROFILE%\\Videos\\Beam\\user\\projects`"],
+                ["macOS", "`~/Movies/Beam/user/projects`"],
+                ["Linux", "`${XDG_VIDEOS_DIR:-~/Videos}/Beam/user/projects`"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Xem trước và huy hiệu",
+          "paragraphs": [
+            "Beam thích `thumbnail.webp` dai dẳng hơn. Nếu thiếu, Beam có ​​thể tạo hình thu nhỏ WebP từ nguồn xem trước có sẵn. Di chuột qua một dự án sẽ phát bản ghi màn hình của nó ở chế độ tắt tiếng, tự động và theo vòng lặp; cuộn sẽ hủy bản xem trước khi di chuột và dừng phát lại."
+          ],
+          "tables": [
+            {
+              "headers": ["Huy hiệu", "Ý nghĩa"],
+              "rows": [
+                ["Màn hình", "Dự án có chứa một bản ghi màn hình."],
+                ["Video", "Dự án có chứa các cảnh quay camera."],
+                ["Chú thích", "Dự án chứa chú thích hoặc một lớp văn bản."]
+              ]
+            }
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Phạm vi huy hiệu",
+            "text": "Trình quản lý dự án hiện tại không hiển thị huy hiệu micrô hoặc âm thanh hệ thống riêng biệt."
+          }
+        },
+        {
+          "title": "Xóa hàng loạt",
+          "paragraphs": [
+            "Việc xóa một dự án sẽ yêu cầu xác nhận. Việc xóa hàng loạt bắt đầu trực tiếp từ chế độ lựa chọn và xóa các dự án một cách tuần tự thay vì bắt đầu mọi thao tác hệ thống tệp cùng một lúc."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/permissions-privacy",
+      "title": "Quyền và quyền riêng tư",
+      "description": "Yêu cầu về nền tảng và hành vi bảo mật đối với việc ghi lại màn hình, âm thanh, máy ảnh và tương tác.",
+      "lead": "Beam chỉ yêu cầu các khả năng được bảo vệ thông qua các đường dẫn hệ điều hành mà các nguồn đã chọn cần. Ghi lại tương tác là tùy chọn và không lưu trữ văn bản đã nhập.",
+      "sections": [
+        {
+          "title": "cửa sổ",
+          "bullets": [
+            "Chụp màn hình và cửa sổ sử dụng Windows Graphics Capture.",
+            "Khả năng của con trỏ và nhấp chuột phụ thuộc vào đường dẫn chụp Windows hiển thị.",
+            "Truy cập tương tác không yêu cầu trình trợ giúp Linux Polkit."
+          ]
+        },
+        {
+          "title": "macOS",
+          "tables": [
+            {
+              "headers": ["Khả năng", "Yêu cầu"],
+              "rows": [
+                ["Chụp màn hình, cửa sổ hoặc ứng dụng", "Quyền ScreenCaptureKit và Ghi màn hình."],
+                ["Truy cập tương tác", "Quyền truy cập CoreGraphics."],
+                ["Chụp MP4 trực tiếp", "macOS 15 trở lên."],
+                [
+                  "Âm thanh hệ thống crom",
+                  "macOS 13 trở lên; `NSAudioCaptureUsageDescription` được yêu cầu từ macOS 14.2."
+                ],
+                ["Micrô và máy ảnh", "Các quyền riêng tư của macOS tương ứng."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Linux",
+          "tables": [
+            {
+              "headers": ["Yêu cầu", "Mục đích hoặc hạn chế"],
+              "rows": [
+                [
+                  "Cổng thông tin máy tính để bàn XDG v2 trở lên",
+                  "Hiển thị bộ chọn nguồn hệ thống và nhận được sự đồng ý ghi âm."
+                ],
+                ["ỐngDây", "Mang màn hình đã chọn và luồng âm thanh hệ thống gốc."],
+                ["FFmpeg cộng với bộ mã hóa MP4 tương thích", "Mã hóa phiên đã ghi."],
+                ["Beam trợ giúp nhập liệu", "Cung cấp siêu dữ liệu phím tắt và nhấp chuột tùy chọn."],
+                ["Polkit / pkexec và nhà môi giới", "Có thể được yêu cầu ủy quyền và vận hành trình trợ giúp đầu vào."],
+                [
+                  "Nguồn cổng thông tin duy nhất",
+                  "Một màn hình hoặc cửa sổ được chọn cho phiên; chụp khu vực không có sẵn."
+                ]
+              ]
+            }
+          ],
+          "paragraphs": [
+            "Phím tắt và thao tác nhấp chuột có thể có sẵn khác nhau tùy thuộc vào thiết bị đầu vào có thể truy cập. Tính năng chụp tương tác Linux luôn báo cáo rằng văn bản đã nhập không được ghi lại."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Beam cửa sổ ở chế độ chụp toàn màn hình",
+            "text": "Beam không thể ẩn các cửa sổ của chính nó khỏi ảnh chụp toàn màn hình Linux. Chế độ màn hình vẫn được khuyến khích; sắp xếp Beam trước khi xác nhận lựa chọn cổng."
+          }
+        },
+        {
+          "title": "Quyền riêng tư tương tác",
+          "bullets": [
+            "Chụp tương tác là tùy chọn.",
+            "Nó chỉ chạy khi phiên ghi đang hoạt động.",
+            "Nó lưu trữ siêu dữ liệu nhấp chuột được hỗ trợ và mã thông báo lối tắt an toàn.",
+            "Nó không bao giờ lưu trữ văn bản được người dùng gõ."
+          ]
+        },
+        {
+          "title": "Ranh giới cách ly và lỗi phương tiện",
+          "paragraphs": [
+            "Camera, micrô và âm thanh hệ thống được lưu trữ dưới dạng các rãnh riêng biệt hoặc sidecar nếu được hỗ trợ. Bên ngoài Linux, âm thanh hệ thống sử dụng tính năng thu thập phương tiện hiển thị bằng Chrome. Electron chỉ cấp quyền truy cập phương tiện cho các trình kết xuất ứng dụng đáng tin cậy. Máy ảnh được báo cáo là không khả dụng trong quá trình chuẩn bị có thể được bỏ qua trong khi tiếp tục chụp; các lỗi camera hoặc sidecar khác cũng như lỗi micrô hoặc nguồn âm thanh hệ thống đã chọn có thể dừng quá trình khởi động ghi."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Thiết lập chi tiết",
+            "text": "Sử dụng [tài liệu tham khảo hỗ trợ nền tảng](/platforms) để thiết lập và khắc phục sự cố hệ điều hành."
+          }
+        }
+      ]
+    }
+  ]
+}

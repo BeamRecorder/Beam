@@ -10,7 +10,7 @@ const docsScreenshotsDirectory = join(websiteRoot, 'docs/public/screenshots');
 
 const collectScreenshotPaths = (sections: readonly DocsSectionContent[]): string[] =>
   sections.flatMap((currentSection) => [
-    ...(currentSection.screenshot ? [currentSection.screenshot.path] : []),
+    ...(currentSection.screenshot && !currentSection.screenshot.hidden ? [currentSection.screenshot.path] : []),
     ...(currentSection.subsections ? collectScreenshotPaths(currentSection.subsections) : []),
   ]);
 
@@ -103,6 +103,9 @@ describe('docs content renderer', () => {
     expect(rendered).toContain('title: "Beam documentation"');
     expect(rendered).toContain('name: "Beam Docs"');
     expect(rendered).toContain('tagline: "Practical Beam guides."');
+    expect(rendered).toContain('src: /favicon.webp');
+    expect(rendered).toContain('width: 192');
+    expect(rendered).toContain('height: 192');
     expect(rendered).toContain('text: "Get started"');
     expect(rendered).toContain('link: "/getting-started"');
     expect(rendered).toContain(
@@ -194,6 +197,9 @@ describe('docs content renderer', () => {
     expect(routes.every((route) => route.content.includes('---'))).toBe(true);
     expect(routes[0]?.content).toContain('layout: home');
     expect(routes[0]?.content).toContain('name: "Beam Docs"');
+    expect(routes[0]?.content).toContain('src: /favicon.webp');
+    expect(routes[0]?.content).toContain('width: 192');
+    expect(routes[0]?.content).toContain('height: 192');
     expect(routes[0]?.content).toContain('<div class="docs-product-grid">');
     expect(routes[0]?.content).toContain(
       '<DocsProductCard title="Recorder app" details="Choose a source, prepare audio and camera tracks, then control the recording from the compact HUD." link="/recorder/" visual="recorder" />',
@@ -233,6 +239,7 @@ describe('docs content renderer', () => {
       'editor/webcam-properties.webp',
       'editor/zoom-empty.webp',
       'editor/zoom-properties.webp',
+      'getting-started/update-controls.webp',
       'recorder/hud-overview.webp',
       'recorder/preferences.webp',
       'reference/export-panel.webp',
@@ -247,6 +254,19 @@ describe('docs content renderer', () => {
         `rendered screenshot ${path}`,
       ).toBe(true);
     }
+
+    const updateRoute = routes.find((route) => route.params.page === 'updates');
+    expect(existsSync(join(docsScreenshotsDirectory, 'getting-started/update-controls.webp'))).toBe(true);
+    expect(updateRoute?.content).toContain(
+      '<DocsScreenshot path="getting-started/update-controls.webp" alt="Beam settings showing the update controls" caption="The update panel displays the installed version and the available update actions." aspect-ratio="16 / 9" />',
+    );
+
+    const platformsRoute = routes.find((route) => route.params.page === 'platforms');
+    expect(platformsRoute?.content).not.toContain('platforms/macos-screen-system-audio.webp');
+    expect(platformsRoute?.content).not.toContain('platforms/macos-microphone-camera.webp');
+
+    const gettingStartedRoute = routes.find((route) => route.params.page === 'getting-started');
+    expect(gettingStartedRoute?.content).not.toContain('getting-started/first-recording.webp');
   });
 
   it('normalizes index routes to the docs root for clean URLs', () => {

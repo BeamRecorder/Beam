@@ -2,43 +2,159 @@
   "locale": "vi-VN",
   "label": "Tiếng Việt",
   "siteTitle": "Tài liệu Beam",
-  "nav": { "website": "Trang web Beam" },
+  "nav": {
+    "website": "Trang web Beam"
+  },
   "sidebar": [
     {
       "text": "Bắt đầu tại đây",
       "items": [
-        { "text": "Giới thiệu", "link": "/" },
-        { "text": "Bắt đầu sử dụng", "link": "/getting-started" },
-        { "text": "Cập nhật Beam", "link": "/updates" }
+        {
+          "text": "Giới thiệu",
+          "link": "/"
+        },
+        {
+          "text": "Bắt đầu sử dụng",
+          "link": "/getting-started"
+        },
+        {
+          "text": "Cập nhật Beam",
+          "link": "/updates"
+        }
       ]
     },
     {
       "text": "Ứng dụng quay",
       "items": [
-        { "text": "Tổng quan", "link": "/recorder/" },
-        { "text": "Giao diện", "link": "/recorder/interface" },
-        { "text": "Tính năng", "link": "/recorder/capabilities" }
+        {
+          "text": "Tổng quan",
+          "link": "/recorder/"
+        },
+        {
+          "text": "Giao diện",
+          "link": "/recorder/interface"
+        },
+        {
+          "text": "Tính năng",
+          "link": "/recorder/capabilities/",
+          "items": [
+            {
+              "text": "Nắm bắt nguồn",
+              "link": "/recorder/capabilities/capture-sources"
+            },
+            {
+              "text": "Âm thanh và máy ảnh",
+              "link": "/recorder/capabilities/audio-camera"
+            },
+            {
+              "text": "Máy nhắc chữ",
+              "link": "/recorder/capabilities/teleprompter"
+            },
+            {
+              "text": "Điều khiển trực tiếp",
+              "link": "/recorder/capabilities/live-controls"
+            },
+            {
+              "text": "Tùy chọn",
+              "link": "/recorder/capabilities/preferences"
+            },
+            {
+              "text": "Người quản lý dự án",
+              "link": "/recorder/capabilities/project-manager"
+            },
+            {
+              "text": "Quyền và quyền riêng tư",
+              "link": "/recorder/capabilities/permissions-privacy"
+            }
+          ]
+        }
       ]
     },
     {
       "text": "Trình chỉnh sửa video",
       "items": [
-        { "text": "Tổng quan", "link": "/editor/" },
-        { "text": "Giao diện", "link": "/editor/interface" },
-        { "text": "Tính năng", "link": "/editor/capabilities" }
+        {
+          "text": "Tổng quan",
+          "link": "/editor/"
+        },
+        {
+          "text": "Giao diện",
+          "link": "/editor/interface"
+        },
+        {
+          "text": "Giới thiệu dự án",
+          "link": "/editor/showcase"
+        },
+        {
+          "text": "Tính năng",
+          "link": "/editor/capabilities",
+          "items": [
+            {
+              "text": "Chỉnh sửa timeline",
+              "link": "/editor/capabilities/timeline"
+            },
+            {
+              "text": "Canvas",
+              "link": "/editor/capabilities/canvas"
+            },
+            {
+              "text": "Đoạn phim",
+              "link": "/editor/capabilities/clips"
+            },
+            {
+              "text": "Thu phóng",
+              "link": "/editor/capabilities/zooms"
+            },
+            {
+              "text": "Con trỏ",
+              "link": "/editor/capabilities/cursor"
+            },
+            {
+              "text": "Chú thích",
+              "link": "/editor/capabilities/captions"
+            },
+            {
+              "text": "Âm thanh",
+              "link": "/editor/capabilities/audio"
+            },
+            {
+              "text": "Cài đặt",
+              "link": "/editor/capabilities/settings"
+            },
+            {
+              "text": "Xuất",
+              "link": "/export"
+            }
+          ]
+        }
       ]
     },
     {
       "text": "Tham khảo",
       "items": [
-        { "text": "Xuất và chia sẻ", "link": "/export" },
-        { "text": "Hỗ trợ nền tảng", "link": "/platforms" },
-        { "text": "Hệ thống tệp", "link": "/filesystem" }
+        {
+          "text": "Xuất và chia sẻ",
+          "link": "/export"
+        },
+        {
+          "text": "Hỗ trợ nền tảng",
+          "link": "/platforms"
+        },
+        {
+          "text": "Hệ thống tệp",
+          "link": "/filesystem"
+        }
       ]
     }
   ],
-  "social": { "github": "Xem Beam trên GitHub", "discord": "Tham gia Discord của Beam" },
-  "theme": { "switchToLight": "Chuyển sang giao diện sáng", "switchToDark": "Chuyển sang giao diện tối" },
+  "social": {
+    "github": "Xem Beam trên GitHub",
+    "discord": "Tham gia Discord của Beam"
+  },
+  "theme": {
+    "switchToLight": "Chuyển sang giao diện sáng",
+    "switchToDark": "Chuyển sang giao diện tối"
+  },
   "footer": {
     "message": "Công cụ quay và chỉnh sửa màn hình mã nguồn mở.",
     "copyright": "Phát hành theo Giấy phép MIT."

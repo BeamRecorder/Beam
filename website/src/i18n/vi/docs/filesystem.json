@@ -12,7 +12,7 @@
             "Beam xác định thư mục Videos của hệ điều hành và tạo `Beam/user` bên trong. Thư mục Videos được chuyển hướng hoặc bản địa hóa sẽ làm thay đổi vị trí thực tế, vì vậy các đường dẫn dưới đây là mặc định thường dùng chứ không phải vị trí cố định."
           ],
           "bullets": [
-            "Windows: `%USERPROFILE%\\Videos\\Beam\\user`",
+            "Cửa sổ: `%USERPROFILE%\\Videos\\Beam\\user`",
             "macOS: `~/Movies/Beam/user`",
             "Linux: `${XDG_VIDEOS_DIR:-~/Videos}/Beam/user`"
           ],
@@ -121,7 +121,7 @@
             "Các bản cập nhật đã tải được lưu trong bộ nhớ đệm của hệ điều hành, tách khỏi dự án. Thư mục `pending/` có thể chứa trình cài đặt hoặc kho lưu trữ cập nhật và `update-info.json`. Beam xóa bộ nhớ đệm cập nhật sau khi phiên bản mới khởi động thành công nhưng giữ lại bản cập nhật đang chờ cài đặt."
           ],
           "bullets": [
-            "Windows: `%LOCALAPPDATA%\\beam-updater\\pending`",
+            "Cửa sổ: `%LOCALAPPDATA%\\beam-updater\\pending`",
             "macOS: `~/Library/Caches/beam-updater/pending`",
             "Linux: `${XDG_CACHE_HOME:-~/.cache}/beam-updater/pending`"
           ],

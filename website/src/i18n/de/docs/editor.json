@@ -3,34 +3,35 @@
     {
       "slug": "editor/index",
       "title": "Übersicht des Videoeditors",
-      "description": "Verstehe den Arbeitsbereich des Beam-Videoeditors und den nicht-destruktiven Bearbeitungs-Workflow.",
-      "lead": "Der Videoeditor verwandelt aufgezeichnete Sitzungen und importierte Medien in eine komponierte Produktdemo und hält dabei das ursprüngliche Ausgangsmaterial intakt.",
+      "description": "Verstehe den Bearbeitungsarbeitsbereich, die Timeline, Eigenschaften, Vorschau und den Export-Workflow von Beam.",
+      "lead": "Der Videoeditor verwandelt aufgezeichnete Sitzungen und importierte Medien in eine ausgearbeitete Komposition und bewahrt dabei die ursprünglichen Quelldateien.",
       "sections": [
         {
-          "title": "Ein Arbeitsbereich",
+          "title": "Ein Bearbeitungsarbeitsbereich",
           "paragraphs": [
-            "Der Editor kombiniert eine Vorschau-Canvas, eine Mehrspur-Timeline, ein fokussiertes Eigenschaftenpanel, Wiedergabesteuerung, Projektaktionen und Export. Durch die Auswahl eines Elements werden die dafür relevanten Steuerelemente angezeigt."
+            "Beam Behält project Steuerungen at der oben, capability navigation und properties auf der links, der output preview in der center, und timing Steuerungen in der resizable Timeline below. Selecting ein Clip, zoom, cursor, oder der Canvas opens der Steuerungen that apply zu it."
           ],
           "screenshot": {
-            "path": "editor/editor-overview.webp",
-            "alt": "Übersicht des Beam-Videoeditor-Arbeitsbereichs",
-            "caption": "Canvas, Eigenschaften, Wiedergabe und Timeline bleiben im Bearbeitungsarbeitsbereich sichtbar."
+            "path": "editor/interface-overview.webp",
+            "alt": "Vollständige Beam-Videoeditor-Oberfläche",
+            "caption": "der Canvas, properties, playback Steuerungen, und multi-track Timeline remain visible together.",
+            "aspectRatio": "1920 / 1053"
           }
-        },
-        {
-          "title": "Nicht-destruktive Komposition",
-          "paragraphs": [
-            "Timeline-Bearbeitungen beschreiben, wie Ausgangsclips angeordnet und präsentiert werden. Trimmen, Teilen, Transformationen, Zooms, Untertitel und visuelle Gestaltung überschreiben die ursprünglichen Aufnahmedateien nicht."
-          ]
         },
         {
           "title": "Von der Aufnahme zum Export",
           "steps": [
-            "Öffne den Editor nach einer Aufnahme oder wähle ein bestehendes Projekt aus.",
-            "Ordne Clips und Timing in der Timeline an.",
-            "Gestalte Canvas, Clips, Cursor, Zooms, Untertitel und Audio.",
-            "Sieh dir die vollständige Komposition in der Vorschau an.",
-            "Wähle Exportformat, Auflösung und Qualitätsprofil aus."
+            "Öffnen der editor after recording oder choose ein existing project.",
+            "Arrange, trim, split, und Stil Clips auf der Timeline.",
+            "Set der Canvas Hintergrund, zooms, cursor Verhalten, captions, und Audio.",
+            "Preview der composition at ein suitable playback quality.",
+            "Export der finished Video as WebM oder MP4."
+          ]
+        },
+        {
+          "title": "Editor-Technologie",
+          "paragraphs": [
+            "der desktop interface ist built mit Electron und Vue. Beam Verwendet Mediabunny für media playback und export, und der Canvas 2D API zu composite visuell layers."
           ]
         }
       ]
@@ -38,134 +39,168 @@
     {
       "slug": "editor/interface",
       "title": "Videoeditor-Oberfläche",
-      "description": "Lerne Canvas, Seitenleiste, Eigenschaften, Timeline, Wiedergabe und Exportsteuerung in Beam kennen.",
-      "lead": "Der Editor hält globale Projektsteuerung oben, visuelle Arbeit in der Mitte, Eigenschaften an der Seite und Timing unten.",
+      "description": "Lerne Topbar, Seitenleiste, Canvas- und Timeline-Werkzeugleiste, Spuren, Auswahl und Wiedergabesteuerung kennen.",
+      "lead": "der interface separates project-level Aktionen, visuell composition, item properties, und time-based editing without hiding der current output.",
       "sections": [
         {
-          "title": "Obere Leiste",
-          "bullets": [
-            "Mit Zurück zum HUD kehrst du zum Rekorder zurück.",
-            "Rückgängig und Wiederholen durchlaufen unterstützte Bearbeitungsaktionen.",
-            "Projekttitel und Speicherstatus kennzeichnen das aktuelle Projekt.",
-            "Discord öffnet die Beam-Community.",
-            "Video exportieren öffnet die Exportsteuerung."
+          "title": "Topbar",
+          "tables": [
+            {
+              "headers": ["Steuerung", "Aktion", "Wichtiges Verhalten"],
+              "rows": [
+                ["Zum HUD zurückkehren", "Kehrt zum Rekorder zurück.", "der current project remains Verfügbar."],
+                [
+                  "Projektauswahl",
+                  "Zeigt der current project und opens another project.",
+                  "Unavailable project data ist handled by der project-loading state."
+                ],
+                [
+                  "Rückgängig / Wiederholen",
+                  "Durchläuft Bearbeitungs-Snapshots.",
+                  "Up zu 50 snapshots in der current editor session; history ist not restored after reopening."
+                ],
+                [
+                  "Leistungsmonitor",
+                  "Meldet den Zustand der Vorschau.",
+                  "States sind Idle, Good, Warning, und Critical."
+                ],
+                ["Discord", "Opens der Beam community.", "Externer Link."],
+                ["Export", "Öffnet die Exporteinstellungen.", "Verfügbar when ein project ist loaded."],
+                [
+                  "Fenstersteuerung",
+                  "Minimize, maximize oder restore, und Schließen.",
+                  "Native desktop-window Aktionen."
+                ]
+              ]
+            }
           ]
         },
         {
-          "title": "Canvas und Werkzeugleiste",
+          "title": "Seitenleiste und Eigenschaften",
           "paragraphs": [
-            "Die Canvas zeigt das komponierte Bild in der Vorschau. Ihre Werkzeugleiste ändert das Ausgabe-Seitenverhältnis, aktiviert den Zuschneidemodus, schaltet das Ausrichtungsraster um und steuert den Ansichtszoom, ohne die exportierte Komposition zu ändern."
+            "der sidebar opens Canvas, Clip, Zooms, Cursor, Captions, Audio, und Settings. der adjacent panel Ändert mit der active category und current selection. auf narrow oder short windows, labels collapse while their icons remain Verfügbar."
           ],
-          "screenshot": {
-            "path": "editor/canvas-properties.webp",
-            "alt": "Beam-Canvas neben dem aktiven Eigenschaftenpanel",
-            "caption": "Wähle die Canvas oder ein Timeline-Element, um die Bearbeitungssteuerung einzublenden."
-          }
+          "tables": [
+            {
+              "headers": ["Auswahl", "Panel Verhalten"],
+              "rows": [
+                ["Clip", "Opens properties compatible mit der primary ausgewählt Clip."],
+                ["Zoom", "Opens der ausgewählt zoom's focus und magnification Steuerungen."],
+                ["Canvas", "Opens composition-wide Hintergrund und branding Steuerungen."],
+                ["Cursor", "Opens global cursor presentation without requiring ein Clip selection."],
+                ["Multiple Clips", "Verwendet one primary Clip und Gilt ein change nur zu compatible ausgewählt Clips."]
+              ]
+            }
+          ]
         },
         {
-          "title": "Seitenleiste und Eigenschaften",
-          "bullets": [
-            "Canvas steuert den Ausgabehintergrund und die Präsentationsfläche.",
-            "Clip steuert den ausgewählten Video-, Webcam-, Audio-, Unschärfe-, Bild- oder Untertitelclip.",
-            "Zoom bearbeitet einen ausgewählten Zoomblock oder erzeugt automatische Zooms.",
-            "Cursor steuert Erscheinungsbild, Klickfeedback und Bewegung.",
-            "Untertitel erzeugt oder gestaltet Text- und Tastaturuntertitel.",
-            "Audio steuert globale System- und Mikrofonpegel.",
-            "Einstellungen steuert App-Präferenzen und Rekorderzugriff."
+          "title": "Canvas-Werkzeugleiste",
+          "tables": [
+            {
+              "headers": ["Steuerung", "Werte", "Effekt"],
+              "rows": [
+                ["Seitenverhältnis", "16:9, 9:16, 1:1, 4:5, 3:4, 4:3, 21:9", "Ändert der output Canvas ratio."],
+                ["Crop", "Zuschneide-Editor öffnen", "Verfügbar nur für exactly one ausgewählt visuell Clip."],
+                ["Grid", "auf oder Off", "Zeigt die 3×3-Ausrichtungshilfe an oder blendet sie aus."],
+                ["Ansichtszoom", "25%–500%; reset to 100%", "Ändert nur der editor view, never export."],
+                ["Pan", "Middle-drag oder Leertaste-drag", "Verschiebt den vergrößerten Editor-Ansichtsbereich."]
+              ]
+            }
           ]
         },
         {
           "title": "Timeline-Werkzeugleiste",
-          "bullets": [
-            "Hinzufügen importiert Video-, Bild-, Ton-, Text- oder Unschärfeelemente.",
-            "Teilen trennt den ausgewählten Clip an der Abspielposition.",
-            "Magnetisches Einrasten richtet Bearbeitungen an nahegelegenen Grenzen aus.",
-            "Die Wiedergabesteuerung springt zum Anfang oder Ende und spielt ab oder pausiert.",
-            "Der Timeline-Zoom ändert die sichtbare Zeitskala."
+          "tables": [
+            {
+              "headers": ["Steuerung", "Aktion", "Constraint oder Standard"],
+              "rows": [
+                [
+                  "Hinzufügen",
+                  "Importierens Video, Bild, oder Audio; Erstellt Text oder Unschärfe.",
+                  "Wird am Abspielkopf hinzugefügt."
+                ],
+                [
+                  "Teilen",
+                  "Divides one ausgewählt Clip at der playhead.",
+                  "Erfordert der playhead strictly inside der Clip; shortcut S."
+                ],
+                ["Magnet", "Snaps edits zu useful boundaries.", "Standardmäßig aktiviert."],
+                [
+                  "Zurück / Vorwärts",
+                  "Moves der playhead zu Timeline start oder end.",
+                  "Hängt von der Projektdauer ab."
+                ],
+                [
+                  "Wiedergabe / Pause",
+                  "Previews oder pauses der composition.",
+                  "Tastenkürzel Leertaste außerhalb bearbeitbarer Felder."
+                ],
+                ["Zeitanzeige", "Zeigt current und total time.", "MM:SS unter einer Stunde; HH:MM:SS ab einer Stunde."],
+                ["Wiedergabequalität", "Voll, Halb, Viertel", "Nur Vorschau; der Export bleibt in voller Qualität."],
+                ["Timeline-Zoom", "100%–3200%", "Also controlled mit Ctrl+mouse wheel."]
+              ]
+            }
           ]
         },
         {
           "title": "Timeline-Spuren",
           "paragraphs": [
-            "Spuren stellen Video, Webcam, Unschärfe, Zoom, Textuntertitel, Tastaturuntertitel, Systemaudio und Mikrofonaudio dar, wenn diese Quellen vorhanden sind. Unterstützte Elemente der Komposition können ausgewählt, verschoben, neu angeordnet, getrimmt, geteilt, aktiviert, deaktiviert oder entkoppelt werden."
+            "Beam Erstellt Spuren für grouped visuell media, zooms, text captions, keyboard captions, system Audio, microphone Audio, und imported Audio when those sources exist."
           ],
-          "screenshot": {
-            "path": "editor/timeline.webp",
-            "alt": "Beam-Mehrspur-Timeline mit visuellen, Zoom-, Untertitel- und Audiospuren",
-            "caption": "Die Timeline hält Präsentation, Untertitel und Ton an einer Abspielposition ausgerichtet."
+          "bullets": [
+            "Clip anklicken zu make it der current selection.",
+            "Spurkopf anklicken zu Auswählen every Clip auf that Spur; use Ctrl, Cmd, oder Shift auf Spur headers zu build ein additive Spur selection. der Clip nearest der playhead becomes primary.",
+            "Ziehen visuell Spur headers zu reorder their layer order.",
+            "Verschieben ein Clip oder trim its start und end handles. Linked recording media Verschieben together.",
+            "Dragging media beyond der current end extends der Timeline.",
+            "Klicken der Zoom Spur zu Hinzufügen ein manual zoom oder der text-caption Spur zu Hinzufügen ein empty caption.",
+            "Right-click ein Clip für der supported Kopieren, Einfügen, Löschen, und Standbild Aktionen."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Leertaste hat zwei Canvas-Rollen",
+            "text": "Leertaste toggles playback, while holding Leertaste during ein Ziehen pans ein zoomed Canvas. Editable fields ignore these global shortcuts."
           }
+        },
+        {
+          "title": "Direkt- und Mehrfachauswahl",
+          "paragraphs": [
+            "Klicken ein supported visuell, caption, blur layer, cursor, oder Bildschirm area directly auf der Canvas, oder Auswählen der same item auf der Timeline. ein multiple selection Verwendet one primary Clip für der panel."
+          ],
+          "bullets": [
+            "Visuelles Aussehen und Transformationen werden nur auf kompatible visuelle Clips übertragen.",
+            "Unschärfeeigenschaften werden nur auf ausgewählte Unschärfeclips übertragen.",
+            "Die Lautstärke wird nur auf ausgewählte Audioclips übertragen.",
+            "Caption styling propagates nur zu captions von der same text oder keyboard subtype.",
+            "Benutzerdefinierter Untertiteltext und „Cursor folgen“ werden nie auf eine Mehrfachauswahl übertragen.",
+            "Zuschneide- und Canvas-Transformationsgriffe erfordern genau einen ausgewählten visuellen Clip."
+          ]
         }
       ]
     },
     {
       "slug": "editor/capabilities",
       "title": "Funktionen des Videoeditors",
-      "description": "Bearbeite Timing, Canvas-Stil, Zooms, Cursorbewegung, Untertitel, Audio, Unschärfe und importierte Medien in Beam.",
-      "lead": "Beam kombiniert präzise Timeline-Operationen mit Präsentationssteuerung für Produktdemos.",
+      "description": "Öffnen ein focused reference für every Video Editor capability und its exact settings.",
+      "lead": "Jede Funktion besitzt eine eigene Seite, damit Eigenschaften, Standards, Auswahlregeln und Sonderfälle leicht erfassbar bleiben.",
       "sections": [
         {
-          "title": "Timeline-Bearbeitung",
-          "bullets": [
-            "Verschiebe und ordne unterstützte visuelle Clips neu an.",
-            "Trimme Clipgrenzen und teile an der Abspielposition.",
-            "Aktiviere Einrasten für präzise Ausrichtung.",
-            "Zoome die Timeline, ohne die Ausgabe zu ändern.",
-            "Aktiviere, deaktiviere, entkopple oder lösche unterstützte Kompositionselemente."
-          ]
-        },
-        {
-          "title": "Importierte Medien",
-          "paragraphs": [
-            "Füge unterstützte Video-, Bild- und Audiodateien über das Hinzufügen-Menü der Timeline hinzu oder ziehe lokale Medien in den Editor. Importierte Elemente werden nach der Prüfung an der Abspielposition eingefügt."
-          ],
-          "notice": {
-            "kind": "info",
-            "title": "Codec-Unterstützung",
-            "text": "Medienimport und -wiedergabe hängen von den für Beam verfügbaren Codecs ab. Nicht unterstützte oder ungültige Dateien werden mit einer Begründung abgelehnt."
-          }
-        },
-        {
-          "title": "Aussehen von Canvas und Clips",
-          "bullets": [
-            "Wähle Bild-, Video-, Farb- oder Verlaufshintergründe und importiere eigene Hintergrundmedien.",
-            "Passe Hintergrundunschärfe und Präsentation der Ausgabe-Canvas an.",
-            "Positioniere, skaliere, beschneide und spiegle unterstützte visuelle Clips.",
-            "Wende Eckenradius, einfarbige oder adaptive Schatten, Rahmen und Fensterrahmen an.",
-            "Passe die Wiedergabegeschwindigkeit unterstützter Clips an."
-          ]
-        },
-        {
-          "title": "Zooms und Cursorpräsentation",
-          "paragraphs": [
-            "Erzeuge automatische Zoomblöcke aus aufgezeichneten Klickereignissen oder füge manuelle Fokuspunkte hinzu. Der Automatikmodus folgt dem aufgezeichneten Cursor während eines aktiven Zooms. Jeder Zoomblock steuert Timing, Fokusmodus, Position und Vergrößerung. Cursorsteuerung ändert Stil, Größe, Farbe, Schatten, Klicksprung, linke und rechte Welleneffekte, Glättung, Federmasse und Bewegungsunschärfe."
-          ],
-          "screenshot": {
-            "path": "editor/zoom-cursor-captions.webp",
-            "alt": "Beam-Bearbeitungssteuerung für Zoom, Cursor und Untertitel",
-            "caption": "Fokus- und Präsentationssteuerung lenkt die Aufmerksamkeit, ohne die ursprüngliche Aufnahme zu ändern."
-          }
-        },
-        {
-          "title": "Untertitel",
-          "paragraphs": [
-            "Erzeuge lokal mit Whisper aus Mikrofon- oder Systemaudio Sprache-zu-Text-Untertitel. Lade ein unterstütztes Modell herunter und überprüfe es, erzeuge Untertitel und bearbeite anschließend die resultierenden Untertitelclips und ihren visuellen Stil. Tastaturkürzel-Untertitel verwenden sichere Interaktionsmetadaten, die mit Zustimmung aufgezeichnet wurden."
-          ],
-          "notice": {
-            "kind": "tip",
-            "title": "Lokale Transkription",
-            "text": "Die Whisper-Transkription läuft auf dem Gerät. Sie benötigt weder einen Cloud-Upload noch einen API-Schlüssel."
-          }
-        },
-        {
-          "title": "Audio und Unschärfe",
-          "paragraphs": [
-            "Steuere die globale Ausgabelautstärke sowie Aktivierungsstatus und Pegel der System- und Mikrofonspuren. Füge Unschärfeclips hinzu, um einen Teil der Komposition mit Form-, Stärke-, Weichzeichnungs-, Eckenradius-, Farbton- und Farbsteuerung zu verdecken oder abzuschwächen."
-          ]
-        },
-        {
-          "title": "Export",
-          "paragraphs": [
-            "Rendere die aktuelle Komposition mit Auflösungs- und Qualitätssteuerung als MP4 oder WebM. Siehe [Export und Teilen](/export) für den vollständigen Workflow."
+          "title": "Funktionsübersicht",
+          "tables": [
+            {
+              "headers": ["Capability", "Referenz"],
+              "rows": [
+                ["Timeline-Bearbeitung", "[Timeline-Bearbeitung öffnen](/editor/capabilities/timeline)"],
+                ["Canvas", "[Canvas öffnen](/editor/capabilities/canvas)"],
+                ["Clips", "[Clips öffnen](/editor/capabilities/clips)"],
+                ["Zooms", "[Zooms öffnen](/editor/capabilities/zooms)"],
+                ["Cursor", "[Cursor öffnen](/editor/capabilities/cursor)"],
+                ["Captions", "[Untertitel öffnen](/editor/capabilities/captions)"],
+                ["Audio", "[Audio öffnen](/editor/capabilities/audio)"],
+                ["Settings", "[Einstellungen öffnen](/editor/capabilities/settings)"],
+                ["Export", "[Export und Teilen öffnen](/export)"]
+              ]
+            }
           ]
         }
       ]

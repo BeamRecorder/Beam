@@ -1,0 +1,24 @@
+{
+  "pages": [
+    {
+      "slug": "editor/showcase",
+      "title": "Ghi lại giới thiệu dự án",
+      "description": "Xem cách phiên Beam được ghi xuất hiện bên trong Trình chỉnh sửa video.",
+      "lead": "Phiên đã ghi sẽ mở ra dưới dạng một bố cục hoàn chỉnh với phương tiện đã ghi được sắp xếp để chỉnh sửa.",
+      "sections": [
+        {
+          "title": "Một dự án đã sẵn sàng để chỉnh sửa",
+          "paragraphs": [
+            "Canvas trình bày đầu ra tổng hợp trong khi dòng thời gian giữ cho phương tiện đã ghi và các lớp chỉnh sửa hiển thị để điều chỉnh thời gian, khung hình, chú thích, âm thanh và xuất."
+          ],
+          "screenshot": {
+            "path": "editor/showcase.webp",
+            "alt": "Trình chỉnh sửa Beam hiển thị dự án đã ghi cùng với khung vẽ và dòng thời gian của dự án đó",
+            "caption": "Một dự án đã ghi sẵn sẵn sàng cho việc điều chỉnh thời gian, khung hình, chú thích, âm thanh và xuất.",
+            "aspectRatio": "1586/992"
+          }
+        }
+      ]
+    }
+  ]
+}

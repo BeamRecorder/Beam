@@ -3,14 +3,29 @@
     {
       "slug": "export",
       "title": "Xuất và chia sẻ",
-      "description": "Xuất bản dàn dựng Beam sang MP4 hoặc WebM với cài đặt độ phân giải và chất lượng phù hợp.",
-      "lead": "Xuất kết xuất bản dàn dựng hiện tại trực tiếp thành tệp cục bộ bằng các cài đặt được máy hỗ trợ.",
+      "description": "Xuất bố cục Beam sang WebM hoặc MP4 với độ phân giải, tốc độ khung hình, chất lượng và điều khiển âm thanh.",
+      "lead": "Xuất hiển thị thành phần hiện tại trực tiếp vào tệp cục bộ và báo cáo từng giai đoạn của công việc.",
       "sections": [
         {
           "title": "Chọn định dạng",
-          "bullets": [
-            "WebM sử dụng container WebM với một encoder có trên máy hiện tại.",
-            "MP4 sử dụng container MP4 khi Beam tìm thấy encoder phần cứng hoặc phần mềm tương thích."
+          "tables": [
+            {
+              "headers": ["định dạng", "Lựa chọn codec video", "Bộ giải mã âm thanh", "sẵn có"],
+              "rows": [
+                [
+                  "WebM",
+                  "Mã hóa đầu tiên của VP9, VP8, AV1",
+                  "tác phẩm",
+                  "Định dạng mặc định; yêu cầu một codec video có thể mã hóa và khi bao gồm âm thanh, Opus."
+                ],
+                [
+                  "MP4",
+                  "AVC / H.264",
+                  "AAC",
+                  "Yêu cầu bộ mã hóa AVC. AAC sử dụng WebCodecs khi có sẵn, sau đó sử dụng bộ mã hóa dự phòng Mediabunny AAC của Beam."
+                ]
+              ]
+            }
           ],
           "notice": {
             "kind": "info",
@@ -20,33 +35,138 @@
         },
         {
           "title": "Chọn độ phân giải",
-          "bullets": [
-            "720p thu nhỏ thành đầu ra HD khi canvas gốc đủ lớn.",
-            "1080p thu nhỏ thành Full HD khi canvas gốc đủ lớn.",
-            "Tối đa giữ nguyên kích thước canvas đầu ra gốc."
+          "tables": [
+            {
+              "headers": ["Tùy chọn", "sẵn có", "Hành vi đầu ra"],
+              "rows": [
+                ["720p", "Chiều cao canvas gốc tối thiểu là 720 px", "Nhắm mục tiêu cao 720 px mà không cần nâng cấp."],
+                [
+                  "1080p",
+                  "Chiều cao canvas gốc ít nhất là 1080 px",
+                  "Nhắm mục tiêu cao 1080 px mà không cần nâng cấp."
+                ],
+                ["Tối đa", "Luôn luôn", "Giữ kích thước canvas đầu ra gốc."],
+                [
+                  "Tất cả các tùy chọn",
+                  "Không áp dụng",
+                  "Giữ nguyên tỷ lệ khung hình cũng như chiều rộng và chiều cao của vòng thành số chẵn dương."
+                ]
+              ]
+            }
           ]
         },
         {
-          "title": "Chọn chất lượng và bitrate",
-          "paragraphs": [
-            "Các cài đặt thấp, trung bình và cao tính bitrate từ kích thước đầu ra và tốc độ khung hình. Trung bình cân bằng độ rõ và kích thước tệp, còn cao ưu tiên độ trung thực hình ảnh."
+          "title": "Chọn tốc độ khung hình và chất lượng",
+          "tables": [
+            {
+              "headers": ["Cài đặt", "Giá trị", "Mặc định hoặc đề xuất"],
+              "rows": [
+                [
+                  "Tốc độ khung hình",
+                  "24, 30, 60 khung hình/giây",
+                  "60 đối với nguồn có tốc độ 50 khung hình/giây trở lên; 24 ở mức hoặc thấp hơn 27 khung hình / giây; nếu không thì 30."
+                ],
+                ["chất lượng", "Thấp, Trung bình, Cao", "Trung bình"],
+                [
+                  "Hệ số tốc độ bit thấp",
+                  "0,055 × chiều rộng × chiều cao × khung hình / giây",
+                  "Được kẹp ở mức 0,5–40 Mbps."
+                ],
+                [
+                  "Hệ số tốc độ bit trung bình",
+                  "0,095 × chiều rộng × chiều cao × khung hình / giây",
+                  "Được kẹp ở mức 0,5–40 Mbps."
+                ],
+                [
+                  "Hệ số tốc độ bit cao",
+                  "0,16 × chiều rộng × chiều cao × khung hình / giây",
+                  "Được kẹp ở mức 0,5–40 Mbps."
+                ]
+              ]
+            }
           ],
           "screenshot": {
-            "path": "reference/export-settings.webp",
-            "alt": "Cài đặt xuất Beam cho định dạng, độ phân giải và chất lượng",
-            "caption": "Chọn định dạng, độ phân giải và chất lượng trước khi chọn tệp đích."
+            "path": "reference/export-panel.webp",
+            "alt": "Beam bảng xuất có định dạng, độ phân giải, tốc độ khung hình, chất lượng và điều khiển âm thanh",
+            "caption": "Chọn cài đặt kết xuất trước khi chọn tệp đích.",
+            "aspectRatio": "361/560"
           }
         },
         {
-          "title": "Theo dõi quá trình xuất",
-          "paragraphs": [
-            "Beam hiển thị tiến trình khung hình trong khi kết xuất. Bạn có thể hủy bản xuất đang hoạt động hoặc sao chép báo cáo chẩn đoán. Thay đổi trực tiếp trong trình chỉnh sửa không sửa tệp đang kết xuất."
+          "title": "Nhiều lựa chọn hơn",
+          "tables": [
+            {
+              "headers": ["Tùy chọn", "Giá trị", "Mặc định", "Hành vi"],
+              "rows": [
+                [
+                  "Bao gồm âm thanh",
+                  "Bật hoặc Tắt",
+                  "Bật",
+                  "Tắt tạo một tập tin im lặng. Âm thanh cũng bị bỏ qua khi không có clip âm thanh nào được bật có thời lượng dương."
+                ],
+                [
+                  "Đầu ra âm thanh",
+                  "48 kHz, âm thanh nổi, 128 kbps",
+                  "Khi âm thanh được bao gồm",
+                  "Các clip âm thanh đã bật sẽ được trộn dần dần vào codec vùng chứa đã chọn."
+                ]
+              ]
+            }
           ]
         },
         {
-          "title": "Mở kết quả",
+          "title": "Theo dõi quá trình xuất",
+          "tables": [
+            {
+              "headers": ["Sân khấu", "Beam làm gì"],
+              "rows": [
+                [
+                  "Xác thực tài sản",
+                  "Kiểm tra ảnh chụp nhanh, nội dung cục bộ, định dạng, codec và kết xuất bất biến."
+                ],
+                ["Đang tải nội dung", "Tải tài nguyên hình ảnh, âm thanh, con trỏ, phông chữ và nền."],
+                ["Mã hóa", "Hiển thị các khung bố cục, trộn âm thanh được bật và ghi các đoạn được mã hóa."],
+                ["Đang hoàn thiện", "Đóng các bản nhạc và hoàn thiện vùng chứa phương tiện và tệp đích."]
+              ]
+            }
+          ],
           "paragraphs": [
-            "Sau khi xuất thành công, Beam báo tên tệp đã lưu và cung cấp thao tác mở tệp. Nếu xuất thất bại, hãy sao chép báo cáo kỹ thuật trước khi nhờ trợ giúp trên [Discord](https://discord.gg/6Q6v2xUCB) hoặc [GitHub](https://github.com/BeamRecorder/Beam/issues)."
+            "Phần trăm báo cáo chế độ xem tiến trình và số lượng khung hình đã hoàn thành và cung cấp Báo cáo sao chép. Hủy dừng quá trình xuất đang hoạt động. Việc đóng hoặc hủy bộ chọn đích sẽ kết thúc công việc mà không báo cáo lỗi. Các chỉnh sửa trực tiếp được thực hiện sau khi bắt đầu xuất sẽ không làm thay đổi tệp đang thực hiện vì Beam xuất ảnh chụp nhanh."
+          ]
+        },
+        {
+          "title": "Xác nhận và các trường hợp cạnh",
+          "tables": [
+            {
+              "headers": ["tình trạng", "kết quả"],
+              "rows": [
+                ["Thiếu tài sản", "Quá trình xuất dừng do vấn đề xác thực xác định nội dung hoặc clip có liên quan."],
+                [
+                  "Nguồn hoặc codec không được hỗ trợ",
+                  "Xuất báo cáo lỗi định dạng, codec hoặc giải mã không được hỗ trợ."
+                ],
+                [
+                  "Không có bộ mã hóa đầu ra tương thích",
+                  "Định dạng WebM hoặc MP4 đã chọn được báo cáo là không thể mã hóa được trên thiết bị."
+                ],
+                ["GIF động", "GIF động vẫn chưa thể xuất được một cách xác định."],
+                ["Canvas 2D không có sẵn", "Quá trình xuất bị dừng do không thể hiển thị khung bố cục."],
+                [
+                  "Hủy bỏ",
+                  "Luồng công việc đang hoạt động và luồng đầu ra bị hủy bỏ và quá trình xuất không đầy đủ không được báo cáo là lỗi."
+                ],
+                [
+                  "Bộ trộn âm thanh không có sẵn",
+                  "Beam báo cáo rằng tính năng trộn âm thanh ngoại tuyến không khả dụng trong bản dựng Chrome."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Kết quả và chẩn đoán",
+          "paragraphs": [
+            "Sau khi xuất thành công, Beam báo cáo tên tệp đã lưu và cung cấp các hành động Mở tệp và Sao chép báo cáo. Nếu quá trình xuất không thành công, thông báo hướng tới người dùng sẽ ẩn đường dẫn hệ thống tệp cục bộ trong khi báo cáo chi tiết vẫn giữ lại thông tin về cấu hình, codec, môi trường, tiến trình và tắc nghẽn để khắc phục sự cố. Sao chép báo cáo đó trước khi yêu cầu trợ giúp trên [Discord](https://discord.gg/6Q6v2xUCB) hoặc [GitHub](https://github.com/BeamRecorder/Beam/issues)."
           ]
         }
       ]
@@ -58,7 +178,7 @@
       "lead": "Beam có trên Windows, macOS và Linux. Quyền gốc và khả năng của hệ thống cửa sổ tạo ra một số khác biệt giữa các nền tảng.",
       "sections": [
         {
-          "title": "Windows",
+          "title": "cửa sổ",
           "bullets": [
             "Beam được phân phối dưới dạng trình cài đặt Windows gốc.",
             "Hỗ trợ ghi màn hình, cửa sổ, vùng, camera, micrô và âm thanh hệ thống.",
@@ -85,6 +205,7 @@
               ],
               "screenshot": {
                 "path": "platforms/macos-screen-system-audio.webp",
+                "hidden": true,
                 "alt": "Cài đặt quyền riêng tư Ghi màn hình và âm thanh hệ thống trên macOS với Beam được bật",
                 "caption": "Bật Beam trong phần Ghi màn hình & âm thanh hệ thống."
               }
@@ -96,6 +217,7 @@
               ],
               "screenshot": {
                 "path": "platforms/macos-microphone-camera.webp",
+                "hidden": true,
                 "alt": "Cài đặt quyền riêng tư Micrô và Camera trên macOS cho Beam",
                 "caption": "Beam phải được bật trong danh sách quyền riêng tư cho từng nguồn bạn muốn ghi."
               }

@@ -28,6 +28,7 @@
           ],
           "screenshot": {
             "path": "getting-started/first-recording.webp",
+            "hidden": true,
             "alt": "Beam 录制器已准备好进行第一次录制",
             "caption": "开始录制前选择捕获来源和媒体来源。"
           }
@@ -47,7 +48,7 @@
           "title": "继续了解",
           "bullets": [
             "了解[录制器界面](/recorder/interface)。",
-            "查看全部[录制器功能](/recorder/capabilities)。",
+            "查看全部[录制器功能](/recorder/capabilities/)。",
             "了解[视频编辑器界面](/editor/interface)。",
             "使用[导出与分享](/export)准备最终文件。"
           ]
@@ -67,6 +68,7 @@
           ],
           "screenshot": {
             "path": "getting-started/update-controls.webp",
+            "aspectRatio": "16 / 9",
             "alt": "显示更新控制项的 Beam 设置",
             "caption": "更新面板会显示已安装版本和可用的更新操作。"
           }

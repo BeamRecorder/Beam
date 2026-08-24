@@ -48,7 +48,7 @@
             "Le répertoire `Beam/user` peut contenir les données durables suivantes :\n\n```text\nBeam/user/\n├── preferences.json\n├── projects/\n│   └── project-<readable-name>/\n├── media/\n│   └── wallpapers/\n│       ├── image/\n│       └── video/\n└── models/\n    └── whisper/\n```"
           ],
           "bullets": [
-            "`preferences.json` stocke l'apparence, le comportement de l'enregistreur, les appareils sélectionnés, les raccourcis, l'état de l'intégration, les préréglages et la position enregistrée des fenêtres. Il est créé ou remplacé par des valeurs par défaut normalisées si nécessaire.",
+            "`preferences.json` stocke l'apparence, le comportement de l'enregistreur, les appareils sélectionnés, les raccourcis, l'état de la configuration initiale, les préréglages et la position enregistrée des fenêtres. Il est créé ou remplacé par des valeurs par défaut normalisées si nécessaire.",
             "`projects/` contient chaque projet Beam et ses sessions d'enregistrement. C'est le répertoire le plus important à sauvegarder.",
             "`media/wallpapers/image/` et `media/wallpapers/video/` contiennent les copies des arrière-plans importés dans la bibliothèque d'arrière-plans partagée. Ils sont facultatifs.",
             "`models/whisper/` contient les modèles de transcription locaux téléchargés, leurs manifestes et les téléchargements `.partial` temporaires. Les modèles sont facultatifs et peuvent être téléchargés à nouveau."

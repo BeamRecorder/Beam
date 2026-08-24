@@ -1,0 +1,486 @@
+{
+  "pages": [
+    {
+      "slug": "editor/capabilities/timeline",
+      "title": "Modifica della timeline",
+      "description": "Riferimento completo per strumenti della timeline, tracce, selezione, aggancio, ritaglio, divisione, azioni degli appunti e fermi immagine.",
+      "lead": "La timeline combina tracce visive, annotazioni, zoom e audio su un unico indicatore di riproduzione. Le regole di modifica dipendono da selezione, tipo di clip, appartenenza al progetto e durata disponibile.",
+      "sections": [
+        {
+          "title": "Aggiungi contenuti e livelli",
+          "tables": [
+            {
+              "headers": ["Elemento", "Come viene aggiunto", "Durata iniziale o comportamento"],
+              "rows": [
+                [
+                  "Video",
+                  "Aggiungi → Video o trascina e rilascia",
+                  "Durata dell'asset divisa per la velocità di riproduzione iniziale."
+                ],
+                ["Immagine", "Aggiungi → Immagine o trascina e rilascia", "5 secondi."],
+                [
+                  "Audio",
+                  "Aggiungi → Audio o trascina e rilascia",
+                  "Durata dell'asset divisa per la velocità di riproduzione iniziale."
+                ],
+                [
+                  "Testo",
+                  "Aggiungi → Testo oppure fai clic sulla traccia dei sottotitoli testuali",
+                  "Preferenza salvata per la durata dei sottotitoli; fallback di 2 secondi e minimo di 200 ms."
+                ],
+                ["Sfocatura", "Aggiungi → Sfocatura", "5 secondi."],
+                [
+                  "Zoom",
+                  "Fai clic su un punto disponibile della traccia Zoom",
+                  "Preferenza salvata per la durata dello zoom o fallback di 1,2 secondi; adattato allo spazio con un minimo di 200 ms."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Controlli della timeline",
+          "tables": [
+            {
+              "headers": ["Controllo", "Intervallo o scorciatoia", "Comportamento"],
+              "rows": [
+                ["Dividi", "S", "Richiede una clip selezionata e un indicatore strettamente all'interno della clip."],
+                [
+                  "Magnete",
+                  "Attivo per impostazione predefinita",
+                  "Aggancia all'inizio/fine della timeline, ai bordi delle clip, ai bordi degli zoom e all'indicatore quando l'operazione lo supporta. La soglia derivata dal righello non scende mai sotto 20 ms."
+                ],
+                ["Riproduci / Pausa", "Spazio", "Ignorato quando il focus è in un campo modificabile."],
+                [
+                  "Indietro / Avanti",
+                  "Pulsanti della barra degli strumenti",
+                  "Sposta all'inizio o alla fine della timeline."
+                ],
+                ["Qualità di riproduzione", "Completa, Metà, Quarto", "Modifica solo la risoluzione dell'anteprima."],
+                [
+                  "Zoom della timeline",
+                  "100%–3200%",
+                  "I pulsanti avanzano di 50 sotto il 500%, di 100 sotto il 1000%, poi di 250; Ctrl+rotellina usa passi da 25/50/100. Salvato dopo le modifiche."
+                ],
+                ["Visualizzazione del tempo", "MM:SS o HH:MM:SS", "Cambia formato quando la durata raggiunge un'ora."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Selezione",
+          "tables": [
+            {
+              "headers": ["Gesto", "Risultato"],
+              "rows": [
+                ["Fai clic su una clip", "Seleziona la clip come elemento primario."],
+                ["Fai clic su un'altra clip", "Sostituisce la selezione corrente della clip."],
+                [
+                  "Fai clic sull'intestazione di una traccia",
+                  "Seleziona tutte le clip della traccia; quella più vicina all'indicatore diventa primaria."
+                ],
+                [
+                  "Ctrl, Cmd o Shift + intestazione della traccia",
+                  "Aggiunge le clip della traccia alla selezione corrente o le rimuove da essa."
+                ],
+                [
+                  "Fai clic su un elemento del canvas",
+                  "Seleziona la clip, il sottotitolo, la sfocatura, il cursore o l'area dello schermo supportati corrispondenti."
+                ],
+                [
+                  "Fai clic su uno spazio vuoto",
+                  "Cancella la selezione in conflitto quando lo strumento attivo lo consente."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Sposta, ritaglia e ordina i livelli",
+          "bullets": [
+            "Trascina una clip per cambiarne l'inizio nella timeline; i sidecar della registrazione collegati si spostano insieme finché non vengono scollegati.",
+            "Trascina la maniglia iniziale o finale per ritagliare l'intervallo attivo. Una clip deve restare lunga almeno 40 ms e le clip che condividono un ID di gruppo vengono ritagliate insieme.",
+            "Trascinare contenuti oltre la fine corrente estende la durata della composizione.",
+            "Trascina le intestazioni delle tracce visive per modificare l'ordine dei livelli.",
+            "Spostare una clip visiva in un'altra riga visiva può anche riordinare le tracce visive.",
+            "Le clip disabilitate restano nella timeline, ma non contribuiscono all'anteprima o all'esportazione.",
+            "Una modifica a una selezione multipla viene applicata solo alle clip selezionate compatibili con la proprietà della clip primaria."
+          ]
+        },
+        {
+          "title": "Appunti ed eliminazione",
+          "tables": [
+            {
+              "headers": ["Azione", "Disponibilità", "Caso limite"],
+              "rows": [
+                [
+                  "Copia",
+                  "Una clip primaria selezionata o uno zoom supportato",
+                  "Copia solo l'elemento primario anche quando sono selezionate più clip; il contenuto resta associato al progetto."
+                ],
+                [
+                  "Incolla",
+                  "Un progetto è caricato e i dati degli appunti sono compatibili",
+                  "Gli elementi copiati da un altro progetto vengono rifiutati."
+                ],
+                [
+                  "Elimina",
+                  "Elementi selezionati della timeline supportati",
+                  "Rimuove l'elemento selezionato dalla composizione."
+                ],
+                [
+                  "Scollega",
+                  "Un elemento selezionato ha un collegamento a un sidecar della registrazione",
+                  "Dopo averlo scollegato, può spostarsi indipendentemente."
+                ],
+                [
+                  "Abilita / Disabilita",
+                  "Clip supportate",
+                  "I contenuti disabilitati vengono ignorati dalla riproduzione e dall'esportazione."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Transizioni di clip e canvas",
+          "tables": [
+            {
+              "headers": ["Proprietà", "Valori", "Predefinito o vincolo"],
+              "rows": [
+                ["Lato", "Entrata e Uscita", "Configurati indipendentemente."],
+                [
+                  "Preset visivo",
+                  "Nessuno, Dissolvenza, Scorri a sinistra, Scorri a destra, Scorri in alto, Scorri in basso, Ingrandisci, Riduci, Sfocatura",
+                  "Disponibile per clip visive e transizioni del canvas."
+                ],
+                [
+                  "Preset audio",
+                  "Nessuno o Dissolvenza",
+                  "Gli altri preset di transizione non sono disponibili per l'audio."
+                ],
+                [
+                  "Durata",
+                  "1–5000 ms",
+                  "500 ms; limitata dalla durata della clip meno la transizione sul lato opposto."
+                ],
+                ["Curva visiva", "1×–5×", "3×; non mostrata per le transizioni audio."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Fermo immagine",
+          "paragraphs": [
+            "Fermo immagine congela il video selezionato sull'indicatore e prolunga la parte fissa come elemento della timeline."
+          ],
+          "tables": [
+            {
+              "headers": ["Requisito", "Regola"],
+              "rows": [
+                ["Tipo di clip", "Clip di schermo, video o webcam abilitata con contenuti video."],
+                ["Selezione", "Deve essere selezionata una clip compatibile."],
+                ["Indicatore di riproduzione", "Da inizio + 40 ms a fine − 40 ms, inclusi."],
+                ["Segmento congelato", "1000 ms."],
+                [
+                  "Contenuti collegati",
+                  "Le clip collegate vengono divise insieme e il segmento congelato può restare raggruppato con il sidecar audio."
+                ],
+                ["Menu", "Disponibile dal menu contestuale della clip supportata."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Errori dei contenuti importati",
+          "paragraphs": [
+            "I file rilasciati vengono convalidati prima dell'importazione. Beam segnala estensioni o codec non supportati, contenuti non validi o vuoti, errori di decodifica, sorgenti non locali ed errori di importazione del progetto. Se un video importato contiene audio non supportato, il video può essere aggiunto mentre l'audio viene ignorato."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Una sola importazione alla volta",
+            "text": "Una nuova importazione tramite trascinamento viene rifiutata mentre è già in corso un'altra importazione multimediale."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/clips",
+      "title": "Proprietà delle clip",
+      "description": "Riferimento completo per le proprietà delle clip visive, webcam, sfocatura, audio, testo e sottotitoli da tastiera.",
+      "lead": "Il pannello Clip segue la selezione primaria. I controlli condivisi appaiono solo per i tipi di clip compatibili e una modifica multipla si propaga solo alle clip selezionate compatibili.",
+      "sections": [
+        {
+          "title": "Nessuna selezione",
+          "paragraphs": [
+            "Quando non è selezionata alcuna clip, il pannello mostra uno stato vuoto istruttivo. Seleziona un elemento sul canvas o nella timeline per mostrarne le proprietà."
+          ],
+          "screenshot": {
+            "path": "editor/clip-empty.webp",
+            "alt": "Pannello Clip di Beam senza clip selezionata",
+            "caption": "Il pannello Clip resta vuoto finché non viene selezionato un elemento compatibile della timeline o del canvas.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Tipi di clip",
+          "tables": [
+            {
+              "headers": ["Tipo di clip", "Proprietà esposte"],
+              "rows": [
+                [
+                  "Schermo / Video",
+                  "Layout visivo, inquadratura, trasformazione, aspetto, velocità di riproduzione, transizioni, abilitazione, eliminazione e scollegamento quando collegata."
+                ],
+                [
+                  "Immagine",
+                  "Layout visivo, inquadratura, trasformazione, aspetto, transizioni, abilitazione ed eliminazione."
+                ],
+                ["Webcam", "Controlli visivi condivisi più layout diviso e Reagisci allo zoom."],
+                ["Sfocatura", "Controlli per effetto, forma, intensità, sfumatura, raggio, tinta e colore."],
+                [
+                  "Sistema / Microfono / Audio importato",
+                  "Volume della clip, transizioni Dissolvenza in entrata e in uscita, abilitazione ed eliminazione."
+                ],
+                [
+                  "Sottotitolo testuale",
+                  "Contenuto testuale, tipografia, allineamento, colore, contorno, estrusione, sfondo e ombra."
+                ],
+                ["Sottotitolo da tastiera", "Stile del sottotitolo più Segui cursore."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Layout visivo condiviso",
+          "tables": [
+            {
+              "headers": ["Proprietà", "Valori o intervallo", "Comportamento"],
+              "rows": [
+                [
+                  "Layout",
+                  "Mobile in alto a sinistra, in alto a destra, in basso a sinistra, in basso a destra; Mobile al centro; Schermo intero",
+                  "La webcam supporta inoltre Diviso a sinistra, a destra, in alto e in basso."
+                ],
+                [
+                  "Inquadratura",
+                  "Riempi, Adatta, Quadrato, Verticale 9:16, Orizzontale 16:9, Squircle, Cerchio",
+                  "Controlla la presentazione del ritaglio e della maschera."
+                ],
+                ["Posizione X / Y", "−300% a 300%", "Sposta l'elemento visivo sul canvas."],
+                ["Larghezza", "2%–400%", "L'altezza resta proporzionale quando cambia solo la larghezza."],
+                [
+                  "Raggio degli angoli",
+                  "Nessuno, 8, 16, 24 px oppure Personalizzato 0–200 px",
+                  "Arrotonda la maschera visiva."
+                ],
+                ["Specchia", "Orizzontale e Verticale", "Capovolge l'elemento visivo renderizzato."],
+                [
+                  "Velocità di riproduzione",
+                  "0.25×–4×; preset 0.5×, 1×, 1.5×, 2×, 3×",
+                  "Disponibile per clip di schermo, video e webcam."
+                ],
+                [
+                  "Abilita / Disabilita",
+                  "Attivo o disattivo",
+                  "Le clip disabilitate restano nella timeline ma non vengono renderizzate."
+                ],
+                [
+                  "Transizioni",
+                  "Apri dall'intestazione delle proprietà",
+                  "Le transizioni in entrata e in uscita vengono memorizzate per clip."
+                ],
+                ["Elimina", "Azione nell'intestazione delle proprietà", "Rimuove la clip selezionata."],
+                [
+                  "Scollega",
+                  "Disponibile per sidecar collegati",
+                  "Separa la clip dal movimento collegato della timeline."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Ombra, bordo e cornice",
+          "tables": [
+            {
+              "headers": ["Gruppo", "Proprietà", "Valori o intervallo"],
+              "rows": [
+                ["Ombra", "Preset", "Nessuna, Morbida, Media, Forte, Personalizzata"],
+                ["Ombra", "Modalità", "Uniforme o Adattiva"],
+                ["Ombra", "Sfocatura personalizzata", "4–96 px"],
+                ["Ombra", "Direzione", "Tutte, In basso, In basso a destra, In alto a sinistra"],
+                ["Bordo", "Abilitato", "Attivo o disattivo"],
+                ["Bordo", "Colore", "Selettore colore"],
+                ["Bordo", "Larghezza", "1–32 px"],
+                ["Cornice", "Stile", "Nessuna, Safari, Windows 95"],
+                ["Cornice", "Titolo", "Titolo personalizzato della cornice"],
+                ["Cornice", "Scala Chrome", "50%–200%"],
+                [
+                  "Cornice",
+                  "Controlli specifici",
+                  "Menu, barra di scorrimento o colori a seconda dello stile della cornice"
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Ritaglia una clip visiva",
+          "paragraphs": ["Ritaglia è un editor diretto del canvas, non un gruppo numerico del pannello Clip."],
+          "steps": [
+            "Seleziona esattamente una clip di schermo, video, immagine o webcam.",
+            "Seleziona Ritaglia nella barra degli strumenti del canvas.",
+            "Sposta o ridimensiona il rettangolo di ritaglio direttamente sull'elemento visivo selezionato.",
+            "Seleziona OK per memorizzare il ritaglio normalizzato su quella clip."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "È richiesta una selezione singola",
+            "text": "Ritaglia non è disponibile senza una singola selezione visiva compatibile e non funziona su una selezione multipla."
+          }
+        },
+        {
+          "title": "Valori visivi iniziali",
+          "tables": [
+            {
+              "headers": ["Clip", "Trasformazione e inquadratura", "Angoli e ombra"],
+              "rows": [
+                [
+                  "Schermo",
+                  "Canvas completo",
+                  "Nessun raggio degli angoli quando non c'è sfondo; ombra Media, sfocatura 40 px, direzione In basso."
+                ],
+                [
+                  "Video / Immagine",
+                  "Canvas completo",
+                  "Raggio degli angoli ridotto; ombra Media, sfocatura 20 px, tutte le direzioni."
+                ],
+                [
+                  "Nuova webcam",
+                  "x 72%, y 72%, larghezza 24%, altezza 24%; Squircle",
+                  "Si applicano i valori predefiniti dell'aspetto webcam."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Clip webcam",
+          "screenshot": {
+            "path": "editor/webcam-properties.webp",
+            "alt": "Proprietà Beam per una clip webcam selezionata",
+            "caption": "Le clip webcam aggiungono layout divisi e comportamento di reazione allo zoom ai controlli visivi condivisi.",
+            "aspectRatio": "199 / 326"
+          },
+          "tables": [
+            {
+              "headers": ["Proprietà", "Valori", "Predefinito o vincolo"],
+              "rows": [
+                [
+                  "Layout diviso",
+                  "Sinistra, Destra, Alto, Basso",
+                  "Richiede una clip di schermo collegata. Altrimenti: “Nessuna registrazione dello schermo corrispondente è disponibile in questo punto della timeline.”"
+                ],
+                ["Rapporto diviso", "20%–80%", "50%"],
+                ["Spaziatura divisa", "0%–8%", "0%"],
+                ["Reagisci allo zoom", "Attivo o disattivo", "Attivo"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Clip di sfocatura",
+          "tables": [
+            {
+              "headers": ["Proprietà", "Valori o intervallo", "Comportamento condizionale"],
+              "rows": [
+                ["Preset Chiaro", "Sfocatura", "Intensità 30, sfumatura 14, tinta 0."],
+                ["Preset Privacy", "Pixelato", "Intensità 72, sfumatura 2, tinta 0."],
+                ["Preset Forte", "Opaco", "Intensità 100, sfumatura 0, tinta 0, colore #000000."],
+                ["Effetto", "Sfocatura, Smerigliato, Pixelato, Opaco", "Modifica quali controlli restano visibili."],
+                ["Forma", "Rettangolo, Quadrato, Cerchio", "Cerchio nasconde il raggio degli angoli."],
+                ["Intensità", "0%–100%", "Nascosta per Opaco."],
+                ["Morbidezza dei bordi", "0%–100%", "Controlla la sfumatura."],
+                ["Raggio degli angoli", "0%–100%", "Nascosto per Cerchio."],
+                [
+                  "Intensità della tinta",
+                  "0%–100%",
+                  "Solo Smerigliato; entrando in Smerigliato viene usato almeno il 24%."
+                ],
+                ["Colore", "Selettore colore", "Solo Smerigliato e Opaco."]
+              ]
+            }
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Effetto privacy",
+            "text": "L'effetto viene incorporato nel video esportato. Aumenta l'intensità o usa Opaco per le informazioni sensibili."
+          }
+        },
+        {
+          "title": "Volume delle clip audio",
+          "tables": [
+            {
+              "headers": ["Proprietà", "Intervallo", "Predefinito"],
+              "rows": [["Volume", "0%–200%", "100%"]]
+            }
+          ],
+          "paragraphs": [
+            "Questo volume a livello di clip si applica alle clip audio di sistema, microfono o importate selezionate. I controlli del volume dell'intera composizione e a livello di ruolo sono documentati nella pagina Audio."
+          ]
+        },
+        {
+          "title": "Sottotitoli testuali e da tastiera",
+          "tables": [
+            {
+              "headers": ["Proprietà", "Valori o intervallo", "Predefinito o regola"],
+              "rows": [
+                [
+                  "Contenuto",
+                  "Testo personalizzato o frase generata / passaggio da tastiera",
+                  "Il testo personalizzato non si propaga a una selezione multipla."
+                ],
+                ["Font", "Cerca font installati o importa un font", "Memorizzato con lo stile dei sottotitoli."],
+                ["Stile", "Grassetto, Corsivo, Barrato", "Interruttori indipendenti."],
+                ["Allineamento", "Sinistra, Centro, Destra", "Allineamento del testo dei sottotitoli."],
+                ["Colore", "Selettore colore", "Colore di riempimento del testo."],
+                ["Altezza riga", "0.8–2.0", "Valore dello stile dei sottotitoli."],
+                ["Spaziatura lettere", "−5 a 20 px", "Valore dello stile dei sottotitoli."],
+                [
+                  "Dimensione font",
+                  "12–256 px",
+                  "Preferenza dei sottotitoli manuali con fallback di creazione a 42 px; fallback del pannello 36 px per il testo / 28 px per la tastiera; i sottotitoli AI usano 36 px."
+                ],
+                ["A capo", "Attivo o disattivo", "Attivo"],
+                ["Contorno", "0–30 px", "Larghezza opzionale del contorno."],
+                [
+                  "Colore del contorno",
+                  "Selettore colore",
+                  "Usato quando la larghezza del contorno è maggiore di zero."
+                ],
+                ["Estrusione", "0–20 px", "Effetto opzionale di profondità."],
+                ["Sfocatura dello sfondo", "0–48 px", "Sfoca dietro il sottotitolo."],
+                [
+                  "Sfocatura dell'ombra del testo",
+                  "0–50 px",
+                  "Direzione: Tutte, In basso, In basso a destra, In alto a sinistra."
+                ],
+                [
+                  "Colore dell'ombra del testo",
+                  "Selettore colore",
+                  "Applicato con sfocatura e direzione dell'ombra configurate."
+                ],
+                [
+                  "Segui cursore",
+                  "Attivo o disattivo",
+                  "Solo sottotitoli da tastiera; mai propagato a una selezione multipla."
+                ]
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

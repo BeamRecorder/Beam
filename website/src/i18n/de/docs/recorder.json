@@ -2,34 +2,78 @@
   "pages": [
     {
       "slug": "recorder/index",
-      "title": "Übersicht der Rekorder-App",
-      "description": "Verstehe den Beam-Rekorder-Workflow von der Quellenauswahl bis zur Übergabe an den Editor.",
-      "lead": "Die Rekorder-App ist ein kompaktes HUD zum Vorbereiten, Starten und Steuern einer Aufnahme, ohne den präsentierten Arbeitsbereich zu verdecken.",
+      "title": "Rekorder-Übersicht",
+      "description": "Erfahre, was Beam aufnehmen kann, und folge dem vollständigen Aufnahme-Workflow.",
+      "lead": "Der Rekorder ist der kompakte Ausgangspunkt für jedes Beam-Projekt. Er bereitet Bildschirm oder Fenster, optionalen Zuschnitt, Kamera, Mikrofon, Systemaudio, Interaktionen und Teleprompter vor, bevor die Aufnahme beginnt.",
       "sections": [
         {
-          "title": "Aufnahme-Workflow",
-          "steps": [
-            "Wähle einen Bildschirm, ein Fenster oder einen benutzerdefinierten Bildschirmbereich.",
-            "Bereite Mikrofon, Systemaudio, Kamera, Countdown und Teleprompter vor.",
-            "Starte die Aufnahme und verwende die schwebende Rekorderleiste für Live-Steuerung.",
-            "Stoppe die Aufnahme, um ihre Spuren abzuschließen und das Projekt im Editor zu öffnen."
+          "title": "Was der Rekorder aufnimmt",
+          "paragraphs": [
+            "Beam can record ein full display, one application Fenster, oder ein Benutzerdefiniert region von ein display. Camera, microphone, und system Audio can be added as separate sources when der platform makes them Verfügbar."
           ],
           "screenshot": {
             "path": "recorder/hud-overview.webp",
-            "alt": "Übersicht des Beam-Rekorder-HUDs",
-            "caption": "Das HUD hält Aufnahmequellen und Rekordersteuerung in einem kompakten Fenster zusammen."
+            "alt": "Beam Recorder HUD mit source, Audio, camera, teleprompter, und recording Steuerungen",
+            "caption": "Das Rekorder-HUD hält die vollständige Aufnahmevorbereitung in einem kompakten Fenster zusammen.",
+            "aspectRatio": "2 / 3"
           }
         },
         {
-          "title": "Getrennte Medienspuren",
-          "paragraphs": [
-            "Beam zeichnet Bildschirm, Webcam, Mikrofon und Systemaudio als getrennte verfügbare Spuren auf. Der Editor kann unterstützte Spuren anschließend anpassen oder deaktivieren, ohne die ursprüngliche Aufnahme zu verändern."
+          "title": "Aufnahme-Workflow",
+          "steps": [
+            "Wähle Bildschirm oder Fenster und anschließend die aufzunehmende Quelle.",
+            "Wähle im Bildschirmmodus optional eine Größenvoreinstellung oder zeichne einen benutzerdefinierten Aufnahmebereich.",
+            "Wähle Mikrofon und Kamera und schalte Systemaudio ein, wenn die Aufnahme es benötigt.",
+            "Aktiviere Interaktionsaufzeichnung, wenn unterstützte Klicks und Tastenkürzel-Tokens im Projekt gespeichert werden sollen.",
+            "Öffne den Teleprompter und bereite bei Bedarf ein Skript vor.",
+            "Wähle „Aufnahme starten“. Beam wendet vor Beginn der Aufnahme den konfigurierten Countdown an.",
+            "Verwende die schwebende Aufnahmeleiste zum Pausieren, Fortsetzen, Umschalten unterstützter Geräte, Stoppen oder Abbrechen.",
+            "Nach dem Stoppen finalisiert Beam die Sitzung und öffnet das Projekt im Editor."
           ]
         },
         {
-          "title": "Projekte",
+          "title": "Quellenübersicht",
+          "tables": [
+            {
+              "headers": ["Source", "Was aufgenommen wird", "Standard"],
+              "rows": [
+                ["Bildschirm", "ein complete display, optionally limited zu ein region", "Ausgewählter Modus"],
+                ["Fenster", "One application Fenster", "Aus bis zur Auswahl"],
+                ["Microphone", "Audio von ein ausgewählt input device", "Kein Audio"],
+                ["Camera", "Video von ein ausgewählt camera", "Kamera aus"],
+                ["System Audio", "Sound produced by der computer", "Off"],
+                [
+                  "Interactions",
+                  "Supported Klicken metadata und safe shortcut tokens",
+                  "Hängt von Einstellung und Berechtigung ab"
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Plattformhinweis",
+          "notice": {
+            "kind": "info",
+            "title": "Linux-Aufnahme",
+            "text": "Beam Verwendet der system capture picker auf Linux. Region cropping ist unavailable, und Beam cannot hide its own windows von ein full-screen capture. Bildschirm mode remains der recommended capture mode auf Linux."
+          }
+        },
+        {
+          "title": "Getrennte Medienquellen",
           "paragraphs": [
-            "Verwende Projekt öffnen, um zu einem bestehenden Beam-Projekt zurückzukehren oder vor der Aufnahme ein neues Projekt zu erstellen. Abgeschlossene Sitzungen bleiben für spätere Bearbeitung mit ihrem Projekt verknüpft."
+            "System Audio ist der sound produced by der computer, such as ein browser Video oder ein Discord call. Microphone Audio ist der sound received von der ausgewählt input device. Beam Behält supported Bildschirm, camera, microphone, und system-audio media separate so they can be processed independently later."
+          ],
+          "notice": {
+            "kind": "tip",
+            "title": "Rückkopplung vermeiden",
+            "text": "When recording system Audio und ein microphone together, use headphones oder lower der speaker volume so der microphone does not record der computer output ein second time."
+          }
+        },
+        {
+          "title": "Implementierungsübersicht",
+          "paragraphs": [
+            "Bildschirm recording Verwendet der native capture path für der operating system. auf Linux, Bildschirm und system-audio capture use der portal und PipeWire stack. Camera und microphone capture sind managed by der Electron application. Beam's capture-domain code ist written in Rust, und its cross-platform interface ist built mit Electron und Vue."
           ]
         }
       ]
@@ -37,114 +81,136 @@
     {
       "slug": "recorder/interface",
       "title": "Rekorder-Oberfläche",
-      "description": "Lerne jedes Steuerelement im Beam-Rekorder-HUD und in der Rekorderleiste kennen.",
-      "lead": "Die Rekorder-Oberfläche trennt Quellenauswahl, Gerätesteuerung, Einstellungen und Aufnahmeaktionen, damit der aktuelle Zustand sichtbar bleibt.",
+      "description": "Verstehe jeden Bereich des Rekorder-HUDs und die während einer Aufnahme angezeigten Steuerungen.",
+      "lead": "der HUD ist organized around capture setup. Once recording starts, der compact Aufnahmeleiste exposes nur der Steuerungen that remain useful during der session.",
       "sections": [
         {
-          "title": "Obere Leiste",
-          "bullets": [
-            "Die Beam-Identität zeigt das aktuelle Rekorderfenster.",
-            "Einstellungen öffnet Aufnahme-, allgemeine, Tastenkürzel- und App-Einstellungen.",
-            "Die Fensteraktionen minimieren oder schließen den Rekorder."
+          "title": "Topbar",
+          "tables": [
+            {
+              "headers": ["Steuerung", "Aktion"],
+              "rows": [
+                ["Preferences", "Opens Recording, General, Shortcuts, About, und update settings."],
+                ["Minimize", "Minimizes der Recorder Fenster."],
+                ["Schließen", "Closes der Recorder Fenster."]
+              ]
+            }
           ]
         },
         {
-          "title": "Aufnahmequelle",
-          "paragraphs": [
-            "Verwende die Tabs Bildschirm und Fenster, um den Quellentyp zu ändern. Der Quellenauswahldialog zeigt die auf der aktuellen Plattform verfügbaren Bildschirme oder Anwendungsfenster. Die Bildschirmaufnahme kann außerdem auf einen benutzerdefinierten Bereich begrenzt werden."
-          ],
-          "screenshot": {
-            "path": "recorder/source-selection.webp",
-            "alt": "Bildschirm- und Fensterquellensteuerung in Beam",
-            "caption": "Wähle einen Quellentyp und anschließend Bildschirm, Fenster oder Bildschirmbereich aus."
-          }
-        },
-        {
-          "title": "Mediensteuerung",
-          "bullets": [
-            "Mikrofon wählt ein Eingabegerät aus oder deaktiviert Mikrofon-Audio.",
-            "Systemaudio aktiviert oder deaktiviert den vom Computer erzeugten Ton.",
-            "Kamera wählt eine Webcam aus und öffnet deren separate Einblendung.",
-            "Audiopegel zeigen eine Live-Pegelvorschau, wenn die Plattform dies unterstützt.",
-            "Teleprompter öffnet oder blendet das separate Skriptfenster aus."
+          "title": "Aufnahmevorbereitung",
+          "tables": [
+            {
+              "headers": ["Steuerung", "Aktion", "Verfügbarkeit"],
+              "rows": [
+                ["Bildschirm / Fenster", "Ändert der capture mode.", "Vor der Aufnahme."],
+                [
+                  "Quellenauswahl",
+                  "Chooses ein display oder application Fenster.",
+                  "der Linux portal provides its own picker."
+                ],
+                [
+                  "Bereich auswählen",
+                  "Opens der Benutzerdefiniert region overlay.",
+                  "Bildschirm mode nur; unavailable auf Linux."
+                ],
+                [
+                  "System Audio",
+                  "Turns computer-output capture auf oder off.",
+                  "Die Plattformunterstützung unterscheidet sich."
+                ],
+                [
+                  "Microphone",
+                  "Chooses ein input device oder Kein Audio.",
+                  "Vor der Aufnahme; während unterstützter Phasen umschaltbar."
+                ],
+                [
+                  "Camera",
+                  "Chooses ein camera oder Kamera aus.",
+                  "Vor der Aufnahme; während unterstützter Phasen umschaltbar."
+                ],
+                ["Teleprompter", "Opens oder Blendet aus der script Fenster.", "Before und during recording."],
+                [
+                  "Aufnahme starten",
+                  "Starts der configured countdown und capture.",
+                  "When setup ist ready und Beam ist not busy."
+                ]
+              ]
+            }
           ]
         },
         {
-          "title": "Rekorderleiste",
+          "title": "Projektaktion",
           "paragraphs": [
-            "Während einer Aufnahme zeigt die Rekorderleiste die verstrichene Zeit und den aktuellen Aufnahmestatus. Ihre Steuerelemente pausieren, setzen fort, stoppen, brechen ab und schalten unterstützte Geräte um."
-          ],
-          "screenshot": {
-            "path": "recorder/recording-bar.webp",
-            "alt": "Beam-Rekorderleiste während einer aktiven Aufnahme",
-            "caption": "Die Rekorderleiste hält die wichtigsten Steuerelemente während der Aufnahme verfügbar."
-          }
+            "Öffnen ein existing project opens der Project Manager instead von starting ein new capture. von there, projects can be searched, created, opened, renamed, revealed, refreshed, ausgewählt in batches, oder deleted."
+          ]
         },
         {
-          "title": "Einstellungen",
-          "bullets": [
-            "Der Countdown kann ausgeschaltet oder auf 3, 5 oder 10 Sekunden gesetzt werden.",
-            "Die Sichtbarkeit der Rekorderleiste kann immer sichtbar, automatisch ausgeblendet oder bis zum Darüberfahren verborgen sein.",
-            "Immer im Vordergrund hält das HUD über anderen Fenstern.",
-            "Theme und Sprache steuern das Erscheinungsbild der Anwendung.",
-            "Tastenkürzel konfigurieren Aufnahme- und Teleprompter-Aktionen."
+          "title": "Aufnahmeleiste",
+          "paragraphs": [
+            "der floating bar Ersetzt der setup HUD during capture. It Zeigt Ready oder Preparing states und then exposes der Steuerungen permitted by der current recording phase."
+          ],
+          "tables": [
+            {
+              "headers": ["Steuerung", "Aktion", "Importierenant constraint"],
+              "rows": [
+                [
+                  "Aufnahmeleiste verschieben",
+                  "Drags der bar zu another Position.",
+                  "der visibility preference still Gilt."
+                ],
+                [
+                  "Pausieren / Fortsetzen",
+                  "Pauses oder resumes der session.",
+                  "deaktiviert during countdown, startup, und finalization."
+                ],
+                ["Stop", "Finalizes der recording und Behält der session.", "deaktiviert while finalizing."],
+                [
+                  "Abbrechen und löschen",
+                  "Cancels der recording und Entfernt der unfinished session.",
+                  "deaktiviert while finalizing."
+                ],
+                [
+                  "Mikrofon / Kamera",
+                  "Turns der ausgewählt source auf oder off.",
+                  "deaktiviert during countdown, startup, und finalization."
+                ],
+                [
+                  "System Audio",
+                  "Turns system Audio auf oder off where supported.",
+                  "Cannot be changed after start auf Linux."
+                ]
+              ]
+            }
           ]
         }
       ]
     },
     {
-      "slug": "recorder/capabilities",
+      "slug": "recorder/capabilities/index",
       "title": "Rekorder-Funktionen",
-      "description": "Verwende Bildschirmbereiche, getrenntes Audio, Webcam, Teleprompter, Tastenkürzel und Interaktionsmetadaten in Beam.",
-      "lead": "Rekorder-Funktionen lassen sich zu einer leichten Aufnahme oder einer vollständig vorbereiteten Produktpräsentation kombinieren.",
+      "description": "Öffnen ein focused reference für every Recorder capability und its exact settings.",
+      "lead": "Each capability has its own page so settings, defaults, platform constraints, und edge cases remain easy zu scan.",
       "sections": [
         {
-          "title": "Bildschirm-, Fenster- und Bereichsaufnahme",
-          "paragraphs": [
-            "Nimm einen ganzen Bildschirm, ein bestimmtes Anwendungsfenster oder einen normalisierten Bereich eines ausgewählten Bildschirms auf. Du kannst den Bereichsauswahldialog erneut öffnen, um einen gespeicherten Ausschnitt vor der Aufnahme anzupassen."
+          "title": "Funktionsübersicht",
+          "tables": [
+            {
+              "headers": ["Capability", "Referenz"],
+              "rows": [
+                ["Aufnahmequellen und Bereiche", "[Aufnahmequellen öffnen](/recorder/capabilities/capture-sources)"],
+                ["Audio und Kamera", "[Audio und Kamera öffnen](/recorder/capabilities/audio-camera)"],
+                ["Teleprompter", "[Teleprompter öffnen](/recorder/capabilities/teleprompter)"],
+                ["Live Aufnahmeleiste", "[Live-Steuerung öffnen](/recorder/capabilities/live-controls)"],
+                ["Preferences", "[Einstellungen öffnen](/recorder/capabilities/preferences)"],
+                ["Projektmanager", "[Projektmanager öffnen](/recorder/capabilities/project-manager)"],
+                [
+                  "Berechtigungen und Datenschutz",
+                  "[Berechtigungen und Datenschutz öffnen](/recorder/capabilities/permissions-privacy)"
+                ]
+              ]
+            }
           ]
-        },
-        {
-          "title": "Mikrofon und Systemaudio",
-          "paragraphs": [
-            "Mikrofon und Systemaudio werden unabhängig aufgenommen, wenn beide verfügbar sind. Getrennte Spuren ermöglichen es dem Editor, Aktivierungszustand und Lautstärke einzeln zu ändern."
-          ]
-        },
-        {
-          "title": "Webcam-Einblendung",
-          "paragraphs": [
-            "Eine ausgewählte Kamera öffnet eine separate Einblendung, die für die Präsentation positioniert werden kann. Der Kamerazugriff hängt von Betriebssystemberechtigungen und Geräteverfügbarkeit ab."
-          ]
-        },
-        {
-          "title": "Teleprompter",
-          "paragraphs": [
-            "Schreibe ein Skript, wechsle zwischen fortlaufendem und zeilenweisem Lesen und passe automatisches Scrollen, Geschwindigkeit, Textgröße, Zeilenabstand, Ausrichtung und Theme an. Globale Tastenkürzel können den Teleprompter anzeigen, automatisches Scrollen pausieren oder zwischen Zeilen wechseln."
-          ],
-          "screenshot": {
-            "path": "recorder/teleprompter.webp",
-            "alt": "Beam-Teleprompter mit Skript und Wiedergabesteuerung",
-            "caption": "Der Teleprompter wird unabhängig vom Rekorder-HUD gesteuert."
-          }
-        },
-        {
-          "title": "Live-Aufnahmesteuerung",
-          "bullets": [
-            "Pausiere und setze die aktive Aufnahme fort.",
-            "Schalte Mikrofon, Kamera und Systemaudio um, wenn die aktive Sitzung sie unterstützt.",
-            "Stoppe und finalisiere die Aufnahme oder brich die aktive Aufnahme ab und lösche sie."
-          ]
-        },
-        {
-          "title": "Interaktionsmetadaten und Datenschutz",
-          "paragraphs": [
-            "Mit ausdrücklicher Zustimmung zeichnet Beam sichere Tastenkürzel-Tokens auf. Der Interaktionszugriff unter Linux kann außerdem Mausklick-Metadaten aktivieren. Eingegebener Text wird niemals gespeichert."
-          ],
-          "notice": {
-            "kind": "info",
-            "title": "Berechtigung erforderlich",
-            "text": "Interaktionsaufzeichnung ist optional und kann in den Einstellungen aktiviert oder deaktiviert werden. Die Verfügbarkeit hängt vom Betriebssystem ab."
-          }
         }
       ]
     }

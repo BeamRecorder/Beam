@@ -28,6 +28,7 @@
           ],
           "screenshot": {
             "path": "getting-started/first-recording.webp",
+            "hidden": true,
             "alt": "Beam recorder prepared for a first recording",
             "caption": "Select the capture and media sources before starting."
           }
@@ -67,6 +68,7 @@
           ],
           "screenshot": {
             "path": "getting-started/update-controls.webp",
+            "aspectRatio": "16 / 9",
             "alt": "Beam settings showing the update controls",
             "caption": "The update panel displays the installed version and the available update actions."
           }

@@ -7,9 +7,21 @@
     "tagline": "Guias práticos para capturar e aprimorar demonstrações de produtos com o Beam.",
     "imageAlt": "Ícone do aplicativo Beam",
     "actions": [
-      { "theme": "brand", "text": "Primeiros passos", "link": "/getting-started" },
-      { "theme": "alt", "text": "Ver no GitHub", "link": "https://github.com/BeamRecorder/Beam" },
-      { "theme": "alt", "text": "Entrar no Discord", "link": "https://discord.gg/6Q6v2xUCB" }
+      {
+        "theme": "marca",
+        "text": "Primeiros passos",
+        "link": "/getting-started"
+      },
+      {
+        "theme": "alternativo",
+        "text": "Ver no GitHub",
+        "link": "https://github.com/BeamRecorder/Beam"
+      },
+      {
+        "theme": "alternativo",
+        "text": "Entrar no Discord",
+        "link": "https://discord.gg/6Q6v2xUCB"
+      }
     ]
   },
   "categories": [
@@ -17,7 +29,7 @@
       "title": "Aplicativo de gravação",
       "details": "Escolha uma fonte, prepare as faixas de áudio e câmera e controle a gravação pelo HUD compacto.",
       "link": "/recorder/",
-      "visual": "recorder"
+      "visual": "gravador"
     },
     {
       "title": "Editor de vídeo",

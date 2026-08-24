@@ -2,14 +2,26 @@
   "title": "Beamドキュメント",
   "description": "Beamで完成度の高いプロダクトデモを録画、編集、共有する方法を学びます。",
   "hero": {
-    "name": "Beam Docs",
+    "name": "Beamドキュメント",
     "text": "記録。編集。共有。",
     "tagline": "Beamでプロダクトデモをキャプチャし、仕上げるための実践ガイド。",
     "imageAlt": "Beamアプリアイコン",
     "actions": [
-      { "theme": "brand", "text": "使い始める", "link": "/getting-started" },
-      { "theme": "alt", "text": "GitHubで見る", "link": "https://github.com/BeamRecorder/Beam" },
-      { "theme": "alt", "text": "Discordに参加", "link": "https://discord.gg/6Q6v2xUCB" }
+      {
+        "theme": "ブランド",
+        "text": "使い始める",
+        "link": "/getting-started"
+      },
+      {
+        "theme": "代替",
+        "text": "GitHubで見る",
+        "link": "https://github.com/BeamRecorder/Beam"
+      },
+      {
+        "theme": "代替",
+        "text": "Discordに参加",
+        "link": "https://discord.gg/6Q6v2xUCB"
+      }
     ]
   },
   "categories": [
@@ -17,13 +29,13 @@
       "title": "レコーダーアプリ",
       "details": "ソースを選び、音声とカメラのトラックを準備して、コンパクトなHUDから録画を操作します。",
       "link": "/recorder/",
-      "visual": "recorder"
+      "visual": "レコーダー"
     },
     {
       "title": "動画エディター",
       "details": "ひとつのワークスペースで、タイミング、フレーミング、ズーム、カーソルの動き、キャプション、音声、書き出しを整えます。",
       "link": "/editor/",
-      "visual": "editor"
+      "visual": "編集者"
     }
   ]
 }

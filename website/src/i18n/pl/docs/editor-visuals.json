@@ -1,0 +1,327 @@
+{
+  "pages": [
+    {
+      "slug": "editor/capabilities/canvas",
+      "title": "Płótno",
+      "description": "Kompletne informacje dotyczące rozmiaru wyjściowego, tła, rozmycia, usuwania tła, gradientów i elementów sterujących znakiem wodnym.",
+      "lead": "Obszar roboczy kontroluje obszar wyjściowy na zewnątrz i za klipami wizualnymi. Ustawienia tła i znaku wodnego dotyczą całej kompozycji.",
+      "sections": [
+        {
+          "title": "Panel płócienny",
+          "screenshot": {
+            "path": "editor/canvas-panel.webp",
+            "alt": "Beam Właściwości płótna z zakładkami w tle i elementami sterującymi prezentacją",
+            "caption": "Kanwa grupuje media, kolory i tła gradientowe wraz z elementami sterującymi prezentacją i brandingiem.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Płótno wyjściowe",
+          "tables": [
+            {
+              "headers": ["Własność", "Wartości", "Wartość domyślna lub zachowanie"],
+              "rows": [
+                ["Rozmiar natywny", "Szerokość × wysokość", "1920×1080"],
+                ["16:9", "1920×1080", "Domyślne ustawienie wstępne."],
+                ["9:16", "1080×1920", "Wstępne ustawienie portretu."],
+                ["1:1", "1080×1080", "Ustawienie kwadratowe."],
+                ["4:5", "1080×1350", "Wstępne ustawienie portretu."],
+                ["3:4", "1080×1440", "Wstępne ustawienie portretu."],
+                ["4:3", "1440×1080", "Wstępnie ustawiony krajobraz."],
+                ["21:9", "2520×1080", "Ustawienia ultraszerokokątne."],
+                ["Widoczność w tle", "Widoczne lub Usuń tło", "Tło ukryte w domyślnym płótnie."],
+                ["Rozmycie tła", "0%–100%", "Rozmywa wybrane tło, a nie temat filmu."],
+                [
+                  "Globalne przejścia",
+                  "Akcja nagłówka Właściwości",
+                  "Otwiera elementy sterujące przejściem na poziomie płótna."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Tła obrazu i wideo",
+          "tables": [
+            {
+              "headers": ["Tło", "Obsługiwane pliki", "Zachowanie biblioteki"],
+              "rows": [
+                [
+                  "Obraz",
+                  "AVIF, BMP, JPEG, JPG, PNG, WebP",
+                  "Początkowo pokazuje 15 pozycji; Pokaż więcej ujawnia dodatkowe partie."
+                ],
+                [
+                  "Wideo",
+                  "M4V, MOV, MP4, OGV, WebM",
+                  "Początkowo pokazuje 15 pozycji; Pokaż więcej ujawnia dodatkowe partie."
+                ],
+                ["Importuj", "Obsługiwany lokalny plik tła", "Dodaje wybrany plik do odpowiedniej biblioteki tła."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Kolor tła",
+          "paragraphs": [
+            "Wybierz wbudowany kolor lub edytuj niestandardową wartość szesnastkową. Edytor niestandardowy aktualizuje podgląd tła na żywo."
+          ],
+          "tables": [
+            {
+              "headers": ["Kontrola", "Wartości"],
+              "rows": [
+                ["Wstępnie ustawione", "#111827, #ffffff, #0f766e, #1d4ed8, #7c3aed, #be123c"],
+                ["Kolor niestandardowy", "Szesnastkowy edytor kolorów"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Tła gradientowe",
+          "tables": [
+            {
+              "headers": ["Kontrola", "Wartości lub ograniczenie"],
+              "rows": [
+                [
+                  "Wstępnie ustawione",
+                  "Wbudowane gradienty, w tym fiolet, ogień, ocean, zachód słońca, neon, las, złoto, lód, fala pary i Aurora."
+                ],
+                ["Wpisz", "Liniowy lub promieniowy"],
+                ["Kąt", "0°–360° dla odpowiedniego kierunku nachylenia"],
+                ["Zatrzymuje się", "Co najmniej dwa przystanki koloru"],
+                ["Niestandardowy gradient", "Edytowalny typ, kąt, przystanki i kolory"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Znak wodny",
+          "paragraphs": [
+            "Znak wodny jest domyślnie wyłączony. Włącz opcję umieszczenia brandingu Beam, etykiety lub logo nad kompozycją."
+          ],
+          "tables": [
+            {
+              "headers": ["Własność", "Wartości lub zakres", "Domyślne lub ograniczenie"],
+              "rows": [
+                [
+                  "Tekst",
+                  "Brak tekstu znaku wodnego, wykonane przy użyciu Beam., Beam, niestandardowe",
+                  "Wykonane z Beam."
+                ],
+                ["Tekst niestandardowy", "Do 80 znaków", "Pusty; dostępne w wersji niestandardowej."],
+                ["Pokaż logo Beam", "Włączone lub wyłączone", "Włączone"],
+                [
+                  "Przetłumacz znak wodny",
+                  "Włączone lub wyłączone",
+                  "Wył.; dostępne dla etykiet Beam i Wykonane z etykietami Beam."
+                ],
+                ["Pozycja", "Lewy górny, prawy górny, lewy dolny, prawy dolny", "Prawy dolny róg"],
+                ["Rozmiar", "50%–200%; krok 10%", "100%"],
+                ["Cień", "0%–100%; krok 5%", "20%"],
+                ["Kolor tła", "Szesnastkowy selektor kolorów", "#111114"],
+                ["Nieprzezroczystość tła", "0%–100%; krok 5%", "78%"],
+                ["Promień tła", "0%–100%; krok 5%", "100%"],
+                ["Wypełnienie tła", "50%–150%; krok 5%", "100%"]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/zooms",
+      "title": "Powiększenia",
+      "description": "Kompletne informacje dotyczące ręcznych i automatycznych zoomów, trybów ostrości, głębi, regeneracji i rozmycia ruchu.",
+      "lead": "Bloki Zoom kierują uwagę na obszar nagrania. Dodaj je ręcznie na osi czasu lub wygeneruj sugestie na podstawie przechwyconych kliknięć kursorem.",
+      "sections": [
+        {
+          "title": "Nie wybrano powiększenia",
+          "paragraphs": [
+            "Generowanie i globalne rozmycie ruchu pozostają dostępne bez wybranego powiększenia. Wybierz blok powiększenia na osi czasu, aby edytować jego głębokość, tryb lub położenie."
+          ],
+          "screenshot": {
+            "path": "editor/zoom-empty.webp",
+            "alt": "Beam Panel powiększenia bez wybranego powiększenia",
+            "caption": "Automatyczne generowanie i globalne rozmycie ruchu nie wymagają wybranego powiększenia.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Generuj automatyczne powiększenia",
+          "tables": [
+            {
+              "headers": ["Akcja", "Wymaganie", "Zachowanie"],
+              "rows": [
+                [
+                  "Generuj automatyczne powiększenia",
+                  "Sesja nagrywania z telemetrią po kliknięciu kursorem",
+                  "Tworzy automatyczne bloki powiększenia na podstawie zarejestrowanych kliknięć."
+                ],
+                [
+                  "Regeneruj automatyczne powiększenia",
+                  "Dostępne jest automatyczne generowanie powiększenia",
+                  "Prosi o potwierdzenie, zachowuje ręczne powiększenia i zastępuje automatyczne powiększenia z bieżącej sesji."
+                ],
+                ["Stan niedostępny", "Brak sesji lub brak telemetrii kursora", "Generacja pozostaje wyłączona."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Dodaj ręczny zoom",
+          "paragraphs": [
+            "Kliknij niezajęty punkt na ścieżce Zoom. Nowy ręczny zoom ma domyślną wartość 1,2 sekundy i jest dodawany tylko wtedy, gdy dostępne jest co najmniej 200 ms czasu trwania osi czasu."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Zajęte zakresy osi czasu",
+            "text": "Beam wybiera dostępny czas trwania wokół kliknięcia i nie nakłada się na istniejący blok powiększenia."
+          }
+        },
+        {
+          "title": "Wybrane powiększenie",
+          "screenshot": {
+            "path": "editor/zoom-properties.webp",
+            "alt": "Beam właściwości dla wybranego powiększenia",
+            "caption": "Wybrany zoom udostępnia tryb ostrości i głębokość powiększenia.",
+            "aspectRatio": "199 / 326"
+          },
+          "tables": [
+            {
+              "headers": ["Własność", "Wartości", "Wartość domyślna lub zachowanie"],
+              "rows": [
+                [
+                  "Tryb",
+                  "Automatyczny kursor lub ręczne ustawianie ostrości",
+                  "Automatyczny kursor podąża za zarejestrowanym ruchem wskaźnika; Ręczne ustawianie ostrości wykorzystuje stały punkt."
+                ],
+                ["Cel ręczny", "Przeciągnij płótno", "Przeciągnij przerywany cel bezpośrednio na obszar roboczy."],
+                ["Głębokość 1", "1,25×", "Mapowanie powiększenia."],
+                ["Głębokość 2", "1,5×", "Domyślne."],
+                ["Głębokość 3", "1,8×", "Mapowanie powiększenia."],
+                ["Głębokość 4", "2,2×", "Mapowanie powiększenia."],
+                ["Głębokość 5", "3,5×", "Mapowanie powiększenia."],
+                ["Głębokość 6", "5×", "Mapowanie powiększenia."],
+                ["Usuń Zoom", "Akcja nagłówka Właściwości", "Usuwa wybrany blok powiększenia."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Powiększ rozmycie ruchu",
+          "tables": [
+            {
+              "headers": ["Własność", "Zasięg", "Domyślne", "Zakres"],
+              "rows": [
+                ["Włączone", "Włączone lub wyłączone", "Włączone", "Globalne ustawienie kompozycji."],
+                ["Intensywność rozmycia ruchu", "0%–100%", "55%", "Stosowane identycznie w podglądzie i eksporcie."]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/cursor",
+      "title": "Kursor",
+      "description": "Kompletne informacje dotyczące pakietów kursorów, wyglądu, cieni, efektów kliknięć, wygładzania, sprężystości i rozmycia ruchu.",
+      "lead": "Ustawienia kursora kontrolują nakładanie wskaźnika w całej kompozycji i nie wymagają zaznaczania klipu.",
+      "sections": [
+        {
+          "title": "Panel kursora",
+          "screenshot": {
+            "path": "editor/cursor-panel.webp",
+            "alt": "Beam Panel kursora ze sterowaniem pakietem, wyglądem, kliknięciem i ruchem",
+            "caption": "Prezentacja kursora jest konfigurowana globalnie dla kompozycji.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Wybór pakietu i kursora",
+          "tables": [
+            {
+              "headers": ["Własność", "Wartości", "Zachowanie"],
+              "rows": [
+                [
+                  "Pakiet kursorów",
+                  "Pakiet wbudowany lub importowany",
+                  "Automatyczne pozostaje automatyczne. Stały kursor zostaje zachowany tylko wtedy, gdy w nowym pakiecie istnieje ten sam identyfikator kursora; w przeciwnym razie Beam powraca do trybu automatycznego."
+                ],
+                [
+                  "Tryb kursora",
+                  "Automatyczny lub stały kursor z wybranego pakietu",
+                  "Opcja automatyczna wykorzystuje zarejestrowane zmiany kształtu kursora."
+                ],
+                [
+                  "Importuj pakiet",
+                  "Obsługiwane pliki pakietu kursorów",
+                  "Dodaje pakiet niestandardowy do dostępnych opcji."
+                ],
+                [
+                  "Zresetuj",
+                  "Zresetuj prezentację kursora",
+                  "Zachowuje wybrany pakiet i przywraca wszystkie pozostałe ustawienia domyślne kursora."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Wygląd",
+          "tables": [
+            {
+              "headers": ["Własność", "Wartości lub zakres", "Domyślne"],
+              "rows": [
+                ["Rozmiar", "16–128 pikseli", "45 pikseli"],
+                ["Rzuć cień", "Włączone lub wyłączone", "Włączone"],
+                ["Rozmycie cienia", "1–24 piks", "6 pikseli po zresetowaniu"],
+                ["Kolor cienia", "Próbnik kolorów", "#000000 po zresetowaniu"],
+                ["Kierunek cienia", "Wszystko, Dół, Prawy dolny dół, Lewy górny", "Dół po zresetowaniu"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Kliknij efekty",
+          "tables": [
+            {
+              "headers": ["Własność", "Wartości lub zakres", "Wartość domyślna lub zachowanie"],
+              "rows": [
+                [
+                  "Gotowe ustawienia stylu Ripple",
+                  "Pojedynczy pierścień, podwójna fala, wybuch",
+                  "Zmienia styl tętnienia dla kliknięć lewym i prawym; nie pozwala na tętnienie."
+                ],
+                ["Zaawansowane strony", "Lewy i prawy", "Konfiguruje oba przyciski niezależnie."],
+                ["Wiosna", "Włączone lub wyłączone", "Włączone"],
+                ["Intensywność wiosny", "0%–100%", "50%"],
+                ["Tętnienie", "Włączone lub wyłączone", "Wyłączone dla obu stron kliknięcia."],
+                ["Rozmiar tętnienia", "10–80 pikseli", "30 pikseli"],
+                ["Kolor falowania", "Próbnik kolorów", "Po stronie kliknięcia."],
+                [
+                  "Środkowe kliknięcie",
+                  "Brak oddzielnej kontroli edytora",
+                  "Używa prezentacji wyświetlanej lewym przyciskiem myszy."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Ruch",
+          "tables": [
+            {
+              "headers": ["Własność", "Wartości lub zakres", "Gładkie ustawienie wstępne"],
+              "rows": [
+                ["Wstępnie ustawione", "Skoncentrowany, gładki, niestandardowy", "Gładka"],
+                ["Wygładzanie", "0–1", "0,67"],
+                ["Wiosenna masa", "0,5–2", "1,29"],
+                ["Rozmycie ruchu", "0–1", "0,4"]
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

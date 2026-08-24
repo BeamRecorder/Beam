@@ -3,50 +3,165 @@
     {
       "slug": "export",
       "title": "Export und Teilen",
-      "description": "Exportiere eine Beam-Komposition mit der richtigen Auflösung und dem passenden Qualitätsprofil als MP4 oder WebM.",
-      "lead": "Der Export rendert die aktuelle Komposition direkt in eine lokale Datei und verwendet dabei die vom Computer unterstützten Einstellungen.",
+      "description": "Exportiere eine Beam-Komposition als WebM oder MP4 mit Steuerungen für Auflösung, Bildrate, Qualität und Audio.",
+      "lead": "Der Export rendert die aktuelle Komposition direkt in eine lokale Datei und meldet jede Phase des Vorgangs.",
       "sections": [
         {
           "title": "Format auswählen",
-          "bullets": [
-            "WebM verwendet den WebM-Container mit einem auf dem aktuellen Computer verfügbaren Encoder.",
-            "MP4 verwendet den MP4-Container, wenn Beam einen kompatiblen Hardware- oder Software-Encoder findet."
+          "tables": [
+            {
+              "headers": ["Format", "Auswahl des Videocodecs", "Audiocodec", "Verfügbarkeit"],
+              "rows": [
+                [
+                  "WebM",
+                  "Erster encodierbarer Codec aus VP9, VP8, AV1",
+                  "Opus",
+                  "Standardformat; erfordert einen encodierbaren Videocodec und bei eingeschlossenem Audio Opus."
+                ],
+                [
+                  "MP4",
+                  "AVC / H.264",
+                  "AAC",
+                  "Erfordert einen AVC-Encoder. AAC verwendet, sofern verfügbar, WebCodecs und danach den Mediabunny-AAC-Encoder von Beam als Fallback."
+                ]
+              ]
+            }
           ],
           "notice": {
             "kind": "info",
             "title": "Encoder-Verfügbarkeit",
-            "text": "Ein Format kann nicht verfügbar sein, wenn der Computer keinen kompatiblen Encoder bereitstellt. Beam meldet dies vor oder während des Exports."
+            "text": "ein format can be unavailable when der machine does not provide ein compatible encoder. Beam reports this before oder during export."
           }
         },
         {
           "title": "Auflösung auswählen",
-          "bullets": [
-            "720p skaliert auf eine HD-Ausgabe herunter, wenn der native Canvas groß genug ist.",
-            "1080p skaliert auf Full HD herunter, wenn der native Canvas groß genug ist.",
-            "Max behält die Abmessungen des nativen Ausgabe-Canvas bei."
+          "tables": [
+            {
+              "headers": ["Option", "Verfügbarkeit", "Ausgabeverhalten"],
+              "rows": [
+                [
+                  "720p",
+                  "Die native Canvas-Höhe beträgt mindestens 720 px",
+                  "Zielt ohne Hochskalierung auf 720 px Höhe."
+                ],
+                [
+                  "1080p",
+                  "Die native Canvas-Höhe beträgt mindestens 1080 px",
+                  "Zielt ohne Hochskalierung auf 1080 px Höhe."
+                ],
+                ["Max", "Always", "Behält die Größe des nativen Ausgabe-Canvas bei."],
+                [
+                  "All options",
+                  "Nicht zutreffend",
+                  "Bewahrt das Seitenverhältnis und rundet Breite und Höhe auf positive gerade Zahlen."
+                ]
+              ]
+            }
           ]
         },
         {
-          "title": "Qualität und Bitrate auswählen",
-          "paragraphs": [
-            "Die Profile Niedrig, Mittel und Hoch berechnen eine Bitrate aus Ausgabeabmessungen und Bildrate. Mittel gleicht Klarheit und Dateigröße aus, während Hoch die visuelle Qualität priorisiert."
+          "title": "Bildrate und Qualität auswählen",
+          "tables": [
+            {
+              "headers": ["Setting", "Werte", "Standard oder Empfehlung"],
+              "rows": [
+                [
+                  "Bildrate",
+                  "24, 30, 60 fps",
+                  "60 for a source at or above 50 fps; 24 at or below 27 fps; otherwise 30."
+                ],
+                ["Quality", "Niedrig, Mittel, Hoch", "Medium"],
+                ["Niedriger Bitratenfaktor", "0.055 × width × height × fps", "Auf 0,5–40 Mbit/s begrenzt."],
+                ["Mittlerer Bitratenfaktor", "0.095 × width × height × fps", "Auf 0,5–40 Mbit/s begrenzt."],
+                ["Hoher Bitratenfaktor", "0.16 × width × height × fps", "Auf 0,5–40 Mbit/s begrenzt."]
+              ]
+            }
           ],
           "screenshot": {
-            "path": "reference/export-settings.webp",
-            "alt": "Beam-Exporteinstellungen für Format, Auflösung und Qualität",
-            "caption": "Wähle Format, Auflösung und Qualität, bevor du die Zieldatei auswählst."
+            "path": "reference/export-panel.webp",
+            "alt": "Beam export panel mit format, resolution, frame rate, quality, und Audio Steuerungen",
+            "caption": "Wähle die Renderingeinstellungen, bevor du die Zieldatei auswählst.",
+            "aspectRatio": "361 / 560"
           }
         },
         {
-          "title": "Export überwachen",
-          "paragraphs": [
-            "Beam zeigt beim Rendern den Frame-Fortschritt an. Du kannst einen aktiven Export abbrechen oder seinen Diagnosebericht kopieren. Live-Änderungen im Editor verändern keine Datei, die bereits gerendert wird."
+          "title": "Weitere Optionen",
+          "tables": [
+            {
+              "headers": ["Option", "Werte", "Standard", "Verhalten"],
+              "rows": [
+                [
+                  "Audio einschließen",
+                  "auf oder Off",
+                  "auf",
+                  "Aus erzeugt eine stumme Datei. Audio wird ebenfalls weggelassen, wenn kein aktivierter Audioclip eine positive Dauer besitzt."
+                ],
+                [
+                  "Audioausgabe",
+                  "48 kHz, stereo, 128 kbps",
+                  "Wenn Audio eingeschlossen ist",
+                  "Aktivierte Audioclips werden fortlaufend in den ausgewählten Containercodec gemischt."
+                ]
+              ]
+            }
           ]
         },
         {
-          "title": "Ergebnis öffnen",
+          "title": "Export überwachen",
+          "tables": [
+            {
+              "headers": ["Stage", "Was Beam tut"],
+              "rows": [
+                [
+                  "Assets werden validiert",
+                  "Checks der snapshot, local assets, formats, codecs, und render invariants."
+                ],
+                ["Assets werden geladen", "Loads visuell, Audio, cursor, font, und Hintergrund resources."],
+                ["Codierung", "Renders composition frames, mixes aktiviert Audio, und writes encoded chunks."],
+                ["Finalisierung", "Closes Spuren und finalizes der media container und destination file."]
+              ]
+            }
+          ],
           "paragraphs": [
-            "Nach einem erfolgreichen Export meldet Beam den Namen der gespeicherten Datei und bietet eine Aktion zum Öffnen an. Wenn der Export fehlschlägt, kopiere den technischen Bericht, bevor du auf [Discord](https://discord.gg/6Q6v2xUCB) oder [GitHub](https://github.com/BeamRecorder/Beam/issues) um Hilfe bittest."
+            "Die Fortschrittsansicht zeigt Prozentsatz und abgeschlossene Frames und bietet „Bericht kopieren“. „Abbrechen“ stoppt einen aktiven Export. Das Schließen oder Abbrechen der Zielauswahl beendet den Vorgang ohne Fehler. Live-Änderungen nach Exportbeginn ändern die laufende Datei nicht, da Beam einen Snapshot exportiert."
+          ]
+        },
+        {
+          "title": "Validierung und Sonderfälle",
+          "tables": [
+            {
+              "headers": ["Bedingung", "Ergebnis"],
+              "rows": [
+                ["Fehlendes Asset", "Export stops mit ein validation issue identifying der relevant asset oder Clip."],
+                [
+                  "Nicht unterstützte Quelle oder Codec",
+                  "Export reports ein unsupported format, codec, oder decode failure."
+                ],
+                [
+                  "Kein kompatibler Ausgabeencoder",
+                  "der ausgewählt WebM oder MP4 format ist reported as not encodable auf der device."
+                ],
+                ["Animiertes GIF", "Animiertes GIFs sind not yet deterministically exportable."],
+                [
+                  "Canvas 2D nicht verfügbar",
+                  "Der Export stoppt, weil Kompositionsframes nicht gerendert werden können."
+                ],
+                [
+                  "Abbruch",
+                  "der active worker und output stream sind aborted und der incomplete export ist not reported as ein failure."
+                ],
+                [
+                  "Audiomischer nicht verfügbar",
+                  "Beam reports that offline Audio mixing ist unavailable in der Chromium build."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Ergebnis und Diagnose",
+          "paragraphs": [
+            "After ein successful export, Beam reports der saved filename und provides Öffnen File und Kopieren Report Aktionen. If export fails, der user-facing message Blendet aus local filesystem paths while der detailed report retains configuration, codec, environment, progress, und bottleneck information für troubleshooting. Kopieren that report before asking für help auf [Discord](https://discord.gg/6Q6v2xUCB) oder [GitHub](https://github.com/BeamRecorder/Beam/issues)."
           ]
         }
       ]
@@ -55,49 +170,51 @@
       "slug": "platforms",
       "title": "Plattformunterstützung",
       "description": "Prüfe Beam-Unterstützung und betriebssystemspezifisches Verhalten unter Windows, macOS und Linux.",
-      "lead": "Beam ist für Windows, macOS und Linux verfügbar. Native Berechtigungen und Fähigkeiten des Fenstersystems führen zu einigen Plattformunterschieden.",
+      "lead": "Beam ist für Windows, macOS und Linux verfügbar. Native Berechtigungen und Fenstersystemfunktionen führen zu einigen Plattformunterschieden.",
       "sections": [
         {
           "title": "Windows",
           "bullets": [
-            "Beam wird als nativer Windows-Installer verteilt.",
-            "Bildschirm-, Fenster-, Bereichs-, Kamera-, Mikrofon- und Systemaudioaufnahme werden unterstützt.",
-            "Positionen und Größen von Einblendungen können gespeichert und wiederhergestellt werden."
+            "Beam ist distributed as ein native Windows installer.",
+            "Bildschirm, Fenster, region, camera, microphone, und system-audio recording sind supported.",
+            "Overlay positions und sizes can be saved und restored."
           ]
         },
         {
           "title": "macOS",
           "bullets": [
-            "Beam wird als DMG für Apple-Silicon-Macs mit macOS 13 oder neuer verteilt.",
-            "Berechtigungen für Bildschirmaufnahme, Mikrofon und Kamera werden angefordert, wenn diese Quellen verwendet werden.",
-            "Positionen und Größen von Einblendungen können gespeichert und wiederhergestellt werden."
+            "Beam ist distributed as ein DMG für Apple Silicon Macs running macOS 13 oder newer.",
+            "Bildschirm Recording, Microphone, und Camera permissions sind requested when those sources sind used.",
+            "Overlay positions und sizes can be saved und restored."
           ],
           "notice": {
             "kind": "warning",
             "title": "Beam ist beschädigt und kann nicht geöffnet werden",
-            "text": "Nachdem du Beam nach `/Applications` verschoben hast, führe `xattr -cr /Applications/Beam.app` aus oder wähle in Systemeinstellungen > Datenschutz und Sicherheit die Option Trotzdem öffnen."
+            "text": "After moving Beam zu `/Applications`, run `xattr -cr /Applications/Beam.app`, oder choose Öffnen Anyway in System Settings > Privacy & Security."
           },
           "subsections": [
             {
               "title": "Bildschirm- und Systemaudioaufnahme erlauben",
               "paragraphs": [
-                "Öffne Apple-Menü > Systemeinstellungen > Datenschutz und Sicherheit > Bildschirm- und Systemaudioaufnahme und aktiviere Beam. Wenn Beam nicht aufgeführt ist, verwende die Hinzufügen-Schaltfläche und wähle `/Applications/Beam.app`. Beende Beam und öffne es nach der Änderung dieser Berechtigung erneut."
+                "Öffnen Apple menu > System Settings > Privacy & Security > Bildschirm & System Audio Recording, then Aktivieren Beam. If Beam ist not listed, use der Hinzufügen button und Auswählen `/Applications/Beam.app`. Quit und reopen Beam after changing this permission."
               ],
               "screenshot": {
                 "path": "platforms/macos-screen-system-audio.webp",
-                "alt": "macOS-Datenschutzeinstellungen für Bildschirm- und Systemaudioaufnahme mit aktiviertem Beam",
-                "caption": "Aktiviere Beam unter Bildschirm- und Systemaudioaufnahme."
+                "hidden": true,
+                "alt": "macOS Bildschirm und System Audio Recording privacy settings mit Beam aktiviert",
+                "caption": "Aktivieren Beam under Bildschirm & System Audio Recording."
               }
             },
             {
               "title": "Mikrofon- und Kamerazugriff erlauben",
               "paragraphs": [
-                "Öffne unter Systemeinstellungen > Datenschutz und Sicherheit den Bereich Mikrofon und aktiviere Beam, wenn du Sprache aufnimmst. Öffne Kamera und aktiviere Beam, wenn du die Kameraeinblendung verwendest."
+                "in System Settings > Privacy & Security, Öffnen Microphone und Aktivieren Beam when recording voice. Öffnen Camera und Aktivieren Beam when using der camera overlay."
               ],
               "screenshot": {
                 "path": "platforms/macos-microphone-camera.webp",
-                "alt": "macOS-Datenschutzeinstellungen für Mikrofon und Kamera von Beam",
-                "caption": "Beam muss in der Datenschutzliste für jede aufzuzeichnende Quelle aktiviert sein."
+                "hidden": true,
+                "alt": "macOS Microphone und Camera privacy settings für Beam",
+                "caption": "Beam must be aktiviert in der privacy list für each source you want zu capture."
               }
             }
           ]
@@ -105,17 +222,17 @@
         {
           "title": "Linux",
           "bullets": [
-            "Beam wird als AppImage-, DEB- und RPM-Paket verteilt.",
-            "Bildschirm- und Fensteraufnahme verwenden XDG Desktop Portal, PipeWire und FFmpeg.",
-            "Der Systemauswahldialog fordert beim Beginn einer Aufnahme die Berechtigung an.",
-            "Tastenkürzel- und Mausklick-Metadaten erfordern eine ausdrückliche Polkit-Zustimmung.",
-            "X11 kann Positionen und Größen von Einblendungen wiederherstellen.",
-            "Native Wayland-Unterstützung kann Einblendungsgrößen, aber keine globalen Positionen wiederherstellen."
+            "Beam ist distributed as AppImage, DEB, und RPM packages.",
+            "Bildschirm und Fenster capture Verwendet XDG Desktop Portal, PipeWire, und FFmpeg.",
+            "der system picker requests permission when ein capture begins.",
+            "Keyboard shortcut und mouse Klicken metadata Erfordert explicit Polkit consent.",
+            "X11 can restore overlay positions und sizes.",
+            "Native Wayland-Unterstützung kann Overlay-Größen, aber keine globalen Positionen wiederherstellen."
           ],
           "notice": {
             "kind": "info",
             "title": "Positionierung unter Wayland",
-            "text": "Wayland stellt keine globalen Fensterkoordinaten bereit. Beam erzwingt XWayland nicht, weil diese Umgehung mit manchen GPU- und X11-Konfigurationen inkompatibel sein kann."
+            "text": "Wayland does not expose global Fenster coordinates. Beam does not force XWayland because that workaround can be incompatible mit some GPU und X11 configurations."
           }
         }
       ]

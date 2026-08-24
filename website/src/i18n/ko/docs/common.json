@@ -1,43 +1,162 @@
 {
   "locale": "ko-KR",
-  "label": "한국어",
+  "label": "영어",
   "siteTitle": "Beam 문서",
-  "nav": { "website": "Beam 웹사이트" },
+  "nav": {
+    "website": "Beam 웹사이트"
+  },
   "sidebar": [
     {
-      "text": "여기서 시작",
+      "text": "시작하기",
       "items": [
-        { "text": "소개", "link": "/" },
-        { "text": "시작하기", "link": "/getting-started" },
-        { "text": "Beam 업데이트", "link": "/updates" }
+        {
+          "text": "소개",
+          "link": "/"
+        },
+        {
+          "text": "시작하기",
+          "link": "/getting-started"
+        },
+        {
+          "text": "Beam 업데이트",
+          "link": "/updates"
+        }
       ]
     },
     {
       "text": "녹화기 앱",
       "items": [
-        { "text": "개요", "link": "/recorder/" },
-        { "text": "인터페이스", "link": "/recorder/interface" },
-        { "text": "기능", "link": "/recorder/capabilities" }
+        {
+          "text": "개요",
+          "link": "/recorder/"
+        },
+        {
+          "text": "인터페이스",
+          "link": "/recorder/interface"
+        },
+        {
+          "text": "기능",
+          "link": "/recorder/capabilities/",
+          "items": [
+            {
+              "text": "캡처 소스",
+              "link": "/recorder/capabilities/capture-sources"
+            },
+            {
+              "text": "오디오 및 카메라",
+              "link": "/recorder/capabilities/audio-camera"
+            },
+            {
+              "text": "텔레프롬프터",
+              "link": "/recorder/capabilities/teleprompter"
+            },
+            {
+              "text": "실시간 제어",
+              "link": "/recorder/capabilities/live-controls"
+            },
+            {
+              "text": "환경 설정",
+              "link": "/recorder/capabilities/preferences"
+            },
+            {
+              "text": "프로젝트 관리자",
+              "link": "/recorder/capabilities/project-manager"
+            },
+            {
+              "text": "권한 및 개인정보 보호",
+              "link": "/recorder/capabilities/permissions-privacy"
+            }
+          ]
+        }
       ]
     },
     {
       "text": "동영상 편집기",
       "items": [
-        { "text": "개요", "link": "/editor/" },
-        { "text": "인터페이스", "link": "/editor/interface" },
-        { "text": "기능", "link": "/editor/capabilities" }
+        {
+          "text": "개요",
+          "link": "/editor/"
+        },
+        {
+          "text": "인터페이스",
+          "link": "/editor/interface"
+        },
+        {
+          "text": "프로젝트 쇼케이스",
+          "link": "/editor/showcase"
+        },
+        {
+          "text": "기능",
+          "link": "/editor/capabilities",
+          "items": [
+            {
+              "text": "타임라인 편집",
+              "link": "/editor/capabilities/timeline"
+            },
+            {
+              "text": "캔버스",
+              "link": "/editor/capabilities/canvas"
+            },
+            {
+              "text": "클립",
+              "link": "/editor/capabilities/clips"
+            },
+            {
+              "text": "확대/축소",
+              "link": "/editor/capabilities/zooms"
+            },
+            {
+              "text": "커서",
+              "link": "/editor/capabilities/cursor"
+            },
+            {
+              "text": "자막",
+              "link": "/editor/capabilities/captions"
+            },
+            {
+              "text": "오디오",
+              "link": "/editor/capabilities/audio"
+            },
+            {
+              "text": "설정",
+              "link": "/editor/capabilities/settings"
+            },
+            {
+              "text": "내보내기",
+              "link": "/export"
+            }
+          ]
+        }
       ]
     },
     {
       "text": "참조",
       "items": [
-        { "text": "내보내기 및 공유", "link": "/export" },
-        { "text": "플랫폼 지원", "link": "/platforms" },
-        { "text": "파일 시스템", "link": "/filesystem" }
+        {
+          "text": "내보내기 및 공유",
+          "link": "/export"
+        },
+        {
+          "text": "플랫폼 지원",
+          "link": "/platforms"
+        },
+        {
+          "text": "파일 시스템",
+          "link": "/filesystem"
+        }
       ]
     }
   ],
-  "social": { "github": "GitHub에서 Beam 보기", "discord": "Beam Discord 참여" },
-  "theme": { "switchToLight": "밝은 테마로 전환", "switchToDark": "어두운 테마로 전환" },
-  "footer": { "message": "오픈 소스 화면 녹화 및 편집 도구.", "copyright": "MIT 라이선스로 배포됩니다." }
+  "social": {
+    "github": "GitHub에서 Beam 보기",
+    "discord": "Beam Discord 참여"
+  },
+  "theme": {
+    "switchToLight": "밝은 테마로 전환",
+    "switchToDark": "어두운 테마로 전환"
+  },
+  "footer": {
+    "message": "오픈 소스 화면 녹화 및 편집.",
+    "copyright": "MIT 라이선스로 배포됩니다."
+  }
 }

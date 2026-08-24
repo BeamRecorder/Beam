@@ -1,0 +1,386 @@
+{
+  "pages": [
+    {
+      "slug": "recorder/capabilities/preferences",
+      "title": "Préférences de l'enregistreur",
+      "description": "Référence complète du comportement d'enregistrement, de l'apparence, de la langue, des raccourcis, des mises à jour et des réglages persistants de l'enregistreur.",
+      "lead": "Ouvrez les Préférences depuis la barre supérieure de l'enregistreur. Les réglages sont regroupés dans Enregistrement, Général, Raccourcis et À propos, avec des contrôles avancés d'apparence et de mise à jour lorsqu'ils sont disponibles.",
+      "sections": [
+        {
+          "title": "Fenêtre des préférences",
+          "screenshot": {
+            "path": "recorder/preferences.webp",
+            "alt": "Fenêtre Préférences de Beam affichant les réglages de l'enregistreur",
+            "caption": "Les préférences de l'enregistreur couvrent le comportement de capture et les réglages partagés avec l'éditeur.",
+            "aspectRatio": "308 / 517"
+          }
+        },
+        {
+          "title": "Réglages d'enregistrement",
+          "tables": [
+            {
+              "headers": ["Réglage", "Valeurs", "Valeur par défaut", "Notes"],
+              "rows": [
+                [
+                  "Compte à rebours",
+                  "Off, 3 seconds, 5 seconds, 10 seconds",
+                  "3 seconds",
+                  "Appliqué avant le début de la capture."
+                ],
+                [
+                  "Barre de l'enregistreur",
+                  "Always visible, Auto-fade, Hidden until hovered",
+                  "Toujours visible sous Windows/macOS ; masquée jusqu'au survol sous Linux",
+                  "Contrôle la barre flottante pendant la capture."
+                ],
+                [
+                  "Accès aux interactions",
+                  "Checking, Available, Permission required, Installation required, Denied, Unavailable",
+                  "Off",
+                  "Sous Linux, cette permission s'appelle Enregistrer les événements clavier et souris."
+                ],
+                [
+                  "Enregistrer les interactions",
+                  "On or Off when available",
+                  "Dépend de la plateforme",
+                  "Stocke les clics pris en charge et les jetons de raccourcis sécurisés, jamais le texte saisi."
+                ],
+                [
+                  "Raccourcis",
+                  "Ouvrir la sous-vue Raccourcis",
+                  "Sans objet",
+                  "Ouvre les groupes de raccourcis Enregistrement et Téléprompteur."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Réglages généraux",
+          "tables": [
+            {
+              "headers": ["Réglage", "Valeurs", "Valeur par défaut"],
+              "rows": [
+                [
+                  "Langue",
+                  "Bulgarian, German, English, Spanish, French, Hindi, Italian, Japanese, Korean, Polish, Portuguese (Brazil), Russian, Vietnamese, Simplified Chinese, Traditional Chinese",
+                  "Une langue du système ou du navigateur prise en charge ; anglais par défaut"
+                ],
+                ["Mode de thème", "Light, Dark, System", "Light"],
+                ["Correcteur orthographique", "On or Off under Advanced", "On"],
+                ["Couleur principale", "Palette de préréglages ou sélecteur de couleur personnalisé", "#ff5a1f"],
+                ["Couleur secondaire", "Palette de préréglages ou sélecteur de couleur personnalisé", "#6366f1"],
+                ["Rayon des angles", "0, 6, 10, 16, 24 px, or Custom", "10 px"],
+                ["Rayon des pastilles", "On or Off", "Off"],
+                ["Ton de surface", "Default, Neutral, Slate, Deep", "Default"],
+                ["Échelle globale de l'interface", "50%, 75%, 100%, 125%", "100%"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Préréglages de thème",
+          "paragraphs": [
+            "L'application d'un préréglage définit ensemble les deux couleurs, le rayon des angles, le comportement des pastilles et le ton de surface. Les contrôles individuels peuvent ensuite être modifiés."
+          ],
+          "tables": [
+            {
+              "headers": ["Préréglage", "Principale", "Secondaire", "Rayon", "Surface"],
+              "rows": [
+                ["Beam Sunset", "#ff5a1f", "#6366f1", "10 px", "Default"],
+                ["Cyber Violet", "#8b5cf6", "#06b6d4", "12 px", "Slate"],
+                ["Emerald Forest", "#10b981", "#f59e0b", "8 px", "Neutral"],
+                ["Crimson Velvet", "#f43f5e", "#a855f7", "14 px", "Deep"],
+                ["Oceanic Breeze", "#0284c7", "#14b8a6", "10 px", "Slate"],
+                ["Amber Studio", "#f59e0b", "#ec4899", "4 px", "Neutral"],
+                ["Sakura Bloom", "#ec4899", "#8b5cf6", "18 px", "Default"],
+                ["Slate Precision", "#0ea5e9", "#64748b", "2 px", "Slate"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Remplacements de l'échelle de l'interface",
+          "paragraphs": [
+            "La barre supérieure, la barre latérale, les propriétés, les contrôles du canevas et la timeline peuvent chacun utiliser l'échelle globale ou la remplacer par 50 %, 75 %, 100 % ou 125 %. Un remplacement vide signifie utiliser l'échelle globale ; modifier l'échelle globale continue donc d'affecter cette zone."
+          ],
+          "tables": [
+            {
+              "headers": ["Zone", "Choix"],
+              "rows": [
+                ["Barre supérieure", "Use global, 50%, 75%, 100%, 125%"],
+                ["Barre latérale", "Use global, 50%, 75%, 100%, 125%"],
+                ["Propriétés", "Use global, 50%, 75%, 100%, 125%"],
+                ["Contrôles du canevas", "Use global, 50%, 75%, 100%, 125%"],
+                ["Timeline", "Use global, 50%, 75%, 100%, 125%"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Raccourcis par défaut",
+          "paragraphs": [
+            "Les conflits entre raccourcis globaux sont comparés sans tenir compte de la casse. Un raccourci global en double est refusé."
+          ],
+          "tables": [
+            {
+              "headers": ["Catégorie", "Action", "Raccourci par défaut"],
+              "rows": [
+                ["Enregistrement", "Démarrer / Arrêter l'enregistrement", "Alt+Shift+R"],
+                ["Enregistrement", "Pause / Reprendre", "Alt+Shift+P"],
+                ["Enregistrement", "Activer ou désactiver le microphone", "Alt+Shift+M"],
+                ["Enregistrement", "Activer ou désactiver la caméra", "Alt+Shift+C"],
+                ["Enregistrement", "Activer ou désactiver l'audio système", "Alt+Shift+A"],
+                ["Teleprompter", "Afficher / Masquer", "Alt+Shift+T"],
+                ["Teleprompter", "Pause / Reprendre", "Alt+Shift+O"],
+                ["Teleprompter", "Ligne suivante", "Ctrl+Shift+Right"],
+                ["Teleprompter", "Ligne précédente", "Ctrl+Shift+Left"]
+              ]
+            }
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Raccourci de l'éditeur",
+            "text": "Le schéma des préférences contient également le raccourci Lecture/Pause de l'éditeur, Espace, mais la sous-vue des raccourcis de l'enregistreur ne l'affiche pas."
+          }
+        },
+        {
+          "title": "À propos et mises à jour",
+          "tables": [
+            {
+              "headers": ["Zone", "Actions ou états disponibles"],
+              "rows": [
+                [
+                  "À propos",
+                  "Affichez la version de l'application, copiez les informations système, ouvrez le journal des modifications et relancez la visite de bienvenue."
+                ],
+                [
+                  "États des mises à jour",
+                  "Inactif, Vérification, Disponible, Téléchargement, Téléchargée, Indisponible, Erreur, Non pris en charge."
+                ],
+                [
+                  "Actions de mise à jour",
+                  "Rechercher, télécharger lorsqu'une mise à jour est disponible, copier un message d'erreur et redémarrer uniquement après qu'une mise à jour a atteint l'état Téléchargée."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Données de préférences stockées",
+          "paragraphs": [
+            "Le schéma normalisé des préférences est en version 3. En plus des contrôles visibles, il stocke l'état d'achèvement de la configuration initiale, les appareils sélectionnés, les préréglages enregistrés de couleur et de dégradé d'arrière-plan, ainsi que la confirmation de l'avis sur les interactions."
+          ],
+          "tables": [
+            {
+              "headers": ["Plateforme", "Fichier de préférences"],
+              "rows": [
+                ["Windows", "`%USERPROFILE%\\Videos\\Beam\\user\\preferences.json`"],
+                ["macOS", "`~/Movies/Beam/user/preferences.json`"],
+                ["Linux", "`${XDG_VIDEOS_DIR:-~/Videos}/Beam/user/preferences.json`"]
+              ]
+            },
+            {
+              "headers": ["Clé supplémentaire", "Rôle"],
+              "rows": [
+                ["locale", "Langue sélectionnée de l'application."],
+                ["screenRegion", "Zone d'enregistrement personnalisée normalisée."],
+                ["screenRegionPreset", "Dernier préréglage de zone sélectionné."],
+                ["teleprompterSettings", "Mode et réglages de lecture partagés du téléprompteur."],
+                ["cameraOverlay", "Réglages de superposition de caméra partagés avec l'éditeur."],
+                ["teleprompterWindow", "État de la fenêtre du téléprompteur."]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/project-manager",
+      "title": "Gestionnaire de projets",
+      "description": "Référence de la recherche, de l'aperçu, de la sélection, de la création, du renommage, de l'ouverture, de l'affichage et de la suppression des projets Beam.",
+      "lead": "Sélectionnez Ouvrir un projet existant sous Démarrer l'enregistrement pour parcourir les projets stockés sur l'ordinateur.",
+      "sections": [
+        {
+          "title": "Actions sur les projets",
+          "tables": [
+            {
+              "headers": ["Action", "Comportement"],
+              "rows": [
+                ["Rechercher des projets", "Filtre les noms des projets sans tenir compte de la casse."],
+                ["Sélectionner des projets", "Passe en mode sélection pour un ou plusieurs projets."],
+                ["Tout sélectionner", "Sélectionne tous les projets actuellement disponibles dans la vue."],
+                ["Quitter la sélection", "Quitte le mode de sélection par lots."],
+                ["Nouveau projet", "Crée un projet vide sans créer d'enregistrement."],
+                [
+                  "Actualiser les projets",
+                  "Recharge la liste depuis le stockage et affiche brièvement Projets actualisés."
+                ],
+                ["Ouvrir le projet", "Ouvre le projet sélectionné dans l'éditeur."],
+                ["Renommer", "Modifie le nom du projet."],
+                ["Explorer", "Affiche le dossier du projet dans le gestionnaire de fichiers de la plateforme."],
+                [
+                  "Supprimer",
+                  "La suppression d'un seul projet demande une confirmation. La suppression par lots démarre directement pour les projets sélectionnés."
+                ],
+                ["Retour", "Retourne au HUD de l'enregistreur."],
+                ["Créer / Annuler", "Confirme ou abandonne la création d'un projet vide."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "États de la liste",
+          "tables": [
+            {
+              "headers": ["État", "Ce que l'interface affiche"],
+              "rows": [
+                ["Chargement", "Cartes de projet squelettes pendant la lecture du stockage."],
+                ["Erreur", "Un état d'erreur avec Réessayer."],
+                ["Vide", "Aucun projet lorsque le stockage n'en contient aucun."],
+                ["Aucun résultat de recherche", "Un message dédié lorsque le filtre ne correspond à rien."],
+                ["Date inconnue", "Texte de secours lorsque les métadonnées temporelles du projet sont indisponibles."],
+                ["Actuel", "Marque le projet actuellement ouvert."],
+                ["Sélectionné", "Marque un projet inclus dans la sélection actuelle."],
+                ["Grande liste", "Les cartes sont virtualisées afin que seule la plage visible soit rendue."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Noms, dossiers et sessions",
+          "paragraphs": [
+            "Les nouveaux enregistrements reçoivent des noms générés comme Clever Comet ou Rapid Signal. Un suffixe numérique est ajouté lorsqu'un nom généré existe déjà. Un projet est un dossier qui peut contenir plusieurs sessions d'enregistrement et leurs pistes média séparées."
+          ],
+          "tables": [
+            {
+              "headers": ["Plateforme", "Racine des projets"],
+              "rows": [
+                ["Windows", "`%USERPROFILE%\\Videos\\Beam\\user\\projects`"],
+                ["macOS", "`~/Movies/Beam/user/projects`"],
+                ["Linux", "`${XDG_VIDEOS_DIR:-~/Videos}/Beam/user/projects`"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Aperçu et badges",
+          "paragraphs": [
+            "Beam privilégie `thumbnail.webp` lorsqu'il existe. S'il est absent, Beam peut générer une miniature WebP à partir de la source d'aperçu disponible. Survoler un projet lit son enregistrement d'écran en sourdine, automatiquement et en boucle ; faire défiler annule l'aperçu au survol et arrête la lecture."
+          ],
+          "tables": [
+            {
+              "headers": ["Badge", "Signification"],
+              "rows": [
+                ["Moniteur", "Le projet contient un enregistrement d'écran."],
+                ["Vidéo", "Le projet contient des images de caméra."],
+                ["Sous-titres", "Le projet contient des sous-titres ou un calque de texte."]
+              ]
+            }
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Portée des badges",
+            "text": "Le gestionnaire de projets actuel n'affiche pas de badges séparés pour le microphone ou l'audio système."
+          }
+        },
+        {
+          "title": "Suppression par lots",
+          "paragraphs": [
+            "La suppression d'un seul projet demande une confirmation. La suppression par lots démarre directement depuis le mode sélection et supprime les projets séquentiellement au lieu de lancer toutes les opérations de système de fichiers en même temps."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/permissions-privacy",
+      "title": "Autorisations et confidentialité",
+      "description": "Exigences de plateforme et comportement de confidentialité pour la capture de l'écran, de l'audio, de la caméra et des interactions.",
+      "lead": "Beam demande les capacités protégées uniquement via les mécanismes du système d'exploitation nécessaires aux sources sélectionnées. L'enregistrement des interactions est facultatif et ne stocke pas le texte saisi.",
+      "sections": [
+        {
+          "title": "Windows",
+          "bullets": [
+            "La capture d'écran et de fenêtre utilise Windows Graphics Capture.",
+            "Les capacités du curseur et des clics dépendent de ce qu'expose le chemin de capture Windows.",
+            "L'accès aux interactions ne nécessite pas l'assistant Polkit de Linux."
+          ]
+        },
+        {
+          "title": "macOS",
+          "tables": [
+            {
+              "headers": ["Capacité", "Exigence"],
+              "rows": [
+                [
+                  "Capture d'écran, de fenêtre ou d'application",
+                  "ScreenCaptureKit et l'autorisation Enregistrement de l'écran."
+                ],
+                ["Accès aux interactions", "Autorisation d'accessibilité CoreGraphics."],
+                ["Capture MP4 directe", "macOS 15 ou version ultérieure."],
+                [
+                  "Audio système Chromium",
+                  "macOS 13 ou version ultérieure ; `NSAudioCaptureUsageDescription` est requis à partir de macOS 14.2."
+                ],
+                ["Microphone et caméra", "Les autorisations de confidentialité macOS correspondantes."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Linux",
+          "tables": [
+            {
+              "headers": ["Exigence", "Rôle ou contrainte"],
+              "rows": [
+                [
+                  "XDG Desktop Portal v2 ou version ultérieure",
+                  "Affiche le sélecteur de sources système et obtient le consentement à l'enregistrement."
+                ],
+                ["PipeWire", "Transporte les flux sélectionnés de l'écran et de l'audio système natif."],
+                ["FFmpeg et un encodeur MP4 compatible", "Encode la session capturée."],
+                [
+                  "Assistant d'entrée Beam",
+                  "Fournit des métadonnées facultatives de raccourcis clavier et de clics de souris."
+                ],
+                ["Polkit / pkexec et broker", "Peut être requis pour autoriser et utiliser l'assistant d'entrée."],
+                [
+                  "Source unique du portail",
+                  "Un écran ou une fenêtre est sélectionné pour la session ; la capture de zone est indisponible."
+                ]
+              ]
+            }
+          ],
+          "paragraphs": [
+            "La disponibilité des raccourcis clavier et des clics de souris peut varier selon les périphériques d'entrée accessibles. La capture des interactions sous Linux indique toujours que le texte saisi n'est pas enregistré."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Fenêtres Beam dans une capture plein écran",
+            "text": "Beam ne peut pas masquer ses propres fenêtres lors d'une capture plein écran sous Linux. Le mode Écran reste recommandé ; placez Beam avant de confirmer la sélection du portail."
+          }
+        },
+        {
+          "title": "Confidentialité des interactions",
+          "bullets": [
+            "La capture des interactions est facultative.",
+            "Elle s'exécute uniquement lorsqu'une session d'enregistrement est active.",
+            "Elle stocke les métadonnées de clic prises en charge et les jetons de raccourcis sécurisés.",
+            "Elle ne stocke jamais le texte saisi par l'utilisateur."
+          ]
+        },
+        {
+          "title": "Isolation des médias et limites d'échec",
+          "paragraphs": [
+            "La caméra, le microphone et l'audio système sont stockés comme pistes ou fichiers associés séparés lorsque cela est pris en charge. En dehors de Linux, l'audio système utilise la capture display-media de Chromium. Electron n'accorde l'accès aux médias qu'aux renderers d'application de confiance. Une caméra signalée comme indisponible pendant la préparation peut être omise tandis que la capture continue ; d'autres erreurs de caméra ou de fichier associé, ainsi que l'échec d'une source microphone ou audio système sélectionnée, peuvent interrompre le démarrage de l'enregistrement."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Configuration détaillée",
+            "text": "Utilisez la [référence de prise en charge des plateformes](/platforms) pour la configuration et le dépannage propres au système d'exploitation."
+          }
+        }
+      ]
+    }
+  ]
+}

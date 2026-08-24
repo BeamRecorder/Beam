@@ -1,0 +1,386 @@
+{
+  "pages": [
+    {
+      "slug": "recorder/capabilities/preferences",
+      "title": "Preferenze del registratore",
+      "description": "Riferimento completo a comportamento della registrazione, aspetto, lingua, scorciatoie, aggiornamenti e impostazioni persistenti del registratore.",
+      "lead": "Apri Preferenze dalla barra superiore del registratore. Le impostazioni sono raggruppate in Registrazione, Generali, Scorciatoie e Informazioni, con controlli avanzati per aspetto e aggiornamenti dove applicabili.",
+      "sections": [
+        {
+          "title": "Finestra delle preferenze",
+          "screenshot": {
+            "path": "recorder/preferences.webp",
+            "alt": "Finestra Preferenze di Beam con le impostazioni del registratore",
+            "caption": "Le preferenze del registratore coprono il comportamento dell'acquisizione e le impostazioni condivise con l'editor.",
+            "aspectRatio": "308 / 517"
+          }
+        },
+        {
+          "title": "Impostazioni di registrazione",
+          "tables": [
+            {
+              "headers": ["Impostazione", "Valori", "Predefinito", "Note"],
+              "rows": [
+                [
+                  "Conto alla rovescia",
+                  "Disattivato, 3 secondi, 5 secondi, 10 secondi",
+                  "3 secondi",
+                  "Applicato prima dell'inizio dell'acquisizione."
+                ],
+                [
+                  "Barra del registratore",
+                  "Sempre visibile, Dissolvenza automatica, Nascosta fino al passaggio",
+                  "Sempre su Windows/macOS; Nascosta fino al passaggio su Linux",
+                  "Controlla la barra fluttuante durante l'acquisizione."
+                ],
+                [
+                  "Accesso alle interazioni",
+                  "Verifica in corso, Disponibile, Autorizzazione richiesta, Installazione richiesta, Negato, Non disponibile",
+                  "Disattivato",
+                  "Su Linux è denominato Registra eventi di tastiera e mouse su Linux."
+                ],
+                [
+                  "Registra interazioni",
+                  "Attivo o disattivo quando disponibile",
+                  "Dipendente dalla piattaforma",
+                  "Memorizza clic supportati e token sicuri delle scorciatoie, mai il testo digitato."
+                ],
+                [
+                  "Scorciatoie",
+                  "Apri la vista secondaria Scorciatoie",
+                  "Non applicabile",
+                  "Apre i gruppi di scorciatoie Registrazione e Teleprompter."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Impostazioni generali",
+          "tables": [
+            {
+              "headers": ["Impostazione", "Valori", "Predefinito"],
+              "rows": [
+                [
+                  "Lingua",
+                  "Bulgaro, tedesco, inglese, spagnolo, francese, hindi, italiano, giapponese, coreano, polacco, portoghese (Brasile), russo, vietnamita, cinese semplificato, cinese tradizionale",
+                  "Una lingua di sistema o del browser supportata; fallback in inglese"
+                ],
+                ["Modalità tema", "Chiaro, Scuro, Sistema", "Chiaro"],
+                ["Controllo ortografico", "Attivo o disattivo in Avanzate", "Attivo"],
+                ["Colore primario", "Tavolozza di preset o selettore colore personalizzato", "#ff5a1f"],
+                ["Colore secondario", "Tavolozza di preset o selettore colore personalizzato", "#6366f1"],
+                ["Raggio degli angoli", "0, 6, 10, 16, 24 px oppure Personalizzato", "10 px"],
+                ["Raggio pillola", "Attivo o disattivo", "Disattivo"],
+                ["Tonalità della superficie", "Predefinita, Neutra, Ardesia, Profonda", "Predefinita"],
+                ["Scala UI globale", "50%, 75%, 100%, 125%", "100%"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Preset del tema",
+          "paragraphs": [
+            "L'applicazione di un preset imposta insieme entrambi i colori, il raggio degli angoli, il comportamento pillola e la tonalità della superficie. In seguito puoi modificare i singoli controlli."
+          ],
+          "tables": [
+            {
+              "headers": ["Preset", "Primario", "Secondario", "Raggio", "Superficie"],
+              "rows": [
+                ["Beam Sunset", "#ff5a1f", "#6366f1", "10 px", "Predefinita"],
+                ["Cyber Violet", "#8b5cf6", "#06b6d4", "12 px", "Ardesia"],
+                ["Emerald Forest", "#10b981", "#f59e0b", "8 px", "Neutra"],
+                ["Crimson Velvet", "#f43f5e", "#a855f7", "14 px", "Profonda"],
+                ["Oceanic Breeze", "#0284c7", "#14b8a6", "10 px", "Ardesia"],
+                ["Amber Studio", "#f59e0b", "#ec4899", "4 px", "Neutra"],
+                ["Sakura Bloom", "#ec4899", "#8b5cf6", "18 px", "Predefinita"],
+                ["Slate Precision", "#0ea5e9", "#64748b", "2 px", "Ardesia"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Override della scala dell'interfaccia",
+          "paragraphs": [
+            "Barra superiore, Barra laterale, Proprietà, controlli Canvas e Timeline possono usare ciascuno la scala globale oppure sostituirla con 50%, 75%, 100% o 125%. Usa globale è rappresentato da un override vuoto, quindi la modifica della scala globale continua a influenzare quella regione."
+          ],
+          "tables": [
+            {
+              "headers": ["Regione", "Scelte"],
+              "rows": [
+                ["Barra superiore", "Usa globale, 50%, 75%, 100%, 125%"],
+                ["Barra laterale", "Usa globale, 50%, 75%, 100%, 125%"],
+                ["Proprietà", "Usa globale, 50%, 75%, 100%, 125%"],
+                ["Controlli Canvas", "Usa globale, 50%, 75%, 100%, 125%"],
+                ["Timeline", "Usa globale, 50%, 75%, 100%, 125%"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Scorciatoie predefinite",
+          "paragraphs": [
+            "I conflitti tra scorciatoie globali vengono confrontati senza distinzione tra maiuscole e minuscole. Una scorciatoia globale duplicata viene rifiutata."
+          ],
+          "tables": [
+            {
+              "headers": ["Categoria", "Azione", "Scorciatoia predefinita"],
+              "rows": [
+                ["Registrazione", "Avvia / Arresta registrazione", "Alt+Shift+R"],
+                ["Registrazione", "Pausa / Riprendi", "Alt+Shift+P"],
+                ["Registrazione", "Attiva microfono", "Alt+Shift+M"],
+                ["Registrazione", "Attiva fotocamera", "Alt+Shift+C"],
+                ["Registrazione", "Attiva audio di sistema", "Alt+Shift+A"],
+                ["Teleprompter", "Mostra / Nascondi", "Alt+Shift+T"],
+                ["Teleprompter", "Pausa / Riprendi", "Alt+Shift+O"],
+                ["Teleprompter", "Riga successiva", "Ctrl+Shift+Destra"],
+                ["Teleprompter", "Riga precedente", "Ctrl+Shift+Sinistra"]
+              ]
+            }
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Scorciatoia dell'editor",
+            "text": "Lo schema delle preferenze contiene anche la scorciatoia Riproduci/Pausa dell'editor, Spazio, ma la vista secondaria delle scorciatoie del registratore non la mostra."
+          }
+        },
+        {
+          "title": "Informazioni e aggiornamenti",
+          "tables": [
+            {
+              "headers": ["Area", "Azioni o stati disponibili"],
+              "rows": [
+                [
+                  "Informazioni",
+                  "Visualizza la versione dell'applicazione, copia le informazioni di sistema, apri il changelog e riavvia il tour di benvenuto."
+                ],
+                [
+                  "Stati degli aggiornamenti",
+                  "Inattivo, Verifica in corso, Disponibile, Download in corso, Scaricato, Non disponibile, Errore, Non supportato."
+                ],
+                [
+                  "Azioni degli aggiornamenti",
+                  "Controlla, scarica quando disponibile, copia un messaggio di errore e riavvia solo dopo che un aggiornamento ha raggiunto lo stato Scaricato."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Dati delle preferenze memorizzati",
+          "paragraphs": [
+            "Lo schema normalizzato delle preferenze è alla versione 3. Oltre ai controlli visibili, memorizza il completamento dell'onboarding, i dispositivi selezionati, i preset salvati di colore e sfumatura dello sfondo e l'eventuale chiusura dell'avviso sulle interazioni."
+          ],
+          "tables": [
+            {
+              "headers": ["Piattaforma", "File delle preferenze"],
+              "rows": [
+                ["Windows", "`%USERPROFILE%\\\\Videos\\\\Beam\\\\user\\\\preferences.json`"],
+                ["macOS", "`~/Movies/Beam/user/preferences.json`"],
+                ["Linux", "`${XDG_VIDEOS_DIR:-~/Videos}`/Beam/user/preferences.json"]
+              ]
+            },
+            {
+              "headers": ["Chiave aggiuntiva", "Scopo"],
+              "rows": [
+                ["locale", "Lingua selezionata dell'applicazione."],
+                ["screenRegion", "Area di registrazione personalizzata normalizzata."],
+                ["screenRegionPreset", "Ultimo preset dell'area selezionato."],
+                ["teleprompterSettings", "Modalità e impostazioni del lettore del teleprompter condivise."],
+                ["cameraOverlay", "Impostazioni dell'overlay della fotocamera condivise con l'editor."],
+                ["teleprompterWindow", "Stato della finestra del teleprompter."]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/project-manager",
+      "title": "Gestore progetti",
+      "description": "Riferimento per cercare, visualizzare in anteprima, selezionare, creare, rinominare, aprire, mostrare ed eliminare i progetti Beam.",
+      "lead": "Seleziona Apri un progetto esistente sotto Avvia registrazione per sfogliare i progetti memorizzati sul computer.",
+      "sections": [
+        {
+          "title": "Azioni sui progetti",
+          "tables": [
+            {
+              "headers": ["Azione", "Comportamento"],
+              "rows": [
+                ["Cerca progetti", "Filtra i nomi dei progetti senza distinzione tra maiuscole e minuscole."],
+                ["Seleziona progetti", "Attiva la modalità di selezione per uno o più progetti."],
+                ["Seleziona tutto", "Seleziona tutti i progetti attualmente disponibili nella vista."],
+                ["Esci dalla selezione", "Esce dalla modalità di selezione in blocco."],
+                ["Nuovo progetto", "Crea un progetto vuoto senza creare una registrazione."],
+                [
+                  "Aggiorna progetti",
+                  "Ricarica l'elenco dallo spazio di archiviazione e mostra brevemente Progetti aggiornati."
+                ],
+                ["Apri progetto", "Apre il progetto selezionato nell'editor."],
+                ["Rinomina", "Modifica il nome del progetto."],
+                ["Esplora", "Mostra la cartella del progetto nel gestore file della piattaforma."],
+                [
+                  "Elimina",
+                  "L'eliminazione di un singolo progetto richiede conferma. L'eliminazione in blocco inizia direttamente per i progetti selezionati."
+                ],
+                ["Indietro", "Torna all'HUD del registratore."],
+                ["Crea / Annulla", "Conferma o abbandona la creazione del progetto vuoto."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Stati dell'elenco",
+          "tables": [
+            {
+              "headers": ["Stato", "Cosa mostra l'interfaccia"],
+              "rows": [
+                ["Caricamento", "Schede progetto segnaposto mentre viene letto lo spazio di archiviazione."],
+                ["Errore", "Uno stato di errore con Riprova."],
+                ["Vuoto", "Nessun progetto quando lo spazio di archiviazione non ne contiene."],
+                ["Nessun risultato", "Un messaggio dedicato quando il filtro non corrisponde a nulla."],
+                ["Data sconosciuta", "Testo di riserva quando i metadati temporali del progetto non sono disponibili."],
+                ["Corrente", "Contrassegna il progetto attualmente aperto."],
+                ["Selezionato", "Contrassegna un progetto incluso nella selezione corrente."],
+                [
+                  "Elenco numeroso",
+                  "Le schede sono virtualizzate, quindi viene visualizzato solo l'intervallo visibile."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Nomi, cartelle e sessioni",
+          "paragraphs": [
+            "Le nuove registrazioni ricevono nomi generati come Clever Comet o Rapid Signal. Quando un nome generato esiste già, viene aggiunto un suffisso numerico. Un progetto è una cartella che può contenere più sessioni di registrazione e le relative tracce multimediali separate."
+          ],
+          "tables": [
+            {
+              "headers": ["Piattaforma", "Radice dei progetti"],
+              "rows": [
+                ["Windows", "`%USERPROFILE%\\\\Videos\\\\Beam\\\\user\\\\projects`"],
+                ["macOS", "`~/Movies/Beam/user/projects`"],
+                ["Linux", "`${XDG_VIDEOS_DIR:-~/Videos}`/Beam/user/projects"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Anteprima e badge",
+          "paragraphs": [
+            "Beam preferisce il file `thumbnail.webp` persistente. Se manca, Beam può generare una miniatura WebP dalla sorgente di anteprima disponibile. Passando il mouse su un progetto viene riprodotta la sua registrazione dello schermo senza audio, automaticamente e in loop; scorrere annulla l'anteprima al passaggio e interrompe la riproduzione."
+          ],
+          "tables": [
+            {
+              "headers": ["Badge", "Significato"],
+              "rows": [
+                ["Monitor", "Il progetto contiene una registrazione dello schermo."],
+                ["Video", "Il progetto contiene riprese della fotocamera."],
+                ["Sottotitoli", "Il progetto contiene sottotitoli o un livello testuale."]
+              ]
+            }
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Ambito dei badge",
+            "text": "Il Gestore progetti attuale non mostra badge separati per microfono o audio di sistema."
+          }
+        },
+        {
+          "title": "Eliminazione in blocco",
+          "paragraphs": [
+            "L'eliminazione di un singolo progetto richiede conferma. L'eliminazione in blocco parte direttamente dalla modalità di selezione ed elimina i progetti in sequenza, invece di avviare tutte le operazioni sul file system contemporaneamente."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/permissions-privacy",
+      "title": "Autorizzazioni e privacy",
+      "description": "Requisiti della piattaforma e comportamento della privacy per acquisizione dello schermo, audio, fotocamera e interazioni.",
+      "lead": "Beam richiede funzionalità protette solo attraverso i percorsi del sistema operativo necessari alle sorgenti selezionate. La registrazione delle interazioni è facoltativa e non memorizza il testo digitato.",
+      "sections": [
+        {
+          "title": "Windows",
+          "bullets": [
+            "L'acquisizione di schermo e finestre usa Windows Graphics Capture.",
+            "Le funzionalità del cursore e dei clic dipendono da ciò che espone il percorso di acquisizione di Windows.",
+            "L'accesso alle interazioni non richiede l'helper Polkit di Linux."
+          ]
+        },
+        {
+          "title": "macOS",
+          "tables": [
+            {
+              "headers": ["Funzionalità", "Requisito"],
+              "rows": [
+                [
+                  "Acquisizione di schermo, finestra o applicazione",
+                  "ScreenCaptureKit e autorizzazione Registrazione schermo."
+                ],
+                ["Accesso alle interazioni", "Autorizzazione Accessibilità di CoreGraphics."],
+                ["Acquisizione MP4 diretta", "macOS 15 o versione successiva."],
+                [
+                  "Audio di sistema Chromium",
+                  "macOS 13 o versione successiva; `NSAudioCaptureUsageDescription` è obbligatorio da macOS 14.2."
+                ],
+                ["Microfono e fotocamera", "Le autorizzazioni privacy macOS corrispondenti."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Linux",
+          "tables": [
+            {
+              "headers": ["Requisito", "Scopo o vincolo"],
+              "rows": [
+                [
+                  "XDG Desktop Portal v2 o versione successiva",
+                  "Mostra il selettore delle sorgenti di sistema e ottiene il consenso alla registrazione."
+                ],
+                ["PipeWire", "Trasporta i flussi selezionati dello schermo e dell'audio di sistema nativo."],
+                ["FFmpeg più un encoder MP4 compatibile", "Codifica la sessione acquisita."],
+                ["Helper input di Beam", "Fornisce metadati facoltativi di scorciatoie da tastiera e clic del mouse."],
+                ["Polkit / pkexec e broker", "Può essere necessario per autorizzare e usare l'helper input."],
+                [
+                  "Sorgente singola del portal",
+                  "Per la sessione viene selezionato uno schermo o una finestra; l'acquisizione dell'area non è disponibile."
+                ]
+              ]
+            }
+          ],
+          "paragraphs": [
+            "La disponibilità di scorciatoie da tastiera e clic del mouse può variare in base ai dispositivi di input accessibili. L'acquisizione delle interazioni su Linux indica sempre che il testo digitato non viene registrato."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Finestre Beam nell'acquisizione a schermo intero",
+            "text": "Beam non può nascondere le proprie finestre da un'acquisizione Linux a schermo intero. La modalità Schermo è comunque consigliata; disponi Beam prima di confermare la selezione del portal."
+          }
+        },
+        {
+          "title": "Privacy delle interazioni",
+          "bullets": [
+            "L'acquisizione delle interazioni è facoltativa.",
+            "Viene eseguita solo mentre è attiva una sessione di registrazione.",
+            "Memorizza metadati dei clic supportati e token sicuri delle scorciatoie.",
+            "Non memorizza mai il testo digitato dall'utente."
+          ]
+        },
+        {
+          "title": "Isolamento dei contenuti e limiti degli errori",
+          "paragraphs": [
+            "Fotocamera, microfono e audio di sistema vengono memorizzati come tracce o sidecar separati quando supportato. Al di fuori di Linux, l'audio di sistema usa l'acquisizione display-media di Chromium. Electron concede l'accesso ai contenuti multimediali solo a renderer applicativi affidabili. Una fotocamera segnalata come non disponibile durante la preparazione può essere omessa mentre l'acquisizione continua; altri errori della fotocamera o del sidecar, così come il malfunzionamento del microfono o della sorgente audio di sistema selezionata, possono interrompere l'avvio della registrazione."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Configurazione dettagliata",
+            "text": "Usa il [riferimento sul supporto delle piattaforme](/platforms) per configurazione e risoluzione dei problemi del sistema operativo."
+          }
+        }
+      ]
+    }
+  ]
+}

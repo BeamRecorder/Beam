@@ -2,42 +2,161 @@
   "locale": "pt-BR",
   "label": "Português (Brasil)",
   "siteTitle": "Documentação do Beam",
-  "nav": { "website": "Site do Beam" },
+  "nav": {
+    "website": "Site do Beam"
+  },
   "sidebar": [
     {
       "text": "Comece aqui",
       "items": [
-        { "text": "Introdução", "link": "/" },
-        { "text": "Primeiros passos", "link": "/getting-started" },
-        { "text": "Atualizar o Beam", "link": "/updates" }
+        {
+          "text": "Introdução",
+          "link": "/"
+        },
+        {
+          "text": "Primeiros passos",
+          "link": "/getting-started"
+        },
+        {
+          "text": "Atualizar o Beam",
+          "link": "/updates"
+        }
       ]
     },
     {
       "text": "Aplicativo de gravação",
       "items": [
-        { "text": "Visão geral", "link": "/recorder/" },
-        { "text": "Interface", "link": "/recorder/interface" },
-        { "text": "Recursos", "link": "/recorder/capabilities" }
+        {
+          "text": "Visão geral",
+          "link": "/recorder/"
+        },
+        {
+          "text": "Interface",
+          "link": "/recorder/interface"
+        },
+        {
+          "text": "Recursos",
+          "link": "/recorder/capabilities/",
+          "items": [
+            {
+              "text": "Fontes de captura",
+              "link": "/recorder/capabilities/capture-sources"
+            },
+            {
+              "text": "Áudio e câmera",
+              "link": "/recorder/capabilities/audio-camera"
+            },
+            {
+              "text": "Teleprompter",
+              "link": "/recorder/capabilities/teleprompter"
+            },
+            {
+              "text": "Controles ao vivo",
+              "link": "/recorder/capabilities/live-controls"
+            },
+            {
+              "text": "Preferências",
+              "link": "/recorder/capabilities/preferences"
+            },
+            {
+              "text": "Gerente de projetos",
+              "link": "/recorder/capabilities/project-manager"
+            },
+            {
+              "text": "Permissões e privacidade",
+              "link": "/recorder/capabilities/permissions-privacy"
+            }
+          ]
+        }
       ]
     },
     {
       "text": "Editor de vídeo",
       "items": [
-        { "text": "Visão geral", "link": "/editor/" },
-        { "text": "Interface", "link": "/editor/interface" },
-        { "text": "Recursos", "link": "/editor/capabilities" }
+        {
+          "text": "Visão geral",
+          "link": "/editor/"
+        },
+        {
+          "text": "Interface",
+          "link": "/editor/interface"
+        },
+        {
+          "text": "Vitrine do projeto",
+          "link": "/editor/showcase"
+        },
+        {
+          "text": "Recursos",
+          "link": "/editor/capabilities",
+          "items": [
+            {
+              "text": "Edição da linha do tempo",
+              "link": "/editor/capabilities/timeline"
+            },
+            {
+              "text": "Tela",
+              "link": "/editor/capabilities/canvas"
+            },
+            {
+              "text": "Clipes",
+              "link": "/editor/capabilities/clips"
+            },
+            {
+              "text": "Ampliações",
+              "link": "/editor/capabilities/zooms"
+            },
+            {
+              "text": "Cursor",
+              "link": "/editor/capabilities/cursor"
+            },
+            {
+              "text": "Legendas",
+              "link": "/editor/capabilities/captions"
+            },
+            {
+              "text": "Áudio",
+              "link": "/editor/capabilities/audio"
+            },
+            {
+              "text": "Configurações",
+              "link": "/editor/capabilities/settings"
+            },
+            {
+              "text": "Exportação",
+              "link": "/export"
+            }
+          ]
+        }
       ]
     },
     {
       "text": "Referência",
       "items": [
-        { "text": "Exportação e compartilhamento", "link": "/export" },
-        { "text": "Compatibilidade com plataformas", "link": "/platforms" },
-        { "text": "Sistema de arquivos", "link": "/filesystem" }
+        {
+          "text": "Exportação e compartilhamento",
+          "link": "/export"
+        },
+        {
+          "text": "Compatibilidade com plataformas",
+          "link": "/platforms"
+        },
+        {
+          "text": "Sistema de arquivos",
+          "link": "/filesystem"
+        }
       ]
     }
   ],
-  "social": { "github": "Ver o Beam no GitHub", "discord": "Entrar no Discord do Beam" },
-  "theme": { "switchToLight": "Mudar para o tema claro", "switchToDark": "Mudar para o tema escuro" },
-  "footer": { "message": "Gravação e edição de tela de código aberto.", "copyright": "Distribuído sob a licença MIT." }
+  "social": {
+    "github": "Ver o Beam no GitHub",
+    "discord": "Entrar no Discord do Beam"
+  },
+  "theme": {
+    "switchToLight": "Mudar para o tema claro",
+    "switchToDark": "Mudar para o tema escuro"
+  },
+  "footer": {
+    "message": "Gravação e edição de tela de código aberto.",
+    "copyright": "Distribuído sob a licença MIT."
+  }
 }

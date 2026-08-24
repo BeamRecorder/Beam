@@ -17,7 +17,19 @@
       "items": [
         { "text": "概览", "link": "/recorder/" },
         { "text": "界面", "link": "/recorder/interface" },
-        { "text": "功能", "link": "/recorder/capabilities" }
+        {
+          "text": "功能",
+          "link": "/recorder/capabilities/",
+          "items": [
+            { "text": "捕获来源", "link": "/recorder/capabilities/capture-sources" },
+            { "text": "音频和摄像头", "link": "/recorder/capabilities/audio-camera" },
+            { "text": "提词器", "link": "/recorder/capabilities/teleprompter" },
+            { "text": "实时控制", "link": "/recorder/capabilities/live-controls" },
+            { "text": "偏好设置", "link": "/recorder/capabilities/preferences" },
+            { "text": "项目管理器", "link": "/recorder/capabilities/project-manager" },
+            { "text": "权限与隐私", "link": "/recorder/capabilities/permissions-privacy" }
+          ]
+        }
       ]
     },
     {
@@ -25,7 +37,22 @@
       "items": [
         { "text": "概览", "link": "/editor/" },
         { "text": "界面", "link": "/editor/interface" },
-        { "text": "功能", "link": "/editor/capabilities" }
+        { "text": "项目展示", "link": "/editor/showcase" },
+        {
+          "text": "功能",
+          "link": "/editor/capabilities",
+          "items": [
+            { "text": "时间线编辑", "link": "/editor/capabilities/timeline" },
+            { "text": "画布", "link": "/editor/capabilities/canvas" },
+            { "text": "片段", "link": "/editor/capabilities/clips" },
+            { "text": "缩放", "link": "/editor/capabilities/zooms" },
+            { "text": "光标", "link": "/editor/capabilities/cursor" },
+            { "text": "字幕", "link": "/editor/capabilities/captions" },
+            { "text": "音频", "link": "/editor/capabilities/audio" },
+            { "text": "设置", "link": "/editor/capabilities/settings" },
+            { "text": "导出", "link": "/export" }
+          ]
+        }
       ]
     },
     {

@@ -1,0 +1,464 @@
+{
+  "pages": [
+    {
+      "slug": "editor/capabilities/timeline",
+      "title": "Edycja osi czasu",
+      "description": "Kompletne informacje dotyczące narzędzi osi czasu, ścieżek, zaznaczania, przyciągania, przycinania, dzielenia, działań w schowku i zatrzymywania klatek.",
+      "lead": "Oś czasu łączy ścieżki wizualne, adnotacje, powiększanie i audio na jednej głowicy odtwarzającej. Reguły edycji zależą od wyboru, typu klipu, własności projektu i dostępnego czasu trwania.",
+      "sections": [
+        {
+          "title": "Dodaj multimedia i warstwy",
+          "tables": [
+            {
+              "headers": ["Przedmiot", "Jak się to dodaje", "Początkowy czas trwania lub zachowanie"],
+              "rows": [
+                [
+                  "Wideo",
+                  "Dodaj → Wideo lub przeciągnij i upuść",
+                  "Czas trwania zasobu podzielony przez początkową prędkość odtwarzania."
+                ],
+                ["Obraz", "Dodaj → Obraz lub przeciągnij i upuść", "5 sekund."],
+                [
+                  "Dźwięk",
+                  "Dodaj → Audio lub przeciągnij i upuść",
+                  "Czas trwania zasobu podzielony przez początkową prędkość odtwarzania."
+                ],
+                [
+                  "Tekst",
+                  "Dodaj → Tekst lub kliknij ścieżkę podpisu tekstowego",
+                  "Zapisane preferencje dotyczące czasu trwania napisów; 2-sekundowy powrót awaryjny i minimum 200 ms."
+                ],
+                ["Rozmycie", "Dodaj → Rozmycie", "5 sekund."],
+                [
+                  "Powiększ",
+                  "Kliknij dostępny punkt na ścieżce Zoom",
+                  "Zapisane preferencje dotyczące czasu powiększenia lub cofania o 1,2 sekundy; dopasowywane do szczeliny z minimalnym czasem 200 ms."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Sterowanie osią czasu",
+          "tables": [
+            {
+              "headers": ["Kontrola", "Zakres lub skrót", "Zachowanie"],
+              "rows": [
+                [
+                  "Podziel",
+                  "S",
+                  "Wymaga jednego wybranego klipu i głowicy odtwarzającej znajdującej się wewnątrz tego klipu."
+                ],
+                [
+                  "Magnes",
+                  "Domyślnie włączone",
+                  "Przyciąga do początku/końca osi czasu, krawędzi klipu, krawędzi powiększenia i głowicy odtwarzania, jeśli operacja to obsługuje. Próg wyliczany na podstawie linijki nigdy nie spada poniżej 20 ms."
+                ],
+                ["Odtwórz/Wstrzymaj", "Przestrzeń", "Ignorowane, gdy fokus znajduje się w edytowalnym polu."],
+                [
+                  "Przeskocz do tyłu/do przodu",
+                  "Przyciski paska narzędzi",
+                  "Przechodzi na początek lub koniec osi czasu."
+                ],
+                ["Jakość odtwarzania", "Pełne, pół, ćwiartka", "Zmienia tylko rozdzielczość podglądu."],
+                [
+                  "Powiększenie osi czasu",
+                  "100%–3200%",
+                  "Przyciski krokowe o 50 poniżej 500%, 100 poniżej 1000%, następnie 250; Ctrl+kółko wykorzystuje 25/50/100 kroków. Zapisano po zmianach."
+                ],
+                [
+                  "Wyświetlanie czasu",
+                  "MM:SS lub GG:MM:SS",
+                  "Przełącza format, gdy czas trwania osiągnie jedną godzinę."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Wybór",
+          "tables": [
+            {
+              "headers": ["Gest", "Wynik"],
+              "rows": [
+                ["Kliknij klip", "Wybiera ten klip jako element podstawowy."],
+                ["Kliknij inny klip", "Zastępuje bieżący wybór klipów."],
+                [
+                  "Kliknij nagłówek ścieżki",
+                  "Zaznacza każdy klip na ścieżce; klip najbliższy głowicy odtwarzania staje się głównym."
+                ],
+                [
+                  "Ctrl, Cmd lub Shift + nagłówek ścieżki",
+                  "Dodaje klipy tej ścieżki do bieżącego zaznaczenia ścieżki lub usuwa je z niej."
+                ],
+                [
+                  "Kliknij element płótna",
+                  "Wybiera odpowiedni obsługiwany klip, podpis, rozmycie, kursor lub obszar ekranu."
+                ],
+                ["Kliknij puste miejsce", "Usuwa sprzeczny wybór, jeśli pozwala na to aktywne narzędzie."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Przesuwaj, przycinaj i nakładaj warstwy",
+          "bullets": [
+            "Przeciągnij klip, aby zmienić początek jego osi czasu; połączone wózki boczne do nagrywania poruszają się razem, aż do rozłączenia.",
+            "Przeciągnij uchwyt początkowy lub końcowy, aby przyciąć aktywny zakres. Klip musi mieć długość co najmniej 40 ms, a klipy muszą mieć wspólne przycięcie identyfikatora grupy.",
+            "Przeciągnięcie multimediów poza bieżący koniec wydłuża czas trwania kompozycji.",
+            "Przeciągnij nagłówki ścieżek wizualnych, aby zmienić kolejność warstw.",
+            "Przeniesienie klipu wizualnego do innego wiersza wizualnego może również zmienić kolejność ścieżek wizualnych.",
+            "Wyłączone klipy pozostają na osi czasu, ale nie umożliwiają podglądu ani eksportu.",
+            "Zmiana wielokrotnego wyboru jest stosowana tylko do wybranych klipów zgodnych z właściwością głównego klipu."
+          ]
+        },
+        {
+          "title": "Schowek i usuwanie",
+          "tables": [
+            {
+              "headers": ["Akcja", "Dostępność", "Obudowa Edge"],
+              "rows": [
+                [
+                  "Kopiuj",
+                  "Obsługiwany główny wybrany klip lub powiększenie",
+                  "Kopiuje tylko element główny, nawet jeśli wybranych jest kilka klipów; ładunek pozostaje powiązany z jego projektem."
+                ],
+                [
+                  "Wklej",
+                  "Projekt został załadowany, a dane schowka są kompatybilne",
+                  "Elementy skopiowane z innego projektu są odrzucane."
+                ],
+                ["Usuń", "Obsługiwane wybrane elementy osi czasu", "Usuwa wybrany element z kompozycji."],
+                ["Odłącz", "Wybrany element ma link do nagrania", "Po rozłączeniu może poruszać się samodzielnie."],
+                [
+                  "Włącz / wyłącz",
+                  "Obsługiwane klipy",
+                  "Wyłączone multimedia są ignorowane podczas odtwarzania i eksportowania."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Przejścia klipów i płótna",
+          "tables": [
+            {
+              "headers": ["Własność", "Wartości", "Domyślne lub ograniczenie"],
+              "rows": [
+                ["Strona", "Wejście i wyjście", "Konfigurowany niezależnie."],
+                [
+                  "Wstępne ustawienia wizualne",
+                  "Brak, Zanikanie, Przesuń w lewo, Przesuń w prawo, Przesuń w górę, Przesuń w dół, Powiększ, Pomniejsz, Rozmycie",
+                  "Dostępne dla klipów wizualnych i przejść płótna."
+                ],
+                [
+                  "Wstępnie ustawione audio",
+                  "Brak lub Zanik",
+                  "Inne ustawienia wstępne przejścia nie są dostępne dla dźwięku."
+                ],
+                [
+                  "Czas trwania",
+                  "1–5000 ms",
+                  "500ms; ograniczone czasem trwania klipu minus przejście po przeciwnej stronie."
+                ],
+                ["Krzywa wizualna", "1×–5×", "3×; nie jest pokazywany w przypadku przejść audio."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Przytrzymaj ramkę",
+          "paragraphs": [
+            "Wstrzymaj klatkę zamraża wybrane wideo na głowicy odtwarzania i rozciąga nieruchomą część jako element osi czasu."
+          ],
+          "tables": [
+            {
+              "headers": ["Wymaganie", "Reguła"],
+              "rows": [
+                ["Typ klipu", "Włączono klip ekranowy, wideo lub kamery internetowej z multimediami wideo."],
+                ["Wybór", "Należy wybrać zgodny klip."],
+                ["Głowica odtwarzająca", "Od początku + 40 ms do końca - 40 ms włącznie."],
+                ["Zamrożony segment", "1000 ms."],
+                [
+                  "Połączone media",
+                  "Połączone klipy są dzielone razem, a zamrożony segment może pozostać zgrupowany z towarzyszącym dźwiękiem."
+                ],
+                ["Menu", "Dostępne z menu kontekstowego obsługiwanego klipu."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Awarie importowanych nośników",
+          "paragraphs": [
+            "Upuszczone pliki są sprawdzane przed importem. Beam zgłasza nieobsługiwane rozszerzenia lub kodeki, nieprawidłowe lub puste media, błędy dekodowania, źródła nielokalne i błędy importu projektu. Jeśli zaimportowany film zawiera nieobsługiwany dźwięk, można go dodać, ale jego dźwięk będzie ignorowany."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Jeden import na raz",
+            "text": "Nowy import metodą „przeciągnij i upuść” został odrzucony, podczas gdy inny import multimediów jest już uruchomiony."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/clips",
+      "title": "Właściwości klipu",
+      "description": "Kompletne informacje dotyczące właściwości obrazu, kamery internetowej, rozmycia, dźwięku, tekstu i klipów z napisami z klawiatury.",
+      "lead": "Panel Klip następuje po wyborze podstawowym. Wspólne elementy sterujące pojawiają się tylko w przypadku zgodnych typów klipów, a edycja wielokrotnego wyboru jest propagowana tylko do zgodnych wybranych klipów.",
+      "sections": [
+        {
+          "title": "Brak wyboru",
+          "paragraphs": [
+            "Jeśli nie jest wybrany żaden klip, panel wyświetla pusty stan instruktażowy. Wybierz element na płótnie lub osi czasu, aby wyświetlić jego właściwości."
+          ],
+          "screenshot": {
+            "path": "editor/clip-empty.webp",
+            "alt": "Beam Panel klipów bez wybranego klipu",
+            "caption": "Panel Klip pozostaje pusty, dopóki nie zostanie wybrany zgodny element osi czasu lub obszaru roboczego.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Typy klipów",
+          "tables": [
+            {
+              "headers": ["Typ klipu", "Właściwości odsłonięte"],
+              "rows": [
+                [
+                  "Ekran/wideo",
+                  "Układ wizualny, kadrowanie, transformacja, wygląd, prędkość odtwarzania, przejścia, włączanie, usuwanie i rozłączanie po połączeniu."
+                ],
+                ["Obraz", "Układ wizualny, kadrowanie, transformacja, wygląd, przejścia, włączanie i usuwanie."],
+                [
+                  "Kamera internetowa",
+                  "Wspólne sterowanie wizualne oraz podzielony układ i funkcja Reaguj na powiększenie."
+                ],
+                ["Rozmycie", "Kontrola efektu, kształtu, siły, pióra, promienia, odcienia i koloru."],
+                [
+                  "System / Mikrofon / Importowany dźwięk",
+                  "Przycinaj głośność, przejścia wejściowe i wyjściowe, włączaj i usuwaj."
+                ],
+                ["Podpis tekstowy", "Treść tekstu, typografia, wyrównanie, kolor, kontur, wytłoczenie, tło i cień."],
+                ["Napis na klawiaturze", "Styl napisów i podążanie za kursorem."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Wspólny układ wizualny",
+          "tables": [
+            {
+              "headers": ["Własność", "Wartości lub zakres", "Zachowanie"],
+              "rows": [
+                [
+                  "Układ",
+                  "Pływający lewy górny, prawy górny, lewy dolny dół, prawy dolny dół; Pływające centrum; Pełny ekran",
+                  "Kamera internetowa dodatkowo obsługuje podział na lewą, prawą, górną i dolną część."
+                ],
+                [
+                  "Kadrowanie",
+                  "Wypełnienie, Dopasowanie, Kwadrat, Portret 9:16, Poziom 16:9, Squircle, Circle",
+                  "Steruje prezentacją przycięcia i maski."
+                ],
+                ["Pozycja X / Y", "−300% do 300%", "Przesuwa wizualizację na płótnie."],
+                ["Szerokość", "2%–400%", "Wysokość pozostaje proporcjonalna, gdy zmienia się tylko szerokość."],
+                [
+                  "Promień narożnika",
+                  "Brak, 8, 16, 24 pikseli lub Niestandardowe 0–200 pikseli",
+                  "Zaokrągla maskę wizualną."
+                ],
+                ["Lustro", "Poziome i pionowe", "Odwraca renderowaną wizualizację."],
+                [
+                  "Szybkość odtwarzania",
+                  "0,25×–4×; ustawienia wstępne 0,5×, 1×, 1,5×, 2×, 3×",
+                  "Dostępne dla klipów ekranowych, wideo i kamer internetowych."
+                ],
+                [
+                  "Włącz / wyłącz",
+                  "Włączone lub wyłączone",
+                  "Wyłączone klipy pozostają na osi czasu, ale nie są renderowane."
+                ],
+                [
+                  "Przejścia",
+                  "Otwórz z nagłówka właściwości",
+                  "Przejścia wejściowe i wyjściowe są zapisywane w każdym klipie."
+                ],
+                ["Usuń", "Akcja nagłówka Właściwości", "Usuwa wybrany klip."],
+                ["Odłącz", "Dostępne dla łączonych wózków bocznych", "Oddziela klip od połączonego ruchu na osi czasu."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Cień, obramowanie i ramka",
+          "tables": [
+            {
+              "headers": ["Grupa", "Własność", "Wartości lub zakres"],
+              "rows": [
+                ["Cień", "Wstępnie ustawione", "Brak, Miękkie, Średnie, Mocne, Niestandardowe"],
+                ["Cień", "Tryb", "Solidne lub adaptacyjne"],
+                ["Cień", "Niestandardowe rozmycie", "4–96 pikseli"],
+                ["Cień", "Kierunek", "Wszystko, Dół, Prawy dolny dół, Lewy górny"],
+                ["Granica", "Włączone", "Włączone lub wyłączone"],
+                ["Granica", "Kolor", "Próbnik kolorów"],
+                ["Granica", "Szerokość", "1–32 piks"],
+                ["Rama", "Styl", "Brak, Safari, Windows 95"],
+                ["Rama", "Tytuł", "Niestandardowy tytuł ramki"],
+                ["Rama", "Skala chromu", "50%–200%"],
+                ["Rama", "Konkretne kontrole", "Menu, pasek przewijania lub kolory w zależności od stylu ramki"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Przytnij klip wizualny",
+          "paragraphs": ["Crop to bezpośredni edytor obszaru roboczego, a nie numeryczna grupa paneli Clip."],
+          "steps": [
+            "Wybierz dokładnie jeden ekran, wideo, obraz lub klip z kamery internetowej.",
+            "Wybierz opcję Przytnij na pasku narzędzi obszaru roboczego.",
+            "Przesuń lub zmień rozmiar prostokąta przycinania bezpośrednio nad wybraną wizualizacją.",
+            "Wybierz OK, aby zapisać znormalizowane przycięcie w tym klipie."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Wymagany jest pojedynczy wybór",
+            "text": "Przycinanie jest niedostępne bez jednego zgodnego zaznaczenia wizualnego i nie działa w przypadku zaznaczenia wielokrotnego."
+          }
+        },
+        {
+          "title": "Początkowe domyślne ustawienia wizualne",
+          "tables": [
+            {
+              "headers": ["Klip", "Transformacja i kadrowanie", "Kąt i cień"],
+              "rows": [
+                [
+                  "Ekran",
+                  "Pełne płótno",
+                  "Brak promienia narożnika w przypadku braku tła; Średni cień, rozmycie 40 pikseli, kierunek dolny."
+                ],
+                [
+                  "Wideo / obraz",
+                  "Pełne płótno",
+                  "Mały promień narożnika; Średni cień, rozmycie 20 pikseli, wszystkie kierunki."
+                ],
+                [
+                  "Nowa kamera internetowa",
+                  "x 72%, y 72%, szerokość 24%, wysokość 24%; Wiercik",
+                  "Następnie zastosuj domyślne ustawienia wyglądu kamery internetowej."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Klipy z kamery internetowej",
+          "screenshot": {
+            "path": "editor/webcam-properties.webp",
+            "alt": "Beam właściwości wybranego klipu z kamery internetowej",
+            "caption": "Klipy z kamery internetowej dodają podzielone układy i zachowanie reakcji na zoom do współdzielonych elementów sterujących wizualnych.",
+            "aspectRatio": "199 / 326"
+          },
+          "tables": [
+            {
+              "headers": ["Własność", "Wartości", "Domyślne lub ograniczenie"],
+              "rows": [
+                [
+                  "Podzielony układ",
+                  "Lewo, prawo, góra, dół",
+                  "Wymaga połączonego klipu ekranowego. W przeciwnym razie: „W tym momencie na osi czasu nie jest dostępne żadne pasujące nagranie ekranu”."
+                ],
+                ["Współczynnik podziału", "20%–80%", "50%"],
+                ["Dzielona wyściółka", "0%–8%", "0%"],
+                ["Reaguj na Zoom", "Włączone lub wyłączone", "Włączone"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Rozmycie klipów",
+          "tables": [
+            {
+              "headers": ["Własność", "Wartości lub zakres", "Zachowanie warunkowe"],
+              "rows": [
+                ["Wstępne ustawienie światła", "Rozmycie", "Siła 30, pióro 14, odcień 0."],
+                ["Ustawienia prywatności", "Piksele", "Siła 72, pióro 2, odcień 0."],
+                ["Mocne ustawienie wstępne", "Nieprzezroczysty", "Siła 100, pióro 0, odcień 0, kolor #000000."],
+                ["Efekt", "Rozmycie, matowe, piksele, nieprzezroczyste", "Zmiany, które kontrolki pozostają widoczne."],
+                ["Kształt", "Prostokąt, kwadrat, okrąg", "Okrąg ukrywa promień narożnika."],
+                ["Siła", "0%–100%", "Ukryte dla nieprzezroczystego."],
+                ["Miękkość krawędzi", "0%–100%", "Kontroluje wtapianie."],
+                ["Promień narożnika", "0%–100%", "Ukryty dla Circle."],
+                ["Intensywność odcienia", "0%–100%", "Tylko matowe; wejście do Frosted zużywa co najmniej 24%."],
+                ["Kolor", "Próbnik kolorów", "Tylko matowe i nieprzezroczyste."]
+              ]
+            }
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Efekt prywatności",
+            "text": "Efekt jest wstawiany do eksportowanego wideo. Zwiększ siłę lub użyj Opaque w przypadku wrażliwych informacji."
+          }
+        },
+        {
+          "title": "Głośność klipu audio",
+          "tables": [
+            {
+              "headers": ["Własność", "Zasięg", "Domyślne"],
+              "rows": [["Objętość", "0%–200%", "100%"]]
+            }
+          ],
+          "paragraphs": [
+            "Ta głośność na poziomie klipu dotyczy wybranego systemu, mikrofonu lub zaimportowanych klipów audio. Regulacja głośności w całej kompozycji i na poziomie roli jest udokumentowana na stronie Audio."
+          ]
+        },
+        {
+          "title": "Podpisy tekstowe i klawiaturowe",
+          "tables": [
+            {
+              "headers": ["Własność", "Wartości lub zakres", "Domyślne lub reguła"],
+              "rows": [
+                [
+                  "Treść",
+                  "Niestandardowy tekst lub wygenerowane zdanie / krok klawiatury",
+                  "Tekst niestandardowy nie jest propagowany w ramach wielokrotnego zaznaczenia."
+                ],
+                [
+                  "Czcionka",
+                  "Wyszukaj zainstalowane czcionki lub zaimportuj czcionkę",
+                  "Przechowywane z napisem „Stylizacja”."
+                ],
+                ["Styl", "Pogrubienie, kursywa, przekreślenie", "Niezależne przełączniki."],
+                ["Wyrównanie", "Lewy, środkowy, prawy", "Wyrównanie tekstu podpisu."],
+                ["Kolor", "Próbnik kolorów", "Kolor wypełnienia tekstu."],
+                ["Wysokość linii", "0,8–2,0", "Wartość stylu podpisu."],
+                ["Odstępy między literami", "−5 do 20 pikseli", "Wartość stylu podpisu."],
+                [
+                  "Rozmiar czcionki",
+                  "12–256 pikseli",
+                  "Ręczne preferencje dotyczące napisów z rezerwą tworzenia 42 pikseli; panel zastępczy 36 px tekst / 28 px klawiatura; Napisy AI mają rozmiar 36 pikseli."
+                ],
+                ["Zawiń", "Włączone lub wyłączone", "Włączone"],
+                ["Zarys", "0–30 pikseli", "Opcjonalna szerokość konturu."],
+                ["Kolor konturu", "Próbnik kolorów", "Używane, gdy szerokość konturu jest większa od zera."],
+                ["Wytłaczanie", "0–20 pikseli", "Opcjonalny efekt głębi."],
+                ["Rozmycie tła", "0–48 pikseli", "Rozmycie za podpisem."],
+                ["Rozmycie cienia tekstu", "0–50 pikseli", "Kierunek: wszystko, dół, prawy dolny dół, lewy górny."],
+                [
+                  "Kolor cienia tekstu",
+                  "Próbnik kolorów",
+                  "Stosowane ze skonfigurowanym rozmyciem cienia i kierunkiem."
+                ],
+                [
+                  "Podążaj za kursorem",
+                  "Włączone lub wyłączone",
+                  "Tylko napisy na klawiaturze; nigdy nie były propagowane poprzez wielokrotny wybór."
+                ]
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,289 @@
+{
+  "pages": [
+    {
+      "slug": "editor/capabilities/captions",
+      "title": "Chú thích AI",
+      "description": "Tài liệu tham khảo đầy đủ về các mô hình Whisper cục bộ, nguồn âm thanh, tải xuống, phiên âm, tái tạo, hủy và chẩn đoán.",
+      "lead": "Beam tạo chú thích giọng nói cục bộ từ clip âm thanh được bật. Nó tải xuống mô hình Whisper đã chọn, chép lại trên thiết bị và tạo các clip phụ đề có thể chỉnh sửa trên dòng thời gian.",
+      "sections": [
+        {
+          "title": "Bảng phụ đề",
+          "screenshot": {
+            "path": "editor/captions-panel.webp",
+            "alt": "Beam Bảng điều khiển Phụ đề AI với nguồn âm thanh và điều khiển mô hình Whisper",
+            "caption": "Chọn nguồn âm thanh được bật và mô hình Whisper cục bộ trước khi tạo phụ đề.",
+            "aspectRatio": "199/326"
+          }
+        },
+        {
+          "title": "Nguồn âm thanh",
+          "tables": [
+            {
+              "headers": ["Nguồn", "Khi nó xuất hiện", "Quy tắc lựa chọn"],
+              "rows": [
+                [
+                  "Âm thanh hệ thống",
+                  "Đã tồn tại một clip đã bật với vai trò Hệ thống.",
+                  "Được xác định là Âm thanh hệ thống."
+                ],
+                ["Micrô", "Đã tồn tại một clip được bật với vai trò Micrô.", "Được xác định là Microphone."],
+                ["Âm thanh đã nhập", "Đã tồn tại một clip âm thanh được nhập đã bật.", "Sử dụng tên clip."],
+                [
+                  "URL phương tiện trùng lặp",
+                  "Hai clip được kích hoạt tham chiếu cùng một URL âm thanh.",
+                  "Chỉ có nguồn đầu tiên được cung cấp."
+                ],
+                [
+                  "Không có nguồn sử dụng được",
+                  "Không có clip âm thanh nào được bật có URL nội dung có thể đọc được.",
+                  "Tạo vẫn không có sẵn."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Mô hình thì thầm",
+          "tables": [
+            {
+              "headers": ["người mẫu", "Ngôn ngữ", "Hướng dẫn thực hiện"],
+              "rows": [
+                ["Nhỏ bé", "Đa ngôn ngữ", "Mô hình mặc định."],
+                ["Nhỏ .en", "Tiếng Việt", "Model chỉ có tiếng Anh."],
+                ["Căn cứ", "Đa ngôn ngữ", "Không có cảnh báo bổ sung."],
+                ["Cơ sở .en", "Tiếng Việt", "Model chỉ có tiếng Anh."],
+                ["nhỏ", "Đa ngôn ngữ", "Có thể chậm nếu không có WebGPU."],
+                [".en nhỏ", "Tiếng Việt", "Có thể chậm nếu không có WebGPU."],
+                ["Trung bình", "Đa ngôn ngữ", "Tải xuống lớn; Khuyến nghị WebGPU."],
+                ["Trung bình .en", "Tiếng Việt", "Tải xuống lớn; Khuyến nghị WebGPU."],
+                ["v3 lớn", "Đa ngôn ngữ", "Rất lớn và chậm khi không có WebGPU."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Tải xuống và xóa mô hình",
+          "tables": [
+            {
+              "headers": ["Trạng thái hoặc hành động", "Hành vi"],
+              "rows": [
+                ["Thiếu", "Mô hình tải xuống có sẵn cho mô hình đã chọn."],
+                ["Đang tải xuống", "Beam báo cáo đã tải xuống và tổng số byte bằng thanh tiến trình."],
+                ["Sẵn sàng", "Dấu kiểm xác định mô hình đã cài đặt và Xóa mô hình sẽ khả dụng."],
+                ["Xóa mô hình", "Không có sẵn trong quá trình tải xuống, xóa hoặc sao chép."],
+                ["Lỗi tải xuống", "Lỗi được hiển thị và có thể được sao chép để chẩn đoán."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Tạo và tái tạo",
+          "steps": [
+            "Chọn một trong các nguồn âm thanh được kích hoạt.",
+            "Chọn và tải xuống mô hình Whisper nếu nó chưa sẵn sàng.",
+            "Chọn Tạo phụ đề. Beam giải mã nguồn, chuyển đổi nó thành âm thanh đơn âm 16 kHz và giới hạn nó trong khoảng thời gian theo dòng thời gian.",
+            "Kết quả sao chép một phần cập nhật thành phần trong khi quá trình xử lý tiếp tục.",
+            "Quá trình chạy hoàn tất sẽ chọn chú thích được tạo đầu tiên để chỉnh sửa."
+          ],
+          "tables": [
+            {
+              "headers": ["Hành vi", "quy tắc"],
+              "rows": [
+                ["Nhóm câu", "Kết thúc cụm chú thích ở dấu câu hoặc sau 12 từ."],
+                ["Thời lượng clip được tạo tối thiểu", "40 mili giây."],
+                ["tái sinh", "Thay thế chú thích hiện có do AI tạo và giữ nguyên chú thích thủ công."],
+                ["Hủy bỏ", "Dừng tải hoặc sao chép mô hình."],
+                ["Đóng bảng điều khiển", "Hủy quá trình sao chép đang hoạt động."],
+                [
+                  "Chẩn đoán",
+                  "Báo cáo thời gian đã trôi qua và hiển thị báo cáo phiên âm có thể sao chép sau khi xử lý."
+                ]
+              ]
+            }
+          ],
+          "notice": {
+            "kind": "tip",
+            "title": "Chuyển lời cục bộ",
+            "text": "Whisper chạy trên thiết bị. Việc tạo phụ đề không yêu cầu tải lên đám mây hoặc khóa API."
+          }
+        },
+        {
+          "title": "Chỉnh sửa phụ đề đã tạo",
+          "paragraphs": [
+            "Phụ đề được tạo là các clip phụ đề có thể chỉnh sửa thông thường được đánh dấu là do AI tạo. Văn bản, thời gian và phong cách hình ảnh của chúng có thể được điều chỉnh thông qua bảng Clip và dòng thời gian sau khi tạo."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/audio",
+      "title": "Âm thanh",
+      "description": "Tham chiếu đầy đủ về đầu ra chung, vai trò hệ thống và micrô, âm thanh được nhập, trạng thái bật, xóa và âm lượng.",
+      "lead": "Bảng Âm thanh tách riêng đầu ra của toàn bộ tác phẩm khỏi vai trò micrô và hệ thống đã ghi. Âm thanh đã nhập vẫn được kiểm soát dưới dạng clip dòng thời gian đã chọn.",
+      "sections": [
+        {
+          "title": "Bảng điều khiển âm thanh",
+          "screenshot": {
+            "path": "editor/audio-panel.webp",
+            "alt": "Beam Bảng điều khiển âm thanh với các điều khiển âm lượng chung, hệ thống và micrô",
+            "caption": "Vai trò âm thanh đầu ra và ghi âm chung có thể được điều chỉnh độc lập.",
+            "aspectRatio": "199/326"
+          }
+        },
+        {
+          "title": "Điều khiển âm lượng",
+          "tables": [
+            {
+              "headers": ["Kiểm soát", "Phạm vi", "Giá trị ban đầu hoặc mặc định", "Phạm vi"],
+              "rows": [
+                [
+                  "Khối lượng toàn cầu",
+                  "0%–100%",
+                  "Trình phát mới được tải bắt đầu ở mức 70%",
+                  "Hoàn thành đầu ra phát lại của trình chỉnh sửa."
+                ],
+                ["Khối lượng hệ thống", "0%–100%", "100%", "Mỗi clip được gán cho vai trò Hệ thống."],
+                ["Âm lượng micrô", "0%–100%", "100%", "Mỗi clip được gán cho vai trò Microphone."],
+                ["Đoạn âm thanh đã chọn", "0%–200%", "100%", "Chỉ hệ thống, micrô hoặc clip âm thanh được nhập."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Kiểm soát vai trò",
+          "tables": [
+            {
+              "headers": ["Vai trò", "Khi hiển thị", "hành động"],
+              "rows": [
+                [
+                  "Bản nhạc âm thanh hệ thống",
+                  "Tồn tại ít nhất một clip âm thanh vai trò hệ thống.",
+                  "Bật hoặc tắt, thay đổi khối lượng vai trò hoặc xóa mọi clip Hệ thống."
+                ],
+                [
+                  "Đường micro",
+                  "Tồn tại ít nhất một clip âm thanh có vai trò micrô.",
+                  "Bật hoặc tắt, thay đổi âm lượng vai trò hoặc xóa mọi clip Micrô."
+                ],
+                [
+                  "Âm thanh đã nhập",
+                  "Đã tồn tại một clip âm thanh được nhập.",
+                  "Chọn clip trên dòng thời gian và sử dụng Clip Volume; nó không có phần vai trò chuyên dụng."
+                ],
+                [
+                  "Không có vai trò",
+                  "Không có vai trò Hệ thống hoặc Micrô nào tồn tại.",
+                  "Bảng điều khiển báo cáo rằng không có bản âm thanh nào được phát hiện."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Bật so với xóa",
+          "paragraphs": [
+            "Việc vô hiệu hóa một vai trò sẽ giữ nguyên các clip của vai trò đó nhưng loại chúng khỏi quá trình phát lại và xuất. Việc xóa một vai trò sẽ xóa mọi clip được gán cho vai trò đó khỏi bố cục."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Việc xóa vai trò ảnh hưởng đến nhiều clip",
+            "text": "Xóa Rãnh Hệ thống và Xóa Rãnh Micrô hoạt động trên toàn bộ vai trò, không chỉ clip gần đầu phát nhất."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/settings",
+      "title": "Cài đặt trình chỉnh sửa",
+      "description": "Tham khảo đầy đủ về ngôn ngữ, kiểm tra chính tả, giao diện, cập nhật, liên kết xã hội và kiểm soát phát triển.",
+      "lead": "Cài đặt trình chỉnh sửa chứa các tùy chọn trên toàn ứng dụng được chia sẻ với Trình ghi cùng với các điều khiển phát triển chỉ dành cho trình chỉnh sửa.",
+      "sections": [
+        {
+          "title": "Bảng cài đặt",
+          "screenshot": {
+            "path": "editor/settings-panel.webp",
+            "alt": "Beam Bảng cài đặt có điều khiển ngôn ngữ và giao diện",
+            "caption": "Cài đặt áp dụng tùy chọn giao diện và ngôn ngữ trên toàn ứng dụng.",
+            "aspectRatio": "199/326"
+          }
+        },
+        {
+          "title": "Ngôn ngữ và chữ viết",
+          "tables": [
+            {
+              "headers": ["Cài đặt", "Giá trị", "Mặc định"],
+              "rows": [
+                [
+                  "Ngôn ngữ",
+                  "Tiếng Bulgaria, tiếng Đức, tiếng Anh, tiếng Tây Ban Nha, tiếng Pháp, tiếng Hindi, tiếng Ý, tiếng Nhật, tiếng Hàn, tiếng Ba Lan, tiếng Bồ Đào Nha (Brazil), tiếng Nga, tiếng Việt, tiếng Trung giản thể, tiếng Trung phồn thể",
+                  "Một hệ thống hoặc ngôn ngữ trình duyệt được hỗ trợ; dự phòng tiếng Anh"
+                ],
+                ["Kiểm tra chính tả", "Bật hoặc Tắt trong phần Nâng cao", "Bật"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Ngoại hình",
+          "tables": [
+            {
+              "headers": ["Cài đặt", "Giá trị", "Mặc định"],
+              "rows": [
+                ["Chế độ chủ đề", "Ánh sáng, bóng tối, hệ thống", "Ánh sáng"],
+                [
+                  "Đặt trước chủ đề",
+                  "Beam Hoàng hôn, Tím điện tử, Rừng ngọc lục bảo, Nhung đỏ thẫm, Gió đại dương, Amber Studio, Sakura Bloom, Slate Precision",
+                  "Beam Hoàng hôn"
+                ],
+                ["Màu cơ bản", "10 cài đặt trước hoặc bộ chọn màu tùy chỉnh", "#ff5a1f"],
+                ["Màu thứ cấp", "8 cài đặt trước hoặc bộ chọn màu tùy chỉnh", "#6366f1"],
+                ["Bán kính góc", "0, 6, 10, 16, 24 px hoặc Tùy chỉnh 0–32 px", "10px"],
+                ["Bán kính viên thuốc", "Bật hoặc Tắt", "Tắt"],
+                ["bề mặt", "Mặc định, Trung tính, Đá phiến, Sâu", "Mặc định"],
+                ["Quy mô giao diện người dùng toàn cầu", "50%, 75%, 100%, 125%", "100%"]
+              ]
+            }
+          ],
+          "paragraphs": [
+            "Mỗi thanh trên cùng, Thanh bên, Thuộc tính, điều khiển Canvas và Dòng thời gian đều có thể sử dụng tỷ lệ chung hoặc ghi đè tỷ lệ đó bằng 50%, 75%, 100% hoặc 125%. Xem [Tham khảo tùy chọn máy ghi](/recorder/capabilities/preferences) để biết mọi giá trị bán kính và màu đặt trước."
+          ]
+        },
+        {
+          "title": "Cập nhật và liên kết",
+          "tables": [
+            {
+              "headers": ["Khu vực", "Hành động và trạng thái"],
+              "rows": [
+                ["Cập nhật", "Kiểm tra, Có sẵn, Đang tải xuống, Đã tải xuống, Không có sẵn, Lỗi, Không được hỗ trợ."],
+                [
+                  "Đã tải xuống bản cập nhật",
+                  "Giờ đây, tính năng khởi động lại sẽ khả dụng sau khi quá trình tải xuống hoàn tất."
+                ],
+                ["Lỗi", "Hiển thị hoặc sao chép chi tiết chẩn đoán."],
+                ["Nhật ký thay đổi", "Mở nhật ký thay đổi cập nhật hiện tại."],
+                ["Bất hòa / GitHub", "Mở cộng đồng Beam hoặc kho lưu trữ nguồn."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Chế độ phát triển",
+          "paragraphs": [
+            "Chế độ Dev được lưu trữ cục bộ trong trình chỉnh sửa. Nó nhằm mục đích phát triển và khắc phục sự cố hơn là chỉnh sửa thông thường."
+          ],
+          "tables": [
+            {
+              "headers": ["Kiểm soát", "Hành vi"],
+              "rows": [
+                ["Chế độ phát triển", "Hiển thị hoặc ẩn các tùy chọn phát triển."],
+                ["Công cụ ghi âm", "Mở HUD ghi âm được nhúng và có thể bắt đầu ghi từ cửa sổ bật lên."],
+                ["Sao chép thông tin hệ thống", "Sao chép thông tin môi trường chẩn đoán."],
+                ["Mở Công cụ dành cho nhà phát triển", "Chuyển đổi các công cụ dành cho nhà phát triển Electron."]
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

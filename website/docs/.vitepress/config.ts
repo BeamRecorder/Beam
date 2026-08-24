@@ -9,7 +9,7 @@ import { enabledDocsLocales, getDocsCatalogs } from './content/docs-routes';
 const siteUrl = 'https://beam.plinka.eu';
 const docsUrl = `${siteUrl}/docs/`;
 const socialImage = `${siteUrl}/Beam-showcase.png`;
-const beamIconFile = fileURLToPath(new URL('../../public/favicon.webp', import.meta.url));
+const beamIconFile = fileURLToPath(new URL('../public/favicon.webp', import.meta.url));
 const beamShowcaseFile = fileURLToPath(new URL('../../public/Beam-showcase.png', import.meta.url));
 
 const initialThemeScript = `(()=>{try{const e=document.documentElement,p=localStorage.getItem('beam-website-theme'),v=p==='light'||p==='dark'||p==='system'?p:'system',d=v==='dark'||v==='system'&&matchMedia('(prefers-color-scheme: dark)').matches;e.dataset.theme=v;e.classList.toggle('dark',d);e.style.colorScheme=d?'dark':'light'}catch{}})()`;
@@ -189,7 +189,7 @@ export default defineConfig({
     ];
   },
   themeConfig: {
-    logo: '/favicon.webp',
+    logo: { src: '/favicon.webp', alt: 'Beam', width: 34, height: 34 },
     siteTitle: false,
     outline: { level: [2, 3], label: 'On this page' },
     externalLinkIcon: true,
