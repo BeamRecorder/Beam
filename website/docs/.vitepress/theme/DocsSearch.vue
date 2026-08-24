@@ -298,8 +298,10 @@ onUnmounted(() => window.removeEventListener('keydown', handleShortcut));
     position: static;
     width: 40px;
     padding: 0;
+    border-color: transparent;
     transform: none;
     justify-content: center;
+    background: transparent;
   }
 
   .docs-search-trigger > span,

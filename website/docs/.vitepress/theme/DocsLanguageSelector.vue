@@ -117,4 +117,11 @@ const currentLabel = computed(() => getDocsCatalogs(currentLocale.value).common.
   flex: 0 0 auto;
   color: var(--color-primary);
 }
+
+@media (max-width: 767px) {
+  :deep(.docs-language-trigger) {
+    border-color: transparent;
+    background: transparent;
+  }
+}
 </style>

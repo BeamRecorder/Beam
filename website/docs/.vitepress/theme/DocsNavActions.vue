@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
-import { ExternalLink, Star } from '@lucide/vue';
+import { ExternalLink } from '@lucide/vue';
 import discordIconUrl from '../../../../public/discord_svg.svg';
 import githubIconUrl from '../../../../public/github.svg';
 import DocsThemeToggle from './DocsThemeToggle.vue';
@@ -10,24 +9,6 @@ import DocsSearch from './DocsSearch.vue';
 const githubUrl = 'https://github.com/BeamRecorder/Beam';
 const discordUrl = 'https://discord.gg/6Q6v2xUCB';
 const websiteUrl = 'https://beam.plinka.eu';
-const stars = ref<number | null>(null);
-
-const formattedStars = computed(() =>
-  stars.value === null ? '…' : new Intl.NumberFormat('en', { notation: 'compact' }).format(stars.value),
-);
-
-onMounted(async () => {
-  try {
-    const response = await fetch('https://api.github.com/repos/BeamRecorder/Beam', {
-      headers: { Accept: 'application/vnd.github+json' },
-    });
-    if (!response.ok) return;
-    const repository = (await response.json()) as { stargazers_count?: unknown };
-    if (typeof repository.stargazers_count === 'number') stars.value = repository.stargazers_count;
-  } catch {
-    // The repository link remains usable when the public API is unavailable.
-  }
-});
 </script>
 
 <template>
@@ -38,17 +19,25 @@ onMounted(async () => {
       <span>Beam website</span>
       <ExternalLink aria-hidden="true" />
     </a>
-    <a class="docs-nav-link github-link" :href="githubUrl" target="_blank" rel="noreferrer">
-      <img :src="githubIconUrl" alt="" />
-      <span class="action-label">GitHub</span>
-      <strong aria-label="GitHub stars" aria-live="polite">{{ formattedStars }}</strong>
-      <Star aria-hidden="true" />
-    </a>
-    <a class="docs-nav-link discord-link" :href="discordUrl" target="_blank" rel="noreferrer">
-      <img :src="discordIconUrl" alt="" />
-      <span class="action-label">Discord</span>
-    </a>
     <span class="actions-divider" aria-hidden="true" />
+    <a
+      class="docs-nav-link community-link github-link"
+      :href="githubUrl"
+      target="_blank"
+      rel="noreferrer"
+      aria-label="GitHub"
+    >
+      <img :src="githubIconUrl" alt="" />
+    </a>
+    <a
+      class="docs-nav-link community-link discord-link"
+      :href="discordUrl"
+      target="_blank"
+      rel="noreferrer"
+      aria-label="Discord"
+    >
+      <img :src="discordIconUrl" alt="" />
+    </a>
     <ClientOnly>
       <DocsLanguageSelector />
       <template #fallback><span class="language-placeholder" aria-hidden="true" /></template>
@@ -109,17 +98,10 @@ onMounted(async () => {
   opacity: 0.82;
 }
 
-.github-link strong {
-  min-width: 18px;
-  padding-left: 8px;
-  border-left: 1px solid var(--color-border);
-  color: var(--text-primary);
-  font-variant-numeric: tabular-nums;
-}
-
-.github-link svg {
-  width: 13px;
-  color: var(--color-primary);
+.community-link {
+  width: 40px;
+  padding: 0;
+  justify-content: center;
 }
 
 .actions-divider {
@@ -127,22 +109,6 @@ onMounted(async () => {
   height: 24px;
   margin: 0 4px;
   background: var(--color-border);
-}
-
-@media (max-width: 1359px) {
-  .website-link {
-    display: none;
-  }
-}
-
-@media (max-width: 1080px) {
-  .action-label {
-    display: none;
-  }
-
-  .docs-nav-link {
-    padding-inline: 9px;
-  }
 }
 
 @media (max-width: 959px) {
@@ -163,13 +129,8 @@ onMounted(async () => {
     display: flex;
   }
 
-  .website-link > span,
-  .action-label {
-    display: none;
-  }
-
-  .docs-nav-link {
-    padding-inline: 8px;
+  .website-link {
+    padding-inline: 10px;
   }
 }
 

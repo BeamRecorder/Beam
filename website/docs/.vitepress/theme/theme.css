@@ -114,6 +114,107 @@ body {
   display: none;
 }
 
+@media (max-width: 767px) {
+  .VPNavBarHamburger {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: var(--radius-md);
+    background: transparent;
+  }
+
+  .VPNavBarHamburger:hover {
+    background: var(--color-header-control-hover);
+  }
+
+  .VPNavBarHamburger .container {
+    width: 18px !important;
+    height: 14px !important;
+  }
+
+  .VPNavBarHamburger:not(.active) .top,
+  .VPNavBarHamburger:not(.active) .middle,
+  .VPNavBarHamburger:not(.active) .bottom {
+    left: 0 !important;
+    width: 18px !important;
+    transform: none !important;
+  }
+
+  .VPNavBarHamburger .top {
+    top: 0 !important;
+  }
+
+  .VPNavBarHamburger .middle {
+    top: 6px !important;
+  }
+
+  .VPNavBarHamburger .bottom {
+    top: 12px !important;
+  }
+
+  .VPNavBarHamburger.active .top,
+  .VPNavBarHamburger.active .bottom {
+    top: 6px !important;
+  }
+
+  .VPNavScreen {
+    padding: 0 16px !important;
+    background: var(--color-bg-app) !important;
+  }
+
+  .VPNavScreen > .container {
+    max-width: none !important;
+    padding-top: 16px !important;
+  }
+
+  .VPNavScreenMenuLink {
+    padding: 15px 4px 14px !important;
+    font-size: 15px !important;
+    font-weight: 650 !important;
+  }
+
+  .VPLocalNav .container {
+    justify-content: flex-start;
+  }
+
+  .VPLocalNav .menu {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 16px 9px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 650;
+  }
+
+  .VPLocalNav .menu[aria-expanded='true'] {
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+  }
+
+  .VPLocalNav .menu-icon {
+    /* Official Lucide Menu glyph, applied to VitePress's fixed icon slot. */
+    --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='currentColor' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpath d='M4 6h16M4 12h16M4 18h16'/%3E%3C/svg%3E");
+    width: 18px;
+    height: 18px;
+    margin-right: 10px;
+    font-size: 18px;
+  }
+
+  .VPLocalNav .VPLocalNavOutlineDropdown,
+  .VPLocalNav .VPOutlineDropdown {
+    display: none;
+  }
+
+  .VPSidebar {
+    top: var(--vp-nav-height);
+    padding-top: 24px;
+    background: var(--color-bg-app) !important;
+  }
+
+  .VPBackdrop {
+    top: var(--vp-nav-height);
+  }
+}
+
 .VPSidebar {
   background: color-mix(in srgb, var(--color-bg-app) 94%, transparent);
   scrollbar-gutter: stable;
@@ -343,8 +444,7 @@ body {
 }
 
 .VPFooter {
-  border-top-color: var(--color-border) !important;
-  background: transparent !important;
+  display: none;
 }
 
 @media (min-width: 640px) {
