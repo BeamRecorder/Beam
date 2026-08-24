@@ -3,7 +3,7 @@ import { computed, onMounted } from 'vue';
 import { BookOpen, CircleHelp, Download, Star } from '@lucide/vue';
 import { useGitHubRepository } from '@website/composables/useGitHubRepository';
 import { detectPlatform, type WebsitePlatform } from '@website/lib/platform-downloads';
-import beamIconUrl from '../../../public/brand/BeamIcon.webp';
+import beamIconUrl from '../assets/beam-icon-72.webp';
 import discordIconUrl from '../../../public/discord_svg.svg';
 import githubIconUrl from '../../../public/github.svg';
 import WebsiteThemeSelector from '@website/components/WebsiteThemeSelector.vue';

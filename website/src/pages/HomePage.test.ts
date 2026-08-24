@@ -1,7 +1,7 @@
 import { createHead } from '@unhead/vue/client';
 import { mount } from '@vue/test-utils';
 import { defineComponent, h, ref } from 'vue';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createWebsiteI18n } from '../i18n';
 import HomePage from './HomePage.vue';
 
@@ -26,11 +26,6 @@ const mountHome = () =>
       plugins: [createWebsiteI18n('en'), createHead()],
       stubs: {
         Button: passthrough('button'),
-        WebsiteCommunityShader: defineComponent({
-          setup() {
-            return () => h('canvas', { 'data-testid': 'community-shader', 'aria-hidden': 'true' });
-          },
-        }),
       },
     },
   });
@@ -38,6 +33,11 @@ const mountHome = () =>
 describe('HomePage', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('presents the concise English hero and static Beam showcase', () => {
@@ -70,7 +70,10 @@ describe('HomePage', () => {
     expect(wrapper.find('.hero-drag').exists()).toBe(false);
     expect(wrapper.find('.hero-drag__cursor').exists()).toBe(false);
     expect(wrapper.find('[data-testid="project-loader"]').exists()).toBe(false);
-    expect(image.attributes('src')).toBe('/Beam-showcase.png');
+    expect(image.attributes('src')).toBe('/Beam-showcase-1200.webp');
+    expect(image.attributes('srcset')).toContain('/Beam-showcase-480.webp 480w');
+    expect(image.attributes('srcset')).toContain('/Beam-showcase-1672.webp 1672w');
+    expect(image.attributes('sizes')).toContain('calc(100vw - 24px)');
     expect(image.attributes('alt')).toBe('Beam recorder and video editor shown side by side');
     expect(image.attributes('width')).toBe('1672');
     expect(image.attributes('height')).toBe('941');
@@ -88,7 +91,9 @@ describe('HomePage', () => {
     const community = wrapper.find('.open-source');
 
     expect(community.exists()).toBe(true);
-    expect(community.find('[data-testid="community-shader"]').exists()).toBe(true);
+    expect(community.classes()).toContain('shader-panel');
+    expect(community.find('canvas.community-shader').exists()).toBe(true);
+    expect(HTMLCanvasElement.prototype.getContext).toHaveBeenCalledWith('webgl', expect.anything());
     expect(community.text()).toContain('Built in the open.');
     expect(community.text()).toContain('View on GitHub');
     expect(community.text()).toContain('Join Discord');

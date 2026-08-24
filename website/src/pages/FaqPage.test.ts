@@ -2,7 +2,7 @@ import { createHead } from '@unhead/vue/client';
 import { mount } from '@vue/test-utils';
 import type { Question } from 'schema-dts';
 import { nextTick } from 'vue';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createWebsiteI18n, type WebsiteLocale } from '../i18n';
 import { faqItems, localizedFaqItems } from '../seo/faq-content';
 import { createFaqJsonLd } from '../seo/json-ld';
@@ -18,6 +18,11 @@ afterEach(() => {
   window.history.replaceState({}, '', initialUrl);
   restoreScrollIntoView();
   restoreScrollIntoView = () => {};
+  vi.restoreAllMocks();
+});
+
+beforeEach(() => {
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
 });
 
 const mountFaq = (locale: WebsiteLocale = 'en', attachTo?: Element) => {
@@ -236,6 +241,9 @@ describe('FaqPage', () => {
     const callout = wrapper.get('.page-callout');
     const actions = callout.findAll('a.secondary-action');
 
+    expect(callout.classes()).toContain('shader-panel');
+    expect(callout.find('canvas.community-shader').exists()).toBe(true);
+    expect(HTMLCanvasElement.prototype.getContext).toHaveBeenCalledWith('webgl', expect.anything());
     expect(callout.get('.page-callout__logo').attributes('src')).toBeTruthy();
     expect(actions).toHaveLength(3);
     expect(actions.map((action) => action.attributes('href'))).toEqual([

@@ -5,12 +5,13 @@ import { useI18n } from 'vue-i18n';
 import Accordion from '~/ui/accordion/Accordion.vue';
 import discordIconUrl from '../../../public/discord_svg.svg';
 import githubIconUrl from '../../../public/github.svg';
-import beamIconUrl from '../../../public/brand/BeamIcon.webp';
+import beamIconUrl from '../assets/beam-icon-72.webp';
 import { normalizeWebsiteLocale } from '@website/i18n';
 import { getFaqCatalog } from '@website/seo/faq-content';
 import { createFaqJsonLd } from '@website/seo/json-ld';
 import { REPOSITORY_URL } from '@website/seo/site';
 import { usePageSeo } from '@website/seo/use-page-seo';
+import WebsiteShaderPanel from '@website/components/WebsiteShaderPanel.vue';
 
 const { locale, t } = useI18n();
 const selectedLocale = computed(() => normalizeWebsiteLocale(locale.value) ?? 'en');
@@ -89,7 +90,7 @@ usePageSeo({
       </section>
     </section>
 
-    <aside class="page-callout">
+    <WebsiteShaderPanel as="aside" class="page-callout">
       <div class="page-callout__copy">
         <img class="page-callout__logo" :src="beamIconUrl" alt="" />
         <div>
@@ -110,7 +111,7 @@ usePageSeo({
           {{ t('Website.home.joinDiscord') }}
         </a>
       </div>
-    </aside>
+    </WebsiteShaderPanel>
   </main>
 </template>
 
@@ -175,13 +176,11 @@ usePageSeo({
   gap: 32px;
   margin-top: 64px;
   padding: 32px;
-  border: 1px solid var(--color-border);
-  border-radius: 24px;
-  background: var(--color-bg-element);
 }
 
 .page-callout h2 {
   margin-top: 8px;
+  color: var(--shader-panel-text);
   font-size: clamp(28px, 4vw, 44px);
 }
 

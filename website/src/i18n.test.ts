@@ -57,6 +57,11 @@ describe('website i18n', () => {
     expect([...websiteI18n.global.availableLocales].sort()).toEqual([...EXPECTED_LOCALES].sort());
   });
 
+  it('ships only website messages in the marketing bundle', () => {
+    const message = websiteI18n.global.getLocaleMessage('en') as MessageRecord;
+    expect(Object.keys(message)).toEqual(['Website']);
+  });
+
   it('keeps the Website namespace recursively identical to English', () => {
     const englishKeys = leafPaths(websiteMessage('en'));
 

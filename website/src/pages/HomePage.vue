@@ -3,8 +3,8 @@ import { computed, onMounted } from 'vue';
 import { Code2, ExternalLink } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import Button from '~/ui/button/Button.vue';
-import WebsiteCommunityShader from '@website/components/WebsiteCommunityShader.vue';
 import WebsiteHero from '@website/components/WebsiteHero.vue';
+import WebsiteShaderPanel from '@website/components/WebsiteShaderPanel.vue';
 import { useGitHubRepository } from '@website/composables/useGitHubRepository';
 import { createHomeJsonLd } from '@website/seo/json-ld';
 import { usePageSeo } from '@website/seo/use-page-seo';
@@ -40,7 +40,14 @@ const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
         </div>
         <img
           class="showcase-image"
-          src="/Beam-showcase.png"
+          src="/Beam-showcase-1200.webp"
+          srcset="
+            /Beam-showcase-480.webp   480w,
+            /Beam-showcase-800.webp   800w,
+            /Beam-showcase-1200.webp 1200w,
+            /Beam-showcase-1672.webp 1672w
+          "
+          sizes="(max-width: 620px) calc(100vw - 24px), min(calc(100vw - 40px), 1440px)"
           :alt="t('Website.home.showcaseAlt')"
           width="1672"
           height="941"
@@ -61,8 +68,7 @@ const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
         </ul>
       </section>
 
-      <section class="open-source">
-        <WebsiteCommunityShader class="open-source__shader" />
+      <WebsiteShaderPanel as="section" class="open-source">
         <div class="open-source__copy">
           <h2>{{ t('Website.home.openSourceTitle') }}</h2>
           <p>{{ t('Website.home.openSourceText') }}</p>
@@ -86,11 +92,13 @@ const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
           <img
             src="https://contrib.rocks/image?repo=BeamRecorder/Beam"
             :alt="t('Website.home.contributorsAlt')"
+            width="314"
+            height="48"
             loading="lazy"
           />
           <span>{{ contributorLabel }}</span>
         </a>
-      </section>
+      </WebsiteShaderPanel>
     </main>
   </div>
 </template>

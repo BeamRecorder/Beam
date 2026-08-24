@@ -222,33 +222,12 @@ h1 {
 }
 
 .open-source {
-  position: relative;
-  isolation: isolate;
   display: grid;
-  overflow: hidden;
   grid-template-columns: minmax(0, 1fr) minmax(260px, 0.55fr);
   align-items: center;
   gap: clamp(32px, 6vw, 80px);
   margin: 24px 0 88px;
   padding: clamp(36px, 6vw, 72px);
-  border: 1px solid var(--color-primary-border);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 34px 90px -40px rgba(255, 90, 31, 0.52);
-  color: #f5fff0;
-}
-
-.open-source::after {
-  position: absolute;
-  z-index: -1;
-  inset: 0;
-  background: rgba(23, 22, 19, 0.34);
-  content: '';
-}
-
-.open-source__shader {
-  position: absolute;
-  z-index: -2;
-  inset: 0;
 }
 
 .open-source__copy {
@@ -287,7 +266,7 @@ h1 {
 
 .open-source__copy > p {
   max-width: 640px;
-  color: rgba(245, 255, 240, 0.78);
+  color: var(--shader-panel-muted);
   font-size: 18px;
   line-height: 1.65;
 }
@@ -296,7 +275,7 @@ h1 {
   display: grid;
   justify-items: center;
   gap: 14px;
-  color: rgba(245, 255, 240, 0.76);
+  color: var(--shader-panel-muted);
   font-size: 14px;
   font-weight: 650;
   text-decoration: none;
@@ -312,18 +291,18 @@ h1 {
 }
 
 .contributors:hover span {
-  color: #ffffff;
+  color: var(--shader-panel-text);
 }
 
 .open-source .btn-frosted {
-  border-color: rgba(255, 255, 255, 0.22);
-  background: rgba(3, 39, 29, 0.5);
-  color: #ffffff;
+  border-color: var(--shader-panel-button-border);
+  background: var(--shader-panel-button-bg);
+  color: var(--shader-panel-text);
 }
 
 .open-source .btn-frosted:hover:not(:disabled) {
-  border-color: rgba(255, 255, 255, 0.4);
-  background: rgba(3, 39, 29, 0.72);
+  border-color: var(--color-primary-border);
+  background: var(--shader-panel-button-hover);
 }
 
 .btn-primary {

@@ -22,14 +22,6 @@ export type WebsiteLocale = (typeof WEBSITE_LOCALES)[number];
 
 type LocaleMessages = Record<string, unknown>;
 
-const coreModules = import.meta.glob('../../src/i18n/*/core.json', {
-  eager: true,
-  import: 'default',
-}) as Record<string, LocaleMessages>;
-const editorModules = import.meta.glob('../../src/i18n/*/editor.json', {
-  eager: true,
-  import: 'default',
-}) as Record<string, LocaleMessages>;
 const websiteModules = import.meta.glob('./i18n/*/website.json', {
   eager: true,
   import: 'default',
@@ -45,8 +37,6 @@ const messages = Object.fromEntries(
   WEBSITE_LOCALES.map((locale) => [
     locale,
     {
-      ...moduleFor(coreModules, locale, 'core'),
-      ...moduleFor(editorModules, locale, 'editor'),
       Website: moduleFor(websiteModules, locale, 'website'),
     },
   ]),
