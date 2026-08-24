@@ -48,6 +48,7 @@ export default defineConfig({
   },
   preview: {
     port: 7002,
+    proxy: {},
   },
   test: {
     include: ['src/**/*.test.ts', 'scripts/**/*.test.mjs', 'docs/.vitepress/**/*.test.ts'],
