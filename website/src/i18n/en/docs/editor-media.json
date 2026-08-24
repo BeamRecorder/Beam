@@ -1,0 +1,275 @@
+{
+  "pages": [
+    {
+      "slug": "editor/capabilities/captions",
+      "title": "AI Captions",
+      "description": "Complete reference for local Whisper models, audio sources, downloads, transcription, regeneration, cancellation, and diagnostics.",
+      "lead": "Beam generates speech captions locally from an enabled audio clip. It downloads the selected Whisper model, transcribes on the device, and creates editable caption clips on the timeline.",
+      "sections": [
+        {
+          "title": "Captions panel",
+          "screenshot": {
+            "path": "editor/captions-panel.webp",
+            "alt": "Beam AI Captions panel with audio source and Whisper model controls",
+            "caption": "Select an enabled audio source and a local Whisper model before generating captions.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Audio sources",
+          "tables": [
+            {
+              "headers": ["Source", "When it appears", "Selection rule"],
+              "rows": [
+                ["System audio", "An enabled clip with the System role exists.", "Identified as System Audio."],
+                ["Microphone", "An enabled clip with the Microphone role exists.", "Identified as Microphone."],
+                ["Imported audio", "An enabled imported audio clip exists.", "Uses the clip name."],
+                [
+                  "Duplicate media URL",
+                  "Two enabled clips reference the same audio URL.",
+                  "Only the first source is offered."
+                ],
+                ["No usable source", "No enabled audio clip has a readable asset URL.", "Generate remains unavailable."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Whisper models",
+          "tables": [
+            {
+              "headers": ["Model", "Languages", "Performance guidance"],
+              "rows": [
+                ["Tiny", "Multilingual", "Default model."],
+                ["Tiny .en", "English", "English-only model."],
+                ["Base", "Multilingual", "No additional warning."],
+                ["Base .en", "English", "English-only model."],
+                ["Small", "Multilingual", "May be slow without WebGPU."],
+                ["Small .en", "English", "May be slow without WebGPU."],
+                ["Medium", "Multilingual", "Large download; WebGPU recommended."],
+                ["Medium .en", "English", "Large download; WebGPU recommended."],
+                ["Large v3", "Multilingual", "Very large and slow without WebGPU."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Model download and deletion",
+          "tables": [
+            {
+              "headers": ["State or action", "Behavior"],
+              "rows": [
+                ["Missing", "Download Model is available for the selected model."],
+                ["Downloading", "Beam reports downloaded and total bytes with a progress bar."],
+                ["Ready", "A check mark identifies the installed model and Delete Model becomes available."],
+                ["Delete Model", "Unavailable during download, deletion, or transcription."],
+                ["Download error", "The error is displayed and can be copied for diagnostics."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Generate and regenerate",
+          "steps": [
+            "Choose one of the enabled audio sources.",
+            "Choose and download a Whisper model if it is not ready.",
+            "Select Generate Captions. Beam decodes the source, converts it to mono 16 kHz audio, and limits it to the timeline duration.",
+            "Partial transcription results update the composition while processing continues.",
+            "The completed run selects the first generated caption for editing."
+          ],
+          "tables": [
+            {
+              "headers": ["Behavior", "Rule"],
+              "rows": [
+                ["Sentence grouping", "Ends a caption phrase at punctuation or after 12 words."],
+                ["Minimum generated clip duration", "40 ms."],
+                ["Regenerate", "Replaces existing AI-generated captions and preserves manual captions."],
+                ["Cancel", "Stops model loading or transcription."],
+                ["Close panel", "Cancels the active transcription run."],
+                ["Diagnostics", "Reports elapsed time and exposes a copyable transcription report after processing."]
+              ]
+            }
+          ],
+          "notice": {
+            "kind": "tip",
+            "title": "Local transcription",
+            "text": "Whisper runs on the device. Caption generation does not require a cloud upload or API key."
+          }
+        },
+        {
+          "title": "Edit generated captions",
+          "paragraphs": [
+            "Generated captions are regular editable caption clips marked as AI-generated. Their text, timing, and visual style can be adjusted through the Clip panel and timeline after generation."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/audio",
+      "title": "Audio",
+      "description": "Complete reference for global output, system and microphone roles, imported audio, enable states, deletion, and volume.",
+      "lead": "The Audio panel separates composition-wide output from recorded system and microphone roles. Imported audio remains controlled as a selected timeline clip.",
+      "sections": [
+        {
+          "title": "Audio panel",
+          "screenshot": {
+            "path": "editor/audio-panel.webp",
+            "alt": "Beam Audio panel with global, system, and microphone volume controls",
+            "caption": "Global output and recorded audio roles can be adjusted independently.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Volume controls",
+          "tables": [
+            {
+              "headers": ["Control", "Range", "Initial or default value", "Scope"],
+              "rows": [
+                ["Global Volume", "0%–100%", "A newly loaded player starts at 70%", "Complete editor playback output."],
+                ["System Volume", "0%–100%", "100%", "Every clip assigned to the System role."],
+                ["Microphone Volume", "0%–100%", "100%", "Every clip assigned to the Microphone role."],
+                [
+                  "Selected audio clip Volume",
+                  "0%–200%",
+                  "100%",
+                  "Only the selected system, microphone, or imported audio clip."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Role controls",
+          "tables": [
+            {
+              "headers": ["Role", "When shown", "Actions"],
+              "rows": [
+                [
+                  "System Sound Track",
+                  "At least one system-role audio clip exists.",
+                  "Enable or disable, change role volume, or delete every System clip."
+                ],
+                [
+                  "Microphone Track",
+                  "At least one microphone-role audio clip exists.",
+                  "Enable or disable, change role volume, or delete every Microphone clip."
+                ],
+                [
+                  "Imported audio",
+                  "An imported-audio clip exists.",
+                  "Select the clip on the timeline and use Clip Volume; it has no dedicated role section."
+                ],
+                [
+                  "No roles",
+                  "No System or Microphone role exists.",
+                  "The panel reports that no audio tracks were detected."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Enable compared with delete",
+          "paragraphs": [
+            "Disabling a role preserves its clips but excludes them from playback and export. Deleting a role removes every clip assigned to that role from the composition."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Role deletion affects multiple clips",
+            "text": "Delete System Track and Delete Microphone Track operate on the complete role, not only the clip nearest the playhead."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/settings",
+      "title": "Editor settings",
+      "description": "Complete reference for language, spell check, appearance, updates, social links, and development controls.",
+      "lead": "Editor Settings contains application-wide preferences shared with the Recorder plus editor-only development controls.",
+      "sections": [
+        {
+          "title": "Settings panel",
+          "screenshot": {
+            "path": "editor/settings-panel.webp",
+            "alt": "Beam Settings panel with language and appearance controls",
+            "caption": "Settings applies application-wide language and appearance preferences.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Language and writing",
+          "tables": [
+            {
+              "headers": ["Setting", "Values", "Default"],
+              "rows": [
+                [
+                  "Language",
+                  "Bulgarian, German, English, Spanish, French, Hindi, Italian, Japanese, Korean, Polish, Portuguese (Brazil), Russian, Vietnamese, Simplified Chinese, Traditional Chinese",
+                  "A supported system or browser language; English fallback"
+                ],
+                ["Spell Check", "On or Off under Advanced", "On"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Appearance",
+          "tables": [
+            {
+              "headers": ["Setting", "Values", "Default"],
+              "rows": [
+                ["Theme mode", "Light, Dark, System", "Light"],
+                [
+                  "Theme preset",
+                  "Beam Sunset, Cyber Violet, Emerald Forest, Crimson Velvet, Oceanic Breeze, Amber Studio, Sakura Bloom, Slate Precision",
+                  "Beam Sunset"
+                ],
+                ["Primary color", "10 presets or a custom color picker", "#ff5a1f"],
+                ["Secondary color", "8 presets or a custom color picker", "#6366f1"],
+                ["Corner radius", "0, 6, 10, 16, 24 px, or Custom 0–32 px", "10 px"],
+                ["Pill radius", "On or Off", "Off"],
+                ["Surface", "Default, Neutral, Slate, Deep", "Default"],
+                ["Global UI scale", "50%, 75%, 100%, 125%", "100%"]
+              ]
+            }
+          ],
+          "paragraphs": [
+            "Top bar, Sidebar, Properties, Canvas controls, and Timeline can each use the global scale or override it with 50%, 75%, 100%, or 125%. See the [Recorder preferences reference](/recorder/capabilities/preferences) for every preset color and radius value."
+          ]
+        },
+        {
+          "title": "Updates and links",
+          "tables": [
+            {
+              "headers": ["Area", "Actions and states"],
+              "rows": [
+                ["Updates", "Check, Available, Downloading, Downloaded, Not available, Error, Unsupported."],
+                ["Downloaded update", "Restart now becomes available after the download completes."],
+                ["Error", "Show or copy diagnostic details."],
+                ["Changelog", "Open the current update changelog."],
+                ["Discord / GitHub", "Open the Beam community or source repository."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Dev Mode",
+          "paragraphs": [
+            "Dev Mode is stored locally in the editor. It is intended for development and troubleshooting rather than normal editing."
+          ],
+          "tables": [
+            {
+              "headers": ["Control", "Behavior"],
+              "rows": [
+                ["Dev Mode", "Shows or hides the development options."],
+                ["Recorder Tool", "Opens an embedded Recorder HUD and can start a recording from the popover."],
+                ["Copy system info", "Copies diagnostic environment information."],
+                ["Open DevTools", "Toggles Electron developer tools."]
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

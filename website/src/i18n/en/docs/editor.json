@@ -9,12 +9,12 @@
         {
           "title": "One editing workspace",
           "paragraphs": [
-            "Beam keeps the project controls at the top, capability navigation and properties on the left, the output preview in the center, and timing controls in the resizable timeline below. Selecting a clip, zoom, cursor, or the canvas opens the controls that apply to it."
+            "Beam keeps project controls at the top, capability navigation and properties on the left, the output preview in the center, and timing controls in the resizable timeline below. Selecting a clip, zoom, cursor, or the canvas opens the controls that apply to it."
           ],
           "screenshot": {
             "path": "editor/interface-overview.webp",
             "alt": "Complete Beam Video Editor interface",
-            "caption": "The editor keeps the canvas, properties, playback controls, and multi-track timeline visible together.",
+            "caption": "The canvas, properties, playback controls, and multi-track timeline remain visible together.",
             "aspectRatio": "1920 / 1053"
           }
         },
@@ -24,7 +24,7 @@
             "Open the editor after recording or choose an existing project.",
             "Arrange, trim, split, and style clips on the timeline.",
             "Set the canvas background, zooms, cursor behavior, captions, and audio.",
-            "Preview the complete composition at a suitable playback quality.",
+            "Preview the composition at a suitable playback quality.",
             "Export the finished video as WebM or MP4."
           ]
         },
@@ -39,90 +39,125 @@
     {
       "slug": "editor/interface",
       "title": "Video editor interface",
-      "description": "Learn the top bar, sidebar, properties, canvas, timeline toolbar, tracks, selection, and playback controls.",
+      "description": "Learn the top bar, sidebar, canvas toolbar, timeline toolbar, tracks, selection, and playback controls.",
       "lead": "The interface separates project-level actions, visual composition, item properties, and time-based editing without hiding the current output.",
       "sections": [
         {
           "title": "Top bar",
-          "bullets": [
-            "Exit to HUD returns to the Recorder.",
-            "The project selector shows the current project and switches to another project.",
-            "Undo and Redo move through up to 50 editing snapshots from the current editor session. The history itself is not restored after reopening the project.",
-            "The optional performance monitor reports idle, good, warning, or critical preview health.",
-            "Discord opens the Beam community.",
-            "Export opens the export panel when a project is loaded."
+          "tables": [
+            {
+              "headers": ["Control", "Action", "Important behavior"],
+              "rows": [
+                ["Exit to HUD", "Returns to the Recorder.", "The current project remains available."],
+                [
+                  "Project selector",
+                  "Shows the current project and opens another project.",
+                  "Unavailable project data is handled by the project-loading state."
+                ],
+                [
+                  "Undo / Redo",
+                  "Moves through editing snapshots.",
+                  "Up to 50 snapshots in the current editor session; history is not restored after reopening."
+                ],
+                ["Performance monitor", "Reports preview health.", "States are Idle, Good, Warning, and Critical."],
+                ["Discord", "Opens the Beam community.", "External link."],
+                ["Export", "Opens export settings.", "Available when a project is loaded."],
+                ["Window controls", "Minimize, maximize or restore, and close.", "Native desktop-window actions."]
+              ]
+            }
           ]
         },
         {
           "title": "Sidebar and properties",
           "paragraphs": [
-            "The sidebar opens Canvas, Clip, Zoom, Cursor, Captions, Audio, and Settings. The adjacent properties panel changes with the active category and current selection. On very narrow or short windows, sidebar labels collapse while their icons remain available."
+            "The sidebar opens Canvas, Clip, Zooms, Cursor, Captions, Audio, and Settings. The adjacent panel changes with the active category and current selection. On narrow or short windows, labels collapse while their icons remain available."
           ],
-          "bullets": [
-            "Selecting a clip opens Clip properties.",
-            "Selecting a zoom opens Zoom properties.",
-            "Selecting the canvas opens Canvas properties.",
-            "Opening Cursor exposes global cursor presentation without requiring a clip selection.",
-            "Clip, zoom, canvas, and cursor selections clear conflicting selections."
+          "tables": [
+            {
+              "headers": ["Selection", "Panel behavior"],
+              "rows": [
+                ["Clip", "Opens properties compatible with the primary selected clip."],
+                ["Zoom", "Opens the selected zoom's focus and magnification controls."],
+                ["Canvas", "Opens composition-wide background and branding controls."],
+                ["Cursor", "Opens global cursor presentation without requiring a clip selection."],
+                ["Multiple clips", "Uses one primary clip and applies a change only to compatible selected clips."]
+              ]
+            }
           ]
         },
         {
-          "title": "Canvas and canvas toolbar",
-          "paragraphs": [
-            "The canvas previews the composed output. Click a supported visual, caption, blur layer, cursor, or screen area to select it directly, or select the same item from the timeline."
-          ],
-          "bullets": [
-            "Aspect Ratio offers 16:9, 9:16, 1:1, 4:5, 3:4, 4:3, and 21:9.",
-            "Crop is available only when exactly one visual clip is selected.",
-            "Grid toggles a 3×3 alignment guide.",
-            "Viewport zoom ranges from 25% to 500% and can be reset to 100%. It changes only the editor view, not the export.",
-            "Pan with the middle mouse button or by holding Space while dragging."
+          "title": "Canvas toolbar",
+          "tables": [
+            {
+              "headers": ["Control", "Values", "Effect"],
+              "rows": [
+                ["Aspect Ratio", "16:9, 9:16, 1:1, 4:5, 3:4, 4:3, 21:9", "Changes the output canvas ratio."],
+                ["Crop", "Open crop editor", "Available only for exactly one selected visual clip."],
+                ["Grid", "On or Off", "Shows or hides the 3×3 alignment guide."],
+                ["Viewport zoom", "25%–500%; reset to 100%", "Changes only the editor view, never export."],
+                ["Pan", "Middle-drag or Space-drag", "Moves the zoomed editor viewport."]
+              ]
+            }
           ]
         },
         {
           "title": "Timeline toolbar",
-          "bullets": [
-            "Add imports Video, Image, or Audio, or creates Text and Blur clips at the playhead.",
-            "Split divides exactly one selected clip at the playhead and is also available with S.",
-            "Magnet enables snapping to the playhead, timeline boundaries, and nearby clip or zoom edges. It is enabled by default.",
-            "Skip Back and Skip Forward move to the beginning and end of the timeline.",
-            "Play/Pause previews the composition. Space also toggles playback when focus is not in an editable field.",
-            "The time display uses MM:SS below one hour and HH:MM:SS for longer projects.",
-            "Playback Quality offers Full, Half, and Quarter preview resolution without changing export quality.",
-            "Timeline zoom ranges from 100% to 3200% and supports Ctrl+mouse wheel."
+          "tables": [
+            {
+              "headers": ["Control", "Action", "Constraint or default"],
+              "rows": [
+                ["Add", "Imports Video, Image, or Audio; creates Text or Blur.", "Adds at the playhead."],
+                [
+                  "Split",
+                  "Divides one selected clip at the playhead.",
+                  "Requires the playhead strictly inside the clip; shortcut S."
+                ],
+                ["Magnet", "Snaps edits to useful boundaries.", "Enabled by default."],
+                ["Skip Back / Forward", "Moves the playhead to timeline start or end.", "Project duration dependent."],
+                ["Play / Pause", "Previews or pauses the composition.", "Shortcut Space outside editable fields."],
+                [
+                  "Time display",
+                  "Shows current and total time.",
+                  "MM:SS below one hour; HH:MM:SS at one hour or more."
+                ],
+                ["Playback Quality", "Full, Half, Quarter", "Preview only; export remains full quality."],
+                ["Timeline zoom", "100%–3200%", "Also controlled with Ctrl+mouse wheel."]
+              ]
+            }
           ]
         },
         {
           "title": "Timeline tracks",
           "paragraphs": [
-            "The timeline creates tracks for grouped visual media, zooms, text captions, keyboard captions, system audio, microphone audio, and imported audio when those sources exist."
+            "Beam creates tracks for grouped visual media, zooms, text captions, keyboard captions, system audio, microphone audio, and imported audio when those sources exist."
           ],
           "bullets": [
-            "Click a clip to select it. Use Ctrl, Cmd, or Shift to build an additive selection.",
-            "Click a track header to select every clip on that track; the clip nearest the playhead becomes primary.",
+            "Click a clip to make it the current selection.",
+            "Click a track header to select every clip on that track; use Ctrl, Cmd, or Shift on track headers to build an additive track selection. The clip nearest the playhead becomes primary.",
             "Drag visual track headers to reorder their layer order.",
-            "Move a clip or trim its start and end handles. Linked media move together.",
+            "Move a clip or trim its start and end handles. Linked recording media move together.",
             "Dragging media beyond the current end extends the timeline.",
-            "Click the Zoom track to add a manual zoom, or the text-caption track to add an empty caption.",
-            "Right-click a clip for supported Copy, Paste, Delete, and Hold Frame actions."
+            "Click the Zoom track to add a manual zoom or the text-caption track to add an empty caption.",
+            "Right-click a clip for the supported Copy, Paste, Delete, and Hold Frame actions."
           ],
           "notice": {
             "kind": "info",
             "title": "Space has two canvas roles",
-            "text": "Space toggles timeline playback, and holding Space while dragging pans a zoomed canvas. Editable fields ignore these global shortcuts."
+            "text": "Space toggles playback, while holding Space during a drag pans a zoomed canvas. Editable fields ignore these global shortcuts."
           }
         },
         {
           "title": "Direct and multiple selection",
           "paragraphs": [
-            "A multiple selection uses one primary clip to populate the properties panel, then applies a change only to compatible selected clips. Crop and canvas transformation handles require a single selected visual clip."
+            "Click a supported visual, caption, blur layer, cursor, or screen area directly on the canvas, or select the same item on the timeline. A multiple selection uses one primary clip for the panel."
           ],
           "bullets": [
-            "Visual appearance and transforms apply to compatible visual clips.",
-            "Blur properties apply only to selected blur clips.",
-            "Audio volume applies only to selected audio clips.",
+            "Visual appearance and transforms propagate only to compatible visual clips.",
+            "Blur properties propagate only to selected blur clips.",
+            "Volume propagates only to selected audio clips.",
             "Caption styling propagates only to captions of the same text or keyboard subtype.",
-            "Custom caption text and Follow Cursor are never propagated across a multiple selection."
+            "Custom caption text and Follow Cursor never propagate across a multiple selection.",
+            "Crop and canvas transformation handles require exactly one selected visual clip."
           ]
         }
       ]
@@ -130,368 +165,26 @@
     {
       "slug": "editor/capabilities",
       "title": "Video editor capabilities",
-      "description": "Reference timeline editing and every Canvas, Clip, Zoom, Cursor, Captions, Audio, and Settings property.",
-      "lead": "Use this page as the complete editor reference. Each category below matches a group in the Capabilities navigation.",
+      "description": "Open a focused reference for every Video Editor capability and its exact settings.",
+      "lead": "Each capability has its own page so properties, defaults, selection rules, and edge cases remain easy to scan.",
       "sections": [
         {
           "title": "Capability index",
-          "bullets": [
-            "[Timeline editing](#timeline-editing)",
-            "[Canvas](#canvas)",
-            "[Clips](#clips)",
-            "[Zooms](#zooms)",
-            "[Cursor](#cursor)",
-            "[Captions](#captions)",
-            "[Audio](#audio)",
-            "[Settings](#settings)",
-            "[Export](/export)"
-          ]
-        },
-        {
-          "title": "Timeline editing",
-          "paragraphs": [
-            "The timeline combines visual, annotation, zoom, and audio tracks on one playhead. Edits snap to useful boundaries when Magnet is active, and linked recording sidecars move together."
-          ],
-          "bullets": [
-            "Add Video, Image, Audio, Text, or Blur at the playhead.",
-            "Imported images and new blur clips default to 5 seconds; new text captions default to 2 seconds.",
-            "Split requires one selected clip and a playhead strictly inside that clip.",
-            "Move, trim, copy, paste, delete, reorder, enable, disable, or unlink supported items.",
-            "Hold Frame is available for enabled screen, video, and webcam clips with video media when the playhead is at least 40 ms from either edge.",
-            "Copy and paste require a project; pasting clips copied from another project is rejected.",
-            "Timeline zoom is saved after changes, while playback quality affects preview only."
-          ]
-        },
-        {
-          "title": "Canvas",
-          "paragraphs": [
-            "Canvas controls the area outside and behind visual clips. Choose a library background or import your own, adjust presentation and optional branding, or open global canvas transitions from the properties header."
-          ],
-          "screenshot": {
-            "path": "editor/canvas-panel.webp",
-            "alt": "Beam Canvas properties with background tabs and presentation controls",
-            "caption": "Canvas groups Image, Video, Color, and Gradient backgrounds with blur, background visibility, and watermark controls.",
-            "aspectRatio": "199 / 326"
-          },
-          "subsections": [
+          "tables": [
             {
-              "title": "Background library",
-              "bullets": [
-                "Image accepts AVIF, BMP, JPEG, JPG, PNG, and WebP.",
-                "Video accepts M4V, MOV, MP4, OGV, and WebM.",
-                "Image and Video show 15 items initially; Show more reveals additional batches.",
-                "Import adds supported local background media to the library.",
-                "Color includes built-in presets and a live custom hexadecimal color editor.",
-                "Gradient includes built-in presets and a custom linear or radial editor with an angle from 0° to 360° and at least two color stops."
-              ]
-            },
-            {
-              "title": "Background presentation",
-              "bullets": [
-                "Background Blur ranges from 0% to 100%.",
-                "Remove Background hides the complete canvas background layer; it does not remove the subject from a video.",
-                "The default canvas is 1920×1080 at 16:9 with its background hidden."
-              ]
-            },
-            {
-              "title": "Watermark",
-              "paragraphs": [
-                "Watermark is disabled by default. Enable it to add a Beam preset, Made with Beam, a custom label, or a logo."
-              ],
-              "bullets": [
-                "Custom text is limited to 80 characters.",
-                "Position: top-left, top-right, bottom-left, or bottom-right.",
-                "Size: 50–200%.",
-                "Shadow, opacity, and corner radius: 0–100%.",
-                "Padding: 50–150%."
+              "headers": ["Capability", "Reference"],
+              "rows": [
+                ["Timeline editing", "[Open timeline editing](/editor/capabilities/timeline)"],
+                ["Canvas", "[Open Canvas](/editor/capabilities/canvas)"],
+                ["Clips", "[Open Clips](/editor/capabilities/clips)"],
+                ["Zooms", "[Open Zooms](/editor/capabilities/zooms)"],
+                ["Cursor", "[Open Cursor](/editor/capabilities/cursor)"],
+                ["Captions", "[Open Captions](/editor/capabilities/captions)"],
+                ["Audio", "[Open Audio](/editor/capabilities/audio)"],
+                ["Settings", "[Open Settings](/editor/capabilities/settings)"],
+                ["Export", "[Open Export and sharing](/export)"]
               ]
             }
-          ]
-        },
-        {
-          "title": "Clips",
-          "paragraphs": [
-            "Beam uses screen, video, image, webcam, blur, audio, and caption clips. The Clip panel changes with the primary selection and shows an instructional empty state when nothing is selected."
-          ],
-          "screenshot": {
-            "path": "editor/clip-empty.webp",
-            "alt": "Beam Clip panel with no clip selected",
-            "caption": "Select an item on the canvas or timeline to reveal compatible clip properties.",
-            "aspectRatio": "199 / 326"
-          },
-          "subsections": [
-            {
-              "title": "Visual clips",
-              "paragraphs": [
-                "Screen recordings are labeled Video in the properties panel. Screen, video, image, and webcam clips share layout, framing, transform, and appearance controls."
-              ],
-              "bullets": [
-                "Use the properties header to enable or disable the selection, open transitions, or delete it.",
-                "Layout: floating in any corner, centered, or fullscreen.",
-                "Framing: Fill, Fit, Square, Portrait 9:16, Landscape 16:9, Squircle, or Circle.",
-                "Position X and Y: −300% to 300%. Width: 2% to 400%; height stays proportional when only width changes.",
-                "Corner radius: None, 8 px, 16 px, 24 px, or custom from 0 to 200 px.",
-                "Shadow: None, Soft, Medium, Strong, or Custom; Solid or Adaptive mode; custom blur 4–96 px; direction All, Bottom, Bottom-right, or Top-left.",
-                "Mirror horizontally or vertically.",
-                "Border: enable or disable, choose a color, and set width from 1 to 32 px.",
-                "Frame: None, Safari, or Windows 95, with title, chrome scale from 50% to 200%, and frame-specific menu, scrollbar, or color controls.",
-                "Playback speed for screen, video, and webcam: 0.25× to 4×, with 0.5×, 1×, 1.5×, 2×, and 3× presets.",
-                "Unlink separates a clip from its linked recording sidecar when a link exists."
-              ]
-            },
-            {
-              "title": "Webcam clips",
-              "screenshot": {
-                "path": "editor/webcam-properties.webp",
-                "alt": "Beam properties for a selected webcam clip",
-                "caption": "Webcam clips add split layouts and zoom-reaction behavior to the shared visual controls.",
-                "aspectRatio": "199 / 326"
-              },
-              "bullets": [
-                "Split Left, Right, Top, or Bottom requires a linked screen clip; unavailable split buttons explain when that partner is missing.",
-                "Split ratio ranges from 20% to 80% and defaults to 50%.",
-                "Split padding ranges from 0% to 8% and defaults to 0%.",
-                "React to Zoom is enabled by default."
-              ]
-            },
-            {
-              "title": "Blur clips",
-              "bullets": [
-                "Mode: Blur, Frosted, Pixelated, or Opaque.",
-                "Shape: Rectangle, Square, or Circle.",
-                "Presets: Light, Privacy, and Strong.",
-                "Strength and feather range from 0% to 100%; strength is hidden for Opaque.",
-                "Corner radius ranges from 0% to 100% and is hidden for Circle.",
-                "Tint is available only for Frosted and ranges from 0% to 100%; entering Frosted uses at least 24% tint.",
-                "Color is available for Frosted and Opaque."
-              ]
-            },
-            {
-              "title": "Audio clips",
-              "paragraphs": [
-                "A selected system, microphone, or imported audio clip exposes Volume from 0% to 200%, with 100% as the clip default."
-              ]
-            },
-            {
-              "title": "Text and keyboard caption clips",
-              "bullets": [
-                "Use custom text or the generated sentence or keyboard-step content.",
-                "Search or import a font; apply bold, italic, strike-through, left/center/right alignment, and color.",
-                "Line height: 0.8–2.0. Letter spacing: −5 to 20 px. Font size: 12–256 px, defaulting to 36 px for text and 28 px for keyboard captions.",
-                "Wrap is enabled by default. Outline: 0–30 px. Extrusion: 0–20 px. Backdrop blur: 0–48 px.",
-                "Text shadow blur: 0–50 px, with All, Bottom, Bottom-right, or Top-left direction.",
-                "Keyboard captions additionally support Follow Cursor."
-              ]
-            }
-          ]
-        },
-        {
-          "title": "Zooms",
-          "paragraphs": [
-            "Zoom blocks direct attention to an area of the recording. Add one on the Zoom track, generate suggestions from recorded clicks, or select an existing block to edit it."
-          ],
-          "screenshot": {
-            "path": "editor/zoom-empty.webp",
-            "alt": "Beam Zoom panel without a selected zoom",
-            "caption": "Generation and global motion blur remain available even when no zoom block is selected.",
-            "aspectRatio": "199 / 326"
-          },
-          "subsections": [
-            {
-              "title": "Generate and add",
-              "bullets": [
-                "Generate creates automatic zooms from recorded cursor-click data. It is unavailable without a session or cursor telemetry.",
-                "Regenerate asks for confirmation, preserves manual zooms, and replaces only automatic zooms from the current session.",
-                "Clicking the Zoom track adds a manual zoom where enough unoccupied time remains.",
-                "A manual zoom defaults to 1.2 seconds and requires at least 200 ms of available duration."
-              ]
-            },
-            {
-              "title": "Selected zoom",
-              "screenshot": {
-                "path": "editor/zoom-properties.webp",
-                "alt": "Beam properties for a selected zoom",
-                "caption": "A selected zoom exposes focus mode and magnification depth.",
-                "aspectRatio": "199 / 326"
-              },
-              "bullets": [
-                "Mode: Auto Cursor follows the recorded cursor; Manual Focus uses a point positioned by dragging directly on the canvas.",
-                "Depth 1–6 maps to 1.25×, 1.5×, 1.8×, 2.2×, 3.5×, and 5× magnification. The default is depth 2.",
-                "Delete is available in the properties header."
-              ]
-            },
-            {
-              "title": "Motion blur",
-              "paragraphs": [
-                "Zoom motion blur is a global control shown with or without a selected zoom. It is enabled by default at 55% intensity and ranges from 0% to 100%."
-              ]
-            }
-          ]
-        },
-        {
-          "title": "Cursor",
-          "paragraphs": [
-            "Cursor controls the global pointer overlay and does not require a clip selection. Choose a built-in or imported cursor pack, then configure appearance, click feedback, and motion."
-          ],
-          "screenshot": {
-            "path": "editor/cursor-panel.webp",
-            "alt": "Beam Cursor panel with pack, appearance, click, and motion controls",
-            "caption": "Cursor presentation is configured globally for the composition.",
-            "aspectRatio": "199 / 326"
-          },
-          "subsections": [
-            {
-              "title": "Pack and appearance",
-              "bullets": [
-                "Cursor mode can be Automatic or a fixed cursor from the selected pack.",
-                "Changing pack keeps a fixed cursor only when the new pack contains the same cursor ID; otherwise it returns to Automatic.",
-                "Color is available only for tintable SVG cursor assets.",
-                "Cursor size ranges from 16 to 128 px and defaults to 45 px.",
-                "Drop shadow is enabled by default, with blur from 1 to 24 px, a color, and All, Bottom, Bottom-right, or Top-left direction.",
-                "Reset keeps the chosen pack and restores the other cursor defaults."
-              ]
-            },
-            {
-              "title": "Click effects",
-              "bullets": [
-                "Single, Double, and Solid ripple presets apply to left and right clicks together.",
-                "Advanced controls configure left and right clicks independently.",
-                "Spring can be enabled with intensity from 0% to 100%; the default is enabled at 50%.",
-                "Ripple can be enabled with size from 10 to 80 px and a custom color; the default size is 30 px.",
-                "Recorded middle clicks use the left-click presentation."
-              ]
-            },
-            {
-              "title": "Motion",
-              "bullets": [
-                "Presets: Focused, Smooth, or Custom.",
-                "Smoothing ranges from 0 to 1.",
-                "Spring mass ranges from 0.5 to 2.",
-                "Motion blur ranges from 0 to 1.",
-                "The default Smooth preset uses 0.67 smoothing, 1.29 spring mass, and 0.4 motion blur."
-              ]
-            }
-          ]
-        },
-        {
-          "title": "Captions",
-          "paragraphs": [
-            "Generate speech captions locally from an enabled system, microphone, or imported audio clip. Beam downloads the selected Whisper model, transcribes the source on the device, then creates editable caption clips."
-          ],
-          "screenshot": {
-            "path": "editor/captions-panel.webp",
-            "alt": "Beam AI Captions panel with audio source and Whisper model controls",
-            "caption": "Select an audio source and local Whisper model before generating subtitles.",
-            "aspectRatio": "199 / 326"
-          },
-          "subsections": [
-            {
-              "title": "Audio source",
-              "bullets": [
-                "Only enabled audio clips are offered.",
-                "Sources can be system audio, microphone audio, or imported audio and are deduplicated by media URL.",
-                "Generate remains disabled when no usable audio source exists."
-              ]
-            },
-            {
-              "title": "Whisper model",
-              "bullets": [
-                "The default model is Whisper Tiny.",
-                "Available models: Tiny, Tiny English, Base, Base English, Small, Small English, Medium, Medium English, and Large v3.",
-                "English models are English-only; the other listed models are multilingual.",
-                "Download reports byte progress, errors can be copied, and a model cannot be deleted during download or transcription."
-              ]
-            },
-            {
-              "title": "Generation behavior",
-              "bullets": [
-                "Audio is decoded, converted to mono at 16 kHz, and limited to the timeline duration before local transcription.",
-                "A caption phrase ends at punctuation or after 12 words.",
-                "Partial transcription results update the composition while generation is running.",
-                "Regenerate replaces existing AI captions but preserves manual captions.",
-                "Cancel stops loading or transcription. Closing the panel also cancels the active transcription.",
-                "The final result selects the first generated caption for editing."
-              ],
-              "notice": {
-                "kind": "tip",
-                "title": "Local transcription",
-                "text": "Whisper runs on the device. Caption generation does not require a cloud upload or API key."
-              }
-            }
-          ]
-        },
-        {
-          "title": "Audio",
-          "paragraphs": [
-            "Audio separates composition-wide output from recorded system and microphone roles. Imported audio remains a selectable timeline clip rather than appearing in the dedicated role sections."
-          ],
-          "screenshot": {
-            "path": "editor/audio-panel.webp",
-            "alt": "Beam Audio panel with global, system, and microphone volume controls",
-            "caption": "Global output and recorded audio roles can be adjusted independently.",
-            "aspectRatio": "199 / 326"
-          },
-          "bullets": [
-            "Global Volume ranges from 0% to 100%; a newly loaded player starts at 70%.",
-            "System Sound Track appears only when system-audio media exists.",
-            "Microphone Track appears only when microphone media exists.",
-            "Each role can be enabled or disabled, removed, and adjusted from 0% to 100%.",
-            "Removing a role removes every clip assigned to that system or microphone role.",
-            "When no role exists, the panel reports that no audio tracks were detected."
-          ]
-        },
-        {
-          "title": "Settings",
-          "paragraphs": [
-            "Settings combines language, spell check, appearance, updates, community links, and development controls. Appearance preferences are shared with the Recorder."
-          ],
-          "screenshot": {
-            "path": "editor/settings-panel.webp",
-            "alt": "Beam Settings panel with language and appearance controls",
-            "caption": "Settings applies application-wide language and appearance preferences.",
-            "aspectRatio": "199 / 326"
-          },
-          "subsections": [
-            {
-              "title": "Language and writing",
-              "bullets": [
-                "Language selects one of the 15 supported application locales.",
-                "Advanced opens Spell Check settings."
-              ]
-            },
-            {
-              "title": "Appearance",
-              "bullets": [
-                "Theme: Light, Dark, or System.",
-                "Eight appearance presets, plus Reset to default.",
-                "Ten primary colors and eight secondary colors, with custom color pickers.",
-                "Corner radius: 0, 6, 10, 16, or 24 px, or custom from 0 to 32 px; Pill mode applies fully rounded controls.",
-                "Surface: Default, Neutral, Slate, or Deep.",
-                "Global scale: 50%, 75%, 100%, or 125%.",
-                "Optional independent scale overrides for the top bar, sidebar, properties, canvas controls, and timeline."
-              ]
-            },
-            {
-              "title": "Updates and links",
-              "bullets": [
-                "Check for updates, view the changelog, download an available version, or restart to apply it.",
-                "Errors include a copy action for diagnostics.",
-                "Discord and GitHub links open Beam community and source pages."
-              ]
-            },
-            {
-              "title": "Dev Mode",
-              "bullets": [
-                "Dev Mode is stored locally.",
-                "When enabled, it exposes the embedded Recorder HUD, Copy system info, and Open DevTools."
-              ]
-            }
-          ]
-        },
-        {
-          "title": "Export",
-          "paragraphs": [
-            "Export opens from the top bar when a project is loaded. Choose WebM or MP4, resolution, frame rate, quality, and optional audio before rendering. See [export and sharing](/export) for progress, diagnostics, and edge cases."
           ]
         }
       ]

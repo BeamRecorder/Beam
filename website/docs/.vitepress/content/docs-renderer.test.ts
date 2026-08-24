@@ -160,7 +160,7 @@ describe('docs content renderer', () => {
     expect(() => validateDocsCatalogs(content)).not.toThrow();
 
     const routes = createDocsRoutes('en');
-    expect(routes).toHaveLength(20);
+    expect(routes).toHaveLength(28);
     expect(routes.map((route) => route.params.page)).toEqual([
       'index',
       'getting-started',
@@ -178,6 +178,14 @@ describe('docs content renderer', () => {
       'editor/index',
       'editor/interface',
       'editor/capabilities',
+      'editor/capabilities/timeline',
+      'editor/capabilities/clips',
+      'editor/capabilities/canvas',
+      'editor/capabilities/zooms',
+      'editor/capabilities/cursor',
+      'editor/capabilities/captions',
+      'editor/capabilities/audio',
+      'editor/capabilities/settings',
       'editor/showcase',
       'export',
       'platforms',
@@ -185,6 +193,7 @@ describe('docs content renderer', () => {
     ]);
     expect(routes.every((route) => route.content.includes('---'))).toBe(true);
     expect(routes[0]?.content).toContain('layout: home');
+    expect(routes[0]?.content).toContain('name: "Beam Docs"');
     expect(routes[0]?.content).toContain('<div class="docs-product-grid">');
     expect(routes[0]?.content).toContain(
       '<DocsProductCard title="Recorder app" details="Choose a source, prepare audio and camera tracks, then control the recording from the compact HUD." link="/recorder/" visual="recorder" />',

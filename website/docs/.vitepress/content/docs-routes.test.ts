@@ -37,6 +37,17 @@ const recorderCapabilitySlugs = [
   'recorder/capabilities/permissions-privacy',
 ];
 
+const editorCapabilitySlugs = [
+  'editor/capabilities/timeline',
+  'editor/capabilities/canvas',
+  'editor/capabilities/clips',
+  'editor/capabilities/zooms',
+  'editor/capabilities/cursor',
+  'editor/capabilities/captions',
+  'editor/capabilities/audio',
+  'editor/capabilities/settings',
+];
+
 describe('documentation locale routes', () => {
   it('provides a complete docs catalogue for every website locale', () => {
     expect([...enabledDocsLocales].sort()).toEqual([...WEBSITE_LOCALES].sort());
@@ -58,7 +69,7 @@ describe('documentation locale routes', () => {
       if (locale !== 'en') {
         const localePages = catalogs.catalogs.flatMap((catalog) => catalog.pages);
         const englishPages = getDocsCatalogs('en').catalogs.flatMap((catalog) => catalog.pages);
-        for (const slug of recorderCapabilitySlugs) {
+        for (const slug of [...recorderCapabilitySlugs, ...editorCapabilitySlugs]) {
           const localizedPage = localePages.find((page) => page.slug === slug);
           const englishPage = englishPages.find((page) => page.slug === slug);
           expect(localizedPage, `${locale} fallback page ${slug}`).toEqual(englishPage);
@@ -89,6 +100,11 @@ describe('documentation locale routes', () => {
     expect(recorderCapabilityEntries.every(({ item }) => !item.link?.includes('#'))).toBe(true);
     expect(recorderCapabilityEntries.map(({ item }) => item.link)).toEqual(
       expect.arrayContaining(['/recorder/capabilities/', ...recorderCapabilitySlugs.map((slug) => `/${slug}`)]),
+    );
+    const editorCapabilityEntries = entries.filter(({ path }) => path.startsWith('Video editor > Capabilities'));
+    expect(editorCapabilityEntries.every(({ item }) => !item.link?.includes('#'))).toBe(true);
+    expect(editorCapabilityEntries.map(({ item }) => item.link)).toEqual(
+      expect.arrayContaining(['/editor/capabilities', ...editorCapabilitySlugs.map((slug) => `/${slug}`)]),
     );
 
     for (const { path, item } of entries) {

@@ -12,6 +12,8 @@ export default {
   extends: DefaultTheme,
   Layout: () =>
     h(DefaultTheme.Layout, null, {
+      'nav-bar-title-after': () =>
+        h('span', { class: 'docs-brand' }, [h('span', 'Beam'), h('span', { class: 'docs-brand__suffix' }, 'Docs')]),
       'nav-bar-content-after': () => h(DocsNavActions),
       'layout-bottom': () => h(DocsRouteTransition),
     }),

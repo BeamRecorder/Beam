@@ -57,7 +57,7 @@ onMounted(() => void github.load());
       <div class="header-actions">
         <ClientOnly>
           <WebsiteLanguageSelector />
-          <WebsiteThemeSelector />
+          <span class="header-theme-control"><WebsiteThemeSelector /></span>
           <template #placeholder><span class="selector-placeholder" aria-hidden="true" /></template>
         </ClientOnly>
         <a
@@ -90,7 +90,7 @@ onMounted(() => void github.load());
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 24px;
-  width: min(100% - 40px, 1320px);
+  width: min(100% - 40px, 1240px);
   min-height: 72px;
   margin: 0 auto;
 }
@@ -202,10 +202,10 @@ onMounted(() => void github.load());
   width: 17px;
   height: 17px;
 }
-@media (max-width: 780px) {
+@media (max-width: 959px) {
   .site-header__inner {
     grid-template-columns: auto 1fr auto;
-    width: min(100% - 24px, 1320px);
+    width: min(100% - 24px, 1240px);
     gap: 12px;
   }
   .site-nav {
@@ -216,6 +216,20 @@ onMounted(() => void github.load());
   }
   .github-stars > span,
   .github-stars > svg:first-child {
+    display: none;
+  }
+}
+@media (max-width: 639px) {
+  .site-header__inner {
+    grid-template-columns: auto 1fr;
+  }
+  .site-nav {
+    display: none;
+  }
+  .selector-placeholder {
+    width: 42px;
+  }
+  .header-theme-control {
     display: none;
   }
 }

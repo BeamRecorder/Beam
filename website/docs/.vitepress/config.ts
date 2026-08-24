@@ -60,7 +60,7 @@ const localeConfig = Object.fromEntries(
         lang: localeCommon.locale,
         link: locale === 'en' ? '/' : `/${locale}/`,
         themeConfig: {
-          siteTitle: localeCommon.siteTitle,
+          siteTitle: false as const,
           nav: [
             { text: localeCommon.nav.website, link: siteUrl },
             { text: 'GitHub', link: 'https://github.com/BeamRecorder/Beam' },
@@ -190,8 +190,7 @@ export default defineConfig({
   },
   themeConfig: {
     logo: '/favicon.webp',
-    siteTitle: common.siteTitle,
-    search: { provider: 'local' },
+    siteTitle: false,
     outline: { level: [2, 3], label: 'On this page' },
     externalLinkIcon: true,
   },

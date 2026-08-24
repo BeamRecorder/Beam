@@ -7,6 +7,12 @@ vi.mock('./DocsLanguageSelector.vue', () => ({
   },
 }));
 
+vi.mock('./DocsSearch.vue', () => ({
+  default: {
+    template: '<button class="docs-search-trigger" type="button">Search</button>',
+  },
+}));
+
 import DocsNavActions from './DocsNavActions.vue';
 
 const ClientOnlyStub = {
@@ -44,14 +50,10 @@ describe('DocsNavActions', () => {
     vi.restoreAllMocks();
   });
 
-  it('delegates the custom search button to the VitePress search button', async () => {
-    const searchButton = document.querySelector<HTMLButtonElement>('.DocSearch-Button');
-    const click = vi.spyOn(searchButton!, 'click');
+  it('renders the custom documentation search trigger', () => {
     wrapper = mountActions();
 
-    await wrapper.get('.docs-search-trigger').trigger('click');
-
-    expect(click).toHaveBeenCalledOnce();
+    expect(wrapper.get('.docs-search-trigger').text()).toBe('Search');
   });
 
   it('renders the GitHub stargazer count from the public repository response', async () => {
@@ -91,5 +93,17 @@ describe('DocsNavActions', () => {
     expect(wrapper.find('.docs-language-trigger').exists()).toBe(true);
     expect(wrapper.find('.docs-language-trigger .lucide-languages').exists()).toBe(true);
     expect(wrapper.find('.docs-theme-toggle').exists()).toBe(true);
+  });
+
+  it('keeps the language menu available outside the mobile-removable theme control', () => {
+    wrapper = mountActions();
+
+    const languageTrigger = wrapper.get('.docs-language-trigger');
+    const themeControl = wrapper.get('.docs-theme-control');
+
+    expect(themeControl.find('.docs-theme-toggle').exists()).toBe(true);
+    expect(themeControl.find('.docs-language-trigger').exists()).toBe(false);
+    expect(languageTrigger.element.closest('.docs-theme-control')).toBeNull();
+    expect(wrapper.find('.docs-search-trigger').exists()).toBe(true);
   });
 });

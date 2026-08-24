@@ -66,9 +66,7 @@ const heroTitleParts = computed(() =>
   gap: 32px;
   width: min(calc(100vw - 120px), 1400px);
   min-height: calc(100dvh - 72px);
-  margin-left: 50%;
   padding: 88px 0 48px;
-  transform: translateX(calc(-50% + clamp(40px, 4vw, 60px)));
 }
 
 .website-hero__copy {
@@ -123,9 +121,7 @@ const heroTitleParts = computed(() =>
     grid-template-columns: 1fr;
     gap: 32px;
     width: 100%;
-    margin-left: 0;
     padding: 64px 0 40px;
-    transform: none;
   }
 }
 

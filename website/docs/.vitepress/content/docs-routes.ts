@@ -1,6 +1,9 @@
 import commonEn from '../../../src/i18n/en/docs/common.json';
 import editorEn from '../../../src/i18n/en/docs/editor.json';
+import editorMediaEn from '../../../src/i18n/en/docs/editor-media.json';
 import editorShowcaseEn from '../../../src/i18n/en/docs/editor-showcase.json';
+import editorTimelineClipsEn from '../../../src/i18n/en/docs/editor-timeline-clips.json';
+import editorVisualsEn from '../../../src/i18n/en/docs/editor-visuals.json';
 import filesystemEn from '../../../src/i18n/en/docs/filesystem.json';
 import gettingStartedEn from '../../../src/i18n/en/docs/getting-started.json';
 import homeEn from '../../../src/i18n/en/docs/home.json';
@@ -107,7 +110,7 @@ import homeZhTw from '../../../src/i18n/zh-TW/docs/home.json';
 import recorderZhTw from '../../../src/i18n/zh-TW/docs/recorder.json';
 import referenceZhTw from '../../../src/i18n/zh-TW/docs/reference.json';
 import type { WebsiteLocale } from '../../../src/i18n';
-import type { DocsLocaleCatalogs } from './docs-content-types';
+import type { DocsLocaleCatalogs, DocsSectionContent } from './docs-content-types';
 import { renderDocsHome, renderDocsPage, validateDocsCatalogs } from './docs-renderer';
 
 const createCatalogs = (common: unknown, home: unknown, catalogs: readonly unknown[]): DocsLocaleCatalogs =>
@@ -120,6 +123,9 @@ const locales: Partial<Record<WebsiteLocale, DocsLocaleCatalogs>> = {
     recorderCaptureEn,
     recorderWorkspaceEn,
     editorEn,
+    editorTimelineClipsEn,
+    editorVisualsEn,
+    editorMediaEn,
     editorShowcaseEn,
     referenceEn,
     filesystemEn,
@@ -165,6 +171,9 @@ export const enabledDocsLocales = Object.keys(locales) as DocsLocale[];
 const englishFallbackCatalogs = [
   recorderCaptureEn,
   recorderWorkspaceEn,
+  editorTimelineClipsEn,
+  editorVisualsEn,
+  editorMediaEn,
   editorShowcaseEn,
 ] as DocsLocaleCatalogs['catalogs'];
 
@@ -209,3 +218,34 @@ export const docsRoutePaths = (locale: DocsLocale = 'en') =>
   createDocsRoutes(locale).map((route) =>
     route.params.page === 'index' ? '/' : route.params.page.replace(/\/index$/, '/'),
   );
+
+export interface DocsSearchEntry {
+  title: string;
+  description: string;
+  path: string;
+  text: string;
+}
+
+const sectionSearchText = (section: DocsSectionContent): string =>
+  [
+    section.title,
+    ...(section.paragraphs ?? []),
+    ...(section.bullets ?? []),
+    ...(section.steps ?? []),
+    ...(section.tables ?? []).flatMap((table) => [...table.headers, ...table.rows.flat()]),
+    section.notice?.title ?? '',
+    section.notice?.text ?? '',
+    ...(section.subsections ?? []).map(sectionSearchText),
+  ].join(' ');
+
+export const getDocsSearchEntries = (locale: DocsLocale): DocsSearchEntry[] => {
+  const prefix = locale === 'en' ? '' : `${locale}/`;
+  return getDocsCatalogs(locale).catalogs.flatMap((catalog) =>
+    catalog.pages.map((page) => ({
+      title: page.title,
+      description: page.description,
+      path: `/${prefix}${page.slug.replace(/\/index$/, '/')}`,
+      text: [page.title, page.description, page.lead, ...page.sections.map(sectionSearchText)].join(' '),
+    })),
+  );
+};

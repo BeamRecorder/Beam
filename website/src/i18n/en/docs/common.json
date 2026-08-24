@@ -44,14 +44,14 @@
           "text": "Capabilities",
           "link": "/editor/capabilities",
           "items": [
-            { "text": "Timeline editing", "link": "/editor/capabilities#timeline-editing" },
-            { "text": "Canvas", "link": "/editor/capabilities#canvas" },
-            { "text": "Clips", "link": "/editor/capabilities#clips" },
-            { "text": "Zooms", "link": "/editor/capabilities#zooms" },
-            { "text": "Cursor", "link": "/editor/capabilities#cursor" },
-            { "text": "Captions", "link": "/editor/capabilities#captions" },
-            { "text": "Audio", "link": "/editor/capabilities#audio" },
-            { "text": "Settings", "link": "/editor/capabilities#settings" },
+            { "text": "Timeline editing", "link": "/editor/capabilities/timeline" },
+            { "text": "Canvas", "link": "/editor/capabilities/canvas" },
+            { "text": "Clips", "link": "/editor/capabilities/clips" },
+            { "text": "Zooms", "link": "/editor/capabilities/zooms" },
+            { "text": "Cursor", "link": "/editor/capabilities/cursor" },
+            { "text": "Captions", "link": "/editor/capabilities/captions" },
+            { "text": "Audio", "link": "/editor/capabilities/audio" },
+            { "text": "Settings", "link": "/editor/capabilities/settings" },
             { "text": "Export", "link": "/export" }
           ]
         }

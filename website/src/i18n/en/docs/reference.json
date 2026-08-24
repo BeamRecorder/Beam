@@ -8,9 +8,24 @@
       "sections": [
         {
           "title": "Choose a format",
-          "bullets": [
-            "WebM is the default format.",
-            "MP4 is available when Beam finds a compatible hardware or software encoder."
+          "tables": [
+            {
+              "headers": ["Format", "Video codec selection", "Audio codec", "Availability"],
+              "rows": [
+                [
+                  "WebM",
+                  "First encodable of VP9, VP8, AV1",
+                  "Opus",
+                  "Default format; requires an encodable video codec and, when audio is included, Opus."
+                ],
+                [
+                  "MP4",
+                  "AVC / H.264",
+                  "AAC",
+                  "Requires an AVC encoder. AAC uses WebCodecs when available, then Beam's Mediabunny AAC encoder fallback."
+                ]
+              ]
+            }
           ],
           "notice": {
             "kind": "info",
@@ -20,17 +35,39 @@
         },
         {
           "title": "Choose a resolution",
-          "bullets": [
-            "720p is available when the native canvas is at least 720 pixels high.",
-            "1080p is available when the native canvas is at least 1080 pixels high.",
-            "Max keeps the native output canvas dimensions.",
-            "Beam preserves the canvas aspect ratio and rounds output dimensions to even numbers."
+          "tables": [
+            {
+              "headers": ["Option", "Availability", "Output behavior"],
+              "rows": [
+                ["720p", "Native canvas height is at least 720 px", "Targets 720 px high without upscaling."],
+                ["1080p", "Native canvas height is at least 1080 px", "Targets 1080 px high without upscaling."],
+                ["Max", "Always", "Keeps the native output-canvas size."],
+                [
+                  "All options",
+                  "Not applicable",
+                  "Preserve aspect ratio and round width and height to positive even numbers."
+                ]
+              ]
+            }
           ]
         },
         {
           "title": "Choose frame rate and quality",
-          "paragraphs": [
-            "Choose 24, 30, or 60 fps. Beam recommends a value from the source recording: 60 for sources at or above 50 fps, 24 for sources at or below 27 fps, and 30 otherwise. Low, Medium, and High calculate a bitrate from the output dimensions and frame rate; Medium is the default."
+          "tables": [
+            {
+              "headers": ["Setting", "Values", "Default or recommendation"],
+              "rows": [
+                [
+                  "Frame rate",
+                  "24, 30, 60 fps",
+                  "60 for a source at or above 50 fps; 24 at or below 27 fps; otherwise 30."
+                ],
+                ["Quality", "Low, Medium, High", "Medium"],
+                ["Low bitrate factor", "0.055 × width × height × fps", "Clamped to 0.5–40 Mbps."],
+                ["Medium bitrate factor", "0.095 × width × height × fps", "Clamped to 0.5–40 Mbps."],
+                ["High bitrate factor", "0.16 × width × height × fps", "Clamped to 0.5–40 Mbps."]
+              ]
+            }
           ],
           "screenshot": {
             "path": "reference/export-panel.webp",
@@ -41,14 +78,67 @@
         },
         {
           "title": "More options",
-          "paragraphs": [
-            "Include Audio is enabled by default. Disable it to render a silent video; audio progress is omitted when audio is disabled or the composition has no enabled audio clip with a positive duration."
+          "tables": [
+            {
+              "headers": ["Option", "Values", "Default", "Behavior"],
+              "rows": [
+                [
+                  "Include Audio",
+                  "On or Off",
+                  "On",
+                  "Off creates a silent file. Audio is also omitted when no enabled audio clip has positive duration."
+                ],
+                [
+                  "Audio output",
+                  "48 kHz, stereo, 128 kbps",
+                  "When audio is included",
+                  "Enabled audio clips are mixed progressively into the selected container codec."
+                ]
+              ]
+            }
           ]
         },
         {
           "title": "Monitor the export",
+          "tables": [
+            {
+              "headers": ["Stage", "What Beam does"],
+              "rows": [
+                ["Validating assets", "Checks the snapshot, local assets, formats, codecs, and render invariants."],
+                ["Loading assets", "Loads visual, audio, cursor, font, and background resources."],
+                ["Encoding", "Renders composition frames, mixes enabled audio, and writes encoded chunks."],
+                ["Finalizing", "Closes tracks and finalizes the media container and destination file."]
+              ]
+            }
+          ],
           "paragraphs": [
-            "Beam validates assets, loads media, encodes frames, and finalizes the file. The progress view reports the active phase and frame count. You can cancel an active export; closing or cancelling the destination picker also ends the job without reporting an error."
+            "The progress view reports percentage and completed frame count and provides Copy Report. Cancel stops an active export. Closing or cancelling the destination picker ends the job without reporting an error. Live edits made after export starts do not change the in-progress file because Beam exports a snapshot."
+          ]
+        },
+        {
+          "title": "Validation and edge cases",
+          "tables": [
+            {
+              "headers": ["Condition", "Result"],
+              "rows": [
+                ["Missing asset", "Export stops with a validation issue identifying the relevant asset or clip."],
+                ["Unsupported source or codec", "Export reports an unsupported format, codec, or decode failure."],
+                [
+                  "No compatible output encoder",
+                  "The selected WebM or MP4 format is reported as not encodable on the device."
+                ],
+                ["Animated GIF", "Animated GIFs are not yet deterministically exportable."],
+                ["Canvas 2D unavailable", "Export stops because composition frames cannot be rendered."],
+                [
+                  "Cancellation",
+                  "The active worker and output stream are aborted and the incomplete export is not reported as a failure."
+                ],
+                [
+                  "Audio mixer unavailable",
+                  "Beam reports that offline audio mixing is unavailable in the Chromium build."
+                ]
+              ]
+            }
           ]
         },
         {

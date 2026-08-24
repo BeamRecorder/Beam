@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { BookOpen, ExternalLink } from '@lucide/vue';
-import { computed, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Accordion from '~/ui/accordion/Accordion.vue';
 import discordIconUrl from '../../../public/discord_svg.svg';
@@ -25,6 +25,31 @@ const faqGroups = computed(() =>
     entries: faqItems.value.map((item, index) => ({ item, index })).filter(({ item }) => item.category === category),
   })),
 );
+
+const openHashItem = async () => {
+  if (typeof window === 'undefined' || !window.location.hash) return;
+
+  let itemId = '';
+  try {
+    itemId = decodeURIComponent(window.location.hash.slice(1));
+  } catch {
+    return;
+  }
+
+  const itemIndex = faqItems.value.findIndex((item) => item.id === itemId);
+  if (itemIndex === -1) return;
+
+  openItems.value = faqItems.value.map((_, index) => index === itemIndex);
+  await nextTick();
+  document.getElementById(itemId)?.scrollIntoView({ behavior: 'auto', block: 'start' });
+};
+
+onMounted(() => {
+  void openHashItem();
+  window.addEventListener('hashchange', openHashItem);
+});
+
+onBeforeUnmount(() => window.removeEventListener('hashchange', openHashItem));
 
 usePageSeo({
   path: '/faq',
@@ -107,6 +132,7 @@ usePageSeo({
 }
 
 .faq-item {
+  scroll-margin-top: 88px;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
 }
