@@ -28,11 +28,38 @@ export function useProjectZoom(options: {
   const generatedSessions = ref<ProjectEditorData['zoom']['generatedSessions']>([]);
   const zoomMotionBlur = ref<ZoomMotionBlurSettings>({ ...DEFAULT_ZOOM_MOTION_BLUR });
   const selectedZoomId = ref<string | null>(null);
+  const selectedZoomIds = ref<string[]>([]);
   const selectedZoom = computed(
     () => zoomElements.value.find((element) => element.id === selectedZoomId.value) ?? null,
   );
   const canGenerateZooms = computed(() => Boolean(editorData.value?.cursor.available && editorData.value.sessionId));
   const hasAutomaticZooms = computed(() => zoomElements.value.some((element) => element.mode === 'auto'));
+
+  watch(
+    selectedZoomId,
+    (id) => {
+      if (!id) selectedZoomIds.value = [];
+      else if (!selectedZoomIds.value.includes(id)) selectedZoomIds.value = [id];
+    },
+    { flush: 'sync' },
+  );
+  watch(
+    () => zoomElements.value.map((zoom) => zoom.id),
+    (validIds) => {
+      const valid = new Set(validIds);
+      selectedZoomIds.value = selectedZoomIds.value.filter((id) => valid.has(id));
+      if (selectedZoomId.value && !valid.has(selectedZoomId.value)) selectedZoomId.value = null;
+    },
+  );
+
+  const selectZooms = (zoomIds: readonly string[], primaryZoomId?: string | null) => {
+    const valid = new Set(zoomElements.value.map((zoom) => zoom.id));
+    const ids = [...new Set(zoomIds)].filter((id) => valid.has(id));
+    if (zoomIds.length && !ids.length) return;
+    selectedZoomIds.value = ids;
+    selectedZoomId.value = primaryZoomId && ids.includes(primaryZoomId) ? primaryZoomId : (ids[0] ?? null);
+    if (ids.length) activeTab.value = 'zoom';
+  };
 
   const addZoomAtTime = (request: number | { startMs: number; durationMs: number }) => {
     const requestedStartMs = typeof request === 'number' ? request : request.startMs;
@@ -65,8 +92,7 @@ export function useProjectZoom(options: {
       focus: { cx: 0.5, cy: 0.5 },
     };
     zoomElements.value.push(zoom);
-    selectedZoomId.value = zoom.id;
-    activeTab.value = 'zoom';
+    selectZooms([zoom.id], zoom.id);
   };
 
   const generateZooms = (selectPanel = false) => {
@@ -88,7 +114,10 @@ export function useProjectZoom(options: {
       ...generatedSessions.value.filter((record) => record.sessionId !== data.sessionId),
       { sessionId: data.sessionId, algorithmVersion: ZOOM_ALGORITHM_VERSION, generatedAt: new Date().toISOString() },
     ];
-    selectedZoomId.value = generated[0]?.id ?? null;
+    selectZooms(
+      generated.map((zoom) => zoom.id),
+      generated[0]?.id ?? null,
+    );
     if (selectPanel) activeTab.value = 'zoom';
   };
 
@@ -123,13 +152,18 @@ export function useProjectZoom(options: {
   const trimZoomEdge = (id: string, edge: 'start' | 'end', timeMs: number) => previewZoomEdge(id, edge, timeMs);
   const previewZoom = updateZoom;
   const deleteSelectedZoom = () => {
-    if (!selectedZoomId.value) return;
-    deleteZoomById(selectedZoomId.value);
+    const ids = new Set(
+      selectedZoomIds.value.length ? selectedZoomIds.value : selectedZoomId.value ? [selectedZoomId.value] : [],
+    );
+    if (!ids.size) return;
+    zoomElements.value = zoomElements.value.filter((element) => !ids.has(element.id));
+    selectedZoomId.value = null;
   };
   const deleteZoomById = (id: string) => {
     zoomElements.value = zoomElements.value.filter((element) => element.id !== id);
+    selectedZoomIds.value = selectedZoomIds.value.filter((selectedId) => selectedId !== id);
     if (selectedZoomId.value === id) {
-      selectedZoomId.value = null;
+      selectedZoomId.value = selectedZoomIds.value[0] ?? null;
     }
   };
   const previewMoveZoom = (id: string, startMs: number, endMs: number) => {
@@ -144,8 +178,7 @@ export function useProjectZoom(options: {
   const pasteZoomAtTime = (copiedZoom: ZoomElement, startMs: number) => {
     const pasted = pasteZoomAt(zoomElements.value, copiedZoom, startMs, durationMs.value);
     zoomElements.value = pasted.elements;
-    selectedZoomId.value = pasted.zoomId;
-    activeTab.value = 'zoom';
+    selectZooms([pasted.zoomId], pasted.zoomId);
     return zoomElements.value.find((zoom) => zoom.id === pasted.zoomId)!;
   };
 
@@ -154,9 +187,11 @@ export function useProjectZoom(options: {
     generatedSessions,
     zoomMotionBlur,
     selectedZoomId,
+    selectedZoomIds,
     selectedZoom,
     canGenerateZooms,
     hasAutomaticZooms,
+    selectZooms,
     addZoomAtTime,
     generateZooms,
     ensureAutomaticZooms,

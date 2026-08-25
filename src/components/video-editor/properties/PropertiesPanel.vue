@@ -69,6 +69,7 @@ const props = withDefaults(
     selectedClip?: SelectedClipProperties | null;
     selectedCaptionClip?: CaptionClip | null;
     selectedClipIds?: string[];
+    selectedZoomIds?: string[];
     cursorSelection: CursorSelection;
     cursorPacks: CursorPackDescriptor[];
     cursorSize: number;
@@ -104,6 +105,7 @@ const props = withDefaults(
     hasSystemAudio: false,
     hasMicAudio: false,
     selectedClipIds: () => [],
+    selectedZoomIds: () => [],
     zoomMotionBlur: () => ({ ...DEFAULT_ZOOM_MOTION_BLUR }),
   },
 );
@@ -130,6 +132,13 @@ const selectedDomainClips = computed(() => {
   return props.composition.clips.filter((clip) => ids.has(clip.id));
 });
 const selectionClipNames = computed(() => selectedClipNames(selectedDomainClips.value, tTimeline('holdSegment')));
+const selectionNames = computed(() =>
+  props.activeTab === 'zoom'
+    ? props.selectedZoomIds.length > 1
+      ? [`${props.selectedZoomIds.length} ${tTimeline('zooms')}`]
+      : []
+    : selectionClipNames.value,
+);
 const panelHeader = ref<InstanceType<typeof PropertiesPanelHeader> | null>(null);
 const transitionEdge = ref<'entry' | 'exit'>('entry');
 const { transitionsOpen, navigationDirection, openTransitions, closeTransitions } = usePropertiesPanelNavigation({
@@ -289,18 +298,8 @@ const deleteTooltip = computed(() => {
   return tClip('deleteClip') || 'Delete clip';
 });
 
-const handleToggleClipEnabled = () => {
-  const nextValue = !isCurrentClipEnabled.value;
-  emit('update:clip-enabled', nextValue);
-};
-
-const handleDelete = () => {
-  if (props.activeTab === 'zoom') {
-    emit('delete:zoom');
-  } else {
-    emit('delete-clip');
-  }
-};
+const handleToggleClipEnabled = () => emit('update:clip-enabled', !isCurrentClipEnabled.value);
+const handleDelete = () => (props.activeTab === 'zoom' ? emit('delete:zoom') : emit('delete-clip'));
 defineExpose({ openCanvasTransitions: openTransitionEdge });
 </script>
 <template>
@@ -309,7 +308,7 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
       <PropertiesPanelHeader
         ref="panelHeader"
         :title="panelTitle"
-        :selection-names="selectionClipNames"
+        :selection-names="selectionNames"
         :transition-title="transitionPanelTitle"
         :transition-name="panelTransitionName"
         :transitions-open="transitionsOpen"

@@ -11,7 +11,11 @@ import type {
   TimelinePasteHighlight,
   TimelinePasteRequest,
 } from './composables/timeline-clipboard-types';
-import type { TimelinePlacementRequest, TrackClipSelection } from './composables/timeline-tracks-types';
+import type {
+  TimelinePlacementRequest,
+  TrackClipSelection,
+  TrackZoomSelection,
+} from './composables/timeline-tracks-types';
 
 const props = withDefaults(
   defineProps<{
@@ -23,6 +27,7 @@ const props = withDefaults(
     zoomElements: ZoomElement[];
     newZoomDurationMs?: number;
     selectedZoomId: string | null;
+    selectedZoomIds?: string[];
     composition: ClipComposition;
     selectedClipId: string | null;
     selectedClipIds?: string[];
@@ -38,6 +43,7 @@ const props = withDefaults(
     newZoomDurationMs: DEFAULT_ZOOM_DURATION_MS,
     canvas: () => ({ ...DEFAULT_OUTPUT_CANVAS, transitions: { ...EMPTY_CLIP_TRANSITIONS } }),
     selectedClipIds: () => [],
+    selectedZoomIds: () => [],
   },
 );
 const emit = defineEmits<{
@@ -45,6 +51,7 @@ const emit = defineEmits<{
   (event: 'update:isPlaying', value: boolean): void;
   (event: 'update:zoomLevel', value: number): void;
   (event: 'select:zoom', zoomId: string): void;
+  (event: 'select:zoom-track', selection: TrackZoomSelection): void;
   (event: 'select:clip', clipId: string): void;
   (event: 'select:track', selection: TrackClipSelection): void;
   (event: 'toggle:clip', clipId: string): void;
@@ -95,6 +102,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
         :zoom-elements="zoomElements"
         :new-zoom-duration-ms="newZoomDurationMs"
         :selected-zoom-id="selectedZoomId"
+        :selected-zoom-ids="selectedZoomIds"
         :composition="composition"
         :selected-clip-id="selectedClipId"
         :selected-clip-ids="selectedClipIds"
@@ -105,6 +113,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
         @update:current-time="emit('update:currentTime', $event)"
         @update:zoom-level="emit('update:zoomLevel', $event)"
         @select:zoom="emit('select:zoom', $event)"
+        @select:zoom-track="emit('select:zoom-track', $event)"
         @select:clip="emit('select:clip', $event)"
         @select:track="emit('select:track', $event)"
         @toggle:clip="emit('toggle:clip', $event)"

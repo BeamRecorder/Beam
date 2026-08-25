@@ -341,6 +341,22 @@ describe('useProjectZoom', () => {
     expect(state.selectedZoomId.value).toBeNull();
   });
 
+  it('preserves a multi-selection and deletes every selected zoom', () => {
+    const { state } = create();
+    state.zoomElements.value = [zoom('first'), zoom('second'), zoom('third')];
+
+    state.selectZooms(['first', 'second'], 'second');
+
+    expect(state.selectedZoomIds.value).toEqual(['first', 'second']);
+    expect(state.selectedZoomId.value).toBe('second');
+
+    state.deleteSelectedZoom();
+
+    expect(state.zoomElements.value.map((item) => item.id)).toEqual(['third']);
+    expect(state.selectedZoomIds.value).toEqual([]);
+    expect(state.selectedZoomId.value).toBeNull();
+  });
+
   it('pastes a zoom at the playhead while preserving its duration and settings', () => {
     const { state } = create(data(), 10_000);
     const copied = {

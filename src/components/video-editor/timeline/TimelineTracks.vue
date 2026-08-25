@@ -20,6 +20,7 @@ const props = withDefaults(defineProps<TimelineTracksProps>(), {
   projectId: null,
   recentPaste: null,
   selectedClipIds: () => [],
+  selectedZoomIds: () => [],
   canvas: () => ({ ...DEFAULT_OUTPUT_CANVAS, transitions: { ...EMPTY_CLIP_TRANSITIONS } }),
 });
 const emit = defineEmits<TimelineTracksEmits>();
@@ -70,6 +71,7 @@ const {
   leaveTrack,
   addAt,
   selectTrack,
+  selectZoomTrack,
   zoomScale,
   draggedTrackId,
   beginReorder,
@@ -80,6 +82,10 @@ void [tracksScrollRef, sidebarScrollRef, tracksViewportRef, ticksAreaRef];
 const selectedClipIdSet = computed(
   () =>
     new Set(props.selectedClipIds?.length ? props.selectedClipIds : props.selectedClipId ? [props.selectedClipId] : []),
+);
+const selectedZoomIdSet = computed(
+  () =>
+    new Set(props.selectedZoomIds?.length ? props.selectedZoomIds : props.selectedZoomId ? [props.selectedZoomId] : []),
 );
 const {
   contextMenuState,
@@ -138,6 +144,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
           />
           <TimelineTrackHeaders
             :visual-tracks="visualTracks"
+            :zoom-elements="zoomElements"
             :keyboard-caption-clips="keyboardCaptionClips"
             :text-caption-layers="textCaptionLayers"
             :system-audio-clips="systemAudioClips"
@@ -146,7 +153,10 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
             :include-audio-in-export="includeAudioInExport"
             :dragged-track-id="draggedTrackId"
             :dragged-caption-id="draggedCaptionId"
+            :selected-clip-ids="[...selectedClipIdSet]"
+            :selected-zoom-ids="[...selectedZoomIdSet]"
             :select-track="selectTrack"
+            :select-zoom-track="selectZoomTrack"
             :begin-reorder="beginReorder"
             :begin-caption-reorder="beginCaptionReorder"
             :open-track-context-menu="openTrackContextMenu"
@@ -265,7 +275,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 type="button"
                 class="cursor-zoom-indicator"
                 :class="{
-                  selected: selectedZoomId === zoom.id,
+                  selected: selectedZoomIdSet.has(zoom.id),
                   'paste-arrival': recentPaste?.type === 'zoom' && recentPaste.id === zoom.id,
                 }"
                 :style="

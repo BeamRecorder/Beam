@@ -21,6 +21,7 @@ export interface TimelineTracksProps {
   zoomElements: ZoomElement[];
   newZoomDurationMs?: number;
   selectedZoomId: string | null;
+  selectedZoomIds?: string[];
   composition: ClipComposition;
   selectedClipId: string | null;
   selectedClipIds?: string[];
@@ -37,6 +38,12 @@ export interface TrackClipSelection {
   additive?: boolean;
 }
 
+export interface TrackZoomSelection {
+  zoomIds: string[];
+  primaryZoomId: string | null;
+  additive?: boolean;
+}
+
 export interface TimelinePlacementRequest {
   startMs: number;
   durationMs: number;
@@ -46,6 +53,7 @@ export interface TimelineTracksEmits {
   (event: 'update:currentTime', value: number): void;
   (event: 'update:zoomLevel', value: number): void;
   (event: 'select:zoom', zoomId: string): void;
+  (event: 'select:zoom-track', selection: TrackZoomSelection): void;
   (event: 'select:clip', clipId: string): void;
   (event: 'select:track', selection: TrackClipSelection): void;
   (event: 'toggle:clip', clipId: string): void;

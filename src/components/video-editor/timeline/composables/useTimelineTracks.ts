@@ -375,6 +375,20 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
       ...(event?.ctrlKey || event?.metaKey || event?.shiftKey ? { additive: true } : {}),
     });
   };
+  const selectZoomTrack = (zooms: ZoomElement[], event?: MouseEvent) => {
+    if (!zooms.length) return;
+    const timeMs = props.currentTime * 1_000;
+    const ordered = [...zooms].sort((left, right) => {
+      const distance = (zoom: ZoomElement) =>
+        timeMs < zoom.startMs ? zoom.startMs - timeMs : timeMs >= zoom.endMs ? timeMs - zoom.endMs : 0;
+      return distance(left) - distance(right) || left.startMs - right.startMs;
+    });
+    emit('select:zoom-track', {
+      zoomIds: ordered.map((zoom) => zoom.id),
+      primaryZoomId: ordered[0]?.id ?? null,
+      ...(event?.ctrlKey || event?.metaKey || event?.shiftKey ? { additive: true } : {}),
+    });
+  };
   const zoomScale = (depth: number) => [1.25, 1.5, 1.8, 2.2, 3.5, 5][Math.max(0, Math.min(5, depth - 1))] ?? 1.25;
 
   const { draggedTrackId, beginReorder } = useVisualTrackReorder({ baseVisualTracks, visualOrderPreview, emit });
@@ -448,6 +462,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     leaveTrack,
     addAt,
     selectTrack,
+    selectZoomTrack,
     zoomScale,
     draggedTrackId,
     beginReorder,
