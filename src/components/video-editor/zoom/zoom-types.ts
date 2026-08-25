@@ -35,6 +35,18 @@ export interface ZoomElement {
   tiltPreset?: ZoomTiltPreset;
 }
 
+export interface AppliedZoom {
+  scale: number;
+  focus: ZoomFocus;
+  strength: number;
+  mode: ZoomElement['mode'];
+  tilt: number;
+  tiltHorizontal?: number;
+  tiltVertical?: number;
+}
+
+export type ZoomFocusMapper = (focus: ZoomFocus, zoom: AppliedZoom, timeMs: number) => ZoomFocus;
+
 export interface ZoomGenerationRecord {
   sessionId: string;
   algorithmVersion: number;

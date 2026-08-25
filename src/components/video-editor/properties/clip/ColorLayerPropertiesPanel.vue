@@ -16,7 +16,7 @@ import {
 } from '../../composables/backgroundCatalog';
 import type { ColorClip } from '~/media/shared/composition-types';
 import type { ColorFill } from '~/media/shared/color-fill-types';
-import type { ColorLayerStyle } from '~/media/shared/color-layer-style';
+import type { ColorLayerStyle } from '~/media/shared/color-layer-style-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import ColorLayerAppearanceControls from './ColorLayerAppearanceControls.vue';
 

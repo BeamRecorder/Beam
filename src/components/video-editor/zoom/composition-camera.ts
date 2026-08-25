@@ -1,9 +1,10 @@
 import type { CursorTelemetryPoint } from '../../../api/types/capture-session';
 import { createCameraVelocity, stepCameraSpring, type CameraTransform, type CameraVelocity } from './zoom-spring';
-import { clampFocusToScale, createZoomTimeEvaluator, type AppliedZoom } from './zoom-playback';
+import { clampFocusToScale, createZoomTimeEvaluator } from './zoom-playback';
 import {
   DEFAULT_ZOOM_TILT_HORIZONTAL,
   DEFAULT_ZOOM_TILT_VERTICAL,
+  type AppliedZoom,
   type ZoomElement,
   type ZoomFocus,
 } from './zoom-types';

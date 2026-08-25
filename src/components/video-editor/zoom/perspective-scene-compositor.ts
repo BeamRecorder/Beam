@@ -3,9 +3,7 @@ import type { PerspectiveTransform } from './perspective-projection';
 import { hasPerspectiveTilt } from './perspective-projection';
 import { WebGlPerspectiveProjector, type PerspectiveCanvas } from './webgl-perspective-projector';
 
-type SceneSurface = PerspectiveCanvas;
-
-const createSceneSurface = (width: number, height: number): SceneSurface => {
+const createSceneSurface = (width: number, height: number): PerspectiveCanvas => {
   if (typeof OffscreenCanvas !== 'undefined') return new OffscreenCanvas(width, height);
   const canvas = document.createElement('canvas');
   canvas.width = width;
@@ -14,7 +12,7 @@ const createSceneSurface = (width: number, height: number): SceneSurface => {
 };
 
 export class PerspectiveSceneCompositor {
-  private surface: SceneSurface | null = null;
+  private surface: PerspectiveCanvas | null = null;
   private context: Canvas2DContext | null = null;
   private projector: WebGlPerspectiveProjector | null = null;
 

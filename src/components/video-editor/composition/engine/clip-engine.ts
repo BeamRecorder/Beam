@@ -19,7 +19,8 @@ import {
 import { normalizeClipTransitions } from '~/media/shared/clip-transitions';
 import type { CameraFramingPreset } from '~/media/shared/camera-layout-types';
 import type { ColorFill } from '~/media/shared/color-fill-types';
-import { normalizeColorLayerStyle, type ColorLayerStyle } from '~/media/shared/color-layer-style';
+import { normalizeColorLayerStyle } from '~/media/shared/color-layer-style';
+import type { ColorLayerStyle } from '~/media/shared/color-layer-style-types';
 import { EMPTY_CLIP_TRANSITIONS } from '~/media/shared/clip-transitions';
 import {
   maximumVisualTrackDuration,

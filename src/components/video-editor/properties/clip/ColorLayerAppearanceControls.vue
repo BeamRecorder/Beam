@@ -9,13 +9,13 @@ import Divider from '~/ui/divider/Divider.vue';
 import Switch from '~/ui/switch/Switch.vue';
 import ShadowDirectionGroup from '../cursor/ShadowDirectionGroup.vue';
 import type { ColorClip } from '~/media/shared/composition-types';
-import {
-  normalizeColorLayerStyle,
-  type ColorLayerShadowDirection,
-  type ColorLayerShadowMode,
-  type ColorLayerShadowSize,
-  type ColorLayerStyle,
-} from '~/media/shared/color-layer-style';
+import { normalizeColorLayerStyle } from '~/media/shared/color-layer-style';
+import type {
+  ColorLayerShadowDirection,
+  ColorLayerShadowMode,
+  ColorLayerShadowSize,
+  ColorLayerStyle,
+} from '~/media/shared/color-layer-style-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useClipCornerRadius } from './useClipCornerRadius';
 

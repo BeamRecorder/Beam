@@ -2,7 +2,7 @@ import type { CameraFramingPreset, CameraLayoutPreset } from './camera-layout-ty
 import type { CaptionHighlightStyle } from './caption-highlight-types';
 import type { CaptionShapeStyle } from './caption-shape-types';
 import type { ColorFill, PhoneFrameFill } from './color-fill-types';
-import type { ColorLayerStyle } from './color-layer-style';
+import type { ColorLayerStyle } from './color-layer-style-types';
 
 export const COMPOSITION_SCHEMA_VERSION = 12 as const;
 export const SCREEN_CLIP_ID = 'screen';

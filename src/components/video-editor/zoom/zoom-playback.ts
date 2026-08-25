@@ -6,20 +6,12 @@ import {
   normalizeZoomTiltAxis,
   normalizeZoomTiltIntensity,
   ZOOM_DEPTH_SCALES,
+  type AppliedZoom,
   type ZoomElement,
   type ZoomFocus,
+  type ZoomFocusMapper,
 } from './zoom-types';
 
-export interface AppliedZoom {
-  scale: number;
-  focus: ZoomFocus;
-  strength: number;
-  mode: ZoomElement['mode'];
-  tilt: number;
-  tiltHorizontal?: number;
-  tiltVertical?: number;
-}
-export type ZoomFocusMapper = (focus: ZoomFocus, zoom: AppliedZoom, timeMs: number) => ZoomFocus;
 export const ZOOM_IN_MS = 1522.575;
 export const ZOOM_OUT_MS = 1015.05;
 const LEAD_MS = 200;
