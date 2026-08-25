@@ -98,8 +98,12 @@ export const loadWebsiteLocale = async (i18n: WebsiteI18n, locale: WebsiteLocale
 };
 
 export const syncWebsiteLocale = async (locale: WebsiteLocale) => {
-  await loadWebsiteLocale(websiteI18n, locale);
-  websiteI18n.global.locale.value = locale;
-  document.documentElement.lang = locale;
-  localStorage.setItem('locale', locale);
+  try {
+    await loadWebsiteLocale(websiteI18n, locale);
+    websiteI18n.global.locale.value = locale;
+    document.documentElement.lang = locale;
+    localStorage.setItem('locale', locale);
+  } finally {
+    delete document.documentElement.dataset.localePending;
+  }
 };

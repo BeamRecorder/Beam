@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import {
   extractInlineScripts,
   hashInlineScript,
+  inlineStylesheets,
   renderHeaders,
   deduplicateSitemap,
   sitemapHtmlFiles,
@@ -28,6 +29,82 @@ const validSeoHtml = `
   </head><body><h1>Beam</h1></body></html>`;
 
 describe('build finalizer', () => {
+  it('inlines local asset stylesheets while preserving external and non-stylesheet links', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'beam-inline-styles-test-'));
+    const distDir = path.join(tempRoot, 'dist');
+
+    try {
+      await mkdir(path.join(distDir, 'assets'), { recursive: true });
+      await writeFile(path.join(distDir, 'assets', 'app.css'), '.app { color: red; }\n');
+
+      const html = [
+        '<head>',
+        '<link rel="icon" href="/favicon.webp">',
+        '<link rel="stylesheet" href="/assets/app.css">',
+        '<link rel="stylesheet" href="https://cdn.example.test/vendor.css">',
+        '</head>',
+      ].join('');
+      const result = await inlineStylesheets(html, distDir);
+
+      expect(result).toContain('<link rel="icon" href="/favicon.webp">');
+      expect(result).toContain('<link rel="stylesheet" href="https://cdn.example.test/vendor.css">');
+      expect(result).toContain('<style>.app { color: red; }\n</style>');
+      expect(result).not.toContain('<link rel="stylesheet" href="/assets/app.css">');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('resolves documentation stylesheets from the docs output directory', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'beam-inline-docs-styles-test-'));
+    const distDir = path.join(tempRoot, 'dist');
+
+    try {
+      await mkdir(path.join(distDir, 'docs', 'assets'), { recursive: true });
+      await writeFile(path.join(distDir, 'docs', 'assets', 'style.hash.css'), '.docs-page { color: blue; }\n');
+      await writeFile(path.join(distDir, 'docs', 'vp-icons.css'), '.vp-icon { display: inline-block; }\n');
+
+      const html = [
+        '<link rel="preload stylesheet" href="/docs/assets/style.hash.css" as="style">',
+        '<link rel="preload stylesheet" href="/docs/vp-icons.css" as="style">',
+        '<link rel="stylesheet" href="https://cdn.example.test/docs.css">',
+      ].join('');
+      const result = await inlineStylesheets(html, distDir);
+
+      expect(result).toContain('<style>.docs-page { color: blue; }\n</style>');
+      expect(result).toContain('<style>.vp-icon { display: inline-block; }\n</style>');
+      expect(result).toContain('<link rel="stylesheet" href="https://cdn.example.test/docs.css">');
+      expect(result).not.toContain('/docs/assets/style.hash.css');
+      expect(result).not.toContain('/docs/vp-icons.css');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('inlines multiple local stylesheets independently and keeps their document order', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'beam-inline-styles-test-'));
+    const distDir = path.join(tempRoot, 'dist');
+
+    try {
+      await mkdir(path.join(distDir, 'assets'), { recursive: true });
+      await writeFile(path.join(distDir, 'assets', 'base.css'), '/* base */\n');
+      await writeFile(path.join(distDir, 'assets', 'page.css'), '/* page */\n');
+
+      const html =
+        '<link rel="stylesheet" href="/assets/base.css"><main>content</main><link rel="stylesheet" href="/assets/page.css">';
+      const result = await inlineStylesheets(html, distDir);
+
+      expect(result).toContain('<style>/* base */\n</style>');
+      expect(result).toContain('<style>/* page */\n</style>');
+      expect(result.indexOf('/* base */')).toBeLessThan(result.indexOf('<main>content</main>'));
+      expect(result.indexOf('<main>content</main>')).toBeLessThan(result.indexOf('/* page */'));
+      expect(result).not.toContain('/assets/base.css');
+      expect(result).not.toContain('/assets/page.css');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
   it('extracts inline scripts but skips external and empty scripts', () => {
     const html =
       '<script src="/app.js"></script><script>one()</script><script>two()</script><script type="application/ld+json">{"name":"Beam"}</script><script></script>';
@@ -199,6 +276,18 @@ describe('build finalizer', () => {
           ),
         ),
       );
+      await mkdir(path.join(docsDir, 'assets'), { recursive: true });
+      await writeFile(path.join(docsDir, 'assets', 'style.hash.css'), '.docs-page { color: blue; }\n');
+      await writeFile(path.join(docsDir, 'vp-icons.css'), '.vp-icon { display: inline-block; }\n');
+      const docsIndexFile = path.join(docsDir, 'index.html');
+      const docsIndex = await readFile(docsIndexFile, 'utf8');
+      await writeFile(
+        docsIndexFile,
+        docsIndex.replace(
+          '</head>',
+          '<link rel="preload stylesheet" href="/docs/assets/style.hash.css" as="style"><link rel="preload stylesheet" href="/docs/vp-icons.css" as="style"><link rel="stylesheet" href="https://cdn.example.test/docs.css"></head>',
+        ),
+      );
       await writeFile(path.join(distDir, 'index.html'), seoHtml('https://beam.plinka.eu/'));
       await writeFile(path.join(distDir, 'faq.html'), seoHtml('https://beam.plinka.eu/faq'));
       await writeFile(path.join(distDir, 'install.html'), seoHtml('https://beam.plinka.eu/install'));
@@ -218,6 +307,13 @@ describe('build finalizer', () => {
       const finalizerUrl = pathToFileURL(path.join(process.cwd(), 'scripts/finalize-build.mjs')).href;
       const finalizerScript = `import { finalizeBuild } from ${JSON.stringify(finalizerUrl)}; await finalizeBuild(${JSON.stringify({ distDir, templateFile })});`;
       await execFileAsync(process.execPath, ['--input-type=module', '--eval', finalizerScript]);
+
+      const finalizedDocsIndex = await readFile(docsIndexFile, 'utf8');
+      expect(finalizedDocsIndex).toContain('<style>.docs-page { color: blue; }\n</style>');
+      expect(finalizedDocsIndex).toContain('<style>.vp-icon { display: inline-block; }\n</style>');
+      expect(finalizedDocsIndex).toContain('<link rel="stylesheet" href="https://cdn.example.test/docs.css">');
+      expect(finalizedDocsIndex).not.toContain('/docs/assets/style.hash.css');
+      expect(finalizedDocsIndex).not.toContain('/docs/vp-icons.css');
 
       expect(await readFile(path.join(distDir, 'robots.txt'), 'utf8')).toBe(
         [

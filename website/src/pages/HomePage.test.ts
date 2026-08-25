@@ -73,7 +73,9 @@ describe('HomePage', () => {
     expect(features.get('.feature-section__intro p').text()).toBe(
       'Built for speed and precision, from first cut to final export.',
     );
-    expect(features.findAll('.feature-card')).toHaveLength(6);
+    const featureCards = features.findAll('.feature-card');
+
+    expect(featureCards).toHaveLength(6);
     expect(features.findAll('h3').map((title) => title.text())).toEqual([
       'Recorder app',
       'Video editor',
@@ -84,6 +86,24 @@ describe('HomePage', () => {
     ]);
     expect(features.findAll('video')).toHaveLength(1);
     expect(features.findAll('img')).toHaveLength(5);
+
+    const mobileImageCandidates = new Map([
+      ['Video editor', '/features/editor-400.webp'],
+      ['Custom backgrounds', '/features/backgrounds-400.webp'],
+      ['Precise zoom controls', '/features/zooms-400.webp'],
+      ['Export your way', '/features/export-settings-400.webp'],
+    ]);
+
+    for (const [title, src] of mobileImageCandidates) {
+      const card = featureCards.find((candidate) => candidate.get('h3').text() === title);
+
+      expect(card, `Missing feature card: ${title}`).toBeDefined();
+      expect(card?.find('picture source').attributes()).toMatchObject({
+        media: '(max-width: 760px)',
+        srcset: src,
+      });
+    }
+
     expect(features.findAll('.feature-card__media--product')).toHaveLength(2);
     expect(features.get('.feature-card__media--product .feature-card__backdrop').attributes('style')).toContain(
       'product-backdrop.webp',

@@ -80,7 +80,10 @@ describe('WebsiteFeatureSection', () => {
     const cards = wrapper.findAll('.feature-card');
     const images = wrapper.findAll('img');
 
-    expect(wrapper.get('h2').text()).toBe('A powerful editor.');
+    const title = wrapper.get('h2');
+
+    expect(title.text()).toBe('A powerful editor.');
+    expect(title.findAll('.feature-section__punctuation').map((part) => part.text())).toEqual(['.']);
     expect(wrapper.get('.feature-section__intro p').text()).toBe(
       'Built for speed and precision, from first cut to final export.',
     );

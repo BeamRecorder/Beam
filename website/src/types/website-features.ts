@@ -3,6 +3,7 @@ export interface WebsiteFeatureImage {
   src: string;
   srcset: string;
   sizes: string;
+  mobileSrc?: string;
   width: number;
   height: number;
   fit?: 'cover' | 'contain';

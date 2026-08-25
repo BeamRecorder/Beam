@@ -1,12 +1,21 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import type { WebsiteFeature } from '@website/types/website-features';
 
-defineProps<{
+const props = defineProps<{
   title: string;
   description: string;
   features: readonly WebsiteFeature[];
 }>();
+
+const TITLE_PUNCTUATION = /([.!?。！？।]+)/u;
+const ONLY_TITLE_PUNCTUATION = /^[.!?。！？।]+$/u;
+const titleParts = computed(() =>
+  props.title
+    .split(TITLE_PUNCTUATION)
+    .filter(Boolean)
+    .map((text) => ({ text, punctuation: ONLY_TITLE_PUNCTUATION.test(text) })),
+);
 
 const section = ref<HTMLElement | null>(null);
 const videoMediaReady = ref(false);
@@ -37,7 +46,14 @@ onBeforeUnmount(() => observer?.disconnect());
 <template>
   <section ref="section" class="feature-section" aria-labelledby="feature-section-title">
     <header class="feature-section__intro">
-      <h2 id="feature-section-title">{{ title }}</h2>
+      <h2 id="feature-section-title">
+        <span
+          v-for="(part, index) in titleParts"
+          :key="`${part.text}-${index}`"
+          :class="{ 'feature-section__punctuation': part.punctuation }"
+          >{{ part.text }}</span
+        >
+      </h2>
       <p>{{ description }}</p>
     </header>
 
@@ -65,17 +81,19 @@ onBeforeUnmount(() => observer?.disconnect());
             :style="{ backgroundImage: `url(${feature.media.poster})` }"
             aria-hidden="true"
           />
-          <img
-            v-if="feature.media.type === 'image'"
-            :src="feature.media.src"
-            :srcset="feature.media.srcset"
-            :sizes="feature.media.sizes"
-            :width="feature.media.width"
-            :height="feature.media.height"
-            alt=""
-            loading="lazy"
-            decoding="async"
-          />
+          <picture v-if="feature.media.type === 'image'">
+            <source v-if="feature.media.mobileSrc" media="(max-width: 760px)" :srcset="feature.media.mobileSrc" />
+            <img
+              :src="feature.media.src"
+              :srcset="feature.media.srcset"
+              :sizes="feature.media.sizes"
+              :width="feature.media.width"
+              :height="feature.media.height"
+              alt=""
+              loading="lazy"
+              decoding="async"
+            />
+          </picture>
           <video
             v-else
             :src="videoMediaReady ? feature.media.src : undefined"
@@ -118,6 +136,11 @@ onBeforeUnmount(() => observer?.disconnect());
   line-height: 0.98;
 }
 
+.feature-section__punctuation {
+  display: inline-block;
+  margin: 0 0.14em 0 0.08em;
+}
+
 .feature-section__intro p {
   max-width: 600px;
   margin: 0;
@@ -158,6 +181,10 @@ onBeforeUnmount(() => observer?.disconnect());
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.feature-card__media picture {
+  display: contents;
 }
 
 .feature-card__media--contained img {

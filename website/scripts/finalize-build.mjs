@@ -24,6 +24,30 @@ export const extractInlineScripts = (html) =>
 export const hashInlineScript = (content) =>
   `'sha256-${createHash('sha256').update(content, 'utf8').digest('base64')}'`;
 
+export const inlineStylesheets = async (html, distDir, stylesheetCache = new Map()) => {
+  const links = [
+    ...html.matchAll(
+      /<link\b(?=[^>]*\brel=["'][^"']*\bstylesheet\b[^"']*["'])(?=[^>]*\bhref=["'](\/[^"'?#]+\.css)["'])[^>]*>/gi,
+    ),
+  ];
+  const replacements = await Promise.all(
+    links.map(async (link) => {
+      const href = link[1];
+      const relativePath = decodeURIComponent(href).replace(/^\/+/, '');
+      const fileName = path.resolve(distDir, relativePath);
+      const resolvedDistDir = `${path.resolve(distDir)}${path.sep}`;
+      if (!fileName.startsWith(resolvedDistDir)) throw new Error(`Stylesheet escapes build output: ${href}`);
+      let css = stylesheetCache.get(fileName);
+      if (css === undefined) {
+        css = await readFile(fileName, 'utf8');
+        stylesheetCache.set(fileName, css);
+      }
+      return [link[0], `<style>${css.replaceAll('</style', '<\\/style')}</style>`];
+    }),
+  );
+  return replacements.reduce((document, [link, style]) => document.replace(link, style), html);
+};
+
 export const renderHeaders = (template, scripts) => {
   const hashes = [...new Set(scripts.map(hashInlineScript))].sort().join(' ');
   const rendered = template.replace('{{SCRIPT_HASHES}}', hashes);
@@ -83,18 +107,17 @@ export const deduplicateSitemap = (sitemap) => {
   });
 };
 
-export const sitemapHtmlFiles = (sitemap, origin = 'https://beam.plinka.eu') =>
-  [
-    ...new Set(
-      [...sitemap.matchAll(/<loc>\s*([^<]+)\s*<\/loc>/g)].flatMap((match) => {
-        const url = new URL(match[1].trim());
-        if (url.origin !== origin) throw new Error(`Unexpected sitemap origin: ${url.origin}`);
-        const pathname = decodeURIComponent(url.pathname);
-        if (pathname === '/404' || pathname.endsWith('/404')) return [];
-        return pathname.endsWith('/') ? [`${pathname.slice(1)}index.html`] : [`${pathname.slice(1)}.html`];
-      }),
-    ),
-  ];
+export const sitemapHtmlFiles = (sitemap, origin = 'https://beam.plinka.eu') => [
+  ...new Set(
+    [...sitemap.matchAll(/<loc>\s*([^<]+)\s*<\/loc>/g)].flatMap((match) => {
+      const url = new URL(match[1].trim());
+      if (url.origin !== origin) throw new Error(`Unexpected sitemap origin: ${url.origin}`);
+      const pathname = decodeURIComponent(url.pathname);
+      if (pathname === '/404' || pathname.endsWith('/404')) return [];
+      return pathname.endsWith('/') ? [`${pathname.slice(1)}index.html`] : [`${pathname.slice(1)}.html`];
+    }),
+  ),
+];
 
 export const finalizeBuild = async (options = {}) => {
   const websiteRoot = fileURLToPath(new URL('..', import.meta.url));
@@ -108,8 +131,12 @@ export const finalizeBuild = async (options = {}) => {
   validateSitemap(rootSitemap, rootSitemapFile);
   validateSitemap(docsSitemap, docsSitemapFile);
   const seoFiles = ['index.html', 'faq.html', 'install.html', ...sitemapHtmlFiles(docsSitemap)];
+  const stylesheetCache = new Map();
   for (const relativeFile of seoFiles) {
-    const html = await readFile(path.join(distDir, relativeFile), 'utf8');
+    const fileName = path.join(distDir, relativeFile);
+    let html = await readFile(fileName, 'utf8');
+    html = await inlineStylesheets(html, distDir, stylesheetCache);
+    await writeFile(fileName, html, 'utf8');
     validateSeoHtml(html, relativeFile);
   }
 

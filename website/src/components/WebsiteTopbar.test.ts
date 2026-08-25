@@ -52,13 +52,34 @@ const mountTopbar = () => {
 afterEach(() => {
   for (const wrapper of mounted.splice(0)) wrapper.unmount();
   document.body.innerHTML = '';
+  vi.useRealTimers();
   vi.clearAllMocks();
 });
 
 describe('WebsiteTopbar', () => {
-  it('loads only the star count used by the topbar', () => {
+  it('defers the decorative star count until 1500ms after the window load event', async () => {
+    vi.useFakeTimers();
     mountTopbar();
+
+    expect(githubState.loadStars).not.toHaveBeenCalled();
+
+    window.dispatchEvent(new Event('load'));
+    await vi.advanceTimersByTimeAsync(1499);
+    expect(githubState.loadStars).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1);
     expect(githubState.loadStars).toHaveBeenCalledOnce();
+  });
+
+  it('cancels the deferred star request when the topbar is unmounted', async () => {
+    vi.useFakeTimers();
+    const wrapper = mountTopbar();
+
+    window.dispatchEvent(new Event('load'));
+    wrapper.unmount();
+    await vi.advanceTimersByTimeAsync(1500);
+
+    expect(githubState.loadStars).not.toHaveBeenCalled();
   });
 
   it('keeps the language selector outside the mobile-removable theme control', () => {

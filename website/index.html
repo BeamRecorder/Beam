@@ -16,6 +16,42 @@
           root.dataset.theme = preference;
           root.classList.toggle('dark', dark);
           root.style.colorScheme = dark ? 'dark' : 'light';
+
+          const locales = [
+            'en',
+            'fr',
+            'es',
+            'de',
+            'ru',
+            'bg',
+            'zh-CN',
+            'ko',
+            'pt-BR',
+            'ja',
+            'it',
+            'pl',
+            'zh-TW',
+            'hi',
+            'vi',
+          ];
+          const storedLocale = localStorage.getItem('locale');
+          const languages = navigator.languages?.length ? navigator.languages : [navigator.language];
+          const normalizeLocale = (language) => {
+            const value = language.toLowerCase();
+            const candidate =
+              value.startsWith('zh-tw') || value.startsWith('zh-hk')
+                ? 'zh-TW'
+                : value.startsWith('zh')
+                  ? 'zh-CN'
+                  : value.startsWith('pt-br')
+                    ? 'pt-BR'
+                    : value.split('-')[0];
+            return locales.includes(candidate) ? candidate : null;
+          };
+          const locale = locales.includes(storedLocale)
+            ? storedLocale
+            : languages.map(normalizeLocale).find(Boolean) || 'en';
+          if (locale !== 'en') root.dataset.localePending = '';
         } catch {}
       })();
     </script>

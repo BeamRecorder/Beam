@@ -48,6 +48,10 @@ textarea {
   margin: 0 auto;
 }
 
+:root[data-locale-pending] .website-hero {
+  visibility: hidden;
+}
+
 .hero-actions,
 .secondary-action {
   display: flex;

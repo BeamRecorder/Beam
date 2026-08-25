@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed, onBeforeUnmount, onMounted } from 'vue';
 import { BookOpen, CircleHelp, Star } from '@lucide/vue';
 import { useGitHubRepository } from '@website/composables/useGitHubRepository';
 import { detectPlatform, type WebsitePlatform } from '@website/lib/platform-downloads';
@@ -16,8 +16,24 @@ const emit = defineEmits<{ install: [platform: WebsitePlatform | null]; home: []
 const github = useGitHubRepository();
 const { t } = useI18n();
 const platform = computed(() => (typeof navigator === 'undefined' ? 'windows' : detectPlatform(navigator)));
+let starsTimer: number | null = null;
 
-onMounted(() => void github.loadStars());
+const scheduleStars = () => {
+  starsTimer = window.setTimeout(() => {
+    starsTimer = null;
+    void github.loadStars();
+  }, 1_500);
+};
+
+onMounted(() => {
+  if (document.readyState === 'complete') scheduleStars();
+  else window.addEventListener('load', scheduleStars, { once: true });
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('load', scheduleStars);
+  if (starsTimer !== null) window.clearTimeout(starsTimer);
+});
 </script>
 
 <template>
