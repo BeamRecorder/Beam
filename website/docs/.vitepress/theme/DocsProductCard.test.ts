@@ -84,7 +84,7 @@ describe('DocsProductCard', () => {
       'editor',
       'Video editor',
       '/showcase/Beam-showcase-editor-400.webp',
-      '/showcase/Beam-showcase-editor-400.webp 400w, /showcase/Beam-showcase-editor-600.webp 600w, /showcase/Beam-showcase-editor-800.webp 800w',
+      '/showcase/Beam-showcase-editor-400.webp 400w, /showcase/Beam-showcase-editor-500.webp 500w, /showcase/Beam-showcase-editor-600.webp 600w, /showcase/Beam-showcase-editor-800.webp 800w',
       '(max-width: 720px) calc(90vw - 44px), 326px',
       '400',
       '250',

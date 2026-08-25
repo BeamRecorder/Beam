@@ -30,6 +30,7 @@ const screenshot = computed(() => {
           src: '/showcase/Beam-showcase-editor-400.webp',
           sources: [
             ['/showcase/Beam-showcase-editor-400.webp', 400],
+            ['/showcase/Beam-showcase-editor-500.webp', 500],
             ['/showcase/Beam-showcase-editor-600.webp', 600],
             ['/showcase/Beam-showcase-editor-800.webp', 800],
           ] as const,

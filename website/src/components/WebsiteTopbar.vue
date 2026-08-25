@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
-import { BookOpen, CircleHelp, Download, Star } from '@lucide/vue';
+import { BookOpen, CircleHelp, Star } from '@lucide/vue';
 import { useGitHubRepository } from '@website/composables/useGitHubRepository';
 import { detectPlatform, type WebsitePlatform } from '@website/lib/platform-downloads';
 import beamIconUrl from '../assets/beam-icon-72.webp';
@@ -9,6 +9,7 @@ import githubIconUrl from '../../../public/github.svg';
 import WebsiteThemeSelector from '@website/components/WebsiteThemeSelector.vue';
 import WebsiteLanguageSelector from '@website/components/WebsiteLanguageSelector.vue';
 import WebsitePlatformIcon from '@website/components/WebsitePlatformIcon.vue';
+import Button from '~/ui/button/Button.vue';
 import { useI18n } from 'vue-i18n';
 
 const emit = defineEmits<{ install: [platform: WebsitePlatform | null]; home: [] }>();
@@ -60,15 +61,15 @@ onMounted(() => void github.loadStars());
           <span class="header-theme-control"><WebsiteThemeSelector /></span>
           <template #placeholder><span class="selector-placeholder" aria-hidden="true" /></template>
         </ClientOnly>
-        <a
+        <Button
           class="install-button"
           :href="platform ? `/install?os=${platform}` : '/install'"
+          size="md"
           @click.prevent="emit('install', platform)"
         >
-          <WebsitePlatformIcon v-if="platform" :platform="platform" />
-          <span>{{ t('Website.nav.install') }}</span>
-          <Download aria-hidden="true" />
-        </a>
+          <template v-if="platform" #icon><WebsitePlatformIcon :platform="platform" /></template>
+          {{ t('Website.nav.install') }}
+        </Button>
       </div>
     </div>
   </header>
@@ -90,15 +91,14 @@ onMounted(() => void github.loadStars());
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 24px;
-  width: min(100% - 40px, 1240px);
+  width: min(calc(100vw - 120px), 1400px);
   min-height: 72px;
   margin: 0 auto;
 }
 .brand,
 .site-nav,
 .site-nav a,
-.header-actions,
-.install-button {
+.header-actions {
   display: flex;
   align-items: center;
 }
@@ -149,8 +149,7 @@ onMounted(() => void github.loadStars());
   background: var(--color-header-control-hover);
   color: var(--text-primary);
 }
-.site-nav a:active,
-.install-button:active {
+.site-nav a:active {
   transform: translateY(1px);
 }
 .site-nav svg,
@@ -177,30 +176,6 @@ onMounted(() => void github.loadStars());
 .github-stars svg:last-child {
   width: 13px;
   color: var(--color-primary);
-}
-.install-button {
-  gap: 9px;
-  min-height: 42px;
-  padding: 0 14px;
-  border: 1px solid var(--color-primary-border);
-  border-radius: 10px;
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-  font-size: 14px;
-  font-weight: 780;
-  text-decoration: none;
-  box-shadow: inset 0 1px rgba(255, 255, 255, 0.24);
-  transition:
-    background 160ms ease,
-    transform 160ms ease;
-}
-.install-button:hover {
-  background: var(--color-primary-hover);
-}
-.install-button .platform-icon,
-.install-button svg {
-  width: 17px;
-  height: 17px;
 }
 @media (max-width: 959px) {
   .site-header__inner {
@@ -235,12 +210,8 @@ onMounted(() => void github.loadStars());
 }
 @media (max-width: 480px) {
   .brand span,
-  .install-button svg,
   .github-stars svg:last-child {
     display: none;
-  }
-  .install-button {
-    padding: 0 11px;
   }
 }
 @media (prefers-reduced-transparency: reduce) {

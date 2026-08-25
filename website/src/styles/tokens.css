@@ -73,7 +73,8 @@
 }
 
 :root[data-theme='dark'] {
-  --color-primary-hover: #ff7140;
+  --color-primary: #ff7140;
+  --color-primary-hover: #ff8a60;
   --color-primary-light: rgba(255, 90, 31, 0.12);
   --color-primary-border: rgba(255, 90, 31, 0.42);
   --color-focus-ring: #ff8a60;
@@ -103,7 +104,8 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]),
   :root[data-theme='system'] {
-    --color-primary-hover: #ff7140;
+    --color-primary: #ff7140;
+    --color-primary-hover: #ff8a60;
     --color-primary-light: rgba(255, 90, 31, 0.12);
     --color-primary-border: rgba(255, 90, 31, 0.42);
     --color-focus-ring: #ff8a60;

@@ -40,11 +40,10 @@ describe('HomePage', () => {
     vi.restoreAllMocks();
   });
 
-  it('presents the concise English hero and static Beam showcase', () => {
+  it('presents the concise English hero and product feature grid', () => {
     const wrapper = mountHome();
     const hero = wrapper.get('.website-hero');
-    const showcase = wrapper.get('#editor-demo');
-    const image = showcase.get('img');
+    const features = wrapper.get('#editor-demo');
 
     expect(wrapper.get('#hero-title').text()).toBe('Record. Edit. Share.');
     expect(
@@ -70,14 +69,26 @@ describe('HomePage', () => {
     expect(wrapper.find('.hero-drag').exists()).toBe(false);
     expect(wrapper.find('.hero-drag__cursor').exists()).toBe(false);
     expect(wrapper.find('[data-testid="project-loader"]').exists()).toBe(false);
-    expect(image.attributes('src')).toBe('/Beam-showcase-1200.webp');
-    expect(image.attributes('srcset')).toContain('/Beam-showcase-480.webp 480w');
-    expect(image.attributes('srcset')).toContain('/Beam-showcase-720.webp 720w');
-    expect(image.attributes('srcset')).toContain('/Beam-showcase-1672.webp 1672w');
-    expect(image.attributes('sizes')).toContain('calc(100vw - 24px)');
-    expect(image.attributes('alt')).toBe('Beam recorder and video editor shown side by side');
-    expect(image.attributes('width')).toBe('1672');
-    expect(image.attributes('height')).toBe('941');
+    expect(features.get('h2').text()).toBe('A powerful editor.');
+    expect(features.get('.feature-section__intro p').text()).toBe(
+      'Built for speed and precision, from first cut to final export.',
+    );
+    expect(features.findAll('.feature-card')).toHaveLength(6);
+    expect(features.findAll('h3').map((title) => title.text())).toEqual([
+      'Recorder app',
+      'Video editor',
+      'Custom backgrounds',
+      'Precise zoom controls',
+      '3D zooms',
+      'Export your way',
+    ]);
+    expect(features.findAll('video')).toHaveLength(1);
+    expect(features.findAll('img')).toHaveLength(5);
+    expect(features.findAll('.feature-card__media--product')).toHaveLength(2);
+    expect(features.get('.feature-card__media--product .feature-card__backdrop').attributes('style')).toContain(
+      'product-backdrop.webp',
+    );
+    expect(wrapper.find('.showcase-image').exists()).toBe(false);
   });
 
   it('does not render the removed hero explore action', () => {
@@ -100,5 +111,6 @@ describe('HomePage', () => {
     expect(community.text()).toContain('Join Discord');
     expect(wrapper.text()).toContain('Download Beam — Free');
     expect(wrapper.find('a[href="https://github.com/BeamRecorder/Beam"]').exists()).toBe(true);
+    expect(wrapper.get('.contributors img').attributes('src')).toBe('/beam-contributors.svg');
   });
 });

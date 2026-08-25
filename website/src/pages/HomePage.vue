@@ -3,13 +3,89 @@ import { computed } from 'vue';
 import { Code2, ExternalLink } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import Button from '~/ui/button/Button.vue';
+import WebsiteFeatureSection from '@website/components/WebsiteFeatureSection.vue';
 import WebsiteHero from '@website/components/WebsiteHero.vue';
 import WebsiteShaderPanel from '@website/components/WebsiteShaderPanel.vue';
 import { createHomeJsonLd } from '@website/seo/json-ld';
 import { usePageSeo } from '@website/seo/use-page-seo';
+import type { WebsiteFeature } from '@website/types/website-features';
 import discordIconUrl from '../../../public/discord_svg.svg';
 
 const { t } = useI18n();
+
+const features = computed<WebsiteFeature[]>(() => [
+  {
+    title: t('Website.home.featureRecorder'),
+    media: {
+      type: 'image',
+      src: '/features/recorder.webp',
+      srcset: '/features/recorder.webp 320w',
+      sizes: '(max-width: 760px) 320px, 420px',
+      width: 320,
+      height: 480,
+      fit: 'contain',
+      containShape: 'portrait',
+      backdrop: '/features/product-backdrop.webp',
+    },
+  },
+  {
+    title: t('Website.home.featureEditor'),
+    media: {
+      type: 'image',
+      src: '/features/editor.webp',
+      srcset: '/features/editor.webp 800w',
+      sizes: '(max-width: 760px) calc(100vw - 48px), 600px',
+      width: 800,
+      height: 500,
+      fit: 'contain',
+      containShape: 'landscape',
+      backdrop: '/features/product-backdrop.webp',
+    },
+  },
+  {
+    title: t('Website.home.featureBackgrounds'),
+    media: {
+      type: 'image',
+      src: '/features/backgrounds-640.webp',
+      srcset: '/features/backgrounds-640.webp 640w, /features/backgrounds-960.webp 960w',
+      sizes: '(max-width: 760px) calc(100vw - 24px), 390px',
+      width: 640,
+      height: 640,
+    },
+  },
+  {
+    title: t('Website.home.featureZoomControls'),
+    media: {
+      type: 'image',
+      src: '/features/zooms-640.webp',
+      srcset: '/features/zooms-640.webp 640w, /features/zooms-960.webp 960w',
+      sizes: '(max-width: 760px) calc(100vw - 24px), 390px',
+      width: 640,
+      height: 640,
+    },
+  },
+  {
+    title: t('Website.home.feature3dZooms'),
+    media: {
+      type: 'video',
+      src: '/features/tilt-zoom-full.webm',
+      poster: '/features/tilt-zoom-full-poster.webp',
+      width: 1280,
+      height: 720,
+    },
+  },
+  {
+    title: t('Website.home.featureExport'),
+    media: {
+      type: 'image',
+      src: '/features/export-settings-640.webp',
+      srcset: '/features/export-settings-640.webp 640w, /features/export-settings-960.webp 960w',
+      sizes: '(max-width: 760px) calc(100vw - 24px), 640px',
+      width: 640,
+      height: 640,
+    },
+  },
+]);
 
 usePageSeo({
   path: '/',
@@ -26,29 +102,12 @@ const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
     <main id="top">
       <WebsiteHero />
 
-      <section id="editor-demo" class="content-section showcase-section">
-        <div class="section-intro">
-          <h2>{{ t('Website.home.editorTitle') }}</h2>
-          <p>{{ t('Website.home.editorText') }}</p>
-        </div>
-        <img
-          class="showcase-image"
-          src="/Beam-showcase-1200.webp"
-          srcset="
-            /Beam-showcase-480.webp   480w,
-            /Beam-showcase-720.webp   720w,
-            /Beam-showcase-800.webp   800w,
-            /Beam-showcase-1200.webp 1200w,
-            /Beam-showcase-1672.webp 1672w
-          "
-          sizes="(max-width: 620px) calc(100vw - 24px), min(calc(100vw - 40px), 1440px)"
-          :alt="t('Website.home.showcaseAlt')"
-          width="1672"
-          height="941"
-          loading="lazy"
-          decoding="async"
-        />
-      </section>
+      <WebsiteFeatureSection
+        id="editor-demo"
+        :title="t('Website.home.featuresTitle')"
+        :description="t('Website.home.featuresText')"
+        :features="features"
+      />
 
       <section class="free-statement" aria-labelledby="free-title">
         <div>
@@ -84,11 +143,12 @@ const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
           rel="noreferrer"
         >
           <img
-            src="https://contrib.rocks/image?repo=BeamRecorder/Beam"
+            src="/beam-contributors.svg"
             :alt="t('Website.home.contributorsAlt')"
-            width="314"
-            height="48"
+            width="200"
+            height="64"
             loading="lazy"
+            decoding="async"
           />
           <span>{{ t('Website.home.contributorsFallback') }}</span>
         </a>

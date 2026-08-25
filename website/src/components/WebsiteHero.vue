@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { Code2, Download, Pause, Play } from '@lucide/vue';
+import { Code2, Pause, Play } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
+import Button from '~/ui/button/Button.vue';
+import WebsitePlatformIcon from '@website/components/WebsitePlatformIcon.vue';
+import { detectPlatform } from '@website/lib/platform-downloads';
 
 const { t } = useI18n();
+const platform = computed(() => (typeof navigator === 'undefined' ? 'windows' : detectPlatform(navigator)));
 const video = ref<HTMLVideoElement | null>(null);
 const isVideoPaused = ref(false);
 
@@ -48,9 +52,10 @@ const toggleVideo = async () => {
         <span>{{ t('Website.home.availabilityPlatforms') }}</span>
       </div>
       <div class="hero-actions">
-        <a class="hero-primary-action" href="/install">
-          <Download aria-hidden="true" /> {{ t('Website.home.downloadFree') }}
-        </a>
+        <Button :href="platform ? `/install?os=${platform}` : '/install'" size="lg">
+          <template v-if="platform" #icon><WebsitePlatformIcon :platform="platform" /></template>
+          {{ t('Website.home.downloadFree') }}
+        </Button>
         <a class="secondary-action" href="https://github.com/BeamRecorder/Beam" target="_blank" rel="noreferrer">
           <Code2 aria-hidden="true" /> {{ t('Website.home.viewGitHub') }}
         </a>

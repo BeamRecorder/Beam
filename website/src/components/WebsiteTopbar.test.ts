@@ -1,6 +1,7 @@
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createWebsiteI18n } from '../i18n';
+import Button from '~/ui/button/Button.vue';
 
 const githubState = vi.hoisted(() => ({
   stars: { value: 42 },
@@ -76,8 +77,11 @@ describe('WebsiteTopbar', () => {
     expect(wrapper.find('nav.site-nav a[href="/docs/"]').exists()).toBe(true);
     expect(wrapper.find('nav.site-nav a[href="/faq"]').exists()).toBe(true);
 
-    const installButton = wrapper.get<HTMLAnchorElement>('.install-button');
+    const installButton = wrapper.getComponent(Button).get<HTMLAnchorElement>('a');
     expect(installButton.text()).toContain('Install');
+    expect(installButton.classes()).toContain('btn-primary');
+    expect(installButton.classes()).toContain('btn-md');
+    expect(installButton.find('.platform-icon').exists()).toBe(true);
     expect(installButton.attributes('href')).toMatch(/^\/install(?:\?os=(?:windows|macos|linux))?$/);
   });
 });

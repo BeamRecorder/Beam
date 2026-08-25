@@ -22,6 +22,7 @@ const props = withDefaults(
     tooltipDelay?: number;
     tooltipDisabled?: boolean;
     type?: 'button' | 'submit' | 'reset';
+    href?: string;
     icon?: Component;
     iconOnly?: boolean;
   }>(),
@@ -109,7 +110,16 @@ const handleClick = (event: MouseEvent) => {
     "
     :class="['btn-container', { 'btn-block': block }]"
   >
-    <button v-bind="$attrs" :type="type" :class="buttonClasses" :disabled="disabled || loading" @click="handleClick">
+    <component
+      :is="href ? 'a' : 'button'"
+      v-bind="$attrs"
+      :href="href"
+      :type="href ? undefined : type"
+      :class="buttonClasses"
+      :disabled="href ? undefined : disabled || loading"
+      :aria-disabled="href && (disabled || loading) ? 'true' : undefined"
+      @click="handleClick"
+    >
       <Loader v-if="loading" class="icon-spin btn-icon" />
       <span v-if="icon && !$slots.icon && !loading" class="btn-icon-wrapper">
         <component :is="icon" class="btn-icon" />
@@ -126,7 +136,7 @@ const handleClick = (event: MouseEvent) => {
       >
         <span ref="contentLabel" class="btn-content-label"><slot /></span>
       </span>
-    </button>
+    </component>
   </component>
 </template>
 
@@ -154,6 +164,7 @@ const handleClick = (event: MouseEvent) => {
   border: 1px solid transparent;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
   white-space: nowrap;
   user-select: none;
   min-width: 0;
@@ -163,7 +174,8 @@ const handleClick = (event: MouseEvent) => {
   width: 100%;
 }
 
-.btn:disabled {
+.btn:disabled,
+.btn[aria-disabled='true'] {
   opacity: 0.6;
   cursor: not-allowed;
 }
@@ -198,11 +210,11 @@ const handleClick = (event: MouseEvent) => {
   background-color: var(--color-primary);
   color: white;
 }
-.btn-primary:hover:not(:disabled) {
+.btn-primary:hover:not(:disabled, [aria-disabled='true']) {
   background-color: var(--color-primary-hover);
   transform: translateY(-1px);
 }
-.btn-primary:active:not(:disabled) {
+.btn-primary:active:not(:disabled, [aria-disabled='true']) {
   transform: translateY(0);
 }
 

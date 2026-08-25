@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import { createWebsiteI18n } from '../i18n';
 import WebsiteHero from './WebsiteHero.vue';
+import Button from '~/ui/button/Button.vue';
 
 const mountHero = () =>
   mount(WebsiteHero, {
@@ -20,6 +21,17 @@ describe('WebsiteHero', () => {
     expect(columns[1]?.classList.contains('website-hero__media')).toBe(true);
     expect(wrapper.get('.website-hero__copy').text()).toContain('Record. Edit. Share.');
     expect(wrapper.get('.website-hero__media').find('video').exists()).toBe(true);
+  });
+
+  it('uses the shared Button with the detected platform icon', () => {
+    const wrapper = mountHero();
+    const installButton = wrapper.getComponent(Button).get<HTMLAnchorElement>('a');
+
+    expect(installButton.classes()).toContain('btn-primary');
+    expect(installButton.attributes('href')).toMatch(/^\/install\?os=(?:windows|macos|linux)$/);
+    expect(installButton.text()).toBe('Download Beam — Free');
+    expect(installButton.find('.platform-icon').exists()).toBe(true);
+    expect(wrapper.find('.hero-primary-action').exists()).toBe(false);
   });
 
   it('uses one native WebM source with immediate autoplay settings', () => {

@@ -300,7 +300,10 @@ body {
 }
 
 .VPButton {
+  display: inline-flex !important;
   min-height: 44px;
+  align-items: center;
+  justify-content: center;
   border-radius: var(--radius-md) !important;
   font-weight: 720 !important;
   transition:
@@ -316,7 +319,7 @@ body {
 .VPButton.brand {
   border-color: var(--color-primary) !important;
   background: var(--color-primary) !important;
-  color: var(--color-on-primary) !important;
+  color: white !important;
 }
 
 .VPButton.brand:hover {
