@@ -1,29 +1,46 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
-import { BookOpen, CircleHelp, Download, Star } from '@lucide/vue';
+import { computed, onBeforeUnmount, onMounted } from 'vue';
+import { BookOpen, CircleHelp, Star } from '@lucide/vue';
 import { useGitHubRepository } from '@website/composables/useGitHubRepository';
 import { detectPlatform, type WebsitePlatform } from '@website/lib/platform-downloads';
-import { demoMedia } from '@website/demo/website-demo-fixture';
+import beamIconUrl from '../assets/beam-icon-72.webp';
 import discordIconUrl from '../../../public/discord_svg.svg';
 import githubIconUrl from '../../../public/github.svg';
 import WebsiteThemeSelector from '@website/components/WebsiteThemeSelector.vue';
 import WebsiteLanguageSelector from '@website/components/WebsiteLanguageSelector.vue';
 import WebsitePlatformIcon from '@website/components/WebsitePlatformIcon.vue';
+import Button from '~/ui/button/Button.vue';
 import { useI18n } from 'vue-i18n';
 
 const emit = defineEmits<{ install: [platform: WebsitePlatform | null]; home: [] }>();
 const github = useGitHubRepository();
 const { t } = useI18n();
 const platform = computed(() => (typeof navigator === 'undefined' ? 'windows' : detectPlatform(navigator)));
+let starsTimer: number | null = null;
 
-onMounted(() => void github.load());
+const scheduleStars = () => {
+  starsTimer = window.setTimeout(() => {
+    starsTimer = null;
+    void github.loadStars();
+  }, 1_500);
+};
+
+onMounted(() => {
+  if (document.readyState === 'complete') scheduleStars();
+  else window.addEventListener('load', scheduleStars, { once: true });
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('load', scheduleStars);
+  if (starsTimer !== null) window.clearTimeout(starsTimer);
+});
 </script>
 
 <template>
   <header class="site-header">
     <div class="site-header__inner">
       <a class="brand" href="/" :aria-label="t('Website.nav.homeAria')" @click.prevent="emit('home')">
-        <img :src="demoMedia.iconUrl" alt="" />
+        <img :src="beamIconUrl" alt="" />
         <span>Beam</span>
       </a>
 
@@ -57,18 +74,18 @@ onMounted(() => void github.load());
       <div class="header-actions">
         <ClientOnly>
           <WebsiteLanguageSelector />
-          <WebsiteThemeSelector />
+          <span class="header-theme-control"><WebsiteThemeSelector /></span>
           <template #placeholder><span class="selector-placeholder" aria-hidden="true" /></template>
         </ClientOnly>
-        <a
+        <Button
           class="install-button"
           :href="platform ? `/install?os=${platform}` : '/install'"
+          size="md"
           @click.prevent="emit('install', platform)"
         >
-          <WebsitePlatformIcon v-if="platform" :platform="platform" />
-          <span>{{ t('Website.nav.install') }}</span>
-          <Download aria-hidden="true" />
-        </a>
+          <template v-if="platform" #icon><WebsitePlatformIcon :platform="platform" /></template>
+          {{ t('Website.nav.install') }}
+        </Button>
       </div>
     </div>
   </header>
@@ -90,15 +107,14 @@ onMounted(() => void github.load());
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 24px;
-  width: min(100% - 40px, 1320px);
+  width: min(calc(100vw - 120px), 1400px);
   min-height: 72px;
   margin: 0 auto;
 }
 .brand,
 .site-nav,
 .site-nav a,
-.header-actions,
-.install-button {
+.header-actions {
   display: flex;
   align-items: center;
 }
@@ -149,8 +165,7 @@ onMounted(() => void github.load());
   background: var(--color-header-control-hover);
   color: var(--text-primary);
 }
-.site-nav a:active,
-.install-button:active {
+.site-nav a:active {
   transform: translateY(1px);
 }
 .site-nav svg,
@@ -178,34 +193,10 @@ onMounted(() => void github.load());
   width: 13px;
   color: var(--color-primary);
 }
-.install-button {
-  gap: 9px;
-  min-height: 42px;
-  padding: 0 14px;
-  border: 1px solid var(--color-primary-border);
-  border-radius: 10px;
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-  font-size: 14px;
-  font-weight: 780;
-  text-decoration: none;
-  box-shadow: inset 0 1px rgba(255, 255, 255, 0.24);
-  transition:
-    background 160ms ease,
-    transform 160ms ease;
-}
-.install-button:hover {
-  background: var(--color-primary-hover);
-}
-.install-button .platform-icon,
-.install-button svg {
-  width: 17px;
-  height: 17px;
-}
-@media (max-width: 780px) {
+@media (max-width: 959px) {
   .site-header__inner {
     grid-template-columns: auto 1fr auto;
-    width: min(100% - 24px, 1320px);
+    width: min(100% - 24px, 1240px);
     gap: 12px;
   }
   .site-nav {
@@ -219,14 +210,24 @@ onMounted(() => void github.load());
     display: none;
   }
 }
-@media (max-width: 480px) {
-  .brand span,
-  .install-button svg,
-  .github-stars svg:last-child {
+@media (max-width: 639px) {
+  .site-header__inner {
+    grid-template-columns: auto 1fr;
+  }
+  .site-nav {
     display: none;
   }
-  .install-button {
-    padding: 0 11px;
+  .selector-placeholder {
+    width: 42px;
+  }
+  .header-theme-control {
+    display: none;
+  }
+}
+@media (max-width: 480px) {
+  .brand span,
+  .github-stars svg:last-child {
+    display: none;
   }
 }
 @media (prefers-reduced-transparency: reduce) {

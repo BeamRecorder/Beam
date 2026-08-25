@@ -7,7 +7,7 @@ export interface PageSeo {
   path: string;
   title: MaybeRefOrGetter<string>;
   description: MaybeRefOrGetter<string>;
-  jsonLd: readonly WebsiteJsonLd[];
+  jsonLd: MaybeRefOrGetter<readonly WebsiteJsonLd[]>;
 }
 
 const serializeJsonLd = (value: WebsiteJsonLd): string => JSON.stringify(value).replaceAll('<', '\\u003c');
@@ -31,12 +31,12 @@ export const usePageSeo = ({ path, title, description, jsonLd }: PageSeo): void 
     twitterImage: image,
   });
 
-  useHead({
+  useHead(() => ({
     link: [{ rel: 'canonical', href: canonical }],
-    script: jsonLd.map((value, index) => ({
+    script: toValue(jsonLd).map((value, index) => ({
       id: `beam-json-ld-${index + 1}`,
       type: 'application/ld+json',
       innerHTML: serializeJsonLd(value),
     })),
-  });
+  }));
 };

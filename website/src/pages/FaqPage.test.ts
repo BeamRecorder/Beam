@@ -2,22 +2,65 @@ import { createHead } from '@unhead/vue/client';
 import { mount } from '@vue/test-utils';
 import type { Question } from 'schema-dts';
 import { nextTick } from 'vue';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createWebsiteI18n, type WebsiteLocale } from '../i18n';
 import { faqItems, localizedFaqItems } from '../seo/faq-content';
 import { createFaqJsonLd } from '../seo/json-ld';
 import FaqPage from './FaqPage.vue';
+import frenchWebsiteMessages from '../i18n/fr/website.json';
+
+const mountedWrappers: Array<{ unmount: () => void }> = [];
+const initialUrl = window.location.href.split('#')[0];
+let restoreScrollIntoView = () => {};
 
 afterEach(() => {
+  for (const wrapper of mountedWrappers.splice(0)) wrapper.unmount();
   document.head.innerHTML = '';
+  window.history.replaceState({}, '', initialUrl);
+  restoreScrollIntoView();
+  restoreScrollIntoView = () => {};
+  vi.restoreAllMocks();
 });
 
-const mountFaq = (locale: WebsiteLocale = 'en') =>
-  mount(FaqPage, {
+beforeEach(() => {
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+});
+
+const mountFaq = (locale: WebsiteLocale = 'en', attachTo?: Element) => {
+  const i18n = createWebsiteI18n(locale);
+  if (locale === 'fr') i18n.global.setLocaleMessage('fr', { Website: frenchWebsiteMessages });
+  const wrapper = mount(FaqPage, {
+    ...(attachTo ? { attachTo } : {}),
     global: {
-      plugins: [createWebsiteI18n(locale), createHead()],
+      plugins: [i18n, createHead()],
     },
   });
+  mountedWrappers.push(wrapper);
+  return wrapper;
+};
+
+const setLocationHash = (hash: string) => {
+  window.history.replaceState({}, '', `${initialUrl}#${hash}`);
+};
+
+const installScrollIntoViewSpy = () => {
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollIntoView');
+  const scrollIntoView = vi.fn();
+
+  Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+    configurable: true,
+    value: scrollIntoView,
+  });
+  restoreScrollIntoView = () => {
+    if (descriptor) {
+      Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', descriptor);
+    } else {
+      Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView');
+    }
+  };
+
+  return scrollIntoView;
+};
 
 const faqCategories = ['application', 'creation', 'comparisons', 'community'] as const;
 const categoryLabels: Partial<Record<WebsiteLocale, readonly string[]>> = {
@@ -122,6 +165,61 @@ describe('FaqPage', () => {
     expect(wrapper.get(`#${contentId} .faq-answer`).text()).toBe(faqItems[0].answer);
   });
 
+  it('opens and scrolls to the accordion named by a valid initial hash', async () => {
+    const target = faqItems.find((item) => item.id === 'beam-vs-screen-studio')!;
+    setLocationHash(target.id);
+    const scrollIntoView = installScrollIntoViewSpy();
+    const wrapper = mountFaq('en', document.body);
+
+    await nextTick();
+    await nextTick();
+
+    expect(wrapper.findAll('.faq-item.is-open').map((item) => item.attributes('id'))).toEqual([target.id]);
+    expect(wrapper.get(`#${target.id} .accordion-trigger`).attributes('aria-expanded')).toBe('true');
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
+    expect(scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ block: 'start' }));
+  });
+
+  it('closes the previous accordion and opens the new one on hashchange', async () => {
+    const firstTarget = faqItems.find((item) => item.id === 'beam-vs-screen-studio')!;
+    const secondTarget = faqItems.find((item) => item.id === 'beam-vs-loom')!;
+    setLocationHash(firstTarget.id);
+    installScrollIntoViewSpy();
+    const wrapper = mountFaq('en', document.body);
+
+    await nextTick();
+    await nextTick();
+    expect(wrapper.findAll('.faq-item.is-open').map((item) => item.attributes('id'))).toEqual([firstTarget.id]);
+
+    setLocationHash(secondTarget.id);
+    window.dispatchEvent(new Event('hashchange'));
+    await nextTick();
+    await nextTick();
+
+    expect(wrapper.findAll('.faq-item.is-open').map((item) => item.attributes('id'))).toEqual([secondTarget.id]);
+    expect(wrapper.get(`#${firstTarget.id} .accordion-trigger`).attributes('aria-expanded')).toBe('false');
+    expect(wrapper.get(`#${secondTarget.id} .accordion-trigger`).attributes('aria-expanded')).toBe('true');
+  });
+
+  it.each([
+    ['an unknown', 'does-not-exist'],
+    ['a malformed', '%E0%A4%A'],
+  ] as const)('ignores %s hash without opening an accordion or throwing', async (_label, hash) => {
+    setLocationHash(hash);
+    let wrapper: ReturnType<typeof mountFaq> | undefined;
+
+    expect(() => {
+      wrapper = mountFaq('en', document.body);
+    }).not.toThrow();
+
+    await nextTick();
+    await nextTick();
+
+    expect(wrapper).toBeDefined();
+    expect(wrapper!.findAll('.faq-item.is-open')).toHaveLength(0);
+    expect(wrapper!.findAll('button.accordion-trigger[aria-expanded="true"]')).toHaveLength(0);
+  });
+
   it('renders the French catalogue through a French i18n instance', () => {
     const wrapper = mountFaq('fr');
     const items = localizedFaqItems('fr');
@@ -146,6 +244,9 @@ describe('FaqPage', () => {
     const callout = wrapper.get('.page-callout');
     const actions = callout.findAll('a.secondary-action');
 
+    expect(callout.classes()).toContain('shader-panel');
+    expect(callout.find('canvas.community-shader').exists()).toBe(true);
+    expect(HTMLCanvasElement.prototype.getContext).toHaveBeenCalledWith('webgl', expect.anything());
     expect(callout.get('.page-callout__logo').attributes('src')).toBeTruthy();
     expect(actions).toHaveLength(3);
     expect(actions.map((action) => action.attributes('href'))).toEqual([

@@ -1,0 +1,280 @@
+{
+  "pages": [
+    {
+      "slug": "recorder/capabilities/capture-sources",
+      "title": "Capture sources and regions",
+      "description": "Reference for Recorder Screen, Window, source selection, and crop-region behavior.",
+      "lead": "Capture mode determines which sources and region controls Beam can expose before a recording starts.",
+      "sections": [
+        {
+          "title": "Capture settings",
+          "tables": [
+            {
+              "headers": ["Setting", "Values", "Default", "Behavior and constraints"],
+              "rows": [
+                [
+                  "Mode",
+                  "Screen or Window",
+                  "Screen",
+                  "Screen records a display; Window records one application window."
+                ],
+                [
+                  "Screen source",
+                  "Available displays",
+                  "Default display, then first available",
+                  "Selected in the HUD outside Linux portal capture."
+                ],
+                [
+                  "Window source",
+                  "Available application windows",
+                  "Default or portal source, then first available",
+                  "Window previews refresh every 5 seconds while Beam is not recording."
+                ],
+                [
+                  "Recording region",
+                  "Normalized x, y, width, and height",
+                  "No region",
+                  "Screen mode only. Stored in `extras.screenRegion`."
+                ],
+                [
+                  "Region preset",
+                  "640×480, 800×600, 1024×768, 1366×768, 1440×990, 1920×1080",
+                  "None",
+                  "Stored in `extras.screenRegionPreset`; a custom rectangle can be drawn instead."
+                ],
+                [
+                  "Capture rate",
+                  "60 FPS",
+                  "60 FPS",
+                  "Fixed in the Recorder configuration; it is not an exposed user setting."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Select a custom region",
+          "steps": [
+            "Choose Screen mode and select a display.",
+            "Select Select an area of the screen. Beam temporarily hides the HUD and opens the always-on-top region overlay.",
+            "Draw a rectangle or choose a preset size.",
+            "Select Use this area to save the region, or Cancel to leave the existing choice unchanged.",
+            "Use Edit the screen area to adjust a saved region."
+          ]
+        },
+        {
+          "title": "Region edge cases",
+          "bullets": [
+            "Reset selects the full screen; it does not delete a file or recording.",
+            "A region that is effectively the complete screen is normalized back to no crop.",
+            "Region controls are disabled in Window mode, while recording, while Beam is busy, or when display bounds are unavailable.",
+            "Linux portal capture does not expose Beam's region overlay."
+          ]
+        },
+        {
+          "title": "Linux source selection",
+          "paragraphs": [
+            "On Linux, the desktop portal displays its own picker when capture starts. The HUD does not provide the Electron source selector, and only one portal source is selected for the session."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Full-screen visibility",
+            "text": "Beam cannot hide its own windows from a Linux full-screen capture. Region capture is also unavailable, so arrange or minimize Beam before confirming the portal source."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/audio-camera",
+      "title": "Audio and camera",
+      "description": "Reference for microphone, camera, system audio, meters, sidecars, and live device toggles.",
+      "lead": "Each source is selected independently. Availability, preview metering, and whether a source can be toggled after start depend on the source and platform.",
+      "sections": [
+        {
+          "title": "Source settings",
+          "tables": [
+            {
+              "headers": ["Source", "Values", "Default", "Capture behavior"],
+              "rows": [
+                [
+                  "Microphone",
+                  "A Chromium input device or No Audio",
+                  "No Audio",
+                  "Captured separately. Echo cancellation, noise suppression, and automatic gain control are disabled."
+                ],
+                [
+                  "Camera",
+                  "A Chromium camera or Camera Off",
+                  "Camera Off",
+                  "Captured as a separate VP8 sidecar. If the camera is reported unavailable, Beam disables it and can continue."
+                ],
+                [
+                  "System audio",
+                  "System audio or Off",
+                  "Off",
+                  "Linux uses native capture; other platforms use a Chromium display-media sidecar."
+                ],
+                ["Microphone meter", "Live level", "Hidden with No Audio", "Visible when a microphone is selected."],
+                [
+                  "System-audio meter",
+                  "Live level",
+                  "Hidden",
+                  "Native preview is available on Linux before recording only."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Controls during recording",
+          "tables": [
+            {
+              "headers": ["Control", "During recording", "Unavailable when"],
+              "rows": [
+                ["Microphone toggle", "Turns the selected microphone on or off", "Countdown, startup, or finalization"],
+                ["Camera toggle", "Turns the selected camera on or off", "Countdown, startup, or finalization"],
+                [
+                  "System-audio toggle",
+                  "Turns capture on or off outside Linux",
+                  "Countdown, startup, finalization, or any active Linux session"
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Failure behavior",
+          "paragraphs": [
+            "When the selected camera is specifically reported unavailable during preparation, Beam disables it and continues without camera. Other camera or sidecar errors can stop startup, as can failure of a selected microphone or system-audio source."
+          ],
+          "notice": {
+            "kind": "tip",
+            "title": "Check before the countdown",
+            "text": "Confirm the selected device and visible meter before starting, especially after connecting or disconnecting USB audio and camera hardware."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/teleprompter",
+      "title": "Teleprompter",
+      "description": "Reference for script editing, preview, autoscroll, line mode, typography, and shortcuts.",
+      "lead": "The Teleprompter can scroll continuously or move through a script line by line. Its document is stored with the recording session.",
+      "sections": [
+        {
+          "title": "Teleprompter settings",
+          "tables": [
+            {
+              "headers": ["Setting", "Values", "Default", "Range or persistence"],
+              "rows": [
+                ["Script", "Free text", "Empty", "Stored in `session/teleprompter.json`."],
+                ["Mode", "Continuous or Line by line", "Continuous", "Stored in preferences and the session document."],
+                ["Autoscroll", "On or Off", "On", "Controls automatic movement; pause and resume remain available."],
+                ["Speed", "5–200 px/s", "42 px/s", "Step: 1 px/s."],
+                ["Text size", "16–36 px", "36 px", "Step: 1 px."],
+                ["Line spacing", "1–2.5", "1.35", "Step: 0.05."],
+                ["Alignment", "Left or Center", "Left", "Stored with teleprompter settings."],
+                [
+                  "Theme",
+                  "System, Light, or Dark in the stored document",
+                  "System",
+                  "The current Teleprompter UI does not expose this as a functional control."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Editor and reader controls",
+          "tables": [
+            {
+              "headers": ["Control", "Purpose"],
+              "rows": [
+                ["Edit", "Makes the script editable before recording."],
+                ["Preview", "Shows the script as it will be read."],
+                ["Hide", "Hides the Teleprompter window."],
+                ["Pause / Resume", "Stops or restarts automatic movement without changing the Autoscroll setting."],
+                ["Previous / Next", "Moves between lines in Line by line mode."],
+                ["Line counter", "Shows the current line position in Line by line mode."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Recording behavior",
+          "paragraphs": [
+            "When a recording session starts, the Teleprompter automatically switches from the editable script to its read-only reader. The selected mode and settings remain available for presentation controls."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Keyboard control",
+            "text": "Teleprompter shortcuts are configurable in Preferences → Shortcuts. The defaults are listed on the Preferences reference page."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/live-controls",
+      "title": "Live recording controls",
+      "description": "Understand Recording Bar phases, visibility modes, device toggles, stop, and cancellation.",
+      "lead": "The Recording Bar changes state across the session and disables actions that would be unsafe while capture starts or files finalize.",
+      "sections": [
+        {
+          "title": "Recording phases",
+          "tables": [
+            {
+              "headers": ["Phase", "Meaning"],
+              "rows": [
+                ["Idle", "No recording is active."],
+                ["Countdown", "The configured delay is running."],
+                ["Starting", "Beam is opening and synchronizing selected sources."],
+                ["Recording", "The session is actively capturing."],
+                ["Paused", "The active session is paused."],
+                ["Finalizing", "Beam is closing tracks and preparing the project for editing."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Visibility preference",
+          "tables": [
+            {
+              "headers": ["Mode", "Behavior", "Platform default"],
+              "rows": [
+                ["Always visible", "The bar stays visible throughout capture.", "Windows and macOS"],
+                ["Auto-fade", "The bar fades and returns on hover.", "Not the default"],
+                ["Hidden until hovered", "The bar remains hidden until the pointer reaches it.", "Linux"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Action availability",
+          "tables": [
+            {
+              "headers": ["Action", "Disabled during"],
+              "rows": [
+                ["Pause / Resume", "Countdown, Starting, Finalizing"],
+                ["Stop", "Finalizing"],
+                ["Cancel and delete", "Finalizing"],
+                ["Microphone / Camera / System audio", "Countdown, Starting, Finalizing"],
+                ["Linux system audio", "The complete active session; choose it before start"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Stop compared with cancel",
+          "paragraphs": [
+            "Stop keeps the capture and enters Finalizing before the project opens. Cancel and delete abandons the active recording and removes the unfinished session. These are deliberately separate actions."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Cancellation deletes the unfinished session",
+            "text": "Use Stop when you want to keep what has already been recorded. Use Cancel and delete only when the current take should be discarded."
+          }
+        }
+      ]
+    }
+  ]
+}

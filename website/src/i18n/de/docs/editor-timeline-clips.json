@@ -1,0 +1,436 @@
+{
+  "pages": [
+    {
+      "slug": "editor/capabilities/timeline",
+      "title": "Timeline-Bearbeitung",
+      "description": "Vollständige Referenz für Timeline tools, Spuren, selection, snapping, trimming, splitting, clipboard Aktionen, und hold frames.",
+      "lead": "Die Timeline kombiniert visuell, annotation, zoom, und Audio Spuren auf one playhead. Bearbeitungsregeln hängen ab von selection, Clip type, project ownership, und Verfügbar Dauer.",
+      "sections": [
+        {
+          "title": "Medien und Ebenen hinzufügen",
+          "tables": [
+            {
+              "headers": ["Element", "So wird es hinzugefügt", "Anfangsdauer oder Verhalten"],
+              "rows": [
+                [
+                  "Video",
+                  "Hinzufügen → Video oder Ziehen und drop",
+                  "Assetdauer geteilt durch die anfängliche Wiedergabegeschwindigkeit."
+                ],
+                ["Bild", "Hinzufügen → Bild oder Ziehen und drop", "5 seconds."],
+                [
+                  "Audio",
+                  "Hinzufügen → Audio oder Ziehen und drop",
+                  "Assetdauer geteilt durch die anfängliche Wiedergabegeschwindigkeit."
+                ],
+                [
+                  "Text",
+                  "Hinzufügen → Text oder Klicken der text-caption Spur",
+                  "Gespeicherte Untertiteldauer; 2-Sekunden-Fallback und mindestens 200 ms."
+                ],
+                ["Unschärfe", "Hinzufügen → Unschärfe", "5 seconds."],
+                [
+                  "Zoom",
+                  "Klicken ein Verfügbar point auf der Zoom Spur",
+                  "Gespeicherte Zoomdauer oder 1,2-Sekunden-Fallback; an die Lücke angepasst, mindestens 200 ms."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Timeline-Steuerung",
+          "tables": [
+            {
+              "headers": ["Steuerung", "Bereich oder Tastenkürzel", "Verhalten"],
+              "rows": [
+                ["Teilen", "S", "Erfordert one ausgewählt Clip und ein playhead strictly inside that Clip."],
+                [
+                  "Magnet",
+                  "Standardmäßig aktiviert",
+                  "Rastet ein ein Timeline start/end, Clip edges, zoom edges, und der playhead when der operation supports it. Der aus dem Lineal abgeleitete Schwellenwert liegt nie unter 20 ms."
+                ],
+                ["Wiedergabe / Pause", "Leertaste", "Wird ignoriert, wenn ein bearbeitbares Feld fokussiert ist."],
+                ["Zurück / Vorwärts", "Werkzeugleisten-Schaltflächen", "Springt zum Anfang oder Ende der Timeline."],
+                ["Wiedergabequalität", "Voll, Halb, Viertel", "Ändert nur die Vorschauauflösung."],
+                [
+                  "Timeline-Zoom",
+                  "100%–3200%",
+                  "Buttons step by 50 below 500%, 100 below 1000%, then 250; Ctrl+wheel Verwendet 25/50/100 steps. Saved after Ändert."
+                ],
+                ["Zeitanzeige", "MM:SS oder HH:MM:SS", "Wechselt das Format, sobald die Dauer eine Stunde erreicht."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Auswahl",
+          "tables": [
+            {
+              "headers": ["Geste", "Ergebnis"],
+              "rows": [
+                ["Clip anklicken", "Wählt diesen Clip als Hauptelement aus."],
+                ["Klicken another Clip", "Ersetzt die aktuelle Clip-Auswahl."],
+                [
+                  "Spurkopf anklicken",
+                  "Selects every Clip auf der Spur; der Clip nearest der playhead becomes primary."
+                ],
+                [
+                  "Ctrl, Cmd, oder Shift + Spur header",
+                  "Adds that Spur's Clips zu oder Entfernt them von der current Spur selection."
+                ],
+                [
+                  "Canvas-Element anklicken",
+                  "Selects der corresponding supported Clip, caption, blur, cursor, oder Bildschirm area."
+                ],
+                ["Leeren Bereich anklicken", "Clears der conflicting selection where der active tool permits it."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Verschieben, trimmen und Ebenen ordnen",
+          "bullets": [
+            "Ziehen ein Clip zu change its Timeline start; linked recording sidecars Verschieben together until unlinked.",
+            "Ziehen der start oder end handle zu trim der active range. ein Clip must remain at least 40 ms long, und Clips sharing ein group ID trim together.",
+            "Dragging media beyond der current end extends der composition Dauer.",
+            "Ziehen visuell Spur headers zu change layer order.",
+            "Moving ein visuell Clip into another visuell row can also reorder visuell Spuren.",
+            "deaktiviert Clips stay auf der Timeline but do not contribute zu preview oder export.",
+            "ein multiple-selection change ist applied nur zu ausgewählt Clips compatible mit der primary Clip's Eigenschaft."
+          ]
+        },
+        {
+          "title": "Zwischenablage und Löschen",
+          "tables": [
+            {
+              "headers": ["Aktion", "Verfügbarkeit", "Sonderfall"],
+              "rows": [
+                [
+                  "Kopieren",
+                  "ein supported primary ausgewählt Clip oder zoom",
+                  "Copies nur der primary item, even when several Clips sind ausgewählt; der payload remains associated mit its project."
+                ],
+                [
+                  "Einfügen",
+                  "ein project ist loaded und clipboard data ist compatible",
+                  "Elements copied von another project sind rejected."
+                ],
+                ["Löschen", "Supported ausgewählt Timeline items", "Entfernt der ausgewählt item von der composition."],
+                [
+                  "Verknüpfung lösen",
+                  "ein ausgewählt item has ein recording-sidecar link",
+                  "After unlinking, it can Verschieben independently."
+                ],
+                [
+                  "Aktivieren / Deaktivieren",
+                  "Supported Clips",
+                  "deaktiviert media ist ignored by playback und export."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Clip- und Canvas-Übergänge",
+          "tables": [
+            {
+              "headers": ["Eigenschaft", "Werte", "Standard oder Einschränkung"],
+              "rows": [
+                ["Seite", "Entry und Exit", "Unabhängig konfiguriert."],
+                [
+                  "visuell Voreinstellung",
+                  "Keine, Fade, Slide links, Slide rechts, Slide up, Slide down, Zoom in, Zoom out, Unschärfe",
+                  "Für visuelle Clips und Canvas-Übergänge verfügbar."
+                ],
+                [
+                  "Audio Voreinstellung",
+                  "Keine oder Fade",
+                  "Andere Übergangsvoreinstellungen sind für Audio nicht verfügbar."
+                ],
+                ["Dauer", "1–5000 ms", "500 ms; capped by clip duration minus the transition on the opposite side."],
+                ["visuell curve", "1×–5×", "3×; not shown for audio transitions."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Standbild",
+          "paragraphs": [
+            "Standbild freezes der ausgewählt Video at der playhead und extends der still portion as ein Timeline item."
+          ],
+          "tables": [
+            {
+              "headers": ["Voraussetzung", "Regel"],
+              "rows": [
+                ["Cliptyp", "aktiviert Bildschirm, Video, oder webcam Clip mit Video media."],
+                ["Auswahl", "Ein kompatibler Clip muss ausgewählt sein."],
+                ["Abspielkopf", "von start + 40 ms through end − 40 ms, inclusive."],
+                ["Eingefrorenes Segment", "1000 ms."],
+                [
+                  "Verknüpfte Medien",
+                  "Linked Clips sind split together, und der frozen segment can remain grouped mit its Audio sidecar."
+                ],
+                ["Menü", "Im Kontextmenü des unterstützten Clips verfügbar."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Fehler beim Medienimport",
+          "paragraphs": [
+            "Abgelegte Dateien werden vor dem Importieren geprüft. Beam reports unsupported extensions oder codecs, invalid oder empty media, decode failures, non-local sources, und project-import failures. If ein imported Video contains unsupported Audio, der Video can be added while its Audio ist ignored."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Nur ein Import gleichzeitig",
+            "text": "Ein neuer Drag-and-drop-Import wird abgelehnt, solange bereits ein Medienimport läuft."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/clips",
+      "title": "Clip-Eigenschaften",
+      "description": "Vollständige Referenz für visuell, webcam, blur, Audio, text, und keyboard-caption Clip properties.",
+      "lead": "der Clip panel follows der primary selection. Shared Steuerungen appear nur für compatible Clip types, und ein multiple-selection edit propagates nur zu compatible ausgewählt Clips.",
+      "sections": [
+        {
+          "title": "Keine Auswahl",
+          "paragraphs": [
+            "Wenn kein Clip ausgewählt ist, zeigt das Panel einen erklärenden leeren Zustand. Auswählen ein item auf der Canvas oder Timeline zu reveal its properties."
+          ],
+          "screenshot": {
+            "path": "editor/clip-empty.webp",
+            "alt": "Beam Clip panel mit no Clip ausgewählt",
+            "caption": "der Clip panel remains empty until ein compatible Timeline oder Canvas item ist ausgewählt.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Cliptypen",
+          "tables": [
+            {
+              "headers": ["Cliptyp", "Verfügbare Eigenschaften"],
+              "rows": [
+                [
+                  "Bildschirm / Video",
+                  "visuell layout, framing, transform, appearance, playback speed, transitions, Aktivieren, Löschen, und unlink when linked."
+                ],
+                ["Bild", "visuell layout, framing, transform, appearance, transitions, Aktivieren, und Löschen."],
+                ["Webcam", "Shared visuell Steuerungen plus split layout und React zu Zoom."],
+                ["Unschärfe", "Effekt, shape, Stärke, feather, Radius, tint, und Farbe Steuerungen."],
+                [
+                  "System / Microphone / Importierened Audio",
+                  "Clip volume, Entry und Exit Fade transitions, Aktivieren, und Löschen."
+                ],
+                [
+                  "Textuntertitel",
+                  "Text content, typography, alignment, Farbe, outline, extrusion, backdrop, und Schatten."
+                ],
+                ["Tastaturuntertitel", "Untertitelstil plus „Cursor folgen“."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Gemeinsames visuelles Layout",
+          "tables": [
+            {
+              "headers": ["Eigenschaft", "Werte oder Bereich", "Verhalten"],
+              "rows": [
+                [
+                  "Layout",
+                  "Schwebend oben links, oben rechts, unten links, unten rechts; schwebend zentriert; Vollbild",
+                  "Webcam unterstützt zusätzlich Teilen links, rechts, oben, und unten."
+                ],
+                [
+                  "Bildrahmen",
+                  "Füllen, Einpassen, Quadrat, Hochformat 9:16, Querformat 16:9, Squircle, Kreis",
+                  "Steuert Zuschnitt und Maskendarstellung."
+                ],
+                ["Position X / Y", "−300% to 300%", "Verschiebt das Visuelle auf dem Canvas."],
+                ["Breite", "2%–400%", "Höhe remains proportional when nur Breite Ändert."],
+                ["Corner Radius", "Keine, 8, 16, 24 px, oder Benutzerdefiniert 0–200 px", "Rounds der visuell mask."],
+                ["Spiegeln", "Horizontal und Vertical", "Spiegelt das gerenderte Visuelle."],
+                [
+                  "Wiedergabegeschwindigkeit",
+                  "0.25×–4×; presets 0.5×, 1×, 1.5×, 2×, 3×",
+                  "Verfügbar für Bildschirm, Video, und webcam Clips."
+                ],
+                [
+                  "Aktivieren / Deaktivieren",
+                  "auf oder Off",
+                  "Deaktivierte Clips bleiben in der Timeline, werden aber nicht gerendert."
+                ],
+                ["Übergänge", "Öffnen von der properties header", "Entry und exit transitions sind stored per Clip."],
+                ["Löschen", "Properties-header Aktion", "Entfernt den ausgewählten Clip."],
+                [
+                  "Verknüpfung lösen",
+                  "Verfügbar für linked sidecars",
+                  "Trennt den Clip von der verknüpften Timeline-Bewegung."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Schatten, Rahmen und Umrandung",
+          "tables": [
+            {
+              "headers": ["Gruppe", "Eigenschaft", "Werte oder Bereich"],
+              "rows": [
+                ["Schatten", "Voreinstellung", "Keine, Soft, Medium, Strong, Benutzerdefiniert"],
+                ["Schatten", "Modus", "Solid oder Adaptive"],
+                ["Schatten", "Benutzerdefiniert blur", "4–96 px"],
+                ["Schatten", "Richtung", "All, unten, Bottom-right, Top-left"],
+                ["Rand", "aktiviert", "auf oder Off"],
+                ["Rand", "Farbe", "Farbauswahl"],
+                ["Rand", "Breite", "1–32 px"],
+                ["Rahmen", "Stil", "Keine, Safari, Windows 95"],
+                ["Rahmen", "Titel", "Benutzerdefinierter Rahmentitel"],
+                ["Rahmen", "Chrome-Skalierung", "50%–200%"],
+                ["Rahmen", "Spezifische Steuerung", "Menü, scrollbar, oder colors depending auf frame Stil"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Visuellen Clip zuschneiden",
+          "paragraphs": ["Crop ist ein direct Canvas editor rather than ein numeric Clip-panel group."],
+          "steps": [
+            "Wähle genau einen Bildschirm, Video, Bild, oder webcam Clip.",
+            "Wähle „Zuschneiden“ in der Canvas-Werkzeugleiste.",
+            "Verschieben oder resize der crop rectangle directly over der ausgewählt visuell.",
+            "Wähle „OK“, um den normalisierten Zuschnitt für diesen Clip zu speichern."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Einzelauswahl erforderlich",
+            "text": "Crop ist unavailable without one compatible visuell selection und does not operate auf ein multiple selection."
+          }
+        },
+        {
+          "title": "Anfängliche visuelle Standards",
+          "tables": [
+            {
+              "headers": ["Clip", "Transform und framing", "Corner und Schatten"],
+              "rows": [
+                [
+                  "Bildschirm",
+                  "Full Canvas",
+                  "No corner Radius when no Hintergrund; Medium Schatten, 40 px blur, unten Richtung."
+                ],
+                ["Video / Bild", "Full Canvas", "Small corner Radius; Medium Schatten, 20 px blur, All directions."],
+                [
+                  "Neue Webcam",
+                  "x 72%, y 72%, Breite 24%, Höhe 24%; Squircle",
+                  "Anschließend werden die Standardwerte für die Webcam-Darstellung angewendet."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Webcam-Clips",
+          "screenshot": {
+            "path": "editor/webcam-properties.webp",
+            "alt": "Beam properties für ein ausgewählt webcam Clip",
+            "caption": "Webcam-Clips Hinzufügen split layouts und zoom-reaction Verhalten zu shared visuell Steuerungen.",
+            "aspectRatio": "199 / 326"
+          },
+          "tables": [
+            {
+              "headers": ["Eigenschaft", "Werte", "Standard oder Einschränkung"],
+              "rows": [
+                [
+                  "Teilungs-Layout",
+                  "links, rechts, oben, unten",
+                  "Erfordert ein linked Bildschirm Clip. Otherwise: “No matching Bildschirm recording ist Verfügbar at this point in der Timeline.”"
+                ],
+                ["Teilungsverhältnis", "20%–80%", "50%"],
+                ["Teilungsabstand", "0%–8%", "0%"],
+                ["React zu Zoom", "auf oder Off", "auf"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Unschärfe-Clips",
+          "tables": [
+            {
+              "headers": ["Eigenschaft", "Werte oder Bereich", "Bedingtes Verhalten"],
+              "rows": [
+                ["Light Voreinstellung", "Unschärfe", "Stärke 30, feather 14, tint 0."],
+                ["Privacy Voreinstellung", "Pixelated", "Stärke 72, feather 2, tint 0."],
+                ["Strong Voreinstellung", "Opaque", "Stärke 100, feather 0, tint 0, Farbe #000000."],
+                ["Effekt", "Unschärfe, Frosted, Pixelated, Opaque", "Ändert, welche Steuerungen sichtbar bleiben."],
+                ["Shape", "Rechteck, Quadrat, Kreis", "Circle Blendet aus corner Radius."],
+                ["Stärke", "0%–100%", "Für „Deckend“ ausgeblendet."],
+                ["Kantenweichheit", "0%–100%", "Steuert die weiche Kante."],
+                ["Corner Radius", "0%–100%", "Hidden für Circle."],
+                ["Farbtonintensität", "0%–100%", "Frosted nur; entering Frosted Verwendet at least 24%."],
+                ["Farbe", "Farbauswahl", "Frosted und Opaque nur."]
+              ]
+            }
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Privatsphäre-Effekt",
+            "text": "Der Effekt wird in das exportierte Video eingebettet. Increase Stärke oder use Opaque für sensitive information."
+          }
+        },
+        {
+          "title": "Lautstärke des Audioclips",
+          "tables": [
+            {
+              "headers": ["Eigenschaft", "Bereich", "Standard"],
+              "rows": [["Volume", "0%–200%", "100%"]]
+            }
+          ],
+          "paragraphs": [
+            "This clip-level volume Gilt zu ausgewählt system, microphone, oder imported Audio Clips. Composition-wide und role-level volume Steuerungen sind documented auf der Audio page."
+          ]
+        },
+        {
+          "title": "Text- und Tastaturuntertitel",
+          "tables": [
+            {
+              "headers": ["Eigenschaft", "Werte oder Bereich", "Standard oder rule"],
+              "rows": [
+                [
+                  "Content",
+                  "Benutzerdefinierter Text oder generated sentence / keyboard step",
+                  "Benutzerdefinierter Text does not propagate across multiple selection."
+                ],
+                ["Font", "Search installed fonts oder import ein font", "Wird mit dem Untertitelstil gespeichert."],
+                ["Stil", "Fett, Kursiv, Durchgestrichen", "Unabhängige Schalter."],
+                ["Alignment", "links, Center, rechts", "Ausrichtung des Untertiteltexts."],
+                ["Farbe", "Farbauswahl", "Füllfarbe des Texts."],
+                ["Line Höhe", "0.8–2.0", "Caption Stil value."],
+                ["Zeichenabstand", "−5 to 20 px", "Caption Stil value."],
+                [
+                  "Font Größe",
+                  "12–256 px",
+                  "Manual caption preference mit 42 px creation fallback; panel fallback 36 px text / 28 px keyboard; AI captions use 36 px."
+                ],
+                ["Wrap", "auf oder Off", "auf"],
+                ["Outline", "0–30 px", "Optionale Konturbreite."],
+                ["Outline Farbe", "Farbauswahl", "Wird verwendet, wenn die Konturbreite größer als null ist."],
+                ["Extrusion", "0–20 px", "Optionaler Tiefeneffekt."],
+                ["Hintergrundunschärfe", "0–48 px", "Unschärfe hinter dem Untertitel."],
+                ["Text Schatten blur", "0–50 px", "Richtung: All, unten, Bottom-right, Top-left."],
+                ["Text Schatten Farbe", "Farbauswahl", "Applied mit der configured Schatten blur und Richtung."],
+                [
+                  "Cursor folgen",
+                  "auf oder Off",
+                  "Tastaturuntertitels nur; never propagated across multiple selection."
+                ]
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

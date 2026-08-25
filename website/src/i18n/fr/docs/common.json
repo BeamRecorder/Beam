@@ -19,7 +19,19 @@
       "items": [
         { "text": "Vue d'ensemble", "link": "/recorder/" },
         { "text": "Interface", "link": "/recorder/interface" },
-        { "text": "Fonctionnalités", "link": "/recorder/capabilities" }
+        {
+          "text": "Fonctionnalités",
+          "link": "/recorder/capabilities/",
+          "items": [
+            { "text": "Sources et zones de capture", "link": "/recorder/capabilities/capture-sources" },
+            { "text": "Audio et caméra", "link": "/recorder/capabilities/audio-camera" },
+            { "text": "Téléprompteur", "link": "/recorder/capabilities/teleprompter" },
+            { "text": "Contrôles en direct", "link": "/recorder/capabilities/live-controls" },
+            { "text": "Préférences", "link": "/recorder/capabilities/preferences" },
+            { "text": "Gestionnaire de projets", "link": "/recorder/capabilities/project-manager" },
+            { "text": "Autorisations et confidentialité", "link": "/recorder/capabilities/permissions-privacy" }
+          ]
+        }
       ]
     },
     {
@@ -27,7 +39,22 @@
       "items": [
         { "text": "Vue d'ensemble", "link": "/editor/" },
         { "text": "Interface", "link": "/editor/interface" },
-        { "text": "Fonctionnalités", "link": "/editor/capabilities" }
+        { "text": "Présentation d'un projet", "link": "/editor/showcase" },
+        {
+          "text": "Fonctionnalités",
+          "link": "/editor/capabilities",
+          "items": [
+            { "text": "Montage sur la timeline", "link": "/editor/capabilities/timeline" },
+            { "text": "Canevas", "link": "/editor/capabilities/canvas" },
+            { "text": "Clips", "link": "/editor/capabilities/clips" },
+            { "text": "Zooms", "link": "/editor/capabilities/zooms" },
+            { "text": "Curseur", "link": "/editor/capabilities/cursor" },
+            { "text": "Sous-titres", "link": "/editor/capabilities/captions" },
+            { "text": "Audio", "link": "/editor/capabilities/audio" },
+            { "text": "Paramètres", "link": "/editor/capabilities/settings" },
+            { "text": "Export", "link": "/export" }
+          ]
+        }
       ]
     },
     {

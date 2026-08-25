@@ -32,8 +32,8 @@ const toggleTheme = () => theme.setTheme(isDark.value ? 'light' : 'dark');
   width: 42px;
   height: 42px;
   padding: 0;
-  border: 1px solid var(--color-border-strong);
-  background: var(--color-header-control);
+  border: 1px solid transparent;
+  background: transparent;
   color: var(--text-secondary);
 }
 

@@ -1,0 +1,308 @@
+{
+  "pages": [
+    {
+      "slug": "editor/capabilities/captions",
+      "title": "KI-Untertitel",
+      "description": "Vollständige Referenz für lokale Whisper-Modelle, Audioquellen, Downloads, Transkription, erneute Generierung, Abbruch und Diagnose.",
+      "lead": "Beam erzeugt aus einem aktivierten Audioclip lokale Sprachuntertitel. Das ausgewählte Whisper-Modell wird heruntergeladen, die Transkription erfolgt auf dem Gerät und bearbeitbare Untertitelclips werden in der Timeline erstellt.",
+      "sections": [
+        {
+          "title": "Untertitel-Panel",
+          "screenshot": {
+            "path": "editor/captions-panel.webp",
+            "alt": "Beam-KI-Untertitel-Panel mit Audioquelle und Whisper-Modellsteuerung",
+            "caption": "Wähle vor dem Erzeugen der Untertitel eine aktivierte Audioquelle und ein lokales Whisper-Modell aus.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Audioquellen",
+          "tables": [
+            {
+              "headers": ["Quelle", "Wann sie erscheint", "Auswahlregel"],
+              "rows": [
+                [
+                  "Systemaudio",
+                  "Ein aktivierter Clip mit der Rolle System ist vorhanden.",
+                  "Wird als Systemaudio erkannt."
+                ],
+                [
+                  "Mikrofon",
+                  "Ein aktivierter Clip mit der Rolle Mikrofon ist vorhanden.",
+                  "Wird als Mikrofon erkannt."
+                ],
+                [
+                  "Importiertes Audio",
+                  "Ein aktivierter importierter Audioclip ist vorhanden.",
+                  "Verwendet den Clipnamen."
+                ],
+                [
+                  "Doppelte Medien-URL",
+                  "Zwei aktivierte Clips verweisen auf dieselbe Audio-URL.",
+                  "Nur die erste Quelle wird angeboten."
+                ],
+                [
+                  "Keine verwendbare Quelle",
+                  "Kein aktivierter Audioclip besitzt eine lesbare Asset-URL.",
+                  "„Erzeugen“ bleibt nicht verfügbar."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Whisper-Modelle",
+          "tables": [
+            {
+              "headers": ["Modell", "Sprachen", "Leistungshinweis"],
+              "rows": [
+                ["Tiny", "Mehrsprachig", "Standardmodell."],
+                ["Tiny .en", "Englisch", "Nur-Englisch-Modell."],
+                ["Base", "Mehrsprachig", "Kein zusätzlicher Hinweis."],
+                ["Base .en", "Englisch", "Nur-Englisch-Modell."],
+                ["Small", "Mehrsprachig", "Ohne WebGPU möglicherweise langsam."],
+                ["Small .en", "Englisch", "Ohne WebGPU möglicherweise langsam."],
+                ["Medium", "Mehrsprachig", "Großer Download; WebGPU wird empfohlen."],
+                ["Medium .en", "Englisch", "Großer Download; WebGPU wird empfohlen."],
+                ["Large v3", "Mehrsprachig", "Sehr groß und ohne WebGPU langsam."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Modell herunterladen und löschen",
+          "tables": [
+            {
+              "headers": ["Status oder Aktion", "Verhalten"],
+              "rows": [
+                ["Fehlt", "„Modell herunterladen“ ist für das ausgewählte Modell verfügbar."],
+                [
+                  "Wird heruntergeladen",
+                  "Beam zeigt die heruntergeladenen und die gesamten Bytes mit einem Fortschrittsbalken an."
+                ],
+                ["Bereit", "Ein Häkchen kennzeichnet das installierte Modell und „Modell löschen“ wird verfügbar."],
+                ["Modell löschen", "Während des Herunterladens, Löschens oder Transkribierens nicht verfügbar."],
+                ["Downloadfehler", "Der Fehler wird angezeigt und kann zur Diagnose kopiert werden."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Erzeugen und erneut erzeugen",
+          "steps": [
+            "Wähle eine der aktivierten Audioquellen aus.",
+            "Wähle ein Whisper-Modell aus und lade es herunter, falls es noch nicht bereit ist.",
+            "Wähle „Untertitel erzeugen“. Beam dekodiert die Quelle, wandelt sie in Mono-Audio mit 16 kHz um und begrenzt sie auf die Dauer der Timeline.",
+            "Teilergebnisse der Transkription aktualisieren die Komposition, während die Verarbeitung fortgesetzt wird.",
+            "Nach Abschluss wird der erste erzeugte Untertitel zur Bearbeitung ausgewählt."
+          ],
+          "tables": [
+            {
+              "headers": ["Verhalten", "Regel"],
+              "rows": [
+                ["Satzgruppierung", "Beendet eine Untertitelphrase an einem Satzzeichen oder nach 12 Wörtern."],
+                ["Minimale Dauer eines erzeugten Clips", "40 ms."],
+                ["Erneut erzeugen", "Ersetzt vorhandene KI-Untertitel und erhält manuelle Untertitel."],
+                ["Abbrechen", "Stoppt das Laden des Modells oder die Transkription."],
+                ["Panel schließen", "Bricht die aktive Transkription ab."],
+                [
+                  "Diagnose",
+                  "Zeigt die verstrichene Zeit an und stellt nach der Verarbeitung einen kopierbaren Transkriptionsbericht bereit."
+                ]
+              ]
+            }
+          ],
+          "notice": {
+            "kind": "tip",
+            "title": "Lokale Transkription",
+            "text": "Whisper läuft auf dem Gerät. Für die Untertitelerzeugung sind weder ein Cloud-Upload noch ein API-Schlüssel erforderlich."
+          }
+        },
+        {
+          "title": "Erzeugte Untertitel bearbeiten",
+          "paragraphs": [
+            "Erzeugte Untertitel sind normale bearbeitbare Untertitelclips, die als KI-erzeugt gekennzeichnet sind. Text, Timing und visueller Stil können nach der Erzeugung im Clip-Panel und in der Timeline angepasst werden."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/audio",
+      "title": "Audio",
+      "description": "Vollständige Referenz für die globale Ausgabe, System- und Mikrofonrollen, importiertes Audio, Aktivierungsstatus, Löschen und Lautstärke.",
+      "lead": "Das Audio-Panel trennt die kompositionsweite Ausgabe von den aufgezeichneten System- und Mikrofonrollen. Importiertes Audio wird als ausgewählter Timeline-Clip gesteuert.",
+      "sections": [
+        {
+          "title": "Audio-Panel",
+          "screenshot": {
+            "path": "editor/audio-panel.webp",
+            "alt": "Beam-Audio-Panel mit globaler, System- und Mikrofon-Lautstärkeregelung",
+            "caption": "Globale Ausgabe und aufgezeichnete Audiorollen können unabhängig voneinander angepasst werden.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Lautstärkeregler",
+          "tables": [
+            {
+              "headers": ["Steuerung", "Bereich", "Anfangs- oder Standardwert", "Geltungsbereich"],
+              "rows": [
+                [
+                  "Globale Lautstärke",
+                  "0%–100%",
+                  "Ein neu geladener Player startet mit 70 %",
+                  "Gesamte Wiedergabeausgabe des Editors."
+                ],
+                ["Systemlautstärke", "0%–100%", "100%", "Jeder Clip mit der Rolle System."],
+                ["Mikrofonlautstärke", "0%–100%", "100%", "Jeder Clip mit der Rolle Mikrofon."],
+                [
+                  "Lautstärke des ausgewählten Audioclips",
+                  "0%–200%",
+                  "100%",
+                  "Nur der ausgewählte System-, Mikrofon- oder importierte Audioclip."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Rollensteuerung",
+          "tables": [
+            {
+              "headers": ["Rolle", "Wann sie angezeigt wird", "Aktionen"],
+              "rows": [
+                [
+                  "Systemaudio-Spur",
+                  "Mindestens ein Audioclip mit der Rolle System ist vorhanden.",
+                  "Aktivieren oder deaktivieren, Rollenlautstärke ändern oder alle Systemclips löschen."
+                ],
+                [
+                  "Mikrofon-Spur",
+                  "Mindestens ein Audioclip mit der Rolle Mikrofon ist vorhanden.",
+                  "Aktivieren oder deaktivieren, Rollenlautstärke ändern oder alle Mikrofonclips löschen."
+                ],
+                [
+                  "Importiertes Audio",
+                  "Ein Clip mit importiertem Audio ist vorhanden.",
+                  "Wähle den Clip in der Timeline aus und verwende „Clip-Lautstärke“; er besitzt keinen eigenen Rollenbereich."
+                ],
+                [
+                  "Keine Rollen",
+                  "Keine System- oder Mikrofonrolle ist vorhanden.",
+                  "Das Panel meldet, dass keine Audiospuren erkannt wurden."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Deaktivieren im Vergleich zum Löschen",
+          "paragraphs": [
+            "Beim Deaktivieren bleiben die Clips erhalten, werden aber von Wiedergabe und Export ausgeschlossen. Beim Löschen einer Rolle werden alle dieser Rolle zugewiesenen Clips aus der Komposition entfernt."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Das Löschen einer Rolle betrifft mehrere Clips",
+            "text": "„Systemspur löschen“ und „Mikrofonspur löschen“ wirken auf die gesamte Rolle, nicht nur auf den Clip neben dem Abspielkopf."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/settings",
+      "title": "Editor-Einstellungen",
+      "description": "Vollständige Referenz für Sprache, Rechtschreibprüfung, Darstellung, Updates, soziale Links und Entwicklungseinstellungen.",
+      "lead": "Die Editor-Einstellungen enthalten anwendungsweite Präferenzen, die mit dem Rekorder geteilt werden, sowie editor-spezifische Entwicklungseinstellungen.",
+      "sections": [
+        {
+          "title": "Einstellungs-Panel",
+          "screenshot": {
+            "path": "editor/settings-panel.webp",
+            "alt": "Beam-Einstellungs-Panel mit Sprach- und Darstellungseinstellungen",
+            "caption": "Die Einstellungen wenden Sprach- und Darstellungspräferenzen auf die gesamte Anwendung an.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Sprache und Schreiben",
+          "tables": [
+            {
+              "headers": ["Einstellung", "Werte", "Standard"],
+              "rows": [
+                [
+                  "Sprache",
+                  "Bulgarisch, Deutsch, Englisch, Spanisch, Französisch, Hindi, Italienisch, Japanisch, Koreanisch, Polnisch, Portugiesisch (Brasilien), Russisch, Vietnamesisch, Vereinfachtes Chinesisch, Traditionelles Chinesisch",
+                  "Eine unterstützte System- oder Browsersprache; Fallback auf Englisch"
+                ],
+                ["Rechtschreibprüfung", "Ein oder Aus unter Erweitert", "Ein"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Darstellung",
+          "tables": [
+            {
+              "headers": ["Einstellung", "Werte", "Standard"],
+              "rows": [
+                ["Theme-Modus", "Hell, Dunkel, System", "Hell"],
+                [
+                  "Theme-Voreinstellung",
+                  "Beam Sunset, Cyber Violet, Emerald Forest, Crimson Velvet, Oceanic Breeze, Amber Studio, Sakura Bloom, Slate Precision",
+                  "Beam Sunset"
+                ],
+                ["Primärfarbe", "10 Voreinstellungen oder eine benutzerdefinierte Farbauswahl", "#ff5a1f"],
+                ["Sekundärfarbe", "8 Voreinstellungen oder eine benutzerdefinierte Farbauswahl", "#6366f1"],
+                ["Eckenradius", "0, 6, 10, 16, 24 px oder benutzerdefiniert 0–32 px", "10 px"],
+                ["Pillenradius", "Ein oder Aus", "Aus"],
+                ["Oberfläche", "Standard, Neutral, Schiefer, Tief", "Standard"],
+                ["Globale UI-Skalierung", "50%, 75%, 100%, 125%", "100%"]
+              ]
+            }
+          ],
+          "paragraphs": [
+            "Topbar, Seitenleiste, Eigenschaften, Canvas-Steuerung und Timeline können jeweils die globale Skalierung verwenden oder sie mit 50 %, 75 %, 100 % oder 125 % überschreiben. Alle Voreinstellungsfarben und Eckenradien findest du in der [Referenz zu den Rekorder-Einstellungen](/recorder/capabilities/preferences)."
+          ]
+        },
+        {
+          "title": "Updates und Links",
+          "tables": [
+            {
+              "headers": ["Bereich", "Aktionen und Status"],
+              "rows": [
+                [
+                  "Updates",
+                  "Prüfen, Verfügbar, Wird heruntergeladen, Heruntergeladen, Nicht verfügbar, Fehler, Nicht unterstützt."
+                ],
+                ["Heruntergeladenes Update", "Nach Abschluss des Downloads wird „Jetzt neu starten“ verfügbar."],
+                ["Fehler", "Diagnosedetails anzeigen oder kopieren."],
+                ["Änderungsprotokoll", "Änderungsprotokoll des aktuellen Updates öffnen."],
+                ["Discord / GitHub", "Beam-Community oder Quell-Repository öffnen."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Entwicklermodus",
+          "paragraphs": [
+            "Der Entwicklermodus wird lokal im Editor gespeichert. Er ist für Entwicklung und Fehlerbehebung gedacht, nicht für die normale Bearbeitung."
+          ],
+          "tables": [
+            {
+              "headers": ["Steuerung", "Verhalten"],
+              "rows": [
+                ["Entwicklermodus", "Zeigt die Entwicklungsoptionen an oder blendet sie aus."],
+                [
+                  "Rekorder-Werkzeug",
+                  "Öffnet ein eingebettetes Rekorder-HUD und kann über das Popover eine Aufnahme starten."
+                ],
+                ["Systeminformationen kopieren", "Kopiert Diagnoseinformationen zur Umgebung."],
+                ["DevTools öffnen", "Schaltet die Electron-Entwicklertools um."]
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

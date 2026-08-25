@@ -28,6 +28,7 @@
           ],
           "screenshot": {
             "path": "getting-started/first-recording.webp",
+            "hidden": true,
             "alt": "Trình quay Beam đã sẵn sàng cho bản ghi đầu tiên",
             "caption": "Chọn nguồn ghi hình và nguồn phương tiện trước khi bắt đầu."
           }
@@ -47,7 +48,7 @@
           "title": "Tiếp tục tìm hiểu",
           "bullets": [
             "Tìm hiểu [giao diện trình quay](/recorder/interface).",
-            "Xem tất cả [tính năng của trình quay](/recorder/capabilities).",
+            "Xem lại tất cả [khả năng ghi](/recorder/capabilities/).",
             "Tìm hiểu [giao diện trình chỉnh sửa video](/editor/interface).",
             "Chuẩn bị tệp cuối bằng [xuất và chia sẻ](/export)."
           ]
@@ -67,6 +68,7 @@
           ],
           "screenshot": {
             "path": "getting-started/update-controls.webp",
+            "aspectRatio": "16 / 9",
             "alt": "Cài đặt Beam hiển thị các điều khiển cập nhật",
             "caption": "Bảng cập nhật hiển thị phiên bản đã cài đặt và các thao tác cập nhật khả dụng."
           }

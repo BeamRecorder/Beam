@@ -28,6 +28,7 @@
           ],
           "screenshot": {
             "path": "getting-started/first-recording.webp",
+            "hidden": true,
             "alt": "Rejestrator Beam przygotowany do pierwszego nagrania",
             "caption": "Przed rozpoczęciem wybierz źródła przechwytywania i multimediów."
           }
@@ -47,7 +48,7 @@
           "title": "Ucz się dalej",
           "bullets": [
             "Poznaj [interfejs rejestratora](/recorder/interface).",
-            "Przejrzyj wszystkie [możliwości rejestratora](/recorder/capabilities).",
+            "Przejrzyj wszystkie [możliwości rejestratora](/recorder/capabilities/).",
             "Poznaj [interfejs edytora wideo](/editor/interface).",
             "Przygotuj końcowy plik za pomocą funkcji [eksportu i udostępniania](/export)."
           ]
@@ -67,6 +68,7 @@
           ],
           "screenshot": {
             "path": "getting-started/update-controls.webp",
+            "aspectRatio": "16 / 9",
             "alt": "Ustawienia Beam wyświetlające ustawienia aktualizacji",
             "caption": "Panel aktualizacji pokazuje zainstalowaną wersję i dostępne działania."
           }

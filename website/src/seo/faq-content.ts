@@ -321,17 +321,34 @@ const faqCatalogs: Partial<Record<WebsiteLocale, FaqPageCatalog>> = {
   en: englishCatalog,
   fr: frenchCatalog,
 };
+const faqCatalogRequests = new Map<WebsiteLocale, Promise<FaqPageCatalog>>();
 
 const translatedFaqModules = import.meta.glob('../i18n/*/faq.json', {
-  eager: true,
   import: 'default',
-}) as Record<string, FaqTranslation>;
-
-for (const [path, translation] of Object.entries(translatedFaqModules)) {
-  const locale = path.match(/\/i18n\/([^/]+)\/faq\.json$/)?.[1] as WebsiteLocale | undefined;
-  if (locale) faqCatalogs[locale] = createFaqCatalog(translation);
-}
+}) as Record<string, () => Promise<FaqTranslation>>;
 
 export const getFaqCatalog = (locale: WebsiteLocale): FaqPageCatalog => faqCatalogs[locale] ?? englishCatalog;
 
 export const localizedFaqItems = (locale: WebsiteLocale): readonly FaqItem[] => getFaqCatalog(locale).items;
+
+export const hasFaqCatalog = (locale: WebsiteLocale): boolean => faqCatalogs[locale] !== undefined;
+
+export const loadFaqCatalog = async (locale: WebsiteLocale): Promise<FaqPageCatalog> => {
+  const loaded = faqCatalogs[locale];
+  if (loaded) return loaded;
+
+  const loader = translatedFaqModules[`../i18n/${locale}/faq.json`];
+  if (!loader) throw new Error(`Missing FAQ catalogue: ${locale}/faq.json`);
+  const activeRequest = faqCatalogRequests.get(locale);
+  if (activeRequest) return activeRequest;
+
+  const request = loader()
+    .then((translation) => {
+      const catalog = createFaqCatalog(translation);
+      faqCatalogs[locale] = catalog;
+      return catalog;
+    })
+    .finally(() => faqCatalogRequests.delete(locale));
+  faqCatalogRequests.set(locale, request);
+  return request;
+};

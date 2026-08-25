@@ -1,0 +1,380 @@
+{
+  "pages": [
+    {
+      "slug": "recorder/capabilities/preferences",
+      "title": "Rekorder-Einstellungen",
+      "description": "Vollständige Referenz für Aufnahmeverhalten, Darstellung, Sprache, Tastenkürzel, Updates und gespeicherte Rekorder-Einstellungen.",
+      "lead": "Öffne die Einstellungen über die Topbar des Rekorders. Die Einstellungen sind in Aufnahme, Allgemein, Tastenkürzel und Über gruppiert; je nach Bereich gibt es erweiterte Darstellungs- und Update-Steuerungen.",
+      "sections": [
+        {
+          "title": "Einstellungsfenster",
+          "screenshot": {
+            "path": "recorder/preferences.webp",
+            "alt": "Beam-Einstellungsfenster mit Rekorder-Einstellungen",
+            "caption": "Die Rekorder-Einstellungen decken das Aufnahmeverhalten und mit dem Editor geteilte Einstellungen ab.",
+            "aspectRatio": "308 / 517"
+          }
+        },
+        {
+          "title": "Aufnahmeeinstellungen",
+          "tables": [
+            {
+              "headers": ["Einstellung", "Werte", "Standard", "Hinweise"],
+              "rows": [
+                [
+                  "Countdown",
+                  "Aus, 3 Sekunden, 5 Sekunden, 10 Sekunden",
+                  "3 Sekunden",
+                  "Wird vor Beginn der Aufnahme angewendet."
+                ],
+                [
+                  "Aufnahmeleiste",
+                  "Immer sichtbar, automatisch ausblenden, bis zum Darüberfahren ausgeblendet",
+                  "Immer sichtbar unter Windows/macOS; bis zum Darüberfahren ausgeblendet unter Linux",
+                  "Steuert die schwebende Leiste während der Aufnahme."
+                ],
+                [
+                  "Interaktionszugriff",
+                  "Wird geprüft, Verfügbar, Berechtigung erforderlich, Installation erforderlich, Verweigert, Nicht verfügbar",
+                  "Aus",
+                  "Unter Linux heißt diese Option „Tastatur- und Mausereignisse aufzeichnen“."
+                ],
+                [
+                  "Interaktionen aufzeichnen",
+                  "Ein oder Aus, wenn verfügbar",
+                  "Plattformabhängig",
+                  "Speichert unterstützte Klicks und sichere Tastenkürzel-Tokens, niemals eingegebenen Text."
+                ],
+                [
+                  "Tastenkürzel",
+                  "Öffnet die Tastenkürzel-Unteransicht",
+                  "Nicht zutreffend",
+                  "Öffnet die Tastenkürzelgruppen für Aufnahme und Teleprompter."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Allgemeine Einstellungen",
+          "tables": [
+            {
+              "headers": ["Einstellung", "Werte", "Standard"],
+              "rows": [
+                [
+                  "Sprache",
+                  "Bulgarisch, Deutsch, Englisch, Spanisch, Französisch, Hindi, Italienisch, Japanisch, Koreanisch, Polnisch, Portugiesisch (Brasilien), Russisch, Vietnamesisch, Vereinfachtes Chinesisch, Traditionelles Chinesisch",
+                  "Eine unterstützte System- oder Browsersprache; Englisch als Fallback"
+                ],
+                ["Designmodus", "Hell, Dunkel, System", "Hell"],
+                ["Rechtschreibprüfung", "Ein oder Aus unter Erweitert", "Ein"],
+                ["Primärfarbe", "Voreinstellungspalette oder benutzerdefinierte Farbauswahl", "#ff5a1f"],
+                ["Sekundärfarbe", "Voreinstellungspalette oder benutzerdefinierte Farbauswahl", "#6366f1"],
+                ["Eckenradius", "0, 6, 10, 16, 24 px oder Benutzerdefiniert", "10 px"],
+                ["Pillenradius", "Ein oder Aus", "Aus"],
+                ["Oberflächenton", "Standard, Neutral, Slate, Deep", "Standard"],
+                ["Globale UI-Skalierung", "50%, 75%, 100%, 125%", "100%"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Design-Voreinstellungen",
+          "paragraphs": [
+            "Eine Voreinstellung legt beide Farben, den Eckenradius, das Pillenverhalten und den Oberflächenton gemeinsam fest. Einzelne Steuerungen können danach angepasst werden."
+          ],
+          "tables": [
+            {
+              "headers": ["Voreinstellung", "Primär", "Sekundär", "Radius", "Oberfläche"],
+              "rows": [
+                ["Beam Sunset", "#ff5a1f", "#6366f1", "10 px", "Standard"],
+                ["Cyber Violet", "#8b5cf6", "#06b6d4", "12 px", "Slate"],
+                ["Emerald Forest", "#10b981", "#f59e0b", "8 px", "Neutral"],
+                ["Crimson Velvet", "#f43f5e", "#a855f7", "14 px", "Deep"],
+                ["Oceanic Breeze", "#0284c7", "#14b8a6", "10 px", "Slate"],
+                ["Amber Studio", "#f59e0b", "#ec4899", "4 px", "Neutral"],
+                ["Sakura Bloom", "#ec4899", "#8b5cf6", "18 px", "Standard"],
+                ["Slate Precision", "#0ea5e9", "#64748b", "2 px", "Slate"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Überschreibungen der Oberflächenskalierung",
+          "paragraphs": [
+            "Topbar, Seitenleiste, Eigenschaften, Canvas-Steuerungen und Timeline können jeweils die globale Skalierung verwenden oder sie mit 50%, 75%, 100% oder 125% überschreiben. „Global verwenden“ wird durch eine leere Überschreibung dargestellt, damit Änderungen der globalen Skalierung den Bereich weiterhin beeinflussen."
+          ],
+          "tables": [
+            {
+              "headers": ["Bereich", "Auswahl"],
+              "rows": [
+                ["Topbar", "Global verwenden, 50 %, 75 %, 100 %, 125 %"],
+                ["Seitenleiste", "Global verwenden, 50 %, 75 %, 100 %, 125 %"],
+                ["Eigenschaften", "Global verwenden, 50 %, 75 %, 100 %, 125 %"],
+                ["Canvas-Steuerungen", "Global verwenden, 50 %, 75 %, 100 %, 125 %"],
+                ["Timeline", "Global verwenden, 50 %, 75 %, 100 %, 125 %"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Tastenkürzel-Standards",
+          "paragraphs": [
+            "Konflikte globaler Tastenkürzel werden ohne Berücksichtigung der Groß- und Kleinschreibung verglichen. Ein doppeltes globales Tastenkürzel wird abgelehnt."
+          ],
+          "tables": [
+            {
+              "headers": ["Kategorie", "Aktion", "Standardtastenkürzel"],
+              "rows": [
+                ["Aufnahme", "Aufnahme starten / stoppen", "Alt+Shift+R"],
+                ["Aufnahme", "Pausieren / Fortsetzen", "Alt+Shift+P"],
+                ["Aufnahme", "Mikrofon umschalten", "Alt+Shift+M"],
+                ["Aufnahme", "Kamera umschalten", "Alt+Shift+C"],
+                ["Aufnahme", "Systemaudio umschalten", "Alt+Shift+A"],
+                ["Teleprompter", "Anzeigen / Ausblenden", "Alt+Shift+T"],
+                ["Teleprompter", "Pausieren / Fortsetzen", "Alt+Shift+O"],
+                ["Teleprompter", "Nächste Zeile", "Ctrl+Shift+Right"],
+                ["Teleprompter", "Vorherige Zeile", "Ctrl+Shift+Left"]
+              ]
+            }
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Editor-Tastenkürzel",
+            "text": "Das Einstellungsschema enthält auch das Editor-Tastenkürzel für Wiedergabe/Pause, die Leertaste; die Tastenkürzel-Unteransicht des Rekorders zeigt es jedoch nicht an."
+          }
+        },
+        {
+          "title": "Über und Updates",
+          "tables": [
+            {
+              "headers": ["Bereich", "Verfügbare Aktionen oder Zustände"],
+              "rows": [
+                [
+                  "Über",
+                  "Zeigt die Anwendungsversion, kopiert Systeminformationen, öffnet das Änderungsprotokoll und startet die Willkommenstour neu."
+                ],
+                [
+                  "Update-Status",
+                  "Inaktiv, Wird geprüft, Verfügbar, Wird heruntergeladen, Heruntergeladen, Nicht verfügbar, Fehler, Nicht unterstützt."
+                ],
+                [
+                  "Update-Aktionen",
+                  "Prüfen, bei Verfügbarkeit herunterladen, eine Fehlermeldung kopieren und erst neu starten, wenn das Update den Zustand „Heruntergeladen“ erreicht."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Gespeicherte Einstellungsdaten",
+          "paragraphs": [
+            "Das normalisierte Einstellungsschema hat Version 3. Zusätzlich zu den sichtbaren Steuerungen speichert es den Abschluss des Onboardings, ausgewählte Geräte, gespeicherte Hintergrundfarben und Verlaufsvoreinstellungen sowie das Ausblenden des Interaktionshinweises."
+          ],
+          "tables": [
+            {
+              "headers": ["Plattform", "Einstellungsdatei"],
+              "rows": [
+                ["Windows", "`%USERPROFILE%\\Videos\\Beam\\user\\preferences.json`"],
+                ["macOS", "`~/Movies/Beam/user/preferences.json`"],
+                ["Linux", "`${XDG_VIDEOS_DIR:-~/Videos}/Beam/user/preferences.json`"]
+              ]
+            },
+            {
+              "headers": ["Zusätzlicher Schlüssel", "Zweck"],
+              "rows": [
+                ["locale", "Ausgewählte Anwendungssprache."],
+                ["screenRegion", "Normalisierter benutzerdefinierter Aufnahmebereich."],
+                ["screenRegionPreset", "Zuletzt ausgewählte Bereichsvoreinstellung."],
+                ["teleprompterSettings", "Gemeinsamer Teleprompter-Modus und Lesereinstellungen."],
+                ["cameraOverlay", "Mit dem Editor geteilte Kamera-Overlay-Einstellungen."],
+                ["teleprompterWindow", "Zustand des Teleprompter-Fensters."]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/project-manager",
+      "title": "Projektmanager",
+      "description": "Referenz zum Suchen, Vorschauen, Auswählen, Erstellen, Umbenennen, Öffnen, Anzeigen und Löschen von Beam-Projekten.",
+      "lead": "Auswählen Öffnen ein existing project below Start Recording zu browse projects stored auf der computer.",
+      "sections": [
+        {
+          "title": "Project Aktionen",
+          "tables": [
+            {
+              "headers": ["Aktion", "Verhalten"],
+              "rows": [
+                ["Projekte suchen", "Filtert Projektnamen ohne Beachtung der Groß- und Kleinschreibung."],
+                ["Auswählen projects", "Enters selection mode für one oder more projects."],
+                ["Auswählen all", "Selects all projects currently Verfügbar zu der view."],
+                ["Auswahl beenden", "Beendet den Mehrfachauswahlmodus."],
+                ["New project", "Erstellt ein blank project without creating ein recording."],
+                ["Projekte aktualisieren", "Reloads der list von storage und briefly reports Projects refreshed."],
+                ["Öffnen project", "Opens der ausgewählt project in der editor."],
+                ["Rename", "Ändert der project name."],
+                ["Explore", "Reveals der project folder in der platform file manager."],
+                [
+                  "Löschen",
+                  "ein single-project Löschen requests confirmation. Batch Löschen starts directly für der ausgewählt projects."
+                ],
+                ["Back", "Returns zu der Recorder HUD."],
+                ["Erstellen / Abbrechen", "Confirms oder abandons blank-project creation."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "List states",
+          "tables": [
+            {
+              "headers": ["State", "Was die Oberfläche zeigt"],
+              "rows": [
+                ["Loading", "Skeleton project cards while storage ist read."],
+                ["Error", "ein error state mit Try again."],
+                ["Empty", "No projects when storage contains Keine."],
+                ["Kein Suchergebnis", "ein dedicated message when der filter matches nothing."],
+                ["Unknown date", "Fallback text when project time metadata ist unavailable."],
+                ["Current", "Marks der currently Öffnen project."],
+                ["ausgewählt", "Marks ein project included in der current selection."],
+                ["Large list", "Cards sind virtualized so nur der visible range ist rendered."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Namen, Ordner und Sitzungen",
+          "paragraphs": [
+            "New recordings receive generated names such as Clever Comet oder Rapid Signal. ein numeric suffix ist added when ein generated name already exists. ein project ist ein folder that can contain multiple recording sessions und their separate media Spuren."
+          ],
+          "tables": [
+            {
+              "headers": ["Platform", "Project root"],
+              "rows": [
+                ["Windows", "`%USERPROFILE%\\Videos\\Beam\\user\\projects`"],
+                ["macOS", "`~/Movies/Beam/user/projects`"],
+                ["Linux", "`${XDG_VIDEOS_DIR:-~/Videos}/Beam/user/projects`"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Preview und badges",
+          "paragraphs": [
+            "Beam prefers der persisted `thumbnail.webp`. If it ist missing, Beam can generate ein WebP thumbnail von der Verfügbar preview source. Hovering ein project plays its Bildschirm recording muted, automatically, und in ein loop; scrolling cancels der hover preview und stops playback."
+          ],
+          "tables": [
+            {
+              "headers": ["Badge", "Meaning"],
+              "rows": [
+                ["Monitor", "der project contains ein Bildschirm recording."],
+                ["Video", "der project contains camera footage."],
+                ["Captions", "der project contains captions oder ein text layer."]
+              ]
+            }
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Badge scope",
+            "text": "der current Project Manager does not show separate microphone oder system-audio badges."
+          }
+        },
+        {
+          "title": "Mehrfachlöschung",
+          "paragraphs": [
+            "ein single-project Löschen asks für confirmation. Batch deletion starts directly von selection mode und deletes projects sequentially rather than starting every filesystem operation at once."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/permissions-privacy",
+      "title": "Berechtigungen und Datenschutz",
+      "description": "Plattformanforderungen und Datenschutzverhalten für Bildschirm-, Audio-, Kamera- und Interaktionsaufnahmen.",
+      "lead": "Beam requests protected capabilities nur through der operating-system paths needed by der ausgewählt sources. Interaction recording ist optional und does not store typed text.",
+      "sections": [
+        {
+          "title": "Windows",
+          "bullets": [
+            "Bildschirm und Fenster capture use Windows Graphics Capture.",
+            "Cursor und Klicken capabilities depend auf what der Windows capture path exposes.",
+            "Interaktionszugriff does not require der Linux Polkit helper."
+          ]
+        },
+        {
+          "title": "macOS",
+          "tables": [
+            {
+              "headers": ["Capability", "Voraussetzung"],
+              "rows": [
+                [
+                  "Bildschirm, Fenster, oder application capture",
+                  "ScreenCaptureKit und Bildschirm Recording permission."
+                ],
+                ["Interaktionszugriff", "CoreGraphics-Bedienungshilfen-Berechtigung."],
+                ["Direkte MP4-Aufnahme", "macOS 15 oder later."],
+                [
+                  "Chromium system Audio",
+                  "macOS 13 oder later; `NSAudioCaptureUsageDescription`ist required von macOS 14.2."
+                ],
+                ["Microphone und camera", "der corresponding macOS privacy permissions."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Linux",
+          "tables": [
+            {
+              "headers": ["Voraussetzung", "Purpose oder constraint"],
+              "rows": [
+                [
+                  "XDG Desktop Portal v2 oder later",
+                  "Displays der system source picker und obtains recording consent."
+                ],
+                ["PipeWire", "Carries der ausgewählt Bildschirm und native system-audio streams."],
+                ["FFmpeg plus ein compatible MP4 encoder", "Encodes der captured session."],
+                ["Beam-Eingabehelfer", "Provides optional keyboard-shortcut und mouse-click metadata."],
+                ["Polkit / pkexec und broker", "May be required zu authorize und operate der input helper."],
+                [
+                  "Einzelne Portalquelle",
+                  "One Bildschirm oder Fenster ist ausgewählt für der session; region capture ist unavailable."
+                ]
+              ]
+            }
+          ],
+          "paragraphs": [
+            "Keyboard shortcuts und mouse clicks can have different availability depending auf accessible input devices. Linux interaction capture always reports that typed text ist not recorded."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Beam-Fenster in der Vollbildaufnahme",
+            "text": "Beam cannot hide its own windows von ein Linux full-screen capture. Bildschirm mode ist still recommended; arrange Beam before confirming der portal selection."
+          }
+        },
+        {
+          "title": "Datenschutz bei Interaktionen",
+          "bullets": [
+            "Interaction capture ist optional.",
+            "It runs nur while ein recording session ist active.",
+            "It stores supported Klicken metadata und safe shortcut tokens.",
+            "It never stores der text typed by der user."
+          ]
+        },
+        {
+          "title": "Media isolation und failure boundaries",
+          "paragraphs": [
+            "Camera, microphone, und system Audio sind stored as separate Spuren oder sidecars where supported. Outside Linux, system Audio Verwendet Chromium display-media capture. Electron grants media access nur zu trusted application renderers. ein camera reported unavailable during preparation can be omitted while capture continues; other camera oder sidecar errors, und failure von ein ausgewählt microphone oder system-audio source, can stop recording startup."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Detaillierte Einrichtung",
+            "text": "Use der [platform support reference](/platforms) für operating-system setup und troubleshooting."
+          }
+        }
+      ]
+    }
+  ]
+}

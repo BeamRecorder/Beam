@@ -14,7 +14,7 @@
           "bullets": [
             "Windows는 네이티브 설치 프로그램을 사용합니다.",
             "macOS는 macOS 13 이상을 실행하는 Apple Silicon Mac용 DMG를 사용합니다.",
-            "Linux는 AppImage, DEB, RPM 패키지를 제공합니다."
+            "Linux는 AppImage, DEB 및 RPM 패키지를 제공합니다."
           ]
         },
         {
@@ -28,6 +28,7 @@
           ],
           "screenshot": {
             "path": "getting-started/first-recording.webp",
+            "hidden": true,
             "alt": "첫 녹화를 준비한 Beam 녹화기",
             "caption": "시작하기 전에 캡처 및 미디어 소스를 선택하세요."
           }
@@ -47,7 +48,7 @@
           "title": "계속 알아보기",
           "bullets": [
             "[녹화기 인터페이스](/recorder/interface)를 알아보세요.",
-            "모든 [녹화기 기능](/recorder/capabilities)을 검토하세요.",
+            "모든 [녹화기 기능](/recorder/capabilities/)을 검토하세요.",
             "[동영상 편집기 인터페이스](/editor/interface)를 이해하세요.",
             "[내보내기 및 공유](/export)로 최종 파일을 준비하세요."
           ]
@@ -67,6 +68,7 @@
           ],
           "screenshot": {
             "path": "getting-started/update-controls.webp",
+            "aspectRatio": "16 / 9",
             "alt": "업데이트 제어를 표시하는 Beam 설정",
             "caption": "업데이트 패널에는 설치된 버전과 사용 가능한 업데이트 작업이 표시됩니다."
           }

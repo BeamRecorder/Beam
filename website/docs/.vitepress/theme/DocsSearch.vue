@@ -1,0 +1,390 @@
+<script setup lang="ts">
+import { ArrowRight, Search } from '@lucide/vue';
+import type MiniSearch from 'minisearch';
+import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef } from 'vue';
+import { useData, withBase } from 'vitepress';
+import Dialog from '../../../../src/components/ui/dialog/Dialog.vue';
+import KeyboardChip from '../../../../src/components/ui/Kbd/KeyboardChip.vue';
+import type { DocsSearchEntry, DocsSearchPayload } from '../content/docs-content-types';
+import { docsLocaleFromPath, type DocsLocale } from '../content/docs-locales';
+
+const { page } = useData();
+const isOpen = ref(false);
+const query = ref('');
+const input = ref<HTMLInputElement | null>(null);
+const index = shallowRef<MiniSearch<DocsSearchEntry> | null>(null);
+const featured = shallowRef<DocsSearchPayload['featured']>([]);
+const isLoading = ref(false);
+const loadFailed = ref(false);
+const searchStates = new Map<
+  DocsLocale,
+  { index: MiniSearch<DocsSearchEntry>; featured: DocsSearchPayload['featured'] }
+>();
+const searchRequests = new Map<
+  DocsLocale,
+  Promise<{ index: MiniSearch<DocsSearchEntry>; featured: DocsSearchPayload['featured'] }>
+>();
+
+const locale = computed<DocsLocale>(() => docsLocaleFromPath(page.value.relativePath));
+
+const normalizeTerm = (value: string) =>
+  value
+    .normalize('NFKD')
+    .replaceAll(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase();
+
+const loadSearchState = async (docsLocale: DocsLocale) => {
+  const cached = searchStates.get(docsLocale);
+  if (cached) return cached;
+  const activeRequest = searchRequests.get(docsLocale);
+  if (activeRequest) return activeRequest;
+
+  const request = Promise.all([fetch(withBase(`/docs-search/${docsLocale}.json`)), import('minisearch')])
+    .then(async ([response, { default: MiniSearchConstructor }]) => {
+      if (!response.ok) throw new Error(`Documentation search returned ${response.status}.`);
+      const payload = (await response.json()) as DocsSearchPayload;
+      if (!Array.isArray(payload.entries) || !Array.isArray(payload.featured)) {
+        throw new Error('Documentation search data is invalid.');
+      }
+      const searchIndex = new MiniSearchConstructor<DocsSearchEntry>({
+        idField: 'path',
+        fields: ['title', 'description', 'text'],
+        storeFields: ['title', 'description', 'path'],
+        processTerm: normalizeTerm,
+        searchOptions: {
+          boost: { title: 5, description: 2 },
+          combineWith: 'AND',
+          prefix: true,
+          fuzzy: (term) => (term.length >= 5 ? 0.2 : false),
+          boostDocument: (_documentId, _term, fields) => {
+            const pathDepth = String(fields?.path).split('/').filter(Boolean).length;
+            return pathDepth === (docsLocale === 'en' ? 1 : 2) ? 2 : 1;
+          },
+        },
+      });
+      searchIndex.addAll(payload.entries);
+      const state = { index: searchIndex, featured: payload.featured };
+      searchStates.set(docsLocale, state);
+      return state;
+    })
+    .finally(() => searchRequests.delete(docsLocale));
+  searchRequests.set(docsLocale, request);
+  return request;
+};
+
+const results = computed(() => {
+  const value = query.value.trim();
+  if (!value || !index.value) return [];
+  return index.value
+    .search(value)
+    .slice(0, 10)
+    .map((result) => ({
+      title: String(result.title),
+      description: String(result.description),
+      path: String(result.path),
+    }));
+});
+
+const featuredHref = (link: string) => {
+  const prefix = locale.value === 'en' ? '' : `${locale.value}/`;
+  return withBase(`/${prefix}${link.replace(/^\//, '')}`);
+};
+
+const open = async () => {
+  isOpen.value = true;
+  loadFailed.value = false;
+  await nextTick();
+  input.value?.focus();
+  isLoading.value = true;
+  try {
+    const requestedLocale = locale.value;
+    const state = await loadSearchState(requestedLocale);
+    if (locale.value !== requestedLocale) return;
+    index.value = state.index;
+    featured.value = state.featured;
+  } catch {
+    loadFailed.value = true;
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+const close = () => {
+  isOpen.value = false;
+  query.value = '';
+};
+
+const handleShortcut = (event: KeyboardEvent) => {
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+    event.preventDefault();
+    void open();
+  }
+};
+
+onMounted(() => window.addEventListener('keydown', handleShortcut));
+onUnmounted(() => window.removeEventListener('keydown', handleShortcut));
+</script>
+
+<template>
+  <button class="docs-search-trigger" type="button" aria-label="Search Beam documentation" @click="open">
+    <Search class="docs-search-trigger__icon" aria-hidden="true" />
+    <span class="docs-search-trigger__label docs-search-trigger__label--full">Search documentation</span>
+    <span class="docs-search-trigger__label docs-search-trigger__label--compact">Search</span>
+    <ClientOnly>
+      <KeyboardChip shortcut="CommandOrControl+K" />
+      <template #fallback><KeyboardChip :keys="['Ctrl', 'K']" /></template>
+    </ClientOnly>
+  </button>
+
+  <Dialog :is-open="isOpen" title="Search Beam Docs" size="md" @close="close">
+    <div class="docs-search-field">
+      <Search aria-hidden="true" />
+      <input
+        ref="input"
+        v-model="query"
+        type="search"
+        autocomplete="off"
+        placeholder="Search Recorder, Video Editor, export…"
+        aria-label="Search all Beam documentation"
+      />
+    </div>
+
+    <p v-if="isLoading" class="docs-search-empty" aria-live="polite">Loading documentation…</p>
+
+    <p v-else-if="loadFailed" class="docs-search-empty" aria-live="polite">
+      Documentation search is temporarily unavailable.
+    </p>
+
+    <section v-else-if="!query.trim()" class="docs-search-section" aria-label="Main documentation sections">
+      <p>Start here</p>
+      <a
+        v-for="item in featured"
+        :key="item.link"
+        class="docs-search-result"
+        :href="featuredHref(item.link)"
+        @click="close"
+      >
+        <span>
+          <strong>{{ item.title }}</strong>
+          <small>{{ item.details }}</small>
+        </span>
+        <ArrowRight aria-hidden="true" />
+      </a>
+    </section>
+
+    <section v-else-if="results.length" class="docs-search-section" aria-live="polite">
+      <p>{{ results.length }} result{{ results.length === 1 ? '' : 's' }}</p>
+      <a
+        v-for="result in results"
+        :key="result.path"
+        class="docs-search-result"
+        :href="withBase(result.path)"
+        @click="close"
+      >
+        <span>
+          <strong>{{ result.title }}</strong>
+          <small>{{ result.description }}</small>
+        </span>
+        <ArrowRight aria-hidden="true" />
+      </a>
+    </section>
+
+    <p v-else class="docs-search-empty" aria-live="polite">No documentation found for “{{ query }}”.</p>
+  </Dialog>
+</template>
+
+<style scoped>
+.docs-search-trigger {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  z-index: 40;
+  display: flex;
+  width: min(272px, 26vw);
+  height: 40px;
+  padding: 0 16px;
+  transform: translateX(-50%);
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-header-control);
+  color: var(--text-muted);
+  cursor: pointer;
+  font: 600 13px/1 var(--font-sans);
+}
+
+.docs-search-trigger:hover {
+  border-color: var(--color-primary-border);
+  background: var(--color-header-control-hover);
+  color: var(--text-primary);
+}
+
+.docs-search-trigger > svg,
+.docs-search-field > svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.docs-search-trigger__label {
+  overflow: hidden;
+  flex: 1;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.docs-search-trigger__label--compact {
+  display: none;
+}
+
+.docs-search-field {
+  display: flex;
+  height: 48px;
+  padding: 0 14px;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-app);
+  color: var(--text-muted);
+}
+
+.docs-search-field:focus-within {
+  border-color: var(--color-primary-border);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.docs-search-field input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: 600 15px/1.4 var(--font-sans);
+}
+
+.docs-search-field input::placeholder {
+  color: var(--text-muted);
+}
+
+.docs-search-section {
+  display: grid;
+  margin-top: 20px;
+  gap: 6px;
+}
+
+.docs-search-section > p {
+  margin: 0 0 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.docs-search-result {
+  display: flex;
+  min-width: 0;
+  padding: 12px 13px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.docs-search-result:hover,
+.docs-search-result:focus-visible {
+  border-color: var(--color-primary-border);
+  background: var(--color-primary-light);
+}
+
+.docs-search-result > span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.docs-search-result strong {
+  font-size: 14px;
+}
+
+.docs-search-result small {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.docs-search-result > svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  color: var(--color-primary);
+}
+
+.docs-search-empty {
+  margin: 20px 0 4px;
+  padding: 20px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+@media (max-width: 1199px) {
+  .docs-search-trigger {
+    width: min(220px, 23vw);
+  }
+
+  .docs-search-trigger :deep(.keyboard-chip-group) {
+    display: none;
+  }
+}
+
+@media (max-width: 1079px) {
+  .docs-search-trigger {
+    width: 128px;
+  }
+
+  .docs-search-trigger__label--full {
+    display: none;
+  }
+
+  .docs-search-trigger__label--compact {
+    display: inline;
+  }
+}
+
+@media (max-width: 959px) {
+  .docs-search-trigger {
+    position: static;
+    width: 40px;
+    padding: 0;
+    border-color: transparent;
+    transform: none;
+    justify-content: center;
+    background: transparent;
+  }
+
+  .docs-search-trigger__label {
+    display: none;
+  }
+}
+
+@media (max-width: 639px) {
+  .docs-search-result small {
+    display: -webkit-box;
+    overflow: hidden;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+}
+</style>

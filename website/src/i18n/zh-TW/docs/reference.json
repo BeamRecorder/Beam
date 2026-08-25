@@ -3,101 +3,184 @@
     {
       "slug": "export",
       "title": "匯出與分享",
-      "description": "使用適當的解析度和品質預設，將 Beam 編排匯出為 MP4 或 WebM。",
-      "lead": "匯出會使用機器支援的設定，將目前編排直接轉譯為本機檔案。",
+      "description": "使用解析度、幀率、質量和音訊控制，將 Beam 編排匯出為 WebM 或 MP4。",
+      "lead": "匯出會直接將當前編排渲染到本地檔案，並報告任務的每個階段。",
       "sections": [
         {
           "title": "選擇格式",
-          "bullets": [
-            "WebM 使用 WebM 容器與目前機器上可用的編碼器。",
-            "當 Beam 找到相容的硬體或軟體編碼器時，MP4 使用 MP4 容器。"
+          "tables": [
+            {
+              "headers": ["格式", "影片編解碼器選擇", "音訊編解碼器", "可用性"],
+              "rows": [
+                [
+                  "WebM",
+                  "VP9、VP8、AV1 中第一個可編碼的編解碼器",
+                  "Opus",
+                  "預設格式；要求存在可編碼的影片編解碼器，並且在包含音訊時需要 Opus。"
+                ],
+                [
+                  "MP4",
+                  "AVC / H.264",
+                  "AAC",
+                  "要求 AVC 編碼器。AAC 在可用時使用 WebCodecs，然後回退到 Beam 的 Mediabunny AAC 編碼器。"
+                ]
+              ]
+            }
           ],
           "notice": {
             "kind": "info",
             "title": "編碼器可用性",
-            "text": "當機器沒有提供相容的編碼器時，某種格式可能無法使用。Beam 會在匯出前或匯出期間報告這一點。"
+            "text": "當裝置沒有提供相容的編碼器時，某種格式可能不可用。Beam 會在匯出之前或期間報告這一點。"
           }
         },
         {
           "title": "選擇解析度",
-          "bullets": [
-            "當原生畫布足夠大時，720p 會縮小為 HD 輸出。",
-            "當原生畫布足夠大時，1080p 會縮小為 Full HD 輸出。",
-            "「最大」保留原生輸出畫布尺寸。"
+          "tables": [
+            {
+              "headers": ["選項", "可用性", "輸出行為"],
+              "rows": [
+                ["720p", "原生畫布高度至少為 720 px", "目標高度為 720 px，不進行放大。"],
+                ["1080p", "原生畫布高度至少為 1080 px", "目標高度為 1080 px，不進行放大。"],
+                ["最大", "始終可用", "保留原生輸出畫布尺寸。"],
+                ["所有選項", "不適用", "保留寬高比，並將寬度和高度四捨五入為正偶數。"]
+              ]
+            }
           ]
         },
         {
-          "title": "選擇品質和位元率",
-          "paragraphs": [
-            "低、中和高預設會根據輸出尺寸和影格率計算位元率。中等品質平衡清晰度與檔案大小，高品質優先考量視覺保真度。"
+          "title": "選擇幀率和質量",
+          "tables": [
+            {
+              "headers": ["設定", "值", "預設值或建議"],
+              "rows": [
+                ["幀率", "24、30、60 fps", "源幀率不低於 50 fps 時為 60；不高於 27 fps 時為 24；其他情況為 30。"],
+                ["質量", "低、中、高", "中"],
+                ["低位元速率係數", "0.055 × 寬度 × 高度 × fps", "限制在 0.5–40 Mbps。"],
+                ["中位元速率係數", "0.095 × 寬度 × 高度 × fps", "限制在 0.5–40 Mbps。"],
+                ["高位元速率係數", "0.16 × 寬度 × 高度 × fps", "限制在 0.5–40 Mbps。"]
+              ]
+            }
           ],
           "screenshot": {
-            "path": "reference/export-settings.webp",
-            "alt": "Beam 的格式、解析度和品質匯出設定",
-            "caption": "選擇目的地檔案前，先選擇格式、解析度和品質。"
+            "path": "reference/export-panel.webp",
+            "alt": "包含格式、解析度、幀率、質量和音訊控制的 Beam 匯出面板",
+            "caption": "選擇目標檔案前，先選擇渲染設定。",
+            "aspectRatio": "361 / 560"
           }
         },
         {
-          "title": "監控匯出",
-          "paragraphs": [
-            "Beam 會在轉譯時顯示影格進度。你可以取消作用中的匯出，或複製其診斷報告。即時編輯器變更不會修改已經在轉譯的檔案。"
+          "title": "更多選項",
+          "tables": [
+            {
+              "headers": ["選項", "值", "預設值", "行為"],
+              "rows": [
+                [
+                  "包含音訊",
+                  "開啟或關閉",
+                  "開啟",
+                  "關閉時建立靜音檔案。如果沒有啟用的音訊片段具有正時長，也會省略音訊。"
+                ],
+                [
+                  "音訊輸出",
+                  "48 kHz、立體聲、128 kbps",
+                  "包含音訊時",
+                  "啟用的音訊片段會逐步混合到選定的容器編解碼器中。"
+                ]
+              ]
+            }
           ]
         },
         {
-          "title": "開啟結果",
+          "title": "監控匯出",
+          "tables": [
+            {
+              "headers": ["階段", "Beam 的操作"],
+              "rows": [
+                ["驗證資源", "檢查快照、本地資源、格式、編解碼器和渲染不變數。"],
+                ["載入資源", "載入視覺、音訊、游標、字型和背景資源。"],
+                ["編碼", "渲染編排幀，混合啟用的音訊，並寫入編碼後的塊。"],
+                ["完成", "關閉軌道並完成媒體容器和目標檔案。"]
+              ]
+            }
+          ],
           "paragraphs": [
-            "匯出成功後，Beam 會報告儲存的檔案名稱，並提供開啟檔案的操作。如果匯出失敗，請先複製技術報告，再在 [Discord](https://discord.gg/6Q6v2xUCB) 或 [GitHub](https://github.com/BeamRecorder/Beam/issues) 上尋求協助。"
+            "進度檢視會報告百分比和已完成幀數，並提供“複製報告”。取消會停止活動匯出。關閉或取消目標檔案選擇器會結束任務，但不會報告錯誤。匯出開始後進行的實時編輯不會改變進行中的檔案，因為 Beam 匯出的是快照。"
+          ]
+        },
+        {
+          "title": "驗證和邊界情況",
+          "tables": [
+            {
+              "headers": ["條件", "結果"],
+              "rows": [
+                ["缺少資源", "匯出會因驗證問題停止，並指出相關資源或片段。"],
+                ["不受支援的來源或編解碼器", "匯出會報告不受支援的格式、編解碼器或解碼失敗。"],
+                ["沒有相容的輸出編碼器", "會報告選定的 WebM 或 MP4 格式無法在裝置上編碼。"],
+                ["動畫 GIF", "動畫 GIF 目前無法進行確定性匯出。"],
+                ["Canvas 2D 不可用", "匯出會停止，因為無法渲染編排幀。"],
+                ["取消", "活動 worker 和輸出流會中止，不完整的匯出不會被報告為失敗。"],
+                ["音訊混合器不可用", "Beam 會報告 Chromium 構建中離線音訊混合不可用。"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "結果和診斷",
+          "paragraphs": [
+            "匯出成功後，Beam 會報告儲存的檔名，並提供“開啟檔案”和“複製報告”操作。如果匯出失敗，面向使用者的訊息會隱藏本地檔案系統路徑，而詳細報告會保留配置、編解碼器、環境、進度和瓶頸資訊以便排查。在 [Discord](https://discord.gg/6Q6v2xUCB) 或 [GitHub](https://github.com/BeamRecorder/Beam/issues) 上尋求幫助前，請先複製該報告。"
           ]
         }
       ]
     },
     {
       "slug": "platforms",
-      "title": "平台支援",
-      "description": "查看 Beam 在 Windows、macOS 和 Linux 上的支援情況與作業系統特定行為。",
-      "lead": "Beam 支援 Windows、macOS 和 Linux。原生權限和視窗系統能力會造成平台之間的一些差異。",
+      "title": "平臺支援",
+      "description": "檢視 Beam 在 Windows、macOS 和 Linux 上的支援情況及作業系統特定行為。",
+      "lead": "Beam 支援 Windows、macOS 和 Linux。原生許可權和視窗系統能力會造成平臺之間的一些差異。",
       "sections": [
         {
           "title": "Windows",
           "bullets": [
-            "Beam 以原生 Windows 安裝程式發行。",
-            "支援螢幕、視窗、區域、攝影機、麥克風和系統音訊錄影。",
-            "可以儲存和還原疊加層的位置與大小。"
+            "Beam 以原生 Windows 安裝程式分發。",
+            "支援螢幕、視窗、區域、攝像頭、麥克風和系統音訊錄製。",
+            "可以儲存和恢復疊加層的位置和大小。"
           ]
         },
         {
           "title": "macOS",
           "bullets": [
-            "Beam 以 DMG 發行，適用於執行 macOS 13 或更新版本的 Apple Silicon Mac。",
-            "使用這些來源時，系統會要求螢幕錄製、麥克風和攝影機權限。",
-            "可以儲存和還原疊加層的位置與大小。"
+            "Beam 以 DMG 分發，適用於執行 macOS 13 或更高版本的 Apple Silicon Mac。",
+            "使用這些來源時，系統會請求螢幕錄製、麥克風和攝像頭許可權。",
+            "可以儲存和恢復疊加層的位置和大小。"
           ],
           "notice": {
             "kind": "warning",
             "title": "Beam 已損壞，無法開啟",
-            "text": "將 Beam 移到 `/Applications` 後，執行 `xattr -cr /Applications/Beam.app`，或在「系統設定」>「隱私權與安全性」中選擇「仍要開啟」。"
+            "text": "將 Beam 移動到 `/Applications` 後，執行 `xattr -cr /Applications/Beam.app`，或在“系統設定”>“隱私與安全性”中選擇“仍要開啟”。"
           },
           "subsections": [
             {
-              "title": "允許螢幕和系統音訊錄影",
+              "title": "允許螢幕和系統音訊錄製",
               "paragraphs": [
-                "開啟 Apple 選單 >「系統設定」>「隱私權與安全性」>「螢幕與系統音訊錄影」，然後啟用 Beam。如果清單中沒有 Beam，請使用新增按鈕並選取 `/Applications/Beam.app`。變更此權限後退出並重新開啟 Beam。"
+                "開啟 Apple 選單 >“系統設定”>“隱私與安全性”>“螢幕與系統音訊錄製”，然後啟用 Beam。如果列表中沒有 Beam，請使用新增按鈕並選擇 `/Applications/Beam.app`。更改此許可權後退出並重新開啟 Beam。"
               ],
               "screenshot": {
                 "path": "platforms/macos-screen-system-audio.webp",
-                "alt": "已啟用 Beam 的 macOS 螢幕與系統音訊錄影隱私設定",
-                "caption": "在「螢幕與系統音訊錄影」下啟用 Beam。"
+                "hidden": true,
+                "alt": "已啟用 Beam 的 macOS 螢幕與系統音訊錄製隱私設定",
+                "caption": "在“螢幕與系統音訊錄製”下啟用 Beam。"
               }
             },
             {
-              "title": "允許麥克風和攝影機存取",
+              "title": "允許麥克風和攝像頭訪問",
               "paragraphs": [
-                "在「系統設定」>「隱私權與安全性」中開啟「麥克風」，錄製語音時啟用 Beam。使用攝影機疊加層時，開啟「攝影機」並啟用 Beam。"
+                "在“系統設定”>“隱私與安全性”中開啟“麥克風”，錄製語音時啟用 Beam。使用攝像頭疊加層時，開啟“攝像頭”並啟用 Beam。"
               ],
               "screenshot": {
                 "path": "platforms/macos-microphone-camera.webp",
-                "alt": "Beam 的 macOS 麥克風和攝影機隱私設定",
-                "caption": "想要擷取某個來源，就必須在該來源的隱私清單中啟用 Beam。"
+                "hidden": true,
+                "alt": "Beam 的 macOS 麥克風和攝像頭隱私設定",
+                "caption": "想要捕獲某個來源，就必須在該來源的隱私列表中啟用 Beam。"
               }
             }
           ]
@@ -105,17 +188,17 @@
         {
           "title": "Linux",
           "bullets": [
-            "Beam 提供 AppImage、DEB 和 RPM 套件。",
-            "螢幕和視窗擷取使用 XDG Desktop Portal、PipeWire 和 FFmpeg。",
-            "開始擷取時，系統選擇器會要求權限。",
-            "鍵盤快捷鍵和滑鼠點擊中繼資料需要明確的 Polkit 同意。",
-            "X11 可以還原疊加層的位置和大小。",
-            "原生 Wayland 可以還原疊加層大小，但不能還原全域位置。"
+            "Beam 提供 AppImage、DEB 和 RPM 軟體包。",
+            "螢幕和視窗捕獲使用 XDG Desktop Portal、PipeWire 和 FFmpeg。",
+            "開始捕獲時，系統選擇器會請求許可權。",
+            "鍵盤快捷鍵和滑鼠點選後設資料需要明確的 Polkit 同意。",
+            "X11 可以恢復疊加層的位置和大小。",
+            "原生 Wayland 可以恢復疊加層大小，但不能恢復全域性位置。"
           ],
           "notice": {
             "kind": "info",
             "title": "Wayland 定位",
-            "text": "Wayland 不會公開全域視窗座標。Beam 不會強制使用 XWayland，因為這種變通方案可能與某些 GPU 和 X11 設定不相容。"
+            "text": "Wayland 不會公開全域性視窗座標。Beam 不會強制使用 XWayland，因為該變通方案可能與某些 GPU 和 X11 配置不相容。"
           }
         }
       ]

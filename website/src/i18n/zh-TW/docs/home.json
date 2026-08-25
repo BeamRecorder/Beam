@@ -1,27 +1,39 @@
 {
   "title": "Beam 文件",
-  "description": "了解如何使用 Beam 錄製、編輯和分享精緻的產品示範。",
+  "description": "瞭解如何使用 Beam 錄製、編輯和分享精心製作的產品演示。",
   "hero": {
-    "name": "Beam 文件",
+    "name": "Beam Docs",
     "text": "錄製。編輯。分享。",
-    "tagline": "使用 Beam 擷取並打磨產品示範的實用指南。",
-    "imageAlt": "Beam 應用程式圖示",
+    "tagline": "使用 Beam 捕獲並打磨產品演示的實用指南。",
+    "imageAlt": "Beam 應用圖示",
     "actions": [
-      { "theme": "brand", "text": "開始使用", "link": "/getting-started" },
-      { "theme": "alt", "text": "在 GitHub 上查看", "link": "https://github.com/BeamRecorder/Beam" },
-      { "theme": "alt", "text": "加入 Discord", "link": "https://discord.gg/6Q6v2xUCB" }
+      {
+        "theme": "brand",
+        "text": "開始使用",
+        "link": "/getting-started"
+      },
+      {
+        "theme": "alt",
+        "text": "在 GitHub 上檢視",
+        "link": "https://github.com/BeamRecorder/Beam"
+      },
+      {
+        "theme": "alt",
+        "text": "加入 Discord",
+        "link": "https://discord.gg/6Q6v2xUCB"
+      }
     ]
   },
   "categories": [
     {
-      "title": "錄影工具",
-      "details": "選擇來源、準備音訊和攝影機軌道，然後從精簡的 HUD 控制錄影。",
+      "title": "錄製器應用",
+      "details": "選擇來源，準備音訊和攝像頭軌道，然後從緊湊的 HUD 控制錄製。",
       "link": "/recorder/",
       "visual": "recorder"
     },
     {
       "title": "影片編輯器",
-      "details": "在一個工作區中調整時間、構圖、縮放、游標動態、字幕、聲音和匯出。",
+      "details": "在一個工作區中調整時序、構圖、縮放、游標移動、字幕、聲音和匯出。",
       "link": "/editor/",
       "visual": "editor"
     }

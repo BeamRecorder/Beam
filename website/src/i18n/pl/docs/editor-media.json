@@ -1,0 +1,293 @@
+{
+  "pages": [
+    {
+      "slug": "editor/capabilities/captions",
+      "title": "Napisy AI",
+      "description": "Pełna dokumentacja lokalnych modeli Whisper, źródeł audio, plików do pobrania, transkrypcji, regeneracji, anulowania i diagnostyki.",
+      "lead": "Beam generuje podpisy mowy lokalnie z włączonego klipu audio. Pobiera wybrany model Whisper, dokonuje transkrypcji na urządzeniu i tworzy edytowalne klipy z napisami na osi czasu.",
+      "sections": [
+        {
+          "title": "Panel napisów",
+          "screenshot": {
+            "path": "editor/captions-panel.webp",
+            "alt": "Beam Panel napisów AI ze źródłem dźwięku i sterowaniem modelem szeptu",
+            "caption": "Przed wygenerowaniem napisów wybierz włączone źródło dźwięku i lokalny model szeptu.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Źródła dźwięku",
+          "tables": [
+            {
+              "headers": ["Źródło", "Kiedy się pojawi", "Reguła wyboru"],
+              "rows": [
+                ["Dźwięk systemowy", "Istnieje włączony klip z rolą System.", "Identyfikowany jako dźwięk systemowy."],
+                ["Mikrofon", "Istnieje włączony klip z rolą Mikrofon.", "Identyfikowany jako Mikrofon."],
+                ["Importowany dźwięk", "Istnieje włączony zaimportowany klip audio.", "Używa nazwy klipu."],
+                [
+                  "Zduplikowany adres URL multimediów",
+                  "Dwa włączone klipy odwołują się do tego samego adresu URL dźwięku.",
+                  "Oferowane jest tylko pierwsze źródło."
+                ],
+                [
+                  "Brak użytecznego źródła",
+                  "Żaden włączony klip audio nie ma czytelnego adresu URL zasobu.",
+                  "Generowanie pozostaje niedostępne."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Modele szeptów",
+          "tables": [
+            {
+              "headers": ["Modelka", "Języki", "Wskazówki dotyczące wydajności"],
+              "rows": [
+                ["Tiny", "Wielojęzyczny", "Domyślny model."],
+                ["Tiny.en", "Angielski", "Model wyłącznie w języku angielskim."],
+                ["Base", "Wielojęzyczny", "Brak dodatkowego ostrzeżenia."],
+                ["Base.en", "Angielski", "Model wyłącznie w języku angielskim."],
+                ["Small", "Wielojęzyczny", "Może działać wolno bez WebGPU."],
+                ["Small.en", "Angielski", "Może działać wolno bez WebGPU."],
+                ["Medium", "Wielojęzyczny", "Duży plik do pobrania; Zalecane WebGPU."],
+                ["Medium.en", "Angielski", "Duży plik do pobrania; Zalecane WebGPU."],
+                ["Large v3", "Wielojęzyczny", "Bardzo duży i wolny bez WebGPU."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Pobieranie i usuwanie modelu",
+          "tables": [
+            {
+              "headers": ["Stan lub działanie", "Zachowanie"],
+              "rows": [
+                ["Brak", "Opcja Pobierz model jest dostępna dla wybranego modelu."],
+                ["Pobieranie", "Beam raportuje pobrane dane i całkowitą liczbę bajtów z paskiem postępu."],
+                ["Gotowy", "Znacznik wyboru wskazuje zainstalowany model i dostępna jest opcja Usuń model."],
+                ["Usuń model", "Niedostępne podczas pobierania, usuwania lub transkrypcji."],
+                ["Błąd pobierania", "Błąd zostanie wyświetlony i można go skopiować do celów diagnostycznych."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Generuj i regeneruj",
+          "steps": [
+            "Wybierz jedno z włączonych źródeł dźwięku.",
+            "Wybierz i pobierz model Whisper, jeśli nie jest jeszcze gotowy.",
+            "Wybierz opcję Generuj podpisy. Beam dekoduje źródło, konwertuje je na dźwięk mono 16 kHz i ogranicza do czasu trwania.",
+            "Wyniki częściowej transkrypcji aktualizują kompozycję podczas kontynuowania przetwarzania.",
+            "Po zakończeniu przebiegu wybierany jest do edycji pierwszy wygenerowany podpis."
+          ],
+          "tables": [
+            {
+              "headers": ["Zachowanie", "Reguła"],
+              "rows": [
+                ["Grupowanie zdań", "Kończy frazę podpisu w miejscu znaków interpunkcyjnych lub po 12 słowach."],
+                ["Minimalny czas trwania wygenerowanego klipu", "40 ms."],
+                [
+                  "Zregeneruj się",
+                  "Zastępuje istniejące napisy generowane przez sztuczną inteligencję i zachowuje napisy ręczne."
+                ],
+                ["Anuluj", "Zatrzymuje ładowanie modelu lub transkrypcję."],
+                ["Zamknij panel", "Anuluje aktywny przebieg transkrypcji."],
+                [
+                  "Diagnostyka",
+                  "Raportuje upływ czasu i po przetworzeniu udostępnia raport transkrypcji, który można skopiować."
+                ]
+              ]
+            }
+          ],
+          "notice": {
+            "kind": "tip",
+            "title": "Transkrypcja lokalna",
+            "text": "Szept działa na urządzeniu. Generowanie napisów nie wymaga przesyłania do chmury ani klucza API."
+          }
+        },
+        {
+          "title": "Edytuj wygenerowane podpisy",
+          "paragraphs": [
+            "Wygenerowane napisy to zwykłe edytowalne klipy z napisami, oznaczone jako wygenerowane przez sztuczną inteligencję. Ich tekst, czas i styl wizualny można dostosować po wygenerowaniu za pomocą panelu Klip i osi czasu."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/audio",
+      "title": "Dźwięk",
+      "description": "Kompletne informacje dotyczące globalnego wyjścia, ról systemowych i mikrofonu, importowanego dźwięku, stanów włączania, usuwania i głośności.",
+      "lead": "Panel Audio oddziela sygnał wyjściowy obejmujący całą kompozycję od nagranych ról systemu i mikrofonu. Zaimportowany dźwięk pozostaje kontrolowany jako wybrany klip na osi czasu.",
+      "sections": [
+        {
+          "title": "Panel dźwiękowy",
+          "screenshot": {
+            "path": "editor/audio-panel.webp",
+            "alt": "Beam Panel audio z regulacją głośności globalnej, systemowej i mikrofonu",
+            "caption": "Globalne role wyjściowe i nagrane audio można regulować niezależnie.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Regulacja głośności",
+          "tables": [
+            {
+              "headers": ["Kontrola", "Zasięg", "Wartość początkowa lub domyślna", "Zakres"],
+              "rows": [
+                [
+                  "Globalny wolumen",
+                  "0%–100%",
+                  "Nowo załadowany gracz zaczyna od 70%",
+                  "Kompletne wyjście odtwarzania edytora."
+                ],
+                ["Głośność systemowa", "0%–100%", "100%", "Każdy klip przypisany do roli System."],
+                ["Głośność mikrofonu", "0%–100%", "100%", "Każdy klip przypisany do roli Mikrofon."],
+                [
+                  "Wybrany klip audio Głośność",
+                  "0%–200%",
+                  "100%",
+                  "Tylko wybrany system, mikrofon lub zaimportowany klip audio."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Kontrola ról",
+          "tables": [
+            {
+              "headers": ["Rola", "Kiedy pokazano", "Działania"],
+              "rows": [
+                [
+                  "Systemowa ścieżka dźwiękowa",
+                  "Istnieje co najmniej jeden klip audio o roli systemowej.",
+                  "Włącz lub wyłącz, zmień głośność roli lub usuń każdy klip systemowy."
+                ],
+                [
+                  "Ścieżka mikrofonu",
+                  "Istnieje co najmniej jeden klip audio pełniący rolę mikrofonu.",
+                  "Włącz lub wyłącz, zmień głośność roli lub usuń każdy klip mikrofonu."
+                ],
+                [
+                  "Importowany dźwięk",
+                  "Istnieje zaimportowany klip audio.",
+                  "Wybierz klip na osi czasu i użyj opcji Clip Volume; nie ma dedykowanej sekcji ról."
+                ],
+                [
+                  "Żadnych ról",
+                  "Nie istnieje żadna rola System ani Mikrofon.",
+                  "Panel zgłasza, że nie wykryto żadnych ścieżek audio."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Włącz w porównaniu z usuwaniem",
+          "paragraphs": [
+            "Wyłączenie roli powoduje zachowanie jej klipów, ale wyklucza ich odtwarzanie i eksportowanie. Usunięcie roli powoduje usunięcie z kompozycji wszystkich klipów przypisanych do tej roli."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Usunięcie roli wpływa na wiele klipów",
+            "text": "Usuń ścieżkę systemową i Usuń ścieżkę mikrofonu działają na całej roli, a nie tylko na klipie znajdującym się najbliżej głowicy odtwarzającej."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/settings",
+      "title": "Ustawienia edytora",
+      "description": "Pełna dokumentacja dotycząca języka, sprawdzania pisowni, wyglądu, aktualizacji, linków społecznościowych i kontroli rozwoju.",
+      "lead": "Ustawienia edytora zawierają preferencje dotyczące całej aplikacji udostępniane Rejestratorowi oraz elementy sterujące programowaniem przeznaczone wyłącznie dla edytora.",
+      "sections": [
+        {
+          "title": "Panel ustawień",
+          "screenshot": {
+            "path": "editor/settings-panel.webp",
+            "alt": "Beam Panel ustawień z kontrolą języka i wyglądu",
+            "caption": "Ustawienia dotyczą preferencji językowych i wyglądu całej aplikacji.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Język i pisanie",
+          "tables": [
+            {
+              "headers": ["Ustawienie", "Wartości", "Domyślne"],
+              "rows": [
+                [
+                  "Język",
+                  "Bułgarski, niemiecki, angielski, hiszpański, francuski, hindi, włoski, japoński, koreański, polski, portugalski (Brazylia), rosyjski, wietnamski, chiński uproszczony, chiński tradycyjny",
+                  "Obsługiwany język systemu lub przeglądarki; Angielski rezerwowy"
+                ],
+                ["Sprawdzanie pisowni", "Włącz lub Wyłącz w obszarze Zaawansowane", "Włączone"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Wygląd",
+          "tables": [
+            {
+              "headers": ["Ustawienie", "Wartości", "Domyślne"],
+              "rows": [
+                ["Tryb tematyczny", "Światło, Ciemność, System", "Światło"],
+                [
+                  "Wstępnie ustawiony motyw",
+                  "Beam Zachód słońca, Cyberfiolet, Szmaragdowy las, Karmazynowy aksamit, Oceaniczna bryza, Amber Studio, Sakura Bloom, Slate Precision",
+                  "Beam Zachód słońca"
+                ],
+                ["Kolor podstawowy", "10 gotowych ustawień lub niestandardowy próbnik kolorów", "#ff5a1f"],
+                ["Kolor wtórny", "8 gotowych ustawień lub niestandardowy próbnik kolorów", "#6366f1"],
+                ["Promień narożnika", "0, 6, 10, 16, 24 piksele lub niestandardowe 0–32 piksele", "10 pikseli"],
+                ["Promień pigułki", "Włączone lub wyłączone", "Wyłączone"],
+                ["Powierzchnia", "Domyślny, Neutralny, Łupkowy, Głęboki", "Domyślne"],
+                ["Globalna skala interfejsu użytkownika", "50%, 75%, 100%, 125%", "100%"]
+              ]
+            }
+          ],
+          "paragraphs": [
+            "Pasek górny, pasek boczny, właściwości, elementy sterujące obszaru roboczego i oś czasu mogą używać skali globalnej lub zastąpić ją wartością 50%, 75%, 100% lub 125%. Zobacz [Odniesienie do preferencji rejestratora](/recorder/capabilities/preferences), aby poznać każdą wstępnie ustawioną wartość koloru i promienia."
+          ]
+        },
+        {
+          "title": "Aktualizacje i linki",
+          "tables": [
+            {
+              "headers": ["Obszar", "Działania i stany"],
+              "rows": [
+                ["Aktualizacje", "Sprawdź, Dostępne, Pobieranie, Pobrane, Niedostępne, Błąd, Nieobsługiwane."],
+                ["Pobrana aktualizacja", "Uruchom ponownie teraz będzie dostępny po zakończeniu pobierania."],
+                ["Błąd", "Pokaż lub skopiuj szczegóły diagnostyczne."],
+                ["Dziennik zmian", "Otwórz bieżący dziennik zmian aktualizacji."],
+                ["Discord/GitHub", "Otwórz społeczność Beam lub repozytorium źródłowe."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Tryb deweloperski",
+          "paragraphs": [
+            "Tryb deweloperski jest przechowywany lokalnie w edytorze. Jest przeznaczony do programowania i rozwiązywania problemów, a nie do normalnej edycji."
+          ],
+          "tables": [
+            {
+              "headers": ["Kontrola", "Zachowanie"],
+              "rows": [
+                ["Tryb deweloperski", "Pokazuje lub ukrywa opcje programowania."],
+                [
+                  "Narzędzie do nagrywania",
+                  "Otwiera wbudowany HUD rejestratora i może rozpocząć nagrywanie z wyskakującego okienka."
+                ],
+                ["Skopiuj informacje o systemie", "Kopiuje informacje o środowisku diagnostycznym."],
+                ["Otwórz Narzędzia deweloperskie", "Przełącza narzędzia programistyczne Electron."]
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

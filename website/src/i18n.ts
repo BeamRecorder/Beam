@@ -1,4 +1,5 @@
 import { createI18n } from 'vue-i18n';
+import englishWebsiteMessages from './i18n/en/website.json';
 
 export const WEBSITE_LOCALES = [
   'en',
@@ -21,36 +22,33 @@ export const WEBSITE_LOCALES = [
 export type WebsiteLocale = (typeof WEBSITE_LOCALES)[number];
 
 type LocaleMessages = Record<string, unknown>;
+type WebsiteModuleLoader = () => Promise<LocaleMessages>;
 
-const coreModules = import.meta.glob('../../src/i18n/*/core.json', {
-  eager: true,
-  import: 'default',
-}) as Record<string, LocaleMessages>;
-const editorModules = import.meta.glob('../../src/i18n/*/editor.json', {
-  eager: true,
-  import: 'default',
-}) as Record<string, LocaleMessages>;
 const websiteModules = import.meta.glob('./i18n/*/website.json', {
-  eager: true,
   import: 'default',
-}) as Record<string, LocaleMessages>;
+}) as Record<string, WebsiteModuleLoader>;
 
-const moduleFor = (modules: Record<string, LocaleMessages>, locale: WebsiteLocale, file: string) => {
-  const entry = Object.entries(modules).find(([path]) => path.endsWith(`/${locale}/${file}.json`));
-  if (!entry) throw new Error(`Catalogue i18n manquant : ${locale}/${file}.json`);
-  return entry[1];
+const loadedWebsiteMessages = new Map<WebsiteLocale, LocaleMessages>([['en', englishWebsiteMessages]]);
+const websiteMessageRequests = new Map<WebsiteLocale, Promise<LocaleMessages>>();
+
+export const loadWebsiteLocaleMessages = async (locale: WebsiteLocale): Promise<LocaleMessages> => {
+  const loaded = loadedWebsiteMessages.get(locale);
+  if (loaded) return loaded;
+
+  const loader = websiteModules[`./i18n/${locale}/website.json`];
+  if (!loader) throw new Error(`Missing i18n catalogue: ${locale}/website.json`);
+  const activeRequest = websiteMessageRequests.get(locale);
+  if (activeRequest) return activeRequest;
+
+  const request = loader()
+    .then((messages) => {
+      loadedWebsiteMessages.set(locale, messages);
+      return messages;
+    })
+    .finally(() => websiteMessageRequests.delete(locale));
+  websiteMessageRequests.set(locale, request);
+  return request;
 };
-
-const messages = Object.fromEntries(
-  WEBSITE_LOCALES.map((locale) => [
-    locale,
-    {
-      ...moduleFor(coreModules, locale, 'core'),
-      ...moduleFor(editorModules, locale, 'editor'),
-      Website: moduleFor(websiteModules, locale, 'website'),
-    },
-  ]),
-);
 
 const isWebsiteLocale = (value: string): value is WebsiteLocale =>
   (WEBSITE_LOCALES as readonly string[]).includes(value);
@@ -81,20 +79,31 @@ export const detectWebsiteLocale = (): WebsiteLocale => {
   return 'en';
 };
 
-const initialLocale = detectWebsiteLocale();
-
 export const createWebsiteI18n = (locale: WebsiteLocale = 'en') =>
   createI18n({
     legacy: false,
     locale,
     fallbackLocale: 'en',
-    messages,
+    messages: { en: { Website: englishWebsiteMessages } } as Record<string, { Website: LocaleMessages }>,
   });
 
-export const websiteI18n = createWebsiteI18n(initialLocale);
+export type WebsiteI18n = ReturnType<typeof createWebsiteI18n>;
 
-export const syncWebsiteLocale = (locale: WebsiteLocale) => {
-  websiteI18n.global.locale.value = locale;
-  document.documentElement.lang = locale;
-  localStorage.setItem('locale', locale);
+export const websiteI18n = createWebsiteI18n();
+
+export const loadWebsiteLocale = async (i18n: WebsiteI18n, locale: WebsiteLocale) => {
+  if (!i18n.global.availableLocales.includes(locale)) {
+    i18n.global.setLocaleMessage(locale, { Website: await loadWebsiteLocaleMessages(locale) });
+  }
+};
+
+export const syncWebsiteLocale = async (locale: WebsiteLocale) => {
+  try {
+    await loadWebsiteLocale(websiteI18n, locale);
+    websiteI18n.global.locale.value = locale;
+    document.documentElement.lang = locale;
+    localStorage.setItem('locale', locale);
+  } finally {
+    delete document.documentElement.dataset.localePending;
+  }
 };

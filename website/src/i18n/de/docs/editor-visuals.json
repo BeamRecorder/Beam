@@ -1,0 +1,323 @@
+{
+  "pages": [
+    {
+      "slug": "editor/capabilities/canvas",
+      "title": "Canvas",
+      "description": "Vollständige Referenz für Ausgabegröße, Hintergründe, Unschärfe, Hintergrundentfernung, Verläufe und Wasserzeichensteuerung.",
+      "lead": "Das Canvas steuert den Ausgabebereich außerhalb und hinter visuellen Clips. Hintergrund und watermark settings apply zu der complete composition.",
+      "sections": [
+        {
+          "title": "Canvas-Panel",
+          "screenshot": {
+            "path": "editor/canvas-panel.webp",
+            "alt": "Beam Canvas properties mit Hintergrund tabs und presentation Steuerungen",
+            "caption": "Canvas groups media, Farbe, und gradient backgrounds mit presentation und branding Steuerungen.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Ausgabe-Canvas",
+          "tables": [
+            {
+              "headers": ["Eigenschaft", "Werte", "Standard oder Verhalten"],
+              "rows": [
+                ["Native Größe", "Breite × Höhe", "1920×1080"],
+                ["16:9", "1920×1080", "Standard Voreinstellung."],
+                ["9:16", "1080×1920", "Portrait Voreinstellung."],
+                ["1:1", "1080×1080", "Square Voreinstellung."],
+                ["4:5", "1080×1350", "Portrait Voreinstellung."],
+                ["3:4", "1080×1440", "Portrait Voreinstellung."],
+                ["4:3", "1440×1080", "Landscape Voreinstellung."],
+                ["21:9", "2520×1080", "Ultrawide Voreinstellung."],
+                [
+                  "Sichtbarkeit des Hintergrunds",
+                  "Visible oder Entfernen Hintergrund",
+                  "Hintergrund im Standard-Canvas ausgeblendet."
+                ],
+                [
+                  "Hintergrund Unschärfe",
+                  "0%–100%",
+                  "Unschärfes der ausgewählt Hintergrund, not der subject von ein Video."
+                ],
+                ["Globale Übergänge", "Properties-header Aktion", "Opens canvas-level transition Steuerungen."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Bild- und Videohintergründe",
+          "tables": [
+            {
+              "headers": ["Hintergrund", "Unterstützte Dateien", "Verhalten der Bibliothek"],
+              "rows": [
+                [
+                  "Bild",
+                  "AVIF, BMP, JPEG, JPG, PNG, WebP",
+                  "Zeigt zunächst 15 Elemente; „Mehr anzeigen“ lädt weitere Gruppen."
+                ],
+                [
+                  "Video",
+                  "M4V, MOV, MP4, OGV, WebM",
+                  "Zeigt zunächst 15 Elemente; „Mehr anzeigen“ lädt weitere Gruppen."
+                ],
+                [
+                  "Importieren",
+                  "ein supported local Hintergrund file",
+                  "Adds der ausgewählt file zu der corresponding Hintergrund library."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Farbhintergründe",
+          "paragraphs": [
+            "Choose ein built-in Farbe oder edit ein Benutzerdefiniert hexadecimal value. der Benutzerdefiniert editor updates der Hintergrund preview live."
+          ],
+          "tables": [
+            {
+              "headers": ["Steuerung", "Werte"],
+              "rows": [
+                ["Voreinstellung", "#111827, #ffffff, #0f766e, #1d4ed8, #7c3aed, #be123c"],
+                ["Benutzerdefiniert Farbe", "Hexadecimal Farbe editor"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Verlaufshintergründe",
+          "tables": [
+            {
+              "headers": ["Steuerung", "Werte oder constraint"],
+              "rows": [
+                [
+                  "Voreinstellung",
+                  "Built-in gradients including Violet, Fire, Ocean, Sunset, Neon, Forest, Gold, Ice, Vaporwave, und Aurora."
+                ],
+                ["Typ", "Linear oder Radial"],
+                ["Winkel", "0°–360° for the applicable gradient direction"],
+                ["Stopps", "At least two Farbe stops"],
+                ["Benutzerdefiniert gradient", "Editable type, angle, stops, und colors"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Wasserzeichen",
+          "paragraphs": [
+            "Das Wasserzeichen ist standardmäßig deaktiviert. Aktiviere es, um Beam-Branding, ein Label oder Logo über der Komposition zu platzieren."
+          ],
+          "tables": [
+            {
+              "headers": ["Eigenschaft", "Werte oder Bereich", "Standard oder Einschränkung"],
+              "rows": [
+                ["Text", "No watermark text, Made mit Beam., Beam, Benutzerdefiniert", "Made mit Beam."],
+                ["Benutzerdefinierter Text", "Up zu 80 characters", "Empty; Verfügbar mit Benutzerdefiniert."],
+                ["Beam-Logo anzeigen", "auf oder Off", "auf"],
+                ["Wasserzeichen verschieben", "auf oder Off", "Off; Verfügbar für der Beam und Made mit Beam labels."],
+                ["Position", "Oben links, oben rechts, unten links, unten rechts", "Bottom-right"],
+                ["Größe", "50%–200%; step 10%", "100%"],
+                ["Schatten", "0%–100%; step 5%", "20%"],
+                ["Hintergrund Farbe", "Hexadecimal Farbe picker", "#111114"],
+                ["Hintergrund opacity", "0%–100%; step 5%", "78%"],
+                ["Hintergrund Radius", "0%–100%; step 5%", "100%"],
+                ["Hintergrund padding", "50%–150%; step 5%", "100%"]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/zooms",
+      "title": "Zooms",
+      "description": "Vollständige Referenz für manuelle und automatische Zooms, Fokusmodi, Tiefe, erneute Erzeugung und Bewegungsunschärfe.",
+      "lead": "Zoom blocks direct attention zu ein region von der recording. Hinzufügen them manually auf der Timeline oder generate suggestions von captured cursor clicks.",
+      "sections": [
+        {
+          "title": "Kein Zoom ausgewählt",
+          "paragraphs": [
+            "Generation und global motion blur remain Verfügbar without ein ausgewählt zoom. Auswählen ein zoom block auf der Timeline zu edit its depth, mode, oder Position."
+          ],
+          "screenshot": {
+            "path": "editor/zoom-empty.webp",
+            "alt": "Beam Zoom panel without ein ausgewählt zoom",
+            "caption": "Automatic generation und global motion blur do not require ein ausgewählt zoom.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Automatische Zooms erzeugen",
+          "tables": [
+            {
+              "headers": ["Aktion", "Voraussetzung", "Verhalten"],
+              "rows": [
+                [
+                  "Automatische Zooms erzeugen",
+                  "ein recording session mit cursor-click telemetry",
+                  "Erstellt automatic zoom blocks von recorded clicks."
+                ],
+                [
+                  "Automatische Zooms erneut erzeugen",
+                  "Automatic zoom generation ist Verfügbar",
+                  "Asks für confirmation, Bewahrt manual zooms, und Ersetzt automatic zooms von der current session."
+                ],
+                ["Nicht verfügbar", "No session oder no cursor telemetry", "Generation remains deaktiviert."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Manuellen Zoom hinzufügen",
+          "paragraphs": [
+            "Klicken ein unoccupied point auf der Zoom Spur. ein new manual zoom defaults zu 1.2 seconds und ist added nur when at least 200 ms von Timeline Dauer remains Verfügbar."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Belegte Timeline-Bereiche",
+            "text": "Beam chooses ein Verfügbar Dauer around der Klicken und does not overlap ein existing zoom block."
+          }
+        },
+        {
+          "title": "Ausgewählter Zoom",
+          "screenshot": {
+            "path": "editor/zoom-properties.webp",
+            "alt": "Beam properties für ein ausgewählt zoom",
+            "caption": "ein ausgewählt zoom exposes focus mode und magnification depth.",
+            "aspectRatio": "199 / 326"
+          },
+          "tables": [
+            {
+              "headers": ["Eigenschaft", "Werte", "Standard oder Verhalten"],
+              "rows": [
+                [
+                  "Modus",
+                  "Auto Cursor oder Manual Focus",
+                  "Auto Cursor follows recorded pointer movement; Manual Focus Verwendet ein fixed point."
+                ],
+                ["Manuelles Ziel", "Canvas Ziehen", "Ziehen der dashed target directly auf der Canvas."],
+                ["Depth 1", "1.25×", "Vergrößerungszuordnung."],
+                ["Depth 2", "1.5×", "Standard."],
+                ["Depth 3", "1.8×", "Vergrößerungszuordnung."],
+                ["Depth 4", "2.2×", "Vergrößerungszuordnung."],
+                ["Depth 5", "3.5×", "Vergrößerungszuordnung."],
+                ["Depth 6", "5×", "Vergrößerungszuordnung."],
+                ["Zoom löschen", "Properties-header Aktion", "Entfernt der ausgewählt zoom block."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Zoom-Bewegungsunschärfe",
+          "tables": [
+            {
+              "headers": ["Eigenschaft", "Bereich", "Standard", "Geltungsbereich"],
+              "rows": [
+                ["aktiviert", "auf oder Off", "auf", "Globale Kompositionseinstellung."],
+                ["Bewegung blur intensity", "0%–100%", "55%", "Applied identically in preview und export."]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/cursor",
+      "title": "Cursor",
+      "description": "Vollständige Referenz für Cursor-Pakete, Darstellung, Schatten, Klickeffekte, Glättung, Federung und Bewegungsunschärfe.",
+      "lead": "Die Cursor-Einstellungen steuern das kompositionsweite Zeiger-Overlay und benötigen keine Clip-Auswahl.",
+      "sections": [
+        {
+          "title": "Cursor-Panel",
+          "screenshot": {
+            "path": "editor/cursor-panel.webp",
+            "alt": "Beam Cursor-Panel mit pack, appearance, Klicken, und motion Steuerungen",
+            "caption": "Cursor presentation ist configured globally für der composition.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Paket- und Cursor-Auswahl",
+          "tables": [
+            {
+              "headers": ["Eigenschaft", "Werte", "Verhalten"],
+              "rows": [
+                [
+                  "Cursor-Paket",
+                  "Integriertes oder importiertes Paket",
+                  "Automatic stays Automatic. ein fixed cursor ist preserved nur when der same cursor ID exists in der new pack; otherwise Beam returns zu Automatic."
+                ],
+                [
+                  "Cursor-Modus",
+                  "Automatic oder ein fixed cursor von der ausgewählt pack",
+                  "Automatic Verwendet recorded cursor shape Ändert."
+                ],
+                [
+                  "Paket importieren",
+                  "Unterstützte Cursor-Paketdateien",
+                  "Adds ein Benutzerdefiniert pack zu der Verfügbar choices."
+                ],
+                [
+                  "Zurücksetzen",
+                  "Cursor-Darstellung zurücksetzen",
+                  "Behält der ausgewählt pack und restores all other cursor defaults."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Darstellung",
+          "tables": [
+            {
+              "headers": ["Eigenschaft", "Werte oder Bereich", "Standard"],
+              "rows": [
+                ["Größe", "16–128 px", "45 px"],
+                ["Drop Schatten", "auf oder Off", "auf"],
+                ["Schatten blur", "1–24 px", "6 px after Reset"],
+                ["Schatten Farbe", "Farbauswahl", "#000000 nach dem Zurücksetzen"],
+                ["Schatten Richtung", "All, unten, Bottom-right, Top-left", "unten after Zurücksetzen"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Klickeffekte",
+          "tables": [
+            {
+              "headers": ["Eigenschaft", "Werte oder Bereich", "Standard oder Verhalten"],
+              "rows": [
+                [
+                  "Welle Stil Voreinstellung",
+                  "Einzelner Ring, Doppelte Welle, Burst",
+                  "Ändert ripple Stil für links und rechts clicks; it does not Aktivieren der ripple."
+                ],
+                ["Erweiterte Seiten", "links und rechts", "Configures der two buttons independently."],
+                ["Spring", "auf oder Off", "auf"],
+                ["Federintensität", "0%–100%", "50%"],
+                ["Welle", "auf oder Off", "Off für both Klicken sides."],
+                ["Welle Größe", "10–80 px", "30 px"],
+                ["Welle Farbe", "Farbauswahl", "Per Klicken side."],
+                ["Middle Klicken", "No separate editor Steuerung", "Verwendet der left-click presentation."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Bewegung",
+          "tables": [
+            {
+              "headers": ["Eigenschaft", "Werte oder Bereich", "Glättungsvoreinstellung"],
+              "rows": [
+                ["Voreinstellung", "Focused, Smooth, Benutzerdefiniert", "Smooth"],
+                ["Glättung", "0–1", "0.67"],
+                ["Federmasse", "0.5–2", "1.29"],
+                ["Bewegungsunschärfe", "0–1", "0.4"]
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

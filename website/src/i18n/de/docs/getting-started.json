@@ -28,6 +28,7 @@
           ],
           "screenshot": {
             "path": "getting-started/first-recording.webp",
+            "hidden": true,
             "alt": "Beam-Rekorder für eine erste Aufnahme vorbereitet",
             "caption": "Wähle die Aufnahme- und Medienquellen vor dem Start aus."
           }
@@ -47,7 +48,7 @@
           "title": "Weiterlernen",
           "bullets": [
             "Lerne die [Rekorder-Oberfläche](/recorder/interface) kennen.",
-            "Sieh dir alle [Rekorder-Funktionen](/recorder/capabilities) an.",
+            "Sieh dir alle [Rekorder-Funktionen](/recorder/capabilities/) an.",
             "Verstehe die [Videoeditor-Oberfläche](/editor/interface).",
             "Bereite die endgültige Datei mit [Export und Teilen](/export) vor."
           ]
@@ -67,6 +68,7 @@
           ],
           "screenshot": {
             "path": "getting-started/update-controls.webp",
+            "aspectRatio": "16 / 9",
             "alt": "Beam-Einstellungen mit Update-Steuerung",
             "caption": "Das Update-Panel zeigt die installierte Version und die verfügbaren Update-Aktionen."
           }

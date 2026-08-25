@@ -149,7 +149,7 @@ vec3 hueRotate(vec3 col, float a) {
 void main() {
   vec2 uv = gl_FragCoord.xy / u_resolution.xy;
   vec2 screenUv = uv;
-  vec2 p = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / min(u_resolution.x, u_resolution.y);
+  vec2 p = (uv - 0.5) * vec2(1.4, 1.0);
   float cursorMask = 0.0;
   uv = p * min(u_resolution.x, u_resolution.y) / u_resolution.xy + 0.5;
   p *= u_scale;
@@ -224,5 +224,10 @@ export const shaderPreset = {
   cursorStrength: 0.65,
   cursorRadius: 0.46,
   oklab: 0,
-  timeScale: 0.727,
+  timeScale: 0.82,
 } as const;
+
+export const lightShaderColors = [
+  [1, 0.9803921568627451, 0.9607843137254902],
+  ...shaderPreset.colors.slice(1),
+] as const;

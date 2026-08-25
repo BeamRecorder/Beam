@@ -1,0 +1,306 @@
+{
+  "pages": [
+    {
+      "slug": "recorder/capabilities/capture-sources",
+      "title": "Sorgenti e aree di acquisizione",
+      "description": "Riferimento per Schermo, Finestra, selezione delle sorgenti e comportamento dell'area di ritaglio del registratore.",
+      "lead": "La modalità di acquisizione determina quali sorgenti e controlli dell'area Beam può mostrare prima dell'inizio della registrazione.",
+      "sections": [
+        {
+          "title": "Impostazioni di acquisizione",
+          "tables": [
+            {
+              "headers": ["Impostazione", "Valori", "Predefinito", "Comportamento e vincoli"],
+              "rows": [
+                [
+                  "Modalità",
+                  "Schermo o Finestra",
+                  "Schermo",
+                  "Schermo registra un display; Finestra registra una singola finestra dell'applicazione."
+                ],
+                [
+                  "Sorgente schermo",
+                  "Display disponibili",
+                  "Display predefinito, poi il primo disponibile",
+                  "Selezionata nell'HUD al di fuori dell'acquisizione tramite portal Linux."
+                ],
+                [
+                  "Sorgente finestra",
+                  "Finestre delle applicazioni disponibili",
+                  "Sorgente predefinita o del portal, poi la prima disponibile",
+                  "Le anteprime delle finestre si aggiornano ogni 5 secondi quando Beam non sta registrando."
+                ],
+                [
+                  "Area di registrazione",
+                  "x, y, larghezza e altezza normalizzate",
+                  "Nessuna area",
+                  "Solo in modalità Schermo. Memorizzata in `extras.screenRegion`."
+                ],
+                [
+                  "Preset area",
+                  "640×480, 800×600, 1024×768, 1366×768, 1440×990, 1920×1080",
+                  "Nessuno",
+                  "Memorizzata in `extras.screenRegionPreset`; in alternativa puoi tracciare un rettangolo personalizzato."
+                ],
+                [
+                  "Frequenza di acquisizione",
+                  "60 FPS",
+                  "60 FPS",
+                  "Fissa nella configurazione del registratore; non è un'impostazione esposta all'utente."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Seleziona un'area personalizzata",
+          "steps": [
+            "Scegli la modalità Schermo e seleziona un display.",
+            "Seleziona Seleziona un'area dello schermo. Beam nasconde temporaneamente l'HUD e apre l'overlay dell'area sempre in primo piano.",
+            "Traccia un rettangolo oppure scegli una dimensione preimpostata.",
+            "Seleziona Usa quest'area per salvare l'area oppure Annulla per lasciare invariata la scelta esistente.",
+            "Usa Modifica area dello schermo per regolare un'area salvata."
+          ]
+        },
+        {
+          "title": "Casi limite delle aree",
+          "bullets": [
+            "Ripristina seleziona lo schermo intero; non elimina file o registrazioni.",
+            "Un'area che corrisponde di fatto allo schermo intero viene normalizzata nuovamente come assenza di ritaglio.",
+            "I controlli dell'area sono disabilitati in modalità Finestra, durante la registrazione, quando Beam è occupato o quando i limiti del display non sono disponibili.",
+            "L'acquisizione tramite portal Linux non espone l'overlay dell'area di Beam."
+          ]
+        },
+        {
+          "title": "Selezione della sorgente su Linux",
+          "paragraphs": [
+            "Su Linux, il portal del desktop mostra il proprio selettore quando inizia l'acquisizione. L'HUD non fornisce il selettore delle sorgenti Electron e per la sessione viene selezionata una sola sorgente del portal."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Visibilità a schermo intero",
+            "text": "Beam non può nascondere le proprie finestre da un'acquisizione Linux a schermo intero. Anche l'acquisizione di un'area non è disponibile, quindi disponi o minimizza Beam prima di confermare la sorgente del portal."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/audio-camera",
+      "title": "Audio e fotocamera",
+      "description": "Riferimento per microfono, fotocamera, audio di sistema, misuratori, sidecar e attivazione live dei dispositivi.",
+      "lead": "Ogni sorgente viene selezionata indipendentemente. Disponibilità, misurazione dell'anteprima e possibilità di attivare una sorgente dopo l'avvio dipendono dalla sorgente e dalla piattaforma.",
+      "sections": [
+        {
+          "title": "Impostazioni delle sorgenti",
+          "tables": [
+            {
+              "headers": ["Sorgente", "Valori", "Predefinito", "Comportamento di acquisizione"],
+              "rows": [
+                [
+                  "Microfono",
+                  "Un dispositivo di ingresso Chromium o Nessun audio",
+                  "Nessun audio",
+                  "Acquisito separatamente. Cancellazione dell'eco, soppressione del rumore e controllo automatico del guadagno sono disabilitati."
+                ],
+                [
+                  "Fotocamera",
+                  "Una fotocamera Chromium o Fotocamera disattivata",
+                  "Fotocamera disattivata",
+                  "Acquisita come sidecar VP8 separato. Se la fotocamera risulta non disponibile, Beam la disabilita e può continuare."
+                ],
+                [
+                  "Audio di sistema",
+                  "Audio di sistema o Disattivato",
+                  "Disattivato",
+                  "Linux usa l'acquisizione nativa; le altre piattaforme usano un sidecar display-media Chromium."
+                ],
+                [
+                  "Misuratore del microfono",
+                  "Livello live",
+                  "Nascosto con Nessun audio",
+                  "Visibile quando è selezionato un microfono."
+                ],
+                [
+                  "Misuratore dell'audio di sistema",
+                  "Livello live",
+                  "Nascosto",
+                  "L'anteprima nativa è disponibile su Linux solo prima della registrazione."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Controlli durante la registrazione",
+          "tables": [
+            {
+              "headers": ["Controllo", "Durante la registrazione", "Non disponibile durante"],
+              "rows": [
+                [
+                  "Attiva microfono",
+                  "Attiva o disattiva il microfono selezionato",
+                  "Conto alla rovescia, avvio o finalizzazione"
+                ],
+                [
+                  "Attiva fotocamera",
+                  "Attiva o disattiva la fotocamera selezionata",
+                  "Conto alla rovescia, avvio o finalizzazione"
+                ],
+                [
+                  "Attiva audio di sistema",
+                  "Attiva o disattiva l'acquisizione al di fuori di Linux",
+                  "Conto alla rovescia, avvio, finalizzazione o qualsiasi sessione Linux attiva"
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Comportamento in caso di errore",
+          "paragraphs": [
+            "Quando durante la preparazione la fotocamera selezionata risulta specificamente non disponibile, Beam la disabilita e continua senza fotocamera. Altri errori della fotocamera o del sidecar possono interrompere l'avvio, così come il malfunzionamento del microfono o della sorgente audio di sistema selezionata."
+          ],
+          "notice": {
+            "kind": "tip",
+            "title": "Controlla prima del conto alla rovescia",
+            "text": "Conferma il dispositivo selezionato e il misuratore visibile prima di iniziare, soprattutto dopo aver collegato o scollegato dispositivi audio o fotocamere USB."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/teleprompter",
+      "title": "Teleprompter",
+      "description": "Riferimento per modifica dello script, anteprima, scorrimento automatico, modalità riga per riga, tipografia e scorciatoie.",
+      "lead": "Il teleprompter può scorrere continuamente oppure avanzare nello script riga per riga. Il documento viene memorizzato con la sessione di registrazione.",
+      "sections": [
+        {
+          "title": "Impostazioni del teleprompter",
+          "tables": [
+            {
+              "headers": ["Impostazione", "Valori", "Predefinito", "Intervallo o persistenza"],
+              "rows": [
+                ["Script", "Testo libero", "Vuoto", "Memorizzato in `session/teleprompter.json`."],
+                [
+                  "Modalità",
+                  "Continua o Riga per riga",
+                  "Continua",
+                  "Memorizzata nelle preferenze e nel documento della sessione."
+                ],
+                [
+                  "Scorrimento automatico",
+                  "Attivo o disattivo",
+                  "Attivo",
+                  "Controlla lo spostamento automatico; pausa e ripresa restano disponibili."
+                ],
+                ["Velocità", "5–200 px/s", "42 px/s", "Passo: 1 px/s."],
+                ["Dimensione del testo", "16–36 px", "36 px", "Passo: 1 px."],
+                ["Spaziatura delle righe", "1–2.5", "1.35", "Passo: 0.05."],
+                ["Allineamento", "Sinistra o Centro", "Sinistra", "Memorizzato con le impostazioni del teleprompter."],
+                [
+                  "Tema",
+                  "Sistema, Chiaro o Scuro nel documento memorizzato",
+                  "Sistema",
+                  "L'interfaccia attuale del teleprompter non espone questo valore come controllo funzionale."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Controlli dell'editor e del lettore",
+          "tables": [
+            {
+              "headers": ["Controllo", "Scopo"],
+              "rows": [
+                ["Modifica", "Rende modificabile lo script prima della registrazione."],
+                ["Anteprima", "Mostra lo script come verrà letto."],
+                ["Nascondi", "Nasconde la finestra del teleprompter."],
+                [
+                  "Pausa / Riprendi",
+                  "Ferma o riavvia lo spostamento automatico senza modificare l'impostazione Scorrimento automatico."
+                ],
+                ["Precedente / Successivo", "Passa da una riga all'altra in modalità Riga per riga."],
+                ["Contatore righe", "Mostra la posizione della riga corrente in modalità Riga per riga."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Comportamento durante la registrazione",
+          "paragraphs": [
+            "Quando inizia una sessione di registrazione, il teleprompter passa automaticamente dallo script modificabile al lettore di sola lettura. La modalità e le impostazioni selezionate restano disponibili per i controlli di presentazione."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Controllo da tastiera",
+            "text": "Le scorciatoie del teleprompter sono configurabili in Preferenze → Scorciatoie. I valori predefiniti sono elencati nella pagina di riferimento delle preferenze."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/live-controls",
+      "title": "Controlli di registrazione live",
+      "description": "Scopri le fasi della Barra di registrazione, le modalità di visibilità, gli interruttori dei dispositivi, l'arresto e l'annullamento.",
+      "lead": "La Barra di registrazione cambia stato durante la sessione e disabilita le azioni che non sarebbero sicure mentre l'acquisizione inizia o i file vengono finalizzati.",
+      "sections": [
+        {
+          "title": "Fasi della registrazione",
+          "tables": [
+            {
+              "headers": ["Fase", "Significato"],
+              "rows": [
+                ["Inattivo", "Nessuna registrazione è attiva."],
+                ["Conto alla rovescia", "È in corso il ritardo configurato."],
+                ["Avvio", "Beam apre e sincronizza le sorgenti selezionate."],
+                ["Registrazione", "La sessione sta acquisendo attivamente."],
+                ["In pausa", "La sessione attiva è in pausa."],
+                ["Finalizzazione", "Beam chiude le tracce e prepara il progetto per la modifica."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Preferenza di visibilità",
+          "tables": [
+            {
+              "headers": ["Modalità", "Comportamento", "Predefinita sulla piattaforma"],
+              "rows": [
+                ["Sempre visibile", "La barra resta visibile per tutta l'acquisizione.", "Windows e macOS"],
+                ["Dissolvenza automatica", "La barra scompare e riappare al passaggio del mouse.", "Non predefinita"],
+                ["Nascosta fino al passaggio", "La barra resta nascosta finché il puntatore non la raggiunge.", "Linux"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Disponibilità delle azioni",
+          "tables": [
+            {
+              "headers": ["Azione", "Disabilitata durante"],
+              "rows": [
+                ["Pausa / Riprendi", "Conto alla rovescia, Avvio, Finalizzazione"],
+                ["Stop", "Finalizzazione"],
+                ["Annulla ed elimina", "Finalizzazione"],
+                ["Microfono / Fotocamera / Audio di sistema", "Conto alla rovescia, Avvio, Finalizzazione"],
+                ["Audio di sistema Linux", "L'intera sessione attiva; sceglilo prima dell'avvio"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Stop e annullamento a confronto",
+          "paragraphs": [
+            "Stop conserva l'acquisizione ed entra in Finalizzazione prima dell'apertura del progetto. Annulla ed elimina abbandona la registrazione attiva e rimuove la sessione non completata. Sono azioni volutamente separate."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "L'annullamento elimina la sessione non completata",
+            "text": "Usa Stop quando vuoi conservare ciò che è già stato registrato. Usa Annulla ed elimina solo quando la ripresa corrente deve essere scartata."
+          }
+        }
+      ]
+    }
+  ]
+}

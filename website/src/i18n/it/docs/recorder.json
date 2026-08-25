@@ -2,34 +2,78 @@
   "pages": [
     {
       "slug": "recorder/index",
-      "title": "Panoramica dell'app di registrazione",
-      "description": "Scopri il flusso del registratore Beam, dalla selezione della sorgente al passaggio nell'editor.",
-      "lead": "L'app di registrazione è un HUD compatto per preparare, avviare e controllare un'acquisizione senza coprire l'area di lavoro che stai presentando.",
+      "title": "Panoramica del registratore",
+      "description": "Scopri cosa può acquisire Beam e segui il flusso completo di registrazione.",
+      "lead": "Il registratore è il punto di partenza compatto di ogni progetto Beam. Prepara schermo o finestra, ritaglio opzionale, fotocamera, microfono, audio di sistema, interazioni e teleprompter prima di iniziare l'acquisizione.",
       "sections": [
         {
-          "title": "Flusso di registrazione",
-          "steps": [
-            "Scegli uno schermo, una finestra o un'area personalizzata dello schermo.",
-            "Prepara microfono, audio di sistema, fotocamera, conto alla rovescia e opzioni del teleprompter.",
-            "Avvia la registrazione e usa la barra fluttuante del registratore per i controlli live.",
-            "Ferma l'acquisizione per finalizzare le tracce e aprire il progetto nell'editor."
+          "title": "Cosa acquisisce il registratore",
+          "paragraphs": [
+            "Beam può registrare uno schermo intero, una singola finestra dell'applicazione o un'area personalizzata di uno schermo. Fotocamera, microfono e audio di sistema possono essere aggiunti come sorgenti separate quando la piattaforma li rende disponibili."
           ],
           "screenshot": {
             "path": "recorder/hud-overview.webp",
-            "alt": "Panoramica dell'HUD del registratore Beam",
-            "caption": "L'HUD raccoglie sorgenti di acquisizione e controlli di registrazione in una finestra compatta."
+            "alt": "HUD del registratore Beam con sorgente, audio, fotocamera, teleprompter e controlli di registrazione",
+            "caption": "L'HUD del registratore riunisce tutta la configurazione dell'acquisizione in una finestra compatta.",
+            "aspectRatio": "2 / 3"
           }
         },
         {
-          "title": "Tracce multimediali separate",
-          "paragraphs": [
-            "Beam registra schermo, webcam, microfono e audio di sistema come tracce separate disponibili. L'editor può poi regolare o disattivare le tracce supportate senza modificare l'acquisizione originale."
+          "title": "Flusso di registrazione",
+          "steps": [
+            "Scegli Schermo o Finestra e seleziona la sorgente da acquisire.",
+            "In modalità Schermo, scegli facoltativamente un preset di dimensioni oppure traccia un'area di registrazione personalizzata.",
+            "Scegli un microfono e una fotocamera, poi attiva l'audio di sistema se la registrazione ne ha bisogno.",
+            "Abilita la registrazione delle interazioni quando vuoi includere nel progetto clic supportati e token sicuri delle scorciatoie.",
+            "Apri il teleprompter e prepara uno script quando serve.",
+            "Seleziona Avvia registrazione. Beam applica il conto alla rovescia configurato prima di iniziare l'acquisizione.",
+            "Usa la Barra di registrazione fluttuante per mettere in pausa, riprendere, attivare o disattivare i dispositivi supportati, fermare o annullare.",
+            "Dopo Stop, Beam finalizza la sessione e apre il progetto nell'editor."
           ]
         },
         {
-          "title": "Progetti",
+          "title": "Riepilogo delle sorgenti",
+          "tables": [
+            {
+              "headers": ["Sorgente", "Cosa registra", "Predefinito"],
+              "rows": [
+                ["Schermo", "Uno schermo completo, facoltativamente limitato a un'area", "Modalità selezionata"],
+                ["Finestra", "Una finestra dell'applicazione", "Disattivata finché non viene selezionata"],
+                ["Microfono", "Audio da un dispositivo di ingresso selezionato", "Nessun audio"],
+                ["Fotocamera", "Video da una fotocamera selezionata", "Fotocamera disattivata"],
+                ["Audio di sistema", "Suono prodotto dal computer", "Disattivato"],
+                [
+                  "Interazioni",
+                  "Metadati dei clic supportati e token sicuri delle scorciatoie",
+                  "Dipende dalla preferenza e dall'autorizzazione"
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Nota sulla piattaforma",
+          "notice": {
+            "kind": "info",
+            "title": "Acquisizione su Linux",
+            "text": "Beam usa il selettore di acquisizione del sistema su Linux. Il ritaglio dell'area non è disponibile e Beam non può nascondere le proprie finestre da un'acquisizione a schermo intero. La modalità Schermo resta quella consigliata su Linux."
+          }
+        },
+        {
+          "title": "Sorgenti multimediali separate",
           "paragraphs": [
-            "Usa Apri un progetto per tornare a un progetto Beam esistente o crearne uno nuovo prima di registrare. Le sessioni completate restano associate al progetto per la modifica successiva."
+            "L'audio di sistema è il suono prodotto dal computer, ad esempio un video del browser o una chiamata Discord. L'audio del microfono è il suono ricevuto dal dispositivo di ingresso selezionato. Beam mantiene separati i contenuti supportati di schermo, fotocamera, microfono e audio di sistema, così possono essere elaborati indipendentemente in seguito."
+          ],
+          "notice": {
+            "kind": "tip",
+            "title": "Evita il feedback",
+            "text": "Quando registri insieme audio di sistema e microfono, usa le cuffie o abbassa il volume degli altoparlanti per evitare che il microfono registri una seconda volta l'uscita del computer."
+          }
+        },
+        {
+          "title": "Panoramica dell'implementazione",
+          "paragraphs": [
+            "La registrazione dello schermo usa il percorso di acquisizione nativo del sistema operativo. Su Linux, l'acquisizione dello schermo e dell'audio di sistema usa lo stack portal e PipeWire. L'acquisizione di fotocamera e microfono è gestita dall'applicazione Electron. Il codice del dominio di acquisizione di Beam è scritto in Rust, mentre l'interfaccia multipiattaforma è costruita con Electron e Vue."
           ]
         }
       ]
@@ -37,114 +81,146 @@
     {
       "slug": "recorder/interface",
       "title": "Interfaccia del registratore",
-      "description": "Scopri ogni controllo dell'HUD e della barra di registrazione di Beam.",
-      "lead": "L'interfaccia del registratore separa la selezione delle sorgenti, i controlli dei dispositivi, le preferenze e le azioni di registrazione, mantenendo visibile lo stato corrente.",
+      "description": "Scopri ogni area dell'HUD del registratore e i controlli mostrati durante una registrazione.",
+      "lead": "L'HUD è organizzato intorno alla configurazione dell'acquisizione. Quando la registrazione inizia, la Barra di registrazione compatta espone solo i controlli utili durante la sessione.",
       "sections": [
         {
           "title": "Barra superiore",
-          "bullets": [
-            "L'identità Beam mostra la finestra corrente del registratore.",
-            "Preferenze apre le impostazioni di registrazione, generali, delle scorciatoie e dell'applicazione.",
-            "Le azioni della finestra minimizzano o chiudono il registratore."
+          "tables": [
+            {
+              "headers": ["Controllo", "Azione"],
+              "rows": [
+                [
+                  "Preferenze",
+                  "Apre le impostazioni di registrazione, generali, scorciatoie, informazioni e aggiornamenti."
+                ],
+                ["Minimizza", "Riduce a icona la finestra del registratore."],
+                ["Chiudi", "Chiude la finestra del registratore."]
+              ]
+            }
           ]
         },
         {
-          "title": "Sorgente di acquisizione",
-          "paragraphs": [
-            "Usa le schede Schermo e Finestra per cambiare il tipo di sorgente. Il selettore mostra gli schermi o le finestre disponibili sulla piattaforma corrente. L'acquisizione dello schermo può anche essere limitata a un'area personalizzata."
-          ],
-          "screenshot": {
-            "path": "recorder/source-selection.webp",
-            "alt": "Controlli delle sorgenti schermo e finestra in Beam",
-            "caption": "Scegli un tipo di sorgente, poi seleziona lo schermo, la finestra o l'area dello schermo."
-          }
+          "title": "Configurazione dell'acquisizione",
+          "tables": [
+            {
+              "headers": ["Controllo", "Azione", "Disponibilità"],
+              "rows": [
+                ["Schermo / Finestra", "Modifica la modalità di acquisizione.", "Prima della registrazione."],
+                [
+                  "Selettore della sorgente",
+                  "Sceglie uno schermo o una finestra dell'applicazione.",
+                  "Il portal Linux fornisce il proprio selettore."
+                ],
+                [
+                  "Seleziona un'area",
+                  "Apre l'overlay dell'area personalizzata.",
+                  "Solo modalità Schermo; non disponibile su Linux."
+                ],
+                [
+                  "Audio di sistema",
+                  "Attiva o disattiva l'acquisizione dell'uscita del computer.",
+                  "Il supporto varia a seconda della piattaforma."
+                ],
+                [
+                  "Microfono",
+                  "Sceglie un dispositivo di ingresso o Nessun audio.",
+                  "Prima della registrazione; attivabile o disattivabile durante le fasi supportate."
+                ],
+                [
+                  "Fotocamera",
+                  "Sceglie una fotocamera o Fotocamera disattivata.",
+                  "Prima della registrazione; attivabile o disattivabile durante le fasi supportate."
+                ],
+                ["Teleprompter", "Mostra o nasconde la finestra dello script.", "Prima e durante la registrazione."],
+                [
+                  "Avvia registrazione",
+                  "Avvia il conto alla rovescia configurato e l'acquisizione.",
+                  "Quando la configurazione è pronta e Beam non è occupato."
+                ]
+              ]
+            }
+          ]
         },
         {
-          "title": "Controlli multimediali",
-          "bullets": [
-            "Microfono seleziona un dispositivo di ingresso o disattiva l'audio del microfono.",
-            "Audio di sistema abilita o disabilita il suono prodotto dal computer.",
-            "Fotocamera seleziona una webcam e apre il relativo overlay separato.",
-            "I misuratori audio mostrano un'anteprima del livello live quando la piattaforma lo supporta.",
-            "Teleprompter apre o nasconde la finestra separata dello script."
+          "title": "Azione del progetto",
+          "paragraphs": [
+            "Apri un progetto esistente apre il Gestore progetti invece di avviare una nuova acquisizione. Da lì puoi cercare, creare, aprire, rinominare, mostrare, aggiornare, selezionare in blocco o eliminare i progetti."
           ]
         },
         {
           "title": "Barra di registrazione",
           "paragraphs": [
-            "Durante un'acquisizione, la barra mostra il tempo trascorso e lo stato corrente. I controlli mettono in pausa, riprendono, fermano, annullano e attivano o disattivano i dispositivi supportati."
+            "La barra fluttuante sostituisce l'HUD di configurazione durante l'acquisizione. Mostra gli stati Pronto o Preparazione, poi espone i controlli consentiti dalla fase corrente della registrazione."
           ],
-          "screenshot": {
-            "path": "recorder/recording-bar.webp",
-            "alt": "Barra di registrazione Beam durante un'acquisizione attiva",
-            "caption": "La barra mantiene disponibili i controlli essenziali durante la registrazione."
-          }
-        },
-        {
-          "title": "Preferenze",
-          "bullets": [
-            "Il conto alla rovescia può essere disattivato o impostato su 3, 5 o 10 secondi.",
-            "La visibilità della barra può essere sempre visibile, con dissolvenza automatica o nascosta fino al passaggio del mouse.",
-            "Sempre in primo piano mantiene l'HUD sopra le altre finestre.",
-            "Tema e lingua controllano l'aspetto dell'applicazione.",
-            "Le impostazioni delle scorciatoie configurano le azioni di registrazione e teleprompter."
+          "tables": [
+            {
+              "headers": ["Controllo", "Azione", "Vincolo importante"],
+              "rows": [
+                [
+                  "Sposta la barra di registrazione",
+                  "Trascina la barra in un'altra posizione.",
+                  "La preferenza di visibilità continua ad applicarsi."
+                ],
+                [
+                  "Pausa / Riprendi",
+                  "Mette in pausa o riprende la sessione.",
+                  "Disabilitato durante il conto alla rovescia, l'avvio e la finalizzazione."
+                ],
+                [
+                  "Stop",
+                  "Finalizza la registrazione e conserva la sessione.",
+                  "Disabilitato durante la finalizzazione."
+                ],
+                [
+                  "Annulla ed elimina",
+                  "Annulla la registrazione e rimuove la sessione non completata.",
+                  "Disabilitato durante la finalizzazione."
+                ],
+                [
+                  "Microfono / Fotocamera",
+                  "Attiva o disattiva la sorgente selezionata.",
+                  "Disabilitato durante il conto alla rovescia, l'avvio e la finalizzazione."
+                ],
+                [
+                  "Audio di sistema",
+                  "Attiva o disattiva l'audio di sistema quando supportato.",
+                  "Dopo l'avvio non può essere modificato su Linux."
+                ]
+              ]
+            }
           ]
         }
       ]
     },
     {
-      "slug": "recorder/capabilities",
+      "slug": "recorder/capabilities/index",
       "title": "Funzionalità del registratore",
-      "description": "Usa aree dello schermo, audio separato, webcam, teleprompter, scorciatoie e metadati delle interazioni in Beam.",
-      "lead": "Le funzionalità del registratore possono essere combinate per un'acquisizione leggera o una presentazione di prodotto completamente preparata.",
+      "description": "Apri un riferimento dedicato per ogni funzionalità del registratore e per le relative impostazioni esatte.",
+      "lead": "Ogni funzionalità ha una pagina dedicata, così impostazioni, valori predefiniti, vincoli della piattaforma e casi limite restano facili da consultare.",
       "sections": [
         {
-          "title": "Acquisizione di schermo, finestra e area",
-          "paragraphs": [
-            "Registra uno schermo intero, una specifica finestra dell'applicazione o un'area normalizzata dello schermo selezionato. Puoi riaprire il selettore dell'area per modificare un ritaglio salvato prima della registrazione."
+          "title": "Indice delle funzionalità",
+          "tables": [
+            {
+              "headers": ["Funzionalità", "Riferimento"],
+              "rows": [
+                [
+                  "Sorgenti e aree di acquisizione",
+                  "[Apri sorgenti di acquisizione](/recorder/capabilities/capture-sources)"
+                ],
+                ["Audio e fotocamera", "[Apri audio e fotocamera](/recorder/capabilities/audio-camera)"],
+                ["Teleprompter", "[Apri teleprompter](/recorder/capabilities/teleprompter)"],
+                ["Barra di registrazione live", "[Apri controlli live](/recorder/capabilities/live-controls)"],
+                ["Preferenze", "[Apri preferenze](/recorder/capabilities/preferences)"],
+                ["Gestore progetti", "[Apri Gestore progetti](/recorder/capabilities/project-manager)"],
+                [
+                  "Autorizzazioni e privacy",
+                  "[Apri autorizzazioni e privacy](/recorder/capabilities/permissions-privacy)"
+                ]
+              ]
+            }
           ]
-        },
-        {
-          "title": "Microfono e audio di sistema",
-          "paragraphs": [
-            "Microfono e audio di sistema vengono acquisiti separatamente quando entrambi sono disponibili. Le tracce separate consentono all'editor di modificare individualmente lo stato e il volume."
-          ]
-        },
-        {
-          "title": "Overlay della webcam",
-          "paragraphs": [
-            "Una fotocamera selezionata apre un overlay separato che può essere posizionato per la presentazione. L'accesso alla fotocamera dipende dai permessi del sistema operativo e dalla disponibilità del dispositivo."
-          ]
-        },
-        {
-          "title": "Teleprompter",
-          "paragraphs": [
-            "Scrivi uno script, passa dalla lettura continua a quella riga per riga e regola scorrimento automatico, velocità, dimensione del testo, spaziatura, allineamento e tema. Le scorciatoie globali possono mostrare il teleprompter, mettere in pausa lo scorrimento o passare da una riga all'altra."
-          ],
-          "screenshot": {
-            "path": "recorder/teleprompter.webp",
-            "alt": "Teleprompter Beam con script e controlli di riproduzione",
-            "caption": "Il teleprompter è controllato indipendentemente dall'HUD del registratore."
-          }
-        },
-        {
-          "title": "Controlli di registrazione live",
-          "bullets": [
-            "Metti in pausa e riprendi la registrazione attiva.",
-            "Attiva o disattiva microfono, fotocamera e audio di sistema quando la sessione li supporta.",
-            "Ferma e finalizza la registrazione, oppure annulla ed elimina l'acquisizione attiva."
-          ]
-        },
-        {
-          "title": "Metadati delle interazioni e privacy",
-          "paragraphs": [
-            "Con un'autorizzazione esplicita, Beam registra token sicuri delle scorciatoie da tastiera. L'accesso alle interazioni su Linux può abilitare anche i metadati dei clic del mouse. Il testo digitato non viene mai memorizzato."
-          ],
-          "notice": {
-            "kind": "info",
-            "title": "Autorizzazione richiesta",
-            "text": "La registrazione delle interazioni è facoltativa e può essere abilitata o disabilitata nelle Preferenze. La disponibilità dipende dal sistema operativo."
-          }
         }
       ]
     }

@@ -31,8 +31,6 @@ html.dark {
 
 html {
   background: var(--color-bg-app);
-  overflow-y: scroll;
-  scrollbar-gutter: stable;
 }
 
 body {
@@ -46,47 +44,8 @@ body {
   color: var(--color-on-primary);
 }
 
-/* Keep both the document viewport and VitePress sidebar aligned with Beam's
-   compact scrollbar treatment without importing the app-only overflow reset. */
-html,
-.VPSidebar {
-  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
-  scrollbar-width: thin;
-}
-
-html.dark,
-html.dark .VPSidebar {
-  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
-}
-
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  border-radius: var(--radius-full);
-  background: rgba(0, 0, 0, 0.15);
-  transition: background 200ms ease-in-out;
-}
-
-html.dark ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.16);
-}
-
-html::-webkit-scrollbar-thumb:hover,
-body::-webkit-scrollbar-thumb:hover,
-.VPSidebar::-webkit-scrollbar-thumb:hover {
-  background: var(--color-primary) !important;
-  background-color: var(--color-primary) !important;
-}
-
 :focus-visible {
-  outline: 3px solid var(--color-primary-border);
+  outline: 3px solid var(--color-focus-ring);
   outline-offset: 3px;
 }
 
@@ -101,14 +60,14 @@ body::-webkit-scrollbar-thumb:hover,
   background: transparent !important;
 }
 
-@media (min-width: 960px) {
-  .VPNavBarSearch {
-    width: 0;
-    min-width: 0;
-    padding: 0;
-    overflow: hidden;
-    visibility: hidden;
-  }
+.VPNavBarSearch {
+  display: none !important;
+}
+
+.VPNavBarTranslations,
+.VPNavBarExtra,
+.VPNavScreenTranslations {
+  display: none !important;
 }
 
 .VPNavBarTitle .title {
@@ -116,6 +75,19 @@ body::-webkit-scrollbar-thumb:hover,
   font-size: 17px;
   font-weight: 760;
   letter-spacing: -0.02em;
+}
+
+.docs-brand {
+  display: inline-flex;
+  gap: 0.32em;
+  align-items: baseline;
+}
+
+.docs-brand__suffix {
+  color: var(--text-secondary);
+  font-size: 0.84em;
+  line-height: 1;
+  -webkit-text-fill-color: var(--text-secondary);
 }
 
 .VPNavBarTitle .logo {
@@ -140,6 +112,55 @@ body::-webkit-scrollbar-thumb:hover,
 .VPNavBarMenuLink[href='https://github.com/BeamRecorder/Beam'],
 .VPNavBarMenuLink[href='https://discord.gg/6Q6v2xUCB'] {
   display: none;
+}
+
+@media (max-width: 767px) {
+  .VPNavBarHamburger {
+    display: none !important;
+  }
+
+  .VPLocalNav .container {
+    justify-content: flex-start;
+  }
+
+  .VPLocalNav .menu {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 16px 9px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 650;
+  }
+
+  .VPLocalNav .menu[aria-expanded='true'] {
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+  }
+
+  .VPLocalNav .menu-icon {
+    /* Official Lucide Menu glyph, applied to VitePress's fixed icon slot. */
+
+    --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='currentColor' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpath d='M4 6h16M4 12h16M4 18h16'/%3E%3C/svg%3E");
+    width: 18px;
+    height: 18px;
+    margin-right: 10px;
+    font-size: 18px;
+  }
+
+  .VPLocalNav .VPLocalNavOutlineDropdown,
+  .VPLocalNav .VPOutlineDropdown {
+    display: none;
+  }
+
+  .VPSidebar {
+    top: var(--vp-nav-height);
+    padding-top: 24px;
+    background: var(--color-bg-app) !important;
+  }
+
+  .VPBackdrop {
+    top: var(--vp-nav-height);
+  }
 }
 
 .VPSidebar {
@@ -234,9 +255,14 @@ body::-webkit-scrollbar-thumb:hover,
   padding-top: calc(var(--vp-nav-height) + 72px);
 }
 
+.VPNavBar.home .container,
 .VPHomeHero .container {
   gap: clamp(40px, 8vw, 104px);
-  max-width: 1200px;
+  max-width: 1240px;
+}
+
+.VPNavBar.home .container {
+  gap: 0;
 }
 
 .VPHomeHero .main {
@@ -274,7 +300,10 @@ body::-webkit-scrollbar-thumb:hover,
 }
 
 .VPButton {
+  display: inline-flex !important;
   min-height: 44px;
+  align-items: center;
+  justify-content: center;
   border-radius: var(--radius-md) !important;
   font-weight: 720 !important;
   transition:
@@ -290,7 +319,7 @@ body::-webkit-scrollbar-thumb:hover,
 .VPButton.brand {
   border-color: var(--color-primary) !important;
   background: var(--color-primary) !important;
-  color: var(--color-on-primary) !important;
+  color: white !important;
 }
 
 .VPButton.brand:hover {
@@ -335,10 +364,15 @@ body::-webkit-scrollbar-thumb:hover,
 
 .docs-product-grid {
   display: grid;
-  width: min(100% - 48px, 1200px);
+  width: min(100% - 48px, 1240px);
   margin: 44px auto 0;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
+}
+
+.VPHome .vp-doc.container {
+  max-width: none;
+  padding: 0;
 }
 
 .VPFeature:hover {
@@ -361,13 +395,38 @@ body::-webkit-scrollbar-thumb:hover,
 }
 
 .VPFooter {
-  border-top-color: var(--color-border) !important;
-  background: transparent !important;
+  display: none;
 }
 
-@media (max-width: 959px) {
+@media (min-width: 640px) {
+  .VPHomeHero {
+    padding-right: 32px;
+    padding-left: 32px;
+  }
+
   .docs-product-grid {
-    width: min(100% - 32px, 720px);
+    width: min(100% - 64px, 1240px);
+  }
+}
+
+@media (min-width: 960px) {
+  .VPNavBar.home .wrapper {
+    padding-right: 64px;
+    padding-left: 64px;
+  }
+
+  .VPHomeHero {
+    padding-right: 64px;
+    padding-left: 64px;
+  }
+
+  .docs-product-grid {
+    width: min(100% - 128px, 1240px);
+  }
+}
+
+@media (max-width: 1119px) {
+  .docs-product-grid {
     grid-template-columns: 1fr;
   }
 

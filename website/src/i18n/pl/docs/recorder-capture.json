@@ -1,0 +1,300 @@
+{
+  "pages": [
+    {
+      "slug": "recorder/capabilities/capture-sources",
+      "title": "Przechwytuj źródła i regiony",
+      "description": "Informacje dotyczące ekranu rejestratora, okna, wyboru źródła i zachowania obszaru przycięcia.",
+      "lead": "Tryb przechwytywania określa, które źródła i kontrolki regionu Beam mogą zostać ujawnione przed rozpoczęciem nagrywania.",
+      "sections": [
+        {
+          "title": "Ustawienia przechwytywania",
+          "tables": [
+            {
+              "headers": ["Ustawienie", "Wartości", "Domyślne", "Zachowanie i ograniczenia"],
+              "rows": [
+                [
+                  "Tryb",
+                  "Ekran lub okno",
+                  "Ekran",
+                  "Ekran rejestruje wyświetlacz; Okno rejestruje jedno okno aplikacji."
+                ],
+                [
+                  "Źródło ekranu",
+                  "Dostępne wyświetlacze",
+                  "Domyślny wyświetlacz, potem dostępny jako pierwszy",
+                  "Wybrane w interfejsie HUD poza przechwytywaniem portalu Linux."
+                ],
+                [
+                  "Źródło okna",
+                  "Dostępne okna aplikacji",
+                  "Źródło domyślne lub portalowe, następnie dostępne jako pierwsze",
+                  "Podglądy okien odświeżają się co 5 sekund, gdy Beam nie nagrywa."
+                ],
+                [
+                  "Region nagrywania",
+                  "Znormalizowane x, y, szerokość i wysokość",
+                  "Brak regionu",
+                  "Tylko tryb ekranowy. Przechowywane w `extras.screenRegion`."
+                ],
+                [
+                  "Ustawienia regionalne",
+                  "640×480, 800×600, 1024×768, 1366×768, 1440×990, 1920×1080",
+                  "Żadne",
+                  "Przechowywane w `extras.screenRegionPreset`; zamiast tego można narysować niestandardowy prostokąt."
+                ],
+                [
+                  "Szybkość przechwytywania",
+                  "60 klatek na sekundę",
+                  "60 klatek na sekundę",
+                  "Naprawiono w konfiguracji Rejestratora; nie jest to ujawnione ustawienie użytkownika."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Wybierz region niestandardowy",
+          "steps": [
+            "Wybierz tryb ekranu i wybierz wyświetlacz.",
+            "Wybierz Wybierz obszar ekranu. Beam tymczasowo ukrywa HUD i otwiera nakładkę regionu, która jest zawsze na wierzchu.",
+            "Narysuj prostokąt lub wybierz wstępnie ustawiony rozmiar.",
+            "Wybierz Użyj tego obszaru, aby zapisać region, lub Anuluj, aby pozostawić istniejący wybór bez zmian.",
+            "Użyj opcji Edytuj obszar ekranu, aby dostosować zapisany region."
+          ]
+        },
+        {
+          "title": "Przypadki graniczne regionu",
+          "bullets": [
+            "Resetuj wybiera pełny ekran; nie usuwa pliku ani nagrania.",
+            "Region, który faktycznie stanowi pełny ekran, jest normalizowany z powrotem do stanu bez kadrowania.",
+            "Sterowanie regionem jest wyłączone w trybie okna, podczas nagrywania, gdy Beam jest zajęte lub gdy granice wyświetlania są niedostępne.",
+            "Przechwytywanie portalu systemu Linux nie ujawnia nakładki regionu Beam."
+          ]
+        },
+        {
+          "title": "Wybór źródła Linuksa",
+          "paragraphs": [
+            "W systemie Linux portal dla komputerów stacjonarnych wyświetla własny selektor po rozpoczęciu przechwytywania. HUD nie udostępnia selektora źródła Electron i dla sesji wybierane jest tylko jedno źródło portalu."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Widoczność na pełnym ekranie",
+            "text": "Beam nie może ukryć własnych okien przed przechwytywaniem pełnoekranowym systemu Linux. Przechwytywanie regionu jest również niedostępne, dlatego przed potwierdzeniem źródła portalu uporządkuj lub zminimalizuj Beam."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/audio-camera",
+      "title": "Dźwięk i kamera",
+      "description": "Informacje dotyczące mikrofonu, kamery, dźwięku systemowego, mierników, wózków bocznych i przełączników urządzeń na żywo.",
+      "lead": "Każde źródło wybierane jest niezależnie. Dostępność, pomiar podglądu i możliwość przełączania źródła po uruchomieniu zależą od źródła i platformy.",
+      "sections": [
+        {
+          "title": "Ustawienia źródła",
+          "tables": [
+            {
+              "headers": ["Źródło", "Wartości", "Domyślne", "Uchwyć zachowanie"],
+              "rows": [
+                [
+                  "Mikrofon",
+                  "Urządzenie wejściowe Chromium lub brak dźwięku",
+                  "Brak dźwięku",
+                  "Schwytane osobno. Eliminacja echa, tłumienie szumów i automatyczna kontrola wzmocnienia są wyłączone."
+                ],
+                [
+                  "Kamera",
+                  "Kamera Chromium lub Kamera wyłączona",
+                  "Kamera wyłączona",
+                  "Uchwycone jako oddzielny wózek boczny VP8. Jeśli kamera zostanie zgłoszona jako niedostępna, Beam wyłącza ją i można kontynuować."
+                ],
+                [
+                  "Dźwięk systemowy",
+                  "Dźwięk systemowy lub Wyłączony",
+                  "Wyłączone",
+                  "Linux wykorzystuje natywne przechwytywanie; inne platformy korzystają z wózka bocznego z multimediami wyświetlającymi Chromium."
+                ],
+                ["Miernik mikrofonu", "Poziom na żywo", "Ukryty bez dźwięku", "Widoczne po wybraniu mikrofonu."],
+                [
+                  "Systemowy miernik audio",
+                  "Poziom na żywo",
+                  "Ukryty",
+                  "Natywny podgląd jest dostępny w systemie Linux tylko przed nagraniem."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Sterowanie podczas nagrywania",
+          "tables": [
+            {
+              "headers": ["Kontrola", "Podczas nagrywania", "Niedostępne, kiedy"],
+              "rows": [
+                [
+                  "Przełącznik mikrofonu",
+                  "Włącza lub wyłącza wybrany mikrofon",
+                  "Odliczanie, uruchamianie lub finalizacja"
+                ],
+                [
+                  "Przełącznik aparatu",
+                  "Włącza lub wyłącza wybraną kamerę",
+                  "Odliczanie, uruchamianie lub finalizacja"
+                ],
+                [
+                  "Przełącznik systemu-audio",
+                  "Włącza lub wyłącza przechwytywanie poza Linuksem",
+                  "Odliczanie, uruchamianie, finalizowanie lub dowolna aktywna sesja systemu Linux"
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Zachowanie niepowodzenia",
+          "paragraphs": [
+            "Kiedy wybrana kamera zostanie specjalnie zgłoszona jako niedostępna podczas przygotowań, Beam wyłącza ją i kontynuuje bez kamery. Inne błędy kamery lub wózka bocznego mogą zatrzymać uruchomienie, podobnie jak awaria wybranego mikrofonu lub systemowego źródła dźwięku."
+          ],
+          "notice": {
+            "kind": "tip",
+            "title": "Sprawdź przed odliczaniem",
+            "text": "Przed uruchomieniem potwierdź wybrane urządzenie i widoczny miernik, zwłaszcza po podłączeniu lub odłączeniu sprzętu audio USB i aparatu."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/teleprompter",
+      "title": "Teleprompter",
+      "description": "Informacje dotyczące edycji skryptów, podglądu, automatycznego przewijania, trybu liniowego, typografii i skrótów.",
+      "lead": "Teleprompter może przewijać w sposób ciągły lub poruszać się po skrypcie linia po linii. Jego dokument jest przechowywany wraz z sesją nagraniową.",
+      "sections": [
+        {
+          "title": "Ustawienia telepromptera",
+          "tables": [
+            {
+              "headers": ["Ustawienie", "Wartości", "Domyślne", "Zasięg lub trwałość"],
+              "rows": [
+                ["Skrypt", "Tekst dowolny", "Pusty", "Przechowywane w `session/teleprompter.json`."],
+                ["Tryb", "Ciągłe lub linia po linii", "Ciągłe", "Przechowywane w preferencjach i dokumencie sesji."],
+                [
+                  "Automatyczne przewijanie",
+                  "Włączone lub wyłączone",
+                  "Włączone",
+                  "Kontroluje ruch automatyczny; pauza i wznowienie pozostają dostępne."
+                ],
+                ["Prędkość", "5–200 pikseli/s", "42 piks./s", "Krok: 1 px/s."],
+                ["Rozmiar tekstu", "16–36 pikseli", "36 pikseli", "Krok: 1 piksel."],
+                ["Odstępy między wierszami", "1–2,5", "1,35", "Krok: 0,05."],
+                ["Wyrównanie", "Lewy lub środkowy", "Lewy", "Przechowywane z ustawieniami telepromptera."],
+                [
+                  "Temat",
+                  "System, Jasny lub Ciemny w przechowywanym dokumencie",
+                  "Systemu",
+                  "Obecny interfejs użytkownika Telepromptera nie przedstawia tego jako kontroli funkcjonalnej."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Kontrola redaktora i czytelnika",
+          "tables": [
+            {
+              "headers": ["Kontrola", "Cel"],
+              "rows": [
+                ["Edytuj", "Umożliwia edycję skryptu przed nagraniem."],
+                ["Podgląd", "Pokazuje skrypt tak, jak będzie czytany."],
+                ["Ukryj", "Ukrywa okno Telepromptera."],
+                [
+                  "Wstrzymaj / Wznów",
+                  "Zatrzymuje lub wznawia automatyczny ruch bez zmiany ustawienia automatycznego przewijania."
+                ],
+                ["Poprzedni/Następny", "Przechodzi między liniami w trybie linia po linii."],
+                ["Licznik linii", "Pokazuje bieżącą pozycję linii w trybie linia po linii."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Nagrywanie zachowania",
+          "paragraphs": [
+            "Po rozpoczęciu sesji nagrywania Teleprompter automatycznie przełącza się z edytowalnego skryptu na czytnik tylko do odczytu. Wybrany tryb i ustawienia pozostają dostępne do sterowania prezentacją."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Sterowanie klawiaturą",
+            "text": "Skróty telepromptera można skonfigurować w Preferencje → Skróty. Wartości domyślne są wymienione na stronie referencyjnej Preferencje."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/live-controls",
+      "title": "Elementy sterujące nagrywaniem na żywo",
+      "description": "Omówienie faz paska nagrywania, trybów widoczności, przełączania urządzeń, zatrzymywania i anulowania.",
+      "lead": "Pasek nagrywania zmienia stan w trakcie sesji i wyłącza działania, które byłyby niebezpieczne podczas rozpoczynania przechwytywania lub finalizowania plików.",
+      "sections": [
+        {
+          "title": "Fazy ​​nagrywania",
+          "tables": [
+            {
+              "headers": ["Faza", "Znaczenie"],
+              "rows": [
+                ["Bezczynny", "Żadne nagrywanie nie jest aktywne."],
+                ["Odliczanie", "Skonfigurowane opóźnienie działa."],
+                ["Rozpoczęcie", "Beam otwiera i synchronizuje wybrane źródła."],
+                ["Nagrywanie", "Sesja jest aktywnie przechwytywana."],
+                ["Wstrzymano", "Aktywna sesja zostaje wstrzymana."],
+                ["Finalizowanie", "Beam zamyka utwory i przygotowuje projekt do montażu."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Preferencje widoczności",
+          "tables": [
+            {
+              "headers": ["Tryb", "Zachowanie", "Domyślna platforma"],
+              "rows": [
+                ["Zawsze widoczny", "Pasek pozostaje widoczny przez cały czas przechwytywania.", "Windows i macOS"],
+                ["Automatyczne zanikanie", "Pasek znika i powraca po najechaniu kursorem.", "Nie domyślne"],
+                [
+                  "Ukryty do momentu najechania kursorem",
+                  "Pasek pozostaje ukryty, dopóki wskaźnik do niego nie dotrze.",
+                  "Linuksa"
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Dostępność akcji",
+          "tables": [
+            {
+              "headers": ["Akcja", "Wyłączone podczas"],
+              "rows": [
+                ["Wstrzymaj / Wznów", "Odliczanie, rozpoczynanie, finalizowanie"],
+                ["Zatrzymaj", "Finalizowanie"],
+                ["Anuluj i usuń", "Finalizowanie"],
+                ["Mikrofon / Kamera / Dźwięk systemowy", "Odliczanie, rozpoczynanie, finalizowanie"],
+                ["Dźwięk systemu Linux", "Cała aktywna sesja; wybierz go przed rozpoczęciem"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Zatrzymaj w porównaniu z anulowaniem",
+          "paragraphs": [
+            "Zatrzymaj zatrzymuje przechwytywanie i przechodzi do finalizacji przed otwarciem projektu. Anuluj i usuń powoduje porzucenie aktywnego nagrania i usunięcie niedokończonej sesji. Są to celowo odrębne działania."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Anulowanie powoduje usunięcie niedokończonej sesji",
+            "text": "Użyj Stop, jeśli chcesz zachować to, co zostało już nagrane. Użyj opcji Anuluj i usuń tylko wtedy, gdy bieżąca próba powinna zostać odrzucona."
+          }
+        }
+      ]
+    }
+  ]
+}

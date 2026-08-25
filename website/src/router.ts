@@ -1,7 +1,5 @@
 import type { RouteRecordRaw } from 'vue-router';
-import FaqPage from './pages/FaqPage.vue';
 import HomePage from './pages/HomePage.vue';
-import InstallPage from './pages/InstallPage.vue';
 
 export const routes: RouteRecordRaw[] = [
   {
@@ -12,11 +10,11 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/faq',
     name: 'faq',
-    component: FaqPage,
+    component: () => import('./pages/FaqPage.vue'),
   },
   {
     path: '/install',
     name: 'install',
-    component: InstallPage,
+    component: () => import('./pages/InstallPage.vue'),
   },
 ];

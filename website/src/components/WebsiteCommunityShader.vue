@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue';
-import { fragmentSource, shaderPreset, vertexSource } from './community-shader-source';
+import { fragmentSource, lightShaderColors, shaderPreset, vertexSource } from './community-shader-source';
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const fallback = ref(false);
@@ -67,7 +67,11 @@ onMounted(() => {
     space: gl.getUniformLocation(program, 'u_space'),
     cursor: gl.getUniformLocation(program, 'u_cursor'),
   };
-  gl.uniform3fv(uniforms.colors, new Float32Array(shaderPreset.colors.flat()));
+  const applyThemeColors = () => {
+    const colors = document.documentElement.classList.contains('dark') ? shaderPreset.colors : lightShaderColors;
+    gl.uniform3fv(uniforms.colors, new Float32Array(colors.flat()));
+  };
+  applyThemeColors();
   gl.uniform4f(uniforms.shape, shaderPreset.scale, shaderPreset.intensity, shaderPreset.paramA, shaderPreset.warp);
   gl.uniform4f(
     uniforms.surface,
@@ -85,6 +89,7 @@ onMounted(() => {
   let visible = document.visibilityState === 'visible';
   let inView = true;
   let disposed = false;
+  const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
   const startedAt = performance.now();
   const renderCanvas = canvas;
   const renderContext = gl;
@@ -105,6 +110,11 @@ onMounted(() => {
   const requestRender = () => {
     if (!disposed && visible && inView && frame === 0) frame = requestAnimationFrame(render);
   };
+  const themeObserver = new MutationObserver(() => {
+    applyThemeColors();
+    requestRender();
+  });
+  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
   const updateLayout = () => {
     bounds = canvas.getBoundingClientRect();
     resizeCanvas();
@@ -130,7 +140,7 @@ onMounted(() => {
       shaderPreset.cursorRadius,
     );
     renderContext.drawArrays(renderContext.TRIANGLES, 0, 3);
-    requestRender();
+    if (!reduceMotion) requestRender();
   }
 
   window.addEventListener('resize', updateLayout);
@@ -161,6 +171,7 @@ onMounted(() => {
     cancelAnimationFrame(frame);
     resizeObserver.disconnect();
     intersectionObserver.disconnect();
+    themeObserver.disconnect();
     document.removeEventListener('visibilitychange', onVisibilityChange);
     window.removeEventListener('resize', updateLayout);
     gl.deleteBuffer(buffer);

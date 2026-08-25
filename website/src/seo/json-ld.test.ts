@@ -1,7 +1,7 @@
 import type { Question } from 'schema-dts';
 import { describe, expect, it } from 'vitest';
 import { WEBSITE_LOCALES } from '../i18n';
-import { faqItems, getFaqCatalog, localizedFaqItems } from './faq-content';
+import { faqItems, getFaqCatalog, loadFaqCatalog, localizedFaqItems } from './faq-content';
 import { createFaqJsonLd, createHomeJsonLd } from './json-ld';
 
 describe('website JSON-LD', () => {
@@ -21,14 +21,14 @@ describe('website JSON-LD', () => {
   });
 
   it('creates one schema question for every visible FAQ item', () => {
-    const schema = createFaqJsonLd();
+    const schema = createFaqJsonLd(faqItems);
     const questions = schema.mainEntity as Question[];
     expect(questions).toHaveLength(faqItems.length);
     expect(questions.map((item) => item.name)).toEqual(faqItems.map((item) => item.question));
   });
 
   it('keeps FAQ answers identical to visible copy', () => {
-    const schema = createFaqJsonLd();
+    const schema = createFaqJsonLd(faqItems);
     const questions = schema.mainEntity as Question[];
     expect(questions.map((item) => item.acceptedAnswer)).toEqual(
       faqItems.map((item) => ({ '@type': 'Answer', text: item.answer })),
@@ -45,7 +45,8 @@ describe('website JSON-LD', () => {
     );
   });
 
-  it('provides a complete translated FAQ catalogue for every website locale', () => {
+  it('provides a complete translated FAQ catalogue for every website locale', async () => {
+    await Promise.all(WEBSITE_LOCALES.map((locale) => loadFaqCatalog(locale)));
     const english = getFaqCatalog('en');
 
     for (const locale of WEBSITE_LOCALES) {

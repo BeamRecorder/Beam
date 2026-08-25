@@ -28,6 +28,7 @@
           ],
           "screenshot": {
             "path": "getting-started/first-recording.webp",
+            "hidden": true,
             "alt": "Enregistreur Beam prêt pour un premier enregistrement",
             "caption": "Sélectionnez les sources de capture et de média avant de commencer."
           }
@@ -47,7 +48,7 @@
           "title": "Poursuivre la découverte",
           "bullets": [
             "Découvrez l'[interface de l'enregistreur](/recorder/interface).",
-            "Consultez toutes les [fonctionnalités de l'enregistreur](/recorder/capabilities).",
+            "Consultez toutes les [fonctionnalités de l'enregistreur](/recorder/capabilities/).",
             "Découvrez l'[interface de l'éditeur vidéo](/editor/interface).",
             "Préparez le fichier final avec [l'export et le partage](/export)."
           ]
@@ -67,6 +68,7 @@
           ],
           "screenshot": {
             "path": "getting-started/update-controls.webp",
+            "aspectRatio": "16 / 9",
             "alt": "Paramètres de Beam affichant les contrôles de mise à jour",
             "caption": "Le panneau de mise à jour affiche la version installée et les actions disponibles."
           }

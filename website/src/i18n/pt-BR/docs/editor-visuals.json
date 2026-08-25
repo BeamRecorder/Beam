@@ -1,0 +1,340 @@
+{
+  "pages": [
+    {
+      "slug": "editor/capabilities/canvas",
+      "title": "Tela",
+      "description": "Referência completa para tamanho de saída, planos de fundo, desfoque, remoção de fundo, gradientes e controles de marca d’água.",
+      "lead": "O Canvas controla a área de saída fora e atrás dos clipes visuais. As configurações de plano de fundo e marca d'água se aplicam à composição completa.",
+      "sections": [
+        {
+          "title": "Painel de tela",
+          "screenshot": {
+            "path": "editor/canvas-panel.webp",
+            "alt": "Beam Propriedades da tela com guias de fundo e controles de apresentação",
+            "caption": "O Canvas agrupa fundos de mídia, cores e gradientes com controles de apresentação e branding.",
+            "aspectRatio": "199/326"
+          }
+        },
+        {
+          "title": "Tela de saída",
+          "tables": [
+            {
+              "headers": ["Propriedade", "Valores", "Padrão ou comportamento"],
+              "rows": [
+                ["Tamanho nativo", "Largura × altura", "1920×1080"],
+                ["16:9", "1920×1080", "Predefinição padrão."],
+                ["9:16", "1080×1920", "Predefinição de retrato."],
+                ["1:1", "1080×1080", "Predefinição quadrada."],
+                ["4:5", "1080×1350", "Predefinição de retrato."],
+                ["3:4", "1080×1440", "Predefinição de retrato."],
+                ["4:3", "1440×1080", "Predefinição de paisagem."],
+                ["21:9", "2520×1080", "Predefinição ultralarga."],
+                ["Visibilidade de fundo", "Visível ou remover fundo", "Plano de fundo oculto na tela padrão."],
+                ["Desfoque de fundo", "0%–100%", "Desfoca o fundo selecionado e não o assunto do vídeo."],
+                [
+                  "Transições globais",
+                  "Ação do cabeçalho de propriedades",
+                  "Abre controles de transição no nível da tela."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Planos de fundo de imagem e vídeo",
+          "tables": [
+            {
+              "headers": ["Plano de fundo", "Arquivos suportados", "Comportamento da biblioteca"],
+              "rows": [
+                [
+                  "Imagem",
+                  "AVIF, BMP, JPEG, JPG, PNG, WebP",
+                  "Mostra 15 itens inicialmente; Mostrar mais revela lotes adicionais."
+                ],
+                [
+                  "Vídeo",
+                  "M4V, MOV, MP4, OGV, WebM",
+                  "Mostra 15 itens inicialmente; Mostrar mais revela lotes adicionais."
+                ],
+                [
+                  "Importar",
+                  "Um arquivo de plano de fundo local compatível",
+                  "Adiciona o arquivo selecionado à biblioteca de plano de fundo correspondente."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Fundos coloridos",
+          "paragraphs": [
+            "Escolha uma cor integrada ou edite um valor hexadecimal personalizado. O editor personalizado atualiza a visualização do plano de fundo ao vivo."
+          ],
+          "tables": [
+            {
+              "headers": ["Controle", "Valores"],
+              "rows": [
+                ["Predefinido", "#111827, #ffffff, #0f766e, #1d4ed8, #7c3aed, #be123c"],
+                ["Cor personalizada", "Editor de cores hexadecimais"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Fundos gradientes",
+          "tables": [
+            {
+              "headers": ["Controle", "Valores ou restrição"],
+              "rows": [
+                [
+                  "Predefinido",
+                  "Gradientes integrados incluindo Violeta, Fogo, Oceano, Pôr do Sol, Néon, Floresta, Ouro, Gelo, Vaporwave e Aurora."
+                ],
+                ["Tipo", "Linear ou Radial"],
+                ["Ângulo", "0°–360° para a direção do gradiente aplicável"],
+                ["Paradas", "Pelo menos duas paradas de cor"],
+                ["Gradiente personalizado", "Tipo, ângulo, paradas e cores editáveis"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Marca d'água",
+          "paragraphs": [
+            "A marca d'água está desabilitada por padrão. Habilite-o para colocar a marca Beam, um rótulo ou um logotipo acima da composição."
+          ],
+          "tables": [
+            {
+              "headers": ["Propriedade", "Valores ou intervalo", "Padrão ou restrição"],
+              "rows": [
+                ["Texto", "Sem texto de marca d'água, Feito com Beam., Beam, Personalizado", "Feito com Beam."],
+                ["Texto personalizado", "Até 80 caracteres", "Vazio; disponível com Personalizado."],
+                ["Mostrar Beam Logotipo", "Ligado ou desligado", "Ligado"],
+                [
+                  "Traduzir marca d’água",
+                  "Ligado ou desligado",
+                  "Desligado; disponível para os rótulos Beam e Feito com Beam."
+                ],
+                [
+                  "Posição",
+                  "Superior esquerdo, superior direito, inferior esquerdo, inferior direito",
+                  "Canto inferior direito"
+                ],
+                ["Tamanho", "50%–200%; passo 10%", "100%"],
+                ["Sombra", "0%–100%; passo 5%", "20%"],
+                ["Cor de fundo", "Seletor de cores hexadecimal", "#111114"],
+                ["Opacidade de fundo", "0%–100%; passo 5%", "78%"],
+                ["Raio de fundo", "0%–100%; passo 5%", "100%"],
+                ["Preenchimento de fundo", "50%–150%; passo 5%", "100%"]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/zooms",
+      "title": "Ampliações",
+      "description": "Referência completa para zoom manual e automático, modos de foco, profundidade, regeneração e desfoque de movimento.",
+      "lead": "Os blocos de zoom direcionam a atenção para uma região da gravação. Adicione-os manualmente na linha do tempo ou gere sugestões a partir de cliques capturados do cursor.",
+      "sections": [
+        {
+          "title": "Nenhum zoom selecionado",
+          "paragraphs": [
+            "A geração e o desfoque de movimento global permanecem disponíveis sem um zoom selecionado. Selecione um bloco de zoom na linha do tempo para editar sua profundidade, modo ou posição."
+          ],
+          "screenshot": {
+            "path": "editor/zoom-empty.webp",
+            "alt": "Beam Painel de zoom sem zoom selecionado",
+            "caption": "A geração automática e o desfoque de movimento global não requerem um zoom selecionado.",
+            "aspectRatio": "199/326"
+          }
+        },
+        {
+          "title": "Gerar zooms automáticos",
+          "tables": [
+            {
+              "headers": ["Ação", "Requisito", "Comportamento"],
+              "rows": [
+                [
+                  "Gerar zooms automáticos",
+                  "Uma sessão de gravação com telemetria de clique do cursor",
+                  "Cria blocos de zoom automáticos a partir de cliques gravados."
+                ],
+                [
+                  "Regenerar zooms automáticos",
+                  "A geração automática de zoom está disponível",
+                  "Pede confirmação, preserva os zooms manuais e substitui os zooms automáticos da sessão atual."
+                ],
+                [
+                  "Estado indisponível",
+                  "Nenhuma sessão ou nenhuma telemetria de cursor",
+                  "A geração permanece desativada."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Adicione um zoom manual",
+          "paragraphs": [
+            "Clique em um ponto desocupado na trilha Zoom. Um novo zoom manual tem como padrão 1,2 segundos e é adicionado somente quando pelo menos 200 ms de duração da linha do tempo permanecem disponíveis."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Intervalos de linha do tempo ocupados",
+            "text": "Beam escolhe uma duração disponível em torno do clique e não se sobrepõe a um bloco de zoom existente."
+          }
+        },
+        {
+          "title": "Zoom selecionado",
+          "screenshot": {
+            "path": "editor/zoom-properties.webp",
+            "alt": "Beam propriedades para um zoom selecionado",
+            "caption": "Um zoom selecionado expõe o modo de foco e a profundidade de ampliação.",
+            "aspectRatio": "199/326"
+          },
+          "tables": [
+            {
+              "headers": ["Propriedade", "Valores", "Padrão ou comportamento"],
+              "rows": [
+                [
+                  "Modo",
+                  "Cursor automático ou foco manual",
+                  "O Cursor Automático segue o movimento do ponteiro gravado; O foco manual usa um ponto fixo."
+                ],
+                ["Alvo manual", "Arrastar tela", "Arraste o alvo tracejado diretamente na tela."],
+                ["Profundidade 1", "1,25×", "Mapeamento de ampliação."],
+                ["Profundidade 2", "1,5×", "Padrão."],
+                ["Profundidade 3", "1,8×", "Mapeamento de ampliação."],
+                ["Profundidade 4", "2,2×", "Mapeamento de ampliação."],
+                ["Profundidade 5", "3,5×", "Mapeamento de ampliação."],
+                ["Profundidade 6", "5×", "Mapeamento de ampliação."],
+                ["Excluir zoom", "Ação do cabeçalho de propriedades", "Remove o bloco de zoom selecionado."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Zoom desfoque de movimento",
+          "tables": [
+            {
+              "headers": ["Propriedade", "Alcance", "Padrão", "Escopo"],
+              "rows": [
+                ["Habilitado", "Ligado ou desligado", "Ligado", "Configuração de composição global."],
+                [
+                  "Intensidade de desfoque de movimento",
+                  "0%–100%",
+                  "55%",
+                  "Aplicado de forma idêntica na visualização e na exportação."
+                ]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/cursor",
+      "title": "Cursor",
+      "description": "Referência completa para pacotes de cursores, aparência, sombras, efeitos de clique, suavização, primavera e desfoque de movimento.",
+      "lead": "As configurações do cursor controlam a sobreposição do ponteiro em toda a composição e não exigem uma seleção de clipe.",
+      "sections": [
+        {
+          "title": "Painel de cursor",
+          "screenshot": {
+            "path": "editor/cursor-panel.webp",
+            "alt": "Beam Painel do cursor com controles de pacote, aparência, clique e movimento",
+            "caption": "A apresentação do cursor é configurada globalmente para a composição.",
+            "aspectRatio": "199/326"
+          }
+        },
+        {
+          "title": "Seleção de pacote e cursor",
+          "tables": [
+            {
+              "headers": ["Propriedade", "Valores", "Comportamento"],
+              "rows": [
+                [
+                  "Pacote de cursores",
+                  "Pacote integrado ou importado",
+                  "Automático permanece Automático. Um cursor fixo é preservado somente quando o mesmo ID de cursor existe no novo pacote; caso contrário, Beam retorna para Automático."
+                ],
+                [
+                  "Modo cursor",
+                  "Cursor automático ou fixo do pacote selecionado",
+                  "Automático usa alterações registradas na forma do cursor."
+                ],
+                [
+                  "Pacote de importação",
+                  "Arquivos de pacote de cursores suportados",
+                  "Adiciona um pacote personalizado às opções disponíveis."
+                ],
+                [
+                  "Redefinir",
+                  "Redefinir apresentação do cursor",
+                  "Mantém o pacote selecionado e restaura todos os outros padrões do cursor."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Aparência",
+          "tables": [
+            {
+              "headers": ["Propriedade", "Valores ou intervalo", "Padrão"],
+              "rows": [
+                ["Tamanho", "16–128 pixels", "45px"],
+                ["Sombra projetada", "Ligado ou desligado", "Ligado"],
+                ["Desfoque de sombra", "1–24 pixels", "6 px após a redefinição"],
+                ["Cor da sombra", "Seletor de cores", "#000000 após reinicialização"],
+                [
+                  "Direção da sombra",
+                  "Todos, inferior, inferior direito, superior esquerdo",
+                  "Parte inferior após reinicialização"
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Efeitos de clique",
+          "tables": [
+            {
+              "headers": ["Propriedade", "Valores ou intervalo", "Padrão ou comportamento"],
+              "rows": [
+                [
+                  "Predefinição de estilo ondulado",
+                  "Anel Único, Onda Dupla, Burst",
+                  "Altera o estilo de ondulação para cliques esquerdo e direito; não permite a ondulação."
+                ],
+                ["Lados avançados", "Esquerda e Direita", "Configura os dois botões de forma independente."],
+                ["Primavera", "Ligado ou desligado", "Ligado"],
+                ["Intensidade da primavera", "0%–100%", "50%"],
+                ["Ondulação", "Ligado ou desligado", "Desativado para ambos os lados do clique."],
+                ["Tamanho da ondulação", "10–80 pixels", "30 pixels"],
+                ["Cor ondulada", "Seletor de cores", "Por lado do clique."],
+                ["Clique com o meio", "Nenhum controle de editor separado", "Usa a apresentação do botão esquerdo."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Movimento",
+          "tables": [
+            {
+              "headers": ["Propriedade", "Valores ou intervalo", "Predefinição suave"],
+              "rows": [
+                ["Predefinido", "Focado, Suave, Personalizado", "Suave"],
+                ["Suavização", "0–1", "0,67"],
+                ["Massa de primavera", "0,5–2", "1,29"],
+                ["Desfoque de movimento", "0–1", "0,4"]
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

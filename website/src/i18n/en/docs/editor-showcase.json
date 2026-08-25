@@ -1,0 +1,24 @@
+{
+  "pages": [
+    {
+      "slug": "editor/showcase",
+      "title": "Recorded project showcase",
+      "description": "See how a recorded Beam session appears inside the Video Editor.",
+      "lead": "A recorded session opens as a complete composition with its captured media arranged for editing.",
+      "sections": [
+        {
+          "title": "A project ready to edit",
+          "paragraphs": [
+            "The canvas presents the composed output while the timeline keeps recorded media and editing layers visible for timing, framing, captions, audio, and export adjustments."
+          ],
+          "screenshot": {
+            "path": "editor/showcase.webp",
+            "alt": "Beam editor showing a recorded project with its canvas and timeline",
+            "caption": "A recorded project ready for timing, framing, captions, audio, and export adjustments.",
+            "aspectRatio": "1586 / 992"
+          }
+        }
+      ]
+    }
+  ]
+}

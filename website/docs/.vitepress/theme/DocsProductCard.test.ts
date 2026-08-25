@@ -42,17 +42,24 @@ describe('DocsProductCard', () => {
 
   it('resolves the card link, background, and recorder visual against the docs base path', () => {
     const wrapper = mountCard();
+    const image = wrapper.get('.docs-product-card__visual img');
 
     expect(wrapper.get('a').attributes('href')).toBe('/docs/recorder/');
     expect(wrapper.get('.docs-product-card__backdrop').attributes('style')).toMatch(
-      /background-image:\s*url\(["']?\/docs\/showcase\/amber-l\.jpg["']?\)/,
+      /background-image:\s*url\(["']?\/docs\/showcase\/amber-800\.webp["']?\)/,
     );
-    expect(wrapper.get('.docs-product-card__visual img').attributes('src')).toBe(
-      '/docs/showcase/Beam-showcase-hud.png',
+    expect(image.attributes('src')).toBe('/docs/showcase/Beam-showcase-hud-160.webp');
+    expect(image.attributes('srcset')).toBe(
+      '/docs/showcase/Beam-showcase-hud-160.webp 160w, /docs/showcase/Beam-showcase-hud-280.webp 280w, /docs/showcase/Beam-showcase-hud-320.webp 320w',
     );
+    expect(image.attributes('sizes')).toBe('160px');
+    expect(image.attributes('width')).toBe('160');
+    expect(image.attributes('height')).toBe('240');
     expect(withBase).toHaveBeenCalledWith('/recorder/');
-    expect(withBase).toHaveBeenCalledWith('/showcase/amber-l.jpg');
-    expect(withBase).toHaveBeenCalledWith('/showcase/Beam-showcase-hud.png');
+    expect(withBase).toHaveBeenCalledWith('/showcase/amber-800.webp');
+    expect(withBase).toHaveBeenCalledWith('/showcase/Beam-showcase-hud-160.webp');
+    expect(withBase).toHaveBeenCalledWith('/showcase/Beam-showcase-hud-280.webp');
+    expect(withBase).toHaveBeenCalledWith('/showcase/Beam-showcase-hud-320.webp');
   });
 
   it('does not rewrite external product links', () => {
@@ -64,18 +71,42 @@ describe('DocsProductCard', () => {
   });
 
   it.each([
-    ['recorder', 'Recorder app', '/showcase/Beam-showcase-hud.png'],
-    ['editor', 'Video editor', '/showcase/Beam-showcase-editor.png'],
+    [
+      'recorder',
+      'Recorder app',
+      '/showcase/Beam-showcase-hud-160.webp',
+      '/showcase/Beam-showcase-hud-160.webp 160w, /showcase/Beam-showcase-hud-280.webp 280w, /showcase/Beam-showcase-hud-320.webp 320w',
+      '160px',
+      '160',
+      '240',
+    ],
+    [
+      'editor',
+      'Video editor',
+      '/showcase/Beam-showcase-editor-400.webp',
+      '/showcase/Beam-showcase-editor-400.webp 400w, /showcase/Beam-showcase-editor-500.webp 500w, /showcase/Beam-showcase-editor-576.webp 576w, /showcase/Beam-showcase-editor-600.webp 600w, /showcase/Beam-showcase-editor-800.webp 800w',
+      '(max-width: 720px) calc(90vw - 44px), 326px',
+      '400',
+      '250',
+    ],
   ] as const)(
     'renders the %s product visual with its accessible label and base-aware image',
-    (visual, title, imagePath) => {
+    (visual, title, imagePath, srcset, sizes, width, height) => {
       const wrapper = mountCard({ visual, title });
       const visualElement = wrapper.get('.docs-product-card__visual');
+      const image = visualElement.get('img');
 
       expect(visualElement.classes()).toContain(`is-${visual}`);
       expect(visualElement.attributes('role')).toBe('img');
       expect(visualElement.attributes('aria-label')).toBe(`${title} interface in Beam`);
-      expect(visualElement.get('img').attributes('src')).toBe(`/docs${imagePath}`);
+      expect(image.attributes('src')).toBe(`/docs${imagePath}`);
+      expect(image.attributes('srcset')).toBe(srcset.replaceAll('/showcase/', '/docs/showcase/'));
+      expect(image.attributes('sizes')).toBe(sizes);
+      expect(image.attributes('width')).toBe(width);
+      expect(image.attributes('height')).toBe(height);
+      expect(image.attributes('loading')).toBe('lazy');
+      expect(image.attributes('decoding')).toBe('async');
+      expect(image.attributes('fetchpriority')).toBe('low');
       expect(withBase).toHaveBeenCalledWith(imagePath);
     },
   );

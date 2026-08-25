@@ -1,0 +1,24 @@
+{
+  "pages": [
+    {
+      "slug": "editor/showcase",
+      "title": "录制项目展示",
+      "description": "查看录制的 Beam 会话在视频编辑器中的呈现方式。",
+      "lead": "录制的会话会作为完整编排打开，其中捕获的媒体已经排列好，可以继续编辑。",
+      "sections": [
+        {
+          "title": "准备编辑的项目",
+          "paragraphs": [
+            "画布显示编排后的输出，而时间线则让录制媒体和编辑图层保持可见，便于调整时序、构图、字幕、音频和导出。"
+          ],
+          "screenshot": {
+            "path": "editor/showcase.webp",
+            "alt": "Beam 编辑器显示包含画布和时间线的录制项目",
+            "caption": "准备调整时序、构图、字幕、音频和导出的录制项目。",
+            "aspectRatio": "1586 / 992"
+          }
+        }
+      ]
+    }
+  ]
+}

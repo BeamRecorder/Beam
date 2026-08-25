@@ -1,0 +1,24 @@
+{
+  "pages": [
+    {
+      "slug": "editor/showcase",
+      "title": "Nagrana prezentacja projektu",
+      "description": "Zobacz, jak nagrana sesja Beam wygląda w Edytorze wideo.",
+      "lead": "Nagrana sesja otwiera się jako kompletna kompozycja z przechwyconymi multimediami przygotowanymi do edycji.",
+      "sections": [
+        {
+          "title": "Projekt gotowy do edycji",
+          "paragraphs": [
+            "Kanwa przedstawia skomponowany wynik, podczas gdy oś czasu zapewnia widoczność nagranych multimediów i warstw edycyjnych w celu dostosowania synchronizacji, kadrowania, podpisów, dźwięku i eksportu."
+          ],
+          "screenshot": {
+            "path": "editor/showcase.webp",
+            "alt": "Beam edytor pokazujący nagrany projekt wraz z jego płótnem i osią czasu",
+            "caption": "Nagrany projekt gotowy do dostosowania czasu, kadrowania, podpisów, dźwięku i eksportu.",
+            "aspectRatio": "1586 / 992"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -2,34 +2,78 @@
   "pages": [
     {
       "slug": "recorder/index",
-      "title": "Vue d'ensemble de l'application d'enregistrement",
-      "description": "Découvrez le fonctionnement de l'enregistreur Beam, de la sélection de la source au passage dans l'éditeur.",
-      "lead": "L'application d'enregistrement est un HUD compact qui prépare, démarre et contrôle une capture sans masquer l'espace de travail que vous présentez.",
+      "title": "Vue d'ensemble de l'enregistreur",
+      "description": "Découvrez ce que Beam peut capturer et suivez le flux complet d'enregistrement.",
+      "lead": "L'enregistreur est le point de départ compact de chaque projet Beam. Il prépare l'écran ou la fenêtre, le recadrage facultatif, la caméra, le microphone, l'audio système, les interactions et le téléprompteur avant le début de la capture.",
       "sections": [
         {
-          "title": "Flux d'enregistrement",
-          "steps": [
-            "Choisissez un écran, une fenêtre ou une zone d'écran personnalisée.",
-            "Préparez les options du microphone, de l'audio système, de la caméra, du compte à rebours et du téléprompteur.",
-            "Démarrez l'enregistrement et utilisez la barre flottante pour le contrôler en direct.",
-            "Arrêtez la capture pour finaliser ses pistes et ouvrir le projet dans l'éditeur."
+          "title": "Ce que l'enregistreur capture",
+          "paragraphs": [
+            "Beam peut enregistrer un écran complet, une fenêtre d'application ou une zone personnalisée d'un écran. La caméra, le microphone et l'audio système peuvent être ajoutés comme sources séparées lorsque la plateforme les rend disponibles."
           ],
           "screenshot": {
             "path": "recorder/hud-overview.webp",
-            "alt": "Vue d'ensemble du HUD de l'enregistreur Beam",
-            "caption": "Le HUD regroupe les sources de capture et les contrôles d'enregistrement dans une fenêtre compacte."
+            "alt": "HUD de l'enregistreur Beam avec les contrôles de source, d'audio, de caméra, de téléprompteur et d'enregistrement",
+            "caption": "Le HUD de l'enregistreur regroupe toute la configuration de capture dans une fenêtre compacte.",
+            "aspectRatio": "2 / 3"
           }
         },
         {
-          "title": "Pistes de média séparées",
-          "paragraphs": [
-            "Beam enregistre l'écran, la webcam, le microphone et l'audio système sur des pistes séparées lorsqu'elles sont disponibles. L'éditeur peut ensuite ajuster ou désactiver les pistes prises en charge sans modifier la capture originale."
+          "title": "Flux d'enregistrement",
+          "steps": [
+            "Choisissez Écran ou Fenêtre et sélectionnez la source à capturer.",
+            "En mode Écran, choisissez éventuellement une taille prédéfinie ou dessinez une zone d'enregistrement personnalisée.",
+            "Choisissez un microphone et une caméra, puis activez l'audio système si l'enregistrement en a besoin.",
+            "Activez l'enregistrement des interactions lorsque vous souhaitez conserver dans le projet les clics pris en charge et les jetons de raccourcis.",
+            "Ouvrez le téléprompteur et préparez un script si nécessaire.",
+            "Sélectionnez Démarrer l'enregistrement. Beam applique le compte à rebours configuré avant le début de la capture.",
+            "Utilisez la barre d'enregistrement flottante pour mettre en pause, reprendre, activer ou désactiver les appareils pris en charge, arrêter ou annuler.",
+            "Après l'arrêt, Beam finalise la session et ouvre le projet dans l'éditeur."
           ]
         },
         {
-          "title": "Projets",
+          "title": "Résumé des sources",
+          "tables": [
+            {
+              "headers": ["Source", "Ce qui est enregistré", "Valeur par défaut"],
+              "rows": [
+                ["Écran", "Un écran complet, éventuellement limité à une zone", "Mode sélectionné"],
+                ["Fenêtre", "Une fenêtre d'application", "Désactivée jusqu'à la sélection"],
+                ["Microphone", "Audio provenant d'un périphérique d'entrée sélectionné", "No Audio"],
+                ["Caméra", "Vidéo provenant d'une caméra sélectionnée", "Camera Off"],
+                ["Audio système", "Son produit par l'ordinateur", "Off"],
+                [
+                  "Interactions",
+                  "Métadonnées de clic prises en charge et jetons de raccourcis sécurisés",
+                  "Dépend des préférences et des autorisations"
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Remarque sur les plateformes",
+          "notice": {
+            "kind": "info",
+            "title": "Capture sous Linux",
+            "text": "Beam utilise le sélecteur de capture du système sous Linux. Le recadrage de zone est indisponible et Beam ne peut pas masquer ses propres fenêtres lors d'une capture plein écran. Le mode Écran reste le mode de capture recommandé sous Linux."
+          }
+        },
+        {
+          "title": "Sources média séparées",
           "paragraphs": [
-            "Utilisez Ouvrir un projet pour revenir à un projet Beam existant ou créez-en un nouveau avant l'enregistrement. Les sessions terminées restent associées à leur projet pour être montées ultérieurement."
+            "L'audio système est le son produit par l'ordinateur, comme une vidéo dans un navigateur ou un appel Discord. L'audio du microphone est le son reçu du périphérique d'entrée sélectionné. Beam conserve séparément les médias d'écran, de caméra, de microphone et d'audio système pris en charge afin de pouvoir les traiter indépendamment par la suite."
+          ],
+          "notice": {
+            "kind": "tip",
+            "title": "Éviter le retour audio",
+            "text": "Lorsque vous enregistrez l'audio système et le microphone ensemble, utilisez un casque ou baissez le volume des haut-parleurs afin que le microphone n'enregistre pas une seconde fois la sortie de l'ordinateur."
+          }
+        },
+        {
+          "title": "Vue d'ensemble de l'implémentation",
+          "paragraphs": [
+            "La capture d'écran utilise le chemin de capture natif du système d'exploitation. Sous Linux, la capture de l'écran et de l'audio système utilise la pile portal et PipeWire. La capture de la caméra et du microphone est gérée par l'application Electron. Le code du domaine de capture de Beam est écrit en Rust et son interface multiplateforme est construite avec Electron et Vue."
           ]
         }
       ]
@@ -37,114 +81,148 @@
     {
       "slug": "recorder/interface",
       "title": "Interface de l'enregistreur",
-      "description": "Découvrez chaque contrôle du HUD et de la barre d'enregistrement Beam.",
-      "lead": "L'interface de l'enregistreur sépare la sélection de la source, les contrôles des appareils, les préférences et les actions d'enregistrement afin que l'état actuel reste visible.",
+      "description": "Découvrez chaque zone du HUD de l'enregistreur et les contrôles affichés pendant un enregistrement.",
+      "lead": "Le HUD est organisé autour de la configuration de capture. Une fois l'enregistrement démarré, la barre d'enregistrement compacte n'affiche que les contrôles utiles pendant la session.",
       "sections": [
         {
           "title": "Barre supérieure",
-          "bullets": [
-            "L'identité Beam indique la fenêtre d'enregistrement actuelle.",
-            "Préférences ouvre les réglages d'enregistrement, généraux, des raccourcis et de l'application.",
-            "Les actions de fenêtre réduisent ou ferment l'enregistreur."
+          "tables": [
+            {
+              "headers": ["Contrôle", "Action"],
+              "rows": [
+                [
+                  "Préférences",
+                  "Ouvre les réglages Enregistrement, Général, Raccourcis, À propos et les mises à jour."
+                ],
+                ["Réduire", "Réduit la fenêtre de l'enregistreur."],
+                ["Fermer", "Ferme la fenêtre de l'enregistreur."]
+              ]
+            }
           ]
         },
         {
-          "title": "Source de capture",
-          "paragraphs": [
-            "Utilisez les onglets Écran et Fenêtre pour changer le type de source. Le sélecteur de source affiche les écrans ou fenêtres d'application disponibles sur la plateforme actuelle. La capture d'écran peut également être limitée à une zone personnalisée."
-          ],
-          "screenshot": {
-            "path": "recorder/source-selection.webp",
-            "alt": "Contrôles des sources d'écran et de fenêtre dans Beam",
-            "caption": "Choisissez un type de source, puis sélectionnez l'écran, la fenêtre ou la zone d'écran."
-          }
+          "title": "Configuration de la capture",
+          "tables": [
+            {
+              "headers": ["Contrôle", "Action", "Disponibilité"],
+              "rows": [
+                ["Écran / Fenêtre", "Modifie le mode de capture.", "Avant l'enregistrement."],
+                [
+                  "Sélecteur de source",
+                  "Choisit un écran ou une fenêtre d'application.",
+                  "Le portail Linux fournit son propre sélecteur."
+                ],
+                [
+                  "Sélectionner une zone",
+                  "Ouvre la superposition de zone personnalisée.",
+                  "Mode Écran uniquement ; indisponible sous Linux."
+                ],
+                [
+                  "Audio système",
+                  "Active ou désactive la capture de la sortie de l'ordinateur.",
+                  "La prise en charge varie selon la plateforme."
+                ],
+                [
+                  "Microphone",
+                  "Choisit un périphérique d'entrée ou Aucun audio.",
+                  "Avant l'enregistrement ; activable pendant les phases prises en charge."
+                ],
+                [
+                  "Caméra",
+                  "Choisit une caméra ou Caméra désactivée.",
+                  "Avant l'enregistrement ; activable pendant les phases prises en charge."
+                ],
+                ["Téléprompteur", "Ouvre ou masque la fenêtre du script.", "Avant et pendant l'enregistrement."],
+                [
+                  "Démarrer l'enregistrement",
+                  "Lance le compte à rebours configuré et la capture.",
+                  "Lorsque la configuration est prête et que Beam n'est pas occupé."
+                ]
+              ]
+            }
+          ]
         },
         {
-          "title": "Contrôles des médias",
-          "bullets": [
-            "Microphone sélectionne un périphérique d'entrée ou désactive l'audio du microphone.",
-            "Audio système active ou désactive le son produit par l'ordinateur.",
-            "Caméra sélectionne une webcam et ouvre sa fenêtre superposée séparée.",
-            "Les vumètres audio affichent un aperçu du niveau en direct lorsque la plateforme le permet.",
-            "Téléprompteur ouvre ou masque la fenêtre de script séparée."
+          "title": "Action sur le projet",
+          "paragraphs": [
+            "Ouvrir un projet existant ouvre le gestionnaire de projets au lieu de démarrer une nouvelle capture. Depuis cet écran, les projets peuvent être recherchés, créés, ouverts, renommés, affichés dans le gestionnaire de fichiers, actualisés, sélectionnés par lots ou supprimés."
           ]
         },
         {
           "title": "Barre d'enregistrement",
           "paragraphs": [
-            "Pendant une capture, la barre d'enregistrement affiche le temps écoulé et l'état actuel de l'enregistrement. Ses contrôles permettent de mettre en pause, reprendre, arrêter ou annuler, ainsi que d'activer les appareils pris en charge."
+            "La barre flottante remplace le HUD de configuration pendant la capture. Elle affiche les états Prêt ou Préparation, puis expose les contrôles autorisés par la phase actuelle de l'enregistrement."
           ],
-          "screenshot": {
-            "path": "recorder/recording-bar.webp",
-            "alt": "Barre d'enregistrement Beam pendant une capture active",
-            "caption": "La barre d'enregistrement garde les contrôles essentiels accessibles pendant la capture."
-          }
-        },
-        {
-          "title": "Préférences",
-          "bullets": [
-            "Le compte à rebours peut être désactivé ou réglé sur 3, 5 ou 10 secondes.",
-            "La visibilité de la barre d'enregistrement peut être toujours visible, disparaître automatiquement ou rester masquée jusqu'au survol.",
-            "Toujours au premier plan maintient le HUD au-dessus des autres fenêtres.",
-            "Le thème et la langue contrôlent l'apparence de l'application.",
-            "Les réglages de raccourcis configurent les actions d'enregistrement et du téléprompteur."
+          "tables": [
+            {
+              "headers": ["Contrôle", "Action", "Contrainte importante"],
+              "rows": [
+                [
+                  "Déplacer la barre d'enregistrement",
+                  "Déplace la barre vers une autre position.",
+                  "La préférence de visibilité continue de s'appliquer."
+                ],
+                [
+                  "Pause / Reprendre",
+                  "Met en pause ou reprend la session.",
+                  "Désactivé pendant le compte à rebours, le démarrage et la finalisation."
+                ],
+                ["Arrêter", "Finalise l'enregistrement et conserve la session.", "Désactivé pendant la finalisation."],
+                [
+                  "Annuler et supprimer",
+                  "Annule l'enregistrement et supprime la session inachevée.",
+                  "Désactivé pendant la finalisation."
+                ],
+                [
+                  "Microphone / Caméra",
+                  "Active ou désactive la source sélectionnée.",
+                  "Désactivé pendant le compte à rebours, le démarrage et la finalisation."
+                ],
+                [
+                  "Audio système",
+                  "Active ou désactive l'audio système lorsqu'il est pris en charge.",
+                  "Ne peut pas être modifié après le démarrage sous Linux."
+                ]
+              ]
+            }
           ]
         }
       ]
     },
     {
-      "slug": "recorder/capabilities",
+      "slug": "recorder/capabilities/index",
       "title": "Fonctionnalités de l'enregistreur",
-      "description": "Utilisez les zones d'écran, l'audio séparé, la webcam, le téléprompteur, les raccourcis et les métadonnées d'interaction dans Beam.",
-      "lead": "Les fonctionnalités de l'enregistreur se combinent pour une capture légère comme pour une présentation produit entièrement préparée.",
+      "description": "Ouvrez une référence ciblée pour chaque fonctionnalité de l'enregistreur et ses réglages exacts.",
+      "lead": "Chaque fonctionnalité possède sa propre page afin que les réglages, valeurs par défaut, contraintes de plateforme et cas limites restent faciles à parcourir.",
       "sections": [
         {
-          "title": "Capture d'écran, de fenêtre et de zone",
-          "paragraphs": [
-            "Enregistrez un écran entier, une fenêtre d'application précise ou une zone normalisée de l'écran sélectionné. Vous pouvez rouvrir le sélecteur de zone pour ajuster un recadrage enregistré avant l'enregistrement."
+          "title": "Index des fonctionnalités",
+          "tables": [
+            {
+              "headers": ["Fonctionnalité", "Référence"],
+              "rows": [
+                [
+                  "Sources et zones de capture",
+                  "[Ouvrir les sources de capture](/recorder/capabilities/capture-sources)"
+                ],
+                ["Audio et caméra", "[Ouvrir l'audio et la caméra](/recorder/capabilities/audio-camera)"],
+                ["Téléprompteur", "[Ouvrir le téléprompteur](/recorder/capabilities/teleprompter)"],
+                [
+                  "Barre d'enregistrement en direct",
+                  "[Ouvrir les contrôles en direct](/recorder/capabilities/live-controls)"
+                ],
+                ["Préférences", "[Ouvrir les préférences](/recorder/capabilities/preferences)"],
+                [
+                  "Gestionnaire de projets",
+                  "[Ouvrir le gestionnaire de projets](/recorder/capabilities/project-manager)"
+                ],
+                [
+                  "Autorisations et confidentialité",
+                  "[Ouvrir les autorisations et la confidentialité](/recorder/capabilities/permissions-privacy)"
+                ]
+              ]
+            }
           ]
-        },
-        {
-          "title": "Microphone et audio système",
-          "paragraphs": [
-            "Le microphone et l'audio système sont capturés indépendamment lorsque les deux sont disponibles. Les pistes séparées permettent à l'éditeur de modifier individuellement leur activation et leur volume."
-          ]
-        },
-        {
-          "title": "Superposition de webcam",
-          "paragraphs": [
-            "Une caméra sélectionnée ouvre une superposition séparée qui peut être positionnée pour la présentation. L'accès à la caméra dépend des autorisations du système d'exploitation et de la disponibilité du périphérique."
-          ]
-        },
-        {
-          "title": "Téléprompteur",
-          "paragraphs": [
-            "Rédigez un script, passez d'une lecture continue à une lecture ligne par ligne et ajustez le défilement automatique, la vitesse, la taille du texte, l'espacement des lignes, l'alignement et le thème. Les raccourcis globaux peuvent afficher le téléprompteur, mettre en pause le défilement automatique ou passer d'une ligne à l'autre."
-          ],
-          "screenshot": {
-            "path": "recorder/teleprompter.webp",
-            "alt": "Téléprompteur Beam avec script et commandes de lecture",
-            "caption": "Le téléprompteur est contrôlé indépendamment du HUD de l'enregistreur."
-          }
-        },
-        {
-          "title": "Contrôles d'enregistrement en direct",
-          "bullets": [
-            "Mettez l'enregistrement actif en pause et reprenez-le.",
-            "Activez ou désactivez le microphone, la caméra et l'audio système lorsque la session active les prend en charge.",
-            "Arrêtez et finalisez l'enregistrement, ou annulez et supprimez la capture active."
-          ]
-        },
-        {
-          "title": "Métadonnées d'interaction et confidentialité",
-          "paragraphs": [
-            "Avec une autorisation explicite, Beam enregistre des jetons de raccourcis clavier sécurisés. Sous Linux, l'accès aux interactions peut également activer les métadonnées des clics de souris. Le texte saisi n'est jamais enregistré."
-          ],
-          "notice": {
-            "kind": "info",
-            "title": "Autorisation requise",
-            "text": "L'enregistrement des interactions est facultatif et peut être activé ou désactivé dans les Préférences. Sa disponibilité dépend du système d'exploitation."
-          }
         }
       ]
     }

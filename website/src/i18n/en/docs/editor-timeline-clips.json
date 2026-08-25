@@ -1,0 +1,408 @@
+{
+  "pages": [
+    {
+      "slug": "editor/capabilities/timeline",
+      "title": "Timeline editing",
+      "description": "Complete reference for timeline tools, tracks, selection, snapping, trimming, splitting, clipboard actions, and hold frames.",
+      "lead": "The timeline combines visual, annotation, zoom, and audio tracks on one playhead. Editing rules depend on selection, clip type, project ownership, and available duration.",
+      "sections": [
+        {
+          "title": "Add media and layers",
+          "tables": [
+            {
+              "headers": ["Item", "How it is added", "Initial duration or behavior"],
+              "rows": [
+                ["Video", "Add → Video or drag and drop", "Asset duration divided by its initial playback speed."],
+                ["Image", "Add → Image or drag and drop", "5 seconds."],
+                ["Audio", "Add → Audio or drag and drop", "Asset duration divided by its initial playback speed."],
+                [
+                  "Text",
+                  "Add → Text or click the text-caption track",
+                  "Saved caption-duration preference; 2-second fallback and 200 ms minimum."
+                ],
+                ["Blur", "Add → Blur", "5 seconds."],
+                [
+                  "Zoom",
+                  "Click an available point on the Zoom track",
+                  "Saved zoom-duration preference or 1.2-second fallback; fitted to the gap with a 200 ms minimum."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Timeline controls",
+          "tables": [
+            {
+              "headers": ["Control", "Range or shortcut", "Behavior"],
+              "rows": [
+                ["Split", "S", "Requires one selected clip and a playhead strictly inside that clip."],
+                [
+                  "Magnet",
+                  "On by default",
+                  "Snaps to timeline start/end, clip edges, zoom edges, and the playhead when the operation supports it. The ruler-derived threshold never falls below 20 ms."
+                ],
+                ["Play / Pause", "Space", "Ignored when focus is in an editable field."],
+                ["Skip Back / Forward", "Toolbar buttons", "Moves to the start or end of the timeline."],
+                ["Playback Quality", "Full, Half, Quarter", "Changes preview resolution only."],
+                [
+                  "Timeline zoom",
+                  "100%–3200%",
+                  "Buttons step by 50 below 500%, 100 below 1000%, then 250; Ctrl+wheel uses 25/50/100 steps. Saved after changes."
+                ],
+                ["Time display", "MM:SS or HH:MM:SS", "Switches format when duration reaches one hour."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Selection",
+          "tables": [
+            {
+              "headers": ["Gesture", "Result"],
+              "rows": [
+                ["Click a clip", "Selects that clip as the primary item."],
+                ["Click another clip", "Replaces the current clip selection."],
+                [
+                  "Click a track header",
+                  "Selects every clip on the track; the clip nearest the playhead becomes primary."
+                ],
+                [
+                  "Ctrl, Cmd, or Shift + track header",
+                  "Adds that track's clips to or removes them from the current track selection."
+                ],
+                [
+                  "Click a canvas element",
+                  "Selects the corresponding supported clip, caption, blur, cursor, or screen area."
+                ],
+                ["Click empty space", "Clears the conflicting selection where the active tool permits it."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Move, trim, and layer",
+          "bullets": [
+            "Drag a clip to change its timeline start; linked recording sidecars move together until unlinked.",
+            "Drag the start or end handle to trim the active range. A clip must remain at least 40 ms long, and clips sharing a group ID trim together.",
+            "Dragging media beyond the current end extends the composition duration.",
+            "Drag visual track headers to change layer order.",
+            "Moving a visual clip into another visual row can also reorder visual tracks.",
+            "Disabled clips stay on the timeline but do not contribute to preview or export.",
+            "A multiple-selection change is applied only to selected clips compatible with the primary clip's property."
+          ]
+        },
+        {
+          "title": "Clipboard and deletion",
+          "tables": [
+            {
+              "headers": ["Action", "Availability", "Edge case"],
+              "rows": [
+                [
+                  "Copy",
+                  "A supported primary selected clip or zoom",
+                  "Copies only the primary item, even when several clips are selected; the payload remains associated with its project."
+                ],
+                [
+                  "Paste",
+                  "A project is loaded and clipboard data is compatible",
+                  "Items copied from another project are rejected."
+                ],
+                ["Delete", "Supported selected timeline items", "Removes the selected item from the composition."],
+                [
+                  "Unlink",
+                  "A selected item has a recording-sidecar link",
+                  "After unlinking, it can move independently."
+                ],
+                ["Enable / Disable", "Supported clips", "Disabled media is ignored by playback and export."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Clip and canvas transitions",
+          "tables": [
+            {
+              "headers": ["Property", "Values", "Default or constraint"],
+              "rows": [
+                ["Side", "Entry and Exit", "Configured independently."],
+                [
+                  "Visual preset",
+                  "None, Fade, Slide left, Slide right, Slide up, Slide down, Zoom in, Zoom out, Blur",
+                  "Available for visual clips and canvas transitions."
+                ],
+                ["Audio preset", "None or Fade", "Other transition presets are not available for audio."],
+                ["Duration", "1–5000 ms", "500 ms; capped by clip duration minus the transition on the opposite side."],
+                ["Visual curve", "1×–5×", "3×; not shown for audio transitions."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Hold Frame",
+          "paragraphs": [
+            "Hold Frame freezes the selected video at the playhead and extends the still portion as a timeline item."
+          ],
+          "tables": [
+            {
+              "headers": ["Requirement", "Rule"],
+              "rows": [
+                ["Clip type", "Enabled screen, video, or webcam clip with video media."],
+                ["Selection", "A compatible clip must be selected."],
+                ["Playhead", "From start + 40 ms through end − 40 ms, inclusive."],
+                ["Frozen segment", "1000 ms."],
+                [
+                  "Linked media",
+                  "Linked clips are split together, and the frozen segment can remain grouped with its audio sidecar."
+                ],
+                ["Menu", "Available from the supported clip's context menu."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Imported-media failures",
+          "paragraphs": [
+            "Dropped files are validated before import. Beam reports unsupported extensions or codecs, invalid or empty media, decode failures, non-local sources, and project-import failures. If an imported video contains unsupported audio, the video can be added while its audio is ignored."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "One import at a time",
+            "text": "A new drag-and-drop import is rejected while another media import is already running."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/clips",
+      "title": "Clip properties",
+      "description": "Complete reference for visual, webcam, blur, audio, text, and keyboard-caption clip properties.",
+      "lead": "The Clip panel follows the primary selection. Shared controls appear only for compatible clip types, and a multiple-selection edit propagates only to compatible selected clips.",
+      "sections": [
+        {
+          "title": "No selection",
+          "paragraphs": [
+            "When no clip is selected, the panel shows an instructional empty state. Select an item on the canvas or timeline to reveal its properties."
+          ],
+          "screenshot": {
+            "path": "editor/clip-empty.webp",
+            "alt": "Beam Clip panel with no clip selected",
+            "caption": "The Clip panel remains empty until a compatible timeline or canvas item is selected.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Clip types",
+          "tables": [
+            {
+              "headers": ["Clip type", "Properties exposed"],
+              "rows": [
+                [
+                  "Screen / Video",
+                  "Visual layout, framing, transform, appearance, playback speed, transitions, enable, delete, and unlink when linked."
+                ],
+                ["Image", "Visual layout, framing, transform, appearance, transitions, enable, and delete."],
+                ["Webcam", "Shared visual controls plus split layout and React to Zoom."],
+                ["Blur", "Effect, shape, strength, feather, radius, tint, and color controls."],
+                [
+                  "System / Microphone / Imported audio",
+                  "Clip volume, Entry and Exit Fade transitions, enable, and delete."
+                ],
+                [
+                  "Text caption",
+                  "Text content, typography, alignment, color, outline, extrusion, backdrop, and shadow."
+                ],
+                ["Keyboard caption", "Caption styling plus Follow Cursor."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Shared visual layout",
+          "tables": [
+            {
+              "headers": ["Property", "Values or range", "Behavior"],
+              "rows": [
+                [
+                  "Layout",
+                  "Floating top-left, top-right, bottom-left, bottom-right; Floating center; Fullscreen",
+                  "Webcam additionally supports Split left, right, top, and bottom."
+                ],
+                [
+                  "Framing",
+                  "Fill, Fit, Square, Portrait 9:16, Landscape 16:9, Squircle, Circle",
+                  "Controls crop and mask presentation."
+                ],
+                ["Position X / Y", "−300% to 300%", "Moves the visual on the canvas."],
+                ["Width", "2%–400%", "Height remains proportional when only width changes."],
+                ["Corner radius", "None, 8, 16, 24 px, or Custom 0–200 px", "Rounds the visual mask."],
+                ["Mirror", "Horizontal and Vertical", "Flips the rendered visual."],
+                [
+                  "Playback speed",
+                  "0.25×–4×; presets 0.5×, 1×, 1.5×, 2×, 3×",
+                  "Available for screen, video, and webcam clips."
+                ],
+                ["Enable / Disable", "On or Off", "Disabled clips remain on the timeline but are not rendered."],
+                ["Transitions", "Open from the properties header", "Entry and exit transitions are stored per clip."],
+                ["Delete", "Properties-header action", "Removes the selected clip."],
+                ["Unlink", "Available for linked sidecars", "Separates the clip from linked timeline movement."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Shadow, border, and frame",
+          "tables": [
+            {
+              "headers": ["Group", "Property", "Values or range"],
+              "rows": [
+                ["Shadow", "Preset", "None, Soft, Medium, Strong, Custom"],
+                ["Shadow", "Mode", "Solid or Adaptive"],
+                ["Shadow", "Custom blur", "4–96 px"],
+                ["Shadow", "Direction", "All, Bottom, Bottom-right, Top-left"],
+                ["Border", "Enabled", "On or Off"],
+                ["Border", "Color", "Color picker"],
+                ["Border", "Width", "1–32 px"],
+                ["Frame", "Style", "None, Safari, Windows 95"],
+                ["Frame", "Title", "Custom frame title"],
+                ["Frame", "Chrome scale", "50%–200%"],
+                ["Frame", "Specific controls", "Menu, scrollbar, or colors depending on frame style"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Crop a visual clip",
+          "paragraphs": ["Crop is a direct canvas editor rather than a numeric Clip-panel group."],
+          "steps": [
+            "Select exactly one screen, video, image, or webcam clip.",
+            "Select Crop in the canvas toolbar.",
+            "Move or resize the crop rectangle directly over the selected visual.",
+            "Select OK to store the normalized crop on that clip."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Single selection required",
+            "text": "Crop is unavailable without one compatible visual selection and does not operate on a multiple selection."
+          }
+        },
+        {
+          "title": "Initial visual defaults",
+          "tables": [
+            {
+              "headers": ["Clip", "Transform and framing", "Corner and shadow"],
+              "rows": [
+                [
+                  "Screen",
+                  "Full canvas",
+                  "No corner radius when no background; Medium shadow, 40 px blur, Bottom direction."
+                ],
+                ["Video / Image", "Full canvas", "Small corner radius; Medium shadow, 20 px blur, All directions."],
+                [
+                  "New Webcam",
+                  "x 72%, y 72%, width 24%, height 24%; Squircle",
+                  "Webcam appearance defaults then apply."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Webcam clips",
+          "screenshot": {
+            "path": "editor/webcam-properties.webp",
+            "alt": "Beam properties for a selected webcam clip",
+            "caption": "Webcam clips add split layouts and zoom-reaction behavior to shared visual controls.",
+            "aspectRatio": "199 / 326"
+          },
+          "tables": [
+            {
+              "headers": ["Property", "Values", "Default or constraint"],
+              "rows": [
+                [
+                  "Split layout",
+                  "Left, Right, Top, Bottom",
+                  "Requires a linked screen clip. Otherwise: “No matching screen recording is available at this point in the timeline.”"
+                ],
+                ["Split ratio", "20%–80%", "50%"],
+                ["Split padding", "0%–8%", "0%"],
+                ["React to Zoom", "On or Off", "On"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Blur clips",
+          "tables": [
+            {
+              "headers": ["Property", "Values or range", "Conditional behavior"],
+              "rows": [
+                ["Light preset", "Blur", "Strength 30, feather 14, tint 0."],
+                ["Privacy preset", "Pixelated", "Strength 72, feather 2, tint 0."],
+                ["Strong preset", "Opaque", "Strength 100, feather 0, tint 0, color #000000."],
+                ["Effect", "Blur, Frosted, Pixelated, Opaque", "Changes which controls remain visible."],
+                ["Shape", "Rectangle, Square, Circle", "Circle hides corner radius."],
+                ["Strength", "0%–100%", "Hidden for Opaque."],
+                ["Edge softness", "0%–100%", "Controls feathering."],
+                ["Corner radius", "0%–100%", "Hidden for Circle."],
+                ["Tint intensity", "0%–100%", "Frosted only; entering Frosted uses at least 24%."],
+                ["Color", "Color picker", "Frosted and Opaque only."]
+              ]
+            }
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Privacy effect",
+            "text": "The effect is baked into the exported video. Increase strength or use Opaque for sensitive information."
+          }
+        },
+        {
+          "title": "Audio clip volume",
+          "tables": [
+            {
+              "headers": ["Property", "Range", "Default"],
+              "rows": [["Volume", "0%–200%", "100%"]]
+            }
+          ],
+          "paragraphs": [
+            "This clip-level volume applies to selected system, microphone, or imported audio clips. Composition-wide and role-level volume controls are documented on the Audio page."
+          ]
+        },
+        {
+          "title": "Text and keyboard captions",
+          "tables": [
+            {
+              "headers": ["Property", "Values or range", "Default or rule"],
+              "rows": [
+                [
+                  "Content",
+                  "Custom text or generated sentence / keyboard step",
+                  "Custom text does not propagate across multiple selection."
+                ],
+                ["Font", "Search installed fonts or import a font", "Stored with caption styling."],
+                ["Style", "Bold, Italic, Strike-through", "Independent toggles."],
+                ["Alignment", "Left, Center, Right", "Caption text alignment."],
+                ["Color", "Color picker", "Text fill color."],
+                ["Line height", "0.8–2.0", "Caption style value."],
+                ["Letter spacing", "−5 to 20 px", "Caption style value."],
+                [
+                  "Font size",
+                  "12–256 px",
+                  "Manual caption preference with 42 px creation fallback; panel fallback 36 px text / 28 px keyboard; AI captions use 36 px."
+                ],
+                ["Wrap", "On or Off", "On"],
+                ["Outline", "0–30 px", "Optional outline width."],
+                ["Outline color", "Color picker", "Used when outline width is above zero."],
+                ["Extrusion", "0–20 px", "Optional depth effect."],
+                ["Backdrop blur", "0–48 px", "Blur behind the caption."],
+                ["Text shadow blur", "0–50 px", "Direction: All, Bottom, Bottom-right, Top-left."],
+                ["Text shadow color", "Color picker", "Applied with the configured shadow blur and direction."],
+                ["Follow Cursor", "On or Off", "Keyboard captions only; never propagated across multiple selection."]
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
