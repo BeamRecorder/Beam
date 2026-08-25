@@ -1,5 +1,6 @@
 import type { CursorButtonEvent, CursorEvent } from '../../../api/types/capture-api';
 import type { CursorMotionSettings } from '../../../api/types/cursor-settings';
+import type { RecordedCursorPoint } from './cursor-motion-types';
 import type { CursorPlaybackState } from './cursorPlayback';
 import { cursorStateAt } from './cursorPlayback';
 import { createDeterministicCursorMotionEvaluator } from './cursor-motion-evaluator';
@@ -55,12 +56,6 @@ const eventTime = (event: CursorEvent) => event.sessionNs / 1_000_000_000;
 
 const buttonEvents = (events: CursorEvent[]) =>
   events.filter((event): event is CursorButtonEvent => event.event === 'button');
-
-interface RecordedCursorPoint {
-  timeSeconds: number;
-  x: number;
-  y: number;
-}
 
 /** Preserves every recorded move and interaction position without path retiming. */
 const createRecordedCursorTarget = (events: CursorEvent[]) => {

@@ -166,10 +166,15 @@ describe('blur effect renderer', () => {
       context.beginPath(),
     );
 
-    applyBlurEffect(output, blurClip(), { x: 200, y: 150, width: 120, height: 60 }, {
-      bounds: { x: 180, y: 120, width: 160, height: 120 },
-      maskPath,
-    });
+    applyBlurEffect(
+      output,
+      blurClip(),
+      { x: 200, y: 150, width: 120, height: 60 },
+      {
+        bounds: { x: 180, y: 120, width: 160, height: 120 },
+        maskPath,
+      },
+    );
 
     expect(maskPath).toHaveBeenCalledOnce();
     expect(maskPath.mock.calls[0]![1]).toMatchObject({ width: 120, height: 60 });

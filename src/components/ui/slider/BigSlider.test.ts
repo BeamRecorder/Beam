@@ -86,5 +86,6 @@ describe('BigSlider', () => {
     expect(frameCallbacks).toHaveLength(1);
     frameCallbacks[0]!(0);
     expect(wrapper.emitted('update:modelValue')).toEqual([[180]]);
+    await input.trigger('change');
   });
 });

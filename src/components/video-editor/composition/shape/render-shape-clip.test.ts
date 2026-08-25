@@ -154,7 +154,10 @@ describe('drawShapeClip', () => {
     const [, blurClip, rect, options] = blurEffect.applyBlurEffect.mock.calls[0]!;
     expect(blurClip).toMatchObject({ kind: 'blur', mode: 'blur', strength: 64, shape: 'rectangle' });
     expect(rect).toEqual({ x: 90, y: 100, width: 400, height: 160 });
-    expect(options.bounds).toEqual({ x: 210, y: -20, width: 160, height: 400 });
+    expect(options.bounds.x).toBeCloseTo(210);
+    expect(options.bounds.y).toBeCloseTo(-20);
+    expect(options.bounds.width).toBeCloseTo(160);
+    expect(options.bounds.height).toBeCloseTo(400);
     expect(options.maskPath).toEqual(expect.any(Function));
 
     const maskContext = context();

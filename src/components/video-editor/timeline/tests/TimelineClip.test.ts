@@ -58,7 +58,7 @@ const colorLayerClip = (fill: ColorClip['fill'] = { kind: 'color', color: '#1118
     fill,
   }) as ColorClip;
 
-const shapeLayerClip = (): ShapeClip =>
+const shapeLayerClip = (overrides: Partial<ShapeClip> = {}): ShapeClip =>
   ({
     ...clip(),
     id: 'shape-clip',
@@ -82,6 +82,7 @@ const shapeLayerClip = (): ShapeClip =>
     shadowColor: '#000000',
     shadowBlur: 20,
     shadowDirection: 'bottom-right',
+    ...overrides,
   }) as ShapeClip;
 
 const baseProps = {
@@ -124,6 +125,16 @@ describe('TimelineClip', () => {
     expect(wrapper.get('.timeline-clip').classes()).toContain('kind-shape');
     expect(wrapper.get('.shape-preview').attributes('style')).toContain('background: rgb(255, 90, 31)');
     expect(wrapper.get('.shape-preview').attributes('style')).toContain('rotate(180deg)');
+  });
+
+  it('scales a rounded rectangle radius in its timeline preview', () => {
+    const clip = shapeLayerClip({ family: 'shape', preset: 'rounded-rectangle', cornerRadius: 24 });
+    const wrapper = mount(TimelineClip, {
+      props: { ...baseProps, clip, asset: null },
+      global: { stubs: { Skeleton, WaveformCanvas } },
+    });
+
+    expect(wrapper.get('.shape-preview').attributes('style')).toContain('border-radius: 12px');
   });
 
   it('keeps the disabled state stable while a video clip is toggled', async () => {

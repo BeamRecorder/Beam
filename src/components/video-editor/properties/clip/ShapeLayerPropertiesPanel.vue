@@ -15,11 +15,7 @@ import {
   normalizeShapeLayerStyle,
   SHAPE_PRESETS,
 } from '~/media/shared/shape-layer-style';
-import type {
-  ShapeLayerFamily,
-  ShapeLayerPreset,
-  ShapeLayerStyle,
-} from '~/media/shared/shape-layer-types';
+import type { ShapeLayerFamily, ShapeLayerPreset, ShapeLayerStyle } from '~/media/shared/shape-layer-types';
 import { useTranslate } from '~/i18n/useTranslate';
 
 const props = defineProps<{ clip: ShapeClip }>();

@@ -19,7 +19,7 @@ const previewStyle = computed(() => {
               : 'inset(8%)';
   return {
     background: props.clip.fillColor,
-    borderRadius: preset === 'rounded-rectangle' ? '8px' : undefined,
+    borderRadius: preset === 'rounded-rectangle' ? `${Math.max(0, props.clip.cornerRadius / 2)}px` : undefined,
     clipPath,
     backdropFilter:
       props.clip.opacityEnabled && props.clip.backdropBlur > 0

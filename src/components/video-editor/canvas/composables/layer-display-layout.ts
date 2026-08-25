@@ -2,7 +2,6 @@ import {
   isBlurClip,
   isVisualClip,
   type BlurClip,
-  type CaptionClip,
   type ClipComposition,
   type ColorClip,
   type NormalizedTransform,
@@ -15,8 +14,7 @@ import { isPhoneFrame } from '../../composition/appearance/phone-frames';
 import { projectCameraRect } from './layer-transform-geometry';
 import { webcamDisplayLayout } from './webcam-transform-editing';
 import type { VideoWindowBounds } from './useCameraZoom';
-
-type TransformClip = VisualClip | ColorClip | ShapeClip | BlurClip | CaptionClip;
+import type { TransformClip } from '../editor-canvas-types';
 
 const usesGlobalCamera = (clip: TransformClip): clip is VisualClip | ColorClip | ShapeClip | BlurClip =>
   clip.kind === 'screen' ||
