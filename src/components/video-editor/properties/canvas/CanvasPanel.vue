@@ -77,7 +77,6 @@ const {
   gradientPresets,
   customColorValue,
   customGradientValue,
-  editingPresetId,
   toggleColor,
   toggleGradient,
   beginAdd,

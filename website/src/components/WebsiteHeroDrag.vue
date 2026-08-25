@@ -6,7 +6,11 @@ import EditorCanvas from '~/components/video-editor/canvas/EditorCanvas.vue';
 import { DEFAULT_OUTPUT_CANVAS } from '~/components/video-editor/canvas/output-canvas';
 import { MACOS_CURSOR_PACK } from '~/components/video-editor/properties/cursor/cursor-packs';
 import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
-import { createDefaultCursorClickEffects, createDefaultCursorMotionSettings } from '~/api/types/cursor-settings';
+import {
+  createDefaultCursorAutoHideSettings,
+  createDefaultCursorClickEffects,
+  createDefaultCursorMotionSettings,
+} from '~/api/types/cursor-settings';
 import type { ProjectEditorData } from '~/api/types/capture-session';
 import { emptyComposition } from '~/media/shared/composition-types';
 import { useWebsiteDemoPlayer } from '@website/composables/useWebsiteDemoPlayer';
@@ -50,6 +54,7 @@ let entranceTimer: ReturnType<typeof setTimeout> | null = null;
 
 const cursorClickEffects = createDefaultCursorClickEffects();
 const cursorMotion = createDefaultCursorMotionSettings();
+const cursorAutoHide = createDefaultCursorAutoHideSettings();
 const websiteCursorPack = {
   ...MACOS_CURSOR_PACK,
   cursors: MACOS_CURSOR_PACK.cursors.map((cursor) =>
@@ -175,6 +180,7 @@ onBeforeUnmount(() => {
           shadow-direction="bottom"
           :click-effects="cursorClickEffects"
           :motion="cursorMotion"
+          :auto-hide="cursorAutoHide"
           :selected-background="null"
           :background-blur-percent="0"
           :frame-for="player.frameFor"
