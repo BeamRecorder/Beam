@@ -348,9 +348,9 @@
   "ExportPopover": {
     "exportVideo": "Exportar vídeo",
     "exportVideoDuration": "Exportar vídeo ({seconds} s)",
-    "exportUntilPlayhead": "Exportar hasta el cabezal",
-    "exportUntilPlayheadDesc": "Limita el vídeo desde el inicio hasta la posición actual del cabezal.",
-    "exportUntilPlayheadEnabled": "La exportación hasta el cabezal está activada. El vídeo se exportará hasta esa posición.",
+    "exportUntilPlayhead": "Exportar hasta el cabezal de reproducción",
+    "exportUntilPlayheadDesc": "Limita el vídeo desde el inicio hasta la posición actual del cabezal de reproducción.",
+    "exportUntilPlayheadEnabled": "La exportación hasta el cabezal de reproducción está activada. El vídeo se exportará hasta esa posición.",
     "format": "Formato",
     "webm": "WebM",
     "mp4": "MP4",

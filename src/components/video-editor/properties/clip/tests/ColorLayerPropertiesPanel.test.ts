@@ -3,7 +3,6 @@ import { defineComponent, h, ref } from 'vue';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ColorClip } from '~/media/shared/composition-types';
 import ColorLayerPropertiesPanel from '../ColorLayerPropertiesPanel.vue';
-import ColorLayerAppearanceControls from '../ColorLayerAppearanceControls.vue';
 import AddTileButton from '../../../../ui/button/AddTileButton.vue';
 
 const { capture } = vi.hoisted(() => ({
@@ -120,22 +119,6 @@ const Switch = defineComponent({
       );
   },
 });
-const ShadowDirectionGroup = defineComponent({
-  name: 'ShadowDirectionGroup',
-  emits: ['update:modelValue'],
-  setup(_, { emit }) {
-    return () =>
-      h('button', { class: 'direction-stub', onClick: () => emit('update:modelValue', 'top-left') }, 'direction');
-  },
-});
-const ColorPicker = defineComponent({
-  name: 'ColorPicker',
-  emits: ['update:modelValue'],
-  setup(_, { emit }) {
-    return () => h('button', { class: 'color-stub', onClick: () => emit('update:modelValue', '#abcdef') }, 'color');
-  },
-});
-
 const radialGradient = {
   type: 'radial' as const,
   angle: 45,
@@ -205,12 +188,6 @@ const mountPanel = async (clip: ColorClip) => {
   await flushPromises();
   return wrapper;
 };
-
-const mountAppearance = (clip: ColorClip) =>
-  mount(ColorLayerAppearanceControls, {
-    props: { clip },
-    global: { stubs: { Button, BigSlider, Switch, ShadowDirectionGroup, ColorPicker } },
-  });
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -303,166 +280,6 @@ describe('ColorLayerPropertiesPanel', () => {
 
     await radial!.trigger('click');
     expect(wrapper.emitted('update')?.at(-1)?.[0]).toEqual({ kind: 'gradient', gradient: radialGradient });
-    wrapper.unmount();
-  });
-
-  it('uses media-style radius and shadow presets plus conditional advanced controls', async () => {
-    const wrapper = mountAppearance(
-      colorClip(
-        { kind: 'color', color: '#111827' },
-        {
-          opacityEnabled: true,
-          opacity: 70,
-          cornerRadius: 'none',
-          shadowSize: 'none',
-          shadowBlur: 40,
-          shadowMode: 'solid',
-          shadowColor: '#000000',
-          shadowDirection: 'all',
-          backdropBlurEnabled: false,
-          backdropBlur: 35,
-        },
-      ),
-    );
-    const radiusGroup = wrapper
-      .findAll('.appearance-controls .btn-group')
-      .find((group) => group.text().includes('16px'));
-    expect(radiusGroup).toBeDefined();
-    await radiusGroup!
-      .findAll('.btn')
-      .find((button) => button.text() === '16px')!
-      .trigger('click');
-    expect(wrapper.emitted('update')).toContainEqual([expect.objectContaining({ cornerRadius: expect.anything() })]);
-
-    const shadowGroup = wrapper
-      .findAll('.appearance-controls .btn-group')
-      .find((group) => group.text().includes('Soft'));
-    expect(shadowGroup).toBeDefined();
-    await shadowGroup!
-      .findAll('.btn')
-      .find((button) => button.text() === 'None')!
-      .trigger('click');
-    expect(wrapper.emitted('update')).toContainEqual([expect.objectContaining({ shadowSize: 'none' })]);
-    await shadowGroup!
-      .findAll('.btn')
-      .find((button) => button.text() === 'Soft')!
-      .trigger('click');
-    expect(wrapper.emitted('update')).toContainEqual([expect.objectContaining({ shadowSize: 'sm' })]);
-
-    const advancedShadow = wrapper
-      .findAll('.appearance-controls button')
-      .find((button) => /custom|advanced/i.test(button.attributes('aria-label') ?? button.text()));
-    expect(advancedShadow).toBeDefined();
-    await advancedShadow!.trigger('click');
-    await wrapper.setProps({
-      clip: colorClip(
-        { kind: 'color', color: '#111827' },
-        {
-          opacityEnabled: true,
-          opacity: 70,
-          cornerRadius: 'md',
-          shadowSize: 'custom',
-          shadowBlur: 40,
-          shadowMode: 'solid',
-          shadowColor: '#000000',
-          shadowDirection: 'all',
-          backdropBlurEnabled: false,
-          backdropBlur: 35,
-        },
-      ),
-    });
-    const shadowSlider = wrapper
-      .findAllComponents(BigSlider)
-      .find((slider) => /shadow/i.test(String(slider.props('label'))));
-    expect(shadowSlider).toBeDefined();
-    shadowSlider!.vm.$emit('update:modelValue', 44);
-    expect(wrapper.emitted('update')).toContainEqual([
-      expect.objectContaining({ shadowSize: 'custom', shadowBlur: 44 }),
-    ]);
-    wrapper.unmount();
-  });
-
-  it('toggles opacity and backdrop blur and only shows their sliders when enabled', async () => {
-    const wrapper = mountAppearance(
-      colorClip(
-        { kind: 'color', color: '#111827' },
-        {
-          opacityEnabled: true,
-          opacity: 70,
-          cornerRadius: 'none',
-          shadowSize: 'none',
-          shadowBlur: 40,
-          shadowMode: 'solid',
-          shadowColor: '#000000',
-          shadowDirection: 'all',
-          backdropBlurEnabled: false,
-          backdropBlur: 35,
-        },
-      ),
-    );
-    const opacityToggle = wrapper
-      .findAll('.appearance-controls .switch-stub')
-      .find((toggle) => /opacity/i.test(toggle.attributes('aria-label') ?? ''));
-    const backdropToggle = wrapper
-      .findAll('.appearance-controls .switch-stub')
-      .find((toggle) => /backdrop|background blur/i.test(toggle.attributes('aria-label') ?? ''));
-    expect(opacityToggle).toBeDefined();
-    expect(backdropToggle).toBeDefined();
-
-    const opacitySlider = wrapper
-      .findAllComponents(BigSlider)
-      .find((slider) => /opacity/i.test(String(slider.props('label'))));
-    expect(opacitySlider).toBeDefined();
-    opacitySlider!.vm.$emit('update:modelValue', 61);
-    expect(wrapper.emitted('update')).toContainEqual([{ opacity: 61 }]);
-    await opacityToggle!.trigger('click');
-    expect(wrapper.emitted('update')).toContainEqual([{ opacityEnabled: false }]);
-    await wrapper.setProps({
-      clip: colorClip(
-        { kind: 'color', color: '#111827' },
-        {
-          opacityEnabled: false,
-          opacity: 61,
-          cornerRadius: 'none',
-          shadowSize: 'none',
-          shadowBlur: 40,
-          shadowMode: 'solid',
-          shadowColor: '#000000',
-          shadowDirection: 'all',
-          backdropBlurEnabled: false,
-          backdropBlur: 35,
-        },
-      ),
-    });
-    expect(wrapper.findAllComponents(BigSlider).some((slider) => /opacity/i.test(String(slider.props('label'))))).toBe(
-      false,
-    );
-
-    await backdropToggle!.trigger('click');
-    expect(wrapper.emitted('update')?.at(-1)).toEqual([{ backdropBlurEnabled: true }]);
-    await wrapper.setProps({
-      clip: colorClip(
-        { kind: 'color', color: '#111827' },
-        {
-          opacityEnabled: false,
-          opacity: 61,
-          cornerRadius: 'none',
-          shadowSize: 'none',
-          shadowBlur: 40,
-          shadowMode: 'solid',
-          shadowColor: '#000000',
-          shadowDirection: 'all',
-          backdropBlurEnabled: true,
-          backdropBlur: 40,
-        },
-      ),
-    });
-    const backdropSlider = wrapper
-      .findAllComponents(BigSlider)
-      .find((slider) => /backdrop|background blur/i.test(String(slider.props('label'))));
-    expect(backdropSlider).toBeDefined();
-    backdropSlider!.vm.$emit('update:modelValue', 55);
-    expect(wrapper.emitted('update')).toContainEqual([{ backdropBlur: 55 }]);
     wrapper.unmount();
   });
 

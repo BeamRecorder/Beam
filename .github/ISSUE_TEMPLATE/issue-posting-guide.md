@@ -11,7 +11,11 @@ assignees: ''
 **Summary:**
 Briefly explain what went wrong.
 
-**Steps to reproduce:** 1. 2. 3.
+**Steps to reproduce:**
+
+1. ...
+2. ...
+3. ...
 
 **Expected behavior:**
 What should have happened?

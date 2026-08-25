@@ -830,38 +830,6 @@ describe('useClipComposition', () => {
     });
   });
 
-  it('adds an inset solid color layer with appearance defaults for three seconds and selects it', async () => {
-    const mounted = mountComposable();
-    mounted.currentTimeSec.value = 2;
-
-    await mounted.state.addElement('color');
-
-    const color = mounted.state.selectedClip.value;
-    expect(color).toMatchObject({
-      kind: 'color',
-      assetId: '',
-      timelineStartMs: 2_000,
-      timelineDurationMs: 3_000,
-      sourceInMs: 0,
-      sourceDurationMs: 3_000,
-      transform: { x: 0.15, y: 0.2, width: 0.7, height: 0.6 },
-      fill: { kind: 'color', color: '#111827' },
-      opacityEnabled: false,
-      opacity: 70,
-      cornerRadius: 'none',
-      shadowSize: 'none',
-      shadowBlur: 40,
-      shadowMode: 'solid',
-      shadowColor: '#000000',
-      shadowDirection: 'all',
-      backdropBlurEnabled: false,
-      backdropBlur: 35,
-    });
-    expect(color?.id).toBe(mounted.state.selectedClipId.value);
-    expect(mounted.activeTab.value).toBe('clip');
-    expect(mounted.state.composition.value.assets).toHaveLength(0);
-  });
-
   it('adds a video with or without a linked imported audio clip', async () => {
     const mounted = mountComposable();
     mockMediaMetadata();

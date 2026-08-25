@@ -92,10 +92,11 @@ describe('drawColorClip', () => {
   });
 
   it('applies opacity, rounded corners, and a proportional shadow', () => {
+    const initialCtx = context();
     const ctx = context();
 
     drawColorClip(
-      ctx.value,
+      initialCtx.value,
       colorClip({ kind: 'color', color: '#123456' }, { x: 0.1, y: 0.2, width: 0.5, height: 0.4 }),
       { x: 10, y: 20, width: 200, height: 100 },
     );
@@ -118,6 +119,8 @@ describe('drawColorClip', () => {
     expect(ctx.value.shadowBlur).toBeCloseTo(40 * (100 / 1080));
     expect(ctx.value.shadowOffsetX).toBe(0);
     expect(ctx.value.shadowOffsetY).toBe(0);
+    expect(ctx.value.save).toHaveBeenCalledOnce();
+    expect(ctx.value.restore).toHaveBeenCalledOnce();
   });
 
   it('delegates backdrop blur to the shared blur renderer with the color layer mask', () => {

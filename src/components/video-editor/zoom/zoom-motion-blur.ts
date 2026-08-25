@@ -107,7 +107,13 @@ export function createZoomMotionBlurSamplePlan(options: ZoomMotionBlurOptions): 
       ) * Math.max(blurStart.scale, blurEnd.scale)
     : 0;
   const scaleTravelPx = hasViewport ? scaleMovement * Math.hypot(viewportWidth, viewportHeight) * 0.5 : 0;
-  const travelPx = focusTravelPx + scaleTravelPx;
+  const tiltTravelPx = hasViewport
+    ? Math.hypot(
+        ((blurEnd.tiltX ?? 0) - (blurStart.tiltX ?? 0)) * viewportHeight,
+        ((blurEnd.tiltY ?? 0) - (blurStart.tiltY ?? 0)) * viewportWidth,
+      ) * 0.5
+    : 0;
+  const travelPx = focusTravelPx + scaleTravelPx + tiltTravelPx;
   if (!Number.isFinite(options.sampleCount) && hasViewport && travelPx < MIN_VISIBLE_TRAVEL_PX)
     return [{ camera: center, weight: 1 }];
 

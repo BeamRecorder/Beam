@@ -119,6 +119,7 @@ function zoomAtSortedTime(
     );
     if (next) {
       const t = easeOut((timeMs - pair.endMs - LEAD_MS) / CONNECTED_PAN_MS);
+      const transitionStrength = lerp(regionStrength(pair, timeMs), 1, t);
       const startScale = ZOOM_DEPTH_SCALES[pair.depth];
       const endScale = ZOOM_DEPTH_SCALES[next.depth];
       const startFocus = clampFocusToScale(
@@ -142,7 +143,7 @@ function zoomAtSortedTime(
         focus: { cx: lerp(startFocus.cx, endFocus.cx, t), cy: lerp(startFocus.cy, endFocus.cy, t) },
         strength: 1,
         mode: pair.mode === 'auto' || next.mode === 'auto' ? 'auto' : 'manual',
-        tilt: lerp(tiltFor(pair), tiltFor(next), t),
+        tilt: lerp(tiltFor(pair), tiltFor(next), t) * transitionStrength,
         tiltHorizontal: lerp(horizontalTiltFor(pair), horizontalTiltFor(next), t),
         tiltVertical: lerp(verticalTiltFor(pair), verticalTiltFor(next), t),
       };

@@ -315,7 +315,12 @@ const drawCanvasScene = (ctx: CanvasRenderingContext2D) => {
     zooms: props.zoomElements,
     drawScene: drawCameraScene,
   });
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(preview.x, preview.y, preview.width, preview.height, OUTPUT_PREVIEW_RADIUS);
+  ctx.clip();
   compositionMedia.drawComposition(ctx, contentWindow, undefined, currentSceneLayers.value);
+  ctx.restore();
   drawBeamWatermark(
     ctx,
     props.outputCanvas,

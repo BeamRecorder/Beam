@@ -69,6 +69,7 @@ describe('PerspectivePreviewRenderer', () => {
         drawScene: () => scene,
       }),
     ).toBe(scene);
+    expect(render).toHaveBeenCalledOnce();
     renderer.dispose();
     expect(dispose).toHaveBeenCalledOnce();
   });
@@ -87,6 +88,7 @@ describe('PerspectivePreviewRenderer', () => {
       zooms: [perspectiveZoom],
       drawScene: () => ({ marker: 'legacy-window', tiltX: undefined, tiltY: undefined }),
     });
+    expect(render).toHaveBeenCalledOnce();
   });
 
   it('fails explicitly if a compositor does not evaluate the scene', () => {

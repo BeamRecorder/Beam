@@ -551,6 +551,8 @@ describe('EditorCanvas', () => {
       }),
     );
     expect(state.drawComposition).toHaveBeenCalledWith(contextMock, cameraBounds, undefined, expect.anything());
+    expect(contextMock.roundRect).toHaveBeenCalledWith(0, 0, 800, 450, 16);
+    expect(contextMock.clip).toHaveBeenCalled();
     mounted.unmount();
     wrapper = undefined;
     expect(state.perspectiveDispose).toHaveBeenCalled();

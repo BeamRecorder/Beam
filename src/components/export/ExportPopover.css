@@ -48,7 +48,6 @@
   line-height: 1.35;
   margin-top: 1px;
   overflow-wrap: anywhere;
-  word-break: break-word;
   min-width: 0;
 }
 .job-status {
@@ -95,7 +94,6 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
   overflow-wrap: anywhere;
-  word-break: break-word;
 }
 .copy-error-icon-btn {
   flex-shrink: 0;
@@ -105,7 +103,6 @@
   font-size: 0.75rem;
   margin: 0;
   overflow-wrap: anywhere;
-  word-break: break-word;
   min-width: 0;
 }
 .result-box {

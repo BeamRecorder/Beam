@@ -44,8 +44,16 @@ export class PerspectiveSceneCompositor {
       options.target.drawImage(this.surface, bounds.x, bounds.y, bounds.width, bounds.height);
       return;
     }
-    this.projector ??= new WebGlPerspectiveProjector();
-    const projected = this.projector.render(this.surface as TexImageSource, width, height, transform);
+    let projected: PerspectiveCanvas;
+    try {
+      this.projector ??= new WebGlPerspectiveProjector();
+      projected = this.projector.render(this.surface as TexImageSource, width, height, transform);
+    } catch {
+      this.projector?.dispose();
+      this.projector = null;
+      options.target.drawImage(this.surface, bounds.x, bounds.y, bounds.width, bounds.height);
+      return;
+    }
     options.target.drawImage(projected, bounds.x, bounds.y, bounds.width, bounds.height);
   }
 

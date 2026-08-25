@@ -78,6 +78,19 @@ describe('zoom motion-blur sample plan', () => {
     expect(samples[2]?.camera.tiltY).toBeCloseTo(-0.4, 12);
   });
 
+  it('keeps visible tilt-only movement above the viewport travel gate', () => {
+    const samples = createZoomMotionBlurSamplePlan({
+      previous: { ...camera(0.5, 0.5, 1), tiltX: -0.01, tiltY: 0 },
+      current: { ...camera(0.5, 0.5, 1), tiltX: 0.01, tiltY: 0 },
+      intensity: 1,
+      deltaMs: 16,
+      viewportWidth: 1_920,
+      viewportHeight: 1_080,
+    });
+
+    expect(samples).toHaveLength(3);
+  });
+
   it('sanitizes non-finite tilt values in blur samples', () => {
     const samples = createZoomMotionBlurSamplePlan({
       previous: { ...camera(0.5, 0.5, 1), tiltX: Number.POSITIVE_INFINITY, tiltY: Number.NaN },

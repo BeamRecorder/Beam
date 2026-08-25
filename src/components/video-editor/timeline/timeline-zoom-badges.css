@@ -1,6 +1,6 @@
 .cursor-zoom-indicator {
-  background: color-mix(in srgb, var(--color-track-cursor) 90%, #000 10%);
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: color-mix(in srgb, var(--color-track-cursor) 90%, var(--text-primary) 10%);
+  border: 1px solid color-mix(in srgb, var(--text-light) 28%, transparent);
   container-type: inline-size;
 }
 

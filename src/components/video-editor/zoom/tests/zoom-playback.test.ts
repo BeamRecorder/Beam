@@ -156,9 +156,25 @@ describe('zoom playback', () => {
     };
     const result = zoomAtTime([zoom, next], 6_700);
 
-    expect(result?.tilt).toBeCloseTo(0.8 * (1 - 0.5 ** 3), 12);
+    expect(result?.tilt).toBeCloseTo(0.8 * (1 - 0.5 ** 3) ** 2, 4);
     expect(result?.tilt).toBeGreaterThan(0);
     expect(result?.tilt).toBeLessThan(0.8);
+  });
+  it('keeps tilt continuous when connected pan begins', () => {
+    const first: ZoomElement = { ...zoom, projection: '3d', tiltIntensity: 0.8 };
+    const next: ZoomElement = {
+      ...first,
+      id: 'connected-next',
+      startMs: 6_800,
+      endMs: 10_000,
+      focus: { cx: 0.7, cy: 0.3 },
+    };
+
+    const immediatelyBefore = zoomAtTime([first, next], 6_199);
+    const atConnectedPanStart = zoomAtTime([first, next], 6_200);
+
+    expect(immediatelyBefore?.tilt).toBeGreaterThan(0);
+    expect(atConnectedPanStart?.tilt).toBeCloseTo(immediatelyBefore!.tilt, 2);
   });
   it('interpolates signed tilt axes between connected zooms', () => {
     const first: ZoomElement = {

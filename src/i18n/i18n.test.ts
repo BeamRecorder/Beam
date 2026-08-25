@@ -202,7 +202,10 @@ describe('internationalization', () => {
       setCurrentLocale(locale);
       for (const key of keys) {
         expect(i18n.global.te(`ExportPopover.${key}`, locale), `${locale}: missing ExportPopover.${key}`).toBe(true);
-        expect(i18n.global.t(`ExportPopover.${key}`, { seconds: '5' })).not.toBe(`ExportPopover.${key}`);
+        const message = i18n.global.t(`ExportPopover.${key}`, { seconds: '5' });
+        expect(message).not.toBe(`ExportPopover.${key}`);
+        expect(message.trim(), `${locale}: empty ExportPopover.${key}`).not.toBe('');
+        if (key === 'exportVideoDuration') expect(message).toContain('5');
       }
     }
   });
