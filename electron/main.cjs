@@ -454,6 +454,7 @@ function initializeApplication() {
       preferencesStore,
       appIconPath,
       initialDark: selectedTheme === 'dark' || (selectedTheme === 'system' && nativeTheme.shouldUseDarkColors),
+      resolveSystemDark: () => nativeTheme.shouldUseDarkColors,
       cleanupWindow: (contents) => {
         exportIpc.cleanupWindow(contents);
         cameraStorage.cleanupOwner(contents.id);
