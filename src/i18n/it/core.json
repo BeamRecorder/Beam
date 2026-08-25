@@ -292,6 +292,7 @@
     "medium": "Media",
     "strong": "Forte",
     "shadowStyle": "Stile ombra",
+    "shadowColor": "Colore ombra",
     "solid": "Piena",
     "adaptive": "Adattiva",
     "adaptiveShadowDescription": "Campiona i colori della clip per creare un bagliore ambientale discreto.",

@@ -14,6 +14,8 @@ import { useTimelineClipboardShortcuts } from './composables/useTimelineClipboar
 import TimelineTrackHeaders from './TimelineTrackHeaders.vue';
 import { normalizeZoomProjection } from '../zoom/zoom-types';
 const { t } = useTranslate('TimelineTracks');
+const { t: tCanvas } = useTranslate('CanvasPanel');
+const { t: tToolbar } = useTranslate('TimelineToolbar');
 const props = withDefaults(defineProps<TimelineTracksProps>(), {
   isSnappingEnabled: true,
   includeAudioInExport: true,
@@ -67,6 +69,8 @@ const {
   hoverZoomDurationMs,
   hoverCaptionTimeMs,
   hoverCaptionDurationMs,
+  hoverVisualPlacements,
+  visualKindFor,
   hoverAt,
   leaveTrack,
   addAt,
@@ -87,6 +91,20 @@ const selectedZoomIdSet = computed(
   () =>
     new Set(props.selectedZoomIds?.length ? props.selectedZoomIds : props.selectedZoomId ? [props.selectedZoomId] : []),
 );
+const visualElementLabel = (track: (typeof visualTracks.value)[number]) => {
+  const kind = visualKindFor(track);
+  return kind === 'color'
+    ? tCanvas('color')
+    : kind === 'shape'
+      ? tCanvas('shapesAndArrows')
+      : kind === 'blur'
+        ? t('blur')
+        : kind === 'image'
+          ? tCanvas('image')
+          : '';
+};
+const visualAddLabel = (track: (typeof visualTracks.value)[number]) =>
+  `${tToolbar('add')} ${visualElementLabel(track)}`;
 const {
   contextMenuState,
   contextMenuItems,
@@ -229,7 +247,28 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
               :class="{ disabled: !track.clips.some((clip) => clip.enabled), dragging: draggedTrackId === track.id }"
               @contextmenu="openTrackContextMenu($event, 'visual', track.id)"
             >
-              <div class="track-content visual-content">
+              <div
+                class="track-content visual-content"
+                :class="{ 'addable-content': visualKindFor(track) }"
+                :title="visualKindFor(track) ? visualAddLabel(track) : undefined"
+                @pointerdown.stop
+                @mousemove="visualKindFor(track) && hoverAt($event, track)"
+                @mouseleave="visualKindFor(track) && leaveTrack(track)"
+                @click.stop="visualKindFor(track) && addAt($event, track)"
+              >
+                <div
+                  v-if="hoverVisualPlacements[`visual:${track.id}`]"
+                  class="visual-add-indicator preview-ghost"
+                  :class="`kind-${visualKindFor(track)}`"
+                  :style="
+                    percentageStyle(
+                      hoverVisualPlacements[`visual:${track.id}`]!.startMs,
+                      hoverVisualPlacements[`visual:${track.id}`]!.durationMs,
+                    )
+                  "
+                >
+                  + {{ visualAddLabel(track) }}
+                </div>
                 <TimelineClip
                   v-for="clip in track.clips"
                   :key="clip.id"

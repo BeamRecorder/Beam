@@ -23,13 +23,12 @@ import { previewClipMove } from './timeline-composition-preview';
 import { useVisualTrackReorder } from './useVisualTrackReorder';
 import { useTimelineClipTrim } from './useTimelineClipTrim';
 import { groupImportedAudioTimelineTracks } from './audio-timeline-tracks';
-import { fitZoomPlacement } from '../../zoom/zoom-placement';
 import { useCaptionLayerReorder } from './useCaptionLayerReorder';
 import { groupTextCaptionLayers } from '../../composition/engine/caption-layer-layout';
+import { useTimelineAddPlacement } from './useTimelineAddPlacement';
 export type { TimelineTracksEmits, TimelineTracksProps } from './timeline-tracks-types';
 
 export { DEFAULT_ZOOM_DURATION_MS } from '../../zoom/zoom-types';
-export const DEFAULT_CAPTION_DURATION_MS = 2_000;
 
 export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTracksEmits) {
   const newZoomDurationMs = computed(() =>
@@ -312,49 +311,24 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     stopAutoScroll,
   });
 
-  const hoverZoomTimeMs = ref<number | null>(null);
-  const hoverZoomDurationMs = ref(newZoomDurationMs.value);
-  const hoverCaptionTimeMs = ref<number | null>(null);
-  const hoverCaptionDurationMs = ref(DEFAULT_CAPTION_DURATION_MS);
-  const placementAt = (event: MouseEvent, kind: 'zoom' | 'caption') => {
-    const preferredDurationMs = kind === 'zoom' ? newZoomDurationMs.value : DEFAULT_CAPTION_DURATION_MS;
-    const occupied =
-      kind === 'zoom'
-        ? props.zoomElements
-        : textCaptionClips.value.map((clip) => ({
-            startMs: clip.timelineStartMs,
-            endMs: clip.timelineStartMs + clip.timelineDurationMs,
-          }));
-    return fitZoomPlacement({
-      anchorMs: timeAt(event.clientX),
-      preferredDurationMs,
-      timelineDurationMs: durationMs.value,
-      occupied,
-    });
-  };
-  const hoverAt = (event: MouseEvent, kind: 'zoom' | 'caption') => {
-    const placement = placementAt(event, kind);
-    if (kind === 'zoom') {
-      hoverZoomTimeMs.value = placement?.startMs ?? null;
-      hoverZoomDurationMs.value = placement ? placement.endMs - placement.startMs : newZoomDurationMs.value;
-      return;
-    }
-    hoverCaptionTimeMs.value = placement?.startMs ?? null;
-    hoverCaptionDurationMs.value = placement ? placement.endMs - placement.startMs : DEFAULT_CAPTION_DURATION_MS;
-  };
-  const leaveTrack = (kind: 'zoom' | 'caption') => {
-    if (kind === 'zoom') hoverZoomTimeMs.value = null;
-    else hoverCaptionTimeMs.value = null;
-  };
-  const addAt = (event: MouseEvent, kind: 'zoom' | 'caption') => {
-    event.preventDefault();
-    event.stopPropagation();
-    const placement = placementAt(event, kind);
-    if (!placement) return;
-    const request = { startMs: placement.startMs, durationMs: placement.endMs - placement.startMs };
-    if (kind === 'zoom') emit('add:zoom', request);
-    else emit('add:caption', request);
-  };
+  const {
+    hoverZoomTimeMs,
+    hoverZoomDurationMs,
+    hoverCaptionTimeMs,
+    hoverCaptionDurationMs,
+    hoverVisualPlacements,
+    visualKindFor,
+    hoverAt,
+    leaveTrack,
+    addAt,
+  } = useTimelineAddPlacement({
+    durationMs: () => durationMs.value,
+    newZoomDurationMs: () => newZoomDurationMs.value,
+    zoomElements: () => props.zoomElements,
+    textCaptionClips: () => textCaptionClips.value,
+    timeAt,
+    emit,
+  });
 
   const selectTrack = (clips: Clip[], trackName: string, event?: MouseEvent) => {
     if (!clips.length) return;
@@ -458,6 +432,8 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     hoverZoomDurationMs,
     hoverCaptionTimeMs,
     hoverCaptionDurationMs,
+    hoverVisualPlacements,
+    visualKindFor,
     hoverAt,
     leaveTrack,
     addAt,
@@ -469,6 +445,5 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     draggedCaptionId,
     beginCaptionReorder,
     newZoomDurationMs,
-    DEFAULT_CAPTION_DURATION_MS,
   };
 }

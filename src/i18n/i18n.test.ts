@@ -99,6 +99,18 @@ describe('internationalization', () => {
     }
   });
 
+  it('provides the clip shadow color label in every supported locale', () => {
+    const path = 'ClipPropertiesPanel.shadowColor';
+
+    for (const locale of SUPPORTED_LOCALES) {
+      setCurrentLocale(locale);
+      expect(i18n.global.te(path, locale), `${locale}: missing ${path}`).toBe(true);
+      const translation = i18n.global.t(path);
+      expect(translation, `${locale}: unresolved ${path}`).not.toBe(path);
+      expect(translation.trim(), `${locale}: empty ${path}`).not.toBe('');
+    }
+  });
+
   it('provides translated linked-clip deletion copy for every locale', () => {
     const keys = [
       'title',

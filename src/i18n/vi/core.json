@@ -292,6 +292,7 @@
     "medium": "Vừa",
     "strong": "Đậm",
     "shadowStyle": "Kiểu bóng",
+    "shadowColor": "Màu bóng",
     "solid": "Màu đặc",
     "adaptive": "Thích ứng",
     "adaptiveShadowDescription": "Lấy mẫu màu từ video để tạo hiệu ứng phát sáng môi trường tinh tế.",

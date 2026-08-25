@@ -292,6 +292,7 @@
     "medium": "중간",
     "strong": "강하게",
     "shadowStyle": "그림자 스타일",
+    "shadowColor": "그림자 색상",
     "solid": "단색",
     "adaptive": "자동 조정",
     "adaptiveShadowDescription": "클립 색상을 추출하여 은은한 주변광을 만듭니다.",

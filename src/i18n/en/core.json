@@ -292,6 +292,7 @@
     "medium": "Medium",
     "strong": "Strong",
     "shadowStyle": "Shadow style",
+    "shadowColor": "Shadow Color",
     "solid": "Solid",
     "adaptive": "Adaptive",
     "adaptiveShadowDescription": "Samples the clip colors for a subtle ambient glow.",

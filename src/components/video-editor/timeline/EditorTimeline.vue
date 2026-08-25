@@ -16,6 +16,7 @@ import type {
   TrackClipSelection,
   TrackZoomSelection,
 } from './composables/timeline-tracks-types';
+import type { AddVisualElementRequest } from '../composition/visual-element-types';
 
 const props = withDefaults(
   defineProps<{
@@ -65,6 +66,7 @@ const emit = defineEmits<{
   (event: 'move:zoom', payload: { id: string; startMs: number; endMs: number }): void;
   (event: 'add:zoom', placement: TimelinePlacementRequest): void;
   (event: 'add:caption', placement: TimelinePlacementRequest): void;
+  (event: 'add:visual-element', request: AddVisualElementRequest): void;
   (event: 'reorder:clip', payload: { id: string; targetIndex: number }): void;
   (event: 'reorder:caption', payload: { id: string; targetIndex: number }): void;
   (event: 'paste:item', payload: TimelinePasteRequest): void;
@@ -127,6 +129,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
         @move:zoom="emit('move:zoom', $event)"
         @add:zoom="emit('add:zoom', $event)"
         @add:caption="emit('add:caption', $event)"
+        @add:visual-element="emit('add:visual-element', $event)"
         @reorder:clip="emit('reorder:clip', $event)"
         @reorder:caption="emit('reorder:caption', $event)"
         @paste:item="emit('paste:item', $event)"

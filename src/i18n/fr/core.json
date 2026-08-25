@@ -292,6 +292,7 @@
     "medium": "Moyen",
     "strong": "Fort",
     "shadowStyle": "Style de l’ombre",
+    "shadowColor": "Couleur de l'ombre",
     "solid": "Unie",
     "adaptive": "Adaptative",
     "adaptiveShadowDescription": "Utilise les couleurs du clip pour créer une lueur ambiante.",

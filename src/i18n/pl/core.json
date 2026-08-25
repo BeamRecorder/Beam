@@ -292,6 +292,7 @@
     "medium": "Średni",
     "strong": "Mocny",
     "shadowStyle": "Styl cienia",
+    "shadowColor": "Kolor cienia",
     "solid": "Jednolity",
     "adaptive": "Adaptacyjny",
     "adaptiveShadowDescription": "Próbkuje kolory klipu, aby utworzyć subtelny blask otoczenia.",

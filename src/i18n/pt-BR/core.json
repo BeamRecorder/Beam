@@ -292,6 +292,7 @@
     "medium": "Média",
     "strong": "Forte",
     "shadowStyle": "Estilo da sombra",
+    "shadowColor": "Cor da sombra",
     "solid": "Sólida",
     "adaptive": "Adaptativa",
     "adaptiveShadowDescription": "Usa as cores do clipe para criar um brilho ambiente sutil.",

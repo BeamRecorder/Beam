@@ -292,6 +292,7 @@
     "medium": "Средняя",
     "strong": "Сильная",
     "shadowStyle": "Стиль тени",
+    "shadowColor": "Цвет тени",
     "solid": "Сплошная",
     "adaptive": "Адаптивная",
     "adaptiveShadowDescription": "Использует цвета клипа для создания мягкого окружающего свечения.",

@@ -292,6 +292,7 @@
     "medium": "Средна",
     "strong": "Силна",
     "shadowStyle": "Стил на сянката",
+    "shadowColor": "Цвят на сянката",
     "solid": "Плътна",
     "adaptive": "Адаптивна",
     "adaptiveShadowDescription": "Използва цветовете на клипа за леко околно сияние.",

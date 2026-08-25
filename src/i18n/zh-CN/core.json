@@ -292,6 +292,7 @@
     "medium": "中等",
     "strong": "强烈",
     "shadowStyle": "阴影样式",
+    "shadowColor": "阴影颜色",
     "solid": "纯色",
     "adaptive": "自适应",
     "adaptiveShadowDescription": "提取片段颜色，生成细微的环境光晕。",

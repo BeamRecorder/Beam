@@ -292,6 +292,7 @@
     "medium": "中",
     "strong": "強",
     "shadowStyle": "影のスタイル",
+    "shadowColor": "影の色",
     "solid": "単色",
     "adaptive": "適応",
     "adaptiveShadowDescription": "クリップの色を使って控えめな環境光を作ります。",

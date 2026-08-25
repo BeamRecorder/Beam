@@ -292,6 +292,7 @@
     "medium": "मध्यम",
     "strong": "तेज़",
     "shadowStyle": "छाया शैली",
+    "shadowColor": "छाया का रंग",
     "solid": "सॉलिड",
     "adaptive": "अडैप्टिव",
     "adaptiveShadowDescription": "क्लिप के रंग निकालकर हल्की एम्बिएंट ग्लो बनाएँ।",

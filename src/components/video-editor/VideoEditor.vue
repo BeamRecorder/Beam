@@ -50,6 +50,7 @@ import type { CursorSelection } from '~/api/types/cursor-pack';
 import { pasteClipAt } from '~/components/video-editor/composition/engine/clip-paste';
 import type { TimelinePasteRequest } from '~/components/video-editor/timeline/composables/timeline-clipboard-types';
 import type { TrackZoomSelection } from '~/components/video-editor/timeline/composables/timeline-tracks-types';
+import type { AddVisualElementRequest } from './composition/visual-element-types';
 import { useTimelineClipboardFeedback } from '~/components/video-editor/timeline/composables/useTimelineClipboardFeedback';
 import { EMPTY_CLIP_TRANSITIONS } from '~/media/shared/clip-transitions';
 import { usePreviewPerformanceMonitor } from './performance/usePreviewPerformanceMonitor';
@@ -148,6 +149,7 @@ const {
   addElement,
   addImportedAsset,
   addCaptionAtTime,
+  addVisualElementAtTime,
   updateCaption,
   trimClipEdge,
   moveClipTo,
@@ -233,6 +235,9 @@ const selectedTransformClip = computed(() => {
 
 const addTimelineElement = (kind: 'video' | 'image' | 'sound' | 'caption' | 'color' | 'shape' | 'blur') => {
   void addElement(kind).catch(() => console.error('Unable to add media.'));
+};
+const addTimelineVisualElement = (request: AddVisualElementRequest) => {
+  void addVisualElementAtTime(request).catch((error) => console.error('Unable to add timeline element.', error));
 };
 const selectEditorClip = (clipId: string) => {
   selectedZoomId.value = null;
@@ -786,6 +791,7 @@ onBeforeUnmount(() => {
           @move:zoom="moveZoom($event.id, $event.startMs, $event.endMs)"
           @add:zoom="addZoomAtTime"
           @add:caption="addCaptionAtTime"
+          @add:visual-element="addTimelineVisualElement"
           @reorder:clip="reorderVisualClip($event.id, $event.targetIndex)"
           @reorder:caption="reorderCaptionClip($event.id, $event.targetIndex)"
           @paste:item="pasteTimelineItem"

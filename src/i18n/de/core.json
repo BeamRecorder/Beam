@@ -292,6 +292,7 @@
     "medium": "Mittel",
     "strong": "Stark",
     "shadowStyle": "Schattenstil",
+    "shadowColor": "Schattenfarbe",
     "solid": "Einfarbig",
     "adaptive": "Adaptiv",
     "adaptiveShadowDescription": "Nimmt die Clipfarben auf, um ein dezentes Umgebungsleuchten zu erzeugen.",
