@@ -3,6 +3,8 @@ import {
   isAudioClip,
   isBlurClip,
   isCaptionClip,
+  isColorClip,
+  isShapeClip,
   isVisualClip,
   type BlurClip,
   type CaptionClip,
@@ -138,6 +140,7 @@ export function useSelectedClips(options: { composition: Ref<ClipComposition>; a
             blurColor: clip.color,
           }
         : {}),
+      ...(isColorClip(clip) || isShapeClip(clip) ? { clipTransform: clip.transform } : {}),
     };
   });
 
@@ -190,7 +193,7 @@ export function useSelectedClips(options: { composition: Ref<ClipComposition>; a
     updateCompositionEach(isVisualClip, (next, id) => setMirroredY(next, id, mirroredY));
   const updateSelectedRate = (rate: number) =>
     updateCompositionEach(
-      (clip) => !isCaptionClip(clip) && !isBlurClip(clip),
+      (clip) => !isCaptionClip(clip) && !isColorClip(clip) && !isShapeClip(clip) && !isBlurClip(clip),
       (next, id) => setPlaybackRate(next, id, rate),
     );
   const updateSelectedVolume = (volume: number) =>

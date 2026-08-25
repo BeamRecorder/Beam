@@ -1,5 +1,6 @@
 import type { BlurEffectMode, BlurEffectShape, ClipFrame, NormalizedTransform } from '~/media/shared/composition-types';
 import type { CameraFramingPreset, CameraLayoutPreset } from '~/media/shared/camera-layout-types';
+import type { PhoneFrameFill } from '~/media/shared/color-fill-types';
 
 export interface SelectedClipProperties {
   id: string;
@@ -23,6 +24,7 @@ export interface SelectedClipProperties {
   frameShowMenu?: boolean;
   frameShowScrollbars?: boolean;
   frameChromeScale?: number;
+  phoneFrameFill?: PhoneFrameFill;
   clipTransform?: NormalizedTransform;
   isMirrored?: boolean;
   isMirroredY?: boolean;

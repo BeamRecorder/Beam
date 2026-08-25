@@ -174,10 +174,16 @@ test('enables clicks and shortcuts on Linux only when interaction recording is o
   });
 });
 
-test('builds a Linux window Portal selection and rejects region capture', () => {
+test('keeps a region for Linux Portal monitors and rejects it for windows', () => {
   const portalCatalog = {
     capabilities: { portalSelection: true },
     sources: [
+      {
+        id: 'portal:monitor',
+        kind: 'display',
+        isDefault: true,
+        selectionMode: 'portal',
+      },
       {
         id: 'portal:window',
         kind: 'window',
@@ -187,15 +193,22 @@ test('builds a Linux window Portal selection and rejects region capture', () => 
     ],
   };
   const linux = { ...environment, platform: 'linux' };
-  assert.equal(buildDefaultCaptureConfig(portalCatalog, { screenKind: 'window' }, linux).screen.kind, 'window');
+  const region = { x: 0.1, y: 0.2, width: 0.5, height: 0.4 };
+  const monitor = buildDefaultCaptureConfig(portalCatalog, { screenId: 'portal:monitor', region }, linux);
+  assert.deepEqual(monitor.screen, {
+    mode: 'portal',
+    kind: 'monitor',
+    restoreToken: null,
+  });
+  assert.deepEqual(monitor.region, region);
+
+  assert.equal(
+    buildDefaultCaptureConfig(portalCatalog, { screenKind: 'window', screenId: 'portal:window' }, linux).screen.kind,
+    'window',
+  );
   assert.throws(
-    () =>
-      buildDefaultCaptureConfig(
-        portalCatalog,
-        { screenKind: 'window', region: { x: 0, y: 0, width: 1, height: 1 } },
-        linux,
-      ),
-    /picker système Linux/,
+    () => buildDefaultCaptureConfig(portalCatalog, { screenKind: 'window', screenId: 'portal:window', region }, linux),
+    /uniquement pour un écran/,
   );
 });
 

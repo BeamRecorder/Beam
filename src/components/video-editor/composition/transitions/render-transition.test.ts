@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import type { ClipTransitions, TransitionPreset, VisualClip } from '~/media/shared/composition-types';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import type { CaptionClip, ClipTransitions, TransitionPreset, VisualClip } from '~/media/shared/composition-types';
 import { drawWithClipTransition, transitionPointWithClip } from './render-transition';
 
 const clipWithTransitions = (transitions: ClipTransitions) =>
@@ -64,6 +64,38 @@ describe('drawWithClipTransition', () => {
     expect(ctx.translate).toHaveBeenCalledOnce();
     expect(ctx.translate).toHaveBeenCalledWith(8, 0);
     expect(ctx.scale).not.toHaveBeenCalled();
+  });
+
+  it('uses the transformed clip bounds for slide displacement', () => {
+    const ctx = context();
+    const clip = clipWithEntry({ kind: 'slide', direction: 'left' });
+    clip.transform = { x: 0.25, y: 0.2, width: 0.5, height: 0.4 };
+
+    drawWithClipTransition(ctx, clip, 250, { x: 100, y: 50, width: 800, height: 400 }, vi.fn());
+
+    expect(ctx.translate).toHaveBeenCalledWith(4, 0);
+  });
+
+  it('uses the default text bounds when a caption has no explicit transform', () => {
+    const ctx = context();
+    const caption: CaptionClip = {
+      id: 'caption',
+      kind: 'caption',
+      name: 'Caption',
+      timelineStartMs: 0,
+      timelineDurationMs: 1_000,
+      sourceInMs: 0,
+      sourceDurationMs: 1_000,
+      playbackRate: 1,
+      transitions: { entry: { preset: { kind: 'slide', direction: 'left' }, durationMs: 500 }, exit: null },
+      enabled: true,
+      order: 0,
+      caption: { type: 'text', sentences: [], style: createDefaultCaptionStyle() },
+    };
+
+    drawWithClipTransition(ctx, caption, 250, { width: 1_000, height: 500 }, vi.fn());
+
+    expect(ctx.translate).toHaveBeenCalledWith(8, 0);
   });
 
   it('maps a point through an entry transition using the same slide transform as the renderer', () => {

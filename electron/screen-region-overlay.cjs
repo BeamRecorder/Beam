@@ -13,7 +13,24 @@ function finiteBounds(value) {
   };
 }
 
-function createScreenRegionOverlayWindow({ applicationRoot, isPackaged, canAcceptWork = () => true }) {
+function resolveSelectionBounds(options, platform, screen, parentWindow) {
+  if (options?.bounds) return finiteBounds(options.bounds);
+  if (platform !== 'linux') throw new Error('Screen overlay bounds are required');
+  const parentBounds = parentWindow && !parentWindow.isDestroyed() ? parentWindow.getBounds() : null;
+  const display =
+    (parentBounds && typeof screen?.getDisplayMatching === 'function' && screen.getDisplayMatching(parentBounds)) ||
+    screen?.getPrimaryDisplay?.();
+  if (!display?.bounds) throw new Error('No display is available for Linux region selection');
+  return finiteBounds(display.bounds);
+}
+
+function createScreenRegionOverlayWindow({
+  applicationRoot,
+  isPackaged,
+  canAcceptWork = () => true,
+  platform = process.platform,
+  screen,
+}) {
   let window = null;
   let ready = false;
   let pending = null;
@@ -63,9 +80,10 @@ function createScreenRegionOverlayWindow({ applicationRoot, isPackaged, canAccep
     return window;
   };
 
-  const configure = (options, interactive) => {
+  const configure = (options, interactive, parentWindow = null) => {
     const target = ensureWindow();
     current = { ...options, bounds: finiteBounds(options.bounds), mode: interactive ? 'select' : 'record' };
+    target.setParentWindow(interactive && platform === 'linux' ? parentWindow : null);
     target.setBounds(current.bounds);
     target.setIgnoreMouseEvents(!interactive);
     send(current);
@@ -79,7 +97,7 @@ function createScreenRegionOverlayWindow({ applicationRoot, isPackaged, canAccep
   };
 
   return {
-    select(options) {
+    select(options, parentWindow = null) {
       if (pending) {
         pending.resolve(null);
         pending = null;
@@ -88,11 +106,18 @@ function createScreenRegionOverlayWindow({ applicationRoot, isPackaged, canAccep
         pending = { resolve };
       });
       try {
-        configure(options, true);
+        configure(
+          { ...options, bounds: resolveSelectionBounds(options, platform, screen, parentWindow) },
+          true,
+          parentWindow,
+        );
       } catch (error) {
         pending = null;
         current = null;
-        if (window && !window.isDestroyed()) window.hide();
+        if (window && !window.isDestroyed()) {
+          window.hide();
+          window.setParentWindow(null);
+        }
         throw error;
       }
       return result;
@@ -107,10 +132,12 @@ function createScreenRegionOverlayWindow({ applicationRoot, isPackaged, canAccep
     confirm(region) {
       if (!pending) return;
       const resolve = pending.resolve;
+      const bounds = current?.bounds;
       pending = null;
       current = null;
       window?.hide();
-      resolve(region);
+      window?.setParentWindow(null);
+      resolve(bounds ? { bounds: { ...bounds }, region } : null);
     },
     cancel() {
       if (!pending) return;
@@ -118,6 +145,7 @@ function createScreenRegionOverlayWindow({ applicationRoot, isPackaged, canAccep
       pending = null;
       current = null;
       window?.hide();
+      window?.setParentWindow(null);
       resolve(null);
     },
     destroy() {
@@ -131,4 +159,4 @@ function createScreenRegionOverlayWindow({ applicationRoot, isPackaged, canAccep
   };
 }
 
-module.exports = { createScreenRegionOverlayWindow };
+module.exports = { createScreenRegionOverlayWindow, resolveSelectionBounds };

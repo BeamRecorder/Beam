@@ -1,32 +1,16 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue';
-import type { Clip, MediaAsset } from '~/media/shared/composition-types';
-import { sourceTimeAt, type MediaError } from '~/media/shared';
+import { sourceTimeAt } from '~/media/shared';
 import { useThumbnails } from './waveform/useThumbnails';
 import { useTranslate } from '~/i18n/useTranslate';
-import type { TimelineThumbnailSlot } from './composables/timeline-viewport';
-import type { AudioWaveformStatus } from './composables/useCompositionAudioWaveforms';
 import WaveformCanvas from './waveform/WaveformCanvas.vue';
 import { timelineClipStyle, timelineFrameStyle, timelineTransitionStyle } from './timeline-clip-geometry';
 import TimelineTransitionCurve from './TimelineTransitionCurve.vue';
+import ShapeTimelinePreview from './ShapeTimelinePreview.vue';
+import ColorTimelinePreview from './ColorTimelinePreview.vue';
+import type { TimelineClipProps } from './timeline-clip-types';
 const { t } = useTranslate('TimelineTracks');
-const props = defineProps<{
-  clip: Clip;
-  asset?: MediaAsset | null;
-  duration: number;
-  timelineWidthPx?: number;
-  thumbnailSlots: readonly TimelineThumbnailSlot[];
-  selected: boolean;
-  waveformBars?: number[];
-  waveformLeftPercent?: number;
-  waveformWidthPercent?: number;
-  waveformLoadingSegments?: Array<{ leftPercent: number; widthPercent: number }>;
-  waveformStatus?: AudioWaveformStatus;
-  waveformError?: MediaError;
-  trimState?: { edge: 'start' | 'end'; durationMs: number; atLimit?: boolean } | null;
-  deferThumbnailRequests?: boolean;
-  pasteHighlight?: boolean;
-}>();
+const props = defineProps<TimelineClipProps>();
 const emit = defineEmits<{
   (event: 'select'): void;
   (event: 'move', value: PointerEvent): void;
@@ -169,7 +153,7 @@ onUnmounted(() => stopMarquee());
         class="waveform-slice"
         :style="{ left: `${waveformLeftPercent ?? 0}%`, width: `${waveformWidthPercent ?? 100}%` }"
       >
-        <WaveformCanvas :bars="waveformBars" :selected="selected" />
+        <WaveformCanvas :bars="waveformBars" :selected="selected" :defer-draw="deferWaveformDraw" />
         <span
           v-for="(segment, index) in waveformLoadingSegments"
           :key="`loading:${index}`"
@@ -208,6 +192,8 @@ onUnmounted(() => stopMarquee());
       :style="imagePreviewStyle"
       aria-hidden="true"
     />
+    <ColorTimelinePreview v-else-if="clip.kind === 'color'" :clip="clip" />
+    <ShapeTimelinePreview v-else-if="clip.kind === 'shape'" :clip="clip" />
     <span
       class="trim-handle start"
       :class="{ 'at-limit': trimState?.edge === 'start' && trimState?.atLimit }"
@@ -292,6 +278,14 @@ onUnmounted(() => stopMarquee());
 .timeline-clip.kind-blur {
   background: linear-gradient(110deg, var(--color-track-blur), var(--color-track-blur-highlight));
   color: #fff;
+}
+.timeline-clip.kind-color {
+  background: var(--color-bg-surface);
+  color: #fff;
+}
+.timeline-clip.kind-shape {
+  background: color-mix(in srgb, var(--color-track-annotation) 24%, var(--color-bg-surface));
+  color: var(--text-primary);
 }
 .timeline-clip.kind-audio {
   background: var(--color-track-audio-light);

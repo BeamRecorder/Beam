@@ -133,6 +133,64 @@ describe('ScreenRegionOverlayApp', () => {
     expect(capture.cancelScreenRegion).toHaveBeenCalledOnce();
   });
 
+  it('renders a non-interactive recording marker without selection controls', async () => {
+    let configure!: (value: {
+      mode: 'record';
+      bounds: { width: number; height: number };
+      region: { x: number; y: number; width: number; height: number };
+    }) => void;
+    capture.onScreenRegionConfigure.mockImplementation((next: typeof configure) => {
+      configure = next;
+      return vi.fn();
+    });
+    const wrapper = mount(ScreenRegionOverlayApp, { global: { stubs: { Button, Select } } });
+    configure({
+      mode: 'record',
+      bounds: { width: 1920, height: 1080 },
+      region: { x: 0.1, y: 0.2, width: 0.5, height: 0.4 },
+    });
+    await wrapper.vm.$nextTick();
+
+    const overlay = wrapper.get('.region-overlay');
+    expect(overlay.classes()).toContain('recording');
+    expect(overlay.classes()).not.toContain('selecting');
+    const frame = wrapper.get('.region-frame');
+    expect(frame.classes()).toContain('recording');
+    expect(frame.classes()).not.toContain('selecting');
+    expect(wrapper.find('.region-toolbar').exists()).toBe(false);
+    expect(wrapper.findAll('.resize-handle')).toHaveLength(0);
+  });
+
+  it('uses crosshair and selection controls only in select mode', async () => {
+    let configure!: (value: {
+      mode: 'select' | 'record';
+      bounds: { width: number; height: number };
+      region: { x: number; y: number; width: number; height: number };
+    }) => void;
+    capture.onScreenRegionConfigure.mockImplementation((next: typeof configure) => {
+      configure = next;
+      return vi.fn();
+    });
+    const wrapper = mount(ScreenRegionOverlayApp, { global: { stubs: { Button, Select } } });
+    const region = { x: 0.1, y: 0.2, width: 0.5, height: 0.4 };
+    configure({ mode: 'select', bounds: { width: 1920, height: 1080 }, region });
+    await wrapper.vm.$nextTick();
+
+    const overlay = wrapper.get('.region-overlay');
+    expect(overlay.classes()).toContain('selecting');
+    expect(overlay.classes()).not.toContain('recording');
+    expect(wrapper.get('.region-frame').classes()).toContain('selecting');
+    expect(wrapper.find('.region-toolbar').exists()).toBe(true);
+
+    configure({ mode: 'record', bounds: { width: 1920, height: 1080 }, region });
+    await wrapper.vm.$nextTick();
+    expect(overlay.classes()).toContain('recording');
+    expect(overlay.classes()).not.toContain('selecting');
+    expect(wrapper.get('.region-frame').classes()).toContain('recording');
+    expect(wrapper.get('.region-frame').classes()).not.toContain('selecting');
+    expect(wrapper.find('.region-toolbar').exists()).toBe(false);
+  });
+
   it('applies a selected preset and persists it to preferences', async () => {
     let configure!: (value: { mode: 'select'; bounds: { width: number; height: number } }) => void;
     capture.onScreenRegionConfigure.mockImplementation((next: typeof configure) => {

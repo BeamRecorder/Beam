@@ -7,3 +7,10 @@ export type ResizeCorner =
   | 'bottom'
   | 'bottom-left'
   | 'left';
+
+export interface ResizeHandlePosition {
+  x: number;
+  y: number;
+}
+
+export type ResizeHandlePositions = Partial<Record<ResizeCorner, ResizeHandlePosition>>;

@@ -11,6 +11,20 @@ import {
 
 type PresetOverride = string | GradientBackground;
 
+const plainClone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+const randomColor = () =>
+  `#${Math.floor(Math.random() * 0x1000000)
+    .toString(16)
+    .padStart(6, '0')}`;
+const randomGradient = (): GradientBackground => ({
+  type: 'linear',
+  angle: Math.round(Math.random() * 359),
+  stops: [
+    { id: crypto.randomUUID(), position: 0, color: randomColor(), alpha: 1 },
+    { id: crypto.randomUUID(), position: 1, color: randomColor(), alpha: 1 },
+  ],
+});
+
 export function useBackgroundPresets(select: (value: BackgroundValue) => void) {
   const customColorValue = ref('#4f46e5');
   const customGradientValue = ref<GradientBackground>(structuredClone(BACKGROUND_GRADIENTS[0].gradient));
@@ -46,10 +60,11 @@ export function useBackgroundPresets(select: (value: BackgroundValue) => void) {
     savedExtras.value = preferences.extras;
   };
   const save = async (colors: string[], gradients: GradientBackground[], nextOverrides = overrides.value) => {
+    const extras = plainClone(savedExtras.value);
     sync(
       await capture.updatePreferences({
-        backgroundPresets: { colors, gradients },
-        extras: { ...savedExtras.value, backgroundPresetOverrides: structuredClone(nextOverrides) },
+        backgroundPresets: plainClone({ colors, gradients }),
+        extras: { ...extras, backgroundPresetOverrides: plainClone(nextOverrides) },
       }),
     );
   };
@@ -71,6 +86,12 @@ export function useBackgroundPresets(select: (value: BackgroundValue) => void) {
   const toggleColor = (item: { id: string; color: string }) => (isEditing(item.id) ? close() : editColor(item));
   const toggleGradient = (item: { id: string; gradient: GradientBackground }) =>
     isEditing(item.id) ? close() : editGradient(item);
+  const beginAdd = (kind: 'color' | 'gradient') => {
+    editingPresetId.value = null;
+    showCustomEditor.value = true;
+    if (kind === 'color') customColorValue.value = randomColor();
+    else customGradientValue.value = randomGradient();
+  };
   const saveColor = async (color: string) => {
     const normalized = color.toLowerCase();
     const editing = editingPresetId.value;
@@ -172,6 +193,7 @@ export function useBackgroundPresets(select: (value: BackgroundValue) => void) {
     editGradient,
     toggleColor,
     toggleGradient,
+    beginAdd,
     isEditing,
     close,
     saveColor,

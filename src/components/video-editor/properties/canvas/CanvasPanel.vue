@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch, type ComponentPublicInstance } from 'vue';
-import { Image, Plus, SlidersHorizontal, Upload, Video } from '@lucide/vue';
+import { Image, SlidersHorizontal, Upload, Video } from '@lucide/vue';
+import AddTileButton from '~/ui/button/AddTileButton.vue';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
@@ -12,6 +13,7 @@ import { capture } from '../../../../api/capture';
 import {
   customColor,
   customGradient,
+  gradientCssBackground,
   type BackgroundMedia,
   type BackgroundMediaGroup,
   type BackgroundValue,
@@ -75,9 +77,9 @@ const {
   gradientPresets,
   customColorValue,
   customGradientValue,
-  editingPresetId,
   toggleColor,
   toggleGradient,
+  beginAdd,
   isEditing,
   close: closeCustomEditor,
   saveColor: addColorPreset,
@@ -328,21 +330,17 @@ onUnmounted(() => {
             "
           >
             <template #trigger>
-              <button
-                type="button"
-                class="swatch-tile custom-add-tile"
-                :class="{ active: isSelected(customColor(customColorValue)) }"
-                :aria-label="t('customColor')"
-                @click="editingPresetId = null"
-              >
-                <Plus :size="16" />
-              </button>
+              <AddTileButton
+                :active="isSelected(customColor(customColorValue))"
+                :label="t('customColor')"
+                @click="beginAdd('color')"
+              />
             </template>
             <template #default="{ close }">
               <BackgroundPresetComposer
                 kind="color"
-                :color="selectedColorPreset?.color ?? customColorValue"
-                :gradient="selectedGradientPreset?.gradient ?? customGradientValue"
+                :color="customColorValue"
+                :gradient="customGradientValue"
                 @add-color="
                   (val) => {
                     addColorPreset(val);
@@ -430,21 +428,17 @@ onUnmounted(() => {
             "
           >
             <template #trigger>
-              <button
-                type="button"
-                class="swatch-tile custom-add-tile"
-                :class="{ active: isSelected(customGradient(customGradientValue)) }"
-                :aria-label="t('customGradient')"
-                @click="editingPresetId = null"
-              >
-                <Plus :size="16" />
-              </button>
+              <AddTileButton
+                :active="isSelected(customGradient(customGradientValue))"
+                :label="t('customGradient')"
+                @click="beginAdd('gradient')"
+              />
             </template>
             <template #default="{ close }">
               <BackgroundPresetComposer
                 kind="gradient"
-                :color="selectedColorPreset?.color ?? customColorValue"
-                :gradient="selectedGradientPreset?.gradient ?? customGradientValue"
+                :color="customColorValue"
+                :gradient="customGradientValue"
                 @add-gradient="
                   (val) => {
                     addGradientPreset(val);
@@ -468,7 +462,7 @@ onUnmounted(() => {
             class="swatch-tile"
             :class="{ active: isSelected(item), editing: isEditing(item.id) }"
             :style="{
-              background: `linear-gradient(${item.gradient.angle}deg, ${item.gradient.stops.map((s: { color: string; position: number }) => `${s.color} ${s.position * 100}%`).join(', ')})`,
+              background: gradientCssBackground(item.gradient),
             }"
             :aria-label="item.name"
             @click="emit('update:selectedBackground', item)"
@@ -729,15 +723,6 @@ img.media-content {
     box-shadow: 0 0 0 3px var(--color-primary-light, rgba(59, 130, 246, 0.4));
     transform: scale(1.02);
   }
-}
-
-.custom-add-tile {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-secondary, #9ca3af);
-  background: repeating-conic-gradient(rgba(255, 255, 255, 0.1) 0 25%, rgba(0, 0, 0, 0.3) 0 50%) 50% / 10px 10px;
-  border-style: dashed;
 }
 
 .custom-editor-row {

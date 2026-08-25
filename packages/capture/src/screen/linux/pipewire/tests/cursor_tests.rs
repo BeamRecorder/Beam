@@ -398,6 +398,7 @@ fn frame_geometry_scales_cursor_crop_to_frame_and_ignores_later_cursor_crop_chan
         None,
         Some(cursor_crop),
         VideoTransform::None,
+        None,
         &frame,
     );
     let cursor = CursorMetadata {

@@ -37,6 +37,9 @@ let loadVersion = 0;
 let previewQuality: PreviewQuality = 'full';
 const loadTasks = new Set<Promise<void>>();
 const processingIdleWaiters = new Set<() => void>();
+const METRICS_INTERVAL_MS = 250;
+let lastMetricsGeneration = -1;
+let lastMetricsPostedAt = Number.NEGATIVE_INFINITY;
 
 const metrics: PlaybackMetrics = {
   decodedFrames: 0,
@@ -383,7 +386,7 @@ async function processSeeks() {
         result: 'presented',
         latencyMs,
       });
-      postMetrics(request.generation);
+      postMetrics(request.generation, true);
       activeRequest = null;
     }
   } catch (error) {
@@ -428,7 +431,11 @@ function updateQueueMetric() {
   metrics.queueSize = [...consumers.values()].reduce((size, consumer) => size + consumer.queue.length, 0);
 }
 
-function postMetrics(messageGeneration: number) {
+function postMetrics(messageGeneration: number, force = false) {
+  const now = performance.now();
+  if (!force && messageGeneration === lastMetricsGeneration && now - lastMetricsPostedAt < METRICS_INTERVAL_MS) return;
+  lastMetricsGeneration = messageGeneration;
+  lastMetricsPostedAt = now;
   updateQueueMetric();
   post({
     type: 'metrics',

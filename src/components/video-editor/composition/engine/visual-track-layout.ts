@@ -1,12 +1,16 @@
 import {
   clipEndMs,
+  captionLayerKey,
   isCompositingClip,
+  isTextCaptionClip,
   type Clip,
   type VisualClip,
   type BlurClip,
+  type ColorClip,
+  type ShapeClip,
 } from '~/media/shared/composition-types';
 
-export type CompositingClip = VisualClip | BlurClip;
+export type CompositingClip = VisualClip | ColorClip | ShapeClip | BlurClip;
 
 const byOrderAndTime = (left: Clip, right: Clip) =>
   left.order - right.order || left.timelineStartMs - right.timelineStartMs || left.id.localeCompare(right.id);
@@ -15,7 +19,11 @@ const byOrderAndTime = (left: Clip, right: Clip) =>
 export const normalizeClipOrders = (clips: Clip[]): Clip[] => {
   const buckets = new Map<string, Clip[]>();
   for (const clip of [...clips].sort(byOrderAndTime)) {
-    const key = isCompositingClip(clip) ? `track:${clip.trackId}` : `clip:${clip.id}`;
+    const key = isCompositingClip(clip)
+      ? `track:${clip.trackId}`
+      : isTextCaptionClip(clip)
+        ? captionLayerKey(clip)
+        : `clip:${clip.id}`;
     const bucket = buckets.get(key);
     if (bucket) bucket.push(clip);
     else buckets.set(key, [clip]);

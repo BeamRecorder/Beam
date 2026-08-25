@@ -10,14 +10,20 @@ import type { CompositeMotionBlurOptions } from './use-camera-zoom-test-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import { clampFocusToScale } from '../../../zoom/zoom-playback';
 import { ZOOM_DEPTH_SCALES } from '../../../zoom/zoom-types';
+import { frameOuterRect } from '../../../composition/appearance/frames';
 
 const drawDecoratedMedia = vi.hoisted(() => vi.fn());
+const drawFrameOverlay = vi.hoisted(() => vi.fn());
 const motionBlurCompositor = vi.hoisted(() => ({
   createMotionBlurSurface: vi.fn((width: number, height: number) => ({ width, height })),
   resizeMotionBlurSurface: vi.fn(),
   compositeIsolatedMotionBlurSample: vi.fn((_options: CompositeMotionBlurOptions) => true),
 }));
 vi.mock('../../../composition/appearance/render-decorated-media', () => ({ drawDecoratedMedia }));
+vi.mock('../../../composition/appearance/frames', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../composition/appearance/frames')>()),
+  drawFrameOverlay,
+}));
 vi.mock('../../../zoom/zoom-motion-blur-compositor', () => motionBlurCompositor);
 
 const screenClip = (enabled = true): VisualClip => ({
@@ -104,11 +110,12 @@ let options!: {
   zooms: ReturnType<typeof ref<ZoomElement[]>>;
   screenTransformDraft: ReturnType<typeof ref<NormalizedTransform | null>>;
   videoError: ReturnType<typeof ref<string | null>>;
+  cropping: ReturnType<typeof ref<boolean>>;
   canvas: HTMLCanvasElement;
   callbacks: Record<string, ReturnType<typeof vi.fn>>;
 };
 
-const mountComposable = (motionBlurSettings = { enabled: false, intensity: 0.55 }) => {
+const mountComposable = (motionBlurSettings = { enabled: false, intensity: 0.55 }, croppingEnabled = false) => {
   const compositionRef = ref(composition());
   const currentTime = ref(0.5);
   const playing = ref(false);
@@ -119,6 +126,26 @@ const mountComposable = (motionBlurSettings = { enabled: false, intensity: 0.55 
   const output = ref({ preset: '16:9' as const, width: 800, height: 450, showBackground: false });
   const screenTransformDraft = ref<NormalizedTransform | null>(null);
   const videoError = ref<string | null>('recording unavailable');
+  const cropping = ref(croppingEnabled);
+  const editorData = {
+    cursor: {
+      telemetry: [
+        { timeMs: 400, cx: 0.1, cy: 0.9 },
+        { timeMs: 900, cx: 0.9, cy: 0.1 },
+      ],
+      events: [
+        {
+          event: 'move',
+          sessionNs: 500_000_000,
+          pixelX: 10,
+          pixelY: 10,
+          normalizedX: 0.2,
+          normalizedY: 0.8,
+          visible: true,
+        },
+      ],
+    },
+  } as any;
   const canvas = document.createElement('canvas');
   canvas.getBoundingClientRect = () => ({
     left: 0,
@@ -154,30 +181,11 @@ const mountComposable = (motionBlurSettings = { enabled: false, intensity: 0.55 
         zoomMotionBlur: () => motionBlur.value,
         currentTime: () => currentTime.value,
         isPlaying: () => playing.value,
-        editorData: () =>
-          ({
-            cursor: {
-              telemetry: [
-                { timeMs: 400, cx: 0.1, cy: 0.9 },
-                { timeMs: 900, cx: 0.9, cy: 0.1 },
-              ],
-              events: [
-                {
-                  event: 'move',
-                  sessionNs: 500_000_000,
-                  pixelX: 10,
-                  pixelY: 10,
-                  normalizedX: 0.2,
-                  normalizedY: 0.8,
-                  visible: true,
-                },
-              ],
-            },
-          }) as any,
+        editorData: () => editorData,
         activeTab: () => activeTab.value,
         composition: () => compositionRef.value,
         screenTransformDraft: () => screenTransformDraft.value,
-        isCropping: () => false,
+        isCropping: () => cropping.value,
         videoError: () => videoError.value,
         renderVisualStack: (ctx, bounds, drawScreen) => {
           drawScreen();
@@ -201,6 +209,7 @@ const mountComposable = (motionBlurSettings = { enabled: false, intensity: 0.55 
     zooms,
     screenTransformDraft,
     videoError,
+    cropping,
     canvas,
     callbacks,
   };
@@ -378,6 +387,111 @@ describe('useCameraZoom', () => {
     }
   });
 
+  it.each(['iphone-16-max', 'pixel-9-pro'] as const)('keeps the %s phone frame in normal screen mode', (frameModel) => {
+    mountComposable();
+    const screen = options.compositionRef.value!.clips[0] as VisualClip;
+    screen.cameraFramingPreset = 'fit';
+    screen.appearance = { ...screen.appearance, frame: frameModel };
+    options.output.value = { preset: '16:9', width: 800, height: 450, showBackground: true };
+
+    drawDecoratedMedia.mockClear();
+    state.drawVideoWindow(context(), 800, 450, frame(720, 1_280));
+    const rendered = drawDecoratedMedia.mock.calls.at(-1)?.[1] as {
+      appearance: { frame: string };
+    };
+
+    expect(rendered.appearance.frame).toBe(frameModel);
+  });
+
+  it.each(['iphone-16-max', 'pixel-9-pro'] as const)(
+    'uses a source-fit rectangle without the %s phone frame while cropping',
+    (frameModel) => {
+      mountComposable({ enabled: false, intensity: 0.55 }, true);
+      const screen = options.compositionRef.value!.clips[0] as VisualClip;
+      screen.cameraFramingPreset = 'custom';
+      screen.appearance = { ...screen.appearance, frame: frameModel };
+      options.output.value = { preset: '16:9', width: 800, height: 450, showBackground: true };
+
+      drawDecoratedMedia.mockClear();
+      state.drawVideoWindow(context(), 800, 450, frame(720, 1_280));
+      const rendered = drawDecoratedMedia.mock.calls.at(-1)?.[1] as {
+        appearance: { frame: string };
+        rect: { width: number; height: number };
+      };
+
+      expect(rendered.appearance.frame).toBe('none');
+      expect(rendered.rect.width / rendered.rect.height).toBeCloseTo(720 / 1_280, 8);
+    },
+  );
+
+  it.each(['iphone-16-max', 'pixel-9-pro'] as const)(
+    'draws the unframed source and one fixed %s chrome overlay while cropping',
+    (frameModel) => {
+      mountComposable({ enabled: false, intensity: 0.55 }, true);
+      const screen = options.compositionRef.value!.clips[0] as VisualClip;
+      screen.cameraFramingPreset = 'custom';
+      screen.appearance = { ...screen.appearance, frame: frameModel };
+      options.output.value = { preset: '16:9', width: 800, height: 450, showBackground: true };
+
+      drawDecoratedMedia.mockClear();
+      drawFrameOverlay.mockClear();
+      state.drawVideoWindow(context(), 800, 450, frame(720, 1_280));
+
+      expect(drawDecoratedMedia).toHaveBeenCalledTimes(1);
+      expect(drawDecoratedMedia.mock.calls[0]?.[1]).toEqual(
+        expect.objectContaining({ appearance: expect.objectContaining({ frame: 'none' }) }),
+      );
+      expect(drawFrameOverlay).toHaveBeenCalledTimes(1);
+      const [, overlayRect, overlayFrame] = drawFrameOverlay.mock.calls[0] as [
+        unknown,
+        { x: number; y: number; width: number; height: number },
+        string,
+        string,
+      ];
+      expect(overlayFrame).toBe(frameModel);
+      expect(overlayRect).toEqual(frameOuterRect(overlayRect, frameModel));
+      expect(overlayRect.width / overlayRect.height).toBeCloseTo(
+        frameModel === 'iphone-16-max' ? 415 / 843 : 353 / 745,
+        8,
+      );
+    },
+  );
+
+  it.each(['iphone-16-max', 'pixel-9-pro'] as const)(
+    'does not add a second %s chrome guide pass in normal mode',
+    (frameModel) => {
+      mountComposable();
+      const screen = options.compositionRef.value!.clips[0] as VisualClip;
+      screen.appearance = { ...screen.appearance, frame: frameModel };
+
+      drawDecoratedMedia.mockClear();
+      drawFrameOverlay.mockClear();
+      state.drawVideoWindow(context(), 800, 450, frame(720, 1_280));
+
+      expect(drawDecoratedMedia).toHaveBeenCalledTimes(1);
+      expect(drawFrameOverlay).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['safari', 'windows-95'] as const)('keeps the %s frame as the only render while cropping', (frameModel) => {
+    mountComposable({ enabled: false, intensity: 0.55 }, true);
+    const screen = options.compositionRef.value!.clips[0] as VisualClip;
+    screen.cameraFramingPreset = 'custom';
+    screen.appearance = { ...screen.appearance, frame: frameModel };
+    options.output.value = { preset: '16:9', width: 800, height: 450, showBackground: true };
+
+    drawDecoratedMedia.mockClear();
+    drawFrameOverlay.mockClear();
+    state.drawVideoWindow(context(), 800, 450, frame(720, 1_280));
+
+    expect(drawDecoratedMedia).toHaveBeenCalledTimes(1);
+    const rendered = drawDecoratedMedia.mock.calls[0]?.[1] as {
+      appearance: { frame: string };
+    };
+    expect(rendered.appearance.frame).toBe(frameModel);
+    expect(drawFrameOverlay).not.toHaveBeenCalled();
+  });
+
   it('updates a transform draft without rebuilding the camera evaluator', () => {
     mountComposable();
     const createEvaluator = vi.spyOn(compositionCamera, 'createCompositionCameraEvaluator');
@@ -394,6 +508,53 @@ describe('useCameraZoom', () => {
       expect.anything(),
       expect.objectContaining({ rect: { x: 80, y: 67.5, width: 560, height: 270 } }),
     );
+  });
+
+  it('reuses the camera evaluator for stable inputs and invalidates changed geometry', () => {
+    const createEvaluator = vi.spyOn(compositionCamera, 'createCompositionCameraEvaluator');
+    mountComposable();
+    const stringify = vi.spyOn(JSON, 'stringify');
+    const stableFrame = frame();
+    const render = () => state.drawVideoWindow(context(), 800, 450, stableFrame);
+    const cameraKeySerializations = () =>
+      stringify.mock.calls.filter(([value]) => {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+        const key = value as Record<string, unknown>;
+        return 'zooms' in key && 'telemetry' in key && 'canvas' in key && 'source' in key && 'screen' in key;
+      }).length;
+
+    render();
+    expect(createEvaluator).toHaveBeenCalledOnce();
+    const firstKeySerializations = cameraKeySerializations();
+
+    for (let index = 0; index < 12; index += 1) render();
+
+    expect(createEvaluator).toHaveBeenCalledOnce();
+    expect(cameraKeySerializations()).toBeLessThanOrEqual(firstKeySerializations);
+
+    options.zooms.value = [{ ...autoZoom, depth: 1 }];
+    render();
+    expect(createEvaluator).toHaveBeenCalledTimes(2);
+
+    const currentOutput = options.output.value!;
+    options.output.value = {
+      preset: currentOutput.preset,
+      width: 720,
+      height: currentOutput.height,
+      showBackground: currentOutput.showBackground,
+    };
+    render();
+    expect(createEvaluator).toHaveBeenCalledTimes(3);
+
+    const currentComposition = options.compositionRef.value!;
+    options.compositionRef.value = {
+      schemaVersion: currentComposition.schemaVersion,
+      assets: currentComposition.assets,
+      keyboardCaptionSessions: currentComposition.keyboardCaptionSessions,
+      clips: [{ ...screenClip(), transform: { x: 0.1, y: 0.2, width: 0.7, height: 0.8 } }],
+    };
+    render();
+    expect(createEvaluator).toHaveBeenCalledTimes(4);
   });
 
   it('applies auto zoom, computes manual target focus, and updates pointer focus', async () => {
@@ -504,6 +665,31 @@ describe('useCameraZoom', () => {
     expect(playingWindow?.scale).toBeGreaterThan(1);
   });
 
+  it('keeps a selected paused 3D manual zoom at scale one while exposing intensity-scaled tilt', () => {
+    mountComposable();
+    const perspectiveZoom: ZoomElement = {
+      ...manualZoom,
+      projection: '3d',
+      tiltIntensity: 0.6,
+    };
+    options.zooms.value = [perspectiveZoom];
+    options.selected.value = perspectiveZoom;
+    options.currentTime.value = 1.5;
+
+    const pausedAt60 = state.drawVideoWindow(context(), 800, 450, frame());
+    const tiltAt60 = Math.hypot(pausedAt60?.tiltX ?? 0, pausedAt60?.tiltY ?? 0);
+
+    expect(pausedAt60?.scale).toBeCloseTo(1, 6);
+    expect(tiltAt60).toBeGreaterThan(0);
+
+    options.selected.value = { ...perspectiveZoom, tiltIntensity: 1 };
+    const pausedAt100 = state.drawVideoWindow(context(), 800, 450, frame());
+    const tiltAt100 = Math.hypot(pausedAt100?.tiltX ?? 0, pausedAt100?.tiltY ?? 0);
+
+    expect(pausedAt100?.scale).toBeCloseTo(1, 6);
+    expect(tiltAt100).toBeGreaterThan(tiltAt60 * 1.5);
+  });
+
   it('clamps a manual focus near the output edge when the preview has an inset background frame', () => {
     mountComposable();
     options.playing.value = true;
@@ -600,6 +786,16 @@ describe('useCameraZoom', () => {
     expect(sampleContext.clearRect).toHaveBeenCalledWith(0, 0, 800, 450);
     expect(sampleContext.fillRect).not.toHaveBeenCalled();
     expect(drawDecoratedMedia).toHaveBeenCalled();
+  });
+
+  it('limits enabled high-intensity playback motion blur to three composited samples', () => {
+    mountComposable({ enabled: true, intensity: 1 });
+    options.playing.value = true;
+
+    state.drawVideoWindow(context(), 800, 450, frame());
+
+    expect(motionBlurCompositor.compositeIsolatedMotionBlurSample.mock.calls.length).toBeLessThanOrEqual(3);
+    expect(motionBlurCompositor.compositeIsolatedMotionBlurSample).toHaveBeenCalled();
   });
 
   it('does not sample shutter endpoints when zoom motion blur is disabled', () => {

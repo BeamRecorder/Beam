@@ -37,6 +37,12 @@ const PreviewQualityPopover = {
   template:
     '<div class="preview-quality-popover-stub" :data-quality="modelValue" :data-status="performanceSnapshot?.status || \'idle\'" />',
 };
+const AddMenuWithItems = {
+  props: ['items'],
+  emits: ['select'],
+  template:
+    '<div class="add-menu-items"><button v-for="item in items" :key="item.id" :data-kind="item.id" @click="$emit(\'select\', item.id)">{{ item.label }}</button></div>',
+};
 
 describe('TimelineToolbar', () => {
   it('passes the live performance snapshot to the preview quality control', () => {
@@ -91,6 +97,22 @@ describe('TimelineToolbar', () => {
     expect(wrapper.emitted('update:zoomLevel')).toContainEqual([150]);
     expect(wrapper.emitted('update:zoomLevel')).toContainEqual([250]);
     expect(wrapper.emitted('update:zoomLevel')).toContainEqual([275]);
+  });
+
+  it('exposes generated layers in Add and emits their selections', async () => {
+    const wrapper = mount(TimelineToolbar, {
+      props: { currentTime: 0, duration: 100, isPlaying: false, zoomLevel: 100 },
+      global: { stubs: { PopoverMenuButton: AddMenuWithItems, Popover, BigSlider, Button } },
+    });
+
+    const colorItem = wrapper.get('[data-kind="color"]');
+    expect(colorItem.text()).toBe('Color');
+
+    await colorItem.trigger('click');
+    const shapeItem = wrapper.get('[data-kind="shape"]');
+    expect(shapeItem.text()).toBe('Shapes & Arrows');
+    await shapeItem.trigger('click');
+    expect(wrapper.emitted('add:element')).toEqual([['color'], ['shape']]);
   });
 
   it('keeps the toolbar height while loading and swaps controls for an animated skeleton', async () => {

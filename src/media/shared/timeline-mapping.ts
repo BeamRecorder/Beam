@@ -1,11 +1,11 @@
-import { clipEndMs, type Clip, type ClipComposition } from './composition-types';
+import { clipEndMs, isColorClip, isShapeClip, type Clip, type ClipComposition } from './composition-types';
 import { snapTimeToBoundary } from './time-boundary';
 
 export const compositionDurationMs = (composition: ClipComposition) =>
   composition.clips.reduce((duration, clip) => Math.max(duration, clipEndMs(clip)), 0);
 
 export const assetForClip = (composition: ClipComposition, clip: Clip) =>
-  clip.kind === 'caption' || clip.kind === 'blur'
+  clip.kind === 'caption' || isColorClip(clip) || isShapeClip(clip) || clip.kind === 'blur'
     ? null
     : (composition.assets.find((asset) => asset.id === clip.assetId) ?? null);
 

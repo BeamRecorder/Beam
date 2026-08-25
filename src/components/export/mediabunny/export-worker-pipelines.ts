@@ -5,7 +5,12 @@ import { createProgressiveAudioMixer } from '~/media/export/pcm-mixer';
 import { createCursorMotionPlayer } from '../../video-editor/composables/cursor-motion';
 import { renderBackground } from '../../video-editor/composition/background/render-background';
 import { resolveCompositionSceneLayers } from '../../video-editor/composition/scene-layers';
-import { createSnapshotCameraEvaluator, renderCompositionFrame, type RenderableMedia } from '../composition/render';
+import {
+  createSnapshotCameraEvaluator,
+  disposeCompositionRenderer,
+  renderCompositionFrame,
+  type RenderableMedia,
+} from '../composition/render';
 import type { ExportRequest } from '../export-types';
 import type { ExportAssets } from './export-worker-assets';
 import { ExportWorkerOutput } from './export-worker-output';
@@ -210,6 +215,7 @@ export async function renderExportVideo(
     mediaOutput.closeVideo();
     return { elapsedMs: performance.now() - started, decodeMs, renderMs, encoderBackpressureMs };
   } finally {
+    disposeCompositionRenderer();
     await Promise.allSettled([
       ...[...consumers.values()].map((consumer) => consumer.return?.()),
       backgroundReader?.close(),

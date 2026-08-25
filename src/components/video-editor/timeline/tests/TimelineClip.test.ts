@@ -2,7 +2,7 @@ import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick, reactive } from 'vue';
 import TimelineClip from '../TimelineClip.vue';
-import type { Clip, MediaAsset } from '~/media/shared/composition-types';
+import type { Clip, ColorClip, MediaAsset, ShapeClip } from '~/media/shared/composition-types';
 import type { MediaError } from '~/media/shared/media-types';
 
 const thumbnailState = vi.hoisted(() => ({
@@ -46,6 +46,45 @@ const clip = (overrides: Partial<Clip> = {}): Clip =>
     ...overrides,
   }) as Clip;
 
+const colorLayerClip = (fill: ColorClip['fill'] = { kind: 'color', color: '#111827' }): ColorClip =>
+  ({
+    ...clip(),
+    id: 'color-clip',
+    kind: 'color',
+    name: 'Color board',
+    timelineDurationMs: 3_000,
+    sourceDurationMs: 3_000,
+    assetId: '',
+    fill,
+  }) as ColorClip;
+
+const shapeLayerClip = (overrides: Partial<ShapeClip> = {}): ShapeClip =>
+  ({
+    ...clip(),
+    id: 'shape-clip',
+    trackId: 'shape-track',
+    kind: 'shape',
+    name: 'Arrow',
+    assetId: '',
+    family: 'arrow',
+    preset: 'arrow',
+    fillColor: '#ff5a1f',
+    borderColor: '#ffffff',
+    borderWidth: 2,
+    cornerRadius: 16,
+    arrowThickness: 36,
+    arrowHeadSize: 38,
+    rotation: 180,
+    opacityEnabled: true,
+    opacity: 70,
+    backdropBlur: 40,
+    shadowEnabled: false,
+    shadowColor: '#000000',
+    shadowBlur: 20,
+    shadowDirection: 'bottom-right',
+    ...overrides,
+  }) as ShapeClip;
+
 const baseProps = {
   clip: clip(),
   asset: asset('video', '/video.mp4'),
@@ -77,6 +116,27 @@ afterEach(() => {
 });
 
 describe('TimelineClip', () => {
+  it('renders an assetless shape preview from its vector style', () => {
+    const wrapper = mount(TimelineClip, {
+      props: { ...baseProps, clip: shapeLayerClip(), asset: null },
+      global: { stubs: { Skeleton, WaveformCanvas } },
+    });
+
+    expect(wrapper.get('.timeline-clip').classes()).toContain('kind-shape');
+    expect(wrapper.get('.shape-preview').attributes('style')).toContain('background: rgb(255, 90, 31)');
+    expect(wrapper.get('.shape-preview').attributes('style')).toContain('rotate(180deg)');
+  });
+
+  it('scales a rounded rectangle radius in its timeline preview', () => {
+    const clip = shapeLayerClip({ family: 'shape', preset: 'rounded-rectangle', cornerRadius: 24 });
+    const wrapper = mount(TimelineClip, {
+      props: { ...baseProps, clip, asset: null },
+      global: { stubs: { Skeleton, WaveformCanvas } },
+    });
+
+    expect(wrapper.get('.shape-preview').attributes('style')).toContain('border-radius: 12px');
+  });
+
   it('keeps the disabled state stable while a video clip is toggled', async () => {
     const wrapper = mount(TimelineClip, {
       props: baseProps,
@@ -204,6 +264,40 @@ describe('TimelineClip', () => {
     expect(wrapper.get('.timeline-clip').classes()).toContain('trim-at-limit');
     expect(wrapper.get('.trim-handle.end').classes()).toContain('at-limit');
     expect(wrapper.get('.trim-side-badge').classes()).toContain('at-limit');
+  });
+
+  it('renders solid and radial color layers without media thumbnails', async () => {
+    const wrapper = mount(TimelineClip, {
+      props: {
+        ...baseProps,
+        clip: colorLayerClip(),
+        asset: null,
+        thumbnailSlots: [],
+      },
+      global: { stubs: { Skeleton, WaveformCanvas } },
+    });
+
+    expect(wrapper.get('.timeline-clip').classes()).toEqual(expect.arrayContaining(['kind-color', 'selected']));
+    expect(wrapper.find('.color-preview').attributes('style')).toContain('background: rgb(17, 24, 39)');
+    expect(wrapper.findAll('.thumbnail-frame')).toHaveLength(0);
+    expect(wrapper.find('.waveform').exists()).toBe(false);
+
+    await wrapper.setProps({
+      clip: colorLayerClip({
+        kind: 'gradient',
+        gradient: {
+          type: 'radial',
+          angle: 0,
+          stops: [
+            { id: 'inner', position: 0, color: '#000000', alpha: 1 },
+            { id: 'outer', position: 1, color: '#ffffff', alpha: 0.5 },
+          ],
+        },
+      }),
+    });
+
+    expect(wrapper.find('.color-preview').attributes('style')).toContain('radial-gradient(circle');
+    wrapper.unmount();
   });
 
   it('requests only frames in the virtualized viewport and refreshes after a zoom-derived range changes', async () => {

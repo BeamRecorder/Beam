@@ -3,23 +3,62 @@ import type { MediaRect } from './appearance-types';
 import type { Canvas2DContext } from '~/types/canvas';
 import {
   normalizeFrameChromeScale,
+  resolveContainedRect,
   resolveSafariFrameGeometry,
+  resolvePhoneFrameGeometry,
   resolveWindowsFrameGeometry,
   type FrameOptions,
 } from './frame-geometry';
+import { drawPhoneFrame, isPhoneFrame } from './phone-frames';
 
 export { normalizeFrameChromeScale };
 export type WindowsFrameOptions = FrameOptions;
 
+export const frameOuterRect = (rect: MediaRect, frame: ClipFrame): MediaRect =>
+  isPhoneFrame(frame) ? resolvePhoneFrameGeometry(rect, frame).outer : rect;
+
+export const transformedFrameOuterRect = (
+  bounds: MediaRect,
+  transform: { x: number; y: number; width: number; height: number },
+  frame: ClipFrame,
+): MediaRect =>
+  frameOuterRect(
+    {
+      x: bounds.x + transform.x * bounds.width,
+      y: bounds.y + transform.y * bounds.height,
+      width: transform.width * bounds.width,
+      height: transform.height * bounds.height,
+    },
+    frame,
+  );
+
 export const frameContentRect = (rect: MediaRect, frame: ClipFrame, windows: WindowsFrameOptions = {}): MediaRect => {
   if (frame === 'safari') return resolveSafariFrameGeometry(rect, windows.chromeScale).content;
   if (frame === 'windows-95') return resolveWindowsFrameGeometry(rect, windows).content;
+  if (isPhoneFrame(frame)) return resolvePhoneFrameGeometry(rect, frame).content;
   return rect;
+};
+
+export const frameMediaRect = (
+  rect: MediaRect,
+  frame: ClipFrame,
+  sourceWidth: number,
+  sourceHeight: number,
+  windows: WindowsFrameOptions = {},
+): MediaRect => {
+  const content = frameContentRect(rect, frame, windows);
+  return isPhoneFrame(frame) ? resolveContainedRect(content, sourceWidth, sourceHeight) : content;
 };
 
 export const frameRadius = (frame: ClipFrame, fallback: number, rect: MediaRect) =>
   Math.min(
-    frame === 'safari' ? resolveSafariFrameGeometry(rect).radius : frame === 'windows-95' ? 0 : fallback,
+    frame === 'safari'
+      ? resolveSafariFrameGeometry(rect).radius
+      : isPhoneFrame(frame)
+        ? resolvePhoneFrameGeometry(rect, frame).outerRadius
+        : frame === 'windows-95'
+          ? 0
+          : fallback,
     rect.width / 2,
     rect.height / 2,
   );
@@ -344,6 +383,10 @@ export function drawFrameChrome(
   windows: WindowsFrameOptions = {},
 ) {
   if (frame === 'none') return;
+  if (isPhoneFrame(frame)) {
+    drawPhoneFrame(ctx, rect, frame, paintBackground);
+    return;
+  }
   if (frame === 'safari') {
     drawSafariToolbar(ctx, rect, title, paintBackground, windows.chromeScale);
     ctx.save();
@@ -362,4 +405,24 @@ export function drawFrameChrome(
     return;
   }
   drawWindows95Frame(ctx, rect, title, paintBackground, frameColor, windows);
+}
+
+export function drawFrameOverlay(
+  ctx: Canvas2DContext,
+  rect: MediaRect,
+  frame: ClipFrame,
+  title: string,
+  frameColor = '#c0c0c0',
+  windows: WindowsFrameOptions = {},
+) {
+  if (frame === 'none') return;
+  const content = frameContentRect(rect, frame, windows);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(rect.x, rect.y, rect.width, rect.height);
+  ctx.rect(content.x, content.y, content.width, content.height);
+  ctx.clip('evenodd');
+  drawFrameChrome(ctx, rect, frame, title, true, frameColor, windows);
+  ctx.restore();
+  drawFrameChrome(ctx, rect, frame, title, false, frameColor, windows);
 }

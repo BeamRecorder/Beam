@@ -60,6 +60,35 @@ fn cursor_without_screen_is_rejected() {
 }
 
 #[test]
+fn portal_monitor_accepts_a_region_but_portal_window_kinds_reject_it() {
+    fn request(kind: PortalSourceKind) -> CaptureRequest {
+        CaptureRequest {
+            project_id: ProjectId::new(),
+            screen: Some(ScreenSelection::Portal {
+                kind,
+                restore_token: None,
+            }),
+            system_audio: None,
+            cursor: CursorSelection::Disabled,
+            recording: RecordingSettings::default(),
+            failure_policy: FailurePolicy::FailFast,
+            region: Some(ScreenRegion {
+                x: 0.1,
+                y: 0.2,
+                width: 0.5,
+                height: 0.4,
+            }),
+            excluded_process_id: None,
+        }
+    }
+
+    assert!(request(PortalSourceKind::Monitor).validate_basic().is_ok());
+    for kind in [PortalSourceKind::Window, PortalSourceKind::MonitorOrWindow] {
+        assert!(request(kind).validate_basic().is_err());
+    }
+}
+
+#[test]
 fn excluded_process_id_roundtrips_when_present() {
     let request: CaptureRequest = serde_json::from_value(serde_json::json!({
         "projectId": ProjectId::new(),

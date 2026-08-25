@@ -116,22 +116,14 @@ describe('drawBeamWatermark', () => {
 
     drawBeamWatermark(context, canvas({ text: 'none', showLogo: true, size }), viewport, logo);
 
-    const [
-      image,
-      sourceX,
-      sourceY,
-      sourceWidth,
-      sourceHeight,
-      destinationX,
-      destinationY,
-      destinationWidth,
-      destinationHeight,
-    ] = (context.drawImage as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]!;
+    const [image, destinationX, destinationY, destinationWidth, destinationHeight] = (
+      context.drawImage as unknown as { mock: { calls: unknown[][] } }
+    ).mock.calls[0]!;
     const [badgeX, badgeY, , badgeHeight] = (context.roundRect as unknown as { mock: { calls: number[][] } }).mock
       .calls[0]!;
 
     expect(image).toBe(logo);
-    expect([sourceX, sourceY, sourceWidth, sourceHeight]).toEqual([93, 93, 1068, 1068]);
+    expect((context.drawImage as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]).toHaveLength(5);
     expect(destinationX).toBeGreaterThan(badgeX);
     expect(destinationY).toBeCloseTo(badgeY + (badgeHeight - Number(destinationHeight)) / 2, 5);
     expect(destinationWidth).toBe(destinationHeight);
@@ -139,7 +131,7 @@ describe('drawBeamWatermark', () => {
     expect(context.roundRect).toHaveBeenCalledOnce();
   });
 
-  it.each([100, 200])('uses visual text metrics to center logo and text at size %s', (size) => {
+  it.each([100, 200])('visually centers the full logo and text inside the badge at size %s', (size) => {
     const ascent = 10 * (size / 100);
     const descent = 4 * (size / 100);
     const { context, textBaselines, measurementBaselines } = createContext({
@@ -154,9 +146,13 @@ describe('drawBeamWatermark', () => {
     expect(textBaselines).toEqual(['alphabetic']);
     const [text, textX, textY] = (context.fillText as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]!;
     const [, badgeY, , badgeHeight] = (context.roundRect as unknown as { mock: { calls: number[][] } }).mock.calls[0]!;
+    const [, , iconY, , iconHeight] = (context.drawImage as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]!;
+    const badgeCenterY = badgeY + badgeHeight / 2;
     expect(text).toBe('Beam');
     expect(textX).toBeGreaterThan(0);
-    expect(textY).toBeCloseTo(badgeY + badgeHeight / 2 + (ascent - descent) / 2, 5);
+    const glyphCenterY = Number(textY) - ascent + (ascent + descent) / 2;
+    expect(glyphCenterY).toBe(badgeCenterY);
+    expect(Number(iconY) + Number(iconHeight) / 2).toBe(badgeCenterY);
   });
 
   it.each([100, 200])('keeps text-only baseline and Y centered at size %s', (size) => {

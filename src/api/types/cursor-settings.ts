@@ -9,6 +9,49 @@ export interface CursorMotionSettings {
   motionBlur: number;
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object';
+const finiteNumber = (value: unknown, fallback: number) =>
+  typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+const booleanValue = (value: unknown, fallback: boolean) => (typeof value === 'boolean' ? value : fallback);
+const stringValue = (value: unknown, fallback: string) => (typeof value === 'string' && value ? value : fallback);
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+export const CURSOR_AUTO_HIDE_DELAY_DEFAULT = 2;
+export const CURSOR_AUTO_HIDE_DELAY_MIN = 0.5;
+export const CURSOR_AUTO_HIDE_DELAY_MAX = 10;
+export const CURSOR_AUTO_HIDE_FADE_DURATION_DEFAULT = 250;
+export const CURSOR_AUTO_HIDE_FADE_DURATION_MIN = 0;
+export const CURSOR_AUTO_HIDE_FADE_DURATION_MAX = 1_000;
+
+export interface CursorAutoHideSettings {
+  enabled: boolean;
+  delaySeconds: number;
+  fadeDurationMs: number;
+}
+
+export const createDefaultCursorAutoHideSettings = (): CursorAutoHideSettings => ({
+  enabled: false,
+  delaySeconds: CURSOR_AUTO_HIDE_DELAY_DEFAULT,
+  fadeDurationMs: CURSOR_AUTO_HIDE_FADE_DURATION_DEFAULT,
+});
+
+export const normalizeCursorAutoHideSettings = (value: unknown): CursorAutoHideSettings => {
+  const input = isRecord(value) ? value : {};
+  return {
+    enabled: booleanValue(input.enabled, false),
+    delaySeconds: clamp(
+      finiteNumber(input.delaySeconds, CURSOR_AUTO_HIDE_DELAY_DEFAULT),
+      CURSOR_AUTO_HIDE_DELAY_MIN,
+      CURSOR_AUTO_HIDE_DELAY_MAX,
+    ),
+    fadeDurationMs: clamp(
+      finiteNumber(input.fadeDurationMs, CURSOR_AUTO_HIDE_FADE_DURATION_DEFAULT),
+      CURSOR_AUTO_HIDE_FADE_DURATION_MIN,
+      CURSOR_AUTO_HIDE_FADE_DURATION_MAX,
+    ),
+  };
+};
+
 const FOCUSED_MOTION: Omit<CursorMotionSettings, 'preset'> = {
   smoothing: 0.67,
   springMassMultiplier: 1,
@@ -30,8 +73,6 @@ export const cursorMotionPreset = (preset: Exclude<CursorMotionPreset, 'custom'>
   preset,
   ...(preset === 'focused' ? FOCUSED_MOTION : SMOOTH_MOTION),
 });
-
-const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 export const normalizeCursorMotionSettings = (value: unknown): CursorMotionSettings => {
   const input = isRecord(value) ? value : {};
@@ -86,15 +127,6 @@ export const createDefaultCursorClickEffects = (): CursorClickEffects => ({
   left: { ...DEFAULT_LEFT },
   right: { ...DEFAULT_RIGHT },
 });
-
-const isRecord = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object';
-
-const finiteNumber = (value: unknown, fallback: number) =>
-  typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-
-const booleanValue = (value: unknown, fallback: boolean) => (typeof value === 'boolean' ? value : fallback);
-
-const stringValue = (value: unknown, fallback: string) => (typeof value === 'string' && value ? value : fallback);
 
 const normalizeEffect = (value: unknown, fallback: CursorClickEffectSettings): CursorClickEffectSettings => {
   const input = isRecord(value) ? value : {};

@@ -199,6 +199,45 @@ describe('MediaPlaybackEngine', () => {
     engine.dispose();
   });
 
+  it('updates the cached duration when retiming changes the composition length', async () => {
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const engine = new MediaPlaybackEngine({
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+    await load(engine, worker);
+
+    const shorter = composition([
+      videoClip('clip-1', 'asset-1', {
+        timelineDurationMs: 1_000,
+        sourceDurationMs: 1_000,
+      }),
+    ]);
+    const pending = engine.loadComposition(shorter, 1.75);
+    await Promise.resolve();
+
+    const retime = worker.requests.at(-1);
+    expect(retime).toMatchObject({ type: 'retime' });
+    if (!retime || retime.type !== 'retime') throw new Error('Expected a retime request.');
+    worker.emit({ type: 'ready', generation: retime.generation });
+    for (let index = 0; index < 4; index += 1) await Promise.resolve();
+
+    const seek = latestSeekRequest(worker)!;
+    expect(seek.timelineSeconds).toBe(1);
+    worker.emit({
+      type: 'seek-result',
+      generation: seek.generation,
+      requestId: seek.requestId,
+      result: 'presented',
+      latencyMs: 1,
+    });
+    await pending;
+
+    expect(engine.currentTime).toBe(1);
+    engine.dispose();
+  });
+
   it('retimes a video enabled toggle while preserving another clip frame and preloaded assets', async () => {
     const worker = new FakeWorker();
     const audio = new FakeAudio();

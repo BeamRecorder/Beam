@@ -20,31 +20,34 @@
 # 🚀 Features
 
 ## Capture
-* 🖥️ **Display, Window, or Custom Crop**
+
+- 🖥️ **Display, Window, or Custom Crop**
   Record your full screen, a specific app window, or select any area you want to capture.
-* 🎙️ **Separate Audio Tracks**
+- 🎙️ **Separate Audio Tracks**
   Capture your microphone and system audio at the same time, each on its own track for easier editing.
-* 🎥 **Webcam Overlay**
+- 🎥 **Webcam Overlay**
   Add your camera on top of the recording, move it anywhere on screen, and customize its size and shape.
-* 📖 **Floating Teleprompter**
+- 📖 **Floating Teleprompter**
   Keep your script visible while recording with a lightweight transparent teleprompter that stays out of the final capture.
 
 ## Editing & Styling
-* 🔍 **Smart Zooms**
+
+- 🔍 **Smart Zooms**
   Automatically zoom in around clicks and keyboard actions, or add your own zooms with keyframes.
-* 🖱️ **Cursor Smoothing & Styling**
+- 🖱️ **Cursor Smoothing & Styling**
   Get clean, fluid cursor movement with native high-precision tracking. Adjust the size, swap the cursor style, add click effects, or smooth out shaky movement.
-* 📝 **Local AI Captions**
+- 📝 **Local AI Captions**
   Generate subtitles directly on your device using Whisper. No cloud uploads, API keys, or extra subscriptions.
-* 🎨 **Canvas Backdrops**
+- 🎨 **Canvas Backdrops**
   Give your recordings a polished look with backgrounds, gradients, padding, shadows, and rounded window corners.
-* ⏱️ **Multi-Track Timeline**
+- ⏱️ **Multi-Track Timeline**
   Edit video, audio, and subtitles independently with precise scrubbing, snapping, and non-destructive editing.
 
 ## Performance & Export
-* 🦀 **Rust Capture Engine**
+
+- 🦀 **Rust Capture Engine**
   A lightweight native capture engine built for smooth 60 fps recording without putting unnecessary load on your CPU or GPU.
-* 📦 **Direct Export**
+- 📦 **Direct Export**
   Export straight to MP4 or WebM, up to 4K, with simple bitrate presets and fast rendering.
 
 Have ideas or feature requests? Open an issue or join the discussion on [Discord](https://discord.gg/6Q6v2xUCB).

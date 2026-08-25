@@ -1,12 +1,17 @@
 import type { CameraFramingPreset, CameraLayoutPreset } from './camera-layout-types';
+import type { CaptionHighlightStyle } from './caption-highlight-types';
+import type { CaptionShapeStyle } from './caption-shape-types';
+import type { ColorFill, PhoneFrameFill } from './color-fill-types';
+import type { ColorLayerStyle } from './color-layer-style-types';
+import type { ShapeLayerStyle } from './shape-layer-types';
 
-export const COMPOSITION_SCHEMA_VERSION = 11 as const;
+export const COMPOSITION_SCHEMA_VERSION = 13 as const;
 export const SCREEN_CLIP_ID = 'screen';
 
 export type MediaKind = 'video' | 'image' | 'audio';
 export type BlurEffectShape = 'rectangle' | 'square' | 'circle';
 export type BlurEffectMode = 'blur' | 'frosted' | 'pixelated' | 'opaque';
-export type ClipKind = 'screen' | 'video' | 'image' | 'webcam' | 'blur' | 'audio' | 'caption';
+export type ClipKind = 'screen' | 'video' | 'image' | 'webcam' | 'color' | 'shape' | 'blur' | 'audio' | 'caption';
 export type AudioRole = 'system' | 'microphone' | 'imported';
 
 export type TransitionPreset =
@@ -76,11 +81,12 @@ export interface CaptionStyle {
   shadowDirection?: 'all' | 'bottom' | 'bottom-right' | 'top-left';
   shadowOffsetX?: number;
   shadowOffsetY?: number;
-  backdropBlur: number;
+  shape: CaptionShapeStyle;
   outlineColor: string;
   outlineWidth: number;
   extrusionDepth: number;
   placement: 'top' | 'center' | 'bottom';
+  wordHighlight: CaptionHighlightStyle;
   customText?: string;
 }
 
@@ -132,9 +138,10 @@ export interface ClipAppearance extends WebcamAppearance {
   frameShowMenu: boolean;
   frameShowScrollbars: boolean;
   frameChromeScale: number;
+  phoneFrameFill?: PhoneFrameFill;
 }
 
-export type ClipFrame = 'none' | 'safari' | 'windows-95';
+export type ClipFrame = 'none' | 'safari' | 'windows-95' | 'iphone-16-max' | 'pixel-9-pro';
 
 export interface MediaAsset {
   id: string;
@@ -207,6 +214,31 @@ export interface BlurClip extends ClipBase {
   color: string;
 }
 
+export interface ColorClip extends ClipBase {
+  kind: 'color';
+  /** Kept empty because generated color clips have no media asset. */
+  assetId: string;
+  transform: NormalizedTransform;
+  fill: ColorFill;
+  /** Optional for color layers saved before appearance controls were introduced. */
+  opacityEnabled?: ColorLayerStyle['opacityEnabled'];
+  opacity?: ColorLayerStyle['opacity'];
+  cornerRadius?: ColorLayerStyle['cornerRadius'];
+  shadowSize?: ColorLayerStyle['shadowSize'];
+  shadowBlur?: ColorLayerStyle['shadowBlur'];
+  shadowMode?: ColorLayerStyle['shadowMode'];
+  shadowColor?: ColorLayerStyle['shadowColor'];
+  shadowDirection?: ColorLayerStyle['shadowDirection'];
+  backdropBlurEnabled?: ColorLayerStyle['backdropBlurEnabled'];
+  backdropBlur?: ColorLayerStyle['backdropBlur'];
+}
+
+export interface ShapeClip extends ClipBase, ShapeLayerStyle {
+  kind: 'shape';
+  assetId: string;
+  transform: NormalizedTransform;
+}
+
 export interface AudioClip extends ClipBase {
   kind: 'audio';
   assetId: string;
@@ -217,11 +249,13 @@ export interface AudioClip extends ClipBase {
 export interface CaptionClip extends ClipBase {
   kind: 'caption';
   caption: CaptionData;
+  /** Captions sharing this identity render and reorder on one logical text layer. */
+  captionLayerId?: string;
   transform?: NormalizedTransform;
   isAiGenerated?: boolean;
 }
 
-export type Clip = VisualClip | BlurClip | AudioClip | CaptionClip;
+export type Clip = VisualClip | ColorClip | ShapeClip | BlurClip | AudioClip | CaptionClip;
 
 export interface ClipComposition {
   schemaVersion: number;
@@ -244,7 +278,10 @@ export const isVisualClip = (clip: Clip): clip is VisualClip =>
   clip.kind === 'screen' || clip.kind === 'video' || clip.kind === 'image' || clip.kind === 'webcam';
 
 export const isBlurClip = (clip: Clip): clip is BlurClip => clip.kind === 'blur';
-export const isCompositingClip = (clip: Clip): clip is VisualClip | BlurClip => isVisualClip(clip) || isBlurClip(clip);
+export const isColorClip = (clip: Clip): clip is ColorClip => clip.kind === 'color';
+export const isShapeClip = (clip: Clip): clip is ShapeClip => clip.kind === 'shape';
+export const isCompositingClip = (clip: Clip): clip is VisualClip | ColorClip | ShapeClip | BlurClip =>
+  isVisualClip(clip) || isColorClip(clip) || isShapeClip(clip) || isBlurClip(clip);
 
 export const isAudioClip = (clip: Clip): clip is AudioClip => clip.kind === 'audio';
 export const isCaptionClip = (clip: Clip): clip is CaptionClip => clip.kind === 'caption';
@@ -252,6 +289,13 @@ export const isTextCaptionClip = (clip: Clip): clip is CaptionClip & { caption: 
   clip.kind === 'caption' && clip.caption.type === 'text';
 export const isKeyboardCaptionClip = (clip: Clip): clip is CaptionClip & { caption: KeyboardCaptionData } =>
   clip.kind === 'caption' && clip.caption.type === 'keyboard';
+
+export const captionLayerKey = (clip: CaptionClip): string =>
+  clip.captionLayerId
+    ? `caption-layer:${clip.captionLayerId}`
+    : clip.isAiGenerated
+      ? 'caption-layer:legacy-ai'
+      : `caption-clip:${clip.id}`;
 
 export const getCaptionTransform = (clip: CaptionClip): NormalizedTransform => {
   if (clip.transform) return clip.transform;

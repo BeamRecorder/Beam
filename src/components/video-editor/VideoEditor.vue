@@ -4,6 +4,10 @@ import type { CaptureProject, ProjectEditorData } from '~/api/types/capture-api'
 import SidebarPanel from '~/components/video-editor/sidebar/SidebarPanel.vue';
 import PropertiesPanel from '~/components/video-editor/properties/PropertiesPanel.vue';
 import EditorCanvas from '~/components/video-editor/canvas/EditorCanvas.vue';
+import type {
+  CaptionInlineEditingEnd,
+  CaptionInlineTextUpdate,
+} from '~/components/video-editor/canvas/caption-inline-editing';
 import CanvasToolbar from '~/components/video-editor/canvas/CanvasToolbar.vue';
 import EditorTimeline from '~/components/video-editor/timeline/EditorTimeline.vue';
 import TimelineToolbar from '~/components/video-editor/timeline/TimelineToolbar.vue';
@@ -29,7 +33,10 @@ import {
 import {
   isAudioClip,
   isBlurClip,
+  isColorClip,
+  isShapeClip,
   isCaptionClip,
+  isTextCaptionClip,
   isVisualClip,
   type NormalizedCrop,
   type NormalizedTransform,
@@ -42,6 +49,8 @@ import {
 import type { CursorSelection } from '~/api/types/cursor-pack';
 import { pasteClipAt } from '~/components/video-editor/composition/engine/clip-paste';
 import type { TimelinePasteRequest } from '~/components/video-editor/timeline/composables/timeline-clipboard-types';
+import type { TrackZoomSelection } from '~/components/video-editor/timeline/composables/timeline-tracks-types';
+import type { AddVisualElementRequest } from './composition/visual-element-types';
 import { useTimelineClipboardFeedback } from '~/components/video-editor/timeline/composables/useTimelineClipboardFeedback';
 import { EMPTY_CLIP_TRANSITIONS } from '~/media/shared/clip-transitions';
 import { usePreviewPerformanceMonitor } from './performance/usePreviewPerformanceMonitor';
@@ -121,6 +130,7 @@ const {
   shadowColor,
   shadowDirection,
   clickEffects,
+  autoHide: cursorAutoHide,
 } = cursor;
 const renderedBackground = computed(() => (outputCanvas.value.showBackground ? selectedBackgroundMedia.value : null));
 const {
@@ -139,12 +149,14 @@ const {
   addElement,
   addImportedAsset,
   addCaptionAtTime,
+  addVisualElementAtTime,
   updateCaption,
   trimClipEdge,
   moveClipTo,
   splitSelectedClip,
   holdClip,
   reorderVisualClip,
+  reorderCaptionClip,
   updateSelectedAppearance,
   updateSelectedTransform,
   updateSelectedBlur,
@@ -178,9 +190,11 @@ usePlaybackErrorToast(playbackError, t, () => ({
 const {
   zoomElements,
   selectedZoomId,
+  selectedZoomIds,
   selectedZoom,
   canGenerateZooms,
   hasAutomaticZooms,
+  selectZooms,
   addZoomAtTime,
   generateZooms,
   updateZoom,
@@ -205,6 +219,7 @@ const timelineCanvasPreview = ref<OutputCanvasSettings | null>(null);
 const captionCompositionPreview = ref<typeof composition.value | null>(null);
 const cursorPreview = ref<CursorSelection | null>(null);
 const transformHandlesMuted = ref(false);
+const isInlineCaptionEditing = ref(false);
 const canvasComposition = computed(
   () => captionCompositionPreview.value ?? timelineCompositionPreview.value ?? composition.value,
 );
@@ -212,11 +227,17 @@ const renderedOutputCanvas = computed(() => timelineCanvasPreview.value ?? outpu
 const selectedTransformClip = computed(() => {
   if (selectedClipIds.value.length !== 1) return null;
   const clip = selectedClip.value;
-  return clip && (isVisualClip(clip) || isBlurClip(clip) || isCaptionClip(clip)) ? clip : null;
+  return clip &&
+    (isVisualClip(clip) || isColorClip(clip) || isShapeClip(clip) || isBlurClip(clip) || isCaptionClip(clip))
+    ? clip
+    : null;
 });
 
-const addTimelineElement = (kind: 'video' | 'image' | 'sound' | 'caption' | 'blur') => {
+const addTimelineElement = (kind: 'video' | 'image' | 'sound' | 'caption' | 'color' | 'shape' | 'blur') => {
   void addElement(kind).catch(() => console.error('Unable to add media.'));
+};
+const addTimelineVisualElement = (request: AddVisualElementRequest) => {
+  void addVisualElementAtTime(request).catch((error) => console.error('Unable to add timeline element.', error));
 };
 const selectEditorClip = (clipId: string) => {
   selectedZoomId.value = null;
@@ -233,8 +254,15 @@ const selectEditorTrack = (selection: { clipIds: string[]; primaryClipId: string
 };
 const selectEditorZoom = (zoomId: string) => {
   selectedClipId.value = null;
-  selectedZoomId.value = zoomId;
-  activeTab.value = 'zoom';
+  selectZooms([zoomId], zoomId);
+};
+const selectEditorZoomTrack = (selection: TrackZoomSelection) => {
+  selectedClipId.value = null;
+  isCropping.value = false;
+  selectZooms(
+    selection.additive ? [...selectedZoomIds.value, ...selection.zoomIds] : selection.zoomIds,
+    selection.primaryZoomId,
+  );
 };
 const selectEditorCanvas = () => {
   selectedClipId.value = null;
@@ -271,6 +299,18 @@ watch([() => selectedCaptionClip.value?.id, activeTab], () => {
 const commitCaption = (clip: Parameters<typeof updateCaption>[0]) => {
   captionCompositionPreview.value = null;
   updateCaption(clip);
+};
+const updateInlineCaptionText = ({ clipId, customText }: CaptionInlineTextUpdate) => {
+  const clip = composition.value.clips.find((candidate) => candidate.id === clipId);
+  if (!clip || !isTextCaptionClip(clip)) return;
+  if (selectedClipId.value !== clipId || selectedClipIds.value.length !== 1) selectEditorClip(clipId);
+  commitCaption({
+    ...clip,
+    caption: {
+      ...clip.caption,
+      style: { ...clip.caption.style, customText },
+    },
+  });
 };
 const deleteAudioRole = (role: 'system' | 'microphone') => {
   requestClipDeletion(
@@ -314,6 +354,16 @@ const {
     await editorState.saveNow();
   },
 });
+const beginInlineCaptionEditing = () => {
+  if (isInlineCaptionEditing.value) return;
+  isInlineCaptionEditing.value = true;
+  commitNow(createEditorSnapshot());
+};
+const endInlineCaptionEditing = ({ cancelled }: CaptionInlineEditingEnd) => {
+  if (!isInlineCaptionEditing.value) return;
+  isInlineCaptionEditing.value = false;
+  if (!cancelled) commitNow(createEditorSnapshot());
+};
 
 const {
   recentPaste,
@@ -404,7 +454,8 @@ watch(
 watch(
   composition,
   () => {
-    if (historyInitialized && !editorState.loading.value) recordSnapshot(createEditorSnapshot, 300);
+    if (historyInitialized && !editorState.loading.value && !isInlineCaptionEditing.value)
+      recordSnapshot(createEditorSnapshot, 300);
   },
   { deep: true },
 );
@@ -505,6 +556,7 @@ onBeforeUnmount(() => {
     />
     <Topbar
       :export-request="exportRequest"
+      :playhead-seconds="currentTime"
       :project="project"
       :is-saving="editorState.isSaving.value"
       :can-undo="canUndo"
@@ -528,6 +580,7 @@ onBeforeUnmount(() => {
           :selected-clip="selectedClipInfo"
           :selected-caption-clip="selectedCaptionClip"
           :selected-clip-ids="selectedClipIds"
+          :selected-zoom-ids="selectedZoomIds"
           v-model:cursor-selection="cursorSelection"
           :cursor-packs="cursorPacks"
           @preview:cursor-selection="cursorPreview = $event"
@@ -539,6 +592,7 @@ onBeforeUnmount(() => {
           v-model:shadow-direction="shadowDirection"
           v-model:click-effects="clickEffects"
           v-model:motion="cursorMotion"
+          v-model:auto-hide="cursorAutoHide"
           v-model:volume="volume"
           v-model:system-volume="systemVolume"
           v-model:mic-volume="micVolume"
@@ -643,6 +697,7 @@ onBeforeUnmount(() => {
             :shadow-direction="shadowDirection"
             :click-effects="clickEffects"
             :motion="cursorMotion"
+            :auto-hide="cursorAutoHide"
             :selected-background="renderedBackground"
             :background-blur-percent="backgroundBlurPercent"
             :frame-for="player.frameFor"
@@ -670,6 +725,9 @@ onBeforeUnmount(() => {
             @deselect:transform-clip="deselectTransformClip"
             @update:clip-transform="commitSelectedTransform"
             @update:clip-crop="commitSelectedCrop"
+            @update:caption-text="updateInlineCaptionText"
+            @caption-editing-start="beginInlineCaptionEditing"
+            @caption-editing-end="endInlineCaptionEditing"
             @done:crop="isCropping = false"
             @deselect:zoom="selectedZoomId = null"
           />
@@ -712,12 +770,14 @@ onBeforeUnmount(() => {
           :zoom-elements="zoomElements"
           :new-zoom-duration-ms="newZoomDurationMs"
           :selected-zoom-id="selectedZoomId"
+          :selected-zoom-ids="selectedZoomIds"
           :composition="composition"
           :selected-clip-id="selectedClipId"
           :selected-clip-ids="selectedClipIds"
           :recent-paste="recentPaste"
           :canvas="outputCanvas"
           @select:zoom="selectEditorZoom"
+          @select:zoom-track="selectEditorZoomTrack"
           @select:clip="selectEditorClip"
           @select:track="selectEditorTrack"
           @toggle:clip="toggleClip"
@@ -731,7 +791,9 @@ onBeforeUnmount(() => {
           @move:zoom="moveZoom($event.id, $event.startMs, $event.endMs)"
           @add:zoom="addZoomAtTime"
           @add:caption="addCaptionAtTime"
+          @add:visual-element="addTimelineVisualElement"
           @reorder:clip="reorderVisualClip($event.id, $event.targetIndex)"
+          @reorder:caption="reorderCaptionClip($event.id, $event.targetIndex)"
           @paste:item="pasteTimelineItem"
           @paste:error="reportTimelinePasteError"
           @clipboard:copied="reportTimelineCopySuccess"

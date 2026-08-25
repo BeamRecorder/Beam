@@ -1,6 +1,6 @@
-import { ref, shallowRef, watchEffect } from 'vue';
+import { ref, shallowRef } from 'vue';
 import type { ProjectEditorData } from '~/api/types/capture-session';
-import { buttonEventsBetween, cursorStateAt } from '../../composables/cursorPlayback';
+import { buttonEventsBetween, cursorAutoHideOpacityAt, cursorStateAt } from '../../composables/cursorPlayback';
 import { useCursorReplacer } from '../../properties/cursor/useCursorReplacer';
 import { ZOOM_DEPTH_SCALES } from '../../zoom/zoom-types';
 import { cursorClickSpringScale } from '../../composables/cursor-click-spring';
@@ -22,6 +22,7 @@ import {
   effectButtonForRecordedButton,
   type CursorClickEffectSettings,
   type CursorClickEffects,
+  type CursorAutoHideSettings,
   type CursorMotionSettings,
 } from '../../../../api/types/cursor-settings';
 import type { OutputCanvasSettings } from '../output-canvas';
@@ -38,6 +39,7 @@ export interface UseCursorOverlayOptions {
   enableShadow: () => boolean;
   clickEffects: () => CursorClickEffects;
   motion: () => CursorMotionSettings;
+  autoHide: () => CursorAutoHideSettings;
   shadowBlur: () => number;
   shadowColor: () => string;
   shadowDirection: () => ShadowDirection;
@@ -99,25 +101,16 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
     return mappedTime !== null && Number.isFinite(mappedTime) ? mappedTime / 1_000 : timelineTime;
   };
 
-  watchEffect(async () => {
-    let requestId = imageRequestId;
+  const loadCursorImage = async (
+    requestId: number,
+    key: string,
+    pack: CursorPackDescriptor,
+    asset: ReturnType<typeof cursorAssetAt>,
+    width: number,
+    height: number,
+  ) => {
     try {
-      const cursorData = options.editorData()?.cursor;
-      const state = cursorStateAt(cursorData?.events ?? [], cursorTime());
-      const selectedPack = options.cursorPack();
-      const pack = selectedPack ?? MACOS_CURSOR_PACK;
-      const selection = selectedPack
-        ? options.cursorSelection()
-        : { packId: MACOS_CURSOR_PACK.id, mode: 'automatic' as const, cursorId: null };
-      const asset = cursorAssetAt(pack, selection, state);
-      const geometry = cursorGeometryAtSize(asset, CURSOR_SIZE_MAX * maxZoomScale * options.deviceScale());
-      const tint = cursorAssetSupportsTint(pack, asset) ? options.cursorColor() : 'original';
-      const key = `${pack.id}:${asset.id}:${asset.format ?? 'svg'}:${asset.url}:${Math.ceil(geometry.width)}x${Math.ceil(geometry.height)}:${tint}`;
-      if (key === imageRequestKey) return;
-      imageRequestKey = key;
-      requestId = ++imageRequestId;
-      options.onRenderOnce?.();
-      const image = await getCursorImage(pack, asset, geometry.width, geometry.height, options.cursorColor());
+      const image = await getCursorImage(pack, asset, width, height, options.cursorColor());
       if (requestId !== imageRequestId) return;
       customCursorImage.value = image;
       loadedImageKey = key;
@@ -129,7 +122,23 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
       loadedImageKey = '';
       options.onRenderOnce?.();
     }
-  });
+  };
+  const ensureCursorImage = (state: ReturnType<typeof cursorStateAt>) => {
+    const selectedPack = options.cursorPack();
+    const pack = selectedPack ?? MACOS_CURSOR_PACK;
+    const selection = selectedPack
+      ? options.cursorSelection()
+      : { packId: MACOS_CURSOR_PACK.id, mode: 'automatic' as const, cursorId: null };
+    const asset = cursorAssetAt(pack, selection, state);
+    const geometry = cursorGeometryAtSize(asset, CURSOR_SIZE_MAX * maxZoomScale * options.deviceScale());
+    const tint = cursorAssetSupportsTint(pack, asset) ? options.cursorColor() : 'original';
+    const key = `${pack.id}:${asset.id}:${asset.format ?? 'svg'}:${asset.url}:${Math.ceil(geometry.width)}x${Math.ceil(geometry.height)}:${tint}`;
+    if (key === imageRequestKey) return;
+    imageRequestKey = key;
+    const requestId = ++imageRequestId;
+    options.onRenderOnce?.();
+    void loadCursorImage(requestId, key, pack, asset, geometry.width, geometry.height);
+  };
 
   const activeCursorImage = () => (loadedImageKey === imageRequestKey ? customCursorImage.value : null);
 
@@ -234,6 +243,7 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
     const time = cursorTime();
     const screenTransition = resolveClipTransitionState(screen, options.currentTime() * 1_000);
     const state = cursorStateAt(cursorData.events, time);
+    ensureCursorImage(state);
     const { player, motion: motionState } = motionStateAt(cursorData.events, time, videoWidth, videoHeight, state);
     drawInCameraSpace(() =>
       drawWithClipTransition(
@@ -274,7 +284,8 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
             }
           }
           const image = activeCursorImage();
-          if (!state?.visible || !image?.complete || image.naturalWidth <= 0 || !motionState) {
+          const autoHideOpacity = cursorAutoHideOpacityAt(cursorData.events, time, options.autoHide());
+          if (!state?.visible || autoHideOpacity <= 0 || !image?.complete || image.naturalWidth <= 0 || !motionState) {
             updateCursorBounds(null);
             return;
           }
@@ -313,7 +324,7 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
             const sampleState = { ...motionState, x: sample.x, y: sample.y };
             const samplePosition = positionAt(sampleState, videoWindow, videoWidth, videoHeight);
             ctx.save();
-            ctx.globalAlpha *= sample.alpha;
+            ctx.globalAlpha *= sample.alpha * autoHideOpacity;
             if (options.enableShadow()) {
               ctx.shadowColor = options.shadowColor();
               const shadowBlur = options.shadowBlur() * previewScale;

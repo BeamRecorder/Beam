@@ -371,7 +371,11 @@ function initializeApplication() {
       platform: process.platform,
     });
     const countdownOverlay = createCountdownWindow(lifecycleOptions);
-    const screenRegionOverlay = createScreenRegionOverlayWindow(lifecycleOptions);
+    const screenRegionOverlay = createScreenRegionOverlayWindow({
+      ...lifecycleOptions,
+      platform: process.platform,
+      screen,
+    });
     applicationIpc.on('camera-overlay:configure', (_event, state) => cameraOverlay.configure(state));
     applicationIpc.on('camera-overlay:set-active', (_event, active) => cameraOverlay.setActive(active));
     applicationIpc.on('camera-overlay:reset-placement', () => cameraOverlay.resetPlacement());
@@ -385,7 +389,9 @@ function initializeApplication() {
       // the native start gate admits the first recorded frame.
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
-    applicationIpc.handle('screen-region:select', (_event, options) => screenRegionOverlay.select(options));
+    applicationIpc.handle('screen-region:select', (event, options) =>
+      screenRegionOverlay.select(options, BrowserWindow.fromWebContents(event.sender)),
+    );
     applicationIpc.on('screen-region:show', (_event, options) => screenRegionOverlay.show(options));
     applicationIpc.on('screen-region:hide', () => screenRegionOverlay.hide());
     applicationIpc.on('screen-region:confirm', (_event, region) => screenRegionOverlay.confirm(region));
@@ -448,6 +454,7 @@ function initializeApplication() {
       preferencesStore,
       appIconPath,
       initialDark: selectedTheme === 'dark' || (selectedTheme === 'system' && nativeTheme.shouldUseDarkColors),
+      resolveSystemDark: () => nativeTheme.shouldUseDarkColors,
       cleanupWindow: (contents) => {
         exportIpc.cleanupWindow(contents);
         cameraStorage.cleanupOwner(contents.id);

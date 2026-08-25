@@ -30,7 +30,7 @@ describe('zoom motion-blur sample plan', () => {
         intensity: 0.8,
         deltaMs: 16,
       }),
-    ).toEqual([{ camera: current, weight: 1 }]);
+    ).toEqual([{ camera: { ...current, tiltX: 0, tiltY: 0 }, weight: 1 }]);
 
     expect(
       createZoomMotionBlurSamplePlan({
@@ -40,7 +40,7 @@ describe('zoom motion-blur sample plan', () => {
         intensity: 0,
         deltaMs: 16,
       }),
-    ).toEqual([{ camera: camera(0.45, 0.55, 1.4), weight: 1 }]);
+    ).toEqual([{ camera: { ...camera(0.45, 0.55, 1.4), tiltX: 0, tiltY: 0 }, weight: 1 }]);
   });
 
   it('creates a symmetric moving-camera kernel with normalized weights', () => {
@@ -59,6 +59,54 @@ describe('zoom motion-blur sample plan', () => {
     expect(samples[0]?.camera).not.toEqual(samples.at(-1)?.camera);
   });
 
+  it('samples tilt-only movement and interpolates both perspective axes', () => {
+    const samples = createZoomMotionBlurSamplePlan({
+      previous: { ...camera(0.5, 0.5, 1), tiltX: -0.2, tiltY: 0.4 },
+      current: { ...camera(0.5, 0.5, 1), tiltX: 0.2, tiltY: -0.4 },
+      center: camera(0.5, 0.5, 1),
+      intensity: 1,
+      deltaMs: 16,
+      sampleCount: 3,
+    });
+
+    expect(samples).toHaveLength(3);
+    expect(samples[0]?.camera.tiltX).toBeCloseTo(-0.2, 12);
+    expect(samples[0]?.camera.tiltY).toBeCloseTo(0.4, 12);
+    expect(samples[1]?.camera.tiltX).toBeCloseTo(0, 12);
+    expect(samples[1]?.camera.tiltY).toBeCloseTo(0, 12);
+    expect(samples[2]?.camera.tiltX).toBeCloseTo(0.2, 12);
+    expect(samples[2]?.camera.tiltY).toBeCloseTo(-0.4, 12);
+  });
+
+  it('keeps visible tilt-only movement above the viewport travel gate', () => {
+    const samples = createZoomMotionBlurSamplePlan({
+      previous: { ...camera(0.5, 0.5, 1), tiltX: -0.01, tiltY: 0 },
+      current: { ...camera(0.5, 0.5, 1), tiltX: 0.01, tiltY: 0 },
+      intensity: 1,
+      deltaMs: 16,
+      viewportWidth: 1_920,
+      viewportHeight: 1_080,
+    });
+
+    expect(samples).toHaveLength(3);
+  });
+
+  it('sanitizes non-finite tilt values in blur samples', () => {
+    const samples = createZoomMotionBlurSamplePlan({
+      previous: { ...camera(0.5, 0.5, 1), tiltX: Number.POSITIVE_INFINITY, tiltY: Number.NaN },
+      current: { ...camera(0.5, 0.5, 1), tiltX: Number.NaN, tiltY: Number.NEGATIVE_INFINITY },
+      intensity: 1,
+      deltaMs: 16,
+      sampleCount: 3,
+    });
+
+    expect(
+      samples.every(({ camera: sample }) =>
+        [sample.focusX, sample.focusY, sample.scale, sample.tiltX, sample.tiltY].every(Number.isFinite),
+      ),
+    ).toBe(true);
+  });
+
   it.each([
     ['sub-pixel', 0.5002, 1],
     ['medium', 0.502, 3],
@@ -72,7 +120,7 @@ describe('zoom motion-blur sample plan', () => {
   it('keeps disabled motion blur at one sample even for large pixel movement', () => {
     const samples = planForPixelMovement(0.5, 0.6, 0);
 
-    expect(samples).toEqual([{ camera: camera(0.6, 0.5, 1), weight: 1 }]);
+    expect(samples).toEqual([{ camera: { ...camera(0.6, 0.5, 1), tiltX: 0, tiltY: 0 }, weight: 1 }]);
   });
 
   it('reuses one 2D context when compositing multiple samples into the same surface', () => {

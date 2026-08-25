@@ -4,17 +4,22 @@ import {
   createComposition,
   HOLD_SEGMENT_DURATION_MS,
   holdClipAtPlayhead,
+  reorderClip,
   setCameraFraming,
   setCameraLayout,
   setCameraSplitRatio,
   setCameraSplitPadding,
+  setColorFill,
   setCrop,
   setTransform,
+  trimClip,
   splitClip,
 } from './clip-engine';
-import type { AudioClip, ClipComposition, MediaAsset, VisualClip } from '~/media/shared/composition-types';
+import type { AudioClip, ClipComposition, ColorClip, MediaAsset, VisualClip } from '~/media/shared/composition-types';
+import type { PhoneFrameFill } from '~/media/shared/color-fill-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import { sourceTimeAt } from '~/media/shared/timeline-mapping';
+import { validateComposition } from './clip-composition-validation';
 
 const videoAsset = (id: string, kind: MediaAsset['kind'] = 'video'): MediaAsset => ({
   id,
@@ -83,6 +88,25 @@ const audio = (assetId: string): AudioClip => ({
   groupId: 'recording-segment',
 });
 
+const color = (id: string, order = 1, overrides: Partial<ColorClip> = {}): ColorClip => ({
+  id,
+  kind: 'color',
+  assetId: '',
+  name: id,
+  trackId: `${id}-track`,
+  timelineStartMs: 0,
+  timelineDurationMs: 3_000,
+  sourceInMs: 0,
+  sourceDurationMs: 3_000,
+  playbackRate: 1,
+  transitions: { entry: null, exit: null },
+  enabled: true,
+  order,
+  transform: { x: 0, y: 0, width: 1, height: 1 },
+  fill: { kind: 'color', color: '#111827' },
+  ...overrides,
+});
+
 const compositionFixture = (): ClipComposition => {
   const assets = [videoAsset('screen-asset'), videoAsset('camera-asset'), videoAsset('audio-asset', 'audio')];
   return createComposition(assets, [
@@ -134,6 +158,135 @@ const visualPresetComposition = (): ClipComposition =>
       }),
     ],
   );
+
+describe('color layer engine operations', () => {
+  it('updates a color fill, reorders the layer, trims it, and splits it', () => {
+    const initial = createComposition(
+      [videoAsset('background-asset'), videoAsset('foreground-asset')],
+      [
+        visual('background', 'video', 'background-asset', { order: 0, trackId: 'background-track' }),
+        color('color', 1),
+        visual('foreground', 'image', 'foreground-asset', { order: 2, trackId: 'foreground-track' }),
+      ],
+    );
+    const gradient = {
+      kind: 'gradient' as const,
+      gradient: {
+        type: 'radial' as const,
+        angle: 0,
+        stops: [
+          { id: 'start', position: 0, color: '#ffffff', alpha: 1 },
+          { id: 'end', position: 1, color: '#000000', alpha: 0.5 },
+        ],
+      },
+    };
+
+    const filled = setColorFill(initial, 'color', gradient);
+    expect(filled.clips.find((clip) => clip.id === 'color')).toMatchObject({ fill: gradient });
+
+    const reordered = reorderClip(filled, 'color', 2);
+    const reorderedColor = reordered.clips.find((clip): clip is ColorClip => clip.id === 'color')!;
+    expect(reorderedColor.order).toBeGreaterThan(reordered.clips.find((clip) => clip.id === 'background')!.order);
+    expect(reorderedColor.order).toBeGreaterThan(reordered.clips.find((clip) => clip.id === 'foreground')!.order);
+
+    const trimmed = trimClip(reordered, 'color', 'start', 500);
+    expect(trimmed.clips.find((clip) => clip.id === 'color')).toMatchObject({
+      timelineStartMs: 500,
+      timelineDurationMs: 2_500,
+      sourceInMs: 500,
+      sourceDurationMs: 2_500,
+    });
+
+    const split = splitClip(trimmed, 'color', 1_500, () => 'color-right');
+    expect(split.clips.filter((clip) => clip.kind === 'color')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'color',
+          timelineStartMs: 500,
+          timelineDurationMs: 1_000,
+          sourceInMs: 500,
+          sourceDurationMs: 1_000,
+          order: reorderedColor.order,
+        }),
+        expect.objectContaining({
+          id: 'color-right',
+          trackId: 'color-track',
+          timelineStartMs: 1_500,
+          timelineDurationMs: 1_500,
+          sourceInMs: 1_500,
+          sourceDurationMs: 1_500,
+          order: reorderedColor.order,
+          fill: gradient,
+        }),
+      ]),
+    );
+  });
+});
+
+describe('phone frame fill validation', () => {
+  const validFills: Array<[string, PhoneFrameFill]> = [
+    ['color', { kind: 'color', color: '#0f172a' }],
+    [
+      'gradient',
+      {
+        kind: 'gradient',
+        gradient: {
+          type: 'radial',
+          angle: 225,
+          stops: [
+            { id: 'start', position: 0, color: '#0f172a', alpha: 1 },
+            { id: 'end', position: 1, color: '#6366f1', alpha: 0.8 },
+          ],
+        },
+      },
+    ],
+    ['adaptive', { kind: 'adaptive' }],
+    ['continuity', { kind: 'continuity', blur: 32, brightness: 72 }],
+  ];
+
+  it.each(validFills)('accepts a %s phone frame fill', (_kind, phoneFrameFill) => {
+    const composition = visualPresetComposition();
+    const clip = composition.clips.find((entry): entry is VisualClip => entry.id === 'video-clip')!;
+    clip.appearance = { ...clip.appearance, frame: 'iphone-16-max', phoneFrameFill };
+
+    expect(() => validateComposition(composition)).not.toThrow();
+  });
+
+  it('rejects an invalid phone frame fill', () => {
+    const composition = visualPresetComposition();
+    const clip = composition.clips.find((entry): entry is VisualClip => entry.id === 'video-clip')!;
+    clip.appearance = {
+      ...clip.appearance,
+      frame: 'pixel-9-pro',
+      phoneFrameFill: {
+        kind: 'gradient',
+        gradient: { type: 'radial', angle: 0, stops: [] },
+      } as unknown as PhoneFrameFill,
+    };
+
+    expect(() => validateComposition(composition)).toThrowError(
+      new CompositionEngineError('Invalid phone frame fill.'),
+    );
+  });
+
+  it.each([
+    { kind: 'continuity', blur: -1, brightness: 72 },
+    { kind: 'continuity', blur: 32, brightness: 101 },
+    { kind: 'continuity', blur: Number.NaN, brightness: 72 },
+  ] as const)('rejects invalid continuity settings: %o', (phoneFrameFill) => {
+    const composition = visualPresetComposition();
+    const clip = composition.clips.find((entry): entry is VisualClip => entry.id === 'video-clip')!;
+    clip.appearance = {
+      ...clip.appearance,
+      frame: 'iphone-16-max',
+      phoneFrameFill: phoneFrameFill as unknown as PhoneFrameFill,
+    };
+
+    expect(() => validateComposition(composition)).toThrowError(
+      new CompositionEngineError('Invalid phone frame fill.'),
+    );
+  });
+});
 
 describe('camera layout engine operations', () => {
   it.each([
@@ -256,6 +409,66 @@ describe('camera layout engine operations', () => {
     expect(camera.cameraFramingPreset).toBe('circle');
     expect(next.clips.find((clip) => clip.id === 'screen')).toEqual(before.find(({ id }) => id === 'screen')?.clip);
     expect(next.clips.find((clip) => clip.id === 'audio')).toEqual(before.find(({ id }) => id === 'audio')?.clip);
+  });
+
+  it('keeps a webcam framing preset and custom size when its position is moved manually', () => {
+    const customTransform = { x: 0.23, y: 0.18, width: 0.41, height: 0.29 };
+    const composition = createComposition(
+      [videoAsset('screen-asset'), videoAsset('camera-asset')],
+      [
+        visual('screen', 'screen', 'screen-asset', { trackId: 'screen-track' }),
+        visual('camera', 'webcam', 'camera-asset', {
+          trackId: 'camera-track',
+          transform: customTransform,
+          cameraLayoutPreset: 'custom',
+          cameraFramingPreset: 'circle',
+        }),
+      ],
+    );
+    const movedTransform = { ...customTransform, x: 0.12, y: 0.34 };
+
+    const moved = setTransform(composition, 'camera', movedTransform);
+    const camera = moved.clips.find((clip): clip is VisualClip => clip.id === 'camera');
+
+    expect(camera).toMatchObject({
+      cameraLayoutPreset: 'custom',
+      cameraFramingPreset: 'circle',
+      transform: movedTransform,
+    });
+  });
+
+  it.each([
+    ['floating-top-left', 0.04, 0.04],
+    ['floating-bottom-right', 0.55, 0.67],
+    ['floating-center', 0.295, 0.355],
+  ] as const)('keeps a custom webcam frame and dimensions when switching to %s', (preset, x, y) => {
+    const customTransform = { x: 0.47, y: 0.32, width: 0.41, height: 0.29 };
+    const crop = { x: 0.1, y: 0.15, width: 0.8, height: 0.7 };
+    const composition = createComposition(
+      [videoAsset('screen-asset'), videoAsset('camera-asset')],
+      [
+        visual('screen', 'screen', 'screen-asset', { trackId: 'screen-track' }),
+        visual('camera', 'webcam', 'camera-asset', {
+          trackId: 'camera-track',
+          transform: customTransform,
+          cameraLayoutPreset: 'floating-bottom-right',
+          cameraFramingPreset: 'circle',
+          crop,
+        }),
+      ],
+    );
+
+    const moved = setCameraLayout(composition, 'camera', preset);
+    const camera = moved.clips.find((clip): clip is VisualClip => clip.id === 'camera');
+
+    expect(camera).toMatchObject({
+      cameraLayoutPreset: preset,
+      cameraFramingPreset: 'circle',
+      crop,
+      transform: { width: customTransform.width, height: customTransform.height },
+    });
+    expect(camera?.transform.x).toBeCloseTo(x);
+    expect(camera?.transform.y).toBeCloseTo(y);
   });
 
   it('adjusts the camera share and complementary screen area for a split', () => {

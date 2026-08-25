@@ -4,7 +4,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import CursorPanel from '../CursorPanel.vue';
 import { MACOS_CURSOR_PACK, orderedCursorPacks } from '../cursor-packs';
 import type { CursorPackDescriptor, CursorSelection } from '~/api/types/cursor-pack';
-import { createDefaultCursorClickEffects, createDefaultCursorMotionSettings } from '~/api/types/cursor-settings';
+import {
+  createDefaultCursorAutoHideSettings,
+  createDefaultCursorClickEffects,
+  createDefaultCursorMotionSettings,
+  type CursorAutoHideSettings,
+} from '~/api/types/cursor-settings';
 import type { CursorClickEffects } from '~/api/types/cursor-settings';
 import { useToastStore } from '~/ui/toast/toastStore';
 
@@ -35,8 +40,10 @@ const Select = {
 };
 
 const BigSlider = {
+  props: ['label', 'modelValue', 'defaultValue', 'min', 'max', 'step'],
   emits: ['update:modelValue'],
-  template: '<button type="button" class="cursor-slider" @click="$emit(\'update:modelValue\', 30)">Slider</button>',
+  template:
+    '<button type="button" class="cursor-slider" :data-label="label" :data-model-value="modelValue" :data-default-value="defaultValue" :data-min="min" :data-max="max" :data-step="step" @click="$emit(\'update:modelValue\', 30)">Slider</button>',
 };
 
 const ColorInput = {
@@ -50,7 +57,7 @@ const Switch = {
   props: ['modelValue'],
   emits: ['update:modelValue'],
   template:
-    '<button type="button" class="cursor-switch" @click="$emit(\'update:modelValue\', !modelValue)">Switch</button>',
+    '<button type="button" class="cursor-switch" :data-model-value="modelValue" @click="$emit(\'update:modelValue\', !modelValue)">Switch</button>',
 };
 
 const ShadowDirectionGroup = {
@@ -130,6 +137,7 @@ const baseProps = (
     cursorColor: string;
     enableShadow: boolean;
     clickEffects: CursorClickEffects;
+    autoHide: CursorAutoHideSettings;
   }> = {},
 ) => ({
   selection: { packId: MACOS_CURSOR_PACK.id, mode: 'automatic' as const, cursorId: null },
@@ -142,6 +150,7 @@ const baseProps = (
   shadowDirection: 'bottom-right' as const,
   motion: createDefaultCursorMotionSettings(),
   clickEffects: createDefaultCursorClickEffects(),
+  autoHide: createDefaultCursorAutoHideSettings(),
   ...overrides,
 });
 
@@ -209,6 +218,45 @@ describe('CursorPanel', () => {
     expect(wrapper.get('#click-effects-advanced-panel').element.closest('.blur-reveal-transition-stub')).not.toBeNull();
     expect(wrapper.get('#click-effects-advanced-panel .click-effects-stub')).toBeDefined();
     expect(wrapper.find('#click-effects-advanced-panel .cursor-select').exists()).toBe(false);
+  });
+
+  it('keeps auto-hide disabled by default and reveals its delay slider only when enabled', async () => {
+    const wrapper = mountPanel();
+
+    expect(wrapper.get('.cursor-switch').attributes('data-model-value')).toBe('false');
+    expect(wrapper.findAll('.cursor-slider').some((slider) => slider.attributes('data-label') === 'Hide after')).toBe(
+      false,
+    );
+
+    await wrapper.get('.cursor-switch').trigger('click');
+    expect(wrapper.emitted('update:autoHide')).toEqual([[{ enabled: true, delaySeconds: 2, fadeDurationMs: 250 }]]);
+
+    await wrapper.setProps({ autoHide: { enabled: true, delaySeconds: 2, fadeDurationMs: 250 } });
+    const delaySlider = wrapper
+      .findAll('.cursor-slider')
+      .find((slider) => slider.attributes('data-label') === 'Hide after');
+    expect(delaySlider).toBeDefined();
+    expect(delaySlider?.attributes('data-model-value')).toBe('2');
+
+    await delaySlider!.trigger('click');
+    expect(wrapper.emitted('update:autoHide')?.at(-1)).toEqual([
+      { enabled: true, delaySeconds: 10, fadeDurationMs: 250 },
+    ]);
+    await wrapper.setProps({ autoHide: { enabled: true, delaySeconds: 10, fadeDurationMs: 250 } });
+
+    const fadeSlider = wrapper
+      .findAll('.cursor-slider')
+      .find((slider) => slider.attributes('data-model-value') === '250');
+    expect(fadeSlider).toBeDefined();
+    expect(fadeSlider?.attributes('data-default-value')).toBe('250');
+    expect(fadeSlider?.attributes('data-min')).toBe('0');
+    expect(fadeSlider?.attributes('data-max')).toBe('1000');
+    expect(fadeSlider?.attributes('data-step')).toBe('50');
+
+    await fadeSlider!.trigger('click');
+    expect(wrapper.emitted('update:autoHide')?.at(-1)).toEqual([
+      { enabled: true, delaySeconds: 10, fadeDurationMs: 30 },
+    ]);
   });
 
   it.each([
@@ -356,6 +404,7 @@ describe('CursorPanel', () => {
     expect(wrapper.emitted('update:shadowDirection')).toContainEqual(['bottom']);
     expect(wrapper.emitted('update:clickEffects')).toContainEqual([createDefaultCursorClickEffects()]);
     expect(wrapper.emitted('update:motion')).toContainEqual([createDefaultCursorMotionSettings()]);
+    expect(wrapper.emitted('update:autoHide')).toContainEqual([createDefaultCursorAutoHideSettings()]);
   });
 
   it('preserves a fixed cursor when the new pack has that role and falls back to automatic otherwise', async () => {

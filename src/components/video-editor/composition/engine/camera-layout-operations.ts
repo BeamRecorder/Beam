@@ -1,8 +1,36 @@
 import { isSplitCameraLayout, type CameraLayoutPreset } from '~/media/shared/camera-layout-types';
-import { isVisualClip, type ClipComposition } from '~/media/shared/composition-types';
+import { isVisualClip, type ClipComposition, type NormalizedTransform } from '~/media/shared/composition-types';
 import { cameraLayoutTransform, linkedScreenTransform } from '../camera-layout';
 import { cameraScreenCanShareGroup, cameraScreenPartner } from '../camera-screen-link';
 import { CompositionEngineError, validateComposition } from './clip-composition-validation';
+
+const FLOATING_MARGIN = 0.04;
+type FloatingCameraLayoutPreset = Extract<CameraLayoutPreset, `floating-${string}`>;
+
+const isFloatingCameraLayout = (preset: CameraLayoutPreset): preset is FloatingCameraLayoutPreset =>
+  preset.startsWith('floating-');
+
+const repositionFloatingCamera = (
+  preset: FloatingCameraLayoutPreset,
+  transform: NormalizedTransform,
+): NormalizedTransform => {
+  const centeredX = (1 - transform.width) / 2;
+  const centeredY = (1 - transform.height) / 2;
+  return {
+    x: preset.endsWith('left')
+      ? FLOATING_MARGIN
+      : preset.endsWith('right')
+        ? 1 - FLOATING_MARGIN - transform.width
+        : centeredX,
+    y: preset.includes('top')
+      ? FLOATING_MARGIN
+      : preset.includes('bottom')
+        ? 1 - FLOATING_MARGIN - transform.height
+        : centeredY,
+    width: transform.width,
+    height: transform.height,
+  };
+};
 
 export function setCameraLayout(
   composition: ClipComposition,
@@ -23,6 +51,11 @@ export function setCameraLayout(
   }
   const splitRatio = camera.cameraSplitRatio ?? 0.5;
   const splitPadding = camera.cameraSplitPadding ?? 0;
+  const floatingPreset = isFloatingCameraLayout(preset) ? preset : null;
+  const preservesWebcamGeometry =
+    camera.kind === 'webcam' &&
+    floatingPreset !== null &&
+    (camera.cameraLayoutPreset === 'custom' || camera.cameraLayoutPreset?.startsWith('floating-'));
   const inferredGroupId =
     isSplitCameraLayout(preset) &&
     linkedScreen &&
@@ -35,10 +68,17 @@ export function setCameraLayout(
       return {
         ...clip,
         ...(inferredGroupId ? { groupId: inferredGroupId } : {}),
-        transform: cameraLayoutTransform(preset, splitRatio, splitPadding),
-        crop: undefined,
+        transform:
+          preservesWebcamGeometry && floatingPreset
+            ? repositionFloatingCamera(floatingPreset, camera.transform)
+            : cameraLayoutTransform(preset, splitRatio, splitPadding),
+        crop: preservesWebcamGeometry ? camera.crop : undefined,
         cameraLayoutPreset: preset,
-        cameraFramingPreset: preset === 'fullscreen' || isSplitCameraLayout(preset) ? 'fill' : 'squircle',
+        cameraFramingPreset: preservesWebcamGeometry
+          ? camera.cameraFramingPreset
+          : preset === 'fullscreen' || isSplitCameraLayout(preset)
+            ? 'fill'
+            : 'squircle',
       };
     }
     if (linkedScreen && clip.id === linkedScreen.id) {

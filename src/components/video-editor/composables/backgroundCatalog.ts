@@ -1,23 +1,27 @@
 import wallpapers from 'virtual:public-background-media';
 import { tNamespace } from '~/i18n';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
+import type { ColorGradient, ColorGradientStop } from '~/media/shared/color-fill-types';
 
 const $t = tNamespace('backgroundCatalog');
 
 export type BackgroundKind = 'image' | 'video' | 'color' | 'gradient';
 export type BackgroundMediaKind = Extract<BackgroundKind, 'image' | 'video'>;
 
-export interface GradientStop {
-  id: string;
-  position: number;
-  color: string;
-  alpha: number;
-}
-export interface GradientBackground {
-  type: 'linear' | 'radial';
-  angle: number;
-  stops: GradientStop[];
-}
+export type GradientStop = ColorGradientStop;
+export type GradientBackground = ColorGradient;
+const colorWithAlpha = (color: string, alpha: number) => {
+  const value = color.slice(1);
+  return `rgba(${Number.parseInt(value.slice(0, 2), 16)}, ${Number.parseInt(value.slice(2, 4), 16)}, ${Number.parseInt(value.slice(4, 6), 16)}, ${alpha})`;
+};
+export const gradientCssBackground = (gradient: GradientBackground): string => {
+  const stops = gradient.stops
+    .map((stop) => `${colorWithAlpha(stop.color, stop.alpha)} ${stop.position * 100}%`)
+    .join(', ');
+  return gradient.type === 'radial'
+    ? `radial-gradient(circle, ${stops})`
+    : `linear-gradient(${gradient.angle}deg, ${stops})`;
+};
 export interface BackgroundMedia {
   id: string;
   name: string;

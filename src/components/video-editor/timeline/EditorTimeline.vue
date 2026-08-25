@@ -11,7 +11,12 @@ import type {
   TimelinePasteHighlight,
   TimelinePasteRequest,
 } from './composables/timeline-clipboard-types';
-import type { TimelinePlacementRequest, TrackClipSelection } from './composables/timeline-tracks-types';
+import type {
+  TimelinePlacementRequest,
+  TrackClipSelection,
+  TrackZoomSelection,
+} from './composables/timeline-tracks-types';
+import type { AddVisualElementRequest } from '../composition/visual-element-types';
 
 const props = withDefaults(
   defineProps<{
@@ -23,6 +28,7 @@ const props = withDefaults(
     zoomElements: ZoomElement[];
     newZoomDurationMs?: number;
     selectedZoomId: string | null;
+    selectedZoomIds?: string[];
     composition: ClipComposition;
     selectedClipId: string | null;
     selectedClipIds?: string[];
@@ -38,6 +44,7 @@ const props = withDefaults(
     newZoomDurationMs: DEFAULT_ZOOM_DURATION_MS,
     canvas: () => ({ ...DEFAULT_OUTPUT_CANVAS, transitions: { ...EMPTY_CLIP_TRANSITIONS } }),
     selectedClipIds: () => [],
+    selectedZoomIds: () => [],
   },
 );
 const emit = defineEmits<{
@@ -45,6 +52,7 @@ const emit = defineEmits<{
   (event: 'update:isPlaying', value: boolean): void;
   (event: 'update:zoomLevel', value: number): void;
   (event: 'select:zoom', zoomId: string): void;
+  (event: 'select:zoom-track', selection: TrackZoomSelection): void;
   (event: 'select:clip', clipId: string): void;
   (event: 'select:track', selection: TrackClipSelection): void;
   (event: 'toggle:clip', clipId: string): void;
@@ -58,7 +66,9 @@ const emit = defineEmits<{
   (event: 'move:zoom', payload: { id: string; startMs: number; endMs: number }): void;
   (event: 'add:zoom', placement: TimelinePlacementRequest): void;
   (event: 'add:caption', placement: TimelinePlacementRequest): void;
+  (event: 'add:visual-element', request: AddVisualElementRequest): void;
   (event: 'reorder:clip', payload: { id: string; targetIndex: number }): void;
+  (event: 'reorder:caption', payload: { id: string; targetIndex: number }): void;
   (event: 'paste:item', payload: TimelinePasteRequest): void;
   (event: 'paste:error', message: string): void;
   (event: 'clipboard:copied', item: TimelineClipboardItem): void;
@@ -94,6 +104,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
         :zoom-elements="zoomElements"
         :new-zoom-duration-ms="newZoomDurationMs"
         :selected-zoom-id="selectedZoomId"
+        :selected-zoom-ids="selectedZoomIds"
         :composition="composition"
         :selected-clip-id="selectedClipId"
         :selected-clip-ids="selectedClipIds"
@@ -104,6 +115,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
         @update:current-time="emit('update:currentTime', $event)"
         @update:zoom-level="emit('update:zoomLevel', $event)"
         @select:zoom="emit('select:zoom', $event)"
+        @select:zoom-track="emit('select:zoom-track', $event)"
         @select:clip="emit('select:clip', $event)"
         @select:track="emit('select:track', $event)"
         @toggle:clip="emit('toggle:clip', $event)"
@@ -117,7 +129,9 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
         @move:zoom="emit('move:zoom', $event)"
         @add:zoom="emit('add:zoom', $event)"
         @add:caption="emit('add:caption', $event)"
+        @add:visual-element="emit('add:visual-element', $event)"
         @reorder:clip="emit('reorder:clip', $event)"
+        @reorder:caption="emit('reorder:caption', $event)"
         @paste:item="emit('paste:item', $event)"
         @paste:error="emit('paste:error', $event)"
         @clipboard:copied="emit('clipboard:copied', $event)"

@@ -3,6 +3,8 @@ import { DEFAULT_ZOOM_DURATION_MS, type ZoomElement } from '../../zoom/zoom-type
 import {
   isAudioClip,
   isCaptionClip,
+  isColorClip,
+  isShapeClip,
   isCompositingClip,
   isKeyboardCaptionClip,
   isTextCaptionClip,
@@ -21,11 +23,12 @@ import { previewClipMove } from './timeline-composition-preview';
 import { useVisualTrackReorder } from './useVisualTrackReorder';
 import { useTimelineClipTrim } from './useTimelineClipTrim';
 import { groupImportedAudioTimelineTracks } from './audio-timeline-tracks';
-import { fitZoomPlacement } from '../../zoom/zoom-placement';
+import { useCaptionLayerReorder } from './useCaptionLayerReorder';
+import { groupTextCaptionLayers } from '../../composition/engine/caption-layer-layout';
+import { useTimelineAddPlacement } from './useTimelineAddPlacement';
 export type { TimelineTracksEmits, TimelineTracksProps } from './timeline-tracks-types';
 
 export { DEFAULT_ZOOM_DURATION_MS } from '../../zoom/zoom-types';
-export const DEFAULT_CAPTION_DURATION_MS = 2_000;
 
 export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTracksEmits) {
   const newZoomDurationMs = computed(() =>
@@ -56,6 +59,14 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
   const captionClips = computed(() => orderedClips.value.filter(isCaptionClip));
   const keyboardCaptionClips = computed(() => orderedClips.value.filter(isKeyboardCaptionClip));
   const textCaptionClips = computed(() => orderedClips.value.filter(isTextCaptionClip));
+  const baseTextCaptionLayers = computed(() => groupTextCaptionLayers(textCaptionClips.value));
+  const textCaptionOrderPreview = ref<string[] | null>(null);
+  const textCaptionLayers = computed(() => {
+    const preview = textCaptionOrderPreview.value;
+    if (!preview) return baseTextCaptionLayers.value;
+    const byId = new Map(baseTextCaptionLayers.value.map((layer) => [layer.id, layer]));
+    return preview.flatMap((id) => (byId.has(id) ? [byId.get(id)!] : []));
+  });
   const systemAudioClips = computed(() =>
     orderedClips.value.filter((clip): clip is AudioClip => isAudioClip(clip) && clip.role === 'system'),
   );
@@ -69,7 +80,9 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
   );
   const assets = computed(() => new Map(props.composition.assets.map((asset: MediaAsset) => [asset.id, asset])));
   const assetFor = (clip: Clip) =>
-    isCaptionClip(clip) || clip.kind === 'blur' ? null : (assets.value.get(clip.assetId) ?? null);
+    isCaptionClip(clip) || isColorClip(clip) || isShapeClip(clip) || clip.kind === 'blur'
+      ? null
+      : (assets.value.get(clip.assetId) ?? null);
 
   const activeSnapTimeMs = ref<number | null>(null);
   const activeTrimState = ref<{ ids: string[]; edge: 'start' | 'end'; durationMs: number; atLimit?: boolean } | null>(
@@ -95,6 +108,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     audioWaveformErrors,
     audioWaveformStatus,
     thumbnailSlots,
+    isWheelZooming,
     onScroll,
     updateAutoScroll,
     stopAutoScroll,
@@ -297,49 +311,24 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     stopAutoScroll,
   });
 
-  const hoverZoomTimeMs = ref<number | null>(null);
-  const hoverZoomDurationMs = ref(newZoomDurationMs.value);
-  const hoverCaptionTimeMs = ref<number | null>(null);
-  const hoverCaptionDurationMs = ref(DEFAULT_CAPTION_DURATION_MS);
-  const placementAt = (event: MouseEvent, kind: 'zoom' | 'caption') => {
-    const preferredDurationMs = kind === 'zoom' ? newZoomDurationMs.value : DEFAULT_CAPTION_DURATION_MS;
-    const occupied =
-      kind === 'zoom'
-        ? props.zoomElements
-        : textCaptionClips.value.map((clip) => ({
-            startMs: clip.timelineStartMs,
-            endMs: clip.timelineStartMs + clip.timelineDurationMs,
-          }));
-    return fitZoomPlacement({
-      anchorMs: timeAt(event.clientX),
-      preferredDurationMs,
-      timelineDurationMs: durationMs.value,
-      occupied,
-    });
-  };
-  const hoverAt = (event: MouseEvent, kind: 'zoom' | 'caption') => {
-    const placement = placementAt(event, kind);
-    if (kind === 'zoom') {
-      hoverZoomTimeMs.value = placement?.startMs ?? null;
-      hoverZoomDurationMs.value = placement ? placement.endMs - placement.startMs : newZoomDurationMs.value;
-      return;
-    }
-    hoverCaptionTimeMs.value = placement?.startMs ?? null;
-    hoverCaptionDurationMs.value = placement ? placement.endMs - placement.startMs : DEFAULT_CAPTION_DURATION_MS;
-  };
-  const leaveTrack = (kind: 'zoom' | 'caption') => {
-    if (kind === 'zoom') hoverZoomTimeMs.value = null;
-    else hoverCaptionTimeMs.value = null;
-  };
-  const addAt = (event: MouseEvent, kind: 'zoom' | 'caption') => {
-    event.preventDefault();
-    event.stopPropagation();
-    const placement = placementAt(event, kind);
-    if (!placement) return;
-    const request = { startMs: placement.startMs, durationMs: placement.endMs - placement.startMs };
-    if (kind === 'zoom') emit('add:zoom', request);
-    else emit('add:caption', request);
-  };
+  const {
+    hoverZoomTimeMs,
+    hoverZoomDurationMs,
+    hoverCaptionTimeMs,
+    hoverCaptionDurationMs,
+    hoverVisualPlacements,
+    visualKindFor,
+    hoverAt,
+    leaveTrack,
+    addAt,
+  } = useTimelineAddPlacement({
+    durationMs: () => durationMs.value,
+    newZoomDurationMs: () => newZoomDurationMs.value,
+    zoomElements: () => props.zoomElements,
+    textCaptionClips: () => textCaptionClips.value,
+    timeAt,
+    emit,
+  });
 
   const selectTrack = (clips: Clip[], trackName: string, event?: MouseEvent) => {
     if (!clips.length) return;
@@ -360,9 +349,28 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
       ...(event?.ctrlKey || event?.metaKey || event?.shiftKey ? { additive: true } : {}),
     });
   };
+  const selectZoomTrack = (zooms: ZoomElement[], event?: MouseEvent) => {
+    if (!zooms.length) return;
+    const timeMs = props.currentTime * 1_000;
+    const ordered = [...zooms].sort((left, right) => {
+      const distance = (zoom: ZoomElement) =>
+        timeMs < zoom.startMs ? zoom.startMs - timeMs : timeMs >= zoom.endMs ? timeMs - zoom.endMs : 0;
+      return distance(left) - distance(right) || left.startMs - right.startMs;
+    });
+    emit('select:zoom-track', {
+      zoomIds: ordered.map((zoom) => zoom.id),
+      primaryZoomId: ordered[0]?.id ?? null,
+      ...(event?.ctrlKey || event?.metaKey || event?.shiftKey ? { additive: true } : {}),
+    });
+  };
   const zoomScale = (depth: number) => [1.25, 1.5, 1.8, 2.2, 3.5, 5][Math.max(0, Math.min(5, depth - 1))] ?? 1.25;
 
   const { draggedTrackId, beginReorder } = useVisualTrackReorder({ baseVisualTracks, visualOrderPreview, emit });
+  const { draggedCaptionId, beginCaptionReorder } = useCaptionLayerReorder({
+    layers: baseTextCaptionLayers,
+    orderPreview: textCaptionOrderPreview,
+    emit,
+  });
 
   return {
     durationMs,
@@ -375,6 +383,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     captionClips,
     keyboardCaptionClips,
     textCaptionClips,
+    textCaptionLayers,
     systemAudioClips,
     microphoneClips,
     importedAudioTracks,
@@ -399,6 +408,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     isRulerLabel,
     formatRulerLabel,
     thumbnailSlots,
+    isWheelZooming,
     onScroll,
     percentageStyle,
     timeAt,
@@ -422,14 +432,18 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     hoverZoomDurationMs,
     hoverCaptionTimeMs,
     hoverCaptionDurationMs,
+    hoverVisualPlacements,
+    visualKindFor,
     hoverAt,
     leaveTrack,
     addAt,
     selectTrack,
+    selectZoomTrack,
     zoomScale,
     draggedTrackId,
     beginReorder,
+    draggedCaptionId,
+    beginCaptionReorder,
     newZoomDurationMs,
-    DEFAULT_CAPTION_DURATION_MS,
   };
 }

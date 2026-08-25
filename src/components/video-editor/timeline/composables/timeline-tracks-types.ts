@@ -1,13 +1,14 @@
 import type { ExportProgress } from '../../../export/export-types';
 import type { ZoomElement } from '../../zoom/zoom-types';
-import type { BlurClip, ClipComposition, VisualClip } from '~/media/shared/composition-types';
+import type { BlurClip, ClipComposition, ColorClip, ShapeClip, VisualClip } from '~/media/shared/composition-types';
 import type { TimelineClipboardItem, TimelinePasteHighlight, TimelinePasteRequest } from './timeline-clipboard-types';
 import type { OutputCanvasSettings } from '../../canvas/output-canvas';
+import type { AddVisualElementRequest } from '../../composition/visual-element-types';
 
 export interface VisualTimelineTrack {
   id: string;
-  clips: Array<VisualClip | BlurClip>;
-  representative: VisualClip | BlurClip;
+  clips: Array<VisualClip | ColorClip | ShapeClip | BlurClip>;
+  representative: VisualClip | ColorClip | ShapeClip | BlurClip;
   order: number;
 }
 
@@ -21,6 +22,7 @@ export interface TimelineTracksProps {
   zoomElements: ZoomElement[];
   newZoomDurationMs?: number;
   selectedZoomId: string | null;
+  selectedZoomIds?: string[];
   composition: ClipComposition;
   selectedClipId: string | null;
   selectedClipIds?: string[];
@@ -37,6 +39,12 @@ export interface TrackClipSelection {
   additive?: boolean;
 }
 
+export interface TrackZoomSelection {
+  zoomIds: string[];
+  primaryZoomId: string | null;
+  additive?: boolean;
+}
+
 export interface TimelinePlacementRequest {
   startMs: number;
   durationMs: number;
@@ -46,6 +54,7 @@ export interface TimelineTracksEmits {
   (event: 'update:currentTime', value: number): void;
   (event: 'update:zoomLevel', value: number): void;
   (event: 'select:zoom', zoomId: string): void;
+  (event: 'select:zoom-track', selection: TrackZoomSelection): void;
   (event: 'select:clip', clipId: string): void;
   (event: 'select:track', selection: TrackClipSelection): void;
   (event: 'toggle:clip', clipId: string): void;
@@ -59,7 +68,9 @@ export interface TimelineTracksEmits {
   (event: 'move:zoom', payload: { id: string; startMs: number; endMs: number }): void;
   (event: 'add:zoom', placement: TimelinePlacementRequest): void;
   (event: 'add:caption', placement: TimelinePlacementRequest): void;
+  (event: 'add:visual-element', request: AddVisualElementRequest): void;
   (event: 'reorder:clip', payload: { id: string; targetIndex: number }): void;
+  (event: 'reorder:caption', payload: { id: string; targetIndex: number }): void;
   (event: 'paste:item', payload: TimelinePasteRequest): void;
   (event: 'paste:error', message: string): void;
   (event: 'clipboard:copied', item: TimelineClipboardItem): void;

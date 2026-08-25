@@ -116,6 +116,12 @@ const audio = (): AudioClip => ({
 });
 
 describe('editor defaults', () => {
+  it('keeps the rounded caption shape for new projects without saved caption defaults', () => {
+    expect(captionDefaultsFor(normalizeEditorPreferenceDefaults({})).style.shape).toEqual(
+      createDefaultCaptionStyle().shape,
+    );
+  });
+
   it('normalizes malformed values safely and bounds visual defaults', () => {
     expect(normalizeEditorPreferenceDefaults(null)).toEqual({ schemaVersion: 1 });
 
@@ -170,6 +176,57 @@ describe('editor defaults', () => {
     expect(result.zoomMotionBlur).toEqual({ enabled: false, intensity: 0.77 });
     result.zoomMotionBlur!.intensity = 0.2;
     expect(editorState.zoom.motionBlur?.intensity).toBe(0.77);
+  });
+
+  it('migrates legacy caption backdrop blur into a square shape and keeps it for new captions', () => {
+    const normalized = normalizeEditorPreferenceDefaults({
+      caption: {
+        style: { fontSize: 36, backdropBlur: 24, customText: 'legacy caption' },
+        durationMs: 1_000,
+      },
+    });
+
+    expect(normalized.caption?.style.shape).toEqual({
+      preset: 'square',
+      radius: 35,
+      color: '#000000',
+      opacity: 0,
+      blur: 24,
+      padding: 0,
+    });
+    expect(normalized.caption?.style).not.toHaveProperty('backdropBlur');
+
+    expect(captionDefaultsFor(normalized, 30).style.shape).toEqual(normalized.caption?.style.shape);
+  });
+
+  it('normalizes and preserves grouped caption shape values when creating caption defaults', () => {
+    const normalized = normalizeEditorPreferenceDefaults({
+      caption: {
+        style: {
+          ...createDefaultCaptionStyle(42),
+          shape: {
+            preset: 'pill',
+            radius: 140,
+            color: '#123456',
+            opacity: 125,
+            blur: -8,
+          },
+        },
+        durationMs: 1_000,
+      },
+    });
+
+    const expectedShape = {
+      preset: 'pill',
+      radius: 100,
+      color: '#123456',
+      opacity: 100,
+      blur: 0,
+      padding: 30,
+    } as const;
+
+    expect(normalized.caption?.style.shape).toEqual(expectedShape);
+    expect(captionDefaultsFor(normalized).style.shape).toEqual(expectedShape);
   });
 
   it('extracts presentation and the selected visual or zoom defaults without sharing mutable values', () => {

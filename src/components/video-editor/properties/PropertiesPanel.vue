@@ -1,11 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import type { CursorPackDescriptor, CursorSelection } from '~/api/types/cursor-pack';
-import type {
-  BackgroundMedia,
-  BackgroundValue,
-  BackgroundMediaGroup,
-} from '~/components/video-editor/composables/backgroundCatalog';
+import type { BackgroundMedia, BackgroundMediaGroup, BackgroundValue } from '../composables/backgroundCatalog';
 import CursorPanel from '~/components/video-editor/properties/cursor/CursorPanel.vue';
 import CanvasPanel from '~/components/video-editor/properties/canvas/CanvasPanel.vue';
 import AudioPanel from '~/components/video-editor/properties/audio/AudioPanel.vue';
@@ -14,14 +10,14 @@ import SettingsPanel from '~/components/video-editor/properties/settings/Setting
 import ClipPropertiesPanel from '~/components/video-editor/properties/clip/ClipPropertiesPanel.vue';
 import AudioClipPropertiesPanel from '~/components/video-editor/properties/clip/AudioClipPropertiesPanel.vue';
 import BlurPropertiesPanel from '~/components/video-editor/properties/clip/BlurPropertiesPanel.vue';
+import GeneratedLayerPropertiesPanel from '~/components/video-editor/properties/clip/GeneratedLayerPropertiesPanel.vue';
 import CaptionPanel from '~/components/video-editor/properties/captions/CaptionPanel.vue';
 import CaptionClipPanel from '~/components/video-editor/properties/captions/CaptionClipPanel.vue';
 import KeyboardCaptionClipPanel from '~/components/video-editor/properties/captions/KeyboardCaptionClipPanel.vue';
 import ClipTransitionsPanel from '~/components/video-editor/properties/clip/ClipTransitionsPanel.vue';
 import TransitionSettingsPanel from '~/components/video-editor/properties/clip/TransitionSettingsPanel.vue';
 import PropertiesPanelHeader from './PropertiesPanelHeader.vue';
-import { setClipTransition } from '~/components/video-editor/composition/engine/clip-engine';
-import type { ClipTransition } from '~/media/shared/composition-types';
+import { setClipTransition } from '../composition/engine/clip-engine';
 import { EMPTY_CLIP_TRANSITIONS, normalizeCanvasTransitions } from '~/media/shared/clip-transitions';
 import ScrollShadow from '~/ui/scroll-shadow/ScrollShadow.vue';
 import {
@@ -37,20 +33,25 @@ import type {
   ClipFrame,
   ClipComposition,
   NormalizedTransform,
+  ClipTransition,
 } from '~/media/shared/composition-types';
 import type { ProjectEditorData } from '../../../api/types/capture-api';
 import type { OutputCanvasSettings } from '../canvas/output-canvas';
 import type { ShadowDirection } from './cursor/shadow-types';
-import type { CursorClickEffects, CursorMotionSettings } from '../../../api/types/cursor-settings';
+import type {
+  CursorAutoHideSettings,
+  CursorClickEffects,
+  CursorMotionSettings,
+} from '../../../api/types/cursor-settings';
 import { useTranslate } from '~/i18n/useTranslate';
-import { isKeyboardCaptionClip } from '~/media/shared/composition-types';
+import { isColorClip, isKeyboardCaptionClip, isShapeClip } from '~/media/shared/composition-types';
 import { usePropertiesPanelNavigation } from './usePropertiesPanelNavigation';
 import type { SelectedClipProperties } from './properties-panel-types';
 import type { CameraFramingPreset, CameraLayoutPreset } from '~/media/shared/camera-layout-types';
+import type { PhoneFrameFill } from '~/media/shared/color-fill-types';
 import { selectedClipNames } from './clip-selection-names';
-import { propertiesPanelTitle } from './properties-panel-title';
+import { clipTransitionPanelTitle, propertiesPanelTitle } from './properties-panel-title';
 import { applyCaptionSelectionUpdate } from '../composition/caption-selection';
-export type { SelectedClipProperties } from './properties-panel-types';
 const { t } = useTranslate('PropertiesPanel');
 const { t: tClip } = useTranslate('ClipPropertiesPanel');
 const { t: tCaption } = useTranslate('CaptionClipPanel');
@@ -61,12 +62,14 @@ const { t: tTimeline } = useTranslate('TimelineTracks');
 const { t: tTimelineToolbar } = useTranslate('TimelineToolbar');
 const { t: tTransitions } = useTranslate('TransitionsPanel');
 const { t: tAudioClip } = useTranslate('AudioClipPropertiesPanel');
+const { t: tCanvas } = useTranslate('CanvasPanel');
 const props = withDefaults(
   defineProps<{
     activeTab: string;
     selectedClip?: SelectedClipProperties | null;
     selectedCaptionClip?: CaptionClip | null;
     selectedClipIds?: string[];
+    selectedZoomIds?: string[];
     cursorSelection: CursorSelection;
     cursorPacks: CursorPackDescriptor[];
     cursorSize: number;
@@ -77,6 +80,7 @@ const props = withDefaults(
     shadowDirection: ShadowDirection;
     clickEffects: CursorClickEffects;
     motion: CursorMotionSettings;
+    autoHide: CursorAutoHideSettings;
     volume: number;
     isSystemAudioEnabled: boolean;
     isMicAudioEnabled: boolean;
@@ -101,6 +105,7 @@ const props = withDefaults(
     hasSystemAudio: false,
     hasMicAudio: false,
     selectedClipIds: () => [],
+    selectedZoomIds: () => [],
     zoomMotionBlur: () => ({ ...DEFAULT_ZOOM_MOTION_BLUR }),
   },
 );
@@ -127,6 +132,13 @@ const selectedDomainClips = computed(() => {
   return props.composition.clips.filter((clip) => ids.has(clip.id));
 });
 const selectionClipNames = computed(() => selectedClipNames(selectedDomainClips.value, tTimeline('holdSegment')));
+const selectionNames = computed(() =>
+  props.activeTab === 'zoom'
+    ? props.selectedZoomIds.length > 1
+      ? [`${props.selectedZoomIds.length} ${tTimeline('zooms')}`]
+      : []
+    : selectionClipNames.value,
+);
 const panelHeader = ref<InstanceType<typeof PropertiesPanelHeader> | null>(null);
 const transitionEdge = ref<'entry' | 'exit'>('entry');
 const { transitionsOpen, navigationDirection, openTransitions, closeTransitions } = usePropertiesPanelNavigation({
@@ -134,9 +146,6 @@ const { transitionsOpen, navigationDirection, openTransitions, closeTransitions 
   canOpenTransitions: () => props.activeTab === 'canvas' || Boolean(selectedDomainClip.value),
 });
 const panelTransitionName = computed(() => `properties-panel-${navigationDirection.value}`);
-const focusTransitionButton = () => {
-  if (!transitionsOpen.value) panelHeader.value?.focusTransitionButton();
-};
 const openTransitionEdge = (edge: 'entry' | 'exit' = 'entry') => {
   transitionEdge.value = edge;
   return openTransitions();
@@ -156,13 +165,7 @@ const updateCanvasTransition = (edge: 'entry' | 'exit', value: ClipTransition | 
 };
 const transitionPanelTitle = computed(() => {
   if (props.activeTab === 'canvas') return tTransitions('canvasTransitions');
-  const kind = selectedDomainClip.value?.kind;
-  if (kind === 'caption') return 'Caption Transitions';
-  if (kind === 'audio') return 'Audio Transitions';
-  if (kind === 'blur') return 'Blur Transitions';
-  if (kind === 'image') return 'Image Transitions';
-  if (kind === 'webcam') return 'Webcam Transitions';
-  return 'Video Transitions';
+  return clipTransitionPanelTitle(selectedDomainClip.value?.kind, () => tTransitions('clipTransitions'));
 });
 const panelTitle = computed(() =>
   propertiesPanelTitle(
@@ -171,7 +174,7 @@ const panelTitle = computed(() =>
       props.selectedClip?.kind ??
       props.selectedCaptionClip?.kind ??
       null) as ClipKind | null,
-    { t, tSidebar, tTimeline, tTimelineToolbar },
+    { t, tSidebar, tTimeline, tTimelineToolbar, tCanvas },
   ),
 );
 const emit = defineEmits<{
@@ -185,6 +188,7 @@ const emit = defineEmits<{
   (event: 'update:shadowDirection', value: ShadowDirection): void;
   (event: 'update:clickEffects', value: CursorClickEffects): void;
   (event: 'update:motion', value: CursorMotionSettings): void;
+  (event: 'update:autoHide', value: CursorAutoHideSettings): void;
   (event: 'update:volume', value: number): void;
   (event: 'update:isSystemAudioEnabled', value: boolean): void;
   (event: 'update:isMicAudioEnabled', value: boolean): void;
@@ -234,6 +238,7 @@ const emit = defineEmits<{
       frameShowMenu?: boolean;
       frameShowScrollbars?: boolean;
       frameChromeScale?: number;
+      phoneFrameFill?: PhoneFrameFill;
     },
   ): void;
   (event: 'update:clip-transform', transform: NormalizedTransform): void;
@@ -261,17 +266,14 @@ const isCurrentClipEnabled = computed(() => {
   if (props.selectedCaptionClip) return props.selectedCaptionClip.enabled ?? true;
   return true;
 });
-
 const isDeletable = computed(() => {
   if (props.activeTab === 'zoom' && props.selectedZoom) return true;
   if (props.activeTab === 'clip' && (props.selectedClip || props.selectedCaptionClip)) return true;
   return false;
 });
-
 const isToggleable = computed(() => {
   return props.activeTab === 'clip' && Boolean(props.selectedClip || props.selectedCaptionClip);
 });
-
 const deleteTooltip = computed(() => {
   if (props.activeTab === 'zoom') {
     return tZoom('deleteZoom') || 'Delete zoom';
@@ -296,18 +298,8 @@ const deleteTooltip = computed(() => {
   return tClip('deleteClip') || 'Delete clip';
 });
 
-const handleToggleClipEnabled = () => {
-  const nextValue = !isCurrentClipEnabled.value;
-  emit('update:clip-enabled', nextValue);
-};
-
-const handleDelete = () => {
-  if (props.activeTab === 'zoom') {
-    emit('delete:zoom');
-  } else {
-    emit('delete-clip');
-  }
-};
+const handleToggleClipEnabled = () => emit('update:clip-enabled', !isCurrentClipEnabled.value);
+const handleDelete = () => (props.activeTab === 'zoom' ? emit('delete:zoom') : emit('delete-clip'));
 defineExpose({ openCanvasTransitions: openTransitionEdge });
 </script>
 <template>
@@ -316,7 +308,7 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
       <PropertiesPanelHeader
         ref="panelHeader"
         :title="panelTitle"
-        :selection-names="selectionClipNames"
+        :selection-names="selectionNames"
         :transition-title="transitionPanelTitle"
         :transition-name="panelTransitionName"
         :transitions-open="transitionsOpen"
@@ -335,7 +327,7 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
         @toggle="handleToggleClipEnabled"
         @delete="handleDelete"
         @transition="openTransitionEdge()"
-        @after-enter="focusTransitionButton"
+        @after-enter="!transitionsOpen && panelHeader?.focusTransitionButton()"
       />
       <ScrollShadow class="panel-scroll-shadow">
         <Transition :name="panelTransitionName" mode="out-in">
@@ -371,6 +363,17 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
               v-else-if="activeTab === 'clip' && normalizedSelectedClip?.kind === 'audio'"
               :clip="normalizedSelectedClip"
               @update:volume="emit('update:clip-volume', $event)"
+            />
+            <GeneratedLayerPropertiesPanel
+              v-else-if="
+                activeTab === 'clip' &&
+                selectedDomainClip &&
+                (isColorClip(selectedDomainClip) || isShapeClip(selectedDomainClip))
+              "
+              :composition="composition"
+              :clip="selectedDomainClip"
+              @update="emit('update:composition', $event)"
+              @corner-radius-interaction="emit('corner-radius-interaction', $event)"
             />
             <BlurPropertiesPanel
               v-else-if="activeTab === 'clip' && normalizedSelectedClip?.kind === 'blur'"
@@ -433,6 +436,7 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
               :shadow-direction="shadowDirection"
               :click-effects="clickEffects"
               :motion="motion"
+              :auto-hide="autoHide"
               @update:selection="emit('update:cursorSelection', $event)"
               @preview:selection="emit('preview:cursorSelection', $event)"
               @update:cursor-size="emit('update:cursorSize', $event)"
@@ -443,6 +447,7 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
               @update:shadow-direction="emit('update:shadowDirection', $event)"
               @update:click-effects="emit('update:clickEffects', $event)"
               @update:motion="emit('update:motion', $event)"
+              @update:auto-hide="emit('update:autoHide', $event)"
             />
             <AudioPanel
               v-else-if="activeTab === 'audio'"

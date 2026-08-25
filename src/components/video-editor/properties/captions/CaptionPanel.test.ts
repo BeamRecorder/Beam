@@ -142,13 +142,21 @@ const aiCaption: CaptionClip = {
       wrap: true,
       shadowColor: '#000',
       shadowBlur: 8,
-      backdropBlur: 0,
+      shape: createDefaultCaptionStyle(36).shape,
       outlineColor: '#000',
       outlineWidth: 6,
       extrusionDepth: 4,
       placement: 'bottom',
     },
   },
+};
+
+const manualCaption: CaptionClip = {
+  ...aiCaption,
+  id: 'caption-manual',
+  name: 'Manual caption',
+  order: 2,
+  isAiGenerated: false,
 };
 
 const createDiagnostics = (overrides: Partial<TranscriptionDiagnostics> = {}): TranscriptionDiagnostics => ({
@@ -191,10 +199,19 @@ const createDiagnostics = (overrides: Partial<TranscriptionDiagnostics> = {}): T
 describe('CaptionPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    whisper.progress!.value = { status: 'idle', message: '', progress: undefined };
+    whisper.progress!.value = {
+      status: 'idle',
+      message: '',
+      progress: undefined,
+    };
     whisper.diagnostics!.value = null;
     capture.whisperModels.mockResolvedValue([
-      { id: 'Xenova/whisper-tiny', status: 'missing', downloadedBytes: 0, totalBytes: 100 },
+      {
+        id: 'Xenova/whisper-tiny',
+        status: 'missing',
+        downloadedBytes: 0,
+        totalBytes: 100,
+      },
     ]);
     capture.downloadWhisperModel.mockResolvedValue(undefined);
     capture.onWhisperProgress.mockReturnValue(() => undefined);
@@ -216,7 +233,11 @@ describe('CaptionPanel', () => {
     expect(wrapper.find('button[variant="primary"]').attributes('disabled')).toBeDefined();
     await wrapper.get('button[variant="secondary"]').trigger('click');
     await vi.waitFor(() => expect(capture.downloadWhisperModel).toHaveBeenCalledWith('Xenova/whisper-tiny'));
-    progressListener({ id: 'Xenova/whisper-tiny', downloadedBytes: 50, totalBytes: 100 });
+    progressListener({
+      id: 'Xenova/whisper-tiny',
+      downloadedBytes: 50,
+      totalBytes: 100,
+    });
     await wrapper.vm.$nextTick();
     expect(wrapper.find('.progress-block').exists()).toBe(true);
 
@@ -274,7 +295,12 @@ describe('CaptionPanel', () => {
 
   it('exposes a diagnostics CopyButton while transcription runs and after it completes', async () => {
     capture.whisperModels.mockResolvedValue([
-      { id: 'Xenova/whisper-tiny', status: 'ready', downloadedBytes: 100, totalBytes: 100 },
+      {
+        id: 'Xenova/whisper-tiny',
+        status: 'ready',
+        downloadedBytes: 100,
+        totalBytes: 100,
+      },
     ]);
     let resolveTranscription!: (result: WhisperResult) => void;
     whisper.transcribe.mockImplementation(
@@ -292,8 +318,15 @@ describe('CaptionPanel', () => {
     await wrapper.get('button[variant="primary"]').trigger('click');
     await vi.waitFor(() => expect(whisper.transcribe).toHaveBeenCalledOnce());
 
-    whisper.progress!.value = { status: 'running', message: 'Transcribing…', progress: 0.5 };
-    whisper.diagnostics!.value = createDiagnostics({ status: 'transcribing', elapsedMs: 1_500 });
+    whisper.progress!.value = {
+      status: 'running',
+      message: 'Transcribing…',
+      progress: 0.5,
+    };
+    whisper.diagnostics!.value = createDiagnostics({
+      status: 'transcribing',
+      elapsedMs: 1_500,
+    });
     await wrapper.vm.$nextTick();
     expect(wrapper.find('.transcription-throbber-row').exists()).toBe(true);
     const throbber = wrapper.getComponent(Throbber);
@@ -310,7 +343,11 @@ describe('CaptionPanel', () => {
     const cancelButton = wrapper.find('.cancel-transcription-btn');
     expect(cancelButton.exists()).toBe(true);
 
-    whisper.progress!.value = { status: 'completed', message: 'Transcription complete', progress: 1 };
+    whisper.progress!.value = {
+      status: 'completed',
+      message: 'Transcription complete',
+      progress: 1,
+    };
     whisper.diagnostics!.value = createDiagnostics({
       status: 'completed',
       elapsedMs: 2_345,
@@ -329,9 +366,14 @@ describe('CaptionPanel', () => {
     wrapper.unmount();
   });
 
-  it('emits progressive caption compositions as persistent updates with stable clip ids', async () => {
+  it('emits one caption clip per sentence while sharing a stable caption layer id', async () => {
     capture.whisperModels.mockResolvedValue([
-      { id: 'Xenova/whisper-tiny', status: 'ready', downloadedBytes: 100, totalBytes: 100 },
+      {
+        id: 'Xenova/whisper-tiny',
+        status: 'ready',
+        downloadedBytes: 100,
+        totalBytes: 100,
+      },
     ]);
     const firstSentence: CaptionSentence = {
       id: 'sentence-1',
@@ -385,7 +427,17 @@ describe('CaptionPanel', () => {
     expect(wrapper.emitted('preview:composition')).toBeUndefined();
     let updates = wrapper.emitted('update:composition') as Array<[ClipComposition]>;
     expect(updates).toHaveLength(1);
-    const firstClipId = updates[0]![0].clips.find((clip) => clip.kind === 'caption')!.id;
+    const firstCaption = updates[0]![0].clips.find((clip) => clip.kind === 'caption')!;
+    const firstClipId = firstCaption.id;
+    const captionLayerId = firstCaption.captionLayerId;
+    expect(captionLayerId).toEqual(expect.any(String));
+    expect(firstCaption.caption.type).toBe('text');
+    if (firstCaption.caption.type === 'text') {
+      expect(firstCaption.caption.sentences).toEqual([firstSentence]);
+    }
+    expect(firstCaption.timelineStartMs).toBe(100);
+    expect(firstCaption.timelineDurationMs).toBe(100);
+    expect(firstCaption.sourceDurationMs).toBe(100);
 
     onPartial(secondPartial);
     await wrapper.vm.$nextTick();
@@ -395,12 +447,30 @@ describe('CaptionPanel', () => {
     expect(updates).toHaveLength(2);
     const progressiveCaptions = updates[1]![0].clips.filter((clip) => clip.kind === 'caption');
     expect(progressiveCaptions).toHaveLength(2);
-    expect(progressiveCaptions.map((clip) => clip.id)).toEqual([firstClipId, expect.any(String)]);
-    expect(new Set(progressiveCaptions.map((clip) => clip.id)).size).toBe(progressiveCaptions.length);
-    expect(progressiveCaptions[0]!.caption.type).toBe('text');
-    if (progressiveCaptions[0]!.caption.type === 'text') {
-      expect(progressiveCaptions[0]!.caption.sentences[0]!.text).toBe('Hello world.');
+    const progressiveFirst = progressiveCaptions.find(
+      (clip) => clip.caption.type === 'text' && clip.caption.sentences[0]?.id === 'sentence-1',
+    )!;
+    const progressiveSecond = progressiveCaptions.find(
+      (clip) => clip.caption.type === 'text' && clip.caption.sentences[0]?.id === 'sentence-2',
+    )!;
+    expect(progressiveFirst.id).toBe(firstClipId);
+    expect(progressiveSecond.id).not.toBe(firstClipId);
+    expect(progressiveCaptions.every((clip) => clip.captionLayerId === captionLayerId)).toBe(true);
+    expect(progressiveFirst.caption.type).toBe('text');
+    if (progressiveFirst.caption.type === 'text') {
+      expect(progressiveFirst.caption.sentences).toEqual([extendedSentence]);
     }
+    expect(progressiveFirst.timelineStartMs).toBe(100);
+    expect(progressiveFirst.timelineDurationMs).toBe(400);
+    expect(progressiveFirst.sourceDurationMs).toBe(400);
+    expect(progressiveSecond.caption.type).toBe('text');
+    if (progressiveSecond.caption.type === 'text') {
+      expect(progressiveSecond.caption.sentences).toEqual([secondSentence]);
+    }
+    expect(progressiveSecond.timelineStartMs).toBe(600);
+    expect(progressiveSecond.timelineDurationMs).toBe(200);
+    expect(progressiveSecond.sourceDurationMs).toBe(200);
+    const secondClipId = progressiveSecond.id;
 
     resolveTranscription(secondPartial);
     await vi.waitFor(() => expect(wrapper.emitted('select-caption')).toHaveLength(1));
@@ -408,13 +478,41 @@ describe('CaptionPanel', () => {
     expect(updates).toHaveLength(3);
     expect(wrapper.emitted('select-caption')![0]).toEqual([firstClipId]);
     const finalCaptions = updates[2]![0].clips.filter((clip) => clip.kind === 'caption');
-    expect(finalCaptions.map((clip) => clip.id)).toEqual(progressiveCaptions.map((clip) => clip.id));
+    expect(finalCaptions).toHaveLength(2);
+    const finalFirst = finalCaptions.find(
+      (clip) => clip.caption.type === 'text' && clip.caption.sentences[0]?.id === 'sentence-1',
+    )!;
+    const finalSecond = finalCaptions.find(
+      (clip) => clip.caption.type === 'text' && clip.caption.sentences[0]?.id === 'sentence-2',
+    )!;
+    expect(finalFirst.id).toBe(firstClipId);
+    expect(finalSecond.id).toBe(secondClipId);
+    expect(finalCaptions.every((clip) => clip.captionLayerId === captionLayerId)).toBe(true);
+    expect(finalFirst.caption.type).toBe('text');
+    if (finalFirst.caption.type === 'text') {
+      expect(finalFirst.caption.sentences).toEqual([extendedSentence]);
+    }
+    expect(finalFirst.timelineStartMs).toBe(100);
+    expect(finalFirst.timelineDurationMs).toBe(400);
+    expect(finalFirst.sourceDurationMs).toBe(400);
+    expect(finalSecond.caption.type).toBe('text');
+    if (finalSecond.caption.type === 'text') {
+      expect(finalSecond.caption.sentences).toEqual([secondSentence]);
+    }
+    expect(finalSecond.timelineStartMs).toBe(600);
+    expect(finalSecond.timelineDurationMs).toBe(200);
+    expect(finalSecond.sourceDurationMs).toBe(200);
     wrapper.unmount();
   });
 
   it('keeps completed caption chunks after transcription is cancelled', async () => {
     capture.whisperModels.mockResolvedValue([
-      { id: 'Xenova/whisper-tiny', status: 'ready', downloadedBytes: 100, totalBytes: 100 },
+      {
+        id: 'Xenova/whisper-tiny',
+        status: 'ready',
+        downloadedBytes: 100,
+        totalBytes: 100,
+      },
     ]);
     const partial: WhisperResult = {
       words: [{ text: 'Hello', startMs: 100, endMs: 200 }],
@@ -453,8 +551,14 @@ describe('CaptionPanel', () => {
     await wrapper.get('.cancel-transcription-btn').trigger('click');
 
     expect(whisper.cancel).toHaveBeenCalledOnce();
-    onPartial({ ...partial, sentences: [{ ...partial.sentences[0]!, text: 'Late partial' }] });
-    resolveTranscription({ ...partial, sentences: [{ ...partial.sentences[0]!, text: 'Late final' }] });
+    onPartial({
+      ...partial,
+      sentences: [{ ...partial.sentences[0]!, text: 'Late partial' }],
+    });
+    resolveTranscription({
+      ...partial,
+      sentences: [{ ...partial.sentences[0]!, text: 'Late final' }],
+    });
     await Promise.resolve();
     await wrapper.vm.$nextTick();
     expect(wrapper.emitted('preview:composition')).toBeUndefined();
@@ -471,23 +575,44 @@ describe('CaptionPanel', () => {
     wrapper.unmount();
   });
 
-  it('generates captions, replaces old AI captions, and exposes the edit action', async () => {
+  it('regenerates one AI layer, replaces old AI clips, and preserves non-AI clips', async () => {
     capture.whisperModels.mockResolvedValue([
-      { id: 'Xenova/whisper-tiny', status: 'ready', downloadedBytes: 100, totalBytes: 100 },
+      {
+        id: 'Xenova/whisper-tiny',
+        status: 'ready',
+        downloadedBytes: 100,
+        totalBytes: 100,
+      },
     ]);
     whisper.transcribe.mockResolvedValue({
       words: [],
-      sentences: [{ id: 'sentence-1', text: 'Hello', startMs: 100, endMs: 120 }],
+      sentences: [
+        { id: 'sentence-1', text: 'Hello', startMs: 100, endMs: 120 },
+        { id: 'sentence-2', text: 'World', startMs: 200, endMs: 260 },
+      ],
     });
     const wrapper = mount(CaptionPanel, {
       props: {
-        composition: { ...audioComposition, clips: [...audioComposition.clips, aiCaption] },
+        composition: {
+          ...audioComposition,
+          clips: [
+            ...audioComposition.clips,
+            aiCaption,
+            {
+              ...aiCaption,
+              id: 'caption-old-2',
+              name: 'Older AI caption',
+              order: 2,
+            },
+            manualCaption,
+          ],
+        },
         timelineDurationMs: 2000,
       },
       global: { stubs },
     });
     await vi.waitFor(() => expect(wrapper.find('.model-ready-text').exists()).toBe(true));
-    expect(wrapper.text()).toContain('1 subtitle track');
+    expect(wrapper.text()).toContain('2 subtitle track(s)');
     await wrapper.get('button[variant="primary"]').trigger('click');
     await vi.waitFor(() =>
       expect(whisper.transcribe).toHaveBeenCalledWith(
@@ -500,13 +625,51 @@ describe('CaptionPanel', () => {
     expect(createComposition).toHaveBeenCalled();
     expect(wrapper.emitted('update:composition')).toHaveLength(1);
     expect(wrapper.emitted('select-caption')).toHaveLength(1);
+    const composition = (wrapper.emitted('update:composition') as Array<[ClipComposition]>)[0]![0];
+    const captions = composition.clips.filter((clip) => clip.kind === 'caption');
+    expect(captions).toHaveLength(3);
+    const generatedCaptions = captions.filter((clip) => clip.isAiGenerated);
+    expect(generatedCaptions).toHaveLength(2);
+    expect(new Set(generatedCaptions.map((clip) => clip.captionLayerId)).size).toBe(1);
+    expect(
+      generatedCaptions.map((clip) => (clip.caption.type === 'text' ? clip.caption.sentences[0]?.id : null)),
+    ).toEqual(['sentence-1', 'sentence-2']);
+    expect(captions.find((clip) => clip.id === 'caption-old')).toBeUndefined();
+    expect(captions.find((clip) => clip.id === 'caption-old-2')).toBeUndefined();
+    expect(captions.find((clip) => clip.id === 'caption-manual')).toMatchObject(manualCaption);
+    expect(composition.clips.find((clip) => clip.id === 'audio-clip')).toMatchObject(audioComposition.clips[0]!);
+    const generatedCaption = generatedCaptions[0]!;
+    expect(generatedCaption.timelineStartMs).toBe(100);
+    expect(generatedCaption.timelineDurationMs).toBe(40);
+    expect(generatedCaption.sourceDurationMs).toBe(40);
+    expect(generatedCaption.caption.type).toBe('text');
+    if (generatedCaption.caption.type === 'text') {
+      expect(generatedCaption.caption.sentences).toEqual([
+        { id: 'sentence-1', text: 'Hello', startMs: 100, endMs: 120 },
+      ]);
+    }
+    const secondGeneratedCaption = generatedCaptions[1]!;
+    expect(secondGeneratedCaption.timelineStartMs).toBe(200);
+    expect(secondGeneratedCaption.timelineDurationMs).toBe(60);
+    expect(secondGeneratedCaption.sourceDurationMs).toBe(60);
+    expect(secondGeneratedCaption.caption.type).toBe('text');
+    if (secondGeneratedCaption.caption.type === 'text') {
+      expect(secondGeneratedCaption.caption.sentences).toEqual([
+        { id: 'sentence-2', text: 'World', startMs: 200, endMs: 260 },
+      ]);
+    }
     await wrapper.get('button[variant="ghost"]').trigger('click');
     expect(wrapper.emitted('select-caption')).toHaveLength(2);
   });
 
   it('locks caption generation while audio decoding or transcription is pending', async () => {
     capture.whisperModels.mockResolvedValue([
-      { id: 'Xenova/whisper-tiny', status: 'ready', downloadedBytes: 100, totalBytes: 100 },
+      {
+        id: 'Xenova/whisper-tiny',
+        status: 'ready',
+        downloadedBytes: 100,
+        totalBytes: 100,
+      },
     ]);
     let resolveTranscription!: (result: WhisperResult) => void;
     whisper.transcribe.mockImplementation(
@@ -535,7 +698,12 @@ describe('CaptionPanel', () => {
 
   it('does nothing when transcription returns no sentences', async () => {
     capture.whisperModels.mockResolvedValue([
-      { id: 'Xenova/whisper-tiny', status: 'ready', downloadedBytes: 100, totalBytes: 100 },
+      {
+        id: 'Xenova/whisper-tiny',
+        status: 'ready',
+        downloadedBytes: 100,
+        totalBytes: 100,
+      },
     ]);
     const wrapper = mount(CaptionPanel, {
       props: { composition: audioComposition, timelineDurationMs: 2000 },
@@ -549,7 +717,12 @@ describe('CaptionPanel', () => {
 
   it('deletes a downloaded model when clicking the delete button', async () => {
     capture.whisperModels.mockResolvedValue([
-      { id: 'Xenova/whisper-tiny', status: 'ready', downloadedBytes: 100, totalBytes: 100 },
+      {
+        id: 'Xenova/whisper-tiny',
+        status: 'ready',
+        downloadedBytes: 100,
+        totalBytes: 100,
+      },
     ]);
     capture.deleteWhisperModel.mockResolvedValue({
       id: 'Xenova/whisper-tiny',
@@ -566,7 +739,12 @@ describe('CaptionPanel', () => {
     expect(deleteButton.text()).toContain('Delete Model');
 
     capture.whisperModels.mockResolvedValue([
-      { id: 'Xenova/whisper-tiny', status: 'missing', downloadedBytes: 0, totalBytes: 100 },
+      {
+        id: 'Xenova/whisper-tiny',
+        status: 'missing',
+        downloadedBytes: 0,
+        totalBytes: 100,
+      },
     ]);
     await deleteButton.trigger('click');
     await vi.waitFor(() => expect(capture.deleteWhisperModel).toHaveBeenCalledWith('Xenova/whisper-tiny'));

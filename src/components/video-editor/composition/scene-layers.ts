@@ -1,36 +1,60 @@
-import { activeClipsAt } from '~/media/shared';
-import type { BlurClip, CaptionClip, ClipComposition, VisualClip } from '~/media/shared/composition-types';
+import { sourceTimeAt } from '~/media/shared';
+import type {
+  BlurClip,
+  CaptionClip,
+  Clip,
+  ClipComposition,
+  ColorClip,
+  ShapeClip,
+  VisualClip,
+} from '~/media/shared/composition-types';
 
 export interface CompositionSceneLayers {
   screen: VisualClip | null;
   cameraVisuals: VisualClip[];
   webcams: VisualClip[];
-  visualStack: Array<VisualClip | BlurClip>;
+  visualStack: Array<VisualClip | ColorClip | ShapeClip | BlurClip>;
   captions: CaptionClip[];
 }
 
-export function resolveCompositionSceneLayers(composition: ClipComposition, timeMs: number): CompositionSceneLayers {
-  const active = activeClipsAt(composition, timeMs);
-  const byOrder = <T extends { order: number }>(left: T, right: T) => right.order - left.order;
-  const screen = active.filter((clip): clip is VisualClip => clip.kind === 'screen').sort(byOrder);
-  const cameraVisuals = active
-    .filter((clip): clip is VisualClip => clip.kind === 'screen' || clip.kind === 'video' || clip.kind === 'image')
-    .sort(byOrder);
-  const visualStack = active
-    .filter(
-      (clip): clip is VisualClip | BlurClip =>
-        clip.kind === 'screen' ||
-        clip.kind === 'video' ||
-        clip.kind === 'image' ||
-        clip.kind === 'webcam' ||
-        clip.kind === 'blur',
-    )
-    .sort(byOrder);
-  return {
-    screen: screen[0] ?? null,
-    cameraVisuals,
-    webcams: active.filter((clip): clip is VisualClip => clip.kind === 'webcam').sort(byOrder),
-    visualStack,
-    captions: active.filter((clip): clip is CaptionClip => clip.kind === 'caption').sort(byOrder),
+export type CompositionSceneLayerResolver = (timeMs: number) => CompositionSceneLayers;
+
+const byDescendingOrder = (left: Clip, right: Clip) => right.order - left.order;
+
+export function createCompositionSceneLayerResolver(composition: ClipComposition): CompositionSceneLayerResolver {
+  const clips = [...composition.clips].sort(byDescendingOrder);
+
+  return (timeMs) => {
+    const cameraVisuals: VisualClip[] = [];
+    const webcams: VisualClip[] = [];
+    const visualStack: Array<VisualClip | ColorClip | ShapeClip | BlurClip> = [];
+    const captions: CaptionClip[] = [];
+    let screen: VisualClip | null = null;
+
+    for (const clip of clips) {
+      if (clip.kind === 'audio' || !clip.enabled || sourceTimeAt(clip, timeMs) === null) continue;
+      if (clip.kind === 'caption') {
+        captions.push(clip);
+        continue;
+      }
+      if (clip.kind === 'color' || clip.kind === 'shape' || clip.kind === 'blur') {
+        visualStack.push(clip);
+        continue;
+      }
+      if (clip.kind === 'webcam') {
+        webcams.push(clip);
+        visualStack.push(clip);
+        continue;
+      }
+      if (clip.kind === 'screen') screen ??= clip;
+      cameraVisuals.push(clip);
+      visualStack.push(clip);
+    }
+
+    return { screen, cameraVisuals, webcams, visualStack, captions };
   };
+}
+
+export function resolveCompositionSceneLayers(composition: ClipComposition, timeMs: number): CompositionSceneLayers {
+  return createCompositionSceneLayerResolver(composition)(timeMs);
 }

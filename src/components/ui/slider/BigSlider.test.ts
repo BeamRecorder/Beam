@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import BigSlider from './BigSlider.vue';
 
 const Input = {
@@ -11,6 +11,8 @@ const Input = {
 };
 
 describe('BigSlider', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
   it('updates the range and reports interaction boundaries', async () => {
     const wrapper = mount(BigSlider, {
       props: {
@@ -60,5 +62,30 @@ describe('BigSlider', () => {
     await wrapper.get('.big-slider-input').trigger('pointerdown');
     wrapper.unmount();
     expect(wrapper.emitted('interaction-end')).toHaveLength(1);
+  });
+
+  it('coalesces drag updates to one composition update per animation frame', async () => {
+    const frameCallbacks: FrameRequestCallback[] = [];
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+      frameCallbacks.push(callback);
+      return 1;
+    });
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    const wrapper = mount(BigSlider, {
+      props: { modelValue: 0, min: 0, max: 360, label: 'Rotation' },
+      global: { stubs: { Input } },
+    });
+    const input = wrapper.get('.big-slider-input');
+
+    await input.trigger('pointerdown');
+    (input.element as HTMLInputElement).value = '90';
+    await input.trigger('input');
+    (input.element as HTMLInputElement).value = '180';
+    await input.trigger('input');
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+    expect(frameCallbacks).toHaveLength(1);
+    frameCallbacks[0]!(0);
+    expect(wrapper.emitted('update:modelValue')).toEqual([[180]]);
+    await input.trigger('change');
   });
 });

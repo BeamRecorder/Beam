@@ -33,6 +33,8 @@ export interface CaptureProject {
   hasScreen?: boolean;
   hasCamera?: boolean;
   hasCaption?: boolean;
+  hasSystemAudio?: boolean;
+  hasMicrophone?: boolean;
 }
 
 export interface CursorMoveEvent {
@@ -189,6 +191,12 @@ export interface ZoomElement {
   focus: ZoomFocus;
   depth: 1 | 2 | 3 | 4 | 5 | 6;
   mode: 'auto' | 'manual';
+  /** Missing only in projects saved before perspective zooms were introduced. */
+  projection?: '2d' | '3d';
+  tiltIntensity?: number;
+  tiltHorizontal?: number;
+  tiltVertical?: number;
+  tiltPreset?: 'small' | 'medium' | 'large' | 'custom';
 }
 
 export interface ProjectZoomState {

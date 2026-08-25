@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 import type { MediaAsset, NormalizedTransform, VisualClip } from '~/media/shared/composition-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import { createComposition } from './engine/clip-engine';
-import { editableVisualClipTransform, resolveVisualClipFraming, visualClipDisplayLayout } from './visual-framing';
+import {
+  editableVisualClipTransform,
+  resolveVisualClipFraming,
+  resizePhoneFrameTransform,
+  visualClipDisplayLayout,
+} from './visual-framing';
 
 const source: MediaAsset = {
   id: 'asset',
@@ -156,4 +161,84 @@ describe('editable visual framing transforms', () => {
     expect(framing.rect.width).toBeLessThan(visibleBounds.width);
     expect(framing.rect.height).toBeCloseTo(visibleBounds.height, 10);
   });
+
+  it.each(['iphone-16-max', 'pixel-9-pro'] as const)(
+    'keeps the native media aspect when the %s phone frame is selected',
+    (frame) => {
+      const portraitSource = { ...source, width: 1_080, height: 1_920 };
+      const clip = clipFor('video', 'fit');
+      clip.appearance = { ...clip.appearance, frame };
+      const composition = createComposition([portraitSource], [clip]);
+      const display = visualClipDisplayLayout(
+        clip,
+        transform,
+        { x: 0, y: 0, width: 800, height: 450 },
+        portraitSource.width!,
+        portraitSource.height!,
+        'fit',
+      );
+      const nativeAspect = frame === 'iphone-16-max' ? 415 / 843 : 353 / 745;
+
+      expect(display.width / display.height).toBeCloseTo(nativeAspect, 10);
+      expect(display.width).toBeLessThan(transform.width * 800);
+      expect(display.height).toBeLessThanOrEqual(transform.height * 450);
+      expect(composition.clips[0]).toMatchObject({ appearance: { frame } });
+    },
+  );
+
+  it.each(['iphone-16-max', 'pixel-9-pro'] as const)(
+    'keeps the top-left anchor stable while resizing a fitted %s phone from the bottom-right',
+    (frame) => {
+      const clip = clipFor('video', 'fit');
+      clip.appearance = { ...clip.appearance, frame };
+      const composition = createComposition([source], [clip]);
+      const viewport = { x: 0, y: 0, width: 800, height: 450 };
+      const initial = visualClipDisplayLayout(clip, transform, viewport, source.width!, source.height!, 'fit');
+      const resizedTransform = resizePhoneFrameTransform(
+        composition,
+        clip,
+        transform,
+        { dx: viewport.x, dy: viewport.y, dw: viewport.width, dh: viewport.height },
+        { x: 0.1, y: 0.1 },
+        'bottom-right',
+      );
+      const resized = visualClipDisplayLayout(clip, resizedTransform, viewport, source.width!, source.height!, 'fit');
+
+      expect(resized.left).toBeCloseTo(initial.left, 10);
+      expect(resized.top).toBeCloseTo(initial.top, 10);
+      expect(resized.width).toBeGreaterThan(initial.width);
+      expect(resized.height).toBeGreaterThan(initial.height);
+    },
+  );
+
+  it.each(['iphone-16-max', 'pixel-9-pro'] as const)(
+    'keeps the bottom-right anchor stable while resizing a fitted %s phone from the top-left',
+    (frame) => {
+      const clip = clipFor('video', 'fit');
+      clip.appearance = { ...clip.appearance, frame };
+      const composition = createComposition([source], [clip]);
+      const viewport = { x: 0, y: 0, width: 800, height: 450 };
+      const initial = visualClipDisplayLayout(clip, transform, viewport, source.width!, source.height!, 'fit');
+      const resized = visualClipDisplayLayout(
+        clip,
+        resizePhoneFrameTransform(
+          composition,
+          clip,
+          transform,
+          { dx: viewport.x, dy: viewport.y, dw: viewport.width, dh: viewport.height },
+          { x: -0.1, y: -0.1 },
+          'top-left',
+        ),
+        viewport,
+        source.width!,
+        source.height!,
+        'fit',
+      );
+
+      expect(resized.left + resized.width).toBeCloseTo(initial.left + initial.width, 10);
+      expect(resized.top + resized.height).toBeCloseTo(initial.top + initial.height, 10);
+      expect(resized.width).toBeGreaterThan(initial.width);
+      expect(resized.height).toBeGreaterThan(initial.height);
+    },
+  );
 });

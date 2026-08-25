@@ -27,6 +27,8 @@ const emit = defineEmits<{
 const isEditing = ref(false);
 const isInteracting = ref(false);
 const editValue = ref<number | string>(props.modelValue);
+let pendingRangeValue: number | null = null;
+let rangeFrame: number | null = null;
 
 const percentage = computed(() => {
   const range = props.max - props.min;
@@ -82,14 +84,42 @@ const startInteraction = () => {
   emit('interaction-start');
 };
 
+const flushRangeValue = () => {
+  if (rangeFrame !== null) cancelAnimationFrame(rangeFrame);
+  rangeFrame = null;
+  if (pendingRangeValue === null) return;
+  emit('update:modelValue', pendingRangeValue);
+  pendingRangeValue = null;
+};
+
+const handleRangeInput = (event: Event) => {
+  const value = parseFloat((event.target as HTMLInputElement).value);
+  if (!isInteracting.value) {
+    emit('update:modelValue', value);
+    return;
+  }
+  pendingRangeValue = value;
+  if (rangeFrame !== null) return;
+  rangeFrame = requestAnimationFrame(() => {
+    rangeFrame = null;
+    if (pendingRangeValue === null) return;
+    emit('update:modelValue', pendingRangeValue);
+    pendingRangeValue = null;
+  });
+};
+
 const endInteraction = () => {
   if (!isInteracting.value) return;
+  flushRangeValue();
   isInteracting.value = false;
   endPropertyInteraction();
   emit('interaction-end');
 };
 
-onBeforeUnmount(endInteraction);
+onBeforeUnmount(() => {
+  flushRangeValue();
+  endInteraction();
+});
 </script>
 
 <template>
@@ -155,7 +185,7 @@ onBeforeUnmount(endInteraction);
         :step="step"
         :value="modelValue"
         class="big-slider-input"
-        @input="emit('update:modelValue', parseFloat(($event.target as HTMLInputElement).value))"
+        @input="handleRangeInput"
         @pointerdown="startInteraction"
         @pointercancel="endInteraction"
         @change="endInteraction"

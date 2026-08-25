@@ -1,5 +1,11 @@
 import type { CaptureConfig, CreateProjectOptions, StartRecordingOptions } from './capture-config';
-import type { ScreenRegion, ScreenRegionBounds, ScreenRegionOverlayOptions } from './screen-region';
+import type {
+  ScreenRegion,
+  ScreenRegionBounds,
+  ScreenRegionOverlayOptions,
+  ScreenRegionSelectionOptions,
+  ScreenRegionSelectionResult,
+} from './screen-region';
 import type { CaptureProject, CaptureSession, ProjectEditorData, ProjectZoomState } from './capture-session';
 import type { ClipComposition, MediaAsset } from '~/media/shared/composition-types';
 import type {
@@ -93,7 +99,7 @@ export interface DesktopCaptureApi extends CaptureApi {
   onCountdown(listener: (seconds: number | null) => void): () => void;
   getSources(types?: string[]): Promise<CapturePreview[]>;
   getDisplayBounds(displayId: string): Promise<ScreenRegionBounds | null>;
-  selectScreenRegion(options: ScreenRegionOverlayOptions): Promise<ScreenRegion | null>;
+  selectScreenRegion(options: ScreenRegionSelectionOptions): Promise<ScreenRegionSelectionResult | null>;
   showScreenRegionOverlay(options: ScreenRegionOverlayOptions): void;
   hideScreenRegionOverlay(): void;
   onScreenRegionConfigure(

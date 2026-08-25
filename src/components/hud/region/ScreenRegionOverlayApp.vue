@@ -207,9 +207,21 @@ onBeforeUnmount(() => unsubscribe?.());
 </script>
 
 <template>
-  <main class="region-overlay" @pointerdown.prevent="begin" @pointermove="move" @pointerup="end" @pointercancel="end">
+  <main
+    class="region-overlay"
+    :class="{ selecting: isSelecting, recording: !isSelecting }"
+    @pointerdown.prevent="begin"
+    @pointermove="move"
+    @pointerup="end"
+    @pointercancel="end"
+  >
     <div v-if="isSelecting && !region" class="region-empty-backdrop" />
-    <div v-if="region" class="region-frame" :style="regionStyle" :class="{ selecting: isSelecting }">
+    <div
+      v-if="region"
+      class="region-frame"
+      :style="regionStyle"
+      :class="{ selecting: isSelecting, recording: !isSelecting }"
+    >
       <span v-if="isSelecting" class="resize-handle nw" data-handle="nw" />
       <span v-if="isSelecting" class="resize-handle ne" data-handle="ne" />
       <span v-if="isSelecting" class="resize-handle sw" data-handle="sw" />
@@ -247,10 +259,13 @@ onBeforeUnmount(() => unsubscribe?.());
   position: fixed;
   inset: 0;
   overflow: hidden;
-  cursor: crosshair;
+  cursor: default;
   background: transparent;
   user-select: none;
   touch-action: none;
+}
+.region-overlay.selecting {
+  cursor: crosshair;
 }
 .region-empty-backdrop {
   position: absolute;
@@ -266,6 +281,11 @@ onBeforeUnmount(() => unsubscribe?.());
 }
 .region-frame.selecting {
   box-shadow: 0 0 0 9999px rgb(8 12 20 / 42%);
+}
+.region-frame.recording {
+  border: 0;
+  cursor: default;
+  outline: 2px solid var(--color-primary);
 }
 .resize-handle {
   position: absolute;

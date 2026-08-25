@@ -152,6 +152,29 @@ describe('openExportAssets', () => {
     result.dispose();
   });
 
+  it('does not require a media asset for vector shape clips', async () => {
+    const shape = {
+      id: 'shape',
+      trackId: 'shape-track',
+      kind: 'shape',
+      name: 'Shape',
+      assetId: '',
+      timelineStartMs: 0,
+      timelineDurationMs: 1_000,
+      sourceInMs: 0,
+      sourceDurationMs: 1_000,
+      playbackRate: 1,
+      enabled: true,
+      order: 0,
+    };
+
+    const result = await openExportAssets(request([], [shape]), new AbortController().signal, vi.fn());
+
+    expect(runtime.openMediaInput).not.toHaveBeenCalled();
+    expect(result.assets.size).toBe(0);
+    result.dispose();
+  });
+
   it('opens each required asset once and reuses its video/audio tracks', async () => {
     const shared = asset('shared');
     const opened = openedInput({ metadata: 4.5 });

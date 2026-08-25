@@ -5,11 +5,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import EditorCanvas from '../EditorCanvas.vue';
 import CanvasLoadingSkeleton from '../CanvasLoadingSkeleton.vue';
 import { DEFAULT_OUTPUT_CANVAS } from '../output-canvas';
-import type { ClipComposition, VisualClip } from '~/media/shared/composition-types';
+import type { CaptionClip, ClipComposition, VisualClip } from '~/media/shared/composition-types';
 import type { MediaFrame } from '~/media/shared';
-import type { CursorClickEffects } from '../../../../api/types/cursor-settings';
+import type { CursorAutoHideSettings, CursorClickEffects } from '../../../../api/types/cursor-settings';
 import ResizeHandle from '../../../ui/ResizeHandle/ResizeHandle.vue';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import { resolveCompositionSceneLayers } from '../../composition/scene-layers';
 
 const { state } = vi.hoisted(() => ({
@@ -37,8 +37,11 @@ const { state } = vi.hoisted(() => ({
     selectVisualAt: vi.fn(),
     transformDraft: undefined as { value: unknown } | undefined,
     transformSelectionViewportStyle: undefined as { value: unknown } | undefined,
+    transformHandlePositions: undefined as { value: unknown } | undefined,
+    transformPerspectiveCorners: undefined as { value: unknown } | undefined,
     transformResizeCorners: undefined as { value: unknown } | undefined,
     transition: undefined as { value: boolean } | undefined,
+    onRenderOnce: undefined as (() => void) | undefined,
     renderVisualStack: undefined as ((...args: unknown[]) => void) | undefined,
     canvasBackgroundOptions: undefined as
       | {
@@ -49,6 +52,32 @@ const { state } = vi.hoisted(() => ({
       | undefined,
     cursorBounds: undefined as { value: unknown } | undefined,
     isScreenEnabled: undefined as (() => boolean) | undefined,
+    perspectiveRender: vi.fn(),
+    perspectiveDispose: vi.fn(),
+  },
+}));
+
+vi.mock('../../zoom/perspective-scene-compositor', () => ({
+  PerspectiveSceneCompositor: class {
+    render(options: {
+      target: CanvasRenderingContext2D;
+      bounds: { x: number; y: number; width: number; height: number };
+      draw: (context: CanvasRenderingContext2D) => unknown;
+    }) {
+      state.perspectiveRender(options);
+      options.draw(options.target);
+      options.target.drawImage(
+        { perspectiveSurface: true } as unknown as CanvasImageSource,
+        options.bounds.x,
+        options.bounds.y,
+        options.bounds.width,
+        options.bounds.height,
+      );
+    }
+
+    dispose() {
+      state.perspectiveDispose();
+    }
   },
 }));
 
@@ -106,6 +135,7 @@ vi.mock('../composables/useCameraZoom', async () => {
   return {
     useCameraZoom: (options: { renderVisualStack: (...args: unknown[]) => void; onRenderOnce?: () => void }) => {
       state.renderVisualStack = options.renderVisualStack;
+      state.onRenderOnce = options.onRenderOnce;
       return {
         focusTargetStyle: ref({
           left: '10px',
@@ -144,6 +174,8 @@ vi.mock('../composables/useLayerTransformAndCrop', async () => {
         width: '800px',
         height: '450px',
       });
+      state.transformHandlePositions = ref(undefined);
+      state.transformPerspectiveCorners = ref(undefined);
       state.transformResizeCorners = ref(undefined);
       return {
         transformSelectionViewportStyle: state.transformSelectionViewportStyle,
@@ -153,6 +185,8 @@ vi.mock('../composables/useLayerTransformAndCrop', async () => {
           width: '100px',
           height: '80px',
         }),
+        transformHandlePositions: state.transformHandlePositions,
+        transformPerspectiveCorners: state.transformPerspectiveCorners,
         cropContainerStyle: ref({
           left: '3px',
           top: '4px',
@@ -198,6 +232,7 @@ const effects: CursorClickEffects = {
     rippleColor: '#00f',
   },
 };
+const autoHide: CursorAutoHideSettings = { enabled: false, delaySeconds: 2, fadeDurationMs: 250 };
 
 const screen = (): VisualClip => ({
   id: 'screen',
@@ -253,6 +288,36 @@ const image = (): VisualClip => ({
   isMirroredY: false,
 });
 
+const caption = (): CaptionClip => ({
+  id: 'caption',
+  kind: 'caption',
+  name: 'Caption',
+  timelineStartMs: 0,
+  timelineDurationMs: 2_000,
+  sourceInMs: 0,
+  sourceDurationMs: 2_000,
+  playbackRate: 1,
+  enabled: true,
+  order: -1,
+  isAiGenerated: false,
+  caption: {
+    type: 'text',
+    sentences: [
+      {
+        id: 'sentence',
+        text: 'Original sentence',
+        startMs: 0,
+        endMs: 2_000,
+        words: [],
+      },
+    ],
+    style: {
+      ...createDefaultCaptionStyle(40),
+      customText: 'Original caption',
+    },
+  },
+});
+
 const frame = (clipId: string, width = 1_280, height = 720): MediaFrame => ({
   clipId,
   bitmap: {} as ImageBitmap,
@@ -300,6 +365,7 @@ const props = () => ({
   shadowColor: '#000000',
   shadowDirection: 'bottom' as const,
   clickEffects: effects,
+  autoHide,
   motion: {
     preset: 'smooth' as const,
     smoothing: 0.67,
@@ -354,6 +420,7 @@ const runFrame = () => {
 beforeEach(() => {
   vi.clearAllMocks();
   frames = [];
+  state.onRenderOnce = undefined;
   contextMock = context();
   vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
     frames.push(callback);
@@ -410,6 +477,85 @@ describe('EditorCanvas', () => {
     await nextTick();
 
     expect(state.canvasBackgroundOptions?.previewQuality?.()).toBe('full');
+  });
+
+  it('keeps a 2D zoom on the direct Canvas2D preview path', async () => {
+    const cameraBounds = {
+      dx: 0,
+      dy: 0,
+      dw: 800,
+      dh: 450,
+      scale: 1,
+      focusX: 400,
+      focusY: 225,
+    };
+    state.drawVideoWindow.mockReturnValue(cameraBounds);
+    const mounted = mountEditor({
+      zoomElements: [
+        {
+          id: 'flat-zoom',
+          sessionId: 'session',
+          startMs: 0,
+          endMs: 2_000,
+          focus: { cx: 0.5, cy: 0.5 },
+          depth: 2,
+          mode: 'manual',
+          projection: '2d',
+          tiltIntensity: 1,
+        },
+      ],
+    });
+    await flushPromises();
+    while (frames.length) runFrame();
+
+    expect(state.perspectiveRender).not.toHaveBeenCalled();
+    expect(state.drawComposition.mock.calls.some(([ctx]) => ctx === contextMock)).toBe(true);
+    mounted.unmount();
+    wrapper = undefined;
+  });
+
+  it('routes an active 3D zoom through the perspective surface while keeping composition overlays on target', async () => {
+    const cameraBounds = {
+      dx: 0,
+      dy: 0,
+      dw: 800,
+      dh: 450,
+      scale: 1,
+      focusX: 400,
+      focusY: 225,
+    };
+    state.drawVideoWindow.mockReturnValue(cameraBounds);
+    const mounted = mountEditor({
+      zoomElements: [
+        {
+          id: 'perspective-zoom',
+          sessionId: 'session',
+          startMs: 0,
+          endMs: 2_000,
+          focus: { cx: 0.75, cy: 0.25 },
+          depth: 2,
+          mode: 'manual',
+          projection: '3d',
+          tiltIntensity: 1,
+        },
+      ],
+    });
+    await flushPromises();
+    while (frames.length) runFrame();
+
+    expect(state.perspectiveRender).toHaveBeenCalled();
+    expect(state.perspectiveRender).toHaveBeenCalledWith(
+      expect.objectContaining({
+        target: contextMock,
+        bounds: expect.objectContaining({ width: 800, height: 450 }),
+      }),
+    );
+    expect(state.drawComposition).toHaveBeenCalledWith(contextMock, cameraBounds, undefined, expect.anything());
+    expect(contextMock.roundRect).toHaveBeenCalledWith(0, 0, 800, 450, 16);
+    expect(contextMock.clip).toHaveBeenCalled();
+    mounted.unmount();
+    wrapper = undefined;
+    expect(state.perspectiveDispose).toHaveBeenCalled();
   });
 
   it('uses a quality-scaled backing canvas while keeping the CSS preview and logical coordinates unchanged', async () => {
@@ -738,7 +884,7 @@ describe('EditorCanvas', () => {
     await flushPromises();
     runFrame();
 
-    expect(state.drawComposition).toHaveBeenCalledWith(expect.anything(), bounds);
+    expect(state.drawComposition.mock.calls.some((call) => call[1] === bounds)).toBe(true);
     expect(state.updateCursor).toHaveBeenCalled();
     expect(mounted.find('.webcam-selection').exists()).toBe(true);
     await mounted.find('.webcam-selection').trigger('pointerdown');
@@ -756,6 +902,18 @@ describe('EditorCanvas', () => {
     state.transformResizeCorners!.value = ['left', 'right'];
     await nextTick();
     expect(mounted.findComponent(ResizeHandle).props('corners')).toEqual(['left', 'right']);
+
+    const positions = { 'top-left': { x: 8, y: 12 }, right: { x: 104, y: 44 } };
+    state.transformHandlePositions!.value = positions;
+    state.transformPerspectiveCorners!.value = [
+      { x: 8, y: 12 },
+      { x: 96, y: 4 },
+      { x: 104, y: 44 },
+      { x: 12, y: 52 },
+    ];
+    await nextTick();
+    expect(mounted.findComponent(ResizeHandle).props('positions')).toEqual(positions);
+    expect(mounted.find('.perspective-border polygon').attributes('points')).toBe('8,12 96,4 104,44 12,52');
 
     state.renderVisualStack?.(contextMock, bounds, vi.fn(), resolveCompositionSceneLayers(composition(), 500));
     expect(state.drawWebcamClips).toHaveBeenCalledWith(expect.anything(), bounds);
@@ -810,6 +968,55 @@ describe('EditorCanvas', () => {
     expect(captionOrder).toBeGreaterThan(cursorOrder!);
   });
 
+  it('opens the native caption editor from the caption hit-test and restores text on Escape', async () => {
+    const testCaption = caption();
+    const testComposition = composition();
+    testComposition.clips.push(testCaption);
+    state.clipIdAt.mockReturnValue('caption');
+    wrapper = mount(EditorCanvas, {
+      props: {
+        ...props(),
+        composition: testComposition,
+        selectedTransformClip: screen(),
+      },
+      global: { plugins: [MotionPlugin] },
+      attachTo: document.body,
+    });
+    const mounted = wrapper;
+    const island = mounted.get('.canvas-island');
+
+    await island.trigger('dblclick', { button: 0, clientX: 400, clientY: 225 });
+    await nextTick();
+
+    expect(state.clipIdAt).toHaveBeenCalledWith(
+      expect.objectContaining({ clientX: 400, clientY: 225 }),
+      expect.any(HTMLCanvasElement),
+    );
+    expect(mounted.emitted('select:clip')).toContainEqual(['caption']);
+    expect(mounted.emitted('caption-editing-start')).toHaveLength(1);
+    const textarea = mounted.get('textarea').element as HTMLTextAreaElement;
+    expect(document.activeElement).toBe(textarea);
+    expect(textarea.selectionStart).toBe(textarea.value.length);
+    expect(textarea.selectionEnd).toBe(textarea.value.length);
+
+    vi.useFakeTimers();
+    await mounted.get('textarea').setValue('Edited caption');
+    vi.advanceTimersByTime(150);
+    await nextTick();
+    expect(mounted.emitted('update:caption-text')).toContainEqual([
+      { clipId: 'caption', customText: 'Edited caption' },
+    ]);
+
+    await mounted.get('textarea').trigger('keydown', { key: 'Escape' });
+    await nextTick();
+
+    expect(mounted.find('textarea').exists()).toBe(false);
+    expect(mounted.emitted('caption-editing-end')).toContainEqual([{ cancelled: true }]);
+    expect(mounted.emitted('update:caption-text')).toContainEqual([
+      { clipId: 'caption', customText: 'Original caption' },
+    ]);
+  });
+
   it('raycasts layers above an already selected recording before starting its drag', async () => {
     const mounted = mountEditor({ selectedTransformClip: screen() });
     await flushPromises();
@@ -842,7 +1049,7 @@ describe('EditorCanvas', () => {
     await flushPromises();
     runFrame();
 
-    expect(state.drawComposition).toHaveBeenCalledWith(contextMock, cameraBounds);
+    expect(state.drawComposition.mock.calls).toContainEqual(expect.arrayContaining([contextMock, cameraBounds]));
   });
 
   it('renders watermark-only output changes immediately without playback or seeking', async () => {
@@ -946,6 +1153,73 @@ describe('EditorCanvas', () => {
     expect(state.resetCamera).toHaveBeenCalled();
   });
 
+  it('keeps one playback frame scheduled while a clip-toggle transition requests redraws during rendering', async () => {
+    const mounted = mountEditor({ isPlaying: false, playbackState: 'paused' });
+    await flushPromises();
+    while (frames.length) runFrame();
+
+    await mounted.setProps({ isPlaying: true, playbackState: 'playing' });
+    await nextTick();
+    expect(frames).toHaveLength(1);
+
+    runFrame();
+    expect(frames).toHaveLength(1);
+
+    const disabledComposition = composition();
+    disabledComposition.clips = disabledComposition.clips.map((clip) =>
+      clip.kind === 'screen' ? { ...clip, enabled: false } : clip,
+    );
+    await mounted.setProps({ composition: disabledComposition });
+    await nextTick();
+
+    // The transition capture and composition invalidation both request a redraw,
+    // but they must coalesce with the frame already scheduled for playback.
+    expect(frames).toHaveLength(1);
+
+    runFrame();
+    expect(frames).toHaveLength(1);
+    const drawCountAfterTransitionFrame = state.drawComposition.mock.calls.length;
+
+    // The fade's onRenderOnce callback runs from inside this draw. Playback must
+    // continue with one pending frame instead of creating a second RAF chain.
+    runFrame();
+    expect(frames).toHaveLength(1);
+    expect(state.drawComposition.mock.calls.length).toBeGreaterThan(drawCountAfterTransitionFrame);
+  });
+
+  it('coalesces a render-once request raised from inside a playback draw', async () => {
+    const mounted = mountEditor({ isPlaying: false, playbackState: 'paused' });
+    await flushPromises();
+    while (frames.length) runFrame();
+
+    const cameraBounds = {
+      dx: 0,
+      dy: 0,
+      dw: 800,
+      dh: 450,
+      scale: 1,
+      focusX: 400,
+      focusY: 225,
+    };
+    state.drawVideoWindow.mockImplementation(() => {
+      state.onRenderOnce?.();
+      return cameraBounds;
+    });
+    expect(state.onRenderOnce).toBeDefined();
+
+    await mounted.setProps({ isPlaying: true, playbackState: 'playing' });
+    await nextTick();
+    expect(frames).toHaveLength(1);
+
+    runFrame();
+    expect(frames).toHaveLength(1);
+
+    const drawCountAfterFirstFrame = state.drawVideoWindow.mock.calls.length;
+    runFrame();
+    expect(frames).toHaveLength(1);
+    expect(state.drawVideoWindow.mock.calls.length).toBeGreaterThan(drawCountAfterFirstFrame);
+  });
+
   it('redraws the paused canvas when the selected manual zoom changes', async () => {
     const mounted = mountEditor({ playbackState: 'paused', isPlaying: false });
     await flushPromises();
@@ -968,6 +1242,33 @@ describe('EditorCanvas', () => {
     expect(frames.length).toBeGreaterThan(0);
     runFrame();
     expect(state.drawVideoWindow).toHaveBeenCalled();
+  });
+
+  it('coalesces playback invalidations without traversing unrelated composition data', async () => {
+    const stableComposition = composition();
+    let unrelatedReadCount = 0;
+    Object.defineProperty(stableComposition, 'unrelatedNestedData', {
+      configurable: true,
+      enumerable: true,
+      get: () => {
+        unrelatedReadCount += 1;
+        return { nested: { value: 1 } };
+      },
+    });
+    const mounted = mountEditor({ composition: stableComposition, playbackState: 'paused', isPlaying: false });
+    await flushPromises();
+    while (frames.length) runFrame();
+    const readsAfterInitialRender = unrelatedReadCount;
+    state.drawComposition.mockClear();
+
+    await mounted.setProps({ currentTime: 0.75, frameVersion: 1 });
+    await nextTick();
+
+    expect(unrelatedReadCount).toBe(readsAfterInitialRender);
+    expect(frames).toHaveLength(1);
+
+    runFrame();
+    expect(state.drawComposition).toHaveBeenCalledTimes(1);
   });
 
   it('shows floating recenter button when zoomed and resets zoom on click', async () => {

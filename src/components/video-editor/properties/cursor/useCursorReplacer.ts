@@ -1,6 +1,10 @@
 import { computed, ref } from 'vue';
 import type { ShadowDirection } from './shadow-types';
-import { createDefaultCursorClickEffects, type CursorClickEffects } from '../../../../api/types/cursor-settings';
+import {
+  createDefaultCursorAutoHideSettings,
+  createDefaultCursorClickEffects,
+  type CursorClickEffects,
+} from '../../../../api/types/cursor-settings';
 import type { CursorAssetDescriptor, CursorPackDescriptor, CursorSelection } from '~/api/types/cursor-pack';
 import { MACOS_CURSOR_PACK, orderedCursorPacks } from './cursor-packs';
 import { CURSOR_SIZE_DEFAULT } from './cursor-size';
@@ -18,6 +22,7 @@ export function useCursorReplacer() {
   const shadowColor = ref('#000000');
   const shadowDirection = ref<ShadowDirection>('bottom');
   const clickEffects = ref<CursorClickEffects>(createDefaultCursorClickEffects());
+  const autoHide = ref(createDefaultCursorAutoHideSettings());
 
   const getCursorImage = async (
     pack: CursorPackDescriptor,
@@ -41,6 +46,7 @@ export function useCursorReplacer() {
     shadowColor,
     shadowDirection,
     clickEffects,
+    autoHide,
     getCursorImage,
   };
 }
