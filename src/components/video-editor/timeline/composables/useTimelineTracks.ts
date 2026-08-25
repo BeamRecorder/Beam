@@ -4,6 +4,7 @@ import {
   isAudioClip,
   isCaptionClip,
   isColorClip,
+  isShapeClip,
   isCompositingClip,
   isKeyboardCaptionClip,
   isTextCaptionClip,
@@ -80,7 +81,9 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
   );
   const assets = computed(() => new Map(props.composition.assets.map((asset: MediaAsset) => [asset.id, asset])));
   const assetFor = (clip: Clip) =>
-    isCaptionClip(clip) || isColorClip(clip) || clip.kind === 'blur' ? null : (assets.value.get(clip.assetId) ?? null);
+    isCaptionClip(clip) || isColorClip(clip) || isShapeClip(clip) || clip.kind === 'blur'
+      ? null
+      : (assets.value.get(clip.assetId) ?? null);
 
   const activeSnapTimeMs = ref<number | null>(null);
   const activeTrimState = ref<{ ids: string[]; edge: 'start' | 'end'; durationMs: number; atLimit?: boolean } | null>(

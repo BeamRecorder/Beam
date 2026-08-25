@@ -34,6 +34,7 @@ import {
   isAudioClip,
   isBlurClip,
   isColorClip,
+  isShapeClip,
   isCaptionClip,
   isTextCaptionClip,
   isVisualClip,
@@ -221,10 +222,13 @@ const renderedOutputCanvas = computed(() => timelineCanvasPreview.value ?? outpu
 const selectedTransformClip = computed(() => {
   if (selectedClipIds.value.length !== 1) return null;
   const clip = selectedClip.value;
-  return clip && (isVisualClip(clip) || isColorClip(clip) || isBlurClip(clip) || isCaptionClip(clip)) ? clip : null;
+  return clip &&
+    (isVisualClip(clip) || isColorClip(clip) || isShapeClip(clip) || isBlurClip(clip) || isCaptionClip(clip))
+    ? clip
+    : null;
 });
 
-const addTimelineElement = (kind: 'video' | 'image' | 'sound' | 'caption' | 'color' | 'blur') => {
+const addTimelineElement = (kind: 'video' | 'image' | 'sound' | 'caption' | 'color' | 'shape' | 'blur') => {
   void addElement(kind).catch(() => console.error('Unable to add media.'));
 };
 const selectEditorClip = (clipId: string) => {

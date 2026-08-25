@@ -143,4 +143,35 @@ describe('blur effect renderer', () => {
     expect(surfaces).toHaveLength(4);
     expect(output.drawImage).toHaveBeenCalledTimes(3);
   });
+
+  it('uses a custom mask path independently from expanded effect bounds', () => {
+    class FakeOffscreenCanvas {
+      width: number;
+      height: number;
+      private readonly context: FakeContext;
+
+      constructor(width: number, height: number) {
+        this.width = width;
+        this.height = height;
+        this.context = new FakeContext(this);
+      }
+
+      getContext() {
+        return this.context;
+      }
+    }
+    vi.stubGlobal('OffscreenCanvas', FakeOffscreenCanvas);
+    const output = new FakeContext({ width: 800, height: 450 }) as unknown as Canvas2DContext;
+    const maskPath = vi.fn((context: Canvas2DContext, _rect: { x: number; y: number; width: number; height: number }) =>
+      context.beginPath(),
+    );
+
+    applyBlurEffect(output, blurClip(), { x: 200, y: 150, width: 120, height: 60 }, {
+      bounds: { x: 180, y: 120, width: 160, height: 120 },
+      maskPath,
+    });
+
+    expect(maskPath).toHaveBeenCalledOnce();
+    expect(maskPath.mock.calls[0]![1]).toMatchObject({ width: 120, height: 60 });
+  });
 });

@@ -6,6 +6,7 @@ import {
   type ClipComposition,
   type ColorClip,
   type NormalizedTransform,
+  type ShapeClip,
   type VisualClip,
 } from '~/media/shared/composition-types';
 import { effectShapeRect } from '../../composition/effects/blur-effect';
@@ -15,13 +16,14 @@ import { projectCameraRect } from './layer-transform-geometry';
 import { webcamDisplayLayout } from './webcam-transform-editing';
 import type { VideoWindowBounds } from './useCameraZoom';
 
-type TransformClip = VisualClip | ColorClip | BlurClip | CaptionClip;
+type TransformClip = VisualClip | ColorClip | ShapeClip | BlurClip | CaptionClip;
 
-const usesGlobalCamera = (clip: TransformClip): clip is VisualClip | ColorClip | BlurClip =>
+const usesGlobalCamera = (clip: TransformClip): clip is VisualClip | ColorClip | ShapeClip | BlurClip =>
   clip.kind === 'screen' ||
   clip.kind === 'video' ||
   clip.kind === 'image' ||
   clip.kind === 'color' ||
+  clip.kind === 'shape' ||
   clip.kind === 'blur';
 
 export function transformClipDisplayLayout(options: {

@@ -6,6 +6,8 @@ import { useTranslate } from '~/i18n/useTranslate';
 import WaveformCanvas from './waveform/WaveformCanvas.vue';
 import { timelineClipStyle, timelineFrameStyle, timelineTransitionStyle } from './timeline-clip-geometry';
 import TimelineTransitionCurve from './TimelineTransitionCurve.vue';
+import ShapeTimelinePreview from './ShapeTimelinePreview.vue';
+import ColorTimelinePreview from './ColorTimelinePreview.vue';
 import type { TimelineClipProps } from './timeline-clip-types';
 const { t } = useTranslate('TimelineTracks');
 const props = defineProps<TimelineClipProps>();
@@ -66,25 +68,6 @@ const imagePreviewStyle = computed(() => ({
   backgroundImage:
     props.asset?.kind === 'image' && props.asset.src ? `url(${JSON.stringify(props.asset.src)})` : undefined,
 }));
-const colorPreviewStyle = computed(() => {
-  if (props.clip.kind !== 'color') return {};
-  if (props.clip.fill.kind === 'color') return { background: props.clip.fill.color };
-  const gradient = props.clip.fill.gradient;
-  const stops = gradient.stops
-    .map(
-      (stop) =>
-        `${stop.color}${Math.round(stop.alpha * 255)
-          .toString(16)
-          .padStart(2, '0')} ${stop.position * 100}%`,
-    )
-    .join(', ');
-  return {
-    background:
-      gradient.type === 'radial'
-        ? `radial-gradient(circle, ${stops})`
-        : `linear-gradient(${gradient.angle}deg, ${stops})`,
-  };
-});
 const frameStyle = (frame: TimelineFrame) => timelineFrameStyle(props.clip, frame.relativeMs, frame.durationMs);
 const transitionStyle = (edge: 'entry' | 'exit') => timelineTransitionStyle(props.clip, edge);
 const thumbnailFor = (frame: TimelineFrame) => {
@@ -209,7 +192,8 @@ onUnmounted(() => stopMarquee());
       :style="imagePreviewStyle"
       aria-hidden="true"
     />
-    <span v-else-if="clip.kind === 'color'" class="color-preview" :style="colorPreviewStyle" aria-hidden="true" />
+    <ColorTimelinePreview v-else-if="clip.kind === 'color'" :clip="clip" />
+    <ShapeTimelinePreview v-else-if="clip.kind === 'shape'" :clip="clip" />
     <span
       class="trim-handle start"
       :class="{ 'at-limit': trimState?.edge === 'start' && trimState?.atLimit }"
@@ -299,6 +283,10 @@ onUnmounted(() => stopMarquee());
   background: var(--color-bg-surface);
   color: #fff;
 }
+.timeline-clip.kind-shape {
+  background: color-mix(in srgb, var(--color-track-annotation) 24%, var(--color-bg-surface));
+  color: var(--text-primary);
+}
 .timeline-clip.kind-audio {
   background: var(--color-track-audio-light);
 }
@@ -317,8 +305,7 @@ onUnmounted(() => stopMarquee());
   border-right: 1px solid rgba(0, 0, 0, 0.08);
 }
 .thumbnail-img,
-.image-preview,
-.color-preview {
+.image-preview {
   display: block;
   width: 100%;
   height: 100%;
@@ -333,10 +320,6 @@ onUnmounted(() => stopMarquee());
   background-position: left center;
   background-repeat: repeat-x;
   background-size: contain;
-}
-.color-preview {
-  position: absolute;
-  inset: 0;
 }
 .thumbnail-crossfade-enter-active,
 .thumbnail-crossfade-leave-active {

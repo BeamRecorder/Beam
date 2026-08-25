@@ -1,7 +1,7 @@
 import type { CursorButtonEvent, CursorEvent } from '../../../api/types/capture-api';
 import type { CursorMotionSettings } from '../../../api/types/cursor-settings';
 import type { CursorPlaybackState } from './cursorPlayback';
-import { cursorEventIndexFor, cursorStateAt } from './cursorPlayback';
+import { cursorStateAt } from './cursorPlayback';
 import { createDeterministicCursorMotionEvaluator } from './cursor-motion-evaluator';
 
 export { stepSpringAxis } from './cursor-motion-evaluator';
@@ -55,6 +55,57 @@ const eventTime = (event: CursorEvent) => event.sessionNs / 1_000_000_000;
 
 const buttonEvents = (events: CursorEvent[]) =>
   events.filter((event): event is CursorButtonEvent => event.event === 'button');
+
+interface RecordedCursorPoint {
+  timeSeconds: number;
+  x: number;
+  y: number;
+}
+
+/** Preserves every recorded move and interaction position without path retiming. */
+const createRecordedCursorTarget = (events: CursorEvent[]) => {
+  const points = events
+    .filter((event) => event.event === 'move' || event.event === 'button')
+    .map((event, order) => ({
+      timeSeconds: eventTime(event),
+      x: event.normalizedX,
+      y: event.normalizedY,
+      order,
+      interaction: event.event === 'button',
+    }))
+    .sort(
+      (left, right) =>
+        left.timeSeconds - right.timeSeconds ||
+        Number(left.interaction) - Number(right.interaction) ||
+        left.order - right.order,
+    )
+    .reduce<RecordedCursorPoint[]>((result, point) => {
+      if (result.at(-1)?.timeSeconds === point.timeSeconds) result[result.length - 1] = point;
+      else result.push(point);
+      return result;
+    }, []);
+
+  return (timeSeconds: number): { x: number; y: number } | null => {
+    if (!points.length) return null;
+    const time = Number.isNaN(timeSeconds) ? Number.POSITIVE_INFINITY : Math.max(0, timeSeconds);
+    if (time <= points[0]!.timeSeconds) return { x: points[0]!.x, y: points[0]!.y };
+    let low = 0;
+    let high = points.length;
+    while (low < high) {
+      const middle = low + Math.floor((high - low) / 2);
+      if (points[middle]!.timeSeconds <= time) low = middle + 1;
+      else high = middle;
+    }
+    const previous = points[low - 1]!;
+    const next = points[low];
+    if (!next) return { x: previous.x, y: previous.y };
+    const progress = (time - previous.timeSeconds) / Math.max(0.000001, next.timeSeconds - previous.timeSeconds);
+    return {
+      x: previous.x + (next.x - previous.x) * progress,
+      y: previous.y + (next.y - previous.y) * progress,
+    };
+  };
+};
 
 const dragRanges = (events: CursorEvent[]) => {
   const ranges: Array<{ startSeconds: number; endSeconds: number }> = [];
@@ -293,17 +344,15 @@ export function createCursorMotionPlayer(
   sourceWidth = 1920,
   sourceHeight = 1080,
 ) {
-  const timeline = createCursorMotionTimeline(events, settings, sourceWidth, sourceHeight);
-  const eventIndex = cursorEventIndexFor(events);
+  const stylizedTimeline = createCursorMotionTimeline(events, settings, sourceWidth, sourceHeight);
+  const recordedTargetAt = createRecordedCursorTarget(events);
+  const timeline: CursorMotionTimeline = { ...stylizedTimeline, targetAt: recordedTargetAt };
   const buttonTimes = buttonEvents(events).map(eventTime);
   const drags = dragRanges(events);
   const evaluator = createDeterministicCursorMotionEvaluator({
     settings,
-    targetAt: timeline.targetAt,
-    directTargetAt: (timeSeconds) => {
-      const state = eventIndex.stateAt(timeSeconds);
-      return state ? { x: state.x, y: state.y } : null;
-    },
+    targetAt: recordedTargetAt,
+    directTargetAt: recordedTargetAt,
     isDraggingAt: (timeSeconds) =>
       drags.some((range) => timeSeconds >= range.startSeconds && timeSeconds <= range.endSeconds),
     buttonTimes,

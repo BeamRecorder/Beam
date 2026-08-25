@@ -4,11 +4,13 @@ import {
   isBlurClip,
   isCaptionClip,
   isColorClip,
+  isShapeClip,
   isVisualClip,
   type ClipComposition,
 } from '~/media/shared/composition-types';
 import { isColorFill, isPhoneFrameFill } from '~/media/shared/color-fill-types';
 import { isColorLayerStyle } from '~/media/shared/color-layer-style';
+import { isShapeLayerStyle } from '~/media/shared/shape-layer-style';
 import { normalizeClipTransitions } from '~/media/shared/clip-transitions';
 import { isCameraFramingPreset, isCameraLayoutPreset, isSplitCameraLayout } from '~/media/shared/camera-layout-types';
 import { assertValidVisualTracks } from './visual-track-layout';
@@ -51,7 +53,7 @@ export function validateComposition(composition: ClipComposition): void {
     if (
       !clip?.id ||
       clipIds.has(clip.id) ||
-      !['screen', 'video', 'image', 'webcam', 'color', 'blur', 'audio', 'caption'].includes(clip.kind)
+      !['screen', 'video', 'image', 'webcam', 'color', 'shape', 'blur', 'audio', 'caption'].includes(clip.kind)
     ) {
       throw new CompositionEngineError('Invalid clip identity.');
     }
@@ -82,7 +84,13 @@ export function validateComposition(composition: ClipComposition): void {
     if (Math.abs(expectedTimelineDuration - clip.timelineDurationMs) > 2) {
       throw new CompositionEngineError('Clip source and timeline durations disagree.');
     }
-    if (clip.kind !== 'caption' && !isColorClip(clip) && !isBlurClip(clip) && !assetIds.has(clip.assetId))
+    if (
+      clip.kind !== 'caption' &&
+      !isColorClip(clip) &&
+      !isShapeClip(clip) &&
+      !isBlurClip(clip) &&
+      !assetIds.has(clip.assetId)
+    )
       throw new CompositionEngineError(`Missing asset for clip: ${clip.id}`);
     if (clip.kind === 'caption') {
       const caption = clip.caption;
@@ -96,7 +104,7 @@ export function validateComposition(composition: ClipComposition): void {
       if (!textCaption && !keyboardCaption) throw new CompositionEngineError('Invalid caption clip.');
     }
     if (
-      (isVisualClip(clip) || isColorClip(clip) || isBlurClip(clip)) &&
+      (isVisualClip(clip) || isColorClip(clip) || isShapeClip(clip) || isBlurClip(clip)) &&
       (![clip.transform.x, clip.transform.y, clip.transform.width, clip.transform.height].every(finite) ||
         clip.transform.width <= 0 ||
         clip.transform.height <= 0)
@@ -157,6 +165,8 @@ export function validateComposition(composition: ClipComposition): void {
     }
     if (isColorClip(clip) && (clip.assetId !== '' || !isColorFill(clip.fill) || !isColorLayerStyle(clip)))
       throw new CompositionEngineError('Invalid color clip settings.');
+    if (isShapeClip(clip) && (clip.assetId !== '' || !isShapeLayerStyle(clip)))
+      throw new CompositionEngineError('Invalid shape clip settings.');
     if (isAudioClip(clip) && (!finite(clip.volume) || clip.volume < 0 || clip.volume > 200))
       throw new CompositionEngineError('Invalid clip volume.');
     if (

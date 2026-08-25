@@ -6,15 +6,14 @@ import {
   getCaptionTransform,
   isBlurClip,
   isColorClip,
+  isShapeClip,
   isVisualClip,
-  type CaptionClip,
-  type BlurClip,
   type ClipComposition,
-  type ColorClip,
+  type CaptionClip,
   type NormalizedCrop,
   type NormalizedTransform,
-  type VisualClip,
 } from '~/media/shared/composition-types';
+import type { TransformClip } from '../editor-canvas-types';
 import {
   approximateCaptionTextWidth,
   captionTextAt,
@@ -40,7 +39,7 @@ import { layerSelectionPresentation, perspectivePointerDelta } from './layer-sel
 const TRANSFORM_MIN = -3;
 const TRANSFORM_MAX = 3;
 const SIZE_MAX = 4;
-type TransformClip = VisualClip | ColorClip | BlurClip | CaptionClip;
+type GlobalCameraClip = Exclude<TransformClip, CaptionClip>;
 
 export interface UseLayerTransformAndCropOptions {
   composition: () => ClipComposition;
@@ -91,13 +90,14 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
   };
   const baseTransformFor = (clip: TransformClip) =>
     clip.kind === 'caption' ? captionTransformFor(clip) : clip.transform;
-  const usesGlobalCamera = (clip: TransformClip | null): clip is VisualClip | ColorClip | BlurClip =>
+  const usesGlobalCamera = (clip: TransformClip | null): clip is GlobalCameraClip =>
     Boolean(
       clip &&
       (clip.kind === 'screen' ||
         clip.kind === 'video' ||
         clip.kind === 'image' ||
         clip.kind === 'color' ||
+        clip.kind === 'shape' ||
         clip.kind === 'blur'),
     );
   const boundsFor = (clip: TransformClip | null) => {
@@ -341,7 +341,7 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
       const otherTargets = activeClipsAt(options.composition(), currentTimeMs)
         .filter(
           (c): c is TransformClip =>
-            (c.kind === 'caption' || isVisualClip(c) || isColorClip(c) || isBlurClip(c)) &&
+            (c.kind === 'caption' || isVisualClip(c) || isColorClip(c) || isShapeClip(c) || isBlurClip(c)) &&
             c.id !== clip.id &&
             c.enabled,
         )
@@ -450,8 +450,8 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     const clips = [
       ...active.filter((clip): clip is CaptionClip => clip.kind === 'caption'),
       ...active.filter(
-        (clip): clip is VisualClip | ColorClip | BlurClip =>
-          isVisualClip(clip) || isColorClip(clip) || isBlurClip(clip),
+        (clip): clip is GlobalCameraClip =>
+          isVisualClip(clip) || isColorClip(clip) || isShapeClip(clip) || isBlurClip(clip),
       ),
     ];
     // The screen layer participates in occlusion, but its existing dedicated

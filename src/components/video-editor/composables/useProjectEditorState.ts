@@ -155,7 +155,13 @@ export function useProjectEditorState(options: {
     if (timer) clearTimeout(timer);
     scheduledDefaultCapture ||= captureDefaults;
     scheduledSave.value = true;
-    timer = setTimeout(() => void saveNow(false).catch(() => console.error('Failed to save editor state.')), 250);
+    timer = setTimeout(
+      () =>
+        void saveNow(false).catch((error) =>
+          console.error('[Beam editor] failed to save project state', { projectId: options.project.value?.id }, error),
+        ),
+      250,
+    );
   };
 
   const load = async (projectId: string) => {

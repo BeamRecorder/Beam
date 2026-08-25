@@ -15,10 +15,12 @@ import {
   type ClipComposition,
   type ColorClip,
   type MediaAsset,
+  type ShapeClip,
   type VisualClip,
 } from '~/media/shared/composition-types';
 import { DEFAULT_COLOR_LAYER_STYLE } from '~/media/shared/color-layer-style';
 import { DEFAULT_COLOR_FILL } from '~/media/shared/color-fill-types';
+import { DEFAULT_SHAPE_LAYER_STYLE } from '~/media/shared/shape-layer-style';
 import type { EditorPreferenceDefaults } from './editor-default-types';
 import { audioDefaultsFor, blurDefaultsFor, captionDefaultsFor, visualClipDefaultProps } from './editor-defaults';
 import {
@@ -194,7 +196,7 @@ export function useClipComposition(options: {
   };
 
   const addElement = async (
-    kind: 'video' | 'image' | 'sound' | 'caption' | 'color' | 'blur',
+    kind: 'video' | 'image' | 'sound' | 'caption' | 'color' | 'shape' | 'blur',
     requestedStartMs?: number,
     requestedDurationMs?: number,
   ) => {
@@ -242,6 +244,30 @@ export function useClipComposition(options: {
         enabled: true,
         order: Math.min(0, ...composition.value.clips.filter(isCompositingClip).map((clip) => clip.order)) - 1,
         ...defaults,
+      };
+      composition.value = addClip(composition.value, clip);
+      selectClip(clip.id);
+      return;
+    }
+    if (kind === 'shape') {
+      const clipId = crypto.randomUUID();
+      const durationMs = DEFAULT_GENERATED_CLIP_DURATION_MS;
+      const clip: ShapeClip = {
+        id: clipId,
+        trackId: clipId,
+        kind: 'shape',
+        assetId: '',
+        name: tCanvas('shapesAndArrows'),
+        timelineStartMs: startMs,
+        timelineDurationMs: durationMs,
+        sourceInMs: 0,
+        sourceDurationMs: durationMs,
+        playbackRate: 1,
+        transitions: { entry: null, exit: null },
+        enabled: true,
+        order: Math.min(0, ...composition.value.clips.filter(isCompositingClip).map((clip) => clip.order)) - 1,
+        transform: { x: 0.3, y: 0.3, width: 0.4, height: 0.4 },
+        ...DEFAULT_SHAPE_LAYER_STYLE,
       };
       composition.value = addClip(composition.value, clip);
       selectClip(clip.id);

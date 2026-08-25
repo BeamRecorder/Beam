@@ -3,6 +3,7 @@ import { mediaSourceDescriptor, openMediaInput, type OpenedMediaInput } from '~/
 import {
   isAudioClip,
   isColorClip,
+  isShapeClip,
   isVisualClip,
   type MediaAsset,
   type VisualClip,
@@ -50,7 +51,14 @@ export async function openExportAssets(
   const catalog = new Map(request.snapshot.composition.assets.map((asset) => [asset.id, asset]));
   const required = new Map<string, { asset: MediaAsset; video: boolean; audio: boolean }>();
   for (const clip of active) {
-    if (clip.kind === 'caption' || clip.kind === 'image' || isColorClip(clip) || clip.kind === 'blur') continue;
+    if (
+      clip.kind === 'caption' ||
+      clip.kind === 'image' ||
+      isColorClip(clip) ||
+      isShapeClip(clip) ||
+      clip.kind === 'blur'
+    )
+      continue;
     const asset = catalog.get(clip.assetId);
     if (!asset) throw new Error(`Missing export asset: ${clip.name}.`);
     const entry = required.get(asset.id) ?? { asset, video: false, audio: false };

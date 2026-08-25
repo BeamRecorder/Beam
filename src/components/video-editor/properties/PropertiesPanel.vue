@@ -10,14 +10,14 @@ import SettingsPanel from '~/components/video-editor/properties/settings/Setting
 import ClipPropertiesPanel from '~/components/video-editor/properties/clip/ClipPropertiesPanel.vue';
 import AudioClipPropertiesPanel from '~/components/video-editor/properties/clip/AudioClipPropertiesPanel.vue';
 import BlurPropertiesPanel from '~/components/video-editor/properties/clip/BlurPropertiesPanel.vue';
-import ColorLayerPropertiesPanel from '~/components/video-editor/properties/clip/ColorLayerPropertiesPanel.vue';
+import GeneratedLayerPropertiesPanel from '~/components/video-editor/properties/clip/GeneratedLayerPropertiesPanel.vue';
 import CaptionPanel from '~/components/video-editor/properties/captions/CaptionPanel.vue';
 import CaptionClipPanel from '~/components/video-editor/properties/captions/CaptionClipPanel.vue';
 import KeyboardCaptionClipPanel from '~/components/video-editor/properties/captions/KeyboardCaptionClipPanel.vue';
 import ClipTransitionsPanel from '~/components/video-editor/properties/clip/ClipTransitionsPanel.vue';
 import TransitionSettingsPanel from '~/components/video-editor/properties/clip/TransitionSettingsPanel.vue';
 import PropertiesPanelHeader from './PropertiesPanelHeader.vue';
-import { setClipTransition, setColorFill, setColorLayerStyle } from '../composition/engine/clip-engine';
+import { setClipTransition } from '../composition/engine/clip-engine';
 import { EMPTY_CLIP_TRANSITIONS, normalizeCanvasTransitions } from '~/media/shared/clip-transitions';
 import ScrollShadow from '~/ui/scroll-shadow/ScrollShadow.vue';
 import {
@@ -44,7 +44,7 @@ import type {
   CursorMotionSettings,
 } from '../../../api/types/cursor-settings';
 import { useTranslate } from '~/i18n/useTranslate';
-import { isColorClip, isKeyboardCaptionClip } from '~/media/shared/composition-types';
+import { isColorClip, isKeyboardCaptionClip, isShapeClip } from '~/media/shared/composition-types';
 import { usePropertiesPanelNavigation } from './usePropertiesPanelNavigation';
 import type { SelectedClipProperties } from './properties-panel-types';
 import type { CameraFramingPreset, CameraLayoutPreset } from '~/media/shared/camera-layout-types';
@@ -265,7 +265,6 @@ const isDeletable = computed(() => {
 const isToggleable = computed(() => {
   return props.activeTab === 'clip' && Boolean(props.selectedClip || props.selectedCaptionClip);
 });
-
 const deleteTooltip = computed(() => {
   if (props.activeTab === 'zoom') {
     return tZoom('deleteZoom') || 'Delete zoom';
@@ -366,11 +365,15 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
               :clip="normalizedSelectedClip"
               @update:volume="emit('update:clip-volume', $event)"
             />
-            <ColorLayerPropertiesPanel
-              v-else-if="activeTab === 'clip' && selectedDomainClip && isColorClip(selectedDomainClip)"
+            <GeneratedLayerPropertiesPanel
+              v-else-if="
+                activeTab === 'clip' &&
+                selectedDomainClip &&
+                (isColorClip(selectedDomainClip) || isShapeClip(selectedDomainClip))
+              "
+              :composition="composition"
               :clip="selectedDomainClip"
-              @update="emit('update:composition', setColorFill(composition, selectedDomainClip.id, $event))"
-              @update:style="emit('update:composition', setColorLayerStyle(composition, selectedDomainClip.id, $event))"
+              @update="emit('update:composition', $event)"
               @corner-radius-interaction="emit('corner-radius-interaction', $event)"
             />
             <BlurPropertiesPanel

@@ -7,9 +7,10 @@ import {
   type VisualClip,
   type BlurClip,
   type ColorClip,
+  type ShapeClip,
 } from '~/media/shared/composition-types';
 
-export type CompositingClip = VisualClip | ColorClip | BlurClip;
+export type CompositingClip = VisualClip | ColorClip | ShapeClip | BlurClip;
 
 const byOrderAndTime = (left: Clip, right: Clip) =>
   left.order - right.order || left.timelineStartMs - right.timelineStartMs || left.id.localeCompare(right.id);

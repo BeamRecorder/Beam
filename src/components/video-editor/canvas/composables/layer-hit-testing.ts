@@ -3,11 +3,12 @@ import {
   type BlurClip,
   type CaptionClip,
   type ColorClip,
+  type ShapeClip,
   type VisualClip,
 } from '~/media/shared/composition-types';
 import { pointInsideEllipse, pointInsideRect, pointInsideSquircle } from './layer-transform-geometry';
 
-type HitTestClip = VisualClip | ColorClip | BlurClip | CaptionClip;
+type HitTestClip = VisualClip | ColorClip | ShapeClip | BlurClip | CaptionClip;
 type HitTestLayout = { left: number; top: number; width: number; height: number };
 const RAYCAST_SLOP_PX = 4;
 

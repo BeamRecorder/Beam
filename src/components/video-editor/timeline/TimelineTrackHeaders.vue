@@ -3,6 +3,7 @@ import {
   Camera,
   CircleDashed,
   Palette,
+  Shapes,
   GripVertical,
   Image as ImageIcon,
   Keyboard,
@@ -12,7 +13,15 @@ import {
   Video,
   Volume2,
 } from '@lucide/vue';
-import type { AudioClip, CaptionClip, Clip, ColorClip, VisualClip, BlurClip } from '~/media/shared/composition-types';
+import type {
+  AudioClip,
+  CaptionClip,
+  Clip,
+  ColorClip,
+  ShapeClip,
+  VisualClip,
+  BlurClip,
+} from '~/media/shared/composition-types';
 import type { ImportedAudioTimelineTrack } from './composables/audio-timeline-tracks';
 import type { VisualTimelineTrack } from './composables/timeline-tracks-types';
 import { useTranslate } from '~/i18n/useTranslate';
@@ -35,26 +44,30 @@ defineProps<{
 }>();
 const { t } = useTranslate('TimelineTracks');
 const { t: tCanvas } = useTranslate('CanvasPanel');
-const iconForVisual = (clip: VisualClip | ColorClip | BlurClip) =>
+const iconForVisual = (clip: VisualClip | ColorClip | ShapeClip | BlurClip) =>
   clip.kind === 'color'
     ? Palette
-    : clip.kind === 'blur'
-      ? CircleDashed
-      : clip.kind === 'image'
-        ? ImageIcon
-        : clip.kind === 'webcam'
-          ? Camera
-          : Video;
-const labelForVisual = (clip: VisualClip | ColorClip | BlurClip) =>
+    : clip.kind === 'shape'
+      ? Shapes
+      : clip.kind === 'blur'
+        ? CircleDashed
+        : clip.kind === 'image'
+          ? ImageIcon
+          : clip.kind === 'webcam'
+            ? Camera
+            : Video;
+const labelForVisual = (clip: VisualClip | ColorClip | ShapeClip | BlurClip) =>
   clip.kind === 'color'
     ? tCanvas('color')
-    : clip.kind === 'blur'
-      ? t('blur')
-      : clip.kind === 'screen'
-        ? t('video')
-        : clip.kind === 'webcam'
-          ? t('webcam')
-          : clip.name;
+    : clip.kind === 'shape'
+      ? tCanvas('shapesAndArrows')
+      : clip.kind === 'blur'
+        ? t('blur')
+        : clip.kind === 'screen'
+          ? t('video')
+          : clip.kind === 'webcam'
+            ? t('webcam')
+            : clip.name;
 const labelForCaption = (clip: CaptionClip) =>
   clip.caption.type === 'text' ? clip.caption.style.customText?.trim() || t('textCaptions') : clip.name;
 </script>

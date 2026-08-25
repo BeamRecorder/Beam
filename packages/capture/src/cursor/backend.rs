@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 pub const CURSOR_TELEMETRY_VERSION: u8 = 2;
-pub const CURSOR_SAMPLE_INTERVAL_NS: u64 = 16_666_667;
+pub const CURSOR_SAMPLE_INTERVAL_NS: u64 = 33_333_333;
 pub const MAX_CURSOR_TELEMETRY_SAMPLES: usize = 216_000;
 
 /// Keeps the native polling loop drift-free while still emitting at a bounded cadence.

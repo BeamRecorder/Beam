@@ -5,6 +5,7 @@ import type {
   Clip,
   ClipComposition,
   ColorClip,
+  ShapeClip,
   VisualClip,
 } from '~/media/shared/composition-types';
 
@@ -12,7 +13,7 @@ export interface CompositionSceneLayers {
   screen: VisualClip | null;
   cameraVisuals: VisualClip[];
   webcams: VisualClip[];
-  visualStack: Array<VisualClip | ColorClip | BlurClip>;
+  visualStack: Array<VisualClip | ColorClip | ShapeClip | BlurClip>;
   captions: CaptionClip[];
 }
 
@@ -26,7 +27,7 @@ export function createCompositionSceneLayerResolver(composition: ClipComposition
   return (timeMs) => {
     const cameraVisuals: VisualClip[] = [];
     const webcams: VisualClip[] = [];
-    const visualStack: Array<VisualClip | ColorClip | BlurClip> = [];
+    const visualStack: Array<VisualClip | ColorClip | ShapeClip | BlurClip> = [];
     const captions: CaptionClip[] = [];
     let screen: VisualClip | null = null;
 
@@ -36,7 +37,7 @@ export function createCompositionSceneLayerResolver(composition: ClipComposition
         captions.push(clip);
         continue;
       }
-      if (clip.kind === 'color' || clip.kind === 'blur') {
+      if (clip.kind === 'color' || clip.kind === 'shape' || clip.kind === 'blur') {
         visualStack.push(clip);
         continue;
       }

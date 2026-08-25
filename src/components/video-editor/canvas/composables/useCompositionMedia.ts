@@ -3,12 +3,14 @@ import { activeClipsAt, type MediaFrame } from '~/media/shared';
 import {
   isBlurClip,
   isColorClip,
+  isShapeClip,
   isVisualClip,
   type BlurClip,
   type CaptionClip,
   type ClipComposition,
   type ColorClip,
   type NormalizedTransform,
+  type ShapeClip,
   type VisualClip,
 } from '~/media/shared/composition-types';
 import { captionContentAt } from '~/media/shared/caption-text-layout';
@@ -27,12 +29,13 @@ import { resolveCompositionSceneLayers, type CompositionSceneLayers } from '../.
 import { drawWithClipTransition } from '../../composition/transitions/render-transition';
 import { resolveVisualClipFraming } from '../../composition/visual-framing';
 import { drawColorClip } from '../../composition/color/render-color-clip';
+import { drawShapeClip } from '../../composition/shape/render-shape-clip';
 
 export interface UseCompositionMediaOptions {
   composition: () => ClipComposition;
   currentTime: () => number;
   frameFor: (clipId: string) => MediaFrame | null;
-  selectedTransformClip: () => VisualClip | ColorClip | BlurClip | CaptionClip | null;
+  selectedTransformClip: () => VisualClip | ColorClip | ShapeClip | BlurClip | CaptionClip | null;
   transformDraft: () => NormalizedTransform | null;
   isCropping?: () => boolean | undefined;
   outputCanvas: () => OutputCanvasSettings;
@@ -174,6 +177,16 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     drawColorClip(ctx, clip, { x: window.dx, y: window.dy, width: window.dw, height: window.dh }, transform);
   };
 
+  const drawShape = (
+    ctx: CanvasRenderingContext2D,
+    clip: ShapeClip,
+    window: { dx: number; dy: number; dw: number; dh: number },
+  ) => {
+    const selected = options.selectedTransformClip();
+    const transform = clip.id === selected?.id && options.transformDraft() ? options.transformDraft()! : clip.transform;
+    drawShapeClip(ctx, clip, { x: window.dx, y: window.dy, width: window.dw, height: window.dh }, transform);
+  };
+
   const drawWebcam = (
     ctx: CanvasRenderingContext2D,
     clip: VisualClip,
@@ -240,6 +253,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
         () => {
           if (clip.kind === 'screen') drawScreen();
           else if (clip.kind === 'color') drawColor(ctx, clip, window);
+          else if (clip.kind === 'shape') drawShape(ctx, clip, window);
           else if (clip.kind === 'blur') drawBlur(ctx, clip, window);
           else if (clip.kind === 'webcam') drawWebcam(ctx, clip, window);
           else drawVisual(ctx, clip, window);
@@ -267,6 +281,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
         () => {
           if (clip.kind === 'caption') drawCaption(ctx, clip, timeMs);
           else if (isColorClip(clip)) drawColor(ctx, clip, window);
+          else if (isShapeClip(clip)) drawShape(ctx, clip, window);
           else if (isBlurClip(clip)) drawBlur(ctx, clip, window);
           else if (isVisualClip(clip) && clip.kind !== 'webcam') drawVisual(ctx, clip, window);
         },

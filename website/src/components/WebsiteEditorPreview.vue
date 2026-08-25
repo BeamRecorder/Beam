@@ -213,7 +213,7 @@ const addCaption = (timeMs: number) => {
   selectClip(composition.value.clips.at(-1)?.id ?? '');
 };
 
-const addTimelineElement = (type: 'video' | 'image' | 'sound' | 'caption' | 'color' | 'blur') => {
+const addTimelineElement = (type: 'video' | 'image' | 'sound' | 'caption' | 'color' | 'shape' | 'blur') => {
   if (type === 'caption') {
     addCaption(Math.round(player.currentTime.value * 1_000));
     return;

@@ -2,6 +2,7 @@ import type { CompositionSnapshot } from '../export-types';
 import {
   isBlurClip,
   isColorClip,
+  isShapeClip,
   type BlurClip,
   type CaptionClip,
   type VisualClip,
@@ -44,7 +45,7 @@ import {
 } from '../../video-editor/zoom/zoom-motion-blur-compositor';
 import { normalizeZoomMotionBlur } from '../../video-editor/zoom/zoom-types';
 import { sourceTimeAt } from '~/media/shared';
-import { drawColorClip } from '../../video-editor/composition/color/render-color-clip';
+import { drawExportGeneratedLayer } from './render-generated-layer';
 import { hasPerspectiveTilt } from '../../video-editor/zoom/perspective-projection';
 import { disposePerspectiveRenderer, renderPerspectiveLayers } from './perspective-render';
 import { disposeCanvasTransitionSurface, getCanvasTransitionSurface } from './canvas-transition-surface';
@@ -189,10 +190,8 @@ export function drawCompositionLayers(
   const layers = resolveCompositionSceneLayers(snapshot.composition, timeMs);
   for (const clip of layers.visualStack) {
     if (clip.kind === 'screen') continue;
-    if (isColorClip(clip)) {
-      drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () =>
-        drawColorClip(ctx, clip, { x: 0, y: 0, width: snapshot.canvas.width, height: snapshot.canvas.height }),
-      );
+    if (isColorClip(clip) || isShapeClip(clip)) {
+      drawExportGeneratedLayer(ctx, clip, timeMs, snapshot.canvas);
       continue;
     }
     if (isBlurClip(clip)) {
@@ -308,10 +307,8 @@ function renderCompositionFrameContent(
         );
         continue;
       }
-      if (isColorClip(clip)) {
-        drawWithClipTransition(target, clip, timeMs, snapshot.canvas, () =>
-          drawColorClip(target, clip, { x: 0, y: 0, width, height }),
-        );
+      if (isColorClip(clip) || isShapeClip(clip)) {
+        drawExportGeneratedLayer(target, clip, timeMs, { width, height });
         continue;
       }
       if (isBlurClip(clip)) {
