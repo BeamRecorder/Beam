@@ -96,3 +96,8 @@ export interface DocsSearchEntry {
   path: string;
   text: string;
 }
+
+export interface DocsSearchPayload {
+  featured: DocsHomeContent['categories'];
+  entries: DocsSearchEntry[];
+}

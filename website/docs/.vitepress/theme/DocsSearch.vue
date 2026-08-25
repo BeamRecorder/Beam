@@ -1,23 +1,31 @@
 <script setup lang="ts">
 import { ArrowRight, Search } from '@lucide/vue';
-import MiniSearch from 'minisearch';
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
+import type MiniSearch from 'minisearch';
+import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef } from 'vue';
 import { useData, withBase } from 'vitepress';
 import Dialog from '../../../../src/components/ui/dialog/Dialog.vue';
 import KeyboardChip from '../../../../src/components/ui/Kbd/KeyboardChip.vue';
-import type { DocsSearchEntry } from '../content/docs-content-types';
-import { enabledDocsLocales, getDocsCatalogs, getDocsSearchEntries, type DocsLocale } from '../content/docs-routes';
+import type { DocsSearchEntry, DocsSearchPayload } from '../content/docs-content-types';
+import { docsLocaleFromPath, type DocsLocale } from '../content/docs-locales';
 
 const { page } = useData();
 const isOpen = ref(false);
 const query = ref('');
 const input = ref<HTMLInputElement | null>(null);
-const searchIndexes = new Map<DocsLocale, MiniSearch<DocsSearchEntry>>();
+const index = shallowRef<MiniSearch<DocsSearchEntry> | null>(null);
+const featured = shallowRef<DocsSearchPayload['featured']>([]);
+const isLoading = ref(false);
+const loadFailed = ref(false);
+const searchStates = new Map<
+  DocsLocale,
+  { index: MiniSearch<DocsSearchEntry>; featured: DocsSearchPayload['featured'] }
+>();
+const searchRequests = new Map<
+  DocsLocale,
+  Promise<{ index: MiniSearch<DocsSearchEntry>; featured: DocsSearchPayload['featured'] }>
+>();
 
-const locale = computed<DocsLocale>(() => {
-  const prefix = page.value.relativePath.split('/')[0];
-  return enabledDocsLocales.includes(prefix as DocsLocale) ? (prefix as DocsLocale) : 'en';
-});
+const locale = computed<DocsLocale>(() => docsLocaleFromPath(page.value.relativePath));
 
 const normalizeTerm = (value: string) =>
   value
@@ -25,34 +33,49 @@ const normalizeTerm = (value: string) =>
     .replaceAll(/[\u0300-\u036f]/g, '')
     .toLocaleLowerCase();
 
-const getSearchIndex = (docsLocale: DocsLocale) => {
-  const cached = searchIndexes.get(docsLocale);
+const loadSearchState = async (docsLocale: DocsLocale) => {
+  const cached = searchStates.get(docsLocale);
   if (cached) return cached;
-  const index = new MiniSearch<DocsSearchEntry>({
-    idField: 'path',
-    fields: ['title', 'description', 'text'],
-    storeFields: ['title', 'description', 'path'],
-    processTerm: normalizeTerm,
-    searchOptions: {
-      boost: { title: 5, description: 2 },
-      combineWith: 'AND',
-      prefix: true,
-      fuzzy: (term) => (term.length >= 5 ? 0.2 : false),
-      boostDocument: (_documentId, _term, fields) => {
-        const pathDepth = String(fields?.path).split('/').filter(Boolean).length;
-        return pathDepth === (docsLocale === 'en' ? 1 : 2) ? 2 : 1;
-      },
-    },
-  });
-  index.addAll(getDocsSearchEntries(docsLocale));
-  searchIndexes.set(docsLocale, index);
-  return index;
+  const activeRequest = searchRequests.get(docsLocale);
+  if (activeRequest) return activeRequest;
+
+  const request = Promise.all([fetch(withBase(`/docs-search/${docsLocale}.json`)), import('minisearch')])
+    .then(async ([response, { default: MiniSearchConstructor }]) => {
+      if (!response.ok) throw new Error(`Documentation search returned ${response.status}.`);
+      const payload = (await response.json()) as DocsSearchPayload;
+      if (!Array.isArray(payload.entries) || !Array.isArray(payload.featured)) {
+        throw new Error('Documentation search data is invalid.');
+      }
+      const searchIndex = new MiniSearchConstructor<DocsSearchEntry>({
+        idField: 'path',
+        fields: ['title', 'description', 'text'],
+        storeFields: ['title', 'description', 'path'],
+        processTerm: normalizeTerm,
+        searchOptions: {
+          boost: { title: 5, description: 2 },
+          combineWith: 'AND',
+          prefix: true,
+          fuzzy: (term) => (term.length >= 5 ? 0.2 : false),
+          boostDocument: (_documentId, _term, fields) => {
+            const pathDepth = String(fields?.path).split('/').filter(Boolean).length;
+            return pathDepth === (docsLocale === 'en' ? 1 : 2) ? 2 : 1;
+          },
+        },
+      });
+      searchIndex.addAll(payload.entries);
+      const state = { index: searchIndex, featured: payload.featured };
+      searchStates.set(docsLocale, state);
+      return state;
+    })
+    .finally(() => searchRequests.delete(docsLocale));
+  searchRequests.set(docsLocale, request);
+  return request;
 };
 
 const results = computed(() => {
   const value = query.value.trim();
-  if (!value) return [];
-  return getSearchIndex(locale.value)
+  if (!value || !index.value) return [];
+  return index.value
     .search(value)
     .slice(0, 10)
     .map((result) => ({
@@ -62,18 +85,28 @@ const results = computed(() => {
     }));
 });
 
-const featured = computed(() => {
+const featuredHref = (link: string) => {
   const prefix = locale.value === 'en' ? '' : `${locale.value}/`;
-  return getDocsCatalogs(locale.value).home.categories.map((category) => ({
-    ...category,
-    href: withBase(`/${prefix}${category.link.replace(/^\//, '')}`),
-  }));
-});
+  return withBase(`/${prefix}${link.replace(/^\//, '')}`);
+};
 
 const open = async () => {
   isOpen.value = true;
+  loadFailed.value = false;
   await nextTick();
   input.value?.focus();
+  isLoading.value = true;
+  try {
+    const requestedLocale = locale.value;
+    const state = await loadSearchState(requestedLocale);
+    if (locale.value !== requestedLocale) return;
+    index.value = state.index;
+    featured.value = state.featured;
+  } catch {
+    loadFailed.value = true;
+  } finally {
+    isLoading.value = false;
+  }
 };
 
 const close = () => {
@@ -116,9 +149,21 @@ onUnmounted(() => window.removeEventListener('keydown', handleShortcut));
       />
     </div>
 
-    <section v-if="!query.trim()" class="docs-search-section" aria-label="Main documentation sections">
+    <p v-if="isLoading" class="docs-search-empty" aria-live="polite">Loading documentation…</p>
+
+    <p v-else-if="loadFailed" class="docs-search-empty" aria-live="polite">
+      Documentation search is temporarily unavailable.
+    </p>
+
+    <section v-else-if="!query.trim()" class="docs-search-section" aria-label="Main documentation sections">
       <p>Start here</p>
-      <a v-for="item in featured" :key="item.link" class="docs-search-result" :href="item.href" @click="close">
+      <a
+        v-for="item in featured"
+        :key="item.link"
+        class="docs-search-result"
+        :href="featuredHref(item.link)"
+        @click="close"
+      >
         <span>
           <strong>{{ item.title }}</strong>
           <small>{{ item.details }}</small>

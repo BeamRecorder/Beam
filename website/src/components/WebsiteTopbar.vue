@@ -16,7 +16,7 @@ const github = useGitHubRepository();
 const { t } = useI18n();
 const platform = computed(() => (typeof navigator === 'undefined' ? 'windows' : detectPlatform(navigator)));
 
-onMounted(() => void github.load());
+onMounted(() => void github.loadStars());
 </script>
 
 <template>

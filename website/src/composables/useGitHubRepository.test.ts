@@ -11,7 +11,6 @@ describe('useGitHubRepository', () => {
 
   const repositoryUrl = 'https://api.github.com/repos/BeamRecorder/Beam';
   const releaseUrl = `${repositoryUrl}/releases/latest`;
-  const contributorsUrl = `${repositoryUrl}/contributors?per_page=100&anon=1`;
 
   beforeEach(() => {
     vi.resetModules();
@@ -24,7 +23,7 @@ describe('useGitHubRepository', () => {
     vi.restoreAllMocks();
   });
 
-  it('loads the repository stars, latest release, and contributor count', async () => {
+  it('loads the repository stars and latest release without requesting contributors', async () => {
     const repository = { stargazers_count: 128 };
     const release = {
       tag_name: 'v1.2.3',
@@ -39,13 +38,8 @@ describe('useGitHubRepository', () => {
         },
       ],
     };
-    const contributors = [{ login: 'extra-binoss' }, { login: 'beam-community' }, { login: 'another-contributor' }];
     fetchMock.mockImplementation(async (input: RequestInfo | URL) =>
-      String(input) === releaseUrl
-        ? jsonResponse(release)
-        : String(input) === contributorsUrl
-          ? jsonResponse(contributors)
-          : jsonResponse(repository),
+      String(input) === releaseUrl ? jsonResponse(release) : jsonResponse(repository),
     );
 
     const { useGitHubRepository } = await import('./useGitHubRepository');
@@ -54,19 +48,17 @@ describe('useGitHubRepository', () => {
     await state.load();
 
     expect(state.stars.value).toBe(repository.stargazers_count);
-    expect(state.contributorCount.value).toBe(contributors.length);
     expect(state.release.value).toEqual(release);
     expect(state.loading.value).toBe(false);
     expect(state.error.value).toBeNull();
-    expect(fetchMock).toHaveBeenCalledTimes(3);
-    expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual([repositoryUrl, releaseUrl, contributorsUrl]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual([repositoryUrl, releaseUrl]);
   });
 
-  it('exposes the GitHub API error and stops loading when a request fails', async () => {
+  it('keeps successful data when one GitHub request fails', async () => {
     fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input);
-      if (url === contributorsUrl) return jsonResponse({}, 503);
-      if (url === releaseUrl) return jsonResponse({ tag_name: 'ignored' });
+      if (url === releaseUrl) return jsonResponse({}, 503);
       return jsonResponse({ stargazers_count: 10 });
     });
 
@@ -75,12 +67,11 @@ describe('useGitHubRepository', () => {
 
     await state.load();
 
-    expect(state.stars.value).toBeNull();
-    expect(state.contributorCount.value).toBeNull();
+    expect(state.stars.value).toBe(10);
     expect(state.release.value).toBeNull();
     expect(state.loading.value).toBe(false);
     expect(state.error.value).toBe('GitHub API returned 503.');
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('allows a failed load to be retried successfully', async () => {
@@ -91,18 +82,16 @@ describe('useGitHubRepository', () => {
       published_at: '2026-08-16T13:00:00Z',
       assets: [],
     };
-    const contributors = [{ login: 'extra-binoss' }, { login: 'beam-community' }];
-    let failContributors = true;
+    let failRelease = true;
     fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input);
-      if (url === contributorsUrl) {
-        if (failContributors) {
-          failContributors = false;
+      if (url === releaseUrl) {
+        if (failRelease) {
+          failRelease = false;
           return jsonResponse({}, 500);
         }
-        return jsonResponse(contributors);
+        return jsonResponse(release);
       }
-      if (url === releaseUrl) return jsonResponse(release);
       return jsonResponse(repository);
     });
 
@@ -115,10 +104,10 @@ describe('useGitHubRepository', () => {
     await state.load();
 
     expect(state.stars.value).toBe(repository.stargazers_count);
-    expect(state.contributorCount.value).toBe(contributors.length);
     expect(state.release.value).toEqual(release);
     expect(state.error.value).toBeNull();
     expect(state.loading.value).toBe(false);
-    expect(fetchMock).toHaveBeenCalledTimes(6);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual([repositoryUrl, releaseUrl, releaseUrl]);
   });
 });

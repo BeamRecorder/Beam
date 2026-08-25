@@ -1,10 +1,30 @@
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const pageState = vi.hoisted(() => ({ value: { relativePath: 'index.md' } }));
+const state = vi.hoisted(() => ({
+  page: { value: { relativePath: 'index.md' } },
+  theme: {
+    value: {
+      nav: [{ text: 'Beam website', link: 'https://beam.plinka.eu' }],
+      sidebar: [
+        {
+          text: 'Documentation',
+          items: [
+            { text: 'Getting started', link: '/getting-started' },
+            { text: 'Recorder', link: '/recorder/' },
+            { text: 'Video editor', link: '/editor/' },
+            { text: 'Export', link: '/export' },
+            { text: 'Platforms', link: '/platforms' },
+          ],
+        },
+      ],
+      footer: { message: 'Beam documentation', copyright: 'Beam' },
+    },
+  },
+}));
 
 vi.mock('vitepress', () => ({
-  useData: () => ({ page: pageState }),
+  useData: () => ({ page: state.page, theme: state.theme }),
   withBase: (path: string) => `/docs${path}`,
 }));
 
@@ -20,7 +40,8 @@ const mountFooter = () => {
 
 afterEach(() => {
   for (const wrapper of mounted.splice(0)) wrapper.unmount();
-  pageState.value = { relativePath: 'index.md' };
+  state.page.value = { relativePath: 'index.md' };
+  for (const item of state.theme.value.sidebar[0].items) item.link = item.link.replace(/^\/fr/, '');
 });
 
 describe('DocsFooter', () => {
@@ -44,7 +65,8 @@ describe('DocsFooter', () => {
   });
 
   it('keeps important documentation links in the current locale', () => {
-    pageState.value = { relativePath: 'fr/recorder/interface.md' };
+    state.page.value = { relativePath: 'fr/recorder/interface.md' };
+    for (const item of state.theme.value.sidebar[0].items) item.link = `/fr${item.link}`;
     const wrapper = mountFooter();
     const hrefs = wrapper.findAll('a').map((link) => link.attributes('href'));
 

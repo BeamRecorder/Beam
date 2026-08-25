@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { createWebsiteI18n, WEBSITE_LOCALES, normalizeWebsiteLocale, websiteI18n, type WebsiteLocale } from './i18n';
+import {
+  createWebsiteI18n,
+  loadWebsiteLocale,
+  WEBSITE_LOCALES,
+  normalizeWebsiteLocale,
+  websiteI18n,
+  type WebsiteLocale,
+} from './i18n';
 
 const EXPECTED_LOCALES = [
   'en',
@@ -52,9 +59,9 @@ describe('website i18n', () => {
     expect(first.global.locale.value).toBe('en');
   });
 
-  it('registers exactly the fifteen supported locales', () => {
+  it('declares fifteen supported locales but initially registers only English', () => {
     expect(WEBSITE_LOCALES).toEqual(EXPECTED_LOCALES);
-    expect([...websiteI18n.global.availableLocales].sort()).toEqual([...EXPECTED_LOCALES].sort());
+    expect(websiteI18n.global.availableLocales).toEqual(['en']);
   });
 
   it('ships only website messages in the marketing bundle', () => {
@@ -62,7 +69,8 @@ describe('website i18n', () => {
     expect(Object.keys(message)).toEqual(['Website']);
   });
 
-  it('keeps the Website namespace recursively identical to English', () => {
+  it('keeps the Website namespace recursively identical to English', async () => {
+    await Promise.all(EXPECTED_LOCALES.map((locale) => loadWebsiteLocale(websiteI18n, locale)));
     const englishKeys = leafPaths(websiteMessage('en'));
 
     for (const locale of EXPECTED_LOCALES) {
@@ -70,7 +78,8 @@ describe('website i18n', () => {
     }
   });
 
-  it('keeps every Website translation value non-empty', () => {
+  it('keeps every Website translation value non-empty', async () => {
+    await Promise.all(EXPECTED_LOCALES.map((locale) => loadWebsiteLocale(websiteI18n, locale)));
     for (const locale of EXPECTED_LOCALES) {
       const values = leafValues(websiteMessage(locale));
       expect(values.length, `${locale} Website values`).toBeGreaterThan(0);

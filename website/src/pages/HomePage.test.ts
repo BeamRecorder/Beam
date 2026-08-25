@@ -72,6 +72,7 @@ describe('HomePage', () => {
     expect(wrapper.find('[data-testid="project-loader"]').exists()).toBe(false);
     expect(image.attributes('src')).toBe('/Beam-showcase-1200.webp');
     expect(image.attributes('srcset')).toContain('/Beam-showcase-480.webp 480w');
+    expect(image.attributes('srcset')).toContain('/Beam-showcase-720.webp 720w');
     expect(image.attributes('srcset')).toContain('/Beam-showcase-1672.webp 1672w');
     expect(image.attributes('sizes')).toContain('calc(100vw - 24px)');
     expect(image.attributes('alt')).toBe('Beam recorder and video editor shown side by side');

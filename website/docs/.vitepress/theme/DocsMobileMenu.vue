@@ -1,36 +1,37 @@
 <script setup lang="ts">
 import { ExternalLink, Menu } from '@lucide/vue';
 import { computed } from 'vue';
-import { useData, withBase } from 'vitepress';
+import { useData, withBase, type DefaultTheme } from 'vitepress';
 import Button from '../../../../src/components/ui/button/Button.vue';
 import Popover from '../../../../src/components/ui/popover/Popover.vue';
-import type { DocsSidebarItem } from '../content/docs-content-types';
-import { enabledDocsLocales, getDocsCatalogs, type DocsLocale } from '../content/docs-routes';
+import { docsLocaleFromPath } from '../content/docs-locales';
 
 const websiteUrl = 'https://beam.plinka.eu';
 const githubUrl = 'https://github.com/BeamRecorder/Beam';
 const discordUrl = 'https://discord.gg/6Q6v2xUCB';
 const importantPaths = ['/getting-started', '/recorder/', '/editor/', '/export', '/platforms'] as const;
 
-const { page } = useData();
-
-const locale = computed<DocsLocale>(() => {
-  const prefix = page.value.relativePath.split('/')[0];
-  return enabledDocsLocales.includes(prefix as DocsLocale) ? (prefix as DocsLocale) : 'en';
+const { page, theme } = useData<DefaultTheme.Config>();
+const localePrefix = computed(() => {
+  const locale = docsLocaleFromPath(page.value.relativePath);
+  return locale === 'en' ? '' : `${locale}/`;
+});
+const sidebar = computed(() => (Array.isArray(theme.value.sidebar) ? theme.value.sidebar : []));
+const websiteLabel = computed(() => {
+  const firstNavItem = Array.isArray(theme.value.nav) ? theme.value.nav[0] : undefined;
+  return firstNavItem && 'text' in firstNavItem ? firstNavItem.text : 'Beam website';
 });
 
-const common = computed(() => getDocsCatalogs(locale.value).common);
-
-const flattenSidebar = (items: readonly DocsSidebarItem[]): DocsSidebarItem[] =>
+const flattenSidebar = (items: readonly DefaultTheme.SidebarItem[]): DefaultTheme.SidebarItem[] =>
   items.flatMap((item) => [item, ...(item.items ? flattenSidebar(item.items) : [])]);
 
 const documentationLinks = computed(() => {
-  const items = common.value.sidebar.flatMap((group) => flattenSidebar(group.items));
-  const prefix = locale.value === 'en' ? '' : `${locale.value}/`;
+  const items = sidebar.value.flatMap((group) => flattenSidebar(group.items ?? []));
   return importantPaths.flatMap((path) => {
-    const item = items.find((candidate) => candidate.link === path);
-    if (!item) return [];
-    return [{ label: item.text, href: withBase(`/${prefix}${path.replace(/^\//, '')}`) }];
+    const localizedPath = `/${localePrefix.value}${path.replace(/^\//, '')}`;
+    const item = items.find((candidate) => candidate.link === path || candidate.link === localizedPath);
+    if (!item?.text) return [];
+    return [{ label: item.text, href: withBase(localizedPath) }];
   });
 });
 </script>
@@ -62,7 +63,7 @@ const documentationLinks = computed(() => {
           <section>
             <p>Beam</p>
             <a :href="websiteUrl" @click="close">
-              {{ common.nav.website }}
+              {{ websiteLabel }}
               <ExternalLink aria-hidden="true" />
             </a>
             <a :href="githubUrl" target="_blank" rel="noreferrer" @click="close">

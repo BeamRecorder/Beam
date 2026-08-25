@@ -7,6 +7,7 @@ import { createWebsiteI18n, type WebsiteLocale } from '../i18n';
 import { faqItems, localizedFaqItems } from '../seo/faq-content';
 import { createFaqJsonLd } from '../seo/json-ld';
 import FaqPage from './FaqPage.vue';
+import frenchWebsiteMessages from '../i18n/fr/website.json';
 
 const mountedWrappers: Array<{ unmount: () => void }> = [];
 const initialUrl = window.location.href.split('#')[0];
@@ -26,10 +27,12 @@ beforeEach(() => {
 });
 
 const mountFaq = (locale: WebsiteLocale = 'en', attachTo?: Element) => {
+  const i18n = createWebsiteI18n(locale);
+  if (locale === 'fr') i18n.global.setLocaleMessage('fr', { Website: frenchWebsiteMessages });
   const wrapper = mount(FaqPage, {
     ...(attachTo ? { attachTo } : {}),
     global: {
-      plugins: [createWebsiteI18n(locale), createHead()],
+      plugins: [i18n, createHead()],
     },
   });
   mountedWrappers.push(wrapper);

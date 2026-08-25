@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { ExternalLink } from '@lucide/vue';
-import { useData, withBase } from 'vitepress';
+import { useData, withBase, type DefaultTheme } from 'vitepress';
 import discordIconUrl from '../../../../public/discord_svg.svg';
 import githubIconUrl from '../../../../public/github.svg';
-import type { DocsSidebarItem } from '../content/docs-content-types';
-import { enabledDocsLocales, getDocsCatalogs, type DocsLocale } from '../content/docs-routes';
+import { docsLocaleFromPath } from '../content/docs-locales';
 
 const githubUrl = 'https://github.com/BeamRecorder/Beam';
 const discordUrl = 'https://discord.gg/6Q6v2xUCB';
@@ -13,25 +12,27 @@ const websiteUrl = 'https://beam.plinka.eu';
 const installUrl = `${websiteUrl}/install`;
 const importantPaths = ['/getting-started', '/recorder/', '/editor/', '/export', '/platforms'] as const;
 
-const { page } = useData();
-
-const locale = computed<DocsLocale>(() => {
-  const prefix = page.value.relativePath.split('/')[0];
-  return enabledDocsLocales.includes(prefix as DocsLocale) ? (prefix as DocsLocale) : 'en';
+const { page, theme } = useData<DefaultTheme.Config>();
+const localePrefix = computed(() => {
+  const locale = docsLocaleFromPath(page.value.relativePath);
+  return locale === 'en' ? '' : `${locale}/`;
+});
+const sidebar = computed(() => (Array.isArray(theme.value.sidebar) ? theme.value.sidebar : []));
+const websiteLabel = computed(() => {
+  const firstNavItem = Array.isArray(theme.value.nav) ? theme.value.nav[0] : undefined;
+  return firstNavItem && 'text' in firstNavItem ? firstNavItem.text : 'Beam website';
 });
 
-const common = computed(() => getDocsCatalogs(locale.value).common);
-
-const flattenSidebar = (items: readonly DocsSidebarItem[]): DocsSidebarItem[] =>
+const flattenSidebar = (items: readonly DefaultTheme.SidebarItem[]): DefaultTheme.SidebarItem[] =>
   items.flatMap((item) => [item, ...(item.items ? flattenSidebar(item.items) : [])]);
 
 const importantLinks = computed(() => {
-  const items = common.value.sidebar.flatMap((group) => flattenSidebar(group.items));
-  const prefix = locale.value === 'en' ? '' : `${locale.value}/`;
+  const items = sidebar.value.flatMap((group) => flattenSidebar(group.items ?? []));
   return importantPaths.flatMap((path) => {
-    const item = items.find((candidate) => candidate.link === path);
-    if (!item) return [];
-    return [{ label: item.text, href: withBase(`/${prefix}${path.replace(/^\//, '')}`) }];
+    const localizedPath = `/${localePrefix.value}${path.replace(/^\//, '')}`;
+    const item = items.find((candidate) => candidate.link === path || candidate.link === localizedPath);
+    if (!item?.text) return [];
+    return [{ label: item.text, href: withBase(localizedPath) }];
   });
 });
 </script>
@@ -44,13 +45,13 @@ const importantLinks = computed(() => {
           <img :src="withBase('/favicon.webp')" alt="" width="34" height="34" />
           <span>Beam <small>Docs</small></span>
         </a>
-        <p>{{ common.footer.message }}</p>
+        <p>{{ theme.footer?.message }}</p>
       </section>
 
       <nav class="docs-footer__links" aria-label="Documentation links">
         <section>
           <h2>Product</h2>
-          <a :href="websiteUrl">{{ common.nav.website }} <ExternalLink aria-hidden="true" /></a>
+          <a :href="websiteUrl">{{ websiteLabel }} <ExternalLink aria-hidden="true" /></a>
           <a :href="installUrl">Install Beam <ExternalLink aria-hidden="true" /></a>
         </section>
 
@@ -68,7 +69,7 @@ const importantLinks = computed(() => {
     </div>
 
     <div class="docs-footer__bottom">
-      <span>{{ common.footer.copyright }}</span>
+      <span>{{ theme.footer?.copyright }}</span>
       <a href="https://github.com/BeamRecorder/Beam/blob/master/LICENSE" target="_blank" rel="noreferrer">
         MIT License
       </a>

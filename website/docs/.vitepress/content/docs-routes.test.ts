@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { WEBSITE_LOCALES } from '../../../src/i18n';
 import type { DocsSidebarItem } from './docs-content-types';
+import { docsLocaleOptions } from './docs-locales';
 import { createDocsRoutes, docsRoutePaths, enabledDocsLocales, getDocsCatalogs } from './docs-routes';
 
 interface FlattenedSidebarItem {
@@ -80,6 +81,16 @@ describe('documentation locale routes', () => {
           ).not.toEqual([englishPage?.title, englishPage?.description, englishPage?.lead]);
         }
       }
+    }
+  });
+
+  it('keeps the lightweight runtime locale metadata aligned with the translated catalogues', () => {
+    expect(docsLocaleOptions.map(({ locale }) => locale)).toEqual(enabledDocsLocales);
+
+    for (const option of docsLocaleOptions) {
+      const { common } = getDocsCatalogs(option.locale);
+      expect(option.lang, `${option.locale} language tag`).toBe(common.locale);
+      expect(option.label, `${option.locale} language label`).toBe(common.label);
     }
   });
 

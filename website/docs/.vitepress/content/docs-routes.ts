@@ -193,14 +193,14 @@ import recorderCaptureZhTw from '../../../src/i18n/zh-TW/docs/recorder-capture.j
 import recorderZhTw from '../../../src/i18n/zh-TW/docs/recorder.json';
 import recorderWorkspaceZhTw from '../../../src/i18n/zh-TW/docs/recorder-workspace.json';
 import referenceZhTw from '../../../src/i18n/zh-TW/docs/reference.json';
-import type { WebsiteLocale } from '../../../src/i18n';
 import type { DocsLocaleCatalogs, DocsSearchEntry, DocsSectionContent } from './docs-content-types';
+import { docsLocaleOptions, type DocsLocale } from './docs-locales';
 import { renderDocsHome, renderDocsPage, validateDocsCatalogs } from './docs-renderer';
 
 const createCatalogs = (common: unknown, home: unknown, catalogs: readonly unknown[]): DocsLocaleCatalogs =>
   ({ common, home, catalogs }) as DocsLocaleCatalogs;
 
-const locales: Partial<Record<WebsiteLocale, DocsLocaleCatalogs>> = {
+const locales: Partial<Record<DocsLocale, DocsLocaleCatalogs>> = {
   en: createCatalogs(commonEn, homeEn, [
     gettingStartedEn,
     recorderEn,
@@ -398,9 +398,9 @@ const locales: Partial<Record<WebsiteLocale, DocsLocaleCatalogs>> = {
   ]),
 };
 
-export type DocsLocale = WebsiteLocale;
+export type { DocsLocale } from './docs-locales';
 
-export const enabledDocsLocales = Object.keys(locales) as DocsLocale[];
+export const enabledDocsLocales = docsLocaleOptions.map(({ locale }) => locale);
 
 export const getDocsCatalogs = (locale: DocsLocale): DocsLocaleCatalogs => {
   const catalogs = locales[locale];

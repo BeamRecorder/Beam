@@ -19,6 +19,7 @@ const screenshot = computed(() => {
           src: '/showcase/Beam-showcase-hud-160.webp',
           sources: [
             ['/showcase/Beam-showcase-hud-160.webp', 160],
+            ['/showcase/Beam-showcase-hud-280.webp', 280],
             ['/showcase/Beam-showcase-hud-320.webp', 320],
           ] as const,
           sizes: '160px',
@@ -29,9 +30,10 @@ const screenshot = computed(() => {
           src: '/showcase/Beam-showcase-editor-400.webp',
           sources: [
             ['/showcase/Beam-showcase-editor-400.webp', 400],
+            ['/showcase/Beam-showcase-editor-600.webp', 600],
             ['/showcase/Beam-showcase-editor-800.webp', 800],
           ] as const,
-          sizes: '(max-width: 720px) 90vw, 326px',
+          sizes: '(max-width: 720px) calc(90vw - 44px), 326px',
           width: 400,
           height: 250,
         };
@@ -71,6 +73,9 @@ const screenshot = computed(() => {
         :width="screenshot.width"
         :height="screenshot.height"
         alt=""
+        loading="lazy"
+        decoding="async"
+        fetchpriority="low"
       />
     </span>
   </a>

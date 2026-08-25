@@ -35,11 +35,11 @@ textarea {
 
 ::selection {
   background: var(--color-primary);
-  color: white;
+  color: var(--color-on-primary);
 }
 
 :focus-visible {
-  outline: 3px solid var(--color-primary-border);
+  outline: 3px solid var(--color-focus-ring);
   outline-offset: 3px;
 }
 

@@ -4,7 +4,8 @@ import { fileURLToPath } from 'node:url';
 import type { BreadcrumbList, ListItem, WebPage, WithContext } from 'schema-dts';
 import common from '../../src/i18n/en/docs/common.json';
 import type { DocsSidebarItem } from './content/docs-content-types';
-import { enabledDocsLocales, getDocsCatalogs } from './content/docs-routes';
+import { enabledDocsLocales, type DocsLocale } from './content/docs-locales';
+import { getDocsCatalogs, getDocsSearchEntries } from './content/docs-routes';
 
 const siteUrl = 'https://beam.plinka.eu';
 const docsUrl = `${siteUrl}/docs/`;
@@ -38,6 +39,12 @@ const localizedDocsPath = (relativePath: string, locale: (typeof enabledDocsLoca
 };
 
 const safeJson = (value: object): string => JSON.stringify(value).replaceAll('<', '\\u003c');
+
+const docsSearchPayload = (locale: DocsLocale): string =>
+  JSON.stringify({
+    featured: getDocsCatalogs(locale).home.categories,
+    entries: getDocsSearchEntries(locale),
+  });
 
 const localizeLink = (link: string, locale: (typeof enabledDocsLocales)[number]) => {
   if (locale === 'en' || !link.startsWith('/')) return link;
@@ -106,12 +113,25 @@ export default defineConfig({
               createReadStream(beamShowcaseFile).pipe(response);
               return;
             }
+            const searchLocale = requestPath?.match(/^\/docs\/docs-search\/([^/]+)\.json$/)?.[1];
+            if (searchLocale && enabledDocsLocales.includes(searchLocale as DocsLocale)) {
+              response.setHeader('Content-Type', 'application/json; charset=utf-8');
+              response.end(docsSearchPayload(searchLocale as DocsLocale));
+              return;
+            }
             next();
           });
         },
         generateBundle() {
           this.emitFile({ type: 'asset', fileName: 'favicon.webp', source: readFileSync(beamIconFile) });
           this.emitFile({ type: 'asset', fileName: 'Beam-showcase.png', source: readFileSync(beamShowcaseFile) });
+          for (const locale of enabledDocsLocales) {
+            this.emitFile({
+              type: 'asset',
+              fileName: `docs-search/${locale}.json`,
+              source: docsSearchPayload(locale),
+            });
+          }
         },
       },
     ],
@@ -120,7 +140,8 @@ export default defineConfig({
     hostname: docsUrl,
   },
   head: [
-    ['link', { rel: 'icon', type: 'image/webp', href: '/favicon.webp' }],
+    ['link', { rel: 'icon', type: 'image/webp', sizes: '288x288', href: '/docs/favicon.webp' }],
+    ['link', { rel: 'preload', as: 'image', type: 'image/webp', href: '/docs/favicon.webp', fetchpriority: 'high' }],
     ['meta', { name: 'theme-color', content: '#111110' }],
     ['meta', { property: 'og:site_name', content: 'Beam' }],
     ['meta', { name: 'twitter:card', content: 'summary_large_image' }],

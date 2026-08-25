@@ -4,7 +4,7 @@ import { createWebsiteI18n } from '../i18n';
 
 const githubState = vi.hoisted(() => ({
   stars: { value: 42 },
-  load: vi.fn(),
+  loadStars: vi.fn(),
 }));
 
 vi.mock('@website/composables/useGitHubRepository', () => ({
@@ -55,6 +55,11 @@ afterEach(() => {
 });
 
 describe('WebsiteTopbar', () => {
+  it('loads only the star count used by the topbar', () => {
+    mountTopbar();
+    expect(githubState.loadStars).toHaveBeenCalledOnce();
+  });
+
   it('keeps the language selector outside the mobile-removable theme control', () => {
     const wrapper = mountTopbar();
     const languageTrigger = wrapper.get('.language-trigger');

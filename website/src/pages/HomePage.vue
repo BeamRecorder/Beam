@@ -1,22 +1,15 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed } from 'vue';
 import { Code2, ExternalLink } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import Button from '~/ui/button/Button.vue';
 import WebsiteHero from '@website/components/WebsiteHero.vue';
 import WebsiteShaderPanel from '@website/components/WebsiteShaderPanel.vue';
-import { useGitHubRepository } from '@website/composables/useGitHubRepository';
 import { createHomeJsonLd } from '@website/seo/json-ld';
 import { usePageSeo } from '@website/seo/use-page-seo';
 import discordIconUrl from '../../../public/discord_svg.svg';
 
-const github = useGitHubRepository();
 const { t } = useI18n();
-onMounted(() => void github.load());
-const contributorLabel = computed(() => {
-  const count = github.contributorCount.value;
-  return count === null ? t('Website.home.contributorsFallback') : t('Website.home.contributors', { count }, count);
-});
 
 usePageSeo({
   path: '/',
@@ -43,6 +36,7 @@ const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
           src="/Beam-showcase-1200.webp"
           srcset="
             /Beam-showcase-480.webp   480w,
+            /Beam-showcase-720.webp   720w,
             /Beam-showcase-800.webp   800w,
             /Beam-showcase-1200.webp 1200w,
             /Beam-showcase-1672.webp 1672w
@@ -96,7 +90,7 @@ const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
             height="48"
             loading="lazy"
           />
-          <span>{{ contributorLabel }}</span>
+          <span>{{ t('Website.home.contributorsFallback') }}</span>
         </a>
       </WebsiteShaderPanel>
     </main>

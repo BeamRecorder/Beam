@@ -1,7 +1,7 @@
 import type { Question } from 'schema-dts';
 import { describe, expect, it } from 'vitest';
 import { WEBSITE_LOCALES } from '../i18n';
-import { faqItems, getFaqCatalog, localizedFaqItems } from './faq-content';
+import { faqItems, getFaqCatalog, loadFaqCatalog, localizedFaqItems } from './faq-content';
 import { createFaqJsonLd, createHomeJsonLd } from './json-ld';
 
 describe('website JSON-LD', () => {
@@ -45,7 +45,8 @@ describe('website JSON-LD', () => {
     );
   });
 
-  it('provides a complete translated FAQ catalogue for every website locale', () => {
+  it('provides a complete translated FAQ catalogue for every website locale', async () => {
+    await Promise.all(WEBSITE_LOCALES.map((locale) => loadFaqCatalog(locale)));
     const english = getFaqCatalog('en');
 
     for (const locale of WEBSITE_LOCALES) {

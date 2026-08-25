@@ -124,6 +124,7 @@ export const renderDocsHome = (home: DocsHomeContent): string => {
     `    alt: ${quote(home.hero.imageAlt)}`,
     '    width: 192',
     '    height: 192',
+    '    fetchpriority: high',
     '  actions:',
   ];
   for (const action of home.hero.actions) {
@@ -133,12 +134,12 @@ export const renderDocsHome = (home: DocsHomeContent): string => {
       `      link: ${quote(action.link)}`,
     );
   }
-  lines.push('---', '', '<div class="docs-product-grid">');
+  lines.push('---', '', '<main class="docs-home-main">', '', '<div class="docs-product-grid">');
   for (const category of home.categories) {
     lines.push(
       `<DocsProductCard title=${quote(category.title)} details=${quote(category.details)} link=${quote(category.link)} visual=${quote(category.visual)} />`,
     );
   }
-  lines.push('</div>');
+  lines.push('</div>', '', '</main>');
   return lines.join('\n');
 };

@@ -13,6 +13,12 @@ vi.mock('vitepress', () => ({
 }));
 
 import DocsSearch from './DocsSearch.vue';
+import { getDocsCatalogs, getDocsSearchEntries } from '../content/docs-routes';
+
+const searchPayload = {
+  featured: getDocsCatalogs('en').home.categories,
+  entries: getDocsSearchEntries('en'),
+};
 
 const ClientOnlyStub = {
   template: '<span class="client-only"><slot /></span>',
@@ -37,6 +43,7 @@ const openSearch = async (wrapper: VueWrapper) => {
   await wrapper.get('.docs-search-trigger').trigger('click');
   await flushPromises();
   await nextTick();
+  await vi.waitFor(() => expect(document.body.querySelector('.docs-search-section')).not.toBeNull());
 };
 
 const resultTitles = () =>
@@ -57,6 +64,10 @@ const setSearchQuery = async (value: string) => {
 beforeEach(() => {
   mocked.page.value.relativePath = 'index.md';
   mocked.withBase.mockClear();
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => new Response(JSON.stringify(searchPayload), { headers: { 'content-type': 'application/json' } })),
+  );
 });
 
 afterEach(() => {
@@ -64,6 +75,7 @@ afterEach(() => {
   mountedWrappers.length = 0;
   document.body.innerHTML = '';
   document.body.style.overflow = '';
+  vi.unstubAllGlobals();
   vi.clearAllMocks();
 });
 

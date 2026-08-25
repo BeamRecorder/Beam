@@ -31,9 +31,9 @@ const githubState = vi.hoisted(() => ({
       ],
     } as GitHubRelease,
   },
-  loading: { value: false },
+  releaseLoading: { value: false },
   error: { value: null as string | null },
-  load: vi.fn(async () => undefined),
+  loadRelease: vi.fn(async () => undefined),
 }));
 
 vi.mock('@website/composables/useGitHubRepository', () => ({
@@ -71,5 +71,6 @@ describe('InstallConfirmation', () => {
     expect(wrapper.text()).toContain('View release');
     expect(wrapper.text()).toContain('Join Discord');
     expect(wrapper.text()).not.toContain('Back to Beam');
+    expect(githubState.loadRelease).toHaveBeenCalledOnce();
   });
 });

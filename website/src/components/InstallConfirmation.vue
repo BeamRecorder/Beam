@@ -29,7 +29,7 @@ const version = computed(() => github.release.value?.tag_name ?? '');
 const titleKey = computed(() =>
   downloadStarted.value
     ? 'Website.install.downloadingTitle'
-    : github.loading.value
+    : github.releaseLoading.value
       ? 'Website.install.preparingTitle'
       : 'Website.install.downloadTitle',
 );
@@ -91,7 +91,7 @@ watch(
   },
 );
 
-onMounted(() => void github.load());
+onMounted(() => void github.loadRelease());
 </script>
 
 <template>
@@ -118,7 +118,7 @@ onMounted(() => void github.load());
         <Button v-if="selectedAsset" size="lg" :icon="Download" @click="startDownload()">
           {{ t(`Website.install.${downloadStarted ? 'downloadAgain' : 'startDownload'}`) }}
         </Button>
-        <Button v-else-if="github.loading.value" size="lg" loading disabled>
+        <Button v-else-if="github.releaseLoading.value" size="lg" loading disabled>
           {{ t('Website.install.checkingGitHub') }}
         </Button>
         <Button size="lg" variant="secondary" :icon="ExternalLink" @click="openRelease">

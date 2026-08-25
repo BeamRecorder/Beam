@@ -4,14 +4,11 @@ import { computed } from 'vue';
 import { useData, withBase } from 'vitepress';
 import Button from '../../../../src/components/ui/button/Button.vue';
 import Popover from '../../../../src/components/ui/popover/Popover.vue';
-import { enabledDocsLocales, getDocsCatalogs, type DocsLocale } from '../content/docs-routes';
+import { docsLocaleFromPath, docsLocaleOptions, type DocsLocale } from '../content/docs-locales';
 
 const { page } = useData();
 
-const currentLocale = computed<DocsLocale>(() => {
-  const prefix = page.value.relativePath.split('/')[0];
-  return enabledDocsLocales.includes(prefix as DocsLocale) ? (prefix as DocsLocale) : 'en';
-});
+const currentLocale = computed<DocsLocale>(() => docsLocaleFromPath(page.value.relativePath));
 
 const pagePath = computed(() => {
   const withoutExtension = page.value.relativePath.replace(/\.md$/, '');
@@ -20,18 +17,21 @@ const pagePath = computed(() => {
 });
 
 const localeOptions = computed(() =>
-  enabledDocsLocales.map((locale) => {
+  docsLocaleOptions.map(({ locale, label, lang }) => {
     const prefix = locale === 'en' ? '' : `${locale}/`;
     const suffix = pagePath.value ? `${pagePath.value}` : '';
     return {
       locale,
-      label: getDocsCatalogs(locale).common.label,
+      label,
+      lang,
       href: withBase(`/${prefix}${suffix}`),
     };
   }),
 );
 
-const currentLabel = computed(() => getDocsCatalogs(currentLocale.value).common.label);
+const currentLabel = computed(
+  () => docsLocaleOptions.find(({ locale }) => locale === currentLocale.value)?.label ?? 'English',
+);
 </script>
 
 <template>
@@ -57,7 +57,7 @@ const currentLabel = computed(() => getDocsCatalogs(currentLocale.value).common.
         :href="option.href"
         role="option"
         :aria-selected="option.locale === currentLocale"
-        :lang="getDocsCatalogs(option.locale).common.locale"
+        :lang="option.lang"
       >
         <span>{{ option.label }}</span>
         <Check v-if="option.locale === currentLocale" aria-hidden="true" />

@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { Check, Languages } from '@lucide/vue';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from '~/ui/button/Button.vue';
 import Popover from '~/ui/popover/Popover.vue';
-import { WEBSITE_LOCALES, type WebsiteLocale } from '@website/i18n';
+import { loadWebsiteLocaleMessages, WEBSITE_LOCALES, type WebsiteLocale } from '@website/i18n';
 
-const { locale } = useI18n();
+const { locale, setLocaleMessage } = useI18n();
+const loadingLocale = ref<WebsiteLocale | null>(null);
 
 const languageNames: Record<WebsiteLocale, string> = {
   en: 'English',
@@ -29,11 +30,18 @@ const languageNames: Record<WebsiteLocale, string> = {
 const selectedLocale = computed(() => locale.value as WebsiteLocale);
 const selectorLabel = computed(() => `Language: ${languageNames[selectedLocale.value]}`);
 
-const selectLocale = (nextLocale: WebsiteLocale, close: () => void) => {
-  locale.value = nextLocale;
-  document.documentElement.lang = nextLocale;
-  localStorage.setItem('locale', nextLocale);
-  close();
+const selectLocale = async (nextLocale: WebsiteLocale, close: () => void) => {
+  if (loadingLocale.value) return;
+  loadingLocale.value = nextLocale;
+  try {
+    setLocaleMessage(nextLocale, { Website: await loadWebsiteLocaleMessages(nextLocale) });
+    locale.value = nextLocale;
+    document.documentElement.lang = nextLocale;
+    localStorage.setItem('locale', nextLocale);
+    close();
+  } finally {
+    loadingLocale.value = null;
+  }
 };
 </script>
 
@@ -61,6 +69,8 @@ const selectLocale = (nextLocale: WebsiteLocale, close: () => void) => {
           type="button"
           role="option"
           :aria-selected="language === selectedLocale"
+          :aria-busy="language === loadingLocale"
+          :disabled="loadingLocale !== null"
           @click="selectLocale(language, close)"
         >
           <span>{{ languageNames[language] }}</span>

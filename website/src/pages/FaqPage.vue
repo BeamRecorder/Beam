@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { BookOpen, ExternalLink } from '@lucide/vue';
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Accordion from '~/ui/accordion/Accordion.vue';
 import discordIconUrl from '../../../public/discord_svg.svg';
 import githubIconUrl from '../../../public/github.svg';
 import beamIconUrl from '../assets/beam-icon-72.webp';
 import { normalizeWebsiteLocale } from '@website/i18n';
-import { getFaqCatalog } from '@website/seo/faq-content';
+import { getFaqCatalog, hasFaqCatalog, loadFaqCatalog } from '@website/seo/faq-content';
 import { createFaqJsonLd } from '@website/seo/json-ld';
 import { REPOSITORY_URL } from '@website/seo/site';
 import { usePageSeo } from '@website/seo/use-page-seo';
@@ -15,7 +15,7 @@ import WebsiteShaderPanel from '@website/components/WebsiteShaderPanel.vue';
 
 const { locale, t } = useI18n();
 const selectedLocale = computed(() => normalizeWebsiteLocale(locale.value) ?? 'en');
-const catalog = computed(() => getFaqCatalog(selectedLocale.value));
+const catalog = shallowRef(getFaqCatalog(selectedLocale.value));
 const faqItems = computed(() => catalog.value.items);
 const openItems = ref(faqItems.value.map(() => false));
 const categoryOrder = ['application', 'creation', 'comparisons', 'community'] as const;
@@ -45,6 +45,30 @@ const openHashItem = async () => {
   document.getElementById(itemId)?.scrollIntoView({ behavior: 'auto', block: 'start' });
 };
 
+let catalogRequest = 0;
+watch(
+  selectedLocale,
+  async (nextLocale) => {
+    if (hasFaqCatalog(nextLocale)) {
+      const nextCatalog = getFaqCatalog(nextLocale);
+      if (catalog.value !== nextCatalog) {
+        catalog.value = nextCatalog;
+        openItems.value = nextCatalog.items.map(() => false);
+        await openHashItem();
+      }
+      return;
+    }
+
+    const requestId = ++catalogRequest;
+    const nextCatalog = await loadFaqCatalog(nextLocale);
+    if (requestId !== catalogRequest) return;
+    catalog.value = nextCatalog;
+    openItems.value = nextCatalog.items.map(() => false);
+    await openHashItem();
+  },
+  { immediate: true },
+);
+
 onMounted(() => {
   void openHashItem();
   window.addEventListener('hashchange', openHashItem);
@@ -56,7 +80,7 @@ usePageSeo({
   path: '/faq',
   title: computed(() => catalog.value.meta.title),
   description: computed(() => catalog.value.meta.description),
-  jsonLd: [createFaqJsonLd(faqItems.value)],
+  jsonLd: computed(() => [createFaqJsonLd(faqItems.value)]),
 });
 </script>
 

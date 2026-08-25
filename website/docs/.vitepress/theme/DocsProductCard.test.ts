@@ -50,7 +50,7 @@ describe('DocsProductCard', () => {
     );
     expect(image.attributes('src')).toBe('/docs/showcase/Beam-showcase-hud-160.webp');
     expect(image.attributes('srcset')).toBe(
-      '/docs/showcase/Beam-showcase-hud-160.webp 160w, /docs/showcase/Beam-showcase-hud-320.webp 320w',
+      '/docs/showcase/Beam-showcase-hud-160.webp 160w, /docs/showcase/Beam-showcase-hud-280.webp 280w, /docs/showcase/Beam-showcase-hud-320.webp 320w',
     );
     expect(image.attributes('sizes')).toBe('160px');
     expect(image.attributes('width')).toBe('160');
@@ -58,6 +58,7 @@ describe('DocsProductCard', () => {
     expect(withBase).toHaveBeenCalledWith('/recorder/');
     expect(withBase).toHaveBeenCalledWith('/showcase/amber-800.webp');
     expect(withBase).toHaveBeenCalledWith('/showcase/Beam-showcase-hud-160.webp');
+    expect(withBase).toHaveBeenCalledWith('/showcase/Beam-showcase-hud-280.webp');
     expect(withBase).toHaveBeenCalledWith('/showcase/Beam-showcase-hud-320.webp');
   });
 
@@ -74,7 +75,7 @@ describe('DocsProductCard', () => {
       'recorder',
       'Recorder app',
       '/showcase/Beam-showcase-hud-160.webp',
-      '/showcase/Beam-showcase-hud-160.webp 160w, /showcase/Beam-showcase-hud-320.webp 320w',
+      '/showcase/Beam-showcase-hud-160.webp 160w, /showcase/Beam-showcase-hud-280.webp 280w, /showcase/Beam-showcase-hud-320.webp 320w',
       '160px',
       '160',
       '240',
@@ -83,8 +84,8 @@ describe('DocsProductCard', () => {
       'editor',
       'Video editor',
       '/showcase/Beam-showcase-editor-400.webp',
-      '/showcase/Beam-showcase-editor-400.webp 400w, /showcase/Beam-showcase-editor-800.webp 800w',
-      '(max-width: 720px) 90vw, 326px',
+      '/showcase/Beam-showcase-editor-400.webp 400w, /showcase/Beam-showcase-editor-600.webp 600w, /showcase/Beam-showcase-editor-800.webp 800w',
+      '(max-width: 720px) calc(90vw - 44px), 326px',
       '400',
       '250',
     ],
@@ -103,6 +104,9 @@ describe('DocsProductCard', () => {
       expect(image.attributes('sizes')).toBe(sizes);
       expect(image.attributes('width')).toBe(width);
       expect(image.attributes('height')).toBe(height);
+      expect(image.attributes('loading')).toBe('lazy');
+      expect(image.attributes('decoding')).toBe('async');
+      expect(image.attributes('fetchpriority')).toBe('low');
       expect(withBase).toHaveBeenCalledWith(imagePath);
     },
   );
