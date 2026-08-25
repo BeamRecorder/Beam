@@ -83,18 +83,17 @@ export const deduplicateSitemap = (sitemap) => {
   });
 };
 
-export const sitemapHtmlFiles = (sitemap, origin = 'https://beam.plinka.eu') =>
-  [
-    ...new Set(
-      [...sitemap.matchAll(/<loc>\s*([^<]+)\s*<\/loc>/g)].flatMap((match) => {
-        const url = new URL(match[1].trim());
-        if (url.origin !== origin) throw new Error(`Unexpected sitemap origin: ${url.origin}`);
-        const pathname = decodeURIComponent(url.pathname);
-        if (pathname === '/404' || pathname.endsWith('/404')) return [];
-        return pathname.endsWith('/') ? [`${pathname.slice(1)}index.html`] : [`${pathname.slice(1)}.html`];
-      }),
-    ),
-  ];
+export const sitemapHtmlFiles = (sitemap, origin = 'https://beam.plinka.eu') => [
+  ...new Set(
+    [...sitemap.matchAll(/<loc>\s*([^<]+)\s*<\/loc>/g)].flatMap((match) => {
+      const url = new URL(match[1].trim());
+      if (url.origin !== origin) throw new Error(`Unexpected sitemap origin: ${url.origin}`);
+      const pathname = decodeURIComponent(url.pathname);
+      if (pathname === '/404' || pathname.endsWith('/404')) return [];
+      return pathname.endsWith('/') ? [`${pathname.slice(1)}index.html`] : [`${pathname.slice(1)}.html`];
+    }),
+  ),
+];
 
 export const finalizeBuild = async (options = {}) => {
   const websiteRoot = fileURLToPath(new URL('..', import.meta.url));

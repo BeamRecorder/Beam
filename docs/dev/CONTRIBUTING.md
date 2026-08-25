@@ -30,7 +30,7 @@ Follow these exact steps to prepare your workspace, fork the repository, and del
      - Performance: `perf/<short-descriptive-name>`
      - Refactoring: `refactor/<short-descriptive-name>`
      - Documentation: `docs/<short-descriptive-name>`
-     Example: `git checkout -b feat/custom-watermark`
+       Example: `git checkout -b feat/custom-watermark`
 
 4. **Engineering Guidelines**:
    - Before making any code changes, read the contracts:
@@ -65,6 +65,7 @@ Follow these exact steps to prepare your workspace, fork the repository, and del
 ### 1. Prerequisites
 
 Make sure you have the following installed on your machine:
+
 - **Node.js**: `v20.x` or later (LTS recommended)
 - **Bun**: `v1.4.0`
 - **Rust Toolchain**: `cargo` & `rustc` (see [docs/dev/INSTALL_RUST.md](INSTALL_RUST.md))
@@ -72,6 +73,7 @@ Make sure you have the following installed on your machine:
 - **Git**: Standard git CLI
 
 OS-specific setup instructions:
+
 - [Windows Guide](windows.md)
 - [macOS Guide](mac.md)
 - [Linux Guide](linux.md)
@@ -81,6 +83,7 @@ OS-specific setup instructions:
 ### 2. Forking and Cloning the Repository
 
 1. **Authenticate with GitHub CLI**:
+
    ```bash
    gh auth login
    ```
@@ -97,13 +100,13 @@ OS-specific setup instructions:
 
 Always create a new branch from `main` for your work. Use standard semantic prefixes:
 
-| Type | Prefix | Example |
-| :--- | :--- | :--- |
-| **New Feature** | `feat/` | `feat/export-gif-format` |
-| **Bug Fix** | `fix/` | `fix/timeline-snap-alignment` |
-| **Performance** | `perf/` | `perf/waveform-decoding` |
-| **Refactoring** | `refactor/` | `refactor/audio-engine` |
-| **Documentation** | `docs/` | `docs/contributing-guide` |
+| Type              | Prefix      | Example                       |
+| :---------------- | :---------- | :---------------------------- |
+| **New Feature**   | `feat/`     | `feat/export-gif-format`      |
+| **Bug Fix**       | `fix/`      | `fix/timeline-snap-alignment` |
+| **Performance**   | `perf/`     | `perf/waveform-decoding`      |
+| **Refactoring**   | `refactor/` | `refactor/audio-engine`       |
+| **Documentation** | `docs/`     | `docs/contributing-guide`     |
 
 ```bash
 git checkout -b feat/your-feature-name
@@ -114,6 +117,7 @@ git checkout -b feat/your-feature-name
 ### 4. Installing Dependencies & Running Locally
 
 1. **Install Bun dependencies**:
+
    ```bash
    bun install
    ```
@@ -164,12 +168,14 @@ Run focused tests directly related to the code you modified:
 ### 7. Submitting a Pull Request
 
 1. **Commit your changes using Conventional Commits**:
+
    ```bash
    git add .
    git commit -m "feat(timeline): add multi-track snapping guides"
    ```
 
 2. **Push to your fork**:
+
    ```bash
    git push -u origin feat/your-feature-name
    ```
