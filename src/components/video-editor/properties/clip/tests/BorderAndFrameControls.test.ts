@@ -148,7 +148,7 @@ describe('BorderAndFrameControls', () => {
 
     await wrapper.setProps({ frame: 'iphone-16-max' });
     expect(wrapper.find('.phone-fill-controls').exists()).toBe(true);
-    expect(wrapper.find('.phone-fill-controls').findAll('.frame-button')).toHaveLength(3);
+    expect(wrapper.find('.phone-fill-controls').findAll('.frame-button')).toHaveLength(4);
 
     await wrapper.setProps({ frame: 'safari' });
     expect(wrapper.find('.phone-fill-controls').exists()).toBe(false);

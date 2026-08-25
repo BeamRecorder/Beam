@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
-import { createWebsiteI18n, type WebsiteLocale } from '../i18n';
+import { createWebsiteI18n, loadWebsiteLocale, type WebsiteLocale } from '../i18n';
 import WebsiteFooter from './WebsiteFooter.vue';
 
 const comparisonLinks = [
@@ -11,16 +11,19 @@ const comparisonLinks = [
   ['Loom', 'beam-vs-loom'],
 ] as const;
 
-const mountFooter = (locale: WebsiteLocale) =>
-  mount(WebsiteFooter, {
+const mountFooter = async (locale: WebsiteLocale) => {
+  const i18n = createWebsiteI18n(locale);
+  await loadWebsiteLocale(i18n, locale);
+  return mount(WebsiteFooter, {
     global: {
-      plugins: [createWebsiteI18n(locale)],
+      plugins: [i18n],
     },
   });
+};
 
 describe('WebsiteFooter', () => {
-  it('links every product comparison to its FAQ anchor', () => {
-    const wrapper = mountFooter('en');
+  it('links every product comparison to its FAQ anchor', async () => {
+    const wrapper = await mountFooter('en');
     const comparisonNav = wrapper.get('nav[aria-label="Compare Beam"]');
     const links = comparisonNav.findAll('a');
 
@@ -56,8 +59,8 @@ describe('WebsiteFooter', () => {
         report: 'Signaler un bug',
       },
     ],
-  ] as const)('renders the %s footer copy and navigation labels', (locale, expected) => {
-    const wrapper = mountFooter(locale);
+  ] as const)('renders the %s footer copy and navigation labels', async (locale, expected) => {
+    const wrapper = await mountFooter(locale);
 
     expect(wrapper.get('.site-footer__brand').text()).toContain(expected.footer);
     expect(wrapper.get(`nav[aria-label="${expected.productAria}"]`).text()).toContain(expected.productHeading);
@@ -66,8 +69,8 @@ describe('WebsiteFooter', () => {
     expect(wrapper.get(`nav[aria-label="${expected.communityNav}"]`).text()).toContain(expected.report);
   });
 
-  it('keeps product documentation and FAQ links internal', () => {
-    const wrapper = mountFooter('en');
+  it('keeps product documentation and FAQ links internal', async () => {
+    const wrapper = await mountFooter('en');
     const productNav = wrapper.get('nav[aria-label="Beam links"]');
 
     productNav.get('a[href="/install"]');

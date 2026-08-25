@@ -232,7 +232,7 @@ describe('TimelineTracks', () => {
     expect(mounted!.emitted('paste:error')).toContainEqual(['Copy a timeline item before pasting.']);
   });
 
-  it('displays real-time caption text and triggers a smooth throbber indicator on edit', async () => {
+  it('displays real-time caption text and triggers the settling animation on edit', async () => {
     const initialComp = composition();
     const targetCaption = initialComp.clips.find((c) => c.id === 'caption-clip') as CaptionClip;
     targetCaption.caption = {
@@ -267,21 +267,19 @@ describe('TimelineTracks', () => {
       await mounted!.setProps({ composition: updatedComp });
       await flushPromises();
 
-      // While editing: full caption text is animated as a Throbber
-      const throbber = mounted!.find('.text-caption-track .editor-loading-throbber');
-      expect(throbber.exists()).toBe(true);
-      expect(throbber.attributes('aria-label')).toBe('Updated subtitle text');
+      // While editing, the updated text stays readable and receives the settling animation.
+      const updatedLabel = mounted!.find('.text-caption-track .caption-label-text');
+      expect(updatedLabel.text()).toBe('Updated subtitle text');
+      expect(updatedLabel.classes()).toContain('caption-settled');
 
-      // Wait for the edit throbber timeout and settling transition.
-      await vi.advanceTimersByTimeAsync(550);
+      // The transient animation class is removed after the settling transition.
+      await vi.advanceTimersByTimeAsync(350);
       await flushPromises();
 
-      // Throbber settles back to crisp static caption text with validated settling animation.
-      expect(mounted!.find('.text-caption-track .editor-loading-throbber').exists()).toBe(false);
       const settledLabel = mounted!.find('.text-caption-track .caption-label-text');
       expect(settledLabel.exists()).toBe(true);
       expect(settledLabel.text()).toBe('Updated subtitle text');
-      expect(settledLabel.classes()).toContain('caption-settled');
+      expect(settledLabel.classes()).not.toContain('caption-settled');
     } finally {
       vi.useRealTimers();
     }

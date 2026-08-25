@@ -10,7 +10,7 @@ import { useCopySystemInformation } from '~/composables/useCopySystemInformation
 const { t } = useTranslate('HudPreferences');
 const { t: tSettings } = useTranslate('SettingsPanel');
 const { copied, copy } = useCopySystemInformation();
-const currentVersion = ref('0.1.7');
+const currentVersion = ref('0.2.5');
 
 onMounted(async () => {
   try {

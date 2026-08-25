@@ -74,7 +74,9 @@ describe('phone frame rendering', () => {
       title: 'Phone recording',
     });
 
-    expect(ctx.clip).toHaveBeenCalledOnce();
+    // The outer frame and the configurable phone background each establish
+    // their own clipping region before the media is painted.
+    expect(ctx.clip).toHaveBeenCalledTimes(2);
     expect(ctx.roundRect).toHaveBeenCalledWith(
       geometry.outer.x,
       geometry.outer.y,
