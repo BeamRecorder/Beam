@@ -23,7 +23,7 @@ const heroTitleParts = computed(() =>
 
 const toggleVideo = async () => {
   if (!video.value) return;
-  if (isVideoPaused.value) {
+  if (video.value.paused) {
     try {
       await video.value.play();
     } catch {

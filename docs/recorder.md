@@ -1,12 +1,10 @@
-first :
-
-Recorder app.
+# Recorder app
 
 ![Beam-showcase-hud](Beam-showcase-hud.png)
 
 The Recorder is the part of the app that lets you record your screen, system audio, webcam, and microphone.
 
-To Record with Beam you have two options:
+To record with Beam, you have three options:
 
 - Screen mode
 - Window mode
@@ -24,8 +22,8 @@ Keep in mind, if you are using your laptop speakers, you may need to adjust your
 
 To start a recording, click on the Start Recording button.
 **macOS only**
-For MacOS users, you may need to authorize Beam to access your microphone, webcam and record your screen. You can do this by going to System Preferences > Security & Privacy > Microphone and Webcam, and allowing Beam to access your microphone and webcam.
-For Screen recording, you may need to allow Beam to record your screen. You can do this by going to System Preferences > Security & Privacy > Screen Recording, and allowing Beam to record your screen.
+On macOS Ventura and later, open System Settings > Privacy & Security and allow Beam separately under Microphone, Camera, and Screen & System Audio Recording.
+On earlier macOS versions, open System Preferences > Security & Privacy and allow Beam under Microphone, Camera, and Screen Recording.
 
 **Linux only**
 For Linux users, you may need to authorize Beam to access input devices, this includes keyboard and mouse. It is asked by polkit on each new version, and will require your password. You can go to Preferences of Beam to allow access to input devices (second option). The input devices are only recorded when a recording is in progress, no data is used for anything else.

@@ -53,21 +53,35 @@ describe('WebsiteHero', () => {
   });
 
   it('lets visitors pause and resume the looping demo', async () => {
-    const pause = vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined);
-    const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
+    let nativePaused = true;
+    const pause = vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {
+      nativePaused = true;
+    });
+    const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockImplementation(async () => {
+      nativePaused = false;
+    });
     const wrapper = mountHero();
     const video = wrapper.get('video');
     const control = wrapper.get('.website-hero__video-control');
+    Object.defineProperty(video.element, 'paused', {
+      configurable: true,
+      get: () => nativePaused,
+    });
 
-    await control.trigger('click');
-    expect(pause).toHaveBeenCalledOnce();
-    await video.trigger('pause');
-    expect(control.attributes('aria-label')).toBe('Play demo');
+    expect((video.element as HTMLVideoElement).paused).toBe(true);
 
     await control.trigger('click');
     expect(play).toHaveBeenCalledOnce();
+    expect(pause).not.toHaveBeenCalled();
+    expect((video.element as HTMLVideoElement).paused).toBe(false);
     await video.trigger('play');
     expect(control.attributes('aria-label')).toBe('Pause demo');
+
+    await control.trigger('click');
+    expect(pause).toHaveBeenCalledOnce();
+    expect((video.element as HTMLVideoElement).paused).toBe(true);
+    await video.trigger('pause');
+    expect(control.attributes('aria-label')).toBe('Play demo');
   });
 
   it('does not mount the removed editor, cursor, or project-loader pipeline', () => {
