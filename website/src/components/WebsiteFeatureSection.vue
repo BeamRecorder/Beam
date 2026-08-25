@@ -117,20 +117,20 @@ onBeforeUnmount(() => observer?.disconnect());
 
 <style scoped>
 .feature-section {
-  padding: clamp(88px, 10vw, 132px) 0;
+  padding: clamp(72px, 8vw, 108px) 0;
 }
 
 .feature-section__intro {
   display: grid;
   max-width: 720px;
-  margin-bottom: clamp(38px, 5vw, 64px);
+  margin-bottom: clamp(34px, 4vw, 52px);
   gap: 18px;
 }
 
 .feature-section__intro h2 {
   margin: 0;
   font-family: var(--font-headline);
-  font-size: clamp(42px, 5.5vw, 72px);
+  font-size: clamp(38px, 4.5vw, 60px);
   font-weight: 720;
   letter-spacing: -0.045em;
   line-height: 0.98;
@@ -151,7 +151,7 @@ onBeforeUnmount(() => observer?.disconnect());
 
 .feature-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: clamp(18px, 2vw, 28px);
 }
 
@@ -247,10 +247,16 @@ onBeforeUnmount(() => observer?.disconnect());
   margin: 0;
   color: var(--text-primary);
   font-family: var(--font-headline);
-  font-size: clamp(20px, 2.2vw, 28px);
+  font-size: clamp(19px, 1.8vw, 24px);
   font-weight: 700;
   letter-spacing: -0.025em;
   line-height: 1.1;
+}
+
+@media (max-width: 1100px) {
+  .feature-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 760px) {

@@ -49,9 +49,9 @@ describe('HomePage', () => {
     expect(
       wrapper
         .get('#hero-title')
-        .findAll('.hero-title__punctuation')
+        .findAll('.hero-title__phrase')
         .map((part) => part.text()),
-    ).toEqual(['.', '.', '.']);
+    ).toEqual(['Record.', 'Edit.', 'Share.']);
     expect(hero.get('.hero-availability').text()).toContain('Free on every desktop.');
     expect(hero.get('.hero-availability').text()).toContain('Available for Windows, macOS, and Linux.');
     expect(hero.find('.hero-eyebrow').exists()).toBe(false);

@@ -12,13 +12,12 @@ const video = ref<HTMLVideoElement | null>(null);
 const isVideoPaused = ref(false);
 
 const HERO_VIDEO_URL = '/website-demo.webm';
-const HERO_PUNCTUATION = /([.!?。！？।]+)/u;
-const ONLY_HERO_PUNCTUATION = /^[.!?。！？।]+$/u;
-const heroTitleParts = computed(() =>
-  t('Website.home.heroLine1')
-    .split(HERO_PUNCTUATION)
-    .filter(Boolean)
-    .map((text) => ({ text, punctuation: ONLY_HERO_PUNCTUATION.test(text) })),
+const HERO_PHRASE = /[^.!?。！？।]+[.!?。！？।]*/gu;
+const heroTitlePhrases = computed(
+  () =>
+    t('Website.home.heroLine1')
+      .match(HERO_PHRASE)
+      ?.map((part) => part.trim()) ?? [],
 );
 
 const toggleVideo = async () => {
@@ -39,12 +38,10 @@ const toggleVideo = async () => {
   <section class="website-hero" aria-labelledby="hero-title">
     <div class="website-hero__copy">
       <h1 id="hero-title">
-        <span
-          v-for="(part, index) in heroTitleParts"
-          :key="`${part.text}-${index}`"
-          :class="{ 'hero-title__punctuation': part.punctuation }"
-          >{{ part.text }}</span
-        >
+        <template v-for="(phrase, index) in heroTitlePhrases" :key="phrase">
+          <span class="hero-title__phrase">{{ phrase }}</span
+          >{{ index < heroTitlePhrases.length - 1 ? ' ' : '' }}
+        </template>
       </h1>
       <p class="lede">{{ t('Website.home.lede') }}</p>
       <div class="hero-availability">
@@ -94,12 +91,13 @@ const toggleVideo = async () => {
 <style scoped>
 .website-hero {
   display: grid;
-  grid-template-columns: minmax(440px, 0.68fr) minmax(0, 1.32fr);
+  grid-template-columns: minmax(360px, 0.58fr) minmax(0, 1.42fr);
   align-items: center;
-  gap: 32px;
-  width: min(calc(100vw - 120px), 1400px);
-  min-height: calc(100dvh - 72px);
-  padding: 88px 0 48px;
+  gap: clamp(40px, 4vw, 64px);
+  width: 100%;
+  min-width: 0;
+  min-height: clamp(680px, calc(100dvh - 72px), 820px);
+  padding: 72px 0 44px;
 }
 
 .website-hero__copy {
@@ -107,12 +105,17 @@ const toggleVideo = async () => {
 }
 
 .website-hero__copy h1 {
-  font-size: clamp(62px, 5.2vw, 78px);
+  font-size: clamp(56px, 4.8vw, 72px);
 }
 
-.hero-title__punctuation {
+.hero-title__phrase {
   display: inline-block;
-  margin: 0 0.14em 0 0.08em;
+  margin-right: 0.08em;
+  white-space: nowrap;
+}
+
+.hero-title__phrase:last-child {
+  margin-right: 0;
 }
 
 .hero-availability {
@@ -135,11 +138,13 @@ const toggleVideo = async () => {
   display: flex;
   overflow: hidden;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   aspect-ratio: 16 / 9;
   border: 1px solid var(--color-border-strong);
   border-radius: 22px;
   background: var(--color-media-surface);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 18px 36px -18px rgb(42 36 28 / 55%);
 }
 
 .website-hero__video-control {
@@ -177,9 +182,14 @@ const toggleVideo = async () => {
 .website-hero__video {
   display: block;
   width: 100%;
+  max-width: 100%;
   height: 100%;
   background: var(--color-media-surface);
   object-fit: cover;
+}
+
+:global(html.dark) .website-hero__media {
+  box-shadow: 0 18px 38px -16px rgb(0 0 0 / 78%);
 }
 
 @media (max-width: 1050px) {
@@ -187,6 +197,7 @@ const toggleVideo = async () => {
     grid-template-columns: 1fr;
     gap: 32px;
     width: 100%;
+    min-height: 0;
     padding: 64px 0 40px;
   }
 }
