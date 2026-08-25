@@ -2,6 +2,7 @@ import type { CompositionSnapshot } from '../export-types';
 import {
   isBlurClip,
   isColorClip,
+  isShapeClip,
   type BlurClip,
   type CaptionClip,
   type VisualClip,
@@ -35,7 +36,7 @@ import { drawCanvasTransitionFrame } from '../../video-editor/composition/transi
 import { mapSourcePointToScreen, resolveScreenRenderGeometry } from '../../video-editor/composition/camera-layout';
 import { resolveVisualClipFraming } from '../../video-editor/composition/visual-framing';
 import { OUTPUT_FALLBACK_COLOR } from '../../video-editor/canvas/output-canvas';
-import { createZoomMotionBlurSamplePlan, ZOOM_MOTION_BLUR_SHUTTER_MS } from '../../video-editor/zoom/zoom-motion-blur';
+import { createCameraMotionBlurPlan } from '../../video-editor/zoom/zoom-motion-blur';
 import {
   compositeIsolatedMotionBlurSample,
   createMotionBlurSurface,
@@ -44,7 +45,10 @@ import {
 } from '../../video-editor/zoom/zoom-motion-blur-compositor';
 import { normalizeZoomMotionBlur } from '../../video-editor/zoom/zoom-types';
 import { sourceTimeAt } from '~/media/shared';
-import { drawColorClip } from '../../video-editor/composition/color/render-color-clip';
+import { drawExportGeneratedLayer } from './render-generated-layer';
+import { hasPerspectiveTilt } from '../../video-editor/zoom/perspective-projection';
+import { disposePerspectiveRenderer, renderPerspectiveLayers } from './perspective-render';
+import { disposeCanvasTransitionSurface, getCanvasTransitionSurface } from './canvas-transition-surface';
 
 export interface RenderableMedia {
   source: CanvasImageSource;
@@ -54,8 +58,6 @@ export interface RenderableMedia {
 }
 
 export type CompositionVisuals = ReadonlyMap<string, RenderableMedia>;
-export { OUTPUT_FALLBACK_COLOR } from '../../video-editor/canvas/output-canvas';
-
 let zoomMotionBlurSurface: MotionBlurSurface | null = null;
 
 const getZoomMotionBlurSurface = (width: number, height: number) => {
@@ -188,10 +190,8 @@ export function drawCompositionLayers(
   const layers = resolveCompositionSceneLayers(snapshot.composition, timeMs);
   for (const clip of layers.visualStack) {
     if (clip.kind === 'screen') continue;
-    if (isColorClip(clip)) {
-      drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () =>
-        drawColorClip(ctx, clip, { x: 0, y: 0, width: snapshot.canvas.width, height: snapshot.canvas.height }),
-      );
+    if (isColorClip(clip) || isShapeClip(clip)) {
+      drawExportGeneratedLayer(ctx, clip, timeMs, snapshot.canvas);
       continue;
     }
     if (isBlurClip(clip)) {
@@ -274,25 +274,15 @@ function renderCompositionFrameContent(
   const scale = camera.scale;
   const cameraFocus = camera.focus;
   const blurSettings = normalizeZoomMotionBlur(snapshot.zoomMotionBlur);
-  const centerCamera = { focusX: cameraFocus.cx, focusY: cameraFocus.cy, scale };
   const blurIntensity = blurSettings.enabled ? blurSettings.intensity : 0;
-  const blurPlan = (() => {
-    if (!(blurIntensity > 0)) return [{ camera: centerCamera, weight: 1 }];
-    const halfShutterMs = ZOOM_MOTION_BLUR_SHUTTER_MS / 2;
-    const cameraAt = (sampleTimeMs: number) => {
-      const value = resolvedCameraEvaluator.sample(Math.max(0, sampleTimeMs));
-      return { focusX: value.focus.cx, focusY: value.focus.cy, scale: value.scale };
-    };
-    return createZoomMotionBlurSamplePlan({
-      previous: cameraAt(timeMs - halfShutterMs),
-      center: centerCamera,
-      current: cameraAt(timeMs + halfShutterMs),
-      intensity: blurIntensity,
-      deltaMs: halfShutterMs * 2,
-      viewportWidth: width,
-      viewportHeight: height,
-    });
-  })();
+  const blurPlan = createCameraMotionBlurPlan({
+    sampleAt: (sampleTimeMs) => resolvedCameraEvaluator.sample(sampleTimeMs),
+    center: camera,
+    timeMs,
+    intensity: blurIntensity,
+    viewportWidth: width,
+    viewportHeight: height,
+  });
   const drawCameraSample = (target: Canvas2DContext, blurSample: (typeof blurPlan)[number]) => {
     const sampleCamera = blurSample.camera;
     target.save();
@@ -317,10 +307,8 @@ function renderCompositionFrameContent(
         );
         continue;
       }
-      if (isColorClip(clip)) {
-        drawWithClipTransition(target, clip, timeMs, snapshot.canvas, () =>
-          drawColorClip(target, clip, { x: 0, y: 0, width, height }),
-        );
+      if (isColorClip(clip) || isShapeClip(clip)) {
+        drawExportGeneratedLayer(target, clip, timeMs, { width, height });
         continue;
       }
       if (isBlurClip(clip)) {
@@ -346,34 +334,6 @@ function renderCompositionFrameContent(
     }
     target.restore();
   };
-  if (blurPlan.length === 1) {
-    drawCameraSample(ctx, blurPlan[0]!);
-  } else {
-    const surface = getZoomMotionBlurSurface(width, height);
-    if (!surface) {
-      drawCameraSample(ctx, blurPlan[Math.floor(blurPlan.length / 2)]!);
-    } else {
-      let accumulatedWeight = 0;
-      let composited = false;
-      for (const blurSample of blurPlan) {
-        const rendered = compositeIsolatedMotionBlurSample({
-          target: ctx,
-          surface,
-          logicalWidth: width,
-          logicalHeight: height,
-          pixelScale: 1,
-          sample: blurSample,
-          accumulatedWeight,
-          draw: (target, sampleToDraw) => drawCameraSample(target, sampleToDraw),
-        });
-        if (rendered) {
-          composited = true;
-          accumulatedWeight += blurSample.weight;
-        }
-      }
-      if (!composited) drawCameraSample(ctx, blurPlan[Math.floor(blurPlan.length / 2)]!);
-    }
-  }
   const hasRenderableScreen = Boolean(screen && video && positionedMedia && source);
   const resolvedCursorMotionPlayer = hasRenderableScreen
     ? (cursorMotionPlayer ??
@@ -397,28 +357,68 @@ function renderCompositionFrameContent(
           camera,
         )
       : null;
-  if (hasRenderableScreen && screen && resolvedCursorMotionPlayer) {
-    ctx.save();
-    ctx.translate(width / 2, height / 2);
-    ctx.scale(scale, scale);
-    ctx.translate(-cameraFocus.cx * width, -cameraFocus.cy * height);
-    drawWithClipTransition(ctx, screen, timeMs, snapshot.canvas, () =>
-      drawCursorLayer(
-        ctx,
-        snapshot,
-        screenTime,
-        screen,
-        sourceWidth,
-        sourceHeight,
-        width,
-        height,
-        cursorImages,
-        resolvedCursorMotionPlayer,
-        cursorMotion,
-      ),
-    );
-    ctx.restore();
-  }
+  const drawCameraLayers = (target: Canvas2DContext) => {
+    if (blurPlan.length === 1) {
+      drawCameraSample(target, blurPlan[0]!);
+    } else {
+      const surface = getZoomMotionBlurSurface(width, height);
+      if (!surface) {
+        drawCameraSample(target, blurPlan[Math.floor(blurPlan.length / 2)]!);
+      } else {
+        let accumulatedWeight = 0;
+        let composited = false;
+        for (const blurSample of blurPlan) {
+          const rendered = compositeIsolatedMotionBlurSample({
+            target,
+            surface,
+            logicalWidth: width,
+            logicalHeight: height,
+            pixelScale: 1,
+            sample: blurSample,
+            accumulatedWeight,
+            draw: (sampleTarget, sampleToDraw) => drawCameraSample(sampleTarget, sampleToDraw),
+          });
+          if (rendered) {
+            composited = true;
+            accumulatedWeight += blurSample.weight;
+          }
+        }
+        if (!composited) drawCameraSample(target, blurPlan[Math.floor(blurPlan.length / 2)]!);
+      }
+    }
+    if (hasRenderableScreen && screen && resolvedCursorMotionPlayer) {
+      target.save();
+      target.translate(width / 2, height / 2);
+      target.scale(scale, scale);
+      target.translate(-cameraFocus.cx * width, -cameraFocus.cy * height);
+      drawWithClipTransition(target, screen, timeMs, snapshot.canvas, () =>
+        drawCursorLayer(
+          target,
+          snapshot,
+          screenTime,
+          screen,
+          sourceWidth,
+          sourceHeight,
+          width,
+          height,
+          cursorImages,
+          resolvedCursorMotionPlayer,
+          cursorMotion,
+        ),
+      );
+      target.restore();
+    }
+  };
+  const perspective = { tiltX: camera.tiltX ?? 0, tiltY: camera.tiltY ?? 0 };
+  if (hasPerspectiveTilt(perspective)) {
+    renderPerspectiveLayers({
+      target: ctx,
+      width,
+      height,
+      transform: perspective,
+      drawLayers: drawCameraLayers,
+    });
+  } else drawCameraLayers(ctx);
   for (const clip of layers.captions)
     drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () =>
       drawCaption(ctx, clip, timeMs, snapshot, keyboardCursorPosition),
@@ -431,17 +431,11 @@ function renderCompositionFrameContent(
   );
 }
 
-let canvasTransitionSurface: OffscreenCanvas | HTMLCanvasElement | null = null;
-const getCanvasTransitionSurface = (width: number, height: number) => {
-  if (!canvasTransitionSurface) {
-    if (typeof OffscreenCanvas !== 'undefined') canvasTransitionSurface = new OffscreenCanvas(width, height);
-    else if (typeof document !== 'undefined') canvasTransitionSurface = document.createElement('canvas');
-  }
-  if (!canvasTransitionSurface) return null;
-  canvasTransitionSurface.width = width;
-  canvasTransitionSurface.height = height;
-  return canvasTransitionSurface;
-};
+export function disposeCompositionRenderer() {
+  disposePerspectiveRenderer();
+  zoomMotionBlurSurface = null;
+  disposeCanvasTransitionSurface();
+}
 
 export function renderCompositionFrame(
   ctx: Canvas2DContext,
@@ -461,9 +455,10 @@ export function renderCompositionFrame(
     time * 1_000,
     snapshot.duration * 1_000,
   );
-  const surface = transition ? getCanvasTransitionSurface(snapshot.canvas.width, snapshot.canvas.height) : null;
-  const surfaceContext = surface?.getContext('2d') as Canvas2DContext | null | undefined;
-  if (!transition || !surface || !surfaceContext) {
+  const transitionTarget = transition
+    ? getCanvasTransitionSurface(snapshot.canvas.width, snapshot.canvas.height)
+    : null;
+  if (!transition || !transitionTarget?.context) {
     renderCompositionFrameContent(
       ctx,
       video,
@@ -479,7 +474,7 @@ export function renderCompositionFrame(
     return;
   }
   renderCompositionFrameContent(
-    surfaceContext,
+    transitionTarget.context,
     video,
     snapshot,
     time,
@@ -492,7 +487,7 @@ export function renderCompositionFrame(
   );
   drawCanvasTransitionFrame(
     ctx,
-    surface,
+    transitionTarget.surface,
     { width: snapshot.canvas.width, height: snapshot.canvas.height },
     { x: 0, y: 0, width: snapshot.canvas.width, height: snapshot.canvas.height },
     transition,

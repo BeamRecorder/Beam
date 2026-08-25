@@ -124,10 +124,24 @@ const zoomState = (value) => {
       element.focus.cy < 0 ||
       element.focus.cy > 1 ||
       ![1, 2, 3, 4, 5, 6].includes(element.depth) ||
-      !['auto', 'manual'].includes(element.mode)
+      !['auto', 'manual'].includes(element.mode) ||
+      (element.projection !== undefined && !['2d', '3d'].includes(element.projection)) ||
+      (element.tiltIntensity !== undefined && !finite(element.tiltIntensity)) ||
+      (element.tiltHorizontal !== undefined && !finite(element.tiltHorizontal)) ||
+      (element.tiltVertical !== undefined && !finite(element.tiltVertical)) ||
+      (element.tiltPreset !== undefined && !['small', 'medium', 'large', 'custom'].includes(element.tiltPreset))
     )
       throw new Error('Propriétés de zoom invalides');
     ids.add(element.id);
+    const tiltIntensity = clamp(element.tiltIntensity === undefined ? 0.6 : element.tiltIntensity, 0, 1);
+    const inferredTiltPreset =
+      Math.abs(tiltIntensity - 0.3) < 1e-6
+        ? 'small'
+        : Math.abs(tiltIntensity - 0.6) < 1e-6
+          ? 'medium'
+          : Math.abs(tiltIntensity - 1) < 1e-6
+            ? 'large'
+            : 'custom';
     return {
       id: element.id,
       sessionId: element.sessionId,
@@ -136,6 +150,11 @@ const zoomState = (value) => {
       focus: { cx: element.focus.cx, cy: element.focus.cy },
       depth: element.depth,
       mode: element.mode,
+      projection: element.projection === '3d' ? '3d' : '2d',
+      tiltIntensity,
+      tiltHorizontal: clamp(element.tiltHorizontal === undefined ? 0.65 : element.tiltHorizontal, -1, 1),
+      tiltVertical: clamp(element.tiltVertical === undefined ? -0.35 : element.tiltVertical, -1, 1),
+      tiltPreset: element.tiltPreset ?? inferredTiltPreset,
     };
   });
   const generatedSessions = value.generatedSessions.map((record) => {

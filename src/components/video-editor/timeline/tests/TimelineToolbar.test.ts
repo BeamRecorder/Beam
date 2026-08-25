@@ -99,7 +99,7 @@ describe('TimelineToolbar', () => {
     expect(wrapper.emitted('update:zoomLevel')).toContainEqual([275]);
   });
 
-  it('exposes Color in Add and emits a color element selection', async () => {
+  it('exposes generated layers in Add and emits their selections', async () => {
     const wrapper = mount(TimelineToolbar, {
       props: { currentTime: 0, duration: 100, isPlaying: false, zoomLevel: 100 },
       global: { stubs: { PopoverMenuButton: AddMenuWithItems, Popover, BigSlider, Button } },
@@ -109,7 +109,10 @@ describe('TimelineToolbar', () => {
     expect(colorItem.text()).toBe('Color');
 
     await colorItem.trigger('click');
-    expect(wrapper.emitted('add:element')).toEqual([['color']]);
+    const shapeItem = wrapper.get('[data-kind="shape"]');
+    expect(shapeItem.text()).toBe('Shapes & Arrows');
+    await shapeItem.trigger('click');
+    expect(wrapper.emitted('add:element')).toEqual([['color'], ['shape']]);
   });
 
   it('keeps the toolbar height while loading and swaps controls for an animated skeleton', async () => {

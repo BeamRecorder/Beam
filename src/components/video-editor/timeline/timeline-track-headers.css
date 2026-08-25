@@ -17,6 +17,13 @@
 .sidebar-track-item.dragging {
   opacity: 0.55;
 }
+.sidebar-track-item.selected {
+  box-shadow: inset 0 0 0 1px var(--color-primary);
+}
+.sidebar-track-item.selected .track-info {
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-bg-surface));
+  color: var(--text-primary);
+}
 .visual-tracks-group {
   display: contents;
 }

@@ -37,6 +37,8 @@ const { state } = vi.hoisted(() => ({
     selectVisualAt: vi.fn(),
     transformDraft: undefined as { value: unknown } | undefined,
     transformSelectionViewportStyle: undefined as { value: unknown } | undefined,
+    transformHandlePositions: undefined as { value: unknown } | undefined,
+    transformPerspectiveCorners: undefined as { value: unknown } | undefined,
     transformResizeCorners: undefined as { value: unknown } | undefined,
     transition: undefined as { value: boolean } | undefined,
     onRenderOnce: undefined as (() => void) | undefined,
@@ -50,6 +52,32 @@ const { state } = vi.hoisted(() => ({
       | undefined,
     cursorBounds: undefined as { value: unknown } | undefined,
     isScreenEnabled: undefined as (() => boolean) | undefined,
+    perspectiveRender: vi.fn(),
+    perspectiveDispose: vi.fn(),
+  },
+}));
+
+vi.mock('../../zoom/perspective-scene-compositor', () => ({
+  PerspectiveSceneCompositor: class {
+    render(options: {
+      target: CanvasRenderingContext2D;
+      bounds: { x: number; y: number; width: number; height: number };
+      draw: (context: CanvasRenderingContext2D) => unknown;
+    }) {
+      state.perspectiveRender(options);
+      options.draw(options.target);
+      options.target.drawImage(
+        { perspectiveSurface: true } as unknown as CanvasImageSource,
+        options.bounds.x,
+        options.bounds.y,
+        options.bounds.width,
+        options.bounds.height,
+      );
+    }
+
+    dispose() {
+      state.perspectiveDispose();
+    }
   },
 }));
 
@@ -146,6 +174,8 @@ vi.mock('../composables/useLayerTransformAndCrop', async () => {
         width: '800px',
         height: '450px',
       });
+      state.transformHandlePositions = ref(undefined);
+      state.transformPerspectiveCorners = ref(undefined);
       state.transformResizeCorners = ref(undefined);
       return {
         transformSelectionViewportStyle: state.transformSelectionViewportStyle,
@@ -155,6 +185,8 @@ vi.mock('../composables/useLayerTransformAndCrop', async () => {
           width: '100px',
           height: '80px',
         }),
+        transformHandlePositions: state.transformHandlePositions,
+        transformPerspectiveCorners: state.transformPerspectiveCorners,
         cropContainerStyle: ref({
           left: '3px',
           top: '4px',
@@ -445,6 +477,85 @@ describe('EditorCanvas', () => {
     await nextTick();
 
     expect(state.canvasBackgroundOptions?.previewQuality?.()).toBe('full');
+  });
+
+  it('keeps a 2D zoom on the direct Canvas2D preview path', async () => {
+    const cameraBounds = {
+      dx: 0,
+      dy: 0,
+      dw: 800,
+      dh: 450,
+      scale: 1,
+      focusX: 400,
+      focusY: 225,
+    };
+    state.drawVideoWindow.mockReturnValue(cameraBounds);
+    const mounted = mountEditor({
+      zoomElements: [
+        {
+          id: 'flat-zoom',
+          sessionId: 'session',
+          startMs: 0,
+          endMs: 2_000,
+          focus: { cx: 0.5, cy: 0.5 },
+          depth: 2,
+          mode: 'manual',
+          projection: '2d',
+          tiltIntensity: 1,
+        },
+      ],
+    });
+    await flushPromises();
+    while (frames.length) runFrame();
+
+    expect(state.perspectiveRender).not.toHaveBeenCalled();
+    expect(state.drawComposition.mock.calls.some(([ctx]) => ctx === contextMock)).toBe(true);
+    mounted.unmount();
+    wrapper = undefined;
+  });
+
+  it('routes an active 3D zoom through the perspective surface while keeping composition overlays on target', async () => {
+    const cameraBounds = {
+      dx: 0,
+      dy: 0,
+      dw: 800,
+      dh: 450,
+      scale: 1,
+      focusX: 400,
+      focusY: 225,
+    };
+    state.drawVideoWindow.mockReturnValue(cameraBounds);
+    const mounted = mountEditor({
+      zoomElements: [
+        {
+          id: 'perspective-zoom',
+          sessionId: 'session',
+          startMs: 0,
+          endMs: 2_000,
+          focus: { cx: 0.75, cy: 0.25 },
+          depth: 2,
+          mode: 'manual',
+          projection: '3d',
+          tiltIntensity: 1,
+        },
+      ],
+    });
+    await flushPromises();
+    while (frames.length) runFrame();
+
+    expect(state.perspectiveRender).toHaveBeenCalled();
+    expect(state.perspectiveRender).toHaveBeenCalledWith(
+      expect.objectContaining({
+        target: contextMock,
+        bounds: expect.objectContaining({ width: 800, height: 450 }),
+      }),
+    );
+    expect(state.drawComposition).toHaveBeenCalledWith(contextMock, cameraBounds, undefined, expect.anything());
+    expect(contextMock.roundRect).toHaveBeenCalledWith(0, 0, 800, 450, 16);
+    expect(contextMock.clip).toHaveBeenCalled();
+    mounted.unmount();
+    wrapper = undefined;
+    expect(state.perspectiveDispose).toHaveBeenCalled();
   });
 
   it('uses a quality-scaled backing canvas while keeping the CSS preview and logical coordinates unchanged', async () => {
@@ -791,6 +902,18 @@ describe('EditorCanvas', () => {
     state.transformResizeCorners!.value = ['left', 'right'];
     await nextTick();
     expect(mounted.findComponent(ResizeHandle).props('corners')).toEqual(['left', 'right']);
+
+    const positions = { 'top-left': { x: 8, y: 12 }, right: { x: 104, y: 44 } };
+    state.transformHandlePositions!.value = positions;
+    state.transformPerspectiveCorners!.value = [
+      { x: 8, y: 12 },
+      { x: 96, y: 4 },
+      { x: 104, y: 44 },
+      { x: 12, y: 52 },
+    ];
+    await nextTick();
+    expect(mounted.findComponent(ResizeHandle).props('positions')).toEqual(positions);
+    expect(mounted.find('.perspective-border polygon').attributes('points')).toBe('8,12 96,4 104,44 12,52');
 
     state.renderVisualStack?.(contextMock, bounds, vi.fn(), resolveCompositionSceneLayers(composition(), 500));
     expect(state.drawWebcamClips).toHaveBeenCalledWith(expect.anything(), bounds);

@@ -334,6 +334,39 @@
 .visual-content {
   background: var(--color-track-video-light);
 }
+.visual-content.addable-content {
+  cursor: crosshair;
+}
+.visual-add-indicator {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  z-index: 8;
+  display: flex;
+  min-width: 14px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  box-sizing: border-box;
+  color: var(--text-primary);
+  font-size: 8px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.visual-add-indicator.kind-color,
+.visual-add-indicator.kind-image {
+  background: var(--color-bg-surface);
+}
+.visual-add-indicator.kind-blur {
+  background: linear-gradient(110deg, var(--color-track-blur), var(--color-track-blur-highlight));
+  color: #fff;
+}
+.visual-add-indicator.kind-shape {
+  background: color-mix(in srgb, var(--color-track-annotation) 24%, var(--color-bg-surface));
+}
 .cursor-content {
   background: var(--color-track-cursor-light);
 }
@@ -362,10 +395,6 @@
   transition: border-color var(--fast) ease;
   overflow: visible;
   box-sizing: border-box;
-}
-.cursor-zoom-indicator {
-  background: color-mix(in srgb, var(--color-track-cursor) 90%, #000 10%);
-  border: 1px solid rgba(255, 255, 255, 0.28);
 }
 .annotation-indicator {
   background: var(--color-track-annotation);

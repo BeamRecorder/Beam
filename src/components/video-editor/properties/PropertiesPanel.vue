@@ -1,11 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import type { CursorPackDescriptor, CursorSelection } from '~/api/types/cursor-pack';
-import type {
-  BackgroundMedia,
-  BackgroundValue,
-  BackgroundMediaGroup,
-} from '~/components/video-editor/composables/backgroundCatalog';
+import type { BackgroundMedia, BackgroundMediaGroup, BackgroundValue } from '../composables/backgroundCatalog';
 import CursorPanel from '~/components/video-editor/properties/cursor/CursorPanel.vue';
 import CanvasPanel from '~/components/video-editor/properties/canvas/CanvasPanel.vue';
 import AudioPanel from '~/components/video-editor/properties/audio/AudioPanel.vue';
@@ -14,14 +10,14 @@ import SettingsPanel from '~/components/video-editor/properties/settings/Setting
 import ClipPropertiesPanel from '~/components/video-editor/properties/clip/ClipPropertiesPanel.vue';
 import AudioClipPropertiesPanel from '~/components/video-editor/properties/clip/AudioClipPropertiesPanel.vue';
 import BlurPropertiesPanel from '~/components/video-editor/properties/clip/BlurPropertiesPanel.vue';
-import ColorLayerPropertiesPanel from '~/components/video-editor/properties/clip/ColorLayerPropertiesPanel.vue';
+import GeneratedLayerPropertiesPanel from '~/components/video-editor/properties/clip/GeneratedLayerPropertiesPanel.vue';
 import CaptionPanel from '~/components/video-editor/properties/captions/CaptionPanel.vue';
 import CaptionClipPanel from '~/components/video-editor/properties/captions/CaptionClipPanel.vue';
 import KeyboardCaptionClipPanel from '~/components/video-editor/properties/captions/KeyboardCaptionClipPanel.vue';
 import ClipTransitionsPanel from '~/components/video-editor/properties/clip/ClipTransitionsPanel.vue';
 import TransitionSettingsPanel from '~/components/video-editor/properties/clip/TransitionSettingsPanel.vue';
 import PropertiesPanelHeader from './PropertiesPanelHeader.vue';
-import { setClipTransition, setColorFill } from '~/components/video-editor/composition/engine/clip-engine';
+import { setClipTransition } from '../composition/engine/clip-engine';
 import { EMPTY_CLIP_TRANSITIONS, normalizeCanvasTransitions } from '~/media/shared/clip-transitions';
 import ScrollShadow from '~/ui/scroll-shadow/ScrollShadow.vue';
 import {
@@ -48,7 +44,7 @@ import type {
   CursorMotionSettings,
 } from '../../../api/types/cursor-settings';
 import { useTranslate } from '~/i18n/useTranslate';
-import { isColorClip, isKeyboardCaptionClip } from '~/media/shared/composition-types';
+import { isColorClip, isKeyboardCaptionClip, isShapeClip } from '~/media/shared/composition-types';
 import { usePropertiesPanelNavigation } from './usePropertiesPanelNavigation';
 import type { SelectedClipProperties } from './properties-panel-types';
 import type { CameraFramingPreset, CameraLayoutPreset } from '~/media/shared/camera-layout-types';
@@ -73,6 +69,7 @@ const props = withDefaults(
     selectedClip?: SelectedClipProperties | null;
     selectedCaptionClip?: CaptionClip | null;
     selectedClipIds?: string[];
+    selectedZoomIds?: string[];
     cursorSelection: CursorSelection;
     cursorPacks: CursorPackDescriptor[];
     cursorSize: number;
@@ -108,6 +105,7 @@ const props = withDefaults(
     hasSystemAudio: false,
     hasMicAudio: false,
     selectedClipIds: () => [],
+    selectedZoomIds: () => [],
     zoomMotionBlur: () => ({ ...DEFAULT_ZOOM_MOTION_BLUR }),
   },
 );
@@ -134,6 +132,13 @@ const selectedDomainClips = computed(() => {
   return props.composition.clips.filter((clip) => ids.has(clip.id));
 });
 const selectionClipNames = computed(() => selectedClipNames(selectedDomainClips.value, tTimeline('holdSegment')));
+const selectionNames = computed(() =>
+  props.activeTab === 'zoom'
+    ? props.selectedZoomIds.length > 1
+      ? [`${props.selectedZoomIds.length} ${tTimeline('zooms')}`]
+      : []
+    : selectionClipNames.value,
+);
 const panelHeader = ref<InstanceType<typeof PropertiesPanelHeader> | null>(null);
 const transitionEdge = ref<'entry' | 'exit'>('entry');
 const { transitionsOpen, navigationDirection, openTransitions, closeTransitions } = usePropertiesPanelNavigation({
@@ -269,7 +274,6 @@ const isDeletable = computed(() => {
 const isToggleable = computed(() => {
   return props.activeTab === 'clip' && Boolean(props.selectedClip || props.selectedCaptionClip);
 });
-
 const deleteTooltip = computed(() => {
   if (props.activeTab === 'zoom') {
     return tZoom('deleteZoom') || 'Delete zoom';
@@ -294,18 +298,8 @@ const deleteTooltip = computed(() => {
   return tClip('deleteClip') || 'Delete clip';
 });
 
-const handleToggleClipEnabled = () => {
-  const nextValue = !isCurrentClipEnabled.value;
-  emit('update:clip-enabled', nextValue);
-};
-
-const handleDelete = () => {
-  if (props.activeTab === 'zoom') {
-    emit('delete:zoom');
-  } else {
-    emit('delete-clip');
-  }
-};
+const handleToggleClipEnabled = () => emit('update:clip-enabled', !isCurrentClipEnabled.value);
+const handleDelete = () => (props.activeTab === 'zoom' ? emit('delete:zoom') : emit('delete-clip'));
 defineExpose({ openCanvasTransitions: openTransitionEdge });
 </script>
 <template>
@@ -314,7 +308,7 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
       <PropertiesPanelHeader
         ref="panelHeader"
         :title="panelTitle"
-        :selection-names="selectionClipNames"
+        :selection-names="selectionNames"
         :transition-title="transitionPanelTitle"
         :transition-name="panelTransitionName"
         :transitions-open="transitionsOpen"
@@ -370,10 +364,16 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
               :clip="normalizedSelectedClip"
               @update:volume="emit('update:clip-volume', $event)"
             />
-            <ColorLayerPropertiesPanel
-              v-else-if="activeTab === 'clip' && selectedDomainClip && isColorClip(selectedDomainClip)"
+            <GeneratedLayerPropertiesPanel
+              v-else-if="
+                activeTab === 'clip' &&
+                selectedDomainClip &&
+                (isColorClip(selectedDomainClip) || isShapeClip(selectedDomainClip))
+              "
+              :composition="composition"
               :clip="selectedDomainClip"
-              @update="emit('update:composition', setColorFill(composition, selectedDomainClip.id, $event))"
+              @update="emit('update:composition', $event)"
+              @corner-radius-interaction="emit('corner-radius-interaction', $event)"
             />
             <BlurPropertiesPanel
               v-else-if="activeTab === 'clip' && normalizedSelectedClip?.kind === 'blur'"

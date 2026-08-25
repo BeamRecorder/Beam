@@ -1,10 +1,18 @@
 import type { CursorTelemetryPoint } from '../../../api/types/capture-session';
-import { DEFAULT_ZOOM_DEPTH, type ZoomElement, type ZoomFocus } from './zoom-types';
+import {
+  DEFAULT_ZOOM_DEPTH,
+  DEFAULT_ZOOM_TILT_HORIZONTAL,
+  DEFAULT_ZOOM_TILT_INTENSITY,
+  DEFAULT_ZOOM_TILT_VERTICAL,
+  type ZoomElement,
+  type ZoomFocus,
+} from './zoom-types';
 import { fitZoomPlacement } from './zoom-placement';
+import { suggestAutomaticTilt } from './automatic-tilt';
 
 export const CLICK_CLUSTER_GAP_MS = 2500;
 export const ZOOM_REGION_PADDING_MS = 500;
-export const ZOOM_ALGORITHM_VERSION = 5;
+export const ZOOM_ALGORITHM_VERSION = 8;
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const explicitClickTypes = new Set(['click', 'double-click', 'right-click', 'middle-click']);
@@ -31,6 +39,7 @@ interface ClickCluster {
   firstMs: number;
   lastMs: number;
   focus: ZoomFocus;
+  focusTimeMs: number;
 }
 
 function clusterClicks(samples: CursorTelemetryPoint[]): ClickCluster[] {
@@ -46,6 +55,7 @@ function clusterClicks(samples: CursorTelemetryPoint[]): ClickCluster[] {
       firstMs: members[0].timeMs,
       lastMs: members.at(-1)?.timeMs ?? members[0].timeMs,
       focus: { cx: best.cx, cy: best.cy },
+      focusTimeMs: best.timeMs,
     });
   };
   for (const click of clicks.slice(1)) {
@@ -67,7 +77,8 @@ export function buildAutomaticZoomElements(params: {
 }): ZoomElement[] {
   if (params.durationMs <= 0) return [];
   const reserved = params.reserved ?? [];
-  return clusterClicks(normalizeCursorTelemetry(params.telemetry, params.durationMs)).flatMap((cluster) => {
+  const telemetry = normalizeCursorTelemetry(params.telemetry, params.durationMs);
+  return clusterClicks(telemetry).flatMap((cluster) => {
     const requestedStartMs = Math.round(clamp(cluster.firstMs - ZOOM_REGION_PADDING_MS, 0, params.durationMs));
     const requestedEndMs = Math.round(clamp(cluster.lastMs + ZOOM_REGION_PADDING_MS, 0, params.durationMs));
     const placement = fitZoomPlacement({
@@ -77,6 +88,7 @@ export function buildAutomaticZoomElements(params: {
       occupied: reserved,
     });
     if (!placement) return [];
+    const tilt = suggestAutomaticTilt(telemetry, cluster.focusTimeMs, cluster.focus);
     return [
       {
         id: `auto:${params.sessionId}:${Math.round(cluster.firstMs)}`,
@@ -86,6 +98,11 @@ export function buildAutomaticZoomElements(params: {
         focus: cluster.focus,
         depth: DEFAULT_ZOOM_DEPTH,
         mode: 'auto' as const,
+        projection: '2d' as const,
+        tiltIntensity: tilt?.intensity ?? DEFAULT_ZOOM_TILT_INTENSITY,
+        tiltHorizontal: tilt?.horizontal ?? DEFAULT_ZOOM_TILT_HORIZONTAL,
+        tiltVertical: tilt?.vertical ?? DEFAULT_ZOOM_TILT_VERTICAL,
+        tiltPreset: 'custom' as const,
       },
     ];
   });

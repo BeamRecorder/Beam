@@ -3,6 +3,7 @@ import {
   Camera,
   CircleDashed,
   Palette,
+  Shapes,
   GripVertical,
   Image as ImageIcon,
   Keyboard,
@@ -12,13 +13,22 @@ import {
   Video,
   Volume2,
 } from '@lucide/vue';
-import type { AudioClip, CaptionClip, Clip, ColorClip, VisualClip, BlurClip } from '~/media/shared/composition-types';
+import type {
+  AudioClip,
+  CaptionClip,
+  Clip,
+  ColorClip,
+  ShapeClip,
+  VisualClip,
+  BlurClip,
+} from '~/media/shared/composition-types';
 import type { ImportedAudioTimelineTrack } from './composables/audio-timeline-tracks';
 import type { VisualTimelineTrack } from './composables/timeline-tracks-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import type { TextCaptionLayer } from '../composition/engine/caption-layer-layout';
+import type { ZoomElement } from '../zoom/zoom-types';
 
-defineProps<{
+const props = defineProps<{
   visualTracks: VisualTimelineTrack[];
   keyboardCaptionClips: CaptionClip[];
   textCaptionLayers: TextCaptionLayer[];
@@ -28,35 +38,47 @@ defineProps<{
   includeAudioInExport: boolean;
   draggedTrackId: string | null;
   draggedCaptionId: string | null;
+  zoomElements: ZoomElement[];
+  selectedClipIds: string[];
+  selectedZoomIds: string[];
   selectTrack: (clips: Clip[], trackName: string, event?: MouseEvent) => void;
+  selectZoomTrack: (zooms: ZoomElement[], event?: MouseEvent) => void;
   beginReorder: (event: PointerEvent, trackId: string, clipId: string) => void;
   beginCaptionReorder: (event: PointerEvent, layerId: string, representativeClipId: string) => void;
   openTrackContextMenu: (event: MouseEvent, kind: 'visual' | 'zoom' | 'caption' | 'audio', id?: string) => void;
 }>();
 const { t } = useTranslate('TimelineTracks');
 const { t: tCanvas } = useTranslate('CanvasPanel');
-const iconForVisual = (clip: VisualClip | ColorClip | BlurClip) =>
+const iconForVisual = (clip: VisualClip | ColorClip | ShapeClip | BlurClip) =>
   clip.kind === 'color'
     ? Palette
-    : clip.kind === 'blur'
-      ? CircleDashed
-      : clip.kind === 'image'
-        ? ImageIcon
-        : clip.kind === 'webcam'
-          ? Camera
-          : Video;
-const labelForVisual = (clip: VisualClip | ColorClip | BlurClip) =>
+    : clip.kind === 'shape'
+      ? Shapes
+      : clip.kind === 'blur'
+        ? CircleDashed
+        : clip.kind === 'image'
+          ? ImageIcon
+          : clip.kind === 'webcam'
+            ? Camera
+            : Video;
+const labelForVisual = (clip: VisualClip | ColorClip | ShapeClip | BlurClip) =>
   clip.kind === 'color'
     ? tCanvas('color')
-    : clip.kind === 'blur'
-      ? t('blur')
-      : clip.kind === 'screen'
-        ? t('video')
-        : clip.kind === 'webcam'
-          ? t('webcam')
-          : clip.name;
+    : clip.kind === 'shape'
+      ? tCanvas('shapesAndArrows')
+      : clip.kind === 'blur'
+        ? t('blur')
+        : clip.kind === 'screen'
+          ? t('video')
+          : clip.kind === 'webcam'
+            ? t('webcam')
+            : clip.name;
 const labelForCaption = (clip: CaptionClip) =>
   clip.caption.type === 'text' ? clip.caption.style.customText?.trim() || t('textCaptions') : clip.name;
+const allClipsSelected = (clips: Clip[]) =>
+  clips.length > 0 && clips.every((clip) => props.selectedClipIds.includes(clip.id));
+const allZoomsSelected = () =>
+  props.zoomElements.length > 0 && props.zoomElements.every((zoom) => props.selectedZoomIds.includes(zoom.id));
 </script>
 
 <template>
@@ -66,7 +88,11 @@ const labelForCaption = (clip: CaptionClip) =>
       :key="track.id"
       class="sidebar-track-item visual-track"
       :data-track-id="track.id"
-      :class="{ disabled: !track.clips.some((clip) => clip.enabled), dragging: draggedTrackId === track.id }"
+      :class="{
+        disabled: !track.clips.some((clip) => clip.enabled),
+        dragging: draggedTrackId === track.id,
+        selected: allClipsSelected(track.clips),
+      }"
       @contextmenu="openTrackContextMenu($event, 'visual', track.id)"
     >
       <button
@@ -82,14 +108,19 @@ const labelForCaption = (clip: CaptionClip) =>
       </button>
     </div>
   </TransitionGroup>
-  <div class="sidebar-track-item cursor-track" @contextmenu="openTrackContextMenu($event, 'zoom')">
-    <div class="track-info static-info">
+  <div
+    class="sidebar-track-item cursor-track"
+    :class="{ selected: allZoomsSelected() }"
+    @contextmenu="openTrackContextMenu($event, 'zoom')"
+  >
+    <button type="button" class="track-info" @click="selectZoomTrack(zoomElements, $event)">
       <MousePointer class="track-icon" /><span class="track-title">{{ t('zooms') }}</span>
-    </div>
+    </button>
   </div>
   <div
     v-if="keyboardCaptionClips.length"
     class="sidebar-track-item annotation-track keyboard-caption-track"
+    :class="{ selected: allClipsSelected(keyboardCaptionClips) }"
     @contextmenu="openTrackContextMenu($event, 'caption')"
   >
     <button type="button" class="track-info" @click="selectTrack(keyboardCaptionClips, t('keyboardCaptions'), $event)">
@@ -102,7 +133,11 @@ const labelForCaption = (clip: CaptionClip) =>
       :key="layer.id"
       class="sidebar-track-item annotation-track text-caption-track text-caption-layer"
       :data-caption-id="layer.id"
-      :class="{ disabled: !layer.clips.some((clip) => clip.enabled), dragging: draggedCaptionId === layer.id }"
+      :class="{
+        disabled: !layer.clips.some((clip) => clip.enabled),
+        dragging: draggedCaptionId === layer.id,
+        selected: allClipsSelected(layer.clips),
+      }"
       @contextmenu="openTrackContextMenu($event, 'caption')"
     >
       <button
@@ -125,7 +160,10 @@ const labelForCaption = (clip: CaptionClip) =>
   <div
     v-if="systemAudioClips.length"
     class="sidebar-track-item audio-track"
-    :class="{ disabled: !includeAudioInExport || !systemAudioClips.some((clip) => clip.enabled) }"
+    :class="{
+      disabled: !includeAudioInExport || !systemAudioClips.some((clip) => clip.enabled),
+      selected: allClipsSelected(systemAudioClips),
+    }"
     @contextmenu="openTrackContextMenu($event, 'audio')"
   >
     <button type="button" class="track-info" @click="selectTrack(systemAudioClips, t('system'), $event)">
@@ -136,7 +174,10 @@ const labelForCaption = (clip: CaptionClip) =>
   <div
     v-if="microphoneClips.length"
     class="sidebar-track-item audio-track"
-    :class="{ disabled: !includeAudioInExport || !microphoneClips.some((clip) => clip.enabled) }"
+    :class="{
+      disabled: !includeAudioInExport || !microphoneClips.some((clip) => clip.enabled),
+      selected: allClipsSelected(microphoneClips),
+    }"
     @contextmenu="openTrackContextMenu($event, 'audio')"
   >
     <button type="button" class="track-info" @click="selectTrack(microphoneClips, t('mic'), $event)">
@@ -148,7 +189,10 @@ const labelForCaption = (clip: CaptionClip) =>
     v-for="track in importedAudioTracks"
     :key="track.id"
     class="sidebar-track-item audio-track"
-    :class="{ disabled: !includeAudioInExport || !track.clips.some((clip) => clip.enabled) }"
+    :class="{
+      disabled: !includeAudioInExport || !track.clips.some((clip) => clip.enabled),
+      selected: allClipsSelected(track.clips),
+    }"
     @contextmenu="openTrackContextMenu($event, 'audio')"
   >
     <button type="button" class="track-info" @click="selectTrack(track.clips, track.representative.name, $event)">

@@ -50,41 +50,58 @@ export function stepSpringAxis(
   deltaSeconds: number,
   settings: CursorMotionSettings,
 ): SpringAxisState {
+  return stepSpringAxisFollowingTarget(state, target, target, deltaSeconds, settings);
+}
+
+/**
+ * Follows a target moving linearly over the current step. Damping relative to
+ * target velocity avoids the permanent trailing offset of a classic spring.
+ */
+function stepSpringAxisFollowingTarget(
+  state: SpringAxisState,
+  previousTarget: number,
+  target: number,
+  deltaSeconds: number,
+  settings: CursorMotionSettings,
+): SpringAxisState {
   const dt = clamp(deltaSeconds, 0, 0.1);
   if (dt <= 0) return state;
   const { mass, stiffness, damping } = springParameters(settings);
   const omega0 = Math.sqrt(stiffness / mass);
   const zeta = damping / (2 * Math.sqrt(stiffness * mass));
-  const displacement = state.position - target;
+  const targetVelocity = (target - previousTarget) / dt;
+  const displacement = state.position - previousTarget;
+  const relativeVelocity = state.velocity - targetVelocity;
   let nextDisplacement: number;
-  let nextVelocity: number;
+  let nextRelativeVelocity: number;
   if (zeta < 1 - 0.0001) {
     const omegaD = omega0 * Math.sqrt(1 - zeta * zeta);
     const a = displacement;
-    const b = (state.velocity + zeta * omega0 * displacement) / omegaD;
+    const b = (relativeVelocity + zeta * omega0 * displacement) / omegaD;
     const decay = Math.exp(-zeta * omega0 * dt);
     const cosine = Math.cos(omegaD * dt);
     const sine = Math.sin(omegaD * dt);
     nextDisplacement = decay * (a * cosine + b * sine);
-    nextVelocity = decay * (-a * omegaD * sine + b * omegaD * cosine - omega0 * zeta * (a * cosine + b * sine));
+    nextRelativeVelocity = decay * (-a * omegaD * sine + b * omegaD * cosine - omega0 * zeta * (a * cosine + b * sine));
   } else if (Math.abs(zeta - 1) <= 0.0001) {
     const decay = Math.exp(-omega0 * dt);
-    const b = state.velocity + omega0 * displacement;
+    const b = relativeVelocity + omega0 * displacement;
     nextDisplacement = decay * (displacement + b * dt);
-    nextVelocity = decay * (state.velocity - omega0 * b * dt);
+    nextRelativeVelocity = decay * (relativeVelocity - omega0 * b * dt);
   } else {
     const root = Math.sqrt(zeta * zeta - 1);
     const firstRoot = -omega0 * (zeta - root);
     const secondRoot = -omega0 * (zeta + root);
-    const firstCoefficient = (state.velocity - secondRoot * displacement) / (firstRoot - secondRoot);
+    const firstCoefficient = (relativeVelocity - secondRoot * displacement) / (firstRoot - secondRoot);
     const secondCoefficient = displacement - firstCoefficient;
     const first = firstCoefficient * Math.exp(firstRoot * dt);
     const second = secondCoefficient * Math.exp(secondRoot * dt);
     nextDisplacement = first + second;
-    nextVelocity = firstRoot * first + secondRoot * second;
+    nextRelativeVelocity = firstRoot * first + secondRoot * second;
   }
   const position = clamp01(target + nextDisplacement);
-  return { position, velocity: position === target + nextDisplacement ? nextVelocity : 0 };
+  const velocity = targetVelocity + nextRelativeVelocity;
+  return { position, velocity: position === target + nextDisplacement ? velocity : 0 };
 }
 
 const cloneState = (state: SimulationState): SimulationState => ({
@@ -113,6 +130,7 @@ export function createDeterministicCursorMotionEvaluator(inputs: CursorMotionEva
     let state = cloneState(checkpoints.get(startStep) ?? initialState());
     for (let step = startStep + 1; step <= targetStep; step += 1) {
       const time = step * STEP_SECONDS;
+      const previousTime = (step - 1) * STEP_SECONDS;
       const direct = inputs.isDraggingAt(time) ? inputs.directTargetAt(time) : null;
       const target = direct ?? inputs.targetAt(time) ?? { x: state.x.position, y: state.y.position };
       if (direct || buttonSteps.has(step)) {
@@ -121,8 +139,9 @@ export function createDeterministicCursorMotionEvaluator(inputs: CursorMotionEva
           y: { position: target.y, velocity: 0 },
         };
       } else {
-        state.x = stepSpringAxis(state.x, target.x, STEP_SECONDS, inputs.settings);
-        state.y = stepSpringAxis(state.y, target.y, STEP_SECONDS, inputs.settings);
+        const previousTarget = inputs.targetAt(previousTime) ?? target;
+        state.x = stepSpringAxisFollowingTarget(state.x, previousTarget.x, target.x, STEP_SECONDS, inputs.settings);
+        state.y = stepSpringAxisFollowingTarget(state.y, previousTarget.y, target.y, STEP_SECONDS, inputs.settings);
       }
       if (step % CHECKPOINT_STEPS === 0) checkpoints.set(step, cloneState(state));
     }
@@ -131,6 +150,7 @@ export function createDeterministicCursorMotionEvaluator(inputs: CursorMotionEva
 
   const pointAt = (timeSeconds: number): Point => {
     const time = Math.max(0, Number.isFinite(timeSeconds) ? timeSeconds : 0);
+    if (inputs.settings.smoothing <= 0) return inputs.directTargetAt(time) ?? inputs.targetAt(time) ?? { x: 0, y: 0 };
     const lowerStep = Math.floor(time / STEP_SECONDS);
     const progress = time / STEP_SECONDS - lowerStep;
     const lower = stateAtStep(lowerStep);

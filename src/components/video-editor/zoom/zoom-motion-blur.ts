@@ -24,10 +24,49 @@ const MIN_VISIBLE_TRAVEL_PX = 0.75;
 const HIGH_QUALITY_TRAVEL_PX = 18;
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
+export function createCameraMotionBlurPlan(options: {
+  sampleAt: (timeMs: number) => { focus: { cx: number; cy: number }; scale: number; tiltX?: number; tiltY?: number };
+  center?: { focus: { cx: number; cy: number }; scale: number; tiltX?: number; tiltY?: number };
+  timeMs: number;
+  intensity: number;
+  sampleCount?: number;
+  viewportWidth: number;
+  viewportHeight: number;
+}) {
+  const cameraFrom = (value: {
+    focus: { cx: number; cy: number };
+    scale: number;
+    tiltX?: number;
+    tiltY?: number;
+  }): CameraTransform => ({
+    focusX: value.focus.cx,
+    focusY: value.focus.cy,
+    scale: value.scale,
+    tiltX: value.tiltX ?? 0,
+    tiltY: value.tiltY ?? 0,
+  });
+  const cameraAt = (timeMs: number) => cameraFrom(options.sampleAt(Math.max(0, timeMs)));
+  const center = options.center ? cameraFrom(options.center) : cameraAt(options.timeMs);
+  if (!(options.intensity > 0)) return [{ camera: center, weight: 1 }];
+  const halfShutterMs = ZOOM_MOTION_BLUR_SHUTTER_MS / 2;
+  return createZoomMotionBlurSamplePlan({
+    previous: cameraAt(options.timeMs - halfShutterMs),
+    center,
+    current: cameraAt(options.timeMs + halfShutterMs),
+    intensity: options.intensity,
+    deltaMs: halfShutterMs * 2,
+    sampleCount: options.sampleCount,
+    viewportWidth: options.viewportWidth,
+    viewportHeight: options.viewportHeight,
+  });
+}
+
 const safeCamera = (camera: CameraTransform): CameraTransform => ({
   focusX: clamp(Number.isFinite(camera.focusX) ? camera.focusX : 0.5, 0, 1),
   focusY: clamp(Number.isFinite(camera.focusY) ? camera.focusY : 0.5, 0, 1),
   scale: Math.max(1, Number.isFinite(camera.scale) ? camera.scale : 1),
+  tiltX: Number.isFinite(camera.tiltX) ? camera.tiltX : 0,
+  tiltY: Number.isFinite(camera.tiltY) ? camera.tiltY : 0,
 });
 
 export function createZoomMotionBlurSamplePlan(options: ZoomMotionBlurOptions): ZoomMotionBlurSample[] {
@@ -39,15 +78,23 @@ export function createZoomMotionBlurSamplePlan(options: ZoomMotionBlurOptions): 
     focusX: center.focusX + (previous.focusX - center.focusX) * intensity,
     focusY: center.focusY + (previous.focusY - center.focusY) * intensity,
     scale: center.scale + (previous.scale - center.scale) * intensity,
+    tiltX: (center.tiltX ?? 0) + ((previous.tiltX ?? 0) - (center.tiltX ?? 0)) * intensity,
+    tiltY: (center.tiltY ?? 0) + ((previous.tiltY ?? 0) - (center.tiltY ?? 0)) * intensity,
   };
   const blurEnd = {
     focusX: center.focusX + (current.focusX - center.focusX) * intensity,
     focusY: center.focusY + (current.focusY - center.focusY) * intensity,
     scale: center.scale + (current.scale - center.scale) * intensity,
+    tiltX: (center.tiltX ?? 0) + ((current.tiltX ?? 0) - (center.tiltX ?? 0)) * intensity,
+    tiltY: (center.tiltY ?? 0) + ((current.tiltY ?? 0) - (center.tiltY ?? 0)) * intensity,
   };
   const movement = Math.hypot(blurEnd.focusX - blurStart.focusX, blurEnd.focusY - blurStart.focusY);
   const scaleMovement = Math.abs(blurEnd.scale - blurStart.scale);
-  if (!(options.deltaMs > 0) || intensity <= 0 || movement + scaleMovement <= MIN_MOVEMENT)
+  const tiltMovement = Math.hypot(
+    (blurEnd.tiltX ?? 0) - (blurStart.tiltX ?? 0),
+    (blurEnd.tiltY ?? 0) - (blurStart.tiltY ?? 0),
+  );
+  if (!(options.deltaMs > 0) || intensity <= 0 || movement + scaleMovement + tiltMovement <= MIN_MOVEMENT)
     return [{ camera: center, weight: 1 }];
 
   const viewportWidth = Math.max(0, Number.isFinite(options.viewportWidth) ? (options.viewportWidth ?? 0) : 0);
@@ -60,7 +107,13 @@ export function createZoomMotionBlurSamplePlan(options: ZoomMotionBlurOptions): 
       ) * Math.max(blurStart.scale, blurEnd.scale)
     : 0;
   const scaleTravelPx = hasViewport ? scaleMovement * Math.hypot(viewportWidth, viewportHeight) * 0.5 : 0;
-  const travelPx = focusTravelPx + scaleTravelPx;
+  const tiltTravelPx = hasViewport
+    ? Math.hypot(
+        ((blurEnd.tiltX ?? 0) - (blurStart.tiltX ?? 0)) * viewportHeight,
+        ((blurEnd.tiltY ?? 0) - (blurStart.tiltY ?? 0)) * viewportWidth,
+      ) * 0.5
+    : 0;
+  const travelPx = focusTravelPx + scaleTravelPx + tiltTravelPx;
   if (!Number.isFinite(options.sampleCount) && hasViewport && travelPx < MIN_VISIBLE_TRAVEL_PX)
     return [{ camera: center, weight: 1 }];
 
@@ -87,6 +140,8 @@ export function createZoomMotionBlurSamplePlan(options: ZoomMotionBlurOptions): 
         focusX: blurStart.focusX + (blurEnd.focusX - blurStart.focusX) * progress,
         focusY: blurStart.focusY + (blurEnd.focusY - blurStart.focusY) * progress,
         scale: blurStart.scale + (blurEnd.scale - blurStart.scale) * progress,
+        tiltX: (blurStart.tiltX ?? 0) + ((blurEnd.tiltX ?? 0) - (blurStart.tiltX ?? 0)) * progress,
+        tiltY: (blurStart.tiltY ?? 0) + ((blurEnd.tiltY ?? 0) - (blurStart.tiltY ?? 0)) * progress,
       },
       weight: weight / weightTotal,
     };

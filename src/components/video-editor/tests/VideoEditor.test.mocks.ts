@@ -154,6 +154,7 @@ vi.mock('../composables/useVideoEditor', async () => {
         }),
         addElement: vi.fn().mockResolvedValue(undefined),
         addCaptionAtTime: vi.fn(),
+        addVisualElementAtTime: vi.fn().mockResolvedValue(undefined),
         updateCaption: vi.fn(),
         trimClipEdge: vi.fn(),
         moveClipTo: vi.fn(),
@@ -177,6 +178,12 @@ vi.mock('../composables/useVideoEditor', async () => {
       };
       const zoomElements = ref<ZoomElement[]>([]);
       const selectedZoomId = ref<string | null>(null);
+      const selectedZoomIds = ref<string[]>([]);
+      const selectZooms = vi.fn((zoomIds: readonly string[], primaryZoomId?: string | null) => {
+        selectedZoomIds.value = [...zoomIds];
+        selectedZoomId.value = primaryZoomId ?? zoomIds[0] ?? null;
+        if (zoomIds.length) activeTab.value = 'zoom';
+      });
       const pasteZoomAtTime = vi.fn((copiedZoom: ZoomElement, startMs: number) => {
         const pasted = {
           ...copiedZoom,
@@ -185,16 +192,17 @@ vi.mock('../composables/useVideoEditor', async () => {
           endMs: startMs + copiedZoom.endMs - copiedZoom.startMs,
         };
         zoomElements.value = [pasted];
-        selectedZoomId.value = pasted.id;
-        activeTab.value = 'zoom';
+        selectZooms([pasted.id], pasted.id);
         return pasted;
       });
       const zoomState = {
         zoomElements,
         selectedZoomId,
+        selectedZoomIds,
         selectedZoom: ref(null),
         canGenerateZooms: ref(true),
         hasAutomaticZooms: ref(false),
+        selectZooms,
         addZoomAtTime: vi.fn(),
         generateZooms: vi.fn(),
         updateZoom: vi.fn(),
@@ -590,6 +598,7 @@ vi.mock('../timeline/EditorTimeline.vue', async () => {
         'move:zoom',
         'add:zoom',
         'add:caption',
+        'add:visual-element',
         'delete:clips',
         'reorder:clip',
         'reorder:caption',

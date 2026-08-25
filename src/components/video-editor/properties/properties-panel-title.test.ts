@@ -16,6 +16,7 @@ describe('propertiesPanelTitle', () => {
     ['image', 'toolbar:image'],
     ['webcam', 'timeline:webcam'],
     ['color', 'canvas:color'],
+    ['shape', 'canvas:shapesAndArrows'],
     ['blur', 'timeline:blur'],
     ['caption', 'sidebar:captions'],
     ['audio', 'sidebar:audio'],

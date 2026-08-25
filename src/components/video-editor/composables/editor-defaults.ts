@@ -12,7 +12,16 @@ import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/
 import { isCameraFramingPreset, isCameraLayoutPreset } from '~/media/shared/camera-layout-types';
 import { normalizeClipTransitions } from '~/media/shared/clip-transitions';
 import { normalizeOutputCanvas } from '../canvas/output-canvas';
-import { normalizeZoomMotionBlur, type ZoomElement } from '../zoom/zoom-types';
+import {
+  normalizeZoomMotionBlur,
+  normalizeZoomProjection,
+  normalizeZoomTiltAxis,
+  normalizeZoomTiltIntensity,
+  normalizeZoomTiltPreset,
+  DEFAULT_ZOOM_TILT_HORIZONTAL,
+  DEFAULT_ZOOM_TILT_VERTICAL,
+  type ZoomElement,
+} from '../zoom/zoom-types';
 import { normalizeCursorAutoHideSettings } from '~/api/types/cursor-settings';
 import type { EditorPreferenceDefaults, VisualClipDefaults } from './editor-default-types';
 
@@ -124,7 +133,16 @@ export const normalizeEditorPreferenceDefaults = (value: unknown): EditorPrefere
       ? { audio: clone(input.audio as EditorPreferenceDefaults['audio']) }
       : {}),
     ...(input.zoom && typeof input.zoom === 'object'
-      ? { zoom: clone(input.zoom as EditorPreferenceDefaults['zoom']) }
+      ? {
+          zoom: {
+            ...clone(input.zoom as EditorPreferenceDefaults['zoom']),
+            projection: normalizeZoomProjection(record(input.zoom).projection),
+            tiltIntensity: normalizeZoomTiltIntensity(record(input.zoom).tiltIntensity),
+            tiltHorizontal: normalizeZoomTiltAxis(record(input.zoom).tiltHorizontal, DEFAULT_ZOOM_TILT_HORIZONTAL),
+            tiltVertical: normalizeZoomTiltAxis(record(input.zoom).tiltVertical, DEFAULT_ZOOM_TILT_VERTICAL),
+            tiltPreset: normalizeZoomTiltPreset(record(input.zoom).tiltPreset, record(input.zoom).tiltIntensity),
+          } as EditorPreferenceDefaults['zoom'],
+        }
       : {}),
     ...(input.zoomMotionBlur && typeof input.zoomMotionBlur === 'object'
       ? { zoomMotionBlur: normalizeZoomMotionBlur(input.zoomMotionBlur) }
@@ -160,6 +178,11 @@ export function defaultsFromEditorState(
       durationMs: selectedZoom.endMs - selectedZoom.startMs,
       depth: selectedZoom.depth,
       mode: selectedZoom.mode,
+      projection: normalizeZoomProjection(selectedZoom.projection),
+      tiltIntensity: normalizeZoomTiltIntensity(selectedZoom.tiltIntensity),
+      tiltHorizontal: normalizeZoomTiltAxis(selectedZoom.tiltHorizontal, DEFAULT_ZOOM_TILT_HORIZONTAL),
+      tiltVertical: normalizeZoomTiltAxis(selectedZoom.tiltVertical, DEFAULT_ZOOM_TILT_VERTICAL),
+      tiltPreset: normalizeZoomTiltPreset(selectedZoom.tiltPreset, selectedZoom.tiltIntensity),
     };
   }
   next.zoomMotionBlur = normalizeZoomMotionBlur(state.zoom.motionBlur);

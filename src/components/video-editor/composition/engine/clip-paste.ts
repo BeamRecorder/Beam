@@ -4,6 +4,7 @@ import {
   isCaptionClip,
   isCompositingClip,
   isColorClip,
+  isShapeClip,
   type Clip,
   type ClipComposition,
   type MediaAsset,
@@ -118,7 +119,12 @@ export function pasteClipAt(
     throw new CompositionEngineError('The copied visual has no valid destination track.');
 
   const next = clone(composition);
-  if (!isCaptionClip(copiedClip) && !isColorClip(copiedClip) && copiedClip.kind !== 'blur') {
+  if (
+    !isCaptionClip(copiedClip) &&
+    !isColorClip(copiedClip) &&
+    !isShapeClip(copiedClip) &&
+    copiedClip.kind !== 'blur'
+  ) {
     const existingAsset = next.assets.some((asset) => asset.id === copiedClip.assetId);
     if (!existingAsset && options.asset?.id === copiedClip.assetId) next.assets.push(clone(options.asset));
     if (!next.assets.some((asset) => asset.id === copiedClip.assetId))

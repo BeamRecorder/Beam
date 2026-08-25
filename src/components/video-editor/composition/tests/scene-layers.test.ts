@@ -5,6 +5,7 @@ import type {
   Clip,
   ClipComposition,
   ColorClip,
+  ShapeClip,
   VisualClip,
 } from '~/media/shared/composition-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
@@ -66,6 +67,38 @@ const color = (order: number, id = 'color'): ColorClip => ({
   order,
   transform: { x: 0, y: 0, width: 1, height: 1 },
   fill: { kind: 'color', color: '#111827' },
+});
+
+const shape = (order: number): ShapeClip => ({
+  id: 'shape',
+  trackId: 'shape-track',
+  kind: 'shape',
+  assetId: '',
+  name: 'Shape',
+  timelineStartMs: 0,
+  timelineDurationMs: 1_000,
+  sourceInMs: 0,
+  sourceDurationMs: 1_000,
+  playbackRate: 1,
+  enabled: true,
+  order,
+  transform: { x: 0.2, y: 0.2, width: 0.4, height: 0.4 },
+  family: 'shape',
+  preset: 'star',
+  fillColor: '#ff5a1f',
+  borderColor: '#ffffff',
+  borderWidth: 0,
+  cornerRadius: 16,
+  arrowThickness: 36,
+  arrowHeadSize: 38,
+  rotation: 0,
+  opacityEnabled: false,
+  opacity: 70,
+  backdropBlur: 35,
+  shadowEnabled: false,
+  shadowColor: '#000000',
+  shadowBlur: 32,
+  shadowDirection: 'bottom-right',
 });
 
 const audio = (id: string, order: number): AudioClip => ({
@@ -141,6 +174,13 @@ describe('resolveCompositionSceneLayers', () => {
     expect(layers.visualStack.map((clip) => clip.id)).toEqual(['video']);
     expect(layers.webcams).toEqual([]);
     expect(layers.captions).toEqual([]);
+  });
+
+  it('keeps assetless shape layers in the ordered visual stack', () => {
+    const layers = resolveCompositionSceneLayers(composition(visual('screen', 'screen', 2), shape(1), color(0)), 500);
+
+    expect(layers.visualStack.map((clip) => clip.id)).toEqual(['screen', 'shape', 'color']);
+    expect(layers.cameraVisuals.map((clip) => clip.id)).toEqual(['screen']);
   });
 
   it('keeps screen recordings and imported video/image clips in global camera space', () => {

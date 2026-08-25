@@ -12,11 +12,15 @@ export interface VideoWindowBounds {
   scale: number;
   focusX?: number;
   focusY?: number;
+  tiltX?: number;
+  tiltY?: number;
 }
 
 export interface RenderedVideoWindow extends VideoWindowBounds {
   focusX: number;
   focusY: number;
+  tiltX?: number;
+  tiltY?: number;
 }
 
 export interface UseCameraZoomOptions {

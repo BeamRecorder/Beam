@@ -17,7 +17,7 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { safeExportErrorMessage, technicalExportError } from './mediabunny/export-preflight';
 import { buildBeamExportReport } from './export-diagnostics';
 
-const { t } = useTranslate('ExportPopover');
+const { t, locale } = useTranslate('ExportPopover');
 
 export type ExportResolutionOption = '720p' | '1080p' | 'max';
 export type ExportFrameRate = 24 | 30 | 60;
@@ -28,7 +28,13 @@ const recommendedFrameRate = (sourceFps: number): ExportFrameRate => {
   return 30;
 };
 
-const props = defineProps<{ request: Omit<ExportRequest, 'format' | 'preset'> }>();
+const props = withDefaults(
+  defineProps<{
+    request: Omit<ExportRequest, 'format' | 'preset'>;
+    playheadSeconds?: number;
+  }>(),
+  { playheadSeconds: 0 },
+);
 const emit = defineEmits<{ (event: 'update:includeAudio', value: boolean): void }>();
 const format = ref<ExportFormat>('webm');
 const preset = ref<ExportPreset>('medium');
@@ -37,6 +43,7 @@ const frameRate = ref<ExportFrameRate>(recommendedFrameRate(props.request.snapsh
 const presets: ExportPreset[] = ['low', 'medium', 'high'];
 const frameRates: ExportFrameRate[] = [24, 30, 60];
 const moreOptionsOpen = ref(false);
+const exportUntilPlayhead = ref(false);
 const includeAudio = computed({
   get: () => props.request.includeAudio !== false,
   set: (value: boolean) => emit('update:includeAudio', value),
@@ -70,6 +77,21 @@ const computeExportDimensions = (res: ExportResolutionOption) => {
 };
 
 const activeDimensions = computed(() => computeExportDimensions(resolution.value));
+const playheadDuration = computed(() => {
+  const value = Number(props.playheadSeconds);
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(props.request.snapshot.duration, value));
+});
+const activeExportDuration = computed(() =>
+  exportUntilPlayhead.value ? playheadDuration.value : props.request.snapshot.duration,
+);
+const formattedExportDuration = computed(() =>
+  new Intl.NumberFormat(locale.value, { maximumFractionDigits: 1 }).format(activeExportDuration.value),
+);
+const exportButtonLabel = computed(() =>
+  exportUntilPlayhead.value ? t('exportVideoDuration', { seconds: formattedExportDuration.value }) : t('exportVideo'),
+);
+const canExport = computed(() => activeExportDuration.value > 0);
 
 const resolutionDescriptions = computed<Record<ExportResolutionOption, string>>(() => {
   const dims720 = computeExportDimensions('720p');
@@ -111,8 +133,7 @@ const percentage = computed(() => {
 const displayError = computed(() => availability.value || (error.value ? safeExportErrorMessage(error.value) : null));
 
 const lastRequest = ref<ExportRequest | null>(null);
-const reportRequest = computed<ExportRequest>(() => {
-  if (lastRequest.value) return lastRequest.value;
+const buildRequest = (): ExportRequest => {
   const { width, height } = activeDimensions.value;
   return {
     ...props.request,
@@ -120,10 +141,15 @@ const reportRequest = computed<ExportRequest>(() => {
     preset: preset.value,
     snapshot: {
       ...props.request.snapshot,
+      duration: activeExportDuration.value,
       render: { ...props.request.snapshot.render, fps: frameRate.value },
       canvas: { ...props.request.snapshot.canvas, width, height },
     },
   };
+};
+const reportRequest = computed<ExportRequest>(() => {
+  if (lastRequest.value) return lastRequest.value;
+  return buildRequest();
 });
 const exportReport = computed(() =>
   buildBeamExportReport({
@@ -146,21 +172,8 @@ const openFile = (path: string) => {
 
 const run = async () => {
   availability.value = null;
-  const { width, height } = activeDimensions.value;
-  const request: ExportRequest = {
-    ...props.request,
-    format: format.value,
-    preset: preset.value,
-    snapshot: {
-      ...props.request.snapshot,
-      render: { ...props.request.snapshot.render, fps: frameRate.value },
-      canvas: {
-        ...props.request.snapshot.canvas,
-        width,
-        height,
-      },
-    },
-  };
+  if (!canExport.value) return;
+  const request = buildRequest();
   lastRequest.value = request;
   await start(request);
   if (error.value) {
@@ -299,12 +312,21 @@ const run = async () => {
           </div>
 
           <Accordion v-model="moreOptionsOpen" :title="t('moreOptions')" class="more-options">
-            <div class="more-options-content">
-              <div class="audio-option-copy">
-                <span class="audio-option-title">{{ t('includeAudio') }}</span>
-                <span class="option-hint">{{ t('includeAudioDesc') }}</span>
+            <div class="more-options-list">
+              <div class="more-options-content">
+                <div class="more-option-copy">
+                  <span class="more-option-title">{{ t('includeAudio') }}</span>
+                  <span class="option-hint">{{ t('includeAudioDesc') }}</span>
+                </div>
+                <Switch v-model="includeAudio" :aria-label="t('includeAudio')" />
               </div>
-              <Switch v-model="includeAudio" :aria-label="t('includeAudio')" />
+              <div class="more-options-content">
+                <div class="more-option-copy">
+                  <span class="more-option-title">{{ t('exportUntilPlayhead') }}</span>
+                  <span class="option-hint">{{ t('exportUntilPlayheadDesc') }}</span>
+                </div>
+                <Switch v-model="exportUntilPlayhead" :aria-label="t('exportUntilPlayhead')" />
+              </div>
             </div>
           </Accordion>
 
@@ -362,246 +384,25 @@ const run = async () => {
             </Button>
           </div>
           <div class="actions">
-            <Button variant="primary" size="sm" block :icon="Download" :loading="isChoosingDestination" @click="run">{{
-              t('exportVideo')
-            }}</Button>
+            <Button
+              variant="primary"
+              size="sm"
+              block
+              :icon="Download"
+              :loading="isChoosingDestination"
+              :disabled="!canExport"
+              @click="run"
+            >
+              {{ exportButtonLabel }}
+            </Button>
           </div>
+          <p v-if="exportUntilPlayhead" class="playhead-export-note">
+            {{ t('exportUntilPlayheadEnabled') }}
+          </p>
         </template>
       </section>
     </template>
   </Popover>
 </template>
 
-<style scoped>
-.export-popover {
-  width: 320px;
-  max-width: 100%;
-  max-height: calc(100vh - 24px);
-  padding: 16px;
-  box-sizing: border-box;
-  display: grid;
-  gap: 14px;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-.field {
-  display: grid;
-  gap: 6px;
-  width: 100%;
-  min-width: 0;
-}
-.field-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 20px;
-  gap: 8px;
-  min-width: 0;
-}
-.field :deep(.btn-group) {
-  width: 100% !important;
-  box-sizing: border-box;
-}
-.field :deep(.btn-group .btn-container) {
-  flex: 1 !important;
-  display: flex !important;
-  min-width: 0 !important;
-}
-.field :deep(.btn-group .btn) {
-  width: 100% !important;
-  justify-content: center !important;
-}
-.field-label {
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--text-muted);
-}
-.option-hint {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  line-height: 1.35;
-  margin-top: 1px;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  min-width: 0;
-}
-.job-status {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  text-transform: capitalize;
-  min-width: 0;
-}
-.error-box {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 10px;
-  background: var(--color-error-light, rgba(239, 68, 68, 0.1));
-  border: 1px solid color-mix(in srgb, var(--color-error, #ef4444) 30%, transparent);
-  border-radius: var(--radius-md);
-  box-sizing: border-box;
-  min-width: 0;
-  max-width: 100%;
-}
-.error-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-  min-width: 0;
-  width: 100%;
-}
-.error-message {
-  color: var(--color-error, #ef4444);
-  font-size: 0.75rem;
-  line-height: 1.35;
-  margin: 0;
-  flex: 1;
-  min-width: 0;
-  max-width: 100%;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-.copy-error-icon-btn {
-  flex-shrink: 0;
-}
-.success {
-  color: var(--color-success, #22c55e);
-  font-size: 0.75rem;
-  margin: 0;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  min-width: 0;
-}
-.result-box {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 10px;
-  background: var(--color-bg-element);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-sizing: border-box;
-  min-width: 0;
-  max-width: 100%;
-}
-.result-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-width: 0;
-  width: 100%;
-}
-.copy-report-icon-btn {
-  flex-shrink: 0;
-}
-.actions {
-  display: flex;
-  width: 100%;
-  margin-top: 4px;
-}
-.more-options {
-  display: grid;
-  min-width: 0;
-}
-.more-options-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  min-width: 0;
-}
-.audio-option-copy {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-.audio-option-title {
-  color: var(--text-primary);
-  font-size: 0.78rem;
-  font-weight: 600;
-}
-.export-progress-card {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-}
-
-.progress-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-width: 0;
-}
-
-.progress-title {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.progress-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 24px;
-  gap: 12px;
-  min-width: 0;
-}
-
-.progress-actions {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-}
-
-.progress-details {
-  margin-left: auto;
-  color: var(--text-muted);
-  font-size: 0.72rem;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-  white-space: nowrap;
-}
-
-.percentage-badge {
-  display: inline-block;
-  width: 4ch;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--color-primary);
-}
-
-:deep(.export-trigger) {
-  -webkit-app-region: no-drag;
-  width: auto;
-  min-width: 9rem;
-  height: 28px;
-  min-height: 28px;
-  max-height: 28px;
-  padding: 0 12px;
-  font-size: 12px;
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-variant-numeric: tabular-nums;
-}
-</style>
+<style scoped src="./ExportPopover.css"></style>

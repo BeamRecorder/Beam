@@ -248,3 +248,204 @@ test('rejects malformed persisted zoom motion blur settings', () => {
     /Flou de mouvement du zoom invalide/,
   );
 });
+
+test('migrates legacy zoom elements to the flat 2D projection', () => {
+  const state = zoomState({
+    elements: [
+      {
+        id: 'legacy-zoom',
+        sessionId: 'session',
+        startMs: 101.4,
+        endMs: 1_999.6,
+        focus: { cx: 0.25, cy: 0.75 },
+        depth: 2,
+        mode: 'manual',
+      },
+    ],
+    generatedSessions: [],
+  });
+
+  assert.deepEqual(state.elements[0], {
+    id: 'legacy-zoom',
+    sessionId: 'session',
+    startMs: 101,
+    endMs: 2_000,
+    focus: { cx: 0.25, cy: 0.75 },
+    depth: 2,
+    mode: 'manual',
+    projection: '2d',
+    tiltIntensity: 0.6,
+    tiltHorizontal: 0.65,
+    tiltVertical: -0.35,
+    tiltPreset: 'medium',
+  });
+});
+
+test('clamps persisted perspective intensity and rejects invalid projection values', () => {
+  const state = zoomState({
+    elements: [
+      {
+        id: 'low-tilt',
+        sessionId: 'session',
+        startMs: 0,
+        endMs: 500,
+        focus: { cx: 0.5, cy: 0.5 },
+        depth: 1,
+        mode: 'auto',
+        projection: '3d',
+        tiltIntensity: -10,
+        tiltHorizontal: -10,
+        tiltVertical: 10,
+      },
+      {
+        id: 'high-tilt',
+        sessionId: 'session',
+        startMs: 500,
+        endMs: 1_000,
+        focus: { cx: 0.5, cy: 0.5 },
+        depth: 1,
+        mode: 'auto',
+        projection: '3d',
+        tiltIntensity: 10,
+        tiltHorizontal: 10,
+        tiltVertical: -10,
+      },
+    ],
+    generatedSessions: [],
+  });
+
+  assert.equal(state.elements[0].tiltIntensity, 0);
+  assert.equal(state.elements[1].tiltIntensity, 1);
+  assert.equal(state.elements[0].tiltHorizontal, -1);
+  assert.equal(state.elements[0].tiltVertical, 1);
+  assert.equal(state.elements[1].tiltHorizontal, 1);
+  assert.equal(state.elements[1].tiltVertical, -1);
+  assert.throws(
+    () =>
+      zoomState({
+        elements: [
+          {
+            id: 'invalid-projection',
+            sessionId: 'session',
+            startMs: 0,
+            endMs: 500,
+            focus: { cx: 0.5, cy: 0.5 },
+            depth: 1,
+            mode: 'manual',
+            projection: 'perspective',
+          },
+        ],
+        generatedSessions: [],
+      }),
+    /Propriétés de zoom invalides/,
+  );
+  assert.throws(
+    () =>
+      zoomState({
+        elements: [
+          {
+            id: 'invalid-axis',
+            sessionId: 'session',
+            startMs: 0,
+            endMs: 500,
+            focus: { cx: 0.5, cy: 0.5 },
+            depth: 1,
+            mode: 'manual',
+            tiltHorizontal: Number.NaN,
+          },
+        ],
+        generatedSessions: [],
+      }),
+    /Propriétés de zoom invalides/,
+  );
+});
+
+test('persists valid 3D zoom settings without dropping the projection contract', () => {
+  const state = zoomState({
+    elements: [
+      {
+        id: 'perspective-zoom',
+        sessionId: 'session',
+        startMs: 0,
+        endMs: 1_000,
+        focus: { cx: 0.5, cy: 0.5 },
+        depth: 4,
+        mode: 'manual',
+        projection: '3d',
+        tiltIntensity: 0.82,
+        tiltHorizontal: 0.42,
+        tiltVertical: -0.77,
+        tiltPreset: 'large',
+      },
+    ],
+    generatedSessions: [],
+  });
+
+  assert.equal(state.elements[0].projection, '3d');
+  assert.equal(state.elements[0].tiltIntensity, 0.82);
+  assert.equal(state.elements[0].tiltHorizontal, 0.42);
+  assert.equal(state.elements[0].tiltVertical, -0.77);
+  assert.equal(state.elements[0].tiltPreset, 'large');
+});
+
+test('infers legacy tilt presets from intensity and validates explicit presets', () => {
+  const state = zoomState({
+    elements: [
+      {
+        id: 'small',
+        sessionId: 'session',
+        startMs: 0,
+        endMs: 100,
+        focus: { cx: 0.5, cy: 0.5 },
+        depth: 1,
+        mode: 'auto',
+        tiltIntensity: 0.3,
+      },
+      {
+        id: 'custom',
+        sessionId: 'session',
+        startMs: 100,
+        endMs: 200,
+        focus: { cx: 0.5, cy: 0.5 },
+        depth: 1,
+        mode: 'auto',
+        tiltIntensity: 0.42,
+      },
+      {
+        id: 'explicit-custom',
+        sessionId: 'session',
+        startMs: 200,
+        endMs: 300,
+        focus: { cx: 0.5, cy: 0.5 },
+        depth: 1,
+        mode: 'manual',
+        tiltIntensity: 0.6,
+        tiltPreset: 'custom',
+      },
+    ],
+    generatedSessions: [],
+  });
+
+  assert.equal(state.elements[0].tiltPreset, 'small');
+  assert.equal(state.elements[1].tiltPreset, 'custom');
+  assert.equal(state.elements[2].tiltPreset, 'custom');
+  assert.throws(
+    () =>
+      zoomState({
+        elements: [
+          {
+            id: 'invalid-preset',
+            sessionId: 'session',
+            startMs: 0,
+            endMs: 100,
+            focus: { cx: 0.5, cy: 0.5 },
+            depth: 1,
+            mode: 'manual',
+            tiltPreset: 'extreme',
+          },
+        ],
+        generatedSessions: [],
+      }),
+    /Propriétés de zoom invalides/,
+  );
+});

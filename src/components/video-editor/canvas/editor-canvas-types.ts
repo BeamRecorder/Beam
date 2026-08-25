@@ -17,13 +17,14 @@ import type {
   ClipComposition,
   NormalizedCrop,
   NormalizedTransform,
+  ShapeClip,
   VisualClip,
 } from '~/media/shared/composition-types';
 import type { OutputCanvasSettings } from './output-canvas';
 import type { PreviewQuality } from '~/media/playback';
 import type { CaptionInlineEditingEnd, CaptionInlineTextUpdate } from './caption-inline-editor-types';
 
-export type TransformClip = VisualClip | ColorClip | BlurClip | CaptionClip;
+export type TransformClip = VisualClip | ColorClip | ShapeClip | BlurClip | CaptionClip;
 export const transformCaptionFollowsCursor = (clip: TransformClip | null) =>
   clip?.kind === 'caption' && clip.caption.type === 'keyboard' && clip.caption.followCursor;
 

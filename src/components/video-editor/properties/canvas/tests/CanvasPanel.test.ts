@@ -1,8 +1,14 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { nextTick, reactive } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { BackgroundMedia, BackgroundMediaGroup, BackgroundValue } from '../../../composables/backgroundCatalog';
+import {
+  BACKGROUND_GRADIENTS,
+  type BackgroundMedia,
+  type BackgroundMediaGroup,
+  type BackgroundValue,
+} from '../../../composables/backgroundCatalog';
 import CanvasPanel from '../CanvasPanel.vue';
+import AddTileButton from '../../../../ui/button/AddTileButton.vue';
 
 const { capture, previewState } = vi.hoisted(() => ({
   capture: {
@@ -27,7 +33,7 @@ const ComposerStub = {
   props: ['kind', 'color', 'gradient'],
   emits: ['add-color', 'add-gradient', 'update-color', 'update-gradient', 'close'],
   template: `
-    <div class="composer-stub">
+    <div class="composer-stub" :data-color="color" :data-gradient="JSON.stringify(gradient)">
       <button class="composer-add-color" @click="$emit('add-color', '#abcdef')">add color</button>
       <button class="composer-add-gradient" @click="$emit('add-gradient', gradient)">add gradient</button>
       <button class="composer-close" @click="$emit('close')">close</button>
@@ -327,17 +333,78 @@ describe('CanvasPanel', () => {
     await tabs[2]!.trigger('click');
     expect(mounted!.find('.swatches-section').exists()).toBe(true);
     expect(mounted!.findAll('.swatch-tile').length).toBeGreaterThan(1);
-    await mounted!.find('.swatch-tile:not(.custom-add-tile)').trigger('click');
+    await mounted!.find('.swatch-tile').trigger('click');
     expect(mounted!.emitted('update:selectedBackground')).toBeTruthy();
 
     await tabs[3]!.trigger('click');
     expect(mounted!.find('.gradients-section').exists()).toBe(true);
     expect(mounted!.findAll('.swatch-tile').length).toBeGreaterThan(1);
-    await mounted!.find('.swatch-tile:not(.custom-add-tile)').trigger('click');
+    await mounted!.find('.swatch-tile').trigger('click');
     expect(mounted!.emitted('update:selectedBackground')).toHaveLength(2);
     await mounted!.get('.import-btn').trigger('click');
     await flushPromises();
     expect(capture.pickBackgroundLibraryMedia).toHaveBeenLastCalledWith('media');
+  });
+
+  it('uses the shared add tile for custom color and gradient composer flows', async () => {
+    const mounted = await mountPanel();
+    const tabs = mounted!.findAll('.kind-group button');
+
+    await tabs[2]!.trigger('click');
+    const colorAdd = mounted!.findComponent(AddTileButton);
+    expect(colorAdd.props('label')).toBe('Custom color');
+    await colorAdd.trigger('click');
+    await flushPromises();
+    expect(document.body.querySelector('.composer-stub')).not.toBeNull();
+    (document.body.querySelector('.composer-add-color') as HTMLButtonElement).click();
+    await flushPromises();
+    expect(mounted!.emitted('update:selectedBackground')?.at(-1)?.[0]).toMatchObject({
+      kind: 'color',
+      color: '#abcdef',
+    });
+
+    await tabs[3]!.trigger('click');
+    const gradientAdd = mounted!
+      .findAllComponents(AddTileButton)
+      .find((tile) => tile.props('label') === 'Custom gradient')!;
+    expect(gradientAdd.props('label')).toBe('Custom gradient');
+    await gradientAdd.trigger('click');
+    await flushPromises();
+    expect(document.body.querySelector('.composer-stub')).not.toBeNull();
+    (document.body.querySelector('.composer-add-gradient') as HTMLButtonElement).click();
+    await flushPromises();
+    expect(mounted!.emitted('update:selectedBackground')?.at(-1)?.[0]).toMatchObject({ kind: 'gradient' });
+  });
+
+  it('starts custom presets from an independent draft and preserves the selected preset when confirming', async () => {
+    const selectedColor = { id: 'color:#111827', name: '#111827', kind: 'color' as const, color: '#111827' };
+    const mounted = await mountPanel(selectedColor);
+    await mounted!.findAll('.kind-group button')[2]!.trigger('click');
+    await mounted!.findComponent(AddTileButton).trigger('click');
+    await flushPromises();
+    const colorComposer = document.body.querySelector('.composer-stub')!;
+    expect(colorComposer.getAttribute('data-color')).not.toBe(selectedColor.color);
+    (colorComposer.querySelector('.composer-add-color') as HTMLButtonElement).click();
+    await flushPromises();
+    expect(mounted!.emitted('update:selectedBackground')?.at(-1)?.[0]).toMatchObject({
+      kind: 'color',
+      color: '#abcdef',
+    });
+
+    mounted!.unmount();
+    const selectedGradient = BACKGROUND_GRADIENTS[0]!;
+    const gradientPanel = await mountPanel(selectedGradient);
+    await gradientPanel!.findAll('.kind-group button')[3]!.trigger('click');
+    const gradientAdd = gradientPanel!
+      .findAllComponents(AddTileButton)
+      .find((tile) => tile.props('label') === 'Custom gradient')!;
+    await gradientAdd.trigger('click');
+    await flushPromises();
+    const gradientComposer = document.body.querySelector('.composer-stub')!;
+    expect(gradientComposer.getAttribute('data-gradient')).not.toBe(JSON.stringify(selectedGradient.gradient));
+    (gradientComposer.querySelector('.composer-add-gradient') as HTMLButtonElement).click();
+    await flushPromises();
+    expect(gradientPanel!.emitted('update:selectedBackground')?.at(-1)?.[0]).toMatchObject({ kind: 'gradient' });
   });
 
   it('edits selected presets and forwards blur slider interactions', async () => {

@@ -215,6 +215,150 @@ test('editor window is opaque and routes native editor lifecycle without changin
   }
 });
 
+const createThemeFixture = ({ theme, resolveSystemDark = () => false }) => {
+  const calls = [];
+  const windows = [];
+  const ipcHandlers = new Map();
+  const ipcListeners = new Map();
+  const preferenceState = { theme, extras: {} };
+  const preferencesStore = {
+    read: () => structuredClone(preferenceState),
+    patch: (patch) => {
+      Object.assign(preferenceState, patch);
+      return structuredClone(preferenceState);
+    },
+  };
+  const electron = {
+    BrowserWindow: class {
+      constructor(options) {
+        calls.push(['constructor', options]);
+        const window = fakeWindow(calls, options);
+        windows.push(window);
+        return window;
+      }
+    },
+  };
+  const originalLoad = Module._load;
+  Module._load = function load(request, parent, isMain) {
+    return request === 'electron' ? electron : originalLoad.call(this, request, parent, isMain);
+  };
+  delete require.cache[require.resolve('../electron/window/editor-window.cjs')];
+  const { createEditorWindowManager } = require('../electron/window/editor-window.cjs');
+  let hudVisible = true;
+  const hudWindow = {
+    webContents: { send: (...args) => calls.push(['hud-send', ...args]) },
+    hide: () => {
+      hudVisible = false;
+      calls.push(['hud-hide']);
+    },
+    show: () => {
+      hudVisible = true;
+      calls.push(['hud-show']);
+    },
+    focus: () => calls.push(['hud-focus']),
+    close: () => calls.push(['hud-close']),
+    isDestroyed: () => false,
+    isVisible: () => hudVisible,
+    isMinimized: () => false,
+    restore: () => calls.push(['hud-restore']),
+  };
+  const manager = createEditorWindowManager({
+    applicationRoot: '/app',
+    isPackaged: false,
+    ipcMain: {
+      handle: (channel, listener) => ipcHandlers.set(channel, listener),
+      on: (channel, listener) => ipcListeners.set(channel, listener),
+    },
+    hudWindow,
+    hudController: {
+      showHud: () => calls.push(['show-hud']),
+      setVisible: (visible) => {
+        hudVisible = visible;
+        calls.push(['hud-visible', visible]);
+        return true;
+      },
+    },
+    registerController: () => undefined,
+    preferencesStore,
+    resolveSystemDark,
+  });
+  return {
+    calls,
+    windows,
+    ipcHandlers,
+    ipcListeners,
+    manager,
+    preferenceState,
+    restore: () => {
+      Module._load = originalLoad;
+    },
+  };
+};
+
+const readyEditor = async (fixture, opening) => {
+  const editor = fixture.windows.at(-1);
+  fixture.ipcListeners.get('editor:ready')({ sender: editor.webContents });
+  await opening;
+  return editor;
+};
+
+test('uses the current preference theme for every editor creation without live native background changes', async () => {
+  for (const [firstTheme, secondTheme] of [
+    ['dark', 'light'],
+    ['light', 'dark'],
+  ]) {
+    const fixture = createThemeFixture({ theme: firstTheme });
+    try {
+      const firstOpening = fixture.manager.open(projectId);
+      assert.equal(
+        fixture.calls.find((call) => call[0] === 'constructor')[1].backgroundColor,
+        firstTheme === 'dark' ? '#141310' : '#f7f5f0',
+      );
+      const firstEditor = await readyEditor(fixture, firstOpening);
+
+      fixture.manager.showHud();
+      fixture.preferenceState.theme = secondTheme;
+      const secondOpening = fixture.manager.open(projectId);
+      const secondOptions = fixture.calls.filter((call) => call[0] === 'constructor').at(-1)[1];
+      assert.equal(secondOptions.backgroundColor, secondTheme === 'dark' ? '#141310' : '#f7f5f0');
+      const secondEditor = await readyEditor(fixture, secondOpening);
+
+      fixture.ipcListeners.get('editor:titlebar-theme')({ sender: secondEditor.webContents }, secondTheme === 'dark');
+      assert.equal(fixture.calls.filter((call) => call[0] === 'background' || call[0] === 'overlay').length, 0);
+      assert.notEqual(firstEditor, secondEditor);
+    } finally {
+      fixture.restore();
+    }
+  }
+});
+
+test('resolves system theme from the current callback on every editor creation', async () => {
+  let systemDark = false;
+  let resolveCalls = 0;
+  const fixture = createThemeFixture({
+    theme: 'system',
+    resolveSystemDark: () => {
+      resolveCalls += 1;
+      return systemDark;
+    },
+  });
+  try {
+    const firstOpening = fixture.manager.open(projectId);
+    assert.equal(fixture.calls.find((call) => call[0] === 'constructor')[1].backgroundColor, '#f7f5f0');
+    await readyEditor(fixture, firstOpening);
+
+    fixture.manager.showHud();
+    systemDark = true;
+    const secondOpening = fixture.manager.open(projectId);
+    assert.equal(fixture.calls.filter((call) => call[0] === 'constructor').at(-1)[1].backgroundColor, '#141310');
+    await readyEditor(fixture, secondOpening);
+
+    assert.equal(resolveCalls, 2);
+  } finally {
+    fixture.restore();
+  }
+});
+
 test('restores and persists editor window dimensions via preferencesStore', async () => {
   const calls = [];
   const windows = [];

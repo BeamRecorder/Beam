@@ -22,6 +22,34 @@ const sourceDimensions = (source: CanvasImageSource) => {
   return { width, height };
 };
 
+export const backgroundFillStyle = (
+  ctx: Canvas2DContext,
+  value: Extract<RenderBackgroundValue, { kind: 'color' | 'gradient' }>,
+  rect: { x: number; y: number; width: number; height: number },
+) => {
+  if (value.kind === 'color') return value.color;
+  const centerX = rect.x + rect.width / 2;
+  const centerY = rect.y + rect.height / 2;
+  const gradient =
+    value.gradient.type === 'radial'
+      ? ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, Math.max(rect.width, rect.height) / 2)
+      : (() => {
+          const radians = ((value.gradient.angle - 90) * Math.PI) / 180;
+          const dx = (Math.cos(radians) * rect.width) / 2;
+          const dy = (Math.sin(radians) * rect.height) / 2;
+          return ctx.createLinearGradient(centerX - dx, centerY - dy, centerX + dx, centerY + dy);
+        })();
+  for (const stop of value.gradient.stops) {
+    gradient.addColorStop(
+      stop.position,
+      `${stop.color}${Math.round(stop.alpha * 255)
+        .toString(16)
+        .padStart(2, '0')}`,
+    );
+  }
+  return gradient;
+};
+
 export function renderBackground(
   ctx: Canvas2DContext,
   options: {
@@ -46,31 +74,8 @@ export function renderBackground(
   ctx.save();
   ctx.globalAlpha *= Math.max(0, Math.min(1, options.alpha ?? 1));
   if (blur > 0) ctx.filter = `blur(${blur}px)`;
-  if (options.value.kind === 'color') {
-    ctx.fillStyle = options.value.color;
-    ctx.fillRect(target.x, target.y, target.width, target.height);
-  } else if (options.value.kind === 'gradient') {
-    const value = options.value.gradient;
-    const centerX = target.x + target.width / 2;
-    const centerY = target.y + target.height / 2;
-    const gradient =
-      value.type === 'radial'
-        ? ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, Math.max(target.width, target.height) / 2)
-        : (() => {
-            const radians = ((value.angle - 90) * Math.PI) / 180;
-            const dx = (Math.cos(radians) * target.width) / 2;
-            const dy = (Math.sin(radians) * target.height) / 2;
-            return ctx.createLinearGradient(centerX - dx, centerY - dy, centerX + dx, centerY + dy);
-          })();
-    for (const stop of value.stops) {
-      gradient.addColorStop(
-        stop.position,
-        `${stop.color}${Math.round(stop.alpha * 255)
-          .toString(16)
-          .padStart(2, '0')}`,
-      );
-    }
-    ctx.fillStyle = gradient;
+  if (options.value.kind === 'color' || options.value.kind === 'gradient') {
+    ctx.fillStyle = backgroundFillStyle(ctx, options.value, target);
     ctx.fillRect(target.x, target.y, target.width, target.height);
   } else if (options.source) {
     const source = options.sourceSize ?? sourceDimensions(options.source);

@@ -5,6 +5,7 @@ import {
   isAudioClip,
   isBlurClip,
   isColorClip,
+  isShapeClip,
   isTextCaptionClip,
   isVisualClip,
   type Clip,
@@ -19,6 +20,10 @@ import {
 import { normalizeClipTransitions } from '~/media/shared/clip-transitions';
 import type { CameraFramingPreset } from '~/media/shared/camera-layout-types';
 import type { ColorFill } from '~/media/shared/color-fill-types';
+import { normalizeColorLayerStyle } from '~/media/shared/color-layer-style';
+import type { ColorLayerStyle } from '~/media/shared/color-layer-style-types';
+import { normalizeShapeLayerStyle } from '~/media/shared/shape-layer-style';
+import type { ShapeLayerStyle } from '~/media/shared/shape-layer-types';
 import { EMPTY_CLIP_TRANSITIONS } from '~/media/shared/clip-transitions';
 import {
   maximumVisualTrackDuration,
@@ -116,6 +121,7 @@ export function addAsset(composition: ClipComposition, asset: MediaAsset): ClipC
       (clip) =>
         clip.kind === 'caption' ||
         isColorClip(clip) ||
+        isShapeClip(clip) ||
         isBlurClip(clip) ||
         next.assets.some((entry) => entry.id === clip.assetId),
     ),
@@ -260,7 +266,7 @@ export function deleteClip(composition: ClipComposition, clipId: string, grouped
   next.clips = normalizeClipOrders(normalizeGroups(next.clips.filter((clip) => !ids.has(clip.id))));
   const usedAssets = new Set(
     next.clips.flatMap((clip) =>
-      clip.kind === 'caption' || isColorClip(clip) || isBlurClip(clip) ? [] : [clip.assetId],
+      clip.kind === 'caption' || isColorClip(clip) || isShapeClip(clip) || isBlurClip(clip) ? [] : [clip.assetId],
     ),
   );
   next.assets = next.assets.filter((asset) => usedAssets.has(asset.id));
@@ -314,6 +320,28 @@ export function setColorFill(composition: ClipComposition, clipId: string, fill:
   return updateClip(composition, clipId, (clip) => {
     if (!isColorClip(clip)) throw new CompositionEngineError('Only color clips have color fill settings.');
     return { ...clip, fill: cloneValue(fill) };
+  });
+}
+
+export function setColorLayerStyle(
+  composition: ClipComposition,
+  clipId: string,
+  patch: Partial<ColorLayerStyle>,
+): ClipComposition {
+  return updateClip(composition, clipId, (clip) => {
+    if (!isColorClip(clip)) throw new CompositionEngineError('Only color clips have color layer styles.');
+    return { ...clip, ...normalizeColorLayerStyle({ ...normalizeColorLayerStyle(clip), ...patch }) };
+  });
+}
+
+export function setShapeLayerStyle(
+  composition: ClipComposition,
+  clipId: string,
+  patch: Partial<ShapeLayerStyle>,
+): ClipComposition {
+  return updateClip(composition, clipId, (clip) => {
+    if (!isShapeClip(clip)) throw new CompositionEngineError('Only shape clips have vector styles.');
+    return { ...clip, ...normalizeShapeLayerStyle({ ...normalizeShapeLayerStyle(clip), ...patch }) };
   });
 }
 

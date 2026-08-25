@@ -45,6 +45,7 @@ function createEditorWindowManager({
   hudController,
   registerController,
   initialDark = false,
+  resolveSystemDark = () => initialDark,
   cleanupWindow = null,
   preferencesStore = null,
   appIconPath,
@@ -105,6 +106,14 @@ function createEditorWindowManager({
     height: TITLEBAR_HEIGHT,
   });
 
+  const resolveWindowDark = () => {
+    const selectedTheme = preferencesStore?.read()?.theme;
+    if (selectedTheme === 'dark') return true;
+    if (selectedTheme === 'light') return false;
+    if (selectedTheme === 'system') return Boolean(resolveSystemDark());
+    return dark;
+  };
+
   const sendProgress = (stage) => {
     const value = EDITOR_LOADING_PROGRESS[stage];
     if (value === undefined || value < lastProgressValue || hudWindow.isDestroyed()) return false;
@@ -151,6 +160,7 @@ function createEditorWindowManager({
         ? Math.round(savedWindow.height)
         : EDITOR_DEFAULT_SIZE.height;
     const shouldMaximize = Boolean(savedWindow?.isMaximized);
+    const windowDark = resolveWindowDark();
     window = new BrowserWindow({
       width: initialWidth,
       height: initialHeight,
@@ -160,7 +170,7 @@ function createEditorWindowManager({
       icon: appIconPath,
       frame: true,
       transparent: false,
-      backgroundColor: dark ? '#141310' : '#f7f5f0',
+      backgroundColor: windowDark ? '#141310' : '#f7f5f0',
       titleBarStyle: 'hidden',
       titleBarOverlay: process.platform === 'darwin' ? true : overlayOptions(),
       ...(process.platform === 'darwin' ? { trafficLightPosition: { x: 12, y: 12 } } : {}),

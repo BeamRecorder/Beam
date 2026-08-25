@@ -19,6 +19,7 @@ export function propertiesPanelTitle(
     if (clipKind === 'image') return translations.tTimelineToolbar('image');
     if (clipKind === 'webcam') return translations.tTimeline('webcam');
     if (clipKind === 'color') return translations.tCanvas('color');
+    if (clipKind === 'shape') return translations.tCanvas('shapesAndArrows');
     if (clipKind === 'blur') return translations.tTimeline('blur');
     if (clipKind === 'caption') return translations.tSidebar('captions');
     return translations.tSidebar('audio');
@@ -34,7 +35,7 @@ export function propertiesPanelTitle(
 }
 
 export function clipTransitionPanelTitle(kind: ClipKind | undefined, tClipTransitions: () => string): string {
-  if (kind === 'color') return tClipTransitions();
+  if (kind === 'color' || kind === 'shape') return tClipTransitions();
   if (kind === 'caption') return 'Caption Transitions';
   if (kind === 'audio') return 'Audio Transitions';
   if (kind === 'blur') return 'Blur Transitions';

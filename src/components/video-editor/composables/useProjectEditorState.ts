@@ -133,12 +133,14 @@ export function useProjectEditorState(options: {
       .then(() => capture.saveProjectEditorState(projectId, state))
       .then(async () => {
         if (!shouldCaptureDefaults) return;
-        const defaults = defaultsFromEditorState(options.editorDefaults.value, state, selectedClip, selectedZoom);
+        const defaults = clone(
+          defaultsFromEditorState(options.editorDefaults.value, state, selectedClip, selectedZoom),
+        );
         options.editorDefaults.value = defaults;
         try {
           await capture.updatePreferences({ extras: { editorDefaults: defaults } });
-        } catch {
-          console.error('Failed to save editor defaults.');
+        } catch (error) {
+          console.error('[Beam editor] failed to save editor defaults', { projectId }, error);
         }
       })
       .then(() => undefined)
@@ -153,7 +155,13 @@ export function useProjectEditorState(options: {
     if (timer) clearTimeout(timer);
     scheduledDefaultCapture ||= captureDefaults;
     scheduledSave.value = true;
-    timer = setTimeout(() => void saveNow(false).catch(() => console.error('Failed to save editor state.')), 250);
+    timer = setTimeout(
+      () =>
+        void saveNow(false).catch((error) =>
+          console.error('[Beam editor] failed to save project state', { projectId: options.project.value?.id }, error),
+        ),
+      250,
+    );
   };
 
   const load = async (projectId: string) => {

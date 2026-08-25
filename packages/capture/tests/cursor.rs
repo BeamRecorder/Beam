@@ -153,7 +153,8 @@ fn telemetry_keeps_the_latest_hour_of_samples() {
 }
 
 #[test]
-fn movement_sampling_is_capped_at_sixty_hz_without_drift() {
+fn movement_sampling_is_capped_at_thirty_hz_without_drift() {
+    assert_eq!(CURSOR_SAMPLE_INTERVAL_NS, 33_333_333);
     let mut next = 0;
     assert!(move_sample_due(&mut next, 0));
     assert_eq!(next, CURSOR_SAMPLE_INTERVAL_NS);
@@ -165,4 +166,26 @@ fn movement_sampling_is_capped_at_sixty_hz_without_drift() {
         CURSOR_SAMPLE_INTERVAL_NS * 4 + 1
     ));
     assert_eq!(next, CURSOR_SAMPLE_INTERVAL_NS * 5);
+}
+
+#[test]
+fn movement_sampling_preserves_phase_after_jitter_and_skipped_ticks() {
+    let interval = CURSOR_SAMPLE_INTERVAL_NS;
+    let mut next = 0;
+
+    assert!(move_sample_due(&mut next, 0));
+    assert_eq!(next, interval);
+
+    // A late poll must skip missed samples without moving the cadence origin.
+    assert!(move_sample_due(&mut next, interval * 7 + 123_456));
+    assert_eq!(next, interval * 8);
+    assert!(!move_sample_due(&mut next, interval * 8 - 1));
+    assert!(move_sample_due(&mut next, interval * 8 + 250_000));
+    assert_eq!(next, interval * 9);
+
+    // Repeated slightly-late polls must remain locked to the original phase.
+    for index in 9_u64..=120 {
+        assert!(move_sample_due(&mut next, interval * index + 1_000));
+        assert_eq!(next, interval * (index + 1));
+    }
 }

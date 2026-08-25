@@ -15,6 +15,11 @@ import { computeWebcamLayout, webcamSettingsForAppearance } from '../../../compo
 import { resolveCameraFraming } from '../../../composition/camera-layout';
 import { frameOuterRect } from '../../../composition/appearance/frames';
 import { projectCameraRect } from '../layer-transform-geometry';
+import {
+  perspectiveCoverScale,
+  projectPerspectivePoint,
+  unprojectPerspectivePoint,
+} from '../../../zoom/perspective-projection';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 
 const screenClip = (): VisualClip => ({
@@ -347,6 +352,165 @@ describe('useLayerTransformAndCrop', () => {
     expect(mounted.state.transformHandleStyle.value).toEqual({ display: 'none' });
   });
 
+  it('exposes a projected bbox, corners and all eight anchors for tilted selections while preserving the 2D path', async () => {
+    const clip = blurClip();
+    const scene = composition();
+    scene.clips = [screenClip(), clip];
+    const mounted = mountComposable(clip, false, scene);
+    const flatViewport = bounds();
+
+    await nextTick();
+    const flatStyle = selectionRect(mounted.state.transformHandleStyle.value);
+    expect(mounted.state.transformHandlePositions.value).toBeUndefined();
+    expect(mounted.state.transformPerspectiveCorners.value).toBeUndefined();
+
+    const layout = {
+      left: flatStyle.left + flatViewport.dx,
+      top: flatStyle.top + flatViewport.dy,
+      width: flatStyle.width,
+      height: flatStyle.height,
+    };
+    const tiltedViewport = { ...flatViewport, tiltX: 0.32, tiltY: -0.24 };
+    const perspective = { tiltX: tiltedViewport.tiltX, tiltY: tiltedViewport.tiltY };
+    mounted.overlayBounds.value = tiltedViewport;
+    await nextTick();
+
+    const projectedStyle = selectionRect(mounted.state.transformHandleStyle.value);
+    const positions = mounted.state.transformHandlePositions.value;
+    const corners = mounted.state.transformPerspectiveCorners.value;
+    const anchors = ['top-left', 'top', 'top-right', 'right', 'bottom-right', 'bottom', 'bottom-left', 'left'] as const;
+    expect(Object.keys(positions ?? {}).sort()).toEqual([...anchors].sort());
+    expect(corners).toHaveLength(4);
+
+    const viewportRect = {
+      x: tiltedViewport.dx,
+      y: tiltedViewport.dy,
+      width: tiltedViewport.dw,
+      height: tiltedViewport.dh,
+    };
+    const coverScale = perspectiveCoverScale(viewportRect.width, viewportRect.height, perspective);
+    const pointFor = (anchor: (typeof anchors)[number]) => {
+      const horizontal = anchor.includes('left') ? 0 : anchor.includes('right') ? 1 : 0.5;
+      const vertical = anchor.includes('top') ? 0 : anchor.includes('bottom') ? 1 : 0.5;
+      return projectPerspectivePoint(
+        { x: layout.left + layout.width * horizontal, y: layout.top + layout.height * vertical },
+        viewportRect,
+        perspective,
+        coverScale,
+      );
+    };
+    const projected = Object.fromEntries(anchors.map((anchor) => [anchor, pointFor(anchor)])) as Record<
+      (typeof anchors)[number],
+      { x: number; y: number }
+    >;
+    const projectedCorners = [
+      projected['top-left'],
+      projected['top-right'],
+      projected['bottom-right'],
+      projected['bottom-left'],
+    ];
+    const left = Math.min(...projectedCorners.map((point) => point.x));
+    const top = Math.min(...projectedCorners.map((point) => point.y));
+    const right = Math.max(...projectedCorners.map((point) => point.x));
+    const bottom = Math.max(...projectedCorners.map((point) => point.y));
+
+    expect(projectedStyle.left).toBeCloseTo(left - tiltedViewport.dx);
+    expect(projectedStyle.top).toBeCloseTo(top - tiltedViewport.dy);
+    expect(projectedStyle.width).toBeCloseTo(right - left);
+    expect(projectedStyle.height).toBeCloseTo(bottom - top);
+    anchors.forEach((anchor) => {
+      expect(positions?.[anchor]?.x).toBeCloseTo(projected[anchor].x - left);
+      expect(positions?.[anchor]?.y).toBeCloseTo(projected[anchor].y - top);
+    });
+    projectedCorners.forEach((point, index) => {
+      expect(corners?.[index]?.x).toBeCloseTo(point.x - left);
+      expect(corners?.[index]?.y).toBeCloseTo(point.y - top);
+    });
+
+    mounted.overlayBounds.value = flatViewport;
+    await nextTick();
+    expect(mounted.state.transformHandleStyle.value).toEqual({
+      left: `${flatStyle.left}px`,
+      top: `${flatStyle.top}px`,
+      width: `${flatStyle.width}px`,
+      height: `${flatStyle.height}px`,
+    });
+    expect(mounted.state.transformHandlePositions.value).toBeUndefined();
+    expect(mounted.state.transformPerspectiveCorners.value).toBeUndefined();
+  });
+
+  it('deprojects a tilted resize delta before updating the transform instead of treating the screen delta as axis-aligned', async () => {
+    const clip = blurClip();
+    const scene = composition();
+    scene.clips = [screenClip(), clip];
+    const mounted = mountComposable(clip, false, scene);
+    mounted.selectedBounds.value = { ...bounds(), dx: 0, dy: 0, dw: 800, dh: 450 };
+    const flatOverlay = { ...bounds(), dx: 50, dy: 25, dw: 900, dh: 500, scale: 1, focusX: 500, focusY: 275 };
+    mounted.overlayBounds.value = flatOverlay;
+    await nextTick();
+
+    const flatStyle = selectionRect(mounted.state.transformHandleStyle.value);
+    const layout = {
+      left: flatStyle.left + flatOverlay.dx,
+      top: flatStyle.top + flatOverlay.dy,
+      width: flatStyle.width,
+      height: flatStyle.height,
+    };
+    const tiltedOverlay = { ...flatOverlay, tiltX: 0.5, tiltY: -0.35 };
+    mounted.overlayBounds.value = tiltedOverlay;
+    await nextTick();
+
+    const target = document.createElement('div');
+    Object.assign(target, {
+      setPointerCapture: vi.fn(),
+      hasPointerCapture: vi.fn().mockReturnValue(true),
+      releasePointerCapture: vi.fn(),
+    });
+    const start = { clientX: 300, clientY: 200 };
+    const screenDelta = { x: 44, y: 27 };
+    mounted.state.beginTransformDrag(pointer(target, start), 'resize', 'bottom-right');
+    const initial = mounted.state.transformDraft.value!;
+    mounted.state.moveTransformDrag(
+      pointer(target, { clientX: start.clientX + screenDelta.x, clientY: start.clientY + screenDelta.y }),
+    );
+
+    const perspective = { tiltX: tiltedOverlay.tiltX, tiltY: tiltedOverlay.tiltY };
+    const viewport = {
+      x: tiltedOverlay.dx,
+      y: tiltedOverlay.dy,
+      width: tiltedOverlay.dw,
+      height: tiltedOverlay.dh,
+    };
+    const coverScale = perspectiveCoverScale(viewport.width, viewport.height, perspective);
+    const source = { x: layout.left + layout.width, y: layout.top + layout.height };
+    const projectedSource = projectPerspectivePoint(source, viewport, perspective, coverScale);
+    const deprojectedTarget = unprojectPerspectivePoint(
+      { x: projectedSource.x + screenDelta.x, y: projectedSource.y + screenDelta.y },
+      viewport,
+      perspective,
+      coverScale,
+    );
+    const pointerDelta = { x: deprojectedTarget.x - source.x, y: deprojectedTarget.y - source.y };
+    const expectedWidth = initial.width + pointerDelta.x / (tiltedOverlay.dw * tiltedOverlay.scale);
+    const expectedHeight = initial.height + pointerDelta.y / (tiltedOverlay.dh * tiltedOverlay.scale);
+    const axisAlignedWidth = initial.width + screenDelta.x / (tiltedOverlay.dw * tiltedOverlay.scale);
+    const axisAlignedHeight = initial.height + screenDelta.y / (tiltedOverlay.dh * tiltedOverlay.scale);
+    const resized = mounted.state.transformDraft.value!;
+
+    expect(projectPerspectivePoint(deprojectedTarget, viewport, perspective, coverScale).x).toBeCloseTo(
+      projectedSource.x + screenDelta.x,
+      5,
+    );
+    expect(projectPerspectivePoint(deprojectedTarget, viewport, perspective, coverScale).y).toBeCloseTo(
+      projectedSource.y + screenDelta.y,
+      5,
+    );
+    expect(resized.width).toBeCloseTo(expectedWidth, 5);
+    expect(resized.height).toBeCloseTo(expectedHeight, 5);
+    expect(resized.width).not.toBeCloseTo(axisAlignedWidth, 3);
+    expect(resized.height).not.toBeCloseTo(axisAlignedHeight, 3);
+  });
+
   it('uses an unframed source-fit crop layout for phone frames and restores the outer frame outside crop mode', async () => {
     const clip = phoneImageClip();
     const scene = composition();
@@ -562,7 +726,7 @@ describe('useLayerTransformAndCrop', () => {
     });
   });
 
-  it('hides transform handles when the selected clip is inactive, disabled or fully outside the viewport', async () => {
+  it('hides transform handles when the selected clip is inactive or disabled, but keeps them calculated when fully outside the viewport', async () => {
     const clip = blurClip({ order: -1 });
     const scene = composition();
     scene.clips = [screenClip(), clip];
@@ -585,7 +749,13 @@ describe('useLayerTransformAndCrop', () => {
     mounted.selectedRef.value = outside;
     mounted.compositionRef.value = { ...scene, clips: [screenClip(), outside] };
     await nextTick();
-    expect(mounted.state.transformSelectionViewportStyle.value).toEqual({ display: 'none' });
+    expect(mounted.state.transformSelectionViewportStyle.value).not.toEqual({ display: 'none' });
+    expect(mounted.state.transformHandleStyle.value).toMatchObject({
+      left: '2800px',
+      top: '1575px',
+      width: '320px',
+      height: '180px',
+    });
     expect(mounted.selectedRef.value?.id).toBe('blur');
   });
 

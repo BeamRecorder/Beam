@@ -830,28 +830,6 @@ describe('useClipComposition', () => {
     });
   });
 
-  it('adds a full-canvas solid color layer for three seconds and selects it', async () => {
-    const mounted = mountComposable();
-    mounted.currentTimeSec.value = 2;
-
-    await mounted.state.addElement('color');
-
-    const color = mounted.state.selectedClip.value;
-    expect(color).toMatchObject({
-      kind: 'color',
-      assetId: '',
-      timelineStartMs: 2_000,
-      timelineDurationMs: 3_000,
-      sourceInMs: 0,
-      sourceDurationMs: 3_000,
-      transform: { x: 0, y: 0, width: 1, height: 1 },
-      fill: { kind: 'color', color: '#111827' },
-    });
-    expect(color?.id).toBe(mounted.state.selectedClipId.value);
-    expect(mounted.activeTab.value).toBe('clip');
-    expect(mounted.state.composition.value.assets).toHaveLength(0);
-  });
-
   it('adds a video with or without a linked imported audio clip', async () => {
     const mounted = mountComposable();
     mockMediaMetadata();

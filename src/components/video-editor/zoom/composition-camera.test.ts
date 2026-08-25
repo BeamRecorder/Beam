@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { createCompositionCameraEvaluator, type CameraSample } from './composition-camera';
+import {
+  cameraTiltForControls,
+  createCompositionCameraEvaluator,
+  MAX_CAMERA_TILT_RADIANS,
+  type CameraSample,
+} from './composition-camera';
 import type { ZoomElement } from './zoom-types';
 
 const zooms: ZoomElement[] = [
@@ -44,5 +49,75 @@ describe('composition camera evaluator', () => {
     const before = evaluator.sample(1_375);
     evaluator.invalidate();
     expectSampleClose(evaluator.sample(1_375), before);
+  });
+
+  it('keeps legacy zooms flat when projection fields are missing', () => {
+    const sample = createCompositionCameraEvaluator({ zooms, telemetry: [] }).sample(1_000);
+
+    expect(sample.tiltX).toBe(0);
+    expect(sample.tiltY).toBe(0);
+  });
+
+  it('interpolates finite tilt for a 3D zoom', () => {
+    const sample = createCompositionCameraEvaluator({
+      zooms: [{ ...zooms[0]!, projection: '3d', tiltIntensity: 1 }],
+      telemetry: [],
+    }).sample(1_000);
+
+    expect(Number.isFinite(sample.tiltX)).toBe(true);
+    expect(Number.isFinite(sample.tiltY)).toBe(true);
+    expect(Math.abs(sample.tiltX ?? 0)).toBeLessThanOrEqual(MAX_CAMERA_TILT_RADIANS);
+    expect(Math.abs(sample.tiltY ?? 0)).toBeLessThanOrEqual(MAX_CAMERA_TILT_RADIANS);
+  });
+
+  it.each([
+    ['left', -1, 0, 0, -MAX_CAMERA_TILT_RADIANS],
+    ['right', 1, 0, 0, MAX_CAMERA_TILT_RADIANS],
+    ['up', 0, -1, -MAX_CAMERA_TILT_RADIANS, 0],
+    ['down', 0, 1, MAX_CAMERA_TILT_RADIANS, 0],
+    ['left/up diagonal', -1, -1, -MAX_CAMERA_TILT_RADIANS / Math.SQRT2, -MAX_CAMERA_TILT_RADIANS / Math.SQRT2],
+    ['right/down diagonal', 1, 1, MAX_CAMERA_TILT_RADIANS / Math.SQRT2, MAX_CAMERA_TILT_RADIANS / Math.SQRT2],
+  ])(
+    'maps %s controls to signed tilt axes at the 62° maximum',
+    (_label, horizontal, vertical, expectedX, expectedY) => {
+      const result = cameraTiltForControls(1, horizontal, vertical);
+
+      expect(result.tiltX).toBeCloseTo(expectedX, 12);
+      expect(result.tiltY).toBeCloseTo(expectedY, 12);
+    },
+  );
+
+  it('clamps intensity and both signed axes before applying the 62° maximum', () => {
+    const horizontal = cameraTiltForControls(4, -3, 0);
+    const vertical = cameraTiltForControls(4, 0, 2);
+
+    expect(horizontal.tiltX).toBe(0);
+    expect(horizontal.tiltY).toBeCloseTo(-MAX_CAMERA_TILT_RADIANS, 12);
+    expect(vertical.tiltX).toBeCloseTo(MAX_CAMERA_TILT_RADIANS, 12);
+    expect(vertical.tiltY).toBe(0);
+    expect(Math.abs(horizontal.tiltY)).toBeLessThanOrEqual(MAX_CAMERA_TILT_RADIANS);
+    expect(Math.abs(vertical.tiltX)).toBeLessThanOrEqual(MAX_CAMERA_TILT_RADIANS);
+  });
+
+  it('keeps tilt deterministic when sampled through 30 and 60 fps playback', () => {
+    const threeDZoom: ZoomElement = {
+      ...zooms[0]!,
+      projection: '3d',
+      tiltIntensity: 1,
+      tiltHorizontal: 0.9,
+      tiltVertical: -0.8,
+    };
+    const reference = createCompositionCameraEvaluator({ zooms: [threeDZoom], telemetry: [] });
+    const expected = reference.sample(1_250);
+
+    for (const fps of [30, 60]) {
+      const evaluator = createCompositionCameraEvaluator({ zooms: [threeDZoom], telemetry: [] });
+      for (let frame = 0; frame <= Math.round((1_250 / 1_000) * fps); frame += 1)
+        evaluator.sample((frame / fps) * 1_000);
+      const actual = evaluator.sample(1_250);
+
+      expect(actual.tiltX ?? 0).toBeCloseTo(expected.tiltX ?? 0, 8);
+      expect(actual.tiltY ?? 0).toBeCloseTo(expected.tiltY ?? 0, 8);
+    }
   });
 });

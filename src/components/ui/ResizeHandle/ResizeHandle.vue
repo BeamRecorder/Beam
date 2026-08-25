@@ -1,12 +1,21 @@
 <script setup lang="ts">
-import type { ResizeCorner } from './types';
+import type { CSSProperties } from 'vue';
+import type { ResizeCorner, ResizeHandlePositions } from './types';
 export type { ResizeCorner };
 
-withDefaults(defineProps<{ corners?: ResizeCorner[]; disabled?: boolean; isAtLimit?: boolean }>(), {
-  corners: () => ['top-left', 'top', 'top-right', 'right', 'bottom-right', 'bottom', 'bottom-left', 'left'],
-  disabled: false,
-  isAtLimit: false,
-});
+const props = withDefaults(
+  defineProps<{
+    corners?: ResizeCorner[];
+    disabled?: boolean;
+    isAtLimit?: boolean;
+    positions?: ResizeHandlePositions;
+  }>(),
+  {
+    corners: () => ['top-left', 'top', 'top-right', 'right', 'bottom-right', 'bottom', 'bottom-left', 'left'],
+    disabled: false,
+    isAtLimit: false,
+  },
+);
 
 const emit = defineEmits<{
   (e: 'resize-start', corner: ResizeCorner, event: PointerEvent): void;
@@ -19,6 +28,18 @@ const start = (corner: ResizeCorner, event: PointerEvent) => {
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
   emit('resize-start', corner, event);
 };
+
+const positionStyle = (corner: ResizeCorner): CSSProperties | undefined => {
+  const position = props.positions?.[corner];
+  if (!position) return undefined;
+  return {
+    left: `${position.x}px`,
+    top: `${position.y}px`,
+    right: 'auto',
+    bottom: 'auto',
+    transform: 'translate(-50%, -50%)',
+  };
+};
 </script>
 
 <template>
@@ -28,6 +49,7 @@ const start = (corner: ResizeCorner, event: PointerEvent) => {
     type="button"
     class="resize-handle"
     :class="[`is-${corner}`, { 'is-at-limit': isAtLimit }]"
+    :style="positionStyle(corner)"
     :disabled="disabled"
     :aria-label="`Resize from ${corner}`"
     @pointerdown.stop="start(corner, $event)"
@@ -48,6 +70,7 @@ const start = (corner: ResizeCorner, event: PointerEvent) => {
   border-radius: 3px;
   background: var(--color-primary);
   z-index: 1;
+  pointer-events: auto;
 }
 .resize-handle.is-at-limit {
   border-color: var(--color-error);

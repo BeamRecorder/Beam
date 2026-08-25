@@ -1,7 +1,9 @@
 import { flushPromises, mount } from '@vue/test-utils';
+import { defineComponent, h, ref } from 'vue';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ColorClip } from '~/media/shared/composition-types';
 import ColorLayerPropertiesPanel from '../ColorLayerPropertiesPanel.vue';
+import AddTileButton from '../../../../ui/button/AddTileButton.vue';
 
 const { capture } = vi.hoisted(() => ({
   capture: {
@@ -20,13 +22,103 @@ const Button = {
   template:
     '<button v-bind="$attrs" :class="[\'btn\', $attrs.class]" :data-variant="variant" @click="$emit(\'click\')"><slot /></button>',
 };
-const Popover = {
-  template: '<div class="popover-stub"><slot name="trigger" :isOpen="false" /></div>',
-};
-const BackgroundPresetComposer = {
-  template: '<div class="composer-stub" />',
-};
-
+const Popover = defineComponent({
+  emits: ['toggle'],
+  setup(_, { emit, slots }) {
+    const open = ref(false);
+    const close = () => {
+      open.value = false;
+      emit('toggle', false);
+    };
+    const toggle = () => {
+      open.value = !open.value;
+      emit('toggle', open.value);
+    };
+    return () =>
+      h('div', { class: 'popover-stub' }, [
+        h('div', { class: 'popover-trigger', onClick: toggle }, slots.trigger?.({ isOpen: open.value })),
+        open.value ? h('div', { class: 'popover-content' }, slots.default?.({ close })) : undefined,
+      ]);
+  },
+});
+const BackgroundPresetComposer = defineComponent({
+  props: {
+    kind: { type: String, required: true },
+    color: { type: String, required: true },
+    gradient: { type: Object, required: true },
+  },
+  emits: ['add-color', 'add-gradient'],
+  setup(props, { emit }) {
+    return () =>
+      h(
+        'div',
+        {
+          class: 'composer-stub',
+          'data-color': props.color,
+          'data-gradient': JSON.stringify(props.gradient),
+        },
+        [
+          props.kind === 'color'
+            ? h('button', { class: 'composer-add-color', onClick: () => emit('add-color', '#abcdef') }, 'add color')
+            : h(
+                'button',
+                { class: 'composer-add-gradient', onClick: () => emit('add-gradient', props.gradient) },
+                'add gradient',
+              ),
+        ],
+      );
+  },
+});
+const BigSlider = defineComponent({
+  name: 'BigSlider',
+  props: {
+    modelValue: { type: Number, required: true },
+    label: { type: String, required: true },
+    min: { type: Number, required: true },
+    max: { type: Number, required: true },
+    step: { type: Number, required: true },
+    defaultValue: { type: Number, required: true },
+  },
+  emits: ['update:modelValue', 'interaction-start', 'interaction-end'],
+  setup(props, { emit }) {
+    return () =>
+      h(
+        'button',
+        {
+          class: 'big-slider-stub',
+          'data-label': props.label,
+          'data-model-value': props.modelValue,
+          onClick: () => emit('update:modelValue', props.modelValue + props.step),
+          onPointerdown: () => emit('interaction-start'),
+          onPointerup: () => emit('interaction-end'),
+        },
+        props.label,
+      );
+  },
+});
+const Switch = defineComponent({
+  name: 'Switch',
+  props: {
+    modelValue: { type: Boolean, required: true },
+    label: { type: String, default: '' },
+    ariaLabel: { type: String, default: '' },
+  },
+  emits: ['update:modelValue'],
+  setup(props, { emit }) {
+    return () =>
+      h(
+        'button',
+        {
+          class: 'switch-stub',
+          role: 'switch',
+          'aria-label': props.ariaLabel || props.label,
+          'aria-checked': props.modelValue,
+          onClick: () => emit('update:modelValue', !props.modelValue),
+        },
+        props.label,
+      );
+  },
+});
 const radialGradient = {
   type: 'radial' as const,
   angle: 45,
@@ -45,7 +137,22 @@ const linearGradient = {
   ],
 };
 
-const colorClip = (fill: ColorClip['fill'] = { kind: 'color', color: '#111827' }): ColorClip => ({
+const colorClip = (
+  fill: ColorClip['fill'] = { kind: 'color', color: '#111827' },
+  style: Pick<
+    ColorClip,
+    | 'opacityEnabled'
+    | 'opacity'
+    | 'cornerRadius'
+    | 'shadowSize'
+    | 'shadowBlur'
+    | 'shadowMode'
+    | 'shadowColor'
+    | 'shadowDirection'
+    | 'backdropBlurEnabled'
+    | 'backdropBlur'
+  > = {},
+): ColorClip => ({
   id: 'color-clip',
   kind: 'color',
   name: 'Color layer',
@@ -60,6 +167,7 @@ const colorClip = (fill: ColorClip['fill'] = { kind: 'color', color: '#111827' }
   assetId: '',
   transform: { x: 0, y: 0, width: 1, height: 1 },
   fill,
+  ...style,
 });
 
 const preferences = (gradients: (typeof radialGradient)[] = []) => ({
@@ -75,7 +183,7 @@ const preferences = (gradients: (typeof radialGradient)[] = []) => ({
 const mountPanel = async (clip: ColorClip) => {
   const wrapper = mount(ColorLayerPropertiesPanel, {
     props: { clip },
-    global: { stubs: { Button, Popover, BackgroundPresetComposer } },
+    global: { stubs: { Button, Popover, BackgroundPresetComposer, BigSlider, Switch } },
   });
   await flushPromises();
   return wrapper;
@@ -105,6 +213,49 @@ describe('ColorLayerPropertiesPanel', () => {
     wrapper.unmount();
   });
 
+  it('uses the shared add tile to open and apply custom color and gradient composers', async () => {
+    const wrapper = await mountPanel(colorClip());
+    const colorAdd = wrapper.findComponent(AddTileButton);
+    expect(colorAdd.props('label')).toBe('Custom color');
+
+    await colorAdd.trigger('click');
+    expect(wrapper.find('.composer-stub').exists()).toBe(true);
+    await wrapper.get('.composer-add-color').trigger('click');
+    await flushPromises();
+    expect(wrapper.emitted('update')?.at(-1)?.[0]).toEqual({ kind: 'color', color: '#abcdef' });
+
+    await wrapper.findAll('.kind-group .btn')[1]!.trigger('click');
+    const gradientAdd = wrapper.findComponent(AddTileButton);
+    expect(gradientAdd.props('label')).toBe('Custom gradient');
+    await gradientAdd.trigger('click');
+    expect(wrapper.find('.composer-stub').exists()).toBe(true);
+    await wrapper.get('.composer-add-gradient').trigger('click');
+    await flushPromises();
+    expect(wrapper.emitted('update')?.at(-1)?.[0]).toMatchObject({ kind: 'gradient' });
+    wrapper.unmount();
+  });
+
+  it('starts custom color and gradient additions from an independent draft', async () => {
+    const wrapper = await mountPanel(colorClip());
+    await wrapper.findComponent(AddTileButton).trigger('click');
+    const colorComposer = wrapper.get('.composer-stub');
+    expect(colorComposer.attributes('data-color')).not.toBe('#111827');
+    await colorComposer.get('.composer-add-color').trigger('click');
+    await flushPromises();
+    expect(wrapper.emitted('update')?.at(-1)?.[0]).toEqual({ kind: 'color', color: '#abcdef' });
+    wrapper.unmount();
+
+    capture.getPreferences.mockResolvedValue(preferences([radialGradient]));
+    const gradientWrapper = await mountPanel(colorClip({ kind: 'gradient', gradient: radialGradient }));
+    await gradientWrapper.findComponent(AddTileButton).trigger('click');
+    const gradientComposer = gradientWrapper.get('.composer-stub');
+    expect(gradientComposer.attributes('data-gradient')).not.toBe(JSON.stringify(radialGradient));
+    await gradientComposer.get('.composer-add-gradient').trigger('click');
+    await flushPromises();
+    expect(gradientWrapper.emitted('update')?.at(-1)?.[0]).toMatchObject({ kind: 'gradient' });
+    gradientWrapper.unmount();
+  });
+
   it('emits a color fill when a shared solid preset is selected', async () => {
     const wrapper = await mountPanel(colorClip());
     const white = wrapper.findAll('.preset-tile').find((tile) => tile.attributes('aria-label') === '#ffffff');
@@ -130,5 +281,63 @@ describe('ColorLayerPropertiesPanel', () => {
     await radial!.trigger('click');
     expect(wrapper.emitted('update')?.at(-1)?.[0]).toEqual({ kind: 'gradient', gradient: radialGradient });
     wrapper.unmount();
+  });
+
+  it('relays custom radius drag interaction state through the color layer panel', async () => {
+    const wrapper = await mountPanel(
+      colorClip(
+        { kind: 'color', color: '#111827' },
+        {
+          cornerRadius: 32,
+          shadowSize: 'none',
+          opacityEnabled: false,
+          backdropBlurEnabled: false,
+        },
+      ),
+    );
+    const radiusSlider = wrapper
+      .findAll('.big-slider-stub')
+      .find((slider) => slider.attributes('data-label')?.toLowerCase().includes('radius'));
+
+    expect(radiusSlider).toBeDefined();
+    await radiusSlider!.trigger('pointerdown');
+    expect(wrapper.emitted('corner-radius-interaction')).toEqual([[true]]);
+
+    await radiusSlider!.trigger('pointerup');
+    expect(wrapper.emitted('corner-radius-interaction')).toEqual([[true], [false]]);
+    wrapper.unmount();
+  });
+
+  it('keeps color layer handles muted for 500 ms after a radius preset change', async () => {
+    vi.useFakeTimers();
+    try {
+      const wrapper = await mountPanel(
+        colorClip(
+          { kind: 'color', color: '#111827' },
+          {
+            cornerRadius: 'sm',
+            shadowSize: 'none',
+            opacityEnabled: false,
+            backdropBlurEnabled: false,
+          },
+        ),
+      );
+      const mediumPreset = wrapper.findAll('.appearance-controls .btn').find((button) => button.text() === '16px');
+
+      expect(mediumPreset).toBeDefined();
+      await mediumPreset!.trigger('click');
+      expect(wrapper.emitted('corner-radius-interaction')).toEqual([[true]]);
+
+      vi.advanceTimersByTime(499);
+      await Promise.resolve();
+      expect(wrapper.emitted('corner-radius-interaction')).toEqual([[true]]);
+
+      vi.advanceTimersByTime(1);
+      await Promise.resolve();
+      expect(wrapper.emitted('corner-radius-interaction')).toEqual([[true], [false]]);
+      wrapper.unmount();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

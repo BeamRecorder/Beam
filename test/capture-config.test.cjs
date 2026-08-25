@@ -194,11 +194,7 @@ test('keeps a region for Linux Portal monitors and rejects it for windows', () =
   };
   const linux = { ...environment, platform: 'linux' };
   const region = { x: 0.1, y: 0.2, width: 0.5, height: 0.4 };
-  const monitor = buildDefaultCaptureConfig(
-    portalCatalog,
-    { screenId: 'portal:monitor', region },
-    linux,
-  );
+  const monitor = buildDefaultCaptureConfig(portalCatalog, { screenId: 'portal:monitor', region }, linux);
   assert.deepEqual(monitor.screen, {
     mode: 'portal',
     kind: 'monitor',
@@ -211,12 +207,7 @@ test('keeps a region for Linux Portal monitors and rejects it for windows', () =
     'window',
   );
   assert.throws(
-    () =>
-      buildDefaultCaptureConfig(
-        portalCatalog,
-        { screenKind: 'window', screenId: 'portal:window', region },
-        linux,
-      ),
+    () => buildDefaultCaptureConfig(portalCatalog, { screenKind: 'window', screenId: 'portal:window', region }, linux),
     /uniquement pour un écran/,
   );
 });

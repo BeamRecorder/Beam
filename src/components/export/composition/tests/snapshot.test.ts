@@ -2,10 +2,11 @@ import { reactive } from 'vue';
 import { describe, expect, it } from 'vitest';
 import { createCompositionSnapshot } from '../snapshot';
 import { DEFAULT_OUTPUT_CANVAS } from '../../../video-editor/canvas/output-canvas';
-import type { ClipComposition } from '~/media/shared/composition-types';
+import type { ClipComposition, ShapeClip } from '~/media/shared/composition-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import { MACOS_CURSOR_PACK } from '../../../video-editor/properties/cursor/cursor-packs';
 import { createDefaultCursorAutoHideSettings } from '../../../../api/types/cursor-settings';
+import type { ZoomElement } from '../../../video-editor/zoom/zoom-types';
 
 const composition = (): ClipComposition => ({
   schemaVersion: 6,
@@ -185,7 +186,7 @@ describe('createCompositionSnapshot', () => {
   });
 
   it('keeps an immutable copy of zooms and composition', () => {
-    const zooms = [
+    const zooms: ZoomElement[] = [
       {
         id: 'z',
         sessionId: 's',
@@ -202,6 +203,86 @@ describe('createCompositionSnapshot', () => {
     input.composition.clips[0].timelineDurationMs = 1_000;
     expect(snapshot.zooms[0].focus.cx).toBe(0.5);
     expect(snapshot.composition.clips[0].timelineDurationMs).toBe(4_000);
+  });
+
+  it('preserves and clones a complete ShapeClip for export', () => {
+    const shape: ShapeClip = {
+      id: 'shape',
+      kind: 'shape',
+      name: 'Callout',
+      trackId: 'shape-track',
+      assetId: '',
+      timelineStartMs: 500,
+      timelineDurationMs: 2_500,
+      sourceInMs: 0,
+      sourceDurationMs: 2_500,
+      playbackRate: 1,
+      transitions: { entry: { preset: { kind: 'fade' }, durationMs: 250 }, exit: null },
+      enabled: true,
+      order: 1,
+      transform: { x: 0.17, y: 0.23, width: 0.41, height: 0.37 },
+      family: 'shape',
+      preset: 'rounded-rectangle',
+      fillColor: '#112233',
+      borderColor: '#445566',
+      borderWidth: 7,
+      cornerRadius: 23,
+      arrowThickness: 36,
+      arrowHeadSize: 48,
+      rotation: 137,
+      opacityEnabled: true,
+      opacity: 42,
+      backdropBlur: 71,
+      shadowEnabled: true,
+      shadowColor: '#010203',
+      shadowBlur: 53,
+      shadowDirection: 'top-left',
+    };
+    const input = base();
+    input.composition.clips.push(shape);
+    const expectedShape = JSON.parse(JSON.stringify(shape)) as ShapeClip;
+
+    const snapshot = createCompositionSnapshot(input);
+
+    expect(snapshot.composition.clips[1]).toEqual(expectedShape);
+
+    shape.transform.x = 0.91;
+    shape.rotation = 0;
+    shape.opacityEnabled = false;
+    shape.backdropBlur = 0;
+    shape.shadowEnabled = false;
+    shape.shadowColor = '#ffffff';
+    shape.shadowBlur = 0;
+    shape.shadowDirection = 'all';
+
+    expect(snapshot.composition.clips[1]).toEqual(expectedShape);
+  });
+
+  it('snapshots 3D projection settings without retaining mutable zoom references', () => {
+    const zooms: ZoomElement[] = [
+      {
+        id: 'perspective',
+        sessionId: 'session',
+        startMs: 0,
+        endMs: 1_000,
+        focus: { cx: 0.2, cy: 0.8 },
+        depth: 3 as const,
+        mode: 'manual' as const,
+        projection: '3d' as const,
+        tiltIntensity: 0.72,
+      },
+    ];
+    const snapshot = createCompositionSnapshot({ ...base(), zooms });
+
+    zooms[0].projection = '2d';
+    zooms[0].tiltIntensity = 0;
+    zooms[0].focus.cx = 0.9;
+
+    expect(snapshot.zooms[0]).toMatchObject({
+      projection: '3d',
+      tiltIntensity: 0.72,
+      focus: { cx: 0.2, cy: 0.8 },
+    });
   });
 
   it('copies the dedicated zoom motion blur settings into the export snapshot', () => {

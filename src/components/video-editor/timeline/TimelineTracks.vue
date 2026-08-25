@@ -12,13 +12,17 @@ import { EMPTY_CLIP_TRANSITIONS } from '~/media/shared/clip-transitions';
 import { DEFAULT_OUTPUT_CANVAS } from '../canvas/output-canvas';
 import { useTimelineClipboardShortcuts } from './composables/useTimelineClipboardShortcuts';
 import TimelineTrackHeaders from './TimelineTrackHeaders.vue';
+import { normalizeZoomProjection } from '../zoom/zoom-types';
 const { t } = useTranslate('TimelineTracks');
+const { t: tCanvas } = useTranslate('CanvasPanel');
+const { t: tToolbar } = useTranslate('TimelineToolbar');
 const props = withDefaults(defineProps<TimelineTracksProps>(), {
   isSnappingEnabled: true,
   includeAudioInExport: true,
   projectId: null,
   recentPaste: null,
   selectedClipIds: () => [],
+  selectedZoomIds: () => [],
   canvas: () => ({ ...DEFAULT_OUTPUT_CANVAS, transitions: { ...EMPTY_CLIP_TRANSITIONS } }),
 });
 const emit = defineEmits<TimelineTracksEmits>();
@@ -65,10 +69,13 @@ const {
   hoverZoomDurationMs,
   hoverCaptionTimeMs,
   hoverCaptionDurationMs,
+  hoverVisualPlacements,
+  visualKindFor,
   hoverAt,
   leaveTrack,
   addAt,
   selectTrack,
+  selectZoomTrack,
   zoomScale,
   draggedTrackId,
   beginReorder,
@@ -80,6 +87,24 @@ const selectedClipIdSet = computed(
   () =>
     new Set(props.selectedClipIds?.length ? props.selectedClipIds : props.selectedClipId ? [props.selectedClipId] : []),
 );
+const selectedZoomIdSet = computed(
+  () =>
+    new Set(props.selectedZoomIds?.length ? props.selectedZoomIds : props.selectedZoomId ? [props.selectedZoomId] : []),
+);
+const visualElementLabel = (track: (typeof visualTracks.value)[number]) => {
+  const kind = visualKindFor(track);
+  return kind === 'color'
+    ? tCanvas('color')
+    : kind === 'shape'
+      ? tCanvas('shapesAndArrows')
+      : kind === 'blur'
+        ? t('blur')
+        : kind === 'image'
+          ? tCanvas('image')
+          : '';
+};
+const visualAddLabel = (track: (typeof visualTracks.value)[number]) =>
+  `${tToolbar('add')} ${visualElementLabel(track)}`;
 const {
   contextMenuState,
   contextMenuItems,
@@ -137,6 +162,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
           />
           <TimelineTrackHeaders
             :visual-tracks="visualTracks"
+            :zoom-elements="zoomElements"
             :keyboard-caption-clips="keyboardCaptionClips"
             :text-caption-layers="textCaptionLayers"
             :system-audio-clips="systemAudioClips"
@@ -145,7 +171,10 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
             :include-audio-in-export="includeAudioInExport"
             :dragged-track-id="draggedTrackId"
             :dragged-caption-id="draggedCaptionId"
+            :selected-clip-ids="[...selectedClipIdSet]"
+            :selected-zoom-ids="[...selectedZoomIdSet]"
             :select-track="selectTrack"
+            :select-zoom-track="selectZoomTrack"
             :begin-reorder="beginReorder"
             :begin-caption-reorder="beginCaptionReorder"
             :open-track-context-menu="openTrackContextMenu"
@@ -218,7 +247,28 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
               :class="{ disabled: !track.clips.some((clip) => clip.enabled), dragging: draggedTrackId === track.id }"
               @contextmenu="openTrackContextMenu($event, 'visual', track.id)"
             >
-              <div class="track-content visual-content">
+              <div
+                class="track-content visual-content"
+                :class="{ 'addable-content': visualKindFor(track) }"
+                :title="visualKindFor(track) ? visualAddLabel(track) : undefined"
+                @pointerdown.stop
+                @mousemove="visualKindFor(track) && hoverAt($event, track)"
+                @mouseleave="visualKindFor(track) && leaveTrack(track)"
+                @click.stop="visualKindFor(track) && addAt($event, track)"
+              >
+                <div
+                  v-if="hoverVisualPlacements[`visual:${track.id}`]"
+                  class="visual-add-indicator preview-ghost"
+                  :class="`kind-${visualKindFor(track)}`"
+                  :style="
+                    percentageStyle(
+                      hoverVisualPlacements[`visual:${track.id}`]!.startMs,
+                      hoverVisualPlacements[`visual:${track.id}`]!.durationMs,
+                    )
+                  "
+                >
+                  + {{ visualAddLabel(track) }}
+                </div>
                 <TimelineClip
                   v-for="clip in track.clips"
                   :key="clip.id"
@@ -264,7 +314,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 type="button"
                 class="cursor-zoom-indicator"
                 :class="{
-                  selected: selectedZoomId === zoom.id,
+                  selected: selectedZoomIdSet.has(zoom.id),
                   'paste-arrival': recentPaste?.type === 'zoom' && recentPaste.id === zoom.id,
                 }"
                 :style="
@@ -283,7 +333,17 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                     >{{ (trimStateFor(zoom.id)!.durationMs / 1000).toFixed(1) }}s</span
                   >
                 </span>
-                <span class="clip-center-title">{{ zoomScale(zoom.depth).toFixed(2) }}×</span>
+                <span class="zoom-clip-labels">
+                  <span class="zoom-meta-badge zoom-projection-badge">
+                    {{ normalizeZoomProjection(zoom.projection) === '3d' ? '3D' : '2D' }}
+                  </span>
+                  <span class="clip-center-title zoom-title">
+                    {{ t('zoomTitle', { level: zoomScale(zoom.depth).toFixed(2) }) }}
+                  </span>
+                  <span class="zoom-meta-badge zoom-mode-badge">
+                    {{ zoom.mode === 'auto' ? t('zoomModeAuto') : t('zoomModeManual') }}
+                  </span>
+                </span>
                 <span
                   class="trim-handle end"
                   :title="t('trimEnd')"
@@ -435,4 +495,5 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
   </div>
 </template>
 <style scoped src="./timeline-tracks.css"></style>
+<style scoped src="./timeline-zoom-badges.css"></style>
 <style src="./timeline-paste-feedback.css"></style>

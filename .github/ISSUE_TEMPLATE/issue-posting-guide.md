@@ -4,7 +4,6 @@ about: Issue template
 title: ''
 labels: ''
 assignees: ''
-
 ---
 
 ## Bug Report — Quick Description
@@ -13,9 +12,10 @@ assignees: ''
 Briefly explain what went wrong.
 
 **Steps to reproduce:**
-1.
-2.
-3.
+
+1. ...
+2. ...
+3. ...
 
 **Expected behavior:**
 What should have happened?

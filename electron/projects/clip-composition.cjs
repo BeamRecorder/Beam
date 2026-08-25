@@ -1,6 +1,8 @@
 const path = require('path');
 const { normalizeCaption } = require('./composition-captions.cjs');
 const { normalizeColorFill } = require('./composition-color-fill.cjs');
+const { normalizeColorLayerStyle } = require('./composition-color-layer.cjs');
+const { normalizeShapeLayerStyle } = require('./composition-shape-layer.cjs');
 const { normalizePhoneFrameFill } = require('./composition-phone-frame-fill.cjs');
 const { historicalAppearance } = require('./composition-appearance.cjs');
 const { withoutInheritedKeyboardText, withHistoricalTypography } = require('./composition-migration-helpers.cjs');
@@ -12,9 +14,9 @@ const {
   normalizeTrackOrders,
   validateTrackLayout,
 } = require('./composition-tracks.cjs');
-
-const schemaVersion = 12;
-const previousCompositionSchemaVersion = 11;
+const schemaVersion = 13;
+const previousCompositionSchemaVersion = 12;
+const colorLayerSchemaVersion = 11;
 const captionPreferenceRepairSchemaVersion = 10;
 const keyboardCaptionRetrySchemaVersion = 9;
 const captionHighlightSchemaVersion = 8;
@@ -26,7 +28,7 @@ const previousSchemaVersion = 3;
 const captionTypeSchemaVersion = 2;
 const legacySchemaVersion = 1;
 const mediaKinds = new Set(['video', 'image', 'audio']);
-const clipKinds = new Set(['screen', 'video', 'image', 'webcam', 'color', 'blur', 'audio', 'caption']);
+const clipKinds = new Set(['screen', 'video', 'image', 'webcam', 'color', 'shape', 'blur', 'audio', 'caption']);
 const cameraLayoutPresets = new Set([
   'custom',
   'floating-top-left',
@@ -67,7 +69,6 @@ const rectangle = (value, label) => {
     throw new Error(`${label} invalide`);
   return { x: next.x, y: next.y, width: next.width, height: next.height };
 };
-
 const appearance = (value) => {
   if (!value || typeof value !== 'object') throw new Error('Apparence de clip invalide');
   const radius = finite(value.cornerRadius)
@@ -111,7 +112,6 @@ const appearance = (value) => {
     phoneFrameFill: normalizePhoneFrameFill(value.phoneFrameFill),
   };
 };
-
 function normalizeComposition(value) {
   if (!value) throw new Error('Composition absente');
   if (
@@ -213,6 +213,17 @@ function normalizeComposition(value) {
         assetId: '',
         transform: rectangle(clip.transform, 'Transformation'),
         fill: normalizeColorFill(clip.fill),
+        ...normalizeColorLayerStyle(clip),
+      };
+    }
+    if (clip.kind === 'shape') {
+      if (!id(clip.trackId)) throw new Error('Identifiant de piste visuelle invalide');
+      return {
+        ...common,
+        trackId: clip.trackId,
+        assetId: '',
+        transform: rectangle(clip.transform, 'Transformation'),
+        ...normalizeShapeLayerStyle(clip),
       };
     }
     if (clip.kind === 'blur') {
@@ -326,7 +337,6 @@ function normalizeComposition(value) {
     clips: normalizedClips,
   };
 }
-
 function migrateComposition(value, showBackground, historicalSessionIds = []) {
   if (value?.schemaVersion === schemaVersion) return normalizeComposition(value);
   if (
@@ -342,6 +352,7 @@ function migrateComposition(value, showBackground, historicalSessionIds = []) {
       captionHighlightSchemaVersion,
       keyboardCaptionRetrySchemaVersion,
       captionPreferenceRepairSchemaVersion,
+      colorLayerSchemaVersion,
       previousCompositionSchemaVersion,
     ].includes(value.schemaVersion) ||
     !Array.isArray(value.assets) ||
@@ -357,6 +368,7 @@ function migrateComposition(value, showBackground, historicalSessionIds = []) {
       captionHighlightSchemaVersion,
       keyboardCaptionRetrySchemaVersion,
       captionPreferenceRepairSchemaVersion,
+      colorLayerSchemaVersion,
       previousCompositionSchemaVersion,
     ].includes(value.schemaVersion)
   ) {
@@ -382,6 +394,7 @@ function migrateComposition(value, showBackground, historicalSessionIds = []) {
         captionHighlightSchemaVersion,
         keyboardCaptionRetrySchemaVersion,
         captionPreferenceRepairSchemaVersion,
+        colorLayerSchemaVersion,
         previousCompositionSchemaVersion,
       ].includes(value.schemaVersion)
         ? repairMigratedTrackIds(value.clips).map((clip) =>
@@ -476,7 +489,6 @@ function migrateComposition(value, showBackground, historicalSessionIds = []) {
     ),
   });
 }
-
 module.exports = {
   compositionSchemaVersion: schemaVersion,
   emptyComposition,
