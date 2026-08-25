@@ -347,6 +347,10 @@
   },
   "ExportPopover": {
     "exportVideo": "Video exportieren",
+    "exportVideoDuration": "Video exportieren ({seconds} s)",
+    "exportUntilPlayhead": "Bis zum Abspielkopf exportieren",
+    "exportUntilPlayheadDesc": "Begrenzt das Video vom Anfang bis zur aktuellen Position des Abspielkopfs.",
+    "exportUntilPlayheadEnabled": "Der Export bis zum Abspielkopf ist aktiviert. Das Video wird bis zu dieser Position exportiert.",
     "format": "Format",
     "webm": "WebM",
     "mp4": "MP4",

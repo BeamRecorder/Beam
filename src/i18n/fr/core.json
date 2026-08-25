@@ -352,6 +352,10 @@
   },
   "ExportPopover": {
     "exportVideo": "Exporter la vidéo",
+    "exportVideoDuration": "Exporter la vidéo ({seconds} s)",
+    "exportUntilPlayhead": "Exporter jusqu’à la tête de lecture",
+    "exportUntilPlayheadDesc": "Limite la vidéo du début jusqu’à la position actuelle de la tête de lecture.",
+    "exportUntilPlayheadEnabled": "L’export à la tête de lecture est activé. La vidéo sera exportée jusqu’à sa position.",
     "format": "Format",
     "webm": "WebM",
     "mp4": "MP4",

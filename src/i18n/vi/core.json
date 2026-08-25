@@ -347,6 +347,10 @@
   },
   "ExportPopover": {
     "exportVideo": "Xuất Video",
+    "exportVideoDuration": "Xuất video ({seconds} giây)",
+    "exportUntilPlayhead": "Xuất đến đầu phát",
+    "exportUntilPlayheadDesc": "Giới hạn video từ đầu đến vị trí hiện tại của đầu phát.",
+    "exportUntilPlayheadEnabled": "Đã bật xuất đến đầu phát. Video sẽ được xuất đến vị trí của đầu phát.",
     "format": "Định dạng",
     "webm": "WebM",
     "mp4": "MP4",

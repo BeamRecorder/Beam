@@ -347,6 +347,10 @@
   },
   "ExportPopover": {
     "exportVideo": "동영상 내보내기",
+    "exportVideoDuration": "동영상 내보내기 ({seconds}초)",
+    "exportUntilPlayhead": "재생 헤드까지 내보내기",
+    "exportUntilPlayheadDesc": "동영상 시작부터 현재 재생 헤드 위치까지만 내보냅니다.",
+    "exportUntilPlayheadEnabled": "재생 헤드까지 내보내기가 활성화되었습니다. 동영상은 재생 헤드 위치까지만 내보내집니다.",
     "format": "형식",
     "webm": "WebM",
     "mp4": "MP4",

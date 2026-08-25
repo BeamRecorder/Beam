@@ -352,6 +352,10 @@
   },
   "ExportPopover": {
     "exportVideo": "Export Video",
+    "exportVideoDuration": "Export Video ({seconds}s)",
+    "exportUntilPlayhead": "Export until playhead",
+    "exportUntilPlayheadDesc": "Limit the video from the start to the current playhead position.",
+    "exportUntilPlayheadEnabled": "Export at playhead is enabled. The video will export until the playhead position.",
     "format": "Format",
     "webm": "WebM",
     "mp4": "MP4",

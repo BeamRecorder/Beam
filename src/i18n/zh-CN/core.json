@@ -347,6 +347,10 @@
   },
   "ExportPopover": {
     "exportVideo": "导出视频",
+    "exportVideoDuration": "导出视频（{seconds} 秒）",
+    "exportUntilPlayhead": "导出至播放头",
+    "exportUntilPlayheadDesc": "将视频限制为从开头到当前播放头位置。",
+    "exportUntilPlayheadEnabled": "已启用导出至播放头。视频将导出到播放头所在位置。",
     "format": "格式",
     "webm": "WebM",
     "mp4": "MP4",

@@ -537,6 +537,7 @@ onBeforeUnmount(() => {
     />
     <Topbar
       :export-request="exportRequest"
+      :playhead-seconds="currentTime"
       :project="project"
       :is-saving="editorState.isSaving.value"
       :can-undo="canUndo"

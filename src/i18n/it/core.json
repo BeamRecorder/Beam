@@ -347,6 +347,10 @@
   },
   "ExportPopover": {
     "exportVideo": "Esporta video",
+    "exportVideoDuration": "Esporta video ({seconds} s)",
+    "exportUntilPlayhead": "Esporta fino alla testina",
+    "exportUntilPlayheadDesc": "Limita il video dall’inizio alla posizione corrente della testina.",
+    "exportUntilPlayheadEnabled": "L’esportazione fino alla testina è attiva. Il video verrà esportato fino alla sua posizione.",
     "format": "Formato",
     "webm": "WebM",
     "mp4": "MP4",

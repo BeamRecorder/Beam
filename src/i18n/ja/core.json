@@ -347,6 +347,10 @@
   },
   "ExportPopover": {
     "exportVideo": "動画を書き出す",
+    "exportVideoDuration": "動画を書き出す（{seconds}秒）",
+    "exportUntilPlayhead": "再生ヘッドまで書き出す",
+    "exportUntilPlayheadDesc": "動画の先頭から現在の再生ヘッド位置までに制限します。",
+    "exportUntilPlayheadEnabled": "再生ヘッドまでの書き出しが有効です。動画は再生ヘッド位置まで書き出されます。",
     "format": "形式",
     "webm": "WebM",
     "mp4": "MP4",

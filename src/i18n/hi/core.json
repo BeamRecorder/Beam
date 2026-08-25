@@ -347,6 +347,10 @@
   },
   "ExportPopover": {
     "exportVideo": "वीडियो एक्सपोर्ट करें",
+    "exportVideoDuration": "वीडियो एक्सपोर्ट करें ({seconds} सेकंड)",
+    "exportUntilPlayhead": "प्लेहेड तक एक्सपोर्ट करें",
+    "exportUntilPlayheadDesc": "वीडियो को शुरुआत से वर्तमान प्लेहेड स्थिति तक सीमित करता है।",
+    "exportUntilPlayheadEnabled": "प्लेहेड तक एक्सपोर्ट चालू है। वीडियो प्लेहेड की स्थिति तक एक्सपोर्ट होगा।",
     "format": "फ़ॉर्मैट",
     "webm": "WebM",
     "mp4": "MP4",

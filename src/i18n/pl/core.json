@@ -347,6 +347,10 @@
   },
   "ExportPopover": {
     "exportVideo": "Eksportuj wideo",
+    "exportVideoDuration": "Eksportuj wideo ({seconds} s)",
+    "exportUntilPlayhead": "Eksportuj do głowicy odtwarzania",
+    "exportUntilPlayheadDesc": "Ogranicza wideo od początku do bieżącej pozycji głowicy odtwarzania.",
+    "exportUntilPlayheadEnabled": "Eksport do głowicy jest włączony. Wideo zostanie wyeksportowane do jej pozycji.",
     "format": "Format",
     "webm": "WebM",
     "mp4": "MP4",

@@ -55,10 +55,10 @@ const Popover = {
 };
 const Button = {
   inheritAttrs: false,
-  props: ['icon', 'iconOnly', 'tooltip', 'tooltipDisabled'],
+  props: ['icon', 'iconOnly', 'tooltip', 'tooltipDisabled', 'disabled', 'loading'],
   emits: ['click'],
   template:
-    '<button v-bind="$attrs" class="button-stub" :data-tooltip="tooltip || undefined" :data-tooltip-disabled="tooltipDisabled ? \'true\' : undefined" :data-icon-only="iconOnly ? \'true\' : undefined" @click="$emit(\'click\')"><slot /></button>',
+    '<button v-bind="$attrs" class="button-stub" :disabled="disabled" :data-tooltip="tooltip || undefined" :data-tooltip-disabled="tooltipDisabled ? \'true\' : undefined" :data-icon-only="iconOnly ? \'true\' : undefined" @click="$emit(\'click\')"><slot /></button>',
 };
 const ButtonGroup = {
   template: '<div class="button-group-stub"><slot /></div>',
@@ -103,11 +103,80 @@ beforeEach(() => {
 });
 
 describe('ExportPopover', () => {
-  const mountExport = () =>
+  const mountExport = (playheadSeconds?: number) =>
     mount(ExportPopover, {
-      props: { request },
+      props: { request, ...(playheadSeconds === undefined ? {} : { playheadSeconds }) },
       global: { stubs: { Popover, Button, ButtonGroup, ProgressBar, CopyButton } },
     });
+  const openMoreOptions = async (wrapper: ReturnType<typeof mountExport>) => {
+    await wrapper.get('.accordion-trigger').trigger('click');
+  };
+  const exportAction = (wrapper: ReturnType<typeof mountExport>) =>
+    wrapper.findAll('.export-popover .button-stub').find((button) => button.text().includes('Export'))!;
+  const playheadSwitch = (wrapper: ReturnType<typeof mountExport>) =>
+    wrapper
+      .findAll('[role="switch"]')
+      .find((toggle) => toggle.attributes('aria-label') === i18n.global.t('ExportPopover.exportUntilPlayhead'))!;
+
+  it('keeps the playhead option off by default and exports the full snapshot duration', async () => {
+    const wrapper = mountExport(4);
+    expect(wrapper.get('.accordion-trigger').attributes('aria-expanded')).toBe('false');
+
+    await openMoreOptions(wrapper);
+    expect(playheadSwitch(wrapper).attributes('aria-checked')).toBe('false');
+    expect(exportAction(wrapper).text()).toBe('Export Video');
+
+    await exportAction(wrapper).trigger('click');
+
+    expect(mockJob.start).toHaveBeenCalledWith(
+      expect.objectContaining({ snapshot: expect.objectContaining({ duration: request.snapshot.duration }) }),
+    );
+  });
+
+  it('exports through the live playhead with a duration label and explanatory note', async () => {
+    const wrapper = mountExport(5.25);
+    await openMoreOptions(wrapper);
+    await playheadSwitch(wrapper).trigger('click');
+
+    expect(exportAction(wrapper).text()).toBe('Export Video (5.3s)');
+    expect(wrapper.get('.playhead-export-note').text()).toBe(i18n.global.t('ExportPopover.exportUntilPlayheadEnabled'));
+
+    await exportAction(wrapper).trigger('click');
+
+    expect(mockJob.start).toHaveBeenCalledWith(
+      expect.objectContaining({ snapshot: expect.objectContaining({ duration: 5.25 }) }),
+    );
+  });
+
+  it('updates the duration label live and clamps the playhead to the snapshot end', async () => {
+    const wrapper = mountExport(3);
+    await openMoreOptions(wrapper);
+    await playheadSwitch(wrapper).trigger('click');
+
+    await wrapper.setProps({ playheadSeconds: 7.5 });
+    expect(exportAction(wrapper).text()).toBe('Export Video (7.5s)');
+
+    await wrapper.setProps({ playheadSeconds: 99 });
+    expect(exportAction(wrapper).text()).toBe('Export Video (12s)');
+    await exportAction(wrapper).trigger('click');
+    expect(mockJob.start).toHaveBeenCalledWith(
+      expect.objectContaining({ snapshot: expect.objectContaining({ duration: request.snapshot.duration }) }),
+    );
+  });
+
+  it.each([0, -1, Number.NaN])(
+    'disables export and does not start for invalid playhead %s',
+    async (playheadSeconds) => {
+      const wrapper = mountExport(playheadSeconds);
+      await openMoreOptions(wrapper);
+      await playheadSwitch(wrapper).trigger('click');
+
+      const action = exportAction(wrapper);
+      expect(action.attributes('disabled')).toBeDefined();
+      await action.trigger('click');
+      expect(mockJob.start).not.toHaveBeenCalled();
+    },
+  );
 
   it('keeps audio enabled by default and includes it in the export request', async () => {
     const wrapper = mountExport();

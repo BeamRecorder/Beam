@@ -190,6 +190,23 @@ describe('internationalization', () => {
     }
   });
 
+  it('provides all playhead export labels in every supported locale', () => {
+    const keys = [
+      'exportVideoDuration',
+      'exportUntilPlayhead',
+      'exportUntilPlayheadDesc',
+      'exportUntilPlayheadEnabled',
+    ];
+
+    for (const locale of SUPPORTED_LOCALES) {
+      setCurrentLocale(locale);
+      for (const key of keys) {
+        expect(i18n.global.te(`ExportPopover.${key}`, locale), `${locale}: missing ExportPopover.${key}`).toBe(true);
+        expect(i18n.global.t(`ExportPopover.${key}`, { seconds: '5' })).not.toBe(`ExportPopover.${key}`);
+      }
+    }
+  });
+
   it('uses the compact Performance title in the default locale', () => {
     setCurrentLocale('en');
     expect(i18n.global.t('PreviewPerformance.title')).toBe('Performance');
