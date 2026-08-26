@@ -204,6 +204,7 @@ fn run_linux_native_capture() -> Result<serde_json::Value, capture::CaptureError
             capture_shortcuts: false,
             capture_shape: false,
         },
+        excluded_window_handles: &[],
         start_ns: 0,
         start_gate: gate.clone(),
         consumer: ScreenConsumer::Samples(Box::new(ProbeSink(summary.clone()))),

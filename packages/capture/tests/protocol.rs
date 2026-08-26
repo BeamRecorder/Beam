@@ -65,6 +65,7 @@ fn engine_eof_finalizes_an_active_session() -> Result<(), Box<dyn Error>> {
         failure_policy: capture::model::FailurePolicy::FailFast,
         region: None,
         excluded_process_id: None,
+        excluded_window_handles: vec![],
     };
     let mut child = Command::new(env!("CARGO_BIN_EXE_capture-engine"))
         .stdin(Stdio::piped())

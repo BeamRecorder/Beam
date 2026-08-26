@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Check, Move, RotateCcw, X } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import Select from '~/ui/select/Select.vue';
@@ -203,6 +203,15 @@ onMounted(() => {
   });
   void loadSavedPreset();
 });
+watch(
+  region,
+  (next) => {
+    if (options.value?.context === 'quick-snip' && next?.width && next.height) {
+      capture.updateScreenRegion({ ...next });
+    }
+  },
+  { deep: true },
+);
 onBeforeUnmount(() => unsubscribe?.());
 </script>
 
@@ -231,7 +240,7 @@ onBeforeUnmount(() => unsubscribe?.());
         {{ Math.round(region.height * (options?.bounds.height || 0)) }}</span
       >
     </div>
-    <aside v-if="isSelecting" class="region-toolbar" @pointerdown.stop>
+    <aside v-if="isSelecting && options?.context !== 'quick-snip'" class="region-toolbar" @pointerdown.stop>
       <span class="region-instruction"><Move :size="16" /> {{ t('instruction') }}</span>
       <div class="region-preset-picker">
         <Select

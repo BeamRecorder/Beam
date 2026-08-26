@@ -36,6 +36,8 @@ const { createSystemAudioStorage, registerSystemAudioIpc } = require('./system-a
 const { createWhisperModelStore } = require('./captions/whisper-model-store.cjs');
 const { registerWhisperIpc } = require('./captions/whisper-ipc.cjs');
 const { createPreferencesStore } = require('./preferences/preferences-store.cjs');
+const { createEditorPresetStore } = require('./presets/editor-preset-store.cjs');
+const { registerEditorPresetIpc } = require('./presets/editor-preset-ipc.cjs');
 const { registerPreferencesIpc } = require('./preferences/preferences-ipc.cjs');
 const { applySpellCheckPreferences } = require('./preferences/spell-check.cjs');
 const { registerSpellCheckContextMenu } = require('./preferences/spell-check-context-menu.cjs');
@@ -55,6 +57,8 @@ const { createShutdownCoordinator } = require('./lifecycle/shutdown-coordinator.
 const { createShutdownAwareIpc } = require('./lifecycle/shutdown-ipc.cjs');
 const { registerFatalLifecycle } = require('./lifecycle/fatal-events.cjs');
 const { initializeSingleInstance } = require('./lifecycle/single-instance.cjs');
+const { configureDevelopmentProfile } = require('./lifecycle/development-profile.cjs');
+const { createQuickSnipService } = require('./quick-snip/quick-snip-service.cjs');
 
 const DISCORD_INVITE_URL = 'https://discord.gg/6Q6v2xUCB';
 const GITHUB_REPOSITORY_URL = 'https://github.com/BeamRecorder/Beam';
@@ -75,6 +79,7 @@ const logStartup = (step) => {
 };
 
 const applicationRoot = path.join(__dirname, '..');
+configureDevelopmentProfile(app);
 if (process.platform === 'linux') {
   // Use Chromium's XDG GlobalShortcuts portal on desktops that provide it.
   app.commandLine.appendSwitch('enable-features', 'GlobalShortcutsPortal');
@@ -254,6 +259,11 @@ function initializeApplication() {
     registerInputAccessIpc(applicationIpc, inputAccess);
     const userPaths = createUserPaths(app.getPath('videos'));
     const preferencesStore = createPreferencesStore(userPaths.preferences, { platform: process.platform });
+    const editorPresetStore = createEditorPresetStore(userPaths.editorPresets, {
+      readPreferences: () => preferencesStore.read(),
+    });
+    let quickSnipController = null;
+    let trayManager = null;
     const applySpellCheck = (preferences) =>
       applySpellCheckPreferences({
         electronSession: session.defaultSession,
@@ -279,6 +289,10 @@ function initializeApplication() {
     setTimeout(() => teleprompterWindow.prepare(), 0);
     const dispatchShortcut = (id) => {
       if (id.startsWith('teleprompter.')) return teleprompterWindow.handleShortcut(id);
+      if (id === 'quickSnip.toggle') {
+        void quickSnipController?.toggle().catch((error) => console.error('[Quick Snip] toggle failed:', error));
+        return true;
+      }
       BrowserWindow.getAllWindows().forEach((win) => win.webContents.send('preferences:shortcut', id));
       return true;
     };
@@ -311,6 +325,7 @@ function initializeApplication() {
         }
       },
     });
+    registerEditorPresetIpc({ ipcMain: applicationIpc, BrowserWindow, store: editorPresetStore });
     logStartup('Desktop loopback policy registered.');
     registerCaptureIpc({
       ipcMain,
@@ -321,6 +336,14 @@ function initializeApplication() {
       userPaths,
       trackStorages: [cameraStorage, microphoneStorage, systemAudioStorage],
       canAcceptWork: () => coordinator.canAcceptWork(),
+      canStartRecording: (event) => {
+        const senderUrl = event?.sender?.getURL?.() || '';
+        if (senderUrl.includes('quickSnipCrop=1')) return true;
+        return (
+          !quickSnipController ||
+          ['idle', 'completed', 'failed', 'canceled'].includes(quickSnipController.state().state)
+        );
+      },
     });
     logStartup('Capture IPC registered.');
     registerCameraIpc({ ipcMain: applicationIpc, storage: cameraStorage });
@@ -376,6 +399,24 @@ function initializeApplication() {
       platform: process.platform,
       screen,
     });
+    const quickSnipService = createQuickSnipService({
+      BrowserWindow,
+      applicationIpc,
+      applicationRoot,
+      isPackaged: app.isPackaged,
+      platform: process.platform,
+      screen,
+      appIconPath,
+      userPaths,
+      preferencesStore,
+      presetStore: editorPresetStore,
+      projectStore,
+      regionOverlay: screenRegionOverlay,
+      nativeImage: require('electron').nativeImage,
+      clipboard: require('electron').clipboard,
+      getTrayManager: () => trayManager,
+    });
+    quickSnipController = quickSnipService.controller;
     applicationIpc.on('camera-overlay:configure', (_event, state) => cameraOverlay.configure(state));
     applicationIpc.on('camera-overlay:set-active', (_event, active) => cameraOverlay.setActive(active));
     applicationIpc.on('camera-overlay:reset-placement', () => cameraOverlay.resetPlacement());
@@ -395,6 +436,7 @@ function initializeApplication() {
     applicationIpc.on('screen-region:show', (_event, options) => screenRegionOverlay.show(options));
     applicationIpc.on('screen-region:hide', () => screenRegionOverlay.hide());
     applicationIpc.on('screen-region:confirm', (_event, region) => screenRegionOverlay.confirm(region));
+    applicationIpc.on('screen-region:update', (_event, region) => screenRegionOverlay.update(region));
     applicationIpc.on('screen-region:cancel', () => screenRegionOverlay.cancel());
     applicationIpc.handle('camera-overlay:state', () => cameraOverlay.state());
     logStartup('Window IPC registered.');
@@ -480,11 +522,13 @@ function initializeApplication() {
       return editorWindow.showHud();
     };
     if (pendingHudRestore) restoreCanonicalHud();
-    const trayManager = createTrayManager({
+    trayManager = createTrayManager({
       applicationRoot,
       getWindow: () => win,
       getController: () => win && controllers.get(win),
       onShowHud: showExistingHud,
+      onQuickSnip: () =>
+        void quickSnipController.toggle().catch((error) => console.error('[Quick Snip] tray toggle failed:', error)),
     });
     trayManager.init();
     if (!preferencesStore.read().onboardingCompleted) onboardingWindow.open();
@@ -501,6 +545,8 @@ function initializeApplication() {
     coordinator.registerCleanup({ id: 'countdown', cleanup: () => countdownOverlay.destroy() });
     coordinator.registerCleanup({ id: 'camera-overlay', cleanup: () => cameraOverlay.destroy() });
     coordinator.registerCleanup({ id: 'screen-region', cleanup: () => screenRegionOverlay.destroy() });
+    coordinator.registerCleanup({ id: 'quick-snip-crop', cleanup: () => quickSnipService.cropWindow.destroy() });
+    coordinator.registerCleanup({ id: 'quick-snip-status', cleanup: () => quickSnipService.statusWindow.destroy() });
     coordinator.registerCleanup({ id: 'preferences', cleanup: preferencesCleanup });
 
     win.on('closed', () => {

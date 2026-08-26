@@ -26,6 +26,7 @@ fn prepared_session_without_screen() -> (tempfile::TempDir, RecordingSession) {
         failure_policy: FailurePolicy::FailFast,
         region: None,
         excluded_process_id: None,
+        excluded_window_handles: vec![],
     };
     let snapshot = CatalogSnapshot {
         generation: 1,

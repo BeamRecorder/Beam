@@ -231,6 +231,7 @@ impl ActiveRecordings {
                 recording: &request.recording,
                 region: request.region,
                 cursor: request.cursor,
+                excluded_window_handles: &request.excluded_window_handles,
                 start_ns,
                 start_gate: start_gate.clone(),
                 consumer: crate::screen::ScreenConsumer::EncodedFile {

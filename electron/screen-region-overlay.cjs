@@ -13,6 +13,16 @@ function finiteBounds(value) {
   };
 }
 
+function finiteRegion(value) {
+  if (!value || !['x', 'y', 'width', 'height'].every((key) => Number.isFinite(value[key]))) return null;
+  const x = Math.max(0, Math.min(1, Number(value.x)));
+  const y = Math.max(0, Math.min(1, Number(value.y)));
+  const width = Math.max(0, Math.min(1 - x, Number(value.width)));
+  const height = Math.max(0, Math.min(1 - y, Number(value.height)));
+  if (width <= 0 || height <= 0) return null;
+  return { x, y, width, height };
+}
+
 function resolveSelectionBounds(options, platform, screen, parentWindow) {
   if (options?.bounds) return finiteBounds(options.bounds);
   if (platform !== 'linux') throw new Error('Screen overlay bounds are required');
@@ -35,6 +45,7 @@ function createScreenRegionOverlayWindow({
   let ready = false;
   let pending = null;
   let current = null;
+  let regionChangeListener = null;
 
   const send = (options) => {
     if (!window || window.isDestroyed() || !ready) return;
@@ -131,13 +142,40 @@ function createScreenRegionOverlayWindow({
     },
     confirm(region) {
       if (!pending) return;
+      const selected = finiteRegion(region);
+      if (!selected) return;
       const resolve = pending.resolve;
       const bounds = current?.bounds;
       pending = null;
       current = null;
       window?.hide();
       window?.setParentWindow(null);
-      resolve(bounds ? { bounds: { ...bounds }, region } : null);
+      resolve(bounds ? { bounds: { ...bounds }, region: selected } : null);
+    },
+    update(region) {
+      if (!pending || !current) return false;
+      const selected = finiteRegion(region);
+      if (!selected) return false;
+      current = { ...current, region: selected };
+      if (current.context === 'quick-snip') regionChangeListener?.(selected, { ...current.bounds });
+      return true;
+    },
+    setRegionChangeListener(listener) {
+      regionChangeListener = typeof listener === 'function' ? listener : null;
+    },
+    nativeWindow() {
+      return window && !window.isDestroyed() ? window : null;
+    },
+    confirmCurrent() {
+      if (!pending || !current?.region) return false;
+      const resolve = pending.resolve;
+      const result = { bounds: { ...current.bounds }, region: { ...current.region } };
+      pending = null;
+      current = null;
+      window?.hide();
+      window?.setParentWindow(null);
+      resolve(result);
+      return true;
     },
     cancel() {
       if (!pending) return;
@@ -155,6 +193,7 @@ function createScreenRegionOverlayWindow({
       }
       window?.destroy();
       window = null;
+      regionChangeListener = null;
     },
   };
 }

@@ -52,11 +52,23 @@ const { t: tHud } = useTranslate('HUD');
 const { t: tRecorderBar } = useTranslate('RecorderBar');
 
 const syncTrayMenu = () => {
+  if (
+    isCameraOverlay ||
+    isCountdownOverlay ||
+    isScreenRegionOverlay ||
+    isTeleprompter ||
+    isQuickSnipCrop ||
+    isQuickSnipStatus
+  )
+    return;
   capture.updateTrayMenu?.({
     openHud: tHud('openHud'),
     stopRecording: tRecorderBar('stopRecording'),
     quit: tHud('quit'),
     tooltip: 'Beam',
+    quickSnip: tHud('quickSnip'),
+    startQuickSnip: tHud('startQuickSnip'),
+    stopQuickSnip: tHud('stopQuickSnip'),
     recording: ['countdown', 'starting', 'recording', 'paused'].includes(recording.phase.value),
   });
 };
@@ -94,8 +106,12 @@ const currentView = ref<'hud' | 'recorder'>('hud');
 const isCameraOverlay = new URLSearchParams(window.location.search).has('cameraOverlay');
 const isCountdownOverlay = new URLSearchParams(window.location.search).has('countdown');
 const isScreenRegionOverlay = new URLSearchParams(window.location.search).has('screenRegion');
+const isQuickSnipCrop = new URLSearchParams(window.location.search).has('quickSnipCrop');
+const isQuickSnipStatus = new URLSearchParams(window.location.search).has('quickSnipStatus');
 const isTeleprompter = new URLSearchParams(window.location.search).has('teleprompter');
 const CameraOverlayApp = defineAsyncComponent(() => import('./components/hud/camera/CameraOverlayApp.vue'));
+const QuickSnipCropBar = defineAsyncComponent(() => import('./components/quick-snip/QuickSnipCropBar.vue'));
+const QuickSnipStatus = defineAsyncComponent(() => import('./components/quick-snip/QuickSnipStatus.vue'));
 const TeleprompterWindowApp = defineAsyncComponent(
   () => import('./components/hud/teleprompter/TeleprompterWindowApp.vue'),
 );
@@ -133,6 +149,16 @@ watch(
   recording.phase,
   (phase) => {
     syncTrayMenu();
+    if (
+      !isCameraOverlay &&
+      !isCountdownOverlay &&
+      !isScreenRegionOverlay &&
+      !isTeleprompter &&
+      !isQuickSnipCrop &&
+      !isQuickSnipStatus
+    ) {
+      capture.setNormalRecordingActive(['countdown', 'starting', 'recording', 'paused', 'finalizing'].includes(phase));
+    }
     // Guarantee the recorder view never coexists with the idle phase, even if
     // the failure callback above is bypassed or throws.
     if (phase === 'idle') returnToHud();
@@ -287,9 +313,18 @@ const dismissEditorLoadError = () => {
     <CameraOverlayApp v-if="isCameraOverlay" />
     <CountdownOverlay v-else-if="isCountdownOverlay" />
     <ScreenRegionOverlayApp v-else-if="isScreenRegionOverlay" />
+    <QuickSnipCropBar v-else-if="isQuickSnipCrop" />
+    <QuickSnipStatus v-else-if="isQuickSnipStatus" />
   </template>
   <div
-    v-if="!isTeleprompter && !isCameraOverlay && !isCountdownOverlay && !isScreenRegionOverlay"
+    v-if="
+      !isTeleprompter &&
+      !isCameraOverlay &&
+      !isCountdownOverlay &&
+      !isScreenRegionOverlay &&
+      !isQuickSnipCrop &&
+      !isQuickSnipStatus
+    "
     class="app-container"
   >
     <HUD

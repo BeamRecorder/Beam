@@ -26,6 +26,7 @@ fn request_json_roundtrip_and_defaults_are_stable() {
         failure_policy: FailurePolicy::ContinueWithoutOptionalTracks,
         region: None,
         excluded_process_id: None,
+        excluded_window_handles: vec![],
     };
     let json = serde_json::to_string(&request).expect("serialize request");
     let decoded: CaptureRequest = serde_json::from_str(&json).expect("deserialize request");
@@ -55,6 +56,7 @@ fn cursor_without_screen_is_rejected() {
         failure_policy: FailurePolicy::FailFast,
         region: None,
         excluded_process_id: None,
+        excluded_window_handles: vec![],
     };
     assert!(request.validate_basic().is_err());
 }
@@ -79,6 +81,7 @@ fn portal_monitor_accepts_a_region_but_portal_window_kinds_reject_it() {
                 height: 0.4,
             }),
             excluded_process_id: None,
+            excluded_window_handles: vec![],
         }
     }
 
@@ -97,13 +100,17 @@ fn excluded_process_id_roundtrips_when_present() {
         "recording": RecordingSettings::default(),
         "failurePolicy": "fail-fast",
         "region": null,
-        "excludedProcessId": 4242
+        "excludedProcessId": 4242,
+        "excludedWindowHandles": ["abc", "1234"]
     }))
     .expect("deserialize excluded process id");
     assert_eq!(request.excluded_process_id, Some(4242));
+    assert_eq!(request.excluded_window_handles, ["abc", "1234"]);
+    let encoded = serde_json::to_value(request).expect("serialize exclusion handles");
+    assert_eq!(encoded["excludedProcessId"], 4242);
     assert_eq!(
-        serde_json::to_value(request).expect("serialize request")["excludedProcessId"],
-        4242
+        encoded["excludedWindowHandles"],
+        serde_json::json!(["abc", "1234"])
     );
 }
 
@@ -137,6 +144,26 @@ fn manifest_schema_is_versioned_and_roundtrips() {
     assert_eq!(
         serde_json::from_value::<SessionManifest>(json).expect("deserialize manifest"),
         manifest
+    );
+}
+
+#[test]
+fn legacy_zoom_elements_default_to_enabled() {
+    let zoom: ZoomElement = serde_json::from_value(serde_json::json!({
+        "id": "zoom-1",
+        "sessionId": "session-1",
+        "startMs": 100,
+        "endMs": 500,
+        "focus": { "cx": 0.5, "cy": 0.5 },
+        "depth": 2,
+        "mode": "auto"
+    }))
+    .expect("deserialize legacy zoom element");
+
+    assert!(zoom.enabled);
+    assert_eq!(
+        serde_json::to_value(zoom).expect("serialize migrated zoom")["enabled"],
+        true
     );
 }
 

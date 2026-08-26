@@ -15,6 +15,7 @@ export interface ScreenRegionBounds {
 export interface ScreenRegionOverlayOptions {
   bounds: ScreenRegionBounds;
   region?: ScreenRegion | null;
+  context?: 'default' | 'quick-snip';
 }
 
 export interface ScreenRegionSelectionOptions {

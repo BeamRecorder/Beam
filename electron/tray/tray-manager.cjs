@@ -1,15 +1,19 @@
 const { Tray, Menu, nativeImage, app, ipcMain } = require('electron');
 const path = require('path');
 
-function createTrayManager({ applicationRoot, getWindow, getController, onShowHud = null }) {
+function createTrayManager({ applicationRoot, getWindow, getController, onShowHud = null, onQuickSnip = null }) {
   let tray = null;
   let labels = {
     openHud: 'Open HUD',
     stopRecording: 'Stop recording',
     quit: 'Quit Beam',
     tooltip: 'Beam',
+    quickSnip: 'Quick Snip',
+    startQuickSnip: 'Start Quick Snip',
+    stopQuickSnip: 'Stop Quick Snip',
   };
   let recording = false;
+  let quickSnipState = 'idle';
 
   const showHud = () => {
     if (onShowHud) return onShowHud();
@@ -26,6 +30,17 @@ function createTrayManager({ applicationRoot, getWindow, getController, onShowHu
 
   const buildMenu = () => {
     return Menu.buildFromTemplate([
+      {
+        label:
+          quickSnipState === 'recording'
+            ? labels.stopQuickSnip
+            : quickSnipState === 'selecting'
+              ? labels.startQuickSnip
+              : labels.quickSnip,
+        enabled: !recording,
+        click: () => onQuickSnip?.(),
+      },
+      { type: 'separator' },
       {
         label: labels.openHud,
         click: () => showHud(),
@@ -57,6 +72,11 @@ function createTrayManager({ applicationRoot, getWindow, getController, onShowHu
       labels.stopRecording = newLabels.stopRecording;
     if (typeof newLabels.quit === 'string' && newLabels.quit) labels.quit = newLabels.quit;
     if (typeof newLabels.tooltip === 'string' && newLabels.tooltip) labels.tooltip = newLabels.tooltip;
+    if (typeof newLabels.quickSnip === 'string' && newLabels.quickSnip) labels.quickSnip = newLabels.quickSnip;
+    if (typeof newLabels.startQuickSnip === 'string' && newLabels.startQuickSnip)
+      labels.startQuickSnip = newLabels.startQuickSnip;
+    if (typeof newLabels.stopQuickSnip === 'string' && newLabels.stopQuickSnip)
+      labels.stopQuickSnip = newLabels.stopQuickSnip;
     if (typeof newLabels.recording === 'boolean') recording = newLabels.recording;
 
     if (tray && !tray.isDestroyed()) {
@@ -85,18 +105,29 @@ function createTrayManager({ applicationRoot, getWindow, getController, onShowHu
     ];
     const candidatePaths = roots.flatMap((root) => iconNames.map((iconName) => path.join(root, iconName)));
 
-    let icon = nativeImage.createEmpty();
+    let icon = null;
+    let iconPath = null;
     for (const p of candidatePaths) {
       if (fs.existsSync(p)) {
         const loaded = nativeImage.createFromPath(p);
         if (!loaded.isEmpty()) {
           icon = loaded;
+          iconPath = p;
           break;
         }
       }
     }
 
+    if (!icon) {
+      throw new Error(`Beam tray icon is missing or unreadable. Searched: ${candidatePaths.join(', ')}`);
+    }
+    if (process.platform === 'linux' && typeof icon.resize === 'function') {
+      const resized = icon.resize({ width: 24, height: 24, quality: 'best' });
+      if (!resized.isEmpty()) icon = resized;
+    }
+
     tray = new Tray(icon);
+    if (process.platform === 'linux') console.info(`[Beam tray] Linux StatusNotifierItem icon loaded from ${iconPath}`);
     tray.setToolTip(labels.tooltip);
     tray.setContextMenu(buildMenu());
 
@@ -129,6 +160,10 @@ function createTrayManager({ applicationRoot, getWindow, getController, onShowHu
     destroy,
     showHud,
     updateMenu,
+    setQuickSnipState(state) {
+      quickSnipState = state;
+      updateMenu();
+    },
   };
 }
 

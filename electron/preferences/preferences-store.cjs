@@ -34,6 +34,7 @@ const defaults = (platform = process.platform) => ({
     'hud.toggleMic': { keys: 'Alt+Shift+M', scope: 'global', category: 'hud' },
     'hud.toggleCamera': { keys: 'Alt+Shift+C', scope: 'global', category: 'hud' },
     'hud.toggleSystemAudio': { keys: 'Alt+Shift+A', scope: 'global', category: 'hud' },
+    'quickSnip.toggle': { keys: 'Alt+Shift+S', scope: 'global', category: 'quick-snip' },
     'editor.playPause': { keys: 'Space', scope: 'application', category: 'video-editor' },
     'teleprompter.toggleVisibility': { keys: 'Alt+Shift+T', scope: 'global', category: 'teleprompter' },
     'teleprompter.toggleAutoscroll': { keys: 'Alt+Shift+O', scope: 'global', category: 'teleprompter' },

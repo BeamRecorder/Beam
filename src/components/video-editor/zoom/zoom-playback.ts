@@ -230,7 +230,9 @@ export function createZoomTimeEvaluator(
   telemetry: readonly CursorTelemetryPoint[] = [],
   mapFocus?: ZoomFocusMapper,
 ) {
-  const sortedElements = [...elements].sort((left, right) => left.startMs - right.startMs);
+  const sortedElements = elements
+    .filter((element) => element.enabled !== false)
+    .sort((left, right) => left.startMs - right.startMs);
   const sortedTelemetry = [...telemetry].sort((left, right) => left.timeMs - right.timeMs);
   return (timeMs: number) => zoomAtSortedTime(sortedElements, timeMs, sortedTelemetry, mapFocus);
 }

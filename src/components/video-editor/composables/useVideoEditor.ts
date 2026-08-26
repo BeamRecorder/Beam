@@ -16,6 +16,7 @@ import { createDefaultCursorMotionSettings } from '../../../api/types/cursor-set
 import { compositionPlaybackSignature } from './composition-playback-signature';
 import { useToastStore } from '~/ui/toast/toastStore';
 import { normalizeEditorPreferenceDefaults } from './editor-defaults';
+import { useEditorPresets } from './useEditorPresets';
 
 export function useVideoEditor(options: {
   project: Ref<CaptureProject | null | undefined>;
@@ -84,6 +85,7 @@ export function useVideoEditor(options: {
     selectedClip: compositionState.selectedClip,
     selectedZoom: zoomState.selectedZoom,
   });
+  const editorPresets = useEditorPresets(editorDefaults);
 
   const refreshBackgroundLibrary = async () => player.setUserBackgrounds(await capture.listBackgroundLibrary());
   void refreshBackgroundLibrary().catch(() => console.error('Failed to load background library.'));
@@ -146,6 +148,8 @@ export function useVideoEditor(options: {
       if (!id) return;
       const request = ++editorLoad;
       try {
+        await editorPresets.load(true);
+        if (request !== editorLoad) return;
         await editorState.load(id);
         if (request !== editorLoad) return;
         compositionState.synchronizeRecording();
@@ -216,6 +220,7 @@ export function useVideoEditor(options: {
     exportRequest,
     includeAudioInExport,
     editorDefaults,
+    editorPresets,
     handleSelectTab: (tab: string) => {
       activeTab.value = tab;
     },

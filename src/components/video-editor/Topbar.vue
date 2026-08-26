@@ -10,6 +10,8 @@ import { resolvePublicAssetUrl } from '~/utils/public-asset';
 import PreviewPerformanceWidget from './performance/PreviewPerformanceWidget.vue';
 import type { PreviewPerformanceSnapshot } from './performance/preview-performance-types';
 import type { ExportRequest } from '../export/export-types';
+import type { EditorPresetDocument } from '~/api/types/editor-preset';
+import EditorPresetControls from './EditorPresetControls.vue';
 
 const { t } = useTranslate('Topbar');
 
@@ -23,6 +25,8 @@ withDefaults(
     canRedo?: boolean;
     historyTooltipPosition?: 'top' | 'bottom' | 'left' | 'right';
     performanceSnapshot?: PreviewPerformanceSnapshot | null;
+    presetDocument?: EditorPresetDocument | null;
+    presetDirty?: boolean;
   }>(),
   {
     exportRequest: null,
@@ -33,6 +37,8 @@ withDefaults(
     canRedo: false,
     historyTooltipPosition: 'bottom',
     performanceSnapshot: null,
+    presetDocument: null,
+    presetDirty: false,
   },
 );
 
@@ -42,6 +48,11 @@ const emit = defineEmits<{
   (e: 'undo'): void;
   (e: 'redo'): void;
   (e: 'update:exportAudio', value: boolean): void;
+  (e: 'presetSelect', id: string | number): void;
+  (e: 'presetAdd', name: string): void;
+  (e: 'presetRename', name: string): void;
+  (e: 'presetDelete'): void;
+  (e: 'presetSave'): void;
 }>();
 
 const handleExit = () => {
@@ -61,6 +72,15 @@ const openDiscordInvite = () => {
         {{ t('exitToHUD') }}
       </Button>
       <VideoProjectEdition :project="project" :is-saving="isSaving" @open-project="emit('open-project', $event)" />
+      <EditorPresetControls
+        :document="presetDocument"
+        :dirty="presetDirty"
+        @select="emit('presetSelect', $event)"
+        @add="emit('presetAdd', $event)"
+        @rename="emit('presetRename', $event)"
+        @delete="emit('presetDelete')"
+        @save="emit('presetSave')"
+      />
       <div class="history-actions">
         <Button
           variant="ghost"

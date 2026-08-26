@@ -49,6 +49,7 @@ contextBridge.exposeInMainWorld(
     minimize: () => ipcRenderer.send('window:minimize'),
     toggleDevTools: () => ipcRenderer.send('window:toggle-devtools'),
     updateTrayMenu: (labels) => ipcRenderer.send('tray:update-menu', labels),
+    setNormalRecordingActive: (active) => ipcRenderer.send('recording:set-active', Boolean(active)),
     onTrayStopRecording: (listener) => {
       const callback = () => listener();
       ipcRenderer.on('tray:stop-recording', callback);
@@ -93,6 +94,7 @@ contextBridge.exposeInMainWorld(
       return () => ipcRenderer.removeListener('screen-region:configure', callback);
     },
     confirmScreenRegion: (region) => ipcRenderer.send('screen-region:confirm', region),
+    updateScreenRegion: (region) => ipcRenderer.send('screen-region:update', region),
     cancelScreenRegion: () => ipcRenderer.send('screen-region:cancel'),
     getWindowBounds: () => ipcRenderer.invoke('window:bounds'),
     getPreferences: () => ipcRenderer.invoke('preferences:get'),
@@ -107,6 +109,47 @@ contextBridge.exposeInMainWorld(
       const callback = (_event, id) => listener(id);
       ipcRenderer.on('preferences:shortcut', callback);
       return () => ipcRenderer.removeListener('preferences:shortcut', callback);
+    },
+    getEditorPresets: () => ipcRenderer.invoke('editor-presets:get'),
+    createEditorPreset: (name) => ipcRenderer.invoke('editor-presets:create', name),
+    renameEditorPreset: (id, name) => ipcRenderer.invoke('editor-presets:rename', { id, name }),
+    deleteEditorPreset: (id) => ipcRenderer.invoke('editor-presets:delete', id),
+    selectEditorPreset: (id) => ipcRenderer.invoke('editor-presets:select', id),
+    updateEditorPreset: (id, settings) => ipcRenderer.invoke('editor-presets:update', { id, settings }),
+    updateActiveEditorPreset: (settings) => ipcRenderer.invoke('editor-presets:update-active', settings),
+    onEditorPresetsChanged: (listener) => {
+      const callback = (_event, document) => listener(document);
+      ipcRenderer.on('editor-presets:changed', callback);
+      return () => ipcRenderer.removeListener('editor-presets:changed', callback);
+    },
+    quickSnipToggle: () => ipcRenderer.invoke('quick-snip:toggle'),
+    quickSnipStart: (overrides = {}) => ipcRenderer.invoke('quick-snip:start', overrides),
+    configureQuickSnip: (overrides = {}) => ipcRenderer.invoke('quick-snip:configure', overrides),
+    quickSnipStop: () => ipcRenderer.invoke('quick-snip:stop'),
+    quickSnipCancel: () => ipcRenderer.invoke('quick-snip:cancel'),
+    getQuickSnipState: () => ipcRenderer.invoke('quick-snip:state'),
+    reportQuickSnip: (event) => ipcRenderer.invoke('quick-snip:report', event),
+    copyQuickSnipFile: (file) => ipcRenderer.invoke('quick-snip:copy-file', file),
+    setQuickSnipStatusCompact: (compact) => ipcRenderer.send('quick-snip:status-compact', Boolean(compact)),
+    onQuickSnipConfigure: (listener) => {
+      const callback = (_event, configuration) => listener(configuration);
+      ipcRenderer.on('quick-snip:configure', callback);
+      return () => ipcRenderer.removeListener('quick-snip:configure', callback);
+    },
+    onQuickSnipCommand: (listener) => {
+      const callback = (_event, command) => listener(command);
+      ipcRenderer.on('quick-snip:command', callback);
+      return () => ipcRenderer.removeListener('quick-snip:command', callback);
+    },
+    onQuickSnipStatus: (listener) => {
+      const callback = (_event, status) => listener(status);
+      ipcRenderer.on('quick-snip:status', callback);
+      return () => ipcRenderer.removeListener('quick-snip:status', callback);
+    },
+    onQuickSnipState: (listener) => {
+      const callback = (_event, status) => listener(status);
+      ipcRenderer.on('quick-snip:state-changed', callback);
+      return () => ipcRenderer.removeListener('quick-snip:state-changed', callback);
     },
     showTeleprompter: () => ipcRenderer.send('teleprompter:show'),
     hideTeleprompter: () => ipcRenderer.send('teleprompter:hide'),

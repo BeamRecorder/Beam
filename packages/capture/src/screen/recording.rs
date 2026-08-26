@@ -30,6 +30,7 @@ pub struct ScreenOpenRequest<'a> {
     pub recording: &'a RecordingSettings,
     pub region: Option<ScreenRegion>,
     pub cursor: CursorSelection,
+    pub excluded_window_handles: &'a [String],
     pub start_ns: u64,
     pub start_gate: Arc<StartGate>,
     pub consumer: ScreenConsumer,

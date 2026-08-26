@@ -88,10 +88,10 @@ const scheduleFocusClose = () => {
 };
 
 const adjustPosition = async () => {
-  if (!popoverRef.value || !contentRef.value) return;
+  await nextTick();
+  if (!popoverRef.value || !contentRef.value || !isOpen.value) return;
   const triggerEl = popoverRef.value.querySelector('.popover-trigger') || popoverRef.value;
   const rect = triggerEl.getBoundingClientRect();
-  await nextTick();
   const content = contentRef.value.getBoundingClientRect();
   const spaceBelow = window.innerHeight - rect.bottom - VIEWPORT_MARGIN;
   const spaceAbove = rect.top - VIEWPORT_MARGIN;
@@ -120,6 +120,7 @@ const adjustPosition = async () => {
   const clampedTop = Math.max(VIEWPORT_MARGIN, Math.min(top, window.innerHeight - content.height - VIEWPORT_MARGIN));
   floatingStyle.value = {
     position: 'fixed',
+    visibility: 'visible',
     top: `${clampedTop}px`,
     left: `${clampedLeft}px`,
     zIndex: '10000',
@@ -138,7 +139,10 @@ let resizeObserver: ResizeObserver | null = null;
 
 watch(isOpen, (val) => {
   if (val) {
-    window.requestAnimationFrame(() => void adjustPosition());
+    // Prevent teleported content from painting at its unpositioned origin.
+    // This is most noticeable for Selects nested inside another popover.
+    floatingStyle.value = { position: 'fixed', visibility: 'hidden' };
+    void nextTick(() => adjustPosition());
     void nextTick(() => {
       if (contentRef.value && typeof ResizeObserver !== 'undefined') {
         resizeObserver?.disconnect();

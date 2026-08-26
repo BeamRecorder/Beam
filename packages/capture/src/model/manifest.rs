@@ -65,6 +65,12 @@ pub struct ZoomElement {
     pub focus: ZoomFocus,
     pub depth: u8,
     pub mode: String,
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+}
+
+const fn default_true() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -101,6 +107,12 @@ pub struct ProjectManifest {
     pub created_at_utc: String,
     pub updated_at_utc: String,
     pub sessions: Vec<ProjectSession>,
-    #[serde(default)]
-    pub editor: ProjectEditorState,
+    /// Electron owns the editor schema. Keeping it opaque prevents the native
+    /// capture engine from dropping fields it does not understand.
+    #[serde(default = "default_editor_envelope")]
+    pub editor: serde_json::Value,
+}
+
+fn default_editor_envelope() -> serde_json::Value {
+    serde_json::json!({ "schemaVersion": 3 })
 }
