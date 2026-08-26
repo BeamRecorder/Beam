@@ -18,7 +18,7 @@ use crate::system_audio::wav::FloatWavWriter;
 mod format;
 mod support;
 mod writer;
-use format::{audio_format_parameter, parse_audio_format, peak_f32le};
+use format::{audio_format_parameter, parse_audio_format_event, peak_f32le};
 use support::{ReadySender, join, pipewire_error, send_ready, set_fatal, take_fatal};
 use writer::writer_worker;
 
@@ -397,14 +397,9 @@ fn audio_listener(
             if id != ParamType::Format.as_raw() {
                 return;
             }
-            if param.is_none() && format_state.borrow().stopping {
-                return;
-            }
-            let result = param
-                .ok_or_else(|| pipewire_error("PipeWire removed the system audio format"))
-                .and_then(parse_audio_format);
+            let result = parse_audio_format_event(param);
             match result {
-                Ok(format) => {
+                Ok(Some(format)) => {
                     format_state.borrow_mut().format = Some(format);
                     if matches!(stream.state(), pw::stream::StreamState::Paused)
                         && format_stopped.get()
@@ -417,6 +412,10 @@ fn audio_listener(
                         send_ready(&format_ready, Err(pipewire_error(error)));
                         format_loop.quit();
                     }
+                }
+                Ok(None) => {
+                    // A null format clears the current PipeWire format during
+                    // negotiation. Keep waiting for the next concrete format.
                 }
                 Err(error) => {
                     send_ready(&format_ready, Err(pipewire_error(error.to_string())));

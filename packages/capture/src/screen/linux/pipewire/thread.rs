@@ -20,7 +20,7 @@ use crate::{
 
 use super::{
     CursorMessage, CursorState, ProcessState, SinkMessage, TimestampMapper, backpressure_event,
-    flush_pending_cursor, format_error, format_parameter, has_fatal, join, parse_format,
+    flush_pending_cursor, format_error, format_parameter, has_fatal, join, parse_format_event,
     pipewire_error, process_buffer, send_ready_error, send_ready_ok, set_fatal, sink_error,
     sink_worker, stream_error, take_fatal, update_buffer_params,
 };
@@ -362,14 +362,9 @@ fn pipewire_worker(
                 if id != ParamType::Format.as_raw() {
                     return;
                 }
-                if param.is_none() && state.borrow().stopping {
-                    return;
-                }
-                let result = param
-                    .ok_or_else(|| format_error("PipeWire removed the negotiated format"))
-                    .and_then(parse_format);
+                let result = parse_format_event(param);
                 match result {
-                    Ok(format) => {
+                    Ok(Some(format)) => {
                         state.borrow_mut().negotiated = Some(format);
                         if let Err(error) = update_buffer_params(stream, format) {
                             let diagnostic = error.to_string();
@@ -391,6 +386,11 @@ fn pipewire_worker(
                             send_ready_error(&ready, pipewire_error(diagnostic));
                             format_loop.quit();
                         }
+                    }
+                    Ok(None) => {
+                        // PipeWire uses a null format parameter to clear the
+                        // current format before (re)negotiation. Wait for the
+                        // next concrete format instead of failing capture.
                     }
                     Err(error) => {
                         let diagnostic = error.to_string();

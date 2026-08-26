@@ -1,5 +1,102 @@
 use super::*;
 
+use std::io::Cursor;
+
+use pipewire::spa;
+use spa::{
+    param::{ParamType, format::MediaSubtype, format::MediaType},
+    pod::{Pod, Value},
+};
+
+fn serialized_pod(object: spa::pod::Object) -> Vec<u8> {
+    spa::pod::serialize::PodSerializer::serialize(Cursor::new(Vec::new()), &Value::Object(object))
+        .expect("test pod should serialize")
+        .0
+        .into_inner()
+}
+
+fn non_video_format_pod() -> Vec<u8> {
+    serialized_pod(spa::pod::object!(
+        spa::utils::SpaTypes::ObjectParamFormat,
+        ParamType::EnumFormat,
+        spa::pod::property!(
+            spa::param::format::FormatProperties::MediaType,
+            Id,
+            MediaType::Audio
+        ),
+        spa::pod::property!(
+            spa::param::format::FormatProperties::MediaSubtype,
+            Id,
+            MediaSubtype::Raw
+        ),
+    ))
+}
+
+fn valid_video_format_pod() -> Vec<u8> {
+    serialized_pod(spa::pod::object!(
+        spa::utils::SpaTypes::ObjectParamFormat,
+        ParamType::EnumFormat,
+        spa::pod::property!(
+            spa::param::format::FormatProperties::MediaType,
+            Id,
+            MediaType::Video
+        ),
+        spa::pod::property!(
+            spa::param::format::FormatProperties::MediaSubtype,
+            Id,
+            MediaSubtype::Raw
+        ),
+        spa::pod::property!(
+            spa::param::format::FormatProperties::VideoFormat,
+            Id,
+            spa::param::video::VideoFormat::BGRA
+        ),
+        spa::pod::property!(
+            spa::param::format::FormatProperties::VideoSize,
+            Rectangle,
+            spa::utils::Rectangle {
+                width: 1920,
+                height: 1080
+            }
+        ),
+    ))
+}
+
+fn format_pod(bytes: &[u8]) -> &Pod {
+    Pod::from_bytes(bytes).expect("test bytes should contain a pod")
+}
+
+#[test]
+fn ignores_a_pipewire_format_clear_during_video_negotiation() {
+    let bytes = valid_video_format_pod();
+    let pod = format_pod(&bytes);
+
+    assert!(
+        parse_format_event(Some(pod))
+            .expect("valid format should be accepted")
+            .is_some()
+    );
+    assert!(
+        parse_format_event(None)
+            .expect("PipeWire format clear is a renegotiation event")
+            .is_none()
+    );
+    assert!(
+        parse_format_event(Some(pod))
+            .expect("format after renegotiation should be accepted")
+            .is_some()
+    );
+}
+
+#[test]
+fn rejects_an_invalid_some_video_format_but_not_a_clear_event() {
+    let bytes = non_video_format_pod();
+    let pod = format_pod(&bytes);
+
+    assert!(parse_format_event(Some(pod)).is_err());
+    assert!(parse_format_event(None).is_ok());
+}
+
 #[test]
 fn converts_all_negotiated_formats_to_owned_bgra() {
     assert_eq!(

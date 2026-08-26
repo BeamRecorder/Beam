@@ -287,6 +287,9 @@ export function useRecordingController(
       elapsedTenths.value = 0;
       startTimer();
       phase.value = 'recording';
+      // The native engine handles commands serially. Polling status while
+      // prepare/start is still running can time out and terminate the engine.
+      recordingHealth.start();
     } catch (reason) {
       if (generation !== recordingGeneration) {
         // Release a stale prepared session once its single-threaded native start returns.
@@ -329,7 +332,6 @@ export function useRecordingController(
       if (generation !== recordingGeneration) return;
       secondsRemaining.value = Math.max(0, next.countdownSeconds);
       phase.value = 'countdown';
-      recordingHealth.start();
       stage = 'prepare-native';
       const preparation = prewarmNativeRecording(generation);
       prewarm = preparation;
