@@ -32,9 +32,14 @@ const Popover = {
   template: '<div class="popover-stub"><slot name="trigger" /><slot :close="() => {}" /></div>',
 };
 const HUD = {
+  name: 'HUD',
+  props: {
+    embedded: Boolean,
+    discoverCaptureSources: Boolean,
+  },
   emits: ['start-recording'],
   template:
-    '<div class="hud-stub"><button class="hud-start-btn" @click="$emit(\'start-recording\', { recordingBarVisibility: \'always\' })">Start</button></div>',
+    "<div class=\"hud-stub\"><span class=\"hud-embedded-value\">{{ embedded ? 'true' : 'false' }}</span><span class=\"hud-discovery-value\">{{ discoverCaptureSources ? 'true' : 'false' }}</span><button class=\"hud-start-btn\" @click=\"$emit('start-recording', { recordingBarVisibility: 'always' })\">Start</button></div>",
 };
 
 describe('SettingsPanel', () => {
@@ -142,6 +147,16 @@ describe('SettingsPanel', () => {
     await startBtn.trigger('click');
 
     expect(wrapper.emitted('start-recording')).toBeTruthy();
+  });
+
+  it('enables source discovery in the embedded recorder', async () => {
+    const wrapper = mount(SettingsPanel, {
+      global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } },
+    });
+    await wrapper.get('.dev-switch').trigger('click');
+
+    const recorder = wrapper.findComponent(HUD);
+    expect(recorder.props()).toMatchObject({ embedded: true, discoverCaptureSources: true });
   });
 
   it('copies system information to clipboard when clicking copy button', async () => {

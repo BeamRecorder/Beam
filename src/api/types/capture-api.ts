@@ -85,10 +85,11 @@ export interface DesktopCaptureApi extends CaptureApi {
   notifyEditorReady(): void;
   reportEditorLoadingStage(stage: EditorLoadingStage): void;
   startRecordingFromEditor(configuration: RecordingConfiguration): void;
+  completeEditorRecordingHandoff(handoffId: number): void;
   setEditorTitlebarTheme(dark: boolean): void;
   onEditorContext(listener: (context: { projectId: string }) => void): () => void;
   onEditorLoadingProgress(listener: (progress: EditorLoadingProgress) => void): () => void;
-  onStartRecordingFromEditor(listener: (configuration: RecordingConfiguration) => void): () => void;
+  onStartRecordingFromEditor(listener: (configuration: RecordingConfiguration, handoffId: number) => void): () => void;
   setPosition(x: number, y: number): void;
   setSize(width: number, height: number): void;
   setSizeSmooth(width: number, height: number): void;

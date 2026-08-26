@@ -315,6 +315,7 @@ function initializeApplication() {
     registerCaptureIpc({
       ipcMain,
       desktopCapturer,
+      BrowserWindow,
       screen,
       captureEngine,
       app,

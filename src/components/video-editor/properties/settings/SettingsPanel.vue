@@ -131,7 +131,11 @@ const { copied: isCopiedSysInfo, copy: copySystemInfo } = useCopySystemInformati
               </template>
               <template #default="{ close }">
                 <div class="hud-popover-content" @click.stop>
-                  <HUD embedded @start-recording="(config: any) => handleStartRecordingFromPopover(config, close)" />
+                  <HUD
+                    :embedded="true"
+                    :discover-capture-sources="true"
+                    @start-recording="(config: any) => handleStartRecordingFromPopover(config, close)"
+                  />
                 </div>
               </template>
             </Popover>

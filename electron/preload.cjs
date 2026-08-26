@@ -61,6 +61,7 @@ contextBridge.exposeInMainWorld(
     notifyEditorReady: () => ipcRenderer.send('editor:ready'),
     reportEditorLoadingStage: (stage) => ipcRenderer.send('editor:loading-stage', stage),
     startRecordingFromEditor: (configuration) => ipcRenderer.send('editor:start-recording', configuration),
+    completeEditorRecordingHandoff: (handoffId) => ipcRenderer.send('editor:recording-prepared', handoffId),
     setEditorTitlebarTheme: (dark) => ipcRenderer.send('editor:titlebar-theme', Boolean(dark)),
     onEditorContext: (listener) => {
       const callback = (_event, context) => listener(context);
@@ -73,7 +74,7 @@ contextBridge.exposeInMainWorld(
       return () => ipcRenderer.removeListener('editor:loading-progress', callback);
     },
     onStartRecordingFromEditor: (listener) => {
-      const callback = (_event, configuration) => listener(configuration);
+      const callback = (_event, request) => listener(request.configuration, request.handoffId);
       ipcRenderer.on('editor:start-recording', callback);
       return () => ipcRenderer.removeListener('editor:start-recording', callback);
     },

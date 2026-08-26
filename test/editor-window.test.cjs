@@ -205,11 +205,34 @@ test('editor window is opaque and routes native editor lifecycle without changin
     await reopening;
 
     const configuration = { screenKind: 'display', cameraId: 'off' };
+    const closeCountBeforeHandoff = calls.filter((call) => call[0] === 'close').length;
     ipcListeners.get('editor:start-recording')({ sender: reopenedEditor.webContents }, configuration);
     assert.deepEqual(
       calls.find((call) => call[0] === 'hud-send' && call[1] === 'editor:start-recording'),
-      ['hud-send', 'editor:start-recording', configuration],
+      ['hud-send', 'editor:start-recording', { configuration, handoffId: 1 }],
     );
+    assert.equal(
+      calls.filter((call) => call[0] === 'close').length,
+      closeCountBeforeHandoff,
+      'the editor must remain alive while the HUD revalidates the recording source',
+    );
+
+    const recordingPrepared = ipcListeners.get('editor:recording-prepared');
+    assert.equal(typeof recordingPrepared, 'function');
+    recordingPrepared({ sender: {} }, 1);
+    assert.equal(
+      calls.filter((call) => call[0] === 'close').length,
+      closeCountBeforeHandoff,
+      'a renderer other than the HUD must not be able to finalize the editor handoff',
+    );
+    recordingPrepared({ sender: hudWindow.webContents }, 2);
+    assert.equal(
+      calls.filter((call) => call[0] === 'close').length,
+      closeCountBeforeHandoff,
+      'a stale handoff acknowledgement must not close the current editor',
+    );
+    recordingPrepared({ sender: hudWindow.webContents }, 1);
+    assert.equal(calls.filter((call) => call[0] === 'close').length, closeCountBeforeHandoff + 1);
   } finally {
     Module._load = originalLoad;
   }

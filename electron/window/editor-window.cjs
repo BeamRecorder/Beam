@@ -56,6 +56,8 @@ function createEditorWindowManager({
   let currentProjectId = null;
   let rendererReady = false;
   let returningToHud = false;
+  let recordingHandoffPending = null;
+  let recordingHandoffGeneration = 0;
   let dark = initialDark;
   let resolvePresentation = null;
   let rejectPresentation = null;
@@ -136,6 +138,7 @@ function createEditorWindowManager({
 
   const showHud = () => {
     if (!canAcceptWork()) return false;
+    recordingHandoffPending = null;
     returningToHud = true;
     if (window && !window.isDestroyed()) window.close();
     if (hudWindow.isMinimized()) hudWindow.restore();
@@ -240,6 +243,7 @@ function createEditorWindowManager({
       window = null;
       controller = null;
       rendererReady = false;
+      recordingHandoffPending = null;
       if (shouldQuit && !hudWindow.isDestroyed()) hudWindow.close();
     });
     load(window);
@@ -297,9 +301,18 @@ function createEditorWindowManager({
   const startRecording = (event, configuration) => {
     if (!canAcceptWork()) return false;
     if (!window || window.isDestroyed() || event.sender !== window.webContents) return false;
+    if (recordingHandoffPending !== null) return false;
     returningToHud = true;
-    window.close();
-    hudWindow.webContents.send('editor:start-recording', configuration);
+    const handoffId = ++recordingHandoffGeneration;
+    recordingHandoffPending = handoffId;
+    hudWindow.webContents.send('editor:start-recording', { configuration, handoffId });
+    return true;
+  };
+
+  const completeRecordingHandoff = (event, handoffId) => {
+    if (event.sender !== hudWindow.webContents || handoffId !== recordingHandoffPending) return false;
+    recordingHandoffPending = null;
+    if (window && !window.isDestroyed()) window.close();
     return true;
   };
 
@@ -329,12 +342,14 @@ function createEditorWindowManager({
   ipcMain.on('editor:ready', markReady);
   ipcMain.on('editor:loading-stage', reportLoadingStage);
   ipcMain.on('editor:start-recording', startRecording);
+  ipcMain.on('editor:recording-prepared', completeRecordingHandoff);
   ipcMain.on('editor:titlebar-theme', setTitlebarTheme);
 
   return {
     open,
     showHud,
     destroy: () => {
+      recordingHandoffPending = null;
       returningToHud = true;
       if (window && !window.isDestroyed()) window.destroy();
       window = null;

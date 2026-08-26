@@ -147,7 +147,7 @@ watch(currentView, (view) => {
 
 const isRecordingStartedFromEditor = ref(false);
 
-const startRecordingFromEditor = async (configuration: RecordingConfiguration) => {
+const startRecordingFromEditor = async (configuration: RecordingConfiguration, handoffId: number) => {
   isRecordingStartedFromEditor.value = true;
   editorLoadError.value = '';
   recordingStartupError.value = '';
@@ -157,12 +157,16 @@ const startRecordingFromEditor = async (configuration: RecordingConfiguration) =
   capture.setWindowVisible(true);
   capture.setCameraOverlayActive(true);
   await recording.start(configuration);
-  if (recording.phase.value === 'idle') returnToHud();
+  if (recording.phase.value === 'idle') {
+    returnToHud();
+    return;
+  }
+  capture.completeEditorRecordingHandoff(handoffId);
 };
 
 onMounted(() => {
-  removeEditorRecordingListener = capture.onStartRecordingFromEditor((configuration) => {
-    void startRecordingFromEditor(configuration);
+  removeEditorRecordingListener = capture.onStartRecordingFromEditor((configuration, handoffId) => {
+    void startRecordingFromEditor(configuration, handoffId);
   });
   removeEditorLoadingListener = capture.onEditorLoadingProgress((progress) => {
     if (isPreparingEditor.value) editorLoadingProgress.value = progress;

@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
     hideTeleprompter: vi.fn(),
     openEditor: vi.fn(),
     onStartRecordingFromEditor: vi.fn(),
+    completeEditorRecordingHandoff: vi.fn(),
     onEditorLoadingProgress: vi.fn(),
     onTrayStopRecording: vi.fn(),
     onPreferenceShortcut: vi.fn(),
@@ -29,7 +30,7 @@ const mocks = vi.hoisted(() => ({
   controller: {
     recording: undefined as any,
     onComplete: undefined as ((session: { videoSrc?: string | null }) => void) | undefined,
-    startFromEditor: undefined as ((configuration: any) => void) | undefined,
+    startFromEditor: undefined as ((configuration: any, handoffId: number) => void) | undefined,
     editorProgress: undefined as ((progress: { stage: string; value: number }) => void) | undefined,
   },
 }));
@@ -300,12 +301,13 @@ describe('App', () => {
       recordingBarVisibility: 'always',
     };
 
-    mocks.controller.startFromEditor?.(configuration);
+    mocks.controller.startFromEditor?.(configuration, 7);
     await settle();
 
     expect(mocks.capture.setWindowMode).toHaveBeenCalledWith('recorder');
     expect(mocks.capture.setWindowVisible).toHaveBeenCalledWith(true);
     expect(mocks.controller.recording.start).toHaveBeenCalledWith(configuration);
+    expect(mocks.capture.completeEditorRecordingHandoff).toHaveBeenCalledWith(7);
   });
 
   it('returns immediately after an idle start and ignores mouse events outside the HUD', async () => {
@@ -316,6 +318,7 @@ describe('App', () => {
     await settle();
     expect(mocks.capture.showHud).toHaveBeenCalled();
     expect(mocks.capture.setCameraOverlayActive).toHaveBeenCalledWith(true);
+    expect(mocks.capture.completeEditorRecordingHandoff).not.toHaveBeenCalled();
 
     vi.spyOn(document, 'elementFromPoint').mockReturnValue(document.body);
     window.dispatchEvent(new MouseEvent('mousemove', { clientX: 2, clientY: 2 }));

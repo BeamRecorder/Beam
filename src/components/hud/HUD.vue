@@ -62,6 +62,7 @@ let savedDevices: SavedDevices | null = null;
 const props = withDefaults(
   defineProps<{
     embedded?: boolean;
+    discoverCaptureSources?: boolean;
     showTopbar?: boolean;
     preparingEditor?: boolean;
     editorLoadingProgress?: EditorLoadingProgress;
@@ -69,6 +70,7 @@ const props = withDefaults(
   }>(),
   {
     embedded: false,
+    discoverCaptureSources: false,
     showTopbar: false,
     preparingEditor: false,
     editorLoadingProgress: () => ({ stage: 'openingWindow', value: 10 }),
@@ -178,6 +180,10 @@ const screenPreviews = ref<CapturePreview[]>([]);
 const windowPreviewsLoading = ref(false);
 const screenPreviewsLoading = ref(false);
 const selectedSourceId = ref<string | null>(null);
+let windowSelectionInvalidated = false;
+watch(selectedSourceId, (sourceId) => {
+  if (sourceId) windowSelectionInvalidated = false;
+});
 
 // Sources lists (Camera / Microphone)
 const cameraOptions = computed(() => [
@@ -349,8 +355,12 @@ const loadPreviews = (type: PreviewKind, force = false): Promise<void> => {
       );
       if (
         !selectedPortalSource &&
-        (!selectedSourceId.value || !results.some((result) => result.id === selectedSourceId.value))
+        selectedSourceId.value &&
+        !results.some((result) => result.id === selectedSourceId.value)
       ) {
+        windowSelectionInvalidated = true;
+        selectedSourceId.value = null;
+      } else if (!selectedPortalSource && !selectedSourceId.value && !windowSelectionInvalidated) {
         selectedSourceId.value = results[0]?.id ?? null;
       }
     })
@@ -912,6 +922,31 @@ const discoverSources = async () => {
 
 let unsubscribeShortcut: (() => void) | null = null;
 let unsubscribeTeleprompterVisibility: (() => void) | null = null;
+let visiblePreviewRefresh: Promise<void> | null = null;
+let componentMounted = false;
+
+const refreshVisiblePreviews = () => {
+  if (
+    (props.embedded && !props.discoverCaptureSources) ||
+    document.visibilityState !== 'visible' ||
+    isRecording.value ||
+    isBusy.value
+  )
+    return;
+  if (visiblePreviewRefresh) return;
+  const operation = loadPreviews(activeTab.value, true);
+  visiblePreviewRefresh = operation;
+  void operation.finally(() => {
+    if (visiblePreviewRefresh === operation) visiblePreviewRefresh = null;
+  });
+};
+
+watch(
+  () => props.preparingEditor,
+  (preparing) => {
+    if (!preparing) refreshVisiblePreviews();
+  },
+);
 
 const toggleTeleprompter = () => {
   if (props.embedded) return;
@@ -921,8 +956,10 @@ const toggleTeleprompter = () => {
 };
 
 onMounted(async () => {
-  if (props.embedded) return;
+  componentMounted = true;
+  if (props.embedded && !props.discoverCaptureSources) return;
   const preferences = await capture.getPreferences();
+  if (!componentMounted) return;
   savedDevices = preferences.devices as unknown as SavedDevices;
   const savedRegion = preferences.extras?.screenRegion;
   if (savedRegion && typeof savedRegion === 'object') {
@@ -950,7 +987,11 @@ onMounted(async () => {
   interactionAccess.hydrate(preferences);
   if (!props.embedded) updateWindowSize();
   await Promise.all([discoverSources(), interactionAccess.refresh()]);
+  if (!componentMounted) return;
   await Promise.allSettled([loadPreviews('screen'), loadPreviews('window')]);
+  if (!componentMounted) return;
+  document.addEventListener('visibilitychange', refreshVisiblePreviews);
+  window.addEventListener('focus', refreshVisiblePreviews);
 
   unsubscribeShortcut = capture.onPreferenceShortcut((actionId: string) => {
     if (actionId === 'hud.startStopRecording') {
@@ -963,19 +1004,28 @@ onMounted(async () => {
 
   // Periodically refresh window previews when settings is not open and not recording
   previewsRefreshInterval = setInterval(() => {
-    if (!showSettings.value && !isRecording.value && activeTab.value === 'window') {
+    if (
+      document.visibilityState === 'visible' &&
+      !props.preparingEditor &&
+      !showSettings.value &&
+      !isRecording.value &&
+      activeTab.value === 'window'
+    ) {
       void loadPreviews('window', true);
     }
   }, 5000);
 });
 
 onBeforeUnmount(() => {
+  componentMounted = false;
   screenBoundsRequest++;
   if (!props.embedded) capture.hideScreenRegionOverlay();
   if (regionSelectionEnterTimeout) clearTimeout(regionSelectionEnterTimeout);
   if (regionConfirmationTimeout) clearTimeout(regionConfirmationTimeout);
   unsubscribeShortcut?.();
   unsubscribeTeleprompterVisibility?.();
+  document.removeEventListener('visibilitychange', refreshVisiblePreviews);
+  window.removeEventListener('focus', refreshVisiblePreviews);
   stopTimer();
   void activeCamera?.stop();
   void activeMicrophone?.stop();

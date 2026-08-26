@@ -59,6 +59,7 @@ function displayBoundsForId(screen, displayId) {
 function registerCaptureIpc({
   ipcMain,
   desktopCapturer,
+  BrowserWindow,
   screen,
   captureEngine,
   app,
@@ -169,7 +170,7 @@ function registerCaptureIpc({
     if (!ALLOWED_COMMANDS.has(command)) throw new Error(`Commande de capture interdite: ${command}`);
     return withProjectId(await requestEngine(command, payload));
   });
-  ipcMain.handle('window:getSources', async (_event, types) => {
+  ipcMain.handle('window:getSources', async (event, types) => {
     // Chromium's desktopCapturer opens the system Portal picker for every
     // enumeration on Wayland. The Rust backend owns the single Portal picker,
     // so Electron preview IDs are never used on Linux.
@@ -179,19 +180,22 @@ function registerCaptureIpc({
       thumbnailSize: { width: 300, height: 200 },
       fetchWindowIcons: true,
     });
-    return sources.map((source) => {
-      const display = source.display_id
-        ? screen.getAllDisplays().find((item) => String(item.id) === String(source.display_id))
-        : null;
-      return {
-        id: source.id,
-        name: source.name,
-        thumbnail: source.thumbnail.toDataURL(),
-        appIcon: source.appIcon ? source.appIcon.toDataURL() : null,
-        displayId: source.display_id || undefined,
-        displayBounds: display?.bounds,
-      };
-    });
+    const ownSourceId = BrowserWindow?.fromWebContents?.(event?.sender)?.getMediaSourceId?.() ?? null;
+    return sources
+      .filter((source) => source.id !== ownSourceId)
+      .map((source) => {
+        const display = source.display_id
+          ? screen.getAllDisplays().find((item) => String(item.id) === String(source.display_id))
+          : null;
+        return {
+          id: source.id,
+          name: source.name,
+          thumbnail: source.thumbnail.toDataURL(),
+          appIcon: source.appIcon ? source.appIcon.toDataURL() : null,
+          displayId: source.display_id || undefined,
+          displayBounds: display?.bounds,
+        };
+      });
   });
   ipcMain.handle('screen:get-display-bounds', (_event, displayId) => displayBoundsForId(screen, displayId));
 }
