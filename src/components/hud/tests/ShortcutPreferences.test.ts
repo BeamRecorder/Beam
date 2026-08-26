@@ -49,30 +49,31 @@ describe('ShortcutPreferences', () => {
   it('loads all definitions, detects conflicts, and resets a shortcut', async () => {
     const wrapper = mount(ShortcutPreferences, { global: { stubs: { ShortcutInput } } });
     await vi.waitFor(() => expect(capture.getPreferences).toHaveBeenCalledOnce());
-    expect(wrapper.findAll('.shortcut-row')).toHaveLength(9);
+    expect(wrapper.findAll('.shortcut-row')).toHaveLength(10);
+    expect(wrapper.findAll('.shortcut-row')[0].find('.shortcut-label').text()).toBe('Quick Snip');
 
-    await wrapper.findAll('.change-shortcut')[0].trigger('click');
+    await wrapper.findAll('.change-shortcut')[1].trigger('click');
     await wrapper.vm.$nextTick();
     expect(wrapper.find('.shortcut-error').text()).toContain('Conflict');
     expect(capture.updatePreferences).not.toHaveBeenCalled();
 
-    await wrapper.findAll('.reset-shortcut')[0].trigger('click');
+    await wrapper.findAll('.reset-shortcut')[1].trigger('click');
     expect(capture.updatePreferences).not.toHaveBeenCalled();
   });
 
   it('persists a changed shortcut and displays a persistence error', async () => {
     const wrapper = mount(ShortcutPreferences, { global: { stubs: { ShortcutInput } } });
     await vi.waitFor(() => expect(capture.getPreferences).toHaveBeenCalledOnce());
-    await wrapper.findAll('.change-shortcut')[2].trigger('click');
+    await wrapper.findAll('.change-shortcut')[0].trigger('click');
     await vi.waitFor(() => expect(capture.updatePreferences).toHaveBeenCalledOnce());
     expect(capture.updatePreferences).toHaveBeenCalledWith(
       expect.objectContaining({
-        shortcuts: expect.objectContaining({ 'hud.toggleMic': expect.objectContaining({ keys: 'Ctrl+Shift+X' }) }),
+        shortcuts: expect.objectContaining({ 'quickSnip.toggle': expect.objectContaining({ keys: 'Ctrl+Shift+X' }) }),
       }),
     );
 
     capture.updatePreferences.mockRejectedValueOnce(new Error('preferences unavailable'));
-    await wrapper.findAll('.change-shortcut')[3].trigger('click');
+    await wrapper.findAll('.change-shortcut')[0].trigger('click');
     await vi.waitFor(() => expect(wrapper.find('.shortcut-error').exists()).toBe(true));
     expect(wrapper.find('.shortcut-error').text()).toContain('preferences unavailable');
   });

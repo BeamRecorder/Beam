@@ -6,6 +6,7 @@ const { capture } = vi.hoisted(() => ({
     onScreenRegionConfigure: vi.fn(),
     confirmScreenRegion: vi.fn(),
     cancelScreenRegion: vi.fn(),
+    updateScreenRegion: vi.fn(),
     getPreferences: vi.fn().mockResolvedValue({ extras: {} }),
     updatePreferences: vi.fn().mockResolvedValue({ extras: {} }),
   },
@@ -189,6 +190,48 @@ describe('ScreenRegionOverlayApp', () => {
     expect(wrapper.get('.region-frame').classes()).toContain('recording');
     expect(wrapper.get('.region-frame').classes()).not.toContain('selecting');
     expect(wrapper.find('.region-toolbar').exists()).toBe(false);
+  });
+
+  it('keeps Quick Snip selection free and reports region changes without the toolbar', async () => {
+    let configure!: (value: {
+      mode: 'select';
+      context: 'quick-snip';
+      bounds: { width: number; height: number };
+      region: { x: number; y: number; width: number; height: number };
+    }) => void;
+    capture.onScreenRegionConfigure.mockImplementation((next: typeof configure) => {
+      configure = next;
+      return vi.fn();
+    });
+    const wrapper = mount(ScreenRegionOverlayApp, { global: { stubs: { Button, Select } } });
+    configure({
+      mode: 'select',
+      context: 'quick-snip',
+      bounds: { width: 1000, height: 500 },
+      region: { x: 0.1, y: 0.2, width: 0.5, height: 0.4 },
+    });
+    await wrapper.vm.$nextTick();
+    await Promise.resolve();
+    await wrapper.vm.$nextTick();
+    capture.updateScreenRegion.mockClear();
+
+    expect(wrapper.find('.region-toolbar').exists()).toBe(false);
+    expect(wrapper.find('.region-instruction').exists()).toBe(false);
+
+    const main = wrapper.get('.region-overlay');
+    const setPointerCapture = vi.fn();
+    Object.defineProperty(main.element, 'setPointerCapture', { value: setPointerCapture });
+    await wrapper.get('.region-frame').trigger('pointerdown', { clientX: 200, clientY: 250, pointerId: 11 });
+    await main.trigger('pointermove', { clientX: 400, clientY: 350, pointerId: 11 });
+
+    expect(wrapper.get('.region-frame').attributes('style')).toMatch(/left: 30(?:\.\d+)?%/);
+    expect(wrapper.get('.region-frame').attributes('style')).toContain('top: 40%');
+    const lastRegion = capture.updateScreenRegion.mock.lastCall?.[0];
+    expect(lastRegion).toMatchObject({ width: 0.5, height: 0.4 });
+    expect(lastRegion.x).toBeCloseTo(0.3);
+    expect(lastRegion.y).toBeCloseTo(0.4);
+    expect(setPointerCapture).toHaveBeenCalledWith(11);
+    wrapper.unmount();
   });
 
   it('applies a selected preset and persists it to preferences', async () => {

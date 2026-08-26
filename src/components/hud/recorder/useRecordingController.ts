@@ -190,15 +190,18 @@ export function useRecordingController(
   const prewarmNativeRecording = async (generation: number) => {
     if (!configuration) return false;
     await capture.prepareRecording({
+      projectId: configuration.projectId,
       screenKind: configuration.screenKind,
       screenId: configuration.screenId,
       cameraId: null,
       microphoneId: null,
       systemAudio: configuration.systemAudio,
-      cursor: true,
+      cursor: configuration.cursor !== false,
       recordInteractions: configuration.recordInteractions === true,
       targetFps: configuration.targetFps,
       region: configuration.region,
+      outputRoot: configuration.outputRoot,
+      excludedWindowHandles: configuration.excludedWindowHandles,
     });
     if (nativeSystemAudio && configuration.systemAudio) sidecarStates.systemAudio = 'prepared';
     if (generation !== recordingGeneration) {

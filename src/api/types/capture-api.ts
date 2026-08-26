@@ -21,8 +21,11 @@ import type {
   TeleprompterSessionContext,
 } from '../../components/hud/teleprompter/teleprompter-types';
 import type { RecordingBarVisibility, RecordingConfiguration } from '../../components/hud/recorder/recording-types';
+import type { RecordingSessionResult } from '../../components/hud/recorder/recording-types';
 import type { EditorLoadingProgress, EditorLoadingStage } from './editor-window';
 import type { AppearanceSettings } from '~/types/appearance';
+import type { EditorPresetDocument, EditorPresetSettings } from './editor-preset';
+import type { QuickSnipConfiguration, QuickSnipSnapshot } from './quick-snip';
 
 export type * from './capture-config';
 export type * from './screen-region';
@@ -30,6 +33,8 @@ export type * from './capture-session';
 export type * from './editor-window';
 export type * from './cursor-pack';
 export type * from '~/types/appearance';
+export type * from './editor-preset';
+export type * from './quick-snip';
 
 export interface ImportedFont {
   id: string;
@@ -76,7 +81,11 @@ export interface DesktopCaptureApi extends CaptureApi {
     quit?: string;
     tooltip?: string;
     recording?: boolean;
+    quickSnip?: string;
+    startQuickSnip?: string;
+    stopQuickSnip?: string;
   }): void;
+  setNormalRecordingActive(active: boolean): void;
   onTrayStopRecording?(listener: () => void): () => void;
   setWindowMode(mode: 'hud' | 'recorder'): void;
   showHud(): void;
@@ -106,6 +115,7 @@ export interface DesktopCaptureApi extends CaptureApi {
     listener: (options: ScreenRegionOverlayOptions & { mode?: 'select' | 'record' }) => void,
   ): () => void;
   confirmScreenRegion(region: ScreenRegion): void;
+  updateScreenRegion(region: ScreenRegion): void;
   cancelScreenRegion(): void;
   getWindowBounds(): Promise<{ x: number; y: number; width: number; height: number } | null>;
   getPreferences(): Promise<PreferenceSettings>;
@@ -113,6 +123,35 @@ export interface DesktopCaptureApi extends CaptureApi {
   resetPreferences(keys?: Array<keyof PreferenceSettings>): Promise<PreferenceSettings>;
   onPreferencesChanged(listener: (preferences: PreferenceSettings) => void): () => void;
   onPreferenceShortcut(listener: (id: string) => void): () => void;
+  getEditorPresets(): Promise<EditorPresetDocument>;
+  createEditorPreset(name: string): Promise<EditorPresetDocument>;
+  renameEditorPreset(id: string, name: string): Promise<EditorPresetDocument>;
+  deleteEditorPreset(id: string): Promise<EditorPresetDocument>;
+  selectEditorPreset(id: string): Promise<EditorPresetDocument>;
+  updateEditorPreset(id: string, settings: EditorPresetSettings): Promise<EditorPresetDocument>;
+  updateActiveEditorPreset(settings: EditorPresetSettings): Promise<EditorPresetDocument>;
+  onEditorPresetsChanged(listener: (document: EditorPresetDocument) => void): () => void;
+  quickSnipToggle(): Promise<QuickSnipSnapshot>;
+  quickSnipStart(
+    overrides?: Partial<Pick<QuickSnipConfiguration, 'mode' | 'format' | 'automaticZoom' | 'devices'>>,
+  ): Promise<QuickSnipSnapshot>;
+  configureQuickSnip(
+    overrides: Partial<Pick<QuickSnipConfiguration, 'mode' | 'format' | 'automaticZoom' | 'devices'>>,
+  ): Promise<QuickSnipSnapshot>;
+  quickSnipStop(): Promise<QuickSnipSnapshot>;
+  quickSnipCancel(): Promise<QuickSnipSnapshot>;
+  getQuickSnipState(): Promise<QuickSnipSnapshot>;
+  reportQuickSnip(event: {
+    type: 'recording' | 'completed' | 'failed';
+    session?: RecordingSessionResult;
+    error?: string;
+  }): Promise<QuickSnipSnapshot>;
+  onQuickSnipConfigure(listener: (configuration: QuickSnipConfiguration) => void): () => void;
+  onQuickSnipCommand(listener: (command: 'start' | 'stop' | 'cancel') => void): () => void;
+  onQuickSnipStatus(listener: (snapshot: QuickSnipSnapshot) => void): () => void;
+  onQuickSnipState(listener: (snapshot: QuickSnipSnapshot) => void): () => void;
+  copyQuickSnipFile(path: string): Promise<{ native: boolean; fallback: string | null }>;
+  setQuickSnipStatusCompact(compact: boolean): void;
   showTeleprompter(): void;
   hideTeleprompter(): void;
   toggleTeleprompterVisibility(): void;

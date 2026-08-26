@@ -11,6 +11,11 @@ const shortcutErrors = ref<Record<string, string>>({});
 
 const recordingDefinitions = [
   {
+    id: 'quickSnip.toggle',
+    label: () => 'Quick Snip',
+    description: () => 'Open, start, or stop Quick Snip based on its current state.',
+  },
+  {
     id: 'hud.startStopRecording',
     label: () => t('startStopRecording'),
     description: () => t('startStopRecordingDesc'),
@@ -52,6 +57,7 @@ const shortcutGroups = [
 
 const defaultShortcuts: Record<string, string> = {
   'hud.startStopRecording': 'Alt+Shift+R',
+  'quickSnip.toggle': 'Alt+Shift+S',
   'hud.playPause': 'Alt+Shift+P',
   'hud.toggleMic': 'Alt+Shift+M',
   'hud.toggleCamera': 'Alt+Shift+C',
@@ -98,7 +104,7 @@ const updateShortcut = async (id: string, keys: string) => {
   if (hasConflict) return;
 
   const currentShortcuts = preferencesStore.settings?.shortcuts || {};
-  const category = id.startsWith('teleprompter.') ? 'teleprompter' : 'hud';
+  const category = id.startsWith('teleprompter.') ? 'teleprompter' : id.startsWith('quickSnip.') ? 'quick-snip' : 'hud';
   const existing = currentShortcuts[id] || { scope: 'global', category };
 
   if (existing.keys === keys) {

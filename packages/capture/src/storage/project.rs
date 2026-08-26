@@ -1,6 +1,4 @@
-use crate::model::{
-    ProjectEditorState, ProjectId, ProjectManifest, ProjectSession, SCHEMA_VERSION, SessionId,
-};
+use crate::model::{ProjectId, ProjectManifest, ProjectSession, SCHEMA_VERSION, SessionId};
 
 use super::{ProjectLayout, write_atomic};
 
@@ -130,7 +128,7 @@ pub fn create_or_update_project(
             created_at_utc: now_utc.into(),
             updated_at_utc: now_utc.into(),
             sessions: Vec::new(),
-            editor: ProjectEditorState::default(),
+            editor: serde_json::json!({ "schemaVersion": 3 }),
         }
     };
     if project.project_id != project_id {

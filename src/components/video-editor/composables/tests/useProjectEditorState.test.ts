@@ -23,7 +23,6 @@ import {
 const mocks = vi.hoisted(() => ({
   saveProjectEditorState: vi.fn(),
   getProjectEditorState: vi.fn(),
-  getPreferences: vi.fn(),
   updatePreferences: vi.fn(),
 }));
 vi.mock('../../../../api/capture', () => ({ capture: mocks }));
@@ -88,7 +87,6 @@ const editorDefaults = () =>
 
 describe('useProjectEditorState property persistence', () => {
   beforeEach(() => {
-    mocks.getPreferences.mockResolvedValue({ extras: {} });
     mocks.updatePreferences.mockResolvedValue(undefined);
   });
 
@@ -97,7 +95,6 @@ describe('useProjectEditorState property persistence', () => {
     vi.useRealTimers();
     mocks.saveProjectEditorState.mockReset();
     mocks.getProjectEditorState.mockReset();
-    mocks.getPreferences.mockReset();
     mocks.updatePreferences.mockReset();
   });
 
@@ -196,8 +193,8 @@ describe('useProjectEditorState property persistence', () => {
   it('applies presentation defaults only when the loaded project is fresh', async () => {
     const state = createState();
     const defaults = editorDefaults();
+    state.editorDefaults.value = defaults;
     state.availableBackgrounds.value = [{ items: [preferredBackground] }];
-    mocks.getPreferences.mockResolvedValue({ extras: { editorDefaults: defaults } });
     mocks.getProjectEditorState.mockResolvedValue({
       schemaVersion: 3,
       isFresh: true,
@@ -226,9 +223,10 @@ describe('useProjectEditorState property persistence', () => {
     expect(state.cursorAutoHide.value).toEqual(defaults.presentation!.cursor.autoHide);
   });
 
-  it('uses global cursor and zoom motion blur preferences for an existing project while preserving its canvas, background, and zoom elements', async () => {
+  it('preserves every saved editor setting for an existing project', async () => {
     const state = createState();
     const defaults = editorDefaults();
+    state.editorDefaults.value = defaults;
     const existingPresentation: ProjectEditorState['presentation'] = {
       canvas: { ...DEFAULT_OUTPUT_CANVAS, preset: '9:16', width: 1080, height: 1920, showBackground: false },
       selectedBackgroundId: null,
@@ -237,7 +235,6 @@ describe('useProjectEditorState property persistence', () => {
       importedBackgrounds: [],
       cursor: projectCursor(),
     };
-    mocks.getPreferences.mockResolvedValue({ extras: { editorDefaults: defaults } });
     mocks.getProjectEditorState.mockResolvedValue({
       schemaVersion: 3,
       isFresh: false,
@@ -257,21 +254,21 @@ describe('useProjectEditorState property persistence', () => {
     expect(state.selectedBackground.value).toEqual(existingPresentation.background);
     expect(state.backgroundBlurPercent.value).toBe(existingPresentation.blurPercent);
     expect(state.zoomElements.value).toEqual([existingZoom]);
-    expect(state.zoomMotionBlur.value).toEqual(defaults.zoomMotionBlur);
-    expect(state.cursorSelection.value).toEqual(defaults.presentation!.cursor.selection);
-    expect(state.cursorSize.value).toBe(defaults.presentation!.cursor.size);
-    expect(state.cursorColor.value).toBe(defaults.presentation!.cursor.color);
+    expect(state.zoomMotionBlur.value).toEqual({ enabled: true, intensity: 0.11 });
+    expect(state.cursorSelection.value).toEqual(existingPresentation.cursor.selection);
+    expect(state.cursorSize.value).toBe(existingPresentation.cursor.size);
+    expect(state.cursorColor.value).toBe(existingPresentation.cursor.color);
     expect(state.importedBackgrounds.value).toEqual(existingPresentation.importedBackgrounds);
-    expect(state.cursorEffects.value).toEqual(defaults.presentation!.cursor.clickEffects);
-    expect(state.cursorMotion.value).toEqual(defaults.presentation!.cursor.motion);
-    expect(state.cursorAutoHide.value).toEqual(defaults.presentation!.cursor.autoHide);
-    expect(state.cursorShadowEnabled.value).toBe(defaults.presentation!.cursor.shadow.enabled);
-    expect(state.cursorShadowBlur.value).toBe(defaults.presentation!.cursor.shadow.blur);
-    expect(state.cursorShadowColor.value).toBe(defaults.presentation!.cursor.shadow.color);
-    expect(state.cursorShadowDirection.value).toBe(defaults.presentation!.cursor.shadow.direction);
+    expect(state.cursorEffects.value).toEqual(existingPresentation.cursor.clickEffects);
+    expect(state.cursorMotion.value).toEqual(existingPresentation.cursor.motion);
+    expect(state.cursorAutoHide.value).toEqual(existingPresentation.cursor.autoHide);
+    expect(state.cursorShadowEnabled.value).toBe(existingPresentation.cursor.shadow.enabled);
+    expect(state.cursorShadowBlur.value).toBe(existingPresentation.cursor.shadow.blur);
+    expect(state.cursorShadowColor.value).toBe(existingPresentation.cursor.shadow.color);
+    expect(state.cursorShadowDirection.value).toBe(existingPresentation.cursor.shadow.direction);
   });
 
-  it('does not capture defaults for a technical save after load until default capture is enabled', async () => {
+  it('never persists editor defaults through the preferences API', async () => {
     vi.useFakeTimers();
     const state = createState();
     mocks.getProjectEditorState.mockResolvedValue({
@@ -293,7 +290,6 @@ describe('useProjectEditorState property persistence', () => {
     const editor = useProjectEditorState(state);
     await editor.load('project');
     await nextTick();
-    mocks.updatePreferences.mockClear();
 
     editor.scheduleSave(false);
     await vi.advanceTimersByTimeAsync(250);
@@ -308,7 +304,8 @@ describe('useProjectEditorState property persistence', () => {
     await nextTick();
     await Promise.resolve();
 
-    expect(mocks.updatePreferences).toHaveBeenCalledOnce();
+    expect(mocks.updatePreferences).not.toHaveBeenCalled();
+    expect(mocks.saveProjectEditorState).toHaveBeenCalledTimes(2);
   });
 
   it('saves snapshots, preserves custom backgrounds and recovers the write chain after failure', async () => {
@@ -339,25 +336,15 @@ describe('useProjectEditorState property persistence', () => {
     expect(editor.isSaving.value).toBe(false);
   });
 
-  it('keeps the editor save resolved when editor defaults persistence fails', async () => {
+  it('keeps editor saves independent from the preferences API', async () => {
     const state = createState();
-    const originalError = new Error('preferences unavailable');
     mocks.saveProjectEditorState.mockResolvedValue(undefined);
-    mocks.updatePreferences.mockRejectedValueOnce(originalError);
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    mocks.updatePreferences.mockRejectedValueOnce(new Error('preferences unavailable'));
 
-    try {
-      const editor = useProjectEditorState(state);
-      await expect(editor.saveNow()).resolves.toBeUndefined();
-      expect(consoleError).toHaveBeenCalledWith(
-        '[Beam editor] failed to save editor defaults',
-        { projectId: 'project' },
-        originalError,
-      );
-      expect(editor.isSaving.value).toBe(false);
-    } finally {
-      consoleError.mockRestore();
-    }
+    const editor = useProjectEditorState(state);
+    await expect(editor.saveNow()).resolves.toBeUndefined();
+    expect(mocks.updatePreferences).not.toHaveBeenCalled();
+    expect(editor.isSaving.value).toBe(false);
   });
 
   it('round-trips cursor auto-hide settings through save and load', async () => {
@@ -382,7 +369,7 @@ describe('useProjectEditorState property persistence', () => {
     expect(loadingState.cursorAutoHide.value).toEqual({ enabled: true, delaySeconds: 7.5, fadeDurationMs: 750 });
   });
 
-  it('persists editor defaults alongside the first successful editor save', async () => {
+  it('updates in-memory editor defaults alongside the first successful editor save', async () => {
     const state = createState();
     const selectedClip: VisualClip = {
       id: 'image-clip',
@@ -423,25 +410,7 @@ describe('useProjectEditorState property persistence', () => {
     const editor = useProjectEditorState(state);
     await editor.saveNow();
 
-    expect(mocks.updatePreferences).toHaveBeenCalledWith({
-      extras: {
-        editorDefaults: expect.objectContaining({
-          schemaVersion: 1,
-          visual: expect.objectContaining({ image: expect.any(Object) }),
-          zoom: {
-            durationMs: 800,
-            depth: 4,
-            mode: 'manual',
-            projection: '3d',
-            tiltIntensity: 0.84,
-            tiltHorizontal: -0.4,
-            tiltVertical: 0.3,
-            tiltPreset: 'custom',
-          },
-          zoomMotionBlur: { enabled: false, intensity: 0.82 },
-        }),
-      },
-    });
+    expect(mocks.updatePreferences).not.toHaveBeenCalled();
     expect(state.editorDefaults.value.zoom).toEqual({
       durationMs: 800,
       depth: 4,
@@ -461,7 +430,7 @@ describe('useProjectEditorState property persistence', () => {
     });
   });
 
-  it('sends structured-cloneable editor defaults when reactive color-layer styles are present', async () => {
+  it('sends a structured-cloneable editor state when reactive color-layer styles are present', async () => {
     const state = createState();
     const colorLayer: ColorClip = {
       id: 'color-layer',
@@ -499,10 +468,11 @@ describe('useProjectEditorState property persistence', () => {
     const editor = useProjectEditorState(state);
     await expect(editor.saveNow()).resolves.toBeUndefined();
 
-    const payload = mocks.updatePreferences.mock.calls[0]?.[0];
+    const payload = mocks.saveProjectEditorState.mock.calls[0]?.[1];
     expect(payload).toBeDefined();
     expect(() => structuredClone(payload)).not.toThrow();
     expect(payload).toEqual(JSON.parse(JSON.stringify(payload)));
+    expect(mocks.updatePreferences).not.toHaveBeenCalled();
     expect(mocks.saveProjectEditorState.mock.calls[0]?.[1].composition.clips[0]).toEqual(colorLayer);
   });
 

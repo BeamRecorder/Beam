@@ -92,15 +92,23 @@ fn project_editor_state_survives_a_new_recording() {
         "2026-01-01T00:00:00Z",
     )
     .expect("project");
-    manifest
-        .editor
-        .zoom
-        .generated_sessions
-        .push(ZoomGenerationRecord {
-            session_id: first_session.to_string(),
-            algorithm_version: 1,
-            generated_at: "2026-01-01T00:00:00Z".into(),
-        });
+    manifest.editor = serde_json::json!({
+        "schemaVersion": 3,
+        "composition": {
+            "schemaVersion": 4,
+            "futureCompositionField": { "preserve": true }
+        },
+        "zoom": {
+            "elements": [],
+            "generatedSessions": [{
+                "sessionId": first_session.to_string(),
+                "algorithmVersion": 1,
+                "generatedAt": "2026-01-01T00:00:00Z"
+            }]
+        },
+        "presentation": { "futurePresentationField": "keep-me" },
+        "futureEditorField": { "preserve": true }
+    });
     let path = ProjectLayout::new(temporary.path(), project).project_manifest();
     write_atomic(&path, &serde_json::to_vec_pretty(&manifest).expect("json"))
         .expect("write project");
@@ -112,7 +120,21 @@ fn project_editor_state_survives_a_new_recording() {
         "2026-01-02T00:00:00Z",
     )
     .expect("updated project");
-    assert_eq!(updated.editor.zoom.generated_sessions.len(), 1);
+    assert_eq!(
+        updated.editor["zoom"]["generatedSessions"]
+            .as_array()
+            .map(Vec::len),
+        Some(1)
+    );
+    assert_eq!(
+        updated.editor["composition"]["futureCompositionField"]["preserve"],
+        true
+    );
+    assert_eq!(
+        updated.editor["presentation"]["futurePresentationField"],
+        "keep-me"
+    );
+    assert_eq!(updated.editor["futureEditorField"]["preserve"], true);
     assert_eq!(updated.sessions.len(), 2);
 }
 

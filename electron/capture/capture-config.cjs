@@ -141,6 +141,11 @@ function buildDefaultCaptureConfig(catalog, options, environment) {
     failurePolicy: options.failurePolicy || 'continue-without-optional-tracks',
     region,
     excludedProcessId: environment.excludedProcessId,
+    excludedWindowHandles: Array.isArray(options.excludedWindowHandles)
+      ? options.excludedWindowHandles
+          .filter((value) => typeof value === 'string' && /^[0-9a-f]+$/i.test(value))
+          .slice(0, 16)
+      : [],
   };
 }
 

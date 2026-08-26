@@ -2,6 +2,62 @@ const assert = require('node:assert/strict');
 const Module = require('node:module');
 const test = require('node:test');
 
+function createOverlayHarness() {
+  const calls = [];
+  const listeners = new Map();
+  let destroyed = false;
+  const window = {
+    webContents: { send: (...args) => calls.push(['send', ...args]) },
+    once: (event, listener) => listeners.set(event, listener),
+    on: (event, listener) => listeners.set(event, listener),
+    emit: (event, ...args) => listeners.get(event)?.(...args),
+    isDestroyed: () => destroyed,
+    setContentProtection: (value) => calls.push(['contentProtection', value]),
+    setBounds: (bounds) => calls.push(['bounds', bounds]),
+    setParentWindow: (parent) => calls.push(['parent', parent]),
+    setIgnoreMouseEvents: (value) => calls.push(['mouse', value]),
+    show: () => calls.push(['show']),
+    showInactive: () => calls.push(['showInactive']),
+    focus: () => calls.push(['focus']),
+    moveTop: () => calls.push(['moveTop']),
+    hide: () => calls.push(['hide']),
+    destroy: () => {
+      destroyed = true;
+      listeners.get('closed')?.();
+    },
+    loadURL: () => undefined,
+    loadFile: () => undefined,
+  };
+  const electron = {
+    BrowserWindow: class {
+      constructor() {
+        return window;
+      }
+    },
+  };
+  const originalLoad = Module._load;
+  Module._load = function load(request, parent, isMain) {
+    return request === 'electron' ? electron : originalLoad.call(this, request, parent, isMain);
+  };
+
+  try {
+    const modulePath = require.resolve('../electron/screen-region-overlay.cjs');
+    delete require.cache[modulePath];
+    const { createScreenRegionOverlayWindow } = require('../electron/screen-region-overlay.cjs');
+    return {
+      overlay: createScreenRegionOverlayWindow({
+        applicationRoot: '/app',
+        isPackaged: false,
+        platform: 'linux',
+      }),
+      calls,
+      window,
+    };
+  } finally {
+    Module._load = originalLoad;
+  }
+}
+
 test('cleans a failed region selection so a later selection can complete', async () => {
   const calls = [];
   const listeners = new Map();
@@ -158,4 +214,116 @@ test('resolves Linux selection bounds from the parent display and falls back to 
   } finally {
     Module._load = originalLoad;
   }
+});
+
+test('updates the live overlay payload and clamps the current selection before confirmCurrent resolves it', async () => {
+  const { overlay, calls, window } = createOverlayHarness();
+  const bounds = { x: 0, y: 0, width: 1920, height: 1080 };
+  const selection = overlay.select({
+    bounds,
+    context: 'quick-snip',
+    region: { x: 0.1, y: 0.2, width: 0.5, height: 0.4 },
+  });
+  window.emit('ready-to-show');
+  calls.length = 0;
+  let liveRegion = null;
+  overlay.setRegionChangeListener((region, displayBounds) => {
+    liveRegion = { region, displayBounds };
+  });
+
+  assert.equal(overlay.update({ x: -0.25, y: 0.75, width: 0.8, height: 0.8 }), true);
+  assert.deepEqual(liveRegion, {
+    displayBounds: bounds,
+    region: { x: 0, y: 0.75, width: 0.8, height: 0.25 },
+  });
+  assert.equal(
+    calls.some((call) => call[0] === 'send'),
+    false,
+  );
+  assert.equal(overlay.confirmCurrent(), true);
+  assert.deepEqual(await selection, {
+    bounds,
+    region: { x: 0, y: 0.75, width: 0.8, height: 0.25 },
+  });
+});
+
+test('exposes the live native overlay window for an owned Crop Bar', async () => {
+  const { overlay, window } = createOverlayHarness();
+  const selection = overlay.select({
+    bounds: { x: 0, y: 0, width: 1920, height: 1080 },
+    context: 'quick-snip',
+    region: { x: 0.1, y: 0.2, width: 0.5, height: 0.4 },
+  });
+
+  assert.equal(overlay.nativeWindow(), window);
+  overlay.cancel();
+  assert.equal(await selection, null);
+  overlay.destroy();
+  assert.equal(overlay.nativeWindow(), null);
+});
+
+test('rejects zero, NaN, and invalid out-of-range updates without resolving selection', async () => {
+  const { overlay } = createOverlayHarness();
+  const selection = overlay.select({
+    bounds: { x: 0, y: 0, width: 1920, height: 1080 },
+    region: { x: 0.1, y: 0.2, width: 0.5, height: 0.4 },
+  });
+  let resolved = false;
+  selection.then(() => {
+    resolved = true;
+  });
+
+  const invalidRegions = [
+    { x: 0.1, y: 0.2, width: 0, height: 0.4 },
+    { x: 0.1, y: 0.2, width: 0.5, height: 0 },
+    { x: Number.NaN, y: 0.2, width: 0.5, height: 0.4 },
+    { x: 1.1, y: 0.2, width: 0.5, height: 0.4 },
+    { x: 0.1, y: 1.1, width: 0.5, height: 0.4 },
+    { x: 0.1, y: 0.2, width: -0.1, height: 0.4 },
+  ];
+  for (const region of invalidRegions) assert.equal(overlay.update(region), false);
+
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(resolved, false);
+  overlay.cancel();
+  assert.equal(await selection, null);
+});
+
+test('cancels an active selection, detaches its parent, and ignores stale updates', async () => {
+  const { overlay, calls, window } = createOverlayHarness();
+  const parentWindow = {
+    isDestroyed: () => false,
+    getBounds: () => ({ x: 10, y: 20, width: 352, height: 512 }),
+  };
+  const selection = overlay.select(
+    {
+      bounds: { x: 0, y: 0, width: 1920, height: 1080 },
+      context: 'quick-snip',
+      region: { x: 0.1, y: 0.2, width: 0.5, height: 0.4 },
+    },
+    parentWindow,
+  );
+
+  window.emit('ready-to-show');
+  overlay.cancel();
+
+  assert.equal(await selection, null);
+  assert.equal(overlay.update({ x: 0.2, y: 0.2, width: 0.5, height: 0.4 }), false);
+  assert.deepEqual(calls.filter((call) => call[0] === 'parent').at(-1), ['parent', null]);
+  assert.equal(
+    calls.some((call) => call[0] === 'hide'),
+    true,
+  );
+});
+
+test('destroy resolves a pending selection and leaves later operations inert', async () => {
+  const { overlay } = createOverlayHarness();
+  const first = overlay.select({
+    bounds: { x: 0, y: 0, width: 1920, height: 1080 },
+    region: { x: 0.1, y: 0.2, width: 0.5, height: 0.4 },
+  });
+
+  overlay.destroy();
+  assert.equal(await first, null);
+  assert.equal(overlay.update({ x: 0.2, y: 0.2, width: 0.5, height: 0.4 }), false);
 });

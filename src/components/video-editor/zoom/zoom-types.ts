@@ -25,6 +25,7 @@ export interface ZoomElement {
   focus: ZoomFocus;
   depth: ZoomDepth;
   mode: ZoomMode;
+  enabled?: boolean;
   /** Missing only in projects saved before perspective zooms were introduced. */
   projection?: ZoomProjection;
   /** Normalized perspective strength. Missing values use the product default. */

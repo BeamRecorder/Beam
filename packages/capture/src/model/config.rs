@@ -156,6 +156,8 @@ pub struct CaptureRequest {
     pub region: Option<ScreenRegion>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub excluded_process_id: Option<u32>,
+    #[serde(default)]
+    pub excluded_window_handles: Vec<String>,
 }
 
 impl CaptureRequest {

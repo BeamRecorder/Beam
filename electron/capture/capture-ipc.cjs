@@ -66,6 +66,7 @@ function registerCaptureIpc({
   trackStorages,
   platform = process.platform,
   canAcceptWork = () => true,
+  canStartRecording = () => true,
 }) {
   const registerSession = (session) => {
     for (const storage of trackStorages) storage.registerSession(session);
@@ -111,11 +112,19 @@ function registerCaptureIpc({
     void promise.then(clearPreparation, clearPreparation);
     return promise;
   };
-  ipcMain.handle('capture:request', async (_event, command, payload = {}) => {
+  ipcMain.handle('capture:request', async (event, command, payload = {}) => {
     if (!canAcceptWork()) {
       const error = new Error(`capture command "${command}" rejected during application shutdown`);
       error.code = 'application-shutting-down';
       throw error;
+    }
+    if (
+      ['start-default-recording', 'prepare-default-recording', 'start-recording', 'prepare', 'start'].includes(
+        command,
+      ) &&
+      !canStartRecording(event)
+    ) {
+      throw new Error('A Quick Snip capture is already active.');
     }
     if (command === 'start-default-recording') {
       const catalog = await requestEngine('discover');

@@ -273,6 +273,7 @@ test('migrates legacy zoom elements to the flat 2D projection', () => {
     focus: { cx: 0.25, cy: 0.75 },
     depth: 2,
     mode: 'manual',
+    enabled: true,
     projection: '2d',
     tiltIntensity: 0.6,
     tiltHorizontal: 0.65,

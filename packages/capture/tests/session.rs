@@ -27,6 +27,7 @@ fn native_session_finalizes_storage_and_supports_pause_segments() {
         failure_policy: FailurePolicy::FailFast,
         region: None,
         excluded_process_id: None,
+        excluded_window_handles: vec![],
     };
     let snapshot = CatalogSnapshot {
         generation: 1,
@@ -72,6 +73,7 @@ fn native_session_discard_removes_the_project_and_session() {
         failure_policy: FailurePolicy::FailFast,
         region: None,
         excluded_process_id: None,
+        excluded_window_handles: vec![],
     };
     let snapshot = CatalogSnapshot {
         generation: 1,
