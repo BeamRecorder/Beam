@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   cameraTiltForControls,
   createCompositionCameraEvaluator,
@@ -64,6 +64,26 @@ describe('composition camera evaluator', () => {
     const sample = evaluator.sample(2_500);
     expect(sample.focus.cx).toBeGreaterThan(0.5);
     expect(sample.focus.cy).toBe(0.5);
+  });
+
+  it('samples cursor telemetry through the active screen source-time mapping', () => {
+    const telemetry = [
+      { timeMs: 0, cx: 0.5, cy: 0.5 },
+      { timeMs: 1_000, cx: 0.5, cy: 0.5 },
+      { timeMs: 2_000, cx: 0.9, cy: 0.5 },
+      { timeMs: 5_000, cx: 0.9, cy: 0.5 },
+    ];
+    const timelineTime = createCompositionCameraEvaluator({ zooms: [autoZoom], telemetry, autoFollow });
+    const mapTelemetryTime = vi.fn((timeMs: number) => timeMs + 2_000);
+    const sourceTime = createCompositionCameraEvaluator({
+      zooms: [autoZoom],
+      telemetry,
+      autoFollow,
+      mapTelemetryTime,
+    });
+
+    expect(sourceTime.sample(1_000).focus.cx).toBeGreaterThan(timelineTime.sample(1_000).focus.cx);
+    expect(mapTelemetryTime).toHaveBeenCalled();
   });
 
   it('returns deterministic samples for sequential, direct and non-sequential access', () => {

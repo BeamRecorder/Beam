@@ -207,6 +207,7 @@
     "delete": "刪除",
     "keyboardCaptions": "鍵盤快速鍵",
     "textCaptions": "文字字幕",
+    "rippleDelete": "刪除並關閉空隙",
     "copyUnavailable": "複製前選擇時間軸項目。",
     "clipboardEmpty": "貼上之前複製時間軸項目。"
   },

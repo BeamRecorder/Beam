@@ -207,6 +207,7 @@
     "copy": "Sao chép",
     "paste": "Dán",
     "delete": "Xóa",
+    "rippleDelete": "Xóa và đóng khoảng trống",
     "copyUnavailable": "Chọn một mục dòng thời gian trước khi sao chép.",
     "clipboardEmpty": "Sao chép một mục dòng thời gian trước khi dán."
   },

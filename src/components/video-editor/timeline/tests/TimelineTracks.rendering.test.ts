@@ -67,9 +67,9 @@ describe('TimelineTracks', () => {
 
     const clip = mounted!.findAll('.visual-track .timeline-clip')[2]!;
     await clip.trigger('click');
-    expect(mounted!.emitted('select:clip')).toContainEqual(['screen-clip']);
+    expect(mounted!.emitted('select:item')).toContainEqual([{ kind: 'clip', id: 'screen-clip', intent: 'replace' }]);
     await mounted!.get('.cursor-zoom-indicator:not(.preview-ghost)').trigger('click');
-    expect(mounted!.emitted('select:zoom')).toContainEqual(['zoom-1']);
+    expect(mounted!.emitted('select:item')).toContainEqual([{ kind: 'zoom', id: 'zoom-1', intent: 'replace' }]);
   });
 
   it('passes layout width to clips when timeline UI scaling changes their visual width', async () => {

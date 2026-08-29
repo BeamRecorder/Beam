@@ -13,6 +13,108 @@ import {
 } from './TimelineTracks.test-support';
 
 describe('TimelineTracks', () => {
+  it('previews and commits a mixed clip and zoom selection as one move', async () => {
+    const mounted = await mountTracks({
+      isSnappingEnabled: false,
+      selectedClipId: 'screen-clip',
+      selectedClipIds: ['screen-clip'],
+      selectedZoomId: 'zoom-1',
+      selectedZoomIds: ['zoom-1'],
+    });
+    mounted!.get('.timeline-tracks-container').element.dispatchEvent(new Event('scroll'));
+    await flushPromises();
+    const screenClip = mounted!
+      .findAllComponents(TimelineClipStub)
+      .find((component) => (component.props('clip') as VisualClip).id === 'screen-clip');
+    if (!screenClip) throw new Error('Expected the screen timeline clip stub.');
+    const zoomButton = mounted!.get('.cursor-zoom-indicator:not(.preview-ghost)');
+    expect((zoomButton.element as HTMLElement).style.left).toBe('20%');
+
+    await screenClip.trigger('pointerdown', { clientX: 200 });
+    window.dispatchEvent(pointerEvent('pointermove', 300));
+    await flushPromises();
+
+    const preview = mounted!.emitted('preview:composition')?.at(-1)?.[0] as ClipComposition | null | undefined;
+    expect(preview?.clips.find((clip) => clip.id === 'screen-clip')).toMatchObject({ timelineStartMs: 1_000 });
+    expect(preview?.clips.find((clip) => clip.id === 'webcam-clip')).toMatchObject({ timelineStartMs: 1_000 });
+    expect((zoomButton.element as HTMLElement).style.left).toBe('30%');
+    expect(mounted!.emitted('move:selection') ?? []).toHaveLength(0);
+
+    window.dispatchEvent(pointerEvent('pointerup', 300));
+
+    expect(mounted!.emitted('preview:composition')?.at(-1)).toEqual([null]);
+    expect(mounted!.emitted('move:selection')).toEqual([
+      [{ clipIds: ['screen-clip', 'webcam-clip'], zoomIds: ['zoom-1'], deltaMs: 1_000 }],
+    ]);
+  });
+
+  it('clamps a mixed clip and zoom move at the beginning of the timeline', async () => {
+    const mounted = await mountTracks({
+      isSnappingEnabled: false,
+      selectedClipId: 'imported-audio',
+      selectedClipIds: ['imported-audio'],
+      selectedZoomId: 'zoom-1',
+      selectedZoomIds: ['zoom-1'],
+    });
+    mounted!.get('.timeline-tracks-container').element.dispatchEvent(new Event('scroll'));
+    await flushPromises();
+    const importedAudio = mounted!
+      .findAllComponents(TimelineClipStub)
+      .find((component) => (component.props('clip') as VisualClip).id === 'imported-audio');
+    if (!importedAudio) throw new Error('Expected the imported audio timeline clip stub.');
+    const zoomButton = mounted!.get('.cursor-zoom-indicator:not(.preview-ghost)');
+
+    await importedAudio.trigger('pointerdown', { clientX: 500 });
+    window.dispatchEvent(pointerEvent('pointermove', 0));
+    await flushPromises();
+
+    const preview = mounted!.emitted('preview:composition')?.at(-1)?.[0] as ClipComposition | null | undefined;
+    expect(preview?.clips.find((clip) => clip.id === 'imported-audio')).toMatchObject({ timelineStartMs: 0 });
+    expect((zoomButton.element as HTMLElement).style.left).toBe('0%');
+
+    window.dispatchEvent(pointerEvent('pointerup', 0));
+
+    expect(mounted!.emitted('move:selection')).toEqual([
+      [{ clipIds: ['imported-audio'], zoomIds: ['zoom-1'], deltaMs: -2_000 }],
+    ]);
+  });
+
+  it('keeps mixed selection movement in timeline time when rendered at 75%', async () => {
+    const mounted = await mountTracks({
+      isSnappingEnabled: false,
+      selectedClipId: 'screen-clip',
+      selectedClipIds: ['screen-clip'],
+      selectedZoomId: 'zoom-1',
+      selectedZoomIds: ['zoom-1'],
+    });
+    const ticks = mounted!.get('.ruler-ticks-area').element;
+    vi.mocked(ticks.getBoundingClientRect).mockReturnValue({
+      left: 120,
+      top: 0,
+      width: 750,
+      height: 28,
+      right: 870,
+      bottom: 28,
+    } as DOMRect);
+    Object.defineProperty(ticks, 'offsetWidth', { configurable: true, value: 1_000 });
+    Object.defineProperty(ticks, 'clientWidth', { configurable: true, value: 1_000 });
+    mounted!.get('.timeline-tracks-container').element.dispatchEvent(new Event('scroll'));
+    await flushPromises();
+
+    const screenClip = mounted!
+      .findAllComponents(TimelineClipStub)
+      .find((component) => (component.props('clip') as VisualClip).id === 'screen-clip');
+    if (!screenClip) throw new Error('Expected the screen timeline clip stub.');
+    await screenClip.trigger('pointerdown', { clientX: 200 });
+    window.dispatchEvent(pointerEvent('pointermove', 275));
+    await flushPromises();
+    window.dispatchEvent(pointerEvent('pointerup', 275));
+
+    expect(mounted!.emitted('move:selection')).toEqual([
+      [{ clipIds: ['screen-clip', 'webcam-clip'], zoomIds: ['zoom-1'], deltaMs: 1_000 }],
+    ]);
+  });
+
   it('keeps clip movement in timeline time when the timeline is rendered at 75%', async () => {
     const mounted = await mountTracks({ isSnappingEnabled: false });
     const ticks = mounted!.get('.ruler-ticks-area').element;

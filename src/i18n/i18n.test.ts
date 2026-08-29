@@ -117,6 +117,14 @@ describe('internationalization', () => {
     }
   });
 
+  it('translates ripple deletion in every supported locale', () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      setCurrentLocale(locale);
+      expect(i18n.global.te('TimelineTracks.rippleDelete', locale)).toBe(true);
+      expect(i18n.global.t('TimelineTracks.rippleDelete')).not.toBe('TimelineTracks.rippleDelete');
+    }
+  });
+
   it('provides the AI caption editing warning in every supported locale', () => {
     for (const locale of SUPPORTED_LOCALES) {
       setCurrentLocale(locale);

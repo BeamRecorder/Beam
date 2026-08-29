@@ -207,6 +207,7 @@
     "delete": "Löschen",
     "keyboardCaptions": "Tastaturkürzel",
     "textCaptions": "Textuntertitel",
+    "rippleDelete": "Löschen und Lücke schließen",
     "copyUnavailable": "Wählen Sie vor dem Kopieren ein Timeline-Element aus.",
     "clipboardEmpty": "Kopieren Sie ein Timeline-Element vor dem Einfügen."
   },

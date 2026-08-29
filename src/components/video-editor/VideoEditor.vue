@@ -51,13 +51,19 @@ import {
 import type { CursorSelection } from '~/api/types/cursor-pack';
 import { pasteClipAt } from '~/components/video-editor/composition/engine/clip-paste';
 import type { TimelinePasteRequest } from '~/components/video-editor/timeline/composables/timeline-clipboard-types';
-import type { TrackZoomSelection } from '~/components/video-editor/timeline/composables/timeline-tracks-types';
 import type { AddVisualElementRequest } from './composition/visual-element-types';
 import { useTimelineClipboardFeedback } from '~/components/video-editor/timeline/composables/useTimelineClipboardFeedback';
 import { EMPTY_CLIP_TRANSITIONS } from '~/media/shared/clip-transitions';
 import { usePreviewPerformanceMonitor } from './performance/usePreviewPerformanceMonitor';
 import { createMediaProcessingCollector, MEDIA_PROCESSING_COLLECTOR } from './performance/media-processing-pressure';
 import { useElementFullscreen } from './canvas/composables/useElementFullscreen';
+import { useMixedTimelineSelection } from './composables/useMixedTimelineSelection';
+import { shiftTimelineSelection } from './composition/timeline-edit-operations';
+import type {
+  TimelineItemSelectionRequest,
+  TimelineSelectionDelete,
+  TimelineSelectionMove,
+} from './timeline/composables/timeline-tracks-types';
 
 const { t } = useTranslate('VideoEditor');
 const { t: tTopbarHud } = useTranslate('TopbarHUD');
@@ -179,8 +185,6 @@ const {
   toggleClip,
   detachSelectedClip,
 } = compositionState;
-const { isDeleteDialogOpen, linkedDeleteClips, requestClipDeletion, deleteFromDialog, closeDeleteDialog } =
-  useLinkedClipDeletion({ composition, selectedClipId, selectedClipIds });
 const mediaDrop = useEditorMediaDrop({
   projectId: () => props.project?.id ?? null,
   currentTimeSeconds: () => currentTime.value,
@@ -206,12 +210,29 @@ const {
   trimZoomEdge,
   moveZoom,
   pasteZoomAtTime,
-  deleteSelectedZoom,
-  deleteZoomById,
 } = zoomState;
 const zoomMotionBlur = zoomState.zoomMotionBlur ?? ref({ ...DEFAULT_ZOOM_MOTION_BLUR });
 const zoomAutoFollow = zoomState.zoomAutoFollow ?? ref({ ...DEFAULT_ZOOM_AUTO_FOLLOW });
 const newZoomDurationMs = computed(() => editorDefaults.value.zoom?.durationMs ?? DEFAULT_ZOOM_DURATION_MS);
+const {
+  isDeleteDialogOpen,
+  linkedDeleteClips,
+  requestClipDeletion,
+  requestTimelineDeletion,
+  deleteFromDialog,
+  closeDeleteDialog,
+} = useLinkedClipDeletion({
+  composition,
+  selectedClipId,
+  selectedClipIds,
+  zoomElements,
+  selectedZoomId,
+  selectedZoomIds,
+  onCommit: () => {
+    editorState.scheduleSave();
+    commitNow(createEditorSnapshot());
+  },
+});
 const { isExporting, progress: exportProgress } = useExportJob();
 const timelineCompositionPreview = ref<typeof composition.value | null>(null);
 const timelinePreviewDuration = computed(() => {
@@ -257,16 +278,34 @@ const selectPropertiesTab = (tab: string) => {
   handleSelectTab(tab);
   openPropertiesPanel();
 };
+const {
+  selectItem: selectTimelineItem,
+  selectAll: selectAllTimelineItems,
+  clearAll: clearTimelineSelection,
+} = useMixedTimelineSelection({
+  composition,
+  zoomElements,
+  selectedClipId,
+  selectedClipIds,
+  selectedZoomId,
+  selectedZoomIds,
+  activeTab,
+  openPropertiesPanel,
+});
 const selectEditorClip = (clipId: string) => {
   openPropertiesPanel();
   selectedZoomId.value = null;
+  selectedZoomIds.value = [];
   selectClip(clipId);
   activeTab.value = 'clip';
 };
 const selectEditorTrack = (selection: { clipIds: string[]; primaryClipId: string | null; additive?: boolean }) => {
   openPropertiesPanel();
-  selectedZoomId.value = null;
   isCropping.value = false;
+  if (!selection.additive) {
+    selectedZoomId.value = null;
+    selectedZoomIds.value = [];
+  }
   selectClips(
     selection.additive ? [...selectedClipIds.value, ...selection.clipIds] : selection.clipIds,
     selection.primaryClipId,
@@ -275,12 +314,16 @@ const selectEditorTrack = (selection: { clipIds: string[]; primaryClipId: string
 const selectEditorZoom = (zoomId: string) => {
   openPropertiesPanel();
   selectedClipId.value = null;
+  selectedClipIds.value = [];
   selectZooms([zoomId], zoomId);
 };
-const selectEditorZoomTrack = (selection: TrackZoomSelection) => {
+const selectEditorZoomTrack = (selection: { zoomIds: string[]; primaryZoomId: string | null; additive?: boolean }) => {
   openPropertiesPanel();
-  selectedClipId.value = null;
   isCropping.value = false;
+  if (!selection.additive) {
+    selectedClipId.value = null;
+    selectedClipIds.value = [];
+  }
   selectZooms(
     selection.additive ? [...selectedZoomIds.value, ...selection.zoomIds] : selection.zoomIds,
     selection.primaryZoomId,
@@ -288,14 +331,13 @@ const selectEditorZoomTrack = (selection: TrackZoomSelection) => {
 };
 const selectEditorCanvas = () => {
   openPropertiesPanel();
-  selectedClipId.value = null;
+  clearTimelineSelection();
   activeTab.value = 'canvas';
   isCropping.value = false;
 };
 const selectEditorCursor = () => {
   openPropertiesPanel();
-  selectedClipId.value = null;
-  selectedZoomId.value = null;
+  clearTimelineSelection();
   isCropping.value = false;
   activeTab.value = 'cursor';
 };
@@ -444,6 +486,35 @@ const commitZoom = (zoom: ZoomElement) => {
   updateZoom(zoom);
   commitNow(createEditorSnapshot());
 };
+const moveTimelineSelection = (request: TimelineSelectionMove) => {
+  const next = shiftTimelineSelection({
+    composition: composition.value,
+    zoomElements: zoomElements.value,
+    selection: request,
+    deltaMs: request.deltaMs,
+  });
+  if (next.deltaMs === 0) return;
+  composition.value = next.composition;
+  zoomElements.value = next.zoomElements;
+  editorState.scheduleSave();
+  commitNow(createEditorSnapshot());
+};
+const deleteTimelineSelection = (request: TimelineSelectionDelete) => requestTimelineDeletion(request);
+const deleteSelectedTimelineZooms = () =>
+  requestTimelineDeletion({
+    clipIds: [],
+    zoomIds: selectedZoomIds.value.length
+      ? [...selectedZoomIds.value]
+      : selectedZoomId.value
+        ? [selectedZoomId.value]
+        : [],
+    mode: 'lift',
+  });
+const deleteTimelineZoom = (id: string) => requestTimelineDeletion({ clipIds: [], zoomIds: [id], mode: 'lift' });
+const handleTimelineItemSelection = (request: TimelineItemSelectionRequest) => {
+  isCropping.value = false;
+  selectTimelineItem(request);
+};
 
 let historyInitialized = false;
 let editorReadyTimer: ReturnType<typeof setTimeout> | null = null;
@@ -531,8 +602,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
   if (event.key === 'Escape' && canvasFullscreen.isFullscreen.value) return;
   if (event.key === 'Escape') {
     if (isCropping.value) isCropping.value = false;
-    else if (selectedZoomId.value) selectedZoomId.value = null;
-    else if (selectedClipId.value) selectedClipId.value = null;
+    else clearTimelineSelection();
   }
   const active = document.activeElement;
   if (active) {
@@ -545,12 +615,13 @@ const handleKeyDown = (event: KeyboardEvent) => {
     return;
   }
   if (event.key !== 'Delete' && event.key !== 'Backspace') return;
-  if (selectedClipId.value) {
+  if (selectedClipIds.value.length || selectedZoomIds.value.length) {
     event.preventDefault();
-    requestClipDeletion(selectedClipIds.value.length ? selectedClipIds.value : [selectedClipId.value]);
-  } else if (selectedZoom.value && activeTab.value === 'zoom') {
-    event.preventDefault();
-    deleteSelectedZoom();
+    requestTimelineDeletion({
+      clipIds: [...selectedClipIds.value],
+      zoomIds: [...selectedZoomIds.value],
+      mode: 'smart',
+    });
   }
 };
 
@@ -650,7 +721,7 @@ onBeforeUnmount(() => {
           @update:zoom="updateZoom"
           @update:zoom-motion-blur="zoomState.updateZoomMotionBlur"
           @update:zoom-auto-follow="zoomState.updateZoomAutoFollow"
-          @delete:zoom="deleteSelectedZoom"
+          @delete:zoom="deleteSelectedTimelineZooms"
           @generate:zooms="generateZooms()"
           @update:caption="commitCaption"
           @update:composition="replaceComposition"
@@ -835,15 +906,19 @@ onBeforeUnmount(() => {
           @select:zoom-track="selectEditorZoomTrack"
           @select:clip="selectEditorClip"
           @select:track="selectEditorTrack"
+          @select:item="handleTimelineItemSelection"
+          @select:all="selectAllTimelineItems"
           @toggle:clip="toggleClip"
           @delete:clips="requestClipDeletion"
-          @delete:zoom="deleteZoomById"
+          @delete:zoom="deleteTimelineZoom"
+          @delete:selection="deleteTimelineSelection"
           @hold:clip="holdClip($event.id, $event.timeMs)"
           @trim:clip="trimClipEdge($event.id, $event.edge, $event.timeMs)"
           @move:clip="moveClipTo($event.id, $event.startMs)"
           @preview:composition="timelineCompositionPreview = $event"
           @trim:zoom="trimZoomEdge($event.id, $event.edge, $event.timeMs)"
           @move:zoom="moveZoom($event.id, $event.startMs, $event.endMs)"
+          @move:selection="moveTimelineSelection"
           @add:zoom="addZoomAtTime"
           @add:caption="addCaptionAtTime"
           @add:visual-element="addTimelineVisualElement"

@@ -207,6 +207,7 @@
     "delete": "删除",
     "keyboardCaptions": "键盘快捷键",
     "textCaptions": "文本字幕",
+    "rippleDelete": "删除并闭合空隙",
     "copyUnavailable": "复制前选择时间线项目。",
     "clipboardEmpty": "粘贴之前复制时间线项目。"
   },

@@ -81,7 +81,7 @@ describe('TimelineTracks', () => {
     await clipEl.trigger('contextmenu', { clientX: 200, clientY: 300 });
     await flushPromises();
 
-    expect(mounted!.emitted('select:clip')).toContainEqual(['image-clip']);
+    expect(mounted!.emitted('select:item')).toContainEqual([{ kind: 'clip', id: 'image-clip', intent: 'replace' }]);
 
     const menuItems = document.body.querySelectorAll('.context-menu-item');
     expect(menuItems.length).toBeGreaterThanOrEqual(3);
@@ -118,7 +118,9 @@ describe('TimelineTracks', () => {
     contextMenuButton('Delete')?.click();
     await flushPromises();
 
-    expect(mounted!.emitted('delete:clips')).toContainEqual([['image-clip']]);
+    expect(mounted!.emitted('delete:selection')).toContainEqual([
+      { clipIds: ['image-clip'], zoomIds: [], mode: 'lift' },
+    ]);
   });
 
   it('highlights and deletes the current selection when right-clicking a timeline gap', async () => {
@@ -138,8 +140,10 @@ describe('TimelineTracks', () => {
     deleteButton?.click();
     await flushPromises();
 
-    expect(mounted!.emitted('delete:clips')).toContainEqual([['screen-clip']]);
-    expect(mounted!.emitted('select:clip')).toBeUndefined();
+    expect(mounted!.emitted('delete:selection')).toContainEqual([
+      { clipIds: ['screen-clip'], zoomIds: [], mode: 'lift' },
+    ]);
+    expect(mounted!.emitted('select:item')).toBeUndefined();
   });
 
   it('allows cross-category pasting from the context menu', async () => {
@@ -153,6 +157,12 @@ describe('TimelineTracks', () => {
     await flushPromises();
     contextMenuButton('Copy')?.click();
     await flushPromises();
+    await mounted!.setProps({
+      selectedClipId: 'image-clip',
+      selectedClipIds: ['image-clip'],
+      selectedZoomId: null,
+      selectedZoomIds: [],
+    });
 
     const captionTrack = mounted!.find('.tracks-stack .text-caption-track');
     await captionTrack.trigger('contextmenu', { clientX: 300, clientY: 300 });
@@ -169,7 +179,7 @@ describe('TimelineTracks', () => {
 
     await zoomButton.trigger('contextmenu', { clientX: 150, clientY: 150 });
     await flushPromises();
-    expect(mounted!.emitted('select:zoom')).toContainEqual(['zoom-1']);
+    expect(mounted!.emitted('select:item')).toContainEqual([{ kind: 'zoom', id: 'zoom-1', intent: 'replace' }]);
 
     contextMenuButton('Copy')?.click();
     await flushPromises();
@@ -192,7 +202,7 @@ describe('TimelineTracks', () => {
     contextMenuButton('Delete')?.click();
     await flushPromises();
 
-    expect(mounted!.emitted('delete:zoom')).toContainEqual(['zoom-1']);
+    expect(mounted!.emitted('delete:selection')).toContainEqual([{ clipIds: [], zoomIds: ['zoom-1'], mode: 'lift' }]);
   });
 
   it('supports Ctrl/Cmd copy and paste, ignores editable fields, and reports an empty clipboard', async () => {

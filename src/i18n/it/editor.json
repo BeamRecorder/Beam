@@ -207,6 +207,7 @@
     "delete": "Elimina",
     "keyboardCaptions": "Scorciatoie da tastiera",
     "textCaptions": "Didascalie di testo",
+    "rippleDelete": "Elimina e chiudi lo spazio",
     "copyUnavailable": "Seleziona un elemento della timeline prima di copiarlo.",
     "clipboardEmpty": "Copia un elemento della timeline prima di incollarlo."
   },

@@ -207,6 +207,7 @@
     "delete": "삭제",
     "keyboardCaptions": "키보드 단축키",
     "textCaptions": "텍스트 자막",
+    "rippleDelete": "삭제하고 빈 공간 닫기",
     "copyUnavailable": "복사하기 전에 타임라인 항목을 선택하세요.",
     "clipboardEmpty": "붙여넣기 전에 타임라인 항목을 복사하세요."
   },

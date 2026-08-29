@@ -54,6 +54,15 @@ describe('EditorTimeline', () => {
     wrapper.unmount();
   });
 
+  it('selects every timeline item with Ctrl/Cmd+A outside form controls', () => {
+    const wrapper = mount(EditorTimeline, { props, global: { stubs: { TimelineTracks } } });
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', ctrlKey: true, bubbles: true }));
+
+    expect(wrapper.emitted('select:all')).toEqual([[]]);
+    wrapper.unmount();
+  });
+
   it('relays clipboard copy feedback from the tracks to the editor timeline', async () => {
     const wrapper = mount(EditorTimeline, { props, global: { stubs: { TimelineTracks } } });
 

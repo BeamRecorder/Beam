@@ -207,6 +207,7 @@
     "copy": "Copy",
     "paste": "Paste",
     "delete": "Delete",
+    "rippleDelete": "Delete and close gap",
     "copyUnavailable": "Select a timeline item before copying.",
     "clipboardEmpty": "Copy a timeline item before pasting."
   },

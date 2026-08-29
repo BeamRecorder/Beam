@@ -207,6 +207,7 @@
     "copy": "Copier",
     "paste": "Coller",
     "delete": "Supprimer",
+    "rippleDelete": "Supprimer et refermer l’espace",
     "copyUnavailable": "Sélectionnez un élément de la timeline avant de le copier.",
     "clipboardEmpty": "Copiez un élément de la timeline avant de le coller."
   },

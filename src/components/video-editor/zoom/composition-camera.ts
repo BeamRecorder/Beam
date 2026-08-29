@@ -34,6 +34,7 @@ export interface CompositionCameraInputs {
   zooms: readonly ZoomElement[];
   telemetry: readonly CursorTelemetryPoint[];
   mapFocus?: (focus: ZoomFocus, zoom: AppliedZoom, timeMs: number) => ZoomFocus;
+  mapTelemetryTime?: (timelineTimeMs: number) => number;
   autoFollow?: ZoomAutoFollowSettings;
 }
 
@@ -84,7 +85,7 @@ export function createCompositionCameraEvaluator(inputs: CompositionCameraInputs
     }
     let focus = clampFocusToScale(zoom.focus, zoom.scale);
     if (zoom.tracksCursor) {
-      const rawCursor = cursorFocusAt(sortedTelemetry, timeMs);
+      const rawCursor = cursorFocusAt(sortedTelemetry, inputs.mapTelemetryTime?.(timeMs) ?? timeMs);
       const cursor = rawCursor ? (inputs.mapFocus?.(rawCursor, zoom, timeMs) ?? rawCursor) : null;
       focus = updateAutoFollowTarget(autoFollow, cursor, focus, zoom.scale, zoom.strength, timeMs);
     } else updateAutoFollowTarget(autoFollow, null, focus, zoom.scale, 0, timeMs);

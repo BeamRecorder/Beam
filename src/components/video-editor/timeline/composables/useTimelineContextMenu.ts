@@ -7,6 +7,7 @@ import { getClipCategory, useTimelineClipboard } from './useTimelineClipboard';
 import type { TimelineClipboardItem, TimelineItemCategory, TimelinePasteTarget } from './timeline-clipboard-types';
 import type { TimelineTracksEmits } from './timeline-tracks-types';
 import { MIN_CLIP_DURATION_MS } from '../../composition/engine/clip-engine';
+import { rippleRangeForSelection } from '../../composition/timeline-edit-operations';
 
 export interface TimelineContextMenuState {
   isOpen: boolean;
@@ -16,6 +17,7 @@ export interface TimelineContextMenuState {
   clip: Clip | null;
   zoom: ZoomElement | null;
   clipIds: string[];
+  zoomIds: string[];
   trackId?: string | null;
 }
 
@@ -27,6 +29,7 @@ export function useTimelineContextMenu(options: {
   selectedClipId: Ref<string | null>;
   selectedClipIds: Ref<string[]>;
   selectedZoomId: Ref<string | null>;
+  selectedZoomIds: Ref<string[]>;
   assetFor: (clip: Clip) => MediaAsset | null;
   emit: TimelineTracksEmits;
   t: (key: string) => string;
@@ -40,13 +43,21 @@ export function useTimelineContextMenu(options: {
     clip: null,
     zoom: null,
     clipIds: [],
+    zoomIds: [],
     trackId: null,
   });
+  const selectedZoomIds = () =>
+    options.selectedZoomIds.value.length
+      ? options.selectedZoomIds.value
+      : options.selectedZoomId.value
+        ? [options.selectedZoomId.value]
+        : [];
 
   const openClipContextMenu = (event: MouseEvent, clip: Clip) => {
     event.preventDefault();
     event.stopPropagation();
-    options.emit('select:clip', clip.id);
+    const isSelected = options.selectedClipIds.value.includes(clip.id);
+    if (!isSelected) options.emit('select:item', { kind: 'clip', id: clip.id, intent: 'replace' });
     contextMenuState.value = {
       isOpen: true,
       x: event.clientX,
@@ -54,7 +65,8 @@ export function useTimelineContextMenu(options: {
       category: getClipCategory(clip),
       clip,
       zoom: null,
-      clipIds: [clip.id],
+      clipIds: isSelected ? [...options.selectedClipIds.value] : [clip.id],
+      zoomIds: isSelected ? [...options.selectedZoomIds.value] : [],
       trackId: clip.trackId ?? null,
     };
   };
@@ -62,7 +74,9 @@ export function useTimelineContextMenu(options: {
   const openZoomContextMenu = (event: MouseEvent, zoom: ZoomElement) => {
     event.preventDefault();
     event.stopPropagation();
-    options.emit('select:zoom', zoom.id);
+    const effectiveZoomIds = selectedZoomIds();
+    const isSelected = effectiveZoomIds.includes(zoom.id);
+    if (!isSelected) options.emit('select:item', { kind: 'zoom', id: zoom.id, intent: 'replace' });
     contextMenuState.value = {
       isOpen: true,
       x: event.clientX,
@@ -71,6 +85,7 @@ export function useTimelineContextMenu(options: {
       clip: null,
       zoom,
       clipIds: [],
+      zoomIds: isSelected ? [...effectiveZoomIds] : [zoom.id],
       trackId: null,
     };
   };
@@ -86,6 +101,7 @@ export function useTimelineContextMenu(options: {
       clip: selected.clip,
       zoom: selected.zoom,
       clipIds: selected.clipIds,
+      zoomIds: selected.zoomIds,
       trackId: trackId ?? null,
     };
   };
@@ -98,7 +114,13 @@ export function useTimelineContextMenu(options: {
     const zoom = options.selectedZoomId.value
       ? (options.zoomElements.value.find((item) => item.id === options.selectedZoomId.value) ?? null)
       : null;
-    if (zoom) return { zoom, clip: null, clipIds: [] };
+    if (zoom)
+      return {
+        zoom,
+        clip: null,
+        clipIds: [...options.selectedClipIds.value],
+        zoomIds: [...selectedZoomIds()],
+      };
     const clipsById = new Map(options.composition.value.clips.map((clip) => [clip.id, clip]));
     const requestedIds = options.selectedClipIds.value.length
       ? options.selectedClipIds.value
@@ -111,7 +133,7 @@ export function useTimelineContextMenu(options: {
       (primaryId && clipIds.includes(primaryId) ? clipsById.get(primaryId) : null) ??
       clipsById.get(clipIds[0] ?? '') ??
       null;
-    return { zoom: null, clip, clipIds };
+    return { zoom: null, clip, clipIds, zoomIds: [...selectedZoomIds()] };
   };
 
   const copyItem = (clip: Clip | null, zoom: ZoomElement | null): boolean => {
@@ -146,7 +168,7 @@ export function useTimelineContextMenu(options: {
     options.currentTimeMs.value <= clip.timelineStartMs + clip.timelineDurationMs - MIN_CLIP_DURATION_MS;
 
   const contextMenuItems = computed<ContextMenuItemOrDivider[]>(() => {
-    const { clip, zoom, clipIds } = contextMenuState.value;
+    const { clip, zoom, clipIds, zoomIds } = contextMenuState.value;
     const canCopy = Boolean(options.scopeId.value && (zoom || clip));
     const canHold = canHoldClip(clip);
     const items: ContextMenuItemOrDivider[] = [];
@@ -169,22 +191,29 @@ export function useTimelineContextMenu(options: {
         icon: Trash2,
         danger: true,
         shortcut: 'Del',
-        disabled: !zoom && clipIds.length === 0,
+        disabled: clipIds.length === 0 && zoomIds.length === 0,
       },
     );
+    const canRipple = Boolean(rippleRangeForSelection(options.composition.value, clipIds));
+    items.push({
+      id: 'ripple-delete',
+      label: options.t('rippleDelete'),
+      icon: Trash2,
+      danger: true,
+      disabled: !canRipple,
+    });
     return items;
   });
 
   const handleContextMenuSelect = (actionId: string) => {
-    const { category, clip, zoom, clipIds, trackId } = contextMenuState.value;
+    const { category, clip, zoom, clipIds, zoomIds, trackId } = contextMenuState.value;
     if (actionId === 'hold' && clip && canHoldClip(clip))
       options.emit('hold:clip', { id: clip.id, timeMs: options.currentTimeMs.value });
     else if (actionId === 'copy') copyItem(clip, zoom);
     else if (actionId === 'paste') pasteClipboard({ category, trackId });
     else if (actionId === 'delete') {
-      if (zoom) options.emit('delete:zoom', zoom.id);
-      else if (clipIds.length) options.emit('delete:clips', clipIds);
-    }
+      options.emit('delete:selection', { clipIds, zoomIds, mode: 'lift' });
+    } else if (actionId === 'ripple-delete') options.emit('delete:selection', { clipIds, zoomIds, mode: 'ripple' });
     closeContextMenu();
   };
 

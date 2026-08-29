@@ -207,6 +207,7 @@
     "delete": "Excluir",
     "keyboardCaptions": "Atalhos do teclado",
     "textCaptions": "Legendas de texto",
+    "rippleDelete": "Excluir e fechar o espaço",
     "copyUnavailable": "Selecione um item da linha do tempo antes de copiar.",
     "clipboardEmpty": "Copie um item da linha do tempo antes de colar."
   },

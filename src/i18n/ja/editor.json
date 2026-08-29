@@ -207,6 +207,7 @@
     "delete": "削除",
     "keyboardCaptions": "キーボードショートカット",
     "textCaptions": "テキストキャプション",
+    "rippleDelete": "削除して空白を詰める",
     "copyUnavailable": "コピーする前にタイムライン項目を選択します。",
     "clipboardEmpty": "貼り付ける前にタイムライン項目をコピーしてください。"
   },

@@ -207,6 +207,7 @@
     "delete": "Usuń",
     "keyboardCaptions": "Skróty klawiaturowe",
     "textCaptions": "Napisy tekstowe",
+    "rippleDelete": "Usuń i zamknij lukę",
     "copyUnavailable": "Przed kopiowaniem wybierz element na osi czasu.",
     "clipboardEmpty": "Skopiuj element osi czasu przed wklejeniem."
   },
