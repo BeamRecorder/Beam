@@ -608,6 +608,8 @@
     "recorderTool": "Videorekorder",
     "recorderDesc": "Schnell zum Rekorder wechseln und eine neue Aufnahme starten",
     "launchRecorder": "Rekorder starten",
+    "recorderUnavailable": "Der Rekorder wird bereits verwendet.",
+    "recorderLaunchError": "Der Rekorder konnte nicht geöffnet werden: {error}",
     "sysInfoTool": "Systeminformationen",
     "sysInfoDesc": "Systemdetails und Informationen zur App-Version kopieren",
     "copySysInfo": "Systeminformationen kopieren",

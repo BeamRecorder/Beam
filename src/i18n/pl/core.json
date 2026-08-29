@@ -608,6 +608,8 @@
     "recorderTool": "Rejestrator wideo",
     "recorderDesc": "Szybko otwórz rejestrator, aby rozpocząć nowe przechwytywanie",
     "launchRecorder": "Uruchom rejestrator",
+    "recorderUnavailable": "Rejestrator jest już używany.",
+    "recorderLaunchError": "Nie można otworzyć rejestratora: {error}",
     "sysInfoTool": "Informacje o systemie",
     "sysInfoDesc": "Skopiuj szczegóły systemu i informacje o wersji aplikacji",
     "copySysInfo": "Kopiuj informacje o systemie",

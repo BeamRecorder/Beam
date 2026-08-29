@@ -259,7 +259,6 @@ const emit = defineEmits<{
   (event: 'delete:mic-audio'): void;
   (event: 'split-clip'): void;
   (event: 'back-to-hud'): void;
-  (event: 'start-recording', config: any): void;
 }>();
 const previewCaption = (clip: CaptionClip | null) => {
   if (!clip) return emit('preview:composition', null);
@@ -484,11 +483,7 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
               @delete="emit('delete:zoom')"
               @generate="emit('generate:zooms')"
             />
-            <SettingsPanel
-              v-else-if="activeTab === 'settings'"
-              @back-to-hud="emit('back-to-hud')"
-              @start-recording="emit('start-recording', $event)"
-            />
+            <SettingsPanel v-else-if="activeTab === 'settings'" />
             <CaptionPanel
               v-show="activeTab === 'caption'"
               :composition="composition"

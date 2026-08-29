@@ -608,6 +608,8 @@
     "recorderTool": "ビデオレコーダー",
     "recorderDesc": "レコーダーをすばやく開いて新しいキャプチャを開始",
     "launchRecorder": "レコーダーを起動",
+    "recorderUnavailable": "レコーダーはすでに使用中です。",
+    "recorderLaunchError": "レコーダーを開けませんでした: {error}",
     "sysInfoTool": "システム情報",
     "sysInfoDesc": "システムの詳細とアプリのバージョン情報をコピー",
     "copySysInfo": "システム情報をコピー",

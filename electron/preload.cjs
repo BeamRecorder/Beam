@@ -56,11 +56,13 @@ contextBridge.exposeInMainWorld(
     },
     setWindowMode: (mode) => ipcRenderer.send('window:set-mode', mode),
     showHud: () => ipcRenderer.send('window:show-hud'),
-    openEditor: (projectId) => ipcRenderer.invoke('editor:open', projectId),
+    openEditor: (projectId, options) => ipcRenderer.invoke('editor:open', projectId, options),
+    openRecorderFromEditor: () => ipcRenderer.invoke('editor:open-recorder'),
+    dismissRecorderLauncher: () => ipcRenderer.invoke('editor:dismiss-recorder'),
+    setRecorderLauncherActive: (active) => ipcRenderer.send('editor:recorder-active', Boolean(active)),
     getEditorContext: () => ipcRenderer.invoke('editor:context'),
     notifyEditorReady: () => ipcRenderer.send('editor:ready'),
     reportEditorLoadingStage: (stage) => ipcRenderer.send('editor:loading-stage', stage),
-    startRecordingFromEditor: (configuration) => ipcRenderer.send('editor:start-recording', configuration),
     setEditorTitlebarTheme: (dark) => ipcRenderer.send('editor:titlebar-theme', Boolean(dark)),
     onEditorContext: (listener) => {
       const callback = (_event, context) => listener(context);
@@ -72,10 +74,10 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.on('editor:loading-progress', callback);
       return () => ipcRenderer.removeListener('editor:loading-progress', callback);
     },
-    onStartRecordingFromEditor: (listener) => {
-      const callback = (_event, configuration) => listener(configuration);
-      ipcRenderer.on('editor:start-recording', callback);
-      return () => ipcRenderer.removeListener('editor:start-recording', callback);
+    onRecorderLauncherContext: (listener) => {
+      const callback = (_event, context) => listener(context);
+      ipcRenderer.on('editor:recorder-launcher', callback);
+      return () => ipcRenderer.removeListener('editor:recorder-launcher', callback);
     },
     setPosition: (x, y) => ipcRenderer.send('window:setPosition', x, y),
     setSize: (width, height) => ipcRenderer.send('window:setSize', width, height),

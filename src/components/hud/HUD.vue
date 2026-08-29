@@ -26,6 +26,7 @@ import type {
   CaptureSession,
   CaptureSource,
   EditorLoadingProgress,
+  RecorderLauncherContext,
 } from '../../api/types/capture-api';
 import type { ScreenRegion, ScreenRegionBounds, ScreenRegionOverlayOptions } from '../../api/types/screen-region';
 import Button from '~/ui/button/Button.vue';
@@ -66,16 +67,18 @@ const props = withDefaults(
     preparingEditor?: boolean;
     editorLoadingProgress?: EditorLoadingProgress;
     externalError?: string;
+    recorderLauncherContext?: RecorderLauncherContext | null;
   }>(),
   {
     embedded: false,
     showTopbar: false,
     preparingEditor: false,
     editorLoadingProgress: () => ({ stage: 'openingWindow', value: 10 }),
+    recorderLauncherContext: null,
   },
 );
 
-const emit = defineEmits(['start-recording', 'stop-recording', 'open-project', 'focus-feature']);
+const emit = defineEmits(['start-recording', 'stop-recording', 'open-project', 'focus-feature', 'dismiss-launcher']);
 const ProjectPicker = defineAsyncComponent(() => import('../projects/ProjectPicker.vue'));
 const HudPreferences = defineAsyncComponent(() => import('./settings/HudPreferences.vue'));
 
@@ -351,7 +354,10 @@ const loadPreviews = (type: PreviewKind, force = false): Promise<void> => {
         !selectedPortalSource &&
         (!selectedSourceId.value || !results.some((result) => result.id === selectedSourceId.value))
       ) {
-        selectedSourceId.value = results[0]?.id ?? null;
+        // The editor launcher must never substitute another application when
+        // its requested source has disappeared. Leave selection empty so the
+        // user explicitly chooses a window instead.
+        selectedSourceId.value = props.recorderLauncherContext ? null : (results[0]?.id ?? null);
       }
     })
     .catch((error) => {
@@ -365,6 +371,24 @@ const loadPreviews = (type: PreviewKind, force = false): Promise<void> => {
   previewRequests[type] = request;
   return request;
 };
+
+watch(
+  () => props.recorderLauncherContext,
+  (context) => {
+    if (!context) return;
+    navigation.openHud();
+    activeTab.value = context.preferredKind;
+    errorMessage.value = '';
+    if (desktopPlatform === 'linux') {
+      selectedSourceId.value =
+        sources.value.find((source) => source.kind === 'window' && source.selectionMode === 'portal')?.id ?? null;
+    } else {
+      selectedSourceId.value = context.preferredSourceId;
+      void loadPreviews('window', true);
+    }
+  },
+  { immediate: true },
+);
 
 const wait = (duration: number) => new Promise((resolve) => window.setTimeout(resolve, duration));
 const snapshotScreenBounds = (bounds: ScreenRegionBounds): ScreenRegionBounds => ({
@@ -913,6 +937,12 @@ const discoverSources = async () => {
 let unsubscribeShortcut: (() => void) | null = null;
 let unsubscribeTeleprompterVisibility: (() => void) | null = null;
 
+const handleLauncherKeydown = (event: KeyboardEvent) => {
+  if (event.key !== 'Escape' || !props.recorderLauncherContext || activeDropdowns.value > 0) return;
+  event.preventDefault();
+  emit('dismiss-launcher');
+};
+
 const toggleTeleprompter = () => {
   if (props.embedded) return;
   isTeleprompterVisible.value = !isTeleprompterVisible.value;
@@ -921,6 +951,7 @@ const toggleTeleprompter = () => {
 };
 
 onMounted(async () => {
+  window.addEventListener('keydown', handleLauncherKeydown);
   if (props.embedded) return;
   const preferences = await capture.getPreferences();
   savedDevices = preferences.devices as unknown as SavedDevices;
@@ -970,6 +1001,7 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleLauncherKeydown);
   screenBoundsRequest++;
   if (!props.embedded) capture.hideScreenRegionOverlay();
   if (regionSelectionEnterTimeout) clearTimeout(regionSelectionEnterTimeout);
@@ -989,11 +1021,13 @@ onBeforeUnmount(() => {
 
 const closeApp = () => {
   if (props.embedded) return;
+  if (props.recorderLauncherContext) return emit('dismiss-launcher');
   capture.close();
 };
 
 const minimizeApp = () => {
   if (props.embedded) return;
+  if (props.recorderLauncherContext) return emit('dismiss-launcher');
   document.body.classList.add('app-minimizing');
   setTimeout(() => {
     capture.minimize();

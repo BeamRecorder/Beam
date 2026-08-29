@@ -608,6 +608,8 @@
     "recorderTool": "Enregistreur vidéo",
     "recorderDesc": "Accéder rapidement à l'enregistreur pour démarrer une nouvelle capture",
     "launchRecorder": "Lancer l'enregistreur",
+    "recorderUnavailable": "L'enregistreur est déjà utilisé.",
+    "recorderLaunchError": "Impossible d'ouvrir l'enregistreur : {error}",
     "sysInfoTool": "Informations système",
     "sysInfoDesc": "Copier les détails du système et la version de l'application",
     "copySysInfo": "Copier les infos système",

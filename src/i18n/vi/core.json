@@ -608,6 +608,8 @@
     "recorderTool": "Quay video",
     "recorderDesc": "Truy cập nhanh bộ ghi để bắt đầu một bản ghi mới",
     "launchRecorder": "Mở trình ghi",
+    "recorderUnavailable": "Trình ghi đang được sử dụng.",
+    "recorderLaunchError": "Không thể mở trình ghi: {error}",
     "sysInfoTool": "Thông tin hệ thống",
     "sysInfoDesc": "Sao chép chi tiết hệ thống và thông tin phiên bản ứng dụng",
     "copySysInfo": "Sao chép thông tin hệ thống",

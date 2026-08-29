@@ -20,8 +20,13 @@ import type {
   TeleprompterDocument,
   TeleprompterSessionContext,
 } from '../../components/hud/teleprompter/teleprompter-types';
-import type { RecordingBarVisibility, RecordingConfiguration } from '../../components/hud/recorder/recording-types';
-import type { EditorLoadingProgress, EditorLoadingStage } from './editor-window';
+import type { RecordingBarVisibility } from '../../components/hud/recorder/recording-types';
+import type {
+  EditorLoadingProgress,
+  EditorLoadingStage,
+  EditorOpenOptions,
+  RecorderLauncherContext,
+} from './editor-window';
 import type { AppearanceSettings } from '~/types/appearance';
 
 export type * from './capture-config';
@@ -80,15 +85,17 @@ export interface DesktopCaptureApi extends CaptureApi {
   onTrayStopRecording?(listener: () => void): () => void;
   setWindowMode(mode: 'hud' | 'recorder'): void;
   showHud(): void;
-  openEditor(projectId: string): Promise<boolean>;
+  openEditor(projectId: string, options?: EditorOpenOptions): Promise<boolean>;
+  openRecorderFromEditor(): Promise<boolean>;
+  dismissRecorderLauncher(): Promise<boolean>;
+  setRecorderLauncherActive(active: boolean): void;
   getEditorContext(): Promise<{ projectId: string } | null>;
   notifyEditorReady(): void;
   reportEditorLoadingStage(stage: EditorLoadingStage): void;
-  startRecordingFromEditor(configuration: RecordingConfiguration): void;
   setEditorTitlebarTheme(dark: boolean): void;
   onEditorContext(listener: (context: { projectId: string }) => void): () => void;
   onEditorLoadingProgress(listener: (progress: EditorLoadingProgress) => void): () => void;
-  onStartRecordingFromEditor(listener: (configuration: RecordingConfiguration) => void): () => void;
+  onRecorderLauncherContext(listener: (context: RecorderLauncherContext | null) => void): () => void;
   setPosition(x: number, y: number): void;
   setSize(width: number, height: number): void;
   setSizeSmooth(width: number, height: number): void;

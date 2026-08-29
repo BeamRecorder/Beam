@@ -608,6 +608,84 @@ describe('HUD', () => {
     ]);
   });
 
+  it('honors an editor launcher window context and keeps the preferred Linux Portal source', async () => {
+    capture.platform = 'linux';
+    Object.defineProperty(window, 'capture', { configurable: true, value: capture });
+    const preferredSourceId = 'portal:window:editor';
+    capture.discover.mockResolvedValueOnce({
+      sources: [
+        {
+          id: 'portal:monitor',
+          kind: 'display',
+          label: 'Choose a screen',
+          isDefault: true,
+          selectionMode: 'portal',
+        },
+        {
+          id: preferredSourceId,
+          kind: 'window',
+          label: 'Editor window',
+          selectionMode: 'portal',
+        },
+      ],
+      capabilities: { portalSelection: true },
+    });
+    capture.getSources.mockResolvedValue([]);
+
+    const wrapper = mount(HUD, {
+      props: {
+        recorderLauncherContext: {
+          requestId: 'launcher-window-1',
+          preferredKind: 'window',
+          preferredSourceId,
+        },
+      },
+      global: { stubs },
+    });
+    await ready();
+
+    expect(wrapper.get('.hud-wrapper').classes()).toContain('window');
+    expect(wrapper.find('.mode-tabs .btn.active').text()).toContain('Window');
+
+    const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording'));
+    await record?.trigger('click');
+
+    expect(wrapper.emitted('start-recording')).toContainEqual([
+      expect.objectContaining({ screenKind: 'window', screenId: preferredSourceId }),
+    ]);
+  });
+
+  it('does not fall back to the first non-Linux window when the launcher source disappeared', async () => {
+    capture.platform = 'darwin';
+    Object.defineProperty(window, 'capture', { configurable: true, value: capture });
+    capture.discover.mockResolvedValueOnce({
+      sources: [{ id: 'display:1', kind: 'display', label: 'Display', isDefault: true }],
+      capabilities: {},
+    });
+    capture.getSources.mockImplementation(async (types: string[]) =>
+      types[0] === 'window' ? [{ id: 'window:first', name: 'First window', thumbnail: '', appIcon: null }] : [],
+    );
+
+    const wrapper = mount(HUD, {
+      props: {
+        recorderLauncherContext: {
+          requestId: 'launcher-window-missing',
+          preferredKind: 'window',
+          preferredSourceId: 'window:missing',
+        },
+      },
+      global: { stubs },
+    });
+    await ready();
+
+    const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording'));
+    expect(record).toBeDefined();
+    expect(record!.element).toHaveProperty('disabled', true);
+
+    await record!.trigger('click');
+    expect(wrapper.emitted('start-recording')).toBeUndefined();
+  });
+
   it('switches views and delegates window controls safely', async () => {
     const wrapper = mount(HUD, { global: { stubs } });
     await ready();

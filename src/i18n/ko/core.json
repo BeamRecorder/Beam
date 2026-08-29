@@ -608,6 +608,8 @@
     "recorderTool": "동영상 녹화기",
     "recorderDesc": "녹화기를 빠르게 열어 새 캡처 시작",
     "launchRecorder": "녹화기 실행",
+    "recorderUnavailable": "녹화기가 이미 사용 중입니다.",
+    "recorderLaunchError": "녹화기를 열 수 없습니다: {error}",
     "sysInfoTool": "시스템 정보",
     "sysInfoDesc": "시스템 세부 정보와 앱 버전 정보 복사",
     "copySysInfo": "시스템 정보 복사",

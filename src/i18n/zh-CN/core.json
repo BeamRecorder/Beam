@@ -608,6 +608,8 @@
     "recorderTool": "视频录制器",
     "recorderDesc": "快速打开录制器并开始新的录制",
     "launchRecorder": "启动录制器",
+    "recorderUnavailable": "录制器正在使用中。",
+    "recorderLaunchError": "无法打开录制器：{error}",
     "sysInfoTool": "系统信息",
     "sysInfoDesc": "复制系统详情和应用版本信息",
     "copySysInfo": "复制系统信息",

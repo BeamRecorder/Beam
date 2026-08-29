@@ -18,7 +18,9 @@ const mocks = vi.hoisted(() => ({
     showHud: vi.fn(),
     hideTeleprompter: vi.fn(),
     openEditor: vi.fn(),
-    onStartRecordingFromEditor: vi.fn(),
+    dismissRecorderLauncher: vi.fn(),
+    setRecorderLauncherActive: vi.fn(),
+    onRecorderLauncherContext: vi.fn(),
     onEditorLoadingProgress: vi.fn(),
     onTrayStopRecording: vi.fn(),
     onPreferenceShortcut: vi.fn(),
@@ -29,7 +31,9 @@ const mocks = vi.hoisted(() => ({
   controller: {
     recording: undefined as any,
     onComplete: undefined as ((session: { videoSrc?: string | null }) => void) | undefined,
-    startFromEditor: undefined as ((configuration: any) => void) | undefined,
+    recorderLauncherContext: undefined as
+      | ((context: { requestId: string; preferredKind: 'window'; preferredSourceId: string | null } | null) => void)
+      | undefined,
     editorProgress: undefined as ((progress: { stage: string; value: number }) => void) | undefined,
   },
 }));
@@ -72,8 +76,9 @@ vi.mock('../components/hud/HUD.vue', async () => {
       props: {
         preparingEditor: { type: Boolean, default: false },
         editorLoadingProgress: { type: Object, default: () => ({ stage: 'openingWindow', value: 10 }) },
+        recorderLauncherContext: { type: Object, default: null },
       },
-      emits: ['start-recording', 'open-project'],
+      emits: ['start-recording', 'open-project', 'dismiss-launcher'],
       setup(props, { emit }) {
         return () =>
           h(
@@ -82,6 +87,8 @@ vi.mock('../components/hud/HUD.vue', async () => {
               class: 'mock-hud',
               'data-preparing-editor': String(props.preparingEditor),
               'data-editor-progress': String((props.editorLoadingProgress as { value: number }).value),
+              'data-launcher-kind': props.recorderLauncherContext?.preferredKind ?? '',
+              'data-launcher-source': props.recorderLauncherContext?.preferredSourceId ?? '',
             },
             [
               h('button', {
@@ -101,6 +108,9 @@ vi.mock('../components/hud/HUD.vue', async () => {
                 class: 'open',
                 onClick: () => emit('open-project', { id: 'project-1', name: 'Project', previewSrc: 'project.mp4' }),
               }),
+              ...(props.recorderLauncherContext
+                ? [h('button', { class: 'dismiss-launcher', onClick: () => emit('dismiss-launcher') })]
+                : []),
             ],
           );
       },
@@ -148,10 +158,12 @@ beforeEach(() => {
   mocks.capture.getPreferences.mockResolvedValue({ recordingBar: { visibility: 'auto-fade' } });
   mocks.capture.listProjects.mockResolvedValue([project]);
   mocks.capture.openEditor.mockResolvedValue(true);
-  mocks.capture.onStartRecordingFromEditor.mockImplementation((listener) => {
-    mocks.controller.startFromEditor = listener;
+  mocks.capture.dismissRecorderLauncher.mockResolvedValue(true);
+  mocks.capture.onRecorderLauncherContext.mockImplementation((listener) => {
+    mocks.controller.recorderLauncherContext = listener;
     return vi.fn();
   });
+  mocks.capture.renameProject.mockResolvedValue(project);
   mocks.capture.onEditorLoadingProgress.mockImplementation((listener) => {
     mocks.controller.editorProgress = listener;
     return vi.fn();
@@ -246,7 +258,7 @@ describe('App', () => {
     mocks.capture.openEditor.mockResolvedValueOnce(true);
     await wrapper.get('.open').trigger('click');
     await settle();
-    expect(mocks.capture.openEditor).toHaveBeenCalledWith('project-1');
+    expect(mocks.capture.openEditor).toHaveBeenCalledWith('project-1', { disposition: 'reuse' });
     expect(wrapper.find('.mock-hud').exists()).toBe(true);
     expect(errorSpy).toHaveBeenCalled();
   });
@@ -280,7 +292,7 @@ describe('App', () => {
     mocks.capture.listProjects.mockResolvedValueOnce([project]);
     mocks.controller.onComplete?.({ videoSrc: 'project.mp4' });
     await settle();
-    expect(mocks.capture.openEditor).toHaveBeenCalledWith('project-1');
+    expect(mocks.capture.openEditor).toHaveBeenCalledWith('project-1', { disposition: 'reuse' });
     expect(mocks.capture.setCameraOverlayActive).toHaveBeenCalledWith(false);
 
     mocks.capture.listProjects.mockResolvedValueOnce([]);
@@ -289,7 +301,38 @@ describe('App', () => {
     expect(wrapper.get('[role="alert"]').text()).toContain('No recorded project was found');
   });
 
-  it('moves the HUD window into recorder mode for recordings requested by the editor', async () => {
+  it('passes the editor launcher context to HUD and prefers the requested window source', async () => {
+    const context = {
+      requestId: 'launcher-1',
+      preferredKind: 'window' as const,
+      preferredSourceId: 'window:editor',
+    };
+
+    mocks.controller.recorderLauncherContext?.(context);
+    await nextTick();
+
+    const hud = wrapper.get('.mock-hud');
+    expect(hud.attributes('data-launcher-kind')).toBe('window');
+    expect(hud.attributes('data-launcher-source')).toBe('window:editor');
+  });
+
+  it('dismisses the editor launcher without opening an editor window', async () => {
+    mocks.controller.recorderLauncherContext?.({
+      requestId: 'launcher-2',
+      preferredKind: 'window',
+      preferredSourceId: 'window:editor',
+    });
+    await nextTick();
+
+    await wrapper.get('.dismiss-launcher').trigger('click');
+    await settle();
+
+    expect(mocks.capture.dismissRecorderLauncher).toHaveBeenCalledOnce();
+    expect(mocks.capture.openEditor).not.toHaveBeenCalled();
+    expect(wrapper.get('.mock-hud').attributes('data-launcher-source')).toBe('');
+  });
+
+  it('opens a completed editor-launched recording in a new editor window', async () => {
     const configuration = {
       screenKind: 'display',
       cameraId: 'off',
@@ -300,12 +343,45 @@ describe('App', () => {
       recordingBarVisibility: 'always',
     };
 
-    mocks.controller.startFromEditor?.(configuration);
+    mocks.controller.recorderLauncherContext?.({
+      requestId: 'launcher-3',
+      preferredKind: 'window',
+      preferredSourceId: 'window:editor',
+    });
+    await nextTick();
+    await wrapper.get('.start').trigger('click');
     await settle();
 
     expect(mocks.capture.setWindowMode).toHaveBeenCalledWith('recorder');
-    expect(mocks.capture.setWindowVisible).toHaveBeenCalledWith(true);
     expect(mocks.controller.recording.start).toHaveBeenCalledWith(configuration);
+
+    mocks.controller.onComplete?.({ videoSrc: 'project.mp4' });
+    await settle();
+
+    expect(mocks.capture.openEditor).toHaveBeenCalledWith('project-1', { disposition: 'new-window' });
+  });
+
+  it('clears the editor launcher context when no project exists after recording', async () => {
+    mocks.controller.recorderLauncherContext?.({
+      requestId: 'launcher-no-project',
+      preferredKind: 'window',
+      preferredSourceId: 'window:editor',
+    });
+    await nextTick();
+    await wrapper.get('.start').trigger('click');
+    await settle();
+
+    mocks.capture.listProjects.mockResolvedValueOnce([]);
+    mocks.controller.onComplete?.({ videoSrc: 'missing.mp4' });
+    await settle();
+
+    expect(wrapper.get('[role="alert"]').text()).toContain('No recorded project was found');
+    await wrapper.get('[role="alert"] button').trigger('click');
+    await settle();
+
+    expect(wrapper.get('.mock-hud').attributes('data-launcher-source')).toBe('');
+    expect(mocks.capture.dismissRecorderLauncher).toHaveBeenCalledOnce();
+    expect(mocks.capture.openEditor).not.toHaveBeenCalled();
   });
 
   it('returns immediately after an idle start and ignores mouse events outside the HUD', async () => {

@@ -608,6 +608,8 @@
     "recorderTool": "वीडियो रिकॉर्डर",
     "recorderDesc": "रिकॉर्डर जल्दी खोलकर नई रिकॉर्डिंग शुरू करें",
     "launchRecorder": "रिकॉर्डर शुरू करें",
+    "recorderUnavailable": "रिकॉर्डर पहले से उपयोग में है।",
+    "recorderLaunchError": "रिकॉर्डर नहीं खोला जा सका: {error}",
     "sysInfoTool": "सिस्टम जानकारी",
     "sysInfoDesc": "सिस्टम विवरण और ऐप वर्ज़न की जानकारी कॉपी करें",
     "copySysInfo": "सिस्टम जानकारी कॉपी करें",

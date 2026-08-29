@@ -79,7 +79,6 @@ const emit = defineEmits<{
   (event: 'ready'): void;
   (event: 'back-to-hud'): void;
   (event: 'open-project', project: CaptureProject): void;
-  (event: 'start-recording', config: any): void;
 }>();
 const mediaProcessing = createMediaProcessingCollector();
 provide(MEDIA_PROCESSING_COLLECTOR, mediaProcessing);
@@ -766,7 +765,6 @@ onBeforeUnmount(() => {
           @update:webcam-react-to-zoom="updateSelectedWebcamReactToZoom"
           @reset:clip-transform="commitSelectedTransform({ x: 0, y: 0, width: 1, height: 1 })"
           @back-to-hud="emit('back-to-hud')"
-          @start-recording="emit('start-recording', $event)"
         />
 
         <div class="canvas-column">
