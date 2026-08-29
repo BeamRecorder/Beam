@@ -47,7 +47,8 @@
     "continuity": "连续背景",
     "continuityDescription": "在适应内容后方扩展一份模糊的视频副本。",
     "continuityBlur": "背景模糊",
-    "continuityBrightness": "背景亮度"
+    "continuityBrightness": "背景亮度",
+    "borderColor": "边框颜色"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "正在加载摄像头预览",
@@ -250,7 +251,9 @@
     "captionWordLabel": "字幕词语",
     "wordStartTimeLabel": "词语开始时间",
     "wordEndTimeLabel": "词语结束时间",
-    "deleteCaptionClip": "删除字幕片段"
+    "deleteCaptionClip": "删除字幕片段",
+    "shadowColor": "阴影颜色",
+    "shadowBlur": "阴影模糊"
   },
   "CaptionPanel": {
     "aiAutoCaptioning": "AI 自动字幕",
@@ -308,7 +311,8 @@
     "unlink": "取消关联",
     "deleteClip": "删除片段",
     "deleteVideo": "删除视频",
-    "deleteWebcam": "删除摄像头"
+    "deleteWebcam": "删除摄像头",
+    "shadowBlur": "阴影模糊"
   },
   "CursorPanel": {
     "cursorStyle": "光标样式",
@@ -354,7 +358,14 @@
     "importSuccess": "已导入 {count} 个静态光标。",
     "importIgnoredAnimated": "已忽略动画角色：{roles}。",
     "importFailed": "无法导入光标包。",
-    "discoveryFailed": "无法打开光标包搜索。"
+    "discoveryFailed": "无法打开光标包搜索。",
+    "shadowBlur": "阴影模糊",
+    "shadowColor": "阴影颜色",
+    "presetNone": "无",
+    "presetSingle": "单环",
+    "presetDouble": "双波",
+    "presetSolid": "爆发",
+    "rippleStyle": "涟漪风格"
   },
   "EditorCanvas": {
     "videoPreviewLoading": "正在加载视频预览",
@@ -443,7 +454,14 @@
     "authorizingInteractions": "正在启用",
     "dismissInteractionNotice": "暂不",
     "interactionAccessSettingsHint": "可在设置中找到“录制键盘快捷键”。",
-    "dismissInteractionReminder": "关闭提醒"
+    "dismissInteractionReminder": "关闭提醒",
+    "copyFix": "复制修复",
+    "interactionAccessGranted": "启用交互访问",
+    "interactionAccessGrantedDescription": "现在可以记录鼠标点击和键盘快捷键，而无需存储键入的文本。",
+    "interactionAccessUnavailableTitle": "交互录制不可用",
+    "interactionAccessUnavailableDescription": "所需的交互助手不可用（Polkit 或受保护的输入助手）。在录制之前解决报告的问题。",
+    "linuxRequirementsTitle": "需要 Linux 设置",
+    "recordingErrorTitle": "录音错误"
   },
   "EditorPreparingHud": {
     "title": "正在准备编辑器",
@@ -680,6 +698,54 @@
     "joinDiscord": "Join Discord Community",
     "reopenHint": "You can revisit this onboarding anytime from Settings > General.",
     "dismiss": "Dismiss",
-    "emptyStateDesc": "Click on any control on the live HUD to test it."
+    "emptyStateDesc": "Click on any control on the live HUD to test it.",
+    "titlebarTitle": "Beam • 入门",
+    "minimize": "最小化",
+    "close": "关闭",
+    "welcomeSubtitle": "专为开发人员、创作者和团队设计的工作室级屏幕录像机。",
+    "featureNativeTitle": "本机屏幕录像机",
+    "featureNativeDesc": "以无损清晰度录制您的屏幕、窗口或选定区域。",
+    "featureAutoZoomTitle": "自动变焦",
+    "featureAutoZoomDesc": "让您顺利放大重要部分。",
+    "featureCaptionsTitle": "人工智能字幕",
+    "featureCaptionsDesc": "使用 Whisper 在几秒钟内转录整个视频并为其添加字幕。",
+    "featureQualityTitle": "专业品质",
+    "featureQualityDesc": "背景、网络摄像头阴影和光标效果让您的录音脱颖而出。",
+    "tryControlTip": "现场互动控制",
+    "hudTopbarTitle": "设置和快捷方式",
+    "hudTopbarDesc": "自定义热键、主题和全局首选项。",
+    "hudProjectsTitle": "项目",
+    "hudProjectsDesc": "在一个地方查找和管理您过去录制的所有演示。",
+    "hudTabsTitle": "拍摄模式",
+    "hudTabsDesc": "在全屏录制和窗口捕获之间切换。",
+    "hudSourceTitle": "来源与作物",
+    "hudSourceDesc": "选择显示、窗口或在屏幕上裁剪自定义区域。",
+    "hudCameraTitle": "网络摄像头",
+    "hudCameraDesc": "在编辑器中记录带有圆角、阴影和平滑重新定位的网络摄像头。",
+    "hudTeleprompterTitle": "提词器",
+    "hudTeleprompterDesc": "直接在屏幕上阅读脚本，这样您就永远不会忘记自己所说的内容。",
+    "hudAudioTitle": "麦克风",
+    "hudAudioDesc": "通过实时音频电平监控记录您的麦克风。",
+    "hudSystemAudioTitle": "系统音频",
+    "hudSystemAudioDesc": "从计算机上的应用程序捕获内部声音和音频。",
+    "hudRecordTitle": "录音",
+    "hudRecordDesc": "使用可选的倒计时器立即开始录制。",
+    "badgeAudio": "音频",
+    "badgeCamera": "相机",
+    "badgeScript": "脚本",
+    "badgeSystem": "系统",
+    "badgeDisplay": "显示",
+    "badgeModes": "模式",
+    "badgeProjects": "项目",
+    "badgeSettings": "设置",
+    "badgeAction": "行动",
+    "versionTitle": "版本",
+    "upToDate": "最新",
+    "starTitle": "开源",
+    "starDesc": "GitHub 上的免费开源项目",
+    "starButton": "在 GitHub 上加星标",
+    "discordTitle": "社区",
+    "discordDesc": "获取帮助、反馈和功能更新",
+    "discordButton": "加入不和谐"
   }
 }

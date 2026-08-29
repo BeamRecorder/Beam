@@ -47,7 +47,8 @@
     "continuity": "連続背景",
     "continuityDescription": "フィットした映像の背後に、ぼかした動画のコピーを広げます。",
     "continuityBlur": "背景のぼかし",
-    "continuityBrightness": "背景の明るさ"
+    "continuityBrightness": "背景の明るさ",
+    "borderColor": "枠線の色"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "カメラプレビューを読み込み中",
@@ -250,7 +251,9 @@
     "captionWordLabel": "キャプションの単語",
     "wordStartTimeLabel": "単語の開始時間",
     "wordEndTimeLabel": "単語の終了時間",
-    "deleteCaptionClip": "キャプションクリップを削除"
+    "deleteCaptionClip": "キャプションクリップを削除",
+    "shadowColor": "影の色",
+    "shadowBlur": "影のぼかし"
   },
   "CaptionPanel": {
     "aiAutoCaptioning": "AI自動キャプション",
@@ -308,7 +311,8 @@
     "unlink": "リンク解除",
     "deleteClip": "クリップを削除",
     "deleteVideo": "ビデオを削除",
-    "deleteWebcam": "ウェブカメラを削除"
+    "deleteWebcam": "ウェブカメラを削除",
+    "shadowBlur": "影のぼかし"
   },
   "CursorPanel": {
     "cursorStyle": "カーソルスタイル",
@@ -354,7 +358,14 @@
     "importSuccess": "静的カーソルを {count} 個インポートしました。",
     "importIgnoredAnimated": "無視したアニメーション役割: {roles}。",
     "importFailed": "カーソルパックをインポートできませんでした。",
-    "discoveryFailed": "パック検索を開けませんでした。"
+    "discoveryFailed": "パック検索を開けませんでした。",
+    "shadowBlur": "影のぼかし",
+    "shadowColor": "影の色",
+    "presetNone": "なし",
+    "presetSingle": "シングルリング",
+    "presetDouble": "ダブルウェーブ",
+    "presetSolid": "バースト",
+    "rippleStyle": "リップルスタイル"
   },
   "EditorCanvas": {
     "videoPreviewLoading": "動画プレビューを読み込み中",
@@ -443,7 +454,14 @@
     "authorizingInteractions": "有効化中",
     "dismissInteractionNotice": "後で",
     "interactionAccessSettingsHint": "設定の「キーボードショートカットを記録」から有効にできます。",
-    "dismissInteractionReminder": "リマインダーを閉じる"
+    "dismissInteractionReminder": "リマインダーを閉じる",
+    "copyFix": "コピー修正",
+    "interactionAccessGranted": "インタラクションアクセスが有効化されました",
+    "interactionAccessGrantedDescription": "マウスのクリックとキーボード ショートカットを、入力したテキストを保存せずに記録できるようになりました。",
+    "interactionAccessUnavailableTitle": "インタラクション録音は利用できません",
+    "interactionAccessUnavailableDescription": "必要な対話ヘルパーが利用できません (Polkit または保護された入力ヘルパー)。記録する前に、報告された問題を解決してください。",
+    "linuxRequirementsTitle": "Linuxのセットアップが必要です",
+    "recordingErrorTitle": "記録エラー"
   },
   "EditorPreparingHud": {
     "title": "エディターを準備しています",
@@ -680,6 +698,54 @@
     "joinDiscord": "Join Discord Community",
     "reopenHint": "You can revisit this onboarding anytime from Settings > General.",
     "dismiss": "Dismiss",
-    "emptyStateDesc": "Click on any control on the live HUD to test it."
+    "emptyStateDesc": "Click on any control on the live HUD to test it.",
+    "titlebarTitle": "ビーム • オンボーディング",
+    "minimize": "最小化する",
+    "close": "閉じる",
+    "welcomeSubtitle": "開発者、クリエイター、チーム向けに設計されたスタジオグレードのスクリーンレコーダー。",
+    "featureNativeTitle": "ネイティブスクリーンレコーダー",
+    "featureNativeDesc": "画面、ウィンドウ、または選択した領域をロスレスの鮮明さで録画します。",
+    "featureAutoZoomTitle": "自動ズーム",
+    "featureAutoZoomDesc": "重要な部分をスムーズに拡大できます。",
+    "featureCaptionsTitle": "AI キャプション",
+    "featureCaptionsDesc": "Whisper を使用すると、ビデオ全体を数秒で文字起こしし、字幕を付けることができます。",
+    "featureQualityTitle": "プロフェッショナルな品質",
+    "featureQualityDesc": "録画を目立たせる背景、Web カメラの影、カーソル効果。",
+    "tryControlTip": "ライブインタラクティブコントロール",
+    "hudTopbarTitle": "設定とショートカット",
+    "hudTopbarDesc": "ホットキー、テーマ、およびグローバル設定をカスタマイズします。",
+    "hudProjectsTitle": "プロジェクト",
+    "hudProjectsDesc": "過去に録音したすべてのデモを 1 か所で見つけて管理します。",
+    "hudTabsTitle": "キャプチャモード",
+    "hudTabsDesc": "全画面録画とウィンドウ キャプチャを切り替えます。",
+    "hudSourceTitle": "ソースとクロップ",
+    "hudSourceDesc": "ディスプレイ、ウィンドウを選択するか、画面上のカスタム領域をトリミングします。",
+    "hudCameraTitle": "ウェブカメラ",
+    "hudCameraDesc": "丸みを帯びた角、影、およびエディターでのスムーズな位置変更を使用して Web カメラを録画します。",
+    "hudTeleprompterTitle": "テレプロンプター",
+    "hudTeleprompterDesc": "画面上でスクリプトを直接読むので、自分の発言を忘れることはありません。",
+    "hudAudioTitle": "マイク",
+    "hudAudioDesc": "ライブオーディオレベルモニタリングでマイクを録音します。",
+    "hudSystemAudioTitle": "システムオーディオ",
+    "hudSystemAudioDesc": "内部サウンドとコンピューター上のアプリからのオーディオをキャプチャします。",
+    "hudRecordTitle": "録音",
+    "hudRecordDesc": "オプションのカウントダウンタイマーを使用すると、すぐに録音を開始できます。",
+    "badgeAudio": "オーディオ",
+    "badgeCamera": "カメラ",
+    "badgeScript": "スクリプト",
+    "badgeSystem": "システム",
+    "badgeDisplay": "ディスプレイ",
+    "badgeModes": "モード",
+    "badgeProjects": "プロジェクト",
+    "badgeSettings": "設定",
+    "badgeAction": "アクション",
+    "versionTitle": "バージョン",
+    "upToDate": "最新の状態",
+    "starTitle": "オープンソース",
+    "starDesc": "GitHub 上の無料のオープンソース プロジェクト",
+    "starButton": "GitHub でスターを付ける",
+    "discordTitle": "コミュニティ",
+    "discordDesc": "ヘルプ、フィードバック、機能のアップデートを入手する",
+    "discordButton": "Discordに参加する"
   }
 }

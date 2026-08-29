@@ -260,6 +260,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       screen,
       selectedZoom?.id,
       selectedZoom?.mode,
+      options.zoomAutoFollow?.(),
       options.isPlaying(),
       videoWidth,
       videoHeight,
@@ -276,6 +277,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       cameraEvaluator = createCompositionCameraEvaluator({
         zooms: previewZooms,
         telemetry,
+        autoFollow: options.zoomAutoFollow?.(),
         mapFocus: (focus, zoom, timeMs) => {
           const activeScreen = sceneLayersAt(timeMs).screen;
           if (!activeScreen || zoom.mode !== 'auto') return focus;

@@ -131,6 +131,7 @@ pub fn create_or_update_project(
             updated_at_utc: now_utc.into(),
             sessions: Vec::new(),
             editor: ProjectEditorState::default(),
+            extra: serde_json::Map::new(),
         }
     };
     if project.project_id != project_id {

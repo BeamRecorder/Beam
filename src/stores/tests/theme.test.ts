@@ -121,4 +121,5 @@ describe('theme store', () => {
     expect(store.theme).toBe('light');
     expect(document.documentElement.classList.contains('dark')).toBe(false);
   });
+
 });

@@ -7,20 +7,13 @@ import {
   SkipForward,
   ZoomIn,
   ZoomOut,
-  Plus,
   Scissors,
   Magnet,
-  Video,
-  Image as ImageIcon,
-  Volume2,
-  Type,
-  CircleDashed,
-  Palette,
-  Shapes,
+  Maximize2,
+  Minimize2,
 } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import Popover from '~/ui/popover/Popover.vue';
-import PopoverMenuButton from '~/ui/popover/PopoverMenuButton.vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
 import Skeleton from '~/ui/skeleton/Skeleton.vue';
 import { useTranslate } from '~/i18n/useTranslate';
@@ -30,7 +23,6 @@ import PreviewQualityPopover from './PreviewQualityPopover.vue';
 import type { PreviewPerformanceSnapshot } from '../performance/preview-performance-types';
 
 const { t } = useTranslate('TimelineToolbar');
-const { t: tCanvas } = useTranslate('CanvasPanel');
 
 const props = withDefaults(
   defineProps<{
@@ -43,8 +35,16 @@ const props = withDefaults(
     loading?: boolean;
     previewQuality?: PreviewQuality;
     performanceSnapshot?: PreviewPerformanceSnapshot | null;
+    isCanvasFullscreen?: boolean;
   }>(),
-  { zoomLevel: 100, canSplit: false, isSnappingEnabled: true, loading: false, previewQuality: 'full' },
+  {
+    zoomLevel: 100,
+    canSplit: false,
+    isSnappingEnabled: true,
+    loading: false,
+    previewQuality: 'full',
+    isCanvasFullscreen: false,
+  },
 );
 
 const emit = defineEmits<{
@@ -53,25 +53,9 @@ const emit = defineEmits<{
   (e: 'update:zoomLevel', value: number): void;
   (e: 'update:isSnappingEnabled', value: boolean): void;
   (e: 'update:previewQuality', value: PreviewQuality): void;
-  (e: 'add:element', type: 'video' | 'image' | 'sound' | 'caption' | 'color' | 'shape' | 'blur'): void;
   (e: 'split'): void;
+  (e: 'toggle:canvas-fullscreen'): void;
 }>();
-
-const handleAdd = (type: 'video' | 'image' | 'sound' | 'caption' | 'color' | 'shape' | 'blur') => {
-  emit('add:element', type);
-};
-const addItems = computed(
-  () =>
-    [
-      { id: 'video', label: t('video'), icon: Video },
-      { id: 'image', label: t('image'), icon: ImageIcon },
-      { id: 'color', label: tCanvas('color'), icon: Palette },
-      { id: 'shape', label: tCanvas('shapesAndArrows'), icon: Shapes },
-      { id: 'sound', label: t('sound'), icon: Volume2 },
-      { id: 'caption', label: t('text'), icon: Type },
-      { id: 'blur', label: t('blur'), icon: CircleDashed },
-    ] as const,
-);
 
 const zoomPercentageText = computed(() => {
   return `${Math.round(props.zoomLevel)}%`;
@@ -99,10 +83,14 @@ const handleZoomIn = () => {
 const handleZoomOut = () => {
   emit('update:zoomLevel', zoomTimelineByButton(props.zoomLevel, -1));
 };
+const handleFullscreenClick = (event?: MouseEvent) => {
+  (event?.currentTarget as HTMLElement | null)?.blur();
+  emit('toggle:canvas-fullscreen');
+};
 </script>
 
 <template>
-  <div class="timeline-toolbar" :class="{ 'is-loading': loading }">
+  <div class="timeline-toolbar" :class="{ 'is-loading': loading, 'is-canvas-fullscreen': isCanvasFullscreen }">
     <Skeleton
       v-if="loading"
       class="timeline-toolbar-loading-skeleton"
@@ -113,14 +101,8 @@ const handleZoomOut = () => {
       aria-hidden="true"
     />
     <div class="timeline-toolbar-content">
-      <!-- Left Section: Add Popover & Tool Group -->
-      <div class="left-section">
-        <PopoverMenuButton
-          :label="t('add')"
-          :icon="Plus"
-          :items="addItems"
-          @select="handleAdd($event as 'video' | 'image' | 'sound' | 'caption' | 'color' | 'shape' | 'blur')"
-        />
+      <!-- Left Section: Editing tools -->
+      <div v-if="!isCanvasFullscreen" class="left-section">
         <div class="tools-group">
           <Button
             variant="ghost"
@@ -140,6 +122,15 @@ const handleZoomOut = () => {
             :tooltip="isSnappingEnabled ? t('snappingOn') : t('snappingOff')"
             class="toolbar-snap-btn"
             @click="emit('update:isSnappingEnabled', !isSnappingEnabled)"
+          />
+          <Button
+            :variant="isCanvasFullscreen ? 'primary' : 'ghost'"
+            size="sm"
+            icon-only
+            :icon="isCanvasFullscreen ? Minimize2 : Maximize2"
+            :tooltip="isCanvasFullscreen ? t('exitFullscreenPreview') : t('fullscreenPreview')"
+            class="toolbar-fullscreen-btn"
+            @click="handleFullscreenClick"
           />
         </div>
       </div>
@@ -182,7 +173,7 @@ const handleZoomOut = () => {
       </div>
 
       <!-- Right Section: Compact Segmented Zoom with Popover -->
-      <div class="right-section">
+      <div v-if="!isCanvasFullscreen" class="right-section">
         <PreviewQualityPopover
           :model-value="previewQuality"
           :performance-snapshot="performanceSnapshot"
@@ -275,6 +266,9 @@ const handleZoomOut = () => {
 
 .timeline-toolbar.is-loading > :not(.timeline-toolbar-loading-skeleton) {
   visibility: hidden;
+}
+.timeline-toolbar.is-canvas-fullscreen .center-section {
+  grid-column: 2;
 }
 
 .left-section {

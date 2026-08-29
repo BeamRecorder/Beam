@@ -2,14 +2,17 @@ import { computed, ref, watch, type Ref } from 'vue';
 import type { ProjectEditorData } from '../../../api/types/capture-api';
 import {
   DEFAULT_ZOOM_DURATION_MS,
+  DEFAULT_ZOOM_AUTO_FOLLOW,
   DEFAULT_ZOOM_MOTION_BLUR,
   DEFAULT_ZOOM_PROJECTION,
   DEFAULT_ZOOM_TILT_INTENSITY,
   DEFAULT_ZOOM_TILT_HORIZONTAL,
   DEFAULT_ZOOM_TILT_VERTICAL,
   DEFAULT_ZOOM_TILT_PRESET,
+  normalizeZoomAutoFollow,
   normalizeZoomMotionBlur,
   type ZoomElement,
+  type ZoomAutoFollowSettings,
   type ZoomMotionBlurSettings,
 } from '../zoom/zoom-types';
 import { buildAutomaticZoomElements, ZOOM_ALGORITHM_VERSION } from '../zoom/zoom-suggestions';
@@ -27,6 +30,7 @@ export function useProjectZoom(options: {
   const zoomElements = ref<ZoomElement[]>([]);
   const generatedSessions = ref<ProjectEditorData['zoom']['generatedSessions']>([]);
   const zoomMotionBlur = ref<ZoomMotionBlurSettings>({ ...DEFAULT_ZOOM_MOTION_BLUR });
+  const zoomAutoFollow = ref<ZoomAutoFollowSettings>({ ...DEFAULT_ZOOM_AUTO_FOLLOW });
   const selectedZoomId = ref<string | null>(null);
   const selectedZoomIds = ref<string[]>([]);
   const selectedZoom = computed(
@@ -175,6 +179,9 @@ export function useProjectZoom(options: {
   const updateZoomMotionBlur = (value: ZoomMotionBlurSettings) => {
     zoomMotionBlur.value = normalizeZoomMotionBlur(value);
   };
+  const updateZoomAutoFollow = (value: ZoomAutoFollowSettings) => {
+    zoomAutoFollow.value = normalizeZoomAutoFollow(value);
+  };
   const pasteZoomAtTime = (copiedZoom: ZoomElement, startMs: number) => {
     const pasted = pasteZoomAt(zoomElements.value, copiedZoom, startMs, durationMs.value);
     zoomElements.value = pasted.elements;
@@ -186,6 +193,7 @@ export function useProjectZoom(options: {
     zoomElements,
     generatedSessions,
     zoomMotionBlur,
+    zoomAutoFollow,
     selectedZoomId,
     selectedZoomIds,
     selectedZoom,
@@ -201,6 +209,7 @@ export function useProjectZoom(options: {
     previewMoveZoom,
     moveZoom,
     updateZoomMotionBlur,
+    updateZoomAutoFollow,
     pasteZoomAtTime,
     previewZoom,
     deleteSelectedZoom,

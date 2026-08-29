@@ -2,6 +2,26 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { i18n, setCurrentLocale } from './index';
 import { localeOptions, SUPPORTED_LOCALES } from './locales';
 
+const messageLeaves = (value: unknown, prefix = ''): Array<[string, unknown]> => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return prefix ? [[prefix, value]] : [];
+  return Object.entries(value as Record<string, unknown>).flatMap(([key, child]) =>
+    messageLeaves(child, prefix ? `${prefix}.${key}` : key),
+  );
+};
+
+const messageAt = (root: unknown, path: string) => {
+  let value: unknown = root;
+  for (const key of path.split('.')) {
+    if (!value || typeof value !== 'object' || Array.isArray(value) || !Object.hasOwn(value, key))
+      return { exists: false, value: undefined };
+    value = (value as Record<string, unknown>)[key];
+  }
+  return { exists: true, value };
+};
+
+const placeholders = (value: unknown) =>
+  [...new Set(typeof value === 'string' ? (value.match(/\{[^{}]+\}/g) ?? []) : [])].sort();
+
 afterEach(() => {
   setCurrentLocale('en');
 });
@@ -10,6 +30,22 @@ describe('internationalization', () => {
   it('registers every supported locale in the language picker', () => {
     expect(i18n.global.availableLocales).toEqual(expect.arrayContaining([...SUPPORTED_LOCALES]));
     expect(localeOptions.map((option) => option.value)).toEqual([...SUPPORTED_LOCALES]);
+  });
+
+  it('keeps the merged English message leaf keys and placeholders in every locale', () => {
+    const english = i18n.global.getLocaleMessage('en');
+    const englishLeaves = messageLeaves(english);
+
+    for (const locale of SUPPORTED_LOCALES) {
+      const messages = i18n.global.getLocaleMessage(locale);
+      for (const [path, englishValue] of englishLeaves) {
+        const translated = messageAt(messages, path);
+        expect(translated.exists, `${locale}: missing message key ${path}`).toBe(true);
+        expect(placeholders(translated.value), `${locale}: placeholder mismatch for ${path}`).toEqual(
+          placeholders(englishValue),
+        );
+      }
+    }
   });
 
   it('renders UTF-8 translations across the supported writing systems', () => {

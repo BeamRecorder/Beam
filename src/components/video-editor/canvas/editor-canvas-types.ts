@@ -8,7 +8,7 @@ import type { HistoryAction } from '../composables/useEditorUndoRedo';
 import type { BackgroundValue } from '../composables/backgroundCatalog';
 import type { CursorPackDescriptor, CursorSelection } from '../../../api/types/cursor-pack';
 import type { ShadowDirection } from '../properties/cursor/shadow-types';
-import type { ZoomElement, ZoomMotionBlurSettings } from '../zoom/zoom-types';
+import type { ZoomAutoFollowSettings, ZoomElement, ZoomMotionBlurSettings } from '../zoom/zoom-types';
 import type { MediaError, MediaFrame } from '~/media/shared';
 import type {
   CaptionClip,
@@ -53,6 +53,7 @@ export interface EditorCanvasProps {
   editorData?: ProjectEditorData | null;
   zoomElements: ZoomElement[];
   zoomMotionBlur?: ZoomMotionBlurSettings;
+  zoomAutoFollow?: ZoomAutoFollowSettings;
   selectedZoom: ZoomElement | null;
   composition: ClipComposition;
   outputCanvas: OutputCanvasSettings;

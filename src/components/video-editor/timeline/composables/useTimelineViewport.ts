@@ -4,6 +4,7 @@ import { calculateSnapThresholdMs, collectSnapTargets, snapValue } from './timel
 import { timelinePlaybackScrollDelta, timelineThumbnailSlots } from './timeline-viewport';
 import { zoomTimelineByWheel } from './timeline-zoom';
 import type { TimelineTracksEmits, TimelineTracksProps } from './timeline-tracks-types';
+import { timelineLayoutToVisualPixels, timelineVisualToLayoutPixels } from './timeline-coordinate-space';
 
 const MAX_WHEEL_EVENT_AGE_MS = 200;
 const WHEEL_ZOOM_IDLE_MS = 120;
@@ -20,6 +21,7 @@ export function useTimelineViewport(
   const tracksViewportRef = ref<HTMLDivElement | null>(null);
   const ticksAreaRef = ref<HTMLDivElement | null>(null);
   const rulerWidth = ref(0);
+  const rulerLayoutWidth = ref(0);
   const currentDuration = computed(() => {
     const ms = typeof durationMs.value === 'number' && Number.isFinite(durationMs.value) ? durationMs.value : 1_000;
     return Math.max(1, ms / 1_000);
@@ -130,6 +132,7 @@ export function useTimelineViewport(
     const ticksRect = ticks.getBoundingClientRect();
     const timelineWidth = Math.max(1, ticksRect.width || ticks.clientWidth);
     rulerWidth.value = timelineWidth;
+    rulerLayoutWidth.value = Math.max(1, ticks.offsetWidth || ticks.clientWidth || timelineWidth);
     const startPixel = Math.max(0, Math.min(timelineWidth, scrollRect.left - ticksRect.left));
     const endPixel = Math.max(0, Math.min(timelineWidth, scrollRect.right - ticksRect.left));
     visibleStartSecond.value = (startPixel / timelineWidth) * currentDuration.value;
@@ -160,7 +163,7 @@ export function useTimelineViewport(
     const playheadX = ticksRect.left + (currentTime / currentDuration.value) * timelineWidth;
     const delta = timelinePlaybackScrollDelta(playheadX, scrollRect.left, scrollRect.right);
     if (Math.abs(delta) < 1) return;
-    scroll.scrollLeft += delta;
+    scroll.scrollLeft += timelineVisualToLayoutPixels(delta, scroll, scrollRect.width);
     onScroll();
   };
   let autoScrollRaf: number | null = null;
@@ -180,15 +183,15 @@ export function useTimelineViewport(
     const elapsedMs = lastAutoScrollTime === null ? 16 : Math.max(1, Math.min(32, frameTime - lastAutoScrollTime));
     lastAutoScrollTime = frameTime;
     const previousScrollLeft = scrollEl.scrollLeft;
-    scrollEl.scrollLeft += (autoScrollVelocity * elapsedMs) / 1_000;
-    const scrollDeltaPx = scrollEl.scrollLeft - previousScrollLeft;
-    if (scrollDeltaPx === 0) {
+    scrollEl.scrollLeft += timelineVisualToLayoutPixels((autoScrollVelocity * elapsedMs) / 1_000, scrollEl);
+    const scrollDeltaLayoutPx = scrollEl.scrollLeft - previousScrollLeft;
+    if (scrollDeltaLayoutPx === 0) {
       autoScrollVelocity = 0;
       lastAutoScrollTime = null;
       return;
     }
     updateVisibleRange();
-    autoScrollUpdate?.(scrollDeltaPx);
+    autoScrollUpdate?.(timelineLayoutToVisualPixels(scrollDeltaLayoutPx, scrollEl));
     if (autoScrollUpdate && autoScrollVelocity !== 0) {
       autoScrollRaf = requestAnimationFrame(runAutoScroll);
     }
@@ -390,6 +393,7 @@ export function useTimelineViewport(
     tracksViewportRef,
     ticksAreaRef,
     rulerWidth,
+    rulerLayoutWidth,
     tracksWidthStyle,
     scrubPreviewTime,
     displayedPlayheadTime,

@@ -18,7 +18,7 @@ export function useTimelineZoomInteractions(options: {
   previewDurationMs: Ref<number | null>;
   zoomPreview: Ref<ZoomPreview>;
   activeTrimState: Ref<TrimState>;
-  resolveMsPerPx: () => { baseDurationMs: number; width: number; msPerPx: number };
+  resolveMsPerPx: () => { baseDurationMs: number; width: number; msPerPx: number; visualScale: number };
   updateAutoScroll: (clientX: number) => void;
   stopAutoScroll: () => void;
 }) {
@@ -28,7 +28,7 @@ export function useTimelineZoomInteractions(options: {
     event.stopPropagation();
     const pointerStartX = event.clientX;
     const initialScrollLeft = options.tracksScrollRef.value?.scrollLeft ?? 0;
-    const { baseDurationMs, width: baseRulerWidth, msPerPx } = options.resolveMsPerPx();
+    const { baseDurationMs, width: baseRulerWidth, msPerPx, visualScale } = options.resolveMsPerPx();
     const lengthMs = zoom.endMs - zoom.startMs;
     const snapTargets = collectSnapTargets({
       composition: options.props.composition,
@@ -42,7 +42,7 @@ export function useTimelineZoomInteractions(options: {
     const applyMove = (next: PointerEvent) => {
       options.updateAutoScroll(next.clientX);
       const currentScrollLeft = options.tracksScrollRef.value?.scrollLeft ?? 0;
-      const deltaPx = next.clientX - pointerStartX + currentScrollLeft - initialScrollLeft;
+      const deltaPx = next.clientX - pointerStartX + (currentScrollLeft - initialScrollLeft) * visualScale;
       const proposedStartMs = Math.max(0, zoom.startMs + Math.round(deltaPx * msPerPx));
       const snap =
         options.props.isSnappingEnabled !== false
@@ -89,7 +89,7 @@ export function useTimelineZoomInteractions(options: {
     event.stopPropagation();
     const pointerStartX = event.clientX;
     const initialScrollLeft = options.tracksScrollRef.value?.scrollLeft ?? 0;
-    const { baseDurationMs, width: baseRulerWidth, msPerPx } = options.resolveMsPerPx();
+    const { baseDurationMs, width: baseRulerWidth, msPerPx, visualScale } = options.resolveMsPerPx();
     let finalTimeMs = edge === 'start' ? zoom.startMs : zoom.endMs;
     const snapTargets = collectSnapTargets({
       composition: options.props.composition,
@@ -102,7 +102,7 @@ export function useTimelineZoomInteractions(options: {
     const applyMove = (next: PointerEvent) => {
       options.updateAutoScroll(next.clientX);
       const currentScrollLeft = options.tracksScrollRef.value?.scrollLeft ?? 0;
-      const deltaPx = next.clientX - pointerStartX + currentScrollLeft - initialScrollLeft;
+      const deltaPx = next.clientX - pointerStartX + (currentScrollLeft - initialScrollLeft) * visualScale;
       const raw = (edge === 'start' ? zoom.startMs : zoom.endMs) + Math.round(deltaPx * msPerPx);
       let proposed =
         edge === 'start'

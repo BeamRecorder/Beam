@@ -34,4 +34,13 @@ describe('PopoverMenuButton', () => {
     expect(wrapper.get('.menu-button').attributes('disabled')).toBeDefined();
     expect(wrapper.get('.menu-button').attributes('aria-label')).toBe('Mode');
   });
+
+  it('supports a flat block trigger with an upward chevron', () => {
+    const wrapper = mount(PopoverMenuButton, {
+      props: { label: 'Add', items: [], bare: true, block: true, direction: 'up' },
+    });
+
+    expect(wrapper.get('.menu-button').classes()).toEqual(expect.arrayContaining(['bare', 'block']));
+    expect(wrapper.get('.menu-button-chevron').classes()).toContain('lucide-chevron-up');
+  });
 });

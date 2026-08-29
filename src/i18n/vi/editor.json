@@ -18,7 +18,31 @@
   },
   "CameraLayoutPanel": {
     "reactToZoom": "Phản hồi theo thu phóng",
-    "reactToZoomDescription": "Giữ webcam cố định và điều chỉnh kích thước theo mức thu phóng của canvas."
+    "reactToZoomDescription": "Giữ webcam cố định và điều chỉnh kích thước theo mức thu phóng của canvas.",
+    "title": "Bố cục máy ảnh",
+    "visualTitle": "Bố cục đoạn phim",
+    "custom": "tùy chỉnh",
+    "topLeft": "Nổi trên cùng bên trái",
+    "topRight": "Nổi trên cùng bên phải",
+    "bottomLeft": "Nổi phía dưới bên trái",
+    "bottomRight": "Nổi phía dưới bên phải",
+    "largeCenter": "Camera trung tâm lớn",
+    "visualLargeCenter": "Clip lớn ở giữa",
+    "fullscreen": "Máy ảnh toàn màn hình",
+    "visualFullscreen": "Clip toàn màn hình",
+    "splitLeft": "Camera trái chia",
+    "splitRight": "Chia phải camera",
+    "splitTop": "Chia đầu máy ảnh",
+    "splitBottom": "Chia đáy máy ảnh",
+    "splitRequiresScreen": "Không có bản ghi màn hình phù hợp nào có sẵn tại thời điểm này trong dòng thời gian.",
+    "splitRatio": "Chia sẻ máy ảnh",
+    "splitPadding": "Khoảng cách nền",
+    "framing": "đóng khung",
+    "fill": "Điền vào",
+    "fit": "Phù hợp",
+    "square": "hình vuông",
+    "squircle": "hình tròn",
+    "circle": "vòng tròn"
   },
   "ShadowDirectionGroup": {
     "shadowDirection": "Hướng đổ bóng",
@@ -125,6 +149,8 @@
     "zoomIn": "Phóng to",
     "snappingOn": "Đã bật tính năng hút dính (Magnet)",
     "snappingOff": "Đã tắt tính năng hút dính (Magnet)",
+    "fullscreenPreview": "Xem trước toàn màn hình",
+    "exitFullscreenPreview": "Thoát xem trước toàn màn hình",
     "zoom": "Thu phóng",
     "resetZoom": "Đặt lại thu phóng",
     "previewQuality": "Chất lượng xem trước",
@@ -180,7 +206,9 @@
     "holdSegment": "Giữ đoạn",
     "copy": "Sao chép",
     "paste": "Dán",
-    "delete": "Xóa"
+    "delete": "Xóa",
+    "copyUnavailable": "Chọn một mục dòng thời gian trước khi sao chép.",
+    "clipboardEmpty": "Sao chép một mục dòng thời gian trước khi dán."
   },
   "TimelineVideoClip": {
     "trimStart": "Cắt đầu đoạn",
@@ -271,7 +299,9 @@
     "mediaPlaybackAssetError": "{project} — “{name}” không khả dụng (nguồn dự kiến: {path}). {message}",
     "mediaPlaybackIncompleteRecording": "{project} — “{name}” không khả dụng (nguồn dự kiến: {path}). Phiên ghi hình chưa được hoàn tất.",
     "mediaPlaybackUnknownProject": "Dự án hiện tại",
-    "mediaPlaybackCopyError": "Sao chép lỗi"
+    "mediaPlaybackCopyError": "Sao chép lỗi",
+    "timelinePasteFailed": "Không thể dán: {message}",
+    "timelineClipboardDifferentProject": "Mục được sao chép thuộc về một dự án khác."
   },
   "BlurPropertiesPanel": {
     "presets": "Cài đặt sẵn",
@@ -306,6 +336,16 @@
     "savingProject": "Đang lưu dự án"
   },
   "ZoomPanel": {
+    "cameraFollow": "Theo dõi camera",
+    "cameraFollowDesc": "Giữ con trỏ trong một vùng ổn định trước khi camera di chuyển.",
+    "advanced": "Nâng cao",
+    "followPresetStable": "Ổn định",
+    "followPresetBalanced": "Cân bằng",
+    "followPresetResponsive": "Phản hồi nhanh",
+    "safeZone": "Vùng an toàn",
+    "responsiveness": "Độ phản hồi",
+    "straightPaths": "Đường đi thẳng",
+    "straightPathsDesc": "Giới hạn chuyển động của camera theo các đường ngang, dọc hoặc chéo.",
     "generateAutoZooms": "Tạo thu phóng tự động",
     "regenerateAutoZooms": "Tạo lại thu phóng tự động",
     "regenerateConfirm": "Tạo lại thu phóng tự động? Thao tác này sẽ thay thế tất cả các điểm thu phóng đã phát hiện trước đó.",

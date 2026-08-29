@@ -17,6 +17,7 @@ import { createAnimationFrameCoalescer } from './animation-frame-coalescer';
 import { useTimelineViewport } from './useTimelineViewport';
 import { useTimelineZoomInteractions } from './useTimelineZoomInteractions';
 import type { TimelineTracksEmits, TimelineTracksProps } from './timeline-tracks-types';
+import { timelineVisualScale } from './timeline-coordinate-space';
 import { groupVisualTimelineTracks, previewVisualTrackOrder } from './visual-timeline-tracks';
 import { visualMoveDeltaBounds } from '../../composition/engine/visual-track-layout';
 import { previewClipMove } from './timeline-composition-preview';
@@ -94,6 +95,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     tracksViewportRef,
     ticksAreaRef,
     rulerWidth,
+    rulerLayoutWidth,
     tracksWidthStyle,
     scrubPreviewTime,
     displayedPlayheadTime,
@@ -166,7 +168,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
         (scroll ? scroll.getBoundingClientRect().width : 0) ||
         1_000,
     );
-    return { baseDurationMs, width, msPerPx: baseDurationMs / width };
+    return { baseDurationMs, width, msPerPx: baseDurationMs / width, visualScale: timelineVisualScale(ticks) };
   };
 
   const beginClipMove = (event: PointerEvent, clip: Clip) => {
@@ -182,7 +184,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     const initialVisualTrackIndex = initialVisualTrack ? initialVisualTrackOrder!.indexOf(initialVisualTrack.id) : -1;
     const pointerStartX = event.clientX;
     const initialScrollLeft = tracksScrollRef.value?.scrollLeft ?? 0;
-    const { baseDurationMs, width: baseRulerWidth, msPerPx } = resolveMsPerPx();
+    const { baseDurationMs, width: baseRulerWidth, msPerPx, visualScale } = resolveMsPerPx();
     const originalStartMs = clip.timelineStartMs;
     const clipLengthMs = clip.timelineDurationMs;
     const moveBounds = visualMoveDeltaBounds(props.composition.clips, new Set(ids));
@@ -201,7 +203,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     const applyMove = (next: PointerEvent) => {
       updateAutoScroll(next.clientX);
       const currentScrollLeft = tracksScrollRef.value?.scrollLeft ?? 0;
-      const deltaPx = next.clientX - pointerStartX + (currentScrollLeft - initialScrollLeft);
+      const deltaPx = next.clientX - pointerStartX + (currentScrollLeft - initialScrollLeft) * visualScale;
       const deltaMs = Math.max(moveBounds.min, Math.min(moveBounds.max, Math.round(deltaPx * msPerPx)));
       const proposedStartMs = Math.max(0, originalStartMs + deltaMs);
       const snap =
@@ -397,6 +399,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     tracksViewportRef,
     ticksAreaRef,
     rulerWidth,
+    rulerLayoutWidth,
     tracksWidthStyle,
     scrubPreviewTime,
     displayedPlayheadTime,

@@ -4,6 +4,7 @@ import type { BlurClip, ClipComposition, ColorClip, ShapeClip, VisualClip } from
 import type { TimelineClipboardItem, TimelinePasteHighlight, TimelinePasteRequest } from './timeline-clipboard-types';
 import type { OutputCanvasSettings } from '../../canvas/output-canvas';
 import type { AddVisualElementRequest } from '../../composition/visual-element-types';
+import type { TimelineElementKind } from '../timeline-element-types';
 
 export interface VisualTimelineTrack {
   id: string;
@@ -51,6 +52,7 @@ export interface TimelinePlacementRequest {
 }
 
 export interface TimelineTracksEmits {
+  (event: 'add:element', kind: TimelineElementKind): void;
   (event: 'update:currentTime', value: number): void;
   (event: 'update:zoomLevel', value: number): void;
   (event: 'select:zoom', zoomId: string): void;

@@ -47,7 +47,8 @@
     "continuity": "Ciągłość",
     "continuityDescription": "Rozciąga rozmytą kopię filmu za dopasowaną zawartością.",
     "continuityBlur": "Rozmycie tła",
-    "continuityBrightness": "Jasność tła"
+    "continuityBrightness": "Jasność tła",
+    "borderColor": "Kolor obramowania"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "Ładowanie podglądu kamery",
@@ -250,7 +251,9 @@
     "captionWordLabel": "Słowo napisów",
     "wordStartTimeLabel": "Czas rozpoczęcia słowa",
     "wordEndTimeLabel": "Czas zakończenia słowa",
-    "deleteCaptionClip": "Usuń klip napisów"
+    "deleteCaptionClip": "Usuń klip napisów",
+    "shadowColor": "Kolor cienia",
+    "shadowBlur": "Rozmycie cienia"
   },
   "CaptionPanel": {
     "aiAutoCaptioning": "Automatyczne napisy AI",
@@ -308,7 +311,8 @@
     "unlink": "Odłącz",
     "deleteClip": "Usuń klip",
     "deleteVideo": "Usuń wideo",
-    "deleteWebcam": "Usuń kamerę"
+    "deleteWebcam": "Usuń kamerę",
+    "shadowBlur": "Rozmycie cienia"
   },
   "CursorPanel": {
     "cursorStyle": "Styl kursora",
@@ -354,7 +358,14 @@
     "importSuccess": "Zaimportowano {count} statycznych kursorów.",
     "importIgnoredAnimated": "Pominięte animowane role: {roles}.",
     "importFailed": "Nie udało się zaimportować pakietu kursorów.",
-    "discoveryFailed": "Nie udało się otworzyć wyszukiwania pakietów."
+    "discoveryFailed": "Nie udało się otworzyć wyszukiwania pakietów.",
+    "shadowBlur": "Rozmycie cienia",
+    "shadowColor": "Kolor cienia",
+    "presetNone": "Żadne",
+    "presetSingle": "Pojedynczy pierścień",
+    "presetDouble": "Podwójna fala",
+    "presetSolid": "Wybuch",
+    "rippleStyle": "Styl falowania"
   },
   "EditorCanvas": {
     "videoPreviewLoading": "Ładowanie podglądu wideo",
@@ -443,7 +454,14 @@
     "authorizingInteractions": "Włączanie",
     "dismissInteractionNotice": "Pomiń",
     "interactionAccessSettingsHint": "Opcję Nagrywaj skróty klawiaturowe znajdziesz w Ustawieniach.",
-    "dismissInteractionReminder": "Zamknij przypomnienie"
+    "dismissInteractionReminder": "Zamknij przypomnienie",
+    "copyFix": "Skopiuj poprawkę",
+    "interactionAccessGranted": "Dostęp do interakcji włączony",
+    "interactionAccessGrantedDescription": "Kliknięcia myszą i skróty klawiaturowe można teraz rejestrować bez zapisywania wpisywanego tekstu.",
+    "interactionAccessUnavailableTitle": "Nagrywanie interakcji jest niedostępne",
+    "interactionAccessUnavailableDescription": "Wymagany pomocnik interakcji jest niedostępny (Polkit lub chroniony pomocnik wejściowy). Rozwiąż zgłoszony problem przed rozpoczęciem nagrywania.",
+    "linuxRequirementsTitle": "Wymagana konfiguracja systemu Linux",
+    "recordingErrorTitle": "Błąd nagrywania"
   },
   "EditorPreparingHud": {
     "title": "Przygotowywanie edytora",
@@ -680,6 +698,54 @@
     "joinDiscord": "Join Discord Community",
     "reopenHint": "You can revisit this onboarding anytime from Settings > General.",
     "dismiss": "Dismiss",
-    "emptyStateDesc": "Click on any control on the live HUD to test it."
+    "emptyStateDesc": "Click on any control on the live HUD to test it.",
+    "titlebarTitle": "Beam • Wdrożenie",
+    "minimize": "Minimalizuj",
+    "close": "Zamknij",
+    "welcomeSubtitle": "Rejestrator ekranowy klasy studyjnej przeznaczony dla programistów, twórców i zespołów.",
+    "featureNativeTitle": "Natywny rejestrator ekranu",
+    "featureNativeDesc": "Nagraj swój ekran, okno lub wybrany region z bezstratną wyrazistością.",
+    "featureAutoZoomTitle": "Automatyczne powiększenie",
+    "featureAutoZoomDesc": "Umożliwia płynne powiększanie ważnych fragmentów.",
+    "featureCaptionsTitle": "Napisy AI",
+    "featureCaptionsDesc": "Użyj Whisper, aby w ciągu kilku sekund dokonać transkrypcji i napisów do całego filmu.",
+    "featureQualityTitle": "Profesjonalna jakość",
+    "featureQualityDesc": "Tła, cienie kamery internetowej i efekty kursora, które wyróżnią Twoje nagrania.",
+    "tryControlTip": "Interaktywna kontrola na żywo",
+    "hudTopbarTitle": "Ustawienia i skróty",
+    "hudTopbarDesc": "Dostosuj skróty klawiszowe, motywy i preferencje globalne.",
+    "hudProjectsTitle": "Projekty",
+    "hudProjectsDesc": "Znajdź i zarządzaj wszystkimi wcześniej nagranymi demami w jednym miejscu.",
+    "hudTabsTitle": "Tryby przechwytywania",
+    "hudTabsDesc": "Przełączaj między nagrywaniem pełnoekranowym a przechwytywaniem okna.",
+    "hudSourceTitle": "Źródło i uprawa",
+    "hudSourceDesc": "Wybierz wyświetlacz, okno lub przytnij niestandardowy region na ekranie.",
+    "hudCameraTitle": "Kamera internetowa",
+    "hudCameraDesc": "Nagraj swoją kamerę internetową z zaokrąglonymi rogami, cieniami i płynną zmianą położenia w edytorze.",
+    "hudTeleprompterTitle": "Teleprompter",
+    "hudTeleprompterDesc": "Przeczytaj swój scenariusz bezpośrednio na ekranie, aby nigdy nie zapomnieć tego, co mówisz.",
+    "hudAudioTitle": "Mikrofon",
+    "hudAudioDesc": "Nagrywaj swój mikrofon dzięki monitorowaniu poziomu dźwięku na żywo.",
+    "hudSystemAudioTitle": "Dźwięk systemowy",
+    "hudSystemAudioDesc": "Przechwytuj dźwięki wewnętrzne i dźwięk z aplikacji na komputerze.",
+    "hudRecordTitle": "Nagrywanie",
+    "hudRecordDesc": "Rozpocznij nagrywanie natychmiast dzięki opcjonalnemu licznikowi czasu.",
+    "badgeAudio": "Dźwięk",
+    "badgeCamera": "Kamera",
+    "badgeScript": "Skrypt",
+    "badgeSystem": "Systemu",
+    "badgeDisplay": "Wyświetlacz",
+    "badgeModes": "Tryby",
+    "badgeProjects": "Projekty",
+    "badgeSettings": "Ustawienia",
+    "badgeAction": "Akcja",
+    "versionTitle": "Wersja",
+    "upToDate": "Aktualne",
+    "starTitle": "Otwarte źródło",
+    "starDesc": "Bezpłatny i otwarty projekt źródłowy na GitHub",
+    "starButton": "Gwiazda na GitHubie",
+    "discordTitle": "Społeczność",
+    "discordDesc": "Uzyskaj pomoc, opinie i aktualizacje funkcji",
+    "discordButton": "Dołącz do Discorda"
   }
 }

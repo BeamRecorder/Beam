@@ -47,7 +47,8 @@
     "continuity": "Continuidade",
     "continuityDescription": "Estende uma cópia desfocada do vídeo atrás do conteúdo ajustado.",
     "continuityBlur": "Desfoque do fundo",
-    "continuityBrightness": "Brilho do fundo"
+    "continuityBrightness": "Brilho do fundo",
+    "borderColor": "Cor da borda"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "Carregando prévia da câmera",
@@ -250,7 +251,9 @@
     "captionWordLabel": "Palavra da legenda",
     "wordStartTimeLabel": "Tempo inicial da palavra",
     "wordEndTimeLabel": "Tempo final da palavra",
-    "deleteCaptionClip": "Excluir clipe de legenda"
+    "deleteCaptionClip": "Excluir clipe de legenda",
+    "shadowColor": "Cor da sombra",
+    "shadowBlur": "Desfoque da sombra"
   },
   "CaptionPanel": {
     "aiAutoCaptioning": "Legendas automáticas com IA",
@@ -308,7 +311,8 @@
     "unlink": "Desvincular",
     "deleteClip": "Excluir clipe",
     "deleteVideo": "Excluir vídeo",
-    "deleteWebcam": "Excluir webcam"
+    "deleteWebcam": "Excluir webcam",
+    "shadowBlur": "Desfoque da sombra"
   },
   "CursorPanel": {
     "cursorStyle": "Estilo do cursor",
@@ -354,7 +358,14 @@
     "importSuccess": "{count} cursores estáticos importados.",
     "importIgnoredAnimated": "Funções animadas ignoradas: {roles}.",
     "importFailed": "Não foi possível importar o pacote de cursores.",
-    "discoveryFailed": "Não foi possível abrir a busca de pacotes."
+    "discoveryFailed": "Não foi possível abrir a busca de pacotes.",
+    "shadowBlur": "Desfoque de sombra",
+    "shadowColor": "Cor da sombra",
+    "presetNone": "Nenhum",
+    "presetSingle": "Anel Único",
+    "presetDouble": "Onda Dupla",
+    "presetSolid": "Explosão",
+    "rippleStyle": "Estilo ondulado"
   },
   "EditorCanvas": {
     "videoPreviewLoading": "Carregando prévia do vídeo",
@@ -443,7 +454,14 @@
     "authorizingInteractions": "Ativando",
     "dismissInteractionNotice": "Ignorar",
     "interactionAccessSettingsHint": "Encontre Gravar atalhos de teclado nas Configurações.",
-    "dismissInteractionReminder": "Fechar lembrete"
+    "dismissInteractionReminder": "Fechar lembrete",
+    "copyFix": "Correção de cópia",
+    "interactionAccessGranted": "Acesso de interação ativado",
+    "interactionAccessGrantedDescription": "Cliques do mouse e atalhos de teclado agora podem ser gravados sem armazenar o texto digitado.",
+    "interactionAccessUnavailableTitle": "Gravação de interação indisponível",
+    "interactionAccessUnavailableDescription": "Um auxiliar de interação necessário não está disponível (Polkit ou o auxiliar de entrada protegido). Resolva o problema relatado antes de gravar.",
+    "linuxRequirementsTitle": "Configuração do Linux necessária",
+    "recordingErrorTitle": "Erro de gravação"
   },
   "EditorPreparingHud": {
     "title": "Preparando o editor",
@@ -680,6 +698,54 @@
     "joinDiscord": "Join Discord Community",
     "reopenHint": "You can revisit this onboarding anytime from Settings > General.",
     "dismiss": "Dismiss",
-    "emptyStateDesc": "Click on any control on the live HUD to test it."
+    "emptyStateDesc": "Click on any control on the live HUD to test it.",
+    "titlebarTitle": "Beam • Integração",
+    "minimize": "Minimizar",
+    "close": "Fechar",
+    "welcomeSubtitle": "Gravador de tela de nível de estúdio projetado para desenvolvedores, criadores e equipes.",
+    "featureNativeTitle": "Gravador de tela nativo",
+    "featureNativeDesc": "Grave sua tela, janela ou região selecionada com clareza sem perdas.",
+    "featureAutoZoomTitle": "Zoom automático",
+    "featureAutoZoomDesc": "Permite ampliar suavemente as partes importantes.",
+    "featureCaptionsTitle": "Legendas de IA",
+    "featureCaptionsDesc": "Use o Whisper para transcrever e legendar um vídeo inteiro em segundos.",
+    "featureQualityTitle": "Qualidade Profissional",
+    "featureQualityDesc": "Planos de fundo, sombras de webcam e efeitos de cursor que destacam suas gravações.",
+    "tryControlTip": "Controle interativo ao vivo",
+    "hudTopbarTitle": "Configurações e atalhos",
+    "hudTopbarDesc": "Personalize teclas de atalho, temas e preferências globais.",
+    "hudProjectsTitle": "Projetos",
+    "hudProjectsDesc": "Encontre e gerencie todas as suas demos gravadas anteriormente em um só lugar.",
+    "hudTabsTitle": "Modos de captura",
+    "hudTabsDesc": "Alterne entre gravação em tela cheia e captura de janela.",
+    "hudSourceTitle": "Fonte e corte",
+    "hudSourceDesc": "Selecione uma exibição, janela ou recorte uma região personalizada na tela.",
+    "hudCameraTitle": "Webcam",
+    "hudCameraDesc": "Grave sua webcam com cantos arredondados, sombras e reposicionamento suave no editor.",
+    "hudTeleprompterTitle": "Teleprompter",
+    "hudTeleprompterDesc": "Leia seu roteiro diretamente na tela para nunca esquecer o que está dizendo.",
+    "hudAudioTitle": "Microfone",
+    "hudAudioDesc": "Grave seu microfone com monitoramento de nível de áudio ao vivo.",
+    "hudSystemAudioTitle": "Áudio do sistema",
+    "hudSystemAudioDesc": "Capture sons e áudio internos de aplicativos em seu computador.",
+    "hudRecordTitle": "Gravação",
+    "hudRecordDesc": "Comece a gravar instantaneamente com um temporizador de contagem regressiva opcional.",
+    "badgeAudio": "Áudio",
+    "badgeCamera": "Câmera",
+    "badgeScript": "Roteiro",
+    "badgeSystem": "Sistema",
+    "badgeDisplay": "Exibição",
+    "badgeModes": "Modos",
+    "badgeProjects": "Projetos",
+    "badgeSettings": "Configurações",
+    "badgeAction": "Ação",
+    "versionTitle": "Versão",
+    "upToDate": "Atualizado",
+    "starTitle": "Código aberto",
+    "starDesc": "Projeto gratuito e de código aberto no GitHub",
+    "starButton": "Estrela no GitHub",
+    "discordTitle": "Comunidade",
+    "discordDesc": "Obtenha ajuda, feedback e atualizações de recursos",
+    "discordButton": "Junte-se à discórdia"
   }
 }

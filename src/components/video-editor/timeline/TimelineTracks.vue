@@ -13,6 +13,7 @@ import { DEFAULT_OUTPUT_CANVAS } from '../canvas/output-canvas';
 import { useTimelineClipboardShortcuts } from './composables/useTimelineClipboardShortcuts';
 import TimelineTrackHeaders from './TimelineTrackHeaders.vue';
 import { normalizeZoomProjection } from '../zoom/zoom-types';
+import TimelineAddMenu from './TimelineAddMenu.vue';
 const { t } = useTranslate('TimelineTracks');
 const { t: tCanvas } = useTranslate('CanvasPanel');
 const { t: tToolbar } = useTranslate('TimelineToolbar');
@@ -43,6 +44,7 @@ const {
   tracksViewportRef,
   ticksAreaRef,
   rulerWidth,
+  rulerLayoutWidth,
   tracksWidthStyle,
   playheadStyle,
   rulerSeconds,
@@ -150,7 +152,9 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
 <template>
   <div class="timeline-root" @wheel="handleWheel">
     <div class="timeline-sidebar">
-      <div class="sidebar-ruler-spacer" />
+      <div class="sidebar-ruler-spacer">
+        <TimelineAddMenu @add:element="emit('add:element', $event)" />
+      </div>
       <div ref="sidebarScrollRef" class="sidebar-tracks-viewport">
         <div class="sidebar-tracks-stack">
           <TimelineCanvasTransitionTrack
@@ -275,7 +279,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                   :clip="displayedClip(clip)"
                   :asset="assetFor(clip)"
                   :duration="layoutDurationMs / 1000"
-                  :timeline-width-px="rulerWidth"
+                  :timeline-width-px="rulerLayoutWidth"
                   :thumbnail-slots="thumbnailSlots"
                   :defer-thumbnail-requests="
                     isWheelZooming || activeTrimState !== null || movingClipIds.includes(clip.id)
@@ -391,7 +395,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 :clip="displayedClip(clip)"
                 :asset="assetFor(clip)"
                 :duration="layoutDurationMs / 1000"
-                :timeline-width-px="rulerWidth"
+                :timeline-width-px="rulerLayoutWidth"
                 :thumbnail-slots="thumbnailSlots"
                 :defer-thumbnail-requests="isWheelZooming || activeTrimState !== null"
                 :defer-waveform-draw="isWheelZooming"
@@ -425,7 +429,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 :clip="displayedClip(clip)"
                 :asset="assetFor(clip)"
                 :duration="layoutDurationMs / 1000"
-                :timeline-width-px="rulerWidth"
+                :timeline-width-px="rulerLayoutWidth"
                 :thumbnail-slots="thumbnailSlots"
                 :defer-thumbnail-requests="isWheelZooming || activeTrimState !== null"
                 :defer-waveform-draw="isWheelZooming"
@@ -460,7 +464,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 :clip="displayedClip(clip)"
                 :asset="assetFor(clip)"
                 :duration="layoutDurationMs / 1000"
-                :timeline-width-px="rulerWidth"
+                :timeline-width-px="rulerLayoutWidth"
                 :thumbnail-slots="thumbnailSlots"
                 :defer-thumbnail-requests="isWheelZooming || activeTrimState !== null"
                 :defer-waveform-draw="isWheelZooming"

@@ -1283,7 +1283,9 @@ describe('EditorCanvas', () => {
     await nextTick();
 
     expect(mounted.find('.recenter-button').exists()).toBe(true);
-    await mounted.get('.recenter-button').trigger('click');
+    const recenterButton = mounted.get('.recenter-button');
+    await recenterButton.trigger('pointerdown', { button: 0, clientX: 400, clientY: 225, pointerId: 1 });
+    await recenterButton.trigger('click');
     await nextTick();
 
     expect(mounted.find('.recenter-button').exists()).toBe(false);

@@ -47,7 +47,8 @@
     "continuity": "Continuidad",
     "continuityDescription": "Extiende una copia desenfocada del vídeo detrás del contenido ajustado.",
     "continuityBlur": "Desenfoque del fondo",
-    "continuityBrightness": "Brillo del fondo"
+    "continuityBrightness": "Brillo del fondo",
+    "borderColor": "Color del borde"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "Cargando vista previa de la cámara",
@@ -250,7 +251,9 @@
     "captionWordLabel": "Palabra del subtítulo",
     "wordStartTimeLabel": "Tiempo de inicio de la palabra",
     "wordEndTimeLabel": "Tiempo de fin de la palabra",
-    "deleteCaptionClip": "Eliminar clip de subtítulos"
+    "deleteCaptionClip": "Eliminar clip de subtítulos",
+    "shadowColor": "Color de la sombra",
+    "shadowBlur": "Desenfoque de la sombra"
   },
   "CaptionPanel": {
     "aiAutoCaptioning": "Subtítulos automáticos con IA",
@@ -308,7 +311,8 @@
     "unlink": "Desvincular",
     "deleteClip": "Eliminar clip",
     "deleteVideo": "Eliminar vídeo",
-    "deleteWebcam": "Eliminar cámara web"
+    "deleteWebcam": "Eliminar cámara web",
+    "shadowBlur": "Desenfoque de la sombra"
   },
   "CursorPanel": {
     "cursorStyle": "Estilo del cursor",
@@ -354,7 +358,14 @@
     "importSuccess": "Se importaron {count} cursores estáticos.",
     "importIgnoredAnimated": "Roles animados ignorados: {roles}.",
     "importFailed": "No se pudo importar el paquete de cursores.",
-    "discoveryFailed": "No se pudo abrir la búsqueda de paquetes."
+    "discoveryFailed": "No se pudo abrir la búsqueda de paquetes.",
+    "shadowBlur": "Desenfoque de sombra",
+    "shadowColor": "Color de sombra",
+    "presetNone": "Ninguno",
+    "presetSingle": "Anillo único",
+    "presetDouble": "Doble Ola",
+    "presetSolid": "Explosión",
+    "rippleStyle": "estilo ondulado"
   },
   "EditorCanvas": {
     "videoPreviewLoading": "Cargando vista previa de vídeo",
@@ -443,7 +454,14 @@
     "authorizingInteractions": "Activando",
     "dismissInteractionNotice": "Ignorar",
     "interactionAccessSettingsHint": "Busca Grabar atajos de teclado en Ajustes.",
-    "dismissInteractionReminder": "Cerrar recordatorio"
+    "dismissInteractionReminder": "Cerrar recordatorio",
+    "copyFix": "Copiar corrección",
+    "interactionAccessGranted": "Acceso a interacción habilitado",
+    "interactionAccessGrantedDescription": "Los clics del mouse y los atajos de teclado ahora se pueden grabar sin almacenar el texto escrito.",
+    "interactionAccessUnavailableTitle": "Grabación de interacción no disponible",
+    "interactionAccessUnavailableDescription": "Un asistente de interacción requerido no está disponible (Polkit o el asistente de entrada protegido). Resuelva el problema informado antes de grabar.",
+    "linuxRequirementsTitle": "Se requiere configuración de Linux",
+    "recordingErrorTitle": "Error de grabación"
   },
   "EditorPreparingHud": {
     "title": "Preparando el editor",
@@ -680,6 +698,54 @@
     "joinDiscord": "Unirse a Discord",
     "reopenHint": "Puedes volver a abrir esta guía desde Ajustes > General.",
     "dismiss": "Cerrar",
-    "emptyStateDesc": "Click on any control on the live HUD to test it."
+    "emptyStateDesc": "Click on any control on the live HUD to test it.",
+    "titlebarTitle": "Haz • Incorporación",
+    "minimize": "minimizar",
+    "close": "Cerrar",
+    "welcomeSubtitle": "Grabador de pantalla con calidad de estudio diseñado para desarrolladores, creadores y equipos.",
+    "featureNativeTitle": "Grabador de pantalla nativo",
+    "featureNativeDesc": "Graba tu pantalla, ventana o región seleccionada con claridad sin pérdidas.",
+    "featureAutoZoomTitle": "Zooms automáticos",
+    "featureAutoZoomDesc": "Le permite acercarse suavemente a las partes importantes.",
+    "featureCaptionsTitle": "Subtítulos de IA",
+    "featureCaptionsDesc": "Utilice Whisper para transcribir y subtitular un vídeo completo en segundos.",
+    "featureQualityTitle": "Calidad profesional",
+    "featureQualityDesc": "Fondos, sombras de la cámara web y efectos de cursor que hacen que tus grabaciones destaquen.",
+    "tryControlTip": "Control interactivo en vivo",
+    "hudTopbarTitle": "Configuraciones y atajos",
+    "hudTopbarDesc": "Personalice teclas de acceso rápido, temas y preferencias globales.",
+    "hudProjectsTitle": "Proyectos",
+    "hudProjectsDesc": "Encuentre y administre todas sus demostraciones grabadas anteriormente en un solo lugar.",
+    "hudTabsTitle": "Modos de captura",
+    "hudTabsDesc": "Cambie entre grabación de pantalla completa y captura de ventana.",
+    "hudSourceTitle": "Fuente y cultivo",
+    "hudSourceDesc": "Seleccione una visualización, ventana o recorte una región personalizada en la pantalla.",
+    "hudCameraTitle": "cámara web",
+    "hudCameraDesc": "Graba tu cámara web con esquinas redondeadas, sombras y reposicionamiento suave en el editor.",
+    "hudTeleprompterTitle": "Teleprompter",
+    "hudTeleprompterDesc": "Lee tu guión directamente en la pantalla para que nunca olvides lo que estás diciendo.",
+    "hudAudioTitle": "micrófono",
+    "hudAudioDesc": "Graba tu micrófono con monitoreo de nivel de audio en vivo.",
+    "hudSystemAudioTitle": "Audio del sistema",
+    "hudSystemAudioDesc": "Capture sonidos internos y audio de aplicaciones en su computadora.",
+    "hudRecordTitle": "Grabación",
+    "hudRecordDesc": "Comience a grabar al instante con un temporizador de cuenta regresiva opcional.",
+    "badgeAudio": "Audio",
+    "badgeCamera": "cámara",
+    "badgeScript": "Guión",
+    "badgeSystem": "Sistema",
+    "badgeDisplay": "Pantalla",
+    "badgeModes": "Modos",
+    "badgeProjects": "Proyectos",
+    "badgeSettings": "Configuración",
+    "badgeAction": "acción",
+    "versionTitle": "Versión",
+    "upToDate": "actualizado",
+    "starTitle": "Código abierto",
+    "starDesc": "Proyecto gratuito y de código abierto en GitHub",
+    "starButton": "Estrella en GitHub",
+    "discordTitle": "Comunidad",
+    "discordDesc": "Obtenga ayuda, comentarios y actualizaciones de funciones",
+    "discordButton": "Únete a la discordia"
   }
 }

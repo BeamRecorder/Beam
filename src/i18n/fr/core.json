@@ -47,7 +47,8 @@
     "continuity": "Continuité",
     "continuityDescription": "Prolonge une copie floutée de la vidéo derrière le contenu ajusté.",
     "continuityBlur": "Flou de l’arrière-plan",
-    "continuityBrightness": "Luminosité de l’arrière-plan"
+    "continuityBrightness": "Luminosité de l’arrière-plan",
+    "borderColor": "Couleur de bordure"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "Chargement de l'aperçu caméra",
@@ -250,7 +251,9 @@
     "captionWordLabel": "Mot du sous-titre",
     "wordStartTimeLabel": "Heure de début du mot",
     "wordEndTimeLabel": "Heure de fin du mot",
-    "deleteCaptionClip": "Supprimer le clip de sous-titre"
+    "deleteCaptionClip": "Supprimer le clip de sous-titre",
+    "shadowColor": "Couleur de l'ombre",
+    "shadowBlur": "Flou d'ombre"
   },
   "CaptionPanel": {
     "aiAutoCaptioning": "Sous-titrage IA automatique",
@@ -308,7 +311,8 @@
     "unlink": "Dissocier",
     "deleteClip": "Supprimer le clip",
     "deleteVideo": "Supprimer la vidéo",
-    "deleteWebcam": "Supprimer la webcam"
+    "deleteWebcam": "Supprimer la webcam",
+    "shadowBlur": "Flou d'ombre"
   },
   "CursorPanel": {
     "cursorStyle": "Style du curseur",
@@ -320,6 +324,8 @@
     "millisecondsValue": "{value} ms",
     "cursorColor": "Couleur du curseur",
     "dropShadow": "Ombre portée",
+    "shadowBlur": "Flou de l’ombre",
+    "shadowColor": "Couleur de l’ombre",
     "direction": "Direction",
     "clickSpring": "Rebond au clic",
     "clicks": "Cliques",

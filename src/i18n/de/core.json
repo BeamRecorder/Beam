@@ -47,7 +47,8 @@
     "continuity": "Kontinuität",
     "continuityDescription": "Erweitert eine weichgezeichnete Kopie des Videos hinter dem eingepassten Inhalt.",
     "continuityBlur": "Hintergrundunschärfe",
-    "continuityBrightness": "Hintergrundhelligkeit"
+    "continuityBrightness": "Hintergrundhelligkeit",
+    "borderColor": "Rahmenfarbe"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "Kameravorschau wird geladen",
@@ -250,7 +251,9 @@
     "captionWordLabel": "Untertitelwort",
     "wordStartTimeLabel": "Startzeit des Wortes",
     "wordEndTimeLabel": "Endzeit des Wortes",
-    "deleteCaptionClip": "Untertitelclip löschen"
+    "deleteCaptionClip": "Untertitelclip löschen",
+    "shadowColor": "Schattenfarbe",
+    "shadowBlur": "Schattenunschärfe"
   },
   "CaptionPanel": {
     "aiAutoCaptioning": "Automatische KI-Untertitel",
@@ -308,7 +311,8 @@
     "unlink": "Trennen",
     "deleteClip": "Clip löschen",
     "deleteVideo": "Video löschen",
-    "deleteWebcam": "Webcam löschen"
+    "deleteWebcam": "Webcam löschen",
+    "shadowBlur": "Schattenunschärfe"
   },
   "CursorPanel": {
     "cursorStyle": "Cursorstil",
@@ -354,7 +358,14 @@
     "importSuccess": "{count} statische Cursor importiert.",
     "importIgnoredAnimated": "Animierte Rollen ignoriert: {roles}.",
     "importFailed": "Das Cursor-Paket konnte nicht importiert werden.",
-    "discoveryFailed": "Die Paketsuche konnte nicht geöffnet werden."
+    "discoveryFailed": "Die Paketsuche konnte nicht geöffnet werden.",
+    "shadowBlur": "Schattenunschärfe",
+    "shadowColor": "Schattenfarbe",
+    "presetNone": "Keine",
+    "presetSingle": "Einzelring",
+    "presetDouble": "Doppelte Welle",
+    "presetSolid": "Platzen",
+    "rippleStyle": "Ripple-Stil"
   },
   "EditorCanvas": {
     "videoPreviewLoading": "Videovorschau wird geladen",
@@ -443,7 +454,14 @@
     "authorizingInteractions": "Aktivierung",
     "dismissInteractionNotice": "Ignorieren",
     "interactionAccessSettingsHint": "Tastenkürzel aufzeichnen findest du in den Einstellungen.",
-    "dismissInteractionReminder": "Erinnerung schließen"
+    "dismissInteractionReminder": "Erinnerung schließen",
+    "copyFix": "Korrektur kopieren",
+    "interactionAccessGranted": "Interaktionszugriff aktiviert",
+    "interactionAccessGrantedDescription": "Mausklicks und Tastaturkürzel können jetzt aufgezeichnet werden, ohne dass eingegebener Text gespeichert werden muss.",
+    "interactionAccessUnavailableTitle": "Interaktionsaufzeichnung nicht verfügbar",
+    "interactionAccessUnavailableDescription": "Ein erforderlicher Interaktionshelfer ist nicht verfügbar (Polkit oder der geschützte Eingabehelfer). Beheben Sie das gemeldete Problem vor der Aufnahme.",
+    "linuxRequirementsTitle": "Linux-Setup erforderlich",
+    "recordingErrorTitle": "Aufnahmefehler"
   },
   "EditorPreparingHud": {
     "title": "Editor wird vorbereitet",
@@ -680,6 +698,54 @@
     "joinDiscord": "Discord beitreten",
     "reopenHint": "Sie können diese Einführung jederzeit unter Einstellungen > Allgemein erneut aufrufen.",
     "dismiss": "Schließen",
-    "emptyStateDesc": "Click on any control on the live HUD to test it."
+    "emptyStateDesc": "Click on any control on the live HUD to test it.",
+    "titlebarTitle": "Beam • Onboarding",
+    "minimize": "Minimieren",
+    "close": "Schließen",
+    "welcomeSubtitle": "Bildschirmrekorder in Studioqualität für Entwickler, Ersteller und Teams.",
+    "featureNativeTitle": "Nativer Bildschirmrekorder",
+    "featureNativeDesc": "Zeichnen Sie Ihren Bildschirm, Ihr Fenster oder Ihren ausgewählten Bereich mit verlustfreier Klarheit auf.",
+    "featureAutoZoomTitle": "Automatischer Zoom",
+    "featureAutoZoomDesc": "Ermöglicht das reibungslose Heranzoomen wichtiger Teile.",
+    "featureCaptionsTitle": "KI-Untertitel",
+    "featureCaptionsDesc": "Mit Whisper können Sie ein ganzes Video in Sekundenschnelle transkribieren und mit Untertiteln versehen.",
+    "featureQualityTitle": "Professionelle Qualität",
+    "featureQualityDesc": "Hintergründe, Webcam-Schatten und Cursoreffekte, die Ihre Aufnahmen hervorheben.",
+    "tryControlTip": "Interaktive Live-Steuerung",
+    "hudTopbarTitle": "Einstellungen und Verknüpfungen",
+    "hudTopbarDesc": "Passen Sie Hotkeys, Themen und globale Einstellungen an.",
+    "hudProjectsTitle": "Projekte",
+    "hudProjectsDesc": "Finden und verwalten Sie alle Ihre zuvor aufgenommenen Demos an einem Ort.",
+    "hudTabsTitle": "Aufnahmemodi",
+    "hudTabsDesc": "Wechseln Sie zwischen Vollbildaufnahme und Fensteraufnahme.",
+    "hudSourceTitle": "Quelle & Zuschnitt",
+    "hudSourceDesc": "Wählen Sie eine Anzeige, ein Fenster oder beschneiden Sie einen benutzerdefinierten Bereich auf dem Bildschirm.",
+    "hudCameraTitle": "Webcam",
+    "hudCameraDesc": "Nehmen Sie Ihre Webcam mit abgerundeten Ecken, Schatten und sanfter Neupositionierung im Editor auf.",
+    "hudTeleprompterTitle": "Teleprompter",
+    "hudTeleprompterDesc": "Lesen Sie Ihr Skript direkt auf dem Bildschirm, damit Sie nie vergessen, was Sie sagen.",
+    "hudAudioTitle": "Mikrofon",
+    "hudAudioDesc": "Nehmen Sie Ihr Mikrofon mit Live-Audiopegelüberwachung auf.",
+    "hudSystemAudioTitle": "System-Audio",
+    "hudSystemAudioDesc": "Erfassen Sie interne Sounds und Audio von Apps auf Ihrem Computer.",
+    "hudRecordTitle": "Aufnahme",
+    "hudRecordDesc": "Starten Sie die Aufnahme sofort mit einem optionalen Countdown-Timer.",
+    "badgeAudio": "Audio",
+    "badgeCamera": "Kamera",
+    "badgeScript": "Skript",
+    "badgeSystem": "System",
+    "badgeDisplay": "Anzeige",
+    "badgeModes": "Modi",
+    "badgeProjects": "Projekte",
+    "badgeSettings": "Einstellungen",
+    "badgeAction": "Aktion",
+    "versionTitle": "Version",
+    "upToDate": "Auf dem neuesten Stand",
+    "starTitle": "Open Source",
+    "starDesc": "Kostenloses Open-Source-Projekt auf GitHub",
+    "starButton": "Stern auf GitHub",
+    "discordTitle": "Gemeinschaft",
+    "discordDesc": "Erhalten Sie Hilfe, Feedback und Funktionsaktualisierungen",
+    "discordButton": "Treten Sie Discord bei"
   }
 }

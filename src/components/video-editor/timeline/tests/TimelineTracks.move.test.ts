@@ -1,5 +1,5 @@
 import { flushPromises } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { ClipComposition, VisualClip } from '~/media/shared/composition-types';
 import {
   TimelineClipStub,
@@ -13,6 +13,34 @@ import {
 } from './TimelineTracks.test-support';
 
 describe('TimelineTracks', () => {
+  it('keeps clip movement in timeline time when the timeline is rendered at 75%', async () => {
+    const mounted = await mountTracks({ isSnappingEnabled: false });
+    const ticks = mounted!.get('.ruler-ticks-area').element;
+    vi.mocked(ticks.getBoundingClientRect).mockReturnValue({
+      left: 120,
+      top: 0,
+      width: 750,
+      height: 28,
+      right: 870,
+      bottom: 28,
+    } as DOMRect);
+    Object.defineProperty(ticks, 'offsetWidth', { configurable: true, value: 1_000 });
+    Object.defineProperty(ticks, 'clientWidth', { configurable: true, value: 1_000 });
+    mounted!.get('.timeline-tracks-container').element.dispatchEvent(new Event('scroll'));
+    await flushPromises();
+
+    const screenClip = mounted!
+      .findAllComponents(TimelineClipStub)
+      .find((component) => (component.props('clip') as VisualClip).id === 'screen-clip');
+    if (!screenClip) throw new Error('Expected the screen timeline clip stub.');
+    await screenClip.trigger('pointerdown', { clientX: 200 });
+    window.dispatchEvent(pointerEvent('pointermove', 275));
+    await flushPromises();
+    window.dispatchEvent(pointerEvent('pointerup', 275));
+
+    expect(mounted!.emitted('move:clip')).toContainEqual([{ id: 'screen-clip', startMs: 1_000 }]);
+  });
+
   it('moves and trims linked clips and zooms with clamped timeline bounds', async () => {
     const mounted = await mountTracks();
     const clips = mounted!.findAll('.visual-track .timeline-clip');

@@ -17,6 +17,7 @@ import type {
   TrackZoomSelection,
 } from './composables/timeline-tracks-types';
 import type { AddVisualElementRequest } from '../composition/visual-element-types';
+import type { TimelineElementKind } from './timeline-element-types';
 
 const props = withDefaults(
   defineProps<{
@@ -48,6 +49,7 @@ const props = withDefaults(
   },
 );
 const emit = defineEmits<{
+  (event: 'add:element', kind: TimelineElementKind): void;
   (event: 'update:currentTime', value: number): void;
   (event: 'update:isPlaying', value: boolean): void;
   (event: 'update:zoomLevel', value: number): void;
@@ -112,6 +114,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
         :project-id="projectId"
         :recent-paste="recentPaste"
         :canvas="canvas"
+        @add:element="emit('add:element', $event)"
         @update:current-time="emit('update:currentTime', $event)"
         @update:zoom-level="emit('update:zoomLevel', $event)"
         @select:zoom="emit('select:zoom', $event)"

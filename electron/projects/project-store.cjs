@@ -5,7 +5,12 @@ const { fileURLToPath, pathToFileURL } = require('url');
 const { kindFor } = require('../backgrounds/background-library.cjs');
 const { emptyComposition, importMedia } = require('./clip-composition.cjs');
 const { normalizeInputSidecar, recordedPlatform } = require('./input-sidecar.cjs');
-const { createDefaultPresentation, defaultZoomMotionBlur, zoomState } = require('./project-editor-state.cjs');
+const {
+  createDefaultPresentation,
+  defaultZoomAutoFollow,
+  defaultZoomMotionBlur,
+  zoomState,
+} = require('./project-editor-state.cjs');
 const { createProjectEditorAccess } = require('./project-editor-access.cjs');
 const { createProjectFeatureDetector } = require('./project-feature-detection.cjs');
 
@@ -314,7 +319,12 @@ function createProjectStore(root) {
         recordedPlatform: recordedPlatform(sessionManifest.platform?.os),
         zoom: manifest.editor?.zoom
           ? zoomState(manifest.editor.zoom)
-          : { elements: [], generatedSessions: [], motionBlur: defaultZoomMotionBlur() },
+          : {
+              elements: [],
+              generatedSessions: [],
+              motionBlur: defaultZoomMotionBlur(),
+              autoFollow: defaultZoomAutoFollow(),
+            },
       };
     }
     return null;
@@ -451,7 +461,12 @@ function createProjectStore(root) {
           schemaVersion: 3,
           applyGlobalDefaults: true,
           composition: emptyComposition(),
-          zoom: { elements: [], generatedSessions: [], motionBlur: defaultZoomMotionBlur() },
+          zoom: {
+            elements: [],
+            generatedSessions: [],
+            motionBlur: defaultZoomMotionBlur(),
+            autoFollow: defaultZoomAutoFollow(),
+          },
           presentation: createDefaultPresentation(),
         },
       };

@@ -65,6 +65,8 @@ pub struct ZoomElement {
     pub focus: ZoomFocus,
     pub depth: u8,
     pub mode: String,
+    #[serde(default, flatten)]
+    pub extra: serde_json::Map<String, serde_json::Value>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -82,6 +84,8 @@ pub struct ProjectZoomState {
     pub elements: Vec<ZoomElement>,
     #[serde(default)]
     pub generated_sessions: Vec<ZoomGenerationRecord>,
+    #[serde(default, flatten)]
+    pub extra: serde_json::Map<String, serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -89,6 +93,8 @@ pub struct ProjectZoomState {
 pub struct ProjectEditorState {
     #[serde(default)]
     pub zoom: ProjectZoomState,
+    #[serde(default, flatten)]
+    pub extra: serde_json::Map<String, serde_json::Value>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -103,4 +109,6 @@ pub struct ProjectManifest {
     pub sessions: Vec<ProjectSession>,
     #[serde(default)]
     pub editor: ProjectEditorState,
+    #[serde(default, flatten)]
+    pub extra: serde_json::Map<String, serde_json::Value>,
 }

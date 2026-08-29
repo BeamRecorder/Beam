@@ -1,6 +1,6 @@
 import type { ProjectEditorData } from '../../api/types/capture-api';
 import type { ZoomElement } from '../video-editor/zoom/zoom-types';
-import type { ZoomMotionBlurSettings } from '../video-editor/zoom/zoom-types';
+import type { ZoomAutoFollowSettings, ZoomMotionBlurSettings } from '../video-editor/zoom/zoom-types';
 import type { ClipComposition } from '~/media/shared/composition-types';
 import type { OutputCanvasSettings } from '../video-editor/canvas/output-canvas';
 import type { CursorPresentationSettings } from '../../api/types/cursor-presentation';
@@ -47,6 +47,7 @@ export interface CompositionSnapshot {
   blurPercent: number;
   zooms: ZoomElement[];
   zoomMotionBlur?: ZoomMotionBlurSettings;
+  zoomAutoFollow?: ZoomAutoFollowSettings;
   cursor: ProjectEditorData['cursor'];
   cursorSettings: CursorRenderSettings;
   cursorPack: CursorPackDescriptor | null;

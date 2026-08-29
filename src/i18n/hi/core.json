@@ -47,7 +47,8 @@
     "continuity": "निरंतरता",
     "continuityDescription": "फ़िट किए गए कंटेंट के पीछे वीडियो की धुंधली कॉपी फैलाता है।",
     "continuityBlur": "बैकग्राउंड ब्लर",
-    "continuityBrightness": "बैकग्राउंड चमक"
+    "continuityBrightness": "बैकग्राउंड चमक",
+    "borderColor": "बॉर्डर रंग"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "कैमरा प्रीव्यू लोड हो रहा है",
@@ -250,7 +251,9 @@
     "captionWordLabel": "कैप्शन शब्द",
     "wordStartTimeLabel": "शब्द का आरंभ समय",
     "wordEndTimeLabel": "शब्द का अंत समय",
-    "deleteCaptionClip": "कैप्शन क्लिप हटाएँ"
+    "deleteCaptionClip": "कैप्शन क्लिप हटाएँ",
+    "shadowColor": "छाया का रंग",
+    "shadowBlur": "छाया का ब्लर"
   },
   "CaptionPanel": {
     "aiAutoCaptioning": "AI ऑटो कैप्शन",
@@ -308,7 +311,8 @@
     "unlink": "अनलिंक करें",
     "deleteClip": "क्लिप हटाएँ",
     "deleteVideo": "वीडियो हटाएँ",
-    "deleteWebcam": "वेबकैम हटाएँ"
+    "deleteWebcam": "वेबकैम हटाएँ",
+    "shadowBlur": "छाया का ब्लर"
   },
   "CursorPanel": {
     "cursorStyle": "कर्सर शैली",
@@ -354,7 +358,14 @@
     "importSuccess": "{count} स्थिर कर्सर आयात किए गए।",
     "importIgnoredAnimated": "अनदेखी की गई एनिमेटेड भूमिकाएँ: {roles}।",
     "importFailed": "कर्सर पैक आयात नहीं किया जा सका।",
-    "discoveryFailed": "पैक खोज नहीं खोली जा सकी।"
+    "discoveryFailed": "पैक खोज नहीं खोली जा सकी।",
+    "shadowBlur": "छाया धुंधलापन",
+    "shadowColor": "छाया का रंग",
+    "presetNone": "कोई नहीं",
+    "presetSingle": "एकल अंगूठी",
+    "presetDouble": "दोहरी लहर",
+    "presetSolid": "फटना",
+    "rippleStyle": "तरंग शैली"
   },
   "EditorCanvas": {
     "videoPreviewLoading": "वीडियो पूर्वावलोकन लोड हो रहा है",
@@ -443,7 +454,14 @@
     "authorizingInteractions": "सक्षम किया जा रहा है",
     "dismissInteractionNotice": "अभी नहीं",
     "interactionAccessSettingsHint": "सेटिंग्स में कीबोर्ड शॉर्टकट रिकॉर्ड करें विकल्प देखें।",
-    "dismissInteractionReminder": "रिमाइंडर बंद करें"
+    "dismissInteractionReminder": "रिमाइंडर बंद करें",
+    "copyFix": "प्रतिलिपि ठीक करें",
+    "interactionAccessGranted": "इंटरेक्शन एक्सेस सक्षम किया गया",
+    "interactionAccessGrantedDescription": "माउस क्लिक और कीबोर्ड शॉर्टकट अब टाइप किए गए टेक्स्ट को संग्रहीत किए बिना रिकॉर्ड किए जा सकते हैं।",
+    "interactionAccessUnavailableTitle": "इंटरैक्शन रिकॉर्डिंग अनुपलब्ध है",
+    "interactionAccessUnavailableDescription": "एक आवश्यक इंटरैक्शन हेल्पर अनुपलब्ध है (पोलकिट या संरक्षित इनपुट हेल्पर)। रिकॉर्डिंग से पहले रिपोर्ट की गई समस्या का समाधान करें.",
+    "linuxRequirementsTitle": "लिनक्स सेटअप आवश्यक है",
+    "recordingErrorTitle": "रिकॉर्डिंग में त्रुटि"
   },
   "EditorPreparingHud": {
     "title": "एडिटर तैयार हो रहा है",
@@ -680,6 +698,54 @@
     "joinDiscord": "Join Discord Community",
     "reopenHint": "You can revisit this onboarding anytime from Settings > General.",
     "dismiss": "Dismiss",
-    "emptyStateDesc": "Click on any control on the live HUD to test it."
+    "emptyStateDesc": "Click on any control on the live HUD to test it.",
+    "titlebarTitle": "बीम • ऑनबोर्डिंग",
+    "minimize": "न्यूनतम करें",
+    "close": "बंद करें",
+    "welcomeSubtitle": "स्टूडियो-ग्रेड स्क्रीन रिकॉर्डर डेवलपर्स, रचनाकारों और टीमों के लिए डिज़ाइन किया गया है।",
+    "featureNativeTitle": "देशी स्क्रीन रिकॉर्डर",
+    "featureNativeDesc": "अपनी स्क्रीन, विंडो या चयनित क्षेत्र को दोषरहित स्पष्टता के साथ रिकॉर्ड करें।",
+    "featureAutoZoomTitle": "ऑटो ज़ूम",
+    "featureAutoZoomDesc": "आपको महत्वपूर्ण हिस्सों पर आसानी से ज़ूम इन करने की सुविधा देता है।",
+    "featureCaptionsTitle": "एआई कैप्शन",
+    "featureCaptionsDesc": "संपूर्ण वीडियो को कुछ ही सेकंड में ट्रांसक्राइब और सबटाइटल करने के लिए व्हिस्पर का उपयोग करें।",
+    "featureQualityTitle": "व्यावसायिक गुणवत्ता",
+    "featureQualityDesc": "पृष्ठभूमि, वेबकैम छाया और कर्सर प्रभाव जो आपकी रिकॉर्डिंग को अलग बनाते हैं।",
+    "tryControlTip": "लाइव इंटरैक्टिव नियंत्रण",
+    "hudTopbarTitle": "सेटिंग्स और शॉर्टकट",
+    "hudTopbarDesc": "हॉटकी, थीम और वैश्विक प्राथमिकताओं को अनुकूलित करें।",
+    "hudProjectsTitle": "परियोजनाएं",
+    "hudProjectsDesc": "अपने सभी पिछले रिकॉर्ड किए गए डेमो को एक ही स्थान पर ढूंढें और प्रबंधित करें।",
+    "hudTabsTitle": "कैप्चर मोड",
+    "hudTabsDesc": "पूर्ण स्क्रीन रिकॉर्डिंग और विंडो कैप्चर के बीच स्विच करें।",
+    "hudSourceTitle": "स्रोत एवं फसल",
+    "hudSourceDesc": "एक डिस्प्ले, विंडो चुनें या स्क्रीन पर एक कस्टम क्षेत्र क्रॉप करें।",
+    "hudCameraTitle": "वेबकैम",
+    "hudCameraDesc": "संपादक में गोलाकार कोनों, छायाओं और सहज पुनर्स्थापन के साथ अपने वेबकैम को रिकॉर्ड करें।",
+    "hudTeleprompterTitle": "टेलीप्रॉम्प्टर",
+    "hudTeleprompterDesc": "अपनी स्क्रिप्ट सीधे स्क्रीन पर पढ़ें ताकि आप कभी न भूलें कि आप क्या कह रहे हैं।",
+    "hudAudioTitle": "माइक्रोफ़ोन",
+    "hudAudioDesc": "लाइव ऑडियो लेवल मॉनिटरिंग के साथ अपने माइक्रोफ़ोन को रिकॉर्ड करें।",
+    "hudSystemAudioTitle": "सिस्टम ऑडियो",
+    "hudSystemAudioDesc": "अपने कंप्यूटर पर ऐप्स से आंतरिक ध्वनियाँ और ऑडियो कैप्चर करें।",
+    "hudRecordTitle": "रिकॉर्डिंग",
+    "hudRecordDesc": "वैकल्पिक उलटी गिनती घड़ी के साथ तुरंत रिकॉर्डिंग शुरू करें।",
+    "badgeAudio": "ऑडियो",
+    "badgeCamera": "कैमरा",
+    "badgeScript": "स्क्रिप्ट",
+    "badgeSystem": "सिस्टम",
+    "badgeDisplay": "प्रदर्शन",
+    "badgeModes": "मोड",
+    "badgeProjects": "परियोजनाएं",
+    "badgeSettings": "सेटिंग्स",
+    "badgeAction": "कार्रवाई",
+    "versionTitle": "संस्करण",
+    "upToDate": "अप टू डेट",
+    "starTitle": "खुला स्रोत",
+    "starDesc": "GitHub पर मुफ़्त और खुला स्रोत प्रोजेक्ट",
+    "starButton": "GitHub पर स्टार लगाएं",
+    "discordTitle": "समुदाय",
+    "discordDesc": "सहायता, फीडबैक और फीचर अपडेट प्राप्त करें",
+    "discordButton": "कलह में शामिल हों"
   }
 }
