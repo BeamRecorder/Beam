@@ -2,11 +2,13 @@
 import { computed, ref } from 'vue';
 import { Code2, Pause, Play } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
+import { useRouter } from 'vue-router';
 import Button from '~/ui/button/Button.vue';
 import WebsitePlatformIcon from '@website/components/WebsitePlatformIcon.vue';
 import { detectPlatform } from '@website/lib/platform-downloads';
 
 const { t } = useI18n();
+const router = useRouter();
 const platform = computed(() => (typeof navigator === 'undefined' ? 'windows' : detectPlatform(navigator)));
 const video = ref<HTMLVideoElement | null>(null);
 const isVideoPaused = ref(false);
@@ -32,6 +34,10 @@ const toggleVideo = async () => {
   }
   video.value.pause();
 };
+
+const beginInstall = () => {
+  void router.push({ path: '/install', query: platform.value ? { os: platform.value } : {} });
+};
 </script>
 
 <template>
@@ -49,7 +55,7 @@ const toggleVideo = async () => {
         <span>{{ t('Website.home.availabilityPlatforms') }}</span>
       </div>
       <div class="hero-actions">
-        <Button :href="platform ? `/install?os=${platform}` : '/install'" size="lg">
+        <Button :href="platform ? `/install?os=${platform}` : '/install'" size="lg" @click.prevent="beginInstall">
           <template v-if="platform" #icon><WebsitePlatformIcon :platform="platform" /></template>
           {{ t('Website.home.downloadFree') }}
         </Button>

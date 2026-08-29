@@ -1,15 +1,19 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
+import { createMemoryHistory, createRouter } from 'vue-router';
 import { createWebsiteI18n } from '../i18n';
 import WebsiteHero from './WebsiteHero.vue';
 import Button from '~/ui/button/Button.vue';
+import { detectPlatform } from '@website/lib/platform-downloads';
 
-const mountHero = () =>
-  mount(WebsiteHero, {
+const mountHero = () => {
+  const router = createRouter({ history: createMemoryHistory(), routes: [] });
+  return mount(WebsiteHero, {
     global: {
-      plugins: [createWebsiteI18n('en')],
+      plugins: [createWebsiteI18n('en'), router],
     },
   });
+};
 
 describe('WebsiteHero', () => {
   it('renders the copy on the left and the final WebM video on the right', () => {
@@ -32,6 +36,30 @@ describe('WebsiteHero', () => {
     expect(installButton.text()).toBe('Download Beam — Free');
     expect(installButton.find('.platform-icon').exists()).toBe(true);
     expect(wrapper.find('.hero-primary-action').exists()).toBe(false);
+  });
+
+  it('navigates the Download Beam CTA to the detected installer', () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [],
+    });
+    const push = vi.spyOn(router, 'push').mockResolvedValue(undefined);
+    const wrapper = mount(WebsiteHero, {
+      global: {
+        plugins: [createWebsiteI18n('en'), router],
+      },
+    });
+    const installButton = wrapper.getComponent(Button).get<HTMLAnchorElement>('a');
+    const platform = detectPlatform(navigator);
+    const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+
+    expect(installButton.element.dispatchEvent(event)).toBe(false);
+    expect(event.defaultPrevented).toBe(true);
+    expect(push).toHaveBeenCalledWith({
+      path: '/install',
+      query: platform ? { os: platform } : {},
+    });
+    expect(installButton.attributes('href')).toBe(platform ? `/install?os=${platform}` : '/install');
   });
 
   it('uses one native WebM source with immediate autoplay settings', () => {
