@@ -159,3 +159,144 @@ test('resolves Linux selection bounds from the parent display and falls back to 
     Module._load = originalLoad;
   }
 });
+
+function createRegionOverlayWindowMock(calls) {
+  const listeners = new Map();
+  let destroyed = false;
+  return {
+    webContents: { send: (...args) => calls.push(['send', ...args]) },
+    once: (event, listener) => listeners.set(event, listener),
+    on: (event, listener) => listeners.set(event, listener),
+    isDestroyed: () => destroyed,
+    setContentProtection: (value) => calls.push(['contentProtection', value]),
+    setBounds: (bounds) => calls.push(['bounds', bounds]),
+    setParentWindow: (parent) => calls.push(['parent', parent]),
+    setIgnoreMouseEvents: (value) => calls.push(['mouse', value]),
+    show: () => calls.push(['show']),
+    showInactive: () => calls.push(['showInactive']),
+    focus: () => calls.push(['focus']),
+    moveTop: () => calls.push(['moveTop']),
+    hide: () => calls.push(['hide']),
+    destroy: () => {
+      destroyed = true;
+      listeners.get('closed')?.();
+    },
+    loadURL: () => undefined,
+    loadFile: () => undefined,
+  };
+}
+
+test('keeps interactive Windows region selection available on Windows 10', async () => {
+  const calls = [];
+  const window = createRegionOverlayWindowMock(calls);
+  const electron = {
+    BrowserWindow: class {
+      constructor() {
+        return window;
+      }
+    },
+  };
+  const originalLoad = Module._load;
+  Module._load = function load(request, parent, isMain) {
+    return request === 'electron' ? electron : originalLoad.call(this, request, parent, isMain);
+  };
+
+  try {
+    const modulePath = require.resolve('../electron/screen-region-overlay.cjs');
+    delete require.cache[modulePath];
+    const { createScreenRegionOverlayWindow } = require('../electron/screen-region-overlay.cjs');
+    const overlay = createScreenRegionOverlayWindow({
+      applicationRoot: '/app',
+      isPackaged: false,
+      platform: 'win32',
+      platformRelease: '10.0.19045',
+    });
+    const bounds = { x: -1280, y: 0, width: 1280, height: 720 };
+    const selection = overlay.select({ bounds, region: null });
+    const region = { x: 0.1, y: 0.2, width: 0.5, height: 0.4 };
+
+    assert.deepEqual(await (overlay.confirm(region), selection), { bounds, region });
+    assert.deepEqual(
+      calls.filter((call) => ['bounds', 'mouse', 'show', 'focus'].includes(call[0])),
+      [['bounds', bounds], ['mouse', false], ['show'], ['focus']],
+    );
+  } finally {
+    Module._load = originalLoad;
+  }
+});
+
+test('suppresses the recording region marker on Windows 10 build 19045', () => {
+  const calls = [];
+  let constructed = 0;
+  const window = createRegionOverlayWindowMock(calls);
+  const electron = {
+    BrowserWindow: class {
+      constructor() {
+        constructed += 1;
+        return window;
+      }
+    },
+  };
+  const originalLoad = Module._load;
+  Module._load = function load(request, parent, isMain) {
+    return request === 'electron' ? electron : originalLoad.call(this, request, parent, isMain);
+  };
+
+  try {
+    const modulePath = require.resolve('../electron/screen-region-overlay.cjs');
+    delete require.cache[modulePath];
+    const { createScreenRegionOverlayWindow } = require('../electron/screen-region-overlay.cjs');
+    const overlay = createScreenRegionOverlayWindow({
+      applicationRoot: '/app',
+      isPackaged: false,
+      platform: 'win32',
+      platformRelease: '10.0.19045',
+    });
+    overlay.show({ bounds: { x: -1280, y: 0, width: 1280, height: 720 }, region: { x: 0, y: 0, width: 1, height: 1 } });
+
+    assert.equal(constructed, 0);
+    assert.deepEqual(calls, []);
+  } finally {
+    Module._load = originalLoad;
+  }
+});
+
+test('shows the recording region marker on Windows 11 build 22000 and newer', () => {
+  const calls = [];
+  let constructed = 0;
+  const window = createRegionOverlayWindowMock(calls);
+  const electron = {
+    BrowserWindow: class {
+      constructor() {
+        constructed += 1;
+        return window;
+      }
+    },
+  };
+  const originalLoad = Module._load;
+  Module._load = function load(request, parent, isMain) {
+    return request === 'electron' ? electron : originalLoad.call(this, request, parent, isMain);
+  };
+
+  try {
+    const modulePath = require.resolve('../electron/screen-region-overlay.cjs');
+    delete require.cache[modulePath];
+    const { createScreenRegionOverlayWindow } = require('../electron/screen-region-overlay.cjs');
+    const overlay = createScreenRegionOverlayWindow({
+      applicationRoot: '/app',
+      isPackaged: false,
+      platform: 'win32',
+      platformRelease: '10.0.22000',
+    });
+    const bounds = { x: -1280, y: 0, width: 1280, height: 720 };
+    overlay.show({ bounds, region: { x: 0.1, y: 0.2, width: 0.5, height: 0.4 } });
+
+    assert.equal(constructed, 1);
+    assert.deepEqual(
+      calls.filter((call) => ['contentProtection', 'bounds', 'mouse', 'showInactive', 'moveTop'].includes(call[0])),
+      [['contentProtection', true], ['bounds', bounds], ['mouse', true], ['showInactive'], ['moveTop']],
+    );
+  } finally {
+    Module._load = originalLoad;
+  }
+});

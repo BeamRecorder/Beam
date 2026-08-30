@@ -41,20 +41,49 @@ struct HandlerFlags {
     fps: u32,
     metrics: Arc<ScreenCaptureMetrics>,
     start_gate: Arc<StartGate>,
-    crop: Option<PixelCrop>,
+    region: Option<ScreenRegion>,
     unavailable: Arc<AtomicBool>,
+}
+
+struct PendingEncoder {
+    output: PathBuf,
+    bitrate: u32,
+    fps: u32,
+    candidate_crop_size: Option<(u32, u32)>,
 }
 
 struct CaptureHandler {
     encoder: Option<VideoEncoder>,
+    pending_encoder: Option<PendingEncoder>,
     metrics: Arc<ScreenCaptureMetrics>,
     start_gate: Arc<StartGate>,
+    region: Option<ScreenRegion>,
     crop: Option<PixelCrop>,
+    encoded_size: Option<(u32, u32)>,
     unavailable: Arc<AtomicBool>,
 }
 
 impl CaptureHandler {
+    fn create_encoder(
+        settings: &PendingEncoder,
+        width: u32,
+        height: u32,
+    ) -> Result<VideoEncoder, String> {
+        let video = VideoSettingsBuilder::new(width, height)
+            .sub_type(VideoSettingsSubType::H264)
+            .bitrate(settings.bitrate)
+            .frame_rate(settings.fps);
+        VideoEncoder::new(
+            video,
+            AudioSettingsBuilder::default().disabled(true),
+            ContainerSettingsBuilder::default(),
+            &settings.output,
+        )
+        .map_err(|error| error.to_string())
+    }
+
     fn finish(&mut self) -> Result<(), CaptureError> {
+        self.pending_encoder = None;
         if let Some(encoder) = self.encoder.take() {
             encoder
                 .finish()
@@ -70,22 +99,34 @@ impl GraphicsCaptureApiHandler for CaptureHandler {
 
     fn new(context: Context<Self::Flags>) -> Result<Self, Self::Error> {
         let flags = context.flags;
-        let video = VideoSettingsBuilder::new(flags.width, flags.height)
-            .sub_type(VideoSettingsSubType::H264)
-            .bitrate(flags.bitrate)
-            .frame_rate(flags.fps);
-        let encoder = VideoEncoder::new(
-            video,
-            AudioSettingsBuilder::default().disabled(true),
-            ContainerSettingsBuilder::default(),
-            &flags.output,
-        )
-        .map_err(|error| error.to_string())?;
+        let settings = PendingEncoder {
+            output: flags.output,
+            bitrate: flags.bitrate,
+            fps: flags.fps,
+            candidate_crop_size: flags.region.map(|_| (flags.width, flags.height)),
+        };
+        // A region's encoded dimensions must come from the WGC texture, not
+        // from the monitor catalog. Windows can report those sizes in
+        // different coordinate spaces when DPI scaling is active.
+        let (encoder, pending_encoder) = if flags.region.is_some() {
+            (None, Some(settings))
+        } else {
+            (
+                Some(Self::create_encoder(&settings, flags.width, flags.height)?),
+                None,
+            )
+        };
         Ok(Self {
-            encoder: Some(encoder),
+            encoder,
+            pending_encoder,
             metrics: flags.metrics,
             start_gate: flags.start_gate,
-            crop: flags.crop,
+            region: flags.region,
+            crop: None,
+            encoded_size: flags
+                .region
+                .is_none()
+                .then_some((flags.width, flags.height)),
             unavailable: flags.unavailable,
         })
     }
@@ -98,14 +139,46 @@ impl GraphicsCaptureApiHandler for CaptureHandler {
         if !self.start_gate.is_released() {
             self.start_gate.wait().map_err(|error| error.to_string())?;
         }
+        let crop = if let Some(region) = self.region {
+            let frame_crop = normalize_crop(region, frame.width(), frame.height())
+                .map_err(|error| error.to_string())?;
+            if let Some(encoder_crop) = self.crop {
+                if frame_crop.width() != encoder_crop.width()
+                    || frame_crop.height() != encoder_crop.height()
+                {
+                    return Err("captured frame dimensions changed during region recording".into());
+                }
+            } else {
+                let candidate_size = (frame_crop.width(), frame_crop.height());
+                let pending = self
+                    .pending_encoder
+                    .as_mut()
+                    .ok_or_else(|| "video encoder was finalized".to_owned())?;
+                if pending.candidate_crop_size != Some(candidate_size) {
+                    pending.candidate_crop_size = Some(candidate_size);
+                    self.metrics.dropped_frames(1);
+                    return Ok(());
+                }
+                let settings = self.pending_encoder.take().ok_or_else(|| {
+                    "video encoder settings disappeared during initialization".to_owned()
+                })?;
+                self.encoder = Some(Self::create_encoder(
+                    &settings,
+                    frame_crop.width(),
+                    frame_crop.height(),
+                )?);
+                self.crop = Some(frame_crop);
+                self.encoded_size = Some(candidate_size);
+            }
+            Some(frame_crop)
+        } else {
+            None
+        };
         let encoder = self
             .encoder
             .as_mut()
             .ok_or_else(|| "video encoder was finalized".to_owned())?;
-        let result = if let Some(crop) = self.crop {
-            if crop.end_x > frame.width() || crop.end_y > frame.height() {
-                return Err("captured frame is smaller than the configured screen crop".into());
-            }
+        let result = if let Some(crop) = crop {
             let timestamp = frame
                 .timestamp()
                 .map_err(|error| error.to_string())?
@@ -285,6 +358,17 @@ impl WindowsRecording {
     }
 
     #[must_use]
+    pub fn video_format(&self) -> Option<crate::screen::VideoFormat> {
+        let (width, height) = self.callback.lock().encoded_size?;
+        Some(crate::screen::VideoFormat {
+            width,
+            height,
+            stride: width as usize * 4,
+            pixel_format: crate::screen::PixelFormat::Bgra8,
+        })
+    }
+
+    #[must_use]
     pub fn metrics(&self) -> Arc<ScreenCaptureMetrics> {
         self.metrics.clone()
     }
@@ -324,10 +408,10 @@ where
     } = config;
     let metrics = Arc::new(ScreenCaptureMetrics::default());
     let unavailable = Arc::new(AtomicBool::new(false));
-    let crop = region
+    let catalog_crop = region
         .map(|region| normalize_crop(region, size.0, size.1))
         .transpose()?;
-    let (width, height) = crop.map_or(size, |crop| (crop.width(), crop.height()));
+    let (width, height) = catalog_crop.map_or(size, |crop| (crop.width(), crop.height()));
     let width = even_dimension(width);
     let height = even_dimension(height);
     if width == 0 || height == 0 {
@@ -343,7 +427,7 @@ where
         fps,
         metrics: metrics.clone(),
         start_gate,
-        crop,
+        region,
         unavailable: unavailable.clone(),
     };
     let compatibility = compatible_settings(exclude_cursor, fps);
@@ -400,49 +484,5 @@ fn backend_error(error: impl std::fmt::Display) -> CaptureError {
 }
 
 #[cfg(test)]
-mod tests {
-    #![allow(clippy::expect_used)]
-
-    use super::flip_bgra_rows;
-    use crate::model::ScreenRegion;
-    use crate::screen::normalize_crop;
-
-    #[test]
-    fn flips_bgra_rows_from_top_to_bottom() {
-        let source = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
-        assert_eq!(
-            flip_bgra_rows(&source, 2, 2),
-            [9, 10, 11, 12, 13, 14, 15, 16, 1, 2, 3, 4, 5, 6, 7, 8]
-        );
-    }
-
-    #[test]
-    fn normalized_dimensions_are_the_row_dimensions_used_for_bgra_conversion() {
-        let crop = normalize_crop(
-            ScreenRegion {
-                x: 0.1,
-                y: 0.1,
-                width: 0.3,
-                height: 0.4,
-            },
-            10,
-            10,
-        )
-        .expect("valid crop");
-        let source = [
-            1, 2, 3, 4, 5, 6, 7, 8, // row 0
-            9, 10, 11, 12, 13, 14, 15, 16, // row 1
-            17, 18, 19, 20, 21, 22, 23, 24, // row 2
-            25, 26, 27, 28, 29, 30, 31, 32, // row 3
-        ];
-        assert_eq!(
-            flip_bgra_rows(&source, crop.width(), crop.height()),
-            [
-                25, 26, 27, 28, 29, 30, 31, 32, // row 3
-                17, 18, 19, 20, 21, 22, 23, 24, // row 2
-                9, 10, 11, 12, 13, 14, 15, 16, // row 1
-                1, 2, 3, 4, 5, 6, 7, 8, // row 0
-            ]
-        );
-    }
-}
+#[path = "capture_tests.rs"]
+mod tests;
