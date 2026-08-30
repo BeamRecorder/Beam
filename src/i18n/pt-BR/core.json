@@ -20,10 +20,7 @@
     "enabled": "Ativado",
     "deleteAudioClip": "Excluir clipe de áudio",
     "normalize": "Normalizar áudio",
-    "normalizeDescription": "Define -16 LUFS e -1 dBTP como alvo, preservando o controle de volume.",
-    "resetNormalization": "Redefinir normalização",
     "analyzing": "Analisando…",
-    "normalizeButton": "Normalizar",
     "silentAudio": "Nenhum sinal utilizável foi detectado.",
     "normalizedGain": "Normalizado ({gain} dB)"
   },

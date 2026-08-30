@@ -24,27 +24,39 @@ describe('AudioClipPropertiesPanel', () => {
       global: { stubs: { BigSlider } },
     });
     expect(wrapper.find('.section-title').exists()).toBe(false);
-    expect(wrapper.find('.normalization-block').exists()).toBe(true);
+    expect(wrapper.find('.normalization-control').exists()).toBe(true);
+    expect(wrapper.get('[role="switch"]').attributes('aria-checked')).toBe('false');
     await wrapper.get('.volume-slider').trigger('click');
     expect(wrapper.emitted('update:volume')).toEqual([[125]]);
   });
 
-  it('emits normalize for a selected clip and disables it while analyzing', async () => {
+  it('emits normalize when the compact switch changes from off to on', async () => {
     const wrapper = mount(AudioClipPropertiesPanel, {
       props: { clip: { name: 'Voice track', enabled: true, volume: 80 } },
       global: { stubs: { BigSlider } },
     });
 
-    expect(wrapper.findAll('.volume-slider')).toHaveLength(1);
-    const normalize = wrapper.get('.normalization-block .btn-secondary');
+    const normalize = wrapper.get('[role="switch"]');
     await normalize.trigger('click');
     expect(wrapper.emitted('normalize')).toEqual([[]]);
-
-    await wrapper.setProps({ normalizationStatus: 'analyzing' });
-    expect(wrapper.get('.normalization-block .btn-secondary').attributes('disabled')).toBeDefined();
+    expect(wrapper.emitted('reset-normalization')).toBeUndefined();
   });
 
-  it('emits reset-normalization when normalization is enabled', async () => {
+  it('shows analyzing as checked and disabled while normalization is pending', () => {
+    const wrapper = mount(AudioClipPropertiesPanel, {
+      props: {
+        clip: { name: 'Voice track', enabled: true, volume: 80 },
+        normalizationStatus: 'analyzing',
+      },
+    });
+
+    const normalize = wrapper.get('[role="switch"]');
+    expect(normalize.attributes('aria-checked')).toBe('true');
+    expect(normalize.attributes('disabled')).toBeDefined();
+    expect(wrapper.get('.normalization-status').text()).toContain('Analyzing');
+  });
+
+  it('emits reset-normalization when an enabled switch changes off', async () => {
     const normalization: AudioNormalization = {
       enabled: true,
       mode: 'lufs',
@@ -58,16 +70,18 @@ describe('AudioClipPropertiesPanel', () => {
       props: { clip: { name: 'Voice track', enabled: true, volume: 80, normalization }, normalizationStatus: 'ready' },
     });
 
+    expect(wrapper.get('[role="switch"]').attributes('aria-checked')).toBe('true');
     expect(wrapper.get('.normalization-status').text()).toContain('2.5');
-    await wrapper.get('.normalization-heading .btn').trigger('click');
+    await wrapper.get('[role="switch"]').trigger('click');
     expect(wrapper.emitted('reset-normalization')).toEqual([[]]);
+    expect(wrapper.emitted('normalize')).toBeUndefined();
   });
 
   it('renders silent and error normalization statuses', async () => {
     const wrapper = mount(AudioClipPropertiesPanel, {
       props: { clip: { name: 'Voice track', enabled: true, volume: 80 }, normalizationStatus: 'silent' },
     });
-    expect(wrapper.get('.normalization-status').text()).toBeTruthy();
+    expect(wrapper.get('.normalization-message').text()).toBeTruthy();
 
     await wrapper.setProps({ normalizationStatus: 'error', normalizationError: 'Unable to decode audio.' });
     expect(wrapper.get('[role="alert"]').text()).toBe('Unable to decode audio.');

@@ -20,10 +20,7 @@
     "enabled": "已启用",
     "deleteAudioClip": "删除音频片段",
     "normalize": "音频标准化",
-    "normalizeDescription": "目标为 -16 LUFS 和 -1 dBTP，同时保留音量控制。",
-    "resetNormalization": "重置标准化",
     "analyzing": "正在分析…",
-    "normalizeButton": "标准化",
     "silentAudio": "未检测到可用信号。",
     "normalizedGain": "已标准化（{gain} dB）"
   },

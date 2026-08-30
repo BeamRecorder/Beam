@@ -20,10 +20,7 @@
     "enabled": "Đã bật",
     "deleteAudioClip": "Xóa đoạn âm thanh",
     "normalize": "Chuẩn hóa âm thanh",
-    "normalizeDescription": "Nhắm đến -16 LUFS và -1 dBTP trong khi vẫn giữ điều khiển âm lượng.",
-    "resetNormalization": "Đặt lại chuẩn hóa",
     "analyzing": "Đang phân tích…",
-    "normalizeButton": "Chuẩn hóa",
     "silentAudio": "Không phát hiện tín hiệu có thể sử dụng.",
     "normalizedGain": "Đã chuẩn hóa ({gain} dB)"
   },

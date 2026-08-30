@@ -20,10 +20,7 @@
     "enabled": "已啟用",
     "deleteAudioClip": "刪除音訊片段",
     "normalize": "音訊標準化",
-    "normalizeDescription": "目標為 -16 LUFS 和 -1 dBTP，同時保留音量控制。",
-    "resetNormalization": "重設標準化",
     "analyzing": "正在分析…",
-    "normalizeButton": "標準化",
     "silentAudio": "未偵測到可用訊號。",
     "normalizedGain": "已標準化（{gain} dB）"
   },

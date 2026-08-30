@@ -20,10 +20,7 @@
     "enabled": "사용",
     "deleteAudioClip": "오디오 클립 삭제",
     "normalize": "오디오 정규화",
-    "normalizeDescription": "볼륨 제어를 유지하면서 -16 LUFS 및 -1 dBTP를 목표로 합니다.",
-    "resetNormalization": "정규화 초기화",
     "analyzing": "분석 중…",
-    "normalizeButton": "정규화",
     "silentAudio": "사용 가능한 신호를 감지하지 못했습니다.",
     "normalizedGain": "정규화됨({gain} dB)"
   },

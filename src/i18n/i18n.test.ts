@@ -63,15 +63,7 @@ describe('internationalization', () => {
         'monitorProjectAudio',
         'muteProjectAudio',
       ],
-      AudioClipPropertiesPanel: [
-        'normalize',
-        'normalizeDescription',
-        'resetNormalization',
-        'analyzing',
-        'normalizeButton',
-        'silentAudio',
-        'normalizedGain',
-      ],
+      AudioClipPropertiesPanel: ['normalize', 'analyzing', 'silentAudio', 'normalizedGain'],
       AudioPanel: ['normalizeAll'],
       TimelineTracks: ['normalizeAudio', 'voiceover'],
     } as const;

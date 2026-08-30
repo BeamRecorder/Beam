@@ -20,10 +20,7 @@
     "enabled": "Включено",
     "deleteAudioClip": "Удалить аудиоклип",
     "normalize": "Нормализовать звук",
-    "normalizeDescription": "Цель: -16 LUFS и -1 dBTP с сохранением регулировки громкости.",
-    "resetNormalization": "Сбросить нормализацию",
     "analyzing": "Анализ…",
-    "normalizeButton": "Нормализовать",
     "silentAudio": "Полезный сигнал не обнаружен.",
     "normalizedGain": "Нормализовано ({gain} дБ)"
   },

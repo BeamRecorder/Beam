@@ -2,8 +2,7 @@
 import { computed } from 'vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
 import { useTranslate } from '~/i18n/useTranslate';
-import Button from '~/ui/button/Button.vue';
-import { AudioLines, RotateCcw } from '@lucide/vue';
+import Switch from '~/ui/switch/Switch.vue';
 import type { AudioNormalization } from '~/media/shared/audio-normalization-types';
 
 const { t } = useTranslate('AudioClipPropertiesPanel');
@@ -21,6 +20,13 @@ const emit = defineEmits<{
 }>();
 
 const volume = computed(() => props.clip?.volume ?? 100);
+const normalizationEnabled = computed(
+  () => props.normalizationStatus === 'analyzing' || props.clip?.normalization?.enabled === true,
+);
+const updateNormalization = (enabled: boolean) => {
+  if (enabled) emit('normalize');
+  else emit('reset-normalization');
+};
 </script>
 
 <template>
@@ -42,38 +48,23 @@ const volume = computed(() => props.clip?.volume ?? 100);
           @update:model-value="emit('update:volume', $event)"
         />
       </div>
-      <div class="section-block normalization-block">
-        <div class="normalization-heading">
-          <div>
-            <strong>{{ t('normalize') }}</strong>
-            <p>{{ t('normalizeDescription') }}</p>
-          </div>
-          <Button
-            v-if="clip.normalization?.enabled"
-            variant="ghost"
-            size="sm"
-            :icon="RotateCcw"
-            :tooltip="t('resetNormalization')"
-            icon-only
-            @click="emit('reset-normalization')"
-          />
+      <div class="normalization-control">
+        <div class="normalization-label">
+          <span>{{ t('normalize') }}</span>
+          <span v-if="normalizationStatus === 'analyzing'" class="normalization-status">{{ t('analyzing') }}</span>
+          <span v-else-if="normalizationStatus === 'ready'" class="normalization-status">
+            {{ t('normalizedGain', { gain: clip.normalization?.appliedGainDb.toFixed(1) ?? '0.0' }) }}
+          </span>
         </div>
-        <Button
-          variant="secondary"
-          size="sm"
-          :icon="AudioLines"
-          :loading="normalizationStatus === 'analyzing'"
+        <Switch
+          :model-value="normalizationEnabled"
           :disabled="normalizationStatus === 'analyzing'"
-          @click="emit('normalize')"
-        >
-          {{ normalizationStatus === 'analyzing' ? t('analyzing') : t('normalizeButton') }}
-        </Button>
-        <p v-if="normalizationStatus === 'silent'" class="normalization-status">{{ t('silentAudio') }}</p>
-        <p v-else-if="normalizationStatus === 'ready'" class="normalization-status">
-          {{ t('normalizedGain', { gain: clip.normalization?.appliedGainDb.toFixed(1) ?? '0.0' }) }}
-        </p>
-        <p v-else-if="normalizationError" class="normalization-error" role="alert">{{ normalizationError }}</p>
+          :aria-label="t('normalize')"
+          @update:model-value="updateNormalization"
+        />
       </div>
+      <p v-if="normalizationStatus === 'silent'" class="normalization-message">{{ t('silentAudio') }}</p>
+      <p v-else-if="normalizationError" class="normalization-error" role="alert">{{ normalizationError }}</p>
     </div>
   </div>
 </template>
@@ -95,22 +86,29 @@ const volume = computed(() => props.clip?.volume ?? 100);
   flex-direction: column;
   gap: 10px;
 }
-.normalization-block {
-  padding: 12px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-bg-element);
-}
-.normalization-heading {
+.normalization-control {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 12px;
 }
-.normalization-heading p,
-.normalization-status,
+.normalization-label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+.normalization-status {
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 500;
+}
+.normalization-message,
 .normalization-error {
-  margin: 3px 0 0;
+  margin: -6px 0 0;
   color: var(--text-secondary);
   font-size: 11px;
   line-height: 1.4;

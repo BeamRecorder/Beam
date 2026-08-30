@@ -20,10 +20,7 @@
     "enabled": "सक्षम",
     "deleteAudioClip": "ऑडियो क्लिप हटाएँ",
     "normalize": "ऑडियो नॉर्मलाइज़ करें",
-    "normalizeDescription": "वॉल्यूम नियंत्रण बनाए रखते हुए -16 LUFS और -1 dBTP का लक्ष्य रखता है।",
-    "resetNormalization": "नॉर्मलाइज़ेशन रीसेट करें",
     "analyzing": "विश्लेषण हो रहा है…",
-    "normalizeButton": "नॉर्मलाइज़ करें",
     "silentAudio": "कोई उपयोगी सिग्नल नहीं मिला।",
     "normalizedGain": "नॉर्मलाइज़ किया गया ({gain} dB)"
   },

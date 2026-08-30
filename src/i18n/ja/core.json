@@ -20,10 +20,7 @@
     "enabled": "有効",
     "deleteAudioClip": "オーディオクリップを削除",
     "normalize": "音声をノーマライズ",
-    "normalizeDescription": "音量調整を維持したまま -16 LUFS、-1 dBTP を目標にします。",
-    "resetNormalization": "ノーマライズをリセット",
     "analyzing": "解析中…",
-    "normalizeButton": "ノーマライズ",
     "silentAudio": "使用可能な信号が検出されませんでした。",
     "normalizedGain": "ノーマライズ済み（{gain} dB）"
   },

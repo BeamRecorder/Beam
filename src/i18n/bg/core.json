@@ -20,10 +20,7 @@
     "enabled": "Включено",
     "deleteAudioClip": "Изтриване на аудиоклипа",
     "normalize": "Нормализиране на звука",
-    "normalizeDescription": "Цел: -16 LUFS и -1 dBTP със запазване на контрола за сила на звука.",
-    "resetNormalization": "Нулиране на нормализацията",
     "analyzing": "Анализиране…",
-    "normalizeButton": "Нормализиране",
     "silentAudio": "Не е открит използваем сигнал.",
     "normalizedGain": "Нормализирано ({gain} dB)"
   },
