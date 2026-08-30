@@ -4,7 +4,7 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { useTimelineTracks } from './composables/useTimelineTracks';
 import { useTimelineContextMenu } from './composables/useTimelineContextMenu';
 import ContextMenu from '~/components/ui/context-menu/ContextMenu.vue';
-import { computed } from 'vue';
+import { computed, type ComponentPublicInstance, type Ref } from 'vue';
 import TimelineCaptionTracks from './TimelineCaptionTracks.vue';
 import type { TimelineTracksEmits, TimelineTracksProps } from './composables/timeline-tracks-types';
 import TimelineCanvasTransitionTrack from './TimelineCanvasTransitionTrack.vue';
@@ -44,7 +44,6 @@ const {
   sidebarScrollRef,
   tracksViewportRef,
   ticksAreaRef,
-  rulerWidth,
   rulerLayoutWidth,
   tracksWidthStyle,
   playheadStyle,
@@ -85,6 +84,13 @@ const {
   draggedCaptionId,
   beginCaptionReorder,
 } = useTimelineTracks(props, emit);
+const bindDivRef = (target: Ref<HTMLDivElement | null>) => (element: Element | ComponentPublicInstance | null) => {
+  target.value = element instanceof HTMLDivElement ? element : null;
+};
+const setSidebarScrollElement = bindDivRef(sidebarScrollRef);
+const setTracksScrollElement = bindDivRef(tracksScrollRef);
+const setTracksViewportElement = bindDivRef(tracksViewportRef);
+const setTicksAreaElement = bindDivRef(ticksAreaRef);
 const { selectedClipIdSet, selectedZoomIdSet, selectItem, startClipMove, startZoomMove } = useTimelineItemInteractions({
   props,
   emit,
@@ -153,7 +159,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
       <div class="sidebar-ruler-spacer">
         <TimelineAddMenu @add:element="emit('add:element', $event)" />
       </div>
-      <div ref="sidebarScrollRef" class="sidebar-tracks-viewport">
+      <div :ref="setSidebarScrollElement" class="sidebar-tracks-viewport">
         <div class="sidebar-tracks-stack">
           <TimelineCanvasTransitionTrack
             v-if="canvasTransitions.entry || canvasTransitions.exit"
@@ -184,15 +190,15 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
         </div>
       </div>
     </div>
-    <div ref="tracksScrollRef" class="timeline-tracks-container" @scroll="onScroll">
+    <div :ref="setTracksScrollElement" class="timeline-tracks-container" @scroll="onScroll">
       <div
-        ref="tracksViewportRef"
+        :ref="setTracksViewportElement"
         class="timeline-viewport"
         :class="{ 'is-trimming': activeTrimState !== null, 'is-wheel-zooming': isWheelZooming }"
         :style="tracksWidthStyle"
       >
         <div class="timeline-ruler">
-          <div ref="ticksAreaRef" class="ruler-ticks-area" @pointerdown="beginScrub">
+          <div :ref="setTicksAreaElement" class="ruler-ticks-area" @pointerdown="beginScrub">
             <div
               v-if="exportProgressPercent !== null"
               class="ruler-export-progress-bar"
