@@ -255,6 +255,7 @@ fn argument_value(name: &str) -> Result<String, capture::CaptureError> {
     )))
 }
 
+#[cfg(target_os = "linux")]
 fn optional_argument_value(name: &str) -> Option<String> {
     let mut arguments = std::env::args();
     while let Some(value) = arguments.next() {

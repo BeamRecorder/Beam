@@ -18,8 +18,19 @@ pub enum Command {
     Permissions,
     InputAccessStatus,
     RequestInputAccess,
-    Formats { source: String },
-    Prepare { config: Box<CaptureRequest> },
+    Formats {
+        source: String,
+    },
+    SourcePreview {
+        source: String,
+        #[serde(rename = "maxWidth")]
+        max_width: u32,
+        #[serde(rename = "maxHeight")]
+        max_height: u32,
+    },
+    Prepare {
+        config: Box<CaptureRequest>,
+    },
     Start,
     Pause,
     Resume,

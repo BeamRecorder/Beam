@@ -49,6 +49,16 @@ function createScreenRegionOverlayWindow({
   let pending = null;
   let current = null;
 
+  const cancelPendingSelection = () => {
+    if (!pending) return;
+    const resolve = pending.resolve;
+    pending = null;
+    current = null;
+    window?.hide();
+    window?.setParentWindow(null);
+    resolve(null);
+  };
+
   const send = (options) => {
     if (!window || window.isDestroyed() || !ready) return;
     window.webContents.send('screen-region:configure', options);
@@ -76,6 +86,16 @@ function createScreenRegionOverlayWindow({
       },
     });
     window.setContentProtection(true);
+    if (platform === 'darwin') {
+      window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
+      window.setAlwaysOnTop(true, 'screen-saver');
+      window.webContents.on('before-input-event', (event, input) => {
+        if (pending && input.type === 'keyDown' && input.key === 'Escape') {
+          event.preventDefault();
+          cancelPendingSelection();
+        }
+      });
+    }
     window.once('ready-to-show', () => {
       ready = true;
       send(current);
@@ -158,13 +178,7 @@ function createScreenRegionOverlayWindow({
       resolve(bounds ? { bounds: { ...bounds }, region } : null);
     },
     cancel() {
-      if (!pending) return;
-      const resolve = pending.resolve;
-      pending = null;
-      current = null;
-      window?.hide();
-      window?.setParentWindow(null);
-      resolve(null);
+      cancelPendingSelection();
     },
     destroy() {
       if (pending) {

@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld(
     stopSystemAudioPreview: async () => {
       await invoke('stop-system-audio-preview');
     },
+    getSourcePreview: (request) => ipcRenderer.invoke('capture:source-preview', request),
     beginCameraSegment: (payload) => ipcRenderer.invoke('camera:begin-segment', payload),
     writeCameraSegment: (payload) => ipcRenderer.invoke('camera:write-segment', payload),
     finalizeCameraSegment: (payload) => ipcRenderer.invoke('camera:finalize-segment', payload),

@@ -68,6 +68,7 @@ export interface CaptureApi {
   startSystemAudioPreview(): Promise<void>;
   systemAudioPreviewLevel(): Promise<number>;
   stopSystemAudioPreview(): Promise<void>;
+  getSourcePreview(request: CaptureSourcePreviewRequest): Promise<CaptureSourcePreview>;
 }
 
 export interface DesktopCaptureApi extends CaptureApi {
@@ -351,6 +352,17 @@ export interface CapturePreview {
   appIcon: string | null;
   displayId?: string;
   displayBounds?: { x: number; y: number; width: number; height: number };
+}
+export interface CaptureSourcePreviewRequest {
+  sourceId: string;
+  maxWidth?: number;
+  maxHeight?: number;
+  refresh?: boolean;
+}
+export interface CaptureSourcePreview {
+  sourceId: string;
+  thumbnail: string | null;
+  status: 'ready' | 'unavailable';
 }
 export interface CaptureSource {
   id: string;

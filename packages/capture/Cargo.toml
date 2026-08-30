@@ -45,6 +45,8 @@ screencapturekit = { version = "8.0.1", features = ["macos_15_0"] }
 core-graphics = "0.25"
 foreign-types = "0.5"
 libc = "0.2"
+base64 = "0.23.1"
+jpeg-encoder = "0.7.1"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 ashpd = { version = "=0.13.13", default-features = false, features = ["tokio", "screencast"] }
@@ -56,6 +58,8 @@ futures-util = "0.3"
 xcursor = "=0.3.11"
 
 [dev-dependencies]
+base64 = "0.23.1"
+jpeg-encoder = "0.7.1"
 tempfile = "3"
 walkdir = "2"
 

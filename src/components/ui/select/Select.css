@@ -108,6 +108,10 @@
   pointer-events: none;
 }
 
+.thumbnail-fallback {
+  color: var(--text-tertiary);
+}
+
 .select-trigger.is-source .selected-thumbnail-wrapper {
   width: 38px;
   height: 24px;

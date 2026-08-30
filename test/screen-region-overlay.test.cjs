@@ -164,11 +164,19 @@ function createRegionOverlayWindowMock(calls) {
   const listeners = new Map();
   let destroyed = false;
   return {
-    webContents: { send: (...args) => calls.push(['send', ...args]) },
+    webContents: {
+      send: (...args) => calls.push(['send', ...args]),
+      on: (event, listener) => {
+        calls.push(['webContents-on', event]);
+        listeners.set(`webContents:${event}`, listener);
+      },
+    },
     once: (event, listener) => listeners.set(event, listener),
     on: (event, listener) => listeners.set(event, listener),
     isDestroyed: () => destroyed,
     setContentProtection: (value) => calls.push(['contentProtection', value]),
+    setVisibleOnAllWorkspaces: (...args) => calls.push(['visibleOnAllWorkspaces', ...args]),
+    setAlwaysOnTop: (...args) => calls.push(['alwaysOnTop', ...args]),
     setBounds: (bounds) => calls.push(['bounds', bounds]),
     setParentWindow: (parent) => calls.push(['parent', parent]),
     setIgnoreMouseEvents: (value) => calls.push(['mouse', value]),
@@ -180,6 +188,17 @@ function createRegionOverlayWindowMock(calls) {
     destroy: () => {
       destroyed = true;
       listeners.get('closed')?.();
+    },
+    emitBeforeInput: (input) => {
+      const event = {
+        defaultPrevented: false,
+        preventDefault: () => {
+          event.defaultPrevented = true;
+          calls.push(['preventDefault']);
+        },
+      };
+      listeners.get('webContents:before-input-event')?.(event, input);
+      return event;
     },
     loadURL: () => undefined,
     loadFile: () => undefined,
@@ -296,6 +315,117 @@ test('shows the recording region marker on Windows 11 build 22000 and newer', ()
       calls.filter((call) => ['contentProtection', 'bounds', 'mouse', 'showInactive', 'moveTop'].includes(call[0])),
       [['contentProtection', true], ['bounds', bounds], ['mouse', true], ['showInactive'], ['moveTop']],
     );
+  } finally {
+    Module._load = originalLoad;
+  }
+});
+
+test('keeps an offset macOS display selection interactive across Spaces', async () => {
+  const calls = [];
+  const window = createRegionOverlayWindowMock(calls);
+  const electron = {
+    BrowserWindow: class {
+      constructor() {
+        return window;
+      }
+    },
+  };
+  const originalLoad = Module._load;
+  Module._load = function load(request, parent, isMain) {
+    return request === 'electron' ? electron : originalLoad.call(this, request, parent, isMain);
+  };
+
+  try {
+    const modulePath = require.resolve('../electron/screen-region-overlay.cjs');
+    delete require.cache[modulePath];
+    const { createScreenRegionOverlayWindow } = require('../electron/screen-region-overlay.cjs');
+    const overlay = createScreenRegionOverlayWindow({
+      applicationRoot: '/app',
+      isPackaged: false,
+      platform: 'darwin',
+    });
+    const bounds = { x: -1728, y: 0, width: 1728, height: 1117 };
+    const region = { x: 0.125, y: 0.2, width: 0.5, height: 0.4 };
+
+    const firstSelection = overlay.select({ bounds, region: null });
+    assert.deepEqual(
+      calls.filter((call) =>
+        [
+          'contentProtection',
+          'visibleOnAllWorkspaces',
+          'alwaysOnTop',
+          'webContents-on',
+          'bounds',
+          'mouse',
+          'show',
+          'focus',
+        ].includes(call[0]),
+      ),
+      [
+        ['contentProtection', true],
+        ['visibleOnAllWorkspaces', true, { visibleOnFullScreen: true, skipTransformProcessType: true }],
+        ['alwaysOnTop', true, 'screen-saver'],
+        ['webContents-on', 'before-input-event'],
+        ['bounds', bounds],
+        ['mouse', false],
+        ['show'],
+        ['focus'],
+      ],
+    );
+    overlay.confirm(region);
+    assert.deepEqual(await firstSelection, { bounds, region });
+
+    const secondBounds = { x: 0, y: 0, width: 3024, height: 1964 };
+    const secondSelection = overlay.select({ bounds: secondBounds, region });
+    overlay.cancel();
+    assert.equal(await secondSelection, null);
+    assert.deepEqual(calls.filter((call) => call[0] === 'bounds').at(-1), ['bounds', secondBounds]);
+    assert.deepEqual(calls.filter((call) => call[0] === 'parent').at(-1), ['parent', null]);
+  } finally {
+    Module._load = originalLoad;
+  }
+});
+
+test('uses native Escape handling to cancel a macOS selection', async () => {
+  const calls = [];
+  const window = createRegionOverlayWindowMock(calls);
+  const electron = {
+    BrowserWindow: class {
+      constructor() {
+        return window;
+      }
+    },
+  };
+  const originalLoad = Module._load;
+  Module._load = function load(request, parent, isMain) {
+    return request === 'electron' ? electron : originalLoad.call(this, request, parent, isMain);
+  };
+
+  try {
+    const modulePath = require.resolve('../electron/screen-region-overlay.cjs');
+    delete require.cache[modulePath];
+    const { createScreenRegionOverlayWindow } = require('../electron/screen-region-overlay.cjs');
+    const overlay = createScreenRegionOverlayWindow({
+      applicationRoot: '/app',
+      isPackaged: false,
+      platform: 'darwin',
+    });
+    const selection = overlay.select({
+      bounds: { x: -1728, y: 0, width: 1728, height: 1117 },
+      region: null,
+    });
+
+    const inputEvent = window.emitBeforeInput({ type: 'keyDown', key: 'Escape' });
+    assert.equal(inputEvent.defaultPrevented, true);
+    assert.deepEqual(await selection, null);
+    assert.ok(calls.some((call) => call[0] === 'preventDefault'));
+    assert.ok(calls.some((call) => call[0] === 'hide'));
+    assert.deepEqual(calls.filter((call) => call[0] === 'parent').at(-1), ['parent', null]);
+
+    // The native listener must only cancel a pending interactive selection.
+    const idleInputEvent = window.emitBeforeInput({ type: 'keyDown', key: 'Escape' });
+    assert.equal(idleInputEvent.defaultPrevented, false);
+    assert.equal(calls.filter((call) => call[0] === 'preventDefault').length, 1);
   } finally {
     Module._load = originalLoad;
   }

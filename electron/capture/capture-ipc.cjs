@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
 const { buildDefaultCaptureConfig } = require('./capture-config.cjs');
+const { createSourcePreviewService } = require('./source-preview-service.cjs');
 
 const ALLOWED_COMMANDS = new Set([
   'discover',
@@ -86,6 +87,7 @@ function registerCaptureIpc({
       throw wrapped;
     }
   };
+  const sourcePreviews = createSourcePreviewService({ requestNative: requestEngine, platform });
   let pendingDefaultPreparation = null;
   const prepareDefaultRecording = (options) => {
     const key = JSON.stringify(options || {});
@@ -192,6 +194,14 @@ function registerCaptureIpc({
         displayBounds: display?.bounds,
       };
     });
+  });
+  ipcMain.handle('capture:source-preview', (_event, request) => {
+    if (!canAcceptWork()) {
+      const error = new Error('source preview rejected during application shutdown');
+      error.code = 'application-shutting-down';
+      throw error;
+    }
+    return sourcePreviews.get(request);
   });
   ipcMain.handle('screen:get-display-bounds', (_event, displayId) => displayBoundsForId(screen, displayId));
 }

@@ -20,7 +20,6 @@ import {
   systemAudioSource,
 } from '../../api/system-audio-recorder';
 import type {
-  CapturePreview,
   CaptureCatalog,
   CaptureProject,
   CaptureSession,
@@ -35,7 +34,8 @@ import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import Skeleton from '~/ui/skeleton/Skeleton.vue';
 import TopbarHUD from './TopbarHUD.vue';
 import SourceSelect from './SourceSelect.vue';
-import { matchScreenPreview } from './source-preview';
+import { canonicalMacWindowSourceId, matchScreenPreview } from './source-preview';
+import { useCaptureSourcePreviews, type PreviewKind } from './useCaptureSourcePreviews';
 import { Monitor, Layout, ArrowUpRight, Video, VideoOff, Crop, ScrollText, Check } from '@lucide/vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useAudioLevelMeter } from './audio/useAudioLevelMeter';
@@ -175,11 +175,6 @@ const hudIssues = computed<HudIssueModel[]>(() => {
   return issues;
 });
 
-// Previews
-const windowPreviews = ref<CapturePreview[]>([]);
-const screenPreviews = ref<CapturePreview[]>([]);
-const windowPreviewsLoading = ref(false);
-const screenPreviewsLoading = ref(false);
 const selectedSourceId = ref<string | null>(null);
 
 // Sources lists (Camera / Microphone)
@@ -200,6 +195,21 @@ const micOptions = computed(() => [
 const selectedMicId = ref('no-audio');
 const isTeleprompterVisible = ref(false);
 const selectedScreenId = ref<string | null>(null);
+const {
+  loadPreviews,
+  refreshSourceChoices,
+  screenPreviews,
+  screenPreviewsLoading,
+  windowPreviews,
+  windowPreviewsLoading,
+} = useCaptureSourcePreviews({
+  platform: desktopPlatform,
+  sources,
+  catalog: captureCatalog,
+  selectedScreenId,
+  selectedWindowId: selectedSourceId,
+  recorderLauncherContext: () => props.recorderLauncherContext,
+});
 const selectedScreenRegion = ref<ScreenRegion | null>(null);
 const selectedScreenOverlay = ref<ScreenRegionOverlayOptions | null>(null);
 const nativeScreenBounds = ref<ScreenRegionBounds | null>(null);
@@ -328,50 +338,6 @@ const stopTimer = () => {
   }
 };
 
-type PreviewKind = 'screen' | 'window';
-const previewLoaded: Record<PreviewKind, boolean> = { screen: false, window: false };
-const previewRequests: Record<PreviewKind, Promise<void> | null> = { screen: null, window: null };
-
-const loadPreviews = (type: PreviewKind, force = false): Promise<void> => {
-  if (!force && previewLoaded[type]) return Promise.resolve();
-  if (previewRequests[type]) return previewRequests[type];
-
-  const target = type === 'screen' ? screenPreviews : windowPreviews;
-  const loading = type === 'screen' ? screenPreviewsLoading : windowPreviewsLoading;
-  if (target.value.length === 0) loading.value = true;
-
-  const request = capture
-    .getSources([type])
-    .then((results) => {
-      target.value = results;
-      previewLoaded[type] = true;
-      if (type !== 'window') return;
-      const selectedPortalSource = sources.value.some(
-        (source) =>
-          source.id === selectedSourceId.value && source.kind === 'window' && source.selectionMode === 'portal',
-      );
-      if (
-        !selectedPortalSource &&
-        (!selectedSourceId.value || !results.some((result) => result.id === selectedSourceId.value))
-      ) {
-        // The editor launcher must never substitute another application when
-        // its requested source has disappeared. Leave selection empty so the
-        // user explicitly chooses a window instead.
-        selectedSourceId.value = props.recorderLauncherContext ? null : (results[0]?.id ?? null);
-      }
-    })
-    .catch((error) => {
-      console.error(`Failed to load ${type} previews:`, error);
-    })
-    .finally(() => {
-      loading.value = false;
-      previewRequests[type] = null;
-    });
-
-  previewRequests[type] = request;
-  return request;
-};
-
 watch(
   () => props.recorderLauncherContext,
   (context) => {
@@ -383,8 +349,11 @@ watch(
       selectedSourceId.value =
         sources.value.find((source) => source.kind === 'window' && source.selectionMode === 'portal')?.id ?? null;
     } else {
-      selectedSourceId.value = context.preferredSourceId;
-      void loadPreviews('window', true);
+      selectedSourceId.value =
+        desktopPlatform === 'darwin'
+          ? canonicalMacWindowSourceId(context.preferredSourceId)
+          : context.preferredSourceId;
+      if (sourceDiscoveryCompleted.value) void loadPreviews('window', true);
     }
   },
   { immediate: true },
@@ -551,6 +520,13 @@ const handleDropdownToggle = (isOpen: boolean) => {
     activeDropdowns.value = Math.max(0, activeDropdowns.value - 1);
   }
   updateWindowSize();
+};
+
+const openSourceDropdown = ref<PreviewKind | null>(null);
+const handleSourceDropdownToggle = (type: PreviewKind, isOpen: boolean) => {
+  handleDropdownToggle(isOpen);
+  openSourceDropdown.value = isOpen ? type : openSourceDropdown.value === type ? null : openSourceDropdown.value;
+  if (isOpen) void refreshSourceChoices(type, true);
 };
 
 // Both preview catalogs are cached. Switching tabs only changes presentation;
@@ -981,7 +957,12 @@ onMounted(async () => {
   interactionAccess.hydrate(preferences);
   if (!props.embedded) updateWindowSize();
   await Promise.all([discoverSources(), interactionAccess.refresh()]);
-  await Promise.allSettled([loadPreviews('screen'), loadPreviews('window')]);
+  if (desktopPlatform === 'darwin') {
+    await loadPreviews('screen');
+    await loadPreviews('window');
+  } else {
+    await Promise.allSettled([loadPreviews('screen'), loadPreviews('window')]);
+  }
 
   unsubscribeShortcut = capture.onPreferenceShortcut((actionId: string) => {
     if (actionId === 'hud.startStopRecording') {
@@ -992,10 +973,11 @@ onMounted(async () => {
     isTeleprompterVisible.value = visible;
   });
 
-  // Periodically refresh window previews when settings is not open and not recording
+  // Refresh only the open source picker. Native macOS previews are snapshots,
+  // not a hidden continuous capture session.
   previewsRefreshInterval = setInterval(() => {
-    if (!showSettings.value && !isRecording.value && activeTab.value === 'window') {
-      void loadPreviews('window', true);
+    if (!showSettings.value && !isRecording.value && openSourceDropdown.value) {
+      void refreshSourceChoices(openSourceDropdown.value, true);
     }
   }, 5000);
 });
@@ -1167,10 +1149,11 @@ const openProject = (project: CaptureProject) => {
                       kind="window"
                       :sources="sources"
                       :previews="windowPreviews"
+                      :prefer-native-sources="desktopPlatform === 'darwin'"
                       :loading="windowPreviewsLoading"
                       :disabled="isRecording || isBusy"
                       @toggle="
-                        handleDropdownToggle($event);
+                        handleSourceDropdownToggle('window', $event);
                         if ($event) emit('focus-feature', 'source');
                       "
                     />
@@ -1190,7 +1173,7 @@ const openProject = (project: CaptureProject) => {
                     :loading="screenPreviewsLoading"
                     :disabled="isRecording || isBusy || displaySources.length === 0"
                     @toggle="
-                      handleDropdownToggle($event);
+                      handleSourceDropdownToggle('screen', $event);
                       if ($event) emit('focus-feature', 'source');
                     "
                   />
