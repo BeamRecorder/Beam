@@ -380,7 +380,7 @@ impl ActiveRecordings {
             let metrics = recording.metrics();
             let mut recording = recording;
             let result = recording.stop();
-            #[cfg(target_os = "linux")]
+            #[cfg(any(windows, target_os = "linux"))]
             if let Some(format) = recording.video_format() {
                 update_video_format(tracks, TrackKind::Screen, format);
             }

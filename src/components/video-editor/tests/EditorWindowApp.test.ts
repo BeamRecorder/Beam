@@ -23,7 +23,6 @@ const capture = vi.hoisted(() => ({
   setCameraOverlayActive: vi.fn(),
   setEditorTitlebarTheme: vi.fn(),
   showHud: vi.fn(),
-  startRecordingFromEditor: vi.fn(),
   openEditor: vi.fn(),
 }));
 
@@ -36,7 +35,7 @@ vi.mock('../VideoEditor.vue', async () => {
     default: defineComponent({
       name: 'MockVideoEditor',
       props: { project: { type: Object, required: true } },
-      emits: ['ready', 'back-to-hud', 'open-project', 'start-recording'],
+      emits: ['ready', 'back-to-hud', 'open-project'],
       setup(props: { project: { id: string } }, { emit }) {
         onMounted(() => emit('ready'));
         return () =>
@@ -44,10 +43,6 @@ vi.mock('../VideoEditor.vue', async () => {
             h('button', { class: 'ready', onClick: () => emit('ready') }),
             h('button', { class: 'open-project', onClick: () => emit('open-project', { id: 'project-2' }) }),
             h('button', { class: 'back', onClick: () => emit('back-to-hud') }),
-            h('button', {
-              class: 'record',
-              onClick: () => emit('start-recording', { screenKind: 'display', recordingBarVisibility: 'always' }),
-            }),
           ]);
       },
     }),
@@ -66,6 +61,7 @@ const mountEditor = () => {
 describe('EditorWindowApp', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    document.title = 'Beam Editor';
     document.documentElement.classList.remove('dark');
     state.contextListener = null;
     capture.getEditorContext.mockResolvedValue({ projectId: project.id });
@@ -76,6 +72,7 @@ describe('EditorWindowApp', () => {
 
   afterEach(() => {
     while (wrappers.length > 0) wrappers.pop()?.unmount();
+    document.title = 'Beam Editor';
     document.documentElement.classList.remove('dark');
     vi.unstubAllGlobals();
     vi.useRealTimers();
@@ -89,6 +86,7 @@ describe('EditorWindowApp', () => {
 
     expect(wrapper.find('.mock-editor').exists()).toBe(true);
     expect(capture.getProjectEditorData).toHaveBeenCalledWith(project.id);
+    expect(document.title).toBe('Project - Beam Editor');
     expect(capture.reportEditorLoadingStage.mock.calls.map(([stage]) => stage)).toEqual([
       'loadingProject',
       'loadingTimeline',
@@ -117,19 +115,13 @@ describe('EditorWindowApp', () => {
     expect(wrapper.get('.editor-project-loading-overlay').attributes('aria-label')).toBe('Préparation de l’éditeur');
   });
 
-  it('returns to the HUD and forwards recording requests', async () => {
+  it('returns to the HUD when requested by the editor', async () => {
     const wrapper = mountEditor();
     await flushPromises();
 
     await wrapper.get('.back').trigger('click');
     expect(capture.setCameraOverlayActive).toHaveBeenCalledWith(true);
     expect(capture.showHud).toHaveBeenCalledOnce();
-
-    await wrapper.get('.record').trigger('click');
-    expect(capture.startRecordingFromEditor).toHaveBeenCalledWith({
-      screenKind: 'display',
-      recordingBarVisibility: 'always',
-    });
   });
 
   it('syncs a user-selected dark theme to the native window after the renderer class changes', async () => {
@@ -149,6 +141,7 @@ describe('EditorWindowApp', () => {
     await flushPromises();
 
     expect(wrapper.get('[role="alert"]').text()).toContain('Project not found');
+    expect(document.title).toBe('Beam Editor');
     await wrapper.get('[role="alert"] button').trigger('click');
     expect(capture.showHud).toHaveBeenCalledOnce();
   });
@@ -188,6 +181,7 @@ describe('EditorWindowApp', () => {
 
     expect(wrapper.find('.mock-editor[data-project-id="project-2"]').exists()).toBe(true);
     expect(wrapper.find('.mock-editor[data-project-id="project-1"]').exists()).toBe(false);
+    expect(document.title).toBe('Next project - Beam Editor');
     expect(wrapper.find('.editor-project-loading-overlay').exists()).toBe(true);
   });
 });

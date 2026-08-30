@@ -1,5 +1,5 @@
 import { createPinia, setActivePinia } from 'pinia';
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const capture = vi.hoisted(() => ({
@@ -8,6 +8,7 @@ const capture = vi.hoisted(() => ({
   onPreferencesChanged: vi.fn(() => () => undefined),
   setWindowMode: vi.fn(),
   showHud: vi.fn(),
+  openRecorderFromEditor: vi.fn(),
   getUpdateState: vi.fn(() => Promise.resolve({ currentVersion: '1.2.3' })),
   openDiscordInvite: vi.fn(),
   openGithubRepository: vi.fn(),
@@ -18,8 +19,10 @@ import SettingsPanel from './SettingsPanel.vue';
 
 const Button = {
   inheritAttrs: true,
+  props: { loading: { type: Boolean, default: false }, disabled: { type: Boolean, default: false } },
   emits: ['click'],
-  template: '<button v-bind="$attrs" @click="$emit(\'click\')"><slot name="icon" /><slot /></button>',
+  template:
+    '<button v-bind="$attrs" :disabled="loading || disabled" @click="$emit(\'click\')"><slot name="icon" /><slot /></button>',
 };
 const ButtonGroup = { template: '<div class="button-group"><slot /></div>' };
 const Select = {
@@ -27,15 +30,6 @@ const Select = {
   template: '<button class="language-select" @click="$emit(\'update:modelValue\', \'fr\')">Select</button>',
 };
 const UpdateControls = { template: '<div class="update-controls-stub">Updates</div>' };
-
-const Popover = {
-  template: '<div class="popover-stub"><slot name="trigger" /><slot :close="() => {}" /></div>',
-};
-const HUD = {
-  emits: ['start-recording'],
-  template:
-    '<div class="hud-stub"><button class="hud-start-btn" @click="$emit(\'start-recording\', { recordingBarVisibility: \'always\' })">Start</button></div>',
-};
 
 describe('SettingsPanel', () => {
   beforeEach(() => {
@@ -54,12 +48,13 @@ describe('SettingsPanel', () => {
     vi.clearAllMocks();
     capture.getPreferences.mockResolvedValue({ theme: 'light' });
     capture.updatePreferences.mockResolvedValue({ theme: 'light' });
+    capture.openRecorderFromEditor.mockResolvedValue(true);
     capture.getUpdateState.mockResolvedValue({ currentVersion: '1.2.3' });
   });
 
   it('renders appearance controls and changes locale through the store', async () => {
     const wrapper = mount(SettingsPanel, {
-      global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } },
+      global: { stubs: { Button, ButtonGroup, Select, UpdateControls } },
     });
     expect(wrapper.find('.appearance-settings').exists()).toBe(true);
     const languageSetting = wrapper.get('.language-setting');
@@ -83,7 +78,7 @@ describe('SettingsPanel', () => {
 
   it('opens language advanced settings and toggles spell check', async () => {
     const wrapper = mount(SettingsPanel, {
-      global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } },
+      global: { stubs: { Button, ButtonGroup, Select, UpdateControls } },
     });
 
     const advanced = wrapper.get('.language-setting .advanced-toggle');
@@ -105,7 +100,7 @@ describe('SettingsPanel', () => {
 
   it('renders the update controls section', () => {
     const wrapper = mount(SettingsPanel, {
-      global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } },
+      global: { stubs: { Button, ButtonGroup, Select, UpdateControls } },
     });
     expect(wrapper.find('.update-controls-stub').exists()).toBe(true);
     expect(wrapper.text()).toContain('Theme Mode');
@@ -113,7 +108,7 @@ describe('SettingsPanel', () => {
 
   it('opens the community links from the socials section', async () => {
     const wrapper = mount(SettingsPanel, {
-      global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } },
+      global: { stubs: { Button, ButtonGroup, Select, UpdateControls } },
     });
     const socialButtons = wrapper.findAll('.social-links button');
 
@@ -126,11 +121,10 @@ describe('SettingsPanel', () => {
     expect(wrapper.find('.github-icon').attributes('src')).toContain('github.svg');
   });
 
-  it('toggles dev mode and reveals the framed recorder options', async () => {
+  it('opens the recorder through the editor launcher without embedding another HUD', async () => {
     const wrapper = mount(SettingsPanel, {
-      global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } },
+      global: { stubs: { Button, ButtonGroup, Select, UpdateControls } },
     });
-    expect(wrapper.find('.dev-frame').exists()).toBe(false);
 
     const switchBtn = wrapper.get('.dev-switch');
     await switchBtn.trigger('click');
@@ -138,15 +132,49 @@ describe('SettingsPanel', () => {
     expect(wrapper.find('.dev-frame').exists()).toBe(true);
     expect(localStorage.getItem('dev_mode_enabled')).toBe('true');
 
-    const startBtn = wrapper.get('.hud-start-btn');
-    await startBtn.trigger('click');
+    const launchButton = wrapper.findAll('.dev-action-btn')[0];
+    expect(launchButton.text()).toContain('Launch Recorder');
+    expect(wrapper.find('.popover-stub').exists()).toBe(false);
+    expect(wrapper.find('.hud-stub').exists()).toBe(false);
 
-    expect(wrapper.emitted('start-recording')).toBeTruthy();
+    await launchButton.trigger('click');
+
+    expect(capture.openRecorderFromEditor).toHaveBeenCalledOnce();
+    expect(launchButton.attributes('disabled')).toBeUndefined();
+  });
+
+  it('shows a loading state and an actionable error when the recorder cannot open', async () => {
+    let resolveOpen!: (opened: boolean) => void;
+    capture.openRecorderFromEditor.mockReturnValueOnce(
+      new Promise<boolean>((resolve) => {
+        resolveOpen = resolve;
+      }),
+    );
+    const wrapper = mount(SettingsPanel, {
+      global: { stubs: { Button, ButtonGroup, Select, UpdateControls } },
+    });
+    await wrapper.get('.dev-switch').trigger('click');
+    const launchButton = wrapper.findAll('.dev-action-btn')[0];
+
+    await launchButton.trigger('click');
+    expect(capture.openRecorderFromEditor).toHaveBeenCalledOnce();
+    expect(launchButton.attributes('disabled')).toBeDefined();
+
+    resolveOpen(true);
+    await flushPromises();
+    expect(launchButton.attributes('disabled')).toBeUndefined();
+
+    capture.openRecorderFromEditor.mockRejectedValueOnce(new Error('recorder unavailable'));
+    await launchButton.trigger('click');
+    await flushPromises();
+
+    expect(wrapper.get('[role="alert"]').text()).toContain('recorder unavailable');
+    expect(launchButton.attributes('disabled')).toBeUndefined();
   });
 
   it('copies system information to clipboard when clicking copy button', async () => {
     const wrapper = mount(SettingsPanel, {
-      global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } },
+      global: { stubs: { Button, ButtonGroup, Select, UpdateControls } },
     });
     await wrapper.get('.dev-switch').trigger('click');
 

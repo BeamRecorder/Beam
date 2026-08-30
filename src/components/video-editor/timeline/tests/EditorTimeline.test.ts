@@ -7,9 +7,9 @@ import type { TimelineClipboardItem } from '../composables/timeline-clipboard-ty
 const copiedItem = { descriptor: { kind: 'item', name: 'recording.mp4' } } as TimelineClipboardItem;
 
 const TimelineTracks = {
-  emits: ['update:currentTime', 'select:clip', 'hold:clip', 'clipboard:copied'],
+  emits: ['update:currentTime', 'select:clip', 'hold:clip', 'clipboard:copied', 'add:element'],
   template:
-    '<div class="timeline-tracks-stub"><button @click="$emit(\'update:currentTime\', 250)">Scrub</button><button @click="$emit(\'select:clip\', \'clip-1\')">Select</button><button class="hold-feedback" @click="$emit(\'hold:clip\', { id: \'clip-1\', timeMs: 500 })">Hold</button><button class="copy-feedback" @click="$emit(\'clipboard:copied\', copiedItem)">Copy</button></div>',
+    '<div class="timeline-tracks-stub"><button @click="$emit(\'update:currentTime\', 250)">Scrub</button><button @click="$emit(\'select:clip\', \'clip-1\')">Select</button><button class="hold-feedback" @click="$emit(\'hold:clip\', { id: \'clip-1\', timeMs: 500 })">Hold</button><button class="copy-feedback" @click="$emit(\'clipboard:copied\', copiedItem)">Copy</button><button class="add-feedback" @click="$emit(\'add:element\', \'blur\')">Add</button></div>',
   setup: () => ({ copiedItem }),
 };
 
@@ -54,6 +54,37 @@ describe('EditorTimeline', () => {
     wrapper.unmount();
   });
 
+  it('does not intercept Ctrl/Cmd+A or Space for an HTMLElement that is contenteditable', () => {
+    const wrapper = mount(EditorTimeline, { props, global: { stubs: { TimelineTracks } } });
+    const editingHost = document.createElement('div');
+    editingHost.contentEditable = 'true';
+    const editingElement = document.createElement('div');
+    editingElement.tabIndex = 0;
+    editingHost.appendChild(editingElement);
+    document.body.appendChild(editingHost);
+    Object.defineProperty(editingElement, 'isContentEditable', { configurable: true, value: true });
+    editingElement.focus();
+
+    expect(document.activeElement).toBe(editingElement);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', ctrlKey: true, bubbles: true }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', metaKey: true, bubbles: true }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', bubbles: true }));
+
+    expect(wrapper.emitted('select:all')).toBeUndefined();
+    expect(wrapper.emitted('update:isPlaying')).toBeUndefined();
+    editingHost.remove();
+    wrapper.unmount();
+  });
+
+  it('selects every timeline item with Ctrl/Cmd+A outside form controls', () => {
+    const wrapper = mount(EditorTimeline, { props, global: { stubs: { TimelineTracks } } });
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', ctrlKey: true, bubbles: true }));
+
+    expect(wrapper.emitted('select:all')).toEqual([[]]);
+    wrapper.unmount();
+  });
+
   it('relays clipboard copy feedback from the tracks to the editor timeline', async () => {
     const wrapper = mount(EditorTimeline, { props, global: { stubs: { TimelineTracks } } });
 
@@ -69,6 +100,15 @@ describe('EditorTimeline', () => {
     await wrapper.get('.hold-feedback').trigger('click');
 
     expect(wrapper.emitted('hold:clip')).toEqual([[{ id: 'clip-1', timeMs: 500 }]]);
+    wrapper.unmount();
+  });
+
+  it('forwards Add menu requests from the tracks to the editor timeline', async () => {
+    const wrapper = mount(EditorTimeline, { props, global: { stubs: { TimelineTracks } } });
+
+    await wrapper.get('.add-feedback').trigger('click');
+
+    expect(wrapper.emitted('add:element')).toEqual([['blur']]);
     wrapper.unmount();
   });
 });

@@ -21,7 +21,12 @@ export function useTimelineClipTrim(options: {
   activeTrimState: Ref<TrimState>;
   linkedIdsFor: (clip: Clip) => string[];
   clearLinkedPreview: (ids: string[]) => void;
-  resolveMsPerPx: () => { baseDurationMs: number; width: number; msPerPx: number };
+  resolveMsPerPx: () => {
+    baseDurationMs: number;
+    width: number;
+    msPerPx: number;
+    visualScale: number;
+  };
   updateAutoScroll: (clientX: number, onScroll?: ((deltaPx: number) => void) | null) => void;
   stopAutoScroll: () => void;
 }) {

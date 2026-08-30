@@ -19,8 +19,6 @@ const IN_OVERLAP_MS = 1000;
 const OUT_EARLY_MS = 500;
 const CONNECTED_GAP_MS = 1350;
 const CONNECTED_PAN_MS = 1000;
-const CURSOR_SMOOTHING_MS = 180;
-const CURSOR_HISTORY_MS = 600;
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 const easeOut = (value: number) => 1 - (1 - clamp01(value)) ** 3;
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -70,30 +68,9 @@ export function cursorFocusAt(samples: readonly CursorTelemetryPoint[], timeMs: 
   return { cx: lerp(previous.cx, next.cx, t), cy: lerp(previous.cy, next.cy, t) };
 }
 
-/** Smooths recorded cursor samples so a fast cross-screen movement pans the camera instead of snapping it. */
-export function smoothedCursorFocusAt(samples: readonly CursorTelemetryPoint[], timeMs: number): ZoomFocus | null {
-  const current = cursorFocusAt(samples, timeMs);
-  if (!current) return null;
-  let totalWeight = 1;
-  let weightedX = current.cx;
-  let weightedY = current.cy;
-  for (let index = samples.length - 1; index >= 0; index -= 1) {
-    const sample = samples[index];
-    if (sample.timeMs >= timeMs) continue;
-    const ageMs = timeMs - sample.timeMs;
-    if (ageMs > CURSOR_HISTORY_MS) break;
-    const weight = Math.exp(-ageMs / CURSOR_SMOOTHING_MS);
-    totalWeight += weight;
-    weightedX += sample.cx * weight;
-    weightedY += sample.cy * weight;
-  }
-  return { cx: weightedX / totalWeight, cy: weightedY / totalWeight };
-}
-
 function zoomAtSortedTime(
   elements: readonly ZoomElement[],
   timeMs: number,
-  telemetry: readonly CursorTelemetryPoint[],
   mapFocus: ZoomFocusMapper = (focus) => focus,
 ): AppliedZoom | null {
   const pair = elements.find((current, index) => {
@@ -135,6 +112,7 @@ function zoomAtSortedTime(
         focus: { cx: lerp(startFocus.cx, endFocus.cx, t), cy: lerp(startFocus.cy, endFocus.cy, t) },
         strength: 1,
         mode: pair.mode === 'auto' || next.mode === 'auto' ? 'auto' : 'manual',
+        tracksCursor: false,
         tilt: lerp(tiltFor(pair), tiltFor(next), t) * transitionStrength,
         tiltHorizontal: lerp(horizontalTiltFor(pair), horizontalTiltFor(next), t),
         tiltVertical: lerp(verticalTiltFor(pair), verticalTiltFor(next), t),
@@ -198,27 +176,18 @@ function zoomAtSortedTime(
       focus,
       strength: current.strength,
       mode: current.element.mode === 'auto' || next.mode === 'auto' ? 'auto' : 'manual',
+      tracksCursor: false,
       tilt: lerp(tiltFor(current.element), tiltFor(next), t),
       tiltHorizontal: lerp(horizontalTiltFor(current.element), horizontalTiltFor(next), t),
       tiltVertical: lerp(verticalTiltFor(current.element), verticalTiltFor(next), t),
     };
-  } else if (current.element.mode === 'auto') {
-    const cursor = smoothedCursorFocusAt(telemetry, timeMs);
-    if (cursor)
-      focus = clampFocusToScale(
-        mapFocus(
-          cursor,
-          { focus: cursor, scale, strength: current.strength, mode: 'auto', tilt: tiltFor(current.element) },
-          timeMs,
-        ),
-        scale,
-      );
   }
   return {
     scale: 1 + (scale - 1) * current.strength,
     focus,
     strength: current.strength,
     mode: current.element.mode,
+    tracksCursor: current.element.mode === 'auto',
     tilt: tiltFor(current.element) * current.strength,
     tiltHorizontal: horizontalTiltFor(current.element),
     tiltVertical: verticalTiltFor(current.element),
@@ -227,12 +196,11 @@ function zoomAtSortedTime(
 
 export function createZoomTimeEvaluator(
   elements: readonly ZoomElement[],
-  telemetry: readonly CursorTelemetryPoint[] = [],
+  _telemetry: readonly CursorTelemetryPoint[] = [],
   mapFocus?: ZoomFocusMapper,
 ) {
   const sortedElements = [...elements].sort((left, right) => left.startMs - right.startMs);
-  const sortedTelemetry = [...telemetry].sort((left, right) => left.timeMs - right.timeMs);
-  return (timeMs: number) => zoomAtSortedTime(sortedElements, timeMs, sortedTelemetry, mapFocus);
+  return (timeMs: number) => zoomAtSortedTime(sortedElements, timeMs, mapFocus);
 }
 
 export function zoomAtTime(

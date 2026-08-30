@@ -1,6 +1,6 @@
 import type { ProjectEditorData } from '~/api/types/capture-api';
 import type { ClipComposition, NormalizedTransform } from '~/media/shared/composition-types';
-import type { ZoomElement, ZoomMotionBlurSettings } from '../../zoom/zoom-types';
+import type { ZoomAutoFollowSettings, ZoomElement, ZoomMotionBlurSettings } from '../../zoom/zoom-types';
 import type { OutputCanvasSettings } from '../output-canvas';
 import type { CompositionSceneLayers } from '../../composition/scene-layers';
 
@@ -28,6 +28,7 @@ export interface UseCameraZoomOptions {
   outputCanvas: () => OutputCanvasSettings;
   zoomElements: () => ZoomElement[];
   zoomMotionBlur?: () => ZoomMotionBlurSettings;
+  zoomAutoFollow?: () => ZoomAutoFollowSettings;
   selectedZoom: () => ZoomElement | null;
   currentTime: () => number;
   isPlaying: () => boolean;

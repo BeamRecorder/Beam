@@ -10,7 +10,7 @@ import {
   type MotionBlurSurface,
 } from '../../zoom/zoom-motion-blur-compositor';
 import { OUTPUT_PREVIEW_RADIUS, outputPreviewRect } from '../output-canvas';
-import type { MediaFrame } from '~/media/shared';
+import { sourceTimeAt, type MediaFrame } from '~/media/shared';
 import type { VisualClip } from '~/media/shared/composition-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import { drawDecoratedMedia } from '../../composition/appearance/render-decorated-media';
@@ -260,6 +260,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       screen,
       selectedZoom?.id,
       selectedZoom?.mode,
+      options.zoomAutoFollow?.(),
       options.isPlaying(),
       videoWidth,
       videoHeight,
@@ -276,6 +277,11 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       cameraEvaluator = createCompositionCameraEvaluator({
         zooms: previewZooms,
         telemetry,
+        autoFollow: options.zoomAutoFollow?.(),
+        mapTelemetryTime: (timeMs) => {
+          const activeScreen = sceneLayersAt(timeMs).screen;
+          return activeScreen ? (sourceTimeAt(activeScreen, timeMs) ?? timeMs) : timeMs;
+        },
         mapFocus: (focus, zoom, timeMs) => {
           const activeScreen = sceneLayersAt(timeMs).screen;
           if (!activeScreen || zoom.mode !== 'auto') return focus;

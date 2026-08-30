@@ -172,6 +172,19 @@ const confirm = () => {
   capture.confirmScreenRegion({ ...region.value });
 };
 const cancel = () => capture.cancelScreenRegion();
+const handleKeydown = (event: KeyboardEvent) => {
+  if (!isSelecting.value || event.defaultPrevented || event.repeat || event.metaKey || event.ctrlKey || event.altKey)
+    return;
+  const target = event.target;
+  if (target instanceof Element && target.closest('button, input, select, [role="listbox"], [role="option"]')) return;
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    cancel();
+  } else if (event.key === 'Enter' && region.value && region.value.width > 0 && region.value.height > 0) {
+    event.preventDefault();
+    confirm();
+  }
+};
 
 const loadSavedPreset = async () => {
   try {
@@ -189,6 +202,7 @@ const loadSavedPreset = async () => {
 };
 
 onMounted(() => {
+  window.addEventListener('keydown', handleKeydown);
   unsubscribe = capture.onScreenRegionConfigure((next) => {
     options.value = next;
     if (next.region) {
@@ -203,7 +217,10 @@ onMounted(() => {
   });
   void loadSavedPreset();
 });
-onBeforeUnmount(() => unsubscribe?.());
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleKeydown);
+  unsubscribe?.();
+});
 </script>
 
 <template>
@@ -214,6 +231,7 @@ onBeforeUnmount(() => unsubscribe?.());
     @pointermove="move"
     @pointerup="end"
     @pointercancel="end"
+    @keydown="handleKeydown"
   >
     <div v-if="isSelecting && !region" class="region-empty-backdrop" />
     <div
@@ -332,7 +350,7 @@ onBeforeUnmount(() => unsubscribe?.());
   position: fixed;
   z-index: 20;
   left: 50%;
-  bottom: 24px;
+  bottom: max(24px, env(safe-area-inset-bottom));
   display: flex;
   align-items: center;
   gap: 16px;
@@ -345,6 +363,9 @@ onBeforeUnmount(() => unsubscribe?.());
   -webkit-backdrop-filter: blur(18px) saturate(1.15);
   color: var(--text-primary);
   transform: translateX(-50%);
+  max-width: calc(100vw - 32px);
+  flex-wrap: wrap;
+  justify-content: center;
 }
 .region-instruction {
   display: inline-flex;
@@ -361,5 +382,16 @@ onBeforeUnmount(() => unsubscribe?.());
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+@media (max-width: 760px), (max-height: 560px) {
+  .region-toolbar {
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .region-instruction {
+    display: none;
+  }
 }
 </style>

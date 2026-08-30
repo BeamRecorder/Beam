@@ -178,6 +178,16 @@ fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
             )
             .map_err(Into::into)
         }
+        Command::SourcePreview {
+            source,
+            max_width,
+            max_height,
+        } => serde_json::to_value(capture::screen::capture_source_preview(
+            &capture::model::SourceId::new(source)?,
+            max_width,
+            max_height,
+        )?)
+        .map_err(Into::into),
         Command::Prepare { config } => {
             engine.stop_system_audio_preview()?;
             if engine.session.as_ref().is_some_and(|session| {

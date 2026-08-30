@@ -171,6 +171,7 @@ export function synchronizeRecordingClips(
   const candidates: Clip[] = [];
   const keyboardCaptionSessions = [...canonicalComposition.keyboardCaptionSessions];
   let assetsChanged = false;
+  let hasKnownScreenSource = false;
 
   for (const track of editorData.tracks) {
     if (!['screen', 'camera', 'system-audio', 'microphone'].includes(track.kind) || track.status === 'failed') continue;
@@ -178,7 +179,9 @@ export function synchronizeRecordingClips(
       if (!segment.complete || !segment.exists || !segment.src) continue;
       const durationMs = safeDuration(segment, fallbackEndNs);
       const asset = sessionAsset(editorData, track, segment, durationMs);
-      if (!assets.has(asset.id)) {
+      const sourceWasAlreadyMaterialized = assets.has(asset.id);
+      if (track.kind === 'screen' && sourceWasAlreadyMaterialized) hasKnownScreenSource = true;
+      if (!sourceWasAlreadyMaterialized) {
         assets.set(asset.id, asset);
         assetsChanged = true;
       }
@@ -191,13 +194,18 @@ export function synchronizeRecordingClips(
               ? 40_000
               : 50_000;
       const clip = sessionClip(editorData, track, segment, durationMs, priority + candidates.length, defaults);
-      if (!existingIds.has(clip.id)) candidates.push(clip);
+      // A split or trimmed recording no longer owns the canonical source clip
+      // id, but it still references the immutable session asset. Treat that
+      // asset as the synchronization marker so reload never restores a second,
+      // overlapping full-length clip on top of the user's edited fragments.
+      if (!sourceWasAlreadyMaterialized && !existingIds.has(clip.id)) candidates.push(clip);
     }
   }
 
   if (
     !candidates.some((clip) => clip.kind === 'screen') &&
     !clips.some((clip) => clip.kind === 'screen') &&
+    !hasKnownScreenSource &&
     editorData.videoSrc
   ) {
     const durationMs = Math.max(40, milliseconds(editorData.manifest.durationNs));

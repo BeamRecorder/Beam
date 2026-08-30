@@ -3,8 +3,6 @@ import { ref, watch } from 'vue';
 import Button from '~/ui/button/Button.vue';
 import AdvancedButton from '~/ui/button/AdvancedButton.vue';
 import Select from '~/ui/select/Select.vue';
-import Popover from '~/ui/popover/Popover.vue';
-import HUD from '~/components/hud/HUD.vue';
 import Divider from '~/ui/divider/Divider.vue';
 import { Code, Video, Copy, Check, Terminal } from '@lucide/vue';
 import { useLocaleStore } from '~/stores/locale';
@@ -30,20 +28,25 @@ const toggleDevTools = () => {
   capture.toggleDevTools?.();
 };
 
-const emit = defineEmits<{
-  (e: 'back-to-hud'): void;
-  (e: 'open-recorder'): void;
-  (e: 'start-recording', config: any): void;
-}>();
-
 const isDevModeEnabled = ref(localStorage.getItem('dev_mode_enabled') === 'true');
 watch(isDevModeEnabled, (value) => {
   localStorage.setItem('dev_mode_enabled', String(value));
 });
 
-const handleStartRecordingFromPopover = (config: any, closePopover: () => void) => {
-  closePopover();
-  emit('start-recording', config);
+const recorderOpening = ref(false);
+const recorderLaunchError = ref('');
+const openRecorder = async () => {
+  if (recorderOpening.value) return;
+  recorderOpening.value = true;
+  recorderLaunchError.value = '';
+  try {
+    const opened = await capture.openRecorderFromEditor();
+    if (!opened) throw new Error(t('recorderUnavailable'));
+  } catch (error) {
+    recorderLaunchError.value = error instanceof Error ? error.message : String(error);
+  } finally {
+    recorderOpening.value = false;
+  }
 };
 
 const { copied: isCopiedSysInfo, copy: copySystemInfo } = useCopySystemInformation();
@@ -122,19 +125,19 @@ const { copied: isCopiedSysInfo, copy: copySystemInfo } = useCopySystemInformati
               <span class="dev-option-label">{{ t('recorderTool') }}</span>
               <span class="dev-option-desc">{{ t('recorderDesc') }}</span>
             </div>
-            <Popover align="right" direction="up" :match-trigger-width="false" flush>
-              <template #trigger>
-                <Button variant="secondary" size="sm" class="dev-action-btn">
-                  <template #icon><Video class="btn-icon" /></template>
-                  {{ t('launchRecorder') }}
-                </Button>
-              </template>
-              <template #default="{ close }">
-                <div class="hud-popover-content" @click.stop>
-                  <HUD embedded @start-recording="(config: any) => handleStartRecordingFromPopover(config, close)" />
-                </div>
-              </template>
-            </Popover>
+            <Button
+              variant="secondary"
+              size="sm"
+              class="dev-action-btn"
+              :loading="recorderOpening"
+              @click="openRecorder"
+            >
+              <template #icon><Video class="btn-icon" /></template>
+              {{ t('launchRecorder') }}
+            </Button>
+            <p v-if="recorderLaunchError" class="dev-option-error" role="alert">
+              {{ t('recorderLaunchError', { error: recorderLaunchError }) }}
+            </p>
           </div>
 
           <!-- System Info Copy Card -->
@@ -342,16 +345,10 @@ const { copied: isCopiedSysInfo, copy: copySystemInfo } = useCopySystemInformati
   color: var(--color-success) !important;
 }
 
-.hud-popover-content {
-  width: 336px;
-  max-height: 540px;
-  overflow-y: auto;
-  padding: 4px;
-}
-
-.hud-popover-content :deep(.hud-wrapper) {
-  width: 100% !important;
-  margin: 0 !important;
+.dev-option-error {
+  margin: 0;
+  font-size: 11px;
+  color: var(--color-error);
 }
 
 .dev-frame-fade-enter-active,

@@ -17,9 +17,10 @@ import { createAnimationFrameCoalescer } from './animation-frame-coalescer';
 import { useTimelineViewport } from './useTimelineViewport';
 import { useTimelineZoomInteractions } from './useTimelineZoomInteractions';
 import type { TimelineTracksEmits, TimelineTracksProps } from './timeline-tracks-types';
+import { timelineVisualScale } from './timeline-coordinate-space';
 import { groupVisualTimelineTracks, previewVisualTrackOrder } from './visual-timeline-tracks';
 import { visualMoveDeltaBounds } from '../../composition/engine/visual-track-layout';
-import { previewClipMove } from './timeline-composition-preview';
+import { shiftTimelineSelection } from '../../composition/timeline-edit-operations';
 import { useVisualTrackReorder } from './useVisualTrackReorder';
 import { useTimelineClipTrim } from './useTimelineClipTrim';
 import { groupImportedAudioTimelineTracks } from './audio-timeline-tracks';
@@ -94,6 +95,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     tracksViewportRef,
     ticksAreaRef,
     rulerWidth,
+    rulerLayoutWidth,
     tracksWidthStyle,
     scrubPreviewTime,
     displayedPlayheadTime,
@@ -144,11 +146,6 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     clip.groupId
       ? props.composition.clips.filter((entry: Clip) => entry.groupId === clip.groupId).map((entry: Clip) => entry.id)
       : [clip.id];
-  const previewLinked = (ids: string[], startMs: number, duration: number) => {
-    const next = { ...clipPreview.value };
-    for (const id of ids) next[id] = { startMs, durationMs: duration };
-    clipPreview.value = next;
-  };
   const clearLinkedPreview = (ids: string[]) => {
     const next = { ...clipPreview.value };
     for (const id of ids) delete next[id];
@@ -166,14 +163,25 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
         (scroll ? scroll.getBoundingClientRect().width : 0) ||
         1_000,
     );
-    return { baseDurationMs, width, msPerPx: baseDurationMs / width };
+    return { baseDurationMs, width, msPerPx: baseDurationMs / width, visualScale: timelineVisualScale(ticks) };
   };
 
   const beginClipMove = (event: PointerEvent, clip: Clip) => {
     if ((event.target as HTMLElement).closest('.trim-handle')) return;
     event.preventDefault();
     event.stopPropagation();
-    const ids = linkedIdsFor(clip);
+    const explicitlySelected = props.selectedClipIds?.includes(clip.id) ?? false;
+    const selectedIds = explicitlySelected && props.selectedClipIds?.length ? props.selectedClipIds : [clip.id];
+    const ids = [
+      ...new Set(
+        selectedIds.flatMap((id) => {
+          const selected = props.composition.clips.find((entry) => entry.id === id);
+          return selected ? linkedIdsFor(selected) : [];
+        }),
+      ),
+    ];
+    const zoomIds = explicitlySelected ? [...(props.selectedZoomIds ?? [])] : [];
+    const isMultipleSelection = selectedIds.length + zoomIds.length > 1;
     movingClipIds.value = ids;
     const initialVisualTrack = baseVisualTracks.value.find((track) =>
       track.clips.some((entry) => entry.id === clip.id),
@@ -182,9 +190,18 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     const initialVisualTrackIndex = initialVisualTrack ? initialVisualTrackOrder!.indexOf(initialVisualTrack.id) : -1;
     const pointerStartX = event.clientX;
     const initialScrollLeft = tracksScrollRef.value?.scrollLeft ?? 0;
-    const { baseDurationMs, width: baseRulerWidth, msPerPx } = resolveMsPerPx();
-    const originalStartMs = clip.timelineStartMs;
-    const clipLengthMs = clip.timelineDurationMs;
+    const { baseDurationMs, width: baseRulerWidth, msPerPx, visualScale } = resolveMsPerPx();
+    const selectedClips = props.composition.clips.filter((entry) => ids.includes(entry.id));
+    const selectedZooms = props.zoomElements.filter((zoom) => zoomIds.includes(zoom.id));
+    const selectionStartMs = Math.min(
+      ...selectedClips.map((entry) => entry.timelineStartMs),
+      ...selectedZooms.map((zoom) => zoom.startMs),
+    );
+    const selectionEndMs = Math.max(
+      ...selectedClips.map((entry) => entry.timelineStartMs + entry.timelineDurationMs),
+      ...selectedZooms.map((zoom) => zoom.endMs),
+    );
+    const selectionLengthMs = selectionEndMs - selectionStartMs;
     const moveBounds = visualMoveDeltaBounds(props.composition.clips, new Set(ids));
 
     const snapTargets = collectSnapTargets({
@@ -193,39 +210,57 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
       currentTime: displayedPlayheadTime.value,
       duration: props.duration,
       ignoreClipIds: ids,
+      ignoreZoomIds: zoomIds,
     });
     const snapThresholdMs = calculateSnapThresholdMs(baseDurationMs, baseRulerWidth);
 
-    let finalStartMs = originalStartMs;
+    let finalDeltaMs = 0;
     let lastVisualSwapTime = 0;
     const applyMove = (next: PointerEvent) => {
       updateAutoScroll(next.clientX);
       const currentScrollLeft = tracksScrollRef.value?.scrollLeft ?? 0;
-      const deltaPx = next.clientX - pointerStartX + (currentScrollLeft - initialScrollLeft);
-      const deltaMs = Math.max(moveBounds.min, Math.min(moveBounds.max, Math.round(deltaPx * msPerPx)));
-      const proposedStartMs = Math.max(0, originalStartMs + deltaMs);
+      const deltaPx = next.clientX - pointerStartX + (currentScrollLeft - initialScrollLeft) * visualScale;
+      const rawDeltaMs = Math.round(deltaPx * msPerPx);
+      const deltaMs = Math.max(-selectionStartMs, moveBounds.min, Math.min(moveBounds.max, rawDeltaMs));
+      const proposedStartMs = selectionStartMs + deltaMs;
       const snap =
         props.isSnappingEnabled !== false
-          ? snapSpan(proposedStartMs, clipLengthMs, snapTargets, snapThresholdMs)
+          ? snapSpan(proposedStartMs, selectionLengthMs, snapTargets, snapThresholdMs)
           : null;
       if (snap) {
-        finalStartMs = Math.max(
-          originalStartMs + moveBounds.min,
-          Math.min(originalStartMs + moveBounds.max, Math.max(0, snap.snappedStartMs)),
+        finalDeltaMs = Math.max(
+          -selectionStartMs,
+          moveBounds.min,
+          Math.min(moveBounds.max, snap.snappedStartMs - selectionStartMs),
         );
         activeSnapTimeMs.value = snap.targetMs;
       } else {
-        finalStartMs = proposedStartMs;
+        finalDeltaMs = deltaMs;
         activeSnapTimeMs.value = null;
       }
-      if (finalStartMs + clipLengthMs > baseDurationMs) {
-        previewDurationMs.value = finalStartMs + clipLengthMs;
+      if (selectionEndMs + finalDeltaMs > baseDurationMs) {
+        previewDurationMs.value = selectionEndMs + finalDeltaMs;
       } else {
         previewDurationMs.value = null;
       }
-      previewLinked(ids, finalStartMs, clipLengthMs);
-      emit('preview:composition', previewClipMove(props.composition, clip, finalStartMs));
-      if (initialVisualTrack && initialVisualTrackOrder) {
+      const preview = shiftTimelineSelection({
+        composition: props.composition,
+        zoomElements: props.zoomElements,
+        selection: { clipIds: ids, zoomIds },
+        deltaMs: finalDeltaMs,
+      });
+      clipPreview.value = Object.fromEntries(
+        preview.composition.clips
+          .filter((entry) => ids.includes(entry.id))
+          .map((entry) => [entry.id, { startMs: entry.timelineStartMs, durationMs: entry.timelineDurationMs }]),
+      );
+      zoomPreview.value = Object.fromEntries(
+        preview.zoomElements
+          .filter((zoom) => zoomIds.includes(zoom.id))
+          .map((zoom) => [zoom.id, { startMs: zoom.startMs, endMs: zoom.endMs }]),
+      );
+      emit('preview:composition', preview.composition);
+      if (!isMultipleSelection && initialVisualTrack && initialVisualTrackOrder) {
         const row = document.elementFromPoint?.(next.clientX, next.clientY)?.closest<HTMLElement>('.visual-track');
         const targetTrackId = row?.dataset.trackId;
         if (targetTrackId && targetTrackId !== initialVisualTrack.id) {
@@ -251,6 +286,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
       window.removeEventListener('pointerup', end);
       window.removeEventListener('pointercancel', cancel);
       clearLinkedPreview(ids);
+      for (const id of zoomIds) delete zoomPreview.value[id];
       previewDurationMs.value = null;
       movingClipIds.value = [];
       activeSnapTimeMs.value = null;
@@ -264,14 +300,16 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     };
     const end = () => {
       moveUpdates.flush();
-      if (initialVisualTrack && visualOrderPreview.value) {
+      if (!isMultipleSelection && initialVisualTrack && visualOrderPreview.value) {
         const finalVisualIndex = visualOrderPreview.value.indexOf(initialVisualTrack.id);
         if (finalVisualIndex >= 0 && finalVisualIndex !== initialVisualTrackIndex) {
           emit('reorder:clip', { id: clip.id, targetIndex: finalVisualIndex });
         }
       }
       cleanup();
-      if (finalStartMs !== originalStartMs) emit('move:clip', { id: clip.id, startMs: finalStartMs });
+      if (finalDeltaMs === 0) return;
+      if (isMultipleSelection) emit('move:selection', { clipIds: ids, zoomIds, deltaMs: finalDeltaMs });
+      else emit('move:clip', { id: clip.id, startMs: clip.timelineStartMs + finalDeltaMs });
     };
     const cancel = () => {
       moveUpdates.cancel();
@@ -305,6 +343,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     activeSnapTimeMs,
     previewDurationMs,
     zoomPreview,
+    clipPreview,
     activeTrimState,
     resolveMsPerPx,
     updateAutoScroll,
@@ -397,6 +436,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     tracksViewportRef,
     ticksAreaRef,
     rulerWidth,
+    rulerLayoutWidth,
     tracksWidthStyle,
     scrubPreviewTime,
     displayedPlayheadTime,

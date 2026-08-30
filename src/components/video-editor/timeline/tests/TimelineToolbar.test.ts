@@ -26,10 +26,10 @@ const BigSlider = {
 };
 const Button = {
   inheritAttrs: true,
-  props: ['disabled', 'iconOnly', 'tooltip', 'tooltipDisabled', 'icon'],
+  props: ['disabled', 'iconOnly', 'tooltip', 'tooltipDisabled', 'icon', 'variant'],
   emits: ['click'],
   template:
-    '<button v-bind="$attrs" :disabled="disabled" :data-icon-only="iconOnly ? \'true\' : undefined" :data-tooltip="tooltip || undefined" :data-tooltip-disabled="tooltipDisabled ? \'true\' : undefined" @click="$emit(\'click\')"><component v-if="icon" :is="icon" class="stub-icon" /><slot name="icon" /><slot /></button>',
+    '<button v-bind="$attrs" :disabled="disabled" :data-variant="variant" :data-icon-only="iconOnly ? \'true\' : undefined" :data-tooltip="tooltip || undefined" :data-tooltip-disabled="tooltipDisabled ? \'true\' : undefined" :data-icon="icon?.name" @click="$emit(\'click\', $event)"><component v-if="icon" :is="icon" class="stub-icon" /><slot name="icon" /><slot /></button>',
 };
 const PreviewQualityPopover = {
   props: ['modelValue', 'performanceSnapshot'],
@@ -37,14 +37,51 @@ const PreviewQualityPopover = {
   template:
     '<div class="preview-quality-popover-stub" :data-quality="modelValue" :data-status="performanceSnapshot?.status || \'idle\'" />',
 };
-const AddMenuWithItems = {
-  props: ['items'],
-  emits: ['select'],
-  template:
-    '<div class="add-menu-items"><button v-for="item in items" :key="item.id" :data-kind="item.id" @click="$emit(\'select\', item.id)">{{ item.label }}</button></div>',
-};
-
 describe('TimelineToolbar', () => {
+  it('emits canvas fullscreen and updates its tooltip and icon', async () => {
+    const wrapper = mount(TimelineToolbar, {
+      props: { currentTime: 0, duration: 100, isPlaying: false, zoomLevel: 100 },
+      global: { stubs: { PopoverMenuButton, Popover, BigSlider, Button } },
+    });
+    const fullscreen = () => wrapper.get('.toolbar-fullscreen-btn');
+
+    expect(fullscreen().attributes('data-tooltip')).toBe('Fullscreen preview');
+    const enterIcon = fullscreen().html();
+    expect(fullscreen().attributes('data-variant')).toBe('ghost');
+    (fullscreen().element as HTMLButtonElement).focus();
+    await fullscreen().trigger('click');
+    expect(wrapper.emitted('toggle:canvas-fullscreen')).toHaveLength(1);
+    expect(document.activeElement).not.toBe(fullscreen().element);
+
+    await wrapper.setProps({ isCanvasFullscreen: true });
+    expect(wrapper.find('.toolbar-fullscreen-btn').exists()).toBe(false);
+    expect(wrapper.find('.left-section').exists()).toBe(false);
+    expect(wrapper.find('.right-section').exists()).toBe(false);
+    expect(wrapper.get('.timeline-toolbar').classes()).toContain('is-canvas-fullscreen');
+    expect(wrapper.html()).not.toContain(enterIcon);
+  });
+
+  it('marks fullscreen state on the toolbar while keeping playback controls available', async () => {
+    const wrapper = mount(TimelineToolbar, {
+      props: {
+        currentTime: 0,
+        duration: 100,
+        isPlaying: false,
+        zoomLevel: 100,
+        isCanvasFullscreen: true,
+      },
+      global: { stubs: { PopoverMenuButton, Popover, BigSlider, Button, PreviewQualityPopover } },
+    });
+
+    expect(wrapper.get('.timeline-toolbar').classes()).toContain('is-canvas-fullscreen');
+    expect(wrapper.find('.toolbar-fullscreen-btn').exists()).toBe(false);
+    expect(wrapper.find('.left-section').exists()).toBe(false);
+    expect(wrapper.find('.right-section').exists()).toBe(false);
+    expect(wrapper.find('.center-section').exists()).toBe(true);
+    expect(wrapper.find('.play-pause-btn').exists()).toBe(true);
+    expect(wrapper.find('.time-display-container').exists()).toBe(true);
+  });
+
   it('passes the live performance snapshot to the preview quality control', () => {
     const wrapper = mount(TimelineToolbar, {
       props: {
@@ -76,7 +113,6 @@ describe('TimelineToolbar', () => {
     });
     expect(wrapper.get('.time-current').text()).toBe('01:05');
     expect(wrapper.get('.time-total').text()).toBe('02:05');
-    await wrapper.get('.add-menu-stub').trigger('click');
     await wrapper.findAll('.nav-controls button')[0].trigger('click');
     await wrapper.findAll('.nav-controls button')[1].trigger('click');
     await wrapper.findAll('.nav-controls button')[2].trigger('click');
@@ -90,29 +126,13 @@ describe('TimelineToolbar', () => {
     // BigSlider inside popover
     await wrapper.get('.big-slider-stub').trigger('click');
 
-    expect(wrapper.emitted('add:element')).toEqual([['caption']]);
+    expect(wrapper.find('.add-menu-stub').exists()).toBe(false);
     expect(wrapper.emitted('update:currentTime')).toEqual([[0], [125.5]]);
     expect(wrapper.emitted('update:isPlaying')).toEqual([[true]]);
     expect(wrapper.emitted('update:zoomLevel')).toContainEqual([100]);
     expect(wrapper.emitted('update:zoomLevel')).toContainEqual([150]);
     expect(wrapper.emitted('update:zoomLevel')).toContainEqual([250]);
     expect(wrapper.emitted('update:zoomLevel')).toContainEqual([275]);
-  });
-
-  it('exposes generated layers in Add and emits their selections', async () => {
-    const wrapper = mount(TimelineToolbar, {
-      props: { currentTime: 0, duration: 100, isPlaying: false, zoomLevel: 100 },
-      global: { stubs: { PopoverMenuButton: AddMenuWithItems, Popover, BigSlider, Button } },
-    });
-
-    const colorItem = wrapper.get('[data-kind="color"]');
-    expect(colorItem.text()).toBe('Color');
-
-    await colorItem.trigger('click');
-    const shapeItem = wrapper.get('[data-kind="shape"]');
-    expect(shapeItem.text()).toBe('Shapes & Arrows');
-    await shapeItem.trigger('click');
-    expect(wrapper.emitted('add:element')).toEqual([['color'], ['shape']]);
   });
 
   it('keeps the toolbar height while loading and swaps controls for an animated skeleton', async () => {

@@ -47,7 +47,8 @@
     "continuity": "Продолжение",
     "continuityDescription": "Растягивает размытую копию видео за вписанным содержимым.",
     "continuityBlur": "Размытие фона",
-    "continuityBrightness": "Яркость фона"
+    "continuityBrightness": "Яркость фона",
+    "borderColor": "Цвет границы"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "Загрузка предпросмотра камеры",
@@ -250,7 +251,9 @@
     "captionWordLabel": "Слово субтитров",
     "wordStartTimeLabel": "Время начала слова",
     "wordEndTimeLabel": "Время окончания слова",
-    "deleteCaptionClip": "Удалить клип субтитров"
+    "deleteCaptionClip": "Удалить клип субтитров",
+    "shadowColor": "Цвет тени",
+    "shadowBlur": "Размытие тени"
   },
   "CaptionPanel": {
     "aiAutoCaptioning": "Автоматические субтитры с ИИ",
@@ -308,7 +311,8 @@
     "unlink": "Отвязать",
     "deleteClip": "Удалить клип",
     "deleteVideo": "Удалить видео",
-    "deleteWebcam": "Удалить веб-камеру"
+    "deleteWebcam": "Удалить веб-камеру",
+    "shadowBlur": "Размытие тени"
   },
   "CursorPanel": {
     "cursorStyle": "Стиль курсора",
@@ -354,7 +358,14 @@
     "importSuccess": "Импортировано статических курсоров: {count}.",
     "importIgnoredAnimated": "Пропущенные анимированные роли: {roles}.",
     "importFailed": "Не удалось импортировать пакет курсоров.",
-    "discoveryFailed": "Не удалось открыть поиск пакетов."
+    "discoveryFailed": "Не удалось открыть поиск пакетов.",
+    "shadowBlur": "Размытие тени",
+    "shadowColor": "Цвет тени",
+    "presetNone": "Нет",
+    "presetSingle": "Одиночное кольцо",
+    "presetDouble": "Двойная волна",
+    "presetSolid": "Взрыв",
+    "rippleStyle": "Пульсирующий стиль"
   },
   "EditorCanvas": {
     "videoPreviewLoading": "Загрузка предпросмотра видео",
@@ -443,7 +454,14 @@
     "authorizingInteractions": "Включение",
     "dismissInteractionNotice": "Игнорировать",
     "interactionAccessSettingsHint": "Параметр «Записывать сочетания клавиш» находится в настройках.",
-    "dismissInteractionReminder": "Закрыть напоминание"
+    "dismissInteractionReminder": "Закрыть напоминание",
+    "copyFix": "Копировать исправление",
+    "interactionAccessGranted": "Доступ к взаимодействию включен",
+    "interactionAccessGrantedDescription": "Щелчки мышью и сочетания клавиш теперь можно записывать без сохранения набранного текста.",
+    "interactionAccessUnavailableTitle": "Запись взаимодействия недоступна.",
+    "interactionAccessUnavailableDescription": "Требуемый помощник по взаимодействию недоступен (Polkit или защищенный помощник по вводу). Устраните проблему, о которой сообщили, перед записью.",
+    "linuxRequirementsTitle": "Требуется установка Linux",
+    "recordingErrorTitle": "Ошибка записи"
   },
   "EditorPreparingHud": {
     "title": "Подготовка редактора",
@@ -590,6 +608,8 @@
     "recorderTool": "Видеорекордер",
     "recorderDesc": "Быстро открыть рекордер и начать новую запись",
     "launchRecorder": "Запустить рекордер",
+    "recorderUnavailable": "Рекордер уже используется.",
+    "recorderLaunchError": "Не удалось открыть рекордер: {error}",
     "sysInfoTool": "Сведения о системе",
     "sysInfoDesc": "Скопировать сведения о системе и версии приложения",
     "copySysInfo": "Скопировать сведения о системе",
@@ -680,6 +700,54 @@
     "joinDiscord": "Join Discord Community",
     "reopenHint": "You can revisit this onboarding anytime from Settings > General.",
     "dismiss": "Dismiss",
-    "emptyStateDesc": "Click on any control on the live HUD to test it."
+    "emptyStateDesc": "Click on any control on the live HUD to test it.",
+    "titlebarTitle": "Beam • Адаптация",
+    "minimize": "Свернуть",
+    "close": "Закрыть",
+    "welcomeSubtitle": "Устройство записи экрана студийного уровня, предназначенное для разработчиков, создателей и команд.",
+    "featureNativeTitle": "Родной рекордер экрана",
+    "featureNativeDesc": "Запишите свой экран, окно или выбранную область с четкостью без потерь.",
+    "featureAutoZoomTitle": "Автоматическое масштабирование",
+    "featureAutoZoomDesc": "Позволяет плавно увеличивать важные части.",
+    "featureCaptionsTitle": "AI-подписи",
+    "featureCaptionsDesc": "Используйте Whisper, чтобы расшифровать и создать субтитры всего видео за считанные секунды.",
+    "featureQualityTitle": "Профессиональное качество",
+    "featureQualityDesc": "Фоны, тени веб-камеры и эффекты курсора, которые выделяют ваши записи.",
+    "tryControlTip": "Живое интерактивное управление",
+    "hudTopbarTitle": "Настройки и ярлыки",
+    "hudTopbarDesc": "Настраивайте горячие клавиши, темы и глобальные настройки.",
+    "hudProjectsTitle": "Проекты",
+    "hudProjectsDesc": "Находите и управляйте всеми своими прошлыми записанными демо в одном месте.",
+    "hudTabsTitle": "Режимы съемки",
+    "hudTabsDesc": "Переключение между полноэкранной записью и захватом окна.",
+    "hudSourceTitle": "Источник и обрезка",
+    "hudSourceDesc": "Выберите дисплей, окно или обрежьте произвольную область на экране.",
+    "hudCameraTitle": "Веб-камера",
+    "hudCameraDesc": "Записывайте свою веб-камеру с закругленными углами, тенями и плавным изменением положения в редакторе.",
+    "hudTeleprompterTitle": "Телесуфлер",
+    "hudTeleprompterDesc": "Читайте сценарий прямо на экране, чтобы никогда не забывать, что вы говорите.",
+    "hudAudioTitle": "Микрофон",
+    "hudAudioDesc": "Запишите свой микрофон с помощью мониторинга уровня звука в реальном времени.",
+    "hudSystemAudioTitle": "Системный звук",
+    "hudSystemAudioDesc": "Захватывайте внутренние звуки и аудио из приложений на вашем компьютере.",
+    "hudRecordTitle": "Запись",
+    "hudRecordDesc": "Начните запись мгновенно с помощью дополнительного таймера обратного отсчета.",
+    "badgeAudio": "Аудио",
+    "badgeCamera": "Камера",
+    "badgeScript": "Скрипт",
+    "badgeSystem": "Система",
+    "badgeDisplay": "Дисплей",
+    "badgeModes": "Режимы",
+    "badgeProjects": "Проекты",
+    "badgeSettings": "Настройки",
+    "badgeAction": "Действие",
+    "versionTitle": "Версия",
+    "upToDate": "Актуально",
+    "starTitle": "Открытый исходный код",
+    "starDesc": "Бесплатный проект с открытым исходным кодом на GitHub",
+    "starButton": "Звезда на GitHub",
+    "discordTitle": "Сообщество",
+    "discordDesc": "Получайте помощь, отзывы и обновления функций",
+    "discordButton": "Присоединяйтесь к Discord"
   }
 }

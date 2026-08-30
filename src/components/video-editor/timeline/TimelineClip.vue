@@ -12,7 +12,7 @@ import type { TimelineClipProps } from './timeline-clip-types';
 const { t } = useTranslate('TimelineTracks');
 const props = defineProps<TimelineClipProps>();
 const emit = defineEmits<{
-  (event: 'select'): void;
+  (event: 'select', value: MouseEvent): void;
   (event: 'move', value: PointerEvent): void;
   (event: 'trim', value: { event: PointerEvent; edge: 'start' | 'end' }): void;
   (event: 'contextmenu', value: MouseEvent): void;
@@ -125,7 +125,7 @@ onUnmounted(() => stopMarquee());
     :class="[`kind-${clip.kind}`, { selected, disabled: !clip.enabled, 'trim-at-limit': trimState?.atLimit }]"
     :data-paste-highlight="pasteHighlight || undefined"
     :style="clipStyle"
-    @click.stop="emit('select')"
+    @click.stop="emit('select', $event)"
     @contextmenu.prevent.stop="emit('contextmenu', $event)"
     @pointerdown="emit('move', $event)"
     @pointerenter="startMarquee"

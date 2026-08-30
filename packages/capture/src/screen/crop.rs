@@ -158,4 +158,53 @@ mod tests {
             }
         );
     }
+
+    #[test]
+    fn derives_region_pixels_from_the_actual_scaled_frame_dimensions() {
+        // Windows Graphics Capture can deliver a frame whose pixel size is
+        // different from the logical monitor size reported to the UI (for
+        // example with display scaling enabled). The normalized region must
+        // be resolved against the frame that will actually be cropped.
+        let crop = normalize_crop(region(0.25, 0.125, 0.5, 0.5), 1536, 864).expect("valid crop");
+
+        assert_eq!(
+            crop,
+            PixelCrop {
+                start_x: 384,
+                start_y: 108,
+                end_x: 1152,
+                end_y: 540,
+            }
+        );
+    }
+
+    #[test]
+    fn scaled_frame_crop_stays_inside_the_frame_and_matches_encoder_dimensions() {
+        let frame_width = 1536;
+        let frame_height = 864;
+        let crop = normalize_crop(region(0.75, 0.75, 0.25, 0.25), frame_width, frame_height)
+            .expect("valid crop");
+
+        assert_eq!((crop.width(), crop.height()), (384, 216));
+        assert_eq!((crop.width() % 2, crop.height() % 2), (0, 0));
+        assert!(crop.end_x <= frame_width);
+        assert!(crop.end_y <= frame_height);
+    }
+
+    #[test]
+    fn frame_dimension_mismatch_changes_crop_dimensions_instead_of_using_display_size() {
+        let region = region(0.0, 0.0, 0.5, 0.5);
+        let logical_display_crop = normalize_crop(region, 1920, 1080).expect("valid crop");
+        let actual_frame_crop = normalize_crop(region, 1536, 864).expect("valid crop");
+
+        assert_eq!(
+            (logical_display_crop.width(), logical_display_crop.height()),
+            (960, 540)
+        );
+        assert_eq!(
+            (actual_frame_crop.width(), actual_frame_crop.height()),
+            (768, 432)
+        );
+        assert_ne!(logical_display_crop, actual_frame_crop);
+    }
 }

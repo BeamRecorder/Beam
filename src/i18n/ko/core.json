@@ -47,7 +47,8 @@
     "continuity": "연속 배경",
     "continuityDescription": "맞춰진 콘텐츠 뒤에 흐린 동영상 사본을 확장합니다.",
     "continuityBlur": "배경 흐림",
-    "continuityBrightness": "배경 밝기"
+    "continuityBrightness": "배경 밝기",
+    "borderColor": "테두리 색상"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "카메라 미리 보기 로드 중",
@@ -250,7 +251,9 @@
     "captionWordLabel": "자막 단어",
     "wordStartTimeLabel": "단어 시작 시간",
     "wordEndTimeLabel": "단어 종료 시간",
-    "deleteCaptionClip": "자막 클립 삭제"
+    "deleteCaptionClip": "자막 클립 삭제",
+    "shadowColor": "그림자 색상",
+    "shadowBlur": "그림자 흐림"
   },
   "CaptionPanel": {
     "aiAutoCaptioning": "AI 자동 자막",
@@ -308,7 +311,8 @@
     "unlink": "연결 해제",
     "deleteClip": "클립 삭제",
     "deleteVideo": "비디오 삭제",
-    "deleteWebcam": "웹캠 삭제"
+    "deleteWebcam": "웹캠 삭제",
+    "shadowBlur": "그림자 흐림"
   },
   "CursorPanel": {
     "cursorStyle": "커서 스타일",
@@ -354,7 +358,14 @@
     "importSuccess": "정적 커서 {count}개를 가져왔습니다.",
     "importIgnoredAnimated": "무시된 애니메이션 역할: {roles}.",
     "importFailed": "커서 팩을 가져올 수 없습니다.",
-    "discoveryFailed": "팩 검색을 열 수 없습니다."
+    "discoveryFailed": "팩 검색을 열 수 없습니다.",
+    "shadowBlur": "그림자 흐림",
+    "shadowColor": "그림자 색상",
+    "presetNone": "없음",
+    "presetSingle": "단일 링",
+    "presetDouble": "더블 웨이브",
+    "presetSolid": "버스트",
+    "rippleStyle": "잔물결 스타일"
   },
   "EditorCanvas": {
     "videoPreviewLoading": "비디오 미리보기 로드 중",
@@ -443,7 +454,14 @@
     "authorizingInteractions": "활성화 중",
     "dismissInteractionNotice": "나중에",
     "interactionAccessSettingsHint": "설정에서 키보드 단축키 기록을 찾을 수 있습니다.",
-    "dismissInteractionReminder": "알림 닫기"
+    "dismissInteractionReminder": "알림 닫기",
+    "copyFix": "수정사항 복사",
+    "interactionAccessGranted": "상호작용 액세스가 활성화되었습니다.",
+    "interactionAccessGrantedDescription": "이제 입력한 텍스트를 저장하지 않고도 마우스 클릭과 키보드 단축키를 기록할 수 있습니다.",
+    "interactionAccessUnavailableTitle": "상호작용 녹음을 사용할 수 없습니다.",
+    "interactionAccessUnavailableDescription": "필수 상호 작용 도우미를 사용할 수 없습니다(Polkit 또는 보호된 입력 도우미). 녹화하기 전에 보고된 문제를 해결하세요.",
+    "linuxRequirementsTitle": "리눅스 설정 필요",
+    "recordingErrorTitle": "녹화 오류"
   },
   "EditorPreparingHud": {
     "title": "편집기 준비 중",
@@ -590,6 +608,8 @@
     "recorderTool": "동영상 녹화기",
     "recorderDesc": "녹화기를 빠르게 열어 새 캡처 시작",
     "launchRecorder": "녹화기 실행",
+    "recorderUnavailable": "녹화기가 이미 사용 중입니다.",
+    "recorderLaunchError": "녹화기를 열 수 없습니다: {error}",
     "sysInfoTool": "시스템 정보",
     "sysInfoDesc": "시스템 세부 정보와 앱 버전 정보 복사",
     "copySysInfo": "시스템 정보 복사",
@@ -680,6 +700,54 @@
     "joinDiscord": "Join Discord Community",
     "reopenHint": "You can revisit this onboarding anytime from Settings > General.",
     "dismiss": "Dismiss",
-    "emptyStateDesc": "Click on any control on the live HUD to test it."
+    "emptyStateDesc": "Click on any control on the live HUD to test it.",
+    "titlebarTitle": "빔 • 온보딩",
+    "minimize": "최소화",
+    "close": "닫기",
+    "welcomeSubtitle": "개발자, 제작자, 팀을 위해 설계된 스튜디오급 스크린 레코더입니다.",
+    "featureNativeTitle": "네이티브 스크린 레코더",
+    "featureNativeDesc": "화면, 창 또는 선택한 영역을 무손실 선명도로 기록하세요.",
+    "featureAutoZoomTitle": "자동 줌",
+    "featureAutoZoomDesc": "중요한 부분을 원활하게 확대할 수 있습니다.",
+    "featureCaptionsTitle": "AI 캡션",
+    "featureCaptionsDesc": "Whisper를 사용하면 몇 초 만에 전체 동영상의 내용을 기록하고 자막을 추가할 수 있습니다.",
+    "featureQualityTitle": "전문적인 품질",
+    "featureQualityDesc": "녹음 내용을 돋보이게 하는 배경, 웹캠 그림자 및 커서 효과.",
+    "tryControlTip": "실시간 대화형 제어",
+    "hudTopbarTitle": "설정 및 바로가기",
+    "hudTopbarDesc": "단축키, 테마, 전역 기본 설정을 사용자 정의하세요.",
+    "hudProjectsTitle": "프로젝트",
+    "hudProjectsDesc": "과거에 녹음한 모든 데모를 한 곳에서 찾고 관리하세요.",
+    "hudTabsTitle": "캡처 모드",
+    "hudTabsDesc": "전체 화면 녹화와 창 캡처 간을 전환합니다.",
+    "hudSourceTitle": "소스 및 자르기",
+    "hudSourceDesc": "디스플레이, 창을 선택하거나 화면에서 사용자 정의 영역을 자릅니다.",
+    "hudCameraTitle": "웹캠",
+    "hudCameraDesc": "편집기에서 둥근 모서리, 그림자 및 부드러운 위치 조정으로 웹캠을 녹화하세요.",
+    "hudTeleprompterTitle": "텔레프롬프터",
+    "hudTeleprompterDesc": "화면에서 직접 스크립트를 읽으면 말하는 내용을 절대 잊지 않을 수 있습니다.",
+    "hudAudioTitle": "마이크",
+    "hudAudioDesc": "실시간 오디오 레벨 모니터링으로 마이크를 녹음하세요.",
+    "hudSystemAudioTitle": "시스템 오디오",
+    "hudSystemAudioDesc": "컴퓨터의 앱에서 내부 소리와 오디오를 캡처합니다.",
+    "hudRecordTitle": "녹음",
+    "hudRecordDesc": "옵션으로 제공되는 카운트다운 타이머를 사용하여 즉시 녹화를 시작하세요.",
+    "badgeAudio": "오디오",
+    "badgeCamera": "카메라",
+    "badgeScript": "스크립트",
+    "badgeSystem": "시스템",
+    "badgeDisplay": "디스플레이",
+    "badgeModes": "모드",
+    "badgeProjects": "프로젝트",
+    "badgeSettings": "설정",
+    "badgeAction": "액션",
+    "versionTitle": "버전",
+    "upToDate": "최신",
+    "starTitle": "오픈 소스",
+    "starDesc": "GitHub의 무료 및 오픈 소스 프로젝트",
+    "starButton": "GitHub의 스타",
+    "discordTitle": "커뮤니티",
+    "discordDesc": "도움말, 피드백, 기능 업데이트 받기",
+    "discordButton": "디스코드에 참여하세요"
   }
 }

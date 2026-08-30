@@ -47,7 +47,8 @@
     "continuity": "Продължение",
     "continuityDescription": "Разширява замъглено копие на видеото зад побраното съдържание.",
     "continuityBlur": "Замъгляване на фона",
-    "continuityBrightness": "Яркост на фона"
+    "continuityBrightness": "Яркост на фона",
+    "borderColor": "Цвят на рамката"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "Зареждане на визуализацията от камерата",
@@ -250,7 +251,9 @@
     "captionWordLabel": "Дума от субтитрите",
     "wordStartTimeLabel": "Начален момент на думата",
     "wordEndTimeLabel": "Краен момент на думата",
-    "deleteCaptionClip": "Изтриване на клипа със субтитри"
+    "deleteCaptionClip": "Изтриване на клипа със субтитри",
+    "shadowColor": "Цвят на сянката",
+    "shadowBlur": "Замъгляване на сянката"
   },
   "CaptionPanel": {
     "aiAutoCaptioning": "Автоматични субтитри с AI",
@@ -308,7 +311,8 @@
     "unlink": "Премахване на връзката",
     "deleteClip": "Изтриване на клипа",
     "deleteVideo": "Изтриване на видеото",
-    "deleteWebcam": "Изтриване на уебкамерата"
+    "deleteWebcam": "Изтриване на уебкамерата",
+    "shadowBlur": "Замъгляване на сянката"
   },
   "CursorPanel": {
     "cursorStyle": "Стил на курсора",
@@ -354,7 +358,14 @@
     "importSuccess": "Импортирани са {count} статични курсора.",
     "importIgnoredAnimated": "Игнорирани анимирани роли: {roles}.",
     "importFailed": "Пакетът курсори не можа да бъде импортиран.",
-    "discoveryFailed": "Търсенето на пакети не можа да се отвори."
+    "discoveryFailed": "Търсенето на пакети не можа да се отвори.",
+    "shadowBlur": "Размазване на сянката",
+    "shadowColor": "Цвят на сянката",
+    "presetNone": "Няма",
+    "presetSingle": "Единичен пръстен",
+    "presetDouble": "Двойна вълна",
+    "presetSolid": "Избухване",
+    "rippleStyle": "Рипъл стил"
   },
   "EditorCanvas": {
     "videoPreviewLoading": "Зареждане на видео визуализация",
@@ -443,7 +454,14 @@
     "authorizingInteractions": "Активиране",
     "dismissInteractionNotice": "Игнориране",
     "interactionAccessSettingsHint": "Намерете Запис на клавишни комбинации в Настройки.",
-    "dismissInteractionReminder": "Затваряне на напомнянето"
+    "dismissInteractionReminder": "Затваряне на напомнянето",
+    "copyFix": "Коригиране на копие",
+    "interactionAccessGranted": "Достъпът за взаимодействие е разрешен",
+    "interactionAccessGrantedDescription": "Щракванията на мишката и клавишните комбинации вече могат да се записват, без да се съхранява въведен текст.",
+    "interactionAccessUnavailableTitle": "Записът на взаимодействието не е наличен",
+    "interactionAccessUnavailableDescription": "Необходимият помощник за взаимодействие не е наличен (Polkit или защитеният помощник за въвеждане). Разрешете докладвания проблем преди запис.",
+    "linuxRequirementsTitle": "Необходима е настройка на Linux",
+    "recordingErrorTitle": "Грешка при записа"
   },
   "EditorPreparingHud": {
     "title": "Подготовка на редактора",
@@ -590,6 +608,8 @@
     "recorderTool": "Видеорекордер",
     "recorderDesc": "Бърз достъп до рекордера за нов запис",
     "launchRecorder": "Стартиране на рекордера",
+    "recorderUnavailable": "Рекордерът вече се използва.",
+    "recorderLaunchError": "Рекордерът не може да бъде отворен: {error}",
     "sysInfoTool": "Системна информация",
     "sysInfoDesc": "Копиране на системните данни и версията на приложението",
     "copySysInfo": "Копиране на системната информация",
@@ -680,6 +700,54 @@
     "joinDiscord": "Join Discord Community",
     "reopenHint": "You can revisit this onboarding anytime from Settings > General.",
     "dismiss": "Dismiss",
-    "emptyStateDesc": "Click on any control on the live HUD to test it."
+    "emptyStateDesc": "Щракнете върху произволен контрол в HUD на живо, за да го изпробвате.",
+    "titlebarTitle": "Beam • Включване",
+    "minimize": "Минимизиране",
+    "close": "затвори",
+    "welcomeSubtitle": "Записващо устройство за екран от студиен клас, предназначено за разработчици, творци и екипи.",
+    "featureNativeTitle": "Нативно устройство за запис на екрана",
+    "featureNativeDesc": "Запишете вашия екран, прозорец или избран регион с яснота без загуба.",
+    "featureAutoZoomTitle": "Автоматични мащаби",
+    "featureAutoZoomDesc": "Позволява ви да увеличавате плавно важните части.",
+    "featureCaptionsTitle": "AI надписи",
+    "featureCaptionsDesc": "Използвайте Whisper за транскрибиране и субтитри на цял видеоклип за секунди.",
+    "featureQualityTitle": "Професионално качество",
+    "featureQualityDesc": "Фонове, сенки на уеб камера и ефекти на курсора, които правят вашите записи да изпъкват.",
+    "tryControlTip": "Интерактивен контрол на живо",
+    "hudTopbarTitle": "Настройки и преки пътища",
+    "hudTopbarDesc": "Персонализирайте клавишни комбинации, теми и глобални предпочитания.",
+    "hudProjectsTitle": "проекти",
+    "hudProjectsDesc": "Намерете и управлявайте всичките си минали записани демонстрации на едно място.",
+    "hudTabsTitle": "Режими на заснемане",
+    "hudTabsDesc": "Превключване между запис на цял екран и заснемане на прозорец.",
+    "hudSourceTitle": "Източник и изрязване",
+    "hudSourceDesc": "Изберете дисплей, прозорец или изрежете персонализирана област на екрана.",
+    "hudCameraTitle": "Уеб камера",
+    "hudCameraDesc": "Запишете вашата уеб камера със заоблени ъгли, сенки и плавно препозициониране в редактора.",
+    "hudTeleprompterTitle": "Телесуфлер",
+    "hudTeleprompterDesc": "Прочетете сценария си директно на екрана, за да не забравите никога какво казвате.",
+    "hudAudioTitle": "Микрофон",
+    "hudAudioDesc": "Запишете своя микрофон с мониторинг на нивото на звука на живо.",
+    "hudSystemAudioTitle": "Системно аудио",
+    "hudSystemAudioDesc": "Заснемайте вътрешни звуци и аудио от приложения на вашия компютър.",
+    "hudRecordTitle": "Записване",
+    "hudRecordDesc": "Започнете запис незабавно с допълнителен таймер за обратно отброяване.",
+    "badgeAudio": "аудио",
+    "badgeCamera": "Камера",
+    "badgeScript": "Скрипт",
+    "badgeSystem": "система",
+    "badgeDisplay": "Дисплей",
+    "badgeModes": "Режими",
+    "badgeProjects": "проекти",
+    "badgeSettings": "Настройки",
+    "badgeAction": "Действие",
+    "versionTitle": "Версия",
+    "upToDate": "В крак с времето",
+    "starTitle": "Отворен код",
+    "starDesc": "Безплатен проект с отворен код в GitHub",
+    "starButton": "Звезда в GitHub",
+    "discordTitle": "Общност",
+    "discordDesc": "Получете помощ, обратна връзка и актуализации на функции",
+    "discordButton": "Присъединете се към Discord"
   }
 }

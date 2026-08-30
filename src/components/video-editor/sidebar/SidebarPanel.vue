@@ -8,9 +8,13 @@ import Tooltip from '~/ui/tooltip/Tooltip.vue';
 
 const { t } = useTranslate('SidebarPanel');
 
-defineProps<{
-  activeTab: string;
-}>();
+withDefaults(
+  defineProps<{
+    activeTab: string;
+    panelOpen?: boolean;
+  }>(),
+  { panelOpen: true },
+);
 
 const emit = defineEmits<{
   (e: 'select-tab', tab: string): void;
@@ -65,6 +69,7 @@ const menuItems = computed(() => [
             class="nav-btn"
             :class="{ active: activeTab === item.id }"
             :aria-label="item.label"
+            :aria-expanded="activeTab === item.id ? panelOpen : undefined"
             :title="item.label"
             @click="emit('select-tab', item.id)"
           >
@@ -88,6 +93,7 @@ const menuItems = computed(() => [
           class="nav-btn footer-btn"
           :class="{ active: activeTab === 'settings' }"
           :aria-label="t('settings')"
+          :aria-expanded="activeTab === 'settings' ? panelOpen : undefined"
           :title="t('settings')"
           @click="emit('select-tab', 'settings')"
         >

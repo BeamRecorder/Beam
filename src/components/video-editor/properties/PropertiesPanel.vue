@@ -21,7 +21,9 @@ import { setClipTransition } from '../composition/engine/clip-engine';
 import { EMPTY_CLIP_TRANSITIONS, normalizeCanvasTransitions } from '~/media/shared/clip-transitions';
 import ScrollShadow from '~/ui/scroll-shadow/ScrollShadow.vue';
 import {
+  DEFAULT_ZOOM_AUTO_FOLLOW,
   DEFAULT_ZOOM_MOTION_BLUR,
+  type ZoomAutoFollowSettings,
   type ZoomElement,
   type ZoomMotionBlurSettings,
 } from '~/components/video-editor/zoom/zoom-types';
@@ -94,6 +96,7 @@ const props = withDefaults(
     selectedZoom: ZoomElement | null;
     canGenerateZooms: boolean;
     hasAutomaticZooms: boolean;
+    zoomAutoFollow?: ZoomAutoFollowSettings;
     zoomMotionBlur?: ZoomMotionBlurSettings;
     composition: ClipComposition;
     editorData?: ProjectEditorData | null;
@@ -106,6 +109,7 @@ const props = withDefaults(
     hasMicAudio: false,
     selectedClipIds: () => [],
     selectedZoomIds: () => [],
+    zoomAutoFollow: () => ({ ...DEFAULT_ZOOM_AUTO_FOLLOW }),
     zoomMotionBlur: () => ({ ...DEFAULT_ZOOM_MOTION_BLUR }),
   },
 );
@@ -199,6 +203,7 @@ const emit = defineEmits<{
   (event: 'import:background', value: BackgroundMedia): void;
   (event: 'update:canvas', value: OutputCanvasSettings): void;
   (event: 'update:zoom', value: ZoomElement): void;
+  (event: 'update:zoomAutoFollow', value: ZoomAutoFollowSettings): void;
   (event: 'update:zoomMotionBlur', value: ZoomMotionBlurSettings): void;
   (event: 'delete:zoom'): void;
   (event: 'generate:zooms'): void;
@@ -254,7 +259,6 @@ const emit = defineEmits<{
   (event: 'delete:mic-audio'): void;
   (event: 'split-clip'): void;
   (event: 'back-to-hud'): void;
-  (event: 'start-recording', config: any): void;
 }>();
 const previewCaption = (clip: CaptionClip | null) => {
   if (!clip) return emit('preview:composition', null);
@@ -472,16 +476,14 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
               :can-generate="canGenerateZooms"
               :has-automatic-zooms="hasAutomaticZooms"
               :motion-blur="zoomMotionBlur"
+              :auto-follow="zoomAutoFollow"
               @update="emit('update:zoom', $event)"
               @update:motion-blur="emit('update:zoomMotionBlur', $event)"
+              @update:auto-follow="emit('update:zoomAutoFollow', $event)"
               @delete="emit('delete:zoom')"
               @generate="emit('generate:zooms')"
             />
-            <SettingsPanel
-              v-else-if="activeTab === 'settings'"
-              @back-to-hud="emit('back-to-hud')"
-              @start-recording="emit('start-recording', $event)"
-            />
+            <SettingsPanel v-else-if="activeTab === 'settings'" />
             <CaptionPanel
               v-show="activeTab === 'caption'"
               :composition="composition"

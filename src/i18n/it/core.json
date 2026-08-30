@@ -47,7 +47,8 @@
     "continuity": "Continuità",
     "continuityDescription": "Estende una copia sfocata del video dietro il contenuto adattato.",
     "continuityBlur": "Sfocatura dello sfondo",
-    "continuityBrightness": "Luminosità dello sfondo"
+    "continuityBrightness": "Luminosità dello sfondo",
+    "borderColor": "Colore del bordo"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "Caricamento anteprima fotocamera",
@@ -250,7 +251,9 @@
     "captionWordLabel": "Parola della didascalia",
     "wordStartTimeLabel": "Ora di inizio parola",
     "wordEndTimeLabel": "Ora di fine parola",
-    "deleteCaptionClip": "Elimina clip didascalia"
+    "deleteCaptionClip": "Elimina clip didascalia",
+    "shadowColor": "Colore ombra",
+    "shadowBlur": "Sfocatura ombra"
   },
   "CaptionPanel": {
     "aiAutoCaptioning": "Didascalie automatiche IA",
@@ -308,7 +311,8 @@
     "unlink": "Scollega",
     "deleteClip": "Elimina clip",
     "deleteVideo": "Elimina video",
-    "deleteWebcam": "Elimina webcam"
+    "deleteWebcam": "Elimina webcam",
+    "shadowBlur": "Sfocatura ombra"
   },
   "CursorPanel": {
     "cursorStyle": "Stile cursore",
@@ -354,7 +358,14 @@
     "importSuccess": "Importati {count} cursori statici.",
     "importIgnoredAnimated": "Ruoli animati ignorati: {roles}.",
     "importFailed": "Impossibile importare il pacchetto cursori.",
-    "discoveryFailed": "Impossibile aprire la ricerca dei pacchetti."
+    "discoveryFailed": "Impossibile aprire la ricerca dei pacchetti.",
+    "shadowBlur": "Sfocatura ombra",
+    "shadowColor": "Colore ombra",
+    "presetNone": "Nessuno",
+    "presetSingle": "Anello singolo",
+    "presetDouble": "Doppia Onda",
+    "presetSolid": "Scoppio",
+    "rippleStyle": "Stile ondulato"
   },
   "EditorCanvas": {
     "videoPreviewLoading": "Caricamento dell'anteprima video",
@@ -443,7 +454,14 @@
     "authorizingInteractions": "Abilitazione",
     "dismissInteractionNotice": "Ignora",
     "interactionAccessSettingsHint": "Trova Registra scorciatoie da tastiera nelle Impostazioni.",
-    "dismissInteractionReminder": "Chiudi promemoria"
+    "dismissInteractionReminder": "Chiudi promemoria",
+    "copyFix": "Copia correzione",
+    "interactionAccessGranted": "Accesso all'interazione abilitato",
+    "interactionAccessGrantedDescription": "I clic del mouse e le scorciatoie da tastiera possono ora essere registrati senza memorizzare il testo digitato.",
+    "interactionAccessUnavailableTitle": "Registrazione dell'interazione non disponibile",
+    "interactionAccessUnavailableDescription": "Un assistente di interazione richiesto non è disponibile (Polkit o l'assistente di input protetto). Risolvi il problema segnalato prima della registrazione.",
+    "linuxRequirementsTitle": "È richiesta la configurazione di Linux",
+    "recordingErrorTitle": "Errore di registrazione"
   },
   "EditorPreparingHud": {
     "title": "Preparazione dell’editor",
@@ -590,6 +608,8 @@
     "recorderTool": "Registratore video",
     "recorderDesc": "Accedi rapidamente al registratore per iniziare una nuova acquisizione",
     "launchRecorder": "Avvia registratore",
+    "recorderUnavailable": "Il registratore è già in uso.",
+    "recorderLaunchError": "Impossibile aprire il registratore: {error}",
     "sysInfoTool": "Informazioni di sistema",
     "sysInfoDesc": "Copia dettagli di sistema e versione dell'applicazione",
     "copySysInfo": "Copia informazioni di sistema",
@@ -680,6 +700,54 @@
     "joinDiscord": "Join Discord Community",
     "reopenHint": "You can revisit this onboarding anytime from Settings > General.",
     "dismiss": "Dismiss",
-    "emptyStateDesc": "Click on any control on the live HUD to test it."
+    "emptyStateDesc": "Click on any control on the live HUD to test it.",
+    "titlebarTitle": "Fascio • Onboarding",
+    "minimize": "Ridurre al minimo",
+    "close": "Chiudi",
+    "welcomeSubtitle": "Registratore di schermo di livello studio progettato per sviluppatori, creatori e team.",
+    "featureNativeTitle": "Registratore dello schermo nativo",
+    "featureNativeDesc": "Registra lo schermo, la finestra o l'area selezionata con chiarezza senza perdite.",
+    "featureAutoZoomTitle": "Zoom automatici",
+    "featureAutoZoomDesc": "Consente di ingrandire agevolmente le parti importanti.",
+    "featureCaptionsTitle": "Sottotitoli IA",
+    "featureCaptionsDesc": "Usa Whisper per trascrivere e sottotitolare un intero video in pochi secondi.",
+    "featureQualityTitle": "Qualità professionale",
+    "featureQualityDesc": "Sfondi, ombre della webcam ed effetti cursore che fanno risaltare le tue registrazioni.",
+    "tryControlTip": "Controllo interattivo dal vivo",
+    "hudTopbarTitle": "Impostazioni e scorciatoie",
+    "hudTopbarDesc": "Personalizza tasti di scelta rapida, temi e preferenze globali.",
+    "hudProjectsTitle": "Progetti",
+    "hudProjectsDesc": "Trova e gestisci tutte le demo registrate in passato in un unico posto.",
+    "hudTabsTitle": "Modalità di acquisizione",
+    "hudTabsDesc": "Passa dalla registrazione a schermo intero all'acquisizione della finestra.",
+    "hudSourceTitle": "Origine e ritaglio",
+    "hudSourceDesc": "Seleziona un display, una finestra o ritaglia un'area personalizzata sullo schermo.",
+    "hudCameraTitle": "Webcam",
+    "hudCameraDesc": "Registra la tua webcam con angoli arrotondati, ombre e riposizionamento fluido nell'editor.",
+    "hudTeleprompterTitle": "Teleprompter",
+    "hudTeleprompterDesc": "Leggi il tuo script direttamente sullo schermo in modo da non dimenticare mai quello che stai dicendo.",
+    "hudAudioTitle": "Microfono",
+    "hudAudioDesc": "Registra il tuo microfono con il monitoraggio del livello audio dal vivo.",
+    "hudSystemAudioTitle": "Audio del sistema",
+    "hudSystemAudioDesc": "Cattura suoni e audio interni dalle app sul tuo computer.",
+    "hudRecordTitle": "Registrazione",
+    "hudRecordDesc": "Inizia subito la registrazione con un timer per il conto alla rovescia opzionale.",
+    "badgeAudio": "Audio",
+    "badgeCamera": "Fotocamera",
+    "badgeScript": "Copione",
+    "badgeSystem": "Sistema",
+    "badgeDisplay": "Visualizzazione",
+    "badgeModes": "Modalità",
+    "badgeProjects": "Progetti",
+    "badgeSettings": "Impostazioni",
+    "badgeAction": "Azione",
+    "versionTitle": "Versione",
+    "upToDate": "Aggiornato",
+    "starTitle": "Open Source",
+    "starDesc": "Progetto gratuito e open source su GitHub",
+    "starButton": "Stella su GitHub",
+    "discordTitle": "Comunità",
+    "discordDesc": "Ottieni assistenza, feedback e aggiornamenti delle funzionalità",
+    "discordButton": "Unisciti a Discord"
   }
 }

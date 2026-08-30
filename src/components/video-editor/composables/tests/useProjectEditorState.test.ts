@@ -9,7 +9,7 @@ import {
 import type { CaptureProject, ProjectEditorState } from '../../../../api/types/capture-api';
 import type { CursorSelection } from '../../../../api/types/cursor-pack';
 import type { BackgroundMedia, BackgroundValue } from '../backgroundCatalog';
-import { DEFAULT_ZOOM_MOTION_BLUR, type ZoomElement } from '../../zoom/zoom-types';
+import { DEFAULT_ZOOM_MOTION_BLUR, type ZoomAutoFollowSettings, type ZoomElement } from '../../zoom/zoom-types';
 import { createDefaultCursorPresentation } from '../../../../api/types/cursor-presentation';
 import type { EditorPreferenceDefaults } from '../editor-default-types';
 import { normalizeEditorPreferenceDefaults } from '../editor-defaults';
@@ -45,6 +45,7 @@ const createState = () => {
     zoomElements: ref<ZoomElement[]>([]),
     generatedSessions: ref<ProjectEditorState['zoom']['generatedSessions']>([]),
     zoomMotionBlur: ref({ ...DEFAULT_ZOOM_MOTION_BLUR }),
+    zoomAutoFollow: ref<ZoomAutoFollowSettings>({ safeZone: 0.5, responsiveness: 0.55, directionLock: true }),
     importedBackgrounds: ref<BackgroundMedia[]>([]),
     selectedBackground: ref<BackgroundValue | null>(null),
     backgroundBlurPercent: ref(0),
@@ -380,6 +381,24 @@ describe('useProjectEditorState property persistence', () => {
     await loadingEditor.load('project');
 
     expect(loadingState.cursorAutoHide.value).toEqual({ enabled: true, delaySeconds: 7.5, fadeDurationMs: 750 });
+  });
+
+  it('round-trips project auto-follow settings through save and load', async () => {
+    const savedState = createState();
+    savedState.zoomAutoFollow.value = { safeZone: 0.42, responsiveness: 0.31, directionLock: false };
+    mocks.saveProjectEditorState.mockResolvedValue(undefined);
+
+    const savingEditor = useProjectEditorState(savedState);
+    await savingEditor.saveNow();
+    const persistedState = mocks.saveProjectEditorState.mock.calls[0][1] as ProjectEditorState;
+    expect(persistedState.zoom.autoFollow).toEqual({ safeZone: 0.42, responsiveness: 0.31, directionLock: false });
+
+    const loadingState = createState();
+    mocks.getProjectEditorState.mockResolvedValue(persistedState);
+    const loadingEditor = useProjectEditorState(loadingState);
+    await loadingEditor.load('project');
+
+    expect(loadingState.zoomAutoFollow.value).toEqual({ safeZone: 0.42, responsiveness: 0.31, directionLock: false });
   });
 
   it('persists editor defaults alongside the first successful editor save', async () => {

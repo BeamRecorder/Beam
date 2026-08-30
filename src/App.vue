@@ -18,13 +18,13 @@ import { formatRecordingStartFailure } from './components/hud/recorder/recording
 import { capture } from './api/capture';
 import { useLocaleStore } from './stores/locale';
 import { useTranslate } from './i18n/useTranslate';
-import type { CaptureProject } from './api/types/capture-api';
+import type { CaptureProject, RecorderLauncherContext } from './api/types/capture-api';
 import type { EditorLoadingProgress } from './api/types/editor-window';
 
 const INTERACTIVE_SELECTORS =
   '.hud-wrapper, .recorder-bar, .camera-overlay-container, .camera-settings-popover, button, a, input, select, textarea, [role="button"], [tabindex], label, video, .popover-content, .popover-trigger, .action-menu-content';
 let lastInteractive: boolean | null = null;
-let removeEditorRecordingListener: (() => void) | null = null;
+let removeRecorderLauncherListener: (() => void) | null = null;
 let removeEditorLoadingListener: (() => void) | null = null;
 let removeTrayStopListener: (() => void) | null = null;
 let removeRecordingShortcutListener: (() => void) | null = null;
@@ -84,7 +84,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('mousemove', handleMouseMove);
   window.removeEventListener('mouseleave', handleMouseLeave);
-  removeEditorRecordingListener?.();
+  removeRecorderLauncherListener?.();
   removeEditorLoadingListener?.();
   removeTrayStopListener?.();
   removeRecordingShortcutListener?.();
@@ -103,6 +103,7 @@ const currentProject = ref<CaptureProject | null>(null);
 const isPreparingEditor = ref(false);
 const editorLoadError = ref('');
 const editorLoadingProgress = ref<EditorLoadingProgress>({ stage: 'openingWindow', value: 10 });
+const recorderLauncherContext = ref<RecorderLauncherContext | null>(null);
 
 const recordingBarVisibility = ref<RecordingBarVisibility>('always');
 const recordingStartupError = ref('');
@@ -117,6 +118,7 @@ const recording = useRecordingController(
 
 const returnToHud = () => {
   if (currentView.value !== 'recorder') return;
+  if (recorderLauncherContext.value) capture.setRecorderLauncherActive(false);
   capture.hideScreenRegionOverlay();
   void capture.setCountdown(null);
   capture.setCameraOverlayActive(true);
@@ -147,22 +149,12 @@ watch(currentView, (view) => {
 
 const isRecordingStartedFromEditor = ref(false);
 
-const startRecordingFromEditor = async (configuration: RecordingConfiguration) => {
-  isRecordingStartedFromEditor.value = true;
-  editorLoadError.value = '';
-  recordingStartupError.value = '';
-  recordingBarVisibility.value = configuration.recordingBarVisibility;
-  currentView.value = 'recorder';
-  capture.setWindowMode('recorder');
-  capture.setWindowVisible(true);
-  capture.setCameraOverlayActive(true);
-  await recording.start(configuration);
-  if (recording.phase.value === 'idle') returnToHud();
-};
-
 onMounted(() => {
-  removeEditorRecordingListener = capture.onStartRecordingFromEditor((configuration) => {
-    void startRecordingFromEditor(configuration);
+  removeRecorderLauncherListener = capture.onRecorderLauncherContext((context) => {
+    recorderLauncherContext.value = context;
+    if (!context) return;
+    currentView.value = 'hud';
+    recordingStartupError.value = '';
   });
   removeEditorLoadingListener = capture.onEditorLoadingProgress((progress) => {
     if (isPreparingEditor.value) editorLoadingProgress.value = progress;
@@ -179,7 +171,9 @@ onMounted(() => {
 });
 
 const startRecording = async (configuration: RecordingConfiguration) => {
-  isRecordingStartedFromEditor.value = false;
+  isRecordingStartedFromEditor.value = recorderLauncherContext.value !== null;
+  const launchedFromEditor = isRecordingStartedFromEditor.value;
+  if (launchedFromEditor) capture.setRecorderLauncherActive(true);
   editorLoadError.value = '';
   currentProject.value = null;
   recordingStartupError.value = '';
@@ -187,8 +181,20 @@ const startRecording = async (configuration: RecordingConfiguration) => {
   currentView.value = 'recorder';
   capture.setWindowMode('recorder');
   capture.setCameraOverlayActive(true);
-  await recording.start(configuration);
-  if (recording.phase.value === 'idle') returnToHud();
+  try {
+    await recording.start(configuration);
+  } catch (error) {
+    if (launchedFromEditor) capture.setRecorderLauncherActive(false);
+    isRecordingStartedFromEditor.value = false;
+    recordingStartupError.value = error instanceof Error ? error.message : String(error);
+    returnToHud();
+    return;
+  }
+  if (recording.phase.value === 'idle') {
+    if (launchedFromEditor) capture.setRecorderLauncherActive(false);
+    isRecordingStartedFromEditor.value = false;
+    returnToHud();
+  }
 };
 
 const cancelOrStopRecording = async () => {
@@ -205,7 +211,7 @@ const cancelRecording = async () => {
   returnToHud();
 };
 
-const revealEditor = () => {
+const revealEditor = (disposition: 'reuse' | 'new-window' = 'reuse') => {
   logEditor('Preparing native editor window', {
     projectId: currentProject.value?.id,
   });
@@ -213,7 +219,7 @@ const revealEditor = () => {
   capture.setCameraOverlayActive(false);
   const projectId = currentProject.value?.id;
   if (!projectId) throw new Error('No project selected');
-  return capture.openEditor(projectId).then(() => {
+  return capture.openEditor(projectId, { disposition }).then(() => {
     isPreparingEditor.value = false;
     currentView.value = 'hud';
   });
@@ -222,6 +228,7 @@ const revealEditor = () => {
 const handleStopRecording = async (session: RecordingSessionResult) => {
   logEditor('Recording finished; loading editor data', { videoSrc: session?.videoSrc });
   const launchedFromEditor = isRecordingStartedFromEditor.value;
+  if (launchedFromEditor) capture.setRecorderLauncherActive(false);
   isRecordingStartedFromEditor.value = false;
   capture.setCameraOverlayActive(false);
   editorLoadError.value = '';
@@ -250,8 +257,24 @@ const handleStopRecording = async (session: RecordingSessionResult) => {
     logEditor('Recording editor data load failed');
     currentProject.value = null;
   }
-  if (currentProject.value) await revealEditor();
-  else {
+  if (currentProject.value) {
+    try {
+      await revealEditor(launchedFromEditor ? 'new-window' : 'reuse');
+      if (launchedFromEditor) recorderLauncherContext.value = null;
+    } catch (error) {
+      isPreparingEditor.value = false;
+      editorLoadError.value = error instanceof Error ? error.message : String(error);
+      capture.showHud();
+    }
+  } else {
+    if (launchedFromEditor) {
+      try {
+        await capture.dismissRecorderLauncher();
+      } catch (error) {
+        console.error('Failed to clear the editor recorder launcher:', error);
+      }
+      recorderLauncherContext.value = null;
+    }
     isPreparingEditor.value = false;
     editorLoadError.value = 'No recorded project was found';
     capture.showHud();
@@ -278,6 +301,15 @@ const handleOpenProject = (project: CaptureProject) => {
 const dismissEditorLoadError = () => {
   editorLoadError.value = '';
 };
+
+const dismissRecorderLauncher = async () => {
+  if (recording.phase.value !== 'idle') return;
+  try {
+    if (await capture.dismissRecorderLauncher()) recorderLauncherContext.value = null;
+  } catch (error) {
+    recordingStartupError.value = error instanceof Error ? error.message : String(error);
+  }
+};
 </script>
 
 <template>
@@ -297,8 +329,10 @@ const dismissEditorLoadError = () => {
       :preparing-editor="isPreparingEditor"
       :editor-loading-progress="editorLoadingProgress"
       :external-error="recordingStartupError"
+      :recorder-launcher-context="recorderLauncherContext"
       @start-recording="startRecording"
       @open-project="handleOpenProject"
+      @dismiss-launcher="dismissRecorderLauncher"
     />
     <Transition name="recorder-return">
       <RecorderBar

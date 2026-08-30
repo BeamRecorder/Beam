@@ -1,5 +1,17 @@
 const { BrowserWindow } = require('electron');
+const os = require('node:os');
 const path = require('path');
+
+function supportsCaptureSafeRecordingOverlay(platform, release) {
+  if (platform !== 'win32') return true;
+  const build = Number.parseInt(String(release).split('.')[2] || '', 10);
+  // The marker is a transparent, display-sized window protected with
+  // WDA_EXCLUDEFROMCAPTURE. On Windows 10 that combination can be represented
+  // as a black protected surface in Windows Graphics Capture, which makes a
+  // region recording black. Keep the marker on Windows 11+, where transparent
+  // capture exclusion is reliable, and fail closed when the build is unknown.
+  return Number.isFinite(build) && build >= 22_000;
+}
 
 function finiteBounds(value) {
   if (!value || !['x', 'y', 'width', 'height'].every((key) => Number.isFinite(value[key])))
@@ -29,12 +41,23 @@ function createScreenRegionOverlayWindow({
   isPackaged,
   canAcceptWork = () => true,
   platform = process.platform,
+  platformRelease = os.release(),
   screen,
 }) {
   let window = null;
   let ready = false;
   let pending = null;
   let current = null;
+
+  const cancelPendingSelection = () => {
+    if (!pending) return;
+    const resolve = pending.resolve;
+    pending = null;
+    current = null;
+    window?.hide();
+    window?.setParentWindow(null);
+    resolve(null);
+  };
 
   const send = (options) => {
     if (!window || window.isDestroyed() || !ready) return;
@@ -63,6 +86,16 @@ function createScreenRegionOverlayWindow({
       },
     });
     window.setContentProtection(true);
+    if (platform === 'darwin') {
+      window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
+      window.setAlwaysOnTop(true, 'screen-saver');
+      window.webContents.on('before-input-event', (event, input) => {
+        if (pending && input.type === 'keyDown' && input.key === 'Escape') {
+          event.preventDefault();
+          cancelPendingSelection();
+        }
+      });
+    }
     window.once('ready-to-show', () => {
       ready = true;
       send(current);
@@ -123,6 +156,11 @@ function createScreenRegionOverlayWindow({
       return result;
     },
     show(options) {
+      if (!supportsCaptureSafeRecordingOverlay(platform, platformRelease)) {
+        current = null;
+        if (window && !window.isDestroyed()) window.hide();
+        return;
+      }
       configure(options, false);
     },
     hide() {
@@ -140,13 +178,7 @@ function createScreenRegionOverlayWindow({
       resolve(bounds ? { bounds: { ...bounds }, region } : null);
     },
     cancel() {
-      if (!pending) return;
-      const resolve = pending.resolve;
-      pending = null;
-      current = null;
-      window?.hide();
-      window?.setParentWindow(null);
-      resolve(null);
+      cancelPendingSelection();
     },
     destroy() {
       if (pending) {
@@ -159,4 +191,8 @@ function createScreenRegionOverlayWindow({
   };
 }
 
-module.exports = { createScreenRegionOverlayWindow, resolveSelectionBounds };
+module.exports = {
+  createScreenRegionOverlayWindow,
+  resolveSelectionBounds,
+  supportsCaptureSafeRecordingOverlay,
+};

@@ -17,6 +17,11 @@ const snapshot = (value: number): EditorStateSnapshot =>
     backgroundBlurPercent: value,
   }) as unknown as EditorStateSnapshot;
 
+const zoomAutoFollowSnapshot = (safeZone: number): EditorStateSnapshot => ({
+  ...snapshot(safeZone),
+  zoomAutoFollow: { safeZone, responsiveness: 0.55, directionLock: true },
+});
+
 describe('useEditorUndoRedo', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
@@ -50,6 +55,32 @@ describe('useEditorUndoRedo', () => {
     await api.redo();
     expect(restored).toHaveLength(2);
     expect(api.lastAction.value?.type).toBe('redo');
+    wrapper.unmount();
+  });
+
+  it('restores zoom auto-follow settings through undo and redo', async () => {
+    const restored: EditorStateSnapshot[] = [];
+    let api!: ReturnType<typeof useEditorUndoRedo>;
+    const Harness = defineComponent({
+      setup: () => (
+        (api = useEditorUndoRedo({
+          onRestoreSnapshot: (value) => {
+            restored.push(value);
+          },
+        })),
+        {}
+      ),
+      template: '<div />',
+    });
+    const wrapper = mount(Harness);
+    api.recordSnapshot(zoomAutoFollowSnapshot(0.5));
+    api.recordSnapshot(zoomAutoFollowSnapshot(0.35));
+
+    await api.undo();
+    expect(restored[0]?.zoomAutoFollow).toEqual({ safeZone: 0.5, responsiveness: 0.55, directionLock: true });
+
+    await api.redo();
+    expect(restored[1]?.zoomAutoFollow).toEqual({ safeZone: 0.35, responsiveness: 0.55, directionLock: true });
     wrapper.unmount();
   });
 

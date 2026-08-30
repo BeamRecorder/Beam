@@ -347,7 +347,7 @@ fn bitmap_dimensions(info: &ICONINFO) -> Result<(u32, u32), CaptureError> {
 }
 
 fn bgra_to_rgba(pixels: &mut [u8]) {
-    for pixel in pixels.chunks_exact_mut(4) {
+    for pixel in pixels.as_chunks_mut::<4>().0 {
         pixel.swap(0, 2);
         if pixel[3] == 0 && pixel[..3].iter().any(|channel| *channel != 0) {
             pixel[3] = 255;

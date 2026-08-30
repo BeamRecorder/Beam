@@ -17,7 +17,7 @@ import { useViewportZoom } from './composables/useViewportZoom';
 import { useTranslate } from '~/i18n/useTranslate';
 import { canvasGuideLines } from './canvas-guides';
 import { transformCaptionFollowsCursor, type EditorCanvasEmits, type EditorCanvasProps } from './editor-canvas-types';
-import { DEFAULT_ZOOM_MOTION_BLUR } from '../zoom/zoom-types';
+import { DEFAULT_ZOOM_AUTO_FOLLOW, DEFAULT_ZOOM_MOTION_BLUR } from '../zoom/zoom-types';
 import { PerspectivePreviewRenderer } from '../zoom/perspective-preview-renderer';
 import { drawBeamWatermark } from './watermark-render';
 import { useCanvasTransitionRenderer } from './composables/useCanvasTransitionRenderer';
@@ -133,6 +133,7 @@ cameraZoom = useCameraZoom({
   outputCanvas: () => props.outputCanvas,
   zoomElements: () => props.zoomElements,
   zoomMotionBlur: () => props.zoomMotionBlur ?? DEFAULT_ZOOM_MOTION_BLUR,
+  zoomAutoFollow: () => props.zoomAutoFollow ?? DEFAULT_ZOOM_AUTO_FOLLOW,
   selectedZoom: () => props.selectedZoom,
   currentTime: () => props.currentTime,
   isPlaying: () => props.isPlaying,
@@ -361,7 +362,7 @@ const {
   onDoneCrop: () => emit('done:crop'),
 });
 const handleIslandPointerDownCapture = (event: PointerEvent) => {
-  if ((event.target as Element | null)?.closest('.caption-text-editor')) return;
+  if ((event.target as Element | null)?.closest('.caption-text-editor, .canvas-recenter-float')) return;
   handleCanvasPointerDownCapture(event);
 };
 onUnmounted(() => {
@@ -389,7 +390,7 @@ defineExpose({ viewportZoom });
     @dblclick="captionEditing.begin"
   >
     <Transition name="fade-slide">
-      <div v-if="viewportZoom.isOutOfBounds.value" class="canvas-recenter-float">
+      <div v-if="viewportZoom.isOutOfBounds.value" class="canvas-recenter-float" @pointerdown.stop>
         <Button
           variant="frosted"
           size="xs"

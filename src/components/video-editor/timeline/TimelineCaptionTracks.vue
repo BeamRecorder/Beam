@@ -30,7 +30,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (event: 'select', clipId: string): void;
+  (event: 'select', payload: { id: string; event: MouseEvent }): void;
   (event: 'contextmenu:clip', payload: { event: MouseEvent; clip: CaptionClip }): void;
   (event: 'contextmenu:track', mouseEvent: MouseEvent): void;
 }>();
@@ -191,7 +191,7 @@ onUnmounted(() => {
             'paste-arrival': recentPaste?.type === 'clip' && recentPaste.id === clip.id,
           }"
           :style="percentageStyle(displayedClip(clip).timelineStartMs, displayedClip(clip).timelineDurationMs)"
-          @click.stop="emit('select', clip.id)"
+          @click.stop="emit('select', { id: clip.id, event: $event })"
           @contextmenu.prevent.stop="emit('contextmenu:clip', { event: $event, clip })"
           @pointerdown="beginClipMove($event, clip)"
           @pointerenter="startMarquee"
@@ -272,7 +272,7 @@ onUnmounted(() => {
             'paste-arrival': recentPaste?.type === 'clip' && recentPaste.id === clip.id,
           }"
           :style="percentageStyle(displayedClip(clip).timelineStartMs, displayedClip(clip).timelineDurationMs)"
-          @click.stop="emit('select', clip.id)"
+          @click.stop="emit('select', { id: clip.id, event: $event })"
           @contextmenu.prevent.stop="emit('contextmenu:clip', { event: $event, clip })"
           @pointerdown="beginClipMove($event, clip)"
           @pointerenter="startMarquee"

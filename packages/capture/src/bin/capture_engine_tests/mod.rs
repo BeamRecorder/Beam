@@ -1,10 +1,13 @@
+use capture::protocol::{Command, RequestEnvelope};
+#[cfg(target_os = "linux")]
 use capture::{
     catalog::CatalogSnapshot,
     model::{CaptureCapabilities, PermissionSnapshot},
-    protocol::{Command, RequestEnvelope},
 };
 
-use super::{Engine, handle, prepare_snapshot};
+#[cfg(target_os = "linux")]
+use super::prepare_snapshot;
+use super::{Engine, handle};
 
 #[test]
 fn idle_status_reports_screen_available() {
