@@ -12,7 +12,7 @@ const PopoverMenuButton = {
     bare: Boolean,
   },
   emits: ['select'],
-  template: '<button class="add-trigger" @click="$emit(\'select\', \'blur\')">{{ label }}</button>',
+  template: '<button class="add-trigger" @click="$emit(\'select\', \'voiceover\')">{{ label }}</button>',
 };
 
 describe('TimelineAddMenu', () => {
@@ -24,18 +24,17 @@ describe('TimelineAddMenu', () => {
     expect(menu.props('bare')).toBe(true);
     expect(menu.props('direction')).toBe('up');
     expect(menu.props('icon')).toBeDefined();
-    expect(menu.props('items').map((item: { id: string }) => item.id)).toEqual([
-      'video',
-      'image',
-      'color',
-      'shape',
-      'sound',
-      'voiceover',
-      'caption',
-      'blur',
-    ]);
+    const items = menu.props('items') as Array<{
+      id: string;
+      children?: Array<{ id: string }>;
+    }>;
+    expect(items.map((item) => item.id)).toEqual(['media', 'composition', 'audio', 'caption']);
+    expect(items[0]?.children?.map((item) => item.id)).toEqual(['video', 'image']);
+    expect(items[1]?.children?.map((item) => item.id)).toEqual(['shape', 'blur', 'color']);
+    expect(items[2]?.children?.map((item) => item.id)).toEqual(['sound', 'voiceover']);
+    expect(items[3]?.children).toBeUndefined();
 
     await wrapper.get('.add-trigger').trigger('click');
-    expect(wrapper.emitted('add:element')).toEqual([['blur']]);
+    expect(wrapper.emitted('add:element')).toEqual([['voiceover']]);
   });
 });

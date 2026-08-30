@@ -18,6 +18,51 @@ describe('auto-follow camera', () => {
     expect(updateAutoFollowTarget(state, { cx: 0.6, cy: 0.4 }, center, 2, 1, 16)).toEqual(initial);
   });
 
+  it('keeps the authored click focus while an auto zoom is entering', () => {
+    const state = createAutoFollowState(settings);
+    const authoredFocus = { cx: 0.6, cy: 0.4 };
+    const preClickCursor = { cx: 0.1, cy: 0.9 };
+
+    expect(updateAutoFollowTarget(state, preClickCursor, authoredFocus, 2, 0.5, 100)).toEqual(authoredFocus);
+    expect(updateAutoFollowTarget(state, preClickCursor, authoredFocus, 2, 0.75, 200)).toEqual(authoredFocus);
+  });
+
+  it('starts safe-zone tracking once the auto zoom reaches full strength', () => {
+    const state = createAutoFollowState(settings);
+    const authoredFocus = { cx: 0.6, cy: 0.4 };
+    const cursor = { cx: 0.9, cy: 0.5 };
+
+    updateAutoFollowTarget(state, cursor, authoredFocus, 2, 0.5, 100);
+    expect(updateAutoFollowTarget(state, cursor, authoredFocus, 2, 1, 200)).toEqual({ cx: 0.75, cy: 0.4 });
+  });
+
+  it('preserves the last followed focus during exit and ignores a new cursor position', () => {
+    const state = createAutoFollowState(settings);
+    const authoredFocus = { cx: 0.6, cy: 0.4 };
+
+    const followed = updateAutoFollowTarget(state, { cx: 0.9, cy: 0.5 }, authoredFocus, 2, 1, 100);
+    expect(followed).toEqual({ cx: 0.75, cy: 0.4 });
+    expect(updateAutoFollowTarget(state, { cx: 0.1, cy: 0.9 }, authoredFocus, 2, 0.8, 200)).toEqual(followed);
+  });
+
+  it('reclamps the frozen focus progressively toward center as exit scale decreases', () => {
+    const state = createAutoFollowState(settings);
+    const authoredFocus = { cx: 0.6, cy: 0.4 };
+    updateAutoFollowTarget(state, { cx: 0.9, cy: 0.9 }, authoredFocus, 2, 1, 100);
+
+    const atScaleTwo = updateAutoFollowTarget(state, { cx: 0.1, cy: 0.1 }, authoredFocus, 2, 0.8, 200);
+    const atScaleOnePointFive = updateAutoFollowTarget(state, { cx: 0.1, cy: 0.1 }, authoredFocus, 1.5, 0.6, 300);
+    const atScaleOnePointOne = updateAutoFollowTarget(state, { cx: 0.1, cy: 0.1 }, authoredFocus, 1.1, 0.2, 400);
+
+    expect(atScaleTwo).toEqual({ cx: 0.75, cy: 0.75 });
+    expect(atScaleOnePointFive.cx).toBeCloseTo(2 / 3);
+    expect(atScaleOnePointFive.cy).toBeCloseTo(2 / 3);
+    expect(atScaleOnePointOne.cx).toBeCloseTo(1 - 1 / 2.2);
+    expect(atScaleOnePointOne.cy).toBeCloseTo(1 - 1 / 2.2);
+    expect(Math.abs(atScaleOnePointFive.cx - 0.5)).toBeLessThan(Math.abs(atScaleTwo.cx - 0.5));
+    expect(Math.abs(atScaleOnePointOne.cx - 0.5)).toBeLessThan(Math.abs(atScaleOnePointFive.cx - 0.5));
+  });
+
   it.each([
     ['x', { cx: 0.9, cy: 0.5 }, true, false],
     ['y', { cx: 0.5, cy: 0.9 }, false, true],

@@ -23,6 +23,50 @@ const ctrlWheelEvent = (deltaY: number, timeStamp?: number) => {
 };
 
 describe('TimelineTracks', () => {
+  it('keeps export progress and limit aligned to the timeline duration across zoom changes', async () => {
+    const mounted = await mountTracks({
+      duration: 10,
+      exportProgress: {
+        stage: 'encoding',
+        overallProgress: 0.25,
+        completedImages: 25,
+        totalImages: 100,
+        audioProgress: null,
+        currentTimeMs: 1_000,
+        totalTimeMs: 4_000,
+      },
+    });
+
+    const progressBar = mounted!.get('.ruler-export-progress-bar');
+    const limit = mounted!.get('.timeline-export-limit');
+    expect(progressBar.attributes('style')).toContain('width: 10%;');
+    expect(limit.attributes('style')).toContain('left: 40%;');
+    expect(limit.get('.timeline-export-limit-badge').text()).toBe('4.00s');
+
+    await mounted!.setProps({ zoomLevel: 3_200 });
+    expect(mounted!.get('.ruler-export-progress-bar').attributes('style')).toContain('width: 10%;');
+    expect(mounted!.get('.timeline-export-limit').attributes('style')).toContain('left: 40%;');
+    expect(mounted!.get('.timeline-export-limit-badge').text()).toBe('4.00s');
+
+    await mounted!.setProps({ exportProgress: null });
+    expect(mounted!.find('.ruler-export-progress-bar').exists()).toBe(false);
+    expect(mounted!.find('.timeline-export-limit').exists()).toBe(false);
+
+    await mounted!.setProps({
+      exportProgress: {
+        stage: 'encoding',
+        overallProgress: 0.25,
+        completedImages: 25,
+        totalImages: 100,
+        audioProgress: null,
+        currentTimeMs: 1_000,
+        totalTimeMs: Number.NaN,
+      },
+    });
+    expect(mounted!.find('.ruler-export-progress-bar').exists()).toBe(false);
+    expect(mounted!.find('.timeline-export-limit').exists()).toBe(false);
+  });
+
   it('renders ordered visual/audio/caption tracks and scrubs, zooms, and selects them', async () => {
     const mounted = await mountTracks();
     expect(mounted!.findAll('.tracks-stack .visual-track')).toHaveLength(3);

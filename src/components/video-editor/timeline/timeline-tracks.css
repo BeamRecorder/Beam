@@ -187,6 +187,33 @@
   width: 2px;
   pointer-events: none;
 }
+.timeline-export-limit {
+  position: absolute;
+  inset-block: 0;
+  width: 1px;
+  border-left: 1px dashed var(--color-primary);
+  opacity: 0.85;
+  pointer-events: none;
+}
+.timeline-export-limit-badge {
+  position: absolute;
+  top: 4px;
+  left: 5px;
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  color: #ffffff;
+  font-family: monospace;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1.4;
+  white-space: nowrap;
+  box-shadow: var(--shadow-sm);
+}
+.timeline-export-limit.is-at-end .timeline-export-limit-badge {
+  left: -5px;
+  transform: translateX(-100%);
+}
 .timeline-playhead::after {
   content: '';
   position: absolute;

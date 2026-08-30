@@ -133,6 +133,7 @@
   },
   "TimelineToolbar": {
     "add": "जोड़ें",
+    "composition": "संयोजन",
     "split": "स्प्लिट करें",
     "selectClipToSplit": "स्प्लिट करने के लिए क्लिप चुनें",
     "video": "वीडियो",

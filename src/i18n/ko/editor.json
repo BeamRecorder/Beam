@@ -133,6 +133,7 @@
   },
   "TimelineToolbar": {
     "add": "추가",
+    "composition": "컴포지션",
     "split": "분할",
     "selectClipToSplit": "분할할 클립을 선택하세요",
     "video": "동영상",

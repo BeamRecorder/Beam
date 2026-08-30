@@ -1,15 +1,11 @@
 <script setup lang="ts">
-import type { Component } from 'vue';
+import { computed, nextTick, ref, type Component } from 'vue';
 import { ChevronDown, ChevronUp } from '@lucide/vue';
 import Popover from './Popover.vue';
+import PopoverMenuList from './PopoverMenuList.vue';
+import type { PopoverMenuItem } from './popover-menu-types';
+export type { PopoverMenuItem } from './popover-menu-types';
 
-export interface PopoverMenuItem {
-  id: string;
-  label: string;
-  icon?: Component;
-  disabled?: boolean;
-  active?: boolean;
-}
 const props = defineProps<{
   label: string;
   items: readonly PopoverMenuItem[];
@@ -22,12 +18,29 @@ const props = defineProps<{
   bare?: boolean;
 }>();
 const emit = defineEmits<{ (event: 'select', id: string): void }>();
+const trigger = ref<HTMLButtonElement | null>(null);
+const hasNestedItems = computed(() => props.items.some((item) => Boolean(item.children?.length)));
+const dismiss = (close: () => void) => {
+  close();
+  void nextTick(() => trigger.value?.focus());
+};
+const select = (id: string, close: () => void) => {
+  emit('select', id);
+  dismiss(close);
+};
 </script>
 
 <template>
-  <Popover align="left" :direction="direction" :block="block" :match-trigger-width="false">
+  <Popover
+    align="left"
+    :direction="direction"
+    :block="block"
+    :match-trigger-width="false"
+    :allow-overflow="hasNestedItems"
+  >
     <template #trigger="{ isOpen }">
       <button
+        ref="trigger"
         class="menu-button"
         :class="{ 'is-open': isOpen, transparent, block, bare }"
         :disabled="disabled"
@@ -46,25 +59,7 @@ const emit = defineEmits<{ (event: 'select', id: string): void }>();
       </button>
     </template>
     <template #default="{ close }">
-      <div class="menu-content" role="menu">
-        <button
-          v-for="item in items"
-          :key="item.id"
-          class="menu-item"
-          :class="{ active: item.active, 'has-icon': Boolean(item.icon) }"
-          :disabled="item.disabled"
-          role="menuitem"
-          @click="
-            emit('select', item.id);
-            close();
-          "
-        >
-          <span v-if="item.icon" class="item-icon-wrapper">
-            <component :is="item.icon" class="menu-item-icon" />
-          </span>
-          <span class="item-label">{{ item.label }}</span>
-        </button>
-      </div>
+      <PopoverMenuList :items="items" @select="select($event, close)" @dismiss="dismiss(close)" />
     </template>
   </Popover>
 </template>
@@ -121,59 +116,5 @@ const emit = defineEmits<{ (event: 'select', id: string): void }>();
 }
 .menu-button-chevron.is-open {
   transform: rotate(180deg);
-}
-.menu-content {
-  display: flex;
-  flex-direction: column;
-  min-width: 108px;
-  padding: 4px;
-  background: var(--color-bg-element);
-}
-.menu-item {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  padding: 6px 10px;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text-primary);
-  font: 500 12px var(--font-sans);
-  text-align: center;
-  cursor: pointer;
-  box-sizing: border-box;
-}
-.menu-item.has-icon {
-  display: grid;
-  grid-template-columns: 18px 1fr;
-  align-items: center;
-  text-align: left;
-  justify-content: start;
-}
-.item-icon-wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-}
-.menu-item-icon {
-  width: 14px;
-  height: 14px;
-  color: var(--color-primary);
-}
-.item-label {
-  white-space: nowrap;
-}
-.menu-item:hover:not(:disabled),
-.menu-item.active {
-  background: var(--color-primary-light);
-  color: var(--color-primary);
-}
-.menu-item:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 </style>

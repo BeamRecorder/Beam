@@ -133,6 +133,7 @@
   },
   "TimelineToolbar": {
     "add": "追加",
+    "composition": "コンポジション",
     "split": "分割",
     "selectClipToSplit": "分割するクリップを選択してください",
     "video": "動画",

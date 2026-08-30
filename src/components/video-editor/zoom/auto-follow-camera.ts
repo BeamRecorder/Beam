@@ -59,8 +59,13 @@ export function updateAutoFollowTarget(
     state.target = fallback;
     state.frozenTarget = fallback;
   }
-  if (strength >= 0.99) state.reachedFullZoom = true;
-  if (state.reachedFullZoom && strength < 0.99) return state.frozenTarget;
+  if (!state.reachedFullZoom) {
+    state.target = fallback;
+    state.frozenTarget = fallback;
+    if (strength < 0.99) return fallback;
+    state.reachedFullZoom = true;
+  }
+  if (state.reachedFullZoom && strength < 0.99) return clampFocusToScale(state.frozenTarget, scale);
   if (!cursor) return state.target;
   if (state.settings.directionLock && timeMs < state.lockUntilMs) return state.target;
 

@@ -133,6 +133,7 @@
   },
   "TimelineToolbar": {
     "add": "Добавить",
+    "composition": "Композиция",
     "split": "Разделить",
     "selectClipToSplit": "Выберите клип для разделения",
     "video": "Видео",

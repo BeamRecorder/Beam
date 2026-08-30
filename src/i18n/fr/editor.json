@@ -133,6 +133,7 @@
   },
   "TimelineToolbar": {
     "add": "Ajouter",
+    "composition": "Composition",
     "split": "Découper",
     "selectClipToSplit": "Sélectionnez un clip à découper",
     "video": "Vidéo",

@@ -133,6 +133,7 @@
   },
   "TimelineToolbar": {
     "add": "Thêm",
+    "composition": "Bố cục",
     "split": "Tách đoạn",
     "selectClipToSplit": "Chọn một đoạn để tách",
     "video": "Video",

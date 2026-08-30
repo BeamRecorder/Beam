@@ -133,6 +133,7 @@
   },
   "TimelineToolbar": {
     "add": "添加",
+    "composition": "合成",
     "split": "分割",
     "selectClipToSplit": "选择要分割的片段",
     "video": "视频",

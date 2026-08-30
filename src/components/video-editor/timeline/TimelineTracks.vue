@@ -143,11 +143,25 @@ useTimelineClipboardShortcuts({
   copySelected,
   pasteClipboard,
 });
-const exportProgressPercent = computed(() => {
-  const current = props.exportProgress?.currentTimeMs;
-  const total = props.exportProgress?.totalTimeMs;
-  if (current === undefined || total === undefined || total <= 0) return null;
-  return Math.min(100, Math.max(0, (current / total) * 100));
+const formatExportLimit = (timeMs: number) => {
+  const totalSeconds = Math.max(0, timeMs) / 1_000;
+  if (totalSeconds < 60) return `${totalSeconds.toFixed(2)}s`;
+  const minutes = Math.floor(totalSeconds / 60);
+  return `${minutes}:${(totalSeconds - minutes * 60).toFixed(2).padStart(5, '0')}`;
+};
+const exportTimelineState = computed(() => {
+  const progress = props.exportProgress;
+  if (!progress || !Number.isFinite(progress.totalTimeMs) || progress.totalTimeMs <= 0) return null;
+  const limitMs = Math.min(layoutDurationMs.value, Math.max(0, progress.totalTimeMs));
+  const currentMs = Number.isFinite(progress.currentTimeMs)
+    ? Math.min(limitMs, Math.max(0, progress.currentTimeMs))
+    : 0;
+  return {
+    progressStyle: percentageStyle(0, currentMs),
+    limitStyle: { left: percentageStyle(limitMs, 0).left },
+    limitLabel: formatExportLimit(limitMs),
+    isAtEnd: limitMs >= layoutDurationMs.value,
+  };
 });
 const canvasTransitions = computed(() => props.canvas.transitions ?? EMPTY_CLIP_TRANSITIONS);
 const updateCanvasTransitions = (transitions: NonNullable<typeof props.canvas.transitions>) =>
@@ -204,11 +218,9 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
         <div class="timeline-ruler">
           <div :ref="setTicksAreaElement" class="ruler-ticks-area" @pointerdown="beginScrub">
             <div
-              v-if="exportProgressPercent !== null"
+              v-if="exportTimelineState"
               class="ruler-export-progress-bar"
-              :style="{
-                width: `${exportProgressPercent}%`,
-              }"
+              :style="exportTimelineState.progressStyle"
             />
             <div
               v-for="second in rulerSeconds"
@@ -223,6 +235,14 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
           </div>
         </div>
         <div class="timeline-playhead-overlay">
+          <div
+            v-if="exportTimelineState"
+            class="timeline-export-limit"
+            :class="{ 'is-at-end': exportTimelineState.isAtEnd }"
+            :style="exportTimelineState.limitStyle"
+          >
+            <span class="timeline-export-limit-badge">{{ exportTimelineState.limitLabel }}</span>
+          </div>
           <div class="timeline-playhead" :style="playheadStyle">
             <div class="playhead-head">
               <svg width="12" height="15" viewBox="0 0 12 15" fill="var(--color-primary)">
