@@ -1,17 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import {
-  Play,
-  Pause,
-  SkipBack,
-  SkipForward,
-  ZoomIn,
-  ZoomOut,
-  Scissors,
-  Magnet,
-  Maximize2,
-  Minimize2,
-} from '@lucide/vue';
+import { Play, Pause, SkipBack, SkipForward, ZoomIn, ZoomOut, Scissors, Magnet, Maximize2 } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
@@ -124,11 +113,11 @@ const handleFullscreenClick = (event?: MouseEvent) => {
             @click="emit('update:isSnappingEnabled', !isSnappingEnabled)"
           />
           <Button
-            :variant="isCanvasFullscreen ? 'primary' : 'ghost'"
+            variant="ghost"
             size="sm"
             icon-only
-            :icon="isCanvasFullscreen ? Minimize2 : Maximize2"
-            :tooltip="isCanvasFullscreen ? t('exitFullscreenPreview') : t('fullscreenPreview')"
+            :icon="Maximize2"
+            :tooltip="t('fullscreenPreview')"
             class="toolbar-fullscreen-btn"
             @click="handleFullscreenClick"
           />

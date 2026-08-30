@@ -54,6 +54,28 @@ describe('EditorTimeline', () => {
     wrapper.unmount();
   });
 
+  it('does not intercept Ctrl/Cmd+A or Space for an HTMLElement that is contenteditable', () => {
+    const wrapper = mount(EditorTimeline, { props, global: { stubs: { TimelineTracks } } });
+    const editingHost = document.createElement('div');
+    editingHost.contentEditable = 'true';
+    const editingElement = document.createElement('div');
+    editingElement.tabIndex = 0;
+    editingHost.appendChild(editingElement);
+    document.body.appendChild(editingHost);
+    Object.defineProperty(editingElement, 'isContentEditable', { configurable: true, value: true });
+    editingElement.focus();
+
+    expect(document.activeElement).toBe(editingElement);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', ctrlKey: true, bubbles: true }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', metaKey: true, bubbles: true }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', bubbles: true }));
+
+    expect(wrapper.emitted('select:all')).toBeUndefined();
+    expect(wrapper.emitted('update:isPlaying')).toBeUndefined();
+    editingHost.remove();
+    wrapper.unmount();
+  });
+
   it('selects every timeline item with Ctrl/Cmd+A outside form controls', () => {
     const wrapper = mount(EditorTimeline, { props, global: { stubs: { TimelineTracks } } });
 

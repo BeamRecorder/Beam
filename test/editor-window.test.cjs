@@ -743,6 +743,13 @@ test('concurrent new-window opens replace the first presentation request', async
     };
     assert.notEqual(first, second);
     await assert.rejects(firstOpening, /remplacée/);
+    assert.equal(
+      fixture.manager.windows().includes(first),
+      false,
+      'the superseded pending editor must be closed or removed from the manager',
+    );
+    assert.equal(fixture.manager.windows().includes(second), true, 'the replacement editor must remain managed');
+    assert.equal(second.isDestroyed(), false, 'the replacement editor must remain live');
 
     fixture.ipcListeners.get('editor:loading-stage')({ sender: first.webContents }, 'loadingTimeline');
     assert.equal(fixture.ipcListeners.get('editor:ready')({ sender: first.webContents }), false);

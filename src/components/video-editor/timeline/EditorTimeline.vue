@@ -86,23 +86,20 @@ const emit = defineEmits<{
   (event: 'open:canvas-transition', edge: 'entry' | 'exit'): void;
 }>();
 
+const isEditorFocused = (active: Element | null) => {
+  if (!(active instanceof HTMLElement)) return false;
+  return ['input', 'textarea', 'select'].includes(active.tagName.toLowerCase()) || active.isContentEditable;
+};
+
 const handleKeyDown = (event: KeyboardEvent) => {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') {
-    const active = document.activeElement;
-    if (active) {
-      const tag = active.tagName.toLowerCase();
-      if (['input', 'textarea', 'select'].includes(tag) || active.getAttribute('contenteditable') === 'true') return;
-    }
+    if (isEditorFocused(document.activeElement)) return;
     event.preventDefault();
     emit('select:all');
     return;
   }
   if (event.code !== 'Space') return;
-  const active = document.activeElement;
-  if (active) {
-    const tag = active.tagName.toLowerCase();
-    if (['input', 'textarea', 'select'].includes(tag) || active.getAttribute('contenteditable') === 'true') return;
-  }
+  if (isEditorFocused(document.activeElement)) return;
   event.preventDefault();
   emit('update:isPlaying', !props.isPlaying);
 };

@@ -238,6 +238,7 @@ function createEditorWindowManager({
       controller: null,
       currentProjectId: null,
       rendererReady: false,
+      presented: false,
       returningToHud: false,
       dark,
       resolvePresentation: null,
@@ -312,10 +313,14 @@ function createEditorWindowManager({
     const source = senderSession ?? recorderOrigin ?? activeSession;
     const session = disposition === 'new-window' ? createSession(source) : isLive(source) ? source : createSession();
     if (disposition === 'new-window' && recorderOrigin) clearRecorderOrigin();
-    if (presentingSession?.rejectPresentation) {
-      presentingSession.rejectPresentation(new Error('La demande précédente a été remplacée'));
-      presentingSession.resolvePresentation = null;
-      presentingSession.rejectPresentation = null;
+    const supersededSession = presentingSession;
+    if (supersededSession?.rejectPresentation) {
+      supersededSession.rejectPresentation(new Error('La demande précédente a été remplacée'));
+      supersededSession.resolvePresentation = null;
+      supersededSession.rejectPresentation = null;
+      if (supersededSession !== session && !supersededSession.presented && isLive(supersededSession)) {
+        supersededSession.window.close();
+      }
     }
     presentingSession = session;
     session.returningToHud = false;
@@ -330,6 +335,7 @@ function createEditorWindowManager({
       if (!hideHudBeforePresentingEditor()) {
         throw new Error('La fenêtre HUD n’a pas pu être masquée avant la présentation de l’éditeur');
       }
+      session.presented = true;
       session.window.show();
       session.window.focus();
       presentingSession = null;
@@ -356,6 +362,7 @@ function createEditorWindowManager({
       return false;
     }
     sendProgress(session, 'ready');
+    session.presented = true;
     session.window.show();
     session.window.focus();
     session.resolvePresentation?.(true);

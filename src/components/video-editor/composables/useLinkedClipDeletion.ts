@@ -1,7 +1,8 @@
 import { ref, type Ref } from 'vue';
 import type { Clip, ClipComposition } from '~/media/shared/composition-types';
 import type { ZoomElement } from '../zoom/zoom-types';
-import { deleteTimelineItems, type TimelineDeleteMode } from '../composition/timeline-edit-operations';
+import { deleteTimelineItems } from '../composition/timeline-edit-operations';
+import type { TimelineDeleteMode } from '../composition/timeline-edit-types';
 import type { TimelineSelectionDelete } from '../timeline/composables/timeline-tracks-types';
 
 export function useLinkedClipDeletion(options: {

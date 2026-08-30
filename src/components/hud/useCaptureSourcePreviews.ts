@@ -1,24 +1,11 @@
-import { ref, type Ref } from 'vue';
+import { ref } from 'vue';
 import { capture } from '../../api/capture';
 import { rememberCaptureCatalog } from '../../api/capture-diagnostics';
-import type {
-  CaptureCatalog,
-  CapturePreview,
-  CaptureSource,
-  RecorderLauncherContext,
-} from '../../api/types/capture-api';
+import type { CapturePreview } from '../../api/types/capture-api';
 import { loadNativeSourcePreviews } from './native-source-previews';
+import type { CaptureSourcePreviewOptions, PreviewKind } from './source-preview-types';
 
-export type PreviewKind = 'screen' | 'window';
-
-interface CaptureSourcePreviewOptions {
-  platform: string;
-  sources: Ref<CaptureSource[]>;
-  catalog: Ref<CaptureCatalog | null>;
-  selectedScreenId: Ref<string | null>;
-  selectedWindowId: Ref<string | null>;
-  recorderLauncherContext: () => RecorderLauncherContext | null | undefined;
-}
+export type { PreviewKind } from './source-preview-types';
 
 export const useCaptureSourcePreviews = (options: CaptureSourcePreviewOptions) => {
   const windowPreviews = ref<CapturePreview[]>([]);

@@ -84,7 +84,7 @@ export function useTimelineContextMenu(options: {
       category: 'zoom',
       clip: null,
       zoom,
-      clipIds: [],
+      clipIds: isSelected ? [...options.selectedClipIds.value] : [],
       zoomIds: isSelected ? [...effectiveZoomIds] : [zoom.id],
       trackId: null,
     };

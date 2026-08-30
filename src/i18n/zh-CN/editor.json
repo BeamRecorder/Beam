@@ -40,9 +40,9 @@
     "framing": "取景",
     "fill": "填充",
     "fit": "适合",
-    "square": "广场",
-    "squircle": "松鼠",
-    "circle": "圆"
+    "square": "正方形",
+    "squircle": "圆角方形",
+    "circle": "圆形"
   },
   "ShadowDirectionGroup": {
     "shadowDirection": "阴影方向",

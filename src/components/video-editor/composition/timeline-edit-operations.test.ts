@@ -3,12 +3,8 @@ import { createDefaultClipAppearance } from '~/media/shared/composition-defaults
 import { createComposition } from './engine/clip-engine';
 import type { AudioClip, ClipComposition, MediaAsset, VisualClip } from '~/media/shared/composition-types';
 import type { ZoomElement } from '../zoom/zoom-types';
-import {
-  deleteTimelineItems,
-  rippleRangeForSelection,
-  shiftTimelineSelection,
-  type TimelineSelectionIds,
-} from './timeline-edit-operations';
+import { deleteTimelineItems, rippleRangeForSelection, shiftTimelineSelection } from './timeline-edit-operations';
+import type { TimelineSelectionIds } from './timeline-edit-types';
 
 const asset = (id: string, kind: MediaAsset['kind'] = 'video'): MediaAsset => ({
   id,

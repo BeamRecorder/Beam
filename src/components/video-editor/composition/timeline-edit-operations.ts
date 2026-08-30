@@ -3,24 +3,19 @@ import type { ZoomElement } from '../zoom/zoom-types';
 import { deleteClip } from './engine/clip-engine';
 import { validateComposition } from './engine/clip-composition-validation';
 import { visualMoveDeltaBounds } from './engine/visual-track-layout';
+import type {
+  TimelineDeleteMode,
+  TimelineEditResult,
+  TimelineRange,
+  TimelineSelectionIds,
+} from './timeline-edit-types';
 
-export type TimelineDeleteMode = 'lift' | 'ripple' | 'smart';
-
-export interface TimelineSelectionIds {
-  clipIds: readonly string[];
-  zoomIds: readonly string[];
-}
-
-export interface TimelineRange {
-  startMs: number;
-  endMs: number;
-}
-
-export interface TimelineEditResult {
-  composition: ClipComposition;
-  zoomElements: ZoomElement[];
-  rippleRange: TimelineRange | null;
-}
+export type {
+  TimelineDeleteMode,
+  TimelineEditResult,
+  TimelineRange,
+  TimelineSelectionIds,
+} from './timeline-edit-types';
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const endMs = (clip: ClipComposition['clips'][number]) => clip.timelineStartMs + clip.timelineDurationMs;

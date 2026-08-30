@@ -246,6 +246,24 @@ describe('useTimelineContextMenu', () => {
     });
   });
 
+  it('preserves a mixed clip and zoom selection from the selected zoom context menu', () => {
+    const menu = createMenu({
+      selectedClipId: ref('clip-1'),
+      selectedClipIds: ref(['clip-1']),
+      selectedZoomId: ref('zoom-1'),
+      selectedZoomIds: ref(['zoom-1']),
+    });
+
+    menu.openZoomContextMenu(new MouseEvent('contextmenu'), menu.sourceZoom);
+    menu.handleContextMenuSelect('delete');
+
+    expect(menu.emitSpy).toHaveBeenCalledWith('delete:selection', {
+      clipIds: ['clip-1'],
+      zoomIds: ['zoom-1'],
+      mode: 'lift',
+    });
+  });
+
   it.each([
     ['without a selection', null, []],
     ['with a stale selection', 'missing-clip', ['missing-clip']],
