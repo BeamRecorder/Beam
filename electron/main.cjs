@@ -454,6 +454,7 @@ function initializeApplication() {
       registerController: (target, controller) => controllers.set(target, controller),
       preferencesStore,
       appIconPath,
+      screen,
       initialDark: selectedTheme === 'dark' || (selectedTheme === 'system' && nativeTheme.shouldUseDarkColors),
       resolveSystemDark: () => nativeTheme.shouldUseDarkColors,
       cleanupWindow: (contents) => {

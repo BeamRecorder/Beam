@@ -49,6 +49,20 @@ fn stop_system_audio_preview_command_roundtrips() -> Result<(), Box<dyn Error>> 
 }
 
 #[test]
+fn source_preview_command_roundtrips_with_native_source_and_bounds() -> Result<(), Box<dyn Error>> {
+    let expected = serde_json::json!({
+        "id": "source-preview-request",
+        "command": "source-preview",
+        "source": "sck:window:123",
+        "maxWidth": 300,
+        "maxHeight": 200,
+    });
+    let request: RequestEnvelope = serde_json::from_value(expected.clone())?;
+    assert_eq!(serde_json::to_value(request)?, expected);
+    Ok(())
+}
+
+#[test]
 fn engine_eof_finalizes_an_active_session() -> Result<(), Box<dyn Error>> {
     let temporary = tempfile::tempdir()?;
     let project_id = ProjectId::new();

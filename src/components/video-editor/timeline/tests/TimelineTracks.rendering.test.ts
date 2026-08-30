@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { CaptionClip, VisualClip } from '~/media/shared/composition-types';
+import { flushPromises } from '@vue/test-utils';
+import type { CaptionClip, ColorClip, VisualClip } from '~/media/shared/composition-types';
 import { DEFAULT_OUTPUT_CANVAS } from '../../canvas/output-canvas';
 import {
   TimelineClipStub,
@@ -66,9 +67,45 @@ describe('TimelineTracks', () => {
 
     const clip = mounted!.findAll('.visual-track .timeline-clip')[2]!;
     await clip.trigger('click');
-    expect(mounted!.emitted('select:clip')).toContainEqual(['screen-clip']);
+    expect(mounted!.emitted('select:item')).toContainEqual([{ kind: 'clip', id: 'screen-clip', intent: 'replace' }]);
     await mounted!.get('.cursor-zoom-indicator:not(.preview-ghost)').trigger('click');
-    expect(mounted!.emitted('select:zoom')).toContainEqual(['zoom-1']);
+    expect(mounted!.emitted('select:item')).toContainEqual([{ kind: 'zoom', id: 'zoom-1', intent: 'replace' }]);
+  });
+
+  it('passes layout width to clips when timeline UI scaling changes their visual width', async () => {
+    const color = {
+      ...visual({
+        id: 'color-clip',
+        name: 'Color layer',
+        assetId: '',
+        trackId: 'color-track',
+        timelineStartMs: 4_000,
+        timelineDurationMs: 1_000,
+      }),
+      kind: 'color',
+      fill: { kind: 'color', color: '#111827' },
+    } as ColorClip;
+    const mounted = await mountTracks({ composition: { ...composition(), clips: [color] } });
+    const ticks = mounted!.get('.ruler-ticks-area').element;
+    vi.mocked(ticks.getBoundingClientRect).mockReturnValue({
+      left: 120,
+      top: 0,
+      width: 750,
+      height: 28,
+      right: 870,
+      bottom: 28,
+    } as DOMRect);
+    Object.defineProperty(ticks, 'offsetWidth', { configurable: true, value: 1_000 });
+    Object.defineProperty(ticks, 'clientWidth', { configurable: true, value: 1_000 });
+    mounted!.get('.timeline-tracks-container').element.dispatchEvent(new Event('scroll'));
+    await flushPromises();
+
+    const colorClip = mounted!
+      .findAllComponents(TimelineClipStub)
+      .find((component) => (component.props('clip') as VisualClip).id === color.id);
+    if (!colorClip) throw new Error('Expected the color timeline clip stub.');
+    expect(colorClip.props('timelineWidthPx')).toBe(1_000);
+    expect(colorClip.get('.timeline-clip').attributes('style')).toContain('translate3d(400px');
   });
 
   it('renders zoom metadata left-to-right around the persistent center Zoom label', async () => {

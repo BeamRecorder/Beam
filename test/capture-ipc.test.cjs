@@ -581,3 +581,87 @@ test('does not prepare the Linux Portal during discovery/previews and starts it 
     restoreToken: null,
   });
 });
+
+test('forwards macOS source previews to the native engine with the same source id', async () => {
+  const handlers = new Map();
+  const requests = [];
+  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const captureEngine = {
+    request: async (command, payload) => {
+      requests.push({ command, payload });
+      assert.equal(command, 'source-preview');
+      return {
+        sourceId: payload.source,
+        thumbnail: 'data:image/jpeg;base64,/9j/native-preview',
+      };
+    },
+  };
+
+  registerCaptureIpc({
+    ipcMain,
+    desktopCapturer: {},
+    screen: {},
+    captureEngine,
+    app: {},
+    userPaths: { projects: 'recordings' },
+    trackStorages: [],
+    platform: 'darwin',
+  });
+
+  const getSourcePreview = handlers.get('capture:source-preview');
+  assert.equal(typeof getSourcePreview, 'function');
+  const result = await getSourcePreview(
+    {},
+    {
+      sourceId: 'sck:window:42',
+      maxWidth: 320,
+      maxHeight: 180,
+    },
+  );
+
+  assert.deepEqual(result, {
+    sourceId: 'sck:window:42',
+    thumbnail: 'data:image/jpeg;base64,/9j/native-preview',
+    status: 'ready',
+  });
+  assert.deepEqual(requests, [
+    {
+      command: 'source-preview',
+      payload: { source: 'sck:window:42', maxWidth: 320, maxHeight: 180 },
+    },
+  ]);
+});
+
+test('rejects source previews during shutdown before contacting the native engine', async () => {
+  const handlers = new Map();
+  let requests = 0;
+  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const captureEngine = {
+    request: async () => {
+      requests += 1;
+      throw new Error('capture engine must not be contacted during shutdown');
+    },
+  };
+
+  registerCaptureIpc({
+    ipcMain,
+    desktopCapturer: {},
+    screen: {},
+    captureEngine,
+    app: {},
+    userPaths: { projects: 'recordings' },
+    trackStorages: [],
+    platform: 'darwin',
+    canAcceptWork: () => false,
+  });
+
+  const getSourcePreview = handlers.get('capture:source-preview');
+  await assert.rejects(
+    async () => getSourcePreview({}, { sourceId: 'sck:window:42' }),
+    (error) => {
+      assert.equal(error.code, 'application-shutting-down');
+      return true;
+    },
+  );
+  assert.equal(requests, 0);
+});

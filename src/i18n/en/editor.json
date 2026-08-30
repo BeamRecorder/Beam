@@ -149,6 +149,8 @@
     "zoomIn": "Zoom In",
     "snappingOn": "Magnet Snapping Enabled",
     "snappingOff": "Magnet Snapping Disabled",
+    "fullscreenPreview": "Fullscreen preview",
+    "exitFullscreenPreview": "Exit fullscreen preview",
     "zoom": "Zoom",
     "resetZoom": "Reset Zoom",
     "previewQuality": "Preview quality",
@@ -205,6 +207,7 @@
     "copy": "Copy",
     "paste": "Paste",
     "delete": "Delete",
+    "rippleDelete": "Delete and close gap",
     "copyUnavailable": "Select a timeline item before copying.",
     "clipboardEmpty": "Copy a timeline item before pasting."
   },
@@ -334,6 +337,16 @@
     "savingProject": "Saving project"
   },
   "ZoomPanel": {
+    "cameraFollow": "Camera follow",
+    "cameraFollowDesc": "Keeps the cursor inside a calm area before moving the camera.",
+    "advanced": "Advanced",
+    "followPresetStable": "Stable",
+    "followPresetBalanced": "Balanced",
+    "followPresetResponsive": "Responsive",
+    "safeZone": "Safe zone",
+    "responsiveness": "Responsiveness",
+    "straightPaths": "Straight paths",
+    "straightPathsDesc": "Locks camera movement to horizontal, vertical, or diagonal paths.",
     "generateAutoZooms": "Generate Auto Zooms",
     "regenerateAutoZooms": "Regenerate Auto Zooms",
     "regenerateConfirm": "Regenerate automatic zooms? This will replace all auto-detected zoom points.",

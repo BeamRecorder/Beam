@@ -67,6 +67,29 @@ const visualTrackComposition = (extraClips: ClipComposition['clips'] = []): Clip
 };
 
 describe('TimelineTracks visual add placement', () => {
+  it('renders Add in the ruler spacer, opens upward, and emits the selected element', async () => {
+    const mounted = await mountTracks({
+      composition: visualTrackComposition(),
+      selectedZoomId: null,
+      selectedClipId: null,
+    });
+    const spacer = mounted!.get('.sidebar-ruler-spacer');
+    const addButton = spacer.find('button');
+    expect(addButton.exists()).toBe(true);
+
+    const popover = mounted!.findComponent({ name: 'Popover' });
+    expect(popover.exists()).toBe(true);
+    expect(popover.props('direction')).toBe('up');
+
+    await addButton.trigger('click');
+    const blur = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.menu-item')).find((button) =>
+      button.textContent?.toLowerCase().includes('blur'),
+    );
+    expect(blur).toBeDefined();
+    blur!.click();
+    expect(mounted!.emitted('add:element')).toEqual([['blur']]);
+  });
+
   it.each([
     ['image-track', 'image'],
     ['color-track', 'color'],

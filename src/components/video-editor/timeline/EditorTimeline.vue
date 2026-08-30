@@ -13,10 +13,14 @@ import type {
 } from './composables/timeline-clipboard-types';
 import type {
   TimelinePlacementRequest,
+  TimelineItemSelectionRequest,
+  TimelineSelectionDelete,
+  TimelineSelectionMove,
   TrackClipSelection,
   TrackZoomSelection,
 } from './composables/timeline-tracks-types';
 import type { AddVisualElementRequest } from '../composition/visual-element-types';
+import type { TimelineElementKind } from './timeline-element-types';
 
 const props = withDefaults(
   defineProps<{
@@ -48,6 +52,7 @@ const props = withDefaults(
   },
 );
 const emit = defineEmits<{
+  (event: 'add:element', kind: TimelineElementKind): void;
   (event: 'update:currentTime', value: number): void;
   (event: 'update:isPlaying', value: boolean): void;
   (event: 'update:zoomLevel', value: number): void;
@@ -55,15 +60,19 @@ const emit = defineEmits<{
   (event: 'select:zoom-track', selection: TrackZoomSelection): void;
   (event: 'select:clip', clipId: string): void;
   (event: 'select:track', selection: TrackClipSelection): void;
+  (event: 'select:item', selection: TimelineItemSelectionRequest): void;
+  (event: 'select:all'): void;
   (event: 'toggle:clip', clipId: string): void;
   (event: 'delete:clips', clipIds: string[]): void;
   (event: 'delete:zoom', zoomId: string): void;
+  (event: 'delete:selection', selection: TimelineSelectionDelete): void;
   (event: 'hold:clip', payload: { id: string; timeMs: number }): void;
   (event: 'trim:clip', payload: { id: string; edge: 'start' | 'end'; timeMs: number }): void;
   (event: 'move:clip', payload: { id: string; startMs: number }): void;
   (event: 'preview:composition', value: ClipComposition | null): void;
   (event: 'trim:zoom', payload: { id: string; edge: 'start' | 'end'; timeMs: number }): void;
   (event: 'move:zoom', payload: { id: string; startMs: number; endMs: number }): void;
+  (event: 'move:selection', payload: TimelineSelectionMove): void;
   (event: 'add:zoom', placement: TimelinePlacementRequest): void;
   (event: 'add:caption', placement: TimelinePlacementRequest): void;
   (event: 'add:visual-element', request: AddVisualElementRequest): void;
@@ -77,13 +86,20 @@ const emit = defineEmits<{
   (event: 'open:canvas-transition', edge: 'entry' | 'exit'): void;
 }>();
 
+const isEditorFocused = (active: Element | null) => {
+  if (!(active instanceof HTMLElement)) return false;
+  return ['input', 'textarea', 'select'].includes(active.tagName.toLowerCase()) || active.isContentEditable;
+};
+
 const handleKeyDown = (event: KeyboardEvent) => {
-  if (event.code !== 'Space') return;
-  const active = document.activeElement;
-  if (active) {
-    const tag = active.tagName.toLowerCase();
-    if (['input', 'textarea', 'select'].includes(tag) || active.getAttribute('contenteditable') === 'true') return;
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') {
+    if (isEditorFocused(document.activeElement)) return;
+    event.preventDefault();
+    emit('select:all');
+    return;
   }
+  if (event.code !== 'Space') return;
+  if (isEditorFocused(document.activeElement)) return;
   event.preventDefault();
   emit('update:isPlaying', !props.isPlaying);
 };
@@ -112,21 +128,26 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
         :project-id="projectId"
         :recent-paste="recentPaste"
         :canvas="canvas"
+        @add:element="emit('add:element', $event)"
         @update:current-time="emit('update:currentTime', $event)"
         @update:zoom-level="emit('update:zoomLevel', $event)"
         @select:zoom="emit('select:zoom', $event)"
         @select:zoom-track="emit('select:zoom-track', $event)"
         @select:clip="emit('select:clip', $event)"
         @select:track="emit('select:track', $event)"
+        @select:item="emit('select:item', $event)"
+        @select:all="emit('select:all')"
         @toggle:clip="emit('toggle:clip', $event)"
         @delete:clips="emit('delete:clips', $event)"
         @delete:zoom="emit('delete:zoom', $event)"
+        @delete:selection="emit('delete:selection', $event)"
         @hold:clip="emit('hold:clip', $event)"
         @trim:clip="emit('trim:clip', $event)"
         @move:clip="emit('move:clip', $event)"
         @preview:composition="emit('preview:composition', $event)"
         @trim:zoom="emit('trim:zoom', $event)"
         @move:zoom="emit('move:zoom', $event)"
+        @move:selection="emit('move:selection', $event)"
         @add:zoom="emit('add:zoom', $event)"
         @add:caption="emit('add:caption', $event)"
         @add:visual-element="emit('add:visual-element', $event)"

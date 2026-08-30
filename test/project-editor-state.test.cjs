@@ -44,6 +44,8 @@ const canvas = (value) => ({
   watermark: value,
 });
 
+const balancedAutoFollow = () => ({ safeZone: 0.5, responsiveness: 0.55, directionLock: true });
+
 test('defaults new cursor presentations to spring-on and ripple-off for both buttons', () => {
   const state = createDefaultPresentation();
 
@@ -240,6 +242,23 @@ test('normalizes persisted zoom motion blur enabled state and intensity', () => 
   });
 
   assert.deepEqual(state.motionBlur, { enabled: false, intensity: 1 });
+});
+
+test('falls back to the Balanced auto-follow preset for legacy editor state', () => {
+  const state = zoomState({ elements: [], generatedSessions: [] });
+
+  assert.deepEqual(state.autoFollow, balancedAutoFollow());
+});
+
+test('clamps and round-trips persisted auto-follow settings', () => {
+  const state = zoomState({
+    elements: [],
+    generatedSessions: [],
+    autoFollow: { safeZone: 2, responsiveness: -1, directionLock: false },
+  });
+
+  assert.deepEqual(state.autoFollow, { safeZone: 0.75, responsiveness: 0, directionLock: false });
+  assert.deepEqual(zoomState(state).autoFollow, state.autoFollow);
 });
 
 test('rejects malformed persisted zoom motion blur settings', () => {

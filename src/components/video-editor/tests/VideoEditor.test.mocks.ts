@@ -15,9 +15,25 @@ const historyState = vi.hoisted(() => ({
   undo: vi.fn(),
   redo: vi.fn(),
 }));
+const fullscreenState = vi.hoisted(() => ({ active: false, toggle: vi.fn() }));
 
 vi.mock('../../../api/capture', () => ({ capture }));
 vi.mock('~/ui/toast/toastStore', () => ({ useToastStore: () => toast }));
+vi.mock('../canvas/composables/useElementFullscreen', async () => {
+  const { ref } = await import('vue');
+  return {
+    useElementFullscreen: vi.fn(() => {
+      const isFullscreen = ref(fullscreenState.active);
+      const isExiting = ref(false);
+      fullscreenState.toggle.mockImplementation(() => {
+        if (isExiting.value) return;
+        fullscreenState.active = !fullscreenState.active;
+        isFullscreen.value = fullscreenState.active;
+      });
+      return { isExiting, isFullscreen, toggleFullscreen: fullscreenState.toggle };
+    }),
+  };
+});
 
 vi.mock('../composables/useVideoEditor', async () => {
   const { computed, ref } = await import('vue');
@@ -376,9 +392,15 @@ vi.mock('../sidebar/SidebarPanel.vue', async () => {
   return {
     default: defineComponent({
       name: 'MockSidebar',
+      props: { activeTab: { type: String, default: 'canvas' }, panelOpen: { type: Boolean, default: true } },
       emits: ['select-tab'],
       setup(_, { emit }) {
-        return () => h('button', { class: 'sidebar-tab', onClick: () => emit('select-tab', 'zoom') });
+        return () =>
+          h('div', [
+            h('button', { class: 'sidebar-tab', onClick: () => emit('select-tab', 'zoom') }),
+            h('button', { class: 'sidebar-canvas-tab', onClick: () => emit('select-tab', 'canvas') }),
+            h('button', { class: 'sidebar-clip-tab', onClick: () => emit('select-tab', 'clip') }),
+          ]);
       },
     }),
   };
@@ -495,6 +517,7 @@ vi.mock('../canvas/EditorCanvas.vue', async () => {
             zoomOut: vi.fn(),
             resetZoom: vi.fn(),
           },
+          getFullscreenElement: () => document.querySelector('.mock-canvas'),
         });
         return () => {
           const previewComposition = props.composition as ClipComposition | null;
@@ -565,13 +588,14 @@ vi.mock('../timeline/TimelineToolbar.vue', async () => {
   return {
     default: defineComponent({
       name: 'MockTimelineToolbar',
-      emits: ['update:is-playing', 'update:current-time', 'add:element'],
+      props: { isCanvasFullscreen: { type: Boolean, default: false } },
+      emits: ['update:is-playing', 'update:current-time', 'toggle:canvas-fullscreen'],
       setup(_, { emit }) {
         return () =>
           h('div', [
-            h('button', { class: 'add-sound', onClick: () => emit('add:element', 'sound') }),
             h('button', { class: 'timeline-play', onClick: () => emit('update:is-playing', true) }),
             h('button', { class: 'timeline-time', onClick: () => emit('update:current-time', 1.25) }),
+            h('button', { class: 'timeline-fullscreen', onClick: () => emit('toggle:canvas-fullscreen') }),
           ]);
       },
     }),
@@ -599,6 +623,7 @@ vi.mock('../timeline/EditorTimeline.vue', async () => {
         'add:zoom',
         'add:caption',
         'add:visual-element',
+        'add:element',
         'delete:clips',
         'reorder:clip',
         'reorder:caption',
@@ -661,6 +686,7 @@ vi.mock('../timeline/EditorTimeline.vue', async () => {
               }),
               h('button', { class: 'timeline-toggle', onClick: () => emit('toggle:clip', 'audio') }),
               h('button', { class: 'timeline-add-caption', onClick: () => emit('add:caption', 500) }),
+              h('button', { class: 'add-sound', onClick: () => emit('add:element', 'sound') }),
               h('button', { class: 'timeline-delete-clips', onClick: () => emit('delete:clips', ['audio']) }),
               h('button', {
                 class: 'timeline-copy',
@@ -725,4 +751,4 @@ vi.mock('../timeline/EditorTimeline.vue', async () => {
   };
 });
 
-export { editorState, capture, exportState, toast, historyState };
+export { editorState, capture, exportState, toast, historyState, fullscreenState };

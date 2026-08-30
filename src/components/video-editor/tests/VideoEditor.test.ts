@@ -3,7 +3,14 @@ import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import type { CaptionClip, ClipComposition } from '~/media/shared/composition-types';
 import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
-import { editorState, historyState, mountEditor, setEditorComponent, toast } from './VideoEditor.test.setup';
+import {
+  editorState,
+  fullscreenState,
+  historyState,
+  mountEditor,
+  setEditorComponent,
+  toast,
+} from './VideoEditor.test.setup';
 
 const { default: VideoEditor } = await import('../VideoEditor.vue');
 setEditorComponent(VideoEditor);
@@ -49,6 +56,27 @@ const updateCaptionState = (clip: CaptionClip) => {
 };
 
 describe('VideoEditor', () => {
+  it('toggles Properties for the same tab and reopens it for a new selection', async () => {
+    const mounted = mountEditor();
+    const canvasTab = mounted.get('.sidebar-canvas-tab');
+    const clipTab = mounted.get('.sidebar-clip-tab');
+
+    expect(mounted.find('.mock-properties').exists()).toBe(true);
+    await canvasTab.trigger('click');
+    expect(mounted.find('.mock-properties').exists()).toBe(false);
+    await canvasTab.trigger('click');
+    expect(mounted.find('.mock-properties').exists()).toBe(true);
+
+    await canvasTab.trigger('click');
+    mounted.findComponent({ name: 'MockEditorCanvas' }).vm.$emit('select:clip', 'screen');
+    await mounted.vm.$nextTick();
+    expect(mounted.find('.mock-properties').exists()).toBe(true);
+    expect(editorState.store.activeTab.value).toBe('clip');
+
+    await clipTab.trigger('click');
+    expect(mounted.find('.mock-properties').exists()).toBe(false);
+  });
+
   it('initializes editor window state and emits topbar navigation events', async () => {
     const mounted = mountEditor();
     await flushPromises();
@@ -56,6 +84,24 @@ describe('VideoEditor', () => {
     await mounted.find('.open').trigger('click');
     expect(mounted.emitted('back-to-hud')).toHaveLength(1);
     expect(mounted.emitted('open-project')).toHaveLength(1);
+  });
+
+  it('connects the timeline fullscreen event to the canvas fullscreen controller', async () => {
+    const mounted = mountEditor();
+
+    await mounted.get('.timeline-fullscreen').trigger('click');
+
+    expect(fullscreenState.toggle).toHaveBeenCalledOnce();
+  });
+
+  it('applies the fullscreen layout class and renders the back button after entering fullscreen', async () => {
+    const mounted = mountEditor();
+
+    await mounted.get('.timeline-fullscreen').trigger('click');
+    await mounted.vm.$nextTick();
+
+    expect(mounted.get('.canvas-preview-stage').classes()).toContain('is-app-fullscreen');
+    expect(mounted.find('.fullscreen-preview-back').exists()).toBe(true);
   });
 
   it('opens Cursor and clears clip and zoom selection when the canvas cursor is clicked', async () => {
@@ -148,7 +194,6 @@ describe('VideoEditor', () => {
     await mounted.find('.select-audio').trigger('click');
     expect(editorState.store.activeTab.value).toBe('clip');
     await mounted.find('.select-canvas').trigger('click');
-    await mounted.find('.add-sound').trigger('click');
     await mounted.find('.timeline-play').trigger('click');
     await mounted.find('.timeline-time').trigger('click');
     await mounted.find('.update-rate').trigger('click');
@@ -166,7 +211,6 @@ describe('VideoEditor', () => {
     expect(editorState.store.player.setPlaying).toHaveBeenCalledWith(true);
     expect(editorState.store.player.seek).toHaveBeenCalledWith(1.25, 'seek');
     expect(editorState.store.compositionState.selectClip).toHaveBeenCalledWith('audio');
-    expect(editorState.store.compositionState.addElement).toHaveBeenCalledWith('sound');
     expect(editorState.store.compositionState.updateSelectedTransform).toHaveBeenCalled();
     expect(editorState.store.compositionState.updateSelectedVolume).toHaveBeenCalledWith(80);
     expect(editorState.store.compositionState.composition.value.clips).not.toEqual(

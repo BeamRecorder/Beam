@@ -4,7 +4,7 @@ import { useVirtualList } from '@vueuse/core';
 import Popover from '../popover/Popover.vue';
 import Skeleton from '../skeleton/Skeleton.vue';
 import Input from '../input/Input.vue';
-import { ChevronDown, Check, Eye, Search } from '@lucide/vue';
+import { ChevronDown, Check, Eye, Monitor, PanelsTopLeft, Search } from '@lucide/vue';
 import { createFuzzySearchEngine } from './fuzzy-search';
 import type { SelectOption } from './select-types';
 
@@ -113,7 +113,7 @@ const handleMouseLeaveList = () => {
 
 const itemHeight = computed(() => {
   if (props.optionHeight !== 38) return props.optionHeight;
-  if (normalizedOptions.value.some((opt) => opt.thumbnail || opt.loading)) {
+  if (normalizedOptions.value.some((opt) => opt.thumbnail || opt.thumbnailFallback || opt.loading)) {
     return 52;
   }
   return props.optionHeight;
@@ -297,6 +297,11 @@ onUnmounted(() => {
             <Skeleton variant="linear" width="100%" height="100%" />
           </div>
 
+          <div v-else-if="selectedOption?.thumbnailFallback" class="selected-thumbnail-wrapper thumbnail-fallback">
+            <Monitor v-if="selectedOption.thumbnailFallback === 'screen'" :size="15" aria-hidden="true" />
+            <PanelsTopLeft v-else :size="15" aria-hidden="true" />
+          </div>
+
           <span class="select-label" :class="{ 'is-placeholder': !selectedOption }" :style="labelStyle">
             {{ selectedOption ? selectedOption.label : placeholder }}
           </span>
@@ -380,6 +385,11 @@ onUnmounted(() => {
                 <!-- Skeleton loader -->
                 <div v-else-if="item.data.loading" class="thumbnail-wrapper">
                   <Skeleton variant="linear" width="100%" height="100%" />
+                </div>
+
+                <div v-else-if="item.data.thumbnailFallback" class="thumbnail-wrapper thumbnail-fallback">
+                  <Monitor v-if="item.data.thumbnailFallback === 'screen'" :size="18" aria-hidden="true" />
+                  <PanelsTopLeft v-else :size="18" aria-hidden="true" />
                 </div>
 
                 <slot name="option" :option="item.data" :previewing="item.data.value === hoveredValue">

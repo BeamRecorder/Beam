@@ -27,6 +27,7 @@ const mountSourceSelect = (props: {
   previews?: CapturePreview[];
   loading?: boolean;
   disabled?: boolean;
+  preferNativeSources?: boolean;
 }) =>
   mount(SourceSelect, {
     attachTo: document.body,
@@ -121,6 +122,34 @@ describe('SourceSelect', () => {
     options[1].click();
     await wrapper.vm.$nextTick();
     expect(wrapper.emitted('update:modelValue')).toEqual([['window:browser']]);
+    wrapper.unmount();
+  });
+
+  it('renders native window catalog entries with a generic fallback when thumbnails are unavailable', async () => {
+    const nativeWindowId = 'sck:window:123';
+    const wrapper = mountSourceSelect({
+      modelValue: nativeWindowId,
+      kind: 'window',
+      sources: [
+        {
+          id: nativeWindowId,
+          kind: 'window',
+          label: 'Editor — Beam',
+          isDefault: false,
+          selectionMode: 'direct',
+        },
+      ],
+      previews: [],
+      preferNativeSources: true,
+    });
+
+    expect(wrapper.get('.select-label').text()).toBe('Editor — Beam');
+    await wrapper.get('.select-trigger').trigger('click');
+    const option = document.body.querySelector<HTMLElement>('.select-option');
+    expect(option?.querySelector('.thumbnail-fallback')).not.toBeNull();
+    option?.click();
+    await wrapper.vm.$nextTick();
+    expect(wrapper.emitted('update:modelValue')).toEqual([[nativeWindowId]]);
     wrapper.unmount();
   });
 

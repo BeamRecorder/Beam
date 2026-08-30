@@ -2,9 +2,9 @@ import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, vi } from 'vitest';
 import type { Component } from 'vue';
 import './VideoEditor.test.mocks';
-import { capture, editorState, exportState, historyState, toast } from './VideoEditor.test.mocks';
+import { capture, editorState, exportState, fullscreenState, historyState, toast } from './VideoEditor.test.mocks';
 
-export { capture, editorState, exportState, historyState, toast };
+export { capture, editorState, exportState, fullscreenState, historyState, toast };
 
 export const project = {
   id: 'project-1',
@@ -20,6 +20,7 @@ let editorComponent: Component | null = null;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  fullscreenState.active = false;
   vi.stubGlobal(
     'requestAnimationFrame',
     vi.fn(() => 1),

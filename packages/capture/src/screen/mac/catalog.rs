@@ -10,7 +10,9 @@ use crate::{
 
 pub fn discover_sources() -> Result<Vec<SourceDescriptor>, CaptureError> {
     let content = SCShareableContent::create()
-        .with_on_screen_windows_only(true)
+        // Desktop-independent windows remain selectable in other Spaces and
+        // while another application owns the active fullscreen Space.
+        .with_on_screen_windows_only(false)
         .with_exclude_desktop_windows(true)
         .get()
         .map_err(backend_error)?;
@@ -65,10 +67,14 @@ fn window_descriptor(
     let frame = window.frame();
     let width = dimension(frame.size.width);
     let height = dimension(frame.size.height);
+    let label = window.owning_application().map_or_else(
+        || title.clone(),
+        |application| format!("{title} — {}", application.application_name()),
+    );
     Some(SourceDescriptor {
         id: SourceId::new(format!("sck:window:{}", window.window_id())).ok()?,
         kind: SourceKind::Window,
-        label: title,
+        label,
         is_default: false,
         selection_mode: SourceSelectionMode::Direct,
         display_id: None,

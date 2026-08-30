@@ -14,6 +14,7 @@ import type { MediaError } from '~/media/shared/media-types';
 import TimelineTracks from '../TimelineTracks.vue';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import { useTimelineClipboard } from '../composables/useTimelineClipboard';
+import { timelineClipStyle } from '../timeline-clip-geometry';
 
 const waveformTestState = vi.hoisted(() => ({
   viewport: null as
@@ -65,11 +66,15 @@ vi.mock('../composables/useCompositionAudioWaveforms', () => ({
 
 export const TimelineClipStub = defineComponent({
   name: 'TimelineClip',
+  setup() {
+    return { timelineClipStyle };
+  },
   props: {
     clip: { type: Object, required: true },
     duration: { type: Number, required: true },
     selected: { type: Boolean, default: false },
     trimState: { type: Object, default: null },
+    timelineWidthPx: { type: Number, default: 0 },
     thumbnailSlots: { type: Array, default: () => [] },
     waveformBars: { type: Array, default: undefined },
     waveformLeftPercent: { type: Number, default: 0 },
@@ -86,8 +91,9 @@ export const TimelineClipStub = defineComponent({
       type="button"
       class="timeline-clip"
       :class="{ selected, disabled: !clip.enabled, 'paste-arrival': pasteHighlight }"
-      @click.stop="$emit('select')"
+      @click.stop="$emit('select', $event)"
       @contextmenu.prevent="$emit('contextmenu', $event)"
+      :style="timelineClipStyle(clip, duration, timelineWidthPx)"
       @pointerdown="$emit('move', $event)"
     >
       <span class="clip-label-text">{{ clip.name }}</span>

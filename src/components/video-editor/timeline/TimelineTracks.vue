@@ -4,7 +4,7 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { useTimelineTracks } from './composables/useTimelineTracks';
 import { useTimelineContextMenu } from './composables/useTimelineContextMenu';
 import ContextMenu from '~/components/ui/context-menu/ContextMenu.vue';
-import { computed } from 'vue';
+import { computed, type ComponentPublicInstance, type Ref } from 'vue';
 import TimelineCaptionTracks from './TimelineCaptionTracks.vue';
 import type { TimelineTracksEmits, TimelineTracksProps } from './composables/timeline-tracks-types';
 import TimelineCanvasTransitionTrack from './TimelineCanvasTransitionTrack.vue';
@@ -13,6 +13,8 @@ import { DEFAULT_OUTPUT_CANVAS } from '../canvas/output-canvas';
 import { useTimelineClipboardShortcuts } from './composables/useTimelineClipboardShortcuts';
 import TimelineTrackHeaders from './TimelineTrackHeaders.vue';
 import { normalizeZoomProjection } from '../zoom/zoom-types';
+import TimelineAddMenu from './TimelineAddMenu.vue';
+import { useTimelineItemInteractions } from './composables/useTimelineItemInteractions';
 const { t } = useTranslate('TimelineTracks');
 const { t: tCanvas } = useTranslate('CanvasPanel');
 const { t: tToolbar } = useTranslate('TimelineToolbar');
@@ -42,7 +44,7 @@ const {
   sidebarScrollRef,
   tracksViewportRef,
   ticksAreaRef,
-  rulerWidth,
+  rulerLayoutWidth,
   tracksWidthStyle,
   playheadStyle,
   rulerSeconds,
@@ -82,15 +84,19 @@ const {
   draggedCaptionId,
   beginCaptionReorder,
 } = useTimelineTracks(props, emit);
-void [tracksScrollRef, sidebarScrollRef, tracksViewportRef, ticksAreaRef];
-const selectedClipIdSet = computed(
-  () =>
-    new Set(props.selectedClipIds?.length ? props.selectedClipIds : props.selectedClipId ? [props.selectedClipId] : []),
-);
-const selectedZoomIdSet = computed(
-  () =>
-    new Set(props.selectedZoomIds?.length ? props.selectedZoomIds : props.selectedZoomId ? [props.selectedZoomId] : []),
-);
+const bindDivRef = (target: Ref<HTMLDivElement | null>) => (element: Element | ComponentPublicInstance | null) => {
+  target.value = element instanceof HTMLDivElement ? element : null;
+};
+const setSidebarScrollElement = bindDivRef(sidebarScrollRef);
+const setTracksScrollElement = bindDivRef(tracksScrollRef);
+const setTracksViewportElement = bindDivRef(tracksViewportRef);
+const setTicksAreaElement = bindDivRef(ticksAreaRef);
+const { selectedClipIdSet, selectedZoomIdSet, selectItem, startClipMove, startZoomMove } = useTimelineItemInteractions({
+  props,
+  emit,
+  beginClipMove,
+  beginZoomMove,
+});
 const visualElementLabel = (track: (typeof visualTracks.value)[number]) => {
   const kind = visualKindFor(track);
   return kind === 'color'
@@ -123,6 +129,7 @@ const {
   selectedClipId: computed(() => props.selectedClipId),
   selectedClipIds: computed(() => [...selectedClipIdSet.value]),
   selectedZoomId: computed(() => props.selectedZoomId),
+  selectedZoomIds: computed(() => [...selectedZoomIdSet.value]),
   assetFor,
   emit,
   t,
@@ -141,7 +148,6 @@ const exportProgressPercent = computed(() => {
   return Math.min(100, Math.max(0, (current / total) * 100));
 });
 const canvasTransitions = computed(() => props.canvas.transitions ?? EMPTY_CLIP_TRANSITIONS);
-const hasCanvasTransitions = computed(() => Boolean(canvasTransitions.value.entry || canvasTransitions.value.exit));
 const updateCanvasTransitions = (transitions: NonNullable<typeof props.canvas.transitions>) =>
   emit('update:canvas', { ...props.canvas, transitions });
 const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.transitions> | null) =>
@@ -150,11 +156,13 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
 <template>
   <div class="timeline-root" @wheel="handleWheel">
     <div class="timeline-sidebar">
-      <div class="sidebar-ruler-spacer" />
-      <div ref="sidebarScrollRef" class="sidebar-tracks-viewport">
+      <div class="sidebar-ruler-spacer">
+        <TimelineAddMenu @add:element="emit('add:element', $event)" />
+      </div>
+      <div :ref="setSidebarScrollElement" class="sidebar-tracks-viewport">
         <div class="sidebar-tracks-stack">
           <TimelineCanvasTransitionTrack
-            v-if="hasCanvasTransitions"
+            v-if="canvasTransitions.entry || canvasTransitions.exit"
             mode="sidebar"
             :transitions="canvasTransitions"
             :duration-ms="layoutDurationMs"
@@ -182,15 +190,15 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
         </div>
       </div>
     </div>
-    <div ref="tracksScrollRef" class="timeline-tracks-container" @scroll="onScroll">
+    <div :ref="setTracksScrollElement" class="timeline-tracks-container" @scroll="onScroll">
       <div
-        ref="tracksViewportRef"
+        :ref="setTracksViewportElement"
         class="timeline-viewport"
         :class="{ 'is-trimming': activeTrimState !== null, 'is-wheel-zooming': isWheelZooming }"
         :style="tracksWidthStyle"
       >
         <div class="timeline-ruler">
-          <div ref="ticksAreaRef" class="ruler-ticks-area" @pointerdown="beginScrub">
+          <div :ref="setTicksAreaElement" class="ruler-ticks-area" @pointerdown="beginScrub">
             <div
               v-if="exportProgressPercent !== null"
               class="ruler-export-progress-bar"
@@ -230,7 +238,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
         </div>
         <div class="tracks-stack">
           <TimelineCanvasTransitionTrack
-            v-if="hasCanvasTransitions"
+            v-if="canvasTransitions.entry || canvasTransitions.exit"
             mode="track"
             :transitions="canvasTransitions"
             :duration-ms="layoutDurationMs"
@@ -275,7 +283,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                   :clip="displayedClip(clip)"
                   :asset="assetFor(clip)"
                   :duration="layoutDurationMs / 1000"
-                  :timeline-width-px="rulerWidth"
+                  :timeline-width-px="rulerLayoutWidth"
                   :thumbnail-slots="thumbnailSlots"
                   :defer-thumbnail-requests="
                     isWheelZooming || activeTrimState !== null || movingClipIds.includes(clip.id)
@@ -284,9 +292,9 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                   :selected="selectedClipIdSet.has(clip.id)"
                   :trim-state="trimStateFor(clip.id)"
                   :paste-highlight="recentPaste?.type === 'clip' && recentPaste.id === clip.id"
-                  @select="emit('select:clip', clip.id)"
+                  @select="selectItem('clip', clip.id, $event)"
                   @contextmenu="openClipContextMenu($event, clip)"
-                  @move="beginClipMove($event, clip)"
+                  @move="startClipMove($event, clip)"
                   @trim="beginClipTrim($event.event, clip, $event.edge)"
                 />
               </div>
@@ -320,9 +328,9 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 :style="
                   percentageStyle(displayedZoom(zoom).startMs, displayedZoom(zoom).endMs - displayedZoom(zoom).startMs)
                 "
-                @click.stop="emit('select:zoom', zoom.id)"
+                @click.stop="selectItem('zoom', zoom.id, $event)"
                 @contextmenu.prevent.stop="openZoomContextMenu($event, zoom)"
-                @pointerdown="beginZoomMove($event, zoom)"
+                @pointerdown="startZoomMove($event, zoom)"
               >
                 <span
                   class="trim-handle start"
@@ -367,13 +375,13 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
             :percentage-style="percentageStyle"
             :displayed-clip="displayedClip"
             :trim-state-for="trimStateFor"
-            :begin-clip-move="beginClipMove"
+            :begin-clip-move="startClipMove"
             :begin-clip-trim="beginClipTrim"
             :hover-at="hoverAt"
             :leave-track="leaveTrack"
             :add-at="addAt"
             :recent-paste="recentPaste"
-            @select="emit('select:clip', $event)"
+            @select="selectItem('clip', $event.id, $event.event)"
             @contextmenu:clip="openClipContextMenu($event.event, $event.clip)"
             @contextmenu:track="openTrackContextMenu($event, 'caption')"
           />
@@ -391,7 +399,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 :clip="displayedClip(clip)"
                 :asset="assetFor(clip)"
                 :duration="layoutDurationMs / 1000"
-                :timeline-width-px="rulerWidth"
+                :timeline-width-px="rulerLayoutWidth"
                 :thumbnail-slots="thumbnailSlots"
                 :defer-thumbnail-requests="isWheelZooming || activeTrimState !== null"
                 :defer-waveform-draw="isWheelZooming"
@@ -404,9 +412,9 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 :waveform-error="audioWaveformErrors[clip.id]"
                 :trim-state="trimStateFor(clip.id)"
                 :paste-highlight="recentPaste?.type === 'clip' && recentPaste.id === clip.id"
-                @select="emit('select:clip', clip.id)"
+                @select="selectItem('clip', clip.id, $event)"
                 @contextmenu="openClipContextMenu($event, clip)"
-                @move="beginClipMove($event, clip)"
+                @move="startClipMove($event, clip)"
                 @trim="beginClipTrim($event.event, clip, $event.edge)"
               />
             </div>
@@ -425,7 +433,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 :clip="displayedClip(clip)"
                 :asset="assetFor(clip)"
                 :duration="layoutDurationMs / 1000"
-                :timeline-width-px="rulerWidth"
+                :timeline-width-px="rulerLayoutWidth"
                 :thumbnail-slots="thumbnailSlots"
                 :defer-thumbnail-requests="isWheelZooming || activeTrimState !== null"
                 :defer-waveform-draw="isWheelZooming"
@@ -438,9 +446,9 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 :waveform-error="audioWaveformErrors[clip.id]"
                 :trim-state="trimStateFor(clip.id)"
                 :paste-highlight="recentPaste?.type === 'clip' && recentPaste.id === clip.id"
-                @select="emit('select:clip', clip.id)"
+                @select="selectItem('clip', clip.id, $event)"
                 @contextmenu="openClipContextMenu($event, clip)"
-                @move="beginClipMove($event, clip)"
+                @move="startClipMove($event, clip)"
                 @trim="beginClipTrim($event.event, clip, $event.edge)"
               />
             </div>
@@ -460,7 +468,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 :clip="displayedClip(clip)"
                 :asset="assetFor(clip)"
                 :duration="layoutDurationMs / 1000"
-                :timeline-width-px="rulerWidth"
+                :timeline-width-px="rulerLayoutWidth"
                 :thumbnail-slots="thumbnailSlots"
                 :defer-thumbnail-requests="isWheelZooming || activeTrimState !== null"
                 :defer-waveform-draw="isWheelZooming"
@@ -473,9 +481,9 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 :waveform-error="audioWaveformErrors[clip.id]"
                 :trim-state="trimStateFor(clip.id)"
                 :paste-highlight="recentPaste?.type === 'clip' && recentPaste.id === clip.id"
-                @select="emit('select:clip', clip.id)"
+                @select="selectItem('clip', clip.id, $event)"
                 @contextmenu="openClipContextMenu($event, clip)"
-                @move="beginClipMove($event, clip)"
+                @move="startClipMove($event, clip)"
                 @trim="beginClipTrim($event.event, clip, $event.edge)"
               />
             </div>
@@ -483,7 +491,6 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
         </div>
       </div>
     </div>
-    <!-- Track & Clip Context Menu -->
     <ContextMenu
       :is-open="contextMenuState.isOpen"
       :x="contextMenuState.x"

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Component } from 'vue';
-import { ChevronDown } from '@lucide/vue';
+import { ChevronDown, ChevronUp } from '@lucide/vue';
 import Popover from './Popover.vue';
 
 export interface PopoverMenuItem {
@@ -17,16 +17,19 @@ const props = defineProps<{
   disabled?: boolean;
   ariaLabel?: string;
   transparent?: boolean;
+  direction?: 'up' | 'down';
+  block?: boolean;
+  bare?: boolean;
 }>();
 const emit = defineEmits<{ (event: 'select', id: string): void }>();
 </script>
 
 <template>
-  <Popover align="left" direction="down" :match-trigger-width="false">
+  <Popover align="left" :direction="direction" :block="block" :match-trigger-width="false">
     <template #trigger="{ isOpen }">
       <button
         class="menu-button"
-        :class="{ 'is-open': isOpen, transparent }"
+        :class="{ 'is-open': isOpen, transparent, block, bare }"
         :disabled="disabled"
         type="button"
         :aria-label="ariaLabel || label"
@@ -35,7 +38,11 @@ const emit = defineEmits<{ (event: 'select', id: string): void }>();
       >
         <component :is="icon" v-if="icon" class="menu-button-icon" />
         <span>{{ label }}</span
-        ><ChevronDown class="menu-button-chevron" :class="{ 'is-open': isOpen }" />
+        ><component
+          :is="direction === 'up' ? ChevronUp : ChevronDown"
+          class="menu-button-chevron"
+          :class="{ 'is-open': isOpen }"
+        />
       </button>
     </template>
     <template #default="{ close }">
@@ -75,6 +82,18 @@ const emit = defineEmits<{ (event: 'select', id: string): void }>();
   color: var(--text-primary);
   font: 600 12px var(--font-sans);
   cursor: pointer;
+}
+.menu-button.block {
+  width: 100%;
+  justify-content: center;
+}
+.menu-button.bare,
+.menu-button.bare:hover:not(:disabled),
+.menu-button.bare.is-open {
+  border-color: transparent;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 .menu-button.transparent {
   background: transparent;

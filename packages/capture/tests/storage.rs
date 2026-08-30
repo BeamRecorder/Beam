@@ -117,6 +117,85 @@ fn project_editor_state_survives_a_new_recording() {
 }
 
 #[test]
+fn project_editor_auto_follow_and_unknown_fields_survive_a_new_recording() {
+    let temporary = tempfile::tempdir().expect("tempdir");
+    let project = ProjectId::new();
+    let first_session = SessionId::new();
+    let second_session = SessionId::new();
+    create_or_update_project(
+        temporary.path(),
+        project,
+        first_session,
+        "2026-01-01T00:00:00Z",
+    )
+    .expect("project");
+
+    let path = ProjectLayout::new(temporary.path(), project).project_manifest();
+    let mut value: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&path).expect("read project")).expect("json");
+    let editor = value
+        .get_mut("editor")
+        .and_then(serde_json::Value::as_object_mut)
+        .expect("editor object");
+    editor.insert(
+        "futureEditorSetting".into(),
+        serde_json::json!({ "enabled": true, "version": 3 }),
+    );
+    let zoom = editor
+        .get_mut("zoom")
+        .and_then(serde_json::Value::as_object_mut)
+        .expect("zoom object");
+    zoom.insert(
+        "autoFollow".into(),
+        serde_json::json!({
+            "safeZone": 0.42,
+            "responsiveness": 0.8,
+            "directionLock": false
+        }),
+    );
+    zoom.insert(
+        "futureZoomSetting".into(),
+        serde_json::json!({ "mode": "experimental" }),
+    );
+    write_atomic(
+        &path,
+        &serde_json::to_vec_pretty(&value).expect("serialize project"),
+    )
+    .expect("write project");
+
+    let updated = create_or_update_project(
+        temporary.path(),
+        project,
+        second_session,
+        "2026-01-02T00:00:00Z",
+    )
+    .expect("updated project");
+
+    assert_eq!(
+        updated.editor.extra.get("futureEditorSetting"),
+        Some(&serde_json::json!({ "enabled": true, "version": 3 }))
+    );
+    assert_eq!(
+        updated.editor.zoom.extra.get("autoFollow"),
+        Some(&serde_json::json!({
+            "safeZone": 0.42,
+            "responsiveness": 0.8,
+            "directionLock": false
+        }))
+    );
+    assert_eq!(
+        updated.editor.zoom.extra.get("futureZoomSetting"),
+        Some(&serde_json::json!({ "mode": "experimental" }))
+    );
+
+    let persisted: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&path).expect("read updated project"))
+            .expect("updated json");
+    assert_eq!(persisted["editor"]["zoom"]["autoFollow"]["safeZone"], 0.42);
+    assert_eq!(persisted["editor"]["futureEditorSetting"]["version"], 3);
+}
+
+#[test]
 fn generated_project_names_receive_a_unique_positive_suffix_on_collision() {
     let temporary = tempfile::tempdir().expect("temporary directory");
     let first_project = ProjectId::from_uuid(uuid::Uuid::from_bytes([

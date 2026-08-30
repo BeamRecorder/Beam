@@ -3,6 +3,7 @@ import type { ProjectEditorData, SessionTrackAsset, SessionTrackData } from '../
 import type { InputEventSidecar } from '../../../../api/types/capture-session';
 import { COMPOSITION_SCHEMA_VERSION, emptyComposition, type ClipComposition } from '~/media/shared/composition-types';
 import { synchronizeRecordingClips } from '../session-clips';
+import { deleteClip, splitClip } from '../engine/clip-engine';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 
 const segment = (overrides: Partial<SessionTrackAsset> = {}): SessionTrackAsset => ({
@@ -269,6 +270,18 @@ describe('synchronizeRecordingClips', () => {
     expect(result.keyboardCaptionSessions).toEqual([]);
     expect(result.clips.filter((clip) => clip.kind === 'caption')).toHaveLength(0);
     expect(result.assets[0]?.src).toBe('project-media://project-1/session-1/screen/segment.webm');
+  });
+
+  it('does not recreate a full recording segment over a persisted split fragment on reload', () => {
+    const data = editorData([track('screen', [segment({ endNs: 4_000_000_000 })])]);
+    const materialized = synchronizeRecordingClips(emptyComposition(), data);
+    const split = splitClip(materialized, 'screen', 2_000);
+    const rightFragment = split.clips.find((clip) => clip.kind === 'screen' && clip.timelineStartMs === 2_000)!;
+    const persisted = deleteClip(split, 'screen');
+
+    expect(persisted.clips).toEqual([rightFragment]);
+    expect(() => synchronizeRecordingClips(persisted, data)).not.toThrow();
+    expect(synchronizeRecordingClips(persisted, data)).toEqual(persisted);
   });
 
   it('creates keyboard captions once, keeps the current schema, and does not recreate a deleted caption', () => {

@@ -244,4 +244,98 @@ describe('ScreenRegionOverlayApp', () => {
     expect(wrapper.get('.region-frame').attributes('style')).toContain('width: 50%');
     expect(wrapper.get('.region-frame').attributes('style')).toContain('height: 50%');
   });
+
+  it('confirms a full-screen selection with Enter and cancels with Escape', async () => {
+    let configure!: (value: { mode: 'select'; bounds: { width: number; height: number } }) => void;
+    capture.onScreenRegionConfigure.mockImplementation((next: typeof configure) => {
+      configure = next;
+      return vi.fn();
+    });
+    const wrapper = mount(ScreenRegionOverlayApp, { global: { stubs: { Button, Select } } });
+    configure({ mode: 'select', bounds: { width: 2560, height: 1440 } });
+    await wrapper.vm.$nextTick();
+
+    const overlay = wrapper.get('.region-overlay');
+    const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+    overlay.element.dispatchEvent(enter);
+    expect(enter.defaultPrevented).toBe(true);
+    expect(capture.confirmScreenRegion).toHaveBeenCalledWith({ x: 0, y: 0, width: 1, height: 1 });
+
+    const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    overlay.element.dispatchEvent(escape);
+    expect(escape.defaultPrevented).toBe(true);
+    expect(capture.cancelScreenRegion).toHaveBeenCalledOnce();
+    wrapper.unmount();
+  });
+
+  it('does not consume selection shortcuts for the non-interactive recording marker', async () => {
+    let configure!: (value: {
+      mode: 'record';
+      bounds: { width: number; height: number };
+      region: { x: number; y: number; width: number; height: number };
+    }) => void;
+    capture.onScreenRegionConfigure.mockImplementation((next: typeof configure) => {
+      configure = next;
+      return vi.fn();
+    });
+    const wrapper = mount(ScreenRegionOverlayApp, { global: { stubs: { Button, Select } } });
+    configure({
+      mode: 'record',
+      bounds: { width: 1920, height: 1080 },
+      region: { x: 0.1, y: 0.2, width: 0.5, height: 0.4 },
+    });
+    await wrapper.vm.$nextTick();
+
+    const overlay = wrapper.get('.region-overlay');
+    const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+    const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    overlay.element.dispatchEvent(enter);
+    overlay.element.dispatchEvent(escape);
+
+    expect(enter.defaultPrevented).toBe(false);
+    expect(escape.defaultPrevented).toBe(false);
+    expect(capture.confirmScreenRegion).not.toHaveBeenCalled();
+    expect(capture.cancelScreenRegion).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('leaves Enter and Escape available to focused toolbar controls', async () => {
+    let configure!: (value: { mode: 'select'; bounds: { width: number; height: number } }) => void;
+    capture.onScreenRegionConfigure.mockImplementation((next: typeof configure) => {
+      configure = next;
+      return vi.fn();
+    });
+    const wrapper = mount(ScreenRegionOverlayApp, { global: { stubs: { Button, Select } } });
+    configure({ mode: 'select', bounds: { width: 2560, height: 1440 } });
+    await wrapper.vm.$nextTick();
+
+    const confirmButton = wrapper.findAll('.region-actions button')[2];
+    const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+    confirmButton.element.dispatchEvent(enter);
+    expect(enter.defaultPrevented).toBe(false);
+    expect(capture.confirmScreenRegion).not.toHaveBeenCalled();
+
+    const preset = wrapper.get('.region-preset-picker select');
+    const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    preset.element.dispatchEvent(escape);
+    expect(escape.defaultPrevented).toBe(false);
+    expect(capture.cancelScreenRegion).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('removes the global keyboard listener when the overlay is unmounted', async () => {
+    let configure!: (value: { mode: 'select'; bounds: { width: number; height: number } }) => void;
+    capture.onScreenRegionConfigure.mockImplementation((next: typeof configure) => {
+      configure = next;
+      return vi.fn();
+    });
+    const remove = vi.spyOn(window, 'removeEventListener');
+    const wrapper = mount(ScreenRegionOverlayApp, { global: { stubs: { Button, Select } } });
+    configure({ mode: 'select', bounds: { width: 2560, height: 1440 } });
+    await wrapper.vm.$nextTick();
+    wrapper.unmount();
+
+    expect(remove).toHaveBeenCalledWith('keydown', expect.any(Function));
+    remove.mockRestore();
+  });
 });

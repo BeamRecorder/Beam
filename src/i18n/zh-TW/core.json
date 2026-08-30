@@ -47,7 +47,8 @@
     "continuity": "連續背景",
     "continuityDescription": "在適應內容後方延伸一份模糊的影片副本。",
     "continuityBlur": "背景模糊",
-    "continuityBrightness": "背景亮度"
+    "continuityBrightness": "背景亮度",
+    "borderColor": "邊框顏色"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "正在載入相機預覽",
@@ -250,7 +251,9 @@
     "captionWordLabel": "字幕詞語",
     "wordStartTimeLabel": "詞語開始時間",
     "wordEndTimeLabel": "詞語結束時間",
-    "deleteCaptionClip": "刪除字幕片段"
+    "deleteCaptionClip": "刪除字幕片段",
+    "shadowColor": "陰影色彩",
+    "shadowBlur": "陰影模糊"
   },
   "CaptionPanel": {
     "aiAutoCaptioning": "AI 自動字幕",
@@ -308,7 +311,8 @@
     "unlink": "取消關聯",
     "deleteClip": "刪除片段",
     "deleteVideo": "刪除影片",
-    "deleteWebcam": "刪除視訊鏡頭"
+    "deleteWebcam": "刪除視訊鏡頭",
+    "shadowBlur": "陰影模糊"
   },
   "CursorPanel": {
     "cursorStyle": "游標樣式",
@@ -354,7 +358,14 @@
     "importSuccess": "已匯入 {count} 個靜態游標。",
     "importIgnoredAnimated": "已忽略動畫角色：{roles}。",
     "importFailed": "無法匯入游標套件。",
-    "discoveryFailed": "無法開啟套件搜尋。"
+    "discoveryFailed": "無法開啟套件搜尋。",
+    "shadowBlur": "陰影模糊",
+    "shadowColor": "陰影顏色",
+    "presetNone": "無",
+    "presetSingle": "單環",
+    "presetDouble": "雙波",
+    "presetSolid": "爆發",
+    "rippleStyle": "漣漪風格"
   },
   "EditorCanvas": {
     "videoPreviewLoading": "正在載入影片預覽",
@@ -443,7 +454,14 @@
     "authorizingInteractions": "正在啟用",
     "dismissInteractionNotice": "暫不",
     "interactionAccessSettingsHint": "可在設定中找到「錄製鍵盤快速鍵」。",
-    "dismissInteractionReminder": "關閉提醒"
+    "dismissInteractionReminder": "關閉提醒",
+    "copyFix": "複製修復",
+    "interactionAccessGranted": "啟用互動訪問",
+    "interactionAccessGrantedDescription": "現在可以記錄滑鼠點擊和鍵盤快捷鍵，而無需儲存鍵入的文字。",
+    "interactionAccessUnavailableTitle": "互動錄製不可用",
+    "interactionAccessUnavailableDescription": "所需的互動助手不可用（Polkit 或受保護的輸入助手）。在錄製之前解決報告的問題。",
+    "linuxRequirementsTitle": "需要 Linux 設定",
+    "recordingErrorTitle": "錄音錯誤"
   },
   "EditorPreparingHud": {
     "title": "正在準備編輯器",
@@ -590,6 +608,8 @@
     "recorderTool": "影片錄製器",
     "recorderDesc": "快速開啟錄製器並開始新的錄影",
     "launchRecorder": "啟動錄製器",
+    "recorderUnavailable": "錄製器正在使用中。",
+    "recorderLaunchError": "無法開啟錄製器：{error}",
     "sysInfoTool": "系統資訊",
     "sysInfoDesc": "複製系統詳細資料與應用程式版本資訊",
     "copySysInfo": "複製系統資訊",
@@ -680,6 +700,54 @@
     "joinDiscord": "Join Discord Community",
     "reopenHint": "You can revisit this onboarding anytime from Settings > General.",
     "dismiss": "Dismiss",
-    "emptyStateDesc": "Click on any control on the live HUD to test it."
+    "emptyStateDesc": "Click on any control on the live HUD to test it.",
+    "titlebarTitle": "Beam • 入門",
+    "minimize": "最小化",
+    "close": "關閉",
+    "welcomeSubtitle": "專為開發人員、創作者和團隊設計的工作室級螢幕錄影機。",
+    "featureNativeTitle": "本機螢幕錄影機",
+    "featureNativeDesc": "以無損清晰度錄製您的螢幕、視窗或選定區域。",
+    "featureAutoZoomTitle": "自動變焦",
+    "featureAutoZoomDesc": "讓您順利放大重要部分。",
+    "featureCaptionsTitle": "人工智慧字幕",
+    "featureCaptionsDesc": "使用 Whisper 在幾秒鐘內轉錄整個影片並為其添加字幕。",
+    "featureQualityTitle": "專業品質",
+    "featureQualityDesc": "背景、網路攝影機陰影和遊標效果讓您的錄音脫穎而出。",
+    "tryControlTip": "現場互動控制",
+    "hudTopbarTitle": "設定和快捷方式",
+    "hudTopbarDesc": "自訂熱鍵、主題和全域首選項。",
+    "hudProjectsTitle": "專案",
+    "hudProjectsDesc": "在一個地方尋找和管理您過去錄製的所有演示。",
+    "hudTabsTitle": "拍攝模式",
+    "hudTabsDesc": "在全螢幕錄製和視窗擷取之間切換。",
+    "hudSourceTitle": "來源與作物",
+    "hudSourceDesc": "選擇顯示、視窗或在螢幕上裁切自訂區域。",
+    "hudCameraTitle": "網路攝影機",
+    "hudCameraDesc": "在編輯器中記錄帶有圓角、陰影和平滑重新定位的網路攝影機。",
+    "hudTeleprompterTitle": "提詞器",
+    "hudTeleprompterDesc": "直接在螢幕上閱讀腳本，這樣您就永遠不會忘記自己所說的內容。",
+    "hudAudioTitle": "麥克風",
+    "hudAudioDesc": "透過即時音訊電平監控記錄您的麥克風。",
+    "hudSystemAudioTitle": "系統音訊",
+    "hudSystemAudioDesc": "從電腦上的應用程式擷取內部聲音和音訊。",
+    "hudRecordTitle": "錄音",
+    "hudRecordDesc": "使用選購的倒數計時器立即開始錄製。",
+    "badgeAudio": "音訊",
+    "badgeCamera": "相機",
+    "badgeScript": "腳本",
+    "badgeSystem": "系統",
+    "badgeDisplay": "顯示",
+    "badgeModes": "模式",
+    "badgeProjects": "專案",
+    "badgeSettings": "設定",
+    "badgeAction": "行動",
+    "versionTitle": "版本",
+    "upToDate": "最新",
+    "starTitle": "開源",
+    "starDesc": "GitHub 上的免費開源專案",
+    "starButton": "在 GitHub 上加星標",
+    "discordTitle": "社群",
+    "discordDesc": "取得協助、回饋和功能更新",
+    "discordButton": "加入 Discord"
   }
 }

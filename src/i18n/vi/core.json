@@ -47,7 +47,8 @@
     "continuity": "Liền mạch",
     "continuityDescription": "Mở rộng bản sao video được làm mờ phía sau nội dung vừa khung.",
     "continuityBlur": "Độ mờ nền",
-    "continuityBrightness": "Độ sáng nền"
+    "continuityBrightness": "Độ sáng nền",
+    "borderColor": "Màu viền"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "Đang tải xem trước camera",
@@ -250,7 +251,9 @@
     "captionWordLabel": "Từ phụ đề",
     "wordStartTimeLabel": "Thời gian bắt đầu từ",
     "wordEndTimeLabel": "Thời gian kết thúc từ",
-    "deleteCaptionClip": "Xóa đoạn phụ đề"
+    "deleteCaptionClip": "Xóa đoạn phụ đề",
+    "shadowColor": "Màu bóng",
+    "shadowBlur": "Độ mờ bóng"
   },
   "CaptionPanel": {
     "aiAutoCaptioning": "Tạo phụ đề tự động bằng AI",
@@ -308,7 +311,8 @@
     "unlink": "Hủy liên kết",
     "deleteClip": "Xóa đoạn",
     "deleteVideo": "Xóa video",
-    "deleteWebcam": "Xóa webcam"
+    "deleteWebcam": "Xóa webcam",
+    "shadowBlur": "Độ mờ bóng"
   },
   "CursorPanel": {
     "cursorStyle": "Kiểu con trỏ",
@@ -354,7 +358,14 @@
     "importSuccess": "Đã nhập {count} con trỏ tĩnh.",
     "importIgnoredAnimated": "Đã bỏ qua vai trò động: {roles}.",
     "importFailed": "Không thể nhập gói con trỏ.",
-    "discoveryFailed": "Không thể mở tìm kiếm gói."
+    "discoveryFailed": "Không thể mở tìm kiếm gói.",
+    "shadowBlur": "Độ mờ bóng",
+    "shadowColor": "Màu bóng",
+    "presetNone": "không có",
+    "presetSingle": "Nhẫn đơn",
+    "presetDouble": "Sóng đôi",
+    "presetSolid": "bùng nổ",
+    "rippleStyle": "Kiểu gợn sóng"
   },
   "EditorCanvas": {
     "videoPreviewLoading": "Đang tải xem trước video",
@@ -443,7 +454,14 @@
     "authorizingInteractions": "Đang bật",
     "dismissInteractionNotice": "Bỏ qua",
     "interactionAccessSettingsHint": "Tìm mục Ghi phím tắt trong Cài đặt.",
-    "dismissInteractionReminder": "Bỏ qua lời nhắc cài đặt tương tác"
+    "dismissInteractionReminder": "Bỏ qua lời nhắc cài đặt tương tác",
+    "copyFix": "Sao chép sửa lỗi",
+    "interactionAccessGranted": "Đã bật quyền truy cập tương tác",
+    "interactionAccessGrantedDescription": "Giờ đây, các thao tác nhấp chuột và phím tắt trên bàn phím có thể được ghi lại mà không cần lưu trữ văn bản đã nhập.",
+    "interactionAccessUnavailableTitle": "Ghi lại tương tác không có sẵn",
+    "interactionAccessUnavailableDescription": "Trình trợ giúp tương tác bắt buộc không có sẵn (Polkit hoặc trình trợ giúp đầu vào được bảo vệ). Giải quyết vấn đề được báo cáo trước khi ghi.",
+    "linuxRequirementsTitle": "Cần thiết lập Linux",
+    "recordingErrorTitle": "Lỗi ghi âm"
   },
   "EditorPreparingHud": {
     "title": "Đang chuẩn bị trình chỉnh sửa",
@@ -567,7 +585,8 @@
     "turnCameraOff": "Tắt camera",
     "turnCameraOn": "Bật camera",
     "turnSystemAudioOff": "Tắt âm thanh hệ thống",
-    "turnSystemAudioOn": "Bật âm thanh hệ thống"
+    "turnSystemAudioOn": "Bật âm thanh hệ thống",
+    "preparing": "Đang chuẩn bị…"
   },
   "ScreenRegionOverlay": {
     "instruction": "Chọn một khu vực để ghi",
@@ -589,6 +608,8 @@
     "recorderTool": "Quay video",
     "recorderDesc": "Truy cập nhanh bộ ghi để bắt đầu một bản ghi mới",
     "launchRecorder": "Mở trình ghi",
+    "recorderUnavailable": "Trình ghi đang được sử dụng.",
+    "recorderLaunchError": "Không thể mở trình ghi: {error}",
     "sysInfoTool": "Thông tin hệ thống",
     "sysInfoDesc": "Sao chép chi tiết hệ thống và thông tin phiên bản ứng dụng",
     "copySysInfo": "Sao chép thông tin hệ thống",

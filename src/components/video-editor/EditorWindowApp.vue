@@ -2,7 +2,6 @@
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { capture } from '~/api/capture';
 import type { CaptureProject, PreferenceSettings, ProjectEditorData } from '~/api/types/capture-api';
-import type { RecordingConfiguration } from '~/components/hud/recorder/recording-types';
 import Button from '~/components/ui/button/Button.vue';
 import ToastProvider from '~/components/ui/toast/ToastProvider.vue';
 import { useTranslate } from '~/i18n/useTranslate';
@@ -23,6 +22,16 @@ let themeObserver: MutationObserver | null = null;
 let nativeEditorReadyNotified = false;
 const { t } = useTranslate('EditorPreparingHud');
 const EDITOR_READY_PAINT_TIMEOUT_MS = 100;
+const DEFAULT_EDITOR_TITLE = 'Beam Editor';
+
+const editorTitle = (projectName: string) => {
+  const normalizedName = projectName
+    .replace(/[\u0000-\u001f\u007f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80);
+  return normalizedName ? `${normalizedName} - ${DEFAULT_EDITOR_TITLE}` : DEFAULT_EDITOR_TITLE;
+};
 
 const syncTitlebarTheme = () => {
   const dark = document.documentElement.classList.contains('dark');
@@ -61,6 +70,7 @@ const loadProject = async (projectId: string) => {
   const generation = ++loadGeneration;
   loading.value = true;
   error.value = '';
+  document.title = DEFAULT_EDITOR_TITLE;
   try {
     capture.reportEditorLoadingStage('loadingProject');
     const projects = await capture.listProjects();
@@ -70,6 +80,7 @@ const loadProject = async (projectId: string) => {
     const nextEditorData = await capture.getProjectEditorData(projectId);
     if (generation !== loadGeneration) return;
     project.value = nextProject;
+    document.title = editorTitle(nextProject.name);
     editorData.value = nextEditorData;
     editorGeneration.value = generation;
     loading.value = false;
@@ -92,10 +103,6 @@ const handleOpenProject = (nextProject: CaptureProject) => {
     loading.value = false;
     console.error('Unable to switch editor project.', reason);
   });
-};
-
-const handleStartRecording = (configuration: RecordingConfiguration) => {
-  capture.startRecordingFromEditor(configuration);
 };
 
 const notifyEditorReady = async (generation: number) => {
@@ -159,7 +166,6 @@ onBeforeUnmount(() => {
     :project="project"
     @back-to-hud="handleBackToHud"
     @open-project="handleOpenProject"
-    @start-recording="handleStartRecording"
     @ready="notifyEditorReady(editorGeneration)"
   />
   <EditorProjectLoadingOverlay

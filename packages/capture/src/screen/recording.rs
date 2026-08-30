@@ -226,9 +226,11 @@ impl ScreenRecording {
     #[must_use]
     pub fn video_format(&self) -> Option<VideoFormat> {
         match &self.backend {
+            #[cfg(windows)]
+            PlatformScreenRecording::Windows(recording) => recording.video_format(),
             #[cfg(target_os = "linux")]
             PlatformScreenRecording::Linux(recording) => recording.video_format(),
-            #[cfg(any(windows, target_os = "macos"))]
+            #[cfg(target_os = "macos")]
             _ => None,
         }
     }

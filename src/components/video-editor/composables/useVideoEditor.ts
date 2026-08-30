@@ -5,7 +5,7 @@ import { useVideoPlayer } from './useVideoPlayer';
 import { useCursorReplacer } from '../properties/cursor/useCursorReplacer';
 import { useClipComposition } from './useClipComposition';
 import { useProjectZoom } from './useProjectZoom';
-import { normalizeZoomMotionBlur } from '../zoom/zoom-types';
+import { normalizeZoomAutoFollow, normalizeZoomMotionBlur } from '../zoom/zoom-types';
 import { useProjectEditorState } from './useProjectEditorState';
 import { createCompositionSnapshot } from '../../export/composition/snapshot';
 import { DEFAULT_OUTPUT_CANVAS, type OutputCanvasSettings } from '../canvas/output-canvas';
@@ -65,6 +65,7 @@ export function useVideoEditor(options: {
     zoomElements: zoomState.zoomElements,
     generatedSessions: zoomState.generatedSessions,
     zoomMotionBlur: zoomState.zoomMotionBlur,
+    zoomAutoFollow: zoomState.zoomAutoFollow,
     importedBackgrounds: player.importedBackgrounds,
     selectedBackground: player.selectedBackground,
     backgroundBlurPercent: player.backgroundBlurPercent,
@@ -119,6 +120,7 @@ export function useVideoEditor(options: {
         editorData: editorData.value,
         zooms: zoomState.zoomElements.value,
         zoomMotionBlur: normalizeZoomMotionBlur(zoomState.zoomMotionBlur?.value),
+        zoomAutoFollow: normalizeZoomAutoFollow(zoomState.zoomAutoFollow?.value),
         composition: compositionState.composition.value,
         cursorSettings: {
           selection: cursor.selection.value,
