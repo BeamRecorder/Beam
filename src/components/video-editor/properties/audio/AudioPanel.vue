@@ -2,6 +2,8 @@
 import BigSlider from '~/ui/slider/BigSlider.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import ClipActionGroup from '~/components/video-editor/properties/clip/ClipActionGroup.vue';
+import Button from '~/ui/button/Button.vue';
+import { AudioLines } from '@lucide/vue';
 
 const { t } = useTranslate('AudioPanel');
 const { t: tClip } = useTranslate('ClipPropertiesPanel');
@@ -13,6 +15,7 @@ const props = withDefaults(
     isMicAudioEnabled: boolean;
     hasSystemAudio?: boolean;
     hasMicAudio?: boolean;
+    hasAudio?: boolean;
     systemVolume?: number;
     micVolume?: number;
   }>(),
@@ -21,6 +24,7 @@ const props = withDefaults(
     micVolume: 100,
     hasSystemAudio: false,
     hasMicAudio: false,
+    hasAudio: false,
   },
 );
 
@@ -32,6 +36,7 @@ const emit = defineEmits<{
   (e: 'update:micVolume', value: number): void;
   (e: 'delete:system'): void;
   (e: 'delete:microphone'): void;
+  (e: 'normalize-all'): void;
 }>();
 
 const handleSystemVolChange = (val: number) => {
@@ -56,6 +61,9 @@ const handleMicVolChange = (val: number) => {
         @update:modelValue="emit('update:volume', $event)"
       />
     </div>
+    <Button variant="secondary" size="sm" :icon="AudioLines" :disabled="!hasAudio" @click="emit('normalize-all')">
+      {{ t('normalizeAll') }}
+    </Button>
 
     <div v-if="hasSystemAudio" class="audio-section">
       <div class="prop-row">

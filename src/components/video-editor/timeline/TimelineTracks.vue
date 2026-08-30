@@ -15,6 +15,7 @@ import TimelineTrackHeaders from './TimelineTrackHeaders.vue';
 import { normalizeZoomProjection } from '../zoom/zoom-types';
 import TimelineAddMenu from './TimelineAddMenu.vue';
 import { useTimelineItemInteractions } from './composables/useTimelineItemInteractions';
+import WaveformCanvas from './waveform/WaveformCanvas.vue';
 const { t } = useTranslate('TimelineTracks');
 const { t: tCanvas } = useTranslate('CanvasPanel');
 const { t: tToolbar } = useTranslate('TimelineToolbar');
@@ -35,6 +36,7 @@ const {
   textCaptionLayers,
   systemAudioClips,
   microphoneClips,
+  voiceoverClips,
   importedAudioTracks,
   assetFor,
   audioWaveforms,
@@ -175,6 +177,8 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
             :text-caption-layers="textCaptionLayers"
             :system-audio-clips="systemAudioClips"
             :microphone-clips="microphoneClips"
+            :voiceover-clips="voiceoverClips"
+            :has-voiceover-draft="Boolean(voiceoverDraft)"
             :imported-audio-tracks="importedAudioTracks"
             :include-audio-in-export="includeAudioInExport"
             :dragged-track-id="draggedTrackId"
@@ -451,6 +455,50 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 @move="startClipMove($event, clip)"
                 @trim="beginClipTrim($event.event, clip, $event.edge)"
               />
+            </div>
+          </div>
+          <div
+            v-for="clip in voiceoverClips"
+            :key="clip.id"
+            class="track-row audio-track voiceover-track"
+            :class="{ disabled: !includeAudioInExport || !clip.enabled }"
+            @contextmenu="openTrackContextMenu($event, 'audio')"
+          >
+            <div class="track-content audio-content">
+              <span v-if="!includeAudioInExport" class="export-audio-disabled">{{ t('audioDisabledFromExport') }}</span>
+              <TimelineClip
+                :clip="displayedClip(clip)"
+                :asset="assetFor(clip)"
+                :duration="layoutDurationMs / 1000"
+                :timeline-width-px="rulerLayoutWidth"
+                :thumbnail-slots="thumbnailSlots"
+                :defer-thumbnail-requests="isWheelZooming || activeTrimState !== null"
+                :defer-waveform-draw="isWheelZooming"
+                :selected="selectedClipIdSet.has(clip.id)"
+                :waveform-bars="audioWaveforms[clip.id]?.bars"
+                :waveform-left-percent="audioWaveforms[clip.id]?.leftPercent"
+                :waveform-width-percent="audioWaveforms[clip.id]?.widthPercent"
+                :waveform-loading-segments="audioWaveforms[clip.id]?.loadingSegments"
+                :waveform-status="audioWaveformStatus[clip.id]"
+                :waveform-error="audioWaveformErrors[clip.id]"
+                :trim-state="trimStateFor(clip.id)"
+                :paste-highlight="recentPaste?.type === 'clip' && recentPaste.id === clip.id"
+                @select="selectItem('clip', clip.id, $event)"
+                @contextmenu="openClipContextMenu($event, clip)"
+                @move="startClipMove($event, clip)"
+                @trim="beginClipTrim($event.event, clip, $event.edge)"
+              />
+            </div>
+          </div>
+          <div v-if="voiceoverDraft" class="track-row audio-track voiceover-track voiceover-draft-track">
+            <div class="track-content audio-content">
+              <span v-if="!includeAudioInExport" class="export-audio-disabled">{{ t('audioDisabledFromExport') }}</span>
+              <div
+                class="voiceover-draft-clip"
+                :style="percentageStyle(voiceoverDraft.startMs, voiceoverDraft.durationMs)"
+              >
+                <WaveformCanvas :bars="voiceoverDraft.bars" selected />
+              </div>
             </div>
           </div>
           <div

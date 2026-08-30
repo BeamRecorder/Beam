@@ -1,11 +1,31 @@
 {
+  "VoiceoverRecorder": {
+    "record": "Record",
+    "pause": "Pause",
+    "resume": "Resume",
+    "stop": "Stop",
+    "discard": "Discard",
+    "preparing": "Preparing microphone…",
+    "finalizing": "Finalizing voice-over…",
+    "microphone": "Microphone",
+    "countdownOff": "Off",
+    "monitorProjectAudio": "Hear project audio",
+    "muteProjectAudio": "Mute project audio"
+  },
   "AudioClipPropertiesPanel": {
     "noAudioClipSelected": "No audio clip selected",
     "selectAudioClip": "Select an imported audio clip in the timeline.",
     "audioClip": "Audio clip",
     "volume": "Volume",
     "enabled": "Enabled",
-    "deleteAudioClip": "Delete Audio Clip"
+    "deleteAudioClip": "Delete Audio Clip",
+    "normalize": "Normalize audio",
+    "normalizeDescription": "Targets -16 LUFS and -1 dBTP while preserving your volume control.",
+    "resetNormalization": "Reset normalization",
+    "analyzing": "Analyzing…",
+    "normalizeButton": "Normalize",
+    "silentAudio": "No usable signal was detected.",
+    "normalizedGain": "Normalized ({gain} dB)"
   },
   "AudioPanel": {
     "globalVolume": "Global Volume",
@@ -15,7 +35,8 @@
     "microphoneVolume": "Microphone Volume",
     "deleteSystemTrack": "Delete system audio track",
     "deleteMicrophoneTrack": "Delete microphone track",
-    "noAudioTracksDetected": "No microphone or system audio track was detected."
+    "noAudioTracksDetected": "No microphone or system audio track was detected.",
+    "normalizeAll": "Normalize all audio"
   },
   "BackgroundPresetComposer": {
     "addCustomColor": "Add custom color",

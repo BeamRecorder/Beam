@@ -1,11 +1,31 @@
 {
+  "VoiceoverRecorder": {
+    "record": "Запис",
+    "pause": "Пауза",
+    "resume": "Продължаване",
+    "stop": "Спиране",
+    "discard": "Отхвърляне",
+    "preparing": "Подготовка на микрофона…",
+    "finalizing": "Завършване на озвучаването…",
+    "microphone": "Микрофон",
+    "countdownOff": "Изкл.",
+    "monitorProjectAudio": "Слушане на звука на проекта",
+    "muteProjectAudio": "Заглушаване на звука на проекта"
+  },
   "AudioClipPropertiesPanel": {
     "noAudioClipSelected": "Няма избран аудиоклип",
     "selectAudioClip": "Изберете импортиран аудиоклип от времевата линия.",
     "audioClip": "Аудиоклип",
     "volume": "Сила на звука",
     "enabled": "Включено",
-    "deleteAudioClip": "Изтриване на аудиоклипа"
+    "deleteAudioClip": "Изтриване на аудиоклипа",
+    "normalize": "Нормализиране на звука",
+    "normalizeDescription": "Цел: -16 LUFS и -1 dBTP със запазване на контрола за сила на звука.",
+    "resetNormalization": "Нулиране на нормализацията",
+    "analyzing": "Анализиране…",
+    "normalizeButton": "Нормализиране",
+    "silentAudio": "Не е открит използваем сигнал.",
+    "normalizedGain": "Нормализирано ({gain} dB)"
   },
   "AudioPanel": {
     "globalVolume": "Обща сила на звука",
@@ -15,7 +35,8 @@
     "microphoneVolume": "Сила на звука на микрофона",
     "deleteSystemTrack": "Изтриване на системната аудиописта",
     "deleteMicrophoneTrack": "Изтриване на микрофонната писта",
-    "noAudioTracksDetected": "Не е открита микрофонна или системна аудиописта."
+    "noAudioTracksDetected": "Не е открита микрофонна или системна аудиописта.",
+    "normalizeAll": "Нормализиране на целия звук"
   },
   "BackgroundPresetComposer": {
     "addCustomColor": "Добавяне на персонализиран цвят",

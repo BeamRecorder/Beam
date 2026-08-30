@@ -11,6 +11,7 @@ import type {
 import CanvasToolbar from '~/components/video-editor/canvas/CanvasToolbar.vue';
 import EditorTimeline from '~/components/video-editor/timeline/EditorTimeline.vue';
 import TimelineToolbar from '~/components/video-editor/timeline/TimelineToolbar.vue';
+import VoiceoverRecorderBar from '~/components/video-editor/voiceover/VoiceoverRecorderBar.vue';
 import Topbar from '~/components/video-editor/Topbar.vue';
 import EditorAmbientBackground from '~/components/video-editor/EditorAmbientBackground.vue';
 import EditorMediaDropOverlay from '~/components/video-editor/EditorMediaDropOverlay.vue';
@@ -58,6 +59,9 @@ import { usePreviewPerformanceMonitor } from './performance/usePreviewPerformanc
 import { createMediaProcessingCollector, MEDIA_PROCESSING_COLLECTOR } from './performance/media-processing-pressure';
 import { useElementFullscreen } from './canvas/composables/useElementFullscreen';
 import { useMixedTimelineSelection } from './composables/useMixedTimelineSelection';
+import { useAudioNormalization } from './composables/useAudioNormalization';
+import { useEditorVoiceover } from './voiceover/useEditorVoiceover';
+import type { TimelineElementKind } from './timeline/timeline-element-types';
 import { shiftTimelineSelection } from './composition/timeline-edit-operations';
 import type {
   TimelineItemSelectionRequest,
@@ -259,7 +263,11 @@ const selectedTransformClip = computed(() => {
     : null;
 });
 
-const addTimelineElement = (kind: 'video' | 'image' | 'sound' | 'caption' | 'color' | 'shape' | 'blur') => {
+const addTimelineElement = (kind: TimelineElementKind) => {
+  if (kind === 'voiceover') {
+    void openVoiceover();
+    return;
+  }
   void addElement(kind).catch(() => console.error('Unable to add media.'));
 };
 const addTimelineVisualElement = (request: AddVisualElementRequest) => {
@@ -420,6 +428,46 @@ const {
     backgroundBlurPercent.value = snapshot.backgroundBlurPercent;
     await editorState.saveNow();
   },
+});
+const audioNormalization = useAudioNormalization({
+  composition,
+  onCommit: () => {
+    editorState.scheduleSave();
+    commitNow(createEditorSnapshot());
+  },
+});
+const voiceover = useEditorVoiceover({
+  projectId: () => props.project?.id ?? null,
+  currentTime,
+  duration,
+  projectVolume: volume,
+  setPlaying: player.setPlaying,
+  seek: async (seconds) => {
+    await player.seek(seconds);
+  },
+  insert: (asset, inspection, startMs) => addImportedAsset(asset, inspection, startMs, undefined, 'voiceover'),
+  normalize: async (clipId) => audioNormalization.normalizeClipIds([clipId]),
+  onCommit: () => {
+    editorState.scheduleSave();
+    commitNow(createEditorSnapshot());
+  },
+});
+const {
+  discard: discardVoiceover,
+  isOpen: isVoiceoverOpen,
+  open: openVoiceover,
+  pause: pauseVoiceover,
+  resume: resumeVoiceover,
+  selectMicrophone: selectVoiceoverMicrophone,
+  start: startVoiceover,
+  state: voiceoverState,
+  stop: stopVoiceover,
+  toggleMonitoring: toggleVoiceoverMonitoring,
+  updateCountdown: updateVoiceoverCountdown,
+} = voiceover;
+const timelineDisplayDuration = computed(() => {
+  const voiceoverEndMs = voiceoverState.draft ? voiceoverState.draft.startMs + voiceoverState.draft.durationMs : 0;
+  return Math.max(timelinePreviewDuration.value, voiceoverEndMs / 1_000);
 });
 const beginInlineCaptionEditing = () => {
   if (isInlineCaptionEditing.value) return;
@@ -713,6 +761,8 @@ onBeforeUnmount(() => {
           :timeline-duration-ms="Math.round(duration * 1000)"
           :project-id="project?.id"
           :canvas="renderedOutputCanvas"
+          :audio-normalization-statuses="audioNormalization.statuses"
+          :audio-normalization-errors="audioNormalization.errors"
           @import:background="addBackground($event)"
           @update:selected-background="selectedBackground = $event"
           @update:blur-percent="backgroundBlurPercent = $event"
@@ -731,6 +781,8 @@ onBeforeUnmount(() => {
           "
           @delete:system-audio="deleteAudioRole('system')"
           @delete:mic-audio="deleteAudioRole('microphone')"
+          @normalize:audio="audioNormalization.normalizeClipIds($event)"
+          @reset:audio-normalization="audioNormalization.resetClipIds($event)"
           @split-clip="splitSelectedClip"
           @update:clip-rate="updateSelectedRate"
           @update:clip-volume="updateSelectedVolume"
@@ -854,9 +906,9 @@ onBeforeUnmount(() => {
             />
             <TimelineToolbar
               :current-time="currentTime"
-              :duration="timelinePreviewDuration"
+              :duration="timelineDisplayDuration"
               :is-playing="isPlaying"
-              :loading="!initialPlaybackSettled"
+              :loading="!initialPlaybackSettled || isVoiceoverOpen"
               :can-split="selectedClipIds.length === 1"
               :is-canvas-fullscreen="canvasFullscreen.isFullscreen.value"
               v-model:zoom-level="timelineZoomLevel"
@@ -881,13 +933,26 @@ onBeforeUnmount(() => {
         <div class="resize-handle-bar" />
       </div>
       <div class="workspace-lower" :style="{ height: `${timelineHeight}px` }">
+        <div v-if="isVoiceoverOpen" class="voiceover-recorder-float">
+          <VoiceoverRecorderBar
+            :state="voiceoverState"
+            @start="startVoiceover"
+            @pause="pauseVoiceover"
+            @resume="resumeVoiceover"
+            @stop="stopVoiceover"
+            @discard="discardVoiceover"
+            @select-microphone="selectVoiceoverMicrophone"
+            @update-countdown="updateVoiceoverCountdown"
+            @toggle-monitoring="toggleVoiceoverMonitoring"
+          />
+        </div>
         <EditorTimeline
           :current-time="currentTime"
           :is-playing="isPlaying"
           v-model:zoom-level="timelineZoomLevel"
           :is-snapping-enabled="isSnappingEnabled"
           :project-id="project?.id"
-          :duration="duration"
+          :duration="timelineDisplayDuration"
           :export-progress="exportProgress"
           :include-audio-in-export="includeAudioInExport"
           :zoom-elements="zoomElements"
@@ -899,6 +964,8 @@ onBeforeUnmount(() => {
           :selected-clip-ids="selectedClipIds"
           :recent-paste="recentPaste"
           :canvas="outputCanvas"
+          :controls-locked="isVoiceoverOpen"
+          :voiceover-draft="voiceoverState.draft"
           @add:element="addTimelineElement"
           @select:zoom="selectEditorZoom"
           @select:zoom-track="selectEditorZoomTrack"
@@ -931,6 +998,7 @@ onBeforeUnmount(() => {
             timelineCanvasPreview = null;
           "
           @open:canvas-transition="openCanvasTransition"
+          @normalize:audio="audioNormalization.normalizeClipIds($event)"
           @update:current-time="handleSeekIntent($event, 'scrub')"
           @update:is-playing="handlePlayingIntent"
         />
@@ -1091,10 +1159,18 @@ onBeforeUnmount(() => {
   box-shadow: 0 0 8px color-mix(in srgb, var(--color-primary) 50%, transparent);
 }
 .workspace-lower {
+  position: relative;
   flex-shrink: 0;
   border-radius: var(--radius-lg);
-  overflow: hidden;
+  overflow: visible;
   display: flex;
   flex-direction: column;
+}
+.voiceover-recorder-float {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 12px);
+  z-index: 80;
+  transform: translateX(-50%);
 }
 </style>

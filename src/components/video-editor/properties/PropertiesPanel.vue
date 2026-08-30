@@ -46,7 +46,7 @@ import type {
   CursorMotionSettings,
 } from '../../../api/types/cursor-settings';
 import { useTranslate } from '~/i18n/useTranslate';
-import { isColorClip, isKeyboardCaptionClip, isShapeClip } from '~/media/shared/composition-types';
+import { isAudioClip, isColorClip, isKeyboardCaptionClip, isShapeClip } from '~/media/shared/composition-types';
 import { usePropertiesPanelNavigation } from './usePropertiesPanelNavigation';
 import type { SelectedClipProperties } from './properties-panel-types';
 import type { CameraFramingPreset, CameraLayoutPreset } from '~/media/shared/camera-layout-types';
@@ -103,12 +103,16 @@ const props = withDefaults(
     timelineDurationMs: number;
     projectId?: string | null;
     canvas: OutputCanvasSettings;
+    audioNormalizationStatuses?: Record<string, 'analyzing' | 'ready' | 'silent' | 'error' | undefined>;
+    audioNormalizationErrors?: Record<string, string | undefined>;
   }>(),
   {
     hasSystemAudio: false,
     hasMicAudio: false,
     selectedClipIds: () => [],
     selectedZoomIds: () => [],
+    audioNormalizationStatuses: () => ({}),
+    audioNormalizationErrors: () => ({}),
     zoomAutoFollow: () => ({ ...DEFAULT_ZOOM_AUTO_FOLLOW }),
     zoomMotionBlur: () => ({ ...DEFAULT_ZOOM_MOTION_BLUR }),
   },
@@ -257,6 +261,8 @@ const emit = defineEmits<{
   (event: 'delete-clip'): void;
   (event: 'delete:system-audio'): void;
   (event: 'delete:mic-audio'): void;
+  (event: 'normalize:audio', clipIds: string[]): void;
+  (event: 'reset:audio-normalization', clipIds: string[]): void;
   (event: 'split-clip'): void;
   (event: 'back-to-hud'): void;
 }>();
@@ -366,7 +372,21 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
             <AudioClipPropertiesPanel
               v-else-if="activeTab === 'clip' && normalizedSelectedClip?.kind === 'audio'"
               :clip="normalizedSelectedClip"
+              :normalization-status="selectedDomainClip ? audioNormalizationStatuses[selectedDomainClip.id] : undefined"
+              :normalization-error="selectedDomainClip ? audioNormalizationErrors[selectedDomainClip.id] : undefined"
               @update:volume="emit('update:clip-volume', $event)"
+              @normalize="
+                emit(
+                  'normalize:audio',
+                  selectedDomainClips.map((clip) => clip.id),
+                )
+              "
+              @reset-normalization="
+                emit(
+                  'reset:audio-normalization',
+                  selectedDomainClips.map((clip) => clip.id),
+                )
+              "
             />
             <GeneratedLayerPropertiesPanel
               v-else-if="
@@ -460,6 +480,7 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
               :is-mic-audio-enabled="isMicAudioEnabled"
               :has-system-audio="hasSystemAudio"
               :has-mic-audio="hasMicAudio"
+              :has-audio="composition.clips.some(isAudioClip)"
               :system-volume="systemVolume"
               :mic-volume="micVolume"
               @update:volume="emit('update:volume', $event)"
@@ -469,6 +490,12 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
               @update:mic-volume="emit('update:micVolume', $event)"
               @delete:system="emit('delete:system-audio')"
               @delete:microphone="emit('delete:mic-audio')"
+              @normalize-all="
+                emit(
+                  'normalize:audio',
+                  composition.clips.map((clip) => clip.id),
+                )
+              "
             />
             <ZoomPanel
               v-else-if="activeTab === 'zoom'"

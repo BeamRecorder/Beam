@@ -1,11 +1,31 @@
 {
+  "VoiceoverRecorder": {
+    "record": "録音",
+    "pause": "一時停止",
+    "resume": "再開",
+    "stop": "停止",
+    "discard": "破棄",
+    "preparing": "マイクを準備中…",
+    "finalizing": "ナレーションを完了中…",
+    "microphone": "マイク",
+    "countdownOff": "オフ",
+    "monitorProjectAudio": "プロジェクト音声を聴く",
+    "muteProjectAudio": "プロジェクト音声をミュート"
+  },
   "AudioClipPropertiesPanel": {
     "noAudioClipSelected": "オーディオクリップが選択されていません",
     "selectAudioClip": "タイムラインで読み込んだオーディオクリップを選択してください。",
     "audioClip": "オーディオクリップ",
     "volume": "音量",
     "enabled": "有効",
-    "deleteAudioClip": "オーディオクリップを削除"
+    "deleteAudioClip": "オーディオクリップを削除",
+    "normalize": "音声をノーマライズ",
+    "normalizeDescription": "音量調整を維持したまま -16 LUFS、-1 dBTP を目標にします。",
+    "resetNormalization": "ノーマライズをリセット",
+    "analyzing": "解析中…",
+    "normalizeButton": "ノーマライズ",
+    "silentAudio": "使用可能な信号が検出されませんでした。",
+    "normalizedGain": "ノーマライズ済み（{gain} dB）"
   },
   "AudioPanel": {
     "globalVolume": "全体の音量",
@@ -15,7 +35,8 @@
     "microphoneVolume": "マイク音量",
     "deleteSystemTrack": "システム音声トラックを削除",
     "deleteMicrophoneTrack": "マイクトラックを削除",
-    "noAudioTracksDetected": "マイクまたはシステム音声トラックが検出されませんでした。"
+    "noAudioTracksDetected": "マイクまたはシステム音声トラックが検出されませんでした。",
+    "normalizeAll": "すべての音声をノーマライズ"
   },
   "BackgroundPresetComposer": {
     "addCustomColor": "カスタムカラーを追加",

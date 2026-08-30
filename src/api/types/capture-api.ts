@@ -142,6 +142,10 @@ export interface DesktopCaptureApi extends CaptureApi {
   saveProjectEditorState(projectId: string, state: ProjectEditorState): Promise<ProjectEditorState>;
   pickProjectMedia(projectId: string, kind: 'video' | 'image' | 'audio'): Promise<MediaAsset | null>;
   importDroppedProjectMedia(projectId: string, file: File, kind: 'video' | 'image' | 'audio'): Promise<MediaAsset>;
+  beginProjectVoiceover(payload: ProjectVoiceoverStart): Promise<{ recordingId: string }>;
+  writeProjectVoiceoverChunk(payload: ProjectVoiceoverChunk): Promise<void>;
+  finalizeProjectVoiceover(payload: ProjectVoiceoverFinish): Promise<MediaAsset>;
+  abortProjectVoiceover(recordingId: string): Promise<void>;
   listBackgroundLibrary(): Promise<BackgroundMedia[]>;
   pickBackgroundLibraryMedia(kind?: 'image' | 'video' | 'media'): Promise<BackgroundMedia | null>;
   onBackgroundLibraryChanged(listener: () => void): () => void;
@@ -254,20 +258,27 @@ export interface PreferenceSettings {
   appearance?: AppearanceSettings;
   recordingBar: { visibility: RecordingBarVisibility };
   recordingInteractions: { enabled: boolean; noticeDismissed: boolean };
+  voiceover?: { countdownSeconds: 0 | 3 | 5 | 10; monitorProjectAudio: boolean };
   spellCheck?: { enabled: boolean };
   onboardingCompleted?: boolean;
-  devices: Record<string, unknown>;
+  devices: {
+    cameraId?: string;
+    micId?: string;
+    systemAudioMode?: string;
+    [key: string]: unknown;
+  };
   shortcuts: Record<string, PreferenceShortcut>;
   backgroundPresets: { colors: string[]; gradients: GradientBackground[] };
   extras: Record<string, unknown>;
 }
 
 export type PreferencePatch = Partial<
-  Omit<PreferenceSettings, 'recordingInteractions' | 'spellCheck' | 'appearance'>
+  Omit<PreferenceSettings, 'recordingInteractions' | 'spellCheck' | 'appearance' | 'voiceover'>
 > & {
   recordingInteractions?: Partial<PreferenceSettings['recordingInteractions']>;
   spellCheck?: Partial<PreferenceSettings['spellCheck']>;
   appearance?: Partial<AppearanceSettings>;
+  voiceover?: Partial<NonNullable<PreferenceSettings['voiceover']>>;
 };
 
 export interface ProjectEditorPresentation {
@@ -327,6 +338,20 @@ export interface MicrophoneFailure {
   sourceId: string;
   reason: string;
   format?: { codec: 'opus'; sampleRate: number; channels: number };
+}
+export interface ProjectVoiceoverStart {
+  projectId: string;
+  sourceId: string;
+  format: { codec: 'opus'; sampleRate: number; channels: number };
+}
+export interface ProjectVoiceoverChunk {
+  recordingId: string;
+  sequence: number;
+  data: Uint8Array;
+}
+export interface ProjectVoiceoverFinish {
+  recordingId: string;
+  name?: string;
 }
 export interface SystemAudioSegmentStart {
   sessionId: string;

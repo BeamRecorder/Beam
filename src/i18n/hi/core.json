@@ -1,11 +1,31 @@
 {
+  "VoiceoverRecorder": {
+    "record": "रिकॉर्ड करें",
+    "pause": "रोकें",
+    "resume": "जारी रखें",
+    "stop": "बंद करें",
+    "discard": "हटाएँ",
+    "preparing": "माइक्रोफ़ोन तैयार हो रहा है…",
+    "finalizing": "वॉइस-ओवर पूरा हो रहा है…",
+    "microphone": "माइक्रोफ़ोन",
+    "countdownOff": "बंद",
+    "monitorProjectAudio": "प्रोजेक्ट ऑडियो सुनें",
+    "muteProjectAudio": "प्रोजेक्ट ऑडियो म्यूट करें"
+  },
   "AudioClipPropertiesPanel": {
     "noAudioClipSelected": "कोई ऑडियो क्लिप चयनित नहीं है",
     "selectAudioClip": "टाइमलाइन पर आयात की गई ऑडियो क्लिप चुनें।",
     "audioClip": "ऑडियो क्लिप",
     "volume": "वॉल्यूम",
     "enabled": "सक्षम",
-    "deleteAudioClip": "ऑडियो क्लिप हटाएँ"
+    "deleteAudioClip": "ऑडियो क्लिप हटाएँ",
+    "normalize": "ऑडियो नॉर्मलाइज़ करें",
+    "normalizeDescription": "वॉल्यूम नियंत्रण बनाए रखते हुए -16 LUFS और -1 dBTP का लक्ष्य रखता है।",
+    "resetNormalization": "नॉर्मलाइज़ेशन रीसेट करें",
+    "analyzing": "विश्लेषण हो रहा है…",
+    "normalizeButton": "नॉर्मलाइज़ करें",
+    "silentAudio": "कोई उपयोगी सिग्नल नहीं मिला।",
+    "normalizedGain": "नॉर्मलाइज़ किया गया ({gain} dB)"
   },
   "AudioPanel": {
     "globalVolume": "ग्लोबल वॉल्यूम",
@@ -15,7 +35,8 @@
     "microphoneVolume": "माइक्रोफ़ोन वॉल्यूम",
     "deleteSystemTrack": "सिस्टम ऑडियो ट्रैक हटाएँ",
     "deleteMicrophoneTrack": "माइक्रोफ़ोन ट्रैक हटाएँ",
-    "noAudioTracksDetected": "कोई माइक्रोफ़ोन या सिस्टम ऑडियो ट्रैक नहीं मिला।"
+    "noAudioTracksDetected": "कोई माइक्रोफ़ोन या सिस्टम ऑडियो ट्रैक नहीं मिला।",
+    "normalizeAll": "सभी ऑडियो नॉर्मलाइज़ करें"
   },
   "BackgroundPresetComposer": {
     "addCustomColor": "कस्टम रंग जोड़ें",

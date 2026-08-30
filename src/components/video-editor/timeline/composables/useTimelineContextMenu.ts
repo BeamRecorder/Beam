@@ -1,6 +1,6 @@
 import { computed, ref, type Ref } from 'vue';
-import { ClipboardPaste, Copy, Pause, Trash2 } from '@lucide/vue';
-import type { Clip, ClipComposition, MediaAsset } from '~/media/shared/composition-types';
+import { AudioLines, ClipboardPaste, Copy, Pause, Trash2 } from '@lucide/vue';
+import { isAudioClip, type Clip, type ClipComposition, type MediaAsset } from '~/media/shared/composition-types';
 import type { ZoomElement } from '../../zoom/zoom-types';
 import type { ContextMenuItemOrDivider } from '~/components/ui/context-menu';
 import { getClipCategory, useTimelineClipboard } from './useTimelineClipboard';
@@ -172,8 +172,15 @@ export function useTimelineContextMenu(options: {
     const canCopy = Boolean(options.scopeId.value && (zoom || clip));
     const canHold = canHoldClip(clip);
     const items: ContextMenuItemOrDivider[] = [];
+    const audioClipIds = clipIds.filter((id) => {
+      const selected = options.composition.value.clips.find((item) => item.id === id);
+      return selected ? isAudioClip(selected) : false;
+    });
     if (clip && (clip.kind === 'screen' || clip.kind === 'video' || clip.kind === 'webcam')) {
       items.push({ id: 'hold', label: options.t('holdSegment'), icon: Pause, disabled: !canHold }, { isDivider: true });
+    }
+    if (audioClipIds.length) {
+      items.push({ id: 'normalize-audio', label: options.t('normalizeAudio'), icon: AudioLines }, { isDivider: true });
     }
     items.push(
       { id: 'copy', label: options.t('copy'), icon: Copy, shortcut: 'Ctrl+C', disabled: !canCopy },
@@ -209,6 +216,7 @@ export function useTimelineContextMenu(options: {
     const { category, clip, zoom, clipIds, zoomIds, trackId } = contextMenuState.value;
     if (actionId === 'hold' && clip && canHoldClip(clip))
       options.emit('hold:clip', { id: clip.id, timeMs: options.currentTimeMs.value });
+    else if (actionId === 'normalize-audio') options.emit('normalize:audio', clipIds);
     else if (actionId === 'copy') copyItem(clip, zoom);
     else if (actionId === 'paste') pasteClipboard({ category, trackId });
     else if (actionId === 'delete') {

@@ -1,11 +1,31 @@
 {
+  "VoiceoverRecorder": {
+    "record": "녹음",
+    "pause": "일시 정지",
+    "resume": "계속",
+    "stop": "중지",
+    "discard": "삭제",
+    "preparing": "마이크 준비 중…",
+    "finalizing": "보이스오버 마무리 중…",
+    "microphone": "마이크",
+    "countdownOff": "끄기",
+    "monitorProjectAudio": "프로젝트 오디오 듣기",
+    "muteProjectAudio": "프로젝트 오디오 음소거"
+  },
   "AudioClipPropertiesPanel": {
     "noAudioClipSelected": "선택한 오디오 클립이 없습니다",
     "selectAudioClip": "타임라인에서 가져온 오디오 클립을 선택하세요.",
     "audioClip": "오디오 클립",
     "volume": "볼륨",
     "enabled": "사용",
-    "deleteAudioClip": "오디오 클립 삭제"
+    "deleteAudioClip": "오디오 클립 삭제",
+    "normalize": "오디오 정규화",
+    "normalizeDescription": "볼륨 제어를 유지하면서 -16 LUFS 및 -1 dBTP를 목표로 합니다.",
+    "resetNormalization": "정규화 초기화",
+    "analyzing": "분석 중…",
+    "normalizeButton": "정규화",
+    "silentAudio": "사용 가능한 신호를 감지하지 못했습니다.",
+    "normalizedGain": "정규화됨({gain} dB)"
   },
   "AudioPanel": {
     "globalVolume": "전체 볼륨",
@@ -15,7 +35,8 @@
     "microphoneVolume": "마이크 볼륨",
     "deleteSystemTrack": "시스템 오디오 트랙 삭제",
     "deleteMicrophoneTrack": "마이크 트랙 삭제",
-    "noAudioTracksDetected": "마이크 또는 시스템 오디오 트랙이 감지되지 않았습니다."
+    "noAudioTracksDetected": "마이크 또는 시스템 오디오 트랙이 감지되지 않았습니다.",
+    "normalizeAll": "모든 오디오 정규화"
   },
   "BackgroundPresetComposer": {
     "addCustomColor": "사용자 지정 색상 추가",

@@ -25,6 +25,7 @@ const defaults = (platform = process.platform) => ({
   appearance: defaultAppearance(),
   recordingBar: { visibility: platform === 'linux' ? 'hover-only' : 'always' },
   recordingInteractions: { enabled: false, noticeDismissed: false },
+  voiceover: { countdownSeconds: 3, monitorProjectAudio: false },
   spellCheck: { enabled: true },
   onboardingCompleted: false,
   devices: {},
@@ -165,6 +166,15 @@ const normalize = (value, platform = process.platform) => {
           ? next.recordingInteractions.noticeDismissed
           : base.recordingInteractions.noticeDismissed,
     },
+    voiceover: {
+      countdownSeconds: [0, 3, 5, 10].includes(next.voiceover?.countdownSeconds)
+        ? next.voiceover.countdownSeconds
+        : base.voiceover.countdownSeconds,
+      monitorProjectAudio:
+        typeof next.voiceover?.monitorProjectAudio === 'boolean'
+          ? next.voiceover.monitorProjectAudio
+          : base.voiceover.monitorProjectAudio,
+    },
     spellCheck: {
       enabled: typeof next.spellCheck?.enabled === 'boolean' ? next.spellCheck.enabled : base.spellCheck.enabled,
     },
@@ -210,6 +220,7 @@ function createPreferencesStore(file, { platform = process.platform } = {}) {
         ...current.recordingInteractions,
         ...(value?.recordingInteractions || {}),
       },
+      voiceover: { ...current.voiceover, ...value?.voiceover },
       spellCheck: { ...current.spellCheck, ...(value?.spellCheck || {}) },
       devices: { ...current.devices, ...(value?.devices || {}) },
       shortcuts: { ...current.shortcuts, ...(value?.shortcuts || {}) },

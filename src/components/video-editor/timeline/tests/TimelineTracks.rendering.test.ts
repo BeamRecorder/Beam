@@ -539,6 +539,118 @@ describe('TimelineTracks', () => {
     });
   });
 
+  it('renders a finalized voice-over clip with a matching header and track row', async () => {
+    const base = composition();
+    const mounted = await mountTracks({
+      composition: {
+        ...base,
+        assets: [...base.assets, asset('voiceover-asset', 'audio')],
+        clips: [
+          ...base.clips,
+          importedAudio({
+            id: 'voiceover-audio',
+            name: 'Voice-over',
+            role: 'voiceover',
+            assetId: 'voiceover-asset',
+            timelineStartMs: 2_500,
+            timelineDurationMs: 1_500,
+            sourceDurationMs: 1_500,
+          }),
+        ],
+      },
+    });
+
+    const trackRows = mounted!.findAll('.tracks-stack > .audio-track');
+    const headerRows = mounted!.findAll('.sidebar-tracks-stack > .audio-track');
+    const voiceoverRow = trackRows.find((row) => row.classes().includes('voiceover-track'));
+    const voiceoverTrackIndex = trackRows.findIndex((row) => row.classes().includes('voiceover-track'));
+    const voiceoverHeader = headerRows[voiceoverTrackIndex];
+    if (!voiceoverRow || !voiceoverHeader || voiceoverTrackIndex < 0)
+      throw new Error('Expected the finalized voice-over row and header.');
+
+    expect(voiceoverRow.find('.timeline-clip').text()).toContain('Voice-over');
+    expect(voiceoverHeader.get('.track-title').text()).toBeTruthy();
+    await voiceoverHeader.get('.track-info').trigger('click');
+    expect(mounted!.emitted('select:track')).toContainEqual([
+      {
+        clipIds: ['voiceover-audio'],
+        primaryClipId: 'voiceover-audio',
+        trackNames: [expect.any(String)],
+      },
+    ]);
+  });
+
+  it('renders each voice-over take on a numbered row and places a live draft next', async () => {
+    const base = composition();
+    const mounted = await mountTracks({
+      composition: {
+        ...base,
+        assets: [...base.assets, asset('voiceover-asset', 'audio')],
+        clips: [
+          ...base.clips,
+          importedAudio({
+            id: 'voiceover-one',
+            name: 'Voice-over',
+            role: 'voiceover',
+            assetId: 'voiceover-asset',
+            order: 8,
+            timelineStartMs: 500,
+            timelineDurationMs: 1_000,
+            sourceDurationMs: 1_000,
+          }),
+          importedAudio({
+            id: 'voiceover-two',
+            name: 'Voice-over',
+            role: 'voiceover',
+            assetId: 'voiceover-asset',
+            order: 9,
+            timelineStartMs: 2_500,
+            timelineDurationMs: 1_500,
+            sourceDurationMs: 1_500,
+          }),
+        ],
+      },
+      voiceoverDraft: { startMs: 4_500, durationMs: 1_000, bars: [4, 10, 20] },
+    });
+
+    const trackRows = mounted!.findAll('.tracks-stack > .voiceover-track');
+    const headerRows = mounted!
+      .findAll('.sidebar-tracks-stack > .audio-track')
+      .filter((row) => row.get('.track-title').text().startsWith('Voice-over'));
+    expect(trackRows).toHaveLength(3);
+    expect(headerRows).toHaveLength(3);
+    expect(headerRows.map((row) => row.get('.track-title').text())).toEqual([
+      'Voice-over 1',
+      'Voice-over 2',
+      'Voice-over 3',
+    ]);
+    expect(trackRows[0]!.find('.timeline-clip').exists()).toBe(true);
+    expect(trackRows[1]!.find('.timeline-clip').exists()).toBe(true);
+    expect(trackRows[2]!.find('.timeline-clip').exists()).toBe(false);
+    expect(trackRows[2]!.find('.voiceover-draft-clip').exists()).toBe(true);
+  });
+
+  it('renders the live voice-over draft waveform in a synchronized header and track row', async () => {
+    const mounted = await mountTracks({
+      voiceoverDraft: { startMs: 3_500, durationMs: 1_500, bars: [4, 10, 20] },
+    });
+
+    const trackRows = mounted!.findAll('.tracks-stack > .audio-track');
+    const headerRows = mounted!.findAll('.sidebar-tracks-stack > .audio-track');
+    const draftRow = mounted!.get('.tracks-stack > .voiceover-track');
+    const draftTrackIndex = trackRows.findIndex((row) => row.classes().includes('voiceover-track'));
+    const draftHeader = headerRows[draftTrackIndex];
+    if (!draftHeader || draftTrackIndex < 0) throw new Error('Expected the live voice-over row and header.');
+
+    expect(draftHeader.get('.track-title').text()).toBeTruthy();
+    expect(draftRow.get('.voiceover-draft-clip').attributes('style')).toEqual(
+      expect.stringContaining('left: 35%; width: 15%;'),
+    );
+    expect(draftRow.find('.waveform-canvas').exists()).toBe(true);
+    expect(draftHeader.find('.track-info.static-info').exists()).toBe(true);
+    expect(mounted!.emitted('select:track')).toBeUndefined();
+  });
+
   it('highlights the recently pasted clip, zoom, and caption only for the matching item', async () => {
     const mounted = await mountTracks({
       recentPaste: { type: 'clip', id: 'screen-clip', timestamp: 1 },

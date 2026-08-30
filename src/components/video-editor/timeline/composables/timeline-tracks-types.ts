@@ -31,6 +31,13 @@ export interface TimelineTracksProps {
   projectId?: string | null;
   recentPaste?: TimelinePasteHighlight | null;
   canvas?: OutputCanvasSettings;
+  voiceoverDraft?: LiveAudioDraft | null;
+}
+
+export interface LiveAudioDraft {
+  startMs: number;
+  durationMs: number;
+  bars: number[];
 }
 
 export interface TrackClipSelection {
@@ -105,4 +112,5 @@ export interface TimelineTracksEmits {
   (event: 'preview:canvas', value: OutputCanvasSettings | null): void;
   (event: 'update:canvas', value: OutputCanvasSettings): void;
   (event: 'open:canvas-transition', edge: 'entry' | 'exit'): void;
+  (event: 'normalize:audio', clipIds: string[]): void;
 }

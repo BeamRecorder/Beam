@@ -377,7 +377,18 @@
   background: var(--color-track-annotation-light);
 }
 .audio-content {
+  position: relative;
   background: var(--color-track-audio-light);
+}
+.voiceover-draft-clip {
+  position: absolute;
+  inset-block: 4px;
+  min-width: 2px;
+  overflow: hidden;
+  pointer-events: none;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 75%, transparent);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-primary) 18%, var(--color-bg-element));
 }
 .cursor-zoom-indicator,
 .annotation-indicator {

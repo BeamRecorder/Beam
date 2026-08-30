@@ -1,6 +1,8 @@
 import { AudioSample, AudioSampleSink, type InputAudioTrack } from 'mediabunny';
 import type { AudioClip } from '../shared/composition-types';
 import { audioTransitionGainAt } from '../shared/clip-transitions';
+import { effectiveAudioClipGain } from '../shared/audio-gain';
+import { StreamingAudioLimiter } from '../shared/audio-limiter';
 
 export const EXPORT_AUDIO_RATE = 48_000;
 export const EXPORT_AUDIO_CHANNELS = 2;
@@ -84,7 +86,7 @@ class ClipPcmReader {
     const clipEnd = clipStart + this.clip.timelineDurationMs / 1_000;
     const firstFrame = Math.max(startFrame, Math.ceil(clipStart * EXPORT_AUDIO_RATE));
     const lastFrame = Math.min(startFrame + frameCount, Math.ceil(clipEnd * EXPORT_AUDIO_RATE));
-    const gain = Math.max(0, Math.min(2, this.clip.volume / 100));
+    const gain = effectiveAudioClipGain(this.clip);
     let blockIndex = 0;
     for (let timelineFrame = firstFrame; timelineFrame < lastFrame; timelineFrame += 1) {
       const sourceTime =
@@ -140,6 +142,8 @@ export function createProgressiveAudioMixer(
     return new ClipPcmReader(clip, track);
   });
   const blockCount = Math.ceil((durationSeconds * EXPORT_AUDIO_RATE) / EXPORT_AUDIO_BLOCK_FRAMES);
+  const limiter = new StreamingAudioLimiter();
+  let previousBlock = -1;
   const dispose = async () => {
     await Promise.allSettled(readers.map((reader) => reader.close()));
   };
@@ -168,8 +172,9 @@ export function createProgressiveAudioMixer(
             reader.clip.sourceInMs / 1_000 + (Math.max(blockStart, clipStart) - clipStart) * reader.clip.playbackRate;
           reader.discardBefore(sourceStart - 1 / EXPORT_AUDIO_RATE);
         }
-        for (let index = 0; index < output.length; index += 1)
-          output[index] = Math.max(-1, Math.min(1, output[index]!));
+        if (index !== previousBlock + 1) limiter.reset();
+        limiter.processInterleaved(output, EXPORT_AUDIO_CHANNELS, EXPORT_AUDIO_RATE);
+        previousBlock = index;
         const planarOutput = new Float32Array(output.length);
         for (let frame = 0; frame < frameCount; frame += 1) {
           planarOutput[frame] = output[frame * EXPORT_AUDIO_CHANNELS]!;

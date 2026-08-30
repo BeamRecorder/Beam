@@ -1,6 +1,7 @@
 import { enableAutoUnmount, mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it } from 'vitest';
 import { h, nextTick } from 'vue';
+import { Mic } from '@lucide/vue';
 import Select from './Select.vue';
 
 enableAutoUnmount(afterEach);
@@ -176,6 +177,17 @@ describe('Select', () => {
 
     const lg = mount(Select, { props: { modelValue: 'one', options, size: 'lg' } });
     expect(lg.get('.select-trigger').classes()).toContain('select-lg');
+  });
+
+  it('renders an optional Lucide icon in the trigger', () => {
+    const wrapper = mount(Select, {
+      props: { modelValue: 'one', options, icon: Mic },
+    });
+
+    const icon = wrapper.get('.select-leading-icon');
+    expect(icon.element.tagName).toBe('svg');
+    expect(icon.attributes('aria-hidden')).toBe('true');
+    wrapper.unmount();
   });
 
   it('fuzzy-filters searchable options without being sensitive to case or accents', async () => {

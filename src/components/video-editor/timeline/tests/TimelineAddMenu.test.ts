@@ -30,6 +30,7 @@ describe('TimelineAddMenu', () => {
       'color',
       'shape',
       'sound',
+      'voiceover',
       'caption',
       'blur',
     ]);

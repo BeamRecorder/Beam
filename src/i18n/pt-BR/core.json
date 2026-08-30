@@ -1,11 +1,31 @@
 {
+  "VoiceoverRecorder": {
+    "record": "Gravar",
+    "pause": "Pausar",
+    "resume": "Retomar",
+    "stop": "Parar",
+    "discard": "Descartar",
+    "preparing": "Preparando microfone…",
+    "finalizing": "Finalizando narração…",
+    "microphone": "Microfone",
+    "countdownOff": "Desativada",
+    "monitorProjectAudio": "Ouvir áudio do projeto",
+    "muteProjectAudio": "Silenciar áudio do projeto"
+  },
   "AudioClipPropertiesPanel": {
     "noAudioClipSelected": "Nenhum clipe de áudio selecionado",
     "selectAudioClip": "Selecione um clipe de áudio importado na linha do tempo.",
     "audioClip": "Clipe de áudio",
     "volume": "Volume",
     "enabled": "Ativado",
-    "deleteAudioClip": "Excluir clipe de áudio"
+    "deleteAudioClip": "Excluir clipe de áudio",
+    "normalize": "Normalizar áudio",
+    "normalizeDescription": "Define -16 LUFS e -1 dBTP como alvo, preservando o controle de volume.",
+    "resetNormalization": "Redefinir normalização",
+    "analyzing": "Analisando…",
+    "normalizeButton": "Normalizar",
+    "silentAudio": "Nenhum sinal utilizável foi detectado.",
+    "normalizedGain": "Normalizado ({gain} dB)"
   },
   "AudioPanel": {
     "globalVolume": "Volume global",
@@ -15,7 +35,8 @@
     "microphoneVolume": "Volume do microfone",
     "deleteSystemTrack": "Excluir faixa de áudio do sistema",
     "deleteMicrophoneTrack": "Excluir faixa do microfone",
-    "noAudioTracksDetected": "Nenhuma faixa de microfone ou áudio do sistema foi detectada."
+    "noAudioTracksDetected": "Nenhuma faixa de microfone ou áudio do sistema foi detectada.",
+    "normalizeAll": "Normalizar todo o áudio"
   },
   "BackgroundPresetComposer": {
     "addCustomColor": "Adicionar cor personalizada",

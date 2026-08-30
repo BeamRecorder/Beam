@@ -1,11 +1,31 @@
 {
+  "VoiceoverRecorder": {
+    "record": "录制",
+    "pause": "暂停",
+    "resume": "继续",
+    "stop": "停止",
+    "discard": "丢弃",
+    "preparing": "正在准备麦克风…",
+    "finalizing": "正在完成旁白…",
+    "microphone": "麦克风",
+    "countdownOff": "关闭",
+    "monitorProjectAudio": "收听项目音频",
+    "muteProjectAudio": "将项目音频静音"
+  },
   "AudioClipPropertiesPanel": {
     "noAudioClipSelected": "未选择音频片段",
     "selectAudioClip": "请在时间线上选择导入的音频片段。",
     "audioClip": "音频片段",
     "volume": "音量",
     "enabled": "已启用",
-    "deleteAudioClip": "删除音频片段"
+    "deleteAudioClip": "删除音频片段",
+    "normalize": "音频标准化",
+    "normalizeDescription": "目标为 -16 LUFS 和 -1 dBTP，同时保留音量控制。",
+    "resetNormalization": "重置标准化",
+    "analyzing": "正在分析…",
+    "normalizeButton": "标准化",
+    "silentAudio": "未检测到可用信号。",
+    "normalizedGain": "已标准化（{gain} dB）"
   },
   "AudioPanel": {
     "globalVolume": "全局音量",
@@ -15,7 +35,8 @@
     "microphoneVolume": "麦克风音量",
     "deleteSystemTrack": "删除系统音频轨道",
     "deleteMicrophoneTrack": "删除麦克风轨道",
-    "noAudioTracksDetected": "未检测到麦克风或系统音频轨道。"
+    "noAudioTracksDetected": "未检测到麦克风或系统音频轨道。",
+    "normalizeAll": "标准化所有音频"
   },
   "BackgroundPresetComposer": {
     "addCustomColor": "添加自定义颜色",

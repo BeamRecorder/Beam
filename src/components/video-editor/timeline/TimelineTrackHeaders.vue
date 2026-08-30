@@ -34,6 +34,8 @@ const props = defineProps<{
   textCaptionLayers: TextCaptionLayer[];
   systemAudioClips: AudioClip[];
   microphoneClips: AudioClip[];
+  voiceoverClips: AudioClip[];
+  hasVoiceoverDraft: boolean;
   importedAudioTracks: ImportedAudioTimelineTrack[];
   includeAudioInExport: boolean;
   draggedTrackId: string | null;
@@ -184,6 +186,26 @@ const allZoomsSelected = () =>
       <Mic class="track-icon" /><span class="track-title">{{ t('mic') }}</span>
       <span v-if="!includeAudioInExport" class="export-disabled-status">{{ t('audioDisabledFromExport') }}</span>
     </button>
+  </div>
+  <div
+    v-for="(clip, index) in voiceoverClips"
+    :key="clip.id"
+    class="sidebar-track-item audio-track voiceover-track"
+    :class="{
+      disabled: !includeAudioInExport || !clip.enabled,
+      selected: allClipsSelected([clip]),
+    }"
+    @contextmenu="openTrackContextMenu($event, 'audio')"
+  >
+    <button type="button" class="track-info" @click="selectTrack([clip], `${t('voiceover')} ${index + 1}`, $event)">
+      <Mic class="track-icon" /><span class="track-title">{{ t('voiceover') }} {{ index + 1 }}</span>
+      <span v-if="!includeAudioInExport" class="export-disabled-status">{{ t('audioDisabledFromExport') }}</span>
+    </button>
+  </div>
+  <div v-if="hasVoiceoverDraft" class="sidebar-track-item audio-track voiceover-track voiceover-draft-track">
+    <div class="track-info static-info">
+      <Mic class="track-icon" /><span class="track-title">{{ t('voiceover') }} {{ voiceoverClips.length + 1 }}</span>
+    </div>
   </div>
   <div
     v-for="track in importedAudioTracks"
