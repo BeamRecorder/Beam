@@ -43,6 +43,12 @@ pub(super) fn parse_format(param: &Pod) -> Result<NegotiatedFormat, CaptureError
         .map_err(|error| format_error(error.to_string()))
 }
 
+pub(super) fn parse_format_event(
+    param: Option<&Pod>,
+) -> Result<Option<NegotiatedFormat>, CaptureError> {
+    param.map(parse_format).transpose()
+}
+
 pub(super) fn format_parameter() -> Result<Vec<u8>, CaptureError> {
     let object = spa::pod::object!(
         spa::utils::SpaTypes::ObjectParamFormat,

@@ -1208,12 +1208,24 @@ describe('HUD', () => {
     expect(capture.discover).toHaveBeenCalledTimes(3);
     expect(nativeCapture.getSourcePreview).toHaveBeenCalledTimes(7);
 
-    await wrapper.find('.select-close').trigger('click');
-    await ready();
+    await wrapper.setProps({ preparingEditor: true });
     vi.advanceTimersByTime(5000);
     await ready();
     expect(capture.discover).toHaveBeenCalledTimes(3);
     expect(nativeCapture.getSourcePreview).toHaveBeenCalledTimes(7);
+
+    await wrapper.setProps({ preparingEditor: false });
+    vi.advanceTimersByTime(5000);
+    await ready();
+    expect(capture.discover).toHaveBeenCalledTimes(4);
+    expect(nativeCapture.getSourcePreview).toHaveBeenCalledTimes(9);
+
+    await wrapper.find('.select-close').trigger('click');
+    await ready();
+    vi.advanceTimersByTime(5000);
+    await ready();
+    expect(capture.discover).toHaveBeenCalledTimes(4);
+    expect(nativeCapture.getSourcePreview).toHaveBeenCalledTimes(9);
     wrapper.unmount();
   });
 

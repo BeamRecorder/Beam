@@ -977,7 +977,7 @@ onMounted(async () => {
   // Refresh only the open source picker. Native macOS previews are snapshots,
   // not a hidden continuous capture session.
   previewsRefreshInterval = setInterval(() => {
-    if (!showSettings.value && !isRecording.value && openSourceDropdown.value) {
+    if (!props.preparingEditor && !showSettings.value && !isRecording.value && openSourceDropdown.value) {
       void refreshSourceChoices(openSourceDropdown.value, true);
     }
   }, 5000);

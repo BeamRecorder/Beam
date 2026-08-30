@@ -41,6 +41,12 @@ pub(super) fn parse_audio_format(param: &Pod) -> Result<SystemAudioFormat, Captu
     })
 }
 
+pub(super) fn parse_audio_format_event(
+    param: Option<&Pod>,
+) -> Result<Option<SystemAudioFormat>, CaptureError> {
+    param.map(parse_audio_format).transpose()
+}
+
 pub(super) fn audio_format_parameter() -> Result<Vec<u8>, CaptureError> {
     let mut info = AudioInfoRaw::new();
     info.set_format(spa::param::audio::AudioFormat::F32LE);

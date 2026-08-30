@@ -104,6 +104,43 @@ afterEach(() => {
 });
 
 describe('useRecordingController countdown', () => {
+  it('starts recording health polling only after native startup reaches recording', async () => {
+    vi.useFakeTimers();
+    const deferred = <T>() => {
+      let resolve!: (value: T) => void;
+      const promise = new Promise<T>((res) => {
+        resolve = res;
+      });
+      return { promise, resolve };
+    };
+    const nativePreparation = deferred<{ sessionId: string }>();
+    const nativeSurface = deferred<undefined>();
+    mocks.capture.prepareRecording.mockReturnValueOnce(nativePreparation.promise);
+    mocks.capture.prepareRecordingSurface.mockReturnValueOnce(nativeSurface.promise);
+
+    const controller = useRecordingController(vi.fn(), vi.fn());
+    void controller.start({ ...baseConfig, countdownSeconds: 1 });
+    await Promise.resolve();
+
+    expect(controller.phase.value).toBe('countdown');
+    expect(mocks.capture.status).not.toHaveBeenCalled();
+
+    nativePreparation.resolve({ sessionId: 'prepared' });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(controller.phase.value).toBe('countdown');
+    expect(mocks.capture.status).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(controller.phase.value).toBe('starting');
+    expect(mocks.capture.status).not.toHaveBeenCalled();
+
+    nativeSurface.resolve(undefined);
+    await vi.waitFor(() => expect(mocks.capture.startPreparedRecording).toHaveBeenCalledOnce());
+    await vi.waitFor(() => expect(controller.phase.value).toBe('recording'));
+    expect(mocks.capture.status).toHaveBeenCalledOnce();
+  });
+
   it('clamps a negative countdown and starts native capture exactly once', async () => {
     vi.useFakeTimers();
     const controller = useRecordingController(vi.fn(), vi.fn());
