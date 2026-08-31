@@ -20,8 +20,11 @@ const fittedPhoneRect = (
   );
   return { x: bounds.x + fit.x, y: bounds.y + fit.y, width: fit.width, height: fit.height };
 };
-const context = () =>
-  ({
+const context = () => {
+  const fillStyles: unknown[] = [];
+  const operations: Array<{ type: 'fill' | 'drawImage'; style?: unknown }> = [];
+  let currentFillStyle: unknown;
+  const value = {
     fillStyle: '',
     strokeStyle: '',
     lineWidth: 0,
@@ -34,16 +37,31 @@ const context = () =>
     beginPath: vi.fn(),
     rect: vi.fn(),
     roundRect: vi.fn(),
-    fill: vi.fn(),
+    fill: vi.fn(() => operations.push({ type: 'fill', style: currentFillStyle })),
     stroke: vi.fn(),
     clip: vi.fn(),
-    drawImage: vi.fn(),
+    drawImage: vi.fn(() => operations.push({ type: 'drawImage' })),
     fillRect: vi.fn(),
     arc: vi.fn(),
     translate: vi.fn(),
     scale: vi.fn(),
     createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
-  }) as unknown as CanvasRenderingContext2D;
+    fillStyles,
+    operations,
+  };
+  Object.defineProperty(value, 'fillStyle', {
+    configurable: true,
+    get: () => currentFillStyle,
+    set: (next: unknown) => {
+      currentFillStyle = next;
+      fillStyles.push(next);
+    },
+  });
+  return value as unknown as CanvasRenderingContext2D & {
+    fillStyles: unknown[];
+    operations: Array<{ type: 'fill' | 'drawImage'; style?: unknown }>;
+  };
+};
 
 describe('phone frame rendering', () => {
   it.each(phoneFrames)('uses the Telephone content inset for the %s frame', (frame) => {
@@ -95,6 +113,37 @@ describe('phone frame rendering', () => {
     expect(ctx.drawImage).toHaveBeenCalledWith(source, media.x, media.y, media.width, media.height);
     expect(ctx.fill).toHaveBeenCalledWith('evenodd');
     expect(ctx.stroke).toHaveBeenCalled();
+  });
+
+  it.each(phoneFrames)('paints the final %s bezel with frameColor after the media', (frame) => {
+    const ctx = context();
+    const frameColor = '#123456';
+    const rect = { x: 12, y: 18, width: 415, height: 843 };
+
+    drawDecoratedMedia(ctx, {
+      source,
+      rect,
+      appearance: {
+        ...DEFAULT_CLIP_APPEARANCE,
+        frame,
+        frameColor,
+        shadowSize: 'none',
+        shadowBlur: 0,
+        phoneFrameFill: { kind: 'color', color: '#abcdef' },
+      },
+      title: 'Custom frame color',
+    });
+
+    const mediaIndex = ctx.operations.findIndex(({ type }) => type === 'drawImage');
+    const finalBezelIndex = ctx.operations.findIndex(
+      ({ type, style }, index) => index > mediaIndex && type === 'fill' && style === frameColor,
+    );
+
+    expect(mediaIndex).toBeGreaterThanOrEqual(0);
+    expect(finalBezelIndex).toBeGreaterThan(mediaIndex);
+    expect(ctx.fillStyles).toContain(frameColor);
+    expect(ctx.createLinearGradient).not.toHaveBeenCalled();
+    expect(ctx.clip).toHaveBeenCalledTimes(2);
   });
 
   it.each(phoneFrames)('centers the native %s outer aspect inside wide and tall bounds', (frame) => {

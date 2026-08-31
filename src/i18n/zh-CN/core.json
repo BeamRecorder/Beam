@@ -54,7 +54,7 @@
     "windowTitle": "窗口标题",
     "windowSize": "窗口大小",
     "screenRecording": "屏幕录制",
-    "windowColor": "窗口颜色",
+    "frameColor": "外框颜色",
     "menuBar": "菜单栏",
     "scrollbars": "滚动条",
     "fitBackground": "适应背景",

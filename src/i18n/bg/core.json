@@ -54,7 +54,7 @@
     "windowTitle": "Заглавие на прозореца",
     "windowSize": "Размер на прозореца",
     "screenRecording": "Запис на екрана",
-    "windowColor": "Цвят на прозореца",
+    "frameColor": "Цвят на рамката",
     "menuBar": "Лента с менюта",
     "scrollbars": "Ленти за превъртане",
     "fitBackground": "Фон при побиране",

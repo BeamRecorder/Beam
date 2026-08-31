@@ -49,17 +49,22 @@ const CanvasPanel = {
   `,
 };
 const AudioPanel = {
-  props: ['hasSystemAudio', 'hasMicAudio'],
-  emits: ['delete:system', 'delete:microphone'],
+  props: ['hasSystemAudio', 'hasMicAudio', 'hasAudio', 'normalizeAllEnabled', 'normalizeAllPending'],
+  emits: ['delete:system', 'delete:microphone', 'update:normalizeAll'],
   template: `
     <div
       class="audio-panel-stub"
       :data-has-system-audio="hasSystemAudio"
       :data-has-mic-audio="hasMicAudio"
+      :data-has-audio="hasAudio"
+      :data-normalize-all-enabled="normalizeAllEnabled"
+      :data-normalize-all-pending="normalizeAllPending"
     >
       Audio
       <button class="delete-system-audio" @click="$emit('delete:system')">Delete system</button>
       <button class="delete-microphone-audio" @click="$emit('delete:microphone')">Delete microphone</button>
+      <button class="normalize-all" @click="$emit('update:normalizeAll', true)">Normalize all</button>
+      <button class="reset-all" @click="$emit('update:normalizeAll', false)">Reset all</button>
     </div>
   `,
 };
@@ -247,6 +252,15 @@ const audioComposition: ClipComposition = {
     },
   ],
   clips: [audioClip],
+};
+const normalizedAudio = {
+  enabled: true,
+  mode: 'lufs' as const,
+  targetLufs: -16,
+  targetPeakDbtp: -1,
+  appliedGainDb: 1,
+  analysisVersion: 1,
+  analysisKey: 'audio-asset:0:2000:v1',
 };
 const noBackground: BackgroundValue | null = null;
 const noZoom: ZoomElement | null = null;
@@ -524,6 +538,52 @@ describe('PropertiesPanel', () => {
     expect(audio.attributes('data-has-mic-audio')).toBe('true');
     await wrapper.get('.delete-microphone-audio').trigger('click');
     expect(wrapper.emitted('delete:mic-audio')).toEqual([[]]);
+  });
+
+  it('targets eligible audio clips for the global toggle and relays checked and pending state', async () => {
+    const secondAudioClip = { ...audioClip, id: 'audio-2', role: 'voiceover' as const, order: 1 };
+    const missingAssetAudioClip = {
+      ...audioClip,
+      id: 'missing-audio',
+      role: 'voiceover' as const,
+      assetId: 'missing-asset',
+      order: 2,
+    };
+    const mixedComposition: ClipComposition = {
+      ...audioComposition,
+      clips: [audioClip, secondAudioClip, missingAssetAudioClip, transitionScreenClip],
+    };
+    const wrapper = mount(PropertiesPanel, {
+      props: { ...baseProps, activeTab: 'audio', composition: mixedComposition },
+      global,
+    });
+    const audio = wrapper.get('.audio-panel-stub');
+
+    expect(audio.attributes('data-has-audio')).toBe('true');
+    expect(audio.attributes('data-normalize-all-enabled')).toBe('false');
+    expect(audio.attributes('data-normalize-all-pending')).toBe('false');
+
+    await wrapper.get('.normalize-all').trigger('click');
+    expect(wrapper.emitted('normalize:audio')).toEqual([[['audio', 'audio-2']]]);
+
+    await wrapper.get('.reset-all').trigger('click');
+    expect(wrapper.emitted('reset:audio-normalization')).toEqual([[['audio', 'audio-2']]]);
+
+    await wrapper.setProps({
+      composition: {
+        ...mixedComposition,
+        clips: [
+          { ...audioClip, normalization: normalizedAudio },
+          { ...secondAudioClip, normalization: { ...normalizedAudio, analysisKey: 'audio-asset:0:2000:v1' } },
+          missingAssetAudioClip,
+          transitionScreenClip,
+        ],
+      },
+    });
+    expect(audio.attributes('data-normalize-all-enabled')).toBe('true');
+
+    await wrapper.setProps({ audioNormalizationStatuses: { audio: 'analyzing' } });
+    expect(audio.attributes('data-normalize-all-pending')).toBe('true');
   });
 
   it('selects audio, caption and regular clip property editors', async () => {

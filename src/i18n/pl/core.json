@@ -54,7 +54,7 @@
     "windowTitle": "Tytuł okna",
     "windowSize": "Rozmiar okna",
     "screenRecording": "Nagrywanie ekranu",
-    "windowColor": "Kolor okna",
+    "frameColor": "Kolor ramki",
     "menuBar": "Pasek menu",
     "scrollbars": "Paski przewijania",
     "fitBackground": "Tło dopasowania",

@@ -54,7 +54,7 @@
     "windowTitle": "視窗標題",
     "windowSize": "視窗大小",
     "screenRecording": "螢幕錄影",
-    "windowColor": "視窗色彩",
+    "frameColor": "外框顏色",
     "menuBar": "選單列",
     "scrollbars": "捲軸",
     "fitBackground": "適應背景",

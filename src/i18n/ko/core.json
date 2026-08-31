@@ -54,7 +54,7 @@
     "windowTitle": "창 제목",
     "windowSize": "창 크기",
     "screenRecording": "화면 녹화",
-    "windowColor": "창 색상",
+    "frameColor": "프레임 색상",
     "menuBar": "메뉴 모음",
     "scrollbars": "스크롤바",
     "fitBackground": "맞춤 배경",

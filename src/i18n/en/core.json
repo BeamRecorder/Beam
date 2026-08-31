@@ -54,7 +54,7 @@
     "windowTitle": "Window title",
     "windowSize": "Window size",
     "screenRecording": "Screen recording",
-    "windowColor": "Window color",
+    "frameColor": "Frame color",
     "menuBar": "Menu bar",
     "scrollbars": "Scrollbars",
     "fitBackground": "Fit background",

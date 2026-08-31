@@ -139,6 +139,19 @@ const selectedDomainClips = computed(() => {
   );
   return props.composition.clips.filter((clip) => ids.has(clip.id));
 });
+const audioClips = computed(() => props.composition.clips.filter(isAudioClip));
+const normalizableAudioClips = computed(() => {
+  const assetIds = new Set(props.composition.assets.filter((asset) => asset.kind === 'audio').map((asset) => asset.id));
+  return audioClips.value.filter((clip) => assetIds.has(clip.assetId));
+});
+const normalizeAllAudioEnabled = computed(
+  () =>
+    normalizableAudioClips.value.length > 0 &&
+    normalizableAudioClips.value.every((clip) => clip.normalization?.enabled === true),
+);
+const normalizeAllAudioPending = computed(() =>
+  normalizableAudioClips.value.some((clip) => props.audioNormalizationStatuses[clip.id] === 'analyzing'),
+);
 const selectionClipNames = computed(() => selectedClipNames(selectedDomainClips.value, tTimeline('holdSegment')));
 const selectionNames = computed(() =>
   props.activeTab === 'zoom'
@@ -480,7 +493,9 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
               :is-mic-audio-enabled="isMicAudioEnabled"
               :has-system-audio="hasSystemAudio"
               :has-mic-audio="hasMicAudio"
-              :has-audio="composition.clips.some(isAudioClip)"
+              :has-audio="normalizableAudioClips.length > 0"
+              :normalize-all-enabled="normalizeAllAudioEnabled"
+              :normalize-all-pending="normalizeAllAudioPending"
               :system-volume="systemVolume"
               :mic-volume="micVolume"
               @update:volume="emit('update:volume', $event)"
@@ -490,11 +505,16 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
               @update:mic-volume="emit('update:micVolume', $event)"
               @delete:system="emit('delete:system-audio')"
               @delete:microphone="emit('delete:mic-audio')"
-              @normalize-all="
-                emit(
-                  'normalize:audio',
-                  composition.clips.map((clip) => clip.id),
-                )
+              @update:normalize-all="
+                $event
+                  ? emit(
+                      'normalize:audio',
+                      normalizableAudioClips.map((clip) => clip.id),
+                    )
+                  : emit(
+                      'reset:audio-normalization',
+                      normalizableAudioClips.map((clip) => clip.id),
+                    )
               "
             />
             <ZoomPanel

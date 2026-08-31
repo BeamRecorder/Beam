@@ -75,6 +75,7 @@ function drawSafariToolbar(
   rect: MediaRect,
   title: string,
   paintBackground: boolean,
+  frameColor: string,
   chromeScale = 1,
 ) {
   const geometry = resolveSafariFrameGeometry(rect, chromeScale);
@@ -88,13 +89,8 @@ function drawSafariToolbar(
     ctx.beginPath();
     ctx.roundRect(rect.x, rect.y, rect.width, rect.height, radius);
     ctx.clip();
-    ctx.fillStyle = '#fafafa';
+    ctx.fillStyle = frameColor;
     ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
-    const background = ctx.createLinearGradient(rect.x, rect.y, rect.x, rect.y + header);
-    background.addColorStop(0, '#fdfdfd');
-    background.addColorStop(1, '#f8f8f8');
-    ctx.fillStyle = background;
-    ctx.fillRect(rect.x, rect.y, rect.width, header);
     ctx.restore();
   }
 
@@ -384,11 +380,11 @@ export function drawFrameChrome(
 ) {
   if (frame === 'none') return;
   if (isPhoneFrame(frame)) {
-    drawPhoneFrame(ctx, rect, frame, paintBackground);
+    drawPhoneFrame(ctx, rect, frame, paintBackground, frameColor);
     return;
   }
   if (frame === 'safari') {
-    drawSafariToolbar(ctx, rect, title, paintBackground, windows.chromeScale);
+    drawSafariToolbar(ctx, rect, title, paintBackground, frameColor, windows.chromeScale);
     ctx.save();
     ctx.strokeStyle = 'rgba(169, 169, 169, .75)';
     ctx.lineWidth = 1;

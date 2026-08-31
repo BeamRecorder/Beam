@@ -54,7 +54,7 @@
     "windowTitle": "Titolo della finestra",
     "windowSize": "Dimensioni finestra",
     "screenRecording": "Registrazione schermo",
-    "windowColor": "Colore della finestra",
+    "frameColor": "Colore della cornice",
     "menuBar": "Barra dei menu",
     "scrollbars": "Barre di scorrimento",
     "fitBackground": "Sfondo adattamento",

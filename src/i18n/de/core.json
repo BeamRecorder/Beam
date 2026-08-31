@@ -54,7 +54,7 @@
     "windowTitle": "Fenstertitel",
     "windowSize": "Fenstergröße",
     "screenRecording": "Bildschirmaufnahme",
-    "windowColor": "Fensterfarbe",
+    "frameColor": "Rahmenfarbe",
     "menuBar": "Menüleiste",
     "scrollbars": "Bildlaufleisten",
     "fitBackground": "Hintergrund bei Einpassen",

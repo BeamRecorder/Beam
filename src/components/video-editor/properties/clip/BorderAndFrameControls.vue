@@ -119,6 +119,12 @@ const selectFrameType = (type: 'desktop' | 'phone') =>
           >{{ item.label }}</Button
         >
       </ButtonGroup>
+      <span class="sub-label">{{ t('frameColor') }}</span>
+      <ColorPicker
+        :model-value="frameColor ?? '#c0c0c0'"
+        :show-label="false"
+        @update:modelValue="emit('update', { frameColor: $event })"
+      />
       <template v-if="activeFrameType === 'desktop'">
         <label class="sub-label" for="frame-title">{{ t('windowTitle') }}</label>
         <Input
@@ -143,12 +149,6 @@ const selectFrameType = (type: 'desktop' | 'phone') =>
         @update:modelValue="emit('update', { phoneFrameFill: $event })"
       />
       <template v-if="activeFrame === 'windows-95'">
-        <span class="sub-label">{{ t('windowColor') }}</span>
-        <ColorPicker
-          :model-value="frameColor ?? '#c0c0c0'"
-          :show-label="false"
-          @update:modelValue="emit('update', { frameColor: $event })"
-        />
         <div class="prop-row">
           <span class="prop-label">{{ t('menuBar') }}</span
           ><Switch

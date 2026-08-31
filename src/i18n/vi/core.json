@@ -54,7 +54,7 @@
     "windowTitle": "Tiêu đề cửa sổ",
     "windowSize": "Kích thước cửa sổ",
     "screenRecording": "Bản ghi màn hình",
-    "windowColor": "Màu cửa sổ",
+    "frameColor": "Màu khung",
     "menuBar": "Thanh menu",
     "scrollbars": "Thanh cuộn",
     "fitBackground": "Nền khi vừa khung",

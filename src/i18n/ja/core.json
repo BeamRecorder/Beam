@@ -54,7 +54,7 @@
     "windowTitle": "ウィンドウタイトル",
     "windowSize": "ウィンドウサイズ",
     "screenRecording": "画面録画",
-    "windowColor": "ウィンドウの色",
+    "frameColor": "フレームの色",
     "menuBar": "メニューバー",
     "scrollbars": "スクロールバー",
     "fitBackground": "フィット時の背景",

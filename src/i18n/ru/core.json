@@ -54,7 +54,7 @@
     "windowTitle": "Заголовок окна",
     "windowSize": "Размер окна",
     "screenRecording": "Запись экрана",
-    "windowColor": "Цвет окна",
+    "frameColor": "Цвет рамки",
     "menuBar": "Строка меню",
     "scrollbars": "Полосы прокрутки",
     "fitBackground": "Фон вписывания",
