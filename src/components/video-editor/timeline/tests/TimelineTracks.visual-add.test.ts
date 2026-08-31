@@ -82,8 +82,14 @@ describe('TimelineTracks visual add placement', () => {
     expect(popover.props('direction')).toBe('up');
 
     await addButton.trigger('click');
-    const blur = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.menu-item')).find((button) =>
-      button.textContent?.toLowerCase().includes('blur'),
+    const compositionMenu = Array.from(
+      document.body.querySelectorAll<HTMLButtonElement>('.menu-content:not(.submenu-panel) > .menu-entry > .menu-item'),
+    ).find((button) => button.textContent?.toLowerCase().includes('composition'));
+    expect(compositionMenu).toBeDefined();
+    compositionMenu!.click();
+    await mounted!.vm.$nextTick();
+    const blur = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.submenu-panel .menu-item')).find(
+      (button) => button.textContent?.toLowerCase().includes('blur'),
     );
     expect(blur).toBeDefined();
     blur!.click();

@@ -46,12 +46,12 @@ test('normalizes an assetless shape clip for persistence', () => {
     clips: [shapeClip()],
   });
 
-  assert.equal(normalized.schemaVersion, 13);
+  assert.equal(normalized.schemaVersion, 14);
   assert.equal(normalized.assets.length, 0);
   assert.deepEqual(normalized.clips[0], shapeClip());
 });
 
-test('migrates a v12 composition to v13 without changing existing clips', () => {
+test('migrates a v12 composition to v14 without changing existing clips', () => {
   const migrated = migrateComposition({
     schemaVersion: 12,
     assets: [],
@@ -59,7 +59,7 @@ test('migrates a v12 composition to v13 without changing existing clips', () => 
     keyboardCaptionSessions: [],
   });
 
-  assert.equal(migrated.schemaVersion, 13);
+  assert.equal(migrated.schemaVersion, 14);
   assert.deepEqual(migrated.clips, []);
 });
 

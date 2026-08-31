@@ -69,6 +69,7 @@ describe('VideoEditor diagnostics and keyboard behavior', () => {
     ).toBe(0);
 
     editorState.store.compositionState.selectedClipId.value = 'audio';
+    editorState.store.compositionState.selectedClipIds.value = ['audio'];
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', cancelable: true }));
     await mounted.vm.$nextTick();
     expect(editorState.store.compositionState.composition.value.clips).not.toEqual(
@@ -87,8 +88,9 @@ describe('VideoEditor diagnostics and keyboard behavior', () => {
     editorState.store.compositionState.selectedClipId.value = null;
     editorState.store.activeTab.value = 'zoom';
     editorState.store.zoomState.selectedZoom.value = { id: 'z', mode: 'manual' };
+    editorState.store.zoomState.selectedZoomIds.value = ['z'];
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', cancelable: true }));
-    expect(editorState.store.zoomState.deleteSelectedZoom).toHaveBeenCalled();
+    expect(editorState.store.zoomState.selectedZoomIds.value).toEqual([]);
   });
 
   it('does not change the editor selection when Escape closes a linked deletion dialog', async () => {
