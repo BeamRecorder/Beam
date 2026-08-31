@@ -12,6 +12,7 @@ const props = withDefaults(
     interaction?: 'click' | 'hover-focus-click';
     closeDelay?: number;
     disabled?: boolean;
+    allowOverflow?: boolean;
   }>(),
   {
     align: 'left',
@@ -23,6 +24,7 @@ const props = withDefaults(
     interaction: 'click',
     closeDelay: 180,
     disabled: false,
+    allowOverflow: false,
   },
 );
 
@@ -123,8 +125,12 @@ const adjustPosition = async () => {
     top: `${clampedTop}px`,
     left: `${clampedLeft}px`,
     zIndex: '10000',
-    maxHeight: `calc(100vh - ${VIEWPORT_MARGIN * 2}px)`,
-    overflowY: 'auto',
+    ...(props.allowOverflow
+      ? {}
+      : {
+          maxHeight: `calc(100vh - ${VIEWPORT_MARGIN * 2}px)`,
+          overflowY: 'auto',
+        }),
     ...(props.matchTriggerWidth
       ? {
           width: `${Math.min(rect.width, window.innerWidth - 16)}px`,
@@ -271,7 +277,11 @@ defineExpose({
           class="popover-content"
           :data-popover-id="popoverId"
           :data-popover-owner="parentPopoverId"
-          :class="[align, directionClass, { 'popover-block': block, 'popover-flush': flush }]"
+          :class="[
+            align,
+            directionClass,
+            { 'popover-block': block, 'popover-flush': flush, 'popover-allow-overflow': allowOverflow },
+          ]"
           :style="floatingStyle"
           @mouseenter="cancelClose"
           @mouseleave="scheduleClose"
@@ -331,6 +341,10 @@ defineExpose({
 .popover-content.popover-flush {
   padding: 0;
   background: var(--color-bg-surface);
+}
+
+.popover-content.popover-allow-overflow {
+  overflow: visible;
 }
 
 /* Animations */

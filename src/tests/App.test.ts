@@ -3,6 +3,7 @@ import { createPinia } from 'pinia';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App.vue';
+import type { RecordingSessionResult } from '../components/hud/recorder/recording-types';
 
 const mocks = vi.hoisted(() => ({
   capture: {
@@ -30,7 +31,7 @@ const mocks = vi.hoisted(() => ({
   },
   controller: {
     recording: undefined as any,
-    onComplete: undefined as ((session: { videoSrc?: string | null }) => void) | undefined,
+    onComplete: undefined as ((session: RecordingSessionResult) => void) | undefined,
     recorderLauncherContext: undefined as
       | ((context: { requestId: string; preferredKind: 'window'; preferredSourceId: string | null } | null) => void)
       | undefined,
@@ -43,7 +44,7 @@ vi.mock('../api/capture', () => ({ capture: mocks.capture }));
 vi.mock('../components/hud/recorder/useRecordingController', async () => {
   const { ref } = await import('vue');
   return {
-    useRecordingController: (onComplete: (session: { videoSrc?: string | null }) => void) => {
+    useRecordingController: (onComplete: (session: RecordingSessionResult) => void) => {
       const recording = {
         phase: ref('idle'),
         secondsRemaining: ref(0),
@@ -290,13 +291,13 @@ describe('App', () => {
 
   it('opens the dedicated editor after completed recordings and reports missing projects', async () => {
     mocks.capture.listProjects.mockResolvedValueOnce([project]);
-    mocks.controller.onComplete?.({ videoSrc: 'project.mp4' });
+    mocks.controller.onComplete?.({ videoSrc: 'project.mp4', sessionId: 'session-1' });
     await settle();
     expect(mocks.capture.openEditor).toHaveBeenCalledWith('project-1', { disposition: 'reuse' });
     expect(mocks.capture.setCameraOverlayActive).toHaveBeenCalledWith(false);
 
     mocks.capture.listProjects.mockResolvedValueOnce([]);
-    mocks.controller.onComplete?.({ videoSrc: 'missing.mp4' });
+    mocks.controller.onComplete?.({ videoSrc: 'missing.mp4', sessionId: 'session-2' });
     await settle();
     expect(wrapper.get('[role="alert"]').text()).toContain('No recorded project was found');
   });
@@ -355,10 +356,51 @@ describe('App', () => {
     expect(mocks.capture.setWindowMode).toHaveBeenCalledWith('recorder');
     expect(mocks.controller.recording.start).toHaveBeenCalledWith(configuration);
 
-    mocks.controller.onComplete?.({ videoSrc: 'project.mp4' });
+    mocks.controller.onComplete?.({ videoSrc: 'project.mp4', sessionId: 'session-3' });
     await settle();
 
     expect(mocks.capture.openEditor).toHaveBeenCalledWith('project-1', { disposition: 'new-window' });
+  });
+
+  it('resolves editor-launched recordings by projectId when file and preview URLs differ', async () => {
+    const previousProject = { id: 'project-old', name: 'Old project', previewSrc: 'project-media://old' };
+    const recordedProject = { id: 'project-new', name: 'New project', previewSrc: 'project-media://new' };
+    mocks.capture.listProjects.mockResolvedValueOnce([previousProject, recordedProject]);
+    mocks.capture.renameProject.mockResolvedValueOnce({ ...recordedProject, name: 'DEBUG New project' });
+    mocks.controller.recorderLauncherContext?.({
+      requestId: 'launcher-project-id',
+      preferredKind: 'window',
+      preferredSourceId: 'window:editor',
+    });
+    await nextTick();
+    await wrapper.get('.start').trigger('click');
+    await settle();
+
+    mocks.controller.onComplete?.({
+      projectId: recordedProject.id,
+      sessionId: 'session-project-id',
+      videoSrc: 'file:///recordings/new.mp4',
+    });
+    await settle();
+
+    expect(mocks.capture.renameProject).toHaveBeenCalledWith(recordedProject.id, 'DEBUG New project');
+    expect(mocks.capture.renameProject).not.toHaveBeenCalledWith(previousProject.id, expect.any(String));
+    expect(mocks.capture.openEditor).toHaveBeenCalledWith(recordedProject.id, { disposition: 'new-window' });
+  });
+
+  it('does not open the first project when a completed projectId is unknown', async () => {
+    mocks.capture.listProjects.mockResolvedValueOnce([project]);
+
+    mocks.controller.onComplete?.({
+      projectId: 'project-missing',
+      sessionId: 'session-missing-project',
+      videoSrc: 'file:///recordings/missing-project.mp4',
+    });
+    await settle();
+
+    expect(mocks.capture.openEditor).not.toHaveBeenCalled();
+    expect(mocks.capture.renameProject).not.toHaveBeenCalled();
+    expect(wrapper.get('[role="alert"]').text()).toContain('No recorded project was found');
   });
 
   it('clears the editor launcher context when no project exists after recording', async () => {
@@ -372,7 +414,7 @@ describe('App', () => {
     await settle();
 
     mocks.capture.listProjects.mockResolvedValueOnce([]);
-    mocks.controller.onComplete?.({ videoSrc: 'missing.mp4' });
+    mocks.controller.onComplete?.({ videoSrc: 'missing.mp4', sessionId: 'session-4' });
     await settle();
 
     expect(wrapper.get('[role="alert"]').text()).toContain('No recorded project was found');

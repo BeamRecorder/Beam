@@ -225,6 +225,12 @@ const revealEditor = (disposition: 'reuse' | 'new-window' = 'reuse') => {
   });
 };
 
+const projectForCompletedRecording = (projects: CaptureProject[], session: RecordingSessionResult) => {
+  const projectId = typeof session?.projectId === 'string' ? session.projectId.trim() : '';
+  if (projectId) return projects.find((project) => project.id === projectId) ?? null;
+  return session?.videoSrc ? (projects.find((project) => project.previewSrc === session.videoSrc) ?? null) : null;
+};
+
 const handleStopRecording = async (session: RecordingSessionResult) => {
   logEditor('Recording finished; loading editor data', { videoSrc: session?.videoSrc });
   const launchedFromEditor = isRecordingStartedFromEditor.value;
@@ -238,7 +244,7 @@ const handleStopRecording = async (session: RecordingSessionResult) => {
   capture.showHud();
   try {
     const projects = await capture.listProjects();
-    let targetProject = projects.find((project) => project.previewSrc === session?.videoSrc) ?? projects[0] ?? null;
+    let targetProject = projectForCompletedRecording(projects, session);
 
     if (targetProject && launchedFromEditor) {
       const baseName = targetProject.name || `Project ${targetProject.id.slice(0, 8)}`;

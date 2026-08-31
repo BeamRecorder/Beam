@@ -129,7 +129,7 @@ describe('BorderAndFrameControls', () => {
     expect(wrapper.find('#frame-title').exists()).toBe(false);
     expect(wrapper.find('.slider-stub').exists()).toBe(false);
     expect(wrapper.find('.phone-fill-controls').exists()).toBe(true);
-    expect(wrapper.findAll('.color-stub')).toHaveLength(1);
+    expect(wrapper.findAll('.color-stub')).toHaveLength(2);
     expect(wrapper.findAll('.switch-stub')).toHaveLength(2);
 
     await frameButton('Pixel 9 Pro')!.trigger('click');
@@ -137,6 +137,42 @@ describe('BorderAndFrameControls', () => {
     await wrapper.setProps({ frame: 'pixel-9-pro' });
     expect(frameButton('Pixel 9 Pro')).toBeDefined();
   });
+
+  it.each(['safari', 'windows-95', 'iphone-16-max', 'pixel-9-pro'] as const)(
+    'shows and emits the shared frame color for %s',
+    async (frame) => {
+      const wrapper = mount(BorderAndFrameControls, {
+        props: {
+          frame,
+          frameColor: '#abcdef',
+          ...(frame === 'iphone-16-max' || frame === 'pixel-9-pro'
+            ? { phoneFrameFill: { kind: 'color' as const, color: '#000000' } }
+            : {}),
+        },
+        global,
+      });
+
+      const colors = wrapper.findAll('.color-stub');
+      expect(colors.length).toBe(frame === 'iphone-16-max' || frame === 'pixel-9-pro' ? 2 : 1);
+      await colors[0]!.trigger('click');
+      expect(wrapper.emitted('update')).toContainEqual([{ frameColor: '#123456' }]);
+    },
+  );
+
+  it.each(['iphone-16-max', 'pixel-9-pro'] as const)(
+    'keeps phone frame fill separate from frame color for %s',
+    async (frame) => {
+      const wrapper = mount(BorderAndFrameControls, {
+        props: { frame, frameColor: '#abcdef', phoneFrameFill: { kind: 'color', color: '#000000' } },
+        global,
+      });
+
+      const colors = wrapper.findAll('.color-stub');
+      expect(colors).toHaveLength(2);
+      await colors[1]!.trigger('click');
+      expect(wrapper.emitted('update')).toContainEqual([{ phoneFrameFill: { kind: 'color', color: '#123456' } }]);
+    },
+  );
 
   it('only exposes the phone fit background controls for phone frames', async () => {
     const wrapper = mount(BorderAndFrameControls, {

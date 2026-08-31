@@ -46,6 +46,20 @@ export function validateComposition(composition: ClipComposition): void {
       throw new CompositionEngineError('Invalid media asset.');
     }
     assetIds.add(asset.id);
+    if (
+      asset.audioAnalyses?.some(
+        (analysis) =>
+          !Number.isSafeInteger(analysis.version) ||
+          analysis.version <= 0 ||
+          !analysis.key ||
+          ![analysis.rangeStartMs, analysis.rangeDurationMs, analysis.sampleRate, analysis.channels].every(finite) ||
+          analysis.rangeStartMs < 0 ||
+          analysis.rangeDurationMs <= 0 ||
+          analysis.sampleRate <= 0 ||
+          analysis.channels <= 0,
+      )
+    )
+      throw new CompositionEngineError('Invalid audio analysis cache.');
   }
   const clipIds = new Set<string>();
   const groupTiming = new Map<string, string>();
@@ -167,8 +181,25 @@ export function validateComposition(composition: ClipComposition): void {
       throw new CompositionEngineError('Invalid color clip settings.');
     if (isShapeClip(clip) && (clip.assetId !== '' || !isShapeLayerStyle(clip)))
       throw new CompositionEngineError('Invalid shape clip settings.');
-    if (isAudioClip(clip) && (!finite(clip.volume) || clip.volume < 0 || clip.volume > 200))
-      throw new CompositionEngineError('Invalid clip volume.');
+    if (isAudioClip(clip)) {
+      if (!['system', 'microphone', 'voiceover', 'imported'].includes(clip.role))
+        throw new CompositionEngineError('Invalid audio role.');
+      if (!finite(clip.volume) || clip.volume < 0 || clip.volume > 200)
+        throw new CompositionEngineError('Invalid clip volume.');
+      const normalization = clip.normalization;
+      if (
+        normalization &&
+        (typeof normalization.enabled !== 'boolean' ||
+          !['lufs', 'peak'].includes(normalization.mode) ||
+          ![normalization.targetLufs, normalization.targetPeakDbtp, normalization.appliedGainDb].every(finite) ||
+          normalization.appliedGainDb < -24 ||
+          normalization.appliedGainDb > 24 ||
+          !Number.isSafeInteger(normalization.analysisVersion) ||
+          normalization.analysisVersion <= 0 ||
+          !normalization.analysisKey)
+      )
+        throw new CompositionEngineError('Invalid audio normalization.');
+    }
     if (
       isCaptionClip(clip) &&
       clip.captionLayerId !== undefined &&

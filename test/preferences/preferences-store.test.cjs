@@ -130,6 +130,45 @@ test('merges interaction preference patches without erasing sibling state', () =
   assert.deepEqual(saved.recordingInteractions, { enabled: true, noticeDismissed: true });
 });
 
+test('defaults voice-over countdown and project monitoring preferences', () => {
+  assert.deepEqual(defaults().voiceover, { countdownSeconds: 3, monitorProjectAudio: false });
+  assert.deepEqual(normalize({ schemaVersion: 2 }).voiceover, {
+    countdownSeconds: 3,
+    monitorProjectAudio: false,
+  });
+});
+
+test('normalizes invalid voice-over preference values and accepts supported countdowns', () => {
+  for (const countdownSeconds of [0, 3, 5, 10]) {
+    assert.equal(normalize({ voiceover: { countdownSeconds } }).voiceover.countdownSeconds, countdownSeconds);
+  }
+
+  const normalized = normalize({
+    voiceover: { countdownSeconds: 4, monitorProjectAudio: 'yes' },
+  });
+  assert.deepEqual(normalized.voiceover, { countdownSeconds: 3, monitorProjectAudio: false });
+  assert.equal(
+    normalize({ voiceover: { countdownSeconds: NaN, monitorProjectAudio: true } }).voiceover.countdownSeconds,
+    3,
+  );
+  assert.equal(
+    normalize({ voiceover: { countdownSeconds: 10, monitorProjectAudio: true } }).voiceover.monitorProjectAudio,
+    true,
+  );
+});
+
+test('merges and persists partial voice-over preference patches without erasing sibling state', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-preferences-voiceover-'));
+  const store = createPreferencesStore(directory);
+
+  store.patch({ voiceover: { monitorProjectAudio: true } });
+  const saved = store.patch({ voiceover: { countdownSeconds: 10 } });
+
+  assert.deepEqual(saved.voiceover, { countdownSeconds: 10, monitorProjectAudio: true });
+  assert.deepEqual(store.read().voiceover, saved.voiceover);
+  assert.deepEqual(JSON.parse(fs.readFileSync(store.file, 'utf8')).voiceover, saved.voiceover);
+});
+
 test('normalizes and patches appearance customizer settings properly', () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-preferences-appearance-'));
   const store = createPreferencesStore(directory);

@@ -9,6 +9,7 @@ import {
   isTextCaptionClip,
   isVisualClip,
   type AudioClip,
+  type AudioRole,
   type BlurClip,
   type CaptionClip,
   type Clip,
@@ -89,8 +90,10 @@ export function useClipComposition(options: {
   const webcamClips = clipsBy((clip) => clip.kind === 'webcam');
   const systemAudioClips = clipsBy((clip) => isAudioClip(clip) && clip.role === 'system');
   const microphoneClips = clipsBy((clip) => isAudioClip(clip) && clip.role === 'microphone');
+  const voiceoverClips = clipsBy((clip) => isAudioClip(clip) && clip.role === 'voiceover');
   const hasSystemAudio = computed(() => systemAudioClips.value.length > 0);
   const hasMicAudio = computed(() => microphoneClips.value.length > 0);
+  const hasVoiceoverAudio = computed(() => voiceoverClips.value.length > 0);
   const everyEnabled = (clips: Ref<Clip[]>) =>
     computed({
       get: () => clips.value.length === 0 || clips.value.some((clip) => clip.enabled),
@@ -118,6 +121,7 @@ export function useClipComposition(options: {
     inspection: DroppedMediaInspection,
     requestedStartMs = options.currentTimeSec.value * 1_000,
     placement?: ImportedVisualPlacement,
+    audioRole: AudioRole = 'imported',
   ) => {
     if (asset.kind !== inspection.kind) throw new Error('Le type du média importé est incohérent.');
     const startMs = Math.max(0, Math.round(requestedStartMs));
@@ -140,7 +144,7 @@ export function useClipComposition(options: {
         kind: 'audio',
         name: asset.name,
         assetId: asset.id,
-        role: 'imported',
+        role: audioRole,
         timelineStartMs: startMs,
         timelineDurationMs: duration / defaults.playbackRate,
         sourceInMs: 0,
@@ -454,6 +458,7 @@ export function useClipComposition(options: {
     isMicAudioEnabled,
     hasSystemAudio,
     hasMicAudio,
+    hasVoiceoverAudio,
     synchronizeRecording,
     selectClip,
     selectClips,

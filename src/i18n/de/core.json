@@ -1,11 +1,28 @@
 {
+  "VoiceoverRecorder": {
+    "record": "Aufnehmen",
+    "pause": "Pausieren",
+    "resume": "Fortsetzen",
+    "stop": "Stoppen",
+    "discard": "Verwerfen",
+    "preparing": "Mikrofon wird vorbereitet…",
+    "finalizing": "Voice-over wird abgeschlossen…",
+    "microphone": "Mikrofon",
+    "countdownOff": "Aus",
+    "monitorProjectAudio": "Projektton anhören",
+    "muteProjectAudio": "Projektton stummschalten"
+  },
   "AudioClipPropertiesPanel": {
     "noAudioClipSelected": "Kein Audioclip ausgewählt",
     "selectAudioClip": "Wähle einen importierten Audioclip in der Zeitleiste aus.",
     "audioClip": "Audioclip",
     "volume": "Lautstärke",
     "enabled": "Aktiviert",
-    "deleteAudioClip": "Audioclip löschen"
+    "deleteAudioClip": "Audioclip löschen",
+    "normalize": "Audio normalisieren",
+    "analyzing": "Analyse läuft…",
+    "silentAudio": "Kein nutzbares Signal erkannt.",
+    "normalizedGain": "Normalisiert ({gain} dB)"
   },
   "AudioPanel": {
     "globalVolume": "Gesamtlautstärke",
@@ -15,7 +32,8 @@
     "microphoneVolume": "Mikrofonlautstärke",
     "deleteSystemTrack": "Systemaudiospur löschen",
     "deleteMicrophoneTrack": "Mikrofonspur löschen",
-    "noAudioTracksDetected": "Es wurde keine Mikrofon- oder Systemaudiospur erkannt."
+    "noAudioTracksDetected": "Es wurde keine Mikrofon- oder Systemaudiospur erkannt.",
+    "normalizeAll": "Gesamtes Audio normalisieren"
   },
   "BackgroundPresetComposer": {
     "addCustomColor": "Benutzerdefinierte Farbe hinzufügen",
@@ -36,7 +54,7 @@
     "windowTitle": "Fenstertitel",
     "windowSize": "Fenstergröße",
     "screenRecording": "Bildschirmaufnahme",
-    "windowColor": "Fensterfarbe",
+    "frameColor": "Rahmenfarbe",
     "menuBar": "Menüleiste",
     "scrollbars": "Bildlaufleisten",
     "fitBackground": "Hintergrund bei Einpassen",

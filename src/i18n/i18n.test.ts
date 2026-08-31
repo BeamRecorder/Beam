@@ -48,6 +48,40 @@ describe('internationalization', () => {
     }
   });
 
+  it('provides voice-over and audio normalization labels in every supported locale', () => {
+    const namespaces = {
+      VoiceoverRecorder: [
+        'record',
+        'pause',
+        'resume',
+        'stop',
+        'discard',
+        'preparing',
+        'finalizing',
+        'microphone',
+        'countdownOff',
+        'monitorProjectAudio',
+        'muteProjectAudio',
+      ],
+      AudioClipPropertiesPanel: ['normalize', 'analyzing', 'silentAudio', 'normalizedGain'],
+      AudioPanel: ['normalizeAll'],
+      TimelineTracks: ['normalizeAudio', 'voiceover'],
+    } as const;
+
+    for (const locale of SUPPORTED_LOCALES) {
+      setCurrentLocale(locale);
+      for (const [namespace, keys] of Object.entries(namespaces)) {
+        for (const key of keys) {
+          const path = `${namespace}.${key}`;
+          expect(i18n.global.te(path, locale), `${locale}: missing ${path}`).toBe(true);
+          expect(i18n.global.t(path), `${locale}: unresolved ${path}`).not.toBe(path);
+          expect(i18n.global.t(path).trim(), `${locale}: empty ${path}`).not.toBe('');
+        }
+      }
+      expect(i18n.global.t('AudioClipPropertiesPanel.normalizedGain', { gain: '2.0' })).toContain('2.0');
+    }
+  });
+
   it('renders UTF-8 translations across the supported writing systems', () => {
     const checks = [
       ['ru', 'Начать запись'],
@@ -263,6 +297,15 @@ describe('internationalization', () => {
         expect(message.trim(), `${locale}: empty ExportPopover.${key}`).not.toBe('');
         if (key === 'exportVideoDuration') expect(message).toContain('5');
       }
+    }
+  });
+
+  it('provides the shared frame color label in every supported locale', () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      setCurrentLocale(locale);
+      expect(i18n.global.te('BorderAndFrameControls.frameColor', locale)).toBe(true);
+      expect(i18n.global.t('BorderAndFrameControls.frameColor')).not.toBe('BorderAndFrameControls.frameColor');
+      expect(i18n.global.t('BorderAndFrameControls.frameColor').trim()).not.toBe('');
     }
   });
 

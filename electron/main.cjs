@@ -20,6 +20,10 @@ const { CaptureEngine } = require('./capture/capture-engine.cjs');
 const { registerCaptureIpc } = require('./capture/capture-ipc.cjs');
 const { registerProjectIpc } = require('./projects/project-ipc.cjs');
 const { createProjectStore } = require('./projects/project-store.cjs');
+const {
+  createProjectVoiceoverStorage,
+  registerProjectVoiceoverIpc,
+} = require('./projects/project-voiceover-storage.cjs');
 const { createProjectMediaHandler } = require('./projects/project-media-protocol.cjs');
 const { WindowController } = require('./window/window-controller.cjs');
 const { registerWindowIpc } = require('./window/window-ipc.cjs');
@@ -329,6 +333,9 @@ function initializeApplication() {
     registerSystemAudioIpc({ ipcMain: applicationIpc, storage: systemAudioStorage });
     logStartup('Capture track IPC registered.');
     const projectStore = createProjectStore(userPaths.projects);
+    const projectVoiceoverStorage = createProjectVoiceoverStorage({ projectStore });
+    projectVoiceoverStorage.cleanupStalePartials();
+    registerProjectVoiceoverIpc({ ipcMain: applicationIpc, storage: projectVoiceoverStorage });
     const backgroundLibrary = createBackgroundLibrary(userPaths);
     const fontLibrary = createFontLibrary(userPaths.fonts);
     const cursorLibrary = createCursorPackLibrary(userPaths.cursors);
@@ -462,6 +469,7 @@ function initializeApplication() {
         cameraStorage.cleanupOwner(contents.id);
         microphoneStorage.cleanupOwner(contents.id);
         systemAudioStorage.cleanupOwner(contents.id);
+        projectVoiceoverStorage.cleanupOwner(contents.id);
       },
       canAcceptWork: () => coordinator.canAcceptWork(),
     });
@@ -514,6 +522,7 @@ function initializeApplication() {
       cameraStorage.cleanupOwner(win.webContents.id);
       microphoneStorage.cleanupOwner(win.webContents.id);
       systemAudioStorage.cleanupOwner(win.webContents.id);
+      projectVoiceoverStorage.cleanupOwner(win.webContents.id);
     });
     void updater.checkForUpdates();
     app.on('activate', () => {

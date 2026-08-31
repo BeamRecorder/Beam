@@ -159,6 +159,10 @@ contextBridge.exposeInMainWorld(
       if (!source) return Promise.reject(new Error('Le fichier déposé ne provient pas du système de fichiers'));
       return ipcRenderer.invoke('projects:import-dropped-media', { projectId, source, kind });
     },
+    beginProjectVoiceover: (payload) => ipcRenderer.invoke('projects:voiceover-begin', payload),
+    writeProjectVoiceoverChunk: (payload) => ipcRenderer.invoke('projects:voiceover-write', payload),
+    finalizeProjectVoiceover: (payload) => ipcRenderer.invoke('projects:voiceover-finalize', payload),
+    abortProjectVoiceover: (recordingId) => ipcRenderer.invoke('projects:voiceover-abort', { recordingId }),
     listBackgroundLibrary: () => ipcRenderer.invoke('background-library:list'),
     pickBackgroundLibraryMedia: (kind = 'media') => ipcRenderer.invoke('background-library:pick-import', { kind }),
     onBackgroundLibraryChanged: (listener) => {

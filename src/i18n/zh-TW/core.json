@@ -1,11 +1,28 @@
 {
+  "VoiceoverRecorder": {
+    "record": "錄製",
+    "pause": "暫停",
+    "resume": "繼續",
+    "stop": "停止",
+    "discard": "捨棄",
+    "preparing": "正在準備麥克風…",
+    "finalizing": "正在完成旁白…",
+    "microphone": "麥克風",
+    "countdownOff": "關閉",
+    "monitorProjectAudio": "聆聽專案音訊",
+    "muteProjectAudio": "將專案音訊靜音"
+  },
   "AudioClipPropertiesPanel": {
     "noAudioClipSelected": "未選取音訊片段",
     "selectAudioClip": "請在時間軸上選取匯入的音訊片段。",
     "audioClip": "音訊片段",
     "volume": "音量",
     "enabled": "已啟用",
-    "deleteAudioClip": "刪除音訊片段"
+    "deleteAudioClip": "刪除音訊片段",
+    "normalize": "音訊標準化",
+    "analyzing": "正在分析…",
+    "silentAudio": "未偵測到可用訊號。",
+    "normalizedGain": "已標準化（{gain} dB）"
   },
   "AudioPanel": {
     "globalVolume": "全域音量",
@@ -15,7 +32,8 @@
     "microphoneVolume": "麥克風音量",
     "deleteSystemTrack": "刪除系統音訊軌道",
     "deleteMicrophoneTrack": "刪除麥克風軌道",
-    "noAudioTracksDetected": "未偵測到麥克風或系統音訊軌道。"
+    "noAudioTracksDetected": "未偵測到麥克風或系統音訊軌道。",
+    "normalizeAll": "標準化所有音訊"
   },
   "BackgroundPresetComposer": {
     "addCustomColor": "新增自訂色彩",
@@ -36,7 +54,7 @@
     "windowTitle": "視窗標題",
     "windowSize": "視窗大小",
     "screenRecording": "螢幕錄影",
-    "windowColor": "視窗色彩",
+    "frameColor": "外框顏色",
     "menuBar": "選單列",
     "scrollbars": "捲軸",
     "fitBackground": "適應背景",

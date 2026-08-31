@@ -1,11 +1,28 @@
 {
+  "VoiceoverRecorder": {
+    "record": "Nagraj",
+    "pause": "Wstrzymaj",
+    "resume": "Wznów",
+    "stop": "Zatrzymaj",
+    "discard": "Odrzuć",
+    "preparing": "Przygotowywanie mikrofonu…",
+    "finalizing": "Finalizowanie narracji…",
+    "microphone": "Mikrofon",
+    "countdownOff": "Wył.",
+    "monitorProjectAudio": "Słuchaj dźwięku projektu",
+    "muteProjectAudio": "Wycisz dźwięk projektu"
+  },
   "AudioClipPropertiesPanel": {
     "noAudioClipSelected": "Nie wybrano klipu audio",
     "selectAudioClip": "Wybierz zaimportowany klip audio na osi czasu.",
     "audioClip": "Klip audio",
     "volume": "Głośność",
     "enabled": "Włączone",
-    "deleteAudioClip": "Usuń klip audio"
+    "deleteAudioClip": "Usuń klip audio",
+    "normalize": "Normalizuj dźwięk",
+    "analyzing": "Analizowanie…",
+    "silentAudio": "Nie wykryto użytecznego sygnału.",
+    "normalizedGain": "Znormalizowano ({gain} dB)"
   },
   "AudioPanel": {
     "globalVolume": "Głośność globalna",
@@ -15,7 +32,8 @@
     "microphoneVolume": "Głośność mikrofonu",
     "deleteSystemTrack": "Usuń ścieżkę dźwięku systemowego",
     "deleteMicrophoneTrack": "Usuń ścieżkę mikrofonu",
-    "noAudioTracksDetected": "Nie wykryto ścieżki mikrofonu ani dźwięku systemowego."
+    "noAudioTracksDetected": "Nie wykryto ścieżki mikrofonu ani dźwięku systemowego.",
+    "normalizeAll": "Normalizuj cały dźwięk"
   },
   "BackgroundPresetComposer": {
     "addCustomColor": "Dodaj niestandardowy kolor",
@@ -36,7 +54,7 @@
     "windowTitle": "Tytuł okna",
     "windowSize": "Rozmiar okna",
     "screenRecording": "Nagrywanie ekranu",
-    "windowColor": "Kolor okna",
+    "frameColor": "Kolor ramki",
     "menuBar": "Pasek menu",
     "scrollbars": "Paski przewijania",
     "fitBackground": "Tło dopasowania",

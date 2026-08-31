@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onUnmounted, ref, useId } from 'vue';
+import { computed, nextTick, onUnmounted, ref, useId, type Component } from 'vue';
 import { useVirtualList } from '@vueuse/core';
 import Popover from '../popover/Popover.vue';
 import Skeleton from '../skeleton/Skeleton.vue';
@@ -23,6 +23,7 @@ const props = withDefaults(
     searchPlaceholder?: string;
     variant?: 'default' | 'source' | 'search';
     size?: 'sm' | 'md' | 'lg' | 'small' | 'medium' | 'large';
+    icon?: Component;
   }>(),
   {
     placeholder: 'Select an option',
@@ -271,6 +272,8 @@ onUnmounted(() => {
         :aria-controls="listboxId"
       >
         <div class="trigger-content-wrapper">
+          <component :is="icon" v-if="icon" class="select-leading-icon" aria-hidden="true" />
+
           <!-- Thumbnail preview -->
           <div v-if="selectedOption?.thumbnail" class="selected-thumbnail-wrapper">
             <img :src="selectedOption.thumbnail" class="trigger-thumbnail-img" draggable="false" />

@@ -15,6 +15,7 @@ import TimelineTrackHeaders from './TimelineTrackHeaders.vue';
 import { normalizeZoomProjection } from '../zoom/zoom-types';
 import TimelineAddMenu from './TimelineAddMenu.vue';
 import { useTimelineItemInteractions } from './composables/useTimelineItemInteractions';
+import WaveformCanvas from './waveform/WaveformCanvas.vue';
 const { t } = useTranslate('TimelineTracks');
 const { t: tCanvas } = useTranslate('CanvasPanel');
 const { t: tToolbar } = useTranslate('TimelineToolbar');
@@ -35,6 +36,7 @@ const {
   textCaptionLayers,
   systemAudioClips,
   microphoneClips,
+  voiceoverClips,
   importedAudioTracks,
   assetFor,
   audioWaveforms,
@@ -141,11 +143,25 @@ useTimelineClipboardShortcuts({
   copySelected,
   pasteClipboard,
 });
-const exportProgressPercent = computed(() => {
-  const current = props.exportProgress?.currentTimeMs;
-  const total = props.exportProgress?.totalTimeMs;
-  if (current === undefined || total === undefined || total <= 0) return null;
-  return Math.min(100, Math.max(0, (current / total) * 100));
+const formatExportLimit = (timeMs: number) => {
+  const totalSeconds = Math.max(0, timeMs) / 1_000;
+  if (totalSeconds < 60) return `${totalSeconds.toFixed(2)}s`;
+  const minutes = Math.floor(totalSeconds / 60);
+  return `${minutes}:${(totalSeconds - minutes * 60).toFixed(2).padStart(5, '0')}`;
+};
+const exportTimelineState = computed(() => {
+  const progress = props.exportProgress;
+  if (!progress || !Number.isFinite(progress.totalTimeMs) || progress.totalTimeMs <= 0) return null;
+  const limitMs = Math.min(layoutDurationMs.value, Math.max(0, progress.totalTimeMs));
+  const currentMs = Number.isFinite(progress.currentTimeMs)
+    ? Math.min(limitMs, Math.max(0, progress.currentTimeMs))
+    : 0;
+  return {
+    progressStyle: percentageStyle(0, currentMs),
+    limitStyle: { left: percentageStyle(limitMs, 0).left },
+    limitLabel: formatExportLimit(limitMs),
+    isAtEnd: limitMs >= layoutDurationMs.value,
+  };
 });
 const canvasTransitions = computed(() => props.canvas.transitions ?? EMPTY_CLIP_TRANSITIONS);
 const updateCanvasTransitions = (transitions: NonNullable<typeof props.canvas.transitions>) =>
@@ -175,6 +191,8 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
             :text-caption-layers="textCaptionLayers"
             :system-audio-clips="systemAudioClips"
             :microphone-clips="microphoneClips"
+            :voiceover-clips="voiceoverClips"
+            :has-voiceover-draft="Boolean(voiceoverDraft)"
             :imported-audio-tracks="importedAudioTracks"
             :include-audio-in-export="includeAudioInExport"
             :dragged-track-id="draggedTrackId"
@@ -200,11 +218,9 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
         <div class="timeline-ruler">
           <div :ref="setTicksAreaElement" class="ruler-ticks-area" @pointerdown="beginScrub">
             <div
-              v-if="exportProgressPercent !== null"
+              v-if="exportTimelineState"
               class="ruler-export-progress-bar"
-              :style="{
-                width: `${exportProgressPercent}%`,
-              }"
+              :style="exportTimelineState.progressStyle"
             />
             <div
               v-for="second in rulerSeconds"
@@ -219,6 +235,14 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
           </div>
         </div>
         <div class="timeline-playhead-overlay">
+          <div
+            v-if="exportTimelineState"
+            class="timeline-export-limit"
+            :class="{ 'is-at-end': exportTimelineState.isAtEnd }"
+            :style="exportTimelineState.limitStyle"
+          >
+            <span class="timeline-export-limit-badge">{{ exportTimelineState.limitLabel }}</span>
+          </div>
           <div class="timeline-playhead" :style="playheadStyle">
             <div class="playhead-head">
               <svg width="12" height="15" viewBox="0 0 12 15" fill="var(--color-primary)">
@@ -451,6 +475,50 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 @move="startClipMove($event, clip)"
                 @trim="beginClipTrim($event.event, clip, $event.edge)"
               />
+            </div>
+          </div>
+          <div
+            v-for="clip in voiceoverClips"
+            :key="clip.id"
+            class="track-row audio-track voiceover-track"
+            :class="{ disabled: !includeAudioInExport || !clip.enabled }"
+            @contextmenu="openTrackContextMenu($event, 'audio')"
+          >
+            <div class="track-content audio-content">
+              <span v-if="!includeAudioInExport" class="export-audio-disabled">{{ t('audioDisabledFromExport') }}</span>
+              <TimelineClip
+                :clip="displayedClip(clip)"
+                :asset="assetFor(clip)"
+                :duration="layoutDurationMs / 1000"
+                :timeline-width-px="rulerLayoutWidth"
+                :thumbnail-slots="thumbnailSlots"
+                :defer-thumbnail-requests="isWheelZooming || activeTrimState !== null"
+                :defer-waveform-draw="isWheelZooming"
+                :selected="selectedClipIdSet.has(clip.id)"
+                :waveform-bars="audioWaveforms[clip.id]?.bars"
+                :waveform-left-percent="audioWaveforms[clip.id]?.leftPercent"
+                :waveform-width-percent="audioWaveforms[clip.id]?.widthPercent"
+                :waveform-loading-segments="audioWaveforms[clip.id]?.loadingSegments"
+                :waveform-status="audioWaveformStatus[clip.id]"
+                :waveform-error="audioWaveformErrors[clip.id]"
+                :trim-state="trimStateFor(clip.id)"
+                :paste-highlight="recentPaste?.type === 'clip' && recentPaste.id === clip.id"
+                @select="selectItem('clip', clip.id, $event)"
+                @contextmenu="openClipContextMenu($event, clip)"
+                @move="startClipMove($event, clip)"
+                @trim="beginClipTrim($event.event, clip, $event.edge)"
+              />
+            </div>
+          </div>
+          <div v-if="voiceoverDraft" class="track-row audio-track voiceover-track voiceover-draft-track">
+            <div class="track-content audio-content">
+              <span v-if="!includeAudioInExport" class="export-audio-disabled">{{ t('audioDisabledFromExport') }}</span>
+              <div
+                class="voiceover-draft-clip"
+                :style="percentageStyle(voiceoverDraft.startMs, voiceoverDraft.durationMs)"
+              >
+                <WaveformCanvas :bars="voiceoverDraft.bars" selected />
+              </div>
             </div>
           </div>
           <div

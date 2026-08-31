@@ -1,11 +1,28 @@
 {
+  "VoiceoverRecorder": {
+    "record": "Записать",
+    "pause": "Пауза",
+    "resume": "Продолжить",
+    "stop": "Остановить",
+    "discard": "Удалить",
+    "preparing": "Подготовка микрофона…",
+    "finalizing": "Завершение озвучки…",
+    "microphone": "Микрофон",
+    "countdownOff": "Выкл.",
+    "monitorProjectAudio": "Слушать звук проекта",
+    "muteProjectAudio": "Выключить звук проекта"
+  },
   "AudioClipPropertiesPanel": {
     "noAudioClipSelected": "Аудиоклип не выбран",
     "selectAudioClip": "Выберите импортированный аудиоклип на временной шкале.",
     "audioClip": "Аудиоклип",
     "volume": "Громкость",
     "enabled": "Включено",
-    "deleteAudioClip": "Удалить аудиоклип"
+    "deleteAudioClip": "Удалить аудиоклип",
+    "normalize": "Нормализовать звук",
+    "analyzing": "Анализ…",
+    "silentAudio": "Полезный сигнал не обнаружен.",
+    "normalizedGain": "Нормализовано ({gain} дБ)"
   },
   "AudioPanel": {
     "globalVolume": "Общая громкость",
@@ -15,7 +32,8 @@
     "microphoneVolume": "Громкость микрофона",
     "deleteSystemTrack": "Удалить дорожку системного звука",
     "deleteMicrophoneTrack": "Удалить дорожку микрофона",
-    "noAudioTracksDetected": "Дорожки микрофона и системного звука не обнаружены."
+    "noAudioTracksDetected": "Дорожки микрофона и системного звука не обнаружены.",
+    "normalizeAll": "Нормализовать весь звук"
   },
   "BackgroundPresetComposer": {
     "addCustomColor": "Добавить собственный цвет",
@@ -36,7 +54,7 @@
     "windowTitle": "Заголовок окна",
     "windowSize": "Размер окна",
     "screenRecording": "Запись экрана",
-    "windowColor": "Цвет окна",
+    "frameColor": "Цвет рамки",
     "menuBar": "Строка меню",
     "scrollbars": "Полосы прокрутки",
     "fitBackground": "Фон вписывания",

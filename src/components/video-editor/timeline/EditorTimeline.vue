@@ -21,6 +21,7 @@ import type {
 } from './composables/timeline-tracks-types';
 import type { AddVisualElementRequest } from '../composition/visual-element-types';
 import type { TimelineElementKind } from './timeline-element-types';
+import type { LiveAudioDraft } from './composables/timeline-tracks-types';
 
 const props = withDefaults(
   defineProps<{
@@ -41,6 +42,8 @@ const props = withDefaults(
     projectId?: string | null;
     recentPaste?: TimelinePasteHighlight | null;
     canvas?: OutputCanvasSettings;
+    controlsLocked?: boolean;
+    voiceoverDraft?: LiveAudioDraft | null;
   }>(),
   {
     isSnappingEnabled: true,
@@ -49,6 +52,8 @@ const props = withDefaults(
     canvas: () => ({ ...DEFAULT_OUTPUT_CANVAS, transitions: { ...EMPTY_CLIP_TRANSITIONS } }),
     selectedClipIds: () => [],
     selectedZoomIds: () => [],
+    controlsLocked: false,
+    voiceoverDraft: null,
   },
 );
 const emit = defineEmits<{
@@ -84,6 +89,7 @@ const emit = defineEmits<{
   (event: 'preview:canvas', value: OutputCanvasSettings | null): void;
   (event: 'update:canvas', value: OutputCanvasSettings): void;
   (event: 'open:canvas-transition', edge: 'entry' | 'exit'): void;
+  (event: 'normalize:audio', clipIds: string[]): void;
 }>();
 
 const isEditorFocused = (active: Element | null) => {
@@ -92,6 +98,7 @@ const isEditorFocused = (active: Element | null) => {
 };
 
 const handleKeyDown = (event: KeyboardEvent) => {
+  if (props.controlsLocked) return;
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') {
     if (isEditorFocused(document.activeElement)) return;
     event.preventDefault();
@@ -108,7 +115,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
 </script>
 
 <template>
-  <div class="timeline-island-container">
+  <div class="timeline-island-container" :class="{ 'controls-locked': controlsLocked }">
     <div class="timeline-scale-content">
       <TimelineTracks
         :current-time="currentTime"
@@ -128,6 +135,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
         :project-id="projectId"
         :recent-paste="recentPaste"
         :canvas="canvas"
+        :voiceover-draft="voiceoverDraft"
         @add:element="emit('add:element', $event)"
         @update:current-time="emit('update:currentTime', $event)"
         @update:zoom-level="emit('update:zoomLevel', $event)"
@@ -159,6 +167,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
         @preview:canvas="emit('preview:canvas', $event)"
         @update:canvas="emit('update:canvas', $event)"
         @open:canvas-transition="emit('open:canvas-transition', $event)"
+        @normalize:audio="emit('normalize:audio', $event)"
       />
     </div>
   </div>
@@ -176,6 +185,10 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+.timeline-island-container.controls-locked {
+  pointer-events: none;
+  opacity: 0.78;
 }
 
 .timeline-scale-content {

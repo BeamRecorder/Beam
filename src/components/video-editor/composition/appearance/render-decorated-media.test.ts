@@ -309,6 +309,38 @@ describe('decorated media rendering', () => {
     );
     expect(ctx.fillText).toHaveBeenCalledWith('Screen recording', expect.any(Number), geometry.header / 2);
   });
+  it('uses an exact black Safari frame color without creating a chrome gradient', () => {
+    const ctx = context();
+    const frameColor = '#000000';
+
+    drawDecoratedMedia(ctx, {
+      source,
+      rect: { x: 0, y: 0, width: 160, height: 100 },
+      appearance: appearance({ frame: 'safari', frameColor, shadowSize: 'none' }),
+      title: 'Black Safari frame',
+    });
+
+    expect(ctx.createLinearGradient).not.toHaveBeenCalled();
+    expect(ctx.fillStyles[0]).toBe(frameColor);
+    expect(ctx.fillStyles).toContain(frameColor);
+  });
+  it.each(['safari', 'iphone-16-max', 'pixel-9-pro'] as const)(
+    'uses a custom frame color for %s while retaining the frame passes and clipping',
+    (frame) => {
+      const ctx = context();
+      const frameColor = '#123456';
+      drawDecoratedMedia(ctx, {
+        source,
+        rect: { x: 7, y: 11, width: 48, height: 24 },
+        appearance: appearance({ frame, frameColor, shadowSize: 'none' }),
+        title: 'Custom frame',
+      });
+
+      expect(ctx.fillStyles).toContain(frameColor);
+      expect(ctx.clip).toHaveBeenCalledTimes(2);
+      expect(ctx.drawImage).toHaveBeenCalledOnce();
+    },
+  );
   it('scales Safari chrome uniformly instead of stretching only its vertical axis', () => {
     const ctx = context();
     const outer = { x: 0, y: 0, width: 1800, height: 1150 };

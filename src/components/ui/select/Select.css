@@ -65,6 +65,13 @@
   min-width: 0;
 }
 
+.select-leading-icon {
+  width: 0.95rem;
+  height: 0.95rem;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
 .selected-thumbnail-wrapper {
   position: relative;
   width: 20px;

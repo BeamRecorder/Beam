@@ -74,6 +74,9 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
   const microphoneClips = computed(() =>
     orderedClips.value.filter((clip): clip is AudioClip => isAudioClip(clip) && clip.role === 'microphone'),
   );
+  const voiceoverClips = computed(() =>
+    orderedClips.value.filter((clip): clip is AudioClip => isAudioClip(clip) && clip.role === 'voiceover'),
+  );
   const importedAudioTracks = computed(() =>
     groupImportedAudioTimelineTracks(
       orderedClips.value.filter((clip): clip is AudioClip => isAudioClip(clip) && clip.role === 'imported'),
@@ -425,6 +428,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     textCaptionLayers,
     systemAudioClips,
     microphoneClips,
+    voiceoverClips,
     importedAudioTracks,
     assets,
     assetFor,

@@ -2,6 +2,7 @@ import { compositionDurationMs } from '~/media/shared';
 import {
   isAudioClip,
   isVisualClip,
+  type AudioClip,
   type Clip,
   type ClipComposition,
   type MediaAsset,
@@ -20,6 +21,7 @@ type PlaybackClipSignature = {
   freezeFrameSourceMs?: number;
   transitions: Clip['transitions'];
   volume?: number;
+  normalization?: AudioClip['normalization'];
 };
 
 const playbackAsset = (asset: MediaAsset) => ({
@@ -45,7 +47,7 @@ const playbackClip = (clip: Clip): PlaybackClipSignature | null => {
       ? { freezeFrameSourceMs: clip.freezeFrameSourceMs }
       : {}),
     transitions: clip.transitions,
-    ...(isAudioClip(clip) ? { volume: clip.volume } : {}),
+    ...(isAudioClip(clip) ? { volume: clip.volume, normalization: clip.normalization } : {}),
   };
 };
 

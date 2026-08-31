@@ -3,6 +3,9 @@ import type { AudioClip } from '../../shared/composition-types';
 import type { InputAudioTrack } from 'mediabunny';
 import { createProgressiveAudioMixer, stereoSample } from '../pcm-mixer';
 import { audioTransitionGainAt } from '../../shared/clip-transitions';
+import { AUDIO_LIMITER_THRESHOLD_DB } from '../../shared/audio-limiter';
+
+const limiterThresholdGain = 10 ** (AUDIO_LIMITER_THRESHOLD_DB / 20);
 
 const runtime = vi.hoisted(() => {
   class TestAudioSample {
@@ -170,7 +173,7 @@ describe('progressive PCM export mixer', () => {
     const secondValues = (second as unknown as { data: Float32Array }).data;
     expect(firstValues[0]).toBe(0);
     expect(firstValues[18_000]).toBeCloseTo(0.5);
-    expect(secondValues[0]).toBe(1);
+    expect(secondValues[0]).toBeCloseTo(limiterThresholdGain, 6);
     expect(secondValues[30_000]).toBeCloseTo(0.5);
     expect(secondValues[47_999]).toBeCloseTo(1 / 36_000, 4);
     await mixer.dispose();
@@ -349,12 +352,18 @@ describe('progressive PCM export mixer', () => {
 
     const result = await mixer.mixBlock(0, new AbortController().signal);
     const values = outputValues(result as unknown as InstanceType<typeof runtime.TestAudioSample>);
-    expect(values).toEqual([0, 0, 1, 1, 0, 0]);
+    expect(values).toHaveLength(6);
+    expect(values[0]).toBe(0);
+    expect(values[1]).toBe(0);
+    expect(values[2]).toBeCloseTo(limiterThresholdGain, 6);
+    expect(values[3]).toBeCloseTo(limiterThresholdGain, 6);
+    expect(values[4]).toBe(0);
+    expect(values[5]).toBe(0);
   });
 
   it.each([
     { rate: 0.25, source: [0, 1, 0, -1, 0], expected: [0, 0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75] },
-    { rate: 4, source: [0, 0, 0, 0, 1], expected: [0, 0, 1, 1] },
+    { rate: 4, source: [0, 0, 0, 0, 1], expected: [0, 0, limiterThresholdGain, limiterThresholdGain] },
   ])('supports the playback-rate boundary $rate×', async ({ rate, source, expected }) => {
     const mixer = createProgressiveAudioMixer(
       [clip('rate', 'asset', { playbackRate: rate, timelineDurationMs: 1, sourceDurationMs: 1 })],
@@ -363,7 +372,9 @@ describe('progressive PCM export mixer', () => {
     );
 
     const result = await mixer.mixBlock(0, new AbortController().signal);
-    expect(outputValues(result as unknown as InstanceType<typeof runtime.TestAudioSample>)).toEqual(expected);
+    const values = outputValues(result as unknown as InstanceType<typeof runtime.TestAudioSample>);
+    expect(values).toHaveLength(expected.length);
+    expected.forEach((value, index) => expect(values[index]).toBeCloseTo(value, 6));
   });
 
   it('closes a decoded sample and aborts when cancellation happens during decoding', async () => {
@@ -394,7 +405,7 @@ describe('progressive PCM export mixer', () => {
     expect(sample.close).toHaveBeenCalledOnce();
   });
 
-  it('mixes overlaps, applies per-clip volume, and clamps the final stereo samples', async () => {
+  it('mixes overlaps, applies per-clip volume, and limits the final stereo samples to -1 dB', async () => {
     const first = inputSample([[0.75]], 48_000);
     const second = inputSample([[0.75]], 48_000);
     const mixer = createProgressiveAudioMixer(
@@ -408,7 +419,9 @@ describe('progressive PCM export mixer', () => {
 
     const result = await mixer.mixBlock(0, new AbortController().signal);
     const values = outputValues(result as unknown as InstanceType<typeof runtime.TestAudioSample>);
-    expect(values).toEqual([1, 1]);
+    expect(values[0]).toBeCloseTo(limiterThresholdGain, 6);
+    expect(values[1]).toBeCloseTo(limiterThresholdGain, 6);
+    expect(Math.max(...values.map((value) => Math.abs(value)))).toBeCloseTo(limiterThresholdGain, 6);
     expect(first.close).toHaveBeenCalledOnce();
     expect(second.close).toHaveBeenCalledOnce();
   });

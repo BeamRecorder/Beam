@@ -109,7 +109,7 @@ export function useSelectedClips(options: { composition: Ref<ClipComposition>; a
       playbackRate: clip.playbackRate,
       enabled: allSelectedEnabled.value,
       isLinked: Boolean(clip.groupId),
-      ...(isAudioClip(clip) ? { volume: clip.volume } : {}),
+      ...(isAudioClip(clip) ? { volume: clip.volume, normalization: clip.normalization } : {}),
       ...(isVisualClip(clip)
         ? {
             isMirrored: clip.isMirrored,

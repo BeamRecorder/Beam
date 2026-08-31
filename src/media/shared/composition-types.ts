@@ -4,15 +4,16 @@ import type { CaptionShapeStyle } from './caption-shape-types';
 import type { ColorFill, PhoneFrameFill } from './color-fill-types';
 import type { ColorLayerStyle } from './color-layer-style-types';
 import type { ShapeLayerStyle } from './shape-layer-types';
+import type { AudioAnalysis, AudioNormalization } from './audio-normalization-types';
 
-export const COMPOSITION_SCHEMA_VERSION = 13 as const;
+export const COMPOSITION_SCHEMA_VERSION = 14 as const;
 export const SCREEN_CLIP_ID = 'screen';
 
 export type MediaKind = 'video' | 'image' | 'audio';
 export type BlurEffectShape = 'rectangle' | 'square' | 'circle';
 export type BlurEffectMode = 'blur' | 'frosted' | 'pixelated' | 'opaque';
 export type ClipKind = 'screen' | 'video' | 'image' | 'webcam' | 'color' | 'shape' | 'blur' | 'audio' | 'caption';
-export type AudioRole = 'system' | 'microphone' | 'imported';
+export type AudioRole = 'system' | 'microphone' | 'voiceover' | 'imported';
 
 export type TransitionPreset =
   | { kind: 'fade' }
@@ -155,6 +156,7 @@ export interface MediaAsset {
   origin: 'project' | 'session';
   sessionId?: string;
   sessionPath?: string;
+  audioAnalyses?: AudioAnalysis[];
 }
 
 export interface ClipBase {
@@ -244,6 +246,7 @@ export interface AudioClip extends ClipBase {
   assetId: string;
   role: AudioRole;
   volume: number;
+  normalization?: AudioNormalization;
 }
 
 export interface CaptionClip extends ClipBase {

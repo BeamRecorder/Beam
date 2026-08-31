@@ -1,11 +1,28 @@
 {
+  "VoiceoverRecorder": {
+    "record": "Ghi âm",
+    "pause": "Tạm dừng",
+    "resume": "Tiếp tục",
+    "stop": "Dừng",
+    "discard": "Loại bỏ",
+    "preparing": "Đang chuẩn bị micrô…",
+    "finalizing": "Đang hoàn tất lời thuyết minh…",
+    "microphone": "Micrô",
+    "countdownOff": "Tắt",
+    "monitorProjectAudio": "Nghe âm thanh dự án",
+    "muteProjectAudio": "Tắt tiếng dự án"
+  },
   "AudioClipPropertiesPanel": {
     "noAudioClipSelected": "Chưa chọn đoạn âm thanh nào",
     "selectAudioClip": "Chọn một đoạn âm thanh đã nhập trên dòng thời gian.",
     "audioClip": "Đoạn âm thanh",
     "volume": "Âm lượng",
     "enabled": "Đã bật",
-    "deleteAudioClip": "Xóa đoạn âm thanh"
+    "deleteAudioClip": "Xóa đoạn âm thanh",
+    "normalize": "Chuẩn hóa âm thanh",
+    "analyzing": "Đang phân tích…",
+    "silentAudio": "Không phát hiện tín hiệu có thể sử dụng.",
+    "normalizedGain": "Đã chuẩn hóa ({gain} dB)"
   },
   "AudioPanel": {
     "globalVolume": "Âm lượng tổng thể",
@@ -15,7 +32,8 @@
     "microphoneVolume": "Âm lượng micro",
     "deleteSystemTrack": "Xóa rãnh âm thanh hệ thống",
     "deleteMicrophoneTrack": "Xóa rãnh micro",
-    "noAudioTracksDetected": "Không phát hiện rãnh micro hoặc âm thanh hệ thống."
+    "noAudioTracksDetected": "Không phát hiện rãnh micro hoặc âm thanh hệ thống.",
+    "normalizeAll": "Chuẩn hóa toàn bộ âm thanh"
   },
   "BackgroundPresetComposer": {
     "addCustomColor": "Thêm màu tùy chỉnh",
@@ -36,7 +54,7 @@
     "windowTitle": "Tiêu đề cửa sổ",
     "windowSize": "Kích thước cửa sổ",
     "screenRecording": "Bản ghi màn hình",
-    "windowColor": "Màu cửa sổ",
+    "frameColor": "Màu khung",
     "menuBar": "Thanh menu",
     "scrollbars": "Thanh cuộn",
     "fitBackground": "Nền khi vừa khung",
