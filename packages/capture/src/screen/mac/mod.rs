@@ -1,5 +1,6 @@
 mod capture;
 mod catalog;
+mod catalog_policy;
 mod permissions;
 mod preview;
 
