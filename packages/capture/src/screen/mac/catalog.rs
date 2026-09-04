@@ -63,6 +63,9 @@ fn window_descriptor(
     window: screencapturekit::shareable_content::SCWindow,
 ) -> Option<SourceDescriptor> {
     let title = window.title()?;
+    if title.trim().is_empty() {
+        return None;
+    }
     let application = window.owning_application()?;
     let application_name = application.application_name();
     let frame = window.frame();

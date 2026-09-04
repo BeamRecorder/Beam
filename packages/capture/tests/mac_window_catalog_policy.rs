@@ -1,3 +1,5 @@
+// The native macOS module is target-gated, so include this pure policy directly
+// to exercise it in the Linux quality job as well as macOS builds.
 #[path = "../src/screen/mac/catalog_policy.rs"]
 mod catalog_policy;
 
@@ -5,10 +7,10 @@ use catalog_policy::is_user_window_candidate;
 
 #[test]
 fn normal_application_windows_are_candidates() {
-    for (application_name, title) in [
-        ("Google Chrome", "Beam documentation"),
-        ("Beam Editor", "Untitled project"),
-        ("Discord", "Beam team"),
+    for (title, application_name) in [
+        ("Beam documentation", "Google Chrome"),
+        ("Untitled project", "Beam Editor"),
+        ("Beam team", "Discord"),
     ] {
         assert!(is_user_window_candidate(
             0,
