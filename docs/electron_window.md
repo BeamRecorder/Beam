@@ -29,7 +29,7 @@ Electron clips painting outside the BrowserWindow. A CSS shadow around an elemen
 - Keep the HUD card at `320 × 480` pixels, with a `352 × 512` BrowserWindow and a 16 px inset.
 - When HUD content changes height or width, include the 32 px outer allowance in the Electron `setSize` request.
 - Do not solve a clipped shadow by increasing the shadow token. Prefer reserving physical renderer space first.
-- The countdown uses the same rule: its circle is inset by 16 px in a larger transparent window so its border and shadow remain intact.
+- The countdown uses a centered `560 × 256` transparent window: its `160 × 160` circle and shortcut-hint row keep at least 16 px of outer room so the border and shadow remain intact.
 
 ## Mouse pass-through and focus stealing
 

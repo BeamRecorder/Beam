@@ -11,7 +11,8 @@ function createCountdownWindow({
   let window = null;
   let seconds = null;
   let ready = false;
-  const size = 192;
+  const width = 560;
+  const height = 256;
   const isWayland =
     platform === 'linux' &&
     (String(environment.XDG_SESSION_TYPE || '').toLowerCase() === 'wayland' || Boolean(environment.WAYLAND_DISPLAY));
@@ -19,8 +20,8 @@ function createCountdownWindow({
     if (isWayland) return;
     const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
     window?.setPosition(
-      display.workArea.x + Math.round((display.workArea.width - size) / 2),
-      display.workArea.y + Math.round((display.workArea.height - size) / 2),
+      display.workArea.x + Math.max(0, Math.round((display.workArea.width - width) / 2)),
+      display.workArea.y + Math.max(0, Math.round((display.workArea.height - height) / 2)),
     );
   };
   const create = () => {
@@ -29,8 +30,8 @@ function createCountdownWindow({
     if (!window || window.isDestroyed()) {
       ready = false;
       window = new BrowserWindow({
-        width: size,
-        height: size,
+        width,
+        height,
         center: isWayland,
         show: false,
         frame: false,

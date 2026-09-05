@@ -272,6 +272,90 @@ describe('App', () => {
     expect(mocks.controller.recording.stop).toHaveBeenCalledTimes(2);
   });
 
+  it('routes the pause/resume shortcut only while recording or paused', async () => {
+    const shortcut = mocks.capture.onPreferenceShortcut.mock.calls[0]?.[0] as ((action: string) => void) | undefined;
+    expect(shortcut).toBeDefined();
+
+    for (const phase of ['idle', 'countdown', 'starting', 'finalizing'] as const) {
+      mocks.controller.recording.phase.value = phase;
+      shortcut?.('hud.playPause');
+    }
+    expect(mocks.controller.recording.togglePause).not.toHaveBeenCalled();
+
+    mocks.controller.recording.phase.value = 'recording';
+    shortcut?.('hud.playPause');
+    await settle();
+    mocks.controller.recording.phase.value = 'paused';
+    shortcut?.('hud.playPause');
+    await settle();
+    expect(mocks.controller.recording.togglePause).toHaveBeenCalledTimes(2);
+    expect(mocks.controller.recording.stop).not.toHaveBeenCalled();
+  });
+
+  it('ignores duplicate pause/resume shortcuts while pending and accepts the next event after resolving', async () => {
+    let resolveToggle!: () => void;
+    const pendingToggle = new Promise<void>((resolve) => {
+      resolveToggle = resolve;
+    });
+    mocks.controller.recording.togglePause.mockReturnValueOnce(pendingToggle);
+    mocks.controller.recording.phase.value = 'recording';
+    const shortcut = mocks.capture.onPreferenceShortcut.mock.calls[0]?.[0] as ((action: string) => void) | undefined;
+
+    shortcut?.('hud.playPause');
+    shortcut?.('hud.playPause');
+    expect(mocks.controller.recording.togglePause).toHaveBeenCalledOnce();
+
+    resolveToggle();
+    await settle();
+    shortcut?.('hud.playPause');
+    await settle();
+    expect(mocks.controller.recording.togglePause).toHaveBeenCalledTimes(2);
+  });
+
+  it('re-enables pause/resume shortcuts after a rejected toggle', async () => {
+    let rejectToggle!: (reason?: unknown) => void;
+    const pendingToggle = new Promise<void>((_, reject) => {
+      rejectToggle = reject;
+    });
+    const error = new Error('pause unavailable');
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    mocks.controller.recording.togglePause.mockReturnValueOnce(pendingToggle);
+    mocks.controller.recording.phase.value = 'paused';
+    const shortcut = mocks.capture.onPreferenceShortcut.mock.calls[0]?.[0] as ((action: string) => void) | undefined;
+
+    shortcut?.('hud.playPause');
+    shortcut?.('hud.playPause');
+    expect(mocks.controller.recording.togglePause).toHaveBeenCalledOnce();
+
+    rejectToggle(error);
+    await settle();
+    expect(errorSpy).toHaveBeenCalledWith('Failed to toggle recording pause from shortcut:', error);
+    shortcut?.('hud.playPause');
+    await settle();
+    expect(mocks.controller.recording.togglePause).toHaveBeenCalledTimes(2);
+  });
+
+  it('ignores unknown shortcut actions and keeps start/stop routing limited to valid phases', async () => {
+    const shortcut = mocks.capture.onPreferenceShortcut.mock.calls[0]?.[0] as ((action: string) => void) | undefined;
+    expect(shortcut).toBeDefined();
+
+    for (const phase of ['idle', 'finalizing'] as const) {
+      mocks.controller.recording.phase.value = phase;
+      shortcut?.('hud.startStopRecording');
+    }
+    mocks.controller.recording.phase.value = 'recording';
+    shortcut?.('hud.unknown');
+    expect(mocks.controller.recording.stop).not.toHaveBeenCalled();
+    expect(mocks.controller.recording.cancel).not.toHaveBeenCalled();
+
+    for (const phase of ['countdown', 'starting', 'recording', 'paused'] as const) {
+      mocks.controller.recording.phase.value = phase;
+      shortcut?.('hud.startStopRecording');
+    }
+    await settle();
+    expect(mocks.controller.recording.stop).toHaveBeenCalledTimes(4);
+  });
+
   it('opens projects, displays loading errors, and dismisses them', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     mocks.capture.openEditor.mockRejectedValueOnce(new Error('project is unreadable'));
