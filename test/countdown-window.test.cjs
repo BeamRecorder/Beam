@@ -3,7 +3,7 @@ const Module = require('node:module');
 const path = require('node:path');
 const test = require('node:test');
 
-function loadCountdownWindow({ platform, environment }) {
+function loadCountdownWindow({ platform, environment, workArea = { x: 0, y: 0, width: 1_000, height: 800 } }) {
   const calls = [];
   const screenCalls = [];
   let finishLoad;
@@ -47,7 +47,7 @@ function loadCountdownWindow({ platform, environment }) {
       },
       getDisplayNearestPoint: () => {
         screenCalls.push('getDisplayNearestPoint');
-        return { workArea: { x: 0, y: 0, width: 1_000, height: 800 } };
+        return { workArea };
       },
     },
   };
@@ -80,9 +80,12 @@ test('Wayland presents the countdown without unsupported global window operation
   });
   const constructor = fixture.calls.find((call) => call[0] === 'constructor');
 
+  assert.equal(constructor[1].width, 560);
+  assert.equal(constructor[1].height, 256);
   assert.equal(constructor[1].show, false);
   assert.equal(constructor[1].center, true);
   assert.equal(constructor[1].focusable, false);
+  assert.ok(fixture.calls.some((call) => call[0] === 'mouse' && call[1] === true));
   assert.deepEqual(fixture.screenCalls, []);
 
   fixture.overlay.show(3);
@@ -138,9 +141,12 @@ test('X11 positions and raises the countdown with the supported inactive path', 
   });
   const constructor = fixture.calls.find((call) => call[0] === 'constructor');
 
+  assert.equal(constructor[1].width, 560);
+  assert.equal(constructor[1].height, 256);
   assert.equal(constructor[1].show, false);
   assert.equal(constructor[1].center, false);
   assert.equal(constructor[1].focusable, false);
+  assert.ok(fixture.calls.some((call) => call[0] === 'mouse' && call[1] === true));
 
   fixture.overlay.show(3);
   assert.equal(
@@ -154,7 +160,13 @@ test('X11 positions and raises the countdown with the supported inactive path', 
 
   fixture.finishLoad();
   assert.ok(fixture.calls.some((call) => call[0] === 'send' && call[1] === 'countdown:state' && call[2] === 3));
-  assert.equal(fixture.calls.filter((call) => call[0] === 'position').length, 2);
+  assert.deepEqual(
+    fixture.calls.filter((call) => call[0] === 'position'),
+    [
+      ['position', 220, 272],
+      ['position', 220, 272],
+    ],
+  );
   assert.equal(fixture.calls.filter((call) => call[0] === 'showInactive').length, 1);
   assert.equal(fixture.calls.filter((call) => call[0] === 'top').length, 1);
   assert.deepEqual(fixture.screenCalls, [
@@ -171,4 +183,23 @@ test('X11 positions and raises the countdown with the supported inactive path', 
 
   fixture.overlay.show(null);
   assert.equal(fixture.calls.at(-1)[0], 'hide');
+});
+
+test('clamps countdown positioning to the work-area origin when the work area is smaller than the window', () => {
+  const fixture = loadCountdownWindow({
+    platform: 'linux',
+    environment: { XDG_SESSION_TYPE: 'x11' },
+    workArea: { x: 37, y: 19, width: 400, height: 180 },
+  });
+
+  fixture.overlay.show(3);
+  fixture.finishLoad();
+
+  assert.deepEqual(
+    fixture.calls.filter((call) => call[0] === 'position'),
+    [
+      ['position', 37, 19],
+      ['position', 37, 19],
+    ],
+  );
 });

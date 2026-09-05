@@ -28,6 +28,7 @@ let removeRecorderLauncherListener: (() => void) | null = null;
 let removeEditorLoadingListener: (() => void) | null = null;
 let removeTrayStopListener: (() => void) | null = null;
 let removeRecordingShortcutListener: (() => void) | null = null;
+let pauseShortcutPending = false;
 
 const handleMouseMove = (e: MouseEvent) => {
   if (currentView.value !== 'hud' && recording.phase.value === 'idle') return;
@@ -164,9 +165,18 @@ onMounted(() => {
       void cancelOrStopRecording();
     }) ?? null;
   removeRecordingShortcutListener = capture.onPreferenceShortcut((actionId) => {
-    if (actionId !== 'hud.startStopRecording') return;
-    if (!['countdown', 'starting', 'recording', 'paused'].includes(recording.phase.value)) return;
-    void cancelOrStopRecording();
+    if (actionId === 'hud.startStopRecording') {
+      if (!['countdown', 'starting', 'recording', 'paused'].includes(recording.phase.value)) return;
+      void cancelOrStopRecording();
+    } else if (actionId === 'hud.playPause' && ['recording', 'paused'].includes(recording.phase.value)) {
+      if (pauseShortcutPending) return;
+      pauseShortcutPending = true;
+      void Promise.resolve(recording.togglePause())
+        .catch((error) => console.error('Failed to toggle recording pause from shortcut:', error))
+        .finally(() => {
+          pauseShortcutPending = false;
+        });
+    }
   });
 });
 
