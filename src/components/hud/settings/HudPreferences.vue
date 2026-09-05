@@ -222,7 +222,7 @@ const openOnboarding = () => {
           </div>
 
           <div class="preference-item preference-appearance-item">
-            <AppearanceSettings :show-title="false" :compact="true" />
+            <AppearanceSettings :show-title="false" :compact="true" :show-ui-scaling="false" />
           </div>
 
           <!-- Category: About -->

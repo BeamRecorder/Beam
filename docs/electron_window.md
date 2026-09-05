@@ -6,11 +6,11 @@ This application uses transparent, frameless Electron windows as part of the UI.
 
 The transparent main window is controlled by `electron/window/window-controller.cjs` and owns the HUD and Recorder modes. The editor uses a separate opaque window created by `electron/window/editor-window.cjs`; this separation is required for native window animations and Windows Snap Layouts.
 
-| Mode       | Bounds / behavior                                                                                                                                                                                                                                 | Interaction                                                                                                                                                                                                                               |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `hud`      | `352 × 512`: a `320 × 480` HUD card plus 16 px of room on every edge for its border and shadow. It returns to its prior HUD position after Recorder mode. Dragging is bounded by the physical display bounds, not the taskbar-excluded work area. | macOS/Windows: transparent pixels pass through; renderer enables mouse handling only over interactive HUD elements. Linux: the window stays fully interactive, so the 16 px transparent margin also captures clicks (accepted trade-off). |
-| `recorder` | `72 × 344`, positioned at the right-middle of the active display. It is draggable and remembers a position per display in preferences.                                                                                                            | Always on top, fixed size, content protected. Drag starts only on mousedown, never on hover.                                                                                                                                              |
-| `editor`   | Independent opaque windows starting at `1280 × 800`, with a native minimum of `960 × 600`.                                                                                                                                                        | `titleBarStyle: hidden` keeps the custom Beam content while Window Controls Overlay supplies the native system buttons. The empty titlebar area uses `app-region: drag`; Beam actions stay in `no-drag` regions.                          |
+| Mode       | Bounds / behavior                                                                                                                                                                                                                                                                                                                                                                              | Interaction                                                                                                                                                                                                                         |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `hud`      | Fixed at `352 × 512`: a `320 × 480` HUD card plus 16 px of room on every edge for its border and shadow. The canonical dimensions live in `preferences.json` as `hudWindow`; startup normalization restores them when missing or unexpected. It returns to its prior HUD position after Recorder mode. Dragging is bounded by the physical display bounds, not the taskbar-excluded work area. | macOS/Windows: transparent pixels pass through; renderer enables mouse handling only over interactive HUD elements. Linux: the window stays fully interactive, so the transparent margin also captures clicks (accepted trade-off). |
+| `recorder` | `72 × 344`, positioned at the right-middle of the active display. It is draggable and remembers a position per display in preferences.                                                                                                                                                                                                                                                         | Always on top, fixed size, content protected. Drag starts only on mousedown, never on hover.                                                                                                                                        |
+| `editor`   | Independent opaque windows starting at `1280 × 800`, with a native minimum of `960 × 600`.                                                                                                                                                                                                                                                                                                     | `titleBarStyle: hidden` keeps the custom Beam content while Window Controls Overlay supplies the native system buttons. The empty titlebar area uses `app-region: drag`; Beam actions stay in `no-drag` regions.                    |
 
 Use `window:show-hud` / `capture.showHud()` to return from the editor. Do not reproduce it by separately changing mode, maximize state, size, and position: ordering matters.
 
@@ -26,7 +26,7 @@ Native window titles identify their role in the operating-system switcher: the H
 
 Electron clips painting outside the BrowserWindow. A CSS shadow around an element that touches the renderer viewport is therefore visibly cut off and looks like a rectangular dark block.
 
-- Keep the HUD card at `320 × 480`, but keep the BrowserWindow at `352 × 512` and the card inset by `16px`.
+- Keep the HUD card at `320 × 480` pixels, with a `352 × 512` BrowserWindow and a 16 px inset.
 - When HUD content changes height or width, include the 32 px outer allowance in the Electron `setSize` request.
 - Do not solve a clipped shadow by increasing the shadow token. Prefer reserving physical renderer space first.
 - The countdown uses the same rule: its circle is inset by 16 px in a larger transparent window so its border and shadow remain intact.
@@ -53,6 +53,12 @@ Teleporting a popover to `body` does not let it escape its BrowserWindow. It can
 - The camera popover temporarily expands its native window. Before expansion, store the window bounds; after expansion, offset the rendered camera preview by the inverse native-window displacement. On close, restore both the original bounds and a zero preview offset. Without that compensation, opening the popover visibly moves the camera preview.
 - Nested teleported popovers must be registered as descendants using `data-popover-owner`; otherwise selecting an inner `Select` is treated as an outside click and closes its parent.
 
+## UI scaling and browser zoom
+
+- `appearance.uiScale` is an editor-only product setting. Do not expose or apply it in the HUD.
+- Chromium page zoom is not a product setting. Keep `webPreferences.zoomFactor` at 1, reset persisted page zoom before presenting HUD/editor windows, and block Ctrl/Cmd plus wheel or browser zoom keys. Timeline and canvas zoom handlers may still consume wheel input for their own scoped behavior.
+- Keep `hudWindow.width` and `hudWindow.height` at the canonical `352 × 512` values. Preferences normalization must replace missing, malformed, or unexpected values before the HUD window is created.
+
 ## Content protection and capture
 
 Recorder mode enables Electron content protection. Camera and Recorder windows must remain separate from the native capture session logic; renderer-side windows are only presentation and sidecar controls. Do not broaden preload APIs beyond narrow, named IPC calls.
@@ -65,4 +71,5 @@ Recorder mode enables Electron content protection. Camera and Recorder windows m
 4. Verify transparent regions do not steal clicks or focus.
 5. Verify popovers at each screen edge and with nested selects.
 6. Verify HUD → Recorder → Editor → HUD restores the intended bounds and position.
-7. Run `bun run build` and the focused tests.
+7. Verify Ctrl/Cmd plus wheel, `+`, `-`, and `0` cannot change HUD or editor browser zoom, while editor timeline/canvas zoom still works.
+8. Run `bun run build` and the focused tests.

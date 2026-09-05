@@ -6,10 +6,12 @@ import EditorWindowApp from './components/video-editor/EditorWindowApp.vue';
 import { initI18n } from './i18n';
 import { useThemeStore } from './stores/theme';
 import { capture } from './api/capture';
+import { installBrowserZoomGuard } from './utils/browserZoomGuard';
 
 // The HUD intentionally uses a transparent document root. The editor is an
 // opaque native window and must not inherit that transparent fallback.
 document.documentElement.classList.add('editor-window-root');
+installBrowserZoomGuard();
 
 const bootstrap = async () => {
   try {

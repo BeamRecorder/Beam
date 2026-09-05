@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { DEFAULT_HUD_WINDOW_SIZE, normalizeHudWindowSize } = require('../window/hud-window-size.cjs');
 
 const defaultAppearance = () => ({
   theme: 'light',
@@ -23,6 +24,7 @@ const defaults = (platform = process.platform) => ({
   schemaVersion: 3,
   theme: 'light',
   appearance: defaultAppearance(),
+  hudWindow: { ...DEFAULT_HUD_WINDOW_SIZE },
   recordingBar: { visibility: platform === 'linux' ? 'hover-only' : 'always' },
   recordingInteractions: { enabled: false, noticeDismissed: false },
   voiceover: { countdownSeconds: 3, monitorProjectAudio: false },
@@ -151,6 +153,7 @@ const normalize = (value, platform = process.platform) => {
     schemaVersion: 3,
     theme: resolvedTheme,
     appearance: appearanceSettings,
+    hudWindow: normalizeHudWindowSize(next.hudWindow),
     recordingBar: {
       visibility: ['always', 'auto-fade', 'hover-only'].includes(next.recordingBar?.visibility)
         ? next.recordingBar.visibility
@@ -188,13 +191,39 @@ const normalize = (value, platform = process.platform) => {
 };
 function createPreferencesStore(file, { platform = process.platform } = {}) {
   const targetFile = path.extname(file) ? file : path.join(file, 'preferencesSettings.json');
-  const read = () => {
+  const runtimeFallback = (value) => {
     try {
-      return normalize(JSON.parse(fs.readFileSync(targetFile, 'utf8')), platform);
+      return normalize({ ...(value && typeof value === 'object' ? value : {}), shortcuts: undefined }, platform);
     } catch {
       return defaults(platform);
     }
   };
+  const inspect = () => {
+    let source;
+    try {
+      source = fs.readFileSync(targetFile, 'utf8');
+    } catch (error) {
+      if (error?.code === 'ENOENT') return { preferences: defaults(platform), writable: true, quarantine: false };
+      return { preferences: defaults(platform), writable: false, quarantine: false, error };
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(source);
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        return { preferences: defaults(platform), writable: true, quarantine: true };
+      }
+      return { preferences: defaults(platform), writable: false, quarantine: false, error };
+    }
+
+    try {
+      return { preferences: normalize(parsed, platform), writable: true, quarantine: false };
+    } catch (error) {
+      return { preferences: runtimeFallback(parsed), writable: false, quarantine: false, error };
+    }
+  };
+  const read = () => inspect().preferences;
   const write = (value) => {
     const next = normalize(value, platform);
     fs.mkdirSync(path.dirname(targetFile), { recursive: true });
@@ -204,7 +233,9 @@ function createPreferencesStore(file, { platform = process.platform } = {}) {
     return next;
   };
   const patch = (value) => {
-    const current = read();
+    const inspected = inspect();
+    if (!inspected.writable) throw inspected.error;
+    const current = inspected.preferences;
     const nextAppearance = value?.appearance ? { ...current.appearance, ...value.appearance } : current.appearance;
     const nextTheme = value?.theme || value?.appearance?.theme || current.theme;
     if (nextAppearance) {
@@ -215,6 +246,7 @@ function createPreferencesStore(file, { platform = process.platform } = {}) {
       ...(value || {}),
       theme: nextTheme,
       appearance: nextAppearance,
+      hudWindow: { ...current.hudWindow, ...value?.hudWindow },
       recordingBar: { ...current.recordingBar, ...(value?.recordingBar || {}) },
       recordingInteractions: {
         ...current.recordingInteractions,
@@ -228,6 +260,23 @@ function createPreferencesStore(file, { platform = process.platform } = {}) {
       extras: { ...current.extras, ...(value?.extras || {}) },
     });
   };
-  return { read, write, patch, file: targetFile };
+  const quarantineMalformedFile = () => {
+    const base = `${targetFile}.invalid`;
+    let quarantineFile = base;
+    let suffix = 1;
+    while (fs.existsSync(quarantineFile)) quarantineFile = `${base}-${suffix++}`;
+    fs.renameSync(targetFile, quarantineFile);
+  };
+  const repair = () => {
+    const inspected = inspect();
+    if (!inspected.writable) return inspected.preferences;
+    try {
+      if (inspected.quarantine) quarantineMalformedFile();
+      return write(inspected.preferences);
+    } catch {
+      return inspected.preferences;
+    }
+  };
+  return { read, write, patch, repair, file: targetFile };
 }
 module.exports = { createPreferencesStore, defaults, normalize };

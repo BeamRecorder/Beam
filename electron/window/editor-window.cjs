@@ -1,5 +1,6 @@
 const { BrowserWindow } = require('electron');
 const path = require('path');
+const { installBrowserZoomPolicy } = require('./browser-zoom-policy.cjs');
 
 const EDITOR_DEFAULT_SIZE = { width: 1280, height: 800 };
 const EDITOR_MIN_SIZE = { width: 960, height: 600 };
@@ -231,8 +232,10 @@ function createEditorWindowManager({
         contextIsolation: true,
         sandbox: false,
         webSecurity: false,
+        zoomFactor: 1,
       },
     });
+    const cleanupBrowserZoomPolicy = installBrowserZoomPolicy(window.webContents);
     const session = {
       window,
       controller: null,
@@ -280,7 +283,10 @@ function createEditorWindowManager({
       if (!isPackaged) contents.openDevTools?.({ mode: 'detach' });
       sendProgress(session, 'loadingEditor');
     });
-    contents.once('destroyed', () => cleanupWindow?.(contents));
+    contents.once('destroyed', () => {
+      cleanupBrowserZoomPolicy();
+      cleanupWindow?.(contents);
+    });
     window.on('closed', () => {
       const shouldQuit = !session.returningToHud;
       if (session.returningToHud) session.resolvePresentation?.(false);

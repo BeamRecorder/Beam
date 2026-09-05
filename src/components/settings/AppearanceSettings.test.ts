@@ -156,6 +156,27 @@ describe('AppearanceSettings.vue', () => {
     expect(wrapper.find('.appearance-advanced-panel .accordion').exists()).toBe(false);
   });
 
+  it('hides the UI scaling section when explicitly disabled', async () => {
+    const wrapper = mount(AppearanceSettings, { props: { showUiScaling: false } });
+    await flushPromises();
+
+    await wrapper.get('.advanced-toggle').trigger('click');
+
+    expect(wrapper.find('.ui-scale-setting').exists()).toBe(false);
+    expect(wrapper.find('.ui-scale-slider').exists()).toBe(false);
+    expect(wrapper.find('.theme-customization-section').exists()).toBe(true);
+  });
+
+  it('keeps the UI scaling section enabled by default for editor settings', async () => {
+    const wrapper = mount(AppearanceSettings);
+    await flushPromises();
+
+    await wrapper.get('.advanced-toggle').trigger('click');
+
+    expect(wrapper.find('.ui-scale-setting').exists()).toBe(true);
+    expect(wrapper.find('.ui-scale-slider').exists()).toBe(true);
+  });
+
   it('aligns one color picker with each primary and secondary color section', async () => {
     const wrapper = mount(AppearanceSettings);
     await flushPromises();
