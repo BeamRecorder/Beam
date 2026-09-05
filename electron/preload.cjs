@@ -212,6 +212,20 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.on('camera-overlay:hover', callback);
       return () => ipcRenderer.removeListener('camera-overlay:hover', callback);
     },
+    controlCameraOverlayRecording: (control) => ipcRenderer.invoke('camera-overlay:recording-control', control),
+    onCameraOverlayRecordingCommand: (listener) => {
+      const callback = (_event, command) => listener(command);
+      ipcRenderer.on('camera-overlay:recording-command', callback);
+      return () => ipcRenderer.removeListener('camera-overlay:recording-command', callback);
+    },
+    completeCameraOverlayRecordingCommand: (result) => ipcRenderer.send('camera-overlay:recording-result', result),
+    notifyCameraOverlayReady: () => ipcRenderer.send('camera-overlay:renderer-ready'),
+    reportCameraRecordingFailure: (failure) => ipcRenderer.send('camera-overlay:recording-failure', failure),
+    onCameraRecordingFailure: (listener) => {
+      const callback = (_event, failure) => listener(failure);
+      ipcRenderer.on('camera-overlay:recording-failure', callback);
+      return () => ipcRenderer.removeListener('camera-overlay:recording-failure', callback);
+    },
     onCameraShadow: (listener) => {
       const callback = (_event, state) => listener(state);
       ipcRenderer.on('camera-shadow:state', callback);

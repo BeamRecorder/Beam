@@ -1,10 +1,11 @@
 import {
-  BrowserCameraRecorder,
+  CameraOverlayRecorder,
   isCameraUnavailableError,
   listBrowserCameras,
   type CameraAppearance,
   type CameraPlacement,
 } from '../../../api/camera-recorder';
+import { capture } from '../../../api/capture';
 import { BrowserMicrophoneRecorder, listBrowserMicrophones } from '../../../api/microphone-recorder';
 import { BrowserSystemAudioRecorder } from '../../../api/system-audio-recorder';
 import type { RecordingConfiguration } from './recording-types';
@@ -12,7 +13,7 @@ import type { RecordingConfiguration } from './recording-types';
 const inactiveCamera = 'off';
 const inactiveMicrophone = 'no-audio';
 
-type Recorder = BrowserCameraRecorder | BrowserMicrophoneRecorder | BrowserSystemAudioRecorder;
+type Recorder = CameraOverlayRecorder | BrowserMicrophoneRecorder | BrowserSystemAudioRecorder;
 
 export interface DeviceToggleContext {
   getConfiguration(): RecordingConfiguration | null;
@@ -20,8 +21,8 @@ export interface DeviceToggleContext {
   setConfigurationMicrophoneId(id: string): void;
   getSessionId(): string | null;
   getSessionTimelineStartedAt(): number;
-  getCamera(): BrowserCameraRecorder | null;
-  setCamera(recorder: BrowserCameraRecorder | null): void;
+  getCamera(): CameraOverlayRecorder | null;
+  setCamera(recorder: CameraOverlayRecorder | null): void;
   getMicrophone(): BrowserMicrophoneRecorder | null;
   setMicrophone(recorder: BrowserMicrophoneRecorder | null): void;
   getSystemAudio(): BrowserSystemAudioRecorder | null;
@@ -76,13 +77,20 @@ export function useDeviceToggles(ctx: DeviceToggleContext) {
       await stopRecorder(ctx.getCamera());
       ctx.setCamera(null);
       ctx.setCameraEnabled(false);
+      capture.configureCameraOverlay({ cameraId: inactiveCamera });
       return;
     }
     try {
       const sourceId = await resolveCameraSourceId();
       if (!sourceId) throw new Error('No camera is available.');
       const { appearance, placement } = await ctx.cameraMetadata();
-      const nextCamera = await BrowserCameraRecorder.request(sourceId);
+      const nextCamera = await CameraOverlayRecorder.request(sourceId);
+      nextCamera.onFatal((reason) => {
+        if (ctx.getCamera() !== nextCamera) return;
+        ctx.setCamera(null);
+        ctx.setCameraEnabled(false);
+        ctx.setError(`Camera recording stopped: ${reason.message}`);
+      });
       try {
         await nextCamera.start(sessionId, appearance, placement, ctx.getSessionTimelineStartedAt());
       } catch (reason) {

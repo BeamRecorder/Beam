@@ -5,6 +5,8 @@ import { browserCameraMock } from './camera-recorder.mock';
 import { browserMicrophoneMock } from './microphone-recorder.mock';
 import { browserSystemAudioMock } from './system-audio-recorder.mock';
 
+const validateCameraAccessMock = vi.hoisted(() => vi.fn());
+
 vi.mock('../../../api/capture', async () => ({ capture: (await import('./capture.mock')).captureMock }));
 vi.mock('../../../api/camera-recorder', async () => {
   const camera = await import('./camera-recorder.mock');
@@ -12,6 +14,7 @@ vi.mock('../../../api/camera-recorder', async () => {
     BrowserCameraRecorder: camera.BrowserCameraRecorder,
     listBrowserCameras: camera.listBrowserCameras,
     isCameraUnavailableError: camera.isCameraUnavailableError,
+    validateCameraAccess: validateCameraAccessMock,
   };
 });
 vi.mock('../../../api/microphone-recorder', async () => {
@@ -101,6 +104,7 @@ describe('HUD', () => {
       status: 'ready',
     }));
     Object.values(browserCameraMock).forEach((mock) => mock.mockReset());
+    validateCameraAccessMock.mockReset().mockResolvedValue(undefined);
     Object.values(browserMicrophoneMock).forEach((mock) => mock.mockReset());
     Object.values(browserSystemAudioMock).forEach((mock) => mock.mockReset());
     capture.getPreferences.mockResolvedValue({
@@ -188,6 +192,28 @@ describe('HUD', () => {
       ],
     ]);
   });
+  it('configures the camera overlay when a camera is selected without probing access', async () => {
+    browserCameraMock.listBrowserCameras.mockResolvedValue([
+      { id: 'camera:chromium:device-1', kind: 'camera', label: 'Cam 1', isDefault: true },
+      { id: 'camera:chromium:device-2', kind: 'camera', label: 'Cam 2', isDefault: false },
+    ]);
+    const wrapper = mount(HUD, { global: { stubs } });
+    await ready();
+
+    capture.configureCameraOverlay.mockClear();
+    validateCameraAccessMock.mockClear();
+
+    const camera = wrapper
+      .findAll('[data-option-value]')
+      .find((option) => option.attributes('data-option-value') === 'camera:chromium:device-2');
+    expect(camera).toBeDefined();
+    await camera!.trigger('click');
+    await ready();
+
+    expect(capture.configureCameraOverlay).toHaveBeenCalledWith({ cameraId: 'camera:chromium:device-2' });
+    expect(validateCameraAccessMock).not.toHaveBeenCalled();
+  });
+
   it('shows actionable errors when discovery or recording fails', async () => {
     capture.discover.mockRejectedValueOnce(new Error('permission denied'));
     const wrapper = mount(HUD, { global: { stubs } });

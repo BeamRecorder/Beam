@@ -3,12 +3,7 @@ import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch 
 import { capture } from '../../api/capture';
 import { rememberCaptureCatalog } from '../../api/capture-diagnostics';
 import { linuxInteractionGuidance, linuxRequirementGuidance } from '../../api/linux-requirement-guidance';
-import {
-  BrowserCameraRecorder,
-  listBrowserCameras,
-  validateCameraAccess,
-  isCameraUnavailableError,
-} from '../../api/camera-recorder';
+import { BrowserCameraRecorder, listBrowserCameras } from '../../api/camera-recorder';
 import {
   BrowserMicrophoneRecorder,
   listBrowserMicrophones,
@@ -246,23 +241,13 @@ watch([selectedCameraId, selectedMicId, systemAudioMode], () => {
 });
 watch(
   [selectedCameraId],
-  async () => {
+  () => {
     if (props.embedded) return;
-    const camId = selectedCameraId.value;
+    // The overlay owns the preview stream. Probing from the HUD would open the
+    // same hardware concurrently, which some Windows camera drivers cannot do.
     capture.configureCameraOverlay({
-      cameraId: camId,
+      cameraId: selectedCameraId.value,
     });
-    if (camId && camId !== 'off') {
-      try {
-        await validateCameraAccess(camId);
-      } catch (err) {
-        if (isCameraUnavailableError(err)) {
-          selectedCameraId.value = 'off';
-          errorMessage.value =
-            'Camera is unavailable: hardware resources are locked by another application or Windows Media Foundation (0xC00D3704).';
-        }
-      }
-    }
   },
   { immediate: true },
 );
@@ -913,6 +898,7 @@ const discoverSources = async () => {
 
 let unsubscribeShortcut: (() => void) | null = null;
 let unsubscribeTeleprompterVisibility: (() => void) | null = null;
+let unsubscribeCameraOverlayState: (() => void) | null = null;
 
 const handleLauncherKeydown = (event: KeyboardEvent) => {
   if (event.key !== 'Escape' || !props.recorderLauncherContext || activeDropdowns.value > 0) return;
@@ -930,6 +916,11 @@ const toggleTeleprompter = () => {
 onMounted(async () => {
   window.addEventListener('keydown', handleLauncherKeydown);
   if (props.embedded) return;
+  unsubscribeCameraOverlayState = capture.onCameraOverlayState((state) => {
+    if (state.cameraId !== 'off' || selectedCameraId.value === 'off') return;
+    selectedCameraId.value = 'off';
+    errorMessage.value = 'The selected camera could not produce a usable video stream.';
+  });
   const preferences = await capture.getPreferences();
   savedDevices = preferences.devices as unknown as SavedDevices;
   const savedRegion = preferences.extras?.screenRegion;
@@ -991,6 +982,7 @@ onBeforeUnmount(() => {
   if (regionConfirmationTimeout) clearTimeout(regionConfirmationTimeout);
   unsubscribeShortcut?.();
   unsubscribeTeleprompterVisibility?.();
+  unsubscribeCameraOverlayState?.();
   stopTimer();
   void activeCamera?.stop();
   void activeMicrophone?.stop();

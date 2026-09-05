@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue';
 import { capture } from '../../../api/capture';
-import { BrowserCameraRecorder, isCameraUnavailableError } from '../../../api/camera-recorder';
+import { CameraOverlayRecorder, isCameraUnavailableError } from '../../../api/camera-recorder';
 import { BrowserMicrophoneRecorder } from '../../../api/microphone-recorder';
 import { BrowserSystemAudioRecorder } from '../../../api/system-audio-recorder';
 import { useDeviceToggles } from './useDeviceToggles';
@@ -8,20 +8,13 @@ import { useRecordingHealth } from './useRecordingHealth';
 import { useNativeSystemAudioLevel } from './useNativeSystemAudioLevel';
 import { recordingCameraMetadata } from './recording-camera-metadata';
 import { formatRecordingTime, isRecordingActivePhase } from './recording-types';
-import type {
-  RecordingConfiguration,
-  RecordingPhase,
-  RecordingSessionResult,
-  RecordingStartFailure,
-  RecordingStartStage,
-  StartupSidecarState,
-} from './recording-types';
+import type { RecordingConfiguration, RecordingPhase, RecordingSessionResult } from './recording-types';
+import type { RecordingStartFailure, RecordingStartStage, StartupSidecarState } from './recording-types';
 
-type Recorder = BrowserCameraRecorder | BrowserMicrophoneRecorder | BrowserSystemAudioRecorder;
+type Recorder = CameraOverlayRecorder | BrowserMicrophoneRecorder | BrowserSystemAudioRecorder;
 type SidecarKind = 'camera' | 'microphone' | 'systemAudio';
 type SidecarStates = Record<SidecarKind, StartupSidecarState>;
-const inactiveCamera = 'off';
-const inactiveMicrophone = 'no-audio';
+const [inactiveCamera, inactiveMicrophone] = ['off', 'no-audio'];
 export function useRecordingController(
   onComplete: (session: RecordingSessionResult) => void,
   onStartupFailure?: (failure: RecordingStartFailure) => void,
@@ -45,7 +38,7 @@ export function useRecordingController(
   let timer: number | null = null;
   let sessionId: string | null = null;
   let projectId: string | null = null;
-  let camera: BrowserCameraRecorder | null = null;
+  let camera: CameraOverlayRecorder | null = null;
   let microphone: BrowserMicrophoneRecorder | null = null;
   let systemAudio: BrowserSystemAudioRecorder | null = null;
   let sessionTimelineStartedAt = 0;
@@ -134,7 +127,15 @@ export function useRecordingController(
     if (!configuration) return;
     if (configuration.cameraId !== inactiveCamera) {
       try {
-        camera = await BrowserCameraRecorder.request(configuration.cameraId);
+        camera = await CameraOverlayRecorder.request(configuration.cameraId);
+        const preparedCamera = camera;
+        preparedCamera.onFatal((reason) => {
+          if (camera !== preparedCamera) return;
+          camera = null;
+          cameraEnabled.value = false;
+          sidecarStates.camera = 'failed';
+          error.value = `Camera recording stopped: ${reason.message}`;
+        });
         sidecarStates.camera = 'prepared';
       } catch (reason) {
         sidecarStates.camera = 'failed';
@@ -287,8 +288,7 @@ export function useRecordingController(
       elapsedTenths.value = 0;
       startTimer();
       phase.value = 'recording';
-      // The native engine handles commands serially. Polling status while
-      // prepare/start is still running can time out and terminate the engine.
+      // Avoid status polling while the single-threaded native prepare/start is running.
       recordingHealth.start();
     } catch (reason) {
       if (generation !== recordingGeneration) {

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { onBeforeUnmount, onMounted, ref, watch, type WatchStopHandle } from 'vue';
 import { Video } from '@lucide/vue';
-import { isCameraUnavailableError } from '../../../api/camera-recorder';
+import { cameraVideoConstraints } from '../../../api/camera-recorder';
+import { waitForFirstCameraFrame } from '../../../api/camera-frame-ready';
 import { useTranslate } from '~/i18n/useTranslate';
 import { capture } from '../../../api/capture';
 
@@ -23,17 +24,21 @@ const cameraStream = ref<MediaStream | null>(null);
 const streamError = ref<string | null>(null);
 const isLoading = ref(false);
 let cameraRequest = 0;
-let initialLoadTimer: number | null = null;
+let cameraLoadQueue = Promise.resolve();
+let stopCameraWatch: WatchStopHandle | null = null;
+let frameWaitAbort: AbortController | null = null;
+let readyCameraId: string | null = null;
 
 const stopCameraStream = () => {
   videoRef.value?.pause();
   if (videoRef.value) videoRef.value.srcObject = null;
   cameraStream.value?.getTracks().forEach((track) => track.stop());
   cameraStream.value = null;
+  readyCameraId = null;
 };
 
-const loadCamera = async (cameraId: string) => {
-  const request = ++cameraRequest;
+const loadCamera = async (cameraId: string, request: number) => {
+  if (request !== cameraRequest) return;
   stopCameraStream();
   if (!cameraId || cameraId === 'off') {
     isLoading.value = false;
@@ -42,46 +47,69 @@ const loadCamera = async (cameraId: string) => {
   try {
     streamError.value = null;
     isLoading.value = true;
-    const deviceId = cameraId.replace('camera:chromium:', '');
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: false,
-      video: deviceId ? { deviceId: { ideal: deviceId } } : true,
+      video: cameraVideoConstraints(cameraId),
     });
     if (request !== cameraRequest) {
       stream.getTracks().forEach((track) => track.stop());
       return;
     }
     cameraStream.value = stream;
-    if (videoRef.value) {
-      videoRef.value.srcObject = stream;
-      await videoRef.value.play();
+    const video = videoRef.value;
+    if (!video) throw new Error('The camera preview is unavailable.');
+    video.srcObject = stream;
+    frameWaitAbort = new AbortController();
+    const firstFrame = waitForFirstCameraFrame(video, { signal: frameWaitAbort.signal });
+    try {
+      await Promise.all([video.play(), firstFrame]);
+    } catch (error) {
+      frameWaitAbort.abort();
+      await firstFrame.catch(() => undefined);
+      throw error;
     }
+    readyCameraId = cameraId;
   } catch (error) {
     if (request === cameraRequest) {
+      stopCameraStream();
       streamError.value = error instanceof Error ? error.message : t('unableToStartCamera');
-      if (isCameraUnavailableError(error)) capture.configureCameraOverlay({ cameraId: 'off' });
+      capture.configureCameraOverlay({ cameraId: 'off' });
     }
   } finally {
-    if (request === cameraRequest) isLoading.value = false;
+    if (request === cameraRequest) {
+      frameWaitAbort = null;
+      isLoading.value = false;
+    }
   }
 };
 
-watch(
-  () => props.cameraId,
-  (cameraId) => {
-    void loadCamera(cameraId);
-  },
-);
+const scheduleCameraLoad = (cameraId: string) => {
+  const request = ++cameraRequest;
+  frameWaitAbort?.abort();
+  // Some camera drivers are exclusive. Wait for an obsolete request to settle
+  // and release its stream before asking Chromium for the next device.
+  cameraLoadQueue = cameraLoadQueue.then(() => loadCamera(cameraId, request));
+};
+
+const readyStream = async (sourceId: string) => {
+  await cameraLoadQueue;
+  if (readyCameraId !== sourceId || !cameraStream.value)
+    throw Object.assign(new Error(streamError.value || 'The selected camera is not ready.'), {
+      name: 'NotReadableError',
+    });
+  return cameraStream.value;
+};
+
+defineExpose({ readyStream });
 
 onMounted(() => {
-  initialLoadTimer = window.setTimeout(() => {
-    void loadCamera(props.cameraId);
-  }, 0);
+  stopCameraWatch = watch(() => props.cameraId, scheduleCameraLoad, { immediate: true });
 });
 
 onBeforeUnmount(() => {
   cameraRequest += 1;
-  if (initialLoadTimer !== null) window.clearTimeout(initialLoadTimer);
+  frameWaitAbort?.abort();
+  stopCameraWatch?.();
   stopCameraStream();
 });
 </script>

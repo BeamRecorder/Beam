@@ -34,6 +34,7 @@ const { createEditorWindowManager } = require('./window/editor-window.cjs');
 const { createOnboardingWindowManager } = require('./window/onboarding-window.cjs');
 const { registerExportIpc } = require('./export/export-ipc.cjs');
 const { createCameraOverlayWindow } = require('./camera/overlay-window.cjs');
+const { createCameraRecordingControl } = require('./camera/recording-control.cjs');
 const { createCountdownWindow } = require('./countdown-window.cjs');
 const { createScreenRegionOverlayWindow } = require('./screen-region-overlay.cjs');
 const { createCameraStorage, registerCameraIpc } = require('./camera-ipc.cjs');
@@ -383,10 +384,15 @@ function initializeApplication() {
       isPackaged: app.isPackaged,
       canAcceptWork: () => coordinator.canAcceptWork(),
     };
+    let cameraRecordingCleanup = () => {};
     const cameraOverlay = createCameraOverlayWindow({
       ...lifecycleOptions,
       preferencesStore,
       platform: process.platform,
+      onWebContentsDestroyed: (contents) => {
+        if (contents) cameraStorage.cleanupOwner(contents.id);
+        cameraRecordingCleanup('The camera overlay was closed while recording.');
+      },
     });
     const countdownOverlay = createCountdownWindow(lifecycleOptions);
     const screenRegionOverlay = createScreenRegionOverlayWindow({
@@ -394,7 +400,16 @@ function initializeApplication() {
       platform: process.platform,
       screen,
     });
-    applicationIpc.on('camera-overlay:configure', (_event, state) => cameraOverlay.configure(state));
+    applicationIpc.on('camera-overlay:configure', (event, state) => {
+      const fromOverlay = cameraOverlay.isRenderer(event.sender);
+      cameraOverlay.configure(state);
+      if (fromOverlay) {
+        for (const target of BrowserWindow.getAllWindows()) {
+          if (!target.isDestroyed() && target.webContents !== event.sender)
+            target.webContents.send('camera-overlay:state', cameraOverlay.state());
+        }
+      }
+    });
     applicationIpc.on('camera-overlay:set-active', (_event, active) => cameraOverlay.setActive(active));
     applicationIpc.on('camera-overlay:reset-placement', () => cameraOverlay.resetPlacement());
     applicationIpc.handle('countdown:set', (_event, seconds) => {
@@ -457,6 +472,11 @@ function initializeApplication() {
       if (coordinator.canAcceptWork()) app.quit();
     });
     const win = createWindow(preferencesStore, appIconPath);
+    cameraRecordingCleanup = createCameraRecordingControl({
+      ipcMain: applicationIpc,
+      cameraOverlay,
+      hudWebContents: win.webContents,
+    });
     win.webContents.once('did-finish-load', () => {
       shortcutReady = true;
       for (const id of pendingExternalShortcuts.splice(0)) externalShortcutHandler(id);
@@ -520,6 +540,7 @@ function initializeApplication() {
     coordinator.registerCleanup({ id: 'spell-check-context-menu', cleanup: spellCheckContextMenuCleanup });
     coordinator.registerCleanup({ id: 'countdown', cleanup: () => countdownOverlay.destroy() });
     coordinator.registerCleanup({ id: 'camera-overlay', cleanup: () => cameraOverlay.destroy() });
+    coordinator.registerCleanup({ id: 'camera-recording-control', cleanup: cameraRecordingCleanup });
     coordinator.registerCleanup({ id: 'screen-region', cleanup: () => screenRegionOverlay.destroy() });
     coordinator.registerCleanup({ id: 'preferences', cleanup: preferencesCleanup });
 

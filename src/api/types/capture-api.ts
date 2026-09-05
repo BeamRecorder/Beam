@@ -28,6 +28,13 @@ import type {
   RecorderLauncherContext,
 } from './editor-window';
 import type { AppearanceSettings } from '~/types/appearance';
+import type {
+  CameraRecordingCommand,
+  CameraRecordingCommandResult,
+  CameraRecordingControl,
+  CameraRecordingControlResult,
+  CameraRecordingFailure,
+} from './camera-recording';
 
 export type * from './capture-config';
 export type * from './screen-region';
@@ -193,6 +200,12 @@ export interface DesktopCaptureApi extends CaptureApi {
   ): () => void;
   onCameraOverlayHover(listener: (hovered: boolean) => void): () => void;
   onCameraShadow(listener: (state: { shadowSize: string; cornerRadius: string }) => void): () => void;
+  controlCameraOverlayRecording(control: CameraRecordingControl): Promise<CameraRecordingControlResult>;
+  onCameraOverlayRecordingCommand(listener: (command: CameraRecordingCommand) => void): () => void;
+  completeCameraOverlayRecordingCommand(result: CameraRecordingCommandResult): void;
+  notifyCameraOverlayReady(): void;
+  reportCameraRecordingFailure(failure: CameraRecordingFailure): void;
+  onCameraRecordingFailure(listener: (failure: CameraRecordingFailure) => void): () => void;
   beginExport(options: {
     projectName: string;
     format: 'webm' | 'mp4';
