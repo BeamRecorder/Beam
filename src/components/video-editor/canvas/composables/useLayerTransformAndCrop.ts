@@ -1,6 +1,5 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import type { ResizeCorner } from '~/ui/ResizeHandle/types';
-import type { VideoWindowBounds } from './useCameraZoom';
 import { activeClipsAt, sourceTimeAt } from '~/media/shared';
 import {
   getCaptionTransform,
@@ -8,7 +7,6 @@ import {
   isColorClip,
   isShapeClip,
   isVisualClip,
-  type ClipComposition,
   type CaptionClip,
   type NormalizedCrop,
   type NormalizedTransform,
@@ -19,9 +17,8 @@ import {
   captionTextAt,
   isCaptionWrapEnabled,
   layoutCaptionText,
-  type CaptionTextMeasurer,
 } from '~/media/shared/caption-text-layout';
-import type { OutputCanvasSettings } from '../output-canvas';
+import type { UseLayerTransformAndCropOptions } from './layer-transform-and-crop-types';
 
 import { computeCanvasAlignmentSnapping, type AlignmentGuide } from './canvas-alignment';
 import { clampNormalizedCrop, mirrorCrop } from './layer-transform-geometry';
@@ -35,26 +32,12 @@ import {
 import { topmostClipIdAtPoint } from './layer-hit-testing';
 import { transformClipDisplayLayout } from './layer-display-layout';
 import { layerSelectionPresentation, perspectivePointerDelta } from './layer-selection-presentation';
+import { resizeCroppedLayer } from './cropped-layer-resize';
 
 const TRANSFORM_MIN = -3;
 const TRANSFORM_MAX = 3;
 const SIZE_MAX = 4;
 type GlobalCameraClip = Exclude<TransformClip, CaptionClip>;
-
-export interface UseLayerTransformAndCropOptions {
-  composition: () => ClipComposition;
-  currentTime: () => number;
-  selectedTransformClip: () => TransformClip | null;
-  videoWindowBounds: () => VideoWindowBounds | null;
-  overlayWindowBounds: () => VideoWindowBounds | null;
-  isCropping: () => boolean | undefined;
-  outputCanvas: () => OutputCanvasSettings;
-  measureCaptionText?: CaptionTextMeasurer;
-  zoomScale?: () => number;
-  onUpdateTransform: (transform: NormalizedTransform) => void;
-  onUpdateCrop: (crop: NormalizedCrop) => void;
-  onSelectTransformClip: (clipId: string) => void;
-}
 
 export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOptions) {
   const transformDraft = ref<NormalizedTransform | null>(null);
@@ -402,7 +385,10 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
       width,
       height,
     };
-    transformDraft.value = clip.kind === 'webcam' ? clampEditedWebcamTransform(clip, resized, bounds.scale) : resized;
+    const cropped = isVisualClip(clip)
+      ? resizeCroppedLayer(clip, initial, resized, transformDrag.corner, corner && preserveAspect)
+      : resized;
+    transformDraft.value = clip.kind === 'webcam' ? clampEditedWebcamTransform(clip, cropped, bounds.scale) : cropped;
   };
 
   const moveTransformDrag = (event: PointerEvent) => {

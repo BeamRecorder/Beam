@@ -1,7 +1,8 @@
 import { defineComponent, h, nextTick, ref } from 'vue';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { useLayerTransformAndCrop, type UseLayerTransformAndCropOptions } from '../useLayerTransformAndCrop';
+import { useLayerTransformAndCrop } from '../useLayerTransformAndCrop';
+import type { UseLayerTransformAndCropOptions } from '../layer-transform-and-crop-types';
 import type {
   BlurClip,
   CaptionClip,
@@ -299,10 +300,10 @@ describe('useLayerTransformAndCrop', () => {
     mounted.selectedRef.value = imageClip();
     await nextTick();
     expect(mounted.state.transformHandleStyle.value).toMatchObject({
-      left: '0px',
-      top: '-45px',
-      width: '800px',
-      height: '360px',
+      left: '80px',
+      top: '27px',
+      width: '560px',
+      height: '216px',
     });
     expect(mounted.state.transformSelectionViewportStyle.value).toEqual({
       left: '10px',
@@ -319,14 +320,20 @@ describe('useLayerTransformAndCrop', () => {
     mounted.selectedRef.value = video;
     await nextTick();
     expect(mounted.state.transformHandleStyle.value).toMatchObject({
+      left: '80px',
+      top: '27px',
+      width: '560px',
+      height: '216px',
+    });
+
+    mounted.croppingRef.value = true;
+    await nextTick();
+    expect(mounted.state.transformHandleStyle.value).toMatchObject({
       left: '0px',
       top: '-45px',
       width: '800px',
       height: '360px',
     });
-
-    mounted.croppingRef.value = true;
-    await nextTick();
     expect(mounted.state.cropContainerStyle.value).toMatchObject({
       left: '10px',
       top: '-25px',
@@ -350,6 +357,61 @@ describe('useLayerTransformAndCrop', () => {
     mounted.selectedBounds.value = null;
     await nextTick();
     expect(mounted.state.transformHandleStyle.value).toEqual({ display: 'none' });
+  });
+
+  it('keeps an applied bottom crop positioned at source scale when crop mode is reopened', async () => {
+    const clip = imageClip();
+    const bottomCrop = { x: 0, y: 0.75, width: 1, height: 0.25 };
+    clip.crop = bottomCrop;
+    const scene = composition();
+    scene.clips = [screenClip(), clip];
+    const mounted = mountComposable(clip, true, scene);
+
+    expect(mounted.state.transformHandleStyle.value).toMatchObject({
+      left: '0px',
+      top: '-45px',
+      width: '800px',
+      height: '360px',
+    });
+    expect(mounted.state.cropContainerStyle.value).toEqual({
+      left: '10px',
+      top: '-25px',
+      width: '800px',
+      height: '360px',
+    });
+    expect(mounted.state.cropOverlayStyle.value).toEqual({
+      left: '0%',
+      top: '75%',
+      width: '100%',
+      height: '25%',
+    });
+
+    mounted.state.commitCrop();
+    expect(mounted.options.onUpdateCrop).toHaveBeenCalledWith(bottomCrop);
+
+    mounted.croppingRef.value = false;
+    await nextTick();
+    expect(mounted.state.transformHandleStyle.value).toMatchObject({
+      left: '0px',
+      top: '225px',
+      width: '800px',
+      height: '90px',
+    });
+
+    mounted.croppingRef.value = true;
+    await nextTick();
+    expect(mounted.state.cropContainerStyle.value).toEqual({
+      left: '10px',
+      top: '-25px',
+      width: '800px',
+      height: '360px',
+    });
+    expect(mounted.state.cropOverlayStyle.value).toEqual({
+      left: '0%',
+      top: '75%',
+      width: '100%',
+      height: '25%',
+    });
   });
 
   it('exposes a projected bbox, corners and all eight anchors for tilted selections while preserving the 2D path', async () => {

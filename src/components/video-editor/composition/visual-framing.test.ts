@@ -95,6 +95,108 @@ describe('editable visual framing transforms', () => {
     expect(normalized).toBe(transform);
   });
 
+  it('keeps a custom crop inside the regular visual bounds while a phone keeps its screen opening', () => {
+    const crop = { x: 0.1, y: 0.2, width: 0.5, height: 0.4 };
+    const visualBounds = { x: bounds.dx, y: bounds.dy, width: bounds.dw, height: bounds.dh };
+    const regular = clipFor('video', 'custom');
+    regular.crop = crop;
+    const regularFraming = resolveVisualClipFraming(
+      regular,
+      visualBounds,
+      source.width!,
+      source.height!,
+      crop,
+      'custom',
+    );
+
+    expectRect(regularFraming.rect, { x: 180, y: 200, width: 400, height: 240 });
+    expectRect(regularFraming.sourceRect!, { x: 192, y: 216, width: 960, height: 432 });
+
+    const phone = clipFor('video', 'custom');
+    phone.crop = crop;
+    phone.appearance = { ...phone.appearance, frame: 'iphone-16-max' };
+    const phoneFraming = resolveVisualClipFraming(phone, visualBounds, source.width!, source.height!, crop, 'custom');
+
+    expectRect(phoneFraming.rect, visualBounds);
+    expectRect(phoneFraming.sourceRect!, regularFraming.sourceRect!);
+    expect(
+      visualClipDisplayLayout(
+        phone,
+        transform,
+        { x: 0, y: 0, width: 1_000, height: 800 },
+        source.width!,
+        source.height!,
+        'custom',
+        'none',
+      ),
+    ).toEqual({ left: 200, top: 80, width: 600, height: 400 });
+
+    const content = visualClipDisplayLayout(
+      phone,
+      transform,
+      { x: 0, y: 0, width: 1_000, height: 800 },
+      source.width!,
+      source.height!,
+      'custom',
+      'content',
+    );
+    expect(content.left).toBeGreaterThan(200);
+    expect(content.top).toBeGreaterThan(80);
+    expect(content.width).toBeLessThan(600);
+    expect(content.height).toBeLessThan(400);
+  });
+
+  it('uses custom framing when the clip framing preset is omitted', () => {
+    const clip = clipFor('video', undefined);
+    const composition = createComposition([source], [clip]);
+    const visualBounds = { x: bounds.dx, y: bounds.dy, width: bounds.dw, height: bounds.dh };
+
+    expectRect(resolveVisualClipFraming(clip, visualBounds, source.width!, source.height!).rect, visualBounds);
+    expect(editableVisualClipTransform(composition, clip, transform, bounds)).toBe(transform);
+
+    const phone = { ...clip, appearance: { ...clip.appearance, frame: 'iphone-16-max' as const } };
+    const resized = resizePhoneFrameTransform(composition, phone, transform, bounds, { x: 0, y: 0 });
+    expectRect(resized, transform);
+  });
+
+  it('keeps a phone transform unchanged while editing its framing', () => {
+    const clip = clipFor('video', 'fit');
+    clip.appearance = { ...clip.appearance, frame: 'iphone-16-max' };
+    const composition = createComposition([source], [clip]);
+
+    expect(editableVisualClipTransform(composition, clip, transform, bounds)).toBe(transform);
+  });
+
+  it('falls back to the viewport dimensions when an editable visual has no asset metadata', () => {
+    const clip = clipFor('video', 'fit');
+    const composition = createComposition([source], [clip]);
+    const missingAssetClip = { ...clip, assetId: 'missing-asset' };
+
+    const normalized = editableVisualClipTransform(composition, missingAssetClip, transform, bounds);
+
+    expectRect(normalized, { x: 0.25, y: 0.1, width: 0.5, height: 0.5 });
+  });
+
+  it('mirrors the in-place custom crop destination without moving its source crop', () => {
+    const clip = clipFor('video', 'custom');
+    const crop = { x: 0.1, y: 0.2, width: 0.5, height: 0.4 };
+    clip.crop = crop;
+    clip.isMirrored = true;
+    clip.isMirroredY = true;
+
+    const framing = resolveVisualClipFraming(
+      clip,
+      { x: bounds.dx, y: bounds.dy, width: bounds.dw, height: bounds.dh },
+      source.width!,
+      source.height!,
+      crop,
+      'custom',
+    );
+
+    expectRect(framing.rect, { x: 420, y: 320, width: 400, height: 240 });
+    expectRect(framing.sourceRect!, { x: 192, y: 216, width: 960, height: 432 });
+  });
+
   it.each(['screen', 'video', 'image'] as const)(
     'uses the complete transform box and a resized squircle mask for %s',
     (kind) => {
@@ -241,4 +343,103 @@ describe('editable visual framing transforms', () => {
       expect(resized.height).toBeGreaterThan(initial.height);
     },
   );
+
+  it('leaves a non-phone resize request unchanged', () => {
+    const clip = clipFor('video', 'custom');
+    const composition = createComposition([source], [clip]);
+
+    expect(
+      resizePhoneFrameTransform(
+        composition,
+        clip,
+        transform,
+        { dx: bounds.dx, dy: bounds.dy, dw: bounds.dw, dh: bounds.dh },
+        { x: 0.1, y: 0.1 },
+        'bottom-right',
+      ),
+    ).toBe(transform);
+  });
+
+  it.each([
+    ['top', { x: 0, y: -0.05 }],
+    ['left', { x: -0.05, y: 0 }],
+    [undefined, { x: 0, y: 0 }],
+  ] as const)('handles a custom phone resize from the %s edge', (edge, delta) => {
+    const clip = clipFor('video', 'custom');
+    clip.appearance = { ...clip.appearance, frame: 'iphone-16-max' };
+    const composition = createComposition([source], [clip]);
+
+    const resized = resizePhoneFrameTransform(composition, clip, transform, bounds, delta, edge);
+
+    const viewport = { x: bounds.dx, y: bounds.dy, width: bounds.dw, height: bounds.dh };
+    const before = visualClipDisplayLayout(clip, transform, viewport, source.width!, source.height!, 'custom');
+    const after = visualClipDisplayLayout(clip, resized, viewport, source.width!, source.height!, 'custom');
+    expect(after.width / after.height).toBeCloseTo(before.width / before.height, 10);
+    if (edge === 'top') expect(after.top + after.height).toBeCloseTo(before.top + before.height, 10);
+    else if (edge === 'left') expect(after.left + after.width).toBeCloseTo(before.left + before.width, 10);
+    else expectRect(resized, transform);
+  });
+
+  it('falls back to the viewport dimensions when resizing a phone without asset metadata', () => {
+    const clip = clipFor('video', 'fit');
+    clip.appearance = { ...clip.appearance, frame: 'iphone-16-max' };
+    const composition = createComposition([source], [clip]);
+    const missingAssetClip = { ...clip, assetId: 'missing-asset' };
+
+    const resized = resizePhoneFrameTransform(composition, missingAssetClip, transform, bounds, { x: 0, y: 0 });
+
+    const explicitMetadata = createComposition([{ ...source, width: bounds.dw, height: bounds.dh }], [clip]);
+    expectRect(resized, resizePhoneFrameTransform(explicitMetadata, clip, transform, bounds, { x: 0, y: 0 }));
+  });
+
+  it.each(['iphone-16-max', 'pixel-9-pro'] as const)(
+    'resizes a cropped custom %s phone through its transform branch',
+    (frame) => {
+      const clip = clipFor('video', 'custom');
+      clip.crop = { x: 0.1, y: 0.2, width: 0.5, height: 0.4 };
+      clip.appearance = { ...clip.appearance, frame };
+      const composition = createComposition([source], [clip]);
+      const viewport = { x: 0, y: 0, width: 800, height: 450 };
+      const initial = visualClipDisplayLayout(clip, transform, viewport, source.width!, source.height!, 'custom');
+      const resizedTransform = resizePhoneFrameTransform(
+        composition,
+        clip,
+        transform,
+        { dx: viewport.x, dy: viewport.y, dw: viewport.width, dh: viewport.height },
+        { x: 0.1, y: 0.01 },
+        'right',
+      );
+      const resized = visualClipDisplayLayout(
+        clip,
+        resizedTransform,
+        viewport,
+        source.width!,
+        source.height!,
+        'custom',
+      );
+
+      expect(resized.width).toBeGreaterThan(initial.width);
+      expect(resized.height).toBeGreaterThan(initial.height);
+    },
+  );
+
+  it('contains a very tall source in a fitted phone when the height branch wins', () => {
+    const tallSource = { ...source, width: 300, height: 1_920 };
+    const clip = clipFor('video', 'fit');
+    clip.appearance = { ...clip.appearance, frame: 'iphone-16-max' };
+    const composition = createComposition([tallSource], [clip]);
+    const viewport = { x: 0, y: 0, width: 800, height: 450 };
+    const resized = resizePhoneFrameTransform(
+      composition,
+      clip,
+      transform,
+      { dx: viewport.x, dy: viewport.y, dw: viewport.width, dh: viewport.height },
+      { x: 0.01, y: 0.1 },
+      'bottom-right',
+    );
+
+    expect(resized.width).toBeGreaterThan(0);
+    expect(resized.height).toBeGreaterThan(0);
+    expect(resized.width / resized.height).toBeCloseTo(tallSource.width / tallSource.height, 10);
+  });
 });
