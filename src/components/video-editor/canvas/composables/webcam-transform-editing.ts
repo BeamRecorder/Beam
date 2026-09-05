@@ -10,6 +10,7 @@ import {
   webcamSettingsForAppearance,
 } from '../../composition/webcam/webcam-zoom';
 import { resolveCameraFraming } from '../../composition/camera-layout';
+import { isPhoneFrame } from '../../composition/appearance/phone-frames';
 
 export function webcamDisplayLayout(
   composition: ClipComposition,
@@ -35,12 +36,15 @@ export function webcamDisplayLayout(
     asset?.width ?? layout.width,
     asset?.height ?? layout.height,
     clip.crop,
+    clip.isMirrored,
+    clip.isMirroredY,
   );
+  const rect = framingPreset === 'custom' && isPhoneFrame(clip.appearance.frame) ? layout : framing.rect;
   return {
-    left: bounds.dx + framing.rect.x,
-    top: bounds.dy + framing.rect.y,
-    width: framing.rect.width,
-    height: framing.rect.height,
+    left: bounds.dx + rect.x,
+    top: bounds.dy + rect.y,
+    width: rect.width,
+    height: rect.height,
   };
 }
 

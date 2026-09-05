@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   computeWebcamLayout,
   drawWebcamOverlay,
@@ -7,6 +7,10 @@ import {
   webcamSettingsForAppearance,
 } from '../webcam/webcam-zoom';
 import { resolveCameraFraming } from '../camera-layout';
+import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import * as renderDecoratedMedia from '../appearance/render-decorated-media';
+
+afterEach(() => vi.restoreAllMocks());
 
 const context = () =>
   ({
@@ -211,7 +215,40 @@ describe('webcam zoom layout', () => {
       { x: 0.1, y: 0.2, width: 0.4, height: 0.3 },
       { x: 0.1, y: 0.1, width: 0.8, height: 0.8 },
     );
-    expect(ctx.drawImage).toHaveBeenCalledWith(source, 32, 24, 256, 192, 100, 160, 400, 240);
+    expect(ctx.drawImage).toHaveBeenCalledWith(source, 32, 24, 256, 192, 140, 184, 320, 192);
     expect(ctx.scale).toHaveBeenCalledWith(-1, -1);
+  });
+
+  it('keeps a phone frame opening fixed while applying a custom source crop', () => {
+    const ctx = context();
+    const source = {} as CanvasImageSource;
+    const appearance = { ...createDefaultClipAppearance('webcam'), frame: 'iphone-16-max' as const };
+    const settings = webcamSettingsForAppearance(appearance, false, false);
+    const drawDecoratedMedia = vi.spyOn(renderDecoratedMedia, 'drawDecoratedMedia');
+
+    drawWebcamOverlay(
+      ctx,
+      source,
+      { width: 320, height: 240 },
+      1000,
+      800,
+      1,
+      settings,
+      { x: 0.1, y: 0.2, width: 0.4, height: 0.3 },
+      { x: 0.1, y: 0.1, width: 0.8, height: 0.8 },
+      appearance,
+      'Camera',
+      1,
+      'custom',
+    );
+
+    expect(drawDecoratedMedia).toHaveBeenCalledWith(
+      ctx,
+      expect.objectContaining({
+        source,
+        sourceRect: { x: 32, y: 24, width: 256, height: 192 },
+        rect: { x: 100, y: 160, width: 400, height: 240 },
+      }),
+    );
   });
 });

@@ -10,6 +10,7 @@ import { DEFAULT_CLIP_APPEARANCE, drawDecoratedMedia } from '../appearance/rende
 import type { MediaRect } from '../appearance/appearance-types';
 import type { Canvas2DContext } from '~/types/canvas';
 import { resolveCameraFraming } from '../camera-layout';
+import { isPhoneFrame } from '../appearance/phone-frames';
 
 export interface WebcamOverlaySettings {
   widthPercent: number;
@@ -191,12 +192,20 @@ export function drawWebcamOverlay(
   const layout = computeWebcamLayout(canvasWidth, canvasHeight, appliedZoomScale, settings, transform);
   const sourceWidth = sourceDimensions.width;
   const sourceHeight = sourceDimensions.height;
-  const framing = resolveCameraFraming(framingPreset, layout, sourceWidth, sourceHeight, crop);
+  const framing = resolveCameraFraming(
+    framingPreset,
+    layout,
+    sourceWidth,
+    sourceHeight,
+    crop,
+    settings.mirror,
+    settings.mirrorY,
+  );
   const sourceRect: MediaRect | undefined = framing.sourceRect;
   drawDecoratedMedia(ctx, {
     source,
     sourceRect,
-    rect: framing.rect,
+    rect: framingPreset === 'custom' && appearance && isPhoneFrame(appearance.frame) ? layout : framing.rect,
     appearance: { ...DEFAULT_CLIP_APPEARANCE, ...appearance },
     shadowScale,
     title,
