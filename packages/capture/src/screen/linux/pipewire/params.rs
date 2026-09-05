@@ -3,7 +3,8 @@ use std::{io::Cursor, mem::size_of};
 use pipewire::{self as pw, spa};
 use spa::{
     param::{ParamType, format::MediaSubtype, format::MediaType, video::VideoInfoRaw},
-    pod::{Pod, Value},
+    pod::{ChoiceValue, Pod, Value},
+    utils::{Choice, ChoiceEnum, ChoiceFlags},
 };
 
 use crate::CaptureError;
@@ -105,10 +106,7 @@ pub(super) fn format_parameter() -> Result<Vec<u8>, CaptureError> {
     serialize_object(object)
 }
 
-pub(super) fn update_buffer_params(
-    stream: &pw::stream::Stream,
-    format: NegotiatedFormat,
-) -> Result<(), CaptureError> {
+pub(super) fn buffer_parameter(format: NegotiatedFormat) -> Result<Vec<u8>, CaptureError> {
     let stride = i32::try_from(
         format
             .width
@@ -124,7 +122,19 @@ pub(super) fn update_buffer_params(
         type_: spa::utils::SpaTypes::ObjectParamBuffers.as_raw(),
         id: ParamType::Buffers.as_raw(),
         properties: vec![
-            spa::pod::Property::new(spa::sys::SPA_PARAM_BUFFERS_buffers, Value::Int(8)),
+            // KWin offers 2–4 buffers. Eight is a preference, not a requirement;
+            // keep the existing upper bound while allowing the producer's pool.
+            spa::pod::Property::new(
+                spa::sys::SPA_PARAM_BUFFERS_buffers,
+                Value::Choice(ChoiceValue::Int(Choice(
+                    ChoiceFlags::empty(),
+                    ChoiceEnum::Range {
+                        default: 8,
+                        min: 2,
+                        max: 8,
+                    },
+                ))),
+            ),
             spa::pod::Property::new(spa::sys::SPA_PARAM_BUFFERS_blocks, Value::Int(1)),
             spa::pod::Property::new(spa::sys::SPA_PARAM_BUFFERS_size, Value::Int(size)),
             spa::pod::Property::new(spa::sys::SPA_PARAM_BUFFERS_stride, Value::Int(stride)),
@@ -134,6 +144,14 @@ pub(super) fn update_buffer_params(
             ),
         ],
     };
+    serialize_object(buffer)
+}
+
+pub(super) fn update_buffer_params(
+    stream: &pw::stream::Stream,
+    format: NegotiatedFormat,
+) -> Result<(), CaptureError> {
+    let mut bytes = vec![buffer_parameter(format)?];
     let metas = [
         (
             spa::sys::SPA_META_Header,
@@ -149,7 +167,6 @@ pub(super) fn update_buffer_params(
             size_of::<spa::sys::spa_meta_videotransform>(),
         ),
     ];
-    let mut bytes = vec![serialize_object(buffer)?];
     for (meta_type, meta_size) in metas {
         let meta = spa::pod::Object {
             type_: spa::utils::SpaTypes::ObjectParamMeta.as_raw(),
