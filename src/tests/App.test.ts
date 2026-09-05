@@ -235,6 +235,31 @@ describe('App', () => {
     expect(wrapper.find('.mock-hud').exists()).toBe(true);
   });
 
+  it('keeps the camera overlay active until recording stop succeeds', async () => {
+    await wrapper.get('.start').trigger('click');
+    await settle();
+    mocks.capture.setCameraOverlayActive.mockClear();
+
+    let finishStop!: () => void;
+    const stopFinished = new Promise<void>((resolve) => {
+      finishStop = () => {
+        mocks.controller.recording.phase.value = 'idle';
+        mocks.controller.onComplete?.({ videoSrc: 'project.mp4', sessionId: 'session-stop' });
+        resolve();
+      };
+    });
+    mocks.controller.recording.stop.mockReturnValueOnce(stopFinished);
+
+    const stopping = wrapper.get('.stop').trigger('click');
+    await nextTick();
+    expect(mocks.capture.setCameraOverlayActive).not.toHaveBeenCalledWith(false);
+
+    finishStop();
+    await stopping;
+    await settle();
+    expect(mocks.capture.setCameraOverlayActive).toHaveBeenCalledWith(false);
+  });
+
   it('routes tray stop and the global start/stop shortcut to an active recording', async () => {
     await wrapper.get('.start').trigger('click');
     await settle();

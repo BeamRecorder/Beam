@@ -199,7 +199,6 @@ const startRecording = async (configuration: RecordingConfiguration) => {
 
 const cancelOrStopRecording = async () => {
   const wasStartup = recording.phase.value === 'countdown' || recording.phase.value === 'starting';
-  if (!wasStartup) capture.setCameraOverlayActive(false);
   await recording.stop();
   if (!wasStartup && recording.phase.value !== 'idle') capture.setCameraOverlayActive(true);
   if (wasStartup) returnToHud();

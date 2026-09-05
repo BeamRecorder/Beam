@@ -10,6 +10,7 @@ function createCameraOverlayWindow({
   preferencesStore = null,
   platform = process.platform,
   canAcceptWork = () => true,
+  onWebContentsDestroyed = () => {},
 }) {
   let window = null;
   let currentState = null;
@@ -17,6 +18,36 @@ function createCameraOverlayWindow({
   let savePlacementTimer = null;
   let isHovered = false;
   let active = true;
+  let rendererReady = false;
+  let readyWaiters = [];
+
+  const settleReadyWaiters = (ready) => {
+    const waiters = readyWaiters;
+    readyWaiters = [];
+    for (const waiter of waiters) {
+      waiter.signal?.removeEventListener('abort', waiter.onAbort);
+      waiter.resolve(ready);
+    }
+  };
+
+  const waitForRenderer = (signal) =>
+    new Promise((resolve, reject) => {
+      if (signal?.aborted) {
+        reject(Object.assign(new Error('The camera recording command was cancelled.'), { name: 'AbortError' }));
+        return;
+      }
+      const waiter = {
+        resolve,
+        reject,
+        signal,
+        onAbort: () => {
+          readyWaiters = readyWaiters.filter((entry) => entry !== waiter);
+          reject(Object.assign(new Error('The camera recording command was cancelled.'), { name: 'AbortError' }));
+        },
+      };
+      signal?.addEventListener('abort', waiter.onAbort, { once: true });
+      readyWaiters.push(waiter);
+    });
 
   const readSavedPlacement = () => {
     const saved = preferencesStore?.read()?.extras?.cameraOverlay;
@@ -151,6 +182,7 @@ function createCameraOverlayWindow({
         sandbox: false,
       },
     });
+    rendererReady = false;
     window.setContentProtection(true);
     window.setAlwaysOnTop(true, 'floating');
     window.on('move', schedulePlacementSave);
@@ -163,9 +195,13 @@ function createCameraOverlayWindow({
     });
     window.on('closed', () => {
       flushPlacementSave();
+      rendererReady = false;
+      settleReadyWaiters(false);
       window = null;
       stopHoverTracking();
     });
+    const contents = window.webContents;
+    contents.once('destroyed', () => onWebContentsDestroyed(contents));
     window.webContents.once('did-finish-load', () => {
       if (currentState) window?.webContents.send('camera-overlay:state', currentState);
     });
@@ -226,11 +262,34 @@ function createCameraOverlayWindow({
     };
   };
 
+  const markRendererReady = (sender) => {
+    if (!window || window.isDestroyed() || sender !== window.webContents) return false;
+    rendererReady = true;
+    settleReadyWaiters(true);
+    if (currentState) window.webContents.send('camera-overlay:state', currentState);
+    return true;
+  };
+
+  const sendRecordingCommand = async (command, { signal } = {}) => {
+    const target = create();
+    if (!target) throw new Error('The camera overlay is unavailable.');
+    const ready = rendererReady || (await waitForRenderer(signal));
+    if (signal?.aborted)
+      throw Object.assign(new Error('The camera recording command was cancelled.'), { name: 'AbortError' });
+    if (!ready || target !== window || target.isDestroyed()) throw new Error('The camera overlay was closed.');
+    target.webContents.send('camera-overlay:recording-command', command);
+  };
+
+  const isRenderer = (sender) => Boolean(window && !window.isDestroyed() && sender === window.webContents);
+
   return {
     configure,
     setActive,
     resetPlacement,
     state,
+    markRendererReady,
+    sendRecordingCommand,
+    isRenderer,
     destroy: () => {
       flushPlacementSave();
       stopHoverTracking();

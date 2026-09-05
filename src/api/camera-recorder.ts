@@ -1,14 +1,19 @@
 import type { CaptureSource } from './types/capture-api';
+import { waitForFirstCameraFrame } from './camera-frame-ready';
+import type {
+  CameraAppearance,
+  CameraFormat,
+  CameraPlacement,
+  CameraRecordingControl,
+  CameraRecordingControlResult,
+  CameraRecordingFailure,
+} from './types/camera-recording';
+
+export type { CameraAppearance, CameraFormat, CameraPlacement } from './types/camera-recording';
 
 const MIME_TYPE = 'video/webm;codecs=vp8';
 const CAMERA_PREFIX = 'camera:chromium:';
 
-export type CameraPlacement = { x: number; y: number; width: number; height: number };
-type CameraFormat = { codec: 'vp8'; width: number; height: number; nominalFps: number };
-export type CameraAppearance = {
-  shadowSize: 'none' | 'sm' | 'md' | 'lg';
-  cornerRadius: 'none' | 'sm' | 'md' | 'lg' | 'full';
-};
 type CameraSegmentApi = {
   beginCameraSegment(payload: {
     sessionId: string;
@@ -19,6 +24,8 @@ type CameraSegmentApi = {
   writeCameraSegment(payload: { jobId: string; sequence: number; data: Uint8Array }): Promise<void>;
   finalizeCameraSegment(payload: { jobId: string; endNs: number; metrics: Record<string, number> }): Promise<void>;
   failCamera(payload: { sessionId: string; reason: string }): Promise<void>;
+  controlCameraOverlayRecording(control: CameraRecordingControl): Promise<CameraRecordingControlResult>;
+  onCameraRecordingFailure(listener: (failure: CameraRecordingFailure) => void): () => void;
 };
 
 function api(): CameraSegmentApi {
@@ -32,11 +39,16 @@ function deviceId(sourceId: string) {
   return sourceId.slice(CAMERA_PREFIX.length);
 }
 
+export function cameraVideoConstraints(sourceId: string): MediaTrackConstraints {
+  return { deviceId: { exact: deviceId(sourceId) } };
+}
+
 export function isCameraUnavailableError(error: unknown) {
   const name = typeof error === 'object' && error !== null && 'name' in error ? String(error.name) : '';
   const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
   return (
     ['NotFoundError', 'NotReadableError', 'OverconstrainedError'].includes(name) ||
+    ['notfounderror', 'notreadableerror', 'overconstrainederror'].some((entry) => message.includes(entry)) ||
     message.includes('could not start video source') ||
     message.includes('hardware resources') ||
     message.includes('0xc00d3704') ||
@@ -48,15 +60,23 @@ function positive(value: number | undefined, fallback: number) {
   return Number.isFinite(value) && value! > 0 ? Math.round(value!) : fallback;
 }
 
-export async function validateCameraAccess(sourceId: string): Promise<void> {
-  if (!sourceId || sourceId === 'off') return;
-  if (!navigator.mediaDevices?.getUserMedia) throw new Error('Camera access is unavailable in this Chromium build.');
-  const rawId = deviceId(sourceId);
-  const stream = await navigator.mediaDevices.getUserMedia({
-    audio: false,
-    video: rawId ? { deviceId: { ideal: rawId } } : true,
-  });
-  stream.getTracks().forEach((track) => track.stop());
+async function waitForCameraStream(stream: MediaStream) {
+  const video = document.createElement('video');
+  const abort = new AbortController();
+  video.muted = true;
+  video.playsInline = true;
+  video.srcObject = stream;
+  const firstFrame = waitForFirstCameraFrame(video, { signal: abort.signal });
+  try {
+    await Promise.all([video.play(), firstFrame]);
+  } catch (error) {
+    abort.abort();
+    await firstFrame.catch(() => undefined);
+    throw error;
+  } finally {
+    video.pause();
+    video.srcObject = null;
+  }
 }
 
 export async function listBrowserCameras(): Promise<CaptureSource[]> {
@@ -90,19 +110,26 @@ export class BrowserCameraRecorder {
   readonly format: CameraFormat;
   private readonly stream: MediaStream;
   private readonly track: MediaStreamTrack;
+  private readonly ownsStream: boolean;
+  private readonly trackEndedHandler = () =>
+    this.reportFatal(new Error('The selected camera was disconnected or stopped.'));
+  private readonly beforeUnloadHandler = () => this.release();
 
-  private constructor(stream: MediaStream, sourceId: string, track: MediaStreamTrack, format: CameraFormat) {
+  private constructor(
+    stream: MediaStream,
+    sourceId: string,
+    track: MediaStreamTrack,
+    format: CameraFormat,
+    ownsStream: boolean,
+  ) {
     this.stream = stream;
     this.sourceId = sourceId;
     this.track = track;
     this.format = format;
-    this.track.addEventListener(
-      'ended',
-      () => this.reportFatal(new Error('The selected camera was disconnected or stopped.')),
-      { once: true },
-    );
+    this.ownsStream = ownsStream;
+    this.track.addEventListener('ended', this.trackEndedHandler, { once: true });
     if (typeof window !== 'undefined') {
-      window.addEventListener('beforeunload', () => this.release(), { once: true });
+      window.addEventListener('beforeunload', this.beforeUnloadHandler, { once: true });
     }
   }
 
@@ -110,25 +137,47 @@ export class BrowserCameraRecorder {
     if (!navigator.mediaDevices?.getUserMedia) throw new Error('Camera access is unavailable in this Chromium build.');
     if (!MediaRecorder.isTypeSupported(MIME_TYPE))
       throw new Error('This Chromium build cannot record VP8 WebM camera video.');
-    // Keep the request permissive. Windows Media Foundation can reject an
-    // otherwise valid camera when a preferred resolution/fps combination
-    // cannot be allocated, especially after another camera stream was closed.
+    // Require the chosen device, but leave its format unconstrained. Windows
+    // Media Foundation can reject otherwise valid resolution/fps preferences.
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: false,
-      video: { deviceId: { ideal: deviceId(sourceId) } },
+      video: cameraVideoConstraints(sourceId),
     });
-    const track = stream.getVideoTracks()[0];
-    if (!track) {
+    if (!stream.getVideoTracks()[0]) {
       stream.getTracks().forEach((entry) => entry.stop());
       throw new Error('The selected camera did not provide a video track.');
     }
+    try {
+      await waitForCameraStream(stream);
+    } catch (error) {
+      stream.getTracks().forEach((entry) => entry.stop());
+      throw error;
+    }
+    return BrowserCameraRecorder.fromReadyStream(sourceId, stream, true);
+  }
+
+  static fromReadyStream(sourceId: string, stream: MediaStream, ownsStream = false) {
+    if (!MediaRecorder.isTypeSupported(MIME_TYPE))
+      throw new Error('This Chromium build cannot record VP8 WebM camera video.');
+    deviceId(sourceId);
+    const track = stream.getVideoTracks()[0];
+    if (!track) {
+      if (ownsStream) stream.getTracks().forEach((entry) => entry.stop());
+      throw new Error('The selected camera did not provide a video track.');
+    }
     const settings = track.getSettings();
-    return new BrowserCameraRecorder(stream, sourceId, track, {
-      codec: 'vp8',
-      width: positive(settings.width, 1920),
-      height: positive(settings.height, 1080),
-      nominalFps: positive(settings.frameRate, 30),
-    });
+    return new BrowserCameraRecorder(
+      stream,
+      sourceId,
+      track,
+      {
+        codec: 'vp8',
+        width: positive(settings.width, 1920),
+        height: positive(settings.height, 1080),
+        nominalFps: positive(settings.frameRate, 30),
+      },
+      ownsStream,
+    );
   }
 
   onFatal(handler: (error: Error) => void) {
@@ -140,20 +189,21 @@ export class BrowserCameraRecorder {
     appearance?: CameraAppearance,
     placement?: CameraPlacement,
     timelineStartedAt = performance.now(),
+    startNs?: number,
   ) {
     this.appearance = appearance;
     this.placement = placement;
     this.timelineStartedAt = timelineStartedAt;
     this.startFrameCounter();
-    await this.startSegment(sessionId, 0);
+    await this.startSegment(sessionId, startNs ?? this.nowNs());
   }
 
   async pause(endNs = this.nowNs()) {
     await this.finishSegment(endNs);
   }
 
-  async resume(sessionId: string) {
-    await this.startSegment(sessionId, this.nowNs());
+  async resume(sessionId: string, startNs = this.nowNs()) {
+    await this.startSegment(sessionId, startNs);
   }
 
   async stop(endNs = this.nowNs()) {
@@ -269,10 +319,125 @@ export class BrowserCameraRecorder {
 
   private release() {
     this.stopped = true;
+    this.track.removeEventListener('ended', this.trackEndedHandler);
+    if (typeof window !== 'undefined') window.removeEventListener('beforeunload', this.beforeUnloadHandler);
     this.video?.pause();
     if (this.video) this.video.srcObject = null;
     this.video = null;
-    this.stream.getTracks().forEach((entry) => entry.stop());
+    if (this.ownsStream) this.stream.getTracks().forEach((entry) => entry.stop());
+  }
+}
+
+export interface CameraRecorderHandle {
+  readonly sourceId: string;
+  readonly format: CameraFormat;
+  onFatal(handler: (error: Error) => void): void;
+  start(
+    sessionId: string,
+    appearance?: CameraAppearance,
+    placement?: CameraPlacement,
+    timelineStartedAt?: number,
+  ): Promise<void>;
+  pause(endNs?: number): Promise<void>;
+  resume(sessionId: string): Promise<void>;
+  stop(endNs?: number): Promise<void>;
+  fail(sessionId: string, reason: string): Promise<void>;
+}
+
+export class CameraOverlayRecorder implements CameraRecorderHandle {
+  private fatalHandler: ((error: Error) => void) | null = null;
+  private removeFailureListener: (() => void) | null = null;
+  private controlQueue = Promise.resolve();
+  private timelineStartedAt = performance.now();
+  private stopped = false;
+  readonly recordingId: string;
+  readonly sourceId: string;
+  readonly format: CameraFormat;
+
+  private constructor(recordingId: string, sourceId: string, format: CameraFormat) {
+    this.recordingId = recordingId;
+    this.sourceId = sourceId;
+    this.format = format;
+    this.removeFailureListener = api().onCameraRecordingFailure((failure) => {
+      if (this.stopped || failure.recordingId !== this.recordingId) return;
+      const handler = this.fatalHandler;
+      this.release();
+      handler?.(new Error(failure.message));
+    });
+  }
+
+  static async request(sourceId: string) {
+    const prepared = await api().controlCameraOverlayRecording({ action: 'prepare', sourceId });
+    if (!prepared) throw new Error('The camera overlay returned an invalid preparation result.');
+    return new CameraOverlayRecorder(prepared.recordingId, prepared.sourceId, prepared.format);
+  }
+
+  onFatal(handler: (error: Error) => void) {
+    this.fatalHandler = handler;
+  }
+
+  async start(
+    sessionId: string,
+    appearance?: CameraAppearance,
+    placement?: CameraPlacement,
+    timelineStartedAt = performance.now(),
+  ) {
+    this.timelineStartedAt = timelineStartedAt;
+    await this.control({
+      action: 'start',
+      recordingId: this.recordingId,
+      sessionId,
+      startNs: this.nowNs(),
+      appearance,
+      placement,
+    });
+  }
+
+  async pause(endNs = this.nowNs()) {
+    await this.control({ action: 'pause', recordingId: this.recordingId, endNs });
+  }
+
+  async resume(sessionId: string) {
+    await this.control({ action: 'resume', recordingId: this.recordingId, sessionId, startNs: this.nowNs() });
+  }
+
+  async stop(endNs = this.nowNs()) {
+    if (this.stopped) return;
+    try {
+      await this.control({ action: 'stop', recordingId: this.recordingId, endNs });
+    } finally {
+      this.release();
+    }
+  }
+
+  async fail(sessionId: string, reason: string) {
+    if (this.stopped) return;
+    try {
+      await this.control({ action: 'fail', recordingId: this.recordingId, sessionId, reason });
+    } finally {
+      this.release();
+    }
+  }
+
+  private async control(control: CameraRecordingControl) {
+    if (this.stopped) throw new Error('Camera recording has already stopped.');
+    const operation = this.controlQueue.then(() => api().controlCameraOverlayRecording(control));
+    this.controlQueue = operation.then(
+      () => undefined,
+      () => undefined,
+    );
+    await operation;
+  }
+
+  private nowNs() {
+    return Math.max(0, Math.round((performance.now() - this.timelineStartedAt) * 1_000_000));
+  }
+
+  private release() {
+    this.stopped = true;
+    this.removeFailureListener?.();
+    this.removeFailureListener = null;
+    this.fatalHandler = null;
   }
 }
 
