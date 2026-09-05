@@ -189,10 +189,18 @@ fn intersects_kwin_buffer_range_and_memfd_choice() {
     let result = filter_pods(&beam, &kwin_buffers_pod()).expect("KWin layout should intersect");
     let object = decoded_object(&result);
 
-    assert_eq!(
-        property(&object, spa::sys::SPA_PARAM_BUFFERS_buffers),
-        &choice_range(3, 2, 4)
-    );
+    let range = match property(&object, spa::sys::SPA_PARAM_BUFFERS_buffers) {
+        Value::Choice(ChoiceValue::Int(Choice(flags, ChoiceEnum::Range { default, min, max }))) => {
+            Some((flags, default, min, max))
+        }
+        _ => None,
+    };
+    let (flags, default, min, max) = range.expect("expected a negotiated buffer count range");
+    assert!(flags.is_empty());
+    assert_eq!((*min, *max), (2, 4));
+    // SPA versions may retain the producer's preference or clamp ours to the
+    // intersection. Both are valid as long as the default is inside that range.
+    assert!((*min..=*max).contains(default));
     assert_eq!(
         property(&object, spa::sys::SPA_PARAM_BUFFERS_dataType),
         &choice_flags(1_i32 << spa::sys::SPA_DATA_MemFd)
