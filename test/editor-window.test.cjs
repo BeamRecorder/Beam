@@ -15,10 +15,47 @@ function fakeWindow(calls, options = {}) {
     width: options.width ?? 1280,
     height: options.height ?? 800,
   };
+  const addContentListener = (event, listener, once = false) => {
+    const registrations = contentListeners.get(event) ?? [];
+    const registration = {
+      listener,
+      wrapped: once
+        ? (...args) => {
+            removeContentListener(event, registration.listener);
+            listener(...args);
+          }
+        : listener,
+    };
+    registrations.push(registration);
+    contentListeners.set(event, registrations);
+  };
+  const removeContentListener = (event, listener) => {
+    const registrations = contentListeners.get(event) ?? [];
+    const remaining = registrations.filter(
+      (registration) => registration.listener !== listener && registration.wrapped !== listener,
+    );
+    if (remaining.length > 0) contentListeners.set(event, remaining);
+    else contentListeners.delete(event);
+  };
+  const emitContent = (event, ...args) => {
+    for (const registration of (contentListeners.get(event) ?? []).slice()) registration.wrapped(...args);
+  };
   const webContents = {
     id: 42,
-    on: (event, listener) => contentListeners.set(event, listener),
-    once: (event, listener) => contentListeners.set(event, listener),
+    on: (event, listener) => {
+      addContentListener(event, listener);
+      return webContents;
+    },
+    once: (event, listener) => {
+      addContentListener(event, listener, true);
+      return webContents;
+    },
+    removeListener: (event, listener) => {
+      removeContentListener(event, listener);
+      return webContents;
+    },
+    listenerCount: (event) => (contentListeners.get(event) ?? []).length,
+    isDestroyed: () => destroyed,
     send: (...args) => calls.push(['editor-send', ...args]),
     openDevTools: (...args) => calls.push(['openDevTools', ...args]),
     closeDevTools: () => calls.push(['closeDevTools']),
@@ -26,7 +63,7 @@ function fakeWindow(calls, options = {}) {
   };
   return {
     webContents,
-    emitContent: (event) => contentListeners.get(event)?.(),
+    emitContent,
     on: (event, listener) => listeners.set(event, listener),
     emit: (event, ...args) => listeners.get(event)?.(...args),
     isDestroyed: () => destroyed,
@@ -44,11 +81,14 @@ function fakeWindow(calls, options = {}) {
     focus: () => calls.push(['focus']),
     close: () => {
       calls.push(['close']);
+      destroyed = true;
+      emitContent('destroyed');
       listeners.get('closed')?.();
     },
     destroy: () => {
       destroyed = true;
       calls.push(['destroy']);
+      emitContent('destroyed');
       listeners.get('closed')?.();
     },
     loadURL: (url) => calls.push(['loadURL', url]),
@@ -437,7 +477,7 @@ test('restores and persists editor window dimensions via preferencesStore', asyn
   }
 });
 
-function createRecorderFixture() {
+function createRecorderFixture({ isPackaged = false, cleanupWindow = null } = {}) {
   const calls = [];
   const windows = [];
   const ipcHandlers = new Map();
@@ -497,7 +537,7 @@ function createRecorderFixture() {
   const { createEditorWindowManager } = require('../electron/window/editor-window.cjs');
   const manager = createEditorWindowManager({
     applicationRoot: '/app',
-    isPackaged: false,
+    isPackaged,
     ipcMain: {
       handle: (channel, listener) => ipcHandlers.set(channel, listener),
       on: (channel, listener) => ipcListeners.set(channel, listener),
@@ -513,6 +553,7 @@ function createRecorderFixture() {
       },
     },
     registerController: () => undefined,
+    cleanupWindow,
   });
   return {
     calls,
@@ -527,6 +568,34 @@ function createRecorderFixture() {
     },
   };
 }
+
+test('editor destruction removes browser zoom policy listeners and still cleans the webContents owner', async () => {
+  const cleanedContents = [];
+  const fixture = createRecorderFixture({
+    isPackaged: true,
+    cleanupWindow: (contents) => cleanedContents.push(contents),
+  });
+  try {
+    const opening = fixture.manager.open(projectId);
+    const editor = await readyEditor(fixture, opening);
+
+    assert.equal(editor.webContents.listenerCount('zoom-changed'), 1);
+    assert.equal(editor.webContents.listenerCount('before-input-event'), 1);
+    assert.equal(editor.webContents.listenerCount('did-finish-load'), 2);
+
+    editor.emitContent('did-finish-load');
+    assert.equal(editor.webContents.listenerCount('did-finish-load'), 1);
+
+    editor.close();
+
+    assert.equal(editor.webContents.listenerCount('zoom-changed'), 0);
+    assert.equal(editor.webContents.listenerCount('before-input-event'), 0);
+    assert.equal(editor.webContents.listenerCount('did-finish-load'), 0);
+    assert.deepEqual(cleanedContents, [editor.webContents]);
+  } finally {
+    fixture.restore();
+  }
+});
 
 test('editor:open-recorder keeps the editor open, shows the real HUD, and supplies its media source', async () => {
   const fixture = createRecorderFixture();

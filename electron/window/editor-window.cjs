@@ -235,7 +235,7 @@ function createEditorWindowManager({
         zoomFactor: 1,
       },
     });
-    installBrowserZoomPolicy(window.webContents);
+    const cleanupBrowserZoomPolicy = installBrowserZoomPolicy(window.webContents);
     const session = {
       window,
       controller: null,
@@ -283,7 +283,10 @@ function createEditorWindowManager({
       if (!isPackaged) contents.openDevTools?.({ mode: 'detach' });
       sendProgress(session, 'loadingEditor');
     });
-    contents.once('destroyed', () => cleanupWindow?.(contents));
+    contents.once('destroyed', () => {
+      cleanupBrowserZoomPolicy();
+      cleanupWindow?.(contents);
+    });
     window.on('closed', () => {
       const shouldQuit = !session.returningToHud;
       if (session.returningToHud) session.resolvePresentation?.(false);

@@ -53,6 +53,34 @@ test('rejects duplicate global shortcuts', () => {
   );
 });
 
+test('repair returns safe runtime preferences for duplicate global shortcuts without rewriting the file', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-preferences-duplicate-shortcuts-'));
+  const file = path.join(directory, 'preferences.json');
+  const store = createPreferencesStore(file, { platform: 'darwin' });
+  const original = {
+    theme: 'dark',
+    devices: { cameraId: 'camera-1', micId: 'mic-1' },
+    extras: { locale: 'fr', marker: 'preserve-me' },
+    shortcuts: {
+      first: { keys: 'Ctrl+F', scope: 'global', category: 'hud' },
+      second: { keys: 'Ctrl+F', scope: 'global', category: 'editor' },
+    },
+  };
+  const originalContents = JSON.stringify(original);
+  fs.writeFileSync(file, originalContents);
+
+  const repaired = store.repair();
+
+  assert.equal(repaired.theme, 'dark');
+  assert.deepEqual(repaired.devices, original.devices);
+  assert.deepEqual(repaired.extras, original.extras);
+  assert.deepEqual(repaired.shortcuts, defaults('darwin').shortcuts);
+  assert.equal(fs.readFileSync(file, 'utf8'), originalContents);
+
+  assert.throws(() => store.patch({ extras: { changed: true } }), /dupliqué/);
+  assert.equal(fs.readFileSync(file, 'utf8'), originalContents);
+});
+
 test('accepts hover-only recorder visibility and falls back for invalid values', () => {
   assert.equal(normalize({ recordingBar: { visibility: 'hover-only' } }).recordingBar.visibility, 'hover-only');
   assert.equal(normalize({ recordingBar: { visibility: 'not-a-mode' } }, 'win32').recordingBar.visibility, 'always');
@@ -141,16 +169,102 @@ test('repair rewrites preferences.json with canonical HUD dimensions and preserv
   assert.deepEqual(persisted.extras, original.extras);
 });
 
-test('repair creates missing preferences and recovers malformed JSON with canonical HUD dimensions', () => {
-  for (const initialContents of [null, '{broken']) {
-    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-preferences-hud-window-recovery-'));
-    const file = path.join(directory, 'preferences.json');
-    if (initialContents !== null) fs.writeFileSync(file, initialContents);
-    const store = createPreferencesStore(file, { platform: 'darwin' });
+test('repair creates missing preferences and quarantines malformed JSON before writing defaults', () => {
+  const missingDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-preferences-hud-window-missing-'));
+  const missingFile = path.join(missingDirectory, 'preferences.json');
+  const missingStore = createPreferencesStore(missingFile, { platform: 'darwin' });
 
-    assert.deepEqual(store.repair().hudWindow, CANONICAL_HUD_WINDOW);
-    assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')).hudWindow, CANONICAL_HUD_WINDOW);
+  assert.deepEqual(missingStore.repair().hudWindow, CANONICAL_HUD_WINDOW);
+  assert.deepEqual(JSON.parse(fs.readFileSync(missingFile, 'utf8')).hudWindow, CANONICAL_HUD_WINDOW);
+  assert.equal(fs.existsSync(`${missingFile}.invalid`), false);
+
+  const malformedDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-preferences-hud-window-malformed-'));
+  const malformedFile = path.join(malformedDirectory, 'preferences.json');
+  const malformedContents = '{broken';
+  fs.writeFileSync(malformedFile, malformedContents);
+  const malformedStore = createPreferencesStore(malformedFile, { platform: 'darwin' });
+
+  const repaired = malformedStore.repair();
+  const quarantinedFile = `${malformedFile}.invalid`;
+
+  assert.deepEqual(repaired, defaults('darwin'));
+  assert.equal(fs.readFileSync(quarantinedFile, 'utf8'), malformedContents);
+  assert.deepEqual(JSON.parse(fs.readFileSync(malformedFile, 'utf8')), defaults('darwin'));
+});
+
+test('repair returns normalized preferences when writing the temporary file fails without replacing the original', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-preferences-repair-write-failure-'));
+  const file = path.join(directory, 'preferences.json');
+  const store = createPreferencesStore(file, { platform: 'darwin' });
+  const original = {
+    theme: 'dark',
+    hudWindow: { width: 640, height: 900 },
+    devices: { cameraId: 'camera-1' },
+    extras: { marker: 'preserve-me' },
+  };
+  const originalContents = JSON.stringify(original);
+  fs.writeFileSync(file, originalContents);
+  const writeFileSync = fs.writeFileSync;
+  let attempted = false;
+  fs.writeFileSync = (destination, ...args) => {
+    if (destination === `${file}.tmp`) {
+      attempted = true;
+      throw new Error('temporary preferences write failed');
+    }
+    return writeFileSync(destination, ...args);
+  };
+
+  let repaired;
+  try {
+    repaired = store.repair();
+  } finally {
+    fs.writeFileSync = writeFileSync;
   }
+
+  assert.equal(attempted, true);
+  assert.equal(repaired.theme, 'dark');
+  assert.deepEqual(repaired.hudWindow, CANONICAL_HUD_WINDOW);
+  assert.deepEqual(repaired.devices, original.devices);
+  assert.deepEqual(repaired.extras, original.extras);
+  assert.equal(fs.readFileSync(file, 'utf8'), originalContents);
+});
+
+test('repair returns normalized preferences when atomic rename fails without replacing the original', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-preferences-repair-rename-failure-'));
+  const file = path.join(directory, 'preferences.json');
+  const store = createPreferencesStore(file, { platform: 'darwin' });
+  const original = {
+    theme: 'dark',
+    hudWindow: { width: 640, height: 900 },
+    devices: { micId: 'mic-1' },
+    extras: { marker: 'preserve-me' },
+  };
+  const originalContents = JSON.stringify(original);
+  fs.writeFileSync(file, originalContents);
+  const renameSync = fs.renameSync;
+  let attempted = false;
+  fs.renameSync = (source, destination) => {
+    if (destination === file) {
+      attempted = true;
+      throw new Error('atomic preferences rename failed');
+    }
+    return renameSync(source, destination);
+  };
+
+  let repaired;
+  try {
+    repaired = store.repair();
+  } finally {
+    fs.renameSync = renameSync;
+    fs.rmSync(`${file}.tmp`, { force: true });
+  }
+
+  assert.equal(attempted, true);
+  assert.equal(repaired.theme, 'dark');
+  assert.deepEqual(repaired.hudWindow, CANONICAL_HUD_WINDOW);
+  assert.deepEqual(repaired.devices, original.devices);
+  assert.deepEqual(repaired.extras, original.extras);
+  assert.equal(fs.readFileSync(file, 'utf8'), originalContents);
 });
 
 test('preserves an explicit recorder visibility preference on Linux', () => {
