@@ -94,6 +94,35 @@ function expectedAlwaysOnTopLevel() {
   return process.platform === 'win32' ? 'screen-saver' : undefined;
 }
 
+function preferencesWithHudWindow(hudWindow, extras = {}) {
+  let hudWindowReads = 0;
+  const preferences = { extras };
+  Object.defineProperty(preferences, 'hudWindow', {
+    enumerable: true,
+    get: () => {
+      hudWindowReads += 1;
+      return hudWindow;
+    },
+  });
+  return {
+    read: () => preferences,
+    patch: () => undefined,
+    hudWindowReads: () => hudWindowReads,
+  };
+}
+
+function hudDisplay() {
+  const display = {
+    id: 1,
+    bounds: { x: 100, y: 200, width: 400, height: 600 },
+    workArea: { x: 100, y: 200, width: 400, height: 600 },
+  };
+  return {
+    getCursorScreenPoint: () => ({ x: 300, y: 500 }),
+    getDisplayNearestPoint: () => display,
+  };
+}
+
 test('hidden window ignores mouse events before it is ready', () => {
   const win = fakeWindow();
   new WindowController(win);
@@ -322,4 +351,58 @@ test('editor transition demotes and hides the HUD until it is explicitly shown a
 
   controller.setVisible(true);
   assert.equal(topCalls(win).at(-1)[1], true);
+});
+
+test('WindowController reads hudWindow and normalizes every unexpected size to the default', () => {
+  for (const hudWindow of [
+    undefined,
+    null,
+    {},
+    { width: 351, height: 512 },
+    { width: 352, height: 511 },
+    { width: 352.5, height: 512 },
+    { width: '352', height: 512 },
+    [352, 512],
+  ]) {
+    const preferencesStore = preferencesWithHudWindow(hudWindow);
+    const controller = new WindowController(fakeWindow(), { preferencesStore });
+
+    assert.ok(preferencesStore.hudWindowReads() > 0);
+    assert.deepEqual(controller.hudSize, HUD_SIZE);
+  }
+});
+
+test('showHud applies the normalized HUD size to native bounds, minimum, and saved-position clamping', () => {
+  const win = fakeWindow();
+  const controller = new WindowController(win, {
+    preferencesStore: preferencesWithHudWindow({ width: 999, height: 999 }, { hudPosition: { x: 999, y: 999 } }),
+    screenModule: hudDisplay(),
+  });
+
+  controller.showHud();
+
+  assert.deepEqual(win.getBounds(), { x: 148, y: 288, width: 352, height: 512 });
+  assert.deepEqual(win.calls.filter((call) => call[0] === 'minimumSize').at(-1), [
+    'minimumSize',
+    HUD_SIZE.width,
+    HUD_SIZE.height,
+  ]);
+  assert.deepEqual(win.calls.filter((call) => call[0] === 'position').at(-1), ['position', 148, 288]);
+});
+
+test('Recorder keeps its fixed 72x344 native bounds with an unexpected HUD size', () => {
+  const win = fakeWindow();
+  const controller = new WindowController(win, {
+    preferencesStore: preferencesWithHudWindow({ width: 1, height: 1 }),
+    screenModule: hudDisplay(),
+  });
+
+  controller.setMode('recorder');
+
+  assert.deepEqual(win.getBounds(), { x: 408, y: 328, width: 72, height: 344 });
+  assert.deepEqual(win.calls.filter((call) => call[0] === 'minimumSize').at(-1), [
+    'minimumSize',
+    RECORDER_SIZE.width,
+    RECORDER_SIZE.height,
+  ]);
 });

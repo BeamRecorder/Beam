@@ -1,4 +1,6 @@
-const HUD_SIZE = { width: 352, height: 512 };
+const { DEFAULT_HUD_WINDOW_SIZE, normalizeHudWindowSize } = require('./hud-window-size.cjs');
+
+const HUD_SIZE = DEFAULT_HUD_WINDOW_SIZE;
 const RECORDER_SIZE = { width: 72, height: 344 };
 
 function clampToDisplayBounds(x, y, width, height, displayBounds) {
@@ -28,14 +30,15 @@ class WindowController {
     this.recorderPositions = this.readRecorderPositions();
     this.recorderPositionSaveTimer = null;
     this.hudPosition = this.readHudPosition();
+    this.hudSize = this.readHudSize();
     this.hudPositionSaveTimer = null;
     if (this.hudPosition) {
       const display = this.screen.getDisplayNearestPoint({ x: this.hudPosition[0], y: this.hudPosition[1] });
       const position = clampToDisplayBounds(
         this.hudPosition[0],
         this.hudPosition[1],
-        HUD_SIZE.width,
-        HUD_SIZE.height,
+        this.hudSize.width,
+        this.hudSize.height,
         display.bounds,
       );
       this.window.setPosition(position.x, position.y);
@@ -120,6 +123,10 @@ class WindowController {
     return null;
   }
 
+  readHudSize() {
+    return normalizeHudWindowSize(this.preferencesStore?.read()?.hudWindow);
+  }
+
   rememberHudPosition() {
     if (this.mode !== 'hud' || this.window.isDestroyed()) return;
     const pos = this.window.getPosition();
@@ -173,6 +180,7 @@ class WindowController {
       this.flushHudPosition();
     }
     this.mode = mode;
+    if (mode === 'hud') this.hudSize = this.readHudSize();
     this.applySizeConstraints();
     if (mode === 'hud') this.hudOverInteractive = false;
     if (mode === 'recorder') this.placeRecorder();
@@ -183,8 +191,8 @@ class WindowController {
         const position = clampToDisplayBounds(
           targetPos[0],
           targetPos[1],
-          HUD_SIZE.width,
-          HUD_SIZE.height,
+          this.hudSize.width,
+          this.hudSize.height,
           display.bounds,
         );
         this.window.setPosition(position.x, position.y);
@@ -228,7 +236,7 @@ class WindowController {
   }
 
   applySizeConstraints() {
-    const minimumSize = this.mode === 'recorder' ? RECORDER_SIZE : HUD_SIZE;
+    const minimumSize = this.mode === 'recorder' ? RECORDER_SIZE : this.hudSize;
     this.window.setMinimumSize?.(minimumSize.width, minimumSize.height);
   }
 
@@ -330,19 +338,20 @@ class WindowController {
 
   showHud() {
     if (this.window.isDestroyed()) return;
+    this.hudSize = this.readHudSize();
     const applyHudBounds = () => {
       if (this.window.isDestroyed()) return;
       this.window.setResizable?.(false);
       this.window.setMaximizable?.(false);
-      this.window.setMinimumSize?.(HUD_SIZE.width, HUD_SIZE.height);
-      this.window.setSize?.(HUD_SIZE.width, HUD_SIZE.height);
+      this.window.setMinimumSize?.(this.hudSize.width, this.hudSize.height);
+      this.window.setSize?.(this.hudSize.width, this.hudSize.height);
       if (this.hudPosition && Array.isArray(this.hudPosition)) {
         const display = this.screen.getDisplayNearestPoint({ x: this.hudPosition[0], y: this.hudPosition[1] });
         const position = clampToDisplayBounds(
           this.hudPosition[0],
           this.hudPosition[1],
-          HUD_SIZE.width,
-          HUD_SIZE.height,
+          this.hudSize.width,
+          this.hudSize.height,
           display.bounds,
         );
         this.window.setPosition?.(position.x, position.y);

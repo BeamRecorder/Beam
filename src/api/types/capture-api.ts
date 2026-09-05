@@ -256,6 +256,7 @@ export interface PreferenceSettings {
   schemaVersion: 3;
   theme: 'light' | 'dark' | 'system';
   appearance?: AppearanceSettings;
+  hudWindow?: { width: number; height: number };
   recordingBar: { visibility: RecordingBarVisibility };
   recordingInteractions: { enabled: boolean; noticeDismissed: boolean };
   voiceover?: { countdownSeconds: 0 | 3 | 5 | 10; monitorProjectAudio: boolean };

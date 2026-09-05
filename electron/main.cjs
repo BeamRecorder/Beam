@@ -27,6 +27,8 @@ const {
 const { createProjectMediaHandler } = require('./projects/project-media-protocol.cjs');
 const { WindowController } = require('./window/window-controller.cjs');
 const { registerWindowIpc } = require('./window/window-ipc.cjs');
+const { enforceDefaultZoom, installBrowserZoomPolicy } = require('./window/browser-zoom-policy.cjs');
+const { normalizeHudWindowSize } = require('./window/hud-window-size.cjs');
 const { shouldAutoOpenDevTools } = require('./window/devtools-policy.cjs');
 const { createEditorWindowManager } = require('./window/editor-window.cjs');
 const { createOnboardingWindowManager } = require('./window/onboarding-window.cjs');
@@ -191,9 +193,10 @@ function getAppIconPath() {
 
 function createWindow(preferencesStore, appIconPath) {
   logStartup('Creating BrowserWindow.');
+  const initialSize = normalizeHudWindowSize(preferencesStore.read().hudWindow);
   const win = new BrowserWindow({
-    width: 352,
-    height: 512,
+    width: initialSize.width,
+    height: initialSize.height,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
@@ -208,14 +211,20 @@ function createWindow(preferencesStore, appIconPath) {
       contextIsolation: true,
       sandbox: false,
       webSecurity: false,
+      zoomFactor: 1,
     },
   });
+  // Calling setZoomFactor on a hidden window before its first paint can suppress
+  // `ready-to-show`. The constructor default handles initial rendering; reset
+  // persisted Chromium zoom only after that event.
+  installBrowserZoomPolicy(win.webContents, { resetOnLoad: false });
   const controller = new WindowController(win, { preferencesStore });
   controllers.set(win, controller);
   // use profileRendererRequests() to see all the requests made by the app and find out why it's slow to launch.
   // profileRendererRequests(win.webContents)
   win.once('ready-to-show', () => {
     logStartup('Window is ready to show (ready-to-show).');
+    enforceDefaultZoom(win.webContents);
     if (preferencesStore.read().onboardingCompleted) controller.markReadyToShow();
   });
   win.webContents.once('did-start-loading', () => logStartup('Renderer navigation started.'));
@@ -258,6 +267,7 @@ function initializeApplication() {
     registerInputAccessIpc(applicationIpc, inputAccess);
     const userPaths = createUserPaths(app.getPath('videos'));
     const preferencesStore = createPreferencesStore(userPaths.preferences, { platform: process.platform });
+    const startupPreferences = preferencesStore.repair();
     const applySpellCheck = (preferences) =>
       applySpellCheckPreferences({
         electronSession: session.defaultSession,
@@ -265,7 +275,7 @@ function initializeApplication() {
         platform: process.platform,
         systemLocale: app.getLocale(),
       });
-    applySpellCheck(preferencesStore.read());
+    applySpellCheck(startupPreferences);
     const spellCheckContextMenuCleanup = registerSpellCheckContextMenu({
       app,
       Menu,

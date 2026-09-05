@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { DEFAULT_HUD_WINDOW_SIZE, normalizeHudWindowSize } = require('../window/hud-window-size.cjs');
 
 const defaultAppearance = () => ({
   theme: 'light',
@@ -23,6 +24,7 @@ const defaults = (platform = process.platform) => ({
   schemaVersion: 3,
   theme: 'light',
   appearance: defaultAppearance(),
+  hudWindow: { ...DEFAULT_HUD_WINDOW_SIZE },
   recordingBar: { visibility: platform === 'linux' ? 'hover-only' : 'always' },
   recordingInteractions: { enabled: false, noticeDismissed: false },
   voiceover: { countdownSeconds: 3, monitorProjectAudio: false },
@@ -151,6 +153,7 @@ const normalize = (value, platform = process.platform) => {
     schemaVersion: 3,
     theme: resolvedTheme,
     appearance: appearanceSettings,
+    hudWindow: normalizeHudWindowSize(next.hudWindow),
     recordingBar: {
       visibility: ['always', 'auto-fade', 'hover-only'].includes(next.recordingBar?.visibility)
         ? next.recordingBar.visibility
@@ -215,6 +218,7 @@ function createPreferencesStore(file, { platform = process.platform } = {}) {
       ...(value || {}),
       theme: nextTheme,
       appearance: nextAppearance,
+      hudWindow: { ...current.hudWindow, ...value?.hudWindow },
       recordingBar: { ...current.recordingBar, ...(value?.recordingBar || {}) },
       recordingInteractions: {
         ...current.recordingInteractions,
@@ -228,6 +232,7 @@ function createPreferencesStore(file, { platform = process.platform } = {}) {
       extras: { ...current.extras, ...(value?.extras || {}) },
     });
   };
-  return { read, write, patch, file: targetFile };
+  const repair = () => write(read());
+  return { read, write, patch, repair, file: targetFile };
 }
 module.exports = { createPreferencesStore, defaults, normalize };

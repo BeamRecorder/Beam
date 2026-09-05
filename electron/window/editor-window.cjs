@@ -1,5 +1,6 @@
 const { BrowserWindow } = require('electron');
 const path = require('path');
+const { installBrowserZoomPolicy } = require('./browser-zoom-policy.cjs');
 
 const EDITOR_DEFAULT_SIZE = { width: 1280, height: 800 };
 const EDITOR_MIN_SIZE = { width: 960, height: 600 };
@@ -231,8 +232,10 @@ function createEditorWindowManager({
         contextIsolation: true,
         sandbox: false,
         webSecurity: false,
+        zoomFactor: 1,
       },
     });
+    installBrowserZoomPolicy(window.webContents);
     const session = {
       window,
       controller: null,

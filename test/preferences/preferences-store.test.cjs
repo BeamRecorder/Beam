@@ -5,6 +5,8 @@ const path = require('node:path');
 const test = require('node:test');
 const { createPreferencesStore, defaults, normalize } = require('../../electron/preferences/preferences-store.cjs');
 
+const CANONICAL_HUD_WINDOW = { width: 352, height: 512 };
+
 test('writes durable generic preferences and merges patches', () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-preferences-'));
   const store = createPreferencesStore(directory);
@@ -67,6 +69,88 @@ test('uses hover-only defaults on Linux and always-visible defaults on desktop p
   assert.equal(normalize({}, 'linux').recordingBar.visibility, 'hover-only');
   assert.equal(normalize({}, 'win32').recordingBar.visibility, 'always');
   assert.equal(normalize({}, 'darwin').recordingBar.visibility, 'always');
+});
+
+test('exposes canonical HUD window dimensions in defaults and normalized preferences', () => {
+  assert.deepEqual(defaults().hudWindow, CANONICAL_HUD_WINDOW);
+  assert.deepEqual(defaults('darwin').hudWindow, CANONICAL_HUD_WINDOW);
+  assert.deepEqual(normalize({}).hudWindow, CANONICAL_HUD_WINDOW);
+  assert.deepEqual(
+    normalize({ hudWindow: { width: 352, height: 512, unexpected: 'discarded' } }).hudWindow,
+    CANONICAL_HUD_WINDOW,
+  );
+});
+
+test('normalizes missing, partial, malformed, and unexpected HUD window sizes exactly', () => {
+  const invalidSizes = [
+    null,
+    {},
+    { width: 352 },
+    { height: 512 },
+    { width: undefined, height: 512 },
+    { width: 352, height: undefined },
+    { width: 351, height: 512 },
+    { width: 352, height: 511 },
+    { width: 352.5, height: 512 },
+    { width: 352, height: '512' },
+    { width: '352', height: 512 },
+    { width: 0, height: 0 },
+    { width: -352, height: -512 },
+    { width: 352, height: 512, scale: 2 },
+    [352, 512],
+    '352x512',
+    true,
+  ];
+
+  for (const hudWindow of invalidSizes) {
+    assert.deepEqual(normalize({ hudWindow }).hudWindow, CANONICAL_HUD_WINDOW, JSON.stringify(hudWindow));
+  }
+});
+
+test('repair rewrites preferences.json with canonical HUD dimensions and preserves valid preferences', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-preferences-hud-window-'));
+  const file = path.join(directory, 'preferences.json');
+  const store = createPreferencesStore(file, { platform: 'darwin' });
+  const original = {
+    theme: 'dark',
+    appearance: {
+      theme: 'dark',
+      primaryColor: '#8b5cf6',
+      secondaryColor: '#06b6d4',
+      radiusPx: 16,
+      isPillRadius: false,
+      surfaceTone: 'slate',
+      activePresetId: 'cyber-violet',
+    },
+    hudWindow: { width: 640, height: 900, staleScale: 2 },
+    recordingBar: { visibility: 'always' },
+    devices: { cameraId: 'camera-1', micId: 'mic-1' },
+    extras: { locale: 'fr', hudPosition: { x: 42, y: 84 } },
+  };
+  fs.writeFileSync(file, JSON.stringify(original));
+
+  const repaired = store.repair();
+  const persisted = JSON.parse(fs.readFileSync(file, 'utf8'));
+
+  assert.deepEqual(repaired.hudWindow, CANONICAL_HUD_WINDOW);
+  assert.deepEqual(persisted.hudWindow, CANONICAL_HUD_WINDOW);
+  assert.equal(persisted.theme, 'dark');
+  assert.equal(persisted.appearance.primaryColor, '#8b5cf6');
+  assert.equal(persisted.appearance.surfaceTone, 'slate');
+  assert.deepEqual(persisted.devices, original.devices);
+  assert.deepEqual(persisted.extras, original.extras);
+});
+
+test('repair creates missing preferences and recovers malformed JSON with canonical HUD dimensions', () => {
+  for (const initialContents of [null, '{broken']) {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-preferences-hud-window-recovery-'));
+    const file = path.join(directory, 'preferences.json');
+    if (initialContents !== null) fs.writeFileSync(file, initialContents);
+    const store = createPreferencesStore(file, { platform: 'darwin' });
+
+    assert.deepEqual(store.repair().hudWindow, CANONICAL_HUD_WINDOW);
+    assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')).hudWindow, CANONICAL_HUD_WINDOW);
+  }
 });
 
 test('preserves an explicit recorder visibility preference on Linux', () => {

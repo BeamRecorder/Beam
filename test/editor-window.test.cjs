@@ -134,6 +134,7 @@ test('editor window is opaque and routes native editor lifecycle without changin
     assert.equal(options.icon, appIconPath);
     assert.equal(options.minWidth, EDITOR_MIN_SIZE.width);
     assert.equal(options.minHeight, EDITOR_MIN_SIZE.height);
+    assert.equal(options.webPreferences.zoomFactor, 1);
     if (process.platform !== 'darwin') {
       assert.deepEqual(options.titleBarOverlay, {
         color: '#00000000',
