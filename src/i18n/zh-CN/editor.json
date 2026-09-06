@@ -213,7 +213,12 @@
     "textCaptions": "文本字幕",
     "rippleDelete": "删除并闭合空隙",
     "copyUnavailable": "复制前选择时间线项目。",
-    "clipboardEmpty": "粘贴之前复制时间线项目。"
+    "clipboardEmpty": "粘贴之前复制时间线项目。",
+    "lock": "锁定",
+    "unlock": "解锁",
+    "locked": "已锁定",
+    "removeGap": "删除间隙",
+    "lockedMessage": "{name} 已锁定，无法修改。"
   },
   "TimelineVideoClip": {
     "trimStart": "裁剪开头",
@@ -439,5 +444,12 @@
       "large": "下载量较大；建议使用 WebGPU。",
       "veryLarge": "没有 WebGPU 时体积很大且速度较慢。"
     }
+  },
+  "RecordingSidecarLinks": {
+    "title": "关联项目",
+    "description": "关联项目会随录制一起移动。取消关联后，移动录制时该项目将保持原位。",
+    "unlinkOne": "取消关联 {name}",
+    "unlink": "取消关联",
+    "unlinkAll": "取消全部关联"
   }
 }

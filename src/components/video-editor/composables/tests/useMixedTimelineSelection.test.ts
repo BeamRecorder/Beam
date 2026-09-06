@@ -200,4 +200,96 @@ describe('useMixedTimelineSelection', () => {
     expect(selection.selectedZoomId.value).toBe('zoom-2');
     expect(selection.openPropertiesPanel).toHaveBeenCalledTimes(5);
   });
+
+  it('filters and deduplicates box selections, chooses a clip primary, and updates the range anchor', () => {
+    const selection = createSelection();
+
+    selection.state.selectBox({
+      clipIds: ['missing-clip', 'clip-2', 'clip-2'],
+      zoomIds: ['missing-zoom', 'zoom-1', 'zoom-1'],
+    });
+
+    expect(selection.selectedClipIds.value).toEqual(['clip-2']);
+    expect(selection.selectedZoomIds.value).toEqual(['zoom-1']);
+    expect(selection.selectedClipId.value).toBe('clip-2');
+    expect(selection.selectedZoomId.value).toBe('zoom-1');
+    expect(selection.activeTab.value).toBe('clip');
+
+    selection.state.selectItem({ kind: 'zoom', id: 'zoom-2', intent: 'range' });
+    expect(selection.selectedClipIds.value).toEqual(['clip-2']);
+    expect(selection.selectedZoomIds.value).toEqual(['zoom-2']);
+    expect(selection.selectedClipId.value).toBe('clip-2');
+    expect(selection.selectedZoomId.value).toBe('zoom-2');
+
+    selection.state.selectBox({ clipIds: ['missing-clip'], zoomIds: ['missing-zoom'] });
+    expect(selection.selectedClipIds.value).toEqual([]);
+    expect(selection.selectedZoomIds.value).toEqual([]);
+    expect(selection.selectedClipId.value).toBeNull();
+    expect(selection.selectedZoomId.value).toBeNull();
+  });
+
+  it('falls back to a zoom target when a range selection has no anchor', () => {
+    const selection = createSelection();
+
+    selection.state.selectItem({ kind: 'zoom', id: 'zoom-2', intent: 'range' });
+
+    expect(selection.selectedClipIds.value).toEqual([]);
+    expect(selection.selectedZoomIds.value).toEqual(['zoom-2']);
+    expect(selection.selectedClipId.value).toBeNull();
+    expect(selection.selectedZoomId.value).toBe('zoom-2');
+    expect(selection.activeTab.value).toBe('zoom');
+  });
+
+  it('orders tied items by kind and id and handles an empty select-all', () => {
+    const selection = createSelection({
+      clips: [clip('clip-b', 1_000), clip('clip-a', 1_000)],
+      zooms: [zoom('zoom-b', 1_000), zoom('zoom-a', 1_000)],
+    });
+
+    selection.state.selectAll();
+
+    expect(selection.selectedClipIds.value).toEqual(['clip-a', 'clip-b']);
+    expect(selection.selectedZoomIds.value).toEqual(['zoom-a', 'zoom-b']);
+    expect(selection.selectedClipId.value).toBe('clip-a');
+    expect(selection.activeTab.value).toBe('clip');
+
+    const empty = createSelection({ clips: [], zooms: [] });
+    empty.state.selectAll();
+
+    expect(empty.selectedClipIds.value).toEqual([]);
+    expect(empty.selectedZoomIds.value).toEqual([]);
+    expect(empty.selectedClipId.value).toBeNull();
+    expect(empty.selectedZoomId.value).toBeNull();
+    expect(empty.activeTab.value).toBe('canvas');
+  });
+
+  it('keeps track selections usable when no primary item is supplied', () => {
+    const clips = createSelection();
+
+    clips.state.selectClipTrack({ clipIds: ['clip-1'], primaryClipId: null, trackNames: ['Screen'] });
+
+    expect(clips.selectedClipIds.value).toEqual(['clip-1']);
+    expect(clips.selectedClipId.value).toBe('clip-1');
+    expect(clips.activeTab.value).toBe('canvas');
+
+    const zooms = createSelection();
+    zooms.state.selectZoomTrack({ zoomIds: ['zoom-2'], primaryZoomId: null });
+
+    expect(zooms.selectedClipIds.value).toEqual([]);
+    expect(zooms.selectedZoomIds.value).toEqual(['zoom-2']);
+    expect(zooms.selectedZoomId.value).toBe('zoom-2');
+    expect(zooms.activeTab.value).toBe('canvas');
+  });
+
+  it('selects a zoom-only box and uses it as the primary item', () => {
+    const selection = createSelection();
+
+    selection.state.selectBox({ clipIds: [], zoomIds: ['zoom-2'] });
+
+    expect(selection.selectedClipIds.value).toEqual([]);
+    expect(selection.selectedZoomIds.value).toEqual(['zoom-2']);
+    expect(selection.selectedClipId.value).toBeNull();
+    expect(selection.selectedZoomId.value).toBe('zoom-2');
+    expect(selection.activeTab.value).toBe('zoom');
+  });
 });

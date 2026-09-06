@@ -3,6 +3,17 @@ import { useCropPreview } from './composables/useCropPreview';
 import { computed, nextTick, onBeforeUnmount, onMounted, provide, ref, toRef, watch } from 'vue';
 import type { CaptureProject, ProjectEditorData } from '~/api/types/capture-api';
 import SidebarPanel from '~/components/video-editor/sidebar/SidebarPanel.vue';
+import {
+  TimelineLockedError,
+  preservesLockedItems,
+  preservesLockedAssets,
+  lockedTimelineSelection,
+  setTimelineLocks,
+} from './composition/timeline-locks';
+import { unlinkRecordingSidecars } from './composition/recording-sidecars';
+import type { RecordingSidecarUnlink } from './composition/recording-sidecar-types';
+import { removeTimelineGap } from './composition/timeline-gaps';
+import type { TimelineGap, TimelineLockRequest } from './composition/timeline-lock-types';
 import PropertiesPanel from '~/components/video-editor/properties/PropertiesPanel.vue';
 import EditorCanvas from '~/components/video-editor/canvas/EditorCanvas.vue';
 import type {
@@ -72,6 +83,7 @@ import type {
 
 const { t } = useTranslate('VideoEditor');
 const { t: tTopbarHud } = useTranslate('TopbarHUD');
+const { t: tTimelineTracks } = useTranslate('TimelineTracks');
 const { t: tTimelineToolbar } = useTranslate('TimelineToolbar');
 const props = withDefaults(
   defineProps<{
@@ -187,7 +199,6 @@ const {
   updateSelectedVolume,
   updateSelectedEnabled,
   toggleClip,
-  detachSelectedClip,
 } = compositionState;
 const mediaDrop = useEditorMediaDrop({
   projectId: () => props.project?.id ?? null,
@@ -242,12 +253,18 @@ const {
 });
 const { isExporting, progress: exportProgress } = useExportJob();
 const timelineCompositionPreview = ref<typeof composition.value | null>(null);
+const timelineZoomPreview = ref<ZoomElement[] | null>(null);
 const timelinePreviewDuration = computed(() => {
   const previewDurationMs = timelineCompositionPreview.value?.clips.reduce(
     (maximum, clip) => Math.max(maximum, clip.timelineStartMs + clip.timelineDurationMs),
     0,
   );
-  return previewDurationMs === undefined ? duration.value : previewDurationMs / 1_000;
+  return (
+    Math.max(
+      previewDurationMs ?? duration.value * 1_000,
+      ...(timelineZoomPreview.value ?? zoomElements.value).map((zoom) => zoom.endMs),
+    ) / 1_000
+  );
 });
 const timelineCanvasPreview = ref<OutputCanvasSettings | null>(null);
 const captionCompositionPreview = ref<typeof composition.value | null>(null);
@@ -263,7 +280,15 @@ const canvasComposition = computed(
     composition.value,
 );
 const renderedOutputCanvas = computed(() => timelineCanvasPreview.value ?? outputCanvas.value);
+const lockedSelection = computed(() =>
+  lockedTimelineSelection(composition.value, zoomElements.value, {
+    clipIds: selectedClipIds.value,
+    zoomIds: selectedZoomIds.value,
+  }),
+);
+const editLocked = computed(() => lockedSelection.value.clipIds.length > 0 || lockedSelection.value.zoomIds.length > 0);
 const selectedTransformClip = computed(() => {
+  if (editLocked.value) return null;
   if (selectedClipIds.value.length !== 1) return null;
   const clip =
     cropCompositionPreview.value?.clips.find((item) => item.id === selectedClipId.value) ?? selectedClip.value;
@@ -300,6 +325,7 @@ const selectPropertiesTab = (tab: string) => {
 const {
   selectItem: selectTimelineItem,
   selectAll: selectAllTimelineItems,
+  selectBox: selectTimelineBox,
   clearAll: clearTimelineSelection,
 } = useMixedTimelineSelection({
   composition,
@@ -373,8 +399,9 @@ const deselectTransformClip = () => {
 };
 const replaceComposition = (value: typeof composition.value) => {
   captionCompositionPreview.value = null;
+  const before = composition.value;
   composition.value = value;
-  editorState.scheduleSave();
+  if (composition.value !== before) editorState.scheduleSave();
 };
 const previewComposition = (value: typeof composition.value | null) => {
   captionCompositionPreview.value = value;
@@ -433,8 +460,8 @@ const {
   lastAction: historyAction,
 } = useEditorUndoRedo({
   onRestoreSnapshot: async (snapshot) => {
-    composition.value = snapshot.composition;
-    zoomElements.value = snapshot.zoomElements;
+    compositionState.restoreComposition(snapshot.composition);
+    zoomState.restoreZoomElements(snapshot.zoomElements);
     if (snapshot.zoomMotionBlur) zoomMotionBlur.value = snapshot.zoomMotionBlur;
     if (snapshot.zoomAutoFollow) zoomAutoFollow.value = snapshot.zoomAutoFollow;
     outputCanvas.value = snapshot.outputCanvas;
@@ -479,10 +506,11 @@ const {
   toggleMonitoring: toggleVoiceoverMonitoring,
   updateCountdown: updateVoiceoverCountdown,
 } = voiceover;
-const timelineDisplayDuration = computed(() => {
+const timelineBaseDuration = computed(() => {
   const voiceoverEndMs = voiceoverState.draft ? voiceoverState.draft.startMs + voiceoverState.draft.durationMs : 0;
-  return Math.max(timelinePreviewDuration.value, voiceoverEndMs / 1_000);
+  return Math.max(duration.value, voiceoverEndMs / 1_000, ...zoomElements.value.map((zoom) => zoom.endMs / 1_000));
 });
+const timelineDisplayDuration = computed(() => Math.max(timelinePreviewDuration.value, timelineBaseDuration.value));
 const beginInlineCaptionEditing = () => {
   if (isInlineCaptionEditing.value) return;
   isInlineCaptionEditing.value = true;
@@ -522,6 +550,11 @@ const pasteTimelineItem = (request: TimelinePasteRequest) => {
         targetTrackId,
         asset: request.item.asset,
       });
+      if (
+        !preservesLockedItems(composition.value.clips, pasted.composition.clips) ||
+        !preservesLockedAssets(composition.value, pasted.composition)
+      )
+        throw new Error(tTimelineTracks('locked'));
       composition.value = pasted.composition;
       selectEditorClip(pasted.clipId);
       editorState.scheduleSave();
@@ -530,10 +563,56 @@ const pasteTimelineItem = (request: TimelinePasteRequest) => {
     commitNow(createEditorSnapshot());
     reportTimelinePasteSuccess(pastedId, request.item);
   } catch (error) {
-    reportTimelinePasteError(error instanceof Error ? error.message : String(error));
+    reportTimelinePasteError(
+      error instanceof TimelineLockedError
+        ? tTimelineTracks('locked')
+        : error instanceof Error
+          ? error.message
+          : String(error),
+    );
   }
 };
 
+const unlinkSidecars = (request: RecordingSidecarUnlink) => {
+  finishCrop();
+  const next = unlinkRecordingSidecars(composition.value, zoomElements.value, request);
+  if (next.composition === composition.value) return;
+  commitNow(createEditorSnapshot());
+  composition.value = next.composition;
+  zoomElements.value = next.zoomElements;
+  commitNow(createEditorSnapshot());
+  editorState.scheduleSave();
+};
+const lockTimelineSelection = (request: TimelineLockRequest) => {
+  finishCrop();
+  commitNow(createEditorSnapshot());
+  const next = setTimelineLocks(composition.value, zoomElements.value, request);
+  composition.value = next.composition;
+  zoomElements.value = next.zoomElements;
+  commitNow(createEditorSnapshot());
+  editorState.scheduleSave();
+};
+const closeTimelineGap = (gap: TimelineGap) => {
+  finishCrop();
+  const next = removeTimelineGap(composition.value, gap);
+  if (next === composition.value) return;
+  const before = new Map(composition.value.clips.map((clip) => [clip.id, clip.timelineStartMs]));
+  const result = shiftTimelineSelection({
+    composition: composition.value,
+    zoomElements: zoomElements.value,
+    selection: {
+      clipIds: next.clips.filter((clip) => before.get(clip.id) !== clip.timelineStartMs).map((clip) => clip.id),
+      zoomIds: [],
+    },
+    deltaMs: gap.startMs - gap.endMs,
+  });
+  if (result.deltaMs !== gap.startMs - gap.endMs) return;
+  commitNow(createEditorSnapshot());
+  composition.value = result.composition;
+  zoomElements.value = result.zoomElements;
+  commitNow(createEditorSnapshot());
+  editorState.scheduleSave();
+};
 const commitSelectedTransform = (transform: NormalizedTransform) => {
   updateSelectedTransform(transform);
   commitNow(createEditorSnapshot());
@@ -752,6 +831,8 @@ onBeforeUnmount(() => {
         <SidebarPanel :active-tab="activeTab" :panel-open="isPropertiesPanelOpen" @select-tab="selectPropertiesTab" />
         <PropertiesPanel
           v-if="isPropertiesPanelOpen"
+          :locked-selection="lockedSelection"
+          @unlock:selection="lockTimelineSelection({ ...lockedSelection, locked: false })"
           ref="propertiesPanelRef"
           :active-tab="activeTab"
           :selected-clip="
@@ -783,6 +864,7 @@ onBeforeUnmount(() => {
           :blur-percent="backgroundBlurPercent"
           :background-groups="backgroundGroups"
           :selected-zoom="selectedZoom"
+          :zoom-elements="zoomElements"
           :can-generate-zooms="canGenerateZooms"
           :has-automatic-zooms="hasAutomaticZooms"
           :zoom-motion-blur="zoomMotionBlur"
@@ -819,7 +901,7 @@ onBeforeUnmount(() => {
           @update:clip-volume="updateSelectedVolume"
           @update:blur="updateSelectedBlur"
           @update:clip-enabled="updateSelectedEnabled"
-          @unlink-clip="detachSelectedClip"
+          @unlink-sidecars="unlinkSidecars"
           @update:clip-is-mirrored="updateSelectedMirrored"
           @update:clip-is-mirrored-y="updateSelectedMirroredY"
           @update:clip-corner-radius="
@@ -911,10 +993,10 @@ onBeforeUnmount(() => {
               :playback-state="playbackState"
               :playback-error="playbackError"
               :editor-data="editorData"
-              :zoom-elements="zoomElements"
+              :zoom-elements="timelineZoomPreview ?? zoomElements"
               :zoom-motion-blur="zoomMotionBlur"
               :zoom-auto-follow="zoomAutoFollow"
-              :selected-zoom="selectedZoom"
+              :selected-zoom="editLocked ? null : selectedZoom"
               :composition="canvasComposition"
               :output-canvas="renderedOutputCanvas"
               :active-tab="activeTab"
@@ -943,7 +1025,7 @@ onBeforeUnmount(() => {
               :duration="timelineDisplayDuration"
               :is-playing="isPlaying"
               :loading="!initialPlaybackSettled || isVoiceoverOpen"
-              :can-split="selectedClipIds.length === 1"
+              :can-split="!editLocked && selectedClipIds.length === 1"
               :is-canvas-fullscreen="canvasFullscreen.isFullscreen.value"
               v-model:zoom-level="timelineZoomLevel"
               v-model:is-snapping-enabled="isSnappingEnabled"
@@ -986,7 +1068,7 @@ onBeforeUnmount(() => {
           v-model:zoom-level="timelineZoomLevel"
           :is-snapping-enabled="isSnappingEnabled"
           :project-id="project?.id"
-          :duration="timelineDisplayDuration"
+          :duration="timelineBaseDuration"
           :export-progress="exportProgress"
           :include-audio-in-export="includeAudioInExport"
           :zoom-elements="zoomElements"
@@ -1006,6 +1088,12 @@ onBeforeUnmount(() => {
           @select:clip="selectEditorClip"
           @select:track="selectEditorTrack"
           @select:item="handleTimelineItemSelection"
+          @lock:selection="lockTimelineSelection"
+          @remove:gap="closeTimelineGap"
+          @select:box="
+            finishCrop();
+            selectTimelineBox($event);
+          "
           @select:all="
             finishCrop();
             selectAllTimelineItems();
@@ -1018,6 +1106,7 @@ onBeforeUnmount(() => {
           @trim:clip="trimClipEdge($event.id, $event.edge, $event.timeMs)"
           @move:clip="moveClipTo($event.id, $event.startMs)"
           @preview:composition="timelineCompositionPreview = $event"
+          @preview:zooms="timelineZoomPreview = $event"
           @trim:zoom="trimZoomEdge($event.id, $event.edge, $event.timeMs)"
           @move:zoom="moveZoom($event.id, $event.startMs, $event.endMs)"
           @move:selection="moveTimelineSelection"

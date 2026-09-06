@@ -49,7 +49,7 @@ export function useAudioNormalization(options: { composition: Ref<ClipCompositio
     for (const clipId of targets) {
       let targetChanged = false;
       const initialClip = next.clips.find((clip) => clip.id === clipId);
-      if (!initialClip || !isAudioClip(initialClip)) continue;
+      if (!initialClip || initialClip.locked || !isAudioClip(initialClip)) continue;
       const asset = next.assets.find((entry) => entry.id === initialClip.assetId);
       if (!asset) continue;
       const key = audioAnalysisKey(asset.id, initialClip.sourceInMs, initialClip.sourceDurationMs);
@@ -69,6 +69,7 @@ export function useAudioNormalization(options: { composition: Ref<ClipCompositio
         const currentClip = next.clips.find((clip) => clip.id === clipId);
         if (
           !currentClip ||
+          currentClip.locked ||
           !isAudioClip(currentClip) ||
           currentClip.assetId !== initialClip.assetId ||
           currentClip.sourceInMs !== initialClip.sourceInMs ||
@@ -120,7 +121,7 @@ export function useAudioNormalization(options: { composition: Ref<ClipCompositio
     let changed = false;
     for (const clipId of new Set(clipIds)) {
       const clip = next.clips.find((entry) => entry.id === clipId);
-      if (!clip || !isAudioClip(clip) || !clip.normalization) continue;
+      if (!clip || clip.locked || !isAudioClip(clip) || !clip.normalization) continue;
       next = setAudioNormalization(next, clipId, undefined);
       statuses[clipId] = undefined;
       errors[clipId] = undefined;

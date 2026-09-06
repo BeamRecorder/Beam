@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import TimelineLockOverlay from './TimelineLockOverlay.vue';
+import { Lock } from '@lucide/vue';
 import { computed, onUnmounted, ref, watch } from 'vue';
 import { sourceTimeAt } from '~/media/shared';
 import { useThumbnails } from './waveform/useThumbnails';
@@ -122,6 +124,7 @@ onUnmounted(() => stopMarquee());
   <button
     type="button"
     class="timeline-clip"
+    :data-timeline-clip-id="clip.id"
     :class="[`kind-${clip.kind}`, { selected, disabled: !clip.enabled, 'trim-at-limit': trimState?.atLimit }]"
     :data-paste-highlight="pasteHighlight || undefined"
     :style="clipStyle"
@@ -204,7 +207,9 @@ onUnmounted(() => stopMarquee());
         formatTrimTime(trimState.durationMs)
       }}</span>
     </span>
+    <TimelineLockOverlay v-if="clip.locked" />
     <span class="clip-label-overlay">
+      <Lock v-if="clip.locked" :size="12" :aria-label="t('locked')" />
       <span class="clip-label-text">{{ 'freezeFrameSourceMs' in clip ? t('holdSegment') : clip.name }}</span>
       <span v-if="Math.abs(clip.playbackRate - 1) > 0.01" class="speed-badge">{{ clip.playbackRate.toFixed(2) }}×</span>
     </span>

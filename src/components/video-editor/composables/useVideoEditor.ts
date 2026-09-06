@@ -58,10 +58,18 @@ export function useVideoEditor(options: {
   // Composition state is available before the asynchronous playback engine has
   // decoded metadata, so it is the authoritative duration for zoom generation.
   const durationMs = computed(() => compositionDurationMs(compositionState.composition.value));
-  const zoomState = useProjectZoom({ editorData, durationMs, activeTab, editorDefaults });
+  const zoomState = useProjectZoom({
+    editorData,
+    durationMs,
+    activeTab,
+    editorDefaults,
+    composition: compositionState.composition,
+  });
   const editorState = useProjectEditorState({
     project,
     composition: compositionState.composition,
+    restoreComposition: compositionState.restoreComposition,
+    restoreZoomElements: zoomState.restoreZoomElements,
     zoomElements: zoomState.zoomElements,
     generatedSessions: zoomState.generatedSessions,
     zoomMotionBlur: zoomState.zoomMotionBlur,

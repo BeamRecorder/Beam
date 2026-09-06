@@ -23,6 +23,7 @@ import type { PhoneFrameFill } from '~/media/shared/color-fill-types';
 import type { ZoomAutoFollowSettings, ZoomElement, ZoomMotionBlurSettings } from '../zoom/zoom-types';
 
 export interface PropertiesPanelProps {
+  lockedSelection?: import('../composition/timeline-edit-types').TimelineSelectionIds;
   activeTab: string;
   selectedClip?: SelectedClipProperties | null;
   selectedCaptionClip?: CaptionClip | null;
@@ -50,6 +51,7 @@ export interface PropertiesPanelProps {
   blurPercent: number;
   backgroundGroups: BackgroundMediaGroup[];
   selectedZoom: ZoomElement | null;
+  zoomElements?: ZoomElement[];
   canGenerateZooms: boolean;
   hasAutomaticZooms: boolean;
   zoomAutoFollow?: ZoomAutoFollowSettings;
@@ -63,6 +65,7 @@ export interface PropertiesPanelProps {
   audioNormalizationErrors?: Record<string, string | undefined>;
 }
 export interface PropertiesPanelEmits {
+  (event: 'unlock:selection'): void;
   (event: 'update:cursorSelection', value: CursorSelection): void;
   (event: 'preview:cursorSelection', value: CursorSelection | null): void;
   (event: 'update:cursorSize', value: number): void;
@@ -136,7 +139,7 @@ export interface PropertiesPanelEmits {
   (event: 'update:camera-split-padding', padding: number): void;
   (event: 'update:webcam-react-to-zoom', enabled: boolean): void;
   (event: 'reset:clip-transform'): void;
-  (event: 'unlink-clip'): void;
+  (event: 'unlink-sidecars', request: import('../composition/recording-sidecar-types').RecordingSidecarUnlink): void;
   (event: 'delete-clip'): void;
   (event: 'delete:system-audio'): void;
   (event: 'delete:mic-audio'): void;

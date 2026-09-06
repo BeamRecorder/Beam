@@ -291,18 +291,14 @@ fn ffmpeg_error(code: NativeCaptureErrorCode, message: impl Into<String>) -> Cap
 #[cfg(test)]
 #[allow(clippy::expect_used)]
 mod tests {
-    use std::{fs, os::unix::fs::PermissionsExt};
-
     use super::{has_named_component, probe_ffmpeg_at, select_h264_encoder};
 
-    fn executable(script: &str) -> (tempfile::TempDir, std::path::PathBuf) {
-        let directory = tempfile::tempdir().expect("temporary FFmpeg probe directory");
-        let path = directory.path().join("ffmpeg-test");
-        fs::write(&path, script).expect("write FFmpeg probe");
-        let mut permissions = fs::metadata(&path).expect("probe metadata").permissions();
-        permissions.set_mode(0o755);
-        fs::set_permissions(&path, permissions).expect("make probe executable");
-        (directory, path)
+    fn executable(name: &str) -> std::path::PathBuf {
+        // Checked-in fixtures have no writable descriptors that concurrent
+        // subprocesses could inherit and temporarily make non-executable.
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures/ffmpeg")
+            .join(name)
     }
 
     #[test]
@@ -336,9 +332,7 @@ mod tests {
 
     #[test]
     fn probe_accepts_ffmpeg_eight_output() {
-        let (_directory, path) = executable(
-            "#!/bin/sh\ncase \"$2\" in\n-version) printf 'ffmpeg version 8.0.1-3ubuntu2+esm1 Copyright (c) 2000-2025 the FFmpeg developers\\n' ;;\n-encoders) printf ' V....D libx264              libx264 H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10\\n' ;;\n-muxers) printf '  E  mp4             MP4 (MPEG-4 Part 14)\\n' ;;\nesac\n",
-        );
+        let path = executable("eight.sh");
         let capabilities = probe_ffmpeg_at(path).expect("Ubuntu FFmpeg 8 output");
         assert_eq!(capabilities.encoder.name, "libx264");
     }
@@ -352,9 +346,7 @@ mod tests {
 
     #[test]
     fn probe_accepts_openh264_and_the_mp4_muxer() {
-        let (_directory, path) = executable(
-            "#!/bin/sh\ncase \"$2\" in\n-version) printf 'ffmpeg version fake\\n' ;;\n-encoders) printf ' V....D libopenh264 fake\\n' ;;\n-muxers) printf ' E mp4 fake\\n' ;;\nesac\n",
-        );
+        let path = executable("openh264.sh");
         let capabilities = probe_ffmpeg_at(path).expect("valid fake FFmpeg");
         assert_eq!(capabilities.encoder.name, "libopenh264");
         assert!(!capabilities.encoder.is_hardware());
@@ -362,18 +354,14 @@ mod tests {
 
     #[test]
     fn probe_rejects_ffmpeg_without_a_supported_encoder() {
-        let (_directory, path) = executable(
-            "#!/bin/sh\ncase \"$2\" in\n-version) printf 'ffmpeg version fake\\n' ;;\n-encoders) printf ' V..... mpeg4 fake\\n' ;;\n-muxers) printf ' E mp4 fake\\n' ;;\nesac\n",
-        );
+        let path = executable("missing-encoder.sh");
         let error = probe_ffmpeg_at(path).expect_err("missing H.264 encoder must fail");
         assert_eq!(error.code(), "ffmpeg-encoder-unavailable", "{error}");
     }
 
     #[test]
     fn probe_rejects_ffmpeg_without_the_mp4_muxer() {
-        let (_directory, path) = executable(
-            "#!/bin/sh\ncase \"$2\" in\n-version) printf 'ffmpeg version fake\\n' ;;\n-encoders) printf ' V....D libx264 fake\\n' ;;\n-muxers) printf ' E matroska fake\\n' ;;\nesac\n",
-        );
+        let path = executable("missing-muxer.sh");
         let error = probe_ffmpeg_at(path).expect_err("missing MP4 muxer must fail");
         assert_eq!(error.code(), "ffmpeg-unavailable");
     }

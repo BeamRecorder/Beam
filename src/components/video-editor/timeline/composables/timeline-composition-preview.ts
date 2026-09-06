@@ -1,3 +1,4 @@
+import type { TimelineSelectionMoveResult } from '../../composition/timeline-edit-types';
 import { clipEndMs, isVisualClip, type Clip, type ClipComposition } from '~/media/shared/composition-types';
 import { visualTrimBounds } from '../../composition/engine/visual-track-layout';
 import { downstreamVisualTrackRippleIds } from '../../composition/engine/visual-track-ripple';
@@ -8,17 +9,6 @@ const linkedIds = (composition: ClipComposition, clip: Clip) =>
       ? composition.clips.filter((entry) => entry.groupId === clip.groupId).map((entry) => entry.id)
       : [clip.id],
   );
-
-export function previewClipMove(composition: ClipComposition, clip: Clip, timelineStartMs: number): ClipComposition {
-  const ids = linkedIds(composition, clip);
-  const deltaMs = timelineStartMs - clip.timelineStartMs;
-  return {
-    ...composition,
-    clips: composition.clips.map((entry) =>
-      ids.has(entry.id) ? { ...entry, timelineStartMs: entry.timelineStartMs + deltaMs } : entry,
-    ),
-  };
-}
 
 export function previewClipTrim(
   composition: ClipComposition,
@@ -71,3 +61,20 @@ export function previewClipTrim(
     }),
   };
 }
+
+export const timelineMovePreviews = (
+  preview: TimelineSelectionMoveResult,
+  clipIds: ReadonlySet<string>,
+  zoomIds: ReadonlySet<string>,
+) => ({
+  clips: Object.fromEntries(
+    preview.composition.clips
+      .filter((clip) => clipIds.has(clip.id))
+      .map((clip) => [clip.id, { startMs: clip.timelineStartMs, durationMs: clip.timelineDurationMs }]),
+  ),
+  zooms: Object.fromEntries(
+    preview.zoomElements
+      .filter((zoom) => zoomIds.has(zoom.id))
+      .map((zoom) => [zoom.id, { startMs: zoom.startMs, endMs: zoom.endMs }]),
+  ),
+});

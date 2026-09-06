@@ -14,6 +14,7 @@ export function useVisualTrackReorder(options: VisualTrackReorderOptions) {
 
   const beginReorder = (event: PointerEvent, trackId: string, representativeClipId: string) => {
     if (event.button !== 0 && event.button !== undefined) return;
+    if (baseVisualTracks.value.find((track) => track.id === trackId)?.clips.some((clip) => clip.locked)) return;
     const startX = event.clientX ?? 0;
     const startY = event.clientY ?? 0;
     let isDragging = false;
@@ -38,6 +39,10 @@ export function useVisualTrackReorder(options: VisualTrackReorderOptions) {
       const from = order.indexOf(trackId);
       const to = order.indexOf(targetId);
       if (from < 0 || to < 0 || from === to || Date.now() - lastSwapTime < 150) return;
+
+      const crossed = new Set(order.slice(Math.min(from, to), Math.max(from, to) + 1));
+      if (baseVisualTracks.value.some((track) => crossed.has(track.id) && track.clips.some((clip) => clip.locked)))
+        return;
 
       const rect = row.getBoundingClientRect?.();
       if (rect && rect.height > 0) {

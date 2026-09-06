@@ -456,7 +456,7 @@ export function reorderTextCaption(composition: ClipComposition, clipId: string,
 }
 
 export function detachClip(composition: ClipComposition, clipId: string): ClipComposition {
-  return updateClip(composition, clipId, (clip) => ({ ...clip, groupId: undefined }));
+  return updateClip(composition, clipId, (clip) => ({ ...clip, groupId: undefined, recordingClipId: null }));
 }
 
 export function linkClips(composition: ClipComposition, clipIds: string[], groupId = createId()): ClipComposition {

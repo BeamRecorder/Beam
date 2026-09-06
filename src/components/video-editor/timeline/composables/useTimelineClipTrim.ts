@@ -1,3 +1,4 @@
+import { selectionHasLocks } from '../../composition/timeline-locks';
 import { nextTick, type Ref } from 'vue';
 import type { Clip, ClipComposition } from '~/media/shared/composition-types';
 import { MIN_CLIP_DURATION_MS } from '../../composition/engine/clip-composition-validation';
@@ -31,6 +32,8 @@ export function useTimelineClipTrim(options: {
   stopAutoScroll: () => void;
 }) {
   const beginClipTrim = (event: PointerEvent, clip: Clip, edge: 'start' | 'end') => {
+    if (event.button > 0 || selectionHasLocks(options.props.composition, [], { clipIds: [clip.id], zoomIds: [] }))
+      return;
     event.preventDefault();
     event.stopPropagation();
     const ids = options.linkedIdsFor(clip);

@@ -18,3 +18,13 @@ export interface TimelineEditResult {
   zoomElements: ZoomElement[];
   rippleRange: TimelineRange | null;
 }
+
+export interface TimelineSelectionMoveSource {
+  composition: ClipComposition;
+  zoomElements: readonly ZoomElement[];
+  selection: TimelineSelectionIds;
+}
+
+export interface TimelineSelectionMoveResult extends TimelineEditResult {
+  deltaMs: number;
+}

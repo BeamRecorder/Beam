@@ -213,7 +213,12 @@
     "textCaptions": "Legendas de texto",
     "rippleDelete": "Excluir e fechar o espaço",
     "copyUnavailable": "Selecione um item da linha do tempo antes de copiar.",
-    "clipboardEmpty": "Copie um item da linha do tempo antes de colar."
+    "clipboardEmpty": "Copie um item da linha do tempo antes de colar.",
+    "lock": "Bloquear",
+    "unlock": "Desbloquear",
+    "locked": "Bloqueado",
+    "removeGap": "Remover intervalo",
+    "lockedMessage": "{name} está bloqueado. Não é possível fazer alterações."
   },
   "TimelineVideoClip": {
     "trimStart": "Cortar início",
@@ -439,5 +444,12 @@
       "large": "Download grande; WebGPU recomendado.",
       "veryLarge": "Muito grande e lento sem WebGPU."
     }
+  },
+  "RecordingSidecarLinks": {
+    "title": "Itens vinculados",
+    "description": "Os itens vinculados se movem com esta gravação. Desvincule um item para manter sua posição ao mover a gravação.",
+    "unlinkOne": "Desvincular {name}",
+    "unlink": "Desvincular",
+    "unlinkAll": "Desvincular todos"
   }
 }

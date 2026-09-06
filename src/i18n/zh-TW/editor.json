@@ -213,7 +213,12 @@
     "textCaptions": "文字字幕",
     "rippleDelete": "刪除並關閉空隙",
     "copyUnavailable": "複製前選擇時間軸項目。",
-    "clipboardEmpty": "貼上之前複製時間軸項目。"
+    "clipboardEmpty": "貼上之前複製時間軸項目。",
+    "lock": "鎖定",
+    "unlock": "解除鎖定",
+    "locked": "已鎖定",
+    "removeGap": "移除間隙",
+    "lockedMessage": "{name} 已鎖定，無法修改。"
   },
   "TimelineVideoClip": {
     "trimStart": "裁切開頭",
@@ -439,5 +444,12 @@
       "large": "下載量較大；建議使用 WebGPU。",
       "veryLarge": "沒有 WebGPU 時體積很大且速度較慢。"
     }
+  },
+  "RecordingSidecarLinks": {
+    "title": "關聯項目",
+    "description": "關聯項目會隨錄製一起移動。取消關聯後，移動錄製時該項目將保持原位。",
+    "unlinkOne": "取消關聯 {name}",
+    "unlink": "取消關聯",
+    "unlinkAll": "取消全部關聯"
   }
 }

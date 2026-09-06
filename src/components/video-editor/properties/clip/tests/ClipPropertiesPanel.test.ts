@@ -90,9 +90,10 @@ const clip = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-const mountPanel = (selectedClip: ReturnType<typeof clip> | null = clip()) =>
+const mountPanel = (selectedClip: ReturnType<typeof clip> | null = clip(), includeSidecars = false) =>
   mount(ClipPropertiesPanel, {
     props: { selectedClip },
+    slots: includeSidecars ? { sidecars: () => h('button', { class: 'sidecar-slot' }, 'Sidecars') } : undefined,
     global: {
       stubs: {
         BigSlider: BigSliderStub,
@@ -116,7 +117,7 @@ describe('ClipPropertiesPanel', () => {
   });
 
   it('updates placement, radius, shadow, mirror, frame, speed and destructive actions', async () => {
-    const wrapper = mountPanel();
+    const wrapper = mountPanel(clip(), true);
     expect(wrapper.findAll('.slider-stub')).toHaveLength(4);
     await wrapper.findAll('.slider-stub')[0].trigger('click');
     await wrapper.findAll('.slider-stub')[1].trigger('click');
@@ -174,11 +175,7 @@ describe('ClipPropertiesPanel', () => {
     await wrapper.get('.preset-pill').trigger('click');
     expect(wrapper.emitted('update:playbackRate')).toContainEqual([0.5]);
 
-    await wrapper
-      .findAll('button')
-      .find((button) => button.text() === 'Unlink')!
-      .trigger('click');
-    expect(wrapper.emitted('unlink')).toHaveLength(1);
+    expect(wrapper.get('.sidecar-slot').text()).toBe('Sidecars');
   });
 
   it('normalizes old radius values and renders only applicable control groups', async () => {

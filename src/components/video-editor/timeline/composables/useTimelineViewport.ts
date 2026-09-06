@@ -132,7 +132,7 @@ export function useTimelineViewport(
     const ticksRect = ticks.getBoundingClientRect();
     const timelineWidth = Math.max(1, ticksRect.width || ticks.clientWidth);
     rulerWidth.value = timelineWidth;
-    rulerLayoutWidth.value = Math.max(1, ticks.offsetWidth || ticks.clientWidth || timelineWidth);
+    rulerLayoutWidth.value = Math.max(0, ticks.offsetWidth || ticks.clientWidth || ticksRect.width);
     const startPixel = Math.max(0, Math.min(timelineWidth, scrollRect.left - ticksRect.left));
     const endPixel = Math.max(0, Math.min(timelineWidth, scrollRect.right - ticksRect.left));
     visibleStartSecond.value = (startPixel / timelineWidth) * currentDuration.value;

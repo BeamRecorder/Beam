@@ -47,7 +47,6 @@ export interface ClipPropertiesEmits {
   (e: 'update:cameraSplitPadding', padding: number): void;
   (e: 'update:reactToZoom', enabled: boolean): void;
   (e: 'reset:clipTransform'): void;
-  (e: 'unlink'): void;
   (e: 'delete'): void;
   (e: 'split'): void;
 }

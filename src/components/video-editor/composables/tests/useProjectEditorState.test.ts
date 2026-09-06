@@ -1,7 +1,13 @@
 import { nextTick, reactive, ref } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_OUTPUT_CANVAS } from '../../canvas/output-canvas';
-import { emptyComposition, type Clip, type ColorClip, type VisualClip } from '~/media/shared/composition-types';
+import {
+  emptyComposition,
+  type Clip,
+  type ClipComposition,
+  type ColorClip,
+  type VisualClip,
+} from '~/media/shared/composition-types';
 import {
   createDefaultCursorClickEffects,
   createDefaultCursorMotionSettings,
@@ -32,6 +38,8 @@ import { useProjectEditorState } from '../../composables/useProjectEditorState';
 
 const createState = () => {
   const cursor = createDefaultCursorPresentation();
+  const composition = ref(emptyComposition());
+  const zoomElements = ref<ZoomElement[]>([]);
   return {
     project: ref<CaptureProject | null | undefined>({
       id: 'project',
@@ -41,8 +49,14 @@ const createState = () => {
       sessionCount: 0,
       previewSrc: null,
     }),
-    composition: ref(emptyComposition()),
-    zoomElements: ref<ZoomElement[]>([]),
+    composition,
+    restoreComposition: vi.fn((value: ClipComposition) => {
+      composition.value = value;
+    }),
+    zoomElements,
+    restoreZoomElements: vi.fn((value: ZoomElement[]) => {
+      zoomElements.value = value;
+    }),
     generatedSessions: ref<ProjectEditorState['zoom']['generatedSessions']>([]),
     zoomMotionBlur: ref({ ...DEFAULT_ZOOM_MOTION_BLUR }),
     zoomAutoFollow: ref<ZoomAutoFollowSettings>({ safeZone: 0.5, responsiveness: 0.55, directionLock: true }),

@@ -39,7 +39,13 @@ export function pasteZoomAt(
         startMs: endMs,
       });
   }
-  elements.push({ ...clone(copiedZoom), id: zoomId, startMs, endMs });
+  elements.push({
+    ...clone(copiedZoom),
+    ...(copiedZoom.mode === 'auto' ? { linkedClipId: null } : {}),
+    id: zoomId,
+    startMs,
+    endMs,
+  });
   elements.sort((left, right) => left.startMs - right.startMs || left.id.localeCompare(right.id));
   return { elements, zoomId };
 }

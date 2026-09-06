@@ -213,7 +213,12 @@
     "textCaptions": "Didascalie di testo",
     "rippleDelete": "Elimina e chiudi lo spazio",
     "copyUnavailable": "Seleziona un elemento della timeline prima di copiarlo.",
-    "clipboardEmpty": "Copia un elemento della timeline prima di incollarlo."
+    "clipboardEmpty": "Copia un elemento della timeline prima di incollarlo.",
+    "lock": "Blocca",
+    "unlock": "Sblocca",
+    "locked": "Bloccato",
+    "removeGap": "Rimuovi spazio",
+    "lockedMessage": "{name} è bloccato. Non è possibile apportare modifiche."
   },
   "TimelineVideoClip": {
     "trimStart": "Taglia inizio",
@@ -439,5 +444,12 @@
       "large": "Download di grandi dimensioni; WebGPU consigliato.",
       "veryLarge": "Molto grande e lento senza WebGPU."
     }
+  },
+  "RecordingSidecarLinks": {
+    "title": "Elementi collegati",
+    "description": "Gli elementi collegati si spostano con questa registrazione. Scollega un elemento per mantenerne la posizione quando sposti la registrazione.",
+    "unlinkOne": "Scollega {name}",
+    "unlink": "Scollega",
+    "unlinkAll": "Scollega tutto"
   }
 }

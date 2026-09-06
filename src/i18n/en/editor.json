@@ -213,7 +213,12 @@
     "delete": "Delete",
     "rippleDelete": "Delete and close gap",
     "copyUnavailable": "Select a timeline item before copying.",
-    "clipboardEmpty": "Copy a timeline item before pasting."
+    "clipboardEmpty": "Copy a timeline item before pasting.",
+    "lock": "Lock",
+    "unlock": "Unlock",
+    "locked": "Locked",
+    "removeGap": "Remove gap",
+    "lockedMessage": "{name} is locked. Modifications are not possible."
   },
   "TimelineVideoClip": {
     "trimStart": "Trim start",
@@ -439,5 +444,12 @@
       "large": "Large download; WebGPU recommended.",
       "veryLarge": "Very large and slow without WebGPU."
     }
+  },
+  "RecordingSidecarLinks": {
+    "title": "Sidecar links",
+    "description": "Linked items move with this recording. Unlink an item to keep its timeline position when the recording moves.",
+    "unlinkOne": "Unlink {name}",
+    "unlink": "Unlink",
+    "unlinkAll": "Unlink all"
   }
 }

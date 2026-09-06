@@ -2,6 +2,7 @@ import './VideoEditor.test.setup';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import type { CaptionClip, ClipComposition, NormalizedCrop } from '~/media/shared/composition-types';
+import type { ZoomElement } from '../zoom/zoom-types';
 import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
 import {
   editorState,
@@ -348,6 +349,211 @@ describe('VideoEditor', () => {
     expect(scheduleSave).toHaveBeenCalledOnce();
   });
 
+  it('locks a timeline selection in one undo entry and restores it through undo', async () => {
+    const mounted = mountEditor();
+    const state = editorState.store;
+    const timeline = mounted.findComponent({ name: 'MockEditorTimeline' });
+    const historyEntriesBefore = historyState.undoStack?.value.length ?? 0;
+    const commitCallsBefore = historyState.commitNow.mock.calls.length;
+    const saveCallsBefore = state.editorState.scheduleSave.mock.calls.length;
+
+    timeline.vm.$emit('lock:selection', { clipIds: ['screen'], zoomIds: [], locked: true });
+    await mounted.vm.$nextTick();
+
+    expect(state.compositionState.composition.value.clips).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: 'screen', locked: true })]),
+    );
+    expect(historyState.commitNow).toHaveBeenCalledTimes(commitCallsBefore + 2);
+    expect(historyState.undoStack?.value).toHaveLength(historyEntriesBefore + 1);
+    expect(state.editorState.scheduleSave).toHaveBeenCalledTimes(saveCallsBefore + 1);
+
+    await mounted.get('.undo').trigger('click');
+    await flushPromises();
+    await mounted.vm.$nextTick();
+
+    expect(historyState.undo).toHaveBeenCalledOnce();
+    const restoredScreen = (state.compositionState.composition.value as ClipComposition).clips.find(
+      (clip) => clip.id === 'screen',
+    );
+    expect(restoredScreen?.locked).toBeUndefined();
+  });
+
+  it('unlocks the mixed clip and zoom selection from the properties panel in one undo entry', async () => {
+    vi.useFakeTimers();
+    try {
+      const mounted = mountEditor();
+      const state = editorState.store;
+      const current = state.compositionState.composition.value as ClipComposition;
+      state.compositionState.composition.value = {
+        ...current,
+        clips: current.clips.map((clip) => (clip.id === 'screen' ? { ...clip, locked: true } : clip)),
+      };
+      const lockedZoom: ZoomElement = {
+        id: 'locked-zoom',
+        sessionId: 'session-1',
+        startMs: 0,
+        endMs: 1_000,
+        focus: { cx: 0.5, cy: 0.5 },
+        depth: 2,
+        mode: 'manual',
+        locked: true,
+      };
+      state.zoomState.zoomElements.value = [lockedZoom];
+      state.compositionState.selectedClipId.value = 'screen';
+      state.compositionState.selectedClipIds.value = ['screen'];
+      state.zoomState.selectedZoomId.value = lockedZoom.id;
+      state.zoomState.selectedZoomIds.value = [lockedZoom.id];
+      await mounted.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(300);
+      await mounted.vm.$nextTick();
+
+      const historyEntriesBefore = historyState.undoStack?.value.length ?? 0;
+      const commitCallsBefore = historyState.commitNow.mock.calls.length;
+      const saveCallsBefore = state.editorState.scheduleSave.mock.calls.length;
+      await mounted.get('.unlock-selection').trigger('click');
+      await mounted.vm.$nextTick();
+
+      expect(state.compositionState.composition.value.clips).toEqual(
+        expect.arrayContaining([expect.objectContaining({ id: 'screen', locked: false })]),
+      );
+      expect(state.zoomState.zoomElements.value).toEqual([
+        expect.objectContaining({ id: lockedZoom.id, locked: false }),
+      ]);
+      expect(historyState.commitNow).toHaveBeenCalledTimes(commitCallsBefore + 2);
+      expect(historyState.undoStack?.value).toHaveLength(historyEntriesBefore + 1);
+      expect(state.editorState.scheduleSave).toHaveBeenCalledTimes(saveCallsBefore + 1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('removes a timeline gap in one undo entry, saves, and restores the gap through undo', async () => {
+    vi.useFakeTimers();
+    try {
+      const mounted = mountEditor();
+      const state = editorState.store;
+      const current = state.compositionState.composition.value as ClipComposition;
+      state.compositionState.composition.value = {
+        ...current,
+        clips: current.clips.map((clip) => (clip.id === 'screen' ? { ...clip, timelineStartMs: 1_000 } : clip)),
+      };
+      await mounted.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(300);
+      await mounted.vm.$nextTick();
+
+      const timeline = mounted.findComponent({ name: 'MockEditorTimeline' });
+      const historyEntriesBefore = historyState.undoStack?.value.length ?? 0;
+      const commitCallsBefore = historyState.commitNow.mock.calls.length;
+      const saveCallsBefore = state.editorState.scheduleSave.mock.calls.length;
+      timeline.vm.$emit('remove:gap', { clipIds: ['screen'], startMs: 0, endMs: 1_000 });
+      await mounted.vm.$nextTick();
+
+      expect((state.compositionState.composition.value as ClipComposition).clips).toEqual(
+        expect.arrayContaining([expect.objectContaining({ id: 'screen', timelineStartMs: 0 })]),
+      );
+      expect(historyState.commitNow).toHaveBeenCalledTimes(commitCallsBefore + 2);
+      expect(historyState.undoStack?.value).toHaveLength(historyEntriesBefore + 1);
+      expect(state.editorState.scheduleSave).toHaveBeenCalledTimes(saveCallsBefore + 1);
+
+      await mounted.get('.undo').trigger('click');
+      await flushPromises();
+      await mounted.vm.$nextTick();
+
+      expect(historyState.undo).toHaveBeenCalledOnce();
+      expect((state.compositionState.composition.value as ClipComposition).clips).toEqual(
+        expect.arrayContaining([expect.objectContaining({ id: 'screen', timelineStartMs: 1_000 })]),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('unlinks recording sidecars from Properties in one undo entry and restores their links', async () => {
+    vi.useFakeTimers();
+    try {
+      const mounted = mountEditor();
+      const state = editorState.store;
+      const current = state.compositionState.composition.value as ClipComposition;
+      const screen = current.clips.find((clip) => clip.id === 'screen');
+      if (!screen || screen.kind !== 'screen') throw new Error('Missing screen fixture');
+      const sidecar = {
+        ...screen,
+        id: 'camera-sidecar',
+        kind: 'video' as const,
+        name: 'Camera sidecar',
+        groupId: 'recording-group',
+        order: 1,
+      };
+      state.compositionState.composition.value = {
+        ...current,
+        assets: current.assets.map((asset) =>
+          asset.id === 'screen-asset' ? { ...asset, sessionId: 'session-1' } : asset,
+        ),
+        clips: current.clips
+          .map((clip) => (clip.id === 'screen' ? { ...clip, groupId: 'recording-group' } : clip))
+          .concat(sidecar),
+      };
+      const linkedZoom: ZoomElement = {
+        id: 'auto-sidecar-zoom',
+        sessionId: 'session-1',
+        startMs: 500,
+        endMs: 1_000,
+        focus: { cx: 0.5, cy: 0.5 },
+        depth: 2,
+        mode: 'auto',
+        linkedClipId: 'screen',
+      };
+      state.zoomState.zoomElements.value = [linkedZoom];
+      await mounted.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(300);
+      await mounted.vm.$nextTick();
+
+      const historyEntriesBefore = historyState.undoStack?.value.length ?? 0;
+      const commitCallsBefore = historyState.commitNow.mock.calls.length;
+      const saveCallsBefore = state.editorState.scheduleSave.mock.calls.length;
+      mounted.findComponent({ name: 'MockProperties' }).vm.$emit('unlink-sidecars', {
+        clipId: 'screen',
+        clipIds: [sidecar.id],
+        zoomIds: [linkedZoom.id],
+      });
+      await mounted.vm.$nextTick();
+
+      const unlinkedSidecar = (state.compositionState.composition.value as ClipComposition).clips.find(
+        (clip) => clip.id === sidecar.id,
+      );
+      const unlinkedZoom = (state.zoomState.zoomElements.value as ZoomElement[]).find(
+        (zoom) => zoom.id === linkedZoom.id,
+      );
+      expect(unlinkedSidecar?.groupId).toBeUndefined();
+      expect(unlinkedSidecar?.timelineStartMs).toBe(sidecar.timelineStartMs);
+      expect(unlinkedSidecar?.timelineDurationMs).toBe(sidecar.timelineDurationMs);
+      expect(unlinkedZoom?.linkedClipId).toBeNull();
+      expect(unlinkedZoom?.startMs).toBe(linkedZoom.startMs);
+      expect(unlinkedZoom?.endMs).toBe(linkedZoom.endMs);
+      expect(historyState.commitNow).toHaveBeenCalledTimes(commitCallsBefore + 2);
+      expect(historyState.undoStack?.value).toHaveLength(historyEntriesBefore + 1);
+      expect(state.editorState.scheduleSave).toHaveBeenCalledTimes(saveCallsBefore + 1);
+
+      await mounted.get('.undo').trigger('click');
+      await flushPromises();
+      await mounted.vm.$nextTick();
+
+      const restoredSidecar = (state.compositionState.composition.value as ClipComposition).clips.find(
+        (clip) => clip.id === sidecar.id,
+      );
+      const restoredZoom = (state.zoomState.zoomElements.value as ZoomElement[]).find(
+        (zoom) => zoom.id === linkedZoom.id,
+      );
+      expect(restoredSidecar?.groupId).toBe('recording-group');
+      expect(restoredSidecar?.timelineStartMs).toBe(sidecar.timelineStartMs);
+      expect(restoredZoom?.linkedClipId).toBe('screen');
+      expect(restoredZoom?.startMs).toBe(linkedZoom.startMs);
+      expect(historyState.undo).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('routes property and canvas crop previews to the canvas without mutating canonical state, saving, or history', async () => {
     const mounted = mountEditor();
     const state = editorState.store;
@@ -434,6 +640,23 @@ describe('VideoEditor', () => {
     expect(mounted.get('.mock-canvas').attributes('data-composition-crop')).toBe(JSON.stringify(committedCrop));
     expect(mounted.get('.mock-properties').attributes('data-selected-crop')).toBe(JSON.stringify(committedCrop));
     expect(state.editorState.scheduleSave).toHaveBeenCalledTimes(saveCallsBefore + 1);
+  });
+
+  it('applies a timeline box selection without losing its committed crop', async () => {
+    const mounted = mountEditor();
+    const state = editorState.store;
+    state.compositionState.selectClip('screen');
+    await mounted.vm.$nextTick();
+    await mounted.get('.toggle-crop').trigger('click');
+    await mounted.get('.canvas-preview-crop').trigger('click');
+    mounted.findComponent({ name: 'MockEditorTimeline' }).vm.$emit('select:box', {
+      clipIds: ['screen', 'audio'],
+      zoomIds: [],
+    });
+    await mounted.vm.$nextTick();
+    expect(state.compositionState.selectedClipIds.value).toEqual(['screen', 'audio']);
+    expect(cropFromComposition(state.compositionState.composition.value)).toEqual(cropModePreview);
+    expect(mounted.get('.mock-canvas').attributes('data-is-cropping')).toBe('false');
   });
 
   it('finishes crop before selecting another clip', async () => {
@@ -642,6 +865,7 @@ describe('VideoEditor', () => {
     timeline.vm.$emit('preview:composition', preview);
     await mounted.vm.$nextTick();
     expect(toolbar().attributes('duration')).toBe('3.5');
+    expect(timeline.attributes('duration')).toBe('2'); // Keep the drag's pixels-per-second base stable.
 
     timeline.vm.$emit('preview:composition', null);
     await mounted.vm.$nextTick();
@@ -738,6 +962,25 @@ describe('VideoEditor', () => {
     expect(editorState.store.editorState.scheduleSave).toHaveBeenCalled();
     expect(historyState.commitNow).toHaveBeenCalledWith(expect.objectContaining({ composition }));
     expect(toast.success).toHaveBeenCalledWith('Pasted: screen.mp4', 1_500, undefined, { leadingIcon: 'paste' });
+  });
+
+  it('previews moved zooms on the canvas without changing saved zooms and clears the preview on cancel', async () => {
+    const mounted = mountEditor();
+    await mounted.get('.timeline-paste-zoom').trigger('click');
+    await mounted.vm.$nextTick();
+    const original = editorState.store.zoomState.zoomElements.value as ZoomElement[];
+    const preview = original.map((zoom) => ({ ...zoom, startMs: zoom.startMs + 750, endMs: zoom.endMs + 750 }));
+    const timeline = mounted.findComponent({ name: 'MockEditorTimeline' });
+    const canvas = mounted.findComponent({ name: 'MockEditorCanvas' });
+    const commits = historyState.commitNow.mock.calls.length;
+    timeline.vm.$emit('preview:zooms', preview);
+    await mounted.vm.$nextTick();
+    expect(canvas.props('zoomElements')).toEqual(preview);
+    expect(editorState.store.zoomState.zoomElements.value).toEqual(original);
+    expect(historyState.commitNow).toHaveBeenCalledTimes(commits);
+    timeline.vm.$emit('preview:zooms', null);
+    await mounted.vm.$nextTick();
+    expect(canvas.props('zoomElements')).toEqual(original);
   });
 
   it('delegates zoom pasting and keeps the pasted zoom selected', async () => {

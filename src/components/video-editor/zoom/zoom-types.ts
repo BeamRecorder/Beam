@@ -19,6 +19,9 @@ export const ZOOM_DEPTH_SCALES: Record<ZoomDepth, number> = {
 
 export interface ZoomElement {
   id: string;
+  locked?: boolean;
+  /** Undefined resolves legacy automatic links; null explicitly detaches a zoom. */
+  linkedClipId?: string | null;
   sessionId: string;
   startMs: number;
   endMs: number;

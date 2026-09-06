@@ -1,9 +1,11 @@
+import { recordingMoveSelection } from '../../composition/recording-sidecars';
+import { timelineMovePreviews } from './timeline-composition-preview';
 import type { Ref } from 'vue';
 import type { ZoomElement } from '../../zoom/zoom-types';
 import { calculateSnapThresholdMs, collectSnapTargets, snapSpan, snapValue } from './timeline-snap';
 import { createAnimationFrameCoalescer } from './animation-frame-coalescer';
 import type { TimelineTracksEmits, TimelineTracksProps } from './timeline-tracks-types';
-import { shiftTimelineSelection } from '../../composition/timeline-edit-operations';
+import { prepareTimelineSelectionMove } from '../../composition/timeline-selection-move';
 
 type ZoomPreview = Record<string, { startMs: number; endMs: number }>;
 type ClipPreview = Record<string, { startMs: number; durationMs: number }>;
@@ -20,6 +22,8 @@ export function useTimelineZoomInteractions(options: {
   previewDurationMs: Ref<number | null>;
   zoomPreview: Ref<ZoomPreview>;
   clipPreview: Ref<ClipPreview>;
+  movingClipIds: Ref<string[]>;
+  isMoving: Ref<boolean>;
   activeTrimState: Ref<TrimState>;
   resolveMsPerPx: () => { baseDurationMs: number; width: number; msPerPx: number; visualScale: number };
   updateAutoScroll: (clientX: number) => void;
@@ -33,22 +37,22 @@ export function useTimelineZoomInteractions(options: {
     const initialScrollLeft = options.tracksScrollRef.value?.scrollLeft ?? 0;
     const { baseDurationMs, width: baseRulerWidth, msPerPx, visualScale } = options.resolveMsPerPx();
     const explicitlySelected = options.props.selectedZoomIds?.includes(zoom.id) ?? false;
-    const zoomIds =
-      explicitlySelected && options.props.selectedZoomIds?.length ? options.props.selectedZoomIds : [zoom.id];
-    const selectedClipIds = explicitlySelected ? [...(options.props.selectedClipIds ?? [])] : [];
-    const clipGroups = new Set(
-      options.props.composition.clips
-        .filter((clip) => selectedClipIds.includes(clip.id) && clip.groupId)
-        .map((clip) => clip.groupId),
-    );
-    const clipIds = [
-      ...new Set([
-        ...selectedClipIds,
-        ...options.props.composition.clips
-          .filter((clip) => clip.groupId && clipGroups.has(clip.groupId))
-          .map((clip) => clip.id),
-      ]),
-    ];
+    const linked = recordingMoveSelection(options.props.composition, options.props.zoomElements, {
+      clipIds: explicitlySelected ? (options.props.selectedClipIds ?? []) : [],
+      zoomIds: explicitlySelected && options.props.selectedZoomIds?.length ? options.props.selectedZoomIds : [zoom.id],
+    });
+    const clipIds = [...linked.clipIds];
+    const zoomIds = [...linked.zoomIds];
+    options.movingClipIds.value = clipIds;
+    options.isMoving.value = true;
+    const clipIdSet = new Set(clipIds);
+    const zoomIdSet = new Set(zoomIds);
+    const previewMove = prepareTimelineSelectionMove({
+      composition: options.props.composition,
+      zoomElements: options.props.zoomElements,
+      selection: { clipIds, zoomIds },
+    });
+    let lastPreview: ReturnType<typeof previewMove> | null = null;
     const selectedClips = options.props.composition.clips.filter((clip) => clipIds.includes(clip.id));
     const selectedZooms = options.props.zoomElements.filter((entry) => zoomIds.includes(entry.id));
     const selectionStartMs = Math.min(
@@ -83,26 +87,17 @@ export function useTimelineZoomInteractions(options: {
           : null;
       finalDeltaMs = snap ? Math.max(-selectionStartMs, snap.snappedStartMs - selectionStartMs) : proposedDeltaMs;
       options.activeSnapTimeMs.value = snap?.targetMs ?? null;
-      const preview = shiftTimelineSelection({
-        composition: options.props.composition,
-        zoomElements: options.props.zoomElements,
-        selection: { clipIds, zoomIds },
-        deltaMs: finalDeltaMs,
-      });
+      const preview = previewMove(finalDeltaMs);
       finalDeltaMs = preview.deltaMs;
       options.previewDurationMs.value =
         selectionEndMs + finalDeltaMs > baseDurationMs ? selectionEndMs + finalDeltaMs : null;
-      options.clipPreview.value = Object.fromEntries(
-        preview.composition.clips
-          .filter((clip) => clipIds.includes(clip.id))
-          .map((clip) => [clip.id, { startMs: clip.timelineStartMs, durationMs: clip.timelineDurationMs }]),
-      );
-      options.zoomPreview.value = Object.fromEntries(
-        preview.zoomElements
-          .filter((entry) => zoomIds.includes(entry.id))
-          .map((entry) => [entry.id, { startMs: entry.startMs, endMs: entry.endMs }]),
-      );
-      options.emit('preview:composition', preview.composition);
+      if (preview === lastPreview) return;
+      lastPreview = preview;
+      const previews = timelineMovePreviews(preview, clipIdSet, zoomIdSet);
+      if (clipIdSet.size) options.clipPreview.value = previews.clips;
+      if (zoomIdSet.size) options.zoomPreview.value = previews.zooms;
+      if (clipIdSet.size) options.emit('preview:composition', preview.composition);
+      options.emit('preview:zooms', preview.zoomElements);
     };
     const updates = createAnimationFrameCoalescer(applyMove);
     const move = updates.schedule;
@@ -116,6 +111,9 @@ export function useTimelineZoomInteractions(options: {
       options.previewDurationMs.value = null;
       options.activeSnapTimeMs.value = null;
       options.emit('preview:composition', null);
+      options.emit('preview:zooms', null);
+      options.movingClipIds.value = [];
+      options.isMoving.value = false;
     };
     const end = () => {
       updates.flush();
@@ -139,6 +137,7 @@ export function useTimelineZoomInteractions(options: {
   };
 
   const beginZoomTrim = (event: PointerEvent, zoom: ZoomElement, edge: 'start' | 'end') => {
+    if (event.button > 0 || zoom.locked) return;
     event.preventDefault();
     event.stopPropagation();
     const pointerStartX = event.clientX;

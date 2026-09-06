@@ -213,7 +213,12 @@
     "textCaptions": "テキストキャプション",
     "rippleDelete": "削除して空白を詰める",
     "copyUnavailable": "コピーする前にタイムライン項目を選択します。",
-    "clipboardEmpty": "貼り付ける前にタイムライン項目をコピーしてください。"
+    "clipboardEmpty": "貼り付ける前にタイムライン項目をコピーしてください。",
+    "lock": "ロック",
+    "unlock": "ロック解除",
+    "locked": "ロック中",
+    "removeGap": "空白を削除",
+    "lockedMessage": "{name} はロックされています。変更できません。"
   },
   "TimelineVideoClip": {
     "trimStart": "先頭をトリミング",
@@ -439,5 +444,12 @@
       "large": "大容量のダウンロードです。WebGPUを推奨します。",
       "veryLarge": "WebGPUがないと非常に大きく、遅くなります。"
     }
+  },
+  "RecordingSidecarLinks": {
+    "title": "リンクされた項目",
+    "description": "リンクされた項目は録画と一緒に移動します。録画を移動しても位置を維持するには、項目のリンクを解除してください。",
+    "unlinkOne": "{name} のリンクを解除",
+    "unlink": "リンクを解除",
+    "unlinkAll": "すべて解除"
   }
 }

@@ -41,6 +41,8 @@ const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 export function useProjectEditorState(options: {
   project: Ref<CaptureProject | null | undefined>;
   composition: Ref<ClipComposition>;
+  restoreComposition: (value: ClipComposition) => void;
+  restoreZoomElements: (value: ZoomElement[]) => void;
   zoomElements: Ref<ZoomElement[]>;
   generatedSessions: Ref<ProjectEditorState['zoom']['generatedSessions']>;
   zoomMotionBlur?: Ref<ZoomMotionBlurSettings>;
@@ -189,8 +191,8 @@ export function useProjectEditorState(options: {
         loadedState.isFresh ? applyFreshPresentationDefaults(loadedState, options.editorDefaults.value) : loadedState,
         options.editorDefaults.value,
       );
-      options.composition.value = state.composition;
-      options.zoomElements.value = state.zoom.elements;
+      options.restoreComposition(state.composition);
+      options.restoreZoomElements(state.zoom.elements);
       options.generatedSessions.value = state.zoom.generatedSessions;
       zoomMotionBlur.value = normalizeZoomMotionBlur(
         options.editorDefaults.value.zoomMotionBlur ?? state.zoom.motionBlur,

@@ -210,6 +210,7 @@ function normalizeComposition(value) {
   const clips = value.clips.map((clip) => {
     if (!clip || !id(clip.id) || clipIds.has(clip.id) || !clipKinds.has(clip.kind) || typeof clip.enabled !== 'boolean')
       throw new Error('Clip invalide');
+    if (clip.locked !== undefined && typeof clip.locked !== 'boolean') throw new Error('Verrouillage de clip invalide');
     clipIds.add(clip.id);
     const numbers = [
       clip.timelineStartMs,
@@ -241,9 +242,13 @@ function normalizeComposition(value) {
       playbackRate: clip.playbackRate,
       transitions: normalizeClipTransitions(clip.transitions, clip.kind, Math.round(clip.timelineDurationMs)),
       enabled: clip.enabled,
+      ...(clip.locked === undefined ? {} : { locked: clip.locked }),
       order: clip.order,
       ...(id(clip.groupId) ? { groupId: clip.groupId } : {}),
+      ...(clip.recordingClipId === undefined ? {} : { recordingClipId: clip.recordingClipId }),
     };
+    if (clip.recordingClipId !== undefined && clip.recordingClipId !== null && !id(clip.recordingClipId))
+      throw new Error('Lien de piste enregistrée invalide');
     if (common.groupId) {
       const key = `${common.timelineStartMs}:${common.timelineDurationMs}:${common.playbackRate}`;
       if (groups.has(common.groupId) && groups.get(common.groupId) !== key) throw new Error('Groupe de clips invalide');

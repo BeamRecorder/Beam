@@ -1,8 +1,10 @@
+import { preservesLockedItems, selectionHasLocks } from './timeline-locks';
 import type { ClipComposition } from '~/media/shared/composition-types';
 import type { ZoomElement } from '../zoom/zoom-types';
 import { deleteClip } from './engine/clip-engine';
 import { validateComposition } from './engine/clip-composition-validation';
-import { visualMoveDeltaBounds } from './engine/visual-track-layout';
+import { prepareTimelineSelectionMove } from './timeline-selection-move';
+export { expandLinkedClipIds } from './timeline-selection-move';
 import type {
   TimelineDeleteMode,
   TimelineEditResult,
@@ -19,15 +21,6 @@ export type {
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const endMs = (clip: ClipComposition['clips'][number]) => clip.timelineStartMs + clip.timelineDurationMs;
-
-export const expandLinkedClipIds = (composition: ClipComposition, clipIds: readonly string[]): string[] => {
-  const ids = new Set(clipIds);
-  const groups = new Set(
-    composition.clips.filter((clip) => ids.has(clip.id) && clip.groupId).map((clip) => clip.groupId),
-  );
-  for (const clip of composition.clips) if (clip.groupId && groups.has(clip.groupId)) ids.add(clip.id);
-  return [...ids];
-};
 
 export const rippleRangeForSelection = (
   composition: ClipComposition,
@@ -64,6 +57,8 @@ export const deleteTimelineItems = (options: {
   selection: TimelineSelectionIds;
   mode: TimelineDeleteMode;
 }): TimelineEditResult => {
+  const unchanged = { composition: options.composition, zoomElements: [...options.zoomElements], rippleRange: null };
+  if (selectionHasLocks(options.composition, options.zoomElements, options.selection)) return unchanged;
   const clipIds = [...new Set(options.selection.clipIds)];
   const zoomIds = new Set(options.selection.zoomIds);
   const candidateRange = rippleRangeForSelection(options.composition, clipIds);
@@ -86,6 +81,11 @@ export const deleteTimelineItems = (options: {
   };
   validateComposition(composition);
   zoomElements = rippleZooms(zoomElements, rippleRange);
+  if (
+    !preservesLockedItems(options.composition.clips, composition.clips) ||
+    !preservesLockedItems(options.zoomElements, zoomElements)
+  )
+    return unchanged;
   return { composition, zoomElements, rippleRange };
 };
 
@@ -94,38 +94,4 @@ export const shiftTimelineSelection = (options: {
   zoomElements: readonly ZoomElement[];
   selection: TimelineSelectionIds;
   deltaMs: number;
-}): TimelineEditResult & { deltaMs: number } => {
-  const clipIds = new Set(expandLinkedClipIds(options.composition, options.selection.clipIds));
-  const zoomIds = new Set(options.selection.zoomIds);
-  const selectedStarts = [
-    ...options.composition.clips.filter((clip) => clipIds.has(clip.id)).map((clip) => clip.timelineStartMs),
-    ...options.zoomElements.filter((zoom) => zoomIds.has(zoom.id)).map((zoom) => zoom.startMs),
-  ];
-  if (!selectedStarts.length || !Number.isFinite(options.deltaMs))
-    return {
-      composition: options.composition,
-      zoomElements: [...options.zoomElements],
-      rippleRange: null,
-      deltaMs: 0,
-    };
-  const requestedDelta = Math.round(options.deltaMs);
-  const minimumStart = Math.min(...selectedStarts);
-  const visualBounds = visualMoveDeltaBounds(options.composition.clips, clipIds);
-  const deltaMs = Math.max(-minimumStart, visualBounds.min, Math.min(visualBounds.max, requestedDelta));
-  const composition: ClipComposition = {
-    ...clone(options.composition),
-    clips: options.composition.clips.map((clip) =>
-      clipIds.has(clip.id) ? { ...clone(clip), timelineStartMs: clip.timelineStartMs + deltaMs } : clone(clip),
-    ),
-  };
-  return {
-    composition,
-    zoomElements: options.zoomElements.map((zoom) =>
-      zoomIds.has(zoom.id)
-        ? { ...clone(zoom), startMs: zoom.startMs + deltaMs, endMs: zoom.endMs + deltaMs }
-        : clone(zoom),
-    ),
-    rippleRange: null,
-    deltaMs,
-  };
-};
+}): TimelineEditResult & { deltaMs: number } => prepareTimelineSelectionMove(options)(options.deltaMs);
