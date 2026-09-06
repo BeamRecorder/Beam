@@ -213,7 +213,12 @@
     "textCaptions": "Textuntertitel",
     "rippleDelete": "Löschen und Lücke schließen",
     "copyUnavailable": "Wählen Sie vor dem Kopieren ein Timeline-Element aus.",
-    "clipboardEmpty": "Kopieren Sie ein Timeline-Element vor dem Einfügen."
+    "clipboardEmpty": "Kopieren Sie ein Timeline-Element vor dem Einfügen.",
+    "lock": "Sperren",
+    "unlock": "Entsperren",
+    "locked": "Gesperrt",
+    "removeGap": "Lücke entfernen",
+    "lockedMessage": "{name} ist gesperrt. Änderungen sind nicht möglich."
   },
   "TimelineVideoClip": {
     "trimStart": "Anfang zuschneiden",
@@ -439,5 +444,12 @@
       "large": "Großer Download; WebGPU wird empfohlen.",
       "veryLarge": "Ohne WebGPU sehr groß und langsam."
     }
+  },
+  "RecordingSidecarLinks": {
+    "title": "Verknüpfte Elemente",
+    "description": "Verknüpfte Elemente bewegen sich mit dieser Aufnahme. Löse eine Verknüpfung, um die Position des Elements beizubehalten.",
+    "unlinkOne": "Verknüpfung von {name} lösen",
+    "unlink": "Verknüpfung lösen",
+    "unlinkAll": "Alle Verknüpfungen lösen"
   }
 }

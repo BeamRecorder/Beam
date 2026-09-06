@@ -109,6 +109,22 @@ describe('useAudioNormalization', () => {
     expect(onCommit).toHaveBeenCalledOnce();
   });
 
+  it('skips a locked clip before starting analysis', async () => {
+    const state = composition({ locked: true });
+    const onCommit = vi.fn();
+    const normalization = (await import('../useAudioNormalization')).useAudioNormalization({
+      composition: state,
+      onCommit,
+    });
+
+    await normalization.normalizeClipIds(['clip-1']);
+
+    expect(workerState.instances).toHaveLength(0);
+    expect(firstAudioClip(state).normalization).toBeUndefined();
+    expect(normalization.statuses['clip-1']).toBeUndefined();
+    expect(onCommit).not.toHaveBeenCalled();
+  });
+
   it('analyzes a cache miss and stores the result on the asset', async () => {
     const state = composition();
     const onCommit = vi.fn();
@@ -204,6 +220,28 @@ describe('useAudioNormalization', () => {
     expect(onCommit).not.toHaveBeenCalled();
   });
 
+  it('discards an analysis result when the clip becomes locked while it is pending', async () => {
+    const state = composition();
+    const onCommit = vi.fn();
+    const normalization = (await import('../useAudioNormalization')).useAudioNormalization({
+      composition: state,
+      onCommit,
+    });
+    const pending = normalization.normalizeClipIds(['clip-1']);
+    const worker = workerState.instances[0]!;
+    const request = workerRequest(worker);
+
+    state.value = createComposition(state.value.assets, [clip({ locked: true })]);
+    worker.respond({ type: 'result', requestId: request.requestId, analysis: analysis() });
+    await pending;
+
+    expect(firstAudioClip(state).locked).toBe(true);
+    expect(firstAudioClip(state).normalization).toBeUndefined();
+    expect(state.value.assets[0]?.audioAnalyses).toEqual([]);
+    expect(normalization.statuses['clip-1']).toBeUndefined();
+    expect(onCommit).not.toHaveBeenCalled();
+  });
+
   it('uses a cached silent result and leaves the clip unchanged', async () => {
     const state = composition({}, [analysis({ integratedLufs: null, samplePeakDbfs: null, truePeakDbtp: null })]);
     const onCommit = vi.fn();
@@ -264,6 +302,32 @@ describe('useAudioNormalization', () => {
     expect(normalization.statuses['clip-1']).toBeUndefined();
     expect(normalization.errors['clip-1']).toBeUndefined();
     expect(onCommit).toHaveBeenCalledOnce();
+    expect(workerState.instances).toHaveLength(0);
+  });
+
+  it('keeps a locked normalization when reset is requested', async () => {
+    const existingNormalization = {
+      enabled: true,
+      mode: 'lufs' as const,
+      targetLufs: -16,
+      targetPeakDbtp: -1,
+      appliedGainDb: 1,
+      analysisVersion: AUDIO_ANALYSIS_VERSION,
+      analysisKey: analysis().key,
+    };
+    const state = composition({ locked: true, normalization: existingNormalization });
+    const onCommit = vi.fn();
+    const normalization = (await import('../useAudioNormalization')).useAudioNormalization({
+      composition: state,
+      onCommit,
+    });
+
+    normalization.resetClipIds(['clip-1']);
+
+    expect(firstAudioClip(state).normalization).toEqual(existingNormalization);
+    expect(normalization.statuses['clip-1']).toBeUndefined();
+    expect(normalization.errors['clip-1']).toBeUndefined();
+    expect(onCommit).not.toHaveBeenCalled();
     expect(workerState.instances).toHaveLength(0);
   });
 });

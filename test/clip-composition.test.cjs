@@ -308,6 +308,111 @@ test('normalizes canonical clip timing, linked groups and appearance', () => {
   });
 });
 
+test('round-trips optional clip lock flags without materializing omitted values', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-clip-locks-'));
+  const store = createProjectStore(root);
+  const project = store.create({ name: 'Clip locks' });
+  const source = path.join(root, 'clip.mp4');
+  fs.writeFileSync(source, 'video');
+  const imported = store.importEditorMedia(project.id, { kind: 'video', source });
+  const asset = { ...imported, durationMs: 1_000, width: 1_280, height: 720 };
+  const state = store.editorState(project.id);
+  state.composition = {
+    schemaVersion: 14,
+    assets: [asset],
+    keyboardCaptionSessions: [],
+    clips: [
+      visualClip(asset.id, { id: 'locked-clip', locked: true }),
+      visualClip(asset.id, { id: 'unlocked-clip', locked: false }),
+      visualClip(asset.id, { id: 'legacy-clip' }),
+    ],
+  };
+
+  const saved = store.saveEditorState(project.id, state);
+  const persisted = JSON.parse(fs.readFileSync(path.join(store.directoryFor(project.id), 'project.json'), 'utf8'));
+  const reopened = store.editorState(project.id);
+  const lockValues = (clips) => Object.fromEntries(clips.map((clip) => [clip.id, clip.locked]));
+
+  const expected = { 'locked-clip': true, 'unlocked-clip': false, 'legacy-clip': undefined };
+  assert.deepEqual(lockValues(saved.composition.clips), expected);
+  assert.deepEqual(lockValues(persisted.editor.composition.clips), expected);
+  assert.deepEqual(lockValues(reopened.composition.clips), expected);
+  assert.equal(
+    Object.hasOwn(
+      reopened.composition.clips.find((clip) => clip.id === 'legacy-clip'),
+      'locked',
+    ),
+    false,
+  );
+});
+
+test('round-trips recording clip links, explicit detachment, and omitted legacy values', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-recording-links-'));
+  const store = createProjectStore(root);
+  const project = store.create({ name: 'Recording links' });
+  const source = path.join(root, 'clip.mp4');
+  fs.writeFileSync(source, 'video');
+  const imported = store.importEditorMedia(project.id, { kind: 'video', source });
+  const asset = { ...imported, durationMs: 1_000, width: 1_280, height: 720 };
+  const state = store.editorState(project.id);
+  state.composition = {
+    schemaVersion: 14,
+    assets: [asset],
+    keyboardCaptionSessions: [],
+    clips: [
+      visualClip(asset.id, { id: 'linked-clip', recordingClipId: 'screen-recording' }),
+      visualClip(asset.id, { id: 'detached-clip', recordingClipId: null }),
+      visualClip(asset.id, { id: 'legacy-clip' }),
+    ],
+  };
+
+  const saved = store.saveEditorState(project.id, state);
+  const persisted = JSON.parse(fs.readFileSync(path.join(store.directoryFor(project.id), 'project.json'), 'utf8'));
+  const reopened = store.editorState(project.id);
+  const recordingLinkValues = (clips) => Object.fromEntries(clips.map((clip) => [clip.id, clip.recordingClipId]));
+  const expected = {
+    'linked-clip': 'screen-recording',
+    'detached-clip': null,
+    'legacy-clip': undefined,
+  };
+
+  assert.deepEqual(recordingLinkValues(saved.composition.clips), expected);
+  assert.deepEqual(recordingLinkValues(persisted.editor.composition.clips), expected);
+  assert.deepEqual(recordingLinkValues(reopened.composition.clips), expected);
+  assert.equal(
+    Object.hasOwn(
+      reopened.composition.clips.find((clip) => clip.id === 'legacy-clip'),
+      'recordingClipId',
+    ),
+    false,
+  );
+});
+
+test('rejects invalid recording clip link values during normalization', () => {
+  const asset = {
+    id: 'recording-asset',
+    kind: 'video',
+    name: 'Recording',
+    fileName: 'recording.mp4',
+    durationMs: 1_000,
+    width: 1_280,
+    height: 720,
+    origin: 'project',
+  };
+  for (const recordingClipId of [42, false, {}, '']) {
+    assert.throws(
+      () =>
+        normalizeComposition({
+          schemaVersion: 14,
+          assets: [asset],
+          keyboardCaptionSessions: [],
+          clips: [visualClip(asset.id, { recordingClipId })],
+        }),
+      /Lien de piste enregistrée invalide/,
+    );
+  }
+});
+
 test('normalizes voiceover clips with audio analyses and persisted normalization', () => {
   const analysis = {
     version: 1,

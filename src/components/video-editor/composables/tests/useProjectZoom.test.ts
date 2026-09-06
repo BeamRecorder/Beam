@@ -3,6 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ProjectEditorData } from '../../../../api/types/capture-api';
 import type { ZoomElement } from '../../zoom/zoom-types';
 import { ZOOM_ALGORITHM_VERSION } from '../../zoom/zoom-suggestions';
+import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { createComposition } from '../../composition/engine/clip-engine';
+import type { ClipComposition } from '~/media/shared/composition-types';
 import type { EditorPreferenceDefaults } from '../editor-default-types';
 import { normalizeEditorPreferenceDefaults } from '../editor-defaults';
 import { useProjectZoom } from '../useProjectZoom';
@@ -48,6 +51,44 @@ const data = (overrides: Partial<ProjectEditorData> = {}): ProjectEditorData => 
   ...overrides,
 });
 
+const recordingComposition = (): ClipComposition =>
+  createComposition(
+    [
+      {
+        id: 'screen-asset',
+        kind: 'video',
+        name: 'Screen recording',
+        fileName: 'screen.webm',
+        durationMs: 10_000,
+        width: 1_920,
+        height: 1_080,
+        src: '/screen.webm',
+        origin: 'session',
+        sessionId: 'session',
+      },
+    ],
+    [
+      {
+        id: 'screen',
+        kind: 'screen',
+        name: 'Screen recording',
+        assetId: 'screen-asset',
+        timelineStartMs: 0,
+        timelineDurationMs: 10_000,
+        sourceInMs: 0,
+        sourceDurationMs: 10_000,
+        playbackRate: 1,
+        enabled: true,
+        order: 0,
+        trackId: 'screen-track',
+        transform: { x: 0, y: 0, width: 1, height: 1 },
+        appearance: createDefaultClipAppearance('screen'),
+        isMirrored: false,
+        isMirroredY: false,
+      },
+    ],
+  );
+
 const create = (
   initialData: ProjectEditorData | null = data(),
   duration = 5_000,
@@ -57,8 +98,9 @@ const create = (
   const editorData = ref(initialData);
   const durationMs = ref(duration);
   const editorDefaults = ref(defaults);
+  const composition = ref(recordingComposition());
   return {
-    state: useProjectZoom({ editorData, durationMs, activeTab, editorDefaults }),
+    state: useProjectZoom({ editorData, durationMs, composition, activeTab, editorDefaults }),
     durationMs,
     activeTab,
     editorDefaults,
@@ -212,7 +254,7 @@ describe('useProjectZoom', () => {
       expect.arrayContaining([
         expect.objectContaining({ id: 'manual' }),
         expect.objectContaining({ id: 'other-auto' }),
-        expect.objectContaining({ id: 'auto:session:2000', mode: 'auto' }),
+        expect.objectContaining({ id: 'auto:session:2000:screen', mode: 'auto' }),
       ]),
     );
     expect(state.zoomElements.value.find((item) => item.id === 'old-auto')).toBeUndefined();
@@ -221,6 +263,41 @@ describe('useProjectZoom', () => {
         expect.objectContaining({ sessionId: 'session', algorithmVersion: ZOOM_ALGORITHM_VERSION }),
         expect.objectContaining({ sessionId: 'other' }),
       ]),
+    );
+  });
+
+  it('preserves explicitly detached automatic zooms while regenerating the active session', () => {
+    const { state } = create(data());
+    const detached = { ...zoom('detached-auto', 'auto'), linkedClipId: null };
+    state.zoomElements.value = [detached];
+
+    state.generateZooms();
+
+    expect(state.zoomElements.value).toContainEqual(detached);
+    expect(state.zoomElements.value.find((item) => item.id === 'auto:session:2000:screen')).toMatchObject({
+      linkedClipId: 'screen',
+      mode: 'auto',
+    });
+  });
+
+  it('preserves locked automatic zooms while regenerating the active session', () => {
+    const { state } = create(data(), 5_000);
+    const lockedAutomatic = {
+      ...zoom('locked-auto', 'auto'),
+      locked: true,
+      startMs: 0,
+      endMs: 1_000,
+    };
+    const staleAutomatic = { ...zoom('stale-auto', 'auto'), startMs: 3_000, endMs: 4_000 };
+    state.zoomElements.value = [lockedAutomatic, staleAutomatic];
+
+    state.generateZooms();
+
+    expect(state.zoomElements.value).toContainEqual(lockedAutomatic);
+    expect(state.zoomElements.value.find((entry) => entry.id === 'locked-auto')).toBe(lockedAutomatic);
+    expect(state.zoomElements.value.find((entry) => entry.id === 'stale-auto')).toBeUndefined();
+    expect(state.zoomElements.value).toContainEqual(
+      expect.objectContaining({ id: 'auto:session:2000:screen', mode: 'auto', startMs: 1_500, endMs: 2_500 }),
     );
   });
 
@@ -265,7 +342,7 @@ describe('useProjectZoom', () => {
     expect(state.zoomElements.value).toContainEqual(manual);
     expect(state.zoomElements.value.find((item) => item.id === 'stale-auto')).toBeUndefined();
     expect(state.zoomElements.value).toContainEqual(
-      expect.objectContaining({ id: 'auto:session:2000', mode: 'auto', projection: '2d', tiltPreset: 'custom' }),
+      expect.objectContaining({ id: 'auto:session:2000:screen', mode: 'auto', projection: '2d', tiltPreset: 'custom' }),
     );
     expect(state.generatedSessions.value).toContainEqual(
       expect.objectContaining({ sessionId: 'session', algorithmVersion: ZOOM_ALGORITHM_VERSION }),
@@ -320,7 +397,7 @@ describe('useProjectZoom', () => {
       expect.objectContaining({ sessionId: 'session', algorithmVersion: ZOOM_ALGORITHM_VERSION }),
     ]);
     expect(state.zoomElements.value).toEqual(
-      expect.arrayContaining([expect.objectContaining({ id: 'auto:session:2000', mode: 'auto' })]),
+      expect.arrayContaining([expect.objectContaining({ id: 'auto:session:2000:screen', mode: 'auto' })]),
     );
   });
 
@@ -339,6 +416,27 @@ describe('useProjectZoom', () => {
     state.deleteSelectedZoom();
     expect(state.zoomElements.value).toEqual([]);
     expect(state.selectedZoomId.value).toBeNull();
+  });
+
+  it('makes ordinary edits to a locked zoom a no-op', () => {
+    const { state } = create();
+    const locked = { ...zoom('locked'), locked: true };
+    const initial = [locked];
+    state.zoomElements.value = initial;
+
+    state.updateZoom({ ...locked, startMs: 2_000, endMs: 3_000, depth: 6 });
+    state.trimZoomEdge('locked', 'start', 1_500);
+    state.previewMoveZoom('locked', 4_000, 5_000);
+    state.selectedZoomId.value = 'locked';
+    state.deleteSelectedZoom();
+    state.deleteZoomById('locked');
+
+    expect(state.zoomElements.value).toBe(initial);
+    expect(state.zoomElements.value).toEqual([locked]);
+
+    const copied = { ...zoom('replacement'), startMs: locked.startMs, endMs: locked.endMs };
+    expect(() => state.pasteZoomAtTime(copied, locked.startMs)).toThrow('Timeline selection is locked.');
+    expect(state.zoomElements.value).toBe(initial);
   });
 
   it('preserves a multi-selection and deletes every selected zoom', () => {

@@ -1,3 +1,5 @@
+import { recordingLinkedClipIds } from '../composition/recording-media-links';
+import { selectionHasLocks } from '../composition/timeline-locks';
 import { ref, type Ref } from 'vue';
 import type { Clip, ClipComposition } from '~/media/shared/composition-types';
 import type { ZoomElement } from '../zoom/zoom-types';
@@ -28,6 +30,12 @@ export function useLinkedClipDeletion(options: {
       selection: { clipIds, zoomIds },
       mode,
     });
+    if (
+      next.composition === options.composition.value &&
+      next.zoomElements.length === options.zoomElements.value.length &&
+      next.zoomElements.every((zoom, index) => zoom === options.zoomElements.value[index])
+    )
+      return;
     options.composition.value = next.composition;
     options.zoomElements.value = next.zoomElements;
     options.selectedClipIds.value = options.selectedClipIds.value.filter((id) => !ids.has(id));
@@ -41,6 +49,7 @@ export function useLinkedClipDeletion(options: {
   };
 
   const requestTimelineDeletion = (selection: TimelineSelectionDelete) => {
+    if (selectionHasLocks(options.composition.value, options.zoomElements.value, selection)) return;
     if (!selection.clipIds.length) {
       if (selection.zoomIds.length) applyDeletion([], selection.zoomIds, selection.mode);
       return;
@@ -53,11 +62,11 @@ export function useLinkedClipDeletion(options: {
       return;
     }
 
-    const linkedGroupIds = new Set(requested.flatMap((clip) => (clip.groupId ? [clip.groupId] : [])));
-    const candidates = options.composition.value.clips.filter(
-      (clip) => requestedIds.has(clip.id) || Boolean(clip.groupId && linkedGroupIds.has(clip.groupId)),
+    const linkedIds = new Set(recordingLinkedClipIds(options.composition.value, [...requestedIds]));
+    const candidates = options.composition.value.clips.filter((clip) => linkedIds.has(clip.id));
+    const hasLinkedCandidates = requested.some(
+      (clip) => recordingLinkedClipIds(options.composition.value, [clip.id]).length > 1,
     );
-    const hasLinkedCandidates = candidates.some((clip) => clip.groupId && linkedGroupIds.has(clip.groupId));
     if (!hasLinkedCandidates) {
       applyDeletion(
         requested.map((clip) => clip.id),

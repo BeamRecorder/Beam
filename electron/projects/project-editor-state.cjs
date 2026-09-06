@@ -122,6 +122,10 @@ const zoomState = (value) => {
       typeof element.id !== 'string' ||
       !element.id ||
       ids.has(element.id) ||
+      (element.linkedClipId !== undefined &&
+        element.linkedClipId !== null &&
+        (typeof element.linkedClipId !== 'string' || !element.linkedClipId.trim())) ||
+      (element.locked !== undefined && typeof element.locked !== 'boolean') ||
       typeof element.sessionId !== 'string' ||
       !finite(element.startMs) ||
       !finite(element.endMs) ||
@@ -154,6 +158,8 @@ const zoomState = (value) => {
             : 'custom';
     return {
       id: element.id,
+      ...(element.linkedClipId === undefined ? {} : { linkedClipId: element.linkedClipId }),
+      ...(element.locked === undefined ? {} : { locked: element.locked }),
       sessionId: element.sessionId,
       startMs: Math.round(element.startMs),
       endMs: Math.round(element.endMs),

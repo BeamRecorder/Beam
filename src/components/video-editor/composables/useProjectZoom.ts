@@ -1,3 +1,7 @@
+import type { ClipComposition } from '~/media/shared/composition-types';
+import { generateRecordingZooms } from '../zoom/recording-zoom-generation';
+import { preservesLockedItems, TimelineLockedError } from '../composition/timeline-locks';
+import { useLockedState } from './useLockedState';
 import { computed, ref, watch, type Ref } from 'vue';
 import type { ProjectEditorData } from '../../../api/types/capture-api';
 import {
@@ -15,7 +19,7 @@ import {
   type ZoomAutoFollowSettings,
   type ZoomMotionBlurSettings,
 } from '../zoom/zoom-types';
-import { buildAutomaticZoomElements, ZOOM_ALGORITHM_VERSION } from '../zoom/zoom-suggestions';
+import { ZOOM_ALGORITHM_VERSION } from '../zoom/zoom-suggestions';
 import { pasteZoomAt } from '../zoom/zoom-paste';
 import { fitZoomPlacement } from '../zoom/zoom-placement';
 import type { EditorPreferenceDefaults } from './editor-default-types';
@@ -23,11 +27,12 @@ import type { EditorPreferenceDefaults } from './editor-default-types';
 export function useProjectZoom(options: {
   editorData: Ref<ProjectEditorData | null | undefined>;
   durationMs: Ref<number>;
+  composition: Ref<ClipComposition>;
   activeTab: Ref<string>;
   editorDefaults: Ref<EditorPreferenceDefaults>;
 }) {
   const { editorData, durationMs, activeTab } = options;
-  const zoomElements = ref<ZoomElement[]>([]);
+  const { state: zoomElements, restore: restoreZoomElements } = useLockedState<ZoomElement[]>([], (value) => value);
   const generatedSessions = ref<ProjectEditorData['zoom']['generatedSessions']>([]);
   const zoomMotionBlur = ref<ZoomMotionBlurSettings>({ ...DEFAULT_ZOOM_MOTION_BLUR });
   const zoomAutoFollow = ref<ZoomAutoFollowSettings>({ ...DEFAULT_ZOOM_AUTO_FOLLOW });
@@ -95,7 +100,7 @@ export function useProjectZoom(options: {
       tiltPreset: defaults?.tiltPreset ?? DEFAULT_ZOOM_TILT_PRESET,
       focus: { cx: 0.5, cy: 0.5 },
     };
-    zoomElements.value.push(zoom);
+    zoomElements.value = [...zoomElements.value, zoom];
     selectZooms([zoom.id], zoom.id);
   };
 
@@ -104,14 +109,26 @@ export function useProjectZoom(options: {
     if (!data?.cursor.available) return;
     const generationDurationMs = Math.min(durationMs.value, data.manifest.durationNs / 1_000_000);
     if (generationDurationMs <= 0) return;
-    const generated = buildAutomaticZoomElements({
-      telemetry: data.cursor.telemetry,
-      sessionId: data.sessionId,
-      durationMs: generationDurationMs,
-      reserved: zoomElements.value.filter((element) => element.mode === 'manual'),
-    });
+    const generated = generateRecordingZooms(
+      options.composition.value,
+      data.sessionId,
+      data.cursor.telemetry,
+      zoomElements.value.filter(
+        (element) =>
+          element.mode === 'manual' ||
+          element.locked ||
+          element.linkedClipId === null ||
+          element.sessionId !== data.sessionId,
+      ),
+    );
     zoomElements.value = [
-      ...zoomElements.value.filter((element) => element.sessionId !== data.sessionId || element.mode !== 'auto'),
+      ...zoomElements.value.filter(
+        (element) =>
+          element.locked ||
+          element.linkedClipId === null ||
+          element.sessionId !== data.sessionId ||
+          element.mode !== 'auto',
+      ),
       ...generated,
     ];
     generatedSessions.value = [
@@ -159,11 +176,12 @@ export function useProjectZoom(options: {
     const ids = new Set(
       selectedZoomIds.value.length ? selectedZoomIds.value : selectedZoomId.value ? [selectedZoomId.value] : [],
     );
-    if (!ids.size) return;
+    if (!ids.size || zoomElements.value.some((element) => ids.has(element.id) && element.locked)) return;
     zoomElements.value = zoomElements.value.filter((element) => !ids.has(element.id));
     selectedZoomId.value = null;
   };
   const deleteZoomById = (id: string) => {
+    if (zoomElements.value.some((element) => element.id === id && element.locked)) return;
     zoomElements.value = zoomElements.value.filter((element) => element.id !== id);
     selectedZoomIds.value = selectedZoomIds.value.filter((selectedId) => selectedId !== id);
     if (selectedZoomId.value === id) {
@@ -184,6 +202,8 @@ export function useProjectZoom(options: {
   };
   const pasteZoomAtTime = (copiedZoom: ZoomElement, startMs: number) => {
     const pasted = pasteZoomAt(zoomElements.value, copiedZoom, startMs, durationMs.value);
+    if (!preservesLockedItems(zoomElements.value, pasted.elements))
+      throw new TimelineLockedError('Timeline selection is locked.');
     zoomElements.value = pasted.elements;
     selectZooms([pasted.zoomId], pasted.zoomId);
     return zoomElements.value.find((zoom) => zoom.id === pasted.zoomId)!;
@@ -191,6 +211,7 @@ export function useProjectZoom(options: {
 
   return {
     zoomElements,
+    restoreZoomElements,
     generatedSessions,
     zoomMotionBlur,
     zoomAutoFollow,

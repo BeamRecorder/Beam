@@ -184,6 +184,7 @@ export interface ZoomFocus {
 }
 
 export interface ZoomElement {
+  linkedClipId?: string | null;
   id: string;
   sessionId: string;
   startMs: number;

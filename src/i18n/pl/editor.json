@@ -213,7 +213,12 @@
     "textCaptions": "Napisy tekstowe",
     "rippleDelete": "Usuń i zamknij lukę",
     "copyUnavailable": "Przed kopiowaniem wybierz element na osi czasu.",
-    "clipboardEmpty": "Skopiuj element osi czasu przed wklejeniem."
+    "clipboardEmpty": "Skopiuj element osi czasu przed wklejeniem.",
+    "lock": "Zablokuj",
+    "unlock": "Odblokuj",
+    "locked": "Zablokowano",
+    "removeGap": "Usuń przerwę",
+    "lockedMessage": "{name} jest zablokowany. Wprowadzanie zmian jest niemożliwe."
   },
   "TimelineVideoClip": {
     "trimStart": "Przytnij początek",
@@ -439,5 +444,12 @@
       "large": "Duży plik do pobrania; zalecany WebGPU.",
       "veryLarge": "Bardzo duży i wolny bez WebGPU."
     }
+  },
+  "RecordingSidecarLinks": {
+    "title": "Powiązane elementy",
+    "description": "Powiązane elementy przesuwają się razem z nagraniem. Odłącz element, aby zachować jego pozycję podczas przesuwania nagrania.",
+    "unlinkOne": "Odłącz {name}",
+    "unlink": "Odłącz",
+    "unlinkAll": "Odłącz wszystkie"
   }
 }

@@ -161,6 +161,7 @@ export interface MediaAsset {
 
 export interface ClipBase {
   id: string;
+  locked?: boolean;
   kind: ClipKind;
   name: string;
   timelineStartMs: number;
@@ -175,6 +176,8 @@ export interface ClipBase {
   order: number;
   /** Clips sharing a group are edited by the same engine operation until detached. */
   groupId?: string;
+  /** Null explicitly detaches a recorded sidecar; undefined resolves its session association. */
+  recordingClipId?: string | null;
   /** Persisted timeline lane for compositing clips; absent on non-visual clips and pre-v4 data. */
   trackId?: string;
 }

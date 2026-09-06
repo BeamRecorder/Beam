@@ -14,6 +14,7 @@ export function useCaptionLayerReorder(options: CaptionLayerReorderOptions) {
 
   const beginCaptionReorder = (event: PointerEvent, layerId: string, representativeClipId: string) => {
     if (event.button !== 0 && event.button !== undefined) return;
+    if (options.layers.value.find((layer) => layer.id === layerId)?.clips.some((clip) => clip.locked)) return;
     const startX = event.clientX ?? 0;
     const startY = event.clientY ?? 0;
     const initialOrder = options.layers.value.map((layer) => layer.id);
@@ -38,6 +39,10 @@ export function useCaptionLayerReorder(options: CaptionLayerReorderOptions) {
       const from = order.indexOf(layerId);
       const to = order.indexOf(targetId);
       if (from < 0 || to < 0 || from === to || Date.now() - lastSwapTime < 150) return;
+
+      const crossed = new Set(order.slice(Math.min(from, to), Math.max(from, to) + 1));
+      if (options.layers.value.some((track) => crossed.has(track.id) && track.clips.some((clip) => clip.locked)))
+        return;
 
       const rect = row.getBoundingClientRect?.();
       if (rect && rect.height > 0) {

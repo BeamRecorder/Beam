@@ -1,3 +1,4 @@
+import { recordingMediaOwner } from './recording-media-links';
 import type { ProjectEditorData, SessionTrackAsset, SessionTrackData } from '../../../api/types/capture-api';
 import {
   COMPOSITION_SCHEMA_VERSION,
@@ -278,6 +279,16 @@ export function synchronizeRecordingClips(
     group.forEach((clip) => {
       clip.groupId = groupId;
     });
+  }
+
+  const associationComposition = {
+    ...canonicalComposition,
+    assets: [...assets.values()],
+    clips: [...clips, ...candidates],
+  };
+  for (const candidate of candidates) {
+    const owner = recordingMediaOwner(associationComposition, candidate);
+    if (owner) candidate.recordingClipId = owner.id;
   }
 
   if (

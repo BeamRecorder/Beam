@@ -90,6 +90,7 @@ export const TimelineClipStub = defineComponent({
     <button
       type="button"
       class="timeline-clip"
+      :data-timeline-clip-id="clip.id"
       :class="{ selected, disabled: !clip.enabled, 'paste-arrival': pasteHighlight }"
       @click.stop="$emit('select', $event)"
       @contextmenu.prevent="$emit('contextmenu', $event)"

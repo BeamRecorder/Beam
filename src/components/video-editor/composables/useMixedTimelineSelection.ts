@@ -3,6 +3,7 @@ import type { ClipComposition } from '~/media/shared/composition-types';
 import type { ZoomElement } from '../zoom/zoom-types';
 import type {
   TimelineItemKind,
+  TimelineSelectionIds,
   TimelineItemSelectionRequest,
   TrackClipSelection,
   TrackZoomSelection,
@@ -121,10 +122,24 @@ export function useMixedTimelineSelection(options: {
     anchor.value = primary;
   };
 
+  const selectBox = (selection: TimelineSelectionIds) => {
+    const validClipIds = new Set(options.composition.value.clips.map((clip) => clip.id));
+    const validZoomIds = new Set(options.zoomElements.value.map((zoom) => zoom.id));
+    const clipIds = selection.clipIds.filter((id) => validClipIds.has(id));
+    const zoomIds = selection.zoomIds.filter((id) => validZoomIds.has(id));
+    const primary = clipIds[0]
+      ? { kind: 'clip' as const, id: clipIds[0] }
+      : zoomIds[0]
+        ? { kind: 'zoom' as const, id: zoomIds[0] }
+        : null;
+    setSelection(clipIds, zoomIds, primary);
+    anchor.value = primary;
+  };
+
   const clearAll = () => {
     setSelection([], [], null);
     anchor.value = null;
   };
 
-  return { selectItem, selectAll, selectClipTrack, selectZoomTrack, clearAll };
+  return { selectItem, selectAll, selectBox, selectClipTrack, selectZoomTrack, clearAll };
 }

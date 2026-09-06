@@ -73,6 +73,26 @@ describe('TimelineTracks', () => {
     expect(mounted!.emitted('reorder:clip')).toContainEqual([{ id: 'image-clip', targetIndex: 1 }]);
   });
 
+  it('does not cross a locked visual lane while reordering tracks', async () => {
+    const lockedComposition = composition();
+    lockedComposition.clips = lockedComposition.clips.map((clip) =>
+      clip.id === 'webcam-clip' ? { ...clip, locked: true } : clip,
+    );
+    const mounted = await mountTracks({ composition: lockedComposition });
+    const rows = mounted!.findAll('.sidebar-tracks-stack .visual-track');
+    expect(rows).toHaveLength(3);
+
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: vi.fn().mockReturnValue(rows[1]!.element),
+    });
+    await rows[0]!.get('.track-drag-handle').trigger('pointerdown', { clientX: 10, clientY: 10 });
+    window.dispatchEvent(pointerEvent('pointermove', 30, 80));
+    window.dispatchEvent(pointerEvent('pointerup', 30, 80));
+
+    expect(mounted!.emitted('reorder:clip') ?? []).toHaveLength(0);
+  });
+
   it('opens context menu on right click, pastes at the playhead, and handles delete', async () => {
     const mounted = await mountTracks();
     const clipEl = mounted!.find('.tracks-stack .timeline-clip');

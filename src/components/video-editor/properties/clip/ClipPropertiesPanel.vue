@@ -8,7 +8,7 @@ import BigSlider from '~/ui/slider/BigSlider.vue';
 import Button from '~/ui/button/Button.vue';
 import Divider from '~/ui/divider/Divider.vue';
 import TimelineClickEmptyState from '~/components/video-editor/properties/clip/TimelineClickEmptyState.vue';
-import { Unlink, RotateCcw } from '@lucide/vue';
+import { RotateCcw } from '@lucide/vue';
 import type { NormalizedTransform } from '~/media/shared/composition-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import CameraLayoutPanel from '../camera/CameraLayoutPanel.vue';
@@ -174,19 +174,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
         </div>
       </div>
 
-      <!-- Divider -->
-      <Divider v-if="selectedClip.isLinked" spacing="xs" />
-
-      <!-- Controls & Link -->
-      <div v-if="selectedClip.isLinked" class="section-block">
-        <div class="prop-row">
-          <div class="link-label">
-            <Unlink :size="14" />
-            <span>{{ t('sidecarLink') }}</span>
-          </div>
-          <Button variant="outline" size="sm" @click="emit('unlink')"> Unlink </Button>
-        </div>
-      </div>
+      <slot name="sidecars" />
     </div>
   </div>
 </template>

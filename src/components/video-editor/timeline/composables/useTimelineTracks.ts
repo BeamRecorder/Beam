@@ -1,3 +1,5 @@
+import { recordingMoveSelection } from '../../composition/recording-sidecars';
+import { timelineMovePreviews } from './timeline-composition-preview';
 import { computed, ref } from 'vue';
 import { DEFAULT_ZOOM_DURATION_MS, type ZoomElement } from '../../zoom/zoom-types';
 import {
@@ -20,7 +22,7 @@ import type { TimelineTracksEmits, TimelineTracksProps } from './timeline-tracks
 import { timelineVisualScale } from './timeline-coordinate-space';
 import { groupVisualTimelineTracks, previewVisualTrackOrder } from './visual-timeline-tracks';
 import { visualMoveDeltaBounds } from '../../composition/engine/visual-track-layout';
-import { shiftTimelineSelection } from '../../composition/timeline-edit-operations';
+import { prepareTimelineSelectionMove } from '../../composition/timeline-selection-move';
 import { useVisualTrackReorder } from './useVisualTrackReorder';
 import { useTimelineClipTrim } from './useTimelineClipTrim';
 import { groupImportedAudioTimelineTracks } from './audio-timeline-tracks';
@@ -30,7 +32,6 @@ import { useTimelineAddPlacement } from './useTimelineAddPlacement';
 export type { TimelineTracksEmits, TimelineTracksProps } from './timeline-tracks-types';
 
 export { DEFAULT_ZOOM_DURATION_MS } from '../../zoom/zoom-types';
-
 export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTracksEmits) {
   const newZoomDurationMs = computed(() =>
     Number.isFinite(props.newZoomDurationMs)
@@ -89,6 +90,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
       : (assets.value.get(clip.assetId) ?? null);
 
   const activeSnapTimeMs = ref<number | null>(null);
+  const isMoving = ref(false);
   const activeTrimState = ref<{ ids: string[]; edge: 'start' | 'end'; durationMs: number; atLimit?: boolean } | null>(
     null,
   );
@@ -127,7 +129,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     emit,
     layoutDurationMs,
     activeSnapTimeMs,
-    computed(() => activeTrimState.value !== null),
+    computed(() => activeTrimState.value !== null || isMoving.value),
   );
 
   const clipPreview = ref<Record<string, { startMs: number; durationMs: number }>>({});
@@ -175,17 +177,24 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     event.stopPropagation();
     const explicitlySelected = props.selectedClipIds?.includes(clip.id) ?? false;
     const selectedIds = explicitlySelected && props.selectedClipIds?.length ? props.selectedClipIds : [clip.id];
-    const ids = [
-      ...new Set(
-        selectedIds.flatMap((id) => {
-          const selected = props.composition.clips.find((entry) => entry.id === id);
-          return selected ? linkedIdsFor(selected) : [];
-        }),
-      ),
-    ];
-    const zoomIds = explicitlySelected ? [...(props.selectedZoomIds ?? [])] : [];
-    const isMultipleSelection = selectedIds.length + zoomIds.length > 1;
+    const linked = recordingMoveSelection(props.composition, props.zoomElements, {
+      clipIds: selectedIds,
+      zoomIds: explicitlySelected ? (props.selectedZoomIds ?? []) : [],
+    });
+    const ids = [...linked.clipIds];
+    const zoomIds = [...linked.zoomIds];
+    const isMultipleSelection =
+      selectedIds.length + (explicitlySelected ? (props.selectedZoomIds?.length ?? 0) : 0) > 1;
     movingClipIds.value = ids;
+    isMoving.value = true;
+    const idSet = new Set(ids);
+    const zoomIdSet = new Set(zoomIds);
+    const previewMove = prepareTimelineSelectionMove({
+      composition: props.composition,
+      zoomElements: props.zoomElements,
+      selection: { clipIds: ids, zoomIds },
+    });
+    let lastPreview: ReturnType<typeof previewMove> | null = null;
     const initialVisualTrack = baseVisualTracks.value.find((track) =>
       track.clips.some((entry) => entry.id === clip.id),
     );
@@ -246,23 +255,16 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
       } else {
         previewDurationMs.value = null;
       }
-      const preview = shiftTimelineSelection({
-        composition: props.composition,
-        zoomElements: props.zoomElements,
-        selection: { clipIds: ids, zoomIds },
-        deltaMs: finalDeltaMs,
-      });
-      clipPreview.value = Object.fromEntries(
-        preview.composition.clips
-          .filter((entry) => ids.includes(entry.id))
-          .map((entry) => [entry.id, { startMs: entry.timelineStartMs, durationMs: entry.timelineDurationMs }]),
-      );
-      zoomPreview.value = Object.fromEntries(
-        preview.zoomElements
-          .filter((zoom) => zoomIds.includes(zoom.id))
-          .map((zoom) => [zoom.id, { startMs: zoom.startMs, endMs: zoom.endMs }]),
-      );
-      emit('preview:composition', preview.composition);
+      const preview = previewMove(finalDeltaMs);
+      finalDeltaMs = preview.deltaMs;
+      if (preview !== lastPreview) {
+        lastPreview = preview;
+        const previews = timelineMovePreviews(preview, idSet, zoomIdSet);
+        if (idSet.size) clipPreview.value = previews.clips;
+        if (zoomIdSet.size) zoomPreview.value = previews.zooms;
+        if (idSet.size) emit('preview:composition', preview.composition);
+        emit('preview:zooms', preview.zoomElements);
+      }
       if (!isMultipleSelection && initialVisualTrack && initialVisualTrackOrder) {
         const row = document.elementFromPoint?.(next.clientX, next.clientY)?.closest<HTMLElement>('.visual-track');
         const targetTrackId = row?.dataset.trackId;
@@ -282,18 +284,19 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
       }
     };
     const moveUpdates = createAnimationFrameCoalescer(applyMove);
-    const move = moveUpdates.schedule;
     const cleanup = () => {
       stopAutoScroll();
-      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointermove', moveUpdates.schedule);
       window.removeEventListener('pointerup', end);
       window.removeEventListener('pointercancel', cancel);
       clearLinkedPreview(ids);
       for (const id of zoomIds) delete zoomPreview.value[id];
       previewDurationMs.value = null;
       movingClipIds.value = [];
+      isMoving.value = false;
       activeSnapTimeMs.value = null;
       emit('preview:composition', null);
+      emit('preview:zooms', null);
       if (initialVisualTrack) {
         requestAnimationFrame(() => {
           visualOrderPreview.value = null;
@@ -311,14 +314,15 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
       }
       cleanup();
       if (finalDeltaMs === 0) return;
-      if (isMultipleSelection) emit('move:selection', { clipIds: ids, zoomIds, deltaMs: finalDeltaMs });
+      if (isMultipleSelection || zoomIds.length || ids.length > 1)
+        emit('move:selection', { clipIds: ids, zoomIds, deltaMs: finalDeltaMs });
       else emit('move:clip', { id: clip.id, startMs: clip.timelineStartMs + finalDeltaMs });
     };
     const cancel = () => {
       moveUpdates.cancel();
       cleanup();
     };
-    window.addEventListener('pointermove', move);
+    window.addEventListener('pointermove', moveUpdates.schedule);
     window.addEventListener('pointerup', end, { once: true });
     window.addEventListener('pointercancel', cancel, { once: true });
   };
@@ -347,6 +351,8 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     previewDurationMs,
     zoomPreview,
     clipPreview,
+    movingClipIds,
+    isMoving,
     activeTrimState,
     resolveMsPerPx,
     updateAutoScroll,
@@ -463,6 +469,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     zoomPreview,
     activeTrimState,
     movingClipIds,
+    isMoving,
     activeSnapTimeMs,
     displayedClip,
     displayedZoom,

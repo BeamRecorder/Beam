@@ -1,5 +1,10 @@
 <script setup lang="ts">
+import TimelineLockOverlay from './TimelineLockOverlay.vue';
+import { Lock } from '@lucide/vue';
+import TimelineGapButtons from './TimelineGapButtons.vue';
 import TimelineClip from './TimelineClip.vue';
+import { timelineSpanStyle } from './timeline-clip-geometry';
+import TimelineSelectionBox from './TimelineSelectionBox.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useTimelineTracks } from './composables/useTimelineTracks';
 import { useTimelineContextMenu } from './composables/useTimelineContextMenu';
@@ -61,7 +66,7 @@ const {
   handleWheel,
   activeTrimState,
   activeSnapTimeMs,
-  movingClipIds,
+  isMoving,
   displayedClip,
   displayedZoom,
   trimStateFor,
@@ -212,7 +217,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
       <div
         :ref="setTracksViewportElement"
         class="timeline-viewport"
-        :class="{ 'is-trimming': activeTrimState !== null, 'is-wheel-zooming': isWheelZooming }"
+        :class="{ 'is-trimming': activeTrimState !== null, 'is-moving': isMoving, 'is-wheel-zooming': isWheelZooming }"
         :style="tracksWidthStyle"
       >
         <div class="timeline-ruler">
@@ -260,7 +265,12 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
             <span class="snap-guide-badge">{{ (activeSnapTimeMs / 1000).toFixed(2) }}s</span>
           </div>
         </div>
-        <div class="tracks-stack">
+        <TimelineSelectionBox
+          class="tracks-stack"
+          :selection="{ clipIds: [...selectedClipIdSet], zoomIds: [...selectedZoomIdSet] }"
+          @start="closeContextMenu"
+          @select="emit('select:box', $event)"
+        >
           <TimelineCanvasTransitionTrack
             v-if="canvasTransitions.entry || canvasTransitions.exit"
             mode="track"
@@ -301,6 +311,15 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 >
                   + {{ visualAddLabel(track) }}
                 </div>
+                <TimelineGapButtons
+                  v-if="track.clips.some((clip) => ['screen', 'video', 'image', 'webcam'].includes(clip.kind))"
+                  :clips="track.clips"
+                  :composition="composition"
+                  :duration-ms="layoutDurationMs"
+                  :width-px="rulerLayoutWidth"
+                  :moving="isMoving || activeTrimState !== null"
+                  @remove="emit('remove:gap', $event)"
+                />
                 <TimelineClip
                   v-for="clip in track.clips"
                   :key="clip.id"
@@ -309,10 +328,8 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                   :duration="layoutDurationMs / 1000"
                   :timeline-width-px="rulerLayoutWidth"
                   :thumbnail-slots="thumbnailSlots"
-                  :defer-thumbnail-requests="
-                    isWheelZooming || activeTrimState !== null || movingClipIds.includes(clip.id)
-                  "
-                  :defer-waveform-draw="isWheelZooming"
+                  :defer-thumbnail-requests="isWheelZooming || activeTrimState !== null || isMoving"
+                  :defer-waveform-draw="isWheelZooming || isMoving"
                   :selected="selectedClipIdSet.has(clip.id)"
                   :trim-state="trimStateFor(clip.id)"
                   :paste-highlight="recentPaste?.type === 'clip' && recentPaste.id === clip.id"
@@ -345,12 +362,18 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 :key="zoom.id"
                 type="button"
                 class="cursor-zoom-indicator"
+                :data-timeline-zoom-id="zoom.id"
                 :class="{
                   selected: selectedZoomIdSet.has(zoom.id),
                   'paste-arrival': recentPaste?.type === 'zoom' && recentPaste.id === zoom.id,
                 }"
                 :style="
-                  percentageStyle(displayedZoom(zoom).startMs, displayedZoom(zoom).endMs - displayedZoom(zoom).startMs)
+                  timelineSpanStyle(
+                    displayedZoom(zoom).startMs,
+                    displayedZoom(zoom).endMs - displayedZoom(zoom).startMs,
+                    layoutDurationMs / 1000,
+                    rulerLayoutWidth,
+                  )
                 "
                 @click.stop="selectItem('zoom', zoom.id, $event)"
                 @contextmenu.prevent.stop="openZoomContextMenu($event, zoom)"
@@ -365,7 +388,9 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                     >{{ (trimStateFor(zoom.id)!.durationMs / 1000).toFixed(1) }}s</span
                   >
                 </span>
+                <TimelineLockOverlay v-if="zoom.locked" />
                 <span class="zoom-clip-labels">
+                  <Lock v-if="zoom.locked" :size="12" :aria-label="t('locked')" />
                   <span class="zoom-meta-badge zoom-projection-badge">
                     {{ normalizeZoomProjection(zoom.projection) === '3d' ? '3D' : '2D' }}
                   </span>
@@ -413,7 +438,14 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
             v-if="systemAudioClips.length"
             class="track-row audio-track"
             :class="{ disabled: !includeAudioInExport || !systemAudioClips.some((clip) => clip.enabled) }"
-            @contextmenu="openTrackContextMenu($event, 'audio')"
+            @contextmenu="
+              openTrackContextMenu(
+                $event,
+                'audio',
+                undefined,
+                systemAudioClips.map((clip) => clip.id),
+              )
+            "
           >
             <div class="track-content audio-content">
               <span v-if="!includeAudioInExport" class="export-audio-disabled">{{ t('audioDisabledFromExport') }}</span>
@@ -425,8 +457,8 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 :duration="layoutDurationMs / 1000"
                 :timeline-width-px="rulerLayoutWidth"
                 :thumbnail-slots="thumbnailSlots"
-                :defer-thumbnail-requests="isWheelZooming || activeTrimState !== null"
-                :defer-waveform-draw="isWheelZooming"
+                :defer-thumbnail-requests="isWheelZooming || activeTrimState !== null || isMoving"
+                :defer-waveform-draw="isWheelZooming || isMoving"
                 :selected="selectedClipIdSet.has(clip.id)"
                 :waveform-bars="audioWaveforms[clip.id]?.bars"
                 :waveform-left-percent="audioWaveforms[clip.id]?.leftPercent"
@@ -447,10 +479,25 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
             v-if="microphoneClips.length"
             class="track-row audio-track"
             :class="{ disabled: !includeAudioInExport || !microphoneClips.some((clip) => clip.enabled) }"
-            @contextmenu="openTrackContextMenu($event, 'audio')"
+            @contextmenu="
+              openTrackContextMenu(
+                $event,
+                'audio',
+                undefined,
+                microphoneClips.map((clip) => clip.id),
+              )
+            "
           >
             <div class="track-content audio-content">
               <span v-if="!includeAudioInExport" class="export-audio-disabled">{{ t('audioDisabledFromExport') }}</span>
+              <TimelineGapButtons
+                :clips="microphoneClips"
+                :composition="composition"
+                :duration-ms="layoutDurationMs"
+                :width-px="rulerLayoutWidth"
+                :moving="isMoving || activeTrimState !== null"
+                @remove="emit('remove:gap', $event)"
+              />
               <TimelineClip
                 v-for="clip in microphoneClips"
                 :key="clip.id"
@@ -459,8 +506,8 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 :duration="layoutDurationMs / 1000"
                 :timeline-width-px="rulerLayoutWidth"
                 :thumbnail-slots="thumbnailSlots"
-                :defer-thumbnail-requests="isWheelZooming || activeTrimState !== null"
-                :defer-waveform-draw="isWheelZooming"
+                :defer-thumbnail-requests="isWheelZooming || activeTrimState !== null || isMoving"
+                :defer-waveform-draw="isWheelZooming || isMoving"
                 :selected="selectedClipIdSet.has(clip.id)"
                 :waveform-bars="audioWaveforms[clip.id]?.bars"
                 :waveform-left-percent="audioWaveforms[clip.id]?.leftPercent"
@@ -482,7 +529,14 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
             :key="clip.id"
             class="track-row audio-track voiceover-track"
             :class="{ disabled: !includeAudioInExport || !clip.enabled }"
-            @contextmenu="openTrackContextMenu($event, 'audio')"
+            @contextmenu="
+              openTrackContextMenu(
+                $event,
+                'audio',
+                undefined,
+                [clip].map((clip) => clip.id),
+              )
+            "
           >
             <div class="track-content audio-content">
               <span v-if="!includeAudioInExport" class="export-audio-disabled">{{ t('audioDisabledFromExport') }}</span>
@@ -492,8 +546,8 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 :duration="layoutDurationMs / 1000"
                 :timeline-width-px="rulerLayoutWidth"
                 :thumbnail-slots="thumbnailSlots"
-                :defer-thumbnail-requests="isWheelZooming || activeTrimState !== null"
-                :defer-waveform-draw="isWheelZooming"
+                :defer-thumbnail-requests="isWheelZooming || activeTrimState !== null || isMoving"
+                :defer-waveform-draw="isWheelZooming || isMoving"
                 :selected="selectedClipIdSet.has(clip.id)"
                 :waveform-bars="audioWaveforms[clip.id]?.bars"
                 :waveform-left-percent="audioWaveforms[clip.id]?.leftPercent"
@@ -526,7 +580,14 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
             :key="track.id"
             class="track-row audio-track"
             :class="{ disabled: !includeAudioInExport || !track.clips.some((clip) => clip.enabled) }"
-            @contextmenu="openTrackContextMenu($event, 'audio')"
+            @contextmenu="
+              openTrackContextMenu(
+                $event,
+                'audio',
+                undefined,
+                track.clips.map((clip) => clip.id),
+              )
+            "
           >
             <div class="track-content audio-content">
               <span v-if="!includeAudioInExport" class="export-audio-disabled">{{ t('audioDisabledFromExport') }}</span>
@@ -538,8 +599,8 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 :duration="layoutDurationMs / 1000"
                 :timeline-width-px="rulerLayoutWidth"
                 :thumbnail-slots="thumbnailSlots"
-                :defer-thumbnail-requests="isWheelZooming || activeTrimState !== null"
-                :defer-waveform-draw="isWheelZooming"
+                :defer-thumbnail-requests="isWheelZooming || activeTrimState !== null || isMoving"
+                :defer-waveform-draw="isWheelZooming || isMoving"
                 :selected="selectedClipIdSet.has(clip.id)"
                 :waveform-bars="audioWaveforms[clip.id]?.bars"
                 :waveform-left-percent="audioWaveforms[clip.id]?.leftPercent"
@@ -556,7 +617,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
               />
             </div>
           </div>
-        </div>
+        </TimelineSelectionBox>
       </div>
     </div>
     <ContextMenu

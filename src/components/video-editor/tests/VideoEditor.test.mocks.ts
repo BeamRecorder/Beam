@@ -153,6 +153,9 @@ vi.mock('../composables/useVideoEditor', async () => {
       const cursorMotion = ref({ preset: 'smooth', smoothing: 0.67, springMassMultiplier: 1.29, motionBlur: 0.4 });
       const compositionState = {
         composition,
+        restoreComposition: vi.fn((value: ClipComposition) => {
+          composition.value = value;
+        }),
         selectedClipId,
         selectedClipIds,
         selectedClip,
@@ -257,6 +260,9 @@ vi.mock('../composables/useVideoEditor', async () => {
       });
       const zoomState = {
         zoomElements,
+        restoreZoomElements: vi.fn((value: ZoomElement[]) => {
+          zoomElements.value = value;
+        }),
         selectedZoomId,
         selectedZoomIds,
         selectedZoom: ref(null),
@@ -488,13 +494,14 @@ vi.mock('../properties/PropertiesPanel.vue', async () => {
         'update:clip-rate',
         'update:clip-volume',
         'update:clip-enabled',
-        'unlink-clip',
+        'unlink-sidecars',
         'update:clip-is-mirrored',
         'update:clip-appearance',
         'update:clip-crop',
         'update:clip-transform',
         'preview:clip-crop',
         'reset:clip-transform',
+        'unlock:selection',
       ],
       setup(props, { emit }) {
         const compositionWithTransform = (x: number) => {
@@ -539,7 +546,10 @@ vi.mock('../properties/PropertiesPanel.vue', async () => {
               h('button', { class: 'update-rate', onClick: () => emit('update:clip-rate', 1.5) }),
               h('button', { class: 'update-volume', onClick: () => emit('update:clip-volume', 80) }),
               h('button', { class: 'update-enabled', onClick: () => emit('update:clip-enabled', false) }),
-              h('button', { class: 'unlink', onClick: () => emit('unlink-clip') }),
+              h('button', {
+                class: 'unlink',
+                onClick: () => emit('unlink-sidecars', { clipId: 'screen', clipIds: [], zoomIds: [] }),
+              }),
               h('button', { class: 'mirrored', onClick: () => emit('update:clip-is-mirrored', true) }),
               h('button', {
                 class: 'preview-clip-crop',
@@ -553,6 +563,7 @@ vi.mock('../properties/PropertiesPanel.vue', async () => {
                 class: 'appearance',
                 onClick: () => emit('update:clip-appearance', { borderEnabled: true }),
               }),
+              h('button', { class: 'unlock-selection', onClick: () => emit('unlock:selection') }),
               h('button', { class: 'reset-transform', onClick: () => emit('reset:clip-transform') }),
             ],
           );
@@ -568,6 +579,7 @@ vi.mock('../canvas/EditorCanvas.vue', async () => {
       name: 'MockEditorCanvas',
       props: {
         isGridVisible: { type: Boolean, default: false },
+        zoomElements: { type: Array, default: () => [] },
         composition: { type: Object, default: null },
         selectedTransformClip: { type: Object, default: null },
         isCropping: { type: Boolean, default: false },
@@ -719,6 +731,8 @@ vi.mock('../timeline/EditorTimeline.vue', async () => {
         'preview:composition',
         'paste:item',
         'clipboard:copied',
+        'lock:selection',
+        'remove:gap',
       ],
       setup(props, { emit }) {
         const composition = props.composition as ClipComposition;

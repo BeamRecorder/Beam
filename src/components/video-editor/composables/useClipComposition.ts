@@ -1,4 +1,7 @@
-import { computed, ref, type Ref } from 'vue';
+import { useCompositionClipEditing } from './useCompositionClipEditing';
+import { preservesLockedAssets } from '../composition/timeline-locks';
+import { useLockedState } from './useLockedState';
+import { computed, type Ref } from 'vue';
 import { capture } from '../../../api/capture';
 import type { CaptureProject, ProjectEditorData } from '../../../api/types/capture-api';
 import { inspectMedia, mediaSourceDescriptor, type DroppedMediaInspection } from '~/media/shared';
@@ -7,7 +10,6 @@ import {
   isAudioClip,
   isCompositingClip,
   isTextCaptionClip,
-  isVisualClip,
   type AudioClip,
   type AudioRole,
   type BlurClip,
@@ -24,17 +26,7 @@ import { DEFAULT_COLOR_FILL } from '~/media/shared/color-fill-types';
 import { DEFAULT_SHAPE_LAYER_STYLE } from '~/media/shared/shape-layer-style';
 import type { EditorPreferenceDefaults } from './editor-default-types';
 import { audioDefaultsFor, blurDefaultsFor, captionDefaultsFor, visualClipDefaultProps } from './editor-defaults';
-import {
-  addClip,
-  clipTrimBounds,
-  holdClipAtPlayhead,
-  moveClip,
-  reorderClip,
-  reorderTextCaption,
-  setClipEnabled,
-  splitClip,
-  trimClip,
-} from '../composition/engine/clip-engine';
+import { addClip, setClipEnabled } from '../composition/engine/clip-engine';
 import { synchronizeRecordingClips } from '../composition/session-clips';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useSelectedClips } from './useSelectedClips';
@@ -45,7 +37,6 @@ import type {
   TimelineAddableVisualKind,
 } from '../composition/visual-element-types';
 
-const endMs = (clip: Clip) => clip.timelineStartMs + clip.timelineDurationMs;
 export function useClipComposition(options: {
   project: Ref<CaptureProject | null | undefined>;
   editorData: Ref<ProjectEditorData | null | undefined>;
@@ -55,7 +46,11 @@ export function useClipComposition(options: {
 }) {
   const { t } = useTranslate('TimelineToolbar');
   const { t: tCanvas } = useTranslate('CanvasPanel');
-  const composition = ref<ClipComposition>(emptyComposition());
+  const { state: composition, restore: restoreComposition } = useLockedState<ClipComposition>(
+    emptyComposition(),
+    (value) => value.clips,
+    preservesLockedAssets,
+  );
   const selection = useSelectedClips({ composition, activeTab: options.activeTab });
   const {
     selectedClipId,
@@ -393,59 +388,20 @@ export function useClipComposition(options: {
   const addVisualElementAtTime = (request: AddVisualElementRequest) =>
     addElement(request.kind, request.startMs, request.durationMs, request.trackId);
 
-  const previewClipEdge = (clipId: string, edge: 'start' | 'end', timeMs: number) => {
-    const clip = composition.value.clips.find((entry) => entry.id === clipId);
-    if (!clip) return;
-    const bounds = clipTrimBounds(composition.value, clipId, edge);
-    const clamped = Math.max(bounds.minMs, Math.min(bounds.maxMs, Math.round(timeMs)));
-    composition.value = trimClip(composition.value, clipId, edge, clamped);
-  };
-
-  const trimClipEdge = (clipId: string, edge: 'start' | 'end', timeMs: number) => previewClipEdge(clipId, edge, timeMs);
-  const previewMoveClip = (clipId: string, startMs: number) => {
-    composition.value = moveClip(composition.value, clipId, startMs);
-  };
-  const moveClipTo = (clipId: string, startMs: number) => previewMoveClip(clipId, startMs);
-  const splitSelectedClip = () => {
-    const clip = selectedClip.value;
-    const timeMs = Math.round(options.currentTimeSec.value * 1_000);
-    if (!clip || timeMs <= clip.timelineStartMs || timeMs >= endMs(clip)) return;
-    composition.value = splitClip(composition.value, clip.id, timeMs);
-  };
-  const holdClip = (clipId: string, timeMs: number) => {
-    const clip = composition.value.clips.find((entry) => entry.id === clipId);
-    if (!clip) return;
-    composition.value = holdClipAtPlayhead(composition.value, clipId, timeMs);
-    const hold = composition.value.clips.find(
-      (entry) =>
-        isVisualClip(entry) &&
-        entry.trackId === clip.trackId &&
-        entry.timelineStartMs === Math.round(timeMs) &&
-        entry.freezeFrameSourceMs !== undefined,
-    );
-    if (hold) selectedClipId.value = hold.id;
-  };
-  const reorderVisualClip = (clipId: string, targetIndex: number) => {
-    if (!Number.isInteger(targetIndex)) return;
-    const clip = composition.value.clips.find((entry) => entry.id === clipId);
-    if (!clip || !isCompositingClip(clip)) return;
-    composition.value = reorderClip(composition.value, clipId, targetIndex);
-  };
-  const reorderCaptionClip = (clipId: string, targetIndex: number) => {
-    if (!Number.isInteger(targetIndex)) return;
-    const clip = composition.value.clips.find((entry) => entry.id === clipId);
-    if (!clip || !isTextCaptionClip(clip)) return;
-    composition.value = reorderTextCaption(composition.value, clipId, targetIndex);
-  };
-
-  const toggleClip = (clipId: string) => {
-    const clip = composition.value.clips.find((entry) => entry.id === clipId);
-    if (!clip) return;
-    selectedClipId.value = clipId;
-    composition.value = setClipEnabled(composition.value, clipId, !clip.enabled);
-  };
+  const {
+    previewClipEdge,
+    trimClipEdge,
+    previewMoveClip,
+    moveClipTo,
+    splitSelectedClip,
+    holdClip,
+    reorderVisualClip,
+    reorderCaptionClip,
+    toggleClip,
+  } = useCompositionClipEditing({ composition, selectedClip, selectedClipId, currentTimeSec: options.currentTimeSec });
   return {
     composition,
+    restoreComposition,
     selectedClipId,
     selectedClipIds,
     selectedClip,

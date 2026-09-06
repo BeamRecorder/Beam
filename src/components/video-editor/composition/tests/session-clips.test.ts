@@ -145,6 +145,7 @@ describe('synchronizeRecordingClips', () => {
     expect(cameraClip.groupId).toBe(screenClip.groupId);
     expect(cameraClip.groupId).toContain('recording:session-1:0:2000');
     expect(audioClips.map((clip) => clip.role)).toEqual(['system', 'microphone']);
+    expect(audioClips.every((clip) => clip.recordingClipId === screenClip.id)).toBe(true);
     expect(audioClips[0]!.timelineStartMs).toBe(500);
     expect(audioClips[1]!.timelineDurationMs).toBe(40);
     expect(result.assets.find((asset) => asset.kind === 'video' && asset.src === '/screen.webm')?.width).toBe(1920);
@@ -411,5 +412,25 @@ describe('synchronizeRecordingClips', () => {
     expect(keyboardCaption?.groupId).toBeUndefined();
     expect(mediaClips).toHaveLength(2);
     expect(mediaClips.every((clip) => clip.groupId === 'recording:session-1:0:2000')).toBe(true);
+  });
+});
+
+it('preserves explicit microphone unlink when synchronizing the same session again', () => {
+  const data = editorData([
+    track('screen', [segment()]),
+    track('microphone', [segment({ path: 'mic.opus', startNs: 200_000_000, endNs: 1_500_000_000 })]),
+  ]);
+  const initial = synchronizeRecordingClips(emptyComposition(), data);
+  const detached = {
+    ...initial,
+    clips: initial.clips.map((clip) =>
+      clip.kind === 'audio' ? { ...clip, recordingClipId: null, groupId: undefined } : clip,
+    ),
+  };
+  const result = synchronizeRecordingClips(detached, data);
+  expect(result.clips.find((clip) => clip.kind === 'audio')).toMatchObject({
+    recordingClipId: null,
+    timelineStartMs: 200,
+    timelineDurationMs: 1300,
   });
 });

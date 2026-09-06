@@ -64,6 +64,8 @@ export function validateComposition(composition: ClipComposition): void {
   const clipIds = new Set<string>();
   const groupTiming = new Map<string, string>();
   for (const clip of composition.clips) {
+    if (clip.locked !== undefined && typeof clip.locked !== 'boolean')
+      throw new CompositionEngineError('Invalid clip lock.');
     if (
       !clip?.id ||
       clipIds.has(clip.id) ||
@@ -206,6 +208,12 @@ export function validateComposition(composition: ClipComposition): void {
       (typeof clip.captionLayerId !== 'string' || !clip.captionLayerId.trim())
     )
       throw new CompositionEngineError('Invalid caption layer identity.');
+    if (
+      clip.recordingClipId !== undefined &&
+      clip.recordingClipId !== null &&
+      (typeof clip.recordingClipId !== 'string' || !clip.recordingClipId.trim())
+    )
+      throw new CompositionEngineError('Invalid recording sidecar link.');
     if (clip.groupId) {
       const timing = `${clip.timelineStartMs}:${clip.timelineDurationMs}:${clip.playbackRate}`;
       const known = groupTiming.get(clip.groupId);

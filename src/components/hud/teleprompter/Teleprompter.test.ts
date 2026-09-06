@@ -61,6 +61,30 @@ describe('Teleprompter', () => {
     expect(wrapper.find('[aria-label="Teleprompter script"]').exists()).toBe(true);
   });
 
+  it.each([
+    ['Russian', 'После создания копируем ключ.\nПример кода MCP'],
+    ['Ukrainian', 'Привіт світе!\nУкраїнська мова: ї, є, ґ.'],
+    ['Bulgarian', 'Здравейте, свят!\nБългарски текст.'],
+    ['Greek', 'Καλημέρα κόσμε!\nΕλληνικό κείμενο.'],
+    ['Arabic', 'مرحبا بالعالم\nهذا نص عربي'],
+    ['Hindi', 'नमस्ते दुनिया\nयह हिन्दी पाठ है'],
+    ['CJK', '你好世界\n日本語の文章\n한국어 문장'],
+    ['mixed', 'Hello — Привет всем!\nMCP: пример кода'],
+  ])('preserves %s script text in the editor and reader with English menus', async (_language, text) => {
+    i18n.global.locale.value = 'en';
+    const wrapper = mount(Teleprompter, { global: { plugins: [i18n] } });
+    try {
+      await wrapper.get('textarea').setValue(text);
+      expect(wrapper.get('textarea').element.value).toBe(text);
+      expect(wrapper.findAll('.teleprompter-line').map((line) => line.text())).toEqual(text.split('\n'));
+      await wrapper.get('[aria-label="Preview"]').trigger('click');
+      expect(wrapper.find('textarea').exists()).toBe(false);
+      expect(wrapper.findAll('.teleprompter-line').map((line) => line.text())).toEqual(text.split('\n'));
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
   it('uses the French translation namespace when the locale changes', () => {
     i18n.global.locale.value = 'fr';
     const wrapper = mount(Teleprompter, { global: { plugins: [i18n] } });

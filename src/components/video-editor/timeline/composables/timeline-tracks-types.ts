@@ -90,6 +90,9 @@ export interface TimelineTracksEmits {
   (event: 'select:track', selection: TrackClipSelection): void;
   (event: 'select:item', selection: TimelineItemSelectionRequest): void;
   (event: 'select:all'): void;
+  (event: 'lock:selection', request: import('../../composition/timeline-lock-types').TimelineLockRequest): void;
+  (event: 'remove:gap', gap: import('../../composition/timeline-lock-types').TimelineGap): void;
+  (event: 'select:box', selection: TimelineSelectionIds): void;
   (event: 'toggle:clip', clipId: string): void;
   (event: 'delete:clips', clipIds: string[]): void;
   (event: 'delete:zoom', zoomId: string): void;
@@ -98,6 +101,7 @@ export interface TimelineTracksEmits {
   (event: 'trim:clip', payload: { id: string; edge: 'start' | 'end'; timeMs: number }): void;
   (event: 'move:clip', payload: { id: string; startMs: number }): void;
   (event: 'preview:composition', value: ClipComposition | null): void;
+  (event: 'preview:zooms', value: ZoomElement[] | null): void;
   (event: 'trim:zoom', payload: { id: string; edge: 'start' | 'end'; timeMs: number }): void;
   (event: 'move:zoom', payload: { id: string; startMs: number; endMs: number }): void;
   (event: 'move:selection', payload: TimelineSelectionMove): void;

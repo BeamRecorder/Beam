@@ -1,5 +1,5 @@
 import { computed, ref, type Ref } from 'vue';
-import { AudioLines, ClipboardPaste, Copy, Pause, Trash2 } from '@lucide/vue';
+import { AudioLines, ClipboardPaste, Copy, Lock, Unlock, Pause, Trash2 } from '@lucide/vue';
 import { isAudioClip, type Clip, type ClipComposition, type MediaAsset } from '~/media/shared/composition-types';
 import type { ZoomElement } from '../../zoom/zoom-types';
 import type { ContextMenuItemOrDivider } from '~/components/ui/context-menu';
@@ -7,6 +7,7 @@ import { getClipCategory, useTimelineClipboard } from './useTimelineClipboard';
 import type { TimelineClipboardItem, TimelineItemCategory, TimelinePasteTarget } from './timeline-clipboard-types';
 import type { TimelineTracksEmits } from './timeline-tracks-types';
 import { MIN_CLIP_DURATION_MS } from '../../composition/engine/clip-engine';
+import { selectionHasLocks } from '../../composition/timeline-locks';
 import { rippleRangeForSelection } from '../../composition/timeline-edit-operations';
 
 export interface TimelineContextMenuState {
@@ -90,9 +91,30 @@ export function useTimelineContextMenu(options: {
     };
   };
 
-  const openTrackContextMenu = (event: MouseEvent, category: TimelineItemCategory, trackId?: string) => {
+  const openTrackContextMenu = (
+    event: MouseEvent,
+    category: TimelineItemCategory,
+    trackId?: string,
+    laneClipIds?: string[],
+  ) => {
     event.preventDefault();
     const selected = selectedItem();
+    if (laneClipIds || trackId) {
+      selected.clipIds =
+        laneClipIds ??
+        options.composition.value.clips
+          .filter((clip) => clip.trackId === trackId || (!clip.trackId && clip.id === trackId))
+          .map((clip) => clip.id);
+      selected.zoomIds = [];
+      selected.clip = options.composition.value.clips.find((clip) => selected.clipIds.includes(clip.id)) ?? null;
+      selected.zoom = null;
+    }
+    if (category === 'zoom' && laneClipIds) {
+      selected.clipIds = [];
+      selected.zoomIds = options.zoomElements.value.map((zoom) => zoom.id);
+      selected.clip = null;
+      selected.zoom = options.zoomElements.value[0] ?? null;
+    }
     contextMenuState.value = {
       isOpen: true,
       x: event.clientX,
@@ -170,8 +192,24 @@ export function useTimelineContextMenu(options: {
   const contextMenuItems = computed<ContextMenuItemOrDivider[]>(() => {
     const { clip, zoom, clipIds, zoomIds } = contextMenuState.value;
     const canCopy = Boolean(options.scopeId.value && (zoom || clip));
-    const canHold = canHoldClip(clip);
+    const locked = selectionHasLocks(options.composition.value, options.zoomElements.value, { clipIds, zoomIds });
+    const selectedItems = [
+      ...options.composition.value.clips.filter((item) => clipIds.includes(item.id)),
+      ...options.zoomElements.value.filter((item) => zoomIds.includes(item.id)),
+    ];
+    const allLocked = selectedItems.length > 0 && selectedItems.every((item) => item.locked);
+    const canHold = !locked && canHoldClip(clip);
     const items: ContextMenuItemOrDivider[] = [];
+    if (selectedItems.length)
+      items.push(
+        {
+          id: allLocked ? 'unlock' : 'lock',
+          label:
+            options.t(allLocked ? 'unlock' : 'lock') + (selectedItems.length > 1 ? ` (${selectedItems.length})` : ''),
+          icon: allLocked ? Unlock : Lock,
+        },
+        { isDivider: true },
+      );
     const audioClipIds = clipIds.filter((id) => {
       const selected = options.composition.value.clips.find((item) => item.id === id);
       return selected ? isAudioClip(selected) : false;
@@ -180,7 +218,10 @@ export function useTimelineContextMenu(options: {
       items.push({ id: 'hold', label: options.t('holdSegment'), icon: Pause, disabled: !canHold }, { isDivider: true });
     }
     if (audioClipIds.length) {
-      items.push({ id: 'normalize-audio', label: options.t('normalizeAudio'), icon: AudioLines }, { isDivider: true });
+      items.push(
+        { id: 'normalize-audio', label: options.t('normalizeAudio'), icon: AudioLines, disabled: locked },
+        { isDivider: true },
+      );
     }
     items.push(
       { id: 'copy', label: options.t('copy'), icon: Copy, shortcut: 'Ctrl+C', disabled: !canCopy },
@@ -198,7 +239,7 @@ export function useTimelineContextMenu(options: {
         icon: Trash2,
         danger: true,
         shortcut: 'Del',
-        disabled: clipIds.length === 0 && zoomIds.length === 0,
+        disabled: locked || (clipIds.length === 0 && zoomIds.length === 0),
       },
     );
     const canRipple = Boolean(rippleRangeForSelection(options.composition.value, clipIds));
@@ -207,14 +248,18 @@ export function useTimelineContextMenu(options: {
       label: options.t('rippleDelete'),
       icon: Trash2,
       danger: true,
-      disabled: !canRipple,
+      disabled: locked || !canRipple,
     });
     return items;
   });
 
   const handleContextMenuSelect = (actionId: string) => {
     const { category, clip, zoom, clipIds, zoomIds, trackId } = contextMenuState.value;
-    if (actionId === 'hold' && clip && canHoldClip(clip))
+    const item = contextMenuItems.value.find((item) => !('isDivider' in item) && item.id === actionId);
+    if (item && 'disabled' in item && item.disabled) return;
+    if (actionId === 'lock' || actionId === 'unlock')
+      options.emit('lock:selection', { clipIds, zoomIds, locked: actionId === 'lock' });
+    else if (actionId === 'hold' && clip && canHoldClip(clip))
       options.emit('hold:clip', { id: clip.id, timeMs: options.currentTimeMs.value });
     else if (actionId === 'normalize-audio') options.emit('normalize:audio', clipIds);
     else if (actionId === 'copy') copyItem(clip, zoom);

@@ -407,6 +407,63 @@ test('persists valid 3D zoom settings without dropping the projection contract',
   assert.equal(state.elements[0].tiltPreset, 'large');
 });
 
+test('round-trips optional zoom lock flags without materializing omitted values', () => {
+  const state = zoomState({
+    elements: [
+      {
+        id: 'locked-zoom',
+        sessionId: 'session',
+        startMs: 0,
+        endMs: 500,
+        focus: { cx: 0.5, cy: 0.5 },
+        depth: 2,
+        mode: 'manual',
+        locked: true,
+      },
+      {
+        id: 'unlocked-zoom',
+        sessionId: 'session',
+        startMs: 500,
+        endMs: 1_000,
+        focus: { cx: 0.5, cy: 0.5 },
+        depth: 2,
+        mode: 'manual',
+        locked: false,
+      },
+      {
+        id: 'legacy-zoom',
+        sessionId: 'session',
+        startMs: 1_000,
+        endMs: 1_500,
+        focus: { cx: 0.5, cy: 0.5 },
+        depth: 2,
+        mode: 'manual',
+      },
+    ],
+    generatedSessions: [],
+  });
+
+  assert.deepEqual(
+    state.elements.map((element) => element.locked),
+    [true, false, undefined],
+  );
+  assert.equal(Object.hasOwn(state.elements[2], 'locked'), false);
+
+  const roundTripped = zoomState(state);
+  assert.deepEqual(
+    roundTripped.elements.map((element) => element.locked),
+    [true, false, undefined],
+  );
+  assert.throws(
+    () =>
+      zoomState({
+        elements: [{ ...state.elements[0], locked: 'yes' }],
+        generatedSessions: [],
+      }),
+    /Propriétés de zoom invalides/,
+  );
+});
+
 test('infers legacy tilt presets from intensity and validates explicit presets', () => {
   const state = zoomState({
     elements: [
@@ -467,4 +524,45 @@ test('infers legacy tilt presets from intensity and validates explicit presets',
       }),
     /Propriétés de zoom invalides/,
   );
+});
+
+test('preserves attached, detached and unspecified automatic zoom links', () => {
+  for (const link of [{ linkedClipId: 'screen-1' }, { linkedClipId: null }, {}]) {
+    const element = {
+      id: 'zoom',
+      sessionId: 'session',
+      startMs: 0,
+      endMs: 500,
+      focus: { cx: 0.5, cy: 0.5 },
+      depth: 2,
+      mode: 'auto',
+      ...link,
+    };
+    const normalized = zoomState({ elements: [element], generatedSessions: [] });
+    assert.equal(normalized.elements[0].linkedClipId, link.linkedClipId);
+    assert.equal(Object.hasOwn(normalized.elements[0], 'linkedClipId'), Object.hasOwn(link, 'linkedClipId'));
+    assert.deepEqual(zoomState(normalized), normalized);
+  }
+});
+
+test('rejects invalid recording link identifiers on zooms', () => {
+  for (const linkedClipId of ['', '  ', 2, false, {}, []]) {
+    assert.throws(() =>
+      zoomState({
+        elements: [
+          {
+            id: 'zoom',
+            sessionId: 'session',
+            startMs: 0,
+            endMs: 500,
+            focus: { cx: 0.5, cy: 0.5 },
+            depth: 2,
+            mode: 'auto',
+            linkedClipId,
+          },
+        ],
+        generatedSessions: [],
+      }),
+    );
+  }
 });

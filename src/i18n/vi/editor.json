@@ -213,7 +213,12 @@
     "delete": "Xóa",
     "rippleDelete": "Xóa và đóng khoảng trống",
     "copyUnavailable": "Chọn một mục dòng thời gian trước khi sao chép.",
-    "clipboardEmpty": "Sao chép một mục dòng thời gian trước khi dán."
+    "clipboardEmpty": "Sao chép một mục dòng thời gian trước khi dán.",
+    "lock": "Khóa",
+    "unlock": "Mở khóa",
+    "locked": "Đã khóa",
+    "removeGap": "Xóa khoảng trống",
+    "lockedMessage": "{name} đã bị khóa. Không thể chỉnh sửa."
   },
   "TimelineVideoClip": {
     "trimStart": "Cắt đầu đoạn",
@@ -439,5 +444,12 @@
       "large": "Dung lượng tải lớn; khuyên dùng WebGPU.",
       "veryLarge": "Rất lớn và chậm nếu không có WebGPU."
     }
+  },
+  "RecordingSidecarLinks": {
+    "title": "Các mục được liên kết",
+    "description": "Các mục được liên kết di chuyển cùng bản ghi. Hủy liên kết một mục để giữ nguyên vị trí của mục đó khi di chuyển bản ghi.",
+    "unlinkOne": "Hủy liên kết {name}",
+    "unlink": "Hủy liên kết",
+    "unlinkAll": "Hủy tất cả liên kết"
   }
 }
