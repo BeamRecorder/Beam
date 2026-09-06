@@ -1,3 +1,4 @@
+import { cropSourceDimensions } from '../composition/crop/crop-pixels';
 import { computed, ref, watch, type Ref } from 'vue';
 import {
   isAudioClip,
@@ -112,6 +113,8 @@ export function useSelectedClips(options: { composition: Ref<ClipComposition>; a
       ...(isAudioClip(clip) ? { volume: clip.volume, normalization: clip.normalization } : {}),
       ...(isVisualClip(clip)
         ? {
+            crop: clip.crop,
+            cropDimensions: cropSourceDimensions(options.composition.value, clip),
             isMirrored: clip.isMirrored,
             isMirroredY: clip.isMirroredY,
             clipTransform: clip.transform,

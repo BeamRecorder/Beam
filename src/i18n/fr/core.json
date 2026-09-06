@@ -330,7 +330,8 @@
     "deleteClip": "Supprimer le clip",
     "deleteVideo": "Supprimer la vidéo",
     "deleteWebcam": "Supprimer la webcam",
-    "shadowBlur": "Flou d'ombre"
+    "shadowBlur": "Flou d'ombre",
+    "crop": "Recadrage"
   },
   "CursorPanel": {
     "cursorStyle": "Style du curseur",
@@ -752,5 +753,14 @@
     "discordButton": "Rejoindre Discord",
     "reopenHint": "Vous pouvez revoir ce guide à tout moment dans Paramètres > Préférences.",
     "dismiss": "Fermer"
+  },
+  "CropControls": {
+    "top": "Haut",
+    "bottom": "Bas",
+    "left": "Gauche",
+    "right": "Droite",
+    "reset": "Réinitialiser",
+    "source": "Source : {width} × {height} px · Valeurs retirées de chaque bord.",
+    "unavailable": "Les dimensions du média sont indisponibles."
   }
 }

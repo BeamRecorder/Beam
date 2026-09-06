@@ -330,7 +330,8 @@
     "deleteClip": "클립 삭제",
     "deleteVideo": "비디오 삭제",
     "deleteWebcam": "웹캠 삭제",
-    "shadowBlur": "그림자 흐림"
+    "shadowBlur": "그림자 흐림",
+    "crop": "자르기"
   },
   "CursorPanel": {
     "cursorStyle": "커서 스타일",
@@ -767,5 +768,14 @@
     "discordTitle": "커뮤니티",
     "discordDesc": "도움말, 피드백, 기능 업데이트 받기",
     "discordButton": "디스코드에 참여하세요"
+  },
+  "CropControls": {
+    "top": "위",
+    "bottom": "아래",
+    "left": "왼쪽",
+    "right": "오른쪽",
+    "reset": "자르기 초기화",
+    "source": "원본: {width} × {height} px · 각 가장자리에서 잘라낼 크기입니다.",
+    "unavailable": "원본 크기를 사용할 수 없습니다."
   }
 }

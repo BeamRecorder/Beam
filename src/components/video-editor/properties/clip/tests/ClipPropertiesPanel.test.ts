@@ -1,11 +1,16 @@
-import { defineComponent, h, nextTick } from 'vue';
+import { defineComponent, h, nextTick, type PropType } from 'vue';
 import { mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import ClipPropertiesPanel from '../ClipPropertiesPanel.vue';
+import CameraLayoutPanel from '../../camera/CameraLayoutPanel.vue';
 
 const BigSliderStub = defineComponent({
   name: 'BigSlider',
-  props: { modelValue: { type: Number, default: 0 }, label: { type: String, default: '' } },
+  props: {
+    modelValue: { type: Number, default: 0 },
+    label: { type: String, default: '' },
+    formatValue: { type: Function as PropType<(value: number) => string>, default: undefined },
+  },
   emits: ['update:modelValue', 'interaction-start', 'interaction-end'],
   setup(props, { emit }) {
     return () =>
@@ -18,7 +23,7 @@ const BigSliderStub = defineComponent({
           onPointerdown: () => emit('interaction-start'),
           onPointerup: () => emit('interaction-end'),
         },
-        props.label,
+        [props.label, h('span', { class: 'slider-value' }, props.formatValue?.(props.modelValue) ?? props.modelValue)],
       );
   },
 });
@@ -53,6 +58,20 @@ const FrameStub = defineComponent({
   },
 });
 
+const CropControlsStub = defineComponent({
+  name: 'CropControls',
+  props: { clip: { type: Object, required: true } },
+  emits: ['update', 'preview'],
+  setup(_, { emit }) {
+    const crop = { x: 0.1, y: 0.2, width: 0.7, height: 0.6 };
+    return () =>
+      h('div', { class: 'crop-controls-stub' }, [
+        h('button', { class: 'crop-update', onClick: () => emit('update', crop) }, 'crop update'),
+        h('button', { class: 'crop-preview', onClick: () => emit('preview', crop) }, 'crop preview'),
+      ]);
+  },
+});
+
 const clip = (overrides: Record<string, unknown> = {}) => ({
   id: 'clip-1',
   kind: 'screen',
@@ -80,6 +99,7 @@ const mountPanel = (selectedClip: ReturnType<typeof clip> | null = clip()) =>
         ColorPicker: ColorPickerStub,
         ShadowDirectionGroup: ShadowDirectionStub,
         BorderAndFrameControls: FrameStub,
+        CropControls: CropControlsStub,
       },
     },
   });
@@ -175,6 +195,61 @@ describe('ClipPropertiesPanel', () => {
     expect(wrapper.findAll('.slider-stub')).toHaveLength(1);
     expect(wrapper.find('.direction-stub').exists()).toBe(false);
     expect(wrapper.find('.color-stub').exists()).toBe(false);
+  });
+
+  it.each(['screen', 'video', 'image', 'webcam'] as const)(
+    'forwards crop preview and commit events for %s',
+    async (kind) => {
+      const wrapper = mountPanel(clip({ kind }));
+      expect(wrapper.find('.accordion-trigger').exists()).toBe(false);
+      expect(wrapper.find('.crop-controls-stub').exists()).toBe(true);
+
+      await wrapper.get('.crop-preview').trigger('click');
+      await wrapper.get('.crop-update').trigger('click');
+      const crop = { x: 0.1, y: 0.2, width: 0.7, height: 0.6 };
+      expect(wrapper.emitted('preview:crop')).toEqual([[crop]]);
+      expect(wrapper.emitted('update:crop')).toEqual([[crop]]);
+    },
+  );
+
+  it('forwards camera settings and formats placement and playback slider values', async () => {
+    const wrapper = mountPanel(
+      clip({
+        kind: 'webcam',
+        cameraLayoutPreset: 'floating-bottom-right',
+        cameraFramingPreset: 'portrait',
+        hasLinkedScreen: true,
+        reactToZoom: false,
+        playbackRate: 1.25,
+        clipTransform: { x: 0.125, y: -0.25, width: 1.5, height: 0.75 },
+      }),
+    );
+    const cameraPanel = wrapper.findComponent(CameraLayoutPanel);
+    expect(cameraPanel.props()).toMatchObject({
+      layout: 'floating-bottom-right',
+      framing: 'portrait',
+      hasLinkedScreen: true,
+      reactToZoom: false,
+      supportsSplitLayouts: true,
+    });
+
+    const sliders = wrapper.findAll('.slider-stub');
+    expect(sliders[0]!.find('.slider-value').text()).toBe('13%');
+    expect(sliders[1]!.find('.slider-value').text()).toBe('-25%');
+    expect(sliders[2]!.find('.slider-value').text()).toBe('150%');
+    const playbackSlider = sliders.find((slider) =>
+      slider.attributes('data-label')?.toLowerCase().includes('playback'),
+    );
+    expect(playbackSlider).toBeDefined();
+    expect(playbackSlider!.find('.slider-value').text()).toBe('1.25×');
+
+    await playbackSlider!.trigger('click');
+    expect(wrapper.emitted('update:playbackRate')).toContainEqual([11.25]);
+
+    cameraPanel.vm.$emit('update:framing', 'fit');
+    cameraPanel.vm.$emit('update:reactToZoom', true);
+    expect(wrapper.emitted('update:cameraFraming')).toContainEqual(['fit']);
+    expect(wrapper.emitted('update:reactToZoom')).toContainEqual([true]);
   });
 
   it.each(['screen', 'video', 'image', 'webcam'] as const)(

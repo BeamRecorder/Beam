@@ -335,14 +335,16 @@ describe('useLayerTransformAndCrop', () => {
       height: '360px',
     });
     expect(mounted.state.cropContainerStyle.value).toMatchObject({
-      left: '10px',
-      top: '-25px',
+      left: '0px',
+      top: '0px',
+      transform: 'translate3d(10px, -25px, 0)',
       width: '800px',
       height: '360px',
     });
     expect(mounted.state.cropOverlayStyle.value).toEqual({
-      left: '10%',
-      top: '20%',
+      left: '0px',
+      top: '0px',
+      transform: 'translate3d(80px, 72px, 0)',
       width: '70%',
       height: '60%',
     });
@@ -374,20 +376,22 @@ describe('useLayerTransformAndCrop', () => {
       height: '360px',
     });
     expect(mounted.state.cropContainerStyle.value).toEqual({
-      left: '10px',
-      top: '-25px',
+      left: '0px',
+      top: '0px',
+      transform: 'translate3d(10px, -25px, 0)',
       width: '800px',
       height: '360px',
     });
     expect(mounted.state.cropOverlayStyle.value).toEqual({
-      left: '0%',
-      top: '75%',
+      left: '0px',
+      top: '0px',
+      transform: 'translate3d(0px, 270px, 0)',
       width: '100%',
       height: '25%',
     });
 
     mounted.state.commitCrop();
-    expect(mounted.options.onUpdateCrop).toHaveBeenCalledWith(bottomCrop);
+    expect(mounted.options.onUpdateCrop).not.toHaveBeenCalled();
 
     mounted.croppingRef.value = false;
     await nextTick();
@@ -401,14 +405,16 @@ describe('useLayerTransformAndCrop', () => {
     mounted.croppingRef.value = true;
     await nextTick();
     expect(mounted.state.cropContainerStyle.value).toEqual({
-      left: '10px',
-      top: '-25px',
+      left: '0px',
+      top: '0px',
+      transform: 'translate3d(10px, -25px, 0)',
       width: '800px',
       height: '360px',
     });
     expect(mounted.state.cropOverlayStyle.value).toEqual({
-      left: '0%',
-      top: '75%',
+      left: '0px',
+      top: '0px',
+      transform: 'translate3d(0px, 270px, 0)',
       width: '100%',
       height: '25%',
     });
@@ -619,14 +625,16 @@ describe('useLayerTransformAndCrop', () => {
     });
 
     expect(mounted.state.cropContainerStyle.value).toEqual({
-      left: `${expectedFit.left}px`,
-      top: `${expectedFit.top}px`,
+      left: '0px',
+      top: '0px',
+      transform: `translate3d(${expectedFit.left}px, ${expectedFit.top}px, 0)`,
       width: `${expectedFit.width}px`,
       height: `${expectedFit.height}px`,
     });
     expect(mounted.state.cropOverlayStyle.value).toEqual({
-      left: '10%',
-      top: '20%',
+      left: '0px',
+      top: '0px',
+      transform: `translate3d(${expectedFit.width * 0.1}px, ${expectedFit.height * 0.2}px, 0)`,
       width: '70%',
       height: '60%',
     });
@@ -839,7 +847,7 @@ describe('useLayerTransformAndCrop', () => {
 
     mounted.state.beginCropDrag(pointer(target, { clientX: 100, clientY: 100 }), 'resize', 'top-left');
     mounted.state.moveCropDrag(pointer(target, { clientX: 1000, clientY: 1000 }));
-    expect(mounted.state.cropDraft.value?.width).toBeGreaterThanOrEqual(0.05);
+    expect(mounted.state.cropDraft.value?.width).toBeGreaterThanOrEqual(1 / 800);
     mounted.state.commitCrop();
     expect(mounted.options.onUpdateCrop).toHaveBeenLastCalledWith(
       expect.objectContaining({ width: expect.any(Number) }),

@@ -330,7 +330,8 @@
     "deleteClip": "删除片段",
     "deleteVideo": "删除视频",
     "deleteWebcam": "删除摄像头",
-    "shadowBlur": "阴影模糊"
+    "shadowBlur": "阴影模糊",
+    "crop": "裁剪"
   },
   "CursorPanel": {
     "cursorStyle": "光标样式",
@@ -767,5 +768,14 @@
     "discordTitle": "社区",
     "discordDesc": "获取帮助、反馈和功能更新",
     "discordButton": "加入 Discord"
+  },
+  "CropControls": {
+    "top": "上",
+    "bottom": "下",
+    "left": "左",
+    "right": "右",
+    "reset": "重置裁剪",
+    "source": "源尺寸：{width} × {height} px · 各边裁去的像素数。",
+    "unavailable": "无法获取源文件尺寸。"
   }
 }

@@ -330,7 +330,8 @@
     "deleteClip": "क्लिप हटाएँ",
     "deleteVideo": "वीडियो हटाएँ",
     "deleteWebcam": "वेबकैम हटाएँ",
-    "shadowBlur": "छाया का ब्लर"
+    "shadowBlur": "छाया का ब्लर",
+    "crop": "क्रॉप"
   },
   "CursorPanel": {
     "cursorStyle": "कर्सर शैली",
@@ -767,5 +768,14 @@
     "discordTitle": "समुदाय",
     "discordDesc": "सहायता, फीडबैक और फीचर अपडेट प्राप्त करें",
     "discordButton": "कलह में शामिल हों"
+  },
+  "CropControls": {
+    "top": "ऊपर",
+    "bottom": "नीचे",
+    "left": "बाएँ",
+    "right": "दाएँ",
+    "reset": "क्रॉप रीसेट करें",
+    "source": "स्रोत: {width} × {height} px · हर किनारे से कटने वाला भाग।",
+    "unavailable": "स्रोत के आयाम उपलब्ध नहीं हैं।"
   }
 }

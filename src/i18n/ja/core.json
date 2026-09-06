@@ -330,7 +330,8 @@
     "deleteClip": "クリップを削除",
     "deleteVideo": "ビデオを削除",
     "deleteWebcam": "ウェブカメラを削除",
-    "shadowBlur": "影のぼかし"
+    "shadowBlur": "影のぼかし",
+    "crop": "クロップ"
   },
   "CursorPanel": {
     "cursorStyle": "カーソルスタイル",
@@ -767,5 +768,14 @@
     "discordTitle": "コミュニティ",
     "discordDesc": "ヘルプ、フィードバック、機能のアップデートを入手する",
     "discordButton": "Discordに参加する"
+  },
+  "CropControls": {
+    "top": "上",
+    "bottom": "下",
+    "left": "左",
+    "right": "右",
+    "reset": "クロップをリセット",
+    "source": "ソース: {width} × {height} px · 各辺から切り取る量。",
+    "unavailable": "ソースのサイズを取得できません。"
   }
 }

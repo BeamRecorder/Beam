@@ -330,7 +330,8 @@
     "deleteClip": "Delete Clip",
     "deleteVideo": "Delete video",
     "deleteWebcam": "Delete webcam",
-    "shadowBlur": "Shadow Blur"
+    "shadowBlur": "Shadow Blur",
+    "crop": "Crop"
   },
   "CursorPanel": {
     "cursorStyle": "Cursor Style",
@@ -752,5 +753,14 @@
     "discordButton": "Join Discord",
     "reopenHint": "You can revisit this onboarding anytime from Settings > Preferences.",
     "dismiss": "Dismiss"
+  },
+  "CropControls": {
+    "top": "Top",
+    "bottom": "Bottom",
+    "left": "Left",
+    "right": "Right",
+    "reset": "Reset crop",
+    "source": "Source: {width} × {height} px · Values trim each edge.",
+    "unavailable": "Source dimensions are unavailable."
   }
 }

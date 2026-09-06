@@ -1,3 +1,5 @@
+import type { CompositionSceneLayers } from '../composition/scene-layers';
+import type { RenderedVideoWindow } from './composables/useCameraZoom';
 import type { ProjectEditorData } from '../../../api/types/capture-api';
 import type {
   CursorAutoHideSettings,
@@ -72,6 +74,7 @@ export interface EditorCanvasEmits {
   (event: 'deselect:transform-clip'): void;
   (event: 'deselect:zoom'): void;
   (event: 'update:clip-transform', transform: NormalizedTransform): void;
+  (event: 'preview:clip-crop', crop: NormalizedCrop | null): void;
   (event: 'update:clip-crop', crop: NormalizedCrop): void;
   (event: 'select:canvas'): void;
   (event: 'select:cursor'): void;
@@ -81,3 +84,10 @@ export interface EditorCanvasEmits {
   (event: 'caption-editing-start'): void;
   (event: 'caption-editing-end', value: CaptionInlineEditingEnd): void;
 }
+
+export type DrawVisualStack = (
+  ctx: CanvasRenderingContext2D,
+  videoWindow: RenderedVideoWindow,
+  drawScreen: () => void,
+  layers: CompositionSceneLayers,
+) => void;

@@ -1,4 +1,12 @@
-import type { BlurEffectMode, BlurEffectShape, ClipFrame, NormalizedTransform } from '~/media/shared/composition-types';
+import type { CropDimensions } from '../composition/crop/crop-types';
+import type {
+  BlurEffectMode,
+  BlurEffectShape,
+  ClipFrame,
+  ClipShadowMode,
+  NormalizedCrop,
+  NormalizedTransform,
+} from '~/media/shared/composition-types';
 import type { CameraFramingPreset, CameraLayoutPreset } from '~/media/shared/camera-layout-types';
 import type { PhoneFrameFill } from '~/media/shared/color-fill-types';
 import type { AudioNormalization } from '~/media/shared/audio-normalization-types';
@@ -12,6 +20,10 @@ export interface SelectedClipProperties {
   playbackRate?: number;
   enabled?: boolean;
   isLinked?: boolean;
+  crop?: NormalizedCrop;
+  cropDimensions?: CropDimensions | null;
+  shadowBlur?: number;
+  shadowMode?: ClipShadowMode;
   shadowSize?: string;
   shadowColor?: string;
   shadowDirection?: string;

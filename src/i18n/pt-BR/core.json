@@ -330,7 +330,8 @@
     "deleteClip": "Excluir clipe",
     "deleteVideo": "Excluir vídeo",
     "deleteWebcam": "Excluir webcam",
-    "shadowBlur": "Desfoque da sombra"
+    "shadowBlur": "Desfoque da sombra",
+    "crop": "Recorte"
   },
   "CursorPanel": {
     "cursorStyle": "Estilo do cursor",
@@ -767,5 +768,14 @@
     "discordTitle": "Comunidade",
     "discordDesc": "Obtenha ajuda, feedback e atualizações de recursos",
     "discordButton": "Junte-se à discórdia"
+  },
+  "CropControls": {
+    "top": "Superior",
+    "bottom": "Inferior",
+    "left": "Esquerda",
+    "right": "Direita",
+    "reset": "Redefinir recorte",
+    "source": "Origem: {width} × {height} px · Corte em cada borda.",
+    "unavailable": "As dimensões da mídia estão indisponíveis."
   }
 }
