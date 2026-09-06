@@ -201,10 +201,23 @@ fn intersects_kwin_buffer_range_and_memfd_choice() {
     // SPA versions may retain the producer's preference or clamp ours to the
     // intersection. Both are valid as long as the default is inside that range.
     assert!((*min..=*max).contains(default));
-    assert_eq!(
-        property(&object, spa::sys::SPA_PARAM_BUFFERS_dataType),
-        &choice_flags(1_i32 << spa::sys::SPA_DATA_MemFd)
-    );
+    let memory = match property(&object, spa::sys::SPA_PARAM_BUFFERS_dataType) {
+        Value::Choice(ChoiceValue::Int(Choice(
+            flags,
+            ChoiceEnum::Flags {
+                default,
+                flags: values,
+            },
+        ))) => Some((flags, default, values)),
+        _ => None,
+    };
+    let (flags, default, values) = memory.expect("expected negotiated memory type flags");
+    let memfd = 1_i32 << spa::sys::SPA_DATA_MemFd;
+    assert!(flags.is_empty());
+    assert_eq!(*default, memfd);
+    // SPA can repeat the default mask in the choice payload. Check the
+    // negotiated memory types, not that version-dependent representation.
+    assert!(values.iter().all(|value| *value == memfd));
 }
 
 #[test]
