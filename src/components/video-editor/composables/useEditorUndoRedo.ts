@@ -122,7 +122,9 @@ export function useEditorUndoRedo(options: {
     const active = document.activeElement;
     if (active) {
       const tag = active.tagName.toLowerCase();
-      if (['input', 'textarea', 'select'].includes(tag) || active.getAttribute('contenteditable') === 'true') return;
+      const editingInput = tag === 'input' && (active as HTMLInputElement).type !== 'range';
+      if (editingInput || ['textarea', 'select'].includes(tag) || active.getAttribute('contenteditable') === 'true')
+        return;
     }
     if (!(event.ctrlKey || event.metaKey)) return;
     if (event.key.toLowerCase() === 'z') {

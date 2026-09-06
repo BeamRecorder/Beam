@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { CropPixels } from '../composition/crop/crop-types';
 import type { CSSProperties } from 'vue';
 import { Check } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
@@ -6,7 +7,7 @@ import ResizeHandle from '~/ui/ResizeHandle/ResizeHandle.vue';
 import type { ResizeCorner } from '~/ui/ResizeHandle/types';
 import { useTranslate } from '~/i18n/useTranslate';
 
-defineProps<{ containerStyle: CSSProperties; overlayStyle: CSSProperties }>();
+defineProps<{ containerStyle: CSSProperties; overlayStyle: CSSProperties; measurements?: CropPixels | null }>();
 const emit = defineEmits<{
   (event: 'move-start', value: PointerEvent): void;
   (event: 'move', value: PointerEvent): void;
@@ -31,7 +32,18 @@ const { t } = useTranslate('EditorCanvas');
       @pointermove="emit('move', $event)"
       @pointerup="emit('move-end', $event)"
       @pointercancel="emit('move-end', $event)"
+      @lostpointercapture="emit('move-end', $event)"
     >
+      <template v-if="measurements">
+        <span
+          v-for="edge in ['top', 'bottom', 'left', 'right'] as const"
+          :key="edge"
+          class="crop-measurement"
+          :class="edge"
+          >{{ measurements[edge] }} px</span
+        >
+        <span class="crop-dimensions">{{ measurements.width }} × {{ measurements.height }} px</span>
+      </template>
       <div class="crop-grid">
         <div class="grid-line vertical line-1" />
         <div class="grid-line vertical line-2" />
@@ -112,5 +124,44 @@ const { t } = useTranslate('EditorCanvas');
   z-index: 10;
   white-space: nowrap;
   pointer-events: auto;
+}
+.grid-line.horizontal.line-2 {
+  top: 66.666%;
+}
+.crop-measurement,
+.crop-dimensions {
+  position: absolute;
+  pointer-events: none;
+  white-space: nowrap;
+  padding: 2px 5px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-surface);
+  color: var(--text-primary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.crop-measurement.top {
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.crop-measurement.bottom {
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.crop-measurement.left {
+  left: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.crop-measurement.right {
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.crop-dimensions {
+  top: 6px;
+  left: 6px;
 }
 </style>

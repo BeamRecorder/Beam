@@ -330,7 +330,8 @@
     "deleteClip": "Xóa đoạn",
     "deleteVideo": "Xóa video",
     "deleteWebcam": "Xóa webcam",
-    "shadowBlur": "Độ mờ bóng"
+    "shadowBlur": "Độ mờ bóng",
+    "crop": "Cắt"
   },
   "CursorPanel": {
     "cursorStyle": "Kiểu con trỏ",
@@ -752,5 +753,14 @@
     "discordButton": "Tham gia Discord",
     "reopenHint": "Bạn có thể mở lại phần hướng dẫn này bất cứ lúc nào từ Cài đặt > Tùy chọn.",
     "dismiss": "Bỏ qua"
+  },
+  "CropControls": {
+    "top": "Trên",
+    "bottom": "Dưới",
+    "left": "Trái",
+    "right": "Phải",
+    "reset": "Đặt lại vùng cắt",
+    "source": "Nguồn: {width} × {height} px · Phần cắt ở mỗi cạnh.",
+    "unavailable": "Không có kích thước nguồn."
   }
 }

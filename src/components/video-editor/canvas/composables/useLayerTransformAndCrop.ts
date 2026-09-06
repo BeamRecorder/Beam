@@ -8,7 +8,6 @@ import {
   isShapeClip,
   isVisualClip,
   type CaptionClip,
-  type NormalizedCrop,
   type NormalizedTransform,
 } from '~/media/shared/composition-types';
 import type { TransformClip } from '../editor-canvas-types';
@@ -21,7 +20,7 @@ import {
 import type { UseLayerTransformAndCropOptions } from './layer-transform-and-crop-types';
 
 import { computeCanvasAlignmentSnapping, type AlignmentGuide } from './canvas-alignment';
-import { clampNormalizedCrop, mirrorCrop } from './layer-transform-geometry';
+import { useCropSelection } from './useCropSelection';
 import { editableVisualClipTransform, resizePhoneFrameTransform } from '../../composition/visual-framing';
 import { isPhoneFrame } from '../../composition/appearance/phone-frames';
 import {
@@ -41,7 +40,6 @@ type GlobalCameraClip = Exclude<TransformClip, CaptionClip>;
 
 export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOptions) {
   const transformDraft = ref<NormalizedTransform | null>(null);
-  const cropDraft = ref<NormalizedCrop | null>(null);
   const activeGuideLines = ref<AlignmentGuide[]>([]);
   let transformDrag: {
     kind: 'move' | 'resize';
@@ -52,14 +50,6 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     lastY: number;
     transform: NormalizedTransform;
   } | null = null;
-  let cropDrag: {
-    kind: 'move' | 'resize';
-    corner?: ResizeCorner;
-    startX: number;
-    startY: number;
-    value: NormalizedCrop;
-  } | null = null;
-
   const captionTransformFor = (clip: CaptionClip, transform = getCaptionTransform(clip)) => {
     const canvas = options.outputCanvas();
     return layoutCaptionText({
@@ -118,7 +108,6 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     () => options.selectedTransformClip()?.id,
     () => {
       if (!transformDrag) transformDraft.value = null;
-      cropDraft.value = null;
     },
   );
 
@@ -159,108 +148,7 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     return undefined;
   });
 
-  const cropValue = computed<NormalizedCrop>(() => {
-    const clip = options.selectedTransformClip();
-    return (
-      cropDraft.value ??
-      (clip && isVisualClip(clip) ? clip.crop : undefined) ?? {
-        x: 0,
-        y: 0,
-        width: 1,
-        height: 1,
-      }
-    );
-  });
-  const displayCrop = (crop: NormalizedCrop) => {
-    const clip = options.selectedTransformClip();
-    return mirrorCrop(
-      crop,
-      Boolean(clip && isVisualClip(clip) && clip.isMirrored),
-      Boolean(clip && isVisualClip(clip) && clip.isMirroredY),
-    );
-  };
-  const sourceCrop = displayCrop;
-  const visualLayout = () => {
-    const clip = options.selectedTransformClip();
-    if (!clip || clip.kind === 'caption') return null;
-    return displayLayoutFor(clip);
-  };
-  const cropContainerStyle = computed(() => {
-    if (!options.isCropping()) return { display: 'none' };
-    const layout = visualLayout();
-    if (!layout) return { display: 'none' };
-    return {
-      left: `${layout.left}px`,
-      top: `${layout.top}px`,
-      width: `${layout.width}px`,
-      height: `${layout.height}px`,
-    };
-  });
-  const cropOverlayStyle = computed(() => {
-    if (!options.isCropping()) return { display: 'none' };
-    const layout = visualLayout();
-    if (!layout) return { display: 'none' };
-    const crop = displayCrop(cropValue.value);
-    return {
-      left: `${crop.x * 100}%`,
-      top: `${crop.y * 100}%`,
-      width: `${crop.width * 100}%`,
-      height: `${crop.height * 100}%`,
-    };
-  });
-  const beginCropDrag = (event: PointerEvent, kind: 'move' | 'resize', corner?: ResizeCorner) => {
-    if (event.button !== 0) return;
-    cropDrag = {
-      kind,
-      corner,
-      startX: event.clientX,
-      startY: event.clientY,
-      value: displayCrop(cropValue.value),
-    };
-    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-  };
-  const moveCropDrag = (event: PointerEvent) => {
-    if (!cropDrag) return;
-    const layout = visualLayout();
-    if (!layout) return;
-    const vScale = options.zoomScale?.() ?? 1;
-    const dx = (event.clientX - cropDrag.startX) / Math.max(1, layout.width * vScale);
-    const dy = (event.clientY - cropDrag.startY) / Math.max(1, layout.height * vScale);
-    if (cropDrag.kind === 'move') {
-      cropDraft.value = sourceCrop(
-        clampNormalizedCrop({
-          ...cropDrag.value,
-          x: cropDrag.value.x + dx,
-          y: cropDrag.value.y + dy,
-        }),
-      );
-      return;
-    }
-    const left = cropDrag.corner?.includes('left');
-    const top = cropDrag.corner?.includes('top');
-    const horizontal = Boolean(left || cropDrag.corner?.includes('right'));
-    const vertical = Boolean(top || cropDrag.corner?.includes('bottom'));
-    const width = cropDrag.value.width + (horizontal ? (left ? -dx : dx) : 0);
-    const height = cropDrag.value.height + (vertical ? (top ? -dy : dy) : 0);
-    cropDraft.value = sourceCrop(
-      clampNormalizedCrop({
-        x: left ? cropDrag.value.x + cropDrag.value.width - width : cropDrag.value.x,
-        y: top ? cropDrag.value.y + cropDrag.value.height - height : cropDrag.value.y,
-        width,
-        height,
-      }),
-    );
-  };
-  const endCropDrag = (event: PointerEvent) => {
-    if (cropDraft.value) options.onUpdateCrop(cropDraft.value);
-    cropDrag = null;
-    const target = event.currentTarget as HTMLElement;
-    if (target.hasPointerCapture(event.pointerId)) target.releasePointerCapture(event.pointerId);
-  };
-  const commitCrop = () => {
-    options.onUpdateCrop(clampNormalizedCrop(cropDraft.value ?? cropValue.value));
-    cropDraft.value = null;
-  };
+  const cropSelection = useCropSelection(options, (clip) => displayLayoutFor(clip));
 
   const beginTransformDrag = (event: PointerEvent, kind: 'move' | 'resize', corner?: ResizeCorner) => {
     if (event.button !== 0) return;
@@ -462,23 +350,17 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
   });
 
   return {
+    ...cropSelection,
     transformDraft,
-    cropDraft,
     transformSelectionViewportStyle,
     transformHandleStyle,
     transformHandlePositions,
     transformPerspectiveCorners,
     transformResizeCorners,
-    cropContainerStyle,
-    cropOverlayStyle,
     activeGuideLines,
     beginTransformDrag,
     moveTransformDrag,
     endTransformDrag,
-    beginCropDrag,
-    moveCropDrag,
-    endCropDrag,
-    commitCrop,
     clipIdAt,
     selectVisualAt,
   };

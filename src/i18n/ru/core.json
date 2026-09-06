@@ -330,7 +330,8 @@
     "deleteClip": "Удалить клип",
     "deleteVideo": "Удалить видео",
     "deleteWebcam": "Удалить веб-камеру",
-    "shadowBlur": "Размытие тени"
+    "shadowBlur": "Размытие тени",
+    "crop": "Обрезка"
   },
   "CursorPanel": {
     "cursorStyle": "Стиль курсора",
@@ -767,5 +768,14 @@
     "discordTitle": "Сообщество",
     "discordDesc": "Получайте помощь, отзывы и обновления функций",
     "discordButton": "Присоединяйтесь к Discord"
+  },
+  "CropControls": {
+    "top": "Сверху",
+    "bottom": "Снизу",
+    "left": "Слева",
+    "right": "Справа",
+    "reset": "Сбросить обрезку",
+    "source": "Источник: {width} × {height} px · Обрезка с каждого края.",
+    "unavailable": "Размеры исходного файла недоступны."
   }
 }

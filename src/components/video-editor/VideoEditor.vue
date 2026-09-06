@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useCropPreview } from './composables/useCropPreview';
 import { computed, nextTick, onBeforeUnmount, onMounted, provide, ref, toRef, watch } from 'vue';
 import type { CaptureProject, ProjectEditorData } from '~/api/types/capture-api';
 import SidebarPanel from '~/components/video-editor/sidebar/SidebarPanel.vue';
@@ -191,7 +192,10 @@ const {
 const mediaDrop = useEditorMediaDrop({
   projectId: () => props.project?.id ?? null,
   currentTimeSeconds: () => currentTime.value,
-  addImportedAsset,
+  addImportedAsset: (...args) => {
+    finishCrop();
+    return addImportedAsset(...args);
+  },
   t,
 });
 usePlaybackErrorToast(playbackError, t, () => ({
@@ -250,13 +254,19 @@ const captionCompositionPreview = ref<typeof composition.value | null>(null);
 const cursorPreview = ref<CursorSelection | null>(null);
 const transformHandlesMuted = ref(false);
 const isInlineCaptionEditing = ref(false);
+const { cropPreview, cropCompositionPreview, previewCrop } = useCropPreview({ composition, selectedClipIds });
 const canvasComposition = computed(
-  () => captionCompositionPreview.value ?? timelineCompositionPreview.value ?? composition.value,
+  () =>
+    cropCompositionPreview.value ??
+    captionCompositionPreview.value ??
+    timelineCompositionPreview.value ??
+    composition.value,
 );
 const renderedOutputCanvas = computed(() => timelineCanvasPreview.value ?? outputCanvas.value);
 const selectedTransformClip = computed(() => {
   if (selectedClipIds.value.length !== 1) return null;
-  const clip = selectedClip.value;
+  const clip =
+    cropCompositionPreview.value?.clips.find((item) => item.id === selectedClipId.value) ?? selectedClip.value;
   return clip &&
     (isVisualClip(clip) || isColorClip(clip) || isShapeClip(clip) || isBlurClip(clip) || isCaptionClip(clip))
     ? clip
@@ -264,6 +274,7 @@ const selectedTransformClip = computed(() => {
 });
 
 const addTimelineElement = (kind: TimelineElementKind) => {
+  finishCrop();
   if (kind === 'voiceover') {
     void openVoiceover();
     return;
@@ -271,6 +282,7 @@ const addTimelineElement = (kind: TimelineElementKind) => {
   void addElement(kind).catch(() => console.error('Unable to add media.'));
 };
 const addTimelineVisualElement = (request: AddVisualElementRequest) => {
+  finishCrop();
   void addVisualElementAtTime(request).catch((error) => console.error('Unable to add timeline element.', error));
 };
 const isPropertiesPanelOpen = ref(true);
@@ -300,6 +312,7 @@ const {
   openPropertiesPanel,
 });
 const selectEditorClip = (clipId: string) => {
+  if (selectedClipId.value !== clipId || selectedClipIds.value.length !== 1) finishCrop();
   openPropertiesPanel();
   selectedZoomId.value = null;
   selectedZoomIds.value = [];
@@ -307,8 +320,8 @@ const selectEditorClip = (clipId: string) => {
   activeTab.value = 'clip';
 };
 const selectEditorTrack = (selection: { clipIds: string[]; primaryClipId: string | null; additive?: boolean }) => {
+  finishCrop();
   openPropertiesPanel();
-  isCropping.value = false;
   if (!selection.additive) {
     selectedZoomId.value = null;
     selectedZoomIds.value = [];
@@ -319,14 +332,15 @@ const selectEditorTrack = (selection: { clipIds: string[]; primaryClipId: string
   );
 };
 const selectEditorZoom = (zoomId: string) => {
+  finishCrop();
   openPropertiesPanel();
   selectedClipId.value = null;
   selectedClipIds.value = [];
   selectZooms([zoomId], zoomId);
 };
 const selectEditorZoomTrack = (selection: { zoomIds: string[]; primaryZoomId: string | null; additive?: boolean }) => {
+  finishCrop();
   openPropertiesPanel();
-  isCropping.value = false;
   if (!selection.additive) {
     selectedClipId.value = null;
     selectedClipIds.value = [];
@@ -337,15 +351,15 @@ const selectEditorZoomTrack = (selection: { zoomIds: string[]; primaryZoomId: st
   );
 };
 const selectEditorCanvas = () => {
+  finishCrop();
   openPropertiesPanel();
   clearTimelineSelection();
   activeTab.value = 'canvas';
-  isCropping.value = false;
 };
 const selectEditorCursor = () => {
+  finishCrop();
   openPropertiesPanel();
   clearTimelineSelection();
-  isCropping.value = false;
   activeTab.value = 'cursor';
 };
 const propertiesPanelRef = ref<InstanceType<typeof PropertiesPanel> | null>(null);
@@ -354,8 +368,8 @@ const openCanvasTransition = (edge: 'entry' | 'exit') => {
   void nextTick(() => propertiesPanelRef.value?.openCanvasTransitions(edge));
 };
 const deselectTransformClip = () => {
+  finishCrop();
   selectedClipId.value = null;
-  isCropping.value = false;
 };
 const replaceComposition = (value: typeof composition.value) => {
   captionCompositionPreview.value = null;
@@ -490,6 +504,7 @@ const pasteTimelineItem = (request: TimelinePasteRequest) => {
   try {
     const projectId = props.project?.id;
     if (!projectId || request.item.scopeId !== projectId) throw new Error(t('timelineClipboardDifferentProject'));
+    finishCrop();
     const timelineDurationMs = Math.round(duration.value * 1_000);
     let pastedId: string;
     if (request.item.type === 'zoom') {
@@ -525,7 +540,9 @@ const commitSelectedTransform = (transform: NormalizedTransform) => {
 };
 
 const commitSelectedCrop = (crop: NormalizedCrop) => {
+  commitNow(createEditorSnapshot());
   updateSelectedCrop(crop);
+  previewCrop(null);
   commitNow(createEditorSnapshot());
 };
 
@@ -559,7 +576,7 @@ const deleteSelectedTimelineZooms = () =>
   });
 const deleteTimelineZoom = (id: string) => requestTimelineDeletion({ clipIds: [], zoomIds: [id], mode: 'lift' });
 const handleTimelineItemSelection = (request: TimelineItemSelectionRequest) => {
-  isCropping.value = false;
+  finishCrop();
   selectTimelineItem(request);
 };
 
@@ -633,8 +650,20 @@ const isSnappingEnabled = ref(true);
 const editorCanvasRef = ref<InstanceType<typeof EditorCanvas> | null>(null);
 const canvasPreviewStageRef = ref<HTMLElement | null>(null);
 const canvasFullscreen = useElementFullscreen(() => canvasPreviewStageRef.value);
+const finishCrop = () => {
+  if (isCropping.value && cropPreview.value) commitSelectedCrop(cropPreview.value);
+  isCropping.value = false;
+};
+watch(
+  [selectedClipId, () => selectedClipIds.value.join('\0')],
+  () => {
+    isCropping.value = false;
+  },
+  { flush: 'sync' },
+);
 const toggleCrop = () => {
-  if (selectedTransformClip.value && isVisualClip(selectedTransformClip.value)) isCropping.value = !isCropping.value;
+  if (isCropping.value) finishCrop();
+  else if (selectedTransformClip.value && isVisualClip(selectedTransformClip.value)) isCropping.value = true;
 };
 const selectCanvasPreset = (preset: Exclude<OutputCanvasPreset, 'custom'>) => {
   outputCanvas.value = {
@@ -725,7 +754,9 @@ onBeforeUnmount(() => {
           v-if="isPropertiesPanelOpen"
           ref="propertiesPanelRef"
           :active-tab="activeTab"
-          :selected-clip="selectedClipInfo"
+          :selected-clip="
+            selectedClipInfo && cropPreview ? { ...selectedClipInfo, crop: cropPreview } : selectedClipInfo
+          "
           :selected-caption-clip="selectedCaptionClip"
           :selected-clip-ids="selectedClipIds"
           :selected-zoom-ids="selectedZoomIds"
@@ -809,6 +840,8 @@ onBeforeUnmount(() => {
             })
           "
           @update:clip-appearance="updateSelectedAppearance($event)"
+          @update:clip-crop="commitSelectedCrop"
+          @preview:clip-crop="previewCrop"
           @update:clip-transform="commitSelectedTransform"
           @update:camera-layout="updateSelectedCameraLayout"
           @update:camera-framing="updateSelectedCameraFraming"
@@ -898,10 +931,11 @@ onBeforeUnmount(() => {
               @deselect:transform-clip="deselectTransformClip"
               @update:clip-transform="commitSelectedTransform"
               @update:clip-crop="commitSelectedCrop"
+              @preview:clip-crop="previewCrop"
               @update:caption-text="updateInlineCaptionText"
               @caption-editing-start="beginInlineCaptionEditing"
               @caption-editing-end="endInlineCaptionEditing"
-              @done:crop="isCropping = false"
+              @done:crop="finishCrop"
               @deselect:zoom="selectedZoomId = null"
             />
             <TimelineToolbar
@@ -972,7 +1006,10 @@ onBeforeUnmount(() => {
           @select:clip="selectEditorClip"
           @select:track="selectEditorTrack"
           @select:item="handleTimelineItemSelection"
-          @select:all="selectAllTimelineItems"
+          @select:all="
+            finishCrop();
+            selectAllTimelineItems();
+          "
           @toggle:clip="toggleClip"
           @delete:clips="requestClipDeletion"
           @delete:zoom="deleteTimelineZoom"
@@ -984,8 +1021,14 @@ onBeforeUnmount(() => {
           @trim:zoom="trimZoomEdge($event.id, $event.edge, $event.timeMs)"
           @move:zoom="moveZoom($event.id, $event.startMs, $event.endMs)"
           @move:selection="moveTimelineSelection"
-          @add:zoom="addZoomAtTime"
-          @add:caption="addCaptionAtTime"
+          @add:zoom="
+            finishCrop();
+            addZoomAtTime($event);
+          "
+          @add:caption="
+            finishCrop();
+            addCaptionAtTime($event);
+          "
           @add:visual-element="addTimelineVisualElement"
           @reorder:clip="reorderVisualClip($event.id, $event.targetIndex)"
           @reorder:caption="reorderCaptionClip($event.id, $event.targetIndex)"

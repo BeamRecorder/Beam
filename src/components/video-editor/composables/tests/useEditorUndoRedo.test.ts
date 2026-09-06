@@ -245,4 +245,47 @@ describe('useEditorUndoRedo', () => {
     input.remove();
     wrapper.unmount();
   });
+
+  it('keeps undo shortcuts active for a focused range input while ignoring other inputs', async () => {
+    const restored: EditorStateSnapshot[] = [];
+    let api!: ReturnType<typeof useEditorUndoRedo>;
+    const Harness = defineComponent({
+      setup: () => (
+        (api = useEditorUndoRedo({
+          onRestoreSnapshot: (value) => {
+            restored.push(value);
+          },
+        })),
+        {}
+      ),
+      template: '<div />',
+    });
+    const wrapper = mount(Harness);
+    api.recordSnapshot(snapshot(1));
+    api.recordSnapshot(snapshot(2));
+
+    const range = document.createElement('input');
+    range.type = 'range';
+    document.body.appendChild(range);
+    range.focus();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true }));
+    await Promise.resolve();
+
+    expect(restored).toHaveLength(1);
+    expect(api.lastAction.value?.type).toBe('undo');
+
+    api.recordSnapshot(snapshot(3));
+    const number = document.createElement('input');
+    number.type = 'number';
+    document.body.appendChild(number);
+    number.focus();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true }));
+    await Promise.resolve();
+
+    expect(restored).toHaveLength(1);
+    expect(api.undoStack.value.at(-1)?.backgroundBlurPercent).toBe(3);
+    number.remove();
+    range.remove();
+    wrapper.unmount();
+  });
 });

@@ -1,7 +1,7 @@
 import './VideoEditor.test.setup';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
-import type { CaptionClip, ClipComposition } from '~/media/shared/composition-types';
+import type { CaptionClip, ClipComposition, NormalizedCrop } from '~/media/shared/composition-types';
 import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
 import {
   editorState,
@@ -53,6 +53,14 @@ const updateCaptionState = (clip: CaptionClip) => {
     ...composition,
     clips: composition.clips.map((candidate) => (candidate.id === clip.id ? clip : candidate)),
   };
+};
+
+const previewCrop: NormalizedCrop = { x: 0.05, y: 0.1, width: 0.8, height: 0.75 };
+const cropModePreview: NormalizedCrop = { x: 0.15, y: 0.05, width: 0.7, height: 0.85 };
+const committedCrop: NormalizedCrop = { x: 0.1, y: 0.2, width: 0.7, height: 0.6 };
+const cropFromComposition = (composition: ClipComposition | undefined) => {
+  const clip = composition?.clips.find((candidate) => candidate.id === 'screen');
+  return clip && 'crop' in clip ? clip.crop : undefined;
 };
 
 describe('VideoEditor', () => {
@@ -338,6 +346,179 @@ describe('VideoEditor', () => {
     expect(editorState.store.compositionState.composition.value.clips[0].transform.x).toBe(0.5);
     expect(mounted.get('.mock-canvas').attributes('data-composition-transform-x')).toBe('0.5');
     expect(scheduleSave).toHaveBeenCalledOnce();
+  });
+
+  it('routes property and canvas crop previews to the canvas without mutating canonical state, saving, or history', async () => {
+    const mounted = mountEditor();
+    const state = editorState.store;
+    state.compositionState.selectClip('screen');
+    await mounted.vm.$nextTick();
+
+    const canonicalBefore = JSON.stringify(state.compositionState.composition.value);
+    const saveCallsBefore = state.editorState.scheduleSave.mock.calls.length;
+    const recordCallsBefore = historyState.recordSnapshot.mock.calls.length;
+    const commitCallsBefore = historyState.commitNow.mock.calls.length;
+    const canvas = mounted.get('.mock-canvas');
+    const properties = mounted.get('.mock-properties');
+
+    await mounted.get('.preview-clip-crop').trigger('click');
+    await mounted.vm.$nextTick();
+
+    expect(JSON.stringify(state.compositionState.composition.value)).toBe(canonicalBefore);
+    expect(canvas.attributes('data-composition-crop')).toBe(JSON.stringify(previewCrop));
+    expect(properties.attributes('data-selected-crop')).toBe(JSON.stringify(previewCrop));
+    expect(state.editorState.scheduleSave).toHaveBeenCalledTimes(saveCallsBefore);
+    expect(historyState.recordSnapshot).toHaveBeenCalledTimes(recordCallsBefore);
+    expect(historyState.commitNow).toHaveBeenCalledTimes(commitCallsBefore);
+
+    const canvasPreviewCrop: NormalizedCrop = { x: 0.15, y: 0.05, width: 0.7, height: 0.85 };
+    mounted.findComponent({ name: 'MockEditorCanvas' }).vm.$emit('preview:clip-crop', canvasPreviewCrop);
+    await mounted.vm.$nextTick();
+
+    expect(JSON.stringify(state.compositionState.composition.value)).toBe(canonicalBefore);
+    expect(canvas.attributes('data-composition-crop')).toBe(JSON.stringify(canvasPreviewCrop));
+    expect(properties.attributes('data-selected-crop')).toBe(JSON.stringify(canvasPreviewCrop));
+    expect(state.editorState.scheduleSave).toHaveBeenCalledTimes(saveCallsBefore);
+    expect(historyState.recordSnapshot).toHaveBeenCalledTimes(recordCallsBefore);
+    expect(historyState.commitNow).toHaveBeenCalledTimes(commitCallsBefore);
+  });
+
+  it('commits one crop history state and clears the shared preview through undo and redo', async () => {
+    const mounted = mountEditor();
+    const state = editorState.store;
+    state.compositionState.selectClip('screen');
+    await mounted.vm.$nextTick();
+
+    const historyEntriesBefore = historyState.undoStack?.value.length ?? 0;
+    const commitCallsBefore = historyState.commitNow.mock.calls.length;
+    const saveCallsBefore = state.editorState.scheduleSave.mock.calls.length;
+
+    await mounted.get('.update-clip-crop').trigger('click');
+    await mounted.vm.$nextTick();
+
+    const committedComposition = state.compositionState.composition.value as ClipComposition;
+    const committed = committedComposition.clips.find((clip) => clip.id === 'screen');
+    expect(committed?.kind).toBe('screen');
+    expect(cropFromComposition(state.compositionState.composition.value)).toEqual(committedCrop);
+    expect(mounted.get('.mock-canvas').attributes('data-composition-crop')).toBe(JSON.stringify(committedCrop));
+    expect(mounted.get('.mock-properties').attributes('data-selected-crop')).toBe(JSON.stringify(committedCrop));
+    expect(state.editorState.scheduleSave).toHaveBeenCalledTimes(saveCallsBefore + 1);
+    expect(historyState.commitNow).toHaveBeenCalledTimes(commitCallsBefore + 2);
+    expect(historyState.undoStack?.value).toHaveLength(historyEntriesBefore + 1);
+
+    const cropCommitCalls = historyState.commitNow.mock.calls.slice(commitCallsBefore);
+    expect(
+      cropFromComposition((cropCommitCalls[0]?.[0] as { composition?: ClipComposition })?.composition),
+    ).toBeUndefined();
+    expect(cropFromComposition((cropCommitCalls[1]?.[0] as { composition?: ClipComposition })?.composition)).toEqual(
+      committedCrop,
+    );
+
+    await mounted.get('.preview-clip-crop').trigger('click');
+    await mounted.vm.$nextTick();
+    expect(mounted.get('.mock-canvas').attributes('data-composition-crop')).toBe(JSON.stringify(previewCrop));
+
+    await mounted.get('.undo').trigger('click');
+    await flushPromises();
+    await mounted.vm.$nextTick();
+    expect(historyState.undo).toHaveBeenCalledOnce();
+    expect(cropFromComposition(state.compositionState.composition.value)).toBeUndefined();
+    expect(mounted.get('.mock-canvas').attributes('data-composition-crop')).toBe('null');
+    expect(mounted.get('.mock-properties').attributes('data-selected-crop')).toBe('null');
+
+    await mounted.get('.redo').trigger('click');
+    await flushPromises();
+    await mounted.vm.$nextTick();
+    expect(historyState.redo).toHaveBeenCalledOnce();
+    expect(cropFromComposition(state.compositionState.composition.value)).toEqual(committedCrop);
+    expect(mounted.get('.mock-canvas').attributes('data-composition-crop')).toBe(JSON.stringify(committedCrop));
+    expect(mounted.get('.mock-properties').attributes('data-selected-crop')).toBe(JSON.stringify(committedCrop));
+    expect(state.editorState.scheduleSave).toHaveBeenCalledTimes(saveCallsBefore + 1);
+  });
+
+  it('finishes crop before selecting another clip', async () => {
+    const mounted = mountEditor();
+    const state = editorState.store;
+    state.compositionState.selectClip('screen');
+    await mounted.vm.$nextTick();
+
+    await mounted.get('.toggle-crop').trigger('click');
+    await mounted.get('.canvas-preview-crop').trigger('click');
+    await mounted.vm.$nextTick();
+    expect(mounted.get('.mock-canvas').attributes('data-is-cropping')).toBe('true');
+
+    await mounted.get('.select-audio').trigger('click');
+    await mounted.vm.$nextTick();
+
+    expect(cropFromComposition(state.compositionState.composition.value)).toEqual(cropModePreview);
+    expect(state.compositionState.selectedClipId.value).toBe('audio');
+    expect(mounted.get('.mock-canvas').attributes('data-is-cropping')).toBe('false');
+  });
+
+  it('keeps crop mode open when the same selection is assigned again', async () => {
+    const mounted = mountEditor();
+    const state = editorState.store;
+    state.compositionState.selectClip('screen');
+    await mounted.vm.$nextTick();
+
+    await mounted.get('.toggle-crop').trigger('click');
+    await mounted.get('.canvas-preview-crop').trigger('click');
+    await mounted.vm.$nextTick();
+
+    state.compositionState.selectClip('screen');
+    await mounted.vm.$nextTick();
+
+    expect(state.compositionState.selectedClipId.value).toBe('screen');
+    expect(cropFromComposition(state.compositionState.composition.value)).toBeUndefined();
+    expect(mounted.get('.mock-canvas').attributes('data-is-cropping')).toBe('true');
+    expect(mounted.get('.mock-canvas').attributes('data-composition-crop')).toBe(JSON.stringify(cropModePreview));
+  });
+
+  it('finishes crop before adding a visual shape and leaves the shape manipulable', async () => {
+    const mounted = mountEditor();
+    const state = editorState.store;
+    state.compositionState.selectClip('screen');
+    await mounted.vm.$nextTick();
+
+    await mounted.get('.toggle-crop').trigger('click');
+    await mounted.get('.canvas-preview-crop').trigger('click');
+    await mounted.vm.$nextTick();
+
+    mounted.findComponent({ name: 'MockEditorTimeline' }).vm.$emit('add:visual-element', {
+      kind: 'shape',
+      trackId: 'shape-track',
+      startMs: 0,
+      durationMs: 1_000,
+    });
+    await flushPromises();
+    await mounted.vm.$nextTick();
+
+    const composition = state.compositionState.composition.value as ClipComposition;
+    const shape = composition.clips.find((clip) => clip.id === 'shape-1');
+    expect(cropFromComposition(composition)).toEqual(cropModePreview);
+    expect(shape).toMatchObject({ id: 'shape-1', kind: 'shape' });
+    expect(shape).not.toHaveProperty('crop');
+    expect(state.compositionState.selectedClipId.value).toBe('shape-1');
+    expect(mounted.get('.mock-canvas').attributes('data-is-cropping')).toBe('false');
+    expect(mounted.get('.mock-canvas').attributes('data-selected-transform-kind')).toBe('shape');
+    expect(mounted.get('.mock-canvas').attributes('data-can-manipulate')).toBe('true');
+  });
+
+  it('commits the preview when the crop toolbar confirms', async () => {
+    const mounted = mountEditor();
+    const state = editorState.store;
+    state.compositionState.selectClip('screen');
+    await mounted.vm.$nextTick();
+
+    await mounted.get('.toggle-crop').trigger('click');
+    await mounted.get('.canvas-preview-crop').trigger('click');
+    await mounted.vm.$nextTick();
+    await mounted.get('.done-crop').trigger('click');
+    await mounted.vm.$nextTick();
+
+    expect(cropFromComposition(state.compositionState.composition.value)).toEqual(cropModePreview);
+    expect(mounted.get('.mock-canvas').attributes('data-is-cropping')).toBe('false');
+    expect(mounted.get('.mock-canvas').attributes('data-composition-crop')).toBe(JSON.stringify(cropModePreview));
   });
 
   it('groups spaced inline caption updates into one final history entry', async () => {

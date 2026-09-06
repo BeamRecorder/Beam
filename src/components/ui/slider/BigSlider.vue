@@ -21,6 +21,7 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: number): void;
   (e: 'interaction-start'): void;
   (e: 'interaction-end'): void;
+  (e: 'interaction-cancel'): void;
   (e: 'reset'): void;
 }>();
 
@@ -108,12 +109,33 @@ const handleRangeInput = (event: Event) => {
   });
 };
 
+let keyboardInteracting = false;
+const rangeKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'];
+const startKeyboardInteraction = (event: KeyboardEvent) => {
+  if (rangeKeys.includes(event.key)) {
+    keyboardInteracting = true;
+    startInteraction();
+  }
+};
+const endKeyboardInteraction = (event: KeyboardEvent) => {
+  if (rangeKeys.includes(event.key)) {
+    keyboardInteracting = false;
+    endInteraction();
+  }
+};
 const endInteraction = () => {
+  keyboardInteracting = false;
   if (!isInteracting.value) return;
   flushRangeValue();
   isInteracting.value = false;
   endPropertyInteraction();
   emit('interaction-end');
+};
+
+const cancelInteraction = () => {
+  if (!isInteracting.value) return;
+  emit('interaction-cancel');
+  endInteraction();
 };
 
 onBeforeUnmount(() => {
@@ -123,15 +145,13 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div
-    class="big-slider-container"
-    :class="{ 'is-editing': isEditing }"
-    :style="{
-      background: isEditing
-        ? 'var(--color-bg-surface)'
-        : `linear-gradient(to right, color-mix(in srgb, var(--color-primary) 22%, var(--color-bg-surface-hover)) 0%, color-mix(in srgb, var(--color-primary) 36%, var(--color-bg-surface-hover)) ${percentage}%, var(--color-bg-surface) ${percentage}%, var(--color-bg-surface) 100%)`,
-    }"
-  >
+  <div class="big-slider-container" :class="{ 'is-editing': isEditing }">
+    <span
+      v-if="!isEditing"
+      class="big-slider-fill"
+      aria-hidden="true"
+      :style="{ transform: `scale3d(${percentage / 100}, 1, 1)` }"
+    />
     <template v-if="isEditing">
       <div class="big-slider-edit-wrapper">
         <span class="big-slider-label edit-label">{{ label }}</span>
@@ -184,11 +204,16 @@ onBeforeUnmount(() => {
         :max="max"
         :step="step"
         :value="modelValue"
+        :aria-label="label"
         class="big-slider-input"
         @input="handleRangeInput"
         @pointerdown="startInteraction"
-        @pointercancel="endInteraction"
-        @change="endInteraction"
+        @pointercancel="cancelInteraction"
+        @pointerup="endInteraction"
+        @blur="endInteraction"
+        @keydown="startKeyboardInteraction"
+        @keyup="endKeyboardInteraction"
+        @change="!keyboardInteracting && endInteraction()"
       />
     </template>
   </div>
@@ -204,9 +229,20 @@ onBeforeUnmount(() => {
   overflow: hidden;
   display: flex;
   align-items: center;
-  transition:
-    border-color var(--fast) ease,
-    background var(--fast) ease;
+  background: var(--color-bg-surface);
+  transition: border-color var(--fast) ease;
+}
+
+.big-slider-fill {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transform-origin: left center;
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--color-primary) 22%, var(--color-bg-surface-hover)),
+    color-mix(in srgb, var(--color-primary) 36%, var(--color-bg-surface-hover))
+  );
 }
 
 .big-slider-container:hover {

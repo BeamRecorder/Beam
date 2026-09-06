@@ -199,6 +199,7 @@ vi.mock('../composables/useLayerTransformAndCrop', async () => {
           width: '90px',
           height: '70px',
         }),
+        cropMeasurements: ref(null),
         activeGuideLines: ref([]),
         transformDraft: state.transformDraft,
         transformResizeCorners: state.transformResizeCorners,
