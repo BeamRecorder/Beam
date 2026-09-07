@@ -183,6 +183,8 @@ jobs:
           shared-key: cargo-package-windows-x64-arm64-release
           cache-on-failure: true
       - run: node scripts/ci/bun-install-retry.cjs
+      - name: Test Windows capture initialization
+        run: cargo test -p capture --all-features --lib --target x86_64-pc-windows-msvc screen::win::capture::tests
       - name: Build and stage both Windows engines
         shell: pwsh
         run: |
