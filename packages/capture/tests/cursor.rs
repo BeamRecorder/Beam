@@ -189,3 +189,62 @@ fn movement_sampling_preserves_phase_after_jitter_and_skipped_ticks() {
         assert_eq!(next, interval * (index + 1));
     }
 }
+
+#[test]
+fn physical_screen_coordinates_do_not_apply_display_scaling_twice() {
+    // The same point at 100%, 125%, 150% and 200% must occupy the same
+    // normalized position when both inputs use physical desktop pixels.
+    for (width, height) in [(1280, 720), (1600, 900), (1920, 1080), (2560, 1440)] {
+        let point = map_coordinates(
+            i32::try_from(width / 4).expect("x"),
+            i32::try_from(height / 2).expect("y"),
+            CaptureRegion {
+                x: 0,
+                y: 0,
+                width,
+                height,
+            },
+        )
+        .expect("physical coordinates");
+        assert_eq!((point.normalized_x, point.normalized_y), (0.25, 0.5));
+        assert!(point.inside);
+    }
+}
+
+#[test]
+fn physical_secondary_monitor_origin_is_subtracted_before_normalization() {
+    for (x, y) in [(-2560, -360), (1920, 240), (0, -1440)] {
+        let point = map_coordinates(
+            x + 640,
+            y + 720,
+            CaptureRegion {
+                x,
+                y,
+                width: 2560,
+                height: 1440,
+            },
+        )
+        .expect("secondary monitor coordinates");
+        assert_eq!((point.pixel_x, point.pixel_y), (640, 720));
+        assert_eq!((point.normalized_x, point.normalized_y), (0.25, 0.5));
+        assert!(point.inside);
+    }
+}
+
+#[test]
+fn physical_cursor_outside_selected_monitor_is_not_clamped_to_its_edge() {
+    let point = map_coordinates(
+        100,
+        200,
+        CaptureRegion {
+            x: -1920,
+            y: 0,
+            width: 1920,
+            height: 1080,
+        },
+    )
+    .expect("outside monitor coordinates");
+    assert!(!point.inside);
+    assert_eq!(point.pixel_x, 2020);
+    assert!(point.normalized_x > 1.0);
+}
