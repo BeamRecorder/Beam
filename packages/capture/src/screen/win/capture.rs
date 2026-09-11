@@ -26,17 +26,12 @@ use super::compatibility::compatible_settings;
 use crate::{
     CaptureError,
     model::{ScreenRegion, SourceId},
-    screen::{
-        PixelCrop, ScreenCaptureMetrics, ScreenConsumer, ScreenOpenRequest, even_dimension,
-        normalize_crop,
-    },
+    screen::{PixelCrop, ScreenCaptureMetrics, ScreenConsumer, ScreenOpenRequest, normalize_crop},
     session::StartGate,
 };
 
 struct HandlerFlags {
     output: PathBuf,
-    width: u32,
-    height: u32,
     bitrate: u32,
     fps: u32,
     metrics: Arc<ScreenCaptureMetrics>,
@@ -64,6 +59,27 @@ struct CaptureHandler {
 }
 
 impl CaptureHandler {
+    fn from_flags(flags: HandlerFlags) -> Self {
+        let settings = PendingEncoder {
+            output: flags.output,
+            bitrate: flags.bitrate,
+            fps: flags.fps,
+            candidate_crop_size: None,
+        };
+        // GetWindowRect can return DPI-virtualized bounds. Only a received WGC
+        // frame supplies reliable pixel dimensions for the encoder.
+        Self {
+            encoder: None,
+            pending_encoder: Some(settings),
+            metrics: flags.metrics,
+            start_gate: flags.start_gate,
+            region: flags.region,
+            crop: None,
+            encoded_size: None,
+            unavailable: flags.unavailable,
+        }
+    }
+
     fn create_encoder(
         settings: &PendingEncoder,
         width: u32,
@@ -98,37 +114,7 @@ impl GraphicsCaptureApiHandler for CaptureHandler {
     type Error = String;
 
     fn new(context: Context<Self::Flags>) -> Result<Self, Self::Error> {
-        let flags = context.flags;
-        let settings = PendingEncoder {
-            output: flags.output,
-            bitrate: flags.bitrate,
-            fps: flags.fps,
-            candidate_crop_size: flags.region.map(|_| (flags.width, flags.height)),
-        };
-        // A region's encoded dimensions must come from the WGC texture, not
-        // from the monitor catalog. Windows can report those sizes in
-        // different coordinate spaces when DPI scaling is active.
-        let (encoder, pending_encoder) = if flags.region.is_some() {
-            (None, Some(settings))
-        } else {
-            (
-                Some(Self::create_encoder(&settings, flags.width, flags.height)?),
-                None,
-            )
-        };
-        Ok(Self {
-            encoder,
-            pending_encoder,
-            metrics: flags.metrics,
-            start_gate: flags.start_gate,
-            region: flags.region,
-            crop: None,
-            encoded_size: flags
-                .region
-                .is_none()
-                .then_some((flags.width, flags.height)),
-            unavailable: flags.unavailable,
-        })
+        Ok(Self::from_flags(context.flags))
     }
 
     fn on_frame_arrived(
@@ -172,6 +158,25 @@ impl GraphicsCaptureApiHandler for CaptureHandler {
             }
             Some(frame_crop)
         } else {
+            if let Some(settings) = self.pending_encoder.take() {
+                let bounds = normalize_crop(
+                    ScreenRegion {
+                        x: 0.0,
+                        y: 0.0,
+                        width: 1.0,
+                        height: 1.0,
+                    },
+                    frame.width(),
+                    frame.height(),
+                )
+                .map_err(|error| error.to_string())?;
+                self.encoder = Some(Self::create_encoder(
+                    &settings,
+                    bounds.width(),
+                    bounds.height(),
+                )?);
+                self.encoded_size = Some((bounds.width(), bounds.height()));
+            }
             None
         };
         let encoder = self
@@ -278,15 +283,10 @@ impl WindowsRecording {
                 .into_iter()
                 .find(|monitor| monitor.device_name().ok().as_deref() == Some(device_name))
                 .ok_or_else(|| CaptureError::SourceNotFound(source_id.to_string()))?;
-            let size = (
-                monitor.width().map_err(backend_error)?,
-                monitor.height().map_err(backend_error)?,
-            );
             return start_item(
                 monitor,
                 StartItemConfig {
                     output,
-                    size,
                     bitrate,
                     fps,
                     exclude_cursor,
@@ -299,15 +299,10 @@ impl WindowsRecording {
             || source_id.as_str().starts_with("window:")
         {
             let window = window_from_source_id(source_id)?;
-            let width = u32::try_from(window.width().map_err(backend_error)?.max(1))
-                .map_err(backend_error)?;
-            let height = u32::try_from(window.height().map_err(backend_error)?.max(1))
-                .map_err(backend_error)?;
             return start_item(
                 window,
                 StartItemConfig {
                     output,
-                    size: (width, height),
                     bitrate,
                     fps,
                     exclude_cursor,
@@ -385,7 +380,6 @@ impl Drop for WindowsRecording {
 
 struct StartItemConfig<'a> {
     output: &'a Path,
-    size: (u32, u32),
     bitrate: u32,
     fps: u32,
     exclude_cursor: bool,
@@ -399,7 +393,6 @@ where
 {
     let StartItemConfig {
         output,
-        size,
         bitrate,
         fps,
         exclude_cursor,
@@ -408,21 +401,8 @@ where
     } = config;
     let metrics = Arc::new(ScreenCaptureMetrics::default());
     let unavailable = Arc::new(AtomicBool::new(false));
-    let catalog_crop = region
-        .map(|region| normalize_crop(region, size.0, size.1))
-        .transpose()?;
-    let (width, height) = catalog_crop.map_or(size, |crop| (crop.width(), crop.height()));
-    let width = even_dimension(width);
-    let height = even_dimension(height);
-    if width == 0 || height == 0 {
-        return Err(CaptureError::InvalidConfiguration(
-            "screen crop is empty".into(),
-        ));
-    }
     let flags = HandlerFlags {
         output: output.to_owned(),
-        width,
-        height,
         bitrate,
         fps,
         metrics: metrics.clone(),

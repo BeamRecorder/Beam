@@ -207,4 +207,28 @@ mod tests {
         );
         assert_ne!(logical_display_crop, actual_frame_crop);
     }
+    #[test]
+    fn full_window_encoding_keeps_physical_pixels_at_common_dpi_scales() {
+        let full = region(0.0, 0.0, 1.0, 1.0);
+        for (width, height) in [(1280, 720), (1600, 900), (1920, 1080), (2560, 1440)] {
+            let crop = normalize_crop(full, width, height).expect("physical frame bounds");
+            assert_eq!((crop.width(), crop.height()), (width, height));
+            assert_eq!((crop.start_x, crop.start_y), (0, 0));
+        }
+    }
+
+    #[test]
+    fn reported_window_regression_trims_only_one_pixel_for_h264() {
+        let crop = normalize_crop(region(0.0, 0.0, 1.0, 1.0), 1909, 1003)
+            .expect("reported physical window size");
+        assert_eq!((crop.width(), crop.height()), (1908, 1002));
+        assert_eq!((crop.start_x, crop.start_y), (0, 0));
+    }
+
+    #[test]
+    fn full_frame_rejects_dimensions_too_small_to_encode() {
+        for (width, height) in [(0, 1080), (1920, 0), (1, 1080), (1920, 1), (1, 1)] {
+            assert!(normalize_crop(region(0.0, 0.0, 1.0, 1.0), width, height).is_err());
+        }
+    }
 }
