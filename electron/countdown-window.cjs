@@ -60,8 +60,8 @@ function createCountdownWindow({
         position();
         reveal();
       });
-      if (isPackaged) window.loadFile(path.join(applicationRoot, 'dist/index.html'), { query: { countdown: '1' } });
-      else window.loadURL('http://localhost:6500/?countdown=1');
+      if (isPackaged) window.loadFile(path.join(applicationRoot, 'dist/countdown.html'));
+      else window.loadURL('http://localhost:6500/countdown.html');
     }
   };
   const reveal = () => {

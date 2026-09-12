@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
     getPreferences: vi.fn(),
     setInteractive: vi.fn(),
     setCameraOverlayActive: vi.fn(),
+    setNormalRecordingActive: vi.fn(),
     hideScreenRegionOverlay: vi.fn(),
     setCountdown: vi.fn(async () => undefined),
     resetCameraOverlayPlacement: vi.fn(),
@@ -18,6 +19,7 @@ const mocks = vi.hoisted(() => ({
     showHud: vi.fn(),
     hideTeleprompter: vi.fn(),
     openEditor: vi.fn(),
+    openScreenshot: vi.fn(),
     onStartRecordingFromEditor: vi.fn(),
     onEditorLoadingProgress: vi.fn(),
     onTrayStopRecording: vi.fn(),
@@ -28,7 +30,8 @@ const mocks = vi.hoisted(() => ({
   },
   controller: {
     recording: undefined as any,
-    onComplete: undefined as ((session: { videoSrc?: string | null }) => void) | undefined,
+    onStartupCancelled: undefined as (() => void) | undefined,
+    onComplete: undefined as ((session: { videoSrc?: string | null; projectId?: string }) => void) | undefined,
     startFromEditor: undefined as ((configuration: any) => void) | undefined,
     editorProgress: undefined as ((progress: { stage: string; value: number }) => void) | undefined,
   },
@@ -39,7 +42,11 @@ vi.mock('../api/capture', () => ({ capture: mocks.capture }));
 vi.mock('../components/hud/recorder/useRecordingController', async () => {
   const { ref } = await import('vue');
   return {
-    useRecordingController: (onComplete: (session: { videoSrc?: string | null }) => void) => {
+    useRecordingController: (
+      onComplete: (session: { videoSrc?: string | null; projectId?: string }) => void,
+      _onFailure: unknown,
+      onStartupCancelled: () => void,
+    ) => {
       const recording = {
         phase: ref('idle'),
         secondsRemaining: ref(0),
@@ -59,6 +66,7 @@ vi.mock('../components/hud/recorder/useRecordingController', async () => {
       };
       mocks.controller.recording = recording;
       mocks.controller.onComplete = onComplete;
+      mocks.controller.onStartupCancelled = onStartupCancelled;
       return recording;
     },
   };
@@ -222,6 +230,16 @@ describe('App', () => {
     expect(wrapper.find('.mock-hud').exists()).toBe(true);
   });
 
+  it('returns to the HUD when native source selection is canceled', async () => {
+    await wrapper.get('.start').trigger('click');
+    await settle();
+    mocks.controller.onStartupCancelled?.();
+    await settle();
+    expect(mocks.capture.showHud).toHaveBeenCalledOnce();
+    expect(wrapper.find('.mock-hud').exists()).toBe(true);
+    expect(mocks.capture.openEditor).not.toHaveBeenCalled();
+  });
+
   it('routes tray stop and the global start/stop shortcut to an active recording', async () => {
     await wrapper.get('.start').trigger('click');
     await settle();
@@ -320,5 +338,16 @@ describe('App', () => {
     vi.spyOn(document, 'elementFromPoint').mockReturnValue(document.body);
     window.dispatchEvent(new MouseEvent('mousemove', { clientX: 2, clientY: 2 }));
     expect(mocks.capture.setInteractive).not.toHaveBeenCalledWith(true);
+  });
+  it('resolves the recorded project by ID ahead of newer screenshots and other recordings', async () => {
+    mocks.capture.listProjects.mockResolvedValueOnce([
+      { id: 'image', name: 'Screenshot', mode: 'screenshot', previewSrc: null },
+      { id: 'other', name: 'Other recording', mode: 'studio', previewSrc: 'other.mp4' },
+      { id: 'recorded', name: 'Recorded', mode: 'studio', previewSrc: 'recorded.mp4' },
+    ]);
+    mocks.controller.onComplete?.({ projectId: 'recorded', videoSrc: null });
+    await settle();
+    expect(mocks.capture.openEditor).toHaveBeenCalledWith('recorded');
+    expect(mocks.capture.openScreenshot).not.toHaveBeenCalled();
   });
 });

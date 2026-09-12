@@ -131,3 +131,28 @@ fn read_response(reader: &mut impl BufRead) -> Result<ResponseEnvelope, Box<dyn 
         std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "engine response missing").into()
     })
 }
+
+#[test]
+fn physical_display_lookup_roundtrips_signed_coordinates() -> Result<(), Box<dyn Error>> {
+    let value =
+        serde_json::json!({ "id": "display", "command": "resolve-display", "x": -3840, "y": 1080 });
+    let request: RequestEnvelope = serde_json::from_value(value.clone())?;
+    assert_eq!(serde_json::to_value(request)?, value);
+    Ok(())
+}
+
+#[test]
+fn physical_display_lookup_rejects_non_integer_and_overflow_coordinates() {
+    for x in [
+        serde_json::json!(1.5),
+        serde_json::json!(2147483648_i64),
+        serde_json::Value::Null,
+    ] {
+        assert!(
+            serde_json::from_value::<RequestEnvelope>(serde_json::json!({
+                "id": "display", "command": "resolve-display", "x": x, "y": 0,
+            }))
+            .is_err()
+        );
+    }
+}

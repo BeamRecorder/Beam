@@ -3,7 +3,7 @@ import type { EditorPreferenceDefaults } from '~/components/video-editor/composa
 export interface EditorPresetSettings {
   editor: EditorPreferenceDefaults;
   devices: Record<string, unknown>;
-  export: { format?: 'mp4' | 'webm'; [key: string]: unknown };
+  export: { format?: 'mp4' | 'webm' | 'png' | 'webp'; [key: string]: unknown };
   quickSnip: { automaticZoom: boolean };
 }
 

@@ -4,7 +4,6 @@ import HUD from './components/hud/HUD.vue';
 import ToastProvider from './components/ui/toast/ToastProvider.vue';
 import Button from './components/ui/button/Button.vue';
 import RecorderBar from './components/hud/recorder/RecorderBar.vue';
-import CountdownOverlay from './components/hud/recorder/CountdownOverlay.vue';
 import ScreenRegionOverlayApp from './components/hud/region/ScreenRegionOverlayApp.vue';
 import { useRecordingController } from './components/hud/recorder/useRecordingController';
 import type {
@@ -30,7 +29,6 @@ let removeTrayStopListener: (() => void) | null = null;
 let removeRecordingShortcutListener: (() => void) | null = null;
 
 const handleMouseMove = (e: MouseEvent) => {
-  if (isQuickSnipStatus) return;
   if (currentView.value !== 'hud' && recording.phase.value === 'idle') return;
   const el = document.elementFromPoint(e.clientX, e.clientY);
   const isInteractive =
@@ -42,7 +40,6 @@ const handleMouseMove = (e: MouseEvent) => {
 };
 
 const handleMouseLeave = () => {
-  if (isQuickSnipStatus) return;
   if (lastInteractive !== false) {
     lastInteractive = false;
     capture.setInteractive(false);
@@ -54,15 +51,7 @@ const { t: tHud } = useTranslate('HUD');
 const { t: tRecorderBar } = useTranslate('RecorderBar');
 
 const syncTrayMenu = () => {
-  if (
-    isCameraOverlay ||
-    isCountdownOverlay ||
-    isScreenRegionOverlay ||
-    isTeleprompter ||
-    isQuickSnipCrop ||
-    isQuickSnipStatus
-  )
-    return;
+  if (isCameraOverlay || isScreenRegionOverlay || isTeleprompter || isQuickSnipCrop) return;
   capture.updateTrayMenu?.({
     openHud: tHud('openHud'),
     stopRecording: tRecorderBar('stopRecording'),
@@ -106,14 +95,11 @@ onBeforeUnmount(() => {
 
 const currentView = ref<'hud' | 'recorder'>('hud');
 const isCameraOverlay = new URLSearchParams(window.location.search).has('cameraOverlay');
-const isCountdownOverlay = new URLSearchParams(window.location.search).has('countdown');
 const isScreenRegionOverlay = new URLSearchParams(window.location.search).has('screenRegion');
 const isQuickSnipCrop = new URLSearchParams(window.location.search).has('quickSnipCrop');
-const isQuickSnipStatus = new URLSearchParams(window.location.search).has('quickSnipStatus');
 const isTeleprompter = new URLSearchParams(window.location.search).has('teleprompter');
 const CameraOverlayApp = defineAsyncComponent(() => import('./components/hud/camera/CameraOverlayApp.vue'));
 const QuickSnipCropBar = defineAsyncComponent(() => import('./components/quick-snip/QuickSnipCropBar.vue'));
-const QuickSnipStatus = defineAsyncComponent(() => import('./components/quick-snip/QuickSnipStatus.vue'));
 const TeleprompterWindowApp = defineAsyncComponent(
   () => import('./components/hud/teleprompter/TeleprompterWindowApp.vue'),
 );
@@ -131,6 +117,7 @@ const recording = useRecordingController(
   (failure) => {
     handleRecordingStartupFailure(failure);
   },
+  () => returnToHud(),
 );
 
 const returnToHud = () => {
@@ -151,14 +138,7 @@ watch(
   recording.phase,
   (phase) => {
     syncTrayMenu();
-    if (
-      !isCameraOverlay &&
-      !isCountdownOverlay &&
-      !isScreenRegionOverlay &&
-      !isTeleprompter &&
-      !isQuickSnipCrop &&
-      !isQuickSnipStatus
-    ) {
+    if (!isCameraOverlay && !isScreenRegionOverlay && !isTeleprompter && !isQuickSnipCrop) {
       capture.setNormalRecordingActive(['countdown', 'starting', 'recording', 'paused', 'finalizing'].includes(phase));
     }
     // Guarantee the recorder view never coexists with the idle phase, even if
@@ -241,7 +221,9 @@ const revealEditor = () => {
   capture.setCameraOverlayActive(false);
   const projectId = currentProject.value?.id;
   if (!projectId) throw new Error('No project selected');
-  return capture.openEditor(projectId).then(() => {
+  const opening =
+    currentProject.value?.mode === 'screenshot' ? capture.openScreenshot(projectId) : capture.openEditor(projectId);
+  return opening.then(() => {
     isPreparingEditor.value = false;
     currentView.value = 'hud';
   });
@@ -259,7 +241,12 @@ const handleStopRecording = async (session: RecordingSessionResult) => {
   capture.showHud();
   try {
     const projects = await capture.listProjects();
-    let targetProject = projects.find((project) => project.previewSrc === session?.videoSrc) ?? projects[0] ?? null;
+    const recordings = projects.filter((project) => project.mode !== 'screenshot');
+    let targetProject =
+      recordings.find((project) => project.id === session?.projectId) ??
+      recordings.find((project) => session?.videoSrc && project.previewSrc === session.videoSrc) ??
+      recordings[0] ??
+      null;
 
     if (targetProject && launchedFromEditor) {
       const baseName = targetProject.name || `Project ${targetProject.id.slice(0, 8)}`;
@@ -295,7 +282,7 @@ const handleOpenProject = (project: CaptureProject) => {
   currentProject.value = project;
   void revealEditor().catch((error) => {
     logEditor('Project editor data load failed', error);
-    if (currentProject.value?.id !== project.id) return;
+    if (currentProject.value?.id !== project.id || currentProject.value?.mode !== project.mode) return;
     isPreparingEditor.value = false;
     editorLoadError.value = error instanceof Error ? error.message : String(error);
     capture.showHud();
@@ -313,22 +300,10 @@ const dismissEditorLoadError = () => {
   <template v-else>
     <ToastProvider />
     <CameraOverlayApp v-if="isCameraOverlay" />
-    <CountdownOverlay v-else-if="isCountdownOverlay" />
     <ScreenRegionOverlayApp v-else-if="isScreenRegionOverlay" />
     <QuickSnipCropBar v-else-if="isQuickSnipCrop" />
-    <QuickSnipStatus v-else-if="isQuickSnipStatus" />
   </template>
-  <div
-    v-if="
-      !isTeleprompter &&
-      !isCameraOverlay &&
-      !isCountdownOverlay &&
-      !isScreenRegionOverlay &&
-      !isQuickSnipCrop &&
-      !isQuickSnipStatus
-    "
-    class="app-container"
-  >
+  <div v-if="!isTeleprompter && !isCameraOverlay && !isScreenRegionOverlay && !isQuickSnipCrop" class="app-container">
     <HUD
       v-if="currentView === 'hud' && !editorLoadError"
       :preparing-editor="isPreparingEditor"

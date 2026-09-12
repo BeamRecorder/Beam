@@ -35,6 +35,10 @@ class CaptureEngine {
     return this.state === 'poisoned' || this.state === 'terminating' || this.unconfirmedExit !== null;
   }
 
+  canCleanup() {
+    return this.state === 'running' && this.process !== null && !this.shuttingDown && !this.isPoisoned;
+  }
+
   resolveExecutable() {
     const version = this.app.getVersion();
     const filename = captureEngineFilename(version);
@@ -121,6 +125,8 @@ class CaptureEngine {
   }
 
   request(command, payload = {}, options = {}) {
+    if (typeof command !== 'string' || command.trim().length === 0)
+      return Promise.reject(new TypeError('capture-engine: command must be a non-empty string'));
     if (this.terminating) {
       const termination = this.terminating.promise;
       return termination.then((result) => {
@@ -134,7 +140,7 @@ class CaptureEngine {
     this.ensureStarted();
     const id = randomUUID();
     return new Promise((resolve, reject) => {
-      const interactive = ['prepare', 'start', 'request-input-access'].includes(command);
+      const interactive = ['prepare', 'start', 'screenshot', 'request-input-access'].includes(command);
       const timeoutMs = options.timeoutMs ?? (interactive ? INTERACTIVE_REQUEST_TIMEOUT_MS : REQUEST_TIMEOUT_MS);
       const timeout = setTimeout(() => {
         void this.terminateProcess(new Error(`Délai dépassé pour la commande de capture "${command}"`));

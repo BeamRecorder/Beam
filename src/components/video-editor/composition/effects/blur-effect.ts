@@ -9,6 +9,7 @@ export interface EffectRect {
 }
 
 export interface BlurEffectOptions {
+  source?: CanvasImageSource;
   bounds?: EffectRect;
   maskPath?: (context: Canvas2DContext, rect: EffectRect) => void;
 }
@@ -208,7 +209,7 @@ export function applyBlurEffect(
   growSurface(pool.effect, width, height);
   growSurface(pool.mask, width, height);
   prepareSurface(pool.source);
-  pool.source.context.drawImage(ctx.canvas, left, top, width, height, 0, 0, width, height);
+  pool.source.context.drawImage(options.source ?? ctx.canvas, left, top, width, height, 0, 0, width, height);
   prepareSurface(pool.effect);
 
   const localTarget = { ...target, x: target.x - left, y: target.y - top };

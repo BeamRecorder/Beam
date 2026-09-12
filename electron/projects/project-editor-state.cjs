@@ -253,7 +253,7 @@ const cursorState = (value) => {
       mode: selection.mode,
       cursorId: selection.mode === 'fixed' ? selection.cursorId : null,
     },
-    size: clamp(value.size, 1, 256),
+    size: clamp(value.size, 1, 384),
     color: value.color,
     shadow: {
       enabled: value.shadow.enabled,

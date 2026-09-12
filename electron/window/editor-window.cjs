@@ -56,6 +56,11 @@ function createEditorWindowManager({
   let window = null;
   let controller = null;
   let currentProjectId = null;
+  let editorKind = null;
+  const editorContext = () => ({
+    projectId: currentProjectId,
+    ...(editorKind === 'screenshot' ? { kind: editorKind } : {}),
+  });
   let rendererReady = false;
   let returningToHud = false;
   let dark = initialDark;
@@ -153,7 +158,7 @@ function createEditorWindowManager({
 
   const sendContext = () => {
     if (!rendererReady || !window || window.isDestroyed() || !currentProjectId) return;
-    window.webContents.send('editor:context', { projectId: currentProjectId });
+    window.webContents.send('editor:context', editorContext());
   };
 
   const hideHudBeforePresentingEditor = () => hudController.setVisible(false) === true && !hudWindow.isVisible();
@@ -286,7 +291,7 @@ function createEditorWindowManager({
     return window;
   };
 
-  const open = (projectId) => {
+  const open = (projectId, kind = null) => {
     if (!canAcceptWork()) throw new Error('Cannot open an editor while Beam is shutting down');
     if (!PROJECT_ID.test(projectId)) throw new Error('Identifiant de projet invalide');
     lastProgressValue = 0;
@@ -296,6 +301,7 @@ function createEditorWindowManager({
     // though normal HUD hit-testing waits for a mousemove.
     hudController.setHudInteractive?.(true);
     currentProjectId = projectId;
+    editorKind = kind;
     const target = ensure();
     if (rendererReady) {
       sendContext();
@@ -369,9 +375,7 @@ function createEditorWindowManager({
 
   ipcMain.handle('editor:open', (_event, projectId) => open(projectId));
   ipcMain.handle('editor:context', (event) =>
-    window && !window.isDestroyed() && event.sender === window.webContents && currentProjectId
-      ? { projectId: currentProjectId }
-      : null,
+    window && !window.isDestroyed() && event.sender === window.webContents && currentProjectId ? editorContext() : null,
   );
   ipcMain.on('editor:ready', markReady);
   ipcMain.on('editor:loading-stage', reportLoadingStage);

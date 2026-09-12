@@ -1,4 +1,5 @@
 import type { CaptureSource } from './types/capture-api';
+import { enumerateBrowserMediaDevices } from './browser-media-devices';
 
 const MIME_TYPE = 'video/webm;codecs=vp8';
 const CAMERA_PREFIX = 'camera:chromium:';
@@ -48,21 +49,8 @@ function positive(value: number | undefined, fallback: number) {
   return Number.isFinite(value) && value! > 0 ? Math.round(value!) : fallback;
 }
 
-export async function validateCameraAccess(sourceId: string): Promise<void> {
-  if (!sourceId || sourceId === 'off') return;
-  if (!navigator.mediaDevices?.getUserMedia) throw new Error('Camera access is unavailable in this Chromium build.');
-  const rawId = deviceId(sourceId);
-  const stream = await navigator.mediaDevices.getUserMedia({
-    audio: false,
-    video: rawId ? { deviceId: { ideal: rawId } } : true,
-  });
-  stream.getTracks().forEach((track) => track.stop());
-}
-
 export async function listBrowserCameras(): Promise<CaptureSource[]> {
-  if (!navigator.mediaDevices?.enumerateDevices)
-    throw new Error('Camera discovery is unavailable in this Chromium build.');
-  let devices = await navigator.mediaDevices.enumerateDevices();
+  const devices = await enumerateBrowserMediaDevices();
   const videoInputs = devices.filter((device) => device.kind === 'videoinput');
   return videoInputs.map((device, index) => ({
     id: `${CAMERA_PREFIX}${device.deviceId}`,

@@ -88,7 +88,8 @@
     "audio": "Audio",
     "media": "Médias",
     "settings": "Paramètres",
-    "logo": "Logo"
+    "logo": "Logo",
+    "elements": "Éléments"
   },
   "Socials": {
     "title": "Réseaux sociaux",
@@ -229,7 +230,7 @@
     "critical": "Critique"
   },
   "Topbar": {
-    "exitToHUD": "Quitter vers le HUD",
+    "exitToHUD": "Retour au HUD",
     "undoTooltip": "Annuler (Ctrl+Z)",
     "redoTooltip": "Rétablir (Ctrl+Y)",
     "discordTooltip": "Rejoindre le Discord de Beam",

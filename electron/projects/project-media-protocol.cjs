@@ -76,7 +76,7 @@ function rangeNotSatisfiable(size) {
   });
 }
 
-function createProjectMediaHandler({ rawProjectStore, projectStore, backgroundLibrary, fontLibrary, cursorLibrary }) {
+function createProjectMediaHandler({ projectStore, backgroundLibrary, fontLibrary, cursorLibrary, screenshotStore }) {
   if (!projectStore || typeof projectStore.mediaFileForUrl !== 'function') {
     throw new TypeError('projectStore.mediaFileForUrl must be a function.');
   }
@@ -88,10 +88,10 @@ function createProjectMediaHandler({ rawProjectStore, projectStore, backgroundLi
     try {
       const file =
         projectStore.mediaFileForUrl(request.url) ??
-        rawProjectStore?.mediaFileForUrl(request.url) ??
         backgroundLibrary?.fileForUrl(request.url) ??
         fontLibrary?.fileForUrl(request.url) ??
-        cursorLibrary?.fileForUrl(request.url);
+        cursorLibrary?.fileForUrl(request.url) ??
+        screenshotStore?.fileForUrl(request.url);
       if (!file) return new Response('Not found', { status: 404 });
       const stat = await fs.promises.stat(file);
       if (!stat.isFile()) return new Response('Not found', { status: 404 });

@@ -343,6 +343,31 @@ test('recorder position persistence stores the compact bar position', () => {
   controller.setMode('hud');
 });
 
+test('HUD restores and clamps saved positions using the expanded native width', () => {
+  assert.deepEqual(HUD_SIZE, { width: 392, height: 512 });
+  const display = {
+    id: 1,
+    bounds: { x: 0, y: 0, width: 1000, height: 800 },
+    workArea: { x: 0, y: 0, width: 1000, height: 800 },
+  };
+  const preferencesStore = {
+    read: () => ({ extras: { hudPosition: { x: 900, y: 700 } } }),
+    patch: () => undefined,
+  };
+  const win = fakeWindow();
+  const controller = new WindowController(win, {
+    preferencesStore,
+    screenModule: { getDisplayNearestPoint: () => display },
+  });
+
+  assert.deepEqual(win.getPosition(), [608, 288]);
+  controller.showHud();
+
+  assert.deepEqual(win.calls.filter((call) => call[0] === 'minimumSize').at(-1), ['minimumSize', 392, 512]);
+  assert.deepEqual(win.calls.filter((call) => call[0] === 'size').at(-1), ['size', 392, 512]);
+  assert.deepEqual(win.getPosition(), [608, 288]);
+});
+
 test('HUD and Recorder stay topmost independently of a legacy preference', () => {
   const preferencesStore = {
     read: () => ({ alwaysOnTop: false }),

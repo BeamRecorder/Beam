@@ -1,3 +1,4 @@
+import { drawElementText, drawFreehand } from './render-element-content';
 import type { BlurClip, NormalizedTransform, ShapeClip } from '~/media/shared/composition-types';
 import { normalizeShapeLayerStyle } from '~/media/shared/shape-layer-style';
 import type { ShapeLayerStyle } from '~/media/shared/shape-layer-types';
@@ -86,6 +87,7 @@ export function drawShapeClip(
   clip: ShapeClip,
   viewport: { x: number; y: number; width: number; height: number },
   transform: NormalizedTransform = clip.transform,
+  backdrop?: CanvasImageSource,
 ) {
   const rect = {
     x: viewport.x + transform.x * viewport.width,
@@ -96,7 +98,7 @@ export function drawShapeClip(
   if (rect.width <= 0 || rect.height <= 0) return;
   const style = normalizeShapeLayerStyle(clip);
   const scale = Math.min(viewport.width, viewport.height) / 1080;
-  if (style.opacityEnabled && style.backdropBlur > 0) {
+  if (style.family !== 'drawing' && style.family !== 'text' && style.opacityEnabled && style.backdropBlur > 0) {
     const backdropClip: BlurClip = {
       ...clip,
       kind: 'blur',
@@ -109,6 +111,7 @@ export function drawShapeClip(
       color: '#000000',
     };
     applyBlurEffect(ctx, backdropClip, rect, {
+      ...(backdrop ? { source: backdrop } : {}),
       bounds: rotatedBounds(rect, style.rotation),
       maskPath: (maskContext, maskRect) => traceShapeInRect(maskContext, maskRect, style),
     });
@@ -122,14 +125,19 @@ export function drawShapeClip(
     ctx.shadowOffsetX = offset.x;
     ctx.shadowOffsetY = offset.y;
   }
-  traceShapeInRect(ctx, rect, style);
-  ctx.fillStyle = style.fillColor;
-  ctx.fill();
-  if (style.borderWidth > 0) {
-    ctx.shadowColor = 'transparent';
-    ctx.strokeStyle = style.borderColor;
-    ctx.lineWidth = style.borderWidth * scale;
-    ctx.stroke();
+  if (style.family === 'drawing') drawFreehand(ctx, clip, rect, scale);
+  else if (style.family !== 'text') {
+    traceShapeInRect(ctx, rect, style);
+    ctx.fillStyle = style.fillColor;
+    ctx.fill();
+    if (style.borderWidth > 0) {
+      ctx.shadowColor = 'transparent';
+      ctx.strokeStyle = style.borderColor;
+      ctx.lineWidth = style.borderWidth * scale;
+      ctx.stroke();
+    }
   }
+  ctx.shadowColor = 'transparent';
+  drawElementText(ctx, { ...clip, transform }, viewport);
   ctx.restore();
 }

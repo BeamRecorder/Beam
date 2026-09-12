@@ -33,6 +33,13 @@ const global = {
 };
 
 describe('BorderAndFrameControls', () => {
+  it('renders the translated border color label', () => {
+    const wrapper = mount(BorderAndFrameControls, { props: { borderEnabled: true }, global });
+    expect(wrapper.text()).toContain('Border color');
+    expect(wrapper.text()).not.toContain('BorderAndFrameControls.borderColor');
+    wrapper.unmount();
+  });
+
   it('toggles the border and emits its color and width changes', async () => {
     const wrapper = mount(BorderAndFrameControls, {
       props: { borderEnabled: false },
@@ -148,7 +155,12 @@ describe('BorderAndFrameControls', () => {
 
     await wrapper.setProps({ frame: 'iphone-16-max' });
     expect(wrapper.find('.phone-fill-controls').exists()).toBe(true);
-    expect(wrapper.find('.phone-fill-controls').findAll('.frame-button')).toHaveLength(3);
+    expect(
+      wrapper
+        .find('.phone-fill-controls')
+        .findAll('.frame-button')
+        .map((button) => button.text()),
+    ).toEqual(['Color', 'Gradient', 'Adaptive', 'Continuity']);
 
     await wrapper.setProps({ frame: 'safari' });
     expect(wrapper.find('.phone-fill-controls').exists()).toBe(false);

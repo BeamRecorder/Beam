@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Type, Pencil } from '@lucide/vue';
 import { computed } from 'vue';
 import type { ShapeClip } from '~/media/shared/composition-types';
 
@@ -33,12 +34,20 @@ const previewStyle = computed(() => {
 
 <template>
   <span class="shape-preview-wrap" aria-hidden="true">
-    <span class="shape-preview" :style="previewStyle" />
+    <component
+      v-if="clip.family === 'text' || clip.family === 'drawing'"
+      :is="clip.family === 'text' ? Type : Pencil"
+      :size="18"
+      :style="{ color: clip.family === 'text' ? clip.text?.style.color : clip.fillColor }"
+    />
+    <span v-else class="shape-preview" :style="previewStyle" />
   </span>
 </template>
 
 <style scoped>
 .shape-preview-wrap {
+  display: grid;
+  place-items: center;
   position: absolute;
   inset: 3px 5px;
   overflow: hidden;

@@ -126,7 +126,9 @@ const normalizeCaptionStyle = (value) => {
       : {}),
     fontWeight: style.fontWeight === 400 ? 400 : 800,
     fontStyle: style.fontStyle === 'italic' ? 'italic' : 'normal',
-    textDecoration: style.textDecoration === 'line-through' ? 'line-through' : 'none',
+    textDecoration: ['underline', 'line-through', 'underline line-through'].includes(style.textDecoration)
+      ? style.textDecoration
+      : 'none',
     textAlign: ['left', 'center', 'right'].includes(style.textAlign) ? style.textAlign : 'center',
     lineHeight: finite(style.lineHeight) ? Math.max(0.8, Math.min(2, style.lineHeight)) : 1.2,
     letterSpacing: finite(style.letterSpacing) ? Math.max(-5, Math.min(20, style.letterSpacing)) : 0,
@@ -220,4 +222,4 @@ const normalizeCaption = (value) => {
   throw new Error('Type de caption invalide');
 };
 
-module.exports = { normalizeCaption };
+module.exports = { normalizeCaption, normalizeCaptionStyle };

@@ -1,4 +1,15 @@
-const PRESETS = new Set(['rectangle', 'rounded-rectangle', 'ellipse', 'triangle', 'diamond', 'star', 'arrow']);
+const { normalizeElementContent } = require('./composition-element-content.cjs');
+const PRESETS = new Set([
+  'rectangle',
+  'rounded-rectangle',
+  'ellipse',
+  'triangle',
+  'diamond',
+  'star',
+  'arrow',
+  'text',
+  'freehand',
+]);
 const DIRECTIONS = new Set(['all', 'bottom', 'bottom-right', 'top-left']);
 const SHAPE_PRESETS = new Set(['rectangle', 'rounded-rectangle', 'ellipse', 'triangle', 'diamond', 'star']);
 const DEFAULTS = {
@@ -26,14 +37,20 @@ const color = (value, fallback) =>
   typeof value === 'string' && /^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/i.test(value) ? value : fallback;
 
 const normalizeShapeLayerStyle = (value) => {
-  const family = value?.family === 'arrow' ? 'arrow' : 'shape';
+  const family = ['arrow', 'text', 'drawing'].includes(value?.family) ? value.family : 'shape';
   const preset =
-    PRESETS.has(value?.preset) && (family === 'arrow' ? value.preset === 'arrow' : SHAPE_PRESETS.has(value.preset))
+    PRESETS.has(value?.preset) &&
+    (family === 'shape'
+      ? SHAPE_PRESETS.has(value.preset)
+      : value.preset === (family === 'drawing' ? 'freehand' : family))
       ? value.preset
-      : family === 'arrow'
-        ? 'arrow'
-        : DEFAULTS.preset;
+      : family === 'shape'
+        ? DEFAULTS.preset
+        : family === 'drawing'
+          ? 'freehand'
+          : family;
   return {
+    ...normalizeElementContent(value ?? {}),
     family,
     preset,
     fillColor: color(value?.fillColor, DEFAULTS.fillColor),

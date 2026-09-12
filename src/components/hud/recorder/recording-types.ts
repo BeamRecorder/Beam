@@ -17,6 +17,7 @@ export interface RecordingStartFailure {
   microphone: StartupSidecarState;
   systemAudio: StartupSidecarState;
   cleanupErrors?: string[];
+  cancelled?: boolean;
 }
 
 export const formatRecordingStartFailure = (failure: RecordingStartFailure): string => {

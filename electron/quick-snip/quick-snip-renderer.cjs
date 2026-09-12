@@ -36,7 +36,7 @@ function createQuickSnipRenderer({ applicationIpc, statusWindow }) {
       if (report.path !== job.target) throw new Error('Unexpected Quick Snip export destination.');
       job.resolve({
         path: job.target,
-        projectId: job.task.configuration.mode === 'studio' ? job.task.configuration.projectId : null,
+        projectId: job.task.configuration.projectId,
       });
     } else if (report.type === 'failed') job.reject(new Error(String(report.error || 'Quick Snip rendering failed.')));
     else throw new Error('Invalid render report.');

@@ -89,6 +89,19 @@ afterEach(() => {
 });
 
 describe('ClipPropertiesPanel', () => {
+  it('hides screenshot layout while preserving placement, appearance, shadows, borders and mirroring', async () => {
+    const wrapper = mountPanel(clip({ kind: 'image', isLinked: false }));
+    await wrapper.setProps({ hideLayout: true });
+    expect(wrapper.findComponent({ name: 'CameraLayoutPanel' }).exists()).toBe(false);
+    expect(wrapper.find('.frame-stub').exists()).toBe(true);
+    expect(wrapper.findComponent(ShadowDirectionStub).exists()).toBe(true);
+    expect(wrapper.findAllComponents(BigSliderStub).length).toBeGreaterThan(0);
+    expect(wrapper.text()).not.toContain('Playback Speed');
+    await wrapper.get('.frame-stub').trigger('click');
+    expect(wrapper.emitted('update:appearance')).toEqual([[{ borderEnabled: true, frame: 'safari' }]]);
+    wrapper.unmount();
+  });
+
   it('renders the empty state when no clip is selected', () => {
     const wrapper = mountPanel(null);
     expect(wrapper.find('.empty-state').exists()).toBe(true);

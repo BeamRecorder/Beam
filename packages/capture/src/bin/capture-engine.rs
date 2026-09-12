@@ -153,6 +153,20 @@ fn prepare_snapshot(engine: &mut Engine) -> Result<CatalogSnapshot, capture::Cap
 fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
     let result: Result<serde_json::Value, capture::CaptureError> = (|| match request.command {
         Command::Discover => serde_json::to_value(discover_snapshot(engine)?).map_err(Into::into),
+        Command::ResolveDisplay { x, y } => {
+            #[cfg(windows)]
+            {
+                serde_json::to_value(capture::screen::win::source_at_point(x, y)?)
+                    .map_err(Into::into)
+            }
+            #[cfg(not(windows))]
+            {
+                let _ = (x, y);
+                Err(capture::CaptureError::InvalidConfiguration(
+                    "Physical display lookup is only supported on Windows".into(),
+                ))
+            }
+        }
         Command::Capabilities => {
             serde_json::to_value(discover_snapshot(engine)?.capabilities).map_err(Into::into)
         }
@@ -177,6 +191,18 @@ fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
                     .formats,
             )
             .map_err(Into::into)
+        }
+        Command::Screenshot { config } => {
+            if !matches!(
+                engine.state(),
+                SessionState::Idle | SessionState::Completed | SessionState::Failed
+            ) {
+                return Err(capture::CaptureError::InvalidConfiguration(
+                    "Another capture is active".into(),
+                ));
+            }
+            engine.stop_system_audio_preview()?;
+            serde_json::to_value(capture::screenshot::capture(config)?).map_err(Into::into)
         }
         Command::Prepare { config } => {
             engine.stop_system_audio_preview()?;

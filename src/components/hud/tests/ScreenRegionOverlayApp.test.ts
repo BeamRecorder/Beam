@@ -192,7 +192,7 @@ describe('ScreenRegionOverlayApp', () => {
     expect(wrapper.find('.region-toolbar').exists()).toBe(false);
   });
 
-  it('keeps Quick Snip selection free and reports region changes without the toolbar', async () => {
+  it('keeps Quick Snip selection adjustable with explicit confirmation controls', async () => {
     let configure!: (value: {
       mode: 'select';
       context: 'quick-snip';
@@ -215,8 +215,8 @@ describe('ScreenRegionOverlayApp', () => {
     await wrapper.vm.$nextTick();
     capture.updateScreenRegion.mockClear();
 
-    expect(wrapper.find('.region-toolbar').exists()).toBe(false);
-    expect(wrapper.find('.region-instruction').exists()).toBe(false);
+    expect(wrapper.find('.region-toolbar').exists()).toBe(true);
+    expect(wrapper.find('.region-instruction').exists()).toBe(true);
 
     const main = wrapper.get('.region-overlay');
     const setPointerCapture = vi.fn();

@@ -25,6 +25,7 @@ const capture = vi.hoisted(() => ({
   showHud: vi.fn(),
   startRecordingFromEditor: vi.fn(),
   openEditor: vi.fn(),
+  openScreenshot: vi.fn(),
 }));
 
 vi.mock('../../../api/capture', () => ({ capture }));
@@ -72,6 +73,7 @@ describe('EditorWindowApp', () => {
     capture.listProjects.mockResolvedValue([project]);
     capture.getProjectEditorData.mockResolvedValue({ composition: {}, zoom: {}, presentation: {} });
     capture.openEditor.mockResolvedValue(true);
+    capture.openScreenshot.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -189,5 +191,13 @@ describe('EditorWindowApp', () => {
     expect(wrapper.find('.mock-editor[data-project-id="project-2"]').exists()).toBe(true);
     expect(wrapper.find('.mock-editor[data-project-id="project-1"]').exists()).toBe(false);
     expect(wrapper.find('.editor-project-loading-overlay').exists()).toBe(true);
+  });
+  it('opens screenshot projects through the screenshot route from the shared picker', async () => {
+    const wrapper = mountEditor();
+    await flushPromises();
+    wrapper.findComponent({ name: 'MockVideoEditor' }).vm.$emit('open-project', { id: 'image-1', mode: 'screenshot' });
+    await flushPromises();
+    expect(capture.openScreenshot).toHaveBeenCalledWith('image-1');
+    expect(capture.openEditor).not.toHaveBeenCalled();
   });
 });

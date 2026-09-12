@@ -7,6 +7,51 @@ afterEach(() => {
 });
 
 describe('internationalization', () => {
+  it('provides screenshot, preset and capture-mode UI in all locales without falling back to English', () => {
+    const namespaces = [
+      'ScreenshotEditor',
+      'EditorPresetControls',
+      'TextInputDialog',
+      'Dialog',
+      'HUD',
+      'QuickSnipStatus',
+    ] as const;
+    const english = i18n.global.getLocaleMessage('en');
+    for (const locale of SUPPORTED_LOCALES) {
+      setCurrentLocale(locale);
+      const paths = namespaces.flatMap((namespace) =>
+        Object.keys(english[namespace]).map((key) => `${namespace}.${key}`),
+      );
+      paths.push(
+        'QuickSnipCropBar.screenshot',
+        'QuickSnipCropBar.instant',
+        'QuickSnipCropBar.deviceHint',
+        'QuickSnipCropBar.defaultSystemAudio',
+        'HUD.screenshot',
+        'HUD.instant',
+        'BorderAndFrameControls.borderColor',
+      );
+      for (const path of paths) {
+        expect(i18n.global.te(path, locale), `${locale}: missing ${path}`).toBe(true);
+        expect(
+          i18n.global
+            .t(path, {
+              name: 'Example',
+              label: 'Name',
+              max: 80,
+              time: '1 s',
+              index: 1,
+              format: 'WebP',
+              device: 'Microphone',
+            })
+            .trim(),
+          `${locale}: empty ${path}`,
+        ).not.toBe('');
+      }
+      expect(i18n.global.t('EditorPresetControls.deleteDescription', { name: 'Example' })).toContain('Example');
+    }
+  });
+
   it('registers every supported locale in the language picker', () => {
     expect(i18n.global.availableLocales).toEqual(expect.arrayContaining([...SUPPORTED_LOCALES]));
     expect(localeOptions.map((option) => option.value)).toEqual([...SUPPORTED_LOCALES]);

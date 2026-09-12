@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Check, Copy, ExternalLink, Film, LoaderCircle, X } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import CopyButton from '~/ui/button/CopyButton.vue';
-import { renderQuickSnip } from './quick-snip-export';
 import { capture } from '~/api/capture';
 import { useTranslate } from '../../i18n/useTranslate';
 import type { QuickSnipSnapshot } from '~/api/types/quick-snip';
 
 const { t } = useTranslate('QuickSnipStatus');
+const { t: presetText } = useTranslate('QuickSnipCropBar');
 const status = ref<QuickSnipSnapshot | null>(null);
 const hovered = ref(false);
 const focused = ref(false);
@@ -23,12 +23,22 @@ const percent = computed(() => {
 });
 const preview = computed(() => status.value?.preview ?? status.value?.job?.thumbnail);
 const projectId = computed(() =>
-  status.value?.job?.mode === 'studio' ? (status.value.result?.projectId ?? status.value.job.projectId) : null,
+  status.value?.job ? (status.value.result?.projectId ?? status.value.job.projectId) : null,
 );
+const screenshot = computed(() => status.value?.job?.mode === 'screenshot');
 const label = computed(() => {
   if (failed.value) return t('failed');
-  if (completed.value) return copied.value || status.value?.copied ? t('copied') : t('ready');
-  return t(status.value?.state === 'processing' ? 'exporting' : 'preparing');
+  if (completed.value)
+    return copied.value || status.value?.copied ? t('copied') : t(screenshot.value ? 'imageReady' : 'ready');
+  return t(
+    status.value?.state === 'processing'
+      ? screenshot.value
+        ? 'exportingImage'
+        : 'exporting'
+      : screenshot.value
+        ? 'preparingImage'
+        : 'preparing',
+  );
 });
 const detail = computed(() => {
   if (completed.value) return t('closing');
@@ -66,16 +76,20 @@ const startRender = (task: import('~/api/types/quick-snip').QuickSnipRenderTask 
   const abort = new AbortController();
   renderAbort = abort;
   renderingId = task.id;
-  void renderQuickSnip(task, abort.signal).catch((reason) => {
-    if (!abort.signal.aborted)
-      void capture
-        .reportQuickSnipRender({
-          id: task.id,
-          type: 'failed',
-          error: reason instanceof Error ? reason.message : String(reason),
-        })
-        .catch(() => undefined);
-  });
+  void import('./quick-snip-export')
+    .then(({ renderQuickSnip }) => {
+      if (!abort.signal.aborted) return renderQuickSnip(task, abort.signal);
+    })
+    .catch((reason) => {
+      if (!abort.signal.aborted)
+        void capture
+          .reportQuickSnipRender({
+            id: task.id,
+            type: 'failed',
+            error: reason instanceof Error ? reason.message : String(reason),
+          })
+          .catch(() => undefined);
+    });
 };
 const offRender = capture.onQuickSnipRenderTask((task) => {
   renderRevision += 1;
@@ -98,6 +112,9 @@ const hover = (value: boolean) => {
     hoverCloseTimer = setTimeout(() => {
       hoverCloseTimer = null;
       hovered.value = false;
+      // Mouse focus must not pin a finished export once its actions are left.
+      if (!(document.activeElement instanceof HTMLElement) || !document.activeElement.matches(':focus-visible'))
+        focus(false);
     }, 300);
   }
 };
@@ -105,6 +122,13 @@ const focus = (value: boolean) => {
   focused.value = value;
   syncInteractive();
 };
+const deactivate = () => {
+  if (hoverCloseTimer !== null) clearTimeout(hoverCloseTimer);
+  hoverCloseTimer = null;
+  hovered.value = false;
+  focus(false);
+};
+const offBlur = capture.onQuickSnipStatusBlur(deactivate);
 const run = async (action: () => Promise<unknown>) => {
   if (pending.value) return;
   pending.value = true;
@@ -122,7 +146,20 @@ const run = async (action: () => Promise<unknown>) => {
 const copy = () =>
   run(async () => {
     if (!status.value?.result) return;
-    await capture.copyQuickSnipFile(status.value.result.path);
+    if (status.value.job?.mode === 'screenshot' && projectId.value) {
+      const [{ encodeScreenshot }, { screenshotState }] = await Promise.all([
+        import('../video-editor/screenshot/screenshot-render'),
+        import('../video-editor/screenshot/screenshot-state'),
+      ]);
+      const document = await capture.getScreenshot(projectId.value);
+      const state = screenshotState(document, await capture.listBackgroundLibrary());
+      await capture.exportScreenshot(
+        document.id,
+        await encodeScreenshot(document.source, { ...state, format: 'png' }),
+        'png',
+        true,
+      );
+    } else await capture.copyQuickSnipFile(status.value.result.path);
     copied.value = true;
   });
 const openEditor = () => run(() => capture.openQuickSnipEditor());
@@ -147,8 +184,10 @@ onMounted(() => {
   const initialRevision = revision;
   void capture
     .getQuickSnipState()
-    .then((next) => {
+    .then(async (next) => {
       if (revision === initialRevision) receive(next);
+      await nextTick();
+      capture.notifyQuickSnipStatusReady();
     })
     .catch(() => {
       actionError.value = t('actionFailed');
@@ -158,6 +197,7 @@ onBeforeUnmount(() => {
   if (hoverCloseTimer !== null) clearTimeout(hoverCloseTimer);
   renderRevision += 1;
   renderAbort.abort();
+  offBlur();
   offRender();
   off();
   capture.setQuickSnipStatusInteractive(false);
@@ -188,7 +228,12 @@ onBeforeUnmount(() => {
           />
         </div>
         <div v-else class="preset-label">
-          {{ status?.job?.preset.name ?? 'Quick Snip' }} <span>{{ status?.job?.format.toUpperCase() }}</span>
+          {{
+            status?.job?.preset.id === 'default'
+              ? presetText('defaultPreset')
+              : (status?.job?.preset.name ?? 'Quick Snip')
+          }}
+          <span>{{ status?.job?.mode === 'screenshot' ? 'PNG / WEBP' : status?.job?.format.toUpperCase() }}</span>
         </div>
         <div class="actions">
           <div v-if="projectId" class="editor-action">
@@ -240,7 +285,16 @@ onBeforeUnmount(() => {
         </div>
         <div class="status-value">
           <Check v-if="completed" :size="20" />
-          <X v-else-if="failed" :size="20" />
+          <Button
+            v-else-if="failed"
+            size="xs"
+            variant="ghost"
+            icon-only
+            :icon="X"
+            :aria-label="t('dismiss')"
+            :title="t('dismiss')"
+            @click="capture.dismissQuickSnipStatus()"
+          />
           <template v-else
             ><span>{{ percent }}<small>%</small></span
             ><LoaderCircle v-if="percent === 0" class="spinner" :size="12"

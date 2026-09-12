@@ -69,7 +69,7 @@ export interface CaptionStyle {
   fontAssetId?: string;
   fontWeight: 400 | 800;
   fontStyle: 'normal' | 'italic';
-  textDecoration: 'none' | 'line-through';
+  textDecoration: 'none' | 'line-through' | 'underline' | 'underline line-through';
   textAlign: 'left' | 'center' | 'right';
   lineHeight: number;
   letterSpacing: number;

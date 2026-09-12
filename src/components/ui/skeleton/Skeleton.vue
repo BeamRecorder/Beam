@@ -170,4 +170,11 @@ const skeletonStyle = computed(() => ({
     transform: translate3d(88%, 12%, 0) scale(1.16);
   }
 }
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after,
+  .skeleton-surface,
+  .skeleton-aurora {
+    animation: none;
+  }
+}
 </style>

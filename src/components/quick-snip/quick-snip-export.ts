@@ -34,23 +34,20 @@ export function quickSnipExportRequest(
     const reason = screen?.terminationReason || 'The recording contains no usable video.';
     throw new Error(`Quick Snip video capture failed: ${reason}`);
   }
-  const defaults = normalizeEditorPreferenceDefaults(
-    config.mode === 'studio' ? config.preset.settings.editor : undefined,
-  );
+  const defaults = normalizeEditorPreferenceDefaults(config.preset.settings.editor);
   const state = applyFreshPresentationDefaults(structuredClone(task.editorState), defaults);
   state.composition = synchronizeRecordingClips(state.composition, editorData, defaults);
   if (!state.composition.clips.some((clip) => clip.kind === 'screen' && clip.enabled && clip.timelineDurationMs > 0))
     throw new Error('Quick Snip has no active screen video to export.');
   const durationMs = compositionDurationMs(state.composition);
-  state.zoom.elements =
-    config.mode === 'studio' && editorData.cursor.available
-      ? buildAutomaticZoomElements({
-          telemetry: editorData.cursor.telemetry,
-          sessionId: editorData.sessionId,
-          durationMs,
-          reserved: [],
-        }).map((zoom) => ({ ...zoom, enabled: config.automaticZoom }))
-      : [];
+  state.zoom.elements = editorData.cursor.available
+    ? buildAutomaticZoomElements({
+        telemetry: editorData.cursor.telemetry,
+        sessionId: editorData.sessionId,
+        durationMs,
+        reserved: [],
+      }).map((zoom) => ({ ...zoom, enabled: config.automaticZoom }))
+    : [];
   state.zoom.generatedSessions = [
     {
       sessionId: editorData.sessionId,
@@ -59,27 +56,6 @@ export function quickSnipExportRequest(
     },
   ];
   state.zoom.motionBlur = defaults.zoomMotionBlur ?? state.zoom.motionBlur;
-  if (config.mode === 'raw') {
-    state.presentation.canvas = {
-      ...state.presentation.canvas,
-      preset: 'custom',
-      width: Number(screen.format.width) || 1920,
-      height: Number(screen.format.height) || 1080,
-      showBackground: false,
-    };
-    for (const clip of state.composition.clips) {
-      if (clip.kind === 'screen') {
-        clip.transform = { x: 0, y: 0, width: 1, height: 1 };
-        clip.appearance = {
-          ...clip.appearance,
-          cornerRadius: 'none',
-          shadowSize: 'none',
-          borderEnabled: false,
-          frame: 'none',
-        };
-      }
-    }
-  }
   const presentation = state.presentation;
   const background =
     normalizeBackgroundValue(presentation.background) ??

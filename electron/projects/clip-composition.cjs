@@ -3,8 +3,7 @@ const { normalizeCaption } = require('./composition-captions.cjs');
 const { normalizeColorFill } = require('./composition-color-fill.cjs');
 const { normalizeColorLayerStyle } = require('./composition-color-layer.cjs');
 const { normalizeShapeLayerStyle } = require('./composition-shape-layer.cjs');
-const { normalizePhoneFrameFill } = require('./composition-phone-frame-fill.cjs');
-const { historicalAppearance } = require('./composition-appearance.cjs');
+const { historicalAppearance, normalizeAppearance } = require('./composition-appearance.cjs');
 const { withoutInheritedKeyboardText, withHistoricalTypography } = require('./composition-migration-helpers.cjs');
 const { normalizeClipTransitions } = require('./composition-clip-transitions.cjs');
 const { materializeComposition, importMedia, pruneProjectMedia } = require('./composition-project-media.cjs');
@@ -68,49 +67,6 @@ const rectangle = (value, label) => {
   if (![next.x, next.y, next.width, next.height].every(finite) || next.width <= 0 || next.height <= 0)
     throw new Error(`${label} invalide`);
   return { x: next.x, y: next.y, width: next.width, height: next.height };
-};
-const appearance = (value) => {
-  if (!value || typeof value !== 'object') throw new Error('Apparence de clip invalide');
-  const radius = finite(value.cornerRadius)
-    ? Math.max(0, Math.min(9999, value.cornerRadius))
-    : ['none', 'sm', 'md', 'lg', 'full'].includes(value.cornerRadius)
-      ? value.cornerRadius
-      : null;
-  if (
-    radius === null ||
-    !['none', 'sm', 'md', 'lg', 'custom'].includes(value.shadowSize) ||
-    !finite(value.shadowBlur) ||
-    !['solid', 'adaptive'].includes(value.shadowMode) ||
-    color(value.shadowColor, null) === null ||
-    !['all', 'bottom', 'bottom-right', 'top-left'].includes(value.shadowDirection) ||
-    typeof value.borderEnabled !== 'boolean' ||
-    color(value.borderColor, null) === null ||
-    !finite(value.borderWidth) ||
-    !['none', 'safari', 'windows-95', 'iphone-16-max', 'pixel-9-pro'].includes(value.frame) ||
-    color(value.frameColor, null) === null ||
-    typeof value.frameShowMenu !== 'boolean' ||
-    typeof value.frameShowScrollbars !== 'boolean' ||
-    !finite(value.frameChromeScale)
-  )
-    throw new Error('Apparence de clip invalide');
-  return {
-    cornerRadius: radius,
-    shadowSize: value.shadowSize,
-    shadowBlur: Math.max(0, Math.min(96, value.shadowBlur)),
-    shadowMode: value.shadowMode,
-    shadowColor: color(value.shadowColor, null),
-    shadowDirection: value.shadowDirection,
-    borderEnabled: value.borderEnabled,
-    borderColor: color(value.borderColor, null),
-    borderWidth: Math.max(0, Math.min(32, value.borderWidth)),
-    frame: value.frame,
-    frameTitle: text(value.frameTitle, 120),
-    frameColor: color(value.frameColor, null),
-    frameShowMenu: value.frameShowMenu,
-    frameShowScrollbars: value.frameShowScrollbars,
-    frameChromeScale: Math.max(0.5, Math.min(2, value.frameChromeScale)),
-    phoneFrameFill: normalizePhoneFrameFill(value.phoneFrameFill),
-  };
 };
 function normalizeComposition(value) {
   if (!value) throw new Error('Composition absente');
@@ -307,7 +263,7 @@ function normalizeComposition(value) {
       assetId: clip.assetId,
       transform: rectangle(clip.transform, 'Transformation'),
       ...(clip.crop ? { crop: rectangle(clip.crop, 'Recadrage') } : {}),
-      appearance: appearance(clip.appearance),
+      appearance: normalizeAppearance(clip.appearance),
       ...(clip.freezeFrameSourceMs !== undefined ? { freezeFrameSourceMs: Math.round(clip.freezeFrameSourceMs) } : {}),
       ...cameraPresets,
       ...(typeof clip.isMirrored === 'boolean' && typeof clip.isMirroredY === 'boolean'

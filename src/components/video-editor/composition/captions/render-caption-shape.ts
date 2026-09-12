@@ -48,7 +48,7 @@ function drawShapeBlur(ctx: Canvas2DContext, rect: CaptionShapeRect, radius: num
   const height = bottom - y;
   if (width <= 0 || height <= 0) return;
   const scratch = createScratchCanvas(width, height);
-  const scratchContext = scratch?.getContext('2d');
+  const scratchContext = scratch?.getContext('2d') as Canvas2DContext | null | undefined;
   if (!scratch || !scratchContext) throw new Error('Caption shape blur requires a 2D scratch canvas.');
   scratchContext.drawImage(canvas, x, y, width, height, 0, 0, width, height);
   ctx.save();

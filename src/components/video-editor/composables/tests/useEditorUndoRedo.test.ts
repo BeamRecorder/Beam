@@ -23,7 +23,7 @@ describe('useEditorUndoRedo', () => {
 
   it('records snapshots, ignores duplicates, restores undo and redo states', async () => {
     const restored: unknown[] = [];
-    let api!: ReturnType<typeof useEditorUndoRedo>;
+    let api!: ReturnType<typeof useEditorUndoRedo<EditorStateSnapshot>>;
     const Harness = defineComponent({
       setup: () => (
         (api = useEditorUndoRedo({
@@ -54,7 +54,7 @@ describe('useEditorUndoRedo', () => {
   });
 
   it('releases the restoring guard when undo restoration rejects', async () => {
-    let api!: ReturnType<typeof useEditorUndoRedo>;
+    let api!: ReturnType<typeof useEditorUndoRedo<EditorStateSnapshot>>;
     const Harness = defineComponent({
       setup: () => (
         (api = useEditorUndoRedo({
@@ -79,7 +79,7 @@ describe('useEditorUndoRedo', () => {
   });
 
   it('releases the restoring guard when redo restoration rejects', async () => {
-    let api!: ReturnType<typeof useEditorUndoRedo>;
+    let api!: ReturnType<typeof useEditorUndoRedo<EditorStateSnapshot>>;
     const restore = vi
       .fn<() => void>()
       .mockImplementationOnce(() => undefined)
@@ -105,7 +105,7 @@ describe('useEditorUndoRedo', () => {
 
   it('flushes pending debounced snapshots on undo/redo before rolling back', async () => {
     const restored: unknown[] = [];
-    let api!: ReturnType<typeof useEditorUndoRedo>;
+    let api!: ReturnType<typeof useEditorUndoRedo<EditorStateSnapshot>>;
     const Harness = defineComponent({
       setup: () => (
         (api = useEditorUndoRedo({
@@ -129,7 +129,7 @@ describe('useEditorUndoRedo', () => {
   });
 
   it('debounces records, cancels pending work and keeps the history bounded', () => {
-    let api!: ReturnType<typeof useEditorUndoRedo>;
+    let api!: ReturnType<typeof useEditorUndoRedo<EditorStateSnapshot>>;
     const Harness = defineComponent({
       setup: () => ((api = useEditorUndoRedo({ onRestoreSnapshot: () => undefined })), {}),
       template: '<div />',
@@ -148,7 +148,7 @@ describe('useEditorUndoRedo', () => {
 
   it('lazily resolves only the latest debounced factory and flushes it on undo', async () => {
     const restored: unknown[] = [];
-    let api!: ReturnType<typeof useEditorUndoRedo>;
+    let api!: ReturnType<typeof useEditorUndoRedo<EditorStateSnapshot>>;
     const Harness = defineComponent({
       setup: () => (
         (api = useEditorUndoRedo({
@@ -192,7 +192,7 @@ describe('useEditorUndoRedo', () => {
   });
 
   it('maps Ctrl/Cmd shortcuts and ignores editable fields', async () => {
-    let api!: ReturnType<typeof useEditorUndoRedo>;
+    let api!: ReturnType<typeof useEditorUndoRedo<EditorStateSnapshot>>;
     const Harness = defineComponent({
       setup: () => ((api = useEditorUndoRedo({ onRestoreSnapshot: () => undefined })), {}),
       template: '<div />',

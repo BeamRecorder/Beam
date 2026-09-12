@@ -50,9 +50,9 @@ On GNOME, a visible tray icon still depends on the desktop providing StatusNotif
 - The Crop Bar waits for native readiness and a mounted-renderer handshake before receiving configuration and queued commands. A Start arriving during loading is retained; cancellation clears it. The recorder runs without background throttling.
 - Linux acknowledges native Start only after its first usable video sample is queued after the format announcement. Empty, cursor-only, or dropped buffers cannot mark the session as recording. A missing first frame times out during startup; an immediate Stop after successful startup therefore cannot overtake the first frame in the encoder queue.
 - The Crop Bar has a WebKit drag handle and remembers a user-dragged position for the current session.
-- The `480 × 132` Crop Bar uses two compact rows with separators: labeled mode/preset/format fields above grouped sources, Studio effects, and recording actions. Mode, preset, and format use native HTML selects with Lucide icons and translated native hints. They do not create renderer popovers or resize the native window.
+- The `480 × 132` Crop Bar uses two compact rows with separators: a shared mode button group and a native preset selector above the mode-specific controls. The preset owns export format. They do not create renderer popovers or resize the native window.
 - The preset field immediately falls back to `Default`, including while preset storage is loading.
-- Controls include Studio/Raw mode, preset, MP4/WebM override, automatic zoom, microphone, system audio, Studio camera, Start/Stop, Cancel, and the recorder-derived elapsed time. Raw mode hides preset, camera, and zoom. Toggle buttons expose their active state, and labels, accessible names, default-preset display name, and native hints follow the application language.
+- Controls include Studio/Screenshot/Instant mode, preset, automatic zoom, microphone, system audio, camera, Start/Stop, Cancel, and elapsed time. Screenshot hides video devices and zoom and offers Copy or Open in editor. Toggle buttons expose their active state, and labels, accessible names, default-preset display name, and native hints follow the application language.
 - Crop Bar actions use native `title` attributes instead of custom tooltip popovers.
 - Field icons and labels open their native select. Disabled sources and effects use red crossed-out icons; the controls remain clickable until recording preparation locks settings.
 - During recording, the Crop Bar follows the shared Recorder visibility preference, including fade and hidden-until-hover modes. Selection stays fully visible. Linux shares its pre-recording system-audio level preview with the HUD, while each window releases only its own subscription.
@@ -94,24 +94,15 @@ Quick Snip source changes update the active preset immediately, including named 
 - The normal recorder rejects startup while Quick Snip is active, while requests from the Quick Snip Crop Bar remain authorized.
 - Linux negotiates the Portal stream during preparation and activates it only after releasing the recording start barrier. Resume prepares the next segment before releasing its new barrier and reactivating PipeWire, preserving the first frame of a static window.
 
-## Studio and Raw processing
+## Studio, Instant and Screenshot
 
-### Studio
+The shared mode button group is also the HUD topbar. Studio is selected until the user changes mode. The existing global shortcut opens Quick Snip using that saved mode.
 
-- Uses the normal persistent Beam project root.
-- Captures cursor/interactions and can include the configured camera and audio sources.
-- Applies reusable editor preset fields to the project editor state during finalization.
-- Automatic zoom OFF preserves generated zoom elements while marking them disabled.
-- Produces collision-safe output under `<Videos>/Beam/user/quick-snip/studio/`.
-- The completed Studio status can open the retained project in the editor.
-
-### Raw
-
-- Uses `<Videos>/Beam/user/quick-snip/.work/` as its technical capture root.
-- Disables Beam cursor reconstruction, interactions, zoom, and camera.
-- Produces collision-safe output under `<Videos>/Beam/user/quick-snip/raw/`.
-- Removes the technical work project after success, cancellation, or failure.
-- Does not expose Open in Editor.
+- Studio records under `user/projects/studio/` and opens the retained project in the Studio editor.
+- Instant records under `user/projects/instant/`, applies the chosen video preset, then exports automatically into that project’s `exports/` folder. Format, quality, resolution, frame rate and audio inclusion come from the preset. The source project remains editable.
+- Screenshot stores a native PNG and `screenshot.json` under `user/projects/screenshot/<uuid>/`. Quick Snip copies the styled image or opens the screenshot editor. HUD Screenshot opens that editor directly. Screenshot presets are separate from video presets.
+- HUD Instant accepts the existing display/window/region selection. Quick Snip retains its platform selection behavior: Windows/macOS region selection; Linux native Portal window selection.
+- Legacy immediate project folders move into `projects/studio/` at startup using a resumable rename migration, including reference updates and collision handling.
 
 ## Status window and clipboard
 
@@ -123,7 +114,7 @@ Quick Snip source changes update the active preset immediately, including named 
 - Completed exports are copied automatically; Copy Again and Dismiss remain available. The window closes after five seconds without interaction; hovering, keyboard focus, and pending actions pause dismissal.
 - Rendering runs in the existing export Worker hosted by the status renderer. MP4/WebM, composited visuals, cursor, zooms, and audio use the same pipeline as editor export. Main-process authorization selects a destination without a save dialog; export IPC retains ownership of temporary writes and atomic finalization.
 - Quick Snip refuses processing when the screen track failed, has no complete accessible video asset, or has no enabled screen clip. A recovered audio-only session reports the capture error instead of producing a background-only video.
-- Raw projects use a separate scoped media host and store; their work files are removed after processing. Studio projects remain available in the editor.
+- Screenshot uses its own UUID-scoped image media resolver. Studio and Instant projects both remain available in the editor.
 - Named presets retain export format, quality, resolution, frame rate and audio inclusion. Default follows current recording devices and the last saved editor/export settings.
 - Completed files are published as native files immediately after export finalization. macOS uses `public.file-url`; Windows uses the system FileDrop list with persistent storage; Linux publishes `text/uri-list` through `wl-copy` (Wayland) or `xclip` (X11). The clipboard owner outlives the widget and permits repeated pastes until another copy replaces it. No timer clears or rewrites the clipboard. Linux clipboard tools are declared as DEB/RPM dependencies and documented for development/AppImage. Native paste behavior still requires desktop-specific validation.
 
@@ -137,7 +128,7 @@ The following items are not complete and should block removal of the WIP label:
 7. **Unsaved-change decision UI** — New/Rename/Delete use Beam dialogs, but changing presets with dirty editor settings still uses the existing browser confirmation sequence instead of a single Save/Discard/Cancel Beam dialog.
 8. **Native end-to-end export QA** — real window/region recording, composited MP4/WebM output, preview delivery, cancellation and clipboard paste still require OS-specific validation.
 9. **Cross-platform native clipboard QA** — native file paste must still be verified in Finder and Windows Explorer, with Linux file URI lists verified on supported desktops.
-10. **End-to-end recorder QA** — elapsed-time rendering, source toggles, cancellation during startup, Studio project retention, Raw cleanup, and output duration need manual end-to-end recordings on each supported OS.
+10. **End-to-end recorder QA** — elapsed-time rendering, source toggles, cancellation during startup, Studio project retention, Screenshot image export, and output duration need manual end-to-end recordings on each supported OS.
 
 ## Focused automated coverage
 
@@ -148,7 +139,7 @@ The branch includes targeted Node, Vitest, and Rust coverage for:
 - Quick Snip state transitions, cancellation races, late events, and recording exclusion;
 - Crop Bar controls, native selects, Default fallback, timer formatting, drag/ownership, and placement;
 - region overlay clamping, live updates, cancellation, and native-window ownership;
-- finalizer naming, partial cleanup, Raw work cleanup, cancellation, and preset application;
+- finalizer naming, partial cleanup, project-local export paths, cancellation, and preset application;
 - status placement, compact mode, hover details, actions, and terminal cleanup;
 - tray ordering, state labels, Linux icon handling, and development profile behavior;
 - Linux GNOME shortcut registration and single-instance forwarding;
@@ -165,6 +156,6 @@ The branch includes targeted Node, Vitest, and Rust coverage for:
 - [ ] Move the Linux Crop Bar over the selected window; verify it remains usable and absent from the video.
 - [ ] Verify tray presence and Quick Snip state labels on each supported desktop shell.
 - [ ] Verify macOS Crop Bar exclusion with intentional overlap.
-- [ ] Verify Studio MP4 output, project retention, disabled zoom behavior, status actions, and clipboard paste.
-- [ ] Verify Raw MP4 output and complete `.work` cleanup.
+- [ ] Verify Instant MP4/WebM output, project retention, disabled zoom behavior, status actions, and clipboard paste.
+- [ ] Verify Studio editor handoff, Screenshot display/window/region capture from the HUD, PNG/WebP alpha export, and PNG clipboard paste.
 - [ ] Complete and verify every known gap above before declaring the feature release-ready.

@@ -1,7 +1,10 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ShapeClip } from '~/media/shared/composition-types';
+import { createElementText } from '~/media/shared/element-text';
 const blurEffect = vi.hoisted(() => ({ applyBlurEffect: vi.fn() }));
+const elementContent = vi.hoisted(() => ({ drawElementText: vi.fn(), drawFreehand: vi.fn() }));
 vi.mock('../effects/blur-effect', () => blurEffect);
+vi.mock('./render-element-content', () => elementContent);
 import { drawShapeClip } from './render-shape-clip';
 
 const shapeClip = (overrides: Partial<ShapeClip> = {}): ShapeClip => ({
@@ -65,6 +68,10 @@ const context = () =>
     shadowOffsetX: 0,
     shadowOffsetY: 0,
   }) as unknown as CanvasRenderingContext2D;
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 describe('drawShapeClip', () => {
   it('uses the optional opacity toggle without applying a canvas filter', () => {
@@ -137,8 +144,8 @@ describe('drawShapeClip', () => {
   });
 
   it('passes a rotated shape mask and bounds to the backdrop blur renderer', () => {
-    blurEffect.applyBlurEffect.mockClear();
     const ctx = context();
+    const backdrop = {} as CanvasImageSource;
     const clip = shapeClip({
       family: 'arrow',
       preset: 'arrow',
@@ -148,7 +155,7 @@ describe('drawShapeClip', () => {
     });
     const viewport = { x: 10, y: 20, width: 800, height: 400 };
 
-    drawShapeClip(ctx, clip, viewport);
+    drawShapeClip(ctx, clip, viewport, clip.transform, backdrop);
 
     expect(blurEffect.applyBlurEffect).toHaveBeenCalledOnce();
     const [, blurClip, rect, options] = blurEffect.applyBlurEffect.mock.calls[0]!;
@@ -159,11 +166,102 @@ describe('drawShapeClip', () => {
     expect(options.bounds.width).toBeCloseTo(160);
     expect(options.bounds.height).toBeCloseTo(400);
     expect(options.maskPath).toEqual(expect.any(Function));
+    expect(options.source).toBe(backdrop);
 
     const maskContext = context();
     options.maskPath(maskContext, rect);
     expect(maskContext.rotate).toHaveBeenCalledWith(Math.PI / 2);
     expect(maskContext.scale).toHaveBeenCalledWith(400, 160);
     expect(maskContext.moveTo).toHaveBeenCalled();
+  });
+
+  it('draws integrated text after the vector shape and passes the selected transform', () => {
+    const ctx = context();
+    const clip = shapeClip({
+      text: createElementText('Label'),
+      borderWidth: 4,
+      shadowEnabled: true,
+      shadowColor: '#456789',
+    });
+    const viewport = { x: 10, y: 20, width: 200, height: 100 };
+    const transform = { x: 0.2, y: 0.3, width: 0.4, height: 0.2 };
+
+    drawShapeClip(ctx, clip, viewport, transform);
+
+    expect(ctx.fill).toHaveBeenCalledOnce();
+    expect(ctx.stroke).toHaveBeenCalledOnce();
+    expect(vi.mocked(ctx.fill).mock.invocationCallOrder[0]).toBeLessThan(
+      elementContent.drawElementText.mock.invocationCallOrder[0]!,
+    );
+    expect(elementContent.drawElementText).toHaveBeenCalledWith(ctx, { ...clip, transform }, viewport);
+    expect(ctx.shadowColor).toBe('transparent');
+  });
+
+  it('renders a standalone text element without a shape fill or backdrop blur', () => {
+    const ctx = context();
+    const clip = shapeClip({
+      family: 'text',
+      preset: 'text',
+      text: createElementText('Standalone'),
+      rotation: 35,
+      opacityEnabled: true,
+      opacity: 25,
+      backdropBlur: 80,
+    });
+    const viewport = { x: 0, y: 0, width: 1_920, height: 1_080 };
+
+    drawShapeClip(ctx, clip, viewport);
+
+    expect(ctx.globalAlpha).toBe(0.25);
+    expect(ctx.fill).not.toHaveBeenCalled();
+    expect(ctx.stroke).not.toHaveBeenCalled();
+    expect(blurEffect.applyBlurEffect).not.toHaveBeenCalled();
+    expect(elementContent.drawElementText).toHaveBeenCalledWith(ctx, clip, viewport);
+  });
+
+  it('routes freehand layers through the shared drawing renderer while retaining layer opacity', () => {
+    const ctx = context();
+    const drawing = {
+      points: [
+        { x: 0.1, y: 0.2 },
+        { x: 0.9, y: 0.8 },
+      ],
+      smoothing: 65,
+      strokeWidth: 12,
+    };
+    const clip = shapeClip({
+      family: 'drawing',
+      preset: 'freehand',
+      drawing,
+      opacityEnabled: true,
+      opacity: 60,
+      backdropBlur: 90,
+    });
+    const viewport = { x: 10, y: 20, width: 800, height: 400 };
+
+    drawShapeClip(ctx, clip, viewport);
+
+    expect(ctx.globalAlpha).toBe(0.6);
+    expect(ctx.fill).not.toHaveBeenCalled();
+    expect(ctx.stroke).not.toHaveBeenCalled();
+    expect(blurEffect.applyBlurEffect).not.toHaveBeenCalled();
+    expect(elementContent.drawFreehand).toHaveBeenCalledWith(
+      ctx,
+      clip,
+      { x: 90, y: 100, width: 400, height: 160 },
+      400 / 1_080,
+    );
+    expect(elementContent.drawElementText).toHaveBeenCalledWith(ctx, clip, viewport);
+  });
+
+  it('ignores a layer whose transform has no drawable area', () => {
+    const ctx = context();
+    const clip = shapeClip({ transform: { x: 0.1, y: 0.2, width: 0, height: 0.4 } });
+
+    drawShapeClip(ctx, clip, { x: 0, y: 0, width: 800, height: 400 });
+
+    expect(ctx.save).not.toHaveBeenCalled();
+    expect(elementContent.drawElementText).not.toHaveBeenCalled();
+    expect(elementContent.drawFreehand).not.toHaveBeenCalled();
   });
 });

@@ -4,23 +4,33 @@ const Module = require('node:module');
 function fixture(snapshot, extra = {}) {
   const handlers = new Map(),
     calls = [],
-    sender = {};
-  const state = snapshot ?? { state: 'processing', job: { mode: 'studio', projectId: 'project' } };
+    sender = {},
+    cropSender = {};
+  const state = snapshot ?? { state: 'processing', job: { mode: 'instant', projectId: 'project' } };
   let currentStatusOwner = sender;
   const controller = {
     state: () => state,
     cancel: async (options) => calls.push(options ? ['cancel', options] : 'cancel'),
     updateSelectionRegion() {},
+    report: (report) => {
+      calls.push(['report', report]);
+      return state;
+    },
   };
-  const cropWindow = { rendererReady: (owner) => calls.push(['crop-ready', owner]) };
+  const cropWindow = {
+    owns: (owner) => owner === cropSender,
+    rendererReady: (owner) => calls.push(['crop-ready', owner]),
+  };
   let controllerDependencies;
   const statusWindow = {
     owns: (owner) => owner === currentStatusOwner,
     snapshot: () => extra.statusSnapshot ?? null,
+    rendererReady: (owner) => calls.push(['status-ready', owner]),
     hide: () => calls.push('hide'),
     setInteractive: (value) => calls.push(value),
   };
   let fileClipboardOptions = null;
+  let service;
   const source = require.resolve('../electron/quick-snip/quick-snip-service.cjs');
   const previous = Module._load;
   delete require.cache[source];
@@ -53,12 +63,13 @@ function fixture(snapshot, extra = {}) {
   };
   try {
     const { createQuickSnipService } = require(source);
-    createQuickSnipService({
+    service = createQuickSnipService({
       BrowserWindow: {},
       applicationIpc: { handle: (name, fn) => handlers.set(name, fn), on: (name, fn) => handlers.set(name, fn) },
       regionOverlay: {},
       userPaths: {},
       openEditor: async (id) => calls.push(`editor:${id}`),
+      openScreenshot: async (id) => calls.push(`screenshot:${id}`),
       ...extra,
     });
   } finally {
@@ -68,8 +79,10 @@ function fixture(snapshot, extra = {}) {
   return {
     calls,
     cropWindow,
+    service,
     controllerDependencies,
     sender,
+    cropSender,
     fileClipboardOptions: () => fileClipboardOptions,
     replaceStatusOwner: (owner) => {
       currentStatusOwner = owner;
@@ -82,12 +95,25 @@ test('main process retains the status window while canceling export and opening 
   await f.invoke('open-editor');
   assert.deepEqual(f.calls, [['cancel', { keepStatus: true }], 'editor:project', 'hide']);
 });
-test('completed projects open without cancelling and raw jobs cannot open an editor', async () => {
+test('completed Studio and Instant projects open in the editor without canceling', async () => {
   const f = fixture({ state: 'completed', job: { mode: 'studio' }, result: { projectId: 'finished' } });
   await f.invoke('open-editor');
   assert.deepEqual(f.calls, ['editor:finished', 'hide']);
-  const raw = fixture({ state: 'completed', job: { mode: 'raw', projectId: 'raw' } });
-  await assert.rejects(raw.invoke('open-editor'), /No retained/);
+  const instant = fixture({ state: 'completed', job: { mode: 'instant' }, result: { projectId: 'instant' } });
+  await instant.invoke('open-editor');
+  assert.deepEqual(instant.calls, ['editor:instant', 'hide']);
+});
+
+test('opens completed screenshot projects in the screenshot editor', async () => {
+  const f = fixture({
+    state: 'completed',
+    job: { mode: 'screenshot' },
+    result: { projectId: 'still-id' },
+  });
+
+  await f.invoke('open-editor');
+
+  assert.deepEqual(f.calls, ['screenshot:still-id', 'hide']);
 });
 test('rejects unrelated renderers and ignores malformed interactivity messages', async () => {
   const f = fixture();
@@ -161,8 +187,16 @@ test('forwards the Crop Bar ready sender to the native renderer gate', () => {
   assert.deepEqual(f.calls, [['crop-ready', rendererSender]]);
 });
 
+test('forwards the status renderer ready sender to the status window', () => {
+  const f = fixture();
+
+  f.invoke('status-ready', undefined, f.sender);
+
+  assert.deepEqual(f.calls, [['status-ready', f.sender]]);
+});
+
 test('returns the status snapshot with popover side only to its owning renderer', () => {
-  const controllerState = { state: 'processing', job: { mode: 'studio', projectId: 'project' } };
+  const controllerState = { state: 'processing', job: { mode: 'instant', projectId: 'project' } };
   const statusSnapshot = { ...controllerState, popoverSide: 'below' };
   const f = fixture(controllerState, { statusSnapshot });
 
@@ -178,7 +212,7 @@ for (const platform of ['linux', 'win32', 'darwin']) {
   });
 }
 
-test('validates Linux Quick Snip output paths before delegating to the file clipboard', async (t) => {
+test('validates Instant project output paths before delegating to the file clipboard', async (t) => {
   const fs = require('node:fs'),
     os = require('node:os'),
     path = require('node:path');
@@ -186,10 +220,14 @@ test('validates Linux Quick Snip output paths before delegating to the file clip
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const file = path.join(root, 'my video.webm');
   fs.writeFileSync(file, 'video');
+  const outsideRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'snip-copy-outside-'));
+  t.after(() => fs.rmSync(outsideRoot, { recursive: true, force: true }));
+  const outsideFile = path.join(outsideRoot, 'outside.webm');
+  fs.writeFileSync(outsideFile, 'video');
   const copied = [];
   const f = fixture(undefined, {
     platform: 'linux',
-    userPaths: { quickSnipStudio: root, quickSnipRaw: path.join(root, 'raw') },
+    userPaths: { instantProjects: root },
     copyFile: async (target, options) => {
       copied.push({ target, platform: options.platform });
       return { native: true, fallback: null };
@@ -198,6 +236,115 @@ test('validates Linux Quick Snip output paths before delegating to the file clip
   assert.deepEqual(f.fileClipboardOptions().platform, 'linux');
   assert.deepEqual(await f.invoke('copy-file', file), { native: true, fallback: null });
   assert.deepEqual(copied, [{ target: file, platform: 'linux' }]);
-  assert.throws(() => f.invoke('copy-file', '/outside.webm'), /invalid/);
+  assert.throws(() => f.invoke('copy-file', outsideFile), /invalid/);
   assert.deepEqual(copied, [{ target: file, platform: 'linux' }]);
+});
+
+test('accepts screenshot capture stages only from the owning Crop Bar', () => {
+  const f = fixture();
+  const reports = [
+    { type: 'capture-cancelled', name: 'current-job' },
+    { type: 'screenshot-captured', name: 'current-job', screenshotId: 'still-id' },
+    { type: 'screenshot-rendered', name: 'current-job', preview: 'data:image/jpeg;base64,AA==' },
+    { type: 'screenshot', name: 'current-job', screenshotId: 'still-id' },
+  ];
+
+  for (const report of reports) {
+    assert.throws(() => f.invoke('report', report), /not authorized/);
+    assert.throws(() => f.invoke('report', report, {}), /not authorized/);
+    f.invoke('report', report, f.cropSender);
+  }
+
+  assert.deepEqual(
+    f.calls,
+    reports.map((report) => ['report', report]),
+  );
+});
+
+test('resolves a Windows Quick Snip source from the selected display center in physical coordinates', async () => {
+  const display = { id: 22, bounds: { x: -1920, y: -120, width: 1920, height: 1080 } };
+  const calls = [];
+  const f = fixture(undefined, {
+    platform: 'win32',
+    screen: {
+      dipToScreenPoint: (point) => {
+        calls.push(['dipToScreenPoint', point]);
+        return { x: -2880, y: -180 };
+      },
+    },
+    captureEngine: {
+      request: async (command, payload) => {
+        calls.push(['captureEngine.request', command, payload]);
+        return 'wgc:monitor:\\\\.\\DISPLAY2';
+      },
+    },
+  });
+
+  const sourceId = await f.controllerDependencies.resolveScreenId(display);
+
+  assert.equal(sourceId, 'wgc:monitor:\\\\.\\DISPLAY2');
+  assert.deepEqual(calls, [
+    ['dipToScreenPoint', { x: -960, y: 420 }],
+    ['captureEngine.request', 'resolve-display', { x: -2880, y: -180 }],
+  ]);
+});
+
+test('resolves a macOS Quick Snip source from the display ID without asking the capture engine', async () => {
+  const display = { id: 456, bounds: { x: 0, y: 0, width: 1920, height: 1080 } };
+  const f = fixture(undefined, {
+    platform: 'darwin',
+    screen: {
+      dipToScreenPoint: () => assert.fail('macOS does not need DIP conversion for a CGDisplayID'),
+    },
+    captureEngine: {
+      request: () => assert.fail('macOS display source resolution must not use the capture engine'),
+    },
+  });
+
+  assert.equal(await f.controllerDependencies.resolveScreenId(display), 'sck:display:456');
+});
+
+for (const platform of ['win32', 'darwin', 'linux']) {
+  test(`hides the ${platform} Crop Bar before screenshot capture proceeds`, async () => {
+    const calls = [];
+    let visible = true;
+    const target = {
+      hide: () => {
+        calls.push('bar.hide');
+        visible = false;
+      },
+      isDestroyed: () => false,
+      isVisible: () => visible,
+    };
+    const f = fixture(undefined, {
+      platform,
+      BrowserWindow: { fromWebContents: () => target },
+    });
+
+    await f.service.prepareScreenshot({ sender: f.cropSender });
+    calls.push('capture');
+
+    assert.deepEqual(calls, ['bar.hide', 'capture']);
+    assert.equal(visible, false);
+  });
+}
+
+test('refuses screenshot capture when the Crop Bar is still visible after hide', async () => {
+  const calls = [];
+  const target = {
+    hide: () => calls.push('bar.hide'),
+    isDestroyed: () => false,
+    isVisible: () => true,
+  };
+  const f = fixture(undefined, {
+    BrowserWindow: { fromWebContents: () => target },
+  });
+
+  const capture = async () => {
+    await f.service.prepareScreenshot({ sender: f.cropSender });
+    calls.push('capture');
+  };
+
+  await assert.rejects(capture(), /Unable to hide the Quick Snip bar for capture/);
+  assert.deepEqual(calls, ['bar.hide']);
 });

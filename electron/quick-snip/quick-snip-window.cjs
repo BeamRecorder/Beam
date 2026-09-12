@@ -225,6 +225,9 @@ function createQuickSnipWindow({
       window?.destroy();
       window = null;
     },
+    owns(sender) {
+      return Boolean(window && !window.isDestroyed() && sender === window.webContents);
+    },
     nativeHandle() {
       if (!window || window.isDestroyed()) return null;
       return window.getNativeWindowHandle().toString('hex');

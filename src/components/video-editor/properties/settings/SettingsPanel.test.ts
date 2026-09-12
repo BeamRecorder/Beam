@@ -57,6 +57,19 @@ describe('SettingsPanel', () => {
     capture.getUpdateState.mockResolvedValue({ currentVersion: '1.2.3' });
   });
 
+  it('keeps recording controls out of screenshot settings even in developer mode', async () => {
+    localStorage.setItem('dev_mode_enabled', 'true');
+    const wrapper = mount(SettingsPanel, {
+      props: { hideRecorder: true },
+      global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } },
+    });
+    expect(wrapper.find('.appearance-settings').exists()).toBe(true);
+    expect(wrapper.find('.hud-stub').exists()).toBe(false);
+    await wrapper.setProps({ hideRecorder: false });
+    expect(wrapper.find('.hud-stub').exists()).toBe(true);
+    wrapper.unmount();
+  });
+
   it('renders appearance controls and changes locale through the store', async () => {
     const wrapper = mount(SettingsPanel, {
       global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } },

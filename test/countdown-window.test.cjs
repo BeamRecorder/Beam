@@ -3,7 +3,7 @@ const Module = require('node:module');
 const path = require('node:path');
 const test = require('node:test');
 
-function loadCountdownWindow({ platform, environment }) {
+function loadCountdownWindow({ platform, environment, isPackaged = false }) {
   const calls = [];
   const screenCalls = [];
   let finishLoad;
@@ -63,7 +63,7 @@ function loadCountdownWindow({ platform, environment }) {
     const { createCountdownWindow } = require(modulePath);
     const overlay = createCountdownWindow({
       applicationRoot: '/app',
-      isPackaged: false,
+      isPackaged,
       platform,
       environment,
     });
@@ -72,6 +72,27 @@ function loadCountdownWindow({ platform, environment }) {
     Module._load = originalLoad;
   }
 }
+
+test('prewarms the dedicated countdown renderer in development and packaged builds', () => {
+  for (const isPackaged of [false, true]) {
+    const fixture = loadCountdownWindow({ platform: 'linux', environment: {}, isPackaged });
+    const expected = isPackaged
+      ? ['loadFile', path.join('/app', 'dist/countdown.html')]
+      : ['loadURL', 'http://localhost:6500/countdown.html'];
+    assert.deepEqual(
+      fixture.calls.find(([name]) => name.startsWith('load')),
+      expected,
+    );
+    fixture.overlay.show(3);
+    fixture.overlay.show(2);
+    fixture.finishLoad();
+    assert.deepEqual(
+      fixture.calls.filter(([name]) => name === 'send'),
+      [['send', 'countdown:state', 2]],
+    );
+    fixture.overlay.destroy();
+  }
+});
 
 test('Wayland presents the countdown without unsupported global window operations', () => {
   const fixture = loadCountdownWindow({

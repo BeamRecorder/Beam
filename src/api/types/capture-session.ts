@@ -23,6 +23,7 @@ export interface CaptureSession {
 }
 
 export interface CaptureProject {
+  mode?: import('./capture-mode').CaptureMode;
   id: string;
   name: string;
   createdAt: string;

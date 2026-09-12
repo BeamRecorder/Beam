@@ -1,15 +1,18 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
-import { Monitor, Film, ZoomIn, MousePointer, Type, Volume2, Settings } from '@lucide/vue';
+import { Monitor, Film, ZoomIn, MousePointer, Type, Volume2, Settings, Shapes } from '@lucide/vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import UpdateAvailableBadge from '~/components/updates/UpdateAvailableBadge.vue';
 import ScrollShadow from '~/ui/scroll-shadow/ScrollShadow.vue';
 import Tooltip from '~/ui/tooltip/Tooltip.vue';
 
+import type { SidebarMenuItem } from './sidebar-types';
+
 const { t } = useTranslate('SidebarPanel');
 
-defineProps<{
+const props = defineProps<{
   activeTab: string;
+  items?: SidebarMenuItem[];
 }>();
 
 const emit = defineEmits<{
@@ -37,14 +40,18 @@ onMounted(() => {
 });
 onBeforeUnmount(() => resizeObserver?.disconnect());
 
-const menuItems = computed(() => [
-  { id: 'canvas', label: t('canvas'), icon: Monitor },
-  { id: 'clip', label: t('clip'), icon: Film },
-  { id: 'zoom', label: t('zoom'), icon: ZoomIn },
-  { id: 'cursor', label: t('cursor'), icon: MousePointer },
-  { id: 'caption', label: t('captions'), icon: Type },
-  { id: 'audio', label: t('audio'), icon: Volume2 },
-]);
+const menuItems = computed(
+  () =>
+    props.items ?? [
+      { id: 'canvas', label: t('canvas'), icon: Monitor },
+      { id: 'clip', label: t('clip'), icon: Film },
+      { id: 'elements', label: t('elements'), icon: Shapes },
+      { id: 'zoom', label: t('zoom'), icon: ZoomIn },
+      { id: 'cursor', label: t('cursor'), icon: MousePointer },
+      { id: 'caption', label: t('captions'), icon: Type },
+      { id: 'audio', label: t('audio'), icon: Volume2 },
+    ],
+);
 </script>
 
 <template>

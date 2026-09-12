@@ -19,42 +19,23 @@ function availableFile(directory, base, extension) {
   throw new Error('Unable to allocate a Quick Snip output filename.');
 }
 
-function removeRawWork(userPaths, session, source) {
-  const workRoot = path.resolve(userPaths.quickSnipWork);
-  const manifestDirectory = path.resolve(path.dirname(session.manifestPath || source));
-  if (!manifestDirectory.startsWith(`${workRoot}${path.sep}`)) return;
-  const [projectName] = path.relative(workRoot, manifestDirectory).split(path.sep);
-  if (projectName) fs.rmSync(path.join(workRoot, projectName), { recursive: true, force: true });
-}
-
-function createQuickSnipFinalizer({ userPaths, projectStore, rawProjectStore, render }) {
+function createQuickSnipFinalizer({ projectStore, render }) {
   return async ({ session, configuration, onProgress = () => {}, signal }) => {
     if (!session.projectId) throw new Error('Quick Snip session has no project.');
-    const raw = configuration.mode === 'raw';
-    const directory = raw ? userPaths.quickSnipRaw : userPaths.quickSnipStudio;
+    const directory = path.join(projectStore.directoryFor(session.projectId), 'exports');
     fs.mkdirSync(directory, { recursive: true });
     const target = availableFile(
       directory,
       safeName(configuration.name),
       configuration.format === 'webm' ? 'webm' : 'mp4',
     );
-    try {
-      return await render({
-        configuration: { ...configuration, projectId: session.projectId },
-        store: raw ? rawProjectStore : projectStore,
-        target,
-        signal,
-        onProgress,
-      });
-    } finally {
-      if (raw) removeRawWork(userPaths, session, session.manifestPath);
-    }
+    return render({
+      configuration: { ...configuration, projectId: session.projectId },
+      store: projectStore,
+      target,
+      signal,
+      onProgress,
+    });
   };
 }
-
-module.exports = {
-  availableFile,
-  createQuickSnipFinalizer,
-  removeRawWork,
-  safeName,
-};
+module.exports = { availableFile, createQuickSnipFinalizer, safeName };

@@ -32,7 +32,9 @@ const emit = defineEmits<{
 
     <template #footer>
       <div class="dialog-actions">
-        <Button variant="ghost" size="sm" :disabled="busy" @click="emit('close')">{{ cancelLabel }}</Button>
+        <Button data-dialog-autofocus variant="ghost" size="sm" :disabled="busy" @click="emit('close')">{{
+          cancelLabel
+        }}</Button>
         <Button :variant="destructive ? 'danger' : 'primary'" size="sm" :loading="busy" @click="emit('confirm')">{{
           confirmLabel
         }}</Button>

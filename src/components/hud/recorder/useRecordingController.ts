@@ -7,6 +7,7 @@ import { useDeviceToggles } from './useDeviceToggles';
 import { useRecordingHealth } from './useRecordingHealth';
 import { useNativeSystemAudioLevel } from './useNativeSystemAudioLevel';
 import { recordingCameraMetadata } from './recording-camera-metadata';
+import { CaptureSelectionCancelled, prepareNativeRecording } from './recording-native-preparation';
 import { formatRecordingTime, isRecordingActivePhase } from './recording-types';
 import type {
   RecordingConfiguration,
@@ -25,6 +26,7 @@ const inactiveMicrophone = 'no-audio';
 export function useRecordingController(
   onComplete: (session: RecordingSessionResult) => void,
   onStartupFailure?: (failure: RecordingStartFailure) => void,
+  onStartupCancelled?: () => void,
 ) {
   const nativeSystemAudio = capture.platform === 'linux';
   const phase = ref<RecordingPhase>('idle');
@@ -189,20 +191,7 @@ export function useRecordingController(
 
   const prewarmNativeRecording = async (generation: number) => {
     if (!configuration) return false;
-    await capture.prepareRecording({
-      projectId: configuration.projectId,
-      screenKind: configuration.screenKind,
-      screenId: configuration.screenId,
-      cameraId: null,
-      microphoneId: null,
-      systemAudio: configuration.systemAudio,
-      cursor: configuration.cursor !== false,
-      recordInteractions: configuration.recordInteractions === true,
-      targetFps: configuration.targetFps,
-      region: configuration.region,
-      outputRoot: configuration.outputRoot,
-      excludedWindowHandles: configuration.excludedWindowHandles,
-    });
+    await prepareNativeRecording(configuration);
     if (nativeSystemAudio && configuration.systemAudio) sidecarStates.systemAudio = 'prepared';
     if (generation !== recordingGeneration) {
       await capture.cancelPreparedRecording().catch(() => undefined);
@@ -220,6 +209,7 @@ export function useRecordingController(
     camera: sidecarStates.camera,
     microphone: sidecarStates.microphone,
     systemAudio: sidecarStates.systemAudio,
+    ...(reason instanceof CaptureSelectionCancelled && { cancelled: true }),
   });
 
   const terminateStartup = async (generation: number, failure: RecordingStartFailure) => {
@@ -246,11 +236,12 @@ export function useRecordingController(
     preparedGeneration = null;
     capture.setTeleprompterSession(null);
     if (cleanupErrors.length > 0) failure.cleanupErrors = cleanupErrors;
-    error.value = failure.message;
+    error.value = failure.cancelled && cleanupErrors.length === 0 ? '' : failure.message;
     await resetState(true);
     if (nativeCleanupBlocked)
       error.value = `${failure.message} Native cleanup is unresolved; restart Beam before recording again.`;
-    onStartupFailure?.(failure);
+    if (failure.cancelled && cleanupErrors.length === 0) onStartupCancelled?.();
+    else onStartupFailure?.(failure);
   };
 
   const performStartup = async (generation: number) => {

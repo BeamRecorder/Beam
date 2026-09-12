@@ -9,6 +9,8 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { clampTimelineHeight, DEFAULT_TIMELINE_HEIGHT } from './composables/useTimelineResize';
 import EditorProjectLoadingOverlay from './EditorProjectLoadingOverlay.vue';
 import VideoEditor from './VideoEditor.vue';
+import ScreenshotEditor from './screenshot/ScreenshotEditor.vue';
+const screenshotId = ref<string | null>(null);
 
 const project = ref<CaptureProject | null>(null);
 const editorData = ref<ProjectEditorData | null>(null);
@@ -64,7 +66,8 @@ const loadProject = async (projectId: string) => {
   try {
     capture.reportEditorLoadingStage('loadingProject');
     const projects = await capture.listProjects();
-    const nextProject = projects.find((candidate) => candidate.id === projectId) ?? null;
+    const nextProject =
+      projects.find((candidate) => candidate.id === projectId && candidate.mode !== 'screenshot') ?? null;
     if (!nextProject) throw new Error('Project not found');
     capture.reportEditorLoadingStage('loadingTimeline');
     const nextEditorData = await capture.getProjectEditorData(projectId);
@@ -81,6 +84,24 @@ const loadProject = async (projectId: string) => {
   }
 };
 
+const loadContext = async (context: { projectId: string; kind?: 'screenshot' }) => {
+  screenshotId.value = context.kind === 'screenshot' ? context.projectId : null;
+  if (screenshotId.value) {
+    project.value = null;
+    loading.value = false;
+    error.value = '';
+    loadGeneration++;
+  } else await loadProject(context.projectId);
+};
+const screenshotReady = async () => {
+  if (!screenshotId.value || nativeEditorReadyNotified) return;
+  nativeEditorReadyNotified = true;
+  const generation = loadGeneration;
+  capture.reportEditorLoadingStage('renderingEditor');
+  await waitForEditorPaint();
+  if (generation === loadGeneration) capture.notifyEditorReady();
+};
+
 const handleBackToHud = () => {
   capture.setCameraOverlayActive(true);
   capture.showHud();
@@ -88,7 +109,9 @@ const handleBackToHud = () => {
 
 const handleOpenProject = (nextProject: CaptureProject) => {
   loading.value = true;
-  void capture.openEditor(nextProject.id).catch((reason) => {
+  const opening =
+    nextProject.mode === 'screenshot' ? capture.openScreenshot(nextProject.id) : capture.openEditor(nextProject.id);
+  void opening.catch((reason) => {
     loading.value = false;
     console.error('Unable to switch editor project.', reason);
   });
@@ -113,7 +136,7 @@ onMounted(async () => {
   // native state with the store's temporary light default during hydration.
   themeObserver = new MutationObserver(syncTitlebarTheme);
   themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-  removeContextListener = capture.onEditorContext(({ projectId }) => void loadProject(projectId));
+  removeContextListener = capture.onEditorContext((context) => void loadContext(context));
   try {
     removePreferencesListener = capture.onPreferencesChanged(syncTimelineHeight);
     void capture
@@ -124,12 +147,12 @@ onMounted(async () => {
     // The editor remains usable with the default timeline height.
   }
   const context = await capture.getEditorContext();
-  if (context) await loadProject(context.projectId);
+  if (context) await loadContext(context);
   else {
     loading.value = false;
     error.value = 'No project selected';
   }
-  if (error.value || !project.value) {
+  if (error.value || (!project.value && !screenshotId.value)) {
     nativeEditorReadyNotified = true;
     capture.reportEditorLoadingStage('renderingEditor');
     await waitForEditorPaint();
@@ -152,6 +175,7 @@ onBeforeUnmount(() => {
     <p>{{ error }}</p>
     <Button variant="secondary" size="sm" @click="handleBackToHud">Back to projects</Button>
   </main>
+  <ScreenshotEditor v-if="screenshotId" :key="screenshotId" :id="screenshotId" @ready="screenshotReady" />
   <VideoEditor
     v-if="project"
     :key="`${project.id}:${editorGeneration}`"

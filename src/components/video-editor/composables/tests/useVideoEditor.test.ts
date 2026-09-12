@@ -15,6 +15,8 @@ const capture = vi.hoisted(() => ({
   onBackgroundLibraryChanged: vi.fn(),
   listCursorPacks: vi.fn(),
   onCursorPacksChanged: vi.fn(),
+  getEditorPresets: vi.fn(),
+  onEditorPresetsChanged: vi.fn(),
 }));
 const toast = vi.hoisted(() => ({
   error: vi.fn(),
@@ -27,6 +29,9 @@ const state = vi.hoisted(() => ({
   editorState: undefined as any,
   cursor: undefined as any,
   initialComposition: undefined as ClipComposition | undefined,
+  videoElementsOptions: undefined as
+    | Parameters<(typeof import('../../elements/useVideoElements'))['useVideoElements']>[0]
+    | undefined,
   useVideoPlayer: vi.fn(),
   createCompositionSnapshot: vi.fn(),
   compositionDurationMs: vi.fn(),
@@ -70,7 +75,7 @@ vi.mock('../useClipComposition', async () => {
         state.initialComposition ??
           ({ schemaVersion: 6, assets: [], clips: [], keyboardCaptionSessions: [] } as ClipComposition),
       );
-      const value = { composition, synchronizeRecording: vi.fn() };
+      const value = { composition, synchronizeRecording: vi.fn(), addElement: vi.fn().mockResolvedValue('image-1') };
       state.compositionState = value;
       return value;
     },
@@ -100,6 +105,12 @@ vi.mock('../useProjectEditorState', () => ({
     };
     state.editorState = value;
     return value;
+  },
+}));
+vi.mock('../../elements/useVideoElements', () => ({
+  useVideoElements: (options: NonNullable<typeof state.videoElementsOptions>) => {
+    state.videoElementsOptions = options;
+    return {};
   },
 }));
 vi.mock('../../properties/cursor/useCursorReplacer', async () => {
@@ -145,11 +156,32 @@ describe('useVideoEditor', () => {
     capture.onBackgroundLibraryChanged.mockReturnValue(() => undefined);
     capture.listCursorPacks.mockResolvedValue([]);
     capture.onCursorPacksChanged.mockReturnValue(() => undefined);
+    capture.getEditorPresets.mockResolvedValue({ schemaVersion: 1, activePresetId: 'default', presets: [] });
+    capture.onEditorPresetsChanged.mockReturnValue(() => undefined);
     state.compositionDurationMs.mockReturnValue(2000);
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it('connects the shared Image element action to Studio media import and reports import failures', async () => {
+    const Harness = defineComponent({
+      setup: () => {
+        useVideoEditor({ project: ref(project), editorData: ref(makeEditorData()) });
+        return {};
+      },
+      template: '<div />',
+    });
+    const wrapper = mount(Harness);
+    await flushPromises();
+    expect(state.videoElementsOptions?.addImage).toBeTypeOf('function');
+    await state.videoElementsOptions!.addImage!();
+    expect(state.compositionState.addElement).toHaveBeenCalledWith('image');
+    state.compositionState.addElement.mockRejectedValueOnce(new Error('Image unreadable'));
+    await state.videoElementsOptions!.addImage!();
+    expect(toast.error).toHaveBeenCalledWith('Error: Image unreadable');
+    wrapper.unmount();
   });
 
   it('initializes dependencies, synchronizes source/project changes and builds export data', async () => {

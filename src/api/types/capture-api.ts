@@ -1,3 +1,5 @@
+import type { ScreenshotApi } from './screenshot';
+import type { PresetKind } from './capture-mode';
 import type { CaptureConfig, CreateProjectOptions, StartRecordingOptions } from './capture-config';
 import type {
   ScreenRegion,
@@ -58,7 +60,7 @@ export interface CaptureApi {
   requestInputAccess(): Promise<InputAccessStatus>;
   formats(sourceId: string): Promise<unknown>;
   prepare(config: CaptureConfig): Promise<CaptureSession>;
-  prepareRecording(options?: StartRecordingOptions): Promise<CaptureSession>;
+  prepareRecording(options?: StartRecordingOptions): Promise<CaptureSession | null>;
   startPreparedRecording(): Promise<CaptureSession>;
   stopNativeRecording(): Promise<CaptureSession>;
   completeNativeRecording(): Promise<CaptureSession>;
@@ -75,7 +77,7 @@ export interface CaptureApi {
   stopSystemAudioPreview(): Promise<void>;
 }
 
-export interface DesktopCaptureApi extends CaptureApi {
+export interface DesktopCaptureApi extends CaptureApi, ScreenshotApi {
   close(): void;
   quit(): void;
   minimize(): void;
@@ -95,12 +97,12 @@ export interface DesktopCaptureApi extends CaptureApi {
   setWindowMode(mode: 'hud' | 'recorder'): void;
   showHud(): void;
   openEditor(projectId: string): Promise<boolean>;
-  getEditorContext(): Promise<{ projectId: string } | null>;
+  getEditorContext(): Promise<{ projectId: string; kind?: 'screenshot' } | null>;
   notifyEditorReady(): void;
   reportEditorLoadingStage(stage: EditorLoadingStage): void;
   startRecordingFromEditor(configuration: RecordingConfiguration): void;
   setEditorTitlebarTheme(dark: boolean): void;
-  onEditorContext(listener: (context: { projectId: string }) => void): () => void;
+  onEditorContext(listener: (context: { projectId: string; kind?: 'screenshot' }) => void): () => void;
   onEditorLoadingProgress(listener: (progress: EditorLoadingProgress) => void): () => void;
   onStartRecordingFromEditor(listener: (configuration: RecordingConfiguration) => void): () => void;
   setPosition(x: number, y: number): void;
@@ -128,27 +130,39 @@ export interface DesktopCaptureApi extends CaptureApi {
   resetPreferences(keys?: Array<keyof PreferenceSettings>): Promise<PreferenceSettings>;
   onPreferencesChanged(listener: (preferences: PreferenceSettings) => void): () => void;
   onPreferenceShortcut(listener: (id: string) => void): () => void;
-  getEditorPresets(): Promise<EditorPresetDocument>;
-  createEditorPreset(name: string): Promise<EditorPresetDocument>;
-  renameEditorPreset(id: string, name: string): Promise<EditorPresetDocument>;
-  deleteEditorPreset(id: string): Promise<EditorPresetDocument>;
-  selectEditorPreset(id: string): Promise<EditorPresetDocument>;
-  updateEditorPreset(id: string, settings: EditorPresetSettings): Promise<EditorPresetDocument>;
-  updateActiveEditorPreset(settings: EditorPresetSettings): Promise<EditorPresetDocument>;
-  onEditorPresetsChanged(listener: (document: EditorPresetDocument) => void): () => void;
+  getEditorPresets(kind?: PresetKind): Promise<EditorPresetDocument>;
+  createEditorPreset(name: string, kind?: PresetKind): Promise<EditorPresetDocument>;
+  renameEditorPreset(id: string, name: string, kind?: PresetKind): Promise<EditorPresetDocument>;
+  deleteEditorPreset(id: string, kind?: PresetKind): Promise<EditorPresetDocument>;
+  selectEditorPreset(id: string, kind?: PresetKind): Promise<EditorPresetDocument>;
+  updateEditorPreset(id: string, settings: EditorPresetSettings, kind?: PresetKind): Promise<EditorPresetDocument>;
+  updateActiveEditorPreset(settings: EditorPresetSettings, kind?: PresetKind): Promise<EditorPresetDocument>;
+  onEditorPresetsChanged(listener: (document: EditorPresetDocument) => void, kind?: PresetKind): () => void;
+  quickSnipFromHud(options: import('./quick-snip').InstantCaptureOptions): Promise<QuickSnipSnapshot>;
   quickSnipToggle(): Promise<QuickSnipSnapshot>;
   notifyQuickSnipCropReady(): void;
   quickSnipStart(
-    overrides?: Partial<Pick<QuickSnipConfiguration, 'mode' | 'format' | 'automaticZoom' | 'devices'>>,
+    overrides?: Partial<Pick<QuickSnipConfiguration, 'mode' | 'automaticZoom' | 'devices' | 'screenshotAction'>>,
   ): Promise<QuickSnipSnapshot>;
   configureQuickSnip(
-    overrides: Partial<Pick<QuickSnipConfiguration, 'mode' | 'format' | 'automaticZoom' | 'devices'>>,
+    overrides: Partial<Pick<QuickSnipConfiguration, 'mode' | 'automaticZoom' | 'devices' | 'screenshotAction'>>,
   ): Promise<QuickSnipSnapshot>;
+  chooseQuickSnipDevice(request: import('./quick-snip').QuickSnipDeviceMenu): Promise<string | null>;
   quickSnipStop(): Promise<QuickSnipSnapshot>;
   quickSnipCancel(): Promise<QuickSnipSnapshot>;
   getQuickSnipState(): Promise<QuickSnipSnapshot>;
   reportQuickSnip(event: {
-    type: 'recording' | 'completed' | 'failed';
+    type:
+      | 'recording'
+      | 'completed'
+      | 'failed'
+      | 'screenshot'
+      | 'screenshot-captured'
+      | 'screenshot-rendered'
+      | 'capture-cancelled';
+    name?: string;
+    screenshotId?: string;
+    preview?: string;
     session?: RecordingSessionResult;
     error?: string;
   }): Promise<QuickSnipSnapshot>;
@@ -159,6 +173,8 @@ export interface DesktopCaptureApi extends CaptureApi {
   copyQuickSnipFile(path: string): Promise<{ native: boolean; fallback: string | null }>;
   setQuickSnipStatusInteractive(interactive: boolean): void;
   dismissQuickSnipStatus(): void;
+  notifyQuickSnipStatusReady(): void;
+  onQuickSnipStatusBlur(listener: () => void): () => void;
   openQuickSnipEditor(): Promise<void>;
   getQuickSnipRenderTask(): Promise<QuickSnipRenderTask | null>;
   onQuickSnipRenderTask(listener: (task: QuickSnipRenderTask) => void): () => void;
@@ -196,9 +212,9 @@ export interface DesktopCaptureApi extends CaptureApi {
   onCursorPacksChanged(listener: () => void): () => void;
   openCursorPackDiscovery(): Promise<void>;
   createProject(options?: CreateProjectOptions): Promise<CaptureProject>;
-  renameProject(projectId: string, name: string): Promise<CaptureProject>;
-  deleteProject(projectId: string): Promise<void>;
-  revealProject(projectId: string): Promise<boolean>;
+  renameProject(projectId: string, name: string, mode?: import('./capture-mode').CaptureMode): Promise<CaptureProject>;
+  deleteProject(projectId: string, mode?: import('./capture-mode').CaptureMode): Promise<void>;
+  revealProject(projectId: string, mode?: import('./capture-mode').CaptureMode): Promise<boolean>;
   saveProjectThumbnail(projectId: string, dataUrl: string): Promise<string | null>;
   whisperModels(): Promise<
     Array<{ id: string; status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>

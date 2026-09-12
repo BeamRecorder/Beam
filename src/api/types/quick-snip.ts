@@ -1,7 +1,16 @@
 import type { EditorPreset } from './editor-preset';
 import type { ScreenRegion, ScreenRegionBounds } from './screen-region';
 
-export type QuickSnipMode = 'studio' | 'raw';
+export type QuickSnipMode = import('./capture-mode').CaptureMode;
+
+export type QuickSnipDeviceKind = 'microphone' | 'camera' | 'systemAudio';
+
+export interface QuickSnipDeviceMenu {
+  kind: QuickSnipDeviceKind;
+  selectedId: string;
+  options: Array<{ id: string; label: string }>;
+  position?: { x: number; y: number };
+}
 
 export type QuickSnipState =
   | 'idle'
@@ -26,7 +35,7 @@ export interface QuickSnipConfiguration {
   displayId: string;
   screenId?: string;
   outputRoot?: string;
-  rawOutputRoot?: string;
+  screenshotAction?: 'copy' | 'edit';
   devices: Record<string, unknown>;
   excludedWindowHandle?: string;
   projectId?: string | null;
@@ -57,3 +66,10 @@ export type QuickSnipRenderReport =
   | { id: string; type: 'progress'; progress: number; preview?: string }
   | { id: string; type: 'completed'; path: string }
   | { id: string; type: 'failed'; error: string };
+
+export interface InstantCaptureOptions {
+  screenKind?: 'display' | 'window';
+  screenId?: string;
+  region?: ScreenRegion | null;
+  devices?: Record<string, unknown>;
+}

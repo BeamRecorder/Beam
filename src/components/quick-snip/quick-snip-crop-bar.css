@@ -126,24 +126,15 @@
 .setting-field select:disabled {
   cursor: default;
 }
-.mode-field {
-  flex: 0 0 116px;
+.quick-modes {
+  flex: 0 0 240px;
 }
-.preset-field,
-.raw-description {
+.preset-field {
   flex: 1;
   min-width: 0;
 }
-.format-field {
-  flex: 0 0 80px;
-}
 .field-divider {
   height: 28px;
-}
-.raw-description {
-  color: var(--text-muted);
-  font-size: 10px;
-  line-height: 14px;
 }
 .controls-row {
   height: 32px;
@@ -186,4 +177,25 @@
   height: 5px;
   border-radius: 50%;
   background: var(--color-error);
+}
+
+.quick-controls-enter-active,
+.quick-controls-leave-active {
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+.quick-controls-enter-from {
+  opacity: 0;
+  transform: translateY(4px);
+}
+.quick-controls-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .quick-controls-enter-active,
+  .quick-controls-leave-active {
+    transition: none;
+  }
 }

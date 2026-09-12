@@ -9,7 +9,8 @@ import type { CaptionStyle } from '~/media/shared/composition-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
-import { AlignCenter, AlignLeft, AlignRight, Bold, Italic, Strikethrough, Upload } from '@lucide/vue';
+import { AlignCenter, AlignLeft, AlignRight, Bold, Italic, Strikethrough, Underline, Upload } from '@lucide/vue';
+import { toggleTextDecoration } from '~/media/shared/element-text';
 import { loadCaptionFont, useFontCatalog } from './useFontCatalog';
 import CaptionHighlightControls from './CaptionHighlightControls.vue';
 import CaptionShapeControls from './CaptionShapeControls.vue';
@@ -112,7 +113,7 @@ const shadowDirectionOptions = computed(() => [
       />
     </div>
     <p v-if="error" class="font-error" role="status">{{ t(error) }}</p>
-    <ButtonGroup full :aria-label="t('textStyle')">
+    <ButtonGroup full :columns="4" :aria-label="t('textStyle')">
       <Button
         :icon="Bold"
         icon-only
@@ -135,13 +136,22 @@ const shadowDirectionOptions = computed(() => [
         :icon="Strikethrough"
         icon-only
         size="xs"
-        :variant="style.textDecoration === 'line-through' ? 'primary' : 'ghost'"
+        :variant="style.textDecoration.includes('line-through') ? 'primary' : 'ghost'"
         :tooltip="t('strikethrough')"
         :aria-label="t('strikethrough')"
-        @click="emit('update', 'textDecoration', style.textDecoration === 'line-through' ? 'none' : 'line-through')"
+        @click="emit('update', 'textDecoration', toggleTextDecoration(style.textDecoration, 'line-through'))"
+      />
+      <Button
+        :icon="Underline"
+        icon-only
+        size="xs"
+        :variant="style.textDecoration.includes('underline') ? 'primary' : 'ghost'"
+        :tooltip="t('underline')"
+        :aria-label="t('underline')"
+        @click="emit('update', 'textDecoration', toggleTextDecoration(style.textDecoration, 'underline'))"
       />
     </ButtonGroup>
-    <ButtonGroup full :aria-label="t('textAlignment')">
+    <ButtonGroup full :columns="3" :aria-label="t('textAlignment')">
       <Button
         v-for="item in [
           { value: 'left', icon: AlignLeft, label: t('alignLeft') },

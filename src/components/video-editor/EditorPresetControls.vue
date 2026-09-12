@@ -1,16 +1,20 @@
 <script setup lang="ts">
+import { useTranslate } from '~/i18n/useTranslate';
 import { computed, ref } from 'vue';
-import { Layers3, Plus, Save, Pencil, Trash2 } from '@lucide/vue';
+import { Clapperboard, ScanLine, Plus, Save, Pencil, Trash2 } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import Select from '~/ui/select/Select.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import ConfirmDialog from '~/ui/dialog/ConfirmDialog.vue';
 import TextInputDialog from '~/ui/dialog/TextInputDialog.vue';
 import type { EditorPresetDocument } from '~/api/types/editor-preset';
+import type { PresetKind } from '~/api/types/capture-mode';
 
+const { t } = useTranslate('EditorPresetControls');
 const props = defineProps<{
   document: EditorPresetDocument | null;
   dirty: boolean;
+  kind?: PresetKind;
 }>();
 const emit = defineEmits<{
   select: [id: string | number];
@@ -24,15 +28,14 @@ const options = computed(
   () =>
     props.document?.presets.map(({ id, name }) => ({
       value: id,
-      label: name,
+      label: id === 'default' ? t('defaultPreset') : name,
     })) ?? [],
 );
-type PopoverHandle = { close: () => void };
-const presetPopover = ref<PopoverHandle | null>(null);
+const presetPopover = ref<InstanceType<typeof Popover> | null>(null);
 const nameDialog = ref<'create' | 'rename' | null>(null);
-const deleteDialogOpen = ref(false);
-const dialogTitle = computed(() => (nameDialog.value === 'rename' ? 'Rename preset' : 'New preset'));
-const dialogConfirmLabel = computed(() => (nameDialog.value === 'rename' ? 'Rename' : 'Create'));
+const deletingPreset = ref<EditorPresetDocument['presets'][number] | null>(null);
+const dialogTitle = computed(() => (nameDialog.value === 'rename' ? t('renameTitle') : t('newTitle')));
+const dialogConfirmLabel = computed(() => (nameDialog.value === 'rename' ? t('rename') : t('create')));
 const dialogInitialValue = computed(() => (nameDialog.value === 'rename' ? (active.value?.name ?? '') : ''));
 
 const openCreateDialog = () => {
@@ -41,20 +44,19 @@ const openCreateDialog = () => {
 };
 
 const openRenameDialog = () => {
-  if (active.value?.protected) return;
+  if (!active.value || active.value.protected) return;
   presetPopover.value?.close();
   nameDialog.value = 'rename';
 };
 
 const openDeleteDialog = () => {
-  if (active.value?.protected) return;
-  presetPopover.value?.close();
-  deleteDialogOpen.value = true;
+  if (!active.value || active.value.protected) return;
+  deletingPreset.value = { ...active.value };
 };
 
 const confirmDelete = () => {
-  emit('delete');
-  deleteDialogOpen.value = false;
+  if (deletingPreset.value?.id === active.value?.id && !active.value?.protected) emit('delete');
+  deletingPreset.value = null;
 };
 
 const validateName = (name: string) => {
@@ -62,7 +64,7 @@ const validateName = (name: string) => {
     if (nameDialog.value === 'rename' && preset.id === active.value?.id) return false;
     return preset.name.localeCompare(name, undefined, { sensitivity: 'accent' }) === 0;
   });
-  return duplicate ? 'A preset with this name already exists.' : null;
+  return duplicate ? t('duplicate') : null;
 };
 
 const confirmName = (name: string) => {
@@ -87,29 +89,34 @@ const confirmName = (name: string) => {
       <Button
         size="xs"
         variant="secondary"
-        :icon="Layers3"
+        :icon="kind === 'screenshot' ? ScanLine : Clapperboard"
         class="preset-trigger"
-        aria-label="Editor preset"
+        style="height: 28px; max-width: 180px"
+        :aria-label="t('editorPreset')"
         :aria-expanded="isOpen"
       >
-        <span class="preset-name">{{ active?.name ?? 'Preset' }}</span>
-        <span v-if="dirty" class="dirty-dot" title="Unsaved preset changes" aria-label="Unsaved preset changes" />
+        <span class="preset-name">{{
+          active?.id === 'default' ? t('defaultPreset') : (active?.name ?? t('preset'))
+        }}</span>
+        <span v-if="dirty" class="dirty-dot" :title="t('unsaved')" :aria-label="t('unsaved')" />
       </Button>
     </template>
 
-    <section class="preset-popover" aria-label="Editor preset settings" @click.stop>
+    <section class="preset-popover" :aria-label="t('settings')" @click.stop>
       <header>
         <div>
-          <strong>Preset</strong>
-          <span v-if="dirty">Unsaved changes</span>
+          <strong>{{ t('preset') }}</strong>
+          <span v-if="dirty">{{ t('unsaved') }}</span>
         </div>
-        <Button size="xs" variant="ghost" :icon="Plus" aria-label="Add preset" @click="openCreateDialog">New</Button>
+        <Button size="xs" variant="ghost" :icon="Plus" :aria-label="t('add')" @click="openCreateDialog">{{
+          t('new')
+        }}</Button>
       </header>
       <Select
         :model-value="document?.activePresetId ?? null"
         :options="options"
         size="sm"
-        aria-label="Select editor preset"
+        :aria-label="t('select')"
         @update:model-value="emit('select', $event)"
       />
       <footer>
@@ -118,68 +125,70 @@ const confirmName = (name: string) => {
             size="xs"
             variant="ghost"
             :icon="Pencil"
-            aria-label="Rename preset"
-            :disabled="active?.protected"
+            icon-only
+            :tooltip="t('renameTitle')"
+            :aria-label="t('renameTitle')"
+            :disabled="!active || active.protected"
             @click="openRenameDialog"
-            >Rename</Button
-          >
+          />
           <Button
             size="xs"
             variant="ghost"
             :icon="Trash2"
+            icon-only
+            :tooltip="t('deleteTitle')"
             class="delete-action"
-            aria-label="Delete preset"
-            :disabled="active?.protected"
+            :aria-label="t('deleteTitle')"
+            :disabled="!active || active.protected"
             @click="openDeleteDialog"
-            >Delete</Button
-          >
+          />
         </div>
         <Button
           size="xs"
           variant="primary"
           :icon="Save"
-          aria-label="Save preset"
-          :disabled="!dirty"
+          class="save-action"
+          :aria-label="t('saveTitle')"
+          :disabled="!active || !dirty"
           @click="emit('save')"
-          >Save</Button
+          >{{ t('save') }}</Button
         >
       </footer>
     </section>
+    <ConfirmDialog
+      :cancel-label="t('cancel')"
+      :is-open="deletingPreset !== null"
+      :title="t('deleteConfirm')"
+      :description="t('deleteDescription', { name: deletingPreset?.name ?? '' })"
+      :confirm-label="t('delete')"
+      destructive
+      @close="deletingPreset = null"
+      @confirm="confirmDelete"
+    />
   </Popover>
 
   <TextInputDialog
     :is-open="nameDialog !== null"
     :title="dialogTitle"
     :initial-value="dialogInitialValue"
-    label="Preset name"
-    placeholder="My preset"
+    :label="t('name')"
+    :placeholder="t('placeholder')"
     :confirm-label="dialogConfirmLabel"
     :validate="validateName"
     @close="nameDialog = null"
     @confirm="confirmName"
   />
-
-  <ConfirmDialog
-    :is-open="deleteDialogOpen"
-    title="Delete preset?"
-    :description="`The preset “${active?.name ?? ''}” will be permanently deleted.`"
-    confirm-label="Delete"
-    destructive
-    @close="deleteDialogOpen = false"
-    @confirm="confirmDelete"
-  />
 </template>
 
 <style scoped>
-.preset-trigger {
-  max-width: 180px;
-}
 .preset-name {
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .preset-popover {
   width: 300px;
+  max-width: calc(100vw - 18px);
+  box-sizing: border-box;
   padding: 12px;
   display: flex;
   flex-direction: column;
@@ -212,9 +221,15 @@ const confirmName = (name: string) => {
   display: flex;
   align-items: center;
   gap: 2px;
+  flex-shrink: 0;
 }
-.delete-action {
-  color: var(--color-danger);
+.save-action {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.delete-action:hover:not(:disabled) {
+  color: var(--color-error);
+  background: color-mix(in srgb, var(--color-error) 14%, transparent);
 }
 .dirty-dot {
   flex: 0 0 auto;

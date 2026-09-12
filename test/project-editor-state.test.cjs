@@ -171,7 +171,7 @@ test('migrates a legacy fixed macOS cursor without discarding presentation setti
     background: null,
     blurPercent: 0,
     importedBackgrounds: [],
-    cursor: { ...legacyCursor, size: 92 },
+    cursor: { ...legacyCursor, size: 384 },
   });
 
   assert.deepEqual(state.cursor.selection, {
@@ -179,7 +179,7 @@ test('migrates a legacy fixed macOS cursor without discarding presentation setti
     mode: 'fixed',
     cursorId: 'handpointing',
   });
-  assert.equal(state.cursor.size, 92);
+  assert.equal(state.cursor.size, 384);
 });
 
 test('preserves an unavailable imported pack selection for later reimport', () => {

@@ -30,8 +30,15 @@ function harness({
   finalize,
   thumbnail,
   copyFile,
+  preferences,
+  presetDocument,
+  screenshotPresetDocument,
+  userPaths,
+  openEditor,
+  openScreenshot,
 } = {}) {
   const calls = [];
+  const preferenceState = preferences ?? { extras: {} };
   const selectionOverlayWindows = [{ id: 'selection-overlay-1' }, { id: 'selection-overlay-2' }];
   const pendingSelections = [];
   let selectionIndex = 0;
@@ -39,6 +46,22 @@ function harness({
   const showCalls = [];
   const selectCalls = [];
   const configurationUpdates = [];
+  const finalizeCalls = [];
+  const editorCalls = [];
+  const screenshotCalls = [];
+  const paths = userPaths ?? { instantProjects: '/instant-projects', studioProjects: '/studio-projects' };
+  const preferencesStore = {
+    read: () => preferenceState,
+    patch: (patch) => {
+      calls.push('preferences.patch');
+      if (patch.devices) preferenceState.devices = { ...preferenceState.devices, ...patch.devices };
+      if (patch.extras) preferenceState.extras = { ...preferenceState.extras, ...patch.extras };
+    },
+  };
+  const videoPresetStore = { read: () => presetDocument ?? { activePresetId: 'default', presets: [preset] } };
+  const stillPresetStore = {
+    read: () => screenshotPresetDocument ?? { activePresetId: 'default', presets: [preset] },
+  };
   let cropParent = null;
   let showFailuresRemaining = showFailure ? 1 : 0;
   const defaultPlan = pendingSelection
@@ -102,28 +125,44 @@ function harness({
     },
   };
   const controller = createQuickSnipController({
-    userPaths: { quickSnipWork: '/work', quickSnipRaw: '/raw', quickSnipStudio: '/studio', projects: '/projects' },
-    preferencesStore: { read: () => ({ extras: {} }), patch: () => calls.push('preferences.patch') },
-    presetStore: { read: () => ({ activePresetId: 'default', presets: [preset] }) },
+    userPaths: paths,
+    preferencesStore,
+    presetStore: videoPresetStore,
+    screenshotPresetStore: stillPresetStore,
+    openEditor: async (id) => {
+      editorCalls.push(id);
+      calls.push(`editor:${id}`);
+      return openEditor?.(id);
+    },
+    openScreenshot: async (id) => {
+      screenshotCalls.push(id);
+      calls.push(`screenshot:${id}`);
+      return openScreenshot?.(id);
+    },
     projectStore: {},
     regionOverlay,
     cropWindow,
     statusWindow,
     platform,
+    resolveScreenId: async (display) => `native-display:${display.id}`,
     resolveDisplay: () => ({ id: 1, bounds, workArea: bounds }),
     isNormalRecordingActive: () => normalRecording,
-    finalize:
-      finalize ??
-      (async ({ onProgress }) => {
-        onProgress(0.5);
-        return { path: '/studio/snippet.mp4', projectId: 'project' };
-      }),
+    finalize: async (options) => {
+      finalizeCalls.push(options);
+      if (finalize) return finalize(options);
+      options.onProgress?.(0.5);
+      return { path: '/instant-projects/snippet.mp4', projectId: 'project' };
+    },
     thumbnail,
     copyFile: copyFile ?? (() => calls.push('copy')),
   });
   return {
     controller,
     calls,
+    preferenceState,
+    finalizeCalls,
+    editorCalls,
+    screenshotCalls,
     selectionOverlayWindow: selectionOverlayWindows[0],
     selectionOverlayWindows,
     showCalls,
@@ -136,11 +175,18 @@ function harness({
   };
 }
 
-test('one toggle selects, starts, stops and finalizes Quick Snip according to state', async () => {
-  const { controller, calls } = harness();
+async function selectAndStart(controller, mode = 'studio') {
+  await controller.toggle();
+  if (mode !== 'studio') await controller.configure({ mode });
+  await controller.toggle();
+}
+
+test('one toggle selects, starts, stops and finalizes Instant Quick Snip according to state', async () => {
+  const { controller, calls, finalizeCalls } = harness();
   assert.equal(controller.state().state, 'idle');
   await controller.toggle();
   assert.equal(controller.state().state, 'selecting');
+  await controller.configure({ mode: 'instant' });
   await controller.toggle();
   assert.equal(controller.state().state, 'preparing');
   assert.ok(calls.includes('crop.start'));
@@ -150,7 +196,8 @@ test('one toggle selects, starts, stops and finalizes Quick Snip according to st
   assert.equal(controller.state().state, 'finalizing');
   await controller.report({ type: 'completed', session: { projectId: 'project' } });
   assert.equal(controller.state().state, 'completed');
-  assert.equal(controller.state().result.path, '/studio/snippet.mp4');
+  assert.equal(controller.state().result.path, '/instant-projects/snippet.mp4');
+  assert.equal(finalizeCalls[0].configuration.mode, 'instant');
   assert.ok(calls.includes('copy'));
 });
 
@@ -188,8 +235,6 @@ test('passes the selection overlay parent to Crop Bar show and detaches it befor
 test('preserves start overrides through pending selection confirmation', async () => {
   const f = harness({ pendingSelection: true });
   const overrides = {
-    mode: 'raw',
-    format: 'webm',
     automaticZoom: false,
     devices: { micId: 'mic-custom', cameraId: 'camera-custom', systemAudioMode: 'on' },
   };
@@ -201,24 +246,18 @@ test('preserves start overrides through pending selection confirmation', async (
 
   const snapshot = f.controller.state();
   assert.equal(snapshot.state, 'preparing');
-  assert.equal(snapshot.job.mode, 'raw');
-  assert.equal(snapshot.job.format, 'webm');
+  assert.equal(snapshot.job.mode, 'studio');
+  assert.equal(snapshot.job.format, 'mp4');
   assert.equal(snapshot.job.automaticZoom, false);
   assert.deepEqual(snapshot.job.devices, overrides.devices);
-  assert.equal(snapshot.job.outputRoot, '/work');
+  assert.equal(snapshot.job.outputRoot, '/instant-projects');
 });
 
 test('updates the confirmed job before sending the start command', async () => {
   const f = harness();
-  const overrides = {
-    mode: 'raw',
-    format: 'webm',
-    automaticZoom: false,
-    devices: { micId: 'mic-custom', cameraId: 'camera-custom', systemAudioMode: 'on' },
-  };
 
   await f.controller.toggle();
-  await f.controller.configure(overrides);
+  await f.controller.configure({ mode: 'instant', automaticZoom: false });
   await f.controller.start();
 
   const updateIndex = f.calls.lastIndexOf('crop.updateConfiguration');
@@ -226,7 +265,8 @@ test('updates the confirmed job before sending the start command', async () => {
   assert.ok(updateIndex >= 0);
   assert.ok(updateIndex < startIndex);
   assert.deepEqual(f.configurationUpdates.at(-1), f.controller.state().job);
-  assert.equal(f.configurationUpdates.at(-1).outputRoot, '/work');
+  assert.equal(f.configurationUpdates.at(-1).outputRoot, '/instant-projects');
+  assert.equal(f.configurationUpdates.at(-1).automaticZoom, false);
 });
 
 for (const platform of ['win32', 'darwin']) {
@@ -395,18 +435,16 @@ test('a stale selection cannot detach the Crop Bar parent of a newer session', a
   await secondSelection;
 });
 
-test('preparing toggle cancels while processing toggle only restores status', async () => {
+test('preparing toggle cancels while Instant processing toggle only restores status', async () => {
   const { controller, calls } = harness();
-  await controller.toggle();
-  await controller.toggle();
+  await selectAndStart(controller, 'instant');
   await controller.toggle();
   assert.equal(controller.state().state, 'canceled');
   assert.ok(calls.includes('crop.cancel'));
   assert.equal(calls.filter((call) => call === 'status.hide').length, 2);
   assert.equal(controller.state().progress, 0);
 
-  await controller.toggle();
-  await controller.toggle();
+  await selectAndStart(controller, 'instant');
   await controller.report({ type: 'recording' });
   await controller.stop();
   const completion = controller.report({ type: 'completed', session: {} });
@@ -430,8 +468,7 @@ test('a late processing result cannot replace canceled state or copy a file', as
     });
   const { controller, calls } = harness({ finalize });
 
-  await controller.toggle();
-  await controller.toggle();
+  await selectAndStart(controller, 'instant');
   await controller.report({ type: 'recording' });
   await controller.stop();
   const completion = controller.report({ type: 'completed', session: { projectId: 'project' } });
@@ -440,7 +477,7 @@ test('a late processing result cannot replace canceled state or copy a file', as
 
   await controller.cancel();
   assert.equal(controller.state().state, 'canceled');
-  resolveFinalize({ path: '/studio/late-result.mp4', projectId: 'project' });
+  resolveFinalize({ path: '/instant-projects/late-result.mp4', projectId: 'project' });
   await completion;
 
   assert.equal(controller.state().state, 'canceled');
@@ -448,7 +485,7 @@ test('a late processing result cannot replace canceled state or copy a file', as
   assert.equal(calls.includes('copy'), false);
 });
 
-test('cancels an in-progress export without hiding status during an editor handoff', async () => {
+test('cancels an Instant export without hiding its status window', async () => {
   let resolveFinalize;
   let finalizeSignal;
   const finalize = ({ signal }) => {
@@ -459,8 +496,7 @@ test('cancels an in-progress export without hiding status during an editor hando
   };
   const { controller, calls } = harness({ finalize });
 
-  await controller.toggle();
-  await controller.toggle();
+  await selectAndStart(controller, 'instant');
   await controller.report({ type: 'recording' });
   await controller.stop();
   const completion = controller.report({ type: 'completed', session: { projectId: 'project' } });
@@ -474,7 +510,7 @@ test('cancels an in-progress export without hiding status during an editor hando
   assert.ok(calls.includes('crop.hide'));
   assert.equal(calls.includes('status.hide'), false);
 
-  resolveFinalize({ path: '/studio/late-result.mp4', projectId: 'project' });
+  resolveFinalize({ path: '/instant-projects/late-result.mp4', projectId: 'project' });
   await completion;
   assert.equal(controller.state().state, 'canceled');
   assert.equal(calls.includes('copy'), false);
@@ -489,8 +525,7 @@ test('late failed and completed reports after cancel do not reopen the status wi
     });
   const { controller, calls } = harness({ finalize });
 
-  await controller.toggle();
-  await controller.toggle();
+  await selectAndStart(controller, 'instant');
   await controller.report({ type: 'recording' });
   await controller.stop();
   const completion = controller.report({ type: 'completed', session: { projectId: 'project' } });
@@ -512,7 +547,7 @@ test('late failed and completed reports after cancel do not reopen the status wi
     false,
   );
 
-  resolveFinalize({ path: '/studio/late-result.mp4', projectId: 'project' });
+  resolveFinalize({ path: '/instant-projects/late-result.mp4', projectId: 'project' });
   await completion;
 });
 
@@ -523,8 +558,7 @@ test('cancellation while awaiting a thumbnail cannot restart processing', async 
       finishThumbnail = resolve;
     });
   const f = harness({ thumbnail });
-  await f.controller.toggle();
-  await f.controller.toggle();
+  await selectAndStart(f.controller, 'instant');
   await f.controller.report({ type: 'recording' });
   const pending = f.controller.report({ type: 'completed', session: { projectId: 'project' } });
   await f.controller.cancel();
@@ -540,8 +574,7 @@ test('clipboard failure preserves the completed output and exposes a retryable e
       throw new Error('Clipboard busy');
     },
   });
-  await f.controller.toggle();
-  await f.controller.toggle();
+  await selectAndStart(f.controller, 'instant');
   await f.controller.report({ type: 'recording' });
   await f.controller.report({ type: 'completed', session: { projectId: 'project' } });
   assert.equal(f.controller.state().state, 'completed');

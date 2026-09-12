@@ -65,6 +65,6 @@ describe('microphone recorder helpers', () => {
       configurable: true,
       value: undefined,
     });
-    await expect(listBrowserMicrophones()).rejects.toThrow('Microphone discovery is unavailable');
+    await expect(listBrowserMicrophones()).rejects.toThrow('Media device discovery is unavailable');
   });
 });

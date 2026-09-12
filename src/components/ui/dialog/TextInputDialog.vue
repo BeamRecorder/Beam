@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { useTranslate } from '~/i18n/useTranslate';
 import { computed, nextTick, ref, useId, watch } from 'vue';
 import Button from '../button/Button.vue';
 import Input from '../input/Input.vue';
 import Dialog from './Dialog.vue';
 
+const { t } = useTranslate('TextInputDialog');
 const props = withDefaults(
   defineProps<{
     isOpen: boolean;
@@ -19,8 +21,6 @@ const props = withDefaults(
   {
     initialValue: '',
     placeholder: '',
-    confirmLabel: 'Save',
-    cancelLabel: 'Cancel',
     maxLength: 80,
     validate: undefined,
   },
@@ -37,9 +37,8 @@ const input = ref<InstanceType<typeof Input> | null>(null);
 const inputId = `text-input-dialog-${useId()}`;
 const normalizedValue = computed(() => value.value.trim());
 const validationError = computed(() => {
-  if (!normalizedValue.value) return `${props.label} is required.`;
-  if (normalizedValue.value.length > props.maxLength)
-    return `${props.label} must be ${props.maxLength} characters or less.`;
+  if (!normalizedValue.value) return t('required', { label: props.label });
+  if (normalizedValue.value.length > props.maxLength) return t('tooLong', { label: props.label, max: props.maxLength });
   return props.validate?.(normalizedValue.value) ?? null;
 });
 
@@ -83,8 +82,8 @@ const confirm = () => {
 
     <template #footer>
       <div class="dialog-actions">
-        <Button variant="ghost" size="sm" @click="emit('close')">{{ cancelLabel }}</Button>
-        <Button variant="primary" size="sm" @click="confirm">{{ confirmLabel }}</Button>
+        <Button variant="ghost" size="sm" @click="emit('close')">{{ cancelLabel ?? t('cancel') }}</Button>
+        <Button variant="primary" size="sm" @click="confirm">{{ confirmLabel ?? t('save') }}</Button>
       </div>
     </template>
   </Dialog>

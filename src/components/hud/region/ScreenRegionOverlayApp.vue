@@ -240,7 +240,7 @@ onBeforeUnmount(() => unsubscribe?.());
         {{ Math.round(region.height * (options?.bounds.height || 0)) }}</span
       >
     </div>
-    <aside v-if="isSelecting && options?.context !== 'quick-snip'" class="region-toolbar" @pointerdown.stop>
+    <aside v-if="isSelecting" class="region-toolbar" @pointerdown.stop>
       <span class="region-instruction"><Move :size="16" /> {{ t('instruction') }}</span>
       <div class="region-preset-picker">
         <Select

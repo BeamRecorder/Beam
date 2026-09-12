@@ -4,6 +4,8 @@ import Badge from '~/ui/badge/Badge.vue';
 import Button from '~/ui/button/Button.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
+import CaptureModeGroup from './CaptureModeGroup.vue';
+import type { CaptureMode } from '~/api/types/capture-mode';
 import UpdateAvailableBadge from '~/components/updates/UpdateAvailableBadge.vue';
 
 const { t } = useTranslate('TopbarHUD');
@@ -11,12 +13,15 @@ const { t } = useTranslate('TopbarHUD');
 withDefaults(
   defineProps<{
     title?: string;
+    mode?: CaptureMode;
+    modeDisabled?: boolean;
     showBack?: boolean;
     showSettings?: boolean;
     isRecording?: boolean;
   }>(),
   {
     title: '',
+    mode: 'studio',
     showBack: false,
     showSettings: false,
     isRecording: false,
@@ -24,6 +29,7 @@ withDefaults(
 );
 
 const emit = defineEmits<{
+  (event: 'update:mode', value: CaptureMode): void;
   (event: 'back'): void;
   (event: 'minimize'): void;
   (event: 'open-settings'): void;
@@ -37,11 +43,24 @@ const emit = defineEmits<{
       <div v-if="showBack" class="topbar-back-action">
         <Button variant="ghost" size="sm" icon-only :icon="ChevronLeft" :aria-label="t('back')" @click="emit('back')" />
       </div>
-      <img v-else :src="resolvePublicAssetUrl('/brand/BeamIcon.webp')" class="brand-logo" :alt="t('title')" />
-      <span class="topbar-title">{{ title || t('title') }}</span>
+      <img
+        v-else
+        :src="resolvePublicAssetUrl('/brand/BeamIcon.webp')"
+        class="brand-logo"
+        :alt="t('title')"
+        draggable="false"
+      />
+      <span v-if="showBack" class="topbar-title">{{ title || t('title') }}</span>
+      <CaptureModeGroup
+        v-else
+        class="topbar-modes"
+        full
+        :model-value="mode"
+        :disabled="modeDisabled || isRecording"
+        @update:model-value="emit('update:mode', $event)"
+      />
       <Badge v-if="isRecording" variant="error" class="rec-badge">{{ t('rec') }}</Badge>
     </div>
-
     <div class="window-actions">
       <button type="button" class="window-action" :aria-label="t('minimize')" @click="emit('minimize')">
         <Minus :size="16" />
@@ -66,15 +85,26 @@ const emit = defineEmits<{
 
 <style scoped>
 .hud-topbar {
-  height: 60px;
+  height: 64px;
   padding: 0 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   border-bottom: 1px solid var(--color-border);
   -webkit-app-region: drag;
   flex-shrink: 0;
   cursor: grab;
+}
+.topbar-modes {
+  flex: 1;
+  min-width: 0;
+}
+.brand-logo {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
 }
 .topbar-identity,
 .window-actions {
@@ -83,6 +113,9 @@ const emit = defineEmits<{
   gap: 8px;
 }
 .topbar-identity {
+  flex: 1;
+  min-width: 0;
+  gap: 12px;
   -webkit-app-region: drag;
 }
 .settings-action {
@@ -93,18 +126,18 @@ const emit = defineEmits<{
   -webkit-app-region: no-drag;
 }
 .window-actions {
+  flex-shrink: 0;
   gap: 4px;
   -webkit-app-region: no-drag;
 }
 .topbar-back-action {
+  flex-shrink: 0;
   -webkit-app-region: no-drag;
 }
-.brand-logo {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
-}
 .topbar-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 16px;
   font-weight: 700;
   color: var(--text-primary);
@@ -113,6 +146,7 @@ const emit = defineEmits<{
   cursor: grab;
 }
 .rec-badge {
+  flex-shrink: 0;
   font-size: 0.6rem;
   padding: 1px 5px;
   user-select: none;

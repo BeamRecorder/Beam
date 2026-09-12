@@ -1,4 +1,4 @@
-const HUD_SIZE = { width: 352, height: 512 };
+const HUD_SIZE = { width: 392, height: 512 };
 const RECORDER_SIZE = { width: 72, height: 344 };
 
 function clampToDisplayBounds(x, y, width, height, displayBounds) {

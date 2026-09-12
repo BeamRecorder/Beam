@@ -90,7 +90,7 @@ describe('browser camera discovery', () => {
 
   it('rejects discovery when Chromium exposes no media-device API', async () => {
     Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: undefined });
-    await expect(listBrowserCameras()).rejects.toThrow('Camera discovery is unavailable');
+    await expect(listBrowserCameras()).rejects.toThrow('Media device discovery is unavailable');
   });
 });
 

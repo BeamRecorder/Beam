@@ -1,0 +1,261 @@
+.hud-wrapper {
+  width: calc(100% - 32px);
+  margin: 16px;
+  background: var(--color-bg-surface); /* Solid opaque background to avoid transparency rendering issues */
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  transition: height 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden; /* Keep content clipped during transitions to avoid visual bugs */
+}
+
+.hud-wrapper.embedded {
+  width: 320px !important;
+  max-width: 100%;
+  max-height: 440px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  margin: 0 !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: var(--shadow-xl) !important;
+  background: var(--color-bg-surface) !important;
+  border-radius: var(--radius-lg) !important;
+  height: auto !important;
+}
+
+.hud-wrapper.region-selection-leaving {
+  animation: hud-region-out 180ms cubic-bezier(0.4, 0, 1, 1) forwards;
+  pointer-events: none;
+}
+
+.hud-wrapper.region-selection-entering {
+  animation: hud-region-in 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.screen-select-controls :deep(.screen-region-confirmed) {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
+}
+
+.screen-select-controls :deep(.screen-region-checkmark .btn-icon) {
+  animation: screen-region-checkmark 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes hud-region-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+    filter: blur(3px);
+  }
+}
+
+@keyframes hud-region-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes screen-region-checkmark {
+  0% {
+    opacity: 0;
+    transform: scale(0.45) rotate(-18deg);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1.2) rotate(0deg);
+  }
+  70% {
+    transform: scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.screen-select-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.screen-select-controls > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+.mic-select-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.mic-select-controls > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+.mic-select-controls :deep(.btn-primary) {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 16%, transparent);
+}
+
+.hud-wrapper.dropdown-open {
+  overflow: visible; /* Allow popovers to float when active */
+}
+
+.hud-header {
+  height: 60px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--color-border);
+  -webkit-app-region: no-drag;
+  flex-shrink: 0;
+}
+
+.logo-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.back-btn {
+  -webkit-app-region: no-drag;
+  margin-right: 4px;
+}
+
+.brand-logo {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.logo-text {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+}
+
+.rec-badge {
+  font-size: 0.6rem;
+  padding: 1px 5px;
+}
+
+.window-actions {
+  display: flex;
+  gap: 4px;
+  -webkit-app-region: no-drag;
+}
+
+/* Override default button layout to ensure centering of the icons */
+.window-actions :deep(.btn) {
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.btn-icon {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.close-btn-override:hover {
+  color: var(--color-error) !important;
+}
+
+.hud-body {
+  flex: 1;
+  min-height: 0;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: visible; /* Prevent clipping of dropdown popovers */
+}
+
+.hud-view-enter-active,
+.hud-view-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hud-view-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.hud-view-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.settings-body {
+  flex: 1;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: hidden;
+}
+
+/* Tabs */
+.mode-tabs {
+  width: 100%;
+}
+
+.tabs-container {
+  background: var(--color-bg-surface-hover);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  display: flex;
+  gap: 4px;
+  border: 1px solid var(--color-border);
+}
+
+.tab-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  padding: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.tab-btn.active {
+  background: white;
+  color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.tab-icon {
+  width: 14px;
+  height: 14px;
+}

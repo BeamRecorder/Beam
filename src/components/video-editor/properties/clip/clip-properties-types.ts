@@ -1,0 +1,39 @@
+import type { ClipFrame, ClipShadowMode, NormalizedTransform } from '~/media/shared/composition-types';
+import type { CameraFramingPreset, CameraLayoutPreset } from '~/media/shared/camera-layout-types';
+import type { PhoneFrameFill } from '~/media/shared/color-fill-types';
+
+export interface SelectedClipProperties {
+  id: string;
+  kind: string;
+  name?: string;
+  timelineStartMs: number;
+  timelineDurationMs: number;
+  playbackRate?: number;
+  enabled?: boolean;
+  isLinked?: boolean;
+  shadowSize?: string;
+  shadowBlur?: number;
+  shadowMode?: ClipShadowMode;
+  shadowColor?: string;
+  shadowDirection?: string;
+  cornerRadius?: string | number;
+  borderEnabled?: boolean;
+  borderColor?: string;
+  borderWidth?: number;
+  frame?: ClipFrame;
+  frameTitle?: string;
+  frameColor?: string;
+  frameShowMenu?: boolean;
+  frameShowScrollbars?: boolean;
+  frameChromeScale?: number;
+  phoneFrameFill?: PhoneFrameFill;
+  clipTransform?: NormalizedTransform;
+  isMirrored?: boolean;
+  isMirroredY?: boolean;
+  cameraLayoutPreset?: CameraLayoutPreset;
+  cameraFramingPreset?: CameraFramingPreset;
+  cameraSplitRatio?: number;
+  cameraSplitPadding?: number;
+  reactToZoom?: boolean;
+  hasLinkedScreen?: boolean;
+}

@@ -10,6 +10,34 @@ use crate::{
 
 use super::compatibility::supports_cursor_exclusion;
 
+// Electron converts its DIP display center to physical pixels before this lookup.
+// MonitorFromPoint uses the actual desktop topology, including mixed DPI screens.
+pub fn source_at_point(x: i32, y: i32) -> Result<SourceId, CaptureError> {
+    use windows::Win32::{
+        Foundation::POINT,
+        Graphics::Gdi::{MONITOR_DEFAULTTONULL, MonitorFromPoint},
+        UI::HiDpi::{DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, SetThreadDpiAwarenessContext},
+    };
+    let previous =
+        unsafe { SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) };
+    if previous.0.is_null() {
+        return Err(backend_error(
+            "Unable to resolve physical display coordinates",
+        ));
+    }
+    let handle = unsafe { MonitorFromPoint(POINT { x, y }, MONITOR_DEFAULTTONULL) };
+    unsafe {
+        SetThreadDpiAwarenessContext(previous);
+    }
+    if handle.0.is_null() {
+        return Err(CaptureError::SourceNotFound(format!("display at {x},{y}")));
+    }
+    let device = Monitor::from_raw_hmonitor(handle.0)
+        .device_name()
+        .map_err(backend_error)?;
+    SourceId::new(format!("wgc:monitor:{device}"))
+}
+
 pub fn discover_sources() -> Result<Vec<SourceDescriptor>, CaptureError> {
     let mut sources = discover_monitors()?;
     sources.extend(discover_windows()?);

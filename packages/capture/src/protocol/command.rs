@@ -14,12 +14,23 @@ pub struct RequestEnvelope {
 #[serde(tag = "command", rename_all = "kebab-case")]
 pub enum Command {
     Discover,
+    ResolveDisplay {
+        x: i32,
+        y: i32,
+    },
     Capabilities,
     Permissions,
     InputAccessStatus,
     RequestInputAccess,
-    Formats { source: String },
-    Prepare { config: Box<CaptureRequest> },
+    Formats {
+        source: String,
+    },
+    Prepare {
+        config: Box<CaptureRequest>,
+    },
+    Screenshot {
+        config: crate::screenshot::ScreenshotRequest,
+    },
     Start,
     Pause,
     Resume,

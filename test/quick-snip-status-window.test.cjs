@@ -172,6 +172,11 @@ function createFixture(
       getCursorScreenPoint: () => ({ x: 100, y: 100 }),
     },
   });
+  const ready = (target = windows[0], order = 'native-first') => {
+    if (order === 'renderer-first') status.rendererReady(target.webContents);
+    target.emit('ready-to-show');
+    if (order !== 'renderer-first') status.rendererReady(target.webContents);
+  };
 
   return {
     timers,
@@ -181,6 +186,7 @@ function createFixture(
     capturedDisplay,
     primaryDisplay,
     status,
+    ready,
     preferenceState,
     preferenceWrites,
   };
@@ -191,6 +197,65 @@ const processingStatus = {
   progress: 0.4,
   job: { regionBounds: { x: 2200, y: 200, width: 800, height: 600 } },
 };
+
+test('prewarms hidden and waits for both readiness signals plus an update before presenting', () => {
+  for (const order of ['native-first', 'renderer-first']) {
+    const fixture = createFixture();
+    const completed = { ...processingStatus, state: 'completed', progress: 1 };
+    fixture.status.prepare(completed);
+    const window = fixture.windows[0];
+    const statusMessages = () => fixture.calls.filter((call) => call[0] === 'send' && call[1] === 'quick-snip:status');
+
+    assert.equal(window.visible, false);
+    assert.equal(fixture.timers.size, 0);
+    assert.equal(statusMessages().length, 0);
+
+    if (order === 'renderer-first') {
+      fixture.status.rendererReady(window.webContents);
+      assert.equal(window.visible, false);
+      assert.equal(statusMessages().length, 0);
+      window.emit('ready-to-show');
+    } else {
+      window.emit('ready-to-show');
+      assert.equal(window.visible, false);
+      assert.equal(statusMessages().length, 0);
+      fixture.status.rendererReady(window.webContents);
+    }
+
+    assert.equal(window.visible, false);
+    assert.equal(statusMessages().length, 1);
+    assert.equal(fixture.timers.size, 0);
+
+    fixture.status.update(completed);
+    assert.equal(window.visible, true);
+    assert.equal(fixture.calls.filter((call) => call[0] === 'showInactive').length, 1);
+    assert.equal(fixture.timers.size, 1);
+    assert.equal([...fixture.timers.values()][0].delay, 5000);
+  }
+});
+
+test('rejects a renderer-ready handshake from another WebContents', () => {
+  const fixture = createFixture();
+  fixture.status.update(processingStatus);
+  const window = fixture.windows[0];
+  window.emit('ready-to-show');
+
+  fixture.status.rendererReady({});
+  assert.equal(window.visible, false);
+  assert.equal(
+    fixture.calls.some((call) => call[0] === 'showInactive'),
+    false,
+  );
+  assert.equal(
+    fixture.calls.some((call) => call[0] === 'send' && call[1] === 'quick-snip:status'),
+    false,
+  );
+
+  fixture.status.rendererReady(window.webContents);
+  assert.equal(window.visible, true);
+  assert.equal(fixture.calls.filter((call) => call[0] === 'showInactive').length, 1);
+  assert.equal(fixture.calls.filter((call) => call[0] === 'send' && call[1] === 'quick-snip:status').length, 1);
+});
 
 test('shows only once ready and stays pinned without moving on progress', () => {
   const fixture = createFixture();
@@ -203,7 +268,7 @@ test('shows only once ready and stays pinned without moving on progress', () => 
     fixture.calls.some((call) => call[0] === 'setPosition'),
     false,
   );
-  window.emit('ready-to-show');
+  fixture.ready(window);
   assert.deepEqual(window.bounds, { x: 3124, y: 780, width: 380, height: 184 });
   assert.equal(window.visible, true);
   const places = fixture.calls.filter((call) => call[0] === 'setPosition').length;
@@ -218,7 +283,7 @@ test('preserves a user-dragged position through show and status updates, then pl
   const fixture = createFixture();
   fixture.status.update(processingStatus);
   const original = fixture.windows[0];
-  original.emit('ready-to-show');
+  fixture.ready(original);
   const initialPlacement = { ...original.bounds };
   const userPlacement = { ...initialPlacement, x: 2460, y: 260 };
 
@@ -233,7 +298,7 @@ test('preserves a user-dragged position through show and status updates, then pl
   fixture.status.hide();
   fixture.status.update({ ...processingStatus, progress: 0.2 });
   const recreated = fixture.windows[1];
-  recreated.emit('ready-to-show');
+  fixture.ready(recreated);
 
   assert.deepEqual(recreated.bounds, initialPlacement);
   assert.equal(fixture.calls.filter((call) => call[0] === 'setPosition').length, 2);
@@ -243,7 +308,7 @@ test('saves the visible pill origin per display and flips below with 84px native
   const fixture = createFixture('win32');
   fixture.status.update(processingStatus);
   const window = fixture.windows[0];
-  window.emit('ready-to-show');
+  fixture.ready(window);
   const initialSize = window.getSize();
   fixture.calls.length = 0;
 
@@ -279,7 +344,7 @@ test('restores a saved pill origin without rewriting it during presentation', ()
   const fixture = createFixture('win32', { preferenceState });
   fixture.status.update(processingStatus);
   const window = fixture.windows[0];
-  window.emit('ready-to-show');
+  fixture.ready(window);
 
   assert.deepEqual(fixture.preferenceState.extras.quickSnipStatusPositions, { 2: { x: 2100, y: 120 } });
   assert.equal(fixture.preferenceWrites.length, 0);
@@ -291,7 +356,7 @@ test('debounces visible status-window moves and stores only the trailing macOS p
   const fixture = createFixture('darwin');
   fixture.status.update(processingStatus);
   const window = fixture.windows[0];
-  window.emit('ready-to-show');
+  fixture.ready(window);
 
   window.bounds = { ...window.bounds, x: 2600, y: 400 };
   window.emit('move');
@@ -336,7 +401,7 @@ test('keeps Linux controls reachable without unsupported mouse forwarding', () =
 test('dismisses completed output after five seconds and pauses while interacting', () => {
   const fixture = createFixture();
   fixture.status.update({ ...processingStatus, state: 'completed' });
-  fixture.windows[0].emit('ready-to-show');
+  fixture.ready();
   assert.equal([...fixture.timers.values()][0].delay, 5000);
   fixture.status.setInteractive(true);
   assert.equal(fixture.timers.size, 0);
@@ -345,11 +410,49 @@ test('dismisses completed output after five seconds and pauses while interacting
   assert.equal(fixture.windows[0].destroyed, true);
 });
 
+test('emits native blur after the renderer handshake', () => {
+  const fixture = createFixture();
+  fixture.status.update(processingStatus);
+  const window = fixture.windows[0];
+  fixture.ready(window);
+  fixture.calls.length = 0;
+
+  window.emit('blur');
+
+  assert.deepEqual(
+    fixture.calls.filter((call) => call[0] === 'send'),
+    [['send', 'quick-snip:status-blur']],
+  );
+});
+
+test('restarts the five-second dismissal after native blur deactivates the renderer', () => {
+  const fixture = createFixture();
+  fixture.status.update({ ...processingStatus, state: 'completed' });
+  const window = fixture.windows[0];
+  fixture.ready(window);
+  const initialTimer = [...fixture.timers.keys()][0];
+
+  fixture.status.setInteractive(true);
+  assert.equal(fixture.timers.size, 0);
+  window.emit('blur');
+  assert.deepEqual(
+    fixture.calls.filter((call) => call[0] === 'send' && call[1] === 'quick-snip:status-blur'),
+    [['send', 'quick-snip:status-blur']],
+  );
+  // The renderer's blur listener deactivates its controls and bridges false back to main.
+  fixture.status.setInteractive(false);
+
+  assert.equal(fixture.timers.size, 1);
+  const [timerId, timer] = [...fixture.timers.entries()][0];
+  assert.notEqual(timerId, initialTimer);
+  assert.equal(timer.delay, 5000);
+});
+
 test('pauses completed dismissal while dragging and restarts the timer after position commit', () => {
   const fixture = createFixture('win32');
   fixture.status.update({ ...processingStatus, state: 'completed' });
   const window = fixture.windows[0];
-  window.emit('ready-to-show');
+  fixture.ready(window);
   assert.equal(fixture.timers.size, 1);
 
   window.bounds = { ...window.bounds, x: 2500, y: fixture.capturedDisplay.workArea.y };
@@ -362,12 +465,23 @@ test('pauses completed dismissal while dragging and restarts the timer after pos
   assert.equal(fixture.preferenceWrites.length, 1);
 });
 
-test('does not reset the dismissal deadline on duplicate status updates', () => {
+test('pending progress and duplicate completed updates do not reset the dismissal deadline', () => {
   const fixture = createFixture();
-  fixture.status.update({ ...processingStatus, state: 'completed' });
-  fixture.windows[0].emit('ready-to-show');
+  fixture.status.prepare(processingStatus);
+  fixture.ready();
+  assert.equal(fixture.windows[0].visible, false);
+  assert.equal(fixture.timers.size, 0);
+
+  fixture.status.update(processingStatus);
+  fixture.status.update({ ...processingStatus, progress: 0.8 });
+  assert.equal(fixture.windows[0].visible, true);
+  assert.equal(fixture.timers.size, 0);
+
+  const completed = { ...processingStatus, state: 'completed', progress: 1 };
+  fixture.status.update(completed);
   const timer = [...fixture.timers.keys()][0];
-  fixture.status.update({ ...processingStatus, state: 'completed' });
+  assert.equal([...fixture.timers.values()][0].delay, 5000);
+  fixture.status.update({ ...completed, progress: 1 });
   assert.equal([...fixture.timers.keys()][0], timer);
   fixture.status.hide();
   assert.equal(fixture.timers.size, 0);
@@ -376,7 +490,7 @@ test('does not reset the dismissal deadline on duplicate status updates', () => 
 test('leaves failures visible for recovery and rejects unrelated senders', () => {
   const fixture = createFixture();
   fixture.status.update({ ...processingStatus, state: 'failed' });
-  fixture.windows[0].emit('ready-to-show');
+  fixture.ready();
   assert.equal(fixture.timers.size, 0);
   assert.equal(fixture.status.owns({}), false);
   assert.equal(fixture.status.owns(fixture.windows[0].webContents), true);
@@ -425,7 +539,7 @@ test('reopening after early dismissal does not deliver an abandoned render task'
   fixture.status.update(processingStatus);
   fixture.windows[0].emit('ready-to-show');
   assert.equal(fixture.windows[1].visible, false);
-  fixture.windows[1].emit('ready-to-show');
+  fixture.ready(fixture.windows[1]);
   assert.equal(fixture.windows[1].visible, true);
   assert.equal(
     fixture.calls.some((call) => call[1] === 'quick-snip:render-task'),
@@ -437,7 +551,7 @@ test('clears a handed-off render task while keeping the status window alive', ()
   const fixture = createFixture();
   fixture.status.update(processingStatus);
   const window = fixture.windows[0];
-  window.emit('ready-to-show');
+  fixture.ready(window);
 
   const task = { id: 'render-1' };
   fixture.status.setRenderTask(task);
@@ -469,7 +583,7 @@ test('a render failure can present recovery without the old teardown closing it'
   const recovery = fixture.windows[1];
   previous.emit('ready-to-show');
   assert.equal(recovery.visible, false);
-  recovery.emit('ready-to-show');
+  fixture.ready(recovery);
   assert.equal(recovery.visible, true);
   assert.equal(recovery.destroyed, false);
   fixture.status.hide();

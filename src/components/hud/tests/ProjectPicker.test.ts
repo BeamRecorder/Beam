@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { captureMock as capture } from './capture.mock';
 
 vi.mock('../../../api/capture', async () => ({ capture: (await import('./capture.mock')).captureMock }));
-import ProjectPicker from '../ProjectPicker.vue';
+import ProjectPicker from '../../projects/ProjectPicker.vue';
 
 const projects = [
   { id: 'one', name: 'First', createdAt: '', updatedAt: '2025-01-01T00:00:00.000Z', sessionCount: 1, previewSrc: null },
@@ -304,5 +304,64 @@ describe('ProjectPicker', () => {
 
     expect(wrapper.find('.project-selection-bar').exists()).toBe(false);
     expect(wrapper.findAll('.project-title-checkbox')).toHaveLength(0);
+  });
+  it('shows Studio, Screenshot and Instant together using the same cards and a mode icon', async () => {
+    const mixed = ['studio', 'screenshot', 'instant'].map((mode, index) => ({
+      ...projects[0],
+      id: String(index),
+      name: mode,
+      mode,
+      thumbnailSrc: mode === 'screenshot' ? 'project-media://screenshot/1/source.png' : null,
+    }));
+    capture.listProjects.mockResolvedValue(mixed);
+    const wrapper = mount(ProjectPicker, { global: { stubs } });
+    await settle();
+    expect(wrapper.findAll('.project-card')).toHaveLength(3);
+    expect(wrapper.findAll('.project-mode-icon').map((icon) => icon.attributes('data-mode'))).toEqual([
+      'studio',
+      'screenshot',
+      'instant',
+    ]);
+    await wrapper.findAll('.project-card')[1].trigger('mouseenter');
+    await settle();
+    expect(wrapper.findAll('video')).toHaveLength(0);
+    expect(wrapper.findAll('.project-card')[1].get('img').attributes('src')).toBe(mixed[1].thumbnailSrc);
+    wrapper.unmount();
+  });
+
+  it('passes the screenshot mode to shared rename, reveal and delete operations', async () => {
+    const screenshot = { ...projects[0], mode: 'screenshot' as const };
+    capture.listProjects.mockResolvedValue([screenshot]);
+    capture.renameProject.mockResolvedValue({ ...screenshot, name: 'Renamed image' });
+    const wrapper = mount(ProjectPicker, { global: { stubs } });
+    await settle();
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Rename')!
+      .trigger('click');
+    await vi.advanceTimersByTimeAsync(300);
+    const input = wrapper.get('.input-element');
+    await input.setValue('Renamed image');
+    await input.trigger('keydown', { key: 'Enter' });
+    await settle();
+    expect(capture.renameProject).toHaveBeenCalledWith('one', 'Renamed image', 'screenshot');
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Explore')!
+      .trigger('click');
+    expect(capture.revealProject).toHaveBeenCalledWith('one', 'screenshot');
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Delete')!
+      .trigger('click');
+    await wrapper.vm.$nextTick();
+    capture.listProjects.mockResolvedValue([]);
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Delete')!
+      .trigger('click');
+    await settle();
+    expect(capture.deleteProject).toHaveBeenCalledWith('one', 'screenshot');
+    wrapper.unmount();
   });
 });

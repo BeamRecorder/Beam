@@ -179,4 +179,35 @@ describe('blur effect renderer', () => {
     expect(maskPath).toHaveBeenCalledOnce();
     expect(maskPath.mock.calls[0]![1]).toMatchObject({ width: 120, height: 60 });
   });
+
+  it('samples the supplied external backdrop rather than the offscreen layer surface', () => {
+    const sourceContexts: FakeContext[] = [];
+    class FakeOffscreenCanvas {
+      width: number;
+      height: number;
+      private readonly context: FakeContext;
+
+      constructor(width: number, height: number) {
+        this.width = width;
+        this.height = height;
+        this.context = new FakeContext(this);
+        sourceContexts.push(this.context);
+      }
+
+      getContext() {
+        return this.context;
+      }
+    }
+    vi.stubGlobal('OffscreenCanvas', FakeOffscreenCanvas);
+
+    const output = new FakeContext({ width: 800, height: 450 }) as unknown as Canvas2DContext;
+    const backdrop = {} as CanvasImageSource;
+
+    applyBlurEffect(output, blurClip(), { x: 20, y: 30, width: 200, height: 100 }, { source: backdrop });
+
+    expect(sourceContexts).toHaveLength(4);
+    expect(sourceContexts[0]!.drawImage.mock.calls[0]![0]).toBe(backdrop);
+    expect(sourceContexts[0]!.drawImage.mock.calls[0]![1]).toEqual(expect.any(Number));
+    expect(output.drawImage).toHaveBeenCalledOnce();
+  });
 });

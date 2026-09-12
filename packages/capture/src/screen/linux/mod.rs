@@ -3,11 +3,13 @@ mod cursor_buttons;
 mod cursor_fusion;
 mod diagnostics;
 mod ffmpeg;
+mod ffmpeg_cache;
 mod ffmpeg_encoder;
 mod ffmpeg_process;
 #[cfg(test)]
 mod ffmpeg_process_tests;
 mod ffmpeg_sink;
+mod gpu_inventory;
 mod input_monitor;
 #[cfg(test)]
 mod input_monitor_tests;

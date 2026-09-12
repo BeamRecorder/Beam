@@ -213,6 +213,9 @@ export function useProjectEditorState(options: {
   if (getCurrentScope()) {
     onScopeDispose(() => {
       loadGeneration += 1;
+      if (scheduledSave.value) {
+        void saveNow().catch((error) => console.error('[Beam editor] failed to save before leaving project', error));
+      }
       if (timer) clearTimeout(timer);
       timer = null;
       scheduledSave.value = false;

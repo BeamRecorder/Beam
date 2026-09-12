@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { capture } from '../../api/capture';
+import EditorHistoryControls from './EditorHistoryControls.vue';
 import VideoProjectEdition from './VideoProjectEdition.vue';
 import ExportPopover from '../export/ExportPopover.vue';
 import Button from '~/ui/button/Button.vue';
 import Tooltip from '~/ui/tooltip/Tooltip.vue';
-import { ArrowLeft, Redo2, Undo2 } from '@lucide/vue';
+import { ArrowLeft } from '@lucide/vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
 import PreviewPerformanceWidget from './performance/PreviewPerformanceWidget.vue';
@@ -72,6 +73,18 @@ const openDiscordInvite = () => {
         {{ t('exitToHUD') }}
       </Button>
       <VideoProjectEdition :project="project" :is-saving="isSaving" @open-project="emit('open-project', $event)" />
+      <EditorHistoryControls
+        :can-undo="canUndo"
+        :can-redo="canRedo"
+        :tooltip-position="historyTooltipPosition"
+        @undo="emit('undo')"
+        @redo="emit('redo')"
+      />
+    </div>
+
+    <div class="titlebar-drag-region" aria-hidden="true" />
+
+    <div class="right-actions">
       <EditorPresetControls
         :document="presetDocument"
         :dirty="presetDirty"
@@ -81,31 +94,6 @@ const openDiscordInvite = () => {
         @delete="emit('presetDelete')"
         @save="emit('presetSave')"
       />
-      <div class="history-actions">
-        <Button
-          variant="ghost"
-          size="xs"
-          :icon="Undo2"
-          :disabled="!canUndo"
-          :tooltip="t('undoTooltip')"
-          :tooltip-position="historyTooltipPosition || 'bottom'"
-          @click.stop="emit('undo')"
-        />
-        <Button
-          variant="ghost"
-          size="xs"
-          :icon="Redo2"
-          :disabled="!canRedo"
-          :tooltip="t('redoTooltip')"
-          :tooltip-position="historyTooltipPosition || 'bottom'"
-          @click.stop="emit('redo')"
-        />
-      </div>
-    </div>
-
-    <div class="titlebar-drag-region" aria-hidden="true" />
-
-    <div class="right-actions">
       <PreviewPerformanceWidget v-if="performanceSnapshot" :snapshot="performanceSnapshot" />
       <Tooltip :content="t('discordTooltip')" position="bottom">
         <button type="button" class="discord-btn" :aria-label="t('discordAriaLabel')" @click.stop="openDiscordInvite">
@@ -172,13 +160,6 @@ const openDiscordInvite = () => {
   margin-left: 10px;
   object-fit: contain;
   flex: 0 0 auto;
-}
-
-.history-actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  margin-left: 8px;
 }
 
 .exit-btn {

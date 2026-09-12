@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { SelectedClipProperties } from './clip-properties-types';
 import { computed, ref, watch } from 'vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
 import Button from '~/ui/button/Button.vue';
@@ -22,41 +23,8 @@ import { useClipCornerRadius } from './useClipCornerRadius';
 import type { PhoneFrameFill } from '~/media/shared/color-fill-types';
 const { t } = useTranslate('ClipPropertiesPanel');
 const props = defineProps<{
-  selectedClip: {
-    id: string;
-    kind: string;
-    name?: string;
-    timelineStartMs: number;
-    timelineDurationMs: number;
-    playbackRate?: number;
-    enabled?: boolean;
-    isLinked?: boolean;
-    shadowSize?: string;
-    shadowBlur?: number;
-    shadowMode?: ClipShadowMode;
-    shadowColor?: string;
-    shadowDirection?: string;
-    cornerRadius?: string | number;
-    borderEnabled?: boolean;
-    borderColor?: string;
-    borderWidth?: number;
-    frame?: ClipFrame;
-    frameTitle?: string;
-    frameColor?: string;
-    frameShowMenu?: boolean;
-    frameShowScrollbars?: boolean;
-    frameChromeScale?: number;
-    phoneFrameFill?: PhoneFrameFill;
-    clipTransform?: NormalizedTransform;
-    isMirrored?: boolean;
-    isMirroredY?: boolean;
-    cameraLayoutPreset?: CameraLayoutPreset;
-    cameraFramingPreset?: CameraFramingPreset;
-    cameraSplitRatio?: number;
-    cameraSplitPadding?: number;
-    reactToZoom?: boolean;
-    hasLinkedScreen?: boolean;
-  } | null;
+  hideLayout?: boolean;
+  selectedClip: SelectedClipProperties | null;
 }>();
 const emit = defineEmits<{
   (e: 'update:playbackRate', rate: number): void;
@@ -233,7 +201,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
 
     <div v-else class="options-group">
       <CameraLayoutPanel
-        v-if="['screen', 'video', 'image', 'webcam'].includes(selectedClip.kind)"
+        v-if="!hideLayout && ['screen', 'video', 'image', 'webcam'].includes(selectedClip.kind)"
         :layout="selectedClip.cameraLayoutPreset ?? 'custom'"
         :framing="selectedClip.cameraFramingPreset ?? 'custom'"
         :has-linked-screen="selectedClip.hasLinkedScreen ?? false"
@@ -247,7 +215,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
         @update:split-padding="emit('update:cameraSplitPadding', $event)"
         @update:react-to-zoom="emit('update:reactToZoom', $event)"
       />
-      <Divider v-if="['screen', 'video', 'image', 'webcam'].includes(selectedClip.kind)" spacing="xs" />
+      <Divider v-if="!hideLayout && ['screen', 'video', 'image', 'webcam'].includes(selectedClip.kind)" spacing="xs" />
 
       <!-- Placement Section -->
       <div

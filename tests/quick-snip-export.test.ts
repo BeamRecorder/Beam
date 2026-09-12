@@ -89,7 +89,7 @@ const task = (): QuickSnipRenderTask => {
         settings: {
           editor: { schemaVersion: 1 },
           devices: {},
-          export: { preset: 'high', frameRate: 60, resolution: '720p' },
+          export: { format: 'webm', preset: 'high', frameRate: 60, resolution: '720p', includeAudio: true },
           quickSnip: { automaticZoom: false },
         },
       },
@@ -217,17 +217,52 @@ describe('Quick Snip composition export', () => {
     expect(request.snapshot.background).toEqual({ kind: 'color', color: '#123456' });
     expect(input).toEqual(before);
   });
-  it('keeps raw captures free of presentation effects and honors audio exclusion', () => {
+  it.each([
+    {
+      mode: 'studio' as const,
+      format: 'mp4' as const,
+      preset: 'low' as const,
+      frameRate: 24,
+      resolution: '1080p',
+      includeAudio: false,
+      width: 1920,
+      height: 1080,
+    },
+    {
+      mode: 'instant' as const,
+      format: 'webm' as const,
+      preset: 'high' as const,
+      frameRate: 60,
+      resolution: '720p',
+      includeAudio: true,
+      width: 1280,
+      height: 720,
+    },
+  ])('applies every video preset export setting to $mode captures', (videoPreset) => {
     const input = task();
-    input.configuration.mode = 'raw';
-    input.configuration.preset.settings.export.includeAudio = false;
-    const { request, state } = quickSnipExportRequest(input, [], []);
-    expect(request.includeAudio).toBe(false);
-    expect(state.presentation.canvas.showBackground).toBe(false);
-    expect(state.presentation.canvas.width).toBe(1600);
-    expect(state.zoom.elements).toEqual([]);
-    const screen = request.snapshot.composition.clips.find((clip) => clip.kind === 'screen');
-    expect(screen?.kind === 'screen' && screen.appearance.cornerRadius).toBe('none');
+    input.configuration.mode = videoPreset.mode;
+    input.configuration.format = videoPreset.format;
+    input.configuration.preset.settings.export = {
+      format: videoPreset.format,
+      preset: videoPreset.preset,
+      frameRate: videoPreset.frameRate,
+      resolution: videoPreset.resolution,
+      includeAudio: videoPreset.includeAudio,
+    };
+
+    const { request } = quickSnipExportRequest(input, [], []);
+
+    expect(request.format).toBe(videoPreset.format);
+    expect(request.preset).toBe(videoPreset.preset);
+    expect(request.includeAudio).toBe(videoPreset.includeAudio);
+    expect(request.snapshot.render.fps).toBe(videoPreset.frameRate);
+    expect(request.snapshot.canvas).toEqual(
+      expect.objectContaining({
+        width: videoPreset.width,
+        height: videoPreset.height,
+      }),
+    );
+    expect(request.snapshot.composition.clips.some((clip) => clip.kind === 'screen')).toBe(true);
   });
 
   it('preserves the native screen-track failure reason', () => {
@@ -253,6 +288,24 @@ describe('Quick Snip composition export', () => {
     expect(state.zoom.elements).toHaveLength(1);
     expect(state.zoom.elements[0]).toEqual(expect.objectContaining({ sessionId: 'session', enabled: true }));
     expect(request.snapshot.zooms).toEqual(state.zoom.elements);
+  });
+
+  it('disables automatic zoom while preserving preset canvas, cursor effects and clip appearance', () => {
+    const input = task();
+    input.configuration.automaticZoom = true;
+    input.editorData.cursor.available = true;
+    input.editorData.cursor.telemetry = [{ timeMs: 1_000, cx: 0.35, cy: 0.45, interactionType: 'click' }];
+    const withZoom = quickSnipExportRequest(input, [], []);
+    input.configuration.automaticZoom = false;
+    const withoutZoom = quickSnipExportRequest(input, [], []);
+    expect(withZoom.state.zoom.elements).toHaveLength(1);
+    expect(withoutZoom.state.zoom.elements).toHaveLength(1);
+    expect(withoutZoom.state.zoom.elements.every((zoom) => !zoom.enabled)).toBe(true);
+    expect(withoutZoom.state.presentation).toEqual(withZoom.state.presentation);
+    expect(withoutZoom.state.composition).toEqual(withZoom.state.composition);
+    expect(withoutZoom.request.snapshot.canvas).toEqual(withZoom.request.snapshot.canvas);
+    expect(withoutZoom.request.format).toBe('webm');
+    expect(withoutZoom.request.preset).toBe('high');
   });
 
   it('uses safe frame and canvas defaults when source and preset values are unsupported', () => {

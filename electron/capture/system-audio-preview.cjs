@@ -2,7 +2,7 @@ const PREVIEW_STATES = new Set(['idle', 'completed', 'failed']);
 
 // One native preview serves several renderer windows. A renderer owns only its
 // subscription; the Rust engine still owns the monitor and capture lifecycle.
-function createSystemAudioPreview({ request }) {
+function createSystemAudioPreview({ request, canCleanup = () => true, canStart = () => true }) {
   const clients = new Map();
   let active = false;
   let generation = 0;
@@ -41,11 +41,17 @@ function createSystemAudioPreview({ request }) {
     enqueue(async () => {
       if (!removeClient(sender) || clients.size > 0) return;
       invalidate();
-      await request('stop-system-audio-preview');
+      if (!canCleanup()) return;
+      try {
+        await request('stop-system-audio-preview');
+      } catch (error) {
+        // Shutdown owns native teardown; a stop already in flight can be rejected.
+        if (canCleanup()) throw error;
+      }
     });
   const start = (sender) =>
     enqueue(async () => {
-      if (sender.isDestroyed()) return;
+      if (sender.isDestroyed() || !canStart()) return;
       if (!clients.has(sender)) {
         const destroyed = () => {
           void stop(sender).catch((error) => console.warn('[Audio preview] Cleanup failed:', error.message));
@@ -63,7 +69,7 @@ function createSystemAudioPreview({ request }) {
     });
   const level = (sender) =>
     enqueue(async () => {
-      if (!clients.has(sender) || !(await ensureStarted())) return { level: 0 };
+      if (!canStart() || !clients.has(sender) || !(await ensureStarted())) return { level: 0 };
       return request('system-audio-preview-level');
     });
   return { start, stop, level, invalidate };

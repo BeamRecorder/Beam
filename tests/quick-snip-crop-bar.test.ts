@@ -16,7 +16,13 @@ const mocks = vi.hoisted(() => ({
     quickSnipToggle: vi.fn(),
     quickSnipStop: vi.fn(),
     quickSnipCancel: vi.fn(),
+    prepareRecordingSurface: vi.fn(),
+    captureScreenshot: vi.fn(),
+    listBackgroundLibrary: vi.fn(),
+    saveScreenshot: vi.fn(),
+    exportScreenshot: vi.fn(),
     configureQuickSnip: vi.fn(),
+    chooseQuickSnipDevice: vi.fn(),
     reportQuickSnip: vi.fn(),
     notifyQuickSnipCropReady: vi.fn(),
     onQuickSnipConfigure: vi.fn(),
@@ -41,6 +47,7 @@ const mocks = vi.hoisted(() => ({
   preferencesLoad: null as ReturnType<typeof vi.fn> | null,
   onComplete: null as ((session: RecordingSessionResult) => unknown) | null,
   onStartupFailure: null as ((failure: RecordingStartFailure) => unknown) | null,
+  onStartupCancelled: null as (() => unknown) | null,
   configure: null as ((configuration: QuickSnipConfiguration) => unknown) | null,
   command: null as ((command: 'start' | 'stop' | 'cancel') => unknown) | null,
   state: null as ((snapshot: { state: string }) => unknown) | null,
@@ -49,7 +56,24 @@ const mocks = vi.hoisted(() => ({
   offState: null as ReturnType<typeof vi.fn> | null,
 }));
 
+const deviceMocks = vi.hoisted(() => ({ cameras: vi.fn(), microphones: vi.fn() }));
+vi.mock('~/api/camera-recorder', () => ({ listBrowserCameras: deviceMocks.cameras }));
+vi.mock('~/api/microphone-recorder', () => ({ listBrowserMicrophones: deviceMocks.microphones }));
+
+const screenshotMocks = vi.hoisted(() => ({
+  screenshotState: vi.fn(),
+  encodeScreenshot: vi.fn(),
+  screenshotPreview: vi.fn(),
+}));
+
 vi.mock('~/api/capture', () => ({ capture: mocks.capture }));
+vi.mock('~/components/video-editor/screenshot/screenshot-state', () => ({
+  screenshotState: screenshotMocks.screenshotState,
+}));
+vi.mock('~/components/video-editor/screenshot/screenshot-render', () => ({
+  encodeScreenshot: screenshotMocks.encodeScreenshot,
+  screenshotPreview: screenshotMocks.screenshotPreview,
+}));
 vi.mock('~/stores/preferences', async () => {
   const { reactive } = await import('vue');
   const settings = reactive({
@@ -78,7 +102,9 @@ vi.mock('~/components/hud/recorder/useRecordingController', async () => {
     useRecordingController: (
       onComplete: (session: RecordingSessionResult) => unknown,
       onStartupFailure: (failure: RecordingStartFailure) => unknown,
+      onStartupCancelled: () => unknown,
     ) => {
+      mocks.onStartupCancelled = onStartupCancelled;
       const recorder = {
         phase: ref('idle'),
         recordingTime: ref('00:00.0'),
@@ -97,6 +123,7 @@ vi.mock('~/components/hud/recorder/useRecordingController', async () => {
 });
 
 import type { QuickSnipConfiguration } from '~/api/types/quick-snip';
+import type { ScreenshotDocument, ScreenshotState } from '~/api/types/screenshot';
 import type { RecordingSessionResult, RecordingStartFailure } from '~/components/hud/recorder/recording-types';
 import { setCurrentLocale } from '~/i18n';
 import QuickSnipCropBar from '../src/components/quick-snip/QuickSnipCropBar.vue';
@@ -109,7 +136,7 @@ const preset = {
   settings: {
     editor: { schemaVersion: 1 as const },
     devices: { micId: 'mic-1', cameraId: 'camera-1', systemAudioMode: 'off' },
-    export: { format: 'mp4' as const },
+    export: { format: 'mp4' as const, preset: 'medium' as const, frameRate: 30, resolution: '1080p' as const },
     quickSnip: { automaticZoom: true },
   },
 };
@@ -125,9 +152,21 @@ const configuration = {
   regionBounds: { x: 0, y: 0, width: 1920, height: 1080 },
   displayId: 'display-1',
   screenId: 'screen-1',
-  rawOutputRoot: '/videos/Beam/user/quick-snip/.work',
+  outputRoot: '/videos/Beam/user/projects/studio',
   devices: preset.settings.devices,
 } satisfies QuickSnipConfiguration;
+
+const screenshotState = { format: 'png', quality: 0.95 } as ScreenshotState;
+const screenshotDocument = {
+  id: '00000000-0000-4000-8000-000000000001',
+  name: 'Quick Snip Screenshot',
+  width: 1920,
+  height: 1080,
+  source: 'file:///screenshots/source.png',
+  preset: preset.settings,
+  state: null,
+} satisfies ScreenshotDocument;
+const screenshotBytes = new Uint8Array([1, 2, 3]).buffer;
 
 const windowConfiguration = {
   ...configuration,
@@ -138,23 +177,38 @@ const windowConfiguration = {
 
 const ButtonStub = {
   inheritAttrs: true,
-  props: ['disabled', 'icon', 'loading', 'iconOnly'],
+  props: ['disabled', 'icon', 'loading', 'iconOnly', 'size', 'variant'],
   emits: ['click'],
-  template:
-    '<button v-bind="$attrs" :disabled="disabled || loading" @click="$emit(\'click\')"><component v-if="icon && !$slots.icon && !loading" :is="icon" /><slot v-if="!loading" name="icon" /><slot /></button>',
+  template: `
+    <button
+      v-bind="$attrs"
+      :class="['btn', 'btn-' + variant, 'btn-' + size]"
+      :disabled="disabled || loading"
+      @click="$emit('click')"
+    >
+      <span v-if="icon && !$slots.icon && !loading" class="btn-icon-wrapper"><component :is="icon" /></span>
+      <span v-if="$slots.icon && !loading" class="btn-icon-wrapper"><slot name="icon" /></span>
+      <span v-if="!iconOnly && $slots.default" class="btn-content">
+        <span class="btn-content-label"><slot /></span>
+      </span>
+    </button>
+  `,
 };
-const mountBar = async () => {
+const mountBar = async (initialConfiguration: QuickSnipConfiguration = configuration) => {
   const wrapper = mount(QuickSnipCropBar, {
     attachTo: document.body,
     global: { stubs: { Button: ButtonStub } },
   });
-  await mocks.configure?.(configuration);
+  await mocks.configure?.(initialConfiguration);
   await flushPromises();
   return wrapper;
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  deviceMocks.cameras.mockResolvedValue([{ id: 'camera:chromium:usb', label: 'USB camera', isDefault: true }]);
+  deviceMocks.microphones.mockResolvedValue([]);
+  mocks.capture.chooseQuickSnipDevice.mockResolvedValue(null);
   showPickerTargets.length = 0;
   Object.defineProperty(HTMLSelectElement.prototype, 'showPicker', {
     configurable: true,
@@ -183,8 +237,15 @@ beforeEach(() => {
   mocks.capture.quickSnipToggle.mockResolvedValue({ state: 'preparing' });
   mocks.capture.quickSnipStop.mockResolvedValue({ state: 'finalizing' });
   mocks.capture.quickSnipCancel.mockResolvedValue({ state: 'canceled' });
+  mocks.capture.prepareRecordingSurface.mockResolvedValue(undefined);
+  mocks.capture.captureScreenshot.mockResolvedValue(screenshotDocument);
+  mocks.capture.listBackgroundLibrary.mockResolvedValue([]);
+  mocks.capture.saveScreenshot.mockResolvedValue(undefined);
+  mocks.capture.exportScreenshot.mockResolvedValue('/screenshots/copied.png');
   mocks.capture.configureQuickSnip.mockResolvedValue({ state: 'selecting' });
   mocks.capture.reportQuickSnip.mockResolvedValue({ state: 'recording' });
+  screenshotMocks.screenshotState.mockReturnValue(screenshotState);
+  screenshotMocks.encodeScreenshot.mockResolvedValue(screenshotBytes);
   mocks.capture.onQuickSnipConfigure.mockImplementation((listener: (value: QuickSnipConfiguration) => unknown) => {
     mocks.configure = listener;
     mocks.offConfigure = vi.fn();
@@ -214,7 +275,15 @@ describe('QuickSnipCropBar', () => {
   it('keeps preset selection but exposes no preset CRUD controls', async () => {
     const wrapper = await mountBar();
 
-    expect(wrapper.findAll('select')).toHaveLength(3);
+    expect(wrapper.findAll('select')).toHaveLength(1);
+    expect(wrapper.get('.capture-modes').attributes('aria-label')).toBe('Mode');
+    expect(
+      wrapper
+        .get('.capture-modes')
+        .findAll('button')
+        .map((button) => button.attributes('aria-label')),
+    ).toEqual(['Studio', 'Screenshot']);
+    expect(wrapper.get('[aria-label="Studio"]').attributes('aria-pressed')).toBe('true');
     expect(wrapper.text()).not.toMatch(/Add|Rename|Delete|Save/);
     expect(wrapper.find('input[type="checkbox"]').exists()).toBe(false);
     expect(wrapper.get('button[aria-label="Microphone"]').attributes('aria-pressed')).toBe('true');
@@ -225,28 +294,38 @@ describe('QuickSnipCropBar', () => {
     wrapper.unmount();
   });
 
-  it('opens each enabled native select from its setting field without reopening a select click', async () => {
+  it('keeps two equal mode buttons with a full French accessible Screenshot label', async () => {
+    setCurrentLocale('fr');
     const wrapper = await mountBar();
-    const fields = [
-      ['.mode-field .field-label', '.mode-select'],
-      ['.preset-field .field-label', '.preset-select'],
-      ['.format-field .field-label', '.format-select'],
-    ] as const;
-    const focusSpies = fields.map(([, selectSelector]) =>
-      vi.spyOn(wrapper.get<HTMLSelectElement>(selectSelector).element, 'focus'),
-    );
 
-    for (let index = 0; index < fields.length; index += 1) {
-      await wrapper.get(fields[index]![0]).trigger('click');
-      expect(focusSpies[index]).toHaveBeenCalledOnce();
-      expect(showPicker).toHaveBeenCalledTimes(index + 1);
-      expect(showPickerTargets[index]).toBe(wrapper.get<HTMLSelectElement>(fields[index]![1]).element);
-    }
+    try {
+      const group = wrapper.get('.capture-modes');
+      const buttons = group.findAll('button');
 
-    for (const [, selectSelector] of fields) {
-      await wrapper.get(selectSelector).trigger('click');
+      expect(group.classes()).toEqual(expect.arrayContaining(['full-width', 'column-layout']));
+      expect(group.attributes('style')).toContain('--button-group-columns: 2');
+      expect(buttons).toHaveLength(2);
+      expect(buttons[1].attributes('aria-label')).toBe('Capture d’écran');
+      expect(buttons[1].attributes('title')).toBe('Capture d’écran');
+      expect(buttons[1].get('.btn-content-label').text()).toBe('Capture d’écran');
+    } finally {
+      wrapper.unmount();
+      setCurrentLocale('en');
     }
-    expect(showPicker).toHaveBeenCalledTimes(fields.length);
+  });
+
+  it('opens the enabled preset select from its setting field without reopening a select click', async () => {
+    const wrapper = await mountBar();
+    const select = wrapper.get<HTMLSelectElement>('.preset-select').element;
+    const focus = vi.spyOn(select, 'focus');
+
+    await wrapper.get('.preset-field .field-label').trigger('click');
+    expect(focus).toHaveBeenCalledOnce();
+    expect(showPicker).toHaveBeenCalledOnce();
+    expect(showPickerTargets[0]).toBe(select);
+
+    await wrapper.get('.preset-select').trigger('click');
+    expect(showPicker).toHaveBeenCalledOnce();
 
     wrapper.unmount();
   });
@@ -256,10 +335,10 @@ describe('QuickSnipCropBar', () => {
     mocks.recorder!.phase.value = 'recording';
     await wrapper.vm.$nextTick();
 
-    const select = wrapper.get<HTMLSelectElement>('.format-select').element;
+    const select = wrapper.get<HTMLSelectElement>('.preset-select').element;
     const focus = vi.spyOn(select, 'focus');
     expect(select.disabled).toBe(true);
-    await wrapper.get('.format-field .field-label').trigger('click');
+    await wrapper.get('.preset-field .field-label').trigger('click');
 
     expect(focus).not.toHaveBeenCalled();
     expect(showPicker).not.toHaveBeenCalled();
@@ -407,25 +486,33 @@ describe('QuickSnipCropBar', () => {
 
     expect(english.get('.crop-bar').attributes('aria-label')).toBe('Quick Snip controls');
     expect(english.get('.drag-handle').attributes('title')).toBe('Move Quick Snip');
-    expect(english.get('.mode-field .field-label').text()).toBe('Mode');
-    expect(english.find('.mode-field svg').exists()).toBe(true);
-    expect(english.get('.mode-field').attributes('title')).toBe('Apply your preset and visual effects');
-    expect(english.get('.mode-select').attributes('title')).toBe('Apply your preset and visual effects');
+    expect(english.get('.capture-modes').attributes('aria-label')).toBe('Mode');
+    expect(
+      english
+        .get('.capture-modes')
+        .findAll('button')
+        .map((button) => button.attributes('title')),
+    ).toEqual(['Studio', 'Screenshot']);
+    expect(english.get('.capture-modes').findAll('button svg')).toHaveLength(2);
     expect(english.get('.preset-field .field-label').text()).toBe('Preset');
     expect(english.find('.preset-field svg').exists()).toBe(true);
     expect(english.get('.preset-field').attributes('title')).toBe('Editor preset');
     expect(english.get('.preset-select').attributes('aria-label')).toBe('Editor preset');
     expect(english.get('.preset-select').attributes('title')).toBe('Editor preset');
     expect(english.get('.preset-select option[value="default"]').text()).toBe('Default');
-    expect(english.get('.format-field .field-label').text()).toBe('Format');
-    expect(english.find('.format-field svg').exists()).toBe(true);
-    expect(english.get('.format-select').attributes('title')).toBe('Export video format');
-    expect(english.get('.format-select').attributes('aria-label')).toBe('Export video format');
+    expect(english.find('.format-field').exists()).toBe(false);
+    expect(english.findAll('select')).toHaveLength(1);
     expect(english.find('.control-group[aria-label="Recording sources"]').exists()).toBe(true);
     expect(english.find('.control-group[aria-label="Studio effects"]').exists()).toBe(true);
-    expect(english.get('button[aria-label="Microphone"]').attributes('title')).toBe('Microphone');
-    expect(english.get('button[aria-label="System audio"]').attributes('title')).toBe('System audio');
-    expect(english.get('button[aria-label="Camera"]').attributes('title')).toBe('Camera');
+    expect(english.get('button[aria-label="Microphone"]').attributes('title')).toBe(
+      'Microphone — right-click to choose a source',
+    );
+    expect(english.get('button[aria-label="System audio"]').attributes('title')).toBe(
+      'System audio — right-click to choose a source',
+    );
+    expect(english.get('button[aria-label="Camera"]').attributes('title')).toBe(
+      'Camera — right-click to choose a source',
+    );
     expect(english.get('button[aria-label="Automatic zoom"]').attributes('title')).toBe('Automatic zoom');
     const captureButton = english.get('.capture-actions button');
     expect(captureButton.attributes('title')).toBe('Start: Alt+Shift+S');
@@ -452,20 +539,30 @@ describe('QuickSnipCropBar', () => {
 
     expect(french.get('.crop-bar').attributes('aria-label')).toBe('Commandes Quick Snip');
     expect(french.get('.drag-handle').attributes('title')).toBe('Déplacer Quick Snip');
-    expect(french.get('.mode-field .field-label').text()).toBe('Mode');
-    expect(french.get('.mode-field').attributes('title')).toBe('Appliquer le préréglage et les effets visuels');
+    expect(french.get('.capture-modes').attributes('aria-label')).toBe('Mode');
+    expect(
+      french
+        .get('.capture-modes')
+        .findAll('button')
+        .map((button) => button.attributes('title')),
+    ).toEqual(['Studio', 'Capture d’écran']);
     expect(french.get('.preset-field .field-label').text()).toBe('Préréglage');
     expect(french.get('.preset-field').attributes('title')).toBe('Préréglage de l’éditeur');
     expect(french.get('.preset-select').attributes('title')).toBe('Préréglage de l’éditeur');
     expect(french.get('.preset-select option[value="default"]').text()).toBe('Par défaut');
-    expect(french.get('.format-field .field-label').text()).toBe('Format');
-    expect(french.get('.format-select').attributes('title')).toBe('Format de la vidéo exportée');
-    expect(french.get('.format-select').attributes('aria-label')).toBe('Format de la vidéo exportée');
+    expect(french.find('.format-field').exists()).toBe(false);
+    expect(french.findAll('select')).toHaveLength(1);
     expect(french.find('.control-group[aria-label="Sources de l’enregistrement"]').exists()).toBe(true);
     expect(french.find('.control-group[aria-label="Effets Studio"]').exists()).toBe(true);
-    expect(french.get('button[aria-label="Microphone"]').attributes('title')).toBe('Microphone');
-    expect(french.get('button[aria-label="Audio système"]').attributes('title')).toBe('Audio système');
-    expect(french.get('button[aria-label="Caméra"]').attributes('title')).toBe('Caméra');
+    expect(french.get('button[aria-label="Microphone"]').attributes('title')).toBe(
+      'Microphone — clic droit pour choisir une source',
+    );
+    expect(french.get('button[aria-label="Audio système"]').attributes('title')).toBe(
+      'Audio système — clic droit pour choisir une source',
+    );
+    expect(french.get('button[aria-label="Caméra"]').attributes('title')).toBe(
+      'Caméra — clic droit pour choisir une source',
+    );
     expect(french.get('button[aria-label="Zoom automatique"]').attributes('title')).toBe('Zoom automatique');
     expect(french.get('.capture-actions button').attributes('title')).toBe('Démarrer : Alt+Shift+S');
     expect(french.get('.capture-actions button').text()).toContain('Démarrer');
@@ -486,7 +583,7 @@ describe('QuickSnipCropBar', () => {
     expect(wrapper.get('.settings-row').attributes('aria-label')).toBe('Recording settings');
     expect(wrapper.find('.controls-row').exists()).toBe(true);
     expect(wrapper.findAll('.crop-controls > .divider')).toHaveLength(1);
-    expect(wrapper.findAll('[role="separator"][aria-orientation="vertical"]')).toHaveLength(4);
+    expect(wrapper.findAll('[role="separator"][aria-orientation="vertical"]')).toHaveLength(3);
 
     const row = wrapper.get('.controls-row').element;
     const children = Array.from(row.children);
@@ -514,34 +611,253 @@ describe('QuickSnipCropBar', () => {
     wrapper.unmount();
   });
 
-  it('keeps Raw free of camera, preset and zoom controls and starts with native-raw options', async () => {
+  it('preserves the crop bar and mode group while only switching controls between Screenshot and video', async () => {
     const wrapper = await mountBar();
-    await wrapper.get('.mode-select').setValue('raw');
-    await wrapper.vm.$nextTick();
+    const section = wrapper.get('.crop-bar').element;
+    const modeGroup = wrapper.get('.capture-modes').element;
+    const videoRow = wrapper.get('.controls-row').element;
 
-    expect(wrapper.findAll('select')).toHaveLength(2);
-    expect(wrapper.find('.preset-field').exists()).toBe(false);
-    expect(wrapper.get('.raw-description').text()).toBe('Without visual effects');
+    await mocks.configure?.({ ...configuration, mode: 'instant' });
+    await wrapper.vm.$nextTick();
+    await flushPromises();
+
+    expect(wrapper.get('.crop-bar').element).toBe(section);
+    expect(wrapper.get('.capture-modes').element).toBe(modeGroup);
+    expect(wrapper.get('.controls-row').element).toBe(videoRow);
+
+    await wrapper.get('[aria-label="Screenshot"]').trigger('click');
+    await flushPromises();
+    const screenshotRow = wrapper.get('.controls-row').element;
+
+    expect(wrapper.get('.crop-bar').element).toBe(section);
+    expect(wrapper.get('.capture-modes').element).toBe(modeGroup);
+    expect(screenshotRow).not.toBe(videoRow);
+    expect(wrapper.find('[aria-label="Microphone"]').exists()).toBe(false);
+
+    await wrapper.get('[aria-label="Studio"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.get('.crop-bar').element).toBe(section);
+    expect(wrapper.get('.capture-modes').element).toBe(modeGroup);
+    expect(wrapper.get('.controls-row').element).not.toBe(screenshotRow);
+    expect(wrapper.find('[aria-label="Microphone"]').exists()).toBe(true);
+
+    wrapper.unmount();
+  });
+
+  it('keeps the screenshot preset and hides all audio, camera, and zoom controls', async () => {
+    const screenshotConfiguration = {
+      ...configuration,
+      mode: 'screenshot' as const,
+      screenshotAction: 'copy' as const,
+    } satisfies QuickSnipConfiguration;
+    const wrapper = await mountBar(screenshotConfiguration);
+
+    expect(wrapper.get('[aria-label="Screenshot"]').attributes('aria-pressed')).toBe('true');
+    expect(wrapper.find('.preset-field').exists()).toBe(true);
+    expect(wrapper.findAll('select')).toHaveLength(1);
+    expect(wrapper.find('[aria-label="Microphone"]').exists()).toBe(false);
+    expect(wrapper.find('[aria-label="System audio"]').exists()).toBe(false);
     expect(wrapper.find('[aria-label="Camera"]').exists()).toBe(false);
     expect(wrapper.find('[aria-label="Automatic zoom"]').exists()).toBe(false);
-    expect(wrapper.find('input[type="checkbox"]').exists()).toBe(false);
-    expect(wrapper.findAll('.control-group')).toHaveLength(1);
-    expect(wrapper.findAll('[role="separator"][aria-orientation="vertical"]')).toHaveLength(3);
+    expect(wrapper.findAll('.control-group')).toHaveLength(0);
+    expect(mocks.capture.getEditorPresets).toHaveBeenCalledWith('screenshot');
+
+    wrapper.unmount();
+  });
+
+  it('selects screenshot presets from their own preset collection in the shared preset field', async () => {
+    const screenshotPreset = { ...preset, id: 'screenshot-preset', name: 'Screenshot preset' };
+    const screenshotPresets = {
+      schemaVersion: 1 as const,
+      activePresetId: screenshotPreset.id,
+      presets: [preset, screenshotPreset],
+    };
+    mocks.capture.getEditorPresets.mockResolvedValue(screenshotPresets);
+    mocks.capture.selectEditorPreset.mockResolvedValue(screenshotPresets);
+    const screenshotConfiguration = {
+      ...configuration,
+      mode: 'screenshot' as const,
+      screenshotAction: 'copy' as const,
+    } satisfies QuickSnipConfiguration;
+    const wrapper = await mountBar(screenshotConfiguration);
+    mocks.capture.selectEditorPreset.mockClear();
+    mocks.capture.configureQuickSnip.mockClear();
+
+    await wrapper.get('.preset-select').setValue(screenshotPreset.id);
+    await flushPromises();
+
+    expect(mocks.capture.selectEditorPreset).toHaveBeenCalledWith(screenshotPreset.id, 'screenshot');
+    expect(wrapper.get('.preset-select option:checked').text()).toBe('Screenshot preset');
+    expect(mocks.capture.configureQuickSnip).toHaveBeenLastCalledWith(
+      expect.objectContaining({ mode: 'screenshot', automaticZoom: false }),
+    );
+    expect(mocks.capture.updateActiveEditorPreset).not.toHaveBeenCalled();
+
+    wrapper.unmount();
+  });
+
+  it('offers one Screenshot action that captures and copies without opening the editor', async () => {
+    const wrapper = await mountBar();
+    await wrapper.get('[aria-label="Screenshot"]').trigger('click');
+    await flushPromises();
+
+    mocks.capture.quickSnipStart.mockClear();
+    await wrapper
+      .findAll('.capture-actions button')
+      .find((button) => button.text() === 'Screenshot')!
+      .trigger('click');
+    expect(mocks.capture.quickSnipStart).toHaveBeenCalledWith(
+      expect.objectContaining({ mode: 'screenshot', screenshotAction: 'copy', automaticZoom: false }),
+    );
+
+    expect(wrapper.findAll('.capture-actions button').map((button) => button.text())).toEqual(['Screenshot', '']);
+    expect(wrapper.find('.controls-row .control-divider').exists()).toBe(false);
+    expect(wrapper.get('.capture-actions button').attributes('title')).toContain('Screenshot');
+
+    wrapper.unmount();
+  });
+
+  it('restores video preset devices and zoom after leaving Screenshot without persisting screenshot settings', async () => {
+    const wrapper = await mountBar({ ...configuration, mode: 'screenshot', devices: {}, automaticZoom: false });
+    mocks.capture.updateActiveEditorPreset.mockClear();
+    mocks.capture.configureQuickSnip.mockImplementationOnce(async () => {
+      mocks.configure?.(configuration);
+      return { state: 'selecting' };
+    });
+
+    await wrapper.get('[aria-label="Studio"]').trigger('click');
+    await flushPromises();
+
+    expect(mocks.capture.updateActiveEditorPreset).not.toHaveBeenCalled();
+    expect(wrapper.get('[aria-label="Automatic zoom"]').attributes('aria-pressed')).toBe('true');
+    await mocks.command?.('start');
+    await flushPromises();
+    expect(mocks.capture.updateActiveEditorPreset).toHaveBeenCalledWith(preset.settings);
+    expect(mocks.recorder?.start).toHaveBeenCalledWith(
+      expect.objectContaining({ cameraId: 'camera-1', microphoneId: 'mic-1', systemAudio: false }),
+    );
+    wrapper.unmount();
+  });
+
+  it.each(['studio', 'screenshot', 'instant'] as const)('shows the preset icon for %s capture', async (mode) => {
+    const wrapper = await mountBar({ ...configuration, mode });
+    expect(
+      wrapper
+        .get('.preset-field')
+        .find(mode === 'screenshot' ? '.lucide-scan-line' : '.lucide-clapperboard')
+        .exists(),
+    ).toBe(true);
+    wrapper.unmount();
+  });
+
+  it('returns a cancelled screenshot to the selecting controls without saving or showing an export failure', async () => {
+    const wrapper = await mountBar({ ...configuration, mode: 'screenshot' });
+    mocks.capture.captureScreenshot.mockResolvedValueOnce(null);
+    mocks.capture.reportQuickSnip.mockImplementationOnce(async () => {
+      mocks.state?.({ state: 'selecting' });
+      return { state: 'selecting' };
+    });
+    await mocks.command?.('start');
+    await flushPromises();
+    expect(mocks.capture.reportQuickSnip).toHaveBeenCalledWith({ type: 'capture-cancelled', name: configuration.name });
+    expect(mocks.capture.saveScreenshot).not.toHaveBeenCalled();
+    expect(mocks.capture.exportScreenshot).not.toHaveBeenCalled();
+    expect(wrapper.get('.capture-actions button').attributes('disabled')).toBeUndefined();
+    expect(wrapper.get('[aria-label="Screenshot"]').attributes('aria-pressed')).toBe('true');
+    expect(wrapper.get<HTMLSelectElement>('.preset-select').element.value).toBe('default');
+    await wrapper.get('.capture-actions button').trigger('click');
+    expect(mocks.capture.quickSnipStart).toHaveBeenCalledWith(expect.objectContaining({ mode: 'screenshot' }));
+    wrapper.unmount();
+  });
+
+  it('does not reopen a screenshot selection after the Quick Snip was canceled', async () => {
+    const wrapper = await mountBar({ ...configuration, mode: 'screenshot' });
+    let resolve!: (value: null) => void;
+    mocks.capture.captureScreenshot.mockReturnValueOnce(
+      new Promise<null>((done) => {
+        resolve = done;
+      }),
+    );
+    await mocks.command?.('start');
+    await flushPromises();
+    await mocks.command?.('cancel');
+    resolve(null);
+    await flushPromises();
+    expect(mocks.capture.reportQuickSnip).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'capture-cancelled' }),
+    );
+    wrapper.unmount();
+  });
+
+  it('reports a clean Studio portal cancellation for the current job', async () => {
+    const wrapper = await mountBar();
+    await mocks.command?.('start');
+    await flushPromises();
+    await mocks.onStartupCancelled?.();
+    expect(mocks.capture.reportQuickSnip).toHaveBeenCalledWith({ type: 'capture-cancelled', name: configuration.name });
+    wrapper.unmount();
+  });
+
+  it('captures and copies a native screenshot from the shortcut command', async () => {
+    const screenshotConfiguration = {
+      ...configuration,
+      mode: 'screenshot' as const,
+      screenshotAction: 'copy' as const,
+      excludedWindowHandle: 'native-window',
+    } satisfies QuickSnipConfiguration;
+    const wrapper = await mountBar(screenshotConfiguration);
+    mocks.capture.reportQuickSnip.mockClear();
 
     await mocks.command?.('start');
     await flushPromises();
-    expect(mocks.capture.quickSnipStart).not.toHaveBeenCalled();
-    expect(mocks.recorder?.start).toHaveBeenCalledWith(
-      expect.objectContaining({
-        cameraId: 'off',
-        cursor: false,
-        recordInteractions: false,
-        region: configuration.region,
-      }),
+
+    expect(mocks.capture.prepareRecordingSurface).toHaveBeenCalledOnce();
+    expect(mocks.capture.captureScreenshot).toHaveBeenCalledWith({
+      screenKind: 'display',
+      screenId: 'screen-1',
+      region: configuration.region,
+      excludedWindowHandles: ['native-window'],
+    });
+    expect(screenshotMocks.screenshotState).toHaveBeenCalledWith(screenshotDocument, []);
+    expect(mocks.capture.saveScreenshot).toHaveBeenCalledWith(screenshotDocument.id, screenshotState);
+    expect(screenshotMocks.encodeScreenshot).toHaveBeenCalledWith(
+      screenshotDocument.source,
+      screenshotState,
+      expect.objectContaining({ onRendered: expect.any(Function) }),
     );
-    expect(mocks.recorder?.start.mock.calls[0][0]).not.toHaveProperty('camera');
-    expect(mocks.recorder?.start.mock.calls[0][0]).not.toHaveProperty('preset');
-    expect(mocks.recorder?.start.mock.calls[0][0]).not.toHaveProperty('zoom');
+    expect(mocks.capture.exportScreenshot).toHaveBeenCalledWith(screenshotDocument.id, screenshotBytes, 'png', true);
+    expect(mocks.capture.reportQuickSnip).toHaveBeenCalledWith({
+      type: 'screenshot',
+      name: configuration.name,
+      screenshotId: screenshotDocument.id,
+    });
+    expect(mocks.recorder?.start).not.toHaveBeenCalled();
+
+    wrapper.unmount();
+  });
+
+  it('hands an editor screenshot capture to the native open flow without exporting a clipboard image', async () => {
+    const screenshotConfiguration = {
+      ...configuration,
+      mode: 'screenshot' as const,
+      screenshotAction: 'edit' as const,
+    } satisfies QuickSnipConfiguration;
+    const wrapper = await mountBar(screenshotConfiguration);
+    mocks.capture.reportQuickSnip.mockClear();
+
+    await mocks.command?.('start');
+    await flushPromises();
+
+    expect(mocks.capture.captureScreenshot).toHaveBeenCalledOnce();
+    expect(mocks.capture.saveScreenshot).not.toHaveBeenCalled();
+    expect(screenshotMocks.encodeScreenshot).not.toHaveBeenCalled();
+    expect(mocks.capture.exportScreenshot).not.toHaveBeenCalled();
+    expect(mocks.capture.reportQuickSnip).toHaveBeenCalledWith({
+      type: 'screenshot',
+      name: configuration.name,
+      screenshotId: screenshotDocument.id,
+    });
 
     wrapper.unmount();
   });
@@ -556,7 +872,7 @@ describe('QuickSnipCropBar', () => {
     mocks.capture.quickSnipStart.mockClear();
     await startButton!.trigger('click');
     expect(mocks.capture.quickSnipStart).toHaveBeenCalledWith(
-      expect.objectContaining({ mode: 'studio', format: 'mp4', automaticZoom: true }),
+      expect.objectContaining({ mode: 'studio', automaticZoom: true, screenshotAction: 'copy' }),
     );
     expect(mocks.capture.configureQuickSnip).not.toHaveBeenCalled();
     expect(mocks.capture.quickSnipToggle).not.toHaveBeenCalled();
@@ -651,7 +967,6 @@ describe('QuickSnipCropBar', () => {
     const wrapper = await mountBar();
     const source = structuredClone(configuration);
 
-    await wrapper.get('.format-select').setValue('webm');
     await wrapper.get('[aria-label="Microphone"]').trigger('click');
     await flushPromises();
 
@@ -747,6 +1062,25 @@ describe('QuickSnipCropBar', () => {
     wrapper.unmount();
   });
 
+  it('starts Instant capture in the output root supplied by its current configuration', async () => {
+    const instantConfiguration = {
+      ...configuration,
+      mode: 'instant' as const,
+      outputRoot: '/videos/Beam/user/projects/instant',
+    } satisfies QuickSnipConfiguration;
+    const wrapper = await mountBar(instantConfiguration);
+
+    await mocks.command?.('start');
+    await flushPromises();
+
+    expect(mocks.recorder?.start).toHaveBeenCalledWith(
+      expect.objectContaining({ outputRoot: instantConfiguration.outputRoot }),
+    );
+    expect(mocks.capture.quickSnipStart).not.toHaveBeenCalled();
+
+    wrapper.unmount();
+  });
+
   it('normalizes device IDs when microphone and camera are re-enabled', async () => {
     const wrapper = mount(QuickSnipCropBar, {
       attachTo: document.body,
@@ -796,12 +1130,11 @@ describe('QuickSnipCropBar', () => {
     wrapper.unmount();
   });
 
-  it('synchronizes format, zoom, and every device toggle from the controls', async () => {
+  it('synchronizes zoom and every device toggle from the controls', async () => {
     const wrapper = await mountBar();
     mocks.capture.updateActiveEditorPreset.mockClear();
     mocks.capture.configureQuickSnip.mockClear();
 
-    await wrapper.get('.format-select').setValue('webm');
     await wrapper.get('button[aria-label="Automatic zoom"]').trigger('click');
     await wrapper.get('[aria-label="Microphone"]').trigger('click');
     await wrapper.get('[aria-label="System audio"]').trigger('click');
@@ -815,7 +1148,6 @@ describe('QuickSnipCropBar', () => {
 
     expect(mocks.capture.configureQuickSnip).toHaveBeenLastCalledWith({
       mode: 'studio',
-      format: 'webm',
       automaticZoom: false,
       devices: {
         micId: 'no-audio',
@@ -852,8 +1184,8 @@ describe('QuickSnipCropBar', () => {
         }),
     );
 
-    const formatChange = wrapper.get('.format-select').setValue('webm');
     const microphoneChange = wrapper.get('[aria-label="Microphone"]').trigger('click');
+    const systemAudioChange = wrapper.get('[aria-label="System audio"]').trigger('click');
     await flushPromises();
     expect(mocks.capture.updateActiveEditorPreset).toHaveBeenCalledOnce();
     expect(maxActiveWrites).toBe(1);
@@ -865,7 +1197,7 @@ describe('QuickSnipCropBar', () => {
     expect(maxActiveWrites).toBe(1);
 
     releaseWrites.shift()!();
-    await Promise.all([formatChange, microphoneChange]);
+    await Promise.all([microphoneChange, systemAudioChange]);
     await flushPromises();
     expect(mocks.capture.configureQuickSnip).toHaveBeenCalledTimes(2);
     expect(maxActiveWrites).toBe(1);
@@ -879,7 +1211,7 @@ describe('QuickSnipCropBar', () => {
     mocks.capture.configureQuickSnip.mockRejectedValueOnce(failure);
     mocks.capture.reportQuickSnip.mockClear();
 
-    await wrapper.get('.format-select').setValue('webm');
+    await wrapper.get('button[aria-label="Automatic zoom"]').trigger('click');
     await flushPromises();
 
     expect(mocks.capture.reportQuickSnip).toHaveBeenCalledWith({ type: 'failed', error: failure.message });
@@ -896,18 +1228,18 @@ describe('QuickSnipCropBar', () => {
     mocks.capture.configureQuickSnip.mockReturnValueOnce(pendingConfigure);
     mocks.capture.reportQuickSnip.mockClear();
 
-    const formatChange = wrapper.get('.format-select').setValue('webm');
+    const zoomChange = wrapper.get('button[aria-label="Automatic zoom"]').trigger('click');
     await flushPromises();
     await mocks.command?.('cancel');
     rejectConfigure(new Error('stale shortcut configuration failed'));
-    await Promise.all([formatChange, flushPromises()]);
+    await Promise.all([zoomChange, flushPromises()]);
 
     expect(mocks.capture.reportQuickSnip).not.toHaveBeenCalled();
 
     wrapper.unmount();
   });
 
-  it('applies a selected preset and synchronizes all of its device settings', async () => {
+  it('applies a selected video preset and synchronizes all of its device settings', async () => {
     const selectedPreset = {
       ...preset,
       id: 'studio-preset',
@@ -932,12 +1264,11 @@ describe('QuickSnipCropBar', () => {
     await wrapper.get('.preset-select').setValue(selectedPreset.id);
     await flushPromises();
 
-    expect(mocks.capture.selectEditorPreset).toHaveBeenCalledWith(selectedPreset.id);
+    expect(mocks.capture.selectEditorPreset).toHaveBeenCalledWith(selectedPreset.id, 'video');
     expect(wrapper.get(`.preset-select option[value="${selectedPreset.id}"]`).text()).toBe('Studio preset');
     expect(wrapper.get('button[aria-label="Automatic zoom"]').attributes('aria-pressed')).toBe('false');
     expect(mocks.capture.configureQuickSnip).toHaveBeenLastCalledWith({
       mode: 'studio',
-      format: 'mp4',
       automaticZoom: false,
       devices: { micId: 'no-audio', cameraId: 'off', systemAudioMode: 'on' },
     });
@@ -968,7 +1299,7 @@ describe('QuickSnipCropBar', () => {
     await wrapper.get('.preset-select').setValue(alternatePreset.id);
     await flushPromises();
 
-    expect(mocks.capture.selectEditorPreset).toHaveBeenCalledWith(alternatePreset.id);
+    expect(mocks.capture.selectEditorPreset).toHaveBeenCalledWith(alternatePreset.id, 'video');
     expect(mocks.capture.updateActiveEditorPreset).not.toHaveBeenCalled();
     expect(mocks.capture.configureQuickSnip).not.toHaveBeenCalled();
     expect(wrapper.get('.preset-select').element).toHaveProperty('value', alternatePreset.id);
@@ -1093,7 +1424,7 @@ describe('QuickSnipCropBar', () => {
     };
     const incoming = {
       ...configuration,
-      format: 'webm' as const,
+      mode: 'instant' as const,
       automaticZoom: false,
       preset: incomingPreset,
       devices: incomingPreset.settings.devices,
@@ -1105,7 +1436,7 @@ describe('QuickSnipCropBar', () => {
     await mocks.configure?.(incoming);
     await flushPromises();
 
-    expect(wrapper.get('.format-select').element).toHaveProperty('value', 'webm');
+    expect(wrapper.get('[aria-label="Studio"]').attributes('aria-pressed')).toBe('true');
     expect(mocks.capture.getEditorPresets).toHaveBeenCalledOnce();
     expect(mocks.capture.updateActiveEditorPreset).not.toHaveBeenCalled();
     expect(mocks.capture.configureQuickSnip).not.toHaveBeenCalled();
@@ -1235,7 +1566,7 @@ describe('QuickSnipCropBar', () => {
     });
     mocks.capture.getEditorPresets.mockReturnValue(pendingPresetRead);
 
-    const formatChange = wrapper.get('.format-select').setValue('webm');
+    const microphoneChange = wrapper.get('[aria-label="Microphone"]').trigger('click');
     await flushPromises();
     await mocks.command?.('start');
     await flushPromises();
@@ -1243,7 +1574,7 @@ describe('QuickSnipCropBar', () => {
     await flushPromises();
 
     resolvePresetRead(presetDocument);
-    await Promise.all([formatChange, flushPromises()]);
+    await Promise.all([microphoneChange, flushPromises()]);
     expect(mocks.recorder?.start).not.toHaveBeenCalled();
 
     wrapper.unmount();
@@ -1257,14 +1588,14 @@ describe('QuickSnipCropBar', () => {
     });
     mocks.capture.configureQuickSnip.mockReturnValueOnce(pendingConfigure);
 
-    const formatChange = wrapper.get('.format-select').setValue('webm');
+    const modeChange = wrapper.get('[aria-label="Microphone"]').trigger('click');
     await flushPromises();
     const startButton = wrapper.findAll('button').find((button) => button.text() === 'Start')!;
     const pendingStart = startButton.trigger('click');
     await flushPromises();
     await mocks.command?.('cancel');
     resolveConfigure({ state: 'selecting' });
-    await Promise.all([formatChange, pendingStart, flushPromises()]);
+    await Promise.all([modeChange, pendingStart, flushPromises()]);
 
     expect(mocks.capture.quickSnipStart).not.toHaveBeenCalled();
 
@@ -1336,9 +1667,10 @@ describe('QuickSnipCropBar', () => {
       }),
     );
     const expectSettingsDisabled = () => {
-      expect(wrapper.find('.mode-select').attributes('disabled')).toBeDefined();
+      for (const mode of ['Studio', 'Screenshot']) {
+        expect(wrapper.get(`[aria-label="${mode}"]`).attributes('disabled')).toBeDefined();
+      }
       expect(wrapper.find('.preset-select').attributes('disabled')).toBeDefined();
-      expect(wrapper.find('.format-select').attributes('disabled')).toBeDefined();
       expect(wrapper.get('button[aria-label="Automatic zoom"]').attributes('disabled')).toBeDefined();
       for (const label of ['Microphone', 'System audio', 'Camera']) {
         expect(wrapper.get(`[aria-label="${label}"]`).attributes('disabled')).toBeDefined();
@@ -1415,7 +1747,14 @@ describe('QuickSnipCropBar', () => {
       .map((button) => button.attributes('title'))
       .filter(Boolean);
 
-    expect(titles).toEqual(expect.arrayContaining(['Microphone', 'System audio', 'Camera', 'Cancel']));
+    expect(titles).toEqual(
+      expect.arrayContaining([
+        'Microphone — right-click to choose a source',
+        'System audio — right-click to choose a source',
+        'Camera — right-click to choose a source',
+        'Cancel',
+      ]),
+    );
     expect(wrapper.findAll('[tooltip]')).toHaveLength(0);
     expect(wrapper.findAll('.tooltip-wrapper')).toHaveLength(0);
 
@@ -1441,6 +1780,36 @@ describe('QuickSnipCropBar', () => {
     mocks.recorder!.recordingTime.value = '60:00.0';
     await wrapper.vm.$nextTick();
     expect(wrapper.get('.elapsed').text()).toBe('01:00:00');
+    wrapper.unmount();
+  });
+  it('opens the native camera menu on right-click and applies the chosen source to the preset and recording', async () => {
+    const wrapper = await mountBar();
+    let resolveMenu!: (id: string) => void;
+    mocks.capture.chooseQuickSnipDevice.mockReturnValueOnce(
+      new Promise<string>((resolve) => {
+        resolveMenu = resolve;
+      }),
+    );
+    const cameraButton = wrapper.get('button[aria-label="Camera"]');
+    const context = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2 });
+    cameraButton.element.dispatchEvent(context);
+    await flushPromises();
+    expect(context.defaultPrevented).toBe(true);
+    expect(mocks.capture.chooseQuickSnipDevice).toHaveBeenCalledWith(expect.objectContaining({ kind: 'camera' }));
+    expect(cameraButton.attributes('aria-pressed')).toBe('true');
+    expect(wrapper.get('.crop-bar').classes()).toContain('pointer-over');
+    expect(wrapper.get('.preset-select').attributes('disabled')).toBeDefined();
+    resolveMenu('camera:chromium:usb');
+    await flushPromises();
+    expect(mocks.capture.configureQuickSnip).toHaveBeenCalledWith(
+      expect.objectContaining({ devices: expect.objectContaining({ cameraId: 'camera:chromium:usb' }) }),
+    );
+    expect(mocks.capture.updateActiveEditorPreset).toHaveBeenCalledWith(
+      expect.objectContaining({ devices: expect.objectContaining({ cameraId: 'camera:chromium:usb' }) }),
+    );
+    await mocks.command?.('start');
+    await flushPromises();
+    expect(mocks.recorder!.start).toHaveBeenCalledWith(expect.objectContaining({ cameraId: 'camera:chromium:usb' }));
     wrapper.unmount();
   });
 });

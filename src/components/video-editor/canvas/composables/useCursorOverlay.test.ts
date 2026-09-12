@@ -187,8 +187,8 @@ describe('useCursorOverlay', () => {
     expect(getCursorImage).toHaveBeenCalledWith(
       MACOS_CURSOR_PACK,
       MACOS_CURSOR_PACK.cursors.find((cursor) => cursor.id === 'default'),
-      640,
-      640,
+      1920,
+      1920,
       '#ffffff',
     );
     expect(options.onRenderOnce).toHaveBeenCalled();
@@ -648,8 +648,8 @@ describe('useCursorOverlay', () => {
     expect(getCursorImage).toHaveBeenLastCalledWith(
       MACOS_CURSOR_PACK,
       MACOS_CURSOR_PACK.cursors.find((cursor) => cursor.id === 'default'),
-      640,
-      640,
+      1920,
+      1920,
       '#ffffff',
     );
     const ctx = createContext();
@@ -797,11 +797,12 @@ describe('useCursorOverlay', () => {
       mode: 'fixed' as const,
       cursorId: 'wide-default',
     });
+    options.cursorSize = () => 384;
     const overlay = useCursorOverlay(options);
     drawOverlay(overlay);
     await settleCursorImage();
     const image = overlay.customCursorImage.value;
-    expect(getCursorImage).toHaveBeenLastCalledWith(pack, pack.cursors[0], 1280, 640, '#ffffff');
+    expect(getCursorImage).toHaveBeenLastCalledWith(pack, pack.cursors[0], 3840, 1920, '#ffffff');
     expect(image).not.toBeNull();
 
     const ctx = createContext();
@@ -809,10 +810,10 @@ describe('useCursorOverlay', () => {
 
     expect(ctx.drawImage).toHaveBeenCalledWith(
       image,
-      expect.closeTo(-2.5, 0.001),
-      expect.closeTo(-2, 0.001),
-      expect.closeTo(20, 0.001),
-      expect.closeTo(10, 0.001),
+      expect.closeTo(-40, 0.001),
+      expect.closeTo(-32, 0.001),
+      expect.closeTo(320, 0.001),
+      expect.closeTo(160, 0.001),
     );
   });
 
@@ -845,7 +846,7 @@ describe('useCursorOverlay', () => {
 
     expect(options.currentTime()).toBe(time);
     expect(selection.value).toEqual(unchangedSelection);
-    expect(getCursorImage).toHaveBeenCalledWith(pack, pack.cursors[0], 1280, 640, '#ffffff');
+    expect(getCursorImage).toHaveBeenCalledWith(pack, pack.cursors[0], 3840, 1920, '#ffffff');
     expect(overlay.customCursorImage.value).not.toBeNull();
     expect(options.onRenderOnce).toHaveBeenCalled();
   });
@@ -979,8 +980,8 @@ describe('useCursorOverlay', () => {
     expect(getCursorImage).toHaveBeenLastCalledWith(
       MACOS_CURSOR_PACK,
       MACOS_CURSOR_PACK.cursors.find((cursor) => cursor.id === 'handpointing'),
-      640,
-      640,
+      1920,
+      1920,
       '#ffffff',
     );
     expect(overlay.customCursorImage.value).toMatchObject({ id: 'stable' });
@@ -1030,8 +1031,8 @@ describe('useCursorOverlay', () => {
     expect(getCursorImage).toHaveBeenLastCalledWith(
       MACOS_CURSOR_PACK,
       MACOS_CURSOR_PACK.cursors.find((cursor) => cursor.id === 'handpointing'),
-      640,
-      640,
+      1920,
+      1920,
       '#ffffff',
     );
   });

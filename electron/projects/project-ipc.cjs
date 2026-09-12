@@ -1,4 +1,5 @@
 const fs = require('fs');
+const { createProjectLibrary } = require('./project-library.cjs');
 const CURSOR_PACK_DISCOVERY_URL = 'https://store.kde.org/browse/cat/107/';
 
 function registerProjectIpc(
@@ -10,8 +11,10 @@ function registerProjectIpc(
   BrowserWindow,
   trustedRenderer,
   cursorLibrary,
+  screenshotStore,
 ) {
-  ipcMain.handle('projects:list', () => projectStore.list());
+  const library = createProjectLibrary(projectStore, screenshotStore);
+  ipcMain.handle('projects:list', () => library.list());
   ipcMain.handle('projects:media-url', (_event, payload = {}) => projectStore.mediaUrlFor(payload.source));
   ipcMain.handle('projects:editor-data', (_event, payload = {}) => projectStore.editorData(payload.projectId));
   ipcMain.handle('projects:editor-state', (_event, payload = {}) => projectStore.editorState(payload.projectId));
@@ -19,7 +22,9 @@ function registerProjectIpc(
     projectStore.saveEditorState(payload.projectId, payload.state),
   );
   ipcMain.handle('projects:create', (_event, options = {}) => projectStore.create(options));
-  ipcMain.handle('projects:rename', (_event, payload = {}) => projectStore.rename(payload.projectId, payload.name));
+  ipcMain.handle('projects:rename', (_event, payload = {}) =>
+    library.rename(payload.projectId, payload.name, payload.mode),
+  );
   ipcMain.handle('projects:save-thumbnail', (_event, payload = {}) =>
     projectStore.saveThumbnail(payload.projectId, payload.dataUrl),
   );
@@ -102,11 +107,11 @@ function registerProjectIpc(
     requireTrustedCursorSender(event);
     return require('electron').shell.openExternal(CURSOR_PACK_DISCOVERY_URL);
   });
-  ipcMain.handle('projects:delete', (_event, payload = {}) => projectStore.delete(payload.projectId));
+  ipcMain.handle('projects:delete', (_event, payload = {}) => library.delete(payload.projectId, payload.mode));
   ipcMain.handle('projects:reveal', (_event, payload = {}) => {
     const { shell } = require('electron');
     try {
-      const directory = projectStore.directoryFor(payload.projectId);
+      const directory = library.directoryFor(payload.projectId, payload.mode);
       if (directory && fs.existsSync(directory)) {
         shell.openPath(directory);
         return true;

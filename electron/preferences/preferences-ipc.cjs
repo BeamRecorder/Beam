@@ -1,3 +1,5 @@
+const { isDeepStrictEqual } = require('node:util');
+
 function registerPreferencesIpc({
   ipcMain,
   BrowserWindow,
@@ -43,8 +45,9 @@ function registerPreferencesIpc({
     return registration;
   };
   const update = async (patch) => {
+    const previousShortcuts = store.read().shortcuts;
     const preferences = store.patch(patch);
-    await registerShortcuts(preferences);
+    if (!isDeepStrictEqual(previousShortcuts, preferences.shortcuts)) await registerShortcuts(preferences);
     broadcast(preferences);
     onPreferencesChanged?.(preferences);
     return preferences;
@@ -56,7 +59,7 @@ function registerPreferencesIpc({
       ? { ...current, ...Object.fromEntries(keys.filter((key) => key in initial).map((key) => [key, initial[key]])) }
       : initial;
     const preferences = store.write(next);
-    await registerShortcuts(preferences);
+    if (!isDeepStrictEqual(current.shortcuts, preferences.shortcuts)) await registerShortcuts(preferences);
     broadcast(preferences);
     onPreferencesChanged?.(preferences);
     return preferences;

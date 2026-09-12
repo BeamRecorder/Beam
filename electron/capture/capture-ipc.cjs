@@ -3,6 +3,7 @@ const path = require('path');
 const { pathToFileURL } = require('url');
 const { buildDefaultCaptureConfig } = require('./capture-config.cjs');
 const { createSystemAudioPreview } = require('./system-audio-preview.cjs');
+const { isCaptureCancellation } = require('./capture-cancellation.cjs');
 
 const ALLOWED_COMMANDS = new Set([
   'discover',
@@ -62,7 +63,6 @@ function registerCaptureIpc({
   desktopCapturer,
   screen,
   captureEngine,
-  app,
   userPaths,
   trackStorages,
   platform = process.platform,
@@ -93,7 +93,12 @@ function registerCaptureIpc({
       throw wrapped;
     }
   };
-  if (platform === 'linux') systemAudioPreview = createSystemAudioPreview({ request: requestEngine });
+  if (platform === 'linux')
+    systemAudioPreview = createSystemAudioPreview({
+      request: requestEngine,
+      canStart: canAcceptWork,
+      canCleanup: () => canAcceptWork() && captureEngine.canCleanup(),
+    });
   let pendingDefaultPreparation = null;
   const prepareDefaultRecording = (options) => {
     const key = JSON.stringify(options || {});
@@ -106,10 +111,15 @@ function registerCaptureIpc({
       const catalog = await requestEngine('discover');
       const config = buildDefaultCaptureConfig(catalog, options || {}, {
         platform,
-        defaultOutputRoot: userPaths.projects,
+        defaultOutputRoot: userPaths.studioProjects,
         excludedProcessId: process.pid,
       });
-      return withProjectId(await requestEngine('prepare', { config }));
+      try {
+        return withProjectId(await requestEngine('prepare', { config }));
+      } catch (error) {
+        if (isCaptureCancellation(error)) return null;
+        throw error;
+      }
     })();
     const preparation = { key, promise };
     pendingDefaultPreparation = preparation;
@@ -142,7 +152,7 @@ function registerCaptureIpc({
       const catalog = await requestEngine('discover');
       const config = buildDefaultCaptureConfig(catalog, payload.options || {}, {
         platform,
-        defaultOutputRoot: userPaths.projects,
+        defaultOutputRoot: userPaths.studioProjects,
         excludedProcessId: process.pid,
       });
       await requestEngine('prepare', { config });

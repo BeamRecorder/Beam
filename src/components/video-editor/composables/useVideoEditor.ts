@@ -1,3 +1,4 @@
+import { useVideoElements } from '../elements/useVideoElements';
 import { computed, nextTick, onScopeDispose, ref, watch, type Ref } from 'vue';
 import { capture } from '../../../api/capture';
 import type { CaptureProject, ProjectEditorData } from '../../../api/types/capture-api';
@@ -86,6 +87,21 @@ export function useVideoEditor(options: {
     selectedZoom: zoomState.selectedZoom,
   });
   const editorPresets = useEditorPresets(editorDefaults);
+  useVideoElements({
+    addImage: () =>
+      compositionState.addElement('image').catch((error) => {
+        toastStore.error(String(error));
+      }),
+    composition: compositionState.composition,
+    selectedId: compositionState.selectedClipId,
+    activeTab,
+    currentTime: player.currentTime,
+    isPlaying: player.isPlaying,
+    select: compositionState.selectClip,
+    clearZoom: () => {
+      zoomState.selectedZoomId.value = null;
+    },
+  });
 
   const refreshBackgroundLibrary = async () => player.setUserBackgrounds(await capture.listBackgroundLibrary());
   void refreshBackgroundLibrary().catch(() => console.error('Failed to load background library.'));

@@ -9,6 +9,7 @@ const props = defineProps<{
   viewportStyle: CSSProperties;
   layoutStyle: CSSProperties;
   renderScale: number;
+  maxLength?: number;
   warningPlacement: 'above' | 'below';
 }>();
 const emit = defineEmits<{
@@ -149,6 +150,7 @@ onUnmounted(discardPendingUpdate);
         <textarea
           ref="textareaRef"
           rows="1"
+          :maxlength="maxLength"
           :wrap="clip.caption.style.wrap ? 'soft' : 'off'"
           :style="textStyle"
           :aria-label="t('captionText')"

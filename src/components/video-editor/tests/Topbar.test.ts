@@ -31,6 +31,17 @@ describe('VideoEditor Topbar', () => {
     expect(wrapper.emitted('back-to-hud')).toHaveLength(1);
   });
 
+  it('forwards undo and redo from the real shared history controls', async () => {
+    const wrapper = mount(Topbar, { props: { canUndo: true, canRedo: true } });
+
+    await wrapper.get('button[aria-label="Undo (Ctrl+Z)"]').trigger('click');
+    await wrapper.get('button[aria-label="Redo (Ctrl+Y)"]').trigger('click');
+
+    expect(wrapper.emitted('undo')).toHaveLength(1);
+    expect(wrapper.emitted('redo')).toHaveLength(1);
+    wrapper.unmount();
+  });
+
   it('keeps an explicit native drag region between the Beam actions', () => {
     const wrapper = mount(Topbar);
 

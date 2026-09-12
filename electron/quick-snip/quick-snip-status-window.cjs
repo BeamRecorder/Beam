@@ -26,6 +26,9 @@ function createQuickSnipStatusWindow({
 }) {
   let window = null;
   let ready = false;
+  let rendererReady = false;
+  let presentationRequested = false;
+  let presented = false;
   let current = null;
   let renderTask = null;
   let renderFailure = null;
@@ -47,16 +50,29 @@ function createQuickSnipStatusWindow({
     current = null;
     renderTask = null;
     ready = false;
+    rendererReady = false;
+    presentationRequested = false;
+    presented = false;
     interactive = false;
     if (previous && !previous.isDestroyed()) previous.destroy();
   };
   const scheduleClose = () => {
     clearClose();
-    if (current?.state === 'completed' && !interactive) closeTimer = setTimer(hide, COMPLETED_VISIBLE_MS);
+    if (presented && current?.state === 'completed' && !interactive) closeTimer = setTimer(hide, COMPLETED_VISIBLE_MS);
   };
   const snapshot = () => (current ? { ...current, popoverSide } : null);
   const send = () => {
-    if (window && !window.isDestroyed() && ready && current) window.webContents.send('quick-snip:status', snapshot());
+    if (window && !window.isDestroyed() && ready && rendererReady && current)
+      window.webContents.send('quick-snip:status', snapshot());
+  };
+  const present = () => {
+    if (!window || window.isDestroyed() || !ready || !rendererReady) return;
+    send();
+    if (presentationRequested && !presented) {
+      presented = true;
+      window.showInactive();
+      scheduleClose();
+    }
   };
   const placePill = (target, position, display) => {
     const placement = placeStatusPill({ position, workArea: display.workArea });
@@ -85,6 +101,8 @@ function createQuickSnipStatusWindow({
   const ensure = () => {
     if (window && !window.isDestroyed()) return window;
     ready = false;
+    rendererReady = false;
+    presented = false;
     const target = new BrowserWindow({
       ...STATUS_SIZE,
       frame: false,
@@ -138,38 +156,49 @@ function createQuickSnipStatusWindow({
       ready = true;
       contents.setZoomFactor(1);
       place(target);
-      send();
-      if (renderTask) contents.send('quick-snip:render-task', renderTask);
-      target.showInactive();
-      scheduleClose();
+      present();
+      if (rendererReady && renderTask) contents.send('quick-snip:render-task', renderTask);
     });
     const failed = () => {
       if (window !== target) return;
       hide();
       renderFailure?.(new Error('Quick Snip render window closed unexpectedly.'));
     };
+    target.on('blur', () => {
+      if (window === target && rendererReady) contents.send('quick-snip:status-blur');
+    });
     target.on('closed', failed);
     contents.on('render-process-gone', failed);
     contents.on('did-fail-load', failed);
-    if (isPackaged) target.loadFile(path.join(applicationRoot, 'dist/index.html'), { query: { quickSnipStatus: '1' } });
-    else target.loadURL('http://localhost:6500/?quickSnipStatus=1');
+    if (isPackaged)
+      target.loadFile(path.join(applicationRoot, 'dist/quick-snip-status.html'), { query: { quickSnipStatus: '1' } });
+    else target.loadURL('http://localhost:6500/quick-snip-status.html?quickSnipStatus=1');
     return target;
   };
   return {
     snapshot,
+    prepare(status) {
+      current = status;
+      ensure();
+    },
+    rendererReady(sender) {
+      if (!window || window.isDestroyed() || window.webContents !== sender) return;
+      rendererReady = true;
+      present();
+      if (ready && renderTask) sender.send('quick-snip:render-task', renderTask);
+    },
     update(status) {
       const previousState = current?.state;
       current = status;
+      presentationRequested = true;
       ensure();
-      send();
-      if (ready && previousState !== status.state) scheduleClose();
+      present();
+      if (presented && previousState !== status.state) scheduleClose();
     },
     show() {
       if (!window || window.isDestroyed()) return false;
-      if (!ready) return true;
-      send();
-      window.showInactive();
-      scheduleClose();
+      presentationRequested = true;
+      present();
       return true;
     },
     setInteractive(value) {
@@ -183,7 +212,8 @@ function createQuickSnipStatusWindow({
     },
     setRenderTask(task) {
       renderTask = task;
-      if (ready && window && !window.isDestroyed()) window.webContents.send('quick-snip:render-task', task);
+      if (ready && rendererReady && window && !window.isDestroyed())
+        window.webContents.send('quick-snip:render-task', task);
     },
     owns(sender) {
       return Boolean(window && !window.isDestroyed() && window.webContents === sender);

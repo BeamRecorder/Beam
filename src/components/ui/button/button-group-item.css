@@ -1,0 +1,63 @@
+.btn-group .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: var(--button-group-inner-radius);
+}
+
+.btn-group.size-xs .btn.btn-icon-only {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  border-radius: var(--button-group-inner-radius);
+}
+
+.btn-group.size-xs .btn-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.btn-group .btn-content {
+  display: block;
+  position: relative;
+  flex: 0 1 auto;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  justify-content: center;
+}
+
+.btn-group .btn-content-label {
+  display: inline-block;
+  min-width: 100%;
+  max-width: none;
+  text-align: center;
+  vertical-align: top;
+  will-change: auto;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .btn-group .btn:hover:not(:disabled) .btn-content.is-overflowing .btn-content-label {
+    animation: button-group-label-marquee var(--button-marquee-duration) 0.35s ease-in-out infinite alternate;
+    will-change: transform;
+  }
+}
+
+@keyframes button-group-label-marquee {
+  0%,
+  12% {
+    transform: translateX(0);
+  }
+  88%,
+  100% {
+    transform: translateX(calc(-1 * var(--button-marquee-distance)));
+  }
+}
+
+.btn-group .btn-icon-wrapper {
+  flex-shrink: 0;
+}

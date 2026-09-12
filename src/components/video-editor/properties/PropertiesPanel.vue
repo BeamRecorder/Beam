@@ -1,7 +1,11 @@
 <script setup lang="ts">
+import type { PropertiesPanelEmits } from './properties-panel-emits';
+import PropertiesDeleteAction from './PropertiesDeleteAction.vue';
+import { useElementEditor } from '../elements/useElementEditor';
+import ElementsPanel from '../elements/ElementsPanel.vue';
 import { computed, ref } from 'vue';
 import type { CursorPackDescriptor, CursorSelection } from '~/api/types/cursor-pack';
-import type { BackgroundMedia, BackgroundMediaGroup, BackgroundValue } from '../composables/backgroundCatalog';
+import type { BackgroundMediaGroup, BackgroundValue } from '../composables/backgroundCatalog';
 import CursorPanel from '~/components/video-editor/properties/cursor/CursorPanel.vue';
 import CanvasPanel from '~/components/video-editor/properties/canvas/CanvasPanel.vue';
 import AudioPanel from '~/components/video-editor/properties/audio/AudioPanel.vue';
@@ -25,16 +29,7 @@ import {
   type ZoomElement,
   type ZoomMotionBlurSettings,
 } from '~/components/video-editor/zoom/zoom-types';
-import type {
-  BlurEffectMode,
-  BlurEffectShape,
-  CaptionClip,
-  ClipKind,
-  ClipFrame,
-  ClipComposition,
-  NormalizedTransform,
-  ClipTransition,
-} from '~/media/shared/composition-types';
+import type { CaptionClip, ClipKind, ClipComposition, ClipTransition } from '~/media/shared/composition-types';
 import type { ProjectEditorData } from '../../../api/types/capture-api';
 import type { OutputCanvasSettings } from '../canvas/output-canvas';
 import type { ShadowDirection } from './cursor/shadow-types';
@@ -47,11 +42,10 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { isColorClip, isKeyboardCaptionClip, isShapeClip } from '~/media/shared/composition-types';
 import { usePropertiesPanelNavigation } from './usePropertiesPanelNavigation';
 import type { SelectedClipProperties } from './properties-panel-types';
-import type { CameraFramingPreset, CameraLayoutPreset } from '~/media/shared/camera-layout-types';
-import type { PhoneFrameFill } from '~/media/shared/color-fill-types';
 import { selectedClipNames } from './clip-selection-names';
 import { clipTransitionPanelTitle, propertiesPanelTitle } from './properties-panel-title';
 import { applyCaptionSelectionUpdate } from '../composition/caption-selection';
+const elements = useElementEditor();
 const { t } = useTranslate('PropertiesPanel');
 const { t: tClip } = useTranslate('ClipPropertiesPanel');
 const { t: tCaption } = useTranslate('CaptionClipPanel');
@@ -177,85 +171,7 @@ const panelTitle = computed(() =>
     { t, tSidebar, tTimeline, tTimelineToolbar, tCanvas },
   ),
 );
-const emit = defineEmits<{
-  (event: 'update:cursorSelection', value: CursorSelection): void;
-  (event: 'preview:cursorSelection', value: CursorSelection | null): void;
-  (event: 'update:cursorSize', value: number): void;
-  (event: 'update:cursorColor', value: string): void;
-  (event: 'update:enableShadow', value: boolean): void;
-  (event: 'update:shadowBlur', value: number): void;
-  (event: 'update:shadowColor', value: string): void;
-  (event: 'update:shadowDirection', value: ShadowDirection): void;
-  (event: 'update:clickEffects', value: CursorClickEffects): void;
-  (event: 'update:motion', value: CursorMotionSettings): void;
-  (event: 'update:autoHide', value: CursorAutoHideSettings): void;
-  (event: 'update:volume', value: number): void;
-  (event: 'update:isSystemAudioEnabled', value: boolean): void;
-  (event: 'update:isMicAudioEnabled', value: boolean): void;
-  (event: 'update:systemVolume', value: number): void;
-  (event: 'update:micVolume', value: number): void;
-  (event: 'update:selectedBackground', value: BackgroundValue): void;
-  (event: 'update:blurPercent', value: number): void;
-  (event: 'import:background', value: BackgroundMedia): void;
-  (event: 'update:canvas', value: OutputCanvasSettings): void;
-  (event: 'update:zoom', value: ZoomElement): void;
-  (event: 'update:zoomMotionBlur', value: ZoomMotionBlurSettings): void;
-  (event: 'delete:zoom'): void;
-  (event: 'generate:zooms'): void;
-  (event: 'update:caption', value: CaptionClip): void;
-  (event: 'update:composition', value: ClipComposition): void;
-  (event: 'preview:composition', value: ClipComposition | null): void;
-  (event: 'select-caption', clipId: string): void;
-  (event: 'update:clip-rate', rate: number): void;
-  (event: 'update:clip-enabled', enabled: boolean): void;
-  (event: 'update:clip-volume', volume: number): void;
-  (
-    event: 'update:blur',
-    patch: Partial<{
-      mode: BlurEffectMode;
-      shape: BlurEffectShape;
-      strength: number;
-      feather: number;
-      cornerRadius: number;
-      tintOpacity: number;
-      color: string;
-    }>,
-  ): void;
-  (event: 'update:clip-is-mirrored', isMirrored: boolean): void;
-  (event: 'update:clip-is-mirrored-y', isMirroredY: boolean): void;
-  (event: 'update:clip-corner-radius', radius: string): void;
-  (event: 'corner-radius-interaction', interacting: boolean): void;
-  (event: 'update:clip-shadow', shadow: { size: string; color?: string; direction?: string }): void;
-  (
-    event: 'update:clip-appearance',
-    appearance: {
-      borderEnabled?: boolean;
-      borderColor?: string;
-      borderWidth?: number;
-      frame?: ClipFrame;
-      frameTitle?: string;
-      frameColor?: string;
-      frameShowMenu?: boolean;
-      frameShowScrollbars?: boolean;
-      frameChromeScale?: number;
-      phoneFrameFill?: PhoneFrameFill;
-    },
-  ): void;
-  (event: 'update:clip-transform', transform: NormalizedTransform): void;
-  (event: 'update:camera-layout', preset: Exclude<CameraLayoutPreset, 'custom'>): void;
-  (event: 'update:camera-framing', preset: Exclude<CameraFramingPreset, 'custom'>): void;
-  (event: 'update:camera-split-ratio', ratio: number): void;
-  (event: 'update:camera-split-padding', padding: number): void;
-  (event: 'update:webcam-react-to-zoom', enabled: boolean): void;
-  (event: 'reset:clip-transform'): void;
-  (event: 'unlink-clip'): void;
-  (event: 'delete-clip'): void;
-  (event: 'delete:system-audio'): void;
-  (event: 'delete:mic-audio'): void;
-  (event: 'split-clip'): void;
-  (event: 'back-to-hud'): void;
-  (event: 'start-recording', config: any): void;
-}>();
+const emit = defineEmits<PropertiesPanelEmits>();
 const previewCaption = (clip: CaptionClip | null) => {
   if (!clip) return emit('preview:composition', null);
   if (!props.selectedCaptionClip) return;
@@ -299,7 +215,17 @@ const deleteTooltip = computed(() => {
 });
 
 const handleToggleClipEnabled = () => emit('update:clip-enabled', !isCurrentClipEnabled.value);
-const handleDelete = () => (props.activeTab === 'zoom' ? emit('delete:zoom') : emit('delete-clip'));
+const canDeleteElement = computed(() => props.activeTab === 'elements' && Boolean(elements?.selected.value));
+const deleteName = computed(() =>
+  canDeleteElement.value
+    ? (elements?.selected.value?.name ?? panelTitle.value)
+    : selectionNames.value.join(', ') ||
+      props.selectedClip?.name ||
+      props.selectedCaptionClip?.name ||
+      panelTitle.value,
+);
+const handleDelete = () =>
+  canDeleteElement.value ? elements?.remove() : props.activeTab === 'zoom' ? emit('delete:zoom') : emit('delete-clip');
 defineExpose({ openCanvasTransitions: openTransitionEdge });
 </script>
 <template>
@@ -329,7 +255,7 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
         @transition="openTransitionEdge()"
         @after-enter="!transitionsOpen && panelHeader?.focusTransitionButton()"
       />
-      <ScrollShadow class="panel-scroll-shadow">
+      <ScrollShadow class="panel-scroll-shadow" :class="{ 'has-footer': isDeletable || canDeleteElement }">
         <Transition :name="panelTransitionName" mode="out-in">
           <div :key="transitionsOpen ? 'transitions' : 'properties'" class="panel-body">
             <TransitionSettingsPanel
@@ -364,6 +290,7 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
               :clip="normalizedSelectedClip"
               @update:volume="emit('update:clip-volume', $event)"
             />
+            <ElementsPanel v-else-if="activeTab === 'elements'" />
             <GeneratedLayerPropertiesPanel
               v-else-if="
                 activeTab === 'clip' &&
@@ -493,6 +420,9 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
           </div>
         </Transition>
       </ScrollShadow>
+      <footer v-if="isDeletable || canDeleteElement" class="properties-footer">
+        <PropertiesDeleteAction :name="deleteName" @delete="handleDelete" />
+      </footer>
     </div>
   </div>
 </template>

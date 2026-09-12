@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import Popover from './Popover.vue';
 
@@ -148,5 +148,29 @@ describe('Popover', () => {
     expect(document.querySelector('.popover-content')?.className).toContain('up');
     expect(document.querySelector('.popover-content')?.getAttribute('style')).toContain('position: fixed');
     wrapper.unmount();
+  });
+  it('measures at full width away from the viewport edge before making its first position visible', async () => {
+    const measurements: Array<{ left: string; width: string; visibility: string }> = [];
+    const bounds = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockImplementation(function (this: HTMLElement) {
+        if (this.classList.contains('popover-content')) {
+          measurements.push({ left: this.style.left, width: this.style.width, visibility: this.style.visibility });
+          return new DOMRect(8, 8, Number.parseFloat(this.style.width), 180);
+        }
+        return new DOMRect(800, 100, 300, 32);
+      });
+    const wrapper = mountPopover({ align: 'right', matchTriggerWidth: true });
+    try {
+      await wrapper.get('.popover-trigger').trigger('click');
+      await flushPromises();
+      expect(measurements[0]).toEqual({ left: '8px', width: '300px', visibility: 'hidden' });
+      const content = document.querySelector<HTMLElement>('.popover-content')!;
+      expect(content.style.visibility).toBe('visible');
+      expect(Number.parseFloat(content.style.left) + 300).toBeLessThanOrEqual(window.innerWidth - 8);
+    } finally {
+      wrapper.unmount();
+      bounds.mockRestore();
+    }
   });
 });

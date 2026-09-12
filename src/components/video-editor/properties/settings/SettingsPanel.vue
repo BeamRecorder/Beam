@@ -17,6 +17,7 @@ import { isSupportedLocale, localeOptions } from '~/i18n/locales';
 import { useCopySystemInformation } from '~/composables/useCopySystemInformation';
 import SpellCheckPreference from '~/components/settings/SpellCheckPreference.vue';
 
+defineProps<{ hideRecorder?: boolean }>();
 const { t } = useTranslate('SettingsPanel');
 const { t: tPreferences } = useTranslate('HudPreferences');
 const { t: tAppearance } = useTranslate('AppearanceSettings');
@@ -117,7 +118,7 @@ const { copied: isCopiedSysInfo, copy: copySystemInfo } = useCopySystemInformati
           </div>
 
           <!-- Video Recorder Card -->
-          <div class="dev-option-card">
+          <div v-if="!hideRecorder" class="dev-option-card">
             <div class="dev-option-info">
               <span class="dev-option-label">{{ t('recorderTool') }}</span>
               <span class="dev-option-desc">{{ t('recorderDesc') }}</span>

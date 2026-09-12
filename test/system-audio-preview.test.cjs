@@ -16,7 +16,7 @@ function createSender() {
   return sender;
 }
 
-function createPreviewHarness({ request: requestOverride } = {}) {
+function createPreviewHarness({ request: requestOverride, canCleanup = () => true, canStart = () => true } = {}) {
   const calls = [];
   let state = 'idle';
   let level = 0.42;
@@ -28,7 +28,7 @@ function createPreviewHarness({ request: requestOverride } = {}) {
     if (command === 'system-audio-preview-level') return { level };
     return {};
   };
-  const preview = createSystemAudioPreview({ request });
+  const preview = createSystemAudioPreview({ request, canCleanup, canStart });
   return {
     calls,
     preview,
@@ -148,5 +148,114 @@ test('releases a renderer subscription and stops the preview when its WebContent
   assert.deepEqual(await preview.level(quickSnip), { level: 0 });
 
   assert.equal(quickSnip.listenerCount('destroyed'), 0);
+  assert.equal(calls.filter((command) => command === 'stop-system-audio-preview').length, 1);
+});
+
+test('detaches destroyed clients without native stop once application shutdown begins', async () => {
+  let canStart = true;
+  let canCleanup = true;
+  const { calls, preview } = createPreviewHarness({
+    canCleanup: () => canCleanup,
+    canStart: () => canStart,
+  });
+  const quickSnip = createSender();
+
+  await preview.start(quickSnip);
+  canStart = false;
+  canCleanup = false;
+  quickSnip.destroy();
+  // The destroyed event schedules cleanup internally. Queueing stop and awaiting it
+  // drains that cleanup without relying on a timer or the Electron event loop.
+  await preview.stop(quickSnip);
+
+  assert.equal(quickSnip.listenerCount('destroyed'), 0);
+  assert.deepEqual(calls, ['status', 'start-system-audio-preview']);
+});
+
+test('settles an in-flight stop quietly only when shutdown starts before it rejects', async () => {
+  let canCleanup = true;
+  let rejectStop;
+  const stopRequest = new Promise((_resolve, reject) => {
+    rejectStop = reject;
+  });
+  const { calls, preview } = createPreviewHarness({
+    canCleanup: () => canCleanup,
+    request: async (command, context) => {
+      if (command === 'status') return { state: context.getState() };
+      if (command === 'stop-system-audio-preview') return stopRequest;
+      return {};
+    },
+  });
+  const quickSnip = createSender();
+
+  await preview.start(quickSnip);
+  const stopping = preview.stop(quickSnip);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(calls.includes('stop-system-audio-preview'), true);
+
+  canCleanup = false;
+  rejectStop(new Error('capture-engine force shutdown'));
+  await stopping;
+});
+
+test('does not request native cleanup or respawn after the engine has disappeared', async () => {
+  let enginePresent = true;
+  const requestsAfterExit = [];
+  let respawns = 0;
+  const { calls, preview } = createPreviewHarness({
+    canCleanup: () => enginePresent,
+    canStart: () => enginePresent,
+    request: async (command, context) => {
+      if (!enginePresent) {
+        requestsAfterExit.push(command);
+        respawns += 1;
+        throw new Error('request would start a new capture-engine');
+      }
+      if (command === 'status') return { state: context.getState() };
+      return {};
+    },
+  });
+  const quickSnip = createSender();
+
+  await preview.start(quickSnip);
+  enginePresent = false;
+  quickSnip.destroy();
+  await preview.stop(quickSnip);
+
+  assert.deepEqual(calls, ['status', 'start-system-audio-preview']);
+  assert.deepEqual(requestsAfterExit, []);
+  assert.equal(respawns, 0);
+});
+
+test('does not start or poll preview after the lifecycle disallows native work', async () => {
+  let canStart = true;
+  const { calls, preview } = createPreviewHarness({ canStart: () => canStart });
+  const activeClient = createSender();
+  const newClient = createSender();
+
+  await preview.start(activeClient);
+  const activeRequests = [...calls];
+  canStart = false;
+
+  await preview.start(newClient);
+  assert.deepEqual(await preview.level(activeClient), { level: 0 });
+
+  assert.equal(activeClient.listenerCount('destroyed'), 1);
+  assert.equal(newClient.listenerCount('destroyed'), 0);
+  assert.deepEqual(calls, activeRequests);
+});
+
+test('propagates a stop failure while native cleanup is still allowed', async () => {
+  const { calls, preview } = createPreviewHarness({
+    request: async (command, context) => {
+      if (command === 'status') return { state: context.getState() };
+      if (command === 'stop-system-audio-preview') throw new Error('live preview stop failed');
+      return {};
+    },
+  });
+  const quickSnip = createSender();
+
+  await preview.start(quickSnip);
+  await assert.rejects(preview.stop(quickSnip), /live preview stop failed/);
   assert.equal(calls.filter((command) => command === 'stop-system-audio-preview').length, 1);
 });

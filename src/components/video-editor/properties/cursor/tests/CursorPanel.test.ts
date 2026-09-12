@@ -223,12 +223,15 @@ describe('CursorPanel', () => {
   it('keeps auto-hide disabled by default and reveals its delay slider only when enabled', async () => {
     const wrapper = mountPanel();
 
-    expect(wrapper.get('.cursor-switch').attributes('data-model-value')).toBe('false');
+    const autoHideSwitch = wrapper
+      .findAll('.cursor-switch')
+      .find((control) => control.attributes('aria-label') === 'Auto-hide cursor')!;
+    expect(autoHideSwitch.attributes('data-model-value')).toBe('false');
     expect(wrapper.findAll('.cursor-slider').some((slider) => slider.attributes('data-label') === 'Hide after')).toBe(
       false,
     );
 
-    await wrapper.get('.cursor-switch').trigger('click');
+    await autoHideSwitch.trigger('click');
     expect(wrapper.emitted('update:autoHide')).toEqual([[{ enabled: true, delaySeconds: 2, fadeDurationMs: 250 }]]);
 
     await wrapper.setProps({ autoHide: { enabled: true, delaySeconds: 2, fadeDurationMs: 250 } });

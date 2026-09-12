@@ -1,3 +1,4 @@
+import { drawTextDecoration } from './text-decoration';
 import type { CaptionClip, CaptionStyle } from '~/media/shared/composition-types';
 import {
   layoutCaptionText,
@@ -249,8 +250,7 @@ export function drawCaptionText(
             })
           : style.color || '#ffffff';
         ctx.fillText(word.text, drawX, drawY);
-        if (style.textDecoration === 'line-through')
-          ctx.fillRect(drawX, drawY - wordFontSize * 0.08, renderedWidth, Math.max(1, wordFontSize * 0.07));
+        drawTextDecoration(ctx, style.textDecoration, drawX, drawY, renderedWidth, wordFontSize);
         ctx.restore();
         x += width;
       });
@@ -305,9 +305,7 @@ export function drawCaptionText(
       }
       ctx.fillStyle = style.color || '#ffffff';
       ctx.fillText(run.text, x, centerY);
-      if (style.textDecoration === 'line-through') {
-        ctx.fillRect(x, centerY - runFontSize * 0.08, runWidth, Math.max(1, runFontSize * 0.07));
-      }
+      drawTextDecoration(ctx, style.textDecoration, x, centerY, runWidth, runFontSize);
       x += runWidth;
     }
     ctx.restore();
@@ -368,11 +366,11 @@ export function drawCaptionText(
     ctx.fillStyle = style.color || '#ffffff';
     if (layout.wrap) ctx.fillText(line, textX, y);
     else ctx.fillText(line, textX, y, maxTextWidth);
-    if (style.textDecoration === 'line-through') {
+    if (style.textDecoration !== 'none') {
       const width = Math.min(maxTextWidth, ctx.measureText(line).width);
       const startX =
         style.textAlign === 'left' ? textX : style.textAlign === 'right' ? textX - width : textX - width / 2;
-      ctx.fillRect(startX, y - fontSize * 0.08, width, Math.max(1, fontSize * 0.07));
+      drawTextDecoration(ctx, style.textDecoration, startX, y, width, fontSize);
     }
   };
   layout.lines.forEach((line, index) => drawLine(line, firstY + index * lineHeight));

@@ -2,7 +2,7 @@
 import Switch from '~/ui/switch/Switch.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 
-defineProps<{ modelValue: boolean }>();
+defineProps<{ modelValue: boolean; description?: string }>();
 const emit = defineEmits<{ (event: 'update:modelValue', value: boolean): void }>();
 const { t } = useTranslate('CanvasPanel');
 </script>
@@ -11,7 +11,7 @@ const { t } = useTranslate('CanvasPanel');
   <div class="remove-background-row">
     <div class="copy">
       <span class="title">{{ t('removeBackground') }}</span>
-      <span class="description">{{ t('removeBackgroundDescription') }}</span>
+      <span class="description">{{ description ?? t('removeBackgroundDescription') }}</span>
     </div>
     <Switch
       :model-value="modelValue"
