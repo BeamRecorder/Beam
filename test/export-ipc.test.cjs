@@ -5,7 +5,7 @@ const path = require('node:path');
 const test = require('node:test');
 const { registerExportIpc, safeExportName } = require('../electron/export/export-ipc.cjs');
 
-function setup(filePath, { defaultExportDirectory, dialogCalls = [] } = {}) {
+function setup(filePath, { defaultExportDirectory, dialogCalls = [], resolveAutomaticDestination } = {}) {
   const handlers = new Map();
   const registration = {
     ipcMain: { handle: (name, handler) => handlers.set(name, handler) },
@@ -20,6 +20,7 @@ function setup(filePath, { defaultExportDirectory, dialogCalls = [] } = {}) {
   if (defaultExportDirectory !== undefined) registration.defaultExportDirectory = defaultExportDirectory;
   registerExportIpc({
     ...registration,
+    ...(resolveAutomaticDestination ? { resolveAutomaticDestination } : {}),
   });
   const event = { sender: { id: 7 } };
   return { event, dialogCalls, invoke: (name, payload) => handlers.get(name)(event, payload) };
@@ -279,4 +280,32 @@ test('removes the partial file after an asynchronous chunk failure and abort', a
   await api.invoke('export:abort', { jobId: opened.jobId });
   assert.equal(fixture.files.has(temporaryPath), false);
   assert.equal(fixture.calls.unlinks.at(-1), temporaryPath);
+});
+
+test('uses a main-authorized Quick Snip destination without a save dialog', async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-auto-export-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const output = path.join(directory, 'snip.mp4');
+  const f = setup('/ignored.mp4', {
+    resolveAutomaticDestination: (sender, format) => {
+      assert.equal(sender.id, 7);
+      assert.equal(format, 'mp4');
+      return output;
+    },
+  });
+  const job = await f.invoke('export:begin', { format: 'mp4', projectName: 'Snip' });
+  assert.equal(f.dialogCalls.length, 0);
+  await f.invoke('export:write', { jobId: job.jobId, sequence: 0, position: 0, data: new Uint8Array([1, 2]) });
+  assert.deepEqual(await f.invoke('export:finalize', { jobId: job.jobId }), { path: output });
+  assert.deepEqual(fs.readFileSync(output), Buffer.from([1, 2]));
+});
+
+test('does not open a save dialog when automatic destination authorization fails', async () => {
+  const f = setup('/ignored.mp4', {
+    resolveAutomaticDestination: () => {
+      throw new Error('No active snip');
+    },
+  });
+  await assert.rejects(f.invoke('export:begin', { format: 'mp4' }), /No active snip/);
+  assert.equal(f.dialogCalls.length, 0);
 });

@@ -25,7 +25,12 @@ import type { RecordingSessionResult } from '../../components/hud/recorder/recor
 import type { EditorLoadingProgress, EditorLoadingStage } from './editor-window';
 import type { AppearanceSettings } from '~/types/appearance';
 import type { EditorPresetDocument, EditorPresetSettings } from './editor-preset';
-import type { QuickSnipConfiguration, QuickSnipSnapshot } from './quick-snip';
+import type {
+  QuickSnipConfiguration,
+  QuickSnipSnapshot,
+  QuickSnipRenderTask,
+  QuickSnipRenderReport,
+} from './quick-snip';
 
 export type * from './capture-config';
 export type * from './screen-region';
@@ -132,6 +137,7 @@ export interface DesktopCaptureApi extends CaptureApi {
   updateActiveEditorPreset(settings: EditorPresetSettings): Promise<EditorPresetDocument>;
   onEditorPresetsChanged(listener: (document: EditorPresetDocument) => void): () => void;
   quickSnipToggle(): Promise<QuickSnipSnapshot>;
+  notifyQuickSnipCropReady(): void;
   quickSnipStart(
     overrides?: Partial<Pick<QuickSnipConfiguration, 'mode' | 'format' | 'automaticZoom' | 'devices'>>,
   ): Promise<QuickSnipSnapshot>;
@@ -151,7 +157,13 @@ export interface DesktopCaptureApi extends CaptureApi {
   onQuickSnipStatus(listener: (snapshot: QuickSnipSnapshot) => void): () => void;
   onQuickSnipState(listener: (snapshot: QuickSnipSnapshot) => void): () => void;
   copyQuickSnipFile(path: string): Promise<{ native: boolean; fallback: string | null }>;
-  setQuickSnipStatusCompact(compact: boolean): void;
+  setQuickSnipStatusInteractive(interactive: boolean): void;
+  dismissQuickSnipStatus(): void;
+  openQuickSnipEditor(): Promise<void>;
+  getQuickSnipRenderTask(): Promise<QuickSnipRenderTask | null>;
+  onQuickSnipRenderTask(listener: (task: QuickSnipRenderTask) => void): () => void;
+  saveQuickSnipRenderState(id: string, state: ProjectEditorState): Promise<void>;
+  reportQuickSnipRender(report: QuickSnipRenderReport): Promise<void>;
   showTeleprompter(): void;
   hideTeleprompter(): void;
   toggleTeleprompterVisibility(): void;

@@ -30,6 +30,7 @@ let removeTrayStopListener: (() => void) | null = null;
 let removeRecordingShortcutListener: (() => void) | null = null;
 
 const handleMouseMove = (e: MouseEvent) => {
+  if (isQuickSnipStatus) return;
   if (currentView.value !== 'hud' && recording.phase.value === 'idle') return;
   const el = document.elementFromPoint(e.clientX, e.clientY);
   const isInteractive =
@@ -41,6 +42,7 @@ const handleMouseMove = (e: MouseEvent) => {
 };
 
 const handleMouseLeave = () => {
+  if (isQuickSnipStatus) return;
   if (lastInteractive !== false) {
     lastInteractive = false;
     capture.setInteractive(false);

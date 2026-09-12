@@ -49,7 +49,9 @@
     "teleprompterPreviousLine": "Предишен ред",
     "teleprompterPreviousLineDesc": "Връщане към предишния ред на телесуфльора",
     "conflictWith": "В конфликт с „{name}“",
-    "failedToUpdate": "Комбинацията не може да бъде обновена"
+    "failedToUpdate": "Комбинацията не може да бъде обновена",
+    "quickSnip": "Quick Snip",
+    "quickSnipDesc": "Отваряне, стартиране или спиране на Quick Snip според текущото му състояние."
   },
   "SidebarPanel": {
     "canvas": "Платно",

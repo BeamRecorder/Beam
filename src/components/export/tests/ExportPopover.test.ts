@@ -14,6 +14,13 @@ const { mockJob } = vi.hoisted(() => ({
   },
 }));
 
+vi.mock('~/api/capture', () => ({
+  capture: {
+    getEditorPresets: vi.fn(async () => ({ activePresetId: 'default', presets: [] })),
+    updateEditorPreset: vi.fn(async () => ({})),
+  },
+}));
+
 vi.mock('../useExportJob', async () => {
   const { ref, computed } = await import('vue');
   const progress = ref(null);

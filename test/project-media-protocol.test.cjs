@@ -345,3 +345,24 @@ test('uses the selected file extension for the response MIME type', async () => 
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test('serves Raw Quick Snip assets only through their dedicated safe store', async (t) => {
+  const { createProjectStore } = require('../electron/projects/project-store.cjs');
+  const { pathToFileURL } = require('node:url');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-raw-media-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const rawRoot = path.join(root, 'raw');
+  fs.mkdirSync(rawRoot);
+  const file = path.join(rawRoot, 'clip.mp4');
+  fs.writeFileSync(file, 'video');
+  const rawProjectStore = createProjectStore(rawRoot, { mediaHost: 'quick-snip' });
+  const projectStore = createProjectStore(path.join(root, 'projects'));
+  const url = rawProjectStore.mediaUrlFor(pathToFileURL(file).href);
+  assert.ok(url.startsWith('project-media://quick-snip/'));
+  assert.equal(projectStore.mediaFileForUrl(url), null);
+  assert.equal(rawProjectStore.mediaFileForUrl('project-media://quick-snip/%2E%2E%2Foutside.mp4'), null);
+  const handler = createProjectMediaHandler({ projectStore, rawProjectStore });
+  const response = await handler(request(url));
+  assert.equal(response.status, 200);
+  assert.equal(await response.text(), 'video');
+});

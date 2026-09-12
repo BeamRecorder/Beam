@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { EventEmitter } = require('node:events');
 const test = require('node:test');
 
 const { registerCaptureIpc } = require('../electron/capture/capture-ipc.cjs');
@@ -168,7 +169,7 @@ test('wraps native errors with the failing command context', async () => {
   await assert.rejects(() => request({}, 'start-prepared-recording'), /capture-engine a échoué pour "start": boom/);
 });
 
-test('forwards system-audio preview commands and returns their engine responses', async () => {
+test('forwards system-audio preview commands unchanged outside Linux', async () => {
   const handlers = new Map();
   const requests = [];
   const responses = {
@@ -192,6 +193,7 @@ test('forwards system-audio preview commands and returns their engine responses'
     app: {},
     userPaths: { projects: 'recordings' },
     trackStorages: [],
+    platform: 'darwin',
   });
 
   const request = handlers.get('capture:request');
@@ -203,6 +205,83 @@ test('forwards system-audio preview commands and returns their engine responses'
     requests,
     Object.keys(responses).map((command) => ({ command, payload: {} })),
   );
+});
+
+test('shares Linux preview clients and restarts the preview after capture completes', async () => {
+  const handlers = new Map();
+  const requests = [];
+  let state = 'idle';
+  let previewActive = false;
+  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const captureEngine = {
+    request: async (command, payload) => {
+      requests.push({ command, payload });
+      if (command === 'status') return { state };
+      if (command === 'start-system-audio-preview') {
+        previewActive = true;
+        return { started: true };
+      }
+      if (command === 'system-audio-preview-level') return { level: previewActive ? 0.6 : 0 };
+      if (command === 'stop-system-audio-preview') {
+        previewActive = false;
+        return { stopped: true };
+      }
+      if (command === 'prepare') {
+        previewActive = false;
+        state = 'prepared';
+        return { state };
+      }
+      if (command === 'start') {
+        state = 'recording';
+        return { state };
+      }
+      if (command === 'stop') {
+        state = 'completed';
+        return { state, sessionId: 'session-preview', manifestPath: null };
+      }
+      throw new Error(`unexpected capture command: ${command}`);
+    },
+  };
+  const createSender = () => {
+    const sender = new EventEmitter();
+    sender.isDestroyed = () => false;
+    return sender;
+  };
+  const hud = createSender();
+  const quickSnip = createSender();
+
+  registerCaptureIpc({
+    ipcMain,
+    desktopCapturer: {},
+    screen: {},
+    captureEngine,
+    app: {},
+    userPaths: { projects: 'recordings' },
+    trackStorages: [],
+    platform: 'linux',
+  });
+
+  const request = handlers.get('capture:request');
+  await Promise.all([
+    request({ sender: hud }, 'start-system-audio-preview'),
+    request({ sender: quickSnip }, 'start-system-audio-preview'),
+  ]);
+  assert.equal(requests.filter(({ command }) => command === 'start-system-audio-preview').length, 1);
+
+  await request({ sender: quickSnip }, 'prepare', { config: {} });
+  assert.deepEqual(await request({ sender: hud }, 'system-audio-preview-level'), { level: 0 });
+  assert.equal(requests.filter(({ command }) => command === 'start-system-audio-preview').length, 1);
+
+  await request({ sender: quickSnip }, 'start');
+  await request({ sender: quickSnip }, 'stop-native-recording');
+  await request({ sender: quickSnip }, 'complete-native-recording');
+  assert.deepEqual(await request({ sender: quickSnip }, 'system-audio-preview-level'), { level: 0.6 });
+  assert.equal(requests.filter(({ command }) => command === 'start-system-audio-preview').length, 2);
+
+  await request({ sender: hud }, 'stop-system-audio-preview');
+  assert.equal(requests.filter(({ command }) => command === 'stop-system-audio-preview').length, 0);
+  await request({ sender: quickSnip }, 'stop-system-audio-preview');
+  assert.equal(requests.filter(({ command }) => command === 'stop-system-audio-preview').length, 1);
 });
 
 test('invalidates the deferred session and rejects when the engine is poisoned', async () => {

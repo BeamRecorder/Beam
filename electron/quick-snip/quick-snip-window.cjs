@@ -1,7 +1,8 @@
 const path = require('path');
-const { placeCropBar } = require('./quick-snip-position.cjs');
+const { placeCropBar, restoreWindowPosition, saveWindowPosition } = require('./quick-snip-position.cjs');
+const { createCommittedWindowPosition } = require('../window/committed-window-position.cjs');
 
-const BAR_SIZE = { width: 760, height: 84 };
+const BAR_SIZE = { width: 480, height: 132 };
 
 function createQuickSnipWindow({
   BrowserWindow,
@@ -9,20 +10,55 @@ function createQuickSnipWindow({
   isPackaged,
   platform = process.platform,
   appIconPath,
+  screen,
+  preferencesStore = null,
+  environment = process.env,
+  setTimer = setTimeout,
+  clearTimer = clearTimeout,
 }) {
   let window = null;
   let ready = false;
+  let rendererReady = false;
+  let visibleRequested = false;
+  let pendingCommand = null;
+  let parentWindow = null;
   let pendingConfiguration = null;
-  let hideWhileRecording = false;
   let baseBounds = null;
   let userPositioned = false;
-  let programmaticBounds = null;
+  let positionTracker = null;
+  let activeDisplay = null;
   const send = (channel, payload) => {
-    if (window && !window.isDestroyed() && ready) window.webContents.send(channel, payload);
+    if (window && !window.isDestroyed() && ready && rendererReady) window.webContents.send(channel, payload);
+  };
+  const present = () => {
+    if (!window || window.isDestroyed() || !ready || !rendererReady || !visibleRequested) return;
+    if (parentWindow && !parentWindow.isVisible()) return;
+    window.showInactive();
+    window.moveTop();
+  };
+  const setParentWindow = (parent) => {
+    if (!window || window.isDestroyed()) return false;
+    parentWindow?.removeListener('show', present);
+    parentWindow?.removeListener('focus', present);
+    parentWindow = parent && !parent.isDestroyed() ? parent : null;
+    window.setParentWindow(parentWindow);
+    parentWindow?.on('show', present);
+    parentWindow?.on('focus', present);
+    present();
+    return true;
+  };
+  const flushReady = () => {
+    if (!ready || !rendererReady) return;
+    if (pendingConfiguration) send('quick-snip:configure', pendingConfiguration);
+    present();
+    if (pendingCommand) {
+      send('quick-snip:command', pendingCommand);
+      pendingCommand = null;
+    }
   };
   const setNativeBounds = (bounds) => {
     if (!window || window.isDestroyed()) return;
-    programmaticBounds = { ...bounds };
+    positionTracker?.trackProgrammatic(bounds);
     window.setBounds(bounds);
   };
   const placeForRegion = (region, display) => {
@@ -32,19 +68,19 @@ function createQuickSnipWindow({
       region,
       barSize: BAR_SIZE,
     });
-    hideWhileRecording = platform === 'linux' && !placement.outside;
     if (!userPositioned) {
       baseBounds = { ...placement.bounds };
       setNativeBounds(baseBounds);
     }
     return placement;
   };
-  const ensure = () => {
+  const ensure = (parent) => {
     if (window && !window.isDestroyed()) return window;
     ready = false;
+    rendererReady = false;
     window = new BrowserWindow({
-      width: 760,
-      height: 84,
+      parent,
+      ...BAR_SIZE,
       frame: false,
       transparent: true,
       backgroundColor: '#00000000',
@@ -63,81 +99,115 @@ function createQuickSnipWindow({
         nodeIntegration: false,
         contextIsolation: true,
         sandbox: false,
+        backgroundThrottling: false,
       },
     });
     window.setContentProtection(true);
     window.setAlwaysOnTop(true, 'screen-saver');
+    const target = window;
+    positionTracker = createCommittedWindowPosition({
+      window: target,
+      platform,
+      environment,
+      setTimer,
+      clearTimer,
+      onMove: (bounds) => {
+        userPositioned = true;
+        baseBounds = bounds;
+      },
+      onCommit: (bounds) => {
+        const display = screen?.getDisplayMatching(bounds) ?? activeDisplay;
+        saveWindowPosition(preferencesStore, 'quickSnipBarPositions', display, bounds);
+      },
+    });
     window.once('ready-to-show', () => {
+      if (window !== target || target.isDestroyed()) return;
       ready = true;
-      if (pendingConfiguration) send('quick-snip:configure', pendingConfiguration);
+      flushReady();
     });
     window.on('closed', () => {
+      if (window !== target) return;
+      positionTracker?.flush();
+      positionTracker?.dispose();
+      positionTracker = null;
+      parentWindow?.removeListener('show', present);
+      parentWindow?.removeListener('focus', present);
+      parentWindow = null;
       ready = false;
+      rendererReady = false;
+      visibleRequested = false;
+      pendingCommand = null;
+      pendingConfiguration = null;
       window = null;
-    });
-    window.on('moved', () => {
-      if (!window || window.isDestroyed()) return;
-      const bounds = window.getBounds();
-      if (
-        programmaticBounds &&
-        bounds.x === programmaticBounds.x &&
-        bounds.y === programmaticBounds.y &&
-        bounds.width === programmaticBounds.width &&
-        bounds.height === programmaticBounds.height
-      ) {
-        programmaticBounds = null;
-        return;
-      }
-      userPositioned = true;
-      baseBounds = { ...bounds };
     });
     if (isPackaged) window.loadFile(path.join(applicationRoot, 'dist/index.html'), { query: { quickSnipCrop: '1' } });
     else window.loadURL('http://localhost:6500/?quickSnipCrop=1');
     return window;
   };
   return {
-    show(configuration, display) {
-      const target = ensure();
+    show(configuration, display, parent = null) {
+      const target = ensure(parent);
+      positionTracker.flush();
+      activeDisplay = display;
+      setParentWindow(parent);
       const nativeIdentity =
         platform === 'darwin'
           ? (target.getMediaSourceId().match(/^window:(\d+)/)?.[1] ?? null)
           : target.getNativeWindowHandle().toString('hex');
       pendingConfiguration = { ...configuration, excludedWindowHandle: nativeIdentity };
-      userPositioned = false;
-      placeForRegion(configuration.region, display);
-      send('quick-snip:configure', { ...pendingConfiguration, hideWhileRecording });
-      target.showInactive();
-      target.moveTop();
+      const saved = restoreWindowPosition(preferencesStore, 'quickSnipBarPositions', display, BAR_SIZE);
+      userPositioned = Boolean(saved);
+      pendingCommand = null;
+      visibleRequested = true;
+      if (saved) {
+        baseBounds = saved;
+        setNativeBounds(saved);
+      } else if (configuration.screenKind === 'window') {
+        const area = display.workArea;
+        baseBounds = {
+          ...BAR_SIZE,
+          x: Math.max(area.x, Math.round(area.x + (area.width - BAR_SIZE.width) / 2)),
+          y: Math.max(area.y, area.y + area.height - BAR_SIZE.height - 16),
+        };
+        setNativeBounds(baseBounds);
+      } else {
+        placeForRegion(configuration.region, display);
+      }
+      flushReady();
+    },
+    rendererReady(sender) {
+      if (!window || window.isDestroyed() || window.webContents !== sender) return false;
+      rendererReady = true;
+      flushReady();
+      return true;
     },
     command(command) {
-      if (command === 'start') window?.setParentWindow(null);
-      send('quick-snip:command', command);
-      if (command === 'start' && hideWhileRecording) window?.hide();
-    },
-    setRecording(recording) {
       if (!window || window.isDestroyed()) return;
-      if (recording && hideWhileRecording) window.hide();
-      else {
-        window.showInactive();
-        window.moveTop();
-      }
+      if (command === 'start') setParentWindow(null);
+      if (ready && rendererReady) send('quick-snip:command', command);
+      else pendingCommand = command;
+    },
+    setRecording() {
+      if (!window || window.isDestroyed()) return;
+      visibleRequested = true;
+      present();
     },
     showExisting() {
       if (!window || window.isDestroyed()) return false;
-      window.showInactive();
-      window.moveTop();
+      visibleRequested = true;
+      present();
       return true;
     },
     hide() {
+      positionTracker?.flush();
+      visibleRequested = false;
+      pendingCommand = null;
+      pendingConfiguration = null;
       if (window && !window.isDestroyed() && baseBounds) setNativeBounds(baseBounds);
-      window?.setParentWindow(null);
+      setParentWindow(null);
       window?.hide();
     },
-    setParentWindow(parent) {
-      if (!window || window.isDestroyed()) return false;
-      window.setParentWindow(parent && !parent.isDestroyed?.() ? parent : null);
-      return true;
-    },
+    setParentWindow,
     updateRegion(region, display) {
       if (!window || window.isDestroyed() || !baseBounds) return false;
       placeForRegion(region, display);
@@ -150,6 +220,8 @@ function createQuickSnipWindow({
       return true;
     },
     destroy() {
+      positionTracker?.flush();
+      positionTracker?.dispose();
       window?.destroy();
       window = null;
     },

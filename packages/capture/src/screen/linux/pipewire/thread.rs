@@ -166,7 +166,13 @@ impl PipewireCapture {
     }
 
     pub(crate) fn start(&mut self) -> Result<(), CaptureError> {
-        self.send_wait(|reply| PipewireCommand::Start {
+        if !self.start_gate.is_released() {
+            return Err(CaptureError::InvalidTransition {
+                from: "Armed".into(),
+                to: "Recording".into(),
+            });
+        }
+        self.send_wait("the first video frame", |reply| PipewireCommand::Start {
             start_ns: self.start_ns,
             start_gate: self.start_gate.clone(),
             reply,
@@ -177,30 +183,24 @@ impl PipewireCapture {
 
     pub(crate) fn pause(&mut self) -> Result<(), CaptureError> {
         if self.running {
-            self.send_wait(|reply| PipewireCommand::Pause { reply })?;
+            self.send_wait("pause", |reply| PipewireCommand::Pause { reply })?;
             self.send_sink_wait(SinkMessage::EndSegment)?;
             self.running = false;
         }
         Ok(())
     }
 
-    pub(crate) fn resume(
+    pub(crate) fn prepare_resume(
         &mut self,
         start_ns: u64,
         start_gate: Arc<StartGate>,
         segment: Option<ScreenSegment>,
     ) -> Result<(), CaptureError> {
         self.start_ns = start_ns;
-        self.start_gate = start_gate.clone();
+        self.start_gate = start_gate;
         if let Some(segment) = segment {
             self.send_sink_wait(|reply| SinkMessage::BeginSegment(segment, reply))?;
         }
-        self.send_wait(|reply| PipewireCommand::Start {
-            start_ns,
-            start_gate,
-            reply,
-        })?;
-        self.running = true;
         Ok(())
     }
 
@@ -239,13 +239,18 @@ impl PipewireCapture {
 
     fn send_wait(
         &self,
+        operation: &str,
         command: impl FnOnce(mpsc::SyncSender<Result<(), CaptureError>>) -> PipewireCommand,
     ) -> Result<(), CaptureError> {
         let (reply, receiver) = mpsc::sync_channel(1);
         self.send(command(reply))?;
         receiver
             .recv_timeout(PIPEWIRE_READY_TIMEOUT)
-            .map_err(|_| pipewire_error("PipeWire lifecycle command timed out"))?
+            .map_err(|error| {
+                pipewire_error(format!(
+                    "Waiting for {operation} from PipeWire failed: {error}"
+                ))
+            })?
     }
 
     fn send_sink_wait(
@@ -307,6 +312,7 @@ fn pipewire_worker(
         timestamp: TimestampMapper::new(start_ns),
         start_gate,
         active: false,
+        start_reply: None,
         stopping: false,
         clock: Instant::now(),
         sink,
@@ -429,7 +435,11 @@ fn pipewire_worker(
                 if let Err(error) = &result {
                     set_fatal(&state.fatal, pipewire_error(error));
                 }
-                let _ = reply.send(result);
+                if result.is_ok() {
+                    state.start_reply = Some(reply);
+                } else {
+                    let _ = reply.send(result);
+                }
             }
             PipewireCommand::Pause { reply } => {
                 let mut state = command_state.borrow_mut();
@@ -482,3 +492,7 @@ fn pipewire_worker(
     }
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "thread_tests.rs"]
+mod tests;

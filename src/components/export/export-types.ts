@@ -12,6 +12,7 @@ export type ExportPreset = 'low' | 'medium' | 'high';
 export type ExportStage = 'validating_assets' | 'loading_assets' | 'encoding' | 'finalizing';
 
 export interface ExportProgress {
+  preview?: string;
   stage: ExportStage;
   stageLabel?: string;
   overallProgress: number;
@@ -53,6 +54,7 @@ export interface CompositionSnapshot {
   composition: ClipComposition;
 }
 export interface ExportRequest {
+  preview?: boolean;
   projectName: string;
   format: ExportFormat;
   preset: ExportPreset;

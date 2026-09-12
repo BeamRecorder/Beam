@@ -156,10 +156,22 @@
       ]
     },
     "deb": {
+      "fpm": [
+        "--depends",
+        "wl-clipboard",
+        "--depends",
+        "xclip"
+      ],
       "afterInstall": "build/linux/after-install.sh",
       "afterRemove": "build/linux/deb-after-remove.sh"
     },
     "rpm": {
+      "fpm": [
+        "--depends",
+        "wl-clipboard",
+        "--depends",
+        "xclip"
+      ],
       "afterInstall": "build/linux/after-install.sh",
       "afterRemove": "build/linux/rpm-after-remove.sh"
     }

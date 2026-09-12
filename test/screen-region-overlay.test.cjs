@@ -58,6 +58,124 @@ function createOverlayHarness() {
   }
 }
 
+test('defers screen overlay presentation until the native window is ready', async () => {
+  const { overlay, calls, window } = createOverlayHarness();
+  const selection = overlay.select({
+    bounds: { x: 0, y: 0, width: 1920, height: 1080 },
+    context: 'quick-snip',
+    region: { x: 0.1, y: 0.2, width: 0.5, height: 0.4 },
+  });
+
+  assert.equal(
+    calls.some((call) => call[0] === 'show'),
+    false,
+  );
+  assert.equal(
+    calls.some((call) => call[0] === 'focus'),
+    false,
+  );
+  assert.equal(
+    calls.some((call) => call[0] === 'send'),
+    false,
+  );
+
+  window.emit('ready-to-show');
+
+  assert.equal(
+    calls.some((call) => call[0] === 'show'),
+    true,
+  );
+  assert.equal(
+    calls.some((call) => call[0] === 'focus'),
+    true,
+  );
+  assert.equal(
+    calls.some((call) => call[0] === 'send' && call[1] === 'screen-region:configure'),
+    true,
+  );
+  overlay.cancel();
+  assert.equal(await selection, null);
+});
+
+test('stays hidden when a pending selection is canceled before native readiness', async () => {
+  const { overlay, calls, window } = createOverlayHarness();
+  const selection = overlay.select({
+    bounds: { x: 0, y: 0, width: 1920, height: 1080 },
+    region: { x: 0.1, y: 0.2, width: 0.5, height: 0.4 },
+  });
+
+  overlay.cancel();
+  window.emit('ready-to-show');
+
+  assert.equal(
+    calls.some((call) => call[0] === 'show'),
+    false,
+  );
+  assert.equal(
+    calls.some((call) => call[0] === 'focus'),
+    false,
+  );
+  assert.equal(
+    calls.some((call) => call[0] === 'send'),
+    false,
+  );
+  assert.equal(await selection, null);
+});
+
+test('stays hidden when the overlay is hidden before native readiness', async () => {
+  const { overlay, calls, window } = createOverlayHarness();
+  const selection = overlay.select({
+    bounds: { x: 0, y: 0, width: 1920, height: 1080 },
+    region: { x: 0.1, y: 0.2, width: 0.5, height: 0.4 },
+  });
+
+  overlay.hide();
+  window.emit('ready-to-show');
+
+  assert.equal(
+    calls.some((call) => call[0] === 'show'),
+    false,
+  );
+  assert.equal(
+    calls.some((call) => call[0] === 'focus'),
+    false,
+  );
+  assert.equal(
+    calls.some((call) => call[0] === 'send'),
+    false,
+  );
+  overlay.cancel();
+  assert.equal(await selection, null);
+});
+
+test('restores the noninteractive recording overlay with showInactive', () => {
+  const { overlay, calls, window } = createOverlayHarness();
+  overlay.show({
+    bounds: { x: 0, y: 0, width: 1920, height: 1080 },
+    region: { x: 0.1, y: 0.2, width: 0.5, height: 0.4 },
+  });
+
+  window.emit('ready-to-show');
+
+  assert.equal(
+    calls.some((call) => call[0] === 'showInactive'),
+    true,
+  );
+  assert.equal(
+    calls.some((call) => call[0] === 'show'),
+    false,
+  );
+  assert.equal(
+    calls.some((call) => call[0] === 'focus'),
+    false,
+  );
+  assert.equal(
+    calls.some((call) => call[0] === 'send' && call[1] === 'screen-region:configure' && call[2].mode === 'record'),
+    true,
+  );
+  overlay.hide();
+});
+
 test('cleans a failed region selection so a later selection can complete', async () => {
   const calls = [];
   const listeners = new Map();
@@ -98,7 +216,9 @@ test('cleans a failed region selection so a later selection can complete', async
         calls.push(['getDisplayMatching', bounds]);
         return { bounds: { x: 1920, y: 0, width: 2560, height: 1440 } };
       },
-      getPrimaryDisplay: () => ({ bounds: { x: 0, y: 0, width: 1920, height: 1080 } }),
+      getPrimaryDisplay: () => ({
+        bounds: { x: 0, y: 0, width: 1920, height: 1080 },
+      }),
     },
   };
   const originalLoad = Module._load;
@@ -200,7 +320,10 @@ test('resolves Linux selection bounds from the parent display and falls back to 
     const parentSelection = overlay.select({ region: null }, parentWindow);
     const selectedRegion = { x: 0.2, y: 0.25, width: 0.4, height: 0.3 };
     overlay.confirm(selectedRegion);
-    assert.deepEqual(await parentSelection, { bounds: matchingBounds, region: selectedRegion });
+    assert.deepEqual(await parentSelection, {
+      bounds: matchingBounds,
+      region: selectedRegion,
+    });
     assert.deepEqual(
       calls.find((call) => call[0] === 'getDisplayMatching'),
       ['getDisplayMatching', parentWindow.getBounds()],

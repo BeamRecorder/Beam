@@ -9,7 +9,7 @@ const { createDefaultPresentation, defaultZoomMotionBlur, zoomState } = require(
 const { createProjectEditorAccess } = require('./project-editor-access.cjs');
 const { createProjectFeatureDetector } = require('./project-feature-detection.cjs');
 
-function createProjectStore(root) {
+function createProjectStore(root, { mediaHost = 'asset' } = {}) {
   const safePath = (directory, relativePath) => {
     if (typeof relativePath !== 'string' || !relativePath) return null;
     const resolvedRoot = path.resolve(directory);
@@ -97,7 +97,7 @@ function createProjectStore(root) {
     const relativePath = path.relative(root, file);
     const safeFile = safePath(root, relativePath);
     return safeFile && safeFile === path.resolve(file) && existingFileWithin(root, safeFile)
-      ? `project-media://asset/${encodeURIComponent(relativePath.split(path.sep).join('/'))}`
+      ? `project-media://${mediaHost}/${encodeURIComponent(relativePath.split(path.sep).join('/'))}`
       : null;
   };
   const mediaFileForUrl = (mediaUrl) => {
@@ -107,7 +107,7 @@ function createProjectStore(root) {
     } catch {
       return null;
     }
-    if (parsed.protocol !== 'project-media:' || parsed.hostname !== 'asset') return null;
+    if (parsed.protocol !== 'project-media:' || parsed.hostname !== mediaHost) return null;
     let relativePath;
     try {
       relativePath = decodeURIComponent(parsed.pathname.slice(1));

@@ -49,7 +49,9 @@
     "teleprompterPreviousLine": "前の行",
     "teleprompterPreviousLineDesc": "テレプロンプターの前の行へ移動",
     "conflictWith": "「{name}」と競合",
-    "failedToUpdate": "ショートカットを更新できませんでした"
+    "failedToUpdate": "ショートカットを更新できませんでした",
+    "quickSnip": "Quick Snip",
+    "quickSnipDesc": "現在の状態に応じて Quick Snip を開く、録画を開始、または停止します。"
   },
   "SidebarPanel": {
     "canvas": "キャンバス",

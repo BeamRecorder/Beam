@@ -12,8 +12,8 @@ const shortcutErrors = ref<Record<string, string>>({});
 const recordingDefinitions = [
   {
     id: 'quickSnip.toggle',
-    label: () => 'Quick Snip',
-    description: () => 'Open, start, or stop Quick Snip based on its current state.',
+    label: () => t('quickSnip'),
+    description: () => t('quickSnipDesc'),
   },
   {
     id: 'hud.startStopRecording',

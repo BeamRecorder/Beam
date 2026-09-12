@@ -51,6 +51,15 @@ function createScreenRegionOverlayWindow({
     if (!window || window.isDestroyed() || !ready) return;
     window.webContents.send('screen-region:configure', options);
   };
+  const present = () => {
+    if (!window || window.isDestroyed() || !ready || !current) return;
+    if (current.mode === 'select') {
+      window.show();
+      window.focus();
+    } else {
+      window.showInactive();
+    }
+  };
 
   const ensureWindow = () => {
     if (!canAcceptWork()) throw new Error('Cannot create a screen overlay while Beam is shutting down');
@@ -76,7 +85,8 @@ function createScreenRegionOverlayWindow({
     window.setContentProtection(true);
     window.once('ready-to-show', () => {
       ready = true;
-      send(current);
+      if (current) send(current);
+      present();
     });
     window.on('closed', () => {
       ready = false;
@@ -98,13 +108,7 @@ function createScreenRegionOverlayWindow({
     target.setBounds(current.bounds);
     target.setIgnoreMouseEvents(!interactive);
     send(current);
-    if (interactive) {
-      target.show();
-      target.focus();
-    } else {
-      target.showInactive();
-    }
-    target.moveTop();
+    present();
   };
 
   return {

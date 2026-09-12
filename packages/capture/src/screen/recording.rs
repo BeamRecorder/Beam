@@ -203,7 +203,8 @@ impl ScreenRecording {
         }
     }
 
-    pub fn resume(
+    /// Prepare the next segment while paused; release its gate and call `start` to activate it.
+    pub fn prepare_resume(
         &mut self,
         start_ns: u64,
         start_gate: Arc<StartGate>,
@@ -212,7 +213,7 @@ impl ScreenRecording {
         match &mut self.backend {
             #[cfg(target_os = "linux")]
             PlatformScreenRecording::Linux(recording) => {
-                recording.resume(start_ns, start_gate, segment)
+                recording.prepare_resume(start_ns, start_gate, segment)
             }
             #[cfg(any(windows, target_os = "macos"))]
             _ => {

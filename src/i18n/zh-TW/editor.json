@@ -49,7 +49,9 @@
     "teleprompterPreviousLine": "上一行",
     "teleprompterPreviousLineDesc": "移至提詞器的上一行",
     "conflictWith": "與「{name}」衝突",
-    "failedToUpdate": "快速鍵更新失敗"
+    "failedToUpdate": "快速鍵更新失敗",
+    "quickSnip": "Quick Snip",
+    "quickSnipDesc": "依目前狀態開啟、開始或停止 Quick Snip。"
   },
   "SidebarPanel": {
     "canvas": "畫布",

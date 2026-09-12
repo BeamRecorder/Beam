@@ -41,4 +41,5 @@ mod cursor_tests;
 mod format_tests;
 mod region_tests;
 mod sink_tests;
+mod start_tests;
 mod timestamp_tests;

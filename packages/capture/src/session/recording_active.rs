@@ -71,6 +71,20 @@ impl ActiveRecordings {
             .map(|recording| recording.metrics().take_peak())
     }
 
+    pub(super) fn start(
+        &mut self,
+        start_gate: &super::StartGate,
+        t0_ns: u64,
+    ) -> Result<(), CaptureError> {
+        // A static Portal window may only produce one frame on activation.
+        // Open the gate first so that frame cannot be discarded as pre-recording data.
+        start_gate.release(t0_ns)?;
+        if let Some(screen) = self.screen.as_mut() {
+            screen.start()?;
+        }
+        Ok(())
+    }
+
     pub(super) fn open(&mut self, context: OpenContext<'_>) -> Result<(), CaptureError> {
         let OpenContext {
             request,
@@ -225,20 +239,19 @@ impl ActiveRecordings {
         let path = segment_path(layout, TrackKind::Screen, generation, "mp4");
         let cursor_directory = matches!(request.cursor, CursorSelection::Separate { .. })
             .then(|| layout.track_dir(TrackKind::Cursor));
-        let mut recording =
-            crate::screen::ScreenRecording::open(crate::screen::ScreenOpenRequest {
-                selection,
-                recording: &request.recording,
-                region: request.region,
-                cursor: request.cursor,
-                excluded_window_handles: &request.excluded_window_handles,
-                start_ns,
-                start_gate: start_gate.clone(),
-                consumer: crate::screen::ScreenConsumer::EncodedFile {
-                    path,
-                    cursor_directory,
-                },
-            })?;
+        let recording = crate::screen::ScreenRecording::open(crate::screen::ScreenOpenRequest {
+            selection,
+            recording: &request.recording,
+            region: request.region,
+            cursor: request.cursor,
+            excluded_window_handles: &request.excluded_window_handles,
+            start_ns,
+            start_gate: start_gate.clone(),
+            consumer: crate::screen::ScreenConsumer::EncodedFile {
+                path,
+                cursor_directory,
+            },
+        })?;
         if let ScreenSelection::Portal { kind, .. } = selection {
             let format = recording.video_format().ok_or_else(|| {
                 CaptureError::Backend("Linux screen format was not negotiated".into())
@@ -266,7 +279,6 @@ impl ActiveRecordings {
             }
         }
         add_segment(tracks, TrackKind::Screen, generation, "mp4", start_ns)?;
-        recording.start()?;
         self.screen = Some(recording);
         Ok(())
     }
@@ -336,7 +348,7 @@ impl ActiveRecordings {
                 from: "PausedWithoutScreen".into(),
                 to: "Recording".into(),
             })?
-            .resume(
+            .prepare_resume(
                 start_ns,
                 start_gate.clone(),
                 Some(crate::screen::ScreenSegment { path, start_ns }),

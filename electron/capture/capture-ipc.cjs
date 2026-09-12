@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
 const { buildDefaultCaptureConfig } = require('./capture-config.cjs');
+const { createSystemAudioPreview } = require('./system-audio-preview.cjs');
 
 const ALLOWED_COMMANDS = new Set([
   'discover',
@@ -74,19 +75,25 @@ function registerCaptureIpc({
   };
   const completeSession = (session) => trackStorages.reduce((value, storage) => storage.complete(value), session);
   let deferredStoppedSession = null;
+  let systemAudioPreview;
   const requestEngine = async (command, payload = {}) => {
+    if (command === 'prepare') systemAudioPreview?.invalidate();
     try {
       // A poisoned engine respawns a fresh process on its next request; the
       // previous (timed out) session is gone and must not be completed.
       return await captureEngine.request(command, payload);
     } catch (error) {
-      if (captureEngine.isPoisoned) deferredStoppedSession = null;
+      if (captureEngine.isPoisoned) {
+        deferredStoppedSession = null;
+        systemAudioPreview?.invalidate();
+      }
       const message = error instanceof Error ? error.message : String(error);
       const wrapped = new Error(`capture-engine a échoué pour "${command}": ${message}`);
       wrapped.code = error?.code || 'capture-engine-error';
       throw wrapped;
     }
   };
+  if (platform === 'linux') systemAudioPreview = createSystemAudioPreview({ request: requestEngine });
   let pendingDefaultPreparation = null;
   const prepareDefaultRecording = (options) => {
     const key = JSON.stringify(options || {});
@@ -117,6 +124,11 @@ function registerCaptureIpc({
       const error = new Error(`capture command "${command}" rejected during application shutdown`);
       error.code = 'application-shutting-down';
       throw error;
+    }
+    if (systemAudioPreview) {
+      if (command === 'start-system-audio-preview') return systemAudioPreview.start(event.sender);
+      if (command === 'stop-system-audio-preview') return systemAudioPreview.stop(event.sender);
+      if (command === 'system-audio-preview-level') return systemAudioPreview.level(event.sender);
     }
     if (
       ['start-default-recording', 'prepare-default-recording', 'start-recording', 'prepare', 'start'].includes(

@@ -1,11 +1,13 @@
 const { BrowserWindow } = require('electron');
 const path = require('path');
+const { shouldAutoOpenDevTools } = require('./devtools-policy.cjs');
 
 const EDITOR_DEFAULT_SIZE = { width: 1280, height: 800 };
 const EDITOR_MIN_SIZE = { width: 960, height: 600 };
 const PROJECT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TITLEBAR_HEIGHT = 40;
 const TITLEBAR_SYMBOL_COLOR = '#7a7a7a';
+const EDITOR_OPEN_TIMEOUT_MS = 30_000;
 const EDITOR_LOADING_PROGRESS = Object.freeze({
   openingWindow: 10,
   loadingEditor: 25,
@@ -61,6 +63,27 @@ function createEditorWindowManager({
   let rejectPresentation = null;
   let lastProgressValue = 0;
   let persistTimer = null;
+  let presentationTimer = null;
+
+  const clearPresentationTimer = () => {
+    if (presentationTimer !== null) clearTimeout(presentationTimer);
+    presentationTimer = null;
+  };
+  const failPresentation = (target, error) => {
+    if (window !== target || !rejectPresentation) return;
+    if (!isPackaged) console.error('[Beam editor] Presentation failed:', error);
+    clearPresentationTimer();
+    const reject = rejectPresentation;
+    resolvePresentation = null;
+    rejectPresentation = null;
+    window = null;
+    controller = null;
+    rendererReady = false;
+    // A startup failure must leave the HUD and the requesting window usable.
+    // Detach before destroy so its closed handler cannot quit the application.
+    if (!target.isDestroyed()) target.destroy();
+    reject(error);
+  };
 
   const flushBounds = () => {
     if (persistTimer) clearTimeout(persistTimer);
@@ -118,13 +141,14 @@ function createEditorWindowManager({
     const value = EDITOR_LOADING_PROGRESS[stage];
     if (value === undefined || value < lastProgressValue || hudWindow.isDestroyed()) return false;
     lastProgressValue = value;
+    if (!isPackaged) console.info('[Beam editor] Loading stage:', stage);
     hudWindow.webContents.send('editor:loading-progress', { stage, value });
     return true;
   };
 
   const load = (target) => {
-    if (isPackaged) target.loadFile(path.join(applicationRoot, 'dist/editor.html'));
-    else target.loadURL('http://localhost:6500/editor.html');
+    if (isPackaged) return target.loadFile(path.join(applicationRoot, 'dist/editor.html'));
+    return target.loadURL('http://localhost:6500/editor.html');
   };
 
   const sendContext = () => {
@@ -186,6 +210,8 @@ function createEditorWindowManager({
         contextIsolation: true,
         sandbox: false,
         webSecurity: false,
+        // The initial timeline and first frame load before native presentation.
+        backgroundThrottling: false,
       },
     });
     if (shouldMaximize) {
@@ -207,6 +233,7 @@ function createEditorWindowManager({
     window.on('close', flushBounds);
     controller = new EditorWindowController(window, showHud);
     registerController(window, controller);
+    const target = window;
     const contents = window.webContents;
     if (!isPackaged) {
       contents.on('console-message', (details) => {
@@ -227,11 +254,24 @@ function createEditorWindowManager({
       });
     }
     contents.once('did-finish-load', () => {
-      if (!isPackaged) contents.openDevTools?.({ mode: 'detach' });
+      if (window !== target || target.isDestroyed()) return;
+      if (shouldAutoOpenDevTools({ isPackaged })) contents.openDevTools?.({ mode: 'detach', activate: false });
       sendProgress('loadingEditor');
     });
     contents.once('destroyed', () => cleanupWindow?.(contents));
+    contents.on('did-fail-load', (_event, code, description, _url, isMainFrame) => {
+      if (isMainFrame !== false && code !== -3)
+        failPresentation(target, new Error(`Editor loading failed (${code}): ${description}`));
+    });
+    contents.on('render-process-gone', (_event, details) => {
+      failPresentation(target, new Error(`Editor renderer stopped: ${details.reason}`));
+    });
+    target.on('unresponsive', () => {
+      failPresentation(target, new Error('The editor stopped responding while opening the project.'));
+    });
     window.on('closed', () => {
+      if (window !== target) return;
+      clearPresentationTimer();
       const shouldQuit = !returningToHud;
       if (returningToHud) resolvePresentation?.(false);
       else rejectPresentation?.(new Error('La fenêtre éditeur a été fermée avant sa présentation'));
@@ -242,7 +282,7 @@ function createEditorWindowManager({
       rendererReady = false;
       if (shouldQuit && !hudWindow.isDestroyed()) hudWindow.close();
     });
-    load(window);
+    Promise.resolve(load(target)).catch((error) => failPresentation(target, error));
     return window;
   };
 
@@ -268,15 +308,22 @@ function createEditorWindowManager({
       return Promise.resolve(true);
     }
     if (rejectPresentation) rejectPresentation(new Error('La demande précédente a été remplacée'));
+    clearPresentationTimer();
     return new Promise((resolve, reject) => {
       resolvePresentation = resolve;
       rejectPresentation = reject;
+      presentationTimer = setTimeout(
+        () => failPresentation(target, new Error('The editor did not finish opening the project within 30 seconds.')),
+        EDITOR_OPEN_TIMEOUT_MS,
+      );
+      presentationTimer.unref?.();
     });
   };
 
   const markReady = (event) => {
     if (!window || window.isDestroyed() || event.sender !== window.webContents) return false;
     rendererReady = true;
+    clearPresentationTimer();
     // Remove the native HUD surface before presenting the editor. This order
     // prevents a transparent HUD from remaining above the focused editor.
     if (!hideHudBeforePresentingEditor()) {

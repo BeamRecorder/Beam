@@ -4,7 +4,7 @@ const test = require('node:test');
 
 const projectId = '11111111-1111-4111-8111-111111111111';
 
-function fakeWindow(calls, options = {}) {
+function fakeWindow(calls, options = {}, loadPromise = undefined) {
   const listeners = new Map();
   const contentListeners = new Map();
   let destroyed = false;
@@ -26,7 +26,7 @@ function fakeWindow(calls, options = {}) {
   };
   return {
     webContents,
-    emitContent: (event) => contentListeners.get(event)?.(),
+    emitContent: (event, ...args) => contentListeners.get(event)?.(...args),
     on: (event, listener) => listeners.set(event, listener),
     emit: (event, ...args) => listeners.get(event)?.(...args),
     isDestroyed: () => destroyed,
@@ -51,8 +51,14 @@ function fakeWindow(calls, options = {}) {
       calls.push(['destroy']);
       listeners.get('closed')?.();
     },
-    loadURL: (url) => calls.push(['loadURL', url]),
-    loadFile: (...args) => calls.push(['loadFile', ...args]),
+    loadURL: (url) => {
+      calls.push(['loadURL', url]);
+      return typeof loadPromise === 'function' ? loadPromise() : loadPromise;
+    },
+    loadFile: (...args) => {
+      calls.push(['loadFile', ...args]);
+      return typeof loadPromise === 'function' ? loadPromise() : loadPromise;
+    },
     setBackgroundColor: (color) => calls.push(['background', color]),
     setTitleBarOverlay: (options) => calls.push(['overlay', options]),
   };
@@ -134,6 +140,7 @@ test('editor window is opaque and routes native editor lifecycle without changin
     assert.equal(options.icon, appIconPath);
     assert.equal(options.minWidth, EDITOR_MIN_SIZE.width);
     assert.equal(options.minHeight, EDITOR_MIN_SIZE.height);
+    assert.equal(options.webPreferences.backgroundThrottling, false);
     if (process.platform !== 'darwin') {
       assert.deepEqual(options.titleBarOverlay, {
         color: '#00000000',
@@ -215,7 +222,7 @@ test('editor window is opaque and routes native editor lifecycle without changin
   }
 });
 
-const createThemeFixture = ({ theme, resolveSystemDark = () => false }) => {
+const createThemeFixture = ({ theme, resolveSystemDark = () => false, loadPromise }) => {
   const calls = [];
   const windows = [];
   const ipcHandlers = new Map();
@@ -232,7 +239,7 @@ const createThemeFixture = ({ theme, resolveSystemDark = () => false }) => {
     BrowserWindow: class {
       constructor(options) {
         calls.push(['constructor', options]);
-        const window = fakeWindow(calls, options);
+        const window = fakeWindow(calls, options, loadPromise);
         windows.push(window);
         return window;
       }
@@ -289,6 +296,7 @@ const createThemeFixture = ({ theme, resolveSystemDark = () => false }) => {
     ipcListeners,
     manager,
     preferenceState,
+    hudVisible: () => hudVisible,
     restore: () => {
       Module._load = originalLoad;
     },
@@ -301,6 +309,27 @@ const readyEditor = async (fixture, opening) => {
   await opening;
   return editor;
 };
+
+for (const setting of [undefined, '0', '1']) {
+  test(`editor DevTools require explicit opt-in (BEAM_DEVTOOLS=${setting})`, async () => {
+    const previous = process.env.BEAM_DEVTOOLS;
+    if (setting === undefined) delete process.env.BEAM_DEVTOOLS;
+    else process.env.BEAM_DEVTOOLS = setting;
+    const fixture = createThemeFixture({ theme: 'light' });
+    try {
+      const opening = fixture.manager.open(projectId);
+      fixture.windows[0].emitContent('did-finish-load');
+      const devtools = fixture.calls.filter((call) => call[0] === 'openDevTools');
+      assert.deepEqual(devtools, setting === '1' ? [['openDevTools', { mode: 'detach', activate: false }]] : []);
+      await readyEditor(fixture, opening);
+    } finally {
+      fixture.manager.showHud();
+      fixture.restore();
+      if (previous === undefined) delete process.env.BEAM_DEVTOOLS;
+      else process.env.BEAM_DEVTOOLS = previous;
+    }
+  });
+}
 
 test('uses the current preference theme for every editor creation without live native background changes', async () => {
   for (const [firstTheme, secondTheme] of [
@@ -438,5 +467,148 @@ test('restores and persists editor window dimensions via preferencesStore', asyn
     assert.ok(calls.some((call) => call[0] === 'maximize'));
   } finally {
     Module._load = originalLoad;
+  }
+});
+
+const editorStartupFailures = [
+  {
+    name: 'main-frame load failure',
+    reject: (editor) => editor.emitContent('did-fail-load', {}, -105, 'ERR_NAME_NOT_RESOLVED', 'editor.html', true),
+    message: /Editor loading failed \(-105\): ERR_NAME_NOT_RESOLVED/,
+  },
+  {
+    name: 'renderer crash',
+    reject: (editor) => editor.emitContent('render-process-gone', {}, { reason: 'crashed' }),
+    message: /Editor renderer stopped: crashed/,
+  },
+  {
+    name: 'unresponsive renderer',
+    reject: (editor) => editor.emit('unresponsive'),
+    message: /stopped responding while opening/,
+  },
+];
+
+for (const failure of editorStartupFailures) {
+  test(`rejects a hidden editor after ${failure.name} and permits a clean retry`, async () => {
+    const fixture = createThemeFixture({ theme: 'light' });
+    try {
+      const opening = fixture.manager.open(projectId);
+      const failedEditor = fixture.windows[0];
+      failure.reject(failedEditor);
+
+      await assert.rejects(opening, failure.message);
+      assert.equal(failedEditor.isDestroyed(), true);
+      assert.equal(fixture.manager.window(), null);
+      assert.equal(fixture.hudVisible(), true);
+      assert.equal(
+        fixture.calls.some((call) => call[0] === 'hud-visible' && call[1] === false),
+        false,
+      );
+      assert.equal(
+        fixture.calls.some((call) => call[0] === 'hud-close'),
+        false,
+      );
+
+      const retry = fixture.manager.open(projectId);
+      const retryEditor = fixture.windows[1];
+      failure.reject(failedEditor);
+      fixture.ipcListeners.get('editor:ready')({ sender: failedEditor.webContents });
+      assert.equal(fixture.manager.window(), retryEditor);
+      assert.equal(retryEditor.isDestroyed(), false, 'late events from a failed window must not affect its retry');
+
+      fixture.ipcListeners.get('editor:ready')({ sender: retryEditor.webContents });
+      await retry;
+      assert.equal(retryEditor.isDestroyed(), false);
+      assert.equal(fixture.manager.window(), retryEditor);
+    } finally {
+      fixture.restore();
+    }
+  });
+}
+
+test('ignores canceled and subframe load failures while the editor document continues loading', async () => {
+  const fixture = createThemeFixture({ theme: 'light' });
+  try {
+    const opening = fixture.manager.open(projectId);
+    const editor = fixture.windows[0];
+    editor.emitContent('did-fail-load', {}, -3, 'ERR_ABORTED', 'editor.html', true);
+    editor.emitContent('did-fail-load', {}, -105, 'ERR_NAME_NOT_RESOLVED', 'child-frame', false);
+
+    assert.equal(fixture.manager.window(), editor);
+    assert.equal(editor.isDestroyed(), false);
+    fixture.ipcListeners.get('editor:ready')({ sender: editor.webContents });
+    await opening;
+    assert.equal(
+      fixture.calls.some((call) => call[0] === 'show'),
+      true,
+    );
+  } finally {
+    fixture.restore();
+  }
+});
+
+test('rejects a failed load promise, preserves the HUD, and accepts the next load', async () => {
+  let attempts = 0;
+  const fixture = createThemeFixture({
+    theme: 'light',
+    loadPromise: () => (attempts++ === 0 ? Promise.reject(new Error('load promise rejected')) : Promise.resolve()),
+  });
+  try {
+    const opening = fixture.manager.open(projectId);
+    await assert.rejects(opening, /load promise rejected/);
+    assert.equal(fixture.windows[0].isDestroyed(), true);
+    assert.equal(fixture.manager.window(), null);
+    assert.equal(fixture.hudVisible(), true);
+
+    const retry = fixture.manager.open(projectId);
+    const editor = fixture.windows[1];
+    fixture.ipcListeners.get('editor:ready')({ sender: editor.webContents });
+    await retry;
+    assert.equal(editor.isDestroyed(), false);
+    assert.equal(attempts, 2);
+  } finally {
+    fixture.restore();
+  }
+});
+
+test('times out a hidden editor after 30 seconds without closing the HUD and allows a retry', async () => {
+  const fixture = createThemeFixture({ theme: 'light' });
+  const originalSetTimeout = global.setTimeout;
+  const originalClearTimeout = global.clearTimeout;
+  let fireTimeout;
+  let timeoutDelay;
+  try {
+    global.setTimeout = (callback, delay) => {
+      fireTimeout = callback;
+      timeoutDelay = delay;
+      return { unref() {} };
+    };
+    global.clearTimeout = () => undefined;
+
+    const opening = fixture.manager.open(projectId);
+    const timedOutEditor = fixture.windows[0];
+    assert.equal(timeoutDelay, 30_000);
+    assert.equal(typeof fireTimeout, 'function');
+    global.setTimeout = originalSetTimeout;
+    global.clearTimeout = originalClearTimeout;
+    fireTimeout();
+
+    await assert.rejects(opening, /did not finish opening the project within 30 seconds/);
+    assert.equal(timedOutEditor.isDestroyed(), true);
+    assert.equal(fixture.hudVisible(), true);
+    assert.equal(fixture.manager.window(), null);
+
+    const retry = fixture.manager.open(projectId);
+    const retryEditor = fixture.windows[1];
+    timedOutEditor.emitContent('render-process-gone', {}, { reason: 'crashed' });
+    fixture.ipcListeners.get('editor:ready')({ sender: timedOutEditor.webContents });
+    assert.equal(fixture.manager.window(), retryEditor);
+    fixture.ipcListeners.get('editor:ready')({ sender: retryEditor.webContents });
+    await retry;
+    assert.equal(retryEditor.isDestroyed(), false);
+  } finally {
+    global.setTimeout = originalSetTimeout;
+    global.clearTimeout = originalClearTimeout;
+    fixture.restore();
   }
 });

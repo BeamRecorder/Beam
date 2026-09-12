@@ -122,7 +122,17 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.on('editor-presets:changed', callback);
       return () => ipcRenderer.removeListener('editor-presets:changed', callback);
     },
+    openQuickSnipEditor: () => ipcRenderer.invoke('quick-snip:open-editor'),
+    getQuickSnipRenderTask: () => ipcRenderer.invoke('quick-snip:render-task'),
+    saveQuickSnipRenderState: (id, state) => ipcRenderer.invoke('quick-snip:render-state', { id, state }),
+    reportQuickSnipRender: (report) => ipcRenderer.invoke('quick-snip:render-report', report),
+    onQuickSnipRenderTask: (listener) => {
+      const callback = (_event, task) => listener(task);
+      ipcRenderer.on('quick-snip:render-task', callback);
+      return () => ipcRenderer.removeListener('quick-snip:render-task', callback);
+    },
     quickSnipToggle: () => ipcRenderer.invoke('quick-snip:toggle'),
+    notifyQuickSnipCropReady: () => ipcRenderer.send('quick-snip:crop-ready'),
     quickSnipStart: (overrides = {}) => ipcRenderer.invoke('quick-snip:start', overrides),
     configureQuickSnip: (overrides = {}) => ipcRenderer.invoke('quick-snip:configure', overrides),
     quickSnipStop: () => ipcRenderer.invoke('quick-snip:stop'),
@@ -130,7 +140,9 @@ contextBridge.exposeInMainWorld(
     getQuickSnipState: () => ipcRenderer.invoke('quick-snip:state'),
     reportQuickSnip: (event) => ipcRenderer.invoke('quick-snip:report', event),
     copyQuickSnipFile: (file) => ipcRenderer.invoke('quick-snip:copy-file', file),
-    setQuickSnipStatusCompact: (compact) => ipcRenderer.send('quick-snip:status-compact', Boolean(compact)),
+    setQuickSnipStatusInteractive: (interactive) =>
+      ipcRenderer.send('quick-snip:status-interactive', Boolean(interactive)),
+    dismissQuickSnipStatus: () => ipcRenderer.send('quick-snip:status-dismiss'),
     onQuickSnipConfigure: (listener) => {
       const callback = (_event, configuration) => listener(configuration);
       ipcRenderer.on('quick-snip:configure', callback);

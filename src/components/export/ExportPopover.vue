@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
+import { capture } from '~/api/capture';
 import { Download, FolderOpen, X } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
@@ -170,11 +171,43 @@ const openFile = (path: string) => {
   }
 };
 
+onMounted(() => {
+  void capture
+    .getEditorPresets()
+    .then((document) => {
+      const saved = document.presets.find((item) => item.id === document.activePresetId)?.settings.export;
+      if (!saved) return;
+      if (saved.format === 'mp4' || saved.format === 'webm') format.value = saved.format;
+      if (saved.preset === 'low' || saved.preset === 'medium' || saved.preset === 'high') preset.value = saved.preset;
+      if (saved.resolution === '720p' || saved.resolution === '1080p' || saved.resolution === 'max')
+        resolution.value = saved.resolution;
+      if (saved.frameRate === 24 || saved.frameRate === 30 || saved.frameRate === 60) frameRate.value = saved.frameRate;
+    })
+    .catch(() => undefined);
+});
+
 const run = async () => {
   availability.value = null;
   if (!canExport.value) return;
   const request = buildRequest();
   lastRequest.value = request;
+  try {
+    const document = await capture.getEditorPresets();
+    const selected = document.presets.find((item) => item.id === document.activePresetId);
+    if (selected)
+      await capture.updateEditorPreset(selected.id, {
+        ...selected.settings,
+        export: {
+          format: format.value,
+          preset: preset.value,
+          resolution: resolution.value,
+          frameRate: frameRate.value,
+          includeAudio: includeAudio.value,
+        },
+      });
+  } catch (reason) {
+    console.error('Unable to save export preset', reason);
+  }
   await start(request);
   if (error.value) {
     const technical = exportReport.value;

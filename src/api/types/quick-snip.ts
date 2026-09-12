@@ -20,14 +20,14 @@ export interface QuickSnipConfiguration {
   name: string;
   preset: EditorPreset;
   automaticZoom: boolean;
-  region: ScreenRegion;
+  screenKind: 'display' | 'window';
+  region: ScreenRegion | null;
   regionBounds: ScreenRegionBounds;
   displayId: string;
   screenId?: string;
   outputRoot?: string;
   rawOutputRoot?: string;
   devices: Record<string, unknown>;
-  hideWhileRecording?: boolean;
   excludedWindowHandle?: string;
   projectId?: string | null;
   thumbnail?: string | null;
@@ -39,4 +39,21 @@ export interface QuickSnipSnapshot {
   progress: number;
   result: { path: string; projectId: string | null } | null;
   error: string | null;
+  etaSeconds?: number | null;
+  preview?: string | null;
+  copied?: boolean;
+  clipboardError?: string | null;
+  popoverSide?: 'above' | 'below';
 }
+
+export interface QuickSnipRenderTask {
+  id: string;
+  configuration: QuickSnipConfiguration;
+  editorData: import('./capture-api').ProjectEditorData;
+  editorState: import('./capture-api').ProjectEditorState;
+}
+
+export type QuickSnipRenderReport =
+  | { id: string; type: 'progress'; progress: number; preview?: string }
+  | { id: string; type: 'completed'; path: string }
+  | { id: string; type: 'failed'; error: string };

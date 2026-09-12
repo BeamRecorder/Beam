@@ -73,7 +73,9 @@
     "teleprompterPreviousLine": "Ligne précédente",
     "teleprompterPreviousLineDesc": "Revenir à la ligne précédente du téléprompteur",
     "conflictWith": "Conflit avec \"{name}\"",
-    "failedToUpdate": "Échec de la mise à jour du raccourci"
+    "failedToUpdate": "Échec de la mise à jour du raccourci",
+    "quickSnip": "Quick Snip",
+    "quickSnipDesc": "Ouvrir Quick Snip, démarrer ou arrêter la capture selon son état."
   },
   "SidebarPanel": {
     "canvas": "Canvas",

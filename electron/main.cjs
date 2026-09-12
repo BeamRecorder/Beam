@@ -351,6 +351,7 @@ function initializeApplication() {
     registerSystemAudioIpc({ ipcMain: applicationIpc, storage: systemAudioStorage });
     logStartup('Capture track IPC registered.');
     const projectStore = createProjectStore(userPaths.projects);
+    const rawProjectStore = createProjectStore(userPaths.quickSnipWork, { mediaHost: 'quick-snip' });
     const backgroundLibrary = createBackgroundLibrary(userPaths);
     const fontLibrary = createFontLibrary(userPaths.fonts);
     const cursorLibrary = createCursorPackLibrary(userPaths.cursors);
@@ -368,7 +369,7 @@ function initializeApplication() {
     );
     protocol.handle(
       'project-media',
-      createProjectMediaHandler({ projectStore, backgroundLibrary, fontLibrary, cursorLibrary }),
+      createProjectMediaHandler({ rawProjectStore, projectStore, backgroundLibrary, fontLibrary, cursorLibrary }),
     );
     logStartup('Project IPC registered.');
     const whisperStore = createWhisperModelStore(userPaths.whisperModels);
@@ -410,6 +411,9 @@ function initializeApplication() {
       userPaths,
       preferencesStore,
       presetStore: editorPresetStore,
+      rawProjectStore,
+      openEditor: (projectId) => editorWindow.open(projectId),
+      cleanupStatus: (contents) => exportIpc.cleanupWindow(contents),
       projectStore,
       regionOverlay: screenRegionOverlay,
       nativeImage: require('electron').nativeImage,
@@ -445,6 +449,7 @@ function initializeApplication() {
       dialog: require('electron').dialog,
       BrowserWindow,
       defaultExportDirectory: app.getPath('videos'),
+      resolveAutomaticDestination: quickSnipService.exportDestination,
     });
     logStartup('Export IPC registered.');
     const updateCache = app.isPackaged

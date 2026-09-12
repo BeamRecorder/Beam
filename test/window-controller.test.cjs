@@ -94,6 +94,71 @@ function expectedAlwaysOnTopLevel() {
   return process.platform === 'win32' ? 'screen-saver' : undefined;
 }
 
+for (const platform of ['linux', 'darwin', 'win32']) {
+  test(`${platform}: native focus callbacks cannot reenter a topmost change`, () => {
+    const win = fakeWindow();
+    const setAlwaysOnTop = win.setAlwaysOnTop;
+    let nativeChanges = 0;
+    win.setAlwaysOnTop = (...args) => {
+      assert.ok(++nativeChanges <= 2, 'topmost policy must not recurse through native focus events');
+      setAlwaysOnTop(...args);
+      win.emit('blur');
+      win.emit('focus');
+    };
+    win.moveTop = () => {
+      win.calls.push(['moveTop']);
+      win.emit('focus');
+    };
+    const controller = new WindowController(win, { platform });
+    controller.markReadyToShow();
+    win.emit('blur');
+    win.emit('focus');
+    assert.equal(nativeChanges, 2);
+    assert.equal(win.calls.filter((call) => call[0] === 'moveTop').length, 1);
+    assert.equal(topCalls(win).at(-1)[2], platform === 'win32' ? 'screen-saver' : undefined);
+  });
+
+  test(`${platform}: demoting the HUD cannot raise it before native hide completes`, () => {
+    const win = fakeWindow();
+    const controller = new WindowController(win, { platform });
+    controller.markReadyToShow();
+    win.calls.length = 0;
+    const setAlwaysOnTop = win.setAlwaysOnTop;
+    win.setAlwaysOnTop = (...args) => {
+      assert.ok(topCalls(win).length < 2, 'demotion must not recursively raise the HUD');
+      setAlwaysOnTop(...args);
+      win.emit('blur');
+      win.emit('focus');
+    };
+    assert.equal(controller.setVisible(false), true);
+    assert.deepEqual(
+      topCalls(win).map((call) => call[1]),
+      [false],
+    );
+    assert.ok(win.calls.filter((call) => call[0] === 'mouse').every((call) => call[1]));
+    assert.equal(
+      win.calls.some((call) => call[0] === 'moveTop'),
+      false,
+    );
+  });
+
+  test(`${platform}: showing a hidden HUD restores its native policy once`, () => {
+    const win = fakeWindow();
+    const controller = new WindowController(win, { platform });
+    controller.markReadyToShow();
+    controller.setVisible(false);
+    win.calls.length = 0;
+    win.show();
+    win.emit('focus');
+    assert.equal(controller.setVisible(true), true);
+    assert.deepEqual(
+      topCalls(win).map((call) => call[1]),
+      [true],
+    );
+    assert.equal(win.calls.filter((call) => call[0] === 'moveTop').length, 1);
+  });
+}
+
 test('hidden window ignores mouse events before it is ready', () => {
   const win = fakeWindow();
   new WindowController(win);

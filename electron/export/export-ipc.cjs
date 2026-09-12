@@ -19,6 +19,7 @@ function registerExportIpc({
   dialog,
   BrowserWindow,
   defaultExportDirectory = null,
+  resolveAutomaticDestination = () => null,
   fsModule = fs,
   pathModule = path,
 }) {
@@ -44,12 +45,15 @@ function registerExportIpc({
     if (!format) throw new Error('Format d’export invalide.');
     const window = BrowserWindow.fromWebContents(event.sender);
     const defaultName = safeExportName(payload.projectName, format);
-    const result = await dialog.showSaveDialog(window, {
-      title: 'Export video',
-      defaultPath: defaultExportDirectory ? pathModule.resolve(defaultExportDirectory, defaultName) : defaultName,
-      filters: [{ name: format.toUpperCase(), extensions: [format] }],
-      properties: ['showOverwriteConfirmation'],
-    });
+    const automaticPath = resolveAutomaticDestination(event.sender, format);
+    const result = automaticPath
+      ? { filePath: automaticPath, canceled: false }
+      : await dialog.showSaveDialog(window, {
+          title: 'Export video',
+          defaultPath: defaultExportDirectory ? pathModule.resolve(defaultExportDirectory, defaultName) : defaultName,
+          filters: [{ name: format.toUpperCase(), extensions: [format] }],
+          properties: ['showOverwriteConfirmation'],
+        });
     if (result.canceled || !result.filePath) return { canceled: true };
     const targetPath = pathModule.resolve(result.filePath);
     if (pathModule.extname(targetPath).toLowerCase() !== `.${format}`)

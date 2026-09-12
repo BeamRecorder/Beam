@@ -105,7 +105,7 @@ export async function renderExportVideo(
   context: OffscreenCanvasRenderingContext2D,
   mediaOutput: ExportWorkerOutput,
   signal: AbortSignal,
-  onFrame: (done: number, stats: Omit<VideoPipelineStats, 'elapsedMs'>) => void,
+  onFrame: (done: number, stats: Omit<VideoPipelineStats, 'elapsedMs'>) => void | Promise<void>,
 ): Promise<VideoPipelineStats> {
   const started = performance.now();
   let decodeMs = 0;
@@ -210,7 +210,7 @@ export async function renderExportVideo(
       const encoderStarted = performance.now();
       await mediaOutput.addVideo(time, Math.min(1 / fps, Math.max(0, request.snapshot.duration - time)));
       encoderBackpressureMs += performance.now() - encoderStarted;
-      onFrame(frame + 1, { decodeMs, renderMs, encoderBackpressureMs });
+      await onFrame(frame + 1, { decodeMs, renderMs, encoderBackpressureMs });
     }
     mediaOutput.closeVideo();
     return { elapsedMs: performance.now() - started, decodeMs, renderMs, encoderBackpressureMs };

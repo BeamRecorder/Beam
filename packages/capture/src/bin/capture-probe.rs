@@ -217,8 +217,9 @@ fn run_linux_native_capture() -> Result<serde_json::Value, capture::CaptureError
     recording.pause()?;
     let resume_ns = u64::try_from(first.as_nanos()).unwrap_or(u64::MAX);
     let resume_gate = Arc::new(StartGate::new());
+    recording.prepare_resume(resume_ns, resume_gate.clone(), None)?;
     resume_gate.release(resume_ns)?;
-    recording.resume(resume_ns, resume_gate, None)?;
+    recording.start()?;
     std::thread::sleep(total - first);
     recording.stop()?;
     let metrics = recording.metrics().snapshot();

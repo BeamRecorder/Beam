@@ -73,7 +73,9 @@
     "teleprompterPreviousLine": "Previous line",
     "teleprompterPreviousLineDesc": "Move to the previous teleprompter line",
     "conflictWith": "Conflict with \"{name}\"",
-    "failedToUpdate": "Failed to update shortcut"
+    "failedToUpdate": "Failed to update shortcut",
+    "quickSnip": "Quick Snip",
+    "quickSnipDesc": "Open, start, or stop Quick Snip based on its current state."
   },
   "SidebarPanel": {
     "canvas": "Canvas",

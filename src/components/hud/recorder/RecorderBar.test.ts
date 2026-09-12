@@ -88,6 +88,37 @@ describe('RecorderBar', () => {
     wrapper.unmount();
   });
 
+  it('shows disabled devices as inactive, emits re-enable actions, and reflects prop updates', async () => {
+    const wrapper = mount(RecorderBar, {
+      props: { ...props, microphoneEnabled: false, cameraEnabled: false, systemAudioEnabled: false },
+    });
+    const controls = wrapper.findAll('.control');
+    const deviceControls = controls.slice(2, 5);
+
+    expect(deviceControls.map((control) => control.attributes('aria-label'))).toEqual([
+      'Turn microphone on',
+      'Turn camera on',
+      'Turn system audio on',
+    ]);
+    deviceControls.forEach((control) => expect(control.classes()).toContain('inactive'));
+
+    await deviceControls[0]!.trigger('click');
+    await deviceControls[1]!.trigger('click');
+    await deviceControls[2]!.trigger('click');
+    expect(wrapper.emitted('microphone')).toHaveLength(1);
+    expect(wrapper.emitted('camera')).toHaveLength(1);
+    expect(wrapper.emitted('systemAudio')).toHaveLength(1);
+
+    await wrapper.setProps({ microphoneEnabled: true, cameraEnabled: true, systemAudioEnabled: true });
+    expect(deviceControls.map((control) => control.attributes('aria-label'))).toEqual([
+      'Turn microphone off',
+      'Turn camera off',
+      'Turn system audio off',
+    ]);
+    deviceControls.forEach((control) => expect(control.classes()).not.toContain('inactive'));
+    wrapper.unmount();
+  });
+
   it('renders countdown and finalizing states with the right disabled controls', async () => {
     const wrapper = mount(RecorderBar, {
       props: { ...props, phase: 'countdown', visibility: 'auto-fade' },

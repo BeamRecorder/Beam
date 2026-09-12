@@ -49,7 +49,9 @@
     "teleprompterPreviousLine": "Línea anterior",
     "teleprompterPreviousLineDesc": "Volver a la línea anterior del teleprompter",
     "conflictWith": "En conflicto con «{name}»",
-    "failedToUpdate": "No se pudo actualizar el atajo"
+    "failedToUpdate": "No se pudo actualizar el atajo",
+    "quickSnip": "Quick Snip",
+    "quickSnipDesc": "Abrir, iniciar o detener Quick Snip según su estado actual."
   },
   "SidebarPanel": {
     "canvas": "Lienzo",

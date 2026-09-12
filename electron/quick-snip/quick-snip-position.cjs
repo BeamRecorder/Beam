@@ -40,4 +40,68 @@ function placeCropBar({ displayBounds, workArea, region, barSize, gap = 10 }) {
   };
 }
 
-module.exports = { placeCropBar, regionPixels };
+const STATUS_SIZE = { width: 380, height: 184 };
+const PILL_SIZE = { width: 356, height: 76 };
+const STATUS_MARGIN = 12;
+const STATUS_DETAILS_SPACE = STATUS_SIZE.height - PILL_SIZE.height - STATUS_MARGIN * 2;
+const clamp = (value, min, max) => Math.round(Math.max(min, Math.min(Math.max(min, max), value)));
+
+function restoreWindowPosition(preferencesStore, key, display, size) {
+  const saved = preferencesStore?.read()?.extras?.[key]?.[String(display.id)];
+  if (!saved || !Number.isFinite(saved.x) || !Number.isFinite(saved.y)) return null;
+  const area = display.workArea;
+  return {
+    x: clamp(saved.x, area.x, area.x + area.width - size.width),
+    y: clamp(saved.y, area.y, area.y + area.height - size.height),
+    ...size,
+  };
+}
+
+function saveWindowPosition(preferencesStore, key, display, position) {
+  if (!preferencesStore || !display || !Number.isFinite(position.x) || !Number.isFinite(position.y)) return;
+  const stored = preferencesStore.read()?.extras?.[key];
+  const positions = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
+  const next = { x: Math.round(position.x), y: Math.round(position.y) };
+  const previous = positions[String(display.id)];
+  if (previous?.x === next.x && previous?.y === next.y) return;
+  preferencesStore.patch({ extras: { [key]: { ...positions, [String(display.id)]: next } } });
+}
+
+function statusPillPosition(bounds, popoverSide) {
+  return {
+    x: bounds.x + STATUS_MARGIN,
+    y: bounds.y + STATUS_MARGIN + (popoverSide === 'above' ? STATUS_DETAILS_SPACE : 0),
+  };
+}
+
+function placeStatusPill({ position, workArea }) {
+  const area = finiteRectangle(workArea);
+  if (!area || !Number.isFinite(position?.x) || !Number.isFinite(position?.y))
+    throw new Error('Quick Snip status geometry is invalid.');
+  const x = clamp(position.x, area.x + STATUS_MARGIN, area.x + area.width - PILL_SIZE.width - STATUS_MARGIN);
+  const y = clamp(position.y, area.y + STATUS_MARGIN, area.y + area.height - PILL_SIZE.height - STATUS_MARGIN);
+  const above = y - area.y - STATUS_MARGIN;
+  const below = area.y + area.height - y - PILL_SIZE.height - STATUS_MARGIN;
+  const popoverSide = below > above ? 'below' : 'above';
+  const bounds = {
+    x: x - STATUS_MARGIN,
+    y: clamp(
+      y - STATUS_MARGIN - (popoverSide === 'above' ? STATUS_DETAILS_SPACE : 0),
+      area.y,
+      area.y + area.height - STATUS_SIZE.height,
+    ),
+    ...STATUS_SIZE,
+  };
+  return { bounds, popoverSide, position: statusPillPosition(bounds, popoverSide) };
+}
+
+module.exports = {
+  placeCropBar,
+  regionPixels,
+  restoreWindowPosition,
+  saveWindowPosition,
+  statusPillPosition,
+  placeStatusPill,
+  STATUS_SIZE,
+  PILL_SIZE,
+};

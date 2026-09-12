@@ -64,9 +64,9 @@ describe('TextInputDialog', () => {
     input().value = '  Fresh name  ';
     input().dispatchEvent(new Event('input', { bubbles: true }));
     input().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-    document.body.querySelector<HTMLFormElement>('.text-input-dialog')!.dispatchEvent(
-      new Event('submit', { bubbles: true, cancelable: true }),
-    );
+    document.body
+      .querySelector<HTMLFormElement>('.text-input-dialog')!
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     await nextTick();
 
     expect(wrapper.emitted('confirm')).toEqual([['Fresh name']]);
