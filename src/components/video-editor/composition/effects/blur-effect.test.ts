@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { BlurClip } from '~/media/shared/composition-types';
 import type { Canvas2DContext } from '~/types/canvas';
-import { applyBlurEffect, effectShapeRect } from './blur-effect';
+import { applyBlurEffect } from './blur-effect';
+import { effectShapeRect } from './effect-shape';
 
 const blurClip = (overrides: Partial<BlurClip> = {}): BlurClip => ({
   id: 'blur',
@@ -39,6 +40,7 @@ class FakeContext {
   save = vi.fn();
   restore = vi.fn();
   beginPath = vi.fn();
+  moveTo = vi.fn();
   arc = vi.fn();
   rect = vi.fn();
   roundRect = vi.fn();

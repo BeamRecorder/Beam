@@ -1,4 +1,4 @@
-export type TimelineAddableVisualKind = 'image' | 'color' | 'shape' | 'blur';
+export type TimelineAddableVisualKind = 'image' | 'color' | 'shape' | 'blur' | 'highlight';
 
 export interface AddVisualElementRequest {
   kind: TimelineAddableVisualKind;

@@ -11,7 +11,7 @@ export const SCREEN_CLIP_ID = 'screen';
 
 export type MediaKind = 'video' | 'image' | 'audio';
 export type BlurEffectShape = 'rectangle' | 'square' | 'circle';
-export type BlurEffectMode = 'blur' | 'frosted' | 'pixelated' | 'opaque';
+export type BlurEffectMode = 'blur' | 'frosted' | 'pixelated' | 'opaque' | 'highlight';
 export type ClipKind = 'screen' | 'video' | 'image' | 'webcam' | 'color' | 'shape' | 'blur' | 'audio' | 'caption';
 export type AudioRole = 'system' | 'microphone' | 'voiceover' | 'imported';
 
@@ -217,6 +217,8 @@ export interface BlurClip extends ClipBase {
   cornerRadius?: number;
   tintOpacity: number;
   color: string;
+  /** Interior tint for Highlight; tintOpacity controls its intensity independently of the surround. */
+  highlightColor?: string;
 }
 
 export interface ColorClip extends ClipBase {

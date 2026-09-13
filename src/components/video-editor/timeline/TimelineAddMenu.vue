@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import {
   AudioLines,
   CircleDashed,
+  Focus,
   FolderOpen,
   Image as ImageIcon,
   Layers3,
@@ -20,6 +21,7 @@ import type { TimelineElementKind } from './timeline-element-types';
 
 const emit = defineEmits<{ (event: 'add:element', kind: TimelineElementKind): void }>();
 const { t } = useTranslate('TimelineToolbar');
+const { t: tHighlight } = useTranslate('Highlight');
 const { t: tCanvas } = useTranslate('CanvasPanel');
 const { t: tSidebar } = useTranslate('SidebarPanel');
 
@@ -40,6 +42,7 @@ const items = computed<readonly PopoverMenuItem[]>(() => [
     children: [
       { id: 'shape', label: tCanvas('shapesAndArrows'), icon: Shapes },
       { id: 'blur', label: t('blur'), icon: CircleDashed },
+      { id: 'highlight', label: tHighlight('title'), icon: Focus },
       { id: 'color', label: tCanvas('color'), icon: Palette },
     ],
   },

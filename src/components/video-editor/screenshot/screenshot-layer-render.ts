@@ -1,3 +1,4 @@
+import { applyBlurEffect } from '../composition/effects/blur-effect';
 import type { ScreenshotState } from '~/api/types/screenshot';
 import type { Canvas2DContext } from '~/types/canvas';
 import { renderBackground } from '../composition/background/render-background';
@@ -46,6 +47,20 @@ export function drawScreenshotLayer(
       mirrored: image.isMirrored,
       mirroredY: image.isMirroredY,
     });
+  } else if (layer.kind === 'effect') {
+    const effect = state.effects?.find((item) => item.id === layer.id);
+    if (!effect) throw new Error(`Screenshot effect unavailable: ${layer.id}`);
+    applyBlurEffect(
+      target,
+      effect,
+      {
+        x: effect.transform.x * width,
+        y: effect.transform.y * height,
+        width: effect.transform.width * width,
+        height: effect.transform.height * height,
+      },
+      { source: backdrop },
+    );
   } else if (layer.kind === 'watermark') drawBeamWatermark(target, state.canvas, viewport, assets.logo);
   else if (layer.kind === 'cursor') {
     const asset = assets.cursors?.get(layer.id);

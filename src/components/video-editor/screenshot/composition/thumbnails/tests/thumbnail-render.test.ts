@@ -164,6 +164,26 @@ describe('renderLayerThumbnail', () => {
     expect(blob.type).toBe('image/png');
   });
 
+  it('fits an inverse effect to the canvas ratio instead of cropping to its illuminated region', async () => {
+    const value = request();
+    value.id = 'highlight';
+    value.layer = { ...value.layer, id: value.id, kind: 'effect' };
+    alphaPixels = new Uint8ClampedArray(176 * 88 * 4);
+    alphaPixels[3] = 255;
+    alphaPixels[alphaPixels.length - 1] = 255;
+
+    await renderLayerThumbnail(value, {});
+
+    expect(canvases.map(({ width, height }) => [width, height])).toEqual([
+      [176, 88],
+      [96, 96],
+    ]);
+    expect(canvases[0]!.context.translate).toHaveBeenCalledWith(0, 0);
+    expect(canvases[0]!.context.getImageData).toHaveBeenCalledWith(0, 0, 176, 88);
+    expect(renderer.draw).toHaveBeenCalledWith(expect.anything(), expect.anything(), value.layer, {}, 176, 88);
+    expect(canvases[1]!.context.drawImage).toHaveBeenCalledWith(canvases[0], 0, 0, 176, 88, 6, 27, 84, 42);
+  });
+
   it('uses rotated bounds when choosing the initial scale for a non-square layer', async () => {
     const shape = screenshotShape('rectangle', 'shape-1');
     shape.transform = { x: 0.1, y: 0.2, width: 0.4, height: 0.2 };

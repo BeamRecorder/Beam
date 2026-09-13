@@ -21,7 +21,7 @@ import TimelineTrackHeaders from './TimelineTrackHeaders.vue';
 import { normalizeZoomProjection } from '../zoom/zoom-types';
 import TimelineAddMenu from './TimelineAddMenu.vue';
 import { useTimelineItemInteractions } from './composables/useTimelineItemInteractions';
-import WaveformCanvas from './waveform/WaveformCanvas.vue';
+import TimelineAudioTracks from './TimelineAudioTracks.vue';
 const { t } = useTranslate('TimelineTracks');
 const { t: tCanvas } = useTranslate('CanvasPanel');
 const { t: tToolbar } = useTranslate('TimelineToolbar');
@@ -105,8 +105,10 @@ const { selectedClipIdSet, selectedZoomIdSet, selectItem, startClipMove, startZo
   beginClipMove,
   beginZoomMove,
 });
+const { t: tHighlight } = useTranslate('Highlight');
 const visualElementLabel = (track: (typeof visualTracks.value)[number]) => {
   const kind = visualKindFor(track);
+  if (kind === 'highlight') return tHighlight('title');
   return kind === 'color'
     ? tCanvas('color')
     : kind === 'shape'
@@ -302,7 +304,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 <div
                   v-if="hoverVisualPlacements[`visual:${track.id}`]"
                   class="visual-add-indicator preview-ghost"
-                  :class="`kind-${visualKindFor(track)}`"
+                  :class="[`kind-${visualKindFor(track)}`, { 'kind-blur': visualKindFor(track) === 'highlight' }]"
                   :style="
                     percentageStyle(
                       hoverVisualPlacements[`visual:${track.id}`]!.startMs,
@@ -435,189 +437,36 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
             @contextmenu:clip="openClipContextMenu($event.event, $event.clip)"
             @contextmenu:track="openTrackContextMenu($event, 'caption')"
           />
-          <div
-            v-if="systemAudioClips.length"
-            class="track-row audio-track"
-            :class="{ disabled: !includeAudioInExport || !systemAudioClips.some((clip) => clip.enabled) }"
-            @contextmenu="
-              openTrackContextMenu(
-                $event,
-                'audio',
-                undefined,
-                systemAudioClips.map((clip) => clip.id),
-              )
-            "
-          >
-            <div class="track-content audio-content">
-              <span v-if="!includeAudioInExport" class="export-audio-disabled">{{ t('audioDisabledFromExport') }}</span>
-              <TimelineClip
-                v-for="clip in systemAudioClips"
-                :key="clip.id"
-                :clip="displayedClip(clip)"
-                :asset="assetFor(clip)"
-                :duration="layoutDurationMs / 1000"
-                :timeline-width-px="rulerLayoutWidth"
-                :thumbnail-slots="thumbnailSlots"
-                :defer-thumbnail-requests="isWheelZooming || activeTrimState !== null || isMoving"
-                :defer-waveform-draw="isWheelZooming || isMoving"
-                :selected="selectedClipIdSet.has(clip.id)"
-                :waveform-bars="audioWaveforms[clip.id]?.bars"
-                :waveform-left-percent="audioWaveforms[clip.id]?.leftPercent"
-                :waveform-width-percent="audioWaveforms[clip.id]?.widthPercent"
-                :waveform-loading-segments="audioWaveforms[clip.id]?.loadingSegments"
-                :waveform-status="audioWaveformStatus[clip.id]"
-                :waveform-error="audioWaveformErrors[clip.id]"
-                :trim-state="trimStateFor(clip.id)"
-                :paste-highlight="recentPaste?.type === 'clip' && recentPaste.id === clip.id"
-                @select="selectItem('clip', clip.id, $event)"
-                @contextmenu="openClipContextMenu($event, clip)"
-                @move="startClipMove($event, clip)"
-                @trim="beginClipTrim($event.event, clip, $event.edge)"
-              />
-            </div>
-          </div>
-          <div
-            v-if="microphoneClips.length"
-            class="track-row audio-track"
-            :class="{ disabled: !includeAudioInExport || !microphoneClips.some((clip) => clip.enabled) }"
-            @contextmenu="
-              openTrackContextMenu(
-                $event,
-                'audio',
-                undefined,
-                microphoneClips.map((clip) => clip.id),
-              )
-            "
-          >
-            <div class="track-content audio-content">
-              <span v-if="!includeAudioInExport" class="export-audio-disabled">{{ t('audioDisabledFromExport') }}</span>
-              <TimelineGapButtons
-                :clips="microphoneClips"
-                :composition="composition"
-                :duration-ms="layoutDurationMs"
-                :width-px="rulerLayoutWidth"
-                :moving="isMoving || activeTrimState !== null"
-                @remove="emit('remove:gap', $event)"
-              />
-              <TimelineClip
-                v-for="clip in microphoneClips"
-                :key="clip.id"
-                :clip="displayedClip(clip)"
-                :asset="assetFor(clip)"
-                :duration="layoutDurationMs / 1000"
-                :timeline-width-px="rulerLayoutWidth"
-                :thumbnail-slots="thumbnailSlots"
-                :defer-thumbnail-requests="isWheelZooming || activeTrimState !== null || isMoving"
-                :defer-waveform-draw="isWheelZooming || isMoving"
-                :selected="selectedClipIdSet.has(clip.id)"
-                :waveform-bars="audioWaveforms[clip.id]?.bars"
-                :waveform-left-percent="audioWaveforms[clip.id]?.leftPercent"
-                :waveform-width-percent="audioWaveforms[clip.id]?.widthPercent"
-                :waveform-loading-segments="audioWaveforms[clip.id]?.loadingSegments"
-                :waveform-status="audioWaveformStatus[clip.id]"
-                :waveform-error="audioWaveformErrors[clip.id]"
-                :trim-state="trimStateFor(clip.id)"
-                :paste-highlight="recentPaste?.type === 'clip' && recentPaste.id === clip.id"
-                @select="selectItem('clip', clip.id, $event)"
-                @contextmenu="openClipContextMenu($event, clip)"
-                @move="startClipMove($event, clip)"
-                @trim="beginClipTrim($event.event, clip, $event.edge)"
-              />
-            </div>
-          </div>
-          <div
-            v-for="clip in voiceoverClips"
-            :key="clip.id"
-            class="track-row audio-track voiceover-track"
-            :class="{ disabled: !includeAudioInExport || !clip.enabled }"
-            @contextmenu="
-              openTrackContextMenu(
-                $event,
-                'audio',
-                undefined,
-                [clip].map((clip) => clip.id),
-              )
-            "
-          >
-            <div class="track-content audio-content">
-              <span v-if="!includeAudioInExport" class="export-audio-disabled">{{ t('audioDisabledFromExport') }}</span>
-              <TimelineClip
-                :clip="displayedClip(clip)"
-                :asset="assetFor(clip)"
-                :duration="layoutDurationMs / 1000"
-                :timeline-width-px="rulerLayoutWidth"
-                :thumbnail-slots="thumbnailSlots"
-                :defer-thumbnail-requests="isWheelZooming || activeTrimState !== null || isMoving"
-                :defer-waveform-draw="isWheelZooming || isMoving"
-                :selected="selectedClipIdSet.has(clip.id)"
-                :waveform-bars="audioWaveforms[clip.id]?.bars"
-                :waveform-left-percent="audioWaveforms[clip.id]?.leftPercent"
-                :waveform-width-percent="audioWaveforms[clip.id]?.widthPercent"
-                :waveform-loading-segments="audioWaveforms[clip.id]?.loadingSegments"
-                :waveform-status="audioWaveformStatus[clip.id]"
-                :waveform-error="audioWaveformErrors[clip.id]"
-                :trim-state="trimStateFor(clip.id)"
-                :paste-highlight="recentPaste?.type === 'clip' && recentPaste.id === clip.id"
-                @select="selectItem('clip', clip.id, $event)"
-                @contextmenu="openClipContextMenu($event, clip)"
-                @move="startClipMove($event, clip)"
-                @trim="beginClipTrim($event.event, clip, $event.edge)"
-              />
-            </div>
-          </div>
-          <div v-if="voiceoverDraft" class="track-row audio-track voiceover-track voiceover-draft-track">
-            <div class="track-content audio-content">
-              <span v-if="!includeAudioInExport" class="export-audio-disabled">{{ t('audioDisabledFromExport') }}</span>
-              <div
-                class="voiceover-draft-clip"
-                :style="percentageStyle(voiceoverDraft.startMs, voiceoverDraft.durationMs)"
-              >
-                <WaveformCanvas :bars="voiceoverDraft.bars" selected />
-              </div>
-            </div>
-          </div>
-          <div
-            v-for="track in importedAudioTracks"
-            :key="track.id"
-            class="track-row audio-track"
-            :class="{ disabled: !includeAudioInExport || !track.clips.some((clip) => clip.enabled) }"
-            @contextmenu="
-              openTrackContextMenu(
-                $event,
-                'audio',
-                undefined,
-                track.clips.map((clip) => clip.id),
-              )
-            "
-          >
-            <div class="track-content audio-content">
-              <span v-if="!includeAudioInExport" class="export-audio-disabled">{{ t('audioDisabledFromExport') }}</span>
-              <TimelineClip
-                v-for="clip in track.clips"
-                :key="clip.id"
-                :clip="displayedClip(clip)"
-                :asset="assetFor(clip)"
-                :duration="layoutDurationMs / 1000"
-                :timeline-width-px="rulerLayoutWidth"
-                :thumbnail-slots="thumbnailSlots"
-                :defer-thumbnail-requests="isWheelZooming || activeTrimState !== null || isMoving"
-                :defer-waveform-draw="isWheelZooming || isMoving"
-                :selected="selectedClipIdSet.has(clip.id)"
-                :waveform-bars="audioWaveforms[clip.id]?.bars"
-                :waveform-left-percent="audioWaveforms[clip.id]?.leftPercent"
-                :waveform-width-percent="audioWaveforms[clip.id]?.widthPercent"
-                :waveform-loading-segments="audioWaveforms[clip.id]?.loadingSegments"
-                :waveform-status="audioWaveformStatus[clip.id]"
-                :waveform-error="audioWaveformErrors[clip.id]"
-                :trim-state="trimStateFor(clip.id)"
-                :paste-highlight="recentPaste?.type === 'clip' && recentPaste.id === clip.id"
-                @select="selectItem('clip', clip.id, $event)"
-                @contextmenu="openClipContextMenu($event, clip)"
-                @move="startClipMove($event, clip)"
-                @trim="beginClipTrim($event.event, clip, $event.edge)"
-              />
-            </div>
-          </div>
+          <TimelineAudioTracks
+            :system-audio-clips="systemAudioClips"
+            :microphone-clips="microphoneClips"
+            :voiceover-clips="voiceoverClips"
+            :imported-audio-tracks="importedAudioTracks"
+            :voiceover-draft="voiceoverDraft"
+            :composition="composition"
+            :include-audio-in-export="includeAudioInExport"
+            :layout-duration-ms="layoutDurationMs"
+            :ruler-layout-width="rulerLayoutWidth"
+            :thumbnail-slots="thumbnailSlots"
+            :is-wheel-zooming="isWheelZooming"
+            :is-moving="isMoving"
+            :selected-clip-id-set="selectedClipIdSet"
+            :recent-paste="recentPaste"
+            :audio-waveforms="audioWaveforms"
+            :audio-waveform-errors="audioWaveformErrors"
+            :audio-waveform-status="audioWaveformStatus"
+            :asset-for="assetFor"
+            :displayed-clip="displayedClip"
+            :trim-state-for="trimStateFor"
+            :percentage-style="percentageStyle"
+            :select-item="selectItem"
+            :start-clip-move="startClipMove"
+            :begin-clip-trim="beginClipTrim"
+            :open-clip-context-menu="openClipContextMenu"
+            :open-track-context-menu="openTrackContextMenu"
+            :is-trimming="activeTrimState !== null"
+            @remove:gap="emit('remove:gap', $event)"
+          />
         </TimelineSelectionBox>
       </div>
     </div>

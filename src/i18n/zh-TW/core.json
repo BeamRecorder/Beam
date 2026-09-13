@@ -973,5 +973,13 @@
     "watermark": "浮水印",
     "previewLoading": "正在產生預覽…",
     "previewError": "無法顯示預覽"
+  },
+  "Highlight": {
+    "title": "區域突顯",
+    "opacity": "周圍不透明度",
+    "color": "周圍顏色",
+    "transitions": "突顯轉場效果",
+    "highlightColor": "醒目提示顏色",
+    "highlightOpacity": "醒目提示強度"
   }
 }

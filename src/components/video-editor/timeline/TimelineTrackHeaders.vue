@@ -3,6 +3,7 @@ import ReorderGroup from '~/ui/transitions/ReorderGroup.vue';
 import {
   Camera,
   CircleDashed,
+  Focus,
   Palette,
   Shapes,
   GripVertical,
@@ -56,6 +57,7 @@ const props = defineProps<{
   ) => void;
 }>();
 const { t } = useTranslate('TimelineTracks');
+const { t: tHighlight } = useTranslate('Highlight');
 const { t: tCanvas } = useTranslate('CanvasPanel');
 const iconForVisual = (clip: VisualClip | ColorClip | ShapeClip | BlurClip) =>
   clip.kind === 'color'
@@ -63,7 +65,9 @@ const iconForVisual = (clip: VisualClip | ColorClip | ShapeClip | BlurClip) =>
     : clip.kind === 'shape'
       ? Shapes
       : clip.kind === 'blur'
-        ? CircleDashed
+        ? clip.mode === 'highlight'
+          ? Focus
+          : CircleDashed
         : clip.kind === 'image'
           ? ImageIcon
           : clip.kind === 'webcam'
@@ -75,7 +79,9 @@ const labelForVisual = (clip: VisualClip | ColorClip | ShapeClip | BlurClip) =>
     : clip.kind === 'shape'
       ? tCanvas('shapesAndArrows')
       : clip.kind === 'blur'
-        ? t('blur')
+        ? clip.mode === 'highlight'
+          ? tHighlight('title')
+          : t('blur')
         : clip.kind === 'screen'
           ? t('video')
           : clip.kind === 'webcam'

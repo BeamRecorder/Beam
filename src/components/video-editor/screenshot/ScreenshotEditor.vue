@@ -20,6 +20,7 @@ import Popover from '~/ui/popover/Popover.vue';
 import type { ClipAppearance } from '~/media/shared/composition-types';
 import SidebarPanel from '../sidebar/SidebarPanel.vue';
 import CanvasPanel from '../properties/canvas/CanvasPanel.vue';
+import BlurPropertiesPanel from '../properties/clip/BlurPropertiesPanel.vue';
 import ClipPropertiesPanel from '../properties/clip/ClipPropertiesPanel.vue';
 import SettingsPanel from '../properties/settings/SettingsPanel.vue';
 import EditorPresetControls from '../EditorPresetControls.vue';
@@ -77,6 +78,7 @@ const {
   renameProject,
   deleteProject,
   cursors,
+  effects,
   selectedLayer,
   history,
 } = useScreenshotEditor(
@@ -195,6 +197,12 @@ const removeLayer = (id: string) => {
               ></template
             >
           </ElementsPanel>
+          <div v-if="panel === 'shapes' && effects.selected.value" class="effect-properties">
+            <BlurPropertiesPanel
+              :clip="{ ...effects.selected.value, cornerRadius: effects.selected.value.cornerRadius ?? 0 }"
+              @update="effects.update"
+            />
+          </div>
           <ClipPropertiesPanel
             v-if="selectedImage && image && (panel === 'image' || panel === 'shapes')"
             hide-layout
@@ -337,6 +345,9 @@ const removeLayer = (id: string) => {
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
+}
+.effect-properties {
+  padding: 12px;
 }
 .layer-properties {
   min-width: 0;

@@ -12,10 +12,12 @@ export function useVideoElements(options: {
   isPlaying: Ref<boolean>;
   select: (id: string) => void;
   clearZoom: () => void;
+  addHighlight?: () => void | Promise<void>;
   addImage?: () => void | Promise<void>;
 }) {
   const editor = provideElementEditor({
     addImage: options.addImage,
+    addHighlight: options.addHighlight,
     layers: () => options.composition.value.clips.filter(isShapeClip),
     selectedId: () => options.selectedId.value,
     select: (id) => {

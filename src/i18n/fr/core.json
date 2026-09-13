@@ -958,5 +958,13 @@
     "watermark": "Filigrane",
     "previewLoading": "Calcul de l’aperçu…",
     "previewError": "Aperçu indisponible"
+  },
+  "Highlight": {
+    "title": "Mise en évidence",
+    "opacity": "Opacité du pourtour",
+    "color": "Couleur du pourtour",
+    "transitions": "Transitions de mise en évidence",
+    "highlightColor": "Couleur de la zone éclairée",
+    "highlightOpacity": "Intensité de la zone éclairée"
   }
 }

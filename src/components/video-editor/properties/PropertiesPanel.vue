@@ -38,6 +38,8 @@ const { t: tClip } = useTranslate('ClipPropertiesPanel');
 const { t: tCaption } = useTranslate('CaptionClipPanel');
 const { t: tZoom } = useTranslate('ZoomPanel');
 const { t: tBlur } = useTranslate('BlurPropertiesPanel');
+const { t: tHighlight } = useTranslate('Highlight');
+const isHighlight = computed(() => props.selectedClip?.blurMode === 'highlight');
 const { t: tSidebar } = useTranslate('SidebarPanel');
 const { t: tTimeline } = useTranslate('TimelineTracks');
 const { t: tTimelineToolbar } = useTranslate('TimelineToolbar');
@@ -136,17 +138,20 @@ const updateCanvasTransition = (edge: 'entry' | 'exit', value: ClipTransition | 
 };
 const transitionPanelTitle = computed(() => {
   if (props.activeTab === 'canvas') return tTransitions('canvasTransitions');
+  if (isHighlight.value) return tHighlight('transitions');
   return clipTransitionPanelTitle(selectedDomainClip.value?.kind, () => tTransitions('clipTransitions'));
 });
 const panelTitle = computed(() =>
-  propertiesPanelTitle(
-    props.activeTab,
-    (selectedDomainClip.value?.kind ??
-      props.selectedClip?.kind ??
-      props.selectedCaptionClip?.kind ??
-      null) as ClipKind | null,
-    { t, tSidebar, tTimeline, tTimelineToolbar, tCanvas },
-  ),
+  props.activeTab === 'clip' && isHighlight.value
+    ? tHighlight('title')
+    : propertiesPanelTitle(
+        props.activeTab,
+        (selectedDomainClip.value?.kind ??
+          props.selectedClip?.kind ??
+          props.selectedCaptionClip?.kind ??
+          null) as ClipKind | null,
+        { t, tSidebar, tTimeline, tTimelineToolbar, tCanvas },
+      ),
 );
 const emit = defineEmits<PropertiesPanelEmits>();
 const previewCaption = (clip: CaptionClip | null) => {
@@ -318,6 +323,7 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
                   cornerRadius: normalizedSelectedClip.blurCornerRadius ?? 0,
                   tintOpacity: normalizedSelectedClip.blurTintOpacity ?? 0,
                   color: normalizedSelectedClip.blurColor ?? '#000000',
+                  highlightColor: normalizedSelectedClip.highlightColor,
                 }"
                 @update="emit('update:blur', $event)"
                 @delete="emit('delete-clip')"

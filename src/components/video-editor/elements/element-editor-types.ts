@@ -13,6 +13,7 @@ export interface ElementEditorOptions {
   timing: () => { startMs: number; durationMs: number };
   showLayers?: boolean;
   canInteract?: () => boolean;
+  addHighlight?: () => void | Promise<void>;
   addImage?: () => void | Promise<void>;
 }
 export interface ElementEditorContext {
@@ -23,6 +24,7 @@ export interface ElementEditorContext {
   drawingSettings: Ref<DrawingSettings>;
   showLayers: boolean;
   add: (family: ShapeLayerFamily) => void;
+  addHighlight?: () => void | Promise<void>;
   addImage?: () => void | Promise<void>;
   addDrawing: (value: DrawnElement) => void;
   select: (id: string) => void;

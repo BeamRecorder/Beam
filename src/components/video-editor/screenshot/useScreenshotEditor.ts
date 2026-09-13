@@ -1,3 +1,4 @@
+import { useScreenshotEffects } from './useScreenshotEffects';
 import { editorTitle } from '../editor-window-title';
 import { provideElementEditor } from '../elements/useElementEditor';
 import { useTranslate } from '~/i18n/useTranslate';
@@ -97,7 +98,7 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
     presets.value = next;
     const selected = next.presets.find((item) => item.id === next.activePresetId);
     if (!document.value || !state.value || !selected) return;
-    const { shapes, cursors, images, composition } = state.value;
+    const { shapes, cursors, images, effects, composition } = state.value;
     const crop = state.value.image.crop;
     applyingPreset = true;
     state.value = {
@@ -105,6 +106,7 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
       shapes,
       cursors,
       images,
+      effects,
       composition,
     };
     state.value.image.crop = crop;
@@ -141,6 +143,10 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
     }
   };
   const select = (id: string | null) => {
+    if (state.value?.effects?.some((effect) => effect.id === id)) {
+      elements.finishText();
+      elements.drawingMode.value = false;
+    }
     selectedId.value = id;
     panel.value =
       id === state.value?.image.id
@@ -156,6 +162,7 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
     if (selectedLayer.value?.locked) return;
     if (cursors.selected.value) cursors.transform(value);
     else if (selectedShape.value) selectedShape.value.transform = value;
+    else if (effects.selected.value) effects.selected.value.transform = value;
     else if (image.value) image.value.transform = value;
   };
   const appearance = (value: Partial<ClipAppearance>) => {
@@ -197,7 +204,18 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
     selectedId.value = state.value.shapes.at(-1)?.id ?? null;
     panel.value = 'shapes';
   };
+  const effects = useScreenshotEffects(
+    state,
+    selectedId,
+    select,
+    () => !busy.value && !cropping.value && !selectedLayer.value?.locked,
+  );
   const elements = provideElementEditor({
+    addHighlight: () => {
+      elements.finishText();
+      elements.drawingMode.value = false;
+      effects.add();
+    },
     addImage,
     layers: () => state.value?.shapes ?? [],
     selectedId: () => selectedId.value,
@@ -341,7 +359,7 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
       panel.value = next;
       cropping.value = false;
       const importedImageSelected = image.value && image.value.id !== state.value?.image.id;
-      if (next === 'shapes' && !selectedShape.value && !importedImageSelected)
+      if (next === 'shapes' && !selectedShape.value && !effects.selected.value && !importedImageSelected)
         selectedId.value = state.value?.shapes.at(-1)?.id ?? null;
     }
   };
@@ -378,6 +396,7 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
     renameProject,
     deleteProject,
     cursors,
+    effects,
     selectedLayer,
     history,
   };

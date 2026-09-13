@@ -41,6 +41,7 @@ const emit = defineEmits<{
   remove: [id: string];
 }>();
 const { t } = useTranslate('ScreenshotComposition');
+const { t: tHighlight } = useTranslate('Highlight');
 const { t: blendText } = useTranslate('BlendModes');
 const { t: elementsText } = useTranslate('Elements');
 const compact = useMediaQuery('(max-width: 1180px)');
@@ -66,6 +67,7 @@ const selected = computed(() => props.layers.find((layer) => layer.id === props.
 
 const label = (layer: ScreenshotLayer) =>
   layer.name ||
+  (layer.kind === 'effect' ? tHighlight('title') : '') ||
   (['shape', 'arrow', 'text', 'drawing', 'cursor'].includes(layer.kind) ? elementsText(layer.kind) : t(layer.kind));
 const blendOptions = computed(() => LAYER_BLEND_MODES.map((value) => ({ value, label: blendText(value) })));
 const removable = computed(

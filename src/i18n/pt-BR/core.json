@@ -973,5 +973,13 @@
     "watermark": "Marca d’água",
     "previewLoading": "Gerando prévia…",
     "previewError": "Prévia indisponível"
+  },
+  "Highlight": {
+    "title": "Destaque",
+    "opacity": "Opacidade ao redor",
+    "color": "Cor ao redor",
+    "transitions": "Transições do destaque",
+    "highlightColor": "Cor do destaque",
+    "highlightOpacity": "Intensidade do destaque"
   }
 }

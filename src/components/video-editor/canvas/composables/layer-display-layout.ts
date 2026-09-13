@@ -8,7 +8,7 @@ import {
   type ShapeClip,
   type VisualClip,
 } from '~/media/shared/composition-types';
-import { effectShapeRect } from '../../composition/effects/blur-effect';
+import { effectShapeRect } from '../../composition/effects/effect-shape';
 import { visualClipDisplayLayout } from '../../composition/visual-framing';
 import { isPhoneFrame } from '../../composition/appearance/phone-frames';
 import { projectCameraRect } from './layer-transform-geometry';

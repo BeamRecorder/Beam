@@ -12,6 +12,7 @@ export function screenshotThumbnailSpecs(
   packs: CursorPackDescriptor[],
 ): ThumbnailSpec[] {
   return screenshotLayers(state).map((layer) => {
+    const effect = state.effects?.find((item) => item.id === layer.id);
     const shape = state.shapes.find((item) => item.id === layer.id);
     const cursor = state.cursors?.find((item) => item.id === layer.id);
     const image = screenshotImage(state, layer.id);
@@ -25,15 +26,17 @@ export function screenshotThumbnailSpecs(
           : layer.kind === 'watermark' && state.canvas.watermark?.showLogo
             ? resolvePublicAssetUrl(WATERMARK_LOGO_PATH)
             : undefined;
-    const visual = shape
-      ? { ...shape, enabled: true, transform: { ...shape.transform, x: 0, y: 0 } }
-      : cursor
-        ? { ...cursor, name: '', enabled: true, position: { x: 0, y: 0 }, asset: cursorAsset }
-        : image
-          ? { ...image, enabled: true, transform: { ...image.transform, x: 0, y: 0 } }
-          : layer.kind === 'background'
-            ? [state.background, state.blurPercent]
-            : { ...state.canvas.watermark, enabled: true };
+    const visual =
+      effect ??
+      (shape
+        ? { ...shape, enabled: true, transform: { ...shape.transform, x: 0, y: 0 } }
+        : cursor
+          ? { ...cursor, name: '', enabled: true, position: { x: 0, y: 0 }, asset: cursorAsset }
+          : image
+            ? { ...image, enabled: true, transform: { ...image.transform, x: 0, y: 0 } }
+            : layer.kind === 'background'
+              ? [state.background, state.blurPercent]
+              : { ...state.canvas.watermark, enabled: true });
     return {
       id: layer.id,
       key: JSON.stringify([state.canvas.width, state.canvas.height, sourceUrl, visual]),
@@ -41,6 +44,7 @@ export function screenshotThumbnailSpecs(
         ...state,
         image: image ?? state.image,
         images: [],
+        effects: effect ? [effect] : [],
         shapes: shape ? [shape] : [],
         cursors: cursor ? [cursor] : [],
         composition: undefined,

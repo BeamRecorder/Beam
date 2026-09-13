@@ -309,7 +309,12 @@ export function setTransform(
 export function setBlurEffect(
   composition: ClipComposition,
   clipId: string,
-  patch: Partial<Pick<BlurClip, 'shape' | 'mode' | 'strength' | 'feather' | 'cornerRadius' | 'tintOpacity' | 'color'>>,
+  patch: Partial<
+    Pick<
+      BlurClip,
+      'shape' | 'mode' | 'strength' | 'feather' | 'cornerRadius' | 'tintOpacity' | 'color' | 'highlightColor'
+    >
+  >,
 ): ClipComposition {
   return updateClip(composition, clipId, (clip) => {
     if (!isBlurClip(clip)) throw new CompositionEngineError('Only blur clips have blur settings.');

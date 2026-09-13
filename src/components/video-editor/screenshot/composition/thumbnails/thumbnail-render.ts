@@ -11,11 +11,14 @@ export async function renderLayerThumbnail(
 ): Promise<Blob> {
   const { state, layer } = request;
   const { width, height } = state.canvas;
-  const transform = screenshotLayerTransform(
-    state,
-    { width: assets.width ?? width, height: assets.height ?? height, cursors: assets.cursors },
-    layer.id,
-  );
+  const transform =
+    layer.kind === 'effect'
+      ? null
+      : screenshotLayerTransform(
+          state,
+          { width: assets.width ?? width, height: assets.height ?? height, cursors: assets.cursors },
+          layer.id,
+        );
   const rect = transform
     ? {
         x: transform.x * width,
@@ -39,10 +42,16 @@ export async function renderLayerThumbnail(
         : 0;
   const padding = shadow + (shape?.borderWidth ?? 0) * unit;
   const scale = 176 / Math.max(1, rotatedWidth + padding * 2, rotatedHeight + padding * 2);
-  const surface = new OffscreenCanvas(256, 256);
+  const surface = new OffscreenCanvas(
+    layer.kind === 'effect' ? Math.max(1, Math.round(width * scale)) : 256,
+    layer.kind === 'effect' ? Math.max(1, Math.round(height * scale)) : 256,
+  );
   const context = surface.getContext('2d', { willReadFrequently: true });
   if (!context) throw new Error('Thumbnail rendering context unavailable.');
-  context.translate(128 - (rect.x + rect.width / 2) * scale, 128 - (rect.y + rect.height / 2) * scale);
+  context.translate(
+    surface.width / 2 - (rect.x + rect.width / 2) * scale,
+    surface.height / 2 - (rect.y + rect.height / 2) * scale,
+  );
   const visibleState = {
     ...state,
     canvas: {
@@ -51,7 +60,11 @@ export async function renderLayerThumbnail(
     },
   };
   drawScreenshotLayer(context, visibleState, layer, assets, width * scale, height * scale);
-  const bounds = alphaBounds(context.getImageData(0, 0, 256, 256).data, 256, 256);
+  const bounds = alphaBounds(
+    context.getImageData(0, 0, surface.width, surface.height).data,
+    surface.width,
+    surface.height,
+  );
   const output = new OffscreenCanvas(96, 96);
   const target = output.getContext('2d', { willReadFrequently: true });
   if (!target) throw new Error('Thumbnail output context unavailable.');

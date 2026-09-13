@@ -177,6 +177,45 @@ describe('ScreenshotEditor', () => {
     wrapper.unmount();
   });
 
+  it('adds a highlight with shared controls, saves it, and supports undo/redo', async () => {
+    const wrapper = mountEditor();
+    await flushPromises();
+    await wrapper.get('[aria-label="Elements"]').trigger('click');
+    await clickText(wrapper, 'Highlight');
+    await flushPromises();
+    const canvas = wrapper.findComponent(ScreenshotCanvasStub);
+    const original = canvas.props('state')!.effects[0];
+    expect(original).toMatchObject({
+      kind: 'blur',
+      mode: 'highlight',
+      strength: 65,
+      highlightColor: '#ffffff',
+      tintOpacity: 20,
+    });
+    expect(canvas.props('selectedId')).toBe(original.id);
+    expect(wrapper.text()).toContain('Surrounding opacity');
+    expect(wrapper.text()).toContain('Highlight intensity');
+    expect(compositionLayers(wrapper)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: original.id, kind: 'effect' })]),
+    );
+    await clickText(wrapper, 'Copy');
+    await flushPromises();
+    expect(capture.saveScreenshot).toHaveBeenLastCalledWith(
+      'screen-1',
+      expect.objectContaining({
+        effects: [expect.objectContaining({ id: original.id, highlightColor: '#ffffff', tintOpacity: 20 })],
+      }),
+      expect.any(Object),
+    );
+    wrapper.findComponent({ name: 'EditorHistoryControls' }).vm.$emit('undo');
+    await flushPromises();
+    expect(canvas.props('state')!.effects ?? []).toHaveLength(0);
+    wrapper.findComponent({ name: 'EditorHistoryControls' }).vm.$emit('redo');
+    await flushPromises();
+    expect(canvas.props('state')!.effects).toHaveLength(1);
+    wrapper.unmount();
+  });
+
   it('creates and selects a shape, applies its shared style, and removes it', async () => {
     vi.stubGlobal('crypto', { randomUUID: () => 'shape-1' });
     const wrapper = mountEditor();

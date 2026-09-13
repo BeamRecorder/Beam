@@ -23,6 +23,13 @@ export function screenshotLayers(state: ScreenshotState): ScreenshotLayer[] {
       name: layer.text?.content || layer.name,
       visible: layer.enabled,
     })),
+    ...(state.effects ?? []).map((layer) => ({
+      id: layer.id,
+      kind: 'effect' as const,
+      name: layer.name,
+      visible: layer.enabled,
+      removable: true,
+    })),
     ...(state.cursors ?? []).map((layer) => ({
       id: layer.id,
       kind: 'cursor' as const,
@@ -78,7 +85,9 @@ export function setScreenshotLayerVisible(state: ScreenshotState, id: string, vi
     const layer =
       id === state.image.id
         ? state.image
-        : [...state.shapes, ...(state.cursors ?? []), ...(state.images ?? [])].find((layer) => layer.id === id);
+        : [...state.shapes, ...(state.effects ?? []), ...(state.cursors ?? []), ...(state.images ?? [])].find(
+            (layer) => layer.id === id,
+          );
     if (layer) layer.enabled = visible;
   }
 }
@@ -86,6 +95,7 @@ export function removeScreenshotLayer(state: ScreenshotState, id: string) {
   if (id === state.image.id || id === SCREENSHOT_BACKGROUND_ID || id === SCREENSHOT_WATERMARK_ID) return;
   state.shapes = state.shapes.filter((layer) => layer.id !== id);
   state.cursors = state.cursors?.filter((layer) => layer.id !== id);
+  state.effects = state.effects?.filter((layer) => layer.id !== id);
   state.images = state.images?.filter((layer) => layer.id !== id);
   state.composition = state.composition?.filter((layer) => layer.id !== id);
 }

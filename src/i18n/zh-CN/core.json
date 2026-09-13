@@ -973,5 +973,13 @@
     "watermark": "水印",
     "previewLoading": "正在生成预览…",
     "previewError": "预览不可用"
+  },
+  "Highlight": {
+    "title": "区域高亮",
+    "opacity": "周围不透明度",
+    "color": "周围颜色",
+    "transitions": "高亮过渡效果",
+    "highlightColor": "高亮颜色",
+    "highlightOpacity": "高亮强度"
   }
 }

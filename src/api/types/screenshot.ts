@@ -2,7 +2,7 @@ import type { EditorOpenOptions } from './editor-window';
 import type { SnapshotHistory } from '~/media/shared/editor-history-types';
 import type { ScreenRegion } from './screen-region';
 import type { EditorPresetSettings } from './editor-preset';
-import type { ShapeClip, VisualClip, MediaAsset } from '~/media/shared/composition-types';
+import type { BlurClip, ShapeClip, VisualClip, MediaAsset } from '~/media/shared/composition-types';
 import type { OutputCanvasSettings } from '~/components/video-editor/canvas/output-canvas';
 import type { BackgroundValue } from '~/components/video-editor/composables/backgroundCatalog';
 import type {
@@ -23,6 +23,7 @@ export interface ScreenshotState {
   blurPercent: number;
   image: VisualClip;
   shapes: ShapeClip[];
+  effects?: BlurClip[];
   cursors?: ScreenshotCursorLayer[];
   images?: ScreenshotImageLayer[];
   composition?: LayerCompositing[];

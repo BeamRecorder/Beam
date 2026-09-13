@@ -1,3 +1,4 @@
+import { effectShapeRect } from '../composition/effects/effect-shape';
 import type { ScreenshotState } from '~/api/types/screenshot';
 import type { NormalizedTransform } from '~/media/shared/composition-types';
 import { frameOuterRect } from '../composition/appearance/frames';
@@ -19,6 +20,18 @@ export function screenshotLayerTransform(
     const { width, height } = state.canvas;
     const framing = screenshotImageFraming({ ...state, image }, asset.width, asset.height, width, height);
     const rect = frameOuterRect(framing.rect, image.appearance.frame);
+    return { x: rect.x / width, y: rect.y / height, width: rect.width / width, height: rect.height / height };
+  }
+  const effect = state.effects?.find((item) => item.id === id);
+  if (effect) {
+    const { width, height } = state.canvas;
+    const t = effect.transform;
+    const rect = effectShapeRect(effect.shape, {
+      x: t.x * width,
+      y: t.y * height,
+      width: t.width * width,
+      height: t.height * height,
+    });
     return { x: rect.x / width, y: rect.y / height, width: rect.width / width, height: rect.height / height };
   }
   const cursor = state.cursors?.find((cursor) => cursor.id === id);

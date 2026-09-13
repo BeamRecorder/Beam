@@ -57,6 +57,7 @@ export function provideElementEditor(options: ElementEditorOptions): ElementEdit
   };
   const context: ElementEditorContext = {
     addImage: options.addImage,
+    addHighlight: options.addHighlight,
     layers,
     selected,
     editing,

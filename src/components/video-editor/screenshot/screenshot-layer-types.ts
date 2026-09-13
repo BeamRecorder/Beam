@@ -36,7 +36,7 @@ export interface ScreenshotCursorAsset {
 }
 export interface ScreenshotLayer extends LayerCompositing {
   removable?: boolean;
-  kind: 'background' | 'image' | 'shape' | 'arrow' | 'text' | 'drawing' | 'cursor' | 'watermark';
+  kind: 'background' | 'image' | 'shape' | 'arrow' | 'text' | 'drawing' | 'cursor' | 'watermark' | 'effect';
   name: string;
   visible: boolean;
 }

@@ -958,5 +958,13 @@
     "watermark": "Hình mờ",
     "previewLoading": "Đang tạo bản xem trước…",
     "previewError": "Không có bản xem trước"
+  },
+  "Highlight": {
+    "title": "Làm nổi bật",
+    "opacity": "Độ mờ đục vùng xung quanh",
+    "color": "Màu vùng xung quanh",
+    "transitions": "Chuyển cảnh làm nổi bật",
+    "highlightColor": "Màu vùng nổi bật",
+    "highlightOpacity": "Cường độ vùng nổi bật"
   }
 }

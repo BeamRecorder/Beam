@@ -1,3 +1,4 @@
+const { normalizeEffectSettings } = require('../projects/composition-effect.cjs');
 const { normalizeShapeLayerStyle } = require('../projects/composition-shape-layer.cjs');
 const { normalizeAppearance } = require('../projects/composition-appearance.cjs');
 const { validateScreenshotComposition } = require('./screenshot-composition-validation.cjs');
@@ -80,6 +81,41 @@ function validateScreenshotState(state, projectId) {
       )
         throw new Error('Invalid screenshot image.');
       image.appearance = normalizeAppearance(image.appearance);
+    }
+  }
+  if (state.effects !== undefined) {
+    if (
+      !Array.isArray(state.effects) ||
+      state.effects.length + state.shapes.length + (state.images?.length ?? 0) + (state.cursors?.length ?? 0) > 500
+    )
+      throw new Error('Invalid screenshot effect layers.');
+    for (const effect of state.effects) {
+      if (
+        !effect ||
+        effect.kind !== 'blur' ||
+        typeof effect.id !== 'string' ||
+        !effect.id ||
+        effect.id.length > 200 ||
+        typeof effect.name !== 'string' ||
+        effect.name.length > 200 ||
+        typeof effect.enabled !== 'boolean' ||
+        !transform(effect.transform) ||
+        ![
+          effect.timelineStartMs,
+          effect.timelineDurationMs,
+          effect.sourceInMs,
+          effect.sourceDurationMs,
+          effect.playbackRate,
+          effect.order,
+        ].every(finite) ||
+        effect.timelineStartMs < 0 ||
+        effect.timelineDurationMs <= 0 ||
+        effect.sourceInMs < 0 ||
+        effect.sourceDurationMs <= 0 ||
+        effect.playbackRate <= 0
+      )
+        throw new Error('Invalid screenshot effect.');
+      Object.assign(effect, normalizeEffectSettings(effect));
     }
   }
   const identifiers = new Set([state.image.id]);

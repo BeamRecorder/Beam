@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowRight, Shapes, Type, Pencil, MousePointer2, Image } from '@lucide/vue';
+import { ArrowRight, Shapes, Type, Pencil, MousePointer2, Image, Focus } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import Divider from '~/ui/divider/Divider.vue';
 import ShapeLayerPropertiesPanel from '../properties/clip/ShapeLayerPropertiesPanel.vue';
@@ -9,6 +9,7 @@ import { useTranslate } from '~/i18n/useTranslate';
 const editor = useElementEditor();
 defineProps<{ disabled?: boolean }>();
 const { t } = useTranslate('Elements');
+const { t: tHighlight } = useTranslate('Highlight');
 const tools = [
   { family: 'shape', icon: Shapes },
   { family: 'arrow', icon: ArrowRight },
@@ -30,6 +31,16 @@ const icons = { shape: Shapes, arrow: ArrowRight, text: Type, drawing: Pencil };
         :variant="tool.family === 'drawing' && editor.drawingMode.value ? 'primary' : 'secondary'"
         @click="editor.add(tool.family)"
         >{{ t(tool.family) }}</Button
+      >
+      <Button
+        v-if="editor.addHighlight"
+        block
+        size="sm"
+        variant="secondary"
+        :icon="Focus"
+        :disabled="disabled"
+        @click="editor.addHighlight()"
+        >{{ tHighlight('title') }}</Button
       >
       <Button
         block

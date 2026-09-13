@@ -973,5 +973,13 @@
     "watermark": "Wasserzeichen",
     "previewLoading": "Vorschau wird erstellt…",
     "previewError": "Vorschau nicht verfügbar"
+  },
+  "Highlight": {
+    "title": "Hervorhebung",
+    "opacity": "Deckkraft der Umgebung",
+    "color": "Farbe der Umgebung",
+    "transitions": "Übergänge der Hervorhebung",
+    "highlightColor": "Farbe der Hervorhebung",
+    "highlightOpacity": "Intensität der Hervorhebung"
   }
 }

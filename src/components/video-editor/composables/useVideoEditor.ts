@@ -98,6 +98,10 @@ export function useVideoEditor(options: {
   });
   const editorPresets = useEditorPresets(editorDefaults);
   useVideoElements({
+    addHighlight: () =>
+      compositionState.addElement('highlight').catch((error) => {
+        toastStore.error(String(error));
+      }),
     addImage: () =>
       compositionState.addElement('image').catch((error) => {
         toastStore.error(String(error));

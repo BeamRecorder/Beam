@@ -13,6 +13,8 @@ export function withScreenshotTransform(
   if (id === state.image.id) return { ...state, image: { ...state.image, transform } };
   if (state.images?.some((image) => image.id === id))
     return { ...state, images: state.images.map((image) => (image.id === id ? { ...image, transform } : image)) };
+  if (state.effects?.some((effect) => effect.id === id))
+    return { ...state, effects: state.effects.map((effect) => (effect.id === id ? { ...effect, transform } : effect)) };
   const cursor = state.cursors?.find((item) => item.id === id);
   const asset = assets?.cursors?.get(id)?.asset;
   if (cursor && asset) {

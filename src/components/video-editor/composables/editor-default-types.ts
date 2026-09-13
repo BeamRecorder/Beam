@@ -31,8 +31,17 @@ export interface EditorPreferenceDefaults {
   caption?: { style: Omit<CaptionStyle, 'customText'>; transform?: NormalizedTransform; durationMs: number };
   blur?: Pick<
     BlurClip,
-    'transform' | 'shape' | 'mode' | 'strength' | 'feather' | 'cornerRadius' | 'tintOpacity' | 'color'
+    | 'transform'
+    | 'shape'
+    | 'mode'
+    | 'strength'
+    | 'feather'
+    | 'cornerRadius'
+    | 'tintOpacity'
+    | 'color'
+    | 'highlightColor'
   >;
+  highlight?: EditorPreferenceDefaults['blur'];
   audio?: { volume: number; playbackRate: number };
   zoom?: {
     durationMs: number;

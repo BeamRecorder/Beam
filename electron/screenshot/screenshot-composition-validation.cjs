@@ -24,7 +24,7 @@ const identifier = (value) => typeof value === 'string' && value.length > 0 && v
 
 function validateScreenshotComposition(state) {
   const ids = new Set(['__background__', '__watermark__']);
-  for (const item of [state.image, ...state.shapes, ...(state.images ?? [])]) {
+  for (const item of [state.image, ...state.shapes, ...(state.effects ?? []), ...(state.images ?? [])]) {
     if (ids.has(item.id)) throw new Error('Duplicate screenshot layer identifier.');
     ids.add(item.id);
   }

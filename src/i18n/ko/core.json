@@ -973,5 +973,13 @@
     "watermark": "워터마크",
     "previewLoading": "미리보기 생성 중…",
     "previewError": "미리보기를 사용할 수 없습니다"
+  },
+  "Highlight": {
+    "title": "강조",
+    "opacity": "주변 불투명도",
+    "color": "주변 색상",
+    "transitions": "강조 전환 효과",
+    "highlightColor": "하이라이트 색상",
+    "highlightOpacity": "하이라이트 강도"
   }
 }

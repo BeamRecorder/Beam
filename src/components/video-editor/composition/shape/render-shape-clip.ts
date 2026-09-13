@@ -3,7 +3,8 @@ import type { BlurClip, NormalizedTransform, ShapeClip } from '~/media/shared/co
 import { normalizeShapeLayerStyle } from '~/media/shared/shape-layer-style';
 import type { ShapeLayerStyle } from '~/media/shared/shape-layer-types';
 import type { Canvas2DContext } from '~/types/canvas';
-import { applyBlurEffect, type EffectRect } from '../effects/blur-effect';
+import { applyBlurEffect } from '../effects/blur-effect';
+import type { EffectRect } from '../effects/effect-types';
 
 const shadowOffset = (direction: ShapeClip['shadowDirection'], scale: number) => {
   const distance = 12 * scale;

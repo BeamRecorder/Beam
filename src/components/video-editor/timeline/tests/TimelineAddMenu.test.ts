@@ -30,11 +30,12 @@ describe('TimelineAddMenu', () => {
     }>;
     expect(items.map((item) => item.id)).toEqual(['media', 'composition', 'audio', 'caption']);
     expect(items[0]?.children?.map((item) => item.id)).toEqual(['video', 'image']);
-    expect(items[1]?.children?.map((item) => item.id)).toEqual(['shape', 'blur', 'color']);
+    expect(items[1]?.children?.map((item) => item.id)).toEqual(['shape', 'blur', 'highlight', 'color']);
     expect(items[2]?.children?.map((item) => item.id)).toEqual(['sound', 'voiceover']);
     expect(items[3]?.children).toBeUndefined();
 
     await wrapper.get('.add-trigger').trigger('click');
-    expect(wrapper.emitted('add:element')).toEqual([['voiceover']]);
+    menu.vm.$emit('select', 'highlight');
+    expect(wrapper.emitted('add:element')).toEqual([['voiceover'], ['highlight']]);
   });
 });

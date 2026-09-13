@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 const { historicalAppearance } = require('../electron/projects/composition-appearance.cjs');
 const { validateScreenshotState } = require('../electron/screenshot/screenshot-validation.cjs');
+const { validateScreenshotHistory } = require('../electron/screenshot/screenshot-history.cjs');
 
 const blendModes = [
   'source-over',
@@ -50,6 +51,31 @@ const cursor = (patch = {}) => ({
   ...patch,
 });
 
+const highlightEffect = (patch = {}) => ({
+  id: 'highlight-1',
+  trackId: 'highlight-1',
+  kind: 'blur',
+  assetId: '',
+  name: 'Highlight',
+  timelineStartMs: 0,
+  timelineDurationMs: 1,
+  sourceInMs: 0,
+  sourceDurationMs: 1,
+  playbackRate: 1,
+  transitions: { entry: null, exit: null },
+  enabled: true,
+  order: 0,
+  transform: { x: 0.2, y: 0.25, width: 0.35, height: 0.3 },
+  shape: 'rectangle',
+  mode: 'highlight',
+  strength: 60,
+  feather: 12,
+  cornerRadius: 18,
+  tintOpacity: 0,
+  color: '#ffcc00',
+  ...patch,
+});
+
 const screenshotState = (patch = {}) => {
   const base = {
     format: 'png',
@@ -85,6 +111,7 @@ const layerIds = (state) => [
   '__background__',
   state.image.id,
   ...state.shapes.map(({ id }) => id),
+  ...(state.effects ?? []).map(({ id }) => id),
   ...(state.cursors ?? []).map(({ id }) => id),
   '__watermark__',
 ];
@@ -177,6 +204,88 @@ test('requires every compositing entry to be unique and reference an existing sc
   const duplicateEntry = structuredClone(valid);
   duplicateEntry.composition[0].id = duplicateEntry.composition[1].id;
   assert.throws(() => validateScreenshotState(duplicateEntry), /invalid screenshot compositing settings/i);
+});
+
+test('accepts persisted highlight effects and validates opacity, mode and color', () => {
+  for (const strength of [0, 100]) {
+    const state = withComposition(screenshotState({ effects: [highlightEffect({ strength })] }));
+    assert.doesNotThrow(() => validateScreenshotState(state));
+    assert.ok(state.composition.some(({ id }) => id === 'highlight-1'));
+  }
+
+  for (const highlightColor of ['#123456', '#aabbccdd']) {
+    const effect = highlightEffect({ highlightColor, tintOpacity: 20 });
+    const state = withComposition(screenshotState({ effects: [effect] }));
+    assert.doesNotThrow(() => validateScreenshotState(state));
+    assert.equal(state.effects[0].highlightColor, highlightColor);
+    assert.equal(state.effects[0].tintOpacity, 20);
+  }
+
+  const legacyState = withComposition(screenshotState({ effects: [highlightEffect({ tintOpacity: 0 })] }));
+  assert.doesNotThrow(() => validateScreenshotState(legacyState));
+  assert.equal(Object.hasOwn(legacyState.effects[0], 'highlightColor'), false);
+  assert.equal(legacyState.effects[0].tintOpacity, 0);
+
+  const invalidEffects = [
+    ['unknown mode', { mode: 'glow' }],
+    ['invalid color', { color: '#12xz56' }],
+    ['null interior color', { highlightColor: null }],
+    ['numeric interior color', { highlightColor: 12 }],
+    ['named interior color', { highlightColor: 'white' }],
+    ['short hex interior color', { highlightColor: '#123' }],
+    ['opacity below zero', { strength: -0.01 }],
+    ['opacity above one hundred', { strength: 100.01 }],
+    ['non-finite opacity', { strength: Number.NaN }],
+  ];
+  for (const [label, patch] of invalidEffects) {
+    const state = withComposition(screenshotState({ effects: [highlightEffect(patch)] }));
+    assert.throws(() => validateScreenshotState(state), /invalid screenshot|effet de flou invalide/i, label);
+  }
+});
+
+test('requires a unique composition reference for each persisted highlight effect', () => {
+  const valid = withComposition(screenshotState({ effects: [highlightEffect()], shapes: [shape()] }));
+  assert.doesNotThrow(() => validateScreenshotState(structuredClone(valid)));
+
+  const missingReference = structuredClone(valid);
+  missingReference.composition = missingReference.composition.filter(({ id }) => id !== 'highlight-1');
+  assert.throws(() => validateScreenshotState(missingReference), /invalid screenshot composition/i);
+
+  const staleReference = structuredClone(valid);
+  staleReference.composition.find(({ id }) => id === 'highlight-1').id = 'stale-highlight';
+  assert.throws(() => validateScreenshotState(staleReference), /invalid screenshot compositing settings/i);
+
+  const duplicateId = withComposition(
+    screenshotState({ effects: [highlightEffect({ id: 'shape-1' })], shapes: [shape()] }),
+  );
+  assert.throws(() => validateScreenshotState(duplicateId), /duplicate screenshot layer identifier/i);
+});
+
+test('validates highlight effects in undo and redo screenshot history snapshots', () => {
+  const previous = withComposition(screenshotState({ image: { enabled: true } }));
+  const current = withComposition(
+    screenshotState({
+      image: { enabled: true },
+      effects: [highlightEffect({ highlightColor: '#aabbccdd', tintOpacity: 20 })],
+    }),
+  );
+  const redo = withComposition(
+    screenshotState({
+      image: { enabled: true },
+      effects: [highlightEffect({ highlightColor: '#123456', tintOpacity: 35 })],
+    }),
+  );
+  const history = { version: 1, undo: [previous, structuredClone(current)], redo: [structuredClone(redo)] };
+
+  assert.doesNotThrow(() => validateScreenshotHistory(history, current));
+  assert.equal(history.undo[1].effects[0].highlightColor, '#aabbccdd');
+  assert.equal(history.undo[1].effects[0].tintOpacity, 20);
+  assert.equal(history.redo[0].effects[0].highlightColor, '#123456');
+  assert.equal(history.redo[0].effects[0].tintOpacity, 35);
+
+  const invalidHistory = structuredClone(history);
+  invalidHistory.redo[0].effects = [highlightEffect({ strength: 101 })];
+  assert.throws(() => validateScreenshotHistory(invalidHistory, current), /invalid screenshot|effet de flou invalide/i);
 });
 
 test('rejects duplicate IDs across content and reserved screenshot layers', () => {

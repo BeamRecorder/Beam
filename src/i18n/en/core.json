@@ -958,5 +958,13 @@
     "watermark": "Watermark",
     "previewLoading": "Rendering preview…",
     "previewError": "Preview unavailable"
+  },
+  "Highlight": {
+    "title": "Highlight",
+    "opacity": "Surrounding opacity",
+    "color": "Surrounding color",
+    "transitions": "Highlight transitions",
+    "highlightColor": "Highlight color",
+    "highlightOpacity": "Highlight intensity"
   }
 }

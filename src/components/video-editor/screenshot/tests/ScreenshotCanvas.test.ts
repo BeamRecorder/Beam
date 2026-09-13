@@ -5,11 +5,13 @@ import { propertyInteractionActive, resetPropertyInteractions } from '~/composab
 import type { CursorAssetDescriptor, CursorPackDescriptor } from '~/api/types/cursor-pack';
 import type { EditorPresetSettings } from '~/api/types/editor-preset';
 import type { ScreenshotDocument, ScreenshotState } from '~/api/types/screenshot';
+import type { BlurClip } from '~/media/shared/composition-types';
 import type { ScreenshotRenderAssets } from '../screenshot-types';
 import type { ScreenshotCursorAsset } from '../screenshot-layer-types';
 import { createScreenshotCursor, screenshotCursorTransform } from '../screenshot-cursors';
 import { initializeScreenshotComposition } from '../screenshot-layers';
 import { screenshotShape, screenshotState } from '../screenshot-state';
+import { HIGHLIGHT_DEFAULTS } from '~/media/shared/highlight-defaults';
 
 const renderer = vi.hoisted(() => ({
   loadScreenshotAssets: vi.fn(),
@@ -361,6 +363,64 @@ describe('ScreenshotCanvas', () => {
     expect(propertyInteractionActive.value).toBe(true);
     wrapper.unmount();
     expect(propertyInteractionActive.value).toBe(false);
+  });
+
+  it.each([
+    ['square', 'right'],
+    ['square', 'bottom-right'],
+    ['circle', 'right'],
+    ['circle', 'bottom-right'],
+  ] as const)('preserves the canvas-space aspect ratio when resizing a %s highlight from %s', async (shape, corner) => {
+    const state = stateFixture();
+    const effect: BlurClip = {
+      ...structuredClone(HIGHLIGHT_DEFAULTS),
+      id: 'highlight-1',
+      trackId: 'highlight-1',
+      kind: 'blur',
+      assetId: '',
+      name: 'Highlight',
+      enabled: true,
+      order: 0,
+      timelineStartMs: 0,
+      timelineDurationMs: 1,
+      sourceInMs: 0,
+      sourceDurationMs: 1,
+      playbackRate: 1,
+      transitions: { entry: null, exit: null },
+      shape,
+    };
+    state.effects = [effect];
+    initializeScreenshotComposition(state);
+
+    const wrapper = mountCanvas(state, effect.id);
+    measurement.set?.(800, 400);
+    await flushPromises();
+
+    const canvas = wrapper.get('canvas');
+    vi.spyOn(canvas.element, 'getBoundingClientRect').mockReturnValue({
+      width: 1000,
+      height: 500,
+    } as DOMRect);
+    const selection = wrapper.findComponent(SelectionStub);
+    const startEvent = {
+      button: 0,
+      clientX: 500,
+      clientY: 250,
+      pointerId: 21,
+      preventDefault: vi.fn(),
+      currentTarget: { setPointerCapture: vi.fn() },
+    } as unknown as PointerEvent;
+    selection.vm.$emit('resize-start', corner, startEvent);
+    const moveEvent = { ...startEvent, clientX: 600, clientY: 300 };
+    selection.vm.$emit('resize-move', moveEvent);
+    selection.vm.$emit('resize-end', moveEvent);
+
+    const transform = wrapper.emitted('transform')?.[0]?.[0] as {
+      width: number;
+      height: number;
+    };
+    expect(transform.width * state.canvas.width).toBeCloseTo(transform.height * state.canvas.height, 8);
+    wrapper.unmount();
   });
 
   it('does not paint stale assets during successive cursor-asset loads', async () => {

@@ -101,9 +101,18 @@ describe('TimelineTracks visual add placement', () => {
     ['color-track', 'color'],
     ['shape-track', 'shape'],
     ['blur-track', 'blur'],
+    ['highlight-track', 'highlight'],
   ] as const)('shows an Add ghost and emits a continuation request for %s', async (trackId, kind) => {
     const clips =
-      kind === 'color' ? [colorClip()] : kind === 'shape' ? [shapeClip()] : kind === 'blur' ? [blurClip()] : [];
+      kind === 'color'
+        ? [colorClip()]
+        : kind === 'shape'
+          ? [shapeClip()]
+          : kind === 'blur'
+            ? [blurClip()]
+            : kind === 'highlight'
+              ? [{ ...blurClip(), id: 'highlight', trackId, name: 'Highlight', mode: 'highlight' } satisfies BlurClip]
+              : [];
     const mounted = await mountTracks({
       composition: visualTrackComposition(clips),
       selectedZoomId: null,
@@ -115,6 +124,11 @@ describe('TimelineTracks visual add placement', () => {
     const ghost = content.find('.visual-add-indicator.preview-ghost');
     expect(ghost.exists()).toBe(true);
     expect(ghost.classes()).toContain(`kind-${kind}`);
+    if (kind === 'highlight') {
+      expect(ghost.classes()).toContain('kind-blur');
+      expect(content.attributes('title')).toBe('Add Highlight');
+      expect(mounted!.get(`[data-track-id="${trackId}"] .track-title`).text()).toBe('Highlight');
+    }
 
     await content.trigger('click', { clientX: 900 });
     expect(mounted!.emitted('add:visual-element')).toContainEqual([

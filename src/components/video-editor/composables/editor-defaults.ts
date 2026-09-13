@@ -1,3 +1,4 @@
+import { HIGHLIGHT_DEFAULTS } from '~/media/shared/highlight-defaults';
 import type { ProjectEditorState } from '~/api/types/capture-api';
 import {
   isAudioClip,
@@ -129,6 +130,9 @@ export const normalizeEditorPreferenceDefaults = (value: unknown): EditorPrefere
     ...(input.blur && typeof input.blur === 'object'
       ? { blur: clone(input.blur as EditorPreferenceDefaults['blur']) }
       : {}),
+    ...(input.highlight && typeof input.highlight === 'object'
+      ? { highlight: clone(input.highlight as EditorPreferenceDefaults['highlight']) }
+      : {}),
     ...(input.audio && typeof input.audio === 'object'
       ? { audio: clone(input.audio as EditorPreferenceDefaults['audio']) }
       : {}),
@@ -168,8 +172,19 @@ export function defaultsFromEditorState(
       durationMs: selectedClip.timelineDurationMs,
     };
   } else if (selectedClip && isBlurClip(selectedClip)) {
-    const { transform, shape, mode, strength, feather, cornerRadius, tintOpacity, color } = selectedClip;
-    next.blur = clone({ transform, shape, mode, strength, feather, cornerRadius, tintOpacity, color });
+    const { transform, shape, mode, strength, feather, cornerRadius, tintOpacity, color, highlightColor } =
+      selectedClip;
+    next[selectedClip.mode === 'highlight' ? 'highlight' : 'blur'] = clone({
+      transform,
+      shape,
+      mode,
+      strength,
+      feather,
+      cornerRadius,
+      tintOpacity,
+      color,
+      ...(highlightColor !== undefined ? { highlightColor } : {}),
+    });
   } else if (selectedClip && isAudioClip(selectedClip)) {
     next.audio = { volume: selectedClip.volume, playbackRate: selectedClip.playbackRate };
   }
@@ -271,3 +286,7 @@ export const blurDefaultsFor = (defaults: EditorPreferenceDefaults): NonNullable
       color: '#000000',
     },
   );
+
+export const highlightDefaultsFor = (
+  defaults: EditorPreferenceDefaults,
+): NonNullable<EditorPreferenceDefaults['blur']> => clone(defaults.highlight ?? HIGHLIGHT_DEFAULTS);

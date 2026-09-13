@@ -108,6 +108,7 @@ export interface PropertiesPanelEmits {
       cornerRadius: number;
       tintOpacity: number;
       color: string;
+      highlightColor: string;
     }>,
   ): void;
   (event: 'update:clip-is-mirrored', isMirrored: boolean): void;

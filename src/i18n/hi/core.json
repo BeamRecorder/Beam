@@ -973,5 +973,13 @@
     "watermark": "वॉटरमार्क",
     "previewLoading": "पूर्वावलोकन बनाया जा रहा है…",
     "previewError": "पूर्वावलोकन उपलब्ध नहीं है"
+  },
+  "Highlight": {
+    "title": "हाइलाइट",
+    "opacity": "आसपास की अपारदर्शिता",
+    "color": "आसपास का रंग",
+    "transitions": "हाइलाइट ट्रांज़िशन",
+    "highlightColor": "हाइलाइट का रंग",
+    "highlightOpacity": "हाइलाइट की तीव्रता"
   }
 }

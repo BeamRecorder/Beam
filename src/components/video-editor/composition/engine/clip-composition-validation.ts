@@ -162,7 +162,7 @@ export function validateComposition(composition: ClipComposition): void {
     if (isBlurClip(clip)) {
       if (
         !['rectangle', 'square', 'circle'].includes(clip.shape) ||
-        !['blur', 'frosted', 'pixelated', 'opaque'].includes(clip.mode)
+        !['blur', 'frosted', 'pixelated', 'opaque', 'highlight'].includes(clip.mode)
       )
         throw new CompositionEngineError('Invalid blur effect.');
       if (
@@ -175,7 +175,8 @@ export function validateComposition(composition: ClipComposition): void {
           (!finite(clip.cornerRadius) || clip.cornerRadius < 0 || clip.cornerRadius > 100)) ||
         clip.tintOpacity < 0 ||
         clip.tintOpacity > 100 ||
-        !/^#[\da-f]{6}$/i.test(clip.color)
+        !/^#[\da-f]{6}(?:[\da-f]{2})?$/i.test(clip.color) ||
+        (clip.highlightColor !== undefined && !/^#[\da-f]{6}(?:[\da-f]{2})?$/i.test(clip.highlightColor))
       )
         throw new CompositionEngineError('Invalid blur effect settings.');
     }

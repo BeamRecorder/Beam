@@ -973,5 +973,13 @@
     "watermark": "ウォーターマーク",
     "previewLoading": "プレビューを生成中…",
     "previewError": "プレビューを表示できません"
+  },
+  "Highlight": {
+    "title": "ハイライト",
+    "opacity": "周囲の不透明度",
+    "color": "周囲の色",
+    "transitions": "ハイライトのトランジション",
+    "highlightColor": "ハイライトの色",
+    "highlightOpacity": "ハイライトの強さ"
   }
 }

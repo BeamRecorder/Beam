@@ -257,9 +257,11 @@ const move = (event: PointerEvent) => {
   if (!drag || !canvas.value) return;
   const dx = (event.clientX - drag.x) / drag.width,
     dy = (event.clientY - drag.y) / drag.height;
+  const effect = props.state.effects?.find((item) => item.id === props.selectedId);
+  const proportionalFrame = drag.imageFrame ?? (effect && effect.shape !== 'rectangle' ? drag.initial : undefined);
   pendingTransform =
-    drag.imageFrame && drag.corner
-      ? resizeScreenshotImage(drag.initial, drag.imageFrame, dx, dy, drag.corner)
+    proportionalFrame && drag.corner
+      ? resizeScreenshotImage(drag.initial, proportionalFrame, dx, dy, drag.corner)
       : moveScreenshotLayer(drag.initial, dx, dy, drag.corner);
   frames.requestRender();
 };
