@@ -1,0 +1,24 @@
+{
+  "pages": [
+    {
+      "slug": "editor/showcase",
+      "title": "Vorzeigeprojekt einer Aufnahme",
+      "description": "Sieh, wie eine aufgezeichnete Beam-Sitzung im Videoeditor erscheint.",
+      "lead": "Eine aufgezeichnete Sitzung wird als vollständige Komposition geöffnet, deren erfasste Medien zur Bearbeitung angeordnet sind.",
+      "sections": [
+        {
+          "title": "Ein bearbeitungsbereites Projekt",
+          "paragraphs": [
+            "Das Canvas zeigt die zusammengesetzte Ausgabe, während die Timeline aufgezeichnete Medien und Bearbeitungsebenen für Anpassungen an Timing, Bildausschnitt, Untertiteln, Audio und Export sichtbar hält."
+          ],
+          "screenshot": {
+            "path": "editor/showcase.webp",
+            "alt": "Beam-Editor mit einem aufgezeichneten Projekt sowie Canvas und Timeline",
+            "caption": "Ein aufgezeichnetes Projekt, bereit für Anpassungen an Timing, Bildausschnitt, Untertiteln, Audio und Export.",
+            "aspectRatio": "1586 / 992"
+          }
+        }
+      ]
+    }
+  ]
+}

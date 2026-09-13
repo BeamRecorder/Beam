@@ -1,11 +1,28 @@
 {
+  "VoiceoverRecorder": {
+    "record": "Enregistrer",
+    "pause": "Pause",
+    "resume": "Reprendre",
+    "stop": "Arrêter",
+    "discard": "Supprimer",
+    "preparing": "Préparation du microphone…",
+    "finalizing": "Finalisation de la voix off…",
+    "microphone": "Microphone",
+    "countdownOff": "Désactivé",
+    "monitorProjectAudio": "Écouter l’audio du projet",
+    "muteProjectAudio": "Couper l’audio du projet"
+  },
   "AudioClipPropertiesPanel": {
     "noAudioClipSelected": "Aucun clip audio sélectionné",
     "selectAudioClip": "Sélectionnez un clip audio importé dans la timeline.",
     "audioClip": "Clip audio",
     "volume": "Volume",
     "enabled": "Activé",
-    "deleteAudioClip": "Supprimer le clip audio"
+    "deleteAudioClip": "Supprimer le clip audio",
+    "normalize": "Normaliser l’audio",
+    "analyzing": "Analyse…",
+    "silentAudio": "Aucun signal exploitable n’a été détecté.",
+    "normalizedGain": "Normalisé ({gain} dB)"
   },
   "AudioPanel": {
     "globalVolume": "Volume global",
@@ -15,7 +32,8 @@
     "microphoneVolume": "Volume microphone",
     "deleteSystemTrack": "Supprimer la piste audio système",
     "deleteMicrophoneTrack": "Supprimer la piste microphone",
-    "noAudioTracksDetected": "Aucune piste microphone ou audio système n’a été détectée."
+    "noAudioTracksDetected": "Aucune piste microphone ou audio système n’a été détectée.",
+    "normalizeAll": "Normaliser tout l’audio"
   },
   "BackgroundPresetComposer": {
     "addCustomColor": "Ajouter une couleur personnalisée",
@@ -36,7 +54,7 @@
     "windowTitle": "Titre de la fenêtre",
     "windowSize": "Taille de la fenêtre",
     "screenRecording": "Enregistrement d'écran",
-    "windowColor": "Couleur de la fenêtre",
+    "frameColor": "Couleur du cadre",
     "menuBar": "Barre de menu",
     "scrollbars": "Barres de défilement",
     "fitBackground": "Arrière-plan du mode Ajuster",
@@ -252,9 +270,9 @@
     "wordStartTimeLabel": "Heure de début du mot",
     "wordEndTimeLabel": "Heure de fin du mot",
     "deleteCaptionClip": "Supprimer le clip de sous-titre",
-    "underline": "Souligné",
     "shadowColor": "Couleur de l'ombre",
-    "shadowBlur": "Flou d'ombre"
+    "shadowBlur": "Flou d'ombre",
+    "underline": "Souligné"
   },
   "CaptionPanel": {
     "aiAutoCaptioning": "Sous-titrage IA automatique",
@@ -312,7 +330,9 @@
     "unlink": "Dissocier",
     "deleteClip": "Supprimer le clip",
     "deleteVideo": "Supprimer la vidéo",
-    "deleteWebcam": "Supprimer la webcam"
+    "deleteWebcam": "Supprimer la webcam",
+    "shadowBlur": "Flou d'ombre",
+    "crop": "Recadrage"
   },
   "CursorPanel": {
     "cursorStyle": "Style du curseur",
@@ -324,6 +344,8 @@
     "millisecondsValue": "{value} ms",
     "cursorColor": "Couleur du curseur",
     "dropShadow": "Ombre portée",
+    "shadowBlur": "Flou de l’ombre",
+    "shadowColor": "Couleur de l’ombre",
     "direction": "Direction",
     "clickSpring": "Rebond au clic",
     "clicks": "Cliques",
@@ -363,9 +385,7 @@
     "importSuccess": "{count} curseurs statiques importés.",
     "importIgnoredAnimated": "Rôles animés ignorés : {roles}.",
     "importFailed": "Impossible d’importer le pack de curseurs.",
-    "discoveryFailed": "Impossible d’ouvrir le catalogue de thèmes.",
-    "shadowBlur": "Flou d'ombre",
-    "shadowColor": "Couleur de l'ombre"
+    "discoveryFailed": "Impossible d’ouvrir le catalogue de thèmes."
   },
   "EditorCanvas": {
     "videoPreviewLoading": "Chargement de l'aperçu vidéo",
@@ -613,6 +633,8 @@
     "recorderTool": "Enregistreur vidéo",
     "recorderDesc": "Accéder rapidement à l'enregistreur pour démarrer une nouvelle capture",
     "launchRecorder": "Lancer l'enregistreur",
+    "recorderUnavailable": "L'enregistreur est déjà utilisé.",
+    "recorderLaunchError": "Impossible d'ouvrir l'enregistreur : {error}",
     "sysInfoTool": "Informations système",
     "sysInfoDesc": "Copier les détails du système et la version de l'application",
     "copySysInfo": "Copier les infos système",
@@ -737,6 +759,15 @@
     "discordButton": "Rejoindre Discord",
     "reopenHint": "Vous pouvez revoir ce guide à tout moment dans Paramètres > Préférences.",
     "dismiss": "Fermer"
+  },
+  "CropControls": {
+    "top": "Haut",
+    "bottom": "Bas",
+    "left": "Gauche",
+    "right": "Droite",
+    "reset": "Réinitialiser",
+    "source": "Source : {width} × {height} px · Valeurs retirées de chaque bord.",
+    "unavailable": "Les dimensions du média sont indisponibles."
   },
   "QuickSnipStatus": {
     "failed": "Échec de l’export",

@@ -3,34 +3,35 @@
     {
       "slug": "editor/index",
       "title": "Panoramica dell'editor video",
-      "description": "Scopri lo spazio di lavoro dell'editor video Beam e il flusso di modifica non distruttivo.",
-      "lead": "L'editor trasforma sessioni registrate e contenuti importati in una demo di prodotto composta, mantenendo intatto il materiale sorgente.",
+      "description": "Scopri lo spazio di lavoro dell'editor Beam, la timeline, le proprietà, l'anteprima e il flusso di esportazione.",
+      "lead": "L'editor video trasforma sessioni registrate e contenuti importati in una composizione curata, preservando i file sorgente originali.",
       "sections": [
         {
-          "title": "Un unico spazio di lavoro",
+          "title": "Un unico spazio di modifica",
           "paragraphs": [
-            "L'editor combina un canvas di anteprima, una timeline multitraccia, un pannello delle proprietà, controlli di riproduzione, azioni del progetto ed esportazione. Selezionando un elemento vengono mostrati i controlli pertinenti."
+            "Beam mantiene i controlli del progetto in alto, la navigazione delle funzionalità e le proprietà a sinistra, l'anteprima dell'output al centro e i controlli temporali nella timeline ridimensionabile in basso. Selezionando una clip, uno zoom, il cursore o il canvas si aprono i controlli pertinenti."
           ],
           "screenshot": {
-            "path": "editor/editor-overview.webp",
-            "alt": "Panoramica dello spazio di lavoro dell'editor video Beam",
-            "caption": "Canvas, proprietà, riproduzione e timeline restano visibili nello spazio di lavoro di modifica."
+            "path": "editor/interface-overview.webp",
+            "alt": "Interfaccia completa dell'editor video Beam",
+            "caption": "Canvas, proprietà, controlli di riproduzione e timeline multitraccia restano visibili insieme.",
+            "aspectRatio": "1920 / 1053"
           }
-        },
-        {
-          "title": "Composizione non distruttiva",
-          "paragraphs": [
-            "Le modifiche della timeline descrivono come i clip sorgente vengono disposti e presentati. Taglio, divisione, trasformazioni, zoom, sottotitoli e stile visivo non sovrascrivono i file della registrazione originale."
-          ]
         },
         {
           "title": "Dalla registrazione all'esportazione",
           "steps": [
-            "Apri l'editor dopo una registrazione o seleziona un progetto esistente.",
-            "Disponi clip e tempi sulla timeline.",
-            "Personalizza canvas, clip, cursore, zoom, sottotitoli e audio.",
-            "Visualizza l'anteprima della composizione completa.",
-            "Scegli formato di esportazione, risoluzione e preset di qualità."
+            "Apri l'editor dopo una registrazione oppure scegli un progetto esistente.",
+            "Disponi, taglia, dividi e applica lo stile alle clip nella timeline.",
+            "Imposta lo sfondo del canvas, gli zoom, il comportamento del cursore, i sottotitoli e l'audio.",
+            "Visualizza l'anteprima della composizione con una qualità di riproduzione adatta.",
+            "Esporta il video finito come WebM o MP4."
+          ]
+        },
+        {
+          "title": "Tecnologia dell'editor",
+          "paragraphs": [
+            "L'interfaccia desktop è costruita con Electron e Vue. Beam usa Mediabunny per la riproduzione e l'esportazione dei contenuti multimediali e l'API Canvas 2D per comporre i livelli visivi."
           ]
         }
       ]
@@ -38,134 +39,192 @@
     {
       "slug": "editor/interface",
       "title": "Interfaccia dell'editor video",
-      "description": "Scopri canvas, barra laterale, proprietà, timeline, riproduzione e controlli di esportazione in Beam.",
-      "lead": "L'editor mantiene i controlli globali del progetto in alto, il lavoro visivo al centro, le proprietà a lato e i tempi in basso.",
+      "description": "Scopri barra superiore, barra laterale, barra degli strumenti del canvas, barra degli strumenti della timeline, tracce, selezione e controlli di riproduzione.",
+      "lead": "L'interfaccia separa le azioni a livello di progetto, la composizione visiva, le proprietà degli elementi e la modifica basata sul tempo senza nascondere l'output corrente.",
       "sections": [
         {
           "title": "Barra superiore",
-          "bullets": [
-            "Esci verso l'HUD torna al registratore.",
-            "Annulla e Ripristina percorrono le azioni di modifica supportate.",
-            "Il titolo del progetto e lo stato di salvataggio identificano il progetto corrente.",
-            "Discord apre la community Beam.",
-            "Esporta video apre i controlli di esportazione."
+          "tables": [
+            {
+              "headers": ["Controllo", "Azione", "Comportamento importante"],
+              "rows": [
+                ["Esci verso l'HUD", "Torna al registratore.", "Il progetto corrente resta disponibile."],
+                [
+                  "Selettore del progetto",
+                  "Mostra il progetto corrente e ne apre un altro.",
+                  "I dati di progetto non disponibili vengono gestiti dallo stato di caricamento del progetto."
+                ],
+                [
+                  "Annulla / Ripristina",
+                  "Scorre tra le istantanee di modifica.",
+                  "Fino a 50 istantanee nella sessione corrente dell'editor; la cronologia non viene ripristinata dopo la riapertura."
+                ],
+                [
+                  "Monitor delle prestazioni",
+                  "Riporta lo stato dell'anteprima.",
+                  "Gli stati sono Inattivo, Buono, Avviso e Critico."
+                ],
+                ["Discord", "Apre la community Beam.", "Link esterno."],
+                ["Esporta", "Apre le impostazioni di esportazione.", "Disponibile quando è caricato un progetto."],
+                [
+                  "Controlli della finestra",
+                  "Minimizza, ingrandisce o ripristina e chiude.",
+                  "Azioni native della finestra desktop."
+                ]
+              ]
+            }
           ]
         },
         {
-          "title": "Canvas e barra degli strumenti",
+          "title": "Barra laterale e proprietà",
           "paragraphs": [
-            "Il canvas mostra in anteprima il fotogramma composto. La barra degli strumenti cambia il rapporto d'aspetto di output, attiva la modalità ritaglio, mostra o nasconde la griglia di allineamento e controlla lo zoom della viewport senza modificare la composizione esportata."
+            "La barra laterale apre Canvas, Clip, Zoom, Cursore, Sottotitoli, Audio e Impostazioni. Il pannello adiacente cambia in base alla categoria attiva e alla selezione corrente. Nelle finestre strette o basse le etichette si riducono, mentre le icone restano disponibili."
           ],
-          "screenshot": {
-            "path": "editor/canvas-properties.webp",
-            "alt": "Canvas Beam accanto al pannello delle proprietà attivo",
-            "caption": "Seleziona il canvas o un elemento della timeline per mostrare i controlli di modifica."
-          }
+          "tables": [
+            {
+              "headers": ["Selezione", "Comportamento del pannello"],
+              "rows": [
+                ["Clip", "Apre le proprietà compatibili con la clip primaria selezionata."],
+                ["Zoom", "Apre i controlli di messa a fuoco e ingrandimento dello zoom selezionato."],
+                ["Canvas", "Apre i controlli dello sfondo e del branding dell'intera composizione."],
+                ["Cursore", "Apre la presentazione globale del cursore senza richiedere la selezione di una clip."],
+                ["Più clip", "Usa una clip primaria e applica una modifica solo alle clip selezionate compatibili."]
+              ]
+            }
+          ]
         },
         {
-          "title": "Barra laterale e proprietà",
-          "bullets": [
-            "Canvas controlla lo sfondo di output e la superficie di presentazione.",
-            "Clip controlla il clip video, webcam, audio, sfocatura, immagine o sottotitolo selezionato.",
-            "Zoom modifica un blocco zoom selezionato o genera zoom automatici.",
-            "Cursore controlla aspetto, feedback dei clic e movimento.",
-            "Sottotitoli genera o personalizza testo e sottotitoli da tastiera.",
-            "Audio controlla i livelli globali, di sistema e del microfono.",
-            "Impostazioni controlla preferenze dell'applicazione e accesso del registratore."
+          "title": "Barra degli strumenti del canvas",
+          "tables": [
+            {
+              "headers": ["Controllo", "Valori", "Effetto"],
+              "rows": [
+                [
+                  "Rapporto d'aspetto",
+                  "16:9, 9:16, 1:1, 4:5, 3:4, 4:3, 21:9",
+                  "Modifica il rapporto del canvas di output."
+                ],
+                [
+                  "Ritaglia",
+                  "Apri l'editor di ritaglio",
+                  "Disponibile solo con esattamente una clip visiva selezionata."
+                ],
+                ["Griglia", "Attiva o disattiva", "Mostra o nasconde la guida di allineamento 3×3."],
+                [
+                  "Zoom della viewport",
+                  "25%–500%; ripristino al 100%",
+                  "Modifica solo la vista dell'editor, mai l'esportazione."
+                ],
+                [
+                  "Panoramica",
+                  "Trascinamento con il pulsante centrale o con la barra spaziatrice",
+                  "Sposta la viewport ingrandita dell'editor."
+                ]
+              ]
+            }
           ]
         },
         {
           "title": "Barra degli strumenti della timeline",
-          "bullets": [
-            "Aggiungi importa elementi video, immagine, audio, testo o sfocatura.",
-            "Dividi separa il clip selezionato in corrispondenza dell'indicatore di riproduzione.",
-            "L'aggancio magnetico allinea le modifiche ai limiti vicini.",
-            "I controlli di riproduzione saltano all'inizio o alla fine e riproducono o mettono in pausa.",
-            "Lo zoom della timeline cambia la scala temporale visibile."
+          "tables": [
+            {
+              "headers": ["Controllo", "Azione", "Vincolo o predefinito"],
+              "rows": [
+                [
+                  "Aggiungi",
+                  "Importa Video, Immagine o Audio; crea Testo o Sfocatura.",
+                  "Aggiunge sull'indicatore di riproduzione."
+                ],
+                [
+                  "Dividi",
+                  "Divide una clip selezionata in corrispondenza dell'indicatore di riproduzione.",
+                  "Richiede l'indicatore strettamente all'interno della clip; scorciatoia S."
+                ],
+                ["Magnete", "Aggancia le modifiche a limiti utili.", "Abilitato per impostazione predefinita."],
+                [
+                  "Indietro / Avanti",
+                  "Sposta l'indicatore all'inizio o alla fine della timeline.",
+                  "Dipende dalla durata del progetto."
+                ],
+                [
+                  "Riproduci / Pausa",
+                  "Mostra l'anteprima o mette in pausa la composizione.",
+                  "Scorciatoia Spazio fuori dai campi modificabili."
+                ],
+                [
+                  "Visualizzazione del tempo",
+                  "Mostra il tempo corrente e quello totale.",
+                  "MM:SS sotto un'ora; HH:MM:SS da un'ora in poi."
+                ],
+                [
+                  "Qualità di riproduzione",
+                  "Completa, Metà, Quarto",
+                  "Solo anteprima; l'esportazione resta alla qualità completa."
+                ],
+                ["Zoom della timeline", "100%–3200%", "Controllabile anche con Ctrl+rotellina del mouse."]
+              ]
+            }
           ]
         },
         {
           "title": "Tracce della timeline",
           "paragraphs": [
-            "Le tracce rappresentano video, webcam, sfocatura, zoom, sottotitoli testuali, sottotitoli da tastiera, audio di sistema e audio del microfono quando le sorgenti esistono. Seleziona, sposta, riordina, taglia, dividi, abilita, disabilita o scollega gli elementi supportati dalla composizione."
+            "Beam crea tracce per contenuti visivi raggruppati, zoom, sottotitoli testuali, sottotitoli da tastiera, audio di sistema, audio del microfono e audio importato quando queste sorgenti esistono."
           ],
-          "screenshot": {
-            "path": "editor/timeline.webp",
-            "alt": "Timeline multitraccia Beam con tracce visive, zoom, sottotitoli e audio",
-            "caption": "La timeline mantiene presentazione, sottotitoli e audio allineati a un unico indicatore di riproduzione."
+          "bullets": [
+            "Fai clic su una clip per renderla la selezione corrente.",
+            "Fai clic sull'intestazione di una traccia per selezionare tutte le clip presenti; usa Ctrl, Cmd o Shift sulle intestazioni per creare una selezione di tracce aggiuntiva. La clip più vicina all'indicatore di riproduzione diventa quella primaria.",
+            "Trascina le intestazioni delle tracce visive per riordinare i livelli.",
+            "Sposta una clip o trascina le maniglie iniziale e finale per tagliarla. I contenuti registrati collegati si spostano insieme.",
+            "Trascinare i contenuti oltre la fine corrente estende la timeline.",
+            "Fai clic sulla traccia Zoom per aggiungere uno zoom manuale oppure sulla traccia dei sottotitoli testuali per aggiungere un sottotitolo vuoto.",
+            "Fai clic destro su una clip per le azioni supportate Copia, Incolla, Elimina e Fermo immagine."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "La barra spaziatrice ha due ruoli nel canvas",
+            "text": "La barra spaziatrice attiva la riproduzione, mentre tenerla premuta durante un trascinamento sposta un canvas ingrandito. I campi modificabili ignorano queste scorciatoie globali."
           }
+        },
+        {
+          "title": "Selezione diretta e multipla",
+          "paragraphs": [
+            "Fai clic direttamente sul canvas su un elemento visivo supportato, un sottotitolo, un livello di sfocatura, il cursore o un'area dello schermo, oppure seleziona lo stesso elemento nella timeline. Una selezione multipla usa una clip primaria per il pannello."
+          ],
+          "bullets": [
+            "Aspetto visivo e trasformazioni vengono applicati solo alle clip visive compatibili.",
+            "Le proprietà della sfocatura vengono applicate solo alle clip di sfocatura selezionate.",
+            "Il volume viene applicato solo alle clip audio selezionate.",
+            "Lo stile dei sottotitoli viene applicato solo ai sottotitoli dello stesso sottotipo testuale o da tastiera.",
+            "Il testo personalizzato dei sottotitoli e Segui cursore non vengono mai applicati a una selezione multipla.",
+            "Le maniglie di ritaglio e trasformazione del canvas richiedono esattamente una clip visiva selezionata."
+          ]
         }
       ]
     },
     {
       "slug": "editor/capabilities",
       "title": "Funzionalità dell'editor video",
-      "description": "Modifica tempi, stile del canvas, zoom, movimento del cursore, sottotitoli, audio, sfocatura e contenuti importati in Beam.",
-      "lead": "Beam combina operazioni precise sulla timeline con controlli di presentazione progettati per le demo di prodotto.",
+      "description": "Apri un riferimento dedicato per ogni funzionalità dell'editor video e per le relative impostazioni esatte.",
+      "lead": "Ogni funzionalità ha una pagina dedicata, così proprietà, valori predefiniti, regole di selezione e casi limite restano facili da consultare.",
       "sections": [
         {
-          "title": "Modifica della timeline",
-          "bullets": [
-            "Sposta e riordina i clip visivi supportati.",
-            "Taglia i limiti dei clip e dividi in corrispondenza dell'indicatore.",
-            "Abilita l'aggancio per un allineamento preciso.",
-            "Zooma la timeline senza modificare l'output.",
-            "Abilita, disabilita, scollega o elimina gli elementi supportati della composizione."
-          ]
-        },
-        {
-          "title": "Contenuti importati",
-          "paragraphs": [
-            "Aggiungi file video, immagine e audio supportati dal menu Aggiungi della timeline o trascinando contenuti locali nell'editor. Gli elementi importati vengono inseriti sull'indicatore dopo la convalida."
-          ],
-          "notice": {
-            "kind": "info",
-            "title": "Supporto dei codec",
-            "text": "Importazione e riproduzione dipendono dai codec disponibili per Beam. I file non supportati o non validi vengono rifiutati con una motivazione."
-          }
-        },
-        {
-          "title": "Aspetto del canvas e dei clip",
-          "bullets": [
-            "Scegli sfondi immagine, video, colore o gradiente e importa contenuti di sfondo personalizzati.",
-            "Regola la sfocatura dello sfondo e la presentazione del canvas di output.",
-            "Posiziona, ridimensiona, ritaglia e rifletti i clip visivi supportati.",
-            "Applica raggio degli angoli, ombre solide o adattive, bordi e cornici in stile finestra.",
-            "Regola la velocità di riproduzione dei clip supportati."
-          ]
-        },
-        {
-          "title": "Zoom e presentazione del cursore",
-          "paragraphs": [
-            "Genera blocchi zoom automatici dagli eventi di clic registrati o aggiungi punti di attenzione manuali. La modalità automatica segue il cursore registrato quando lo zoom è attivo. Ogni blocco controlla tempi, modalità di messa a fuoco, posizione e ingrandimento. I controlli del cursore modificano stile, dimensioni, colore, ombra, rimbalzo al clic, effetti ripple sinistro e destro, fluidità, massa della molla e motion blur."
-          ],
-          "screenshot": {
-            "path": "editor/zoom-cursor-captions.webp",
-            "alt": "Controlli di modifica Beam per zoom, cursore e sottotitoli",
-            "caption": "I controlli di messa a fuoco e presentazione guidano l'attenzione senza modificare l'acquisizione sorgente."
-          }
-        },
-        {
-          "title": "Sottotitoli",
-          "paragraphs": [
-            "Genera localmente sottotitoli speech-to-text con Whisper dal microfono o dall'audio di sistema. Scarica e verifica un modello supportato, genera i sottotitoli, quindi modifica i clip risultanti e lo stile visivo. I sottotitoli delle scorciatoie usano metadati sicuri delle interazioni registrati con autorizzazione."
-          ],
-          "notice": {
-            "kind": "tip",
-            "title": "Trascrizione locale",
-            "text": "La trascrizione Whisper viene eseguita sul dispositivo. Non richiede un caricamento nel cloud o una chiave API."
-          }
-        },
-        {
-          "title": "Audio e sfocatura",
-          "paragraphs": [
-            "Controlla il volume di output globale e lo stato o il livello delle tracce di sistema e microfono. Aggiungi clip di sfocatura per nascondere o attenuare una parte della composizione con controlli di forma, intensità, sfumatura, raggio degli angoli, tinta e colore."
-          ]
-        },
-        {
-          "title": "Esportazione",
-          "paragraphs": [
-            "Esegui il rendering della composizione corrente in MP4 o WebM con controlli di risoluzione e qualità. Consulta [esportazione e condivisione](/export) per il flusso completo."
+          "title": "Indice delle funzionalità",
+          "tables": [
+            {
+              "headers": ["Funzionalità", "Riferimento"],
+              "rows": [
+                ["Modifica della timeline", "[Apri modifica della timeline](/editor/capabilities/timeline)"],
+                ["Canvas", "[Apri Canvas](/editor/capabilities/canvas)"],
+                ["Clip", "[Apri Clip](/editor/capabilities/clips)"],
+                ["Zoom", "[Apri Zoom](/editor/capabilities/zooms)"],
+                ["Cursore", "[Apri Cursore](/editor/capabilities/cursor)"],
+                ["Sottotitoli", "[Apri Sottotitoli](/editor/capabilities/captions)"],
+                ["Audio", "[Apri Audio](/editor/capabilities/audio)"],
+                ["Impostazioni", "[Apri Impostazioni](/editor/capabilities/settings)"],
+                ["Esportazione", "[Apri Esportazione e condivisione](/export)"]
+              ]
+            }
           ]
         }
       ]

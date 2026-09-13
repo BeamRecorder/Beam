@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed, nextTick, onUnmounted, ref, useId } from 'vue';
+import { computed, nextTick, onUnmounted, ref, useId, type Component } from 'vue';
 import { useVirtualList } from '@vueuse/core';
 import Popover from '../popover/Popover.vue';
 import Skeleton from '../skeleton/Skeleton.vue';
 import Input from '../input/Input.vue';
-import { ChevronDown, Check, Eye, Search } from '@lucide/vue';
+import { ChevronDown, Check, Eye, Monitor, PanelsTopLeft, Search } from '@lucide/vue';
 import { createFuzzySearchEngine } from './fuzzy-search';
 import type { SelectOption } from './select-types';
 
@@ -23,6 +23,7 @@ const props = withDefaults(
     searchPlaceholder?: string;
     variant?: 'default' | 'source' | 'search';
     size?: 'sm' | 'md' | 'lg' | 'small' | 'medium' | 'large';
+    icon?: Component;
   }>(),
   {
     placeholder: 'Select an option',
@@ -113,7 +114,7 @@ const handleMouseLeaveList = () => {
 
 const itemHeight = computed(() => {
   if (props.optionHeight !== 38) return props.optionHeight;
-  if (normalizedOptions.value.some((opt) => opt.thumbnail || opt.loading)) {
+  if (normalizedOptions.value.some((opt) => opt.thumbnail || opt.thumbnailFallback || opt.loading)) {
     return 52;
   }
   return props.optionHeight;
@@ -271,6 +272,8 @@ onUnmounted(() => {
         :aria-controls="listboxId"
       >
         <div class="trigger-content-wrapper">
+          <component :is="icon" v-if="icon" class="select-leading-icon" aria-hidden="true" />
+
           <!-- Thumbnail preview -->
           <div v-if="selectedOption?.thumbnail" class="selected-thumbnail-wrapper">
             <img :src="selectedOption.thumbnail" class="trigger-thumbnail-img" draggable="false" />
@@ -295,6 +298,11 @@ onUnmounted(() => {
             class="selected-thumbnail-wrapper"
           >
             <Skeleton variant="linear" width="100%" height="100%" />
+          </div>
+
+          <div v-else-if="selectedOption?.thumbnailFallback" class="selected-thumbnail-wrapper thumbnail-fallback">
+            <Monitor v-if="selectedOption.thumbnailFallback === 'screen'" :size="15" aria-hidden="true" />
+            <PanelsTopLeft v-else :size="15" aria-hidden="true" />
           </div>
 
           <span class="select-label" :class="{ 'is-placeholder': !selectedOption }" :style="labelStyle">
@@ -380,6 +388,11 @@ onUnmounted(() => {
                 <!-- Skeleton loader -->
                 <div v-else-if="item.data.loading" class="thumbnail-wrapper">
                   <Skeleton variant="linear" width="100%" height="100%" />
+                </div>
+
+                <div v-else-if="item.data.thumbnailFallback" class="thumbnail-wrapper thumbnail-fallback">
+                  <Monitor v-if="item.data.thumbnailFallback === 'screen'" :size="18" aria-hidden="true" />
+                  <PanelsTopLeft v-else :size="18" aria-hidden="true" />
                 </div>
 
                 <slot name="option" :option="item.data" :previewing="item.data.value === hoveredValue">

@@ -1,24 +1,38 @@
-import { onBeforeUnmount, ref, watch, type Ref } from 'vue';
+import { computed, onBeforeUnmount, ref, watch, type Ref } from 'vue';
 import { capture } from '~/api/capture';
 import type { CaptureMode } from '~/api/types/capture-mode';
 import type { PreferenceSettings } from '~/api/types/capture-api';
 import type { RecordingConfiguration } from './recorder/recording-types';
 
-export function useHudCaptureMode(busy: Ref<boolean>, error: Ref<string>, embedded: boolean) {
-  const captureMode = ref<CaptureMode>('studio');
+export function useHudCaptureMode(
+  busy: Ref<boolean>,
+  error: Ref<string>,
+  embedded: boolean,
+  isRecorderLauncher: () => boolean = () => false,
+) {
+  const preferredMode = ref<CaptureMode>('studio');
+  const captureMode = computed({
+    get: () => (isRecorderLauncher() ? 'studio' : preferredMode.value),
+    set: (mode: CaptureMode) => {
+      preferredMode.value = mode;
+    },
+  });
   const modeShortcut = ref('Alt+Shift+S');
   let hydrated = false;
   const hydrateMode = (preferences: PreferenceSettings) => {
     const mode = preferences.extras?.captureMode;
-    captureMode.value = mode === 'instant' || mode === 'screenshot' ? mode : 'studio';
+    preferredMode.value = mode === 'instant' || mode === 'screenshot' ? mode : 'studio';
     modeShortcut.value = preferences.shortcuts?.['quickSnip.toggle']?.keys ?? '';
     hydrated = true;
   };
-  watch(captureMode, (mode) => {
+  watch(preferredMode, (mode) => {
     if (!hydrated || embedded) return;
     void capture.updatePreferences({ extras: { captureMode: mode } }).catch((reason) => {
       error.value = String(reason);
     });
+  });
+  watch(captureMode, (mode) => {
+    if (embedded) return;
     capture.setCameraOverlayActive(mode !== 'screenshot');
     if (mode === 'screenshot') capture.hideTeleprompter();
   });

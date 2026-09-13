@@ -28,6 +28,7 @@
           ],
           "screenshot": {
             "path": "getting-started/first-recording.webp",
+            "hidden": true,
             "alt": "最初の録画に備えたBeamレコーダー",
             "caption": "開始前にキャプチャソースとメディアソースを選択します。"
           }
@@ -47,7 +48,7 @@
           "title": "さらに学ぶ",
           "bullets": [
             "[レコーダーインターフェース](/recorder/interface)を学ぶ。",
-            "[レコーダーの機能](/recorder/capabilities)を確認する。",
+            "[レコーダー機能](/recorder/capabilities/) をすべて確認してください。",
             "[動画エディターインターフェース](/editor/interface)を理解する。",
             "[書き出しと共有](/export)で最終ファイルを準備する。"
           ]
@@ -67,6 +68,7 @@
           ],
           "screenshot": {
             "path": "getting-started/update-controls.webp",
+            "aspectRatio": "16 / 9",
             "alt": "更新コントロールを表示したBeamの設定",
             "caption": "更新パネルにはインストール済みバージョンと利用できる更新操作が表示されます。"
           }

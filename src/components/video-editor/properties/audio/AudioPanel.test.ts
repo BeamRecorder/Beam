@@ -20,6 +20,15 @@ const ClipActionGroup = {
   `,
 };
 
+const Switch = {
+  props: ['modelValue', 'disabled', 'ariaLabel'],
+  emits: ['update:modelValue'],
+  template:
+    '<button class="switch-stub" :disabled="disabled" :aria-checked="modelValue" :aria-label="ariaLabel" @click="$emit(\'update:modelValue\', !modelValue)">Switch</button>',
+};
+
+const stubs = { BigSlider, ClipActionGroup, Switch };
+
 describe('AudioPanel', () => {
   it('emits global, device and volume changes', async () => {
     const wrapper = mount(AudioPanel, {
@@ -32,7 +41,7 @@ describe('AudioPanel', () => {
         systemVolume: 60,
         micVolume: 40,
       },
-      global: { stubs: { BigSlider, ClipActionGroup } },
+      global: { stubs },
     });
 
     const sliders = wrapper.findAll('.big-slider');
@@ -63,7 +72,7 @@ describe('AudioPanel', () => {
         hasSystemAudio: true,
         hasMicAudio: false,
       },
-      global: { stubs: { BigSlider, ClipActionGroup } },
+      global: { stubs },
     });
 
     expect(wrapper.text()).toContain('System Sound Track');
@@ -88,12 +97,75 @@ describe('AudioPanel', () => {
         hasSystemAudio: false,
         hasMicAudio: false,
       },
-      global: { stubs: { BigSlider, ClipActionGroup } },
+      global: { stubs },
     });
 
     expect(wrapper.get('[role="status"]').text()).toContain('No microphone or system audio track was detected.');
     expect(wrapper.findAll('.audio-section')).toHaveLength(0);
     expect(wrapper.findAll('.clip-action-group')).toHaveLength(0);
     expect(wrapper.findAll('.big-slider')).toHaveLength(1);
+  });
+
+  it('renders the global normalization switch last and emits both states', async () => {
+    const wrapper = mount(AudioPanel, {
+      props: {
+        volume: 100,
+        isSystemAudioEnabled: true,
+        isMicAudioEnabled: false,
+        hasSystemAudio: true,
+        hasMicAudio: false,
+        hasAudio: true,
+        normalizeAllEnabled: false,
+      },
+      global: { stubs },
+    });
+
+    const row = wrapper.get('.normalize-all-row');
+    const optionsGroup = wrapper.get('.options-group');
+    expect(optionsGroup.element.lastElementChild).toBe(row.element);
+
+    const switchButton = row.get('.switch-stub');
+    expect(switchButton.attributes('aria-checked')).toBe('false');
+    await switchButton.trigger('click');
+    expect(wrapper.emitted('update:normalizeAll')).toEqual([[true]]);
+
+    await wrapper.setProps({ normalizeAllEnabled: true });
+    expect(switchButton.attributes('aria-checked')).toBe('true');
+    await switchButton.trigger('click');
+    expect(wrapper.emitted('update:normalizeAll')).toEqual([[true], [false]]);
+  });
+
+  it('shows pending normalization as checked and disabled', () => {
+    const wrapper = mount(AudioPanel, {
+      props: {
+        volume: 100,
+        isSystemAudioEnabled: true,
+        isMicAudioEnabled: false,
+        hasSystemAudio: true,
+        hasMicAudio: false,
+        normalizeAllPending: true,
+      },
+      global: { stubs },
+    });
+
+    const switchButton = wrapper.get('.normalize-all-row .switch-stub');
+    expect(switchButton.attributes('aria-checked')).toBe('true');
+    expect(switchButton.attributes('disabled')).toBeDefined();
+  });
+
+  it('disables the global normalization switch without eligible audio', () => {
+    const wrapper = mount(AudioPanel, {
+      props: {
+        volume: 100,
+        isSystemAudioEnabled: false,
+        isMicAudioEnabled: false,
+        hasSystemAudio: false,
+        hasMicAudio: false,
+        hasAudio: false,
+      },
+      global: { stubs },
+    });
+
+    expect(wrapper.get('.normalize-all-row .switch-stub').attributes('disabled')).toBeDefined();
   });
 });

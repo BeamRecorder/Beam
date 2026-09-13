@@ -2,14 +2,26 @@
   "title": "Beam 문서",
   "description": "Beam으로 완성도 높은 제품 데모를 녹화하고 편집하고 공유하는 방법을 알아보세요.",
   "hero": {
-    "name": "Beam Docs",
+    "name": "Beam 문서",
     "text": "기록하세요. 편집하세요. 공유하세요.",
     "tagline": "Beam으로 제품 데모를 캡처하고 다듬기 위한 실용 가이드입니다.",
     "imageAlt": "Beam 앱 아이콘",
     "actions": [
-      { "theme": "brand", "text": "시작하기", "link": "/getting-started" },
-      { "theme": "alt", "text": "GitHub에서 보기", "link": "https://github.com/BeamRecorder/Beam" },
-      { "theme": "alt", "text": "Discord 참여", "link": "https://discord.gg/6Q6v2xUCB" }
+      {
+        "theme": "brand",
+        "text": "시작하기",
+        "link": "/getting-started"
+      },
+      {
+        "theme": "alt",
+        "text": "GitHub에서 보기",
+        "link": "https://github.com/BeamRecorder/Beam"
+      },
+      {
+        "theme": "alt",
+        "text": "Discord 참여",
+        "link": "https://discord.gg/6Q6v2xUCB"
+      }
     ]
   },
   "categories": [

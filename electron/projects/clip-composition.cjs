@@ -13,7 +13,8 @@ const {
   normalizeTrackOrders,
   validateTrackLayout,
 } = require('./composition-tracks.cjs');
-const schemaVersion = 13;
+const schemaVersion = 14;
+const audioNormalizationSchemaVersion = 13;
 const previousCompositionSchemaVersion = 12;
 const colorLayerSchemaVersion = 11;
 const captionPreferenceRepairSchemaVersion = 10;
@@ -56,6 +57,54 @@ const text = (value, max = 160) => (typeof value === 'string' ? value.slice(0, m
 const id = (value) => typeof value === 'string' && value.length > 0 && value.length <= 600;
 const color = (value, fallback) =>
   typeof value === 'string' && /^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/i.test(value) ? value : fallback;
+const normalizeAudioAnalysis = (value) => {
+  if (
+    !value ||
+    !Number.isSafeInteger(value.version) ||
+    value.version <= 0 ||
+    !id(value.key) ||
+    ![value.rangeStartMs, value.rangeDurationMs, value.sampleRate, value.channels].every(finite) ||
+    value.rangeStartMs < 0 ||
+    value.rangeDurationMs <= 0 ||
+    value.sampleRate <= 0 ||
+    value.channels <= 0
+  )
+    throw new Error('Analyse audio invalide');
+  const optionalLevel = (level) => (finite(level) ? Math.max(-240, Math.min(24, level)) : null);
+  return {
+    version: value.version,
+    key: value.key,
+    rangeStartMs: Math.round(value.rangeStartMs),
+    rangeDurationMs: Math.round(value.rangeDurationMs),
+    sampleRate: Math.round(value.sampleRate),
+    channels: Math.round(value.channels),
+    integratedLufs: optionalLevel(value.integratedLufs),
+    samplePeakDbfs: optionalLevel(value.samplePeakDbfs),
+    truePeakDbtp: optionalLevel(value.truePeakDbtp),
+  };
+};
+const normalizeAudioNormalization = (value) => {
+  if (value === undefined) return undefined;
+  if (
+    !value ||
+    typeof value.enabled !== 'boolean' ||
+    !['lufs', 'peak'].includes(value.mode) ||
+    ![value.targetLufs, value.targetPeakDbtp, value.appliedGainDb].every(finite) ||
+    !Number.isSafeInteger(value.analysisVersion) ||
+    value.analysisVersion <= 0 ||
+    !id(value.analysisKey)
+  )
+    throw new Error('Normalisation audio invalide');
+  return {
+    enabled: value.enabled,
+    mode: value.mode,
+    targetLufs: Math.max(-60, Math.min(0, value.targetLufs)),
+    targetPeakDbtp: Math.max(-24, Math.min(0, value.targetPeakDbtp)),
+    appliedGainDb: Math.max(-24, Math.min(24, value.appliedGainDb)),
+    analysisVersion: value.analysisVersion,
+    analysisKey: value.analysisKey,
+  };
+};
 const emptyComposition = () => ({
   schemaVersion,
   assets: [],
@@ -107,6 +156,9 @@ function normalizeComposition(value) {
       height: finite(asset.height) ? Math.max(1, Math.round(asset.height)) : null,
       origin,
       ...(origin === 'session' ? { sessionId: asset.sessionId, sessionPath: asset.sessionPath } : {}),
+      ...(Array.isArray(asset.audioAnalyses)
+        ? { audioAnalyses: asset.audioAnalyses.slice(-64).map(normalizeAudioAnalysis) }
+        : {}),
     };
   });
   const clipIds = new Set();
@@ -114,6 +166,7 @@ function normalizeComposition(value) {
   const clips = value.clips.map((clip) => {
     if (!clip || !id(clip.id) || clipIds.has(clip.id) || !clipKinds.has(clip.kind) || typeof clip.enabled !== 'boolean')
       throw new Error('Clip invalide');
+    if (clip.locked !== undefined && typeof clip.locked !== 'boolean') throw new Error('Verrouillage de clip invalide');
     clipIds.add(clip.id);
     const numbers = [
       clip.timelineStartMs,
@@ -145,9 +198,13 @@ function normalizeComposition(value) {
       playbackRate: clip.playbackRate,
       transitions: normalizeClipTransitions(clip.transitions, clip.kind, Math.round(clip.timelineDurationMs)),
       enabled: clip.enabled,
+      ...(clip.locked === undefined ? {} : { locked: clip.locked }),
       order: clip.order,
       ...(id(clip.groupId) ? { groupId: clip.groupId } : {}),
+      ...(clip.recordingClipId === undefined ? {} : { recordingClipId: clip.recordingClipId }),
     };
+    if (clip.recordingClipId !== undefined && clip.recordingClipId !== null && !id(clip.recordingClipId))
+      throw new Error('Lien de piste enregistrée invalide');
     if (common.groupId) {
       const key = `${common.timelineStartMs}:${common.timelineDurationMs}:${common.playbackRate}`;
       if (groups.has(common.groupId) && groups.get(common.groupId) !== key) throw new Error('Groupe de clips invalide');
@@ -218,8 +275,9 @@ function normalizeComposition(value) {
       return {
         ...common,
         assetId: clip.assetId,
-        role: ['system', 'microphone', 'imported'].includes(clip.role) ? clip.role : 'imported',
+        role: ['system', 'microphone', 'voiceover', 'imported'].includes(clip.role) ? clip.role : 'imported',
         volume: finite(clip.volume) ? Math.max(0, Math.min(200, clip.volume)) : 100,
+        ...(clip.normalization === undefined ? {} : { normalization: normalizeAudioNormalization(clip.normalization) }),
       };
     if (!id(clip.trackId)) throw new Error('Identifiant de piste visuelle invalide');
     if (
@@ -309,6 +367,7 @@ function migrateComposition(value, showBackground, historicalSessionIds = []) {
       keyboardCaptionRetrySchemaVersion,
       captionPreferenceRepairSchemaVersion,
       colorLayerSchemaVersion,
+      audioNormalizationSchemaVersion,
       previousCompositionSchemaVersion,
     ].includes(value.schemaVersion) ||
     !Array.isArray(value.assets) ||
@@ -325,6 +384,7 @@ function migrateComposition(value, showBackground, historicalSessionIds = []) {
       keyboardCaptionRetrySchemaVersion,
       captionPreferenceRepairSchemaVersion,
       colorLayerSchemaVersion,
+      audioNormalizationSchemaVersion,
       previousCompositionSchemaVersion,
     ].includes(value.schemaVersion)
   ) {
@@ -351,6 +411,7 @@ function migrateComposition(value, showBackground, historicalSessionIds = []) {
         keyboardCaptionRetrySchemaVersion,
         captionPreferenceRepairSchemaVersion,
         colorLayerSchemaVersion,
+        audioNormalizationSchemaVersion,
         previousCompositionSchemaVersion,
       ].includes(value.schemaVersion)
         ? repairMigratedTrackIds(value.clips).map((clip) =>

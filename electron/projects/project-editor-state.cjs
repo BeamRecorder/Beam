@@ -48,6 +48,16 @@ const PRESETS = {
 const finite = (value) => typeof value === 'number' && Number.isFinite(value);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const defaultZoomMotionBlur = () => ({ enabled: true, intensity: 0.55 });
+const defaultZoomAutoFollow = () => ({ safeZone: 0.5, responsiveness: 0.55, directionLock: true });
+const zoomAutoFollowState = (value) => {
+  const input = value && typeof value === 'object' ? value : {};
+  const defaults = defaultZoomAutoFollow();
+  return {
+    safeZone: clamp(finite(input.safeZone) ? input.safeZone : defaults.safeZone, 0.25, 0.75),
+    responsiveness: clamp(finite(input.responsiveness) ? input.responsiveness : defaults.responsiveness, 0, 1),
+    directionLock: typeof input.directionLock === 'boolean' ? input.directionLock : defaults.directionLock,
+  };
+};
 const canvasTransitionKinds = new Set(['fade', 'slide', 'zoom', 'blur']);
 const canvasTransitionEasingPower = (value) =>
   value === undefined || !finite(value) ? undefined : clamp(Math.round(value), 1, 5);
@@ -112,6 +122,10 @@ const zoomState = (value) => {
       typeof element.id !== 'string' ||
       !element.id ||
       ids.has(element.id) ||
+      (element.linkedClipId !== undefined &&
+        element.linkedClipId !== null &&
+        (typeof element.linkedClipId !== 'string' || !element.linkedClipId.trim())) ||
+      (element.locked !== undefined && typeof element.locked !== 'boolean') ||
       typeof element.sessionId !== 'string' ||
       !finite(element.startMs) ||
       !finite(element.endMs) ||
@@ -145,6 +159,8 @@ const zoomState = (value) => {
             : 'custom';
     return {
       id: element.id,
+      ...(element.linkedClipId === undefined ? {} : { linkedClipId: element.linkedClipId }),
+      ...(element.locked === undefined ? {} : { locked: element.locked }),
       sessionId: element.sessionId,
       startMs: Math.round(element.startMs),
       endMs: Math.round(element.endMs),
@@ -179,7 +195,7 @@ const zoomState = (value) => {
   const motionBlur = motionBlurInput
     ? { enabled: motionBlurInput.enabled, intensity: clamp(motionBlurInput.intensity, 0, 1) }
     : defaultZoomMotionBlur();
-  return { elements, generatedSessions, motionBlur };
+  return { elements, generatedSessions, motionBlur, autoFollow: zoomAutoFollowState(value.autoFollow) };
 };
 
 const clickEffect = (value) => {
@@ -391,6 +407,7 @@ const createDefaultPresentation = () => migratePresentation(null);
 
 module.exports = {
   createDefaultPresentation,
+  defaultZoomAutoFollow,
   defaultZoomMotionBlur,
   migratePresentation,
   presentationState,

@@ -33,7 +33,6 @@ export default defineConfig({
   },
   ssgOptions: {
     dirStyle: 'flat',
-    formatting: 'prettify',
   } satisfies ViteSSGOptions,
   server: {
     host: '127.0.0.1',
@@ -49,6 +48,7 @@ export default defineConfig({
   },
   preview: {
     port: 7002,
+    proxy: {},
   },
   test: {
     include: ['src/**/*.test.ts', 'scripts/**/*.test.mjs', 'docs/.vitepress/**/*.test.ts'],

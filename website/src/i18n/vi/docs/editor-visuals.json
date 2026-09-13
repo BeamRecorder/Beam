@@ -1,0 +1,311 @@
+{
+  "pages": [
+    {
+      "slug": "editor/capabilities/canvas",
+      "title": "Canvas",
+      "description": "Tham chiếu đầy đủ về kích thước đầu ra, hình nền, độ mờ, loại bỏ nền, độ dốc và điều khiển hình mờ.",
+      "lead": "Canvas kiểm soát khu vực đầu ra bên ngoài và phía sau các clip trực quan. Cài đặt nền và hình mờ áp dụng cho bố cục hoàn chỉnh.",
+      "sections": [
+        {
+          "title": "Bảng điều khiển Canvas",
+          "screenshot": {
+            "path": "editor/canvas-panel.webp",
+            "alt": "Beam Thuộc tính canvas với các tab nền và điều khiển bản trình bày",
+            "caption": "Canvas nhóm phương tiện, màu sắc và nền chuyển màu bằng các điều khiển trình bày và xây dựng thương hiệu.",
+            "aspectRatio": "199/326"
+          }
+        },
+        {
+          "title": "Canvas đầu ra",
+          "tables": [
+            {
+              "headers": ["Tài sản", "Giá trị", "Mặc định hoặc hành vi"],
+              "rows": [
+                ["Kích thước gốc", "Chiều rộng × chiều cao", "1920×1080"],
+                ["16:9", "1920×1080", "Giá trị đặt trước mặc định."],
+                ["9:16", "1080×1920", "Đặt trước chân dung."],
+                ["1:1", "1080×1080", "Đặt trước hình vuông."],
+                ["4:5", "1080×1350", "Đặt trước chân dung."],
+                ["3:4", "1080×1440", "Đặt trước chân dung."],
+                ["4:3", "1440×1080", "Cài đặt trước phong cảnh."],
+                ["21:9", "2520×1080", "Đặt trước siêu rộng."],
+                ["Khả năng hiển thị nền", "Hiển thị hoặc Xóa nền", "Nền ẩn trong canvas mặc định."],
+                ["Làm mờ nền", "0%–100%", "Làm mờ nền đã chọn chứ không làm mờ chủ đề của video."],
+                ["Chuyển đổi toàn cầu", "Hành động tiêu đề thuộc tính", "Mở các điều khiển chuyển tiếp cấp canvas."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Hình nền và video",
+          "tables": [
+            {
+              "headers": ["Nền", "Các tập tin được hỗ trợ", "Hành vi thư viện"],
+              "rows": [
+                [
+                  "Hình ảnh",
+                  "AVIF, BMP, JPEG, JPG, PNG, WebP",
+                  "Hiển thị 15 mục ban đầu; Hiển thị thêm tiết lộ lô bổ sung."
+                ],
+                ["Video", "M4V, MOV, MP4, OGV, WebM", "Hiển thị 15 mục ban đầu; Hiển thị thêm tiết lộ lô bổ sung."],
+                ["Nhập khẩu", "Tệp nền cục bộ được hỗ trợ", "Thêm tệp đã chọn vào thư viện nền tương ứng."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Màu nền",
+          "paragraphs": [
+            "Chọn màu tích hợp hoặc chỉnh sửa giá trị thập lục phân tùy chỉnh. Trình chỉnh sửa tùy chỉnh cập nhật bản xem trước nền trực tiếp."
+          ],
+          "tables": [
+            {
+              "headers": ["Kiểm soát", "Giá trị"],
+              "rows": [
+                ["cài sẵn", "#111827, #ffffff, #0f766e, #1d4ed8, #7c3aed, #be123c"],
+                ["Màu tùy chỉnh", "Trình chỉnh sửa màu thập lục phân"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Nền chuyển màu",
+          "tables": [
+            {
+              "headers": ["Kiểm soát", "Giá trị hoặc ràng buộc"],
+              "rows": [
+                [
+                  "cài sẵn",
+                  "Các gradient tích hợp bao gồm Tím, Lửa, Đại dương, Hoàng hôn, Neon, Rừng, Vàng, Băng, Sóng hơi và Cực quang."
+                ],
+                ["loại", "Tuyến tính hoặc xuyên tâm"],
+                ["Góc", "0°–360° cho hướng gradient áp dụng"],
+                ["Điểm dừng", "Ít nhất hai điểm dừng màu"],
+                ["Độ dốc tùy chỉnh", "Loại, góc, điểm dừng và màu sắc có thể chỉnh sửa"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Hình mờ",
+          "paragraphs": [
+            "Hình mờ bị tắt theo mặc định. Cho phép nó đặt nhãn hiệu Beam, nhãn hoặc biểu tượng phía trên bố cục."
+          ],
+          "tables": [
+            {
+              "headers": ["Tài sản", "Giá trị hoặc phạm vi", "Mặc định hoặc ràng buộc"],
+              "rows": [
+                ["văn bản", "Không có văn bản hình mờ, Được tạo bằng Beam., Beam, Tùy chỉnh", "Được làm bằng Beam."],
+                ["Văn bản tùy chỉnh", "Tối đa 80 ký tự", "trống rỗng; có sẵn với Tùy chỉnh."],
+                ["Hiển thị biểu tượng Beam", "Bật hoặc Tắt", "Bật"],
+                ["Dịch hình mờ", "Bật hoặc Tắt", "Tắt; có sẵn cho nhãn Beam và Được làm bằng nhãn Beam."],
+                [
+                  "Vị trí",
+                  "Trên cùng bên trái, Trên cùng bên phải, Dưới cùng bên trái, Dưới cùng bên phải",
+                  "Dưới cùng bên phải"
+                ],
+                ["Kích thước", "50%–200%; bước 10%", "100%"],
+                ["Bóng tối", "0%–100%; bước 5%", "20%"],
+                ["Màu nền", "Bộ chọn màu thập lục phân", "#111114"],
+                ["Độ mờ nền", "0%–100%; bước 5%", "78%"],
+                ["Bán kính nền", "0%–100%; bước 5%", "100%"],
+                ["Đệm nền", "50%–150%; bước 5%", "100%"]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/zooms",
+      "title": "Thu phóng",
+      "description": "Tham khảo đầy đủ về thu phóng thủ công và tự động, chế độ lấy nét, độ sâu, tái tạo và làm mờ chuyển động.",
+      "lead": "Khối thu phóng hướng sự chú ý đến một vùng ghi. Thêm chúng theo cách thủ công trên dòng thời gian hoặc tạo đề xuất từ ​​các lần nhấp chuột được ghi lại.",
+      "sections": [
+        {
+          "title": "Không có thu phóng nào được chọn",
+          "paragraphs": [
+            "Tạo và làm mờ chuyển động tổng thể vẫn khả dụng mà không cần thu phóng đã chọn. Chọn khối thu phóng trên dòng thời gian để chỉnh sửa độ sâu, chế độ hoặc vị trí của khối đó."
+          ],
+          "screenshot": {
+            "path": "editor/zoom-empty.webp",
+            "alt": "Beam Bảng thu phóng không có chế độ thu phóng đã chọn",
+            "caption": "Tự động tạo và làm mờ chuyển động tổng thể không yêu cầu thu phóng đã chọn.",
+            "aspectRatio": "199/326"
+          }
+        },
+        {
+          "title": "Tạo thu phóng tự động",
+          "tables": [
+            {
+              "headers": ["hành động", "Yêu cầu", "Hành vi"],
+              "rows": [
+                [
+                  "Tạo thu phóng tự động",
+                  "Phiên ghi âm với phép đo từ xa bằng con trỏ",
+                  "Tạo các khối thu phóng tự động từ các nhấp chuột được ghi lại."
+                ],
+                [
+                  "Tạo lại thu phóng tự động",
+                  "Tạo thu phóng tự động có sẵn",
+                  "Yêu cầu xác nhận, duy trì thu phóng thủ công và thay thế thu phóng tự động từ phiên hiện tại."
+                ],
+                [
+                  "Trạng thái không khả dụng",
+                  "Không có phiên hoặc không có đo từ xa con trỏ",
+                  "Thế hệ vẫn bị vô hiệu hóa."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Thêm thu phóng thủ công",
+          "paragraphs": [
+            "Nhấp vào một điểm trống trên rãnh Thu phóng. Thu phóng thủ công mới mặc định là 1,2 giây và chỉ được thêm vào khi vẫn còn ít nhất 200 ms thời lượng dòng thời gian."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Phạm vi dòng thời gian bị chiếm đóng",
+            "text": "Beam chọn khoảng thời gian khả dụng xung quanh lần nhấp chuột và không chồng lên khối thu phóng hiện có."
+          }
+        },
+        {
+          "title": "Thu phóng đã chọn",
+          "screenshot": {
+            "path": "editor/zoom-properties.webp",
+            "alt": "Beam thuộc tính cho mức thu phóng đã chọn",
+            "caption": "Thu phóng được chọn sẽ hiển thị chế độ lấy nét và độ sâu phóng đại.",
+            "aspectRatio": "199/326"
+          },
+          "tables": [
+            {
+              "headers": ["Tài sản", "Giá trị", "Mặc định hoặc hành vi"],
+              "rows": [
+                [
+                  "Chế độ",
+                  "Con trỏ tự động hoặc lấy nét thủ công",
+                  "Con trỏ tự động theo chuyển động của con trỏ đã ghi; Lấy nét thủ công sử dụng một điểm cố định."
+                ],
+                ["Mục tiêu thủ công", "Kéo vải", "Kéo mục tiêu nét đứt trực tiếp trên khung vẽ."],
+                ["Độ sâu 1", "1,25×", "Bản đồ phóng đại."],
+                ["Độ sâu 2", "1,5×", "Mặc định."],
+                ["Độ sâu 3", "1,8×", "Bản đồ phóng đại."],
+                ["Độ sâu 4", "2,2×", "Bản đồ phóng đại."],
+                ["Độ sâu 5", "3,5×", "Bản đồ phóng đại."],
+                ["Độ sâu 6", "5×", "Bản đồ phóng đại."],
+                ["Xóa Thu phóng", "Hành động tiêu đề thuộc tính", "Loại bỏ khối thu phóng đã chọn."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Thu phóng làm mờ chuyển động",
+          "tables": [
+            {
+              "headers": ["Tài sản", "Phạm vi", "Mặc định", "Phạm vi"],
+              "rows": [
+                ["Đã bật", "Bật hoặc Tắt", "Bật", "Cài đặt thành phần toàn cầu."],
+                ["Cường độ mờ chuyển động", "0%–100%", "55%", "Áp dụng giống hệt nhau trong bản xem trước và xuất."]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/cursor",
+      "title": "Con trỏ",
+      "description": "Tài liệu tham khảo đầy đủ về gói con trỏ, giao diện, bóng, hiệu ứng nhấp chuột, làm mịn, lò xo và làm mờ chuyển động.",
+      "lead": "Cài đặt con trỏ kiểm soát lớp phủ con trỏ trên toàn thành phần và không yêu cầu lựa chọn clip.",
+      "sections": [
+        {
+          "title": "Bảng con trỏ",
+          "screenshot": {
+            "path": "editor/cursor-panel.webp",
+            "alt": "Beam Bảng điều khiển con trỏ với các điều khiển đóng gói, giao diện, nhấp chuột và chuyển động",
+            "caption": "Bản trình bày con trỏ được định cấu hình chung cho bố cục.",
+            "aspectRatio": "199/326"
+          }
+        },
+        {
+          "title": "Lựa chọn gói và con trỏ",
+          "tables": [
+            {
+              "headers": ["Tài sản", "Giá trị", "Hành vi"],
+              "rows": [
+                [
+                  "Gói con trỏ",
+                  "Gói tích hợp hoặc nhập khẩu",
+                  "Tự động vẫn tự động. Một con trỏ cố định chỉ được giữ nguyên khi cùng một ID con trỏ tồn tại trong gói mới; nếu không thì Beam trở về Tự động."
+                ],
+                [
+                  "Chế độ con trỏ",
+                  "Con trỏ tự động hoặc cố định từ gói đã chọn",
+                  "Tự động sử dụng các thay đổi hình dạng con trỏ đã ghi lại."
+                ],
+                ["Gói nhập khẩu", "Các tập tin gói con trỏ được hỗ trợ", "Thêm gói tùy chỉnh vào các lựa chọn có sẵn."],
+                [
+                  "Đặt lại",
+                  "Đặt lại bản trình bày con trỏ",
+                  "Giữ gói đã chọn và khôi phục tất cả các giá trị mặc định khác của con trỏ."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Ngoại hình",
+          "tables": [
+            {
+              "headers": ["Tài sản", "Giá trị hoặc phạm vi", "Mặc định"],
+              "rows": [
+                ["Kích thước", "16–128 pixel", "45px"],
+                ["Đổ bóng", "Bật hoặc Tắt", "Bật"],
+                ["Bóng mờ", "1–24 pixel", "6 px sau khi đặt lại"],
+                ["Màu bóng", "Bộ chọn màu", "#000000 sau khi đặt lại"],
+                ["Hướng bóng", "Tất cả, Dưới cùng, Dưới cùng bên phải, Trên cùng bên trái", "Dưới cùng sau khi đặt lại"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Hiệu ứng nhấp chuột",
+          "tables": [
+            {
+              "headers": ["Tài sản", "Giá trị hoặc phạm vi", "Mặc định hoặc hành vi"],
+              "rows": [
+                [
+                  "Cài đặt sẵn kiểu gợn sóng",
+                  "Vòng đơn, sóng đôi, nổ",
+                  "Thay đổi kiểu gợn sóng cho nhấp chuột trái và phải; nó không kích hoạt gợn sóng."
+                ],
+                ["Các mặt nâng cao", "Trái và Phải", "Cấu hình hai nút một cách độc lập."],
+                ["mùa xuân", "Bật hoặc Tắt", "Bật"],
+                ["Cường độ mùa xuân", "0%–100%", "50%"],
+                ["gợn sóng", "Bật hoặc Tắt", "Tắt cho cả hai bên nhấp chuột."],
+                ["Kích thước gợn sóng", "10–80 pixel", "30px"],
+                ["Màu gợn sóng", "Bộ chọn màu", "Mỗi bên nhấp chuột."],
+                ["Nhấp chuột giữa", "Không có điều khiển biên tập riêng biệt", "Sử dụng trình bày nhấp chuột trái."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "chuyển động",
+          "tables": [
+            {
+              "headers": ["Tài sản", "Giá trị hoặc phạm vi", "cài sẵn mượt mà"],
+              "rows": [
+                ["cài sẵn", "Tập trung, mượt mà, tùy chỉnh", "mịn màng"],
+                ["Làm mịn", "0–1", "0,67"],
+                ["Khối lượng mùa xuân", "0,5–2", "1,29"],
+                ["Chuyển động mờ", "0–1", "0,4"]
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

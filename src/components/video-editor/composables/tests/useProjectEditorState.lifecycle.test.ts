@@ -14,7 +14,11 @@ describe('project editor lifecycle', () => {
   it('saves pending video edits on unmount when switching to a screenshot before the debounce runs', async () => {
     vi.useFakeTimers();
     capture.saveProjectEditorState.mockResolvedValue(undefined);
-    const state = createState();
+    const state = {
+      ...createState(),
+      restoreComposition: vi.fn(),
+      restoreZoomElements: vi.fn(),
+    };
     const scope = effectScope();
     scope.run(() => useProjectEditorState(state));
     state.backgroundBlurPercent.value = 42;

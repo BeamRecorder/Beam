@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => {
   const makeRecorder = () => ({
     onFatal: vi.fn(),
     start: vi.fn(async () => undefined),
-    stop: vi.fn(async () => undefined),
+    stop: vi.fn<() => Promise<void>>(async () => undefined),
     pause: vi.fn(async () => undefined),
     resume: vi.fn(async () => undefined),
   });
@@ -31,6 +31,7 @@ const mocks = vi.hoisted(() => {
       status: vi.fn(async () => ({ state: 'recording', screenAvailable: true })),
       pause: vi.fn(async () => ({ sessionId: 'session-1' })),
       resume: vi.fn(async () => ({ sessionId: 'session-1' })),
+      configureCameraOverlay: vi.fn(),
       setTeleprompterSession: vi.fn(),
       showScreenRegionOverlay: vi.fn(),
       hideScreenRegionOverlay: vi.fn(),
@@ -40,7 +41,7 @@ const mocks = vi.hoisted(() => {
 
 vi.mock('../../../api/capture', () => ({ capture: mocks.capture }));
 vi.mock('../../../api/camera-recorder', () => ({
-  BrowserCameraRecorder: { request: vi.fn(async () => mocks.cameraRecorder) },
+  CameraOverlayRecorder: { request: vi.fn(async () => mocks.cameraRecorder) },
   isCameraUnavailableError: (error: unknown) => (error as Error)?.name === 'NotFoundError',
   listBrowserCameras: vi.fn(async () => []),
 }));
@@ -104,6 +105,43 @@ afterEach(() => {
 });
 
 describe('useRecordingController countdown', () => {
+  it('starts recording health polling only after native startup reaches recording', async () => {
+    vi.useFakeTimers();
+    const deferred = <T>() => {
+      let resolve!: (value: T) => void;
+      const promise = new Promise<T>((res) => {
+        resolve = res;
+      });
+      return { promise, resolve };
+    };
+    const nativePreparation = deferred<{ sessionId: string }>();
+    const nativeSurface = deferred<undefined>();
+    mocks.capture.prepareRecording.mockReturnValueOnce(nativePreparation.promise);
+    mocks.capture.prepareRecordingSurface.mockReturnValueOnce(nativeSurface.promise);
+
+    const controller = useRecordingController(vi.fn(), vi.fn());
+    void controller.start({ ...baseConfig, countdownSeconds: 1 });
+    await Promise.resolve();
+
+    expect(controller.phase.value).toBe('countdown');
+    expect(mocks.capture.status).not.toHaveBeenCalled();
+
+    nativePreparation.resolve({ sessionId: 'prepared' });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(controller.phase.value).toBe('countdown');
+    expect(mocks.capture.status).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(controller.phase.value).toBe('starting');
+    expect(mocks.capture.status).not.toHaveBeenCalled();
+
+    nativeSurface.resolve(undefined);
+    await vi.waitFor(() => expect(mocks.capture.startPreparedRecording).toHaveBeenCalledOnce());
+    await vi.waitFor(() => expect(controller.phase.value).toBe('recording'));
+    expect(mocks.capture.status).toHaveBeenCalledOnce();
+  });
+
   it('clamps a negative countdown and starts native capture exactly once', async () => {
     vi.useFakeTimers();
     const controller = useRecordingController(vi.fn(), vi.fn());
@@ -229,6 +267,76 @@ describe('useRecordingController countdown', () => {
 });
 
 describe('useRecordingController startup', () => {
+  it('drives the overlay camera proxy lifecycle without acquiring media in the HUD', async () => {
+    const getUserMedia = vi.fn();
+    const previousMediaDevices = navigator.mediaDevices;
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: { getUserMedia },
+    });
+
+    try {
+      const controller = useRecordingController(vi.fn());
+      await controller.start({ ...fullConfig, microphoneId: 'no-audio', systemAudio: false });
+      await vi.waitFor(() => expect(controller.phase.value).toBe('recording'));
+
+      expect(mocks.cameraRecorder.onFatal).toHaveBeenCalledOnce();
+      expect(getUserMedia).not.toHaveBeenCalled();
+
+      await controller.togglePause();
+      expect(controller.phase.value).toBe('paused');
+      expect(mocks.cameraRecorder.pause).toHaveBeenCalledWith(expect.any(Number));
+
+      await controller.togglePause();
+      expect(controller.phase.value).toBe('recording');
+      expect(mocks.cameraRecorder.resume).toHaveBeenCalledWith('session-1');
+
+      await controller.stop();
+      expect(mocks.cameraRecorder.stop).toHaveBeenCalledWith(expect.any(Number));
+    } finally {
+      Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: previousMediaDevices });
+    }
+  });
+
+  it('keeps the camera enabled until the overlay recorder finishes stopping', async () => {
+    let finishStop!: () => void;
+    const stopFinished = new Promise<void>((resolve) => {
+      finishStop = resolve;
+    });
+    const controller = useRecordingController(vi.fn());
+
+    await controller.start({ ...fullConfig, microphoneId: 'no-audio', systemAudio: false });
+    await vi.waitFor(() => expect(controller.phase.value).toBe('recording'));
+
+    mocks.cameraRecorder.stop.mockReturnValueOnce(stopFinished);
+    const disabling = controller.toggleCamera();
+    await vi.waitFor(() => expect(mocks.cameraRecorder.stop).toHaveBeenCalledOnce());
+    expect(controller.cameraEnabled.value).toBe(true);
+    expect(mocks.capture.configureCameraOverlay).not.toHaveBeenCalled();
+
+    finishStop();
+    await disabling;
+    expect(controller.cameraEnabled.value).toBe(false);
+    expect(mocks.capture.configureCameraOverlay).toHaveBeenCalledWith({ cameraId: 'off' });
+  });
+
+  it('handles an overlay camera fatal event without restoring the camera state', async () => {
+    let fatal!: (reason: Error) => void;
+    mocks.cameraRecorder.onFatal.mockImplementationOnce((handler: (reason: Error) => void) => {
+      fatal = handler;
+    });
+    const controller = useRecordingController(vi.fn());
+
+    await controller.start({ ...fullConfig, microphoneId: 'no-audio', systemAudio: false });
+    await vi.waitFor(() => expect(controller.phase.value).toBe('recording'));
+
+    fatal(new Error('overlay camera failed'));
+
+    expect(controller.cameraEnabled.value).toBe(false);
+    expect(controller.error.value).toBe('Camera recording stopped: overlay camera failed');
+    expect(controller.phase.value).toBe('recording');
+  });
+
   it('uses native Linux system audio during prepare and start without Chromium capture', async () => {
     mocks.capture.platform = 'linux';
     const controller = useRecordingController(vi.fn());

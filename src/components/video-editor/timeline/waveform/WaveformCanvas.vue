@@ -11,9 +11,20 @@ const canvas = ref<HTMLCanvasElement | null>(null);
 let resizeObserver: ResizeObserver | null = null;
 let animationFrame = 0;
 
-const compactBars = (bars: readonly number[], width: number) => {
-  const count = Math.max(1, Math.min(bars.length, Math.floor(width / 3)));
-  if (count >= bars.length) return bars;
+const resampleBars = (bars: readonly number[], width: number) => {
+  if (bars.length === 0) return bars;
+  const count = Math.max(1, Math.floor(width / 3));
+  if (count === bars.length) return bars;
+  if (count > bars.length) {
+    if (bars.length === 1) return Array.from({ length: count }, () => bars[0] ?? 0);
+    return Array.from({ length: count }, (_, index) => {
+      const position = (index * (bars.length - 1)) / Math.max(1, count - 1);
+      const leftIndex = Math.floor(position);
+      const rightIndex = Math.min(bars.length - 1, leftIndex + 1);
+      const mix = position - leftIndex;
+      return (bars[leftIndex] ?? 0) * (1 - mix) + (bars[rightIndex] ?? 0) * mix;
+    });
+  }
   return Array.from({ length: count }, (_, index) => {
     const start = Math.floor((index * bars.length) / count);
     const end = Math.max(start + 1, Math.floor(((index + 1) * bars.length) / count));
@@ -38,7 +49,7 @@ const draw = () => {
   if (!context) return;
   context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
   context.clearRect(0, 0, width, height);
-  const bars = compactBars(props.bars, width);
+  const bars = resampleBars(props.bars, width);
   if (bars.length === 0) return;
   const step = width / bars.length;
   context.strokeStyle = props.selected ? '#056247' : '#07865f';

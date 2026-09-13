@@ -1,12 +1,13 @@
+import { restoreHudDevices } from './hud-devices';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { capture } from '../../api/capture';
 import { rememberCaptureCatalog } from '../../api/capture-diagnostics';
 import { listBrowserCameras } from '~/api/camera-recorder';
 import { listBrowserMicrophones } from '~/api/microphone-recorder';
 import { systemAudioSource } from '~/api/system-audio-recorder';
-import type { CapturePreview, CaptureCatalog, CaptureProject, CaptureSource } from '../../api/types/capture-api';
+import type { CaptureCatalog, CaptureProject, CaptureSource } from '../../api/types/capture-api';
 import type { ScreenRegion } from '../../api/types/screen-region';
-import { matchScreenPreview } from './source-preview';
+import { canonicalMacWindowSourceId, matchScreenPreview } from './source-preview';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useAudioLevelMeter } from './audio/useAudioLevelMeter';
 import type { RecordingBarVisibility } from './recorder/recording-types';
@@ -16,6 +17,7 @@ import { useNativeSystemAudioPreview } from './recorder/useNativeSystemAudioPrev
 import { useHudIssues } from './useHudIssues';
 import { useHudCaptureMode } from './useHudCaptureMode';
 
+import { useCaptureSourcePreviews } from './useCaptureSourcePreviews';
 import { useHudWindow } from './useHudWindow';
 import type { HudProps, HudEmit, SavedDevices, PreviewKind } from './hud-state-types';
 
@@ -51,6 +53,7 @@ export function useHudState(props: HudProps, emit: HudEmit) {
     isBusy,
     errorMessage,
     props.embedded,
+    () => Boolean(props.recorderLauncherContext),
   );
   const { hudIssues, authorizeInteractionAccess, handleHudIssueAction } = useHudIssues(
     captureCatalog,
@@ -58,11 +61,6 @@ export function useHudState(props: HudProps, emit: HudEmit) {
     interactionAccess,
   );
 
-  // Previews
-  const windowPreviews = ref<CapturePreview[]>([]);
-  const screenPreviews = ref<CapturePreview[]>([]);
-  const windowPreviewsLoading = ref(false);
-  const screenPreviewsLoading = ref(false);
   const selectedSourceId = ref<string | null>(null);
 
   // Sources lists (Camera / Microphone)
@@ -83,6 +81,21 @@ export function useHudState(props: HudProps, emit: HudEmit) {
   const selectedMicId = ref('no-audio');
   const isTeleprompterVisible = ref(false);
   const selectedScreenId = ref<string | null>(null);
+  const {
+    loadPreviews,
+    refreshSourceChoices,
+    screenPreviews,
+    screenPreviewsLoading,
+    windowPreviews,
+    windowPreviewsLoading,
+  } = useCaptureSourcePreviews({
+    platform: desktopPlatform,
+    sources,
+    catalog: captureCatalog,
+    selectedScreenId,
+    selectedWindowId: selectedSourceId,
+    recorderLauncherContext: () => props.recorderLauncherContext,
+  });
   const systemAudioMode = ref<'on' | 'off'>('off');
 
   const isMicEnabled = computed(() => selectedMicId.value !== 'no-audio');
@@ -167,44 +180,28 @@ export function useHudState(props: HudProps, emit: HudEmit) {
   const recordingTime = ref('00:00');
   let previewsRefreshInterval: ReturnType<typeof setInterval> | null = null;
 
-  const previewLoaded: Record<PreviewKind, boolean> = { screen: false, window: false };
-  const previewRequests: Record<PreviewKind, Promise<void> | null> = { screen: null, window: null };
-
-  const loadPreviews = (type: PreviewKind, force = false): Promise<void> => {
-    if (!force && previewLoaded[type]) return Promise.resolve();
-    if (previewRequests[type]) return previewRequests[type];
-
-    const target = type === 'screen' ? screenPreviews : windowPreviews;
-    const loading = type === 'screen' ? screenPreviewsLoading : windowPreviewsLoading;
-    if (target.value.length === 0) loading.value = true;
-
-    const request = capture
-      .getSources([type])
-      .then((results) => {
-        target.value = results;
-        previewLoaded[type] = true;
-        if (type !== 'window') return;
-        const selectedPortalSource = sources.value.some(
-          (source) =>
-            source.id === selectedSourceId.value && source.kind === 'window' && source.selectionMode === 'portal',
-        );
-        if (
-          !selectedPortalSource &&
-          (!selectedSourceId.value || !results.some((result) => result.id === selectedSourceId.value))
-        ) {
-          selectedSourceId.value = results[0]?.id ?? null;
-        }
-      })
-      .catch((error) => {
-        console.error(`Failed to load ${type} previews:`, error);
-      })
-      .finally(() => {
-        loading.value = false;
-        previewRequests[type] = null;
-      });
-
-    previewRequests[type] = request;
-    return request;
+  watch(
+    () => props.recorderLauncherContext,
+    (context) => {
+      if (!context) return;
+      navigation.openHud();
+      activeTab.value = context.preferredKind;
+      errorMessage.value = '';
+      selectedSourceId.value =
+        desktopPlatform === 'linux'
+          ? (sources.value.find((source) => source.kind === 'window' && source.selectionMode === 'portal')?.id ?? null)
+          : desktopPlatform === 'darwin'
+            ? canonicalMacWindowSourceId(context.preferredSourceId)
+            : context.preferredSourceId;
+      if (sourceDiscoveryCompleted.value && desktopPlatform !== 'linux') void loadPreviews('window', true);
+    },
+    { immediate: true },
+  );
+  const openSourceDropdown = ref<PreviewKind | null>(null);
+  const handleSourceDropdownToggle = (type: PreviewKind, isOpen: boolean) => {
+    handleDropdownToggle(isOpen);
+    openSourceDropdown.value = isOpen ? type : openSourceDropdown.value === type ? null : openSourceDropdown.value;
+    if (isOpen) void refreshSourceChoices(type, true);
   };
 
   // Control functions
@@ -287,32 +284,10 @@ export function useHudState(props: HudProps, emit: HudEmit) {
   };
 
   const restoreBrowserDevices = () => {
-    if (
-      savedDevices?.cameraId &&
-      (savedDevices.cameraId === 'off' || sources.value.some((s) => s.id === savedDevices?.cameraId))
-    ) {
-      selectedCameraId.value = savedDevices.cameraId;
-    } else {
-      selectedCameraId.value = 'off';
-    }
-
-    if (
-      savedDevices?.micId &&
-      (savedDevices.micId === 'no-audio' || sources.value.some((s) => s.id === savedDevices?.micId))
-    ) {
-      selectedMicId.value = savedDevices.micId;
-    } else {
-      selectedMicId.value = 'no-audio';
-    }
-
-    if (
-      savedDevices?.systemAudioMode &&
-      (savedDevices.systemAudioMode === 'on' || savedDevices.systemAudioMode === 'off')
-    ) {
-      systemAudioMode.value = savedDevices.systemAudioMode;
-    } else {
-      systemAudioMode.value = 'off';
-    }
+    const restored = restoreHudDevices(savedDevices, sources.value);
+    selectedCameraId.value = restored.cameraId;
+    selectedMicId.value = restored.micId;
+    systemAudioMode.value = restored.systemAudioMode;
   };
 
   const selectDefaultScreen = () => {
@@ -330,6 +305,12 @@ export function useHudState(props: HudProps, emit: HudEmit) {
   let unsubscribeShortcut: (() => void) | null = null;
   let unsubscribeTeleprompterVisibility: (() => void) | null = null;
   let disposed = false;
+  let unsubscribeCameraOverlayState: (() => void) | null = null;
+  const handleLauncherKeydown = (event: KeyboardEvent) => {
+    if (event.key !== 'Escape' || !props.recorderLauncherContext || activeDropdowns.value > 0) return;
+    event.preventDefault();
+    emit('dismiss-launcher');
+  };
 
   const toggleTeleprompter = () => {
     if (props.embedded) return;
@@ -339,7 +320,13 @@ export function useHudState(props: HudProps, emit: HudEmit) {
   };
 
   onMounted(async () => {
+    window.addEventListener('keydown', handleLauncherKeydown);
     if (props.embedded) return;
+    unsubscribeCameraOverlayState = capture.onCameraOverlayState((state) => {
+      if (state.cameraId !== 'off' || selectedCameraId.value === 'off') return;
+      selectedCameraId.value = 'off';
+      errorMessage.value = 'The selected camera could not produce a usable video stream.';
+    });
     const preferences = await capture.getPreferences();
     if (disposed) return;
     hydrateMode(preferences);
@@ -382,16 +369,18 @@ export function useHudState(props: HudProps, emit: HudEmit) {
     if (disposed) return;
     void loadPreviews(activeTab.value);
 
-    // Periodically refresh window previews when settings is not open and not recording
+    // Refresh native snapshots only while their source picker is open.
     previewsRefreshInterval = setInterval(() => {
-      if (!showSettings.value && !isRecording.value && activeTab.value === 'window') {
-        void loadPreviews('window', true);
+      if (!props.preparingEditor && !showSettings.value && !isRecording.value && openSourceDropdown.value) {
+        void refreshSourceChoices(openSourceDropdown.value, true);
       }
     }, 5000);
   });
 
   onBeforeUnmount(() => {
     disposed = true;
+    window.removeEventListener('keydown', handleLauncherKeydown);
+    unsubscribeCameraOverlayState?.();
     unsubscribeShortcut?.();
     unsubscribeTeleprompterVisibility?.();
     if (previewsRefreshInterval) clearInterval(previewsRefreshInterval);
@@ -399,11 +388,13 @@ export function useHudState(props: HudProps, emit: HudEmit) {
 
   const closeApp = () => {
     if (props.embedded) return;
+    if (props.recorderLauncherContext) return emit('dismiss-launcher');
     capture.close();
   };
 
   const minimizeApp = () => {
     if (props.embedded) return;
+    if (props.recorderLauncherContext) return emit('dismiss-launcher');
     document.body.classList.add('app-minimizing');
     setTimeout(() => {
       capture.minimize();
@@ -472,6 +463,7 @@ export function useHudState(props: HudProps, emit: HudEmit) {
     activeDropdowns,
     hudHeight,
     handleDropdownToggle,
+    handleSourceDropdownToggle,
     selectScreenRegion,
     systemAudioOptions,
     recordingTime,

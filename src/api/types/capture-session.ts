@@ -185,6 +185,7 @@ export interface ZoomFocus {
 }
 
 export interface ZoomElement {
+  linkedClipId?: string | null;
   id: string;
   sessionId: string;
   startMs: number;
@@ -211,6 +212,8 @@ export interface ProjectZoomState {
   }>;
   /** Missing only in projects saved before zoom motion blur was introduced. */
   motionBlur?: { enabled: boolean; intensity: number };
+  /** Missing only in projects saved before automatic camera follow controls were introduced. */
+  autoFollow?: { safeZone: number; responsiveness: number; directionLock: boolean };
 }
 
 export interface SessionTrackAsset {

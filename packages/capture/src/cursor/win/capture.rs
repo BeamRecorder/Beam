@@ -12,9 +12,10 @@ use windows::Win32::{
     UI::{
         Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON, VK_MBUTTON, VK_RBUTTON},
         WindowsAndMessaging::{
-            CURSOR_SHOWING, CURSORINFO, DI_NORMAL, DrawIconEx, GetCursorInfo, GetIconInfo, HICON,
-            ICONINFO, IDC_APPSTARTING, IDC_ARROW, IDC_CROSS, IDC_HAND, IDC_HELP, IDC_IBEAM, IDC_NO,
-            IDC_SIZEALL, IDC_SIZENESW, IDC_SIZENS, IDC_SIZENWSE, IDC_SIZEWE, IDC_WAIT, LoadCursorW,
+            CURSOR_SHOWING, CURSORINFO, DI_NORMAL, DrawIconEx, GetCursorInfo, GetIconInfo,
+            GetPhysicalCursorPos, HICON, ICONINFO, IDC_APPSTARTING, IDC_ARROW, IDC_CROSS, IDC_HAND,
+            IDC_HELP, IDC_IBEAM, IDC_NO, IDC_SIZEALL, IDC_SIZENESW, IDC_SIZENS, IDC_SIZENWSE,
+            IDC_SIZEWE, IDC_WAIT, LoadCursorW,
         },
     },
 };
@@ -55,7 +56,12 @@ pub fn sample_cursor(
     };
     // SAFETY: `info` has the required size and remains writable for the entire call.
     unsafe { GetCursorInfo(&mut info) }.map_err(backend_error)?;
-    let position = map_coordinates(info.ptScreenPos.x, info.ptScreenPos.y, region)?;
+    // WGC records physical pixels. Do not mix DPI-virtualized cursor positions
+    // with the physical source rectangle when producing normalized events.
+    let mut physical_position = POINT::default();
+    // SAFETY: physical_position is writable storage for the returned desktop point.
+    unsafe { GetPhysicalCursorPos(&mut physical_position) }.map_err(backend_error)?;
+    let position = map_coordinates(physical_position.x, physical_position.y, region)?;
     let visible = info.flags == CURSOR_SHOWING;
     let shape = if include_shape && visible && !info.hCursor.is_invalid() {
         Some(cursor_shape(info.hCursor.0 as usize)?)
@@ -73,6 +79,7 @@ pub fn sample_cursor(
 }
 
 pub fn source_region(source_id: &SourceId) -> Result<CaptureRegion, CaptureError> {
+    let _physical_coordinates = super::dpi::PhysicalCoordinates::enter()?;
     if let Some(device_name) = source_id.as_str().strip_prefix("wgc:monitor:") {
         let monitor = Monitor::enumerate()
             .map_err(backend_error)?
@@ -347,7 +354,7 @@ fn bitmap_dimensions(info: &ICONINFO) -> Result<(u32, u32), CaptureError> {
 }
 
 fn bgra_to_rgba(pixels: &mut [u8]) {
-    for pixel in pixels.chunks_exact_mut(4) {
+    for pixel in pixels.as_chunks_mut::<4>().0 {
         pixel.swap(0, 2);
         if pixel[3] == 0 && pixel[..3].iter().any(|channel| *channel != 0) {
             pixel[3] = 255;

@@ -7,8 +7,12 @@ import PropertiesPanel from './PropertiesPanel.vue';
 
 vi.mock('~/i18n/useTranslate', () => ({
   useTranslate: (component: string) => ({
-    t: (key: string) => {
+    t: (key: string, params?: Record<string, unknown>) => {
       if (component === 'TimelineTracks' && key === 'zooms') return 'Zooms';
+      if (component === 'TimelineTracks' && key === 'lockedMessage') {
+        return `${String(params?.name ?? '')} is locked. Modifications are not possible.`;
+      }
+      if (component === 'TimelineToolbar' && key === 'zoom') return 'Zoom';
       return key;
     },
   }),
@@ -24,6 +28,21 @@ const zoom = (id: string) =>
     focus: { cx: 0.5, cy: 0.5 },
     depth: 2,
     mode: 'manual',
+  }) as const;
+
+const clip = (id: string, kind: 'blur' | 'color', name: string, locked = false) =>
+  ({
+    id,
+    kind,
+    name,
+    locked,
+    timelineStartMs: 0,
+    timelineDurationMs: 1_000,
+    sourceInMs: 0,
+    sourceDurationMs: 1_000,
+    playbackRate: 1,
+    enabled: true,
+    order: 0,
   }) as const;
 
 const baseProps = {
@@ -91,5 +110,72 @@ describe('PropertiesPanel zoom selection summary', () => {
     await wrapper.setProps({ selectedZoomIds: ['zoom-one'] });
 
     expect(wrapper.find('.selection-summary').exists()).toBe(false);
+  });
+
+  it('names only the locked clip when a locked blur is selected with a free color layer', () => {
+    const blur = clip('blur-1', 'blur', 'Sensitive blur', true);
+    const color = clip('color-1', 'color', 'Free color');
+    const wrapper = mount(PropertiesPanel, {
+      props: {
+        ...baseProps,
+        activeTab: 'clip',
+        selectedClip: { ...blur, kind: 'blur' },
+        selectedClipIds: [blur.id, color.id],
+        composition: { ...baseProps.composition, clips: [blur, color] },
+        lockedSelection: { clipIds: [blur.id], zoomIds: [] },
+      },
+      global,
+    });
+
+    expect(wrapper.get('.properties-lock-message').text()).toContain(
+      'Sensitive blur is locked. Modifications are not possible.',
+    );
+    expect(wrapper.get('.properties-lock-message').text()).not.toContain('Free color');
+  });
+
+  it('removes the lock overlay when the selection becomes entirely free', async () => {
+    const blur = clip('blur-1', 'blur', 'Sensitive blur', true);
+    const color = clip('color-1', 'color', 'Free color');
+    const wrapper = mount(PropertiesPanel, {
+      props: {
+        ...baseProps,
+        activeTab: 'clip',
+        selectedClip: { ...blur, kind: 'blur' },
+        selectedClipIds: [blur.id, color.id],
+        composition: { ...baseProps.composition, clips: [blur, color] },
+        lockedSelection: { clipIds: [blur.id], zoomIds: [] },
+      },
+      global,
+    });
+
+    expect(wrapper.find('.properties-lock-message').exists()).toBe(true);
+
+    await wrapper.setProps({
+      selectedClip: { ...color, kind: 'color' },
+      selectedClipIds: [color.id],
+      lockedSelection: { clipIds: [], zoomIds: [] },
+    });
+
+    expect(wrapper.find('.properties-lock-message').exists()).toBe(false);
+    expect(wrapper.find('.properties-lock-content.is-locked').exists()).toBe(false);
+  });
+
+  it('combines locked clip names with the count of locked zooms', () => {
+    const blur = clip('blur-1', 'blur', 'Sensitive blur', true);
+    const color = clip('color-1', 'color', 'Free color');
+    const wrapper = mount(PropertiesPanel, {
+      props: {
+        ...baseProps,
+        activeTab: 'zoom',
+        selectedClipIds: [blur.id, color.id],
+        selectedZoomIds: ['zoom-one', 'zoom-two', 'zoom-free'],
+        composition: { ...baseProps.composition, clips: [blur, color] },
+        lockedSelection: { clipIds: [blur.id], zoomIds: ['zoom-one', 'zoom-two'] },
+      },
+      global,
+    });
+
+    expect(wrapper.get('.properties-lock-message').text()).toContain('Sensitive blur, 2 Zooms');
+    expect(wrapper.get('.properties-lock-message').text()).not.toContain('Free color');
   });
 });

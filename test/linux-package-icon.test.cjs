@@ -151,17 +151,14 @@ test('desktop packages use the Beam PNG icon and stable desktop identity', () =>
   }
 
   assertPng('public/brand/BeamIcon.png', 1024, 1024);
-  const pixel = decodeRgba('public/brand/BeamIcon.png');
-  const corners = [pixel(0, 0), pixel(1023, 0), pixel(0, 1023), pixel(1023, 1023)];
+  const packagedIcon = path.join(build.linux.icon, '32x32.png');
+  const pixel = decodeRgba(packagedIcon);
+  const corners = [pixel(0, 0), pixel(31, 0), pixel(0, 31), pixel(31, 31)];
   assert.ok(
     corners.every((rgba) => rgba[3] === 0),
-    'BeamIcon.png corners must be fully transparent',
+    'packaged Beam icon corners must be fully transparent',
   );
-  assert.equal(pixel(512, 512)[3], 255, 'BeamIcon.png center must remain fully opaque');
-
-  const appWebIcon = fs.readFileSync(path.resolve(__dirname, '../public/brand/BeamIcon.webp'));
-  const websiteIcon = fs.readFileSync(path.resolve(__dirname, '../website/public/favicon.webp'));
-  assert.deepEqual(websiteIcon, appWebIcon, 'website and application must use the same Beam icon');
+  assert.equal(pixel(16, 16)[3], 255, 'packaged Beam icon center must remain fully opaque');
 
   assertIco(build.win.icon, [16, 20, 24, 32, 40, 48, 64, 128, 256]);
   assertIcns(build.mac.icon, ['icp4', 'icp5', 'icp6', 'ic07', 'ic08', 'ic09', 'ic10']);

@@ -49,6 +49,37 @@ fn stop_system_audio_preview_command_roundtrips() -> Result<(), Box<dyn Error>> 
 }
 
 #[test]
+fn source_preview_command_roundtrips_with_native_source_and_bounds() -> Result<(), Box<dyn Error>> {
+    let expected = serde_json::json!({
+        "id": "source-preview-request",
+        "command": "source-preview",
+        "source": "sck:window:123",
+        "maxWidth": 300,
+        "maxHeight": 200,
+    });
+    let request: RequestEnvelope = serde_json::from_value(expected.clone())?;
+    assert_eq!(serde_json::to_value(request)?, expected);
+    Ok(())
+}
+
+#[test]
+fn screenshot_command_roundtrips_with_region_and_excluded_windows() -> Result<(), Box<dyn Error>> {
+    let expected = serde_json::json!({
+        "id": "screenshot-request",
+        "command": "screenshot",
+        "config": {
+            "screen": { "mode": "source", "sourceId": "sck:display:42" },
+            "region": { "x": 0.1, "y": 0.2, "width": 0.5, "height": 0.6 },
+            "output": "/tmp/beam screenshot.png",
+            "excludedWindowHandles": ["1234", "5678"]
+        }
+    });
+    let request: RequestEnvelope = serde_json::from_value(expected.clone())?;
+    assert_eq!(serde_json::to_value(request)?, expected);
+    Ok(())
+}
+
+#[test]
 fn engine_eof_finalizes_an_active_session() -> Result<(), Box<dyn Error>> {
     let temporary = tempfile::tempdir()?;
     let project_id = ProjectId::new();

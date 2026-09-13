@@ -214,6 +214,45 @@ describe('Teleprompter', () => {
     wrapper.unmount();
   });
 
+  it('restores the saved reader position without smooth scrolling', async () => {
+    const resume = {
+      document: {
+        schemaVersion: 1,
+        text: 'First line\nSecond line',
+        mode: 'continuous',
+        autoscroll: false,
+        scrollSpeed: 70,
+        fontSize: 32,
+        lineHeight: 1.5,
+        textAlign: 'left',
+        theme: 'dark',
+        updatedAtUtc: '2026-01-01T00:00:00.000Z',
+      },
+      session: null,
+      activeLine: 0,
+      scrollTop: 123,
+      isEditing: false,
+      isPaused: true,
+      error: '',
+    };
+    let resolveResume!: (value: typeof resume) => void;
+    capture.getTeleprompterResumeState.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveResume = resolve;
+      }),
+    );
+    const wrapper = mount(Teleprompter, { global: { plugins: [i18n] } });
+    const display = wrapper.get('.teleprompter-display').element as HTMLElement;
+    const scrollTo = vi.fn();
+    Object.defineProperty(display, 'scrollTo', { configurable: true, value: scrollTo });
+
+    resolveResume(resume);
+    await flushPromises();
+
+    expect(scrollTo).toHaveBeenCalledWith({ top: 123, behavior: 'instant' });
+    wrapper.unmount();
+  });
+
   it('does not announce readiness when unmounted before the resume snapshot arrives', async () => {
     let resolveResume!: (value: null) => void;
     capture.getTeleprompterResumeState.mockReturnValueOnce(
@@ -301,6 +340,30 @@ describe('Teleprompter', () => {
         writable: true,
         value: original,
       });
+    }
+  });
+
+  it.each([
+    ['Russian', 'После создания копируем ключ.\nПример кода MCP'],
+    ['Ukrainian', 'Привіт світе!\nУкраїнська мова: ї, є, ґ.'],
+    ['Bulgarian', 'Здравейте, свят!\nБългарски текст.'],
+    ['Greek', 'Καλημέρα κόσμε!\nΕλληνικό κείμενο.'],
+    ['Arabic', 'مرحبا بالعالم\nهذا نص عربي'],
+    ['Hindi', 'नमस्ते दुनिया\nयह हिन्दी पाठ है'],
+    ['CJK', '你好世界\n日本語の文章\n한국어 문장'],
+    ['mixed', 'Hello — Привет всем!\nMCP: пример кода'],
+  ])('preserves %s script text in the editor and reader with English menus', async (_language, text) => {
+    i18n.global.locale.value = 'en';
+    const wrapper = mount(Teleprompter, { global: { plugins: [i18n] } });
+    try {
+      await wrapper.get('textarea').setValue(text);
+      expect(wrapper.get('textarea').element.value).toBe(text);
+      expect(wrapper.findAll('.teleprompter-line').map((line) => line.text())).toEqual(text.split('\n'));
+      await wrapper.get('[aria-label="Preview"]').trigger('click');
+      expect(wrapper.find('textarea').exists()).toBe(false);
+      expect(wrapper.findAll('.teleprompter-line').map((line) => line.text())).toEqual(text.split('\n'));
+    } finally {
+      wrapper.unmount();
     }
   });
 

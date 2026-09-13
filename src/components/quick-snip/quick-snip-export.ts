@@ -73,6 +73,7 @@ export function quickSnipExportRequest(
     editorData,
     zooms: state.zoom.elements,
     zoomMotionBlur: state.zoom.motionBlur,
+    zoomAutoFollow: state.zoom.autoFollow,
     composition: state.composition,
     cursorSettings: presentation.cursor,
     cursorPack: orderedCursorPacks(packs).find((pack) => pack.id === presentation.cursor.selection.packId) ?? null,

@@ -1,0 +1,293 @@
+{
+  "pages": [
+    {
+      "slug": "editor/capabilities/captions",
+      "title": "Sous-titres IA",
+      "description": "Référence complète des modèles Whisper locaux, des sources audio, des téléchargements, de la transcription, de la régénération, de l'annulation et des diagnostics.",
+      "lead": "Beam génère localement des sous-titres parlés à partir d'un clip audio activé. Il télécharge le modèle Whisper sélectionné, transcrit sur l'appareil et crée des clips de sous-titres modifiables dans la timeline.",
+      "sections": [
+        {
+          "title": "Panneau des sous-titres",
+          "screenshot": {
+            "path": "editor/captions-panel.webp",
+            "alt": "Panneau des sous-titres IA Beam avec les contrôles de source audio et de modèle Whisper",
+            "caption": "Sélectionnez une source audio activée et un modèle Whisper local avant de générer les sous-titres.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Sources audio",
+          "tables": [
+            {
+              "headers": ["Source", "Quand elle apparaît", "Règle de sélection"],
+              "rows": [
+                ["System audio", "Un clip activé avec le rôle Système existe.", "Identifiée comme Audio système."],
+                ["Microphone", "Un clip activé avec le rôle Microphone existe.", "Identifiée comme Microphone."],
+                ["Audio importé", "Un clip audio importé activé existe.", "Utilise le nom du clip."],
+                [
+                  "URL de média en double",
+                  "Deux clips activés font référence à la même URL audio.",
+                  "Seule la première source est proposée."
+                ],
+                [
+                  "Aucune source utilisable",
+                  "Aucun clip audio activé ne possède une URL de ressource lisible.",
+                  "La génération reste indisponible."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Modèles Whisper",
+          "tables": [
+            {
+              "headers": ["Modèle", "Langues", "Conseils de performances"],
+              "rows": [
+                ["Tiny", "Multilingue", "Modèle par défaut."],
+                ["Tiny .en", "Anglais", "Modèle réservé à l'anglais."],
+                ["Base", "Multilingue", "Aucun avertissement supplémentaire."],
+                ["Base .en", "Anglais", "Modèle réservé à l'anglais."],
+                ["Small", "Multilingue", "Peut être lent sans WebGPU."],
+                ["Small .en", "Anglais", "Peut être lent sans WebGPU."],
+                ["Medium", "Multilingue", "Téléchargement volumineux ; WebGPU recommandé."],
+                ["Medium .en", "Anglais", "Téléchargement volumineux ; WebGPU recommandé."],
+                ["Large v3", "Multilingue", "Très volumineux et lent sans WebGPU."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Téléchargement et suppression d'un modèle",
+          "tables": [
+            {
+              "headers": ["État ou action", "Comportement"],
+              "rows": [
+                ["Manquant", "Télécharger le modèle est disponible pour le modèle sélectionné."],
+                ["Téléchargement", "Beam indique les octets téléchargés et le total avec une barre de progression."],
+                ["Prêt", "Une coche identifie le modèle installé et Supprimer le modèle devient disponible."],
+                ["Supprimer le modèle", "Indisponible pendant le téléchargement, la suppression ou la transcription."],
+                ["Erreur de téléchargement", "L'erreur est affichée et peut être copiée pour les diagnostics."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Générer et régénérer",
+          "steps": [
+            "Choisissez l'une des sources audio activées.",
+            "Choisissez et téléchargez un modèle Whisper s'il n'est pas prêt.",
+            "Sélectionnez Générer les sous-titres. Beam décode la source, la convertit en audio mono à 16 kHz et la limite à la durée de la timeline.",
+            "Les résultats partiels de transcription mettent à jour la composition pendant la poursuite du traitement.",
+            "Une fois l'opération terminée, le premier sous-titre généré est sélectionné pour le montage."
+          ],
+          "tables": [
+            {
+              "headers": ["Comportement", "Règle"],
+              "rows": [
+                ["Regroupement des phrases", "Termine une phrase de sous-titres à la ponctuation ou après 12 mots."],
+                ["Durée minimale du clip généré", "40 ms."],
+                ["Régénérer", "Remplace les sous-titres déjà générés par l'IA et conserve les sous-titres manuels."],
+                ["Annuler", "Arrête le chargement du modèle ou la transcription."],
+                ["Fermer le panneau", "Annule la transcription active."],
+                [
+                  "Diagnostics",
+                  "Indique le temps écoulé et expose un rapport de transcription copiable après le traitement."
+                ]
+              ]
+            }
+          ],
+          "notice": {
+            "kind": "tip",
+            "title": "Transcription locale",
+            "text": "Whisper s'exécute sur l'appareil. La génération de sous-titres ne nécessite ni envoi vers le cloud ni clé API."
+          }
+        },
+        {
+          "title": "Modifier les sous-titres générés",
+          "paragraphs": [
+            "Les sous-titres générés sont des clips de sous-titres modifiables ordinaires marqués comme générés par l'IA. Leur texte, leur timing et leur style visuel peuvent être ajustés dans le panneau Clip et la timeline après la génération."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/audio",
+      "title": "Audio",
+      "description": "Référence complète de la sortie globale, des rôles système et microphone, de l'audio importé, des états d'activation, de la suppression et du volume.",
+      "lead": "Le panneau Audio sépare la sortie globale de la composition des rôles système et microphone enregistrés. L'audio importé se contrôle comme un clip sélectionné dans la timeline.",
+      "sections": [
+        {
+          "title": "Panneau Audio",
+          "screenshot": {
+            "path": "editor/audio-panel.webp",
+            "alt": "Panneau Audio Beam avec les contrôles de volume global, système et microphone",
+            "caption": "La sortie globale et les rôles audio enregistrés peuvent être réglés indépendamment.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Contrôles du volume",
+          "tables": [
+            {
+              "headers": ["Contrôle", "Plage", "Valeur initiale ou par défaut", "Portée"],
+              "rows": [
+                [
+                  "Volume global",
+                  "0%–100%",
+                  "Un lecteur nouvellement chargé démarre à 70%",
+                  "Sortie complète de lecture de l'éditeur."
+                ],
+                ["Volume système", "0%–100%", "100%", "Tous les clips affectés au rôle Système."],
+                ["Volume du microphone", "0%–100%", "100%", "Tous les clips affectés au rôle Microphone."],
+                [
+                  "Volume du clip audio sélectionné",
+                  "0%–200%",
+                  "100%",
+                  "Uniquement le clip audio système, microphone ou importé sélectionné."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Contrôles des rôles",
+          "tables": [
+            {
+              "headers": ["Rôle", "Quand affiché", "Actions"],
+              "rows": [
+                [
+                  "Piste de son système",
+                  "Au moins un clip audio avec le rôle système existe.",
+                  "Activez ou désactivez, modifiez le volume du rôle ou supprimez tous les clips Système."
+                ],
+                [
+                  "Piste du microphone",
+                  "Au moins un clip audio avec le rôle microphone existe.",
+                  "Activez ou désactivez, modifiez le volume du rôle ou supprimez tous les clips Microphone."
+                ],
+                [
+                  "Audio importé",
+                  "Un clip audio importé existe.",
+                  "Sélectionnez le clip dans la timeline et utilisez Volume du clip ; il ne possède pas de section de rôle dédiée."
+                ],
+                [
+                  "Aucun rôle",
+                  "Aucun rôle Système ou Microphone n'existe.",
+                  "Le panneau indique qu'aucune piste audio n'a été détectée."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Activer ou supprimer",
+          "paragraphs": [
+            "Désactiver un rôle conserve ses clips, mais les exclut de la lecture et de l'export. Supprimer un rôle retire de la composition tous les clips affectés à ce rôle."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "La suppression d'un rôle affecte plusieurs clips",
+            "text": "Supprimer la piste système et Supprimer la piste du microphone s'appliquent à l'ensemble du rôle, pas seulement au clip le plus proche de la tête de lecture."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/settings",
+      "title": "Paramètres de l'éditeur",
+      "description": "Référence complète de la langue, du correcteur orthographique, de l'apparence, des mises à jour, des liens sociaux et des contrôles de développement.",
+      "lead": "Les Paramètres de l'éditeur contiennent les préférences générales partagées avec l'enregistreur ainsi que les contrôles de développement propres à l'éditeur.",
+      "sections": [
+        {
+          "title": "Panneau des paramètres",
+          "screenshot": {
+            "path": "editor/settings-panel.webp",
+            "alt": "Panneau Paramètres de Beam avec les contrôles de langue et d'apparence",
+            "caption": "Les Paramètres appliquent les préférences générales de langue et d'apparence.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Langue et rédaction",
+          "tables": [
+            {
+              "headers": ["Réglage", "Valeurs", "Valeur par défaut"],
+              "rows": [
+                [
+                  "Langue",
+                  "Bulgarian, German, English, Spanish, French, Hindi, Italian, Japanese, Korean, Polish, Portuguese (Brazil), Russian, Vietnamese, Simplified Chinese, Traditional Chinese",
+                  "Une langue du système ou du navigateur prise en charge ; anglais par défaut"
+                ],
+                ["Correcteur orthographique", "On or Off under Advanced", "On"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Apparence",
+          "tables": [
+            {
+              "headers": ["Réglage", "Valeurs", "Valeur par défaut"],
+              "rows": [
+                ["Mode de thème", "Light, Dark, System", "Light"],
+                [
+                  "Préréglage de thème",
+                  "Beam Sunset, Cyber Violet, Emerald Forest, Crimson Velvet, Oceanic Breeze, Amber Studio, Sakura Bloom, Slate Precision",
+                  "Beam Sunset"
+                ],
+                ["Couleur principale", "10 préréglages ou un sélecteur de couleur personnalisé", "#ff5a1f"],
+                ["Couleur secondaire", "8 préréglages ou un sélecteur de couleur personnalisé", "#6366f1"],
+                ["Rayon des angles", "0, 6, 10, 16, 24 px, or Custom 0–32 px", "10 px"],
+                ["Rayon des pastilles", "On or Off", "Off"],
+                ["Surface", "Default, Neutral, Slate, Deep", "Default"],
+                ["Échelle globale de l'interface", "50%, 75%, 100%, 125%", "100%"]
+              ]
+            }
+          ],
+          "paragraphs": [
+            "La barre supérieure, la barre latérale, les propriétés, les contrôles du canevas et la timeline peuvent utiliser l'échelle globale ou la remplacer par 50 %, 75 %, 100 % ou 125 %. Consultez la [référence des préférences de l'enregistreur](/recorder/capabilities/preferences) pour connaître chaque couleur prédéfinie et valeur de rayon."
+          ]
+        },
+        {
+          "title": "Mises à jour et liens",
+          "tables": [
+            {
+              "headers": ["Zone", "Actions et états"],
+              "rows": [
+                [
+                  "Mises à jour",
+                  "Rechercher, Disponible, Téléchargement, Téléchargée, Indisponible, Erreur, Non pris en charge."
+                ],
+                ["Mise à jour téléchargée", "Redémarrer devient disponible une fois le téléchargement terminé."],
+                ["Erreur", "Afficher ou copier les détails de diagnostic."],
+                ["Journal des modifications", "Ouvre le journal des modifications de la mise à jour actuelle."],
+                ["Discord / GitHub", "Ouvre la communauté Beam ou le dépôt source."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Mode développement",
+          "paragraphs": [
+            "Le Mode développement est stocké localement dans l'éditeur. Il est destiné au développement et au dépannage plutôt qu'au montage courant."
+          ],
+          "tables": [
+            {
+              "headers": ["Contrôle", "Comportement"],
+              "rows": [
+                ["Mode développement", "Affiche ou masque les options de développement."],
+                [
+                  "Outil Enregistreur",
+                  "Ouvre un HUD d'enregistreur intégré et peut démarrer un enregistrement depuis la fenêtre contextuelle."
+                ],
+                ["Copier les informations système", "Copie les informations de diagnostic de l'environnement."],
+                ["Ouvrir les outils de développement", "Active ou désactive les outils de développement Electron."]
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

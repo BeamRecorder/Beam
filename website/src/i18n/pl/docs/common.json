@@ -2,42 +2,161 @@
   "locale": "pl-PL",
   "label": "Polski",
   "siteTitle": "Dokumentacja Beam",
-  "nav": { "website": "Witryna Beam" },
+  "nav": {
+    "website": "Witryna Beam"
+  },
   "sidebar": [
     {
       "text": "Zacznij tutaj",
       "items": [
-        { "text": "Wprowadzenie", "link": "/" },
-        { "text": "Pierwsze kroki", "link": "/getting-started" },
-        { "text": "Aktualizowanie Beam", "link": "/updates" }
+        {
+          "text": "Wprowadzenie",
+          "link": "/"
+        },
+        {
+          "text": "Pierwsze kroki",
+          "link": "/getting-started"
+        },
+        {
+          "text": "Aktualizowanie Beam",
+          "link": "/updates"
+        }
       ]
     },
     {
       "text": "Aplikacja do nagrywania",
       "items": [
-        { "text": "Przegląd", "link": "/recorder/" },
-        { "text": "Interfejs", "link": "/recorder/interface" },
-        { "text": "Możliwości", "link": "/recorder/capabilities" }
+        {
+          "text": "Przegląd",
+          "link": "/recorder/"
+        },
+        {
+          "text": "Interfejs",
+          "link": "/recorder/interface"
+        },
+        {
+          "text": "Możliwości",
+          "link": "/recorder/capabilities/",
+          "items": [
+            {
+              "text": "Źródła przechwytywania",
+              "link": "/recorder/capabilities/capture-sources"
+            },
+            {
+              "text": "Dźwięk i kamera",
+              "link": "/recorder/capabilities/audio-camera"
+            },
+            {
+              "text": "Teleprompter",
+              "link": "/recorder/capabilities/teleprompter"
+            },
+            {
+              "text": "Sterowanie na żywo",
+              "link": "/recorder/capabilities/live-controls"
+            },
+            {
+              "text": "Preferencje",
+              "link": "/recorder/capabilities/preferences"
+            },
+            {
+              "text": "Kierownik projektu",
+              "link": "/recorder/capabilities/project-manager"
+            },
+            {
+              "text": "Uprawnienia i prywatność",
+              "link": "/recorder/capabilities/permissions-privacy"
+            }
+          ]
+        }
       ]
     },
     {
       "text": "Edytor wideo",
       "items": [
-        { "text": "Przegląd", "link": "/editor/" },
-        { "text": "Interfejs", "link": "/editor/interface" },
-        { "text": "Możliwości", "link": "/editor/capabilities" }
+        {
+          "text": "Przegląd",
+          "link": "/editor/"
+        },
+        {
+          "text": "Interfejs",
+          "link": "/editor/interface"
+        },
+        {
+          "text": "Prezentacja projektu",
+          "link": "/editor/showcase"
+        },
+        {
+          "text": "Możliwości",
+          "link": "/editor/capabilities",
+          "items": [
+            {
+              "text": "Edycja osi czasu",
+              "link": "/editor/capabilities/timeline"
+            },
+            {
+              "text": "Płótno",
+              "link": "/editor/capabilities/canvas"
+            },
+            {
+              "text": "Klipy",
+              "link": "/editor/capabilities/clips"
+            },
+            {
+              "text": "Powiększenia",
+              "link": "/editor/capabilities/zooms"
+            },
+            {
+              "text": "Kursor",
+              "link": "/editor/capabilities/cursor"
+            },
+            {
+              "text": "Napisy",
+              "link": "/editor/capabilities/captions"
+            },
+            {
+              "text": "Dźwięk",
+              "link": "/editor/capabilities/audio"
+            },
+            {
+              "text": "Ustawienia",
+              "link": "/editor/capabilities/settings"
+            },
+            {
+              "text": "Eksport",
+              "link": "/export"
+            }
+          ]
+        }
       ]
     },
     {
       "text": "Materiały referencyjne",
       "items": [
-        { "text": "Eksport i udostępnianie", "link": "/export" },
-        { "text": "Obsługiwane platformy", "link": "/platforms" },
-        { "text": "System plików", "link": "/filesystem" }
+        {
+          "text": "Eksport i udostępnianie",
+          "link": "/export"
+        },
+        {
+          "text": "Obsługiwane platformy",
+          "link": "/platforms"
+        },
+        {
+          "text": "System plików",
+          "link": "/filesystem"
+        }
       ]
     }
   ],
-  "social": { "github": "Zobacz Beam na GitHubie", "discord": "Dołącz do Discorda Beam" },
-  "theme": { "switchToLight": "Przełącz na jasny motyw", "switchToDark": "Przełącz na ciemny motyw" },
-  "footer": { "message": "Otwartoźródłowe nagrywanie i edycja ekranu.", "copyright": "Wydano na licencji MIT." }
+  "social": {
+    "github": "Zobacz Beam na GitHubie",
+    "discord": "Dołącz do Discorda Beam"
+  },
+  "theme": {
+    "switchToLight": "Przełącz na jasny motyw",
+    "switchToDark": "Przełącz na ciemny motyw"
+  },
+  "footer": {
+    "message": "Otwartoźródłowe nagrywanie i edycja ekranu.",
+    "copyright": "Wydano na licencji MIT."
+  }
 }

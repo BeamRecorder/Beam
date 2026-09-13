@@ -1,0 +1,348 @@
+{
+  "pages": [
+    {
+      "slug": "editor/capabilities/canvas",
+      "title": "Canvas",
+      "description": "Riferimento completo per dimensioni dell'output, sfondi, sfocatura, rimozione dello sfondo, gradienti e controlli del watermark.",
+      "lead": "Canvas controlla l'area di output all'esterno e dietro le clip visive. Le impostazioni di sfondo e watermark si applicano all'intera composizione.",
+      "sections": [
+        {
+          "title": "Pannello Canvas",
+          "screenshot": {
+            "path": "editor/canvas-panel.webp",
+            "alt": "Proprietà Canvas di Beam con schede degli sfondi e controlli di presentazione",
+            "caption": "Canvas raggruppa sfondi multimediali, a colore e sfumati con controlli di presentazione e branding.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Canvas di output",
+          "tables": [
+            {
+              "headers": ["Proprietà", "Valori", "Predefinito o comportamento"],
+              "rows": [
+                ["Dimensione nativa", "Larghezza × altezza", "1920×1080"],
+                ["16:9", "1920×1080", "Preset predefinito."],
+                ["9:16", "1080×1920", "Preset verticale."],
+                ["1:1", "1080×1080", "Preset quadrato."],
+                ["4:5", "1080×1350", "Preset verticale."],
+                ["3:4", "1080×1440", "Preset verticale."],
+                ["4:3", "1440×1080", "Preset orizzontale."],
+                ["21:9", "2520×1080", "Preset ultrawide."],
+                [
+                  "Visibilità dello sfondo",
+                  "Visibile o Rimuovi sfondo",
+                  "Lo sfondo è nascosto nel canvas predefinito."
+                ],
+                ["Sfocatura dello sfondo", "0%–100%", "Sfoca lo sfondo selezionato, non il soggetto di un video."],
+                [
+                  "Transizioni globali",
+                  "Azione nell'intestazione delle proprietà",
+                  "Apre i controlli delle transizioni a livello di canvas."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Sfondi immagine e video",
+          "tables": [
+            {
+              "headers": ["Sfondo", "File supportati", "Comportamento della libreria"],
+              "rows": [
+                [
+                  "Immagine",
+                  "AVIF, BMP, JPEG, JPG, PNG, WebP",
+                  "Mostra inizialmente 15 elementi; Mostra altro rivela i gruppi successivi."
+                ],
+                [
+                  "Video",
+                  "M4V, MOV, MP4, OGV, WebM",
+                  "Mostra inizialmente 15 elementi; Mostra altro rivela i gruppi successivi."
+                ],
+                [
+                  "Importa",
+                  "Un file di sfondo locale supportato",
+                  "Aggiunge il file selezionato alla libreria degli sfondi corrispondente."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Sfondi a colore",
+          "paragraphs": [
+            "Scegli un colore integrato oppure modifica un valore esadecimale personalizzato. L'editor personalizzato aggiorna in tempo reale l'anteprima dello sfondo."
+          ],
+          "tables": [
+            {
+              "headers": ["Controllo", "Valori"],
+              "rows": [
+                ["Preset", "#111827, #ffffff, #0f766e, #1d4ed8, #7c3aed, #be123c"],
+                ["Colore personalizzato", "Editor del colore esadecimale"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Sfondi sfumati",
+          "tables": [
+            {
+              "headers": ["Controllo", "Valori o vincolo"],
+              "rows": [
+                [
+                  "Preset",
+                  "Sfumature integrate tra cui Violet, Fire, Ocean, Sunset, Neon, Forest, Gold, Ice, Vaporwave e Aurora."
+                ],
+                ["Tipo", "Lineare o Radiale"],
+                ["Angolo", "0°–360° per la direzione della sfumatura applicabile"],
+                ["Interruzioni", "Almeno due interruzioni di colore"],
+                ["Sfumatura personalizzata", "Tipo, angolo, interruzioni e colori modificabili"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Watermark",
+          "paragraphs": [
+            "Il watermark è disabilitato per impostazione predefinita. Abilitalo per posizionare il branding di Beam, un'etichetta o un logo sopra la composizione."
+          ],
+          "tables": [
+            {
+              "headers": ["Proprietà", "Valori o intervallo", "Predefinito o vincolo"],
+              "rows": [
+                ["Testo", "Nessun testo watermark, Made with Beam., Beam, Personalizzato", "Made with Beam."],
+                ["Testo personalizzato", "Fino a 80 caratteri", "Vuoto; disponibile con Personalizzato."],
+                ["Mostra logo Beam", "Attivo o disattivo", "Attivo"],
+                [
+                  "Traduci watermark",
+                  "Attivo o disattivo",
+                  "Disattivo; disponibile per le etichette Beam e Made with Beam."
+                ],
+                [
+                  "Posizione",
+                  "In alto a sinistra, In alto a destra, In basso a sinistra, In basso a destra",
+                  "In basso a destra"
+                ],
+                ["Dimensione", "50%–200%; passo 10%", "100%"],
+                ["Ombra", "0%–100%; passo 5%", "20%"],
+                ["Colore di sfondo", "Selettore colore esadecimale", "#111114"],
+                ["Opacità dello sfondo", "0%–100%; passo 5%", "78%"],
+                ["Raggio dello sfondo", "0%–100%; passo 5%", "100%"],
+                ["Spaziatura dello sfondo", "50%–150%; passo 5%", "100%"]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/zooms",
+      "title": "Zoom",
+      "description": "Riferimento completo per zoom manuali e automatici, modalità di messa a fuoco, profondità, rigenerazione e motion blur.",
+      "lead": "I blocchi zoom attirano l'attenzione su una regione della registrazione. Aggiungili manualmente nella timeline oppure genera suggerimenti dai clic del cursore acquisiti.",
+      "sections": [
+        {
+          "title": "Nessuno zoom selezionato",
+          "paragraphs": [
+            "La generazione e il motion blur globale restano disponibili senza uno zoom selezionato. Seleziona un blocco zoom nella timeline per modificarne profondità, modalità o posizione."
+          ],
+          "screenshot": {
+            "path": "editor/zoom-empty.webp",
+            "alt": "Pannello Zoom di Beam senza uno zoom selezionato",
+            "caption": "La generazione automatica e il motion blur globale non richiedono uno zoom selezionato.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Genera zoom automatici",
+          "tables": [
+            {
+              "headers": ["Azione", "Requisito", "Comportamento"],
+              "rows": [
+                [
+                  "Genera zoom automatici",
+                  "Una sessione di registrazione con telemetria dei clic del cursore",
+                  "Crea blocchi zoom automatici dai clic registrati."
+                ],
+                [
+                  "Rigenera zoom automatici",
+                  "La generazione automatica degli zoom è disponibile",
+                  "Chiede conferma, conserva gli zoom manuali e sostituisce gli zoom automatici della sessione corrente."
+                ],
+                [
+                  "Stato non disponibile",
+                  "Nessuna sessione o nessuna telemetria del cursore",
+                  "La generazione resta disabilitata."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Aggiungi uno zoom manuale",
+          "paragraphs": [
+            "Fai clic su un punto libero della traccia Zoom. Un nuovo zoom manuale ha una durata predefinita di 1,2 secondi e viene aggiunto solo quando restano disponibili almeno 200 ms di durata nella timeline."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Intervalli occupati nella timeline",
+            "text": "Beam sceglie una durata disponibile intorno al clic e non si sovrappone a un blocco zoom esistente."
+          }
+        },
+        {
+          "title": "Zoom selezionato",
+          "screenshot": {
+            "path": "editor/zoom-properties.webp",
+            "alt": "Proprietà Beam per uno zoom selezionato",
+            "caption": "Uno zoom selezionato espone la modalità di messa a fuoco e la profondità dell'ingrandimento.",
+            "aspectRatio": "199 / 326"
+          },
+          "tables": [
+            {
+              "headers": ["Proprietà", "Valori", "Predefinito o comportamento"],
+              "rows": [
+                [
+                  "Modalità",
+                  "Cursore automatico o Messa a fuoco manuale",
+                  "Cursore automatico segue il movimento del puntatore registrato; Messa a fuoco manuale usa un punto fisso."
+                ],
+                [
+                  "Obiettivo manuale",
+                  "Trascinamento sul canvas",
+                  "Trascina direttamente sul canvas l'obiettivo tratteggiato."
+                ],
+                ["Profondità 1", "1.25×", "Mappatura dell'ingrandimento."],
+                ["Profondità 2", "1.5×", "Predefinita."],
+                ["Profondità 3", "1.8×", "Mappatura dell'ingrandimento."],
+                ["Profondità 4", "2.2×", "Mappatura dell'ingrandimento."],
+                ["Profondità 5", "3.5×", "Mappatura dell'ingrandimento."],
+                ["Profondità 6", "5×", "Mappatura dell'ingrandimento."],
+                ["Elimina zoom", "Azione nell'intestazione delle proprietà", "Rimuove il blocco zoom selezionato."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Motion blur dello zoom",
+          "tables": [
+            {
+              "headers": ["Proprietà", "Intervallo", "Predefinito", "Ambito"],
+              "rows": [
+                ["Abilitato", "Attivo o disattivo", "Attivo", "Impostazione dell'intera composizione."],
+                [
+                  "Intensità motion blur",
+                  "0%–100%",
+                  "55%",
+                  "Applicata allo stesso modo nell'anteprima e nell'esportazione."
+                ]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/cursor",
+      "title": "Cursore",
+      "description": "Riferimento completo per pacchetti del cursore, aspetto, ombre, effetti dei clic, fluidità, molla e motion blur.",
+      "lead": "Le impostazioni del cursore controllano l'overlay del puntatore sull'intera composizione e non richiedono la selezione di una clip.",
+      "sections": [
+        {
+          "title": "Pannello Cursore",
+          "screenshot": {
+            "path": "editor/cursor-panel.webp",
+            "alt": "Pannello Cursore Beam con controlli del pacchetto, dell'aspetto, dei clic e del movimento",
+            "caption": "La presentazione del cursore viene configurata globalmente per la composizione.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Selezione del pacchetto e del cursore",
+          "tables": [
+            {
+              "headers": ["Proprietà", "Valori", "Comportamento"],
+              "rows": [
+                [
+                  "Pacchetto del cursore",
+                  "Pacchetto integrato o importato",
+                  "Automatico resta Automatico. Un cursore fisso viene conservato solo se nel nuovo pacchetto esiste lo stesso ID; altrimenti Beam torna ad Automatico."
+                ],
+                [
+                  "Modalità cursore",
+                  "Automatico o un cursore fisso del pacchetto selezionato",
+                  "Automatico usa i cambi di forma del cursore registrati."
+                ],
+                [
+                  "Importa pacchetto",
+                  "File di pacchetto cursore supportati",
+                  "Aggiunge un pacchetto personalizzato alle scelte disponibili."
+                ],
+                [
+                  "Ripristina",
+                  "Ripristina presentazione del cursore",
+                  "Mantiene il pacchetto selezionato e ripristina tutti gli altri valori predefiniti del cursore."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Aspetto",
+          "tables": [
+            {
+              "headers": ["Proprietà", "Valori o intervallo", "Predefinito"],
+              "rows": [
+                ["Dimensione", "16–128 px", "45 px"],
+                ["Ombra esterna", "Attiva o disattiva", "Attiva"],
+                ["Sfocatura dell'ombra", "1–24 px", "6 px dopo Ripristina"],
+                ["Colore dell'ombra", "Selettore colore", "#000000 dopo Ripristina"],
+                [
+                  "Direzione dell'ombra",
+                  "Tutte, In basso, In basso a destra, In alto a sinistra",
+                  "In basso dopo Ripristina"
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Effetti dei clic",
+          "tables": [
+            {
+              "headers": ["Proprietà", "Valori o intervallo", "Predefinito o comportamento"],
+              "rows": [
+                [
+                  "Preset stile ripple",
+                  "Anello singolo, Onda doppia, Esplosione",
+                  "Modifica lo stile ripple per i clic sinistro e destro; non abilita il ripple."
+                ],
+                ["Lati avanzati", "Sinistro e destro", "Configura i due pulsanti indipendentemente."],
+                ["Molla", "Attiva o disattiva", "Attiva"],
+                ["Intensità della molla", "0%–100%", "50%"],
+                ["Ripple", "Attivo o disattivo", "Disattivo per entrambi i lati del clic."],
+                ["Dimensione ripple", "10–80 px", "30 px"],
+                ["Colore ripple", "Selettore colore", "Per lato del clic."],
+                ["Clic centrale", "Nessun controllo separato nell'editor", "Usa la presentazione del clic sinistro."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Movimento",
+          "tables": [
+            {
+              "headers": ["Proprietà", "Valori o intervallo", "Preset Fluido"],
+              "rows": [
+                ["Preset", "Focalizzato, Fluido, Personalizzato", "Fluido"],
+                ["Fluidità", "0–1", "0.67"],
+                ["Massa della molla", "0.5–2", "1.29"],
+                ["Motion blur", "0–1", "0.4"]
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

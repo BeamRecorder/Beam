@@ -266,7 +266,16 @@ describe('editor defaults', () => {
       cameraSplitRatio: 0.65,
       cameraSplitPadding: 0.03,
     });
-    expect(result.zoom).toEqual({ durationMs: 800, depth: 4, mode: 'manual' });
+    expect(result.zoom).toEqual({
+      durationMs: 800,
+      depth: 4,
+      mode: 'manual',
+      projection: '2d',
+      tiltIntensity: 0.6,
+      tiltHorizontal: 0.65,
+      tiltVertical: -0.35,
+      tiltPreset: 'medium',
+    });
 
     result.visual!.webcam!.transform.x = 0.99;
     expect(selected.transform.x).toBe(0.1);

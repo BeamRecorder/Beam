@@ -147,6 +147,7 @@ export function pasteClipAt(
     : copiedClip.order;
   const pasted: Clip = {
     ...clone(copiedClip),
+    recordingClipId: null,
     id: pastedId,
     groupId: undefined,
     timelineStartMs: startMs,

@@ -17,6 +17,11 @@ const snapshot = (value: number): EditorStateSnapshot =>
     backgroundBlurPercent: value,
   }) as unknown as EditorStateSnapshot;
 
+const zoomAutoFollowSnapshot = (safeZone: number): EditorStateSnapshot => ({
+  ...snapshot(safeZone),
+  zoomAutoFollow: { safeZone, responsiveness: 0.55, directionLock: true },
+});
+
 describe('useEditorUndoRedo', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
@@ -50,6 +55,32 @@ describe('useEditorUndoRedo', () => {
     await api.redo();
     expect(restored).toHaveLength(2);
     expect(api.lastAction.value?.type).toBe('redo');
+    wrapper.unmount();
+  });
+
+  it('restores zoom auto-follow settings through undo and redo', async () => {
+    const restored: EditorStateSnapshot[] = [];
+    let api!: ReturnType<typeof useEditorUndoRedo<EditorStateSnapshot>>;
+    const Harness = defineComponent({
+      setup: () => (
+        (api = useEditorUndoRedo<EditorStateSnapshot>({
+          onRestoreSnapshot: (value) => {
+            restored.push(value);
+          },
+        })),
+        {}
+      ),
+      template: '<div />',
+    });
+    const wrapper = mount(Harness);
+    api.recordSnapshot(zoomAutoFollowSnapshot(0.5));
+    api.recordSnapshot(zoomAutoFollowSnapshot(0.35));
+
+    await api.undo();
+    expect(restored[0]?.zoomAutoFollow).toEqual({ safeZone: 0.5, responsiveness: 0.55, directionLock: true });
+
+    await api.redo();
+    expect(restored[1]?.zoomAutoFollow).toEqual({ safeZone: 0.35, responsiveness: 0.55, directionLock: true });
     wrapper.unmount();
   });
 
@@ -295,6 +326,49 @@ describe('useEditorUndoRedo', () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true }));
     expect(api.lastAction.value?.type).toBe('redo');
     input.remove();
+    wrapper.unmount();
+  });
+
+  it('keeps undo shortcuts active for a focused range input while ignoring other inputs', async () => {
+    const restored: EditorStateSnapshot[] = [];
+    let api!: ReturnType<typeof useEditorUndoRedo<EditorStateSnapshot>>;
+    const Harness = defineComponent({
+      setup: () => (
+        (api = useEditorUndoRedo<EditorStateSnapshot>({
+          onRestoreSnapshot: (value) => {
+            restored.push(value);
+          },
+        })),
+        {}
+      ),
+      template: '<div />',
+    });
+    const wrapper = mount(Harness);
+    api.recordSnapshot(snapshot(1));
+    api.recordSnapshot(snapshot(2));
+
+    const range = document.createElement('input');
+    range.type = 'range';
+    document.body.appendChild(range);
+    range.focus();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true }));
+    await Promise.resolve();
+
+    expect(restored).toHaveLength(1);
+    expect(api.lastAction.value?.type).toBe('undo');
+
+    api.recordSnapshot(snapshot(3));
+    const number = document.createElement('input');
+    number.type = 'number';
+    document.body.appendChild(number);
+    number.focus();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true }));
+    await Promise.resolve();
+
+    expect(restored).toHaveLength(1);
+    expect(api.undoStack.value.at(-1)?.backgroundBlurPercent).toBe(3);
+    number.remove();
+    range.remove();
     wrapper.unmount();
   });
 });

@@ -61,13 +61,13 @@ describe('useHudCaptureMode', () => {
   let wrapper: VueWrapper;
   let unsubscribe!: ReturnType<typeof vi.fn>;
 
-  const mountMode = (embedded = false) => {
+  const mountMode = (embedded = false, isRecorderLauncher = () => false) => {
     busy = ref(false);
     error = ref('');
     wrapper = mount(
       defineComponent({
         setup() {
-          api = useHudCaptureMode(busy, error, embedded);
+          api = useHudCaptureMode(busy, error, embedded, isRecorderLauncher);
           return () => null;
         },
       }),
@@ -139,6 +139,36 @@ describe('useHudCaptureMode', () => {
     expect(captureMock.updatePreferences).not.toHaveBeenCalled();
     expect(captureMock.setCameraOverlayActive).not.toHaveBeenCalled();
     expect(captureMock.hideTeleprompter).not.toHaveBeenCalled();
+  });
+
+  it('temporarily forces Studio in the recorder launcher without replacing the preferred Screenshot mode', async () => {
+    const recorderLauncherActive = ref(false);
+    mountMode(false, () => recorderLauncherActive.value);
+    api.hydrateMode(preferences({ mode: 'screenshot' }));
+    await nextTick();
+    expect(api.captureMode.value).toBe('screenshot');
+
+    captureMock.updatePreferences.mockClear();
+    captureMock.setCameraOverlayActive.mockClear();
+    recorderLauncherActive.value = true;
+    await nextTick();
+
+    expect(api.captureMode.value).toBe('studio');
+    expect(captureMock.setCameraOverlayActive).toHaveBeenLastCalledWith(true);
+    const config = configuration();
+    const studio = vi.fn();
+    await api.captureWithMode(config, studio);
+
+    expect(studio).toHaveBeenCalledWith(config);
+    expect(captureMock.captureScreenshot).not.toHaveBeenCalled();
+    expect(captureMock.quickSnipFromHud).not.toHaveBeenCalled();
+
+    recorderLauncherActive.value = false;
+    await nextTick();
+
+    expect(api.captureMode.value).toBe('screenshot');
+    expect(captureMock.setCameraOverlayActive).toHaveBeenLastCalledWith(false);
+    expect(captureMock.updatePreferences).not.toHaveBeenCalled();
   });
 
   it('keeps Studio capture on the normal recording callback', async () => {

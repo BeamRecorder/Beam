@@ -2,14 +2,26 @@
   "title": "Beam दस्तावेज़",
   "description": "Beam से बेहतर प्रोडक्ट डेमो रिकॉर्ड, एडिट और शेयर करना सीखें।",
   "hero": {
-    "name": "Beam Docs",
+    "name": "Beam दस्तावेज़",
     "text": "रिकॉर्ड करें। एडिट करें। शेयर करें।",
     "tagline": "Beam से प्रोडक्ट डेमो कैप्चर और बेहतर बनाने के व्यावहारिक गाइड।",
     "imageAlt": "Beam ऐप आइकन",
     "actions": [
-      { "theme": "brand", "text": "शुरुआत करें", "link": "/getting-started" },
-      { "theme": "alt", "text": "GitHub पर देखें", "link": "https://github.com/BeamRecorder/Beam" },
-      { "theme": "alt", "text": "Discord से जुड़ें", "link": "https://discord.gg/6Q6v2xUCB" }
+      {
+        "theme": "brand",
+        "text": "शुरुआत करें",
+        "link": "/getting-started"
+      },
+      {
+        "theme": "alt",
+        "text": "GitHub पर देखें",
+        "link": "https://github.com/BeamRecorder/Beam"
+      },
+      {
+        "theme": "alt",
+        "text": "Discord से जुड़ें",
+        "link": "https://discord.gg/6Q6v2xUCB"
+      }
     ]
   },
   "categories": [

@@ -31,7 +31,6 @@ defineProps<{ platform: WebsitePlatform }>();
 }
 
 .platform-icon--macos {
-  color: var(--text-primary);
   -webkit-mask-image: url('/os/apple.svg');
   mask-image: url('/os/apple.svg');
 }

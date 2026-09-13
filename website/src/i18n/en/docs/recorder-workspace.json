@@ -1,0 +1,369 @@
+{
+  "pages": [
+    {
+      "slug": "recorder/capabilities/preferences",
+      "title": "Recorder preferences",
+      "description": "Complete reference for recording behavior, appearance, language, shortcuts, updates, and persisted Recorder settings.",
+      "lead": "Open Preferences from the Recorder top bar. Settings are grouped into Recording, General, Shortcuts, and About, with advanced appearance and update controls where applicable.",
+      "sections": [
+        {
+          "title": "Preferences window",
+          "screenshot": {
+            "path": "recorder/preferences.webp",
+            "alt": "Beam Preferences window showing Recorder settings",
+            "caption": "Recorder preferences cover capture behavior and settings shared with the editor.",
+            "aspectRatio": "308 / 517"
+          }
+        },
+        {
+          "title": "Recording settings",
+          "tables": [
+            {
+              "headers": ["Setting", "Values", "Default", "Notes"],
+              "rows": [
+                ["Countdown", "Off, 3 seconds, 5 seconds, 10 seconds", "3 seconds", "Applied before capture starts."],
+                [
+                  "Recorder Bar",
+                  "Always visible, Auto-fade, Hidden until hovered",
+                  "Always on Windows/macOS; Hidden until hovered on Linux",
+                  "Controls the floating bar during capture."
+                ],
+                [
+                  "Interaction access",
+                  "Checking, Available, Permission required, Installation required, Denied, Unavailable",
+                  "Off",
+                  "Linux labels this Record keyboard & mouse events on Linux."
+                ],
+                [
+                  "Record interactions",
+                  "On or Off when available",
+                  "Platform dependent",
+                  "Stores supported clicks and safe shortcut tokens, never typed text."
+                ],
+                [
+                  "Shortcuts",
+                  "Open Shortcuts subview",
+                  "Not applicable",
+                  "Opens the Recording and Teleprompter shortcut groups."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "General settings",
+          "tables": [
+            {
+              "headers": ["Setting", "Values", "Default"],
+              "rows": [
+                [
+                  "Language",
+                  "Bulgarian, German, English, Spanish, French, Hindi, Italian, Japanese, Korean, Polish, Portuguese (Brazil), Russian, Vietnamese, Simplified Chinese, Traditional Chinese",
+                  "A supported system or browser language; English fallback"
+                ],
+                ["Theme mode", "Light, Dark, System", "Light"],
+                ["Spell check", "On or Off under Advanced", "On"],
+                ["Primary color", "Preset palette or custom color picker", "#ff5a1f"],
+                ["Secondary color", "Preset palette or custom color picker", "#6366f1"],
+                ["Corner radius", "0, 6, 10, 16, 24 px, or Custom", "10 px"],
+                ["Pill radius", "On or Off", "Off"],
+                ["Surface tone", "Default, Neutral, Slate, Deep", "Default"],
+                ["Global UI scale", "50%, 75%, 100%, 125%", "100%"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Theme presets",
+          "paragraphs": [
+            "Applying a preset sets both colors, corner radius, pill behavior, and surface tone together. Individual controls can then be changed."
+          ],
+          "tables": [
+            {
+              "headers": ["Preset", "Primary", "Secondary", "Radius", "Surface"],
+              "rows": [
+                ["Beam Sunset", "#ff5a1f", "#6366f1", "10 px", "Default"],
+                ["Cyber Violet", "#8b5cf6", "#06b6d4", "12 px", "Slate"],
+                ["Emerald Forest", "#10b981", "#f59e0b", "8 px", "Neutral"],
+                ["Crimson Velvet", "#f43f5e", "#a855f7", "14 px", "Deep"],
+                ["Oceanic Breeze", "#0284c7", "#14b8a6", "10 px", "Slate"],
+                ["Amber Studio", "#f59e0b", "#ec4899", "4 px", "Neutral"],
+                ["Sakura Bloom", "#ec4899", "#8b5cf6", "18 px", "Default"],
+                ["Slate Precision", "#0ea5e9", "#64748b", "2 px", "Slate"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Interface scale overrides",
+          "paragraphs": [
+            "Top bar, Sidebar, Properties, Canvas controls, and Timeline can each use the global scale or override it with 50%, 75%, 100%, or 125%. Use global is represented by an empty override, so changing the global scale continues to affect that region."
+          ],
+          "tables": [
+            {
+              "headers": ["Region", "Choices"],
+              "rows": [
+                ["Top bar", "Use global, 50%, 75%, 100%, 125%"],
+                ["Sidebar", "Use global, 50%, 75%, 100%, 125%"],
+                ["Properties", "Use global, 50%, 75%, 100%, 125%"],
+                ["Canvas controls", "Use global, 50%, 75%, 100%, 125%"],
+                ["Timeline", "Use global, 50%, 75%, 100%, 125%"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Shortcut defaults",
+          "paragraphs": [
+            "Global shortcut conflicts are compared without case sensitivity. A duplicate global shortcut is rejected."
+          ],
+          "tables": [
+            {
+              "headers": ["Category", "Action", "Default shortcut"],
+              "rows": [
+                ["Recording", "Start / Stop recording", "Alt+Shift+R"],
+                ["Recording", "Pause / Resume", "Alt+Shift+P"],
+                ["Recording", "Toggle microphone", "Alt+Shift+M"],
+                ["Recording", "Toggle camera", "Alt+Shift+C"],
+                ["Recording", "Toggle system audio", "Alt+Shift+A"],
+                ["Teleprompter", "Show / Hide", "Alt+Shift+T"],
+                ["Teleprompter", "Pause / Resume", "Alt+Shift+O"],
+                ["Teleprompter", "Next line", "Ctrl+Shift+Right"],
+                ["Teleprompter", "Previous line", "Ctrl+Shift+Left"]
+              ]
+            }
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Editor shortcut",
+            "text": "The preferences schema also contains the editor Play/Pause shortcut, Space, but the Recorder shortcut subview does not display it."
+          }
+        },
+        {
+          "title": "About and updates",
+          "tables": [
+            {
+              "headers": ["Area", "Available actions or states"],
+              "rows": [
+                [
+                  "About",
+                  "View the application version, copy system information, open the changelog, and restart the Welcome Tour."
+                ],
+                [
+                  "Update states",
+                  "Idle, Checking, Available, Downloading, Downloaded, Not available, Error, Unsupported."
+                ],
+                [
+                  "Update actions",
+                  "Check, download when available, copy an error message, and restart only after an update reaches Downloaded."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Stored preference data",
+          "paragraphs": [
+            "The normalized preference schema is version 3. In addition to visible controls, it stores onboarding completion, selected devices, saved background color and gradient presets, and whether the interaction notice was dismissed."
+          ],
+          "tables": [
+            {
+              "headers": ["Platform", "Preferences file"],
+              "rows": [
+                ["Windows", "`%USERPROFILE%\\Videos\\Beam\\user\\preferences.json`"],
+                ["macOS", "`~/Movies/Beam/user/preferences.json`"],
+                ["Linux", "`${XDG_VIDEOS_DIR:-~/Videos}/Beam/user/preferences.json`"]
+              ]
+            },
+            {
+              "headers": ["Extra key", "Purpose"],
+              "rows": [
+                ["locale", "Selected application language."],
+                ["screenRegion", "Normalized custom recording region."],
+                ["screenRegionPreset", "Last selected region preset."],
+                ["teleprompterSettings", "Shared Teleprompter mode and reader settings."],
+                ["cameraOverlay", "Camera overlay settings shared with the editor."],
+                ["teleprompterWindow", "Teleprompter window state."]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/project-manager",
+      "title": "Project Manager",
+      "description": "Reference for searching, previewing, selecting, creating, renaming, opening, revealing, and deleting Beam projects.",
+      "lead": "Select Open an existing project below Start Recording to browse projects stored on the computer.",
+      "sections": [
+        {
+          "title": "Project actions",
+          "tables": [
+            {
+              "headers": ["Action", "Behavior"],
+              "rows": [
+                ["Search projects", "Filters project names without case sensitivity."],
+                ["Select projects", "Enters selection mode for one or more projects."],
+                ["Select all", "Selects all projects currently available to the view."],
+                ["Exit selection", "Leaves batch-selection mode."],
+                ["New project", "Creates a blank project without creating a recording."],
+                ["Refresh projects", "Reloads the list from storage and briefly reports Projects refreshed."],
+                ["Open project", "Opens the selected project in the editor."],
+                ["Rename", "Changes the project name."],
+                ["Explore", "Reveals the project folder in the platform file manager."],
+                [
+                  "Delete",
+                  "A single-project delete requests confirmation. Batch delete starts directly for the selected projects."
+                ],
+                ["Back", "Returns to the Recorder HUD."],
+                ["Create / Cancel", "Confirms or abandons blank-project creation."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "List states",
+          "tables": [
+            {
+              "headers": ["State", "What the interface shows"],
+              "rows": [
+                ["Loading", "Skeleton project cards while storage is read."],
+                ["Error", "An error state with Try again."],
+                ["Empty", "No projects when storage contains none."],
+                ["No search result", "A dedicated message when the filter matches nothing."],
+                ["Unknown date", "Fallback text when project time metadata is unavailable."],
+                ["Current", "Marks the currently open project."],
+                ["Selected", "Marks a project included in the current selection."],
+                ["Large list", "Cards are virtualized so only the visible range is rendered."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Names, folders, and sessions",
+          "paragraphs": [
+            "New recordings receive generated names such as Clever Comet or Rapid Signal. A numeric suffix is added when a generated name already exists. A project is a folder that can contain multiple recording sessions and their separate media tracks."
+          ],
+          "tables": [
+            {
+              "headers": ["Platform", "Project root"],
+              "rows": [
+                ["Windows", "`%USERPROFILE%\\Videos\\Beam\\user\\projects`"],
+                ["macOS", "`~/Movies/Beam/user/projects`"],
+                ["Linux", "`${XDG_VIDEOS_DIR:-~/Videos}/Beam/user/projects`"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Preview and badges",
+          "paragraphs": [
+            "Beam prefers the persisted `thumbnail.webp`. If it is missing, Beam can generate a WebP thumbnail from the available preview source. Hovering a project plays its screen recording muted, automatically, and in a loop; scrolling cancels the hover preview and stops playback."
+          ],
+          "tables": [
+            {
+              "headers": ["Badge", "Meaning"],
+              "rows": [
+                ["Monitor", "The project contains a screen recording."],
+                ["Video", "The project contains camera footage."],
+                ["Captions", "The project contains captions or a text layer."]
+              ]
+            }
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Badge scope",
+            "text": "The current Project Manager does not show separate microphone or system-audio badges."
+          }
+        },
+        {
+          "title": "Batch deletion",
+          "paragraphs": [
+            "A single-project delete asks for confirmation. Batch deletion starts directly from selection mode and deletes projects sequentially rather than starting every filesystem operation at once."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/permissions-privacy",
+      "title": "Permissions and privacy",
+      "description": "Platform requirements and privacy behavior for screen, audio, camera, and interaction capture.",
+      "lead": "Beam requests protected capabilities only through the operating-system paths needed by the selected sources. Interaction recording is optional and does not store typed text.",
+      "sections": [
+        {
+          "title": "Windows",
+          "bullets": [
+            "Screen and window capture use Windows Graphics Capture.",
+            "Cursor and click capabilities depend on what the Windows capture path exposes.",
+            "Interaction access does not require the Linux Polkit helper."
+          ]
+        },
+        {
+          "title": "macOS",
+          "tables": [
+            {
+              "headers": ["Capability", "Requirement"],
+              "rows": [
+                ["Screen, window, or application capture", "ScreenCaptureKit and Screen Recording permission."],
+                ["Interaction access", "CoreGraphics Accessibility permission."],
+                ["Direct MP4 capture", "macOS 15 or later."],
+                [
+                  "Chromium system audio",
+                  "macOS 13 or later; `NSAudioCaptureUsageDescription` is required from macOS 14.2."
+                ],
+                ["Microphone and camera", "The corresponding macOS privacy permissions."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Linux",
+          "tables": [
+            {
+              "headers": ["Requirement", "Purpose or constraint"],
+              "rows": [
+                ["XDG Desktop Portal v2 or later", "Displays the system source picker and obtains recording consent."],
+                ["PipeWire", "Carries the selected screen and native system-audio streams."],
+                ["FFmpeg plus a compatible MP4 encoder", "Encodes the captured session."],
+                ["Beam input helper", "Provides optional keyboard-shortcut and mouse-click metadata."],
+                ["Polkit / pkexec and broker", "May be required to authorize and operate the input helper."],
+                [
+                  "Single portal source",
+                  "One screen or window is selected for the session; region capture is unavailable."
+                ]
+              ]
+            }
+          ],
+          "paragraphs": [
+            "Keyboard shortcuts and mouse clicks can have different availability depending on accessible input devices. Linux interaction capture always reports that typed text is not recorded."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Beam windows in full-screen capture",
+            "text": "Beam cannot hide its own windows from a Linux full-screen capture. Screen mode is still recommended; arrange Beam before confirming the portal selection."
+          }
+        },
+        {
+          "title": "Interaction privacy",
+          "bullets": [
+            "Interaction capture is optional.",
+            "It runs only while a recording session is active.",
+            "It stores supported click metadata and safe shortcut tokens.",
+            "It never stores the text typed by the user."
+          ]
+        },
+        {
+          "title": "Media isolation and failure boundaries",
+          "paragraphs": [
+            "Camera, microphone, and system audio are stored as separate tracks or sidecars where supported. Outside Linux, system audio uses Chromium display-media capture. Electron grants media access only to trusted application renderers. A camera reported unavailable during preparation can be omitted while capture continues; other camera or sidecar errors, and failure of a selected microphone or system-audio source, can stop recording startup."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Detailed setup",
+            "text": "Use the [platform support reference](/platforms) for operating-system setup and troubleshooting."
+          }
+        }
+      ]
+    }
+  ]
+}

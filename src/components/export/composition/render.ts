@@ -221,6 +221,11 @@ export const createSnapshotCameraEvaluator = (
   createCompositionCameraEvaluator({
     zooms: snapshot.zooms,
     telemetry: snapshot.cursor.telemetry,
+    autoFollow: snapshot.zoomAutoFollow,
+    mapTelemetryTime: (timeMs) => {
+      const screen = resolveCompositionSceneLayers(snapshot.composition, timeMs).screen;
+      return screen ? (sourceTimeAt(screen, timeMs) ?? timeMs) : timeMs;
+    },
     mapFocus: (focus, zoom, timeMs) => {
       const screen = resolveCompositionSceneLayers(snapshot.composition, timeMs).screen;
       if (zoom.mode !== 'auto' || !screen) return focus;

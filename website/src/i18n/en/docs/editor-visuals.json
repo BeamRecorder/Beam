@@ -1,0 +1,311 @@
+{
+  "pages": [
+    {
+      "slug": "editor/capabilities/canvas",
+      "title": "Canvas",
+      "description": "Complete reference for output size, backgrounds, blur, background removal, gradients, and watermark controls.",
+      "lead": "Canvas controls the output area outside and behind visual clips. Background and watermark settings apply to the complete composition.",
+      "sections": [
+        {
+          "title": "Canvas panel",
+          "screenshot": {
+            "path": "editor/canvas-panel.webp",
+            "alt": "Beam Canvas properties with background tabs and presentation controls",
+            "caption": "Canvas groups media, color, and gradient backgrounds with presentation and branding controls.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Output canvas",
+          "tables": [
+            {
+              "headers": ["Property", "Values", "Default or behavior"],
+              "rows": [
+                ["Native size", "Width × height", "1920×1080"],
+                ["16:9", "1920×1080", "Default preset."],
+                ["9:16", "1080×1920", "Portrait preset."],
+                ["1:1", "1080×1080", "Square preset."],
+                ["4:5", "1080×1350", "Portrait preset."],
+                ["3:4", "1080×1440", "Portrait preset."],
+                ["4:3", "1440×1080", "Landscape preset."],
+                ["21:9", "2520×1080", "Ultrawide preset."],
+                ["Background visibility", "Visible or Remove Background", "Background hidden in the default canvas."],
+                ["Background Blur", "0%–100%", "Blurs the selected background, not the subject of a video."],
+                ["Global transitions", "Properties-header action", "Opens canvas-level transition controls."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Image and video backgrounds",
+          "tables": [
+            {
+              "headers": ["Background", "Supported files", "Library behavior"],
+              "rows": [
+                [
+                  "Image",
+                  "AVIF, BMP, JPEG, JPG, PNG, WebP",
+                  "Shows 15 items initially; Show more reveals additional batches."
+                ],
+                [
+                  "Video",
+                  "M4V, MOV, MP4, OGV, WebM",
+                  "Shows 15 items initially; Show more reveals additional batches."
+                ],
+                [
+                  "Import",
+                  "A supported local background file",
+                  "Adds the selected file to the corresponding background library."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Color backgrounds",
+          "paragraphs": [
+            "Choose a built-in color or edit a custom hexadecimal value. The custom editor updates the background preview live."
+          ],
+          "tables": [
+            {
+              "headers": ["Control", "Values"],
+              "rows": [
+                ["Preset", "#111827, #ffffff, #0f766e, #1d4ed8, #7c3aed, #be123c"],
+                ["Custom color", "Hexadecimal color editor"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Gradient backgrounds",
+          "tables": [
+            {
+              "headers": ["Control", "Values or constraint"],
+              "rows": [
+                [
+                  "Preset",
+                  "Built-in gradients including Violet, Fire, Ocean, Sunset, Neon, Forest, Gold, Ice, Vaporwave, and Aurora."
+                ],
+                ["Type", "Linear or Radial"],
+                ["Angle", "0°–360° for the applicable gradient direction"],
+                ["Stops", "At least two color stops"],
+                ["Custom gradient", "Editable type, angle, stops, and colors"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Watermark",
+          "paragraphs": [
+            "Watermark is disabled by default. Enable it to place Beam branding, a label, or a logo above the composition."
+          ],
+          "tables": [
+            {
+              "headers": ["Property", "Values or range", "Default or constraint"],
+              "rows": [
+                ["Text", "No watermark text, Made with Beam., Beam, Custom", "Made with Beam."],
+                ["Custom text", "Up to 80 characters", "Empty; available with Custom."],
+                ["Show Beam Logo", "On or Off", "On"],
+                ["Translate watermark", "On or Off", "Off; available for the Beam and Made with Beam labels."],
+                ["Position", "Top-left, Top-right, Bottom-left, Bottom-right", "Bottom-right"],
+                ["Size", "50%–200%; step 10%", "100%"],
+                ["Shadow", "0%–100%; step 5%", "20%"],
+                ["Background color", "Hexadecimal color picker", "#111114"],
+                ["Background opacity", "0%–100%; step 5%", "78%"],
+                ["Background radius", "0%–100%; step 5%", "100%"],
+                ["Background padding", "50%–150%; step 5%", "100%"]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/zooms",
+      "title": "Zooms",
+      "description": "Complete reference for manual and automatic zooms, focus modes, depth, regeneration, and motion blur.",
+      "lead": "Zoom blocks direct attention to a region of the recording. Add them manually on the timeline or generate suggestions from captured cursor clicks.",
+      "sections": [
+        {
+          "title": "No zoom selected",
+          "paragraphs": [
+            "Generation and global motion blur remain available without a selected zoom. Select a zoom block on the timeline to edit its depth, mode, or position."
+          ],
+          "screenshot": {
+            "path": "editor/zoom-empty.webp",
+            "alt": "Beam Zoom panel without a selected zoom",
+            "caption": "Automatic generation and global motion blur do not require a selected zoom.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Generate automatic zooms",
+          "tables": [
+            {
+              "headers": ["Action", "Requirement", "Behavior"],
+              "rows": [
+                [
+                  "Generate Auto Zooms",
+                  "A recording session with cursor-click telemetry",
+                  "Creates automatic zoom blocks from recorded clicks."
+                ],
+                [
+                  "Regenerate Auto Zooms",
+                  "Automatic zoom generation is available",
+                  "Asks for confirmation, preserves manual zooms, and replaces automatic zooms from the current session."
+                ],
+                ["Unavailable state", "No session or no cursor telemetry", "Generation remains disabled."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Add a manual zoom",
+          "paragraphs": [
+            "Click an unoccupied point on the Zoom track. A new manual zoom defaults to 1.2 seconds and is added only when at least 200 ms of timeline duration remains available."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Occupied timeline ranges",
+            "text": "Beam chooses an available duration around the click and does not overlap an existing zoom block."
+          }
+        },
+        {
+          "title": "Selected zoom",
+          "screenshot": {
+            "path": "editor/zoom-properties.webp",
+            "alt": "Beam properties for a selected zoom",
+            "caption": "A selected zoom exposes focus mode and magnification depth.",
+            "aspectRatio": "199 / 326"
+          },
+          "tables": [
+            {
+              "headers": ["Property", "Values", "Default or behavior"],
+              "rows": [
+                [
+                  "Mode",
+                  "Auto Cursor or Manual Focus",
+                  "Auto Cursor follows recorded pointer movement; Manual Focus uses a fixed point."
+                ],
+                ["Manual target", "Canvas drag", "Drag the dashed target directly on the canvas."],
+                ["Depth 1", "1.25×", "Magnification mapping."],
+                ["Depth 2", "1.5×", "Default."],
+                ["Depth 3", "1.8×", "Magnification mapping."],
+                ["Depth 4", "2.2×", "Magnification mapping."],
+                ["Depth 5", "3.5×", "Magnification mapping."],
+                ["Depth 6", "5×", "Magnification mapping."],
+                ["Delete Zoom", "Properties-header action", "Removes the selected zoom block."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Zoom motion blur",
+          "tables": [
+            {
+              "headers": ["Property", "Range", "Default", "Scope"],
+              "rows": [
+                ["Enabled", "On or Off", "On", "Global composition setting."],
+                ["Motion blur intensity", "0%–100%", "55%", "Applied identically in preview and export."]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/cursor",
+      "title": "Cursor",
+      "description": "Complete reference for cursor packs, appearance, shadows, click effects, smoothing, spring, and motion blur.",
+      "lead": "Cursor settings control the composition-wide pointer overlay and do not require a clip selection.",
+      "sections": [
+        {
+          "title": "Cursor panel",
+          "screenshot": {
+            "path": "editor/cursor-panel.webp",
+            "alt": "Beam Cursor panel with pack, appearance, click, and motion controls",
+            "caption": "Cursor presentation is configured globally for the composition.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Pack and cursor selection",
+          "tables": [
+            {
+              "headers": ["Property", "Values", "Behavior"],
+              "rows": [
+                [
+                  "Cursor pack",
+                  "Built-in or imported pack",
+                  "Automatic stays Automatic. A fixed cursor is preserved only when the same cursor ID exists in the new pack; otherwise Beam returns to Automatic."
+                ],
+                [
+                  "Cursor mode",
+                  "Automatic or a fixed cursor from the selected pack",
+                  "Automatic uses recorded cursor shape changes."
+                ],
+                ["Import pack", "Supported cursor-pack files", "Adds a custom pack to the available choices."],
+                [
+                  "Reset",
+                  "Reset cursor presentation",
+                  "Keeps the selected pack and restores all other cursor defaults."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Appearance",
+          "tables": [
+            {
+              "headers": ["Property", "Values or range", "Default"],
+              "rows": [
+                ["Size", "16–128 px", "45 px"],
+                ["Drop shadow", "On or Off", "On"],
+                ["Shadow blur", "1–24 px", "6 px after Reset"],
+                ["Shadow color", "Color picker", "#000000 after Reset"],
+                ["Shadow direction", "All, Bottom, Bottom-right, Top-left", "Bottom after Reset"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Click effects",
+          "tables": [
+            {
+              "headers": ["Property", "Values or range", "Default or behavior"],
+              "rows": [
+                [
+                  "Ripple style preset",
+                  "Single Ring, Double Wave, Burst",
+                  "Changes ripple style for left and right clicks; it does not enable the ripple."
+                ],
+                ["Advanced sides", "Left and Right", "Configures the two buttons independently."],
+                ["Spring", "On or Off", "On"],
+                ["Spring intensity", "0%–100%", "50%"],
+                ["Ripple", "On or Off", "Off for both click sides."],
+                ["Ripple size", "10–80 px", "30 px"],
+                ["Ripple color", "Color picker", "Per click side."],
+                ["Middle click", "No separate editor control", "Uses the left-click presentation."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Motion",
+          "tables": [
+            {
+              "headers": ["Property", "Values or range", "Smooth preset"],
+              "rows": [
+                ["Preset", "Focused, Smooth, Custom", "Smooth"],
+                ["Smoothing", "0–1", "0.67"],
+                ["Spring mass", "0.5–2", "1.29"],
+                ["Motion blur", "0–1", "0.4"]
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

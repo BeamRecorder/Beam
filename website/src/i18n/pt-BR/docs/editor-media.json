@@ -1,0 +1,294 @@
+{
+  "pages": [
+    {
+      "slug": "editor/capabilities/captions",
+      "title": "Legendas de IA",
+      "description": "Referência completa para modelos Whisper locais, fontes de áudio, downloads, transcrição, regeneração, cancelamento e diagnóstico.",
+      "lead": "Beam gera legendas de fala localmente a partir de um clipe de áudio habilitado. Ele baixa o modelo Whisper selecionado, transcreve no dispositivo e cria clipes de legenda editáveis ​​na linha do tempo.",
+      "sections": [
+        {
+          "title": "Painel de legendas",
+          "screenshot": {
+            "path": "editor/captions-panel.webp",
+            "alt": "Beam Painel AI Captions com fonte de áudio e controles de modelo Whisper",
+            "caption": "Selecione uma fonte de áudio habilitada e um modelo Whisper local antes de gerar legendas.",
+            "aspectRatio": "199/326"
+          }
+        },
+        {
+          "title": "Fontes de áudio",
+          "tables": [
+            {
+              "headers": ["Fonte", "Quando aparece", "Regra de seleção"],
+              "rows": [
+                [
+                  "Áudio do sistema",
+                  "Existe um clipe habilitado com a função Sistema.",
+                  "Identificado como Áudio do Sistema."
+                ],
+                ["Microfone", "Existe um clipe habilitado com a função Microfone.", "Identificado como Microfone."],
+                ["Áudio importado", "Existe um clipe de áudio importado habilitado.", "Usa o nome do clipe."],
+                [
+                  "URL de mídia duplicado",
+                  "Dois clipes habilitados fazem referência ao mesmo URL de áudio.",
+                  "Apenas a primeira fonte é oferecida."
+                ],
+                [
+                  "Nenhuma fonte utilizável",
+                  "Nenhum clipe de áudio ativado possui um URL de recurso legível.",
+                  "Gerar permanece indisponível."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Modelos de sussurro",
+          "tables": [
+            {
+              "headers": ["Modelo", "Idiomas", "Orientação de desempenho"],
+              "rows": [
+                ["Tiny", "Multilíngue", "Modelo padrão."],
+                ["Tiny.en", "Inglês", "Modelo somente em inglês."],
+                ["Base", "Multilíngue", "Nenhum aviso adicional."],
+                ["Base.en", "Inglês", "Modelo somente em inglês."],
+                ["Small", "Multilíngue", "Pode ser lento sem WebGPU."],
+                ["Small.en", "Inglês", "Pode ser lento sem WebGPU."],
+                ["Medium", "Multilíngue", "Grande download; WebGPU recomendado."],
+                ["Medium.en", "Inglês", "Grande download; WebGPU recomendado."],
+                ["Large v3", "Multilíngue", "Muito grande e lento sem WebGPU."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Download e exclusão de modelo",
+          "tables": [
+            {
+              "headers": ["Estado ou ação", "Comportamento"],
+              "rows": [
+                ["Desaparecido", "Baixar modelo está disponível para o modelo selecionado."],
+                ["Baixando", "Beam relatórios baixados e total de bytes com uma barra de progresso."],
+                ["Pronto", "Uma marca de seleção identifica o modelo instalado e Excluir modelo fica disponível."],
+                ["Excluir modelo", "Indisponível durante download, exclusão ou transcrição."],
+                ["Erro de download", "O erro é exibido e pode ser copiado para diagnóstico."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Gerar e regenerar",
+          "steps": [
+            "Escolha uma das fontes de áudio habilitadas.",
+            "Escolha e baixe um modelo Whisper se ele não estiver pronto.",
+            "Selecione Gerar legendas. Beam decodifica a fonte, converte-a em áudio mono de 16 kHz e limita-a à duração da linha do tempo.",
+            "Os resultados parciais da transcrição atualizam a composição enquanto o processamento continua.",
+            "A execução concluída seleciona a primeira legenda gerada para edição."
+          ],
+          "tables": [
+            {
+              "headers": ["Comportamento", "Regra"],
+              "rows": [
+                ["Agrupamento de frases", "Termina uma frase de legenda com pontuação ou após 12 palavras."],
+                ["Duração mínima do clipe gerado", "40 ms."],
+                ["Regenerar", "Substitui legendas existentes geradas por IA e preserva legendas manuais."],
+                ["Cancelar", "Interrompe o carregamento ou a transcrição do modelo."],
+                ["Fechar painel", "Cancela a execução de transcrição ativa."],
+                [
+                  "Diagnóstico",
+                  "Relata o tempo decorrido e expõe um relatório de transcrição copiável após o processamento."
+                ]
+              ]
+            }
+          ],
+          "notice": {
+            "kind": "tip",
+            "title": "Transcrição local",
+            "text": "O Whisper é executado no dispositivo. A geração de legenda não requer upload na nuvem ou chave de API."
+          }
+        },
+        {
+          "title": "Editar legendas geradas",
+          "paragraphs": [
+            "As legendas geradas são clipes de legenda editáveis regulares marcados como gerados por IA. Seu texto, tempo e estilo visual podem ser ajustados através do painel Clipe e da linha do tempo após a geração."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/audio",
+      "title": "Áudio",
+      "description": "Referência completa para saída global, funções do sistema e do microfone, áudio importado, estados de ativação, exclusão e volume.",
+      "lead": "O painel Áudio separa a saída de toda a composição das funções do sistema gravado e do microfone. O áudio importado permanece controlado como um clipe da linha do tempo selecionado.",
+      "sections": [
+        {
+          "title": "Painel de áudio",
+          "screenshot": {
+            "path": "editor/audio-panel.webp",
+            "alt": "Beam Painel de áudio com controles globais, de sistema e de volume do microfone",
+            "caption": "A saída global e as funções de áudio gravado podem ser ajustadas de forma independente.",
+            "aspectRatio": "199/326"
+          }
+        },
+        {
+          "title": "Controles de volume",
+          "tables": [
+            {
+              "headers": ["Controle", "Alcance", "Valor inicial ou padrão", "Escopo"],
+              "rows": [
+                [
+                  "Volume global",
+                  "0%–100%",
+                  "Um jogador recém-carregado começa com 70%",
+                  "Saída completa de reprodução do editor."
+                ],
+                ["Volume do sistema", "0%–100%", "100%", "Cada clipe atribuído à função Sistema."],
+                ["Volume do microfone", "0%–100%", "100%", "Cada clipe atribuído à função Microfone."],
+                [
+                  "Volume do clipe de áudio selecionado",
+                  "0%–200%",
+                  "100%",
+                  "Somente o sistema selecionado, microfone ou clipe de áudio importado."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Controles de função",
+          "tables": [
+            {
+              "headers": ["Função", "Quando mostrado", "Ações"],
+              "rows": [
+                [
+                  "Trilha Sonora do Sistema",
+                  "Existe pelo menos um clipe de áudio da função do sistema.",
+                  "Ative ou desative, altere o volume da função ou exclua todos os clipes do sistema."
+                ],
+                [
+                  "Faixa de microfone",
+                  "Existe pelo menos um clipe de áudio com função de microfone.",
+                  "Ative ou desative, altere o volume da função ou exclua todos os clipes do microfone."
+                ],
+                [
+                  "Áudio importado",
+                  "Existe um clipe de áudio importado.",
+                  "Selecione o clipe na linha do tempo e use Clip Volume; não tem seção de função dedicada."
+                ],
+                [
+                  "Sem funções",
+                  "Não existe nenhuma função de Sistema ou Microfone.",
+                  "O painel informa que nenhuma faixa de áudio foi detectada."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Ativar em comparação com excluir",
+          "paragraphs": [
+            "Desabilitar uma função preserva seus clipes, mas os exclui da reprodução e exportação. A exclusão de uma função remove todos os clipes atribuídos a essa função da composição."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "A exclusão da função afeta vários clipes",
+            "text": "Excluir trilha do sistema e excluir trilha do microfone operam na função completa, não apenas no clipe mais próximo do cursor de reprodução."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/settings",
+      "title": "Configurações do editor",
+      "description": "Referência completa para idioma, verificação ortográfica, aparência, atualizações, links sociais e controles de desenvolvimento.",
+      "lead": "As Configurações do Editor contêm preferências de todo o aplicativo compartilhadas com o Gravador, além de controles de desenvolvimento somente para editor.",
+      "sections": [
+        {
+          "title": "Painel de configurações",
+          "screenshot": {
+            "path": "editor/settings-panel.webp",
+            "alt": "Beam Painel de configurações com controles de idioma e aparência",
+            "caption": "As configurações aplicam preferências de idioma e aparência em todo o aplicativo.",
+            "aspectRatio": "199/326"
+          }
+        },
+        {
+          "title": "Linguagem e escrita",
+          "tables": [
+            {
+              "headers": ["Configuração", "Valores", "Padrão"],
+              "rows": [
+                [
+                  "Idioma",
+                  "Búlgaro, Alemão, Inglês, Espanhol, Francês, Hindi, Italiano, Japonês, Coreano, Polonês, Português (Brasil), Russo, Vietnamita, Chinês Simplificado, Chinês Tradicional",
+                  "Um sistema ou idioma de navegador compatível; Alternativa inglesa"
+                ],
+                ["Verificação ortográfica", "Ativado ou desativado em Avançado", "Ligado"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Aparência",
+          "tables": [
+            {
+              "headers": ["Configuração", "Valores", "Padrão"],
+              "rows": [
+                ["Modo tema", "Claro, Escuro, Sistema", "Luz"],
+                [
+                  "Predefinição de tema",
+                  "Beam Pôr do sol, Violeta Cibernética, Floresta Esmeralda, Veludo Carmesim, Brisa Oceânica, Estúdio Âmbar, Flor Sakura, Precisão de Ardósia",
+                  "Beam Pôr do sol"
+                ],
+                ["Cor primária", "10 predefinições ou um seletor de cores personalizado", "#ff5a1f"],
+                ["Cor secundária", "8 predefinições ou um seletor de cores personalizado", "#6366f1"],
+                ["Raio de canto", "0, 6, 10, 16, 24 px ou personalizado de 0 a 32 px", "10 pixels"],
+                ["Raio da pílula", "Ligado ou desligado", "Desligado"],
+                ["Superfície", "Padrão, Neutro, Ardósia, Profundo", "Padrão"],
+                ["Escala global da IU", "50%, 75%, 100%, 125%", "100%"]
+              ]
+            }
+          ],
+          "paragraphs": [
+            "A barra superior, a barra lateral, as propriedades, os controles do Canvas e a linha do tempo podem usar a escala global ou substituí-la por 50%, 75%, 100% ou 125%. Consulte a [Referência de preferências do gravador](/recorder/capabilities/preferences) para cada cor predefinida e valor de raio."
+          ]
+        },
+        {
+          "title": "Atualizações e links",
+          "tables": [
+            {
+              "headers": ["Área", "Ações e estados"],
+              "rows": [
+                ["Atualizações", "Verificar, Disponível, Baixando, Baixado, Não disponível, Erro, Não suportado."],
+                ["Atualização baixada", "A reinicialização agora fica disponível após a conclusão do download."],
+                ["Erro", "Mostre ou copie detalhes de diagnóstico."],
+                ["Registro de alterações", "Abra o changelog da atualização atual."],
+                ["Discord/GitHub", "Abra a comunidade Beam ou repositório de origem."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Modo de desenvolvimento",
+          "paragraphs": [
+            "O Modo Dev é armazenado localmente no editor. Destina-se ao desenvolvimento e solução de problemas, em vez da edição normal."
+          ],
+          "tables": [
+            {
+              "headers": ["Controle", "Comportamento"],
+              "rows": [
+                ["Modo de desenvolvimento", "Mostra ou oculta as opções de desenvolvimento."],
+                [
+                  "Ferramenta Gravador",
+                  "Abre um gravador HUD incorporado e pode iniciar uma gravação a partir do popover."
+                ],
+                ["Copiar informações do sistema", "Copia informações do ambiente de diagnóstico."],
+                ["Abra DevTools", "Alterna as ferramentas de desenvolvedor do Electron."]
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

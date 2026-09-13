@@ -11,6 +11,8 @@ import {
   type OpenedMediaInput,
 } from '../shared';
 import { audioTransitionGainAt } from '../shared/clip-transitions';
+import { effectiveAudioClipGain } from '../shared/audio-gain';
+import { AUDIO_LIMITER_RELEASE_SECONDS, AUDIO_LIMITER_THRESHOLD_DB } from '../shared/audio-limiter';
 import { emptyAudioPlaybackMetrics, type AudioPlaybackMetrics } from './audio-playback-metrics';
 
 const SCHEDULE_AHEAD_SECONDS = 1;
@@ -224,11 +226,11 @@ export class AudioPlaybackScheduler {
     this.metrics.contextState = this.context.state;
     this.masterGain = this.context.createGain();
     this.limiter = this.context.createDynamicsCompressor();
-    this.limiter.threshold.value = -1;
+    this.limiter.threshold.value = AUDIO_LIMITER_THRESHOLD_DB;
     this.limiter.knee.value = 0;
     this.limiter.ratio.value = 20;
     this.limiter.attack.value = 0.003;
-    this.limiter.release.value = 0.1;
+    this.limiter.release.value = AUDIO_LIMITER_RELEASE_SECONDS;
     this.masterGain.connect(this.limiter);
     this.limiter.connect(this.context.destination);
     return this.context;
@@ -326,7 +328,7 @@ export class AudioPlaybackScheduler {
     const gain = context.createGain();
     source.buffer = wrapped.buffer;
     source.playbackRate.value = consumer.clip.playbackRate;
-    const volume = Math.max(0, Math.min(2, consumer.clip.volume / 100));
+    const volume = effectiveAudioClipGain(consumer.clip);
     if (!consumer.clip.transitions?.entry && !consumer.clip.transitions?.exit) {
       gain.gain.value = volume;
     } else {

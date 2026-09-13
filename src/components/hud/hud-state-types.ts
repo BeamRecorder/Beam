@@ -1,5 +1,10 @@
 import type { Ref, ComputedRef } from 'vue';
-import type { CapturePreview, CaptureSource, EditorLoadingProgress } from '~/api/types/capture-api';
+import type {
+  CapturePreview,
+  CaptureSource,
+  EditorLoadingProgress,
+  RecorderLauncherContext,
+} from '~/api/types/capture-api';
 
 export interface HudProps {
   embedded: boolean;
@@ -7,9 +12,10 @@ export interface HudProps {
   preparingEditor: boolean;
   editorLoadingProgress: EditorLoadingProgress;
   externalError?: string;
+  recorderLauncherContext?: RecorderLauncherContext | null;
 }
 export type HudEmit = (
-  event: 'start-recording' | 'stop-recording' | 'open-project' | 'focus-feature',
+  event: 'start-recording' | 'stop-recording' | 'open-project' | 'focus-feature' | 'dismiss-launcher',
   ...args: unknown[]
 ) => void;
 export interface SavedDevices {

@@ -1,3 +1,4 @@
+const { initializeApplicationUpdater } = require('./lifecycle/application-updater.cjs');
 const { createCaptureStores } = require('./storage/capture-stores.cjs');
 const { prewarmCaptureCapabilities } = require('./lifecycle/capture-warmup.cjs');
 const { organizeProjectCategories } = require('./storage/project-categories.cjs');
@@ -23,6 +24,12 @@ const { Readable } = require('stream');
 const { CaptureEngine } = require('./capture/capture-engine.cjs');
 const { registerCaptureIpc } = require('./capture/capture-ipc.cjs');
 const { registerProjectIpc } = require('./projects/project-ipc.cjs');
+const {
+  createProjectVoiceoverStorage,
+  registerProjectVoiceoverIpc,
+} = require('./projects/project-voiceover-storage.cjs');
+const { createCameraRecordingControl } = require('./camera/recording-control.cjs');
+const { registerCaptureWindowIpc } = require('./lifecycle/capture-window-ipc.cjs');
 const { createProjectStore } = require('./projects/project-store.cjs');
 const { createProjectMediaHandler } = require('./projects/project-media-protocol.cjs');
 const { registerWindowIpc } = require('./window/window-ipc.cjs');
@@ -51,8 +58,6 @@ const { createUserPaths } = require('./storage/user-paths.cjs');
 const { createBackgroundLibrary } = require('./backgrounds/background-library.cjs');
 const { createFontLibrary } = require('./fonts/font-library.cjs');
 const { createCursorPackLibrary } = require('./cursors/cursor-pack-library.cjs');
-const { createAutoUpdater, registerUpdateIpc } = require('./updates/auto-updater.cjs');
-const { createUpdateCache, updaterCacheDirectory } = require('./updates/update-cache.cjs');
 const { createTrayManager } = require('./tray/tray-manager.cjs');
 const { InputAccess, registerInputAccessIpc } = require('./input/input-access.cjs');
 const { createShutdownCoordinator } = require('./lifecycle/shutdown-coordinator.cjs');
@@ -132,6 +137,7 @@ function initializeApplication() {
       const userPaths = createUserPaths(app.getPath('videos'));
       organizeProjectCategories(userPaths.projects);
       const preferencesStore = createPreferencesStore(userPaths.preferences, { platform: process.platform });
+      const startupPreferences = preferencesStore.repair();
       const { editorPresetStore, screenshotPresetStore, screenshotStore } = createCaptureStores({
         userPaths,
         preferencesStore,
@@ -148,7 +154,7 @@ function initializeApplication() {
           platform: process.platform,
           systemLocale: app.getLocale(),
         });
-      applySpellCheck(preferencesStore.read());
+      applySpellCheck(startupPreferences);
       const spellCheckContextMenuCleanup = registerSpellCheckContextMenu({
         app,
         Menu,
@@ -212,6 +218,7 @@ function initializeApplication() {
       registerCaptureIpc({
         ipcMain,
         desktopCapturer,
+        BrowserWindow,
         screen,
         captureEngine,
         app,
@@ -235,6 +242,9 @@ function initializeApplication() {
       registerSystemAudioIpc({ ipcMain: applicationIpc, storage: systemAudioStorage });
       logStartup('Capture track IPC registered.');
       const projectStore = createProjectStore(userPaths.projects, { category: 'studio' });
+      const projectVoiceoverStorage = createProjectVoiceoverStorage({ projectStore });
+      projectVoiceoverStorage.cleanupStalePartials();
+      registerProjectVoiceoverIpc({ ipcMain: applicationIpc, storage: projectVoiceoverStorage });
       const backgroundLibrary = createBackgroundLibrary(userPaths);
       const fontLibrary = createFontLibrary(userPaths.fonts);
       const cursorLibrary = createCursorPackLibrary(userPaths.cursors);
@@ -273,10 +283,15 @@ function initializeApplication() {
         isPackaged: app.isPackaged,
         canAcceptWork: () => coordinator.canAcceptWork(),
       };
+      let cameraRecordingCleanup = () => {};
       const cameraOverlay = createCameraOverlayWindow({
         ...lifecycleOptions,
         preferencesStore,
         platform: process.platform,
+        onWebContentsDestroyed: (contents) => {
+          if (contents) cameraStorage.cleanupOwner(contents.id);
+          cameraRecordingCleanup('The camera overlay was closed while recording.');
+        },
       });
       const countdownOverlay = createCountdownWindow(lifecycleOptions);
       const screenRegionOverlay = createScreenRegionOverlayWindow({
@@ -298,7 +313,7 @@ function initializeApplication() {
         presetStore: editorPresetStore,
         screenshotPresetStore,
         screenshotStore,
-        openScreenshot: (id) => editorWindow.open(id, 'screenshot'),
+        openScreenshot: (id) => editorWindow.open(id, { kind: 'screenshot' }),
         isScreenshotBusy: () => screenshotService?.isBusy() ?? false,
         openEditor: (projectId) => editorWindow.open(projectId),
         cleanupStatus: (contents) => exportIpc.cleanupWindow(contents),
@@ -309,26 +324,7 @@ function initializeApplication() {
         getTrayManager: () => trayManager,
       });
       quickSnipController = quickSnipService.controller;
-      applicationIpc.on('camera-overlay:configure', (_event, state) => cameraOverlay.configure(state));
-      applicationIpc.on('camera-overlay:set-active', (_event, active) => cameraOverlay.setActive(active));
-      applicationIpc.on('camera-overlay:reset-placement', () => cameraOverlay.resetPlacement());
-      applicationIpc.handle('countdown:set', (_event, seconds) => {
-        countdownOverlay.show(Number.isInteger(seconds) && seconds >= 0 ? seconds : null);
-      });
-      applicationIpc.handle('recording-surface:prepare', async () => {
-        countdownOverlay.show(null);
-        screenRegionOverlay.hide();
-        await new Promise((resolve) => setTimeout(resolve, 100)); // Commit hidden surfaces before capture.
-      });
-      applicationIpc.handle('screen-region:select', (event, options) =>
-        screenRegionOverlay.select(options, BrowserWindow.fromWebContents(event.sender)),
-      );
-      applicationIpc.on('screen-region:show', (_event, options) => screenRegionOverlay.show(options));
-      applicationIpc.on('screen-region:hide', () => screenRegionOverlay.hide());
-      applicationIpc.on('screen-region:confirm', (_event, region) => screenRegionOverlay.confirm(region));
-      applicationIpc.on('screen-region:update', (_event, region) => screenRegionOverlay.update(region));
-      applicationIpc.on('screen-region:cancel', () => screenRegionOverlay.cancel());
-      applicationIpc.handle('camera-overlay:state', () => cameraOverlay.state());
+      registerCaptureWindowIpc({ applicationIpc, BrowserWindow, cameraOverlay, countdownOverlay, screenRegionOverlay });
       logStartup('Window IPC registered.');
       const exportIpc = registerExportIpc({
         ipcMain: applicationIpc,
@@ -338,40 +334,19 @@ function initializeApplication() {
         resolveAutomaticDestination: quickSnipService.exportDestination,
       });
       logStartup('Export IPC registered.');
-      const updateCache = app.isPackaged
-        ? createUpdateCache({
-            stateFile: path.join(app.getPath('userData'), 'update-cache-state.json'),
-            cacheDirectory: updaterCacheDirectory(),
-          })
-        : null;
-      if (updateCache) {
-        try {
-          updateCache.cleanupForVersion(app.getVersion());
-        } catch (error) {
-          console.warn('[Updater] Unable to clean installed update cache:', error);
-        }
-      }
-      const updater = createAutoUpdater({
-        app,
-        BrowserWindow,
-        autoUpdater,
-        openExternal: require('electron').shell.openExternal,
-        beforeQuitAndInstall: () => coordinator.requestShutdown('updater'),
-        onUpdateDownloaded: (targetVersion) => {
-          try {
-            updateCache?.markDownloaded(app.getVersion(), targetVersion);
-          } catch (error) {
-            console.warn('[Updater] Unable to record the downloaded update:', error);
-          }
-        },
-      });
-      registerUpdateIpc(applicationIpc, updater);
+      const updater = initializeApplicationUpdater({ app, BrowserWindow, autoUpdater, coordinator, applicationIpc });
       applicationIpc.handle('community:open-discord', () => shell.openExternal(DISCORD_INVITE_URL));
       applicationIpc.handle('community:open-github', () => shell.openExternal(GITHUB_REPOSITORY_URL));
       ipcMain.on('app:quit', () => {
         if (coordinator.canAcceptWork()) app.quit();
       });
       const win = createWindow(preferencesStore, appIconPath);
+      cameraRecordingCleanup = createCameraRecordingControl({
+        ipcMain: applicationIpc,
+        cameraOverlay,
+        hudWebContents: win.webContents,
+        isRecordingOwner: (sender) => sender === win.webContents || quickSnipService.cropWindow.owns(sender),
+      });
       win.webContents.once('did-finish-load', () => {
         shortcutReady = true;
         for (const id of pendingExternalShortcuts.splice(0)) externalShortcutHandler(id);
@@ -382,6 +357,7 @@ function initializeApplication() {
         isPackaged: app.isPackaged,
         ipcMain: applicationIpc,
         hudWindow: win,
+        screen,
         hudAuxiliaryWindows: [teleprompterWindow, countdownOverlay],
         hudController: controllers.get(win),
         registerController: (target, controller) => controllers.set(target, controller),
@@ -394,6 +370,7 @@ function initializeApplication() {
           cameraStorage.cleanupOwner(contents.id);
           microphoneStorage.cleanupOwner(contents.id);
           systemAudioStorage.cleanupOwner(contents.id);
+          projectVoiceoverStorage.cleanupOwner(contents.id);
         },
         canAcceptWork: () => coordinator.canAcceptWork(),
       });
@@ -407,7 +384,7 @@ function initializeApplication() {
         clipboard: require('electron').clipboard,
         nativeImage: require('electron').nativeImage,
         isTrustedRenderer,
-        openEditor: (id) => editorWindow.open(id, 'screenshot'),
+        openEditor: (id, options, sender) => editorWindow.open(id, { ...options, kind: 'screenshot' }, sender),
         prepareCapture: quickSnipService.prepareScreenshot,
         canCapture: (event) =>
           !quickSnipService.isNormalRecordingActive() &&
@@ -451,6 +428,7 @@ function initializeApplication() {
       coordinator.registerCleanup({ id: 'teleprompter', cleanup: () => teleprompterWindow.destroy() });
       coordinator.registerCleanup({ id: 'spell-check-context-menu', cleanup: spellCheckContextMenuCleanup });
       coordinator.registerCleanup({ id: 'countdown', cleanup: () => countdownOverlay.destroy() });
+      coordinator.registerCleanup({ id: 'camera-recording-control', cleanup: cameraRecordingCleanup });
       coordinator.registerCleanup({ id: 'camera-overlay', cleanup: () => cameraOverlay.destroy() });
       coordinator.registerCleanup({ id: 'screen-region', cleanup: () => screenRegionOverlay.destroy() });
       coordinator.registerCleanup({ id: 'quick-snip-crop', cleanup: () => quickSnipService.cropWindow.destroy() });
@@ -466,6 +444,7 @@ function initializeApplication() {
         cameraStorage.cleanupOwner(win.webContents.id);
         microphoneStorage.cleanupOwner(win.webContents.id);
         systemAudioStorage.cleanupOwner(win.webContents.id);
+        projectVoiceoverStorage.cleanupOwner(win.webContents.id);
       });
       void updater.checkForUpdates();
       app.on('activate', () => {

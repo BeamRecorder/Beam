@@ -1,0 +1,340 @@
+{
+  "pages": [
+    {
+      "slug": "editor/capabilities/canvas",
+      "title": "Lienzo",
+      "description": "Referencia completa del tamaño de salida, los fondos, el desenfoque, la eliminación del fondo, los degradados y los controles de marca de agua.",
+      "lead": "Canvas controla el área de salida situada fuera y detrás de los clips visuales. Los ajustes de fondo y marca de agua se aplican a toda la composición.",
+      "sections": [
+        {
+          "title": "Panel Canvas",
+          "screenshot": {
+            "path": "editor/canvas-panel.webp",
+            "alt": "Propiedades Canvas de Beam con pestañas de fondo y controles de presentación",
+            "caption": "Canvas agrupa fondos multimedia, de color y degradados con controles de presentación y marca.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Lienzo de salida",
+          "tables": [
+            {
+              "headers": ["Propiedad", "Valores", "Predeterminado o comportamiento"],
+              "rows": [
+                ["Native size", "Ancho × alto", "1920×1080"],
+                ["16:9", "1920×1080", "Preajuste predeterminado."],
+                ["9:16", "1080×1920", "Preajuste vertical."],
+                ["1:1", "1080×1080", "Preajuste cuadrado."],
+                ["4:5", "1080×1350", "Preajuste vertical."],
+                ["3:4", "1080×1440", "Preajuste vertical."],
+                ["4:3", "1440×1080", "Preajuste horizontal."],
+                ["21:9", "2520×1080", "Preajuste ultrapanorámico."],
+                [
+                  "Background visibility",
+                  "Visible o Remove Background",
+                  "El fondo está oculto en el lienzo predeterminado."
+                ],
+                ["Background Blur", "0%–100%", "Desenfoca el fondo seleccionado, no el sujeto de un vídeo."],
+                [
+                  "Global transitions",
+                  "Acción del encabezado de propiedades",
+                  "Abre los controles de transición del lienzo."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Fondos de imagen y vídeo",
+          "tables": [
+            {
+              "headers": ["Fondo", "Archivos compatibles", "Comportamiento de la biblioteca"],
+              "rows": [
+                [
+                  "Image",
+                  "AVIF, BMP, JPEG, JPG, PNG, WebP",
+                  "Muestra inicialmente 15 elementos; Show more revela lotes adicionales."
+                ],
+                [
+                  "Video",
+                  "M4V, MOV, MP4, OGV, WebM",
+                  "Muestra inicialmente 15 elementos; Show more revela lotes adicionales."
+                ],
+                [
+                  "Import",
+                  "Un archivo de fondo local compatible",
+                  "Añade el archivo seleccionado a la biblioteca de fondos correspondiente."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Fondos de color",
+          "paragraphs": [
+            "Elige un color integrado o edita un valor hexadecimal personalizado. El editor personalizado actualiza en directo la vista previa del fondo."
+          ],
+          "tables": [
+            {
+              "headers": ["Control", "Valores"],
+              "rows": [
+                ["Preset", "#111827, #ffffff, #0f766e, #1d4ed8, #7c3aed, #be123c"],
+                ["Custom color", "Editor de color hexadecimal"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Fondos degradados",
+          "tables": [
+            {
+              "headers": ["Control", "Valores o restricción"],
+              "rows": [
+                [
+                  "Preset",
+                  "Degradados integrados, incluidos Violet, Fire, Ocean, Sunset, Neon, Forest, Gold, Ice, Vaporwave y Aurora."
+                ],
+                ["Type", "Linear o Radial"],
+                ["Angle", "0°–360° para la dirección de degradado aplicable"],
+                ["Stops", "Al menos dos paradas de color"],
+                ["Custom gradient", "Tipo, ángulo, paradas y colores editables"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Marca de agua",
+          "paragraphs": [
+            "La opción Watermark está desactivada de forma predeterminada. Actívala para colocar la marca de Beam, una etiqueta o un logotipo sobre la composición."
+          ],
+          "tables": [
+            {
+              "headers": ["Propiedad", "Valores o rango", "Predeterminado o restricción"],
+              "rows": [
+                ["Text", "Sin texto de marca de agua, Made with Beam., Beam, Custom", "Made with Beam."],
+                ["Custom text", "Hasta 80 caracteres", "Vacío; disponible con Custom."],
+                ["Show Beam Logo", "On u Off", "On"],
+                ["Translate watermark", "On u Off", "Off; disponible para las etiquetas Beam y Made with Beam."],
+                ["Position", "Top-left, Top-right, Bottom-left, Bottom-right", "Bottom-right"],
+                ["Size", "50%–200%; incremento del 10%", "100%"],
+                ["Shadow", "0%–100%; incremento del 5%", "20%"],
+                ["Background color", "Selector de color hexadecimal", "#111114"],
+                ["Background opacity", "0%–100%; incremento del 5%", "78%"],
+                ["Background radius", "0%–100%; incremento del 5%", "100%"],
+                ["Background padding", "50%–150%; incremento del 5%", "100%"]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/zooms",
+      "title": "Zooms",
+      "description": "Referencia completa de los zooms manuales y automáticos, los modos de enfoque, la profundidad, la regeneración y el desenfoque de movimiento.",
+      "lead": "Los bloques de zoom dirigen la atención a una región de la grabación. Añádelos manualmente en la línea de tiempo o genera sugerencias a partir de los clics del cursor capturados.",
+      "sections": [
+        {
+          "title": "Ningún zoom seleccionado",
+          "paragraphs": [
+            "La generación y el desenfoque de movimiento global siguen disponibles sin un zoom seleccionado. Selecciona un bloque de zoom en la línea de tiempo para editar su profundidad, modo o posición."
+          ],
+          "screenshot": {
+            "path": "editor/zoom-empty.webp",
+            "alt": "Panel Zoom de Beam sin ningún zoom seleccionado",
+            "caption": "La generación automática y el desenfoque de movimiento global no requieren un zoom seleccionado.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Generar zooms automáticos",
+          "tables": [
+            {
+              "headers": ["Acción", "Requisito", "Comportamiento"],
+              "rows": [
+                [
+                  "Generate Auto Zooms",
+                  "Una sesión de grabación con telemetría de clics del cursor",
+                  "Crea bloques de zoom automáticos a partir de los clics grabados."
+                ],
+                [
+                  "Regenerate Auto Zooms",
+                  "La generación de zooms automáticos está disponible",
+                  "Pide confirmación, conserva los zooms manuales y reemplaza los zooms automáticos de la sesión actual."
+                ],
+                [
+                  "Unavailable state",
+                  "No hay sesión o no existe telemetría del cursor",
+                  "La generación permanece desactivada."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Añadir un zoom manual",
+          "paragraphs": [
+            "Haz clic en un punto libre de la pista Zoom. Un nuevo zoom manual tiene una duración predeterminada de 1.2 segundos y solo se añade cuando quedan disponibles al menos 200 ms de duración en la línea de tiempo."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Rangos ocupados de la línea de tiempo",
+            "text": "Beam elige una duración disponible alrededor del clic y no se solapa con un bloque de zoom existente."
+          }
+        },
+        {
+          "title": "Zoom seleccionado",
+          "screenshot": {
+            "path": "editor/zoom-properties.webp",
+            "alt": "Propiedades de Beam para un zoom seleccionado",
+            "caption": "Un zoom seleccionado muestra el modo de enfoque y la profundidad de ampliación.",
+            "aspectRatio": "199 / 326"
+          },
+          "tables": [
+            {
+              "headers": ["Propiedad", "Valores", "Predeterminado o comportamiento"],
+              "rows": [
+                [
+                  "Mode",
+                  "Auto Cursor o Manual Focus",
+                  "Auto Cursor sigue el movimiento del puntero grabado; Manual Focus utiliza un punto fijo."
+                ],
+                [
+                  "Manual target",
+                  "Arrastre en el lienzo",
+                  "Arrastra el objetivo de línea discontinua directamente sobre el lienzo."
+                ],
+                ["Depth 1", "1.25×", "Correspondencia de ampliación."],
+                ["Depth 2", "1.5×", "Predeterminado."],
+                ["Depth 3", "1.8×", "Correspondencia de ampliación."],
+                ["Depth 4", "2.2×", "Correspondencia de ampliación."],
+                ["Depth 5", "3.5×", "Correspondencia de ampliación."],
+                ["Depth 6", "5×", "Correspondencia de ampliación."],
+                ["Delete Zoom", "Acción del encabezado de propiedades", "Elimina el bloque de zoom seleccionado."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Desenfoque de movimiento del zoom",
+          "tables": [
+            {
+              "headers": ["Propiedad", "Rango", "Predeterminado", "Ámbito"],
+              "rows": [
+                ["Enabled", "On u Off", "On", "Ajuste global de la composición."],
+                [
+                  "Motion blur intensity",
+                  "0%–100%",
+                  "55%",
+                  "Se aplica de forma idéntica en la vista previa y la exportación."
+                ]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/cursor",
+      "title": "Cursor",
+      "description": "Referencia completa de los paquetes de cursores, la apariencia, las sombras, los efectos de clic, el suavizado, el resorte y el desenfoque de movimiento.",
+      "lead": "Los ajustes del cursor controlan la superposición del puntero en toda la composición y no requieren seleccionar un clip.",
+      "sections": [
+        {
+          "title": "Panel Cursor",
+          "screenshot": {
+            "path": "editor/cursor-panel.webp",
+            "alt": "Panel Cursor de Beam con controles de paquete, apariencia, clic y movimiento",
+            "caption": "La presentación del cursor se configura globalmente para la composición.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Selección del paquete y del cursor",
+          "tables": [
+            {
+              "headers": ["Propiedad", "Valores", "Comportamiento"],
+              "rows": [
+                [
+                  "Cursor pack",
+                  "Paquete integrado o importado",
+                  "El valor Automatic se mantiene como Automatic. Un cursor fijo solo se conserva cuando el nuevo paquete contiene el mismo ID de cursor; de lo contrario, Beam vuelve a Automatic."
+                ],
+                [
+                  "Cursor mode",
+                  "Automatic o un cursor fijo del paquete seleccionado",
+                  "Automatic utiliza los cambios de forma del cursor grabados."
+                ],
+                [
+                  "Import pack",
+                  "Archivos de paquetes de cursores compatibles",
+                  "Añade un paquete personalizado a las opciones disponibles."
+                ],
+                [
+                  "Reset",
+                  "Restablecer la presentación del cursor",
+                  "Conserva el paquete seleccionado y restaura todos los demás valores predeterminados del cursor."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Apariencia",
+          "tables": [
+            {
+              "headers": ["Propiedad", "Valores o rango", "Predeterminado"],
+              "rows": [
+                ["Size", "16–128 px", "45 px"],
+                ["Drop shadow", "On u Off", "On"],
+                ["Shadow blur", "1–24 px", "6 px después de Reset"],
+                ["Shadow color", "Selector de color", "#000000 después de Reset"],
+                ["Shadow direction", "All, Bottom, Bottom-right, Top-left", "Bottom después de Reset"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Efectos de clic",
+          "tables": [
+            {
+              "headers": ["Propiedad", "Valores o rango", "Predeterminado o comportamiento"],
+              "rows": [
+                [
+                  "Ripple style preset",
+                  "Single Ring, Double Wave, Burst",
+                  "Cambia el estilo de onda para los clics izquierdo y derecho; no activa la onda."
+                ],
+                ["Advanced sides", "Left y Right", "Configura los dos botones de forma independiente."],
+                ["Spring", "On u Off", "On"],
+                ["Spring intensity", "0%–100%", "50%"],
+                ["Ripple", "On u Off", "Off para ambos lados del clic."],
+                ["Ripple size", "10–80 px", "30 px"],
+                ["Ripple color", "Selector de color", "Por lado del clic."],
+                [
+                  "Middle click",
+                  "No hay un control de edición independiente",
+                  "Utiliza la presentación del clic izquierdo."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Movimiento",
+          "tables": [
+            {
+              "headers": ["Propiedad", "Valores o rango", "Preajuste Smooth"],
+              "rows": [
+                ["Preset", "Focused, Smooth, Custom", "Smooth"],
+                ["Smoothing", "0–1", "0.67"],
+                ["Spring mass", "0.5–2", "1.29"],
+                ["Motion blur", "0–1", "0.4"]
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

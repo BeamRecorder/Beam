@@ -28,14 +28,24 @@ const drawSideButton = (
   ctx.fill();
 };
 
-const drawBezel = (ctx: Canvas2DContext, rect: MediaRect, frame: PhoneFrame) => {
-  const geometry = resolvePhoneFrameGeometry(rect, frame);
-  ctx.save();
+const drawShell = (
+  ctx: Canvas2DContext,
+  geometry: ReturnType<typeof resolvePhoneFrameGeometry>,
+  frameColor: string,
+  cutout: boolean,
+) => {
+  const { outer } = geometry;
   ctx.beginPath();
-  roundedRectPath(ctx, geometry.outer, geometry.outerRadius);
-  roundedRectPath(ctx, geometry.content, geometry.contentRadius);
-  ctx.fillStyle = '#050505';
-  ctx.fill('evenodd');
+  roundedRectPath(ctx, outer, geometry.outerRadius);
+  if (cutout) roundedRectPath(ctx, geometry.content, geometry.contentRadius);
+  ctx.fillStyle = frameColor;
+  if (cutout) ctx.fill('evenodd');
+  else ctx.fill();
+};
+
+const drawBezel = (ctx: Canvas2DContext, rect: MediaRect, frame: PhoneFrame, frameColor: string) => {
+  ctx.save();
+  drawShell(ctx, resolvePhoneFrameGeometry(rect, frame), frameColor, true);
   ctx.restore();
 };
 
@@ -76,32 +86,24 @@ const drawPixelDetails = (ctx: Canvas2DContext, rect: MediaRect) => {
   drawSideButton(ctx, rect, 'right', 0.397, 0.14, buttonWidth, '#8b8177');
 };
 
-export function drawPhoneFrame(ctx: Canvas2DContext, rect: MediaRect, frame: PhoneFrame, paintBackground: boolean) {
+export function drawPhoneFrame(
+  ctx: Canvas2DContext,
+  rect: MediaRect,
+  frame: PhoneFrame,
+  paintBackground: boolean,
+  frameColor = '#c0c0c0',
+) {
   const geometry = resolvePhoneFrameGeometry(rect, frame);
   const outer = geometry.outer;
   if (paintBackground) {
-    const shell = ctx.createLinearGradient(outer.x, outer.y, outer.x + outer.width, outer.y + outer.height);
-    if (frame === 'iphone-16-max') {
-      shell.addColorStop(0, '#9b978b');
-      shell.addColorStop(0.22, '#e7e3d8');
-      shell.addColorStop(0.7, '#6f6b62');
-      shell.addColorStop(1, '#d4d0c4');
-    } else {
-      shell.addColorStop(0, '#252525');
-      shell.addColorStop(0.5, '#050505');
-      shell.addColorStop(1, '#343434');
-    }
-    ctx.fillStyle = shell;
-    ctx.beginPath();
-    roundedRectPath(ctx, outer, geometry.outerRadius);
-    ctx.fill();
+    drawShell(ctx, geometry, frameColor, false);
     ctx.fillStyle = '#000000';
     ctx.beginPath();
     roundedRectPath(ctx, geometry.content, geometry.contentRadius);
     ctx.fill();
     return;
   }
-  drawBezel(ctx, rect, frame);
+  drawBezel(ctx, rect, frame, frameColor);
   ctx.save();
   ctx.strokeStyle = frame === 'iphone-16-max' ? 'rgba(255, 255, 255, .42)' : 'rgba(255, 255, 255, .16)';
   ctx.lineWidth = Math.max(0.5, geometry.unit);

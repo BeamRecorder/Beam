@@ -146,8 +146,8 @@ describe('WaveformCanvas', () => {
 
     const moveCalls = context.moveTo.mock.calls as Array<[number, number]>;
     const lineCalls = context.lineTo.mock.calls as Array<[number, number]>;
-    expect(moveCalls).toHaveLength(3);
-    expect(lineCalls).toHaveLength(3);
+    expect(moveCalls).toHaveLength(40);
+    expect(lineCalls).toHaveLength(40);
     expect(context.lineWidth).toBeGreaterThan(0);
     expect(context.lineWidth).toBeLessThanOrEqual(2);
     expect(context.lineCap).toBe('round');
@@ -161,6 +161,19 @@ describe('WaveformCanvas', () => {
     }
     expect(context.fillRect).not.toHaveBeenCalled();
     expect(context.strokeRect).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('densifies sparse input to approximately one bar every three pixels', async () => {
+    const wrapper = mount(WaveformCanvas, { props: { bars: [8, 24], selected: false } });
+    await waitForDraw();
+
+    const moveCalls = context.moveTo.mock.calls as Array<[number, number]>;
+    expect(moveCalls).toHaveLength(Math.floor(bounds.width / 3));
+    expect(moveCalls[0]![0]).toBeCloseTo(1.5);
+    expect(moveCalls.at(-1)![0]).toBeCloseTo(bounds.width - 1.5);
+    for (let index = 1; index < moveCalls.length; index += 1)
+      expect(moveCalls[index]![0] - moveCalls[index - 1]![0]).toBeCloseTo(3);
     wrapper.unmount();
   });
 
@@ -194,7 +207,7 @@ describe('WaveformCanvas', () => {
 
     expect(context.clearRect).toHaveBeenCalledTimes(1);
     expect(context.strokeStyle).toBe('#056247');
-    expect(context.moveTo.mock.calls).toHaveLength(3);
+    expect(context.moveTo.mock.calls).toHaveLength(Math.floor(bounds.width / 3));
     wrapper.unmount();
   });
 

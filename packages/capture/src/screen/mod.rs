@@ -1,12 +1,12 @@
 mod crop;
 mod frame;
+mod preview;
 mod recording;
 
-#[cfg(windows)]
-pub(crate) use crop::even_dimension;
 #[cfg(any(windows, target_os = "linux"))]
 pub(crate) use crop::{PixelCrop, normalize_crop};
 pub use frame::*;
+pub use preview::*;
 pub use recording::*;
 
 #[cfg(target_os = "linux")]

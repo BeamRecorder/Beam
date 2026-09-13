@@ -28,6 +28,7 @@
           ],
           "screenshot": {
             "path": "getting-started/first-recording.webp",
+            "hidden": true,
             "alt": "पहली रिकॉर्डिंग के लिए तैयार Beam रिकॉर्डर",
             "caption": "शुरू करने से पहले कैप्चर और मीडिया सोर्स चुनें।"
           }
@@ -47,7 +48,7 @@
           "title": "आगे सीखें",
           "bullets": [
             "[रिकॉर्डर इंटरफ़ेस](/recorder/interface) जानें।",
-            "सभी [रिकॉर्डर सुविधाओं](/recorder/capabilities) की समीक्षा करें।",
+            "सभी [रिकॉर्डर क्षमताओं](/recorder/capabilities/) की समीक्षा करें।",
             "[वीडियो एडिटर इंटरफ़ेस](/editor/interface) समझें।",
             "[एक्सपोर्ट और शेयर करना](/export) से अंतिम फ़ाइल तैयार करें।"
           ]
@@ -67,6 +68,7 @@
           ],
           "screenshot": {
             "path": "getting-started/update-controls.webp",
+            "aspectRatio": "16 / 9",
             "alt": "अपडेट कंट्रोल दिखाती Beam सेटिंग्स",
             "caption": "अपडेट पैनल इंस्टॉल किए गए संस्करण और उपलब्ध अपडेट कार्रवाइयाँ दिखाता है।"
           }

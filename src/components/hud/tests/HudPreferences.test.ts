@@ -3,6 +3,7 @@ import { mount } from '@vue/test-utils';
 import { defineComponent, h } from 'vue';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import HudPreferences from '../settings/HudPreferences.vue';
+import AppearanceSettings from '~/components/settings/AppearanceSettings.vue';
 import { captureMock as capture } from './capture.mock';
 
 vi.mock('../../../api/capture', async () => ({ capture: (await import('./capture.mock')).captureMock }));
@@ -84,6 +85,19 @@ describe('HudPreferences', () => {
     const wrapper = mountPreferences({ countdownSeconds: 0 });
     expect(wrapper.find('.appearance-settings').exists()).toBe(true);
     expect(wrapper.find('.theme-mode-group').exists()).toBe(true);
+  });
+
+  it('passes the HUD-specific scaling flag and does not render scaling controls', async () => {
+    const wrapper = mountPreferences();
+    const appearance = wrapper.findComponent(AppearanceSettings);
+
+    expect(appearance.exists()).toBe(true);
+    expect(appearance.props('showUiScaling')).toBe(false);
+
+    await appearance.get('.advanced-toggle').trigger('click');
+
+    expect(appearance.find('.ui-scale-setting').exists()).toBe(false);
+    expect(appearance.find('.ui-scale-slider').exists()).toBe(false);
   });
 
   it('opens language advanced settings and toggles spell check', async () => {

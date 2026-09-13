@@ -30,4 +30,16 @@ describe('marketing routes', () => {
       query: { os: 'linux' },
     });
   });
+
+  it.each([
+    ['/faq', 'FaqPage'],
+    ['/install', 'InstallPage'],
+  ])('loads the lazy page component for %s', async (path, componentName) => {
+    const route = routes.find((candidate) => candidate.path === path);
+    expect(typeof route?.component).toBe('function');
+
+    const module = await (route!.component as () => Promise<{ default: { __name?: string } }>)();
+
+    expect(module.default.__name).toBe(componentName);
+  });
 });

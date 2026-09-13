@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref, shallowRef, type Component } from 'vue';
+import { DEFAULT_EDITOR_TITLE, editorTitle } from './editor-window-title';
 import { capture } from '~/api/capture';
 import type { CaptureProject, PreferenceSettings, ProjectEditorData } from '~/api/types/capture-api';
-import type { RecordingConfiguration } from '~/components/hud/recorder/recording-types';
 import Button from '~/components/ui/button/Button.vue';
 import ToastProvider from '~/components/ui/toast/ToastProvider.vue';
 import { useTranslate } from '~/i18n/useTranslate';
@@ -25,7 +25,6 @@ let themeObserver: MutationObserver | null = null;
 let nativeEditorReadyNotified = false;
 const { t } = useTranslate('EditorPreparingHud');
 const EDITOR_READY_PAINT_TIMEOUT_MS = 100;
-
 const syncTitlebarTheme = () => {
   const dark = document.documentElement.classList.contains('dark');
   capture.setEditorTitlebarTheme(dark);
@@ -63,6 +62,7 @@ const loadProject = async (projectId: string) => {
   const generation = ++loadGeneration;
   loading.value = true;
   error.value = '';
+  document.title = DEFAULT_EDITOR_TITLE;
   try {
     capture.reportEditorLoadingStage('loadingProject');
     capture.reportEditorLoadingStage('loadingTimeline');
@@ -75,6 +75,7 @@ const loadProject = async (projectId: string) => {
     if (!nextProject || nextProject.mode === 'screenshot') throw new Error('Project not found');
     VideoEditor.value = editor.default;
     project.value = nextProject;
+    document.title = editorTitle(nextProject.name);
     editorData.value = nextEditorData;
     editorGeneration.value = generation;
     loading.value = false;
@@ -91,6 +92,10 @@ const loadContext = async (context: { projectId: string; kind?: 'screenshot' }) 
     const generation = ++loadGeneration;
     loading.value = true;
     error.value = '';
+    document.title = DEFAULT_EDITOR_TITLE;
+    project.value = null;
+    editorData.value = null;
+    screenshotId.value = null;
     try {
       const editor = await import('./screenshot/ScreenshotEditor.vue');
       if (generation !== loadGeneration) return;
@@ -131,10 +136,6 @@ const handleOpenProject = (nextProject: CaptureProject) => {
     loading.value = false;
     console.error('Unable to switch editor project.', reason);
   });
-};
-
-const handleStartRecording = (configuration: RecordingConfiguration) => {
-  capture.startRecordingFromEditor(configuration);
 };
 
 const notifyEditorReady = async (generation: number) => {
@@ -199,7 +200,6 @@ onBeforeUnmount(() => {
     :project="project"
     @back-to-hud="handleBackToHud"
     @open-project="handleOpenProject"
-    @start-recording="handleStartRecording"
     @ready="notifyEditorReady(editorGeneration)"
   />
   <EditorProjectLoadingOverlay

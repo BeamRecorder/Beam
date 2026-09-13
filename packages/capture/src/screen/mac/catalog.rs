@@ -8,9 +8,13 @@ use crate::{
     },
 };
 
+use super::catalog_policy::is_user_window_candidate;
+
 pub fn discover_sources() -> Result<Vec<SourceDescriptor>, CaptureError> {
     let content = SCShareableContent::create()
-        .with_on_screen_windows_only(true)
+        // Desktop-independent windows remain selectable in other Spaces and
+        // while another application owns the active fullscreen Space.
+        .with_on_screen_windows_only(false)
         .with_exclude_desktop_windows(true)
         .get()
         .map_err(backend_error)?;
@@ -62,13 +66,25 @@ fn window_descriptor(
     if title.trim().is_empty() {
         return None;
     }
+    let application = window.owning_application()?;
+    let application_name = application.application_name();
     let frame = window.frame();
+    if !is_user_window_candidate(
+        window.window_layer(),
+        &title,
+        &application_name,
+        frame.size.width,
+        frame.size.height,
+    ) {
+        return None;
+    }
     let width = dimension(frame.size.width);
     let height = dimension(frame.size.height);
+    let label = format!("{title} — {application_name}");
     Some(SourceDescriptor {
         id: SourceId::new(format!("sck:window:{}", window.window_id())).ok()?,
         kind: SourceKind::Window,
-        label: title,
+        label,
         is_default: false,
         selection_mode: SourceSelectionMode::Direct,
         display_id: None,

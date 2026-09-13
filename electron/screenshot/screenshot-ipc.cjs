@@ -81,9 +81,9 @@ function registerScreenshotIpc({
   });
   handle('screenshot:list', () => store.list());
   handle('screenshot:save', (_event, { id, state, history }) => store.save(id, state, history));
-  handle('screenshot:open', (_event, id) => {
+  handle('screenshot:open', (event, id, options) => {
     store.read(id);
-    return openEditor(id);
+    return openEditor(id, options, event.sender);
   });
   handle('screenshot:export', async (event, { id, bytes, format, copy }) => {
     const document = store.read(id);

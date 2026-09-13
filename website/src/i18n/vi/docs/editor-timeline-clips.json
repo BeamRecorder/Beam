@@ -1,0 +1,437 @@
+{
+  "pages": [
+    {
+      "slug": "editor/capabilities/timeline",
+      "title": "Chỉnh sửa timeline",
+      "description": "Tài liệu tham khảo đầy đủ về các công cụ dòng thời gian, bản nhạc, lựa chọn, chụp nhanh, cắt xén, tách, các hành động trong bảng tạm và giữ khung.",
+      "lead": "Dòng thời gian kết hợp các rãnh hình ảnh, chú thích, thu phóng và âm thanh trên một đầu phát. Quy tắc chỉnh sửa tùy thuộc vào lựa chọn, loại clip, quyền sở hữu dự án và thời lượng có sẵn.",
+      "sections": [
+        {
+          "title": "Thêm phương tiện và lớp",
+          "tables": [
+            {
+              "headers": ["Mục", "Làm thế nào nó được thêm vào", "Thời lượng hoặc hành vi ban đầu"],
+              "rows": [
+                ["Video", "Thêm → Video hoặc kéo và thả", "Thời lượng nội dung chia cho tốc độ phát lại ban đầu."],
+                ["Hình ảnh", "Thêm → Hình ảnh hoặc kéo và thả", "5 giây."],
+                [
+                  "Âm thanh",
+                  "Thêm → Âm thanh hoặc kéo và thả",
+                  "Thời lượng nội dung chia cho tốc độ phát lại ban đầu."
+                ],
+                [
+                  "văn bản",
+                  "Thêm → Văn bản hoặc nhấp vào bản phụ đề văn bản",
+                  "Tùy chọn thời lượng chú thích đã lưu; Dự phòng 2 giây và tối thiểu 200 ms."
+                ],
+                ["Làm mờ", "Thêm → Làm mờ", "5 giây."],
+                [
+                  "Thu phóng",
+                  "Bấm vào một điểm có sẵn trên đường thu phóng",
+                  "Tùy chọn thời lượng thu phóng đã lưu hoặc dự phòng 1,2 giây; được trang bị vào khoảng trống tối thiểu 200 ms."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Kiểm soát dòng thời gian",
+          "tables": [
+            {
+              "headers": ["Kiểm soát", "Phạm vi hoặc phím tắt", "Hành vi"],
+              "rows": [
+                ["Tách", "S", "Yêu cầu một clip đã chọn và một đầu phát nằm hoàn toàn bên trong clip đó."],
+                [
+                  "nam châm",
+                  "Bật theo mặc định",
+                  "Gắn vào phần bắt đầu/kết thúc của dòng thời gian, các cạnh cắt, các cạnh thu phóng và đầu phát khi thao tác hỗ trợ nó. Ngưỡng bắt nguồn từ thước đo không bao giờ giảm xuống dưới 20 ms."
+                ],
+                ["Phát / Tạm dừng", "không gian", "Bị bỏ qua khi tiêu điểm nằm trong trường có thể chỉnh sửa."],
+                [
+                  "Bỏ qua Quay lại / Chuyển tiếp",
+                  "Các nút trên thanh công cụ",
+                  "Di chuyển đến đầu hoặc cuối dòng thời gian."
+                ],
+                ["Chất lượng phát lại", "Đầy đủ, một nửa, một phần tư", "Chỉ thay đổi độ phân giải xem trước."],
+                [
+                  "Thu phóng dòng thời gian",
+                  "100%–3200%",
+                  "Các nút tăng dần 50 dưới 500%, 100 dưới 1000%, rồi 250; Ctrl+bánh xe sử dụng 25/50/100 bước. Đã lưu sau khi thay đổi."
+                ],
+                ["Hiển thị thời gian", "MM:SS hoặc HH:MM:SS", "Chuyển đổi định dạng khi thời lượng đạt đến một giờ."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Lựa chọn",
+          "tables": [
+            {
+              "headers": ["Cử chỉ", "kết quả"],
+              "rows": [
+                ["Bấm vào một đoạn phim", "Chọn clip đó làm mục chính."],
+                ["Bấm vào clip khác", "Thay thế lựa chọn clip hiện tại."],
+                [
+                  "Nhấp vào tiêu đề bản nhạc",
+                  "Chọn mọi clip trên bản nhạc; clip gần đầu phát nhất sẽ trở thành chính."
+                ],
+                [
+                  "Ctrl, Cmd hoặc Shift + tiêu đề bản nhạc",
+                  "Thêm các clip của bản nhạc đó vào hoặc xóa chúng khỏi lựa chọn bản nhạc hiện tại."
+                ],
+                [
+                  "Nhấp vào phần tử canvas",
+                  "Chọn clip, chú thích, làm mờ, con trỏ hoặc vùng màn hình được hỗ trợ tương ứng."
+                ],
+                ["Bấm vào chỗ trống", "Xóa lựa chọn xung đột ở nơi công cụ đang hoạt động cho phép."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Di chuyển, cắt và xếp lớp",
+          "bullets": [
+            "Kéo clip để thay đổi điểm bắt đầu dòng thời gian của nó; các sidecar ghi âm được liên kết sẽ di chuyển cùng nhau cho đến khi không được liên kết.",
+            "Kéo núm điều khiển bắt đầu hoặc kết thúc để cắt phạm vi hoạt động. Một clip phải dài ít nhất 40 mili giây và các clip chia sẻ ID nhóm sẽ được cắt cùng nhau.",
+            "Kéo phương tiện ra ngoài đầu hiện tại sẽ kéo dài thời lượng sáng tác.",
+            "Kéo tiêu đề bản nhạc trực quan để thay đổi thứ tự lớp.",
+            "Di chuyển clip trực quan vào một hàng hình ảnh khác cũng có thể sắp xếp lại các bản nhạc trực quan.",
+            "Các clip bị vô hiệu hóa vẫn hiển thị trên dòng thời gian nhưng không góp phần xem trước hoặc xuất.",
+            "Thay đổi nhiều lựa chọn chỉ được áp dụng cho các clip đã chọn tương thích với thuộc tính của clip chính."
+          ]
+        },
+        {
+          "title": "Clipboard và xóa",
+          "tables": [
+            {
+              "headers": ["hành động", "sẵn có", "Vỏ cạnh"],
+              "rows": [
+                [
+                  "Sao chép",
+                  "Clip hoặc thu phóng được chọn chính được hỗ trợ",
+                  "Chỉ sao chép mục chính, ngay cả khi nhiều clip được chọn; tải trọng vẫn được liên kết với dự án của nó."
+                ],
+                [
+                  "Dán",
+                  "Một dự án đã được tải và dữ liệu clipboard tương thích",
+                  "Các mục được sao chép từ dự án khác sẽ bị từ chối."
+                ],
+                ["Xóa", "Các mục dòng thời gian đã chọn được hỗ trợ", "Xóa mục đã chọn khỏi bố cục."],
+                [
+                  "Hủy liên kết",
+                  "Mục được chọn có liên kết ghi-sidecar",
+                  "Sau khi hủy liên kết, nó có thể di chuyển độc lập."
+                ],
+                ["Bật / Tắt", "Clip được hỗ trợ", "Phương tiện bị vô hiệu hóa sẽ bị bỏ qua khi phát lại và xuất."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Chuyển tiếp clip và canvas",
+          "tables": [
+            {
+              "headers": ["Tài sản", "Giá trị", "Mặc định hoặc ràng buộc"],
+              "rows": [
+                ["bên", "Vào và ra", "Được cấu hình độc lập."],
+                [
+                  "cài sẵn trực quan",
+                  "Không có, Làm mờ, Trượt sang trái, Trượt sang phải, Trượt lên, Trượt xuống, Phóng to, Thu nhỏ, Làm mờ",
+                  "Có sẵn cho các clip trực quan và chuyển tiếp canvas."
+                ],
+                [
+                  "cài sẵn âm thanh",
+                  "Không có hoặc mờ dần",
+                  "Các cài đặt trước chuyển tiếp khác không có sẵn cho âm thanh."
+                ],
+                [
+                  "Thời lượng",
+                  "1–5000 mili giây",
+                  "500 mili giây; bị giới hạn bởi thời lượng clip trừ đi phần chuyển tiếp ở phía đối diện."
+                ],
+                ["Đường cong thị giác", "1×–5×", "3×; không được hiển thị cho quá trình chuyển đổi âm thanh."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Giữ khung",
+          "paragraphs": [
+            "Giữ khung sẽ cố định video đã chọn ở đầu phát và mở rộng phần tĩnh dưới dạng mục dòng thời gian."
+          ],
+          "tables": [
+            {
+              "headers": ["Yêu cầu", "quy tắc"],
+              "rows": [
+                ["Loại clip", "Kích hoạt màn hình, video hoặc clip webcam với phương tiện video."],
+                ["Lựa chọn", "Phải chọn một clip tương thích."],
+                ["Đầu phát", "Từ đầu + 40 ms đến cuối − 40 ms, bao gồm cả."],
+                ["Đoạn đông lạnh", "1000 mili giây."],
+                [
+                  "Phương tiện được liên kết",
+                  "Các clip được liên kết sẽ được chia nhỏ lại với nhau và phân đoạn cố định có thể vẫn được nhóm lại với sidecar âm thanh của nó."
+                ],
+                ["Thực đơn", "Có sẵn từ menu ngữ cảnh của clip được hỗ trợ."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Lỗi phương tiện được nhập",
+          "paragraphs": [
+            "Các tập tin bị mất sẽ được xác thực trước khi nhập. Beam báo cáo các tiện ích mở rộng hoặc codec không được hỗ trợ, phương tiện trống hoặc không hợp lệ, lỗi giải mã, nguồn không cục bộ và lỗi nhập dự án. Nếu video đã nhập chứa âm thanh không được hỗ trợ thì video đó có thể được thêm vào trong khi âm thanh của video đó bị bỏ qua."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Mỗi lần nhập một lần",
+            "text": "Quá trình nhập kéo và thả mới bị từ chối trong khi một quá trình nhập phương tiện khác đang chạy."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/clips",
+      "title": "Thuộc tính clip",
+      "description": "Tham chiếu đầy đủ về các thuộc tính hình ảnh, webcam, độ mờ, âm thanh, văn bản và phụ đề bàn phím.",
+      "lead": "Bảng Clip tuân theo lựa chọn chính. Các điều khiển được chia sẻ chỉ xuất hiện đối với các loại clip tương thích và bản chỉnh sửa nhiều lựa chọn chỉ lan truyền đến các clip đã chọn tương thích.",
+      "sections": [
+        {
+          "title": "Không có lựa chọn",
+          "paragraphs": [
+            "Khi không có clip nào được chọn, bảng sẽ hiển thị trạng thái trống hướng dẫn. Chọn một mục trên khung vẽ hoặc dòng thời gian để hiển thị các thuộc tính của nó."
+          ],
+          "screenshot": {
+            "path": "editor/clip-empty.webp",
+            "alt": "Beam Bảng clip không có clip nào được chọn",
+            "caption": "Bảng Clip vẫn trống cho đến khi dòng thời gian hoặc mục canvas tương thích được chọn.",
+            "aspectRatio": "199/326"
+          }
+        },
+        {
+          "title": "Các loại clip",
+          "tables": [
+            {
+              "headers": ["Loại clip", "Thuộc tính tiếp xúc"],
+              "rows": [
+                [
+                  "Màn hình/Video",
+                  "Bố cục trực quan, đóng khung, chuyển đổi, giao diện, tốc độ phát lại, chuyển tiếp, bật, xóa và hủy liên kết khi được liên kết."
+                ],
+                ["Hình ảnh", "Bố cục trực quan, đóng khung, biến đổi, giao diện, chuyển tiếp, bật và xóa."],
+                ["Webcam", "Điều khiển trực quan được chia sẻ cùng với bố cục phân chia và React to Zoom."],
+                ["Làm mờ", "Điều khiển hiệu ứng, hình dạng, cường độ, lông vũ, bán kính, sắc thái và màu sắc."],
+                ["Hệ thống/Micrô/Âm thanh nhập vào", "Âm lượng clip, Mục nhập và Thoát Chuyển đổi mờ dần, bật và xóa."],
+                [
+                  "Chú thích văn bản",
+                  "Nội dung văn bản, kiểu chữ, căn chỉnh, màu sắc, đường viền, đùn, phông nền và bóng."
+                ],
+                ["Chú thích bàn phím", "Kiểu chú thích cộng với Con trỏ theo dõi."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Bố cục trực quan được chia sẻ",
+          "tables": [
+            {
+              "headers": ["Tài sản", "Giá trị hoặc phạm vi", "Hành vi"],
+              "rows": [
+                [
+                  "Bố cục",
+                  "Nổi trên cùng bên trái, trên cùng bên phải, dưới cùng bên trái, dưới cùng bên phải; Trung tâm nổi; Toàn màn hình",
+                  "Webcam còn hỗ trợ Chia trái, phải, trên, dưới."
+                ],
+                [
+                  "đóng khung",
+                  "Lấp đầy, Vừa vặn, Hình vuông, Chân dung 9:16, Phong cảnh 16:9, Hình tròn, Hình tròn",
+                  "Kiểm soát việc trình bày cắt và mặt nạ."
+                ],
+                ["Vị trí X/Y", "−300% đến 300%", "Di chuyển hình ảnh trên canvas."],
+                ["Chiều rộng", "2%–400%", "Chiều cao vẫn tỷ lệ thuận khi chỉ thay đổi chiều rộng."],
+                ["Bán kính góc", "Không có, 8, 16, 24 px hoặc Tùy chỉnh 0–200 px", "Làm tròn mặt nạ trực quan."],
+                ["Gương", "Ngang và Dọc", "Lật hình ảnh được hiển thị."],
+                [
+                  "Tốc độ phát lại",
+                  "0,25×–4×; cài đặt trước 0,5×, 1×, 1,5×, 2×, 3×",
+                  "Có sẵn cho các clip màn hình, video và webcam."
+                ],
+                ["Bật / Tắt", "Bật hoặc Tắt", "Các clip bị tắt vẫn còn trên dòng thời gian nhưng không được hiển thị."],
+                ["Chuyển tiếp", "Mở từ tiêu đề thuộc tính", "Chuyển tiếp vào và ra được lưu trữ trên mỗi clip."],
+                ["Xóa", "Hành động tiêu đề thuộc tính", "Xóa clip đã chọn."],
+                [
+                  "Hủy liên kết",
+                  "Có sẵn cho sidecar được liên kết",
+                  "Tách clip khỏi chuyển động của dòng thời gian được liên kết."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Bóng, đường viền và khung",
+          "tables": [
+            {
+              "headers": ["Nhóm", "Tài sản", "Giá trị hoặc phạm vi"],
+              "rows": [
+                ["Bóng tối", "cài sẵn", "Không, Mềm, Trung bình, Mạnh, Tùy chỉnh"],
+                ["Bóng tối", "Chế độ", "Rắn hoặc thích ứng"],
+                ["Bóng tối", "Làm mờ tùy chỉnh", "4–96 pixel"],
+                ["Bóng tối", "Hướng", "Tất cả, Dưới cùng, Dưới cùng bên phải, Trên cùng bên trái"],
+                ["Biên giới", "Đã bật", "Bật hoặc Tắt"],
+                ["Biên giới", "Màu sắc", "Bộ chọn màu"],
+                ["Biên giới", "Chiều rộng", "1–32 pixel"],
+                ["khung", "phong cách", "Không có, Safari, Windows 95"],
+                ["khung", "Tiêu đề", "Tiêu đề khung tùy chỉnh"],
+                ["khung", "Cân Chrome", "50%–200%"],
+                ["khung", "Kiểm soát cụ thể", "Menu, thanh cuộn hoặc màu sắc tùy thuộc vào kiểu khung"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Cắt một clip trực quan",
+          "paragraphs": ["Cắt là một trình chỉnh sửa canvas trực tiếp chứ không phải là nhóm bảng Clip số."],
+          "steps": [
+            "Chọn chính xác một màn hình, video, hình ảnh hoặc clip webcam.",
+            "Chọn Cắt trên thanh công cụ canvas.",
+            "Di chuyển hoặc thay đổi kích thước hình chữ nhật cắt trực tiếp trên hình ảnh đã chọn.",
+            "Chọn OK để lưu phần cắt chuẩn hóa trên clip đó."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Yêu cầu lựa chọn duy nhất",
+            "text": "Cắt không khả dụng nếu không có một lựa chọn trực quan tương thích và không hoạt động trên nhiều lựa chọn."
+          }
+        },
+        {
+          "title": "Mặc định hình ảnh ban đầu",
+          "tables": [
+            {
+              "headers": ["Đoạn phim", "Chuyển đổi và đóng khung", "Góc và bóng tối"],
+              "rows": [
+                [
+                  "Màn hình",
+                  "Toàn bộ khung vẽ",
+                  "Không có bán kính góc khi không có nền; Bóng trung bình, độ mờ 40 px, Hướng dưới cùng."
+                ],
+                ["Video/Hình ảnh", "Toàn bộ khung vẽ", "Bán kính góc nhỏ; Bóng trung bình, độ mờ 20 px, Mọi hướng."],
+                [
+                  "Webcam mới",
+                  "x 72%, y 72%, rộng 24%, cao 24%; hình tròn",
+                  "Giao diện webcam mặc định sau đó áp dụng."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Clip webcam",
+          "screenshot": {
+            "path": "editor/webcam-properties.webp",
+            "alt": "Beam thuộc tính cho clip webcam đã chọn",
+            "caption": "Các clip webcam thêm bố cục phân chia và hành vi phản ứng thu phóng vào các điều khiển trực quan được chia sẻ.",
+            "aspectRatio": "199/326"
+          },
+          "tables": [
+            {
+              "headers": ["Tài sản", "Giá trị", "Mặc định hoặc ràng buộc"],
+              "rows": [
+                [
+                  "Chia bố cục",
+                  "Trái, Phải, Trên, Dưới",
+                  "Yêu cầu một clip màn hình được liên kết. Ngược lại: “Không có bản ghi màn hình phù hợp nào tại thời điểm này trong dòng thời gian.”"
+                ],
+                ["Tỷ lệ chia", "20%–80%", "50%"],
+                ["Phần đệm tách", "0%–8%", "0%"],
+                ["Phản ứng với thu phóng", "Bật hoặc Tắt", "Bật"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Làm mờ clip",
+          "tables": [
+            {
+              "headers": ["Tài sản", "Giá trị hoặc phạm vi", "Hành vi có điều kiện"],
+              "rows": [
+                ["cài sẵn ánh sáng", "Làm mờ", "Sức mạnh 30, lông 14, màu 0."],
+                ["Đặt trước quyền riêng tư", "Pixel hóa", "Sức mạnh 72, lông 2, màu 0."],
+                ["cài sẵn mạnh mẽ", "đục", "Sức mạnh 100, lông 0, tông màu 0, màu #000000."],
+                ["Hiệu ứng", "Mờ, mờ, có pixel, mờ", "Những thay đổi mà điều khiển vẫn hiển thị."],
+                ["hình dạng", "Hình chữ nhật, hình vuông, hình tròn", "Vòng tròn ẩn bán kính góc."],
+                ["sức mạnh", "0%–100%", "Ẩn cho Opaque."],
+                ["Độ mềm của cạnh", "0%–100%", "Kiểm soát lông."],
+                ["Bán kính góc", "0%–100%", "Ẩn cho Vòng Tròn."],
+                ["Cường độ màu", "0%–100%", "Chỉ mờ; vào Frosted sử dụng ít nhất 24%."],
+                ["Màu sắc", "Bộ chọn màu", "Chỉ có mờ và đục."]
+              ]
+            }
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Hiệu ứng riêng tư",
+            "text": "Hiệu ứng được đưa vào video được xuất. Tăng cường độ hoặc sử dụng Opaque cho thông tin nhạy cảm."
+          }
+        },
+        {
+          "title": "Âm lượng đoạn âm thanh",
+          "tables": [
+            {
+              "headers": ["Tài sản", "Phạm vi", "Mặc định"],
+              "rows": [["khối lượng", "0%–200%", "100%"]]
+            }
+          ],
+          "paragraphs": [
+            "Âm lượng ở mức clip này áp dụng cho các clip âm thanh được nhập, micrô hoặc hệ thống đã chọn. Các điều khiển âm lượng ở cấp độ vai trò và toàn tác phẩm được ghi lại trên trang Âm thanh."
+          ]
+        },
+        {
+          "title": "Chú thích văn bản và bàn phím",
+          "tables": [
+            {
+              "headers": ["Tài sản", "Giá trị hoặc phạm vi", "Mặc định hoặc quy tắc"],
+              "rows": [
+                [
+                  "Nội dung",
+                  "Văn bản tùy chỉnh hoặc câu được tạo/bước bàn phím",
+                  "Văn bản tùy chỉnh không lan truyền qua nhiều lựa chọn."
+                ],
+                [
+                  "Phông chữ",
+                  "Tìm kiếm phông chữ đã cài đặt hoặc nhập phông chữ",
+                  "Được lưu trữ với kiểu dáng chú thích."
+                ],
+                ["phong cách", "In đậm, in nghiêng, gạch ngang", "Chuyển đổi độc lập."],
+                ["Căn chỉnh", "Trái, Giữa, Phải", "Căn chỉnh văn bản chú thích."],
+                ["Màu sắc", "Bộ chọn màu", "Màu tô văn bản."],
+                ["Chiều cao dòng", "0,8–2,0", "Giá trị kiểu chú thích."],
+                ["Khoảng cách chữ", "−5 đến 20 px", "Giá trị kiểu chú thích."],
+                [
+                  "Cỡ chữ",
+                  "12–256 pixel",
+                  "Tùy chọn phụ đề thủ công với dự phòng tạo 42 px; bảng điều khiển dự phòng Văn bản 36 px / bàn phím 28 px; Chú thích AI sử dụng 36 px."
+                ],
+                ["Bọc", "Bật hoặc Tắt", "Bật"],
+                ["phác thảo", "0–30 pixel", "Chiều rộng phác thảo tùy chọn."],
+                ["Màu phác thảo", "Bộ chọn màu", "Được sử dụng khi chiều rộng đường viền trên 0."],
+                ["Đùn", "0–20 pixel", "Hiệu ứng chiều sâu tùy chọn."],
+                ["Làm mờ phông nền", "0–48 pixel", "Làm mờ đằng sau chú thích."],
+                [
+                  "Làm mờ bóng văn bản",
+                  "0–50 pixel",
+                  "Hướng: Tất cả, Dưới cùng, Dưới cùng bên phải, Trên cùng bên trái."
+                ],
+                ["Màu bóng văn bản", "Bộ chọn màu", "Áp dụng với độ mờ và hướng bóng được định cấu hình."],
+                [
+                  "Theo dõi con trỏ",
+                  "Bật hoặc Tắt",
+                  "Chỉ chú thích bàn phím; không bao giờ được truyền bá qua nhiều lựa chọn."
+                ]
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

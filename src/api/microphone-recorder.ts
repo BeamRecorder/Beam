@@ -5,9 +5,12 @@ import type {
   MicrophoneSegmentStart,
 } from './types/capture-api';
 import { enumerateBrowserMediaDevices } from './browser-media-devices';
-
-const MIME_TYPE = 'audio/webm;codecs=opus';
-const MICROPHONE_PREFIX = 'microphone:chromium:';
+import {
+  MICROPHONE_PREFIX,
+  MIME_TYPE,
+  microphoneDeviceId,
+  normalizedMicrophoneSetting,
+} from './browser-microphone-source';
 
 type MicrophoneFormat = MicrophoneSegmentStart['format'];
 type MicrophoneApi = {
@@ -22,15 +25,7 @@ function api(): MicrophoneApi {
   return window.capture;
 }
 
-export function microphoneDeviceId(sourceId: string) {
-  if (!sourceId.startsWith(MICROPHONE_PREFIX) || sourceId.length === MICROPHONE_PREFIX.length)
-    throw new Error('The selected microphone is invalid.');
-  return sourceId.slice(MICROPHONE_PREFIX.length);
-}
-
-export function normalizedMicrophoneSetting(value: number | undefined) {
-  return Number.isFinite(value) && value! >= 0 ? Math.round(value!) : 0;
-}
+export { microphoneDeviceId, normalizedMicrophoneSetting } from './browser-microphone-source';
 
 export async function listBrowserMicrophones(): Promise<CaptureSource[]> {
   const devices = await enumerateBrowserMediaDevices();

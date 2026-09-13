@@ -19,6 +19,9 @@ export const ZOOM_DEPTH_SCALES: Record<ZoomDepth, number> = {
 
 export interface ZoomElement {
   id: string;
+  locked?: boolean;
+  /** Undefined resolves legacy automatic links; null explicitly detaches a zoom. */
+  linkedClipId?: string | null;
   sessionId: string;
   startMs: number;
   endMs: number;
@@ -41,6 +44,8 @@ export interface AppliedZoom {
   focus: ZoomFocus;
   strength: number;
   mode: ZoomElement['mode'];
+  /** True only while an automatic region should follow cursor telemetry. */
+  tracksCursor?: boolean;
   tilt: number;
   tiltHorizontal?: number;
   tiltVertical?: number;
@@ -59,12 +64,49 @@ export interface ProjectZoomState {
   generatedSessions: ZoomGenerationRecord[];
   /** Missing only in projects saved before zoom motion blur was introduced. */
   motionBlur?: ZoomMotionBlurSettings;
+  /** Missing only in projects saved before automatic camera follow controls were introduced. */
+  autoFollow?: ZoomAutoFollowSettings;
 }
 
 export interface ZoomMotionBlurSettings {
   enabled: boolean;
   intensity: number;
 }
+
+export interface ZoomAutoFollowSettings {
+  /** Fraction of the visible viewport kept stable around the camera focus. */
+  safeZone: number;
+  /** Normalized critical-spring response from stable (0) to responsive (1). */
+  responsiveness: number;
+  /** Holds each target until settled so camera travel stays on a straight segment. */
+  directionLock: boolean;
+}
+
+export type ZoomAutoFollowPreset = 'stable' | 'balanced' | 'responsive';
+
+export const ZOOM_AUTO_FOLLOW_PRESETS: Record<ZoomAutoFollowPreset, ZoomAutoFollowSettings> = {
+  stable: { safeZone: 0.65, responsiveness: 0.3, directionLock: true },
+  balanced: { safeZone: 0.5, responsiveness: 0.55, directionLock: true },
+  responsive: { safeZone: 0.35, responsiveness: 0.85, directionLock: true },
+};
+
+export const DEFAULT_ZOOM_AUTO_FOLLOW: ZoomAutoFollowSettings = { ...ZOOM_AUTO_FOLLOW_PRESETS.balanced };
+export const ZOOM_AUTO_FOLLOW_SAFE_ZONE_MIN = 0.25;
+export const ZOOM_AUTO_FOLLOW_SAFE_ZONE_MAX = 0.75;
+
+export const normalizeZoomAutoFollow = (
+  value: Partial<ZoomAutoFollowSettings> | null | undefined,
+): ZoomAutoFollowSettings => ({
+  safeZone:
+    typeof value?.safeZone === 'number' && Number.isFinite(value.safeZone)
+      ? Math.min(ZOOM_AUTO_FOLLOW_SAFE_ZONE_MAX, Math.max(ZOOM_AUTO_FOLLOW_SAFE_ZONE_MIN, value.safeZone))
+      : DEFAULT_ZOOM_AUTO_FOLLOW.safeZone,
+  responsiveness:
+    typeof value?.responsiveness === 'number' && Number.isFinite(value.responsiveness)
+      ? Math.min(1, Math.max(0, value.responsiveness))
+      : DEFAULT_ZOOM_AUTO_FOLLOW.responsiveness,
+  directionLock: value?.directionLock !== false,
+});
 
 export const DEFAULT_ZOOM_MOTION_BLUR: ZoomMotionBlurSettings = { enabled: true, intensity: 0.55 };
 export const DEFAULT_ZOOM_PROJECTION: ZoomProjection = '2d';
@@ -101,6 +143,7 @@ export const EMPTY_PROJECT_ZOOM_STATE: ProjectZoomState = {
   elements: [],
   generatedSessions: [],
   motionBlur: { ...DEFAULT_ZOOM_MOTION_BLUR },
+  autoFollow: { ...DEFAULT_ZOOM_AUTO_FOLLOW },
 };
 
 export const DEFAULT_ZOOM_DEPTH: ZoomDepth = 2;

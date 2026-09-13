@@ -3,34 +3,35 @@
     {
       "slug": "editor/index",
       "title": "Tổng quan trình chỉnh sửa video",
-      "description": "Tìm hiểu không gian làm việc và quy trình chỉnh sửa không phá hủy của trình chỉnh sửa video Beam.",
-      "lead": "Trình chỉnh sửa video biến các phiên đã ghi và phương tiện nhập vào thành demo sản phẩm được dàn dựng trong khi vẫn giữ nguyên tài liệu nguồn ban đầu.",
+      "description": "Hiểu Beam không gian làm việc chỉnh sửa, dòng thời gian, thuộc tính, xem trước và quy trình xuất.",
+      "lead": "Trình chỉnh sửa video biến các phiên đã ghi và phương tiện đã nhập thành một bố cục bóng bẩy trong khi vẫn giữ được các tệp nguồn gốc.",
       "sections": [
         {
-          "title": "Một không gian làm việc",
+          "title": "Một không gian làm việc chỉnh sửa",
           "paragraphs": [
-            "Trình chỉnh sửa kết hợp canvas xem trước, timeline nhiều track, bảng thuộc tính, điều khiển phát, thao tác dự án và xuất. Chọn một mục sẽ hiển thị các điều khiển phù hợp với mục đó."
+            "Beam giữ các điều khiển dự án ở trên cùng, điều hướng khả năng và các thuộc tính ở bên trái, bản xem trước đầu ra ở giữa và các điều khiển thời gian trong dòng thời gian có thể thay đổi kích thước bên dưới. Việc chọn clip, thu phóng, con trỏ hoặc khung vẽ sẽ mở ra các điều khiển áp dụng cho nó."
           ],
           "screenshot": {
-            "path": "editor/editor-overview.webp",
-            "alt": "Tổng quan không gian làm việc của trình chỉnh sửa video Beam",
-            "caption": "Canvas, thuộc tính, phát và timeline luôn hiện trong không gian chỉnh sửa."
+            "path": "editor/interface-overview.webp",
+            "alt": "Hoàn thiện giao diện Beam Trình chỉnh sửa video",
+            "caption": "Canvas, thuộc tính, điều khiển phát lại và dòng thời gian nhiều bản nhạc vẫn hiển thị cùng nhau.",
+            "aspectRatio": "1920/1053"
           }
-        },
-        {
-          "title": "Dàn dựng không phá hủy",
-          "paragraphs": [
-            "Các chỉnh sửa trên timeline mô tả cách sắp xếp và trình bày clip nguồn. Cắt, tách, biến đổi, thu phóng, chú thích và kiểu hiển thị không ghi đè các tệp bản ghi gốc."
-          ]
         },
         {
           "title": "Từ ghi hình đến xuất",
           "steps": [
-            "Mở trình chỉnh sửa sau khi ghi hoặc chọn một dự án hiện có.",
-            "Sắp xếp clip và thời gian trên timeline.",
-            "Tạo kiểu cho canvas, clip, con trỏ, mức thu phóng, chú thích và âm thanh.",
-            "Xem trước toàn bộ dàn dựng.",
-            "Chọn định dạng xuất, độ phân giải và cài đặt chất lượng."
+            "Mở trình chỉnh sửa sau khi ghi hoặc chọn dự án hiện có.",
+            "Sắp xếp, cắt, tách và tạo kiểu cho các clip trên dòng thời gian.",
+            "Đặt nền canvas, thu phóng, hành vi con trỏ, chú thích và âm thanh.",
+            "Xem trước bố cục ở chất lượng phát lại phù hợp.",
+            "Xuất video đã hoàn thành dưới dạng WebM hoặc MP4."
+          ]
+        },
+        {
+          "title": "Công nghệ biên tập",
+          "paragraphs": [
+            "Giao diện máy tính để bàn được xây dựng bằng Electron và Vue. Beam sử dụng Mediabunny để phát lại và xuất phương tiện cũng như API Canvas 2D để tổng hợp các lớp hình ảnh."
           ]
         }
       ]
@@ -38,134 +39,176 @@
     {
       "slug": "editor/interface",
       "title": "Giao diện trình chỉnh sửa video",
-      "description": "Tìm hiểu canvas, thanh bên, thuộc tính, timeline, phát và điều khiển xuất trong Beam.",
-      "lead": "Trình chỉnh sửa đặt điều khiển dự án chung ở trên cùng, phần hình ảnh ở giữa, thuộc tính ở bên cạnh và thời gian ở phía dưới.",
+      "description": "Tìm hiểu thanh trên cùng, thanh bên, thanh công cụ canvas, thanh công cụ dòng thời gian, bản nhạc, lựa chọn và điều khiển phát lại.",
+      "lead": "Giao diện phân tách các hành động cấp dự án, bố cục hình ảnh, thuộc tính mục và chỉnh sửa dựa trên thời gian mà không ẩn kết quả đầu ra hiện tại.",
       "sections": [
         {
           "title": "Thanh trên cùng",
-          "bullets": [
-            "Thoát về HUD đưa bạn trở lại trình quay.",
-            "Hoàn tác và làm lại di chuyển qua các thao tác chỉnh sửa được hỗ trợ.",
-            "Tiêu đề dự án và trạng thái lưu xác định dự án hiện tại.",
-            "Discord mở cộng đồng Beam.",
-            "Xuất video mở các điều khiển xuất."
+          "tables": [
+            {
+              "headers": ["Kiểm soát", "hành động", "Hành vi quan trọng"],
+              "rows": [
+                ["Thoát sang HUD", "Trở lại Máy ghi âm.", "Dự án hiện tại vẫn có sẵn."],
+                [
+                  "Bộ chọn dự án",
+                  "Hiển thị dự án hiện tại và mở một dự án khác.",
+                  "Dữ liệu dự án không có sẵn sẽ được xử lý bởi trạng thái tải dự án."
+                ],
+                [
+                  "Hoàn tác / Làm lại",
+                  "Di chuyển qua các ảnh chụp nhanh đang chỉnh sửa.",
+                  "Tối đa 50 ảnh chụp nhanh trong phiên chỉnh sửa hiện tại; lịch sử không được khôi phục sau khi mở lại."
+                ],
+                [
+                  "Giám sát hiệu suất",
+                  "Báo cáo xem trước sức khỏe.",
+                  "Các trạng thái Nhàn rỗi, Tốt, Cảnh báo và Quan trọng."
+                ],
+                ["Bất hòa", "Mở cộng đồng Beam.", "Liên kết bên ngoài."],
+                ["Xuất", "Mở cài đặt xuất.", "Có sẵn khi một dự án được tải."],
+                [
+                  "Điều khiển cửa sổ",
+                  "Giảm thiểu, tối đa hóa hoặc khôi phục và đóng.",
+                  "Hành động gốc của cửa sổ máy tính để bàn."
+                ]
+              ]
+            }
           ]
         },
         {
-          "title": "Canvas và thanh công cụ",
+          "title": "Thanh bên và thuộc tính",
           "paragraphs": [
-            "Canvas xem trước khung hình đã dàn dựng. Thanh công cụ thay đổi tỷ lệ khung hình đầu ra, vào chế độ cắt, bật tắt lưới căn chỉnh và điều khiển mức thu phóng khung nhìn mà không thay đổi bản dàn dựng được xuất."
+            "Thanh bên mở Canvas, Clip, Thu phóng, Con trỏ, Chú thích, Âm thanh và Cài đặt. Bảng liền kề thay đổi theo danh mục đang hoạt động và lựa chọn hiện tại. Trên các cửa sổ hẹp hoặc ngắn, các nhãn sẽ thu gọn trong khi các biểu tượng của chúng vẫn hiển thị."
           ],
-          "screenshot": {
-            "path": "editor/canvas-properties.webp",
-            "alt": "Canvas Beam bên cạnh bảng thuộc tính đang hoạt động",
-            "caption": "Chọn canvas hoặc một mục timeline để hiển thị các điều khiển chỉnh sửa."
-          }
+          "tables": [
+            {
+              "headers": ["Lựa chọn", "Hành vi của bảng điều khiển"],
+              "rows": [
+                ["Đoạn phim", "Mở các thuộc tính tương thích với clip được chọn chính."],
+                ["Thu phóng", "Mở các điều khiển lấy nét và phóng to của chế độ thu phóng đã chọn."],
+                ["Canvas", "Mở các điều khiển nền và thương hiệu trên toàn thành phần."],
+                ["Con trỏ", "Mở bản trình bày con trỏ chung mà không yêu cầu lựa chọn clip."],
+                ["Nhiều clip", "Sử dụng một clip chính và chỉ áp dụng thay đổi cho các clip đã chọn tương thích."]
+              ]
+            }
+          ]
         },
         {
-          "title": "Thanh bên và thuộc tính",
-          "bullets": [
-            "Canvas điều khiển nền đầu ra và bề mặt trình bày.",
-            "Clip điều khiển clip video, webcam, âm thanh, làm mờ, hình ảnh hoặc chú thích đã chọn.",
-            "Thu phóng chỉnh sửa khối thu phóng đã chọn hoặc tạo thu phóng tự động.",
-            "Con trỏ điều khiển giao diện, phản hồi nhấp chuột và chuyển động.",
-            "Chú thích tạo hoặc tạo kiểu cho chú thích văn bản và bàn phím.",
-            "Âm thanh điều khiển mức âm thanh chung, hệ thống và micrô.",
-            "Cài đặt điều khiển tùy chọn ứng dụng và quyền truy cập trình quay."
+          "title": "Thanh công cụ canvas",
+          "tables": [
+            {
+              "headers": ["Kiểm soát", "Giá trị", "Hiệu ứng"],
+              "rows": [
+                ["Tỷ lệ khung hình", "16:9, 9:16, 1:1, 4:5, 3:4, 4:3, 21:9", "Thay đổi tỷ lệ canvas đầu ra."],
+                ["Cắt", "Mở trình chỉnh sửa cắt xén", "Chỉ có sẵn cho chính xác một clip hình ảnh đã chọn."],
+                ["Lưới", "Bật hoặc Tắt", "Hiển thị hoặc ẩn hướng dẫn căn chỉnh 3×3."],
+                [
+                  "Thu phóng khung nhìn",
+                  "25%–500%; đặt lại về 100%",
+                  "Chỉ thay đổi chế độ xem trình chỉnh sửa, không bao giờ xuất."
+                ],
+                ["Chảo", "Kéo giữa hoặc kéo cách", "Di chuyển khung nhìn của trình chỉnh sửa được phóng to."]
+              ]
+            }
           ]
         },
         {
           "title": "Thanh công cụ timeline",
-          "bullets": [
-            "Thêm nhập video, hình ảnh, âm thanh, văn bản hoặc mục làm mờ.",
-            "Tách chia clip đã chọn tại đầu phát.",
-            "Hút nam châm căn chỉnh chỉnh sửa với các ranh giới gần đó.",
-            "Điều khiển phát chuyển đến đầu hoặc cuối rồi phát hoặc tạm dừng.",
-            "Thu phóng timeline thay đổi thang thời gian hiển thị."
+          "tables": [
+            {
+              "headers": ["Kiểm soát", "hành động", "Ràng buộc hoặc mặc định"],
+              "rows": [
+                ["Thêm", "Nhập Video, Hình ảnh hoặc Âm thanh; tạo Văn bản hoặc Làm mờ.", "Thêm vào đầu phát."],
+                [
+                  "Tách",
+                  "Chia một clip đã chọn ở đầu phát.",
+                  "Yêu cầu đầu phát nghiêm ngặt bên trong clip; phím tắt S"
+                ],
+                ["nam châm", "Đính kèm các chỉnh sửa vào các ranh giới hữu ích.", "Được bật theo mặc định."],
+                [
+                  "Bỏ qua Quay lại / Chuyển tiếp",
+                  "Di chuyển đầu phát đến điểm bắt đầu hoặc kết thúc của dòng thời gian.",
+                  "Thời gian dự án phụ thuộc."
+                ],
+                [
+                  "Phát / Tạm dừng",
+                  "Xem trước hoặc tạm dừng sáng tác.",
+                  "Không gian phím tắt bên ngoài các trường có thể chỉnh sửa."
+                ],
+                [
+                  "Hiển thị thời gian",
+                  "Hiển thị thời gian hiện tại và tổng số.",
+                  "MM:SS dưới một giờ; HH:MM:SS sau một giờ hoặc hơn."
+                ],
+                [
+                  "Chất lượng phát lại",
+                  "Đầy đủ, một nửa, một phần tư",
+                  "Chỉ xem trước; xuất khẩu vẫn đảm bảo chất lượng."
+                ],
+                ["Thu phóng dòng thời gian", "100%–3200%", "Cũng được điều khiển bằng Ctrl+con lăn chuột."]
+              ]
+            }
           ]
         },
         {
           "title": "Các track trên timeline",
           "paragraphs": [
-            "Khi có các nguồn tương ứng, track đại diện cho video, webcam, làm mờ, thu phóng, chú thích văn bản, chú thích bàn phím, âm thanh hệ thống và âm thanh micrô. Chọn, di chuyển, sắp xếp, cắt, tách, bật hoặc hủy liên kết các mục được hỗ trợ khỏi bản dàn dựng."
+            "Beam tạo các bản nhạc cho phương tiện trực quan được nhóm, thu phóng, chú thích văn bản, chú thích bàn phím, âm thanh hệ thống, âm thanh micrô và âm thanh được nhập khi các nguồn đó tồn tại."
           ],
-          "screenshot": {
-            "path": "editor/timeline.webp",
-            "alt": "Timeline nhiều track của Beam với track hình ảnh, thu phóng, chú thích và âm thanh",
-            "caption": "Timeline giữ phần trình bày, chú thích và âm thanh thẳng hàng với một đầu phát."
+          "bullets": [
+            "Nhấp vào một clip để biến nó thành lựa chọn hiện tại.",
+            "Nhấp vào tiêu đề bản nhạc để chọn mọi clip trên bản nhạc đó; sử dụng Ctrl, Cmd hoặc Shift trên tiêu đề bản nhạc để xây dựng lựa chọn bản nhạc bổ sung. Clip gần đầu phát nhất sẽ trở thành clip chính.",
+            "Kéo tiêu đề bản nhạc trực quan để sắp xếp lại thứ tự lớp của chúng.",
+            "Di chuyển một clip hoặc cắt bớt các bộ điều khiển bắt đầu và kết thúc của nó. Phương tiện ghi được liên kết di chuyển cùng nhau.",
+            "Kéo phương tiện ra ngoài đầu hiện tại sẽ kéo dài dòng thời gian.",
+            "Nhấp vào rãnh Thu phóng để thêm thu phóng thủ công hoặc rãnh phụ đề văn bản để thêm chú thích trống.",
+            "Nhấp chuột phải vào clip để thực hiện các hành động Sao chép, Dán, Xóa và Giữ Khung được hỗ trợ."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Không gian có hai vai trò canvas",
+            "text": "Dấu cách chuyển đổi chế độ phát lại, trong khi giữ Dấu cách trong khi kéo sẽ xoay khung vẽ được thu phóng. Các trường có thể chỉnh sửa bỏ qua các phím tắt chung này."
           }
+        },
+        {
+          "title": "Lựa chọn trực tiếp và nhiều lựa chọn",
+          "paragraphs": [
+            "Nhấp trực tiếp vào vùng hình ảnh, chú thích, lớp làm mờ, con trỏ hoặc màn hình được hỗ trợ trên khung vẽ hoặc chọn cùng một mục trên dòng thời gian. Nhiều lựa chọn sử dụng một clip chính cho bảng điều khiển."
+          ],
+          "bullets": [
+            "Hình thức trực quan và các biến đổi chỉ lan truyền đến các clip hình ảnh tương thích.",
+            "Thuộc tính làm mờ chỉ lan truyền đến các clip làm mờ đã chọn.",
+            "Âm lượng chỉ truyền tới các clip âm thanh đã chọn.",
+            "Kiểu phụ đề chỉ áp dụng cho các chú thích của cùng một loại văn bản hoặc bàn phím.",
+            "Văn bản chú thích tùy chỉnh và Con trỏ theo dõi không bao giờ truyền qua nhiều lựa chọn.",
+            "Bộ điều khiển chuyển đổi cắt và canvas yêu cầu chính xác một clip trực quan đã chọn."
+          ]
         }
       ]
     },
     {
       "slug": "editor/capabilities",
       "title": "Tính năng trình chỉnh sửa video",
-      "description": "Chỉnh sửa thời gian, kiểu canvas, mức thu phóng, chuyển động con trỏ, chú thích, âm thanh, làm mờ và phương tiện đã nhập trong Beam.",
-      "lead": "Beam kết hợp các thao tác timeline chính xác với điều khiển trình bày dành cho demo sản phẩm.",
+      "description": "Mở tài liệu tham khảo tập trung cho mọi khả năng của Trình chỉnh sửa video và cài đặt chính xác của nó.",
+      "lead": "Mỗi khả năng đều có trang riêng nên các thuộc tính, mặc định, quy tắc lựa chọn và các trường hợp đặc biệt vẫn dễ dàng quét được.",
       "sections": [
         {
-          "title": "Chỉnh sửa timeline",
-          "bullets": [
-            "Di chuyển và sắp xếp lại các clip hình ảnh được hỗ trợ.",
-            "Cắt ranh giới clip và tách tại đầu phát.",
-            "Bật tính năng hút để căn chỉnh chính xác.",
-            "Thu phóng timeline mà không thay đổi đầu ra.",
-            "Bật, tắt, hủy liên kết hoặc xóa các mục dàn dựng được hỗ trợ."
-          ]
-        },
-        {
-          "title": "Phương tiện đã nhập",
-          "paragraphs": [
-            "Thêm tệp video, hình ảnh và âm thanh được hỗ trợ từ menu Thêm trên timeline hoặc kéo phương tiện cục bộ vào trình chỉnh sửa. Mục đã nhập được chèn tại đầu phát sau khi xác thực."
-          ],
-          "notice": {
-            "kind": "info",
-            "title": "Hỗ trợ codec",
-            "text": "Việc nhập và phát phương tiện phụ thuộc vào codec có sẵn cho Beam. Tệp không được hỗ trợ hoặc không hợp lệ sẽ bị từ chối cùng lý do."
-          }
-        },
-        {
-          "title": "Giao diện canvas và clip",
-          "bullets": [
-            "Chọn nền hình ảnh, video, màu hoặc chuyển màu và nhập phương tiện nền tùy chỉnh.",
-            "Điều chỉnh độ mờ nền và cách trình bày canvas đầu ra.",
-            "Định vị, đổi kích thước, cắt và lật các clip hình ảnh được hỗ trợ.",
-            "Áp dụng bán kính góc, bóng đặc hoặc thích ứng, đường viền và khung kiểu cửa sổ.",
-            "Điều chỉnh tốc độ phát cho các clip được hỗ trợ."
-          ]
-        },
-        {
-          "title": "Thu phóng và trình bày con trỏ",
-          "paragraphs": [
-            "Tạo các khối thu phóng tự động từ sự kiện nhấp chuột đã ghi hoặc thêm điểm tập trung thủ công. Chế độ tự động đi theo con trỏ đã ghi khi thu phóng hoạt động. Mỗi khối thu phóng điều khiển thời gian, chế độ tập trung, vị trí và độ phóng đại. Điều khiển con trỏ thay đổi kiểu, kích thước, màu, bóng, nảy khi nhấp, hiệu ứng gợn trái phải, làm mượt, khối lượng lò xo và làm mờ chuyển động."
-          ],
-          "screenshot": {
-            "path": "editor/zoom-cursor-captions.webp",
-            "alt": "Điều khiển chỉnh sửa thu phóng, con trỏ và chú thích của Beam",
-            "caption": "Điều khiển tập trung và trình bày giúp hướng sự chú ý mà không thay đổi bản ghi nguồn."
-          }
-        },
-        {
-          "title": "Chú thích",
-          "paragraphs": [
-            "Tạo phụ đề chuyển giọng nói thành văn bản cục bộ bằng Whisper từ âm thanh micrô hoặc hệ thống. Tải xuống và xác minh mô hình được hỗ trợ, tạo chú thích rồi chỉnh sửa các clip chú thích và kiểu hiển thị. Chú thích phím tắt sử dụng siêu dữ liệu tương tác an toàn được ghi khi có quyền."
-          ],
-          "notice": {
-            "kind": "tip",
-            "title": "Chuyển lời cục bộ",
-            "text": "Chuyển lời Whisper chạy trên thiết bị. Không cần tải lên đám mây hoặc khóa API."
-          }
-        },
-        {
-          "title": "Âm thanh và làm mờ",
-          "paragraphs": [
-            "Điều khiển âm lượng đầu ra chung và trạng thái bật hoặc mức của track hệ thống và micrô. Thêm clip làm mờ để che hoặc làm mềm một phần bản dàn dựng bằng các điều khiển hình dạng, cường độ, làm mềm biên, bán kính góc, màu phủ và màu sắc."
-          ]
-        },
-        {
-          "title": "Xuất",
-          "paragraphs": [
-            "Kết xuất bản dàn dựng hiện tại thành MP4 hoặc WebM với điều khiển độ phân giải và chất lượng. Xem [xuất và chia sẻ](/export) để biết toàn bộ quy trình."
+          "title": "chỉ số năng lực",
+          "tables": [
+            {
+              "headers": ["Khả năng", "Tham khảo"],
+              "rows": [
+                ["Chỉnh sửa timeline", "[Mở chỉnh sửa dòng thời gian](/editor/capabilities/timeline)"],
+                ["Canvas", "[Mở Canvas](/editor/capabilities/canvas)"],
+                ["Đoạn phim", "[Mở Clip](/editor/capabilities/clips)"],
+                ["Thu phóng", "[Mở thu phóng](/editor/capabilities/zooms)"],
+                ["Con trỏ", "[Mở con trỏ](/editor/capabilities/cursor)"],
+                ["Chú thích", "[Mở phụ đề](/editor/capabilities/captions)"],
+                ["Âm thanh", "[Mở âm thanh](/editor/capabilities/audio)"],
+                ["Cài đặt", "[Mở Cài đặt](/editor/capabilities/settings)"],
+                ["Xuất", "[Mở Xuất và chia sẻ](/export)"]
+              ]
+            }
           ]
         }
       ]

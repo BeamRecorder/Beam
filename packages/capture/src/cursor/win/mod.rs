@@ -1,4 +1,5 @@
 mod capture;
+mod dpi;
 mod recording;
 
 pub use capture::*;

@@ -1,0 +1,306 @@
+{
+  "pages": [
+    {
+      "slug": "recorder/capabilities/capture-sources",
+      "title": "Capturar fontes e regiões",
+      "description": "Referência para tela do gravador, janela, seleção de fonte e comportamento da região de corte.",
+      "lead": "O modo de captura determina quais fontes e controles de região Beam podem ser expostos antes do início da gravação.",
+      "sections": [
+        {
+          "title": "Configurações de captura",
+          "tables": [
+            {
+              "headers": ["Configuração", "Valores", "Padrão", "Comportamento e restrições"],
+              "rows": [
+                [
+                  "Modo",
+                  "Tela ou janela",
+                  "Tela",
+                  "A tela registra uma exibição; Janela registra uma janela do aplicativo."
+                ],
+                [
+                  "Fonte da tela",
+                  "Exibições disponíveis",
+                  "Exibição padrão, então disponível primeiro",
+                  "Selecionado no HUD fora da captura do portal Linux."
+                ],
+                [
+                  "Fonte da janela",
+                  "Janelas de aplicativos disponíveis",
+                  "Fonte padrão ou portal, disponível primeiro",
+                  "As visualizações da janela são atualizadas a cada 5 segundos enquanto Beam não está gravando."
+                ],
+                [
+                  "Região de gravação",
+                  "X, y, largura e altura normalizados",
+                  "Nenhuma região",
+                  "Apenas modo de tela. Armazenado em `extras.screenRegion`."
+                ],
+                [
+                  "Predefinição de região",
+                  "640×480, 800×600, 1024×768, 1366×768, 1440×990, 1920×1080",
+                  "Nenhum",
+                  "Armazenado em `extras.screenRegionPreset`; um retângulo personalizado pode ser desenhado."
+                ],
+                [
+                  "Taxa de captura",
+                  "60 FPS",
+                  "60 FPS",
+                  "Corrigido na configuração do Gravador; não é uma configuração de usuário exposta."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Selecione uma região personalizada",
+          "steps": [
+            "Escolha o modo Tela e selecione uma exibição.",
+            "Selecione Selecione uma área da tela. Beam oculta temporariamente o HUD e abre a sobreposição de região sempre visível.",
+            "Desenhe um retângulo ou escolha um tamanho predefinido.",
+            "Selecione Usar esta área para salvar a região ou Cancelar para deixar a escolha existente inalterada.",
+            "Use Editar a área da tela para ajustar uma região salva."
+          ]
+        },
+        {
+          "title": "Casos extremos da região",
+          "bullets": [
+            "Redefinir seleciona a tela inteira; não exclui um arquivo ou gravação.",
+            "Uma região que é efetivamente a tela completa é normalizada para nenhum corte.",
+            "Os controles de região são desabilitados no modo Janela, durante a gravação, enquanto Beam está ocupado ou quando os limites de exibição não estão disponíveis.",
+            "A captura do portal Linux não expõe a sobreposição de região de Beam."
+          ]
+        },
+        {
+          "title": "Seleção de fonte Linux",
+          "paragraphs": [
+            "No Linux, o portal de desktop exibe seu próprio seletor quando a captura é iniciada. O HUD não fornece o seletor de fonte de elétrons e apenas uma fonte de portal é selecionada para a sessão."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Visibilidade em tela cheia",
+            "text": "Beam não pode ocultar suas próprias janelas de uma captura de tela inteira do Linux. A captura de região também não está disponível, então organize ou minimize Beam antes de confirmar a origem do portal."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/audio-camera",
+      "title": "Áudio e câmera",
+      "description": "Referência para microfone, câmera, áudio do sistema, medidores, sidecars e alternadores de dispositivos ao vivo.",
+      "lead": "Cada fonte é selecionada de forma independente. A disponibilidade, a medição de visualização e se uma fonte pode ser alternada após o início dependem da fonte e da plataforma.",
+      "sections": [
+        {
+          "title": "Configurações de origem",
+          "tables": [
+            {
+              "headers": ["Fonte", "Valores", "Padrão", "Capturar comportamento"],
+              "rows": [
+                [
+                  "Microfone",
+                  "Um dispositivo de entrada Chromium ou sem áudio",
+                  "Sem áudio",
+                  "Capturado separadamente. O cancelamento de eco, a supressão de ruído e o controle automático de ganho estão desativados."
+                ],
+                [
+                  "Câmera",
+                  "Uma câmera Chromium ou câmera desligada",
+                  "Câmera desligada",
+                  "Capturado como um sidecar VP8 separado. Se a câmera for informada como indisponível, Beam a desativa e pode continuar."
+                ],
+                [
+                  "Áudio do sistema",
+                  "Áudio do sistema ou desligado",
+                  "Desligado",
+                  "Linux usa captura nativa; outras plataformas usam um sidecar de mídia de exibição do Chromium."
+                ],
+                [
+                  "Medidor de microfone",
+                  "Nível ao vivo",
+                  "Escondido sem áudio",
+                  "Visível quando um microfone é selecionado."
+                ],
+                [
+                  "Medidor de áudio do sistema",
+                  "Nível ao vivo",
+                  "Oculto",
+                  "A visualização nativa está disponível no Linux apenas antes da gravação."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Controles durante a gravação",
+          "tables": [
+            {
+              "headers": ["Controle", "Durante a gravação", "Indisponível quando"],
+              "rows": [
+                [
+                  "Alternar microfone",
+                  "Liga ou desliga o microfone selecionado",
+                  "Contagem regressiva, inicialização ou finalização"
+                ],
+                [
+                  "Alternar câmera",
+                  "Liga ou desliga a câmera selecionada",
+                  "Contagem regressiva, inicialização ou finalização"
+                ],
+                [
+                  "Alternar áudio do sistema",
+                  "Ativa ou desativa a captura fora do Linux",
+                  "Contagem regressiva, inicialização, finalização ou qualquer sessão ativa do Linux"
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Comportamento de falha",
+          "paragraphs": [
+            "Quando a câmera selecionada é especificamente informada como indisponível durante a preparação, Beam a desativa e continua sem câmera. Outros erros de câmera ou sidecar podem interromper a inicialização, assim como a falha de um microfone selecionado ou fonte de áudio do sistema."
+          ],
+          "notice": {
+            "kind": "tip",
+            "title": "Verifique antes da contagem regressiva",
+            "text": "Confirme o dispositivo selecionado e o medidor visível antes de iniciar, especialmente depois de conectar ou desconectar o áudio USB e o hardware da câmera."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/teleprompter",
+      "title": "Teleprompter",
+      "description": "Referência para edição de script, visualização, rolagem automática, modo de linha, tipografia e atalhos.",
+      "lead": "O Teleprompter pode rolar continuamente ou percorrer um script linha por linha. Seu documento é armazenado com a sessão de gravação.",
+      "sections": [
+        {
+          "title": "Configurações do teleprompter",
+          "tables": [
+            {
+              "headers": ["Configuração", "Valores", "Padrão", "Alcance ou persistência"],
+              "rows": [
+                ["Roteiro", "Texto livre", "Vazio", "Armazenado em `session/teleprompter.json`."],
+                [
+                  "Modo",
+                  "Contínuo ou linha por linha",
+                  "Contínuo",
+                  "Armazenado nas preferências e no documento da sessão."
+                ],
+                [
+                  "Rolagem automática",
+                  "Ligado ou desligado",
+                  "Ligado",
+                  "Controla o movimento automático; pausar e retomar permanecem disponíveis."
+                ],
+                ["Velocidade", "5–200 px/s", "42px/s", "Etapa: 1 px/s."],
+                ["Tamanho do texto", "16–36 pixels", "36 pixels", "Etapa: 1px."],
+                ["Espaçamento entre linhas", "1–2,5", "1,35", "Passo: 0,05."],
+                ["Alinhamento", "Esquerda ou Centro", "Esquerda", "Armazenado com configurações de teleprompter."],
+                [
+                  "Tema",
+                  "Sistema, Claro ou Escuro no documento armazenado",
+                  "Sistema",
+                  "A UI atual do Teleprompter não expõe isso como um controle funcional."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Controles de editor e leitor",
+          "tables": [
+            {
+              "headers": ["Controle", "Objetivo"],
+              "rows": [
+                ["Editar", "Torna o script editável antes da gravação."],
+                ["Visualização", "Mostra o script como ele será lido."],
+                ["Esconder", "Oculta a janela do Teleprompter."],
+                [
+                  "Pausar/Retomar",
+                  "Interrompe ou reinicia o movimento automático sem alterar a configuração Autoscroll."
+                ],
+                ["Anterior/Próximo", "Move-se entre as linhas no modo Linha por linha."],
+                ["Contador de linha", "Mostra a posição atual da linha no modo Linha por linha."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Comportamento de gravação",
+          "paragraphs": [
+            "Quando uma sessão de gravação é iniciada, o Teleprompter muda automaticamente do script editável para o leitor somente leitura. O modo e as configurações selecionados permanecem disponíveis para controles de apresentação."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Controle de teclado",
+            "text": "Os atalhos do teleprompter são configuráveis em Preferências → Atalhos. Os padrões estão listados na página de referência de Preferências."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/live-controls",
+      "title": "Controles de gravação ao vivo",
+      "description": "Entenda as fases da barra de gravação, modos de visibilidade, alternância de dispositivos, parada e cancelamento.",
+      "lead": "A Barra de Gravação muda de estado durante a sessão e desativa ações que seriam inseguras durante o início da captura ou a finalização dos arquivos.",
+      "sections": [
+        {
+          "title": "Fases de gravação",
+          "tables": [
+            {
+              "headers": ["Fase", "Significado"],
+              "rows": [
+                ["Inativo", "Nenhuma gravação está ativa."],
+                ["Contagem regressiva", "O atraso configurado está em execução."],
+                ["Começando", "Beam está abrindo e sincronizando fontes selecionadas."],
+                ["Gravação", "A sessão está sendo capturada ativamente."],
+                ["Pausado", "A sessão ativa está pausada."],
+                ["Finalizando", "Beam está fechando faixas e preparando o projeto para edição."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Preferência de visibilidade",
+          "tables": [
+            {
+              "headers": ["Modo", "Comportamento", "Padrão da plataforma"],
+              "rows": [
+                ["Sempre visível", "A barra permanece visível durante a captura.", "Windows e macOS"],
+                ["Desvanecimento automático", "A barra desaparece e retorna ao passar o mouse.", "Não é o padrão"],
+                ["Oculto até passar o mouse", "A barra permanece oculta até que o ponteiro a alcance.", "Linux"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Disponibilidade de ação",
+          "tables": [
+            {
+              "headers": ["Ação", "Desativado durante"],
+              "rows": [
+                ["Pausar/Retomar", "Contagem regressiva, início, finalização"],
+                ["Pare", "Finalizando"],
+                ["Cancelar e excluir", "Finalizando"],
+                ["Microfone / Câmera / Áudio do sistema", "Contagem regressiva, início, finalização"],
+                ["Áudio do sistema Linux", "A sessão ativa completa; escolha antes de começar"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Parar em comparação com cancelar",
+          "paragraphs": [
+            "Parar mantém a captura e entra em Finalizando antes de o projeto ser aberto. Cancelar e excluir abandona a gravação ativa e remove a sessão inacabada. Estas são ações deliberadamente separadas."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "O cancelamento exclui a sessão inacabada",
+            "text": "Use Parar quando quiser manter o que já foi gravado. Use Cancelar e excluir somente quando o take atual precisar ser descartado."
+          }
+        }
+      ]
+    }
+  ]
+}

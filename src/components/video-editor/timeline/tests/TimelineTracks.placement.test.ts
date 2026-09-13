@@ -1,8 +1,38 @@
-import { describe, expect, it } from 'vitest';
+import { flushPromises } from '@vue/test-utils';
+import { describe, expect, it, vi } from 'vitest';
 import type { ClipComposition } from '~/media/shared/composition-types';
 import { composition, mountTracks, zoom } from './TimelineTracks.test-support';
 
 describe('TimelineTracks', () => {
+  it.each([
+    [0.75, 750],
+    [1.25, 1_250],
+  ])('keeps the zoom ghost at the same timeline time at UI scale %s', async (_scale, visualWidth) => {
+    const mounted = await mountTracks({ zoomElements: [] });
+    const ticks = mounted!.get('.ruler-ticks-area').element;
+    vi.mocked(ticks.getBoundingClientRect).mockReturnValue({
+      left: 120,
+      top: 0,
+      width: visualWidth,
+      height: 28,
+      right: 120 + visualWidth,
+      bottom: 28,
+    } as DOMRect);
+    Object.defineProperty(ticks, 'offsetWidth', { configurable: true, value: 1_000 });
+    Object.defineProperty(ticks, 'clientWidth', { configurable: true, value: 1_000 });
+    mounted!.get('.timeline-tracks-container').element.dispatchEvent(new Event('scroll'));
+    await flushPromises();
+
+    const cursor = mounted!.get('.cursor-content');
+    await cursor.trigger('mousemove', { clientX: 120 + visualWidth * 0.6 });
+    const ghost = mounted!.get('.cursor-zoom-indicator.preview-ghost');
+    expect(ghost.attributes('style')).toContain('left: 54%');
+    expect(ghost.attributes('style')).toContain('width: 12%');
+
+    await cursor.trigger('click', { clientX: 120 + visualWidth * 0.6 });
+    expect(mounted!.emitted('add:zoom')).toContainEqual([{ startMs: 5_400, durationMs: 1_200 }]);
+  });
+
   it('previews and adds zooms/captions fitted into available gaps', async () => {
     const mounted = await mountTracks();
     const cursor = mounted!.get('.cursor-content');

@@ -13,12 +13,14 @@ const props = withDefaults(
     previews?: CapturePreview[];
     loading?: boolean;
     disabled?: boolean;
+    preferNativeSources?: boolean;
   }>(),
   {
     sources: () => [],
     previews: () => [],
     loading: false,
     disabled: false,
+    preferNativeSources: false,
   },
 );
 
@@ -34,15 +36,26 @@ const options = computed(() => {
     const portal = props.sources
       .filter((source) => source.kind === 'window' && source.selectionMode === 'portal')
       .map((source) => ({ value: source.id, label: source.label }));
-    return [
-      ...portal,
-      ...props.previews.map((preview) => ({
-        value: preview.id,
-        label: preview.name,
-        thumbnail: preview.thumbnail || undefined,
-        appIcon: preview.appIcon,
-      })),
-    ];
+    const direct = props.preferNativeSources
+      ? props.sources
+          .filter((source) => source.kind === 'window' && source.selectionMode !== 'portal')
+          .map((source) => {
+            const preview = props.previews.find((candidate) => candidate.id === source.id);
+            return {
+              value: source.id,
+              label: source.label,
+              thumbnail: preview?.thumbnail || undefined,
+              thumbnailFallback: 'window' as const,
+              loading: props.loading && !preview?.thumbnail,
+            };
+          })
+      : props.previews.map((preview) => ({
+          value: preview.id,
+          label: preview.name,
+          thumbnail: preview.thumbnail || undefined,
+          appIcon: preview.appIcon,
+        }));
+    return [...portal, ...direct];
   }
 
   return displaySources.value.map((source, index) => {
@@ -51,6 +64,7 @@ const options = computed(() => {
       value: source.id,
       label: source.selectionMode === 'portal' ? source.label : t('screenOption', { index: index + 1 }),
       thumbnail: preview?.thumbnail || undefined,
+      thumbnailFallback: 'screen' as const,
       loading: source.selectionMode !== 'portal' && props.loading && !preview?.thumbnail,
     };
   });

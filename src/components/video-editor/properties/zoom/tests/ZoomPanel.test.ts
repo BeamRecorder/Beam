@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import ZoomPanel from '../ZoomPanel.vue';
-import type { ZoomElement } from '../../../zoom/zoom-types';
+import type { ZoomAutoFollowSettings, ZoomElement } from '../../../zoom/zoom-types';
 
 const Button = {
   inheritAttrs: true,
@@ -15,12 +15,14 @@ const BigSlider = {
   props: ['label'],
   emits: ['update:modelValue'],
   template:
-    "<button :class=\"label?.toLowerCase().includes('motion') ? 'motion-blur-slider' : label?.toLowerCase().includes('left') ? 'tilt-horizontal-slider' : label?.toLowerCase().includes('up') ? 'tilt-vertical-slider' : label?.toLowerCase().includes('tilt') ? 'tilt-slider' : 'depth-slider'\" @click=\"$emit('update:modelValue', label?.toLowerCase().includes('motion') ? 80 : label?.toLowerCase().includes('left') ? 25 : label?.toLowerCase().includes('up') ? -60 : label?.toLowerCase().includes('tilt') ? 180 : 4)\">Slider</button>",
+    "<button :class=\"label?.toLowerCase().includes('motion') ? 'motion-blur-slider' : label?.toLowerCase().includes('safe') ? 'auto-follow-safe-zone-slider' : label?.toLowerCase().includes('response') || label?.toLowerCase().includes('responsiveness') || label?.toLowerCase().includes('smooth') ? 'auto-follow-response-slider' : label?.toLowerCase().includes('left') ? 'tilt-horizontal-slider' : label?.toLowerCase().includes('up') ? 'tilt-vertical-slider' : label?.toLowerCase().includes('tilt') ? 'tilt-slider' : 'depth-slider'\" @click=\"$emit('update:modelValue', label?.toLowerCase().includes('motion') ? 80 : label?.toLowerCase().includes('safe') ? 80 : label?.toLowerCase().includes('response') || label?.toLowerCase().includes('responsiveness') || label?.toLowerCase().includes('smooth') ? 320 : label?.toLowerCase().includes('left') ? 25 : label?.toLowerCase().includes('up') ? -60 : label?.toLowerCase().includes('tilt') ? 180 : 4)\">Slider</button>",
 };
 const Switch = {
+  inheritAttrs: true,
   props: ['modelValue'],
   emits: ['update:modelValue'],
-  template: '<button class="motion-blur-switch" @click="$emit(\'update:modelValue\', !modelValue)">Switch</button>',
+  template:
+    "<button :class=\"$attrs['aria-label']?.toLowerCase().includes('straight') ? 'auto-follow-direction-lock-switch' : 'motion-blur-switch'\" @click=\"$emit('update:modelValue', !modelValue)\">Switch</button>",
 };
 
 const selectedZoom: ZoomElement = {
@@ -32,6 +34,8 @@ const selectedZoom: ZoomElement = {
   depth: 2,
   mode: 'auto',
 };
+
+const balancedAutoFollow: ZoomAutoFollowSettings = { safeZone: 0.5, responsiveness: 0.55, directionLock: true };
 
 describe('ZoomPanel', () => {
   it('shows the empty state and generates automatic zooms', async () => {
@@ -61,7 +65,7 @@ describe('ZoomPanel', () => {
     });
     await wrapper.get('.depth-slider').trigger('click');
     await wrapper.get('.preset-pill').trigger('click');
-    await wrapper.findAll('.button-group button')[1].trigger('click');
+    await wrapper.findAll('.zoom-mode-options button')[1]!.trigger('click');
     expect(wrapper.emitted('update')).toContainEqual([{ ...selectedZoom, depth: 4 }]);
     expect(wrapper.emitted('update')).toContainEqual([{ ...selectedZoom, depth: 1 }]);
     expect(wrapper.emitted('update')).toContainEqual([{ ...selectedZoom, mode: 'manual' }]);
@@ -100,6 +104,68 @@ describe('ZoomPanel', () => {
     ]);
   });
 
+  it('keeps auto-follow Advanced closed by default and exposes the Balanced preset', () => {
+    const wrapper = mount(ZoomPanel, {
+      props: {
+        selectedZoom,
+        canGenerate: true,
+        hasAutomaticZooms: true,
+        motionBlur: { enabled: true, intensity: 0.55 },
+        autoFollow: balancedAutoFollow,
+      },
+      global: { stubs: { Button, ButtonGroup, BigSlider, Switch } },
+    });
+
+    const toggle = wrapper.get('[aria-controls="zoom-auto-follow-advanced-panel"]');
+    expect(toggle.attributes('aria-expanded')).toBe('false');
+    expect(wrapper.find('#zoom-auto-follow-advanced-panel').exists()).toBe(false);
+    expect(wrapper.get('[data-auto-follow-preset="balanced"]')).toBeDefined();
+  });
+
+  it('marks auto-follow Custom after editing and returns to the Balanced preset', async () => {
+    const wrapper = mount(ZoomPanel, {
+      props: {
+        selectedZoom,
+        canGenerate: true,
+        hasAutomaticZooms: true,
+        motionBlur: { enabled: true, intensity: 0.55 },
+        autoFollow: balancedAutoFollow,
+      },
+      global: { stubs: { Button, ButtonGroup, BigSlider, Switch } },
+    });
+
+    await wrapper.get('[aria-controls="zoom-auto-follow-advanced-panel"]').trigger('click');
+    expect(wrapper.find('#zoom-auto-follow-advanced-panel').exists()).toBe(true);
+
+    await wrapper.get('.auto-follow-safe-zone-slider').trigger('click');
+    expect(wrapper.emitted('update:autoFollow')).toContainEqual([
+      expect.objectContaining({ safeZone: 0.75, responsiveness: 0.55, directionLock: true }),
+    ]);
+
+    await wrapper.get('.auto-follow-response-slider').trigger('click');
+    expect(wrapper.emitted('update:autoFollow')).toContainEqual([
+      { safeZone: 0.5, responsiveness: 1, directionLock: true },
+    ]);
+
+    await wrapper.get('.auto-follow-direction-lock-switch').trigger('click');
+    expect(wrapper.emitted('update:autoFollow')).toContainEqual([
+      { safeZone: 0.5, responsiveness: 0.55, directionLock: false },
+    ]);
+
+    await wrapper.get('[data-auto-follow-preset="stable"]').trigger('click');
+    expect(wrapper.emitted('update:autoFollow')).toContainEqual([
+      { safeZone: 0.65, responsiveness: 0.3, directionLock: true },
+    ]);
+
+    await wrapper.get('[data-auto-follow-preset="responsive"]').trigger('click');
+    expect(wrapper.emitted('update:autoFollow')).toContainEqual([
+      { safeZone: 0.35, responsiveness: 0.85, directionLock: true },
+    ]);
+
+    await wrapper.get('[data-auto-follow-preset="balanced"]').trigger('click');
+    expect(wrapper.emitted('update:autoFollow')).toContainEqual([balancedAutoFollow]);
+  });
+
   it('activates 3D with the existing metadata, marks it custom, and preserves it when returning to 2D', async () => {
     const wrapper = mount(ZoomPanel, {
       props: {
@@ -118,7 +184,7 @@ describe('ZoomPanel', () => {
       global: { stubs: { Button, ButtonGroup, BigSlider, Switch } },
     });
 
-    const projectionButtons = wrapper.findAll('.button-group')[1]!.findAll('button');
+    const projectionButtons = wrapper.findAll('.zoom-projection-options button');
     await projectionButtons[1]!.trigger('click');
     expect(wrapper.emitted('update')).toContainEqual([
       {
@@ -163,7 +229,7 @@ describe('ZoomPanel', () => {
         tiltPreset: 'custom',
       },
     });
-    const updatedProjectionButtons = wrapper.findAll('.button-group')[1]!.findAll('button');
+    const updatedProjectionButtons = wrapper.findAll('.zoom-projection-options button');
     await updatedProjectionButtons[0]!.trigger('click');
     expect(wrapper.emitted('update')).toContainEqual([
       {
@@ -250,7 +316,7 @@ describe('ZoomPanel', () => {
     });
     expect(wrapper.emitted('update')).toBeUndefined();
 
-    const presetButtons = wrapper.findAll('.button-group')[2]!.findAll('button');
+    const presetButtons = wrapper.findAll('.zoom-tilt-presets button');
     await presetButtons[0]!.trigger('click');
     expect(wrapper.emitted('update')).toContainEqual([
       expect.objectContaining({
@@ -307,7 +373,7 @@ describe('ZoomPanel', () => {
       global: { stubs: { Button, ButtonGroup, BigSlider, Switch } },
     });
 
-    const customButton = wrapper.findAll('.button-group')[2]!.findAll('button')[3]!;
+    const customButton = wrapper.findAll('.zoom-tilt-presets button')[3]!;
     expect(customButton.text()).toBe('');
     expect(customButton.attributes('data-icon')).toBe('lucide');
     expect(customButton.attributes('data-icon-only')).toBe('true');

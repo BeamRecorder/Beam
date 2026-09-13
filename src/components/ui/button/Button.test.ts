@@ -20,6 +20,19 @@ describe('Button', () => {
     await wrapper.get('button').trigger('click');
     expect(wrapper.emitted('click')).toHaveLength(1);
   });
+  it('renders the same button primitive as a link when href is provided', () => {
+    const wrapper = mount(Button, {
+      props: { href: '/install', size: 'lg' },
+      slots: { icon: '<span class="platform-icon" />', default: 'Install Beam' },
+    });
+    const link = wrapper.get('a');
+
+    expect(link.attributes('href')).toBe('/install');
+    expect(link.classes()).toContain('btn-primary');
+    expect(link.classes()).toContain('btn-lg');
+    expect(link.find('.platform-icon').exists()).toBe(true);
+    expect(wrapper.find('button').exists()).toBe(false);
+  });
   it('does not emit clicks while disabled or loading', async () => {
     for (const props of [{ disabled: true }, { loading: true }]) {
       const wrapper = mount(Button, { props: props as never });

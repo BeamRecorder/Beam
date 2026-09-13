@@ -1,24 +1,95 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed } from 'vue';
 import { Code2, ExternalLink } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import Button from '~/ui/button/Button.vue';
-import WebsiteEditorPreview from '@website/components/WebsiteEditorPreview.vue';
-import WebsiteCommunityShader from '@website/components/WebsiteCommunityShader.vue';
-import WebsiteHeroDrag from '@website/components/WebsiteHeroDrag.vue';
-import { useGitHubRepository } from '@website/composables/useGitHubRepository';
+import WebsiteFeatureSection from '@website/components/WebsiteFeatureSection.vue';
+import WebsiteHero from '@website/components/WebsiteHero.vue';
+import WebsiteShaderPanel from '@website/components/WebsiteShaderPanel.vue';
 import { createHomeJsonLd } from '@website/seo/json-ld';
 import { usePageSeo } from '@website/seo/use-page-seo';
+import type { WebsiteFeature } from '@website/types/website-features';
 import discordIconUrl from '../../../public/discord_svg.svg';
 
-const editorRef = ref<InstanceType<typeof WebsiteEditorPreview> | null>(null);
-const github = useGitHubRepository();
 const { t } = useI18n();
-onMounted(() => void github.load());
-const contributorLabel = computed(() => {
-  const count = github.contributorCount.value;
-  return count === null ? t('Website.home.contributorsFallback') : t('Website.home.contributors', { count }, count);
-});
+
+const features = computed<WebsiteFeature[]>(() => [
+  {
+    title: t('Website.home.featureRecorder'),
+    media: {
+      type: 'image',
+      src: '/features/recorder.webp',
+      srcset: '/features/recorder.webp 320w',
+      sizes: '(max-width: 760px) 320px, 420px',
+      width: 320,
+      height: 480,
+      fit: 'contain',
+      containShape: 'portrait',
+      backdrop: '/features/product-backdrop.webp',
+    },
+  },
+  {
+    title: t('Website.home.featureEditor'),
+    media: {
+      type: 'image',
+      src: '/features/editor.webp',
+      srcset: '/features/editor.webp 800w',
+      sizes: '(max-width: 760px) calc(100vw - 48px), 600px',
+      mobileSrc: '/features/editor-400.webp',
+      width: 800,
+      height: 500,
+      fit: 'contain',
+      containShape: 'landscape',
+      backdrop: '/features/product-backdrop.webp',
+    },
+  },
+  {
+    title: t('Website.home.featureBackgrounds'),
+    media: {
+      type: 'image',
+      src: '/features/backgrounds-640.webp',
+      srcset: '/features/backgrounds-640.webp 640w, /features/backgrounds-960.webp 960w',
+      sizes: '(max-width: 760px) calc(100vw - 24px), 390px',
+      mobileSrc: '/features/backgrounds-400.webp',
+      width: 640,
+      height: 640,
+    },
+  },
+  {
+    title: t('Website.home.featureZoomControls'),
+    media: {
+      type: 'image',
+      src: '/features/zooms-640.webp',
+      srcset: '/features/zooms-640.webp 640w, /features/zooms-960.webp 960w',
+      sizes: '(max-width: 760px) calc(100vw - 24px), 390px',
+      mobileSrc: '/features/zooms-400.webp',
+      width: 640,
+      height: 640,
+    },
+  },
+  {
+    title: t('Website.home.feature3dZooms'),
+    media: {
+      type: 'video',
+      src: '/features/tilt-zoom-full.webm',
+      poster: '/features/tilt-zoom-full-poster.webp',
+      width: 1280,
+      height: 720,
+    },
+  },
+  {
+    title: t('Website.home.featureExport'),
+    media: {
+      type: 'image',
+      src: '/features/export-settings-640.webp',
+      srcset: '/features/export-settings-640.webp 640w, /features/export-settings-960.webp 960w',
+      sizes: '(max-width: 760px) calc(100vw - 24px), 640px',
+      mobileSrc: '/features/export-settings-400.webp',
+      width: 640,
+      height: 640,
+    },
+  },
+]);
 
 usePageSeo({
   path: '/',
@@ -27,39 +98,20 @@ usePageSeo({
   jsonLd: createHomeJsonLd(),
 });
 
-const playDemo = () => {
-  document.querySelector('#editor-demo')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  void editorRef.value?.play();
-};
-
 const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
 </script>
 
 <template>
   <div class="site-shell">
     <main id="top">
-      <WebsiteHeroDrag @explore="playDemo" />
+      <WebsiteHero />
 
-      <section class="availability" aria-label="Beam availability">
-        <strong>{{ t('Website.home.availabilityTitle') }}</strong>
-        <span>{{ t('Website.home.availabilityPlatforms') }}</span>
-      </section>
-
-      <section id="editor-demo" class="content-section">
-        <div class="section-intro">
-          <h2>{{ t('Website.home.editorTitle') }}</h2>
-          <p>{{ t('Website.home.editorText') }}</p>
-        </div>
-        <ClientOnly>
-          <WebsiteEditorPreview ref="editorRef" />
-          <template #placeholder>
-            <article class="demo-placeholder">
-              <h2>Polish timing, zooms, captions, and presentation.</h2>
-              <p>Beam keeps the original capture intact while you shape the final product demo.</p>
-            </article>
-          </template>
-        </ClientOnly>
-      </section>
+      <WebsiteFeatureSection
+        id="editor-demo"
+        :title="t('Website.home.featuresTitle')"
+        :description="t('Website.home.featuresText')"
+        :features="features"
+      />
 
       <section class="free-statement" aria-labelledby="free-title">
         <div>
@@ -73,8 +125,7 @@ const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
         </ul>
       </section>
 
-      <section class="open-source">
-        <WebsiteCommunityShader class="open-source__shader" />
+      <WebsiteShaderPanel as="section" class="open-source">
         <div class="open-source__copy">
           <h2>{{ t('Website.home.openSourceTitle') }}</h2>
           <p>{{ t('Website.home.openSourceText') }}</p>
@@ -96,13 +147,16 @@ const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
           rel="noreferrer"
         >
           <img
-            src="https://contrib.rocks/image?repo=BeamRecorder/Beam"
+            src="/beam-contributors.svg"
             :alt="t('Website.home.contributorsAlt')"
+            width="200"
+            height="64"
             loading="lazy"
+            decoding="async"
           />
-          <span>{{ contributorLabel }}</span>
+          <span>{{ t('Website.home.contributorsFallback') }}</span>
         </a>
-      </section>
+      </WebsiteShaderPanel>
     </main>
   </div>
 </template>

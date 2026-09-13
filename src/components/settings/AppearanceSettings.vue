@@ -29,10 +29,12 @@ withDefaults(
   defineProps<{
     showTitle?: boolean;
     compact?: boolean;
+    showUiScaling?: boolean;
   }>(),
   {
     showTitle: true,
     compact: false,
+    showUiScaling: true,
   },
 );
 
@@ -189,7 +191,7 @@ const isCustomSecondaryColor = computed(() => {
     </div>
 
     <div v-if="advancedOpen" id="appearance-advanced-panel" class="appearance-advanced-panel">
-      <section class="advanced-category ui-scale-setting setting-section">
+      <section v-if="showUiScaling" class="advanced-category ui-scale-setting setting-section">
         <h4 class="advanced-category-title">{{ t('scalingCategory') }}</h4>
         <div class="section-title-row">
           <div class="title-with-icon">

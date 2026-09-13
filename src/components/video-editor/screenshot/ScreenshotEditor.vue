@@ -198,6 +198,7 @@ const removeLayer = (id: string) => {
           <ClipPropertiesPanel
             v-if="selectedImage && image && (panel === 'image' || panel === 'shapes')"
             hide-layout
+            hide-crop
             :selected-clip="selectedImage"
             @update:appearance="appearance"
             @corner-radius-interaction="handlesMuted = $event"

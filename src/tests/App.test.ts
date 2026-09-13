@@ -3,6 +3,7 @@ import { createPinia } from 'pinia';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App.vue';
+import type { RecordingSessionResult } from '../components/hud/recorder/recording-types';
 
 const mocks = vi.hoisted(() => ({
   capture: {
@@ -20,7 +21,9 @@ const mocks = vi.hoisted(() => ({
     hideTeleprompter: vi.fn(),
     openEditor: vi.fn(),
     openScreenshot: vi.fn(),
-    onStartRecordingFromEditor: vi.fn(),
+    dismissRecorderLauncher: vi.fn(),
+    setRecorderLauncherActive: vi.fn(),
+    onRecorderLauncherContext: vi.fn(),
     onEditorLoadingProgress: vi.fn(),
     onTrayStopRecording: vi.fn(),
     onPreferenceShortcut: vi.fn(),
@@ -30,9 +33,10 @@ const mocks = vi.hoisted(() => ({
   },
   controller: {
     recording: undefined as any,
-    onStartupCancelled: undefined as (() => void) | undefined,
-    onComplete: undefined as ((session: { videoSrc?: string | null; projectId?: string }) => void) | undefined,
-    startFromEditor: undefined as ((configuration: any) => void) | undefined,
+    onComplete: undefined as ((session: RecordingSessionResult) => void) | undefined,
+    recorderLauncherContext: undefined as
+      | ((context: { requestId: string; preferredKind: 'window'; preferredSourceId: string | null } | null) => void)
+      | undefined,
     editorProgress: undefined as ((progress: { stage: string; value: number }) => void) | undefined,
   },
 }));
@@ -42,11 +46,7 @@ vi.mock('../api/capture', () => ({ capture: mocks.capture }));
 vi.mock('../components/hud/recorder/useRecordingController', async () => {
   const { ref } = await import('vue');
   return {
-    useRecordingController: (
-      onComplete: (session: { videoSrc?: string | null; projectId?: string }) => void,
-      _onFailure: unknown,
-      onStartupCancelled: () => void,
-    ) => {
+    useRecordingController: (onComplete: (session: RecordingSessionResult) => void, _onFailure?: unknown) => {
       const recording = {
         phase: ref('idle'),
         secondsRemaining: ref(0),
@@ -66,7 +66,6 @@ vi.mock('../components/hud/recorder/useRecordingController', async () => {
       };
       mocks.controller.recording = recording;
       mocks.controller.onComplete = onComplete;
-      mocks.controller.onStartupCancelled = onStartupCancelled;
       return recording;
     },
   };
@@ -80,8 +79,9 @@ vi.mock('../components/hud/HUD.vue', async () => {
       props: {
         preparingEditor: { type: Boolean, default: false },
         editorLoadingProgress: { type: Object, default: () => ({ stage: 'openingWindow', value: 10 }) },
+        recorderLauncherContext: { type: Object, default: null },
       },
-      emits: ['start-recording', 'open-project'],
+      emits: ['start-recording', 'open-project', 'dismiss-launcher'],
       setup(props, { emit }) {
         return () =>
           h(
@@ -90,6 +90,8 @@ vi.mock('../components/hud/HUD.vue', async () => {
               class: 'mock-hud',
               'data-preparing-editor': String(props.preparingEditor),
               'data-editor-progress': String((props.editorLoadingProgress as { value: number }).value),
+              'data-launcher-kind': props.recorderLauncherContext?.preferredKind ?? '',
+              'data-launcher-source': props.recorderLauncherContext?.preferredSourceId ?? '',
             },
             [
               h('button', {
@@ -109,6 +111,9 @@ vi.mock('../components/hud/HUD.vue', async () => {
                 class: 'open',
                 onClick: () => emit('open-project', { id: 'project-1', name: 'Project', previewSrc: 'project.mp4' }),
               }),
+              ...(props.recorderLauncherContext
+                ? [h('button', { class: 'dismiss-launcher', onClick: () => emit('dismiss-launcher') })]
+                : []),
             ],
           );
       },
@@ -156,10 +161,13 @@ beforeEach(() => {
   mocks.capture.getPreferences.mockResolvedValue({ recordingBar: { visibility: 'auto-fade' } });
   mocks.capture.listProjects.mockResolvedValue([project]);
   mocks.capture.openEditor.mockResolvedValue(true);
-  mocks.capture.onStartRecordingFromEditor.mockImplementation((listener) => {
-    mocks.controller.startFromEditor = listener;
+  mocks.capture.openScreenshot.mockResolvedValue(true);
+  mocks.capture.dismissRecorderLauncher.mockResolvedValue(true);
+  mocks.capture.onRecorderLauncherContext.mockImplementation((listener) => {
+    mocks.controller.recorderLauncherContext = listener;
     return vi.fn();
   });
+  mocks.capture.renameProject.mockResolvedValue(project);
   mocks.capture.onEditorLoadingProgress.mockImplementation((listener) => {
     mocks.controller.editorProgress = listener;
     return vi.fn();
@@ -230,14 +238,29 @@ describe('App', () => {
     expect(wrapper.find('.mock-hud').exists()).toBe(true);
   });
 
-  it('returns to the HUD when native source selection is canceled', async () => {
+  it('keeps the camera overlay active until recording stop succeeds', async () => {
     await wrapper.get('.start').trigger('click');
     await settle();
-    mocks.controller.onStartupCancelled?.();
+    mocks.capture.setCameraOverlayActive.mockClear();
+
+    let finishStop!: () => void;
+    const stopFinished = new Promise<void>((resolve) => {
+      finishStop = () => {
+        mocks.controller.recording.phase.value = 'idle';
+        mocks.controller.onComplete?.({ videoSrc: 'project.mp4', sessionId: 'session-stop' });
+        resolve();
+      };
+    });
+    mocks.controller.recording.stop.mockReturnValueOnce(stopFinished);
+
+    const stopping = wrapper.get('.stop').trigger('click');
+    await nextTick();
+    expect(mocks.capture.setCameraOverlayActive).not.toHaveBeenCalledWith(false);
+
+    finishStop();
+    await stopping;
     await settle();
-    expect(mocks.capture.showHud).toHaveBeenCalledOnce();
-    expect(wrapper.find('.mock-hud').exists()).toBe(true);
-    expect(mocks.capture.openEditor).not.toHaveBeenCalled();
+    expect(mocks.capture.setCameraOverlayActive).toHaveBeenCalledWith(false);
   });
 
   it('routes tray stop and the global start/stop shortcut to an active recording', async () => {
@@ -252,6 +275,90 @@ describe('App', () => {
     expect(mocks.controller.recording.stop).toHaveBeenCalledTimes(2);
   });
 
+  it('routes the pause/resume shortcut only while recording or paused', async () => {
+    const shortcut = mocks.capture.onPreferenceShortcut.mock.calls[0]?.[0] as ((action: string) => void) | undefined;
+    expect(shortcut).toBeDefined();
+
+    for (const phase of ['idle', 'countdown', 'starting', 'finalizing'] as const) {
+      mocks.controller.recording.phase.value = phase;
+      shortcut?.('hud.playPause');
+    }
+    expect(mocks.controller.recording.togglePause).not.toHaveBeenCalled();
+
+    mocks.controller.recording.phase.value = 'recording';
+    shortcut?.('hud.playPause');
+    await settle();
+    mocks.controller.recording.phase.value = 'paused';
+    shortcut?.('hud.playPause');
+    await settle();
+    expect(mocks.controller.recording.togglePause).toHaveBeenCalledTimes(2);
+    expect(mocks.controller.recording.stop).not.toHaveBeenCalled();
+  });
+
+  it('ignores duplicate pause/resume shortcuts while pending and accepts the next event after resolving', async () => {
+    let resolveToggle!: () => void;
+    const pendingToggle = new Promise<void>((resolve) => {
+      resolveToggle = resolve;
+    });
+    mocks.controller.recording.togglePause.mockReturnValueOnce(pendingToggle);
+    mocks.controller.recording.phase.value = 'recording';
+    const shortcut = mocks.capture.onPreferenceShortcut.mock.calls[0]?.[0] as ((action: string) => void) | undefined;
+
+    shortcut?.('hud.playPause');
+    shortcut?.('hud.playPause');
+    expect(mocks.controller.recording.togglePause).toHaveBeenCalledOnce();
+
+    resolveToggle();
+    await settle();
+    shortcut?.('hud.playPause');
+    await settle();
+    expect(mocks.controller.recording.togglePause).toHaveBeenCalledTimes(2);
+  });
+
+  it('re-enables pause/resume shortcuts after a rejected toggle', async () => {
+    let rejectToggle!: (reason?: unknown) => void;
+    const pendingToggle = new Promise<void>((_, reject) => {
+      rejectToggle = reject;
+    });
+    const error = new Error('pause unavailable');
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    mocks.controller.recording.togglePause.mockReturnValueOnce(pendingToggle);
+    mocks.controller.recording.phase.value = 'paused';
+    const shortcut = mocks.capture.onPreferenceShortcut.mock.calls[0]?.[0] as ((action: string) => void) | undefined;
+
+    shortcut?.('hud.playPause');
+    shortcut?.('hud.playPause');
+    expect(mocks.controller.recording.togglePause).toHaveBeenCalledOnce();
+
+    rejectToggle(error);
+    await settle();
+    expect(errorSpy).toHaveBeenCalledWith('Failed to toggle recording pause from shortcut:', error);
+    shortcut?.('hud.playPause');
+    await settle();
+    expect(mocks.controller.recording.togglePause).toHaveBeenCalledTimes(2);
+  });
+
+  it('ignores unknown shortcut actions and keeps start/stop routing limited to valid phases', async () => {
+    const shortcut = mocks.capture.onPreferenceShortcut.mock.calls[0]?.[0] as ((action: string) => void) | undefined;
+    expect(shortcut).toBeDefined();
+
+    for (const phase of ['idle', 'finalizing'] as const) {
+      mocks.controller.recording.phase.value = phase;
+      shortcut?.('hud.startStopRecording');
+    }
+    mocks.controller.recording.phase.value = 'recording';
+    shortcut?.('hud.unknown');
+    expect(mocks.controller.recording.stop).not.toHaveBeenCalled();
+    expect(mocks.controller.recording.cancel).not.toHaveBeenCalled();
+
+    for (const phase of ['countdown', 'starting', 'recording', 'paused'] as const) {
+      mocks.controller.recording.phase.value = phase;
+      shortcut?.('hud.startStopRecording');
+    }
+    await settle();
+    expect(mocks.controller.recording.stop).toHaveBeenCalledTimes(4);
+  });
+
   it('opens projects, displays loading errors, and dismisses them', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     mocks.capture.openEditor.mockRejectedValueOnce(new Error('project is unreadable'));
@@ -264,7 +371,7 @@ describe('App', () => {
     mocks.capture.openEditor.mockResolvedValueOnce(true);
     await wrapper.get('.open').trigger('click');
     await settle();
-    expect(mocks.capture.openEditor).toHaveBeenCalledWith('project-1');
+    expect(mocks.capture.openEditor).toHaveBeenCalledWith('project-1', { disposition: 'reuse' });
     expect(wrapper.find('.mock-hud').exists()).toBe(true);
     expect(errorSpy).toHaveBeenCalled();
   });
@@ -296,18 +403,49 @@ describe('App', () => {
 
   it('opens the dedicated editor after completed recordings and reports missing projects', async () => {
     mocks.capture.listProjects.mockResolvedValueOnce([project]);
-    mocks.controller.onComplete?.({ videoSrc: 'project.mp4' });
+    mocks.controller.onComplete?.({ videoSrc: 'project.mp4', sessionId: 'session-1' });
     await settle();
-    expect(mocks.capture.openEditor).toHaveBeenCalledWith('project-1');
+    expect(mocks.capture.openEditor).toHaveBeenCalledWith('project-1', { disposition: 'reuse' });
     expect(mocks.capture.setCameraOverlayActive).toHaveBeenCalledWith(false);
 
     mocks.capture.listProjects.mockResolvedValueOnce([]);
-    mocks.controller.onComplete?.({ videoSrc: 'missing.mp4' });
+    mocks.controller.onComplete?.({ videoSrc: 'missing.mp4', sessionId: 'session-2' });
     await settle();
     expect(wrapper.get('[role="alert"]').text()).toContain('No recorded project was found');
   });
 
-  it('moves the HUD window into recorder mode for recordings requested by the editor', async () => {
+  it('passes the editor launcher context to HUD and prefers the requested window source', async () => {
+    const context = {
+      requestId: 'launcher-1',
+      preferredKind: 'window' as const,
+      preferredSourceId: 'window:editor',
+    };
+
+    mocks.controller.recorderLauncherContext?.(context);
+    await nextTick();
+
+    const hud = wrapper.get('.mock-hud');
+    expect(hud.attributes('data-launcher-kind')).toBe('window');
+    expect(hud.attributes('data-launcher-source')).toBe('window:editor');
+  });
+
+  it('dismisses the editor launcher without opening an editor window', async () => {
+    mocks.controller.recorderLauncherContext?.({
+      requestId: 'launcher-2',
+      preferredKind: 'window',
+      preferredSourceId: 'window:editor',
+    });
+    await nextTick();
+
+    await wrapper.get('.dismiss-launcher').trigger('click');
+    await settle();
+
+    expect(mocks.capture.dismissRecorderLauncher).toHaveBeenCalledOnce();
+    expect(mocks.capture.openEditor).not.toHaveBeenCalled();
+    expect(wrapper.get('.mock-hud').attributes('data-launcher-source')).toBe('');
+  });
+
+  it('opens a completed editor-launched recording in a new editor window', async () => {
     const configuration = {
       screenKind: 'display',
       cameraId: 'off',
@@ -318,12 +456,86 @@ describe('App', () => {
       recordingBarVisibility: 'always',
     };
 
-    mocks.controller.startFromEditor?.(configuration);
+    mocks.controller.recorderLauncherContext?.({
+      requestId: 'launcher-3',
+      preferredKind: 'window',
+      preferredSourceId: 'window:editor',
+    });
+    await nextTick();
+    await wrapper.get('.start').trigger('click');
     await settle();
 
     expect(mocks.capture.setWindowMode).toHaveBeenCalledWith('recorder');
-    expect(mocks.capture.setWindowVisible).toHaveBeenCalledWith(true);
     expect(mocks.controller.recording.start).toHaveBeenCalledWith(configuration);
+
+    mocks.controller.onComplete?.({ videoSrc: 'project.mp4', sessionId: 'session-3' });
+    await settle();
+
+    expect(mocks.capture.openEditor).toHaveBeenCalledWith('project-1', { disposition: 'new-window' });
+  });
+
+  it('resolves editor-launched recordings by projectId when file and preview URLs differ', async () => {
+    const previousProject = { id: 'project-old', name: 'Old project', previewSrc: 'project-media://old' };
+    const recordedProject = { id: 'project-new', name: 'New project', previewSrc: 'project-media://new' };
+    mocks.capture.listProjects.mockResolvedValueOnce([previousProject, recordedProject]);
+    mocks.capture.renameProject.mockResolvedValueOnce({ ...recordedProject, name: 'DEBUG New project' });
+    mocks.controller.recorderLauncherContext?.({
+      requestId: 'launcher-project-id',
+      preferredKind: 'window',
+      preferredSourceId: 'window:editor',
+    });
+    await nextTick();
+    await wrapper.get('.start').trigger('click');
+    await settle();
+
+    mocks.controller.onComplete?.({
+      projectId: recordedProject.id,
+      sessionId: 'session-project-id',
+      videoSrc: 'file:///recordings/new.mp4',
+    });
+    await settle();
+
+    expect(mocks.capture.renameProject).toHaveBeenCalledWith(recordedProject.id, 'DEBUG New project');
+    expect(mocks.capture.renameProject).not.toHaveBeenCalledWith(previousProject.id, expect.any(String));
+    expect(mocks.capture.openEditor).toHaveBeenCalledWith(recordedProject.id, { disposition: 'new-window' });
+  });
+
+  it('does not open the first project when a completed projectId is unknown', async () => {
+    mocks.capture.listProjects.mockResolvedValueOnce([project]);
+
+    mocks.controller.onComplete?.({
+      projectId: 'project-missing',
+      sessionId: 'session-missing-project',
+      videoSrc: 'file:///recordings/missing-project.mp4',
+    });
+    await settle();
+
+    expect(mocks.capture.openEditor).not.toHaveBeenCalled();
+    expect(mocks.capture.renameProject).not.toHaveBeenCalled();
+    expect(wrapper.get('[role="alert"]').text()).toContain('No recorded project was found');
+  });
+
+  it('clears the editor launcher context when no project exists after recording', async () => {
+    mocks.controller.recorderLauncherContext?.({
+      requestId: 'launcher-no-project',
+      preferredKind: 'window',
+      preferredSourceId: 'window:editor',
+    });
+    await nextTick();
+    await wrapper.get('.start').trigger('click');
+    await settle();
+
+    mocks.capture.listProjects.mockResolvedValueOnce([]);
+    mocks.controller.onComplete?.({ videoSrc: 'missing.mp4', sessionId: 'session-4' });
+    await settle();
+
+    expect(wrapper.get('[role="alert"]').text()).toContain('No recorded project was found');
+    await wrapper.get('[role="alert"] button').trigger('click');
+    await settle();
+
+    expect(wrapper.get('.mock-hud').attributes('data-launcher-source')).toBe('');
+    expect(mocks.capture.dismissRecorderLauncher).toHaveBeenCalledOnce();
+    expect(mocks.capture.openEditor).not.toHaveBeenCalled();
   });
 
   it('returns immediately after an idle start and ignores mouse events outside the HUD', async () => {
@@ -347,7 +559,7 @@ describe('App', () => {
     ]);
     mocks.controller.onComplete?.({ projectId: 'recorded', videoSrc: null });
     await settle();
-    expect(mocks.capture.openEditor).toHaveBeenCalledWith('recorded');
+    expect(mocks.capture.openEditor).toHaveBeenCalledWith('recorded', { disposition: 'reuse' });
     expect(mocks.capture.openScreenshot).not.toHaveBeenCalled();
   });
 });

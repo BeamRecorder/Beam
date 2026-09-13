@@ -25,6 +25,13 @@ pub enum Command {
     Formats {
         source: String,
     },
+    SourcePreview {
+        source: String,
+        #[serde(rename = "maxWidth")]
+        max_width: u32,
+        #[serde(rename = "maxHeight")]
+        max_height: u32,
+    },
     Prepare {
         config: Box<CaptureRequest>,
     },

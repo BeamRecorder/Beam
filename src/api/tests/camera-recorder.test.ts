@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { BrowserCameraRecorder, listBrowserCameras } from '../camera-recorder';
+import { BrowserCameraRecorder, CameraOverlayRecorder, listBrowserCameras } from '../camera-recorder';
 
 type Listener = (...args: unknown[]) => void;
 
@@ -31,6 +31,12 @@ const createTrack = (settings: MediaTrackSettings = {}) => {
     addEventListener: vi.fn((type: string, listener: Listener) =>
       listeners.set(type, [...(listeners.get(type) ?? []), listener]),
     ),
+    removeEventListener: vi.fn((type: string, listener: Listener) => {
+      listeners.set(
+        type,
+        (listeners.get(type) ?? []).filter((entry) => entry !== listener),
+      );
+    }),
     getSettings: vi.fn(() => settings),
     stop: vi.fn(),
     emit: (type: string) => listeners.get(type)?.forEach((listener) => listener()),
@@ -44,6 +50,8 @@ const capture = {
   writeCameraSegment: vi.fn(),
   finalizeCameraSegment: vi.fn(),
   failCamera: vi.fn(),
+  controlCameraOverlayRecording: vi.fn(),
+  onCameraRecordingFailure: vi.fn(),
 };
 
 beforeEach(() => {
@@ -60,11 +68,17 @@ beforeEach(() => {
   capture.writeCameraSegment.mockResolvedValue(undefined);
   capture.finalizeCameraSegment.mockResolvedValue(undefined);
   capture.failCamera.mockResolvedValue(undefined);
+  capture.controlCameraOverlayRecording.mockResolvedValue(undefined);
+  capture.onCameraRecordingFailure.mockReturnValue(() => undefined);
   vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
   vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined);
+  let frameCallbackCount = 0;
   Object.defineProperty(HTMLVideoElement.prototype, 'requestVideoFrameCallback', {
     configurable: true,
-    value: vi.fn(),
+    value: vi.fn((callback: (now: number, metadata: { width: number; height: number }) => void) => {
+      if (frameCallbackCount++ === 0) callback(0, { width: 1280, height: 720 });
+      return frameCallbackCount;
+    }),
   });
 });
 
@@ -125,9 +139,15 @@ describe('BrowserCameraRecorder', () => {
     const stream = { getVideoTracks: () => [track], getTracks: () => [track] } as unknown as MediaStream;
     vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValue(stream);
     const recorder = await BrowserCameraRecorder.request('camera:chromium:device-7');
-    await recorder.start('session', { shadowSize: 'md', cornerRadius: 'lg' }, { x: 1, y: 2, width: 3, height: 4 }, 50);
+    await recorder.start(
+      'session',
+      { shadowSize: 'md', cornerRadius: 'lg' },
+      { x: 1, y: 2, width: 3, height: 4 },
+      50,
+      0,
+    );
     expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith(
-      expect.objectContaining({ audio: false, video: expect.objectContaining({ deviceId: { ideal: 'device-7' } }) }),
+      expect.objectContaining({ audio: false, video: expect.objectContaining({ deviceId: { exact: 'device-7' } }) }),
     );
     expect(capture.beginCameraSegment).toHaveBeenCalledWith({
       sessionId: 'session',
@@ -141,6 +161,19 @@ describe('BrowserCameraRecorder', () => {
       startNs: 0,
     });
     expect(FakeMediaRecorder.instances[0].start).toHaveBeenCalledWith(1000);
+  });
+
+  it('records an existing ready stream without reacquiring or stopping the shared stream', async () => {
+    const track = createTrack({ width: 1280, height: 720, frameRate: 30 });
+    const stream = { getVideoTracks: () => [track], getTracks: () => [track] } as unknown as MediaStream;
+    const recorder = BrowserCameraRecorder.fromReadyStream('camera:chromium:shared', stream);
+
+    await recorder.start('session');
+    expect(navigator.mediaDevices.getUserMedia).not.toHaveBeenCalled();
+    expect(FakeMediaRecorder.instances[0].stream).toBe(stream);
+
+    await recorder.stop();
+    expect(track.stop).not.toHaveBeenCalled();
   });
 
   it('serializes chunks and finalizes using a non-negative monotonically bounded end time', async () => {
@@ -219,5 +252,87 @@ describe('BrowserCameraRecorder', () => {
     expect(capture.failCamera).toHaveBeenCalledWith({ sessionId: 'session', reason: 'lost permission' });
     expect(track.stop).toHaveBeenCalledOnce();
     await expect(recorder.resume('session')).rejects.toThrow('already stopped');
+  });
+});
+
+describe('CameraOverlayRecorder', () => {
+  it('drives the overlay-owned recorder without acquiring another camera stream', async () => {
+    capture.controlCameraOverlayRecording.mockResolvedValueOnce({
+      recordingId: 'recording-1',
+      sourceId: 'camera:chromium:shared',
+      format: { codec: 'vp8', width: 1280, height: 720, nominalFps: 30 },
+    });
+    const recorder = await CameraOverlayRecorder.request('camera:chromium:shared');
+
+    await recorder.start('session-1', { shadowSize: 'sm', cornerRadius: 'lg' }, undefined, performance.now());
+    await recorder.pause(100);
+    await recorder.resume('session-1');
+    await recorder.stop(300);
+
+    expect(navigator.mediaDevices.getUserMedia).not.toHaveBeenCalled();
+    expect(capture.controlCameraOverlayRecording.mock.calls.map(([control]) => control.action)).toEqual([
+      'prepare',
+      'start',
+      'pause',
+      'resume',
+      'stop',
+    ]);
+    expect(capture.controlCameraOverlayRecording).toHaveBeenLastCalledWith({
+      action: 'stop',
+      recordingId: 'recording-1',
+      endNs: 300,
+    });
+  });
+
+  it('sends the first overlay segment start relative to the supplied session timeline', async () => {
+    const now = vi.spyOn(performance, 'now').mockReturnValue(1_000);
+    capture.controlCameraOverlayRecording.mockResolvedValueOnce({
+      recordingId: 'recording-1',
+      sourceId: 'camera:chromium:shared',
+      format: { codec: 'vp8', width: 1280, height: 720, nominalFps: 30 },
+    });
+    const recorder = await CameraOverlayRecorder.request('camera:chromium:shared');
+
+    now.mockReturnValue(6_000);
+    await recorder.start('session-1', undefined, undefined, 1_000);
+
+    expect(capture.controlCameraOverlayRecording).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'start',
+        recordingId: 'recording-1',
+        sessionId: 'session-1',
+        startNs: 5_000_000_000,
+      }),
+    );
+    await recorder.stop(5_000_000_000);
+  });
+
+  it('forwards only matching fatal failures and unsubscribes after stop', async () => {
+    let failureListener!: (failure: { recordingId: string; message: string }) => void;
+    const unsubscribe = vi.fn();
+    capture.onCameraRecordingFailure.mockImplementation((listener) => {
+      failureListener = listener;
+      return unsubscribe;
+    });
+    capture.controlCameraOverlayRecording.mockResolvedValueOnce({
+      recordingId: 'recording-1',
+      sourceId: 'camera:chromium:shared',
+      format: { codec: 'vp8', width: 1280, height: 720, nominalFps: 30 },
+    });
+    const recorder = await CameraOverlayRecorder.request('camera:chromium:shared');
+    const fatal = vi.fn();
+    recorder.onFatal(fatal);
+
+    failureListener({ recordingId: 'other', message: 'ignored' });
+    expect(unsubscribe).not.toHaveBeenCalled();
+    failureListener({ recordingId: 'recording-1', message: 'camera disconnected' });
+    expect(fatal).toHaveBeenCalledOnce();
+    expect(fatal).toHaveBeenCalledWith(expect.objectContaining({ message: 'camera disconnected' }));
+    expect(unsubscribe).toHaveBeenCalledOnce();
+
+    await recorder.stop(0);
+    expect(unsubscribe).toHaveBeenCalledOnce();
+    failureListener({ recordingId: 'recording-1', message: 'late failure' });
+    expect(fatal).toHaveBeenCalledOnce();
   });
 });

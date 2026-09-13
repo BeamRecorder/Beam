@@ -3,12 +3,14 @@ import { createReadStream, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { BreadcrumbList, ListItem, WebPage, WithContext } from 'schema-dts';
 import common from '../../src/i18n/en/docs/common.json';
-import { enabledDocsLocales, getDocsCatalogs } from './content/docs-routes';
+import type { DocsSidebarItem } from './content/docs-content-types';
+import { enabledDocsLocales, type DocsLocale } from './content/docs-locales';
+import { getDocsCatalogs, getDocsSearchEntries } from './content/docs-routes';
 
 const siteUrl = 'https://beam.plinka.eu';
 const docsUrl = `${siteUrl}/docs/`;
 const socialImage = `${siteUrl}/Beam-showcase.png`;
-const beamIconFile = fileURLToPath(new URL('../../public/favicon.webp', import.meta.url));
+const beamIconFile = fileURLToPath(new URL('../public/favicon.webp', import.meta.url));
 const beamShowcaseFile = fileURLToPath(new URL('../../public/Beam-showcase.png', import.meta.url));
 
 const initialThemeScript = `(()=>{try{const e=document.documentElement,p=localStorage.getItem('beam-website-theme'),v=p==='light'||p==='dark'||p==='system'?p:'system',d=v==='dark'||v==='system'&&matchMedia('(prefers-color-scheme: dark)').matches;e.dataset.theme=v;e.classList.toggle('dark',d);e.style.colorScheme=d?'dark':'light'}catch{}})()`;
@@ -38,10 +40,22 @@ const localizedDocsPath = (relativePath: string, locale: (typeof enabledDocsLoca
 
 const safeJson = (value: object): string => JSON.stringify(value).replaceAll('<', '\\u003c');
 
+const docsSearchPayload = (locale: DocsLocale): string =>
+  JSON.stringify({
+    featured: getDocsCatalogs(locale).home.categories,
+    entries: getDocsSearchEntries(locale),
+  });
+
 const localizeLink = (link: string, locale: (typeof enabledDocsLocales)[number]) => {
   if (locale === 'en' || !link.startsWith('/')) return link;
   return `/${locale}${link}`;
 };
+
+const localizeSidebarItem = (item: DocsSidebarItem, locale: (typeof enabledDocsLocales)[number]): DocsSidebarItem => ({
+  ...item,
+  ...(item.link ? { link: localizeLink(item.link, locale) } : {}),
+  ...(item.items ? { items: item.items.map((child) => localizeSidebarItem(child, locale)) } : {}),
+});
 
 const localeConfig = Object.fromEntries(
   enabledDocsLocales.map((locale) => {
@@ -53,7 +67,7 @@ const localeConfig = Object.fromEntries(
         lang: localeCommon.locale,
         link: locale === 'en' ? '/' : `/${locale}/`,
         themeConfig: {
-          siteTitle: localeCommon.siteTitle,
+          siteTitle: false as const,
           nav: [
             { text: localeCommon.nav.website, link: siteUrl },
             { text: 'GitHub', link: 'https://github.com/BeamRecorder/Beam' },
@@ -61,7 +75,7 @@ const localeConfig = Object.fromEntries(
           ],
           sidebar: localeCommon.sidebar.map((group) => ({
             ...group,
-            items: group.items.map((item) => ({ ...item, link: localizeLink(item.link, locale) })),
+            items: group.items.map((item) => localizeSidebarItem(item, locale)),
           })),
           footer: localeCommon.footer,
         },
@@ -99,12 +113,25 @@ export default defineConfig({
               createReadStream(beamShowcaseFile).pipe(response);
               return;
             }
+            const searchLocale = requestPath?.match(/^\/docs\/docs-search\/([^/]+)\.json$/)?.[1];
+            if (searchLocale && enabledDocsLocales.includes(searchLocale as DocsLocale)) {
+              response.setHeader('Content-Type', 'application/json; charset=utf-8');
+              response.end(docsSearchPayload(searchLocale as DocsLocale));
+              return;
+            }
             next();
           });
         },
         generateBundle() {
           this.emitFile({ type: 'asset', fileName: 'favicon.webp', source: readFileSync(beamIconFile) });
           this.emitFile({ type: 'asset', fileName: 'Beam-showcase.png', source: readFileSync(beamShowcaseFile) });
+          for (const locale of enabledDocsLocales) {
+            this.emitFile({
+              type: 'asset',
+              fileName: `docs-search/${locale}.json`,
+              source: docsSearchPayload(locale),
+            });
+          }
         },
       },
     ],
@@ -113,7 +140,8 @@ export default defineConfig({
     hostname: docsUrl,
   },
   head: [
-    ['link', { rel: 'icon', type: 'image/webp', href: '/favicon.webp' }],
+    ['link', { rel: 'icon', type: 'image/webp', sizes: '288x288', href: '/docs/favicon.webp' }],
+    ['link', { rel: 'preload', as: 'image', type: 'image/webp', href: '/docs/favicon.webp', fetchpriority: 'high' }],
     ['meta', { name: 'theme-color', content: '#111110' }],
     ['meta', { property: 'og:site_name', content: 'Beam' }],
     ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
@@ -182,9 +210,8 @@ export default defineConfig({
     ];
   },
   themeConfig: {
-    logo: '/favicon.webp',
-    siteTitle: common.siteTitle,
-    search: { provider: 'local' },
+    logo: { src: '/favicon.webp', alt: 'Beam', width: 34, height: 34 },
+    siteTitle: false,
     outline: { level: [2, 3], label: 'On this page' },
     externalLinkIcon: true,
   },

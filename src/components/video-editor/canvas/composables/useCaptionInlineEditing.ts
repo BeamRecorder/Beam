@@ -55,13 +55,13 @@ export function useCaptionInlineEditing(options: {
   };
   const update = (customText: string) => {
     const clipId = editingCaptionId.value;
-    if (clipId) options.onUpdate({ clipId, customText });
+    if (clipId && !editingCaption.value?.locked) options.onUpdate({ clipId, customText });
   };
   const begin = (event: Pick<MouseEvent, 'clientX' | 'clientY' | 'button'>) => {
     if (event.button !== 0 || options.isPlaying() || options.isCropping() || options.isManualZoom()) return;
     const clipId = options.clipIdAt(event);
     const clip = options.composition().clips.find((candidate) => candidate.id === clipId);
-    if (!clip || !isTextCaptionClip(clip)) return;
+    if (!clip || clip.locked || !isTextCaptionClip(clip)) return;
     if (options.selectedClip()?.id !== clip.id) options.onSelect(clip.id);
     options.onStart();
     editingCaptionId.value = clip.id;
@@ -75,6 +75,13 @@ export function useCaptionInlineEditing(options: {
       if (editingCaptionId.value && (playing || cropping || (selectedId && selectedId !== editingCaptionId.value)))
         finish();
     },
+  );
+  watch(
+    () => editingCaption.value?.locked,
+    (locked) => {
+      if (locked) finish();
+    },
+    { flush: 'sync' },
   );
   watch(options.activeCaptionIds, (ids) => {
     if (editingCaptionId.value && !ids.includes(editingCaptionId.value)) finish();

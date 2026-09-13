@@ -1,7 +1,9 @@
 const fs = require('fs');
 const path = require('path');
-const { HUD_SIZE, WindowController } = require('../window/window-controller.cjs');
+const { WindowController } = require('../window/window-controller.cjs');
 const { shouldAutoOpenDevTools } = require('../window/devtools-policy.cjs');
+const { normalizeHudWindowSize } = require('../window/hud-window-size.cjs');
+const { enforceDefaultZoom, installBrowserZoomPolicy } = require('../window/browser-zoom-policy.cjs');
 function createRendererSetup({
   app,
   BrowserWindow,
@@ -86,9 +88,10 @@ function createRendererSetup({
 
   function createWindow(preferencesStore, appIconPath) {
     logStartup('Creating BrowserWindow.');
+    const initialSize = normalizeHudWindowSize(preferencesStore.read().hudWindow);
     const win = new BrowserWindow({
-      width: HUD_SIZE.width,
-      height: HUD_SIZE.height,
+      width: initialSize.width,
+      height: initialSize.height,
       frame: false,
       transparent: true,
       alwaysOnTop: true,
@@ -103,14 +106,18 @@ function createRendererSetup({
         contextIsolation: true,
         sandbox: false,
         webSecurity: false,
+        zoomFactor: 1,
       },
     });
+    // Reset persisted zoom after first paint so ready-to-show is not suppressed.
+    installBrowserZoomPolicy(win.webContents, { resetOnLoad: false });
     const controller = new WindowController(win, { preferencesStore });
     controllers.set(win, controller);
     // use profileRendererRequests() to see all the requests made by the app and find out why it's slow to launch.
     // profileRendererRequests(win.webContents)
     win.once('ready-to-show', () => {
       logStartup('Window is ready to show (ready-to-show).');
+      enforceDefaultZoom(win.webContents);
       if (preferencesStore.read().onboardingCompleted) controller.markReadyToShow();
     });
     win.webContents.once('did-start-loading', () => logStartup('Renderer navigation started.'));

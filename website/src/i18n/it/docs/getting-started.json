@@ -28,6 +28,7 @@
           ],
           "screenshot": {
             "path": "getting-started/first-recording.webp",
+            "hidden": true,
             "alt": "Registratore Beam pronto per la prima registrazione",
             "caption": "Seleziona le sorgenti di acquisizione e multimediali prima di iniziare."
           }
@@ -47,7 +48,7 @@
           "title": "Continua a imparare",
           "bullets": [
             "Scopri l'[interfaccia del registratore](/recorder/interface).",
-            "Consulta tutte le [funzionalità del registratore](/recorder/capabilities).",
+            "Consulta tutte le [funzionalità del registratore](/recorder/capabilities/).",
             "Scopri l'[interfaccia dell'editor video](/editor/interface).",
             "Prepara il file finale con [esportazione e condivisione](/export)."
           ]
@@ -56,7 +57,7 @@
     },
     {
       "slug": "updates",
-      "title": "Aggiorna Beam",
+      "title": "Aggiornare Beam",
       "description": "Controlla, scarica e installa gli aggiornamenti di Beam dal registratore o dall'editor video.",
       "lead": "Le build installate di Beam possono controllare GitHub Releases per una nuova versione senza scaricarla o installarla automaticamente.",
       "sections": [
@@ -67,6 +68,7 @@
           ],
           "screenshot": {
             "path": "getting-started/update-controls.webp",
+            "aspectRatio": "16 / 9",
             "alt": "Impostazioni di Beam con i controlli degli aggiornamenti",
             "caption": "Il pannello degli aggiornamenti mostra la versione installata e le azioni disponibili."
           }

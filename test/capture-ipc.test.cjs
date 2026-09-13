@@ -128,7 +128,6 @@ test('resolves display bounds by native display id without relying on desktop pr
       { id: 84, bounds: { x: 2560, y: 0, width: 1920, height: 1080 } },
     ],
   };
-
   registerCaptureIpc({
     ipcMain,
     desktopCapturer,
@@ -352,6 +351,87 @@ test('does not enumerate Electron sources on the Linux Portal path', async () =>
   assert.equal(typeof getSources, 'function');
   assert.deepEqual(await getSources({}, ['window']), []);
   assert.equal(previewCalls, 0);
+});
+
+test('excludes the owner window from Electron source previews', async () => {
+  const handlers = new Map();
+  const previewCalls = [];
+  const thumbnail = (label) => ({ toDataURL: () => `data:image/png;base64,${label}` });
+  const sources = [
+    { id: 'window:owner', name: 'Beam', thumbnail: thumbnail('owner'), appIcon: null },
+    { id: 'window:other', name: 'Other app', thumbnail: thumbnail('other'), appIcon: null },
+    { id: 'screen:1', name: 'Screen 1', thumbnail: thumbnail('screen'), appIcon: null, display_id: '1' },
+  ];
+  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const screen = { getAllDisplays: () => [{ id: 1, bounds: { x: 0, y: 0, width: 1920, height: 1080 } }] };
+  const desktopCapturer = {
+    getSources: async (options) => {
+      previewCalls.push(options);
+      return sources;
+    },
+  };
+  const event = { sender: {} };
+  const ownerWindow = { getMediaSourceId: () => 'window:owner' };
+  const BrowserWindow = { fromWebContents: (sender) => (sender === event.sender ? ownerWindow : null) };
+
+  registerCaptureIpc({
+    ipcMain,
+    desktopCapturer,
+    BrowserWindow,
+    screen,
+    captureEngine: { request: async () => undefined },
+    app: {},
+    userPaths: { projects: 'recordings' },
+    trackStorages: [],
+    platform: 'win32',
+  });
+
+  const getSources = handlers.get('window:getSources');
+  const previews = await getSources(event, ['window', 'screen']);
+
+  assert.deepEqual(
+    previews.map(({ id }) => id),
+    ['window:other', 'screen:1'],
+  );
+  assert.equal(previews[0].thumbnail, 'data:image/png;base64,other');
+  assert.deepEqual(previews[1].displayBounds, { x: 0, y: 0, width: 1920, height: 1080 });
+  assert.deepEqual(previewCalls, [
+    {
+      types: ['window', 'screen'],
+      thumbnailSize: { width: 300, height: 200 },
+      fetchWindowIcons: true,
+    },
+  ]);
+});
+
+test('keeps Electron sources when the owner window metadata is unavailable', async () => {
+  const handlers = new Map();
+  const thumbnail = { toDataURL: () => 'data:image/png;base64,source' };
+  const sources = [{ id: 'window:source', name: 'Source', thumbnail, appIcon: null }];
+  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const desktopCapturer = { getSources: async () => sources };
+  const BrowserWindow = { fromWebContents: (sender) => sender?.owner ?? null };
+
+  registerCaptureIpc({
+    ipcMain,
+    desktopCapturer,
+    BrowserWindow,
+    screen: {},
+    captureEngine: { request: async () => undefined },
+    app: {},
+    userPaths: { projects: 'recordings' },
+    trackStorages: [],
+    platform: 'win32',
+  });
+
+  const getSources = handlers.get('window:getSources');
+  for (const event of [{}, { sender: {} }, { sender: { owner: {} } }]) {
+    const previews = await getSources(event, ['window']);
+    assert.deepEqual(
+      previews.map(({ id }) => id),
+      ['window:source'],
+    );
+  }
 });
 
 test('starts a Linux Portal recording from one catalog without an Electron preview preflight', async () => {
@@ -701,4 +781,88 @@ test('does not prepare the Linux Portal during discovery/previews and starts it 
     kind: 'monitor',
     restoreToken: null,
   });
+});
+
+test('forwards macOS source previews to the native engine with the same source id', async () => {
+  const handlers = new Map();
+  const requests = [];
+  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const captureEngine = {
+    request: async (command, payload) => {
+      requests.push({ command, payload });
+      assert.equal(command, 'source-preview');
+      return {
+        sourceId: payload.source,
+        thumbnail: 'data:image/jpeg;base64,/9j/native-preview',
+      };
+    },
+  };
+
+  registerCaptureIpc({
+    ipcMain,
+    desktopCapturer: {},
+    screen: {},
+    captureEngine,
+    app: {},
+    userPaths: { projects: 'recordings' },
+    trackStorages: [],
+    platform: 'darwin',
+  });
+
+  const getSourcePreview = handlers.get('capture:source-preview');
+  assert.equal(typeof getSourcePreview, 'function');
+  const result = await getSourcePreview(
+    {},
+    {
+      sourceId: 'sck:window:42',
+      maxWidth: 320,
+      maxHeight: 180,
+    },
+  );
+
+  assert.deepEqual(result, {
+    sourceId: 'sck:window:42',
+    thumbnail: 'data:image/jpeg;base64,/9j/native-preview',
+    status: 'ready',
+  });
+  assert.deepEqual(requests, [
+    {
+      command: 'source-preview',
+      payload: { source: 'sck:window:42', maxWidth: 320, maxHeight: 180 },
+    },
+  ]);
+});
+
+test('rejects source previews during shutdown before contacting the native engine', async () => {
+  const handlers = new Map();
+  let requests = 0;
+  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const captureEngine = {
+    request: async () => {
+      requests += 1;
+      throw new Error('capture engine must not be contacted during shutdown');
+    },
+  };
+
+  registerCaptureIpc({
+    ipcMain,
+    desktopCapturer: {},
+    screen: {},
+    captureEngine,
+    app: {},
+    userPaths: { projects: 'recordings' },
+    trackStorages: [],
+    platform: 'darwin',
+    canAcceptWork: () => false,
+  });
+
+  const getSourcePreview = handlers.get('capture:source-preview');
+  await assert.rejects(
+    async () => getSourcePreview({}, { sourceId: 'sck:window:42' }),
+    (error) => {
+      assert.equal(error.code, 'application-shutting-down');
+      return true;
+    },
+  );
+  assert.equal(requests, 0);
 });

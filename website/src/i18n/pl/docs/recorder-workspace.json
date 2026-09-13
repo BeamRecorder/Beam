@@ -1,0 +1,372 @@
+{
+  "pages": [
+    {
+      "slug": "recorder/capabilities/preferences",
+      "title": "Preferencje rejestratora",
+      "description": "Pełne informacje dotyczące zachowania nagrywania, wyglądu, języka, skrótów, aktualizacji i utrwalonych ustawień rejestratora.",
+      "lead": "Otwórz Preferencje z górnego paska Rejestratora. Ustawienia są pogrupowane w Nagrywanie, Ogólne, Skróty i Informacje, z zaawansowanymi opcjami kontroli wyglądu i aktualizacji, jeśli ma to zastosowanie.",
+      "sections": [
+        {
+          "title": "Okno preferencji",
+          "screenshot": {
+            "path": "recorder/preferences.webp",
+            "alt": "Beam Okno Preferencje pokazujące ustawienia Rejestratora",
+            "caption": "Preferencje rejestratora obejmują zachowanie przechwytywania i ustawienia udostępnione edytorowi.",
+            "aspectRatio": "308 / 517"
+          }
+        },
+        {
+          "title": "Ustawienia nagrywania",
+          "tables": [
+            {
+              "headers": ["Ustawienie", "Wartości", "Domyślne", "Notatki"],
+              "rows": [
+                [
+                  "Odliczanie",
+                  "Wył., 3 sekundy, 5 sekund, 10 sekund",
+                  "3 sekundy",
+                  "Stosowane przed rozpoczęciem przechwytywania."
+                ],
+                [
+                  "Pasek rejestratora",
+                  "Zawsze widoczne, automatyczne zanikanie, ukryte do momentu najechania kursorem",
+                  "Zawsze w systemie Windows/macOS; Ukryty do momentu najechania kursorem na Linuks",
+                  "Steruje pływającym paskiem podczas przechwytywania."
+                ],
+                [
+                  "Dostęp do interakcji",
+                  "Sprawdzanie, Dostępne, Wymagane pozwolenie, Wymagana instalacja, Odmowa, Niedostępne",
+                  "Wyłączone",
+                  "Linux to oznacza. Rejestruj zdarzenia klawiatury i myszy w systemie Linux."
+                ],
+                [
+                  "Rejestruj interakcje",
+                  "Wł. lub Wył., jeśli jest dostępny",
+                  "Zależne od platformy",
+                  "Przechowuje obsługiwane kliknięcia i bezpieczne tokeny skrótów, nigdy nie wpisywany tekst."
+                ],
+                ["Skróty", "Otwórz podgląd Skróty", "Nie dotyczy", "Otwiera grupy skrótów Nagrywanie i Teleprompter."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Ustawienia ogólne",
+          "tables": [
+            {
+              "headers": ["Ustawienie", "Wartości", "Domyślne"],
+              "rows": [
+                [
+                  "Język",
+                  "Bułgarski, niemiecki, angielski, hiszpański, francuski, hindi, włoski, japoński, koreański, polski, portugalski (Brazylia), rosyjski, wietnamski, chiński uproszczony, chiński tradycyjny",
+                  "Obsługiwany język systemu lub przeglądarki; Angielski rezerwowy"
+                ],
+                ["Tryb tematyczny", "Światło, Ciemność, System", "Światło"],
+                ["Sprawdzanie pisowni", "Włącz lub Wyłącz w obszarze Zaawansowane", "Włączone"],
+                ["Kolor podstawowy", "Gotowa paleta lub niestandardowy próbnik kolorów", "#ff5a1f"],
+                ["Kolor wtórny", "Gotowa paleta lub niestandardowy próbnik kolorów", "#6366f1"],
+                ["Promień narożnika", "0, 6, 10, 16, 24 pikseli lub niestandardowe", "10 pikseli"],
+                ["Promień pigułki", "Włączone lub wyłączone", "Wyłączone"],
+                ["Ton powierzchni", "Domyślny, Neutralny, Łupkowy, Głęboki", "Domyślne"],
+                ["Globalna skala interfejsu użytkownika", "50%, 75%, 100%, 125%", "100%"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Wstępne ustawienia motywu",
+          "paragraphs": [
+            "Zastosowanie ustawienia wstępnego ustawia razem kolory, promień narożnika, zachowanie pigułki i odcień powierzchni. Następnie można zmienić poszczególne elementy sterujące."
+          ],
+          "tables": [
+            {
+              "headers": ["Wstępnie ustawione", "Podstawowy", "Drugorzędne", "Promień", "Powierzchnia"],
+              "rows": [
+                ["Beam Zachód słońca", "#ff5a1f", "#6366f1", "10 pikseli", "Domyślne"],
+                ["Cyberfiołek", "#8b5cf6", "#06b6d4", "12 pikseli", "Łupek"],
+                ["Szmaragdowy Las", "#10b981", "#f59e0b", "8 pikseli", "Neutralny"],
+                ["Karmazynowy aksamit", "#f43f5e", "#a855f7", "14 pikseli", "Głęboko"],
+                ["Oceaniczna bryza", "#0284c7", "#14b8a6", "10 pikseli", "Łupek"],
+                ["Pracownia Bursztynowa", "#f59e0b", "#ec4899", "4 piks", "Neutralny"],
+                ["Sakura Bloom", "#ec4899", "#8b5cf6", "18 pikseli", "Domyślne"],
+                ["Precyzja łupka", "#0ea5e9", "#64748b", "2 piks", "Łupek"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Przesłonięcia skali interfejsu",
+          "paragraphs": [
+            "Pasek górny, pasek boczny, właściwości, elementy sterujące obszaru roboczego i oś czasu mogą używać skali globalnej lub zastąpić ją wartością 50%, 75%, 100% lub 125%. Użycie globalne jest reprezentowane przez puste zastąpienie, zatem zmiana skali globalnej w dalszym ciągu wpływa na ten region."
+          ],
+          "tables": [
+            {
+              "headers": ["Region", "Wybory"],
+              "rows": [
+                ["Górny pasek", "Użyj globalnie, 50%, 75%, 100%, 125%"],
+                ["Pasek boczny", "Użyj globalnie, 50%, 75%, 100%, 125%"],
+                ["Właściwości", "Użyj globalnie, 50%, 75%, 100%, 125%"],
+                ["Elementy sterujące płótna", "Użyj globalnie, 50%, 75%, 100%, 125%"],
+                ["Oś czasu", "Użyj globalnie, 50%, 75%, 100%, 125%"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Domyślne skróty",
+          "paragraphs": [
+            "Globalne konflikty skrótów są porównywane bez uwzględniania wielkości liter. Zduplikowany skrót globalny jest odrzucany."
+          ],
+          "tables": [
+            {
+              "headers": ["Kategoria", "Akcja", "Domyślny skrót"],
+              "rows": [
+                ["Nagrywanie", "Rozpocznij/zatrzymaj nagrywanie", "Alt+Shift+R"],
+                ["Nagrywanie", "Wstrzymaj / Wznów", "Alt+Shift+P"],
+                ["Nagrywanie", "Przełącz mikrofon", "Alt+Shift+M"],
+                ["Nagrywanie", "Przełącz kamerę", "Alt+Shift+C"],
+                ["Nagrywanie", "Przełącz dźwięk systemowy", "Alt+Shift+A"],
+                ["Teleprompter", "Pokaż/Ukryj", "Alt+Shift+T"],
+                ["Teleprompter", "Wstrzymaj / Wznów", "Alt+Shift+O"],
+                ["Teleprompter", "Następna linia", "Ctrl+Shift+Right"],
+                ["Teleprompter", "Poprzednia linia", "Ctrl+Shift+Left"]
+              ]
+            }
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Skrót edytora",
+            "text": "Schemat preferencji zawiera także skrót edytora Odtwórz/Wstrzymaj, Spacja, ale podwidok skrótów Rejestratora go nie wyświetla."
+          }
+        },
+        {
+          "title": "Informacje i aktualizacje",
+          "tables": [
+            {
+              "headers": ["Obszar", "Dostępne akcje lub stany"],
+              "rows": [
+                [
+                  "O",
+                  "Wyświetl wersję aplikacji, skopiuj informacje o systemie, otwórz dziennik zmian i uruchom ponownie prezentację powitalną."
+                ],
+                [
+                  "Aktualizuj stany",
+                  "Bezczynny, Sprawdzam, Dostępny, Pobieram, Pobrany, Niedostępny, Błąd, Nieobsługiwany."
+                ],
+                [
+                  "Aktualizuj działania",
+                  "Sprawdź, pobierz, jeśli jest dostępny, skopiuj komunikat o błędzie i uruchom ponownie dopiero po osiągnięciu Pobranej aktualizacji."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Przechowywane dane dotyczące preferencji",
+          "paragraphs": [
+            "Znormalizowany schemat preferencji to wersja 3. Oprócz widocznych elementów sterujących przechowuje informacje o zakończeniu wdrażania, wybranych urządzeniach, zapisanych ustawieniach koloru tła i gradientu oraz o odrzuceniu powiadomienia o interakcji."
+          ],
+          "tables": [
+            {
+              "headers": ["Platforma", "Plik preferencji"],
+              "rows": [
+                ["Windows", "`%USERPROFILE%\\Videos\\Beam\\user\\preferences.json`"],
+                ["macOS", "`~/Movies/Beam/user/preferences.json`"],
+                ["Linuksa", "`${XDG_VIDEOS_DIR:-~/Videos}/Beam/user/preferences.json`"]
+              ]
+            },
+            {
+              "headers": ["Dodatkowy klucz", "Cel"],
+              "rows": [
+                ["lokalne", "Wybrany język aplikacji."],
+                ["Region ekranu", "Znormalizowany niestandardowy region nagrywania."],
+                ["Ustawienia regionalne ekranu", "Ostatnio wybrane ustawienie wstępne regionu."],
+                ["Ustawienia telepromptera", "Udostępniony tryb telepromptera i ustawienia czytnika."],
+                ["nakładka kamery", "Ustawienia nakładki kamery udostępnione edytorowi."],
+                ["teleprompterOkno", "Stan okna telepromptera."]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/project-manager",
+      "title": "Kierownik projektu",
+      "description": "Podręcznik do wyszukiwania, przeglądania, wybierania, tworzenia, zmiany nazwy, otwierania, odkrywania i usuwania Beam projektów.",
+      "lead": "Wybierz opcję Otwórz istniejący projekt poniżej opcji Rozpocznij nagrywanie, aby przeglądać projekty zapisane na komputerze.",
+      "sections": [
+        {
+          "title": "Działania projektowe",
+          "tables": [
+            {
+              "headers": ["Akcja", "Zachowanie"],
+              "rows": [
+                ["Wyszukaj projekty", "Filtruje nazwy projektów bez uwzględniania wielkości liter."],
+                ["Wybierz projekty", "Przechodzi do trybu wyboru dla jednego lub większej liczby projektów."],
+                ["Zaznacz wszystko", "Wybiera wszystkie projekty aktualnie dostępne w widoku."],
+                ["Wyjdź z wyboru", "Opuszcza tryb wyboru partii."],
+                ["Nowy projekt", "Tworzy pusty projekt bez tworzenia nagrania."],
+                ["Odśwież projekty", "Ponownie ładuje listę z pamięci i krótko raportuje Projekty odświeżone."],
+                ["Otwórz projekt", "Otwiera wybrany projekt w edytorze."],
+                ["Zmień nazwę", "Zmienia nazwę projektu."],
+                ["Eksploruj", "Ujawnia folder projektu w menedżerze plików platformy."],
+                [
+                  "Usuń",
+                  "Żądanie potwierdzenia usunięcia pojedynczego projektu. Usuwanie zbiorcze rozpoczyna się bezpośrednio dla wybranych projektów."
+                ],
+                ["Powrót", "Powrót do interfejsu rejestratora."],
+                ["Utwórz / Anuluj", "Potwierdza lub przerywa tworzenie pustego projektu."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Lista stanów",
+          "tables": [
+            {
+              "headers": ["Stan", "Co pokazuje interfejs"],
+              "rows": [
+                ["Ładowanie", "Karty projektu szkieletu podczas odczytywania pamięci."],
+                ["Błąd", "Stan błędu z opcją Spróbuj ponownie."],
+                ["Pusty", "Brak projektów, gdy pamięć ich nie zawiera."],
+                ["Brak wyników wyszukiwania", "Dedykowany komunikat w przypadku, gdy filtr nie pasuje do niczego."],
+                ["Nieznana data", "Tekst zastępczy, gdy metadane dotyczące czasu projektu są niedostępne."],
+                ["Aktualny", "Zaznacza aktualnie otwarty projekt."],
+                ["Wybrane", "Zaznacza projekt zawarty w bieżącym wyborze."],
+                ["Duża lista", "Karty są zwirtualizowane, więc renderowany jest tylko widoczny zakres."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Nazwy, foldery i sesje",
+          "paragraphs": [
+            "Nowe nagrania otrzymują generowane nazwy takie jak Clever Comet czy Rapid Signal. Sufiks numeryczny jest dodawany, gdy wygenerowana nazwa już istnieje. Projekt to folder, który może zawierać wiele sesji nagraniowych i ich oddzielne ścieżki multimedialne."
+          ],
+          "tables": [
+            {
+              "headers": ["Platforma", "Katalog główny projektu"],
+              "rows": [
+                ["Windows", "`%USERPROFILE%\\Videos\\Beam\\user\\projects`"],
+                ["macOS", "`~/Movies/Beam/user/projects`"],
+                ["Linuksa", "`${XDG_VIDEOS_DIR:-~/Videos}/Beam/user/projects`"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Podgląd i odznaki",
+          "paragraphs": [
+            "Beam preferuje utrwalone `thumbnail.webp`. Jeśli go brakuje, Beam może wygenerować miniaturę WebP z dostępnego źródła podglądu. Najechanie kursorem na projekt powoduje wyciszenie nagrania ekranu, automatycznie i w pętli; przewijanie anuluje podgląd po najechaniu myszką i zatrzymuje odtwarzanie."
+          ],
+          "tables": [
+            {
+              "headers": ["Odznaka", "Znaczenie"],
+              "rows": [
+                ["Monitoruj", "Projekt zawiera nagranie ekranu."],
+                ["Wideo", "Projekt zawiera nagrania z kamer."],
+                ["Napisy", "Projekt zawiera podpisy lub warstwę tekstową."]
+              ]
+            }
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Zakres odznaki",
+            "text": "Obecny kierownik projektu nie wyświetla oddzielnych identyfikatorów mikrofonu ani systemu audio."
+          }
+        },
+        {
+          "title": "Usuwanie partii",
+          "paragraphs": [
+            "W przypadku usunięcia pojedynczego projektu wymagane jest potwierdzenie. Usuwanie wsadowe rozpoczyna się bezpośrednio z trybu zaznaczania i usuwa projekty sekwencyjnie, zamiast rozpoczynać od razu każdą operację na systemie plików."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/permissions-privacy",
+      "title": "Uprawnienia i prywatność",
+      "description": "Wymagania platformy i zachowanie prywatności w przypadku przechwytywania ekranu, dźwięku, kamery i interakcji.",
+      "lead": "Beam żąda chronionych możliwości tylko poprzez ścieżki systemu operacyjnego wymagane przez wybrane źródła. Nagrywanie interakcji jest opcjonalne i nie przechowuje wpisywanego tekstu.",
+      "sections": [
+        {
+          "title": "Windows",
+          "bullets": [
+            "Przechwytywanie ekranu i okien wykorzystuje funkcję Przechwytywanie grafiki systemu Windows.",
+            "Możliwości kursora i kliknięcia zależą od tego, co ujawnia ścieżka przechwytywania systemu Windows.",
+            "Dostęp do interakcji nie wymaga pomocnika Linux Polkit."
+          ]
+        },
+        {
+          "title": "macOS",
+          "tables": [
+            {
+              "headers": ["Możliwości", "Wymaganie"],
+              "rows": [
+                ["Przechwytywanie ekranu, okna lub aplikacji", "ScreenCaptureKit i pozwolenie na nagrywanie ekranu."],
+                ["Dostęp do interakcji", "CoreGraphics Pozwolenie na dostępność."],
+                ["Bezpośrednie przechwytywanie MP4", "macOS 15 lub nowszy."],
+                [
+                  "Dźwięk systemowy Chrom",
+                  "macOS 13 lub nowszy; Od systemu macOS 14.2 wymagana jest wersja `NSAudioCaptureUsageDescription`."
+                ],
+                ["Mikrofon i kamera", "Odpowiednie uprawnienia dotyczące prywatności w systemie macOS."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Linuksa",
+          "tables": [
+            {
+              "headers": ["Wymaganie", "Cel lub ograniczenie"],
+              "rows": [
+                [
+                  "Portal XDG Desktop w wersji 2 lub nowszej",
+                  "Wyświetla systemowy wybór źródła i uzyskuje zgodę na nagrywanie."
+                ],
+                ["Drut rurowy", "Przenosi wybrany ekran i natywne strumienie audio systemu."],
+                ["FFmpeg plus kompatybilny koder MP4", "Koduje przechwyconą sesję."],
+                ["Beam pomocnik wejściowy", "Zapewnia opcjonalne skróty klawiaturowe i metadane kliknięcia myszą."],
+                ["Polkit/pkexec i broker", "Może być wymagane do autoryzacji i obsługi pomocnika wejściowego."],
+                [
+                  "Pojedyncze źródło portalu",
+                  "Do sesji wybierany jest jeden ekran lub okno; przechwytywanie regionu jest niedostępne."
+                ]
+              ]
+            }
+          ],
+          "paragraphs": [
+            "Skróty klawiaturowe i kliknięcia myszą mogą mieć różną dostępność w zależności od dostępnych urządzeń wejściowych. Przechwytywanie interakcji w systemie Linux zawsze zgłasza, że ​​wpisany tekst nie jest rejestrowany."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Beam okien w trybie pełnoekranowym",
+            "text": "Beam nie może ukryć własnych okien przed przechwytywaniem pełnoekranowym systemu Linux. Tryb ekranu jest nadal zalecany; umów się na Beam przed potwierdzeniem wyboru portalu."
+          }
+        },
+        {
+          "title": "Prywatność interakcji",
+          "bullets": [
+            "Przechwytywanie interakcji jest opcjonalne.",
+            "Działa tylko wtedy, gdy sesja nagrywania jest aktywna.",
+            "Przechowuje obsługiwane metadane kliknięć i bezpieczne tokeny skrótów.",
+            "Nigdy nie przechowuje tekstu wpisanego przez użytkownika."
+          ]
+        },
+        {
+          "title": "Izolacja mediów i granice awarii",
+          "paragraphs": [
+            "Kamera, mikrofon i dźwięk systemowy są przechowywane jako osobne ścieżki lub wózki boczne, jeśli jest to obsługiwane. Poza Linuksem dźwięk systemowy korzysta z przechwytywania multimediów wyświetlanych w Chromium. Electron przyznaje dostęp do multimediów tylko zaufanym rendererom aplikacji. Kamera zgłoszona jako niedostępna podczas przygotowań może zostać pominięta podczas kontynuowania przechwytywania; inne błędy kamery lub wózka bocznego oraz awaria wybranego mikrofonu lub systemowego źródła dźwięku mogą spowodować zatrzymanie uruchamiania nagrywania."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Szczegółowa konfiguracja",
+            "text": "Użyj [odniesienia do obsługi platformy](/platforms) do konfiguracji systemu operacyjnego i rozwiązywania problemów."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -92,23 +92,34 @@ fn project_editor_state_survives_a_new_recording() {
         "2026-01-01T00:00:00Z",
     )
     .expect("project");
-    manifest.editor = serde_json::json!({
+    manifest.editor = serde_json::from_value(serde_json::json!({
         "schemaVersion": 3,
         "composition": {
             "schemaVersion": 4,
             "futureCompositionField": { "preserve": true }
         },
         "zoom": {
-            "elements": [],
+            "elements": [{
+                "id": "zoom-1",
+                "sessionId": first_session.to_string(),
+                "startMs": 0,
+                "endMs": 100,
+                "focus": { "cx": 0.5, "cy": 0.5 },
+                "depth": 1,
+                "mode": "auto",
+                "enabled": false
+            }],
             "generatedSessions": [{
                 "sessionId": first_session.to_string(),
                 "algorithmVersion": 1,
                 "generatedAt": "2026-01-01T00:00:00Z"
-            }]
+            }],
+            "futureZoomField": { "preserve": true }
         },
         "presentation": { "futurePresentationField": "keep-me" },
         "futureEditorField": { "preserve": true }
-    });
+    }))
+    .expect("typed project editor state");
     let path = ProjectLayout::new(temporary.path(), project).project_manifest();
     write_atomic(&path, &serde_json::to_vec_pretty(&manifest).expect("json"))
         .expect("write project");
@@ -120,22 +131,117 @@ fn project_editor_state_survives_a_new_recording() {
         "2026-01-02T00:00:00Z",
     )
     .expect("updated project");
+    assert_eq!(updated.editor.zoom.generated_sessions.len(), 1);
     assert_eq!(
-        updated.editor["zoom"]["generatedSessions"]
-            .as_array()
-            .map(Vec::len),
-        Some(1)
+        updated.editor.zoom.elements[0].extra.get("enabled"),
+        Some(&serde_json::json!(false))
     );
     assert_eq!(
-        updated.editor["composition"]["futureCompositionField"]["preserve"],
-        true
+        updated.editor.zoom.extra.get("futureZoomField"),
+        Some(&serde_json::json!({ "preserve": true }))
     );
     assert_eq!(
-        updated.editor["presentation"]["futurePresentationField"],
-        "keep-me"
+        updated.editor.extra.get("composition"),
+        Some(&serde_json::json!({
+            "schemaVersion": 4,
+            "futureCompositionField": { "preserve": true }
+        }))
     );
-    assert_eq!(updated.editor["futureEditorField"]["preserve"], true);
+    assert_eq!(
+        updated.editor.extra.get("presentation"),
+        Some(&serde_json::json!({ "futurePresentationField": "keep-me" }))
+    );
+    assert_eq!(
+        updated.editor.extra.get("futureEditorField"),
+        Some(&serde_json::json!({ "preserve": true }))
+    );
     assert_eq!(updated.sessions.len(), 2);
+
+    let persisted: serde_json::Value = serde_json::from_slice(
+        &std::fs::read(ProjectLayout::new(temporary.path(), project).project_manifest())
+            .expect("read updated project"),
+    )
+    .expect("updated project JSON");
+    assert_eq!(persisted["editor"]["zoom"]["elements"][0]["enabled"], false);
+}
+
+#[test]
+fn project_editor_auto_follow_and_unknown_fields_survive_a_new_recording() {
+    let temporary = tempfile::tempdir().expect("tempdir");
+    let project = ProjectId::new();
+    let first_session = SessionId::new();
+    let second_session = SessionId::new();
+    create_or_update_project(
+        temporary.path(),
+        project,
+        first_session,
+        "2026-01-01T00:00:00Z",
+    )
+    .expect("project");
+
+    let path = ProjectLayout::new(temporary.path(), project).project_manifest();
+    let mut value: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&path).expect("read project")).expect("json");
+    let editor = value
+        .get_mut("editor")
+        .and_then(serde_json::Value::as_object_mut)
+        .expect("editor object");
+    editor.insert(
+        "futureEditorSetting".into(),
+        serde_json::json!({ "enabled": true, "version": 3 }),
+    );
+    let zoom = editor
+        .get_mut("zoom")
+        .and_then(serde_json::Value::as_object_mut)
+        .expect("zoom object");
+    zoom.insert(
+        "autoFollow".into(),
+        serde_json::json!({
+            "safeZone": 0.42,
+            "responsiveness": 0.8,
+            "directionLock": false
+        }),
+    );
+    zoom.insert(
+        "futureZoomSetting".into(),
+        serde_json::json!({ "mode": "experimental" }),
+    );
+    write_atomic(
+        &path,
+        &serde_json::to_vec_pretty(&value).expect("serialize project"),
+    )
+    .expect("write project");
+
+    let updated = create_or_update_project(
+        temporary.path(),
+        project,
+        second_session,
+        "2026-01-02T00:00:00Z",
+    )
+    .expect("updated project");
+
+    assert_eq!(
+        updated.editor.extra.get("futureEditorSetting"),
+        Some(&serde_json::json!({ "enabled": true, "version": 3 }))
+    );
+    assert_eq!(
+        updated.editor.zoom.extra.get("autoFollow"),
+        Some(&serde_json::json!({
+            "safeZone": 0.42,
+            "responsiveness": 0.8,
+            "directionLock": false
+        }))
+    );
+    assert_eq!(
+        updated.editor.zoom.extra.get("futureZoomSetting"),
+        Some(&serde_json::json!({ "mode": "experimental" }))
+    );
+
+    let persisted: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&path).expect("read updated project"))
+            .expect("updated json");
+    assert_eq!(persisted["editor"]["zoom"]["autoFollow"]["safeZone"], 0.42);
+    assert_eq!(persisted["editor"]["futureEditorSetting"]["version"], 3);
 }
 
 #[test]

@@ -19,7 +19,19 @@
       "items": [
         { "text": "Обзор", "link": "/recorder/" },
         { "text": "Интерфейс", "link": "/recorder/interface" },
-        { "text": "Возможности", "link": "/recorder/capabilities" }
+        {
+          "text": "Возможности",
+          "link": "/recorder/capabilities/",
+          "items": [
+            { "text": "Источники захвата", "link": "/recorder/capabilities/capture-sources" },
+            { "text": "Аудио и камера", "link": "/recorder/capabilities/audio-camera" },
+            { "text": "Телесуфлёр", "link": "/recorder/capabilities/teleprompter" },
+            { "text": "Управление во время записи", "link": "/recorder/capabilities/live-controls" },
+            { "text": "Настройки", "link": "/recorder/capabilities/preferences" },
+            { "text": "Менеджер проектов", "link": "/recorder/capabilities/project-manager" },
+            { "text": "Разрешения и конфиденциальность", "link": "/recorder/capabilities/permissions-privacy" }
+          ]
+        }
       ]
     },
     {
@@ -27,7 +39,22 @@
       "items": [
         { "text": "Обзор", "link": "/editor/" },
         { "text": "Интерфейс", "link": "/editor/interface" },
-        { "text": "Возможности", "link": "/editor/capabilities" }
+        { "text": "Пример проекта", "link": "/editor/showcase" },
+        {
+          "text": "Возможности",
+          "link": "/editor/capabilities",
+          "items": [
+            { "text": "Монтаж на временной шкале", "link": "/editor/capabilities/timeline" },
+            { "text": "Холст", "link": "/editor/capabilities/canvas" },
+            { "text": "Клипы", "link": "/editor/capabilities/clips" },
+            { "text": "Масштабирование", "link": "/editor/capabilities/zooms" },
+            { "text": "Курсор", "link": "/editor/capabilities/cursor" },
+            { "text": "Субтитры", "link": "/editor/capabilities/captions" },
+            { "text": "Аудио", "link": "/editor/capabilities/audio" },
+            { "text": "Настройки", "link": "/editor/capabilities/settings" },
+            { "text": "Экспорт", "link": "/export" }
+          ]
+        }
       ]
     },
     {

@@ -73,6 +73,26 @@ describe('TimelineTracks', () => {
     expect(mounted!.emitted('reorder:clip')).toContainEqual([{ id: 'image-clip', targetIndex: 1 }]);
   });
 
+  it('does not cross a locked visual lane while reordering tracks', async () => {
+    const lockedComposition = composition();
+    lockedComposition.clips = lockedComposition.clips.map((clip) =>
+      clip.id === 'webcam-clip' ? { ...clip, locked: true } : clip,
+    );
+    const mounted = await mountTracks({ composition: lockedComposition });
+    const rows = mounted!.findAll('.sidebar-tracks-stack .visual-track');
+    expect(rows).toHaveLength(3);
+
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: vi.fn().mockReturnValue(rows[1]!.element),
+    });
+    await rows[0]!.get('.track-drag-handle').trigger('pointerdown', { clientX: 10, clientY: 10 });
+    window.dispatchEvent(pointerEvent('pointermove', 30, 80));
+    window.dispatchEvent(pointerEvent('pointerup', 30, 80));
+
+    expect(mounted!.emitted('reorder:clip') ?? []).toHaveLength(0);
+  });
+
   it('opens context menu on right click, pastes at the playhead, and handles delete', async () => {
     const mounted = await mountTracks();
     const clipEl = mounted!.find('.tracks-stack .timeline-clip');
@@ -81,7 +101,7 @@ describe('TimelineTracks', () => {
     await clipEl.trigger('contextmenu', { clientX: 200, clientY: 300 });
     await flushPromises();
 
-    expect(mounted!.emitted('select:clip')).toContainEqual(['image-clip']);
+    expect(mounted!.emitted('select:item')).toContainEqual([{ kind: 'clip', id: 'image-clip', intent: 'replace' }]);
 
     const menuItems = document.body.querySelectorAll('.context-menu-item');
     expect(menuItems.length).toBeGreaterThanOrEqual(3);
@@ -118,7 +138,9 @@ describe('TimelineTracks', () => {
     contextMenuButton('Delete')?.click();
     await flushPromises();
 
-    expect(mounted!.emitted('delete:clips')).toContainEqual([['image-clip']]);
+    expect(mounted!.emitted('delete:selection')).toContainEqual([
+      { clipIds: ['image-clip'], zoomIds: [], mode: 'lift' },
+    ]);
   });
 
   it('highlights and deletes the current selection when right-clicking a timeline gap', async () => {
@@ -138,8 +160,10 @@ describe('TimelineTracks', () => {
     deleteButton?.click();
     await flushPromises();
 
-    expect(mounted!.emitted('delete:clips')).toContainEqual([['screen-clip']]);
-    expect(mounted!.emitted('select:clip')).toBeUndefined();
+    expect(mounted!.emitted('delete:selection')).toContainEqual([
+      { clipIds: ['screen-clip'], zoomIds: [], mode: 'lift' },
+    ]);
+    expect(mounted!.emitted('select:item')).toBeUndefined();
   });
 
   it('allows cross-category pasting from the context menu', async () => {
@@ -153,6 +177,12 @@ describe('TimelineTracks', () => {
     await flushPromises();
     contextMenuButton('Copy')?.click();
     await flushPromises();
+    await mounted!.setProps({
+      selectedClipId: 'image-clip',
+      selectedClipIds: ['image-clip'],
+      selectedZoomId: null,
+      selectedZoomIds: [],
+    });
 
     const captionTrack = mounted!.find('.tracks-stack .text-caption-track');
     await captionTrack.trigger('contextmenu', { clientX: 300, clientY: 300 });
@@ -169,7 +199,7 @@ describe('TimelineTracks', () => {
 
     await zoomButton.trigger('contextmenu', { clientX: 150, clientY: 150 });
     await flushPromises();
-    expect(mounted!.emitted('select:zoom')).toContainEqual(['zoom-1']);
+    expect(mounted!.emitted('select:item')).toContainEqual([{ kind: 'zoom', id: 'zoom-1', intent: 'replace' }]);
 
     contextMenuButton('Copy')?.click();
     await flushPromises();
@@ -192,7 +222,7 @@ describe('TimelineTracks', () => {
     contextMenuButton('Delete')?.click();
     await flushPromises();
 
-    expect(mounted!.emitted('delete:zoom')).toContainEqual(['zoom-1']);
+    expect(mounted!.emitted('delete:selection')).toContainEqual([{ clipIds: [], zoomIds: ['zoom-1'], mode: 'lift' }]);
   });
 
   it('supports Ctrl/Cmd copy and paste, ignores editable fields, and reports an empty clipboard', async () => {
@@ -232,7 +262,7 @@ describe('TimelineTracks', () => {
     expect(mounted!.emitted('paste:error')).toContainEqual(['Copy a timeline item before pasting.']);
   });
 
-  it('displays real-time caption text and triggers a smooth throbber indicator on edit', async () => {
+  it('displays real-time caption text and triggers the settling animation on edit', async () => {
     const initialComp = composition();
     const targetCaption = initialComp.clips.find((c) => c.id === 'caption-clip') as CaptionClip;
     targetCaption.caption = {
@@ -267,21 +297,19 @@ describe('TimelineTracks', () => {
       await mounted!.setProps({ composition: updatedComp });
       await flushPromises();
 
-      // While editing: full caption text is animated as a Throbber
-      const throbber = mounted!.find('.text-caption-track .editor-loading-throbber');
-      expect(throbber.exists()).toBe(true);
-      expect(throbber.attributes('aria-label')).toBe('Updated subtitle text');
+      // While editing, the updated text stays readable and receives the settling animation.
+      const updatedLabel = mounted!.find('.text-caption-track .caption-label-text');
+      expect(updatedLabel.text()).toBe('Updated subtitle text');
+      expect(updatedLabel.classes()).toContain('caption-settled');
 
-      // Wait for the edit throbber timeout and settling transition.
-      await vi.advanceTimersByTimeAsync(550);
+      // The transient animation class is removed after the settling transition.
+      await vi.advanceTimersByTimeAsync(350);
       await flushPromises();
 
-      // Throbber settles back to crisp static caption text with validated settling animation.
-      expect(mounted!.find('.text-caption-track .editor-loading-throbber').exists()).toBe(false);
       const settledLabel = mounted!.find('.text-caption-track .caption-label-text');
       expect(settledLabel.exists()).toBe(true);
       expect(settledLabel.text()).toBe('Updated subtitle text');
-      expect(settledLabel.classes()).toContain('caption-settled');
+      expect(settledLabel.classes()).not.toContain('caption-settled');
     } finally {
       vi.useRealTimers();
     }

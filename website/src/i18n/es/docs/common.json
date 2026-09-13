@@ -9,33 +9,141 @@
     {
       "text": "Empieza aquí",
       "items": [
-        { "text": "Introducción", "link": "/" },
-        { "text": "Primeros pasos", "link": "/getting-started" },
-        { "text": "Actualizar Beam", "link": "/updates" }
+        {
+          "text": "Introducción",
+          "link": "/"
+        },
+        {
+          "text": "Primeros pasos",
+          "link": "/getting-started"
+        },
+        {
+          "text": "Actualizar Beam",
+          "link": "/updates"
+        }
       ]
     },
     {
       "text": "Aplicación de grabación",
       "items": [
-        { "text": "Descripción general", "link": "/recorder/" },
-        { "text": "Interfaz", "link": "/recorder/interface" },
-        { "text": "Funciones", "link": "/recorder/capabilities" }
+        {
+          "text": "Descripción general",
+          "link": "/recorder/"
+        },
+        {
+          "text": "Interfaz",
+          "link": "/recorder/interface"
+        },
+        {
+          "text": "Funciones",
+          "link": "/recorder/capabilities/",
+          "items": [
+            {
+              "text": "Fuentes de captura",
+              "link": "/recorder/capabilities/capture-sources"
+            },
+            {
+              "text": "Audio y cámara",
+              "link": "/recorder/capabilities/audio-camera"
+            },
+            {
+              "text": "Teleprompter",
+              "link": "/recorder/capabilities/teleprompter"
+            },
+            {
+              "text": "Controles en directo",
+              "link": "/recorder/capabilities/live-controls"
+            },
+            {
+              "text": "Preferencias",
+              "link": "/recorder/capabilities/preferences"
+            },
+            {
+              "text": "Gestor de proyectos",
+              "link": "/recorder/capabilities/project-manager"
+            },
+            {
+              "text": "Permisos y privacidad",
+              "link": "/recorder/capabilities/permissions-privacy"
+            }
+          ]
+        }
       ]
     },
     {
       "text": "Editor de vídeo",
       "items": [
-        { "text": "Descripción general", "link": "/editor/" },
-        { "text": "Interfaz", "link": "/editor/interface" },
-        { "text": "Funciones", "link": "/editor/capabilities" }
+        {
+          "text": "Descripción general",
+          "link": "/editor/"
+        },
+        {
+          "text": "Interfaz",
+          "link": "/editor/interface"
+        },
+        {
+          "text": "Presentación del proyecto",
+          "link": "/editor/showcase"
+        },
+        {
+          "text": "Funciones",
+          "link": "/editor/capabilities",
+          "items": [
+            {
+              "text": "Edición de la línea de tiempo",
+              "link": "/editor/capabilities/timeline"
+            },
+            {
+              "text": "Lienzo",
+              "link": "/editor/capabilities/canvas"
+            },
+            {
+              "text": "Clips",
+              "link": "/editor/capabilities/clips"
+            },
+            {
+              "text": "Zooms",
+              "link": "/editor/capabilities/zooms"
+            },
+            {
+              "text": "Cursor",
+              "link": "/editor/capabilities/cursor"
+            },
+            {
+              "text": "Subtítulos",
+              "link": "/editor/capabilities/captions"
+            },
+            {
+              "text": "Audio",
+              "link": "/editor/capabilities/audio"
+            },
+            {
+              "text": "Ajustes",
+              "link": "/editor/capabilities/settings"
+            },
+            {
+              "text": "Exportación",
+              "link": "/export"
+            }
+          ]
+        }
       ]
     },
     {
       "text": "Referencia",
       "items": [
-        { "text": "Exportación y uso compartido", "link": "/export" },
-        { "text": "Compatibilidad con plataformas", "link": "/platforms" },
-        { "text": "Sistema de archivos", "link": "/filesystem" }
+        {
+          "text": "Exportación y uso compartido",
+          "link": "/export"
+        },
+        {
+          "text": "Compatibilidad con plataformas",
+          "link": "/platforms"
+        },
+        {
+          "text": "Sistema de archivos",
+          "link": "/filesystem"
+        }
       ]
     }
   ],

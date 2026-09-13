@@ -37,6 +37,7 @@ fn copy_pixel(format: NativePixelFormat, bytes: &[u8]) -> Vec<u8> {
         .to_vec()
 }
 
+mod buffer_params_tests;
 mod cursor_tests;
 mod format_tests;
 mod region_tests;

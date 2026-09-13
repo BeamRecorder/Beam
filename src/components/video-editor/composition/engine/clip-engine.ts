@@ -9,6 +9,7 @@ import {
   isTextCaptionClip,
   isVisualClip,
   type Clip,
+  type AudioClip,
   type ClipAppearance,
   type ClipComposition,
   type BlurClip,
@@ -408,6 +409,16 @@ export const setVolume = (composition: ClipComposition, clipId: string, volume: 
     return { ...clip, volume: Math.max(0, Math.min(200, volume)) };
   });
 
+export const setAudioNormalization = (
+  composition: ClipComposition,
+  clipId: string,
+  normalization: AudioClip['normalization'],
+) =>
+  updateClip(composition, clipId, (clip) => {
+    if (!isAudioClip(clip)) throw new CompositionEngineError('Only audio clips can be normalized.');
+    return { ...clip, normalization: normalization ? cloneValue(normalization) : undefined };
+  });
+
 export function setClipTransition(
   composition: ClipComposition,
   clipId: string,
@@ -445,7 +456,7 @@ export function reorderTextCaption(composition: ClipComposition, clipId: string,
 }
 
 export function detachClip(composition: ClipComposition, clipId: string): ClipComposition {
-  return updateClip(composition, clipId, (clip) => ({ ...clip, groupId: undefined }));
+  return updateClip(composition, clipId, (clip) => ({ ...clip, groupId: undefined, recordingClipId: null }));
 }
 
 export function linkClips(composition: ClipComposition, clipIds: string[], groupId = createId()): ClipComposition {

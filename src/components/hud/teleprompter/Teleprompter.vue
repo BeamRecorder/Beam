@@ -295,4 +295,4 @@ onBeforeUnmount(() => {
   </main>
 </template>
 
-<style scoped src="./teleprompter.css"></style>
+<style scoped src="./Teleprompter.css"></style>

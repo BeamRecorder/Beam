@@ -2,6 +2,26 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { i18n, setCurrentLocale } from './index';
 import { localeOptions, SUPPORTED_LOCALES } from './locales';
 
+const messageLeaves = (value: unknown, prefix = ''): Array<[string, unknown]> => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return prefix ? [[prefix, value]] : [];
+  return Object.entries(value as Record<string, unknown>).flatMap(([key, child]) =>
+    messageLeaves(child, prefix ? `${prefix}.${key}` : key),
+  );
+};
+
+const messageAt = (root: unknown, path: string) => {
+  let value: unknown = root;
+  for (const key of path.split('.')) {
+    if (!value || typeof value !== 'object' || Array.isArray(value) || !Object.hasOwn(value, key))
+      return { exists: false, value: undefined };
+    value = (value as Record<string, unknown>)[key];
+  }
+  return { exists: true, value };
+};
+
+const placeholders = (value: unknown) =>
+  [...new Set(typeof value === 'string' ? (value.match(/\{[^{}]+\}/g) ?? []) : [])].sort();
+
 afterEach(() => {
   setCurrentLocale('en');
 });
@@ -55,6 +75,56 @@ describe('internationalization', () => {
   it('registers every supported locale in the language picker', () => {
     expect(i18n.global.availableLocales).toEqual(expect.arrayContaining([...SUPPORTED_LOCALES]));
     expect(localeOptions.map((option) => option.value)).toEqual([...SUPPORTED_LOCALES]);
+  });
+
+  it('keeps the merged English message leaf keys and placeholders in every locale', () => {
+    const english = i18n.global.getLocaleMessage('en');
+    const englishLeaves = messageLeaves(english);
+
+    for (const locale of SUPPORTED_LOCALES) {
+      const messages = i18n.global.getLocaleMessage(locale);
+      for (const [path, englishValue] of englishLeaves) {
+        const translated = messageAt(messages, path);
+        expect(translated.exists, `${locale}: missing message key ${path}`).toBe(true);
+        expect(placeholders(translated.value), `${locale}: placeholder mismatch for ${path}`).toEqual(
+          placeholders(englishValue),
+        );
+      }
+    }
+  });
+
+  it('provides voice-over and audio normalization labels in every supported locale', () => {
+    const namespaces = {
+      VoiceoverRecorder: [
+        'record',
+        'pause',
+        'resume',
+        'stop',
+        'discard',
+        'preparing',
+        'finalizing',
+        'microphone',
+        'countdownOff',
+        'monitorProjectAudio',
+        'muteProjectAudio',
+      ],
+      AudioClipPropertiesPanel: ['normalize', 'analyzing', 'silentAudio', 'normalizedGain'],
+      AudioPanel: ['normalizeAll'],
+      TimelineTracks: ['normalizeAudio', 'voiceover'],
+    } as const;
+
+    for (const locale of SUPPORTED_LOCALES) {
+      setCurrentLocale(locale);
+      for (const [namespace, keys] of Object.entries(namespaces)) {
+        for (const key of keys) {
+          const path = `${namespace}.${key}`;
+          expect(i18n.global.te(path, locale), `${locale}: missing ${path}`).toBe(true);
+          expect(i18n.global.t(path), `${locale}: unresolved ${path}`).not.toBe(path);
+          expect(i18n.global.t(path).trim(), `${locale}: empty ${path}`).not.toBe('');
+        }
+      }
+      expect(i18n.global.t('AudioClipPropertiesPanel.normalizedGain', { gain: '2.0' })).toContain('2.0');
+    }
   });
 
   it('renders UTF-8 translations across the supported writing systems', () => {
@@ -123,6 +193,14 @@ describe('internationalization', () => {
           `${locale}: missing CaptionPanel.${captionKey}`,
         ).toBe(true);
       }
+    }
+  });
+
+  it('translates ripple deletion in every supported locale', () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      setCurrentLocale(locale);
+      expect(i18n.global.te('TimelineTracks.rippleDelete', locale)).toBe(true);
+      expect(i18n.global.t('TimelineTracks.rippleDelete')).not.toBe('TimelineTracks.rippleDelete');
     }
   });
 
@@ -264,6 +342,15 @@ describe('internationalization', () => {
         expect(message.trim(), `${locale}: empty ExportPopover.${key}`).not.toBe('');
         if (key === 'exportVideoDuration') expect(message).toContain('5');
       }
+    }
+  });
+
+  it('provides the shared frame color label in every supported locale', () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      setCurrentLocale(locale);
+      expect(i18n.global.te('BorderAndFrameControls.frameColor', locale)).toBe(true);
+      expect(i18n.global.t('BorderAndFrameControls.frameColor')).not.toBe('BorderAndFrameControls.frameColor');
+      expect(i18n.global.t('BorderAndFrameControls.frameColor').trim()).not.toBe('');
     }
   });
 

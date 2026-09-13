@@ -225,7 +225,7 @@ pub(super) fn update_video_metrics(
     }
 }
 
-#[cfg(any(target_os = "linux", test))]
+#[cfg(any(windows, target_os = "linux", test))]
 pub(super) fn update_video_format(
     tracks: &mut [TrackMetadata],
     kind: TrackKind,

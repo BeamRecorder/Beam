@@ -353,7 +353,10 @@ describe('useCameraZoom', () => {
 
     expect(drawDecoratedMedia).toHaveBeenLastCalledWith(
       expect.anything(),
-      expect.objectContaining({ rect: { x: 200, y: 90, width: 400, height: 225 } }),
+      expect.objectContaining({
+        sourceRect: { x: 128, y: 72, width: 1024, height: 576 },
+        rect: { x: 240, y: 112.5, width: 320, height: 180 },
+      }),
     );
   });
 
@@ -506,7 +509,10 @@ describe('useCameraZoom', () => {
     expect(createEvaluator).toHaveBeenCalledTimes(evaluatorCount);
     expect(drawDecoratedMedia).toHaveBeenLastCalledWith(
       expect.anything(),
-      expect.objectContaining({ rect: { x: 80, y: 67.5, width: 560, height: 270 } }),
+      expect.objectContaining({
+        sourceRect: { x: 128, y: 72, width: 1024, height: 576 },
+        rect: { x: 136, y: 94.5, width: 448, height: 216 },
+      }),
     );
   });
 
@@ -839,6 +845,8 @@ describe('useCameraZoom', () => {
   it('selects screen or canvas targets and exposes camera-space drawing/reset', () => {
     mountComposable();
     const ctx = context();
+    Object.defineProperty(options.canvas, 'clientWidth', { configurable: true, value: 800 });
+    Object.defineProperty(options.canvas, 'clientHeight', { configurable: true, value: 450 });
     state.drawVideoWindow(ctx, 800, 450, frame());
     options.selected.value = null;
     const pointer = (x: number, y: number, pointerId: number) =>

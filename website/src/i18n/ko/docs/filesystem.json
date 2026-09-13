@@ -12,9 +12,9 @@
             "Beam은 운영체제의 비디오 폴더를 확인하고 그 안에 `Beam/user`를 만듭니다. 리디렉션되었거나 현지화된 비디오 폴더에 따라 확인되는 위치가 달라지므로 아래 경로는 하드코딩된 위치가 아닌 일반적인 기본값입니다."
           ],
           "bullets": [
-            "Windows: `%USERPROFILE%\\Videos\\Beam\\user`",
-            "macOS: `~/Movies/Beam/user`",
-            "Linux: `${XDG_VIDEOS_DIR:-~/Videos}/Beam/user`"
+            "윈도우: `%USERPROFILE%\\Videos\\Beam\\user`",
+            "맥OS: `~/Movies/Beam/user`",
+            "리눅스: `${XDG_VIDEOS_DIR:-~/Videos}/Beam/user`"
           ],
           "subsections": [
             {
@@ -121,7 +121,7 @@
             "다운로드한 업데이트는 프로젝트와 별도로 운영체제의 캐시에 저장됩니다. `pending/` 디렉터리에는 설치 프로그램 또는 업데이트 아카이브와 `update-info.json`이 들어갈 수 있습니다. 새 버전이 성공적으로 시작되면 Beam은 업데이터 캐시를 지우지만 설치 대기 중인 업데이트는 보존합니다."
           ],
           "bullets": [
-            "Windows: `%LOCALAPPDATA%\\beam-updater\\pending`",
+            "윈도우: `%LOCALAPPDATA%\\beam-updater\\pending`",
             "macOS: `~/Library/Caches/beam-updater/pending`",
             "Linux: `${XDG_CACHE_HOME:-~/.cache}/beam-updater/pending`"
           ],

@@ -10,10 +10,9 @@ import type { SidebarMenuItem } from './sidebar-types';
 
 const { t } = useTranslate('SidebarPanel');
 
-const props = defineProps<{
-  activeTab: string;
-  items?: SidebarMenuItem[];
-}>();
+const props = withDefaults(defineProps<{ activeTab: string; panelOpen?: boolean; items?: SidebarMenuItem[] }>(), {
+  panelOpen: true,
+});
 
 const emit = defineEmits<{
   (e: 'select-tab', tab: string): void;
@@ -72,6 +71,7 @@ const menuItems = computed(
             class="nav-btn"
             :class="{ active: activeTab === item.id }"
             :aria-label="item.label"
+            :aria-expanded="activeTab === item.id ? panelOpen : undefined"
             :title="item.label"
             @click="emit('select-tab', item.id)"
           >
@@ -95,6 +95,7 @@ const menuItems = computed(
           class="nav-btn footer-btn"
           :class="{ active: activeTab === 'settings' }"
           :aria-label="t('settings')"
+          :aria-expanded="activeTab === 'settings' ? panelOpen : undefined"
           :title="t('settings')"
           @click="emit('select-tab', 'settings')"
         >

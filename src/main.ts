@@ -5,6 +5,9 @@ import './style.css';
 import App from './App.vue';
 import { useThemeStore } from './stores/theme';
 import { initI18n } from './i18n';
+import { installBrowserZoomGuard } from './utils/browserZoomGuard';
+
+installBrowserZoomGuard();
 
 const app = createApp(App);
 const pinia = createPinia();

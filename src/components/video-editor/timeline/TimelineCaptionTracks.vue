@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import ReorderGroup from '~/ui/transitions/ReorderGroup.vue';
+import TimelineLockOverlay from './TimelineLockOverlay.vue';
 import { onUnmounted, ref, watch } from 'vue';
-import { Sparkles } from '@lucide/vue';
+import { Lock, Sparkles } from '@lucide/vue';
 import type { CaptionClip } from '~/media/shared/composition-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import type { TimelinePasteHighlight } from './composables/timeline-clipboard-types';
@@ -31,7 +32,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (event: 'select', clipId: string): void;
+  (event: 'select', payload: { id: string; event: MouseEvent }): void;
   (event: 'contextmenu:clip', payload: { event: MouseEvent; clip: CaptionClip }): void;
   (event: 'contextmenu:track', mouseEvent: MouseEvent): void;
 }>();
@@ -185,6 +186,7 @@ onUnmounted(() => {
           v-for="clip in keyboardClips"
           :key="clip.id"
           type="button"
+          :data-timeline-clip-id="clip.id"
           class="annotation-indicator"
           :class="{
             selected: selectedClipIds.includes(clip.id) || selectedClipId === clip.id,
@@ -192,7 +194,7 @@ onUnmounted(() => {
             'paste-arrival': recentPaste?.type === 'clip' && recentPaste.id === clip.id,
           }"
           :style="percentageStyle(displayedClip(clip).timelineStartMs, displayedClip(clip).timelineDurationMs)"
-          @click.stop="emit('select', clip.id)"
+          @click.stop="emit('select', { id: clip.id, event: $event })"
           @contextmenu.prevent.stop="emit('contextmenu:clip', { event: $event, clip })"
           @pointerdown="beginClipMove($event, clip)"
           @pointerenter="startMarquee"
@@ -223,7 +225,9 @@ onUnmounted(() => {
               {{ (trimStateFor(clip.id)!.durationMs / 1000).toFixed(1) }}s
             </span>
           </span>
+          <TimelineLockOverlay v-if="clip.locked" />
           <span class="clip-center-title">
+            <Lock v-if="clip.locked" :size="12" :aria-label="t('locked')" />
             <span class="caption-label-text" :class="{ 'caption-settled': settlingClipIds.has(clip.id) }">{{
               getCaptionText(clip)
             }}</span>
@@ -271,6 +275,7 @@ onUnmounted(() => {
           v-for="clip in layer.clips"
           :key="clip.id"
           type="button"
+          :data-timeline-clip-id="clip.id"
           class="annotation-indicator"
           :class="{
             selected: selectedClipIds.includes(clip.id) || selectedClipId === clip.id,
@@ -278,7 +283,7 @@ onUnmounted(() => {
             'paste-arrival': recentPaste?.type === 'clip' && recentPaste.id === clip.id,
           }"
           :style="percentageStyle(displayedClip(clip).timelineStartMs, displayedClip(clip).timelineDurationMs)"
-          @click.stop="emit('select', clip.id)"
+          @click.stop="emit('select', { id: clip.id, event: $event })"
           @contextmenu.prevent.stop="emit('contextmenu:clip', { event: $event, clip })"
           @pointerdown="beginClipMove($event, clip)"
           @pointerenter="startMarquee"
@@ -309,7 +314,9 @@ onUnmounted(() => {
               {{ (trimStateFor(clip.id)!.durationMs / 1000).toFixed(1) }}s
             </span>
           </span>
+          <TimelineLockOverlay v-if="clip.locked" />
           <span class="clip-center-title">
+            <Lock v-if="clip.locked" :size="12" :aria-label="t('locked')" />
             <Sparkles v-if="clip.isAiGenerated" :size="12" class="sparkles-icon" />
             <span class="caption-label-text" :class="{ 'caption-settled': settlingClipIds.has(clip.id) }">{{
               getCaptionText(clip)

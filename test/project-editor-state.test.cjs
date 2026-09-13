@@ -44,6 +44,8 @@ const canvas = (value) => ({
   watermark: value,
 });
 
+const balancedAutoFollow = () => ({ safeZone: 0.5, responsiveness: 0.55, directionLock: true });
+
 test('defaults new cursor presentations to spring-on and ripple-off for both buttons', () => {
   const state = createDefaultPresentation();
 
@@ -242,6 +244,23 @@ test('normalizes persisted zoom motion blur enabled state and intensity', () => 
   assert.deepEqual(state.motionBlur, { enabled: false, intensity: 1 });
 });
 
+test('falls back to the Balanced auto-follow preset for legacy editor state', () => {
+  const state = zoomState({ elements: [], generatedSessions: [] });
+
+  assert.deepEqual(state.autoFollow, balancedAutoFollow());
+});
+
+test('clamps and round-trips persisted auto-follow settings', () => {
+  const state = zoomState({
+    elements: [],
+    generatedSessions: [],
+    autoFollow: { safeZone: 2, responsiveness: -1, directionLock: false },
+  });
+
+  assert.deepEqual(state.autoFollow, { safeZone: 0.75, responsiveness: 0, directionLock: false });
+  assert.deepEqual(zoomState(state).autoFollow, state.autoFollow);
+});
+
 test('rejects malformed persisted zoom motion blur settings', () => {
   assert.throws(
     () => zoomState({ elements: [], generatedSessions: [], motionBlur: { enabled: 'yes', intensity: 0.5 } }),
@@ -389,6 +408,63 @@ test('persists valid 3D zoom settings without dropping the projection contract',
   assert.equal(state.elements[0].tiltPreset, 'large');
 });
 
+test('round-trips optional zoom lock flags without materializing omitted values', () => {
+  const state = zoomState({
+    elements: [
+      {
+        id: 'locked-zoom',
+        sessionId: 'session',
+        startMs: 0,
+        endMs: 500,
+        focus: { cx: 0.5, cy: 0.5 },
+        depth: 2,
+        mode: 'manual',
+        locked: true,
+      },
+      {
+        id: 'unlocked-zoom',
+        sessionId: 'session',
+        startMs: 500,
+        endMs: 1_000,
+        focus: { cx: 0.5, cy: 0.5 },
+        depth: 2,
+        mode: 'manual',
+        locked: false,
+      },
+      {
+        id: 'legacy-zoom',
+        sessionId: 'session',
+        startMs: 1_000,
+        endMs: 1_500,
+        focus: { cx: 0.5, cy: 0.5 },
+        depth: 2,
+        mode: 'manual',
+      },
+    ],
+    generatedSessions: [],
+  });
+
+  assert.deepEqual(
+    state.elements.map((element) => element.locked),
+    [true, false, undefined],
+  );
+  assert.equal(Object.hasOwn(state.elements[2], 'locked'), false);
+
+  const roundTripped = zoomState(state);
+  assert.deepEqual(
+    roundTripped.elements.map((element) => element.locked),
+    [true, false, undefined],
+  );
+  assert.throws(
+    () =>
+      zoomState({
+        elements: [{ ...state.elements[0], locked: 'yes' }],
+        generatedSessions: [],
+      }),
+    /Propriétés de zoom invalides/,
+  );
+});
+
 test('infers legacy tilt presets from intensity and validates explicit presets', () => {
   const state = zoomState({
     elements: [
@@ -449,4 +525,45 @@ test('infers legacy tilt presets from intensity and validates explicit presets',
       }),
     /Propriétés de zoom invalides/,
   );
+});
+
+test('preserves attached, detached and unspecified automatic zoom links', () => {
+  for (const link of [{ linkedClipId: 'screen-1' }, { linkedClipId: null }, {}]) {
+    const element = {
+      id: 'zoom',
+      sessionId: 'session',
+      startMs: 0,
+      endMs: 500,
+      focus: { cx: 0.5, cy: 0.5 },
+      depth: 2,
+      mode: 'auto',
+      ...link,
+    };
+    const normalized = zoomState({ elements: [element], generatedSessions: [] });
+    assert.equal(normalized.elements[0].linkedClipId, link.linkedClipId);
+    assert.equal(Object.hasOwn(normalized.elements[0], 'linkedClipId'), Object.hasOwn(link, 'linkedClipId'));
+    assert.deepEqual(zoomState(normalized), normalized);
+  }
+});
+
+test('rejects invalid recording link identifiers on zooms', () => {
+  for (const linkedClipId of ['', '  ', 2, false, {}, []]) {
+    assert.throws(() =>
+      zoomState({
+        elements: [
+          {
+            id: 'zoom',
+            sessionId: 'session',
+            startMs: 0,
+            endMs: 500,
+            focus: { cx: 0.5, cy: 0.5 },
+            depth: 2,
+            mode: 'auto',
+            linkedClipId,
+          },
+        ],
+        generatedSessions: [],
+      }),
+    );
+  }
 });

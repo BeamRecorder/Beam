@@ -1,0 +1,288 @@
+{
+  "pages": [
+    {
+      "slug": "recorder/capabilities/capture-sources",
+      "title": "Nắm bắt nguồn và khu vực",
+      "description": "Tài liệu tham khảo về Màn hình ghi, Cửa sổ, lựa chọn nguồn và hành vi vùng cắt.",
+      "lead": "Chế độ chụp xác định nguồn và điều khiển vùng nào Beam có thể hiển thị trước khi quá trình ghi bắt đầu.",
+      "sections": [
+        {
+          "title": "Cài đặt chụp",
+          "tables": [
+            {
+              "headers": ["Cài đặt", "Giá trị", "Mặc định", "Hành vi và hạn chế"],
+              "rows": [
+                [
+                  "Chế độ",
+                  "Màn hình hoặc cửa sổ",
+                  "Màn hình",
+                  "Màn hình ghi lại một màn hình; Cửa sổ ghi lại một cửa sổ ứng dụng."
+                ],
+                [
+                  "Nguồn màn hình",
+                  "Màn hình có sẵn",
+                  "Hiển thị mặc định, sau đó có sẵn đầu tiên",
+                  "Đã chọn trong bản chụp cổng thông tin HUD bên ngoài Linux."
+                ],
+                [
+                  "Nguồn cửa sổ",
+                  "Cửa sổ ứng dụng có sẵn",
+                  "Nguồn mặc định hoặc cổng thông tin, sau đó có sẵn trước tiên",
+                  "Bản xem trước cửa sổ làm mới cứ sau 5 giây trong khi Beam không ghi."
+                ],
+                [
+                  "Vùng ghi",
+                  "Chuẩn hóa x, y, chiều rộng và chiều cao",
+                  "Không có khu vực",
+                  "Chỉ có chế độ màn hình. Được lưu trữ trong `extras.screenRegion`."
+                ],
+                [
+                  "Đặt trước vùng",
+                  "640×480, 800×600, 1024×768, 1366×768, 1440×990, 1920×1080",
+                  "không có",
+                  "Được lưu trữ trong `extras.screenRegionPreset`; thay vào đó, một hình chữ nhật tùy chỉnh có thể được vẽ."
+                ],
+                [
+                  "Tốc độ chụp",
+                  "60 khung hình/giây",
+                  "60 khung hình/giây",
+                  "Đã sửa lỗi trong cấu hình Trình ghi; nó không phải là cài đặt người dùng được hiển thị."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Chọn một khu vực tùy chỉnh",
+          "steps": [
+            "Chọn Chế độ màn hình và chọn một màn hình.",
+            "Chọn Chọn một vùng trên màn hình. Beam tạm thời ẩn HUD và mở lớp phủ vùng luôn ở trên cùng.",
+            "Vẽ một hình chữ nhật hoặc chọn kích thước đặt trước.",
+            "Chọn Sử dụng khu vực này để lưu khu vực hoặc Hủy để giữ nguyên lựa chọn hiện có.",
+            "Sử dụng Chỉnh sửa vùng màn hình để điều chỉnh vùng đã lưu."
+          ]
+        },
+        {
+          "title": "Các trường hợp cạnh khu vực",
+          "bullets": [
+            "Đặt lại chọn toàn màn hình; nó không xóa một tập tin hoặc ghi âm.",
+            "Một vùng thực tế là toàn bộ màn hình được chuẩn hóa trở lại trạng thái không cắt xén.",
+            "Điều khiển vùng bị tắt ở chế độ Cửa sổ, trong khi ghi, trong khi Beam đang bận hoặc khi không có giới hạn hiển thị.",
+            "Tính năng chụp cổng thông tin Linux không hiển thị lớp phủ vùng của Beam."
+          ]
+        },
+        {
+          "title": "Lựa chọn nguồn Linux",
+          "paragraphs": [
+            "Trên Linux, cổng thông tin dành cho máy tính để bàn hiển thị bộ chọn riêng khi quá trình chụp bắt đầu. HUD không cung cấp bộ chọn nguồn Electron và chỉ có một nguồn cổng thông tin được chọn cho phiên."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Khả năng hiển thị toàn màn hình",
+            "text": "Beam không thể ẩn các cửa sổ của chính nó khỏi ảnh chụp toàn màn hình Linux. Tính năng thu thập khu vực cũng không khả dụng, vì vậy hãy sắp xếp hoặc thu nhỏ Beam trước khi xác nhận nguồn cổng thông tin."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/audio-camera",
+      "title": "Âm thanh và máy ảnh",
+      "description": "Tài liệu tham khảo về micrô, máy ảnh, âm thanh hệ thống, đồng hồ đo, sidecar và chuyển đổi thiết bị trực tiếp.",
+      "lead": "Mỗi nguồn được chọn độc lập. Tính khả dụng, đo sáng xem trước và liệu nguồn có thể được chuyển đổi sau khi bắt đầu hay không tùy thuộc vào nguồn và nền tảng.",
+      "sections": [
+        {
+          "title": "Cài đặt nguồn",
+          "tables": [
+            {
+              "headers": ["Nguồn", "Giá trị", "Mặc định", "Nắm bắt hành vi"],
+              "rows": [
+                [
+                  "Micrô",
+                  "Thiết bị đầu vào Chrome hoặc Không có âm thanh",
+                  "Không có âm thanh",
+                  "Chụp riêng. Tính năng khử tiếng vang, khử tiếng ồn và điều khiển khuếch đại tự động bị tắt."
+                ],
+                [
+                  "Máy ảnh",
+                  "Máy ảnh Chrome hoặc Máy ảnh đang tắt",
+                  "Tắt máy ảnh",
+                  "Được chụp dưới dạng sidecar VP8 riêng biệt. Nếu máy ảnh được báo cáo là không khả dụng, Beam sẽ tắt nó và có thể tiếp tục."
+                ],
+                [
+                  "Âm thanh hệ thống",
+                  "Âm thanh hệ thống hoặc Tắt",
+                  "Tắt",
+                  "Linux sử dụng tính năng chụp tự nhiên; các nền tảng khác sử dụng sidecar phương tiện hiển thị Chrome."
+                ],
+                ["Máy đo micro", "Cấp độ trực tiếp", "Ẩn không có âm thanh", "Hiển thị khi micrô được chọn."],
+                [
+                  "Máy đo âm thanh hệ thống",
+                  "Cấp độ trực tiếp",
+                  "Ẩn",
+                  "Bản xem trước gốc chỉ có sẵn trên Linux trước khi ghi."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Điều khiển trong quá trình ghi",
+          "tables": [
+            {
+              "headers": ["Kiểm soát", "Trong quá trình ghi", "Không có sẵn khi"],
+              "rows": [
+                ["Chuyển đổi micrô", "Bật hoặc tắt micrô đã chọn", "Đếm ngược, khởi động hoặc hoàn thiện"],
+                ["Chuyển đổi máy ảnh", "Bật hoặc tắt máy ảnh đã chọn", "Đếm ngược, khởi động hoặc hoàn thiện"],
+                [
+                  "Chuyển đổi âm thanh hệ thống",
+                  "Bật hoặc tắt tính năng chụp bên ngoài Linux",
+                  "Đếm ngược, khởi động, hoàn thiện hoặc bất kỳ phiên Linux đang hoạt động nào"
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Hành vi thất bại",
+          "paragraphs": [
+            "Khi máy ảnh đã chọn được thông báo cụ thể là không có sẵn trong quá trình chuẩn bị, Beam sẽ tắt máy ảnh đó và tiếp tục mà không cần máy ảnh. Các lỗi máy ảnh hoặc sidecar khác có thể dừng khởi động, cũng như lỗi micrô hoặc nguồn âm thanh hệ thống đã chọn."
+          ],
+          "notice": {
+            "kind": "tip",
+            "title": "Kiểm tra trước khi đếm ngược",
+            "text": "Xác nhận thiết bị đã chọn và đồng hồ đo hiển thị trước khi bắt đầu, đặc biệt là sau khi kết nối hoặc ngắt kết nối phần cứng âm thanh và camera USB."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/teleprompter",
+      "title": "Máy nhắc chữ",
+      "description": "Tham khảo về chỉnh sửa tập lệnh, xem trước, tự động cuộn, chế độ dòng, kiểu chữ và phím tắt.",
+      "lead": "Teleprompter có thể cuộn liên tục hoặc di chuyển qua từng dòng script. Tài liệu của nó được lưu trữ cùng với phiên ghi âm.",
+      "sections": [
+        {
+          "title": "Cài đặt máy nhắc chữ từ xa",
+          "tables": [
+            {
+              "headers": ["Cài đặt", "Giá trị", "Mặc định", "Phạm vi hoặc sự kiên trì"],
+              "rows": [
+                ["kịch bản", "Văn bản miễn phí", "trống", "Được lưu trữ trong `session/teleprompter.json`."],
+                ["Chế độ", "Liên tục hoặc từng dòng", "liên tục", "Được lưu trữ trong tùy chọn và tài liệu phiên."],
+                [
+                  "Tự động cuộn",
+                  "Bật hoặc Tắt",
+                  "Bật",
+                  "Điều khiển chuyển động tự động; tạm dừng và tiếp tục vẫn có sẵn."
+                ],
+                ["Tốc độ", "5–200 pixel/giây", "42 pixel/giây", "Bước: 1px/s."],
+                ["Kích thước văn bản", "16–36 pixel", "36px", "Bước: 1px."],
+                ["Khoảng cách dòng", "1–2,5", "1,35", "Bước: 0,05."],
+                ["Căn chỉnh", "Trái hoặc Trung tâm", "trái", "Được lưu trữ với cài đặt teleprompter."],
+                [
+                  "chủ đề",
+                  "Hệ thống, Sáng hoặc Tối trong tài liệu được lưu trữ",
+                  "Hệ thống",
+                  "Giao diện người dùng Teleprompter hiện tại không hiển thị điều này dưới dạng điều khiển chức năng."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Điều khiển trình soạn thảo và trình đọc",
+          "tables": [
+            {
+              "headers": ["Kiểm soát", "Mục đích"],
+              "rows": [
+                ["Chỉnh sửa", "Làm cho tập lệnh có thể chỉnh sửa được trước khi ghi."],
+                ["Xem trước", "Hiển thị tập lệnh như nó sẽ được đọc."],
+                ["Ẩn", "Ẩn cửa sổ Teleprompter."],
+                [
+                  "Tạm dừng / Tiếp tục",
+                  "Dừng hoặc khởi động lại chuyển động tự động mà không thay đổi cài đặt Tự động cuộn."
+                ],
+                ["Trước / Tiếp theo", "Di chuyển giữa các dòng trong chế độ Line by line."],
+                ["Bộ đếm dòng", "Hiển thị vị trí dòng hiện tại ở chế độ từng dòng."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Ghi lại hành vi",
+          "paragraphs": [
+            "Khi phiên ghi bắt đầu, Teleprompter sẽ tự động chuyển từ tập lệnh có thể chỉnh sửa sang trình đọc chỉ đọc. Chế độ và cài đặt đã chọn vẫn có sẵn cho các điều khiển bản trình bày."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Điều khiển bàn phím",
+            "text": "Các phím tắt của Teleprompter có thể được cấu hình trong Tùy chọn → Phím tắt. Các giá trị mặc định được liệt kê trên trang tham chiếu Tùy chọn."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/live-controls",
+      "title": "Điều khiển ghi trực tiếp",
+      "description": "Hiểu các giai đoạn của Thanh ghi, chế độ hiển thị, chuyển đổi, dừng và hủy thiết bị.",
+      "lead": "Thanh ghi thay đổi trạng thái trong suốt phiên và vô hiệu hóa các hành động không an toàn trong khi bắt đầu chụp hoặc hoàn tất tệp.",
+      "sections": [
+        {
+          "title": "Giai đoạn ghi âm",
+          "tables": [
+            {
+              "headers": ["Giai đoạn", "Ý nghĩa"],
+              "rows": [
+                ["Nhàn rỗi", "Không có bản ghi nào đang hoạt động."],
+                ["Đếm ngược", "Độ trễ được cấu hình đang chạy."],
+                ["Bắt đầu", "Beam đang mở và đồng bộ hóa các nguồn đã chọn."],
+                ["Ghi âm", "Phiên đang tích cực nắm bắt."],
+                ["Đã tạm dừng", "Phiên hoạt động bị tạm dừng."],
+                ["Đang hoàn thiện", "Beam đang kết thúc quá trình theo dõi và chuẩn bị chỉnh sửa dự án."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Tùy chọn hiển thị",
+          "tables": [
+            {
+              "headers": ["Chế độ", "Hành vi", "Nền tảng mặc định"],
+              "rows": [
+                ["Luôn hiển thị", "Thanh vẫn hiển thị trong suốt quá trình chụp.", "Windows và macOS"],
+                ["Tự động mờ dần", "Thanh mờ dần và quay trở lại khi di chuột.", "Không phải mặc định"],
+                ["Ẩn cho đến khi di chuột", "Thanh vẫn bị ẩn cho đến khi con trỏ chạm tới nó.", "Linux"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Tính khả dụng của hành động",
+          "tables": [
+            {
+              "headers": ["hành động", "Bị vô hiệu hóa trong thời gian"],
+              "rows": [
+                ["Tạm dừng / Tiếp tục", "Đếm ngược, bắt đầu, kết thúc"],
+                ["Dừng lại", "Đang hoàn thiện"],
+                ["Hủy và xóa", "Đang hoàn thiện"],
+                ["Micrô / Camera / Âm thanh hệ thống", "Đếm ngược, bắt đầu, kết thúc"],
+                ["Âm thanh hệ thống Linux", "Phiên hoạt động hoàn chỉnh; chọn nó trước khi bắt đầu"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Dừng so với hủy",
+          "paragraphs": [
+            "Dừng tiếp tục chụp và chuyển sang Hoàn thiện trước khi dự án mở ra. Hủy và xóa sẽ bỏ qua bản ghi đang hoạt động và xóa phiên chưa hoàn thành. Đây là những hành động riêng biệt có chủ ý."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Việc hủy sẽ xóa phiên còn dang dở",
+            "text": "Sử dụng Dừng khi bạn muốn giữ lại những gì đã được ghi. Chỉ sử dụng Hủy và xóa khi cần loại bỏ thao tác hiện tại."
+          }
+        }
+      ]
+    }
+  ]
+}

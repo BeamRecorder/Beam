@@ -25,6 +25,12 @@ function createElectronFixture(savedExtras = {}) {
       this.webContents = {
         getURL: () => 'http://localhost:6500/?cameraOverlay=1',
         once: (event, listener) => this.contentListeners.set(event, listener),
+        emit: (event, ...args) => {
+          const listener = this.contentListeners.get(event);
+          if (!listener) return;
+          this.contentListeners.delete(event);
+          listener(...args);
+        },
         send: (...args) => calls.push(['send', ...args]),
       };
       windows.push(this);
@@ -105,6 +111,7 @@ function createElectronFixture(savedExtras = {}) {
     destroy() {
       this.destroyed = true;
       this.emit('closed');
+      this.webContents.emit('destroyed');
     }
   }
 
@@ -239,6 +246,136 @@ test('keeps a valid top-left camera overlay placement instead of discarding zero
       height: 300,
     });
     overlay.destroy();
+  } finally {
+    fixture.restore();
+  }
+});
+
+test('waits for the overlay renderer before forwarding recording commands', async () => {
+  const fixture = createElectronFixture();
+  try {
+    const { createCameraOverlayWindow } = loadOverlayWindow();
+    const overlay = createCameraOverlayWindow({
+      applicationRoot: '/app',
+      isPackaged: false,
+      platform: 'win32',
+      preferencesStore: fixture.preferencesStore,
+    });
+    const command = { commandId: 'command-1', recordingId: 'recording-1', control: { action: 'prepare' } };
+
+    overlay.configure({ cameraId: 'camera:front' });
+    const window = fixture.windows[0];
+    let settled = false;
+    const pending = overlay.sendRecordingCommand(command).then(() => {
+      settled = true;
+    });
+    await Promise.resolve();
+    assert.equal(settled, false);
+    assert.equal(overlay.markRendererReady({}), false);
+    assert.equal(overlay.markRendererReady(window.webContents), true);
+    await pending;
+    assert.equal(settled, true);
+    assert.deepEqual(
+      fixture.calls.filter((call) => call[0] === 'send' && call[1] === 'camera-overlay:recording-command').at(-1),
+      ['send', 'camera-overlay:recording-command', command],
+    );
+    overlay.destroy();
+  } finally {
+    fixture.restore();
+  }
+});
+
+test('rejects a command waiting for readiness when the overlay closes', async () => {
+  const fixture = createElectronFixture();
+  try {
+    const { createCameraOverlayWindow } = loadOverlayWindow();
+    const overlay = createCameraOverlayWindow({ applicationRoot: '/app', isPackaged: false, platform: 'win32' });
+    overlay.configure({ cameraId: 'camera:front' });
+    const pending = overlay.sendRecordingCommand({ commandId: 'command-1' });
+    fixture.windows[0].destroy();
+    await assert.rejects(pending, /camera overlay was closed/);
+  } finally {
+    fixture.restore();
+  }
+});
+
+test('does not forward a stale command after an aborted readiness wait and a new renderer becomes ready', async () => {
+  const fixture = createElectronFixture();
+  try {
+    const { createCameraOverlayWindow } = loadOverlayWindow();
+    const overlay = createCameraOverlayWindow({ applicationRoot: '/app', isPackaged: false, platform: 'win32' });
+    const staleCommand = { commandId: 'stale-command', recordingId: 'recording-1' };
+
+    overlay.configure({ cameraId: 'camera:first' });
+    const firstWindow = fixture.windows[0];
+    const pending = overlay.sendRecordingCommand(staleCommand);
+    firstWindow.destroy();
+    await assert.rejects(pending, /camera overlay was closed/);
+
+    overlay.configure({ cameraId: 'camera:second' });
+    const secondWindow = fixture.windows[1];
+    assert.equal(overlay.markRendererReady(secondWindow.webContents), true);
+    await Promise.resolve();
+
+    assert.deepEqual(
+      fixture.calls.filter((call) => call[0] === 'send' && call[1] === 'camera-overlay:recording-command'),
+      [],
+    );
+    overlay.destroy();
+  } finally {
+    fixture.restore();
+  }
+});
+
+test('does not forward an explicitly aborted command when the same renderer becomes ready later', async () => {
+  const fixture = createElectronFixture();
+  let overlay;
+  try {
+    const { createCameraOverlayWindow } = loadOverlayWindow();
+    overlay = createCameraOverlayWindow({ applicationRoot: '/app', isPackaged: false, platform: 'win32' });
+    const staleCommand = { commandId: 'aborted-command', recordingId: 'recording-1' };
+    const abort = new AbortController();
+
+    overlay.configure({ cameraId: 'camera:first' });
+    const window = fixture.windows[0];
+    const pending = overlay.sendRecordingCommand(staleCommand, { signal: abort.signal });
+    const outcome = pending.then(
+      () => 'resolved',
+      () => 'rejected',
+    );
+    abort.abort();
+    const outcomeBeforeReady = await Promise.race([
+      outcome,
+      new Promise((resolve) => setTimeout(() => resolve('pending'), 25)),
+    ]);
+    assert.equal(overlay.markRendererReady(window.webContents), true);
+    await pending.catch(() => undefined);
+    assert.equal(outcomeBeforeReady, 'rejected');
+    assert.deepEqual(
+      fixture.calls.filter((call) => call[0] === 'send' && call[1] === 'camera-overlay:recording-command'),
+      [],
+    );
+  } finally {
+    overlay?.destroy();
+    fixture.restore();
+  }
+});
+
+test('notifies the main process when the overlay web contents are destroyed', () => {
+  const fixture = createElectronFixture();
+  const destroyed = [];
+  try {
+    const { createCameraOverlayWindow } = loadOverlayWindow();
+    const overlay = createCameraOverlayWindow({
+      applicationRoot: '/app',
+      isPackaged: false,
+      platform: 'win32',
+      onWebContentsDestroyed: (contents) => destroyed.push(contents),
+    });
+    overlay.configure({ cameraId: 'camera:front' });
+    const contents = fixture.windows[0].webContents;
+    fixture.windows[0].destroy();
+    assert.deepEqual(destroyed, [contents]);
   } finally {
     fixture.restore();
   }

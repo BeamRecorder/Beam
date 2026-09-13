@@ -48,7 +48,10 @@ export const useThemeStore = defineStore('theme', () => {
     isPillRadius: isPillRadius.value,
     surfaceTone: surfaceTone.value,
     activePresetId: activePresetId.value,
-    uiScale: { global: uiScaleGlobal.value, overrides: { ...uiScaleOverrides.value } },
+    uiScale: {
+      global: uiScaleGlobal.value,
+      overrides: { ...uiScaleOverrides.value },
+    },
   }));
   const appearanceSignature = () => JSON.stringify(appearance.value);
 
@@ -112,15 +115,6 @@ export const useThemeStore = defineStore('theme', () => {
     style.setProperty('--ui-scale-properties', String(resolvedScale('properties')));
     style.setProperty('--ui-scale-canvas-controls', String(resolvedScale('canvasControls')));
     style.setProperty('--ui-scale-timeline', String(resolvedScale('timeline')));
-
-    logTheme('renderer appearance applied', {
-      theme: theme.value,
-      dark: isDark,
-      primary,
-      radius,
-      isPill,
-      surfaceTone: surfaceTone.value,
-    });
   };
 
   const applyTheme = () => {
@@ -139,7 +133,10 @@ export const useThemeStore = defineStore('theme', () => {
     if (appSettings?.activePresetId !== undefined) activePresetId.value = appSettings.activePresetId;
     if (appSettings?.uiScale) {
       uiScaleGlobal.value = appSettings.uiScale.global;
-      uiScaleOverrides.value = { ...DEFAULT_APPEARANCE.uiScale!.overrides, ...appSettings.uiScale.overrides };
+      uiScaleOverrides.value = {
+        ...DEFAULT_APPEARANCE.uiScale!.overrides,
+        ...appSettings.uiScale.overrides,
+      };
     }
     synchronizedAppearance = appearanceSignature();
     synchronizingPreference = false;
@@ -172,7 +169,10 @@ export const useThemeStore = defineStore('theme', () => {
           isPillRadius: isPillRadius.value,
           surfaceTone: surfaceTone.value,
           activePresetId: activePresetId.value,
-          uiScale: { global: uiScaleGlobal.value, overrides: { ...uiScaleOverrides.value } },
+          uiScale: {
+            global: uiScaleGlobal.value,
+            overrides: { ...uiScaleOverrides.value },
+          },
         },
       })
       .catch(() => undefined);
@@ -243,7 +243,10 @@ export const useThemeStore = defineStore('theme', () => {
           next.surfaceTone === surfaceTone.value &&
           next.activePresetId === activePresetId.value &&
           JSON.stringify(next.uiScale ?? DEFAULT_APPEARANCE.uiScale) ===
-            JSON.stringify({ global: uiScaleGlobal.value, overrides: uiScaleOverrides.value })))
+            JSON.stringify({
+              global: uiScaleGlobal.value,
+              overrides: uiScaleOverrides.value,
+            })))
     )
       return;
     hydrateFromSettings(preferences.appearance, preferences.theme);

@@ -23,17 +23,23 @@ import type {
   TeleprompterViewState,
   TeleprompterSessionContext,
 } from '../../components/hud/teleprompter/teleprompter-types';
-import type { RecordingBarVisibility, RecordingConfiguration } from '../../components/hud/recorder/recording-types';
-import type { RecordingSessionResult } from '../../components/hud/recorder/recording-types';
-import type { EditorLoadingProgress, EditorLoadingStage } from './editor-window';
-import type { AppearanceSettings } from '~/types/appearance';
-import type { EditorPresetDocument, EditorPresetSettings } from './editor-preset';
+import type { RecordingBarVisibility } from '../../components/hud/recorder/recording-types';
 import type {
-  QuickSnipConfiguration,
-  QuickSnipSnapshot,
-  QuickSnipRenderTask,
-  QuickSnipRenderReport,
-} from './quick-snip';
+  EditorLoadingProgress,
+  EditorLoadingStage,
+  EditorOpenOptions,
+  RecorderLauncherContext,
+} from './editor-window';
+import type { AppearanceSettings } from '~/types/appearance';
+import type {
+  CameraRecordingCommand,
+  CameraRecordingCommandResult,
+  CameraRecordingControl,
+  CameraRecordingControlResult,
+  CameraRecordingFailure,
+} from './camera-recording';
+import type { EditorPresetDocument, EditorPresetSettings } from './editor-preset';
+import type { QuickSnipApi } from './quick-snip-api';
 
 export type * from './capture-config';
 export type * from './screen-region';
@@ -76,9 +82,10 @@ export interface CaptureApi {
   startSystemAudioPreview(): Promise<void>;
   systemAudioPreviewLevel(): Promise<number>;
   stopSystemAudioPreview(): Promise<void>;
+  getSourcePreview(request: CaptureSourcePreviewRequest): Promise<CaptureSourcePreview>;
 }
 
-export interface DesktopCaptureApi extends CaptureApi, ScreenshotApi {
+export interface DesktopCaptureApi extends CaptureApi, ScreenshotApi, QuickSnipApi {
   close(): void;
   quit(): void;
   minimize(): void;
@@ -97,15 +104,17 @@ export interface DesktopCaptureApi extends CaptureApi, ScreenshotApi {
   onTrayStopRecording?(listener: () => void): () => void;
   setWindowMode(mode: 'hud' | 'recorder'): void;
   showHud(): void;
-  openEditor(projectId: string): Promise<boolean>;
+  openEditor(projectId: string, options?: EditorOpenOptions): Promise<boolean>;
+  openRecorderFromEditor(): Promise<boolean>;
+  dismissRecorderLauncher(): Promise<boolean>;
+  setRecorderLauncherActive(active: boolean): void;
   getEditorContext(): Promise<{ projectId: string; kind?: 'screenshot' } | null>;
   notifyEditorReady(): void;
   reportEditorLoadingStage(stage: EditorLoadingStage): void;
-  startRecordingFromEditor(configuration: RecordingConfiguration): void;
   setEditorTitlebarTheme(dark: boolean): void;
   onEditorContext(listener: (context: { projectId: string; kind?: 'screenshot' }) => void): () => void;
   onEditorLoadingProgress(listener: (progress: EditorLoadingProgress) => void): () => void;
-  onStartRecordingFromEditor(listener: (configuration: RecordingConfiguration) => void): () => void;
+  onRecorderLauncherContext(listener: (context: RecorderLauncherContext | null) => void): () => void;
   setPosition(x: number, y: number): void;
   setSize(width: number, height: number): void;
   setSizeSmooth(width: number, height: number): void;
@@ -139,48 +148,6 @@ export interface DesktopCaptureApi extends CaptureApi, ScreenshotApi {
   updateEditorPreset(id: string, settings: EditorPresetSettings, kind?: PresetKind): Promise<EditorPresetDocument>;
   updateActiveEditorPreset(settings: EditorPresetSettings, kind?: PresetKind): Promise<EditorPresetDocument>;
   onEditorPresetsChanged(listener: (document: EditorPresetDocument) => void, kind?: PresetKind): () => void;
-  quickSnipFromHud(options: import('./quick-snip').InstantCaptureOptions): Promise<QuickSnipSnapshot>;
-  quickSnipToggle(): Promise<QuickSnipSnapshot>;
-  notifyQuickSnipCropReady(): void;
-  quickSnipStart(
-    overrides?: Partial<Pick<QuickSnipConfiguration, 'mode' | 'automaticZoom' | 'devices' | 'screenshotAction'>>,
-  ): Promise<QuickSnipSnapshot>;
-  configureQuickSnip(
-    overrides: Partial<Pick<QuickSnipConfiguration, 'mode' | 'automaticZoom' | 'devices' | 'screenshotAction'>>,
-  ): Promise<QuickSnipSnapshot>;
-  chooseQuickSnipDevice(request: import('./quick-snip').QuickSnipDeviceMenu): Promise<string | null>;
-  quickSnipStop(): Promise<QuickSnipSnapshot>;
-  quickSnipCancel(): Promise<QuickSnipSnapshot>;
-  getQuickSnipState(): Promise<QuickSnipSnapshot>;
-  reportQuickSnip(event: {
-    type:
-      | 'recording'
-      | 'completed'
-      | 'failed'
-      | 'screenshot'
-      | 'screenshot-captured'
-      | 'screenshot-rendered'
-      | 'capture-cancelled';
-    name?: string;
-    screenshotId?: string;
-    preview?: string;
-    session?: RecordingSessionResult;
-    error?: string;
-  }): Promise<QuickSnipSnapshot>;
-  onQuickSnipConfigure(listener: (configuration: QuickSnipConfiguration) => void): () => void;
-  onQuickSnipCommand(listener: (command: 'start' | 'stop' | 'cancel') => void): () => void;
-  onQuickSnipStatus(listener: (snapshot: QuickSnipSnapshot) => void): () => void;
-  onQuickSnipState(listener: (snapshot: QuickSnipSnapshot) => void): () => void;
-  copyQuickSnipFile(path: string): Promise<{ native: boolean; fallback: string | null }>;
-  setQuickSnipStatusInteractive(interactive: boolean): void;
-  dismissQuickSnipStatus(): void;
-  notifyQuickSnipStatusReady(): void;
-  onQuickSnipStatusBlur(listener: () => void): () => void;
-  openQuickSnipEditor(): Promise<void>;
-  getQuickSnipRenderTask(): Promise<QuickSnipRenderTask | null>;
-  onQuickSnipRenderTask(listener: (task: QuickSnipRenderTask) => void): () => void;
-  saveQuickSnipRenderState(id: string, state: ProjectEditorState): Promise<void>;
-  reportQuickSnipRender(report: QuickSnipRenderReport): Promise<void>;
   showTeleprompter(): void;
   hideTeleprompter(): void;
   toggleTeleprompterVisibility(): void;
@@ -206,6 +173,10 @@ export interface DesktopCaptureApi extends CaptureApi, ScreenshotApi {
   saveProjectEditorState(projectId: string, state: ProjectEditorState): Promise<ProjectEditorState>;
   pickProjectMedia(projectId: string, kind: 'video' | 'image' | 'audio'): Promise<MediaAsset | null>;
   importDroppedProjectMedia(projectId: string, file: File, kind: 'video' | 'image' | 'audio'): Promise<MediaAsset>;
+  beginProjectVoiceover(payload: ProjectVoiceoverStart): Promise<{ recordingId: string }>;
+  writeProjectVoiceoverChunk(payload: ProjectVoiceoverChunk): Promise<void>;
+  finalizeProjectVoiceover(payload: ProjectVoiceoverFinish): Promise<MediaAsset>;
+  abortProjectVoiceover(recordingId: string): Promise<void>;
   listBackgroundLibrary(): Promise<BackgroundMedia[]>;
   pickBackgroundLibraryMedia(kind?: 'image' | 'video' | 'media'): Promise<BackgroundMedia | null>;
   onBackgroundLibraryChanged(listener: () => void): () => void;
@@ -253,6 +224,12 @@ export interface DesktopCaptureApi extends CaptureApi, ScreenshotApi {
   ): () => void;
   onCameraOverlayHover(listener: (hovered: boolean) => void): () => void;
   onCameraShadow(listener: (state: { shadowSize: string; cornerRadius: string }) => void): () => void;
+  controlCameraOverlayRecording(control: CameraRecordingControl): Promise<CameraRecordingControlResult>;
+  onCameraOverlayRecordingCommand(listener: (command: CameraRecordingCommand) => void): () => void;
+  completeCameraOverlayRecordingCommand(result: CameraRecordingCommandResult): void;
+  notifyCameraOverlayReady(): void;
+  reportCameraRecordingFailure(failure: CameraRecordingFailure): void;
+  onCameraRecordingFailure(listener: (failure: CameraRecordingFailure) => void): () => void;
   beginExport(options: {
     projectName: string;
     format: 'webm' | 'mp4';
@@ -316,22 +293,30 @@ export interface PreferenceSettings {
   schemaVersion: 3;
   theme: 'light' | 'dark' | 'system';
   appearance?: AppearanceSettings;
+  hudWindow?: { width: number; height: number };
   recordingBar: { visibility: RecordingBarVisibility };
   recordingInteractions: { enabled: boolean; noticeDismissed: boolean };
+  voiceover?: { countdownSeconds: 0 | 3 | 5 | 10; monitorProjectAudio: boolean };
   spellCheck?: { enabled: boolean };
   onboardingCompleted?: boolean;
-  devices: Record<string, unknown>;
+  devices: {
+    cameraId?: string;
+    micId?: string;
+    systemAudioMode?: string;
+    [key: string]: unknown;
+  };
   shortcuts: Record<string, PreferenceShortcut>;
   backgroundPresets: { colors: string[]; gradients: GradientBackground[] };
   extras: Record<string, unknown>;
 }
 
 export type PreferencePatch = Partial<
-  Omit<PreferenceSettings, 'recordingInteractions' | 'spellCheck' | 'appearance'>
+  Omit<PreferenceSettings, 'recordingInteractions' | 'spellCheck' | 'appearance' | 'voiceover'>
 > & {
   recordingInteractions?: Partial<PreferenceSettings['recordingInteractions']>;
   spellCheck?: Partial<PreferenceSettings['spellCheck']>;
   appearance?: Partial<AppearanceSettings>;
+  voiceover?: Partial<NonNullable<PreferenceSettings['voiceover']>>;
 };
 
 export interface ProjectEditorPresentation {
@@ -392,6 +377,20 @@ export interface MicrophoneFailure {
   reason: string;
   format?: { codec: 'opus'; sampleRate: number; channels: number };
 }
+export interface ProjectVoiceoverStart {
+  projectId: string;
+  sourceId: string;
+  format: { codec: 'opus'; sampleRate: number; channels: number };
+}
+export interface ProjectVoiceoverChunk {
+  recordingId: string;
+  sequence: number;
+  data: Uint8Array;
+}
+export interface ProjectVoiceoverFinish {
+  recordingId: string;
+  name?: string;
+}
 export interface SystemAudioSegmentStart {
   sessionId: string;
   sourceId: string;
@@ -416,6 +415,17 @@ export interface CapturePreview {
   appIcon: string | null;
   displayId?: string;
   displayBounds?: { x: number; y: number; width: number; height: number };
+}
+export interface CaptureSourcePreviewRequest {
+  sourceId: string;
+  maxWidth?: number;
+  maxHeight?: number;
+  refresh?: boolean;
+}
+export interface CaptureSourcePreview {
+  sourceId: string;
+  thumbnail: string | null;
+  status: 'ready' | 'unavailable';
 }
 export interface CaptureSource {
   id: string;

@@ -9,6 +9,13 @@ class FakeTrack {
     this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
   }
 
+  removeEventListener(type: string, listener: () => void) {
+    this.listeners.set(
+      type,
+      (this.listeners.get(type) ?? []).filter((entry) => entry !== listener),
+    );
+  }
+
   getSettings() {
     return { width: 1280, height: 720, frameRate: 30 };
   }
@@ -91,9 +98,13 @@ beforeEach(() => {
   vi.stubGlobal('MediaRecorder', FakeMediaRecorder);
   vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
   vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined);
+  let frameCallbackCount = 0;
   Object.defineProperty(HTMLVideoElement.prototype, 'requestVideoFrameCallback', {
     configurable: true,
-    value: vi.fn(),
+    value: vi.fn((callback: VideoFrameRequestCallback) => {
+      if (frameCallbackCount++ === 0) callback(0, { width: 1280, height: 720 } as VideoFrameCallbackMetadata);
+      return frameCallbackCount;
+    }),
   });
 });
 

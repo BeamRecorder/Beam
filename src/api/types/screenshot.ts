@@ -1,3 +1,4 @@
+import type { EditorOpenOptions } from './editor-window';
 import type { SnapshotHistory } from '~/media/shared/editor-history-types';
 import type { ScreenRegion } from './screen-region';
 import type { EditorPresetSettings } from './editor-preset';
@@ -47,6 +48,6 @@ export interface ScreenshotApi {
   getScreenshot(id: string): Promise<ScreenshotDocument>;
   listScreenshots(): Promise<ScreenshotDocument[]>;
   saveScreenshot(id: string, state: ScreenshotState, history?: SnapshotHistory<ScreenshotState>): Promise<void>;
-  openScreenshot(id: string): Promise<void>;
+  openScreenshot(id: string, options?: EditorOpenOptions): Promise<void>;
   exportScreenshot(id: string, bytes: ArrayBuffer, format: 'png' | 'webp', copy: boolean): Promise<string | null>;
 }

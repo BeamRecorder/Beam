@@ -6,7 +6,7 @@ import { useVideoPlayer } from './useVideoPlayer';
 import { useCursorReplacer } from '../properties/cursor/useCursorReplacer';
 import { useClipComposition } from './useClipComposition';
 import { useProjectZoom } from './useProjectZoom';
-import { normalizeZoomMotionBlur } from '../zoom/zoom-types';
+import { normalizeZoomAutoFollow, normalizeZoomMotionBlur } from '../zoom/zoom-types';
 import { useProjectEditorState } from './useProjectEditorState';
 import type { EditorExportSource } from '../../export/export-types';
 import { createCompositionSnapshot } from '../../export/composition/snapshot';
@@ -61,13 +61,22 @@ export function useVideoEditor(options: {
   // Composition state is available before the asynchronous playback engine has
   // decoded metadata, so it is the authoritative duration for zoom generation.
   const durationMs = computed(() => compositionDurationMs(compositionState.composition.value));
-  const zoomState = useProjectZoom({ editorData, durationMs, activeTab, editorDefaults });
+  const zoomState = useProjectZoom({
+    editorData,
+    durationMs,
+    activeTab,
+    editorDefaults,
+    composition: compositionState.composition,
+  });
   const editorState = useProjectEditorState({
     project,
     composition: compositionState.composition,
+    restoreComposition: compositionState.restoreComposition,
+    restoreZoomElements: zoomState.restoreZoomElements,
     zoomElements: zoomState.zoomElements,
     generatedSessions: zoomState.generatedSessions,
     zoomMotionBlur: zoomState.zoomMotionBlur,
+    zoomAutoFollow: zoomState.zoomAutoFollow,
     importedBackgrounds: player.importedBackgrounds,
     selectedBackground: player.selectedBackground,
     backgroundBlurPercent: player.backgroundBlurPercent,
@@ -134,6 +143,7 @@ export function useVideoEditor(options: {
       editorData: editorData.value,
       zooms: zoomState.zoomElements.value,
       zoomMotionBlur: normalizeZoomMotionBlur(zoomState.zoomMotionBlur?.value),
+      zoomAutoFollow: normalizeZoomAutoFollow(zoomState.zoomAutoFollow?.value),
       composition: compositionState.composition.value,
       cursorSettings: {
         selection: cursor.selection.value,

@@ -1,0 +1,24 @@
+{
+  "pages": [
+    {
+      "slug": "editor/showcase",
+      "title": "Présentation d'un projet enregistré",
+      "description": "Découvrez comment une session Beam enregistrée apparaît dans l'éditeur vidéo.",
+      "lead": "Une session enregistrée s'ouvre comme une composition complète dont les médias capturés sont organisés pour le montage.",
+      "sections": [
+        {
+          "title": "Un projet prêt à être monté",
+          "paragraphs": [
+            "Le canevas présente la sortie composée tandis que la timeline garde les médias enregistrés et les calques de montage visibles pour ajuster le timing, le cadrage, les sous-titres, l'audio et l'export."
+          ],
+          "screenshot": {
+            "path": "editor/showcase.webp",
+            "alt": "Éditeur Beam affichant un projet enregistré avec son canevas et sa timeline",
+            "caption": "Un projet enregistré prêt pour les ajustements de timing, de cadrage, de sous-titres, d'audio et d'export.",
+            "aspectRatio": "1586 / 992"
+          }
+        }
+      ]
+    }
+  ]
+}

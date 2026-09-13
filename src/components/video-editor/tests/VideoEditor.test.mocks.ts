@@ -1,9 +1,11 @@
 import { vi } from 'vitest';
 import type { CompositionSnapshot } from '~/components/export/export-types';
-import type { ClipComposition } from '~/media/shared/composition-types';
-import { COMPOSITION_SCHEMA_VERSION, isAudioClip } from '~/media/shared/composition-types';
+import type { ClipComposition, NormalizedCrop, ShapeClip } from '~/media/shared/composition-types';
+import { COMPOSITION_SCHEMA_VERSION, isAudioClip, isVisualClip } from '~/media/shared/composition-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { setVolume } from '~/components/video-editor/composition/engine/clip-engine';
+import { setCrop, setVolume } from '~/components/video-editor/composition/engine/clip-engine';
+import { DEFAULT_SHAPE_LAYER_STYLE } from '~/media/shared/shape-layer-style';
+import type { AddVisualElementRequest } from '~/components/video-editor/composition/visual-element-types';
 import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
 
 const { editorState } = vi.hoisted(() => ({ editorState: { store: undefined as any } }));
@@ -15,16 +17,36 @@ const historyState = vi.hoisted(() => ({
   commitNow: vi.fn(),
   undo: vi.fn(),
   redo: vi.fn(),
+  undoStack: undefined as { value: unknown[] } | undefined,
+  redoStack: undefined as { value: unknown[] } | undefined,
 }));
+const fullscreenState = vi.hoisted(() => ({ active: false, toggle: vi.fn() }));
 
 vi.mock('../../../api/capture', () => ({ capture }));
 vi.mock('~/ui/toast/toastStore', () => ({ useToastStore: () => toast }));
+vi.mock('../canvas/composables/useElementFullscreen', async () => {
+  const { ref } = await import('vue');
+  return {
+    useElementFullscreen: vi.fn(() => {
+      const isFullscreen = ref(fullscreenState.active);
+      const isExiting = ref(false);
+      fullscreenState.toggle.mockImplementation(() => {
+        if (isExiting.value) return;
+        fullscreenState.active = !fullscreenState.active;
+        isFullscreen.value = fullscreenState.active;
+      });
+      return { isExiting, isFullscreen, toggleFullscreen: fullscreenState.toggle };
+    }),
+  };
+});
 
 vi.mock('../composables/useVideoEditor', async () => {
   const { computed, ref } = await import('vue');
   return {
     useVideoEditor: vi.fn(() => {
       const activeTab = ref('canvas');
+      const scheduleSave = vi.fn();
+      const saveNow = vi.fn().mockResolvedValue(undefined);
       const composition = ref<ClipComposition>({
         schemaVersion: COMPOSITION_SCHEMA_VERSION,
         keyboardCaptionSessions: [],
@@ -132,11 +154,20 @@ vi.mock('../composables/useVideoEditor', async () => {
       const cursorMotion = ref({ preset: 'smooth', smoothing: 0.67, springMassMultiplier: 1.29, motionBlur: 0.4 });
       const compositionState = {
         composition,
+        restoreComposition: vi.fn((value: ClipComposition) => {
+          composition.value = value;
+        }),
         selectedClipId,
         selectedClipIds,
         selectedClip,
         selectedClipInfo: computed(() =>
-          selectedClip.value ? { id: selectedClip.value.id, kind: selectedClip.value.kind } : null,
+          selectedClip.value
+            ? {
+                id: selectedClip.value.id,
+                kind: selectedClip.value.kind,
+                crop: isVisualClip(selectedClip.value) ? selectedClip.value.crop : undefined,
+              }
+            : null,
         ),
         selectedCaptionClip: computed(() => null),
         isVideoEnabled: ref(true),
@@ -155,7 +186,30 @@ vi.mock('../composables/useVideoEditor', async () => {
         }),
         addElement: vi.fn().mockResolvedValue(undefined),
         addCaptionAtTime: vi.fn(),
-        addVisualElementAtTime: vi.fn().mockResolvedValue(undefined),
+        addVisualElementAtTime: vi.fn(async (request: AddVisualElementRequest) => {
+          if (request.kind !== 'shape') return;
+          const shape: ShapeClip = {
+            id: 'shape-1',
+            trackId: request.trackId,
+            kind: 'shape',
+            assetId: '',
+            name: 'Shape',
+            timelineStartMs: request.startMs,
+            timelineDurationMs: request.durationMs,
+            sourceInMs: 0,
+            sourceDurationMs: request.durationMs,
+            playbackRate: 1,
+            transitions: { entry: null, exit: null },
+            enabled: true,
+            order: 2,
+            transform: { x: 0.3, y: 0.3, width: 0.4, height: 0.4 },
+            ...DEFAULT_SHAPE_LAYER_STYLE,
+          };
+          composition.value = { ...composition.value, clips: [...composition.value.clips, shape] };
+          selectedClipIds.value = [shape.id];
+          selectedClipId.value = shape.id;
+          activeTab.value = 'clip';
+        }),
         updateCaption: vi.fn(),
         trimClipEdge: vi.fn(),
         moveClipTo: vi.fn(),
@@ -166,7 +220,16 @@ vi.mock('../composables/useVideoEditor', async () => {
         updateSelectedAppearance: vi.fn(),
         updateSelectedTransform: vi.fn(),
         previewSelectedTransform: vi.fn(),
-        updateSelectedCrop: vi.fn(),
+        updateSelectedCrop: vi.fn((crop: NormalizedCrop) => {
+          let next = composition.value;
+          for (const id of selectedClipIds.value) {
+            const clip = next.clips.find((candidate) => candidate.id === id);
+            if (clip && isVisualClip(clip)) next = setCrop(next, id, crop);
+          }
+          if (next === composition.value) return;
+          composition.value = next;
+          scheduleSave();
+        }),
         updateSelectedCameraLayout: vi.fn(),
         updateSelectedCameraFraming: vi.fn(),
         updateSelectedMirrored: vi.fn(),
@@ -198,6 +261,9 @@ vi.mock('../composables/useVideoEditor', async () => {
       });
       const zoomState = {
         zoomElements,
+        restoreZoomElements: vi.fn((value: ZoomElement[]) => {
+          zoomElements.value = value;
+        }),
         selectedZoomId,
         selectedZoomIds,
         selectedZoom: ref(null),
@@ -240,8 +306,8 @@ vi.mock('../composables/useVideoEditor', async () => {
         editorState: {
           loading: ref(false),
           isSaving: ref(false),
-          scheduleSave: vi.fn(),
-          saveNow: vi.fn().mockResolvedValue(undefined),
+          scheduleSave,
+          saveNow,
         },
         zoomState,
         editorPresets: {
@@ -273,15 +339,26 @@ vi.mock('../composables/useVideoEditor', async () => {
   };
 });
 
-vi.mock('../composables/useEditorUndoRedo', async () => {
-  const { ref } = await import('vue');
+vi.mock('../composables/useEditorUndoRedo', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../composables/useEditorUndoRedo')>();
   return {
-    useEditorUndoRedo: vi.fn(() => ({
-      ...historyState,
-      canUndo: ref(false),
-      canRedo: ref(false),
-      lastAction: ref(null),
-    })),
+    ...actual,
+    useEditorUndoRedo: vi.fn((options: Parameters<typeof actual.useEditorUndoRedo>[0]) => {
+      const api = actual.useEditorUndoRedo(options);
+      historyState.undoStack = api.undoStack;
+      historyState.redoStack = api.redoStack;
+      historyState.recordSnapshot.mockImplementation(api.recordSnapshot);
+      historyState.commitNow.mockImplementation(api.commitNow);
+      historyState.undo.mockImplementation(api.undo);
+      historyState.redo.mockImplementation(api.redo);
+      return {
+        ...api,
+        recordSnapshot: historyState.recordSnapshot,
+        commitNow: historyState.commitNow,
+        undo: historyState.undo,
+        redo: historyState.redo,
+      };
+    }),
   };
 });
 
@@ -394,9 +471,15 @@ vi.mock('../sidebar/SidebarPanel.vue', async () => {
   return {
     default: defineComponent({
       name: 'MockSidebar',
+      props: { activeTab: { type: String, default: 'canvas' }, panelOpen: { type: Boolean, default: true } },
       emits: ['select-tab'],
       setup(_, { emit }) {
-        return () => h('button', { class: 'sidebar-tab', onClick: () => emit('select-tab', 'zoom') });
+        return () =>
+          h('div', [
+            h('button', { class: 'sidebar-tab', onClick: () => emit('select-tab', 'zoom') }),
+            h('button', { class: 'sidebar-canvas-tab', onClick: () => emit('select-tab', 'canvas') }),
+            h('button', { class: 'sidebar-clip-tab', onClick: () => emit('select-tab', 'clip') }),
+          ]);
       },
     }),
   };
@@ -407,7 +490,10 @@ vi.mock('../properties/PropertiesPanel.vue', async () => {
   return {
     default: defineComponent({
       name: 'MockProperties',
-      props: { composition: { type: Object, default: null } },
+      props: {
+        composition: { type: Object, default: null },
+        selectedClip: { type: Object, default: null },
+      },
       emits: [
         'update:system-volume',
         'update:mic-volume',
@@ -426,11 +512,14 @@ vi.mock('../properties/PropertiesPanel.vue', async () => {
         'update:clip-rate',
         'update:clip-volume',
         'update:clip-enabled',
-        'unlink-clip',
+        'unlink-sidecars',
         'update:clip-is-mirrored',
         'update:clip-appearance',
+        'update:clip-crop',
         'update:clip-transform',
+        'preview:clip-crop',
         'reset:clip-transform',
+        'unlock:selection',
       ],
       setup(props, { emit }) {
         const compositionWithTransform = (x: number) => {
@@ -443,39 +532,59 @@ vi.mock('../properties/PropertiesPanel.vue', async () => {
           };
         };
         return () =>
-          h('div', { class: 'mock-properties' }, [
-            h('button', { class: 'system-volume', onClick: () => emit('update:system-volume', 150) }),
-            h('button', { class: 'mic-volume', onClick: () => emit('update:mic-volume', 125) }),
-            h('button', {
-              class: 'import-background',
-              onClick: () => emit('import:background', { kind: 'color', color: '#f00' }),
-            }),
-            h('button', {
-              class: 'update-canvas',
-              onClick: () => emit('update:canvas', { preset: '1:1', width: 1080, height: 1080, showBackground: true }),
-            }),
-            h('button', {
-              class: 'preview-composition',
-              onClick: () => emit('preview:composition', compositionWithTransform(0.25)),
-            }),
-            h('button', {
-              class: 'update-composition',
-              onClick: () => emit('update:composition', compositionWithTransform(0.5)),
-            }),
-            h('button', { class: 'delete-zoom', onClick: () => emit('delete:zoom') }),
-            h('button', { class: 'generate-zooms', onClick: () => emit('generate:zooms') }),
-            h('button', { class: 'delete-clip', onClick: () => emit('delete-clip') }),
-            h('button', { class: 'update-rate', onClick: () => emit('update:clip-rate', 1.5) }),
-            h('button', { class: 'update-volume', onClick: () => emit('update:clip-volume', 80) }),
-            h('button', { class: 'update-enabled', onClick: () => emit('update:clip-enabled', false) }),
-            h('button', { class: 'unlink', onClick: () => emit('unlink-clip') }),
-            h('button', { class: 'mirrored', onClick: () => emit('update:clip-is-mirrored', true) }),
-            h('button', {
-              class: 'appearance',
-              onClick: () => emit('update:clip-appearance', { borderEnabled: true }),
-            }),
-            h('button', { class: 'reset-transform', onClick: () => emit('reset:clip-transform') }),
-          ]);
+          h(
+            'div',
+            {
+              class: 'mock-properties',
+              'data-selected-crop': JSON.stringify((props.selectedClip as { crop?: unknown } | null)?.crop ?? null),
+            },
+            [
+              h('button', { class: 'system-volume', onClick: () => emit('update:system-volume', 150) }),
+              h('button', { class: 'mic-volume', onClick: () => emit('update:mic-volume', 125) }),
+              h('button', {
+                class: 'import-background',
+                onClick: () => emit('import:background', { kind: 'color', color: '#f00' }),
+              }),
+              h('button', {
+                class: 'update-canvas',
+                onClick: () =>
+                  emit('update:canvas', { preset: '1:1', width: 1080, height: 1080, showBackground: true }),
+              }),
+              h('button', {
+                class: 'preview-composition',
+                onClick: () => emit('preview:composition', compositionWithTransform(0.25)),
+              }),
+              h('button', {
+                class: 'update-composition',
+                onClick: () => emit('update:composition', compositionWithTransform(0.5)),
+              }),
+              h('button', { class: 'delete-zoom', onClick: () => emit('delete:zoom') }),
+              h('button', { class: 'generate-zooms', onClick: () => emit('generate:zooms') }),
+              h('button', { class: 'delete-clip', onClick: () => emit('delete-clip') }),
+              h('button', { class: 'update-rate', onClick: () => emit('update:clip-rate', 1.5) }),
+              h('button', { class: 'update-volume', onClick: () => emit('update:clip-volume', 80) }),
+              h('button', { class: 'update-enabled', onClick: () => emit('update:clip-enabled', false) }),
+              h('button', {
+                class: 'unlink',
+                onClick: () => emit('unlink-sidecars', { clipId: 'screen', clipIds: [], zoomIds: [] }),
+              }),
+              h('button', { class: 'mirrored', onClick: () => emit('update:clip-is-mirrored', true) }),
+              h('button', {
+                class: 'preview-clip-crop',
+                onClick: () => emit('preview:clip-crop', { x: 0.05, y: 0.1, width: 0.8, height: 0.75 }),
+              }),
+              h('button', {
+                class: 'update-clip-crop',
+                onClick: () => emit('update:clip-crop', { x: 0.1, y: 0.2, width: 0.7, height: 0.6 }),
+              }),
+              h('button', {
+                class: 'appearance',
+                onClick: () => emit('update:clip-appearance', { borderEnabled: true }),
+              }),
+              h('button', { class: 'unlock-selection', onClick: () => emit('unlock:selection') }),
+              h('button', { class: 'reset-transform', onClick: () => emit('reset:clip-transform') }),
+            ],
+          );
       },
     }),
   };
@@ -488,7 +597,10 @@ vi.mock('../canvas/EditorCanvas.vue', async () => {
       name: 'MockEditorCanvas',
       props: {
         isGridVisible: { type: Boolean, default: false },
+        zoomElements: { type: Array, default: () => [] },
         composition: { type: Object, default: null },
+        selectedTransformClip: { type: Object, default: null },
+        isCropping: { type: Boolean, default: false },
       },
       emits: [
         'update:zoom',
@@ -499,6 +611,7 @@ vi.mock('../canvas/EditorCanvas.vue', async () => {
         'update:clip-transform',
         'preview:clip-transform',
         'update:clip-crop',
+        'preview:clip-crop',
         'done:crop',
         'deselect:zoom',
         'update:is-playing',
@@ -513,16 +626,23 @@ vi.mock('../canvas/EditorCanvas.vue', async () => {
             zoomOut: vi.fn(),
             resetZoom: vi.fn(),
           },
+          getFullscreenElement: () => document.querySelector('.mock-canvas'),
         });
         return () => {
           const previewComposition = props.composition as ClipComposition | null;
           const previewClip = previewComposition?.clips.find((clip) => clip.id === 'screen');
           const previewTransformX = previewClip?.kind === 'screen' ? previewClip.transform.x : undefined;
+          const previewCrop = previewClip?.kind === 'screen' ? previewClip.crop : undefined;
+          const selectedTransformClip = props.selectedTransformClip as { kind?: string } | null;
           return h(
             'div',
             {
               class: 'mock-canvas',
               'data-composition-transform-x': String(previewTransformX ?? ''),
+              'data-composition-crop': JSON.stringify(previewCrop ?? null),
+              'data-is-cropping': String(props.isCropping),
+              'data-selected-transform-kind': selectedTransformClip?.kind ?? '',
+              'data-can-manipulate': String(Boolean(selectedTransformClip) && !props.isCropping),
             },
             [
               props.isGridVisible ? h('div', { class: 'canvas-3x3-grid' }) : null,
@@ -549,6 +669,10 @@ vi.mock('../canvas/EditorCanvas.vue', async () => {
               h('button', {
                 class: 'crop',
                 onClick: () => emit('update:clip-crop', { x: 0, y: 0, width: 1, height: 1 }),
+              }),
+              h('button', {
+                class: 'canvas-preview-crop',
+                onClick: () => emit('preview:clip-crop', { x: 0.15, y: 0.05, width: 0.7, height: 0.85 }),
               }),
               h('button', { class: 'done-crop', onClick: () => emit('done:crop') }),
               h('button', { class: 'pause', onClick: () => emit('update:is-playing', false) }),
@@ -583,13 +707,14 @@ vi.mock('../timeline/TimelineToolbar.vue', async () => {
   return {
     default: defineComponent({
       name: 'MockTimelineToolbar',
-      emits: ['update:is-playing', 'update:current-time', 'add:element'],
+      props: { isCanvasFullscreen: { type: Boolean, default: false } },
+      emits: ['update:is-playing', 'update:current-time', 'toggle:canvas-fullscreen'],
       setup(_, { emit }) {
         return () =>
           h('div', [
-            h('button', { class: 'add-sound', onClick: () => emit('add:element', 'sound') }),
             h('button', { class: 'timeline-play', onClick: () => emit('update:is-playing', true) }),
             h('button', { class: 'timeline-time', onClick: () => emit('update:current-time', 1.25) }),
+            h('button', { class: 'timeline-fullscreen', onClick: () => emit('toggle:canvas-fullscreen') }),
           ]);
       },
     }),
@@ -617,12 +742,15 @@ vi.mock('../timeline/EditorTimeline.vue', async () => {
         'add:zoom',
         'add:caption',
         'add:visual-element',
+        'add:element',
         'delete:clips',
         'reorder:clip',
         'reorder:caption',
         'preview:composition',
         'paste:item',
         'clipboard:copied',
+        'lock:selection',
+        'remove:gap',
       ],
       setup(props, { emit }) {
         const composition = props.composition as ClipComposition;
@@ -679,6 +807,7 @@ vi.mock('../timeline/EditorTimeline.vue', async () => {
               }),
               h('button', { class: 'timeline-toggle', onClick: () => emit('toggle:clip', 'audio') }),
               h('button', { class: 'timeline-add-caption', onClick: () => emit('add:caption', 500) }),
+              h('button', { class: 'add-sound', onClick: () => emit('add:element', 'sound') }),
               h('button', { class: 'timeline-delete-clips', onClick: () => emit('delete:clips', ['audio']) }),
               h('button', {
                 class: 'timeline-copy',
@@ -743,4 +872,4 @@ vi.mock('../timeline/EditorTimeline.vue', async () => {
   };
 });
 
-export { editorState, capture, exportState, toast, historyState };
+export { editorState, capture, exportState, toast, historyState, fullscreenState };

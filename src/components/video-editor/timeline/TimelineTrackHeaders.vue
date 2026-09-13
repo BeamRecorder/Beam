@@ -35,6 +35,8 @@ const props = defineProps<{
   textCaptionLayers: TextCaptionLayer[];
   systemAudioClips: AudioClip[];
   microphoneClips: AudioClip[];
+  voiceoverClips: AudioClip[];
+  hasVoiceoverDraft: boolean;
   importedAudioTracks: ImportedAudioTimelineTrack[];
   includeAudioInExport: boolean;
   draggedTrackId: string | null;
@@ -46,7 +48,12 @@ const props = defineProps<{
   selectZoomTrack: (zooms: ZoomElement[], event?: MouseEvent) => void;
   beginReorder: (event: PointerEvent, trackId: string, clipId: string) => void;
   beginCaptionReorder: (event: PointerEvent, layerId: string, representativeClipId: string) => void;
-  openTrackContextMenu: (event: MouseEvent, kind: 'visual' | 'zoom' | 'caption' | 'audio', id?: string) => void;
+  openTrackContextMenu: (
+    event: MouseEvent,
+    kind: 'visual' | 'zoom' | 'caption' | 'audio',
+    id?: string,
+    clipIds?: string[],
+  ) => void;
 }>();
 const { t } = useTranslate('TimelineTracks');
 const { t: tCanvas } = useTranslate('CanvasPanel');
@@ -94,7 +101,14 @@ const allZoomsSelected = () =>
         dragging: draggedTrackId === track.id,
         selected: allClipsSelected(track.clips),
       }"
-      @contextmenu="openTrackContextMenu($event, 'visual', track.id)"
+      @contextmenu="
+        openTrackContextMenu(
+          $event,
+          'visual',
+          track.id,
+          track.clips.map((clip) => clip.id),
+        )
+      "
     >
       <button
         type="button"
@@ -112,7 +126,7 @@ const allZoomsSelected = () =>
   <div
     class="sidebar-track-item cursor-track"
     :class="{ selected: allZoomsSelected() }"
-    @contextmenu="openTrackContextMenu($event, 'zoom')"
+    @contextmenu="openTrackContextMenu($event, 'zoom', undefined, [])"
   >
     <button type="button" class="track-info" @click="selectZoomTrack(zoomElements, $event)">
       <MousePointer class="track-icon" /><span class="track-title">{{ t('zooms') }}</span>
@@ -144,7 +158,14 @@ const allZoomsSelected = () =>
         dragging: draggedCaptionId === layer.id,
         selected: allClipsSelected(layer.clips),
       }"
-      @contextmenu="openTrackContextMenu($event, 'caption')"
+      @contextmenu="
+        openTrackContextMenu(
+          $event,
+          'caption',
+          undefined,
+          layer.clips.map((clip) => clip.id),
+        )
+      "
     >
       <button
         type="button"
@@ -170,7 +191,14 @@ const allZoomsSelected = () =>
       disabled: !includeAudioInExport || !systemAudioClips.some((clip) => clip.enabled),
       selected: allClipsSelected(systemAudioClips),
     }"
-    @contextmenu="openTrackContextMenu($event, 'audio')"
+    @contextmenu="
+      openTrackContextMenu(
+        $event,
+        'audio',
+        undefined,
+        systemAudioClips.map((clip) => clip.id),
+      )
+    "
   >
     <button type="button" class="track-info" @click="selectTrack(systemAudioClips, t('system'), $event)">
       <Volume2 class="track-icon" /><span class="track-title">{{ t('system') }}</span>
@@ -184,12 +212,46 @@ const allZoomsSelected = () =>
       disabled: !includeAudioInExport || !microphoneClips.some((clip) => clip.enabled),
       selected: allClipsSelected(microphoneClips),
     }"
-    @contextmenu="openTrackContextMenu($event, 'audio')"
+    @contextmenu="
+      openTrackContextMenu(
+        $event,
+        'audio',
+        undefined,
+        microphoneClips.map((clip) => clip.id),
+      )
+    "
   >
     <button type="button" class="track-info" @click="selectTrack(microphoneClips, t('mic'), $event)">
       <Mic class="track-icon" /><span class="track-title">{{ t('mic') }}</span>
       <span v-if="!includeAudioInExport" class="export-disabled-status">{{ t('audioDisabledFromExport') }}</span>
     </button>
+  </div>
+  <div
+    v-for="(clip, index) in voiceoverClips"
+    :key="clip.id"
+    class="sidebar-track-item audio-track voiceover-track"
+    :class="{
+      disabled: !includeAudioInExport || !clip.enabled,
+      selected: allClipsSelected([clip]),
+    }"
+    @contextmenu="
+      openTrackContextMenu(
+        $event,
+        'audio',
+        undefined,
+        [clip].map((clip) => clip.id),
+      )
+    "
+  >
+    <button type="button" class="track-info" @click="selectTrack([clip], `${t('voiceover')} ${index + 1}`, $event)">
+      <Mic class="track-icon" /><span class="track-title">{{ t('voiceover') }} {{ index + 1 }}</span>
+      <span v-if="!includeAudioInExport" class="export-disabled-status">{{ t('audioDisabledFromExport') }}</span>
+    </button>
+  </div>
+  <div v-if="hasVoiceoverDraft" class="sidebar-track-item audio-track voiceover-track voiceover-draft-track">
+    <div class="track-info static-info">
+      <Mic class="track-icon" /><span class="track-title">{{ t('voiceover') }} {{ voiceoverClips.length + 1 }}</span>
+    </div>
   </div>
   <div
     v-for="track in importedAudioTracks"
@@ -199,7 +261,14 @@ const allZoomsSelected = () =>
       disabled: !includeAudioInExport || !track.clips.some((clip) => clip.enabled),
       selected: allClipsSelected(track.clips),
     }"
-    @contextmenu="openTrackContextMenu($event, 'audio')"
+    @contextmenu="
+      openTrackContextMenu(
+        $event,
+        'audio',
+        track.id,
+        track.clips.map((clip) => clip.id),
+      )
+    "
   >
     <button type="button" class="track-info" @click="selectTrack(track.clips, track.representative.name, $event)">
       <Volume2 class="track-icon" /><span class="track-title">{{ track.representative.name }}</span>

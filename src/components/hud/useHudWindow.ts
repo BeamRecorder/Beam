@@ -3,7 +3,7 @@ import { capture } from '~/api/capture';
 import type { ScreenRegion, ScreenRegionBounds, ScreenRegionOverlayOptions } from '~/api/types/screen-region';
 import type { HudWindowOptions } from './hud-state-types';
 
-const HUD_WIDTH = 360;
+const HUD_WIDTH = 320;
 
 export function useHudWindow(options: HudWindowOptions) {
   const {

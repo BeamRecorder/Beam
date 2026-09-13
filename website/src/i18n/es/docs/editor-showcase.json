@@ -1,0 +1,24 @@
+{
+  "pages": [
+    {
+      "slug": "editor/showcase",
+      "title": "Presentación de un proyecto grabado",
+      "description": "Descubre cómo aparece una sesión grabada de Beam dentro del editor de vídeo.",
+      "lead": "Una sesión grabada se abre como una composición completa, con sus archivos multimedia capturados organizados para la edición.",
+      "sections": [
+        {
+          "title": "Un proyecto listo para editar",
+          "paragraphs": [
+            "El lienzo muestra la salida compuesta, mientras la línea de tiempo mantiene visibles los archivos multimedia grabados y las capas de edición para ajustar la temporización, el encuadre, los subtítulos, el audio y la exportación."
+          ],
+          "screenshot": {
+            "path": "editor/showcase.webp",
+            "alt": "Editor de Beam mostrando un proyecto grabado con su lienzo y línea de tiempo",
+            "caption": "Un proyecto grabado listo para ajustar la temporización, el encuadre, los subtítulos, el audio y la exportación.",
+            "aspectRatio": "1586 / 992"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -5,8 +5,10 @@ import BigSlider from '~/ui/slider/BigSlider.vue';
 import Switch from '~/ui/switch/Switch.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import ZoomClickEmptyState from '~/components/video-editor/properties/zoom/ZoomClickEmptyState.vue';
+import ZoomAutoFollowControls from '~/components/video-editor/properties/zoom/ZoomAutoFollowControls.vue';
 import { MousePointer, SlidersHorizontal, Sparkles } from '@lucide/vue';
 import type {
+  ZoomAutoFollowSettings,
   ZoomDepth,
   ZoomElement,
   ZoomMotionBlurSettings,
@@ -16,6 +18,7 @@ import {
   DEFAULT_ZOOM_TILT_HORIZONTAL,
   DEFAULT_ZOOM_TILT_INTENSITY,
   DEFAULT_ZOOM_TILT_VERTICAL,
+  DEFAULT_ZOOM_AUTO_FOLLOW,
   normalizeZoomProjection,
   normalizeZoomTiltAxis,
   normalizeZoomTiltIntensity,
@@ -26,18 +29,23 @@ import { useTranslate } from '~/i18n/useTranslate';
 
 const { t } = useTranslate('ZoomPanel');
 
-const props = defineProps<{
-  selectedZoom: ZoomElement | null;
-  canGenerate: boolean;
-  hasAutomaticZooms: boolean;
-  motionBlur: ZoomMotionBlurSettings;
-}>();
+const props = withDefaults(
+  defineProps<{
+    selectedZoom: ZoomElement | null;
+    canGenerate: boolean;
+    hasAutomaticZooms: boolean;
+    motionBlur: ZoomMotionBlurSettings;
+    autoFollow?: ZoomAutoFollowSettings;
+  }>(),
+  { autoFollow: () => ({ ...DEFAULT_ZOOM_AUTO_FOLLOW }) },
+);
 
 const emit = defineEmits<{
   (event: 'update', value: ZoomElement): void;
   (event: 'delete'): void;
   (event: 'generate'): void;
   (event: 'update:motionBlur', value: ZoomMotionBlurSettings): void;
+  (event: 'update:autoFollow', value: ZoomAutoFollowSettings): void;
 }>();
 
 const magnificationValues = [1.25, 1.5, 1.8, 2.2, 3.5, 5.0];
@@ -154,6 +162,8 @@ const updateMotionBlur = (patch: Partial<ZoomMotionBlurSettings>) => {
       </Popover>
     </div>
 
+    <ZoomAutoFollowControls :model-value="autoFollow" @update:model-value="emit('update:autoFollow', $event)" />
+
     <div class="section-block motion-blur-settings">
       <div class="section-header">
         <div class="motion-blur-copy">
@@ -184,7 +194,7 @@ const updateMotionBlur = (patch: Partial<ZoomMotionBlurSettings>) => {
       <!-- Mode Toggle -->
       <div class="section-block">
         <span class="section-title">{{ t('mode') }}</span>
-        <ButtonGroup full>
+        <ButtonGroup class="zoom-mode-options" full>
           <Button size="xs" :variant="selectedZoom.mode === 'auto' ? 'primary' : 'ghost'" @click="setMode('auto')">
             {{ t('autoCursor') }}
           </Button>
@@ -202,7 +212,7 @@ const updateMotionBlur = (patch: Partial<ZoomMotionBlurSettings>) => {
 
       <div class="section-block">
         <span class="section-title">{{ t('projection') }}</span>
-        <ButtonGroup full>
+        <ButtonGroup class="zoom-projection-options" full>
           <Button
             size="xs"
             :variant="normalizeZoomProjection(selectedZoom.projection) === '2d' ? 'primary' : 'ghost'"
@@ -220,7 +230,7 @@ const updateMotionBlur = (patch: Partial<ZoomMotionBlurSettings>) => {
         </ButtonGroup>
         <template v-if="normalizeZoomProjection(selectedZoom.projection) === '3d'">
           <span class="section-title">{{ t('tiltPreset') }}</span>
-          <ButtonGroup full>
+          <ButtonGroup class="zoom-tilt-presets" full>
             <Button
               v-for="preset in tiltPresets"
               :key="preset"

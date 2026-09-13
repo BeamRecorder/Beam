@@ -1,6 +1,6 @@
 @font-face {
   font-family: 'Stack Sans Text';
-  src: url('../../../public/font/StackSansText-VariableFont_wght.ttf') format('truetype');
+  src: url('../../../public/font/StackSansText-VariableFont_wght.woff2') format('woff2');
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
@@ -8,7 +8,7 @@
 
 @font-face {
   font-family: 'Stack Sans Headline';
-  src: url('../../../public/font/StackSansHeadline-VariableFont_wght.ttf') format('truetype');
+  src: url('../../../public/font/StackSansHeadline-VariableFont_wght.woff2') format('woff2');
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
@@ -16,9 +16,10 @@
 
 :root {
   --color-primary: #ff5a1f;
-  --color-primary-hover: #e94b14;
+  --color-primary-hover: #f45117;
   --color-primary-light: rgba(255, 90, 31, 0.1);
   --color-primary-border: rgba(255, 90, 31, 0.34);
+  --color-focus-ring: #a9340c;
   --color-bg-app: #f7f5f0;
   --color-bg-surface: #f3f0e9;
   --color-bg-surface-hover: #e9e5dc;
@@ -31,7 +32,7 @@
   --color-header-control: rgba(30, 28, 24, 0.035);
   --color-header-control-hover: rgba(30, 28, 24, 0.07);
   --color-header-edge: rgba(30, 28, 24, 0.05);
-  --color-on-primary: #ffffff;
+  --color-on-primary: #201e1a;
   --color-page-gradient: #fffaf5;
   --color-media-surface: #171613;
   --brand-icon-filter: none;
@@ -72,9 +73,11 @@
 }
 
 :root[data-theme='dark'] {
-  --color-primary-hover: #ff7140;
+  --color-primary: #ff7140;
+  --color-primary-hover: #ff8a60;
   --color-primary-light: rgba(255, 90, 31, 0.12);
   --color-primary-border: rgba(255, 90, 31, 0.42);
+  --color-focus-ring: #ff8a60;
   --color-bg-app: #111110;
   --color-bg-surface: #171716;
   --color-bg-surface-hover: #25231f;
@@ -101,9 +104,11 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]),
   :root[data-theme='system'] {
-    --color-primary-hover: #ff7140;
+    --color-primary: #ff7140;
+    --color-primary-hover: #ff8a60;
     --color-primary-light: rgba(255, 90, 31, 0.12);
     --color-primary-border: rgba(255, 90, 31, 0.42);
+    --color-focus-ring: #ff8a60;
     --color-bg-app: #111110;
     --color-bg-surface: #171716;
     --color-bg-surface-hover: #25231f;

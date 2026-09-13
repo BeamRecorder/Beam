@@ -5,6 +5,9 @@ import './style.css';
 import EditorWindowApp from './components/video-editor/EditorWindowApp.vue';
 import { initI18n } from './i18n';
 import { useThemeStore } from './stores/theme';
+import { installBrowserZoomGuard } from './utils/browserZoomGuard';
+
+installBrowserZoomGuard();
 
 const bootstrap = async () => {
   const app = createApp(EditorWindowApp);

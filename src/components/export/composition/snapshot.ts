@@ -1,8 +1,10 @@
 import type { ProjectEditorData } from '../../../api/types/capture-api';
 import type { BackgroundValue } from '../../video-editor/composables/backgroundCatalog';
 import {
+  normalizeZoomAutoFollow,
   normalizeZoomMotionBlur,
   type ZoomElement,
+  type ZoomAutoFollowSettings,
   type ZoomMotionBlurSettings,
 } from '../../video-editor/zoom/zoom-types';
 import type { ClipComposition } from '~/media/shared/composition-types';
@@ -44,6 +46,7 @@ export function createCompositionSnapshot(input: {
   editorData: ProjectEditorData | null | undefined;
   zooms: ZoomElement[];
   zoomMotionBlur?: ZoomMotionBlurSettings;
+  zoomAutoFollow?: ZoomAutoFollowSettings;
   composition: ClipComposition;
   cursorSettings: CursorRenderSettings;
   cursorPack: CursorPackDescriptor | null;
@@ -70,6 +73,7 @@ export function createCompositionSnapshot(input: {
     blurPercent: Math.max(0, Math.min(100, Math.round(input.blurPercent))),
     zooms: copyZooms(input.zooms),
     zoomMotionBlur: normalizeZoomMotionBlur(input.zoomMotionBlur),
+    zoomAutoFollow: normalizeZoomAutoFollow(input.zoomAutoFollow),
     cursor: copyCursor(input.editorData?.cursor),
     cursorSettings: cloneJson({
       ...input.cursorSettings,

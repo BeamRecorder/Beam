@@ -19,7 +19,19 @@
       "items": [
         { "text": "Общ преглед", "link": "/recorder/" },
         { "text": "Интерфейс", "link": "/recorder/interface" },
-        { "text": "Възможности", "link": "/recorder/capabilities" }
+        {
+          "text": "Възможности",
+          "link": "/recorder/capabilities/",
+          "items": [
+            { "text": "Източници и области за заснемане", "link": "/recorder/capabilities/capture-sources" },
+            { "text": "Звук и камера", "link": "/recorder/capabilities/audio-camera" },
+            { "text": "Телесуфльор", "link": "/recorder/capabilities/teleprompter" },
+            { "text": "Контроли на живо", "link": "/recorder/capabilities/live-controls" },
+            { "text": "Предпочитания", "link": "/recorder/capabilities/preferences" },
+            { "text": "Мениджър на проекти", "link": "/recorder/capabilities/project-manager" },
+            { "text": "Разрешения и поверителност", "link": "/recorder/capabilities/permissions-privacy" }
+          ]
+        }
       ]
     },
     {
@@ -27,7 +39,22 @@
       "items": [
         { "text": "Общ преглед", "link": "/editor/" },
         { "text": "Интерфейс", "link": "/editor/interface" },
-        { "text": "Възможности", "link": "/editor/capabilities" }
+        { "text": "Представяне на проект", "link": "/editor/showcase" },
+        {
+          "text": "Възможности",
+          "link": "/editor/capabilities",
+          "items": [
+            { "text": "Редактиране във времевата линия", "link": "/editor/capabilities/timeline" },
+            { "text": "Платно", "link": "/editor/capabilities/canvas" },
+            { "text": "Клипове", "link": "/editor/capabilities/clips" },
+            { "text": "Мащабиране", "link": "/editor/capabilities/zooms" },
+            { "text": "Курсор", "link": "/editor/capabilities/cursor" },
+            { "text": "Субтитри", "link": "/editor/capabilities/captions" },
+            { "text": "Аудио", "link": "/editor/capabilities/audio" },
+            { "text": "Настройки", "link": "/editor/capabilities/settings" },
+            { "text": "Експортиране", "link": "/export" }
+          ]
+        }
       ]
     },
     {

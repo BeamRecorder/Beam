@@ -1,9 +1,9 @@
 {
   "title": "Beam 文档",
-  "description": "了解如何使用 Beam 录制、编辑和分享精致的产品演示。",
+  "description": "了解如何使用 Beam 录制、编辑和分享精心制作的产品演示。",
   "hero": {
-    "name": "Beam 文档",
-    "text": "记录。编辑。分享。",
+    "name": "Beam Docs",
+    "text": "录制。编辑。分享。",
     "tagline": "使用 Beam 捕获并打磨产品演示的实用指南。",
     "imageAlt": "Beam 应用图标",
     "actions": [

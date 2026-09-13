@@ -1,11 +1,28 @@
 {
+  "VoiceoverRecorder": {
+    "record": "Ghi âm",
+    "pause": "Tạm dừng",
+    "resume": "Tiếp tục",
+    "stop": "Dừng",
+    "discard": "Loại bỏ",
+    "preparing": "Đang chuẩn bị micrô…",
+    "finalizing": "Đang hoàn tất lời thuyết minh…",
+    "microphone": "Micrô",
+    "countdownOff": "Tắt",
+    "monitorProjectAudio": "Nghe âm thanh dự án",
+    "muteProjectAudio": "Tắt tiếng dự án"
+  },
   "AudioClipPropertiesPanel": {
     "noAudioClipSelected": "Chưa chọn đoạn âm thanh nào",
     "selectAudioClip": "Chọn một đoạn âm thanh đã nhập trên dòng thời gian.",
     "audioClip": "Đoạn âm thanh",
     "volume": "Âm lượng",
     "enabled": "Đã bật",
-    "deleteAudioClip": "Xóa đoạn âm thanh"
+    "deleteAudioClip": "Xóa đoạn âm thanh",
+    "normalize": "Chuẩn hóa âm thanh",
+    "analyzing": "Đang phân tích…",
+    "silentAudio": "Không phát hiện tín hiệu có thể sử dụng.",
+    "normalizedGain": "Đã chuẩn hóa ({gain} dB)"
   },
   "AudioPanel": {
     "globalVolume": "Âm lượng tổng thể",
@@ -15,7 +32,8 @@
     "microphoneVolume": "Âm lượng micro",
     "deleteSystemTrack": "Xóa rãnh âm thanh hệ thống",
     "deleteMicrophoneTrack": "Xóa rãnh micro",
-    "noAudioTracksDetected": "Không phát hiện rãnh micro hoặc âm thanh hệ thống."
+    "noAudioTracksDetected": "Không phát hiện rãnh micro hoặc âm thanh hệ thống.",
+    "normalizeAll": "Chuẩn hóa toàn bộ âm thanh"
   },
   "BackgroundPresetComposer": {
     "addCustomColor": "Thêm màu tùy chỉnh",
@@ -36,7 +54,7 @@
     "windowTitle": "Tiêu đề cửa sổ",
     "windowSize": "Kích thước cửa sổ",
     "screenRecording": "Bản ghi màn hình",
-    "windowColor": "Màu cửa sổ",
+    "frameColor": "Màu khung",
     "menuBar": "Thanh menu",
     "scrollbars": "Thanh cuộn",
     "fitBackground": "Nền khi vừa khung",
@@ -252,9 +270,9 @@
     "wordStartTimeLabel": "Thời gian bắt đầu từ",
     "wordEndTimeLabel": "Thời gian kết thúc từ",
     "deleteCaptionClip": "Xóa đoạn phụ đề",
-    "underline": "Gạch chân",
     "shadowColor": "Màu bóng",
-    "shadowBlur": "Độ mờ bóng"
+    "shadowBlur": "Độ mờ bóng",
+    "underline": "Gạch chân"
   },
   "CaptionPanel": {
     "aiAutoCaptioning": "Tạo phụ đề tự động bằng AI",
@@ -312,7 +330,9 @@
     "unlink": "Hủy liên kết",
     "deleteClip": "Xóa đoạn",
     "deleteVideo": "Xóa video",
-    "deleteWebcam": "Xóa webcam"
+    "deleteWebcam": "Xóa webcam",
+    "shadowBlur": "Độ mờ bóng",
+    "crop": "Cắt"
   },
   "CursorPanel": {
     "cursorStyle": "Kiểu con trỏ",
@@ -360,7 +380,12 @@
     "importFailed": "Không thể nhập gói con trỏ.",
     "discoveryFailed": "Không thể mở tìm kiếm gói.",
     "shadowBlur": "Độ mờ bóng",
-    "shadowColor": "Màu bóng"
+    "shadowColor": "Màu bóng",
+    "presetNone": "không có",
+    "presetSingle": "Nhẫn đơn",
+    "presetDouble": "Sóng đôi",
+    "presetSolid": "bùng nổ",
+    "rippleStyle": "Kiểu gợn sóng"
   },
   "EditorCanvas": {
     "videoPreviewLoading": "Đang tải xem trước video",
@@ -440,9 +465,6 @@
     "openTeleprompter": "Mở máy nhắc chữ",
     "closeTeleprompter": "Ẩn máy nhắc chữ",
     "openHud": "Mở HUD",
-    "quickSnip": "Chụp nhanh",
-    "startQuickSnip": "Bắt đầu chụp nhanh",
-    "stopQuickSnip": "Dừng chụp nhanh",
     "quit": "Thoát Beam",
     "preparingEditor": "Đang mở trình chỉnh sửa",
     "interactionAccessNoticeTitle": "Cho phép ghi phím tắt",
@@ -453,15 +475,18 @@
     "dismissInteractionNotice": "Bỏ qua",
     "interactionAccessSettingsHint": "Tìm mục Ghi phím tắt trong Cài đặt.",
     "dismissInteractionReminder": "Bỏ qua lời nhắc cài đặt tương tác",
-    "screenshot": "Ảnh chụp màn hình",
-    "instant": "Tức thì",
-    "copyFix": "Sao chép cách sửa",
+    "copyFix": "Sao chép sửa lỗi",
     "interactionAccessGranted": "Đã bật quyền truy cập tương tác",
-    "interactionAccessGrantedDescription": "Giờ có thể ghi nhấp chuột và phím tắt mà không lưu văn bản đã nhập.",
-    "interactionAccessUnavailableDescription": "Một công cụ cần thiết không khả dụng (Polkit hoặc trình hỗ trợ nhập liệu được bảo vệ). Hãy khắc phục lỗi trước khi ghi.",
-    "interactionAccessUnavailableTitle": "Không thể ghi tương tác",
+    "interactionAccessGrantedDescription": "Giờ đây, các thao tác nhấp chuột và phím tắt trên bàn phím có thể được ghi lại mà không cần lưu trữ văn bản đã nhập.",
+    "interactionAccessUnavailableTitle": "Ghi lại tương tác không có sẵn",
+    "interactionAccessUnavailableDescription": "Trình trợ giúp tương tác bắt buộc không có sẵn (Polkit hoặc trình trợ giúp đầu vào được bảo vệ). Giải quyết vấn đề được báo cáo trước khi ghi.",
     "linuxRequirementsTitle": "Cần thiết lập Linux",
-    "recordingErrorTitle": "Lỗi ghi hình"
+    "recordingErrorTitle": "Lỗi ghi âm",
+    "quickSnip": "Chụp nhanh",
+    "startQuickSnip": "Bắt đầu chụp nhanh",
+    "stopQuickSnip": "Dừng chụp nhanh",
+    "screenshot": "Ảnh chụp màn hình",
+    "instant": "Tức thì"
   },
   "EditorPreparingHud": {
     "title": "Đang chuẩn bị trình chỉnh sửa",
@@ -585,7 +610,8 @@
     "turnCameraOff": "Tắt camera",
     "turnCameraOn": "Bật camera",
     "turnSystemAudioOff": "Tắt âm thanh hệ thống",
-    "turnSystemAudioOn": "Bật âm thanh hệ thống"
+    "turnSystemAudioOn": "Bật âm thanh hệ thống",
+    "preparing": "Đang chuẩn bị…"
   },
   "ScreenRegionOverlay": {
     "instruction": "Chọn một khu vực để ghi",
@@ -607,6 +633,8 @@
     "recorderTool": "Quay video",
     "recorderDesc": "Truy cập nhanh bộ ghi để bắt đầu một bản ghi mới",
     "launchRecorder": "Mở trình ghi",
+    "recorderUnavailable": "Trình ghi đang được sử dụng.",
+    "recorderLaunchError": "Không thể mở trình ghi: {error}",
     "sysInfoTool": "Thông tin hệ thống",
     "sysInfoDesc": "Sao chép chi tiết hệ thống và thông tin phiên bản ứng dụng",
     "copySysInfo": "Sao chép thông tin hệ thống",
@@ -731,6 +759,15 @@
     "discordButton": "Tham gia Discord",
     "reopenHint": "Bạn có thể mở lại phần hướng dẫn này bất cứ lúc nào từ Cài đặt > Tùy chọn.",
     "dismiss": "Bỏ qua"
+  },
+  "CropControls": {
+    "top": "Trên",
+    "bottom": "Dưới",
+    "left": "Trái",
+    "right": "Phải",
+    "reset": "Đặt lại vùng cắt",
+    "source": "Nguồn: {width} × {height} px · Phần cắt ở mỗi cạnh.",
+    "unavailable": "Không có kích thước nguồn."
   },
   "QuickSnipStatus": {
     "failed": "Xuất thất bại",

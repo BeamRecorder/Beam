@@ -2,14 +2,26 @@
   "title": "Tài liệu Beam",
   "description": "Tìm hiểu cách ghi hình, chỉnh sửa và chia sẻ demo sản phẩm chỉn chu bằng Beam.",
   "hero": {
-    "name": "Beam Docs",
+    "name": "Tài liệu Beam",
     "text": "Ghi lại. Chỉnh sửa. Chia sẻ.",
     "tagline": "Hướng dẫn thực tế để ghi hình và trau chuốt demo sản phẩm bằng Beam.",
     "imageAlt": "Biểu tượng ứng dụng Beam",
     "actions": [
-      { "theme": "brand", "text": "Bắt đầu sử dụng", "link": "/getting-started" },
-      { "theme": "alt", "text": "Xem trên GitHub", "link": "https://github.com/BeamRecorder/Beam" },
-      { "theme": "alt", "text": "Tham gia Discord", "link": "https://discord.gg/6Q6v2xUCB" }
+      {
+        "theme": "brand",
+        "text": "Bắt đầu sử dụng",
+        "link": "/getting-started"
+      },
+      {
+        "theme": "alt",
+        "text": "Xem trên GitHub",
+        "link": "https://github.com/BeamRecorder/Beam"
+      },
+      {
+        "theme": "alt",
+        "text": "Tham gia Discord",
+        "link": "https://discord.gg/6Q6v2xUCB"
+      }
     ]
   },
   "categories": [

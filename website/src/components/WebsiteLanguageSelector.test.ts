@@ -1,7 +1,14 @@
 import { mount, type VueWrapper } from '@vue/test-utils';
-import { afterEach, describe, expect, it } from 'vitest';
+import { flushPromises } from '@vue/test-utils';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
-import { createWebsiteI18n, detectWebsiteLocale, WEBSITE_LOCALES, type WebsiteLocale } from '../i18n';
+import {
+  createWebsiteI18n,
+  detectWebsiteLocale,
+  syncWebsiteLocale,
+  WEBSITE_LOCALES,
+  type WebsiteLocale,
+} from '../i18n';
 import WebsiteLanguageSelector from './WebsiteLanguageSelector.vue';
 
 const mounted: VueWrapper[] = [];
@@ -33,6 +40,16 @@ afterEach(() => {
 });
 
 describe('WebsiteLanguageSelector', () => {
+  it('uses the Languages icon for the language trigger', () => {
+    const { wrapper } = mountSelector();
+    const trigger = wrapper.get('button.language-trigger');
+    const icon = trigger.get('svg');
+
+    expect(trigger.classes()).toContain('btn-ghost');
+    expect(icon.classes()).toContain('lucide-languages');
+    expect(wrapper.find('.lucide-earth').exists()).toBe(false);
+  });
+
   it('lists every supported website locale and marks the active locale', async () => {
     const { wrapper } = mountSelector('fr');
     const menu = await openLanguageMenu(wrapper);
@@ -54,11 +71,19 @@ describe('WebsiteLanguageSelector', () => {
 
     expect(french).toBeDefined();
     french?.click();
-    await nextTick();
+    await flushPromises();
 
-    expect(i18n.global.locale.value).toBe('fr');
+    await vi.waitFor(() => expect(i18n.global.locale.value).toBe('fr'));
     expect(document.documentElement.lang).toBe('fr');
     expect(window.localStorage.getItem('locale')).toBe('fr');
     expect(detectWebsiteLocale()).toBe('fr');
+  });
+
+  it('clears the pending locale marker after a successful locale sync', async () => {
+    document.documentElement.dataset.localePending = 'true';
+
+    await syncWebsiteLocale('fr');
+
+    expect(document.documentElement.dataset.localePending).toBeUndefined();
   });
 });

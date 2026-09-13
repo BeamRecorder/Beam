@@ -3,14 +3,29 @@
     {
       "slug": "export",
       "title": "Export and sharing",
-      "description": "Export a Beam composition to MP4 or WebM with the right resolution and quality preset.",
-      "lead": "Export renders the current composition directly to a local file using the settings supported by the machine.",
+      "description": "Export a Beam composition to WebM or MP4 with resolution, frame rate, quality, and audio controls.",
+      "lead": "Export renders the current composition directly to a local file and reports each stage of the job.",
       "sections": [
         {
           "title": "Choose a format",
-          "bullets": [
-            "WebM uses the WebM container with an encoder available on the current machine.",
-            "MP4 uses the MP4 container when Beam finds a compatible hardware or software encoder."
+          "tables": [
+            {
+              "headers": ["Format", "Video codec selection", "Audio codec", "Availability"],
+              "rows": [
+                [
+                  "WebM",
+                  "First encodable of VP9, VP8, AV1",
+                  "Opus",
+                  "Default format; requires an encodable video codec and, when audio is included, Opus."
+                ],
+                [
+                  "MP4",
+                  "AVC / H.264",
+                  "AAC",
+                  "Requires an AVC encoder. AAC uses WebCodecs when available, then Beam's Mediabunny AAC encoder fallback."
+                ]
+              ]
+            }
           ],
           "notice": {
             "kind": "info",
@@ -20,33 +35,116 @@
         },
         {
           "title": "Choose a resolution",
-          "bullets": [
-            "720p scales down to an HD output when the native canvas is large enough.",
-            "1080p scales down to Full HD when the native canvas is large enough.",
-            "Max keeps the native output canvas dimensions."
+          "tables": [
+            {
+              "headers": ["Option", "Availability", "Output behavior"],
+              "rows": [
+                ["720p", "Native canvas height is at least 720 px", "Targets 720 px high without upscaling."],
+                ["1080p", "Native canvas height is at least 1080 px", "Targets 1080 px high without upscaling."],
+                ["Max", "Always", "Keeps the native output-canvas size."],
+                [
+                  "All options",
+                  "Not applicable",
+                  "Preserve aspect ratio and round width and height to positive even numbers."
+                ]
+              ]
+            }
           ]
         },
         {
-          "title": "Choose quality and bitrate",
-          "paragraphs": [
-            "Low, medium, and high presets calculate a bitrate from the output dimensions and frame rate. Medium balances clarity and file size, while high prioritizes visual fidelity."
+          "title": "Choose frame rate and quality",
+          "tables": [
+            {
+              "headers": ["Setting", "Values", "Default or recommendation"],
+              "rows": [
+                [
+                  "Frame rate",
+                  "24, 30, 60 fps",
+                  "60 for a source at or above 50 fps; 24 at or below 27 fps; otherwise 30."
+                ],
+                ["Quality", "Low, Medium, High", "Medium"],
+                ["Low bitrate factor", "0.055 × width × height × fps", "Clamped to 0.5–40 Mbps."],
+                ["Medium bitrate factor", "0.095 × width × height × fps", "Clamped to 0.5–40 Mbps."],
+                ["High bitrate factor", "0.16 × width × height × fps", "Clamped to 0.5–40 Mbps."]
+              ]
+            }
           ],
           "screenshot": {
-            "path": "reference/export-settings.webp",
-            "alt": "Beam export settings for format, resolution, and quality",
-            "caption": "Select format, resolution, and quality before choosing the destination file."
+            "path": "reference/export-panel.webp",
+            "alt": "Beam export panel with format, resolution, frame rate, quality, and audio controls",
+            "caption": "Choose the rendering settings before selecting the destination file.",
+            "aspectRatio": "361 / 560"
           }
         },
         {
-          "title": "Monitor the export",
-          "paragraphs": [
-            "Beam displays frame progress while rendering. You can cancel an active export or copy its diagnostic report. Live editor changes do not modify a file that is already rendering."
+          "title": "More options",
+          "tables": [
+            {
+              "headers": ["Option", "Values", "Default", "Behavior"],
+              "rows": [
+                [
+                  "Include Audio",
+                  "On or Off",
+                  "On",
+                  "Off creates a silent file. Audio is also omitted when no enabled audio clip has positive duration."
+                ],
+                [
+                  "Audio output",
+                  "48 kHz, stereo, 128 kbps",
+                  "When audio is included",
+                  "Enabled audio clips are mixed progressively into the selected container codec."
+                ]
+              ]
+            }
           ]
         },
         {
-          "title": "Open the result",
+          "title": "Monitor the export",
+          "tables": [
+            {
+              "headers": ["Stage", "What Beam does"],
+              "rows": [
+                ["Validating assets", "Checks the snapshot, local assets, formats, codecs, and render invariants."],
+                ["Loading assets", "Loads visual, audio, cursor, font, and background resources."],
+                ["Encoding", "Renders composition frames, mixes enabled audio, and writes encoded chunks."],
+                ["Finalizing", "Closes tracks and finalizes the media container and destination file."]
+              ]
+            }
+          ],
           "paragraphs": [
-            "After a successful export, Beam reports the saved filename and provides an action to open the file. If export fails, copy the technical report before asking for help on [Discord](https://discord.gg/6Q6v2xUCB) or [GitHub](https://github.com/BeamRecorder/Beam/issues)."
+            "The progress view reports percentage and completed frame count and provides Copy Report. Cancel stops an active export. Closing or cancelling the destination picker ends the job without reporting an error. Live edits made after export starts do not change the in-progress file because Beam exports a snapshot."
+          ]
+        },
+        {
+          "title": "Validation and edge cases",
+          "tables": [
+            {
+              "headers": ["Condition", "Result"],
+              "rows": [
+                ["Missing asset", "Export stops with a validation issue identifying the relevant asset or clip."],
+                ["Unsupported source or codec", "Export reports an unsupported format, codec, or decode failure."],
+                [
+                  "No compatible output encoder",
+                  "The selected WebM or MP4 format is reported as not encodable on the device."
+                ],
+                ["Animated GIF", "Animated GIFs are not yet deterministically exportable."],
+                ["Canvas 2D unavailable", "Export stops because composition frames cannot be rendered."],
+                [
+                  "Cancellation",
+                  "The active worker and output stream are aborted and the incomplete export is not reported as a failure."
+                ],
+                [
+                  "Audio mixer unavailable",
+                  "Beam reports that offline audio mixing is unavailable in the Chromium build."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Result and diagnostics",
+          "paragraphs": [
+            "After a successful export, Beam reports the saved filename and provides Open File and Copy Report actions. If export fails, the user-facing message hides local filesystem paths while the detailed report retains configuration, codec, environment, progress, and bottleneck information for troubleshooting. Copy that report before asking for help on [Discord](https://discord.gg/6Q6v2xUCB) or [GitHub](https://github.com/BeamRecorder/Beam/issues)."
           ]
         }
       ]
@@ -85,6 +183,7 @@
               ],
               "screenshot": {
                 "path": "platforms/macos-screen-system-audio.webp",
+                "hidden": true,
                 "alt": "macOS Screen and System Audio Recording privacy settings with Beam enabled",
                 "caption": "Enable Beam under Screen & System Audio Recording."
               }
@@ -96,6 +195,7 @@
               ],
               "screenshot": {
                 "path": "platforms/macos-microphone-camera.webp",
+                "hidden": true,
                 "alt": "macOS Microphone and Camera privacy settings for Beam",
                 "caption": "Beam must be enabled in the privacy list for each source you want to capture."
               }

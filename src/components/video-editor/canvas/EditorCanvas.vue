@@ -8,7 +8,7 @@ import Button from '../../ui/button/Button.vue';
 import CanvasLoadingSkeleton from './CanvasLoadingSkeleton.vue';
 import UndoRedoToast from './UndoRedoToast.vue';
 import type { VisualClip } from '~/media/shared/composition-types';
-import { createCompositionSceneLayerResolver, type CompositionSceneLayers } from '../composition/scene-layers';
+import { createCompositionSceneLayerResolver } from '../composition/scene-layers';
 import { OUTPUT_FALLBACK_COLOR, OUTPUT_PREVIEW_RADIUS, outputPreviewRect } from './output-canvas';
 import { useCanvasBackground } from './composables/useCanvasBackground';
 import { useCompositionMedia } from './composables/useCompositionMedia';
@@ -19,8 +19,13 @@ import { useLayerTransformAndCrop } from './composables/useLayerTransformAndCrop
 import { useViewportZoom } from './composables/useViewportZoom';
 import { useTranslate } from '~/i18n/useTranslate';
 import { canvasGuideLines } from './canvas-guides';
-import { transformCaptionFollowsCursor, type EditorCanvasEmits, type EditorCanvasProps } from './editor-canvas-types';
-import { DEFAULT_ZOOM_MOTION_BLUR } from '../zoom/zoom-types';
+import {
+  transformCaptionFollowsCursor,
+  type EditorCanvasEmits,
+  type EditorCanvasProps,
+  type DrawVisualStack,
+} from './editor-canvas-types';
+import { DEFAULT_ZOOM_AUTO_FOLLOW, DEFAULT_ZOOM_MOTION_BLUR } from '../zoom/zoom-types';
 import { PerspectivePreviewRenderer } from '../zoom/perspective-preview-renderer';
 import { drawBeamWatermark } from './watermark-render';
 import { useCanvasTransitionRenderer } from './composables/useCanvasTransitionRenderer';
@@ -55,15 +60,7 @@ const canvasTransitionRenderer = useCanvasTransitionRenderer({
   deviceScale: () => deviceScale.value,
   fallbackColor: OUTPUT_FALLBACK_COLOR,
 });
-
-let drawVisualStack:
-  | ((
-      ctx: CanvasRenderingContext2D,
-      videoWindow: RenderedVideoWindow,
-      drawScreen: () => void,
-      layers: CompositionSceneLayers,
-    ) => void)
-  | null = null;
+let drawVisualStack: DrawVisualStack | null = null;
 const viewportZoom = useViewportZoom();
 let renderComposition = toRaw(props.composition);
 const sceneLayersAt = shallowRef(createCompositionSceneLayerResolver(renderComposition));
@@ -124,15 +121,20 @@ const transformAndCrop = useLayerTransformAndCrop({
   measureCaptionText: (text, fontSize, style) => measureCanvasCaptionText(canvasRef.value, text, fontSize, style),
   zoomScale: () => viewportZoom.zoomScale.value,
   onUpdateTransform: (transform) => emit('update:clip-transform', transform),
+  onPreviewCrop: (crop) => emit('preview:clip-crop', crop),
   onUpdateCrop: (crop) => emit('update:clip-crop', crop),
   onSelectTransformClip: (clipId) => emit('select:clip', clipId),
 });
 
+const renderGuideLines = computed(() =>
+  canvasGuideLines(logicalSize.value, props.outputCanvas, transformAndCrop.activeGuideLines.value),
+);
 cameraZoom = useCameraZoom({
   canvasRef: () => canvasRef.value,
   outputCanvas: () => props.outputCanvas,
   zoomElements: () => props.zoomElements,
   zoomMotionBlur: () => props.zoomMotionBlur ?? DEFAULT_ZOOM_MOTION_BLUR,
+  zoomAutoFollow: () => props.zoomAutoFollow ?? DEFAULT_ZOOM_AUTO_FOLLOW,
   selectedZoom: () => props.selectedZoom,
   currentTime: () => props.currentTime,
   isPlaying: () => props.isPlaying,
@@ -351,7 +353,8 @@ const {
   onDoneCrop: () => emit('done:crop'),
 });
 const handleIslandPointerDownCapture = (event: PointerEvent) => {
-  if ((event.target as Element | null)?.closest('.caption-text-editor, .element-overlay')) return;
+  if ((event.target as Element | null)?.closest('.caption-text-editor, .canvas-recenter-float, .element-overlay'))
+    return;
   handleCanvasPointerDownCapture(event);
 };
 onUnmounted(() => {
@@ -378,7 +381,7 @@ defineExpose({ viewportZoom });
     @dblclick="elements.begin($event) || captionEditing.begin($event)"
   >
     <Transition name="fade-slide">
-      <div v-if="viewportZoom.isOutOfBounds.value" class="canvas-recenter-float">
+      <div v-if="viewportZoom.isOutOfBounds.value" class="canvas-recenter-float" @pointerdown.stop>
         <Button
           variant="frosted"
           size="xs"
@@ -415,7 +418,7 @@ defineExpose({ viewportZoom });
         <div class="grid-line horizontal line-2" />
       </div>
       <div
-        v-for="(guide, index) in canvasGuideLines(logicalSize, outputCanvas, transformAndCrop.activeGuideLines.value)"
+        v-for="(guide, index) in renderGuideLines"
         :key="index"
         class="canvas-guide-line"
         :class="guide.type"
@@ -477,6 +480,7 @@ defineExpose({ viewportZoom });
         v-if="isCropping && selectedTransformClip"
         :container-style="transformAndCrop.cropContainerStyle.value"
         :overlay-style="transformAndCrop.cropOverlayStyle.value"
+        :measurements="transformAndCrop.cropMeasurements.value"
         @move-start="transformAndCrop.beginCropDrag($event, 'move')"
         @move="transformAndCrop.moveCropDrag"
         @move-end="transformAndCrop.endCropDrag"

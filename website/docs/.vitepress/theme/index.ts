@@ -2,6 +2,7 @@ import DefaultTheme from 'vitepress/theme-without-fonts';
 import type { Theme } from 'vitepress';
 import { h } from 'vue';
 import KeyboardChip from '../../../../src/components/ui/Kbd/KeyboardChip.vue';
+import DocsFooter from './DocsFooter.vue';
 import DocsNavActions from './DocsNavActions.vue';
 import DocsProductCard from './DocsProductCard.vue';
 import DocsScreenshot from './DocsScreenshot.vue';
@@ -12,8 +13,10 @@ export default {
   extends: DefaultTheme,
   Layout: () =>
     h(DefaultTheme.Layout, null, {
+      'nav-bar-title-after': () =>
+        h('span', { class: 'docs-brand' }, [h('span', 'Beam'), h('span', { class: 'docs-brand__suffix' }, 'Docs')]),
       'nav-bar-content-after': () => h(DocsNavActions),
-      'layout-bottom': () => h(DocsRouteTransition),
+      'layout-bottom': () => [h(DocsFooter), h(DocsRouteTransition)],
     }),
   enhanceApp({ app }) {
     app.component('DocsScreenshot', DocsScreenshot);

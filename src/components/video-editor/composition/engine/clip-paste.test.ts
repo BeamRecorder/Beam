@@ -193,6 +193,24 @@ describe('pasteClipAt', () => {
     });
   });
 
+  it('detaches a pasted copy from its recording clip link', () => {
+    const copied = visual('copied', 'video', 'copied-asset', 0, 400, {
+      recordingClipId: 'screen-recording',
+      groupId: 'recording-group',
+    });
+    const source = composition([], [asset('copied-asset')]);
+
+    const result = pasteClipAt(source, copied, {
+      timelineStartMs: 0,
+      timelineDurationMs: 1_000,
+      idFactory: () => 'pasted-copy',
+    });
+    const pasted = result.composition.clips.find((clip) => clip.id === result.clipId);
+
+    expect(pasted).toMatchObject({ id: 'pasted-copy', recordingClipId: null });
+    expect(pasted?.groupId).toBeUndefined();
+  });
+
   it('pastes a webcam with its camera settings into the selected webcam track', () => {
     const target = visual('camera-target', 'webcam', 'camera-asset', 0, 1_000, {
       trackId: 'camera-track',

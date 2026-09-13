@@ -2,34 +2,78 @@
   "pages": [
     {
       "slug": "recorder/index",
-      "title": "Descripción general de la aplicación de grabación",
-      "description": "Conoce el flujo del grabador de Beam, desde la selección de la fuente hasta la transferencia al editor.",
-      "lead": "La aplicación de grabación es un HUD compacto para preparar, iniciar y controlar una captura sin cubrir el espacio de trabajo que estás presentando.",
+      "title": "Descripción general del grabador",
+      "description": "Descubre qué puede capturar Beam y sigue el flujo completo de grabación.",
+      "lead": "El grabador es el punto de partida compacto de cada proyecto de Beam. Prepara la pantalla o ventana, el recorte opcional, la cámara, el micrófono, el audio del sistema, las interacciones y el Teleprompter antes de comenzar la captura.",
       "sections": [
         {
-          "title": "Flujo de grabación",
-          "steps": [
-            "Elige una pantalla, una ventana o una región de pantalla personalizada.",
-            "Prepara las opciones de micrófono, audio del sistema, cámara, cuenta atrás y teleprompter.",
-            "Inicia la grabación y usa la barra flotante del grabador para los controles en directo.",
-            "Detén la captura para finalizar sus pistas y abrir el proyecto en el editor."
+          "title": "Qué captura el grabador",
+          "paragraphs": [
+            "Beam puede grabar una pantalla completa, una ventana de aplicación o una región personalizada de una pantalla. La cámara, el micrófono y el audio del sistema se pueden añadir como fuentes independientes cuando la plataforma las ofrece."
           ],
           "screenshot": {
             "path": "recorder/hud-overview.webp",
-            "alt": "Descripción general del HUD del grabador de Beam",
-            "caption": "El HUD mantiene las fuentes de captura y los controles de grabación en una única ventana compacta."
+            "alt": "HUD del grabador de Beam con controles de fuente, audio, cámara, Teleprompter y grabación",
+            "caption": "El HUD del grabador mantiene toda la configuración de captura en una única ventana compacta.",
+            "aspectRatio": "2 / 3"
           }
         },
         {
-          "title": "Pistas multimedia separadas",
-          "paragraphs": [
-            "Beam graba la pantalla, la cámara web, el micrófono y el audio del sistema como pistas independientes cuando están disponibles. Después, el editor puede ajustar o desactivar las pistas compatibles sin modificar la captura original."
+          "title": "Flujo de grabación",
+          "steps": [
+            "Elige Screen o Window y selecciona la fuente que quieres capturar.",
+            "En el modo Screen, elige opcionalmente un tamaño preestablecido o dibuja una región de grabación personalizada.",
+            "Elige un micrófono y una cámara y activa el audio del sistema si la grabación lo necesita.",
+            "Activa la grabación de interacciones cuando quieras incluir en el proyecto clics compatibles y tokens de atajos.",
+            "Abre el Teleprompter y prepara un guion cuando lo necesites.",
+            "Selecciona Start Recording. Beam aplica la cuenta atrás configurada antes de comenzar la captura.",
+            "Usa la Recording Bar flotante para pausar, reanudar, activar o desactivar dispositivos compatibles, detener o cancelar.",
+            "Después de Stop, Beam finaliza la sesión y abre el proyecto en el editor."
           ]
         },
         {
-          "title": "Proyectos",
+          "title": "Resumen de fuentes",
+          "tables": [
+            {
+              "headers": ["Fuente", "Qué graba", "Predeterminado"],
+              "rows": [
+                ["Screen", "Una pantalla completa, limitada opcionalmente a una región", "Modo seleccionado"],
+                ["Window", "Una ventana de aplicación", "Off hasta seleccionar una fuente"],
+                ["Microphone", "Audio de un dispositivo de entrada seleccionado", "No Audio"],
+                ["Camera", "Vídeo de una cámara seleccionada", "Camera Off"],
+                ["System audio", "Sonido producido por el ordenador", "Off"],
+                [
+                  "Interactions",
+                  "Metadatos de clics compatibles y tokens de atajos seguros",
+                  "Depende de la preferencia y el permiso"
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Nota sobre la plataforma",
+          "notice": {
+            "kind": "info",
+            "title": "Captura en Linux",
+            "text": "Beam utiliza el selector de captura del sistema en Linux. El recorte de regiones no está disponible y Beam no puede ocultar sus propias ventanas en una captura a pantalla completa. El modo Screen sigue siendo el modo de captura recomendado en Linux."
+          }
+        },
+        {
+          "title": "Fuentes multimedia independientes",
           "paragraphs": [
-            "Usa Abrir un proyecto para volver a un proyecto existente de Beam o crear un proyecto nuevo antes de grabar. Las sesiones terminadas permanecen asociadas a su proyecto para editarlas más adelante."
+            "El audio del sistema es el sonido producido por el ordenador, como un vídeo del navegador o una llamada de Discord. El audio del micrófono es el sonido recibido del dispositivo de entrada seleccionado. Beam mantiene separados los contenidos multimedia compatibles de pantalla, cámara, micrófono y audio del sistema para poder procesarlos de forma independiente más adelante."
+          ],
+          "notice": {
+            "kind": "tip",
+            "title": "Evita el acople",
+            "text": "Al grabar a la vez el audio del sistema y un micrófono, utiliza auriculares o baja el volumen de los altavoces para que el micrófono no grabe una segunda vez la salida del ordenador."
+          }
+        },
+        {
+          "title": "Resumen de la implementación",
+          "paragraphs": [
+            "La grabación de pantalla utiliza la ruta de captura nativa del sistema operativo. En Linux, la captura de pantalla y audio del sistema utiliza el portal y la pila PipeWire. La aplicación Electron gestiona la captura de cámara y micrófono. El código del dominio de captura de Beam está escrito en Rust y su interfaz multiplataforma está creada con Electron y Vue."
           ]
         }
       ]
@@ -37,114 +81,136 @@
     {
       "slug": "recorder/interface",
       "title": "Interfaz del grabador",
-      "description": "Conoce todos los controles del HUD y la barra de grabación de Beam.",
-      "lead": "La interfaz del grabador separa la selección de fuentes, los controles de dispositivos, las preferencias y las acciones de grabación para mantener visible el estado actual.",
+      "description": "Conoce cada área del HUD del grabador y los controles que se muestran durante una grabación.",
+      "lead": "El HUD se organiza en torno a la configuración de captura. Cuando comienza la grabación, la Recording Bar compacta muestra únicamente los controles que siguen siendo útiles durante la sesión.",
       "sections": [
         {
           "title": "Barra superior",
-          "bullets": [
-            "La identidad de Beam muestra la ventana actual del grabador.",
-            "Preferencias abre los ajustes de grabación, generales, de accesos directos y de la aplicación.",
-            "Las acciones de ventana minimizan o cierran el grabador."
+          "tables": [
+            {
+              "headers": ["Control", "Acción"],
+              "rows": [
+                ["Preferences", "Abre los ajustes de Recording, General, Shortcuts, About y las actualizaciones."],
+                ["Minimize", "Minimiza la ventana del grabador."],
+                ["Close", "Cierra la ventana del grabador."]
+              ]
+            }
           ]
         },
         {
-          "title": "Fuente de captura",
-          "paragraphs": [
-            "Usa las pestañas Pantalla y Ventana para cambiar el tipo de fuente. El selector de fuentes muestra las pantallas o ventanas de aplicación disponibles en la plataforma actual. La captura de pantalla también puede limitarse a una región personalizada."
-          ],
-          "screenshot": {
-            "path": "recorder/source-selection.webp",
-            "alt": "Controles de fuente de pantalla y ventana en Beam",
-            "caption": "Elige un tipo de fuente y selecciona la pantalla, ventana o región de pantalla."
-          }
-        },
-        {
-          "title": "Controles multimedia",
-          "bullets": [
-            "Micrófono selecciona un dispositivo de entrada o desactiva el audio del micrófono.",
-            "Audio del sistema activa o desactiva el sonido producido por el ordenador.",
-            "Cámara selecciona una cámara web y abre su superposición independiente.",
-            "Los medidores de audio muestran una vista previa del nivel en directo cuando la plataforma lo admite.",
-            "Teleprompter abre u oculta la ventana independiente del guion."
+          "title": "Configuración de captura",
+          "tables": [
+            {
+              "headers": ["Control", "Acción", "Disponibilidad"],
+              "rows": [
+                ["Screen / Window", "Cambia el modo de captura.", "Antes de grabar."],
+                [
+                  "Source selector",
+                  "Elige una pantalla o ventana de aplicación.",
+                  "El portal de Linux proporciona su propio selector."
+                ],
+                [
+                  "Select an area",
+                  "Abre la superposición de región personalizada.",
+                  "Solo en modo Screen; no disponible en Linux."
+                ],
+                [
+                  "System audio",
+                  "Activa o desactiva la captura de la salida del ordenador.",
+                  "La compatibilidad depende de la plataforma."
+                ],
+                [
+                  "Microphone",
+                  "Elige un dispositivo de entrada o No Audio.",
+                  "Antes de grabar; se puede alternar durante las fases compatibles."
+                ],
+                [
+                  "Camera",
+                  "Elige una cámara o Camera Off.",
+                  "Antes de grabar; se puede alternar durante las fases compatibles."
+                ],
+                ["Teleprompter", "Abre u oculta la ventana del guion.", "Antes y durante la grabación."],
+                [
+                  "Start Recording",
+                  "Inicia la cuenta atrás y la captura configuradas.",
+                  "Cuando la configuración está lista y Beam no está ocupado."
+                ]
+              ]
+            }
           ]
         },
         {
-          "title": "Barra de grabación",
+          "title": "Acción de proyecto",
           "paragraphs": [
-            "Durante una captura, la barra del grabador muestra el tiempo transcurrido y el estado actual de la grabación. Sus controles permiten pausar, reanudar, detener, cancelar y activar o desactivar los dispositivos compatibles."
-          ],
-          "screenshot": {
-            "path": "recorder/recording-bar.webp",
-            "alt": "Barra de grabación de Beam durante una captura activa",
-            "caption": "La barra de grabación mantiene disponibles los controles esenciales durante la grabación."
-          }
+            "La opción Open an existing project abre el Gestor de proyectos en lugar de iniciar una captura nueva. Desde allí se pueden buscar, crear, abrir, renombrar, mostrar, actualizar, seleccionar por lotes o eliminar proyectos."
+          ]
         },
         {
-          "title": "Preferencias",
-          "bullets": [
-            "La cuenta atrás puede estar desactivada o durar 3, 5 o 10 segundos.",
-            "La visibilidad de la barra del grabador puede ser siempre visible, desvanecerse automáticamente u ocultarse hasta pasar el cursor por encima.",
-            "Siempre visible mantiene el HUD por encima de las demás ventanas.",
-            "El tema y el idioma controlan el aspecto de la aplicación.",
-            "Los ajustes de accesos directos configuran las acciones de grabación y teleprompter."
+          "title": "Recording Bar",
+          "paragraphs": [
+            "La barra flotante sustituye al HUD de configuración durante la captura. Muestra los estados Ready o Preparing y después expone los controles permitidos por la fase de grabación actual."
+          ],
+          "tables": [
+            {
+              "headers": ["Control", "Acción", "Restricción importante"],
+              "rows": [
+                [
+                  "Move recording bar",
+                  "Arrastra la barra a otra posición.",
+                  "La preferencia de visibilidad sigue aplicándose."
+                ],
+                [
+                  "Pause / Resume",
+                  "Pausa o reanuda la sesión.",
+                  "Desactivado durante la cuenta atrás, el inicio y la finalización."
+                ],
+                ["Stop", "Finaliza la grabación y conserva la sesión.", "Desactivado mientras se finaliza."],
+                [
+                  "Cancel and delete",
+                  "Cancela la grabación y elimina la sesión sin terminar.",
+                  "Desactivado mientras se finaliza."
+                ],
+                [
+                  "Microphone / Camera",
+                  "Activa o desactiva la fuente seleccionada.",
+                  "Desactivado durante la cuenta atrás, el inicio y la finalización."
+                ],
+                [
+                  "System audio",
+                  "Activa o desactiva el audio del sistema cuando es compatible.",
+                  "No se puede cambiar después de iniciar en Linux."
+                ]
+              ]
+            }
           ]
         }
       ]
     },
     {
-      "slug": "recorder/capabilities",
+      "slug": "recorder/capabilities/index",
       "title": "Funciones del grabador",
-      "description": "Usa regiones de pantalla, audio separado, cámara web, teleprompter, accesos directos y metadatos de interacción en Beam.",
-      "lead": "Las funciones del grabador pueden combinarse para una captura ligera o una presentación de producto completamente preparada.",
+      "description": "Abre una referencia específica para cada función del grabador y sus ajustes exactos.",
+      "lead": "Cada función tiene su propia página para que los ajustes, valores predeterminados, restricciones de plataforma y casos límite sean fáciles de consultar.",
       "sections": [
         {
-          "title": "Captura de pantalla, ventana y región",
-          "paragraphs": [
-            "Graba una pantalla completa, una ventana de aplicación concreta o una región normalizada de una pantalla seleccionada. Puedes volver a abrir el selector de regiones para ajustar un recorte guardado antes de grabar."
+          "title": "Índice de funciones",
+          "tables": [
+            {
+              "headers": ["Función", "Referencia"],
+              "rows": [
+                ["Fuentes y regiones de captura", "[Abrir fuentes de captura](/recorder/capabilities/capture-sources)"],
+                ["Audio y cámara", "[Abrir audio y cámara](/recorder/capabilities/audio-camera)"],
+                ["Teleprompter", "[Abrir Teleprompter](/recorder/capabilities/teleprompter)"],
+                [
+                  "Recording Bar durante la grabación",
+                  "[Abrir controles en directo](/recorder/capabilities/live-controls)"
+                ],
+                ["Preferencias", "[Abrir preferencias](/recorder/capabilities/preferences)"],
+                ["Gestor de proyectos", "[Abrir el Gestor de proyectos](/recorder/capabilities/project-manager)"],
+                ["Permisos y privacidad", "[Abrir permisos y privacidad](/recorder/capabilities/permissions-privacy)"]
+              ]
+            }
           ]
-        },
-        {
-          "title": "Micrófono y audio del sistema",
-          "paragraphs": [
-            "El micrófono y el audio del sistema se capturan de forma independiente cuando ambos están disponibles. Las pistas separadas permiten al editor cambiar individualmente su estado de activación y volumen."
-          ]
-        },
-        {
-          "title": "Superposición de cámara web",
-          "paragraphs": [
-            "Una cámara seleccionada abre una superposición independiente que puede colocarse para la presentación. El acceso a la cámara depende de los permisos del sistema operativo y de la disponibilidad del dispositivo."
-          ]
-        },
-        {
-          "title": "Teleprompter",
-          "paragraphs": [
-            "Escribe un guion, alterna entre la lectura continua y línea por línea, y ajusta el desplazamiento automático, la velocidad, el tamaño del texto, el espaciado entre líneas, la alineación y el tema. Los accesos directos globales pueden mostrar el teleprompter, pausar el desplazamiento automático o moverse entre líneas."
-          ],
-          "screenshot": {
-            "path": "recorder/teleprompter.webp",
-            "alt": "Teleprompter de Beam con guion y controles de reproducción",
-            "caption": "El teleprompter se controla de forma independiente del HUD del grabador."
-          }
-        },
-        {
-          "title": "Controles de grabación en directo",
-          "bullets": [
-            "Pausa y reanuda la grabación activa.",
-            "Activa o desactiva el micrófono, la cámara y el audio del sistema cuando la sesión activa los admite.",
-            "Detén y finaliza la grabación, o cancela y elimina la captura activa."
-          ]
-        },
-        {
-          "title": "Metadatos de interacción y privacidad",
-          "paragraphs": [
-            "Con permiso explícito, Beam registra tokens seguros de accesos directos de teclado. El acceso a interacciones en Linux también puede activar los metadatos de los clics del ratón. El texto escrito nunca se almacena."
-          ],
-          "notice": {
-            "kind": "info",
-            "title": "Se requiere permiso",
-            "text": "La grabación de interacciones es opcional y puede activarse o desactivarse en Preferencias. La disponibilidad depende del sistema operativo."
-          }
         }
       ]
     }

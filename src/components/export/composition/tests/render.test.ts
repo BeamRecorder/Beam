@@ -71,7 +71,7 @@ describe('canonical composition rendering', () => {
     screen.crop = { x: 0.1, y: 0.2, width: 0.5, height: 0.4 };
     const ctx = context();
     renderCompositionFrame(ctx, { source: {}, width: 100, height: 50 } as RenderableMedia, value, 0);
-    expect(ctx.drawImage).toHaveBeenCalledWith(expect.anything(), 15, 10, 40, 20, 0, 0, 100, 50);
+    expect(ctx.drawImage).toHaveBeenCalledWith(expect.anything(), 10, 10, 50, 20, 10, 10, 50, 20);
   });
 
   it('draws an active imported visual from its canonical clip', () => {
@@ -243,19 +243,27 @@ describe('canonical composition rendering', () => {
       undefined,
       new Map([['webcam', source]]),
     );
-    expect(ctx.drawImage).toHaveBeenCalledWith(
+    expect(ctx.drawImage).toHaveBeenNthCalledWith(
+      1,
       source.source,
       10,
       10,
       50,
       30,
-      expect.closeTo(100, 0.001),
-      expect.closeTo(100, 0.001),
-      300,
-      200,
+      expect.closeTo(220, 0.001),
+      expect.closeTo(140, 0.001),
+      150,
+      120,
     );
     expect(ctx.scale).toHaveBeenCalledWith(-1, 1);
-    expect(ctx.roundRect).toHaveBeenCalledWith(100, expect.closeTo(100, 0.001), 300, 200, 42);
+    expect(ctx.roundRect).toHaveBeenNthCalledWith(
+      1,
+      expect.closeTo(220, 0.001),
+      expect.closeTo(140, 0.001),
+      150,
+      120,
+      42,
+    );
     expect(ctx.stroke).toHaveBeenCalled();
   });
 

@@ -4,6 +4,7 @@ import { isAudioClip, type AudioClip, type ClipComposition, type MediaAsset } fr
 import { MediaInputError, mediaSourceDescriptor, type MediaError } from '~/media/shared';
 import { assertWaveformWorkerResponse, type WaveformWorkerRequest } from '~/media/playback/waveform-protocol';
 import { useMediaProcessingReporter } from '../../performance/media-processing-pressure';
+import { effectiveAudioClipGain } from '~/media/shared/audio-gain';
 
 const MAX_BAR_HEIGHT = 38;
 const MAX_POINTS = 1_200;
@@ -157,7 +158,7 @@ export function useCompositionAudioWaveforms(
     const volumes = new Map(
       composition()
         .clips.filter(isAudioClip)
-        .map((clip) => [clip.id, Math.max(0, Math.min(2, clip.volume / 100))]),
+        .map((clip) => [clip.id, effectiveAudioClipGain(clip)]),
     );
     return Object.fromEntries(
       Object.entries(rawSlices.value).map(([clipId, slice]) => {

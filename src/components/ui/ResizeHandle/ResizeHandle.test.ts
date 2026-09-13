@@ -36,7 +36,7 @@ describe('ResizeHandle', () => {
     expect(handles.every((handle) => handle.classes().includes('is-at-limit'))).toBe(true);
   });
 
-  it('uses custom positions for perspective anchors', () => {
+  it('uses custom positions for perspective anchors and reacts to prop updates', async () => {
     const positions = {
       'top-left': { x: 12, y: 18 },
       top: { x: 48, y: 9 },
@@ -51,11 +51,21 @@ describe('ResizeHandle', () => {
 
     for (const [corner, position] of Object.entries(positions)) {
       const style = wrapper.get(`.is-${corner}`).attributes('style');
-      expect(style).toContain(`left: ${position.x}px`);
-      expect(style).toContain(`top: ${position.y}px`);
+      expect(style).toContain('left: 0px');
+      expect(style).toContain('top: 0px');
+      expect(style).toContain(`translate3d(${position.x}px, ${position.y}px, 0)`);
+      expect(style).toContain('translate(-50%, -50%)');
       expect(style).toContain('right: auto');
       expect(style).toContain('bottom: auto');
+      expect(style).not.toMatch(/width|height|scale/);
     }
+
+    await wrapper.setProps({ positions: { ...positions, 'top-left': { x: 24, y: 32 } } });
+    const updatedStyle = wrapper.get('.is-top-left').attributes('style');
+    expect(updatedStyle).toContain('left: 0px');
+    expect(updatedStyle).toContain('top: 0px');
+    expect(updatedStyle).toContain('translate3d(24px, 32px, 0)');
+    expect(updatedStyle).toContain('translate(-50%, -50%)');
   });
 
   it('ends a captured resize when the pointer capture is lost', async () => {

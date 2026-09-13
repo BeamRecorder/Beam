@@ -36,7 +36,9 @@ export function useVideoElements(options: {
       options.composition.value = deleteClip(options.composition.value, id);
     },
     timing: () => ({ startMs: Math.round(options.currentTime.value * 1000), durationMs: 3000 }),
-    canInteract: () => !options.isPlaying.value,
+    canInteract: () =>
+      !options.isPlaying.value &&
+      !options.composition.value.clips.find((clip) => clip.id === options.selectedId.value)?.locked,
   });
   watch(options.activeTab, (tab) => {
     if (tab !== 'elements') editor.drawingMode.value = false;

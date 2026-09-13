@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { defineAsyncComponent } from 'vue';
-import type { EditorLoadingProgress } from '~/api/types/capture-api';
+import type { EditorLoadingProgress, RecorderLauncherContext } from '~/api/types/capture-api';
 import Button from '~/ui/button/Button.vue';
 import Select from '~/ui/select/Select.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
@@ -22,16 +22,18 @@ const props = withDefaults(
     preparingEditor?: boolean;
     editorLoadingProgress?: EditorLoadingProgress;
     externalError?: string;
+    recorderLauncherContext?: RecorderLauncherContext | null;
   }>(),
   {
     embedded: false,
     showTopbar: false,
     preparingEditor: false,
     editorLoadingProgress: () => ({ stage: 'openingWindow', value: 10 }),
+    recorderLauncherContext: null,
   },
 );
 
-const emit = defineEmits(['start-recording', 'stop-recording', 'open-project', 'focus-feature']);
+const emit = defineEmits(['start-recording', 'stop-recording', 'open-project', 'focus-feature', 'dismiss-launcher']);
 const ProjectPicker = defineAsyncComponent(() => import('../projects/ProjectPicker.vue'));
 const HudPreferences = defineAsyncComponent(() => import('./settings/HudPreferences.vue'));
 
@@ -77,6 +79,7 @@ const {
   activeDropdowns,
   hudHeight,
   handleDropdownToggle,
+  handleSourceDropdownToggle,
   selectScreenRegion,
   systemAudioOptions,
   recordingTime,
@@ -127,7 +130,7 @@ const {
       :show-settings="!preparingEditor && !showSettings && !showProjectPicker"
       :is-recording="isRecording"
       v-model:mode="captureMode"
-      :mode-disabled="isBusy || preparingEditor"
+      :mode-disabled="isBusy || preparingEditor || Boolean(recorderLauncherContext)"
       @back="handleTopbarBack"
       @minimize="minimizeApp"
       @open-settings="
@@ -215,10 +218,11 @@ const {
                       kind="window"
                       :sources="sources"
                       :previews="windowPreviews"
+                      :prefer-native-sources="desktopPlatform === 'darwin'"
                       :loading="windowPreviewsLoading"
                       :disabled="isRecording || isBusy"
                       @toggle="
-                        handleDropdownToggle($event);
+                        handleSourceDropdownToggle('window', $event);
                         if ($event) emit('focus-feature', 'source');
                       "
                     />
@@ -238,7 +242,7 @@ const {
                     :loading="screenPreviewsLoading"
                     :disabled="isRecording || isBusy || displaySources.length === 0"
                     @toggle="
-                      handleDropdownToggle($event);
+                      handleSourceDropdownToggle('screen', $event);
                       if ($event) emit('focus-feature', 'source');
                     "
                   />

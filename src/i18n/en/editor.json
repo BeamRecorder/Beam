@@ -136,11 +136,13 @@
   },
   "TimelineToolbar": {
     "add": "Add",
+    "composition": "Composition",
     "split": "Split",
     "selectClipToSplit": "Select a clip to split",
     "video": "Video",
     "image": "Image",
     "sound": "Sound",
+    "voiceover": "Voice-over",
     "text": "Text",
     "blur": "Blur",
     "goToStart": "Go to Start",
@@ -152,6 +154,8 @@
     "zoomIn": "Zoom In",
     "snappingOn": "Magnet Snapping Enabled",
     "snappingOff": "Magnet Snapping Disabled",
+    "fullscreenPreview": "Fullscreen preview",
+    "exitFullscreenPreview": "Exit fullscreen preview",
     "zoom": "Zoom",
     "resetZoom": "Reset Zoom",
     "previewQuality": "Preview quality",
@@ -196,10 +200,12 @@
     "unlinkSystemAudioTrack": "Unlink System Audio track",
     "clickToToggleMicrophone": "Click to toggle Microphone track",
     "mic": "Mic",
+    "voiceover": "Voice-over",
     "hideAudio": "Hide audio",
     "showAudio": "Show audio",
     "deleteAudio": "Delete audio track",
     "audioDisabledFromExport": "Audio disabled from export",
+    "normalizeAudio": "Normalize audio",
     "unlinkMicrophoneTrack": "Unlink Microphone track",
     "waveformUnavailable": "Waveform unavailable",
     "trimStart": "Trim start",
@@ -208,8 +214,14 @@
     "copy": "Copy",
     "paste": "Paste",
     "delete": "Delete",
+    "rippleDelete": "Delete and close gap",
     "copyUnavailable": "Select a timeline item before copying.",
-    "clipboardEmpty": "Copy a timeline item before pasting."
+    "clipboardEmpty": "Copy a timeline item before pasting.",
+    "lock": "Lock",
+    "unlock": "Unlock",
+    "locked": "Locked",
+    "removeGap": "Remove gap",
+    "lockedMessage": "{name} is locked. Modifications are not possible."
   },
   "TimelineVideoClip": {
     "trimStart": "Trim start",
@@ -337,6 +349,16 @@
     "savingProject": "Saving project"
   },
   "ZoomPanel": {
+    "cameraFollow": "Camera follow",
+    "cameraFollowDesc": "Keeps the cursor inside a calm area before moving the camera.",
+    "advanced": "Advanced",
+    "followPresetStable": "Stable",
+    "followPresetBalanced": "Balanced",
+    "followPresetResponsive": "Responsive",
+    "safeZone": "Safe zone",
+    "responsiveness": "Responsiveness",
+    "straightPaths": "Straight paths",
+    "straightPathsDesc": "Locks camera movement to horizontal, vertical, or diagonal paths.",
     "generateAutoZooms": "Generate Auto Zooms",
     "regenerateAutoZooms": "Regenerate Auto Zooms",
     "regenerateConfirm": "Regenerate automatic zooms? This will replace all auto-detected zoom points.",
@@ -425,5 +447,12 @@
       "large": "Large download; WebGPU recommended.",
       "veryLarge": "Very large and slow without WebGPU."
     }
+  },
+  "RecordingSidecarLinks": {
+    "title": "Sidecar links",
+    "description": "Linked items move with this recording. Unlink an item to keep its timeline position when the recording moves.",
+    "unlinkOne": "Unlink {name}",
+    "unlink": "Unlink",
+    "unlinkAll": "Unlink all"
   }
 }

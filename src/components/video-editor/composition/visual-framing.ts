@@ -19,7 +19,17 @@ export function resolveVisualClipFraming(
       mask: 'squircle' as const,
     };
   }
-  return resolveCameraFraming(preset, bounds, sourceWidth, sourceHeight, crop);
+  const framing = resolveCameraFraming(
+    preset,
+    bounds,
+    sourceWidth,
+    sourceHeight,
+    crop,
+    clip.isMirrored,
+    clip.isMirroredY,
+  );
+  // A device frame keeps its fixed screen opening; cropping fills that opening.
+  return preset === 'custom' && isPhoneFrame(clip.appearance.frame) ? { ...framing, rect: bounds } : framing;
 }
 
 export function visualClipDisplayLayout(

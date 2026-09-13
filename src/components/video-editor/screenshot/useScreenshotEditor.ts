@@ -1,3 +1,4 @@
+import { editorTitle } from '../editor-window-title';
 import { provideElementEditor } from '../elements/useElementEditor';
 import { useTranslate } from '~/i18n/useTranslate';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
@@ -311,6 +312,7 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
       // Keep only metadata here, rather than retaining a second edit history.
       const { state: _state, history: savedHistory, ...metadata } = next;
       document.value = { ...metadata, state: null };
+      window.document.title = editorTitle(metadata.name);
       backgroundLibrary.value = library;
       presets.value = presetDocument;
       const initial = screenshotState(next, library);

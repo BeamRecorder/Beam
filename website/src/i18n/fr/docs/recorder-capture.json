@@ -1,0 +1,310 @@
+{
+  "pages": [
+    {
+      "slug": "recorder/capabilities/capture-sources",
+      "title": "Sources et zones de capture",
+      "description": "Référence du mode Écran, du mode Fenêtre, de la sélection des sources et du comportement des zones de recadrage de l'enregistreur.",
+      "lead": "Le mode de capture détermine les sources et les contrôles de zone que Beam peut proposer avant le début d'un enregistrement.",
+      "sections": [
+        {
+          "title": "Réglages de capture",
+          "tables": [
+            {
+              "headers": ["Réglage", "Valeurs", "Valeur par défaut", "Comportement et contraintes"],
+              "rows": [
+                [
+                  "Mode",
+                  "Screen or Window",
+                  "Screen",
+                  "Écran enregistre un écran ; Fenêtre enregistre une fenêtre d'application."
+                ],
+                [
+                  "Source d'écran",
+                  "Écrans disponibles",
+                  "Écran par défaut, puis premier écran disponible",
+                  "Sélectionnée dans le HUD en dehors de la capture par portail Linux."
+                ],
+                [
+                  "Source de fenêtre",
+                  "Fenêtres d'application disponibles",
+                  "Source par défaut ou du portail, puis première source disponible",
+                  "Les aperçus des fenêtres sont actualisés toutes les 5 secondes lorsque Beam n'enregistre pas."
+                ],
+                [
+                  "Zone d'enregistrement",
+                  "x, y, largeur et hauteur normalisés",
+                  "No region",
+                  "Mode Écran uniquement. Stockée dans `extras.screenRegion`."
+                ],
+                [
+                  "Préréglage de zone",
+                  "640×480, 800×600, 1024×768, 1366×768, 1440×990, 1920×1080",
+                  "None",
+                  "Stocké dans `extras.screenRegionPreset` ; un rectangle personnalisé peut être dessiné à la place."
+                ],
+                [
+                  "Fréquence de capture",
+                  "60 FPS",
+                  "60 FPS",
+                  "Fixée dans la configuration de l'enregistreur ; ce n'est pas un réglage utilisateur exposé."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Sélectionner une zone personnalisée",
+          "steps": [
+            "Choisissez le mode Écran et sélectionnez un écran.",
+            "Sélectionnez Sélectionner une zone de l'écran. Beam masque temporairement le HUD et ouvre la superposition de zone toujours au premier plan.",
+            "Dessinez un rectangle ou choisissez une taille prédéfinie.",
+            "Sélectionnez Utiliser cette zone pour enregistrer la zone, ou Annuler pour conserver le choix existant inchangé.",
+            "Utilisez Modifier la zone de l'écran pour ajuster une zone enregistrée."
+          ]
+        },
+        {
+          "title": "Cas limites des zones",
+          "bullets": [
+            "Réinitialiser sélectionne le plein écran ; cela ne supprime ni fichier ni enregistrement.",
+            "Une zone qui correspond en pratique à l'écran complet est normalisée en absence de recadrage.",
+            "Les contrôles de zone sont désactivés en mode Fenêtre, pendant l'enregistrement, lorsque Beam est occupé ou lorsque les limites de l'écran sont indisponibles.",
+            "La capture par portail Linux n'expose pas la superposition de zone de Beam."
+          ]
+        },
+        {
+          "title": "Sélection de source sous Linux",
+          "paragraphs": [
+            "Sous Linux, le portail du bureau affiche son propre sélecteur au début de la capture. Le HUD ne fournit pas le sélecteur de source Electron et une seule source du portail est sélectionnée pour la session."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Visibilité en plein écran",
+            "text": "Beam ne peut pas masquer ses propres fenêtres lors d'une capture plein écran sous Linux. La capture de zone est également indisponible ; placez ou réduisez Beam avant de confirmer la source du portail."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/audio-camera",
+      "title": "Audio et caméra",
+      "description": "Référence du microphone, de la caméra, de l'audio système, des vumètres, des fichiers associés et des activations d'appareils en direct.",
+      "lead": "Chaque source est sélectionnée indépendamment. La disponibilité, le vumètre d'aperçu et la possibilité d'activer une source après le démarrage dépendent de la source et de la plateforme.",
+      "sections": [
+        {
+          "title": "Réglages des sources",
+          "tables": [
+            {
+              "headers": ["Source", "Valeurs", "Valeur par défaut", "Comportement de capture"],
+              "rows": [
+                [
+                  "Microphone",
+                  "Un périphérique d'entrée Chromium ou No Audio",
+                  "No Audio",
+                  "Capturée séparément. L'annulation d'écho, la réduction du bruit et le contrôle automatique du gain sont désactivés."
+                ],
+                [
+                  "Caméra",
+                  "Une caméra Chromium ou Camera Off",
+                  "Camera Off",
+                  "Capturée comme fichier associé VP8 séparé. Si la caméra est signalée comme indisponible, Beam la désactive et peut continuer."
+                ],
+                [
+                  "Audio système",
+                  "Audio système ou Off",
+                  "Off",
+                  "Linux utilise la capture native ; les autres plateformes utilisent un fichier associé de capture display-media Chromium."
+                ],
+                [
+                  "Vumètre du microphone",
+                  "Niveau en direct",
+                  "Masqué avec No Audio",
+                  "Visible lorsqu'un microphone est sélectionné."
+                ],
+                [
+                  "Vumètre de l'audio système",
+                  "Niveau en direct",
+                  "Masqué",
+                  "L'aperçu natif est disponible sous Linux uniquement avant l'enregistrement."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Contrôles pendant l'enregistrement",
+          "tables": [
+            {
+              "headers": ["Contrôle", "Pendant l'enregistrement", "Indisponible lorsque"],
+              "rows": [
+                [
+                  "Activation du microphone",
+                  "Active ou désactive le microphone sélectionné",
+                  "Compte à rebours, démarrage ou finalisation"
+                ],
+                [
+                  "Activation de la caméra",
+                  "Active ou désactive la caméra sélectionnée",
+                  "Compte à rebours, démarrage ou finalisation"
+                ],
+                [
+                  "Activation de l'audio système",
+                  "Active ou désactive la capture en dehors de Linux",
+                  "Compte à rebours, démarrage, finalisation ou toute session Linux active"
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Comportement en cas d'échec",
+          "paragraphs": [
+            "Lorsque la caméra sélectionnée est signalée comme indisponible pendant la préparation, Beam la désactive et continue sans caméra. D'autres erreurs de caméra ou de fichier associé peuvent interrompre le démarrage, tout comme l'échec d'une source microphone ou audio système sélectionnée."
+          ],
+          "notice": {
+            "kind": "tip",
+            "title": "Vérifier avant le compte à rebours",
+            "text": "Vérifiez le périphérique sélectionné et le vumètre visible avant de commencer, en particulier après avoir connecté ou déconnecté du matériel audio ou une caméra USB."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/teleprompter",
+      "title": "Téléprompteur",
+      "description": "Référence de la modification du script, de l'aperçu, du défilement automatique, du mode ligne, de la typographie et des raccourcis.",
+      "lead": "Le téléprompteur peut défiler continuellement ou avancer dans un script ligne par ligne. Son document est stocké avec la session d'enregistrement.",
+      "sections": [
+        {
+          "title": "Réglages du téléprompteur",
+          "tables": [
+            {
+              "headers": ["Réglage", "Valeurs", "Valeur par défaut", "Plage ou persistance"],
+              "rows": [
+                ["Script", "Free text", "Empty", "Stocké dans `session/teleprompter.json`."],
+                [
+                  "Mode",
+                  "Continuous or Line by line",
+                  "Continuous",
+                  "Stocké dans les préférences et le document de session."
+                ],
+                [
+                  "Défilement automatique",
+                  "On or Off",
+                  "On",
+                  "Contrôle le déplacement automatique ; la pause et la reprise restent disponibles."
+                ],
+                ["Vitesse", "5–200 px/s", "42 px/s", "Pas : 1 px/s."],
+                ["Taille du texte", "16–36 px", "36 px", "Pas : 1 px."],
+                ["Espacement des lignes", "1–2.5", "1.35", "Pas : 0.05."],
+                ["Alignement", "Left or Center", "Left", "Stocké avec les réglages du téléprompteur."],
+                [
+                  "Thème",
+                  "System, Light ou Dark dans le document stocké",
+                  "System",
+                  "L'interface actuelle du téléprompteur ne propose pas ce réglage comme contrôle fonctionnel."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Contrôles de l'éditeur et du lecteur",
+          "tables": [
+            {
+              "headers": ["Contrôle", "Rôle"],
+              "rows": [
+                ["Modifier", "Rend le script modifiable avant l'enregistrement."],
+                ["Aperçu", "Affiche le script tel qu'il sera lu."],
+                ["Masquer", "Masque la fenêtre du téléprompteur."],
+                [
+                  "Pause / Reprendre",
+                  "Arrête ou relance le déplacement automatique sans modifier le réglage de défilement automatique."
+                ],
+                ["Précédente / Suivante", "Passe d'une ligne à l'autre en mode ligne par ligne."],
+                ["Compteur de lignes", "Affiche la position de la ligne actuelle en mode ligne par ligne."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Comportement pendant l'enregistrement",
+          "paragraphs": [
+            "Lorsqu'une session d'enregistrement démarre, le téléprompteur passe automatiquement du script modifiable à son lecteur en lecture seule. Le mode et les réglages sélectionnés restent disponibles pour les contrôles de présentation."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Contrôle au clavier",
+            "text": "Les raccourcis du téléprompteur sont configurables dans Préférences → Raccourcis. Les valeurs par défaut sont listées sur la page de référence des préférences."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/live-controls",
+      "title": "Contrôles d'enregistrement en direct",
+      "description": "Découvrez les phases de la barre d'enregistrement, les modes de visibilité, les activations d'appareils, l'arrêt et l'annulation.",
+      "lead": "La barre d'enregistrement change d'état au cours de la session et désactive les actions qui seraient dangereuses pendant le démarrage de la capture ou la finalisation des fichiers.",
+      "sections": [
+        {
+          "title": "Phases de l'enregistrement",
+          "tables": [
+            {
+              "headers": ["Phase", "Signification"],
+              "rows": [
+                ["Inactif", "Aucun enregistrement n'est actif."],
+                ["Compte à rebours", "Le délai configuré est en cours."],
+                ["Démarrage", "Beam ouvre et synchronise les sources sélectionnées."],
+                ["Enregistrement", "La session capture activement."],
+                ["En pause", "La session active est en pause."],
+                ["Finalisation", "Beam ferme les pistes et prépare le projet pour le montage."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Préférence de visibilité",
+          "tables": [
+            {
+              "headers": ["Mode", "Comportement", "Valeur par défaut de la plateforme"],
+              "rows": [
+                ["Toujours visible", "La barre reste visible pendant toute la capture.", "Windows and macOS"],
+                [
+                  "Fondu automatique",
+                  "La barre disparaît progressivement et réapparaît au survol.",
+                  "Pas la valeur par défaut"
+                ],
+                ["Masquée jusqu'au survol", "La barre reste masquée jusqu'à ce que le pointeur l'atteigne.", "Linux"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Disponibilité des actions",
+          "tables": [
+            {
+              "headers": ["Action", "Désactivé pendant"],
+              "rows": [
+                ["Pause / Reprendre", "Compte à rebours, Démarrage, Finalisation"],
+                ["Arrêter", "Finalisation"],
+                ["Annuler et supprimer", "Finalisation"],
+                ["Microphone / Caméra / Audio système", "Compte à rebours, Démarrage, Finalisation"],
+                ["Audio système sous Linux", "Toute la session active ; choisissez-le avant le démarrage"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Arrêter ou annuler",
+          "paragraphs": [
+            "Arrêter conserve la capture et passe à la finalisation avant l'ouverture du projet. Annuler et supprimer abandonne l'enregistrement actif et supprime la session inachevée. Il s'agit volontairement de deux actions distinctes."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "L'annulation supprime la session inachevée",
+            "text": "Utilisez Arrêter lorsque vous souhaitez conserver ce qui a déjà été enregistré. Utilisez Annuler et supprimer uniquement lorsque la prise actuelle doit être abandonnée."
+          }
+        }
+      ]
+    }
+  ]
+}

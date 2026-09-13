@@ -2,6 +2,7 @@
 import BigSlider from '~/ui/slider/BigSlider.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import ClipActionGroup from '~/components/video-editor/properties/clip/ClipActionGroup.vue';
+import Switch from '~/ui/switch/Switch.vue';
 
 const { t } = useTranslate('AudioPanel');
 const { t: tClip } = useTranslate('ClipPropertiesPanel');
@@ -13,6 +14,9 @@ const props = withDefaults(
     isMicAudioEnabled: boolean;
     hasSystemAudio?: boolean;
     hasMicAudio?: boolean;
+    hasAudio?: boolean;
+    normalizeAllEnabled?: boolean;
+    normalizeAllPending?: boolean;
     systemVolume?: number;
     micVolume?: number;
   }>(),
@@ -21,6 +25,9 @@ const props = withDefaults(
     micVolume: 100,
     hasSystemAudio: false,
     hasMicAudio: false,
+    hasAudio: false,
+    normalizeAllEnabled: false,
+    normalizeAllPending: false,
   },
 );
 
@@ -32,6 +39,7 @@ const emit = defineEmits<{
   (e: 'update:micVolume', value: number): void;
   (e: 'delete:system'): void;
   (e: 'delete:microphone'): void;
+  (e: 'update:normalizeAll', value: boolean): void;
 }>();
 
 const handleSystemVolChange = (val: number) => {
@@ -56,7 +64,6 @@ const handleMicVolChange = (val: number) => {
         @update:modelValue="emit('update:volume', $event)"
       />
     </div>
-
     <div v-if="hasSystemAudio" class="audio-section">
       <div class="prop-row">
         <span class="prop-label">{{ t('systemSoundTrack') }}</span>
@@ -110,6 +117,16 @@ const handleMicVolChange = (val: number) => {
     <div v-if="!hasSystemAudio && !hasMicAudio" class="empty-state" role="status">
       <p>{{ t('noAudioTracksDetected') }}</p>
     </div>
+
+    <div class="prop-row normalize-all-row">
+      <span class="prop-label">{{ t('normalizeAll') }}</span>
+      <Switch
+        :model-value="normalizeAllEnabled || normalizeAllPending"
+        :disabled="!hasAudio || normalizeAllPending"
+        :aria-label="t('normalizeAll')"
+        @update:modelValue="emit('update:normalizeAll', $event)"
+      />
+    </div>
   </div>
 </template>
 
@@ -151,6 +168,9 @@ const handleMicVolChange = (val: number) => {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-primary);
+}
+.normalize-all-row {
+  margin-top: auto;
 }
 .empty-state {
   padding: 18px 14px;

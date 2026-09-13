@@ -7,9 +7,21 @@
     "tagline": "Praktyczne poradniki dotyczące przechwytywania i dopracowywania prezentacji produktów w Beam.",
     "imageAlt": "Ikona aplikacji Beam",
     "actions": [
-      { "theme": "brand", "text": "Pierwsze kroki", "link": "/getting-started" },
-      { "theme": "alt", "text": "Zobacz na GitHubie", "link": "https://github.com/BeamRecorder/Beam" },
-      { "theme": "alt", "text": "Dołącz do Discorda", "link": "https://discord.gg/6Q6v2xUCB" }
+      {
+        "theme": "brand",
+        "text": "Pierwsze kroki",
+        "link": "/getting-started"
+      },
+      {
+        "theme": "alt",
+        "text": "Zobacz na GitHubie",
+        "link": "https://github.com/BeamRecorder/Beam"
+      },
+      {
+        "theme": "alt",
+        "text": "Dołącz do Discorda",
+        "link": "https://discord.gg/6Q6v2xUCB"
+      }
     ]
   },
   "categories": [

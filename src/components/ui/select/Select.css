@@ -65,6 +65,13 @@
   min-width: 0;
 }
 
+.select-leading-icon {
+  width: 0.95rem;
+  height: 0.95rem;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
 .selected-thumbnail-wrapper {
   position: relative;
   width: 20px;
@@ -106,6 +113,10 @@
   -webkit-user-select: none;
   -webkit-user-drag: none;
   pointer-events: none;
+}
+
+.thumbnail-fallback {
+  color: var(--text-tertiary);
 }
 
 .select-trigger.is-source .selected-thumbnail-wrapper {

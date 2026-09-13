@@ -1,0 +1,24 @@
+{
+  "pages": [
+    {
+      "slug": "editor/showcase",
+      "title": "Showcase de projeto gravado",
+      "description": "Veja como uma sessão Beam gravada aparece dentro do Editor de Vídeo.",
+      "lead": "Uma sessão gravada abre como uma composição completa com a mídia capturada organizada para edição.",
+      "sections": [
+        {
+          "title": "Um projeto pronto para editar",
+          "paragraphs": [
+            "A tela apresenta a saída composta enquanto a linha do tempo mantém a mídia gravada e as camadas de edição visíveis para ajustes de tempo, enquadramento, legendas, áudio e exportação."
+          ],
+          "screenshot": {
+            "path": "editor/showcase.webp",
+            "alt": "Editor Beam mostrando um projeto gravado com sua tela e linha do tempo",
+            "caption": "Um projeto gravado pronto para ajustes de tempo, enquadramento, legendas, áudio e exportação.",
+            "aspectRatio": "1586/992"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -19,7 +19,19 @@
       "items": [
         { "text": "Overview", "link": "/recorder/" },
         { "text": "Interface", "link": "/recorder/interface" },
-        { "text": "Capabilities", "link": "/recorder/capabilities" }
+        {
+          "text": "Capabilities",
+          "link": "/recorder/capabilities/",
+          "items": [
+            { "text": "Capture sources", "link": "/recorder/capabilities/capture-sources" },
+            { "text": "Audio and camera", "link": "/recorder/capabilities/audio-camera" },
+            { "text": "Teleprompter", "link": "/recorder/capabilities/teleprompter" },
+            { "text": "Live controls", "link": "/recorder/capabilities/live-controls" },
+            { "text": "Preferences", "link": "/recorder/capabilities/preferences" },
+            { "text": "Project manager", "link": "/recorder/capabilities/project-manager" },
+            { "text": "Permissions and privacy", "link": "/recorder/capabilities/permissions-privacy" }
+          ]
+        }
       ]
     },
     {
@@ -27,7 +39,22 @@
       "items": [
         { "text": "Overview", "link": "/editor/" },
         { "text": "Interface", "link": "/editor/interface" },
-        { "text": "Capabilities", "link": "/editor/capabilities" }
+        { "text": "Project showcase", "link": "/editor/showcase" },
+        {
+          "text": "Capabilities",
+          "link": "/editor/capabilities",
+          "items": [
+            { "text": "Timeline editing", "link": "/editor/capabilities/timeline" },
+            { "text": "Canvas", "link": "/editor/capabilities/canvas" },
+            { "text": "Clips", "link": "/editor/capabilities/clips" },
+            { "text": "Zooms", "link": "/editor/capabilities/zooms" },
+            { "text": "Cursor", "link": "/editor/capabilities/cursor" },
+            { "text": "Captions", "link": "/editor/capabilities/captions" },
+            { "text": "Audio", "link": "/editor/capabilities/audio" },
+            { "text": "Settings", "link": "/editor/capabilities/settings" },
+            { "text": "Export", "link": "/export" }
+          ]
+        }
       ]
     },
     {

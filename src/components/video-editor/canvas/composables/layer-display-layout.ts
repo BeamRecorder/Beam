@@ -31,7 +31,8 @@ export function transformClipDisplayLayout(options: {
   bounds: VideoWindowBounds;
   isCropping: boolean;
 }) {
-  const { clip, bounds, transform } = options;
+  const { bounds, transform } = options;
+  const clip = options.isCropping && isVisualClip(options.clip) ? { ...options.clip, crop: undefined } : options.clip;
   if (clip.kind === 'webcam')
     return webcamDisplayLayout(
       options.composition,

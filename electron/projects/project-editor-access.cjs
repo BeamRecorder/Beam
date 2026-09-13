@@ -5,6 +5,7 @@ const {
   materializeComposition,
 } = require('./clip-composition.cjs');
 const {
+  defaultZoomAutoFollow,
   defaultZoomMotionBlur,
   migratePresentation,
   presentationState,
@@ -42,7 +43,12 @@ function createProjectEditorAccess(options) {
             ),
       zoom: current?.zoom
         ? zoomState(current.zoom)
-        : { elements: [], generatedSessions: [], motionBlur: defaultZoomMotionBlur() },
+        : {
+            elements: [],
+            generatedSessions: [],
+            motionBlur: defaultZoomMotionBlur(),
+            autoFollow: defaultZoomAutoFollow(),
+          },
       presentation,
     };
     manifest.editor = editor;

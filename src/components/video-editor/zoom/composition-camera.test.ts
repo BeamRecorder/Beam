@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   cameraTiltForControls,
   createCompositionCameraEvaluator,
@@ -25,7 +25,90 @@ const expectSampleClose = (actual: CameraSample, expected: CameraSample) => {
   expect(actual.focus.cy).toBeCloseTo(expected.focus.cy, 8);
 };
 
+const autoZoom: ZoomElement = {
+  id: 'auto-follow',
+  sessionId: 'session',
+  startMs: 0,
+  endMs: 5_000,
+  focus: { cx: 0.5, cy: 0.5 },
+  depth: 2,
+  mode: 'auto',
+};
+
+const autoFollow = { safeZone: 0.5, responsiveness: 0.55, directionLock: true } as const;
+
 describe('composition camera evaluator', () => {
+  it('keeps an auto zoom stable while the cursor remains inside its safe zone', () => {
+    const evaluator = createCompositionCameraEvaluator({
+      zooms: [autoZoom],
+      telemetry: [
+        { timeMs: 0, cx: 0.58, cy: 0.42 },
+        { timeMs: 5_000, cx: 0.58, cy: 0.42 },
+      ],
+      autoFollow,
+    });
+
+    expect(evaluator.sample(2_500).focus).toEqual({ cx: 0.5, cy: 0.5 });
+  });
+
+  it('corrects the minimum required axes when an auto-zoom cursor leaves the safe zone', () => {
+    const evaluator = createCompositionCameraEvaluator({
+      zooms: [autoZoom],
+      telemetry: [
+        { timeMs: 0, cx: 0.9, cy: 0.5 },
+        { timeMs: 5_000, cx: 0.9, cy: 0.5 },
+      ],
+      autoFollow,
+    });
+
+    const sample = evaluator.sample(2_500);
+    expect(sample.focus.cx).toBeGreaterThan(0.5);
+    expect(sample.focus.cy).toBe(0.5);
+  });
+
+  it('samples cursor telemetry through the active screen source-time mapping', () => {
+    const telemetry = [
+      { timeMs: 0, cx: 0.5, cy: 0.5 },
+      { timeMs: 1_000, cx: 0.5, cy: 0.5 },
+      { timeMs: 2_000, cx: 0.9, cy: 0.5 },
+      { timeMs: 5_000, cx: 0.9, cy: 0.5 },
+    ];
+    const timelineTime = createCompositionCameraEvaluator({ zooms: [autoZoom], telemetry, autoFollow });
+    const mapTelemetryTime = vi.fn((timeMs: number) => timeMs + 2_000);
+    const sourceTime = createCompositionCameraEvaluator({
+      zooms: [autoZoom],
+      telemetry,
+      autoFollow,
+      mapTelemetryTime,
+    });
+
+    expect(sourceTime.sample(1_000).focus.cx).toBeGreaterThan(timelineTime.sample(1_000).focus.cx);
+    expect(mapTelemetryTime).toHaveBeenCalled();
+  });
+
+  it('returns deterministic samples for sequential, direct and non-sequential access', () => {
+    const create = () =>
+      createCompositionCameraEvaluator({
+        zooms: [autoZoom],
+        telemetry: [
+          { timeMs: 0, cx: 0.9, cy: 0.5 },
+          { timeMs: 1_000, cx: 0.9, cy: 0.5 },
+          { timeMs: 2_000, cx: 0.5, cy: 0.9 },
+          { timeMs: 5_000, cx: 0.5, cy: 0.9 },
+        ],
+        autoFollow,
+      });
+    const expected = create().sample(2_500);
+    const sequential = create();
+    for (let timeMs = 0; timeMs <= 2_500; timeMs += 1000 / 60) sequential.sample(timeMs);
+    expectSampleClose(sequential.sample(2_500), expected);
+
+    const nonSequential = create();
+    nonSequential.sample(4_000);
+    nonSequential.sample(750);
+    expectSampleClose(nonSequential.sample(2_500), expected);
+  });
+
   it('returns the same sample for sequential playback, direct seek, backward seek and export frame rates', () => {
     const sequential = createCompositionCameraEvaluator({ zooms, telemetry: [] });
     for (let time = 0; time <= 1_250; time += 1_000 / 60) sequential.sample(time);

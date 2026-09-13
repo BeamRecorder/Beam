@@ -4,8 +4,11 @@ import type { CaptureProject, ProjectEditorState } from '../../../api/types/capt
 import type { Clip, ClipComposition } from '~/media/shared/composition-types';
 import {
   DEFAULT_ZOOM_MOTION_BLUR,
+  DEFAULT_ZOOM_AUTO_FOLLOW,
+  normalizeZoomAutoFollow,
   normalizeZoomMotionBlur,
   type ZoomElement,
+  type ZoomAutoFollowSettings,
   type ZoomMotionBlurSettings,
 } from '../zoom/zoom-types';
 import {
@@ -33,9 +36,12 @@ const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 export function useProjectEditorState(options: {
   project: Ref<CaptureProject | null | undefined>;
   composition: Ref<ClipComposition>;
+  restoreComposition: (value: ClipComposition) => void;
+  restoreZoomElements: (value: ZoomElement[]) => void;
   zoomElements: Ref<ZoomElement[]>;
   generatedSessions: Ref<ProjectEditorState['zoom']['generatedSessions']>;
   zoomMotionBlur?: Ref<ZoomMotionBlurSettings>;
+  zoomAutoFollow?: Ref<ZoomAutoFollowSettings>;
   importedBackgrounds: Ref<BackgroundMedia[]>;
   selectedBackground: Ref<BackgroundValue | null>;
   backgroundBlurPercent: Ref<number>;
@@ -56,6 +62,7 @@ export function useProjectEditorState(options: {
   selectedZoom: Ref<ZoomElement | null>;
 }) {
   const zoomMotionBlur = options.zoomMotionBlur ?? ref<ZoomMotionBlurSettings>({ ...DEFAULT_ZOOM_MOTION_BLUR });
+  const zoomAutoFollow = options.zoomAutoFollow ?? ref<ZoomAutoFollowSettings>({ ...DEFAULT_ZOOM_AUTO_FOLLOW });
   const loading = ref(false);
   const scheduledSave = ref(false);
   const pendingSaves = ref(0);
@@ -74,6 +81,7 @@ export function useProjectEditorState(options: {
       elements: options.zoomElements.value.map((zoom) => ({ ...toRaw(zoom), focus: { ...toRaw(zoom).focus } })),
       generatedSessions: options.generatedSessions.value.map((session) => ({ ...toRaw(session) })),
       motionBlur: clone(zoomMotionBlur.value),
+      autoFollow: clone(zoomAutoFollow.value),
     },
     presentation: {
       canvas: clone(options.canvas.value),
@@ -171,14 +179,15 @@ export function useProjectEditorState(options: {
             options.editorDefaults.value,
           )
         : loadedState;
-      options.composition.value = state.composition;
-      options.zoomElements.value = state.zoom.elements;
+      options.restoreComposition(state.composition);
+      options.restoreZoomElements(state.zoom.elements);
       options.generatedSessions.value = state.zoom.generatedSessions;
       zoomMotionBlur.value = normalizeZoomMotionBlur(
         loadedState.isFresh
           ? (options.editorDefaults.value.zoomMotionBlur ?? state.zoom.motionBlur)
           : state.zoom.motionBlur,
       );
+      zoomAutoFollow.value = normalizeZoomAutoFollow(state.zoom.autoFollow);
       options.importedBackgrounds.value = state.presentation.importedBackgrounds;
       const globalBackgrounds = options.availableBackgrounds.value.flatMap((group) => group.items);
       savedBackgroundId = state.presentation.selectedBackgroundId;
@@ -229,6 +238,7 @@ export function useProjectEditorState(options: {
       options.zoomElements,
       options.generatedSessions,
       zoomMotionBlur,
+      zoomAutoFollow,
       options.importedBackgrounds,
       options.selectedBackground,
       options.backgroundBlurPercent,

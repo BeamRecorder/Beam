@@ -6,6 +6,7 @@ const { capture, cameraApi, microphoneApi, systemApi } = vi.hoisted(() => ({
   capture: {
     platform: 'darwin',
     getCameraOverlayState: vi.fn(),
+    configureCameraOverlay: vi.fn(),
     setCountdown: vi.fn().mockResolvedValue(undefined),
     prepareRecordingSurface: vi.fn().mockResolvedValue(undefined),
     hideScreenRegionOverlay: vi.fn(),
@@ -29,7 +30,7 @@ const { capture, cameraApi, microphoneApi, systemApi } = vi.hoisted(() => ({
 
 vi.mock('../../../api/capture', () => ({ capture }));
 vi.mock('../../../api/camera-recorder', () => ({
-  BrowserCameraRecorder: { request: cameraApi.request },
+  CameraOverlayRecorder: { request: cameraApi.request },
   listBrowserCameras: cameraApi.list,
   isCameraUnavailableError: (reason: unknown) => (reason as { code?: string })?.code === 'camera-unavailable',
 }));

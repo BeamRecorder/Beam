@@ -4,7 +4,6 @@ import {
   createZoomTimeEvaluator,
   cursorFocusAt,
   regionStrength,
-  smoothedCursorFocusAt,
   zoomAtTime,
 } from '../zoom-playback';
 import type { ZoomElement } from '../zoom-types';
@@ -44,22 +43,12 @@ describe('zoom playback', () => {
       cx: 0.25,
       cy: 0.75,
     }));
-  it('tracks the telemetry focus for automatic regions', () =>
-    expect(zoomAtTime([zoom], 4_000, [{ timeMs: 4_000, cx: 0.8, cy: 0.2 }])?.focus).toEqual({
-      cx: 0.6666666666666667,
-      cy: 0.3333333333333333,
-    }));
-  it('smooths an abrupt cursor jump using recent telemetry', () => {
-    const focus = smoothedCursorFocusAt(
-      [
-        { timeMs: 0, cx: 0.2, cy: 0.5 },
-        { timeMs: 100, cx: 0.8, cy: 0.5 },
-      ],
-      100,
-    );
-    expect(focus?.cx).toBeGreaterThan(0.2);
-    expect(focus?.cx).toBeLessThan(0.8);
-    expect(focus?.cy).toBe(0.5);
+  it('marks automatic regions for stateful cursor tracking without baking telemetry into the region', () => {
+    const result = zoomAtTime([zoom], 4_000, [{ timeMs: 4_000, cx: 0.8, cy: 0.2 }]);
+
+    expect(result?.tracksCursor).toBe(true);
+    expect(result?.focus.cx).toBeCloseTo(1 / 3, 12);
+    expect(result?.focus.cy).toBeCloseTo(2 / 3, 12);
   });
   it('interpolates telemetry before, between, and after samples', () => {
     const telemetry = [
@@ -73,7 +62,7 @@ describe('zoom playback', () => {
     expect(cursorFocusAt(telemetry, 1_500)?.cy).toBeCloseTo(0.4, 12);
     expect(cursorFocusAt(telemetry, 4_000)).toEqual({ cx: 0.9, cy: 0.4 });
   });
-  it('sorts zooms and telemetry once when building an evaluator', () => {
+  it('sorts zooms once when building an evaluator', () => {
     const next: ZoomElement = {
       ...zoom,
       id: 'next',

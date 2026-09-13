@@ -1,0 +1,108 @@
+import { mount, type VueWrapper } from '@vue/test-utils';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createWebsiteI18n } from '../i18n';
+import Button from '~/ui/button/Button.vue';
+
+const githubState = vi.hoisted(() => ({
+  stars: { value: 42 },
+  loadStars: vi.fn(),
+}));
+
+vi.mock('@website/composables/useGitHubRepository', () => ({
+  useGitHubRepository: () => githubState,
+}));
+
+import WebsiteTopbar from './WebsiteTopbar.vue';
+
+const ClientOnlyStub = {
+  template: '<span class="client-only"><slot /><slot name="placeholder" /></span>',
+};
+
+const WebsiteLanguageSelectorStub = {
+  template: '<button class="language-trigger" type="button">Language</button>',
+};
+
+const WebsiteThemeSelectorStub = {
+  template: '<button class="theme-toggle" type="button">Theme</button>',
+};
+
+const WebsitePlatformIconStub = {
+  props: ['platform'],
+  template: '<span class="platform-icon" :data-platform="platform" />',
+};
+
+const mounted: VueWrapper[] = [];
+
+const mountTopbar = () => {
+  const wrapper = mount(WebsiteTopbar, {
+    global: {
+      plugins: [createWebsiteI18n('en')],
+      stubs: {
+        ClientOnly: ClientOnlyStub,
+        WebsiteLanguageSelector: WebsiteLanguageSelectorStub,
+        WebsiteThemeSelector: WebsiteThemeSelectorStub,
+        WebsitePlatformIcon: WebsitePlatformIconStub,
+      },
+    },
+  });
+  mounted.push(wrapper);
+  return wrapper;
+};
+
+afterEach(() => {
+  for (const wrapper of mounted.splice(0)) wrapper.unmount();
+  document.body.innerHTML = '';
+  vi.useRealTimers();
+  vi.clearAllMocks();
+});
+
+describe('WebsiteTopbar', () => {
+  it('defers the decorative star count until 1500ms after the window load event', async () => {
+    vi.useFakeTimers();
+    mountTopbar();
+
+    expect(githubState.loadStars).not.toHaveBeenCalled();
+
+    window.dispatchEvent(new Event('load'));
+    await vi.advanceTimersByTimeAsync(1499);
+    expect(githubState.loadStars).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(githubState.loadStars).toHaveBeenCalledOnce();
+  });
+
+  it('cancels the deferred star request when the topbar is unmounted', async () => {
+    vi.useFakeTimers();
+    const wrapper = mountTopbar();
+
+    window.dispatchEvent(new Event('load'));
+    wrapper.unmount();
+    await vi.advanceTimersByTimeAsync(1500);
+
+    expect(githubState.loadStars).not.toHaveBeenCalled();
+  });
+
+  it('keeps the language selector outside the mobile-removable theme control', () => {
+    const wrapper = mountTopbar();
+    const languageTrigger = wrapper.get('.language-trigger');
+    const themeControl = wrapper.get('.header-theme-control');
+
+    expect(themeControl.find('.theme-toggle').exists()).toBe(true);
+    expect(themeControl.find('.language-trigger').exists()).toBe(false);
+    expect(languageTrigger.element.closest('.header-theme-control')).toBeNull();
+  });
+
+  it('keeps the main navigation and install control available', () => {
+    const wrapper = mountTopbar();
+
+    expect(wrapper.find('nav.site-nav a[href="/docs/"]').exists()).toBe(true);
+    expect(wrapper.find('nav.site-nav a[href="/faq"]').exists()).toBe(true);
+
+    const installButton = wrapper.getComponent(Button).get<HTMLAnchorElement>('a');
+    expect(installButton.text()).toContain('Install');
+    expect(installButton.classes()).toContain('btn-primary');
+    expect(installButton.classes()).toContain('btn-md');
+    expect(installButton.find('.platform-icon').exists()).toBe(true);
+    expect(installButton.attributes('href')).toMatch(/^\/install(?:\?os=(?:windows|macos|linux))?$/);
+  });
+});

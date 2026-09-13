@@ -1,0 +1,24 @@
+{
+  "pages": [
+    {
+      "slug": "editor/showcase",
+      "title": "Showcase del progetto registrato",
+      "description": "Scopri come appare una sessione Beam registrata all'interno dell'editor video.",
+      "lead": "Una sessione registrata si apre come una composizione completa, con i contenuti acquisiti disposti per la modifica.",
+      "sections": [
+        {
+          "title": "Un progetto pronto per la modifica",
+          "paragraphs": [
+            "Il canvas mostra l'output composto, mentre la timeline mantiene visibili i contenuti registrati e i livelli di modifica per regolare tempi, inquadratura, sottotitoli, audio ed esportazione."
+          ],
+          "screenshot": {
+            "path": "editor/showcase.webp",
+            "alt": "Editor Beam con un progetto registrato, canvas e timeline visibili",
+            "caption": "Un progetto registrato pronto per regolare tempi, inquadratura, sottotitoli, audio ed esportazione.",
+            "aspectRatio": "1586 / 992"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,3 +1,5 @@
+import type { CompositionSceneLayers } from '../composition/scene-layers';
+import type { RenderedVideoWindow } from './composables/useCameraZoom';
 import type { ProjectEditorData } from '../../../api/types/capture-api';
 import type {
   CursorAutoHideSettings,
@@ -8,7 +10,7 @@ import type { HistoryAction } from '../composables/useEditorUndoRedo';
 import type { BackgroundValue } from '../composables/backgroundCatalog';
 import type { CursorPackDescriptor, CursorSelection } from '../../../api/types/cursor-pack';
 import type { ShadowDirection } from '../properties/cursor/shadow-types';
-import type { ZoomElement, ZoomMotionBlurSettings } from '../zoom/zoom-types';
+import type { ZoomAutoFollowSettings, ZoomElement, ZoomMotionBlurSettings } from '../zoom/zoom-types';
 import type { MediaError, MediaFrame } from '~/media/shared';
 import type {
   CaptionClip,
@@ -53,6 +55,7 @@ export interface EditorCanvasProps {
   editorData?: ProjectEditorData | null;
   zoomElements: ZoomElement[];
   zoomMotionBlur?: ZoomMotionBlurSettings;
+  zoomAutoFollow?: ZoomAutoFollowSettings;
   selectedZoom: ZoomElement | null;
   composition: ClipComposition;
   outputCanvas: OutputCanvasSettings;
@@ -71,6 +74,7 @@ export interface EditorCanvasEmits {
   (event: 'deselect:transform-clip'): void;
   (event: 'deselect:zoom'): void;
   (event: 'update:clip-transform', transform: NormalizedTransform): void;
+  (event: 'preview:clip-crop', crop: NormalizedCrop | null): void;
   (event: 'update:clip-crop', crop: NormalizedCrop): void;
   (event: 'select:canvas'): void;
   (event: 'select:cursor'): void;
@@ -80,3 +84,10 @@ export interface EditorCanvasEmits {
   (event: 'caption-editing-start'): void;
   (event: 'caption-editing-end', value: CaptionInlineEditingEnd): void;
 }
+
+export type DrawVisualStack = (
+  ctx: CanvasRenderingContext2D,
+  videoWindow: RenderedVideoWindow,
+  drawScreen: () => void,
+  layers: CompositionSceneLayers,
+) => void;

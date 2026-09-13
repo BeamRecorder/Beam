@@ -1,7 +1,18 @@
+import { existsSync } from 'node:fs';
+import { basename, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { DocsLocaleCatalogs, DocsPageContent, DocsSectionContent } from './docs-content-types';
 import { createDocsRoutes, docsRoutePaths, getDocsCatalogs } from './docs-routes';
 import { renderDocsHome, renderDocsPage, validateDocsCatalogs } from './docs-renderer';
+
+const websiteRoot = basename(process.cwd()) === 'website' ? process.cwd() : join(process.cwd(), 'website');
+const docsScreenshotsDirectory = join(websiteRoot, 'docs/public/screenshots');
+
+const collectScreenshotPaths = (sections: readonly DocsSectionContent[]): string[] =>
+  sections.flatMap((currentSection) => [
+    ...(currentSection.screenshot && !currentSection.screenshot.hidden ? [currentSection.screenshot.path] : []),
+    ...(currentSection.subsections ? collectScreenshotPaths(currentSection.subsections) : []),
+  ]);
 
 const page = (overrides: Partial<DocsPageContent> = {}): DocsPageContent => ({
   slug: 'getting-started',
@@ -45,6 +56,15 @@ const section = (overrides: Partial<DocsSectionContent> = {}): DocsSectionConten
   bullets: ['Display', 'Window'],
   steps: ['Choose a source', 'Start recording'],
   notice: { kind: 'tip', title: 'Tip', text: 'Keep the source visible.' },
+  tables: [
+    {
+      headers: ['Source', 'Use it when'],
+      rows: [
+        ['Display', 'You need the whole screen.'],
+        ['Window', 'You need one application window.'],
+      ],
+    },
+  ],
   screenshot: {
     path: 'recorder/source.webp',
     alt: 'Beam capture source picker',
@@ -66,6 +86,9 @@ describe('docs content renderer', () => {
     expect(rendered).toContain('## Capture sources');
     expect(rendered).toContain('- Display\n- Window');
     expect(rendered).toContain('1. Choose a source\n2. Start recording');
+    expect(rendered).toContain(
+      'Choose a display or window.\n\n- Display\n- Window\n\n1. Choose a source\n2. Start recording\n\n| Source | Use it when |\n| --- | --- |\n| Display | You need the whole screen. |\n| Window | You need one application window. |\n\n::: tip Tip',
+    );
     expect(rendered).toContain('::: tip Tip\nKeep the source visible.\n:::');
     expect(rendered).toContain(
       '<DocsScreenshot path="recorder/source.webp" alt="Beam capture source picker" caption="Choose what to record." aspect-ratio="4 / 3" />',
@@ -80,6 +103,9 @@ describe('docs content renderer', () => {
     expect(rendered).toContain('title: "Beam documentation"');
     expect(rendered).toContain('name: "Beam Docs"');
     expect(rendered).toContain('tagline: "Practical Beam guides."');
+    expect(rendered).toContain('src: /favicon.webp');
+    expect(rendered).toContain('width: 192');
+    expect(rendered).toContain('height: 192');
     expect(rendered).toContain('text: "Get started"');
     expect(rendered).toContain('link: "/getting-started"');
     expect(rendered).toContain(
@@ -111,6 +137,25 @@ describe('docs content renderer', () => {
         }),
       ),
     ).toThrow('screenshot.alt');
+    expect(() =>
+      validateDocsCatalogs(
+        catalog({
+          catalogs: [
+            {
+              pages: [
+                page({
+                  sections: [
+                    section({
+                      tables: [{ headers: ['Setting', 'Value'], rows: [['Only one cell']] }],
+                    }),
+                  ],
+                }),
+              ],
+            },
+          ],
+        }),
+      ),
+    ).toThrow('must match the header count');
   });
 
   it('validates the real English catalog and renders every declared route exactly once', () => {
@@ -118,23 +163,43 @@ describe('docs content renderer', () => {
     expect(() => validateDocsCatalogs(content)).not.toThrow();
 
     const routes = createDocsRoutes('en');
-    expect(routes).toHaveLength(12);
+    expect(routes).toHaveLength(28);
     expect(routes.map((route) => route.params.page)).toEqual([
       'index',
       'getting-started',
       'updates',
       'recorder/index',
       'recorder/interface',
-      'recorder/capabilities',
+      'recorder/capabilities/index',
+      'recorder/capabilities/capture-sources',
+      'recorder/capabilities/audio-camera',
+      'recorder/capabilities/teleprompter',
+      'recorder/capabilities/live-controls',
+      'recorder/capabilities/preferences',
+      'recorder/capabilities/project-manager',
+      'recorder/capabilities/permissions-privacy',
       'editor/index',
       'editor/interface',
       'editor/capabilities',
+      'editor/capabilities/timeline',
+      'editor/capabilities/clips',
+      'editor/capabilities/canvas',
+      'editor/capabilities/zooms',
+      'editor/capabilities/cursor',
+      'editor/capabilities/captions',
+      'editor/capabilities/audio',
+      'editor/capabilities/settings',
+      'editor/showcase',
       'export',
       'platforms',
       'filesystem',
     ]);
     expect(routes.every((route) => route.content.includes('---'))).toBe(true);
     expect(routes[0]?.content).toContain('layout: home');
+    expect(routes[0]?.content).toContain('name: "Beam Docs"');
+    expect(routes[0]?.content).toContain('src: /favicon.webp');
+    expect(routes[0]?.content).toContain('width: 192');
+    expect(routes[0]?.content).toContain('height: 192');
     expect(routes[0]?.content).toContain('<div class="docs-product-grid">');
     expect(routes[0]?.content).toContain(
       '<DocsProductCard title="Recorder app" details="Choose a source, prepare audio and camera tracks, then control the recording from the compact HUD." link="/recorder/" visual="recorder" />',
@@ -150,6 +215,58 @@ describe('docs content renderer', () => {
     expect(filesystemRoute?.content).toContain('<KeyboardChip shortcut="Command+Shift+G" />');
     expect(filesystemRoute?.content).toContain('<KeyboardChip shortcut="Ctrl+L" />');
     expect(filesystemRoute?.content).not.toContain('&lt;KeyboardChip');
+  });
+
+  it('renders every English WebP screenshot and resolves its copied asset', () => {
+    const content = getDocsCatalogs('en');
+    const webpPaths = [
+      ...new Set(
+        content.catalogs
+          .flatMap((catalog) => catalog.pages)
+          .flatMap((pageContent) => collectScreenshotPaths(pageContent.sections))
+          .filter((path) => path.endsWith('.webp')),
+      ),
+    ].sort();
+    const expectedWebpPaths = [
+      'editor/audio-panel.webp',
+      'editor/canvas-panel.webp',
+      'editor/captions-panel.webp',
+      'editor/clip-empty.webp',
+      'editor/cursor-panel.webp',
+      'editor/interface-overview.webp',
+      'editor/settings-panel.webp',
+      'editor/showcase.webp',
+      'editor/webcam-properties.webp',
+      'editor/zoom-empty.webp',
+      'editor/zoom-properties.webp',
+      'getting-started/update-controls.webp',
+      'recorder/hud-overview.webp',
+      'recorder/preferences.webp',
+      'reference/export-panel.webp',
+    ].sort();
+    const routes = createDocsRoutes('en');
+
+    expect(webpPaths).toEqual(expect.arrayContaining(expectedWebpPaths));
+    for (const path of expectedWebpPaths) {
+      expect(existsSync(join(docsScreenshotsDirectory, path)), `copied screenshot ${path}`).toBe(true);
+      expect(
+        routes.some((route) => route.content.includes(`path="${path}"`)),
+        `rendered screenshot ${path}`,
+      ).toBe(true);
+    }
+
+    const updateRoute = routes.find((route) => route.params.page === 'updates');
+    expect(existsSync(join(docsScreenshotsDirectory, 'getting-started/update-controls.webp'))).toBe(true);
+    expect(updateRoute?.content).toContain(
+      '<DocsScreenshot path="getting-started/update-controls.webp" alt="Beam settings showing the update controls" caption="The update panel displays the installed version and the available update actions." aspect-ratio="16 / 9" />',
+    );
+
+    const platformsRoute = routes.find((route) => route.params.page === 'platforms');
+    expect(platformsRoute?.content).not.toContain('platforms/macos-screen-system-audio.webp');
+    expect(platformsRoute?.content).not.toContain('platforms/macos-microphone-camera.webp');
+
+    const gettingStartedRoute = routes.find((route) => route.params.page === 'getting-started');
+    expect(gettingStartedRoute?.content).not.toContain('getting-started/first-recording.webp');
   });
 
   it('normalizes index routes to the docs root for clean URLs', () => {

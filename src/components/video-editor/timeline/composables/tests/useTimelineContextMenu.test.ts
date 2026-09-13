@@ -92,6 +92,7 @@ const createMenu = (overrides: Partial<Parameters<typeof useTimelineContextMenu>
     selectedClipId: ref<string | null>(sourceClip.id),
     selectedClipIds: ref([sourceClip.id]),
     selectedZoomId: ref<string | null>(null),
+    selectedZoomIds: ref<string[]>([]),
     assetFor: (candidate: Clip) => ('assetId' in candidate && candidate.assetId === asset.id ? asset : null),
     emit: emitSpy as unknown as TimelineTracksEmits,
     t: (key: string) => ({ copyUnavailable: 'Select an item.', clipboardEmpty: 'Copy an item first.' })[key] ?? key,
@@ -167,7 +168,25 @@ describe('useTimelineContextMenu', () => {
     );
     expect(menu.emitSpy).not.toHaveBeenCalledWith('select:clip', expect.anything());
     menu.handleContextMenuSelect('delete');
-    expect(menu.emitSpy).toHaveBeenCalledWith('delete:clips', [menu.sourceClip.id]);
+    expect(menu.emitSpy).toHaveBeenCalledWith('delete:selection', {
+      clipIds: [menu.sourceClip.id],
+      zoomIds: [],
+      mode: 'lift',
+    });
+  });
+
+  it('offers ripple deletion for an isolated aligned selection', () => {
+    const menu = createMenu();
+
+    menu.openTrackContextMenu(new MouseEvent('contextmenu'), 'visual');
+
+    expect(contextMenuItem(menu, 'ripple-delete')).toEqual(expect.objectContaining({ disabled: false }));
+    menu.handleContextMenuSelect('ripple-delete');
+    expect(menu.emitSpy).toHaveBeenCalledWith('delete:selection', {
+      clipIds: [menu.sourceClip.id],
+      zoomIds: [],
+      mode: 'ripple',
+    });
   });
 
   it('deletes the complete clip selection from a timeline gap', () => {
@@ -182,7 +201,11 @@ describe('useTimelineContextMenu', () => {
     menu.openTrackContextMenu(new MouseEvent('contextmenu'), 'visual', 'empty-track');
     menu.handleContextMenuSelect('delete');
 
-    expect(menu.emitSpy).toHaveBeenCalledWith('delete:clips', [first.id, second.id]);
+    expect(menu.emitSpy).toHaveBeenCalledWith('delete:selection', {
+      clipIds: [first.id, second.id],
+      zoomIds: [],
+      mode: 'lift',
+    });
   });
 
   it('uses the valid selected list when the primary clip id is inconsistent', () => {
@@ -198,7 +221,11 @@ describe('useTimelineContextMenu', () => {
 
     expect(menu.contextMenuState.value.clip?.id).toBe(second.id);
     menu.handleContextMenuSelect('delete');
-    expect(menu.emitSpy).toHaveBeenCalledWith('delete:clips', [second.id]);
+    expect(menu.emitSpy).toHaveBeenCalledWith('delete:selection', {
+      clipIds: [second.id],
+      zoomIds: [],
+      mode: 'lift',
+    });
   });
 
   it('deletes the selected zoom when opening a gap in another track', () => {
@@ -212,7 +239,29 @@ describe('useTimelineContextMenu', () => {
 
     expect(contextMenuItem(menu, 'delete')).toEqual(expect.objectContaining({ danger: true, disabled: false }));
     menu.handleContextMenuSelect('delete');
-    expect(menu.emitSpy).toHaveBeenCalledWith('delete:zoom', 'zoom-1');
+    expect(menu.emitSpy).toHaveBeenCalledWith('delete:selection', {
+      clipIds: [],
+      zoomIds: ['zoom-1'],
+      mode: 'lift',
+    });
+  });
+
+  it('preserves a mixed clip and zoom selection from the selected zoom context menu', () => {
+    const menu = createMenu({
+      selectedClipId: ref('clip-1'),
+      selectedClipIds: ref(['clip-1']),
+      selectedZoomId: ref('zoom-1'),
+      selectedZoomIds: ref(['zoom-1']),
+    });
+
+    menu.openZoomContextMenu(new MouseEvent('contextmenu'), menu.sourceZoom);
+    menu.handleContextMenuSelect('delete');
+
+    expect(menu.emitSpy).toHaveBeenCalledWith('delete:selection', {
+      clipIds: ['clip-1'],
+      zoomIds: ['zoom-1'],
+      mode: 'lift',
+    });
   });
 
   it.each([

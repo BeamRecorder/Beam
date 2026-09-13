@@ -3,6 +3,7 @@ import type { ProjectEditorData, SessionTrackAsset, SessionTrackData } from '../
 import type { InputEventSidecar } from '../../../../api/types/capture-session';
 import { COMPOSITION_SCHEMA_VERSION, emptyComposition, type ClipComposition } from '~/media/shared/composition-types';
 import { synchronizeRecordingClips } from '../session-clips';
+import { deleteClip, splitClip } from '../engine/clip-engine';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 
 const segment = (overrides: Partial<SessionTrackAsset> = {}): SessionTrackAsset => ({
@@ -144,6 +145,7 @@ describe('synchronizeRecordingClips', () => {
     expect(cameraClip.groupId).toBe(screenClip.groupId);
     expect(cameraClip.groupId).toContain('recording:session-1:0:2000');
     expect(audioClips.map((clip) => clip.role)).toEqual(['system', 'microphone']);
+    expect(audioClips.every((clip) => clip.recordingClipId === screenClip.id)).toBe(true);
     expect(audioClips[0]!.timelineStartMs).toBe(500);
     expect(audioClips[1]!.timelineDurationMs).toBe(40);
     expect(result.assets.find((asset) => asset.kind === 'video' && asset.src === '/screen.webm')?.width).toBe(1920);
@@ -269,6 +271,18 @@ describe('synchronizeRecordingClips', () => {
     expect(result.keyboardCaptionSessions).toEqual([]);
     expect(result.clips.filter((clip) => clip.kind === 'caption')).toHaveLength(0);
     expect(result.assets[0]?.src).toBe('project-media://project-1/session-1/screen/segment.webm');
+  });
+
+  it('does not recreate a full recording segment over a persisted split fragment on reload', () => {
+    const data = editorData([track('screen', [segment({ endNs: 4_000_000_000 })])]);
+    const materialized = synchronizeRecordingClips(emptyComposition(), data);
+    const split = splitClip(materialized, 'screen', 2_000);
+    const rightFragment = split.clips.find((clip) => clip.kind === 'screen' && clip.timelineStartMs === 2_000)!;
+    const persisted = deleteClip(split, 'screen');
+
+    expect(persisted.clips).toEqual([rightFragment]);
+    expect(() => synchronizeRecordingClips(persisted, data)).not.toThrow();
+    expect(synchronizeRecordingClips(persisted, data)).toEqual(persisted);
   });
 
   it('creates keyboard captions once, keeps the current schema, and does not recreate a deleted caption', () => {
@@ -398,5 +412,25 @@ describe('synchronizeRecordingClips', () => {
     expect(keyboardCaption?.groupId).toBeUndefined();
     expect(mediaClips).toHaveLength(2);
     expect(mediaClips.every((clip) => clip.groupId === 'recording:session-1:0:2000')).toBe(true);
+  });
+});
+
+it('preserves explicit microphone unlink when synchronizing the same session again', () => {
+  const data = editorData([
+    track('screen', [segment()]),
+    track('microphone', [segment({ path: 'mic.opus', startNs: 200_000_000, endNs: 1_500_000_000 })]),
+  ]);
+  const initial = synchronizeRecordingClips(emptyComposition(), data);
+  const detached = {
+    ...initial,
+    clips: initial.clips.map((clip) =>
+      clip.kind === 'audio' ? { ...clip, recordingClipId: null, groupId: undefined } : clip,
+    ),
+  };
+  const result = synchronizeRecordingClips(detached, data);
+  expect(result.clips.find((clip) => clip.kind === 'audio')).toMatchObject({
+    recordingClipId: null,
+    timelineStartMs: 200,
+    timelineDurationMs: 1300,
   });
 });

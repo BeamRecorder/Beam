@@ -1,0 +1,470 @@
+{
+  "pages": [
+    {
+      "slug": "editor/capabilities/timeline",
+      "title": "Edición de la línea de tiempo",
+      "description": "Referencia completa de las herramientas de la línea de tiempo, las pistas, la selección, el ajuste magnético, el recorte, la división, las acciones del portapapeles y los fotogramas congelados.",
+      "lead": "La línea de tiempo combina pistas visuales, de anotaciones, de zoom y de audio en un único cabezal de reproducción. Las reglas de edición dependen de la selección, el tipo de clip, la pertenencia al proyecto y la duración disponible.",
+      "sections": [
+        {
+          "title": "Añadir contenido multimedia y capas",
+          "tables": [
+            {
+              "headers": ["Elemento", "Cómo se añade", "Duración inicial o comportamiento"],
+              "rows": [
+                [
+                  "Video",
+                  "Add → Video o arrastrar y soltar",
+                  "Duración del recurso dividida entre su velocidad de reproducción inicial."
+                ],
+                ["Image", "Add → Image o arrastrar y soltar", "5 segundos."],
+                [
+                  "Audio",
+                  "Add → Audio o arrastrar y soltar",
+                  "Duración del recurso dividida entre su velocidad de reproducción inicial."
+                ],
+                [
+                  "Text",
+                  "Add → Text o hacer clic en la pista de subtítulos de texto",
+                  "Preferencia de duración de subtítulos guardada; valor alternativo de 2 segundos y mínimo de 200 ms."
+                ],
+                ["Blur", "Add → Blur", "5 segundos."],
+                [
+                  "Zoom",
+                  "Hacer clic en un punto disponible de la pista Zoom",
+                  "Preferencia de duración de zoom guardada o valor alternativo de 1.2 segundos; se ajusta al espacio con un mínimo de 200 ms."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Controles de la línea de tiempo",
+          "tables": [
+            {
+              "headers": ["Control", "Rango o atajo", "Comportamiento"],
+              "rows": [
+                [
+                  "Split",
+                  "S",
+                  "Requiere un clip seleccionado y que el cabezal de reproducción esté estrictamente dentro de ese clip."
+                ],
+                [
+                  "Magnet",
+                  "Activado de forma predeterminada",
+                  "Ajusta al inicio y final de la línea de tiempo, los bordes de clips, los bordes de zooms y el cabezal cuando la operación lo admite. El umbral derivado de la regla nunca es inferior a 20 ms."
+                ],
+                ["Play / Pause", "Space", "Se ignora cuando el foco está en un campo editable."],
+                [
+                  "Skip Back / Forward",
+                  "Botones de la barra de herramientas",
+                  "Se desplaza al inicio o al final de la línea de tiempo."
+                ],
+                ["Playback Quality", "Full, Half, Quarter", "Cambia únicamente la resolución de la vista previa."],
+                [
+                  "Timeline zoom",
+                  "100%–3200%",
+                  "Los botones avanzan de 50 en 50 por debajo del 500%, de 100 en 100 por debajo del 1000% y después de 250 en 250; Ctrl y la rueda utilizan pasos de 25/50/100. Se guarda después de los cambios."
+                ],
+                ["Time display", "MM:SS o HH:MM:SS", "Cambia de formato cuando la duración alcanza una hora."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Selección",
+          "tables": [
+            {
+              "headers": ["Gesto", "Resultado"],
+              "rows": [
+                ["Hacer clic en un clip", "Selecciona ese clip como elemento principal."],
+                ["Hacer clic en otro clip", "Sustituye la selección de clips actual."],
+                [
+                  "Hacer clic en el encabezado de una pista",
+                  "Selecciona todos los clips de la pista; el clip más cercano al cabezal se convierte en el principal."
+                ],
+                [
+                  "Ctrl, Cmd o Shift + encabezado de pista",
+                  "Añade los clips de esa pista a la selección actual o los quita de ella."
+                ],
+                [
+                  "Hacer clic en un elemento del lienzo",
+                  "Selecciona el clip, subtítulo, desenfoque, cursor o área de pantalla compatible correspondiente."
+                ],
+                [
+                  "Hacer clic en un espacio vacío",
+                  "Borra la selección en conflicto cuando la herramienta activa lo permite."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Mover, recortar y crear capas",
+          "bullets": [
+            "Arrastra un clip para cambiar el inicio que ocupa en la línea de tiempo; los archivos secundarios vinculados a la grabación se mueven conjuntamente hasta que se desvinculan.",
+            "Arrastra el tirador inicial o final para recortar el rango activo. Un clip debe conservar al menos 40 ms y los clips que comparten un ID de grupo se recortan conjuntamente.",
+            "Arrastrar contenido multimedia más allá del final actual amplía la duración de la composición.",
+            "Arrastra los encabezados de las pistas visuales para cambiar el orden de las capas.",
+            "Mover un clip visual a otra fila visual también puede reordenar las pistas visuales.",
+            "Los clips desactivados permanecen en la línea de tiempo, pero no contribuyen a la vista previa ni a la exportación.",
+            "Un cambio en una selección múltiple solo se aplica a los clips seleccionados compatibles con la propiedad del clip principal."
+          ]
+        },
+        {
+          "title": "Portapapeles y eliminación",
+          "tables": [
+            {
+              "headers": ["Acción", "Disponibilidad", "Caso límite"],
+              "rows": [
+                [
+                  "Copy",
+                  "Un clip o zoom principal seleccionado compatible",
+                  "Copia solo el elemento principal, aunque haya varios clips seleccionados; el contenido permanece asociado a su proyecto."
+                ],
+                [
+                  "Paste",
+                  "Hay un proyecto cargado y los datos del portapapeles son compatibles",
+                  "Se rechazan los elementos copiados desde otro proyecto."
+                ],
+                [
+                  "Delete",
+                  "Elementos seleccionados compatibles de la línea de tiempo",
+                  "Elimina el elemento seleccionado de la composición."
+                ],
+                [
+                  "Unlink",
+                  "Un elemento seleccionado tiene un enlace a un archivo secundario de grabación",
+                  "Después de desvincularlo, se puede mover de forma independiente."
+                ],
+                [
+                  "Enable / Disable",
+                  "Clips compatibles",
+                  "El contenido multimedia desactivado se ignora durante la reproducción y la exportación."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Transiciones de clips y lienzo",
+          "tables": [
+            {
+              "headers": ["Propiedad", "Valores", "Predeterminado o restricción"],
+              "rows": [
+                ["Side", "Entry y Exit", "Se configuran de forma independiente."],
+                [
+                  "Visual preset",
+                  "None, Fade, Slide left, Slide right, Slide up, Slide down, Zoom in, Zoom out, Blur",
+                  "Disponible para clips visuales y transiciones del lienzo."
+                ],
+                [
+                  "Audio preset",
+                  "None o Fade",
+                  "Los demás preajustes de transición no están disponibles para el audio."
+                ],
+                [
+                  "Duration",
+                  "1–5000 ms",
+                  "500 ms; limitada por la duración del clip menos la transición del lado opuesto."
+                ],
+                ["Visual curve", "1×–5×", "3×; no se muestra para transiciones de audio."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Hold Frame",
+          "paragraphs": [
+            "Hold Frame congela el vídeo seleccionado en el cabezal de reproducción y extiende la parte fija como un elemento de la línea de tiempo."
+          ],
+          "tables": [
+            {
+              "headers": ["Requisito", "Regla"],
+              "rows": [
+                ["Tipo de clip", "Clip de pantalla, vídeo o webcam activado que contenga contenido de vídeo."],
+                ["Selección", "Debe haber un clip compatible seleccionado."],
+                ["Cabezal de reproducción", "Desde inicio + 40 ms hasta final − 40 ms, ambos incluidos."],
+                ["Segmento congelado", "1000 ms."],
+                [
+                  "Contenido multimedia vinculado",
+                  "Los clips vinculados se dividen conjuntamente y el segmento congelado puede permanecer agrupado con su archivo de audio secundario."
+                ],
+                ["Menú", "Disponible en el menú contextual del clip compatible."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Fallos del contenido multimedia importado",
+          "paragraphs": [
+            "Los archivos soltados se validan antes de importarse. Beam informa de extensiones o códecs no compatibles, contenido multimedia no válido o vacío, fallos de decodificación, fuentes no locales y fallos de importación del proyecto. Si un vídeo importado contiene audio no compatible, el vídeo se puede añadir mientras se ignora su audio."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Una importación a la vez",
+            "text": "Una nueva importación mediante arrastrar y soltar se rechaza mientras ya se esté ejecutando otra importación de contenido multimedia."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities/clips",
+      "title": "Propiedades de los clips",
+      "description": "Referencia completa de las propiedades de clips visuales, de webcam, de desenfoque, de audio, de texto y de subtítulos de teclado.",
+      "lead": "El panel Clip sigue la selección principal. Los controles compartidos solo aparecen para tipos de clip compatibles y una edición múltiple solo se propaga a los clips seleccionados compatibles.",
+      "sections": [
+        {
+          "title": "Sin selección",
+          "paragraphs": [
+            "Cuando no hay ningún clip seleccionado, el panel muestra un estado vacío instructivo. Selecciona un elemento en el lienzo o la línea de tiempo para mostrar sus propiedades."
+          ],
+          "screenshot": {
+            "path": "editor/clip-empty.webp",
+            "alt": "Panel Clip de Beam sin ningún clip seleccionado",
+            "caption": "El panel Clip permanece vacío hasta que se selecciona un elemento compatible de la línea de tiempo o el lienzo.",
+            "aspectRatio": "199 / 326"
+          }
+        },
+        {
+          "title": "Tipos de clip",
+          "tables": [
+            {
+              "headers": ["Tipo de clip", "Propiedades expuestas"],
+              "rows": [
+                [
+                  "Screen / Video",
+                  "Distribución visual, encuadre, transformación, apariencia, velocidad de reproducción, transiciones, activación, eliminación y desvinculación cuando está vinculado."
+                ],
+                [
+                  "Image",
+                  "Distribución visual, encuadre, transformación, apariencia, transiciones, activación y eliminación."
+                ],
+                ["Webcam", "Controles visuales compartidos, además de distribución dividida y React to Zoom."],
+                ["Blur", "Controles de efecto, forma, intensidad, difuminado, radio, matiz y color."],
+                [
+                  "System / Microphone / Imported audio",
+                  "Volumen del clip, transiciones Entry y Exit Fade, activación y eliminación."
+                ],
+                [
+                  "Text caption",
+                  "Contenido de texto, tipografía, alineación, color, contorno, extrusión, fondo y sombra."
+                ],
+                ["Keyboard caption", "Estilo de subtítulos más Follow Cursor."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Distribución visual compartida",
+          "tables": [
+            {
+              "headers": ["Propiedad", "Valores o rango", "Comportamiento"],
+              "rows": [
+                [
+                  "Layout",
+                  "Floating top-left, top-right, bottom-left, bottom-right; Floating center; Fullscreen",
+                  "Webcam también admite Split left, right, top y bottom."
+                ],
+                [
+                  "Framing",
+                  "Fill, Fit, Square, Portrait 9:16, Landscape 16:9, Squircle, Circle",
+                  "Controla la presentación del recorte y la máscara."
+                ],
+                ["Position X / Y", "−300% a 300%", "Mueve el elemento visual por el lienzo."],
+                ["Width", "2%–400%", "La altura conserva la proporción cuando solo cambia el ancho."],
+                ["Corner radius", "None, 8, 16, 24 px o Custom 0–200 px", "Redondea la máscara visual."],
+                ["Mirror", "Horizontal y Vertical", "Voltea el elemento visual renderizado."],
+                [
+                  "Playback speed",
+                  "0.25×–4×; preajustes 0.5×, 1×, 1.5×, 2×, 3×",
+                  "Disponible para clips de pantalla, vídeo y webcam."
+                ],
+                [
+                  "Enable / Disable",
+                  "On u Off",
+                  "Los clips desactivados permanecen en la línea de tiempo, pero no se renderizan."
+                ],
+                [
+                  "Transitions",
+                  "Abrir desde el encabezado de propiedades",
+                  "Las transiciones de entrada y salida se almacenan por clip."
+                ],
+                ["Delete", "Acción del encabezado de propiedades", "Elimina el clip seleccionado."],
+                [
+                  "Unlink",
+                  "Disponible para archivos secundarios vinculados",
+                  "Separa el clip del movimiento vinculado de la línea de tiempo."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Sombra, borde y marco",
+          "tables": [
+            {
+              "headers": ["Grupo", "Propiedad", "Valores o rango"],
+              "rows": [
+                ["Shadow", "Preset", "None, Soft, Medium, Strong, Custom"],
+                ["Shadow", "Mode", "Solid o Adaptive"],
+                ["Shadow", "Custom blur", "4–96 px"],
+                ["Shadow", "Direction", "All, Bottom, Bottom-right, Top-left"],
+                ["Border", "Enabled", "On u Off"],
+                ["Border", "Color", "Selector de color"],
+                ["Border", "Width", "1–32 px"],
+                ["Frame", "Style", "None, Safari, Windows 95"],
+                ["Frame", "Title", "Título de marco personalizado"],
+                ["Frame", "Chrome scale", "50%–200%"],
+                ["Frame", "Specific controls", "Menú, barra de desplazamiento o colores según el estilo del marco"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Recortar un clip visual",
+          "paragraphs": ["Crop es un editor directo del lienzo, no un grupo numérico del panel Clip."],
+          "steps": [
+            "Selecciona exactamente un clip de pantalla, vídeo, imagen o webcam.",
+            "Selecciona Crop en la barra de herramientas del lienzo.",
+            "Mueve o cambia el tamaño del rectángulo de recorte directamente sobre el elemento visual seleccionado.",
+            "Selecciona OK para guardar el recorte normalizado en ese clip."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Se requiere una selección individual",
+            "text": "Crop no está disponible sin una selección visual compatible y no funciona con una selección múltiple."
+          }
+        },
+        {
+          "title": "Valores visuales iniciales predeterminados",
+          "tables": [
+            {
+              "headers": ["Clip", "Transformación y encuadre", "Radio de esquina y sombra"],
+              "rows": [
+                [
+                  "Screen",
+                  "Lienzo completo",
+                  "Sin radio de esquina cuando no hay fondo; sombra Medium, desenfoque de 40 px, dirección Bottom."
+                ],
+                [
+                  "Video / Image",
+                  "Lienzo completo",
+                  "Radio de esquina pequeño; sombra Medium, desenfoque de 20 px, todas las direcciones."
+                ],
+                [
+                  "New Webcam",
+                  "x 72%, y 72%, ancho 24%, alto 24%; Squircle",
+                  "Después se aplican los valores predeterminados de apariencia de la webcam."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Clips de webcam",
+          "screenshot": {
+            "path": "editor/webcam-properties.webp",
+            "alt": "Propiedades de Beam para un clip de webcam seleccionado",
+            "caption": "Los clips de webcam añaden distribuciones divididas y comportamiento de reacción a los zooms a los controles visuales compartidos.",
+            "aspectRatio": "199 / 326"
+          },
+          "tables": [
+            {
+              "headers": ["Propiedad", "Valores", "Predeterminado o restricción"],
+              "rows": [
+                [
+                  "Split layout",
+                  "Left, Right, Top, Bottom",
+                  "Requiere un clip de pantalla vinculado. De lo contrario: “No matching screen recording is available at this point in the timeline.”"
+                ],
+                ["Split ratio", "20%–80%", "50%"],
+                ["Split padding", "0%–8%", "0%"],
+                ["React to Zoom", "On u Off", "On"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Clips de desenfoque",
+          "tables": [
+            {
+              "headers": ["Propiedad", "Valores o rango", "Comportamiento condicional"],
+              "rows": [
+                ["Light preset", "Blur", "Intensidad 30, difuminado 14, matiz 0."],
+                ["Privacy preset", "Pixelated", "Intensidad 72, difuminado 2, matiz 0."],
+                ["Strong preset", "Opaque", "Intensidad 100, difuminado 0, matiz 0, color #000000."],
+                ["Effect", "Blur, Frosted, Pixelated, Opaque", "Cambia qué controles permanecen visibles."],
+                ["Shape", "Rectangle, Square, Circle", "Circle oculta el radio de esquina."],
+                ["Strength", "0%–100%", "Oculto para Opaque."],
+                ["Edge softness", "0%–100%", "Controla el difuminado."],
+                ["Corner radius", "0%–100%", "Oculto para Circle."],
+                ["Tint intensity", "0%–100%", "Solo Frosted; entrar en Frosted utiliza como mínimo el 24 %."],
+                ["Color", "Selector de color", "Solo Frosted y Opaque."]
+              ]
+            }
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Efecto de privacidad",
+            "text": "El efecto queda integrado en el vídeo exportado. Aumenta la intensidad o utiliza Opaque para la información sensible."
+          }
+        },
+        {
+          "title": "Volumen de clips de audio",
+          "tables": [
+            {
+              "headers": ["Propiedad", "Rango", "Predeterminado"],
+              "rows": [["Volume", "0%–200%", "100%"]]
+            }
+          ],
+          "paragraphs": [
+            "Este volumen por clip se aplica a los clips de audio de sistema, micrófono o importados seleccionados. Los controles de volumen de toda la composición y de cada rol se documentan en la página Audio."
+          ]
+        },
+        {
+          "title": "Subtítulos de texto y teclado",
+          "tables": [
+            {
+              "headers": ["Propiedad", "Valores o rango", "Predeterminado o regla"],
+              "rows": [
+                [
+                  "Content",
+                  "Texto personalizado o frase generada / paso de teclado",
+                  "El texto personalizado no se propaga en una selección múltiple."
+                ],
+                [
+                  "Font",
+                  "Buscar fuentes instaladas o importar una fuente",
+                  "Se guarda con el estilo de los subtítulos."
+                ],
+                ["Style", "Bold, Italic, Strike-through", "Interruptores independientes."],
+                ["Alignment", "Left, Center, Right", "Alineación del texto de los subtítulos."],
+                ["Color", "Selector de color", "Color de relleno del texto."],
+                ["Line height", "0.8–2.0", "Valor de estilo de los subtítulos."],
+                ["Letter spacing", "−5 a 20 px", "Valor de estilo de los subtítulos."],
+                [
+                  "Font size",
+                  "12–256 px",
+                  "Preferencia manual de subtítulos con valor alternativo de creación de 42 px; valor alternativo del panel de 36 px para texto / 28 px para teclado; los subtítulos de IA usan 36 px."
+                ],
+                ["Wrap", "On u Off", "On"],
+                ["Outline", "0–30 px", "Ancho opcional del contorno."],
+                ["Outline color", "Selector de color", "Se utiliza cuando el ancho del contorno es superior a cero."],
+                ["Extrusion", "0–20 px", "Efecto de profundidad opcional."],
+                ["Backdrop blur", "0–48 px", "Desenfoca detrás del subtítulo."],
+                ["Text shadow blur", "0–50 px", "Dirección: All, Bottom, Bottom-right, Top-left."],
+                [
+                  "Text shadow color",
+                  "Selector de color",
+                  "Se aplica con el desenfoque y la dirección de sombra configurados."
+                ],
+                ["Follow Cursor", "On u Off", "Solo subtítulos de teclado; nunca se propaga en una selección múltiple."]
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

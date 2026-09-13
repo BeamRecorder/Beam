@@ -774,11 +774,66 @@ describe('useCompositionMedia', () => {
     });
     mounted.selected.value = mounted.compositionRef.value.clips.find((clip) => clip.id === 'image') as VisualClip;
     mounted.draft.value = { x: 0.4, y: 0.4, width: 0.2, height: 0.2 };
+    mounted.cropping.value = true;
     await nextTick();
     state.drawComposition(context(), { dx: 0, dy: 0, dw: 800, dh: 400 }, 'image');
     expect(drawDecoratedMedia).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ rect: { x: 320, y: 160, width: 160, height: 80 } }),
+      expect.objectContaining({
+        sourceRect: { x: 0, y: 0, width: 100, height: 80 },
+        rect: { x: 320, y: 160, width: 160, height: 80 },
+      }),
+    );
+  });
+
+  it('keeps a committed bottom crop at the source scale while reopening its full editing layout', async () => {
+    const mounted = mountComposable();
+    const image = state.images.get('image-asset')!;
+    Object.defineProperties(image, {
+      complete: { configurable: true, value: true },
+      naturalWidth: { configurable: true, value: 100 },
+      naturalHeight: { configurable: true, value: 80 },
+    });
+    const clip = mounted.compositionRef.value.clips.find((entry) => entry.id === 'image') as VisualClip;
+    clip.crop = { x: 0, y: 0.75, width: 1, height: 0.25 };
+    clip.isMirrored = false;
+    clip.isMirroredY = false;
+    mounted.selected.value = clip;
+    await nextTick();
+
+    const bounds = { dx: 0, dy: 0, dw: 800, dh: 400 };
+    const render = () => {
+      drawDecoratedMedia.mockClear();
+      state.drawComposition(context(), bounds, clip.id);
+      return drawDecoratedMedia.mock.calls.at(-1)?.[1] as {
+        rect: { x: number; y: number; width: number; height: number };
+        sourceRect?: { x: number; y: number; width: number; height: number };
+      };
+    };
+
+    expect(render()).toEqual(
+      expect.objectContaining({
+        sourceRect: { x: 0, y: 60, width: 100, height: 20 },
+        rect: { x: 80, y: 200, width: 400, height: 40 },
+      }),
+    );
+
+    mounted.cropping.value = true;
+    await nextTick();
+    expect(render()).toEqual(
+      expect.objectContaining({
+        sourceRect: { x: 0, y: 0, width: 100, height: 80 },
+        rect: { x: 80, y: 80, width: 400, height: 160 },
+      }),
+    );
+
+    mounted.cropping.value = false;
+    await nextTick();
+    expect(render()).toEqual(
+      expect.objectContaining({
+        sourceRect: { x: 0, y: 60, width: 100, height: 20 },
+        rect: { x: 80, y: 200, width: 400, height: 40 },
+      }),
     );
   });
 });

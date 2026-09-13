@@ -33,11 +33,11 @@ const positionStyle = (corner: ResizeCorner): CSSProperties | undefined => {
   const position = props.positions?.[corner];
   if (!position) return undefined;
   return {
-    left: `${position.x}px`,
-    top: `${position.y}px`,
+    left: '0px',
+    top: '0px',
     right: 'auto',
     bottom: 'auto',
-    transform: 'translate(-50%, -50%)',
+    transform: `translate3d(${position.x}px, ${position.y}px, 0) translate(-50%, -50%)`,
   };
 };
 </script>
@@ -86,7 +86,7 @@ const positionStyle = (corner: ResizeCorner): CSSProperties | undefined => {
   left: 50%;
   width: 22px;
   height: 10px;
-  transform: translateX(-50%);
+  transform: translate3d(-50%, 0, 0);
   cursor: ns-resize;
 }
 .is-top-right {
@@ -99,7 +99,7 @@ const positionStyle = (corner: ResizeCorner): CSSProperties | undefined => {
   right: -5px;
   width: 10px;
   height: 22px;
-  transform: translateY(-50%);
+  transform: translate3d(0, -50%, 0);
   cursor: ew-resize;
 }
 .is-bottom-left {
@@ -112,7 +112,7 @@ const positionStyle = (corner: ResizeCorner): CSSProperties | undefined => {
   left: 50%;
   width: 22px;
   height: 10px;
-  transform: translateX(-50%);
+  transform: translate3d(-50%, 0, 0);
   cursor: ns-resize;
 }
 .is-bottom-right {
@@ -125,7 +125,7 @@ const positionStyle = (corner: ResizeCorner): CSSProperties | undefined => {
   left: -5px;
   width: 10px;
   height: 22px;
-  transform: translateY(-50%);
+  transform: translate3d(0, -50%, 0);
   cursor: ew-resize;
 }
 </style>

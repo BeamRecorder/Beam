@@ -96,7 +96,9 @@ export function useEditorUndoRedo<T extends object = EditorStateSnapshot>(option
     if (event.defaultPrevented || event.isComposing || event.altKey || !available()) return;
     const active = document.activeElement;
     if (
-      active?.closest('input, textarea, select, [contenteditable="true"], [role="textbox"], [role="dialog"]') ||
+      active?.closest(
+        'input:not([type="range"]), textarea, select, [contenteditable="true"], [role="textbox"], [role="dialog"]',
+      ) ||
       document.querySelector('[role="dialog"][aria-modal="true"]')
     )
       return;

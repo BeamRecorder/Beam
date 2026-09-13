@@ -13,10 +13,16 @@ import type {
 } from './composables/timeline-clipboard-types';
 import type {
   TimelinePlacementRequest,
+  TimelineItemSelectionRequest,
+  TimelineSelectionIds,
+  TimelineSelectionDelete,
+  TimelineSelectionMove,
   TrackClipSelection,
   TrackZoomSelection,
 } from './composables/timeline-tracks-types';
 import type { AddVisualElementRequest } from '../composition/visual-element-types';
+import type { TimelineElementKind } from './timeline-element-types';
+import type { LiveAudioDraft } from './composables/timeline-tracks-types';
 
 const props = withDefaults(
   defineProps<{
@@ -37,6 +43,8 @@ const props = withDefaults(
     projectId?: string | null;
     recentPaste?: TimelinePasteHighlight | null;
     canvas?: OutputCanvasSettings;
+    controlsLocked?: boolean;
+    voiceoverDraft?: LiveAudioDraft | null;
   }>(),
   {
     isSnappingEnabled: true,
@@ -45,9 +53,12 @@ const props = withDefaults(
     canvas: () => ({ ...DEFAULT_OUTPUT_CANVAS, transitions: { ...EMPTY_CLIP_TRANSITIONS } }),
     selectedClipIds: () => [],
     selectedZoomIds: () => [],
+    controlsLocked: false,
+    voiceoverDraft: null,
   },
 );
 const emit = defineEmits<{
+  (event: 'add:element', kind: TimelineElementKind): void;
   (event: 'update:currentTime', value: number): void;
   (event: 'update:isPlaying', value: boolean): void;
   (event: 'update:zoomLevel', value: number): void;
@@ -55,15 +66,23 @@ const emit = defineEmits<{
   (event: 'select:zoom-track', selection: TrackZoomSelection): void;
   (event: 'select:clip', clipId: string): void;
   (event: 'select:track', selection: TrackClipSelection): void;
+  (event: 'select:item', selection: TimelineItemSelectionRequest): void;
+  (event: 'select:all'): void;
+  (event: 'lock:selection', request: import('../composition/timeline-lock-types').TimelineLockRequest): void;
+  (event: 'remove:gap', gap: import('../composition/timeline-lock-types').TimelineGap): void;
+  (event: 'select:box', selection: TimelineSelectionIds): void;
   (event: 'toggle:clip', clipId: string): void;
   (event: 'delete:clips', clipIds: string[]): void;
   (event: 'delete:zoom', zoomId: string): void;
+  (event: 'delete:selection', selection: TimelineSelectionDelete): void;
   (event: 'hold:clip', payload: { id: string; timeMs: number }): void;
   (event: 'trim:clip', payload: { id: string; edge: 'start' | 'end'; timeMs: number }): void;
   (event: 'move:clip', payload: { id: string; startMs: number }): void;
   (event: 'preview:composition', value: ClipComposition | null): void;
+  (event: 'preview:zooms', value: ZoomElement[] | null): void;
   (event: 'trim:zoom', payload: { id: string; edge: 'start' | 'end'; timeMs: number }): void;
   (event: 'move:zoom', payload: { id: string; startMs: number; endMs: number }): void;
+  (event: 'move:selection', payload: TimelineSelectionMove): void;
   (event: 'add:zoom', placement: TimelinePlacementRequest): void;
   (event: 'add:caption', placement: TimelinePlacementRequest): void;
   (event: 'add:visual-element', request: AddVisualElementRequest): void;
@@ -75,15 +94,24 @@ const emit = defineEmits<{
   (event: 'preview:canvas', value: OutputCanvasSettings | null): void;
   (event: 'update:canvas', value: OutputCanvasSettings): void;
   (event: 'open:canvas-transition', edge: 'entry' | 'exit'): void;
+  (event: 'normalize:audio', clipIds: string[]): void;
 }>();
 
+const isEditorFocused = (active: Element | null) => {
+  if (!(active instanceof HTMLElement)) return false;
+  return ['input', 'textarea', 'select'].includes(active.tagName.toLowerCase()) || active.isContentEditable;
+};
+
 const handleKeyDown = (event: KeyboardEvent) => {
-  if (event.code !== 'Space') return;
-  const active = document.activeElement;
-  if (active) {
-    const tag = active.tagName.toLowerCase();
-    if (['input', 'textarea', 'select'].includes(tag) || active.getAttribute('contenteditable') === 'true') return;
+  if (props.controlsLocked) return;
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') {
+    if (isEditorFocused(document.activeElement)) return;
+    event.preventDefault();
+    emit('select:all');
+    return;
   }
+  if (event.code !== 'Space') return;
+  if (isEditorFocused(document.activeElement)) return;
   event.preventDefault();
   emit('update:isPlaying', !props.isPlaying);
 };
@@ -92,7 +120,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
 </script>
 
 <template>
-  <div class="timeline-island-container">
+  <div class="timeline-island-container" :class="{ 'controls-locked': controlsLocked }">
     <div class="timeline-scale-content">
       <TimelineTracks
         :current-time="currentTime"
@@ -112,21 +140,31 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
         :project-id="projectId"
         :recent-paste="recentPaste"
         :canvas="canvas"
+        :voiceover-draft="voiceoverDraft"
+        @add:element="emit('add:element', $event)"
         @update:current-time="emit('update:currentTime', $event)"
         @update:zoom-level="emit('update:zoomLevel', $event)"
         @select:zoom="emit('select:zoom', $event)"
         @select:zoom-track="emit('select:zoom-track', $event)"
         @select:clip="emit('select:clip', $event)"
         @select:track="emit('select:track', $event)"
+        @select:item="emit('select:item', $event)"
+        @select:all="emit('select:all')"
+        @lock:selection="emit('lock:selection', $event)"
+        @remove:gap="emit('remove:gap', $event)"
+        @select:box="emit('select:box', $event)"
         @toggle:clip="emit('toggle:clip', $event)"
         @delete:clips="emit('delete:clips', $event)"
         @delete:zoom="emit('delete:zoom', $event)"
+        @delete:selection="emit('delete:selection', $event)"
         @hold:clip="emit('hold:clip', $event)"
         @trim:clip="emit('trim:clip', $event)"
         @move:clip="emit('move:clip', $event)"
         @preview:composition="emit('preview:composition', $event)"
+        @preview:zooms="emit('preview:zooms', $event)"
         @trim:zoom="emit('trim:zoom', $event)"
         @move:zoom="emit('move:zoom', $event)"
+        @move:selection="emit('move:selection', $event)"
         @add:zoom="emit('add:zoom', $event)"
         @add:caption="emit('add:caption', $event)"
         @add:visual-element="emit('add:visual-element', $event)"
@@ -138,6 +176,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
         @preview:canvas="emit('preview:canvas', $event)"
         @update:canvas="emit('update:canvas', $event)"
         @open:canvas-transition="emit('open:canvas-transition', $event)"
+        @normalize:audio="emit('normalize:audio', $event)"
       />
     </div>
   </div>
@@ -155,6 +194,10 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+.timeline-island-container.controls-locked {
+  pointer-events: none;
+  opacity: 0.78;
 }
 
 .timeline-scale-content {

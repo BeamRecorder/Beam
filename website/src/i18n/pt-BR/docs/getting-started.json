@@ -28,6 +28,7 @@
           ],
           "screenshot": {
             "path": "getting-started/first-recording.webp",
+            "hidden": true,
             "alt": "Gravador do Beam preparado para a primeira gravação",
             "caption": "Selecione as fontes de captura e mídia antes de começar."
           }
@@ -47,7 +48,7 @@
           "title": "Continue aprendendo",
           "bullets": [
             "Conheça a [interface do gravador](/recorder/interface).",
-            "Confira todos os [recursos do gravador](/recorder/capabilities).",
+            "Revise todos os [recursos do gravador](/recorder/capabilities/).",
             "Entenda a [interface do editor de vídeo](/editor/interface).",
             "Prepare o arquivo final com [exportação e compartilhamento](/export)."
           ]
@@ -67,6 +68,7 @@
           ],
           "screenshot": {
             "path": "getting-started/update-controls.webp",
+            "aspectRatio": "16 / 9",
             "alt": "Configurações do Beam mostrando os controles de atualização",
             "caption": "O painel de atualização exibe a versão instalada e as ações disponíveis."
           }

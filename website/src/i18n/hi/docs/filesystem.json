@@ -12,9 +12,9 @@
             "Beam ऑपरेटिंग सिस्टम के Videos फ़ोल्डर को खोजकर उसके अंदर `Beam/user` बनाता है। रीडायरेक्ट या स्थानीयकृत Videos फ़ोल्डर से सही स्थान बदल जाता है, इसलिए नीचे दिए पथ हार्ड-कोडेड स्थान नहीं बल्कि सामान्य डिफ़ॉल्ट हैं।"
           ],
           "bullets": [
-            "Windows: `%USERPROFILE%\\Videos\\Beam\\user`",
-            "macOS: `~/Movies/Beam/user`",
-            "Linux: `${XDG_VIDEOS_DIR:-~/Videos}/Beam/user`"
+            "विंडोज़: `%USERPROFILE%\\Videos\\Beam\\user`",
+            "मैकओएस: `~/Movies/Beam/user`",
+            "लिनक्स: `${XDG_VIDEOS_DIR:-~/Videos}/Beam/user`"
           ],
           "subsections": [
             {
@@ -121,9 +121,9 @@
             "डाउनलोड किए गए अपडेट ऑपरेटिंग सिस्टम के कैश में प्रोजेक्ट से अलग रखे जाते हैं। `pending/` डायरेक्टरी में इंस्टॉलर या अपडेट आर्काइव और `update-info.json` हो सकते हैं। नया संस्करण सफलतापूर्वक शुरू होने पर Beam अपडेटर कैश साफ करता है, लेकिन इंस्टॉल होने की प्रतीक्षा कर रहे अपडेट को रखता है।"
           ],
           "bullets": [
-            "Windows: `%LOCALAPPDATA%\\beam-updater\\pending`",
-            "macOS: `~/Library/Caches/beam-updater/pending`",
-            "Linux: `${XDG_CACHE_HOME:-~/.cache}/beam-updater/pending`"
+            "विंडोज़: `%LOCALAPPDATA%\\beam-updater\\pending`",
+            "मैकओएस: `~/Library/Caches/beam-updater/pending`",
+            "लिनक्स: `${XDG_CACHE_HOME:-~/.cache}/beam-updater/pending`"
           ],
           "subsections": [
             {

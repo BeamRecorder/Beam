@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld(
     stopSystemAudioPreview: async () => {
       await invoke('stop-system-audio-preview');
     },
+    getSourcePreview: (request) => ipcRenderer.invoke('capture:source-preview', request),
     beginCameraSegment: (payload) => ipcRenderer.invoke('camera:begin-segment', payload),
     writeCameraSegment: (payload) => ipcRenderer.invoke('camera:write-segment', payload),
     finalizeCameraSegment: (payload) => ipcRenderer.invoke('camera:finalize-segment', payload),
@@ -57,11 +58,13 @@ contextBridge.exposeInMainWorld(
     },
     setWindowMode: (mode) => ipcRenderer.send('window:set-mode', mode),
     showHud: () => ipcRenderer.send('window:show-hud'),
-    openEditor: (projectId) => ipcRenderer.invoke('editor:open', projectId),
+    openEditor: (projectId, options) => ipcRenderer.invoke('editor:open', projectId, options),
+    openRecorderFromEditor: () => ipcRenderer.invoke('editor:open-recorder'),
+    dismissRecorderLauncher: () => ipcRenderer.invoke('editor:dismiss-recorder'),
+    setRecorderLauncherActive: (active) => ipcRenderer.send('editor:recorder-active', Boolean(active)),
     getEditorContext: () => ipcRenderer.invoke('editor:context'),
     notifyEditorReady: () => ipcRenderer.send('editor:ready'),
     reportEditorLoadingStage: (stage) => ipcRenderer.send('editor:loading-stage', stage),
-    startRecordingFromEditor: (configuration) => ipcRenderer.send('editor:start-recording', configuration),
     setEditorTitlebarTheme: (dark) => ipcRenderer.send('editor:titlebar-theme', Boolean(dark)),
     onEditorContext: (listener) => {
       const callback = (_event, context) => listener(context);
@@ -73,10 +76,10 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.on('editor:loading-progress', callback);
       return () => ipcRenderer.removeListener('editor:loading-progress', callback);
     },
-    onStartRecordingFromEditor: (listener) => {
-      const callback = (_event, configuration) => listener(configuration);
-      ipcRenderer.on('editor:start-recording', callback);
-      return () => ipcRenderer.removeListener('editor:start-recording', callback);
+    onRecorderLauncherContext: (listener) => {
+      const callback = (_event, context) => listener(context);
+      ipcRenderer.on('editor:recorder-launcher', callback);
+      return () => ipcRenderer.removeListener('editor:recorder-launcher', callback);
     },
     setPosition: (x, y) => ipcRenderer.send('window:setPosition', x, y),
     setSize: (width, height) => ipcRenderer.send('window:setSize', width, height),
@@ -114,7 +117,7 @@ contextBridge.exposeInMainWorld(
     getScreenshot: (id) => ipcRenderer.invoke('screenshot:get', id),
     listScreenshots: () => ipcRenderer.invoke('screenshot:list'),
     saveScreenshot: (id, state, history) => ipcRenderer.invoke('screenshot:save', { id, state, history }),
-    openScreenshot: (id) => ipcRenderer.invoke('screenshot:open', id),
+    openScreenshot: (id, options) => ipcRenderer.invoke('screenshot:open', id, options),
     exportScreenshot: (id, bytes, format, copy) => ipcRenderer.invoke('screenshot:export', { id, bytes, format, copy }),
     getEditorPresets: (kind = 'video') =>
       ipcRenderer.invoke(`${kind === 'screenshot' ? 'screenshot-presets' : 'editor-presets'}:get`),
@@ -246,6 +249,10 @@ contextBridge.exposeInMainWorld(
       if (!source) return Promise.reject(new Error('Le fichier déposé ne provient pas du système de fichiers'));
       return ipcRenderer.invoke('projects:import-dropped-media', { projectId, source, kind });
     },
+    beginProjectVoiceover: (payload) => ipcRenderer.invoke('projects:voiceover-begin', payload),
+    writeProjectVoiceoverChunk: (payload) => ipcRenderer.invoke('projects:voiceover-write', payload),
+    finalizeProjectVoiceover: (payload) => ipcRenderer.invoke('projects:voiceover-finalize', payload),
+    abortProjectVoiceover: (recordingId) => ipcRenderer.invoke('projects:voiceover-abort', { recordingId }),
     listBackgroundLibrary: () => ipcRenderer.invoke('background-library:list'),
     pickBackgroundLibraryMedia: (kind = 'media') => ipcRenderer.invoke('background-library:pick-import', { kind }),
     onBackgroundLibraryChanged: (listener) => {
@@ -294,6 +301,20 @@ contextBridge.exposeInMainWorld(
       const callback = (_event, hovered) => listener(hovered);
       ipcRenderer.on('camera-overlay:hover', callback);
       return () => ipcRenderer.removeListener('camera-overlay:hover', callback);
+    },
+    controlCameraOverlayRecording: (control) => ipcRenderer.invoke('camera-overlay:recording-control', control),
+    onCameraOverlayRecordingCommand: (listener) => {
+      const callback = (_event, command) => listener(command);
+      ipcRenderer.on('camera-overlay:recording-command', callback);
+      return () => ipcRenderer.removeListener('camera-overlay:recording-command', callback);
+    },
+    completeCameraOverlayRecordingCommand: (result) => ipcRenderer.send('camera-overlay:recording-result', result),
+    notifyCameraOverlayReady: () => ipcRenderer.send('camera-overlay:renderer-ready'),
+    reportCameraRecordingFailure: (failure) => ipcRenderer.send('camera-overlay:recording-failure', failure),
+    onCameraRecordingFailure: (listener) => {
+      const callback = (_event, failure) => listener(failure);
+      ipcRenderer.on('camera-overlay:recording-failure', callback);
+      return () => ipcRenderer.removeListener('camera-overlay:recording-failure', callback);
     },
     onCameraShadow: (listener) => {
       const callback = (_event, state) => listener(state);

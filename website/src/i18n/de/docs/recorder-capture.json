@@ -1,0 +1,305 @@
+{
+  "pages": [
+    {
+      "slug": "recorder/capabilities/capture-sources",
+      "title": "Aufnahmequellen und Bereiche",
+      "description": "Referenz für Bildschirm, Fenster, Quellenauswahl und Verhalten von Zuschnittbereichen im Rekorder.",
+      "lead": "Der Aufnahmemodus bestimmt, welche Quellen und Bereichssteuerungen Beam vor Beginn einer Aufnahme anbietet.",
+      "sections": [
+        {
+          "title": "Aufnahmeeinstellungen",
+          "tables": [
+            {
+              "headers": ["Setting", "Werte", "Standard", "Verhalten und Einschränkungen"],
+              "rows": [
+                [
+                  "Modus",
+                  "Bildschirm oder Fenster",
+                  "Bildschirm",
+                  "Bildschirm records ein display; Fenster records one application Fenster."
+                ],
+                [
+                  "Bildschirm source",
+                  "Verfügbar displays",
+                  "Standard display, then first Verfügbar",
+                  "ausgewählt in der HUD outside Linux portal capture."
+                ],
+                [
+                  "Fenster source",
+                  "Verfügbar application windows",
+                  "Standard oder portal source, then first Verfügbar",
+                  "Fenster previews refresh every 5 seconds while Beam ist not recording."
+                ],
+                [
+                  "Aufnahmebereich",
+                  "Normalized x, y, Breite, und Höhe",
+                  "No region",
+                  "Bildschirm mode nur. Stored in `extras.screenRegion`."
+                ],
+                [
+                  "Region Voreinstellung",
+                  "640×480, 800×600, 1024×768, 1366×768, 1440×990, 1920×1080",
+                  "Keine",
+                  "Stored in `extras.screenRegionPreset`; ein Benutzerdefiniert rectangle can be drawn instead."
+                ],
+                [
+                  "Capture rate",
+                  "60 FPS",
+                  "60 FPS",
+                  "Fixed in der Recorder configuration; it ist not ein exposed user setting."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Benutzerdefinierten Bereich auswählen",
+          "steps": [
+            "Wähle den Bildschirmmodus und einen Bildschirm aus.",
+            "Auswählen Auswählen ein area von der Bildschirm. Beam temporarily Blendet aus der HUD und opens der always-on-top region overlay.",
+            "Draw ein rectangle oder choose ein Voreinstellung Größe.",
+            "Auswählen Use this area zu save der region, oder Cancel zu leave der existing choice unchanged.",
+            "Use Edit der Bildschirm area zu adjust ein saved region."
+          ]
+        },
+        {
+          "title": "Sonderfälle des Aufnahmebereichs",
+          "bullets": [
+            "Zurücksetzen selects der full Bildschirm; it does not Löschen ein file oder recording.",
+            "ein region that ist effectively der complete Bildschirm ist normalized back zu no crop.",
+            "Region Steuerungen sind deaktiviert in Fenster mode, while recording, while Beam ist busy, oder when display bounds sind unavailable.",
+            "Die Linux-Portalaufnahme stellt das Bereichs-Overlay von Beam nicht bereit."
+          ]
+        },
+        {
+          "title": "Quellenauswahl unter Linux",
+          "paragraphs": [
+            "auf Linux, der desktop portal displays its own picker when capture starts. der HUD does not provide der Electron source selector, und nur one portal source ist ausgewählt für der session."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Sichtbarkeit bei Vollbildaufnahmen",
+            "text": "Beam cannot hide its own windows von ein Linux full-screen capture. Region capture ist also unavailable, so arrange oder minimize Beam before confirming der portal source."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/audio-camera",
+      "title": "Audio und camera",
+      "description": "Referenz für Mikrofon, Kamera, Systemaudio, Pegelanzeigen, Sidecars und Live-Geräteschalter.",
+      "lead": "Each source ist ausgewählt independently. Verfügbarkeit, preview metering, und whether ein source can be toggled after start depend auf der source und platform.",
+      "sections": [
+        {
+          "title": "Quelleneinstellungen",
+          "tables": [
+            {
+              "headers": ["Source", "Werte", "Standard", "Capture Verhalten"],
+              "rows": [
+                [
+                  "Microphone",
+                  "ein Chromium input device oder No Audio",
+                  "No Audio",
+                  "Captured separately. Echo cancellation, noise suppression, und automatic gain Steuerung sind deaktiviert."
+                ],
+                [
+                  "Camera",
+                  "ein Chromium camera oder Camera Off",
+                  "Camera Off",
+                  "Captured as ein separate VP8 sidecar. If der camera ist reported unavailable, Beam disables it und can continue."
+                ],
+                [
+                  "System Audio",
+                  "System Audio oder Off",
+                  "Off",
+                  "Linux Verwendet native capture; other platforms use ein Chromium display-media sidecar."
+                ],
+                ["Mikrofonpegel", "Live level", "Hidden mit No Audio", "Visible when ein microphone ist ausgewählt."],
+                [
+                  "Systemaudiopegel",
+                  "Live level",
+                  "Hidden",
+                  "Native preview ist Verfügbar auf Linux before recording nur."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Steuerung während der Aufnahme",
+          "tables": [
+            {
+              "headers": ["Steuerung", "Während der Aufnahme", "Nicht verfügbar, wenn"],
+              "rows": [
+                [
+                  "Mikrofonschalter",
+                  "Turns der ausgewählt microphone auf oder off",
+                  "Countdown, startup, oder finalization"
+                ],
+                [
+                  "Kamera umschalten",
+                  "Turns der ausgewählt camera auf oder off",
+                  "Countdown, startup, oder finalization"
+                ],
+                [
+                  "Systemaudio-Schalter",
+                  "Turns capture auf oder off outside Linux",
+                  "Countdown, startup, finalization, oder any active Linux session"
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Failure Verhalten",
+          "paragraphs": [
+            "When der ausgewählt camera ist specifically reported unavailable during preparation, Beam disables it und continues without camera. Other camera oder sidecar errors can stop startup, as can failure von ein ausgewählt microphone oder system-audio source."
+          ],
+          "notice": {
+            "kind": "tip",
+            "title": "Vor dem Countdown prüfen",
+            "text": "Confirm der ausgewählt device und visible meter before starting, especially after connecting oder disconnecting USB Audio und camera hardware."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/teleprompter",
+      "title": "Teleprompter",
+      "description": "Referenz für Skriptbearbeitung, Vorschau, automatisches Scrollen, Zeilenmodus, Typografie und Tastenkürzel.",
+      "lead": "der Teleprompter can scroll continuously oder Verschieben through ein script line by line. Its document ist stored mit der recording session.",
+      "sections": [
+        {
+          "title": "Teleprompter-Einstellungen",
+          "tables": [
+            {
+              "headers": ["Setting", "Werte", "Standard", "Bereich oder persistence"],
+              "rows": [
+                ["Script", "Free text", "Empty", "Gespeichert in `session/teleprompter.json`."],
+                [
+                  "Modus",
+                  "Continuous oder Line by line",
+                  "Continuous",
+                  "Stored in preferences und der session document."
+                ],
+                [
+                  "Autoscroll",
+                  "auf oder Off",
+                  "auf",
+                  "Steuerungen automatic movement; pause und resume remain Verfügbar."
+                ],
+                ["Speed", "5–200 px/s", "42 px/s", "Schritt: 1 px/s."],
+                ["Text Größe", "16–36 px", "36 px", "Step: 1 px."],
+                ["Line spacing", "1–2.5", "1.35", "Step: 0.05."],
+                ["Alignment", "links oder Center", "links", "Stored mit teleprompter settings."],
+                [
+                  "Theme",
+                  "System, Light, oder Dark in der stored document",
+                  "System",
+                  "der current Teleprompter UI does not expose this as ein functional Steuerung."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Editor- und Lesesteuerung",
+          "tables": [
+            {
+              "headers": ["Steuerung", "Purpose"],
+              "rows": [
+                ["Edit", "Makes der script editable before recording."],
+                ["Preview", "Zeigt der script as it will be read."],
+                ["Hide", "Blendet aus der Teleprompter Fenster."],
+                [
+                  "Pausieren / Fortsetzen",
+                  "Stopps oder restarts automatic movement without changing der Autoscroll setting."
+                ],
+                ["Vorherige / Nächste", "Wechselt im Zeilenmodus zwischen den Zeilen."],
+                ["Line counter", "Zeigt der current line Position in Line by line mode."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Recording Verhalten",
+          "paragraphs": [
+            "When ein recording session starts, der Teleprompter automatically switches von der editable script zu its read-only reader. der ausgewählt mode und settings remain Verfügbar für presentation Steuerungen."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Keyboard Steuerung",
+            "text": "Teleprompter shortcuts sind configurable in Preferences → Shortcuts. der defaults sind listed auf der Preferences reference page."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities/live-controls",
+      "title": "Live-Aufnahmesteuerung",
+      "description": "Verstehe die Phasen der Aufnahmeleiste, Sichtbarkeitsmodi, Geräteschalter, Stoppen und Abbrechen.",
+      "lead": "der Recording Bar Ändert state across der session und disables Aktionen that would be unsafe while capture starts oder files finalize.",
+      "sections": [
+        {
+          "title": "Aufnahmephasen",
+          "tables": [
+            {
+              "headers": ["Phase", "Meaning"],
+              "rows": [
+                ["Idle", "Keine Aufnahme ist aktiv."],
+                ["Countdown", "Die konfigurierte Verzögerung läuft."],
+                ["Starting", "Beam ist opening und synchronizing ausgewählt sources."],
+                ["Recording", "Die Sitzung nimmt aktiv auf."],
+                ["Paused", "Die aktive Sitzung ist pausiert."],
+                ["Finalizing", "Beam ist closing Spuren und preparing der project für editing."]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Sichtbarkeitseinstellung",
+          "tables": [
+            {
+              "headers": ["Modus", "Verhalten", "Platform Standard"],
+              "rows": [
+                ["Immer sichtbar", "der bar stays visible throughout capture.", "Windows und macOS"],
+                ["Auto-fade", "der bar fades und returns auf hover.", "Not der Standard"],
+                [
+                  "Ausgeblendet, bis der Mauszeiger darüber bewegt wird.",
+                  "der bar remains hidden until der pointer reaches it.",
+                  "Linux"
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Aktion availability",
+          "tables": [
+            {
+              "headers": ["Aktion", "deaktiviert during"],
+              "rows": [
+                ["Pausieren / Fortsetzen", "Countdown, Start, Abschluss"],
+                ["Stop", "Finalizing"],
+                ["Cancel und Löschen", "Finalizing"],
+                ["Microphone / Camera / System Audio", "Countdown, Start, Abschluss"],
+                ["Linux system Audio", "der complete active session; choose it before start"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Stoppen im Vergleich zum Abbrechen",
+          "paragraphs": [
+            "Stop Behält der capture und enters Finalizing before der project opens. Cancel und Löschen abandons der active recording und Entfernt der unfinished session. These sind deliberately separate Aktionen."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Abbrechen löscht die unfertige Sitzung",
+            "text": "Use Stop when you want zu keep what has already been recorded. Use Cancel und Löschen nur when der current take should be discarded."
+          }
+        }
+      ]
+    }
+  ]
+}

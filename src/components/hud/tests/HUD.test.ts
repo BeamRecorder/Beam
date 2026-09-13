@@ -5,6 +5,8 @@ import { browserCameraMock } from './camera-recorder.mock';
 import { browserMicrophoneMock } from './microphone-recorder.mock';
 import { browserSystemAudioMock } from './system-audio-recorder.mock';
 
+const validateCameraAccessMock = vi.hoisted(() => vi.fn());
+
 vi.mock('../../../api/capture', async () => ({ capture: (await import('./capture.mock')).captureMock }));
 vi.mock('../../../api/camera-recorder', async () => {
   const camera = await import('./camera-recorder.mock');
@@ -12,6 +14,7 @@ vi.mock('../../../api/camera-recorder', async () => {
     BrowserCameraRecorder: camera.BrowserCameraRecorder,
     listBrowserCameras: camera.listBrowserCameras,
     isCameraUnavailableError: camera.isCameraUnavailableError,
+    validateCameraAccess: validateCameraAccessMock,
   };
 });
 vi.mock('../../../api/microphone-recorder', async () => {
@@ -39,7 +42,7 @@ vi.mock('../TopbarHUD.vue', () => ({
 import HUD from '../HUD.vue';
 
 const catalog = {
-  sources: [{ id: 'display:1', kind: 'display', label: 'Display', isDefault: true }],
+  sources: [{ id: 'sck:display:1', kind: 'display', label: 'Display', isDefault: true }],
   capabilities: { systemAudio: true },
 };
 const stubs = {
@@ -71,11 +74,13 @@ const emptyDisplayStream = () => ({
 });
 const originalClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
 const originalExecCommand = Object.getOwnPropertyDescriptor(document, 'execCommand');
+const nativeCapture = capture as typeof capture & { getSourcePreview: ReturnType<typeof vi.fn> };
 
 describe('HUD', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     capture.platform = 'darwin';
+    nativeCapture.getSourcePreview = vi.fn();
     getDisplayMedia.mockReset();
     getDisplayMedia.mockResolvedValue(emptyDisplayStream());
     if (!navigator.mediaDevices) {
@@ -93,7 +98,13 @@ describe('HUD', () => {
     Object.values(capture).forEach((mock) => {
       if (vi.isMockFunction(mock)) mock.mockReset();
     });
+    nativeCapture.getSourcePreview.mockImplementation(async ({ sourceId }: { sourceId: string }) => ({
+      sourceId,
+      thumbnail: `data:image/jpeg;base64,native-${sourceId}`,
+      status: 'ready',
+    }));
     Object.values(browserCameraMock).forEach((mock) => mock.mockReset());
+    validateCameraAccessMock.mockReset().mockResolvedValue(undefined);
     Object.values(browserMicrophoneMock).forEach((mock) => mock.mockReset());
     Object.values(browserSystemAudioMock).forEach((mock) => mock.mockReset());
     capture.getPreferences.mockResolvedValue({
@@ -172,7 +183,7 @@ describe('HUD', () => {
       [
         expect.objectContaining({
           screenKind: 'display',
-          screenId: 'display:1',
+          screenId: 'sck:display:1',
           microphoneId: 'microphone:chromium:device-1',
           cameraId: 'camera:chromium:device-1',
           systemAudio: false,
@@ -181,6 +192,28 @@ describe('HUD', () => {
       ],
     ]);
   });
+  it('configures the camera overlay when a camera is selected without probing access', async () => {
+    browserCameraMock.listBrowserCameras.mockResolvedValue([
+      { id: 'camera:chromium:device-1', kind: 'camera', label: 'Cam 1', isDefault: true },
+      { id: 'camera:chromium:device-2', kind: 'camera', label: 'Cam 2', isDefault: false },
+    ]);
+    const wrapper = mount(HUD, { global: { stubs } });
+    await ready();
+
+    capture.configureCameraOverlay.mockClear();
+    validateCameraAccessMock.mockClear();
+
+    const camera = wrapper
+      .findAll('[data-option-value]')
+      .find((option) => option.attributes('data-option-value') === 'camera:chromium:device-2');
+    expect(camera).toBeDefined();
+    await camera!.trigger('click');
+    await ready();
+
+    expect(capture.configureCameraOverlay).toHaveBeenCalledWith({ cameraId: 'camera:chromium:device-2' });
+    expect(validateCameraAccessMock).not.toHaveBeenCalled();
+  });
+
   it('shows actionable errors when discovery or recording fails', async () => {
     capture.discover.mockRejectedValueOnce(new Error('permission denied'));
     const wrapper = mount(HUD, { global: { stubs } });
@@ -573,6 +606,8 @@ describe('HUD', () => {
   });
 
   it('keeps Linux Portal sources selectable without Electron desktop previews', async () => {
+    capture.platform = 'linux';
+    Object.defineProperty(window, 'capture', { configurable: true, value: capture });
     capture.discover.mockResolvedValueOnce({
       sources: [
         {
@@ -607,6 +642,86 @@ describe('HUD', () => {
     expect(wrapper.emitted('start-recording')).toContainEqual([
       expect.objectContaining({ screenKind: 'window', screenId: 'portal:window' }),
     ]);
+  });
+
+  it('honors an editor launcher window context and keeps the preferred Linux Portal source', async () => {
+    capture.platform = 'linux';
+    Object.defineProperty(window, 'capture', { configurable: true, value: capture });
+    const preferredSourceId = 'portal:window:editor';
+    capture.discover.mockResolvedValueOnce({
+      sources: [
+        {
+          id: 'portal:monitor',
+          kind: 'display',
+          label: 'Choose a screen',
+          isDefault: true,
+          selectionMode: 'portal',
+        },
+        {
+          id: preferredSourceId,
+          kind: 'window',
+          label: 'Editor window',
+          selectionMode: 'portal',
+        },
+      ],
+      capabilities: { portalSelection: true },
+    });
+    capture.getSources.mockResolvedValue([]);
+
+    const wrapper = mount(HUD, {
+      props: {
+        recorderLauncherContext: {
+          requestId: 'launcher-window-1',
+          preferredKind: 'window',
+          preferredSourceId,
+        },
+      },
+      global: { stubs },
+    });
+    await ready();
+
+    expect(wrapper.get('.hud-wrapper').classes()).toContain('window');
+    expect(wrapper.find('.mode-tabs .btn.active').text()).toContain('Window');
+
+    const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording'));
+    await record?.trigger('click');
+
+    expect(wrapper.emitted('start-recording')).toContainEqual([
+      expect.objectContaining({ screenKind: 'window', screenId: preferredSourceId }),
+    ]);
+  });
+
+  it('does not fall back to the first non-Linux window when the launcher source disappeared', async () => {
+    capture.platform = 'darwin';
+    Object.defineProperty(window, 'capture', { configurable: true, value: capture });
+    capture.discover.mockResolvedValueOnce({
+      sources: [{ id: 'sck:display:1', kind: 'display', label: 'Display', isDefault: true }],
+      capabilities: {},
+    });
+    nativeCapture.getSourcePreview.mockImplementation(async ({ sourceId }: { sourceId: string }) => ({
+      sourceId,
+      thumbnail: `data:image/jpeg;base64,native-${sourceId}`,
+      status: 'ready',
+    }));
+
+    const wrapper = mount(HUD, {
+      props: {
+        recorderLauncherContext: {
+          requestId: 'launcher-window-missing',
+          preferredKind: 'window',
+          preferredSourceId: 'window:missing',
+        },
+      },
+      global: { stubs },
+    });
+    await ready();
+
+    const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording'));
+    expect(record).toBeDefined();
+    expect(record!.element).toHaveProperty('disabled', true);
+
+    await record!.trigger('click');
+    expect(wrapper.emitted('start-recording')).toBeUndefined();
   });
 
   it('switches views and delegates window controls safely', async () => {
@@ -645,8 +760,8 @@ describe('HUD', () => {
     await ready();
 
     expect(wrapper.get('.hud-wrapper').attributes('style')).toContain('height: 480px');
-    expect(capture.setSize).toHaveBeenCalledWith(392, 512);
-    expect(capture.setSize.mock.calls.map(([width]) => width)).not.toContain(352);
+    expect(capture.setSize).toHaveBeenCalledWith(352, 512);
+    expect(capture.setSize.mock.calls.map(([width]) => width)).not.toContain(392);
     expect(wrapper.find('.hud-body .interaction-access-notice').exists()).toBe(false);
     expect(wrapper.find('.hud-body [role="status"]').exists()).toBe(false);
     expect(wrapper.find('.preferences-input-access').exists()).toBe(false);
@@ -666,8 +781,8 @@ describe('HUD', () => {
     expect(wrapper.get('.recording-action-stack').classes()).toContain('has-issues');
     expect(wrapper.find('.hud-issues').exists()).toBe(true);
     expect(wrapper.get('.hud-wrapper').attributes('style')).toContain('height: 480px');
-    expect(capture.setSize.mock.calls.map(([width]) => width)).toContain(392);
-    expect(capture.setSize.mock.calls.map(([width]) => width)).not.toContain(352);
+    expect(capture.setSize.mock.calls.map(([width]) => width)).toContain(352);
+    expect(capture.setSize.mock.calls.map(([width]) => width)).not.toContain(392);
     expect(capture.setSize.mock.calls.map(([, height]) => height)).toContain(512);
     expect(capture.setSize.mock.calls.map(([, height]) => height)).not.toContain(628);
 
@@ -701,6 +816,8 @@ describe('HUD', () => {
   });
 
   it('switches to window capture, handles device choices and preference shortcuts', async () => {
+    capture.platform = 'win32';
+    Object.defineProperty(window, 'capture', { configurable: true, value: capture });
     capture.getSources.mockImplementation(async (types: string[]) =>
       types[0] === 'window'
         ? [{ id: 'window:123:0', name: 'Editor window', thumbnail: 'thumb', appIcon: null }]
@@ -766,6 +883,8 @@ describe('HUD', () => {
   });
 
   it('caches screen and window previews across tab switches with separate selections', async () => {
+    capture.platform = 'win32';
+    Object.defineProperty(window, 'capture', { configurable: true, value: capture });
     capture.discover.mockResolvedValue({
       sources: [
         { id: 'sck:display:1', kind: 'display', label: 'Display 1', isDefault: true, displayId: '1' },
@@ -853,6 +972,8 @@ describe('HUD', () => {
   });
 
   it('selects and confirms a screen region, persists it, and handles region errors', async () => {
+    capture.platform = 'win32';
+    Object.defineProperty(window, 'capture', { configurable: true, value: capture });
     capture.getPreferences.mockResolvedValue({
       schemaVersion: 3,
       theme: 'system',
@@ -1060,7 +1181,7 @@ describe('HUD', () => {
       .find((option) => option.attributes('data-option-value') === 'sck:display:456');
     expect(secondScreenOption).toBeDefined();
     expect(secondScreenOption?.find('.select-option-thumbnail').attributes('src')).toBe(
-      'data:image/png;base64,screen-2',
+      'data:image/jpeg;base64,native-sck:display:456',
     );
 
     await secondScreenOption?.trigger('click');
@@ -1073,7 +1194,76 @@ describe('HUD', () => {
     ]);
   });
 
+  it('refreshes macOS native thumbnails only while the source picker is open', async () => {
+    capture.platform = 'darwin';
+    Object.defineProperty(window, 'capture', { configurable: true, value: capture });
+    const nativeSources = [
+      { id: 'sck:display:1', kind: 'display', label: 'Display 1', isDefault: true },
+      { id: 'sck:window:42', kind: 'window', label: 'Editor — Beam', isDefault: false },
+      { id: 'sck:window:84', kind: 'window', label: 'Browser — Safari', isDefault: false },
+    ];
+    capture.discover.mockResolvedValue({ sources: nativeSources, capabilities: { systemAudio: true } });
+    nativeCapture.getSourcePreview.mockImplementation(
+      async ({ sourceId, refresh }: { sourceId: string; refresh?: boolean }) => ({
+        sourceId,
+        thumbnail: `data:image/jpeg;base64/${sourceId}-${String(refresh)}`,
+        status: 'ready',
+      }),
+    );
+
+    const wrapper = mount(HUD, { global: { stubs } });
+    await ready();
+    expect(nativeCapture.getSourcePreview.mock.calls.map(([request]) => request.sourceId)).toEqual(['sck:display:1']);
+
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Window')
+      ?.trigger('click');
+    await ready();
+    expect(nativeCapture.getSourcePreview.mock.calls.map(([request]) => request.sourceId)).toEqual([
+      'sck:display:1',
+      'sck:window:42',
+      'sck:window:84',
+    ]);
+    await wrapper.find('.select-control').trigger('click');
+    await ready();
+
+    expect(capture.discover).toHaveBeenCalledTimes(2);
+    expect(nativeCapture.getSourcePreview).toHaveBeenCalledTimes(5);
+    expect(nativeCapture.getSourcePreview.mock.calls.slice(3).map(([request]) => request)).toEqual([
+      { sourceId: 'sck:window:42', maxWidth: 300, maxHeight: 200, refresh: true },
+      { sourceId: 'sck:window:84', maxWidth: 300, maxHeight: 200, refresh: true },
+    ]);
+
+    vi.advanceTimersByTime(5000);
+    await ready();
+    expect(capture.discover).toHaveBeenCalledTimes(3);
+    expect(nativeCapture.getSourcePreview).toHaveBeenCalledTimes(7);
+
+    await wrapper.setProps({ preparingEditor: true });
+    vi.advanceTimersByTime(5000);
+    await ready();
+    expect(capture.discover).toHaveBeenCalledTimes(3);
+    expect(nativeCapture.getSourcePreview).toHaveBeenCalledTimes(7);
+
+    await wrapper.setProps({ preparingEditor: false });
+    vi.advanceTimersByTime(5000);
+    await ready();
+    expect(capture.discover).toHaveBeenCalledTimes(4);
+    expect(nativeCapture.getSourcePreview).toHaveBeenCalledTimes(9);
+
+    await wrapper.find('.select-close').trigger('click');
+    await ready();
+    vi.advanceTimersByTime(5000);
+    await ready();
+    expect(capture.discover).toHaveBeenCalledTimes(4);
+    expect(nativeCapture.getSourcePreview).toHaveBeenCalledTimes(9);
+    wrapper.unmount();
+  });
+
   it('matches a numeric Electron preview to a Windows native display without changing its id', async () => {
+    capture.platform = 'win32';
+    Object.defineProperty(window, 'capture', { configurable: true, value: capture });
     const windowsDisplayId = String.raw`\\.\DISPLAY1`;
     const nativeSourceId = `wgc:monitor:${windowsDisplayId}`;
     capture.discover.mockResolvedValue({
@@ -1119,6 +1309,8 @@ describe('HUD', () => {
   });
 
   it('clones Windows fallback bounds and restores an interactive HUD after a crop IPC error', async () => {
+    capture.platform = 'win32';
+    Object.defineProperty(window, 'capture', { configurable: true, value: capture });
     const windowsDisplayId = String.raw`\\.\DISPLAY1`;
     const nativeSourceId = `wgc:monitor:${windowsDisplayId}`;
     const cloneError = new DOMException('The object could not be cloned.', 'DataCloneError');
@@ -1201,6 +1393,8 @@ describe('HUD', () => {
   });
 
   it('handles empty window catalogs, dropdown resize transitions, and native topbar controls', async () => {
+    capture.platform = 'win32';
+    Object.defineProperty(window, 'capture', { configurable: true, value: capture });
     capture.getPreferences.mockResolvedValueOnce({
       schemaVersion: 3,
       theme: 'system',
@@ -1238,6 +1432,8 @@ describe('HUD', () => {
   });
 
   it('keeps the Electron window id for backend validation', async () => {
+    capture.platform = 'win32';
+    Object.defineProperty(window, 'capture', { configurable: true, value: capture });
     capture.discover.mockResolvedValueOnce({
       sources: [{ id: 'window:abc', kind: 'window', label: 'Editor' }],
       capabilities: { systemAudio: false },
