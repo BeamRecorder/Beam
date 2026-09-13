@@ -39,6 +39,8 @@ let previousPointerCapture: PropertyDescriptor | undefined;
 let previousDevicePixelRatio: PropertyDescriptor | undefined;
 let setPointerCapture: ReturnType<typeof vi.fn>;
 let drawingContext: CanvasRenderingContext2D;
+let drawingPreviewHasInk: boolean;
+let currentPathHasSegments: boolean;
 
 const mountOverlay = (startEditing = false, viewport = { x: 0, y: 0, width: 1_000, height: 500 }) => {
   const viewportState = ref(viewport);
@@ -54,7 +56,9 @@ const mountOverlay = (startEditing = false, viewport = { x: 0, y: 0, width: 1_00
   const update = vi.fn((id: string, patch: Partial<ShapeLayerStyle>) => {
     layers.value = layers.value.map((clip) => (clip.id === id ? { ...clip, ...patch } : clip));
   });
-  const remove = vi.fn();
+  const remove = vi.fn((id: string) => {
+    layers.value = layers.value.filter((clip) => clip.id !== id);
+  });
   let editor!: ElementEditorContext;
   const Host = defineComponent({
     setup() {
@@ -108,15 +112,29 @@ const setSurfaceBounds = (wrapper: VueWrapper, bounds = { left: 10, top: 20, wid
 beforeEach(() => {
   resetPropertyInteractions();
   vi.stubGlobal('crypto', { randomUUID: () => 'drawn-element' });
+  drawingPreviewHasInk = false;
+  currentPathHasSegments = false;
   drawingContext = {
-    beginPath: vi.fn(),
-    moveTo: vi.fn(),
-    lineTo: vi.fn(),
-    bezierCurveTo: vi.fn(),
-    stroke: vi.fn(),
+    beginPath: vi.fn(() => {
+      currentPathHasSegments = false;
+    }),
+    moveTo: vi.fn(() => {
+      currentPathHasSegments = true;
+    }),
+    lineTo: vi.fn(() => {
+      currentPathHasSegments = true;
+    }),
+    bezierCurveTo: vi.fn(() => {
+      currentPathHasSegments = true;
+    }),
+    stroke: vi.fn(() => {
+      if (currentPathHasSegments) drawingPreviewHasInk = true;
+    }),
     scale: vi.fn(),
     setTransform: vi.fn(),
-    clearRect: vi.fn(),
+    clearRect: vi.fn(() => {
+      drawingPreviewHasInk = false;
+    }),
     measureText: vi.fn((text: string) => ({ width: text.length * 12 })),
   } as unknown as CanvasRenderingContext2D;
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(drawingContext);
@@ -251,6 +269,46 @@ describe('ElementCanvasOverlay', () => {
       },
     });
     expect(insert.mock.calls[0]![0].drawing?.points).toHaveLength(4);
+  });
+
+  it('clears the temporary preview after committing and deleting a drawing without another stroke', async () => {
+    const { wrapper, editor, layers } = mountOverlay();
+    editor.add('drawing');
+    await nextTick();
+    setSurfaceBounds(wrapper);
+    const input = wrapper.get('.drawing-input').element;
+
+    dispatch(input, 'pointerdown', { button: 0, pointerId: 71, clientX: 35, clientY: 45 });
+    dispatch(input, 'pointermove', { pointerId: 71, clientX: 85, clientY: 95 });
+    expect(drawingPreviewHasInk).toBe(true);
+
+    dispatch(input, 'pointerup', { pointerId: 71, clientX: 110, clientY: 120 });
+    expect(layers.value.some((layer) => layer.family === 'drawing')).toBe(true);
+    // A real canvas keeps its current path after clearRect; clearing preview pixels must not stroke it again.
+    expect(currentPathHasSegments).toBe(true);
+    expect(drawingPreviewHasInk).toBe(false);
+
+    editor.remove();
+    expect(layers.value.some((layer) => layer.family === 'drawing')).toBe(false);
+    expect(drawingPreviewHasInk).toBe(false);
+  });
+
+  it('clears canceled drawing preview pixels even though clearRect preserves the current path', async () => {
+    const { wrapper, editor, insert } = mountOverlay();
+    editor.add('drawing');
+    await nextTick();
+    setSurfaceBounds(wrapper);
+    const input = wrapper.get('.drawing-input').element;
+
+    dispatch(input, 'pointerdown', { button: 0, pointerId: 72, clientX: 35, clientY: 45 });
+    dispatch(input, 'pointermove', { pointerId: 72, clientX: 85, clientY: 95 });
+    expect(drawingPreviewHasInk).toBe(true);
+
+    dispatch(input, 'pointercancel', { pointerId: 72 });
+
+    expect(currentPathHasSegments).toBe(true);
+    expect(drawingPreviewHasInk).toBe(false);
+    expect(insert).not.toHaveBeenCalled();
   });
 
   it('keeps a drawing interaction active through pointerup and ignores duplicate finish events', async () => {

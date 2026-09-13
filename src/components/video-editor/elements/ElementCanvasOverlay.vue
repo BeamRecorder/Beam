@@ -78,6 +78,8 @@ const paint = () => {
   if (canvas.height !== height) canvas.height = height;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, props.viewport.width, props.viewport.height);
+  // clearRect clears pixels, but keeps the previous path alive for stroke().
+  if (!points.length) return;
   const settings = editor.drawingSettings.value;
   traceFreehand(ctx, { points, ...settings }, props.viewport.width, props.viewport.height);
   ctx.strokeStyle = settings.color;

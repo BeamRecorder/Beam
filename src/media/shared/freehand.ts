@@ -1,5 +1,6 @@
 import type { Canvas2DContext } from '~/types/canvas';
 import type { DrawingPoint, DrawingSettings, DrawnElement, FreehandDrawing } from './element-types';
+import { smoothFreehandPoints } from './freehand-smoothing';
 
 export const MAX_DRAWING_POINTS = 8192;
 export const DEFAULT_DRAWING_SETTINGS: DrawingSettings = { smoothing: 65, strokeWidth: 8, color: '#ff5a1f' };
@@ -45,9 +46,9 @@ export function finishDrawing(
   };
 }
 
-/** Catmull–Rom tangents blended with straight segments. Bounds remain inside the editable rectangle. */
+/** Reconstruct a regular curve from the gesture, then trace it with cubic tangents. */
 export function traceFreehand(ctx: Canvas2DContext, drawing: FreehandDrawing, width: number, height: number) {
-  const points = drawing.points;
+  const points = smoothFreehandPoints(drawing.points, drawing.smoothing, width, height);
   if (!points.length) return;
   const first = points[0]!;
   ctx.beginPath();
@@ -57,23 +58,31 @@ export function traceFreehand(ctx: Canvas2DContext, drawing: FreehandDrawing, wi
     return;
   }
   const smooth = drawing.smoothing / 100;
-  const clamp = (v: number) => Math.min(1, Math.max(0, v));
+  if (smooth === 0) {
+    for (let i = 1; i < points.length; i++) ctx.lineTo(points[i]!.x * width, points[i]!.y * height);
+    return;
+  }
+  // Use the gesture's bounds so preview and the cropped element have identical controls.
+  const xs = points.map((p) => p.x),
+    ys = points.map((p) => p.y);
+  const minX = Math.max(0, Math.min(...xs)),
+    maxX = Math.min(1, Math.max(...xs));
+  const minY = Math.max(0, Math.min(...ys)),
+    maxY = Math.min(1, Math.max(...ys));
+  const last = points[points.length - 1]!;
+  const closed = points.length > 3 && Math.hypot(first.x - last.x, first.y - last.y) < 1e-9;
+  const control = (start: number, linear: number, tangent: number, min: number, max: number) =>
+    Math.max(min, Math.min(max, start + linear * (1 - smooth) + tangent * smooth));
   for (let i = 1; i < points.length; i++) {
     const a = points[i - 1]!,
       b = points[i]!;
-    if (smooth === 0) {
-      ctx.lineTo(b.x * width, b.y * height);
-      continue;
-    }
-    const prev = points[Math.max(0, i - 2)]!,
-      next = points[Math.min(points.length - 1, i + 1)]!;
-    const control = (start: number, linear: number, tangent: number) =>
-      clamp(start + linear * (1 - smooth) + tangent * smooth);
+    const prev = points[closed && i === 1 ? points.length - 2 : Math.max(0, i - 2)]!,
+      next = points[closed && i === points.length - 1 ? 1 : Math.min(points.length - 1, i + 1)]!;
     ctx.bezierCurveTo(
-      control(a.x, (b.x - a.x) / 3, (b.x - prev.x) / 6) * width,
-      control(a.y, (b.y - a.y) / 3, (b.y - prev.y) / 6) * height,
-      control(b.x, (a.x - b.x) / 3, -(next.x - a.x) / 6) * width,
-      control(b.y, (a.y - b.y) / 3, -(next.y - a.y) / 6) * height,
+      control(a.x, (b.x - a.x) / 3, (b.x - prev.x) / 6, minX, maxX) * width,
+      control(a.y, (b.y - a.y) / 3, (b.y - prev.y) / 6, minY, maxY) * height,
+      control(b.x, (a.x - b.x) / 3, -(next.x - a.x) / 6, minX, maxX) * width,
+      control(b.y, (a.y - b.y) / 3, -(next.y - a.y) / 6, minY, maxY) * height,
       b.x * width,
       b.y * height,
     );

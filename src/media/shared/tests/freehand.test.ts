@@ -168,6 +168,49 @@ describe('finishDrawing', () => {
 });
 
 describe('traceFreehand', () => {
+  it.each([0, 65, 100])('keeps preview and committed curves identical at %s smoothing', (smoothing) => {
+    const canvas = { width: 1_200, height: 600 };
+    const points = Array.from({ length: 81 }, (_, i) => ({
+      x: 0.2 + (0.6 * i) / 80,
+      y: 0.5 + 0.25 * Math.sin(i / 7) + 0.015 * Math.sin(i * 2),
+    }));
+    const settings = { ...DEFAULT_DRAWING_SETTINGS, smoothing };
+    const finished = finishDrawing(points, settings, canvas)!;
+    const preview = drawingContext(),
+      committed = drawingContext();
+    traceFreehand(preview as unknown as Canvas2DContext, { points, ...settings }, canvas.width, canvas.height);
+    traceFreehand(
+      committed as unknown as Canvas2DContext,
+      finished.drawing,
+      finished.transform.width * canvas.width,
+      finished.transform.height * canvas.height,
+    );
+    for (const method of ['moveTo', 'lineTo', 'bezierCurveTo'] as const) {
+      const calls = preview[method].mock.calls;
+      expect(committed[method].mock.calls).toHaveLength(calls.length);
+      calls.forEach((coordinates, i) => {
+        coordinates.forEach((value, j) => {
+          const offset = j % 2 ? finished.transform.y * canvas.height : finished.transform.x * canvas.width;
+          expect(committed[method].mock.calls[i]![j] + offset).toBeCloseTo(value, 6);
+        });
+      });
+    }
+  });
+
+  it('continues cubic tangents smoothly across a closed circle seam', () => {
+    const points = Array.from({ length: 97 }, (_, i) => ({
+      x: 0.5 + 0.3 * Math.cos((i * Math.PI) / 48),
+      y: 0.5 + 0.3 * Math.sin((i * Math.PI) / 48),
+    }));
+    const ctx = drawingContext();
+    traceFreehand(ctx as unknown as Canvas2DContext, drawing({ points, smoothing: 100 }), 600, 600);
+    const start = ctx.moveTo.mock.calls[0]!;
+    const outgoing = ctx.bezierCurveTo.mock.calls[0]!;
+    const incoming = ctx.bezierCurveTo.mock.calls.at(-1)!;
+    expect(outgoing[0] - start[0]).toBeCloseTo(incoming[4] - incoming[2], 6);
+    expect(outgoing[1] - start[1]).toBeCloseTo(incoming[5] - incoming[3], 6);
+  });
+
   it('does nothing for an empty path', () => {
     const ctx = drawingContext();
     traceFreehand(ctx as unknown as Canvas2DContext, drawing({ points: [] }), 200, 100);
