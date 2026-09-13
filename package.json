@@ -158,6 +158,8 @@
     "deb": {
       "fpm": [
         "--depends",
+        "pkexec",
+        "--depends",
         "wl-clipboard",
         "--depends",
         "xclip"
@@ -167,6 +169,8 @@
     },
     "rpm": {
       "fpm": [
+        "--depends",
+        "polkit",
         "--depends",
         "wl-clipboard",
         "--depends",

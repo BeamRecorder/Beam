@@ -23,6 +23,7 @@ function createQuickSnipStatusWindow({
   preferencesStore = null,
   setTimer = setTimeout,
   clearTimer = clearTimeout,
+  now = Date.now,
 }) {
   let window = null;
   let ready = false;
@@ -34,9 +35,13 @@ function createQuickSnipStatusWindow({
   let renderFailure = null;
   let interactive = false;
   let closeTimer = null;
+  let closeDeadline = null;
+  let closeRemaining = COMPLETED_VISIBLE_MS;
   let positionTracker = null;
   let popoverSide = 'above';
   const clearClose = () => {
+    if (closeDeadline !== null) closeRemaining = Math.max(0, closeDeadline - now());
+    closeDeadline = null;
     if (closeTimer !== null) clearTimer(closeTimer);
     closeTimer = null;
   };
@@ -45,6 +50,7 @@ function createQuickSnipStatusWindow({
     positionTracker?.dispose();
     positionTracker = null;
     clearClose();
+    closeRemaining = COMPLETED_VISIBLE_MS;
     const previous = window;
     window = null;
     current = null;
@@ -58,21 +64,39 @@ function createQuickSnipStatusWindow({
   };
   const scheduleClose = () => {
     clearClose();
-    if (presented && current?.state === 'completed' && !interactive) closeTimer = setTimer(hide, COMPLETED_VISIBLE_MS);
+    if (presented && current?.state === 'completed' && !interactive) {
+      closeRemaining = COMPLETED_VISIBLE_MS;
+      closeDeadline = now() + COMPLETED_VISIBLE_MS;
+      closeTimer = setTimer(hide, COMPLETED_VISIBLE_MS);
+    }
   };
-  const snapshot = () => (current ? { ...current, popoverSide } : null);
+  const snapshot = () =>
+    current
+      ? {
+          ...current,
+          popoverSide,
+          autoClose:
+            current.state === 'completed'
+              ? {
+                  durationMs: COMPLETED_VISIBLE_MS,
+                  deadlineMs: closeDeadline,
+                  remainingMs: closeDeadline === null ? closeRemaining : Math.max(0, closeDeadline - now()),
+                }
+              : null,
+        }
+      : null;
   const send = () => {
     if (window && !window.isDestroyed() && ready && rendererReady && current)
       window.webContents.send('quick-snip:status', snapshot());
   };
   const present = () => {
     if (!window || window.isDestroyed() || !ready || !rendererReady) return;
-    send();
     if (presentationRequested && !presented) {
       presented = true;
       window.showInactive();
       scheduleClose();
     }
+    send();
   };
   const placePill = (target, position, display) => {
     const placement = placeStatusPill({ position, workArea: display.workArea });
@@ -134,14 +158,18 @@ function createQuickSnipStatusWindow({
       environment,
       setTimer,
       clearTimer,
-      onMove: clearClose,
+      onMove: () => {
+        if (closeTimer === null) return;
+        clearClose();
+        send();
+      },
       onCommit: (bounds) => {
         let position = statusPillPosition(bounds, popoverSide);
         const display = screen.getDisplayMatching({ ...position, ...PILL_SIZE });
         if (!target.isDestroyed()) position = placePill(target, position, display);
         saveWindowPosition(preferencesStore, 'quickSnipStatusPositions', display, position);
-        send();
         scheduleClose();
+        send();
       },
     });
     target.setContentProtection(true);
@@ -192,8 +220,12 @@ function createQuickSnipStatusWindow({
       current = status;
       presentationRequested = true;
       ensure();
+      if (previousState !== status.state) {
+        clearClose();
+        closeRemaining = COMPLETED_VISIBLE_MS;
+        if (presented) scheduleClose();
+      }
       present();
-      if (presented && previousState !== status.state) scheduleClose();
     },
     show() {
       if (!window || window.isDestroyed()) return false;
@@ -206,6 +238,7 @@ function createQuickSnipStatusWindow({
       interactive = value;
       if (platform !== 'linux') window.setIgnoreMouseEvents(!value, { forward: true });
       scheduleClose();
+      send();
     },
     onRenderFailure(listener) {
       renderFailure = listener;

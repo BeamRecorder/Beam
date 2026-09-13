@@ -89,6 +89,7 @@ vi.mock('../useProjectZoom', async () => {
         zoomElements: ref([]),
         generatedSessions: ref([]),
         selectedZoomId: ref(null),
+        selectedZoomIds: ref([]),
         ensureAutomaticZooms: vi.fn(),
       };
       state.zoomState = value;

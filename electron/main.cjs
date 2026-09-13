@@ -37,6 +37,7 @@ const { createRendererSetup } = require('./lifecycle/renderer-setup.cjs');
 const { createEditorWindowManager } = require('./window/editor-window.cjs');
 const { createOnboardingWindowManager } = require('./window/onboarding-window.cjs');
 const { registerExportIpc } = require('./export/export-ipc.cjs');
+const { registerTranscriptExportIpc } = require('./captions/transcript-export-ipc.cjs');
 const { createCameraOverlayWindow } = require('./camera/overlay-window.cjs');
 const { createCountdownWindow } = require('./countdown-window.cjs');
 const { createScreenRegionOverlayWindow } = require('./screen-region-overlay.cjs');
@@ -334,6 +335,12 @@ function initializeApplication() {
         resolveAutomaticDestination: quickSnipService.exportDestination,
       });
       logStartup('Export IPC registered.');
+      registerTranscriptExportIpc({
+        ipcMain: applicationIpc,
+        dialog: require('electron').dialog,
+        BrowserWindow,
+        defaultExportDirectory: app.getPath('documents'),
+      });
       const updater = initializeApplicationUpdater({ app, BrowserWindow, autoUpdater, coordinator, applicationIpc });
       applicationIpc.handle('community:open-discord', () => shell.openExternal(DISCORD_INVITE_URL));
       applicationIpc.handle('community:open-github', () => shell.openExternal(GITHUB_REPOSITORY_URL));

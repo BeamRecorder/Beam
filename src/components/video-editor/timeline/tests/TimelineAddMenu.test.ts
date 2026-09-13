@@ -28,14 +28,24 @@ describe('TimelineAddMenu', () => {
       id: string;
       children?: Array<{ id: string }>;
     }>;
-    expect(items.map((item) => item.id)).toEqual(['media', 'composition', 'audio', 'caption']);
-    expect(items[0]?.children?.map((item) => item.id)).toEqual(['video', 'image']);
-    expect(items[1]?.children?.map((item) => item.id)).toEqual(['shape', 'blur', 'highlight', 'color']);
+    expect(items.map((item) => item.id)).toEqual(['video', 'elements', 'audio']);
+    expect(items[0]?.children).toBeUndefined();
+    expect(items[1]?.children?.map((item) => item.id)).toEqual([
+      'shape',
+      'arrow',
+      'text',
+      'drawing',
+      'highlight',
+      'blur',
+      'color',
+      'image',
+    ]);
     expect(items[2]?.children?.map((item) => item.id)).toEqual(['sound', 'voiceover']);
-    expect(items[3]?.children).toBeUndefined();
+    expect(items.flatMap((item) => item.children ?? []).filter((child) => child.id === 'text')).toHaveLength(1);
+    expect(items.some((item) => item.id === 'caption')).toBe(false);
 
     await wrapper.get('.add-trigger').trigger('click');
-    menu.vm.$emit('select', 'highlight');
-    expect(wrapper.emitted('add:element')).toEqual([['voiceover'], ['highlight']]);
+    menu.vm.$emit('select', 'drawing');
+    expect(wrapper.emitted('add:element')).toEqual([['voiceover'], ['drawing']]);
   });
 });

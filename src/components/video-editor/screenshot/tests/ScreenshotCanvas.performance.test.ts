@@ -76,18 +76,19 @@ const stateFixture = (): ScreenshotState => {
 
 const SelectionStub = defineComponent({
   name: 'CanvasLayerSelection',
-  props: { handleStyle: Object, viewportStyle: Object, muted: Boolean },
+  props: { handleStyle: Object, viewportStyle: Object, muted: Boolean, resizeCorners: Array },
   emits: ['pointer-down', 'pointer-move', 'pointer-up', 'resize-start', 'resize-move', 'resize-end'],
   template:
     '<div data-testid="layer-selection" :data-muted="String(muted)" :style="handleStyle" @pointerdown="$emit(\'pointer-down\', $event)" @pointermove="$emit(\'pointer-move\', $event)" @pointerup="$emit(\'pointer-up\', $event)" @pointercancel="$emit(\'pointer-up\', $event)" />',
 });
 
-const mountCanvas = () =>
+const mountCanvas = (state = stateFixture(), selectedId = 'shape-selected', selectedIds = [selectedId]) =>
   mount(ScreenshotCanvas, {
     props: {
       source: 'project-media://screenshot/screen-1/source.png',
-      state: stateFixture(),
-      selectedId: 'shape-selected',
+      state,
+      selectedId,
+      selectedIds,
     },
     global: {
       stubs: {
@@ -109,8 +110,8 @@ const flushOneFrame = () => {
   next[1](16);
 };
 
-const prepareCanvas = async () => {
-  const wrapper = mountCanvas();
+const prepareCanvas = async (state = stateFixture(), selectedId = 'shape-selected', selectedIds = [selectedId]) => {
+  const wrapper = mountCanvas(state, selectedId, selectedIds);
   measurement.set?.(800, 600);
   await flushPromises();
   while (animationFrames.size) flushOneFrame();
@@ -214,6 +215,55 @@ describe('ScreenshotCanvas interaction performance', () => {
     await flushPromises();
     expect(wrapper.emitted('transform')).toHaveLength(1);
     expect(dragRenderer.draw).toHaveBeenCalledOnce();
+    expect(propertyInteractionActive.value).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('previews group translation once per frame and emits its shared delta only on release', async () => {
+    const state = stateFixture();
+    const primary = state.shapes[0]!;
+    const secondary = screenshotShape('ellipse', 'shape-secondary');
+    secondary.transform = { x: 0.05, y: 0.05, width: 0.2, height: 0.2 };
+    state.shapes.push(secondary);
+    const initialPrimary = structuredClone(primary.transform);
+    const initialSecondary = structuredClone(secondary.transform);
+    const wrapper = await prepareCanvas(state, primary.id, [secondary.id, primary.id]);
+    setCanvasBounds(wrapper);
+    const secondaryOutline = wrapper
+      .findAllComponents(SelectionStub)
+      .find((selection) => selection.attributes('data-layer-id') === secondary.id);
+    if (!secondaryOutline) throw new Error('Expected the secondary selected outline.');
+    const start = pointerEvent({ clientX: 10, clientY: 10 });
+
+    secondaryOutline.vm.$emit('pointer-down', start);
+    dragRenderer.draw.mockClear();
+    const callsBeforeMoves = requestFrame.mock.calls.length;
+    secondaryOutline.vm.$emit('pointer-move', pointerEvent({ clientX: 20, clientY: 15 }));
+    secondaryOutline.vm.$emit('pointer-move', pointerEvent({ clientX: 30, clientY: 20 }));
+
+    expect(requestFrame).toHaveBeenCalledTimes(callsBeforeMoves + 1);
+    expect(animationFrames.size).toBe(1);
+    expect(wrapper.emitted('translate')).toBeUndefined();
+    expect(wrapper.emitted('transform')).toBeUndefined();
+    expect(primary.transform).toEqual(initialPrimary);
+    expect(secondary.transform).toEqual(initialSecondary);
+
+    flushOneFrame();
+    await nextTick();
+    expect(dragRenderer.draw).toHaveBeenCalledOnce();
+    expect(dragRenderer.draw.mock.calls[0]?.[1].shapes[0]?.transform.x).toBeCloseTo(0.5);
+    expect(dragRenderer.draw.mock.calls[0]?.[1].shapes[0]?.transform.y).toBeCloseTo(0.4);
+    expect(dragRenderer.draw.mock.calls[0]?.[1].shapes[1]?.transform.x).toBeCloseTo(0.25);
+    expect(dragRenderer.draw.mock.calls[0]?.[1].shapes[1]?.transform.y).toBeCloseTo(0.15);
+    expect(dragRenderer.draw.mock.calls[0]?.[5]).toBe(primary.id);
+    expect(primary.transform).toEqual(initialPrimary);
+    expect(secondary.transform).toEqual(initialSecondary);
+    expect(wrapper.emitted('translate')).toBeUndefined();
+
+    secondaryOutline.vm.$emit('pointer-up', pointerEvent({ clientX: 30, clientY: 20 }));
+
+    expect(wrapper.emitted('translate')).toEqual([[{ x: 0.2, y: 0.1 }]]);
+    expect(wrapper.emitted('transform')).toBeUndefined();
     expect(propertyInteractionActive.value).toBe(false);
     wrapper.unmount();
   });

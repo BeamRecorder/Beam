@@ -2,6 +2,7 @@ import { createPinia, setActivePinia } from 'pinia';
 import { nextTick } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PreferenceSettings } from '../../api/types/capture-api';
+import { DEFAULT_APPEARANCE } from '../../types/appearance';
 
 const preferences = (theme: PreferenceSettings['theme']): PreferenceSettings => ({
   schemaVersion: 3,
@@ -69,6 +70,20 @@ describe('theme store', () => {
     expect(document.documentElement.classList.contains('dark')).toBe(true);
   });
 
+  it('shares the single bootstrap preference snapshot with the preferences store', async () => {
+    const initial = {
+      ...preferences('dark'),
+      extras: { screenshotCompositionPosition: { x: 0.35, y: 0.8 } },
+    };
+    capture.getPreferences.mockResolvedValue(initial);
+
+    await loadStore();
+
+    const { usePreferencesStore } = await import('../preferences');
+    expect(usePreferencesStore().settings).toEqual(initial);
+    expect(capture.getPreferences).toHaveBeenCalledOnce();
+  });
+
   it('persists user choices only after hydration and changes the root class', async () => {
     const store = await loadStore();
     expect(capture.updatePreferences).not.toHaveBeenCalled();
@@ -112,6 +127,36 @@ describe('theme store', () => {
     await nextTick();
     expect(store.theme).toBe('dark');
     expect(document.documentElement.classList.contains('dark')).toBe(true);
+    const { usePreferencesStore } = await import('../preferences');
+    expect(usePreferencesStore().settings).toEqual(preferences('dark'));
+    expect(capture.updatePreferences).not.toHaveBeenCalled();
+  });
+
+  it('syncs extras-only changes before skipping unchanged appearance hydration', async () => {
+    let notify: ((value: PreferenceSettings) => void) | undefined;
+    capture.onPreferencesChanged.mockImplementation((callback: (value: PreferenceSettings) => void) => {
+      notify = callback;
+      return vi.fn();
+    });
+    const initial = {
+      ...preferences('light'),
+      appearance: DEFAULT_APPEARANCE,
+      extras: { screenshotCompositionPosition: { x: 0.25, y: 0.4 } },
+    };
+    capture.getPreferences.mockResolvedValue(initial);
+
+    const themeStore = await loadStore();
+    const updated = {
+      ...initial,
+      extras: { screenshotCompositionPosition: { x: 0.75, y: 0.9 } },
+    };
+    notify?.(updated);
+    await nextTick();
+
+    const { usePreferencesStore } = await import('../preferences');
+    expect(usePreferencesStore().settings).toEqual(updated);
+    expect(themeStore.theme).toBe('light');
+    expect(capture.getPreferences).toHaveBeenCalledOnce();
     expect(capture.updatePreferences).not.toHaveBeenCalled();
   });
 

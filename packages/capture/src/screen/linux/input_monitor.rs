@@ -1,12 +1,6 @@
 use std::{
     collections::VecDeque,
-    fs::{self, File, OpenOptions},
     io::{BufRead, BufReader},
-    os::{
-        fd::{AsRawFd, FromRawFd},
-        unix::fs::{OpenOptionsExt, PermissionsExt},
-    },
-    path::{Path, PathBuf},
     process::{Child, Command, Stdio},
     sync::{
         Arc, Mutex, OnceLock, Weak,
@@ -20,15 +14,13 @@ use crate::{
     input::{InputAccessStatus, InputAccessUnavailableReason, NativeInputEvent},
 };
 
-use super::owned_child;
+use super::{
+    input_helper_diagnostics::{HelperDiagnostics, startup_error},
+    input_helper_executable::{command_on_path, helper_launch, input_helper_path},
+    owned_child,
+};
 
-const INSTALLED_HELPER: &str = "/usr/libexec/beam-input-helper";
 pub(super) const INPUT_QUEUE_CAPACITY: usize = 4_096;
-
-pub(super) struct ElevatedHelperExecutable {
-    path: PathBuf,
-    _sealed_file: Option<File>,
-}
 
 pub(super) struct InputEventQueue {
     pub(super) events: VecDeque<NativeInputEvent>,
@@ -66,6 +58,8 @@ impl Default for BrokerShared {
 struct LinuxInputBroker {
     child: Option<Child>,
     reader: Option<JoinHandle<()>>,
+    diagnostics: Option<HelperDiagnostics>,
+    last_failure: Option<InputAccessStatus>,
     shared: Arc<BrokerShared>,
 }
 
@@ -122,7 +116,7 @@ pub fn linux_input_access_status() -> InputAccessStatus {
     if !command_on_path("pkexec") {
         return InputAccessStatus::unavailable_for(InputAccessUnavailableReason::PolkitUnavailable);
     }
-    let Ok(broker) = broker().lock() else {
+    let Ok(mut broker) = broker().lock() else {
         return InputAccessStatus::unavailable_for(
             InputAccessUnavailableReason::InputBrokerUnavailable,
         );
@@ -133,16 +127,65 @@ pub fn linux_input_access_status() -> InputAccessStatus {
             Some(broker.shared.keyboard_devices.load(Ordering::Acquire)),
         );
     }
+    if let Some(failure) = &broker.last_failure {
+        return failure.clone();
+    }
+    if broker.diagnostics.is_some() {
+        let exit = broker
+            .child
+            .as_mut()
+            .and_then(|child| child.try_wait().ok().flatten());
+        let exited = exit.is_some();
+        let detail = if exit.is_some() {
+            broker
+                .diagnostics
+                .take()
+                .map_or_else(String::new, HelperDiagnostics::finish)
+        } else {
+            broker
+                .diagnostics
+                .as_ref()
+                .map_or_else(String::new, HelperDiagnostics::snapshot)
+        };
+        let exit = exit.map_or_else(String::new, |status| format!(" ({status})"));
+        let failure = InputAccessStatus::failed(&CaptureError::Backend(format!(
+            "Input helper stopped{exit}. {detail}"
+        )));
+        if exited {
+            broker.last_failure = Some(failure.clone());
+        }
+        return failure;
+    }
     match helper_launch() {
         Ok((_, "install-stream")) => InputAccessStatus::installation_required(),
         Ok(_) => InputAccessStatus::required(),
-        Err(_) => {
-            InputAccessStatus::unavailable_for(InputAccessUnavailableReason::InputHelperUnavailable)
-        }
+        Err(error) => InputAccessStatus::failed(&error),
     }
 }
 
 pub fn request_linux_input_access() -> Result<InputAccessStatus, CaptureError> {
+    if input_helper_path().is_none() || !command_on_path("pkexec") {
+        return Ok(linux_input_access_status());
+    }
+    match try_request_linux_input_access() {
+        Ok(status) => Ok(status),
+        Err(CaptureError::Cancelled) => {
+            if let Ok(mut broker) = broker().lock() {
+                broker.last_failure = None;
+            }
+            Ok(linux_input_access_status())
+        }
+        Err(error) => {
+            let status = InputAccessStatus::failed(&error);
+            if let Ok(mut broker) = broker().lock() {
+                broker.last_failure = Some(status.clone());
+            }
+            Ok(status)
+        }
+    }
+}
+
+fn try_request_linux_input_access() -> Result<InputAccessStatus, CaptureError> {
     if !command_on_path("pkexec") {
         return Err(CaptureError::Unsupported(
             "Polkit pkexec is not available".into(),
@@ -163,32 +206,42 @@ pub fn request_linux_input_access() -> Result<InputAccessStatus, CaptureError> {
         .arg(helper_command)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .stderr(Stdio::null());
+        .stderr(Stdio::piped());
     owned_child::configure(&mut command);
     let mut child = command
         .spawn()
         .map_err(|error| CaptureError::Backend(format!("input helper failed to start: {error}")))?;
     owned_child::register(&child);
-    let Some(stdout) = child.stdout.take() else {
+    let Some(stderr) = child.stderr.take() else {
         owned_child::kill_and_wait(&mut child);
         return Err(CaptureError::Backend(
-            "input helper stdout was unavailable".into(),
+            "input helper stderr was unavailable".into(),
+        ));
+    };
+    broker.diagnostics = match HelperDiagnostics::start(stderr) {
+        Ok(diagnostics) => Some(diagnostics),
+        Err(error) => {
+            owned_child::kill_and_wait(&mut child);
+            return Err(error);
+        }
+    };
+    let Some(stdout) = child.stdout.take() else {
+        return Err(failed_startup(
+            &mut broker,
+            &mut child,
+            "Input helper stdout was unavailable.",
         ));
     };
     let mut reader = BufReader::new(stdout);
     let mut ready_line = String::new();
     match reader.read_line(&mut ready_line) {
-        Ok(0) => {
-            owned_child::kill_and_wait(&mut child);
-            return Err(CaptureError::PermissionDenied(
-                "interaction access was not authorized".into(),
-            ));
-        }
+        Ok(0) => return Err(failed_startup(&mut broker, &mut child, "")),
         Err(error) => {
-            owned_child::kill_and_wait(&mut child);
-            return Err(CaptureError::Backend(format!(
-                "input helper readiness failed: {error}"
-            )));
+            return Err(failed_startup(
+                &mut broker,
+                &mut child,
+                &format!("Input helper readiness failed: {error}"),
+            ));
         }
         Ok(_) => {}
     }
@@ -198,14 +251,18 @@ pub fn request_linux_input_access() -> Result<InputAccessStatus, CaptureError> {
     let ready: serde_json::Value = match serde_json::from_str(&ready_line) {
         Ok(ready) => ready,
         Err(error) => {
-            owned_child::kill_and_wait(&mut child);
-            return Err(error.into());
+            return Err(failed_startup(
+                &mut broker,
+                &mut child,
+                &format!("Invalid input helper readiness JSON: {error}"),
+            ));
         }
     };
     if ready.get("event").and_then(serde_json::Value::as_str) != Some("ready") {
-        owned_child::kill_and_wait(&mut child);
-        return Err(CaptureError::Backend(
-            "input helper returned an invalid readiness response".into(),
+        return Err(failed_startup(
+            &mut broker,
+            &mut child,
+            "Input helper returned an invalid readiness response.",
         ));
     }
 
@@ -258,15 +315,32 @@ pub fn request_linux_input_access() -> Result<InputAccessStatus, CaptureError> {
         Ok(reader_thread) => reader_thread,
         Err(error) => {
             broker.shared.ready.store(false, Ordering::Release);
-            owned_child::kill_and_wait(&mut child);
-            return Err(CaptureError::Backend(format!(
-                "input broker reader failed to start: {error}"
-            )));
+            return Err(failed_startup(
+                &mut broker,
+                &mut child,
+                &format!("Input broker reader failed to start: {error}"),
+            ));
         }
     };
     broker.reader = Some(reader_thread);
     broker.child = Some(child);
     Ok(linux_input_access_status_from(&broker))
+}
+
+fn failed_startup(broker: &mut LinuxInputBroker, child: &mut Child, context: &str) -> CaptureError {
+    // Reap after terminating the owned process group; EOF alone does not prove process exit.
+    owned_child::kill_and_wait(child);
+    let exit = child.try_wait().ok().flatten();
+    let stderr = broker
+        .diagnostics
+        .take()
+        .map_or_else(String::new, HelperDiagnostics::finish);
+    let detail = [context, stderr.as_str()]
+        .into_iter()
+        .filter(|part| !part.is_empty())
+        .collect::<Vec<_>>()
+        .join("\n");
+    startup_error(exit, &detail)
 }
 
 impl InputEventQueue {
@@ -316,11 +390,15 @@ pub fn shutdown_linux_input_access() {
 impl LinuxInputBroker {
     fn stop(&mut self) {
         self.shared.ready.store(false, Ordering::Release);
+        self.last_failure = None;
         if let Some(mut child) = self.child.take() {
             owned_child::kill_and_wait(&mut child);
         }
         if let Some(reader) = self.reader.take() {
             let _ = reader.join();
+        }
+        if let Some(diagnostics) = self.diagnostics.take() {
+            diagnostics.finish();
         }
         if let Ok(mut subscribers) = self.shared.subscribers.lock() {
             subscribers.clear();
@@ -339,139 +417,6 @@ fn linux_input_access_status_from(broker: &LinuxInputBroker) -> InputAccessStatu
     )
 }
 
-fn input_helper_path() -> Option<PathBuf> {
-    let installed = PathBuf::from(INSTALLED_HELPER);
-    bundled_input_helper_path().or_else(|| executable_file(&installed).then_some(installed))
-}
-
-fn bundled_input_helper_path() -> Option<PathBuf> {
-    std::env::var_os("BEAM_INPUT_HELPER_PATH")
-        .map(PathBuf::from)
-        .filter(|path| executable_file(path))
-}
-
-fn helper_launch() -> Result<(ElevatedHelperExecutable, &'static str), CaptureError> {
-    let installed = PathBuf::from(INSTALLED_HELPER);
-    if let Some(bundled) = bundled_input_helper_path()
-        && bundled != installed
-        && (!executable_file(&installed) || helper_version(&bundled) != helper_version(&installed))
-    {
-        // AppImage resources live on a user-mounted FUSE filesystem that the
-        // privileged pkexec child cannot traverse. Copy it into an immutable,
-        // sealed memory file that remains open until pkexec starts the helper.
-        return Ok((
-            ElevatedHelperExecutable::from_bundled(&bundled)?,
-            "install-stream",
-        ));
-    }
-    executable_file(&installed)
-        .then_some((ElevatedHelperExecutable::installed(installed), "stream"))
-        .ok_or_else(|| CaptureError::Unsupported("Beam input helper is not installed".into()))
-}
-
-impl ElevatedHelperExecutable {
-    fn installed(path: PathBuf) -> Self {
-        Self {
-            path,
-            _sealed_file: None,
-        }
-    }
-
-    pub(super) fn from_bundled(source: &Path) -> Result<Self, CaptureError> {
-        let mut input = OpenOptions::new()
-            .read(true)
-            .custom_flags(libc::O_NOFOLLOW)
-            .open(source)
-            .map_err(|error| CaptureError::storage(source, error))?;
-        if !input
-            .metadata()
-            .map_err(|error| CaptureError::storage(source, error))?
-            .is_file()
-        {
-            return Err(CaptureError::InvalidConfiguration(format!(
-                "input helper is not a regular file: {}",
-                source.display()
-            )));
-        }
-
-        // SAFETY: the C string is static and valid; memfd_create returns a new
-        // owned descriptor or -1 without aliasing any Rust-managed resource.
-        let descriptor = unsafe {
-            libc::memfd_create(
-                c"beam-input-helper".as_ptr(),
-                libc::MFD_CLOEXEC | libc::MFD_ALLOW_SEALING,
-            )
-        };
-        if descriptor < 0 {
-            return Err(CaptureError::Backend(format!(
-                "input helper memory file could not be created: {}",
-                std::io::Error::last_os_error()
-            )));
-        }
-        // SAFETY: descriptor was freshly returned by memfd_create and ownership
-        // is transferred exactly once to File, which closes it on every exit.
-        let mut sealed_file = unsafe { File::from_raw_fd(descriptor) };
-        std::io::copy(&mut input, &mut sealed_file)
-            .and_then(|_| sealed_file.sync_all())
-            .map_err(|error| CaptureError::storage(source, error))?;
-        // SAFETY: fchmod only mutates the mode of this owned descriptor.
-        if unsafe { libc::fchmod(sealed_file.as_raw_fd(), 0o500) } != 0 {
-            return Err(CaptureError::Backend(format!(
-                "input helper memory permissions could not be set: {}",
-                std::io::Error::last_os_error()
-            )));
-        }
-        let seals =
-            libc::F_SEAL_SEAL | libc::F_SEAL_SHRINK | libc::F_SEAL_GROW | libc::F_SEAL_WRITE;
-        // SAFETY: fcntl applies immutable seals to this owned memfd descriptor.
-        if unsafe { libc::fcntl(sealed_file.as_raw_fd(), libc::F_ADD_SEALS, seals) } != 0 {
-            return Err(CaptureError::Backend(format!(
-                "input helper memory file could not be sealed: {}",
-                std::io::Error::last_os_error()
-            )));
-        }
-        let path = PathBuf::from(format!(
-            "/proc/{}/fd/{}",
-            std::process::id(),
-            sealed_file.as_raw_fd()
-        ));
-        Ok(Self {
-            path,
-            _sealed_file: Some(sealed_file),
-        })
-    }
-
-    pub(super) fn path(&self) -> &Path {
-        &self.path
-    }
-}
-
-fn helper_version(path: &Path) -> Option<(String, u64)> {
-    let mut command = Command::new(path);
-    command.arg("version").stdin(Stdio::null());
-    owned_child::configure(&mut command);
-    let output = command.output().ok()?;
-    if !output.status.success() {
-        return None;
-    }
-    parse_helper_version(&output.stdout)
-}
-
-pub(super) fn parse_helper_version(output: &[u8]) -> Option<(String, u64)> {
-    let value = serde_json::from_slice::<serde_json::Value>(output).ok()?;
-    Some((
-        value.get("version")?.as_str()?.to_owned(),
-        value.get("policyVersion")?.as_u64()?,
-    ))
-}
-
-fn executable_file(path: &Path) -> bool {
-    fs::metadata(path)
-        .is_ok_and(|metadata| metadata.is_file() && metadata.permissions().mode() & 0o111 != 0)
-}
-
-fn command_on_path(command: &str) -> bool {
-    std::env::var_os("PATH").is_some_and(|value| {
-        std::env::split_paths(&value).any(|directory| executable_file(&directory.join(command)))
-    })
-}
+#[cfg(test)]
+#[path = "input_monitor_startup_tests.rs"]
+mod startup_tests;

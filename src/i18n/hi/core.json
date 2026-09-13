@@ -294,7 +294,11 @@
     "modelDownloadFailed": "मॉडल डाउनलोड नहीं हो सका।",
     "systemAudio": "सिस्टम ऑडियो",
     "microphone": "माइक्रोफ़ोन",
-    "cancel": "रद्द करें"
+    "cancel": "रद्द करें",
+    "exportTranscript": "ट्रांसक्रिप्ट निर्यात करें (JSON)",
+    "transcriptDescription": "खंडों और शब्दों के मिलीसेकंड टाइमस्टैम्प के साथ टेक्स्ट उपशीर्षक निर्यात करें।",
+    "transcriptSaved": "ट्रांसक्रिप्ट निर्यात हो गई।",
+    "transcriptExportFailed": "ट्रांसक्रिप्ट निर्यात नहीं हो सकी।"
   },
   "ClipPropertiesPanel": {
     "noClipSelected": "कोई क्लिप चयनित नहीं है",
@@ -439,6 +443,7 @@
     "includeAudioDesc": "चालू ऑडियो ट्रैक को निर्यात किए गए वीडियो में जोड़ता है।"
   },
   "HUD": {
+    "inputAccessFailed": "इंटरैक्शन ऐक्सेस का अनुरोध नहीं किया जा सका।",
     "title": "Beam",
     "openProject": "प्रोजेक्ट खोलें",
     "preferences": "प्राथमिकताएँ",

@@ -294,7 +294,11 @@
     "modelDownloadFailed": "Не удалось загрузить модель.",
     "systemAudio": "Системный звук",
     "microphone": "Микрофон",
-    "cancel": "Отмена"
+    "cancel": "Отмена",
+    "exportTranscript": "Экспортировать расшифровку (JSON)",
+    "transcriptDescription": "Экспорт текстовых субтитров с временными метками сегментов и слов в миллисекундах.",
+    "transcriptSaved": "Расшифровка экспортирована.",
+    "transcriptExportFailed": "Не удалось экспортировать расшифровку."
   },
   "ClipPropertiesPanel": {
     "noClipSelected": "Клип не выбран",
@@ -439,6 +443,7 @@
     "includeAudioDesc": "Добавляет включённые аудиодорожки в экспортируемое видео."
   },
   "HUD": {
+    "inputAccessFailed": "Не удалось запросить доступ к взаимодействиям.",
     "title": "Beam",
     "openProject": "Открыть проект",
     "preferences": "Настройки",

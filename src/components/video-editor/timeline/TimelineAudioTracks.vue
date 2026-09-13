@@ -72,6 +72,8 @@ const lanes = computed(() => {
         :defer-waveform-draw="isWheelZooming || isMoving"
         :selected="selectedClipIdSet.has(clip.id)"
         :waveform-bars="audioWaveforms[clip.id]?.bars"
+        :waveform-bands="audioWaveforms[clip.id]?.bands"
+        :waveform-source-duration-seconds="audioWaveforms[clip.id]?.sourceDurationSeconds"
         :waveform-left-percent="audioWaveforms[clip.id]?.leftPercent"
         :waveform-width-percent="audioWaveforms[clip.id]?.widthPercent"
         :waveform-loading-segments="audioWaveforms[clip.id]?.loadingSegments"

@@ -976,6 +976,7 @@ describe('PropertiesPanel', () => {
       selected.value = null;
     });
     const editor: ElementEditorContext = {
+      canInteract: computed(() => true),
       layers: computed(() => (selected.value ? [selected.value] : [])),
       selected: computed(() => selected.value),
       editing: ref(null),
@@ -998,14 +999,28 @@ describe('PropertiesPanel', () => {
       stubs: { ...global.stubs, ShapeLayerPropertiesPanel: true },
     };
     const element = mount(PropertiesPanel, {
-      props: { ...baseProps, activeTab: 'elements' },
+      props: {
+        ...baseProps,
+        activeTab: 'elements',
+        selectedClip: {
+          id: layer.id,
+          kind: 'shape',
+          name: layer.name,
+          timelineStartMs: 0,
+          timelineDurationMs: 1_000,
+          enabled: true,
+        },
+        selectedClipIds: [layer.id],
+        composition: { ...composition, clips: [layer] },
+      },
       global: elementGlobal,
     });
     const elementDelete = element.get('.properties-footer').get('button');
     expect(elementDelete.text()).toContain('Canvas element');
     await elementDelete.trigger('click');
-    expect(remove).toHaveBeenCalledOnce();
-    expect(element.find('.properties-footer').exists()).toBe(false);
+    expect(element.emitted('delete-clip')).toHaveLength(1);
+    expect(remove).not.toHaveBeenCalled();
+    expect(element.find('.properties-footer').exists()).toBe(true);
     element.unmount();
 
     const canvas = mount(PropertiesPanel, {

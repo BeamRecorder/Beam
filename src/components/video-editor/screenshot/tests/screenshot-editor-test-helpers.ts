@@ -81,10 +81,11 @@ export function createScreenshotEditorTestHarness(
       source: String,
       state: Object,
       selectedId: String,
+      selectedIds: { type: Array as PropType<string[]>, default: () => [] },
       cropping: Boolean,
       cursorPacks: Array,
     },
-    emits: ['select', 'transform', 'error', 'ready', 'crop', 'cropDone'],
+    emits: ['select', 'transform', 'translate', 'error', 'ready', 'crop', 'cropDone'],
     setup() {
       onCanvasEditor(useElementEditor());
     },
@@ -95,6 +96,7 @@ export function createScreenshotEditorTestHarness(
     props: {
       layers: { type: Array as PropType<ScreenshotLayer[]>, required: true },
       selectedId: String,
+      selectedIds: { type: Array as PropType<string[]>, default: () => [] },
       source: String,
       disabled: Boolean,
     },

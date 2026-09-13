@@ -148,8 +148,8 @@ fn manifest_schema_is_versioned_and_roundtrips() {
 }
 
 #[test]
-fn legacy_zoom_elements_default_to_enabled() {
-    let zoom: ZoomElement = serde_json::from_value(serde_json::json!({
+fn legacy_zoom_elements_keep_renderer_owned_enabled_missing() {
+    let input = serde_json::json!({
         "id": "zoom-1",
         "sessionId": "session-1",
         "startMs": 100,
@@ -157,14 +157,41 @@ fn legacy_zoom_elements_default_to_enabled() {
         "focus": { "cx": 0.5, "cy": 0.5 },
         "depth": 2,
         "mode": "auto"
-    }))
-    .expect("deserialize legacy zoom element");
+    });
+    let zoom: ZoomElement =
+        serde_json::from_value(input.clone()).expect("deserialize legacy zoom element");
 
-    assert!(zoom.enabled);
+    assert!(zoom.extra.get("enabled").is_none());
     assert_eq!(
-        serde_json::to_value(zoom).expect("serialize migrated zoom")["enabled"],
-        true
+        serde_json::to_value(zoom).expect("serialize legacy zoom"),
+        input
     );
+}
+
+#[test]
+fn zoom_elements_roundtrip_renderer_owned_and_future_fields() {
+    for enabled in [true, false] {
+        let input = serde_json::json!({
+            "id": "zoom-1",
+            "sessionId": "session-1",
+            "startMs": 100,
+            "endMs": 500,
+            "focus": { "cx": 0.5, "cy": 0.5 },
+            "depth": 2,
+            "mode": "auto",
+            "enabled": enabled,
+            "futureRendererField": { "curve": "ease-out", "strength": 0.7 }
+        });
+        let zoom: ZoomElement =
+            serde_json::from_value(input.clone()).expect("deserialize zoom renderer fields");
+
+        assert_eq!(zoom.extra.get("enabled"), Some(&serde_json::json!(enabled)));
+        assert_eq!(
+            zoom.extra.get("futureRendererField"),
+            Some(&serde_json::json!({ "curve": "ease-out", "strength": 0.7 }))
+        );
+        assert_eq!(serde_json::to_value(zoom).expect("serialize zoom"), input);
+    }
 }
 
 #[test]

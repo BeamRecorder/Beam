@@ -304,7 +304,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 <div
                   v-if="hoverVisualPlacements[`visual:${track.id}`]"
                   class="visual-add-indicator preview-ghost"
-                  :class="[`kind-${visualKindFor(track)}`, { 'kind-blur': visualKindFor(track) === 'highlight' }]"
+                  :class="`kind-${visualKindFor(track)}`"
                   :style="
                     percentageStyle(
                       hoverVisualPlacements[`visual:${track.id}`]!.startMs,
@@ -327,6 +327,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                   v-for="clip in track.clips"
                   :key="clip.id"
                   :clip="displayedClip(clip)"
+                  :canvas="canvas"
                   :asset="assetFor(clip)"
                   :duration="layoutDurationMs / 1000"
                   :timeline-width-px="rulerLayoutWidth"
@@ -481,5 +482,6 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
   </div>
 </template>
 <style scoped src="./timeline-tracks.css"></style>
+<style scoped src="./timeline-highlight.css"></style>
 <style scoped src="./timeline-zoom-badges.css"></style>
 <style src="./timeline-paste-feedback.css"></style>

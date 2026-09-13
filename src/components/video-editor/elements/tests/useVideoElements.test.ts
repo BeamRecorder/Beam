@@ -1,9 +1,22 @@
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent, nextTick, ref, shallowRef } from 'vue';
-import type { ClipComposition, ShapeClip } from '~/media/shared/composition-types';
+import type {
+  AudioClip,
+  BlurClip,
+  CaptionClip,
+  Clip,
+  ClipComposition,
+  ColorClip,
+  MediaAsset,
+  ShapeClip,
+  VisualClip,
+} from '~/media/shared/composition-types';
 import { createElementText } from '~/media/shared/element-text';
 import type { DrawnElement } from '~/media/shared/element-types';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { DEFAULT_COLOR_FILL } from '~/media/shared/color-fill-types';
+import { normalizeColorLayerStyle } from '~/media/shared/color-layer-style';
 import { normalizeShapeLayerStyle } from '~/media/shared/shape-layer-style';
 import { createComposition } from '../../composition/engine/clip-engine';
 import type { ElementEditorContext } from '../element-editor-types';
@@ -34,6 +47,121 @@ const makeShapeClip = (id: string, order: number, overrides: Partial<ShapeClip> 
 
 const makeComposition = () =>
   createComposition([], [makeShapeClip('background-element', 0), makeShapeClip('existing-element', 1)]);
+
+const makeClipBase = (id: string) => ({
+  id,
+  trackId: id,
+  name: id,
+  timelineStartMs: 0,
+  timelineDurationMs: 1_000,
+  sourceInMs: 0,
+  sourceDurationMs: 1_000,
+  playbackRate: 1,
+  transitions: { entry: null, exit: null },
+  enabled: true,
+  order: 0,
+});
+
+const makeImageClip = (id: string): VisualClip => ({
+  ...makeClipBase(id),
+  kind: 'image',
+  assetId: 'image-asset',
+  transform: { x: 0.1, y: 0.1, width: 0.8, height: 0.8 },
+  appearance: createDefaultClipAppearance('image'),
+  isMirrored: false,
+  isMirroredY: false,
+});
+
+const makeColorClip = (id: string): ColorClip => ({
+  ...makeClipBase(id),
+  kind: 'color',
+  assetId: '',
+  transform: { x: 0.1, y: 0.1, width: 0.8, height: 0.8 },
+  fill: DEFAULT_COLOR_FILL,
+  ...normalizeColorLayerStyle(undefined),
+});
+
+const makeBlurClip = (id: string): BlurClip => ({
+  ...makeClipBase(id),
+  kind: 'blur',
+  assetId: '',
+  transform: { x: 0.1, y: 0.1, width: 0.8, height: 0.8 },
+  shape: 'rectangle',
+  mode: 'blur',
+  strength: 60,
+  feather: 0,
+  tintOpacity: 0,
+  color: '#000000',
+});
+
+const makeCaptionClip = (id: string, options: { customText?: string; isAiGenerated?: boolean } = {}): CaptionClip => ({
+  ...makeClipBase(id),
+  kind: 'caption',
+  caption: {
+    type: 'text',
+    sentences: [],
+    style: {
+      ...createDefaultCaptionStyle(),
+      ...(options.customText === undefined ? {} : { customText: options.customText }),
+    },
+  },
+  ...(options.isAiGenerated === undefined ? {} : { isAiGenerated: options.isAiGenerated }),
+});
+
+const makeKeyboardCaptionClip = (id: string): CaptionClip => ({
+  ...makeClipBase(id),
+  kind: 'caption',
+  caption: {
+    type: 'keyboard',
+    steps: [{ offsetMs: 0, modifiers: [], key: 'A' }],
+    followCursor: false,
+    recordedPlatform: 'macos',
+    sourceSessionId: 'session',
+    style: { ...createDefaultCaptionStyle(), customText: '' },
+  },
+});
+
+const makeVideoClip = (id: string): VisualClip => ({
+  ...makeClipBase(id),
+  kind: 'video',
+  assetId: 'video-asset',
+  transform: { x: 0, y: 0, width: 1, height: 1 },
+  appearance: createDefaultClipAppearance('video'),
+  isMirrored: false,
+  isMirroredY: false,
+});
+
+const makeAudioClip = (id: string): AudioClip => ({
+  ...makeClipBase(id),
+  kind: 'audio',
+  assetId: 'audio-asset',
+  role: 'system',
+  volume: 100,
+});
+
+const makeAsset = (id: string, kind: MediaAsset['kind']): MediaAsset => ({
+  id,
+  kind,
+  name: id,
+  fileName: null,
+  durationMs: 1_000,
+  width: kind === 'audio' ? null : 1_920,
+  height: kind === 'audio' ? null : 1_080,
+  src: `project-media:${id}`,
+  origin: 'project',
+});
+
+const makeCompositionWith = (clip: Clip): ClipComposition => {
+  const asset =
+    clip.kind === 'image'
+      ? makeAsset('image-asset', 'image')
+      : clip.kind === 'video'
+        ? makeAsset('video-asset', 'video')
+        : clip.kind === 'audio'
+          ? makeAsset('audio-asset', 'audio')
+          : null;
+  return createComposition(asset ? [asset] : [], [clip]);
+};
 
 interface HarnessOptions {
   composition?: ClipComposition;
@@ -79,6 +207,91 @@ afterEach(() => {
 });
 
 describe('useVideoElements', () => {
+  it.each([
+    ['shape', makeShapeClip('selected-shape', 0)],
+    ['image', makeImageClip('selected-image')],
+    ['color', makeColorClip('selected-color')],
+    ['blur', makeBlurClip('selected-blur')],
+    ['manual text caption', makeCaptionClip('manual-caption', { customText: '' })],
+  ] satisfies Array<[string, Clip]>)('routes a selected %s from Clip to Elements synchronously', (_name, clip) => {
+    const state = mountVideoElements({
+      composition: makeCompositionWith(clip),
+      selectedId: clip.id,
+      activeTab: 'clip',
+    });
+
+    expect(state.activeTab.value).toBe('elements');
+  });
+
+  it('routes a newly selected shape from Clip to Elements synchronously', () => {
+    const shape = makeShapeClip('selected-shape', 0);
+    const state = mountVideoElements({ composition: makeCompositionWith(shape), activeTab: 'clip' });
+
+    state.selectedId.value = shape.id;
+
+    expect(state.activeTab.value).toBe('elements');
+  });
+
+  it('returns to Elements when the Clip tab is chosen while the same shape remains selected', () => {
+    const shape = makeShapeClip('selected-shape', 0);
+    const state = mountVideoElements({
+      composition: makeCompositionWith(shape),
+      selectedId: shape.id,
+      activeTab: 'elements',
+    });
+    state.editor.add('drawing');
+    expect(state.editor.drawingMode.value).toBe(true);
+
+    state.activeTab.value = 'clip';
+
+    expect(state.activeTab.value).toBe('elements');
+    expect(state.editor.drawingMode.value).toBe(true);
+  });
+
+  it.each([
+    ['video', makeVideoClip('selected-video')],
+    ['audio', makeAudioClip('selected-audio')],
+    ['generated text caption', makeCaptionClip('generated-caption', { isAiGenerated: true })],
+    ['keyboard caption with custom text', makeKeyboardCaptionClip('keyboard-caption')],
+  ] satisfies Array<[string, Clip]>)('keeps the Clip tab for a selected %s', (_name, clip) => {
+    const state = mountVideoElements({
+      composition: makeCompositionWith(clip),
+      activeTab: 'clip',
+    });
+
+    state.selectedId.value = clip.id;
+
+    expect(state.activeTab.value).toBe('clip');
+  });
+
+  it('routes a generated caption to Elements when the same clip becomes manual text', () => {
+    const generated = makeCaptionClip('selected-caption', { isAiGenerated: true });
+    const state = mountVideoElements({
+      composition: makeCompositionWith(generated),
+      selectedId: generated.id,
+      activeTab: 'clip',
+    });
+
+    expect(state.activeTab.value).toBe('clip');
+
+    state.composition.value = makeCompositionWith(makeCaptionClip(generated.id, { customText: 'Edited caption' }));
+
+    expect(state.selectedId.value).toBe(generated.id);
+    expect(state.activeTab.value).toBe('elements');
+  });
+
+  it('preserves another properties tab when an element is selected', () => {
+    const shape = makeShapeClip('selected-shape', 0);
+    const state = mountVideoElements({
+      composition: makeCompositionWith(shape),
+      activeTab: 'canvas',
+    });
+
+    state.selectedId.value = shape.id;
+
+    expect(state.activeTab.value).toBe('canvas');
+  });
+
   it('inserts new text through addClip at the playhead and places it in the foreground', () => {
     const state = mountVideoElements();
 

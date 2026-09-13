@@ -19,6 +19,7 @@ import { compositionPlaybackSignature } from './composition-playback-signature';
 import { useToastStore } from '~/ui/toast/toastStore';
 import { normalizeEditorPreferenceDefaults } from './editor-defaults';
 import { useEditorPresets } from './useEditorPresets';
+import type { TimelineElementKind } from '../timeline/timeline-element-types';
 
 export function useVideoEditor(options: {
   project: Ref<CaptureProject | null | undefined>;
@@ -97,7 +98,17 @@ export function useVideoEditor(options: {
     selectedZoom: zoomState.selectedZoom,
   });
   const editorPresets = useEditorPresets(editorDefaults);
-  useVideoElements({
+  const elements = useVideoElements({
+    addBlur: async () => {
+      await compositionState.addElement('blur').catch((error) => {
+        toastStore.error(String(error));
+      });
+    },
+    addColor: async () => {
+      await compositionState.addElement('color').catch((error) => {
+        toastStore.error(String(error));
+      });
+    },
     addHighlight: () =>
       compositionState.addElement('highlight').catch((error) => {
         toastStore.error(String(error));
@@ -114,6 +125,7 @@ export function useVideoEditor(options: {
     select: compositionState.selectClip,
     clearZoom: () => {
       zoomState.selectedZoomId.value = null;
+      zoomState.selectedZoomIds.value = [];
     },
   });
 
@@ -251,7 +263,21 @@ export function useVideoEditor(options: {
     initialPlaybackSettled,
     cursor,
     cursorMotion,
-    compositionState,
+    compositionState: {
+      ...compositionState,
+      addElement: async (kind: Exclude<TimelineElementKind, 'voiceover'>) => {
+        if (kind === 'shape' || kind === 'arrow' || kind === 'text' || kind === 'drawing') {
+          if (player.isPlaying.value) await player.setPlaying(false);
+          compositionState.selectClips([]);
+          zoomState.selectedZoomId.value = null;
+          zoomState.selectedZoomIds.value = [];
+          activeTab.value = 'elements';
+          elements.add(kind);
+          return;
+        }
+        return compositionState.addElement(kind);
+      },
+    },
     editorState,
     zoomState,
     exportRequest,

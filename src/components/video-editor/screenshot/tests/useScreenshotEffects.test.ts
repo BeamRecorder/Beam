@@ -99,6 +99,37 @@ describe('useScreenshotEffects', () => {
     expect(HIGHLIGHT_DEFAULTS.transform.x).toBe(0.3);
   });
 
+  it('adds an independent blur with the default blur settings and selects its composition entry', () => {
+    vi.stubGlobal('crypto', { randomUUID: () => 'blur-1' });
+    const state = ref<ScreenshotState | null>(makeState());
+    const mounted = mountEffects(state);
+
+    mounted.effects.add('blur');
+
+    const added = state.value!.effects![0]!;
+    expect(added).toMatchObject({
+      id: 'blur-1',
+      trackId: 'blur-1',
+      kind: 'blur',
+      mode: 'blur',
+      shape: 'rectangle',
+      strength: 60,
+      feather: 0,
+      cornerRadius: 0,
+      tintOpacity: 0,
+      color: '#000000',
+      name: 'TimelineTracks.blur',
+      enabled: true,
+      transform: { x: 0.35, y: 0.35, width: 0.3, height: 0.3 },
+      transitions: { entry: null, exit: null },
+    });
+    expect(state.value!.composition?.map(({ id }) => id)).toContain(added.id);
+    expect(state.value!.composition?.find(({ id }) => id === added.id)).toEqual(defaultLayerCompositing(added.id));
+    expect(mounted.select).toHaveBeenCalledWith(added.id);
+    expect(mounted.selectedId.value).toBe(added.id);
+    expect(mounted.effects.selected.value).toBe(added);
+  });
+
   it('applies updates to the selected effect only while interaction is allowed', () => {
     const selected = {
       id: 'selected',
@@ -128,7 +159,7 @@ describe('useScreenshotEffects', () => {
   it('does nothing when state is absent or interaction is blocked by busy or locked state', () => {
     const missingState = ref<ScreenshotState | null>(null);
     const missing = mountEffects(missingState);
-    missing.effects.add();
+    missing.effects.add('blur');
     missing.effects.update({ strength: 90 });
     expect(missing.select).not.toHaveBeenCalled();
     expect(missing.canInteract).not.toHaveBeenCalled();
@@ -136,7 +167,7 @@ describe('useScreenshotEffects', () => {
     const busyState = ref<ScreenshotState | null>(makeState());
     const busyGuard = vi.fn(() => false);
     const busy = mountEffects(busyState, busyGuard);
-    busy.effects.add();
+    busy.effects.add('blur');
     expect(busyState.value?.effects).toBeUndefined();
     expect(busyState.value?.composition).toBeUndefined();
     expect(busy.select).not.toHaveBeenCalled();
@@ -159,8 +190,10 @@ describe('useScreenshotEffects', () => {
     const lockGuard = vi.fn(() => !lockedState.value!.composition!.find(({ id }) => id === lockedId.value)?.locked);
     const locked = mountEffects(lockedState, lockGuard, lockedId);
 
+    locked.effects.add('blur');
     locked.effects.update({ strength: 90 });
     expect(lockedEffect.strength).toBe(65);
-    expect(lockGuard).toHaveBeenCalledOnce();
+    expect(lockedState.value!.effects).toEqual([lockedEffect]);
+    expect(lockGuard).toHaveBeenCalledTimes(2);
   });
 });

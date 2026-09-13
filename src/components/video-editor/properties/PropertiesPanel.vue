@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import PropertiesDeleteAction from './PropertiesDeleteAction.vue';
-import { useElementEditor } from '../elements/useElementEditor';
+import { isVideoElementClip } from '../elements/video-elements';
 import ElementsPanel from '../elements/ElementsPanel.vue';
 import RecordingSidecarLinks from './clip/RecordingSidecarLinks.vue';
 import PropertiesLockGuard from './PropertiesLockGuard.vue';
@@ -32,7 +32,6 @@ import { usePropertiesPanelNavigation } from './usePropertiesPanelNavigation';
 import { selectedClipNames } from './clip-selection-names';
 import { clipTransitionPanelTitle, propertiesPanelTitle } from './properties-panel-title';
 import { applyCaptionSelectionUpdate } from '../composition/caption-selection';
-const elements = useElementEditor();
 const { t } = useTranslate('PropertiesPanel');
 const { t: tClip } = useTranslate('ClipPropertiesPanel');
 const { t: tCaption } = useTranslate('CaptionClipPanel');
@@ -68,6 +67,9 @@ const selectedDomainClip = computed(() => {
   const id = props.selectedClip?.id ?? props.selectedCaptionClip?.id;
   return id ? (props.composition.clips.find((clip) => clip.id === id) ?? null) : null;
 });
+const showsSelectedProperties = computed(
+  () => props.activeTab === 'clip' || (props.activeTab === 'elements' && isVideoElementClip(selectedDomainClip.value)),
+);
 const selectedDomainClips = computed(() => {
   const ids = new Set(
     props.selectedClipIds?.length
@@ -166,11 +168,11 @@ const isCurrentClipEnabled = computed(() => {
 });
 const isDeletable = computed(() => {
   if (props.activeTab === 'zoom' && props.selectedZoom) return true;
-  if (props.activeTab === 'clip' && (props.selectedClip || props.selectedCaptionClip)) return true;
+  if (showsSelectedProperties.value && (props.selectedClip || props.selectedCaptionClip)) return true;
   return false;
 });
 const isToggleable = computed(() => {
-  return props.activeTab === 'clip' && Boolean(props.selectedClip || props.selectedCaptionClip);
+  return showsSelectedProperties.value && Boolean(props.selectedClip || props.selectedCaptionClip);
 });
 const deleteTooltip = computed(() => {
   if (props.activeTab === 'zoom') {
@@ -197,19 +199,13 @@ const deleteTooltip = computed(() => {
 });
 
 const handleToggleClipEnabled = () => emit('update:clip-enabled', !isCurrentClipEnabled.value);
-const canDeleteElement = computed(() => props.activeTab === 'elements' && Boolean(elements?.selected.value));
-const deleteName = computed(() =>
-  canDeleteElement.value
-    ? (elements?.selected.value?.name ?? panelTitle.value)
-    : selectionNames.value.join(', ') ||
-      props.selectedClip?.name ||
-      props.selectedCaptionClip?.name ||
-      panelTitle.value,
+const deleteName = computed(
+  () =>
+    selectionNames.value.join(', ') || props.selectedClip?.name || props.selectedCaptionClip?.name || panelTitle.value,
 );
 const handleDelete = () => {
   if (editLocked.value) return;
-  if (canDeleteElement.value) elements?.remove();
-  else if (props.activeTab === 'zoom') emit('delete:zoom');
+  if (props.activeTab === 'zoom') emit('delete:zoom');
   else emit('delete-clip');
 };
 defineExpose({ openCanvasTransitions: openTransitionEdge });
@@ -225,7 +221,7 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
         :transition-name="panelTransitionName"
         :transitions-open="transitionsOpen"
         :show-clip-actions="isDeletable && !editLocked"
-        :clip-transitionable="activeTab === 'clip'"
+        :clip-transitionable="showsSelectedProperties"
         :show-canvas-transition="activeTab === 'canvas'"
         :enabled="isCurrentClipEnabled"
         :toggleable="isToggleable"
@@ -246,13 +242,14 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
         :name="lockedSelectionName"
         @unlock="emit('unlock:selection')"
       >
-        <ScrollShadow class="panel-scroll-shadow" :class="{ 'has-footer': isDeletable || canDeleteElement }">
+        <ScrollShadow class="panel-scroll-shadow" :class="{ 'has-footer': isDeletable }">
           <Transition :name="panelTransitionName" mode="out-in">
             <div
               :key="transitionsOpen ? 'transitions' : 'properties'"
               class="panel-body"
               :inert="editLocked && activeTab !== 'canvas' && activeTab !== 'settings' && activeTab !== 'cursor'"
             >
+              <ElementsPanel v-if="activeTab === 'elements' && !transitionsOpen" :disabled="editLocked" />
               <TransitionSettingsPanel
                 v-if="transitionsOpen && activeTab === 'canvas'"
                 :transitions="canvas.transitions ?? EMPTY_CLIP_TRANSITIONS"
@@ -301,12 +298,11 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
                   )
                 "
               />
-              <ElementsPanel v-else-if="activeTab === 'elements'" :disabled="editLocked" />
               <GeneratedLayerPropertiesPanel
                 v-else-if="
-                  activeTab === 'clip' &&
+                  showsSelectedProperties &&
                   selectedDomainClip &&
-                  (isColorClip(selectedDomainClip) || isShapeClip(selectedDomainClip))
+                  (isColorClip(selectedDomainClip) || (activeTab === 'clip' && isShapeClip(selectedDomainClip)))
                 "
                 :composition="composition"
                 :clip="selectedDomainClip"
@@ -314,7 +310,7 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
                 @corner-radius-interaction="emit('corner-radius-interaction', $event)"
               />
               <BlurPropertiesPanel
-                v-else-if="activeTab === 'clip' && normalizedSelectedClip?.kind === 'blur'"
+                v-else-if="showsSelectedProperties && normalizedSelectedClip?.kind === 'blur'"
                 :clip="{
                   mode: normalizedSelectedClip.blurMode ?? 'blur',
                   shape: normalizedSelectedClip.blurShape ?? 'rectangle',
@@ -336,14 +332,16 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
                 @delete="emit('delete-clip')"
               />
               <CaptionClipPanel
-                v-else-if="activeTab === 'clip' && selectedCaptionClip"
+                v-else-if="showsSelectedProperties && selectedCaptionClip"
                 :clip="selectedCaptionClip"
                 @update="emit('update:caption', $event)"
                 @preview="previewCaption"
                 @delete="emit('delete-clip')"
               />
               <ClipPropertiesPanel
-                v-else-if="activeTab === 'clip'"
+                v-else-if="
+                  showsSelectedProperties && (activeTab === 'clip' || normalizedSelectedClip?.kind === 'image')
+                "
                 :selected-clip="normalizedSelectedClip"
                 @update:playback-rate="emit('update:clip-rate', $event)"
                 @update:is-mirrored="emit('update:clip-is-mirrored', $event)"
@@ -456,7 +454,7 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
           </Transition>
         </ScrollShadow>
       </PropertiesLockGuard>
-      <footer v-if="isDeletable || canDeleteElement" class="properties-footer">
+      <footer v-if="isDeletable" class="properties-footer">
         <PropertiesDeleteAction :name="deleteName" :disabled="editLocked" @delete="handleDelete" />
       </footer>
     </div>

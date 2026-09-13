@@ -294,7 +294,11 @@
     "modelDownloadFailed": "模型下载失败。",
     "systemAudio": "系统音频",
     "microphone": "麦克风",
-    "cancel": "取消"
+    "cancel": "取消",
+    "exportTranscript": "导出转录文本（JSON）",
+    "transcriptDescription": "导出文字字幕，包含以毫秒为单位的片段和单词时间戳。",
+    "transcriptSaved": "转录文本已导出。",
+    "transcriptExportFailed": "无法导出转录文本。"
   },
   "ClipPropertiesPanel": {
     "noClipSelected": "未选择片段",
@@ -439,6 +443,7 @@
     "includeAudioDesc": "将已启用的音轨添加到导出的视频中。"
   },
   "HUD": {
+    "inputAccessFailed": "无法请求交互访问权限。",
     "title": "Beam",
     "openProject": "打开项目",
     "preferences": "偏好设置",

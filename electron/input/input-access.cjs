@@ -10,6 +10,7 @@ class InputAccess {
     this.applicationRoot = applicationRoot;
     this.nativeRequest = nativeRequest;
     this.platform = platform;
+    this.lastError = null;
   }
 
   helperForCapture() {
@@ -22,15 +23,24 @@ class InputAccess {
   async status() {
     if (this.platform === 'linux' && !this.helperForCapture()) return unavailableStatus('input-helper-unavailable');
     try {
-      return await this.nativeRequest('input-access-status');
-    } catch {
-      return unavailableStatus();
+      const status = await this.nativeRequest('input-access-status');
+      if (status.state === 'available') this.lastError = null;
+      return status.error || !this.lastError ? status : { ...status, error: this.lastError };
+    } catch (error) {
+      this.lastError = accessError(error);
+      return { ...unavailableStatus(), error: this.lastError };
     }
   }
 
   async request() {
+    this.lastError = null;
     if (this.platform === 'linux' && !this.helperForCapture()) return unavailableStatus('input-helper-unavailable');
-    return this.nativeRequest('request-input-access');
+    try {
+      return await this.nativeRequest('request-input-access');
+    } catch (error) {
+      this.lastError = accessError(error);
+      throw error;
+    }
   }
 
   installedHelper() {
@@ -48,6 +58,13 @@ class InputAccess {
         ];
     return candidates.filter(Boolean).find(executable) || null;
   }
+}
+
+function accessError(error) {
+  return {
+    code: typeof error?.code === 'string' ? error.code.slice(0, 4096) : 'input-broker-unavailable',
+    message: (error instanceof Error ? error.message : 'Input access failed.').slice(0, 4096),
+  };
 }
 
 function unavailableStatus(unavailableReason = 'input-broker-unavailable') {

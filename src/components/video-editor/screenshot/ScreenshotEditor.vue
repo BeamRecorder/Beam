@@ -38,7 +38,6 @@ import {
   reorderScreenshotLayer,
   updateScreenshotLayer,
   setScreenshotLayerVisible,
-  removeScreenshotLayer,
 } from './screenshot-layers';
 
 const props = defineProps<{ id: string }>();
@@ -54,6 +53,7 @@ const {
   presets,
   backgroundLibrary,
   selectedId,
+  selectedIds,
   panel,
   cropping,
   advanced,
@@ -71,6 +71,8 @@ const {
   select,
   selectPanel,
   transform,
+  translate,
+  removeLayer,
   appearance,
   exportImage,
   back,
@@ -96,11 +98,6 @@ const panelTitle = computed(() =>
     : (tabs.value.find((tab) => tab.id === panel.value)?.label ?? sidebarText('settings')),
 );
 const composition = computed(() => (state.value ? screenshotLayers(state.value) : []));
-const removeLayer = (id: string) => {
-  if (!state.value) return;
-  removeScreenshotLayer(state.value, id);
-  if (selectedId.value === id) select(null);
-};
 </script>
 
 <template>
@@ -255,12 +252,15 @@ const removeLayer = (id: string) => {
         :source="document.source"
         :state="state"
         :selected-id="selectedId"
+        :selected-ids="selectedIds"
+        :disabled="busy"
         :cropping="cropping"
         :handles-muted="handlesMuted"
         :cursor-packs="cursors.packs.value"
         :cursor-packs-ready="cursors.ready.value"
         @select="select"
         @transform="transform"
+        @translate="translate"
         @crop="image && (image.crop = $event)"
         @crop-done="cropping = false"
         @error="
@@ -275,6 +275,7 @@ const removeLayer = (id: string) => {
             :state="state"
             :cursor-packs="cursors.packs.value"
             :selected-id="selectedId"
+            :selected-ids="selectedIds"
             :source="document.source"
             :disabled="busy || cropping"
             @select="select"

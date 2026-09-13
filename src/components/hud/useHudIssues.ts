@@ -55,17 +55,21 @@ export function useHudIssues(
       });
     } else if (
       desktopPlatform === 'linux' &&
-      ['permission-required', 'installation-required', 'denied'].includes(interactionAccess.status.value.state)
+      (['permission-required', 'installation-required', 'denied'].includes(interactionAccess.status.value.state) ||
+        (interactionAccess.status.value.state === 'unavailable' && interactionAccess.status.value.canRequest))
     ) {
       issues.push({
         id: 'interaction-access',
-        title: t('interactionAccessNoticeTitle'),
+        title: t(
+          interactionAccess.status.value.error ? 'interactionAccessUnavailableTitle' : 'interactionAccessNoticeTitle',
+        ),
         details: [
-          interactionAccess.status.value.state === 'denied'
-            ? t('interactionAccessDeniedDescription')
-            : t('interactionAccessNoticeDescription'),
+          interactionAccess.status.value.error?.message ||
+            (interactionAccess.status.value.state === 'denied'
+              ? t('interactionAccessDeniedDescription')
+              : t('interactionAccessNoticeDescription')),
         ],
-        tone: 'warning',
+        tone: interactionAccess.status.value.error ? 'error' : 'warning',
         actionLabel: interactionAccess.requesting.value ? t('authorizingInteractions') : t('authorizeInteractions'),
         actionLoading: interactionAccess.requesting.value,
         actionDisabled: interactionAccess.requesting.value,

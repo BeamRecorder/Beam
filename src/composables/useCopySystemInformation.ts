@@ -39,6 +39,9 @@ const linuxSystemInformation = (diagnostics: LinuxCaptureDiagnostics, inputAcces
     `FFmpeg: ${yesNo(diagnostics.ffmpeg.available)}${encoder.length ? ` (${encoder.join(', ')})` : ''}`,
     `Recording Available: ${yesNo(diagnostics.recordingAvailable)}`,
     `Interaction Access: ${inputAccess?.state || 'Unknown'}${inputAccess?.unavailableReason ? ` (${inputAccess.unavailableReason})` : inputAccess ? ` (clicks=${yesNo(inputAccess.clicks)}, shortcuts=${yesNo(inputAccess.shortcuts)})` : ''}`,
+    ...(inputAccess?.mouseDevices !== undefined ? [`Mouse Devices: ${inputAccess.mouseDevices}`] : []),
+    ...(inputAccess?.keyboardDevices !== undefined ? [`Keyboard Devices: ${inputAccess.keyboardDevices}`] : []),
+    ...(inputAccess?.error ? [`Interaction Error: ${inputAccess.error.code}`, inputAccess.error.message] : []),
     ...(issues.length > 0 ? ['Linux Requirement Issues:', ...issues.map((issue) => `- ${issue}`)] : []),
     ...(guidance.length > 0
       ? ['', 'Linux Requirement Fixes:', ...guidance.flatMap((item) => ['', item.copyText])]

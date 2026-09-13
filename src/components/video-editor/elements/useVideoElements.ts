@@ -1,8 +1,9 @@
-import { watch } from 'vue';
+import { computed, watch } from 'vue';
 import type { Ref } from 'vue';
 import { isShapeClip, type ClipComposition } from '~/media/shared/composition-types';
 import { addClip, deleteClip, setShapeLayerStyle } from '../composition/engine/clip-engine';
 import { provideElementEditor } from './useElementEditor';
+import { isVideoElementClip } from './video-elements';
 
 export function useVideoElements(options: {
   composition: Ref<ClipComposition>;
@@ -13,11 +14,15 @@ export function useVideoElements(options: {
   select: (id: string) => void;
   clearZoom: () => void;
   addHighlight?: () => void | Promise<void>;
+  addBlur?: () => void | Promise<void>;
+  addColor?: () => void | Promise<void>;
   addImage?: () => void | Promise<void>;
 }) {
   const editor = provideElementEditor({
     addImage: options.addImage,
     addHighlight: options.addHighlight,
+    addBlur: options.addBlur,
+    addColor: options.addColor,
     layers: () => options.composition.value.clips.filter(isShapeClip),
     selectedId: () => options.selectedId.value,
     select: (id) => {
@@ -42,6 +47,16 @@ export function useVideoElements(options: {
       !options.isPlaying.value &&
       !options.composition.value.clips.find((clip) => clip.id === options.selectedId.value)?.locked,
   });
+  const selectedIsElement = computed(() =>
+    isVideoElementClip(options.composition.value.clips.find((item) => item.id === options.selectedId.value)),
+  );
+  watch(
+    [selectedIsElement, options.activeTab],
+    () => {
+      if (options.activeTab.value === 'clip' && selectedIsElement.value) options.activeTab.value = 'elements';
+    },
+    { flush: 'sync', immediate: true },
+  );
   watch(options.activeTab, (tab) => {
     if (tab !== 'elements') editor.drawingMode.value = false;
   });

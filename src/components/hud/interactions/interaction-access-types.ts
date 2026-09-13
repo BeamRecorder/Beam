@@ -8,4 +8,5 @@ export type InteractionAccessViewState =
       clicks: false;
       shortcuts: false;
       recordsText: false;
+      error?: never;
     };

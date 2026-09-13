@@ -22,6 +22,13 @@ pub enum InputAccessUnavailableReason {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct InputAccessError {
+    pub code: String,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct InputAccessStatus {
     pub state: InputAccessState,
     pub can_request: bool,
@@ -34,6 +41,8 @@ pub struct InputAccessStatus {
     pub mouse_devices: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub keyboard_devices: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<InputAccessError>,
 }
 
 impl InputAccessStatus {
@@ -48,6 +57,7 @@ impl InputAccessStatus {
             unavailable_reason: None,
             mouse_devices,
             keyboard_devices,
+            error: None,
         }
     }
 
@@ -62,6 +72,7 @@ impl InputAccessStatus {
             unavailable_reason: None,
             mouse_devices: None,
             keyboard_devices: None,
+            error: None,
         }
     }
 
@@ -84,6 +95,7 @@ impl InputAccessStatus {
             unavailable_reason: None,
             mouse_devices: None,
             keyboard_devices: None,
+            error: None,
         }
     }
 
@@ -91,6 +103,18 @@ impl InputAccessStatus {
     pub fn unavailable_for(reason: InputAccessUnavailableReason) -> Self {
         Self {
             unavailable_reason: Some(reason),
+            ..Self::unavailable()
+        }
+    }
+
+    #[must_use]
+    pub fn failed(error: &CaptureError) -> Self {
+        Self {
+            can_request: true,
+            error: Some(InputAccessError {
+                code: error.code().to_owned(),
+                message: error.to_string(),
+            }),
             ..Self::unavailable()
         }
     }

@@ -4,7 +4,7 @@ import { flushPromises } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CursorAssetDescriptor, CursorPackDescriptor } from '~/api/types/cursor-pack';
 import type { ElementEditorContext } from '../../elements/element-editor-types';
-import type { ScreenshotDocument } from '~/api/types/screenshot';
+import type { ScreenshotDocument, ScreenshotState } from '~/api/types/screenshot';
 import { createScreenshotEditorTestHarness, documentFixture, presetFixture } from './screenshot-editor-test-helpers';
 import { registerScreenshotEditorHistoryAndFooterTests } from './screenshot-editor-history-cases';
 
@@ -216,6 +216,75 @@ describe('ScreenshotEditor', () => {
     wrapper.unmount();
   });
 
+  it('adds a blur with shared controls, saves it, and supports undo/redo', async () => {
+    vi.stubGlobal('crypto', { randomUUID: () => 'blur-1' });
+    const wrapper = mountEditor();
+    await flushPromises();
+    await wrapper.get('[aria-label="Elements"]').trigger('click');
+    await clickText(wrapper, 'Blur');
+    await flushPromises();
+
+    const canvas = wrapper.findComponent(ScreenshotCanvasStub);
+    const original = canvas.props('state')!.effects[0]!;
+    expect(original).toMatchObject({
+      id: 'blur-1',
+      kind: 'blur',
+      mode: 'blur',
+      shape: 'rectangle',
+      strength: 60,
+      feather: 0,
+      cornerRadius: 0,
+      tintOpacity: 0,
+      color: '#000000',
+      transform: { x: 0.35, y: 0.35, width: 0.3, height: 0.3 },
+    });
+    expect(canvas.props('selectedId')).toBe(original.id);
+    expect(wrapper.text()).toContain('Blur radius');
+    expect(wrapper.text()).toContain('Privacy');
+    expect(compositionLayers(wrapper)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: original.id, kind: 'effect' })]),
+    );
+
+    await clickText(wrapper, 'Copy');
+    await flushPromises();
+    expect(capture.saveScreenshot).toHaveBeenLastCalledWith(
+      'screen-1',
+      expect.objectContaining({ effects: [expect.objectContaining({ id: original.id, mode: 'blur', strength: 60 })] }),
+      expect.any(Object),
+    );
+    wrapper.findComponent({ name: 'EditorHistoryControls' }).vm.$emit('undo');
+    await flushPromises();
+    expect(canvas.props('state')!.effects ?? []).toHaveLength(0);
+    wrapper.findComponent({ name: 'EditorHistoryControls' }).vm.$emit('redo');
+    await flushPromises();
+    expect(canvas.props('state')!.effects).toHaveLength(1);
+    wrapper.unmount();
+  });
+
+  it('finishes text editing and exits drawing mode before adding a blur', async () => {
+    let id = 0;
+    vi.stubGlobal('crypto', { randomUUID: () => `layer-${++id}` });
+    const wrapper = mountEditor();
+    await flushPromises();
+    await wrapper.get('[aria-label="Elements"]').trigger('click');
+
+    await clickText(wrapper, 'Text');
+    screenshotCanvasEditor?.updateText('Committed text');
+    expect(screenshotCanvasEditor?.editing.value?.text?.content).toBe('Committed text');
+
+    await clickText(wrapper, 'Blur');
+    const canvas = wrapper.findComponent(ScreenshotCanvasStub);
+    expect(canvas.props('state')!.shapes[0]!.text?.content).toBe('Committed text');
+    expect(screenshotCanvasEditor?.editing.value).toBeNull();
+
+    await clickText(wrapper, 'Draw');
+    expect(screenshotCanvasEditor?.drawingMode.value).toBe(true);
+    await clickText(wrapper, 'Blur');
+    expect(screenshotCanvasEditor?.drawingMode.value).toBe(false);
+    expect(canvas.props('state')!.effects).toHaveLength(2);
+    wrapper.unmount();
+  });
+
   it('creates and selects a shape, applies its shared style, and removes it', async () => {
     vi.stubGlobal('crypto', { randomUUID: () => 'shape-1' });
     const wrapper = mountEditor();
@@ -351,6 +420,13 @@ describe('ScreenshotEditor', () => {
 
     composition.vm.$emit('remove', 'cursor-1');
     await wrapper.vm.$nextTick();
+    expect(state.cursors).toHaveLength(1);
+    expect(state.composition?.some((layer: { id: string }) => layer.id === 'cursor-1')).toBe(true);
+
+    composition.vm.$emit('update', 'cursor-1', { locked: false });
+    await wrapper.vm.$nextTick();
+    composition.vm.$emit('remove', 'cursor-1');
+    await wrapper.vm.$nextTick();
     expect(state.cursors).toEqual([]);
     expect(state.composition?.some((layer: { id: string }) => layer.id === 'cursor-1')).toBe(false);
 
@@ -359,6 +435,195 @@ describe('ScreenshotEditor', () => {
     expect(capture.listCursorPacks).toHaveBeenCalledTimes(2);
     wrapper.unmount();
     expect(unsubscribe).toHaveBeenCalledOnce();
+  });
+
+  it('synchronizes composition and canvas multi-selection with toggles and replacement', async () => {
+    const ids = ['selection-a', 'selection-b', 'selection-c'];
+    let nextId = 0;
+    vi.stubGlobal('crypto', { randomUUID: () => ids[nextId++]! });
+    const wrapper = mountEditor();
+    await flushPromises();
+    await wrapper.get('[aria-label="Elements"]').trigger('click');
+    await clickText(wrapper, 'Arrow');
+    await clickText(wrapper, 'Arrow');
+    await clickText(wrapper, 'Arrow');
+
+    const canvas = wrapper.findComponent(ScreenshotCanvasStub);
+    const composition = wrapper.findComponent(ScreenshotCompositionStub);
+    expect(canvas.props('selectedIds')).toEqual(['selection-c']);
+
+    composition.vm.$emit('select', 'selection-a', 'toggle');
+    await wrapper.vm.$nextTick();
+    expect(composition.props('selectedIds')).toEqual(['selection-c', 'selection-a']);
+    expect(canvas.props('selectedIds')).toEqual(['selection-c', 'selection-a']);
+    expect(canvas.props('selectedId')).toBe('selection-a');
+
+    canvas.vm.$emit('select', 'selection-b', 'toggle');
+    await wrapper.vm.$nextTick();
+    expect(canvas.props('selectedIds')).toEqual(['selection-c', 'selection-a', 'selection-b']);
+    expect(composition.props('selectedIds')).toEqual(['selection-c', 'selection-a', 'selection-b']);
+    expect(composition.props('selectedId')).toBe('selection-b');
+
+    composition.vm.$emit('select', 'selection-a');
+    await wrapper.vm.$nextTick();
+    expect(composition.props('selectedIds')).toEqual(['selection-a']);
+    expect(canvas.props('selectedIds')).toEqual(['selection-a']);
+
+    canvas.vm.$emit('select', 'selection-c');
+    await wrapper.vm.$nextTick();
+    expect(canvas.props('selectedIds')).toEqual(['selection-c']);
+    expect(composition.props('selectedIds')).toEqual(['selection-c']);
+    wrapper.unmount();
+  });
+
+  it('translates a selected group in place and records the movement as one undo step', async () => {
+    const ids = ['translate-a', 'translate-b', 'translate-outside'];
+    let nextId = 0;
+    vi.stubGlobal('crypto', { randomUUID: () => ids[nextId++]! });
+    const wrapper = mountEditor();
+    await flushPromises();
+    await wrapper.get('[aria-label="Elements"]').trigger('click');
+    await clickText(wrapper, 'Arrow');
+    await clickText(wrapper, 'Arrow');
+    await clickText(wrapper, 'Arrow');
+
+    const canvas = wrapper.findComponent(ScreenshotCanvasStub);
+    const composition = wrapper.findComponent(ScreenshotCompositionStub);
+    const state = canvas.props('state') as ScreenshotState;
+    const shapeCollection = state.shapes;
+    const compositionCollection = state.composition;
+    const shapes = new Map(state.shapes.map((shape) => [shape.id, shape]));
+    const before = new Map(state.shapes.map((shape) => [shape.id, { ...shape.transform }]));
+
+    composition.vm.$emit('select', 'translate-a');
+    composition.vm.$emit('select', 'translate-b', 'toggle');
+    await wrapper.vm.$nextTick();
+    canvas.vm.$emit('translate', { x: 0.05, y: 0.08 });
+    await flushPromises();
+
+    expect(canvas.props('state')).toBe(state);
+    expect(state.shapes).toBe(shapeCollection);
+    expect(state.composition).toBe(compositionCollection);
+    expect(state.shapes[0]).toBe(shapes.get('translate-a'));
+    expect(state.shapes[1]).toBe(shapes.get('translate-b'));
+    expect(state.shapes[2]).toBe(shapes.get('translate-outside'));
+    expect(state.shapes[0]?.transform).toEqual({
+      ...before.get('translate-a'),
+      x: before.get('translate-a')!.x + 0.05,
+      y: before.get('translate-a')!.y + 0.08,
+    });
+    expect(state.shapes[1]?.transform).toEqual({
+      ...before.get('translate-b'),
+      x: before.get('translate-b')!.x + 0.05,
+      y: before.get('translate-b')!.y + 0.08,
+    });
+    expect(state.shapes[2]?.transform).toEqual(before.get('translate-outside'));
+
+    const history = wrapper.findComponent({ name: 'EditorHistoryControls' });
+    history.vm.$emit('undo');
+    await flushPromises();
+    let restored = canvas.props('state') as ScreenshotState;
+    expect(restored.shapes.map((shape) => shape.transform)).toEqual([
+      before.get('translate-a'),
+      before.get('translate-b'),
+      before.get('translate-outside'),
+    ]);
+
+    history.vm.$emit('redo');
+    await flushPromises();
+    restored = canvas.props('state') as ScreenshotState;
+    expect(restored.shapes[0]?.transform).toEqual({
+      ...before.get('translate-a'),
+      x: before.get('translate-a')!.x + 0.05,
+      y: before.get('translate-a')!.y + 0.08,
+    });
+    expect(restored.shapes[1]?.transform).toEqual({
+      ...before.get('translate-b'),
+      x: before.get('translate-b')!.x + 0.05,
+      y: before.get('translate-b')!.y + 0.08,
+    });
+    expect(restored.shapes[2]?.transform).toEqual(before.get('translate-outside'));
+    wrapper.unmount();
+  });
+
+  it('deletes the selected unlocked group from the keyboard and undo restores valid layer ids', async () => {
+    const ids = ['keyboard-a', 'keyboard-b'];
+    let nextId = 0;
+    vi.stubGlobal('crypto', { randomUUID: () => ids[nextId++]! });
+    const wrapper = mountEditor();
+    await flushPromises();
+    await wrapper.get('[aria-label="Elements"]').trigger('click');
+    await clickText(wrapper, 'Arrow');
+    await clickText(wrapper, 'Arrow');
+
+    const canvas = wrapper.findComponent(ScreenshotCanvasStub);
+    const composition = wrapper.findComponent(ScreenshotCompositionStub);
+    composition.vm.$emit('select', 'keyboard-a');
+    composition.vm.$emit('select', 'keyboard-b', 'toggle');
+    await wrapper.vm.$nextTick();
+
+    const event = new KeyboardEvent('keydown', { key: 'Delete', bubbles: true, cancelable: true });
+    window.dispatchEvent(event);
+    await flushPromises();
+    expect(event.defaultPrevented).toBe(true);
+    expect((canvas.props('state') as ScreenshotState).shapes).toEqual([]);
+    expect(composition.props('selectedIds')).toEqual([]);
+    expect(composition.props('selectedId')).toBeNull();
+    expect(compositionLayers(wrapper).map(({ id }) => id)).not.toContain('keyboard-a');
+    expect(compositionLayers(wrapper).map(({ id }) => id)).not.toContain('keyboard-b');
+
+    wrapper.findComponent({ name: 'EditorHistoryControls' }).vm.$emit('undo');
+    await flushPromises();
+    const restored = canvas.props('state') as ScreenshotState;
+    expect(restored.shapes.map(({ id }) => id)).toEqual(['keyboard-a', 'keyboard-b']);
+    expect(composition.props('selectedIds')).toEqual([]);
+    const layerIds = compositionLayers(wrapper).map(({ id }) => id);
+    expect(new Set(layerIds).size).toBe(layerIds.length);
+    expect(restored.composition?.map(({ id }) => id)).toEqual(layerIds);
+    expect(layerIds).toEqual(expect.arrayContaining(['keyboard-a', 'keyboard-b', 'screenshot']));
+    wrapper.unmount();
+  });
+
+  it('deletes removable selected members from a context target while preserving locked and protected members', async () => {
+    const ids = ['context-a', 'context-b'];
+    let nextId = 0;
+    vi.stubGlobal('crypto', { randomUUID: () => ids[nextId++]! });
+    const wrapper = mountEditor();
+    await flushPromises();
+    await wrapper.get('[aria-label="Elements"]').trigger('click');
+    await clickText(wrapper, 'Arrow');
+    await clickText(wrapper, 'Arrow');
+
+    const canvas = wrapper.findComponent(ScreenshotCanvasStub);
+    const composition = wrapper.findComponent(ScreenshotCompositionStub);
+    composition.vm.$emit('update', 'context-b', { locked: true });
+    composition.vm.$emit('select', 'context-a');
+    composition.vm.$emit('select', 'screenshot', 'toggle');
+    composition.vm.$emit('select', 'context-b', 'toggle');
+    await wrapper.vm.$nextTick();
+    expect(composition.props('selectedIds')).toEqual(['context-a', 'screenshot', 'context-b']);
+
+    composition.vm.$emit('remove', 'context-b');
+    await flushPromises();
+    const state = canvas.props('state') as ScreenshotState;
+    expect(state.shapes.map(({ id }) => id)).toEqual(['context-b']);
+    expect(state.composition?.find(({ id }) => id === 'context-b')?.locked).toBe(true);
+    expect(state.image.id).toBe('screenshot');
+    expect(compositionLayers(wrapper).map(({ id }) => id)).toEqual(expect.arrayContaining(['screenshot', 'context-b']));
+    expect(compositionLayers(wrapper).map(({ id }) => id)).not.toContain('context-a');
+    expect(composition.props('selectedIds')).toEqual(['screenshot', 'context-b']);
+    expect(composition.props('selectedId')).toBe('context-b');
+
+    wrapper.findComponent({ name: 'EditorHistoryControls' }).vm.$emit('undo');
+    await flushPromises();
+    const restored = canvas.props('state') as ScreenshotState;
+    expect(restored.shapes.map(({ id }) => id)).toEqual(['context-a', 'context-b']);
+    expect(composition.props('selectedIds')).toEqual(['screenshot', 'context-b']);
+    const layerIds = compositionLayers(wrapper).map(({ id }) => id);
+    expect(new Set(layerIds).size).toBe(layerIds.length);
+    expect(restored.composition?.map(({ id }) => id)).toEqual(layerIds);
+    expect(layerIds).toEqual(expect.arrayContaining(['screenshot', 'context-a', 'context-b']));
+    wrapper.unmount();
   });
 
   it('saves text styling and a completed drawing from the provided element context', async () => {

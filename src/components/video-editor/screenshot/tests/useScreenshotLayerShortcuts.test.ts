@@ -40,6 +40,7 @@ const mountShortcuts = (initialSelection?: ScreenshotLayer, initialDisabled = fa
           h('select', { 'data-testid': 'select' }, [h('option', { value: 'one' }, 'One')]),
           h('div', { 'data-testid': 'editable', contenteditable: 'true' }),
           h('div', { 'data-testid': 'textbox', role: 'textbox' }),
+          h('div', { 'data-testid': 'menu', role: 'menu' }, [h('button', 'Delete')]),
           h('div', { class: 'popover-content' }, [h('button', { 'data-testid': 'popover-button' }, 'Open')]),
         ]);
     },
@@ -121,6 +122,15 @@ describe('useScreenshotLayerShortcuts', () => {
       expect(event.defaultPrevented).toBe(false);
     }
 
+    expect(remove).not.toHaveBeenCalled();
+  });
+
+  it('ignores Delete from a menu', () => {
+    const { wrapper, remove } = mountShortcuts(makeLayer('text'));
+
+    const event = dispatchKey(wrapper.get('[data-testid="menu"]').element);
+
+    expect(event.defaultPrevented).toBe(false);
     expect(remove).not.toHaveBeenCalled();
   });
 

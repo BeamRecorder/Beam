@@ -5,6 +5,19 @@ import { MediaInputError, mediaSourceDescriptor, type MediaError } from '~/media
 import { assertWaveformWorkerResponse, type WaveformWorkerRequest } from '~/media/playback/waveform-protocol';
 import { useMediaProcessingReporter } from '../../performance/media-processing-pressure';
 import { effectiveAudioClipGain } from '~/media/shared/audio-gain';
+import { prepareWaveform, retainWaveform, waveformSourceKey as sourceKey } from './audio-waveform-cache';
+
+import type {
+  AudioWaveformViewport,
+  AudioWaveformSlice,
+  AudioWaveformStatus,
+  StoredWaveformSlice,
+  WaveformRequest,
+  WaveformSegment,
+  RefinementBatch,
+  PreparedWaveform,
+} from './audio-waveform-types';
+export type { AudioWaveformViewport, AudioWaveformSlice, AudioWaveformStatus } from './audio-waveform-types';
 
 const MAX_BAR_HEIGHT = 38;
 const MAX_POINTS = 1_200;
@@ -12,87 +25,17 @@ const PIXELS_PER_POINT = 3;
 const WAVEFORM_WORKER_COUNT = 3;
 const VIEWPORT_REFINEMENT_DEBOUNCE_MS = 120;
 
-export interface AudioWaveformViewport {
-  startSeconds: number;
-  endSeconds: number;
-  pixelsPerSecond: number;
-}
-
-export interface AudioWaveformSlice {
-  bars: number[];
-  leftPercent: number;
-  widthPercent: number;
-  loadingSegments: Array<{ leftPercent: number; widthPercent: number }>;
-}
-
-export type AudioWaveformStatus = 'idle' | 'loading' | 'ready' | 'error';
-
-type StoredWaveformSlice = AudioWaveformSlice & {
-  sourceKey: string;
-  sourceStartSeconds: number;
-  sourceEndSeconds: number;
-  peaks: Float32Array;
-};
-
-type WaveformRequest = {
-  clip: AudioClip;
-  asset: MediaAsset | null;
-  sourceStartSeconds: number;
-  sourceEndSeconds: number;
-  pointCount: number;
-  leftPercent: number;
-  widthPercent: number;
-};
-
-type WaveformSegment = {
-  index: number;
-  count: number;
-  pointOffset: number;
-  pointCount: number;
-  startSeconds: number;
-  endSeconds: number;
-};
-
-type RefinementBatch = {
-  generation: number;
-  request: WaveformRequest;
-  peaks: Float32Array;
-  segments: WaveformSegment[];
-  pending: Set<number>;
-  receivedPoints: Map<number, number>;
-};
-
 const barsFromPeaks = (peaks: Float32Array) => {
   const count = Math.floor(peaks.length / 2);
   if (count <= 0) return [];
   const amplitudes = new Float32Array(count);
   for (let index = 0; index < count; index += 1) {
-    const amplitude = Math.max(0, peaks[index * 2 + 1] - peaks[index * 2]);
+    const amplitude = Math.max(Math.abs(peaks[index * 2]!), Math.abs(peaks[index * 2 + 1]!));
     amplitudes[index] = amplitude;
   }
   return Array.from(amplitudes, (amplitude) =>
-    amplitude <= 0 ? 0 : Math.max(1, Math.min(MAX_BAR_HEIGHT, Math.round((amplitude * MAX_BAR_HEIGHT) / 2))),
+    amplitude <= 0 ? 0 : Math.max(1, Math.min(MAX_BAR_HEIGHT, amplitude * MAX_BAR_HEIGHT)),
   );
-};
-
-const waveformSegments = (request: WaveformRequest, count: number): WaveformSegment[] => {
-  const segmentCount = Math.max(1, Math.min(count, request.pointCount));
-  const duration = request.sourceEndSeconds - request.sourceStartSeconds;
-  let pointOffset = 0;
-  return Array.from({ length: segmentCount }, (_, index) => {
-    const pointCount =
-      Math.floor(request.pointCount / segmentCount) + (index < request.pointCount % segmentCount ? 1 : 0);
-    const startOffset = pointOffset;
-    pointOffset += pointCount;
-    return {
-      index,
-      count: segmentCount,
-      pointOffset: startOffset,
-      pointCount,
-      startSeconds: request.sourceStartSeconds + duration * (startOffset / request.pointCount),
-      endSeconds: request.sourceStartSeconds + duration * (pointOffset / request.pointCount),
-    };
-  });
 };
 
 const visibleRequest = (
@@ -141,7 +84,12 @@ export function useCompositionAudioWaveforms(
   const waveformCache = new Map<string, StoredWaveformSlice>();
   const pendingPublishes = new Map<
     string,
-    { request: WaveformRequest; peaks: Float32Array; loadingSegments: AudioWaveformSlice['loadingSegments'] }
+    {
+      request: WaveformRequest;
+      peaks: Float32Array;
+      bands: Float32Array;
+      loadingSegments: AudioWaveformSlice['loadingSegments'];
+    }
   >();
   let generation = 0;
   let nextWorkerStart = 0;
@@ -169,8 +117,10 @@ export function useCompositionAudioWaveforms(
             leftPercent: slice.leftPercent,
             widthPercent: slice.widthPercent,
             loadingSegments: slice.loadingSegments,
+            bands: slice.bands,
+            sourceDurationSeconds: slice.sourceDurationSeconds,
             bars: slice.bars.map((height) =>
-              gain <= 0 || height <= 0 ? 0 : Math.max(1, Math.min(MAX_BAR_HEIGHT, Math.round(height * gain))),
+              gain <= 0 || height <= 0 ? 0 : Math.max(1, Math.min(MAX_BAR_HEIGHT, height * gain)),
             ),
           },
         ];
@@ -195,7 +145,6 @@ export function useCompositionAudioWaveforms(
       .join('|'),
   );
 
-  const sourceKey = (request: WaveformRequest) => `${request.asset?.id ?? ''}:${request.asset?.src ?? ''}`;
   const sliceMatchesRequestRange = (slice: StoredWaveformSlice | undefined, request: WaveformRequest) =>
     slice?.sourceKey === sourceKey(request) &&
     slice.sourceStartSeconds === request.sourceStartSeconds &&
@@ -221,9 +170,12 @@ export function useCompositionAudioWaveforms(
   const sliceFrom = (
     request: WaveformRequest,
     peaks: Float32Array,
+    bands: Float32Array,
     loadingSegments: AudioWaveformSlice['loadingSegments'],
   ): StoredWaveformSlice => ({
     bars: barsFromPeaks(peaks),
+    bands: bands.slice(),
+    sourceDurationSeconds: request.sourceEndSeconds - request.sourceStartSeconds,
     leftPercent: request.leftPercent,
     widthPercent: request.widthPercent,
     loadingSegments,
@@ -236,15 +188,16 @@ export function useCompositionAudioWaveforms(
     clipId: string,
     request: WaveformRequest,
     peaks: Float32Array,
+    bands: Float32Array,
     loadingSegments: AudioWaveformSlice['loadingSegments'] = [],
   ) => {
-    pendingPublishes.set(clipId, { request, peaks, loadingSegments });
+    pendingPublishes.set(clipId, { request, peaks, bands, loadingSegments });
     if (publishFrame) return;
     publishFrame = requestAnimationFrame(() => {
       publishFrame = 0;
       const next = { ...rawSlices.value };
       for (const [pendingClipId, pending] of pendingPublishes) {
-        next[pendingClipId] = sliceFrom(pending.request, pending.peaks, pending.loadingSegments);
+        next[pendingClipId] = sliceFrom(pending.request, pending.peaks, pending.bands, pending.loadingSegments);
       }
       pendingPublishes.clear();
       rawSlices.value = next;
@@ -302,12 +255,13 @@ export function useCompositionAudioWaveforms(
     workers[workerIndex]!.postMessage(message);
   };
 
-  const beginExtraction = (request: WaveformRequest) => {
-    const segments = waveformSegments(request, WAVEFORM_WORKER_COUNT);
+  const beginExtraction = (request: WaveformRequest, prepared: PreparedWaveform, retainVisible: boolean) => {
+    const { segments, peaks, bands } = prepared;
     const batch: RefinementBatch = {
       generation,
       request,
-      peaks: new Float32Array(request.pointCount * 2),
+      peaks,
+      bands,
       segments,
       pending: new Set(segments.map(({ index }) => index)),
       receivedPoints: new Map(segments.map(({ index }) => [index, 0])),
@@ -316,6 +270,8 @@ export function useCompositionAudioWaveforms(
     updatePressure();
     const workerStart = nextWorkerStart++ % workers.length;
     for (const segment of segments) postSegment(request, segment, workerStart);
+    if (prepared.reusedPoints && !retainVisible)
+      publish(request.clip.id, request, peaks, bands, loadingSegmentsFor(batch));
   };
 
   const receiveWorkerMessage = (event: MessageEvent<unknown>) => {
@@ -354,6 +310,7 @@ export function useCompositionAudioWaveforms(
       return;
     }
     batch.peaks.set(message.peaks, (segment.pointOffset + message.segmentPointOffset) * 2);
+    batch.bands.set(message.bands, (segment.pointOffset + message.segmentPointOffset) * 4);
     batch.receivedPoints.set(segment.index, chunkEnd);
     if (message.segmentComplete) batch.pending.delete(segment.index);
     const complete = batch.pending.size === 0;
@@ -361,11 +318,11 @@ export function useCompositionAudioWaveforms(
     const isVisibleSliceForRequest =
       sliceMatchesRequestRange(visibleSlice, request) && visibleSlice?.peaks.length === request.pointCount * 2;
     if (complete || !visibleSlice || isVisibleSliceForRequest) {
-      publish(message.clipId, request, batch.peaks, loadingSegmentsFor(batch));
+      publish(message.clipId, request, batch.peaks, batch.bands, loadingSegmentsFor(batch));
     }
     updatePressure();
     if (!complete) return;
-    cacheSlice(request, sliceFrom(request, batch.peaks, []));
+    cacheSlice(request, sliceFrom(request, batch.peaks, batch.bands, []));
     refinementBatches.delete(message.clipId);
     status.value = { ...status.value, [message.clipId]: 'ready' };
     updatePressure();
@@ -389,6 +346,11 @@ export function useCompositionAudioWaveforms(
   const reconcileRequests = () => {
     refinementTimer = 0;
     generation += 1;
+    for (const batch of refinementBatches.values()) {
+      if ([...batch.receivedPoints.values()].some((count) => count > 0)) {
+        cacheSlice(batch.request, sliceFrom(batch.request, batch.peaks, batch.bands, loadingSegmentsFor(batch)));
+      }
+    }
     refinementBatches.clear();
     pendingPublishes.clear();
     updatePressure();
@@ -412,21 +374,29 @@ export function useCompositionAudioWaveforms(
         continue;
       }
       const cached = waveformCache.get(cacheKey(request));
-      if (cached) {
+      if (cached && !cached.loadingSegments.length) {
         waveformCache.delete(cacheKey(request));
         waveformCache.set(cacheKey(request), cached);
         nextSlices[request.clip.id] = cached;
         nextStatus[request.clip.id] = 'ready';
         continue;
       }
-      const visibleSlice = rawSlices.value[request.clip.id];
-      if (sliceMatchesRequestRange(visibleSlice, request)) {
+      const prepared = prepareWaveform(request, waveformCache.values(), WAVEFORM_WORKER_COUNT);
+      if (!prepared.segments.length) {
+        const reused = sliceFrom(request, prepared.peaks, prepared.bands, []);
+        nextSlices[request.clip.id] = reused;
+        nextStatus[request.clip.id] = 'ready';
+        // Keep original finer bins in the cache: zooming out must not evict their detail.
+        continue;
+      }
+      const visibleSlice = retainWaveform(rawSlices.value[request.clip.id], request);
+      if (visibleSlice) {
         nextSlices[request.clip.id] = visibleSlice;
       }
       nextStatus[request.clip.id] = 'loading';
       try {
         initWorkers();
-        beginExtraction(request);
+        beginExtraction(request, prepared, Boolean(visibleSlice));
       } catch (error) {
         fail(request.clip.id, {
           kind: 'decode-failure',
@@ -447,8 +417,7 @@ export function useCompositionAudioWaveforms(
       window.clearTimeout(refinementTimer);
       const active = requests.value;
       const canKeepEveryVisibleWaveform =
-        active.length > 0 &&
-        active.every((request) => sliceMatchesRequestRange(rawSlices.value[request.clip.id], request));
+        active.length > 0 && active.every((request) => retainWaveform(rawSlices.value[request.clip.id], request));
       if (canKeepEveryVisibleWaveform) {
         refinementTimer = window.setTimeout(reconcileRequests, VIEWPORT_REFINEMENT_DEBOUNCE_MS);
         return;

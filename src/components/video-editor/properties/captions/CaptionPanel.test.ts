@@ -15,6 +15,7 @@ const capture = vi.hoisted(() => ({
   downloadWhisperModel: vi.fn(),
   deleteWhisperModel: vi.fn(),
   onWhisperProgress: vi.fn(),
+  exportTranscript: vi.fn(),
 }));
 const whisper = vi.hoisted(() => ({
   progress: undefined as { value: MockWhisperProgress } | undefined,
@@ -215,7 +216,43 @@ describe('CaptionPanel', () => {
     ]);
     capture.downloadWhisperModel.mockResolvedValue(undefined);
     capture.onWhisperProgress.mockReturnValue(() => undefined);
+    capture.exportTranscript.mockReset();
+    capture.exportTranscript.mockResolvedValue({ canceled: true });
     whisper.transcribe.mockResolvedValue({ words: [], sentences: [] });
+  });
+
+  it('renders transcript export without a Whisper model and disables it while transcription is active', async () => {
+    const transcriptCaption: CaptionClip = {
+      ...manualCaption,
+      caption: {
+        type: 'text',
+        sentences: [],
+        style: { ...createDefaultCaptionStyle(36), customText: 'Manual transcript text' },
+      },
+    };
+    const composition: ClipComposition = {
+      ...audioComposition,
+      clips: [...audioComposition.clips, transcriptCaption],
+    };
+    const originalComposition = structuredClone(composition);
+    const wrapper = mount(CaptionPanel, {
+      props: { composition, timelineDurationMs: 2000 },
+      global: { stubs },
+    });
+    await vi.waitFor(() => expect(capture.whisperModels).toHaveBeenCalledOnce());
+
+    const exportButton = wrapper.get('.transcript-export button');
+    expect(exportButton.attributes('disabled')).toBeUndefined();
+
+    whisper.progress!.value = { status: 'running', message: 'Transcribing' };
+    await wrapper.vm.$nextTick();
+    expect(wrapper.get('.transcript-export button').attributes('disabled')).toBeDefined();
+    await wrapper.get('.transcript-export button').trigger('click');
+
+    expect(capture.exportTranscript).not.toHaveBeenCalled();
+    expect(wrapper.emitted('update:composition')).toBeUndefined();
+    expect(composition).toEqual(originalComposition);
+    wrapper.unmount();
   });
 
   it('loads a missing model, displays progress/errors and downloads it', async () => {

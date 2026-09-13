@@ -10,6 +10,7 @@ import {
   respondAllSegments,
   respondChunk,
   respondSegment,
+  segmentBands,
   segmentOffset,
   twoAudioClipComposition,
 } from './useCompositionAudioWaveforms.test-support';
@@ -106,21 +107,31 @@ describe('useCompositionAudioWaveforms', () => {
     expect(state.slices.value.clip).toBeUndefined();
 
     const middle = segments[1]!;
-    respondChunk(pool, middle, 0, 32, 2, false);
+    const firstBandValues = [0.125, 0.25, 0.5, 0.75] as const;
+    const secondBandValues = [0.0625, 0.1875, 0.375, 0.625] as const;
+    respondChunk(pool, middle, 0, 32, 2, false, firstBandValues);
     await flushPublished();
     expect(state.status.value.clip).toBe('loading');
     const middleOffset = segmentOffset(segments, 1);
     expect(state.slices.value.clip?.bars.slice(0, middleOffset).every((bar) => bar === 0)).toBe(true);
     expect(state.slices.value.clip?.bars.slice(middleOffset, middleOffset + 32).every((bar) => bar === 38)).toBe(true);
+    expect(state.slices.value.clip?.bands.slice(0, middleOffset * 4).every((band) => band === 0)).toBe(true);
+    expect(state.slices.value.clip?.bands.slice(middleOffset * 4, (middleOffset + 32) * 4)).toEqual(
+      segmentBands(32, firstBandValues),
+    );
+    expect(state.slices.value.clip?.sourceDurationSeconds).toBe(1);
     expect(state.slices.value.clip?.loadingSegments).toHaveLength(3);
 
-    respondChunk(pool, middle, 32, middle.pointCount - 32, 2, true);
+    respondChunk(pool, middle, 32, middle.pointCount - 32, 2, true, secondBandValues);
     await flushPublished();
     expect(state.slices.value.clip?.loadingSegments).toHaveLength(2);
     expect(
       state.slices.value.clip?.bars.slice(middleOffset, middleOffset + middle.pointCount).every((bar) => bar === 38),
     ).toBe(true);
     expect(state.slices.value.clip?.bars.slice(middleOffset + middle.pointCount).every((bar) => bar === 0)).toBe(true);
+    expect(
+      state.slices.value.clip?.bands.slice((middleOffset + 32) * 4, (middleOffset + middle.pointCount) * 4),
+    ).toEqual(segmentBands(middle.pointCount - 32, secondBandValues));
 
     respondSegment(pool, segments[0]!, 1);
     respondSegment(pool, segments[2]!, 0.5);
@@ -128,10 +139,14 @@ describe('useCompositionAudioWaveforms', () => {
     expect(state.status.value.clip).toBe('ready');
     expect(state.slices.value.clip?.loadingSegments).toEqual([]);
     expect(state.slices.value.clip?.bars).toEqual([
-      ...Array.from({ length: segments[0]!.pointCount }, () => 19),
+      ...Array.from({ length: segments[0]!.pointCount }, () => 38),
       ...Array.from({ length: segments[1]!.pointCount }, () => 38),
-      ...Array.from({ length: segments[2]!.pointCount }, () => 10),
+      ...Array.from({ length: segments[2]!.pointCount }, () => 19),
     ]);
+    const expectedBands = new Float32Array(450 * 4);
+    expectedBands.set(segmentBands(32, firstBandValues), (middleOffset + 0) * 4);
+    expectedBands.set(segmentBands(middle.pointCount - 32, secondBandValues), (middleOffset + 32) * 4);
+    expect(state.slices.value.clip?.bands).toEqual(expectedBands);
   });
 
   it('publishes each audio clip independently while segment responses arrive', async () => {
@@ -174,19 +189,33 @@ describe('useCompositionAudioWaveforms', () => {
     await flushPromises();
     const pool = workerPool();
     const generation = latestGeneration(pool);
-    const segments = respondAllSegments(pool, 'clip', generation);
+    const segments = respondAllSegments(pool, 'clip', generation, [0.25, 0.25, 0.25]);
     await flushPublished();
-    expect(state.slices.value.clip?.bars).toEqual(Array.from({ length: 450 }, () => 38));
+    expect(state.slices.value.clip?.bars).toEqual(Array.from({ length: 450 }, () => 9.5));
 
     const clip = mounted.compositionRef.value.clips[0];
     if (clip.kind !== 'audio') throw new Error('audio fixture missing');
     clip.volume = 0;
     await nextTick();
     expect(state.slices.value.clip?.bars).toEqual(Array.from({ length: 450 }, () => 0));
-    clip.volume = 50;
+    clip.volume = 75;
     await nextTick();
-    expect(state.slices.value.clip?.bars).toEqual(Array.from({ length: 450 }, () => 19));
+    expect(state.slices.value.clip?.bars).toEqual(Array.from({ length: 450 }, () => 7.125));
     expect(extractRequests(pool, 'clip', generation)).toHaveLength(segments.length);
+  });
+
+  it('uses the largest absolute sample extremum for one-sided bar height', async () => {
+    mountComposable();
+    await flushPromises();
+    const pool = workerPool();
+    const segments = extractRequests(pool, 'clip', latestGeneration(pool));
+    const first = segments[0]!;
+    respondChunk(pool, first, 0, first.pointCount, -0.1, true, [0, 0, 0, 0], -0.5);
+    await flushPublished();
+
+    expect(state.slices.value.clip?.bars.slice(0, first.pointCount)).toEqual(
+      Array.from({ length: first.pointCount }, () => 19),
+    );
   });
 
   it('ignores stale segment results after a new source generation starts', async () => {
@@ -206,20 +235,33 @@ describe('useCompositionAudioWaveforms', () => {
     const secondSegments = extractRequests(pool, 'clip', secondGeneration);
     expect(secondSegments).toHaveLength(3);
 
-    respondSegment(pool, firstSegments[1]!, 0.1);
+    respondSegment(pool, firstSegments[1]!, 0.1, [0.75, 0.5, 0.25, 0.125]);
     await flushPublished();
     expect(state.slices.value.clip).toBeUndefined();
     expect(state.status.value.clip).toBe('loading');
 
-    respondAllSegments(pool, 'clip', secondGeneration, [0.5, 1, 2], [2, 0, 1]);
+    const currentBandValues = [
+      [0.125, 0.25, 0.5, 0.75],
+      [0.0625, 0.1875, 0.375, 0.625],
+      [0.03125, 0.15625, 0.3125, 0.5625],
+    ] as const;
+    respondAllSegments(pool, 'clip', secondGeneration, [0.5, 1, 2], [2, 0, 1], currentBandValues);
     await flushPublished();
     expect(state.status.value.clip).toBe('ready');
     expect(state.errors.value).toEqual({});
     expect(state.slices.value.clip?.bars).toEqual([
-      ...Array.from({ length: secondSegments[0]!.pointCount }, () => 10),
-      ...Array.from({ length: secondSegments[1]!.pointCount }, () => 19),
+      ...Array.from({ length: secondSegments[0]!.pointCount }, () => 19),
+      ...Array.from({ length: secondSegments[1]!.pointCount }, () => 38),
       ...Array.from({ length: secondSegments[2]!.pointCount }, () => 38),
     ]);
+    const expectedCurrentBands = new Float32Array(450 * 4);
+    for (const segment of secondSegments) {
+      expectedCurrentBands.set(
+        segmentBands(segment.pointCount, currentBandValues[segment.segmentIndex]!),
+        segmentOffset(secondSegments, segment.segmentIndex) * 4,
+      );
+    }
+    expect(state.slices.value.clip?.bands).toEqual(expectedCurrentBands);
   });
 
   it('reuses an exact A waveform after an A→B→A source switch without decoding A twice', async () => {
@@ -227,9 +269,16 @@ describe('useCompositionAudioWaveforms', () => {
     await flushPromises();
     const pool = workerPool();
     const generationA = latestGeneration(pool);
-    respondAllSegments(pool, 'clip', generationA, [2, 1, 0.5]);
+    const bandValuesA = [
+      [0.125, 0.25, 0.5, 0.75],
+      [0.0625, 0.1875, 0.375, 0.625],
+      [0.03125, 0.15625, 0.3125, 0.5625],
+    ] as const;
+    respondAllSegments(pool, 'clip', generationA, [2, 1, 0.5], [0, 1, 2], bandValuesA);
     await flushPublished();
     const barsA = state.slices.value.clip?.bars;
+    const bandsA = state.slices.value.clip?.bands.slice();
+    const sourceDurationA = state.slices.value.clip?.sourceDurationSeconds;
     expect(state.status.value.clip).toBe('ready');
     expect(extractRequests(pool, 'clip')).toHaveLength(3);
 
@@ -238,7 +287,18 @@ describe('useCompositionAudioWaveforms', () => {
     await flushPromises();
     const generationB = latestGeneration(pool);
     expect(generationB).toBeGreaterThan(generationA);
-    respondAllSegments(pool, 'clip', generationB, [1, 1, 1]);
+    respondAllSegments(
+      pool,
+      'clip',
+      generationB,
+      [1, 1, 1],
+      [0, 1, 2],
+      [
+        [0.75, 0.625, 0.5, 0.375],
+        [0.625, 0.5, 0.375, 0.25],
+        [0.5, 0.375, 0.25, 0.125],
+      ],
+    );
     await flushPublished();
     expect(extractRequests(pool, 'clip')).toHaveLength(6);
 
@@ -248,6 +308,8 @@ describe('useCompositionAudioWaveforms', () => {
     expect(extractRequests(pool, 'clip')).toHaveLength(6);
     expect(state.status.value.clip).toBe('ready');
     expect(state.slices.value.clip?.bars).toEqual(barsA);
+    expect(state.slices.value.clip?.bands).toEqual(bandsA);
+    expect(state.slices.value.clip?.sourceDurationSeconds).toBe(sourceDurationA);
   });
 
   it('exposes a real worker error and removes non-drawable waveform data', async () => {
@@ -318,24 +380,61 @@ describe('useCompositionAudioWaveforms', () => {
     expect(secondGeneration).toBeGreaterThan(firstGeneration);
     const second = extractRequests(pool, 'clip', secondGeneration);
     expect(second).toHaveLength(3);
-    expect(second[0]?.startSeconds).toBeCloseTo(2.25, 8);
+    expect(second[0]?.startSeconds).toBeCloseTo(6.25, 8);
     expect(second[2]?.endSeconds).toBeCloseTo(8.25, 8);
     expect(second[0]?.startSeconds).not.toBe(first[0]?.startSeconds);
-    expect(second.reduce((sum, request) => sum + request.pointCount, 0)).toBe(firstPointCount);
-    expect(second.reduce((sum, request) => sum + request.pointCount, 0)).toBe(240);
-    expect(state.slices.value.clip).toBeUndefined();
+    expect(second.reduce((sum, request) => sum + request.pointCount, 0)).toBe(80);
+    expect(second.map(({ startSeconds, endSeconds }) => [startSeconds, endSeconds])).toEqual([
+      [6.25, expect.any(Number)],
+      [expect.any(Number), expect.any(Number)],
+      [expect.any(Number), 8.25],
+    ]);
+    expect(state.status.value.clip).toBe('loading');
+    expect(state.slices.value.clip).toEqual(
+      expect.objectContaining({ leftPercent: 0, widthPercent: 75, loadingSegments: [] }),
+    );
+    expect(state.slices.value.clip?.bars).toEqual(pageABars);
 
     respondSegment(pool, second[0]!, 2);
     await flushPublished();
     expect(state.status.value.clip).toBe('loading');
-    expect(state.slices.value.clip).toEqual(expect.objectContaining({ leftPercent: 25, widthPercent: 75 }));
-    expect(state.slices.value.clip?.bars).not.toEqual(pageABars);
+    expect(state.slices.value.clip).toEqual(
+      expect.objectContaining({ leftPercent: 0, widthPercent: 75, loadingSegments: [] }),
+    );
+    expect(state.slices.value.clip?.bars).toEqual(pageABars);
 
     respondSegment(pool, second[1]!, 1);
     respondSegment(pool, second[2]!, 0.5);
     await flushPublished();
     expect(state.status.value.clip).toBe('ready');
+    expect(state.slices.value.clip).toEqual(
+      expect.objectContaining({ leftPercent: 25, widthPercent: 75, loadingSegments: [] }),
+    );
+    expect(state.slices.value.clip?.bars.slice(0, 160)).toEqual(pageABars?.slice(80));
+    expect(state.slices.value.clip?.bars.slice(160, 160 + second[0]!.pointCount).every((bar) => bar === 38)).toBe(true);
+    expect(
+      state.slices.value.clip?.bars
+        .slice(160 + second[0]!.pointCount, 160 + second[0]!.pointCount + second[1]!.pointCount)
+        .every((bar) => bar === 38),
+    ).toBe(true);
+    expect(state.slices.value.clip?.bars.slice(-second[2]!.pointCount).every((bar) => bar === 19)).toBe(true);
     expect(extractRequests(pool, 'clip')).toHaveLength(6);
+
+    mounted.viewportRef.value = { startSeconds: 2, endSeconds: 4, pixelsPerSecond: 120 };
+    await nextTick();
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 125));
+    await flushPublished();
+    expect(extractRequests(pool, 'clip')).toHaveLength(6);
+    expect(state.status.value.clip).toBe('ready');
+    expect(state.slices.value.clip?.bars).toEqual(pageABars);
+
+    mounted.viewportRef.value = { startSeconds: 2, endSeconds: 4, pixelsPerSecond: 60 };
+    await nextTick();
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 125));
+    await flushPublished();
+    expect(extractRequests(pool, 'clip')).toHaveLength(6);
+    expect(state.status.value.clip).toBe('ready');
+    expect(state.slices.value.clip?.bars).toHaveLength(120);
 
     mounted.viewportRef.value = { startSeconds: 2, endSeconds: 4, pixelsPerSecond: 120 };
     await nextTick();
@@ -354,6 +453,7 @@ describe('useCompositionAudioWaveforms', () => {
     expect(zoomed).toHaveLength(3);
     expect(zoomed.reduce((sum, request) => sum + request.pointCount, 0)).toBeGreaterThan(firstPointCount);
     expect(zoomed.reduce((sum, request) => sum + request.pointCount, 0)).toBe(480);
+    expect(state.status.value.clip).toBe('loading');
   });
 
   it('keeps the ready waveform visible while an uncached zoom request loads', async () => {
@@ -406,15 +506,15 @@ describe('useCompositionAudioWaveforms', () => {
       expect(state.status.value.clip).toBe('ready');
       expect(state.slices.value.clip?.bars).toEqual([
         ...Array.from({ length: zoomed[0]!.pointCount }, () => 38),
-        ...Array.from({ length: zoomed[1]!.pointCount }, () => 19),
-        ...Array.from({ length: zoomed[2]!.pointCount }, () => 10),
+        ...Array.from({ length: zoomed[1]!.pointCount }, () => 38),
+        ...Array.from({ length: zoomed[2]!.pointCount }, () => 19),
       ]);
     } finally {
       vi.useRealTimers();
     }
   });
 
-  it('immediately reconciles rapid viewport changes to incompatible buffered ranges', async () => {
+  it('debounces rapid viewport changes while the current waveform overlaps their buffered ranges', async () => {
     const value = composition();
     const clip = value.clips[0];
     if (clip?.kind !== 'audio') throw new Error('audio fixture missing');
@@ -436,18 +536,20 @@ describe('useCompositionAudioWaveforms', () => {
       mounted.viewportRef.value = { startSeconds: 6, endSeconds: 8, pixelsPerSecond: 120 };
       await nextTick();
 
-      expect(extractRequests(pool, 'clip')).toHaveLength(9);
+      expect(extractRequests(pool, 'clip')).toHaveLength(3);
+      expect(state.status.value.clip).toBe('ready');
       await vi.advanceTimersByTimeAsync(119);
-      expect(extractRequests(pool, 'clip')).toHaveLength(9);
+      expect(extractRequests(pool, 'clip')).toHaveLength(3);
 
       await vi.advanceTimersByTimeAsync(1);
       await flushPromises();
       const latest = extractRequests(pool, 'clip');
-      expect(latest).toHaveLength(9);
+      expect(latest).toHaveLength(6);
       const latestGenerationRequests = extractRequests(pool, 'clip', latestGeneration(pool));
       expect(latestGenerationRequests).toHaveLength(3);
-      expect(latestGenerationRequests[0]?.startSeconds).toBeCloseTo(4.25, 8);
+      expect(latestGenerationRequests[0]?.startSeconds).toBeCloseTo(6.25, 8);
       expect(latestGenerationRequests[2]?.endSeconds).toBeCloseTo(8.25, 8);
+      expect(state.status.value.clip).toBe('loading');
     } finally {
       vi.useRealTimers();
     }

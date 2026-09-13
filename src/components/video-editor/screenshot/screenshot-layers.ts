@@ -6,6 +6,10 @@ import type { ScreenshotLayer } from './screenshot-layer-types';
 export const SCREENSHOT_BACKGROUND_ID = '__background__';
 export const SCREENSHOT_WATERMARK_ID = '__watermark__';
 
+export function canRemoveScreenshotLayer(layer: ScreenshotLayer): boolean {
+  return !layer.locked && (Boolean(layer.removable) || !['image', 'background', 'watermark'].includes(layer.kind));
+}
+
 export function screenshotLayers(state: ScreenshotState): ScreenshotLayer[] {
   const content = [
     { id: SCREENSHOT_BACKGROUND_ID, kind: 'background' as const, name: '', visible: state.canvas.showBackground },

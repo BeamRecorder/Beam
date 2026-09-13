@@ -17,6 +17,7 @@ import { captionSources } from './caption-sources';
 import { useTranslate } from '~/i18n/useTranslate';
 import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
 import { buildBeamTranscriptionReport, formatTranscriptionElapsed } from '../../captions/transcription-diagnostics';
+import TranscriptExport from '../../captions/TranscriptExport.vue';
 
 const { t } = useTranslate('CaptionPanel');
 const { t: tHud } = useTranslate('HUD');
@@ -297,6 +298,12 @@ const runTranscription = async () => {
         </div>
         <p class="section-desc">{{ t('subtitlesGenerated', { count: aiCaptions.length }) }}</p>
       </div>
+
+      <TranscriptExport
+        :composition="composition"
+        :timeline-duration-ms="timelineDurationMs"
+        :disabled="isProcessing"
+      />
 
       <!-- Bottom Generate Action -->
       <div class="generate-action-footer">

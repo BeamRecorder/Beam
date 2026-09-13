@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Check, Copy, ExternalLink, Film, LoaderCircle, X } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import CopyButton from '~/ui/button/CopyButton.vue';
+import QuickSnipCountdown from './QuickSnipCountdown.vue';
 import { capture } from '~/api/capture';
 import { useTranslate } from '../../i18n/useTranslate';
 import type { QuickSnipSnapshot } from '~/api/types/quick-snip';
@@ -282,6 +283,7 @@ onBeforeUnmount(() => {
         <div class="status-copy">
           <strong role="status">{{ label }}</strong>
           <span>{{ detail }}</span>
+          <QuickSnipCountdown v-if="completed && status?.autoClose" :countdown="status.autoClose" :paused="expanded" />
         </div>
         <div class="status-value">
           <Check v-if="completed" :size="20" />

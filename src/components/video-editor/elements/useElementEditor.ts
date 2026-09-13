@@ -56,8 +56,11 @@ export function provideElementEditor(options: ElementEditorOptions): ElementEdit
     return true;
   };
   const context: ElementEditorContext = {
+    canInteract: computed(allowed),
     addImage: options.addImage,
     addHighlight: options.addHighlight,
+    addBlur: options.addBlur,
+    addColor: options.addColor,
     layers,
     selected,
     editing,

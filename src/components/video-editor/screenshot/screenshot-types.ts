@@ -24,9 +24,16 @@ export interface ScreenshotDrag {
   initial: NormalizedTransform;
   imageFrame?: NormalizedTransform;
   corner?: ResizeCorner;
+  selection?: string[];
+  targetId?: string;
 }
 
 export type ScreenshotPanel = 'canvas' | 'image' | 'shapes' | 'cursor' | 'settings';
+export type ScreenshotSelectionMode = 'replace' | 'toggle';
+export interface ScreenshotTranslation {
+  x: number;
+  y: number;
+}
 
 export interface ScreenshotDimensions {
   width: number;

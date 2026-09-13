@@ -1,31 +1,7 @@
 import type { MediaError, MediaSourceDescriptor } from '../shared';
 
-export type WaveformWorkerRequest =
-  | {
-      type: 'extract';
-      generation: number;
-      clipId: string;
-      source: MediaSourceDescriptor;
-      startSeconds: number;
-      endSeconds: number;
-      pointCount: number;
-      segmentIndex: number;
-      segmentCount: number;
-    }
-  | { type: 'clear'; generation: number };
-
-export type WaveformWorkerResponse =
-  | {
-      type: 'result';
-      generation: number;
-      clipId: string;
-      peaks: Float32Array;
-      segmentIndex: number;
-      segmentCount: number;
-      segmentPointOffset: number;
-      segmentComplete: boolean;
-    }
-  | { type: 'error'; generation: number; clipId: string; error: MediaError };
+import type { WaveformWorkerRequest, WaveformWorkerResponse } from './waveform-types';
+export type { WaveformWorkerRequest, WaveformWorkerResponse } from './waveform-types';
 
 const record = (value: unknown): value is Record<string, unknown> => Boolean(value && typeof value === 'object');
 const generation = (value: unknown) => Number.isSafeInteger(value) && (value as number) >= 0;
@@ -92,6 +68,8 @@ export function isWaveformWorkerResponse(value: unknown): value is WaveformWorke
       value.peaks instanceof Float32Array &&
       value.peaks.length > 0 &&
       value.peaks.length % 2 === 0 &&
+      value.bands instanceof Float32Array &&
+      value.bands.length === value.peaks.length * 2 &&
       segment(value.segmentIndex, value.segmentCount) &&
       Number.isSafeInteger(value.segmentPointOffset) &&
       (value.segmentPointOffset as number) >= 0 &&

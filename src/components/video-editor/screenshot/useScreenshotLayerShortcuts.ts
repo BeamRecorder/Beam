@@ -22,7 +22,7 @@ export function useScreenshotLayerShortcuts(
     const target = event.target instanceof Element ? event.target : null;
     if (
       target?.closest(
-        'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], .popover-content',
+        'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="menu"], .popover-content',
       ) ||
       document.querySelector('[role="dialog"][aria-modal="true"]')
     )

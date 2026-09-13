@@ -6,5 +6,8 @@ export type TimelineElementKind =
   | 'caption'
   | 'color'
   | 'shape'
+  | 'arrow'
+  | 'text'
+  | 'drawing'
   | 'blur'
   | 'highlight';

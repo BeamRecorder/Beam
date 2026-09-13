@@ -366,9 +366,18 @@ mod tests {
 
     #[test]
     fn probe_drains_large_output_before_waiting_for_exit() {
-        let (_directory, path) = executable(
+        let directory = tempfile::tempdir().expect("temporary FFmpeg directory");
+        let path = directory.path().join("large-output.sh");
+        fs::write(
+            &path,
             "#!/bin/sh\nhead -c 262144 /dev/zero | tr '\\000' 'x'\nhead -c 262144 /dev/zero | tr '\\000' 'y' >&2\n",
-        );
+        )
+        .expect("write large-output FFmpeg fixture");
+        let mut permissions = fs::metadata(&path)
+            .expect("large-output fixture metadata")
+            .permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(&path, permissions).expect("make fixture executable");
         let output = run(&path, &[]).expect("output larger than both pipe buffers");
         assert_eq!(output.len(), 262144);
         assert!(output.bytes().all(|byte| byte == b'x'));
@@ -376,7 +385,15 @@ mod tests {
 
     #[test]
     fn probe_rejects_an_executable_that_is_not_ffmpeg() {
-        let (_directory, path) = executable("#!/bin/sh\nprintf 'another program\\n'\n");
+        let directory = tempfile::tempdir().expect("temporary FFmpeg directory");
+        let path = directory.path().join("not-ffmpeg.sh");
+        fs::write(&path, "#!/bin/sh\nprintf 'another program\\n'\n")
+            .expect("write not-FFmpeg fixture");
+        let mut permissions = fs::metadata(&path)
+            .expect("not-FFmpeg fixture metadata")
+            .permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(&path, permissions).expect("make fixture executable");
         let error = probe_ffmpeg_at(path).expect_err("invalid executable identity");
         assert!(
             error

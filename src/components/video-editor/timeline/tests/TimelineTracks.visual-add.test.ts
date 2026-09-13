@@ -82,11 +82,11 @@ describe('TimelineTracks visual add placement', () => {
     expect(popover.props('direction')).toBe('up');
 
     await addButton.trigger('click');
-    const compositionMenu = Array.from(
+    const elementsMenu = Array.from(
       document.body.querySelectorAll<HTMLButtonElement>('.menu-content:not(.submenu-panel) > .menu-entry > .menu-item'),
-    ).find((button) => button.textContent?.toLowerCase().includes('composition'));
-    expect(compositionMenu).toBeDefined();
-    compositionMenu!.click();
+    ).find((button) => button.textContent?.toLowerCase().includes('elements'));
+    expect(elementsMenu).toBeDefined();
+    elementsMenu!.click();
     await mounted!.vm.$nextTick();
     const blur = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.submenu-panel .menu-item')).find(
       (button) => button.textContent?.toLowerCase().includes('blur'),
@@ -125,7 +125,7 @@ describe('TimelineTracks visual add placement', () => {
     expect(ghost.exists()).toBe(true);
     expect(ghost.classes()).toContain(`kind-${kind}`);
     if (kind === 'highlight') {
-      expect(ghost.classes()).toContain('kind-blur');
+      expect(ghost.classes()).not.toContain('kind-blur');
       expect(content.attributes('title')).toBe('Add Highlight');
       expect(mounted!.get(`[data-track-id="${trackId}"] .track-title`).text()).toBe('Highlight');
     }

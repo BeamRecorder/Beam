@@ -2,9 +2,11 @@
 import ReorderGroup from '~/ui/transitions/ReorderGroup.vue';
 import {
   Camera,
+  ArrowRight,
   CircleDashed,
   Focus,
   Palette,
+  Pencil,
   Shapes,
   GripVertical,
   Image as ImageIcon,
@@ -59,11 +61,13 @@ const props = defineProps<{
 const { t } = useTranslate('TimelineTracks');
 const { t: tHighlight } = useTranslate('Highlight');
 const { t: tCanvas } = useTranslate('CanvasPanel');
+const { t: tElements } = useTranslate('Elements');
+const elementIcons = { shape: Shapes, arrow: ArrowRight, text: Type, drawing: Pencil };
 const iconForVisual = (clip: VisualClip | ColorClip | ShapeClip | BlurClip) =>
   clip.kind === 'color'
     ? Palette
     : clip.kind === 'shape'
-      ? Shapes
+      ? elementIcons[clip.family]
       : clip.kind === 'blur'
         ? clip.mode === 'highlight'
           ? Focus
@@ -77,7 +81,7 @@ const labelForVisual = (clip: VisualClip | ColorClip | ShapeClip | BlurClip) =>
   clip.kind === 'color'
     ? tCanvas('color')
     : clip.kind === 'shape'
-      ? tCanvas('shapesAndArrows')
+      ? tElements(clip.family)
       : clip.kind === 'blur'
         ? clip.mode === 'highlight'
           ? tHighlight('title')

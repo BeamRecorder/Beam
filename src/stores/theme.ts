@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
 import { capture } from '../api/capture';
+import { usePreferencesStore } from './preferences';
 import {
   adjustHexBrightness,
   DEFAULT_APPEARANCE,
@@ -15,6 +16,7 @@ import {
 } from '../types/appearance';
 
 export const useThemeStore = defineStore('theme', () => {
+  const preferencesStore = usePreferencesStore();
   const logTheme = (message: string, details?: unknown) => {
     if (details === undefined) console.info(`[Beam appearance] ${message}`);
     else console.info(`[Beam appearance] ${message}`, details);
@@ -146,6 +148,7 @@ export const useThemeStore = defineStore('theme', () => {
   const ready = capture
     .getPreferences()
     .then((preferences) => {
+      preferencesStore.settings = preferences;
       hydrateFromSettings(preferences.appearance, preferences.theme);
       hydrated.value = true;
       logTheme('appearance hydrated', { appearance: preferences.appearance });
@@ -231,6 +234,7 @@ export const useThemeStore = defineStore('theme', () => {
   });
 
   capture.onPreferencesChanged((preferences) => {
+    preferencesStore.settings = preferences;
     const next = preferences.appearance;
     if (
       preferences.theme === theme.value &&

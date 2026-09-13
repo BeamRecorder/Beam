@@ -10,6 +10,12 @@ mod ffmpeg_process;
 mod ffmpeg_process_tests;
 mod ffmpeg_sink;
 mod gpu_inventory;
+mod input_helper_diagnostics;
+#[cfg(test)]
+mod input_helper_diagnostics_tests;
+mod input_helper_executable;
+#[cfg(test)]
+mod input_helper_executable_tests;
 mod input_monitor;
 #[cfg(test)]
 mod input_monitor_tests;

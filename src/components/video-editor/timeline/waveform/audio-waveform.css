@@ -1,0 +1,31 @@
+.waveform {
+  position: absolute;
+  inset: 4px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1px;
+  overflow: hidden;
+}
+.waveform-slice {
+  position: absolute;
+  inset: 0;
+}
+.waveform-unavailable {
+  width: 100%;
+  color: var(--text-muted);
+  font-size: 9px;
+  text-align: center;
+}
+.waveform-loading {
+  width: 100%;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--color-track-audio-light);
+  animation: waveform-pending 800ms ease-in-out infinite alternate;
+}
+@keyframes waveform-pending {
+  to {
+    opacity: 0.45;
+  }
+}

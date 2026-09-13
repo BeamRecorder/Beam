@@ -2,15 +2,19 @@ import type { MediaError } from '~/media/shared';
 import type { Clip, MediaAsset } from '~/media/shared/composition-types';
 import type { TimelineThumbnailSlot } from './composables/timeline-viewport';
 import type { AudioWaveformStatus } from './composables/useCompositionAudioWaveforms';
+import type { OutputCanvasSettings } from '../canvas/output-canvas';
 
 export interface TimelineClipProps {
   clip: Clip;
+  canvas?: Pick<OutputCanvasSettings, 'width' | 'height'>;
   asset?: MediaAsset | null;
   duration: number;
   timelineWidthPx?: number;
   thumbnailSlots: readonly TimelineThumbnailSlot[];
   selected: boolean;
   waveformBars?: number[];
+  waveformBands?: Float32Array;
+  waveformSourceDurationSeconds?: number;
   waveformLeftPercent?: number;
   waveformWidthPercent?: number;
   waveformLoadingSegments?: Array<{ leftPercent: number; widthPercent: number }>;

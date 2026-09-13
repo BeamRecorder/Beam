@@ -294,7 +294,11 @@
     "modelDownloadFailed": "모델을 다운로드하지 못했습니다.",
     "systemAudio": "시스템 오디오",
     "microphone": "마이크",
-    "cancel": "취소"
+    "cancel": "취소",
+    "exportTranscript": "스크립트 내보내기 (JSON)",
+    "transcriptDescription": "구간 및 단어별 타임스탬프를 밀리초 단위로 포함하여 텍스트 자막을 내보냅니다.",
+    "transcriptSaved": "스크립트를 내보냈습니다.",
+    "transcriptExportFailed": "스크립트를 내보낼 수 없습니다."
   },
   "ClipPropertiesPanel": {
     "noClipSelected": "선택한 클립이 없습니다",
@@ -439,6 +443,7 @@
     "includeAudioDesc": "활성화된 오디오 트랙을 내보낸 동영상에 추가합니다."
   },
   "HUD": {
+    "inputAccessFailed": "상호작용 접근 권한을 요청할 수 없습니다.",
     "title": "Beam",
     "openProject": "프로젝트 열기",
     "preferences": "환경 설정",

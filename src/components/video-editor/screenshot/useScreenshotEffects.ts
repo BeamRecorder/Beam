@@ -3,6 +3,7 @@ import type { ScreenshotState } from '~/api/types/screenshot';
 import type { BlurClip } from '~/media/shared/composition-types';
 import type { BlurPatch } from '../properties/clip/blur-properties-types';
 import { HIGHLIGHT_DEFAULTS } from '~/media/shared/highlight-defaults';
+import { blurDefaultsFor } from '../composables/editor-defaults';
 import { useTranslate } from '~/i18n/useTranslate';
 import { initializeScreenshotComposition, insertScreenshotLayer } from './screenshot-layers';
 
@@ -13,17 +14,18 @@ export function useScreenshotEffects(
   canInteract: () => boolean,
 ) {
   const { t } = useTranslate('Highlight');
+  const { t: tTimeline } = useTranslate('TimelineTracks');
   const selected = computed(() => state.value?.effects?.find((effect) => effect.id === selectedId.value));
-  const add = () => {
+  const add = (kind: 'highlight' | 'blur' = 'highlight') => {
     if (!state.value || !canInteract()) return;
     const id = crypto.randomUUID();
     const clip: BlurClip = {
-      ...structuredClone(HIGHLIGHT_DEFAULTS),
+      ...(kind === 'highlight' ? structuredClone(HIGHLIGHT_DEFAULTS) : blurDefaultsFor({ schemaVersion: 1 })),
       id,
       trackId: id,
       kind: 'blur',
       assetId: '',
-      name: t('title'),
+      name: kind === 'highlight' ? t('title') : tTimeline('blur'),
       enabled: true,
       order: 0,
       timelineStartMs: 0,

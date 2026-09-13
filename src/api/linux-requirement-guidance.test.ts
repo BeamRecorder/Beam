@@ -191,4 +191,23 @@ describe('linuxInteractionGuidance', () => {
     expect(result?.copyText).toContain('Reported reason: not-provided');
     expect(result?.copyText).not.toContain('Confirmed reason');
   });
+
+  it('uses structured input errors as the cause and includes retry guidance in the copied report', () => {
+    const code = 'input-broker-start-failed';
+    const message = 'The protected input broker failed while opening Linux input devices.';
+    const result = linuxInteractionGuidance(diagnostics(), {
+      state: 'unavailable',
+      canRequest: true,
+      clicks: false,
+      shortcuts: false,
+      recordsText: false,
+      error: { code, message },
+    });
+
+    expect(result?.description).toBe(message);
+    expect(result?.copyText).toContain(`Error: ${code}\n${message}`);
+    expect(result?.copyText).toMatch(/Action: .*retry interaction access/i);
+    expect(result?.copyText).not.toContain('could not determine why');
+    expect(result?.copyText).not.toContain('Reported reason: not-provided');
+  });
 });

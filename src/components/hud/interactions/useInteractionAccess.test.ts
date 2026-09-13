@@ -33,6 +33,18 @@ const installationRequired: InputAccessStatus = {
   shortcuts: false,
   recordsText: false,
 };
+const brokerUnavailable: InputAccessStatus = {
+  state: 'unavailable',
+  canRequest: true,
+  clicks: false,
+  shortcuts: false,
+  recordsText: false,
+  unavailableReason: 'input-broker-unavailable',
+  error: {
+    code: 'input-broker-start-failed',
+    message: 'The protected input broker failed to start.',
+  },
+};
 
 const preferences = (enabled: boolean, noticeDismissed = false): PreferenceSettings => ({
   schemaVersion: 3,
@@ -151,17 +163,17 @@ describe('useInteractionAccess', () => {
     wrapper.unmount();
   });
 
-  it('persists disabled interactions after an explicitly denied Linux request', async () => {
-    capture.requestInputAccess.mockRejectedValueOnce(new Error('permission denied'));
+  it('preserves a structured Linux startup failure and clears enabled consent', async () => {
+    capture.inputAccessStatus.mockResolvedValueOnce(brokerUnavailable);
     const { access, wrapper } = mountAccess('linux');
-    access.hydrate(preferences(true));
+    access.hydrate(preferences(true, true));
 
-    await access.request();
+    await access.refresh();
 
-    expect(capture.requestInputAccess).toHaveBeenCalledOnce();
-    expect(access.status.value.state).toBe('denied');
-    expect(access.status.value.canRequest).toBe(true);
+    expect(capture.requestInputAccess).not.toHaveBeenCalled();
+    expect(access.status.value).toEqual(brokerUnavailable);
     expect(access.enabled.value).toBe(false);
+    expect(access.noticeDismissed.value).toBe(false);
     expect(capture.updatePreferences).toHaveBeenCalledWith({
       recordingInteractions: { enabled: false, noticeDismissed: false },
     });
@@ -169,30 +181,70 @@ describe('useInteractionAccess', () => {
     wrapper.unmount();
   });
 
+  it('preserves a structured failure returned by authorization and allows it to be retried', async () => {
+    capture.requestInputAccess.mockResolvedValueOnce(brokerUnavailable).mockResolvedValueOnce(available);
+    const { access, wrapper } = mountAccess('linux');
+    access.hydrate(preferences(true, true));
+
+    await access.request();
+
+    expect(access.status.value).toEqual(brokerUnavailable);
+    expect(access.enabled.value).toBe(false);
+    expect(access.noticeDismissed.value).toBe(false);
+    expect(capture.updatePreferences).toHaveBeenNthCalledWith(1, {
+      recordingInteractions: { enabled: false, noticeDismissed: false },
+    });
+
+    await access.request();
+
+    expect(capture.requestInputAccess).toHaveBeenCalledTimes(2);
+    expect(access.status.value).toEqual(available);
+    expect(access.recordingEnabled.value).toBe(true);
+    expect(capture.updatePreferences).toHaveBeenNthCalledWith(2, {
+      recordingInteractions: { enabled: true, noticeDismissed: true },
+    });
+    wrapper.unmount();
+  });
+
   it('surfaces a failed automatic request as retryable access', async () => {
-    capture.requestInputAccess.mockRejectedValueOnce(new Error('permission denied'));
+    capture.requestInputAccess.mockRejectedValueOnce(new Error('The Polkit helper stopped unexpectedly.'));
     const { access, wrapper } = mountAccess('linux');
     access.hydrate(preferences(true, true));
 
     await access.refresh();
 
     expect(capture.requestInputAccess).toHaveBeenCalledOnce();
-    expect(access.status.value.state).toBe('denied');
-    expect(access.status.value.canRequest).toBe(true);
+    expect(access.status.value).toMatchObject({
+      state: 'unavailable',
+      canRequest: true,
+      error: {
+        code: 'input-access-failed',
+        message: 'The Polkit helper stopped unexpectedly.',
+      },
+    });
     expect(access.recordingEnabled.value).toBe(false);
+    expect(access.noticeDismissed.value).toBe(false);
     expect(capture.updatePreferences).toHaveBeenCalledWith({
       recordingInteractions: { enabled: false, noticeDismissed: false },
     });
     wrapper.unmount();
   });
 
-  it('allows a denied Linux request to be retried explicitly and enabled after success', async () => {
-    capture.requestInputAccess.mockRejectedValueOnce(new Error('permission denied')).mockResolvedValueOnce(available);
+  it('allows an unexpected Linux access failure to be retried explicitly and enabled after success', async () => {
+    capture.requestInputAccess
+      .mockRejectedValueOnce(new Error('input helper crashed'))
+      .mockResolvedValueOnce(available);
     const { access, wrapper } = mountAccess('linux');
+    access.hydrate(preferences(true, true));
 
     await access.request();
-    expect(access.status.value.state).toBe('denied');
+    expect(access.status.value).toMatchObject({
+      state: 'unavailable',
+      canRequest: true,
+      error: { code: 'input-access-failed', message: 'input helper crashed' },
+    });
     expect(access.enabled.value).toBe(false);
+    expect(access.noticeDismissed.value).toBe(false);
 
     await access.request();
 
@@ -209,6 +261,66 @@ describe('useInteractionAccess', () => {
     wrapper.unmount();
   });
 
+  it('preserves Linux authorization cancellation statuses without turning them into errors', async () => {
+    capture.requestInputAccess.mockResolvedValueOnce(permissionRequired).mockResolvedValueOnce(installationRequired);
+    const { access, wrapper } = mountAccess('linux');
+    access.hydrate(preferences(true, true));
+
+    await access.request();
+    expect(access.status.value).toEqual(permissionRequired);
+    expect(access.status.value.state).not.toBe('denied');
+    expect(access.status.value.canRequest).toBe(true);
+    expect(access.status.value.error).toBeUndefined();
+    expect(access.noticeDismissed.value).toBe(true);
+
+    await access.request();
+    expect(access.status.value).toEqual(installationRequired);
+    expect(access.status.value.state).not.toBe('denied');
+    expect(access.status.value.canRequest).toBe(true);
+    expect(access.status.value.error).toBeUndefined();
+    expect(access.noticeDismissed.value).toBe(true);
+    wrapper.unmount();
+  });
+
+  it('keeps a native macOS denial status unchanged', async () => {
+    const denied: InputAccessStatus = {
+      ...permissionRequired,
+      state: 'denied',
+    };
+    capture.requestInputAccess.mockResolvedValueOnce(denied);
+    const { access, wrapper } = mountAccess('darwin');
+    access.hydrate(preferences(true, true));
+
+    await access.request();
+
+    expect(access.status.value).toEqual(denied);
+    expect(access.enabled.value).toBe(false);
+    expect(access.noticeDismissed.value).toBe(false);
+    expect(capture.updatePreferences).toHaveBeenCalledWith({
+      recordingInteractions: { enabled: false, noticeDismissed: false },
+    });
+    wrapper.unmount();
+  });
+
+  it('uses a generic detail for non-Error Linux request rejections', async () => {
+    capture.requestInputAccess.mockRejectedValueOnce('unexpected native rejection');
+    const { access, wrapper } = mountAccess('linux');
+
+    await access.request();
+
+    expect(access.status.value).toMatchObject({
+      state: 'unavailable',
+      canRequest: true,
+      error: {
+        code: 'input-access-failed',
+        message: expect.any(String),
+      },
+    });
+    expect(access.status.value.error?.message).not.toContain('unexpected native rejection');
+    expect(access.status.value.state).not.toBe('denied');
+    wrapper.unmount();
+  });
+
   it('persists a successful explicit authorization as enabled and notice dismissed', async () => {
     const { access, wrapper } = mountAccess('linux');
 
@@ -217,19 +329,6 @@ describe('useInteractionAccess', () => {
     expect(access.noticeDismissed.value).toBe(true);
     expect(capture.updatePreferences).toHaveBeenCalledWith({
       recordingInteractions: { enabled: true, noticeDismissed: true },
-    });
-    wrapper.unmount();
-  });
-
-  it('keeps the interaction notice visible after an explicit refusal', async () => {
-    capture.requestInputAccess.mockRejectedValueOnce(new Error('permission denied'));
-    const { access, wrapper } = mountAccess('linux');
-
-    await access.request();
-
-    expect(access.noticeDismissed.value).toBe(false);
-    expect(capture.updatePreferences).toHaveBeenCalledWith({
-      recordingInteractions: { enabled: false, noticeDismissed: false },
     });
     wrapper.unmount();
   });

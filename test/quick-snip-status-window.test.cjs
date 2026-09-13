@@ -8,6 +8,7 @@ function createFixture(
   { cleanupStatus = () => {}, preferenceState = { extras: {} }, environment = {} } = {},
 ) {
   const timers = new Map();
+  let clockNow = 10_000;
   let timerId = 0;
   const calls = [];
   const windows = [];
@@ -154,6 +155,7 @@ function createFixture(
     cleanupStatus,
     environment,
     preferencesStore,
+    now: () => clockNow,
     setTimer: (callback, delay) => {
       timers.set(++timerId, { callback, delay });
       return timerId;
@@ -189,6 +191,10 @@ function createFixture(
     ready,
     preferenceState,
     preferenceWrites,
+    now: () => clockNow,
+    setNow: (value) => {
+      clockNow = value;
+    },
   };
 }
 
@@ -197,6 +203,11 @@ const processingStatus = {
   progress: 0.4,
   job: { regionBounds: { x: 2200, y: 200, width: 800, height: 600 } },
 };
+
+function latestStatusSnapshot(fixture) {
+  const messages = fixture.calls.filter((call) => call[0] === 'send' && call[1] === 'quick-snip:status');
+  return messages[messages.length - 1]?.[2] ?? null;
+}
 
 test('prewarms hidden and waits for both readiness signals plus an update before presenting', () => {
   for (const order of ['native-first', 'renderer-first']) {
@@ -209,6 +220,11 @@ test('prewarms hidden and waits for both readiness signals plus an update before
     assert.equal(window.visible, false);
     assert.equal(fixture.timers.size, 0);
     assert.equal(statusMessages().length, 0);
+    assert.deepEqual(fixture.status.snapshot().autoClose, {
+      durationMs: 5000,
+      deadlineMs: null,
+      remainingMs: 5000,
+    });
 
     if (order === 'renderer-first') {
       fixture.status.rendererReady(window.webContents);
@@ -225,12 +241,23 @@ test('prewarms hidden and waits for both readiness signals plus an update before
     assert.equal(window.visible, false);
     assert.equal(statusMessages().length, 1);
     assert.equal(fixture.timers.size, 0);
+    assert.deepEqual(statusMessages()[0][2].autoClose, {
+      durationMs: 5000,
+      deadlineMs: null,
+      remainingMs: 5000,
+    });
 
     fixture.status.update(completed);
     assert.equal(window.visible, true);
     assert.equal(fixture.calls.filter((call) => call[0] === 'showInactive').length, 1);
     assert.equal(fixture.timers.size, 1);
     assert.equal([...fixture.timers.values()][0].delay, 5000);
+    assert.deepEqual(fixture.status.snapshot().autoClose, {
+      durationMs: 5000,
+      deadlineMs: fixture.now() + 5000,
+      remainingMs: 5000,
+    });
+    assert.deepEqual(latestStatusSnapshot(fixture).autoClose, fixture.status.snapshot().autoClose);
   }
 });
 
@@ -400,14 +427,56 @@ test('keeps Linux controls reachable without unsupported mouse forwarding', () =
 
 test('dismisses completed output after five seconds and pauses while interacting', () => {
   const fixture = createFixture();
+  const startedAt = fixture.now();
   fixture.status.update({ ...processingStatus, state: 'completed' });
   fixture.ready();
   assert.equal([...fixture.timers.values()][0].delay, 5000);
   fixture.status.setInteractive(true);
   assert.equal(fixture.timers.size, 0);
   fixture.status.setInteractive(false);
+  fixture.setNow(startedAt + 5000);
   [...fixture.timers.values()][0].callback();
   assert.equal(fixture.windows[0].destroyed, true);
+});
+
+test('freezes the completed countdown on hover and restarts five full seconds on leave', () => {
+  const fixture = createFixture();
+  const startedAt = fixture.now();
+  fixture.status.update({ ...processingStatus, state: 'completed' });
+  fixture.ready();
+
+  const firstTimerId = [...fixture.timers.keys()][0];
+  assert.deepEqual(fixture.status.snapshot().autoClose, {
+    durationMs: 5000,
+    deadlineMs: startedAt + 5000,
+    remainingMs: 5000,
+  });
+
+  fixture.setNow(startedAt + 1400);
+  fixture.status.setInteractive(true);
+
+  const pausedSnapshot = {
+    durationMs: 5000,
+    deadlineMs: null,
+    remainingMs: 3600,
+  };
+  assert.equal(fixture.timers.size, 0);
+  assert.deepEqual(fixture.status.snapshot().autoClose, pausedSnapshot);
+  assert.deepEqual(latestStatusSnapshot(fixture).autoClose, pausedSnapshot);
+
+  fixture.setNow(startedAt + 1400 + 4000);
+  fixture.status.setInteractive(false);
+
+  const resumedSnapshot = {
+    durationMs: 5000,
+    deadlineMs: fixture.now() + 5000,
+    remainingMs: 5000,
+  };
+  const [resumedTimerId, resumedTimer] = [...fixture.timers.entries()][0];
+  assert.notEqual(resumedTimerId, firstTimerId);
+  assert.equal(resumedTimer.delay, 5000);
+  assert.deepEqual(fixture.status.snapshot().autoClose, resumedSnapshot);
+  assert.deepEqual(latestStatusSnapshot(fixture).autoClose, resumedSnapshot);
 });
 
 test('emits native blur after the renderer handshake', () => {
@@ -450,39 +519,84 @@ test('restarts the five-second dismissal after native blur deactivates the rende
 
 test('pauses completed dismissal while dragging and restarts the timer after position commit', () => {
   const fixture = createFixture('win32');
+  const startedAt = fixture.now();
   fixture.status.update({ ...processingStatus, state: 'completed' });
   const window = fixture.windows[0];
   fixture.ready(window);
   assert.equal(fixture.timers.size, 1);
 
+  fixture.setNow(startedAt + 1200);
   window.bounds = { ...window.bounds, x: 2500, y: fixture.capturedDisplay.workArea.y };
   window.emit('move');
   assert.equal(fixture.timers.size, 0);
+  const pausedSnapshot = {
+    durationMs: 5000,
+    deadlineMs: null,
+    remainingMs: 3800,
+  };
+  assert.deepEqual(fixture.status.snapshot().autoClose, pausedSnapshot);
+  assert.deepEqual(latestStatusSnapshot(fixture).autoClose, pausedSnapshot);
+
   window.emit('moved');
 
   assert.equal(fixture.timers.size, 1);
   assert.equal([...fixture.timers.values()][0].delay, 5000);
+  const committedSnapshot = {
+    durationMs: 5000,
+    deadlineMs: fixture.now() + 5000,
+    remainingMs: 5000,
+  };
+  assert.deepEqual(fixture.status.snapshot().autoClose, committedSnapshot);
+  assert.deepEqual(latestStatusSnapshot(fixture).autoClose, committedSnapshot);
   assert.equal(fixture.preferenceWrites.length, 1);
 });
 
 test('pending progress and duplicate completed updates do not reset the dismissal deadline', () => {
   const fixture = createFixture();
+  const startedAt = fixture.now();
   fixture.status.prepare(processingStatus);
   fixture.ready();
   assert.equal(fixture.windows[0].visible, false);
   assert.equal(fixture.timers.size, 0);
+  assert.equal(fixture.status.snapshot().autoClose, null);
 
   fixture.status.update(processingStatus);
   fixture.status.update({ ...processingStatus, progress: 0.8 });
   assert.equal(fixture.windows[0].visible, true);
   assert.equal(fixture.timers.size, 0);
+  assert.equal(fixture.status.snapshot().autoClose, null);
+  assert.equal(latestStatusSnapshot(fixture).autoClose, null);
 
   const completed = { ...processingStatus, state: 'completed', progress: 1 };
   fixture.status.update(completed);
   const timer = [...fixture.timers.keys()][0];
   assert.equal([...fixture.timers.values()][0].delay, 5000);
-  fixture.status.update({ ...completed, progress: 1 });
+  const deadline = startedAt + 5000;
+  assert.deepEqual(fixture.status.snapshot().autoClose, {
+    durationMs: 5000,
+    deadlineMs: deadline,
+    remainingMs: 5000,
+  });
+
+  fixture.setNow(startedAt + 2200);
+  fixture.status.update({ ...completed, progress: 0.95 });
   assert.equal([...fixture.timers.keys()][0], timer);
+  assert.deepEqual(fixture.status.snapshot().autoClose, {
+    durationMs: 5000,
+    deadlineMs: deadline,
+    remainingMs: 2800,
+  });
+  assert.deepEqual(latestStatusSnapshot(fixture).autoClose, fixture.status.snapshot().autoClose);
+
+  fixture.setNow(startedAt + 3400);
+  fixture.status.update(completed);
+  assert.equal([...fixture.timers.keys()][0], timer);
+  assert.deepEqual(fixture.status.snapshot().autoClose, {
+    durationMs: 5000,
+    deadlineMs: deadline,
+    remainingMs: 1600,
+  });
+  assert.deepEqual(latestStatusSnapshot(fixture).autoClose, fixture.status.snapshot().autoClose);
   fixture.status.hide();
   assert.equal(fixture.timers.size, 0);
 });

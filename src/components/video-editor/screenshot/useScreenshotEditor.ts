@@ -4,7 +4,9 @@ import { provideElementEditor } from '../elements/useElementEditor';
 import { useTranslate } from '~/i18n/useTranslate';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useToastStore } from '~/ui/toast/toastStore';
-import type { ScreenshotPanel } from './screenshot-types';
+import type { ScreenshotPanel, ScreenshotSelectionMode, ScreenshotTranslation } from './screenshot-types';
+import { useScreenshotSelection } from './useScreenshotSelection';
+import { applyScreenshotTranslation } from './screenshot-selection-transform';
 import type { CaptureProject } from '~/api/types/capture-api';
 import { capture } from '~/api/capture';
 import type { ScreenshotDocument, ScreenshotState } from '~/api/types/screenshot';
@@ -13,7 +15,11 @@ import type { EditorPresetDocument } from '~/api/types/editor-preset';
 import { BACKGROUND_MEDIA, groupBackgroundMedia, type BackgroundMedia } from '../composables/backgroundCatalog';
 import { screenshotState, screenshotPresetSettings } from './screenshot-state';
 import { encodeScreenshot } from './screenshot-render';
-import { propertyInteractionActive } from '~/composables/property-interaction';
+import {
+  beginPropertyInteraction,
+  endPropertyInteraction,
+  propertyInteractionActive,
+} from '~/composables/property-interaction';
 import { useScreenshotHistory } from './useScreenshotHistory';
 import { useScreenshotCursors } from './useScreenshotCursors';
 import { useScreenshotLayerShortcuts } from './useScreenshotLayerShortcuts';
@@ -24,6 +30,7 @@ import {
   initializeScreenshotComposition,
   insertScreenshotLayer,
   removeScreenshotLayer,
+  canRemoveScreenshotLayer,
   screenshotLayers,
   SCREENSHOT_BACKGROUND_ID,
   SCREENSHOT_WATERMARK_ID,
@@ -36,7 +43,8 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
   const state = ref<ScreenshotState | null>(null);
   const presets = ref<EditorPresetDocument | null>(null);
   const backgroundLibrary = ref<BackgroundMedia[]>([]);
-  const selectedId = ref<string | null>(null);
+  const selection = useScreenshotSelection(() => (state.value ? screenshotLayers(state.value) : []));
+  const { selectedId, selectedIds } = selection;
   const panel = ref<ScreenshotPanel>('canvas');
   const cropping = ref(false);
   const advanced = ref(false);
@@ -142,12 +150,16 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
       busy.value = false;
     }
   };
-  const select = (id: string | null) => {
+  const select = (id: string | null, mode?: ScreenshotSelectionMode) => {
+    selection.select(id, mode);
+    id = selectedId.value;
+    showSelection(id);
+  };
+  const showSelection = (id: string | null) => {
     if (state.value?.effects?.some((effect) => effect.id === id)) {
       elements.finishText();
       elements.drawingMode.value = false;
     }
-    selectedId.value = id;
     panel.value =
       id === state.value?.image.id
         ? 'image'
@@ -157,6 +169,27 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
             ? 'canvas'
             : 'shapes';
     cropping.value = false;
+  };
+  const removeLayer = (id: string) => {
+    if (!state.value || busy.value || cropping.value) return;
+    const targets = selectedIds.value.includes(id) ? selectedIds.value : [id];
+    const removable = screenshotLayers(state.value).filter(
+      (layer) => targets.includes(layer.id) && canRemoveScreenshotLayer(layer),
+    );
+    if (!removable.length) return;
+    beginPropertyInteraction();
+    try {
+      elements.finishText();
+      for (const layer of removable) removeScreenshotLayer(state.value, layer.id);
+      selection.reconcile();
+      showSelection(selectedId.value);
+    } finally {
+      endPropertyInteraction();
+    }
+  };
+  const translate = (value: ScreenshotTranslation) => {
+    if (state.value && !busy.value && !cropping.value)
+      applyScreenshotTranslation(state.value, selectedIds.value, value);
   };
   const transform = (value: NormalizedTransform) => {
     if (selectedLayer.value?.locked) return;
@@ -211,6 +244,11 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
     () => !busy.value && !cropping.value && !selectedLayer.value?.locked,
   );
   const elements = provideElementEditor({
+    addBlur: () => {
+      elements.finishText();
+      elements.drawingMode.value = false;
+      effects.add('blur');
+    },
     addHighlight: () => {
       elements.finishText();
       elements.drawingMode.value = false;
@@ -239,18 +277,20 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
     disabled: () => busy.value || Boolean(elements.editing.value),
     restore: () => {
       cropping.value = false;
-      if (selectedId.value && !screenshotLayers(state.value!).some((layer) => layer.id === selectedId.value))
-        select(null);
+      const previous = selectedId.value;
+      selection.reconcile();
+      if (selectedId.value !== previous) showSelection(selectedId.value);
     },
   });
   useScreenshotLayerShortcuts(
-    () => selectedLayer.value,
+    () =>
+      state.value
+        ? screenshotLayers(state.value).find(
+            (layer) => selectedIds.value.includes(layer.id) && canRemoveScreenshotLayer(layer),
+          )
+        : undefined,
     () => busy.value || cropping.value || Boolean(elements.editing.value) || elements.drawingMode.value,
-    (id) => {
-      if (!state.value) return;
-      removeScreenshotLayer(state.value, id);
-      select(null);
-    },
+    removeLayer,
   );
   watch(panel, (next) => {
     if (next !== 'shapes') elements.drawingMode.value = false;
@@ -369,6 +409,7 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
     presets,
     backgroundLibrary,
     selectedId,
+    selectedIds,
     panel,
     cropping,
     advanced,
@@ -388,6 +429,8 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
     select,
     selectPanel,
     transform,
+    translate,
+    removeLayer,
     appearance,
     removeShape,
     exportImage,

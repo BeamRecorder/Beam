@@ -1,53 +1,103 @@
 <script setup lang="ts">
-import { Type, Pencil } from '@lucide/vue';
-import { computed } from 'vue';
-import type { ShapeClip } from '~/media/shared/composition-types';
+import { ImageOff } from '@lucide/vue';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
+import { loadElementFonts } from '~/media/shared/element-fonts';
+import { useTranslate } from '~/i18n/useTranslate';
+import { DEFAULT_OUTPUT_CANVAS } from '../canvas/output-canvas';
+import { renderShapeTimelinePreview } from './shape-timeline-preview';
+import type { ShapeTimelinePreviewProps } from './shape-timeline-preview-types';
 
-const props = defineProps<{ clip: ShapeClip }>();
-const previewStyle = computed(() => {
-  const preset = props.clip.preset;
-  const clipPath =
-    preset === 'ellipse'
-      ? 'ellipse(46% 42% at 50% 50%)'
-      : preset === 'triangle'
-        ? 'polygon(50% 8%, 94% 90%, 6% 90%)'
-        : preset === 'diamond'
-          ? 'polygon(50% 5%, 95% 50%, 50% 95%, 5% 50%)'
-          : preset === 'star'
-            ? 'polygon(50% 3%, 61% 35%, 96% 35%, 68% 56%, 79% 91%, 50% 70%, 21% 91%, 32% 56%, 4% 35%, 39% 35%)'
-            : preset === 'arrow'
-              ? 'polygon(5% 34%, 62% 34%, 62% 9%, 96% 50%, 62% 91%, 62% 66%, 5% 66%)'
-              : 'inset(8%)';
-  return {
-    background: props.clip.fillColor,
-    borderRadius: preset === 'rounded-rectangle' ? `${Math.max(0, props.clip.cornerRadius / 2)}px` : undefined,
-    clipPath,
-    backdropFilter:
-      props.clip.opacityEnabled && props.clip.backdropBlur > 0
-        ? `blur(${Math.max(1, props.clip.backdropBlur / 20)}px)`
-        : undefined,
-    opacity: props.clip.opacityEnabled ? props.clip.opacity / 100 : 1,
-    transform: `rotate(${props.clip.rotation}deg)`,
-  };
+const props = withDefaults(defineProps<ShapeTimelinePreviewProps>(), { canvas: () => DEFAULT_OUTPUT_CANVAS });
+const { t } = useTranslate('ScreenshotComposition');
+const preview = ref('');
+const error = ref('');
+let mounted = false;
+let frame = 0;
+let revision = 0;
+let signature = '';
+
+const draw = async () => {
+  frame = 0;
+  const current = revision;
+  const clip = props.clip;
+  const canvas = props.canvas;
+  try {
+    await loadElementFonts([clip]);
+    if (!mounted || current !== revision) return;
+    preview.value = renderShapeTimelinePreview(clip, canvas);
+    error.value = '';
+  } catch (cause) {
+    if (!mounted || current !== revision) return;
+    error.value = cause instanceof Error ? cause.message : String(cause);
+  }
+};
+const schedule = () => {
+  const next = JSON.stringify([
+    ...appearanceFields.map((field) => props.clip[field]),
+    props.clip.transform.width,
+    props.clip.transform.height,
+    props.canvas.width,
+    props.canvas.height,
+  ]);
+  // Composition edits clone clips, including otherwise unchanged text and paths.
+  if (next === signature) return;
+  signature = next;
+  revision += 1;
+  if (mounted && !frame) frame = requestAnimationFrame(() => void draw());
+};
+// Placement, clip timing and timeline zoom do not change the element's artwork.
+const appearanceFields = [
+  'family',
+  'preset',
+  'fillColor',
+  'borderColor',
+  'borderWidth',
+  'cornerRadius',
+  'arrowThickness',
+  'arrowHeadSize',
+  'rotation',
+  'opacityEnabled',
+  'opacity',
+  'backdropBlur',
+  'shadowEnabled',
+  'shadowColor',
+  'shadowBlur',
+  'shadowDirection',
+  'text',
+  'drawing',
+] as const;
+watch(
+  [
+    ...appearanceFields.map((field) => () => props.clip[field]),
+    () => props.clip.transform.width,
+    () => props.clip.transform.height,
+    () => props.canvas.width,
+    () => props.canvas.height,
+  ],
+  schedule,
+);
+onMounted(() => {
+  mounted = true;
+  schedule();
+});
+onUnmounted(() => {
+  mounted = false;
+  revision += 1;
+  cancelAnimationFrame(frame);
 });
 </script>
 
 <template>
   <span class="shape-preview-wrap" aria-hidden="true">
-    <component
-      v-if="clip.family === 'text' || clip.family === 'drawing'"
-      :is="clip.family === 'text' ? Type : Pencil"
-      :size="18"
-      :style="{ color: clip.family === 'text' ? clip.text?.style.color : clip.fillColor }"
-    />
-    <span v-else class="shape-preview" :style="previewStyle" />
+    <span v-if="preview" class="shape-preview" :style="{ backgroundImage: `url(${JSON.stringify(preview)})` }" />
+    <ImageOff v-if="error" class="preview-status" :size="16" :aria-label="t('previewError')" :title="error" />
+    <span v-else-if="!preview" class="preview-status">{{ t('previewLoading') }}</span>
   </span>
 </template>
 
 <style scoped>
 .shape-preview-wrap {
-  display: grid;
-  place-items: center;
+  display: block;
   position: absolute;
   inset: 3px 5px;
   overflow: hidden;
@@ -56,6 +106,17 @@ const previewStyle = computed(() => {
   display: block;
   width: 100%;
   height: 100%;
-  transform-origin: center;
+  background-position: left center;
+  background-repeat: repeat-x;
+  background-size: auto 100%;
+}
+.preview-status {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+  color: var(--text-muted);
 }
 </style>

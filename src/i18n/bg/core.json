@@ -294,7 +294,11 @@
     "modelDownloadFailed": "Изтеглянето на модела не бе успешно.",
     "systemAudio": "Системен звук",
     "microphone": "Микрофон",
-    "cancel": "Отказ"
+    "cancel": "Отказ",
+    "exportTranscript": "Експортиране на транскрипция (JSON)",
+    "transcriptDescription": "Експортирайте текстовите субтитри с времеви маркери на сегменти и думи в милисекунди.",
+    "transcriptSaved": "Транскрипцията е експортирана.",
+    "transcriptExportFailed": "Транскрипцията не можа да бъде експортирана."
   },
   "ClipPropertiesPanel": {
     "noClipSelected": "Няма избран клип",
@@ -439,6 +443,7 @@
     "includeAudioDesc": "Добавя включените аудио писти към експортираното видео."
   },
   "HUD": {
+    "inputAccessFailed": "Неуспешно заявяване на достъп до взаимодействията.",
     "title": "Beam",
     "openProject": "Отваряне на проект",
     "preferences": "Предпочитания",

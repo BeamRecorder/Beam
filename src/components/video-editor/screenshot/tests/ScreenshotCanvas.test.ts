@@ -95,7 +95,7 @@ const cursorPack: CursorPackDescriptor = {
 
 const SelectionStub = defineComponent({
   name: 'CanvasLayerSelection',
-  props: { handleStyle: Object, viewportStyle: Object },
+  props: { handleStyle: Object, viewportStyle: Object, resizeCorners: Array },
   emits: ['pointer-down', 'pointer-move', 'pointer-up', 'resize-start', 'resize-move', 'resize-end'],
   template:
     '<div data-testid="layer-selection" :style="handleStyle" @pointerdown="$emit(\'pointer-down\', $event)" @pointermove="$emit(\'pointer-move\', $event)" @pointerup="$emit(\'pointer-up\', $event)" @pointercancel="$emit(\'pointer-up\', $event)" />',
@@ -120,17 +120,33 @@ const mountCanvas = (
   selectedId: string | null = null,
   cursorPacks?: CursorPackDescriptor[],
   cursorPacksReady?: boolean,
+  selectedIds = selectedId ? [selectedId] : [],
 ) =>
   mount(ScreenshotCanvas, {
     props: {
       source: 'project-media://screenshot/screen-1/source.png',
       state,
       selectedId,
+      selectedIds,
       cursorPacks,
       cursorPacksReady,
     },
     global: { stubs: { CanvasLayerSelection: SelectionStub } },
   });
+
+const setCanvasBounds = (wrapper: ReturnType<typeof mountCanvas>) => {
+  vi.spyOn(wrapper.get('canvas').element, 'getBoundingClientRect').mockReturnValue({
+    x: 0,
+    y: 0,
+    left: 0,
+    top: 0,
+    right: 100,
+    bottom: 100,
+    width: 100,
+    height: 100,
+    toJSON: () => ({}),
+  } as DOMRect);
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -209,17 +225,168 @@ describe('ScreenshotCanvas', () => {
       toJSON: () => ({}),
     } as DOMRect);
     await canvas.trigger('pointerdown', {
+      button: 0,
       clientX: 60,
       clientY: 70,
       pointerId: 1,
     });
     expect(wrapper.emitted('select')).toEqual([['shape-upper']]);
 
-    await wrapper.setProps({ selectedId: 'shape-upper' });
+    await wrapper.setProps({ selectedId: 'shape-upper', selectedIds: ['shape-upper'] });
     const selectionStyle = wrapper.get('[data-testid="layer-selection"]').attributes('style');
     expect(selectionStyle).toContain('width: 40%');
     expect(selectionStyle).toContain('height: 40%');
     expect(selectionStyle).toContain('translate3d(320px, 160px, 0)');
+    wrapper.unmount();
+  });
+
+  it.each([
+    ['Ctrl', { ctrlKey: true }],
+    ['Meta', { metaKey: true }],
+  ] as const)('toggles the topmost layer when canvas selection uses %s', async (_modifier, modifier) => {
+    const wrapper = mountCanvas();
+    await flushPromises();
+    setCanvasBounds(wrapper);
+
+    await wrapper.get('canvas').trigger('pointerdown', {
+      button: 0,
+      clientX: 45,
+      clientY: 45,
+      pointerId: 1,
+      ...modifier,
+    });
+
+    expect(wrapper.emitted('select')).toEqual([['shape-upper', 'toggle']]);
+    wrapper.unmount();
+  });
+
+  it.each([1, 2])('ignores non-primary canvas pointer button %s', async (button) => {
+    const wrapper = mountCanvas();
+    await flushPromises();
+    setCanvasBounds(wrapper);
+
+    await wrapper.get('canvas').trigger('pointerdown', {
+      button,
+      clientX: 45,
+      clientY: 45,
+      pointerId: 1,
+    });
+
+    expect(wrapper.emitted('select')).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it('does not select layers while cropping', async () => {
+    const wrapper = mountCanvas(stateFixture(), 'shape-upper');
+    await wrapper.setProps({ cropping: true });
+    await flushPromises();
+    setCanvasBounds(wrapper);
+
+    await wrapper.get('canvas').trigger('pointerdown', {
+      button: 0,
+      clientX: 45,
+      clientY: 45,
+      pointerId: 1,
+    });
+
+    expect(wrapper.emitted('select')).toBeUndefined();
+    expect(wrapper.findAllComponents(SelectionStub)).toHaveLength(0);
+    wrapper.unmount();
+  });
+
+  it('renders visible unlocked selected outlines and resize handles only for the primary', async () => {
+    const state = stateFixture();
+    const lockedShape = screenshotShape('ellipse', 'shape-locked');
+    state.shapes.push(lockedShape);
+    state.shapes[1]!.enabled = false;
+    initializeScreenshotComposition(state);
+    const lockedLayer = state.composition?.find((layer) => layer.id === lockedShape.id);
+    if (!lockedLayer) throw new Error('Expected the locked shape in screenshot composition.');
+    lockedLayer.locked = true;
+
+    const wrapper = mountCanvas(state, 'shape-lower', undefined, undefined, [
+      'shape-lower',
+      'screenshot',
+      'shape-upper',
+      'shape-locked',
+    ]);
+    await flushPromises();
+
+    const selections = wrapper.findAllComponents(SelectionStub);
+    expect(selections.map((selection) => selection.attributes('data-layer-id'))).toEqual(['shape-lower', 'screenshot']);
+    expect(
+      selections.find((selection) => selection.attributes('data-layer-id') === 'shape-lower')?.props('resizeCorners'),
+    ).toBeUndefined();
+    expect(
+      selections.find((selection) => selection.attributes('data-layer-id') === 'screenshot')?.props('resizeCorners'),
+    ).toEqual([]);
+    wrapper.unmount();
+  });
+
+  it.each([
+    ['Ctrl', { ctrlKey: true }],
+    ['Meta', { metaKey: true }],
+  ] as const)(
+    'modifier-clicking a secondary selected outline with %s raycasts and toggles without dragging',
+    async (_modifier, modifier) => {
+      const wrapper = mountCanvas(stateFixture(), 'shape-upper', undefined, undefined, ['shape-upper', 'shape-lower']);
+      await flushPromises();
+      setCanvasBounds(wrapper);
+      const secondary = wrapper
+        .findAllComponents(SelectionStub)
+        .find((selection) => selection.attributes('data-layer-id') === 'shape-lower');
+      if (!secondary) throw new Error('Expected a secondary selected outline.');
+      const setPointerCapture = vi.fn();
+      const preventDefault = vi.fn();
+      const stopPropagation = vi.fn();
+
+      secondary.vm.$emit('pointer-down', {
+        button: 0,
+        clientX: 25,
+        clientY: 30,
+        pointerId: 4,
+        currentTarget: { setPointerCapture },
+        preventDefault,
+        stopPropagation,
+        ...modifier,
+      } as unknown as PointerEvent);
+
+      expect(wrapper.emitted('select')).toEqual([['shape-lower', 'toggle']]);
+      expect(stopPropagation).toHaveBeenCalledOnce();
+      expect(preventDefault).not.toHaveBeenCalled();
+      expect(setPointerCapture).not.toHaveBeenCalled();
+      expect(propertyInteractionActive.value).toBe(false);
+      wrapper.unmount();
+    },
+  );
+
+  it('replaces group selection on release when a secondary outline is clicked without movement', async () => {
+    const wrapper = mountCanvas(stateFixture(), 'shape-upper', undefined, undefined, ['shape-upper', 'shape-lower']);
+    await flushPromises();
+    setCanvasBounds(wrapper);
+    const secondary = wrapper
+      .findAllComponents(SelectionStub)
+      .find((selection) => selection.attributes('data-layer-id') === 'shape-lower');
+    if (!secondary) throw new Error('Expected a secondary selected outline.');
+    const event = {
+      button: 0,
+      clientX: 25,
+      clientY: 30,
+      pointerId: 8,
+      currentTarget: { setPointerCapture: vi.fn() },
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    } as unknown as PointerEvent;
+
+    secondary.vm.$emit('pointer-down', event);
+    expect(wrapper.emitted('select')).toBeUndefined();
+    expect(propertyInteractionActive.value).toBe(true);
+    secondary.vm.$emit('pointer-up', event);
+
+    expect(wrapper.emitted('select')).toEqual([['shape-lower']]);
+    expect(wrapper.emitted('transform')).toBeUndefined();
+    expect(wrapper.emitted('translate')).toBeUndefined();
+    expect(propertyInteractionActive.value).toBe(false);
     wrapper.unmount();
   });
 
@@ -257,6 +424,7 @@ describe('ScreenshotCanvas', () => {
       toJSON: () => ({}),
     } as DOMRect);
     await canvas.trigger('pointerdown', {
+      button: 0,
       clientX: (bounds.x + bounds.width / 2) * 100,
       clientY: (bounds.y + bounds.height / 2) * 100,
       pointerId: 1,
@@ -308,25 +476,29 @@ describe('ScreenshotCanvas', () => {
     expect(captureTarget.setPointerCapture).not.toHaveBeenCalled();
     expect(wrapper.emitted('transform')).toBeUndefined();
 
-    await wrapper.setProps({ selectedId: 'shape-upper' });
+    await wrapper.setProps({ selectedId: 'shape-upper', selectedIds: ['shape-upper'] });
+    const selectedSelection = wrapper
+      .findAllComponents(SelectionStub)
+      .find((candidate) => candidate.attributes('data-layer-id') === 'shape-upper');
+    if (!selectedSelection) throw new Error('Expected the newly selected shape outline.');
     const selectedPointerDown = {
       ...pointerDown,
       preventDefault: vi.fn(),
       stopPropagation: vi.fn(),
     } as unknown as PointerEvent;
-    selection.vm.$emit('pointer-down', selectedPointerDown);
+    selectedSelection.vm.$emit('pointer-down', selectedPointerDown);
     const moveEvent = {
       ...selectedPointerDown,
       clientX: 55,
       clientY: 55,
     } as unknown as PointerEvent;
-    selection.vm.$emit('pointer-move', moveEvent);
+    selectedSelection.vm.$emit('pointer-move', moveEvent);
 
     expect(selectedPointerDown.preventDefault).toHaveBeenCalledOnce();
     expect(selectedPointerDown.stopPropagation).not.toHaveBeenCalled();
     expect(captureTarget.setPointerCapture).toHaveBeenCalledWith(7);
     expect(wrapper.emitted('transform')).toBeUndefined();
-    selection.vm.$emit('pointer-up', moveEvent);
+    selectedSelection.vm.$emit('pointer-up', moveEvent);
     expect(wrapper.emitted('transform')).toHaveLength(1);
     expect(wrapper.emitted('transform')?.[0]?.[0]).toMatchObject({ x: 0.5, y: 0.5 });
     wrapper.unmount();

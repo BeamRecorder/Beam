@@ -281,6 +281,7 @@ contextBridge.exposeInMainWorld(
     deleteProject: (projectId, mode) => ipcRenderer.invoke('projects:delete', { projectId, mode }),
     revealProject: (projectId, mode) => ipcRenderer.invoke('projects:reveal', { projectId, mode }),
     whisperModels: () => ipcRenderer.invoke('whisper:models'),
+    exportTranscript: (request) => ipcRenderer.invoke('captions:export-transcript', request),
     downloadWhisperModel: (modelId) => ipcRenderer.invoke('whisper:download', { modelId }),
     deleteWhisperModel: (modelId) => ipcRenderer.invoke('whisper:delete', { modelId }),
     onWhisperProgress: (listener) => {

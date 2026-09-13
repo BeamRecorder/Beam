@@ -294,7 +294,11 @@
     "modelDownloadFailed": "Tải mô hình thất bại.",
     "systemAudio": "Âm thanh hệ thống",
     "microphone": "Micrô",
-    "cancel": "Hủy"
+    "cancel": "Hủy",
+    "exportTranscript": "Xuất bản chép lời (JSON)",
+    "transcriptDescription": "Xuất phụ đề văn bản cùng dấu thời gian của đoạn và từ theo mili giây.",
+    "transcriptSaved": "Đã xuất bản chép lời.",
+    "transcriptExportFailed": "Không thể xuất bản chép lời."
   },
   "ClipPropertiesPanel": {
     "noClipSelected": "Chưa chọn đoạn nào",
@@ -439,6 +443,7 @@
     "includeAudioDesc": "Thêm các rãnh âm thanh đang bật vào video xuất."
   },
   "HUD": {
+    "inputAccessFailed": "Không thể yêu cầu quyền truy cập tương tác.",
     "title": "Beam",
     "openProject": "Mở dự án",
     "preferences": "Tùy chọn",

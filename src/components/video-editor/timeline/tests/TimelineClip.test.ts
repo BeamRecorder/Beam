@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { computed, nextTick, reactive, type Ref } from 'vue';
 import TimelineClip from '../TimelineClip.vue';
+import { createElementText } from '~/media/shared/element-text';
 import type { Clip, ColorClip, MediaAsset, ShapeClip } from '~/media/shared/composition-types';
 import type { MediaError } from '~/media/shared/media-types';
 
@@ -19,7 +20,32 @@ vi.mock('../waveform/useThumbnails', () => ({
 }));
 
 const Skeleton = { template: '<div class="skeleton-stub" />' };
-const WaveformCanvas = { name: 'WaveformCanvas', template: '<canvas class="waveform-canvas" />' };
+const ShapeTimelinePreviewStub = {
+  name: 'ShapeTimelinePreview',
+  props: ['clip', 'canvas'],
+  template: '<span class="shape-preview-stub" />',
+};
+const BlickWaveformCanvas = {
+  name: 'BlickWaveformCanvas',
+  props: ['bars', 'bands', 'leftPercent', 'widthPercent', 'sourceDurationSeconds', 'loadingSegments', 'deferDraw'],
+  template: `
+    <div class="blick-waveform">
+      <canvas
+        class="blick-waveform-canvas"
+        :style="{ left: (leftPercent ?? 0) + '%', width: (widthPercent ?? 100) + '%' }"
+      />
+      <span
+        v-for="(segment, index) in loadingSegments"
+        :key="index"
+        class="waveform-segment-loading"
+        :style="{
+          left: ((leftPercent ?? 0) + (segment.leftPercent * (widthPercent ?? 100)) / 100) + '%',
+          width: ((segment.widthPercent * (widthPercent ?? 100)) / 100) + '%',
+        }"
+      />
+    </div>
+  `,
+};
 
 const asset = (kind: MediaAsset['kind'], src = `/media/${kind}`): MediaAsset => ({
   id: `${kind}-asset`,
@@ -121,31 +147,39 @@ afterEach(() => {
 });
 
 describe('TimelineClip', () => {
-  it('renders an assetless shape preview from its vector style', () => {
+  it('forwards canvas settings to the shape preview and labels text clips by content', async () => {
+    const canvas = { width: 1_280, height: 720 };
+    const textClip = shapeLayerClip({
+      family: 'text',
+      preset: 'text',
+      text: createElementText('  Release notes  '),
+    });
     const wrapper = mount(TimelineClip, {
-      props: { ...baseProps, clip: shapeLayerClip(), asset: null },
-      global: { stubs: { Skeleton, WaveformCanvas } },
+      props: { ...baseProps, clip: textClip, asset: null, canvas },
+      global: { stubs: { Skeleton, BlickWaveformCanvas, ShapeTimelinePreview: ShapeTimelinePreviewStub } },
     });
 
     expect(wrapper.get('.timeline-clip').classes()).toContain('kind-shape');
-    expect(wrapper.get('.shape-preview').attributes('style')).toContain('background: rgb(255, 90, 31)');
-    expect(wrapper.get('.shape-preview').attributes('style')).toContain('rotate(180deg)');
-  });
+    expect(wrapper.findComponent(ShapeTimelinePreviewStub).props('clip')).toEqual(textClip);
+    expect(wrapper.findComponent(ShapeTimelinePreviewStub).props('canvas')).toEqual(canvas);
+    expect(wrapper.get('.clip-label-text').text()).toBe('Release notes');
 
-  it('scales a rounded rectangle radius in its timeline preview', () => {
-    const clip = shapeLayerClip({ family: 'shape', preset: 'rounded-rectangle', cornerRadius: 24 });
-    const wrapper = mount(TimelineClip, {
-      props: { ...baseProps, clip, asset: null },
-      global: { stubs: { Skeleton, WaveformCanvas } },
+    await wrapper.setProps({
+      clip: shapeLayerClip({
+        family: 'text',
+        preset: 'text',
+        name: 'Text fallback',
+        text: createElementText('  \n '),
+      }),
     });
-
-    expect(wrapper.get('.shape-preview').attributes('style')).toContain('border-radius: 12px');
+    expect(wrapper.get('.clip-label-text').text()).toBe('Text fallback');
+    wrapper.unmount();
   });
 
   it('keeps the disabled state stable while a video clip is toggled', async () => {
     const wrapper = mount(TimelineClip, {
       props: baseProps,
-      global: { stubs: { Skeleton, WaveformCanvas } },
+      global: { stubs: { Skeleton, BlickWaveformCanvas } },
     });
 
     expect(wrapper.get('.timeline-clip').classes()).not.toContain('disabled');
@@ -167,7 +201,7 @@ describe('TimelineClip', () => {
           },
         }),
       },
-      global: { stubs: { Skeleton, WaveformCanvas } },
+      global: { stubs: { Skeleton, BlickWaveformCanvas } },
     });
 
     const entry = wrapper.get('.transition-zone.entry');
@@ -191,7 +225,7 @@ describe('TimelineClip', () => {
           },
         }),
       },
-      global: { stubs: { Skeleton, WaveformCanvas } },
+      global: { stubs: { Skeleton, BlickWaveformCanvas } },
     });
 
     const entryPath = wrapper.get('.transition-zone.entry svg.timeline-transition-curve path.curve-line');
@@ -220,7 +254,7 @@ describe('TimelineClip', () => {
   it('marks a newly pasted clip with the arrival highlight and clears it when the prop is removed', async () => {
     const wrapper = mount(TimelineClip, {
       props: { ...baseProps, pasteHighlight: true },
-      global: { stubs: { Skeleton, WaveformCanvas } },
+      global: { stubs: { Skeleton, BlickWaveformCanvas } },
     });
 
     expect(wrapper.get('.timeline-clip').attributes('data-paste-highlight')).toBe('true');
@@ -233,7 +267,7 @@ describe('TimelineClip', () => {
     const wrapper = mount(TimelineClip, {
       attachTo: document.body,
       props: { ...baseProps, trimState: { edge: 'start', durationMs: 1_250 } },
-      global: { stubs: { Skeleton, WaveformCanvas } },
+      global: { stubs: { Skeleton, BlickWaveformCanvas } },
     });
 
     expect(wrapper.get('.timeline-clip').classes()).toEqual(expect.arrayContaining(['selected', 'kind-video']));
@@ -264,7 +298,7 @@ describe('TimelineClip', () => {
     const wrapper = mount(TimelineClip, {
       attachTo: document.body,
       props: { ...baseProps, trimState: { edge: 'end', durationMs: 2_000, atLimit: true } },
-      global: { stubs: { Skeleton, WaveformCanvas } },
+      global: { stubs: { Skeleton, BlickWaveformCanvas } },
     });
     expect(wrapper.get('.timeline-clip').classes()).toContain('trim-at-limit');
     expect(wrapper.get('.trim-handle.end').classes()).toContain('at-limit');
@@ -279,7 +313,7 @@ describe('TimelineClip', () => {
         asset: null,
         thumbnailSlots: [],
       },
-      global: { stubs: { Skeleton, WaveformCanvas } },
+      global: { stubs: { Skeleton, BlickWaveformCanvas } },
     });
 
     expect(wrapper.get('.timeline-clip').classes()).toEqual(expect.arrayContaining(['kind-color', 'selected']));
@@ -308,7 +342,7 @@ describe('TimelineClip', () => {
   it('requests only frames in the virtualized viewport and refreshes after a zoom-derived range changes', async () => {
     const wrapper = mount(TimelineClip, {
       props: { ...baseProps },
-      global: { stubs: { Skeleton, WaveformCanvas } },
+      global: { stubs: { Skeleton, BlickWaveformCanvas } },
     });
     expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([0, 1.25]);
 
@@ -326,7 +360,7 @@ describe('TimelineClip', () => {
   it('refreshes visible frames after asset identity and clip timeline geometry changes', async () => {
     const wrapper = mount(TimelineClip, {
       props: { ...baseProps },
-      global: { stubs: { Skeleton, WaveformCanvas } },
+      global: { stubs: { Skeleton, BlickWaveformCanvas } },
     });
 
     thumbnailState.requestVisibleFrames.mockClear();
@@ -383,7 +417,7 @@ describe('TimelineClip', () => {
     thumbnailState.thumbnailsRef = computed(() => thumbnailState.thumbnails);
     const wrapper = mount(TimelineClip, {
       props: { ...baseProps },
-      global: { stubs: { Skeleton, WaveformCanvas } },
+      global: { stubs: { Skeleton, BlickWaveformCanvas } },
     });
 
     expect(wrapper.find('.thumbnail-img').exists()).toBe(false);
@@ -393,7 +427,7 @@ describe('TimelineClip', () => {
   it('restarts deferred thumbnail requests when the clip is no longer moving', async () => {
     const wrapper = mount(TimelineClip, {
       props: { ...baseProps, deferThumbnailRequests: true },
-      global: { stubs: { Skeleton, WaveformCanvas } },
+      global: { stubs: { Skeleton, BlickWaveformCanvas } },
     });
     expect(thumbnailState.requestVisibleFrames).not.toHaveBeenCalled();
 
@@ -405,7 +439,7 @@ describe('TimelineClip', () => {
   it('uses translate3d positioning when the timeline width is provided', () => {
     const wrapper = mount(TimelineClip, {
       props: { ...baseProps, timelineWidthPx: 2_000 },
-      global: { stubs: { Skeleton, WaveformCanvas } },
+      global: { stubs: { Skeleton, BlickWaveformCanvas } },
     });
 
     const style = wrapper.get('.timeline-clip').attributes('style') ?? '';
@@ -415,6 +449,9 @@ describe('TimelineClip', () => {
   });
 
   it('renders audio waveforms, a dark loading state, and an explicit unavailable error', async () => {
+    const waveformBars = [4, 10];
+    const waveformBands = new Float32Array(waveformBars.length * 4);
+    const waveformLoadingSegments = [{ leftPercent: 25, widthPercent: 10 }];
     const audio = mount(TimelineClip, {
       props: {
         ...baseProps,
@@ -426,19 +463,37 @@ describe('TimelineClip', () => {
           enabled: false,
         }),
         asset: asset('audio'),
-        waveformBars: [4, 10],
+        waveformBars,
+        waveformBands,
+        waveformSourceDurationSeconds: 2.5,
         waveformStatus: 'ready',
         waveformLeftPercent: 20,
         waveformWidthPercent: 60,
+        waveformLoadingSegments,
+        deferWaveformDraw: true,
         selected: false,
       },
-      global: { stubs: { Skeleton, WaveformCanvas } },
+      global: { stubs: { Skeleton, BlickWaveformCanvas } },
     });
     expect(audio.get('.timeline-clip').classes()).toEqual(expect.arrayContaining(['kind-audio', 'disabled']));
-    expect(audio.findAll('.waveform-slice > .waveform-canvas')).toHaveLength(1);
-    expect(audio.get('.waveform-slice').attributes('style')).toContain('left: 20%');
-    expect(audio.get('.waveform-slice').attributes('style')).toContain('width: 60%');
+    const waveform = audio.findComponent(BlickWaveformCanvas);
+    expect(waveform.exists()).toBe(true);
+    expect(waveform.props()).toMatchObject({
+      bars: waveformBars,
+      bands: waveformBands,
+      sourceDurationSeconds: 2.5,
+      loadingSegments: waveformLoadingSegments,
+      deferDraw: true,
+    });
+    expect(waveform.props('leftPercent')).toBe(20);
+    expect(waveform.props('widthPercent')).toBe(60);
+    expect(audio.get('.waveform-slice').attributes('style')).toBeUndefined();
+    expect(audio.find('.waveform-slice > .blick-waveform').exists()).toBe(true);
     expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([]);
+
+    await audio.setProps({ deferWaveformDraw: false, waveformSourceDurationSeconds: 2.75 });
+    expect(waveform.props('deferDraw')).toBe(false);
+    expect(waveform.props('sourceDurationSeconds')).toBe(2.75);
 
     const loading = mount(TimelineClip, {
       props: {
@@ -447,7 +502,7 @@ describe('TimelineClip', () => {
         asset: asset('audio'),
         waveformStatus: 'loading',
       },
-      global: { stubs: { Skeleton, WaveformCanvas } },
+      global: { stubs: { Skeleton, BlickWaveformCanvas } },
     });
     expect(loading.find('.waveform-loading').exists()).toBe(true);
     expect(loading.find('.skeleton-stub').exists()).toBe(false);
@@ -466,7 +521,7 @@ describe('TimelineClip', () => {
         waveformStatus: 'error',
         waveformError: error,
       },
-      global: { stubs: { Skeleton, WaveformCanvas } },
+      global: { stubs: { Skeleton, BlickWaveformCanvas } },
     });
     expect(unavailable.find('.waveform-unavailable').exists()).toBe(true);
     expect(unavailable.find('.waveform-unavailable').attributes('title')).toBe(error.message);
@@ -478,7 +533,7 @@ describe('TimelineClip', () => {
         clip: clip({ kind: 'image', assetId: 'image-asset' }),
         asset: asset('image', '/poster.png'),
       },
-      global: { stubs: { Skeleton, WaveformCanvas } },
+      global: { stubs: { Skeleton, BlickWaveformCanvas } },
     });
     const imagePreview = image.get('.image-preview');
     expect(imagePreview.attributes('style')).toContain('background-image: url("/poster.png")');
@@ -489,23 +544,37 @@ describe('TimelineClip', () => {
   });
 
   it('renders only pending waveform segments as localized dark overlays while refined bars arrive', async () => {
+    const waveformBars = [10, 20, 30, 40, 50, 60];
+    const waveformBands = new Float32Array(waveformBars.length * 4);
+    const loadingSegments = [
+      { leftPercent: 0, widthPercent: 33.333 },
+      { leftPercent: 66.667, widthPercent: 33.333 },
+    ];
     const audio = mount(TimelineClip, {
       props: {
         ...baseProps,
         clip: clip({ kind: 'audio', assetId: 'audio-asset', name: 'Segmented audio' }),
         asset: asset('audio'),
-        waveformBars: [10, 20, 30, 40, 50, 60],
+        waveformBars,
+        waveformBands,
+        waveformSourceDurationSeconds: 3,
         waveformStatus: 'loading',
         waveformLeftPercent: 0,
         waveformWidthPercent: 100,
-        waveformLoadingSegments: [
-          { leftPercent: 0, widthPercent: 33.333 },
-          { leftPercent: 66.667, widthPercent: 33.333 },
-        ],
+        waveformLoadingSegments: loadingSegments,
+        deferWaveformDraw: true,
       },
-      global: { stubs: { Skeleton, WaveformCanvas } },
+      global: { stubs: { Skeleton, BlickWaveformCanvas } },
     });
 
+    const waveform = audio.findComponent(BlickWaveformCanvas);
+    expect(waveform.props()).toMatchObject({
+      bars: waveformBars,
+      bands: waveformBands,
+      sourceDurationSeconds: 3,
+      loadingSegments,
+      deferDraw: true,
+    });
     const pending = audio.findAll('.waveform-segment-loading');
     expect(pending).toHaveLength(2);
     expect(pending[0]?.attributes('style')).toContain('left: 0%');
@@ -518,14 +587,15 @@ describe('TimelineClip', () => {
 
     await audio.setProps({ waveformLoadingSegments: [] });
     expect(audio.findAll('.waveform-segment-loading')).toHaveLength(0);
-    expect(audio.findAll('.waveform-slice > .waveform-canvas')).toHaveLength(1);
+    expect(waveform.props('loadingSegments')).toEqual([]);
+    expect(waveform.exists()).toBe(true);
     audio.unmount();
   });
 
   it('marquees an overflowing label and stops it on leave and unmount', async () => {
     const wrapper = mount(TimelineClip, {
       props: baseProps,
-      global: { stubs: { Skeleton, WaveformCanvas } },
+      global: { stubs: { Skeleton, BlickWaveformCanvas } },
     });
     const label = wrapper.get('.clip-label-text').element as HTMLElement;
     Object.defineProperty(label, 'scrollWidth', {

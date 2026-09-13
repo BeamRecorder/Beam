@@ -42,6 +42,13 @@ export interface QuickSnipConfiguration {
   thumbnail?: string | null;
 }
 
+export interface QuickSnipAutoClose {
+  durationMs: number;
+  /** Native deadline, absent while hidden or interaction has suspended dismissal. */
+  deadlineMs: number | null;
+  remainingMs: number;
+}
+
 export interface QuickSnipSnapshot {
   state: QuickSnipState;
   job: QuickSnipConfiguration | null;
@@ -53,6 +60,7 @@ export interface QuickSnipSnapshot {
   copied?: boolean;
   clipboardError?: string | null;
   popoverSide?: 'above' | 'below';
+  autoClose?: QuickSnipAutoClose | null;
 }
 
 export interface QuickSnipRenderTask {

@@ -14,9 +14,12 @@ export interface ElementEditorOptions {
   showLayers?: boolean;
   canInteract?: () => boolean;
   addHighlight?: () => void | Promise<void>;
+  addBlur?: () => void | Promise<void>;
+  addColor?: () => void | Promise<void>;
   addImage?: () => void | Promise<void>;
 }
 export interface ElementEditorContext {
+  canInteract: ComputedRef<boolean>;
   layers: ComputedRef<ShapeClip[]>;
   selected: ComputedRef<ShapeClip | null>;
   editing: Ref<ShapeClip | null>;
@@ -25,6 +28,8 @@ export interface ElementEditorContext {
   showLayers: boolean;
   add: (family: ShapeLayerFamily) => void;
   addHighlight?: () => void | Promise<void>;
+  addBlur?: () => void | Promise<void>;
+  addColor?: () => void | Promise<void>;
   addImage?: () => void | Promise<void>;
   addDrawing: (value: DrawnElement) => void;
   select: (id: string) => void;

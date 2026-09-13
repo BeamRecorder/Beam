@@ -294,7 +294,11 @@
     "modelDownloadFailed": "Falha ao baixar o modelo.",
     "systemAudio": "Áudio do sistema",
     "microphone": "Microfone",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "exportTranscript": "Exportar transcrição (JSON)",
+    "transcriptDescription": "Exporte legendas de texto com marcações de tempo de segmentos e palavras em milissegundos.",
+    "transcriptSaved": "Transcrição exportada.",
+    "transcriptExportFailed": "Não foi possível exportar a transcrição."
   },
   "ClipPropertiesPanel": {
     "noClipSelected": "Nenhum clipe selecionado",
@@ -439,6 +443,7 @@
     "includeAudioDesc": "Adiciona as faixas de áudio ativadas ao vídeo exportado."
   },
   "HUD": {
+    "inputAccessFailed": "Não foi possível solicitar acesso às interações.",
     "title": "Beam",
     "openProject": "Abrir um projeto",
     "preferences": "Preferências",

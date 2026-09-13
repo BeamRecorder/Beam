@@ -22,7 +22,17 @@ import { screenshotImageFraming, resizeScreenshotImage } from './screenshot-geom
 import CanvasLayerSelection from '../canvas/CanvasLayerSelection.vue';
 import { loadScreenshotAssets, drawScreenshot } from './screenshot-render';
 import { moveScreenshotLayer } from './screenshot-state';
-import type { ScreenshotDrag, ScreenshotRenderAssets } from './screenshot-types';
+import type {
+  ScreenshotDrag,
+  ScreenshotRenderAssets,
+  ScreenshotSelectionMode,
+  ScreenshotTranslation,
+} from './screenshot-types';
+import {
+  constrainScreenshotTranslation,
+  movableScreenshotSelection,
+  withScreenshotTranslation,
+} from './screenshot-selection-transform';
 import { screenshotLayerAt, screenshotLayerTransform, screenshotLayerRotation } from './screenshot-layer-geometry';
 import { screenshotLayers } from './screenshot-layers';
 import { createScreenshotImageLoader } from './screenshot-assets';
@@ -33,14 +43,17 @@ const props = defineProps<{
   source: string;
   state: ScreenshotState;
   selectedId: string | null;
+  selectedIds: string[];
+  disabled?: boolean;
   cropping?: boolean;
   cursorPacks?: CursorPackDescriptor[];
   cursorPacksReady?: boolean;
   handlesMuted?: boolean;
 }>();
 const emit = defineEmits<{
-  select: [id: string | null];
+  select: [id: string | null, mode?: ScreenshotSelectionMode];
   transform: [value: NormalizedTransform];
+  translate: [value: ScreenshotTranslation];
   error: [message: string];
   ready: [];
   crop: [value: NormalizedCrop];
@@ -79,38 +92,51 @@ const dragging = ref(false);
 const dragRenderer = createScreenshotDragRenderer();
 const transformDraft = shallowRef<NormalizedTransform | null>(null);
 let pendingTransform: NormalizedTransform | null = null;
+const translationDraft = shallowRef<ScreenshotTranslation | null>(null);
+let pendingTranslation: ScreenshotTranslation | null = null;
 const flushTransform = () => {
+  if (pendingTranslation) {
+    translationDraft.value = pendingTranslation;
+    pendingTranslation = null;
+  }
   if (!pendingTransform) return;
   transformDraft.value = pendingTransform;
   pendingTransform = null;
 };
 const previewState = computed(() =>
-  props.selectedId && transformDraft.value
-    ? withScreenshotTransform(props.state, props.selectedId, transformDraft.value, assets.value)
-    : props.state,
+  translationDraft.value && drag?.selection
+    ? withScreenshotTranslation(props.state, drag.selection, translationDraft.value)
+    : props.selectedId && transformDraft.value
+      ? withScreenshotTransform(props.state, props.selectedId, transformDraft.value, assets.value)
+      : props.state,
 );
 const activeImage = computed(() => screenshotImage(previewState.value, props.selectedId));
 const activeImageAssets = computed(() =>
   props.selectedId === props.state.image.id ? assets.value : assets.value?.images?.get(props.selectedId ?? ''),
 );
-const selected = computed(() => screenshotLayers(props.state).find((layer) => layer.id === props.selectedId));
 const imageTransform = computed(() => {
   return screenshotLayerTransform(previewState.value, assets.value, props.selectedId ?? props.state.image.id)!;
 });
-const selectedTransform = computed(() =>
-  props.selectedId ? screenshotLayerTransform(previewState.value, assets.value, props.selectedId) : null,
-);
-const style = computed(() => {
-  const t = selectedTransform.value;
-  return t
-    ? {
-        left: '0',
-        top: '0',
-        width: `${t.width * 100}%`,
-        height: `${t.height * 100}%`,
-        transform: `translate3d(${t.x * stageSize.value.width}px, ${t.y * stageSize.value.height}px, 0) rotate(${screenshotLayerRotation(props.state, props.selectedId!)}deg)`,
-      }
-    : {};
+const selections = computed(() => {
+  const layers = new Map(screenshotLayers(previewState.value).map((layer) => [layer.id, layer]));
+  return props.selectedIds.flatMap((id) => {
+    const layer = layers.get(id);
+    const t = screenshotLayerTransform(previewState.value, assets.value, id);
+    return layer?.visible && !layer.locked && t && id !== elements?.editing.value?.id
+      ? [
+          {
+            id,
+            style: {
+              left: '0',
+              top: '0',
+              width: `${t.width * 100}%`,
+              height: `${t.height * 100}%`,
+              transform: `translate3d(${t.x * stageSize.value.width}px, ${t.y * stageSize.value.height}px, 0) rotate(${screenshotLayerRotation(props.state, id)}deg)`,
+            },
+          },
+        ]
+      : [];
+  });
 });
 const paint = () => {
   if (loadedGeneration !== generation) return;
@@ -131,7 +157,15 @@ const paint = () => {
         }
       : state;
     if (drag && props.selectedId)
-      dragRenderer.draw(ctx, preview, assets.value, width, height, props.selectedId, elements?.editing.value?.id);
+      dragRenderer.draw(
+        ctx,
+        preview,
+        assets.value,
+        width,
+        height,
+        drag.selection?.[0] ?? props.selectedId,
+        elements?.editing.value?.id,
+      );
     else drawScreenshot(ctx, preview, assets.value, width, height, elements?.editing.value?.id);
     if (!painted) {
       painted = true;
@@ -202,23 +236,36 @@ const layerAt = (event: MouseEvent) => {
   return screenshotLayerAt(props.state, assets.value, x, y);
 };
 const select = (event: PointerEvent) => {
-  if (!props.cropping) emit('select', layerAt(event));
+  if (props.cropping || props.disabled || event.button !== 0) return;
+  const id = layerAt(event);
+  if (event.ctrlKey || event.metaKey) emit('select', id, 'toggle');
+  else emit('select', id);
 };
 const editText = (event: MouseEvent) => {
-  if (props.cropping || event.button !== 0) return;
+  if (props.cropping || props.disabled || event.button !== 0 || event.ctrlKey || event.metaKey) return;
   const id = layerAt(event);
   if (id) elements?.beginText(id);
 };
 const start = (event: PointerEvent, corner?: ResizeCorner) => {
-  if (!selected.value || !selectedTransform.value || selected.value.locked || event.button !== 0) return;
+  if (props.cropping || props.disabled || event.button !== 0) return;
+  if (event.ctrlKey || event.metaKey) {
+    event.stopPropagation();
+    select(event);
+    return;
+  }
+  let targetId = props.selectedId;
   if (!corner) {
     const id = layerAt(event);
-    if (id !== props.selectedId) {
+    if (!id || !props.selectedIds.includes(id)) {
       event.stopPropagation();
       emit('select', id);
       return;
     }
+    targetId = id;
   }
+  const target = screenshotLayers(props.state).find((layer) => layer.id === targetId);
+  const targetTransform = targetId ? screenshotLayerTransform(props.state, assets.value, targetId) : null;
+  if (!target || !targetTransform || target.locked) return;
   event.preventDefault();
   (event.currentTarget as Element).setPointerCapture(event.pointerId);
   if (!drag) beginPropertyInteraction();
@@ -231,9 +278,14 @@ const start = (event: PointerEvent, corner?: ResizeCorner) => {
     width: bounds.width,
     height: bounds.height,
     initial: {
-      ...(activeImage.value?.transform ?? selectedTransform.value),
+      ...(screenshotImage(props.state, targetId)?.transform ?? targetTransform),
     },
     corner,
+    targetId: targetId ?? undefined,
+    selection:
+      !corner && props.selectedIds.length > 1
+        ? movableScreenshotSelection(props.state, props.selectedIds).map((layer) => layer.id)
+        : undefined,
   };
   if (corner && activeImage.value && activeImageAssets.value) {
     const { width, height } = props.state.canvas;
@@ -257,6 +309,12 @@ const move = (event: PointerEvent) => {
   if (!drag || !canvas.value) return;
   const dx = (event.clientX - drag.x) / drag.width,
     dy = (event.clientY - drag.y) / drag.height;
+  if (drag.selection) {
+    if (!translationDraft.value && !pendingTranslation && Math.hypot(dx * drag.width, dy * drag.height) < 4) return;
+    pendingTranslation = constrainScreenshotTranslation(props.state, drag.selection, { x: dx, y: dy }, assets.value);
+    frames.requestRender();
+    return;
+  }
   const effect = props.state.effects?.find((item) => item.id === props.selectedId);
   const proportionalFrame = drag.imageFrame ?? (effect && effect.shape !== 'rectangle' ? drag.initial : undefined);
   pendingTransform =
@@ -267,19 +325,26 @@ const move = (event: PointerEvent) => {
 };
 const endDrag = () => {
   flushTransform();
+  if (translationDraft.value) emit('translate', translationDraft.value);
   if (transformDraft.value) emit('transform', transformDraft.value);
+  const clickedId = drag?.selection && !translationDraft.value ? drag.targetId : undefined;
+  translationDraft.value = null;
   transformDraft.value = null;
   if (drag) endPropertyInteraction();
   drag = null;
   dragging.value = false;
   dragRenderer.reset();
   frames.requestRender();
+  if (clickedId) emit('select', clickedId);
 };
 watch(
-  () => props.selectedId,
+  () => props.selectedIds,
   () => {
     pendingTransform = null;
     transformDraft.value = null;
+    pendingTranslation = null;
+    translationDraft.value = null;
+    if (drag) drag.targetId = undefined;
     endDrag();
   },
 );
@@ -296,15 +361,12 @@ onBeforeUnmount(() => {
       <div class="image-stage" :style="stageStyle" @dblclick="editText">
         <canvas ref="canvas" :aria-label="t('preview')" @pointerdown="select" />
         <CanvasLayerSelection
-          v-if="
-            selected?.visible &&
-            !selected.locked &&
-            selectedTransform &&
-            !cropping &&
-            selected.id !== elements?.editing.value?.id
-          "
+          v-for="selection in cropping ? [] : selections"
+          :key="selection.id"
+          :data-layer-id="selection.id"
           :viewport-style="{ inset: '0' }"
-          :handle-style="style"
+          :handle-style="selection.style"
+          :resize-corners="selection.id === selectedId ? undefined : []"
           :muted="handlesMuted || (propertyInteractionActive && !dragging)"
           @pointer-down="start($event)"
           @pointer-move="move"

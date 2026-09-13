@@ -1,4 +1,7 @@
+import type { InputAccessStatus } from './input-access';
+export type { InputAccessStatus } from './input-access';
 import type { ScreenshotApi } from './screenshot';
+import type { TranscriptExportRequest, TranscriptExportResult } from './transcript';
 import type { PresetKind } from './capture-mode';
 import type { CaptureConfig, CreateProjectOptions, StartRecordingOptions } from './capture-config';
 import type {
@@ -195,6 +198,7 @@ export interface DesktopCaptureApi extends CaptureApi, ScreenshotApi, QuickSnipA
   whisperModels(): Promise<
     Array<{ id: string; status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>
   >;
+  exportTranscript(request: TranscriptExportRequest): Promise<TranscriptExportResult>;
   downloadWhisperModel(
     modelId: string,
   ): Promise<{ id: string; status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>;
@@ -271,17 +275,6 @@ export interface AppUpdateState {
   availableVersion: string | null;
   percent: number | null;
   message: string | null;
-}
-
-export interface InputAccessStatus {
-  state: 'available' | 'permission-required' | 'installation-required' | 'unavailable' | 'denied';
-  canRequest: boolean;
-  clicks: boolean;
-  shortcuts: boolean;
-  recordsText: false;
-  unavailableReason?: 'input-helper-unavailable' | 'polkit-unavailable' | 'input-broker-unavailable';
-  mouseDevices?: number;
-  keyboardDevices?: number;
 }
 
 export interface PreferenceShortcut {

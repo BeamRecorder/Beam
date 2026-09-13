@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowRight, Shapes, Type, Pencil, MousePointer2, Image, Focus } from '@lucide/vue';
+import { ArrowRight, Shapes, Type, Pencil, MousePointer2, Image, Focus, CircleDashed, Palette } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import Divider from '~/ui/divider/Divider.vue';
 import ShapeLayerPropertiesPanel from '../properties/clip/ShapeLayerPropertiesPanel.vue';
@@ -10,6 +10,8 @@ const editor = useElementEditor();
 defineProps<{ disabled?: boolean }>();
 const { t } = useTranslate('Elements');
 const { t: tHighlight } = useTranslate('Highlight');
+const { t: tTimeline } = useTranslate('TimelineToolbar');
+const { t: tCanvas } = useTranslate('CanvasPanel');
 const tools = [
   { family: 'shape', icon: Shapes },
   { family: 'arrow', icon: ArrowRight },
@@ -28,6 +30,7 @@ const icons = { shape: Shapes, arrow: ArrowRight, text: Type, drawing: Pencil };
         block
         size="sm"
         :icon="tool.icon"
+        :disabled="disabled || !editor.canInteract.value"
         :variant="tool.family === 'drawing' && editor.drawingMode.value ? 'primary' : 'secondary'"
         @click="editor.add(tool.family)"
         >{{ t(tool.family) }}</Button
@@ -41,6 +44,26 @@ const icons = { shape: Shapes, arrow: ArrowRight, text: Type, drawing: Pencil };
         :disabled="disabled"
         @click="editor.addHighlight()"
         >{{ tHighlight('title') }}</Button
+      >
+      <Button
+        v-if="editor.addBlur"
+        block
+        size="sm"
+        variant="secondary"
+        :icon="CircleDashed"
+        :disabled="disabled"
+        @click="editor.addBlur()"
+        >{{ tTimeline('blur') }}</Button
+      >
+      <Button
+        v-if="editor.addColor"
+        block
+        size="sm"
+        variant="secondary"
+        :icon="Palette"
+        :disabled="disabled"
+        @click="editor.addColor()"
+        >{{ tCanvas('color') }}</Button
       >
       <Button
         block

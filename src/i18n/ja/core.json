@@ -294,7 +294,11 @@
     "modelDownloadFailed": "モデルのダウンロードに失敗しました。",
     "systemAudio": "システム音声",
     "microphone": "マイク",
-    "cancel": "キャンセル"
+    "cancel": "キャンセル",
+    "exportTranscript": "文字起こしをエクスポート（JSON）",
+    "transcriptDescription": "区間と単語のタイムスタンプをミリ秒単位で含むテキスト字幕をエクスポートします。",
+    "transcriptSaved": "文字起こしをエクスポートしました。",
+    "transcriptExportFailed": "文字起こしをエクスポートできませんでした。"
   },
   "ClipPropertiesPanel": {
     "noClipSelected": "クリップが選択されていません",
@@ -439,6 +443,7 @@
     "includeAudioDesc": "有効な音声トラックをエクスポート動画に追加します。"
   },
   "HUD": {
+    "inputAccessFailed": "操作へのアクセス権限をリクエストできませんでした。",
     "title": "Beam",
     "openProject": "プロジェクトを開く",
     "preferences": "環境設定",

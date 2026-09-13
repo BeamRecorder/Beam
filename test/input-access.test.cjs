@@ -15,6 +15,13 @@ const available = {
   shortcuts: true,
   recordsText: false,
 };
+const permissionRequired = {
+  state: 'permission-required',
+  canRequest: true,
+  clicks: false,
+  shortcuts: false,
+  recordsText: false,
+};
 
 function app({ packaged = false, currentVersion = version } = {}) {
   return { isPackaged: packaged, getVersion: () => currentVersion };
@@ -24,6 +31,20 @@ function writeExecutable(candidate) {
   fs.mkdirSync(path.dirname(candidate), { recursive: true });
   fs.writeFileSync(candidate, 'test fixture');
   fs.chmodSync(candidate, 0o755);
+}
+
+function createLinuxInputAccess(nativeRequest) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-input-access-'));
+  writeExecutable(prebuiltInputHelperPath(root, version, 'linux', process.arch));
+  return {
+    inputAccess: new InputAccess({
+      app: app(),
+      applicationRoot: root,
+      platform: 'linux',
+      nativeRequest,
+    }),
+    cleanup: () => fs.rmSync(root, { recursive: true, force: true }),
+  };
 }
 
 test('non-Linux status delegates to the native capture engine without a helper', async () => {
@@ -120,20 +141,11 @@ test('Linux resolves the exact versioned cache helper and only requests authoriz
   }
 });
 
-test('Linux preserves the broker-unavailable fallback when the helper exists but native status fails', async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-input-access-'));
-  const helper = prebuiltInputHelperPath(root, version, 'linux', process.arch);
+test('Linux preserves the broker-unavailable fallback and error when native status fails', async () => {
+  const { inputAccess, cleanup } = createLinuxInputAccess(async () => {
+    throw new Error('input broker unavailable');
+  });
   try {
-    writeExecutable(helper);
-    const inputAccess = new InputAccess({
-      app: app(),
-      applicationRoot: root,
-      platform: 'linux',
-      nativeRequest: async () => {
-        throw new Error('input broker unavailable');
-      },
-    });
-
     assert.deepEqual(await inputAccess.status(), {
       state: 'unavailable',
       canRequest: false,
@@ -141,9 +153,118 @@ test('Linux preserves the broker-unavailable fallback when the helper exists but
       shortcuts: false,
       recordsText: false,
       unavailableReason: 'input-broker-unavailable',
+      error: { code: 'input-broker-unavailable', message: 'input broker unavailable' },
     });
   } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+    cleanup();
+  }
+});
+
+test('Linux preserves a failed request error on a later permission-required status', async () => {
+  const requestError = Object.assign(new Error('input helper failed to launch'), {
+    code: 'helper-launch-failed',
+  });
+  const { inputAccess, cleanup } = createLinuxInputAccess(async (command) => {
+    if (command === 'request-input-access') throw requestError;
+    return permissionRequired;
+  });
+
+  try {
+    await assert.rejects(inputAccess.request(), (error) => error === requestError);
+    assert.deepEqual(await inputAccess.status(), {
+      ...permissionRequired,
+      error: { code: 'helper-launch-failed', message: 'input helper failed to launch' },
+    });
+  } finally {
+    cleanup();
+  }
+});
+
+test('Linux native status errors take precedence over a remembered request error', async () => {
+  const requestError = Object.assign(new Error('request failed'), { code: 'request-failed' });
+  const nativeStatusError = { code: 'status-failed', message: 'native status diagnostic' };
+  const { inputAccess, cleanup } = createLinuxInputAccess(async (command) => {
+    if (command === 'request-input-access') throw requestError;
+    return { ...permissionRequired, error: nativeStatusError };
+  });
+
+  try {
+    await assert.rejects(inputAccess.request(), (error) => error === requestError);
+    assert.deepEqual(await inputAccess.status(), {
+      ...permissionRequired,
+      error: nativeStatusError,
+    });
+  } finally {
+    cleanup();
+  }
+});
+
+test('Linux clears a remembered request error when status reports access available', async () => {
+  let statusCount = 0;
+  const { inputAccess, cleanup } = createLinuxInputAccess(async (command) => {
+    if (command === 'request-input-access') throw new Error('first request failed');
+    statusCount += 1;
+    return statusCount === 1 ? available : permissionRequired;
+  });
+
+  try {
+    await assert.rejects(inputAccess.request(), /first request failed/);
+    assert.deepEqual(await inputAccess.status(), available);
+    assert.deepEqual(await inputAccess.status(), permissionRequired);
+  } finally {
+    cleanup();
+  }
+});
+
+test('Linux clears a remembered request error when a retry resolves without access', async () => {
+  let requestCount = 0;
+  const { inputAccess, cleanup } = createLinuxInputAccess(async (command) => {
+    if (command === 'input-access-status') return permissionRequired;
+    requestCount += 1;
+    if (requestCount === 1) throw new Error('first request failed');
+    // Polkit cancellation resolves with the current status instead of throwing.
+    return permissionRequired;
+  });
+
+  try {
+    await assert.rejects(inputAccess.request(), /first request failed/);
+    assert.deepEqual(await inputAccess.request(), permissionRequired);
+    assert.deepEqual(await inputAccess.status(), permissionRequired);
+  } finally {
+    cleanup();
+  }
+});
+
+test('Linux bounds remembered native error code and message lengths', async () => {
+  const nativeError = Object.assign(new Error('x'.repeat(5000)), {
+    code: 'y'.repeat(5000),
+  });
+  const { inputAccess, cleanup } = createLinuxInputAccess(async () => {
+    throw nativeError;
+  });
+
+  try {
+    const status = await inputAccess.status();
+    assert.equal(status.error.code.length, 4096);
+    assert.equal(status.error.message.length, 4096);
+  } finally {
+    cleanup();
+  }
+});
+
+test('Linux uses a fallback message when native status throws a non-Error value', async () => {
+  const { inputAccess, cleanup } = createLinuxInputAccess(async () => {
+    throw { code: 12, message: 'not an Error instance' };
+  });
+
+  try {
+    const status = await inputAccess.status();
+    assert.deepEqual(status.error, {
+      code: 'input-broker-unavailable',
+      message: 'Input access failed.',
+    });
+  } finally {
+    cleanup();
   }
 });
 

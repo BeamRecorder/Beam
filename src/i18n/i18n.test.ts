@@ -186,6 +186,10 @@ describe('internationalization', () => {
         'regenerateAICaptions',
         'processing',
         'preparingAudio',
+        'exportTranscript',
+        'transcriptDescription',
+        'transcriptSaved',
+        'transcriptExportFailed',
         'cancel',
       ]) {
         expect(

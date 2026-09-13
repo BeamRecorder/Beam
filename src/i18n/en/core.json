@@ -294,7 +294,11 @@
     "modelDownloadFailed": "Model download failed.",
     "systemAudio": "System Audio",
     "microphone": "Microphone",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "exportTranscript": "Export transcript (JSON)",
+    "transcriptDescription": "Export text subtitles with segment and word timestamps in milliseconds.",
+    "transcriptSaved": "Transcript exported.",
+    "transcriptExportFailed": "Could not export the transcript."
   },
   "ClipPropertiesPanel": {
     "noClipSelected": "No clip selected",
@@ -439,6 +443,7 @@
     "includeAudioDesc": "Add enabled audio tracks to the exported video."
   },
   "HUD": {
+    "inputAccessFailed": "Could not request interaction access.",
     "title": "Beam",
     "openProject": "Open a project",
     "preferences": "Preferences",
