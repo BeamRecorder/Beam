@@ -1,12 +1,11 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useVirtualList } from '@vueuse/core';
-import Input from '~/ui/input/Input.vue';
 import { useScrollShadow } from '~/ui/scroll-shadow/useScrollShadow';
 import { capture } from '~/api/capture';
 import type { CaptureProject } from '~/api/types/capture-api';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useProjectPreviews } from './useProjectPreviews';
-import type { ProjectPickerProps, ProjectPickerEmit } from './project-picker-types';
+import type { ProjectPickerProps, ProjectPickerEmit, ProjectPickerSearchInput } from './project-picker-types';
 
 export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerEmit) {
   const { t } = useTranslate('ProjectPicker');
@@ -21,7 +20,7 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
 
   const isSearchOpen = ref(false);
   const searchQuery = ref('');
-  const searchInputRef = ref<InstanceType<typeof Input> | null>(null);
+  const searchInputRef = ref<ProjectPickerSearchInput | null>(null);
 
   const isSelectionMode = ref(false);
   const selectedBatchIds = ref<Set<string>>(new Set());

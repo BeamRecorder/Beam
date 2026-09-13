@@ -77,9 +77,17 @@ export function smoothedCursorFocusAt(samples: readonly CursorTelemetryPoint[], 
   let totalWeight = 1;
   let weightedX = current.cx;
   let weightedY = current.cy;
-  for (let index = samples.length - 1; index >= 0; index -= 1) {
+  // Start immediately before the requested time, rather than walking every
+  // future sample on each spring simulation step. Preserve the summation order.
+  let lower = 0;
+  let upper = samples.length;
+  while (lower < upper) {
+    const middle = (lower + upper) >>> 1;
+    if (samples[middle]!.timeMs < timeMs) lower = middle + 1;
+    else upper = middle;
+  }
+  for (let index = lower - 1; index >= 0; index -= 1) {
     const sample = samples[index];
-    if (sample.timeMs >= timeMs) continue;
     const ageMs = timeMs - sample.timeMs;
     if (ageMs > CURSOR_HISTORY_MS) break;
     const weight = Math.exp(-ageMs / CURSOR_SMOOTHING_MS);
@@ -233,7 +241,11 @@ export function createZoomTimeEvaluator(
   const sortedElements = elements
     .filter((element) => element.enabled !== false)
     .sort((left, right) => left.startMs - right.startMs);
-  const sortedTelemetry = [...telemetry].sort((left, right) => left.timeMs - right.timeMs);
+  // The evaluator owns a numeric snapshot; per-frame simulation must not walk
+  // reactive sample proxies. Its caller rebuilds it when telemetry changes.
+  const sortedTelemetry = telemetry
+    .map(({ timeMs, cx, cy }) => ({ timeMs, cx, cy }))
+    .sort((left, right) => left.timeMs - right.timeMs);
   return (timeMs: number) => zoomAtSortedTime(sortedElements, timeMs, sortedTelemetry, mapFocus);
 }
 

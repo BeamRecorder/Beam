@@ -14,3 +14,7 @@ export type ProjectPickerEmit = <K extends keyof ProjectPickerEvents>(
   ...args: ProjectPickerEvents[K]
 ) => void;
 export type ProjectIdentity = Pick<CaptureProject, 'id' | 'name' | 'mode'>;
+
+export interface ProjectPickerSearchInput {
+  inputRef: HTMLInputElement | null;
+}

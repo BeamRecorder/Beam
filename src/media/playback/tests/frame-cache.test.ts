@@ -2,12 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { FRAME_CACHE_LIMIT_BYTES, FrameLruCache } from '../frame-cache';
 import type { MediaFrame } from '../../shared';
 
-const frame = (clipId: string, byteSize: number) =>
+const frame = (clipId: string, byteSize: number, timestampSeconds = 0, durationSeconds = 1) =>
   ({
     clipId,
     bitmap: {} as ImageBitmap,
-    timestampSeconds: 0,
-    durationSeconds: 1,
+    timestampSeconds,
+    durationSeconds,
     width: 1,
     height: 1,
     byteSize,
@@ -228,5 +228,45 @@ describe('FrameLruCache.clear', () => {
     cache.set('first', first);
     expect(cache.size).toBe(1);
     expect(cache.byteSize).toBe(7);
+  });
+});
+
+describe('FrameLruCache.findCoveringKey', () => {
+  it('treats frame intervals as inclusive at the start and exclusive at the end', () => {
+    const cache = new FrameLruCache();
+    cache.set('full:clip-1:0.5', frame('clip-1', 1, 0.5, 0.25));
+
+    expect(cache.findCoveringKey('clip-1', 0.5, 'full:')).toBe('full:clip-1:0.5');
+    expect(cache.findCoveringKey('clip-1', 0.749_999, 'full:')).toBe('full:clip-1:0.5');
+    expect(cache.findCoveringKey('clip-1', 0.75, 'full:')).toBeUndefined();
+  });
+
+  it('does not treat a future frame or a gap between frames as covering the requested time', () => {
+    const cache = new FrameLruCache();
+    cache.set('full:clip-1:1', frame('clip-1', 1, 1, 0.25));
+    cache.set('full:clip-1:2', frame('clip-1', 1, 2, 0.25));
+
+    expect(cache.findCoveringKey('clip-1', 0.99, 'full:')).toBeUndefined();
+    expect(cache.findCoveringKey('clip-1', 1.25, 'full:')).toBeUndefined();
+    expect(cache.findCoveringKey('clip-1', 1.5, 'full:')).toBeUndefined();
+  });
+
+  it('returns the covering frame with the latest timestamp when intervals overlap', () => {
+    const cache = new FrameLruCache();
+    cache.set('full:clip-1:0.75', frame('clip-1', 1, 0.75, 0.5));
+    cache.set('full:clip-1:0.5', frame('clip-1', 1, 0.5, 1));
+
+    expect(cache.findCoveringKey('clip-1', 0.9, 'full:')).toBe('full:clip-1:0.75');
+  });
+
+  it('only considers frames for the requested clip and quality prefix', () => {
+    const cache = new FrameLruCache();
+    cache.set('full:clip-1:0', frame('clip-1', 1, 0, 1));
+    cache.set('half:clip-1:0', frame('clip-1', 1, 0, 1));
+    cache.set('full:clip-2:0', frame('clip-2', 1, 0, 1));
+
+    expect(cache.findCoveringKey('clip-1', 0.5, 'full:')).toBe('full:clip-1:0');
+    expect(cache.findCoveringKey('clip-1', 0.5, 'quarter:')).toBeUndefined();
+    expect(cache.findCoveringKey('clip-2', 0.5, 'half:')).toBeUndefined();
   });
 });

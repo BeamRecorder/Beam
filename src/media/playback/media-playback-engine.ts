@@ -10,6 +10,7 @@ import {
 } from '../shared';
 import { AudioPlaybackScheduler } from './audio-scheduler';
 import { FrameLruCache } from './frame-cache';
+import { cachedSeekFrames } from './playback-cached-seek';
 import { isPlaybackWorkerResponse } from './playback-protocol';
 import { audioPlaybackTopology, videoPlaybackTopology } from './playback-composition-topology';
 import { videoPlaybackPlan } from './playback-composition-plan';
@@ -210,24 +211,17 @@ export class MediaPlaybackEngine {
     this.currentSeconds = target;
     this.emit('time', target);
 
-    if (this.composition) {
-      for (const clip of this.composition.clips) {
-        if (isVisualClip(clip) && clip.enabled) {
-          const clipStartSec = clip.timelineStartMs / 1_000;
-          const clipEndSec = (clip.timelineStartMs + clip.timelineDurationMs) / 1_000;
-          if (target >= clipStartSec && target < clipEndSec) {
-            const srcSec =
-              clip.freezeFrameSourceMs !== undefined
-                ? clip.freezeFrameSourceMs / 1_000
-                : (clip.sourceInMs + (target - clipStartSec) * 1_000 * (clip.playbackRate ?? 1)) / 1_000;
-            const cachedKey = this.cache.findMatchingKey(clip.id, srcSec, `${this.previewQuality}:`);
-            if (cachedKey) {
-              this.currentFrameKeys.set(clip.id, cachedKey);
-              this.emit('frame', { clipId: clip.id });
-            }
-          }
-        }
-      }
+    const cached = cachedSeekFrames(this.composition, this.cache, target, this.previewQuality);
+    for (const [clipId, key] of cached.frames) {
+      this.currentFrameKeys.set(clipId, key);
+      this.emit('frame', { clipId });
+    }
+    if (mode === 'scrub' && !resume && cached.complete) {
+      // An older in-flight scrub must not replace this exact cached image.
+      for (const pending of this.pendingSeeks.values()) pending.resolve('superseded');
+      this.pendingSeeks.clear();
+      this.post({ type: 'cancel-seek', generation: requestGeneration });
+      return 'presented';
     }
 
     if (mode === 'seek' || resume) {

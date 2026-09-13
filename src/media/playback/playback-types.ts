@@ -29,6 +29,7 @@ export type PlaybackWorkerRequest =
   | { type: 'play'; generation: number; timelineSeconds: number }
   | { type: 'tick'; generation: number; timelineSeconds: number }
   | { type: 'pause'; generation: number }
+  | { type: 'cancel-seek'; generation: number }
   | {
       type: 'seek';
       generation: number;
