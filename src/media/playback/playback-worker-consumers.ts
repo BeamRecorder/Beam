@@ -41,7 +41,8 @@ export const createPlaybackSink = (asset: AssetDecoder, quality: PreviewQuality)
     width: preview.width,
     height: preview.height,
     fit: 'contain',
-    poolSize: 3,
+    // Every canvas is transferred/copied into an owned bitmap before reading the next.
+    poolSize: 1,
     ...(asset.decoderOptions ? { decoderOptions: asset.decoderOptions } : {}),
   });
 };
@@ -78,16 +79,3 @@ export const sourceTime = (clip: PlaybackClipDescriptor, timelineSeconds: number
 
 export const shouldDecodeTickFrame = (consumer: ClipConsumer, targetSeconds: number) =>
   consumer.lastTargetSeconds !== targetSeconds;
-
-export function activeConsumersForTick(consumers: Iterable<ClipConsumer>, timelineSeconds: number, preloadSeconds = 0) {
-  const active: ClipConsumer[] = [];
-  for (const consumer of consumers) {
-    const startsIn = consumer.clip.timelineStartSeconds - timelineSeconds;
-    if (activeAt(consumer.clip, timelineSeconds) || (startsIn > 0 && startsIn <= preloadSeconds)) {
-      active.push(consumer);
-    } else {
-      consumer.lastTargetSeconds = null;
-    }
-  }
-  return active;
-}

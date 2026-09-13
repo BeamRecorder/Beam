@@ -75,6 +75,27 @@ describe('useThumbnails', () => {
     ...overrides,
   });
 
+  let additionalUnmounts: Array<() => void> = [];
+  const mountAdditionalClient = (initialAsset: MediaAsset | null = asset()) => {
+    const clientSource = ref<MediaAsset | null>(initialAsset);
+    let clientApi!: ReturnType<typeof useThumbnails>;
+    const Harness = defineComponent({
+      setup() {
+        clientApi = useThumbnails(clientSource);
+        return () => null;
+      },
+    });
+    const clientWrapper = mount(Harness);
+    let active = true;
+    const unmount = () => {
+      if (!active) return;
+      active = false;
+      clientWrapper.unmount();
+    };
+    additionalUnmounts.push(unmount);
+    return { source: clientSource, api: clientApi, unmount };
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     workerState.instances.length = 0;
@@ -106,9 +127,11 @@ describe('useThumbnails', () => {
       },
     });
     wrapper = mount(Harness);
+    additionalUnmounts = [];
   });
 
   afterEach(() => {
+    for (const unmount of additionalUnmounts) unmount();
     wrapper.unmount();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
@@ -125,6 +148,21 @@ describe('useThumbnails', () => {
   const batchFinished = (generation: number, workerIndex: number) => {
     sendWorkerMessage(workerIndex, { type: 'batch-finished', generation });
   };
+
+  const requestMessages = () =>
+    workerState.instances
+      .flatMap((worker) =>
+        worker.postMessage.mock.calls.map(
+          ([message]) =>
+            message as {
+              type?: string;
+              generation?: number;
+              visibleTimes?: number[];
+              source?: { assetId: string; url: string };
+            },
+        ),
+      )
+      .filter((message) => message.type === 'request-frames');
 
   it('queues visible frames, extracts missing thumbnails, and retains visible entries in the bounded cache', async () => {
     source.value = asset();
@@ -157,7 +195,7 @@ describe('useThumbnails', () => {
     ready(batchGeneration, 1);
     ready(batchGeneration, 2, new Blob(['2']), 1);
     flushAnimationFrame();
-    expect(api.thumbnails[1]).toContain('blob:');
+    expect(api.thumbnails.value[1]).toContain('blob:');
     ready(batchGeneration, 1, new Blob(['replacement']));
     flushAnimationFrame();
     expect(revokeObjectURL).toHaveBeenCalled();
@@ -172,8 +210,8 @@ describe('useThumbnails', () => {
 
     for (let time = 2; time <= 181; time += 1) ready(batchGeneration, time);
     flushAnimationFrame();
-    expect(api.thumbnails[1]).toBeDefined();
-    expect(Object.keys(api.thumbnails)).toHaveLength(96);
+    expect(api.thumbnails.value[1]).toBeDefined();
+    expect(Object.keys(api.thumbnails.value)).toHaveLength(96);
 
     sendWorkerMessage(0, { type: 'error', generation: batchGeneration, message: 'failed' });
     expect(api.isExtracting.value).toBe(false);
@@ -195,8 +233,8 @@ describe('useThumbnails', () => {
     for (let time = 2; time <= 181; time += 1) ready(requestGeneration, time);
     flushAnimationFrame();
 
-    expect(api.thumbnails[1]).toBeDefined();
-    expect(Object.keys(api.thumbnails)).toHaveLength(96);
+    expect(api.thumbnails.value[1]).toBeDefined();
+    expect(Object.keys(api.thumbnails.value)).toHaveLength(96);
   });
 
   it('ignores stale generations and clears pending work when the asset changes', async () => {
@@ -205,9 +243,10 @@ describe('useThumbnails', () => {
     api.requestVisibleFrames([4]);
     await flushPromises();
     const worker = workerState.instances[0]!;
+    const firstWorkers = [...workerState.instances];
     const firstGeneration = latestRequestGeneration();
     ready(firstGeneration - 1, 4);
-    expect(api.thumbnails[4]).toBeUndefined();
+    expect(api.thumbnails.value[4]).toBeUndefined();
 
     api.clearCache();
     expect(worker.postMessage).toHaveBeenCalledWith({
@@ -220,19 +259,22 @@ describe('useThumbnails', () => {
     await flushPromises();
     expect(api.isExtracting.value).toBe(false);
 
-    source.value = asset({ id: 'video-2', src: 'project-media://asset/video-2' });
+    source.value = asset({ src: 'project-media://asset/video-1-version-2' });
     await nextTick();
     api.requestVisibleFrames([6]);
     await flushPromises();
-    const secondGeneration = latestRequestGeneration();
-    expect(worker.postMessage).toHaveBeenLastCalledWith({
+    const secondGeneration = latestRequestGeneration(2);
+    expect(firstWorkers).toHaveLength(2);
+    expect(firstWorkers.every((item) => item.terminate.mock.calls.length === 1)).toBe(true);
+    expect(workerState.instances).toHaveLength(4);
+    expect(workerAt(2).postMessage).toHaveBeenLastCalledWith({
       type: 'request-frames',
       generation: secondGeneration,
       source: {
-        assetId: 'video-2',
+        assetId: 'video-1',
         kind: 'video',
         label: 'Recording',
-        url: 'project-media://asset/video-2',
+        url: 'project-media://asset/video-1-version-2',
       },
       visibleTimes: [6],
     });
@@ -251,7 +293,7 @@ describe('useThumbnails', () => {
     const secondRequests = secondWorker.postMessage.mock.calls.filter(([message]) => message.type === 'request-frames');
     expect(firstRequests).toHaveLength(1);
     expect(secondRequests).toHaveLength(1);
-    const firstGeneration = (firstRequests[0]?.[0] as { generation: number }).generation;
+    const firstGeneration = (firstRequests[0]![0] as { generation: number }).generation;
     expect(secondRequests[0]?.[0]).toEqual(expect.objectContaining({ generation: firstGeneration, visibleTimes: [5] }));
     expect(firstGeneration).toEqual(expect.any(Number));
   });
@@ -264,7 +306,8 @@ describe('useThumbnails', () => {
     api.requestVisibleFrames([2]);
     await flushPromises();
 
-    const worker = workerState.instances[0]!;
+    const worker = workerAt(0);
+    const firstWorkers = [...workerState.instances];
     const requestGenerations = worker.postMessage.mock.calls
       .map(([message]) => message)
       .filter((message) => message.type === 'request-frames')
@@ -272,9 +315,19 @@ describe('useThumbnails', () => {
     expect(requestGenerations).toHaveLength(2);
     expect(requestGenerations[1]).toBeGreaterThan(requestGenerations[0]!);
 
-    source.value = asset({ id: 'video-2', src: 'project-media://asset/video-2' });
+    source.value = asset({ src: 'project-media://asset/video-1-version-2' });
     await nextTick();
-    expect(worker.postMessage).toHaveBeenLastCalledWith({ type: 'clear', generation: expect.any(Number) });
+    expect(firstWorkers.every((worker) => worker.terminate.mock.calls.length === 1)).toBe(true);
+    api.requestVisibleFrames([3]);
+    await flushPromises();
+    expect(workerState.instances).toHaveLength(4);
+    expect(workerAt(2).postMessage).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        type: 'request-frames',
+        source: expect.objectContaining({ assetId: 'video-1', url: 'project-media://asset/video-1-version-2' }),
+        visibleTimes: [3],
+      }),
+    );
   });
 
   it('exposes synchronous descriptor failures without posting invalid requests', async () => {
@@ -320,8 +373,8 @@ describe('useThumbnails', () => {
     expect(api.isExtracting.value).toBe(true);
     ready(batchGeneration - 1, 10, new Blob(['stale']), 0);
     ready(batchGeneration - 1, 40, new Blob(['stale']), 1);
-    expect(api.thumbnails[10]).toBeUndefined();
-    expect(api.thumbnails[40]).toBeUndefined();
+    expect(api.thumbnails.value[10]).toBeUndefined();
+    expect(api.thumbnails.value[40]).toBeUndefined();
 
     sendWorkerMessage(1, { type: 'error', generation: batchGeneration, message: 'second worker failed' });
     expect(api.isExtracting.value).toBe(true);
@@ -337,7 +390,7 @@ describe('useThumbnails', () => {
     expect(clearGeneration).toEqual(expect.any(Number));
     expect(workerAt(1).postMessage).toHaveBeenLastCalledWith({ type: 'clear', generation: clearGeneration });
     ready(batchGeneration, 20, new Blob(['stale-after-clear']), 0);
-    expect(api.thumbnails[20]).toBeUndefined();
+    expect(api.thumbnails.value[20]).toBeUndefined();
 
     wrapper.unmount();
     expect(workerAt(0).terminate).toHaveBeenCalledOnce();
@@ -355,10 +408,10 @@ describe('useThumbnails', () => {
     await flushPromises();
     ready(latestRequestGeneration(), 1);
     flushAnimationFrame();
-    expect(api.thumbnails[1]).toBeDefined();
+    expect(api.thumbnails.value[1]).toBeDefined();
     source.value = null;
     await nextTick();
-    expect(api.thumbnails[1]).toBeUndefined();
+    expect(api.thumbnails.value[1]).toBeUndefined();
     expect(revokeObjectURL).toHaveBeenCalled();
   });
 
@@ -376,15 +429,25 @@ describe('useThumbnails', () => {
     source.value = asset();
     await nextTick();
 
-    expect(api.thumbnails[1]).toBeDefined();
+    expect(api.thumbnails.value[1]).toBeDefined();
     expect(worker.postMessage).toHaveBeenCalledTimes(postCount);
     expect(revokeObjectURL).toHaveBeenCalledTimes(revokeCount);
 
-    source.value = asset({ id: 'video-2', src: 'project-media://asset/video-2' });
+    source.value = asset({ src: 'project-media://asset/video-1-version-2' });
     await nextTick();
-    expect(worker.postMessage).toHaveBeenLastCalledWith({ type: 'clear', generation: expect.any(Number) });
+    expect(workerState.instances).toHaveLength(2);
+    expect(workerState.instances.every((item) => item.terminate.mock.calls.length === 1)).toBe(true);
     expect(revokeObjectURL.mock.calls.length).toBeGreaterThan(revokeCount);
-    expect(api.thumbnails[1]).toBeUndefined();
+    expect(api.thumbnails.value[1]).toBeUndefined();
+    api.requestVisibleFrames([1]);
+    await flushPromises();
+    expect(workerState.instances).toHaveLength(4);
+    expect(workerAt(2).postMessage).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        type: 'request-frames',
+        source: expect.objectContaining({ assetId: 'video-1', url: 'project-media://asset/video-1-version-2' }),
+      }),
+    );
   });
 
   it('keeps the LRU cache and workers across A-to-B-to-A scrolling while invalidating only the stale batch', async () => {
@@ -403,8 +466,8 @@ describe('useThumbnails', () => {
     batchFinished(firstGeneration, 0);
     batchFinished(firstGeneration, 1);
     expect(api.isExtracting.value).toBe(false);
-    expect(api.thumbnails[1]).toBeDefined();
-    expect(api.thumbnails[2]).toBeDefined();
+    expect(api.thumbnails.value[1]).toBeDefined();
+    expect(api.thumbnails.value[2]).toBeDefined();
 
     const clearCountBeforeScroll = workerState.instances.reduce(
       (count, worker) => count + worker.postMessage.mock.calls.filter(([message]) => message.type === 'clear').length,
@@ -440,18 +503,18 @@ describe('useThumbnails', () => {
     expect(workerState.instances).toEqual(firstWorkers);
 
     ready(firstGeneration, 99, new Blob(['stale-old-batch']), 0);
-    expect(api.thumbnails[99]).toBeUndefined();
+    expect(api.thumbnails.value[99]).toBeUndefined();
     batchStarted(secondGeneration, 0);
     ready(secondGeneration, 3, new Blob(['b-3']), 0);
     flushAnimationFrame();
     batchFinished(secondGeneration, 0);
-    expect(api.thumbnails[3]).toBeDefined();
+    expect(api.thumbnails.value[3]).toBeDefined();
 
     api.requestVisibleFrames([1, 2]);
     await flushPromises();
 
-    expect(api.thumbnails[1]).toBeDefined();
-    expect(api.thumbnails[2]).toBeDefined();
+    expect(api.thumbnails.value[1]).toBeDefined();
+    expect(api.thumbnails.value[2]).toBeDefined();
     expect(
       workerState.instances.reduce(
         (count, worker) =>
@@ -464,5 +527,224 @@ describe('useThumbnails', () => {
         worker.postMessage.mock.calls.every(([message]) => message.type !== 'dispose'),
       ),
     ).toBe(true);
+  });
+
+  it('shares workers and the frame cache across consumers while unioning their visible requests', async () => {
+    source.value = asset();
+    await nextTick();
+    const peerA = mountAdditionalClient(asset());
+    const peerB = mountAdditionalClient(asset());
+    await nextTick();
+
+    api.requestVisibleFrames([1, 2, 2]);
+    peerA.api.requestVisibleFrames([2, 3]);
+    peerB.api.requestVisibleFrames([3, 4, 4]);
+    await flushPromises();
+
+    expect(workerState.instances).toHaveLength(2);
+    const firstBatch = requestMessages();
+    const firstGeneration = firstBatch[0]?.generation;
+    expect(firstBatch).toHaveLength(2);
+    expect(firstBatch.every((message) => message.generation === firstGeneration)).toBe(true);
+    expect(firstBatch.flatMap((message) => message.visibleTimes ?? []).sort((a, b) => a - b)).toEqual([1, 2, 3, 4]);
+
+    ready(firstGeneration!, 2, new Blob(['shared-frame']));
+    flushAnimationFrame();
+    const sharedUrl = api.thumbnails.value[2];
+    expect(sharedUrl).toBeTruthy();
+    expect(peerA.api.thumbnails.value[2]).toBe(sharedUrl);
+    expect(peerB.api.thumbnails.value[2]).toBe(sharedUrl);
+    expect(createObjectURL).toHaveBeenCalledOnce();
+
+    peerA.unmount();
+    expect(workerState.instances.every((worker) => worker.terminate.mock.calls.length === 0)).toBe(true);
+    api.requestVisibleFrames([5]);
+    peerB.api.requestVisibleFrames([5, 6]);
+    await flushPromises();
+
+    const secondBatch = requestMessages().filter((message) => message.generation !== firstGeneration);
+    const secondGeneration = secondBatch[0]?.generation;
+    expect(secondGeneration).toBeGreaterThan(firstGeneration!);
+    expect(secondBatch.flatMap((message) => message.visibleTimes ?? []).sort((a, b) => a - b)).toEqual([5, 6]);
+    ready(secondGeneration!, 5, new Blob(['still-shared']));
+    flushAnimationFrame();
+    expect(api.thumbnails.value[5]).toBe(peerB.api.thumbnails.value[5]);
+    expect(workerState.instances).toHaveLength(2);
+    expect(workerState.instances.every((worker) => worker.terminate.mock.calls.length === 0)).toBe(true);
+
+    peerB.unmount();
+    api.requestVisibleFrames([7]);
+    await flushPromises();
+    const thirdGeneration = latestRequestGeneration(0);
+    expect(thirdGeneration).toBeGreaterThan(secondGeneration!);
+    ready(thirdGeneration, 7, new Blob(['last-subscriber']));
+    flushAnimationFrame();
+    const cachedUrls = Object.values(api.thumbnails.value);
+    expect(cachedUrls).toHaveLength(3);
+
+    wrapper.unmount();
+    expect(workerState.instances.map((worker) => worker.terminate.mock.calls.length)).toEqual([1, 1]);
+    expect(revokeObjectURL).toHaveBeenCalledTimes(cachedUrls.length);
+    for (const url of cachedUrls) expect(revokeObjectURL).toHaveBeenCalledWith(url);
+  });
+
+  it('does not restart a shared batch for an unchanged union or a frame waiting for animation-frame caching', async () => {
+    source.value = asset();
+    await nextTick();
+    const peer = mountAdditionalClient(asset());
+    await nextTick();
+
+    api.requestVisibleFrames([1, 2]);
+    await flushPromises();
+    const generation = latestRequestGeneration(0);
+    const requestCount = requestMessages().length;
+    ready(generation, 1, new Blob(['pending-cache-frame']));
+
+    peer.api.requestVisibleFrames([1, 2]);
+    await flushPromises();
+    expect(latestRequestGeneration(0)).toBe(generation);
+    expect(requestMessages()).toHaveLength(requestCount);
+
+    flushAnimationFrame();
+    expect(api.thumbnails.value[1]).toBeTruthy();
+    expect(peer.api.thumbnails.value[1]).toBe(api.thumbnails.value[1]);
+    expect(workerState.instances).toHaveLength(2);
+  });
+
+  it('stops workers for an empty viewport but retains cached URLs and restarts only for missing frames', async () => {
+    source.value = asset();
+    await nextTick();
+    api.requestVisibleFrames([1]);
+    await flushPromises();
+    const generation = latestRequestGeneration(0);
+    const firstPair = [...workerState.instances];
+    ready(generation, 1, new Blob(['visible-before-empty']));
+    flushAnimationFrame();
+    const cachedUrl = api.thumbnails.value[1];
+    expect(cachedUrl).toBeTruthy();
+
+    api.requestVisibleFrames([]);
+    await flushPromises();
+    expect(firstPair.map((worker) => worker.terminate.mock.calls.length)).toEqual([1, 1]);
+    expect(api.thumbnails.value[1]).toBe(cachedUrl);
+    expect(revokeObjectURL).not.toHaveBeenCalled();
+
+    const requestCount = requestMessages().length;
+    api.requestVisibleFrames([1]);
+    await flushPromises();
+    expect(api.thumbnails.value[1]).toBe(cachedUrl);
+    expect(workerState.instances).toHaveLength(2);
+    expect(requestMessages()).toHaveLength(requestCount);
+
+    api.requestVisibleFrames([2]);
+    await flushPromises();
+    expect(workerState.instances).toHaveLength(4);
+    expect(firstPair.map((worker) => worker.terminate.mock.calls.length)).toEqual([1, 1]);
+    expect(workerAt(2).terminate).not.toHaveBeenCalled();
+    expect(workerAt(3).terminate).not.toHaveBeenCalled();
+    expect(requestMessages().at(-1)).toEqual(
+      expect.objectContaining({
+        source: expect.objectContaining({ assetId: 'video-1', url: 'project-media://asset/video-1' }),
+        visibleTimes: [2],
+      }),
+    );
+  });
+
+  it('isolates consumers with the same asset id but different source URLs', async () => {
+    source.value = asset();
+    await nextTick();
+    const peer = mountAdditionalClient(asset({ src: 'project-media://asset/video-1-revision' }));
+    await nextTick();
+
+    api.requestVisibleFrames([1]);
+    peer.api.requestVisibleFrames([1]);
+    await flushPromises();
+
+    expect(workerState.instances).toHaveLength(4);
+    expect(requestMessages()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          source: expect.objectContaining({ assetId: 'video-1', url: 'project-media://asset/video-1' }),
+          visibleTimes: [1],
+        }),
+        expect.objectContaining({
+          source: expect.objectContaining({ assetId: 'video-1', url: 'project-media://asset/video-1-revision' }),
+          visibleTimes: [1],
+        }),
+      ]),
+    );
+    const originalGeneration = latestRequestGeneration(0);
+    const revisionGeneration = latestRequestGeneration(2);
+    ready(originalGeneration, 1, new Blob(['original']), 0);
+    ready(revisionGeneration, 1, new Blob(['revision']), 2);
+    flushAnimationFrame();
+
+    expect(api.thumbnails.value[1]).toBeTruthy();
+    expect(peer.api.thumbnails.value[1]).toBeTruthy();
+    expect(api.thumbnails.value[1]).not.toBe(peer.api.thumbnails.value[1]);
+    expect(createObjectURL).toHaveBeenCalledTimes(2);
+
+    peer.unmount();
+    expect(workerAt(0).terminate).not.toHaveBeenCalled();
+    expect(workerAt(1).terminate).not.toHaveBeenCalled();
+    expect(workerAt(2).terminate).toHaveBeenCalledOnce();
+    expect(workerAt(3).terminate).toHaveBeenCalledOnce();
+  });
+
+  it('does not post a queued request after disposal or revive thumbnails from late worker frames', async () => {
+    const pendingClient = mountAdditionalClient(asset());
+    pendingClient.api.requestVisibleFrames([11]);
+    pendingClient.unmount();
+    await flushPromises();
+    expect(workerState.instances).toHaveLength(0);
+
+    source.value = asset();
+    await nextTick();
+    api.requestVisibleFrames([12]);
+    await flushPromises();
+    const generation = latestRequestGeneration(0);
+    ready(generation, 12, new Blob(['cached-before-dispose']));
+    flushAnimationFrame();
+    const cachedUrl = api.thumbnails.value[12];
+    expect(cachedUrl).toBeTruthy();
+    const objectUrlCount = createObjectURL.mock.calls.length;
+
+    wrapper.unmount();
+    ready(generation, 13, new Blob(['late-after-dispose']));
+    flushAnimationFrame();
+
+    expect(createObjectURL).toHaveBeenCalledTimes(objectUrlCount);
+    expect(api.thumbnails.value[13]).toBeUndefined();
+    expect(revokeObjectURL).toHaveBeenCalledExactlyOnceWith(cachedUrl);
+  });
+
+  it('recreates a crashed worker pair on the next visible request and ignores old responses', async () => {
+    source.value = asset();
+    await nextTick();
+    api.requestVisibleFrames([1]);
+    await flushPromises();
+    const firstGeneration = latestRequestGeneration(0);
+    const firstWorkers = [...workerState.instances];
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    workerAt(0).onerror?.();
+    expect(firstWorkers.map((worker) => worker.terminate.mock.calls.length)).toEqual([1, 1]);
+    expect(api.isExtracting.value).toBe(false);
+    expect(api.error.value).toBe('Timeline thumbnail decoding failed.');
+
+    api.requestVisibleFrames([2]);
+    await flushPromises();
+    expect(workerState.instances).toHaveLength(4);
+    const recoveredGeneration = latestRequestGeneration(2);
+    expect(recoveredGeneration).toBeGreaterThan(firstGeneration);
+    ready(firstGeneration, 1, new Blob(['stale-crash-frame']), 0);
+    ready(recoveredGeneration, 2, new Blob(['recovered-frame']), 2);
+    flushAnimationFrame();
+
+    expect(api.thumbnails.value[1]).toBeUndefined();
+    expect(api.thumbnails.value[2]).toBeTruthy();
+    expect(api.error.value).toBeNull();
+    expect(workerAt(2).terminate).not.toHaveBeenCalled();
+    expect(workerAt(3).terminate).not.toHaveBeenCalled();
   });
 });

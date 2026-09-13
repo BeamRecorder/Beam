@@ -14,7 +14,7 @@ import { cachedSeekFrames } from './playback-cached-seek';
 import { isPlaybackWorkerResponse } from './playback-protocol';
 import { audioPlaybackTopology, videoPlaybackTopology } from './playback-composition-topology';
 import { videoPlaybackPlan } from './playback-composition-plan';
-import { previousContiguousVisualClipId } from './playback-frame-continuity';
+import { createPlaybackClipIndex } from './playback-clip-index';
 import { isPreviewQuality, type PreviewQuality } from './playback-preview';
 import type {
   PlaybackEventMap,
@@ -43,6 +43,7 @@ export class MediaPlaybackEngine {
   >();
   private readonly pendingLoads = new Map<number, { resolve(): void; reject(error: Error): void }>();
   private composition: ClipComposition | null = null;
+  private clipIndex = createPlaybackClipIndex(null);
   private generation = 0;
   private nextRequestId = 1;
   private animationFrame: number | null = null;
@@ -95,6 +96,7 @@ export class MediaPlaybackEngine {
     if (this.canRetimeComposition(composition)) return this.retimeComposition(composition, timelineSeconds);
     this.pause();
     this.composition = composition;
+    this.clipIndex = createPlaybackClipIndex(composition);
     this.durationSeconds = this.compositionDuration(composition);
     this.currentSeconds = this.clampTime(timelineSeconds);
     this.cache.clear();
@@ -141,6 +143,7 @@ export class MediaPlaybackEngine {
     const shouldReloadAudio = audioPlaybackTopology(previousComposition) !== audioPlaybackTopology(composition);
     this.pause();
     this.composition = composition;
+    this.clipIndex = createPlaybackClipIndex(composition);
     this.durationSeconds = this.compositionDuration(composition);
     this.currentSeconds = this.clampTime(timelineSeconds);
     const requestGeneration = ++this.generation;
@@ -234,14 +237,14 @@ export class MediaPlaybackEngine {
   }
 
   frameFor(clipId: string): MediaFrame | null {
-    const clip = this.composition?.clips.find((entry) => entry.id === clipId);
+    const clip = this.clipIndex.clips.get(clipId);
     const timelineTimeMs = this.currentSeconds * 1_000;
     if (!clip || !clip.enabled || !isVisualClip(clip) || sourceTimeAt(clip, timelineTimeMs) === null) {
       return null;
     }
     const key = this.currentFrameKeys.get(clipId);
     if (key) return this.cache.get(key) ?? null;
-    const previousClipId = previousContiguousVisualClipId(this.composition!, clipId, timelineTimeMs);
+    const previousClipId = this.clipIndex.previous.get(clipId);
     const previousKey = previousClipId ? this.currentFrameKeys.get(previousClipId) : null;
     return previousKey ? (this.cache.get(previousKey) ?? null) : null;
   }
@@ -311,6 +314,7 @@ export class MediaPlaybackEngine {
     for (const pending of this.pendingLoads.values()) pending.reject(new Error('Playback engine disposed.'));
     this.pendingLoads.clear();
     this.composition = null;
+    this.clipIndex = createPlaybackClipIndex(null);
     this.durationSeconds = 0;
     this.setState('disposed');
     this.listeners.clear();

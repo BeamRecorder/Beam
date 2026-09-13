@@ -54,7 +54,67 @@ async function flushPromises() {
   for (let index = 0; index < 6; index += 1) await Promise.resolve();
 }
 
+async function finishRetime(
+  engine: MediaPlaybackEngine,
+  worker: FakeWorker,
+  next: ClipComposition,
+  timelineSeconds: number,
+) {
+  const pending = engine.retimeComposition(next, timelineSeconds);
+  await flushPromises();
+  const retime = [...worker.requests]
+    .reverse()
+    .find((request): request is Extract<PlaybackWorkerRequest, { type: 'retime' }> => request.type === 'retime');
+  if (!retime) throw new Error('Expected retime request.');
+  worker.emit({ type: 'ready', generation: retime.generation });
+  await flushPromises();
+  const seek = latestSeekRequest(worker);
+  if (!seek || seek.generation === retime.generation) throw new Error('Expected seek after retime readiness.');
+  worker.emit({
+    type: 'seek-result',
+    generation: seek.generation,
+    requestId: seek.requestId,
+    result: 'presented',
+    latencyMs: 1,
+  });
+  await pending;
+}
+
 describe('MediaPlaybackEngine lifecycle', () => {
+  it('rejects non-finite load times and retimes whose topology is invalid', async () => {
+    const { engine, worker } = createEngine();
+
+    await expect(engine.loadComposition(composition(), Number.NaN)).rejects.toThrow('finite');
+    expect(worker.requests).toHaveLength(0);
+
+    await load(engine, worker);
+    const requestCount = worker.requests.length;
+    await expect(engine.retimeComposition(composition([videoClip('different-clip')]), 0.5)).rejects.toThrow(
+      'topology changed',
+    );
+    await expect(engine.retimeComposition(composition(), Number.POSITIVE_INFINITY)).rejects.toThrow('finite');
+    expect(worker.requests).toHaveLength(requestCount);
+    acknowledgeDisposal(engine, worker);
+  });
+
+  it('keeps pause harmless and rejects operations after disposal', async () => {
+    const { engine, worker, audio } = createEngine();
+    await load(engine, worker);
+    engine.dispose();
+    const requestCount = worker.requests.length;
+    audio.pause.mockClear();
+
+    engine.pause();
+
+    expect(audio.pause).not.toHaveBeenCalled();
+    expect(worker.requests).toHaveLength(requestCount);
+    await expect(engine.loadComposition(composition())).rejects.toThrow('disposed');
+    await expect(engine.retimeComposition(composition())).rejects.toThrow('disposed');
+    await expect(engine.seek(0.5, 'seek')).rejects.toThrow('disposed');
+    await expect(engine.play(0.5)).rejects.toThrow('disposed');
+    worker.emit({ type: 'disposed', generation: 0 });
+  });
+
   it('validates preview quality, supports an idle quality choice, and exposes volume and listener cleanup', async () => {
     const worker = new FakeWorker();
     const audio = new FakeAudio();
@@ -270,6 +330,66 @@ describe('MediaPlaybackEngine lifecycle', () => {
 
     expect(audio.loadComposition).toHaveBeenCalledOnce();
     expect(audio.loadComposition).toHaveBeenCalledWith(next);
+    acknowledgeDisposal(engine, worker);
+  });
+
+  it('drops a removed clip current-frame key when a retime disables and then re-enables it', async () => {
+    const { engine, worker } = createEngine();
+    const initial = composition([videoClip('kept'), videoClip('toggle')]);
+    await load(engine, worker, initial);
+    const frame = new FakeImageBitmap();
+    worker.emit(frameResponse(latestSeekRequest(worker)!.generation, 'toggle', 0.5, frame));
+    expect(engine.frameFor('toggle')?.bitmap).toBe(frame);
+
+    const disabled = composition([videoClip('kept'), videoClip('toggle', 'asset-1', { enabled: false })]);
+    await finishRetime(engine, worker, disabled, 0.1);
+    expect(engine.frameFor('toggle')).toBeNull();
+
+    await finishRetime(engine, worker, initial, 0.1);
+    expect(engine.frameFor('toggle')).toBeNull();
+    expect(frame.close).not.toHaveBeenCalled();
+    acknowledgeDisposal(engine, worker);
+  });
+
+  it('does not seek to a retime time after a newer retime supersedes it', async () => {
+    const { engine, worker } = createEngine();
+    await load(engine, worker);
+
+    const stale = engine.retimeComposition(
+      composition([videoClip('clip-1', 'asset-1', { timelineStartMs: 100 })]),
+      1.25,
+    );
+    await flushPromises();
+    const staleRequest = [...worker.requests]
+      .reverse()
+      .find((request): request is Extract<PlaybackWorkerRequest, { type: 'retime' }> => request.type === 'retime')!;
+
+    const current = engine.retimeComposition(
+      composition([videoClip('clip-1', 'asset-1', { timelineStartMs: 250 })]),
+      0.5,
+    );
+    await flushPromises();
+    const currentRequest = [...worker.requests]
+      .reverse()
+      .find((request): request is Extract<PlaybackWorkerRequest, { type: 'retime' }> => request.type === 'retime')!;
+    expect(currentRequest.generation).not.toBe(staleRequest.generation);
+
+    worker.emit({ type: 'ready', generation: currentRequest.generation });
+    await flushPromises();
+    const seek = latestSeekRequest(worker)!;
+    expect(seek.timelineSeconds).toBe(0.5);
+    worker.emit({
+      type: 'seek-result',
+      generation: seek.generation,
+      requestId: seek.requestId,
+      result: 'presented',
+      latencyMs: 1,
+    });
+    await Promise.all([stale, current]);
+
+    expect(
+      worker.requests.filter((request) => request.type === 'seek').map((request) => request.timelineSeconds),
+    ).not.toContain(1.25);
     acknowledgeDisposal(engine, worker);
   });
 });

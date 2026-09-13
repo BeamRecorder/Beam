@@ -1,17 +1,21 @@
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { nextTick, reactive } from 'vue';
+import { computed, nextTick, reactive, type Ref } from 'vue';
 import TimelineClip from '../TimelineClip.vue';
 import type { Clip, ColorClip, MediaAsset, ShapeClip } from '~/media/shared/composition-types';
 import type { MediaError } from '~/media/shared/media-types';
 
 const thumbnailState = vi.hoisted(() => ({
   thumbnails: {} as Record<number, string>,
+  thumbnailsRef: null as unknown as Ref<Record<number, string>>,
   requestVisibleFrames: vi.fn(),
 }));
 
 vi.mock('../waveform/useThumbnails', () => ({
-  useThumbnails: () => thumbnailState,
+  useThumbnails: () => ({
+    thumbnails: thumbnailState.thumbnailsRef,
+    requestVisibleFrames: thumbnailState.requestVisibleFrames,
+  }),
 }));
 
 const Skeleton = { template: '<div class="skeleton-stub" />' };
@@ -100,6 +104,7 @@ const baseProps = {
 
 beforeEach(() => {
   thumbnailState.thumbnails = reactive<Record<number, string>>({ 0: '/thumb-0.png' });
+  thumbnailState.thumbnailsRef = computed(() => thumbnailState.thumbnails);
   thumbnailState.requestVisibleFrames.mockClear();
   vi.useFakeTimers();
   vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
@@ -318,8 +323,29 @@ describe('TimelineClip', () => {
     expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([1.25]);
   });
 
+  it('refreshes visible frames after asset identity and clip timeline geometry changes', async () => {
+    const wrapper = mount(TimelineClip, {
+      props: { ...baseProps },
+      global: { stubs: { Skeleton, WaveformCanvas } },
+    });
+
+    thumbnailState.requestVisibleFrames.mockClear();
+    await wrapper.setProps({ asset: { ...asset('video', '/video.mp4'), id: 'video-asset-replaced' } });
+    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([0, 1.25]);
+
+    thumbnailState.requestVisibleFrames.mockClear();
+    await wrapper.setProps({ clip: clip({ timelineStartMs: 2_000 }) });
+    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([0, 1.25]);
+
+    thumbnailState.requestVisibleFrames.mockClear();
+    await wrapper.setProps({ clip: clip({ timelineStartMs: 2_000, timelineDurationMs: 1_000 }) });
+    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([0]);
+    expect(wrapper.findAll('.thumbnail-frame')).toHaveLength(1);
+  });
+
   it('keeps the nearest cached thumbnail under a dark loading overlay, then crossfades to the exact source', async () => {
     thumbnailState.thumbnails[1] = '/thumb-nearest.png';
+    thumbnailState.thumbnails[2] = '/thumb-farther.png';
     const wrapper = mount(TimelineClip, {
       props: {
         ...baseProps,
@@ -350,6 +376,18 @@ describe('TimelineClip', () => {
     expect(wrapper.find('.thumbnail-img').attributes('src')).toBe('/thumb-exact.png');
     expect(wrapper.find('.thumbnail-loading-overlay').exists()).toBe(false);
     wrapper.unmount();
+  });
+
+  it('renders a loading slot without an image when no cached thumbnail can be selected', () => {
+    thumbnailState.thumbnails = reactive<Record<number, string>>({});
+    thumbnailState.thumbnailsRef = computed(() => thumbnailState.thumbnails);
+    const wrapper = mount(TimelineClip, {
+      props: { ...baseProps },
+      global: { stubs: { Skeleton, WaveformCanvas } },
+    });
+
+    expect(wrapper.find('.thumbnail-img').exists()).toBe(false);
+    expect(wrapper.find('.thumbnail-loading-overlay').exists()).toBe(true);
   });
 
   it('restarts deferred thumbnail requests when the clip is no longer moving', async () => {

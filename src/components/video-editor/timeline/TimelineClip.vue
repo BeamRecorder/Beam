@@ -47,6 +47,9 @@ const thumbnailRefreshKey = computed(() =>
   [
     props.thumbnailSlots.map((slot) => `${slot.timelineSeconds}:${slot.durationSeconds}`).join(','),
     props.asset?.src ?? '',
+    props.asset?.id ?? '',
+    props.clip.timelineStartMs,
+    props.clip.timelineDurationMs,
     props.clip.sourceInMs,
     props.clip.sourceDurationMs,
     props.clip.playbackRate,
@@ -71,10 +74,10 @@ const imagePreviewStyle = computed(() => ({
 const frameStyle = (frame: TimelineFrame) => timelineFrameStyle(props.clip, frame.relativeMs, frame.durationMs);
 const transitionStyle = (edge: 'entry' | 'exit') => timelineTransitionStyle(props.clip, edge);
 const thumbnailFor = (frame: TimelineFrame) => {
-  const exact = thumbnails[frame.mediaSecond];
+  const exact = thumbnails.value[frame.mediaSecond];
   if (exact) return exact;
   let nearest: { distance: number; url: string } | null = null;
-  for (const [time, url] of Object.entries(thumbnails)) {
+  for (const [time, url] of Object.entries(thumbnails.value)) {
     const distance = Math.abs(Number(time) - frame.mediaSecond);
     if (!nearest || distance < nearest.distance) nearest = { distance, url };
   }

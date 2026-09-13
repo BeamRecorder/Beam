@@ -33,12 +33,15 @@ export function createPlaybackFrameQueue(
   }
 
   async function resetConsumer(consumer: ClipConsumer) {
-    await closeIterator(consumer.iterator);
+    const iterator = consumer.iterator;
+    // Detach owned state before yielding: a newer reset must not inherit the
+    // old iterator, and its replacement queue must survive this cleanup.
     consumer.iteratorGeneration += 1;
     consumer.iterator = null;
     consumer.lastTargetSeconds = null;
     for (const frame of consumer.queue) closeFrame(frame);
     consumer.queue.length = 0;
+    await closeIterator(iterator);
   }
 
   async function resetSequential(consumer: ClipConsumer, startSeconds: number) {

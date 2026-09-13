@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { WrappedCanvas } from 'mediabunny';
 import { createPlaybackFrameQueue } from '../playback-frame-queue';
 import type { PlaybackMetrics } from '../playback-types';
-import type { ClipConsumer } from '../playback-worker-consumers';
+import type { ClipConsumer, QueuedFrame } from '../playback-worker-consumers';
 
 const metrics = (): PlaybackMetrics => ({
   decodedFrames: 0,
@@ -14,6 +14,14 @@ const metrics = (): PlaybackMetrics => ({
   disposedBitmaps: 0,
   seekLatencyMs: [],
 });
+
+const deferred = () => {
+  let resolve!: () => void;
+  const promise = new Promise<void>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+};
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -57,6 +65,74 @@ describe('playback frame queue ownership', () => {
     expect(consumer.lastTargetSeconds).toBeNull();
     expect(consumer.queue).toEqual([]);
     expect(counts.disposedBitmaps).toBe(2);
+  });
+
+  it('does not let a pending old iterator cleanup clear replacement consumer state', async () => {
+    const cleanup = deferred();
+    const oldFrame = {
+      bitmap: { close: vi.fn() },
+      timestampSeconds: 0,
+      durationSeconds: 0.04,
+    } as unknown as QueuedFrame;
+    const nextFrame = {
+      bitmap: { close: vi.fn() },
+      timestampSeconds: 1,
+      durationSeconds: 0.04,
+    } as unknown as QueuedFrame;
+    const oldIterator = {
+      return: vi.fn(() => cleanup.promise.then(() => ({ value: undefined, done: true as const }))),
+    };
+    const replacementIterator = { return: vi.fn().mockResolvedValue({ value: undefined, done: true as const }) };
+    const consumer = {
+      iterator: oldIterator,
+      iteratorGeneration: 4,
+      lastTargetSeconds: 0,
+      queue: [oldFrame],
+    } as unknown as ClipConsumer;
+    const queue = createPlaybackFrameQueue(metrics(), () => false, vi.fn(), vi.fn());
+
+    const resetting = queue.resetConsumer(consumer);
+    expect(oldIterator.return).toHaveBeenCalledOnce();
+    expect(oldFrame.bitmap.close).toHaveBeenCalledOnce();
+    expect(consumer.iterator).toBeNull();
+    expect(consumer.queue).toEqual([]);
+
+    consumer.iterator = replacementIterator as unknown as ClipConsumer['iterator'];
+    consumer.queue.push(nextFrame);
+    consumer.lastTargetSeconds = 1;
+    cleanup.resolve();
+    await resetting;
+
+    expect(consumer.iterator).toBe(replacementIterator);
+    expect(consumer.queue).toEqual([nextFrame]);
+    expect(nextFrame.bitmap.close).not.toHaveBeenCalled();
+    expect(consumer.lastTargetSeconds).toBe(1);
+    expect(replacementIterator.return).not.toHaveBeenCalled();
+  });
+
+  it('detaches an iterator before awaiting cleanup so concurrent resets call return once', async () => {
+    const cleanup = deferred();
+    const iterator = {
+      return: vi.fn(() => cleanup.promise.then(() => ({ value: undefined, done: true as const }))),
+    };
+    const consumer = {
+      iterator,
+      iteratorGeneration: 2,
+      lastTargetSeconds: 0,
+      queue: [],
+    } as unknown as ClipConsumer;
+    const queue = createPlaybackFrameQueue(metrics(), () => false, vi.fn(), vi.fn());
+
+    const firstReset = queue.resetConsumer(consumer);
+    const secondReset = queue.resetConsumer(consumer);
+    await secondReset;
+    expect(iterator.return).toHaveBeenCalledOnce();
+
+    cleanup.resolve();
+    await firstReset;
+    expect(iterator.return).toHaveBeenCalledOnce();
+    expect(consumer.iterator).toBeNull();
+    expect(consumer.iteratorGeneration).toBe(4);
   });
 
   it('retains future frames without presenting them before their time', async () => {

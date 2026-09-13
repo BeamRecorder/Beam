@@ -52,6 +52,13 @@ Rust owns capture lifecycle, native permissions, source discovery, clocks, track
 - Optional tracks may be absent or failed. The editor must preserve that distinction and present it explicitly.
 - Session timestamps use the capture session timeline. Playback code must convert them consistently and must not invent keyframes or events.
 
+## Preview resource ownership
+
+- Rebuild the scene and playback interval indexes when composition timing changes. Queries preserve half-open clip intervals, floating-point cut snapping, every overlapping layer and the existing paint order. The playback ID/predecessor maps change with the same composition; a rejected retime must leave the current timeline usable.
+- Playback owns one reusable canvas per clip sink and converts it into an owned bitmap before requesting another frame. Keep decoded surfaces only for active clips and the 120 ms lookahead; after iterator cleanup, replace inactive sinks to release their old canvas pools. The renderer's frame-cache budget and preview resolution are independent of these pools.
+- Timeline thumbnails share two workers and a source-time cache per asset ID/URL within an editor's media-processing collector. Coalesce the union of visible requests, reuse pending frames, and retain every subscriber's visible times. Empty aggregate viewports stop workers while keeping cached URLs; the final subscriber releases the cache too. Late responses must not revive a disposed source, and changing one clip's source must not clear another clip's cache.
+- Detach iterator/queue ownership before asynchronous cleanup. Configuration changes validate first and check their version after cleanup, then commit the consumer map and interval index together. Disposal invalidates pending window preparation so it cannot recreate released sinks.
+
 ## Capture modes and project categories
 
 - Persist the selected `studio`, `screenshot` or `instant` mode in `preferences.extras.captureMode`; missing preferences select Studio.

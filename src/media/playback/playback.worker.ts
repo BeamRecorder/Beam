@@ -1,4 +1,5 @@
 import { createPlaybackFrameQueue } from './playback-frame-queue';
+import { PlaybackConsumerWindow } from './playback-consumer-window';
 import { MediaInputError, type MediaError } from '../shared';
 import { assertPlaybackWorkerRequest, assertPlaybackWorkerResponse } from './playback-protocol';
 import type { PreviewQuality } from './playback-preview';
@@ -10,12 +11,9 @@ import type {
   PlaybackWorkerResponse,
 } from './playback-types';
 import {
-  activeAt,
-  activeConsumersForTick,
   createPlaybackConsumer,
   createPlaybackSink,
   disposeLoadedAssets,
-  PLAYBACK_TICK_PRELOAD_SECONDS,
   shouldDecodeTickFrame,
   sourceTime,
   type AssetDecoder,
@@ -27,6 +25,7 @@ const reportPlaybackWorkerError = (message: string, error?: unknown) =>
 
 const assets = new Map<string, AssetDecoder>();
 const consumers = new Map<string, ClipConsumer>();
+const consumerWindow = new PlaybackConsumerWindow();
 let generation = 0;
 let disposed = false;
 let pendingSeek: Extract<PlaybackWorkerRequest, { type: 'seek' }> | null = null;
@@ -112,13 +111,12 @@ async function cancelSeek(message: Extract<PlaybackWorkerRequest, { type: 'cance
   pendingTick = null;
   await waitForProcessingIdle();
   if (disposed || generation !== message.generation || processingSeek || processingTick) return;
-  const sequential = [...consumers.values()].filter((consumer) => consumer.iterator || consumer.queue.length);
-  if (!sequential.length) return;
+  if (!consumerWindow.resident.size) return;
   // Cached scrubs also end sequential prefetch. Serialize cleanup with decode;
   // returning an iterator while next() is pending can close its live surfaces.
   processingSeek = true;
   try {
-    await Promise.all(sequential.map(resetConsumer));
+    await consumerWindow.prepare([], resetConsumer, previewQuality);
     postMetrics(message.generation, true);
   } finally {
     processingSeek = false;
@@ -136,13 +134,10 @@ async function configurePreview(message: Extract<PlaybackWorkerRequest, { type: 
   await waitForProcessingIdle();
   if (isStaleLoad(version)) return;
   try {
+    await Promise.all([...consumers.values()].map(resetConsumer));
+    if (isStaleLoad(version)) return;
     previewQuality = message.previewQuality;
-    await Promise.all(
-      [...consumers.values()].map(async (consumer) => {
-        await resetConsumer(consumer);
-        consumer.sink = createPlaybackSink(consumer.asset, previewQuality);
-      }),
-    );
+    for (const consumer of consumers.values()) consumer.sink = createPlaybackSink(consumer.asset, previewQuality);
     updateQueueMetric();
     post({ type: 'ready', generation: message.generation });
   } catch (error) {
@@ -157,28 +152,24 @@ async function retime(message: Extract<PlaybackWorkerRequest, { type: 'retime' }
   await waitForProcessingIdle();
   if (isStaleLoad(version)) return;
   try {
-    const nextClips = new Map(message.clips.map((clip) => [clip.clipId, clip]));
-    for (const [clipId, consumer] of consumers) {
-      if (nextClips.has(clipId)) continue;
-      await closeIterator(consumer.iterator);
-      consumer.iteratorGeneration += 1;
-      for (const frame of consumer.queue) closeFrame(frame);
-      consumers.delete(clipId);
-    }
+    // Validate the whole update before releasing or changing the current timeline.
     for (const clip of message.clips) {
       const existing = consumers.get(clip.clipId);
-      if (existing) {
-        if (existing.asset.assetId !== clip.assetId)
-          throw new Error('Playback asset changed during a timing-only update.');
-        const consumer = existing;
-        await resetConsumer(consumer);
-        consumer.clip = clip;
-        continue;
-      }
-      const asset = assets.get(clip.assetId);
-      if (!asset) throw new Error('Playback asset is unavailable during a timing-only update.');
-      consumers.set(clip.clipId, createPlaybackConsumer(clip, asset, previewQuality));
+      if (existing && existing.asset.assetId !== clip.assetId)
+        throw new Error('Playback asset changed during a timing-only update.');
+      if (!assets.has(clip.assetId)) throw new Error('Playback asset is unavailable during a timing-only update.');
     }
+    await Promise.all([...consumers.values()].map(resetConsumer));
+    if (isStaleLoad(version)) return;
+    const next = message.clips.map(
+      (clip) => consumers.get(clip.clipId) ?? createPlaybackConsumer(clip, assets.get(clip.assetId)!, previewQuality),
+    );
+    consumers.clear();
+    next.forEach((consumer, index) => {
+      consumer.clip = message.clips[index]!;
+      consumers.set(consumer.clip.clipId, consumer);
+    });
+    consumerWindow.rebuild(consumers.values());
     updateQueueMetric();
     post({ type: 'ready', generation: message.generation });
   } catch (error) {
@@ -215,6 +206,7 @@ async function load(message: Extract<PlaybackWorkerRequest, { type: 'load' }>) {
       }
       consumers.set(clip.clipId, createPlaybackConsumer(clip, asset, previewQuality));
     }
+    consumerWindow.rebuild(consumers.values());
     post({ type: 'ready', generation: message.generation });
   } catch (error) {
     if (!committed) disposeLoadedAssets(loadedAssets);
@@ -239,21 +231,9 @@ async function processTicks() {
       pendingTick = null;
       if (request.generation !== generation) continue;
       requestGeneration = request.generation;
-      const activeConsumers = activeConsumersForTick(
-        consumers.values(),
-        request.timelineSeconds,
-        PLAYBACK_TICK_PRELOAD_SECONDS,
-      );
-      await Promise.all(
-        [...consumers.values()]
-          .filter(
-            (consumer) =>
-              consumer.lastTargetSeconds === null &&
-              !activeConsumers.includes(consumer) &&
-              (consumer.iterator || consumer.queue.length),
-          )
-          .map(resetConsumer),
-      );
+      const activeConsumers = consumerWindow.select(request.timelineSeconds, true);
+      await consumerWindow.prepare(activeConsumers, resetConsumer, previewQuality);
+      if (disposed || request.generation !== generation) continue;
       const decoded = await Promise.allSettled(
         activeConsumers.map(async (consumer) => {
           const sampleTimelineSeconds = Math.max(request.timelineSeconds, consumer.clip.timelineStartSeconds);
@@ -303,14 +283,15 @@ async function processSeeks() {
       activeRequest = request;
       pendingSeek = null;
       const startedAt = performance.now();
-      const activeConsumers = [...consumers.values()].filter((consumer) =>
-        activeAt(consumer.clip, request.timelineSeconds),
-      );
+      const activeConsumers = consumerWindow.select(request.timelineSeconds);
       // Arbitrary access replaces sequential playback. Release its prefetched
       // bitmaps and decoder before opening a separate seek decoder.
-      await Promise.all(
-        [...consumers.values()].filter((consumer) => consumer.iterator || consumer.queue.length).map(resetConsumer),
-      );
+      await consumerWindow.prepare(activeConsumers, resetConsumer, previewQuality, true);
+      if (disposed) break;
+      if (request.generation !== generation && !pendingSeek) {
+        supersede(request);
+        continue;
+      }
       const decoded = await Promise.allSettled(
         activeConsumers.map(async (consumer) => {
           const targetSeconds = sourceTime(consumer.clip, request.timelineSeconds);
@@ -403,7 +384,7 @@ function supersede(request: Extract<PlaybackWorkerRequest, { type: 'seek' }>, la
 }
 
 function updateQueueMetric() {
-  metrics.queueSize = [...consumers.values()].reduce((size, consumer) => size + consumer.queue.length, 0);
+  metrics.queueSize = [...consumerWindow.resident].reduce((size, consumer) => size + consumer.queue.length, 0);
 }
 
 function postMetrics(messageGeneration: number, force = false) {
@@ -448,6 +429,7 @@ async function disposeAll(invalidateLoad = true) {
     for (const frame of consumer.queue) closeFrame(frame);
   }
   consumers.clear();
+  consumerWindow.clear();
   for (const asset of assets.values()) asset.opened.dispose();
   assets.clear();
   updateQueueMetric();
@@ -466,7 +448,7 @@ function resolveProcessingIdle() {
 async function shutdown() {
   await disposeAll();
   await waitForProcessingIdle();
-  await Promise.allSettled([...loadTasks]);
+  await Promise.allSettled(loadTasks);
   await new Promise<void>((resolve) => setTimeout(resolve, 0));
   post({ type: 'disposed', generation });
 }
