@@ -1,5 +1,17 @@
 const EDITOR_OPEN_TIMEOUT_MS = 30_000;
 
+function editorTimeoutError(session) {
+  const stage = session.lastProgressStage || 'openingWindow';
+  const progress = Number.isFinite(session.lastProgressValue) ? session.lastProgressValue : 0;
+  return new Error(
+    [
+      'The editor did not finish opening the project within 30 seconds.',
+      `Last reported stage: ${stage} (${progress}%).`,
+      `Editor document loaded: ${session.documentLoaded ? 'yes' : 'no'}.`,
+    ].join('\n'),
+  );
+}
+
 function createEditorStartupGuard(session) {
   let timer = null;
   const clear = () => {
@@ -29,12 +41,9 @@ function createEditorStartupGuard(session) {
     fail,
     start() {
       clear();
-      timer = setTimeout(
-        () => fail(new Error('The editor did not finish opening the project within 30 seconds.')),
-        EDITOR_OPEN_TIMEOUT_MS,
-      );
+      timer = setTimeout(() => fail(editorTimeoutError(session)), EDITOR_OPEN_TIMEOUT_MS);
       timer.unref?.();
     },
   };
 }
-module.exports = { createEditorStartupGuard };
+module.exports = { createEditorStartupGuard, editorTimeoutError };

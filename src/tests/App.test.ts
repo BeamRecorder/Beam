@@ -4,10 +4,13 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App.vue';
 import type { RecordingSessionResult } from '../components/hud/recorder/recording-types';
+import { setCurrentLocale } from '../i18n';
 
 const mocks = vi.hoisted(() => ({
   capture: {
+    platform: 'win32',
     getPreferences: vi.fn(),
+    getUpdateState: vi.fn(),
     setInteractive: vi.fn(),
     setCameraOverlayActive: vi.fn(),
     setNormalRecordingActive: vi.fn(),
@@ -109,7 +112,13 @@ vi.mock('../components/hud/HUD.vue', async () => {
               }),
               h('button', {
                 class: 'open',
-                onClick: () => emit('open-project', { id: 'project-1', name: 'Project', previewSrc: 'project.mp4' }),
+                onClick: () =>
+                  emit('open-project', {
+                    id: 'project-1',
+                    name: 'Project',
+                    previewSrc: 'project.mp4',
+                    mode: 'studio',
+                  }),
               }),
               ...(props.recorderLauncherContext
                 ? [h('button', { class: 'dismiss-launcher', onClick: () => emit('dismiss-launcher') })]
@@ -151,14 +160,22 @@ vi.mock('../components/ui/toast/ToastProvider.vue', async () => ({
   default: (await import('vue')).defineComponent({ template: '<div />' }),
 }));
 
-const project = { id: 'project-1', name: 'Project', previewSrc: 'project.mp4' };
+const project = { id: 'project-1', name: 'Project', previewSrc: 'project.mp4', mode: 'studio' as const };
 
 let wrapper!: VueWrapper;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  setCurrentLocale('en');
   Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: vi.fn(() => document.body) });
   mocks.capture.getPreferences.mockResolvedValue({ recordingBar: { visibility: 'auto-fade' } });
+  mocks.capture.getUpdateState.mockResolvedValue({
+    status: 'unsupported',
+    currentVersion: '0.2.9-test',
+    availableVersion: null,
+    percent: null,
+    message: null,
+  });
   mocks.capture.listProjects.mockResolvedValue([project]);
   mocks.capture.openEditor.mockResolvedValue(true);
   mocks.capture.openScreenshot.mockResolvedValue(true);
@@ -364,8 +381,9 @@ describe('App', () => {
     mocks.capture.openEditor.mockRejectedValueOnce(new Error('project is unreadable'));
     await wrapper.get('.open').trigger('click');
     await settle();
-    expect(wrapper.get('[role="alert"]').text()).toContain('project is unreadable');
-    await wrapper.get('[role="alert"] button').trigger('click');
+    expect(wrapper.get('[role="alert"]').text()).not.toContain('project is unreadable');
+    await wrapper.findAll('[role="alert"] button').at(-1)!.trigger('click');
+    await settle();
     expect(wrapper.find('[role="alert"]').exists()).toBe(false);
 
     mocks.capture.openEditor.mockResolvedValueOnce(true);
@@ -374,6 +392,63 @@ describe('App', () => {
     expect(mocks.capture.openEditor).toHaveBeenCalledWith('project-1', { disposition: 'reuse' });
     expect(wrapper.find('.mock-hud').exists()).toBe(true);
     expect(errorSpy).toHaveBeenCalled();
+  });
+
+  it('shows a translated editor-open failure and copies its complete diagnostics', async () => {
+    setCurrentLocale('fr');
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const clipboardWriteText = vi.fn().mockResolvedValue(undefined);
+    const originalClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: clipboardWriteText },
+    });
+    let rejectOpening!: (error: Error) => void;
+    mocks.capture.openEditor.mockReturnValueOnce(
+      new Promise<boolean>((_resolve, reject) => {
+        rejectOpening = reject;
+      }),
+    );
+
+    try {
+      await wrapper.get('.open').trigger('click');
+      await nextTick();
+      mocks.controller.editorProgress?.({ stage: 'loadingTimeline', value: 60 });
+      rejectOpening(new Error('diagnostic détaillé'));
+      await settle();
+
+      const error = wrapper.get('[role="alert"]');
+      expect(error.text()).toContain('Impossible d’ouvrir l’éditeur');
+      expect(error.text()).toContain(
+        'Beam n’a pas reçu le signal de disponibilité de l’éditeur. Votre enregistrement est toujours conservé.',
+      );
+      expect(error.text()).toContain('Dernière étape signalée : Chargement de la timeline…');
+      expect(error.text()).toContain('Retour à Beam');
+      expect(error.text()).not.toContain('diagnostic détaillé');
+      expect(error.text()).not.toContain('Error:');
+
+      const copy = error.get('[aria-label="Copier le diagnostic"]');
+      await copy.trigger('click');
+      await settle();
+
+      expect(clipboardWriteText).toHaveBeenCalledOnce();
+      const diagnostics = clipboardWriteText.mock.calls[0]![0];
+      expect(diagnostics).toContain('=== Beam Editor Open Diagnostics ===');
+      expect(diagnostics).toContain('App version: 0.2.9-test');
+      expect(diagnostics).toContain('Runtime platform: win32');
+      expect(diagnostics).toContain('Project ID: project-1');
+      expect(diagnostics).toContain('Project mode: studio');
+      expect(diagnostics).toContain('Last reported stage: loadingTimeline (60%)');
+      expect(diagnostics).toMatch(/^Occurred at: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/m);
+      expect(diagnostics).toContain(`User agent: ${navigator.userAgent}`);
+      expect(diagnostics).toContain('Error: diagnostic détaillé');
+      expect(copy.attributes('data-state')).toBe('copied');
+      expect(copy.attributes('aria-label')).toBe('Diagnostic copié');
+    } finally {
+      errorSpy.mockRestore();
+      if (originalClipboard) Object.defineProperty(navigator, 'clipboard', originalClipboard);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+    }
   });
 
   it('keeps the HUD mounted and reflects real editor loading stages', async () => {
@@ -389,9 +464,9 @@ describe('App', () => {
     expect(wrapper.get('.mock-hud').attributes('data-preparing-editor')).toBe('true');
     expect(wrapper.get('.mock-hud').attributes('data-editor-progress')).toBe('10');
 
-    mocks.controller.editorProgress?.({ stage: 'loadingTimeline', value: 65 });
+    mocks.controller.editorProgress?.({ stage: 'loadingTimeline', value: 60 });
     await nextTick();
-    expect(wrapper.get('.mock-hud').attributes('data-editor-progress')).toBe('65');
+    expect(wrapper.get('.mock-hud').attributes('data-editor-progress')).toBe('60');
 
     mocks.controller.editorProgress?.({ stage: 'ready', value: 100 });
     expect(mocks.capture.setWindowVisible).not.toHaveBeenCalledWith(false);
@@ -411,7 +486,8 @@ describe('App', () => {
     mocks.capture.listProjects.mockResolvedValueOnce([]);
     mocks.controller.onComplete?.({ videoSrc: 'missing.mp4', sessionId: 'session-2' });
     await settle();
-    expect(wrapper.get('[role="alert"]').text()).toContain('No recorded project was found');
+    expect(wrapper.find('[role="alert"]').exists()).toBe(true);
+    expect(wrapper.get('[role="alert"]').text()).not.toContain('No recorded project was found');
   });
 
   it('passes the editor launcher context to HUD and prefers the requested window source', async () => {
@@ -512,7 +588,8 @@ describe('App', () => {
 
     expect(mocks.capture.openEditor).not.toHaveBeenCalled();
     expect(mocks.capture.renameProject).not.toHaveBeenCalled();
-    expect(wrapper.get('[role="alert"]').text()).toContain('No recorded project was found');
+    expect(wrapper.find('[role="alert"]').exists()).toBe(true);
+    expect(wrapper.get('[role="alert"]').text()).not.toContain('No recorded project was found');
   });
 
   it('clears the editor launcher context when no project exists after recording', async () => {
@@ -529,8 +606,9 @@ describe('App', () => {
     mocks.controller.onComplete?.({ videoSrc: 'missing.mp4', sessionId: 'session-4' });
     await settle();
 
-    expect(wrapper.get('[role="alert"]').text()).toContain('No recorded project was found');
-    await wrapper.get('[role="alert"] button').trigger('click');
+    expect(wrapper.find('[role="alert"]').exists()).toBe(true);
+    expect(wrapper.get('[role="alert"]').text()).not.toContain('No recorded project was found');
+    await wrapper.findAll('[role="alert"] button').at(-1)!.trigger('click');
     await settle();
 
     expect(wrapper.get('.mock-hud').attributes('data-launcher-source')).toBe('');

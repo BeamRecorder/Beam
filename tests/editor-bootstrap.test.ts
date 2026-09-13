@@ -6,6 +6,7 @@ import type { PreferenceSettings } from '../src/api/types/capture-api';
 const capture = vi.hoisted(() => ({
   getPreferences: vi.fn(),
   onPreferencesChanged: vi.fn(() => () => {}),
+  reportEditorLoadingStage: vi.fn(),
   updatePreferences: vi.fn(),
 }));
 vi.mock('../src/api/capture', () => ({ capture }));
@@ -44,6 +45,8 @@ describe('editor appearance bootstrap', () => {
       }),
     );
     await import('../src/editor-main');
+    expect(capture.reportEditorLoadingStage).toHaveBeenCalledWith('loadingAppearance');
+    expect(capture.reportEditorLoadingStage).toHaveBeenCalledOnce();
     expect(document.documentElement.classList.contains('editor-window-root')).toBe(false);
     expect(document.querySelector('#app')?.childElementCount).toBe(0);
     resolve(preferences('dark'));

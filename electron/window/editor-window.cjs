@@ -12,9 +12,11 @@ const TITLEBAR_HEIGHT = 40;
 const TITLEBAR_SYMBOL_COLOR = '#7a7a7a';
 const EDITOR_LOADING_PROGRESS = Object.freeze({
   openingWindow: 10,
-  loadingEditor: 25,
+  loadingEditor: 20,
+  loadingAppearance: 30,
   loadingProject: 45,
-  loadingTimeline: 65,
+  loadingTimeline: 60,
+  loadingEditorModule: 75,
   renderingEditor: 90,
   ready: 100,
 });
@@ -74,14 +76,10 @@ function createEditorWindowManager({
 
   const sendProgress = (session, stage) => {
     const value = EDITOR_LOADING_PROGRESS[stage];
-    if (
-      presentingSession !== session ||
-      value === undefined ||
-      value < session.lastProgressValue ||
-      hudWindow.isDestroyed()
-    )
-      return false;
+    if (presentingSession !== session || value === undefined || value < session.lastProgressValue) return false;
     session.lastProgressValue = value;
+    session.lastProgressStage = stage;
+    if (hudWindow.isDestroyed()) return false;
     hudWindow.webContents.send('editor:loading-progress', { stage, value });
     return true;
   };
@@ -244,6 +242,8 @@ function createEditorWindowManager({
       resolvePresentation: null,
       rejectPresentation: null,
       lastProgressValue: 0,
+      lastProgressStage: null,
+      documentLoaded: false,
       persistTimer: null,
     };
     session.startup = createEditorStartupGuard(session);
@@ -278,6 +278,7 @@ function createEditorWindowManager({
       });
     }
     contents.once('did-finish-load', () => {
+      session.documentLoaded = true;
       if (shouldAutoOpenDevTools({ isPackaged })) contents.openDevTools?.({ mode: 'detach', activate: false });
       sendProgress(session, 'loadingEditor');
     });
@@ -333,6 +334,7 @@ function createEditorWindowManager({
     presentingSession = session;
     session.returningToHud = false;
     session.lastProgressValue = 0;
+    session.lastProgressStage = null;
     session.currentProjectId = projectId;
     session.kind = options.kind ?? null;
     activeSession = session;

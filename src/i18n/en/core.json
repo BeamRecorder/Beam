@@ -497,11 +497,22 @@
     "title": "Preparing your editor",
     "openingWindow": "Creating the editor window…",
     "loadingEditor": "Loading the editor interface…",
+    "loadingAppearance": "Loading the editor appearance…",
     "loadingProject": "Opening your project…",
     "loadingTimeline": "Loading the timeline…",
+    "loadingEditorModule": "Loading the editor components…",
     "renderingEditor": "Rendering the editor…",
     "ready": "Editor ready",
     "progressLabel": "Editor loading progress"
+  },
+  "EditorOpenError": {
+    "title": "The editor could not open",
+    "description": "Beam did not receive the editor’s ready signal. Your recording is still saved.",
+    "lastStage": "Last reported step: {stage}",
+    "copyDetails": "Copy diagnostics",
+    "detailsCopied": "Diagnostics copied",
+    "copyFailed": "Copy failed",
+    "back": "Return to Beam"
   },
   "HudPreferences": {
     "categoryRecording": "Recording",

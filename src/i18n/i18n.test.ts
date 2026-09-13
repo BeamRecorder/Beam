@@ -27,6 +27,15 @@ afterEach(() => {
 });
 
 describe('internationalization', () => {
+  it('uses an imperative Vietnamese label for screenshot actions and keeps screenshot names nominal', () => {
+    setCurrentLocale('vi');
+
+    expect(i18n.global.t('HUD.screenshot')).toBe('Chụp ảnh màn hình');
+    expect(i18n.global.t('QuickSnipCropBar.screenshot')).toBe('Chụp ảnh màn hình');
+    expect(i18n.global.t('ScreenshotEditor.title')).toBe('Ảnh chụp màn hình');
+    expect(i18n.global.t('ScreenshotEditor.screenshots')).toBe('Ảnh chụp màn hình');
+  });
+
   it('provides screenshot, preset and capture-mode UI in all locales without falling back to English', () => {
     const namespaces = [
       'ScreenshotEditor',
@@ -159,7 +168,15 @@ describe('internationalization', () => {
   it('translates every editor loading stage in every supported locale', () => {
     for (const locale of SUPPORTED_LOCALES) {
       setCurrentLocale(locale);
-      for (const stage of ['openingWindow', 'loadingEditor', 'loadingProject', 'loadingTimeline', 'renderingEditor']) {
+      for (const stage of [
+        'openingWindow',
+        'loadingEditor',
+        'loadingAppearance',
+        'loadingProject',
+        'loadingTimeline',
+        'loadingEditorModule',
+        'renderingEditor',
+      ]) {
         expect(i18n.global.te(`EditorPreparingHud.${stage}`, locale)).toBe(true);
       }
     }

@@ -497,11 +497,22 @@
     "title": "Подготовка редактора",
     "openingWindow": "Создание окна редактора…",
     "loadingEditor": "Загрузка интерфейса редактора…",
+    "loadingAppearance": "Загрузка оформления редактора…",
     "loadingProject": "Открытие проекта…",
     "loadingTimeline": "Загрузка временной шкалы…",
+    "loadingEditorModule": "Загрузка компонентов редактора…",
     "renderingEditor": "Отрисовка редактора…",
     "ready": "Редактор готов",
     "progressLabel": "Ход загрузки редактора"
+  },
+  "EditorOpenError": {
+    "title": "Не удалось открыть редактор",
+    "description": "Beam не получил сигнал готовности редактора. Ваша запись по-прежнему сохранена.",
+    "lastStage": "Последний зарегистрированный этап: {stage}",
+    "copyDetails": "Копировать диагностику",
+    "detailsCopied": "Диагностика скопирована",
+    "copyFailed": "Не удалось скопировать",
+    "back": "Вернуться в Beam"
   },
   "HudPreferences": {
     "categoryRecording": "Запись",

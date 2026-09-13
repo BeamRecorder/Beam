@@ -497,11 +497,22 @@
     "title": "Préparation de l’éditeur",
     "openingWindow": "Création de la fenêtre de l’éditeur…",
     "loadingEditor": "Chargement de l’interface…",
+    "loadingAppearance": "Chargement de l’apparence de l’éditeur…",
     "loadingProject": "Ouverture de votre projet…",
     "loadingTimeline": "Chargement de la timeline…",
+    "loadingEditorModule": "Chargement des composants de l’éditeur…",
     "renderingEditor": "Rendu de l’éditeur…",
     "ready": "Éditeur prêt",
     "progressLabel": "Progression du chargement de l’éditeur"
+  },
+  "EditorOpenError": {
+    "title": "Impossible d’ouvrir l’éditeur",
+    "description": "Beam n’a pas reçu le signal de disponibilité de l’éditeur. Votre enregistrement est toujours conservé.",
+    "lastStage": "Dernière étape signalée : {stage}",
+    "copyDetails": "Copier le diagnostic",
+    "detailsCopied": "Diagnostic copié",
+    "copyFailed": "Échec de la copie",
+    "back": "Retour à Beam"
   },
   "HudPreferences": {
     "categoryRecording": "Enregistrement",

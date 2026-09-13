@@ -2,7 +2,7 @@
 import { defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import HUD from './components/hud/HUD.vue';
 import ToastProvider from './components/ui/toast/ToastProvider.vue';
-import Button from './components/ui/button/Button.vue';
+import EditorOpenError from './components/hud/EditorOpenError.vue';
 import RecorderBar from './components/hud/recorder/RecorderBar.vue';
 import ScreenRegionOverlayApp from './components/hud/region/ScreenRegionOverlayApp.vue';
 import { useRecordingController } from './components/hud/recorder/useRecordingController';
@@ -107,6 +107,8 @@ const TeleprompterWindowApp = defineAsyncComponent(
 const currentProject = ref<CaptureProject | null>(null);
 const isPreparingEditor = ref(false);
 const editorLoadError = ref('');
+const editorLoadErrorAt = ref('');
+const appVersion = ref('Unknown');
 const editorLoadingProgress = ref<EditorLoadingProgress>({ stage: 'openingWindow', value: 10 });
 const recorderLauncherContext = ref<RecorderLauncherContext | null>(null);
 
@@ -186,7 +188,18 @@ onMounted(() => {
         });
     }
   });
+  void capture
+    .getUpdateState()
+    .then((state) => {
+      appVersion.value = state?.currentVersion || appVersion.value;
+    })
+    .catch(() => undefined);
 });
+
+const showEditorLoadError = (reason: unknown) => {
+  editorLoadError.value = reason instanceof Error ? reason.message : String(reason);
+  editorLoadErrorAt.value = new Date().toISOString();
+};
 
 const startRecording = async (configuration: RecordingConfiguration) => {
   isRecordingStartedFromEditor.value = recorderLauncherContext.value !== null;
@@ -293,7 +306,7 @@ const handleStopRecording = async (session: RecordingSessionResult) => {
       if (launchedFromEditor) recorderLauncherContext.value = null;
     } catch (error) {
       isPreparingEditor.value = false;
-      editorLoadError.value = error instanceof Error ? error.message : String(error);
+      showEditorLoadError(error);
       capture.showHud();
     }
   } else {
@@ -306,7 +319,7 @@ const handleStopRecording = async (session: RecordingSessionResult) => {
       recorderLauncherContext.value = null;
     }
     isPreparingEditor.value = false;
-    editorLoadError.value = 'No recorded project was found';
+    showEditorLoadError('No recorded project was found');
     capture.showHud();
   }
 };
@@ -322,7 +335,7 @@ const handleOpenProject = (project: CaptureProject) => {
     logEditor('Project editor data load failed', error);
     if (currentProject.value?.id !== project.id || currentProject.value?.mode !== project.mode) return;
     isPreparingEditor.value = false;
-    editorLoadError.value = error instanceof Error ? error.message : String(error);
+    showEditorLoadError(error);
     capture.showHud();
     console.error('Failed to load project editor data:', error);
   });
@@ -330,6 +343,7 @@ const handleOpenProject = (project: CaptureProject) => {
 
 const dismissEditorLoadError = () => {
   editorLoadError.value = '';
+  editorLoadErrorAt.value = '';
 };
 
 const dismissRecorderLauncher = async () => {
@@ -381,11 +395,17 @@ const dismissRecorderLauncher = async () => {
         @system-audio="recording.toggleSystemAudio"
       />
     </Transition>
-    <section v-if="editorLoadError" class="editor-load-error" role="alert">
-      <p class="editor-load-error-title">Unable to open this project</p>
-      <p>{{ editorLoadError }}</p>
-      <Button variant="secondary" size="sm" @click="dismissEditorLoadError">Back to projects</Button>
-    </section>
+    <EditorOpenError
+      v-if="editorLoadError"
+      :error="editorLoadError"
+      :progress="editorLoadingProgress"
+      :app-version="appVersion"
+      :runtime-platform="capture.platform"
+      :project-id="currentProject?.id"
+      :project-mode="currentProject?.mode"
+      :occurred-at="editorLoadErrorAt"
+      @dismiss="dismissEditorLoadError"
+    />
   </div>
 </template>
 
@@ -397,22 +417,6 @@ const dismissRecorderLauncher = async () => {
   align-items: flex-start;
   justify-content: flex-start;
   overflow: hidden;
-}
-.editor-load-error {
-  width: 100vw;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 24px;
-  background: var(--color-bg-surface);
-  color: var(--text-primary);
-  text-align: center;
-}
-.editor-load-error-title {
-  font-weight: 700;
 }
 .recorder-return-enter-active,
 .recorder-return-leave-active {

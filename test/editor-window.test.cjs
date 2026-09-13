@@ -219,9 +219,9 @@ test('editor window is opaque and routes native editor lifecycle without changin
       ['hud-send', 'editor:loading-progress', { stage: 'openingWindow', value: 10 }],
     );
     editor.emitContent('did-finish-load');
-    assert.deepEqual(calls.at(-1), ['hud-send', 'editor:loading-progress', { stage: 'loadingEditor', value: 25 }]);
+    assert.deepEqual(calls.at(-1), ['hud-send', 'editor:loading-progress', { stage: 'loadingEditor', value: 20 }]);
     ipcListeners.get('editor:loading-stage')({ sender: editor.webContents }, 'loadingTimeline');
-    assert.deepEqual(calls.at(-1), ['hud-send', 'editor:loading-progress', { stage: 'loadingTimeline', value: 65 }]);
+    assert.deepEqual(calls.at(-1), ['hud-send', 'editor:loading-progress', { stage: 'loadingTimeline', value: 60 }]);
     assert.deepEqual(ipcHandlers.get('editor:context')({ sender: editor.webContents }), { projectId });
     ipcListeners.get('editor:ready')({ sender: editor.webContents });
     await opening;
@@ -434,11 +434,18 @@ test('times out a hidden editor after 30 seconds without closing the HUD and all
     const timedOutEditor = fixture.windows[0];
     assert.equal(timeoutDelay, 30_000);
     assert.equal(typeof fireTimeout, 'function');
+    timedOutEditor.emitContent('did-finish-load');
+    fixture.ipcListeners.get('editor:loading-stage')({ sender: timedOutEditor.webContents }, 'loadingTimeline');
     global.setTimeout = originalSetTimeout;
     global.clearTimeout = originalClearTimeout;
     fireTimeout();
 
-    await assert.rejects(opening, /did not finish opening the project within 30 seconds/);
+    await assert.rejects(opening, (error) => {
+      assert.match(error.message, /did not finish opening the project within 30 seconds/);
+      assert.match(error.message, /Last reported stage: loadingTimeline \(60%\)\./);
+      assert.match(error.message, /Editor document loaded: yes\./);
+      return true;
+    });
     assert.equal(timedOutEditor.isDestroyed(), true);
     assert.equal(fixture.hudVisible(), true);
     assert.equal(fixture.manager.window(), null);

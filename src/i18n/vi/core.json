@@ -490,18 +490,29 @@
     "quickSnip": "Chụp nhanh",
     "startQuickSnip": "Bắt đầu chụp nhanh",
     "stopQuickSnip": "Dừng chụp nhanh",
-    "screenshot": "Ảnh chụp màn hình",
+    "screenshot": "Chụp ảnh màn hình",
     "instant": "Tức thì"
   },
   "EditorPreparingHud": {
     "title": "Đang chuẩn bị trình chỉnh sửa",
     "openingWindow": "Đang tạo cửa sổ trình chỉnh sửa…",
     "loadingEditor": "Đang tải giao diện trình chỉnh sửa…",
+    "loadingAppearance": "Đang tải giao diện hiển thị của trình chỉnh sửa…",
     "loadingProject": "Đang mở dự án của bạn…",
     "loadingTimeline": "Đang tải dòng thời gian…",
+    "loadingEditorModule": "Đang tải các thành phần của trình chỉnh sửa…",
     "renderingEditor": "Đang dựng hình trình chỉnh sửa…",
     "ready": "Trình chỉnh sửa đã sẵn sàng",
     "progressLabel": "Tiến trình tải trình chỉnh sửa"
+  },
+  "EditorOpenError": {
+    "title": "Không thể mở trình chỉnh sửa",
+    "description": "Beam không nhận được tín hiệu sẵn sàng của trình chỉnh sửa. Bản ghi của bạn vẫn được lưu.",
+    "lastStage": "Bước được báo cáo gần nhất: {stage}",
+    "copyDetails": "Sao chép chẩn đoán",
+    "detailsCopied": "Đã sao chép chẩn đoán",
+    "copyFailed": "Sao chép thất bại",
+    "back": "Quay lại Beam"
   },
   "HudPreferences": {
     "categoryRecording": "Ghi hình",
@@ -820,7 +831,7 @@
     "camera": "Máy ảnh",
     "cancel": "Hủy",
     "actionShortcut": "{action}: {shortcut}",
-    "screenshot": "Ảnh chụp màn hình",
+    "screenshot": "Chụp ảnh màn hình",
     "screenshotDescription": "Chụp ảnh màn hình, sau đó mở trong trình chỉnh sửa.",
     "instant": "Tức thì",
     "instantDescription": "Quay và tự động xuất video đã tạo kiểu.",

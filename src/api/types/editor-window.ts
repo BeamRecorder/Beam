@@ -1,8 +1,10 @@
 export type EditorLoadingStage =
   | 'openingWindow'
   | 'loadingEditor'
+  | 'loadingAppearance'
   | 'loadingProject'
   | 'loadingTimeline'
+  | 'loadingEditorModule'
   | 'renderingEditor'
   | 'ready';
 

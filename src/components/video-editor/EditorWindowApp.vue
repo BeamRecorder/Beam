@@ -65,14 +65,15 @@ const loadProject = async (projectId: string) => {
   document.title = DEFAULT_EDITOR_TITLE;
   try {
     capture.reportEditorLoadingStage('loadingProject');
-    capture.reportEditorLoadingStage('loadingTimeline');
-    const [nextProject, nextEditorData, editor] = await Promise.all([
-      capture.getProject(projectId),
-      capture.getProjectEditorData(projectId),
-      import('./VideoEditor.vue'),
-    ]);
+    const nextProject = await capture.getProject(projectId);
     if (generation !== loadGeneration) return;
     if (!nextProject || nextProject.mode === 'screenshot') throw new Error('Project not found');
+    capture.reportEditorLoadingStage('loadingTimeline');
+    const nextEditorData = await capture.getProjectEditorData(projectId);
+    if (generation !== loadGeneration) return;
+    capture.reportEditorLoadingStage('loadingEditorModule');
+    const editor = await import('./VideoEditor.vue');
+    if (generation !== loadGeneration) return;
     VideoEditor.value = editor.default;
     project.value = nextProject;
     document.title = editorTitle(nextProject.name);

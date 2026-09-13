@@ -9,6 +9,7 @@ const state = vi.hoisted(() => ({
   contextListener: null as ((context: { projectId: string; kind?: 'screenshot' }) => void) | null,
   removeContextListener: vi.fn(),
   videoModuleLoads: 0,
+  videoModuleLoadObserver: null as (() => void) | null,
   screenshotModuleLoads: 0,
 }));
 
@@ -35,6 +36,7 @@ vi.mock('../../ui/toast/ToastProvider.vue', () => ({ default: { template: '<div 
 vi.mock('../../ui/button/Button.vue', () => ({ default: { template: '<button><slot /></button>' } }));
 vi.mock('../VideoEditor.vue', async () => {
   state.videoModuleLoads++;
+  state.videoModuleLoadObserver?.();
   const { defineComponent, h } = await import('vue');
   return {
     default: defineComponent({
@@ -81,9 +83,11 @@ const mountEditor = () => {
 describe('EditorWindowApp', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    capture.reportEditorLoadingStage.mockReset();
     document.title = 'Beam Editor';
     document.documentElement.classList.remove('dark');
     state.contextListener = null;
+    state.videoModuleLoadObserver = null;
     capture.getEditorContext.mockResolvedValue({ projectId: project.id });
     capture.getProject.mockResolvedValue(project);
     capture.listProjects.mockResolvedValue([project]);
@@ -98,9 +102,35 @@ describe('EditorWindowApp', () => {
     document.documentElement.classList.remove('dark');
     vi.unstubAllGlobals();
     vi.useRealTimers();
+    state.videoModuleLoadObserver = null;
   });
 
   it('loads only the screenshot module for a screenshot context, then loads video on a Studio context', async () => {
+    const loadEvents: string[] = [];
+    const editorData = { composition: {}, zoom: {}, presentation: {} };
+    let resolveProject!: (value: typeof project) => void;
+    let resolveEditorData!: (value: typeof editorData) => void;
+    const projectLoad = new Promise<typeof project>((resolve) => {
+      resolveProject = resolve;
+    });
+    const editorDataLoad = new Promise<typeof editorData>((resolve) => {
+      resolveEditorData = resolve;
+    });
+
+    capture.reportEditorLoadingStage.mockImplementation((stage: string) => {
+      loadEvents.push(`stage:${stage}`);
+    });
+    capture.getProject.mockImplementation((projectId: string) => {
+      expect(projectId).toBe(project.id);
+      loadEvents.push('getProject');
+      return projectLoad;
+    });
+    capture.getProjectEditorData.mockImplementation((projectId: string) => {
+      expect(projectId).toBe(project.id);
+      loadEvents.push('getProjectEditorData');
+      return editorDataLoad;
+    });
+    state.videoModuleLoadObserver = () => loadEvents.push('import:VideoEditor');
     capture.getEditorContext.mockResolvedValue({ projectId: 'image-1', kind: 'screenshot' });
     const wrapper = mountEditor();
     await flushPromises();
@@ -114,11 +144,29 @@ describe('EditorWindowApp', () => {
     expect(capture.getProjectEditorData).not.toHaveBeenCalled();
     expect(capture.notifyEditorReady).toHaveBeenCalledOnce();
 
+    loadEvents.length = 0;
     state.contextListener?.({ projectId: project.id });
+    await flushPromises();
+    expect(loadEvents).toEqual(['stage:loadingProject', 'getProject']);
+    expect(capture.getProjectEditorData).not.toHaveBeenCalled();
+
+    resolveProject(project);
+    await flushPromises();
+    expect(loadEvents).toEqual(['stage:loadingProject', 'getProject', 'stage:loadingTimeline', 'getProjectEditorData']);
+
+    resolveEditorData(editorData);
     await flushPromises();
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     await flushPromises();
 
+    expect(loadEvents.slice(0, 6)).toEqual([
+      'stage:loadingProject',
+      'getProject',
+      'stage:loadingTimeline',
+      'getProjectEditorData',
+      'stage:loadingEditorModule',
+      'import:VideoEditor',
+    ]);
     expect(wrapper.find('.mock-editor[data-project-id="project-1"]').exists()).toBe(true);
     expect(wrapper.find('.mock-screenshot-editor').exists()).toBe(false);
     expect(state.videoModuleLoads).toBe(1);
@@ -140,6 +188,7 @@ describe('EditorWindowApp', () => {
     expect(capture.reportEditorLoadingStage.mock.calls.map(([stage]) => stage)).toEqual([
       'loadingProject',
       'loadingTimeline',
+      'loadingEditorModule',
       'renderingEditor',
     ]);
     expect(capture.notifyEditorReady).toHaveBeenCalledOnce();

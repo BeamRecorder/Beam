@@ -497,11 +497,22 @@
     "title": "Preparazione dell’editor",
     "openingWindow": "Creazione della finestra dell’editor…",
     "loadingEditor": "Caricamento dell’interfaccia…",
+    "loadingAppearance": "Caricamento dell’aspetto dell’editor…",
     "loadingProject": "Apertura del progetto…",
     "loadingTimeline": "Caricamento della timeline…",
+    "loadingEditorModule": "Caricamento dei componenti dell’editor…",
     "renderingEditor": "Rendering dell’editor…",
     "ready": "Editor pronto",
     "progressLabel": "Avanzamento del caricamento dell’editor"
+  },
+  "EditorOpenError": {
+    "title": "Impossibile aprire l’editor",
+    "description": "Beam non ha ricevuto il segnale di disponibilità dell’editor. La registrazione è ancora salvata.",
+    "lastStage": "Ultimo passaggio segnalato: {stage}",
+    "copyDetails": "Copia diagnostica",
+    "detailsCopied": "Diagnostica copiata",
+    "copyFailed": "Copia non riuscita",
+    "back": "Torna a Beam"
   },
   "HudPreferences": {
     "categoryRecording": "Registrazione",

@@ -497,11 +497,22 @@
     "title": "正在準備編輯器",
     "openingWindow": "正在建立編輯器視窗…",
     "loadingEditor": "正在載入編輯器介面…",
+    "loadingAppearance": "正在載入編輯器外觀…",
     "loadingProject": "正在開啟專案…",
     "loadingTimeline": "正在載入時間軸…",
+    "loadingEditorModule": "正在載入編輯器元件…",
     "renderingEditor": "正在呈現編輯器…",
     "ready": "編輯器已就緒",
     "progressLabel": "編輯器載入進度"
+  },
+  "EditorOpenError": {
+    "title": "無法開啟編輯器",
+    "description": "Beam 未收到編輯器的就緒訊號。你的錄影仍已儲存。",
+    "lastStage": "最後回報的步驟：{stage}",
+    "copyDetails": "複製診斷資訊",
+    "detailsCopied": "診斷資訊已複製",
+    "copyFailed": "複製失敗",
+    "back": "返回 Beam"
   },
   "HudPreferences": {
     "categoryRecording": "錄影",

@@ -497,11 +497,22 @@
     "title": "エディターを準備しています",
     "openingWindow": "エディターウィンドウを作成しています…",
     "loadingEditor": "エディター画面を読み込んでいます…",
+    "loadingAppearance": "エディターの外観を読み込んでいます…",
     "loadingProject": "プロジェクトを開いています…",
     "loadingTimeline": "タイムラインを読み込んでいます…",
+    "loadingEditorModule": "エディターのコンポーネントを読み込んでいます…",
     "renderingEditor": "エディターを描画しています…",
     "ready": "エディターの準備ができました",
     "progressLabel": "エディターの読み込み進捗"
+  },
+  "EditorOpenError": {
+    "title": "エディターを開けませんでした",
+    "description": "Beamはエディターの準備完了信号を受信できませんでした。録画は保存されています。",
+    "lastStage": "最後に報告されたステップ：{stage}",
+    "copyDetails": "診断情報をコピー",
+    "detailsCopied": "診断情報をコピーしました",
+    "copyFailed": "コピーに失敗しました",
+    "back": "Beamに戻る"
   },
   "HudPreferences": {
     "categoryRecording": "録画",

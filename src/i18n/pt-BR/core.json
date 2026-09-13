@@ -497,11 +497,22 @@
     "title": "Preparando o editor",
     "openingWindow": "Criando a janela do editor…",
     "loadingEditor": "Carregando a interface do editor…",
+    "loadingAppearance": "Carregando a aparência do editor…",
     "loadingProject": "Abrindo seu projeto…",
     "loadingTimeline": "Carregando a linha do tempo…",
+    "loadingEditorModule": "Carregando os componentes do editor…",
     "renderingEditor": "Renderizando o editor…",
     "ready": "Editor pronto",
     "progressLabel": "Progresso de carregamento do editor"
+  },
+  "EditorOpenError": {
+    "title": "Não foi possível abrir o editor",
+    "description": "O Beam não recebeu o sinal de que o editor está pronto. Sua gravação continua salva.",
+    "lastStage": "Última etapa informada: {stage}",
+    "copyDetails": "Copiar diagnóstico",
+    "detailsCopied": "Diagnóstico copiado",
+    "copyFailed": "Falha ao copiar",
+    "back": "Voltar ao Beam"
   },
   "HudPreferences": {
     "categoryRecording": "Gravação",

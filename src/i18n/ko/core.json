@@ -497,11 +497,22 @@
     "title": "편집기 준비 중",
     "openingWindow": "편집기 창을 만드는 중…",
     "loadingEditor": "편집기 인터페이스를 불러오는 중…",
+    "loadingAppearance": "편집기 모양을 불러오는 중…",
     "loadingProject": "프로젝트를 여는 중…",
     "loadingTimeline": "타임라인을 불러오는 중…",
+    "loadingEditorModule": "편집기 구성 요소를 불러오는 중…",
     "renderingEditor": "편집기를 렌더링하는 중…",
     "ready": "편집기 준비 완료",
     "progressLabel": "편집기 로딩 진행률"
+  },
+  "EditorOpenError": {
+    "title": "편집기를 열 수 없습니다",
+    "description": "Beam이 편집기의 준비 완료 신호를 받지 못했습니다. 녹화 파일은 계속 저장되어 있습니다.",
+    "lastStage": "마지막으로 보고된 단계: {stage}",
+    "copyDetails": "진단 정보 복사",
+    "detailsCopied": "진단 정보가 복사되었습니다",
+    "copyFailed": "복사하지 못했습니다",
+    "back": "Beam으로 돌아가기"
   },
   "HudPreferences": {
     "categoryRecording": "녹화",

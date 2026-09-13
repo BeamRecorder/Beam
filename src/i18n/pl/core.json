@@ -497,11 +497,22 @@
     "title": "Przygotowywanie edytora",
     "openingWindow": "Tworzenie okna edytora…",
     "loadingEditor": "Ładowanie interfejsu edytora…",
+    "loadingAppearance": "Ładowanie wyglądu edytora…",
     "loadingProject": "Otwieranie projektu…",
     "loadingTimeline": "Ładowanie osi czasu…",
+    "loadingEditorModule": "Ładowanie komponentów edytora…",
     "renderingEditor": "Renderowanie edytora…",
     "ready": "Edytor gotowy",
     "progressLabel": "Postęp ładowania edytora"
+  },
+  "EditorOpenError": {
+    "title": "Nie udało się otworzyć edytora",
+    "description": "Beam nie otrzymał sygnału gotowości edytora. Nagranie jest nadal zapisane.",
+    "lastStage": "Ostatnio zgłoszony krok: {stage}",
+    "copyDetails": "Kopiuj diagnostykę",
+    "detailsCopied": "Skopiowano diagnostykę",
+    "copyFailed": "Kopiowanie nie powiodło się",
+    "back": "Wróć do Beam"
   },
   "HudPreferences": {
     "categoryRecording": "Nagrywanie",
