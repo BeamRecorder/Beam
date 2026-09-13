@@ -26,7 +26,9 @@ On macOS Ventura and later, open System Settings > Privacy & Security and allow 
 On earlier macOS versions, open System Preferences > Security & Privacy and allow Beam under Microphone, Camera, and Screen Recording.
 
 **Linux only**
-For Linux users, you may need to authorize Beam to access input devices, this includes keyboard and mouse. It is asked by polkit on each new version, and will require your password. You can go to Preferences of Beam to allow access to input devices (second option). The input devices are only recorded when a recording is in progress, no data is used for anything else.
+On Linux, enable interaction recording in Beam Preferences to capture clicks and keyboard shortcuts. The DEB and RPM packages install the input helper and its Polkit rule through the package manager. AppImage asks for administrator authorization when its helper or rule needs to be installed or updated. Once installed, the matching helper can start in an active desktop session without another password prompt. Recorded interaction data is saved only during a recording; ordinary typed text is filtered out.
+
+If access fails, Beam displays the helper's error rather than assuming you refused authorization. Retry from Preferences after addressing the reported problem. When reporting a failure, use **Copy system information**: the Linux section includes the distribution, desktop/session type, interaction error and detected device counts when available. Canceling the password dialog leaves access disabled and allows another attempt.
 
 Teleprompter :
 Next to the microphone selection box, you have a Teleprompter button that allows you to add a teleprompter when recording. This allows you to display a script that will automatically scroll through during your recording. It comes with a bunch of options (changing speed of scrolling, size of the text, spacing between lines, continuous scrolling or line by line scrolling)

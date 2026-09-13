@@ -86,6 +86,24 @@ beforeEach(() => {
   capture.pickImportedFont.mockResolvedValue(null);
 });
 
+const mountCaptionControls = (style: ReturnType<typeof createDefaultCaptionStyle>) =>
+  mount(CaptionStyleControls, {
+    props: { style, defaultFontSize: 42 },
+    global: {
+      stubs: {
+        BigSlider,
+        ColorPicker,
+        Select,
+        Switch,
+        Divider,
+        Button,
+        ButtonGroup,
+        BackdropBlurControl,
+        Gradient,
+      },
+    },
+  });
+
 describe('CaptionStyleControls', () => {
   it('allows caption font sizes up to 256px', () => {
     const wrapper = mount(CaptionStyleControls, {
@@ -328,7 +346,7 @@ describe('CaptionStyleControls', () => {
       },
     });
 
-    const shapeGroup = wrapper.findAllComponents(ButtonGroup).find((group) => group.findAll('button').length === 4);
+    const shapeGroup = wrapper.find('.caption-shape-controls').findComponent(ButtonGroup);
     expect(shapeGroup).toBeDefined();
     expect(shapeGroup!.attributes('aria-label')).toBeTruthy();
 
@@ -457,5 +475,43 @@ describe('CaptionStyleControls', () => {
     expect(shapeBlur).toBeDefined();
     shapeBlur!.vm.$emit('update:modelValue', 18);
     expect(wrapper.emitted('update')).toContainEqual(['shape', expect.objectContaining({ blur: 18 })]);
+  });
+
+  it('toggles underline while preserving an existing strikethrough decoration', async () => {
+    const style = { ...createDefaultCaptionStyle(42), textDecoration: 'line-through' as const };
+    const wrapper = mountCaptionControls(style);
+    const underlineButton = () =>
+      wrapper.findAllComponents(Button).find((button) => button.attributes('aria-label') === 'Underline');
+
+    expect(underlineButton()).toBeDefined();
+    expect(underlineButton()!.attributes('variant')).toBe('ghost');
+    await underlineButton()!.trigger('click');
+    expect(wrapper.emitted('update')).toContainEqual(['textDecoration', 'underline line-through']);
+
+    await wrapper.setProps({ style: { ...style, textDecoration: 'underline line-through' } });
+    expect(underlineButton()!.attributes('variant')).toBe('primary');
+    await underlineButton()!.trigger('click');
+    expect(wrapper.emitted('update')).toContainEqual(['textDecoration', 'line-through']);
+  });
+
+  it('emits text alignment updates and marks the selected alignment', async () => {
+    const style = { ...createDefaultCaptionStyle(42), textAlign: 'center' as const };
+    const wrapper = mountCaptionControls(style);
+    const alignmentGroup = wrapper
+      .findAllComponents(ButtonGroup)
+      .find((group) => group.attributes('aria-label') === 'Text alignment');
+    expect(alignmentGroup).toBeDefined();
+
+    const alignButton = (label: string) =>
+      alignmentGroup!.findAllComponents(Button).find((button) => button.attributes('aria-label') === label);
+    expect(alignButton('Align center')!.attributes('variant')).toBe('primary');
+    expect(alignButton('Align right')!.attributes('variant')).toBe('ghost');
+
+    await alignButton('Align right')!.trigger('click');
+    expect(wrapper.emitted('update')).toContainEqual(['textAlign', 'right']);
+
+    await wrapper.setProps({ style: { ...style, textAlign: 'right' } });
+    expect(alignButton('Align center')!.attributes('variant')).toBe('ghost');
+    expect(alignButton('Align right')!.attributes('variant')).toBe('primary');
   });
 });

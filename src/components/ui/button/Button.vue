@@ -373,13 +373,13 @@ const handleClick = (event: MouseEvent) => {
   justify-content: center;
 }
 
-.btn-tab:hover:not(:disabled) {
+.btn-tab:hover:not(:disabled):not(.active) {
   background: rgba(0, 0, 0, 0.02);
   transform: none;
   box-shadow: none;
 }
 
-:root.dark .btn-tab:hover:not(:disabled) {
+:root.dark .btn-tab:hover:not(:disabled):not(.active) {
   background: rgba(255, 255, 255, 0.02);
 }
 
@@ -423,3 +423,5 @@ const handleClick = (event: MouseEvent) => {
   min-width: 0;
 }
 </style>
+
+<style scoped src="./button-group-item.css"></style>

@@ -4,3 +4,25 @@ resolver = "2"
 
 [profile.dev.package.capture]
 opt-level = 2
+
+# PNG screenshots run on the latency-sensitive capture path in development too.
+[profile.dev.package.png]
+opt-level = 2
+
+[profile.dev.package.fdeflate]
+opt-level = 2
+
+[profile.dev.package.flate2]
+opt-level = 2
+
+[profile.dev.package.miniz_oxide]
+opt-level = 2
+
+[profile.dev.package.adler2]
+opt-level = 2
+
+[profile.dev.package.simd-adler32]
+opt-level = 2
+
+[profile.dev.package.crc32fast]
+opt-level = 2

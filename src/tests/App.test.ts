@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
     getPreferences: vi.fn(),
     setInteractive: vi.fn(),
     setCameraOverlayActive: vi.fn(),
+    setNormalRecordingActive: vi.fn(),
     hideScreenRegionOverlay: vi.fn(),
     setCountdown: vi.fn(async () => undefined),
     resetCameraOverlayPlacement: vi.fn(),
@@ -19,6 +20,7 @@ const mocks = vi.hoisted(() => ({
     showHud: vi.fn(),
     hideTeleprompter: vi.fn(),
     openEditor: vi.fn(),
+    openScreenshot: vi.fn(),
     dismissRecorderLauncher: vi.fn(),
     setRecorderLauncherActive: vi.fn(),
     onRecorderLauncherContext: vi.fn(),
@@ -44,7 +46,7 @@ vi.mock('../api/capture', () => ({ capture: mocks.capture }));
 vi.mock('../components/hud/recorder/useRecordingController', async () => {
   const { ref } = await import('vue');
   return {
-    useRecordingController: (onComplete: (session: RecordingSessionResult) => void) => {
+    useRecordingController: (onComplete: (session: RecordingSessionResult) => void, _onFailure?: unknown) => {
       const recording = {
         phase: ref('idle'),
         secondsRemaining: ref(0),
@@ -159,6 +161,7 @@ beforeEach(() => {
   mocks.capture.getPreferences.mockResolvedValue({ recordingBar: { visibility: 'auto-fade' } });
   mocks.capture.listProjects.mockResolvedValue([project]);
   mocks.capture.openEditor.mockResolvedValue(true);
+  mocks.capture.openScreenshot.mockResolvedValue(true);
   mocks.capture.dismissRecorderLauncher.mockResolvedValue(true);
   mocks.capture.onRecorderLauncherContext.mockImplementation((listener) => {
     mocks.controller.recorderLauncherContext = listener;
@@ -547,5 +550,16 @@ describe('App', () => {
     vi.spyOn(document, 'elementFromPoint').mockReturnValue(document.body);
     window.dispatchEvent(new MouseEvent('mousemove', { clientX: 2, clientY: 2 }));
     expect(mocks.capture.setInteractive).not.toHaveBeenCalledWith(true);
+  });
+  it('resolves the recorded project by ID ahead of newer screenshots and other recordings', async () => {
+    mocks.capture.listProjects.mockResolvedValueOnce([
+      { id: 'image', name: 'Screenshot', mode: 'screenshot', previewSrc: null },
+      { id: 'other', name: 'Other recording', mode: 'studio', previewSrc: 'other.mp4' },
+      { id: 'recorded', name: 'Recorded', mode: 'studio', previewSrc: 'recorded.mp4' },
+    ]);
+    mocks.controller.onComplete?.({ projectId: 'recorded', videoSrc: null });
+    await settle();
+    expect(mocks.capture.openEditor).toHaveBeenCalledWith('recorded', { disposition: 'reuse' });
+    expect(mocks.capture.openScreenshot).not.toHaveBeenCalled();
   });
 });

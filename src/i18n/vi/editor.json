@@ -73,7 +73,9 @@
     "teleprompterPreviousLine": "Dòng trước",
     "teleprompterPreviousLineDesc": "Quay lại dòng nhắc chữ trước đó",
     "conflictWith": "Xung đột với \"{name}\"",
-    "failedToUpdate": "Cập nhật phím tắt thất bại"
+    "failedToUpdate": "Cập nhật phím tắt thất bại",
+    "quickSnip": "Quick Snip",
+    "quickSnipDesc": "Mở, bắt đầu hoặc dừng Quick Snip tùy theo trạng thái hiện tại."
   },
   "SidebarPanel": {
     "canvas": "Khung nền",
@@ -86,7 +88,8 @@
     "audio": "Âm thanh",
     "media": "Đa phương tiện",
     "settings": "Cài đặt",
-    "logo": "Logo"
+    "logo": "Logo",
+    "elements": "Phần tử"
   },
   "Socials": {
     "title": "Mạng xã hội",

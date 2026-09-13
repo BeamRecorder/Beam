@@ -139,6 +139,7 @@ const zoomState = (value) => {
       element.focus.cy > 1 ||
       ![1, 2, 3, 4, 5, 6].includes(element.depth) ||
       !['auto', 'manual'].includes(element.mode) ||
+      (element.enabled !== undefined && typeof element.enabled !== 'boolean') ||
       (element.projection !== undefined && !['2d', '3d'].includes(element.projection)) ||
       (element.tiltIntensity !== undefined && !finite(element.tiltIntensity)) ||
       (element.tiltHorizontal !== undefined && !finite(element.tiltHorizontal)) ||
@@ -166,6 +167,7 @@ const zoomState = (value) => {
       focus: { cx: element.focus.cx, cy: element.focus.cy },
       depth: element.depth,
       mode: element.mode,
+      enabled: element.enabled !== false,
       projection: element.projection === '3d' ? '3d' : '2d',
       tiltIntensity,
       tiltHorizontal: clamp(element.tiltHorizontal === undefined ? 0.65 : element.tiltHorizontal, -1, 1),
@@ -267,7 +269,7 @@ const cursorState = (value) => {
       mode: selection.mode,
       cursorId: selection.mode === 'fixed' ? selection.cursorId : null,
     },
-    size: clamp(value.size, 1, 256),
+    size: clamp(value.size, 1, 384),
     color: value.color,
     shadow: {
       enabled: value.shadow.enabled,

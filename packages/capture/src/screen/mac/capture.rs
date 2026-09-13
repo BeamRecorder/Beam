@@ -56,6 +56,7 @@ impl MacRecording {
                 crate::model::CursorSelection::Separate { .. }
             ),
             request.region,
+            request.excluded_window_handles,
             request.start_gate,
         )
     }
@@ -66,6 +67,7 @@ impl MacRecording {
         fps: u32,
         exclude_cursor: bool,
         region: Option<ScreenRegion>,
+        excluded_window_handles: &[String],
         start_gate: Arc<StartGate>,
     ) -> Result<Self, CaptureError> {
         if fps == 0 {
@@ -74,7 +76,8 @@ impl MacRecording {
             ));
         }
         let content = SCShareableContent::get().map_err(backend_error)?;
-        let (filter, width, height, source_rect) = resolve_filter(&content, source_id, region)?;
+        let (filter, width, height, source_rect) =
+            resolve_filter(&content, source_id, region, excluded_window_handles)?;
         let timescale = i32::try_from(fps).map_err(backend_error)?;
         let mut configuration = SCStreamConfiguration::new()
             .with_width(width)
@@ -182,6 +185,7 @@ pub(crate) fn resolve_filter(
     content: &SCShareableContent,
     source_id: &SourceId,
     region: Option<ScreenRegion>,
+    excluded_window_handles: &[String],
 ) -> Result<
     (
         SCContentFilter,
@@ -202,9 +206,19 @@ pub(crate) fn resolve_filter(
             .ok_or_else(|| CaptureError::SourceNotFound(source_id.to_string()))?;
         let width = display.width();
         let height = display.height();
+        let excluded_ids = excluded_window_handles
+            .iter()
+            .filter_map(|value| value.parse::<u32>().ok())
+            .collect::<std::collections::HashSet<_>>();
+        let excluded_windows = content
+            .windows()
+            .into_iter()
+            .filter(|window| excluded_ids.contains(&window.window_id()))
+            .collect::<Vec<_>>();
+        let excluded_refs = excluded_windows.iter().collect::<Vec<_>>();
         let filter = SCContentFilter::create()
             .with_display(&display)
-            .with_excluding_windows(&[])
+            .with_excluding_windows(&excluded_refs)
             .build();
         let Some(region) = region else {
             return Ok((filter, width, height, None));

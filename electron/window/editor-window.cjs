@@ -1,5 +1,8 @@
+const { EditorWindowController } = require('./editor-window-controller.cjs');
 const { BrowserWindow } = require('electron');
 const path = require('path');
+const { shouldAutoOpenDevTools } = require('./devtools-policy.cjs');
+const { createEditorStartupGuard } = require('./editor-startup-guard.cjs');
 const { installBrowserZoomPolicy } = require('./browser-zoom-policy.cjs');
 
 const EDITOR_DEFAULT_SIZE = { width: 1280, height: 800 };
@@ -16,33 +19,12 @@ const EDITOR_LOADING_PROGRESS = Object.freeze({
   ready: 100,
 });
 
-class EditorWindowController {
-  constructor(window, showHud) {
-    this.window = window;
-    this.showHudWindow = showHud;
-  }
-
-  showHud() {
-    this.showHudWindow();
-  }
-
-  setVisible(visible) {
-    if (visible) {
-      if (this.window.isMinimized()) this.window.restore();
-      this.window.show();
-      this.window.focus();
-    } else this.window.hide();
-  }
-
-  setHudInteractive() {}
-  applyModePolicy() {}
-}
-
 function createEditorWindowManager({
   applicationRoot,
   isPackaged,
   ipcMain,
   hudWindow,
+  hudAuxiliaryWindows = [],
   hudController,
   registerController,
   initialDark = false,
@@ -77,8 +59,8 @@ function createEditorWindowManager({
   };
 
   const load = (target) => {
-    if (isPackaged) target.loadFile(path.join(applicationRoot, 'dist/editor.html'));
-    else target.loadURL('http://localhost:6500/editor.html');
+    if (isPackaged) return target.loadFile(path.join(applicationRoot, 'dist/editor.html'));
+    return target.loadURL('http://localhost:6500/editor.html');
   };
 
   const sessionForSender = (sender) => {
@@ -104,14 +86,27 @@ function createEditorWindowManager({
     return true;
   };
 
+  const editorContext = (session) => ({
+    projectId: session.currentProjectId,
+    ...(session.kind === 'screenshot' ? { kind: session.kind } : {}),
+  });
   const sendContext = (session) => {
     if (!session.rendererReady || !isLive(session) || !session.currentProjectId) return;
-    session.window.webContents.send('editor:context', { projectId: session.currentProjectId });
+    session.window.webContents.send('editor:context', editorContext(session));
   };
 
-  const hideHudBeforePresentingEditor = () => hudController.setVisible(false) === true && !hudWindow.isVisible();
+  const prepareHudAuxiliaryWindows = () => {
+    for (const auxiliary of hudAuxiliaryWindows) void auxiliary.prepare();
+  };
+  const hideHudBeforePresentingEditor = () => {
+    if (hudController.setVisible(false) !== true || hudWindow.isVisible()) return false;
+    for (const auxiliary of hudAuxiliaryWindows)
+      void Promise.resolve(auxiliary.suspend()).catch((error) => console.error('[HUD auxiliary window]', error));
+    return true;
+  };
 
   const presentHud = () => {
+    prepareHudAuxiliaryWindows();
     if (hudWindow.isMinimized()) hudWindow.restore();
     hudController.showHud();
     hudController.setVisible?.(true);
@@ -233,6 +228,7 @@ function createEditorWindowManager({
         sandbox: false,
         webSecurity: false,
         zoomFactor: 1,
+        backgroundThrottling: false,
       },
     });
     const cleanupBrowserZoomPolicy = installBrowserZoomPolicy(window.webContents);
@@ -240,6 +236,7 @@ function createEditorWindowManager({
       window,
       controller: null,
       currentProjectId: null,
+      kind: null,
       rendererReady: false,
       presented: false,
       returningToHud: false,
@@ -249,6 +246,7 @@ function createEditorWindowManager({
       lastProgressValue: 0,
       persistTimer: null,
     };
+    session.startup = createEditorStartupGuard(session);
     sessions.set(window, session);
     activeSession = session;
     if (savedWindow?.isMaximized) window.maximize();
@@ -280,7 +278,7 @@ function createEditorWindowManager({
       });
     }
     contents.once('did-finish-load', () => {
-      if (!isPackaged) contents.openDevTools?.({ mode: 'detach' });
+      if (shouldAutoOpenDevTools({ isPackaged })) contents.openDevTools?.({ mode: 'detach', activate: false });
       sendProgress(session, 'loadingEditor');
     });
     contents.once('destroyed', () => {
@@ -288,6 +286,8 @@ function createEditorWindowManager({
       cleanupWindow?.(contents);
     });
     window.on('closed', () => {
+      session.startup.clear();
+      if (session.persistTimer) clearTimeout(session.persistTimer);
       const shouldQuit = !session.returningToHud;
       if (session.returningToHud) session.resolvePresentation?.(false);
       else session.rejectPresentation?.(new Error('La fenêtre éditeur a été fermée avant sa présentation'));
@@ -302,7 +302,7 @@ function createEditorWindowManager({
       if (activeSession === session) activeSession = [...sessions.values()].at(-1) ?? null;
       if (shouldQuit && sessions.size === 0 && !hudWindow.isDestroyed() && !hudWindow.isVisible()) hudWindow.close();
     });
-    load(window);
+    Promise.resolve(load(window)).catch((error) => session.startup.fail(error));
     return session;
   };
 
@@ -311,6 +311,7 @@ function createEditorWindowManager({
     if (!PROJECT_ID.test(projectId)) throw new Error('Identifiant de projet invalide');
     if (options === null) options = {};
     if (typeof options !== 'object' || Array.isArray(options)) throw new Error("Options d'éditeur invalides");
+    if (options.kind != null && options.kind !== 'screenshot') throw new Error('Type d’éditeur invalide');
     const disposition = options?.disposition ?? 'reuse';
     if (!['reuse', 'new-window'].includes(disposition)) throw new Error('Disposition de fenêtre éditeur invalide');
     const senderSession = sessionForSender(sender);
@@ -321,6 +322,7 @@ function createEditorWindowManager({
     if (disposition === 'new-window' && recorderOrigin) clearRecorderOrigin();
     const supersededSession = presentingSession;
     if (supersededSession?.rejectPresentation) {
+      supersededSession.startup.clear();
       supersededSession.rejectPresentation(new Error('La demande précédente a été remplacée'));
       supersededSession.resolvePresentation = null;
       supersededSession.rejectPresentation = null;
@@ -332,6 +334,7 @@ function createEditorWindowManager({
     session.returningToHud = false;
     session.lastProgressValue = 0;
     session.currentProjectId = projectId;
+    session.kind = options.kind ?? null;
     activeSession = session;
     sendProgress(session, 'openingWindow');
     hudController.setHudInteractive?.(true);
@@ -350,6 +353,7 @@ function createEditorWindowManager({
     return new Promise((resolve, reject) => {
       session.resolvePresentation = resolve;
       session.rejectPresentation = reject;
+      session.startup.start();
     });
   };
 
@@ -357,6 +361,7 @@ function createEditorWindowManager({
     const session = sessionForSender(event.sender);
     if (!session) return false;
     session.rendererReady = true;
+    session.startup.clear();
     if (presentingSession !== session || !session.resolvePresentation) return false;
     if (!hideHudBeforePresentingEditor()) {
       session.rejectPresentation?.(
@@ -400,7 +405,7 @@ function createEditorWindowManager({
   const dismissRecorder = (event) => {
     if (event.sender !== hudWindow.webContents || !recorderOrigin) return false;
     const origin = clearRecorderOrigin();
-    hudController.setVisible(false);
+    hideHudBeforePresentingEditor();
     const focusTarget = isLive(origin) ? origin : isLive(activeSession) ? activeSession : null;
     if (focusTarget) {
       if (focusTarget.window.isMinimized()) focusTarget.window.restore();
@@ -433,12 +438,13 @@ function createEditorWindowManager({
     return true;
   };
 
+  prepareHudAuxiliaryWindows();
   ipcMain.handle('editor:open', (event, projectId, options) => open(projectId, options, event.sender));
   ipcMain.handle('editor:open-recorder', openRecorder);
   ipcMain.handle('editor:dismiss-recorder', dismissRecorder);
   ipcMain.handle('editor:context', (event) => {
     const session = sessionForSender(event.sender);
-    return session?.currentProjectId ? { projectId: session.currentProjectId } : null;
+    return session?.currentProjectId ? editorContext(session) : null;
   });
   ipcMain.on('editor:ready', markReady);
   ipcMain.on('editor:loading-stage', reportLoadingStage);
@@ -446,7 +452,7 @@ function createEditorWindowManager({
   ipcMain.on('editor:recorder-active', setRecorderActive);
 
   return {
-    open: (projectId, options) => open(projectId, options),
+    open,
     showHud,
     destroy: () => {
       clearRecorderOrigin({ notify: false });

@@ -52,6 +52,19 @@ describe('SettingsPanel', () => {
     capture.getUpdateState.mockResolvedValue({ currentVersion: '1.2.3' });
   });
 
+  it('keeps recording controls out of screenshot settings even in developer mode', async () => {
+    localStorage.setItem('dev_mode_enabled', 'true');
+    const wrapper = mount(SettingsPanel, {
+      props: { hideRecorder: true },
+      global: { stubs: { Button, ButtonGroup, Select, UpdateControls } },
+    });
+    expect(wrapper.find('.appearance-settings').exists()).toBe(true);
+    expect(wrapper.findAll('.dev-option-card')).toHaveLength(2);
+    await wrapper.setProps({ hideRecorder: false });
+    expect(wrapper.findAll('.dev-option-card')).toHaveLength(3);
+    wrapper.unmount();
+  });
+
   it('renders appearance controls and changes locale through the store', async () => {
     const wrapper = mount(SettingsPanel, {
       global: { stubs: { Button, ButtonGroup, Select, UpdateControls } },
@@ -121,7 +134,7 @@ describe('SettingsPanel', () => {
     expect(wrapper.find('.github-icon').attributes('src')).toContain('github.svg');
   });
 
-  it('opens the recorder through the editor launcher without embedding another HUD', async () => {
+  it('opens the recorder through the editor launcher', async () => {
     const wrapper = mount(SettingsPanel, {
       global: { stubs: { Button, ButtonGroup, Select, UpdateControls } },
     });
@@ -134,8 +147,6 @@ describe('SettingsPanel', () => {
 
     const launchButton = wrapper.findAll('.dev-action-btn')[0];
     expect(launchButton.text()).toContain('Launch Recorder');
-    expect(wrapper.find('.popover-stub').exists()).toBe(false);
-    expect(wrapper.find('.hud-stub').exists()).toBe(false);
 
     await launchButton.trigger('click');
 

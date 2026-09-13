@@ -5,31 +5,20 @@ import './style.css';
 import EditorWindowApp from './components/video-editor/EditorWindowApp.vue';
 import { initI18n } from './i18n';
 import { useThemeStore } from './stores/theme';
-import { capture } from './api/capture';
 import { installBrowserZoomGuard } from './utils/browserZoomGuard';
 
-// The HUD intentionally uses a transparent document root. The editor is an
-// opaque native window and must not inherit that transparent fallback.
-document.documentElement.classList.add('editor-window-root');
 installBrowserZoomGuard();
 
 const bootstrap = async () => {
-  try {
-    const preferences = await capture.getPreferences();
-    const dark =
-      preferences.theme === 'dark' ||
-      (preferences.theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    document.documentElement.classList.toggle('dark', dark);
-  } catch {
-    document.documentElement.classList.remove('dark');
-  }
-
   const app = createApp(EditorWindowApp);
   const pinia = createPinia();
   app.use(pinia);
   app.use(MotionPlugin);
   app.use(initI18n());
-  useThemeStore(pinia);
+  await useThemeStore(pinia).ready;
+  // Keep the native window's themed backing visible until all appearance
+  // tokens are hydrated, then make the editor document opaque before mounting.
+  document.documentElement.classList.add('editor-window-root');
   app.mount('#app');
 };
 

@@ -2,13 +2,14 @@ import { describe, expect, it } from 'vitest';
 import type {
   AudioClip,
   BlurClip,
+  CaptionClip,
   Clip,
   ClipComposition,
   ColorClip,
   ShapeClip,
   VisualClip,
 } from '~/media/shared/composition-types';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import { createCompositionSceneLayerResolver, resolveCompositionSceneLayers } from '../scene-layers';
 
 const visual = (kind: VisualClip['kind'], id: string, order: number, enabled = true, trackId = id): VisualClip => ({
@@ -115,6 +116,20 @@ const audio = (id: string, order: number): AudioClip => ({
   enabled: true,
   order,
   volume: 100,
+});
+
+const caption = (id: string, order: number, timelineStartMs = 0, timelineDurationMs = 1_000): CaptionClip => ({
+  id,
+  kind: 'caption',
+  name: id,
+  timelineStartMs,
+  timelineDurationMs,
+  sourceInMs: 0,
+  sourceDurationMs: timelineDurationMs,
+  playbackRate: 1,
+  enabled: true,
+  order,
+  caption: { type: 'text', sentences: [], style: createDefaultCaptionStyle() },
 });
 
 const composition = (...clips: Clip[]): ClipComposition => ({
@@ -284,5 +299,92 @@ describe('resolveCompositionSceneLayers', () => {
       'background',
     ]);
     expect(foregroundLeft.trackId).toBe(foregroundRight.trackId);
+  });
+
+  it('indexes a large timeline while preserving active kinds, overlaps, and stable equal-order rendering', () => {
+    const decoys = Array.from({ length: 80 }, (_, index) => {
+      const clip = visual('video', `far-${index}`, index % 5);
+      clip.timelineStartMs = 10_000 + index * 1_000;
+      return clip;
+    });
+    const underlay = visual('video', 'underlay', 1);
+    underlay.timelineDurationMs = 20_000;
+    const screen = visual('screen', 'screen', 0);
+    screen.timelineDurationMs = 20_000;
+    const webcam = visual('webcam', 'webcam', 3);
+    webcam.timelineStartMs = 400;
+    webcam.timelineDurationMs = 1_100;
+    const activeColor = color(3, 'active-color');
+    activeColor.timelineStartMs = 400;
+    activeColor.timelineDurationMs = 400;
+    const activeShape = shape(2);
+    activeShape.timelineStartMs = 600;
+    activeShape.timelineDurationMs = 800;
+    const activeBlur = blur(1);
+    activeBlur.timelineStartMs = 700;
+    activeBlur.timelineDurationMs = 500;
+    const activeCaption = caption('active-caption', 4, 500, 400);
+    const disabledWebcam = visual('webcam', 'disabled-webcam', 9, false);
+    const resolver = createCompositionSceneLayerResolver(
+      composition(
+        ...decoys,
+        underlay,
+        screen,
+        webcam,
+        activeColor,
+        activeShape,
+        activeBlur,
+        activeCaption,
+        audio('active-audio', -1),
+        disabledWebcam,
+      ),
+    );
+
+    const active = resolver(750);
+    expect(active.screen?.id).toBe('screen');
+    expect(active.cameraVisuals.map((clip) => clip.id)).toEqual(['underlay', 'screen']);
+    expect(active.webcams.map((clip) => clip.id)).toEqual(['webcam']);
+    expect(active.captions.map((clip) => clip.id)).toEqual(['active-caption']);
+    expect(active.visualStack.map((clip) => clip.id)).toEqual([
+      'webcam',
+      'active-color',
+      'shape',
+      'underlay',
+      'blur',
+      'screen',
+    ]);
+
+    const atWebcamEnd = resolver(1_500);
+    expect(atWebcamEnd.webcams).toEqual([]);
+    expect(atWebcamEnd.visualStack.map((clip) => clip.id)).toEqual(['underlay', 'screen']);
+  });
+
+  it('keeps half-open cuts and floating point boundary snapping when resolving indexed scenes', () => {
+    const left = visual('video', 'left', 1);
+    const right = visual('video', 'right', 2);
+    left.timelineDurationMs = 1_000;
+    right.timelineStartMs = 1_000;
+    const resolver = createCompositionSceneLayerResolver(composition(left, right));
+    const withinTolerance = Number.EPSILON * 1_000 * 8;
+    const outsideTolerance = Number.EPSILON * 1_000 * 32;
+
+    expect(resolver(1_000 - outsideTolerance).cameraVisuals.map((clip) => clip.id)).toEqual(['left']);
+    expect(resolver(1_000 - withinTolerance).cameraVisuals.map((clip) => clip.id)).toEqual(['right']);
+    expect(resolver(1_000).cameraVisuals.map((clip) => clip.id)).toEqual(['right']);
+    expect(resolver(1_000 + withinTolerance).cameraVisuals.map((clip) => clip.id)).toEqual(['right']);
+  });
+
+  it('builds a fresh interval snapshot for an edited composition', () => {
+    const original = visual('video', 'editable', 0);
+    const firstComposition = composition(original);
+    const firstResolver = createCompositionSceneLayerResolver(firstComposition);
+    expect(firstResolver(500).cameraVisuals.map((clip) => clip.id)).toEqual(['editable']);
+
+    const moved = { ...original, timelineStartMs: 2_000, timelineDurationMs: 500 };
+    const editedComposition = composition(moved);
+    const editedResolver = createCompositionSceneLayerResolver(editedComposition);
+
+    expect(editedResolver(500).cameraVisuals).toEqual([]);
+    expect(editedResolver(2_000).cameraVisuals.map((clip) => clip.id)).toEqual(['editable']);
   });
 });

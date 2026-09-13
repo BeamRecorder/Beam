@@ -1,17 +1,30 @@
 import { createPinia, setActivePinia } from 'pinia';
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { nextTick, type Ref } from 'vue';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { i18n, setCurrentLocale } from '~/i18n';
 import { useToastStore } from '~/ui/toast/toastStore';
-import { ExportValidationError, type ExportRequest } from '../export-types';
+import {
+  ExportValidationError,
+  type CompositionSnapshot,
+  type EditorExportSource,
+  type ExportRequest,
+} from '../export-types';
 
-const { mockJob } = vi.hoisted(() => ({
+const { mockJob, mockCapture } = vi.hoisted(() => ({
   mockJob: {
     start: vi.fn(),
     cancel: vi.fn(),
     state: null as Record<string, Ref<unknown>> | null,
   },
+  mockCapture: {
+    getEditorPresets: vi.fn(),
+    updateEditorPreset: vi.fn(),
+  },
+}));
+
+vi.mock('~/api/capture', () => ({
+  capture: mockCapture,
 }));
 
 vi.mock('../useExportJob', async () => {
@@ -72,19 +85,37 @@ const CopyButton = {
   template: '<button class="copy-progress-button" :data-copy-text="text" :aria-label="label">{{ label }}</button>',
 };
 
-const request = {
+const snapshot = {
+  duration: 12,
+  canvas: { width: 1920, height: 1080 },
+  render: { fps: 60, sourceWidth: 1920, sourceHeight: 1080 },
+} as unknown as CompositionSnapshot;
+
+const request: EditorExportSource = {
   projectName: 'Demo project',
   includeAudio: true,
-  snapshot: {
-    duration: 12,
-    canvas: { width: 1920, height: 1080 },
-    render: { fps: 60, sourceWidth: 1920, sourceHeight: 1080 },
-  },
-} as unknown as Omit<ExportRequest, 'format' | 'preset'>;
+  duration: 12,
+  fps: 60,
+  width: 1920,
+  height: 1080,
+  createSnapshot: vi.fn(() => snapshot),
+};
+
+const deferred = <T>() => {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+};
 
 beforeEach(() => {
   setActivePinia(createPinia());
   vi.clearAllMocks();
+  mockCapture.getEditorPresets.mockReset().mockResolvedValue({ activePresetId: 'default', presets: [] });
+  mockCapture.updateEditorPreset.mockReset().mockResolvedValue({});
   mockJob.start.mockReset();
   mockJob.cancel.mockReset();
   Object.defineProperty(window, 'capture', {
@@ -102,10 +133,15 @@ beforeEach(() => {
   }
 });
 
+afterEach(() => {
+  vi.restoreAllMocks();
+  setCurrentLocale('en');
+});
+
 describe('ExportPopover', () => {
-  const mountExport = (playheadSeconds?: number) =>
+  const mountExport = (playheadSeconds?: number, source = request) =>
     mount(ExportPopover, {
-      props: { request, ...(playheadSeconds === undefined ? {} : { playheadSeconds }) },
+      props: { request: source, ...(playheadSeconds === undefined ? {} : { playheadSeconds }) },
       global: { stubs: { Popover, Button, ButtonGroup, ProgressBar, CopyButton } },
     });
   const openMoreOptions = async (wrapper: ReturnType<typeof mountExport>) => {
@@ -120,6 +156,7 @@ describe('ExportPopover', () => {
 
   it('keeps the playhead option off by default and exports the full snapshot duration', async () => {
     const wrapper = mountExport(4);
+    expect(request.createSnapshot).not.toHaveBeenCalled();
     expect(wrapper.get('.accordion-trigger').attributes('aria-expanded')).toBe('false');
 
     await openMoreOptions(wrapper);
@@ -128,9 +165,112 @@ describe('ExportPopover', () => {
 
     await exportAction(wrapper).trigger('click');
 
+    expect(request.createSnapshot).toHaveBeenCalledOnce();
     expect(mockJob.start).toHaveBeenCalledWith(
-      expect.objectContaining({ snapshot: expect.objectContaining({ duration: request.snapshot.duration }) }),
+      expect.objectContaining({ snapshot: expect.objectContaining({ duration: request.duration }) }),
     );
+  });
+
+  it('keeps export metadata live without creating snapshots until the user starts an export', async () => {
+    const createSnapshot = vi.fn(() => snapshot);
+    const source: EditorExportSource = { ...request, createSnapshot };
+    const wrapper = mountExport(undefined, source);
+    await flushPromises();
+
+    expect(createSnapshot).not.toHaveBeenCalled();
+
+    await wrapper.setProps({
+      request: {
+        ...source,
+        projectName: 'Renamed project',
+        duration: 24,
+        fps: 30,
+        width: 1280,
+        height: 720,
+      },
+    });
+
+    expect(wrapper.text()).toContain('Export Video');
+    expect(createSnapshot).not.toHaveBeenCalled();
+  });
+
+  it('hydrates every supported saved option and leaves unsupported values at safe defaults', async () => {
+    const savedOptions = [
+      { format: 'mp4', preset: 'low', resolution: '720p', frameRate: 24 },
+      { format: 'webm', preset: 'medium', resolution: '1080p', frameRate: 30 },
+      { format: 'webm', preset: 'high', resolution: 'max', frameRate: 60 },
+      { format: 'gif', preset: 'ultra', resolution: '480p', frameRate: 25 },
+    ];
+
+    for (const saved of savedOptions) {
+      mockCapture.getEditorPresets.mockResolvedValueOnce({
+        activePresetId: 'default',
+        presets: [{ id: 'default', settings: { export: saved } }],
+      });
+      const wrapper = mountExport();
+      await flushPromises();
+
+      const selected = (label: string) => {
+        const field = wrapper.findAll('.field').find((candidate) => candidate.find('.field-label').text() === label);
+        return field
+          ?.findAll('.button-stub')
+          .find((button) => button.classes().includes('active'))
+          ?.text();
+      };
+      if (saved.format === 'mp4' || saved.format === 'webm')
+        expect(selected('Format')).toBe(saved.format === 'mp4' ? 'MP4' : 'WebM');
+      else expect(selected('Format')).toBe('WebM');
+      if (saved.preset === 'low' || saved.preset === 'medium' || saved.preset === 'high')
+        expect(selected('Quality & Bitrate')).toBe(saved.preset[0]!.toUpperCase() + saved.preset.slice(1));
+      else expect(selected('Quality & Bitrate')).toBe('Medium');
+      if (saved.resolution === '720p' || saved.resolution === '1080p' || saved.resolution === 'max')
+        expect(selected('Resolution')).toBe(saved.resolution === 'max' ? 'Max' : saved.resolution);
+      else expect(selected('Resolution')).toBe('Max');
+      if (saved.frameRate === 24 || saved.frameRate === 30 || saved.frameRate === 60)
+        expect(selected('Frame rate')).toBe(`${saved.frameRate} fps`);
+      else expect(selected('Frame rate')).toBe('60 fps');
+
+      wrapper.unmount();
+    }
+  });
+
+  it('chooses the recommended frame rate for low and middle source rates', () => {
+    const lowRate = mountExport(undefined, { ...request, fps: 24 });
+    expect(
+      lowRate
+        .findAll('.button-stub')
+        .find((button) => button.text() === '24 fps')
+        ?.classes(),
+    ).toContain('active');
+    lowRate.unmount();
+
+    const middleRate = mountExport(undefined, { ...request, fps: 30 });
+    expect(
+      middleRate
+        .findAll('.button-stub')
+        .find((button) => button.text() === '30 fps')
+        ?.classes(),
+    ).toContain('active');
+    middleRate.unmount();
+  });
+
+  it('ignores preset-read failures on mount and continues using export defaults', async () => {
+    mockCapture.getEditorPresets.mockRejectedValueOnce(new Error('preset store unavailable'));
+    const wrapper = mountExport();
+    await flushPromises();
+
+    expect(
+      wrapper
+        .findAll('.button-stub')
+        .find((button) => button.text() === 'WebM')
+        ?.classes(),
+    ).toContain('active');
+    expect(
+      wrapper
+        .findAll('.button-stub')
+        .find((button) => button.text() === 'Medium')
+        ?.classes(),
+    ).toContain('active');
   });
 
   it('exports through the live playhead with a duration label and explanatory note', async () => {
@@ -160,7 +300,7 @@ describe('ExportPopover', () => {
     expect(exportAction(wrapper).text()).toBe('Export Video (12s)');
     await exportAction(wrapper).trigger('click');
     expect(mockJob.start).toHaveBeenCalledWith(
-      expect.objectContaining({ snapshot: expect.objectContaining({ duration: request.snapshot.duration }) }),
+      expect.objectContaining({ snapshot: expect.objectContaining({ duration: request.duration }) }),
     );
   });
 
@@ -175,8 +315,100 @@ describe('ExportPopover', () => {
       expect(action.attributes('disabled')).toBeDefined();
       await action.trigger('click');
       expect(mockJob.start).not.toHaveBeenCalled();
+      expect(request.createSnapshot).not.toHaveBeenCalled();
     },
   );
+
+  it('captures current options and one fresh snapshot before asynchronous preset persistence', async () => {
+    const createSnapshot = vi.fn(() => snapshot);
+    const source: EditorExportSource = { ...request, createSnapshot };
+    const wrapper = mountExport(5.25, source);
+    await flushPromises();
+
+    await openMoreOptions(wrapper);
+    await playheadSwitch(wrapper).trigger('click');
+    const buttons = wrapper.findAll('.button-stub');
+    await buttons.find((button) => button.text() === 'MP4')?.trigger('click');
+    await buttons.find((button) => button.text() === 'High')?.trigger('click');
+    await buttons.find((button) => button.text() === '720p')?.trigger('click');
+    await buttons.find((button) => button.text() === '24 fps')?.trigger('click');
+    const audioSwitch = wrapper
+      .findAll('[role="switch"]')
+      .find((toggle) => toggle.attributes('aria-label') === i18n.global.t('ExportPopover.includeAudio'))!;
+    await audioSwitch.trigger('click');
+    expect(wrapper.emitted('update:includeAudio')).toEqual([[false]]);
+    await wrapper.setProps({ request: { ...source, includeAudio: false } });
+
+    const save = deferred<Record<string, never>>();
+    mockCapture.getEditorPresets.mockResolvedValueOnce({
+      activePresetId: 'default',
+      presets: [{ id: 'default', settings: {} }],
+    });
+    mockCapture.updateEditorPreset.mockReturnValueOnce(save.promise);
+
+    await exportAction(wrapper).trigger('click');
+    await flushPromises();
+
+    expect(createSnapshot).toHaveBeenCalledOnce();
+    expect(mockCapture.updateEditorPreset).toHaveBeenCalledOnce();
+    expect(mockJob.start).not.toHaveBeenCalled();
+
+    const replacementSnapshot = vi.fn(() => snapshot);
+    await wrapper.setProps({
+      request: {
+        ...source,
+        projectName: 'Changed while saving',
+        includeAudio: true,
+        duration: 20,
+        fps: 30,
+        width: 1280,
+        height: 720,
+        createSnapshot: replacementSnapshot,
+      },
+      playheadSeconds: 10,
+    });
+    const updatedButtons = wrapper.findAll('.button-stub');
+    await updatedButtons.find((button) => button.text() === '30 fps')?.trigger('click');
+    await updatedButtons.find((button) => button.text() === '1080p')?.trigger('click');
+
+    save.resolve({});
+    await flushPromises();
+
+    expect(mockJob.start).toHaveBeenCalledOnce();
+    expect(mockJob.start).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectName: 'Demo project',
+        includeAudio: false,
+        format: 'mp4',
+        preset: 'high',
+        snapshot: expect.objectContaining({
+          duration: 5.25,
+          render: expect.objectContaining({ fps: 24 }),
+          canvas: expect.objectContaining({ width: 1280, height: 720 }),
+        }),
+      }),
+    );
+    expect(createSnapshot).toHaveBeenCalledOnce();
+    expect(replacementSnapshot).not.toHaveBeenCalled();
+  });
+
+  it('starts the export even when saving the preset fails', async () => {
+    const failure = new Error('preset store unavailable');
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    mockCapture.getEditorPresets
+      .mockResolvedValueOnce({ activePresetId: 'default', presets: [] })
+      .mockRejectedValueOnce(failure);
+    const wrapper = mountExport();
+    await flushPromises();
+
+    await exportAction(wrapper).trigger('click');
+    await flushPromises();
+
+    expect(consoleError).toHaveBeenCalledWith('Unable to save export preset', failure);
+    expect(mockJob.start).toHaveBeenCalledOnce();
+    wrapper.unmount();
+    consoleError.mockRestore();
+  });
 
   it('keeps audio enabled by default and includes it in the export request', async () => {
     const wrapper = mountExport();
@@ -205,7 +437,7 @@ describe('ExportPopover', () => {
 
   it('passes format and quality to the export job so validation errors stay visible', async () => {
     mockJob.start.mockImplementationOnce(async (value: ExportRequest) => {
-      (mockJob.state?.error as Ref<string | null>).value = `${value.format.toUpperCase()} is not encodable`;
+      (mockJob.state!.error as Ref<string | null>).value = `${value.format.toUpperCase()} is not encodable`;
     });
     const wrapper = mountExport();
     const buttons = wrapper.findAll('.button-stub');
@@ -322,7 +554,7 @@ describe('ExportPopover', () => {
     await wrapper.findAll('.export-popover .button-stub').at(-1)?.trigger('click');
     expect(mockJob.start).toHaveBeenCalledWith(expect.objectContaining({ format: 'webm', preset: 'medium' }));
 
-    const result = mockJob.state?.result as Ref<{
+    const result = mockJob.state!.result as Ref<{
       path: string;
       format: 'webm' | 'mp4';
     } | null>;
@@ -336,6 +568,43 @@ describe('ExportPopover', () => {
     expect((window.capture as unknown as { openFile: ReturnType<typeof vi.fn> }).openFile).toHaveBeenCalledWith(
       'C:\\Exports\\demo.webm',
     );
+  });
+
+  it('reports a successful export and opens its file from the toast action', async () => {
+    const toast = useToastStore();
+    const success = vi.spyOn(toast, 'success');
+    const openFile = (window.capture as unknown as { openFile: ReturnType<typeof vi.fn> }).openFile;
+    mockJob.start.mockImplementationOnce(async () => {
+      (mockJob.state!.result as Ref<{ path: string; format: 'webm' | 'mp4' } | null>).value = {
+        path: '/exports/final.mp4',
+        format: 'mp4',
+      };
+    });
+    const wrapper = mountExport();
+
+    await exportAction(wrapper).trigger('click');
+    await flushPromises();
+
+    expect(success).toHaveBeenCalledWith('Saved to final.mp4', 6000, expect.objectContaining({ label: 'Open File' }));
+    const action = success.mock.calls[0]?.[2] as { onClick?: () => void } | undefined;
+    action?.onClick?.();
+    expect(openFile).toHaveBeenCalledWith('/exports/final.mp4');
+    wrapper.unmount();
+    success.mockRestore();
+  });
+
+  it('keeps the result screen usable if the desktop open-file bridge is unavailable', async () => {
+    const wrapper = mountExport();
+    (mockJob.state!.result as Ref<{ path: string; format: 'webm' | 'mp4' } | null>).value = {
+      path: '/exports/offline.webm',
+      format: 'webm',
+    };
+    delete (window.capture as unknown as { openFile?: ReturnType<typeof vi.fn> }).openFile;
+    await nextTick();
+
+    await expect(wrapper.get('.result-box .button-stub').trigger('click')).resolves.toBeUndefined();
+    expect(wrapper.get('[role="status"]').text()).toContain('offline.webm');
+    wrapper.unmount();
   });
 
   it('supports selecting output resolution options without upscaling', async () => {
@@ -352,10 +621,38 @@ describe('ExportPopover', () => {
     );
   });
 
+  it('restores native resolution and supports choosing WebM after changing export options', async () => {
+    const wrapper = mountExport();
+    const buttons = wrapper.findAll('.button-stub');
+    await buttons.find((button) => button.text() === 'MP4')?.trigger('click');
+    await buttons.find((button) => button.text() === 'WebM')?.trigger('click');
+    await buttons.find((button) => button.text() === '1080p')?.trigger('click');
+    await buttons.find((button) => button.text() === 'Max')?.trigger('click');
+    await exportAction(wrapper).trigger('click');
+
+    expect(mockJob.start).toHaveBeenCalledWith(
+      expect.objectContaining({
+        format: 'webm',
+        snapshot: expect.objectContaining({ canvas: { width: 1920, height: 1080 } }),
+      }),
+    );
+    wrapper.unmount();
+  });
+
+  it('disables scaled resolution choices that would enlarge a small source', () => {
+    const wrapper = mountExport(undefined, { ...request, width: 854, height: 480 });
+    const buttons = wrapper.findAll('.button-stub');
+
+    expect(buttons.find((button) => button.text() === '720p')?.attributes('disabled')).toBeDefined();
+    expect(buttons.find((button) => button.text() === '1080p')?.attributes('disabled')).toBeDefined();
+    expect(buttons.find((button) => button.text() === 'Max')?.attributes('disabled')).toBeUndefined();
+    wrapper.unmount();
+  });
+
   it('renders stable export progress and cancellation', async () => {
     const wrapper = mountExport();
-    const progress = mockJob.state?.progress as Ref<Record<string, unknown> | null>;
-    const exporting = mockJob.state?.exporting as Ref<boolean>;
+    const progress = mockJob.state!.progress as Ref<Record<string, unknown> | null>;
+    const exporting = mockJob.state!.exporting as Ref<boolean>;
     progress.value = {
       stage: 'encoding',
       stageLabel: 'Encoding',
@@ -379,12 +676,24 @@ describe('ExportPopover', () => {
     expect(mockJob.cancel).toHaveBeenCalledOnce();
   });
 
+  it('shows zero progress and safe frame-count defaults before the first progress event', async () => {
+    const wrapper = mountExport();
+    const exporting = mockJob.state!.exporting as Ref<boolean>;
+    exporting.value = true;
+    await nextTick();
+
+    expect(wrapper.get('.export-trigger').text()).toBe('0%');
+    expect(wrapper.get('.percentage-badge').text()).toBe('0%');
+    expect(wrapper.get('.progress-details').text()).toContain('Frame 0 / 0');
+    wrapper.unmount();
+  });
+
   it('keeps the full export label before starting and shows only the percentage while exporting', async () => {
     const wrapper = mountExport();
     expect(wrapper.get('.export-trigger').text()).toBe('Export Video');
 
-    const progress = mockJob.state?.progress as Ref<Record<string, unknown> | null>;
-    const exporting = mockJob.state?.exporting as Ref<boolean>;
+    const progress = mockJob.state!.progress as Ref<Record<string, unknown> | null>;
+    const exporting = mockJob.state!.exporting as Ref<boolean>;
     progress.value = {
       stage: 'encoding',
       overallProgress: 0.25,
@@ -402,8 +711,11 @@ describe('ExportPopover', () => {
 
   it('bases visible progress on video frames while exposing the full diagnostic report for copying', async () => {
     const wrapper = mountExport();
-    const progress = mockJob.state?.progress as Ref<Record<string, unknown> | null>;
-    const exporting = mockJob.state?.exporting as Ref<boolean>;
+    await exportAction(wrapper).trigger('click');
+    await flushPromises();
+
+    const progress = mockJob.state!.progress as Ref<Record<string, unknown> | null>;
+    const exporting = mockJob.state!.exporting as Ref<boolean>;
     progress.value = {
       stage: 'encoding',
       overallProgress: 0.24595,
@@ -434,8 +746,8 @@ describe('ExportPopover', () => {
 
   it('keeps zero percent visible before encoding and hides encoding details', async () => {
     const wrapper = mountExport();
-    const progress = mockJob.state?.progress as Ref<Record<string, unknown> | null>;
-    const exporting = mockJob.state?.exporting as Ref<boolean>;
+    const progress = mockJob.state!.progress as Ref<Record<string, unknown> | null>;
+    const exporting = mockJob.state!.exporting as Ref<boolean>;
     exporting.value = true;
 
     for (const stage of ['validating_assets', 'loading_assets']) {
@@ -458,8 +770,8 @@ describe('ExportPopover', () => {
 
   it('keeps Export visible and publishes a sanitized copyable error toast', async () => {
     mockJob.start.mockImplementation(async () => {
-      (mockJob.state?.error as Ref<string | null>).value = 'The source image could not be decoded.';
-      (mockJob.state?.errorContext as Ref<unknown>).value = new ExportValidationError({
+      (mockJob.state!.error as Ref<string | null>).value = 'The source image could not be decoded.';
+      (mockJob.state!.errorContext as Ref<unknown>).value = new ExportValidationError({
         code: 'decode-failure',
         message: 'The source image could not be decoded.',
         assetId: 'vivid-horizon',

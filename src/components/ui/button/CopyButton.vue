@@ -16,6 +16,7 @@ const props = withDefaults(
     size?: 'xs' | 'sm' | 'md' | 'lg';
     disabled?: boolean;
     tooltipPosition?: 'top' | 'bottom' | 'left' | 'right';
+    tooltipMode?: 'popover' | 'native';
   }>(),
   {
     display: 'text',
@@ -26,6 +27,7 @@ const props = withDefaults(
     size: 'sm',
     disabled: false,
     tooltipPosition: 'top',
+    tooltipMode: 'popover',
   },
 );
 
@@ -103,7 +105,8 @@ const copy = async () => {
     icon-only
     :loading="state === 'copying'"
     :disabled="disabled"
-    :tooltip="stateLabel"
+    :tooltip="tooltipMode === 'popover' ? stateLabel : ''"
+    :title="tooltipMode === 'native' ? stateLabel : undefined"
     :tooltip-position="tooltipPosition"
     :tooltip-variant="state === 'error' ? 'error' : 'default'"
     :aria-label="stateLabel"
@@ -119,6 +122,7 @@ const copy = async () => {
     :icon="stateIcon"
     :loading="state === 'copying'"
     :disabled="disabled"
+    :title="tooltipMode === 'native' ? stateLabel : undefined"
     :tooltip-position="tooltipPosition"
     :tooltip-variant="state === 'error' ? 'error' : 'default'"
     :aria-label="stateLabel"

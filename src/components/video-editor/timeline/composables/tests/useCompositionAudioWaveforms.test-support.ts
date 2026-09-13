@@ -30,12 +30,17 @@ export type WaveformWorkerResponse =
       generation: number;
       clipId: string;
       peaks: Float32Array;
+      bands: Float32Array;
       segmentIndex: number;
       segmentCount: number;
       segmentPointOffset: number;
       segmentComplete: boolean;
     }
   | { type: 'error'; generation: number; clipId: string; error: MediaError };
+
+export type WaveformBandValues = readonly [number, number, number, number];
+
+const EMPTY_BAND_VALUES: WaveformBandValues = [0, 0, 0, 0];
 
 export const composition = (volume = 100, source = 'https://media.test/sound.mp4'): ClipComposition => ({
   schemaVersion: 6,
@@ -104,8 +109,11 @@ export const latestGeneration = (instances: readonly FakeWaveformWorkerInstance[
   return Math.max(...values);
 };
 
-export const segmentPeaks = (pointCount: number, maximum: number) =>
-  Float32Array.from({ length: pointCount * 2 }, (_, index) => (index % 2 === 0 ? 0 : maximum));
+export const segmentPeaks = (pointCount: number, maximum: number, minimum = 0) =>
+  Float32Array.from({ length: pointCount * 2 }, (_, index) => (index % 2 === 0 ? minimum : maximum));
+
+export const segmentBands = (pointCount: number, values: WaveformBandValues = EMPTY_BAND_VALUES) =>
+  Float32Array.from({ length: pointCount * 4 }, (_, index) => values[index % 4]!);
 
 export const segmentOffset = (segments: readonly ExtractWaveformWorkerRequest[], index: number) =>
   segments.slice(0, index).reduce((sum, segment) => sum + segment.pointCount, 0);
@@ -121,6 +129,8 @@ export const respondChunk = (
   pointCount: number,
   maximum: number,
   complete: boolean,
+  bandValues: WaveformBandValues = EMPTY_BAND_VALUES,
+  minimum = 0,
 ) => {
   respond(instances, {
     type: 'result',
@@ -130,7 +140,8 @@ export const respondChunk = (
     segmentCount: request.segmentCount,
     segmentPointOffset: pointOffset,
     segmentComplete: complete,
-    peaks: segmentPeaks(pointCount, maximum),
+    peaks: segmentPeaks(pointCount, maximum, minimum),
+    bands: segmentBands(pointCount, bandValues),
   });
 };
 
@@ -138,6 +149,8 @@ export const respondSegment = (
   instances: readonly FakeWaveformWorkerInstance[],
   request: ExtractWaveformWorkerRequest,
   maximum: number,
+  bandValues: WaveformBandValues = EMPTY_BAND_VALUES,
+  minimum = 0,
 ) => {
   respond(instances, {
     type: 'result',
@@ -147,7 +160,8 @@ export const respondSegment = (
     segmentCount: request.segmentCount,
     segmentPointOffset: 0,
     segmentComplete: true,
-    peaks: segmentPeaks(request.pointCount, maximum),
+    peaks: segmentPeaks(request.pointCount, maximum, minimum),
+    bands: segmentBands(request.pointCount, bandValues),
   });
 };
 
@@ -157,9 +171,12 @@ export const respondAllSegments = (
   generation: number,
   maximums: readonly number[] = [2, 2, 2],
   order: readonly number[] = [0, 1, 2],
+  bandValuesBySegment: readonly WaveformBandValues[] = [],
 ) => {
   const segments = extractRequests(instances, clipId, generation);
   if (segments.length !== 3) throw new Error(`Expected three segments for ${clipId}.`);
-  for (const index of order) respondSegment(instances, segments[index]!, maximums[index] ?? 2);
+  for (const index of order) {
+    respondSegment(instances, segments[index]!, maximums[index] ?? 2, bandValuesBySegment[index] ?? EMPTY_BAND_VALUES);
+  }
   return segments;
 };

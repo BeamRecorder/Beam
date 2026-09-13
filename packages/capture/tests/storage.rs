@@ -92,15 +92,34 @@ fn project_editor_state_survives_a_new_recording() {
         "2026-01-01T00:00:00Z",
     )
     .expect("project");
-    manifest
-        .editor
-        .zoom
-        .generated_sessions
-        .push(ZoomGenerationRecord {
-            session_id: first_session.to_string(),
-            algorithm_version: 1,
-            generated_at: "2026-01-01T00:00:00Z".into(),
-        });
+    manifest.editor = serde_json::from_value(serde_json::json!({
+        "schemaVersion": 3,
+        "composition": {
+            "schemaVersion": 4,
+            "futureCompositionField": { "preserve": true }
+        },
+        "zoom": {
+            "elements": [{
+                "id": "zoom-1",
+                "sessionId": first_session.to_string(),
+                "startMs": 0,
+                "endMs": 100,
+                "focus": { "cx": 0.5, "cy": 0.5 },
+                "depth": 1,
+                "mode": "auto",
+                "enabled": false
+            }],
+            "generatedSessions": [{
+                "sessionId": first_session.to_string(),
+                "algorithmVersion": 1,
+                "generatedAt": "2026-01-01T00:00:00Z"
+            }],
+            "futureZoomField": { "preserve": true }
+        },
+        "presentation": { "futurePresentationField": "keep-me" },
+        "futureEditorField": { "preserve": true }
+    }))
+    .expect("typed project editor state");
     let path = ProjectLayout::new(temporary.path(), project).project_manifest();
     write_atomic(&path, &serde_json::to_vec_pretty(&manifest).expect("json"))
         .expect("write project");
@@ -113,7 +132,37 @@ fn project_editor_state_survives_a_new_recording() {
     )
     .expect("updated project");
     assert_eq!(updated.editor.zoom.generated_sessions.len(), 1);
+    assert_eq!(
+        updated.editor.zoom.elements[0].extra.get("enabled"),
+        Some(&serde_json::json!(false))
+    );
+    assert_eq!(
+        updated.editor.zoom.extra.get("futureZoomField"),
+        Some(&serde_json::json!({ "preserve": true }))
+    );
+    assert_eq!(
+        updated.editor.extra.get("composition"),
+        Some(&serde_json::json!({
+            "schemaVersion": 4,
+            "futureCompositionField": { "preserve": true }
+        }))
+    );
+    assert_eq!(
+        updated.editor.extra.get("presentation"),
+        Some(&serde_json::json!({ "futurePresentationField": "keep-me" }))
+    );
+    assert_eq!(
+        updated.editor.extra.get("futureEditorField"),
+        Some(&serde_json::json!({ "preserve": true }))
+    );
     assert_eq!(updated.sessions.len(), 2);
+
+    let persisted: serde_json::Value = serde_json::from_slice(
+        &std::fs::read(ProjectLayout::new(temporary.path(), project).project_manifest())
+            .expect("read updated project"),
+    )
+    .expect("updated project JSON");
+    assert_eq!(persisted["editor"]["zoom"]["elements"][0]["enabled"], false);
 }
 
 #[test]

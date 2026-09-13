@@ -67,6 +67,15 @@ async function run(request: ExportRequest, preparedCursorImages: PreparedCursorI
         )
       : [];
   const totalFrames = Math.max(1, Math.ceil(request.snapshot.duration * request.snapshot.render.fps));
+  let lastPreviewAt = -Infinity;
+  let preview: string | undefined;
+  const previewScale = Math.min(256 / request.snapshot.canvas.width, 144 / request.snapshot.canvas.height);
+  const previewCanvas = request.preview
+    ? new OffscreenCanvas(
+        Math.max(2, Math.round(request.snapshot.canvas.width * previewScale)),
+        Math.max(2, Math.round(request.snapshot.canvas.height * previewScale)),
+      )
+    : null;
   let assets: ExportAssets | null = null;
   const bitmaps = new Map<string, ImageBitmap>();
   const transferredCursors = new Map<string, ImageBitmap>();
@@ -104,7 +113,7 @@ async function run(request: ExportRequest, preparedCursorImages: PreparedCursorI
     phase,
   });
   const report = (value: ExportProgress, force = false) =>
-    progress({ ...value, diagnostics: diagnostics(value.stage) }, force);
+    progress({ ...value, preview, diagnostics: diagnostics(value.stage) }, force);
   try {
     if (typeof OffscreenCanvas === 'undefined') throw new Error('OffscreenCanvas is required for export.');
     if (typeof VideoEncoder === 'undefined' || typeof VideoDecoder === 'undefined')
@@ -185,7 +194,17 @@ async function run(request: ExportRequest, preparedCursorImages: PreparedCursorI
         context,
         output,
         pipelineController.signal,
-        (done, stats) => {
+        async (done, stats) => {
+          if (previewCanvas && performance.now() - lastPreviewAt > 500) {
+            lastPreviewAt = performance.now();
+            const previewContext = previewCanvas.getContext('2d');
+            if (previewContext) {
+              previewContext.drawImage(context.canvas, 0, 0, previewCanvas.width, previewCanvas.height);
+              const blob = await previewCanvas.convertToBlob({ type: 'image/jpeg', quality: 0.65 });
+              const bytes = new Uint8Array(await blob.arrayBuffer());
+              preview = `data:image/jpeg;base64,${btoa(Array.from(bytes, (byte) => String.fromCharCode(byte)).join(''))}`;
+            }
+          }
           measured.decodeMs = stats.decodeMs;
           measured.renderMs = stats.renderMs;
           measured.encoderBackpressureMs = stats.encoderBackpressureMs;

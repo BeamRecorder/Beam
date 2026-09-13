@@ -1,4 +1,5 @@
 import { sourceTimeAt } from '~/media/shared';
+import { createTimelineIntervalIndex } from '~/media/shared/timeline-interval-index';
 import type {
   BlurClip,
   CaptionClip,
@@ -19,10 +20,19 @@ export interface CompositionSceneLayers {
 
 export type CompositionSceneLayerResolver = (timeMs: number) => CompositionSceneLayers;
 
-const byDescendingOrder = (left: Clip, right: Clip) => right.order - left.order;
-
 export function createCompositionSceneLayerResolver(composition: ClipComposition): CompositionSceneLayerResolver {
-  const clips = [...composition.clips].sort(byDescendingOrder);
+  const order = new Map(composition.clips.map((clip, index) => [clip, index]));
+  const clipsAt = createTimelineIntervalIndex(
+    composition.clips
+      .filter((clip) => clip.enabled && clip.kind !== 'audio')
+      .map((clip) => ({
+        start: clip.timelineStartMs,
+        end: clip.timelineStartMs + clip.timelineDurationMs,
+        value: clip,
+      })),
+  );
+  const byDescendingOrder = (left: Clip, right: Clip) =>
+    right.order - left.order || order.get(left)! - order.get(right)!;
 
   return (timeMs) => {
     const cameraVisuals: VisualClip[] = [];
@@ -31,7 +41,7 @@ export function createCompositionSceneLayerResolver(composition: ClipComposition
     const captions: CaptionClip[] = [];
     let screen: VisualClip | null = null;
 
-    for (const clip of clips) {
+    for (const clip of clipsAt(timeMs).sort(byDescendingOrder)) {
       if (clip.kind === 'audio' || !clip.enabled || sourceTimeAt(clip, timeMs) === null) continue;
       if (clip.kind === 'caption') {
         captions.push(clip);

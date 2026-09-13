@@ -26,6 +26,7 @@ import type { TeleprompterMode } from './teleprompter-types';
 
 const { t } = useTranslate('Teleprompter');
 const state = useTeleprompter();
+state.setVisible(false);
 const setDisplayElement: VNodeRef = (element) => {
   state.setDisplayElement(element instanceof HTMLElement ? element : null);
 };
@@ -48,11 +49,39 @@ const onSession = (event: Event) => {
   void state.applySession(context);
 };
 const onShortcut = (event: Event) => state.handleShortcut(String((event as CustomEvent).detail ?? ''));
-onMounted(() => {
+let mounted = false;
+let unsubscribeSuspend: (() => void) | null = null;
+let unsubscribeVisibility: (() => void) | null = null;
+let nativeVisible = false;
+const updateVisibility = () => state.setVisible(nativeVisible && !document.hidden);
+onMounted(async () => {
+  mounted = true;
+  updateVisibility();
+  document.addEventListener('visibilitychange', updateVisibility);
+  unsubscribeVisibility = capture.onTeleprompterVisibility((visible) => {
+    nativeVisible = visible;
+    updateVisibility();
+  });
+  unsubscribeSuspend = capture.onTeleprompterSuspend(async (id) => {
+    capture.acknowledgeTeleprompterSuspend(id, await state.suspendState());
+  });
+  try {
+    const resume = await capture.getTeleprompterResumeState();
+    if (!mounted) return;
+    if (resume) await state.restoreState(resume);
+  } catch (error) {
+    state.error.value = error instanceof Error ? error.message : String(error);
+  }
+  if (!mounted) return;
   window.addEventListener('teleprompter-session', onSession);
   window.addEventListener('teleprompter-shortcut', onShortcut);
+  capture.notifyTeleprompterReady?.();
 });
 onBeforeUnmount(() => {
+  mounted = false;
+  unsubscribeSuspend?.();
+  unsubscribeVisibility?.();
+  document.removeEventListener('visibilitychange', updateVisibility);
   window.removeEventListener('teleprompter-session', onSession);
   window.removeEventListener('teleprompter-shortcut', onShortcut);
 });

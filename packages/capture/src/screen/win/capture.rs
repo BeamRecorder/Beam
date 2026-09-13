@@ -432,7 +432,7 @@ where
     })
 }
 
-fn window_from_source_id(source_id: &SourceId) -> Result<Window, CaptureError> {
+pub(super) fn window_from_source_id(source_id: &SourceId) -> Result<Window, CaptureError> {
     let s = source_id.as_str();
     let (raw, radix) = if let Some(raw) = s.strip_prefix("wgc:window:") {
         (raw, 16)

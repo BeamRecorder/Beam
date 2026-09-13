@@ -17,12 +17,9 @@ import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue';
 import Divider from '~/ui/divider/Divider.vue';
 import { useTranslate } from '~/i18n/useTranslate';
-import type { BlurClip, BlurEffectMode, BlurEffectShape } from '~/media/shared/composition-types';
+import type { BlurEffectMode, BlurEffectShape } from '~/media/shared/composition-types';
 
-type BlurSettings = Pick<BlurClip, 'mode' | 'shape' | 'strength' | 'feather' | 'tintOpacity' | 'color'> & {
-  cornerRadius: number;
-};
-type BlurPatch = Partial<BlurSettings>;
+import type { BlurSettings, BlurPatch, Choice } from './blur-properties-types';
 
 const { t } = useTranslate('BlurPropertiesPanel');
 const props = defineProps<{
@@ -32,12 +29,6 @@ const emit = defineEmits<{
   (event: 'update', patch: BlurPatch): void;
   (event: 'delete'): void;
 }>();
-
-interface Choice<T> {
-  value: T;
-  label: string;
-  icon: Component;
-}
 
 const modes: Array<Choice<BlurEffectMode>> = [
   { value: 'blur', label: t('blur'), icon: Waves },
@@ -71,13 +62,16 @@ const presets: Array<{ value: string; label: string; icon: Component; patch: Blu
   },
 ];
 
+const isHighlight = computed(() => props.clip.mode === 'highlight');
+const { t: tHighlight } = useTranslate('Highlight');
 const strengthLabel = computed(() => {
+  if (isHighlight.value) return tHighlight('opacity');
   if (props.clip.mode === 'blur') return t('blurRadius');
   if (props.clip.mode === 'frosted') return t('frostIntensity');
   return t('pixelSize');
 });
-const usesColor = computed(() => props.clip.mode === 'frosted' || props.clip.mode === 'opaque');
-const usesTint = computed(() => props.clip.mode === 'frosted');
+const usesColor = computed(() => isHighlight.value || props.clip.mode === 'frosted' || props.clip.mode === 'opaque');
+const usesTint = computed(() => isHighlight.value || props.clip.mode === 'frosted');
 
 const selectMode = (mode: BlurEffectMode) => {
   emit('update', {
@@ -91,7 +85,7 @@ const presetIsActive = (patch: BlurPatch) =>
 
 <template>
   <div class="blur-properties">
-    <section class="section-block" :aria-label="t('presets')">
+    <section v-if="!isHighlight" class="section-block" :aria-label="t('presets')">
       <span class="section-title">{{ t('presets') }}</span>
       <ButtonGroup full :columns="1" class="preset-group">
         <Button
@@ -109,9 +103,9 @@ const presetIsActive = (patch: BlurPatch) =>
       </ButtonGroup>
     </section>
 
-    <Divider spacing="xs" />
+    <Divider v-if="!isHighlight" spacing="xs" />
 
-    <section class="section-block" :aria-label="t('mode')">
+    <section v-if="!isHighlight" class="section-block" :aria-label="t('mode')">
       <span class="section-title">{{ t('mode') }}</span>
       <ButtonGroup full :columns="2" class="mode-group">
         <Button
@@ -156,7 +150,7 @@ const presetIsActive = (patch: BlurPatch) =>
           :min="0"
           :max="100"
           :step="1"
-          :default-value="60"
+          :default-value="isHighlight ? 65 : 60"
           :label="strengthLabel"
           :format-value="(value) => `${Math.round(value)}%`"
           @update:model-value="emit('update', { strength: $event })"
@@ -188,19 +182,25 @@ const presetIsActive = (patch: BlurPatch) =>
           :min="0"
           :max="100"
           :step="1"
-          :default-value="24"
-          :label="t('tintOpacity')"
+          :default-value="isHighlight ? 20 : 24"
+          :label="isHighlight ? tHighlight('highlightOpacity') : t('tintOpacity')"
           :format-value="(value) => `${Math.round(value)}%`"
           @update:model-value="emit('update', { tintOpacity: $event })"
         />
         <ColorPicker
+          v-if="isHighlight"
+          :model-value="clip.highlightColor ?? '#ffffff'"
+          :label="tHighlight('highlightColor')"
+          @update:model-value="emit('update', { highlightColor: $event })"
+        />
+        <ColorPicker
           v-if="usesColor"
           :model-value="clip.color"
-          :label="t('color')"
+          :label="isHighlight ? tHighlight('color') : t('color')"
           @update:model-value="emit('update', { color: $event })"
         />
       </div>
-      <p class="privacy-hint">
+      <p v-if="!isHighlight" class="privacy-hint">
         <ShieldCheck class="privacy-icon" aria-hidden="true" />
         <span>{{ t('privacyHint') }}</span>
       </p>

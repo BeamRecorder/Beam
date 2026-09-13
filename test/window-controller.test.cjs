@@ -94,6 +94,71 @@ function expectedAlwaysOnTopLevel() {
   return process.platform === 'win32' ? 'screen-saver' : undefined;
 }
 
+for (const platform of ['linux', 'darwin', 'win32']) {
+  test(`${platform}: native focus callbacks cannot reenter a topmost change`, () => {
+    const win = fakeWindow();
+    const setAlwaysOnTop = win.setAlwaysOnTop;
+    let nativeChanges = 0;
+    win.setAlwaysOnTop = (...args) => {
+      assert.ok(++nativeChanges <= 2, 'topmost policy must not recurse through native focus events');
+      setAlwaysOnTop(...args);
+      win.emit('blur');
+      win.emit('focus');
+    };
+    win.moveTop = () => {
+      win.calls.push(['moveTop']);
+      win.emit('focus');
+    };
+    const controller = new WindowController(win, { platform });
+    controller.markReadyToShow();
+    win.emit('blur');
+    win.emit('focus');
+    assert.equal(nativeChanges, 2);
+    assert.equal(win.calls.filter((call) => call[0] === 'moveTop').length, 1);
+    assert.equal(topCalls(win).at(-1)[2], platform === 'win32' ? 'screen-saver' : undefined);
+  });
+
+  test(`${platform}: demoting the HUD cannot raise it before native hide completes`, () => {
+    const win = fakeWindow();
+    const controller = new WindowController(win, { platform });
+    controller.markReadyToShow();
+    win.calls.length = 0;
+    const setAlwaysOnTop = win.setAlwaysOnTop;
+    win.setAlwaysOnTop = (...args) => {
+      assert.ok(topCalls(win).length < 2, 'demotion must not recursively raise the HUD');
+      setAlwaysOnTop(...args);
+      win.emit('blur');
+      win.emit('focus');
+    };
+    assert.equal(controller.setVisible(false), true);
+    assert.deepEqual(
+      topCalls(win).map((call) => call[1]),
+      [false],
+    );
+    assert.ok(win.calls.filter((call) => call[0] === 'mouse').every((call) => call[1]));
+    assert.equal(
+      win.calls.some((call) => call[0] === 'moveTop'),
+      false,
+    );
+  });
+
+  test(`${platform}: showing a hidden HUD restores its native policy once`, () => {
+    const win = fakeWindow();
+    const controller = new WindowController(win, { platform });
+    controller.markReadyToShow();
+    controller.setVisible(false);
+    win.calls.length = 0;
+    win.show();
+    win.emit('focus');
+    assert.equal(controller.setVisible(true), true);
+    assert.deepEqual(
+      topCalls(win).map((call) => call[1]),
+      [true],
+    );
+    assert.equal(win.calls.filter((call) => call[0] === 'moveTop').length, 1);
+  });
+}
+
 function preferencesWithHudWindow(hudWindow, extras = {}) {
   let hudWindowReads = 0;
   const preferences = { extras };
@@ -305,6 +370,31 @@ test('recorder position persistence stores the compact bar position', () => {
 
   assert.deepEqual(saved.at(-1).extras.recorderPositions['1'], { x: 908, y: 228 });
   controller.setMode('hud');
+});
+
+test('HUD restores and clamps saved positions using the normalized native width', () => {
+  assert.deepEqual(HUD_SIZE, { width: 352, height: 512 });
+  const display = {
+    id: 1,
+    bounds: { x: 0, y: 0, width: 1000, height: 800 },
+    workArea: { x: 0, y: 0, width: 1000, height: 800 },
+  };
+  const preferencesStore = {
+    read: () => ({ extras: { hudPosition: { x: 900, y: 700 } } }),
+    patch: () => undefined,
+  };
+  const win = fakeWindow();
+  const controller = new WindowController(win, {
+    preferencesStore,
+    screenModule: { getDisplayNearestPoint: () => display },
+  });
+
+  assert.deepEqual(win.getPosition(), [648, 288]);
+  controller.showHud();
+
+  assert.deepEqual(win.calls.filter((call) => call[0] === 'minimumSize').at(-1), ['minimumSize', 352, 512]);
+  assert.deepEqual(win.calls.filter((call) => call[0] === 'size').at(-1), ['size', 352, 512]);
+  assert.deepEqual(win.getPosition(), [648, 288]);
 });
 
 test('HUD and Recorder stay topmost independently of a legacy preference', () => {

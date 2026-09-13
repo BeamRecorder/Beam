@@ -73,7 +73,9 @@
     "teleprompterPreviousLine": "이전 줄",
     "teleprompterPreviousLineDesc": "텔레프롬프터의 이전 줄로 이동",
     "conflictWith": "‘{name}’과(와) 충돌",
-    "failedToUpdate": "단축키를 업데이트하지 못했습니다"
+    "failedToUpdate": "단축키를 업데이트하지 못했습니다",
+    "quickSnip": "Quick Snip",
+    "quickSnipDesc": "현재 상태에 따라 Quick Snip을 열거나 녹화를 시작 또는 중지합니다."
   },
   "SidebarPanel": {
     "canvas": "캔버스",
@@ -86,7 +88,8 @@
     "audio": "오디오",
     "media": "미디어",
     "settings": "설정",
-    "logo": "로고"
+    "logo": "로고",
+    "elements": "요소"
   },
   "Socials": {
     "title": "소셜",

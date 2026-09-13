@@ -73,7 +73,9 @@
     "teleprompterPreviousLine": "Linha anterior",
     "teleprompterPreviousLineDesc": "Voltar para a linha anterior do teleprompter",
     "conflictWith": "Conflito com “{name}”",
-    "failedToUpdate": "Falha ao atualizar o atalho"
+    "failedToUpdate": "Falha ao atualizar o atalho",
+    "quickSnip": "Quick Snip",
+    "quickSnipDesc": "Abrir, iniciar ou parar o Quick Snip conforme seu estado atual."
   },
   "SidebarPanel": {
     "canvas": "Tela",
@@ -86,7 +88,8 @@
     "audio": "Áudio",
     "media": "Mídia",
     "settings": "Configurações",
-    "logo": "Logotipo"
+    "logo": "Logotipo",
+    "elements": "Elementos"
   },
   "Socials": {
     "title": "Redes sociais",

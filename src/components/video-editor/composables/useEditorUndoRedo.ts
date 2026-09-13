@@ -1,146 +1,130 @@
-import { computed, onMounted, onUnmounted, ref } from 'vue';
-import type { ClipComposition } from '~/media/shared/composition-types';
-import type { ZoomAutoFollowSettings, ZoomElement, ZoomMotionBlurSettings } from '../zoom/zoom-types';
-import type { OutputCanvasSettings } from '../canvas/output-canvas';
-import type { BackgroundValue } from './backgroundCatalog';
+import { computed, onMounted, onUnmounted, ref, shallowRef } from 'vue';
+import type { SnapshotHistory } from '~/media/shared/editor-history-types';
+import type {
+  EditorHistoryOptions,
+  EditorStateSnapshot,
+  HistoryAction,
+  SnapshotSource,
+  SnapshotOwnership,
+} from './editor-history-types';
+export type { EditorStateSnapshot, HistoryAction, HistoryActionType } from './editor-history-types';
 
-export type HistoryActionType = 'undo' | 'redo';
-export interface HistoryAction {
-  type: HistoryActionType;
-  timestamp: number;
-}
-export interface EditorStateSnapshot {
-  composition: ClipComposition;
-  zoomElements: ZoomElement[];
-  zoomMotionBlur?: ZoomMotionBlurSettings;
-  zoomAutoFollow?: ZoomAutoFollowSettings;
-  outputCanvas: OutputCanvasSettings;
-  selectedBackground: BackgroundValue | null;
-  backgroundBlurPercent: number;
-}
-const MAX_HISTORY_DEPTH = 50;
+export const MAX_HISTORY_DEPTH = 50;
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
-type SnapshotSource = EditorStateSnapshot | (() => EditorStateSnapshot);
+const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
-export function useEditorUndoRedo(options: {
-  onRestoreSnapshot: (snapshot: EditorStateSnapshot) => void | Promise<void>;
-}) {
-  const undoStack = ref<EditorStateSnapshot[]>([]);
-  const redoStack = ref<EditorStateSnapshot[]>([]);
+export function useEditorUndoRedo<T extends object = EditorStateSnapshot>(options: EditorHistoryOptions<T>) {
+  const undoStack = shallowRef<T[]>([]);
+  const redoStack = shallowRef<T[]>([]);
   const lastAction = ref<HistoryAction | null>(null);
-  let restoring = false;
+  const restoring = ref(false);
+  const pending = ref(false);
   let timer: ReturnType<typeof setTimeout> | null = null;
-  let pendingSnapshot: SnapshotSource | null = null;
+  let pendingSnapshot: SnapshotSource<T> | null = null;
+  const available = () => !restoring.value && !options.disabled?.();
+  const canUndo = computed(() => available() && (undoStack.value.length > 1 || pending.value));
+  const canRedo = computed(() => available() && redoStack.value.length > 0);
+  const resolveSnapshot = (source: SnapshotSource<T>) => (typeof source === 'function' ? source() : source);
 
-  const canUndo = computed(() => undoStack.value.length > 1);
-  const canRedo = computed(() => redoStack.value.length > 0);
-  const resolveSnapshot = (source: SnapshotSource) => (typeof source === 'function' ? source() : source);
-
-  const recordImmediate = (snapshot: EditorStateSnapshot) => {
-    if (restoring) return;
+  const recordImmediate = (snapshot: T) => {
+    if (restoring.value) return;
     const next = clone(snapshot);
-    const current = undoStack.value.at(-1);
-    if (current && JSON.stringify(current) === JSON.stringify(next)) return;
-    undoStack.value.push(next);
-    if (undoStack.value.length > MAX_HISTORY_DEPTH) undoStack.value.shift();
+    if (same(undoStack.value.at(-1), next)) return;
+    undoStack.value = [...undoStack.value, next].slice(-MAX_HISTORY_DEPTH);
     redoStack.value = [];
   };
-
-  const flushPending = () => {
-    if (timer && pendingSnapshot) {
-      clearTimeout(timer);
-      timer = null;
-      const snapshot = resolveSnapshot(pendingSnapshot);
-      pendingSnapshot = null;
-      recordImmediate(snapshot);
-    }
-  };
-
   const cancel = () => {
     if (timer) clearTimeout(timer);
     timer = null;
     pendingSnapshot = null;
+    pending.value = false;
   };
-
-  const recordSnapshot = (snapshot: SnapshotSource, debounceMs = 0) => {
-    if (restoring) return;
+  const flushPending = () => {
+    const source = pendingSnapshot;
+    cancel();
+    if (source) recordImmediate(resolveSnapshot(source));
+  };
+  const recordSnapshot = (snapshot: SnapshotSource<T>, debounceMs = 0) => {
+    if (restoring.value) return;
+    cancel();
     if (debounceMs > 0) {
       pendingSnapshot = snapshot;
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(() => {
-        timer = null;
-        const pending = pendingSnapshot;
-        pendingSnapshot = null;
-        if (pending) recordImmediate(resolveSnapshot(pending));
-      }, debounceMs);
-    } else {
-      cancel();
-      recordImmediate(resolveSnapshot(snapshot));
-    }
+      pending.value = true;
+      timer = setTimeout(flushPending, debounceMs);
+    } else recordImmediate(resolveSnapshot(snapshot));
   };
-
-  const commitNow = (snapshot: EditorStateSnapshot) => {
+  const commitNow = (snapshot: T) => recordSnapshot(snapshot);
+  // Transfer is for freshly received IPC snapshots: the caller relinquishes
+  // the history. Restoring still clones so live edits never mutate a snapshot.
+  const initialize = (snapshot: T, history?: SnapshotHistory<T>, ownership: SnapshotOwnership = 'copy') => {
     cancel();
-    recordImmediate(snapshot);
+    const valid =
+      history?.version === 1 &&
+      Array.isArray(history.undo) &&
+      Array.isArray(history.redo) &&
+      history.undo.length > 0 &&
+      history.undo.length + history.redo.length <= MAX_HISTORY_DEPTH &&
+      same(history.undo.at(-1), snapshot);
+    undoStack.value = valid ? (ownership === 'transfer' ? history.undo : clone(history.undo)) : [clone(snapshot)];
+    redoStack.value = valid ? (ownership === 'transfer' ? history.redo : clone(history.redo)) : [];
+    lastAction.value = null;
   };
-
-  const undo = async () => {
+  const serialize = (): SnapshotHistory<T> => {
     flushPending();
-    if (!canUndo.value) return;
-    cancel();
-    restoring = true;
-    try {
-      const current = undoStack.value.pop();
-      if (current) redoStack.value.push(current);
-      const previous = undoStack.value.at(-1);
-      if (previous) await options.onRestoreSnapshot(clone(previous));
-      lastAction.value = { type: 'undo', timestamp: Date.now() };
-    } finally {
-      restoring = false;
-    }
+    return clone({ version: 1, undo: undoStack.value, redo: redoStack.value });
   };
-
-  const redo = async () => {
+  const restore = async (type: 'undo' | 'redo') => {
+    if (!available()) return;
     flushPending();
-    if (!canRedo.value) return;
-    cancel();
-    restoring = true;
+    const undo = undoStack.value,
+      redo = redoStack.value;
+    const snapshot = type === 'undo' ? undo.at(-2) : redo.at(-1);
+    if (!snapshot) return;
+    restoring.value = true;
     try {
-      const next = redoStack.value.pop();
-      if (next) {
-        const restored = clone(next);
-        undoStack.value.push(restored);
-        await options.onRestoreSnapshot(restored);
-      }
-      lastAction.value = { type: 'redo', timestamp: Date.now() };
+      await options.onRestoreSnapshot(clone(snapshot));
+      undoStack.value = type === 'undo' ? undo.slice(0, -1) : [...undo, clone(snapshot)];
+      redoStack.value = type === 'undo' ? [...redo, undo[undo.length - 1]!] : redo.slice(0, -1);
+      lastAction.value = { type, timestamp: Date.now() };
     } finally {
-      restoring = false;
+      restoring.value = false;
     }
   };
-
+  const undo = () => restore('undo');
+  const redo = () => restore('redo');
   const handleKeyDown = (event: KeyboardEvent) => {
+    if (event.defaultPrevented || event.isComposing || event.altKey || !available()) return;
     const active = document.activeElement;
-    if (active) {
-      const tag = active.tagName.toLowerCase();
-      const editingInput = tag === 'input' && (active as HTMLInputElement).type !== 'range';
-      if (editingInput || ['textarea', 'select'].includes(tag) || active.getAttribute('contenteditable') === 'true')
-        return;
-    }
+    if (
+      active?.closest(
+        'input:not([type="range"]), textarea, select, [contenteditable="true"], [role="textbox"], [role="dialog"]',
+      ) ||
+      document.querySelector('[role="dialog"][aria-modal="true"]')
+    )
+      return;
     if (!(event.ctrlKey || event.metaKey)) return;
-    if (event.key.toLowerCase() === 'z') {
-      event.preventDefault();
-      void (event.shiftKey ? redo() : undo());
-    } else if (event.key.toLowerCase() === 'y') {
-      event.preventDefault();
-      void redo();
-    }
+    const key = event.key.toLowerCase();
+    if (key !== 'z' && key !== 'y') return;
+    event.preventDefault();
+    void (key === 'y' || event.shiftKey ? redo() : undo());
   };
-
   onMounted(() => window.addEventListener('keydown', handleKeyDown));
   onUnmounted(() => {
     window.removeEventListener('keydown', handleKeyDown);
     cancel();
   });
-
-  return { undoStack, redoStack, canUndo, canRedo, lastAction, recordSnapshot, commitNow, undo, redo };
+  return {
+    undoStack,
+    redoStack,
+    canUndo,
+    canRedo,
+    lastAction,
+    restoring,
+    initialize,
+    serialize,
+    recordSnapshot,
+    commitNow,
+    undo,
+    redo,
+  };
 }

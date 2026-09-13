@@ -1,21 +1,24 @@
 <script setup lang="ts">
 import { capture } from '../../api/capture';
+import EditorHistoryControls from './EditorHistoryControls.vue';
 import VideoProjectEdition from './VideoProjectEdition.vue';
 import ExportPopover from '../export/ExportPopover.vue';
 import Button from '~/ui/button/Button.vue';
 import Tooltip from '~/ui/tooltip/Tooltip.vue';
-import { ArrowLeft, Redo2, Undo2 } from '@lucide/vue';
+import { ArrowLeft } from '@lucide/vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
 import PreviewPerformanceWidget from './performance/PreviewPerformanceWidget.vue';
 import type { PreviewPerformanceSnapshot } from './performance/preview-performance-types';
-import type { ExportRequest } from '../export/export-types';
+import type { EditorExportSource } from '../export/export-types';
+import type { EditorPresetDocument } from '~/api/types/editor-preset';
+import EditorPresetControls from './EditorPresetControls.vue';
 
 const { t } = useTranslate('Topbar');
 
 withDefaults(
   defineProps<{
-    exportRequest?: Omit<ExportRequest, 'format' | 'preset'> | null;
+    exportRequest?: EditorExportSource | null;
     playheadSeconds?: number;
     project?: any;
     isSaving?: boolean;
@@ -23,6 +26,8 @@ withDefaults(
     canRedo?: boolean;
     historyTooltipPosition?: 'top' | 'bottom' | 'left' | 'right';
     performanceSnapshot?: PreviewPerformanceSnapshot | null;
+    presetDocument?: EditorPresetDocument | null;
+    presetDirty?: boolean;
   }>(),
   {
     exportRequest: null,
@@ -33,6 +38,8 @@ withDefaults(
     canRedo: false,
     historyTooltipPosition: 'bottom',
     performanceSnapshot: null,
+    presetDocument: null,
+    presetDirty: false,
   },
 );
 
@@ -42,6 +49,11 @@ const emit = defineEmits<{
   (e: 'undo'): void;
   (e: 'redo'): void;
   (e: 'update:exportAudio', value: boolean): void;
+  (e: 'presetSelect', id: string | number): void;
+  (e: 'presetAdd', name: string): void;
+  (e: 'presetRename', name: string): void;
+  (e: 'presetDelete'): void;
+  (e: 'presetSave'): void;
 }>();
 
 const handleExit = () => {
@@ -61,31 +73,27 @@ const openDiscordInvite = () => {
         {{ t('exitToHUD') }}
       </Button>
       <VideoProjectEdition :project="project" :is-saving="isSaving" @open-project="emit('open-project', $event)" />
-      <div class="history-actions">
-        <Button
-          variant="ghost"
-          size="xs"
-          :icon="Undo2"
-          :disabled="!canUndo"
-          :tooltip="t('undoTooltip')"
-          :tooltip-position="historyTooltipPosition || 'bottom'"
-          @click.stop="emit('undo')"
-        />
-        <Button
-          variant="ghost"
-          size="xs"
-          :icon="Redo2"
-          :disabled="!canRedo"
-          :tooltip="t('redoTooltip')"
-          :tooltip-position="historyTooltipPosition || 'bottom'"
-          @click.stop="emit('redo')"
-        />
-      </div>
+      <EditorHistoryControls
+        :can-undo="canUndo"
+        :can-redo="canRedo"
+        :tooltip-position="historyTooltipPosition"
+        @undo="emit('undo')"
+        @redo="emit('redo')"
+      />
     </div>
 
     <div class="titlebar-drag-region" aria-hidden="true" />
 
     <div class="right-actions">
+      <EditorPresetControls
+        :document="presetDocument"
+        :dirty="presetDirty"
+        @select="emit('presetSelect', $event)"
+        @add="emit('presetAdd', $event)"
+        @rename="emit('presetRename', $event)"
+        @delete="emit('presetDelete')"
+        @save="emit('presetSave')"
+      />
       <PreviewPerformanceWidget v-if="performanceSnapshot" :snapshot="performanceSnapshot" />
       <Tooltip :content="t('discordTooltip')" position="bottom">
         <button type="button" class="discord-btn" :aria-label="t('discordAriaLabel')" @click.stop="openDiscordInvite">
@@ -152,13 +160,6 @@ const openDiscordInvite = () => {
   margin-left: 10px;
   object-fit: contain;
   flex: 0 0 auto;
-}
-
-.history-actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  margin-left: 8px;
 }
 
 .exit-btn {

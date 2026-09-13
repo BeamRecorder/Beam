@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { EventEmitter } = require('node:events');
 const test = require('node:test');
 
 const { registerCaptureIpc } = require('../electron/capture/capture-ipc.cjs');
@@ -19,6 +20,7 @@ test('stops native capture before completing sidecar tracks', async () => {
   const session = { state: 'completed', sessionId: 'session-1', manifestPath };
   const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
   const captureEngine = {
+    canCleanup: () => true,
     request: async (command) => {
       requests.push(command);
       return session;
@@ -68,6 +70,7 @@ test('recovers a completed partial native session after stop rejects', async () 
     const session = { state: 'completed', sessionId: 'session-partial', manifestPath };
     const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
     const captureEngine = {
+      canCleanup: () => true,
       request: async (command) => {
         requests.push(command);
         if (command === 'stop') throw new Error('native source disappeared');
@@ -148,6 +151,7 @@ test('wraps native errors with the failing command context', async () => {
   const handlers = new Map();
   const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
   const captureEngine = {
+    canCleanup: () => true,
     request: async () => {
       throw new Error('boom');
     },
@@ -167,7 +171,7 @@ test('wraps native errors with the failing command context', async () => {
   await assert.rejects(() => request({}, 'start-prepared-recording'), /capture-engine a échoué pour "start": boom/);
 });
 
-test('forwards system-audio preview commands and returns their engine responses', async () => {
+test('forwards system-audio preview commands unchanged outside Linux', async () => {
   const handlers = new Map();
   const requests = [];
   const responses = {
@@ -177,6 +181,7 @@ test('forwards system-audio preview commands and returns their engine responses'
   };
   const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
   const captureEngine = {
+    canCleanup: () => true,
     request: async (command, payload) => {
       requests.push({ command, payload });
       return responses[command];
@@ -191,6 +196,7 @@ test('forwards system-audio preview commands and returns their engine responses'
     app: {},
     userPaths: { projects: 'recordings' },
     trackStorages: [],
+    platform: 'darwin',
   });
 
   const request = handlers.get('capture:request');
@@ -204,11 +210,90 @@ test('forwards system-audio preview commands and returns their engine responses'
   );
 });
 
+test('shares Linux preview clients and restarts the preview after capture completes', async () => {
+  const handlers = new Map();
+  const requests = [];
+  let state = 'idle';
+  let previewActive = false;
+  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const captureEngine = {
+    canCleanup: () => true,
+    request: async (command, payload) => {
+      requests.push({ command, payload });
+      if (command === 'status') return { state };
+      if (command === 'start-system-audio-preview') {
+        previewActive = true;
+        return { started: true };
+      }
+      if (command === 'system-audio-preview-level') return { level: previewActive ? 0.6 : 0 };
+      if (command === 'stop-system-audio-preview') {
+        previewActive = false;
+        return { stopped: true };
+      }
+      if (command === 'prepare') {
+        previewActive = false;
+        state = 'prepared';
+        return { state };
+      }
+      if (command === 'start') {
+        state = 'recording';
+        return { state };
+      }
+      if (command === 'stop') {
+        state = 'completed';
+        return { state, sessionId: 'session-preview', manifestPath: null };
+      }
+      throw new Error(`unexpected capture command: ${command}`);
+    },
+  };
+  const createSender = () => {
+    const sender = new EventEmitter();
+    sender.isDestroyed = () => false;
+    return sender;
+  };
+  const hud = createSender();
+  const quickSnip = createSender();
+
+  registerCaptureIpc({
+    ipcMain,
+    desktopCapturer: {},
+    screen: {},
+    captureEngine,
+    app: {},
+    userPaths: { projects: 'recordings' },
+    trackStorages: [],
+    platform: 'linux',
+  });
+
+  const request = handlers.get('capture:request');
+  await Promise.all([
+    request({ sender: hud }, 'start-system-audio-preview'),
+    request({ sender: quickSnip }, 'start-system-audio-preview'),
+  ]);
+  assert.equal(requests.filter(({ command }) => command === 'start-system-audio-preview').length, 1);
+
+  await request({ sender: quickSnip }, 'prepare', { config: {} });
+  assert.deepEqual(await request({ sender: hud }, 'system-audio-preview-level'), { level: 0 });
+  assert.equal(requests.filter(({ command }) => command === 'start-system-audio-preview').length, 1);
+
+  await request({ sender: quickSnip }, 'start');
+  await request({ sender: quickSnip }, 'stop-native-recording');
+  await request({ sender: quickSnip }, 'complete-native-recording');
+  assert.deepEqual(await request({ sender: quickSnip }, 'system-audio-preview-level'), { level: 0.6 });
+  assert.equal(requests.filter(({ command }) => command === 'start-system-audio-preview').length, 2);
+
+  await request({ sender: hud }, 'stop-system-audio-preview');
+  assert.equal(requests.filter(({ command }) => command === 'stop-system-audio-preview').length, 0);
+  await request({ sender: quickSnip }, 'stop-system-audio-preview');
+  assert.equal(requests.filter(({ command }) => command === 'stop-system-audio-preview').length, 1);
+});
+
 test('invalidates the deferred session and rejects when the engine is poisoned', async () => {
   const handlers = new Map();
   const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
   let poisoned = false;
   const captureEngine = {
+    canCleanup: () => true,
     get isPoisoned() {
       return poisoned;
     },
@@ -361,6 +446,7 @@ test('starts a Linux Portal recording from one catalog without an Electron previ
     },
   };
   const captureEngine = {
+    canCleanup: () => true,
     request: async (command, payload) => {
       requests.push({ command, payload });
       if (command === 'discover') {
@@ -414,6 +500,7 @@ test('starts a prepared Linux Portal session without rediscovering or preparing 
   const requests = [];
   const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
   const captureEngine = {
+    canCleanup: () => true,
     request: async (command, payload) => {
       requests.push({ command, payload });
       if (command === 'discover') {
@@ -468,6 +555,7 @@ test('coalesces concurrent identical Linux Portal preparation requests', async (
   });
   const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
   const captureEngine = {
+    canCleanup: () => true,
     request: async (command, payload) => {
       requests.push({ command, payload });
       if (command === 'discover') {
@@ -513,6 +601,118 @@ test('coalesces concurrent identical Linux Portal preparation requests', async (
   );
 });
 
+for (const code of ['portal-cancelled', 'cancelled']) {
+  test(`returns null for ${code} during default Portal preparation and allows a retry`, async () => {
+    const handlers = new Map();
+    const requests = [];
+    let prepareAttempts = 0;
+    const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+    const captureEngine = {
+      canCleanup: () => true,
+      request: async (command, payload) => {
+        requests.push({ command, payload });
+        if (command === 'discover') {
+          return {
+            sources: [],
+            capabilities: {
+              separateCursor: true,
+              cursorClicks: true,
+              cursorShapes: true,
+            },
+          };
+        }
+        if (command === 'prepare') {
+          prepareAttempts += 1;
+          if (prepareAttempts === 1) {
+            const error = new Error(`Portal preparation returned ${code}`);
+            error.code = code;
+            throw error;
+          }
+          return { state: 'armed', sessionId: `session-${code}` };
+        }
+        throw new Error(`unexpected capture command: ${command}`);
+      },
+    };
+
+    registerCaptureIpc({
+      ipcMain,
+      desktopCapturer: {},
+      screen: {},
+      captureEngine,
+      app: {},
+      userPaths: { projects: 'recordings', studioProjects: 'recordings/studio' },
+      trackStorages: [],
+      platform: 'linux',
+    });
+
+    const request = handlers.get('capture:request');
+    const options = { screenKind: 'display', screenId: 'portal:monitor' };
+    assert.equal(await request({}, 'prepare-default-recording', { options }), null);
+
+    const retried = await request({}, 'prepare-default-recording', { options });
+    assert.equal(retried.state, 'armed');
+    assert.equal(retried.sessionId, `session-${code}`);
+    assert.deepEqual(
+      requests.map(({ command }) => command),
+      ['discover', 'prepare', 'discover', 'prepare'],
+    );
+  });
+}
+
+test('does not treat cancellation-like preparation error text as a dismissed Portal', async () => {
+  const handlers = new Map();
+  const requests = [];
+  let prepareAttempts = 0;
+  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const captureEngine = {
+    canCleanup: () => true,
+    request: async (command, payload) => {
+      requests.push({ command, payload });
+      if (command === 'discover') {
+        return {
+          sources: [],
+          capabilities: {
+            separateCursor: true,
+            cursorClicks: true,
+            cursorShapes: true,
+          },
+        };
+      }
+      if (command === 'prepare') {
+        prepareAttempts += 1;
+        if (prepareAttempts === 1) throw new Error('Portal cancellation was denied by the capture engine.');
+        return { state: 'armed', sessionId: 'session-retry' };
+      }
+      throw new Error(`unexpected capture command: ${command}`);
+    },
+  };
+
+  registerCaptureIpc({
+    ipcMain,
+    desktopCapturer: {},
+    screen: {},
+    captureEngine,
+    app: {},
+    userPaths: { projects: 'recordings', studioProjects: 'recordings/studio' },
+    trackStorages: [],
+    platform: 'linux',
+  });
+
+  const request = handlers.get('capture:request');
+  const options = { screenKind: 'display', screenId: 'portal:monitor' };
+  await assert.rejects(
+    request({}, 'prepare-default-recording', { options }),
+    /capture-engine a échoué pour "prepare": Portal cancellation was denied/,
+  );
+
+  const retried = await request({}, 'prepare-default-recording', { options });
+  assert.equal(retried.sessionId, 'session-retry');
+  assert.deepEqual(
+    requests.map(({ command }) => command),
+    ['discover', 'prepare', 'discover', 'prepare'],
+  );
+});
+
 test('does not prepare the Linux Portal during discovery/previews and starts it once after the user request', async () => {
   const handlers = new Map();
   const requests = [];
@@ -530,6 +730,7 @@ test('does not prepare the Linux Portal during discovery/previews and starts it 
   const session = { state: 'recording', sessionId: 'session-portal-1' };
   const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
   const captureEngine = {
+    canCleanup: () => true,
     request: async (command, payload) => {
       requests.push({ command, payload });
       if (command === 'discover') return catalog;

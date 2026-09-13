@@ -104,6 +104,7 @@ test('disables the dev Electron sandbox when GNOME launches a shortcut', async (
 
   await source.register({ shortcuts: { 'hud.startStopRecording': { keys: 'Alt+Shift+R', scope: 'global' } } });
   const command = fake.calls.find(({ args }) => args[0] === 'set' && args[2] === 'command').args[3];
+  assert.match(command, /BEAM_DEVELOPMENT_INSTANCE=1/);
   assert.match(command, /opt\/electron/);
   assert.match(command, /--no-sandbox/);
   assert.match(command, /home\/beam/);

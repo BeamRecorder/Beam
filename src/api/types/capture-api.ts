@@ -1,3 +1,8 @@
+import type { InputAccessStatus } from './input-access';
+export type { InputAccessStatus } from './input-access';
+import type { ScreenshotApi } from './screenshot';
+import type { TranscriptExportRequest, TranscriptExportResult } from './transcript';
+import type { PresetKind } from './capture-mode';
 import type { CaptureConfig, CreateProjectOptions, StartRecordingOptions } from './capture-config';
 import type {
   ScreenRegion,
@@ -18,6 +23,7 @@ import type { CursorPresentationSettings } from './cursor-presentation';
 import type { CursorPackDescriptor, CursorPackImportResult } from './cursor-pack';
 import type {
   TeleprompterDocument,
+  TeleprompterViewState,
   TeleprompterSessionContext,
 } from '../../components/hud/teleprompter/teleprompter-types';
 import type { RecordingBarVisibility } from '../../components/hud/recorder/recording-types';
@@ -35,6 +41,8 @@ import type {
   CameraRecordingControlResult,
   CameraRecordingFailure,
 } from './camera-recording';
+import type { EditorPresetDocument, EditorPresetSettings } from './editor-preset';
+import type { QuickSnipApi } from './quick-snip-api';
 
 export type * from './capture-config';
 export type * from './screen-region';
@@ -42,6 +50,8 @@ export type * from './capture-session';
 export type * from './editor-window';
 export type * from './cursor-pack';
 export type * from '~/types/appearance';
+export type * from './editor-preset';
+export type * from './quick-snip';
 
 export interface ImportedFont {
   id: string;
@@ -60,7 +70,7 @@ export interface CaptureApi {
   requestInputAccess(): Promise<InputAccessStatus>;
   formats(sourceId: string): Promise<unknown>;
   prepare(config: CaptureConfig): Promise<CaptureSession>;
-  prepareRecording(options?: StartRecordingOptions): Promise<CaptureSession>;
+  prepareRecording(options?: StartRecordingOptions): Promise<CaptureSession | null>;
   startPreparedRecording(): Promise<CaptureSession>;
   stopNativeRecording(): Promise<CaptureSession>;
   completeNativeRecording(): Promise<CaptureSession>;
@@ -78,7 +88,7 @@ export interface CaptureApi {
   getSourcePreview(request: CaptureSourcePreviewRequest): Promise<CaptureSourcePreview>;
 }
 
-export interface DesktopCaptureApi extends CaptureApi {
+export interface DesktopCaptureApi extends CaptureApi, ScreenshotApi, QuickSnipApi {
   close(): void;
   quit(): void;
   minimize(): void;
@@ -89,7 +99,11 @@ export interface DesktopCaptureApi extends CaptureApi {
     quit?: string;
     tooltip?: string;
     recording?: boolean;
+    quickSnip?: string;
+    startQuickSnip?: string;
+    stopQuickSnip?: string;
   }): void;
+  setNormalRecordingActive(active: boolean): void;
   onTrayStopRecording?(listener: () => void): () => void;
   setWindowMode(mode: 'hud' | 'recorder'): void;
   showHud(): void;
@@ -97,11 +111,11 @@ export interface DesktopCaptureApi extends CaptureApi {
   openRecorderFromEditor(): Promise<boolean>;
   dismissRecorderLauncher(): Promise<boolean>;
   setRecorderLauncherActive(active: boolean): void;
-  getEditorContext(): Promise<{ projectId: string } | null>;
+  getEditorContext(): Promise<{ projectId: string; kind?: 'screenshot' } | null>;
   notifyEditorReady(): void;
   reportEditorLoadingStage(stage: EditorLoadingStage): void;
   setEditorTitlebarTheme(dark: boolean): void;
-  onEditorContext(listener: (context: { projectId: string }) => void): () => void;
+  onEditorContext(listener: (context: { projectId: string; kind?: 'screenshot' }) => void): () => void;
   onEditorLoadingProgress(listener: (progress: EditorLoadingProgress) => void): () => void;
   onRecorderLauncherContext(listener: (context: RecorderLauncherContext | null) => void): () => void;
   setPosition(x: number, y: number): void;
@@ -121,6 +135,7 @@ export interface DesktopCaptureApi extends CaptureApi {
     listener: (options: ScreenRegionOverlayOptions & { mode?: 'select' | 'record' }) => void,
   ): () => void;
   confirmScreenRegion(region: ScreenRegion): void;
+  updateScreenRegion(region: ScreenRegion): void;
   cancelScreenRegion(): void;
   getWindowBounds(): Promise<{ x: number; y: number; width: number; height: number } | null>;
   getPreferences(): Promise<PreferenceSettings>;
@@ -128,10 +143,21 @@ export interface DesktopCaptureApi extends CaptureApi {
   resetPreferences(keys?: Array<keyof PreferenceSettings>): Promise<PreferenceSettings>;
   onPreferencesChanged(listener: (preferences: PreferenceSettings) => void): () => void;
   onPreferenceShortcut(listener: (id: string) => void): () => void;
+  getEditorPresets(kind?: PresetKind): Promise<EditorPresetDocument>;
+  createEditorPreset(name: string, kind?: PresetKind): Promise<EditorPresetDocument>;
+  renameEditorPreset(id: string, name: string, kind?: PresetKind): Promise<EditorPresetDocument>;
+  deleteEditorPreset(id: string, kind?: PresetKind): Promise<EditorPresetDocument>;
+  selectEditorPreset(id: string, kind?: PresetKind): Promise<EditorPresetDocument>;
+  updateEditorPreset(id: string, settings: EditorPresetSettings, kind?: PresetKind): Promise<EditorPresetDocument>;
+  updateActiveEditorPreset(settings: EditorPresetSettings, kind?: PresetKind): Promise<EditorPresetDocument>;
+  onEditorPresetsChanged(listener: (document: EditorPresetDocument) => void, kind?: PresetKind): () => void;
   showTeleprompter(): void;
   hideTeleprompter(): void;
   toggleTeleprompterVisibility(): void;
   setTeleprompterSession(context: TeleprompterSessionContext | null): void;
+  getTeleprompterResumeState(): Promise<TeleprompterViewState | null>;
+  onTeleprompterSuspend(listener: (requestId: string) => void): () => void;
+  acknowledgeTeleprompterSuspend(requestId: string, state: TeleprompterViewState): void;
   notifyTeleprompterReady?: () => void;
   onTeleprompterShortcut(listener: (id: string) => void): () => void;
   onTeleprompterSession(listener: (context: TeleprompterSessionContext | null) => void): () => void;
@@ -143,6 +169,7 @@ export interface DesktopCaptureApi extends CaptureApi {
   ): Promise<TeleprompterDocument>;
   getSessionTeleprompter(projectId: string, sessionId: string): Promise<TeleprompterDocument | null>;
   listProjects(): Promise<CaptureProject[]>;
+  getProject(projectId: string): Promise<CaptureProject>;
   projectMediaUrl(source: string): Promise<string | null>;
   getProjectEditorData(projectId: string): Promise<ProjectEditorData | null>;
   getProjectEditorState(projectId: string): Promise<ProjectEditorState>;
@@ -164,13 +191,14 @@ export interface DesktopCaptureApi extends CaptureApi {
   onCursorPacksChanged(listener: () => void): () => void;
   openCursorPackDiscovery(): Promise<void>;
   createProject(options?: CreateProjectOptions): Promise<CaptureProject>;
-  renameProject(projectId: string, name: string): Promise<CaptureProject>;
-  deleteProject(projectId: string): Promise<void>;
-  revealProject(projectId: string): Promise<boolean>;
+  renameProject(projectId: string, name: string, mode?: import('./capture-mode').CaptureMode): Promise<CaptureProject>;
+  deleteProject(projectId: string, mode?: import('./capture-mode').CaptureMode): Promise<void>;
+  revealProject(projectId: string, mode?: import('./capture-mode').CaptureMode): Promise<boolean>;
   saveProjectThumbnail(projectId: string, dataUrl: string): Promise<string | null>;
   whisperModels(): Promise<
     Array<{ id: string; status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>
   >;
+  exportTranscript(request: TranscriptExportRequest): Promise<TranscriptExportResult>;
   downloadWhisperModel(
     modelId: string,
   ): Promise<{ id: string; status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>;
@@ -247,17 +275,6 @@ export interface AppUpdateState {
   availableVersion: string | null;
   percent: number | null;
   message: string | null;
-}
-
-export interface InputAccessStatus {
-  state: 'available' | 'permission-required' | 'installation-required' | 'unavailable' | 'denied';
-  canRequest: boolean;
-  clicks: boolean;
-  shortcuts: boolean;
-  recordsText: false;
-  unavailableReason?: 'input-helper-unavailable' | 'polkit-unavailable' | 'input-broker-unavailable';
-  mouseDevices?: number;
-  keyboardDevices?: number;
 }
 
 export interface PreferenceShortcut {

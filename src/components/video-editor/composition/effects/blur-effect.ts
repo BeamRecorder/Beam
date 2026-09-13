@@ -1,29 +1,9 @@
 import type { BlurClip } from '~/media/shared/composition-types';
 import type { Canvas2DContext } from '~/types/canvas';
 
-export interface EffectRect {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-export interface BlurEffectOptions {
-  bounds?: EffectRect;
-  maskPath?: (context: Canvas2DContext, rect: EffectRect) => void;
-}
-
-type ScratchCanvas = HTMLCanvasElement | OffscreenCanvas;
-interface ScratchSurface {
-  canvas: ScratchCanvas;
-  context: Canvas2DContext;
-}
-interface ScratchPool {
-  source: ScratchSurface;
-  effect: ScratchSurface;
-  mask: ScratchSurface;
-  pixel: ScratchSurface;
-}
+import type { EffectRect, BlurEffectOptions, ScratchCanvas, ScratchSurface, ScratchPool } from './effect-types';
+import { effectShapeRect, appendEffectShape } from './effect-shape';
+import { applyHighlightEffect } from './highlight-effect';
 
 const scratchPools = new WeakMap<Canvas2DContext, ScratchPool>();
 
@@ -64,28 +44,6 @@ const scratchPoolFor = (ctx: Canvas2DContext): ScratchPool => {
     scratchPools.set(ctx, pool);
   }
   return pool;
-};
-
-export const effectShapeRect = (shape: BlurClip['shape'], rect: EffectRect): EffectRect => {
-  if (shape === 'rectangle') return rect;
-  const size = Math.min(rect.width, rect.height);
-  return {
-    x: rect.x + (rect.width - size) / 2,
-    y: rect.y + (rect.height - size) / 2,
-    width: size,
-    height: size,
-  };
-};
-
-const shapePath = (ctx: Canvas2DContext, clip: BlurClip, rect: EffectRect) => {
-  const target = effectShapeRect(clip.shape, rect);
-  ctx.beginPath();
-  if (clip.shape === 'circle')
-    ctx.arc(target.x + target.width / 2, target.y + target.height / 2, target.width / 2, 0, Math.PI * 2);
-  else if ((clip.cornerRadius ?? 0) > 0) {
-    const radius = (Math.min(target.width, target.height) * (clip.cornerRadius ?? 0)) / 200;
-    ctx.roundRect(target.x, target.y, target.width, target.height, radius);
-  } else ctx.rect(target.x, target.y, target.width, target.height);
 };
 
 const deviceRect = (ctx: Canvas2DContext, rect: EffectRect): EffectRect => {
@@ -174,7 +132,10 @@ const applyShapeMask = (
   pool.mask.context.filter = featherPixels > 0 ? `blur(${featherPixels}px)` : 'none';
   pool.mask.context.fillStyle = '#ffffff';
   if (maskPath) maskPath(pool.mask.context, rect);
-  else shapePath(pool.mask.context, clip, rect);
+  else {
+    pool.mask.context.beginPath();
+    appendEffectShape(pool.mask.context, clip, rect);
+  }
   pool.mask.context.fill();
   pool.mask.context.filter = 'none';
   pool.effect.context.globalCompositeOperation = 'destination-in';
@@ -189,6 +150,7 @@ export function applyBlurEffect(
   options: BlurEffectOptions = {},
 ): void {
   if (!ctx.canvas.width || !ctx.canvas.height || rect.width <= 0 || rect.height <= 0) return;
+  if (clip.mode === 'highlight') return applyHighlightEffect(ctx, clip, rect);
   if (clip.mode === 'blur' && clip.strength <= 0) return;
   const target = deviceRect(ctx, effectShapeRect(clip.shape, options.bounds ?? rect));
   const maskTarget = options.maskPath ? deviceRect(ctx, rect) : target;
@@ -208,7 +170,7 @@ export function applyBlurEffect(
   growSurface(pool.effect, width, height);
   growSurface(pool.mask, width, height);
   prepareSurface(pool.source);
-  pool.source.context.drawImage(ctx.canvas, left, top, width, height, 0, 0, width, height);
+  pool.source.context.drawImage(options.source ?? ctx.canvas, left, top, width, height, 0, 0, width, height);
   prepareSurface(pool.effect);
 
   const localTarget = { ...target, x: target.x - left, y: target.y - top };

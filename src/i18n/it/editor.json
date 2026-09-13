@@ -73,7 +73,9 @@
     "teleprompterPreviousLine": "Riga precedente",
     "teleprompterPreviousLineDesc": "Torna alla riga precedente del teleprompter",
     "conflictWith": "In conflitto con “{name}”",
-    "failedToUpdate": "Impossibile aggiornare la scorciatoia"
+    "failedToUpdate": "Impossibile aggiornare la scorciatoia",
+    "quickSnip": "Quick Snip",
+    "quickSnipDesc": "Apri, avvia o interrompi Quick Snip in base al suo stato attuale."
   },
   "SidebarPanel": {
     "canvas": "Canvas",
@@ -86,7 +88,8 @@
     "audio": "Audio",
     "media": "Media",
     "settings": "Impostazioni",
-    "logo": "Logo"
+    "logo": "Logo",
+    "elements": "Elementi"
   },
   "Socials": {
     "title": "Social",

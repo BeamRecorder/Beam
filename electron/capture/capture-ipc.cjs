@@ -2,6 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
 const { buildDefaultCaptureConfig } = require('./capture-config.cjs');
+const { createSystemAudioPreview } = require('./system-audio-preview.cjs');
+const { isCaptureCancellation } = require('./capture-cancellation.cjs');
 const { createSourcePreviewService } = require('./source-preview-service.cjs');
 
 const ALLOWED_COMMANDS = new Set([
@@ -63,11 +65,11 @@ function registerCaptureIpc({
   BrowserWindow,
   screen,
   captureEngine,
-  app,
   userPaths,
   trackStorages,
   platform = process.platform,
   canAcceptWork = () => true,
+  canStartRecording = () => true,
 }) {
   const registerSession = (session) => {
     for (const storage of trackStorages) storage.registerSession(session);
@@ -75,19 +77,30 @@ function registerCaptureIpc({
   };
   const completeSession = (session) => trackStorages.reduce((value, storage) => storage.complete(value), session);
   let deferredStoppedSession = null;
+  let systemAudioPreview;
   const requestEngine = async (command, payload = {}) => {
+    if (command === 'prepare') systemAudioPreview?.invalidate();
     try {
       // A poisoned engine respawns a fresh process on its next request; the
       // previous (timed out) session is gone and must not be completed.
       return await captureEngine.request(command, payload);
     } catch (error) {
-      if (captureEngine.isPoisoned) deferredStoppedSession = null;
+      if (captureEngine.isPoisoned) {
+        deferredStoppedSession = null;
+        systemAudioPreview?.invalidate();
+      }
       const message = error instanceof Error ? error.message : String(error);
       const wrapped = new Error(`capture-engine a échoué pour "${command}": ${message}`);
       wrapped.code = error?.code || 'capture-engine-error';
       throw wrapped;
     }
   };
+  if (platform === 'linux')
+    systemAudioPreview = createSystemAudioPreview({
+      request: requestEngine,
+      canStart: canAcceptWork,
+      canCleanup: () => canAcceptWork() && captureEngine.canCleanup(),
+    });
   const sourcePreviews = createSourcePreviewService({ requestNative: requestEngine, platform });
   let pendingDefaultPreparation = null;
   const prepareDefaultRecording = (options) => {
@@ -101,10 +114,15 @@ function registerCaptureIpc({
       const catalog = await requestEngine('discover');
       const config = buildDefaultCaptureConfig(catalog, options || {}, {
         platform,
-        defaultOutputRoot: userPaths.projects,
+        defaultOutputRoot: userPaths.studioProjects,
         excludedProcessId: process.pid,
       });
-      return withProjectId(await requestEngine('prepare', { config }));
+      try {
+        return withProjectId(await requestEngine('prepare', { config }));
+      } catch (error) {
+        if (isCaptureCancellation(error)) return null;
+        throw error;
+      }
     })();
     const preparation = { key, promise };
     pendingDefaultPreparation = preparation;
@@ -114,17 +132,30 @@ function registerCaptureIpc({
     void promise.then(clearPreparation, clearPreparation);
     return promise;
   };
-  ipcMain.handle('capture:request', async (_event, command, payload = {}) => {
+  ipcMain.handle('capture:request', async (event, command, payload = {}) => {
     if (!canAcceptWork()) {
       const error = new Error(`capture command "${command}" rejected during application shutdown`);
       error.code = 'application-shutting-down';
       throw error;
     }
+    if (systemAudioPreview) {
+      if (command === 'start-system-audio-preview') return systemAudioPreview.start(event.sender);
+      if (command === 'stop-system-audio-preview') return systemAudioPreview.stop(event.sender);
+      if (command === 'system-audio-preview-level') return systemAudioPreview.level(event.sender);
+    }
+    if (
+      ['start-default-recording', 'prepare-default-recording', 'start-recording', 'prepare', 'start'].includes(
+        command,
+      ) &&
+      !canStartRecording(event)
+    ) {
+      throw new Error('A Quick Snip capture is already active.');
+    }
     if (command === 'start-default-recording') {
       const catalog = await requestEngine('discover');
       const config = buildDefaultCaptureConfig(catalog, payload.options || {}, {
         platform,
-        defaultOutputRoot: userPaths.projects,
+        defaultOutputRoot: userPaths.studioProjects,
         excludedProcessId: process.pid,
       });
       await requestEngine('prepare', { config });

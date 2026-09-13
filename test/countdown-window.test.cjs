@@ -3,41 +3,74 @@ const Module = require('node:module');
 const path = require('node:path');
 const test = require('node:test');
 
-function loadCountdownWindow({ platform, environment, workArea = { x: 0, y: 0, width: 1_000, height: 800 } }) {
+function loadCountdownWindow({
+  platform,
+  environment,
+  isPackaged = false,
+  loadResultForWindow = () => undefined,
+  workArea = { x: 0, y: 0, width: 1_000, height: 800 },
+}) {
   const calls = [];
   const screenCalls = [];
-  let finishLoad;
-  let failLoad;
-  let destroyed = false;
+  const windows = [];
 
-  const window = {
-    webContents: {
-      once: (event, listener) => {
-        if (event === 'did-finish-load') finishLoad = listener;
-        if (event === 'did-fail-load') failLoad = listener;
+  const createWindow = () => {
+    const contentListeners = new Map();
+    const addContentListener = (event, listener, once) => {
+      const listeners = contentListeners.get(event) ?? [];
+      listeners.push({ listener, once });
+      contentListeners.set(event, listeners);
+    };
+    const windowCalls = [];
+    let destroyed = false;
+    const record = (call) => {
+      calls.push(call);
+      windowCalls.push(call);
+    };
+    const window = {
+      webContents: {
+        on: (event, listener) => addContentListener(event, listener, false),
+        once: (event, listener) => addContentListener(event, listener, true),
+        send: (...args) => record(['send', ...args]),
       },
-      send: (...args) => calls.push(['send', ...args]),
-    },
-    isDestroyed: () => destroyed,
-    setIgnoreMouseEvents: (value) => calls.push(['mouse', value]),
-    setPosition: (...args) => calls.push(['position', ...args]),
-    show: () => calls.push(['show']),
-    showInactive: () => calls.push(['showInactive']),
-    moveTop: () => calls.push(['top']),
-    hide: () => calls.push(['hide']),
-    destroy: () => {
-      destroyed = true;
-      calls.push(['destroy']);
-    },
-    loadURL: (url) => calls.push(['loadURL', url]),
-    loadFile: (...args) => calls.push(['loadFile', ...args]),
+      calls: windowCalls,
+      emitContent: (event, ...args) => {
+        const listeners = contentListeners.get(event) ?? [];
+        contentListeners.set(
+          event,
+          listeners.filter(({ once }) => !once),
+        );
+        for (const { listener } of listeners) listener(...args);
+      },
+      isDestroyed: () => destroyed,
+      setIgnoreMouseEvents: (value) => record(['mouse', value]),
+      setPosition: (...args) => record(['position', ...args]),
+      show: () => record(['show']),
+      showInactive: () => record(['showInactive']),
+      moveTop: () => record(['top']),
+      hide: () => record(['hide']),
+      destroy: () => {
+        destroyed = true;
+        record(['destroy']);
+      },
+      loadURL: (url) => {
+        record(['loadURL', url]);
+        return loadResultForWindow(windows.indexOf(window));
+      },
+      loadFile: (...args) => {
+        record(['loadFile', ...args]);
+        return loadResultForWindow(windows.indexOf(window));
+      },
+    };
+    windows.push(window);
+    return window;
   };
 
   const electron = {
     BrowserWindow: class {
       constructor(options) {
         calls.push(['constructor', options]);
-        return window;
+        return createWindow();
       }
     },
     screen: {
@@ -63,15 +96,148 @@ function loadCountdownWindow({ platform, environment, workArea = { x: 0, y: 0, w
     const { createCountdownWindow } = require(modulePath);
     const overlay = createCountdownWindow({
       applicationRoot: '/app',
-      isPackaged: false,
+      isPackaged,
       platform,
       environment,
     });
-    return { calls, screenCalls, window, overlay, finishLoad: () => finishLoad(), failLoad: () => failLoad() };
+    return {
+      calls,
+      screenCalls,
+      windows,
+      window: windows[0],
+      overlay,
+      finishLoad: (index = 0) => windows[index].emitContent('did-finish-load'),
+      failLoad: (index = 0, { code = -2, isMainFrame = true } = {}) =>
+        windows[index].emitContent(
+          'did-fail-load',
+          {},
+          code,
+          'load failed',
+          'http://localhost:6500/countdown.html',
+          isMainFrame,
+        ),
+    };
   } finally {
     Module._load = originalLoad;
   }
 }
+
+test('prewarms the dedicated countdown renderer in development and packaged builds', async () => {
+  for (const isPackaged of [false, true]) {
+    const fixture = loadCountdownWindow({ platform: 'linux', environment: {}, isPackaged });
+    const expected = isPackaged
+      ? ['loadFile', path.join('/app', 'dist/countdown.html')]
+      : ['loadURL', 'http://localhost:6500/countdown.html'];
+    assert.deepEqual(
+      fixture.calls.find(([name]) => name.startsWith('load')),
+      expected,
+    );
+    const ready = fixture.overlay.prepare();
+    fixture.overlay.show(3);
+    fixture.overlay.show(2);
+    fixture.finishLoad();
+    await ready;
+    assert.deepEqual(
+      fixture.calls.filter(([name]) => name === 'send'),
+      [['send', 'countdown:state', 2]],
+    );
+    fixture.overlay.destroy();
+  }
+});
+
+test('suspend clears a queued countdown and ignores readiness from the destroyed renderer after recreation', async () => {
+  const fixture = loadCountdownWindow({ platform: 'linux', environment: { XDG_SESSION_TYPE: 'x11' } });
+  const firstReady = fixture.overlay.prepare();
+  firstReady.catch(() => undefined);
+  fixture.overlay.show(3);
+
+  await fixture.overlay.suspend();
+  assert.equal(fixture.windows[0].isDestroyed(), true);
+  assert.ok(fixture.windows[0].calls.some(([name]) => name === 'destroy'));
+
+  const secondReady = fixture.overlay.prepare();
+  assert.equal(fixture.windows.length, 2);
+  fixture.finishLoad(0);
+  await Promise.resolve();
+  assert.equal(
+    fixture.windows[1].calls.some(([name]) => ['show', 'showInactive', 'top'].includes(name)),
+    false,
+    'a stale load callback must not reveal or raise the replacement window',
+  );
+  assert.equal(
+    fixture.windows[1].calls.some(([name, channel]) => name === 'send' && channel === 'countdown:state'),
+    false,
+    'the queued countdown must not cross the suspend boundary',
+  );
+
+  fixture.finishLoad(1);
+  await secondReady;
+  assert.equal(
+    fixture.windows[1].calls.some(([name]) => ['show', 'showInactive', 'top'].includes(name)),
+    false,
+    'prepare recreates a hidden window without presenting it',
+  );
+  fixture.overlay.show(2);
+  assert.ok(
+    fixture.windows[1].calls.some(
+      ([name, channel, seconds]) => name === 'send' && channel === 'countdown:state' && seconds === 2,
+    ),
+  );
+  await fixture.overlay.suspend();
+});
+
+test('ignores aborted and subframe loads, then fails the main load and recreates for a retry', async () => {
+  const fixture = loadCountdownWindow({ platform: 'linux', environment: { XDG_SESSION_TYPE: 'x11' } });
+  const firstReady = fixture.overlay.prepare();
+  fixture.overlay.show(3);
+
+  fixture.failLoad(0, { code: -3, isMainFrame: true });
+  fixture.failLoad(0, { code: -2, isMainFrame: false });
+  await Promise.resolve();
+  assert.equal(fixture.windows[0].isDestroyed(), false);
+
+  fixture.failLoad(0, { code: -2, isMainFrame: true });
+  assert.equal(await firstReady, false);
+  assert.equal(fixture.windows[0].isDestroyed(), true);
+
+  const retryReady = fixture.overlay.prepare();
+  assert.equal(fixture.windows.length, 2);
+  fixture.finishLoad(0);
+  await Promise.resolve();
+  assert.equal(fixture.windows[1].isDestroyed(), false, 'stale load events must not destroy the retry');
+  fixture.finishLoad(1);
+  assert.equal(await retryReady, true);
+  assert.equal(
+    fixture.windows[1].calls.some(([name]) => name === 'send'),
+    false,
+    'failed queued seconds are cleared',
+  );
+
+  fixture.overlay.show(2);
+  assert.ok(
+    fixture.windows[1].calls.some(
+      ([name, channel, value]) => name === 'send' && channel === 'countdown:state' && value === 2,
+    ),
+  );
+  await fixture.overlay.suspend();
+});
+
+test('recreates the countdown after its navigation promise rejects', async () => {
+  const fixture = loadCountdownWindow({
+    platform: 'linux',
+    environment: {},
+    loadResultForWindow: (index) => (index === 0 ? Promise.reject(new Error('navigation failed')) : undefined),
+  });
+  const failedReady = fixture.overlay.prepare();
+  assert.equal(await failedReady, false);
+  assert.equal(fixture.windows[0].isDestroyed(), true);
+
+  const retryReady = fixture.overlay.prepare();
+  fixture.finishLoad(1);
+  assert.equal(await retryReady, true);
+  assert.equal(fixture.windows[1].isDestroyed(), false);
+  await fixture.overlay.suspend();
+});
 
 test('Wayland presents the countdown without unsupported global window operations', () => {
   const fixture = loadCountdownWindow({

@@ -2,7 +2,6 @@
 import { computed, nextTick, onUnmounted, ref, watch, type CSSProperties } from 'vue';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
 import type { BackgroundValue } from './composables/backgroundCatalog';
-import { decodeVideoPoster } from '~/media/playback';
 import { mediaSourceDescriptor, type MediaFrame } from '~/media/shared';
 import type { MediaAsset } from '~/media/shared/composition-types';
 
@@ -72,6 +71,8 @@ watch(
       origin: 'project',
     };
     try {
+      const { decodeVideoPoster } = await import('~/media/playback');
+      if (version !== loadVersion) return;
       const frame = await decodeVideoPoster(mediaSourceDescriptor(asset), { position: 0.5, width: 640 });
       if (version !== loadVersion) {
         frame.close();

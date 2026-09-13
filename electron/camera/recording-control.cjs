@@ -67,9 +67,16 @@ function validateControl(value) {
   return value;
 }
 
-function createCameraRecordingControl({ ipcMain, cameraOverlay, hudWebContents, timeoutMs = 30_000 }) {
+function createCameraRecordingControl({
+  ipcMain,
+  cameraOverlay,
+  hudWebContents,
+  isRecordingOwner = (sender) => sender === hudWebContents,
+  timeoutMs = 30_000,
+}) {
   const pending = new Map();
   let activeRecordingId = null;
+  let activeOwner = null;
   let activeSessionId = null;
   let activePhase = 'idle';
 
@@ -92,11 +99,13 @@ function createCameraRecordingControl({ ipcMain, cameraOverlay, hudWebContents, 
     });
 
   ipcMain.handle('camera-overlay:recording-control', async (event, rawControl) => {
-    if (event.sender !== hudWebContents) throw new Error('Camera recording commands are restricted to the HUD.');
+    if (!isRecordingOwner(event.sender)) throw new Error('Camera recording commands are restricted to the recorder.');
+    if (activeOwner && activeOwner !== event.sender) throw new Error('Camera recording belongs to another recorder.');
     const control = validateControl(rawControl);
     const preparing = control.action === 'prepare';
     if (preparing) {
       if (activeRecordingId) throw new Error('Another camera recording is already active.');
+      activeOwner = event.sender;
       activeRecordingId = crypto.randomUUID();
       activeSessionId = null;
       activePhase = 'preparing';
@@ -132,12 +141,14 @@ function createCameraRecordingControl({ ipcMain, cameraOverlay, hudWebContents, 
       return result;
     } catch (error) {
       if (preparing) {
+        activeOwner = null;
         activeRecordingId = null;
         activePhase = 'idle';
       }
       throw error;
     } finally {
       if (control.action === 'stop' || control.action === 'fail') {
+        activeOwner = null;
         activeRecordingId = null;
         activeSessionId = null;
         activePhase = 'idle';
@@ -168,22 +179,28 @@ function createCameraRecordingControl({ ipcMain, cameraOverlay, hudWebContents, 
       typeof failure.message !== 'string'
     )
       return;
-    hudWebContents.send('camera-overlay:recording-failure', {
-      recordingId: activeRecordingId,
-      message: failure.message.slice(0, 500),
-    });
-    activeRecordingId = null;
-    activeSessionId = null;
-    activePhase = 'idle';
+    try {
+      if (activeOwner && !activeOwner.isDestroyed?.())
+        activeOwner.send('camera-overlay:recording-failure', {
+          recordingId: activeRecordingId,
+          message: failure.message.slice(0, 500),
+        });
+    } finally {
+      activeOwner = null;
+      activeRecordingId = null;
+      activeSessionId = null;
+      activePhase = 'idle';
+    }
   });
 
   return (reason = 'Camera recording control was closed.') => {
-    if (activeRecordingId && (typeof hudWebContents.isDestroyed !== 'function' || !hudWebContents.isDestroyed())) {
-      hudWebContents.send('camera-overlay:recording-failure', {
+    if (activeRecordingId && activeOwner && !activeOwner.isDestroyed?.()) {
+      activeOwner?.send('camera-overlay:recording-failure', {
         recordingId: activeRecordingId,
         message: reason.slice(0, 500),
       });
     }
+    activeOwner = null;
     activeRecordingId = null;
     activeSessionId = null;
     activePhase = 'idle';

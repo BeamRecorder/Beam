@@ -2,7 +2,14 @@ import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { capture } = vi.hoisted(() => ({
-  capture: { onTeleprompterSession: vi.fn(), onTeleprompterShortcut: vi.fn(), notifyTeleprompterReady: vi.fn() },
+  capture: {
+    onTeleprompterSession: vi.fn(),
+    onTeleprompterShortcut: vi.fn(),
+    getTeleprompterResumeState: vi.fn().mockResolvedValue(null),
+    onTeleprompterSuspend: vi.fn(),
+    acknowledgeTeleprompterSuspend: vi.fn(),
+    notifyTeleprompterReady: vi.fn(),
+  },
 }));
 vi.mock('~/api/capture', () => ({ capture }));
 
@@ -42,7 +49,7 @@ describe('TeleprompterWindowApp', () => {
     });
     expect(shortcutEvent).toHaveBeenCalledOnce();
     expect((shortcutEvent.mock.calls[0][0] as CustomEvent).detail).toBe('toggleVisibility');
-    expect(capture.notifyTeleprompterReady).toHaveBeenCalledOnce();
+    expect(capture.notifyTeleprompterReady).not.toHaveBeenCalled();
     wrapper.unmount();
     expect(stopSession).toHaveBeenCalledOnce();
     expect(stopShortcut).toHaveBeenCalledOnce();

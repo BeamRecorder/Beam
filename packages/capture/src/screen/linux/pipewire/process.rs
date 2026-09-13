@@ -49,6 +49,7 @@ pub(super) struct ProcessState {
     pub timestamp: TimestampMapper,
     pub start_gate: Arc<StartGate>,
     pub active: bool,
+    pub start_reply: Option<mpsc::SyncSender<Result<(), CaptureError>>>,
     pub stopping: bool,
     pub clock: Instant,
     pub sink: Sender<SinkMessage>,
@@ -261,21 +262,39 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
     if has_cursor {
         try_cursor_sample(&mut state, timestamp.session_ns, sample_cursor.clone());
     }
-    let native_pts = timestamp.native_pts_ns;
     let sample = OwnedScreenSample {
         frame,
         timestamp,
         sequence: header.sequence,
         cursor: CursorSampleState::Unknown,
     };
+    enqueue_video_sample(&mut state, sample, has_cursor);
+}
+
+pub(super) fn enqueue_video_sample(
+    state: &mut ProcessState,
+    sample: OwnedScreenSample,
+    has_cursor: bool,
+) {
+    let native_pts = sample.timestamp.native_pts_ns;
     match state.sink.try_send(SinkMessage::Sample(sample)) {
-        Ok(()) => state.metrics.received_frame(native_pts, has_cursor),
+        Ok(()) => {
+            state.metrics.received_frame(native_pts, has_cursor);
+            // Format and this first usable image now precede any Stop in the
+            // sink queue. Only now may the session advertise Recording.
+            if let Some(reply) = state.start_reply.take() {
+                let _ = reply.send(Ok(()));
+            }
+        }
         Err(TrySendError::Full(_)) => {
             state.metrics.dropped_frames(1);
             state.pending_drops = state.pending_drops.saturating_add(1);
         }
         Err(TrySendError::Disconnected(_)) => {
             set_fatal(&state.fatal, sink_error("screen sink channel disconnected"));
+            if let Some(reply) = state.start_reply.take() {
+                let _ = reply.send(Err(sink_error("screen sink channel disconnected")));
+            }
         }
     }
 }

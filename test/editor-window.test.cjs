@@ -4,7 +4,7 @@ const test = require('node:test');
 
 const projectId = '11111111-1111-4111-8111-111111111111';
 
-function fakeWindow(calls, options = {}) {
+function fakeWindow(calls, options = {}, loadPromise = () => undefined) {
   const listeners = new Map();
   const contentListeners = new Map();
   let destroyed = false;
@@ -91,7 +91,10 @@ function fakeWindow(calls, options = {}) {
       emitContent('destroyed');
       listeners.get('closed')?.();
     },
-    loadURL: (url) => calls.push(['loadURL', url]),
+    loadURL: (url) => {
+      calls.push(['loadURL', url]);
+      return loadPromise(url);
+    },
     loadFile: (...args) => calls.push(['loadFile', ...args]),
     setBackgroundColor: (color) => calls.push(['background', color]),
     setTitleBarOverlay: (options) => calls.push(['overlay', options]),
@@ -153,6 +156,16 @@ test('editor window is opaque and routes native editor lifecycle without changin
       on: (channel, listener) => ipcListeners.set(channel, listener),
     };
     const registered = [];
+    const hudAuxiliaryWindows = ['countdown', 'teleprompter'].map((name) => ({
+      prepare: () => {
+        calls.push(['aux-prepare', name]);
+        return Promise.resolve();
+      },
+      suspend: () => {
+        calls.push(['aux-suspend', name]);
+        return Promise.resolve();
+      },
+    }));
     const appIconPath = '/app/dist/brand/BeamIcon.png';
     const manager = createEditorWindowManager({
       applicationRoot: '/app',
@@ -162,8 +175,17 @@ test('editor window is opaque and routes native editor lifecycle without changin
       hudController,
       registerController: (...args) => registered.push(args),
       appIconPath,
+      hudAuxiliaryWindows,
     });
 
+    assert.deepEqual(
+      calls.filter(([name]) => name === 'aux-prepare'),
+      [
+        ['aux-prepare', 'countdown'],
+        ['aux-prepare', 'teleprompter'],
+      ],
+      'HUD auxiliary renderers are warmed when the manager is created',
+    );
     assert.throws(() => manager.open('project'), /invalide/);
     const opening = manager.open(projectId);
     const options = calls.find((call) => call[0] === 'constructor')[1];
@@ -174,6 +196,7 @@ test('editor window is opaque and routes native editor lifecycle without changin
     assert.equal(options.icon, appIconPath);
     assert.equal(options.minWidth, EDITOR_MIN_SIZE.width);
     assert.equal(options.minHeight, EDITOR_MIN_SIZE.height);
+    assert.equal(options.webPreferences.backgroundThrottling, false);
     assert.equal(options.webPreferences.zoomFactor, 1);
     if (process.platform !== 'darwin') {
       assert.deepEqual(options.titleBarOverlay, {
@@ -208,8 +231,16 @@ test('editor window is opaque and routes native editor lifecycle without changin
     );
     const editorShowIndex = calls.findIndex((call) => call[0] === 'show');
     const editorFocusIndex = calls.findIndex((call) => call[0] === 'focus');
+    const auxiliarySuspendIndices = calls
+      .map((call, index) => (call[0] === 'aux-suspend' ? index : -1))
+      .filter((index) => index >= 0);
     assert.ok(hudHiddenIndex >= 0);
     assert.equal(hudWindow.isVisible(), false);
+    assert.equal(auxiliarySuspendIndices.length, 2);
+    assert.ok(
+      auxiliarySuspendIndices.every((index) => hudHiddenIndex < index && index < editorShowIndex),
+      'auxiliary windows suspend after HUD hide and before the editor is presented',
+    );
     assert.ok(hudHiddenIndex < readyProgressIndex, 'the HUD must be hidden before ready progress is sent');
     assert.ok(readyProgressIndex < editorShowIndex, 'ready progress must precede editor.show()');
     assert.ok(editorShowIndex < editorFocusIndex, 'editor.show() must precede editor.focus()');
@@ -233,10 +264,16 @@ test('editor window is opaque and routes native editor lifecycle without changin
       'a live theme change must not mutate the native compositor surface',
     );
 
+    const showHudCallStart = calls.length;
     manager.showHud();
     assert.ok(calls.some((call) => call[0] === 'show-hud'));
     assert.ok(calls.some((call) => call[0] === 'hud-show'));
     assert.ok(calls.some((call) => call[0] === 'hud-focus'));
+    assert.equal(calls.filter(([name]) => name === 'aux-prepare').length, 4);
+    const returningCalls = calls.slice(showHudCallStart);
+    const returningPrepareIndex = returningCalls.findIndex((call) => call[0] === 'aux-prepare');
+    const returningHudIndex = returningCalls.findIndex((call) => call[0] === 'show-hud');
+    assert.ok(returningPrepareIndex >= 0 && returningPrepareIndex < returningHudIndex);
 
     const reopening = manager.open(projectId, { disposition: 'new-window' });
     const reopenedEditor = windows[1];
@@ -247,12 +284,13 @@ test('editor window is opaque and routes native editor lifecycle without changin
 
     assert.equal(await ipcHandlers.get('editor:open-recorder')({ sender: reopenedEditor.webContents }), true);
     assert.ok(calls.some((call) => call[0] === 'hud-send' && call[1] === 'editor:recorder-launcher'));
+    assert.equal(calls.filter(([name]) => name === 'aux-prepare').length, 6);
   } finally {
     Module._load = originalLoad;
   }
 });
 
-const createThemeFixture = ({ theme, resolveSystemDark = () => false }) => {
+const createThemeFixture = ({ theme, resolveSystemDark = () => false, loadPromise = () => undefined }) => {
   const calls = [];
   const windows = [];
   const ipcHandlers = new Map();
@@ -269,7 +307,7 @@ const createThemeFixture = ({ theme, resolveSystemDark = () => false }) => {
     BrowserWindow: class {
       constructor(options) {
         calls.push(['constructor', options]);
-        const window = fakeWindow(calls, options);
+        const window = fakeWindow(calls, options, loadPromise);
         windows.push(window);
         return window;
       }
@@ -326,11 +364,99 @@ const createThemeFixture = ({ theme, resolveSystemDark = () => false }) => {
     ipcListeners,
     manager,
     preferenceState,
+    hudVisible: () => hudVisible,
     restore: () => {
       Module._load = originalLoad;
     },
   };
 };
+
+test('ignores canceled and subframe load failures while the editor document continues loading', async () => {
+  const fixture = createThemeFixture({ theme: 'light' });
+  try {
+    const opening = fixture.manager.open(projectId);
+    const editor = fixture.windows[0];
+    editor.emitContent('did-fail-load', {}, -3, 'ERR_ABORTED', 'editor.html', true);
+    editor.emitContent('did-fail-load', {}, -105, 'ERR_NAME_NOT_RESOLVED', 'child-frame', false);
+
+    assert.equal(fixture.manager.window(), editor);
+    assert.equal(editor.isDestroyed(), false);
+    fixture.ipcListeners.get('editor:ready')({ sender: editor.webContents });
+    await opening;
+    assert.equal(
+      fixture.calls.some((call) => call[0] === 'show'),
+      true,
+    );
+  } finally {
+    fixture.restore();
+  }
+});
+
+test('rejects a failed load promise, preserves the HUD, and accepts the next load', async () => {
+  let attempts = 0;
+  const fixture = createThemeFixture({
+    theme: 'light',
+    loadPromise: () => (attempts++ === 0 ? Promise.reject(new Error('load promise rejected')) : Promise.resolve()),
+  });
+  try {
+    const opening = fixture.manager.open(projectId);
+    await assert.rejects(opening, /load promise rejected/);
+    assert.equal(fixture.windows[0].isDestroyed(), true);
+    assert.equal(fixture.manager.window(), null);
+    assert.equal(fixture.hudVisible(), true);
+
+    const retry = fixture.manager.open(projectId);
+    const editor = fixture.windows[1];
+    fixture.ipcListeners.get('editor:ready')({ sender: editor.webContents });
+    await retry;
+    assert.equal(editor.isDestroyed(), false);
+    assert.equal(attempts, 2);
+  } finally {
+    fixture.restore();
+  }
+});
+
+test('times out a hidden editor after 30 seconds without closing the HUD and allows a retry', async () => {
+  const fixture = createThemeFixture({ theme: 'light' });
+  const originalSetTimeout = global.setTimeout;
+  const originalClearTimeout = global.clearTimeout;
+  let fireTimeout;
+  let timeoutDelay;
+  try {
+    global.setTimeout = (callback, delay) => {
+      fireTimeout = callback;
+      timeoutDelay = delay;
+      return { unref() {} };
+    };
+    global.clearTimeout = () => undefined;
+
+    const opening = fixture.manager.open(projectId);
+    const timedOutEditor = fixture.windows[0];
+    assert.equal(timeoutDelay, 30_000);
+    assert.equal(typeof fireTimeout, 'function');
+    global.setTimeout = originalSetTimeout;
+    global.clearTimeout = originalClearTimeout;
+    fireTimeout();
+
+    await assert.rejects(opening, /did not finish opening the project within 30 seconds/);
+    assert.equal(timedOutEditor.isDestroyed(), true);
+    assert.equal(fixture.hudVisible(), true);
+    assert.equal(fixture.manager.window(), null);
+
+    const retry = fixture.manager.open(projectId);
+    const retryEditor = fixture.windows[1];
+    timedOutEditor.emitContent('render-process-gone', {}, { reason: 'crashed' });
+    fixture.ipcListeners.get('editor:ready')({ sender: timedOutEditor.webContents });
+    assert.equal(fixture.manager.window(), retryEditor);
+    fixture.ipcListeners.get('editor:ready')({ sender: retryEditor.webContents });
+    await retry;
+    assert.equal(retryEditor.isDestroyed(), false);
+  } finally {
+    global.setTimeout = originalSetTimeout;
+    global.clearTimeout = originalClearTimeout;
+    fixture.restore();
+  }
+});
 
 const readyEditor = async (fixture, opening) => {
   const editor = fixture.windows.at(-1);
@@ -645,7 +771,7 @@ test('editor:dismiss-recorder hides the HUD and refocuses its originating editor
   }
 });
 
-test('editor:open new-window keeps IPC contexts independent and closing one editor preserves the other', async () => {
+test('editor:open preserves screenshot kind per window and closing one editor preserves the other', async () => {
   const fixture = createRecorderFixture();
   try {
     const firstOpening = fixture.manager.open(projectId);
@@ -653,6 +779,7 @@ test('editor:open new-window keeps IPC contexts independent and closing one edit
     const secondProjectId = '22222222-2222-4222-8222-222222222222';
     const secondOpening = fixture.ipcHandlers.get('editor:open')({ sender: first.webContents }, secondProjectId, {
       disposition: 'new-window',
+      kind: 'screenshot',
     });
     assert.equal(fixture.windows.length, 2);
     const second = fixture.windows[1];
@@ -663,6 +790,7 @@ test('editor:open new-window keeps IPC contexts independent and closing one edit
     assert.deepEqual(fixture.ipcHandlers.get('editor:context')({ sender: first.webContents }), { projectId });
     assert.deepEqual(fixture.ipcHandlers.get('editor:context')({ sender: second.webContents }), {
       projectId: secondProjectId,
+      kind: 'screenshot',
     });
 
     const secondCloseCount = second.closeCount;
@@ -671,6 +799,7 @@ test('editor:open new-window keeps IPC contexts independent and closing one edit
     assert.equal(second.isDestroyed(), false);
     assert.deepEqual(fixture.ipcHandlers.get('editor:context')({ sender: second.webContents }), {
       projectId: secondProjectId,
+      kind: 'screenshot',
     });
 
     const foreign = fakeWindow(fixture.calls);

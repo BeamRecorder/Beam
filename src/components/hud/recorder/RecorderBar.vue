@@ -150,8 +150,6 @@ const emit = defineEmits<{
   background: var(--color-bg-surface);
   box-shadow: var(--shadow-lg);
   overflow: hidden;
-  -webkit-app-region: no-drag;
-  app-region: no-drag;
   transition: opacity 0.18s ease;
 }
 .drag-handle {

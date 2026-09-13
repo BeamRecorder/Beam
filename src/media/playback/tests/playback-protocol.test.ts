@@ -58,6 +58,7 @@ describe('isPlaybackWorkerRequest', () => {
       isPlaybackWorkerRequest({ type: 'load', generation: 0, assets: [], clips: [], previewQuality: 'full' }),
     ).toBe(true);
     expect(isPlaybackWorkerRequest({ type: 'pause', generation: 3 })).toBe(true);
+    expect(isPlaybackWorkerRequest({ type: 'cancel-seek', generation: 3 })).toBe(true);
     expect(isPlaybackWorkerRequest({ type: 'dispose' })).toBe(true);
   });
 
@@ -131,6 +132,8 @@ describe('isPlaybackWorkerRequest', () => {
     const invalid = [
       { type: 'pause', generation: -1 },
       { type: 'pause', generation: 1.5 },
+      { type: 'cancel-seek', generation: -1 },
+      { type: 'cancel-seek', generation: 1.5 },
       { type: 'pause', generation: Number.MAX_SAFE_INTEGER + 1 },
       { type: 'play', generation: 0, timelineSeconds: -0.001 },
       { type: 'tick', generation: 0, timelineSeconds: Number.NaN },

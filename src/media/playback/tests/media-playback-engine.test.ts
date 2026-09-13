@@ -636,6 +636,65 @@ describe('MediaPlaybackEngine', () => {
     engine.dispose();
   });
 
+  it('rebuilds clip continuity when retiming changes the previous visual clip', async () => {
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const engine = new MediaPlaybackEngine({
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+    const previous = videoClip('previous', 'asset-1', {
+      trackId: 'video-track',
+      timelineStartMs: 0,
+      timelineDurationMs: 1_000,
+      sourceDurationMs: 1_000,
+    });
+    const retimedPrevious = videoClip('retimed-previous', 'asset-1', {
+      trackId: 'video-track',
+      timelineStartMs: 3_000,
+      timelineDurationMs: 1_000,
+      sourceDurationMs: 1_000,
+    });
+    const target = videoClip('target', 'asset-1', {
+      trackId: 'video-track',
+      timelineStartMs: 1_000,
+      timelineDurationMs: 1_000,
+      sourceDurationMs: 1_000,
+    });
+    await loadAt(engine, worker, composition([previous, retimedPrevious, target]), 1.5);
+    const generation = latestSeekRequest(worker)!.generation;
+    const oldFrame = new FakeImageBitmap();
+    const newFrame = new FakeImageBitmap();
+    worker.emit(frameResponse(generation, previous.id, 0.5, oldFrame));
+    worker.emit(frameResponse(generation, retimedPrevious.id, 0.5, newFrame));
+    expect(engine.frameFor(target.id)?.bitmap).toBe(oldFrame);
+
+    worker.requests.length = 0;
+    const updatedPrevious = { ...previous, timelineStartMs: 4_000 };
+    const movedPrevious = { ...retimedPrevious, timelineStartMs: 0 };
+    const pending = engine.loadComposition(composition([updatedPrevious, movedPrevious, target]), 1.5);
+    expect(engine.frameFor(target.id)?.bitmap).toBe(newFrame);
+
+    await Promise.resolve();
+    const request = worker.requests.at(-1);
+    expect(request?.type).toBe('retime');
+    if (!request || request.type !== 'retime') throw new Error('Expected a retime request.');
+    worker.emit({ type: 'ready', generation: request.generation });
+    for (let index = 0; index < 4; index += 1) await Promise.resolve();
+    const seek = latestSeekRequest(worker)!;
+    worker.emit({
+      type: 'seek-result',
+      generation: seek.generation,
+      requestId: seek.requestId,
+      result: 'presented',
+      latencyMs: 1,
+    });
+    await pending;
+
+    expect(engine.frameFor(target.id)?.bitmap).toBe(newFrame);
+    engine.dispose();
+  });
+
   it('does not reuse a previous frame across a real timeline gap', async () => {
     const worker = new FakeWorker();
     const audio = new FakeAudio();

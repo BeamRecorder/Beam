@@ -834,6 +834,100 @@ test('round-trips an assetless blur overlay with its effect settings', () => {
   });
 });
 
+test('round-trips assetless highlight overlays with bounded opacity and color', () => {
+  const highlightClip = (overrides = {}) => ({
+    id: 'highlight',
+    trackId: 'highlight',
+    kind: 'blur',
+    name: 'Highlight',
+    timelineStartMs: 500,
+    timelineDurationMs: 2_000,
+    sourceInMs: 0,
+    sourceDurationMs: 2_000,
+    playbackRate: 1,
+    transitions: { entry: null, exit: null },
+    enabled: true,
+    order: 0,
+    transform: { x: 0.2, y: 0.3, width: 0.4, height: 0.25 },
+    shape: 'rectangle',
+    mode: 'highlight',
+    strength: 60,
+    feather: 14,
+    cornerRadius: 24,
+    tintOpacity: 0,
+    color: '#ffcc00',
+    ...overrides,
+  });
+  const normalize = (clip) =>
+    normalizeComposition({
+      schemaVersion: 14,
+      assets: [],
+      keyboardCaptionSessions: [],
+      clips: [clip],
+    }).clips[0];
+
+  for (const opacity of [0, 100]) {
+    const normalized = normalize(highlightClip({ strength: opacity }));
+    assert.equal(normalized.mode, 'highlight');
+    assert.equal(normalized.strength, opacity);
+    assert.equal(normalized.color, '#ffcc00');
+    assert.equal(normalized.feather, 14);
+    assert.equal(normalized.cornerRadius, 24);
+  }
+
+  for (const highlightColor of ['#123456', '#aabbccdd']) {
+    const normalized = normalize(highlightClip({ highlightColor, tintOpacity: 20 }));
+    assert.equal(normalized.highlightColor, highlightColor);
+    assert.equal(normalized.tintOpacity, 20);
+    assert.equal(normalize(JSON.parse(JSON.stringify(normalized))).highlightColor, highlightColor);
+  }
+
+  const legacyHighlight = normalize(highlightClip({ tintOpacity: 0 }));
+  assert.equal(Object.hasOwn(legacyHighlight, 'highlightColor'), false);
+  assert.equal(legacyHighlight.tintOpacity, 0);
+
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-highlight-project-save-'));
+  try {
+    const store = createProjectStore(root);
+    for (const [index, highlightColor] of ['#123456', '#aabbccdd'].entries()) {
+      const project = store.create({ name: `Highlight ${index}` });
+      const editor = store.editorState(project.id);
+      editor.composition.clips = [highlightClip({ highlightColor, tintOpacity: 20 })];
+      const saved = store.saveEditorState(project.id, editor);
+      const savedClip = saved.composition.clips[0];
+      const manifestPath = path.join(store.directoryFor(project.id), 'project.json');
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+      assert.equal(savedClip.highlightColor, highlightColor);
+      assert.equal(savedClip.tintOpacity, 20);
+      assert.equal(manifest.editor.composition.clips[0].highlightColor, highlightColor);
+      assert.equal(manifest.editor.composition.clips[0].tintOpacity, 20);
+    }
+
+    const legacyProject = store.create({ name: 'Legacy highlight' });
+    const legacyEditor = store.editorState(legacyProject.id);
+    legacyEditor.composition.clips = [highlightClip({ tintOpacity: 0 })];
+    const savedLegacy = store.saveEditorState(legacyProject.id, legacyEditor).composition.clips[0];
+    assert.equal(Object.hasOwn(savedLegacy, 'highlightColor'), false);
+    assert.equal(savedLegacy.tintOpacity, 0);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+
+  for (const invalid of [
+    { mode: 'glow' },
+    { color: 'yellow' },
+    { highlightColor: null },
+    { highlightColor: 12 },
+    { highlightColor: 'red' },
+    { highlightColor: '#123' },
+    { strength: -0.01 },
+    { strength: 100.01 },
+    { strength: Number.NaN },
+  ]) {
+    assert.throws(() => normalize(highlightClip(invalid)), /invalide/i);
+  }
+});
+
 test('normalizes assetless color layers and preserves their visual track ordering', () => {
   const normalized = normalizeComposition({
     schemaVersion: 14,

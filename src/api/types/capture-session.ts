@@ -23,6 +23,7 @@ export interface CaptureSession {
 }
 
 export interface CaptureProject {
+  mode?: import('./capture-mode').CaptureMode;
   id: string;
   name: string;
   createdAt: string;
@@ -192,6 +193,8 @@ export interface ZoomElement {
   focus: ZoomFocus;
   depth: 1 | 2 | 3 | 4 | 5 | 6;
   mode: 'auto' | 'manual';
+  /** Missing only in projects saved before zoom toggles were introduced. */
+  enabled?: boolean;
   /** Missing only in projects saved before perspective zooms were introduced. */
   projection?: '2d' | '3d';
   tiltIntensity?: number;

@@ -73,7 +73,9 @@
     "teleprompterPreviousLine": "पिछली पंक्ति",
     "teleprompterPreviousLineDesc": "टेलीप्रॉम्प्टर की पिछली पंक्ति पर जाएँ",
     "conflictWith": "“{name}” के साथ टकराव",
-    "failedToUpdate": "शॉर्टकट अपडेट नहीं हो सका"
+    "failedToUpdate": "शॉर्टकट अपडेट नहीं हो सका",
+    "quickSnip": "Quick Snip",
+    "quickSnipDesc": "मौजूदा स्थिति के अनुसार Quick Snip खोलें, रिकॉर्डिंग शुरू करें या रोकें।"
   },
   "SidebarPanel": {
     "canvas": "कैनवास",
@@ -86,7 +88,8 @@
     "audio": "ऑडियो",
     "media": "मीडिया",
     "settings": "सेटिंग",
-    "logo": "लोगो"
+    "logo": "लोगो",
+    "elements": "एलिमेंट"
   },
   "Socials": {
     "title": "सोशल प्लेटफ़ॉर्म",

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, ref, shallowRef, type Component } from 'vue';
+import { DEFAULT_EDITOR_TITLE, editorTitle } from './editor-window-title';
 import { capture } from '~/api/capture';
 import type { CaptureProject, PreferenceSettings, ProjectEditorData } from '~/api/types/capture-api';
 import Button from '~/components/ui/button/Button.vue';
@@ -7,7 +8,9 @@ import ToastProvider from '~/components/ui/toast/ToastProvider.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { clampTimelineHeight, DEFAULT_TIMELINE_HEIGHT } from './composables/useTimelineResize';
 import EditorProjectLoadingOverlay from './EditorProjectLoadingOverlay.vue';
-import VideoEditor from './VideoEditor.vue';
+const VideoEditor = shallowRef<Component>();
+const ScreenshotEditor = shallowRef<Component>();
+const screenshotId = ref<string | null>(null);
 
 const project = ref<CaptureProject | null>(null);
 const editorData = ref<ProjectEditorData | null>(null);
@@ -22,17 +25,6 @@ let themeObserver: MutationObserver | null = null;
 let nativeEditorReadyNotified = false;
 const { t } = useTranslate('EditorPreparingHud');
 const EDITOR_READY_PAINT_TIMEOUT_MS = 100;
-const DEFAULT_EDITOR_TITLE = 'Beam Editor';
-
-const editorTitle = (projectName: string) => {
-  const normalizedName = projectName
-    .replace(/[\u0000-\u001f\u007f]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 80);
-  return normalizedName ? `${normalizedName} - ${DEFAULT_EDITOR_TITLE}` : DEFAULT_EDITOR_TITLE;
-};
-
 const syncTitlebarTheme = () => {
   const dark = document.documentElement.classList.contains('dark');
   capture.setEditorTitlebarTheme(dark);
@@ -73,12 +65,15 @@ const loadProject = async (projectId: string) => {
   document.title = DEFAULT_EDITOR_TITLE;
   try {
     capture.reportEditorLoadingStage('loadingProject');
-    const projects = await capture.listProjects();
-    const nextProject = projects.find((candidate) => candidate.id === projectId) ?? null;
-    if (!nextProject) throw new Error('Project not found');
     capture.reportEditorLoadingStage('loadingTimeline');
-    const nextEditorData = await capture.getProjectEditorData(projectId);
+    const [nextProject, nextEditorData, editor] = await Promise.all([
+      capture.getProject(projectId),
+      capture.getProjectEditorData(projectId),
+      import('./VideoEditor.vue'),
+    ]);
     if (generation !== loadGeneration) return;
+    if (!nextProject || nextProject.mode === 'screenshot') throw new Error('Project not found');
+    VideoEditor.value = editor.default;
     project.value = nextProject;
     document.title = editorTitle(nextProject.name);
     editorData.value = nextEditorData;
@@ -92,6 +87,42 @@ const loadProject = async (projectId: string) => {
   }
 };
 
+const loadContext = async (context: { projectId: string; kind?: 'screenshot' }) => {
+  if (context.kind === 'screenshot') {
+    const generation = ++loadGeneration;
+    loading.value = true;
+    error.value = '';
+    document.title = DEFAULT_EDITOR_TITLE;
+    project.value = null;
+    editorData.value = null;
+    screenshotId.value = null;
+    try {
+      const editor = await import('./screenshot/ScreenshotEditor.vue');
+      if (generation !== loadGeneration) return;
+      ScreenshotEditor.value = editor.default;
+      screenshotId.value = context.projectId;
+      project.value = null;
+      editorData.value = null;
+    } catch (reason) {
+      if (generation !== loadGeneration) return;
+      error.value = reason instanceof Error ? reason.message : String(reason);
+    } finally {
+      if (generation === loadGeneration) loading.value = false;
+    }
+  } else {
+    screenshotId.value = null;
+    await loadProject(context.projectId);
+  }
+};
+const screenshotReady = async () => {
+  if (!screenshotId.value || nativeEditorReadyNotified) return;
+  nativeEditorReadyNotified = true;
+  const generation = loadGeneration;
+  capture.reportEditorLoadingStage('renderingEditor');
+  await waitForEditorPaint();
+  if (generation === loadGeneration) capture.notifyEditorReady();
+};
+
 const handleBackToHud = () => {
   capture.setCameraOverlayActive(true);
   capture.showHud();
@@ -99,7 +130,9 @@ const handleBackToHud = () => {
 
 const handleOpenProject = (nextProject: CaptureProject) => {
   loading.value = true;
-  void capture.openEditor(nextProject.id).catch((reason) => {
+  const opening =
+    nextProject.mode === 'screenshot' ? capture.openScreenshot(nextProject.id) : capture.openEditor(nextProject.id);
+  void opening.catch((reason) => {
     loading.value = false;
     console.error('Unable to switch editor project.', reason);
   });
@@ -120,7 +153,7 @@ onMounted(async () => {
   // native state with the store's temporary light default during hydration.
   themeObserver = new MutationObserver(syncTitlebarTheme);
   themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-  removeContextListener = capture.onEditorContext(({ projectId }) => void loadProject(projectId));
+  removeContextListener = capture.onEditorContext((context) => void loadContext(context));
   try {
     removePreferencesListener = capture.onPreferencesChanged(syncTimelineHeight);
     void capture
@@ -131,12 +164,12 @@ onMounted(async () => {
     // The editor remains usable with the default timeline height.
   }
   const context = await capture.getEditorContext();
-  if (context) await loadProject(context.projectId);
+  if (context) await loadContext(context);
   else {
     loading.value = false;
     error.value = 'No project selected';
   }
-  if (error.value || !project.value) {
+  if (error.value || (!project.value && !screenshotId.value)) {
     nativeEditorReadyNotified = true;
     capture.reportEditorLoadingStage('renderingEditor');
     await waitForEditorPaint();
@@ -159,6 +192,7 @@ onBeforeUnmount(() => {
     <p>{{ error }}</p>
     <Button variant="secondary" size="sm" @click="handleBackToHud">Back to projects</Button>
   </main>
+  <ScreenshotEditor v-if="screenshotId" :key="screenshotId" :id="screenshotId" @ready="screenshotReady" />
   <VideoEditor
     v-if="project"
     :key="`${project.id}:${editorGeneration}`"

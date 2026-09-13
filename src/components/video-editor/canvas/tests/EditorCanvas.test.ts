@@ -783,10 +783,10 @@ describe('EditorCanvas', () => {
     });
     await handle.trigger('pointermove', {
       pointerId: 2,
-      clientX: 0,
+      clientX: -500,
       clientY: 0,
     });
-    expect(mounted.emitted('update:cursor-size')).toContainEqual([128]);
+    expect(mounted.emitted('update:cursor-size')).toContainEqual([384]);
 
     await mounted.setProps({ isPlaying: true });
     await handle.trigger('pointermove', {

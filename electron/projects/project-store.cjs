@@ -12,9 +12,9 @@ const {
   zoomState,
 } = require('./project-editor-state.cjs');
 const { createProjectEditorAccess } = require('./project-editor-access.cjs');
+const { createProjectSummary } = require('./project-summary.cjs');
 const { createProjectFeatureDetector } = require('./project-feature-detection.cjs');
-
-function createProjectStore(root) {
+function createProjectStore(root, { mediaHost = 'asset', category = null } = {}) {
   const safePath = (directory, relativePath) => {
     if (typeof relativePath !== 'string' || !relativePath) return null;
     const resolvedRoot = path.resolve(directory);
@@ -48,14 +48,18 @@ function createProjectStore(root) {
     fs.writeFileSync(`${target}.tmp`, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
     fs.renameSync(`${target}.tmp`, target);
   };
-  const projectDirectories = () =>
-    !fs.existsSync(root)
-      ? []
-      : fs
-          .readdirSync(root, { withFileTypes: true })
-          .filter((entry) => entry.isDirectory())
-          .map((entry) => path.join(root, entry.name))
-          .filter((directory) => fs.existsSync(path.join(directory, 'project.json')));
+  const projectDirectories = () => {
+    const roots = category ? ['studio', 'instant'].map((name) => path.join(root, name)) : [root];
+    return roots.flatMap((directory) =>
+      !fs.existsSync(directory)
+        ? []
+        : fs
+            .readdirSync(directory, { withFileTypes: true })
+            .filter((entry) => entry.isDirectory())
+            .map((entry) => path.join(directory, entry.name))
+            .filter((entry) => fs.existsSync(path.join(entry, 'project.json'))),
+    );
+  };
   const directoryFor = (id) => {
     const projectId = assertId(id);
     const directory = projectDirectories().find((candidate) => {
@@ -79,7 +83,12 @@ function createProjectStore(root) {
   const availableDirectory = (name, currentDirectory = null) => {
     const base = `project-${slugify(name)}`;
     for (let suffix = 1; suffix <= 2_147_483_647; suffix += 1) {
-      const candidate = path.join(root, suffix === 1 ? base : `${base}-${suffix}`);
+      const destination = currentDirectory
+        ? path.dirname(currentDirectory)
+        : category
+          ? path.join(root, category)
+          : root;
+      const candidate = path.join(destination, suffix === 1 ? base : `${base}-${suffix}`);
       if (candidate === currentDirectory || !fs.existsSync(candidate)) return candidate;
     }
     throw new Error('Impossible de créer un dossier de projet unique');
@@ -102,7 +111,7 @@ function createProjectStore(root) {
     const relativePath = path.relative(root, file);
     const safeFile = safePath(root, relativePath);
     return safeFile && safeFile === path.resolve(file) && existingFileWithin(root, safeFile)
-      ? `project-media://asset/${encodeURIComponent(relativePath.split(path.sep).join('/'))}`
+      ? `project-media://${mediaHost}/${encodeURIComponent(relativePath.split(path.sep).join('/'))}`
       : null;
   };
   const mediaFileForUrl = (mediaUrl) => {
@@ -112,7 +121,7 @@ function createProjectStore(root) {
     } catch {
       return null;
     }
-    if (parsed.protocol !== 'project-media:' || parsed.hostname !== 'asset') return null;
+    if (parsed.protocol !== 'project-media:' || parsed.hostname !== mediaHost) return null;
     let relativePath;
     try {
       relativePath = decodeURIComponent(parsed.pathname.slice(1));
@@ -154,30 +163,7 @@ function createProjectStore(root) {
     return null;
   };
   const detectProjectFeatures = createProjectFeatureDetector({ safePath, sessionFileFor });
-  const summary = (directory, manifest, fallbackId) => {
-    const sessions = Array.isArray(manifest.sessions) ? manifest.sessions : [];
-    const id = typeof manifest.projectId === 'string' ? manifest.projectId : fallbackId;
-    const { hasScreen, hasCamera, hasCaption, hasSystemAudio, hasMicrophone } = detectProjectFeatures(
-      directory,
-      manifest,
-      sessions,
-    );
-    return {
-      id,
-      name:
-        typeof manifest.name === 'string' && manifest.name.trim() ? manifest.name.trim() : `Project ${id.slice(0, 8)}`,
-      createdAt: typeof manifest.createdAtUtc === 'string' ? manifest.createdAtUtc : '',
-      updatedAt: typeof manifest.updatedAtUtc === 'string' ? manifest.updatedAtUtc : '',
-      sessionCount: sessions.length,
-      previewSrc: previewFor(directory, manifest, sessions),
-      thumbnailSrc: thumbnailFor(directory),
-      hasScreen,
-      hasCamera,
-      hasCaption,
-      hasSystemAudio,
-      hasMicrophone,
-    };
-  };
+  const summary = createProjectSummary({ root, category, detectProjectFeatures, previewFor, thumbnailFor });
   const readJsonArray = (file) => {
     if (!fs.existsSync(file)) return null;
     try {
@@ -417,6 +403,10 @@ function createProjectStore(root) {
         })
         .filter(Boolean)
         .sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))),
+    get: (id) => {
+      const directory = directoryFor(id);
+      return summary(directory, readManifest(directory), id);
+    },
     mediaUrlFor,
     mediaFileForUrl,
     directoryFor,
@@ -447,7 +437,7 @@ function createProjectStore(root) {
       const now = new Date().toISOString();
       const name =
         typeof options.name === 'string' && options.name.trim() ? options.name.trim().slice(0, 80) : generatedName(id);
-      fs.mkdirSync(root, { recursive: true });
+      fs.mkdirSync(category ? path.join(root, category) : root, { recursive: true });
       const directory = availableDirectory(name);
       fs.mkdirSync(directory);
       const manifest = {

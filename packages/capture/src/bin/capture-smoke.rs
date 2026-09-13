@@ -201,6 +201,7 @@ fn record_full_session() -> Result<(), capture::CaptureError> {
         failure_policy: FailurePolicy::ContinueWithoutOptionalTracks,
         region: None,
         excluded_process_id: None,
+        excluded_window_handles: vec![],
     };
     let mut session = RecordingSession::prepare(request, snapshot)?;
     session.start()?;

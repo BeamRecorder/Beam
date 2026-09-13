@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
+import { capture } from '~/api/capture';
 import { Download, FolderOpen, X } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
@@ -12,7 +13,7 @@ import InfoTooltip from '~/ui/tooltip/InfoTooltip.vue';
 import { useToastStore } from '~/ui/toast/toastStore';
 import { useExportJob } from './useExportJob';
 import { bitrateFor } from './export-presets';
-import type { ExportFormat, ExportPreset, ExportRequest } from './export-types';
+import type { EditorExportSource, ExportFormat, ExportPreset, ExportRequest } from './export-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import { safeExportErrorMessage, technicalExportError } from './mediabunny/export-preflight';
 import { buildBeamExportReport } from './export-diagnostics';
@@ -30,7 +31,7 @@ const recommendedFrameRate = (sourceFps: number): ExportFrameRate => {
 
 const props = withDefaults(
   defineProps<{
-    request: Omit<ExportRequest, 'format' | 'preset'>;
+    request: EditorExportSource;
     playheadSeconds?: number;
   }>(),
   { playheadSeconds: 0 },
@@ -39,7 +40,7 @@ const emit = defineEmits<{ (event: 'update:includeAudio', value: boolean): void 
 const format = ref<ExportFormat>('webm');
 const preset = ref<ExportPreset>('medium');
 const resolution = ref<ExportResolutionOption>('max');
-const frameRate = ref<ExportFrameRate>(recommendedFrameRate(props.request.snapshot.render.fps));
+const frameRate = ref<ExportFrameRate>(recommendedFrameRate(props.request.fps));
 const presets: ExportPreset[] = ['low', 'medium', 'high'];
 const frameRates: ExportFrameRate[] = [24, 30, 60];
 const moreOptionsOpen = ref(false);
@@ -54,8 +55,8 @@ const formatDescriptions: Record<ExportFormat, string> = {
   mp4: t('mp4Desc'),
 };
 
-const nativeWidth = computed(() => props.request.snapshot.canvas.width);
-const nativeHeight = computed(() => props.request.snapshot.canvas.height);
+const nativeWidth = computed(() => props.request.width);
+const nativeHeight = computed(() => props.request.height);
 
 const computeExportDimensions = (res: ExportResolutionOption) => {
   const nativeW = nativeWidth.value;
@@ -80,10 +81,10 @@ const activeDimensions = computed(() => computeExportDimensions(resolution.value
 const playheadDuration = computed(() => {
   const value = Number(props.playheadSeconds);
   if (!Number.isFinite(value)) return 0;
-  return Math.max(0, Math.min(props.request.snapshot.duration, value));
+  return Math.max(0, Math.min(props.request.duration, value));
 });
 const activeExportDuration = computed(() =>
-  exportUntilPlayhead.value ? playheadDuration.value : props.request.snapshot.duration,
+  exportUntilPlayhead.value ? playheadDuration.value : props.request.duration,
 );
 const formattedExportDuration = computed(() =>
   new Intl.NumberFormat(locale.value, { maximumFractionDigits: 1 }).format(activeExportDuration.value),
@@ -135,34 +136,34 @@ const displayError = computed(() => availability.value || (error.value ? safeExp
 const lastRequest = ref<ExportRequest | null>(null);
 const buildRequest = (): ExportRequest => {
   const { width, height } = activeDimensions.value;
+  const snapshot = props.request.createSnapshot();
   return {
-    ...props.request,
+    projectName: props.request.projectName,
+    includeAudio: props.request.includeAudio,
     format: format.value,
     preset: preset.value,
     snapshot: {
-      ...props.request.snapshot,
+      ...snapshot,
       duration: activeExportDuration.value,
-      render: { ...props.request.snapshot.render, fps: frameRate.value },
-      canvas: { ...props.request.snapshot.canvas, width, height },
+      render: { ...snapshot.render, fps: frameRate.value },
+      canvas: { ...snapshot.canvas, width, height },
     },
   };
 };
-const reportRequest = computed<ExportRequest>(() => {
-  if (lastRequest.value) return lastRequest.value;
-  return buildRequest();
-});
-const exportReport = computed(() =>
-  buildBeamExportReport({
-    request: reportRequest.value,
-    format: reportRequest.value.format,
-    preset: reportRequest.value.preset,
+const exportReport = computed(() => {
+  const request = lastRequest.value;
+  if (!request) return '';
+  return buildBeamExportReport({
+    request,
+    format: request.format,
+    preset: request.preset,
     status: error.value ? 'failed' : result.value ? 'completed' : 'running',
     progress: progress.value,
     diagnostics: result.value?.diagnostics ?? diagnostics.value,
     outputPath: result.value?.path,
     error: error.value ? technicalExportError(errorContext?.value ?? error.value) : undefined,
-  }),
-);
+  });
+});
 
 const openFile = (path: string) => {
   if (path && window.capture?.openFile) {
@@ -170,11 +171,43 @@ const openFile = (path: string) => {
   }
 };
 
+onMounted(() => {
+  void capture
+    .getEditorPresets()
+    .then((document) => {
+      const saved = document.presets.find((item) => item.id === document.activePresetId)?.settings.export;
+      if (!saved) return;
+      if (saved.format === 'mp4' || saved.format === 'webm') format.value = saved.format;
+      if (saved.preset === 'low' || saved.preset === 'medium' || saved.preset === 'high') preset.value = saved.preset;
+      if (saved.resolution === '720p' || saved.resolution === '1080p' || saved.resolution === 'max')
+        resolution.value = saved.resolution;
+      if (saved.frameRate === 24 || saved.frameRate === 30 || saved.frameRate === 60) frameRate.value = saved.frameRate;
+    })
+    .catch(() => undefined);
+});
+
 const run = async () => {
   availability.value = null;
   if (!canExport.value) return;
   const request = buildRequest();
   lastRequest.value = request;
+  try {
+    const document = await capture.getEditorPresets();
+    const selected = document.presets.find((item) => item.id === document.activePresetId);
+    if (selected)
+      await capture.updateEditorPreset(selected.id, {
+        ...selected.settings,
+        export: {
+          format: format.value,
+          preset: preset.value,
+          resolution: resolution.value,
+          frameRate: frameRate.value,
+          includeAudio: includeAudio.value,
+        },
+      });
+  } catch (reason) {
+    console.error('Unable to save export preset', reason);
+  }
   await start(request);
   if (error.value) {
     const technical = exportReport.value;

@@ -1,0 +1,8 @@
+.timeline-clip.kind-highlight,
+.visual-add-indicator.kind-highlight {
+  background: linear-gradient(
+    110deg,
+    color-mix(in srgb, var(--color-track-annotation) 72%, var(--color-bg-surface)),
+    color-mix(in srgb, var(--color-track-annotation) 38%, var(--color-bg-surface))
+  );
+}

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Check, Move, RotateCcw, X } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import Select from '~/ui/select/Select.vue';
@@ -217,6 +217,15 @@ onMounted(() => {
   });
   void loadSavedPreset();
 });
+watch(
+  region,
+  (next) => {
+    if (options.value?.context === 'quick-snip' && next?.width && next.height) {
+      capture.updateScreenRegion({ ...next });
+    }
+  },
+  { deep: true },
+);
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeydown);
   unsubscribe?.();

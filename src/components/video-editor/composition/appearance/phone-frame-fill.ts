@@ -20,7 +20,10 @@ const samplingContext = () => {
       sampleCanvas.width = SAMPLE_WIDTH;
       sampleCanvas.height = SAMPLE_HEIGHT;
     } else return null;
-    sampleContext = sampleCanvas.getContext('2d', { willReadFrequently: true });
+    sampleContext = sampleCanvas.getContext('2d', { willReadFrequently: true }) as
+      | CanvasRenderingContext2D
+      | OffscreenCanvasRenderingContext2D
+      | null;
   } catch {
     sampleCanvas = null;
     sampleContext = null;

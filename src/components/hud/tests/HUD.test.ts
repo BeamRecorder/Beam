@@ -601,6 +601,7 @@ describe('HUD', () => {
     expect(capture.inputAccessStatus).not.toHaveBeenCalled();
     expect(capture.configureCameraOverlay).not.toHaveBeenCalled();
     expect(capture.updatePreferences).not.toHaveBeenCalled();
+    expect(capture.setSize).not.toHaveBeenCalled();
     wrapper.unmount();
   });
 
@@ -759,6 +760,8 @@ describe('HUD', () => {
     await ready();
 
     expect(wrapper.get('.hud-wrapper').attributes('style')).toContain('height: 480px');
+    expect(capture.setSize).toHaveBeenCalledWith(352, 512);
+    expect(capture.setSize.mock.calls.map(([width]) => width)).not.toContain(392);
     expect(wrapper.find('.hud-body .interaction-access-notice').exists()).toBe(false);
     expect(wrapper.find('.hud-body [role="status"]').exists()).toBe(false);
     expect(wrapper.find('.preferences-input-access').exists()).toBe(false);
@@ -778,6 +781,8 @@ describe('HUD', () => {
     expect(wrapper.get('.recording-action-stack').classes()).toContain('has-issues');
     expect(wrapper.find('.hud-issues').exists()).toBe(true);
     expect(wrapper.get('.hud-wrapper').attributes('style')).toContain('height: 480px');
+    expect(capture.setSize.mock.calls.map(([width]) => width)).toContain(352);
+    expect(capture.setSize.mock.calls.map(([width]) => width)).not.toContain(392);
     expect(capture.setSize.mock.calls.map(([, height]) => height)).toContain(512);
     expect(capture.setSize.mock.calls.map(([, height]) => height)).not.toContain(628);
 
@@ -917,7 +922,7 @@ describe('HUD', () => {
     const callsFor = (type: string) =>
       capture.getSources.mock.calls.filter(([requested]) => (requested as string[])[0] === type);
     expect(callsFor('screen')).toHaveLength(1);
-    expect(callsFor('window')).toHaveLength(1);
+    expect(callsFor('window')).toHaveLength(0);
 
     const screenTwo = wrapper
       .findAll('[data-option-value]')
@@ -1208,17 +1213,18 @@ describe('HUD', () => {
 
     const wrapper = mount(HUD, { global: { stubs } });
     await ready();
-    expect(nativeCapture.getSourcePreview.mock.calls.map(([request]) => request.sourceId)).toEqual([
-      'sck:display:1',
-      'sck:window:42',
-      'sck:window:84',
-    ]);
+    expect(nativeCapture.getSourcePreview.mock.calls.map(([request]) => request.sourceId)).toEqual(['sck:display:1']);
 
     await wrapper
       .findAll('button')
       .find((button) => button.text() === 'Window')
       ?.trigger('click');
     await ready();
+    expect(nativeCapture.getSourcePreview.mock.calls.map(([request]) => request.sourceId)).toEqual([
+      'sck:display:1',
+      'sck:window:42',
+      'sck:window:84',
+    ]);
     await wrapper.find('.select-control').trigger('click');
     await ready();
 
@@ -1374,8 +1380,7 @@ describe('HUD', () => {
     expect(wrapper.get('[aria-label="Copied"]').attributes('data-state')).toBe('copied');
   });
 
-  it('stops an active session and reports the stop event', async () => {
-    capture.stop.mockResolvedValue({ state: 'stopped', sessionId: 'session-1' });
+  it('delegates stopping an active session to the parent', async () => {
     const wrapper = mount(HUD, { global: { stubs } });
     await ready();
     (wrapper.vm as any).$.setupState.isRecording = true;
@@ -1383,8 +1388,8 @@ describe('HUD', () => {
     const record = wrapper.findAll('button').find((button) => button.text().includes('Stop ('))!;
     await record.trigger('click');
     await ready();
-    expect(capture.stop).toHaveBeenCalledOnce();
-    expect(wrapper.emitted('stop-recording')).toEqual([[{ state: 'stopped', sessionId: 'session-1' }]]);
+    expect(capture.stop).not.toHaveBeenCalled();
+    expect(wrapper.emitted('stop-recording')).toEqual([[]]);
   });
 
   it('handles empty window catalogs, dropdown resize transitions, and native topbar controls', async () => {
@@ -1452,18 +1457,9 @@ describe('HUD', () => {
     ]);
   });
 
-  it('keeps a failed active stop visible as an error and resets transient dropdown state', async () => {
-    capture.stop.mockRejectedValueOnce(new Error('native stop failed'));
+  it('resets transient dropdown state when a source dropdown closes', async () => {
     const wrapper = mount(HUD, { global: { stubs } });
     await ready();
-    (wrapper.vm as any).$.setupState.isRecording = true;
-    await wrapper.vm.$nextTick();
-    await wrapper
-      .findAll('button')
-      .find((button) => button.text().includes('Stop ('))!
-      .trigger('click');
-    await ready();
-    expect(wrapper.get('[role="alert"]').text()).toContain('native stop failed');
     await wrapper.get('.select-control').trigger('click');
     await wrapper.get('.select-close').trigger('click');
     expect(capture.setSize).toHaveBeenCalled();

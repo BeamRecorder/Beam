@@ -2,12 +2,13 @@
 import { computed } from 'vue';
 import {
   AudioLines,
+  ArrowRight,
   CircleDashed,
-  FolderOpen,
+  Focus,
   Image as ImageIcon,
-  Layers3,
   Mic2,
   Palette,
+  Pencil,
   Plus,
   Shapes,
   Type,
@@ -20,27 +21,26 @@ import type { TimelineElementKind } from './timeline-element-types';
 
 const emit = defineEmits<{ (event: 'add:element', kind: TimelineElementKind): void }>();
 const { t } = useTranslate('TimelineToolbar');
+const { t: tHighlight } = useTranslate('Highlight');
 const { t: tCanvas } = useTranslate('CanvasPanel');
 const { t: tSidebar } = useTranslate('SidebarPanel');
+const { t: tElements } = useTranslate('Elements');
 
 const items = computed<readonly PopoverMenuItem[]>(() => [
+  { id: 'video', label: t('video'), icon: Video },
   {
-    id: 'media',
-    label: tSidebar('media'),
-    icon: FolderOpen,
+    id: 'elements',
+    label: tElements('title'),
+    icon: Shapes,
     children: [
-      { id: 'video', label: t('video'), icon: Video },
-      { id: 'image', label: t('image'), icon: ImageIcon },
-    ],
-  },
-  {
-    id: 'composition',
-    label: t('composition'),
-    icon: Layers3,
-    children: [
-      { id: 'shape', label: tCanvas('shapesAndArrows'), icon: Shapes },
+      { id: 'shape', label: tElements('shape'), icon: Shapes },
+      { id: 'arrow', label: tElements('arrow'), icon: ArrowRight },
+      { id: 'text', label: tElements('text'), icon: Type },
+      { id: 'drawing', label: tElements('drawing'), icon: Pencil },
+      { id: 'highlight', label: tHighlight('title'), icon: Focus },
       { id: 'blur', label: t('blur'), icon: CircleDashed },
       { id: 'color', label: tCanvas('color'), icon: Palette },
+      { id: 'image', label: tElements('image'), icon: ImageIcon },
     ],
   },
   {
@@ -52,7 +52,6 @@ const items = computed<readonly PopoverMenuItem[]>(() => [
       { id: 'voiceover', label: t('voiceover'), icon: Mic2 },
     ],
   },
-  { id: 'caption', label: t('text'), icon: Type },
 ]);
 </script>
 

@@ -1,0 +1,705 @@
+const assert = require('node:assert/strict');
+const test = require('node:test');
+
+const { createQuickSnipStatusWindow } = require('../electron/quick-snip/quick-snip-status-window.cjs');
+
+function createFixture(
+  platform = 'win32',
+  { cleanupStatus = () => {}, preferenceState = { extras: {} }, environment = {} } = {},
+) {
+  const timers = new Map();
+  let clockNow = 10_000;
+  let timerId = 0;
+  const calls = [];
+  const windows = [];
+  const preferenceWrites = [];
+  const preferencesStore = {
+    read: () => preferenceState,
+    patch: ({ extras }) => {
+      preferenceWrites.push(extras);
+      for (const [key, value] of Object.entries(extras ?? {})) {
+        preferenceState.extras[key] = { ...(preferenceState.extras[key] ?? {}), ...value };
+      }
+    },
+  };
+  const capturedDisplay = {
+    id: 2,
+    workArea: { x: 1920, y: 80, width: 1600, height: 900 },
+  };
+  const primaryDisplay = {
+    id: 1,
+    workArea: { x: 0, y: 0, width: 1920, height: 1080 },
+  };
+
+  class FakeWindow {
+    constructor(options) {
+      this.options = options;
+      this.bounds = { x: 0, y: 0, width: options.width, height: options.height };
+      this.listeners = new Map();
+      this.destroyed = false;
+      this.visible = false;
+      this._webContentsListeners = new Map();
+      this._webContents = {
+        on: (event, listener) => {
+          this._webContentsListeners.set(event, listener);
+        },
+        once: (event, listener) => {
+          this._webContentsListeners.set(event, (...args) => {
+            this._webContentsListeners.delete(event);
+            listener(...args);
+          });
+        },
+        setZoomFactor: () => {},
+        send: (...args) => calls.push(['send', ...args]),
+      };
+      Object.defineProperty(this, 'webContents', {
+        enumerable: true,
+        get: () => {
+          if (this.destroyed) throw new TypeError('Object has been destroyed');
+          return this._webContents;
+        },
+      });
+      windows.push(this);
+      calls.push(['constructor', options]);
+    }
+
+    on(event, listener) {
+      this.listeners.set(event, listener);
+    }
+
+    once(event, listener) {
+      this.listeners.set(event, (...args) => {
+        this.listeners.delete(event);
+        listener(...args);
+      });
+    }
+
+    emit(event, ...args) {
+      this.listeners.get(event)?.(...args);
+    }
+
+    emitWebContents(event, ...args) {
+      this._webContentsListeners.get(event)?.(...args);
+    }
+
+    isDestroyed() {
+      return this.destroyed;
+    }
+
+    isVisible() {
+      return this.visible;
+    }
+
+    getBounds() {
+      return { ...this.bounds };
+    }
+
+    getSize() {
+      return [this.bounds.width, this.bounds.height];
+    }
+
+    setPosition(x, y) {
+      this.bounds = { ...this.bounds, x, y };
+      calls.push(['setPosition', x, y]);
+    }
+
+    setSize(width, height) {
+      this.bounds = { ...this.bounds, width, height };
+      calls.push(['setSize', width, height]);
+    }
+
+    setIgnoreMouseEvents(...args) {
+      calls.push(['ignoreMouse', ...args]);
+    }
+
+    setContentProtection(value) {
+      calls.push(['contentProtection', value]);
+    }
+
+    showInactive() {
+      this.visible = true;
+      calls.push(['showInactive']);
+    }
+
+    hide() {
+      this.visible = false;
+      calls.push(['hide']);
+    }
+
+    moveTop() {
+      calls.push(['moveTop']);
+    }
+
+    loadURL(url) {
+      calls.push(['loadURL', url]);
+    }
+
+    loadFile(...args) {
+      calls.push(['loadFile', ...args]);
+    }
+
+    destroy() {
+      if (this.destroyed) return;
+      this.destroyed = true;
+      this.visible = false;
+      calls.push(['destroy']);
+      this.emitWebContents('destroyed');
+      this.emit('closed');
+    }
+  }
+
+  const matchingBounds = [];
+  const status = createQuickSnipStatusWindow({
+    BrowserWindow: FakeWindow,
+    platform,
+    cleanupStatus,
+    environment,
+    preferencesStore,
+    now: () => clockNow,
+    setTimer: (callback, delay) => {
+      timers.set(++timerId, { callback, delay });
+      return timerId;
+    },
+    clearTimer: (id) => timers.delete(id),
+    applicationRoot: '/app',
+    isPackaged: false,
+    appIconPath: '/app/icon.png',
+    screen: {
+      getDisplayMatching: (bounds) => {
+        matchingBounds.push(bounds);
+        return capturedDisplay;
+      },
+      getDisplayNearestPoint: () => primaryDisplay,
+      getPrimaryDisplay: () => primaryDisplay,
+      getCursorScreenPoint: () => ({ x: 100, y: 100 }),
+    },
+  });
+  const ready = (target = windows[0], order = 'native-first') => {
+    if (order === 'renderer-first') status.rendererReady(target.webContents);
+    target.emit('ready-to-show');
+    if (order !== 'renderer-first') status.rendererReady(target.webContents);
+  };
+
+  return {
+    timers,
+    calls,
+    windows,
+    matchingBounds,
+    capturedDisplay,
+    primaryDisplay,
+    status,
+    ready,
+    preferenceState,
+    preferenceWrites,
+    now: () => clockNow,
+    setNow: (value) => {
+      clockNow = value;
+    },
+  };
+}
+
+const processingStatus = {
+  state: 'processing',
+  progress: 0.4,
+  job: { regionBounds: { x: 2200, y: 200, width: 800, height: 600 } },
+};
+
+function latestStatusSnapshot(fixture) {
+  const messages = fixture.calls.filter((call) => call[0] === 'send' && call[1] === 'quick-snip:status');
+  return messages[messages.length - 1]?.[2] ?? null;
+}
+
+test('prewarms hidden and waits for both readiness signals plus an update before presenting', () => {
+  for (const order of ['native-first', 'renderer-first']) {
+    const fixture = createFixture();
+    const completed = { ...processingStatus, state: 'completed', progress: 1 };
+    fixture.status.prepare(completed);
+    const window = fixture.windows[0];
+    const statusMessages = () => fixture.calls.filter((call) => call[0] === 'send' && call[1] === 'quick-snip:status');
+
+    assert.equal(window.visible, false);
+    assert.equal(fixture.timers.size, 0);
+    assert.equal(statusMessages().length, 0);
+    assert.deepEqual(fixture.status.snapshot().autoClose, {
+      durationMs: 5000,
+      deadlineMs: null,
+      remainingMs: 5000,
+    });
+
+    if (order === 'renderer-first') {
+      fixture.status.rendererReady(window.webContents);
+      assert.equal(window.visible, false);
+      assert.equal(statusMessages().length, 0);
+      window.emit('ready-to-show');
+    } else {
+      window.emit('ready-to-show');
+      assert.equal(window.visible, false);
+      assert.equal(statusMessages().length, 0);
+      fixture.status.rendererReady(window.webContents);
+    }
+
+    assert.equal(window.visible, false);
+    assert.equal(statusMessages().length, 1);
+    assert.equal(fixture.timers.size, 0);
+    assert.deepEqual(statusMessages()[0][2].autoClose, {
+      durationMs: 5000,
+      deadlineMs: null,
+      remainingMs: 5000,
+    });
+
+    fixture.status.update(completed);
+    assert.equal(window.visible, true);
+    assert.equal(fixture.calls.filter((call) => call[0] === 'showInactive').length, 1);
+    assert.equal(fixture.timers.size, 1);
+    assert.equal([...fixture.timers.values()][0].delay, 5000);
+    assert.deepEqual(fixture.status.snapshot().autoClose, {
+      durationMs: 5000,
+      deadlineMs: fixture.now() + 5000,
+      remainingMs: 5000,
+    });
+    assert.deepEqual(latestStatusSnapshot(fixture).autoClose, fixture.status.snapshot().autoClose);
+  }
+});
+
+test('rejects a renderer-ready handshake from another WebContents', () => {
+  const fixture = createFixture();
+  fixture.status.update(processingStatus);
+  const window = fixture.windows[0];
+  window.emit('ready-to-show');
+
+  fixture.status.rendererReady({});
+  assert.equal(window.visible, false);
+  assert.equal(
+    fixture.calls.some((call) => call[0] === 'showInactive'),
+    false,
+  );
+  assert.equal(
+    fixture.calls.some((call) => call[0] === 'send' && call[1] === 'quick-snip:status'),
+    false,
+  );
+
+  fixture.status.rendererReady(window.webContents);
+  assert.equal(window.visible, true);
+  assert.equal(fixture.calls.filter((call) => call[0] === 'showInactive').length, 1);
+  assert.equal(fixture.calls.filter((call) => call[0] === 'send' && call[1] === 'quick-snip:status').length, 1);
+});
+
+test('shows only once ready and stays pinned without moving on progress', () => {
+  const fixture = createFixture();
+  fixture.status.update(processingStatus);
+  const window = fixture.windows[0];
+  assert.equal(window.visible, false);
+  assert.equal(fixture.status.show(), true);
+  assert.equal(window.visible, false);
+  assert.equal(
+    fixture.calls.some((call) => call[0] === 'setPosition'),
+    false,
+  );
+  fixture.ready(window);
+  assert.deepEqual(window.bounds, { x: 3124, y: 780, width: 380, height: 184 });
+  assert.equal(window.visible, true);
+  const places = fixture.calls.filter((call) => call[0] === 'setPosition').length;
+  fixture.status.update({ ...processingStatus, progress: 0.8 });
+  fixture.status.setInteractive(true);
+  fixture.status.setInteractive(false);
+  assert.equal(fixture.calls.filter((call) => call[0] === 'setPosition').length, places);
+  assert.equal(fixture.calls.filter((call) => call[0] === 'setSize').length, 0);
+});
+
+test('preserves a user-dragged position through show and status updates, then places a recreated window initially', () => {
+  const fixture = createFixture();
+  fixture.status.update(processingStatus);
+  const original = fixture.windows[0];
+  fixture.ready(original);
+  const initialPlacement = { ...original.bounds };
+  const userPlacement = { ...initialPlacement, x: 2460, y: 260 };
+
+  original.bounds = userPlacement;
+  assert.equal(fixture.status.show(), true);
+  fixture.status.update({ ...processingStatus, progress: 0.8 });
+  fixture.status.update({ ...processingStatus, state: 'completed', progress: 1 });
+
+  assert.deepEqual(original.bounds, userPlacement);
+  assert.equal(fixture.calls.filter((call) => call[0] === 'setPosition').length, 1);
+
+  fixture.status.hide();
+  fixture.status.update({ ...processingStatus, progress: 0.2 });
+  const recreated = fixture.windows[1];
+  fixture.ready(recreated);
+
+  assert.deepEqual(recreated.bounds, initialPlacement);
+  assert.equal(fixture.calls.filter((call) => call[0] === 'setPosition').length, 2);
+});
+
+test('saves the visible pill origin per display and flips below with 84px native compensation', () => {
+  const fixture = createFixture('win32');
+  fixture.status.update(processingStatus);
+  const window = fixture.windows[0];
+  fixture.ready(window);
+  const initialSize = window.getSize();
+  fixture.calls.length = 0;
+
+  // The previous layout placed details above the pill. Dragging the native window
+  // to the work-area top flips details below while keeping the pill under the same point.
+  window.bounds = { ...window.bounds, x: 2500, y: fixture.capturedDisplay.workArea.y };
+  window.emit('move');
+  window.emit('moved');
+
+  assert.equal(fixture.status.snapshot().popoverSide, 'below');
+  assert.deepEqual(window.getBounds(), { x: 2500, y: 164, width: 380, height: 184 });
+  assert.deepEqual(fixture.preferenceState.extras.quickSnipStatusPositions, { 2: { x: 2512, y: 176 } });
+  assert.equal(fixture.preferenceWrites.length, 1);
+  assert.deepEqual(window.getSize(), initialSize);
+  assert.deepEqual(
+    fixture.calls.filter((call) => call[0] === 'setPosition'),
+    [['setPosition', 2500, 164]],
+  );
+  assert.equal(window.getBounds().y - fixture.capturedDisplay.workArea.y, 84);
+
+  const positionsAfterCommit = fixture.calls.filter((call) =>
+    ['setPosition', 'setSize', 'showInactive', 'moveTop'].includes(call[0]),
+  );
+  fixture.status.update({ ...processingStatus, progress: 0.8 });
+  assert.deepEqual(
+    fixture.calls.filter((call) => ['setPosition', 'setSize', 'showInactive', 'moveTop'].includes(call[0])),
+    positionsAfterCommit,
+  );
+});
+
+test('restores a saved pill origin without rewriting it during presentation', () => {
+  const preferenceState = { extras: { quickSnipStatusPositions: { 2: { x: 2100, y: 120 } } } };
+  const fixture = createFixture('win32', { preferenceState });
+  fixture.status.update(processingStatus);
+  const window = fixture.windows[0];
+  fixture.ready(window);
+
+  assert.deepEqual(fixture.preferenceState.extras.quickSnipStatusPositions, { 2: { x: 2100, y: 120 } });
+  assert.equal(fixture.preferenceWrites.length, 0);
+  assert.equal(fixture.status.snapshot().popoverSide, 'below');
+  assert.deepEqual(window.getBounds(), { x: 2088, y: 108, width: 380, height: 184 });
+});
+
+test('debounces visible status-window moves and stores only the trailing macOS position', () => {
+  const fixture = createFixture('darwin');
+  fixture.status.update(processingStatus);
+  const window = fixture.windows[0];
+  fixture.ready(window);
+
+  window.bounds = { ...window.bounds, x: 2600, y: 400 };
+  window.emit('move');
+  window.bounds = { ...window.bounds, x: 2700, y: 450 };
+  window.emit('move');
+  window.emit('moved');
+
+  assert.equal(fixture.preferenceWrites.length, 0);
+  assert.equal(fixture.timers.size, 1);
+  const [timer] = fixture.timers.values();
+  assert.equal(timer.delay, 350);
+  timer.callback();
+  assert.equal(fixture.preferenceWrites.length, 1);
+  assert.deepEqual(fixture.preferenceState.extras.quickSnipStatusPositions, { 2: { x: 2712, y: 546 } });
+});
+
+test('passes transparent pixels through on Windows and restores it after hover', () => {
+  const fixture = createFixture();
+  fixture.status.update(processingStatus);
+  fixture.status.setInteractive(true);
+  fixture.status.setInteractive(false);
+  assert.deepEqual(
+    fixture.calls.filter((call) => call[0] === 'ignoreMouse'),
+    [
+      ['ignoreMouse', true, { forward: true }],
+      ['ignoreMouse', false, { forward: true }],
+      ['ignoreMouse', true, { forward: true }],
+    ],
+  );
+});
+
+test('keeps Linux controls reachable without unsupported mouse forwarding', () => {
+  const fixture = createFixture('linux');
+  fixture.status.update(processingStatus);
+  fixture.status.setInteractive(true);
+  assert.equal(
+    fixture.calls.some((call) => call[0] === 'ignoreMouse'),
+    false,
+  );
+});
+
+test('dismisses completed output after five seconds and pauses while interacting', () => {
+  const fixture = createFixture();
+  const startedAt = fixture.now();
+  fixture.status.update({ ...processingStatus, state: 'completed' });
+  fixture.ready();
+  assert.equal([...fixture.timers.values()][0].delay, 5000);
+  fixture.status.setInteractive(true);
+  assert.equal(fixture.timers.size, 0);
+  fixture.status.setInteractive(false);
+  fixture.setNow(startedAt + 5000);
+  [...fixture.timers.values()][0].callback();
+  assert.equal(fixture.windows[0].destroyed, true);
+});
+
+test('freezes the completed countdown on hover and restarts five full seconds on leave', () => {
+  const fixture = createFixture();
+  const startedAt = fixture.now();
+  fixture.status.update({ ...processingStatus, state: 'completed' });
+  fixture.ready();
+
+  const firstTimerId = [...fixture.timers.keys()][0];
+  assert.deepEqual(fixture.status.snapshot().autoClose, {
+    durationMs: 5000,
+    deadlineMs: startedAt + 5000,
+    remainingMs: 5000,
+  });
+
+  fixture.setNow(startedAt + 1400);
+  fixture.status.setInteractive(true);
+
+  const pausedSnapshot = {
+    durationMs: 5000,
+    deadlineMs: null,
+    remainingMs: 3600,
+  };
+  assert.equal(fixture.timers.size, 0);
+  assert.deepEqual(fixture.status.snapshot().autoClose, pausedSnapshot);
+  assert.deepEqual(latestStatusSnapshot(fixture).autoClose, pausedSnapshot);
+
+  fixture.setNow(startedAt + 1400 + 4000);
+  fixture.status.setInteractive(false);
+
+  const resumedSnapshot = {
+    durationMs: 5000,
+    deadlineMs: fixture.now() + 5000,
+    remainingMs: 5000,
+  };
+  const [resumedTimerId, resumedTimer] = [...fixture.timers.entries()][0];
+  assert.notEqual(resumedTimerId, firstTimerId);
+  assert.equal(resumedTimer.delay, 5000);
+  assert.deepEqual(fixture.status.snapshot().autoClose, resumedSnapshot);
+  assert.deepEqual(latestStatusSnapshot(fixture).autoClose, resumedSnapshot);
+});
+
+test('emits native blur after the renderer handshake', () => {
+  const fixture = createFixture();
+  fixture.status.update(processingStatus);
+  const window = fixture.windows[0];
+  fixture.ready(window);
+  fixture.calls.length = 0;
+
+  window.emit('blur');
+
+  assert.deepEqual(
+    fixture.calls.filter((call) => call[0] === 'send'),
+    [['send', 'quick-snip:status-blur']],
+  );
+});
+
+test('restarts the five-second dismissal after native blur deactivates the renderer', () => {
+  const fixture = createFixture();
+  fixture.status.update({ ...processingStatus, state: 'completed' });
+  const window = fixture.windows[0];
+  fixture.ready(window);
+  const initialTimer = [...fixture.timers.keys()][0];
+
+  fixture.status.setInteractive(true);
+  assert.equal(fixture.timers.size, 0);
+  window.emit('blur');
+  assert.deepEqual(
+    fixture.calls.filter((call) => call[0] === 'send' && call[1] === 'quick-snip:status-blur'),
+    [['send', 'quick-snip:status-blur']],
+  );
+  // The renderer's blur listener deactivates its controls and bridges false back to main.
+  fixture.status.setInteractive(false);
+
+  assert.equal(fixture.timers.size, 1);
+  const [timerId, timer] = [...fixture.timers.entries()][0];
+  assert.notEqual(timerId, initialTimer);
+  assert.equal(timer.delay, 5000);
+});
+
+test('pauses completed dismissal while dragging and restarts the timer after position commit', () => {
+  const fixture = createFixture('win32');
+  const startedAt = fixture.now();
+  fixture.status.update({ ...processingStatus, state: 'completed' });
+  const window = fixture.windows[0];
+  fixture.ready(window);
+  assert.equal(fixture.timers.size, 1);
+
+  fixture.setNow(startedAt + 1200);
+  window.bounds = { ...window.bounds, x: 2500, y: fixture.capturedDisplay.workArea.y };
+  window.emit('move');
+  assert.equal(fixture.timers.size, 0);
+  const pausedSnapshot = {
+    durationMs: 5000,
+    deadlineMs: null,
+    remainingMs: 3800,
+  };
+  assert.deepEqual(fixture.status.snapshot().autoClose, pausedSnapshot);
+  assert.deepEqual(latestStatusSnapshot(fixture).autoClose, pausedSnapshot);
+
+  window.emit('moved');
+
+  assert.equal(fixture.timers.size, 1);
+  assert.equal([...fixture.timers.values()][0].delay, 5000);
+  const committedSnapshot = {
+    durationMs: 5000,
+    deadlineMs: fixture.now() + 5000,
+    remainingMs: 5000,
+  };
+  assert.deepEqual(fixture.status.snapshot().autoClose, committedSnapshot);
+  assert.deepEqual(latestStatusSnapshot(fixture).autoClose, committedSnapshot);
+  assert.equal(fixture.preferenceWrites.length, 1);
+});
+
+test('pending progress and duplicate completed updates do not reset the dismissal deadline', () => {
+  const fixture = createFixture();
+  const startedAt = fixture.now();
+  fixture.status.prepare(processingStatus);
+  fixture.ready();
+  assert.equal(fixture.windows[0].visible, false);
+  assert.equal(fixture.timers.size, 0);
+  assert.equal(fixture.status.snapshot().autoClose, null);
+
+  fixture.status.update(processingStatus);
+  fixture.status.update({ ...processingStatus, progress: 0.8 });
+  assert.equal(fixture.windows[0].visible, true);
+  assert.equal(fixture.timers.size, 0);
+  assert.equal(fixture.status.snapshot().autoClose, null);
+  assert.equal(latestStatusSnapshot(fixture).autoClose, null);
+
+  const completed = { ...processingStatus, state: 'completed', progress: 1 };
+  fixture.status.update(completed);
+  const timer = [...fixture.timers.keys()][0];
+  assert.equal([...fixture.timers.values()][0].delay, 5000);
+  const deadline = startedAt + 5000;
+  assert.deepEqual(fixture.status.snapshot().autoClose, {
+    durationMs: 5000,
+    deadlineMs: deadline,
+    remainingMs: 5000,
+  });
+
+  fixture.setNow(startedAt + 2200);
+  fixture.status.update({ ...completed, progress: 0.95 });
+  assert.equal([...fixture.timers.keys()][0], timer);
+  assert.deepEqual(fixture.status.snapshot().autoClose, {
+    durationMs: 5000,
+    deadlineMs: deadline,
+    remainingMs: 2800,
+  });
+  assert.deepEqual(latestStatusSnapshot(fixture).autoClose, fixture.status.snapshot().autoClose);
+
+  fixture.setNow(startedAt + 3400);
+  fixture.status.update(completed);
+  assert.equal([...fixture.timers.keys()][0], timer);
+  assert.deepEqual(fixture.status.snapshot().autoClose, {
+    durationMs: 5000,
+    deadlineMs: deadline,
+    remainingMs: 1600,
+  });
+  assert.deepEqual(latestStatusSnapshot(fixture).autoClose, fixture.status.snapshot().autoClose);
+  fixture.status.hide();
+  assert.equal(fixture.timers.size, 0);
+});
+
+test('leaves failures visible for recovery and rejects unrelated senders', () => {
+  const fixture = createFixture();
+  fixture.status.update({ ...processingStatus, state: 'failed' });
+  fixture.ready();
+  assert.equal(fixture.timers.size, 0);
+  assert.equal(fixture.status.owns({}), false);
+  assert.equal(fixture.status.owns(fixture.windows[0].webContents), true);
+  fixture.status.hide();
+  assert.equal(fixture.status.show(), false);
+});
+
+test('cleans the renderer exactly once with the live webContents reference', () => {
+  const cleaned = [];
+  const fixture = createFixture('win32', { cleanupStatus: (contents) => cleaned.push(contents) });
+  fixture.status.update(processingStatus);
+  const window = fixture.windows[0];
+  const contents = window.webContents;
+
+  assert.doesNotThrow(() => window.destroy());
+  assert.throws(() => window.webContents, /Object has been destroyed/);
+  assert.deepEqual(cleaned, [contents]);
+
+  window.emitWebContents('destroyed');
+  fixture.status.hide();
+  assert.deepEqual(cleaned, [contents]);
+});
+
+test('ignores readiness that arrives after the status window closes', () => {
+  const cleaned = [];
+  const fixture = createFixture('win32', { cleanupStatus: (contents) => cleaned.push(contents) });
+  fixture.status.update(processingStatus);
+  const window = fixture.windows[0];
+  const contents = window.webContents;
+
+  assert.equal(window.visible, false);
+  assert.doesNotThrow(() => window.emit('closed'));
+  assert.equal(window.destroyed, true);
+  assert.equal(fixture.status.show(), false);
+  assert.doesNotThrow(() => window.emit('ready-to-show'));
+  assert.equal(window.visible, false);
+  assert.equal(fixture.calls.filter((call) => call[0] === 'showInactive').length, 0);
+  assert.deepEqual(cleaned, [contents]);
+});
+
+test('reopening after early dismissal does not deliver an abandoned render task', () => {
+  const fixture = createFixture();
+  fixture.status.update(processingStatus);
+  fixture.status.setRenderTask({ id: 'abandoned' });
+  fixture.status.hide();
+  fixture.status.update(processingStatus);
+  fixture.windows[0].emit('ready-to-show');
+  assert.equal(fixture.windows[1].visible, false);
+  fixture.ready(fixture.windows[1]);
+  assert.equal(fixture.windows[1].visible, true);
+  assert.equal(
+    fixture.calls.some((call) => call[1] === 'quick-snip:render-task'),
+    false,
+  );
+});
+
+test('clears a handed-off render task while keeping the status window alive', () => {
+  const fixture = createFixture();
+  fixture.status.update(processingStatus);
+  const window = fixture.windows[0];
+  fixture.ready(window);
+
+  const task = { id: 'render-1' };
+  fixture.status.setRenderTask(task);
+  fixture.status.setRenderTask(null);
+
+  assert.deepEqual(
+    fixture.calls.filter((call) => call[0] === 'send' && call[1] === 'quick-snip:render-task').map((call) => call[2]),
+    [task, null],
+  );
+  assert.equal(window.destroyed, false);
+  assert.equal(window.visible, true);
+  assert.equal(fixture.windows.length, 1);
+  assert.equal(fixture.status.owns(window.webContents), true);
+  assert.equal(fixture.status.show(), true);
+});
+
+test('a render failure can present recovery without the old teardown closing it', () => {
+  const fixture = createFixture();
+  const failures = [];
+  fixture.status.onRenderFailure((error) => {
+    failures.push(error);
+    fixture.status.update({ ...processingStatus, state: 'failed' });
+  });
+  fixture.status.update(processingStatus);
+  const previous = fixture.windows[0];
+  previous.emitWebContents('render-process-gone');
+  assert.equal(failures.length, 1);
+  assert.equal(previous.destroyed, true);
+  const recovery = fixture.windows[1];
+  previous.emit('ready-to-show');
+  assert.equal(recovery.visible, false);
+  fixture.ready(recovery);
+  assert.equal(recovery.visible, true);
+  assert.equal(recovery.destroyed, false);
+  fixture.status.hide();
+  assert.equal(failures.length, 1);
+});

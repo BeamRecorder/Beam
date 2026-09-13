@@ -1,4 +1,5 @@
 import { vi } from 'vitest';
+import type { CompositionSnapshot } from '~/components/export/export-types';
 import type { ClipComposition, NormalizedCrop, ShapeClip } from '~/media/shared/composition-types';
 import { COMPOSITION_SCHEMA_VERSION, isAudioClip, isVisualClip } from '~/media/shared/composition-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
@@ -309,7 +310,24 @@ vi.mock('../composables/useVideoEditor', async () => {
           saveNow,
         },
         zoomState,
-        exportRequest: computed(() => ({ projectName: 'Demo', snapshot: {}, format: 'webm', preset: 'medium' })),
+        editorPresets: {
+          document: ref(null),
+          dirty: ref(false),
+          select: vi.fn(),
+          create: vi.fn(),
+          rename: vi.fn(),
+          remove: vi.fn(),
+          save: vi.fn(),
+        },
+        exportRequest: computed(() => ({
+          projectName: 'Demo',
+          includeAudio: true,
+          duration: 2,
+          fps: 30,
+          width: 1920,
+          height: 1080,
+          createSnapshot: vi.fn(() => ({}) as CompositionSnapshot),
+        })),
         outputCanvas,
         handleSelectTab: vi.fn((tab: string) => {
           activeTab.value = tab;

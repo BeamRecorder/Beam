@@ -184,7 +184,8 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
   ) => {
     const selected = options.selectedTransformClip();
     const transform = clip.id === selected?.id && options.transformDraft() ? options.transformDraft()! : clip.transform;
-    drawShapeClip(ctx, clip, { x: window.dx, y: window.dy, width: window.dw, height: window.dh }, transform);
+    const visible = clip.id === options.editingCaptionId?.() ? { ...clip, text: undefined } : clip;
+    drawShapeClip(ctx, visible, { x: window.dx, y: window.dy, width: window.dw, height: window.dh }, transform);
   };
 
   const drawWebcam = (

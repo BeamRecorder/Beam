@@ -72,6 +72,24 @@ export class FrameLruCache {
     return closestKey;
   }
 
+  findCoveringKey(clipId: string, timestampSeconds: number, keyPrefix = ''): string | undefined {
+    let result: string | undefined;
+    let latestStart = -Infinity;
+    for (const [key, frame] of this.frames) {
+      if (
+        key.startsWith(keyPrefix) &&
+        frame.clipId === clipId &&
+        frame.timestampSeconds <= timestampSeconds &&
+        timestampSeconds < frame.timestampSeconds + frame.durationSeconds &&
+        frame.timestampSeconds > latestStart
+      ) {
+        result = key;
+        latestStart = frame.timestampSeconds;
+      }
+    }
+    return result;
+  }
+
   get byteSize(): number {
     return this.bytes;
   }

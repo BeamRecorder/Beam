@@ -111,7 +111,9 @@ function run(execFile, args) {
 
 function shortcutCommand({ app, applicationRoot, id }) {
   const executable = typeof app.getPath === 'function' ? app.getPath('exe') : process.execPath;
-  const command = app.isPackaged ? [executable] : [executable, '--no-sandbox', applicationRoot];
+  const command = app.isPackaged
+    ? [executable]
+    : ['env', 'BEAM_DEVELOPMENT_INSTANCE=1', executable, '--no-sandbox', applicationRoot];
   return `${command.map(shellQuote).join(' ')} ${shellQuote(`${SHORTCUT_ARGUMENT}${encodeURIComponent(id)}`)}`;
 }
 

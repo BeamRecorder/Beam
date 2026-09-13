@@ -20,6 +20,7 @@ export interface StartRecordingOptions {
   minimumFreeBytes?: number;
   failurePolicy?: 'fail-fast' | 'continue-without-optional-tracks';
   region?: ScreenRegion | null;
+  excludedWindowHandles?: string[];
 }
 
 export interface RecordingSettings {
@@ -54,5 +55,6 @@ export interface CaptureConfig {
   failurePolicy: 'fail-fast' | 'continue-without-optional-tracks';
   /** Electron process whose windows must be excluded by native capturers when supported. */
   excludedProcessId?: number;
+  excludedWindowHandles?: string[];
   region?: ScreenRegion | null;
 }

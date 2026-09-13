@@ -50,6 +50,7 @@ contextBridge.exposeInMainWorld(
     minimize: () => ipcRenderer.send('window:minimize'),
     toggleDevTools: () => ipcRenderer.send('window:toggle-devtools'),
     updateTrayMenu: (labels) => ipcRenderer.send('tray:update-menu', labels),
+    setNormalRecordingActive: (active) => ipcRenderer.send('recording:set-active', Boolean(active)),
     onTrayStopRecording: (listener) => {
       const callback = () => listener();
       ipcRenderer.on('tray:stop-recording', callback);
@@ -96,6 +97,7 @@ contextBridge.exposeInMainWorld(
       return () => ipcRenderer.removeListener('screen-region:configure', callback);
     },
     confirmScreenRegion: (region) => ipcRenderer.send('screen-region:confirm', region),
+    updateScreenRegion: (region) => ipcRenderer.send('screen-region:update', region),
     cancelScreenRegion: () => ipcRenderer.send('screen-region:cancel'),
     getWindowBounds: () => ipcRenderer.invoke('window:bounds'),
     getPreferences: () => ipcRenderer.invoke('preferences:get'),
@@ -111,10 +113,95 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.on('preferences:shortcut', callback);
       return () => ipcRenderer.removeListener('preferences:shortcut', callback);
     },
+    captureScreenshot: (options) => ipcRenderer.invoke('screenshot:capture', options),
+    getScreenshot: (id) => ipcRenderer.invoke('screenshot:get', id),
+    listScreenshots: () => ipcRenderer.invoke('screenshot:list'),
+    saveScreenshot: (id, state, history) => ipcRenderer.invoke('screenshot:save', { id, state, history }),
+    openScreenshot: (id, options) => ipcRenderer.invoke('screenshot:open', id, options),
+    exportScreenshot: (id, bytes, format, copy) => ipcRenderer.invoke('screenshot:export', { id, bytes, format, copy }),
+    getEditorPresets: (kind = 'video') =>
+      ipcRenderer.invoke(`${kind === 'screenshot' ? 'screenshot-presets' : 'editor-presets'}:get`),
+    createEditorPreset: (name, kind = 'video') =>
+      ipcRenderer.invoke(`${kind === 'screenshot' ? 'screenshot-presets' : 'editor-presets'}:create`, name),
+    renameEditorPreset: (id, name, kind = 'video') =>
+      ipcRenderer.invoke(`${kind === 'screenshot' ? 'screenshot-presets' : 'editor-presets'}:rename`, { id, name }),
+    deleteEditorPreset: (id, kind = 'video') =>
+      ipcRenderer.invoke(`${kind === 'screenshot' ? 'screenshot-presets' : 'editor-presets'}:delete`, id),
+    selectEditorPreset: (id, kind = 'video') =>
+      ipcRenderer.invoke(`${kind === 'screenshot' ? 'screenshot-presets' : 'editor-presets'}:select`, id),
+    updateEditorPreset: (id, settings, kind = 'video') =>
+      ipcRenderer.invoke(`${kind === 'screenshot' ? 'screenshot-presets' : 'editor-presets'}:update`, { id, settings }),
+    updateActiveEditorPreset: (settings, kind = 'video') =>
+      ipcRenderer.invoke(`${kind === 'screenshot' ? 'screenshot-presets' : 'editor-presets'}:update-active`, settings),
+    onEditorPresetsChanged: (listener, kind = 'video') => {
+      const callback = (_event, document) => listener(document);
+      ipcRenderer.on(`${kind === 'screenshot' ? 'screenshot-presets' : 'editor-presets'}:changed`, callback);
+      return () =>
+        ipcRenderer.removeListener(
+          `${kind === 'screenshot' ? 'screenshot-presets' : 'editor-presets'}:changed`,
+          callback,
+        );
+    },
+    openQuickSnipEditor: () => ipcRenderer.invoke('quick-snip:open-editor'),
+    getQuickSnipRenderTask: () => ipcRenderer.invoke('quick-snip:render-task'),
+    saveQuickSnipRenderState: (id, state) => ipcRenderer.invoke('quick-snip:render-state', { id, state }),
+    reportQuickSnipRender: (report) => ipcRenderer.invoke('quick-snip:render-report', report),
+    onQuickSnipRenderTask: (listener) => {
+      const callback = (_event, task) => listener(task);
+      ipcRenderer.on('quick-snip:render-task', callback);
+      return () => ipcRenderer.removeListener('quick-snip:render-task', callback);
+    },
+    quickSnipFromHud: (options) => ipcRenderer.invoke('quick-snip:from-hud', options),
+    quickSnipToggle: () => ipcRenderer.invoke('quick-snip:toggle'),
+    notifyQuickSnipCropReady: () => ipcRenderer.send('quick-snip:crop-ready'),
+    quickSnipStart: (overrides = {}) => ipcRenderer.invoke('quick-snip:start', overrides),
+    configureQuickSnip: (overrides = {}) => ipcRenderer.invoke('quick-snip:configure', overrides),
+    chooseQuickSnipDevice: (request) => ipcRenderer.invoke('quick-snip:choose-device', request),
+    quickSnipStop: () => ipcRenderer.invoke('quick-snip:stop'),
+    quickSnipCancel: () => ipcRenderer.invoke('quick-snip:cancel'),
+    getQuickSnipState: () => ipcRenderer.invoke('quick-snip:state'),
+    reportQuickSnip: (event) => ipcRenderer.invoke('quick-snip:report', event),
+    copyQuickSnipFile: (file) => ipcRenderer.invoke('quick-snip:copy-file', file),
+    setQuickSnipStatusInteractive: (interactive) =>
+      ipcRenderer.send('quick-snip:status-interactive', Boolean(interactive)),
+    dismissQuickSnipStatus: () => ipcRenderer.send('quick-snip:status-dismiss'),
+    notifyQuickSnipStatusReady: () => ipcRenderer.send('quick-snip:status-ready'),
+    onQuickSnipConfigure: (listener) => {
+      const callback = (_event, configuration) => listener(configuration);
+      ipcRenderer.on('quick-snip:configure', callback);
+      return () => ipcRenderer.removeListener('quick-snip:configure', callback);
+    },
+    onQuickSnipCommand: (listener) => {
+      const callback = (_event, command) => listener(command);
+      ipcRenderer.on('quick-snip:command', callback);
+      return () => ipcRenderer.removeListener('quick-snip:command', callback);
+    },
+    onQuickSnipStatusBlur: (listener) => {
+      const callback = () => listener();
+      ipcRenderer.on('quick-snip:status-blur', callback);
+      return () => ipcRenderer.removeListener('quick-snip:status-blur', callback);
+    },
+    onQuickSnipStatus: (listener) => {
+      const callback = (_event, status) => listener(status);
+      ipcRenderer.on('quick-snip:status', callback);
+      return () => ipcRenderer.removeListener('quick-snip:status', callback);
+    },
+    onQuickSnipState: (listener) => {
+      const callback = (_event, status) => listener(status);
+      ipcRenderer.on('quick-snip:state-changed', callback);
+      return () => ipcRenderer.removeListener('quick-snip:state-changed', callback);
+    },
     showTeleprompter: () => ipcRenderer.send('teleprompter:show'),
     hideTeleprompter: () => ipcRenderer.send('teleprompter:hide'),
     toggleTeleprompterVisibility: () => ipcRenderer.send('teleprompter:toggle-visibility'),
     setTeleprompterSession: (context) => ipcRenderer.send('teleprompter:set-session', context),
+    getTeleprompterResumeState: () => ipcRenderer.invoke('teleprompter:resume-state'),
+    onTeleprompterSuspend: (listener) => {
+      const callback = (_event, id) => listener(id);
+      ipcRenderer.on('teleprompter:suspend', callback);
+      return () => ipcRenderer.removeListener('teleprompter:suspend', callback);
+    },
+    acknowledgeTeleprompterSuspend: (id, state) => ipcRenderer.send('teleprompter:suspended', id, state),
     notifyTeleprompterReady: () => ipcRenderer.send('teleprompter:ready'),
     onTeleprompterShortcut: (listener) => {
       const callback = (_event, id) => listener(id);
@@ -143,12 +230,15 @@ contextBridge.exposeInMainWorld(
       return () => ipcRenderer.removeListener('countdown:state', callback);
     },
     listProjects: () => ipcRenderer.invoke('projects:list'),
+    getProject: (projectId) => ipcRenderer.invoke('projects:get', { projectId }),
     projectMediaUrl: (source) => ipcRenderer.invoke('projects:media-url', { source }),
     getProjectEditorData: (projectId) => ipcRenderer.invoke('projects:editor-data', { projectId }),
     getProjectEditorState: (projectId) => ipcRenderer.invoke('projects:editor-state', { projectId }),
     saveProjectEditorState: (projectId, state) =>
       ipcRenderer.invoke('projects:save-editor-state', { projectId, state }),
     pickProjectMedia: (projectId, kind) => ipcRenderer.invoke('projects:pick-media', { projectId, kind }),
+    pickScreenshotImage: (id) => ipcRenderer.invoke('screenshot:pick-image', id),
+    discardScreenshotImage: (id, source) => ipcRenderer.invoke('screenshot:discard-image', { id, source }),
     importDroppedProjectMedia: (projectId, file, kind) => {
       let source;
       try {
@@ -186,11 +276,12 @@ contextBridge.exposeInMainWorld(
     },
     openCursorPackDiscovery: () => ipcRenderer.invoke('cursor-packs:open-discovery'),
     createProject: (options = {}) => ipcRenderer.invoke('projects:create', options),
-    renameProject: (projectId, name) => ipcRenderer.invoke('projects:rename', { projectId, name }),
+    renameProject: (projectId, name, mode) => ipcRenderer.invoke('projects:rename', { projectId, name, mode }),
     saveProjectThumbnail: (projectId, dataUrl) => ipcRenderer.invoke('projects:save-thumbnail', { projectId, dataUrl }),
-    deleteProject: (projectId) => ipcRenderer.invoke('projects:delete', { projectId }),
-    revealProject: (projectId) => ipcRenderer.invoke('projects:reveal', { projectId }),
+    deleteProject: (projectId, mode) => ipcRenderer.invoke('projects:delete', { projectId, mode }),
+    revealProject: (projectId, mode) => ipcRenderer.invoke('projects:reveal', { projectId, mode }),
     whisperModels: () => ipcRenderer.invoke('whisper:models'),
+    exportTranscript: (request) => ipcRenderer.invoke('captions:export-transcript', request),
     downloadWhisperModel: (modelId) => ipcRenderer.invoke('whisper:download', { modelId }),
     deleteWhisperModel: (modelId) => ipcRenderer.invoke('whisper:delete', { modelId }),
     onWhisperProgress: (listener) => {

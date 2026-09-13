@@ -12,7 +12,6 @@ onMounted(() => {
   unsubscribeShortcut = capture.onTeleprompterShortcut((id) =>
     window.dispatchEvent(new CustomEvent('teleprompter-shortcut', { detail: id })),
   );
-  capture.notifyTeleprompterReady?.();
 });
 onBeforeUnmount(() => {
   unsubscribeSession?.();

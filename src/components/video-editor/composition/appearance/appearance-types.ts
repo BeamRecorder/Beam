@@ -7,6 +7,8 @@ export interface MediaRect {
   height: number;
 }
 export interface DecoratedMediaOptions {
+  /** Intrinsic crop dimensions when the drawable is a reduced raster. */
+  sourceSize?: { width: number; height: number };
   source: CanvasImageSource;
   sourceRect?: MediaRect;
   rect: MediaRect;

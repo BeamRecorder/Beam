@@ -12,6 +12,7 @@ export type ExportPreset = 'low' | 'medium' | 'high';
 export type ExportStage = 'validating_assets' | 'loading_assets' | 'encoding' | 'finalizing';
 
 export interface ExportProgress {
+  preview?: string;
   stage: ExportStage;
   stageLabel?: string;
   overallProgress: number;
@@ -54,12 +55,24 @@ export interface CompositionSnapshot {
   composition: ClipComposition;
 }
 export interface ExportRequest {
+  preview?: boolean;
   projectName: string;
   format: ExportFormat;
   preset: ExportPreset;
   /** Defaults to true for requests created before this option existed. */
   includeAudio?: boolean;
   snapshot: CompositionSnapshot;
+}
+
+/** Live UI metadata; expensive, owned render data is captured only when export starts. */
+export interface EditorExportSource {
+  projectName: string;
+  includeAudio: boolean;
+  duration: number;
+  fps: number;
+  width: number;
+  height: number;
+  createSnapshot: () => CompositionSnapshot;
 }
 
 export type ExportValidationCode =

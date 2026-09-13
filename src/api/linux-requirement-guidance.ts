@@ -156,13 +156,19 @@ export const linuxInteractionGuidance = (
     title = 'Interaction helper unavailable';
     description = 'Beam confirmed that its protected input broker could not be initialized.';
     instruction = 'Restart Beam. If the problem continues, reinstall the Beam package.';
+  } else if (status.error) {
+    title = 'Interaction helper failed';
+    description = status.error.message;
+    instruction =
+      'Retry interaction access in Beam. If the problem continues, copy the system information with this error.';
   }
   return {
     title,
     description,
     copyText: [
       `Beam Linux interaction issue: ${title}`,
-      `Reported reason: ${status.unavailableReason || 'not-provided'}`,
+      `Reported reason: ${status.unavailableReason || status.error?.code || 'not-provided'}`,
+      ...(status.error ? [`Error: ${status.error.code}`, status.error.message] : []),
       `Detected system: ${diagnostics?.distribution || 'Unknown Linux'}`,
       `Action: ${instruction}`,
       `Linux guide: ${LINUX_GUIDE_URL}`,

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MediaSourceDescriptor } from '../../shared/media-types';
 
-const { openMediaInput, sinkSamples, sinkSamplesAtTimestamps, AudioSampleSink, MediaInputError } = vi.hoisted(() => {
+const { openMediaInput, sinkSamples, AudioSampleSink, MediaInputError } = vi.hoisted(() => {
   class TestMediaInputError extends Error {
     detail: unknown;
 
@@ -20,16 +20,11 @@ const { openMediaInput, sinkSamples, sinkSamplesAtTimestamps, AudioSampleSink, M
     samples(...args: unknown[]) {
       return sinkSamples(...args);
     }
-
-    samplesAtTimestamps(...args: unknown[]) {
-      return sinkSamplesAtTimestamps(...args);
-    }
   }
 
   return {
     openMediaInput: vi.fn(),
     sinkSamples: vi.fn(),
-    sinkSamplesAtTimestamps: vi.fn(),
     AudioSampleSink: TestAudioSampleSink,
     MediaInputError: TestMediaInputError,
   };
@@ -67,10 +62,12 @@ const openedInput = (track: unknown) => ({
   dispose: vi.fn(),
 });
 
+const sine = (frames: number, sampleRate: number, frequency: number, amplitude = 0.3) =>
+  Array.from({ length: frames }, (_, frame) => amplitude * Math.sin((2 * Math.PI * frequency * frame) / sampleRate));
+
 beforeEach(() => {
   openMediaInput.mockReset();
   sinkSamples.mockReset();
-  sinkSamplesAtTimestamps.mockReset();
 });
 
 afterEach(() => {
@@ -78,127 +75,170 @@ afterEach(() => {
 });
 
 describe('extractWaveformPeaks', () => {
-  it('retrieves sparse audio samples in the requested range and aggregates bounded min/max bins', async () => {
+  it('decodes sequential samples into exact half-open bins and keeps antiphase channel extrema', async () => {
     const track = { canDecode: vi.fn().mockResolvedValue(true) };
     const opened = openedInput(track);
+    const sample = audioSample(
+      [
+        [0.9, -0.7, 0.4, -0.3, 0.6, -0.8, 0.2, -0.4],
+        [-0.9, 0.7, -0.4, 0.3, -0.6, 0.8, -0.2, 0.4],
+      ],
+      4,
+      1,
+    );
     openMediaInput.mockResolvedValue(opened);
-    sinkSamplesAtTimestamps.mockImplementation(async function* (timestamps: Iterable<number>) {
-      const requested = [...timestamps];
-      expect(requested).toHaveLength(2);
-      expect(requested.every((timestamp) => timestamp >= 1 && timestamp < 3)).toBe(true);
-      yield {
-        ...audioSample([[0.4, 0.6, -0.2, 0.2]], 4, requested[0]),
-      };
-      yield {
-        ...audioSample([[1, -1]], 4, requested[1]),
-      };
+    sinkSamples.mockImplementation(async function* (start: number, end: number) {
+      expect([start, end]).toEqual([1, 3]);
+      yield sample;
     });
 
     const peaks = await extractWaveformPeaks(descriptor, 1, 3, 2);
 
-    expect(peaks).toEqual(new Float32Array([-0.2, 0.6, -1, 1]));
-    expect(openMediaInput).toHaveBeenCalledWith({ ...descriptor, kind: 'audio' });
+    expect(sinkSamples).toHaveBeenCalledWith(1, 3);
+    expect(peaks).toEqual(new Float32Array([-0.9, 0.9, -0.8, 0.8]));
+    expect(sample.close).toHaveBeenCalledOnce();
     expect(opened.dispose).toHaveBeenCalledOnce();
-    expect(peaks.length).toBe(4);
   });
 
-  it('uses sparse timestamp retrieval instead of decoding every buffer in the full range', async () => {
-    const track = { canDecode: vi.fn().mockResolvedValue(true) };
-    const opened = openedInput(track);
+  it('captures impulses between former sparse sample timestamps', async () => {
+    const opened = openedInput({ canDecode: vi.fn().mockResolvedValue(true) });
+    const values = Array.from({ length: 100 }, () => 0);
+    values[9] = 0.75;
+    values[39] = -0.9;
     openMediaInput.mockResolvedValue(opened);
-    sinkSamples.mockImplementation(() => {
-      throw new Error('full-range AudioSampleSink.samples() must not be used for waveforms');
+    sinkSamples.mockImplementation(async function* () {
+      yield audioSample([values], 100);
     });
 
-    let requestedTimestamps: number[] = [];
-    sinkSamplesAtTimestamps.mockImplementation(async function* (timestamps: Iterable<number>) {
-      requestedTimestamps = [...timestamps];
-      for (const timestamp of requestedTimestamps) {
-        yield {
-          ...audioSample([[0.25]], 100, timestamp),
-        };
+    const peaks = await extractWaveformPeaks(descriptor, 0, 1, 10);
+
+    expect(peaks[1]).toBe(0.75);
+    expect(peaks[6]).toBeCloseTo(-0.9, 6);
+    expect(opened.dispose).toHaveBeenCalledOnce();
+  });
+
+  it('clips samples to the requested start and excludes the exact end boundary', async () => {
+    const opened = openedInput({ canDecode: vi.fn().mockResolvedValue(true) });
+    openMediaInput.mockResolvedValue(opened);
+    sinkSamples.mockImplementation(async function* () {
+      yield audioSample([[0.9, -0.8, -0.2, 0.3, -0.4, 0.95, -0.7]], 4);
+    });
+
+    const peaks = await extractWaveformPeaks(descriptor, 0.5, 1.25, 3);
+
+    expect(peaks).toEqual(new Float32Array([-0.2, 0, 0, 0.3, -0.4, 0]));
+  });
+
+  it('returns zeroed bins and a completed progress chunk when the range has no samples', async () => {
+    const opened = openedInput({ canDecode: vi.fn().mockResolvedValue(true) });
+    openMediaInput.mockResolvedValue(opened);
+    sinkSamples.mockImplementation(async function* () {});
+    const progress: Array<{ pointOffset: number; peaks: Float32Array; bands: Float32Array; complete: boolean }> = [];
+
+    const peaks = await extractWaveformPeaks(descriptor, 0, 1, 3, {
+      pointsPerChunk: 2,
+      shouldStop: () => false,
+      onProgress: (chunk) => progress.push(chunk),
+    });
+
+    expect(peaks).toEqual(new Float32Array(6));
+    expect(progress).toHaveLength(1);
+    expect(progress[0]).toMatchObject({ pointOffset: 0, complete: true });
+    expect(progress[0]!.peaks).toEqual(new Float32Array(6));
+    expect(progress[0]!.bands).toEqual(new Float32Array(12));
+    expect(opened.dispose).toHaveBeenCalledOnce();
+  });
+
+  it('publishes ordered progress chunks with bands and completes a short final tail', async () => {
+    const opened = openedInput({ canDecode: vi.fn().mockResolvedValue(true) });
+    openMediaInput.mockResolvedValue(opened);
+    sinkSamples.mockImplementation(async function* () {
+      for (const startFrame of [0, 16, 32, 48]) {
+        const frameCount = startFrame === 48 ? 8 : 16;
+        yield audioSample([Array.from({ length: frameCount }, () => 0.5)], 64, startFrame / 64);
       }
     });
-
-    const peaks = await extractWaveformPeaks(descriptor, 10, 610, 4);
-
-    expect(sinkSamples).not.toHaveBeenCalled();
-    expect(sinkSamplesAtTimestamps).toHaveBeenCalledOnce();
-    expect(requestedTimestamps).toHaveLength(4);
-    expect(requestedTimestamps.every((timestamp) => timestamp >= 10 && timestamp < 610)).toBe(true);
-    expect(peaks).toEqual(new Float32Array([0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25]));
-    expect(opened.dispose).toHaveBeenCalledOnce();
-  });
-
-  it('publishes ordered 32-point progress chunks with only the last chunk marked complete', async () => {
-    const opened = openedInput({ canDecode: vi.fn().mockResolvedValue(true) });
-    openMediaInput.mockResolvedValue(opened);
-    sinkSamplesAtTimestamps.mockImplementation(async function* (timestamps: Iterable<number>) {
-      for (const timestamp of timestamps) yield audioSample([[0.5]], 100, timestamp);
-    });
-    const progress: Array<{ pointOffset: number; peaks: Float32Array; complete: boolean }> = [];
+    const progress: Array<{ pointOffset: number; peaks: Float32Array; bands: Float32Array; complete: boolean }> = [];
 
     await extractWaveformPeaks(descriptor, 0, 1, 64, {
-      pointsPerChunk: 32,
+      pointsPerChunk: 16,
       shouldStop: () => false,
-      onProgress: (value) => progress.push(value),
+      onProgress: (chunk) => progress.push(chunk),
     });
 
-    expect(progress.map(({ pointOffset }) => pointOffset)).toEqual([0, 32]);
-    expect(progress.map(({ peaks }) => peaks.length / 2)).toEqual([32, 32]);
-    expect(progress.map(({ complete }) => complete)).toEqual([false, true]);
-    expect(progress[1]!.pointOffset).toBeGreaterThan(progress[0]!.pointOffset);
+    expect(progress.map(({ pointOffset }) => pointOffset)).toEqual([0, 16, 32, 48]);
+    expect(progress.map(({ peaks }) => peaks.length / 2)).toEqual([16, 16, 16, 16]);
+    expect(progress.map(({ bands }) => bands.length / 4)).toEqual([16, 16, 16, 16]);
+    expect(progress.map(({ complete }) => complete)).toEqual([false, false, false, true]);
+    expect(Array.from(progress[3]!.peaks.slice(0, 16))).toEqual(Array.from({ length: 8 }, () => [0, 0.5]).flat());
+    expect(progress[3]!.peaks.slice(16)).toEqual(new Float32Array(16));
+    expect(progress[3]!.bands.slice(32)).toEqual(new Float32Array(32));
   });
 
-  it('stops on request, closes the current sample, and leaves the unprocessed tail empty', async () => {
+  it('keeps spectral bands across sample-rate changes and flushes the preceding sample rate', async () => {
     const opened = openedInput({ canDecode: vi.fn().mockResolvedValue(true) });
     openMediaInput.mockResolvedValue(opened);
-    const first = audioSample([[0.25]], 100);
-    const second = audioSample([[0.75]], 100);
-    sinkSamplesAtTimestamps.mockImplementation(async function* () {
+    const lowRate = audioSample([sine(800, 8_000, 100)], 8_000, 0);
+    const highRate = audioSample([sine(1_600, 16_000, 6_000)], 16_000, 0.1);
+    sinkSamples.mockImplementation(async function* () {
+      yield lowRate;
+      yield highRate;
+    });
+    const progress: Array<{ bands: Float32Array; complete: boolean }> = [];
+
+    await extractWaveformPeaks(descriptor, 0, 0.2, 2, {
+      pointsPerChunk: 2,
+      shouldStop: () => false,
+      onProgress: ({ bands, complete }) => progress.push({ bands, complete }),
+    });
+
+    expect(progress).toHaveLength(1);
+    expect(progress[0]!.complete).toBe(true);
+    const bands = progress[0]!.bands;
+    expect(bands[0]).toBeGreaterThan(bands[3]!);
+    expect(bands[7]).toBeGreaterThan(bands[4]!);
+    expect(lowRate.close).toHaveBeenCalledOnce();
+    expect(highRate.close).toHaveBeenCalledOnce();
+  });
+
+  it('stops between samples, closes each acquired sample, and leaves the unprocessed tail empty', async () => {
+    const opened = openedInput({ canDecode: vi.fn().mockResolvedValue(true) });
+    const first = audioSample([[0.25]], 2, 0);
+    const second = audioSample([[-0.5]], 2, 0.5);
+    openMediaInput.mockResolvedValue(opened);
+    sinkSamples.mockImplementation(async function* () {
       yield first;
       yield second;
     });
     let checks = 0;
-    const progress: Array<{ complete: boolean }> = [];
+    const progress: Array<{ pointOffset: number; complete: boolean }> = [];
 
-    const peaks = await extractWaveformPeaks(descriptor, 0, 1, 4, {
-      pointsPerChunk: 2,
+    const peaks = await extractWaveformPeaks(descriptor, 0, 1, 2, {
+      pointsPerChunk: 1,
       shouldStop: () => checks++ > 0,
-      onProgress: ({ complete }) => progress.push({ complete }),
+      onProgress: ({ pointOffset, complete }) => progress.push({ pointOffset, complete }),
     });
 
     expect(first.close).toHaveBeenCalledOnce();
     expect(second.close).toHaveBeenCalledOnce();
-    expect(peaks[0]).toBe(0.25);
-    expect(peaks[1]).toBe(0.25);
-    expect(Array.from(peaks.slice(2))).toEqual([0, 0, 0, 0, 0, 0]);
-    expect(progress).toEqual([]);
+    expect(peaks).toEqual(new Float32Array([0, 0.25, 0, 0]));
+    expect(progress).toEqual([{ pointOffset: 0, complete: false }]);
     expect(opened.dispose).toHaveBeenCalledOnce();
   });
 
-  it('averages channels while retaining the sample range in each bin', async () => {
-    const opened = openedInput({ canDecode: vi.fn().mockResolvedValue(true) });
-    openMediaInput.mockResolvedValue(opened);
-    sinkSamplesAtTimestamps.mockImplementation(async function* () {
-      yield {
-        ...audioSample(
-          [
-            [-1, 0.5, 1, 0],
-            [1, -0.5, -1, 0.4],
-          ],
-          4,
-        ),
-      };
-    });
-
-    await expect(extractWaveformPeaks(descriptor, 0, 1, 1)).resolves.toEqual(new Float32Array([0, 0.2]));
-  });
-
-  it('rejects invalid ranges and point counts before opening media', async () => {
+  it('rejects invalid ranges, point counts and chunk sizes before opening media', async () => {
     await expect(extractWaveformPeaks(descriptor, -1, 1, 4)).rejects.toThrow(RangeError);
+    await expect(extractWaveformPeaks(descriptor, 0, 0, 4)).rejects.toThrow(RangeError);
+    await expect(extractWaveformPeaks(descriptor, Number.NaN, 1, 4)).rejects.toThrow(RangeError);
     await expect(extractWaveformPeaks(descriptor, 0, 1, 0)).rejects.toThrow(RangeError);
     await expect(extractWaveformPeaks(descriptor, 0, 1, 1.5)).rejects.toThrow(RangeError);
+    await expect(
+      extractWaveformPeaks(descriptor, 0, 1, 4, {
+        pointsPerChunk: 0,
+        shouldStop: () => false,
+        onProgress: () => undefined,
+      }),
+    ).rejects.toThrow(RangeError);
     expect(openMediaInput).not.toHaveBeenCalled();
   });
 
@@ -217,7 +257,7 @@ describe('extractWaveformPeaks', () => {
     expect(opened.dispose).toHaveBeenCalledOnce();
   });
 
-  it('reports unsupported audio codecs explicitly and disposes after sink failures', async () => {
+  it('reports unsupported codecs and closes acquired samples when decoding fails', async () => {
     const unsupportedTrack = {
       canDecode: vi.fn().mockResolvedValue(false),
       getCodec: vi.fn().mockResolvedValue('audio/unsupported'),
@@ -230,11 +270,31 @@ describe('extractWaveformPeaks', () => {
     expect(unsupported.dispose).toHaveBeenCalledOnce();
 
     const failing = openedInput({ canDecode: vi.fn().mockResolvedValue(true) });
+    const sample = audioSample([[0.5]], 4);
+    sample.copyTo.mockImplementation(() => {
+      throw new Error('sample decode failed');
+    });
     openMediaInput.mockResolvedValueOnce(failing);
-    sinkSamplesAtTimestamps.mockImplementation(async function* () {
+    sinkSamples.mockImplementation(async function* () {
+      yield sample;
+    });
+
+    await expect(extractWaveformPeaks(descriptor, 0, 1, 4)).rejects.toThrow('sample decode failed');
+    expect(sample.close).toHaveBeenCalledOnce();
+    expect(failing.dispose).toHaveBeenCalledOnce();
+  });
+
+  it('disposes the opened input when the sequential sample iterator fails', async () => {
+    const opened = openedInput({ canDecode: vi.fn().mockResolvedValue(true) });
+    const sample = audioSample([[0.5]], 4);
+    openMediaInput.mockResolvedValue(opened);
+    sinkSamples.mockImplementation(async function* () {
+      yield sample;
       throw new Error('decoder failed');
     });
+
     await expect(extractWaveformPeaks(descriptor, 0, 1, 4)).rejects.toThrow('decoder failed');
-    expect(failing.dispose).toHaveBeenCalledOnce();
+    expect(sample.close).toHaveBeenCalledOnce();
+    expect(opened.dispose).toHaveBeenCalledOnce();
   });
 });

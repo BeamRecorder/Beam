@@ -11,6 +11,8 @@ function createCountdownWindow({
   let window = null;
   let seconds = null;
   let ready = false;
+  let prepared = null;
+  let finishPreparation = null;
   const width = 560;
   const height = 256;
   const isWayland =
@@ -24,67 +26,83 @@ function createCountdownWindow({
       display.workArea.y + Math.max(0, Math.round((display.workArea.height - height) / 2)),
     );
   };
-  const create = () => {
-    if (!canAcceptWork()) return;
-    if (window && !window.isDestroyed()) return;
-    if (!window || window.isDestroyed()) {
-      ready = false;
-      window = new BrowserWindow({
-        width,
-        height,
-        center: isWayland,
-        show: false,
-        frame: false,
-        transparent: true,
-        alwaysOnTop: true,
-        skipTaskbar: true,
-        resizable: false,
-        focusable: false,
-        hasShadow: false,
-        webPreferences: {
-          preload: path.join(applicationRoot, 'electron/preload.cjs'),
-          contextIsolation: true,
-          nodeIntegration: false,
-          sandbox: false,
-        },
-      });
-      window.setIgnoreMouseEvents(true);
-      window.webContents.once('did-fail-load', () => {
-        ready = false;
-        if (window && !window.isDestroyed()) window.destroy();
-        window = null;
-      });
-      window.webContents.once('did-finish-load', () => {
-        ready = true;
-        if (seconds === null) return;
-        window?.webContents.send('countdown:state', seconds);
-        position();
-        reveal();
-      });
-      if (isPackaged) window.loadFile(path.join(applicationRoot, 'dist/index.html'), { query: { countdown: '1' } });
-      else window.loadURL('http://localhost:6500/?countdown=1');
-    }
+  const destroy = () => {
+    const target = window;
+    window = null;
+    seconds = null;
+    ready = false;
+    finishPreparation?.(false);
+    finishPreparation = null;
+    prepared = null;
+    if (target && !target.isDestroyed()) target.destroy();
   };
   const reveal = () => {
     if (!window || window.isDestroyed()) return;
-    if (isWayland) {
-      // showInactive() and moveTop() are not supported by Electron on
-      // Wayland. The window remains non-focusable, so show() presents it
-      // without taking focus from the recording target.
-      window.show();
-      return;
+    // Wayland has no showInactive/moveTop; this surface is always non-focusable.
+    if (isWayland) window.show();
+    else {
+      window.showInactive();
+      window.moveTop();
     }
-    window.showInactive();
-    window.moveTop();
+  };
+  const prepare = () => {
+    if (!canAcceptWork()) return Promise.resolve(false);
+    if (window && !window.isDestroyed()) return prepared;
+    ready = false;
+    prepared = new Promise((resolve) => {
+      finishPreparation = resolve;
+    });
+    const target = new BrowserWindow({
+      width,
+      height,
+      center: isWayland,
+      show: false,
+      frame: false,
+      transparent: true,
+      alwaysOnTop: true,
+      skipTaskbar: true,
+      resizable: false,
+      focusable: false,
+      hasShadow: false,
+      webPreferences: {
+        preload: path.join(applicationRoot, 'electron/preload.cjs'),
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: false,
+      },
+    });
+    window = target;
+    target.setIgnoreMouseEvents(true);
+    const failPreparation = () => {
+      if (target === window) destroy();
+    };
+    target.webContents.on('did-fail-load', (_event, code, _description, _url, isMainFrame) => {
+      if (code !== -3 && isMainFrame !== false) failPreparation();
+    });
+    target.webContents.once('did-finish-load', () => {
+      if (target !== window || target.isDestroyed()) return;
+      ready = true;
+      finishPreparation?.(true);
+      finishPreparation = null;
+      if (seconds === null) return;
+      target.webContents.send('countdown:state', seconds);
+      position();
+      reveal();
+    });
+    const loading = isPackaged
+      ? target.loadFile(path.join(applicationRoot, 'dist/countdown.html'))
+      : target.loadURL('http://localhost:6500/countdown.html');
+    void Promise.resolve(loading).catch(failPreparation);
+    return prepared;
   };
   const show = (value) => {
     if (!canAcceptWork()) return false;
     seconds = value;
-    create();
     if (value === null) {
-      window?.hide();
+      if (window && !window.isDestroyed()) window.hide();
       return true;
     }
+    prepare();
     position();
     if (ready) {
       window.webContents.send('countdown:state', value);
@@ -92,18 +110,8 @@ function createCountdownWindow({
     }
     return true;
   };
-  // Load the renderer while the application is idle. The first countdown
-  // value can then be displayed immediately instead of waiting for a cold
-  // BrowserWindow and renderer navigation.
-  create();
-  return {
-    show,
-    destroy: () => {
-      if (window && !window.isDestroyed()) window.destroy();
-      window = null;
-      ready = false;
-    },
-  };
+  prepare();
+  return { show, prepare, suspend: destroy, destroy };
 }
 
 module.exports = { createCountdownWindow };

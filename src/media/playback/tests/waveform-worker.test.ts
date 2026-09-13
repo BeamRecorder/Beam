@@ -83,6 +83,7 @@ describe('waveform worker protocol', () => {
       generation: 1,
       clipId: 'clip-1',
       peaks: new Float32Array([0, 1]),
+      bands: new Float32Array([0.1, 0.2, 0.3, 0.4]),
       segmentIndex: 0,
       segmentCount: 1,
       segmentPointOffset: 0,
@@ -98,6 +99,13 @@ describe('waveform worker protocol', () => {
     expect(isWaveformWorkerResponse(error)).toBe(true);
     expect(() => assertWaveformWorkerResponse(result)).not.toThrow();
     expect(isWaveformWorkerResponse({ ...result, peaks: [0, 1] })).toBe(false);
+    expect(isWaveformWorkerResponse({ ...result, bands: undefined })).toBe(false);
+    expect(isWaveformWorkerResponse({ ...result, bands: [0.1, 0.2, 0.3, 0.4] })).toBe(false);
+    expect(isWaveformWorkerResponse({ ...result, bands: new Float32Array(3) })).toBe(false);
+    expect(isWaveformWorkerResponse({ ...result, bands: new Float32Array(6) })).toBe(false);
+    expect(() => assertWaveformWorkerResponse({ ...result, bands: new Float32Array(3) })).toThrow(
+      'Invalid waveform worker response.',
+    );
     expect(isWaveformWorkerResponse({ ...result, segmentPointOffset: -1 })).toBe(false);
     expect(isWaveformWorkerResponse({ ...result, segmentComplete: undefined })).toBe(false);
     expect(isWaveformWorkerResponse({ ...error, error: { kind: 'decode-failure' } })).toBe(false);
@@ -106,12 +114,17 @@ describe('waveform worker protocol', () => {
 
 describe('waveform worker', () => {
   it('forwards ordered 32-point chunks for one segment without a coarse stage', async () => {
+    const firstPeaks = new Float32Array(32 * 2).fill(0.25);
+    const firstBands = new Float32Array(32 * 4).fill(0.125);
+    const secondPeaks = new Float32Array((64 - 32) * 2).fill(0.25);
+    const secondBands = new Float32Array((64 - 32) * 4).fill(0.25);
     runtime.extractWaveformPeaks.mockImplementation(
-      async (_source, _start, _end, pointCount: number, options?: { onProgress: (value: unknown) => void }) => {
-        options?.onProgress({ pointOffset: 0, peaks: new Float32Array(32 * 2).fill(0.25), complete: false });
+      async (_source, _start, _end, _pointCount: number, options?: { onProgress: (value: unknown) => void }) => {
+        options?.onProgress({ pointOffset: 0, peaks: firstPeaks, bands: firstBands, complete: false });
         options?.onProgress({
           pointOffset: 32,
-          peaks: new Float32Array((pointCount - 32) * 2).fill(0.25),
+          peaks: secondPeaks,
+          bands: secondBands,
           complete: true,
         });
       },
@@ -137,6 +150,7 @@ describe('waveform worker', () => {
         segmentPointOffset: 0,
         segmentComplete: false,
         peaks: expect.any(Float32Array),
+        bands: expect.any(Float32Array),
       }),
       expect.objectContaining({
         type: 'result',
@@ -147,7 +161,19 @@ describe('waveform worker', () => {
         segmentPointOffset: 32,
         segmentComplete: true,
         peaks: expect.any(Float32Array),
+        bands: expect.any(Float32Array),
       }),
+    ]);
+    expect(messages().map((message) => (message.type === 'result' ? message.bands : null))).toEqual([
+      firstBands,
+      secondBands,
+    ]);
+    const transferLists = workerSelf.postMessage.mock.calls.map(
+      ([, options]) => (options as { transfer: ArrayBufferLike[] }).transfer,
+    );
+    expect(transferLists).toEqual([
+      [firstPeaks.buffer, firstBands.buffer],
+      [secondPeaks.buffer, secondBands.buffer],
     ]);
   });
 
@@ -158,13 +184,23 @@ describe('waveform worker', () => {
       .mockImplementationOnce(
         async (_source, _start, _end, pointCount: number, options?: { onProgress: (value: unknown) => void }) => {
           await first.promise;
-          options?.onProgress({ pointOffset: 0, peaks: new Float32Array(pointCount * 2).fill(0.1), complete: true });
+          options?.onProgress({
+            pointOffset: 0,
+            peaks: new Float32Array(pointCount * 2).fill(0.1),
+            bands: new Float32Array(pointCount * 4).fill(0.1),
+            complete: true,
+          });
         },
       )
       .mockImplementationOnce(
         async (_source, _start, _end, pointCount: number, options?: { onProgress: (value: unknown) => void }) => {
           await second.promise;
-          options?.onProgress({ pointOffset: 0, peaks: new Float32Array(pointCount * 2).fill(0.9), complete: true });
+          options?.onProgress({
+            pointOffset: 0,
+            peaks: new Float32Array(pointCount * 2).fill(0.9),
+            bands: new Float32Array(pointCount * 4).fill(0.9),
+            complete: true,
+          });
         },
       );
 
@@ -202,5 +238,49 @@ describe('waveform worker', () => {
     expect(segments[0]!.endSeconds).toBe(segments[1]!.startSeconds);
     expect(segments[1]!.endSeconds).toBe(segments[2]!.startSeconds);
     expect(segments.reduce((sum, segment) => sum + segment.pointCount, 0)).toBe(64);
+  });
+
+  it('skips queued extraction requests after a newer generation arrives', async () => {
+    const inFlight = deferred<void>();
+    runtime.extractWaveformPeaks
+      .mockImplementationOnce(
+        async (_source, _start, _end, pointCount: number, options?: { onProgress: (value: unknown) => void }) => {
+          await inFlight.promise;
+          options?.onProgress({
+            pointOffset: 0,
+            peaks: new Float32Array(pointCount * 2).fill(0.1),
+            bands: new Float32Array(pointCount * 4).fill(0.1),
+            complete: true,
+          });
+        },
+      )
+      .mockImplementationOnce(
+        async (_source, _start, _end, pointCount: number, options?: { onProgress: (value: unknown) => void }) => {
+          options?.onProgress({
+            pointOffset: 0,
+            peaks: new Float32Array(pointCount * 2).fill(0.9),
+            bands: new Float32Array(pointCount * 4).fill(0.9),
+            complete: true,
+          });
+        },
+      );
+
+    send(extract({ generation: 1, clipId: 'in-flight', pointCount: 1 }));
+    await flush();
+    send(extract({ generation: 1, clipId: 'stale-pending', pointCount: 1 }));
+    send(extract({ generation: 2, clipId: 'current', pointCount: 1 }));
+    inFlight.resolve();
+    await flush();
+
+    expect(runtime.extractWaveformPeaks).toHaveBeenCalledTimes(2);
+    expect(messages()).toEqual([
+      expect.objectContaining({
+        type: 'result',
+        generation: 2,
+        clipId: 'current',
+        bands: expect.any(Float32Array),
+        segmentComplete: true,
+      }),
+    ]);
   });
 });

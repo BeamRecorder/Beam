@@ -6,22 +6,25 @@ import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import ClipActionGroup from './clip/ClipActionGroup.vue';
 import PropertiesSelectionSummary from './PropertiesSelectionSummary.vue';
 
-defineProps<{
-  title: string;
-  transitionTitle: string;
-  transitionName: string;
-  transitionsOpen: boolean;
-  showClipActions: boolean;
-  clipTransitionable: boolean;
-  showCanvasTransition: boolean;
-  enabled: boolean;
-  toggleable: boolean;
-  enabledLabel: string;
-  disabledLabel: string;
-  deleteLabel: string;
-  transitionButtonLabel: string;
-  selectionNames?: string[];
-}>();
+withDefaults(
+  defineProps<{
+    title: string;
+    transitionTitle?: string;
+    transitionName?: string;
+    transitionsOpen?: boolean;
+    showClipActions?: boolean;
+    clipTransitionable?: boolean;
+    showCanvasTransition?: boolean;
+    enabled?: boolean;
+    toggleable?: boolean;
+    enabledLabel?: string;
+    disabledLabel?: string;
+    deleteLabel?: string;
+    transitionButtonLabel?: string;
+    selectionNames?: string[];
+  }>(),
+  { enabledLabel: '', disabledLabel: '', deleteLabel: '' },
+);
 const emit = defineEmits<{
   (event: 'back'): void;
   (event: 'toggle'): void;
@@ -50,33 +53,35 @@ defineExpose({ focusTransitionButton });
           <h3 class="panel-title">{{ title }}</h3>
           <PropertiesSelectionSummary v-if="selectionNames?.length" :names="selectionNames" />
         </div>
-        <ClipActionGroup
-          v-if="showClipActions && !transitionsOpen"
-          ref="transitionButton"
-          class="panel-header-actions"
-          :enabled="enabled"
-          :toggleable="toggleable"
-          :enabled-label="enabledLabel"
-          :disabled-label="disabledLabel"
-          :delete-label="deleteLabel"
-          :transitionable="clipTransitionable"
-          :transition-active="transitionsOpen"
-          :transition-label="transitionButtonLabel"
-          @toggle="emit('toggle')"
-          @delete="emit('delete')"
-          @transition="emit('transition')"
-        />
-        <ButtonGroup v-else-if="showCanvasTransition && !transitionsOpen" ref="transitionButton" size="xs">
-          <Button
-            variant="ghost"
-            size="xs"
-            :icon="Blend"
-            icon-only
-            :aria-label="transitionButtonLabel"
-            :tooltip="transitionButtonLabel"
-            @click="emit('transition')"
+        <slot name="actions">
+          <ClipActionGroup
+            v-if="showClipActions && !transitionsOpen"
+            ref="transitionButton"
+            class="panel-header-actions"
+            :enabled="enabled"
+            :toggleable="toggleable"
+            :enabled-label="enabledLabel"
+            :disabled-label="disabledLabel"
+            :delete-label="deleteLabel"
+            :transitionable="clipTransitionable"
+            :transition-active="transitionsOpen"
+            :transition-label="transitionButtonLabel"
+            @toggle="emit('toggle')"
+            @delete="emit('delete')"
+            @transition="emit('transition')"
           />
-        </ButtonGroup>
+          <ButtonGroup v-else-if="showCanvasTransition && !transitionsOpen" ref="transitionButton" size="xs">
+            <Button
+              variant="ghost"
+              size="xs"
+              :icon="Blend"
+              icon-only
+              :aria-label="transitionButtonLabel"
+              :tooltip="transitionButtonLabel"
+              @click="emit('transition')"
+            />
+          </ButtonGroup>
+        </slot>
       </div>
     </Transition>
   </div>

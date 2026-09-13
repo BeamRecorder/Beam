@@ -82,6 +82,32 @@ function createEngine() {
   );
 }
 
+test('invalid commands reject before starting the engine or registering pending requests', async () => {
+  const engine = createEngine();
+  const startEngine = engine.ensureStarted.bind(engine);
+  let startCalls = 0;
+  engine.ensureStarted = () => {
+    startCalls += 1;
+    return startEngine();
+  };
+  const expectedError = {
+    name: 'TypeError',
+    message: 'capture-engine: command must be a non-empty string',
+  };
+  const requests = [{}, '', ' \t '].map((command) => engine.request(command, {}, { timeoutMs: 10 }));
+  const rejectionChecks = requests.map((request) => assert.rejects(request, expectedError));
+
+  try {
+    assert.equal(startCalls, 0);
+    assert.equal(spawned.length, 0);
+    assert.equal(engine.pending.size, 0);
+    await Promise.all(rejectionChecks);
+  } finally {
+    await Promise.allSettled(rejectionChecks);
+    await engine.forceShutdown();
+  }
+});
+
 test('a timed-out request kills the child, rejects all pending requests, and poisons the engine', async () => {
   const engine = createEngine();
   const first = engine.request('status', {}, { timeoutMs: 20 });
@@ -248,4 +274,27 @@ test('shutdown gracefully stops, force-kills the child, and stays idempotent', a
 
   await engine.shutdown();
   assert.equal(spawned.length, 1);
+});
+
+test('native preview cleanup is allowed only on a live running engine', () => {
+  const { CaptureEngine } = require('../electron/capture/capture-engine.cjs');
+  const engine = new CaptureEngine({}, '/beam');
+  assert.equal(engine.canCleanup(), false);
+  assert.equal(spawned.length, 0);
+  engine.process = {};
+  engine.state = 'running';
+  assert.equal(engine.canCleanup(), true);
+  engine.shuttingDown = true;
+  assert.equal(engine.canCleanup(), false);
+  engine.shuttingDown = false;
+  for (const state of ['stopped', 'poisoned', 'terminating', 'shutdown']) {
+    engine.state = state;
+    assert.equal(engine.canCleanup(), false);
+  }
+  engine.state = 'running';
+  engine.unconfirmedExit = {};
+  assert.equal(engine.canCleanup(), false);
+  engine.unconfirmedExit = null;
+  engine.process = null;
+  assert.equal(engine.canCleanup(), false);
 });

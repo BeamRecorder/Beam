@@ -141,6 +141,7 @@ export function useSelectedClips(options: { composition: Ref<ClipComposition>; a
             blurCornerRadius: clip.cornerRadius,
             blurTintOpacity: clip.tintOpacity,
             blurColor: clip.color,
+            highlightColor: clip.highlightColor,
           }
         : {}),
       ...(isColorClip(clip) || isShapeClip(clip) ? { clipTransform: clip.transform } : {}),
@@ -170,7 +171,10 @@ export function useSelectedClips(options: { composition: Ref<ClipComposition>; a
     );
   const updateSelectedBlur = (
     patch: Partial<
-      Pick<BlurClip, 'shape' | 'mode' | 'strength' | 'feather' | 'cornerRadius' | 'tintOpacity' | 'color'>
+      Pick<
+        BlurClip,
+        'shape' | 'mode' | 'strength' | 'feather' | 'cornerRadius' | 'tintOpacity' | 'color' | 'highlightColor'
+      >
     >,
   ) => updateCompositionEach(isBlurClip, (next, id) => setBlurEffect(next, id, patch));
   const updateSelectedCrop = (crop: NormalizedCrop) =>

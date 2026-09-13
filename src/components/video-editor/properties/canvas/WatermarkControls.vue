@@ -11,7 +11,7 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
 import { DEFAULT_WATERMARK, normalizeWatermark, type WatermarkSettings } from '../../canvas/output-canvas';
 
-const props = defineProps<{ modelValue?: WatermarkSettings }>();
+const props = defineProps<{ modelValue?: WatermarkSettings; description?: string }>();
 const emit = defineEmits<{ (event: 'update:modelValue', value: WatermarkSettings): void }>();
 const { t } = useTranslate('CanvasPanel');
 const value = computed(() => normalizeWatermark(props.modelValue ?? DEFAULT_WATERMARK));
@@ -51,7 +51,7 @@ const positions = [
         <img :src="resolvePublicAssetUrl('/brand/BeamIcon.webp')" alt="" class="logo" />
         <div>
           <span class="title">{{ t('watermark') }}</span
-          ><span class="description">{{ t('watermarkDescription') }}</span>
+          ><span class="description">{{ description ?? t('watermarkDescription') }}</span>
         </div>
       </div>
       <Switch

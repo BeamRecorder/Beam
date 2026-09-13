@@ -11,7 +11,7 @@ const preparedValue = (command) => ({
   format: { codec: 'vp8', width: 1280, height: 720, nominalFps: 30 },
 });
 
-function createFixture({ timeoutMs = 100 } = {}) {
+function createFixture({ timeoutMs = 100, allowQuickSnipOwner = false } = {}) {
   const handlers = new Map();
   const listeners = new Map();
   const commands = [];
@@ -21,6 +21,13 @@ function createFixture({ timeoutMs = 100 } = {}) {
   const hudWebContents = { id: 1, send: (...message) => hudMessages.push(message) };
   const overlayWebContents = { id: 2 };
   const otherWebContents = { id: 3 };
+  let quickSnipDestroyed = false;
+  const quickSnipMessages = [];
+  const quickSnipWebContents = {
+    id: 4,
+    isDestroyed: () => quickSnipDestroyed,
+    send: (...message) => quickSnipMessages.push(message),
+  };
 
   const ipcMain = {
     handle(channel, listener) {
@@ -50,6 +57,7 @@ function createFixture({ timeoutMs = 100 } = {}) {
     ipcMain,
     cameraOverlay,
     hudWebContents,
+    isRecordingOwner: (sender) => sender === hudWebContents || (allowQuickSnipOwner && sender === quickSnipWebContents),
     timeoutMs,
   });
 
@@ -60,7 +68,12 @@ function createFixture({ timeoutMs = 100 } = {}) {
     configureCalls,
     rendererReadyCalls,
     hudMessages,
+    quickSnipMessages,
     hudWebContents,
+    quickSnipWebContents,
+    destroyQuickSnip: () => {
+      quickSnipDestroyed = true;
+    },
     overlayWebContents,
     otherWebContents,
     cleanup,
@@ -102,10 +115,78 @@ test('accepts recording control only from the canonical HUD sender', async () =>
 
   await assert.rejects(
     fixture.invoke(fixture.otherWebContents, { action: 'prepare', sourceId }),
-    /restricted to the HUD/,
+    /restricted to the recorder/,
   );
   assert.deepEqual(fixture.commands, []);
   assert.deepEqual(fixture.configureCalls, []);
+});
+
+test('allows the Quick Snip crop window to own recording and rejects commands from other windows', async () => {
+  const fixture = createFixture({ allowQuickSnipOwner: true });
+  const preparation = fixture.invoke(fixture.quickSnipWebContents, { action: 'prepare', sourceId });
+  await Promise.resolve();
+  const command = fixture.commands[0];
+
+  await assert.rejects(
+    fixture.invoke(fixture.hudWebContents, { action: 'prepare', sourceId }),
+    /belongs to another recorder/,
+  );
+  await assert.rejects(
+    fixture.invoke(fixture.otherWebContents, { action: 'prepare', sourceId }),
+    /restricted to the recorder/,
+  );
+  assert.equal(fixture.commands.length, 1);
+  assert.deepEqual(fixture.configureCalls, [{ cameraId: sourceId }]);
+
+  fixture.emit('camera-overlay:recording-result', fixture.overlayWebContents, {
+    commandId: command.commandId,
+    ok: true,
+    value: preparedValue(command),
+  });
+  await preparation;
+
+  fixture.emit('camera-overlay:recording-failure', fixture.overlayWebContents, {
+    recordingId: command.recordingId,
+    message: 'camera disconnected',
+  });
+  assert.deepEqual(fixture.quickSnipMessages, [
+    ['camera-overlay:recording-failure', { recordingId: command.recordingId, message: 'camera disconnected' }],
+  ]);
+  assert.deepEqual(fixture.hudMessages, []);
+});
+
+test('failure after Quick Snip owner destruction releases the camera recording lock', async () => {
+  const fixture = createFixture({ allowQuickSnipOwner: true });
+  const cropPreparation = fixture.invoke(fixture.quickSnipWebContents, { action: 'prepare', sourceId });
+  await Promise.resolve();
+  const cropCommand = fixture.commands.at(-1);
+  fixture.emit('camera-overlay:recording-result', fixture.overlayWebContents, {
+    commandId: cropCommand.commandId,
+    ok: true,
+    value: preparedValue(cropCommand),
+  });
+  await cropPreparation;
+  fixture.destroyQuickSnip();
+
+  assert.doesNotThrow(() =>
+    fixture.emit('camera-overlay:recording-failure', fixture.overlayWebContents, {
+      recordingId: cropCommand.recordingId,
+      message: 'camera disconnected after crop closed',
+    }),
+  );
+  assert.deepEqual(fixture.quickSnipMessages, []);
+
+  const hudPreparation = fixture.invoke(fixture.hudWebContents, { action: 'prepare', sourceId });
+  await Promise.resolve();
+  const hudCommand = fixture.commands.at(-1);
+  assert.notEqual(hudCommand.recordingId, cropCommand.recordingId);
+  fixture.emit('camera-overlay:recording-result', fixture.overlayWebContents, {
+    commandId: hudCommand.commandId,
+    ok: true,
+    value: preparedValue(hudCommand),
+  });
+  await hudPreparation;
+  fixture.cleanup();
 });
 
 test('rejects malformed controls before dispatching to the overlay', () => {

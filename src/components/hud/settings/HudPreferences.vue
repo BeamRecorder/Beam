@@ -17,6 +17,7 @@ import { isSupportedLocale, localeOptions } from '~/i18n/locales';
 import type { RecordingBarVisibility } from '../recorder/recording-types';
 import type { InteractionAccessViewState } from '../interactions/interaction-access-types';
 import InteractionAccessControl from '../interactions/InteractionAccessControl.vue';
+import InteractionAccessError from '../interactions/InteractionAccessError.vue';
 import SpellCheckPreference from '~/components/settings/SpellCheckPreference.vue';
 
 const { t } = useTranslate('HudPreferences');
@@ -139,6 +140,7 @@ const openOnboarding = () => {
             <div class="preference-copy">
               <p class="preference-title">{{ interactionTitle }}</p>
               <p class="preference-description">{{ inputDescription }}</p>
+              <InteractionAccessError :status="props.inputAccess" />
             </div>
             <div class="input-access-actions" role="status" aria-live="polite">
               <InteractionAccessControl

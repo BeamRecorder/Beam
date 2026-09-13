@@ -2,13 +2,15 @@ use std::{
     io::Read,
     path::{Path, PathBuf},
     process::{Command, Stdio},
-    sync::OnceLock,
+    sync::{Mutex, OnceLock},
     time::{Duration, Instant},
 };
 
 use crate::{CaptureError, NativeCaptureErrorCode};
 
-use super::{FfmpegAcceleration, FfmpegEncoder, owned_child};
+use super::{
+    FfmpegAcceleration, FfmpegEncoder, ffmpeg_cache::FfmpegProbeCache, gpu_inventory, owned_child,
+};
 
 const FFMPEG_PATH_ENV: &str = "BEAM_FFMPEG_PATH";
 const FFMPEG_PROBE_TIMEOUT: Duration = Duration::from_secs(3);
@@ -20,20 +22,37 @@ pub(crate) struct FfmpegCapabilities {
 }
 
 pub(crate) fn probe_ffmpeg() -> Result<FfmpegCapabilities, CaptureError> {
-    static CAPABILITIES: OnceLock<FfmpegCapabilities> = OnceLock::new();
-    if let Some(capabilities) = CAPABILITIES.get() {
-        return Ok(capabilities.clone());
-    }
+    static CACHE: OnceLock<Mutex<FfmpegProbeCache>> = OnceLock::new();
     let executable = std::env::var_os(FFMPEG_PATH_ENV)
         .filter(|value| !value.is_empty())
         .map_or_else(|| PathBuf::from("ffmpeg"), PathBuf::from);
-    let capabilities = probe_ffmpeg_at(executable)?;
-    let _ = CAPABILITIES.set(capabilities.clone());
-    Ok(capabilities)
+    CACHE
+        .get_or_init(|| Mutex::new(FfmpegProbeCache::default()))
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .get_or_probe(executable, Instant::now, probe_ffmpeg_at)
 }
 
 fn probe_ffmpeg_at(executable: PathBuf) -> Result<FfmpegCapabilities, CaptureError> {
-    let version_output = run(&executable, &["-hide_banner", "-version"])?;
+    // These inventories do not initialize a GPU. Overlap their process startup,
+    // while retaining sequential hardware tests to avoid encoder contention.
+    let (version_output, encoders, muxers) = std::thread::scope(|scope| {
+        let version = scope.spawn(|| run(&executable, &["-hide_banner", "-version"]));
+        let muxers = scope.spawn(|| run(&executable, &["-hide_banner", "-muxers"]));
+        let encoders = run(&executable, &["-hide_banner", "-encoders"]);
+        let join_error = |_| {
+            Err(ffmpeg_error(
+                NativeCaptureErrorCode::FfmpegUnavailable,
+                "FFmpeg capability probe thread failed",
+            ))
+        };
+        (
+            version.join().unwrap_or_else(join_error),
+            encoders,
+            muxers.join().unwrap_or_else(join_error),
+        )
+    });
+    let version_output = version_output?;
     version_output
         .lines()
         .next()
@@ -44,14 +63,14 @@ fn probe_ffmpeg_at(executable: PathBuf) -> Result<FfmpegCapabilities, CaptureErr
                 "the configured executable did not identify itself as FFmpeg",
             )
         })?;
-    let encoders = run(&executable, &["-hide_banner", "-encoders"])?;
+    let encoders = encoders?;
     let encoder = select_encoder(&executable, &encoders).ok_or_else(|| {
         ffmpeg_error(
             NativeCaptureErrorCode::FfmpegEncoderUnavailable,
             "FFmpeg has no working hardware H.264/AV1/VP9 encoder and neither libx264 nor libopenh264",
         )
     })?;
-    let muxers = run(&executable, &["-hide_banner", "-muxers"])?;
+    let muxers = muxers?;
     if !has_named_component(&muxers, "mp4") {
         return Err(ffmpeg_error(
             NativeCaptureErrorCode::FfmpegUnavailable,
@@ -65,8 +84,10 @@ fn probe_ffmpeg_at(executable: PathBuf) -> Result<FfmpegCapabilities, CaptureErr
 }
 
 fn select_encoder(executable: &Path, output: &str) -> Option<FfmpegEncoder> {
+    let vendors = gpu_inventory::available_vendors();
     for candidate in hardware_candidates() {
         if has_named_component(output, &candidate.name)
+            && gpu_inventory::supports(vendors.as_ref(), &candidate.acceleration)
             && probe_hardware_encoder(executable, &candidate)
         {
             return Some(candidate);
@@ -214,49 +235,46 @@ fn run(executable: &Path, arguments: &[&str]) -> Result<String, CaptureError> {
         )
     })?;
     owned_child::register(&child);
-    let deadline = Instant::now() + FFMPEG_PROBE_TIMEOUT;
-    let status = loop {
-        match child.try_wait() {
-            Ok(Some(status)) => {
-                owned_child::unregister(&child);
-                break status;
+    // Drain both pipes while the child runs. Large FFmpeg inventories can fill
+    // a pipe before exit; waiting first would turn a healthy probe into a timeout.
+    let (status, stdout, stderr) = std::thread::scope(|scope| {
+        let stdout = child.stdout.take();
+        let stderr = child.stderr.take();
+        let read = |output: Option<std::process::ChildStdout>| {
+            let mut text = String::new();
+            if let Some(mut output) = output {
+                output.read_to_string(&mut text)?;
             }
-            Err(error) => {
-                owned_child::kill_and_wait(&mut child);
-                return Err(ffmpeg_error(
-                    NativeCaptureErrorCode::FfmpegUnavailable,
-                    format!("failed while waiting for {}: {error}", executable.display()),
-                ));
+            Ok::<_, std::io::Error>(text)
+        };
+        let stdout_reader = scope.spawn(move || read(stdout));
+        let stderr_reader = scope.spawn(move || {
+            let mut text = String::new();
+            if let Some(mut output) = stderr {
+                output.read_to_string(&mut text)?;
             }
-            Ok(None) => {}
-        }
-        if Instant::now() >= deadline {
-            owned_child::kill_and_wait(&mut child);
-            return Err(ffmpeg_error(
-                NativeCaptureErrorCode::FfmpegUnavailable,
-                format!("{} capability probe timed out", executable.display()),
-            ));
-        }
-        std::thread::sleep(Duration::from_millis(10));
+            Ok::<_, std::io::Error>(text)
+        });
+        let status = wait_for_probe(&mut child);
+        (status, stdout_reader.join(), stderr_reader.join())
+    });
+    let status = status.ok_or_else(|| {
+        ffmpeg_error(
+            NativeCaptureErrorCode::FfmpegUnavailable,
+            format!(
+                "{} capability probe timed out or failed",
+                executable.display()
+            ),
+        )
+    })?;
+    let read_output = |result: std::thread::Result<std::io::Result<String>>| {
+        result
+            .map_err(|_| "FFmpeg output reader failed".to_owned())
+            .and_then(|output| output.map_err(|error| error.to_string()))
+            .map_err(|error| ffmpeg_error(NativeCaptureErrorCode::FfmpegUnavailable, error))
     };
-    let mut stdout = String::new();
-    let mut stderr = String::new();
-    if let Some(mut output) = child.stdout.take() {
-        output.read_to_string(&mut stdout).map_err(|error| {
-            ffmpeg_error(
-                NativeCaptureErrorCode::FfmpegUnavailable,
-                format!("failed to read FFmpeg capabilities: {error}"),
-            )
-        })?;
-    }
-    if let Some(mut diagnostics) = child.stderr.take() {
-        diagnostics.read_to_string(&mut stderr).map_err(|error| {
-            ffmpeg_error(
-                NativeCaptureErrorCode::FfmpegUnavailable,
-                format!("failed to read FFmpeg diagnostics: {error}"),
-            )
-        })?;
-    }
+    let stdout = read_output(stdout)?;
+    let stderr = read_output(stderr)?;
     if !status.success() {
         return Err(ffmpeg_error(
             NativeCaptureErrorCode::FfmpegUnavailable,
@@ -291,7 +309,9 @@ fn ffmpeg_error(code: NativeCaptureErrorCode, message: impl Into<String>) -> Cap
 #[cfg(test)]
 #[allow(clippy::expect_used)]
 mod tests {
-    use super::{has_named_component, probe_ffmpeg_at, select_h264_encoder};
+    use std::{fs, os::unix::fs::PermissionsExt};
+
+    use super::{has_named_component, probe_ffmpeg_at, run, select_h264_encoder};
 
     fn executable(name: &str) -> std::path::PathBuf {
         // Checked-in fixtures have no writable descriptors that concurrent
@@ -342,6 +362,44 @@ mod tests {
         let error = probe_ffmpeg_at("/definitely/missing/beam-ffmpeg".into())
             .expect_err("missing FFmpeg must fail");
         assert_eq!(error.code(), "ffmpeg-unavailable");
+    }
+
+    #[test]
+    fn probe_drains_large_output_before_waiting_for_exit() {
+        let directory = tempfile::tempdir().expect("temporary FFmpeg directory");
+        let path = directory.path().join("large-output.sh");
+        fs::write(
+            &path,
+            "#!/bin/sh\nhead -c 262144 /dev/zero | tr '\\000' 'x'\nhead -c 262144 /dev/zero | tr '\\000' 'y' >&2\n",
+        )
+        .expect("write large-output FFmpeg fixture");
+        let mut permissions = fs::metadata(&path)
+            .expect("large-output fixture metadata")
+            .permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(&path, permissions).expect("make fixture executable");
+        let output = run(&path, &[]).expect("output larger than both pipe buffers");
+        assert_eq!(output.len(), 262144);
+        assert!(output.bytes().all(|byte| byte == b'x'));
+    }
+
+    #[test]
+    fn probe_rejects_an_executable_that_is_not_ffmpeg() {
+        let directory = tempfile::tempdir().expect("temporary FFmpeg directory");
+        let path = directory.path().join("not-ffmpeg.sh");
+        fs::write(&path, "#!/bin/sh\nprintf 'another program\\n'\n")
+            .expect("write not-FFmpeg fixture");
+        let mut permissions = fs::metadata(&path)
+            .expect("not-FFmpeg fixture metadata")
+            .permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(&path, permissions).expect("make fixture executable");
+        let error = probe_ffmpeg_at(path).expect_err("invalid executable identity");
+        assert!(
+            error
+                .to_string()
+                .contains("did not identify itself as FFmpeg")
+        );
     }
 
     #[test]

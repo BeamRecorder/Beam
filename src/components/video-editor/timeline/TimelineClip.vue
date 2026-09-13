@@ -1,17 +1,18 @@
 <script setup lang="ts">
 import TimelineLockOverlay from './TimelineLockOverlay.vue';
-import { Lock } from '@lucide/vue';
+import { CircleDashed, Focus, Lock } from '@lucide/vue';
 import { computed, onUnmounted, ref, watch } from 'vue';
 import { sourceTimeAt } from '~/media/shared';
 import { useThumbnails } from './waveform/useThumbnails';
 import { useTranslate } from '~/i18n/useTranslate';
-import WaveformCanvas from './waveform/WaveformCanvas.vue';
+import BlickWaveformCanvas from './waveform/BlickWaveformCanvas.vue';
 import { timelineClipStyle, timelineFrameStyle, timelineTransitionStyle } from './timeline-clip-geometry';
 import TimelineTransitionCurve from './TimelineTransitionCurve.vue';
 import ShapeTimelinePreview from './ShapeTimelinePreview.vue';
 import ColorTimelinePreview from './ColorTimelinePreview.vue';
 import type { TimelineClipProps } from './timeline-clip-types';
 const { t } = useTranslate('TimelineTracks');
+const { t: tHighlight } = useTranslate('Highlight');
 const props = defineProps<TimelineClipProps>();
 const emit = defineEmits<{
   (event: 'select', value: MouseEvent): void;
@@ -49,6 +50,9 @@ const thumbnailRefreshKey = computed(() =>
   [
     props.thumbnailSlots.map((slot) => `${slot.timelineSeconds}:${slot.durationSeconds}`).join(','),
     props.asset?.src ?? '',
+    props.asset?.id ?? '',
+    props.clip.timelineStartMs,
+    props.clip.timelineDurationMs,
     props.clip.sourceInMs,
     props.clip.sourceDurationMs,
     props.clip.playbackRate,
@@ -66,6 +70,17 @@ watch(
   { immediate: true },
 );
 const clipStyle = computed(() => timelineClipStyle(props.clip, props.duration, props.timelineWidthPx));
+const visualKind = computed(() =>
+  props.clip.kind === 'blur' && props.clip.mode === 'highlight' ? 'highlight' : props.clip.kind,
+);
+const clipIcon = computed(() =>
+  visualKind.value === 'highlight' ? Focus : visualKind.value === 'blur' ? CircleDashed : null,
+);
+const clipLabel = computed(() =>
+  'freezeFrameSourceMs' in props.clip
+    ? t('holdSegment')
+    : (props.clip.kind === 'shape' ? props.clip.text?.content.trim() : '') || props.clip.name,
+);
 const imagePreviewStyle = computed(() => ({
   backgroundImage:
     props.asset?.kind === 'image' && props.asset.src ? `url(${JSON.stringify(props.asset.src)})` : undefined,
@@ -73,10 +88,10 @@ const imagePreviewStyle = computed(() => ({
 const frameStyle = (frame: TimelineFrame) => timelineFrameStyle(props.clip, frame.relativeMs, frame.durationMs);
 const transitionStyle = (edge: 'entry' | 'exit') => timelineTransitionStyle(props.clip, edge);
 const thumbnailFor = (frame: TimelineFrame) => {
-  const exact = thumbnails[frame.mediaSecond];
+  const exact = thumbnails.value[frame.mediaSecond];
   if (exact) return exact;
   let nearest: { distance: number; url: string } | null = null;
-  for (const [time, url] of Object.entries(thumbnails)) {
+  for (const [time, url] of Object.entries(thumbnails.value)) {
     const distance = Math.abs(Number(time) - frame.mediaSecond);
     if (!nearest || distance < nearest.distance) nearest = { distance, url };
   }
@@ -125,7 +140,7 @@ onUnmounted(() => stopMarquee());
     type="button"
     class="timeline-clip"
     :data-timeline-clip-id="clip.id"
-    :class="[`kind-${clip.kind}`, { selected, disabled: !clip.enabled, 'trim-at-limit': trimState?.atLimit }]"
+    :class="[`kind-${visualKind}`, { selected, disabled: !clip.enabled, 'trim-at-limit': trimState?.atLimit }]"
     :data-paste-highlight="pasteHighlight || undefined"
     :style="clipStyle"
     @click.stop="emit('select', $event)"
@@ -151,17 +166,16 @@ onUnmounted(() => stopMarquee());
       <TimelineTransitionCurve edge="exit" :transition="clip.transitions.exit" />
     </span>
     <div v-if="clip.kind === 'audio'" class="waveform" aria-hidden="true">
-      <div
-        v-if="waveformBars?.length"
-        class="waveform-slice"
-        :style="{ left: `${waveformLeftPercent ?? 0}%`, width: `${waveformWidthPercent ?? 100}%` }"
-      >
-        <WaveformCanvas :bars="waveformBars" :selected="selected" :defer-draw="deferWaveformDraw" />
-        <span
-          v-for="(segment, index) in waveformLoadingSegments"
-          :key="`loading:${index}`"
-          class="waveform-segment-loading"
-          :style="{ left: `${segment.leftPercent}%`, width: `${segment.widthPercent}%` }"
+      <div v-if="waveformBars?.length" class="waveform-slice">
+        <BlickWaveformCanvas
+          v-if="waveformBands"
+          :bars="waveformBars"
+          :bands="waveformBands"
+          :left-percent="waveformLeftPercent"
+          :width-percent="waveformWidthPercent"
+          :source-duration-seconds="waveformSourceDurationSeconds ?? 0"
+          :loading-segments="waveformLoadingSegments ?? []"
+          :defer-draw="deferWaveformDraw"
         />
       </div>
       <span v-else-if="waveformStatus === 'loading'" class="waveform-loading" />
@@ -196,7 +210,7 @@ onUnmounted(() => stopMarquee());
       aria-hidden="true"
     />
     <ColorTimelinePreview v-else-if="clip.kind === 'color'" :clip="clip" />
-    <ShapeTimelinePreview v-else-if="clip.kind === 'shape'" :clip="clip" />
+    <ShapeTimelinePreview v-else-if="clip.kind === 'shape'" :clip="clip" :canvas="canvas" />
     <span
       class="trim-handle start"
       :class="{ 'at-limit': trimState?.edge === 'start' && trimState?.atLimit }"
@@ -210,7 +224,15 @@ onUnmounted(() => stopMarquee());
     <TimelineLockOverlay v-if="clip.locked" />
     <span class="clip-label-overlay">
       <Lock v-if="clip.locked" :size="12" :aria-label="t('locked')" />
-      <span class="clip-label-text">{{ 'freezeFrameSourceMs' in clip ? t('holdSegment') : clip.name }}</span>
+      <component
+        :is="clipIcon"
+        v-if="clipIcon"
+        class="clip-kind-icon"
+        :size="12"
+        role="img"
+        :aria-label="visualKind === 'highlight' ? tHighlight('title') : t('blur')"
+      />
+      <span class="clip-label-text">{{ clipLabel }}</span>
       <span v-if="Math.abs(clip.playbackRate - 1) > 0.01" class="speed-badge">{{ clip.playbackRate.toFixed(2) }}×</span>
     </span>
     <span
@@ -350,63 +372,6 @@ onUnmounted(() => stopMarquee());
     background: rgba(0, 0, 0, 0.32);
   }
 }
-.waveform {
-  position: absolute;
-  inset: 4px 8px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1px;
-  overflow: hidden;
-}
-.waveform::before {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  left: 0;
-  right: 0;
-  top: 50%;
-  height: 1px;
-  background: rgba(5, 150, 105, 0.32);
-}
-.waveform-slice {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-}
-.waveform-segment-loading {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  z-index: 2;
-  background: rgba(0, 0, 0, 0.2);
-  border-inline: 1px solid rgba(7, 134, 95, 0.42);
-  pointer-events: none;
-  animation: waveform-segment-pending 700ms ease-in-out infinite alternate;
-}
-@keyframes waveform-segment-pending {
-  to {
-    background: rgba(0, 0, 0, 0.34);
-  }
-}
-.waveform-unavailable {
-  width: 100%;
-  color: var(--text-muted);
-  font-size: 9px;
-  text-align: center;
-}
-.waveform-loading {
-  width: 100%;
-  height: 100%;
-  border-radius: 2px;
-  background: rgba(7, 134, 95, 0.2);
-  animation: waveform-pending 800ms ease-in-out infinite alternate;
-}
-@keyframes waveform-pending {
-  to {
-    opacity: 0.45;
-  }
-}
 .trim-handle {
   position: absolute;
   top: 0;
@@ -490,6 +455,9 @@ onUnmounted(() => stopMarquee());
   white-space: nowrap;
   transition: transform 0.05s linear;
 }
+.clip-kind-icon {
+  flex: none;
+}
 .speed-badge {
   flex: none;
   padding: 1px 4px;
@@ -498,3 +466,6 @@ onUnmounted(() => stopMarquee());
   color: #fff;
 }
 </style>
+
+<style scoped src="./waveform/audio-waveform.css"></style>
+<style scoped src="./timeline-highlight.css"></style>

@@ -4,6 +4,8 @@ Beam records screens and windows on Linux through the XDG ScreenCast Portal, Pip
 
 ## Prerequisites
 
+Interaction recording also requires Polkit: `pkexec` on Debian/Ubuntu, `polkit` on Fedora, and an authentication agent in the desktop session. Beam's DEB/RPM declare the corresponding runtime dependency. AppImage users install that prerequisite through their distribution. The protected input helper handles Wayland and X11 alike; startup errors are available in Beam Preferences and in **Copy system information**. Include the package format and whether the authorization dialog appeared when reporting a failure.
+
 - Node.js 22 or newer and Bun 1.4.0
 - [Rust stable](./INSTALL_RUST.md)
 - Git
@@ -11,6 +13,7 @@ Beam records screens and windows on Linux through the XDG ScreenCast Portal, Pip
 - PipeWire development headers and runtime services
 - FFmpeg with the MP4 muxer and either the `libx264` or `libopenh264` encoder
 - XDG Desktop Portal and the backend for the active desktop environment
+- `wl-clipboard` on Wayland or `xclip` on X11 for persistent Quick Snip file copies
 
 Install the native packages for your distribution. The commands below target GNOME; replace only the final portal backend package with `xdg-desktop-portal-kde` on KDE or `xdg-desktop-portal-wlr` on a compatible wlroots desktop. Do not install every backend indiscriminately.
 
@@ -19,7 +22,7 @@ Install the native packages for your distribution. The commands below target GNO
 ```bash
 sudo dnf install \
   gcc clang-devel pkgconf-pkg-config pipewire-devel \
-  ffmpeg-free pipewire wireplumber xdg-desktop-portal \
+  ffmpeg-free pipewire wireplumber wl-clipboard xclip xdg-desktop-portal \
   xdg-desktop-portal-gnome
 ```
 
@@ -31,7 +34,7 @@ Fedora's `ffmpeg-free` package provides the supported `libopenh264` encoder.
 sudo apt update
 sudo apt install \
   build-essential clang libclang-dev pkg-config libpipewire-0.3-dev \
-  ffmpeg pipewire wireplumber xdg-desktop-portal \
+  ffmpeg pipewire wireplumber wl-clipboard xclip xdg-desktop-portal \
   xdg-desktop-portal-gnome
 ```
 
@@ -39,7 +42,7 @@ sudo apt install \
 
 ```bash
 sudo pacman -S --needed \
-  base-devel clang pkgconf libpipewire pipewire wireplumber ffmpeg \
+  base-devel clang pkgconf libpipewire pipewire wireplumber ffmpeg wl-clipboard xclip \
   xdg-desktop-portal xdg-desktop-portal-gnome
 ```
 
@@ -82,6 +85,10 @@ cargo test -p capture --lib \
 ```
 
 A real monitor/window smoke remains interactive and must be run manually because the Portal requires explicit user consent.
+
+Quick Snip publishes completed files through `wl-copy` on Wayland and `xclip` on X11. These tools keep the clipboard selection alive independently of Beam's windows, with no expiration or single-paste limit; replacing the clipboard ends their ownership. DEB/RPM packages declare both dependencies. Development and AppImage installations need the appropriate tool on `PATH`. Missing tools or failed publication are shown as copy errors, with the exported file retained for retry.
+
+On Wayland compositors without a data-control protocol, `wl-copy` obtains selection access through a temporary native surface. The compositor may briefly focus that surface. Beam bounds acquisition to ten seconds and reports failure if ownership cannot be obtained; this deadline never expires a successful copy.
 
 Click and shortcut metadata also requires explicit Polkit consent. Use **Record keyboard shortcuts** in HUD preferences. On Linux, turning this setting off disables both keyboard shortcuts and click metadata. Do not add the developer account to the `input` group: that would grant the entire Electron process broad access to every raw input device. Development, AppImage, RPM and DEB use the same filtered helper protocol and write structured events to `cursor/input.json`.
 

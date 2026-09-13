@@ -171,7 +171,7 @@ impl RecordingSession {
         }
         let t0 = self.clock.now_ns();
         self.manifest.session_start_monotonic_ns = t0;
-        start_gate.release(t0)?;
+        self.start_segment(&start_gate, t0, 0)?;
         write_timing_anchors(&self.layout, &self.manifest.tracks, 0)?;
         self.state = super::SessionState::Recording;
         self.checkpoint()
@@ -272,6 +272,7 @@ impl RecordingSession {
             });
             if let Err(error) = result {
                 start_gate.cancel();
+                let _ = self.active.stop(&mut self.manifest.tracks, now);
                 self.state = super::SessionState::Failed;
                 return Err(error);
             }
@@ -280,7 +281,7 @@ impl RecordingSession {
         }
         #[cfg(not(target_os = "linux"))]
         self.open_segment(now, &start_gate)?;
-        start_gate.release(self.clock.now_ns())?;
+        self.start_segment(&start_gate, self.clock.now_ns(), now)?;
         write_timing_anchors(&self.layout, &self.manifest.tracks, now)?;
         self.state = super::SessionState::Recording;
         self.checkpoint()
@@ -363,6 +364,21 @@ impl RecordingSession {
             return Err(error);
         }
         self.active = opened;
+        Ok(())
+    }
+
+    fn start_segment(
+        &mut self,
+        start_gate: &super::StartGate,
+        t0_ns: u64,
+        start_ns: u64,
+    ) -> Result<(), CaptureError> {
+        if let Err(error) = self.active.start(start_gate, t0_ns) {
+            start_gate.cancel();
+            let _ = self.active.stop(&mut self.manifest.tracks, start_ns);
+            self.state = super::SessionState::Failed;
+            return Err(error);
+        }
         Ok(())
     }
 

@@ -128,7 +128,7 @@ impl LinuxRecording {
             .pause()
     }
 
-    pub fn resume(
+    pub fn prepare_resume(
         &mut self,
         start_ns: u64,
         start_gate: Arc<StartGate>,
@@ -140,7 +140,7 @@ impl LinuxRecording {
                 from: "Stopped".into(),
                 to: "Recording".into(),
             })?
-            .resume(start_ns, start_gate, segment)
+            .prepare_resume(start_ns, start_gate, segment)
     }
 
     pub fn stop(&mut self) -> Result<(), CaptureError> {

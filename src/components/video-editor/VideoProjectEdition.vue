@@ -1,15 +1,18 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
-import ProjectPicker from '../hud/ProjectPicker.vue';
+import { defineAsyncComponent, ref, watch, onMounted, onUnmounted } from 'vue';
+import ProjectModeIcon from '../projects/ProjectModeIcon.vue';
+import type { ProjectIdentity } from '../projects/project-picker-types';
 import { ChevronDown, LoaderCircle } from '@lucide/vue';
 import type { CaptureProject } from '../../api/types/capture-api';
 import { useTranslate } from '~/i18n/useTranslate';
 
 const { t } = useTranslate('VideoProjectEdition');
+const ProjectPicker = defineAsyncComponent(() => import('../projects/ProjectPicker.vue'));
 
 const props = withDefaults(
   defineProps<{
-    project?: CaptureProject | null;
+    project?: ProjectIdentity | null;
+    disabled?: boolean;
     isSaving?: boolean;
   }>(),
   {
@@ -20,13 +23,26 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   (event: 'open-project', project: CaptureProject): void;
+  (event: 'rename-project', project: CaptureProject): void;
+  (event: 'delete-project', project: CaptureProject): void;
 }>();
 
+const projectTitle = ref(props.project?.name);
+watch(
+  () => props.project?.name,
+  (name) => {
+    projectTitle.value = name;
+  },
+);
+const handleProjectRenamed = (project: CaptureProject) => {
+  if (props.project?.id === project.id) projectTitle.value = project.name;
+  emit('rename-project', project);
+};
 const projectMenuOpen = ref(false);
 const switcherRef = ref<HTMLDivElement | null>(null);
 
 const toggleProjectMenu = () => {
-  projectMenuOpen.value = !projectMenuOpen.value;
+  if (!props.disabled) projectMenuOpen.value = !projectMenuOpen.value;
 };
 
 const handleProjectSelected = (project: CaptureProject) => {
@@ -74,12 +90,14 @@ onUnmounted(() => {
   <div ref="switcherRef" class="project-switcher">
     <button
       class="project-name-button"
-      :title="project?.name || t('untitledProject')"
+      :disabled="disabled"
+      :title="projectTitle || t('untitledProject')"
       aria-haspopup="true"
       :aria-expanded="projectMenuOpen"
       @click="toggleProjectMenu"
     >
-      <span class="project-title">{{ project?.name || t('untitledProject') }}</span>
+      <ProjectModeIcon :mode="project?.mode" />
+      <span class="project-title">{{ projectTitle || t('untitledProject') }}</span>
       <LoaderCircle class="save-spinner" :class="{ 'is-visible': isSaving }" :aria-label="t('savingProject')" />
       <ChevronDown class="chevron-icon" />
     </button>
@@ -91,6 +109,8 @@ onUnmounted(() => {
           :current-project-id="project?.id"
           @select-project="handleProjectSelected"
           @open-project="handleProjectSelected"
+          @rename-project="handleProjectRenamed"
+          @delete-project="emit('delete-project', $event)"
         />
       </div>
     </Transition>

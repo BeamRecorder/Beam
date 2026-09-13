@@ -1,4 +1,5 @@
 import type { CaptureSource } from './types/capture-api';
+import { enumerateBrowserMediaDevices } from './browser-media-devices';
 import { waitForFirstCameraFrame } from './camera-frame-ready';
 import type {
   CameraAppearance,
@@ -80,9 +81,7 @@ async function waitForCameraStream(stream: MediaStream) {
 }
 
 export async function listBrowserCameras(): Promise<CaptureSource[]> {
-  if (!navigator.mediaDevices?.enumerateDevices)
-    throw new Error('Camera discovery is unavailable in this Chromium build.');
-  let devices = await navigator.mediaDevices.enumerateDevices();
+  const devices = await enumerateBrowserMediaDevices();
   const videoInputs = devices.filter((device) => device.kind === 'videoinput');
   return videoInputs.map((device, index) => ({
     id: `${CAMERA_PREFIX}${device.deviceId}`,

@@ -1,4 +1,6 @@
-export type ShapeLayerFamily = 'shape' | 'arrow';
+import type { ElementText, FreehandDrawing } from './element-types';
+
+export type ShapeLayerFamily = 'shape' | 'arrow' | 'text' | 'drawing';
 export type ShapeLayerPreset =
   | 'rectangle'
   | 'rounded-rectangle'
@@ -6,8 +8,12 @@ export type ShapeLayerPreset =
   | 'triangle'
   | 'diamond'
   | 'star'
-  | 'arrow';
+  | 'arrow'
+  | 'text'
+  | 'freehand';
 export interface ShapeLayerStyle {
+  text?: ElementText;
+  drawing?: FreehandDrawing;
   family: ShapeLayerFamily;
   preset: ShapeLayerPreset;
   fillColor: string;

@@ -56,4 +56,5 @@ export interface SelectedClipProperties {
   blurCornerRadius?: number;
   blurTintOpacity?: number;
   blurColor?: string;
+  highlightColor?: string;
 }

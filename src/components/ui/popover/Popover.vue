@@ -90,10 +90,10 @@ const scheduleFocusClose = () => {
 };
 
 const adjustPosition = async () => {
-  if (!popoverRef.value || !contentRef.value) return;
+  await nextTick();
+  if (!popoverRef.value || !contentRef.value || !isOpen.value) return;
   const triggerEl = popoverRef.value.querySelector('.popover-trigger') || popoverRef.value;
   const rect = triggerEl.getBoundingClientRect();
-  await nextTick();
   const content = contentRef.value.getBoundingClientRect();
   const spaceBelow = window.innerHeight - rect.bottom - VIEWPORT_MARGIN;
   const spaceAbove = rect.top - VIEWPORT_MARGIN;
@@ -122,6 +122,7 @@ const adjustPosition = async () => {
   const clampedTop = Math.max(VIEWPORT_MARGIN, Math.min(top, window.innerHeight - content.height - VIEWPORT_MARGIN));
   floatingStyle.value = {
     position: 'fixed',
+    visibility: 'visible',
     top: `${clampedTop}px`,
     left: `${clampedLeft}px`,
     zIndex: '10000',
@@ -144,7 +145,19 @@ let resizeObserver: ResizeObserver | null = null;
 
 watch(isOpen, (val) => {
   if (val) {
-    window.requestAnimationFrame(() => void adjustPosition());
+    // Prevent teleported content from painting at its unpositioned origin.
+    // This is most noticeable for Selects nested inside another popover.
+    const trigger = popoverRef.value?.querySelector('.popover-trigger')?.getBoundingClientRect();
+    floatingStyle.value = {
+      position: 'fixed',
+      visibility: 'hidden',
+      top: `${VIEWPORT_MARGIN}px`,
+      left: `${VIEWPORT_MARGIN}px`,
+      maxHeight: `calc(100vh - ${VIEWPORT_MARGIN * 2}px)`,
+      overflowY: 'auto',
+      ...(props.matchTriggerWidth && trigger ? { width: `${Math.min(trigger.width, window.innerWidth - 16)}px` } : {}),
+    };
+    void nextTick(() => adjustPosition());
     void nextTick(() => {
       if (contentRef.value && typeof ResizeObserver !== 'undefined') {
         resizeObserver?.disconnect();
@@ -365,24 +378,5 @@ defineExpose({
 .pop-leave-from {
   opacity: 1;
   transform: translateY(0);
-}
-
-.pop-enter-active.center,
-.pop-leave-active.center {
-  transition:
-    opacity 0.15s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.pop-enter-from.center,
-.pop-leave-to.center {
-  opacity: 0;
-  transform: translate(-50%, -4px);
-}
-
-.pop-enter-to.center,
-.pop-leave-from.center {
-  opacity: 1;
-  transform: translate(-50%, 0);
 }
 </style>

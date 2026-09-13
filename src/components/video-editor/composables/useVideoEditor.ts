@@ -1,3 +1,4 @@
+import { useVideoElements } from '../elements/useVideoElements';
 import { computed, nextTick, onScopeDispose, ref, watch, type Ref } from 'vue';
 import { capture } from '../../../api/capture';
 import type { CaptureProject, ProjectEditorData } from '../../../api/types/capture-api';
@@ -7,6 +8,7 @@ import { useClipComposition } from './useClipComposition';
 import { useProjectZoom } from './useProjectZoom';
 import { normalizeZoomAutoFollow, normalizeZoomMotionBlur } from '../zoom/zoom-types';
 import { useProjectEditorState } from './useProjectEditorState';
+import type { EditorExportSource } from '../../export/export-types';
 import { createCompositionSnapshot } from '../../export/composition/snapshot';
 import { DEFAULT_OUTPUT_CANVAS, type OutputCanvasSettings } from '../canvas/output-canvas';
 import { compositionDurationMs } from '~/media/shared';
@@ -16,6 +18,8 @@ import { createDefaultCursorMotionSettings } from '../../../api/types/cursor-set
 import { compositionPlaybackSignature } from './composition-playback-signature';
 import { useToastStore } from '~/ui/toast/toastStore';
 import { normalizeEditorPreferenceDefaults } from './editor-defaults';
+import { useEditorPresets } from './useEditorPresets';
+import type { TimelineElementKind } from '../timeline/timeline-element-types';
 
 export function useVideoEditor(options: {
   project: Ref<CaptureProject | null | undefined>;
@@ -93,6 +97,37 @@ export function useVideoEditor(options: {
     selectedClip: compositionState.selectedClip,
     selectedZoom: zoomState.selectedZoom,
   });
+  const editorPresets = useEditorPresets(editorDefaults);
+  const elements = useVideoElements({
+    addBlur: async () => {
+      await compositionState.addElement('blur').catch((error) => {
+        toastStore.error(String(error));
+      });
+    },
+    addColor: async () => {
+      await compositionState.addElement('color').catch((error) => {
+        toastStore.error(String(error));
+      });
+    },
+    addHighlight: () =>
+      compositionState.addElement('highlight').catch((error) => {
+        toastStore.error(String(error));
+      }),
+    addImage: () =>
+      compositionState.addElement('image').catch((error) => {
+        toastStore.error(String(error));
+      }),
+    composition: compositionState.composition,
+    selectedId: compositionState.selectedClipId,
+    activeTab,
+    currentTime: player.currentTime,
+    isPlaying: player.isPlaying,
+    select: compositionState.selectClip,
+    clearZoom: () => {
+      zoomState.selectedZoomId.value = null;
+      zoomState.selectedZoomIds.value = [];
+    },
+  });
 
   const refreshBackgroundLibrary = async () => player.setUserBackgrounds(await capture.listBackgroundLibrary());
   void refreshBackgroundLibrary().catch(() => console.error('Failed to load background library.'));
@@ -114,38 +149,44 @@ export function useVideoEditor(options: {
     const value = screen?.format.frameRate ?? screen?.format.fps;
     return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 30;
   });
-  const exportRequest = computed(() => {
+  const createExportSnapshot = () =>
+    createCompositionSnapshot({
+      duration: compositionDurationMs(compositionState.composition.value) / 1_000,
+      canvas: outputCanvas.value,
+      fps: sourceFps.value,
+      background: player.selectedBackgroundMedia.value,
+      blurPercent: player.backgroundBlurPercent.value,
+      editorData: editorData.value,
+      zooms: zoomState.zoomElements.value,
+      zoomMotionBlur: normalizeZoomMotionBlur(zoomState.zoomMotionBlur?.value),
+      zoomAutoFollow: normalizeZoomAutoFollow(zoomState.zoomAutoFollow?.value),
+      composition: compositionState.composition.value,
+      cursorSettings: {
+        selection: cursor.selection.value,
+        size: cursor.cursorSize.value,
+        color: cursor.cursorColor.value,
+        shadow: {
+          enabled: cursor.enableShadow.value,
+          blur: cursor.shadowBlur.value,
+          color: cursor.shadowColor.value,
+          direction: cursor.shadowDirection.value,
+        },
+        clickEffects: cursor.clickEffects.value,
+        motion: cursorMotion.value,
+        autoHide: cursor.autoHide.value,
+      },
+      cursorPack: cursor.selectedPack.value,
+    });
+  const exportRequest = computed<EditorExportSource | null>(() => {
     if (!project.value) return null;
     return {
       projectName: project.value.name,
       includeAudio: includeAudioInExport.value,
-      snapshot: createCompositionSnapshot({
-        duration: compositionDurationMs(compositionState.composition.value) / 1_000,
-        canvas: outputCanvas.value,
-        fps: sourceFps.value,
-        background: player.selectedBackgroundMedia.value,
-        blurPercent: player.backgroundBlurPercent.value,
-        editorData: editorData.value,
-        zooms: zoomState.zoomElements.value,
-        zoomMotionBlur: normalizeZoomMotionBlur(zoomState.zoomMotionBlur?.value),
-        zoomAutoFollow: normalizeZoomAutoFollow(zoomState.zoomAutoFollow?.value),
-        composition: compositionState.composition.value,
-        cursorSettings: {
-          selection: cursor.selection.value,
-          size: cursor.cursorSize.value,
-          color: cursor.cursorColor.value,
-          shadow: {
-            enabled: cursor.enableShadow.value,
-            blur: cursor.shadowBlur.value,
-            color: cursor.shadowColor.value,
-            direction: cursor.shadowDirection.value,
-          },
-          clickEffects: cursor.clickEffects.value,
-          motion: cursorMotion.value,
-          autoHide: cursor.autoHide.value,
-        },
-        cursorPack: cursor.selectedPack.value,
-      }),
+      duration: compositionDurationMs(compositionState.composition.value) / 1_000,
+      fps: sourceFps.value,
+      width: outputCanvas.value.width,
+      height: outputCanvas.value.height,
+      createSnapshot: createExportSnapshot,
     };
   });
 
@@ -156,6 +197,8 @@ export function useVideoEditor(options: {
       if (!id) return;
       const request = ++editorLoad;
       try {
+        await editorPresets.load(true);
+        if (request !== editorLoad) return;
         await editorState.load(id);
         if (request !== editorLoad) return;
         compositionState.synchronizeRecording();
@@ -220,12 +263,27 @@ export function useVideoEditor(options: {
     initialPlaybackSettled,
     cursor,
     cursorMotion,
-    compositionState,
+    compositionState: {
+      ...compositionState,
+      addElement: async (kind: Exclude<TimelineElementKind, 'voiceover'>) => {
+        if (kind === 'shape' || kind === 'arrow' || kind === 'text' || kind === 'drawing') {
+          if (player.isPlaying.value) await player.setPlaying(false);
+          compositionState.selectClips([]);
+          zoomState.selectedZoomId.value = null;
+          zoomState.selectedZoomIds.value = [];
+          activeTab.value = 'elements';
+          elements.add(kind);
+          return;
+        }
+        return compositionState.addElement(kind);
+      },
+    },
     editorState,
     zoomState,
     exportRequest,
     includeAudioInExport,
     editorDefaults,
+    editorPresets,
     handleSelectTab: (tab: string) => {
       activeTab.value = tab;
     },

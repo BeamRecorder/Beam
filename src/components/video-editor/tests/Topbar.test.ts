@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Topbar from '../Topbar.vue';
+import type { CompositionSnapshot, EditorExportSource } from '~/components/export/export-types';
 import type { PreviewPerformanceSnapshot } from '../performance/preview-performance-types';
 
 const capture = vi.hoisted(() => ({
@@ -8,7 +9,13 @@ const capture = vi.hoisted(() => ({
 }));
 
 vi.mock('../../../api/capture', () => ({ capture }));
-vi.mock('../../export/ExportPopover.vue', () => ({ default: { template: '<div />' } }));
+vi.mock('../../export/ExportPopover.vue', () => ({
+  default: {
+    props: ['request', 'playheadSeconds'],
+    template:
+      '<div class="export-popover-stub" :data-project-name="request?.projectName" :data-duration="request?.duration" :data-playhead="playheadSeconds" />',
+  },
+}));
 vi.mock('../VideoProjectEdition.vue', () => ({ default: { template: '<div />' } }));
 
 describe('VideoEditor Topbar', () => {
@@ -29,6 +36,41 @@ describe('VideoEditor Topbar', () => {
     await wrapper.get('.exit-btn').trigger('click');
 
     expect(wrapper.emitted('back-to-hud')).toHaveLength(1);
+  });
+
+  it('passes live export metadata and playhead through without asking for a snapshot', () => {
+    const createSnapshot = vi.fn(() => ({}) as CompositionSnapshot);
+    const exportRequest: EditorExportSource = {
+      projectName: 'Demo project',
+      includeAudio: true,
+      duration: 24,
+      fps: 30,
+      width: 1280,
+      height: 720,
+      createSnapshot,
+    };
+    const wrapper = mount(Topbar, {
+      props: { exportRequest, playheadSeconds: 7.5 },
+    });
+
+    expect(wrapper.get('.export-popover-stub').attributes()).toMatchObject({
+      'data-project-name': 'Demo project',
+      'data-duration': '24',
+      'data-playhead': '7.5',
+    });
+    expect(createSnapshot).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('forwards undo and redo from the real shared history controls', async () => {
+    const wrapper = mount(Topbar, { props: { canUndo: true, canRedo: true } });
+
+    await wrapper.get('button[aria-label="Undo (Ctrl+Z)"]').trigger('click');
+    await wrapper.get('button[aria-label="Redo (Ctrl+Y)"]').trigger('click');
+
+    expect(wrapper.emitted('undo')).toHaveLength(1);
+    expect(wrapper.emitted('redo')).toHaveLength(1);
+    wrapper.unmount();
   });
 
   it('keeps an explicit native drag region between the Beam actions', () => {

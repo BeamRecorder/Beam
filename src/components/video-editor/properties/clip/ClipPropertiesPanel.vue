@@ -15,6 +15,8 @@ import CameraLayoutPanel from '../camera/CameraLayoutPanel.vue';
 import { isSplitCameraLayout } from '~/media/shared/camera-layout-types';
 const { t } = useTranslate('ClipPropertiesPanel');
 const props = defineProps<{
+  hideLayout?: boolean;
+  hideCrop?: boolean;
   selectedClip: SelectedClipProperties | null;
 }>();
 const emit = defineEmits<ClipPropertiesEmits>();
@@ -50,7 +52,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
 
     <div v-else class="options-group">
       <CameraLayoutPanel
-        v-if="['screen', 'video', 'image', 'webcam'].includes(selectedClip.kind)"
+        v-if="!hideLayout && ['screen', 'video', 'image', 'webcam'].includes(selectedClip.kind)"
         :layout="selectedClip.cameraLayoutPreset ?? 'custom'"
         :framing="selectedClip.cameraFramingPreset ?? 'custom'"
         :has-linked-screen="selectedClip.hasLinkedScreen ?? false"
@@ -64,7 +66,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
         @update:split-padding="emit('update:cameraSplitPadding', $event)"
         @update:react-to-zoom="emit('update:reactToZoom', $event)"
       />
-      <Divider v-if="['screen', 'video', 'image', 'webcam'].includes(selectedClip.kind)" spacing="xs" />
+      <Divider v-if="!hideLayout && ['screen', 'video', 'image', 'webcam'].includes(selectedClip.kind)" spacing="xs" />
 
       <!-- Placement Section -->
       <div
@@ -119,7 +121,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
         spacing="xs"
       />
 
-      <div v-if="isVisual" class="section-block">
+      <div v-if="isVisual && !hideCrop" class="section-block">
         <div class="section-header">
           <span class="section-title">{{ t('crop') }}</span>
         </div>
@@ -130,7 +132,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
           @preview="emit('preview:crop', $event)"
         />
       </div>
-      <Divider v-if="isVisual" spacing="xs" />
+      <Divider v-if="isVisual && !hideCrop" spacing="xs" />
       <ClipAppearanceControls
         v-if="isVisual"
         :selected-clip="selectedClip"

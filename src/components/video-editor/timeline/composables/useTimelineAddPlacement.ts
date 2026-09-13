@@ -11,6 +11,7 @@ type Placement = { startMs: number; durationMs: number };
 const DEFAULT_CAPTION_DURATION_MS = 2_000;
 
 const visualKindFor = (track: VisualTimelineTrack): TimelineAddableVisualKind | null => {
+  if (track.representative.kind === 'blur' && track.representative.mode === 'highlight') return 'highlight';
   const kind = track.representative.kind;
   return kind === 'image' || kind === 'color' || kind === 'shape' || kind === 'blur' ? kind : null;
 };

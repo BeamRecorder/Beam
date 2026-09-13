@@ -319,4 +319,156 @@ describe('MiniPerformanceGraph', () => {
     expect(context.lineTo).toHaveBeenCalledWith(80, expect.any(Number));
     expect(context.stroke).toHaveBeenCalled();
   });
+
+  it('skips animation for flat samples but scrolls new peaks through the fixed window', async () => {
+    const now = vi.spyOn(performance, 'now').mockReturnValue(0);
+    const wrapper = mount(MiniPerformanceGraph, {
+      props: {
+        label: 'Paused performance',
+        width: 100,
+        height: 24,
+        values: [0.2, 0.2, 0.2, 0.2],
+        color: '#fff',
+        animationMs: 500,
+        sampleCapacity: 4,
+        sampleTimestamp: 100,
+      },
+    });
+
+    expect(rafController.pending.size).toBe(0);
+
+    await wrapper.setProps({ values: [0.2, 0.2, 0.2, 0.2], sampleTimestamp: 600 });
+    expect(rafController.pending.size).toBe(0);
+
+    await wrapper.setProps({ values: [0.2, 1, 0.2, 0.2], sampleTimestamp: 1_100 });
+    expect(rafController.pending.size).toBe(1);
+    const startingPeakX = vi.mocked(context.bezierCurveTo).mock.calls.at(-3)?.[4];
+
+    now.mockReturnValue(250);
+    rafController.run(250);
+
+    const midAnimationPeakX = vi.mocked(context.bezierCurveTo).mock.calls.at(-3)?.[4];
+    expect(startingPeakX).toBeCloseTo(100 / 3, 5);
+    expect(midAnimationPeakX).toBeCloseTo(100 / 6, 5);
+    expect(rafController.pending.size).toBe(1);
+
+    wrapper.unmount();
+  });
+
+  it('resolves CSS custom-property colors while keeping unsupported tokens intact', async () => {
+    vi.spyOn(window, 'getComputedStyle').mockImplementation(
+      () =>
+        ({
+          getPropertyValue: (property: string) => (property === '--graph-coverage-color' ? '#123456' : ''),
+        }) as CSSStyleDeclaration,
+    );
+    const wrapper = mount(MiniPerformanceGraph, {
+      props: {
+        label: 'CSS color graph',
+        values: [0.3, 0.8],
+        color: 'var(--graph-coverage-color)',
+        animationMs: 0,
+      },
+    });
+    expect(context.strokeStyle).toBe('#123456');
+
+    await wrapper.setProps({ color: 'var(--invalid, #fff)' });
+    expect(context.strokeStyle).toBe('var(--invalid, #fff)');
+
+    await wrapper.setProps({ color: 'var(--graph-missing-color)' });
+    expect(context.strokeStyle).toBe('var(--graph-missing-color)');
+
+    wrapper.unmount();
+    document.documentElement.style.removeProperty('--graph-coverage-color');
+  });
+
+  it('caps high DPR and falls back to one when the device pixel ratio is zero', () => {
+    Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: 4 });
+    const highDpr = mount(MiniPerformanceGraph, {
+      props: { label: 'High DPR', width: 20, height: 10, values: [0.5], color: '#fff', animationMs: 0 },
+    });
+    expect((highDpr.get('canvas').element as HTMLCanvasElement).width).toBe(40);
+    highDpr.unmount();
+
+    Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: 0 });
+    const zeroDpr = mount(MiniPerformanceGraph, {
+      props: { label: 'Zero DPR', width: 20, height: 10, values: [0.5], color: '#fff', animationMs: 0 },
+    });
+    expect((zeroDpr.get('canvas').element as HTMLCanvasElement).width).toBe(20);
+    zeroDpr.unmount();
+  });
+
+  it('uses a solid fill when linear gradients are available', () => {
+    const gradient = { addColorStop: vi.fn() };
+    const createLinearGradient = vi.fn(() => gradient);
+    Object.assign(context, { createLinearGradient });
+
+    mount(MiniPerformanceGraph, {
+      props: { label: 'Gradient graph', values: [0.2, 0.8], color: '#aabbcc', animationMs: 0 },
+    });
+
+    expect(createLinearGradient).toHaveBeenCalledOnce();
+    expect(gradient.addColorStop).toHaveBeenNthCalledWith(1, 0, '#aabbcc');
+    expect(gradient.addColorStop).toHaveBeenNthCalledWith(2, 1, '#aabbcc');
+    expect(context.fillStyle).toBe(gradient);
+  });
+
+  it('treats a nonpositive sample capacity as a window sized to the available samples', () => {
+    mount(MiniPerformanceGraph, {
+      props: {
+        label: 'Natural capacity',
+        width: 90,
+        values: [0.1, 0.5, 0.9],
+        sampleCapacity: 0,
+        color: '#fff',
+        animationMs: 0,
+      },
+    });
+
+    expect(vi.mocked(context.bezierCurveTo).mock.calls).toHaveLength(2);
+    expect(vi.mocked(context.bezierCurveTo).mock.calls.map((call) => call[4])).toEqual([45, 90]);
+  });
+
+  it('finishes an animation at the final window position and cancels it when samples clear', async () => {
+    const now = vi.spyOn(performance, 'now').mockReturnValue(0);
+    const wrapper = mount(MiniPerformanceGraph, {
+      props: { label: 'Completing graph', values: [0.2, 0.8], color: '#fff', animationMs: 500 },
+    });
+
+    now.mockReturnValue(500);
+    rafController.run(500);
+    expect(rafController.pending.size).toBe(0);
+    expect(vi.mocked(context.bezierCurveTo).mock.calls.at(-1)?.[4]).toBeCloseTo(82 - 82 / 47, 5);
+
+    await wrapper.setProps({ values: [0.2, 0.8, 0.4] });
+    expect(rafController.pending.size).toBe(1);
+    await wrapper.setProps({ values: [] });
+    expect(rafController.pending.size).toBe(0);
+    expect(window.cancelAnimationFrame).toHaveBeenCalledOnce();
+
+    wrapper.unmount();
+    now.mockRestore();
+  });
+
+  it('redraws changed values when the sample timestamp is unchanged without restarting the slide', async () => {
+    const wrapper = mount(MiniPerformanceGraph, {
+      props: {
+        label: 'Stable timestamp graph',
+        values: [0.1, 0.4, 0.2],
+        color: '#fff',
+        animationMs: 500,
+        sampleTimestamp: 42,
+      },
+    });
+    const requestCount = vi.mocked(window.requestAnimationFrame).mock.calls.length;
+    const cancelCount = vi.mocked(window.cancelAnimationFrame).mock.calls.length;
+
+    await wrapper.setProps({ values: [0.9, 0.4, 0.2], sampleTimestamp: 42 });
+
+    expect(vi.mocked(window.requestAnimationFrame).mock.calls).toHaveLength(requestCount);
+    expect(vi.mocked(window.cancelAnimationFrame).mock.calls).toHaveLength(cancelCount);
+    expect(context.clearRect).toHaveBeenCalled();
+    expect(rafController.pending.size).toBe(1);
+    wrapper.unmount();
+  });
 });

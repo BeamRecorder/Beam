@@ -75,6 +75,7 @@ export function isExportWorkerRequest(value: unknown): value is ExportWorkerRequ
     });
     return (
       validCursorImages &&
+      (value.request.preview === undefined || typeof value.request.preview === 'boolean') &&
       typeof value.request.projectName === 'string' &&
       (value.request.format === 'webm' || value.request.format === 'mp4') &&
       ['low', 'medium', 'high'].includes(value.request.preset as string) &&
@@ -101,6 +102,10 @@ export function isExportWorkerResponse(value: unknown): value is ExportWorkerRes
     const progress = value.progress;
     return (
       ['validating_assets', 'loading_assets', 'encoding', 'finalizing'].includes(progress.stage as string) &&
+      (progress.preview === undefined ||
+        (typeof progress.preview === 'string' &&
+          progress.preview.length < 200_000 &&
+          /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(progress.preview))) &&
       finite(progress.overallProgress) &&
       progress.overallProgress >= 0 &&
       progress.overallProgress <= 1 &&

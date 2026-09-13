@@ -1,10 +1,11 @@
-import { isCaptionClip, type ClipComposition } from '~/media/shared/composition-types';
+import { clipTextStyles } from '~/media/shared/element-fonts';
+import type { ClipComposition } from '~/media/shared/composition-types';
 
 export async function loadExportFonts(composition: ClipComposition) {
   const requested = new Map<string, string>();
-  for (const clip of composition.clips) {
-    if (!isCaptionClip(clip) || !clip.caption.style.fontAssetId) continue;
-    requested.set(clip.caption.style.fontAssetId, clip.caption.style.fontFamily || 'sans-serif');
+  for (const style of clipTextStyles(composition.clips)) {
+    if (!style.fontAssetId) continue;
+    requested.set(style.fontAssetId, style.fontFamily || 'sans-serif');
   }
   const fontSet = (self as typeof self & { fonts?: FontFaceSet }).fonts;
   if (requested.size && !fontSet) throw new Error('Imported fonts are unavailable in the export Worker.');

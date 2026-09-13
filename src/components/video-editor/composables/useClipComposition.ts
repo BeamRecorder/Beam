@@ -25,7 +25,13 @@ import { DEFAULT_COLOR_LAYER_STYLE } from '~/media/shared/color-layer-style';
 import { DEFAULT_COLOR_FILL } from '~/media/shared/color-fill-types';
 import { DEFAULT_SHAPE_LAYER_STYLE } from '~/media/shared/shape-layer-style';
 import type { EditorPreferenceDefaults } from './editor-default-types';
-import { audioDefaultsFor, blurDefaultsFor, captionDefaultsFor, visualClipDefaultProps } from './editor-defaults';
+import {
+  audioDefaultsFor,
+  blurDefaultsFor,
+  highlightDefaultsFor,
+  captionDefaultsFor,
+  visualClipDefaultProps,
+} from './editor-defaults';
 import { addClip, setClipEnabled } from '../composition/engine/clip-engine';
 import { synchronizeRecordingClips } from '../composition/session-clips';
 import { useTranslate } from '~/i18n/useTranslate';
@@ -213,8 +219,9 @@ export function useClipComposition(options: {
     return visual.id;
   };
 
+  const { t: tHighlight } = useTranslate('Highlight');
   const addElement = async (
-    kind: 'video' | 'image' | 'sound' | 'caption' | 'color' | 'shape' | 'blur',
+    kind: 'video' | 'image' | 'sound' | 'caption' | 'color' | 'shape' | 'blur' | 'highlight',
     requestedStartMs?: number,
     requestedDurationMs?: number,
     targetTrackId?: string,
@@ -228,11 +235,15 @@ export function useClipComposition(options: {
     )
       return;
     const generatedKind: TimelineAddableVisualKind | null =
-      kind === 'color' || kind === 'shape' || kind === 'blur' ? kind : null;
+      kind === 'color' || kind === 'shape' || kind === 'blur' || kind === 'highlight' ? kind : null;
     const targetTrackClip =
       generatedKind && targetTrackId
         ? composition.value.clips.find(
-            (clip) => isCompositingClip(clip) && clip.trackId === targetTrackId && clip.kind === generatedKind,
+            (clip) =>
+              isCompositingClip(clip) &&
+              clip.trackId === targetTrackId &&
+              clip.kind === (generatedKind === 'highlight' ? 'blur' : generatedKind) &&
+              (clip.kind !== 'blur' || (clip.mode === 'highlight') === (generatedKind === 'highlight')),
           )
         : null;
     if (generatedKind && targetTrackId && !targetTrackClip) return;
@@ -269,15 +280,18 @@ export function useClipComposition(options: {
       selectClip(clip.id);
       return;
     }
-    if (kind === 'blur') {
-      const defaults = blurDefaultsFor(options.editorDefaults.value);
+    if (kind === 'blur' || kind === 'highlight') {
+      const defaults =
+        kind === 'highlight'
+          ? highlightDefaultsFor(options.editorDefaults.value)
+          : blurDefaultsFor(options.editorDefaults.value);
       const clipId = crypto.randomUUID();
       const clip: BlurClip = {
         id: clipId,
         trackId: generatedTrackId ?? clipId,
         kind: 'blur',
         assetId: '',
-        name: t('blur'),
+        name: kind === 'highlight' ? tHighlight('title') : t('blur'),
         timelineStartMs: startMs,
         timelineDurationMs: generatedDurationMs,
         sourceInMs: 0,

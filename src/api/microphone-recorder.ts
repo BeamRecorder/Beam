@@ -4,6 +4,7 @@ import type {
   MicrophoneSegmentFinish,
   MicrophoneSegmentStart,
 } from './types/capture-api';
+import { enumerateBrowserMediaDevices } from './browser-media-devices';
 import {
   MICROPHONE_PREFIX,
   MIME_TYPE,
@@ -26,31 +27,8 @@ function api(): MicrophoneApi {
 
 export { microphoneDeviceId, normalizedMicrophoneSetting } from './browser-microphone-source';
 
-async function ensureMediaLabelsUnlocked(): Promise<MediaDeviceInfo[]> {
-  if (!navigator.mediaDevices?.enumerateDevices)
-    throw new Error('Microphone discovery is unavailable in this Chromium build.');
-  let devices = await navigator.mediaDevices.enumerateDevices();
-  const needsUnlock = devices.some((d) => (d.kind === 'audioinput' || d.kind === 'videoinput') && !d.label);
-  if (needsUnlock && navigator.mediaDevices.getUserMedia) {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach((track) => track.stop());
-      devices = await navigator.mediaDevices.enumerateDevices();
-    } catch {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        stream.getTracks().forEach((track) => track.stop());
-        devices = await navigator.mediaDevices.enumerateDevices();
-      } catch {
-        // Fallback
-      }
-    }
-  }
-  return devices;
-}
-
 export async function listBrowserMicrophones(): Promise<CaptureSource[]> {
-  const devices = await ensureMediaLabelsUnlocked();
+  const devices = await enumerateBrowserMediaDevices();
   const audioInputs = devices.filter((device) => device.kind === 'audioinput');
   return audioInputs.map((device, index) => ({
     id: `${MICROPHONE_PREFIX}${device.deviceId}`,

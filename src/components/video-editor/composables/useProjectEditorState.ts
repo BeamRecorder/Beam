@@ -29,12 +29,7 @@ import type { CursorShadowDirection } from '../../../api/types/cursor-presentati
 import type { CursorSelection } from '../../../api/types/cursor-pack';
 import { propertyInteractionActive } from '../../../composables/property-interaction';
 import type { EditorPreferenceDefaults } from './editor-default-types';
-import {
-  applyFreshPresentationDefaults,
-  applyGlobalCursorDefaults,
-  defaultsFromEditorState,
-  normalizeEditorPreferenceDefaults,
-} from './editor-defaults';
+import { applyFreshPresentationDefaults, applyGlobalCursorDefaults, defaultsFromEditorState } from './editor-defaults';
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
@@ -145,11 +140,6 @@ export function useProjectEditorState(options: {
           defaultsFromEditorState(options.editorDefaults.value, state, selectedClip, selectedZoom),
         );
         options.editorDefaults.value = defaults;
-        try {
-          await capture.updatePreferences({ extras: { editorDefaults: defaults } });
-        } catch (error) {
-          console.error('[Beam editor] failed to save editor defaults', { projectId }, error);
-        }
       })
       .then(() => undefined)
       .finally(() => {
@@ -181,21 +171,21 @@ export function useProjectEditorState(options: {
     defaultCaptureEnabled = false;
     loading.value = true;
     try {
-      const [loadedState, preferences] = await Promise.all([
-        capture.getProjectEditorState(projectId),
-        capture.getPreferences().catch(() => null),
-      ]);
+      const loadedState = await capture.getProjectEditorState(projectId);
       if (generation !== loadGeneration) return;
-      options.editorDefaults.value = normalizeEditorPreferenceDefaults(preferences?.extras?.editorDefaults);
-      const state = applyGlobalCursorDefaults(
-        loadedState.isFresh ? applyFreshPresentationDefaults(loadedState, options.editorDefaults.value) : loadedState,
-        options.editorDefaults.value,
-      );
+      const state = loadedState.isFresh
+        ? applyGlobalCursorDefaults(
+            applyFreshPresentationDefaults(loadedState, options.editorDefaults.value),
+            options.editorDefaults.value,
+          )
+        : loadedState;
       options.restoreComposition(state.composition);
       options.restoreZoomElements(state.zoom.elements);
       options.generatedSessions.value = state.zoom.generatedSessions;
       zoomMotionBlur.value = normalizeZoomMotionBlur(
-        options.editorDefaults.value.zoomMotionBlur ?? state.zoom.motionBlur,
+        loadedState.isFresh
+          ? (options.editorDefaults.value.zoomMotionBlur ?? state.zoom.motionBlur)
+          : state.zoom.motionBlur,
       );
       zoomAutoFollow.value = normalizeZoomAutoFollow(state.zoom.autoFollow);
       options.importedBackgrounds.value = state.presentation.importedBackgrounds;
@@ -232,6 +222,9 @@ export function useProjectEditorState(options: {
   if (getCurrentScope()) {
     onScopeDispose(() => {
       loadGeneration += 1;
+      if (scheduledSave.value) {
+        void saveNow().catch((error) => console.error('[Beam editor] failed to save before leaving project', error));
+      }
       if (timer) clearTimeout(timer);
       timer = null;
       scheduledSave.value = false;

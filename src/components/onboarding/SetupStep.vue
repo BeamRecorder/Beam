@@ -18,8 +18,10 @@ import { capture } from '~/api/capture';
 import Button from '~/ui/button/Button.vue';
 import Badge from '~/ui/badge/Badge.vue';
 import type { InputAccessStatus } from '~/api/types/capture-api';
+import InteractionAccessError from '../hud/interactions/InteractionAccessError.vue';
 
 const { t } = useTranslate('Onboarding');
+const { t: tHud } = useTranslate('HUD');
 const themeStore = useThemeStore();
 
 const inputStatus = ref<InputAccessStatus>({
@@ -51,8 +53,18 @@ const handleRequestAccess = async () => {
   try {
     const result = await capture.requestInputAccess();
     inputStatus.value = result;
-  } catch {
-    // Error
+  } catch (error) {
+    inputStatus.value = {
+      state: 'unavailable',
+      canRequest: true,
+      clicks: false,
+      shortcuts: false,
+      recordsText: false,
+      error: {
+        code: 'input-access-failed',
+        message: error instanceof Error ? error.message : tHud('inputAccessFailed'),
+      },
+    };
   } finally {
     isRequestingAccess.value = false;
   }
@@ -149,6 +161,7 @@ onMounted(() => {
               <MousePointer class="dev-icon" />
             </div>
             <span class="box-desc">{{ t('linuxInputDesc') }}</span>
+            <InteractionAccessError :status="inputStatus" />
           </div>
 
           <div class="box-action-area">

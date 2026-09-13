@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, ref } from 'vue';
+import { nextTick, ref, type CSSProperties } from 'vue';
 import { ChevronRight } from '@lucide/vue';
 import type { PopoverMenuItem } from './popover-menu-types';
 
@@ -11,6 +11,7 @@ const emit = defineEmits<{
 }>();
 const openItemId = ref<string | null>(null);
 const submenuSides = ref<Record<string, 'left' | 'right'>>({});
+const submenuStyles = ref<Record<string, CSSProperties>>({});
 const itemElements = new Map<string, HTMLButtonElement>();
 
 const setItemElement = (id: string, element: Element | null) => {
@@ -28,11 +29,27 @@ const setSubmenuSide = (item: PopoverMenuItem, element: HTMLElement) => {
 const openSubmenu = (item: PopoverMenuItem, element: HTMLElement, focusFirst = false) => {
   if (!item.children?.length || item.disabled) return;
   setSubmenuSide(item, element);
+  submenuStyles.value = { ...submenuStyles.value, [item.id]: { top: '-4px' } };
   openItemId.value = item.id;
-  if (!focusFirst) return;
   void nextTick(() => {
+    if (openItemId.value !== item.id) return;
     const entry = element.closest('.menu-entry');
-    entry?.querySelector<HTMLButtonElement>(':scope > .submenu-panel > .menu-entry > .menu-item')?.focus();
+    const panel = entry?.querySelector<HTMLElement>(':scope > .submenu-panel');
+    if (!panel) return;
+    const bounds = panel.getBoundingClientRect();
+    const anchor = element.getBoundingClientRect();
+    const scale = element.offsetHeight > 0 ? anchor.height / element.offsetHeight : 1;
+    const availableHeight = Math.max(1, window.innerHeight - 16);
+    const offset = Math.max(8 - bounds.top, Math.min(0, window.innerHeight - 8 - bounds.bottom));
+    submenuStyles.value = {
+      ...submenuStyles.value,
+      [item.id]: {
+        top: `${-4 + offset / scale}px`,
+        maxHeight: `${availableHeight / scale}px`,
+        overflowY: bounds.height > availableHeight ? 'auto' : 'visible',
+      },
+    };
+    if (focusFirst) panel.querySelector<HTMLButtonElement>(':scope > .menu-entry > .menu-item')?.focus();
   });
 };
 const closeSubmenu = (item: PopoverMenuItem) => {
@@ -101,6 +118,7 @@ const handleKeydown = (event: KeyboardEvent, item: PopoverMenuItem) => {
         v-if="item.children?.length && openItemId === item.id"
         class="submenu-panel"
         :class="`opens-${submenuSides[item.id] ?? 'right'}`"
+        :style="submenuStyles[item.id]"
         :items="item.children"
         :level="level + 1"
         @select="emit('select', $event)"

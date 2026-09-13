@@ -203,14 +203,70 @@ describe('playback worker', () => {
 
     expect(runtime.openMediaInput).toHaveBeenCalledOnce();
     expect(runtime.CanvasSink).toHaveBeenCalledTimes(2);
-    expect(runtime.CanvasSink).toHaveBeenNthCalledWith(1, expect.anything(), expect.objectContaining({ poolSize: 3 }));
-    expect(runtime.CanvasSink).toHaveBeenNthCalledWith(2, expect.anything(), expect.objectContaining({ poolSize: 3 }));
+    expect(runtime.CanvasSink).toHaveBeenNthCalledWith(1, expect.anything(), expect.objectContaining({ poolSize: 1 }));
+    expect(runtime.CanvasSink).toHaveBeenNthCalledWith(2, expect.anything(), expect.objectContaining({ poolSize: 1 }));
     expect(messages()).toContainEqual({ type: 'ready', generation: 3 });
 
     send({ type: 'dispose' });
     const opened = await runtime.openMediaInput.mock.results[0]!.value;
     expect(opened.dispose).toHaveBeenCalledOnce();
     expect(workerSelf.postMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores load and playback messages after disposal', async () => {
+    send({ type: 'load', generation: 4, assets: [source('asset-1')], clips: [clip('clip-a')], previewQuality: 'full' });
+    await flush();
+    send({ type: 'dispose' });
+    await flush();
+
+    const responseSnapshot = messages();
+    const inputCount = runtime.openMediaInput.mock.calls.length;
+    const sinkCount = runtime.CanvasSink.mock.calls.length;
+    send({
+      type: 'load',
+      generation: 5,
+      assets: [source('asset-2')],
+      clips: [clip('clip-b', 'asset-2')],
+      previewQuality: 'full',
+    });
+    send({ type: 'play', generation: 5, timelineSeconds: 0 });
+    send({ type: 'tick', generation: 5, timelineSeconds: 0 });
+    await flush();
+
+    expect(runtime.openMediaInput).toHaveBeenCalledTimes(inputCount);
+    expect(runtime.CanvasSink).toHaveBeenCalledTimes(sinkCount);
+    expect(messages()).toEqual(responseSnapshot);
+  });
+
+  it('decodes and presents a frame when playback starts with play', async () => {
+    send({ type: 'load', generation: 5, assets: [source('asset-1')], clips: [clip('clip-a')], previewQuality: 'full' });
+    await flush();
+
+    const sink = runtime.sinkInstances[0]!;
+    const iterator = {
+      next: vi
+        .fn()
+        .mockResolvedValueOnce({ value: wrapped(0), done: false })
+        .mockResolvedValue({ value: undefined, done: true }),
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+    };
+    sink.canvases.mockReturnValueOnce(iterator);
+    send({ type: 'play', generation: 5, timelineSeconds: 0 });
+    await flush();
+
+    expect(messages()).toContainEqual(expect.objectContaining({ type: 'frame', generation: 5, clipId: 'clip-a' }));
+  });
+
+  it('skips empty cached-seek cancellation without allocating sinks or posting metrics', async () => {
+    send({ type: 'load', generation: 6, assets: [source('asset-1')], clips: [clip('clip-a')], previewQuality: 'full' });
+    await flush();
+    send({ type: 'cancel-seek', generation: 6 });
+    await flush();
+
+    expect(runtime.CanvasSink).toHaveBeenCalledOnce();
+    expect(messages().filter((message) => message.type === 'metrics')).toEqual([]);
   });
 
   it('uses full source dimensions and requests low-latency hardware decoding', async () => {
@@ -448,6 +504,72 @@ describe('playback worker', () => {
     });
   });
 
+  it('closes fulfilled tick frames when another active consumer fails to decode', async () => {
+    const deliveredFrame = bitmap();
+    const successfulIterator = {
+      next: vi
+        .fn()
+        .mockResolvedValueOnce({ value: wrapped(0, deliveredFrame), done: false })
+        .mockResolvedValue({ value: undefined, done: true }),
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+    };
+    const failedIterator = {
+      next: vi.fn().mockRejectedValue(new Error('second consumer decode failed')),
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+    };
+    send({
+      type: 'load',
+      generation: 30,
+      assets: [source('asset-1'), source('asset-2')],
+      clips: [clip('clip-a', 'asset-1'), clip('clip-b', 'asset-2')],
+      previewQuality: 'full',
+    });
+    await flush();
+    runtime.sinkInstances[0]!.canvases.mockReturnValueOnce(successfulIterator);
+    runtime.sinkInstances[1]!.canvases.mockReturnValueOnce(failedIterator);
+
+    send({ type: 'tick', generation: 30, timelineSeconds: 0 });
+    await flush();
+
+    expect(deliveredFrame.close).toHaveBeenCalledOnce();
+    expect(messages().some((message) => message.type === 'frame')).toBe(false);
+    expect(messages()).toContainEqual({
+      type: 'error',
+      generation: 30,
+      error: { kind: 'decode-failure', sourceId: 'playback', message: 'second consumer decode failed' },
+    });
+  });
+
+  it('closes fulfilled seek frames when another active consumer fails to decode', async () => {
+    const fulfilledFrame = bitmap();
+    send({
+      type: 'load',
+      generation: 31,
+      assets: [source('asset-1'), source('asset-2')],
+      clips: [clip('clip-a', 'asset-1'), clip('clip-b', 'asset-2')],
+      previewQuality: 'full',
+    });
+    await flush();
+    runtime.sinkInstances[0]!.getCanvas.mockResolvedValueOnce(wrapped(0.5, fulfilledFrame));
+    runtime.sinkInstances[1]!.getCanvas.mockRejectedValueOnce(new Error('second seek decode failed'));
+
+    send({ type: 'seek', generation: 31, requestId: 310, timelineSeconds: 0.5, mode: 'seek' });
+    await flush();
+
+    expect(fulfilledFrame.close).toHaveBeenCalledOnce();
+    expect(messages().some((message) => message.type === 'frame' && message.requestId === 310)).toBe(false);
+    expect(messages()).toContainEqual({
+      type: 'error',
+      generation: 31,
+      requestId: 310,
+      error: { kind: 'decode-failure', sourceId: 'playback', message: 'second seek decode failed' },
+    });
+  });
+
   it('resolves project-media assets by id at the initial seek and reports unavailable assets explicitly', async () => {
     send({
       type: 'load',
@@ -573,6 +695,132 @@ describe('playback worker', () => {
     expect(current.close).not.toHaveBeenCalled();
   });
 
+  it('cancels the latest pending seek and rejects an in-flight result without a playback error', async () => {
+    const inFlightCanvas = deferred<Wrapped | null>();
+    send({ type: 'load', generation: 1, assets: [source('asset-1')], clips: [clip('clip-a')], previewQuality: 'full' });
+    await flush();
+    const sink = runtime.sinkInstances[0]!;
+    sink.getCanvas.mockImplementationOnce(() => inFlightCanvas.promise);
+
+    send({ type: 'seek', generation: 1, requestId: 10, timelineSeconds: 1, mode: 'seek' });
+    await flush();
+    send({ type: 'seek', generation: 1, requestId: 11, timelineSeconds: 2, mode: 'scrub' });
+    send({ type: 'cancel-seek', generation: 2 });
+
+    expect(messages()).toContainEqual({
+      type: 'seek-result',
+      generation: 1,
+      requestId: 11,
+      result: 'superseded',
+      latencyMs: expect.any(Number),
+    });
+
+    const staleFrame = bitmap();
+    inFlightCanvas.resolve(wrapped(1, staleFrame));
+    await flush();
+
+    expect(messages()).toContainEqual({
+      type: 'seek-result',
+      generation: 1,
+      requestId: 10,
+      result: 'superseded',
+      latencyMs: expect.any(Number),
+    });
+    expect(staleFrame.close).toHaveBeenCalledOnce();
+    expect(messages().some((message) => message.type === 'error')).toBe(false);
+  });
+
+  it('releases tick iterators and queued bitmaps on cancel-seek after an in-flight next settles', async () => {
+    const inFlightNext = deferred<IteratorResult<Wrapped>>();
+    const firstFrame = bitmap();
+    const queuedFrame = bitmap();
+    const nextQueuedFrame = bitmap();
+    const iterator = {
+      next: vi
+        .fn()
+        .mockResolvedValueOnce({ value: wrapped(0, firstFrame), done: false })
+        .mockResolvedValueOnce({ value: wrapped(0.04, queuedFrame), done: false })
+        .mockImplementationOnce(() => inFlightNext.promise),
+      return: vi.fn().mockResolvedValue({ value: undefined, done: true }),
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+    };
+    send({
+      type: 'load',
+      generation: 25,
+      assets: [source('asset-1')],
+      clips: [clip('clip-a')],
+      previewQuality: 'full',
+    });
+    await flush();
+    runtime.sinkInstances[0]!.canvases.mockReturnValueOnce(iterator);
+
+    send({ type: 'tick', generation: 25, timelineSeconds: 0 });
+    await flush();
+    expect(iterator.next).toHaveBeenCalledTimes(3);
+
+    send({ type: 'cancel-seek', generation: 26 });
+    await flush();
+    expect(iterator.return).not.toHaveBeenCalled();
+    expect(queuedFrame.close).not.toHaveBeenCalled();
+
+    inFlightNext.resolve({ value: wrapped(0.08, nextQueuedFrame), done: false });
+    await flush();
+
+    expect(iterator.return).toHaveBeenCalledOnce();
+    expect(queuedFrame.close).toHaveBeenCalledOnce();
+    expect(nextQueuedFrame.close).toHaveBeenCalledOnce();
+    expect(messages().some((message) => message.type === 'error')).toBe(false);
+
+    send({ type: 'dispose' });
+    await flush();
+    expect(iterator.return).toHaveBeenCalledOnce();
+    expect(queuedFrame.close).toHaveBeenCalledOnce();
+    expect(nextQueuedFrame.close).toHaveBeenCalledOnce();
+  });
+
+  it.each(['pause', 'cancel-seek'] as const)(
+    'reports a stale tick failure with its original generation after %s',
+    async (type) => {
+      const inFlightNext = deferred<IteratorResult<Wrapped>>();
+      const iterator = {
+        next: vi.fn(() => inFlightNext.promise),
+        return: vi.fn().mockResolvedValue({ value: undefined, done: true }),
+        [Symbol.asyncIterator]() {
+          return this;
+        },
+      };
+      send({
+        type: 'load',
+        generation: 27,
+        assets: [source('asset-1')],
+        clips: [clip('clip-a')],
+        previewQuality: 'full',
+      });
+      await flush();
+      runtime.sinkInstances[0]!.canvases.mockReturnValueOnce(iterator);
+      send({ type: 'tick', generation: 27, timelineSeconds: 0 });
+      await flush();
+      expect(iterator.next).toHaveBeenCalledOnce();
+
+      send({ type, generation: 28 });
+      await flush();
+      inFlightNext.reject(new Error('stale tick decode failed'));
+      await flush();
+
+      expect(messages().filter((message) => message.type === 'error')).toEqual([
+        {
+          type: 'error',
+          generation: 27,
+          error: { kind: 'decode-failure', sourceId: 'playback', message: 'stale tick decode failed' },
+        },
+      ]);
+      send({ type: 'dispose' });
+      await flush();
+    },
+  );
+
   it('supersedes a pending seek when preview configuration changes', async () => {
     const firstCanvas = deferred<Wrapped | null>();
     send({
@@ -608,6 +856,366 @@ describe('playback worker', () => {
       latencyMs: expect.any(Number),
     });
     expect(messages()).toContainEqual({ type: 'ready', generation: 2 });
+  });
+
+  it('skips stale preview and retime requests when a newer reconfiguration is queued', async () => {
+    const clips = [clip('clip-a')];
+    send({ type: 'load', generation: 32, assets: [source('asset-1')], clips, previewQuality: 'full' });
+    await flush();
+
+    send({ type: 'configure-preview', generation: 33, previewQuality: 'half' });
+    send({ type: 'configure-preview', generation: 34, previewQuality: 'quarter' });
+    await flush();
+
+    expect(runtime.CanvasSink).toHaveBeenCalledTimes(2);
+    expect(runtime.CanvasSink.mock.calls[1]?.[1]).toMatchObject({ width: 960, height: 480 });
+    expect(messages()).not.toContainEqual({ type: 'ready', generation: 33 });
+    expect(messages()).toContainEqual({ type: 'ready', generation: 34 });
+
+    send({ type: 'retime', generation: 35, clips });
+    send({ type: 'retime', generation: 36, clips });
+    await flush();
+
+    expect(messages()).not.toContainEqual({ type: 'ready', generation: 35 });
+    expect(messages()).toContainEqual({ type: 'ready', generation: 36 });
+  });
+
+  it.each(['retime', 'configure-preview'] as const)(
+    'does not commit or announce an older %s after a newer request arrives during reset',
+    async (operation) => {
+      const cleanup = deferred<void>();
+      const iterator = {
+        next: vi
+          .fn()
+          .mockResolvedValueOnce({ value: wrapped(0), done: false })
+          .mockResolvedValueOnce({ value: wrapped(0.04), done: false })
+          .mockResolvedValueOnce({ value: wrapped(0.08), done: false }),
+        return: vi.fn(async () => {
+          await cleanup.promise;
+          return { value: undefined, done: true };
+        }),
+        [Symbol.asyncIterator]() {
+          return this;
+        },
+      };
+      send({
+        type: 'load',
+        generation: 40,
+        assets: [source('asset-1')],
+        clips: [clip('clip-a')],
+        previewQuality: 'full',
+      });
+      await flush();
+      const sink = runtime.sinkInstances[0]!;
+      sink.canvases.mockReturnValueOnce(iterator);
+      send({ type: 'tick', generation: 40, timelineSeconds: 0 });
+      await flush();
+
+      if (operation === 'retime') {
+        send({
+          type: 'retime',
+          generation: 41,
+          clips: [{ ...clip('clip-a'), timelineStartSeconds: 5, timelineDurationSeconds: 1 }],
+        });
+      } else {
+        send({ type: 'configure-preview', generation: 41, previewQuality: 'half' });
+      }
+      await flush();
+      expect(iterator.return).toHaveBeenCalledOnce();
+
+      if (operation === 'retime') {
+        send({
+          type: 'retime',
+          generation: 42,
+          clips: [{ ...clip('clip-a'), timelineStartSeconds: 7, timelineDurationSeconds: 1 }],
+        });
+      } else {
+        send({ type: 'configure-preview', generation: 42, previewQuality: 'quarter' });
+      }
+      await flush();
+      expect(iterator.return).toHaveBeenCalledOnce();
+      cleanup.resolve();
+      await flush();
+
+      expect(messages()).not.toContainEqual({ type: 'ready', generation: 41 });
+      expect(messages()).toContainEqual({ type: 'ready', generation: 42 });
+      if (operation === 'configure-preview') {
+        expect(runtime.CanvasSink).toHaveBeenCalledTimes(2);
+        expect(runtime.CanvasSink.mock.calls[1]?.[1]).toMatchObject({ width: 960, height: 480 });
+      } else {
+        sink.getCanvas.mockResolvedValueOnce(wrapped(7.5));
+        send({ type: 'seek', generation: 42, requestId: 420, timelineSeconds: 7.5, mode: 'seek' });
+        await flush();
+        expect(sink.getCanvas).toHaveBeenCalledWith(0.5);
+        expect(messages()).toContainEqual(expect.objectContaining({ type: 'frame', clipId: 'clip-a' }));
+      }
+
+      send({ type: 'dispose' });
+      await flush();
+    },
+  );
+
+  it('does not recreate sinks or decode selected clips when disposed during window preparation', async () => {
+    const cleanup = deferred<void>();
+    const previousIterator = {
+      next: vi
+        .fn()
+        .mockResolvedValueOnce({ value: wrapped(0), done: false })
+        .mockResolvedValueOnce({ value: wrapped(0.04), done: false })
+        .mockResolvedValueOnce({ value: wrapped(0.08), done: false }),
+      return: vi.fn(async () => {
+        await cleanup.promise;
+        return { value: undefined, done: true };
+      }),
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+    };
+    send({
+      type: 'load',
+      generation: 43,
+      assets: [source('asset-1')],
+      clips: [
+        { ...clip('previous'), timelineStartSeconds: 0, timelineDurationSeconds: 0.5 },
+        { ...clip('active'), timelineStartSeconds: 0.6, timelineDurationSeconds: 1 },
+      ],
+      previewQuality: 'full',
+    });
+    await flush();
+    const [previousSink, activeSink] = runtime.sinkInstances;
+    previousSink!.canvases.mockReturnValueOnce(previousIterator);
+    send({ type: 'tick', generation: 43, timelineSeconds: 0 });
+    await flush();
+
+    send({ type: 'tick', generation: 43, timelineSeconds: 0.6 });
+    await flush();
+    expect(previousIterator.return).toHaveBeenCalledOnce();
+
+    send({ type: 'dispose' });
+    cleanup.resolve();
+    await flush();
+
+    expect(activeSink!.canvases).not.toHaveBeenCalled();
+    expect(runtime.CanvasSink).toHaveBeenCalledTimes(2);
+    expect(messages()).toContainEqual({ type: 'disposed', generation: 43 });
+  });
+
+  it('keeps the previous timeline usable when a retime references an asset that was not loaded', async () => {
+    send({
+      type: 'load',
+      generation: 37,
+      assets: [source('asset-1')],
+      clips: [clip('clip-a')],
+      previewQuality: 'full',
+    });
+    await flush();
+
+    const originalSink = runtime.sinkInstances[0]!;
+    send({
+      type: 'retime',
+      generation: 38,
+      clips: [
+        { ...clip('clip-a'), timelineStartSeconds: 5, timelineDurationSeconds: 1 },
+        clip('new-clip', 'missing-asset'),
+      ],
+    });
+    await flush();
+
+    expect(messages()).toContainEqual({
+      type: 'error',
+      generation: 38,
+      error: {
+        kind: 'decode-failure',
+        sourceId: 'playback',
+        message: 'Playback asset is unavailable during a timing-only update.',
+      },
+    });
+
+    originalSink.getCanvas.mockResolvedValueOnce(wrapped(0.5));
+    send({ type: 'seek', generation: 38, requestId: 380, timelineSeconds: 0.5, mode: 'seek' });
+    await flush();
+
+    expect(runtime.CanvasSink).toHaveBeenCalledOnce();
+    expect(originalSink.getCanvas).toHaveBeenCalledWith(0.5);
+    expect(messages()).toContainEqual(expect.objectContaining({ type: 'frame', clipId: 'clip-a' }));
+    send({ type: 'dispose' });
+    await flush();
+  });
+
+  it('keeps the existing clip when a timing-only retime changes its asset', async () => {
+    send({
+      type: 'load',
+      generation: 44,
+      assets: [source('asset-1'), source('asset-2')],
+      clips: [clip('clip-a', 'asset-1')],
+      previewQuality: 'full',
+    });
+    await flush();
+    const originalSink = runtime.sinkInstances[0]!;
+
+    send({
+      type: 'retime',
+      generation: 45,
+      clips: [{ ...clip('clip-a', 'asset-2'), timelineStartSeconds: 5, timelineDurationSeconds: 1 }],
+    });
+    await flush();
+
+    expect(messages()).toContainEqual({
+      type: 'error',
+      generation: 45,
+      error: {
+        kind: 'decode-failure',
+        sourceId: 'playback',
+        message: 'Playback asset changed during a timing-only update.',
+      },
+    });
+
+    originalSink.getCanvas.mockResolvedValueOnce(wrapped(0.5));
+    send({ type: 'seek', generation: 45, requestId: 450, timelineSeconds: 0.5, mode: 'seek' });
+    await flush();
+
+    expect(runtime.CanvasSink).toHaveBeenCalledOnce();
+    expect(originalSink.getCanvas).toHaveBeenCalledWith(0.5);
+    expect(messages()).toContainEqual(
+      expect.objectContaining({
+        type: 'frame',
+        requestId: 450,
+        clipId: 'clip-a',
+        assetId: 'asset-1',
+      }),
+    );
+    send({ type: 'dispose' });
+    await flush();
+  });
+
+  it.each(['pause', 'dispose'] as const)(
+    'does not decode a seek after pending window cleanup is followed by %s',
+    async (interrupt) => {
+      const cleanup = deferred<void>();
+      const previousIterator = {
+        next: vi
+          .fn()
+          .mockResolvedValueOnce({ value: wrapped(0), done: false })
+          .mockResolvedValueOnce({ value: wrapped(0.04), done: false })
+          .mockResolvedValueOnce({ value: wrapped(0.08), done: false }),
+        return: vi.fn(async () => {
+          await cleanup.promise;
+          return { value: undefined, done: true };
+        }),
+        [Symbol.asyncIterator]() {
+          return this;
+        },
+      };
+      send({
+        type: 'load',
+        generation: 46,
+        assets: [source('asset-1')],
+        clips: [
+          { ...clip('previous'), timelineStartSeconds: 0, timelineDurationSeconds: 0.5 },
+          { ...clip('active'), timelineStartSeconds: 0.6, timelineDurationSeconds: 1 },
+        ],
+        previewQuality: 'full',
+      });
+      await flush();
+      const [previousSink, activeSink] = runtime.sinkInstances;
+      previousSink!.canvases.mockReturnValueOnce(previousIterator);
+      send({ type: 'tick', generation: 46, timelineSeconds: 0 });
+      await flush();
+
+      send({ type: 'seek', generation: 46, requestId: 460, timelineSeconds: 0.8, mode: 'seek' });
+      await flush();
+      expect(previousIterator.return).toHaveBeenCalledOnce();
+      expect(activeSink!.getCanvas).not.toHaveBeenCalled();
+
+      if (interrupt === 'pause') send({ type: 'pause', generation: 47 });
+      else send({ type: 'dispose' });
+      await flush();
+      cleanup.resolve();
+      await flush();
+
+      expect(activeSink!.getCanvas).not.toHaveBeenCalled();
+      expect(activeSink!.canvases).not.toHaveBeenCalled();
+      expect(runtime.CanvasSink).toHaveBeenCalledTimes(interrupt === 'pause' ? 3 : 2);
+      if (interrupt === 'pause') {
+        expect(messages()).toContainEqual({
+          type: 'seek-result',
+          generation: 46,
+          requestId: 460,
+          result: 'superseded',
+          latencyMs: 0,
+        });
+        send({ type: 'dispose' });
+        await flush();
+      } else {
+        expect(messages()).toContainEqual({ type: 'disposed', generation: 46 });
+      }
+      expect(previousIterator.return).toHaveBeenCalledOnce();
+    },
+  );
+
+  it.each(['newer seek', 'dispose'] as const)('skips cancel-seek cleanup when superseded by %s', async (superseder) => {
+    const inFlightNext = deferred<IteratorResult<Wrapped>>();
+    const firstFrame = bitmap();
+    const queuedFrame = bitmap();
+    const nextQueuedFrame = bitmap();
+    const transferNext = vi.fn(() => nextQueuedFrame);
+    const iterator = {
+      next: vi
+        .fn()
+        .mockResolvedValueOnce({ value: wrapped(0, firstFrame), done: false })
+        .mockResolvedValueOnce({ value: wrapped(0.04, queuedFrame), done: false })
+        .mockImplementationOnce(() => inFlightNext.promise),
+      return: vi.fn().mockResolvedValue({ value: undefined, done: true }),
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+    };
+    send({
+      type: 'load',
+      generation: 39,
+      assets: [source('asset-1')],
+      clips: [clip('clip-a')],
+      previewQuality: 'full',
+    });
+    await flush();
+    const sink = runtime.sinkInstances[0]!;
+    sink.canvases.mockReturnValueOnce(iterator);
+    send({ type: 'tick', generation: 39, timelineSeconds: 0 });
+    await flush();
+    expect(iterator.next).toHaveBeenCalledTimes(3);
+
+    send({ type: 'cancel-seek', generation: 40 });
+    await flush();
+    if (superseder === 'newer seek') {
+      sink.getCanvas.mockResolvedValueOnce(wrapped(0.5));
+      send({ type: 'seek', generation: 41, requestId: 410, timelineSeconds: 0.5, mode: 'seek' });
+    } else {
+      send({ type: 'dispose' });
+    }
+    inFlightNext.resolve({ value: { ...wrapped(0.08), canvas: { transferToImageBitmap: transferNext } }, done: false });
+    await flush();
+
+    expect(iterator.return).toHaveBeenCalledOnce();
+    expect(queuedFrame.close).toHaveBeenCalledOnce();
+    expect(nextQueuedFrame.close).toHaveBeenCalledTimes(superseder === 'dispose' ? 0 : 1);
+    expect(transferNext).toHaveBeenCalledTimes(superseder === 'dispose' ? 0 : 1);
+    if (superseder === 'newer seek') {
+      expect(messages()).toContainEqual({
+        type: 'seek-result',
+        generation: 41,
+        requestId: 410,
+        result: 'presented',
+        latencyMs: expect.any(Number),
+      });
+      send({ type: 'dispose' });
+      await flush();
+    } else {
+      expect(messages()).toContainEqual({ type: 'disposed', generation: 40 });
+    }
+    expect(iterator.return).toHaveBeenCalledOnce();
+    expect(queuedFrame.close).toHaveBeenCalledOnce();
+    expect(nextQueuedFrame.close).toHaveBeenCalledTimes(superseder === 'dispose' ? 0 : 1);
+    expect(transferNext).toHaveBeenCalledTimes(superseder === 'dispose' ? 0 : 1);
   });
 
   it('transfers a decoded scrub frame before superseding it and continues with the newest scrub', async () => {
@@ -818,6 +1426,114 @@ describe('playback worker', () => {
     expect(messages()).toContainEqual(expect.objectContaining({ type: 'frame', clipId: 'following' }));
   });
 
+  it('releases stale tick queues while preserving active and preloaded consumers for later reentry', async () => {
+    const expiredFrames = [bitmap(), bitmap(), bitmap()];
+    const expiredIterator = {
+      next: vi
+        .fn()
+        .mockResolvedValueOnce({ value: wrapped(0.2, expiredFrames[0]!), done: false })
+        .mockResolvedValueOnce({ value: wrapped(0.24, expiredFrames[1]!), done: false })
+        .mockResolvedValueOnce({ value: wrapped(0.28, expiredFrames[2]!), done: false }),
+      return: vi.fn().mockResolvedValue({ value: undefined, done: true }),
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+    };
+    const activeFrames = [bitmap(), bitmap(), bitmap()];
+    const activeIterator = {
+      next: vi
+        .fn()
+        .mockResolvedValueOnce({ value: wrapped(1, activeFrames[0]!), done: false })
+        .mockResolvedValueOnce({ value: wrapped(1.04, activeFrames[1]!), done: false })
+        .mockResolvedValueOnce({ value: wrapped(1.08, activeFrames[2]!), done: false }),
+      return: vi.fn().mockResolvedValue({ value: undefined, done: true }),
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+    };
+    const overlapIterator = {
+      next: vi
+        .fn()
+        .mockResolvedValueOnce({ value: wrapped(0.05), done: false })
+        .mockResolvedValue({ value: undefined, done: true }),
+      return: vi.fn().mockResolvedValue({ value: undefined, done: true }),
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+    };
+    const preloadIterator = {
+      next: vi
+        .fn()
+        .mockResolvedValueOnce({ value: wrapped(0), done: false })
+        .mockResolvedValue({ value: undefined, done: true }),
+      return: vi.fn().mockResolvedValue({ value: undefined, done: true }),
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+    };
+    const reentryFrame = bitmap();
+    const reentryIterator = {
+      next: vi
+        .fn()
+        .mockResolvedValueOnce({ value: wrapped(0.3, reentryFrame), done: false })
+        .mockResolvedValue({ value: undefined, done: true }),
+      return: vi.fn().mockResolvedValue({ value: undefined, done: true }),
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+    };
+
+    send({
+      type: 'load',
+      generation: 23,
+      assets: [source('asset-1')],
+      clips: [
+        { ...clip('expired'), timelineDurationSeconds: 0.5 },
+        { ...clip('active-hold'), timelineDurationSeconds: 1, freezeFrameSourceSeconds: 1 },
+        { ...clip('overlap'), timelineStartSeconds: 0.55, timelineDurationSeconds: 1 },
+        { ...clip('lookahead'), timelineStartSeconds: 0.7, timelineDurationSeconds: 1 },
+      ],
+      previewQuality: 'full',
+    });
+    await flush();
+
+    const [expiredSink, activeSink, overlapSink, lookaheadSink] = runtime.sinkInstances;
+    expiredSink!.canvases.mockReturnValueOnce(expiredIterator);
+    activeSink!.canvases.mockReturnValueOnce(activeIterator);
+    overlapSink!.canvases.mockReturnValueOnce(overlapIterator);
+    lookaheadSink!.canvases.mockReturnValueOnce(preloadIterator);
+
+    send({ type: 'tick', generation: 23, timelineSeconds: 0.2 });
+    await flush();
+    send({ type: 'tick', generation: 23, timelineSeconds: 0.6 });
+    await flush();
+
+    expect(expiredIterator.return).toHaveBeenCalledOnce();
+    expect(expiredFrames[0]!.close).not.toHaveBeenCalled();
+    expect(expiredFrames[1]!.close).toHaveBeenCalledOnce();
+    expect(expiredFrames[2]!.close).toHaveBeenCalledOnce();
+    expect(activeIterator.return).not.toHaveBeenCalled();
+    expect(activeFrames[1]!.close).not.toHaveBeenCalled();
+    expect(activeFrames[2]!.close).not.toHaveBeenCalled();
+    expect(messages()).toContainEqual(expect.objectContaining({ type: 'frame', clipId: 'overlap' }));
+    expect(messages()).toContainEqual(expect.objectContaining({ type: 'frame', clipId: 'lookahead' }));
+
+    const expiredReentrySink = runtime.sinkInstances[4]!;
+    expiredReentrySink.canvases.mockReturnValueOnce(reentryIterator);
+    send({ type: 'tick', generation: 23, timelineSeconds: 0.3 });
+    await flush();
+
+    expect(expiredSink!.canvases).toHaveBeenCalledOnce();
+    expect(expiredReentrySink.canvases).toHaveBeenCalledOnce();
+    expect(reentryIterator.next).toHaveBeenCalled();
+    expect(messages()).toContainEqual(
+      expect.objectContaining({ type: 'frame', clipId: 'expired', timestampSeconds: 0.3 }),
+    );
+    expect(messages().some((message) => message.type === 'error')).toBe(false);
+    send({ type: 'dispose' });
+    await flush();
+  });
+
   it('presents the frozen frame again after leaving and re-entering the hold range', async () => {
     const freezeFrameSourceSeconds = 4.5;
     const firstFrame = bitmap();
@@ -857,15 +1573,18 @@ describe('playback worker', () => {
     await flush();
 
     const sink = runtime.sinkInstances[0]!;
-    sink.canvases.mockReturnValueOnce(firstIterator).mockReturnValueOnce(reentryIterator);
+    sink.canvases.mockReturnValueOnce(firstIterator);
     send({ type: 'tick', generation: 19, timelineSeconds: 2.25 });
     await flush();
     send({ type: 'tick', generation: 19, timelineSeconds: 3 });
     await flush();
+    const reentrySink = runtime.sinkInstances[1]!;
+    reentrySink.canvases.mockReturnValueOnce(reentryIterator);
     send({ type: 'tick', generation: 19, timelineSeconds: 2.75 });
     await flush();
 
-    expect(sink.canvases).toHaveBeenCalledTimes(2);
+    expect(sink.canvases).toHaveBeenCalledOnce();
+    expect(reentrySink.canvases).toHaveBeenCalledOnce();
     expect(reentryIterator.next).toHaveBeenCalled();
     const frames = messages().filter((message) => message.type === 'frame');
     expect(frames).toHaveLength(2);
@@ -1060,6 +1779,108 @@ describe('playback worker', () => {
 
     expect(temporaryIterator.return).toHaveBeenCalledOnce();
     send({ type: 'dispose' });
+  });
+
+  it('releases the previous clip sink on a seek switch and keeps the current sink resident', async () => {
+    send({
+      type: 'load',
+      generation: 14,
+      assets: [source('asset-1')],
+      clips: [
+        { ...clip('first'), timelineStartSeconds: 0, timelineDurationSeconds: 1 },
+        { ...clip('second'), timelineStartSeconds: 2, timelineDurationSeconds: 1 },
+      ],
+      previewQuality: 'full',
+    });
+    await flush();
+
+    const firstSink = runtime.sinkInstances[0]!;
+    const secondSink = runtime.sinkInstances[1]!;
+    firstSink.getCanvas.mockResolvedValueOnce(wrapped(0.5));
+    send({ type: 'seek', generation: 14, requestId: 140, timelineSeconds: 0.5, mode: 'seek' });
+    await flush();
+
+    secondSink.getCanvas.mockResolvedValueOnce(wrapped(2.5));
+    send({ type: 'seek', generation: 14, requestId: 141, timelineSeconds: 2.5, mode: 'seek' });
+    await flush();
+
+    expect(firstSink.getCanvas).toHaveBeenCalledOnce();
+    expect(runtime.CanvasSink).toHaveBeenCalledTimes(3);
+    expect(messages()).toContainEqual(expect.objectContaining({ type: 'frame', clipId: 'second' }));
+
+    secondSink.getCanvas.mockResolvedValueOnce(wrapped(2.75));
+    send({ type: 'seek', generation: 14, requestId: 142, timelineSeconds: 2.75, mode: 'seek' });
+    await flush();
+
+    expect(secondSink.getCanvas).toHaveBeenCalledTimes(2);
+    expect(runtime.CanvasSink).toHaveBeenCalledTimes(3);
+    expect(messages()).toContainEqual(
+      expect.objectContaining({ type: 'frame', clipId: 'second', timestampSeconds: 2.75 }),
+    );
+    send({ type: 'dispose' });
+    await flush();
+  });
+
+  it('closes sequential iterators and queued bitmaps before an arbitrary seek decode', async () => {
+    const firstFrames = [bitmap(), bitmap(), bitmap()];
+    const secondFrames = [bitmap(), bitmap(), bitmap()];
+    const iteratorFor = (frames: TestBitmap[]) => ({
+      next: vi
+        .fn()
+        .mockResolvedValueOnce({ value: wrapped(0, frames[0]!), done: false })
+        .mockResolvedValueOnce({ value: wrapped(0.04, frames[1]!), done: false })
+        .mockResolvedValueOnce({ value: wrapped(0.08, frames[2]!), done: false }),
+      return: vi.fn().mockResolvedValue({ value: undefined, done: true }),
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+    });
+    const firstIterator = iteratorFor(firstFrames);
+    const secondIterator = iteratorFor(secondFrames);
+
+    send({
+      type: 'load',
+      generation: 24,
+      assets: [source('asset-1'), source('asset-2')],
+      clips: [clip('clip-a', 'asset-1'), clip('clip-b', 'asset-2')],
+      previewQuality: 'full',
+    });
+    await flush();
+    const [firstSink, secondSink] = runtime.sinkInstances;
+    firstSink!.canvases.mockReturnValueOnce(firstIterator);
+    secondSink!.canvases.mockReturnValueOnce(secondIterator);
+
+    send({ type: 'tick', generation: 24, timelineSeconds: 0 });
+    await flush();
+    firstSink!.getCanvas.mockResolvedValueOnce(wrapped(0.5));
+    secondSink!.getCanvas.mockResolvedValueOnce(wrapped(0.5));
+    send({ type: 'seek', generation: 24, requestId: 240, timelineSeconds: 0.5, mode: 'seek' });
+    await flush();
+
+    const firstDecodeOrder = Math.min(
+      ...runtime.sinkInstances.map((sink) => sink.getCanvas.mock.invocationCallOrder[0]!),
+    );
+    for (const [iterator, frames, sink] of [
+      [firstIterator, firstFrames, firstSink!],
+      [secondIterator, secondFrames, secondSink!],
+    ] as const) {
+      expect(iterator.return).toHaveBeenCalledOnce();
+      expect(frames[1]!.close).toHaveBeenCalledOnce();
+      expect(frames[2]!.close).toHaveBeenCalledOnce();
+      expect(iterator.return.mock.invocationCallOrder[0]).toBeLessThan(firstDecodeOrder);
+      expect(frames[1]!.close.mock.invocationCallOrder[0]).toBeLessThan(firstDecodeOrder);
+      expect(frames[2]!.close.mock.invocationCallOrder[0]).toBeLessThan(firstDecodeOrder);
+      expect(sink.getCanvas).toHaveBeenCalledWith(0.5);
+    }
+    expect(messages()).toContainEqual({
+      type: 'seek-result',
+      generation: 24,
+      requestId: 240,
+      result: 'presented',
+      latencyMs: expect.any(Number),
+    });
+    send({ type: 'dispose' });
+    await flush();
   });
 
   it('returns active CanvasSink iterators when a load disposes the previous generation', async () => {

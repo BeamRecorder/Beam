@@ -1,3 +1,5 @@
+import { isElementText } from './element-text';
+import { isFreehandDrawing } from './freehand';
 import type { ShapeLayerFamily, ShapeLayerPreset, ShapeLayerStyle } from './shape-layer-types';
 
 export const SHAPE_PRESETS: readonly ShapeLayerPreset[] = [
@@ -34,12 +36,14 @@ const color = (value: string | undefined, fallback: string) =>
   /^#[\da-f]{6}(?:[\da-f]{2})?$/i.test(value ?? '') ? value! : fallback;
 
 export const defaultShapePresetFor = (family: ShapeLayerFamily): ShapeLayerPreset =>
-  family === 'arrow' ? 'arrow' : 'rounded-rectangle';
+  family === 'arrow' ? 'arrow' : family === 'text' ? 'text' : family === 'drawing' ? 'freehand' : 'rounded-rectangle';
 
 export const normalizeShapeLayerStyle = (value: Partial<ShapeLayerStyle> | null | undefined): ShapeLayerStyle => {
-  const family = value?.family === 'arrow' ? 'arrow' : 'shape';
-  const presets = family === 'arrow' ? ARROW_PRESETS : SHAPE_PRESETS;
+  const family = value?.family && ['arrow', 'text', 'drawing'].includes(value.family) ? value.family : 'shape';
+  const presets = family === 'shape' ? SHAPE_PRESETS : [defaultShapePresetFor(family)];
   return {
+    ...(value?.text ? { text: value.text } : {}),
+    ...(value?.drawing ? { drawing: value.drawing } : {}),
     family,
     preset: presets.includes(value?.preset as ShapeLayerPreset) ? value!.preset! : defaultShapePresetFor(family),
     fillColor: color(value?.fillColor, DEFAULT_SHAPE_LAYER_STYLE.fillColor),
@@ -62,6 +66,9 @@ export const normalizeShapeLayerStyle = (value: Partial<ShapeLayerStyle> | null 
 };
 
 export const isShapeLayerStyle = (value: Partial<ShapeLayerStyle>) => {
+  if (value.text !== undefined && !isElementText(value.text)) return false;
+  if (value.drawing !== undefined && !isFreehandDrawing(value.drawing)) return false;
+  if ((value.family === 'text' && !value.text) || (value.family === 'drawing' && !value.drawing)) return false;
   const normalized = normalizeShapeLayerStyle(value);
   return (Object.keys(normalized) as Array<keyof ShapeLayerStyle>).every((key) => value[key] === normalized[key]);
 };

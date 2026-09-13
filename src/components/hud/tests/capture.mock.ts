@@ -35,6 +35,7 @@ export const captureMock = {
   createProject: vi.fn(),
   renameProject: vi.fn(),
   deleteProject: vi.fn(),
+  revealProject: vi.fn(),
   configureCameraOverlay: vi.fn(),
   setCameraOverlayActive: vi.fn(),
   getCameraOverlayState: vi.fn().mockResolvedValue(null),

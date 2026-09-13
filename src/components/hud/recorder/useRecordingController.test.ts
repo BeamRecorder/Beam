@@ -17,7 +17,7 @@ const mocks = vi.hoisted(() => {
     capture: {
       platform: 'darwin',
       getCameraOverlayState: vi.fn(async () => null),
-      prepareRecording: vi.fn(async () => ({ sessionId: 'prepared' })),
+      prepareRecording: vi.fn(async (): Promise<{ sessionId: string } | null> => ({ sessionId: 'prepared' })),
       cancelPreparedRecording: vi.fn(async () => undefined),
       setCountdown: vi.fn(async () => undefined),
       prepareRecordingSurface: vi.fn(async () => undefined),
@@ -569,5 +569,62 @@ describe('useRecordingController startup', () => {
     await controller.start(fullConfig);
     await vi.waitFor(() => expect(controller.phase.value).toBe('recording'));
     expect(controller.recordingTime.value).toBe('00:00.0');
+  });
+});
+
+describe('native source selection cancellation', () => {
+  it('cleans prepared devices, reports cancellation without failure, and allows retry', async () => {
+    const cancelled = vi.fn(),
+      failed = vi.fn();
+    mocks.capture.prepareRecording.mockResolvedValueOnce(null);
+    const controller = useRecordingController(vi.fn(), failed, cancelled);
+    await controller.start(fullConfig);
+    expect(cancelled).toHaveBeenCalledOnce();
+    expect(failed).not.toHaveBeenCalled();
+    expect(controller.phase.value).toBe('idle');
+    expect(controller.error.value).toBe('');
+    for (const recorder of [mocks.cameraRecorder, mocks.micRecorder, mocks.systemAudioRecorder]) {
+      expect(recorder.stop).toHaveBeenCalledOnce();
+      expect(recorder.start).not.toHaveBeenCalled();
+    }
+    expect(mocks.capture.startPreparedRecording).not.toHaveBeenCalled();
+    expect(mocks.capture.discardRecording).not.toHaveBeenCalled();
+    await controller.start(baseConfig);
+    await vi.waitFor(() => expect(controller.phase.value).toBe('recording'));
+    await controller.cancel();
+  });
+
+  it('keeps cancellation cleanup failures visible', async () => {
+    const cancelled = vi.fn(),
+      failed = vi.fn();
+    mocks.capture.prepareRecording.mockResolvedValueOnce(null);
+    mocks.cameraRecorder.stop.mockRejectedValueOnce(new Error('Camera cleanup failed'));
+    const controller = useRecordingController(vi.fn(), failed, cancelled);
+    await controller.start(fullConfig);
+    expect(cancelled).not.toHaveBeenCalled();
+    expect(failed).toHaveBeenCalledWith(
+      expect.objectContaining({ cancelled: true, cleanupErrors: ['Camera cleanup failed'] }),
+    );
+    expect(controller.error.value).not.toBe('');
+  });
+
+  it('ignores a late Portal cancellation after the recording was explicitly canceled', async () => {
+    let resolve!: (value: null) => void;
+    mocks.capture.prepareRecording.mockReturnValueOnce(
+      new Promise<null>((done) => {
+        resolve = done;
+      }),
+    );
+    const cancelled = vi.fn(),
+      failed = vi.fn();
+    const controller = useRecordingController(vi.fn(), failed, cancelled);
+    const starting = controller.start(baseConfig);
+    await vi.waitFor(() => expect(mocks.capture.prepareRecording).toHaveBeenCalledOnce());
+    await controller.cancel();
+    resolve(null);
+    await starting;
+    expect(cancelled).not.toHaveBeenCalled();
+    expect(failed).not.toHaveBeenCalled();
+    expect(controller.phase.value).toBe('idle');
   });
 });

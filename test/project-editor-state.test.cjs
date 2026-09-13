@@ -173,7 +173,7 @@ test('migrates a legacy fixed macOS cursor without discarding presentation setti
     background: null,
     blurPercent: 0,
     importedBackgrounds: [],
-    cursor: { ...legacyCursor, size: 92 },
+    cursor: { ...legacyCursor, size: 384 },
   });
 
   assert.deepEqual(state.cursor.selection, {
@@ -181,7 +181,7 @@ test('migrates a legacy fixed macOS cursor without discarding presentation setti
     mode: 'fixed',
     cursorId: 'handpointing',
   });
-  assert.equal(state.cursor.size, 92);
+  assert.equal(state.cursor.size, 384);
 });
 
 test('preserves an unavailable imported pack selection for later reimport', () => {
@@ -292,6 +292,7 @@ test('migrates legacy zoom elements to the flat 2D projection', () => {
     focus: { cx: 0.25, cy: 0.75 },
     depth: 2,
     mode: 'manual',
+    enabled: true,
     projection: '2d',
     tiltIntensity: 0.6,
     tiltHorizontal: 0.65,

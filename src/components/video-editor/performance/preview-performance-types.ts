@@ -1,3 +1,6 @@
+import type { Ref } from 'vue';
+import type { AudioPlaybackMetrics, PlaybackMetrics, PlaybackState } from '~/media/playback';
+import type { MediaProcessingMetrics } from './media-processing-pressure';
 import type { PreviewQuality } from '~/media/playback';
 
 export type PreviewPerformanceChannel = 'ui' | 'worker' | 'audio' | 'media';
@@ -32,4 +35,15 @@ export interface PreviewPerformanceHealthState {
   status: PreviewPerformanceStatus;
   badSamples: number;
   goodSamples: number;
+}
+
+export interface PreviewPerformanceMonitorOptions {
+  isPlaying: Readonly<Ref<boolean>>;
+  playbackState: Readonly<Ref<PlaybackState>>;
+  previewQuality: Readonly<Ref<PreviewQuality>>;
+  playbackMetrics: Readonly<Ref<PlaybackMetrics | null>>;
+  audioMetrics: Readonly<Ref<AudioPlaybackMetrics | null>>;
+  mediaMetrics: Readonly<Ref<MediaProcessingMetrics>>;
+  isReady?: Readonly<Ref<boolean>>;
+  now?: () => number;
 }

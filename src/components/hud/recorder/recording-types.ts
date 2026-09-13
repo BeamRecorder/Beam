@@ -17,6 +17,7 @@ export interface RecordingStartFailure {
   microphone: StartupSidecarState;
   systemAudio: StartupSidecarState;
   cleanupErrors?: string[];
+  cancelled?: boolean;
 }
 
 export const formatRecordingStartFailure = (failure: RecordingStartFailure): string => {
@@ -53,10 +54,15 @@ export interface RecordingConfiguration {
   recordInteractions?: boolean;
   region?: ScreenRegion | null;
   regionOverlay?: ScreenRegionOverlayOptions | null;
+  projectId?: string;
+  outputRoot?: string;
+  cursor?: boolean;
+  excludedWindowHandles?: string[];
 }
 
 export interface RecordingSessionResult {
   videoSrc?: string | null;
   projectId?: string | null;
   sessionId?: string | null;
+  manifestPath?: string | null;
 }

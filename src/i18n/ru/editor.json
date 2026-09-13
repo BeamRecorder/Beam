@@ -73,7 +73,9 @@
     "teleprompterPreviousLine": "Предыдущая строка",
     "teleprompterPreviousLineDesc": "Перейти к предыдущей строке телесуфлёра",
     "conflictWith": "Конфликт с «{name}»",
-    "failedToUpdate": "Не удалось обновить сочетание"
+    "failedToUpdate": "Не удалось обновить сочетание",
+    "quickSnip": "Quick Snip",
+    "quickSnipDesc": "Открыть Quick Snip, начать или остановить запись в зависимости от текущего состояния."
   },
   "SidebarPanel": {
     "canvas": "Холст",
@@ -86,7 +88,8 @@
     "audio": "Аудио",
     "media": "Медиа",
     "settings": "Настройки",
-    "logo": "Логотип"
+    "logo": "Логотип",
+    "elements": "Элементы"
   },
   "Socials": {
     "title": "Социальные сети",

@@ -137,6 +137,28 @@ describe('buildSystemInformation', () => {
     expect(information).toContain('Recording Available: Yes');
     expect(information).toContain('Interaction Access: available (clicks=Yes, shortcuts=Yes)');
   });
+
+  it('includes structured interaction errors and reported Linux input device counts', () => {
+    const information = buildSystemInformation('9.4.1', linuxCatalog(), {
+      state: 'unavailable',
+      canRequest: true,
+      clicks: false,
+      shortcuts: false,
+      recordsText: false,
+      mouseDevices: 2,
+      keyboardDevices: 3,
+      error: {
+        code: 'input-broker-start-failed',
+        message: 'The protected input broker failed to start.',
+      },
+    });
+
+    expect(information).toContain(
+      'Interaction Error: input-broker-start-failed\nThe protected input broker failed to start.',
+    );
+    expect(information).toContain('Mouse Devices: 2');
+    expect(information).toContain('Keyboard Devices: 3');
+  });
 });
 
 describe('useCopySystemInformation', () => {
@@ -208,6 +230,35 @@ describe('useCopySystemInformation', () => {
     expect(clipboardWriteText).toHaveBeenCalledWith(
       expect.stringContaining('Linux Requirement Issues:\n- Install an FFmpeg build with H.264 support'),
     );
+    wrapper.unmount();
+  });
+
+  it('copies structured input access errors and device counts from the Linux status response', async () => {
+    capture.platform = 'linux';
+    rememberCaptureCatalog(linuxCatalog());
+    capture.inputAccessStatus.mockResolvedValueOnce({
+      state: 'unavailable',
+      canRequest: true,
+      clicks: false,
+      shortcuts: false,
+      recordsText: false,
+      mouseDevices: 2,
+      keyboardDevices: 3,
+      error: {
+        code: 'input-broker-start-failed',
+        message: 'The protected input broker failed to start.',
+      },
+    });
+    const { wrapper, state } = mountCopySystemInformation();
+
+    await state.copy();
+
+    const copiedReport = clipboardWriteText.mock.calls[0]?.[0] as string;
+    expect(copiedReport).toContain(
+      'Interaction Error: input-broker-start-failed\nThe protected input broker failed to start.',
+    );
+    expect(copiedReport).toContain('Mouse Devices: 2');
+    expect(copiedReport).toContain('Keyboard Devices: 3');
     wrapper.unmount();
   });
 

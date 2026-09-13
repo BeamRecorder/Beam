@@ -62,7 +62,7 @@ export function isPlaybackWorkerRequest(value: unknown): value is PlaybackWorker
   }
   if (value.type === 'retime') return Array.isArray(value.clips) && value.clips.every(isClip);
   if (value.type === 'configure-preview') return isPreviewQuality(value.previewQuality);
-  if (value.type === 'pause') return true;
+  if (value.type === 'pause' || value.type === 'cancel-seek') return true;
   if (value.type === 'play' || value.type === 'tick')
     return finite(value.timelineSeconds) && value.timelineSeconds >= 0;
   return (

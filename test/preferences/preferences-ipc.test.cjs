@@ -183,3 +183,59 @@ test('shortcut handler receives every global id when provided', async () => {
   callbacks.forEach((callback) => callback());
   assert.deepEqual(received, ['hud.startStopRecording', 'teleprompter.toggleVisibility']);
 });
+
+test('ordinary updates and resets do not wait for or repeat shortcut registration', async () => {
+  const handlers = new Map();
+  const sent = [];
+  const changes = [];
+  let releaseRegistration;
+  let registrations = 0;
+  const initialRegistration = new Promise((resolve) => {
+    releaseRegistration = resolve;
+  });
+  const cleanup = registerPreferencesIpc({
+    ipcMain: ipcMainWith(handlers),
+    BrowserWindow: { getAllWindows: () => [windowWith(sent)] },
+    globalShortcut: { register: () => {}, unregisterAll: () => {} },
+    store: storeWith(shortcutPreferences()),
+    onPreferencesChanged: (preferences) => changes.push(preferences.theme),
+    linuxShortcutSource: {
+      register: async () => {
+        registrations += 1;
+        await initialRegistration;
+        return { fallbackIds: [] };
+      },
+      cleanup: async () => {},
+    },
+  });
+  await flush();
+  const updated = await handlers.get('preferences:update')(null, { theme: 'dark' });
+  assert.equal(updated.theme, 'dark');
+  await handlers.get('preferences:reset')(null, ['theme']);
+  await handlers.get('preferences:update')(null, { shortcuts: structuredClone(updated.shortcuts) });
+  assert.equal(registrations, 1);
+  assert.equal(sent.length, 3);
+  assert.equal(changes.length, 3);
+  releaseRegistration();
+  await cleanup();
+});
+
+test('resetting changed shortcuts registers the restored bindings', async () => {
+  const handlers = new Map();
+  const source = linuxSourceWith({ fallbackIds: [] });
+  const cleanup = registerPreferencesIpc({
+    ipcMain: ipcMainWith(handlers),
+    BrowserWindow: { getAllWindows: () => [] },
+    globalShortcut: { register: () => {}, unregisterAll: () => {} },
+    store: storeWith(shortcutPreferences()),
+    linuxShortcutSource: source,
+  });
+  await flush();
+  await handlers.get('preferences:update')(null, {
+    shortcuts: { 'hud.startStopRecording': { keys: 'Alt+Shift+Q', scope: 'global', category: 'hud' } },
+  });
+  const reset = await handlers.get('preferences:reset')(null, ['shortcuts']);
+  assert.equal(source.calls.register.length, 3);
+  assert.equal(source.calls.register.at(-1), reset.shortcuts['hud.startStopRecording'].keys);
+  await cleanup();
+});

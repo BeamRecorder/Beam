@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue';
 import { capture } from '~/api/capture';
+import { useTranslate } from '~/i18n/useTranslate';
 import type { PreferenceSettings } from '~/api/types/capture-api';
 import type { InteractionAccessViewState } from './interaction-access-types';
 
@@ -12,6 +13,7 @@ const checkingState = (): InteractionAccessViewState => ({
 });
 
 export function useInteractionAccess(platform: string = window.capture?.platform ?? 'unknown') {
+  const { t } = useTranslate('HUD');
   const status = ref<InteractionAccessViewState>(checkingState());
   const enabled = ref(false);
   const noticeDismissed = ref(false);
@@ -46,7 +48,11 @@ export function useInteractionAccess(platform: string = window.capture?.platform
     }
     if (status.value.state !== 'available' && enabled.value) {
       enabled.value = false;
-      await capture.updatePreferences({ recordingInteractions: { enabled: false } });
+      const failed = status.value.state === 'denied' || Boolean(status.value.error);
+      if (failed) noticeDismissed.value = false;
+      await capture.updatePreferences({
+        recordingInteractions: { enabled: false, ...(failed ? { noticeDismissed: false } : {}) },
+      });
     }
   };
 
@@ -55,20 +61,24 @@ export function useInteractionAccess(platform: string = window.capture?.platform
     requesting.value = true;
     try {
       status.value = await window.capture.requestInputAccess();
-    } catch {
+    } catch (error) {
       status.value = {
-        state: 'denied',
+        state: 'unavailable',
         canRequest: true,
         clicks: false,
         shortcuts: false,
         recordsText: false,
+        error: {
+          code: 'input-access-failed',
+          message: error instanceof Error ? error.message : t('inputAccessFailed'),
+        },
       };
       enabled.value = false;
       noticeDismissed.value = false;
       try {
         await capture.updatePreferences({ recordingInteractions: { enabled: false, noticeDismissed: false } });
       } catch {
-        // The native denial remains authoritative even if preference persistence fails.
+        // Preserve the access failure even if preference persistence also fails.
       }
       return;
     } finally {
@@ -77,11 +87,14 @@ export function useInteractionAccess(platform: string = window.capture?.platform
     const available = status.value.state === 'available';
     enabled.value = available;
     if (available) noticeDismissed.value = true;
+    else if (status.value.state === 'denied' || status.value.error) noticeDismissed.value = false;
     try {
       await capture.updatePreferences({
         recordingInteractions: {
           enabled: available,
-          ...(available ? { noticeDismissed: true } : {}),
+          ...(available || status.value.state === 'denied' || status.value.error
+            ? { noticeDismissed: noticeDismissed.value }
+            : {}),
         },
       });
     } catch {

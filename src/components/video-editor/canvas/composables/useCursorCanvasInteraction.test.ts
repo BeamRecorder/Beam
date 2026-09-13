@@ -115,7 +115,7 @@ describe('useCursorCanvasInteraction', () => {
     expect(onResize).not.toHaveBeenCalled();
   });
 
-  it('resizes from a corner and clamps the slider value to 16–128', () => {
+  it('resizes from a corner and clamps the slider value to 16–384', () => {
     const { interaction, onResize } = createInteraction();
 
     interaction.beginResize('top-left', pointer(340, 180));
@@ -131,8 +131,8 @@ describe('useCursorCanvasInteraction', () => {
     interaction.endResize();
 
     interaction.beginResize('top-left', pointer(340, 180));
-    interaction.moveResize(pointer(0, 0));
-    expect(onResize).toHaveBeenLastCalledWith(128);
+    interaction.moveResize(pointer(-400, 0));
+    expect(onResize).toHaveBeenLastCalledWith(384);
   });
 
   it('changes size progressively from a corner in both directions', () => {

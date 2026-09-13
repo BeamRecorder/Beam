@@ -6,6 +6,7 @@ import { DEFAULT_COLOR_FILL } from '~/media/shared/color-fill-types';
 import { DEFAULT_COLOR_LAYER_STYLE } from '~/media/shared/color-layer-style';
 import { DEFAULT_SHAPE_LAYER_STYLE } from '~/media/shared/shape-layer-style';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { HIGHLIGHT_DEFAULTS } from '~/media/shared/highlight-defaults';
 import {
   type BlurClip,
   type ColorClip,
@@ -91,7 +92,7 @@ const shapeClip = (): ShapeClip => ({
   ...DEFAULT_SHAPE_LAYER_STYLE,
 });
 
-const blurClip = (): BlurClip => ({
+const blurClip = (overrides: Partial<BlurClip> = {}): BlurClip => ({
   ...baseClip,
   id: 'blur-original',
   trackId: 'blur-track',
@@ -107,10 +108,17 @@ const blurClip = (): BlurClip => ({
   cornerRadius: 0,
   tintOpacity: 0,
   color: '#000000',
+  ...overrides,
 });
 
 const targetFor = (kind: TimelineAddableVisualKind) =>
-  kind === 'image' ? imageClip() : kind === 'color' ? colorClip() : kind === 'shape' ? shapeClip() : blurClip();
+  kind === 'image'
+    ? imageClip()
+    : kind === 'color'
+      ? colorClip()
+      : kind === 'shape'
+        ? shapeClip()
+        : blurClip(kind === 'highlight' ? { mode: 'highlight' } : {});
 
 const mountComposable = () => {
   const currentTimeSec = ref(0);
@@ -144,7 +152,7 @@ beforeEach(() => {
 afterEach(() => randomUuid?.mockRestore());
 
 describe('useClipComposition visual continuation', () => {
-  it.each(['color', 'blur', 'shape', 'image'] as const)(
+  it.each(['color', 'blur', 'shape', 'image', 'highlight'] as const)(
     'continues a %s track with the requested duration, track, and order',
     async (kind) => {
       const mounted = mountComposable();
@@ -160,17 +168,19 @@ describe('useClipComposition visual continuation', () => {
       };
       await mounted.state.addVisualElementAtTime(request);
 
+      const storedKind = kind === 'highlight' ? 'blur' : kind;
       const clips = mounted.state.composition.value.clips.filter(
-        (clip) => clip.kind === kind && 'trackId' in clip && clip.trackId === original.trackId,
+        (clip) => clip.kind === storedKind && 'trackId' in clip && clip.trackId === original.trackId,
       );
       expect(clips).toHaveLength(2);
       expect(clips[0]).toMatchObject({ id: original.id });
       expect(clips[1]).toMatchObject({
-        kind,
+        kind: storedKind,
         trackId: original.trackId,
         timelineStartMs: request.startMs,
         timelineDurationMs: request.durationMs,
         sourceDurationMs: request.durationMs,
+        ...(kind === 'highlight' ? { mode: 'highlight' } : {}),
       });
       expect(clips[1]!.order).toBe(clips[0]!.order);
       if (kind === 'image') {
@@ -180,6 +190,29 @@ describe('useClipComposition visual continuation', () => {
       }
     },
   );
+
+  it('creates a default highlight blur clip with its own visual track and duration', async () => {
+    const mounted = mountComposable();
+
+    await mounted.state.addElement('highlight', 1_750);
+
+    const clip = mounted.state.composition.value.clips[0] as BlurClip;
+    expect(clip).toMatchObject({
+      kind: 'blur',
+      assetId: '',
+      timelineStartMs: 1_750,
+      timelineDurationMs: 3_000,
+      sourceInMs: 0,
+      sourceDurationMs: 3_000,
+      playbackRate: 1,
+      transitions: { entry: null, exit: null },
+      enabled: true,
+      order: 0,
+      trackId: clip.id,
+      ...HIGHLIGHT_DEFAULTS,
+    });
+    expect(mounted.state.selectedClipId.value).toBe(clip.id);
+  });
 
   it('does not create a continuation when the requested visual track is incompatible', async () => {
     const mounted = mountComposable();
@@ -193,5 +226,21 @@ describe('useClipComposition visual continuation', () => {
     });
 
     expect(mounted.state.composition.value.clips).toHaveLength(1);
+  });
+
+  it('round-trips the interior highlight settings through selection and rejects an invalid color', async () => {
+    const { state } = mountComposable();
+    await state.addElement('highlight');
+    state.updateSelectedBlur({ highlightColor: '#ffe68080', tintOpacity: 42, color: '#12345680', strength: 0 });
+    expect(state.selectedClipInfo.value).toMatchObject({
+      highlightColor: '#ffe68080',
+      blurTintOpacity: 42,
+      blurColor: '#12345680',
+      blurStrength: 0,
+    });
+    expect(state.selectedClip.value).toMatchObject({ highlightColor: '#ffe68080', tintOpacity: 42 });
+    const valid = state.composition.value;
+    expect(() => state.updateSelectedBlur({ highlightColor: '#invalid' })).toThrow('Invalid blur effect settings');
+    expect(state.composition.value).toBe(valid);
   });
 });

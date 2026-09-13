@@ -63,6 +63,23 @@ fn source_preview_command_roundtrips_with_native_source_and_bounds() -> Result<(
 }
 
 #[test]
+fn screenshot_command_roundtrips_with_region_and_excluded_windows() -> Result<(), Box<dyn Error>> {
+    let expected = serde_json::json!({
+        "id": "screenshot-request",
+        "command": "screenshot",
+        "config": {
+            "screen": { "mode": "source", "sourceId": "sck:display:42" },
+            "region": { "x": 0.1, "y": 0.2, "width": 0.5, "height": 0.6 },
+            "output": "/tmp/beam screenshot.png",
+            "excludedWindowHandles": ["1234", "5678"]
+        }
+    });
+    let request: RequestEnvelope = serde_json::from_value(expected.clone())?;
+    assert_eq!(serde_json::to_value(request)?, expected);
+    Ok(())
+}
+
+#[test]
 fn engine_eof_finalizes_an_active_session() -> Result<(), Box<dyn Error>> {
     let temporary = tempfile::tempdir()?;
     let project_id = ProjectId::new();
@@ -79,6 +96,7 @@ fn engine_eof_finalizes_an_active_session() -> Result<(), Box<dyn Error>> {
         failure_policy: capture::model::FailurePolicy::FailFast,
         region: None,
         excluded_process_id: None,
+        excluded_window_handles: vec![],
     };
     let mut child = Command::new(env!("CARGO_BIN_EXE_capture-engine"))
         .stdin(Stdio::piped())
@@ -143,4 +161,29 @@ fn read_response(reader: &mut impl BufRead) -> Result<ResponseEnvelope, Box<dyn 
     read_json_line(reader)?.ok_or_else(|| {
         std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "engine response missing").into()
     })
+}
+
+#[test]
+fn physical_display_lookup_roundtrips_signed_coordinates() -> Result<(), Box<dyn Error>> {
+    let value =
+        serde_json::json!({ "id": "display", "command": "resolve-display", "x": -3840, "y": 1080 });
+    let request: RequestEnvelope = serde_json::from_value(value.clone())?;
+    assert_eq!(serde_json::to_value(request)?, value);
+    Ok(())
+}
+
+#[test]
+fn physical_display_lookup_rejects_non_integer_and_overflow_coordinates() {
+    for x in [
+        serde_json::json!(1.5),
+        serde_json::json!(2147483648_i64),
+        serde_json::Value::Null,
+    ] {
+        assert!(
+            serde_json::from_value::<RequestEnvelope>(serde_json::json!({
+                "id": "display", "command": "resolve-display", "x": x, "y": 0,
+            }))
+            .is_err()
+        );
+    }
 }

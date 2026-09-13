@@ -14,3 +14,5 @@ pub mod storage;
 pub mod system_audio;
 
 pub use error::{CaptureError, NativeCaptureErrorCode};
+
+pub mod screenshot;

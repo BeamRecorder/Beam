@@ -1,3 +1,5 @@
+import { reactive } from 'vue';
+import { HIGHLIGHT_DEFAULTS } from '~/media/shared/highlight-defaults';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_OUTPUT_CANVAS } from '../../canvas/output-canvas';
 import { createDefaultCursorPresentation } from '../../../../api/types/cursor-presentation';
@@ -10,6 +12,7 @@ import {
   applyFreshPresentationDefaults,
   audioDefaultsFor,
   blurDefaultsFor,
+  highlightDefaultsFor,
   captionDefaultsFor,
   defaultsFromEditorState,
   normalizeEditorPreferenceDefaults,
@@ -415,5 +418,63 @@ describe('editor defaults', () => {
     const blurValue = blurDefaultsFor(defaults);
     blurValue.transform.x = 0.8;
     expect(defaults.blur?.transform.x).toBe(0.1);
+  });
+});
+
+describe('highlight defaults', () => {
+  it('clones initial settings independently', () => {
+    const settings = highlightDefaultsFor({ schemaVersion: 1 });
+    expect(settings).toEqual(HIGHLIGHT_DEFAULTS);
+    settings.transform.x = 0.8;
+    expect(HIGHLIGHT_DEFAULTS.transform.x).toBe(0.3);
+  });
+
+  it('restores reactive saved settings without modifying Blur defaults', () => {
+    const defaults = reactive(
+      normalizeEditorPreferenceDefaults({
+        schemaVersion: 1,
+        blur: { ...HIGHLIGHT_DEFAULTS, mode: 'pixelated', strength: 28 },
+        highlight: {
+          ...HIGHLIGHT_DEFAULTS,
+          strength: 84,
+          color: '#114477',
+          highlightColor: '#aabbcc',
+          tintOpacity: 32,
+        },
+      }),
+    );
+    const settings = highlightDefaultsFor(defaults);
+    expect(settings).toMatchObject({
+      mode: 'highlight',
+      strength: 84,
+      color: '#114477',
+      highlightColor: '#aabbcc',
+      tintOpacity: 32,
+    });
+    settings.transform.x = 0.9;
+    expect(defaults.highlight!.transform.x).toBe(0.3);
+    expect(blurDefaultsFor(defaults)).toMatchObject({ mode: 'pixelated', strength: 28 });
+  });
+
+  it('updates only Highlight preferences when that effect is selected', () => {
+    const current = normalizeEditorPreferenceDefaults({
+      schemaVersion: 1,
+      blur: { ...HIGHLIGHT_DEFAULTS, mode: 'blur', strength: 21 },
+    });
+    const clip: BlurClip = {
+      ...blur(),
+      ...HIGHLIGHT_DEFAULTS,
+      strength: 80,
+      highlightColor: '#fedcba',
+      tintOpacity: 45,
+    };
+    const saved = defaultsFromEditorState(current, state(), clip, null);
+    expect(saved.highlight).toMatchObject({
+      mode: 'highlight',
+      strength: 80,
+      highlightColor: '#fedcba',
+      tintOpacity: 45,
+    });
+    expect(saved.blur).toEqual(current.blur);
   });
 });

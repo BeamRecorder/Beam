@@ -1,0 +1,259 @@
+const path = require('path');
+const { createCommittedWindowPosition } = require('../window/committed-window-position.cjs');
+const {
+  STATUS_SIZE,
+  PILL_SIZE,
+  placeStatusPill,
+  statusPillPosition,
+  restoreWindowPosition,
+  saveWindowPosition,
+} = require('./quick-snip-position.cjs');
+
+const COMPLETED_VISIBLE_MS = 5_000;
+
+function createQuickSnipStatusWindow({
+  BrowserWindow,
+  applicationRoot,
+  isPackaged,
+  screen,
+  appIconPath,
+  cleanupStatus = () => {},
+  platform = process.platform,
+  environment = process.env,
+  preferencesStore = null,
+  setTimer = setTimeout,
+  clearTimer = clearTimeout,
+  now = Date.now,
+}) {
+  let window = null;
+  let ready = false;
+  let rendererReady = false;
+  let presentationRequested = false;
+  let presented = false;
+  let current = null;
+  let renderTask = null;
+  let renderFailure = null;
+  let interactive = false;
+  let closeTimer = null;
+  let closeDeadline = null;
+  let closeRemaining = COMPLETED_VISIBLE_MS;
+  let positionTracker = null;
+  let popoverSide = 'above';
+  const clearClose = () => {
+    if (closeDeadline !== null) closeRemaining = Math.max(0, closeDeadline - now());
+    closeDeadline = null;
+    if (closeTimer !== null) clearTimer(closeTimer);
+    closeTimer = null;
+  };
+  const hide = () => {
+    positionTracker?.flush();
+    positionTracker?.dispose();
+    positionTracker = null;
+    clearClose();
+    closeRemaining = COMPLETED_VISIBLE_MS;
+    const previous = window;
+    window = null;
+    current = null;
+    renderTask = null;
+    ready = false;
+    rendererReady = false;
+    presentationRequested = false;
+    presented = false;
+    interactive = false;
+    if (previous && !previous.isDestroyed()) previous.destroy();
+  };
+  const scheduleClose = () => {
+    clearClose();
+    if (presented && current?.state === 'completed' && !interactive) {
+      closeRemaining = COMPLETED_VISIBLE_MS;
+      closeDeadline = now() + COMPLETED_VISIBLE_MS;
+      closeTimer = setTimer(hide, COMPLETED_VISIBLE_MS);
+    }
+  };
+  const snapshot = () =>
+    current
+      ? {
+          ...current,
+          popoverSide,
+          autoClose:
+            current.state === 'completed'
+              ? {
+                  durationMs: COMPLETED_VISIBLE_MS,
+                  deadlineMs: closeDeadline,
+                  remainingMs: closeDeadline === null ? closeRemaining : Math.max(0, closeDeadline - now()),
+                }
+              : null,
+        }
+      : null;
+  const send = () => {
+    if (window && !window.isDestroyed() && ready && rendererReady && current)
+      window.webContents.send('quick-snip:status', snapshot());
+  };
+  const present = () => {
+    if (!window || window.isDestroyed() || !ready || !rendererReady) return;
+    if (presentationRequested && !presented) {
+      presented = true;
+      window.showInactive();
+      scheduleClose();
+    }
+    send();
+  };
+  const placePill = (target, position, display) => {
+    const placement = placeStatusPill({ position, workArea: display.workArea });
+    popoverSide = placement.popoverSide;
+    const bounds = target.getBounds();
+    if (bounds.x !== placement.bounds.x || bounds.y !== placement.bounds.y) {
+      positionTracker.trackProgrammatic(placement.bounds);
+      target.setPosition(placement.bounds.x, placement.bounds.y);
+    }
+    return placement.position;
+  };
+  const place = (target) => {
+    const regionBounds = current?.job?.regionBounds;
+    const display =
+      (regionBounds && screen.getDisplayMatching(regionBounds)) ||
+      screen.getDisplayNearestPoint(screen.getCursorScreenPoint()) ||
+      screen.getPrimaryDisplay();
+    const area = display.workArea;
+    const saved = restoreWindowPosition(preferencesStore, 'quickSnipStatusPositions', display, PILL_SIZE);
+    placePill(
+      target,
+      saved ?? { x: area.x + area.width - PILL_SIZE.width - 28, y: area.y + area.height - PILL_SIZE.height - 28 },
+      display,
+    );
+  };
+  const ensure = () => {
+    if (window && !window.isDestroyed()) return window;
+    ready = false;
+    rendererReady = false;
+    presented = false;
+    const target = new BrowserWindow({
+      ...STATUS_SIZE,
+      frame: false,
+      transparent: true,
+      backgroundColor: '#00000000',
+      resizable: false,
+      maximizable: false,
+      minimizable: false,
+      skipTaskbar: true,
+      alwaysOnTop: true,
+      show: false,
+      hasShadow: false,
+      icon: appIconPath,
+      webPreferences: {
+        preload: path.join(applicationRoot, 'electron/preload.cjs'),
+        nodeIntegration: false,
+        contextIsolation: true,
+        sandbox: false,
+        zoomFactor: 1,
+        backgroundThrottling: false,
+      },
+    });
+    window = target;
+    popoverSide = 'above';
+    const contents = target.webContents;
+    positionTracker = createCommittedWindowPosition({
+      window: target,
+      platform,
+      environment,
+      setTimer,
+      clearTimer,
+      onMove: () => {
+        if (closeTimer === null) return;
+        clearClose();
+        send();
+      },
+      onCommit: (bounds) => {
+        let position = statusPillPosition(bounds, popoverSide);
+        const display = screen.getDisplayMatching({ ...position, ...PILL_SIZE });
+        if (!target.isDestroyed()) position = placePill(target, position, display);
+        saveWindowPosition(preferencesStore, 'quickSnipStatusPositions', display, position);
+        scheduleClose();
+        send();
+      },
+    });
+    target.setContentProtection(true);
+    // BrowserWindow.webContents throws once the native window has been destroyed.
+    contents.once('destroyed', () => cleanupStatus(contents));
+    if (platform !== 'linux') target.setIgnoreMouseEvents(true, { forward: true });
+    contents.on('before-input-event', (event, input) => {
+      if ((input.control || input.meta) && ['+', '-', '=', '0'].includes(input.key)) event.preventDefault();
+    });
+    target.once('ready-to-show', () => {
+      if (window !== target || target.isDestroyed()) return;
+      ready = true;
+      contents.setZoomFactor(1);
+      place(target);
+      present();
+      if (rendererReady && renderTask) contents.send('quick-snip:render-task', renderTask);
+    });
+    const failed = () => {
+      if (window !== target) return;
+      hide();
+      renderFailure?.(new Error('Quick Snip render window closed unexpectedly.'));
+    };
+    target.on('blur', () => {
+      if (window === target && rendererReady) contents.send('quick-snip:status-blur');
+    });
+    target.on('closed', failed);
+    contents.on('render-process-gone', failed);
+    contents.on('did-fail-load', failed);
+    if (isPackaged)
+      target.loadFile(path.join(applicationRoot, 'dist/quick-snip-status.html'), { query: { quickSnipStatus: '1' } });
+    else target.loadURL('http://localhost:6500/quick-snip-status.html?quickSnipStatus=1');
+    return target;
+  };
+  return {
+    snapshot,
+    prepare(status) {
+      current = status;
+      ensure();
+    },
+    rendererReady(sender) {
+      if (!window || window.isDestroyed() || window.webContents !== sender) return;
+      rendererReady = true;
+      present();
+      if (ready && renderTask) sender.send('quick-snip:render-task', renderTask);
+    },
+    update(status) {
+      const previousState = current?.state;
+      current = status;
+      presentationRequested = true;
+      ensure();
+      if (previousState !== status.state) {
+        clearClose();
+        closeRemaining = COMPLETED_VISIBLE_MS;
+        if (presented) scheduleClose();
+      }
+      present();
+    },
+    show() {
+      if (!window || window.isDestroyed()) return false;
+      presentationRequested = true;
+      present();
+      return true;
+    },
+    setInteractive(value) {
+      if (!window || interactive === value) return;
+      interactive = value;
+      if (platform !== 'linux') window.setIgnoreMouseEvents(!value, { forward: true });
+      scheduleClose();
+      send();
+    },
+    onRenderFailure(listener) {
+      renderFailure = listener;
+    },
+    setRenderTask(task) {
+      renderTask = task;
+      if (ready && rendererReady && window && !window.isDestroyed())
+        window.webContents.send('quick-snip:render-task', task);
+    },
+    owns(sender) {
+      return Boolean(window && !window.isDestroyed() && window.webContents === sender);
+    },
+    hide,
+    destroy: hide,
+  };
+}
+
+module.exports = { createQuickSnipStatusWindow, STATUS_SIZE, COMPLETED_VISIBLE_MS };

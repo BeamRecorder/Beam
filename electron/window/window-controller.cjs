@@ -22,6 +22,8 @@ class WindowController {
     this.mode = 'hud';
     this.ready = false;
     this.interactive = false;
+    this.hiddenByController = false;
+    this.overlayAlwaysOnTop = null;
     // Start click-through so the renderer can classify the pointer from the
     // first forwarded mousemove, including when it starts over transparent HUD.
     // Electron only forwards mousemove to click-through windows on macOS and
@@ -48,7 +50,10 @@ class WindowController {
       this.applyInteractionPolicy();
       this.applyZOrderPolicy();
     };
-    this.window.on('show', applyNativeWindowPolicy);
+    this.window.on('show', () => {
+      this.hiddenByController = false;
+      applyNativeWindowPolicy();
+    });
     this.window.on('hide', applyNativeWindowPolicy);
     this.window.on('minimize', applyNativeWindowPolicy);
     this.window.on('restore', applyNativeWindowPolicy);
@@ -241,7 +246,11 @@ class WindowController {
   }
 
   setOverlayAlwaysOnTop(value) {
-    if (value && process.platform === 'win32') {
+    if (this.overlayAlwaysOnTop === value) return;
+    // Native z-order changes can dispatch focus/blur synchronously. Record the
+    // policy first so those callbacks cannot repeat the same native operation.
+    this.overlayAlwaysOnTop = value;
+    if (value && this.platform === 'win32') {
       // The stronger Windows level keeps the Recorder above fullscreen apps.
       this.window.setAlwaysOnTop(true, 'screen-saver');
       this.window.moveTop?.();
@@ -256,7 +265,8 @@ class WindowController {
     // HUD and Recorder are persistent capture controls while visible. The
     // editor transition explicitly hides and demotes this window before the
     // editor is presented, so the overlay can never cover the loaded editor.
-    const overlayIsVisible = ['hud', 'recorder'].includes(this.mode) && this.window.isVisible();
+    const overlayIsVisible =
+      !this.hiddenByController && ['hud', 'recorder'].includes(this.mode) && this.window.isVisible();
     this.setOverlayAlwaysOnTop(this.ready && overlayIsVisible && !this.window.isMinimized());
   }
 
@@ -291,6 +301,7 @@ class WindowController {
   setVisible(visible) {
     if (this.window.isDestroyed()) return false;
     if (visible) {
+      this.hiddenByController = false;
       if (this.mode === 'hud') this.hudOverInteractive = false;
       this.window.showInactive();
       this.applyModePolicy();
@@ -299,6 +310,9 @@ class WindowController {
     // Demote before hiding. On Windows, hiding a screen-saver-level window and
     // demoting it afterwards can leave a topmost compositor surface in front
     // of the editor for a frame (or indefinitely on a failed transition).
+    // Commit the hidden policy before demotion: a focus/blur callback during
+    // setAlwaysOnTop must not raise the still-visible HUD again.
+    this.hiddenByController = true;
     this.setOverlayAlwaysOnTop(false);
     this.window.setIgnoreMouseEvents(true);
     this.window.hide();
@@ -307,7 +321,8 @@ class WindowController {
 
   applyInteractionPolicy() {
     if (this.window.isDestroyed()) return;
-    const shouldBeActive = this.ready && this.window.isVisible() && !this.window.isMinimized();
+    const shouldBeActive =
+      !this.hiddenByController && this.ready && this.window.isVisible() && !this.window.isMinimized();
     if (!shouldBeActive) {
       this.window.setIgnoreMouseEvents(true);
       this.interactive = false;

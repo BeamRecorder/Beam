@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import ElementCanvasOverlay from '../elements/ElementCanvasOverlay.vue';
+import { useCanvasElements } from '../elements/useCanvasElements';
+import { useCanvasFormatTransition } from './composables/useCanvasFormatTransition';
 import { computed, onUnmounted, ref, shallowRef, toRaw, watch } from 'vue';
 import { RotateCcw } from '@lucide/vue';
 import Button from '../../ui/button/Button.vue';
@@ -29,11 +32,11 @@ import { useCanvasTransitionRenderer } from './composables/useCanvasTransitionRe
 import { measureCanvasCaptionText } from './canvas-text-measure';
 import { useCanvasLoadingState } from './composables/useCanvasLoadingState';
 import { useCanvasClipToggleTransition } from './composables/useCanvasClipToggleTransition';
-import { previewRenderScale } from '~/media/playback';
 import CursorCanvasSelection from './CursorCanvasSelection.vue';
 import { useCursorCanvasInteraction } from './composables/useCursorCanvasInteraction';
 import { CURSOR_SIZE_MAX, CURSOR_SIZE_MIN } from '../properties/cursor/cursor-size';
 import { useEditorCanvasPointerInteractions } from './composables/useEditorCanvasPointerInteractions';
+import { resizeEditorCanvas } from './canvas-sizing';
 import { useEditorCanvasAssets } from './composables/useEditorCanvasAssets';
 import { useEditorCanvasInvalidation } from './composables/useEditorCanvasInvalidation';
 import { CaptionInlineEditor, useCaptionInlineEditing } from './caption-inline-editing';
@@ -57,8 +60,6 @@ const canvasTransitionRenderer = useCanvasTransitionRenderer({
   deviceScale: () => deviceScale.value,
   fallbackColor: OUTPUT_FALLBACK_COLOR,
 });
-const isFormatTransitioning = ref(false);
-let formatTransitionTimer: ReturnType<typeof setTimeout> | null = null;
 let drawVisualStack: DrawVisualStack | null = null;
 const viewportZoom = useViewportZoom();
 let renderComposition = toRaw(props.composition);
@@ -124,6 +125,7 @@ const transformAndCrop = useLayerTransformAndCrop({
   onUpdateCrop: (crop) => emit('update:clip-crop', crop),
   onSelectTransformClip: (clipId) => emit('select:clip', clipId),
 });
+
 const renderGuideLines = computed(() =>
   canvasGuideLines(logicalSize.value, props.outputCanvas, transformAndCrop.activeGuideLines.value),
 );
@@ -180,6 +182,13 @@ const captionEditing = useCaptionInlineEditing({
   onEnd: (cancelled) => emit('caption-editing-end', { cancelled }),
   onRender: renderOnce,
 });
+const elements = useCanvasElements({
+  bounds: () => cameraZoom.overlayWindowBounds.value,
+  preview: () => outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas),
+  clipIdAt: (event) => transformAndCrop.clipIdAt(event, canvasRef.value),
+  canEdit: () => !props.isPlaying && !props.isCropping && props.selectedZoom?.mode !== 'manual',
+  render: renderOnce,
+});
 let currentRenderWindow: RenderedVideoWindow | null = null;
 const compositionMedia = useCompositionMedia({
   composition: () => props.composition,
@@ -201,7 +210,7 @@ const compositionMedia = useCompositionMedia({
           screenFrame.value?.height ?? 0,
         )
       : null,
-  editingCaptionId: () => captionEditing.editingCaptionId.value,
+  editingCaptionId: () => elements.editingId.value ?? captionEditing.editingCaptionId.value,
   onRenderOnce: renderOnce,
 });
 const visualStackRenderer = createEditorVisualStackRenderer(compositionMedia);
@@ -238,17 +247,7 @@ const cursorInteraction = useCursorCanvasInteraction({
   onSelect: () => emit('select:cursor'),
   onResize: (size) => emit('update:cursor-size', size),
 });
-watch(
-  () => `${props.outputCanvas.width}:${props.outputCanvas.height}:${props.outputCanvas.showBackground}`,
-  () => {
-    isFormatTransitioning.value = true;
-    if (formatTransitionTimer) clearTimeout(formatTransitionTimer);
-    formatTransitionTimer = setTimeout(() => {
-      isFormatTransitioning.value = false;
-    }, 260);
-    renderOnce();
-  },
-);
+const isFormatTransitioning = useCanvasFormatTransition(() => props.outputCanvas, renderOnce);
 useEditorCanvasInvalidation({
   props,
   transformDraft: () => transformAndCrop.transformDraft.value,
@@ -256,17 +255,10 @@ useEditorCanvasInvalidation({
   resetCamera: cameraZoom.resetCameraUnlessDragging,
 });
 const resizeCanvas = () => {
-  const canvas = canvasRef.value;
-  const container = containerRef.value;
-  if (!canvas || !container) return;
-  const width = Math.max(1, container.clientWidth);
-  const height = Math.max(1, container.clientHeight);
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const renderScale = previewRenderScale(width, height, dpr, props.previewQuality);
-  deviceScale.value = renderScale;
-  logicalSize.value = { width, height };
-  canvas.width = Math.max(1, Math.round(width * renderScale));
-  canvas.height = Math.max(1, Math.round(height * renderScale));
+  const size = resizeEditorCanvas(canvasRef.value, containerRef.value, props.previewQuality);
+  if (!size) return;
+  deviceScale.value = size.scale;
+  logicalSize.value = { width: size.width, height: size.height };
   renderCanvas();
 };
 watch(() => props.previewQuality, resizeCanvas);
@@ -361,13 +353,13 @@ const {
   onDoneCrop: () => emit('done:crop'),
 });
 const handleIslandPointerDownCapture = (event: PointerEvent) => {
-  if ((event.target as Element | null)?.closest('.caption-text-editor, .canvas-recenter-float')) return;
+  if ((event.target as Element | null)?.closest('.caption-text-editor, .canvas-recenter-float, .element-overlay'))
+    return;
   handleCanvasPointerDownCapture(event);
 };
 onUnmounted(() => {
   frameScheduler.dispose();
   perspectivePreviewRenderer.dispose();
-  if (formatTransitionTimer) clearTimeout(formatTransitionTimer);
 });
 defineExpose({ viewportZoom });
 </script>
@@ -386,7 +378,7 @@ defineExpose({ viewportZoom });
     @pointermove="handleIslandPointerMove"
     @pointerup="handleIslandPointerUp"
     @pointercancel="handleIslandPointerUp"
-    @dblclick="captionEditing.begin"
+    @dblclick="elements.begin($event) || captionEditing.begin($event)"
   >
     <Transition name="fade-slide">
       <div v-if="viewportZoom.isOutOfBounds.value" class="canvas-recenter-float" @pointerdown.stop>
@@ -458,10 +450,15 @@ defineExpose({ viewportZoom });
         @finish="captionEditing.finish"
         @cancel="captionEditing.cancel"
       />
+      <ElementCanvasOverlay
+        :viewport="elements.viewport.value"
+        :camera="cameraZoom.overlayWindowBounds.value ?? undefined"
+        :surface-size="logicalSize"
+      />
       <CanvasLayerSelection
         v-if="
           selectedTransformClip &&
-          selectedTransformClip.id !== captionEditing.editingCaptionId.value &&
+          selectedTransformClip.id !== (elements.editingId.value ?? captionEditing.editingCaptionId.value) &&
           !transformCaptionFollowsCursor(selectedTransformClip) &&
           !isCropping &&
           selectedZoom?.mode !== 'manual'

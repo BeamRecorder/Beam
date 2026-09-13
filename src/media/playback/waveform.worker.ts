@@ -31,17 +31,19 @@ async function processRequests() {
       const request = pending.values().next().value;
       if (!request) break;
       pending.delete(`${request.clipId}:${request.segmentIndex}`);
+      if (request.generation !== latestGeneration) continue;
       try {
         await extractWaveformPeaks(request.source, request.startSeconds, request.endSeconds, request.pointCount, {
           pointsPerChunk: POINTS_PER_CHUNK,
           shouldStop: () => request.generation !== latestGeneration,
-          onProgress: ({ pointOffset, peaks, complete }) => {
+          onProgress: ({ pointOffset, peaks, bands, complete }) => {
             if (request.generation !== latestGeneration) return;
             post({
               type: 'result',
               generation: request.generation,
               clipId: request.clipId,
               peaks,
+              bands,
               segmentIndex: request.segmentIndex,
               segmentCount: request.segmentCount,
               segmentPointOffset: pointOffset,
@@ -75,6 +77,6 @@ const mediaError = (error: unknown, sourceId: string): MediaError =>
 
 function post(message: WaveformWorkerResponse) {
   assertWaveformWorkerResponse(message);
-  if (message.type === 'result') self.postMessage(message, { transfer: [message.peaks.buffer] });
+  if (message.type === 'result') self.postMessage(message, { transfer: [message.peaks.buffer, message.bands.buffer] });
   else self.postMessage(message);
 }

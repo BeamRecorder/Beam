@@ -4,6 +4,7 @@ const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
 const { createProjectMediaHandler, mimeTypeFor } = require('../electron/projects/project-media-protocol.cjs');
+const { createScreenshotStore } = require('../electron/screenshot/screenshot-store.cjs');
 
 function fixture(contents = Buffer.from('0123456789')) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-project-media-'));
@@ -344,4 +345,43 @@ test('uses the selected file extension for the response MIME type', async () => 
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+test('serves screenshot source PNGs only through the screenshot store resolver', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-screenshot-media-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const store = createScreenshotStore(path.join(root, 'screenshots'));
+  const pending = store.create();
+  const sourceBytes = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 1]);
+  fs.writeFileSync(pending.path, sourceBytes);
+  const screenshot = store.complete(pending.id, { width: 1280, height: 720 }, {});
+  const projectLookups = [];
+  const screenshotLookups = [];
+  const handler = createProjectMediaHandler({
+    projectStore: {
+      mediaFileForUrl: (candidate) => {
+        projectLookups.push(candidate);
+        return null;
+      },
+    },
+    screenshotStore: {
+      fileForUrl: (candidate) => {
+        screenshotLookups.push(candidate);
+        return store.fileForUrl(candidate);
+      },
+    },
+  });
+
+  const response = await handler(request(screenshot.source));
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('content-type'), 'image/png');
+  assert.deepEqual(await responseBody(response), sourceBytes);
+  assert.deepEqual(projectLookups, [screenshot.source]);
+  assert.deepEqual(screenshotLookups, [screenshot.source]);
+
+  const invalidUrl = `project-media://screenshot/${pending.id}/source.png/extra`;
+  const invalid = await handler(request(invalidUrl));
+  assert.equal(invalid.status, 404);
+  assert.equal(await invalid.text(), 'Not found');
+  assert.deepEqual(screenshotLookups, [screenshot.source, invalidUrl]);
 });

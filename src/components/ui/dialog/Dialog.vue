@@ -1,6 +1,22 @@
 <script setup lang="ts">
-import { watch, onMounted, onUnmounted } from 'vue';
+import { useTranslate } from '~/i18n/useTranslate';
+import { inject, ref, nextTick, watch, onMounted, onUnmounted } from 'vue';
 import { X } from '@lucide/vue';
+
+const { t } = useTranslate('Dialog');
+const popoverOwner = inject<string | null>('popover-owner-id', null);
+const content = ref<HTMLElement | null>(null);
+let previousFocus: HTMLElement | null = null;
+const focusable = () =>
+  Array.from(
+    content.value?.querySelectorAll<HTMLElement>(
+      'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"]',
+    ) ?? [],
+  );
+const restoreFocus = () => {
+  if (previousFocus?.isConnected && !previousFocus.matches(':disabled')) previousFocus.focus();
+  previousFocus = null;
+};
 
 const props = withDefaults(
   defineProps<{
@@ -25,6 +41,20 @@ const close = () => {
 };
 
 const handleKeyDown = (event: KeyboardEvent) => {
+  if (event.key === 'Tab' && props.isOpen) {
+    const nodes = focusable();
+    const first = nodes[0],
+      last = nodes.at(-1);
+    if (
+      !content.value?.contains(document.activeElement) ||
+      !first ||
+      (event.shiftKey && document.activeElement === first) ||
+      (!event.shiftKey && document.activeElement === last)
+    ) {
+      event.preventDefault();
+      (event.shiftKey ? (last ?? content.value) : (first ?? content.value))?.focus();
+    }
+  }
   if (event.key === 'Escape' && props.isOpen) {
     event.preventDefault();
     close();
@@ -33,13 +63,19 @@ const handleKeyDown = (event: KeyboardEvent) => {
 
 watch(
   () => props.isOpen,
-  (newVal) => {
+  async (newVal) => {
     if (newVal) {
+      previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       document.body.style.overflow = 'hidden';
+      await nextTick();
+      if (props.isOpen && !content.value?.contains(document.activeElement))
+        (content.value?.querySelector<HTMLElement>('[data-dialog-autofocus]') ?? content.value)?.focus();
     } else {
       document.body.style.overflow = '';
+      restoreFocus();
     }
   },
+  { immediate: true, flush: 'post' },
 );
 
 let mousedownTarget: EventTarget | null = null;
@@ -62,18 +98,34 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDown);
   document.body.style.overflow = '';
+  restoreFocus();
 });
 </script>
 
 <template>
   <Teleport to="body">
     <Transition name="fade-overlay">
-      <div v-if="isOpen" class="dialog-overlay" @mousedown="handleOverlayMouseDown" @mouseup="handleOverlayMouseUp">
+      <div
+        v-if="isOpen"
+        class="dialog-overlay"
+        :data-popover-owner="popoverOwner"
+        @mousedown="handleOverlayMouseDown"
+        @mouseup="handleOverlayMouseUp"
+      >
         <Transition name="scale-modal" appear>
-          <div class="dialog-content" :class="size" @mousedown.stop @mouseup.stop role="dialog" aria-modal="true">
+          <div
+            ref="content"
+            tabindex="-1"
+            class="dialog-content"
+            :class="size"
+            @mousedown.stop
+            @mouseup.stop
+            role="dialog"
+            aria-modal="true"
+          >
             <header class="dialog-header">
               <h3 v-if="title" class="dialog-title">{{ title }}</h3>
-              <button type="button" class="dialog-close" @click="close" aria-label="Close dialog">
+              <button type="button" class="dialog-close" @click="close" :aria-label="t('close')">
                 <X class="close-icon" />
               </button>
             </header>
@@ -104,7 +156,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 20000;
   padding: 1rem;
 }
 

@@ -73,7 +73,9 @@
     "teleprompterPreviousLine": "Vorherige Zeile",
     "teleprompterPreviousLineDesc": "Zur vorherigen Teleprompter-Zeile wechseln",
     "conflictWith": "Konflikt mit „{name}“",
-    "failedToUpdate": "Tastenkürzel konnte nicht aktualisiert werden"
+    "failedToUpdate": "Tastenkürzel konnte nicht aktualisiert werden",
+    "quickSnip": "Quick Snip",
+    "quickSnipDesc": "Quick Snip je nach aktuellem Zustand öffnen, starten oder stoppen."
   },
   "SidebarPanel": {
     "canvas": "Arbeitsfläche",
@@ -86,7 +88,8 @@
     "audio": "Audio",
     "media": "Medien",
     "settings": "Einstellungen",
-    "logo": "Logo"
+    "logo": "Logo",
+    "elements": "Elemente"
   },
   "Socials": {
     "title": "Soziale Netzwerke",

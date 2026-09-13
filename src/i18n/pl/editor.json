@@ -73,7 +73,9 @@
     "teleprompterPreviousLine": "Poprzedni wiersz",
     "teleprompterPreviousLineDesc": "Przejdź do poprzedniego wiersza telepromptera",
     "conflictWith": "Konflikt z „{name}”",
-    "failedToUpdate": "Nie udało się zaktualizować skrótu"
+    "failedToUpdate": "Nie udało się zaktualizować skrótu",
+    "quickSnip": "Quick Snip",
+    "quickSnipDesc": "Otwórz, rozpocznij lub zatrzymaj Quick Snip zależnie od bieżącego stanu."
   },
   "SidebarPanel": {
     "canvas": "Płótno",
@@ -86,7 +88,8 @@
     "audio": "Audio",
     "settings": "Ustawienia",
     "logo": "Logo",
-    "media": "Media"
+    "media": "Media",
+    "elements": "Elementy"
   },
   "Socials": {
     "title": "Media społecznościowe",

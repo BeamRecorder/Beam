@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const { EventEmitter } = require('node:events');
 const os = require('node:os');
 const path = require('node:path');
 const { Readable, Writable } = require('node:stream');
@@ -11,6 +12,7 @@ const {
   cargoBuildArguments,
   parseDevelopmentArguments,
   resolveDevelopmentEngine,
+  startElectron,
 } = require('../scripts/dev/electron.cjs');
 const { requiredNativeFiles } = require('../scripts/native/download.cjs');
 
@@ -81,6 +83,42 @@ test('development arguments enable the forced no-Rust path only when requested',
 
 test('development arguments reject unsupported options', () => {
   assert.throws(() => parseDevelopmentArguments(['--skip-build']), /Unknown electron:dev option: --skip-build/);
+});
+
+test('startElectron marks GNOME Wayland shortcut launches as the development instance', async () => {
+  const child = new EventEmitter();
+  let invocation;
+  const env = {
+    PATH: '/bin',
+    BEAM_CAPTURE_ENGINE: '/old/capture-engine',
+    XDG_CURRENT_DESKTOP: 'GNOME',
+    XDG_SESSION_TYPE: 'wayland',
+    WAYLAND_DISPLAY: 'wayland-0',
+  };
+  const start = startElectron('/built/capture-engine', {
+    root: '/workspace',
+    env,
+    spawnImpl: (command, args, options) => {
+      invocation = { command, args, options };
+      queueMicrotask(() => child.emit('exit', 0, null));
+      return child;
+    },
+  });
+  await start;
+
+  assert.equal(invocation.command, process.execPath);
+  assert.deepEqual(invocation.args, [require.resolve('electron/cli.js'), '.']);
+  assert.equal(invocation.options.cwd, '/workspace');
+  assert.equal(invocation.options.env.PATH, '/bin');
+  assert.equal(invocation.options.env.BEAM_CAPTURE_ENGINE, '/built/capture-engine');
+  assert.equal(invocation.options.env.BEAM_DEVELOPMENT_INSTANCE, '1');
+  assert.deepEqual(env, {
+    PATH: '/bin',
+    BEAM_CAPTURE_ENGINE: '/old/capture-engine',
+    XDG_CURRENT_DESKTOP: 'GNOME',
+    XDG_SESSION_TYPE: 'wayland',
+    WAYLAND_DISPLAY: 'wayland-0',
+  });
 });
 
 test('Cargo-present development builds are used directly', async () => {

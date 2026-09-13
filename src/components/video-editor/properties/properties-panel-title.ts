@@ -28,7 +28,7 @@ export function propertiesPanelTitle(
   const sidebarKey =
     activeTab === 'caption'
       ? 'captions'
-      : ['canvas', 'zoom', 'cursor', 'audio', 'settings'].includes(activeTab)
+      : ['canvas', 'zoom', 'cursor', 'audio', 'settings', 'elements'].includes(activeTab)
         ? activeTab
         : null;
   return sidebarKey ? translations.tSidebar(sidebarKey) : translations.t('properties');

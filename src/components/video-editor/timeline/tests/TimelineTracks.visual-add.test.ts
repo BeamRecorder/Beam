@@ -82,11 +82,11 @@ describe('TimelineTracks visual add placement', () => {
     expect(popover.props('direction')).toBe('up');
 
     await addButton.trigger('click');
-    const compositionMenu = Array.from(
+    const elementsMenu = Array.from(
       document.body.querySelectorAll<HTMLButtonElement>('.menu-content:not(.submenu-panel) > .menu-entry > .menu-item'),
-    ).find((button) => button.textContent?.toLowerCase().includes('composition'));
-    expect(compositionMenu).toBeDefined();
-    compositionMenu!.click();
+    ).find((button) => button.textContent?.toLowerCase().includes('elements'));
+    expect(elementsMenu).toBeDefined();
+    elementsMenu!.click();
     await mounted!.vm.$nextTick();
     const blur = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.submenu-panel .menu-item')).find(
       (button) => button.textContent?.toLowerCase().includes('blur'),
@@ -101,9 +101,18 @@ describe('TimelineTracks visual add placement', () => {
     ['color-track', 'color'],
     ['shape-track', 'shape'],
     ['blur-track', 'blur'],
+    ['highlight-track', 'highlight'],
   ] as const)('shows an Add ghost and emits a continuation request for %s', async (trackId, kind) => {
     const clips =
-      kind === 'color' ? [colorClip()] : kind === 'shape' ? [shapeClip()] : kind === 'blur' ? [blurClip()] : [];
+      kind === 'color'
+        ? [colorClip()]
+        : kind === 'shape'
+          ? [shapeClip()]
+          : kind === 'blur'
+            ? [blurClip()]
+            : kind === 'highlight'
+              ? [{ ...blurClip(), id: 'highlight', trackId, name: 'Highlight', mode: 'highlight' } satisfies BlurClip]
+              : [];
     const mounted = await mountTracks({
       composition: visualTrackComposition(clips),
       selectedZoomId: null,
@@ -115,6 +124,11 @@ describe('TimelineTracks visual add placement', () => {
     const ghost = content.find('.visual-add-indicator.preview-ghost');
     expect(ghost.exists()).toBe(true);
     expect(ghost.classes()).toContain(`kind-${kind}`);
+    if (kind === 'highlight') {
+      expect(ghost.classes()).not.toContain('kind-blur');
+      expect(content.attributes('title')).toBe('Add Highlight');
+      expect(mounted!.get(`[data-track-id="${trackId}"] .track-title`).text()).toBe('Highlight');
+    }
 
     await content.trigger('click', { clientX: 900 });
     expect(mounted!.emitted('add:visual-element')).toContainEqual([

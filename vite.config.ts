@@ -80,6 +80,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: fileURLToPath(new URL('./index.html', import.meta.url)),
+        quickSnipStatus: fileURLToPath(new URL('./quick-snip-status.html', import.meta.url)),
+        countdown: fileURLToPath(new URL('./countdown.html', import.meta.url)),
         editor: fileURLToPath(new URL('./editor.html', import.meta.url)),
         teleprompter: fileURLToPath(new URL('./teleprompter.html', import.meta.url)),
         onboarding: fileURLToPath(new URL('./onboarding.html', import.meta.url)),

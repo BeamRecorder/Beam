@@ -831,7 +831,7 @@ describe('canonical composition rendering', () => {
         },
       ],
     };
-    value.cursorSettings.size = 50;
+    value.cursorSettings.size = 384;
     const ctx = context();
     const image = { complete: true, naturalWidth: 24 } as HTMLImageElement;
 
@@ -848,7 +848,7 @@ describe('canonical composition rendering', () => {
       new Map([['default', image]]),
     );
 
-    expect(ctx.drawImage).toHaveBeenLastCalledWith(image, expect.any(Number), expect.any(Number), 50, 50);
+    expect(ctx.drawImage).toHaveBeenLastCalledWith(image, expect.any(Number), expect.any(Number), 384, 384);
   });
 
   it('preserves a non-square pack asset ratio and scales its hotspot', () => {

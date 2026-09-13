@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils';
-import { nextTick } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 import { describe, expect, it, vi } from 'vitest';
 import {
   createDefaultCursorAutoHideSettings,
@@ -21,6 +21,9 @@ import {
 import type { ZoomElement } from '../zoom/zoom-types';
 import type { ShadowDirection } from '../properties/cursor/shadow-types';
 import type { ProjectEditorData } from '../../../api/types/capture-api';
+import type { ShapeClip } from '~/media/shared/composition-types';
+import type { ElementEditorContext } from '../elements/element-editor-types';
+import { ELEMENT_EDITOR } from '../elements/useElementEditor';
 
 vi.mock('../../../api/capture', () => ({ capture: {} }));
 
@@ -69,7 +72,9 @@ const AudioPanel = {
   `,
 };
 const ZoomPanel = { template: '<div class="zoom-panel-stub">Zoom</div>' };
-const SettingsPanel = { template: '<div class="settings-panel-stub">Settings</div>' };
+const SettingsPanel = {
+  template: '<div class="settings-panel-stub">Settings</div>',
+};
 const AudioClipPropertiesPanel = {
   props: ['clip'],
   template: `
@@ -78,7 +83,9 @@ const AudioClipPropertiesPanel = {
     </div>
   `,
 };
-const CaptionClipPanel = { template: '<div class="caption-clip-stub">Caption clip</div>' };
+const CaptionClipPanel = {
+  template: '<div class="caption-clip-stub">Caption clip</div>',
+};
 const CaptionPanel = {
   emits: ['update:composition'],
   template: `
@@ -278,7 +285,11 @@ const baseProps = {
   activeTab: 'canvas',
   selectedClip: null,
   selectedCaptionClip: null,
-  cursorSelection: { packId: 'builtin:macos', mode: 'fixed' as const, cursorId: 'default' },
+  cursorSelection: {
+    packId: 'builtin:macos',
+    mode: 'fixed' as const,
+    cursorId: 'default',
+  },
   cursorPacks: [MACOS_CURSOR_PACK],
   cursorSize: 24,
   cursorColor: '#000000',
@@ -415,7 +426,10 @@ describe('PropertiesPanel', () => {
 
   it('keeps all ten layouts and split adjustments for webcam clips', () => {
     const wrapper = mountRealClipPropertiesPanel(
-      layoutClip('webcam', { cameraLayoutPreset: 'split-left', hasLinkedScreen: true }),
+      layoutClip('webcam', {
+        cameraLayoutPreset: 'split-left',
+        hasLinkedScreen: true,
+      }),
     );
     const panel = wrapper.get('.camera-layout-panel');
 
@@ -462,7 +476,10 @@ describe('PropertiesPanel', () => {
     await wrapper.findAll('.preset-card')[1]!.trigger('click');
     expect(wrapper.emitted('update:canvas')).toContainEqual([
       expect.objectContaining({
-        transitions: { entry: { preset: { kind: 'fade' }, durationMs: 500, easingPower: 3 }, exit: null },
+        transitions: {
+          entry: { preset: { kind: 'fade' }, durationMs: 500, easingPower: 3 },
+          exit: null,
+        },
       }),
     ]);
   });
@@ -474,7 +491,10 @@ describe('PropertiesPanel', () => {
         activeTab: 'canvas',
         canvas: {
           ...canvas,
-          transitions: { entry: { preset: { kind: 'fade' }, durationMs: 200 }, exit: null },
+          transitions: {
+            entry: { preset: { kind: 'fade' }, durationMs: 200 },
+            exit: null,
+          },
         },
       },
       global,
@@ -501,7 +521,10 @@ describe('PropertiesPanel', () => {
   it('reflects an incoming Canvas transition preview in the shared duration slider without committing it', async () => {
     const initialCanvas: OutputCanvasSettings = {
       ...canvas,
-      transitions: { entry: { preset: { kind: 'fade' }, durationMs: 200 }, exit: null },
+      transitions: {
+        entry: { preset: { kind: 'fade' }, durationMs: 200 },
+        exit: null,
+      },
     };
     const wrapper = mount(PropertiesPanel, {
       props: { ...baseProps, activeTab: 'canvas', canvas: initialCanvas },
@@ -514,7 +537,10 @@ describe('PropertiesPanel', () => {
     await wrapper.setProps({
       canvas: {
         ...initialCanvas,
-        transitions: { entry: { preset: { kind: 'fade' }, durationMs: 600 }, exit: null },
+        transitions: {
+          entry: { preset: { kind: 'fade' }, durationMs: 600 },
+          exit: null,
+        },
       },
     });
     expect(wrapper.get('.big-slider-value').text()).toBe('600 ms');
@@ -523,7 +549,12 @@ describe('PropertiesPanel', () => {
 
   it('passes audio track presence to the audio panel and forwards role deletions', async () => {
     const wrapper = mount(PropertiesPanel, {
-      props: { ...baseProps, activeTab: 'audio', hasSystemAudio: true, hasMicAudio: false },
+      props: {
+        ...baseProps,
+        activeTab: 'audio',
+        hasSystemAudio: true,
+        hasMicAudio: false,
+      },
       global,
     });
     const audio = wrapper.get('.audio-panel-stub');
@@ -595,7 +626,10 @@ describe('PropertiesPanel', () => {
     });
     expect(wrapper.find('.audio-clip-stub').exists()).toBe(true);
 
-    await wrapper.setProps({ selectedClip: null, selectedCaptionClip: captionClip });
+    await wrapper.setProps({
+      selectedClip: null,
+      selectedCaptionClip: captionClip,
+    });
     expect(wrapper.find('.caption-clip-stub').exists()).toBe(true);
     await wrapper.setProps({
       selectedCaptionClip: null,
@@ -605,7 +639,10 @@ describe('PropertiesPanel', () => {
   });
 
   it('routes a selected color clip to the color layer panel and applies fill updates', async () => {
-    const colorComposition: ClipComposition = { ...composition, clips: [colorClip] };
+    const colorComposition: ClipComposition = {
+      ...composition,
+      clips: [colorClip],
+    };
     const wrapper = mount(PropertiesPanel, {
       props: {
         ...baseProps,
@@ -645,7 +682,12 @@ describe('PropertiesPanel', () => {
 
   it('renders audio actions in the header and opens audio transitions with None and Fade', async () => {
     const wrapper = mount(PropertiesPanel, {
-      props: { ...baseProps, activeTab: 'clip', selectedClip: audioClip, composition: audioComposition },
+      props: {
+        ...baseProps,
+        activeTab: 'clip',
+        selectedClip: audioClip,
+        composition: audioComposition,
+      },
       global,
     });
 
@@ -667,7 +709,10 @@ describe('PropertiesPanel', () => {
       expect.objectContaining({
         clips: [
           expect.objectContaining({
-            transitions: { entry: { preset: { kind: 'fade' }, durationMs: 500 }, exit: null },
+            transitions: {
+              entry: { preset: { kind: 'fade' }, durationMs: 500 },
+              exit: null,
+            },
           }),
         ],
       }),
@@ -676,7 +721,15 @@ describe('PropertiesPanel', () => {
     await wrapper.setProps({
       composition: {
         ...audioComposition,
-        clips: [{ ...audioClip, transitions: { entry: { preset: { kind: 'fade' }, durationMs: 500 }, exit: null } }],
+        clips: [
+          {
+            ...audioClip,
+            transitions: {
+              entry: { preset: { kind: 'fade' }, durationMs: 500 },
+              exit: null,
+            },
+          },
+        ],
       },
     });
     expect(wrapper.find('.duration-slider').exists()).toBe(true);
@@ -708,7 +761,13 @@ describe('PropertiesPanel', () => {
     await wrapper.setProps({
       activeTab: 'zoom',
       selectedClip: null,
-      selectedZoom: { id: 'zoom-1', startMs: 0, durationMs: 1000, depth: 2, mode: 'auto' } as any,
+      selectedZoom: {
+        id: 'zoom-1',
+        startMs: 0,
+        durationMs: 1000,
+        depth: 2,
+        mode: 'auto',
+      } as any,
     });
     expect(wrapper.get('.panel-title').text()).toBe('Zoom');
     const zoomButtons = wrapper.findAll('.panel-header-actions button');
@@ -723,7 +782,9 @@ describe('PropertiesPanel', () => {
     await wrapper.get('[aria-label="Clip transitions"]').trigger('click');
     expect(wrapper.get('.panel-title').text()).toBe('Video Transitions');
     expect(wrapper.find('.transitions-header').exists()).toBe(false);
-    await wrapper.setProps({ selectedClip: { ...transitionScreenClip, name: 'Video refreshed' } });
+    await wrapper.setProps({
+      selectedClip: { ...transitionScreenClip, name: 'Video refreshed' },
+    });
     expect(wrapper.get('.panel-title').text()).toBe('Video Transitions');
     expect(wrapper.find('.transitions-panel').exists()).toBe(true);
     wrapper.unmount();
@@ -761,13 +822,21 @@ describe('PropertiesPanel', () => {
     await wrapper.get('[aria-label="Clip transitions"]').trigger('click');
     await wrapper.get('[aria-label="Back"]').trigger('click');
 
-    const forward = new MouseEvent('mouseup', { button: 4, bubbles: true, cancelable: true });
+    const forward = new MouseEvent('mouseup', {
+      button: 4,
+      bubbles: true,
+      cancelable: true,
+    });
     window.dispatchEvent(forward);
     await nextTick();
     expect(forward.defaultPrevented).toBe(true);
     expect(wrapper.find('.transitions-panel').exists()).toBe(true);
 
-    const back = new MouseEvent('mouseup', { button: 3, bubbles: true, cancelable: true });
+    const back = new MouseEvent('mouseup', {
+      button: 3,
+      bubbles: true,
+      cancelable: true,
+    });
     window.dispatchEvent(back);
     await nextTick();
     expect(back.defaultPrevented).toBe(true);
@@ -777,7 +846,16 @@ describe('PropertiesPanel', () => {
 
   it.each([
     ['active tab', { activeTab: 'canvas' }],
-    ['selected clip', { selectedClip: { ...transitionScreenClip, id: 'other-clip', name: 'Other' } }],
+    [
+      'selected clip',
+      {
+        selectedClip: {
+          ...transitionScreenClip,
+          id: 'other-clip',
+          name: 'Other',
+        },
+      },
+    ],
   ])('invalidates forward transition history when the %s changes', async (_label, overrides) => {
     const wrapper = mountTransitionPropertiesPanel();
 
@@ -786,7 +864,11 @@ describe('PropertiesPanel', () => {
     await wrapper.setProps(overrides);
     await nextTick();
 
-    const forward = new MouseEvent('mouseup', { button: 4, bubbles: true, cancelable: true });
+    const forward = new MouseEvent('mouseup', {
+      button: 4,
+      bubbles: true,
+      cancelable: true,
+    });
     window.dispatchEvent(forward);
     await nextTick();
 
@@ -797,7 +879,11 @@ describe('PropertiesPanel', () => {
 
   it.each([3, 4])('prevents default for auxiliary mouse button %s events', (button) => {
     const wrapper = mountTransitionPropertiesPanel();
-    const event = new MouseEvent('auxclick', { button, bubbles: true, cancelable: true });
+    const event = new MouseEvent('auxclick', {
+      button,
+      bubbles: true,
+      cancelable: true,
+    });
 
     window.dispatchEvent(event);
 
@@ -815,7 +901,10 @@ describe('PropertiesPanel', () => {
   });
 
   it('forwards cursor auto-hide settings and emits updates from the cursor panel', async () => {
-    const wrapper = mount(PropertiesPanel, { props: { ...baseProps, activeTab: 'cursor' }, global });
+    const wrapper = mount(PropertiesPanel, {
+      props: { ...baseProps, activeTab: 'cursor' },
+      global,
+    });
     const cursorPanel = wrapper.get('.cursor-panel-stub');
 
     expect(JSON.parse(cursorPanel.attributes('data-auto-hide') ?? '')).toEqual(autoHide);
@@ -849,7 +938,10 @@ describe('PropertiesPanel', () => {
   });
 
   it('forwards final composition updates from the caption panel', async () => {
-    const wrapper = mount(PropertiesPanel, { props: { ...baseProps, activeTab: 'caption' }, global });
+    const wrapper = mount(PropertiesPanel, {
+      props: { ...baseProps, activeTab: 'caption' },
+      global,
+    });
 
     await wrapper.get('.caption-update').trigger('click');
 
@@ -860,5 +952,82 @@ describe('PropertiesPanel', () => {
     const wrapper = mount(PropertiesPanel, { props: baseProps, global });
     expect(wrapper.findComponent({ name: 'ScrollShadow' }).exists()).toBe(true);
     expect(wrapper.find('.panel-body').exists()).toBe(true);
+  });
+
+  it('shows named delete footers for selected clips and injected elements', async () => {
+    const clip = mount(PropertiesPanel, {
+      props: { ...baseProps, activeTab: 'clip', selectedClip: screenClip },
+      global,
+    });
+    const clipDelete = clip.get('.properties-footer').get('button');
+    expect(clipDelete.text()).toContain('Screen');
+    await clipDelete.trigger('click');
+    expect(clip.emitted('delete-clip')).toHaveLength(1);
+    clip.unmount();
+
+    const layer = {
+      id: 'element-1',
+      kind: 'shape',
+      name: 'Canvas element',
+      family: 'shape',
+    } as unknown as ShapeClip;
+    const selected = ref<ShapeClip | null>(layer);
+    const remove = vi.fn(() => {
+      selected.value = null;
+    });
+    const editor: ElementEditorContext = {
+      canInteract: computed(() => true),
+      layers: computed(() => (selected.value ? [selected.value] : [])),
+      selected: computed(() => selected.value),
+      editing: ref(null),
+      drawingMode: ref(false),
+      drawingSettings: ref({ smoothing: 50, strokeWidth: 8, color: '#ff5a1f' }),
+      showLayers: true,
+      add: vi.fn(),
+      addDrawing: vi.fn(),
+      select: vi.fn(),
+      update: vi.fn(),
+      remove,
+      beginText: vi.fn(() => false),
+      updateText: vi.fn(),
+      finishText: vi.fn(),
+      cancelText: vi.fn(),
+    };
+    const elementGlobal = {
+      ...global,
+      provide: { [ELEMENT_EDITOR as symbol]: editor },
+      stubs: { ...global.stubs, ShapeLayerPropertiesPanel: true },
+    };
+    const element = mount(PropertiesPanel, {
+      props: {
+        ...baseProps,
+        activeTab: 'elements',
+        selectedClip: {
+          id: layer.id,
+          kind: 'shape',
+          name: layer.name,
+          timelineStartMs: 0,
+          timelineDurationMs: 1_000,
+          enabled: true,
+        },
+        selectedClipIds: [layer.id],
+        composition: { ...composition, clips: [layer] },
+      },
+      global: elementGlobal,
+    });
+    const elementDelete = element.get('.properties-footer').get('button');
+    expect(elementDelete.text()).toContain('Canvas element');
+    await elementDelete.trigger('click');
+    expect(element.emitted('delete-clip')).toHaveLength(1);
+    expect(remove).not.toHaveBeenCalled();
+    expect(element.find('.properties-footer').exists()).toBe(true);
+    element.unmount();
+
+    const canvas = mount(PropertiesPanel, {
+      props: { ...baseProps, activeTab: 'canvas' },
+      global: elementGlobal,
+    });
+    expect(canvas.find('.properties-footer').exists()).toBe(false);
+    canvas.unmount();
   });
 });

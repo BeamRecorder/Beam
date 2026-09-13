@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ReorderGroup from '~/ui/transitions/ReorderGroup.vue';
 import TimelineLockOverlay from './TimelineLockOverlay.vue';
 import { onUnmounted, ref, watch } from 'vue';
 import { Lock, Sparkles } from '@lucide/vue';
@@ -241,7 +242,12 @@ onUnmounted(() => {
     </div>
   </div>
 
-  <TransitionGroup v-if="textLayers.length" name="track-reorder" tag="div" class="text-caption-layers-group">
+  <ReorderGroup
+    v-if="textLayers.length"
+    :order="textLayers.map((layer) => layer.id)"
+    item-attribute="data-caption-id"
+    class="text-caption-layers-group"
+  >
     <div
       v-for="layer in textLayers"
       :key="layer.id"
@@ -324,7 +330,7 @@ onUnmounted(() => {
         </button>
       </div>
     </div>
-  </TransitionGroup>
+  </ReorderGroup>
   <div
     v-else
     class="track-row annotation-track text-caption-track"

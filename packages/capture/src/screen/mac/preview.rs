@@ -21,7 +21,7 @@ pub fn capture_source_preview(
         .get()
         .map_err(preview_error)?;
     let (filter, source_width, source_height, _) =
-        super::resolve_filter(&content, source_id, None)?;
+        super::resolve_filter(&content, source_id, None, &[])?;
     let (width, height) =
         fit_preview_dimensions(source_width, source_height, max_width, max_height);
     let configuration = SCStreamConfiguration::new()
