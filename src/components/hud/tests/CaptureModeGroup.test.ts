@@ -1,10 +1,16 @@
 import { mount } from '@vue/test-utils';
 import { setCurrentLocale } from '~/i18n';
 import { nextTick } from 'vue';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import CaptureModeGroup from '../CaptureModeGroup.vue';
 
 describe('CaptureModeGroup', () => {
+  beforeEach(() => setCurrentLocale('en'));
+  afterEach(() => {
+    vi.useRealTimers();
+    setCurrentLocale('en');
+  });
+
   it('exposes all capture modes as accessible toggle buttons', () => {
     const wrapper = mount(CaptureModeGroup, { props: { modelValue: 'studio' } });
     const group = wrapper.get('[role="group"]');
@@ -32,6 +38,51 @@ describe('CaptureModeGroup', () => {
     await wrapper.get('[aria-label="Instantané"]').trigger('click');
     expect(wrapper.emitted('update:modelValue')).toEqual([['instant']]);
     wrapper.unmount();
+  });
+
+  it.each([
+    {
+      locale: 'en',
+      labels: ['Studio', 'Screenshot', 'Instant'],
+      descriptions: [
+        'Record a video, then open it in the editor.',
+        'Take a screenshot, then open it in the editor.',
+        'Record and export a styled video automatically.',
+      ],
+    },
+    {
+      locale: 'fr',
+      labels: ['Studio', 'Capture d’écran', 'Instantané'],
+      descriptions: [
+        'Enregistre une vidéo, puis l’ouvre dans l’éditeur.',
+        'Prend une capture d’écran, puis l’ouvre dans l’éditeur.',
+        'Enregistre et exporte automatiquement une vidéo stylisée.',
+      ],
+    },
+  ] as const)('shows each icon mode description on hover in $locale', async ({ locale, labels, descriptions }) => {
+    vi.useFakeTimers();
+    setCurrentLocale(locale);
+    const wrapper = mount(CaptureModeGroup, { props: { modelValue: 'studio' } });
+
+    try {
+      const buttons = wrapper.findAll('button');
+      const tooltipTriggers = wrapper.findAll('.btn-container');
+      expect(buttons.map((button) => button.attributes('aria-label'))).toEqual(labels);
+
+      for (const [index, description] of descriptions.entries()) {
+        expect(buttons[index]!.attributes('aria-label')).not.toBe(description);
+        await tooltipTriggers[index]!.trigger('mouseenter');
+        await vi.advanceTimersByTimeAsync(100);
+        await nextTick();
+        expect(
+          Array.from(document.body.querySelectorAll<HTMLElement>('[role="tooltip"]')).some((tooltip) =>
+            tooltip.textContent?.includes(description),
+          ),
+        ).toBe(true);
+      }
+    } finally {
+      wrapper.unmount();
+    }
   });
 
   it('emits the selected mode when a mode button is activated', async () => {

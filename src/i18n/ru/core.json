@@ -815,6 +815,7 @@
     "controls": "Управление Quick Snip",
     "drag": "Переместить Quick Snip",
     "studio": "Studio",
+    "studioDescription": "Запишите видео, а затем откройте его в редакторе.",
     "studioHint": "Применить пресет и визуальные эффекты",
     "presetHint": "Пресет редактора",
     "defaultPreset": "По умолчанию",
@@ -835,7 +836,9 @@
     "cancel": "Отмена",
     "actionShortcut": "{action}: {shortcut}",
     "screenshot": "Снимок экрана",
+    "screenshotDescription": "Сделайте снимок экрана, а затем откройте его в редакторе.",
     "instant": "Мгновенно",
+    "instantDescription": "Запишите и автоматически экспортируйте видео с оформлением.",
     "deviceHint": "{device} — щёлкните правой кнопкой для выбора источника",
     "defaultSystemAudio": "Системный выход по умолчанию"
   },

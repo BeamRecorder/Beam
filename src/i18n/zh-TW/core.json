@@ -815,6 +815,7 @@
     "controls": "Quick Snip 控制項",
     "drag": "移動 Quick Snip",
     "studio": "Studio",
+    "studioDescription": "錄製影片，然後在編輯器中開啟。",
     "studioHint": "套用預設與視覺效果",
     "presetHint": "編輯器預設",
     "defaultPreset": "預設",
@@ -835,7 +836,9 @@
     "cancel": "取消",
     "actionShortcut": "{action}: {shortcut}",
     "screenshot": "螢幕截圖",
+    "screenshotDescription": "擷取螢幕截圖，然後在編輯器中開啟。",
     "instant": "即時",
+    "instantDescription": "錄製並自動匯出套用樣式的影片。",
     "deviceHint": "{device} — 按右鍵選擇來源",
     "defaultSystemAudio": "預設系統輸出"
   },

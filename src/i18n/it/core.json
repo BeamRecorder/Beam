@@ -815,6 +815,7 @@
     "controls": "Controlli Quick Snip",
     "drag": "Sposta Quick Snip",
     "studio": "Studio",
+    "studioDescription": "Registra un video, poi aprilo nell’editor.",
     "studioHint": "Applica il preset e gli effetti visivi",
     "presetHint": "Preset dell’editor",
     "defaultPreset": "Predefinito",
@@ -835,7 +836,9 @@
     "cancel": "Annulla",
     "actionShortcut": "{action}: {shortcut}",
     "screenshot": "Schermata",
+    "screenshotDescription": "Acquisisci una schermata, poi aprila nell’editor.",
     "instant": "Istantaneo",
+    "instantDescription": "Registra ed esporta automaticamente un video con stile.",
     "deviceHint": "{device} — clic destro per scegliere una sorgente",
     "defaultSystemAudio": "Uscita di sistema predefinita"
   },

@@ -815,6 +815,7 @@
     "controls": "Quick Snip नियंत्रण",
     "drag": "Quick Snip को खिसकाएँ",
     "studio": "Studio",
+    "studioDescription": "वीडियो रिकॉर्ड करें, फिर उसे एडिटर में खोलें।",
     "studioHint": "प्रीसेट और विज़ुअल प्रभाव लागू करें",
     "presetHint": "एडिटर प्रीसेट",
     "defaultPreset": "डिफ़ॉल्ट",
@@ -835,7 +836,9 @@
     "cancel": "रद्द करें",
     "actionShortcut": "{action}: {shortcut}",
     "screenshot": "स्क्रीनशॉट",
+    "screenshotDescription": "स्क्रीनशॉट लें, फिर उसे एडिटर में खोलें।",
     "instant": "तुरंत",
+    "instantDescription": "स्टाइल किया हुआ वीडियो रिकॉर्ड करके अपने आप निर्यात करें।",
     "deviceHint": "{device} — स्रोत चुनने के लिए राइट-क्लिक करें",
     "defaultSystemAudio": "डिफ़ॉल्ट सिस्टम आउटपुट"
   },

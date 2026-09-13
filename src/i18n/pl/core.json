@@ -815,6 +815,7 @@
     "controls": "Sterowanie Quick Snip",
     "drag": "Przenieś Quick Snip",
     "studio": "Studio",
+    "studioDescription": "Nagraj film, a następnie otwórz go w edytorze.",
     "studioHint": "Zastosuj profil i efekty wizualne",
     "presetHint": "Profil edytora",
     "defaultPreset": "Domyślny",
@@ -835,7 +836,9 @@
     "cancel": "Anuluj",
     "actionShortcut": "{action}: {shortcut}",
     "screenshot": "Zrzut ekranu",
+    "screenshotDescription": "Zrób zrzut ekranu, a następnie otwórz go w edytorze.",
     "instant": "Natychmiast",
+    "instantDescription": "Nagraj i automatycznie wyeksportuj stylizowany film.",
     "deviceHint": "{device} — kliknij prawym przyciskiem, aby wybrać źródło",
     "defaultSystemAudio": "Domyślne wyjście systemowe"
   },

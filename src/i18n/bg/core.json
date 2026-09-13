@@ -815,6 +815,7 @@
     "controls": "Контроли на Quick Snip",
     "drag": "Преместване на Quick Snip",
     "studio": "Studio",
+    "studioDescription": "Запишете видео и след това го отворете в редактора.",
     "studioHint": "Прилагане на шаблона и визуалните ефекти",
     "presetHint": "Шаблон на редактора",
     "defaultPreset": "По подразбиране",
@@ -835,7 +836,9 @@
     "cancel": "Отказ",
     "actionShortcut": "{action}: {shortcut}",
     "screenshot": "Екранна снимка",
+    "screenshotDescription": "Направете снимка на екрана и след това я отворете в редактора.",
     "instant": "Мигновено",
+    "instantDescription": "Запишете и автоматично експортирайте стилизирано видео.",
     "deviceHint": "{device} — десен бутон за избор на източник",
     "defaultSystemAudio": "Системен изход по подразбиране"
   },

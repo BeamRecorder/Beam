@@ -198,12 +198,7 @@ const {
         </ButtonGroup>
 
         <Transition name="fade-slide" mode="out-in">
-          <CapturePresetSelect
-            :key="captureMode"
-            v-if="captureMode !== 'studio'"
-            :kind="captureMode === 'screenshot' ? 'screenshot' : 'video'"
-            :disabled="isBusy"
-          />
+          <CapturePresetSelect :key="captureMode" v-if="captureMode === 'instant'" kind="video" :disabled="isBusy" />
         </Transition>
         <div class="form-inputs-area">
           <Transition name="fade-slide" mode="out-in">

@@ -800,6 +800,7 @@
     "controls": "Quick Snip controls",
     "drag": "Move Quick Snip",
     "studio": "Studio",
+    "studioDescription": "Record a video, then open it in the editor.",
     "studioHint": "Apply your preset and visual effects",
     "presetHint": "Editor preset",
     "defaultPreset": "Default",
@@ -820,7 +821,9 @@
     "cancel": "Cancel",
     "actionShortcut": "{action}: {shortcut}",
     "screenshot": "Screenshot",
+    "screenshotDescription": "Take a screenshot, then open it in the editor.",
     "instant": "Instant",
+    "instantDescription": "Record and export a styled video automatically.",
     "deviceHint": "{device} — right-click to choose a source",
     "defaultSystemAudio": "Default system output"
   },

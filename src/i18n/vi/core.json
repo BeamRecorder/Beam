@@ -800,6 +800,7 @@
     "controls": "Điều khiển Quick Snip",
     "drag": "Di chuyển Quick Snip",
     "studio": "Studio",
+    "studioDescription": "Quay video, sau đó mở trong trình chỉnh sửa.",
     "studioHint": "Áp dụng thiết lập sẵn và hiệu ứng hình ảnh",
     "presetHint": "Thiết lập sẵn của trình chỉnh sửa",
     "defaultPreset": "Mặc định",
@@ -820,7 +821,9 @@
     "cancel": "Hủy",
     "actionShortcut": "{action}: {shortcut}",
     "screenshot": "Ảnh chụp màn hình",
+    "screenshotDescription": "Chụp ảnh màn hình, sau đó mở trong trình chỉnh sửa.",
     "instant": "Tức thì",
+    "instantDescription": "Quay và tự động xuất video đã tạo kiểu.",
     "deviceHint": "{device} — nhấp chuột phải để chọn nguồn",
     "defaultSystemAudio": "Đầu ra hệ thống mặc định"
   },

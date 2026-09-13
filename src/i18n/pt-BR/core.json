@@ -815,6 +815,7 @@
     "controls": "Controles do Quick Snip",
     "drag": "Mover Quick Snip",
     "studio": "Studio",
+    "studioDescription": "Grave um vídeo e depois abra-o no editor.",
     "studioHint": "Aplicar a predefinição e os efeitos visuais",
     "presetHint": "Predefinição do editor",
     "defaultPreset": "Padrão",
@@ -835,7 +836,9 @@
     "cancel": "Cancelar",
     "actionShortcut": "{action}: {shortcut}",
     "screenshot": "Captura de tela",
+    "screenshotDescription": "Faça uma captura de tela e depois abra-a no editor.",
     "instant": "Instantâneo",
+    "instantDescription": "Grave e exporte automaticamente um vídeo estilizado.",
     "deviceHint": "{device} — clique direito para escolher uma fonte",
     "defaultSystemAudio": "Saída padrão do sistema"
   },

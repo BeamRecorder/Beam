@@ -55,6 +55,10 @@ const stubs = {
     template:
       '<div class="project-picker-stub"><button class="project-back" @click="$emit(\'back\')"/><button class="project-open" @click="$emit(\'open-project\', { id: \'project-1\', name: \'Demo\', previewSrc: \'demo.mp4\' })"/><button class="project-toggle" @click="$emit(\'toggle-popover\', true)"/></div>',
   },
+  CapturePresetSelect: {
+    props: ['kind'],
+    template: '<div data-testid="capture-preset-select" :data-kind="kind" />',
+  },
   HudPreferences: {
     props: ['inputAccess', 'recordInteractions', 'requestingInputAccess'],
     template:
@@ -192,6 +196,45 @@ describe('HUD', () => {
       ],
     ]);
   });
+
+  it.each([
+    { mode: 'studio', visible: false },
+    { mode: 'screenshot', visible: false },
+    { mode: 'instant', visible: true },
+  ] as const)('shows the capture preset only in instant mode when saved mode is $mode', async ({ mode, visible }) => {
+    capture.getPreferences.mockResolvedValueOnce({
+      schemaVersion: 3,
+      theme: 'system',
+      recordingBar: { visibility: 'always' },
+      recordingInteractions: { enabled: false, noticeDismissed: false },
+      alwaysOnTop: true,
+      devices: { cameraId: 'camera:chromium:device-1', micId: 'microphone:chromium:device-1', systemAudioMode: 'off' },
+      shortcuts: {},
+      backgroundPresets: { colors: [], gradients: [] },
+      extras: { captureMode: mode },
+    });
+    capture.updatePreferences.mockResolvedValue({
+      schemaVersion: 3,
+      theme: 'system',
+      recordingBar: { visibility: 'always' },
+      recordingInteractions: { enabled: false, noticeDismissed: false },
+      alwaysOnTop: true,
+      devices: {},
+      shortcuts: {},
+      backgroundPresets: { colors: [], gradients: [] },
+      extras: { captureMode: mode },
+    });
+
+    const wrapper = mount(HUD, { global: { stubs } });
+    await ready();
+
+    const preset = wrapper.find('[data-testid="capture-preset-select"]');
+    expect(preset.exists()).toBe(visible);
+    if (mode === 'instant') expect(preset.attributes('data-kind')).toBe('video');
+
+    wrapper.unmount();
+  });
+
   it('configures the camera overlay when a camera is selected without probing access', async () => {
     browserCameraMock.listBrowserCameras.mockResolvedValue([
       { id: 'camera:chromium:device-1', kind: 'camera', label: 'Cam 1', isDefault: true },

@@ -815,6 +815,7 @@
     "controls": "Quick-Snip-Steuerung",
     "drag": "Quick Snip verschieben",
     "studio": "Studio",
+    "studioDescription": "Nimm ein Video auf und öffne es anschließend im Editor.",
     "studioHint": "Vorlage und visuelle Effekte anwenden",
     "presetHint": "Editorvorlage",
     "defaultPreset": "Standard",
@@ -835,7 +836,9 @@
     "cancel": "Abbrechen",
     "actionShortcut": "{action}: {shortcut}",
     "screenshot": "Screenshot",
+    "screenshotDescription": "Erstelle einen Screenshot und öffne ihn anschließend im Editor.",
     "instant": "Sofort",
+    "instantDescription": "Nimm ein gestaltetes Video auf und exportiere es automatisch.",
     "deviceHint": "{device} — Rechtsklick zur Quellenauswahl",
     "defaultSystemAudio": "Standard-Systemausgabe"
   },

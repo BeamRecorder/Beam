@@ -815,6 +815,7 @@
     "controls": "Quick Snip の操作",
     "drag": "Quick Snip を移動",
     "studio": "Studio",
+    "studioDescription": "動画を録画してからエディターで開きます。",
     "studioHint": "プリセットと視覚効果を適用",
     "presetHint": "エディターのプリセット",
     "defaultPreset": "デフォルト",
@@ -835,7 +836,9 @@
     "cancel": "キャンセル",
     "actionShortcut": "{action}: {shortcut}",
     "screenshot": "スクリーンショット",
+    "screenshotDescription": "スクリーンショットを撮影してからエディターで開きます。",
     "instant": "即時",
+    "instantDescription": "スタイル付きの動画を録画して自動的に書き出します。",
     "deviceHint": "{device} — 右クリックでソースを選択",
     "defaultSystemAudio": "既定のシステム出力"
   },

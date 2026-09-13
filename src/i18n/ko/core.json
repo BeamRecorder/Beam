@@ -815,6 +815,7 @@
     "controls": "Quick Snip 컨트롤",
     "drag": "Quick Snip 이동",
     "studio": "Studio",
+    "studioDescription": "동영상을 녹화한 다음 편집기에서 엽니다.",
     "studioHint": "프리셋 및 시각 효과 적용",
     "presetHint": "편집기 프리셋",
     "defaultPreset": "기본값",
@@ -835,7 +836,9 @@
     "cancel": "취소",
     "actionShortcut": "{action}: {shortcut}",
     "screenshot": "스크린샷",
+    "screenshotDescription": "스크린샷을 찍은 다음 편집기에서 엽니다.",
     "instant": "즉시",
+    "instantDescription": "스타일이 적용된 동영상을 녹화하고 자동으로 내보냅니다.",
     "deviceHint": "{device} — 마우스 오른쪽 버튼으로 소스 선택",
     "defaultSystemAudio": "기본 시스템 출력"
   },

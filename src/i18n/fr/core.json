@@ -800,6 +800,7 @@
     "controls": "Commandes Quick Snip",
     "drag": "Déplacer Quick Snip",
     "studio": "Studio",
+    "studioDescription": "Enregistre une vidéo, puis l’ouvre dans l’éditeur.",
     "studioHint": "Appliquer le préréglage et les effets visuels",
     "presetHint": "Préréglage de l’éditeur",
     "defaultPreset": "Par défaut",
@@ -820,7 +821,9 @@
     "cancel": "Annuler",
     "actionShortcut": "{action} : {shortcut}",
     "screenshot": "Capture d’écran",
+    "screenshotDescription": "Prend une capture d’écran, puis l’ouvre dans l’éditeur.",
     "instant": "Instantané",
+    "instantDescription": "Enregistre et exporte automatiquement une vidéo stylisée.",
     "deviceHint": "{device} — clic droit pour choisir une source",
     "defaultSystemAudio": "Sortie système par défaut"
   },
