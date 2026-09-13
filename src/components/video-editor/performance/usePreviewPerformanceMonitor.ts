@@ -1,5 +1,5 @@
-import { onScopeDispose, readonly, ref, watch, type Ref } from 'vue';
-import type { AudioPlaybackMetrics, PlaybackMetrics, PlaybackState, PreviewQuality } from '~/media/playback';
+import { onScopeDispose, readonly, ref, watch } from 'vue';
+import type { AudioPlaybackMetrics, PlaybackMetrics } from '~/media/playback';
 import {
   clampPerformanceScore,
   idlePreviewPerformanceHealth,
@@ -8,26 +8,17 @@ import {
   recommendedPreviewQuality,
 } from './preview-performance-health';
 import type {
+  PreviewPerformanceMonitorOptions,
   PreviewPerformanceHealthState,
   PreviewPerformanceScores,
   PreviewPerformanceSnapshot,
 } from './preview-performance-types';
+import { usePreviewMonitorActivity } from './usePreviewMonitorActivity';
 import type { MediaProcessingMetrics } from './media-processing-pressure';
 
 const SAMPLE_INTERVAL_MS = 500;
 const STARTUP_COOLDOWN_MS = 1_000;
 const MAX_SAMPLES = 48;
-
-type MonitorOptions = {
-  isPlaying: Readonly<Ref<boolean>>;
-  playbackState: Readonly<Ref<PlaybackState>>;
-  previewQuality: Readonly<Ref<PreviewQuality>>;
-  playbackMetrics: Readonly<Ref<PlaybackMetrics | null>>;
-  audioMetrics: Readonly<Ref<AudioPlaybackMetrics | null>>;
-  mediaMetrics: Readonly<Ref<MediaProcessingMetrics>>;
-  isReady?: Readonly<Ref<boolean>>;
-  now?: () => number;
-};
 
 const percentile = (values: readonly number[], ratio: number) => {
   if (!values.length) return 0;
@@ -73,7 +64,7 @@ export function mediaPerformanceScore(current: MediaProcessingMetrics, previous:
   return clampPerformanceScore(Math.max(activeScore * 0.55 + backlogScore * 0.45, ageScore, errorScore));
 }
 
-export function usePreviewPerformanceMonitor(options: MonitorOptions) {
+export function usePreviewPerformanceMonitor(options: PreviewPerformanceMonitorOptions) {
   const now = options.now ?? (() => performance.now());
   const snapshot = ref<PreviewPerformanceSnapshot>({
     status: 'idle',
@@ -180,8 +171,34 @@ export function usePreviewPerformanceMonitor(options: MonitorOptions) {
   });
   health = { status: 'good', badSamples: 0, goodSamples: 0 };
   snapshot.value = { ...snapshot.value, status: 'good' };
-  animationFrame = requestAnimationFrame(trackFrame);
-  sampleTimer = setInterval(sample, SAMPLE_INTERVAL_MS);
+  const active = usePreviewMonitorActivity(options);
+  watch(
+    active,
+    (running) => {
+      stop();
+      frameIntervals = [];
+      previousFrameTime = null;
+      resetBaselines();
+      if (running) {
+        animationFrame = requestAnimationFrame(trackFrame);
+        sampleTimer = setInterval(sample, SAMPLE_INTERVAL_MS);
+      } else {
+        health = { status: 'good', badSamples: 0, goodSamples: 0 };
+        const scores = { ui: 0, worker: 0, audio: 0, media: 0 };
+        snapshot.value = {
+          status: 'good',
+          scores,
+          activity: { playback: false, media: false },
+          samples: snapshot.value.samples.length
+            ? [...snapshot.value.samples, { timestampMs: now(), ...scores }].slice(-MAX_SAMPLES)
+            : [],
+          issues: [],
+          recommendation: null,
+        };
+      }
+    },
+    { immediate: true, flush: 'sync' },
+  );
   onScopeDispose(stop);
   return { snapshot: readonly(snapshot) };
 }

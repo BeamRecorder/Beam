@@ -58,3 +58,13 @@ export const clampTeleprompterLine = (index: number, lineCount: number): number 
   if (lineCount <= 0) return 0;
   return Math.max(0, Math.min(Math.trunc(index), lineCount - 1));
 };
+
+export interface TeleprompterViewState {
+  document: TeleprompterDocument;
+  session: TeleprompterSessionContext | null;
+  activeLine: number;
+  scrollTop: number;
+  isEditing: boolean;
+  isPaused: boolean;
+  error: string;
+}

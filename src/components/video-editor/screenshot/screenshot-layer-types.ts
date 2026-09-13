@@ -10,6 +10,7 @@ export interface ScreenshotImageLayer extends VisualClip {
   height: number;
 }
 export interface ScreenshotImageAsset {
+  rasterSize?: { width: number; height: number };
   image: CanvasImageSource;
   width: number;
   height: number;

@@ -124,12 +124,14 @@ const flushMicrotasks = async () => {
 };
 
 const scopes: Array<ReturnType<typeof effectScope>> = [];
-const mountClient = (initial: ThumbnailSpec[]) => {
+const mountClient = (initial: ThumbnailSpec[], initialEnabled?: boolean) => {
   const specs = ref(initial);
+  const enabled = ref(initialEnabled ?? true);
   const scope = effectScope();
   scopes.push(scope);
-  const thumbnails = scope.run(() => useLayerThumbnails(() => specs.value))!;
-  return { specs, thumbnails, scope };
+  const enabledGetter = initialEnabled === undefined ? undefined : () => enabled.value;
+  const thumbnails = scope.run(() => useLayerThumbnails(() => specs.value, enabledGetter))!;
+  return { specs, enabled, thumbnails, scope };
 };
 
 const createObjectURL = vi.fn<(blob: Blob | MediaSource) => string>();
@@ -143,7 +145,7 @@ beforeEach(() => {
   FakeWorker.instances.length = 0;
   objectUrlId = 0;
   cursorRuntime.cursorGeometry.mockReturnValue({ width: 24, height: 32, hotspot: { x: 6, y: 8 } });
-  cursorRuntime.loadCursorImage.mockResolvedValue({} as CanvasImageSource);
+  cursorRuntime.loadCursorImage.mockResolvedValue({ naturalWidth: 32, naturalHeight: 32 } as CanvasImageSource);
   createObjectURL.mockImplementation(() => `blob:thumbnail-${++objectUrlId}`);
   revokeObjectURL.mockImplementation(() => undefined);
   vi.spyOn(URL, 'createObjectURL').mockImplementation(createObjectURL);
@@ -180,6 +182,113 @@ describe('useLayerThumbnails', () => {
       sourceUrl: 'asset://latest',
       layer: { name: 'shape-1' },
     });
+  });
+
+  it('does no work while disabled and starts thumbnails for the current specs when enabled', async () => {
+    const client = mountClient([makeSpec('shape-1', 'first')], false);
+
+    expect(client.thumbnails.value).toEqual({});
+    await vi.advanceTimersByTimeAsync(500);
+    expect(FakeWorker.instances).toHaveLength(0);
+
+    client.enabled.value = true;
+    await nextTick();
+    expect(client.thumbnails.value['shape-1']).toMatchObject({ status: 'loading', revision: 1 });
+    await vi.advanceTimersByTimeAsync(80);
+
+    expect(workerAt().postMessage).toHaveBeenCalledOnce();
+    expect(workerAt().postMessage.mock.calls[0]?.[0]).toMatchObject({ id: 'shape-1' });
+  });
+
+  it('terminates the worker on pause but retains ready URLs for an unchanged instant reopen', async () => {
+    const client = mountClient([makeSpec('shape-1', 'ready')], true);
+    await vi.advanceTimersByTimeAsync(80);
+    const worker = workerAt();
+    const revision = client.thumbnails.value['shape-1']!.revision;
+    worker.reply(makeReply('shape-1', revision));
+    const url = (client.thumbnails.value['shape-1'] as LayerThumbnail).url!;
+
+    client.enabled.value = false;
+    await nextTick();
+    expect(worker.terminate).toHaveBeenCalledOnce();
+    expect(client.thumbnails.value['shape-1']).toMatchObject({ status: 'ready', url });
+    expect(revokeObjectURL).not.toHaveBeenCalled();
+
+    client.enabled.value = true;
+    await nextTick();
+    await vi.advanceTimersByTimeAsync(500);
+
+    expect(FakeWorker.instances).toHaveLength(1);
+    expect(worker.postMessage).toHaveBeenCalledOnce();
+    expect(client.thumbnails.value['shape-1']).toMatchObject({ status: 'ready', url });
+    expect(revokeObjectURL).not.toHaveBeenCalled();
+  });
+
+  it('reconciles removals and only changed keys that accumulated while paused', async () => {
+    const client = mountClient(
+      [makeSpec('shape-stable', 'stable'), makeSpec('shape-changed', 'old'), makeSpec('shape-removed', 'removed')],
+      true,
+    );
+    await vi.advanceTimersByTimeAsync(80);
+    const worker = workerAt();
+    const stableRevision = client.thumbnails.value['shape-stable']!.revision;
+    const changedRevision = client.thumbnails.value['shape-changed']!.revision;
+    const removedRevision = client.thumbnails.value['shape-removed']!.revision;
+    worker.reply(makeReply('shape-stable', stableRevision));
+    worker.reply(makeReply('shape-changed', changedRevision));
+    worker.reply(makeReply('shape-removed', removedRevision));
+    const stableUrl = (client.thumbnails.value['shape-stable'] as LayerThumbnail).url!;
+    const changedUrl = (client.thumbnails.value['shape-changed'] as LayerThumbnail).url!;
+    const removedUrl = (client.thumbnails.value['shape-removed'] as LayerThumbnail).url!;
+
+    client.enabled.value = false;
+    await nextTick();
+    client.specs.value = [makeSpec('shape-stable', 'stable'), makeSpec('shape-changed', 'new')];
+    await nextTick();
+    expect(client.thumbnails.value['shape-changed']).toMatchObject({ status: 'ready', url: changedUrl });
+    expect(revokeObjectURL).not.toHaveBeenCalled();
+
+    client.enabled.value = true;
+    await nextTick();
+    expect(client.thumbnails.value['shape-stable']).toMatchObject({ status: 'ready', url: stableUrl });
+    expect(client.thumbnails.value['shape-changed']).toMatchObject({ status: 'loading' });
+    expect(client.thumbnails.value['shape-removed']).toBeUndefined();
+    expect(revokeObjectURL).toHaveBeenCalledTimes(2);
+    expect(revokeObjectURL).toHaveBeenCalledWith(changedUrl);
+    expect(revokeObjectURL).toHaveBeenCalledWith(removedUrl);
+    await vi.advanceTimersByTimeAsync(80);
+
+    expect(worker.postMessage).toHaveBeenCalledTimes(3);
+    expect(FakeWorker.instances).toHaveLength(2);
+    expect(workerAt(1).postMessage).toHaveBeenCalledOnce();
+    expect(workerAt(1).postMessage.mock.calls[0]?.[0]).toMatchObject({ id: 'shape-changed' });
+  });
+
+  it('requeues an unfinished loading key after pause and ignores replies from the terminated worker', async () => {
+    const client = mountClient([makeSpec('shape-1', 'pending')], true);
+    await vi.advanceTimersByTimeAsync(80);
+    const oldWorker = workerAt();
+    const oldRevision = client.thumbnails.value['shape-1']!.revision;
+
+    client.enabled.value = false;
+    await nextTick();
+    expect(oldWorker.terminate).toHaveBeenCalledOnce();
+    client.enabled.value = true;
+    await nextTick();
+    const currentRevision = client.thumbnails.value['shape-1']!.revision;
+    expect(currentRevision).not.toBe(oldRevision);
+
+    // Even a stale worker message carrying the new revision cannot publish a URL.
+    oldWorker.reply(makeReply('shape-1', currentRevision));
+    expect(client.thumbnails.value['shape-1']).toMatchObject({ status: 'loading', revision: currentRevision });
+    expect(createObjectURL).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(80);
+    const currentWorker = workerAt(1);
+    currentWorker.reply(makeReply('shape-1', currentRevision));
+    expect(client.thumbnails.value['shape-1']).toMatchObject({ status: 'ready', revision: currentRevision });
+    oldWorker.reply(makeReply('shape-1', currentRevision));
+    expect(createObjectURL).toHaveBeenCalledOnce();
   });
 
   it('updates only the layer whose key changed and ignores stale worker replies', async () => {
@@ -232,7 +341,7 @@ describe('useLayerThumbnails', () => {
     client.specs.value = [makeCursorSpec('cursor-1', 'new')];
     await nextTick();
     const currentRevision = client.thumbnails.value['cursor-1']!.revision;
-    resolveOldImage({} as CanvasImageSource);
+    resolveOldImage({ naturalWidth: 2_048, naturalHeight: 1_024 } as CanvasImageSource);
     await flushMicrotasks();
     expect(bitmap.close).toHaveBeenCalledOnce();
     expect(FakeWorker.instances).toHaveLength(0);
@@ -243,6 +352,32 @@ describe('useLayerThumbnails', () => {
     expect(workerAt().postMessage.mock.calls[0]?.[0]).toMatchObject({ id: 'cursor-1', revision: currentRevision });
     expect(workerAt().postMessage.mock.calls[0]?.[0].bitmap).toBe(bitmap);
     expect(workerAt().postMessage.mock.calls[0]?.[1]).toEqual([bitmap]);
+    expect(createImageBitmapMock).toHaveBeenCalledWith(
+      { naturalWidth: 2_048, naturalHeight: 1_024 },
+      { resizeWidth: 512, resizeHeight: 256, resizeQuality: 'high' },
+    );
+    expect(workerAt().postMessage.mock.calls[0]?.[0].cursorAsset).toEqual(cursorAsset);
+  });
+
+  it('closes a cursor bitmap decoded after pause without creating or messaging a worker', async () => {
+    let resolveImage!: (image: CanvasImageSource) => void;
+    cursorRuntime.loadCursorImage.mockImplementationOnce(
+      () => new Promise<CanvasImageSource>((resolve) => (resolveImage = resolve)),
+    );
+    const bitmap = { close: vi.fn() } as unknown as ImageBitmap;
+    createImageBitmapMock.mockResolvedValue(bitmap);
+    const client = mountClient([makeCursorSpec('cursor-1', 'pending')], true);
+    await vi.advanceTimersByTimeAsync(80);
+    expect(cursorRuntime.loadCursorImage).toHaveBeenCalledOnce();
+
+    client.enabled.value = false;
+    await nextTick();
+    resolveImage({ naturalWidth: 2_048, naturalHeight: 1_024 } as CanvasImageSource);
+    await flushMicrotasks();
+
+    expect(bitmap.close).toHaveBeenCalledOnce();
+    expect(FakeWorker.instances).toHaveLength(0);
+    expect(client.thumbnails.value['cursor-1']).toMatchObject({ status: 'loading' });
   });
 
   it('ignores a cursor decode failure after its layer is removed or the client is disposed', async () => {

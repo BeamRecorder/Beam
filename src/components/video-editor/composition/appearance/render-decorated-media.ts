@@ -157,6 +157,7 @@ const drawMediaSource = (ctx: Canvas2DContext, options: DecoratedMediaOptions, c
 };
 
 const mediaSourceDimensions = (options: DecoratedMediaOptions) => {
+  if (options.sourceSize) return options.sourceSize;
   if (options.sourceRect) return { width: options.sourceRect.width, height: options.sourceRect.height };
   const source = options.source as unknown as Record<string, unknown>;
   const dimension = (...keys: string[]) => {

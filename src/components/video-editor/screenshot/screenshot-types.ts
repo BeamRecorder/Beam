@@ -1,8 +1,10 @@
+import type { MediaRect } from '../composition/appearance/appearance-types';
 import type { NormalizedTransform, NormalizedCrop } from '~/media/shared/composition-types';
 import type { ResizeCorner } from '~/ui/ResizeHandle/types';
 import type { ScreenshotCursorAsset, ScreenshotImageAsset } from './screenshot-layer-types';
 
 export interface ScreenshotRenderAssets {
+  rasterSize?: { width: number; height: number };
   image: CanvasImageSource;
   background: CanvasImageSource | null;
   logo: CanvasImageSource | null;
@@ -41,4 +43,10 @@ export interface ScreenshotCropDrag {
 export interface ScreenshotHistoryOptions {
   disabled: () => boolean;
   restore: () => void;
+}
+
+export interface ScreenshotImageFraming {
+  rect: MediaRect;
+  sourceRect: MediaRect;
+  sourceSize?: { width: number; height: number };
 }

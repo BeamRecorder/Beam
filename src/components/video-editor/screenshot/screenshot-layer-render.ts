@@ -9,6 +9,7 @@ import { drawScreenshotCursor } from './screenshot-cursors';
 import type { ScreenshotLayer } from './screenshot-layer-types';
 import type { ScreenshotRenderAssets } from './screenshot-types';
 import { screenshotImage } from './screenshot-images';
+import { screenshotImageRaster } from './screenshot-image-raster';
 
 export function drawScreenshotLayer(
   target: Canvas2DContext,
@@ -34,7 +35,11 @@ export function drawScreenshotLayer(
     if (!image || !asset?.image || !asset.width || !asset.height) throw new Error('Screenshot image unavailable.');
     drawDecoratedMedia(target, {
       source: asset.image,
-      ...screenshotImageFraming({ ...state, image }, asset.width, asset.height, width, height),
+      ...screenshotImageRaster(screenshotImageFraming({ ...state, image }, asset.width, asset.height, width, height), {
+        width: asset.width,
+        height: asset.height,
+        rasterSize: asset.rasterSize,
+      }),
       appearance: image.appearance,
       title: image.name,
       shadowScale: Math.min(width / state.canvas.width, height / state.canvas.height),

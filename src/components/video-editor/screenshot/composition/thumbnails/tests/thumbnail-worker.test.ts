@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ScreenshotState } from '~/api/types/screenshot';
 import type { CursorAssetDescriptor } from '~/api/types/cursor-pack';
 import type { ScreenshotLayer } from '../../../screenshot-layer-types';
-import type { ThumbnailReply, ThumbnailRequest } from '../thumbnail-types';
+import type { ThumbnailImageAsset, ThumbnailReply, ThumbnailRequest } from '../thumbnail-types';
 
 const dependencies = vi.hoisted(() => ({
   loadFonts: vi.fn(),
@@ -44,6 +44,16 @@ const request = (overrides: Partial<ThumbnailRequest> = {}): ThumbnailRequest =>
   ...overrides,
 });
 const bitmap = (width = 32, height = 32) => ({ width, height, close: vi.fn() }) as unknown as ImageBitmap;
+const loadedImage = (
+  width: number,
+  height: number,
+  rasterWidth = width,
+  rasterHeight = height,
+): ThumbnailImageAsset => ({
+  image: bitmap(rasterWidth, rasterHeight),
+  width,
+  height,
+});
 const deferred = <T>() => {
   let resolve!: (value: T) => void;
   let reject!: (reason?: unknown) => void;
@@ -57,7 +67,7 @@ const deferred = <T>() => {
 beforeEach(() => {
   vi.clearAllMocks();
   dependencies.loadFonts.mockResolvedValue(undefined);
-  dependencies.loadImage.mockResolvedValue({ width: 800, height: 450 } as ImageBitmap);
+  dependencies.loadImage.mockResolvedValue(loadedImage(800, 450, 512, 288));
   dependencies.createImageLoader.mockReturnValue(dependencies.loadImage);
   dependencies.render.mockResolvedValue(new Blob(['preview'], { type: 'image/png' }));
 });
@@ -85,7 +95,12 @@ describe('thumbnail worker queue', () => {
     expect(dependencies.loadFonts).toHaveBeenCalledWith(value.state.shapes);
     expect(dependencies.render).toHaveBeenCalledWith(
       value,
-      expect.objectContaining({ image: expect.objectContaining({ width: 800, height: 450 }), width: 800, height: 450 }),
+      expect.objectContaining({
+        image: expect.objectContaining({ width: 512, height: 288 }),
+        width: 800,
+        height: 450,
+        rasterSize: { width: 512, height: 288 },
+      }),
     );
     expect(order).toEqual(['fonts', 'render']);
     expect(replies[0]).toMatchObject({ id: 'screenshot', revision: 1, blob: expect.any(Blob) });
@@ -97,8 +112,8 @@ describe('thumbnail worker queue', () => {
   ] as const)('places a loaded source in the %s asset slot', async (kind, slot) => {
     const replies: ThumbnailReply[] = [];
     const worker = createThumbnailWorker((reply) => replies.push(reply));
-    const image = { width: 64, height: 48 } as ImageBitmap;
-    dependencies.loadImage.mockResolvedValue(image);
+    const loaded = loadedImage(640, 480, 64, 48);
+    dependencies.loadImage.mockResolvedValue(loaded);
 
     worker(
       request({
@@ -109,7 +124,7 @@ describe('thumbnail worker queue', () => {
     );
     await vi.waitFor(() => expect(replies).toHaveLength(1));
 
-    expect(dependencies.render.mock.calls[0]![1]).toMatchObject({ [slot]: image });
+    expect(dependencies.render.mock.calls[0]![1]).toMatchObject({ [slot]: loaded.image });
   });
 
   it('passes a transferred cursor bitmap with its asset and always closes it after rendering', async () => {

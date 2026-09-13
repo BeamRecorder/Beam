@@ -3,6 +3,15 @@ import type { LayerCompositing } from '~/media/shared/layer-compositing-types';
 
 const surfaces = new WeakMap<Canvas2DContext, OffscreenCanvas>();
 
+/** Release the scratch surface when its owning renderer has finished. */
+export function releaseCompositedLayerSurface(ctx: Canvas2DContext) {
+  const surface = surfaces.get(ctx);
+  if (!surface) return;
+  surfaces.delete(ctx);
+  surface.width = 0;
+  surface.height = 0;
+}
+
 /** Flatten the layer before blending, so overlaps, text and shadows share one opacity. */
 export function renderCompositedLayer(
   ctx: Canvas2DContext,

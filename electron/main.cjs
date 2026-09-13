@@ -163,7 +163,6 @@ function initializeApplication() {
         preferencesStore,
         appIconPath,
       });
-      setTimeout(() => teleprompterWindow.prepare(), 0);
       const dispatchShortcut = (id) => {
         if (id.startsWith('teleprompter.')) return teleprompterWindow.handleShortcut(id);
         if (id === 'quickSnip.toggle') {
@@ -240,7 +239,7 @@ function initializeApplication() {
       const fontLibrary = createFontLibrary(userPaths.fonts);
       const cursorLibrary = createCursorPackLibrary(userPaths.cursors);
       const teleprompterStorage = createTeleprompterStorage({ projectStore });
-      registerTeleprompterIpc({ ipcMain: applicationIpc, teleprompterWindow, storage: teleprompterStorage });
+      registerTeleprompterIpc(applicationIpc, teleprompterWindow, teleprompterStorage, () => win.webContents);
       registerProjectIpc(
         applicationIpc,
         projectStore,
@@ -383,6 +382,7 @@ function initializeApplication() {
         isPackaged: app.isPackaged,
         ipcMain: applicationIpc,
         hudWindow: win,
+        hudAuxiliaryWindows: [teleprompterWindow, countdownOverlay],
         hudController: controllers.get(win),
         registerController: (target, controller) => controllers.set(target, controller),
         preferencesStore,

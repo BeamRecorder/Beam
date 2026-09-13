@@ -56,6 +56,14 @@ Teleporting a popover to `body` does not let it escape its BrowserWindow. It can
 
 Recorder mode enables Electron content protection. Camera and Recorder windows must remain separate from the native capture session logic; renderer-side windows are only presentation and sidecar controls. Do not broaden preload APIs beyond narrow, named IPC calls.
 
+## HUD auxiliary window lifetime
+
+The editor window manager prepares the countdown and teleprompter at HUD startup and whenever the user returns to the HUD. Preparation runs alongside HUD presentation; it must not block the HUD on renderer loading. Both auxiliary windows are released once the editor can be presented and the HUD is hidden. A canceled countdown (`show(null)`) must not recreate a released window.
+
+Before releasing the teleprompter, hide it and request a checkpoint from its renderer. The renderer flushes pending document/preferences saves and returns its draft, matching session, reading line, scroll position and paused/editing state. Only the owning webContents can acknowledge the unique checkpoint request. A timeout or invalid checkpoint retains the renderer to preserve the draft; returning to the HUD during a pending checkpoint cancels disposal. Restore the matching state before announcing renderer readiness. Native loading and renderer readiness must both complete before showing a requested reader. Hidden readers do not autoscroll: use the native visibility notification as well as page visibility, because a preloaded `show: false` window can initially report `document.hidden === false`. Restore the saved scroll offset with instant scrolling so CSS smooth scrolling cannot move it while the renderer is being prepared.
+
+Keep bounds persistence and existing visibility intent across suspension. Capture each native window instance in load/close callbacks so stale callbacks cannot destroy a replacement; failed loads must allow preparation to retry. The narrow preload methods are `getTeleprompterResumeState`, `onTeleprompterSuspend`, `acknowledgeTeleprompterSuspend` and `notifyTeleprompterReady`.
+
 ## Checklist for a window change
 
 1. Read this document and `docs/ARCHITECTURE.md`.

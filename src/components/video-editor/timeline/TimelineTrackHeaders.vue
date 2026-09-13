@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ReorderGroup from '~/ui/transitions/ReorderGroup.vue';
 import {
   Camera,
   CircleDashed,
@@ -82,7 +83,7 @@ const allZoomsSelected = () =>
 </script>
 
 <template>
-  <TransitionGroup name="track-reorder" tag="div" class="visual-tracks-group">
+  <ReorderGroup :order="visualTracks.map((track) => track.id)" class="visual-tracks-group">
     <div
       v-for="track in visualTracks"
       :key="track.id"
@@ -107,7 +108,7 @@ const allZoomsSelected = () =>
         <span class="track-title">{{ labelForVisual(track.representative) }}</span>
       </button>
     </div>
-  </TransitionGroup>
+  </ReorderGroup>
   <div
     class="sidebar-track-item cursor-track"
     :class="{ selected: allZoomsSelected() }"
@@ -127,7 +128,12 @@ const allZoomsSelected = () =>
       <Keyboard class="track-icon" /><span class="track-title">{{ t('keyboardCaptions') }}</span>
     </button>
   </div>
-  <TransitionGroup v-if="textCaptionLayers.length" name="track-reorder" tag="div" class="text-caption-layers-group">
+  <ReorderGroup
+    v-if="textCaptionLayers.length"
+    :order="textCaptionLayers.map((layer) => layer.id)"
+    item-attribute="data-caption-id"
+    class="text-caption-layers-group"
+  >
     <div
       v-for="layer in textCaptionLayers"
       :key="layer.id"
@@ -151,7 +157,7 @@ const allZoomsSelected = () =>
         <Type class="track-icon" /><span class="track-title">{{ labelForCaption(layer.representative) }}</span>
       </button>
     </div>
-  </TransitionGroup>
+  </ReorderGroup>
   <div v-else class="sidebar-track-item annotation-track text-caption-track">
     <div class="track-info static-info">
       <Type class="track-icon" /><span class="track-title">{{ t('textCaptions') }}</span>

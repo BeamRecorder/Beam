@@ -10,7 +10,7 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
 import PreviewPerformanceWidget from './performance/PreviewPerformanceWidget.vue';
 import type { PreviewPerformanceSnapshot } from './performance/preview-performance-types';
-import type { ExportRequest } from '../export/export-types';
+import type { EditorExportSource } from '../export/export-types';
 import type { EditorPresetDocument } from '~/api/types/editor-preset';
 import EditorPresetControls from './EditorPresetControls.vue';
 
@@ -18,7 +18,7 @@ const { t } = useTranslate('Topbar');
 
 withDefaults(
   defineProps<{
-    exportRequest?: Omit<ExportRequest, 'format' | 'preset'> | null;
+    exportRequest?: EditorExportSource | null;
     playheadSeconds?: number;
     project?: any;
     isSaving?: boolean;

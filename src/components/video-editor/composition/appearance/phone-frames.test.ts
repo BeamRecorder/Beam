@@ -74,7 +74,8 @@ describe('phone frame rendering', () => {
       title: 'Phone recording',
     });
 
-    expect(ctx.clip).toHaveBeenCalledOnce();
+    // The outer phone silhouette and inset phone fill each have their own clip.
+    expect(ctx.clip).toHaveBeenCalledTimes(2);
     expect(ctx.roundRect).toHaveBeenCalledWith(
       geometry.outer.x,
       geometry.outer.y,

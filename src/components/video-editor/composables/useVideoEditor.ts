@@ -8,6 +8,7 @@ import { useClipComposition } from './useClipComposition';
 import { useProjectZoom } from './useProjectZoom';
 import { normalizeZoomMotionBlur } from '../zoom/zoom-types';
 import { useProjectEditorState } from './useProjectEditorState';
+import type { EditorExportSource } from '../../export/export-types';
 import { createCompositionSnapshot } from '../../export/composition/snapshot';
 import { DEFAULT_OUTPUT_CANVAS, type OutputCanvasSettings } from '../canvas/output-canvas';
 import { compositionDurationMs } from '~/media/shared';
@@ -123,37 +124,43 @@ export function useVideoEditor(options: {
     const value = screen?.format.frameRate ?? screen?.format.fps;
     return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 30;
   });
-  const exportRequest = computed(() => {
+  const createExportSnapshot = () =>
+    createCompositionSnapshot({
+      duration: compositionDurationMs(compositionState.composition.value) / 1_000,
+      canvas: outputCanvas.value,
+      fps: sourceFps.value,
+      background: player.selectedBackgroundMedia.value,
+      blurPercent: player.backgroundBlurPercent.value,
+      editorData: editorData.value,
+      zooms: zoomState.zoomElements.value,
+      zoomMotionBlur: normalizeZoomMotionBlur(zoomState.zoomMotionBlur?.value),
+      composition: compositionState.composition.value,
+      cursorSettings: {
+        selection: cursor.selection.value,
+        size: cursor.cursorSize.value,
+        color: cursor.cursorColor.value,
+        shadow: {
+          enabled: cursor.enableShadow.value,
+          blur: cursor.shadowBlur.value,
+          color: cursor.shadowColor.value,
+          direction: cursor.shadowDirection.value,
+        },
+        clickEffects: cursor.clickEffects.value,
+        motion: cursorMotion.value,
+        autoHide: cursor.autoHide.value,
+      },
+      cursorPack: cursor.selectedPack.value,
+    });
+  const exportRequest = computed<EditorExportSource | null>(() => {
     if (!project.value) return null;
     return {
       projectName: project.value.name,
       includeAudio: includeAudioInExport.value,
-      snapshot: createCompositionSnapshot({
-        duration: compositionDurationMs(compositionState.composition.value) / 1_000,
-        canvas: outputCanvas.value,
-        fps: sourceFps.value,
-        background: player.selectedBackgroundMedia.value,
-        blurPercent: player.backgroundBlurPercent.value,
-        editorData: editorData.value,
-        zooms: zoomState.zoomElements.value,
-        zoomMotionBlur: normalizeZoomMotionBlur(zoomState.zoomMotionBlur?.value),
-        composition: compositionState.composition.value,
-        cursorSettings: {
-          selection: cursor.selection.value,
-          size: cursor.cursorSize.value,
-          color: cursor.cursorColor.value,
-          shadow: {
-            enabled: cursor.enableShadow.value,
-            blur: cursor.shadowBlur.value,
-            color: cursor.shadowColor.value,
-            direction: cursor.shadowDirection.value,
-          },
-          clickEffects: cursor.clickEffects.value,
-          motion: cursorMotion.value,
-          autoHide: cursor.autoHide.value,
-        },
-        cursorPack: cursor.selectedPack.value,
-      }),
+      duration: compositionDurationMs(compositionState.composition.value) / 1_000,
+      fps: sourceFps.value,
+      width: outputCanvas.value.width,
+      height: outputCanvas.value.height,
+      createSnapshot: createExportSnapshot,
     };
   });
 

@@ -119,6 +119,16 @@ test('editor window is opaque and routes native editor lifecycle without changin
       on: (channel, listener) => ipcListeners.set(channel, listener),
     };
     const registered = [];
+    const hudAuxiliaryWindows = ['countdown', 'teleprompter'].map((name) => ({
+      prepare: () => {
+        calls.push(['aux-prepare', name]);
+        return Promise.resolve();
+      },
+      suspend: () => {
+        calls.push(['aux-suspend', name]);
+        return Promise.resolve();
+      },
+    }));
     const appIconPath = '/app/dist/brand/BeamIcon.png';
     const manager = createEditorWindowManager({
       applicationRoot: '/app',
@@ -128,8 +138,17 @@ test('editor window is opaque and routes native editor lifecycle without changin
       hudController,
       registerController: (...args) => registered.push(args),
       appIconPath,
+      hudAuxiliaryWindows,
     });
 
+    assert.deepEqual(
+      calls.filter(([name]) => name === 'aux-prepare'),
+      [
+        ['aux-prepare', 'countdown'],
+        ['aux-prepare', 'teleprompter'],
+      ],
+      'HUD auxiliary renderers are warmed when the editor manager is created',
+    );
     assert.throws(() => manager.open('project'), /invalide/);
     const opening = manager.open(projectId);
     const options = calls.find((call) => call[0] === 'constructor')[1];
@@ -166,7 +185,7 @@ test('editor window is opaque and routes native editor lifecycle without changin
     ipcListeners.get('editor:loading-stage')({ sender: editor.webContents }, 'loadingTimeline');
     assert.deepEqual(calls.at(-1), ['hud-send', 'editor:loading-progress', { stage: 'loadingTimeline', value: 65 }]);
     assert.deepEqual(ipcHandlers.get('editor:context')({ sender: editor.webContents }), { projectId });
-    ipcListeners.get('editor:ready')({ sender: editor.webContents });
+    await ipcListeners.get('editor:ready')({ sender: editor.webContents });
     await opening;
     const hudHiddenIndex = calls.findIndex((call) => call[0] === 'hud-visible' && call[1] === false);
     const readyProgressIndex = calls.findIndex(
@@ -174,8 +193,16 @@ test('editor window is opaque and routes native editor lifecycle without changin
     );
     const editorShowIndex = calls.findIndex((call) => call[0] === 'show');
     const editorFocusIndex = calls.findIndex((call) => call[0] === 'focus');
+    const auxiliarySuspendIndices = calls
+      .map((call, index) => (call[0] === 'aux-suspend' ? index : -1))
+      .filter((index) => index >= 0);
     assert.ok(hudHiddenIndex >= 0);
     assert.equal(hudWindow.isVisible(), false);
+    assert.equal(auxiliarySuspendIndices.length, 2);
+    assert.ok(
+      auxiliarySuspendIndices.every((index) => hudHiddenIndex < index && index < editorShowIndex),
+      'auxiliary overlays are suspended after the native HUD is hidden and before the editor appears',
+    );
     assert.ok(hudHiddenIndex < readyProgressIndex, 'the HUD must be hidden before ready progress is sent');
     assert.ok(readyProgressIndex < editorShowIndex, 'ready progress must precede editor.show()');
     assert.ok(editorShowIndex < editorFocusIndex, 'editor.show() must precede editor.focus()');
@@ -199,23 +226,33 @@ test('editor window is opaque and routes native editor lifecycle without changin
       'a live theme change must not mutate the native compositor surface',
     );
 
-    manager.showHud();
+    await manager.showHud();
     assert.ok(calls.some((call) => call[0] === 'show-hud'));
     assert.ok(calls.some((call) => call[0] === 'hud-show'));
     assert.ok(calls.some((call) => call[0] === 'hud-focus'));
+    assert.equal(
+      calls.filter(([name]) => name === 'aux-prepare').length,
+      4,
+      'both auxiliary windows are prepared before returning to the HUD',
+    );
 
     const reopening = manager.open(projectId);
     const reopenedEditor = windows[1];
     const reopenedOptions = calls.filter((call) => call[0] === 'constructor').at(-1)[1];
     assert.equal(reopenedOptions.backgroundColor, '#141310');
-    ipcListeners.get('editor:ready')({ sender: reopenedEditor.webContents });
+    await ipcListeners.get('editor:ready')({ sender: reopenedEditor.webContents });
     await reopening;
 
     const configuration = { screenKind: 'display', cameraId: 'off' };
-    ipcListeners.get('editor:start-recording')({ sender: reopenedEditor.webContents }, configuration);
+    await ipcListeners.get('editor:start-recording')({ sender: reopenedEditor.webContents }, configuration);
     assert.deepEqual(
       calls.find((call) => call[0] === 'hud-send' && call[1] === 'editor:start-recording'),
       ['hud-send', 'editor:start-recording', configuration],
+    );
+    assert.equal(
+      calls.filter(([name]) => name === 'aux-prepare').length,
+      6,
+      'the editor start-recording path warms both overlays before it hands control back to the HUD',
     );
   } finally {
     Module._load = originalLoad;

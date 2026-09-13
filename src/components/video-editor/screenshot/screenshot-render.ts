@@ -3,7 +3,7 @@ import { screenshotLayers } from './screenshot-layers';
 import { loadScreenshotCursors } from './screenshot-cursors';
 import { BUILTIN_CURSOR_PACKS } from '../properties/cursor/cursor-packs';
 import type { CursorPackDescriptor } from '~/api/types/cursor-pack';
-import { renderCompositedLayer } from '../composition/render-composited-layer';
+import { releaseCompositedLayerSurface, renderCompositedLayer } from '../composition/render-composited-layer';
 import { loadElementFonts } from '~/media/shared/element-fonts';
 import { i18n } from '~/i18n';
 import { validScreenshotDimensions } from './screenshot-dimensions';
@@ -83,14 +83,22 @@ export async function encodeScreenshot(
   const assets = await loadScreenshotAssets(source, state);
   const canvas = new OffscreenCanvas(width, height);
   const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error(i18n.global.t('ScreenshotEditor.renderUnavailable'));
-  drawScreenshot(ctx, state, assets, width, height);
-  await options.onRendered?.(canvas);
-  const type = `image/${state.format}`;
-  const blob = await canvas.convertToBlob({ type, quality: Math.max(0, Math.min(1, state.quality)) });
-  if (blob.type !== type)
-    throw new Error(i18n.global.t('ScreenshotEditor.encodingUnavailable', { format: state.format.toUpperCase() }));
-  return blob.arrayBuffer();
+  try {
+    if (!ctx) throw new Error(i18n.global.t('ScreenshotEditor.renderUnavailable'));
+    drawScreenshot(ctx, state, assets, width, height);
+    await options.onRendered?.(canvas);
+    const type = `image/${state.format}`;
+    const blob = await canvas.convertToBlob({ type, quality: Math.max(0, Math.min(1, state.quality)) });
+    if (blob.type !== type)
+      throw new Error(i18n.global.t('ScreenshotEditor.encodingUnavailable', { format: state.format.toUpperCase() }));
+    return blob.arrayBuffer();
+  } finally {
+    if (ctx) releaseCompositedLayerSurface(ctx);
+    // The encoded blob owns its pixels. Do not retain a full-size render target
+    // while IPC, native decoding or a save dialog is pending.
+    canvas.width = 0;
+    canvas.height = 0;
+  }
 }
 
 export async function screenshotPreview(source: OffscreenCanvas): Promise<string> {

@@ -4,10 +4,11 @@ import { CURSOR_SIZE_MAX } from '../../../properties/cursor/cursor-size';
 import { loadCursorImage } from '../../../properties/cursor/cursor-image-loader';
 import type { LayerThumbnail, ThumbnailReply, ThumbnailRequest, ThumbnailSpec } from './thumbnail-types';
 
-export function useLayerThumbnails(specs: () => ThumbnailSpec[]) {
+export function useLayerThumbnails(specs: () => ThumbnailSpec[], enabled: () => boolean = () => true) {
   const thumbnails = shallowRef<Record<string, LayerThumbnail>>({});
   const keys = new Map<string, string>();
   const pending = new Map<string, ThumbnailSpec>();
+  let generation = 0;
   let revision = 0,
     disposed = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -22,8 +23,9 @@ export function useLayerThumbnails(specs: () => ThumbnailSpec[]) {
   const getWorker = () => {
     if (worker) return worker;
     worker = new Worker(new URL('./thumbnail.worker.ts', import.meta.url), { type: 'module' });
+    const target = worker;
     worker.onmessage = ({ data }: MessageEvent<ThumbnailReply>) => {
-      if (disposed || thumbnails.value[data.id]?.revision !== data.revision) return;
+      if (disposed || worker !== target || thumbnails.value[data.id]?.revision !== data.revision) return;
       if (data.error !== undefined) {
         fail(data.id, data.revision, data.error);
         return;
@@ -31,6 +33,7 @@ export function useLayerThumbnails(specs: () => ThumbnailSpec[]) {
       update(data.id, { status: 'ready', revision: data.revision, url: URL.createObjectURL(data.blob) });
     };
     worker.onerror = () => {
+      if (worker !== target) return;
       worker?.terminate();
       worker = undefined;
       for (const [id, value] of Object.entries(thumbnails.value))
@@ -39,6 +42,7 @@ export function useLayerThumbnails(specs: () => ThumbnailSpec[]) {
     return worker;
   };
   const send = async (spec: ThumbnailSpec, version: number) => {
+    const batch = generation;
     let bitmap: ImageBitmap | undefined;
     try {
       const state = JSON.parse(JSON.stringify(spec.state)) as ThumbnailSpec['state'];
@@ -56,9 +60,14 @@ export function useLayerThumbnails(specs: () => ThumbnailSpec[]) {
           Math.max(1, raster.height),
           cursor.color,
         );
-        bitmap = await createImageBitmap(image);
+        const scale = Math.min(1, 512 / Math.max(image.naturalWidth, image.naturalHeight));
+        bitmap = await createImageBitmap(image, {
+          resizeWidth: Math.max(1, Math.round(image.naturalWidth * scale)),
+          resizeHeight: Math.max(1, Math.round(image.naturalHeight * scale)),
+          resizeQuality: 'high',
+        });
       }
-      if (disposed || thumbnails.value[spec.id]?.revision !== version) {
+      if (disposed || batch !== generation || thumbnails.value[spec.id]?.revision !== version) {
         bitmap?.close();
         return;
       }
@@ -78,8 +87,17 @@ export function useLayerThumbnails(specs: () => ThumbnailSpec[]) {
     }
   };
   watch(
-    specs,
+    () => (enabled() ? specs() : null),
     (next) => {
+      if (next === null) {
+        generation += 1;
+        clearTimeout(timer);
+        pending.clear();
+        worker?.terminate();
+        worker = undefined;
+        for (const [id, value] of Object.entries(thumbnails.value)) if (value.status === 'loading') keys.delete(id);
+        return;
+      }
       let changed = false;
       const ids = new Set(next.map((item) => item.id));
       const values = { ...thumbnails.value };

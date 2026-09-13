@@ -44,6 +44,7 @@ function createEditorWindowManager({
   isPackaged,
   ipcMain,
   hudWindow,
+  hudAuxiliaryWindows = [],
   hudController,
   registerController,
   initialDark = false,
@@ -161,10 +162,21 @@ function createEditorWindowManager({
     window.webContents.send('editor:context', editorContext());
   };
 
-  const hideHudBeforePresentingEditor = () => hudController.setVisible(false) === true && !hudWindow.isVisible();
+  const prepareHudAuxiliaryWindows = () => {
+    for (const auxiliary of hudAuxiliaryWindows) void auxiliary.prepare();
+  };
+  const hideHudBeforePresentingEditor = () => {
+    if (hudController.setVisible(false) !== true || hudWindow.isVisible()) return false;
+    for (const auxiliary of hudAuxiliaryWindows) {
+      // Hide synchronously; the teleprompter then checkpoints its draft before disposal.
+      void Promise.resolve(auxiliary.suspend()).catch((error) => console.error('[HUD auxiliary window]', error));
+    }
+    return true;
+  };
 
   const showHud = () => {
     if (!canAcceptWork()) return false;
+    prepareHudAuxiliaryWindows();
     returningToHud = true;
     if (window && !window.isDestroyed()) window.close();
     if (hudWindow.isMinimized()) hudWindow.restore();
@@ -350,6 +362,7 @@ function createEditorWindowManager({
   const startRecording = (event, configuration) => {
     if (!canAcceptWork()) return false;
     if (!window || window.isDestroyed() || event.sender !== window.webContents) return false;
+    prepareHudAuxiliaryWindows();
     returningToHud = true;
     window.close();
     hudWindow.webContents.send('editor:start-recording', configuration);
@@ -373,6 +386,7 @@ function createEditorWindowManager({
     return sendProgress(stage);
   };
 
+  prepareHudAuxiliaryWindows();
   ipcMain.handle('editor:open', (_event, projectId) => open(projectId));
   ipcMain.handle('editor:context', (event) =>
     window && !window.isDestroyed() && event.sender === window.webContents && currentProjectId ? editorContext() : null,

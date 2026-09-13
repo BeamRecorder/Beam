@@ -192,6 +192,13 @@ contextBridge.exposeInMainWorld(
     hideTeleprompter: () => ipcRenderer.send('teleprompter:hide'),
     toggleTeleprompterVisibility: () => ipcRenderer.send('teleprompter:toggle-visibility'),
     setTeleprompterSession: (context) => ipcRenderer.send('teleprompter:set-session', context),
+    getTeleprompterResumeState: () => ipcRenderer.invoke('teleprompter:resume-state'),
+    onTeleprompterSuspend: (listener) => {
+      const callback = (_event, id) => listener(id);
+      ipcRenderer.on('teleprompter:suspend', callback);
+      return () => ipcRenderer.removeListener('teleprompter:suspend', callback);
+    },
+    acknowledgeTeleprompterSuspend: (id, state) => ipcRenderer.send('teleprompter:suspended', id, state),
     notifyTeleprompterReady: () => ipcRenderer.send('teleprompter:ready'),
     onTeleprompterShortcut: (listener) => {
       const callback = (_event, id) => listener(id);

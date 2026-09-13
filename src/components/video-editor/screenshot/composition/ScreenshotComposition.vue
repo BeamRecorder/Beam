@@ -49,8 +49,9 @@ watch(compact, (value) => {
   if (value) collapsed.value = true;
 });
 const list = ref<HTMLElement | null>(null);
-const thumbnails = useLayerThumbnails(() =>
-  props.state ? screenshotThumbnailSpecs(props.state, props.source, props.cursorPacks ?? []) : [],
+const thumbnails = useLayerThumbnails(
+  () => (props.state ? screenshotThumbnailSpecs(props.state, props.source, props.cursorPacks ?? []) : []),
+  () => !collapsed.value,
 );
 const front = computed(() => [...props.layers].reverse());
 const { preview, dragging, begin } = useScreenshotLayerReorder(

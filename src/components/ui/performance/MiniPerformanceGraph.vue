@@ -207,6 +207,17 @@ function onValuesUpdate() {
     animationFrame = null;
   }
 
+  const flat = nextSamples.length > 0 && nextSamples.every((value) => value === nextSamples[0]);
+  const sameFlat = flat && activeSamples.length > 0 && activeSamples.every((value) => value === nextSamples[0]);
+  if (flat) {
+    activeSampleTimestamp = hasTimestamp ? props.sampleTimestamp : undefined;
+    activeSamples = nextSamples;
+    slideOffsetProgress = 1;
+    // Scrolling a horizontal line produces identical pixels at every frame.
+    if (!sameFlat) draw(activeSamples, 1);
+    return;
+  }
+
   const duration = props.animationMs ?? 500;
   activeSampleTimestamp = hasTimestamp ? props.sampleTimestamp : undefined;
 

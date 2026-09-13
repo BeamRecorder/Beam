@@ -18,9 +18,10 @@ export function createThumbnailWorker(post: (reply: ThumbnailReply) => void) {
         if (request.bitmap && request.cursorAsset)
           assets.cursors = new Map([[request.id, { image: request.bitmap, asset: request.cursorAsset }]]);
         if (request.sourceUrl) {
-          const image = await loadImage(request.sourceUrl);
+          const asset = await loadImage(request.sourceUrl);
+          const { image } = asset;
           if (request.layer.kind === 'image')
-            Object.assign(assets, { image, width: image.width, height: image.height });
+            Object.assign(assets, { ...asset, rasterSize: { width: image.width, height: image.height } });
           else if (request.layer.kind === 'background') assets.background = image;
           else if (request.layer.kind === 'watermark') assets.logo = image;
         }

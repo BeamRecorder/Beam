@@ -1,6 +1,11 @@
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { capture } from '~/api/capture';
-import type { TeleprompterDocument, TeleprompterSessionContext, TeleprompterSettings } from './teleprompter-types';
+import type {
+  TeleprompterViewState,
+  TeleprompterDocument,
+  TeleprompterSessionContext,
+  TeleprompterSettings,
+} from './teleprompter-types';
 import {
   clampTeleprompterLine,
   createDefaultTeleprompterDocument,
@@ -25,6 +30,8 @@ export function useTeleprompter() {
   let preferencesSaveTimer: ReturnType<typeof setTimeout> | null = null;
   let lineTimer: ReturnType<typeof setTimeout> | null = null;
   let settingsRevision = 0;
+  let visible = true;
+  let resumeScrollTop: number | null = null;
 
   const settingsFromDocument = (): TeleprompterSettings => ({
     mode: document.value.mode,
@@ -143,6 +150,7 @@ export function useTeleprompter() {
   const scheduleLineAdvance = () => {
     cancelLineTimer();
     if (
+      !visible ||
       !document.value.autoscroll ||
       isPaused.value ||
       document.value.mode !== 'line-by-line' ||
@@ -158,7 +166,7 @@ export function useTeleprompter() {
 
   const tick = (now: number) => {
     frame = null;
-    if (!document.value.autoscroll || isPaused.value || document.value.mode !== 'continuous') return;
+    if (!visible || !document.value.autoscroll || isPaused.value || document.value.mode !== 'continuous') return;
     const element = displayRef.value;
     if (!element) {
       frame = window.requestAnimationFrame(tick);
@@ -174,7 +182,7 @@ export function useTeleprompter() {
   const startAutoscroll = () => {
     cancelFrame();
     cancelLineTimer();
-    if (!document.value.autoscroll || isPaused.value) return;
+    if (!visible || !document.value.autoscroll || isPaused.value) return;
     if (document.value.mode === 'continuous') frame = window.requestAnimationFrame(tick);
     else scheduleLineAdvance();
   };
@@ -224,7 +232,13 @@ export function useTeleprompter() {
 
   const setDisplayElement = (element: HTMLElement | null) => {
     displayRef.value = element;
-    if (element) startAutoscroll();
+    if (element) {
+      if (resumeScrollTop !== null) {
+        element.scrollTo({ top: resumeScrollTop, behavior: 'instant' });
+        resumeScrollTop = null;
+      }
+      startAutoscroll();
+    }
   };
   watch(
     () => document.value.mode,
@@ -251,7 +265,49 @@ export function useTeleprompter() {
     void savePreferences();
   });
 
+  const setVisible = (value: boolean) => {
+    visible = value;
+    startAutoscroll();
+  };
+  const suspendState = async (): Promise<TeleprompterViewState> => {
+    setVisible(false);
+    await preferencesReady;
+    if (saveTimer) clearTimeout(saveTimer);
+    if (preferencesSaveTimer) clearTimeout(preferencesSaveTimer);
+    saveTimer = null;
+    preferencesSaveTimer = null;
+    await Promise.all([save(), savePreferences()]);
+    return {
+      document: { ...document.value },
+      session: session.value ? { ...session.value } : null,
+      activeLine: activeLine.value,
+      scrollTop: displayRef.value?.scrollTop ?? resumeScrollTop ?? 0,
+      isEditing: isEditing.value,
+      isPaused: isPaused.value,
+      error: error.value,
+    };
+  };
+  const restoreState = async (state: TeleprompterViewState) => {
+    await preferencesReady;
+    settingsRevision += 1;
+    document.value = state.document;
+    session.value = state.session;
+    isEditing.value = state.isEditing;
+    isPaused.value = state.isPaused;
+    error.value = state.error;
+    // Let mode/text watchers settle before restoring the reader's exact location.
+    await nextTick();
+    activeLine.value = clampTeleprompterLine(state.activeLine, lines.value.length);
+    resumeScrollTop = state.scrollTop;
+    if (displayRef.value) {
+      displayRef.value.scrollTo({ top: state.scrollTop, behavior: 'instant' });
+      resumeScrollTop = null;
+    }
+  };
   return {
+    setVisible,
+    suspendState,
+    restoreState,
     document,
     session,
     lines,

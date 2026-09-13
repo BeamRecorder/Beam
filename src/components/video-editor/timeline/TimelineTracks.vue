@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ReorderGroup from '~/ui/transitions/ReorderGroup.vue';
 import TimelineClip from './TimelineClip.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useTimelineTracks } from './composables/useTimelineTracks';
@@ -238,7 +239,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
             @preview="previewCanvasTransitions"
             @update="updateCanvasTransitions"
           />
-          <TransitionGroup name="track-reorder" tag="div" class="visual-tracks-group">
+          <ReorderGroup :order="visualTracks.map((track) => track.id)" class="visual-tracks-group">
             <div
               v-for="track in visualTracks"
               :key="track.id"
@@ -291,7 +292,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 />
               </div>
             </div>
-          </TransitionGroup>
+          </ReorderGroup>
           <div class="track-row cursor-track" @contextmenu="openTrackContextMenu($event, 'zoom')">
             <div
               class="track-content cursor-content"

@@ -35,3 +35,9 @@ export interface PixelBounds {
   width: number;
   height: number;
 }
+
+export interface ThumbnailImageAsset {
+  image: ImageBitmap;
+  width: number;
+  height: number;
+}

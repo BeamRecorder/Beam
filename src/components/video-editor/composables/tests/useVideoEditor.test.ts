@@ -34,7 +34,6 @@ const state = vi.hoisted(() => ({
     | undefined,
   useVideoPlayer: vi.fn(),
   createCompositionSnapshot: vi.fn(),
-  compositionDurationMs: vi.fn(),
 }));
 
 vi.mock('../../../../api/capture', () => ({ capture }));
@@ -89,6 +88,7 @@ vi.mock('../useProjectZoom', async () => {
       const value = {
         zoomElements: ref([]),
         generatedSessions: ref([]),
+        selectedZoomId: ref(null),
         ensureAutomaticZooms: vi.fn(),
       };
       state.zoomState = value;
@@ -145,7 +145,16 @@ vi.mock('../../../export/composition/snapshot', () => ({
 import { useVideoEditor } from '../useVideoEditor';
 
 const project = { id: 'project-1', name: 'Demo project' } as any;
-const makeEditorData = () => ({ tracks: [{ kind: 'screen', format: { frameRate: 60 } }] }) as any;
+const makeEditorData = (fps = 60) => ({ tracks: [{ kind: 'screen', format: { frameRate: fps } }] }) as any;
+const deferred = <T>() => {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+};
 
 describe('useVideoEditor', () => {
   beforeEach(() => {
@@ -158,7 +167,6 @@ describe('useVideoEditor', () => {
     capture.onCursorPacksChanged.mockReturnValue(() => undefined);
     capture.getEditorPresets.mockResolvedValue({ schemaVersion: 1, activePresetId: 'default', presets: [] });
     capture.onEditorPresetsChanged.mockReturnValue(() => undefined);
-    state.compositionDurationMs.mockReturnValue(2000);
   });
 
   afterEach(() => {
@@ -178,16 +186,25 @@ describe('useVideoEditor', () => {
     expect(state.videoElementsOptions?.addImage).toBeTypeOf('function');
     await state.videoElementsOptions!.addImage!();
     expect(state.compositionState.addElement).toHaveBeenCalledWith('image');
+    state.zoomState.selectedZoomId.value = 'zoom-1';
+    state.videoElementsOptions!.clearZoom();
+    expect(state.zoomState.selectedZoomId.value).toBeNull();
     state.compositionState.addElement.mockRejectedValueOnce(new Error('Image unreadable'));
     await state.videoElementsOptions!.addImage!();
     expect(toast.error).toHaveBeenCalledWith('Error: Image unreadable');
     wrapper.unmount();
   });
 
-  it('initializes dependencies, synchronizes source/project changes and builds export data', async () => {
+  it('exposes cheap live export metadata and creates snapshots only when requested', async () => {
     let api!: ReturnType<typeof useVideoEditor>;
     const projectRef = ref(project);
     const editorData = ref(makeEditorData());
+    const initialComposition = createCompositionFixture();
+    const screenClip = initialComposition.clips.find((clip) => clip.id === 'screen')!;
+    screenClip.timelineDurationMs = 2_000;
+    screenClip.sourceDurationMs = 2_000;
+    initialComposition.clips = [screenClip];
+    state.initialComposition = initialComposition;
     const Harness = defineComponent({
       setup: () => ((api = useVideoEditor({ project: projectRef, editorData })), {}),
       template: '<div />',
@@ -200,8 +217,14 @@ describe('useVideoEditor', () => {
     expect(capture.onBackgroundLibraryChanged).toHaveBeenCalledOnce();
     expect(api.exportRequest.value).toMatchObject({
       projectName: 'Demo project',
-      snapshot: { snapshot: true },
+      includeAudio: true,
+      duration: 2,
+      fps: 60,
+      width: 1920,
+      height: 1080,
     });
+    expect(state.createCompositionSnapshot).not.toHaveBeenCalled();
+    api.exportRequest.value!.createSnapshot();
     expect(state.createCompositionSnapshot).toHaveBeenCalledWith(
       expect.objectContaining({
         fps: 60,
@@ -218,7 +241,7 @@ describe('useVideoEditor', () => {
       springMassMultiplier: 0.5,
       motionBlur: 0,
     };
-    void api.exportRequest.value;
+    api.exportRequest.value!.createSnapshot();
     expect(state.createCompositionSnapshot).toHaveBeenLastCalledWith(
       expect.objectContaining({
         cursorSettings: expect.objectContaining({
@@ -235,7 +258,30 @@ describe('useVideoEditor', () => {
       }),
     );
 
+    api.outputCanvas.value = { ...api.outputCanvas.value, width: 1280, height: 720 };
+    api.includeAudioInExport.value = false;
+    editorData.value = makeEditorData(24);
     state.compositionState.composition.value = createCompositionFixture();
+    await wrapper.vm.$nextTick();
+
+    expect(api.exportRequest.value).toMatchObject({
+      includeAudio: false,
+      duration: 5,
+      fps: 24,
+      width: 1280,
+      height: 720,
+    });
+    expect(state.createCompositionSnapshot).toHaveBeenCalledTimes(2);
+    api.exportRequest.value!.createSnapshot();
+    expect(state.createCompositionSnapshot).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        duration: 5,
+        fps: 24,
+        canvas: expect.objectContaining({ width: 1280, height: 720 }),
+        composition: state.compositionState.composition.value,
+      }),
+    );
+
     api.handleSelectTab('zoom');
     await wrapper.vm.$nextTick();
     await flushPromises();
@@ -296,6 +342,59 @@ describe('useVideoEditor', () => {
       copyText: 'invalid editor payload',
       detail: 'invalid editor payload',
     });
+    wrapper.unmount();
+  });
+
+  it('ignores a slow preset load after switching to a newer project', async () => {
+    const slowPresetLoad = deferred<any>();
+    capture.getEditorPresets.mockReturnValueOnce(slowPresetLoad.promise).mockResolvedValueOnce({
+      schemaVersion: 1,
+      activePresetId: 'default',
+      presets: [],
+    });
+    const projectRef = ref({ ...project, id: 'project-slow' });
+    const editorData = ref(makeEditorData());
+    const Harness = defineComponent({
+      setup: () => useVideoEditor({ project: projectRef, editorData }),
+      template: '<div />',
+    });
+    const wrapper = mount(Harness);
+
+    projectRef.value = { ...project, id: 'project-current' };
+    await flushPromises();
+    expect(state.editorState.load).toHaveBeenCalledWith('project-current');
+
+    slowPresetLoad.resolve({ schemaVersion: 1, activePresetId: 'default', presets: [] });
+    await flushPromises();
+
+    expect(state.editorState.load).not.toHaveBeenCalledWith('project-slow');
+    expect(state.editorState.enableDefaultCapture).toHaveBeenCalledOnce();
+    wrapper.unmount();
+  });
+
+  it('does not enable defaults from an editor-state load superseded by a project switch', async () => {
+    const staleStateLoad = deferred<void>();
+    const projectRef = ref({ ...project, id: 'project-slow-state' });
+    const editorData = ref(makeEditorData());
+    const Harness = defineComponent({
+      setup: () => useVideoEditor({ project: projectRef, editorData }),
+      template: '<div />',
+    });
+    const wrapper = mount(Harness);
+    state.editorState.load.mockImplementation((id: string) =>
+      id === 'project-slow-state' ? staleStateLoad.promise : Promise.resolve(),
+    );
+    await flushPromises();
+    expect(state.editorState.load).toHaveBeenCalledWith('project-slow-state');
+
+    projectRef.value = { ...project, id: 'project-latest-state' };
+    await flushPromises();
+    expect(state.editorState.load).toHaveBeenCalledWith('project-latest-state');
+    expect(state.editorState.enableDefaultCapture).toHaveBeenCalledOnce();
+
+    staleStateLoad.resolve();
+    await flushPromises();
+    expect(state.editorState.enableDefaultCapture).toHaveBeenCalledOnce();
     wrapper.unmount();
   });
 
@@ -388,6 +487,42 @@ describe('useVideoEditor', () => {
     wrapper.unmount();
   });
 
+  it('uses full volume when the recording has no system or microphone clips', async () => {
+    const { api, wrapper } = await mountWithComposition();
+
+    expect(api.systemVolume.value).toBe(100);
+    expect(api.micVolume.value).toBe(100);
+    wrapper.unmount();
+  });
+
+  it('uses the screen FPS field when frameRate is absent and falls back for invalid metadata', async () => {
+    const projectRef = ref(project);
+    const sourceData = ref({ tracks: [] } as any);
+    let sourceApi!: ReturnType<typeof useVideoEditor>;
+    const Harness = defineComponent({
+      setup: () => ((sourceApi = useVideoEditor({ project: projectRef, editorData: sourceData })), {}),
+      template: '<div />',
+    });
+    const sourceWrapper = mount(Harness);
+    await flushPromises();
+    expect(sourceApi.exportRequest.value?.fps).toBe(30);
+
+    sourceData.value = { tracks: [{ kind: 'screen', format: { fps: 48 } }] } as any;
+    await sourceWrapper.vm.$nextTick();
+    expect(sourceApi.exportRequest.value?.fps).toBe(48);
+
+    sourceData.value = { tracks: [{ kind: 'screen', format: { frameRate: 0, fps: 24 } }] } as any;
+    await sourceWrapper.vm.$nextTick();
+    expect(sourceApi.exportRequest.value?.fps).toBe(30);
+    sourceData.value = { tracks: [{ kind: 'screen', format: { frameRate: Number.NaN } }] } as any;
+    await sourceWrapper.vm.$nextTick();
+    expect(sourceApi.exportRequest.value?.fps).toBe(30);
+    sourceData.value = { tracks: [{ kind: 'audio', format: { frameRate: 30 } }] } as any;
+    await sourceWrapper.vm.$nextTick();
+    expect(sourceApi.exportRequest.value?.fps).toBe(30);
+    sourceWrapper.unmount();
+  });
+
   it.each(visualMutations)('keeps the loaded media for a visual-only %s mutation', async (_name, mutate) => {
     const { wrapper } = await mountWithComposition();
     const next = cloneComposition(state.compositionState.composition.value);
@@ -415,12 +550,13 @@ describe('useVideoEditor', () => {
 
   it('refreshes the background library from the native subscription and tolerates failures', async () => {
     let refresh!: () => void;
+    const unsubscribe = vi.fn();
     capture.listBackgroundLibrary
       .mockRejectedValueOnce(new Error('library unavailable'))
       .mockResolvedValueOnce([{ id: 'later' }]);
     capture.onBackgroundLibraryChanged.mockImplementation((listener) => {
       refresh = listener;
-      return vi.fn();
+      return unsubscribe;
     });
     const projectRef = ref(null);
     const editorData = ref(null);
@@ -434,5 +570,74 @@ describe('useVideoEditor', () => {
     await flushPromises();
     expect(state.player.setUserBackgrounds).toHaveBeenCalledWith([{ id: 'later' }]);
     wrapper.unmount();
+    expect(unsubscribe).toHaveBeenCalledOnce();
+  });
+
+  it('retries camera-pack discovery from its subscription and releases the listener', async () => {
+    let refresh!: () => void;
+    const unsubscribe = vi.fn();
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    capture.listCursorPacks
+      .mockRejectedValueOnce(new Error('camera packs unavailable'))
+      .mockResolvedValueOnce([{ id: 'camera-pack' }]);
+    capture.onCursorPacksChanged.mockImplementation((listener) => {
+      refresh = listener;
+      return unsubscribe;
+    });
+    const Harness = defineComponent({
+      setup: () => useVideoEditor({ project: ref(null), editorData: ref(null) }),
+      template: '<div />',
+    });
+    const wrapper = mount(Harness);
+    await flushPromises();
+
+    expect(consoleError).toHaveBeenCalledWith('Failed to load cursor packs.');
+    refresh();
+    await flushPromises();
+    expect(state.cursor.importedPacks.value).toEqual([{ id: 'camera-pack' }]);
+
+    wrapper.unmount();
+    expect(unsubscribe).toHaveBeenCalledOnce();
+    consoleError.mockRestore();
+  });
+
+  it('suppresses a stale playback failure after a newer composition load succeeds', async () => {
+    const { wrapper } = await mountWithComposition();
+    const staleLoad = deferred<void>();
+    const failure = new Error('old media decode failed');
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    state.player.loadComposition.mockImplementationOnce(() => staleLoad.promise).mockResolvedValueOnce(undefined);
+
+    const first = cloneComposition(state.compositionState.composition.value);
+    first.clips.find((clip: { id: string }) => clip.id === 'imported-video')!.timelineStartMs += 100;
+    state.compositionState.composition.value = first;
+    await flushCompositionWatcher(wrapper);
+    const second = cloneComposition(first);
+    second.clips.find((clip: { id: string }) => clip.id === 'imported-video')!.timelineStartMs += 100;
+    state.compositionState.composition.value = second;
+    await flushCompositionWatcher(wrapper);
+
+    staleLoad.reject(failure);
+    await flushPromises();
+    expect(consoleError).not.toHaveBeenCalled();
+    wrapper.unmount();
+    consoleError.mockRestore();
+  });
+
+  it('reports a current playback failure instead of swallowing it as a stale load', async () => {
+    const { wrapper } = await mountWithComposition();
+    const failure = new Error('current video decode failed');
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    state.player.loadComposition.mockRejectedValueOnce(failure);
+
+    const next = cloneComposition(state.compositionState.composition.value);
+    next.clips.find((clip: { id: string }) => clip.id === 'imported-video')!.sourceInMs += 250;
+    state.compositionState.composition.value = next;
+    await flushCompositionWatcher(wrapper);
+
+    expect(consoleError).toHaveBeenCalledWith(expect.stringContaining('composition watcher load failed'));
+    expect(consoleError.mock.calls[0]?.[0]).toContain('current video decode failed');
+    wrapper.unmount();
+    consoleError.mockRestore();
   });
 });

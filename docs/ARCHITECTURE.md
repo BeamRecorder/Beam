@@ -59,6 +59,15 @@ Rust owns capture lifecycle, native permissions, source discovery, clocks, track
 - Timeline thumbnails share two workers and a source-time cache per asset ID/URL within an editor's media-processing collector. Coalesce the union of visible requests, reuse pending frames, and retain every subscriber's visible times. Empty aggregate viewports stop workers while keeping cached URLs; the final subscriber releases the cache too. Late responses must not revive a disposed source, and changing one clip's source must not clear another clip's cache.
 - Detach iterator/queue ownership before asynchronous cleanup. Configuration changes validate first and check their version after cleanup, then commit the consumer map and interval index together. Disposal invalidates pending window preparation so it cannot recreate released sinks.
 
+## Idle editor and export ownership
+
+- The export popover receives cheap project metadata and a snapshot factory. Materialize an immutable export request only when the user starts an export; property edits must not rebuild cursor telemetry for the popover.
+- The preview performance monitor runs while playback, media work, export or user interaction is active. An idle or hidden editor owns no monitoring animation frame or sample interval. Resume with fresh timing baselines; a flat performance graph does not animate identical samples.
+- Timeline row reordering uses `ui/transitions/ReorderGroup.vue`. Measure row positions only when their IDs change order or membership, preserving move animations and reduced-motion preferences without layout reads on appearance edits.
+- Cursor artwork uses a 32-entry, 16 MiB decoded-pixel LRU. PNG cache keys ignore display size and tint, since these do not alter PNG decoding. Eviction drops the cache reference without changing images still owned by a consumer; uncached export loading remains independent.
+- Screenshot composition workers retain at most three image rasters with a 512 px longest edge. Intrinsic dimensions continue to determine framing; source crop coordinates are converted to bitmap pixels. Main previews and exports retain full-resolution sources. Collapsing Composition terminates its worker while retaining ready thumbnail URLs; reopening reconciles edits and regenerates unfinished thumbnails.
+- Screenshot encoding releases its offscreen render canvas and its owned compositing scratch canvas immediately after blob encoding, including failures. Native image validation, clipboard publication and the atomic temporary-file write remain unchanged.
+
 ## Capture modes and project categories
 
 - Persist the selected `studio`, `screenshot` or `instant` mode in `preferences.extras.captureMode`; missing preferences select Studio.

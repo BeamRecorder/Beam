@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LayerBlendMode, LayerCompositing } from '~/media/shared/layer-compositing-types';
 import type { Canvas2DContext } from '~/types/canvas';
-import { renderCompositedLayer } from '../render-composited-layer';
+import { releaseCompositedLayerSurface, renderCompositedLayer } from '../render-composited-layer';
 
 class MockContext {
   readonly canvas: { width: number; height: number };
@@ -174,6 +174,34 @@ describe('renderCompositedLayer', () => {
 
     renderCompositedLayer(outputContext() as unknown as Canvas2DContext, composited, 640, 360, draw);
     expect(surfaces).toHaveLength(2);
+  });
+
+  it('releases only its destination surface, is idempotent, and allocates a fresh surface afterward', () => {
+    const firstOutput = outputContext() as unknown as Canvas2DContext;
+    const secondOutput = outputContext() as unknown as Canvas2DContext;
+    const composited = layer({ opacity: 50, blendMode: 'multiply' });
+    const draw = vi.fn();
+
+    renderCompositedLayer(firstOutput, composited, 640, 480, draw);
+    renderCompositedLayer(secondOutput, composited, 640, 480, draw);
+    const [firstSurface, secondSurface] = surfaces;
+    expect(firstSurface).toMatchObject({ width: 640, height: 480 });
+    expect(secondSurface).toMatchObject({ width: 640, height: 480 });
+
+    releaseCompositedLayerSurface(firstOutput);
+    expect(firstSurface).toMatchObject({ width: 0, height: 0 });
+    expect(secondSurface).toMatchObject({ width: 640, height: 480 });
+    expect(() => releaseCompositedLayerSurface(firstOutput)).not.toThrow();
+    renderCompositedLayer(secondOutput, composited, 640, 480, draw);
+    expect(surfaces).toHaveLength(2);
+
+    renderCompositedLayer(firstOutput, composited, 640, 480, draw);
+    expect(surfaces).toHaveLength(3);
+    expect(surfaces[2]).not.toBe(firstSurface);
+    expect(surfaces[2]).toMatchObject({ width: 640, height: 480 });
+    expect(() => releaseCompositedLayerSurface(outputContext())).not.toThrow();
+    releaseCompositedLayerSurface(firstOutput);
+    expect(surfaces[2]).toMatchObject({ width: 0, height: 0 });
   });
 
   it('throws if the cached surface cannot provide a 2D context', () => {

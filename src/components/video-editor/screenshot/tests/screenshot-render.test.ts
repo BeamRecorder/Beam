@@ -10,6 +10,8 @@ const renderers = vi.hoisted(() => ({
   drawShapeClip: vi.fn(),
   drawBeamWatermark: vi.fn(),
 }));
+const captureApi = vi.hoisted(() => ({ listCursorPacks: vi.fn() }));
+const cursorLoad = vi.hoisted(() => ({ loadScreenshotCursors: vi.fn() }));
 
 vi.mock('../../composition/background/render-background', () => ({ renderBackground: renderers.renderBackground }));
 vi.mock('../../composition/appearance/render-decorated-media', () => ({
@@ -20,8 +22,14 @@ vi.mock('../../canvas/watermark-render', () => ({
   WATERMARK_LOGO_PATH: './brand/beam.svg',
   drawBeamWatermark: renderers.drawBeamWatermark,
 }));
+vi.mock('~/api/capture', () => ({ capture: captureApi }));
+vi.mock('../screenshot-cursors', async (importOriginal) => ({
+  ...(await importOriginal()),
+  loadScreenshotCursors: cursorLoad.loadScreenshotCursors,
+}));
 
 import { drawScreenshot, encodeScreenshot, loadScreenshotAssets, screenshotPreview } from '../screenshot-render';
+import type { ScreenshotRenderAssets } from '../screenshot-types';
 
 const image = {} as CanvasImageSource;
 const backgroundImage = {} as CanvasImageSource;
@@ -35,15 +43,25 @@ let imageLoadCount = 0;
 let imageAssignments: string[] = [];
 let imageDecodeError: Error | null = null;
 let canvasContextAvailable = true;
+let canvasConvertError: Error | null = null;
+let arrayBufferResult: Promise<ArrayBuffer> | null = null;
+let offscreenCanvases: Array<{ width: number; height: number }> = [];
 
-const context = () =>
+const context = (canvas: object = {}) =>
   ({
     clearRect: vi.fn(),
     drawImage: vi.fn(),
     save: vi.fn(),
     restore: vi.fn(),
-    canvas: {},
+    canvas,
+    globalAlpha: 1,
+    globalCompositeOperation: 'source-over',
   }) as unknown as Canvas2DContext;
+
+const expectCanvasesReleased = () => {
+  expect(offscreenCanvases.length).toBeGreaterThan(0);
+  expect(offscreenCanvases.every(({ width, height }) => width === 0 && height === 0)).toBe(true);
+};
 
 const screenshot = (overrides: Partial<ScreenshotState> = {}): ScreenshotState => ({
   canvas: {
@@ -96,6 +114,14 @@ const screenshot = (overrides: Partial<ScreenshotState> = {}): ScreenshotState =
   ...overrides,
 });
 
+const scratchComposition = () =>
+  screenshot({
+    composition: [
+      { id: 'screenshot', opacity: 50, blendMode: 'multiply', locked: false },
+      { id: '__watermark__', opacity: 100, blendMode: 'source-over', locked: false },
+    ],
+  });
+
 const assets = () => ({
   image,
   background: backgroundImage,
@@ -106,6 +132,8 @@ const assets = () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  captureApi.listCursorPacks.mockResolvedValue([]);
+  cursorLoad.loadScreenshotCursors.mockResolvedValue(undefined);
   encodeOptions = null;
   blobTypeOverride = null;
   canvasDimensions = null;
@@ -113,6 +141,9 @@ beforeEach(() => {
   imageAssignments = [];
   imageDecodeError = null;
   canvasContextAvailable = true;
+  canvasConvertError = null;
+  arrayBufferResult = null;
+  offscreenCanvases = [];
   vi.stubGlobal(
     'Image',
     class {
@@ -145,17 +176,26 @@ beforeEach(() => {
   vi.stubGlobal(
     'OffscreenCanvas',
     class {
+      width: number;
+      height: number;
+      private readonly drawingContext: Canvas2DContext | null;
+
       constructor(width: number, height: number) {
+        this.width = width;
+        this.height = height;
         canvasDimensions = [width, height];
+        offscreenCanvases.push(this);
+        this.drawingContext = canvasContextAvailable ? context(this) : null;
       }
       getContext() {
-        return canvasContextAvailable ? context() : null;
+        return this.drawingContext;
       }
       async convertToBlob(options: { type: string; quality?: number }) {
         encodeOptions = options;
+        if (canvasConvertError) throw canvasConvertError;
         return {
           type: blobTypeOverride ?? options.type,
-          arrayBuffer: async () => encodedBytes,
+          arrayBuffer: () => arrayBufferResult ?? Promise.resolve(encodedBytes),
         } as Blob;
       }
     },
@@ -274,6 +314,59 @@ describe('drawScreenshot', () => {
     expect(loaded.logo).not.toBeNull();
   });
 
+  it('loads imported composition images and default cursor packs when a cursor is enabled', async () => {
+    const base = screenshot();
+    const sticker = {
+      ...base.image,
+      id: 'sticker',
+      assetId: 'sticker-asset',
+      kind: 'image',
+      source: 'sticker.png',
+      width: 800,
+      height: 450,
+    } as NonNullable<ScreenshotState['images']>[number];
+    const cursor = {
+      id: 'cursor-1',
+      name: 'Pointer',
+      enabled: true,
+      position: { x: 0.5, y: 0.5 },
+      size: 1,
+      rotation: 0,
+      selection: { packId: 'custom-pack', mode: 'fixed', cursorId: 'pointer' },
+      color: '#000000',
+      shadowEnabled: false,
+      shadowBlur: 0,
+      shadowColor: '#000000',
+      shadowDirection: 'bottom',
+    } as NonNullable<ScreenshotState['cursors']>[number];
+    const state = screenshot({
+      images: [sticker],
+      cursors: [cursor],
+      canvas: { ...base.canvas, watermark: { ...base.canvas.watermark!, enabled: false } },
+    });
+    const customPack = { id: 'custom-pack', cursors: [] };
+    const cursorAssets = new Map([['cursor-1', { image: {} as CanvasImageSource, asset: {} }]]) as NonNullable<
+      ScreenshotRenderAssets['cursors']
+    >;
+    captureApi.listCursorPacks.mockResolvedValue([customPack]);
+    cursorLoad.loadScreenshotCursors.mockResolvedValue(cursorAssets);
+    const stickerImage = { naturalWidth: 640, naturalHeight: 360 } as HTMLImageElement;
+    const load = vi.fn(async (source: string) => (source === 'sticker.png' ? stickerImage : image) as HTMLImageElement);
+
+    const loaded = await loadScreenshotAssets('capture.png', state, undefined, load);
+
+    expect(captureApi.listCursorPacks).toHaveBeenCalledOnce();
+    expect(cursorLoad.loadScreenshotCursors).toHaveBeenCalledWith(
+      state.cursors,
+      expect.arrayContaining([customPack]),
+      state.canvas,
+    );
+    expect(loaded.cursors).toBe(cursorAssets);
+    expect(loaded.images?.get('sticker')).toEqual({ image: stickerImage, width: 640, height: 360 });
+    expect(load).toHaveBeenCalledWith('capture.png');
+    expect(load).toHaveBeenCalledWith('sticker.png');
+  });
+
   it.each([
     { enabled: false, showLogo: true },
     { enabled: true, showLogo: false },
@@ -330,6 +423,7 @@ describe('encodeScreenshot', () => {
 
     expect(canvasDimensions).toEqual([state.canvas.width, state.canvas.height]);
     expect(encodeOptions).toEqual({ type: `image/${format}`, quality });
+    expectCanvasesReleased();
   });
 
   it.each([
@@ -350,6 +444,7 @@ describe('encodeScreenshot', () => {
 
     expect(encodeOptions).toBeNull();
     expect(renderers.drawDecoratedMedia).not.toHaveBeenCalled();
+    expectCanvasesReleased();
   });
 
   it.each([
@@ -367,10 +462,23 @@ describe('encodeScreenshot', () => {
 
   it('rejects an encoder that returns a different MIME type', async () => {
     blobTypeOverride = 'image/png';
-    const state = screenshot({ format: 'webp' });
+    const state = scratchComposition();
+    state.format = 'webp';
 
     await expect(encodeScreenshot('capture.png', state)).rejects.toThrow('WEBP encoding is unavailable.');
     expect(encodeOptions).toMatchObject({ type: 'image/webp' });
+    expect(offscreenCanvases).toHaveLength(2);
+    expectCanvasesReleased();
+  });
+
+  it('releases both the render target and scratch surface when blob encoding fails', async () => {
+    canvasConvertError = new Error('encoder failed');
+
+    await expect(encodeScreenshot('capture.png', scratchComposition())).rejects.toThrow('encoder failed');
+
+    expect(encodeOptions).toMatchObject({ type: 'image/png' });
+    expect(offscreenCanvases).toHaveLength(2);
+    expectCanvasesReleased();
   });
 });
 
@@ -393,13 +501,28 @@ describe('Screenshot progress and preview', () => {
 
   it('does not encode when the rendered callback fails', async () => {
     await expect(
-      encodeScreenshot('capture.png', screenshot(), {
+      encodeScreenshot('capture.png', scratchComposition(), {
         onRendered: async () => {
           throw new Error('preview unavailable');
         },
       }),
     ).rejects.toThrow('preview unavailable');
     expect(encodeOptions).toBeNull();
+    expect(offscreenCanvases).toHaveLength(2);
+    expectCanvasesReleased();
+  });
+
+  it('releases full-size surfaces while the encoded byte promise is still pending', async () => {
+    let resolveBytes!: (value: ArrayBuffer) => void;
+    arrayBufferResult = new Promise<ArrayBuffer>((resolve) => (resolveBytes = resolve));
+    const pending = encodeScreenshot('capture.png', scratchComposition());
+
+    await vi.waitFor(() => expect(encodeOptions).toMatchObject({ type: 'image/png' }));
+
+    expect(offscreenCanvases).toHaveLength(2);
+    expectCanvasesReleased();
+    resolveBytes(encodedBytes);
+    await expect(pending).resolves.toBe(encodedBytes);
   });
 
   it.each([

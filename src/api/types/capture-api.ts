@@ -20,6 +20,7 @@ import type { CursorPresentationSettings } from './cursor-presentation';
 import type { CursorPackDescriptor, CursorPackImportResult } from './cursor-pack';
 import type {
   TeleprompterDocument,
+  TeleprompterViewState,
   TeleprompterSessionContext,
 } from '../../components/hud/teleprompter/teleprompter-types';
 import type { RecordingBarVisibility, RecordingConfiguration } from '../../components/hud/recorder/recording-types';
@@ -184,6 +185,9 @@ export interface DesktopCaptureApi extends CaptureApi, ScreenshotApi {
   hideTeleprompter(): void;
   toggleTeleprompterVisibility(): void;
   setTeleprompterSession(context: TeleprompterSessionContext | null): void;
+  getTeleprompterResumeState(): Promise<TeleprompterViewState | null>;
+  onTeleprompterSuspend(listener: (requestId: string) => void): () => void;
+  acknowledgeTeleprompterSuspend(requestId: string, state: TeleprompterViewState): void;
   notifyTeleprompterReady?: () => void;
   onTeleprompterShortcut(listener: (id: string) => void): () => void;
   onTeleprompterSession(listener: (context: TeleprompterSessionContext | null) => void): () => void;

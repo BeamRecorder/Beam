@@ -63,6 +63,17 @@ export interface ExportRequest {
   snapshot: CompositionSnapshot;
 }
 
+/** Live UI metadata; expensive, owned render data is captured only when export starts. */
+export interface EditorExportSource {
+  projectName: string;
+  includeAudio: boolean;
+  duration: number;
+  fps: number;
+  width: number;
+  height: number;
+  createSnapshot: () => CompositionSnapshot;
+}
+
 export type ExportValidationCode =
   | 'missing-asset'
   | 'unsupported-format'
