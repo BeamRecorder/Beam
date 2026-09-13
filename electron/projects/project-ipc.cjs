@@ -15,6 +15,7 @@ function registerProjectIpc(
 ) {
   const library = createProjectLibrary(projectStore, screenshotStore);
   ipcMain.handle('projects:list', () => library.list());
+  ipcMain.handle('projects:get', (_event, payload = {}) => projectStore.get(payload.projectId));
   ipcMain.handle('projects:media-url', (_event, payload = {}) => projectStore.mediaUrlFor(payload.source));
   ipcMain.handle('projects:editor-data', (_event, payload = {}) => projectStore.editorData(payload.projectId));
   ipcMain.handle('projects:editor-state', (_event, payload = {}) => projectStore.editorState(payload.projectId));

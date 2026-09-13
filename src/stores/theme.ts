@@ -146,7 +146,7 @@ export const useThemeStore = defineStore('theme', () => {
     applyAppearanceTokens();
   };
 
-  void capture
+  const ready = capture
     .getPreferences()
     .then((preferences) => {
       hydrateFromSettings(preferences.appearance, preferences.theme);
@@ -306,6 +306,7 @@ export const useThemeStore = defineStore('theme', () => {
   };
 
   return {
+    ready,
     theme,
     primaryColor,
     secondaryColor,

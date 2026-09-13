@@ -220,6 +220,7 @@ contextBridge.exposeInMainWorld(
       return () => ipcRenderer.removeListener('countdown:state', callback);
     },
     listProjects: () => ipcRenderer.invoke('projects:list'),
+    getProject: (projectId) => ipcRenderer.invoke('projects:get', { projectId }),
     projectMediaUrl: (source) => ipcRenderer.invoke('projects:media-url', { source }),
     getProjectEditorData: (projectId) => ipcRenderer.invoke('projects:editor-data', { projectId }),
     getProjectEditorState: (projectId) => ipcRenderer.invoke('projects:editor-state', { projectId }),

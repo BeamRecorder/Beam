@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, ref, shallowRef, type Component } from 'vue';
 import { capture } from '~/api/capture';
 import type { CaptureProject, PreferenceSettings, ProjectEditorData } from '~/api/types/capture-api';
 import type { RecordingConfiguration } from '~/components/hud/recorder/recording-types';
@@ -8,8 +8,8 @@ import ToastProvider from '~/components/ui/toast/ToastProvider.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { clampTimelineHeight, DEFAULT_TIMELINE_HEIGHT } from './composables/useTimelineResize';
 import EditorProjectLoadingOverlay from './EditorProjectLoadingOverlay.vue';
-import VideoEditor from './VideoEditor.vue';
-import ScreenshotEditor from './screenshot/ScreenshotEditor.vue';
+const VideoEditor = shallowRef<Component>();
+const ScreenshotEditor = shallowRef<Component>();
 const screenshotId = ref<string | null>(null);
 
 const project = ref<CaptureProject | null>(null);
@@ -65,13 +65,15 @@ const loadProject = async (projectId: string) => {
   error.value = '';
   try {
     capture.reportEditorLoadingStage('loadingProject');
-    const projects = await capture.listProjects();
-    const nextProject =
-      projects.find((candidate) => candidate.id === projectId && candidate.mode !== 'screenshot') ?? null;
-    if (!nextProject) throw new Error('Project not found');
     capture.reportEditorLoadingStage('loadingTimeline');
-    const nextEditorData = await capture.getProjectEditorData(projectId);
+    const [nextProject, nextEditorData, editor] = await Promise.all([
+      capture.getProject(projectId),
+      capture.getProjectEditorData(projectId),
+      import('./VideoEditor.vue'),
+    ]);
     if (generation !== loadGeneration) return;
+    if (!nextProject || nextProject.mode === 'screenshot') throw new Error('Project not found');
+    VideoEditor.value = editor.default;
     project.value = nextProject;
     editorData.value = nextEditorData;
     editorGeneration.value = generation;
@@ -85,13 +87,27 @@ const loadProject = async (projectId: string) => {
 };
 
 const loadContext = async (context: { projectId: string; kind?: 'screenshot' }) => {
-  screenshotId.value = context.kind === 'screenshot' ? context.projectId : null;
-  if (screenshotId.value) {
-    project.value = null;
-    loading.value = false;
+  if (context.kind === 'screenshot') {
+    const generation = ++loadGeneration;
+    loading.value = true;
     error.value = '';
-    loadGeneration++;
-  } else await loadProject(context.projectId);
+    try {
+      const editor = await import('./screenshot/ScreenshotEditor.vue');
+      if (generation !== loadGeneration) return;
+      ScreenshotEditor.value = editor.default;
+      screenshotId.value = context.projectId;
+      project.value = null;
+      editorData.value = null;
+    } catch (reason) {
+      if (generation !== loadGeneration) return;
+      error.value = reason instanceof Error ? reason.message : String(reason);
+    } finally {
+      if (generation === loadGeneration) loading.value = false;
+    }
+  } else {
+    screenshotId.value = null;
+    await loadProject(context.projectId);
+  }
 };
 const screenshotReady = async () => {
   if (!screenshotId.value || nativeEditorReadyNotified) return;

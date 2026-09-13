@@ -19,7 +19,16 @@ function fixture(t) {
   const pending = screenshots.create();
   fs.writeFileSync(pending.path, 'original image');
   const screenshot = screenshots.complete(pending.id, { width: 1200, height: 800 }, {});
-  return { root, videos, screenshots, studio, quick, screenshot, library: createProjectLibrary(videos, screenshots) };
+  return {
+    root,
+    videos,
+    instant,
+    screenshots,
+    studio,
+    quick,
+    screenshot,
+    library: createProjectLibrary(videos, screenshots),
+  };
 }
 
 test('lists every mode chronologically with image thumbnails and no image video preview', (t) => {
@@ -106,3 +115,66 @@ test('old screenshot documents obtain dates from metadata and retain creation ti
   assert.throws(() => screenshots.rename(screenshot.id, 'a'.repeat(201)), /name/);
   assert.equal(screenshots.read(screenshot.id).name, 'Legacy');
 });
+
+test('gets Studio and Instant projects by ID and does not scan screenshot documents', (t) => {
+  const { videos, instant, screenshots, studio, quick, screenshot } = fixture(t);
+  const originalList = screenshots.list;
+  let screenshotListCalls = 0;
+  screenshots.list = (...args) => {
+    screenshotListCalls += 1;
+    return originalList(...args);
+  };
+
+  assert.deepEqual(videos.get(studio.id), expectProject(studio, 'studio'));
+  assert.deepEqual(instant.get(quick.id), expectProject(quick, 'instant'));
+  assert.throws(() => videos.get('not-a-project-id'), /identifiant.*invalide/i);
+  assert.throws(() => videos.get('00000000-0000-0000-0000-000000000000'), /introuvable/i);
+  assert.throws(() => videos.get(screenshot.id), /introuvable/i);
+  assert.equal(screenshotListCalls, 0);
+});
+
+test('projects:get delegates one ID lookup to the project store without listing screenshots', (t) => {
+  const { videos, screenshots, studio } = fixture(t);
+  const handlers = new Map();
+  let screenshotListCalls = 0;
+  const originalList = screenshots.list;
+  screenshots.list = (...args) => {
+    screenshotListCalls += 1;
+    return originalList(...args);
+  };
+  registerProjectIpc(
+    { handle: (name, callback) => handlers.set(name, callback) },
+    videos,
+    {},
+    {},
+    {},
+    {},
+    () => true,
+    {},
+    screenshots,
+  );
+
+  const project = handlers.get('projects:get')({}, { projectId: studio.id });
+
+  assert.deepEqual(project, videos.get(studio.id));
+  assert.equal(project.mode, 'studio');
+  assert.equal(screenshotListCalls, 0);
+});
+
+function expectProject(project, mode) {
+  return {
+    id: project.id,
+    name: project.name,
+    createdAt: project.createdAt,
+    updatedAt: project.updatedAt,
+    mode,
+    sessionCount: 0,
+    previewSrc: null,
+    thumbnailSrc: null,
+    hasScreen: false,
+    hasCamera: false,
+    hasCaption: false,
+    hasSystemAudio: false,
+    hasMicrophone: false,
+  };
+}

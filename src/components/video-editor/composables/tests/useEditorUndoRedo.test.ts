@@ -191,6 +191,89 @@ describe('useEditorUndoRedo', () => {
     wrapper.unmount();
   });
 
+  it('keeps hydrated history isolated by default', () => {
+    let api!: ReturnType<typeof useEditorUndoRedo<EditorStateSnapshot>>;
+    const Harness = defineComponent({
+      setup: () => ((api = useEditorUndoRedo({ onRestoreSnapshot: () => undefined })), {}),
+      template: '<div />',
+    });
+    const wrapper = mount(Harness);
+    const initial = snapshot(2);
+    const history = { version: 1 as const, undo: [snapshot(1), initial], redo: [snapshot(3)] };
+
+    api.initialize(initial, history);
+
+    expect(api.undoStack.value).not.toBe(history.undo);
+    expect(api.undoStack.value[0]).not.toBe(history.undo[0]);
+    expect(api.redoStack.value).not.toBe(history.redo);
+    expect(api.redoStack.value[0]).not.toBe(history.redo[0]);
+    history.undo[0]!.backgroundBlurPercent = 80;
+    expect(api.undoStack.value[0]!.backgroundBlurPercent).toBe(1);
+    api.redoStack.value[0]!.backgroundBlurPercent = 90;
+    expect(history.redo[0]!.backgroundBlurPercent).toBe(3);
+
+    wrapper.unmount();
+  });
+
+  it('takes ownership of validated history without copying it and still clones restored snapshots', async () => {
+    const restored: EditorStateSnapshot[] = [];
+    let api!: ReturnType<typeof useEditorUndoRedo<EditorStateSnapshot>>;
+    const Harness = defineComponent({
+      setup: () => (
+        (api = useEditorUndoRedo({
+          onRestoreSnapshot: (value) => {
+            restored.push(value);
+          },
+        })),
+        {}
+      ),
+      template: '<div />',
+    });
+    const wrapper = mount(Harness);
+    const initial = snapshot(2);
+    const previous = snapshot(1);
+    const future = snapshot(3);
+    const history = { version: 1 as const, undo: [previous, initial], redo: [future] };
+
+    api.initialize(initial, history, 'transfer');
+
+    expect(api.undoStack.value).toBe(history.undo);
+    expect(api.redoStack.value).toBe(history.redo);
+    expect(api.undoStack.value[0]).toBe(previous);
+    expect(api.redoStack.value[0]).toBe(future);
+
+    await api.undo();
+
+    expect(restored).toHaveLength(1);
+    expect(restored[0]).not.toBe(previous);
+    restored[0]!.backgroundBlurPercent = 99;
+    expect(previous.backgroundBlurPercent).toBe(1);
+
+    wrapper.unmount();
+  });
+
+  it('falls back to an isolated initial snapshot when transferred history is invalid', () => {
+    let api!: ReturnType<typeof useEditorUndoRedo<EditorStateSnapshot>>;
+    const Harness = defineComponent({
+      setup: () => ((api = useEditorUndoRedo({ onRestoreSnapshot: () => undefined })), {}),
+      template: '<div />',
+    });
+    const wrapper = mount(Harness);
+    const initial = snapshot(2);
+    const invalid = { version: 1 as const, undo: [snapshot(1)], redo: [snapshot(3)] };
+
+    api.initialize(initial, invalid, 'transfer');
+
+    expect(api.undoStack.value).toHaveLength(1);
+    expect(api.undoStack.value[0]).toEqual(initial);
+    expect(api.undoStack.value[0]).not.toBe(initial);
+    expect(api.redoStack.value).toEqual([]);
+    api.undoStack.value[0]!.backgroundBlurPercent = 99;
+    expect(initial.backgroundBlurPercent).toBe(2);
+
+    wrapper.unmount();
+  });
+
   it('maps Ctrl/Cmd shortcuts and ignores editable fields', async () => {
     let api!: ReturnType<typeof useEditorUndoRedo<EditorStateSnapshot>>;
     const Harness = defineComponent({

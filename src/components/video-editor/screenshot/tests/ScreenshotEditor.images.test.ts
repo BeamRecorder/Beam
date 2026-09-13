@@ -266,6 +266,11 @@ describe('ScreenshotEditor imported image layers', () => {
     const reopened = mountEditor();
     await flushPromises();
     expect(canvasState(reopened).images).toContainEqual(expect.objectContaining({ id: importedId, source: asset.src }));
+    const reopenedProject = reopened
+      .findComponent({ name: 'VideoProjectEdition' })
+      .props('project') as ScreenshotDocument;
+    expect(reopenedProject.state).toBeNull();
+    expect(reopenedProject.history).toBeUndefined();
     await reopened.get('[aria-label="Redo (Ctrl+Y)"]').trigger('click');
     await flushPromises();
     expect(canvasState(reopened).images).toEqual([]);

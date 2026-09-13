@@ -10,6 +10,7 @@ import type { ProjectPickerProps, ProjectPickerEmit } from './project-picker-typ
 
 export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerEmit) {
   const { t } = useTranslate('ProjectPicker');
+  const dateFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' });
 
   let cachedProjects: CaptureProject[] | null = null;
 
@@ -114,7 +115,7 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
     isSearchOpen.value = !isSearchOpen.value;
     if (isSearchOpen.value) {
       void nextTick(() => {
-        searchInputRef.value?.focus();
+        if (isSearchOpen.value) searchInputRef.value?.inputRef?.focus({ preventScroll: true });
       });
     } else {
       searchQuery.value = '';
@@ -123,7 +124,7 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
 
   const clearSearch = () => {
     searchQuery.value = '';
-    searchInputRef.value?.focus();
+    searchInputRef.value?.inputRef?.focus({ preventScroll: true });
   };
 
   const handleSearchKeydown = (event: KeyboardEvent) => {
@@ -264,7 +265,7 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
   const formatDate = (date: string) => {
     const parsedDate = new Date(date);
     if (Number.isNaN(parsedDate.getTime())) return t('dateUnknown');
-    return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(parsedDate);
+    return dateFormatter.format(parsedDate);
   };
 
   const handleProjectOpen = (project: CaptureProject) => {

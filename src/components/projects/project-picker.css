@@ -52,6 +52,59 @@
   color: var(--color-success) !important;
 }
 
+.project-picker-body {
+  --project-tools-offset: 44px;
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.compact .project-picker-body {
+  --project-tools-offset: 36px;
+}
+
+.project-results {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  transform: translate3d(0, 0, 0);
+  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.has-tools .project-results {
+  /* Resize once; only the translation animates, so the virtual list does not
+     recalculate its range and scroll shadows on every animation frame. */
+  bottom: var(--project-tools-offset);
+  transform: translate3d(0, var(--project-tools-offset), 0);
+}
+
+.project-tools-enter-active,
+.project-tools-leave-active {
+  transition:
+    opacity 180ms ease,
+    transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.project-search-bar,
+.project-selection-bar {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .project-results,
+  .project-tools-enter-active,
+  .project-tools-leave-active {
+    transition: none;
+  }
+}
+
 .project-selection-bar {
   flex-shrink: 0;
   display: flex;
@@ -208,4 +261,10 @@
 .compact .project-row {
   height: 116px;
   margin-bottom: 12px;
+}
+
+.project-tools-enter-from,
+.project-tools-leave-to {
+  opacity: 0;
+  transform: translate3d(0, -8px, 0);
 }

@@ -307,13 +307,16 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
         capture.getEditorPresets('screenshot'),
       ]);
       if (current !== generation) return;
-      document.value = next;
+      // Persisted state and history move into their respective owners below.
+      // Keep only metadata here, rather than retaining a second edit history.
+      const { state: _state, history: savedHistory, ...metadata } = next;
+      document.value = { ...metadata, state: null };
       backgroundLibrary.value = library;
       presets.value = presetDocument;
       const initial = screenshotState(next, library);
       initializeScreenshotComposition(initial);
       state.value = initial;
-      history.initialize(initial, next.history);
+      history.initialize(initial, savedHistory, 'transfer');
       baseline = JSON.stringify(settings());
     } catch (reason) {
       if (current === generation) {

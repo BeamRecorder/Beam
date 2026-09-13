@@ -195,6 +195,7 @@ export interface DesktopCaptureApi extends CaptureApi, ScreenshotApi {
   ): Promise<TeleprompterDocument>;
   getSessionTeleprompter(projectId: string, sessionId: string): Promise<TeleprompterDocument | null>;
   listProjects(): Promise<CaptureProject[]>;
+  getProject(projectId: string): Promise<CaptureProject>;
   projectMediaUrl(source: string): Promise<string | null>;
   getProjectEditorData(projectId: string): Promise<ProjectEditorData | null>;
   getProjectEditorState(projectId: string): Promise<ProjectEditorState>;

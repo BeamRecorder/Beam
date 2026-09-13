@@ -1,6 +1,12 @@
 import { computed, onMounted, onUnmounted, ref, shallowRef } from 'vue';
 import type { SnapshotHistory } from '~/media/shared/editor-history-types';
-import type { EditorHistoryOptions, EditorStateSnapshot, HistoryAction, SnapshotSource } from './editor-history-types';
+import type {
+  EditorHistoryOptions,
+  EditorStateSnapshot,
+  HistoryAction,
+  SnapshotSource,
+  SnapshotOwnership,
+} from './editor-history-types';
 export type { EditorStateSnapshot, HistoryAction, HistoryActionType } from './editor-history-types';
 
 export const MAX_HISTORY_DEPTH = 50;
@@ -48,7 +54,9 @@ export function useEditorUndoRedo<T extends object = EditorStateSnapshot>(option
     } else recordImmediate(resolveSnapshot(snapshot));
   };
   const commitNow = (snapshot: T) => recordSnapshot(snapshot);
-  const initialize = (snapshot: T, history?: SnapshotHistory<T>) => {
+  // Transfer is for freshly received IPC snapshots: the caller relinquishes
+  // the history. Restoring still clones so live edits never mutate a snapshot.
+  const initialize = (snapshot: T, history?: SnapshotHistory<T>, ownership: SnapshotOwnership = 'copy') => {
     cancel();
     const valid =
       history?.version === 1 &&
@@ -57,8 +65,8 @@ export function useEditorUndoRedo<T extends object = EditorStateSnapshot>(option
       history.undo.length > 0 &&
       history.undo.length + history.redo.length <= MAX_HISTORY_DEPTH &&
       same(history.undo.at(-1), snapshot);
-    undoStack.value = valid ? clone(history.undo) : [clone(snapshot)];
-    redoStack.value = valid ? clone(history.redo) : [];
+    undoStack.value = valid ? (ownership === 'transfer' ? history.undo : clone(history.undo)) : [clone(snapshot)];
+    redoStack.value = valid ? (ownership === 'transfer' ? history.redo : clone(history.redo)) : [];
     lastAction.value = null;
   };
   const serialize = (): SnapshotHistory<T> => {

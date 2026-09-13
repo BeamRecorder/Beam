@@ -7,6 +7,7 @@ const { emptyComposition, importMedia } = require('./clip-composition.cjs');
 const { normalizeInputSidecar, recordedPlatform } = require('./input-sidecar.cjs');
 const { createDefaultPresentation, defaultZoomMotionBlur, zoomState } = require('./project-editor-state.cjs');
 const { createProjectEditorAccess } = require('./project-editor-access.cjs');
+const { createProjectSummary } = require('./project-summary.cjs');
 const { createProjectFeatureDetector } = require('./project-feature-detection.cjs');
 function createProjectStore(root, { mediaHost = 'asset', category = null } = {}) {
   const safePath = (directory, relativePath) => {
@@ -157,31 +158,7 @@ function createProjectStore(root, { mediaHost = 'asset', category = null } = {})
     return null;
   };
   const detectProjectFeatures = createProjectFeatureDetector({ safePath, sessionFileFor });
-  const summary = (directory, manifest, fallbackId) => {
-    const sessions = Array.isArray(manifest.sessions) ? manifest.sessions : [];
-    const id = typeof manifest.projectId === 'string' ? manifest.projectId : fallbackId;
-    const { hasScreen, hasCamera, hasCaption, hasSystemAudio, hasMicrophone } = detectProjectFeatures(
-      directory,
-      manifest,
-      sessions,
-    );
-    return {
-      id,
-      name:
-        typeof manifest.name === 'string' && manifest.name.trim() ? manifest.name.trim() : `Project ${id.slice(0, 8)}`,
-      createdAt: typeof manifest.createdAtUtc === 'string' ? manifest.createdAtUtc : '',
-      updatedAt: typeof manifest.updatedAtUtc === 'string' ? manifest.updatedAtUtc : '',
-      mode: category && path.dirname(directory) === path.join(root, 'instant') ? 'instant' : 'studio',
-      sessionCount: sessions.length,
-      previewSrc: previewFor(directory, manifest, sessions),
-      thumbnailSrc: thumbnailFor(directory),
-      hasScreen,
-      hasCamera,
-      hasCaption,
-      hasSystemAudio,
-      hasMicrophone,
-    };
-  };
+  const summary = createProjectSummary({ root, category, detectProjectFeatures, previewFor, thumbnailFor });
   const readJsonArray = (file) => {
     if (!fs.existsSync(file)) return null;
     try {
@@ -416,6 +393,10 @@ function createProjectStore(root, { mediaHost = 'asset', category = null } = {})
         })
         .filter(Boolean)
         .sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))),
+    get: (id) => {
+      const directory = directoryFor(id);
+      return summary(directory, readManifest(directory), id);
+    },
     mediaUrlFor,
     mediaFileForUrl,
     directoryFor,

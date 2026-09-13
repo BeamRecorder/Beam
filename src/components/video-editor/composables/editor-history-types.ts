@@ -21,3 +21,4 @@ export interface EditorHistoryOptions<T> {
   onRestoreSnapshot: (snapshot: T) => void | Promise<void>;
   disabled?: () => boolean;
 }
+export type SnapshotOwnership = 'copy' | 'transfer';

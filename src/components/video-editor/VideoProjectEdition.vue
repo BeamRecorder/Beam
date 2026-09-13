@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue';
-import ProjectPicker from '../projects/ProjectPicker.vue';
+import { defineAsyncComponent, ref, watch, onMounted, onUnmounted } from 'vue';
 import ProjectModeIcon from '../projects/ProjectModeIcon.vue';
 import type { ProjectIdentity } from '../projects/project-picker-types';
 import { ChevronDown, LoaderCircle } from '@lucide/vue';
@@ -8,6 +7,7 @@ import type { CaptureProject } from '../../api/types/capture-api';
 import { useTranslate } from '~/i18n/useTranslate';
 
 const { t } = useTranslate('VideoProjectEdition');
+const ProjectPicker = defineAsyncComponent(() => import('../projects/ProjectPicker.vue'));
 
 const props = withDefaults(
   defineProps<{
