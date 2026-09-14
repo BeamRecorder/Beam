@@ -49,6 +49,12 @@ export interface CursorMoveEvent {
   visible: boolean;
 }
 
+export interface CursorMetadataEvent {
+  event: 'metadata';
+  sessionNs: number;
+  displayScaleFactor: number;
+}
+
 export interface CursorShapeEvent {
   event: 'shape';
   sessionNs: number;
@@ -90,7 +96,12 @@ export interface CursorVisibilityEvent {
   visible: boolean;
 }
 
-export type CursorEvent = CursorMoveEvent | CursorShapeEvent | CursorButtonEvent | CursorVisibilityEvent;
+export type CursorEvent =
+  | CursorMetadataEvent
+  | CursorMoveEvent
+  | CursorShapeEvent
+  | CursorButtonEvent
+  | CursorVisibilityEvent;
 
 export type CursorInteractionType = 'move' | 'click' | 'double-click' | 'right-click' | 'middle-click' | 'mouseup';
 

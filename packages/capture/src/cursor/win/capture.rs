@@ -3,7 +3,7 @@ use std::{ffi::c_void, mem::size_of, ptr, sync::OnceLock};
 use windows_capture::{monitor::Monitor, window::Window};
 
 use windows::Win32::{
-    Foundation::POINT,
+    Foundation::{HWND, POINT},
     Graphics::Gdi::{
         BI_RGB, BITMAP, BITMAPINFO, BITMAPINFOHEADER, CreateCompatibleDC, CreateDIBSection,
         DIB_RGB_COLORS, DeleteDC, DeleteObject, GetMonitorInfoW, GetObjectW, HGDIOBJ, HMONITOR,
@@ -11,6 +11,7 @@ use windows::Win32::{
     },
     UI::{
         Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON, VK_MBUTTON, VK_RBUTTON},
+        Shell::GetScaleFactorForMonitor,
         WindowsAndMessaging::{
             CURSOR_SHOWING, CURSORINFO, DI_NORMAL, DrawIconEx, GetCursorInfo, GetIconInfo,
             GetPhysicalCursorPos, HICON, ICONINFO, IDC_APPSTARTING, IDC_ARROW, IDC_CROSS, IDC_HAND,
@@ -42,6 +43,12 @@ pub struct WindowsCursorSample {
     pub right_pressed: bool,
     pub middle_pressed: bool,
     pub shape: Option<WindowsCursorShape>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct WindowsCursorSourceContext {
+    pub region: CaptureRegion,
+    pub display_scale_factor: Option<f64>,
 }
 
 pub fn sample_cursor(
@@ -78,7 +85,7 @@ pub fn sample_cursor(
     })
 }
 
-pub fn source_region(source_id: &SourceId) -> Result<CaptureRegion, CaptureError> {
+pub fn source_context(source_id: &SourceId) -> Result<WindowsCursorSourceContext, CaptureError> {
     let _physical_coordinates = super::dpi::PhysicalCoordinates::enter()?;
     if let Some(device_name) = source_id.as_str().strip_prefix("wgc:monitor:") {
         let monitor = Monitor::enumerate()
@@ -94,7 +101,11 @@ pub fn source_region(source_id: &SourceId) -> Result<CaptureRegion, CaptureError
         if !unsafe { GetMonitorInfoW(HMONITOR(monitor.as_raw_hmonitor()), &mut info) }.as_bool() {
             return Err(CaptureError::Backend("GetMonitorInfoW failed".into()));
         }
-        return region_from_rect(info.rcMonitor);
+        let monitor = HMONITOR(monitor.as_raw_hmonitor());
+        return Ok(WindowsCursorSourceContext {
+            region: region_from_rect(info.rcMonitor)?,
+            display_scale_factor: display_scale_factor(monitor),
+        });
     }
     if source_id.as_str().starts_with("wgc:window:") {
         let window = Window::enumerate()
@@ -104,11 +115,32 @@ pub fn source_region(source_id: &SourceId) -> Result<CaptureRegion, CaptureError
                 source_id.as_str() == format!("wgc:window:{:x}", window.as_raw_hwnd() as usize)
             })
             .ok_or_else(|| CaptureError::SourceNotFound(source_id.to_string()))?;
-        return region_from_rect(window.rect().map_err(backend_error)?);
+        let monitor = unsafe {
+            windows::Win32::Graphics::Gdi::MonitorFromWindow(
+                HWND(window.as_raw_hwnd()),
+                windows::Win32::Graphics::Gdi::MONITOR_DEFAULTTONEAREST,
+            )
+        };
+        return Ok(WindowsCursorSourceContext {
+            region: region_from_rect(window.rect().map_err(backend_error)?)?,
+            display_scale_factor: (!monitor.is_invalid())
+                .then(|| display_scale_factor(monitor))
+                .flatten(),
+        });
     }
     Err(CaptureError::InvalidConfiguration(format!(
         "{source_id} is not a Windows visual source"
     )))
+}
+
+pub fn source_region(source_id: &SourceId) -> Result<CaptureRegion, CaptureError> {
+    Ok(source_context(source_id)?.region)
+}
+
+fn display_scale_factor(monitor: HMONITOR) -> Option<f64> {
+    // SAFETY: the handle comes from monitor enumeration or MonitorFromWindow.
+    let percentage = unsafe { GetScaleFactorForMonitor(monitor) }.ok()?.0;
+    (percentage > 0).then(|| f64::from(percentage) / 100.0)
 }
 
 fn region_from_rect(rect: windows::Win32::Foundation::RECT) -> Result<CaptureRegion, CaptureError> {

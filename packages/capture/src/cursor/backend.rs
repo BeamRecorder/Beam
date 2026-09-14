@@ -82,6 +82,10 @@ pub struct CursorShapeCatalogEntry {
     rename_all_fields = "camelCase"
 )]
 pub enum CursorEvent {
+    Metadata {
+        session_ns: u64,
+        display_scale_factor: f64,
+    },
     Move {
         session_ns: u64,
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -176,7 +180,8 @@ pub fn telemetry_from_events(events: &[CursorEvent]) -> CursorTelemetrySidecar {
                     interaction_type: Some(interaction_type),
                 });
             }
-            CursorEvent::Shape { .. }
+            CursorEvent::Metadata { .. }
+            | CursorEvent::Shape { .. }
             | CursorEvent::Visibility { .. }
             | CursorEvent::CropChanged { .. } => {}
         }

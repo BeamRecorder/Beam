@@ -258,6 +258,79 @@ fn successful_worker_publishes_cursor_events_telemetry_shapes_and_input() {
 }
 
 #[test]
+fn display_scale_metadata_survives_finalization_without_telemetry_or_shapes() {
+    let temporary = tempfile::tempdir().expect("temporary directory");
+    let paths = paths(temporary.path());
+    let events = [
+        CursorEvent::Metadata {
+            session_ns: 0,
+            display_scale_factor: 1.5,
+        },
+        CursorEvent::Move {
+            session_ns: 33_000_000,
+            cursor_id: None,
+            pixel_x: 300,
+            pixel_y: 200,
+            normalized_x: 0.3,
+            normalized_y: 0.2,
+            visible: true,
+        },
+    ];
+    let cursor_lines = events
+        .iter()
+        .map(|event| serde_json::to_string(event).expect("cursor event JSON"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    std::fs::write(&paths.partial, format!("{cursor_lines}\n")).expect("cursor partial");
+    std::fs::write(&paths.input_partial, "").expect("input partial");
+
+    finalize_after_worker(Ok(()), paths).expect("finalization");
+
+    let cursor_json = std::fs::read(temporary.path().join("cursor.json")).expect("cursor JSON");
+    let raw_events: Vec<serde_json::Value> =
+        serde_json::from_slice(&cursor_json).expect("raw cursor events");
+    assert_eq!(raw_events[0]["event"], "metadata");
+    assert_eq!(raw_events[0]["displayScaleFactor"], 1.5);
+    let events: Vec<CursorEvent> = serde_json::from_slice(&cursor_json).expect("cursor events");
+    assert!(matches!(
+        events.first(),
+        Some(CursorEvent::Metadata {
+            session_ns: 0,
+            display_scale_factor,
+        }) if *display_scale_factor == 1.5
+    ));
+    assert!(matches!(
+        events.get(1),
+        Some(CursorEvent::Move {
+            session_ns: 33_000_000,
+            pixel_x: 300,
+            pixel_y: 200,
+            normalized_x,
+            normalized_y,
+            ..
+        }) if *normalized_x == 0.3 && *normalized_y == 0.2
+    ));
+
+    let telemetry: CursorTelemetrySidecar = serde_json::from_slice(
+        &std::fs::read(temporary.path().join("telemetry.json")).expect("telemetry JSON"),
+    )
+    .expect("telemetry sidecar");
+    assert_eq!(telemetry.samples.len(), 1);
+    assert_eq!(telemetry.samples[0].time_ms, 33);
+    assert_eq!(
+        telemetry.samples[0].interaction_type,
+        Some(crate::cursor::CursorInteractionType::Move)
+    );
+
+    let shapes: std::collections::BTreeMap<String, CursorShapeCatalogEntry> =
+        serde_json::from_slice(
+            &std::fs::read(temporary.path().join("shapes.json")).expect("shape catalog JSON"),
+        )
+        .expect("shape catalog");
+    assert!(shapes.is_empty());
+}
+
+#[test]
 fn invalid_cursor_partial_is_preserved_for_recovery() {
     let temporary = tempfile::tempdir().expect("temporary directory");
     let paths = paths(temporary.path());

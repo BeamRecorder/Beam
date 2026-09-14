@@ -104,26 +104,35 @@ impl ActiveRecordings {
             capture_shape,
         } = request.cursor
         {
-            let region = match &request.screen {
-                Some(ScreenSelection::Source { source_id }) => crate::cursor::crop_region(
-                    crate::cursor::win::source_region(source_id)?,
-                    request.region.unwrap_or(crate::model::ScreenRegion {
-                        x: 0.0,
-                        y: 0.0,
-                        width: 1.0,
-                        height: 1.0,
-                    }),
-                )?,
-                _ => crate::cursor::CaptureRegion {
-                    x: 0,
-                    y: 0,
-                    width: 1,
-                    height: 1,
+            let source = match &request.screen {
+                Some(ScreenSelection::Source { source_id }) => {
+                    let source = crate::cursor::win::source_context(source_id)?;
+                    crate::cursor::win::WindowsCursorSourceContext {
+                        region: crate::cursor::crop_region(
+                            source.region,
+                            request.region.unwrap_or(crate::model::ScreenRegion {
+                                x: 0.0,
+                                y: 0.0,
+                                width: 1.0,
+                                height: 1.0,
+                            }),
+                        )?,
+                        display_scale_factor: source.display_scale_factor,
+                    }
+                }
+                _ => crate::cursor::win::WindowsCursorSourceContext {
+                    region: crate::cursor::CaptureRegion {
+                        x: 0,
+                        y: 0,
+                        width: 1,
+                        height: 1,
+                    },
+                    display_scale_factor: None,
                 },
             };
             self.cursor = Some(crate::cursor::win::WindowsCursorRecording::start(
                 &layout.track_dir(TrackKind::Cursor),
-                region,
+                source,
                 capture_clicks,
                 capture_shortcuts,
                 capture_shape,
