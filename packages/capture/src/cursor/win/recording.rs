@@ -19,6 +19,7 @@ use crate::{
     session::StartGate,
 };
 
+use super::WindowsCursorSourceContext;
 use super::{sample_cursor, shortcut_key_pressed, shortcut_modifier_pressed};
 
 #[derive(Debug, Default)]
@@ -54,7 +55,7 @@ pub struct WindowsCursorRecording {
 impl WindowsCursorRecording {
     pub fn start(
         directory: &Path,
-        region: CaptureRegion,
+        source: WindowsCursorSourceContext,
         capture_clicks: bool,
         capture_shortcuts: bool,
         capture_shape: bool,
@@ -82,10 +83,11 @@ impl WindowsCursorRecording {
                 capture_loop(
                     &thread_partial,
                     &thread_input_partial,
-                    region,
+                    source.region,
                     capture_clicks,
                     capture_shortcuts,
                     capture_shape,
+                    source.display_scale_factor,
                     segment_start_ns,
                     &thread_cancel,
                     &thread_metrics,
@@ -163,6 +165,7 @@ fn capture_loop(
     capture_clicks: bool,
     capture_shortcuts: bool,
     capture_shape: bool,
+    display_scale_factor: Option<f64>,
     segment_start_ns: u64,
     cancel: &AtomicBool,
     metrics: &CursorCaptureMetrics,
@@ -171,6 +174,12 @@ fn capture_loop(
 ) -> Result<(), CaptureError> {
     let mut writer = CursorEventWriter::open(partial_path)?;
     let mut input_writer = InputEventWriter::open(input_partial_path)?;
+    if let Some(display_scale_factor) = display_scale_factor {
+        writer.push(CursorEvent::Metadata {
+            session_ns: segment_start_ns,
+            display_scale_factor,
+        })?;
+    }
     ready
         .send(Ok(()))
         .map_err(|_| CaptureError::Backend("cursor startup receiver closed".into()))?;

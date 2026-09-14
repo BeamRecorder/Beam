@@ -56,7 +56,8 @@ fn position_at(
 
 fn event_session_ns(event: &CursorEvent) -> u64 {
     match event {
-        CursorEvent::Move { session_ns, .. }
+        CursorEvent::Metadata { session_ns, .. }
+        | CursorEvent::Move { session_ns, .. }
         | CursorEvent::Shape { session_ns, .. }
         | CursorEvent::Button { session_ns, .. }
         | CursorEvent::Visibility { session_ns, .. }

@@ -43,6 +43,47 @@ describe('cursor playback', () => {
     });
   });
 
+  it('ignores cursor metadata placed before recorded moves', () => {
+    const metadata = {
+      event: 'metadata',
+      sessionNs: second(0),
+      displayScaleFactor: 1.5,
+    } satisfies CursorEvent;
+    const recordedEvents: CursorEvent[] = [
+      {
+        event: 'shape',
+        sessionNs: second(0),
+        cursorId: 'win:arrow',
+        cursorKind: 'default',
+        hotspot: { x: 2, y: 3 },
+      },
+      move(0, 0.2, 0.4),
+      { event: 'visibility', sessionNs: second(0.75), visible: false },
+      move(1, 0.8, 0.6),
+    ];
+    const events = [metadata, ...recordedEvents];
+
+    for (const time of [0, 0.5, 0.8]) {
+      expect(cursorStateAt(events, time)).toEqual(cursorStateAt(recordedEvents, time));
+    }
+    expect(cursorStateAt(events, 0.5)).toMatchObject({
+      x: 0.5,
+      y: 0.5,
+      visible: true,
+      cursorId: 'win:arrow',
+      shapeId: 'win:arrow',
+      cursorKind: 'default',
+      hotspot: { x: 2, y: 3 },
+    });
+    expect(cursorStateAt(events, 0.8)).toMatchObject({
+      visible: false,
+      cursorId: 'win:arrow',
+      shapeId: 'win:arrow',
+      cursorKind: 'default',
+      hotspot: { x: 2, y: 3 },
+    });
+  });
+
   it('smooths movement between recorded cursor positions', () => {
     const state = cursorStateAt([move(0, 0, 0), move(1, 1, 0)], 0.25);
     expect(state?.x).toBeCloseTo(0.15625);
