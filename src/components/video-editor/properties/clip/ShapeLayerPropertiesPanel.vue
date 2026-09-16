@@ -17,9 +17,12 @@ import {
   defaultShapePresetFor,
   normalizeShapeLayerStyle,
   SHAPE_PRESETS,
+  shapeLayerFill,
 } from '~/media/shared/shape-layer-style';
+import type { ColorFill } from '~/media/shared/color-fill-types';
 import type { ShapeLayerFamily, ShapeLayerPreset, ShapeLayerStyle } from '~/media/shared/shape-layer-types';
 import { useTranslate } from '~/i18n/useTranslate';
+import ColorFillPresetControls from '../ColorFillPresetControls.vue';
 
 const props = defineProps<{ clip: ShapeClip }>();
 const emit = defineEmits<{ update: [patch: Partial<ShapeLayerStyle>] }>();
@@ -35,6 +38,7 @@ watch(
   { immediate: true },
 );
 const style = computed(() => normalizeShapeLayerStyle(props.clip));
+const fill = computed(() => shapeLayerFill(style.value));
 const presetOptions: Record<Exclude<ShapeLayerPreset, 'text' | 'freehand'>, { icon: Component; labelKey: string }> = {
   rectangle: { icon: RectangleHorizontal, labelKey: 'shapePresetRectangle' },
   'rounded-rectangle': { icon: SquareRoundCorner, labelKey: 'shapePresetRoundedRectangle' },
@@ -51,6 +55,11 @@ const presets = computed(() =>
   })),
 );
 const update = (patch: Partial<ShapeLayerStyle>) => emit('update', patch);
+const updateFill = (value: ColorFill) =>
+  update({
+    fill: value,
+    ...(value.kind === 'color' ? { fillColor: value.color } : {}),
+  });
 const selectFamily = (family: ShapeLayerFamily) => update({ family, preset: defaultShapePresetFor(family) });
 const rotationPresets = [0, 90, 180, 270] as const;
 </script>
@@ -163,18 +172,22 @@ const rotationPresets = [0, 90, 180, 270] as const;
 
       <DrawingControls
         v-if="clip.drawing && style.family === 'drawing'"
-        hide-color
-        :model-value="{ ...clip.drawing, color: style.fillColor }"
+        :model-value="{ ...clip.drawing, color: style.fillColor, fill }"
         @update:model-value="
-          update({ drawing: { ...clip.drawing, smoothing: $event.smoothing, strokeWidth: $event.strokeWidth } })
+          update({
+            fill: $event.fill,
+            ...($event.fill?.kind === 'color' ? { fillColor: $event.fill.color } : {}),
+            drawing: { ...clip.drawing, smoothing: $event.smoothing, strokeWidth: $event.strokeWidth },
+          })
         "
       />
       <Divider />
       <template v-if="style.family !== 'text'">
-        <ColorPicker
-          :model-value="style.fillColor"
+        <ColorFillPresetControls
+          v-if="style.family !== 'drawing'"
+          :model-value="fill"
           :label="t('fillColor')"
-          @update:model-value="update({ fillColor: $event })"
+          @update:model-value="updateFill"
         />
         <ColorPicker
           :model-value="style.borderColor"

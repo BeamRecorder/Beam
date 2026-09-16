@@ -1,4 +1,8 @@
-use std::{io::Cursor, mem::MaybeUninit, ptr};
+use std::{
+    io::Cursor,
+    mem::{MaybeUninit, size_of},
+    ptr,
+};
 
 use super::*;
 use pipewire::spa;
@@ -92,6 +96,34 @@ fn dma_only_buffers_pod() -> Vec<u8> {
     )
 }
 
+fn cursor_meta_size(dimension: i32) -> i32 {
+    i32::try_from(size_of::<spa::sys::spa_meta_cursor>()).expect("cursor header size")
+        + i32::try_from(size_of::<spa::sys::spa_meta_bitmap>()).expect("cursor bitmap header size")
+        + dimension * dimension * 4
+}
+
+fn cursor_meta_size_range() -> Value {
+    choice_range(
+        cursor_meta_size(64),
+        cursor_meta_size(1),
+        cursor_meta_size(384),
+    )
+}
+
+fn cursor_meta_pod(size: Value) -> Vec<u8> {
+    serialized(Value::Object(Object {
+        type_: SpaTypes::ObjectParamMeta.as_raw(),
+        id: ParamType::Meta.as_raw(),
+        properties: vec![
+            Property::new(
+                spa::sys::SPA_PARAM_META_type,
+                Value::Id(spa::utils::Id(spa::sys::SPA_META_Cursor)),
+            ),
+            Property::new(spa::sys::SPA_PARAM_META_size, size),
+        ],
+    }))
+}
+
 fn decoded_object(bytes: &[u8]) -> Object {
     let (remaining, value) =
         PodDeserializer::deserialize_any_from(bytes).expect("test pod should deserialize");
@@ -113,6 +145,22 @@ fn property(object: &Object, key: u32) -> &Value {
         .find(|property| property.key == key)
         .map(|property| &property.value)
         .expect("expected buffer property")
+}
+
+fn fixed_int(value: &Value) -> Option<i32> {
+    match value {
+        Value::Int(value) => Some(*value),
+        Value::Choice(ChoiceValue::Int(Choice(_, ChoiceEnum::None(value)))) => Some(*value),
+        _ => None,
+    }
+}
+
+fn fixed_id(value: &Value) -> Option<spa::utils::Id> {
+    match value {
+        Value::Id(value) => Some(*value),
+        Value::Choice(ChoiceValue::Id(Choice(_, ChoiceEnum::None(value)))) => Some(*value),
+        _ => None,
+    }
 }
 
 fn filter_pods(pod_bytes: &[u8], filter_bytes: &[u8]) -> Result<Vec<u8>, i32> {
@@ -245,6 +293,56 @@ fn rejects_buffer_counts_outside_the_supported_range_and_dma_only_memory() {
         );
     }
     assert!(filter_pods(&beam, &dma_only_buffers_pod()).is_err());
+}
+
+#[test]
+fn requests_a_bounded_cursor_meta_size_range() {
+    let bytes = cursor_meta_parameter().expect("cursor meta parameter should serialize");
+    let object = decoded_object(&bytes);
+
+    assert_eq!(object.type_, SpaTypes::ObjectParamMeta.as_raw());
+    assert_eq!(object.id, ParamType::Meta.as_raw());
+    assert_eq!(
+        property(&object, spa::sys::SPA_PARAM_META_type),
+        &Value::Id(spa::utils::Id(spa::sys::SPA_META_Cursor))
+    );
+    assert_eq!(
+        property(&object, spa::sys::SPA_PARAM_META_size),
+        &cursor_meta_size_range()
+    );
+}
+
+#[test]
+fn cursor_meta_size_range_intersects_fixed_kwin_and_mutter_sizes() {
+    let beam = cursor_meta_parameter().expect("cursor meta parameter should serialize");
+    for peer_size in [cursor_meta_size(24), cursor_meta_size(384)] {
+        let peer = cursor_meta_pod(Value::Int(peer_size));
+        let result = filter_pods(&beam, &peer)
+            .expect("cursor meta range should intersect a supported fixed peer size");
+        let object = decoded_object(&result);
+
+        assert_eq!(
+            fixed_id(property(&object, spa::sys::SPA_PARAM_META_type)),
+            Some(spa::utils::Id(spa::sys::SPA_META_Cursor))
+        );
+        assert_eq!(
+            fixed_int(property(&object, spa::sys::SPA_PARAM_META_size)),
+            Some(peer_size),
+            "fixed peer size {peer_size:?} should be negotiated as-is"
+        );
+    }
+}
+
+#[test]
+fn cursor_meta_size_range_rejects_sizes_outside_its_bounds() {
+    let beam = cursor_meta_parameter().expect("cursor meta parameter should serialize");
+    for peer_size in [cursor_meta_size(0), cursor_meta_size(385)] {
+        let peer = cursor_meta_pod(Value::Int(peer_size));
+        assert!(
+            filter_pods(&beam, &peer).is_err(),
+            "unsupported fixed peer size {peer_size:?} must not intersect the cursor meta range"
+        );
+    }
 }
 
 #[test]

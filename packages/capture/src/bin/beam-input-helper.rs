@@ -7,6 +7,10 @@ mod input_motion;
 mod input_install;
 
 #[cfg(target_os = "linux")]
+#[path = "beam_input_helper/device.rs"]
+mod input_device;
+
+#[cfg(target_os = "linux")]
 mod linux {
     use std::{
         collections::{HashMap, HashSet},
@@ -22,6 +26,7 @@ mod linux {
     use serde::Serialize;
 
     use super::{
+        input_device::{supports_mouse, supports_shortcuts},
         input_install::{INSTALLED_HELPER, INSTALLED_POLICY, install_assets},
         input_motion::MotionAccumulator,
     };
@@ -137,10 +142,16 @@ mod linux {
                                 EventSummary::RelativeAxis(_, axis, value) => {
                                     motion.push(axis, value);
                                 }
+                                EventSummary::AbsoluteAxis(_, axis, value) => {
+                                    motion.push_absolute(axis, value);
+                                }
                                 EventSummary::Key(_, key, value) => {
                                     if let Some(relative) = motion.take(monotonic_ns()?) {
                                         write_stream_event(&mut output, &relative)?;
                                         emitted = true;
+                                    }
+                                    if key == KeyCode::BTN_TOUCH && value == 0 {
+                                        motion.release_absolute_contact();
                                     }
                                     if let Some(filtered) =
                                         filter.apply(key, value, monotonic_ns()?)
@@ -232,23 +243,6 @@ mod linux {
             .into_iter()
             .filter_map(|path| Device::open(path).ok())
             .collect())
-    }
-
-    fn supports_mouse(device: &Device) -> bool {
-        device
-            .supported_keys()
-            .is_some_and(|keys| keys.contains(KeyCode::BTN_LEFT))
-    }
-
-    fn supports_shortcuts(device: &Device) -> bool {
-        device.supported_keys().is_some_and(|keys| {
-            keys.contains(KeyCode::KEY_LEFTCTRL)
-                || keys.contains(KeyCode::KEY_RIGHTCTRL)
-                || keys.contains(KeyCode::KEY_LEFTALT)
-                || keys.contains(KeyCode::KEY_RIGHTALT)
-                || keys.contains(KeyCode::KEY_LEFTMETA)
-                || keys.contains(KeyCode::KEY_RIGHTMETA)
-        })
     }
 
     fn monotonic_ns() -> Result<u64, io::Error> {

@@ -17,9 +17,10 @@ export const useTimelineClipboardFeedback = () => {
   const recentPaste = ref<TimelinePasteHighlight | null>(null);
   let recentPasteTimer: ReturnType<typeof setTimeout> | null = null;
 
-  const describeItem = (descriptor: TimelineClipboardDescriptor) => {
+  const describeItem = (descriptor: TimelineClipboardDescriptor): string => {
     if (descriptor.kind === 'caption') return t('timelineClipboardCaption', { text: descriptor.text });
     if (descriptor.kind === 'zoom') return t('timelineClipboardZoom', { number: descriptor.number });
+    if (descriptor.kind === 'selection') return descriptor.items.map(describeItem).join(', ');
     return descriptor.name;
   };
   const reportCopySuccess = (item: TimelineClipboardItem) =>
@@ -31,8 +32,8 @@ export const useTimelineClipboardFeedback = () => {
     );
   const reportPasteError = (message: string) =>
     toast.error(t('timelinePasteFailed', { message }), ERROR_TOAST_DURATION_MS);
-  const reportPasteSuccess = (id: string, item: TimelineClipboardItem) => {
-    recentPaste.value = { type: item.type, id, timestamp: Date.now() };
+  const reportPasteSuccess = (highlight: Omit<TimelinePasteHighlight, 'timestamp'>, item: TimelineClipboardItem) => {
+    recentPaste.value = { ...highlight, timestamp: Date.now() };
     if (recentPasteTimer) clearTimeout(recentPasteTimer);
     recentPasteTimer = setTimeout(() => {
       recentPaste.value = null;

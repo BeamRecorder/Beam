@@ -77,7 +77,7 @@ const icons = { shape: Shapes, arrow: ArrowRight, text: Type, drawing: Pencil };
     </div>
     <template v-if="editor.drawingMode.value">
       <p class="hint">{{ t('drawHint') }}</p>
-      <DrawingControls v-model="editor.drawingSettings.value" />
+      <DrawingControls :model-value="editor.drawingSettings.value" @update:model-value="editor.updateDrawingSettings" />
       <Button :icon="MousePointer2" size="sm" variant="secondary" @click="editor.drawingMode.value = false">{{
         t('finishDrawing')
       }}</Button>

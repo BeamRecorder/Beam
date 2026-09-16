@@ -154,21 +154,40 @@ describe('ShapeTimelinePreview', () => {
     await runFrame();
     expect(dependencies.renderShapeTimelinePreview).toHaveBeenCalledTimes(2);
 
-    const placementClone = structuredClone(visualEdit);
+    const fillEdit = structuredClone(visualEdit);
+    fillEdit.fill = {
+      kind: 'gradient',
+      gradient: {
+        type: 'linear',
+        angle: 45,
+        stops: [
+          { id: 'start', position: 0, color: '#111111', alpha: 1 },
+          { id: 'end', position: 1, color: '#eeeeee', alpha: 0.5 },
+        ],
+      },
+    };
+    expect(fillEdit.fillColor).toBe(visualEdit.fillColor);
+    await wrapper.setProps({ clip: fillEdit });
+    expect(window.requestAnimationFrame).toHaveBeenCalledTimes(3);
+    await runFrame();
+    expect(dependencies.renderShapeTimelinePreview).toHaveBeenCalledTimes(3);
+    expect(dependencies.renderShapeTimelinePreview).toHaveBeenLastCalledWith(fillEdit, canvas);
+
+    const placementClone = structuredClone(fillEdit);
     placementClone.transform.x = 0.8;
     placementClone.transform.y = 0.1;
     placementClone.timelineStartMs = 4_000;
     placementClone.timelineDurationMs = 2_000;
     await wrapper.setProps({ clip: placementClone });
-    expect(window.requestAnimationFrame).toHaveBeenCalledTimes(2);
-    expect(dependencies.renderShapeTimelinePreview).toHaveBeenCalledTimes(2);
+    expect(window.requestAnimationFrame).toHaveBeenCalledTimes(3);
+    expect(dependencies.renderShapeTimelinePreview).toHaveBeenCalledTimes(3);
 
     const resizedCanvas = { width: 1_280, height: 720 };
     await wrapper.setProps({ canvas: resizedCanvas });
-    expect(window.requestAnimationFrame).toHaveBeenCalledTimes(3);
+    expect(window.requestAnimationFrame).toHaveBeenCalledTimes(4);
     await runFrame();
     expect(dependencies.renderShapeTimelinePreview).toHaveBeenCalledWith(placementClone, resizedCanvas);
-    expect(dependencies.renderShapeTimelinePreview).toHaveBeenCalledTimes(3);
+    expect(dependencies.renderShapeTimelinePreview).toHaveBeenCalledTimes(4);
     wrapper.unmount();
   });
 

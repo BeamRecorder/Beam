@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SHAPE_LAYER_STYLE, normalizeShapeLayerStyle } from './shape-layer-style';
+import { DEFAULT_SHAPE_LAYER_STYLE, isShapeLayerStyle, normalizeShapeLayerStyle } from './shape-layer-style';
+import type { ShapeLayerStyle } from './shape-layer-types';
 
 describe('normalizeShapeLayerStyle', () => {
   it('keeps valid arrow styles and clamps finite numeric values', () => {
@@ -39,5 +40,57 @@ describe('normalizeShapeLayerStyle', () => {
       backdropBlur: DEFAULT_SHAPE_LAYER_STYLE.backdropBlur,
       shadowBlur: DEFAULT_SHAPE_LAYER_STYLE.shadowBlur,
     });
+  });
+
+  it('accepts legacy styles without fill and keeps fillColor as the solid fill', () => {
+    const normalized = normalizeShapeLayerStyle(DEFAULT_SHAPE_LAYER_STYLE);
+
+    expect(isShapeLayerStyle(DEFAULT_SHAPE_LAYER_STYLE)).toBe(true);
+    expect(normalized).not.toHaveProperty('fill');
+    expect(normalized.fillColor).toBe(DEFAULT_SHAPE_LAYER_STYLE.fillColor);
+  });
+
+  it('preserves a valid gradient fill and its fillColor fallback', () => {
+    const style = {
+      ...DEFAULT_SHAPE_LAYER_STYLE,
+      fill: {
+        kind: 'gradient',
+        gradient: {
+          type: 'linear',
+          angle: 90,
+          stops: [
+            { id: 'start', position: 0, color: '#112233', alpha: 1 },
+            { id: 'end', position: 1, color: '#aabbcc', alpha: 0.5 },
+          ],
+        },
+      },
+      fillColor: '#123456',
+    } satisfies ShapeLayerStyle;
+
+    expect(isShapeLayerStyle(style)).toBe(true);
+    expect(normalizeShapeLayerStyle(style)).toEqual(style);
+    expect(normalizeShapeLayerStyle(style).fillColor).toBe('#123456');
+  });
+
+  it('rejects an invalid gradient without losing the fillColor fallback during normalization', () => {
+    const style: Partial<ShapeLayerStyle> = {
+      ...DEFAULT_SHAPE_LAYER_STYLE,
+      fill: {
+        kind: 'gradient',
+        gradient: {
+          type: 'linear',
+          angle: 360,
+          stops: [
+            { id: 'start', position: 0, color: '#112233', alpha: 1 },
+            { id: 'end', position: 1, color: '#aabbcc', alpha: 1 },
+          ],
+        },
+      },
+      fillColor: '#654321',
+    };
+
+    expect(isShapeLayerStyle(style)).toBe(false);
+    expect(normalizeShapeLayerStyle(style)).not.toHaveProperty('fill');
+    expect(normalizeShapeLayerStyle(style).fillColor).toBe('#654321');
   });
 });

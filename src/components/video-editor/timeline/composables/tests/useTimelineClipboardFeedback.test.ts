@@ -14,7 +14,9 @@ vi.mock('~/ui/toast/toastStore', () => ({ useToastStore: () => toast }));
 
 const { useTimelineClipboardFeedback } = await import('../useTimelineClipboardFeedback');
 
-const item = (descriptor: Exclude<TimelineClipboardItem['descriptor'], { kind: 'zoom' }>): TimelineClipboardItem => ({
+const item = (
+  descriptor: Extract<TimelineClipboardItem['descriptor'], { kind: 'item' | 'caption' }>,
+): TimelineClipboardItem => ({
   type: 'clip',
   scopeId: 'project-a',
   category: 'visual',
@@ -55,7 +57,7 @@ describe('useTimelineClipboardFeedback', () => {
       leadingIcon: 'copy',
     });
 
-    feedback.reportPasteSuccess('pasted-clip', source);
+    feedback.reportPasteSuccess({ type: 'clip', id: 'pasted-clip' }, source);
     expect(toast.success).toHaveBeenLastCalledWith('Pasted: screen-recording.mp4', 1_500, undefined, {
       leadingIcon: 'paste',
     });
@@ -68,15 +70,78 @@ describe('useTimelineClipboardFeedback', () => {
       leadingIcon: 'copy',
     });
 
-    feedback.reportPasteSuccess('pasted-zoom', {
-      type: 'zoom',
-      scopeId: 'project-a',
-      category: 'zoom',
-      zoom: {} as never,
-      descriptor: { kind: 'zoom', number: 2 },
-    });
+    feedback.reportPasteSuccess(
+      { type: 'zoom', id: 'pasted-zoom' },
+      {
+        type: 'zoom',
+        scopeId: 'project-a',
+        category: 'zoom',
+        zoom: {} as never,
+        descriptor: { kind: 'zoom', number: 2 },
+      },
+    );
     expect(toast.success).toHaveBeenLastCalledWith('Pasted: Zoom 2', 1_500, undefined, {
       leadingIcon: 'paste',
+    });
+  });
+
+  it('lists every copied and pasted item name in a multi-item bundle toast', () => {
+    const bundle: TimelineClipboardItem = {
+      type: 'selection',
+      scopeId: 'project-a',
+      entries: [
+        {
+          type: 'clip',
+          category: 'visual',
+          clip: {} as Clip,
+          asset: null,
+          descriptor: { kind: 'item', name: 'screen.mp4' },
+        },
+        {
+          type: 'clip',
+          category: 'caption',
+          clip: {} as Clip,
+          asset: null,
+          descriptor: { kind: 'caption', text: 'Hello timeline' },
+        },
+        {
+          type: 'zoom',
+          category: 'zoom',
+          zoom: {} as never,
+          descriptor: { kind: 'zoom', number: 2 },
+        },
+      ],
+      anchorTimeMs: 0,
+      primaryIndex: 0,
+      descriptor: {
+        kind: 'selection',
+        items: [
+          { kind: 'item', name: 'screen.mp4' },
+          { kind: 'caption', text: 'Hello timeline' },
+          { kind: 'zoom', number: 2 },
+        ],
+      },
+    };
+
+    feedback.reportCopySuccess(bundle);
+    expect(toast.success).toHaveBeenLastCalledWith(
+      'Copied: screen.mp4, Caption “Hello timeline”, Zoom 2',
+      1_500,
+      undefined,
+      { leadingIcon: 'copy' },
+    );
+
+    feedback.reportPasteSuccess({ type: 'clip', id: 'pasted-screen' }, bundle);
+    expect(toast.success).toHaveBeenLastCalledWith(
+      'Pasted: screen.mp4, Caption “Hello timeline”, Zoom 2',
+      1_500,
+      undefined,
+      { leadingIcon: 'paste' },
+    );
+    expect(feedback.recentPaste.value).toEqual({
+      type: 'clip',
+      id: 'pasted-screen',
+      timestamp: expect.any(Number),
     });
   });
 
@@ -84,7 +149,7 @@ describe('useTimelineClipboardFeedback', () => {
     feedback.reportPasteError('The copied item does not fit at the playhead.');
     expect(toast.error).toHaveBeenCalledWith('Unable to paste: The copied item does not fit at the playhead.', 5_000);
 
-    feedback.reportPasteSuccess('pasted-clip', item({ kind: 'item', name: 'clip.mp4' }));
+    feedback.reportPasteSuccess({ type: 'clip', id: 'pasted-clip' }, item({ kind: 'item', name: 'clip.mp4' }));
     vi.advanceTimersByTime(899);
     expect(feedback.recentPaste.value).not.toBeNull();
     vi.advanceTimersByTime(1);

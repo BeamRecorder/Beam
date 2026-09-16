@@ -41,8 +41,9 @@ const shapeClip = (overrides: Partial<ShapeClip> = {}): ShapeClip => ({
   ...overrides,
 });
 
-const context = () =>
-  ({
+const context = () => {
+  const gradient = { addColorStop: vi.fn() };
+  return {
     save: vi.fn(),
     restore: vi.fn(),
     beginPath: vi.fn(),
@@ -59,6 +60,8 @@ const context = () =>
     clip: vi.fn(),
     fill: vi.fn(),
     stroke: vi.fn(),
+    createLinearGradient: vi.fn(() => gradient),
+    createRadialGradient: vi.fn(() => gradient),
     globalAlpha: 1,
     fillStyle: '',
     strokeStyle: '',
@@ -67,7 +70,13 @@ const context = () =>
     shadowBlur: 0,
     shadowOffsetX: 0,
     shadowOffsetY: 0,
-  }) as unknown as CanvasRenderingContext2D;
+    gradient,
+  } as unknown as CanvasRenderingContext2D & {
+    createLinearGradient: ReturnType<typeof vi.fn>;
+    createRadialGradient: ReturnType<typeof vi.fn>;
+    gradient: typeof gradient;
+  };
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -108,6 +117,41 @@ describe('drawShapeClip', () => {
     expect(ctx.fill).toHaveBeenCalledOnce();
     expect(ctx.save).toHaveBeenCalledTimes(2);
     expect(ctx.restore).toHaveBeenCalledTimes(2);
+  });
+
+  it('fills a shape with its gradient stops and alpha values', () => {
+    const ctx = context();
+    const gradient = {
+      type: 'linear' as const,
+      angle: 90,
+      stops: [
+        { id: 'start', position: 0, color: '#112233', alpha: 0.5 },
+        { id: 'end', position: 1, color: '#aabbcc', alpha: 1 },
+      ],
+    };
+
+    drawShapeClip(ctx, shapeClip({ fill: { kind: 'gradient', gradient } }), {
+      x: 10,
+      y: 20,
+      width: 200,
+      height: 100,
+    });
+
+    expect(ctx.createLinearGradient).toHaveBeenCalledWith(30, 60, 130, 60);
+    expect(ctx.gradient.addColorStop).toHaveBeenNthCalledWith(1, 0, '#11223380');
+    expect(ctx.gradient.addColorStop).toHaveBeenNthCalledWith(2, 1, '#aabbccff');
+    expect(ctx.fillStyle).toBe(ctx.gradient);
+    expect(ctx.fill).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the legacy fillColor when no fill value is present', () => {
+    const ctx = context();
+
+    drawShapeClip(ctx, shapeClip({ fillColor: '#123abc' }), { x: 0, y: 0, width: 800, height: 400 });
+
+    expect(ctx.fillStyle).toBe('#123abc');
+    expect(ctx.createLinearGradient).not.toHaveBeenCalled();
+    expect(ctx.createRadialGradient).not.toHaveBeenCalled();
   });
 
   it('applies opacity, border, rotation, and directional shadow', () => {

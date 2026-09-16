@@ -49,6 +49,7 @@ const schedule = () => {
 const appearanceFields = [
   'family',
   'preset',
+  'fill',
   'fillColor',
   'borderColor',
   'borderWidth',

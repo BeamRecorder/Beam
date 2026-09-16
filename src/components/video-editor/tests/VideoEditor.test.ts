@@ -1,8 +1,15 @@
 import './VideoEditor.test.setup';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
-import type { CaptionClip, ClipComposition, NormalizedCrop } from '~/media/shared/composition-types';
+import type {
+  CaptionClip,
+  ClipComposition,
+  MediaAsset,
+  NormalizedCrop,
+  VisualClip,
+} from '~/media/shared/composition-types';
 import type { ZoomElement } from '../zoom/zoom-types';
+import type { TimelineClipboardItem } from '../timeline/composables/timeline-clipboard-types';
 import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
 import {
   editorState,
@@ -956,12 +963,191 @@ describe('VideoEditor', () => {
     );
     expect(pasted).toBeDefined();
     expect(composition.clips.filter((clip) => clip.kind === 'screen')).toHaveLength(2);
-    expect(editorState.store.compositionState.selectClip).toHaveBeenCalledWith(pasted!.id);
+    expect(editorState.store.compositionState.selectClips).toHaveBeenCalledWith([pasted!.id], pasted!.id);
     expect(editorState.store.compositionState.selectedClipId.value).toBe(pasted!.id);
     expect(editorState.store.activeTab.value).toBe('clip');
     expect(editorState.store.editorState.scheduleSave).toHaveBeenCalled();
     expect(historyState.commitNow).toHaveBeenCalledWith(expect.objectContaining({ composition }));
     expect(toast.success).toHaveBeenCalledWith('Pasted: screen.mp4', 1_500, undefined, { leadingIcon: 'paste' });
+  });
+
+  it('pastes a copied clip bundle onto one new layer without changing sources and commits once', async () => {
+    const mounted = mountEditor();
+    const state = editorState.store;
+    const initial = state.compositionState.composition.value as ClipComposition;
+    const sourceScreen = initial.clips.find((clip) => clip.id === 'screen');
+    const screenAsset = initial.assets.find((asset) => asset.id === 'screen-asset');
+    if (!sourceScreen || sourceScreen.kind !== 'screen' || !screenAsset) throw new Error('Missing screen fixture.');
+    const screenName = screenAsset.fileName ?? screenAsset.name;
+    const overlayAsset: MediaAsset = {
+      ...screenAsset,
+      id: 'overlay-asset',
+      name: 'Overlay recording',
+      fileName: 'overlay.mp4',
+      src: 'overlay.mp4',
+    };
+    const overlayName = overlayAsset.fileName ?? overlayAsset.name;
+    const sourceOverlay: VisualClip = {
+      ...sourceScreen,
+      id: 'overlay-source',
+      name: 'Overlay recording',
+      assetId: overlayAsset.id,
+      timelineStartMs: 2_500,
+      timelineDurationMs: 1_000,
+      sourceDurationMs: 1_000,
+    };
+    const compositionWithBundle: ClipComposition = {
+      ...initial,
+      assets: [...initial.assets, overlayAsset],
+      clips: [...initial.clips, sourceOverlay],
+    };
+    state.compositionState.composition.value = compositionWithBundle;
+    state.player.duration.value = 5;
+    await mounted.vm.$nextTick();
+    await flushPromises();
+
+    const sourceSnapshots = [sourceScreen, sourceOverlay].map((clip) => JSON.parse(JSON.stringify(clip)));
+    const assetSnapshots = [screenAsset, overlayAsset].map((asset) => JSON.parse(JSON.stringify(asset)));
+    const bundle: TimelineClipboardItem = {
+      type: 'selection',
+      scopeId: 'project-1',
+      entries: [
+        {
+          type: 'clip',
+          category: 'visual',
+          clip: sourceScreen,
+          asset: screenAsset,
+          descriptor: { kind: 'item', name: screenName },
+        },
+        {
+          type: 'clip',
+          category: 'visual',
+          clip: sourceOverlay,
+          asset: overlayAsset,
+          descriptor: { kind: 'item', name: overlayName },
+        },
+      ],
+      anchorTimeMs: 0,
+      primaryIndex: 1,
+      descriptor: {
+        kind: 'selection',
+        items: [
+          { kind: 'item', name: screenName },
+          { kind: 'item', name: overlayName },
+        ],
+      },
+    };
+    const commitCount = historyState.commitNow.mock.calls.length;
+    const saveCount = state.editorState.scheduleSave.mock.calls.length;
+
+    mounted.findComponent({ name: 'MockEditorTimeline' }).vm.$emit('paste:item', {
+      item: bundle,
+      timeMs: 1_000,
+      target: { category: 'visual', placement: 'new-layer' },
+    });
+    await flushPromises();
+    await mounted.vm.$nextTick();
+
+    const updated = state.compositionState.composition.value as ClipComposition;
+    const pasted = updated.clips.filter(
+      (clip): clip is VisualClip =>
+        clip.kind === 'screen' && clip.id !== sourceScreen.id && clip.id !== sourceOverlay.id,
+    );
+    expect(pasted).toHaveLength(2);
+    const firstCopy = pasted.find((clip) => clip.timelineStartMs === 1_000);
+    const secondCopy = pasted.find((clip) => clip.timelineStartMs === 3_500);
+    expect(firstCopy).toBeDefined();
+    expect(secondCopy).toBeDefined();
+    expect(firstCopy?.trackId).not.toBe(sourceScreen.trackId);
+    expect(secondCopy?.trackId).toBe(firstCopy?.trackId);
+    expect(firstCopy?.assetId).toBe(screenAsset.id);
+    expect(secondCopy?.assetId).toBe(overlayAsset.id);
+    expect(updated.clips.filter((clip) => clip.id === sourceScreen.id || clip.id === sourceOverlay.id)).toEqual(
+      sourceSnapshots,
+    );
+    expect(updated.assets.filter((asset) => asset.id === screenAsset.id || asset.id === overlayAsset.id)).toEqual(
+      assetSnapshots,
+    );
+
+    const pastedIds = [firstCopy!.id, secondCopy!.id];
+    expect(state.compositionState.selectedClipIds.value).toEqual(pastedIds);
+    expect(state.compositionState.selectedClipId.value).toBe(secondCopy!.id);
+    expect(state.compositionState.selectClips).toHaveBeenLastCalledWith(pastedIds, secondCopy!.id);
+    expect(state.editorState.scheduleSave).toHaveBeenCalledTimes(saveCount + 1);
+    expect(historyState.commitNow).toHaveBeenCalledTimes(commitCount + 1);
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(toast.success).toHaveBeenCalledWith('Pasted: screen.mp4, overlay.mp4', 1_500, undefined, {
+      leadingIcon: 'paste',
+    });
+  });
+
+  it('does not apply a partially valid clipboard bundle when a later item does not fit', async () => {
+    const mounted = mountEditor();
+    const state = editorState.store;
+    const composition = state.compositionState.composition.value as ClipComposition;
+    const source = composition.clips.find((clip) => clip.id === 'screen');
+    const asset = composition.assets.find((candidate) => candidate.id === 'screen-asset');
+    if (!source || source.kind !== 'screen' || !asset) throw new Error('Missing screen fixture.');
+    const first: VisualClip = {
+      ...source,
+      id: 'copy-first',
+      timelineStartMs: 0,
+      timelineDurationMs: 500,
+      sourceDurationMs: 500,
+    };
+    const second: VisualClip = {
+      ...source,
+      id: 'copy-second',
+      timelineStartMs: 1_000,
+      timelineDurationMs: 500,
+      sourceInMs: 1_000,
+      sourceDurationMs: 500,
+    };
+    const bundle: TimelineClipboardItem = {
+      type: 'selection',
+      scopeId: 'project-1',
+      entries: [
+        { type: 'clip', category: 'visual', clip: first, asset, descriptor: { kind: 'item', name: 'first.mp4' } },
+        { type: 'clip', category: 'visual', clip: second, asset, descriptor: { kind: 'item', name: 'second.mp4' } },
+      ],
+      anchorTimeMs: 0,
+      primaryIndex: 0,
+      descriptor: {
+        kind: 'selection',
+        items: [
+          { kind: 'item', name: 'first.mp4' },
+          { kind: 'item', name: 'second.mp4' },
+        ],
+      },
+    };
+    state.compositionState.selectedClipId.value = 'screen';
+    state.compositionState.selectedClipIds.value = ['screen'];
+    await mounted.vm.$nextTick();
+    const compositionBefore = JSON.stringify(state.compositionState.composition.value);
+    const zoomsBefore = JSON.stringify(state.zoomState.zoomElements.value);
+    const selectedClipIdBefore = state.compositionState.selectedClipId.value;
+    const selectedClipIdsBefore = [...state.compositionState.selectedClipIds.value];
+    const commitCount = historyState.commitNow.mock.calls.length;
+    const saveCount = state.editorState.scheduleSave.mock.calls.length;
+    const selectCalls = state.compositionState.selectClips.mock.calls.length;
+
+    mounted.findComponent({ name: 'MockEditorTimeline' }).vm.$emit('paste:item', {
+      item: bundle,
+      timeMs: 1_000,
+      target: { category: 'visual', placement: 'new-layer' },
+    });
+    await flushPromises();
+    await mounted.vm.$nextTick();
+
+    expect(JSON.stringify(state.compositionState.composition.value)).toBe(compositionBefore);
+    expect(JSON.stringify(state.zoomState.zoomElements.value)).toBe(zoomsBefore);
+    expect(state.compositionState.selectedClipId.value).toBe(selectedClipIdBefore);
+    expect(state.compositionState.selectedClipIds.value).toEqual(selectedClipIdsBefore);
+    expect(state.compositionState.selectClips).toHaveBeenCalledTimes(selectCalls);
+    expect(state.editorState.scheduleSave).toHaveBeenCalledTimes(saveCount);
+    expect(historyState.commitNow).toHaveBeenCalledTimes(commitCount);
+    expect(toast.error).toHaveBeenCalledWith(expect.stringMatching(/fit/i), expect.any(Number));
+    expect(toast.success).not.toHaveBeenCalled();
   });
 
   it('previews moved zooms on the canvas without changing saved zooms and clears the preview on cancel', async () => {
@@ -983,17 +1169,17 @@ describe('VideoEditor', () => {
     expect(canvas.props('zoomElements')).toEqual(original);
   });
 
-  it('delegates zoom pasting and keeps the pasted zoom selected', async () => {
+  it('pastes a zoom through the timeline transaction and keeps it selected', async () => {
     const mounted = mountEditor();
 
     await mounted.get('.timeline-paste-zoom').trigger('click');
     await mounted.vm.$nextTick();
 
-    expect(editorState.store.zoomState.pasteZoomAtTime).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'copied-zoom', startMs: 0, endMs: 500 }),
-      1_000,
-    );
-    expect(editorState.store.zoomState.selectedZoomId.value).toBe('pasted-zoom');
+    const pastedZoom = (editorState.store.zoomState.zoomElements.value as ZoomElement[])[0];
+    expect(pastedZoom).toMatchObject({ startMs: 1_000, endMs: 1_500 });
+    expect(pastedZoom.id).not.toBe('copied-zoom');
+    expect(editorState.store.zoomState.selectZooms).toHaveBeenCalledWith([pastedZoom.id], pastedZoom.id);
+    expect(editorState.store.zoomState.selectedZoomId.value).toBe(pastedZoom.id);
     expect(editorState.store.activeTab.value).toBe('zoom');
     expect(editorState.store.compositionState.selectedClipId.value).toBeNull();
     expect(historyState.commitNow).toHaveBeenCalled();
@@ -1013,8 +1199,9 @@ describe('VideoEditor', () => {
 
       vi.advanceTimersByTime(450);
       await mounted.get('.timeline-paste-zoom').trigger('click');
+      const pastedZoomId = editorState.store.zoomState.selectedZoomId.value;
       expect(timeline().attributes('data-recent-paste-type')).toBe('zoom');
-      expect(timeline().attributes('data-recent-paste-id')).toBe('pasted-zoom');
+      expect(timeline().attributes('data-recent-paste-id')).toBe(pastedZoomId);
 
       // The first timer would have expired by now if the second paste had not replaced it.
       vi.advanceTimersByTime(899);

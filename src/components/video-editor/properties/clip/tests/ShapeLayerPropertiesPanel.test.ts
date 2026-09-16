@@ -1,7 +1,18 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ShapeClip } from '~/media/shared/composition-types';
+import DrawingControls from '~/components/video-editor/elements/DrawingControls.vue';
 import ShapeLayerPropertiesPanel from '../ShapeLayerPropertiesPanel.vue';
+
+const { capture } = vi.hoisted(() => ({
+  capture: {
+    getPreferences: vi.fn(),
+    updatePreferences: vi.fn(),
+    onPreferencesChanged: vi.fn(),
+  },
+}));
+
+vi.mock('../../../../../api/capture', () => ({ capture }));
 
 type ShapeClipOverrides = Partial<ShapeClip> & {
   opacityEnabled?: boolean;
@@ -43,6 +54,27 @@ const clip = (overrides: ShapeClipOverrides = {}): ShapeClip =>
     ...overrides,
   }) as ShapeClip;
 
+const ColorPickerStub = {
+  name: 'ColorPickerStub',
+  props: ['label', 'modelValue'],
+  emits: ['update:modelValue'],
+  template: '<div class="color-picker-stub" :data-label="label" :data-value="modelValue" />',
+};
+
+const ColorFillPresetControlsStub = {
+  name: 'ColorFillPresetControlsStub',
+  props: ['modelValue', 'label'],
+  emits: ['update:modelValue'],
+  template: '<div class="color-fill-preset-controls-stub" :data-label="label" :data-kind="modelValue.kind" />',
+};
+
+const BigSliderStub = {
+  name: 'BigSliderStub',
+  props: ['label', 'modelValue'],
+  emits: ['update:modelValue'],
+  template: '<div class="slider-stub" :data-label="label" :data-value="modelValue" />',
+};
+
 const stubs = {
   Button: {
     props: {
@@ -60,11 +92,9 @@ const stubs = {
     props: { full: Boolean, columns: Number },
     template: '<div class="button-group-stub" :class="{ \'is-full\': full }" :data-columns="columns"><slot /></div>',
   },
-  BigSlider: {
-    props: { label: String, modelValue: Number },
-    template: '<div class="slider-stub" :data-label="label" :data-value="modelValue" />',
-  },
-  ColorPicker: { props: ['label'], template: '<div class="color-picker-stub" :data-label="label" />' },
+  BigSlider: BigSliderStub,
+  ColorPicker: ColorPickerStub,
+  ColorFillPresetControls: ColorFillPresetControlsStub,
   Divider: { template: '<hr />' },
   Switch: {
     props: { modelValue: Boolean, ariaLabel: String },
@@ -77,6 +107,12 @@ const stubs = {
 
 const sliderLabels = (wrapper: ReturnType<typeof mount>) =>
   wrapper.findAll('.slider-stub').map((slider) => slider.attributes('data-label'));
+
+beforeEach(() => {
+  capture.getPreferences.mockResolvedValue({ backgroundPresets: { colors: [], gradients: [] }, extras: {} });
+  capture.updatePreferences.mockResolvedValue({ backgroundPresets: { colors: [], gradients: [] }, extras: {} });
+  capture.onPreferencesChanged.mockReturnValue(vi.fn());
+});
 
 describe('ShapeLayerPropertiesPanel', () => {
   it('switches between shape and arrow families using family defaults', async () => {
@@ -144,13 +180,183 @@ describe('ShapeLayerPropertiesPanel', () => {
     expect(sliderLabels(wrapper)).toContain('Background blur');
   });
 
-  it('uses the color picker labels without rendering duplicate color labels', () => {
+  it('labels the shape fill controls and keeps the border picker separate', () => {
     const wrapper = mount(ShapeLayerPropertiesPanel, { props: { clip: clip() }, global: { stubs } });
+    const fillControls = wrapper.findComponent(ColorFillPresetControlsStub);
 
-    expect(wrapper.findAll('.color-picker-stub').map((picker) => picker.attributes('data-label'))).toEqual([
-      'Fill color',
-      'Border color',
-    ]);
+    expect(fillControls.props('label')).toBe('Fill color');
+    expect(fillControls.props('modelValue')).toEqual({ kind: 'color', color: '#ff5a1f' });
+    expect(wrapper.findAllComponents(ColorPickerStub).map((picker) => picker.props('label'))).toEqual(['Border color']);
     expect(wrapper.find('.color-row').exists()).toBe(false);
+  });
+
+  it('shows drawing stroke fill controls with separate border color and width controls', async () => {
+    const drawing = {
+      points: [
+        { x: 0.1, y: 0.2 },
+        { x: 0.9, y: 0.8 },
+      ],
+      smoothing: 45,
+      strokeWidth: 12,
+    };
+    const gradientFill = {
+      kind: 'gradient' as const,
+      gradient: {
+        type: 'linear' as const,
+        angle: 90,
+        stops: [
+          { id: 'stroke-start', position: 0, color: '#123456', alpha: 1 },
+          { id: 'stroke-end', position: 1, color: '#abcdef', alpha: 0.5 },
+        ],
+      },
+    };
+    const wrapper = mount(ShapeLayerPropertiesPanel, {
+      props: {
+        clip: clip({
+          family: 'drawing',
+          preset: 'freehand',
+          fillColor: '#123456',
+          borderColor: '#654321',
+          borderWidth: 7,
+          drawing,
+        }),
+      },
+      global: { stubs },
+    });
+    const drawingControls = wrapper.findComponent(DrawingControls);
+    const strokeFillControls = drawingControls.findComponent(ColorFillPresetControlsStub);
+
+    expect(strokeFillControls.props('label')).toBe('Stroke color');
+    expect(strokeFillControls.props('modelValue')).toEqual({ kind: 'color', color: '#123456' });
+    expect(wrapper.findAllComponents(ColorFillPresetControlsStub)).toHaveLength(1);
+    const borderPicker = wrapper.findComponent(ColorPickerStub);
+    expect(borderPicker.props('label')).toBe('Border color');
+    expect(borderPicker.props('modelValue')).toBe('#654321');
+    const borderWidth = wrapper
+      .findAllComponents(BigSliderStub)
+      .find((control) => control.props('label') === 'Border width');
+    expect(borderWidth).toBeDefined();
+    expect(borderWidth!.props('modelValue')).toBe(7);
+    expect(wrapper.text()).not.toContain('Fill color');
+    expect(wrapper.findAllComponents(ColorFillPresetControlsStub).map((control) => control.props('label'))).toEqual([
+      'Stroke color',
+    ]);
+
+    await wrapper.setProps({
+      clip: clip({
+        family: 'drawing',
+        preset: 'freehand',
+        fill: gradientFill,
+        fillColor: '#123456',
+        borderColor: '#654321',
+        borderWidth: 7,
+        drawing,
+      }),
+    });
+    const gradientStrokeFillControls = wrapper
+      .findComponent(DrawingControls)
+      .findComponent(ColorFillPresetControlsStub);
+    expect(gradientStrokeFillControls.props('label')).toBe('Stroke color');
+    expect(gradientStrokeFillControls.props('modelValue')).toEqual(gradientFill);
+    expect(wrapper.findAllComponents(ColorFillPresetControlsStub)).toHaveLength(1);
+    expect(wrapper.findAllComponents(ColorPickerStub).map((picker) => picker.props('label'))).toEqual(['Border color']);
+    expect(
+      wrapper
+        .findAllComponents(BigSliderStub)
+        .find((control) => control.props('label') === 'Border width')
+        ?.props('modelValue'),
+    ).toBe(7);
+    expect(wrapper.text()).not.toContain('Fill color');
+    expect(wrapper.findAllComponents(ColorFillPresetControlsStub).map((control) => control.props('label'))).toEqual([
+      'Stroke color',
+    ]);
+
+    gradientStrokeFillControls.vm.$emit('update:modelValue', gradientFill);
+    expect(wrapper.emitted('update')).toEqual([
+      [
+        {
+          fill: gradientFill,
+          drawing: { ...drawing, smoothing: 45, strokeWidth: 12 },
+        },
+      ],
+    ]);
+
+    gradientStrokeFillControls.vm.$emit('update:modelValue', { kind: 'color', color: '#abcdef' });
+    expect(wrapper.emitted('update')).toEqual([
+      [
+        {
+          fill: gradientFill,
+          drawing: { ...drawing, smoothing: 45, strokeWidth: 12 },
+        },
+      ],
+      [
+        {
+          fill: { kind: 'color', color: '#abcdef' },
+          fillColor: '#abcdef',
+          drawing: { ...drawing, smoothing: 45, strokeWidth: 12 },
+        },
+      ],
+    ]);
+
+    wrapper.findComponent(ColorPickerStub).vm.$emit('update:modelValue', '#fedcba');
+    const updatedBorderWidth = wrapper
+      .findAllComponents(BigSliderStub)
+      .find((control) => control.props('label') === 'Border width');
+    updatedBorderWidth!.vm.$emit('update:modelValue', 11);
+    expect(wrapper.emitted('update')).toEqual([
+      [
+        {
+          fill: gradientFill,
+          drawing: { ...drawing, smoothing: 45, strokeWidth: 12 },
+        },
+      ],
+      [
+        {
+          fill: { kind: 'color', color: '#abcdef' },
+          fillColor: '#abcdef',
+          drawing: { ...drawing, smoothing: 45, strokeWidth: 12 },
+        },
+      ],
+      [{ borderColor: '#fedcba' }],
+      [{ borderWidth: 11 }],
+    ]);
+  });
+
+  it.each(['shape', 'arrow'] as const)('keeps the %s fill and border controls independent', (family) => {
+    const gradientFill = {
+      kind: 'gradient' as const,
+      gradient: {
+        type: 'radial' as const,
+        angle: 180,
+        stops: [
+          { id: 'shape-center', position: 0, color: '#ffffff', alpha: 1 },
+          { id: 'shape-edge', position: 1, color: '#123456', alpha: 0.75 },
+        ],
+      },
+    };
+    const wrapper = mount(ShapeLayerPropertiesPanel, {
+      props: {
+        clip: clip({
+          family,
+          preset: family === 'arrow' ? 'arrow' : 'rounded-rectangle',
+          fillColor: '#abcdef',
+          borderColor: '#654321',
+        }),
+      },
+      global: { stubs },
+    });
+    const fillControls = wrapper.findComponent(ColorFillPresetControlsStub);
+    const borderPicker = wrapper.findComponent(ColorPickerStub);
+
+    expect(fillControls.props('label')).toBe('Fill color');
+    expect(fillControls.props('modelValue')).toEqual({ kind: 'color', color: '#abcdef' });
+    expect(borderPicker.props('label')).toBe('Border color');
+    expect(borderPicker.props('modelValue')).toBe('#654321');
+
+    fillControls.vm.$emit('update:modelValue', gradientFill);
+    expect(wrapper.emitted('update')).toEqual([[{ fill: gradientFill }]]);
+
+    borderPicker.vm.$emit('update:modelValue', '#fedcba');
+    expect(wrapper.emitted('update')).toEqual([[{ fill: gradientFill }], [{ borderColor: '#fedcba' }]]);
   });
 });

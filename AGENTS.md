@@ -27,6 +27,13 @@ Before handing off a change, run the smallest relevant checks and report any una
 - Type checking and the smallest relevant build may still be used when they validate compilation across a changed typed boundary.
 - For Rust changes, target the affected package/module for formatting, tests, and Clippy when the toolchain is available; do not default to the whole workspace.
 
+## Changelog
+
+- Keep user-facing release notes in the repository-root `CHANGELOG.md`. If it does not exist, create it with an `## [Unreleased]` section and the `Added`, `Changed`, `Fixed`, `Removed`, and `Security` subsections as needed.
+- Before marking any feature, bug fix, or user-visible change complete or handing it off, add a concise user-facing entry under the relevant subsection of `## [Unreleased]`. This is a required completion step for every task; do not defer entries until release preparation. Internal-only refactors, tests, or documentation changes need no entry unless they change user-visible behavior.
+- When preparing a release, move the applicable Unreleased entries into `## [VERSION] - YYYY-MM-DD`, matching the stable version in the root `package.json`. Keep released sections as history; never add new work to an already released version.
+- Include the changelog update in the final diff review and report. If the task has no user-visible behavior change, state that explicitly instead of adding an empty or misleading entry.
+
 ## Protocole d'exécution du goal
 
 - **Sol** lit les plans et leurs dépendances, identifie les critères d'acceptation et les gates, décide l'architecture, écrit tout le code produit, intègre, relit les diffs et exécute les validations finales. Sol est le seul à modifier le code produit et à effectuer, lorsqu'ils sont demandés, les commits et merges.

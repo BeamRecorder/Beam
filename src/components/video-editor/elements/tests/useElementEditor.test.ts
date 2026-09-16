@@ -5,7 +5,8 @@ import type { ShapeClip } from '~/media/shared/composition-types';
 import { createElementText } from '~/media/shared/element-text';
 import type { ShapeLayerStyle } from '~/media/shared/shape-layer-types';
 import { normalizeShapeLayerStyle } from '~/media/shared/shape-layer-style';
-import type { DrawnElement } from '~/media/shared/element-types';
+import type { ColorFill } from '~/media/shared/color-fill-types';
+import type { DrawingSettings, DrawnElement } from '~/media/shared/element-types';
 import type { ElementEditorContext, ElementEditorOptions } from '../element-editor-types';
 import { provideElementEditor, useElementEditor } from '../useElementEditor';
 
@@ -204,6 +205,209 @@ describe('useElementEditor', () => {
       drawing: drawing.drawing,
     });
     expect(editor.select).toHaveBeenLastCalledWith(inserted.id);
+    expect(editor.context.drawingMode.value).toBe(true);
+  });
+
+  it('keeps drawing mode active and selects each completed drawing', () => {
+    const editor = mountEditor();
+    editor.context.add('drawing');
+    expect(editor.context.drawingMode.value).toBe(true);
+
+    const drawing: DrawnElement = {
+      transform: { x: 0.2, y: 0.25, width: 0.4, height: 0.3 },
+      drawing: {
+        points: [
+          { x: 0.1, y: 0.2 },
+          { x: 0.9, y: 0.8 },
+        ],
+        smoothing: 45,
+        strokeWidth: 12,
+      },
+    };
+    editor.context.addDrawing(drawing);
+
+    const inserted = editor.insert.mock.calls[0]![0];
+    expect(editor.insert).toHaveBeenCalledOnce();
+    expect(inserted).toMatchObject({ family: 'drawing', preset: 'freehand', drawing: drawing.drawing });
+    expect(editor.select).toHaveBeenLastCalledWith(inserted.id);
+    expect(editor.context.selected.value).toBe(inserted);
+    expect(editor.context.drawingMode.value).toBe(true);
+  });
+
+  it('applies drawing settings to the latest stroke and retains them for the next stroke', () => {
+    const editor = mountEditor();
+    editor.context.add('drawing');
+    const firstDrawing: DrawnElement = {
+      transform: { x: 0.2, y: 0.25, width: 0.4, height: 0.3 },
+      drawing: {
+        points: [
+          { x: 0.1, y: 0.2 },
+          { x: 0.9, y: 0.8 },
+        ],
+        smoothing: 45,
+        strokeWidth: 12,
+      },
+    };
+    editor.context.addDrawing(firstDrawing);
+    const latestId = editor.context.selected.value!.id;
+    const fallbackColor = editor.context.drawingSettings.value.color;
+    const gradientFill: ColorFill = {
+      kind: 'gradient',
+      gradient: {
+        type: 'linear',
+        angle: 90,
+        stops: [
+          { id: 'start', position: 0, color: '#123456', alpha: 1 },
+          { id: 'end', position: 1, color: '#abcdef', alpha: 0.5 },
+        ],
+      },
+    };
+    const gradientSettings: DrawingSettings = {
+      ...editor.context.drawingSettings.value,
+      fill: gradientFill,
+      strokeWidth: 24,
+      smoothing: 78,
+    };
+
+    editor.context.updateDrawingSettings(gradientSettings);
+
+    expect(editor.context.drawingSettings.value).toEqual(gradientSettings);
+    expect(editor.update).toHaveBeenNthCalledWith(1, latestId, {
+      fill: gradientFill,
+      drawing: { ...firstDrawing.drawing, smoothing: 78, strokeWidth: 24 },
+    });
+    expect(editor.context.selected.value).toMatchObject({
+      id: latestId,
+      fill: gradientFill,
+      fillColor: fallbackColor,
+      drawing: { ...firstDrawing.drawing, smoothing: 78, strokeWidth: 24 },
+    });
+
+    const solidFill: ColorFill = { kind: 'color', color: '#654321' };
+    const solidSettings: DrawingSettings = {
+      ...gradientSettings,
+      color: solidFill.color,
+      fill: solidFill,
+      strokeWidth: 16,
+      smoothing: 32,
+    };
+    editor.context.updateDrawingSettings(solidSettings);
+
+    expect(editor.context.drawingSettings.value).toEqual(solidSettings);
+    expect(editor.update).toHaveBeenNthCalledWith(2, latestId, {
+      fill: solidFill,
+      fillColor: solidFill.color,
+      drawing: { ...firstDrawing.drawing, smoothing: 32, strokeWidth: 16 },
+    });
+    expect(editor.context.selected.value).toMatchObject({
+      id: latestId,
+      fill: solidFill,
+      fillColor: solidFill.color,
+      drawing: { ...firstDrawing.drawing, smoothing: 32, strokeWidth: 16 },
+    });
+
+    const nextDrawing: DrawnElement = {
+      transform: { x: 0.3, y: 0.3, width: 0.3, height: 0.3 },
+      drawing: {
+        points: [
+          { x: 0.2, y: 0.2 },
+          { x: 0.8, y: 0.8 },
+        ],
+        smoothing: solidSettings.smoothing,
+        strokeWidth: solidSettings.strokeWidth,
+      },
+    };
+    editor.context.addDrawing(nextDrawing);
+    const nextInserted = editor.insert.mock.calls[1]![0];
+
+    expect(nextInserted).toMatchObject({
+      fill: solidFill,
+      fillColor: solidFill.color,
+      drawing: nextDrawing.drawing,
+    });
+    expect(editor.context.drawingSettings.value).toEqual(solidSettings);
+    expect(editor.context.drawingMode.value).toBe(true);
+  });
+
+  it('does not edit an already selected drawing before a new stroke is completed', () => {
+    const existing = createClip('existing-drawing', {
+      family: 'drawing',
+      preset: 'freehand',
+      fillColor: '#123456',
+      drawing: {
+        points: [
+          { x: 0.1, y: 0.2 },
+          { x: 0.9, y: 0.8 },
+        ],
+        smoothing: 40,
+        strokeWidth: 10,
+      },
+    });
+    const editor = mountEditor({ initialLayers: [existing], selectedId: existing.id });
+    editor.context.add('drawing');
+    const settings: DrawingSettings = {
+      ...editor.context.drawingSettings.value,
+      fill: {
+        kind: 'gradient',
+        gradient: {
+          type: 'radial',
+          angle: 0,
+          stops: [
+            { id: 'center', position: 0, color: '#ffffff', alpha: 1 },
+            { id: 'edge', position: 1, color: '#000000', alpha: 1 },
+          ],
+        },
+      },
+      strokeWidth: 30,
+      smoothing: 80,
+    };
+
+    editor.context.updateDrawingSettings(settings);
+
+    expect(editor.context.drawingMode.value).toBe(true);
+    expect(editor.context.selected.value).toBe(existing);
+    expect(editor.context.drawingSettings.value).toEqual(settings);
+    expect(editor.update).not.toHaveBeenCalled();
+    expect(editor.layers.value[0]).toBe(existing);
+    expect(existing).toMatchObject({
+      fillColor: '#123456',
+      drawing: { smoothing: 40, strokeWidth: 10 },
+    });
+  });
+
+  it('preserves the configured gradient fill on the inserted drawing ShapeClip', () => {
+    const editor = mountEditor();
+    const fill = {
+      kind: 'gradient' as const,
+      gradient: {
+        type: 'linear' as const,
+        angle: 90,
+        stops: [
+          { id: 'start', position: 0, color: '#123456', alpha: 0.25 },
+          { id: 'end', position: 1, color: '#abcdef', alpha: 0.75 },
+        ],
+      },
+    };
+    editor.context.drawingSettings.value.fill = fill;
+    const drawing: DrawnElement = {
+      transform: { x: 0.2, y: 0.25, width: 0.4, height: 0.3 },
+      drawing: {
+        points: [
+          { x: 0.1, y: 0.2 },
+          { x: 0.9, y: 0.8 },
+        ],
+        smoothing: 45,
+        strokeWidth: 12,
+      },
+    };
+
+    editor.context.addDrawing(drawing);
+
+    const inserted = editor.insert.mock.calls[0]![0];
+    expect(editor.insert).toHaveBeenCalledOnce();
+    expect(inserted).toMatchObject({ family: 'drawing', preset: 'freehand', drawing: drawing.drawing });
+    expect(inserted.fill).toEqual(fill);
+    expect(inserted.fillColor).toBe(editor.context.drawingSettings.value.color);
   });
 
   it('keeps text changes in a detached draft until finish and commits the latest bounded value', () => {

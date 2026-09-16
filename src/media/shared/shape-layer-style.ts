@@ -1,5 +1,6 @@
 import { isElementText } from './element-text';
 import { isFreehandDrawing } from './freehand';
+import { isColorFill, type ColorFill } from './color-fill-types';
 import type { ShapeLayerFamily, ShapeLayerPreset, ShapeLayerStyle } from './shape-layer-types';
 
 export const SHAPE_PRESETS: readonly ShapeLayerPreset[] = [
@@ -38,6 +39,9 @@ const color = (value: string | undefined, fallback: string) =>
 export const defaultShapePresetFor = (family: ShapeLayerFamily): ShapeLayerPreset =>
   family === 'arrow' ? 'arrow' : family === 'text' ? 'text' : family === 'drawing' ? 'freehand' : 'rounded-rectangle';
 
+export const shapeLayerFill = (value: Pick<ShapeLayerStyle, 'fill' | 'fillColor'>): ColorFill =>
+  isColorFill(value.fill) ? value.fill : { kind: 'color', color: value.fillColor };
+
 export const normalizeShapeLayerStyle = (value: Partial<ShapeLayerStyle> | null | undefined): ShapeLayerStyle => {
   const family = value?.family && ['arrow', 'text', 'drawing'].includes(value.family) ? value.family : 'shape';
   const presets = family === 'shape' ? SHAPE_PRESETS : [defaultShapePresetFor(family)];
@@ -46,6 +50,7 @@ export const normalizeShapeLayerStyle = (value: Partial<ShapeLayerStyle> | null 
     ...(value?.drawing ? { drawing: value.drawing } : {}),
     family,
     preset: presets.includes(value?.preset as ShapeLayerPreset) ? value!.preset! : defaultShapePresetFor(family),
+    ...(isColorFill(value?.fill) ? { fill: value.fill } : {}),
     fillColor: color(value?.fillColor, DEFAULT_SHAPE_LAYER_STYLE.fillColor),
     borderColor: color(value?.borderColor, DEFAULT_SHAPE_LAYER_STYLE.borderColor),
     borderWidth: finite(value?.borderWidth, DEFAULT_SHAPE_LAYER_STYLE.borderWidth, 40),
@@ -68,6 +73,7 @@ export const normalizeShapeLayerStyle = (value: Partial<ShapeLayerStyle> | null 
 export const isShapeLayerStyle = (value: Partial<ShapeLayerStyle>) => {
   if (value.text !== undefined && !isElementText(value.text)) return false;
   if (value.drawing !== undefined && !isFreehandDrawing(value.drawing)) return false;
+  if (value.fill !== undefined && !isColorFill(value.fill)) return false;
   if ((value.family === 'text' && !value.text) || (value.family === 'drawing' && !value.drawing)) return false;
   const normalized = normalizeShapeLayerStyle(value);
   return (Object.keys(normalized) as Array<keyof ShapeLayerStyle>).every((key) => value[key] === normalized[key]);

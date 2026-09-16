@@ -4,11 +4,12 @@ import { isAudioClip, type Clip, type ClipComposition, type MediaAsset } from '~
 import type { ZoomElement } from '../../zoom/zoom-types';
 import type { ContextMenuItemOrDivider } from '~/components/ui/context-menu';
 import { getClipCategory, useTimelineClipboard } from './useTimelineClipboard';
-import type { TimelineClipboardItem, TimelineItemCategory, TimelinePasteTarget } from './timeline-clipboard-types';
+import type { TimelineItemCategory, TimelinePasteTarget } from './timeline-clipboard-types';
 import type { TimelineTracksEmits } from './timeline-tracks-types';
 import { MIN_CLIP_DURATION_MS } from '../../composition/engine/clip-engine';
 import { selectionHasLocks } from '../../composition/timeline-locks';
 import { rippleRangeForSelection } from '../../composition/timeline-edit-operations';
+import { recordingLinkedClipIds } from '../../composition/recording-media-links';
 
 export interface TimelineContextMenuState {
   isOpen: boolean;
@@ -158,20 +159,51 @@ export function useTimelineContextMenu(options: {
     return { zoom: null, clip, clipIds, zoomIds: [...selectedZoomIds()] };
   };
 
-  const copyItem = (clip: Clip | null, zoom: ZoomElement | null): boolean => {
+  const copySelection = (
+    clipIds: readonly string[],
+    zoomIds: readonly string[],
+    primary: Clip | ZoomElement | null,
+  ): boolean => {
     const scopeId = options.scopeId.value;
     if (!scopeId) return false;
-    let item: TimelineClipboardItem;
-    if (zoom) item = clipboard.copyZoom(scopeId, zoom, options.zoomElements.value);
-    else if (clip) item = clipboard.copyClip(scopeId, clip, options.assetFor(clip));
-    else return false;
+    const selectedClips = options.composition.value.clips.filter((clip) => clipIds.includes(clip.id));
+    const selectedZooms = options.zoomElements.value.filter((zoom) => zoomIds.includes(zoom.id));
+    const item = clipboard.copySelection({
+      scopeId,
+      clips: selectedClips,
+      zooms: selectedZooms,
+      allZooms: options.zoomElements.value,
+      primaryId: primary?.id ?? null,
+      assetFor: options.assetFor,
+    });
+    if (!item) return false;
     options.emit('clipboard:copied', item);
     return true;
   };
 
   const copySelected = () => {
     const selected = selectedItem();
-    if (!copyItem(selected.clip, selected.zoom)) options.emit('paste:error', options.t('copyUnavailable'));
+    if (!copySelection(selected.clipIds, selected.zoomIds, selected.zoom ?? selected.clip))
+      options.emit('paste:error', options.t('copyUnavailable'));
+  };
+
+  const cutSelected = () => {
+    const selected = selectedItem();
+    const linkedClipIds = recordingLinkedClipIds(options.composition.value, selected.clipIds);
+    if (
+      selectionHasLocks(options.composition.value, options.zoomElements.value, {
+        clipIds: linkedClipIds,
+        zoomIds: selected.zoomIds,
+      }) ||
+      !copySelection(selected.clipIds, selected.zoomIds, selected.zoom ?? selected.clip)
+    )
+      return false;
+    options.emit('delete:selection', {
+      clipIds: selected.clipIds,
+      zoomIds: selected.zoomIds,
+      mode: 'lift',
+    });
+    return true;
   };
 
   const pasteClipboard = (target?: TimelinePasteTarget | null) => {
@@ -230,7 +262,7 @@ export function useTimelineContextMenu(options: {
         label: options.t('paste'),
         icon: ClipboardPaste,
         shortcut: 'Ctrl+V',
-        disabled: !clipboard.hasClipboardItem.value,
+        disabled: !clipboard.canPaste(options.scopeId.value),
       },
       { isDivider: true },
       {
@@ -262,7 +294,7 @@ export function useTimelineContextMenu(options: {
     else if (actionId === 'hold' && clip && canHoldClip(clip))
       options.emit('hold:clip', { id: clip.id, timeMs: options.currentTimeMs.value });
     else if (actionId === 'normalize-audio') options.emit('normalize:audio', clipIds);
-    else if (actionId === 'copy') copyItem(clip, zoom);
+    else if (actionId === 'copy') copySelection(clipIds, zoomIds, zoom ?? clip);
     else if (actionId === 'paste') pasteClipboard({ category, trackId });
     else if (actionId === 'delete') {
       options.emit('delete:selection', { clipIds, zoomIds, mode: 'lift' });
@@ -279,6 +311,7 @@ export function useTimelineContextMenu(options: {
     closeContextMenu,
     handleContextMenuSelect,
     copySelected,
+    cutSelected,
     pasteClipboard,
   };
 }

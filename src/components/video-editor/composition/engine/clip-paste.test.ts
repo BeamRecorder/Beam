@@ -284,11 +284,12 @@ describe('pasteClipAt', () => {
     expect(result.composition.clips[0]).toMatchObject({ timelineStartMs: 0, timelineDurationMs: 1_000 });
   });
 
-  it('overwrites only the matching caption type lane', () => {
-    const text = caption('text-target', 'text', 0, 1_000);
-    const keyboard = caption('keyboard-target', 'keyboard', 0, 1_000);
-    const copied = caption('copied-text', 'text', 0, 400);
-    const source = composition([text, keyboard], []);
+  it('overwrites only the matching caption layer and preserves other same-type layers', () => {
+    const text = caption('text-target', 'text', 0, 1_000, { captionLayerId: 'text-layer' });
+    const otherText = caption('other-text-target', 'text', 0, 1_000, { captionLayerId: 'other-text-layer' });
+    const keyboard = caption('keyboard-target', 'keyboard', 0, 1_000, { captionLayerId: 'keyboard-layer' });
+    const copied = caption('copied-text', 'text', 0, 400, { captionLayerId: 'text-layer' });
+    const source = composition([text, otherText, keyboard], []);
 
     let nextId = 0;
     const result = pasteClipAt(source, copied, {
@@ -296,20 +297,28 @@ describe('pasteClipAt', () => {
       timelineDurationMs: 1_500,
       idFactory: () => (nextId++ === 0 ? 'pasted-caption' : 'generated-caption'),
     });
-    const textClips = result.composition.clips.filter(
-      (clip): clip is CaptionClip => clip.kind === 'caption' && clip.caption.type === 'text',
+    const textLayerClips = result.composition.clips.filter(
+      (clip): clip is CaptionClip =>
+        clip.kind === 'caption' && clip.caption.type === 'text' && clip.captionLayerId === 'text-layer',
     );
 
-    expect(textClips.map((clip) => [clip.id, clip.timelineStartMs, clip.timelineDurationMs])).toEqual([
+    expect(textLayerClips.map((clip) => [clip.id, clip.timelineStartMs, clip.timelineDurationMs])).toEqual([
       ['text-target', 0, 200],
       ['pasted-caption', 200, 400],
       ['generated-caption', 600, 400],
     ]);
+    expect(result.composition.clips.find((clip) => clip.id === 'other-text-target')).toMatchObject({
+      ...otherText,
+      order: expect.any(Number),
+    });
     expect(result.composition.clips.find((clip) => clip.id === 'keyboard-target')).toMatchObject({
       ...keyboard,
       order: expect.any(Number),
     });
-    expect(textClips.find((clip) => clip.id === 'pasted-caption')?.caption).toEqual(copied.caption);
+    expect(textLayerClips.find((clip) => clip.id === 'pasted-caption')).toMatchObject({
+      captionLayerId: 'text-layer',
+      caption: copied.caption,
+    });
   });
 
   it('keeps unrelated visual tracks, audio, and synchronized groups unchanged', () => {

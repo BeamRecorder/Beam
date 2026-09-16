@@ -1,4 +1,5 @@
 import type { ElementText, FreehandDrawing } from './element-types';
+import type { ColorFill } from './color-fill-types';
 
 export type ShapeLayerFamily = 'shape' | 'arrow' | 'text' | 'drawing';
 export type ShapeLayerPreset =
@@ -16,6 +17,7 @@ export interface ShapeLayerStyle {
   drawing?: FreehandDrawing;
   family: ShapeLayerFamily;
   preset: ShapeLayerPreset;
+  fill?: ColorFill;
   fillColor: string;
   borderColor: string;
   borderWidth: number;

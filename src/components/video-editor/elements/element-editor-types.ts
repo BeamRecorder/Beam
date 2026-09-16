@@ -32,6 +32,7 @@ export interface ElementEditorContext {
   addColor?: () => void | Promise<void>;
   addImage?: () => void | Promise<void>;
   addDrawing: (value: DrawnElement) => void;
+  updateDrawingSettings: (settings: DrawingSettings) => void;
   select: (id: string) => void;
   update: (patch: Partial<ShapeLayerStyle>) => void;
   remove: () => void;

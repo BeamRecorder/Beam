@@ -75,6 +75,12 @@ export function createScreenshotEditorTestHarness(
     template:
       '<section data-testid="shape-properties"><button data-testid="change-shape-style" @click="$emit(\'update\', { fillColor: \'#123456\', rotation: 90 })">Change style</button></section>',
   });
+  const ColorFillPresetControlsStub = defineComponent({
+    name: 'ColorFillPresetControls',
+    props: { modelValue: { type: Object, required: true }, label: String },
+    emits: ['update:modelValue'],
+    template: '<div data-testid="color-fill-preset-controls">{{ label }}</div>',
+  });
   const ScreenshotCanvasStub = defineComponent({
     name: 'ScreenshotCanvas',
     props: {
@@ -150,6 +156,7 @@ export function createScreenshotEditorTestHarness(
           Button: ButtonStub,
           ButtonGroup: ButtonGroupStub,
           Select: SelectStub,
+          ColorFillPresetControls: ColorFillPresetControlsStub,
           ShapeLayerPropertiesPanel: ShapePropertiesStub,
           ScreenshotCanvas: ScreenshotCanvasStub,
           ScreenshotComposition: ScreenshotCompositionStub,

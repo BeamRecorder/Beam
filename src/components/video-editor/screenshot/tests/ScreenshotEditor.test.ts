@@ -476,6 +476,86 @@ describe('ScreenshotEditor', () => {
     wrapper.unmount();
   });
 
+  it('copies and pastes a selected shape group, then cuts only the pasted copies', async () => {
+    const ids = ['clipboard-a', 'clipboard-b', 'untouched-c', 'pasted-a', 'pasted-b'];
+    let nextId = 0;
+    vi.stubGlobal('crypto', {
+      randomUUID: () => ids[nextId++] ?? `unexpected-${nextId}`,
+    });
+    const wrapper = mountEditor();
+    await flushPromises();
+    await wrapper.get('[aria-label="Elements"]').trigger('click');
+    await clickText(wrapper, 'Arrow');
+    await clickText(wrapper, 'Arrow');
+    await clickText(wrapper, 'Arrow');
+
+    const canvas = wrapper.findComponent(ScreenshotCanvasStub);
+    const composition = wrapper.findComponent(ScreenshotCompositionStub);
+    const state = canvas.props('state') as ScreenshotState;
+    state.shapes[0]!.name = 'First shape';
+    state.shapes[1]!.name = 'Second shape';
+    state.shapes[2]!.name = 'Uncopied shape';
+    await wrapper.vm.$nextTick();
+
+    composition.vm.$emit('select', 'clipboard-a');
+    composition.vm.$emit('select', 'clipboard-b', 'toggle');
+    await wrapper.vm.$nextTick();
+    expect(composition.props('selectedIds')).toEqual(['clipboard-a', 'clipboard-b']);
+
+    const copyEvent = new KeyboardEvent('keydown', {
+      key: 'c',
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    window.dispatchEvent(copyEvent);
+    expect(copyEvent.defaultPrevented).toBe(true);
+    expect(useToastStore().toasts.at(-1)?.message).toBe('Copied: First shape, Second shape');
+
+    const pasteEvent = new KeyboardEvent('keydown', {
+      key: 'v',
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    window.dispatchEvent(pasteEvent);
+    await flushPromises();
+    expect(pasteEvent.defaultPrevented).toBe(true);
+    expect((canvas.props('state') as ScreenshotState).shapes.map(({ id }) => id)).toEqual([
+      'clipboard-a',
+      'clipboard-b',
+      'untouched-c',
+      'pasted-a',
+      'pasted-b',
+    ]);
+    expect(composition.props('selectedIds')).toEqual(['pasted-a', 'pasted-b']);
+    expect(composition.props('selectedId')).toBe('pasted-b');
+    expect(useToastStore().toasts.at(-1)?.message).toBe('Pasted: First shape, Second shape');
+
+    const cutEvent = new KeyboardEvent('keydown', {
+      key: 'x',
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    window.dispatchEvent(cutEvent);
+    await flushPromises();
+    expect(cutEvent.defaultPrevented).toBe(true);
+    expect((canvas.props('state') as ScreenshotState).shapes.map(({ id }) => id)).toEqual([
+      'clipboard-a',
+      'clipboard-b',
+      'untouched-c',
+    ]);
+    expect(composition.props('selectedIds')).toEqual([]);
+    expect(compositionLayers(wrapper).map(({ id }) => id)).toEqual(
+      expect.arrayContaining(['clipboard-a', 'clipboard-b', 'untouched-c']),
+    );
+    expect(compositionLayers(wrapper).map(({ id }) => id)).not.toEqual(
+      expect.arrayContaining(['pasted-a', 'pasted-b']),
+    );
+    wrapper.unmount();
+  });
+
   it('translates a selected group in place and records the movement as one undo step', async () => {
     const ids = ['translate-a', 'translate-b', 'translate-outside'];
     let nextId = 0;

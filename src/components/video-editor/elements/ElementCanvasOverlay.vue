@@ -8,6 +8,7 @@ import { elementTextCanvas } from '../composition/shape/render-element-content';
 import { applyCanvasCaptionFont } from '~/media/shared/caption-font';
 import { finishDrawing, MAX_DRAWING_POINTS, traceFreehand } from '~/media/shared/freehand';
 import type { DrawingPoint } from '~/media/shared/element-types';
+import { backgroundFillStyle } from '../composition/background/render-background';
 import type { ElementCamera, ElementViewport } from './element-editor-types';
 import { elementMatrix, unprojectElementPoint } from './element-projection';
 import { useTranslate } from '~/i18n/useTranslate';
@@ -67,6 +68,25 @@ const pointAt = (event: PointerEvent) => {
     props.camera,
   );
 };
+const drawingFillRect = (settings: { strokeWidth: number }) => {
+  let minX = 1,
+    minY = 1,
+    maxX = 0,
+    maxY = 0;
+  for (const point of points) {
+    minX = Math.min(minX, point.x);
+    minY = Math.min(minY, point.y);
+    maxX = Math.max(maxX, point.x);
+    maxY = Math.max(maxY, point.y);
+  }
+  const padding = (settings.strokeWidth * Math.min(props.viewport.width, props.viewport.height)) / 2160;
+  return {
+    x: minX * props.viewport.width - padding,
+    y: minY * props.viewport.height - padding,
+    width: Math.max(1, (maxX - minX) * props.viewport.width + padding * 2),
+    height: Math.max(1, (maxY - minY) * props.viewport.height + padding * 2),
+  };
+};
 const paint = () => {
   const canvas = preview.value,
     ctx = canvas?.getContext('2d');
@@ -82,7 +102,11 @@ const paint = () => {
   if (!points.length) return;
   const settings = editor.drawingSettings.value;
   traceFreehand(ctx, { points, ...settings }, props.viewport.width, props.viewport.height);
-  ctx.strokeStyle = settings.color;
+  ctx.strokeStyle = backgroundFillStyle(
+    ctx,
+    settings.fill ?? { kind: 'color', color: settings.color },
+    drawingFillRect(settings),
+  );
   ctx.lineWidth = (settings.strokeWidth * Math.min(props.viewport.width, props.viewport.height)) / 1080;
   ctx.lineCap = ctx.lineJoin = 'round';
   ctx.stroke();

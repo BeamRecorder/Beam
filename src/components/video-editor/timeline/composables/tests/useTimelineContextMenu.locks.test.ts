@@ -1,11 +1,13 @@
-import { ref } from 'vue';
+import { defineComponent, h, ref } from 'vue';
+import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Clip, ClipComposition, MediaAsset, VisualClip } from '~/media/shared/composition-types';
+import type { AudioClip, Clip, ClipComposition, MediaAsset, VisualClip } from '~/media/shared/composition-types';
 import { COMPOSITION_SCHEMA_VERSION } from '~/media/shared/composition-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import type { ZoomElement } from '../../../zoom/zoom-types';
 import type { TimelineTracksEmits } from '../timeline-tracks-types';
 import { useTimelineClipboard } from '../useTimelineClipboard';
+import { useTimelineClipboardShortcuts } from '../useTimelineClipboardShortcuts';
 import { useTimelineContextMenu } from '../useTimelineContextMenu';
 
 const asset: MediaAsset = {
@@ -83,12 +85,35 @@ const createMenu = (overrides: Partial<Parameters<typeof useTimelineContextMenu>
   return { ...useTimelineContextMenu(options), options, emitSpy, clips, sourceZoom };
 };
 
+let shortcutWrapper: VueWrapper | undefined;
+
+const mountClipboardShortcuts = (menu: ReturnType<typeof createMenu>) => {
+  const Harness = defineComponent({
+    setup() {
+      useTimelineClipboardShortcuts({
+        composition: () => menu.options.composition.value,
+        selectedClipId: () => menu.options.selectedClipId.value,
+        selectedZoomId: () => menu.options.selectedZoomId.value,
+        disabled: () => false,
+        copySelected: menu.copySelected,
+        cutSelected: menu.cutSelected,
+        pasteClipboard: menu.pasteClipboard,
+      });
+      return () => h('div');
+    },
+  });
+  shortcutWrapper = mount(Harness);
+  return shortcutWrapper;
+};
+
 const item = (menu: ReturnType<typeof createMenu>, id: string) => {
   const found = menu.contextMenuItems.value.find((entry) => !('isDivider' in entry) && entry.id === id);
   return found && !('isDivider' in found) ? found : undefined;
 };
 
 afterEach(() => {
+  shortcutWrapper?.unmount();
+  shortcutWrapper = undefined;
   useTimelineClipboard().clearClipboard();
 });
 
@@ -200,6 +225,119 @@ describe('useTimelineContextMenu lock actions', () => {
 
     menu.handleContextMenuSelect('copy');
     expect(menu.emitSpy).toHaveBeenCalledWith('clipboard:copied', expect.objectContaining({ type: 'clip' }));
+  });
+
+  it('leaves Ctrl+X and the existing clipboard untouched when any selected item is locked', () => {
+    const free = clip('free');
+    const locked = clip('locked', { timelineStartMs: 2_500, locked: true });
+    const menu = createMenu({
+      composition: ref(composition([free, locked])),
+      selectedClipId: ref(free.id),
+      selectedClipIds: ref([free.id, locked.id]),
+    });
+    const clipboard = useTimelineClipboard();
+    const previous = clipboard.copyClip('project-a', clip('previously-copied'));
+    mountClipboardShortcuts(menu);
+
+    const event = new KeyboardEvent('keydown', { key: 'x', ctrlKey: true, bubbles: true, cancelable: true });
+    window.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(clipboard.getClipboardItem()).toEqual(previous);
+    expect(menu.emitSpy).not.toHaveBeenCalledWith('clipboard:copied', expect.anything());
+    expect(menu.emitSpy).not.toHaveBeenCalledWith('delete:selection', expect.anything());
+  });
+
+  it('blocks Ctrl+X when a linked recording sidecar is locked', () => {
+    const sessionId = 'session-1';
+    const screenAsset: MediaAsset = { ...asset, id: 'screen-asset', sessionId };
+    const microphoneAsset: MediaAsset = {
+      ...asset,
+      id: 'microphone-asset',
+      kind: 'audio',
+      name: 'Microphone',
+      fileName: 'microphone.wav',
+      width: null,
+      height: null,
+      sessionId,
+    };
+    const screen = clip('screen-recording', {
+      kind: 'screen',
+      assetId: screenAsset.id,
+      appearance: createDefaultClipAppearance('screen'),
+    });
+    const lockedMicrophone: AudioClip = {
+      id: 'locked-microphone',
+      kind: 'audio',
+      name: 'Microphone',
+      assetId: microphoneAsset.id,
+      timelineStartMs: 3_000,
+      timelineDurationMs: 1_000,
+      sourceInMs: 0,
+      sourceDurationMs: 1_000,
+      playbackRate: 1,
+      transitions: { entry: null, exit: null },
+      enabled: true,
+      order: 1,
+      role: 'microphone',
+      volume: 100,
+      locked: true,
+      recordingClipId: screen.id,
+    };
+    const menu = createMenu({
+      composition: ref({
+        ...composition([screen, lockedMicrophone]),
+        assets: [screenAsset, microphoneAsset],
+      }),
+      selectedClipId: ref(screen.id),
+      selectedClipIds: ref([screen.id]),
+    });
+    const clipboard = useTimelineClipboard();
+    const previous = clipboard.copyClip('project-a', clip('previously-copied'));
+    mountClipboardShortcuts(menu);
+
+    const event = new KeyboardEvent('keydown', { key: 'x', ctrlKey: true, bubbles: true, cancelable: true });
+    window.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(clipboard.getClipboardItem()).toEqual(previous);
+    expect(menu.emitSpy).not.toHaveBeenCalledWith('clipboard:copied', expect.anything());
+    expect(menu.emitSpy).not.toHaveBeenCalledWith('delete:selection', expect.anything());
+  });
+
+  it('cuts an unlocked clip and zoom bundle with one delete-selection emission', () => {
+    const first = clip('first');
+    const second = clip('second', { timelineStartMs: 2_500 });
+    const selectedZoom = zoom('selected-zoom');
+    const menu = createMenu({
+      composition: ref(composition([first, second])),
+      zoomElements: ref([selectedZoom]),
+      selectedClipId: ref(second.id),
+      selectedClipIds: ref([first.id, second.id]),
+      selectedZoomIds: ref([selectedZoom.id]),
+    });
+    mountClipboardShortcuts(menu);
+
+    const event = new KeyboardEvent('keydown', { key: 'x', ctrlKey: true, bubbles: true, cancelable: true });
+    window.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(menu.emitSpy).toHaveBeenCalledTimes(2);
+    expect(menu.emitSpy).toHaveBeenCalledWith('clipboard:copied', expect.objectContaining({ type: 'selection' }));
+    expect(menu.emitSpy).toHaveBeenCalledWith('delete:selection', {
+      clipIds: [first.id, second.id],
+      zoomIds: [selectedZoom.id],
+      mode: 'lift',
+    });
+    expect(useTimelineClipboard().getClipboardItem()).toMatchObject({
+      type: 'selection',
+      primaryIndex: 1,
+      entries: [
+        expect.objectContaining({ type: 'clip', clip: expect.objectContaining({ id: first.id }) }),
+        expect.objectContaining({ type: 'clip', clip: expect.objectContaining({ id: second.id }) }),
+        expect.objectContaining({ type: 'zoom', zoom: expect.objectContaining({ id: selectedZoom.id }) }),
+      ],
+    });
   });
 
   it('targets every clip in a visual header lane instead of the current selection', () => {

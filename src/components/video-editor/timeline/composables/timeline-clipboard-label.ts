@@ -32,7 +32,7 @@ const captionText = (clip: CaptionClip) => {
 export const describeClipboardClip = (
   clip: Clip,
   asset: MediaAsset | null,
-): Exclude<TimelineClipboardDescriptor, { kind: 'zoom' }> => {
+): Extract<TimelineClipboardDescriptor, { kind: 'item' | 'caption' }> => {
   if (clip.kind === 'caption') return { kind: 'caption', text: captionText(clip) };
   const name = compactText(asset?.fileName ?? '') || compactText(clip.name) || compactText(asset?.name ?? '');
   return { kind: 'item', name };

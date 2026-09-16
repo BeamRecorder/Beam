@@ -3,7 +3,9 @@ import type { Canvas2DContext } from '~/types/canvas';
 import { elementTextCaption, elementTextLayout } from '~/media/shared/element-text';
 import { applyCanvasCaptionFont } from '~/media/shared/caption-font';
 import { traceFreehand } from '~/media/shared/freehand';
+import { shapeLayerFill } from '~/media/shared/shape-layer-style';
 import { drawCaptionText } from '../captions/render-caption-text';
+import { backgroundFillStyle } from '../background/render-background';
 
 export const elementTextCanvas = (viewport: { width: number; height: number }) => {
   const scale = 1080 / Math.max(1, Math.min(viewport.width, viewport.height));
@@ -50,7 +52,12 @@ export function drawFreehand(
     ctx.stroke();
     ctx.shadowColor = 'transparent';
   }
-  ctx.strokeStyle = clip.fillColor;
+  ctx.strokeStyle = backgroundFillStyle(ctx, shapeLayerFill(clip), {
+    x: 0,
+    y: 0,
+    width: rect.width,
+    height: rect.height,
+  });
   ctx.lineWidth = width;
   ctx.stroke();
   ctx.restore();

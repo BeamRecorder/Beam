@@ -1,4 +1,5 @@
 import {
+  captionLayerKey,
   clipEndMs,
   isAudioClip,
   isCaptionClip,
@@ -40,7 +41,7 @@ const withoutOrphanGroups = (clips: Clip[]): Clip[] => {
 const sharesPasteLane = (candidate: Clip, source: Clip, targetTrackId: string | null): boolean => {
   if (isCompositingClip(source))
     return isCompositingClip(candidate) && candidate.trackId === (targetTrackId ?? source.trackId);
-  if (isCaptionClip(source)) return isCaptionClip(candidate) && candidate.caption.type === source.caption.type;
+  if (isCaptionClip(source)) return isCaptionClip(candidate) && captionLayerKey(candidate) === captionLayerKey(source);
   if (isAudioClip(source))
     return (
       isAudioClip(candidate) &&

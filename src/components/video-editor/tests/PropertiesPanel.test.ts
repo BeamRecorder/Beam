@@ -985,6 +985,7 @@ describe('PropertiesPanel', () => {
       showLayers: true,
       add: vi.fn(),
       addDrawing: vi.fn(),
+      updateDrawingSettings: vi.fn(),
       select: vi.fn(),
       update: vi.fn(),
       remove,
