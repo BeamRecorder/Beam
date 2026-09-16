@@ -8,7 +8,7 @@ import type { ShapeLayerStyle } from '~/media/shared/shape-layer-types';
 import type { ElementEditorContext } from '../element-editor-types';
 import { provideElementEditor } from '../useElementEditor';
 import ElementCanvasOverlay from '../ElementCanvasOverlay.vue';
-import { MAX_DRAWING_POINTS } from '~/media/shared/freehand';
+import { finishDrawing, MAX_DRAWING_POINTS } from '~/media/shared/freehand';
 import {
   beginPropertyInteraction,
   endPropertyInteraction,
@@ -39,6 +39,8 @@ let previousPointerCapture: PropertyDescriptor | undefined;
 let previousDevicePixelRatio: PropertyDescriptor | undefined;
 let setPointerCapture: ReturnType<typeof vi.fn>;
 let drawingContext: CanvasRenderingContext2D;
+const createGradientMock = () => ({ addColorStop: vi.fn() });
+let drawingGradient = createGradientMock();
 let drawingPreviewHasInk: boolean;
 let currentPathHasSegments: boolean;
 
@@ -114,6 +116,7 @@ beforeEach(() => {
   vi.stubGlobal('crypto', { randomUUID: () => 'drawn-element' });
   drawingPreviewHasInk = false;
   currentPathHasSegments = false;
+  drawingGradient = createGradientMock();
   drawingContext = {
     beginPath: vi.fn(() => {
       currentPathHasSegments = false;
@@ -130,6 +133,8 @@ beforeEach(() => {
     stroke: vi.fn(() => {
       if (currentPathHasSegments) drawingPreviewHasInk = true;
     }),
+    createLinearGradient: vi.fn(() => drawingGradient),
+    createRadialGradient: vi.fn(() => drawingGradient),
     scale: vi.fn(),
     setTransform: vi.fn(),
     clearRect: vi.fn(() => {
@@ -269,6 +274,62 @@ describe('ElementCanvasOverlay', () => {
       },
     });
     expect(insert.mock.calls[0]![0].drawing?.points).toHaveLength(4);
+  });
+
+  it('paints the drawing gradient over the padded bounds of the committed element', async () => {
+    const { wrapper, editor, insert } = mountOverlay();
+    editor.drawingSettings.value.fill = {
+      kind: 'gradient',
+      gradient: {
+        type: 'linear',
+        angle: 90,
+        stops: [
+          { id: 'start', position: 0, color: '#123456', alpha: 0.25 },
+          { id: 'end', position: 1, color: '#abcdef', alpha: 0.75 },
+        ],
+      },
+    };
+    const viewport = { width: 1_000, height: 500 };
+    const sampledPoints = [
+      { x: 0.05, y: 0.1 },
+      { x: 0.15, y: 0.3 },
+    ];
+    const expectedElement = finishDrawing(sampledPoints, editor.drawingSettings.value, viewport);
+    expect(expectedElement).not.toBeNull();
+
+    editor.add('drawing');
+    await nextTick();
+    setSurfaceBounds(wrapper);
+    const input = wrapper.get('.drawing-input').element;
+
+    dispatch(input, 'pointerdown', { button: 0, pointerId: 23, clientX: 35, clientY: 45 });
+    dispatch(input, 'pointermove', { pointerId: 23, clientX: 85, clientY: 95 });
+
+    expect(vi.mocked(drawingContext.createLinearGradient)).toHaveBeenCalledTimes(2);
+    const previewGradient = vi.mocked(drawingContext.createLinearGradient).mock.calls[1]!;
+    expect(drawingGradient.addColorStop).toHaveBeenNthCalledWith(1, 0, '#12345640');
+    expect(drawingGradient.addColorStop).toHaveBeenNthCalledWith(2, 1, '#abcdefbf');
+    expect(drawingGradient.addColorStop).toHaveBeenNthCalledWith(3, 0, '#12345640');
+    expect(drawingGradient.addColorStop).toHaveBeenNthCalledWith(4, 1, '#abcdefbf');
+    expect(drawingContext.strokeStyle).toBe(drawingGradient);
+    expect(drawingPreviewHasInk).toBe(true);
+
+    // Pointer-up at the last sample commits the same bounds used by the preview.
+    dispatch(input, 'pointerup', { pointerId: 23, clientX: 85, clientY: 95 });
+    const committed = insert.mock.calls[0]![0];
+    expect(committed.transform).toEqual(expectedElement!.transform);
+    expect(committed.drawing).toEqual(expectedElement!.drawing);
+
+    const finalBounds = {
+      x: committed.transform.x * viewport.width,
+      y: committed.transform.y * viewport.height,
+      width: committed.transform.width * viewport.width,
+      height: committed.transform.height * viewport.height,
+    };
+    expect(previewGradient[0]).toBeCloseTo(finalBounds.x);
+    expect(previewGradient[1]).toBeCloseTo(finalBounds.y + finalBounds.height / 2);
+    expect(previewGradient[2]).toBeCloseTo(finalBounds.x + finalBounds.width);
+    expect(previewGradient[3]).toBeCloseTo(finalBounds.y + finalBounds.height / 2);
   });
 
   it('clears the temporary preview after committing and deleting a drawing without another stroke', async () => {

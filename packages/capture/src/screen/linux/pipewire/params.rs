@@ -11,14 +11,21 @@ use crate::CaptureError;
 
 use super::{NativePixelFormat, NegotiatedFormat, format_error, pipewire_error};
 
-// Mutter advertises SPA_META_Cursor with room for a 384 x 384 RGBA bitmap.
-// SPA_PARAM_META_size is negotiated as a fixed value, so asking for a smaller
-// block does not merely truncate the bitmap: the Cursor meta is omitted from
-// the allocated buffers altogether.
+// Chromium/WebRTC uses 64 px as its preferred cursor size and accepts anything
+// from 1 px through Mutter's 384 px allocation. A range matters here: KWin
+// advertises the current theme size as a smaller fixed allocation, and two
+// incompatible fixed sizes cause SPA_META_Cursor to disappear entirely.
+const PREFERRED_CURSOR_DIMENSION: usize = 64;
+const MIN_CURSOR_DIMENSION: usize = 1;
 const MAX_CURSOR_DIMENSION: usize = 384;
-pub(super) const CURSOR_META_SIZE: usize = size_of::<spa::sys::spa_meta_cursor>()
-    + size_of::<spa::sys::spa_meta_bitmap>()
-    + MAX_CURSOR_DIMENSION * MAX_CURSOR_DIMENSION * 4;
+
+const fn cursor_meta_size(dimension: usize) -> usize {
+    size_of::<spa::sys::spa_meta_cursor>()
+        + size_of::<spa::sys::spa_meta_bitmap>()
+        + dimension * dimension * 4
+}
+
+pub(super) const CURSOR_META_SIZE: usize = cursor_meta_size(MAX_CURSOR_DIMENSION);
 
 pub(super) fn parse_format(param: &Pod) -> Result<NegotiatedFormat, CaptureError> {
     let (media_type, media_subtype) = spa::param::format_utils::parse_format(param)
@@ -151,13 +158,12 @@ pub(super) fn update_buffer_params(
     stream: &pw::stream::Stream,
     format: NegotiatedFormat,
 ) -> Result<(), CaptureError> {
-    let mut bytes = vec![buffer_parameter(format)?];
+    let mut bytes = vec![buffer_parameter(format)?, cursor_meta_parameter()?];
     let metas = [
         (
             spa::sys::SPA_META_Header,
             size_of::<spa::sys::spa_meta_header>(),
         ),
-        (spa::sys::SPA_META_Cursor, CURSOR_META_SIZE),
         (
             spa::sys::SPA_META_VideoCrop,
             size_of::<spa::sys::spa_meta_region>(),
@@ -168,21 +174,8 @@ pub(super) fn update_buffer_params(
         ),
     ];
     for (meta_type, meta_size) in metas {
-        let meta = spa::pod::Object {
-            type_: spa::utils::SpaTypes::ObjectParamMeta.as_raw(),
-            id: ParamType::Meta.as_raw(),
-            properties: vec![
-                spa::pod::Property::new(
-                    spa::sys::SPA_PARAM_META_type,
-                    Value::Id(spa::utils::Id(meta_type)),
-                ),
-                spa::pod::Property::new(
-                    spa::sys::SPA_PARAM_META_size,
-                    Value::Int(i32::try_from(meta_size).map_err(format_error)?),
-                ),
-            ],
-        };
-        bytes.push(serialize_object(meta)?);
+        let size = i32::try_from(meta_size).map_err(format_error)?;
+        bytes.push(meta_parameter(meta_type, Value::Int(size))?);
     }
     let mut params = bytes
         .iter()
@@ -192,6 +185,33 @@ pub(super) fn update_buffer_params(
         })
         .collect::<Result<Vec<_>, _>>()?;
     stream.update_params(&mut params).map_err(pipewire_error)
+}
+
+pub(super) fn cursor_meta_parameter() -> Result<Vec<u8>, CaptureError> {
+    let size = |dimension| i32::try_from(cursor_meta_size(dimension)).map_err(format_error);
+    let value = Value::Choice(ChoiceValue::Int(Choice(
+        ChoiceFlags::empty(),
+        ChoiceEnum::Range {
+            default: size(PREFERRED_CURSOR_DIMENSION)?,
+            min: size(MIN_CURSOR_DIMENSION)?,
+            max: size(MAX_CURSOR_DIMENSION)?,
+        },
+    )));
+    meta_parameter(spa::sys::SPA_META_Cursor, value)
+}
+
+fn meta_parameter(meta_type: u32, size: Value) -> Result<Vec<u8>, CaptureError> {
+    serialize_object(spa::pod::Object {
+        type_: spa::utils::SpaTypes::ObjectParamMeta.as_raw(),
+        id: ParamType::Meta.as_raw(),
+        properties: vec![
+            spa::pod::Property::new(
+                spa::sys::SPA_PARAM_META_type,
+                Value::Id(spa::utils::Id(meta_type)),
+            ),
+            spa::pod::Property::new(spa::sys::SPA_PARAM_META_size, size),
+        ],
+    })
 }
 
 fn serialize_object(object: spa::pod::Object) -> Result<Vec<u8>, CaptureError> {

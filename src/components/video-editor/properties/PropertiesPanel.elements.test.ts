@@ -200,6 +200,7 @@ const createEditor = (shape: ShapeClip | null, layers: ShapeClip[] = shape ? [sh
     addColor: vi.fn(),
     addImage: vi.fn(),
     addDrawing: vi.fn(),
+    updateDrawingSettings: vi.fn(),
     select: vi.fn(),
     update: vi.fn(),
     remove,

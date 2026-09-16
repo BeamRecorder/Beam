@@ -1,4 +1,5 @@
 import type { CaptionStyle, NormalizedTransform } from './composition-types';
+import type { ColorFill } from './color-fill-types';
 
 export interface ElementText {
   content: string;
@@ -23,6 +24,7 @@ export interface DrawingSettings {
   smoothing: number;
   strokeWidth: number;
   color: string;
+  fill?: ColorFill;
 }
 export interface DrawnElement {
   drawing: FreehandDrawing;

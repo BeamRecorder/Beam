@@ -17,6 +17,7 @@ export function provideElementEditor(options: ElementEditorOptions): ElementEdit
   const editing = ref<ShapeClip | null>(null);
   const drawingMode = ref(false);
   const drawingSettings = ref({ ...DEFAULT_DRAWING_SETTINGS });
+  let latestDrawingId: string | null = null;
   const create = (family: ShapeLayerFamily): ShapeClip => {
     const { startMs, durationMs } = options.timing();
     const id = crypto.randomUUID();
@@ -73,9 +74,11 @@ export function provideElementEditor(options: ElementEditorOptions): ElementEdit
       finishText();
       if (family === 'drawing') {
         drawingMode.value = !drawingMode.value;
+        latestDrawingId = null;
         return;
       }
       drawingMode.value = false;
+      latestDrawingId = null;
       const clip = create(family);
       options.insert(clip);
       options.select(clip.id);
@@ -83,9 +86,32 @@ export function provideElementEditor(options: ElementEditorOptions): ElementEdit
     },
     addDrawing: (value) => {
       if (!allowed()) return;
-      const clip = { ...create('drawing'), ...value, fillColor: drawingSettings.value.color };
+      const fill = drawingSettings.value.fill ?? { kind: 'color' as const, color: drawingSettings.value.color };
+      const clip = {
+        ...create('drawing'),
+        ...value,
+        fill,
+        fillColor: fill.kind === 'color' ? fill.color : drawingSettings.value.color,
+      };
       options.insert(clip);
+      latestDrawingId = clip.id;
       options.select(clip.id);
+    },
+    updateDrawingSettings: (settings) => {
+      drawingSettings.value = settings;
+      if (!drawingMode.value || !latestDrawingId || options.selectedId() !== latestDrawingId) return;
+      const clip = layers.value.find((layer) => layer.id === latestDrawingId);
+      if (clip?.family !== 'drawing' || !clip.drawing) return;
+      const fill = settings.fill ?? { kind: 'color' as const, color: settings.color };
+      options.update(clip.id, {
+        fill,
+        ...(fill.kind === 'color' ? { fillColor: fill.color } : {}),
+        drawing: {
+          ...clip.drawing,
+          smoothing: settings.smoothing,
+          strokeWidth: settings.strokeWidth,
+        },
+      });
     },
     update: (patch) => {
       if (!selected.value) return;
@@ -109,6 +135,10 @@ export function provideElementEditor(options: ElementEditorOptions): ElementEdit
   };
   watch(options.selectedId, (id) => {
     if (editing.value && id !== editing.value.id) finishText();
+    if (latestDrawingId && id !== latestDrawingId) latestDrawingId = null;
+  });
+  watch(drawingMode, (active) => {
+    if (!active) latestDrawingId = null;
   });
   watch(allowed, (value) => {
     if (!value) {

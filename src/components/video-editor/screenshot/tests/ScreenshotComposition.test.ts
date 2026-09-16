@@ -235,7 +235,13 @@ describe('ScreenshotComposition', () => {
     expect(wrapper.get('.layer-row[data-layer-id="shape-1"]').classes()).toContain('selected');
     expect(wrapper.get('.layer-row[data-layer-id="screenshot"] .layer-thumbnail').attributes('aria-busy')).toBe('true');
 
-    await wrapper.get('.layer-row[data-layer-id="screenshot"] .layer-select').trigger('click');
+    const selectButton = wrapper.get('.layer-row[data-layer-id="screenshot"] .layer-select');
+    const pointerDown = dispatchPointer(selectButton.element, 'pointerdown', { pointerId: 4, clientY: 50 });
+    dispatchPointer(selectButton.element, 'pointerup', { pointerId: 4, clientY: 50 });
+    expect(pointerDown.defaultPrevented).toBe(false);
+    expect(setPointerCapture).not.toHaveBeenCalled();
+
+    await selectButton.trigger('click');
     expect(wrapper.emitted('select')).toEqual([['screenshot']]);
   });
 
@@ -292,6 +298,29 @@ describe('ScreenshotComposition', () => {
     await row.get('button[aria-label="ScreenshotComposition.lock (Elements.shape)"]').trigger('click');
     await row.get('button[aria-label="ScreenshotComposition.hide (Elements.shape)"]').trigger('click');
     expect(wrapper.emitted('update')?.at(-1)).toEqual(['shape-1', { locked: true }]);
+    expect(wrapper.emitted('visibility')).toEqual([['shape-1', false]]);
+  });
+
+  it('does not start a reorder from the lock or visibility action buttons', async () => {
+    const wrapper = mountComposition({ selectedId: 'shape-1' });
+    wrappers.push(wrapper);
+    const row = wrapper.get('.layer-row[data-layer-id="shape-1"]');
+    const lock = row.get('button[aria-label="ScreenshotComposition.lock (Elements.shape)"]');
+    const visibility = row.get('button[aria-label="ScreenshotComposition.hide (Elements.shape)"]');
+
+    dispatchPointer(lock.element, 'pointerdown', { pointerId: 31, clientY: 100 });
+    dispatchPointer(window, 'pointermove', { pointerId: 31, clientY: 35 });
+    dispatchPointer(window, 'pointerup', { pointerId: 31, clientY: 35 });
+    dispatchPointer(visibility.element, 'pointerdown', { pointerId: 32, clientY: 100 });
+    dispatchPointer(window, 'pointermove', { pointerId: 32, clientY: 35 });
+    dispatchPointer(window, 'pointerup', { pointerId: 32, clientY: 35 });
+
+    expect(setPointerCapture).not.toHaveBeenCalled();
+    expect(wrapper.emitted('reorder')).toBeUndefined();
+
+    await lock.trigger('click');
+    await visibility.trigger('click');
+    expect(wrapper.emitted('update')).toEqual([['shape-1', { locked: true }]]);
     expect(wrapper.emitted('visibility')).toEqual([['shape-1', false]]);
   });
 
@@ -600,17 +629,24 @@ describe('ScreenshotComposition', () => {
       Object.defineProperty(row.element, 'offsetHeight', { configurable: true, value: 44 });
     }
 
-    const grip = wrapper.get('.layer-row[data-layer-id="screenshot"] .layer-grip').element;
-    dispatchPointer(grip, 'pointerdown', { pointerId: 12, clientY: 100 });
+    const selectButton = wrapper.get('.layer-row[data-layer-id="screenshot"] .layer-select');
+    const pointerDown = dispatchPointer(selectButton.element, 'pointerdown', { pointerId: 12, clientY: 100 });
+    expect(pointerDown.defaultPrevented).toBe(false);
+    expect(setPointerCapture).not.toHaveBeenCalled();
     dispatchPointer(window, 'pointermove', { pointerId: 12, clientY: 35 });
     runFrame();
     await wrapper.vm.$nextTick();
     expect(wrapper.findAll('.layer-row').map((row) => row.attributes('data-layer-id'))[0]).toBe('screenshot');
+    expect(setPointerCapture).toHaveBeenCalledWith(12);
 
     dispatchPointer(window, 'pointerup', { pointerId: 12, clientY: 35 });
     expect(wrapper.emitted('reorder')).toEqual([['screenshot', 0]]);
-    expect(setPointerCapture).toHaveBeenCalledWith(12);
     expect(releasePointerCapture).toHaveBeenCalledWith(12);
+
+    const dragClick = new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true });
+    selectButton.element.dispatchEvent(dragClick);
+    expect(dragClick.defaultPrevented).toBe(true);
+    expect(wrapper.emitted('select')).toBeUndefined();
 
     const reordered = [
       ...layers.filter((layer) => layer.id !== 'screenshot'),
@@ -623,9 +659,9 @@ describe('ScreenshotComposition', () => {
   it('reorders with Alt plus arrows, clamps at stack edges, and ignores other or disabled keys', async () => {
     const wrapper = mountComposition();
     wrappers.push(wrapper);
-    const top = wrapper.get('.layer-row[data-layer-id="__watermark__"]');
-    const shape = wrapper.get('.layer-row[data-layer-id="shape-1"]');
-    const bottom = wrapper.get('.layer-row[data-layer-id="__background__"]');
+    const top = wrapper.get('.layer-row[data-layer-id="__watermark__"] .layer-select');
+    const shape = wrapper.get('.layer-row[data-layer-id="shape-1"] .layer-select');
+    const bottom = wrapper.get('.layer-row[data-layer-id="__background__"] .layer-select');
 
     await shape.trigger('keydown', { key: 'ArrowUp', altKey: false });
     await shape.trigger('keydown', { key: 'ArrowLeft', altKey: true });
@@ -645,6 +681,20 @@ describe('ScreenshotComposition', () => {
     await wrapper.setProps({ disabled: true });
     await shape.trigger('keydown', { key: 'ArrowUp', altKey: true });
     expect(wrapper.emitted('reorder')).toHaveLength(4);
-    expect((wrapper.get('.layer-grip').element as HTMLButtonElement).disabled).toBe(true);
+    expect((shape.element as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      (
+        wrapper.get(
+          '.layer-row[data-layer-id="shape-1"] button[aria-label="ScreenshotComposition.lock (Elements.shape)"]',
+        ).element as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+    expect(
+      (
+        wrapper.get(
+          '.layer-row[data-layer-id="shape-1"] button[aria-label="ScreenshotComposition.hide (Elements.shape)"]',
+        ).element as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
   });
 });

@@ -31,6 +31,7 @@ export interface TimelineTracksProps {
   projectId?: string | null;
   recentPaste?: TimelinePasteHighlight | null;
   canvas?: OutputCanvasSettings;
+  controlsLocked?: boolean;
   voiceoverDraft?: LiveAudioDraft | null;
 }
 

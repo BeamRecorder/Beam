@@ -9,9 +9,27 @@ export function useScreenshotLayerReorder(
   const preview = ref<string[] | null>(null);
   const dragging = ref<string | null>(null);
   let disposeGesture: (() => void) | null = null;
+  let suppressedClickId: string | null = null;
+  let suppressedClickTimer: ReturnType<typeof setTimeout> | null = null;
+  const suppressNextClick = (id: string) => {
+    suppressedClickId = id;
+    if (suppressedClickTimer) clearTimeout(suppressedClickTimer);
+    suppressedClickTimer = setTimeout(() => {
+      suppressedClickId = null;
+      suppressedClickTimer = null;
+    }, 0);
+  };
+  const consumeClick = (event: MouseEvent, id: string) => {
+    if (suppressedClickId !== id) return false;
+    event.preventDefault();
+    event.stopPropagation();
+    suppressedClickId = null;
+    if (suppressedClickTimer) clearTimeout(suppressedClickTimer);
+    suppressedClickTimer = null;
+    return true;
+  };
   const begin = (event: PointerEvent, id: string) => {
     if (event.button !== 0 || disposeGesture || !list.value || !ids().includes(id)) return;
-    event.preventDefault();
     const initial = ids();
     const pointerId = event.pointerId;
     const startY = event.clientY;
@@ -20,7 +38,6 @@ export function useScreenshotLayerReorder(
       active = false;
     // Capture on the stable list, not a row that Vue moves during its FLIP transition.
     const target = list.value;
-    target.setPointerCapture(pointerId);
     const apply = () => {
       const node = list.value;
       if (!node || !active) return;
@@ -49,10 +66,12 @@ export function useScreenshotLayerReorder(
       y = next.clientY;
       if (!active && Math.abs(y - startY) >= 4) {
         active = true;
+        next.preventDefault();
+        target.setPointerCapture(pointerId);
         dragging.value = id;
         preview.value = initial;
         frame = requestAnimationFrame(tick);
-      }
+      } else if (active) next.preventDefault();
     };
     const cleanup = () => {
       cancelAnimationFrame(frame);
@@ -73,6 +92,7 @@ export function useScreenshotLayerReorder(
       apply();
       const index = preview.value?.indexOf(id) ?? initial.indexOf(id);
       if (active && index !== initial.indexOf(id)) commit(id, index);
+      if (active) suppressNextClick(id);
       cleanup();
     };
     const cancel = (next: PointerEvent) => {
@@ -93,6 +113,9 @@ export function useScreenshotLayerReorder(
     window.addEventListener('blur', cleanup);
     target.addEventListener('lostpointercapture', cancel);
   };
-  onScopeDispose(() => disposeGesture?.());
-  return { preview, dragging, begin };
+  onScopeDispose(() => {
+    disposeGesture?.();
+    if (suppressedClickTimer) clearTimeout(suppressedClickTimer);
+  });
+  return { preview, dragging, begin, consumeClick };
 }

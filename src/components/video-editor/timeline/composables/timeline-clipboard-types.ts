@@ -3,31 +3,45 @@ import type { ZoomElement } from '../../zoom/zoom-types';
 
 export type TimelineItemCategory = 'visual' | 'audio' | 'caption' | 'zoom';
 
-export type TimelineClipboardDescriptor =
+export type TimelineClipboardEntryDescriptor =
   | { kind: 'item'; name: string }
   | { kind: 'caption'; text: string }
   | { kind: 'zoom'; number: number };
 
-export type TimelineClipboardItem =
+export type TimelineClipboardDescriptor =
+  | TimelineClipboardEntryDescriptor
+  | { kind: 'selection'; items: TimelineClipboardEntryDescriptor[] };
+
+export type TimelineClipboardEntry =
   | {
       type: 'clip';
-      scopeId: string;
       category: Exclude<TimelineItemCategory, 'zoom'>;
       clip: Clip;
       asset: MediaAsset | null;
-      descriptor: Exclude<TimelineClipboardDescriptor, { kind: 'zoom' }>;
+      descriptor: Extract<TimelineClipboardDescriptor, { kind: 'item' | 'caption' }>;
     }
   | {
       type: 'zoom';
-      scopeId: string;
       category: 'zoom';
       zoom: ZoomElement;
       descriptor: Extract<TimelineClipboardDescriptor, { kind: 'zoom' }>;
     };
 
+export type TimelineClipboardItem =
+  | (TimelineClipboardEntry & { scopeId: string })
+  | {
+      type: 'selection';
+      scopeId: string;
+      entries: TimelineClipboardEntry[];
+      anchorTimeMs: number;
+      primaryIndex: number;
+      descriptor: Extract<TimelineClipboardDescriptor, { kind: 'selection' }>;
+    };
+
 export interface TimelinePasteTarget {
   category: TimelineItemCategory;
   trackId?: string | null;
+  placement?: 'track' | 'new-layer';
 }
 
 export interface TimelinePasteRequest {
@@ -37,7 +51,7 @@ export interface TimelinePasteRequest {
 }
 
 export interface TimelinePasteHighlight {
-  type: TimelineClipboardItem['type'];
+  type: TimelineClipboardEntry['type'];
   id: string;
   timestamp: number;
 }

@@ -23,6 +23,7 @@ import {
 import { useScreenshotHistory } from './useScreenshotHistory';
 import { useScreenshotCursors } from './useScreenshotCursors';
 import { useScreenshotLayerShortcuts } from './useScreenshotLayerShortcuts';
+import { useScreenshotLayerClipboard } from './useScreenshotLayerClipboard';
 import { screenshotImage, createScreenshotImage } from './screenshot-images';
 import { createScreenshotImageLoader } from './screenshot-assets';
 import { validScreenshotDimensions } from './screenshot-dimensions';
@@ -282,16 +283,27 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
       if (selectedId.value !== previous) showSelection(selectedId.value);
     },
   });
-  useScreenshotLayerShortcuts(
-    () =>
+  const layerClipboard = useScreenshotLayerClipboard({
+    state,
+    selectedIds,
+    selectedId,
+    disabled: () => busy.value || cropping.value || Boolean(elements.editing.value) || elements.drawingMode.value,
+    reconcileSelection: selection.reconcile,
+    showSelection,
+  });
+  useScreenshotLayerShortcuts({
+    selected: () =>
       state.value
         ? screenshotLayers(state.value).find(
             (layer) => selectedIds.value.includes(layer.id) && canRemoveScreenshotLayer(layer),
           )
         : undefined,
-    () => busy.value || cropping.value || Boolean(elements.editing.value) || elements.drawingMode.value,
-    removeLayer,
-  );
+    disabled: () => busy.value || cropping.value || Boolean(elements.editing.value) || elements.drawingMode.value,
+    remove: removeLayer,
+    copy: layerClipboard.copy,
+    cut: layerClipboard.cut,
+    paste: layerClipboard.paste,
+  });
   watch(panel, (next) => {
     if (next !== 'shapes') elements.drawingMode.value = false;
   });

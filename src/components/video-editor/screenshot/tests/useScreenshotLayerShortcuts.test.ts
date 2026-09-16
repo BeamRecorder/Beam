@@ -21,17 +21,27 @@ const makeLayer = (
 const wrappers: Array<{ unmount: () => void }> = [];
 const dialogs: HTMLElement[] = [];
 
-const mountShortcuts = (initialSelection?: ScreenshotLayer, initialDisabled = false) => {
+const mountShortcuts = (
+  initialSelection?: ScreenshotLayer,
+  initialDisabled = false,
+  outcomes: { copy?: boolean; cut?: boolean; paste?: boolean } = {},
+) => {
   const selected = ref(initialSelection);
   const disabled = ref(initialDisabled);
   const remove = vi.fn();
+  const copy = vi.fn(() => outcomes.copy ?? true);
+  const cut = vi.fn(() => outcomes.cut ?? true);
+  const paste = vi.fn(() => outcomes.paste ?? true);
   const Host = defineComponent({
     setup() {
-      useScreenshotLayerShortcuts(
-        () => selected.value,
-        () => disabled.value,
+      useScreenshotLayerShortcuts({
+        selected: () => selected.value,
+        disabled: () => disabled.value,
         remove,
-      );
+        copy,
+        cut,
+        paste,
+      });
       return () =>
         h('div', { 'data-testid': 'host' }, [
           h('div', { 'data-testid': 'plain-target' }),
@@ -47,7 +57,7 @@ const mountShortcuts = (initialSelection?: ScreenshotLayer, initialDisabled = fa
   });
   const wrapper = mount(Host, { attachTo: document.body });
   wrappers.push(wrapper);
-  return { wrapper, selected, disabled, remove };
+  return { wrapper, selected, disabled, remove, copy, cut, paste };
 };
 
 const dispatchKey = (
@@ -69,6 +79,130 @@ afterEach(() => {
 });
 
 describe('useScreenshotLayerShortcuts', () => {
+  it.each([
+    ['Ctrl+C', 'c', { ctrlKey: true }, 'copy'],
+    ['Cmd+C', 'c', { metaKey: true }, 'copy'],
+    ['Ctrl+X', 'x', { ctrlKey: true }, 'cut'],
+    ['Cmd+X', 'x', { metaKey: true }, 'cut'],
+    ['Ctrl+V', 'v', { ctrlKey: true }, 'paste'],
+    ['Cmd+V', 'v', { metaKey: true }, 'paste'],
+  ] as const)('handles %s through the matching callback', (_label, key, modifiers, action) => {
+    const { copy, cut, paste } = mountShortcuts(makeLayer());
+
+    const event = dispatchKey(window, key, modifiers);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect({ copy, cut, paste }[action]).toHaveBeenCalledOnce();
+    expect(copy).toHaveBeenCalledTimes(action === 'copy' ? 1 : 0);
+    expect(cut).toHaveBeenCalledTimes(action === 'cut' ? 1 : 0);
+    expect(paste).toHaveBeenCalledTimes(action === 'paste' ? 1 : 0);
+  });
+
+  it('does not claim clipboard shortcuts when there is no selection or clipboard content', () => {
+    const { copy, cut, paste } = mountShortcuts(undefined, false, {
+      copy: false,
+      cut: false,
+      paste: false,
+    });
+
+    for (const [key, modifiers] of [
+      ['c', { ctrlKey: true }],
+      ['x', { metaKey: true }],
+      ['v', { ctrlKey: true }],
+    ] as const) {
+      const event = dispatchKey(window, key, modifiers);
+      expect(event.defaultPrevented).toBe(false);
+    }
+
+    expect(copy).toHaveBeenCalledOnce();
+    expect(cut).toHaveBeenCalledOnce();
+    expect(paste).toHaveBeenCalledOnce();
+  });
+
+  it('ignores clipboard shortcuts from editable controls, menus, and popovers', () => {
+    const { wrapper, copy, cut, paste } = mountShortcuts(makeLayer());
+    const targets = [
+      wrapper.get('[data-testid="input"]').element,
+      wrapper.get('[data-testid="textarea"]').element,
+      wrapper.get('[data-testid="select"]').element,
+      wrapper.get('[data-testid="editable"]').element,
+      wrapper.get('[data-testid="textbox"]').element,
+      wrapper.get('[data-testid="menu"]').element,
+      wrapper.get('[data-testid="popover-button"]').element,
+    ];
+
+    for (const target of targets) {
+      for (const [key, modifiers] of [
+        ['c', { ctrlKey: true }],
+        ['x', { metaKey: true }],
+        ['v', { ctrlKey: true }],
+      ] as const) {
+        const event = dispatchKey(target, key, modifiers);
+        expect(event.defaultPrevented).toBe(false);
+      }
+    }
+
+    expect(copy).not.toHaveBeenCalled();
+    expect(cut).not.toHaveBeenCalled();
+    expect(paste).not.toHaveBeenCalled();
+  });
+
+  it('ignores clipboard shortcuts while a modal dialog is present', () => {
+    const { copy, cut, paste } = mountShortcuts(makeLayer());
+    const dialog = document.createElement('div');
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+    document.body.append(dialog);
+    dialogs.push(dialog);
+
+    for (const [key, modifiers] of [
+      ['c', { ctrlKey: true }],
+      ['x', { metaKey: true }],
+      ['v', { ctrlKey: true }],
+    ] as const) {
+      const event = dispatchKey(window, key, modifiers);
+      expect(event.defaultPrevented).toBe(false);
+    }
+
+    expect(copy).not.toHaveBeenCalled();
+    expect(cut).not.toHaveBeenCalled();
+    expect(paste).not.toHaveBeenCalled();
+  });
+
+  it('ignores repeated clipboard shortcuts and shortcuts while disabled', () => {
+    const repeated = mountShortcuts(makeLayer());
+    const repeatedEvent = dispatchKey(window, 'v', { ctrlKey: true, repeat: true });
+    expect(repeatedEvent.defaultPrevented).toBe(false);
+    expect(repeated.paste).not.toHaveBeenCalled();
+
+    repeated.disabled.value = true;
+    for (const [key, modifiers] of [
+      ['c', { ctrlKey: true }],
+      ['x', { metaKey: true }],
+      ['v', { ctrlKey: true }],
+    ] as const) {
+      const event = dispatchKey(window, key, modifiers);
+      expect(event.defaultPrevented).toBe(false);
+    }
+    expect(repeated.copy).not.toHaveBeenCalled();
+    expect(repeated.cut).not.toHaveBeenCalled();
+    expect(repeated.paste).not.toHaveBeenCalled();
+  });
+
+  it('ignores clipboard shortcuts with Alt or Shift modifiers', () => {
+    const { copy, cut, paste } = mountShortcuts(makeLayer());
+    const events = [
+      dispatchKey(window, 'c', { ctrlKey: true, shiftKey: true }),
+      dispatchKey(window, 'x', { metaKey: true, altKey: true }),
+      dispatchKey(window, 'v', { ctrlKey: true, altKey: true }),
+    ];
+
+    expect(events.every((event) => !event.defaultPrevented)).toBe(true);
+    expect(copy).not.toHaveBeenCalled();
+    expect(cut).not.toHaveBeenCalled();
+    expect(paste).not.toHaveBeenCalled();
+  });
+
   it.each(['Delete', 'Backspace'])('removes a selected removable layer on %s', (key) => {
     const { remove } = mountShortcuts(makeLayer('text'));
 

@@ -140,6 +140,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
         :project-id="projectId"
         :recent-paste="recentPaste"
         :canvas="canvas"
+        :controls-locked="controlsLocked"
         :voiceover-draft="voiceoverDraft"
         @add:element="emit('add:element', $event)"
         @update:current-time="emit('update:currentTime', $event)"

@@ -51,23 +51,29 @@ const shapeClip = (overrides: Partial<ShapeClip> = {}): ShapeClip => ({
   ...overrides,
 });
 
-const makeContext = () => ({
-  save: vi.fn(),
-  restore: vi.fn(),
-  translate: vi.fn(),
-  rotate: vi.fn(),
-  measureText: vi.fn((text: string) => ({ width: text.length * 12 }) as TextMetrics),
-  beginPath: vi.fn(),
-  moveTo: vi.fn(),
-  lineTo: vi.fn(),
-  bezierCurveTo: vi.fn(),
-  stroke: vi.fn(),
-  lineCap: 'butt' as CanvasLineCap,
-  lineJoin: 'miter' as CanvasLineJoin,
-  strokeStyle: '',
-  lineWidth: 1,
-  shadowColor: 'transparent',
-});
+const makeContext = () => {
+  const gradient = { addColorStop: vi.fn() };
+  return {
+    save: vi.fn(),
+    restore: vi.fn(),
+    translate: vi.fn(),
+    rotate: vi.fn(),
+    measureText: vi.fn((text: string) => ({ width: text.length * 12 }) as TextMetrics),
+    beginPath: vi.fn(),
+    moveTo: vi.fn(),
+    lineTo: vi.fn(),
+    bezierCurveTo: vi.fn(),
+    stroke: vi.fn(),
+    createLinearGradient: vi.fn(() => gradient),
+    createRadialGradient: vi.fn(() => gradient),
+    lineCap: 'butt' as CanvasLineCap,
+    lineJoin: 'miter' as CanvasLineJoin,
+    strokeStyle: '',
+    lineWidth: 1,
+    shadowColor: 'transparent',
+    gradient,
+  };
+};
 
 const asCanvasContext = (ctx: ReturnType<typeof makeContext>) => ctx as unknown as Canvas2DContext;
 
@@ -193,6 +199,44 @@ describe('drawFreehand', () => {
     expect(ctx.lineWidth).toBe(4);
     expect(ctx.shadowColor).toBe('transparent');
     expect(ctx.restore).toHaveBeenCalledOnce();
+  });
+
+  it('strokes a drawing with its gradient stops and alpha values', () => {
+    const ctx = makeContext();
+    const drawing = {
+      points: [
+        { x: 0.1, y: 0.2 },
+        { x: 0.9, y: 0.8 },
+      ],
+      smoothing: 65,
+      strokeWidth: 8,
+    };
+    const clip = shapeClip({
+      family: 'drawing',
+      preset: 'freehand',
+      drawing,
+      fill: {
+        kind: 'gradient',
+        gradient: {
+          type: 'linear',
+          angle: 90,
+          stops: [
+            { id: 'start', position: 0, color: '#123456', alpha: 0.25 },
+            { id: 'end', position: 1, color: '#abcdef', alpha: 0.75 },
+          ],
+        },
+      },
+      fillColor: '#ff0000',
+    });
+
+    drawFreehand(asCanvasContext(ctx), clip, { x: 10, y: 20, width: 100, height: 80 }, 0.5);
+
+    expect(ctx.createLinearGradient).toHaveBeenCalledWith(0, 40, 100, 40);
+    expect(ctx.gradient.addColorStop).toHaveBeenNthCalledWith(1, 0, '#12345640');
+    expect(ctx.gradient.addColorStop).toHaveBeenNthCalledWith(2, 1, '#abcdefbf');
+    expect(ctx.strokeStyle).toBe(ctx.gradient);
+    expect(ctx.lineWidth).toBe(4);
+    expect(ctx.stroke).toHaveBeenCalledOnce();
   });
 
   it('uses a single scaled stroke when the drawing has no outline', () => {

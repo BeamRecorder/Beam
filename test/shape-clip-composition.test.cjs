@@ -51,6 +51,85 @@ test('normalizes an assetless shape clip for persistence', () => {
   assert.deepEqual(normalized.clips[0], shapeClip());
 });
 
+test('preserves normalized gradient fills on shape and drawing clips', () => {
+  const fill = {
+    kind: 'gradient',
+    gradient: {
+      type: 'linear',
+      angle: 135,
+      stops: [
+        { id: 'start', position: 0, color: '#112233', alpha: 1 },
+        { id: 'end', position: 1, color: '#aabbcc', alpha: 0.5 },
+      ],
+    },
+  };
+  const normalized = normalizeComposition({
+    ...emptyComposition(),
+    clips: [
+      shapeClip({ family: 'shape', preset: 'ellipse', fill, fillColor: '#123456' }),
+      shapeClip({
+        id: 'drawing-1',
+        trackId: 'drawing-track',
+        family: 'drawing',
+        preset: 'freehand',
+        drawing: {
+          points: [
+            { x: 0.1, y: 0.2 },
+            { x: 0.8, y: 0.9 },
+          ],
+          smoothing: 25,
+          strokeWidth: 12,
+        },
+        fill,
+        fillColor: '#654321',
+      }),
+    ],
+  });
+
+  const normalizedShape = normalized.clips.find((clip) => clip.id === 'shape-1');
+  const normalizedDrawing = normalized.clips.find((clip) => clip.id === 'drawing-1');
+  assert.ok(normalizedShape);
+  assert.ok(normalizedDrawing);
+  assert.deepEqual(normalizedShape.fill, fill);
+  assert.equal(normalizedShape.fillColor, '#123456');
+  assert.deepEqual(normalizedDrawing.fill, fill);
+  assert.equal(normalizedDrawing.fillColor, '#654321');
+});
+
+test('drops an invalid optional gradient fill while preserving the solid legacy fill', () => {
+  const normalized = normalizeComposition({
+    ...emptyComposition(),
+    clips: [
+      shapeClip({
+        family: 'shape',
+        preset: 'rectangle',
+        fill: {
+          kind: 'gradient',
+          gradient: {
+            type: 'linear',
+            angle: 360,
+            stops: [
+              { id: 'start', position: 0, color: '#112233', alpha: 1 },
+              { id: 'end', position: 1, color: '#aabbcc', alpha: 1 },
+            ],
+          },
+        },
+        fillColor: '#123456',
+      }),
+      shapeClip({ id: 'legacy-shape', trackId: 'legacy-track', family: 'shape', preset: 'rectangle' }),
+    ],
+  });
+  const invalidGradient = normalized.clips.find((clip) => clip.id === 'shape-1');
+  const legacyShape = normalized.clips.find((clip) => clip.id === 'legacy-shape');
+  assert.ok(invalidGradient);
+  assert.ok(legacyShape);
+
+  assert.equal(Object.hasOwn(invalidGradient, 'fill'), false);
+  assert.equal(invalidGradient.fillColor, '#123456');
+  assert.equal(Object.hasOwn(legacyShape, 'fill'), false);
+  assert.equal(legacyShape.fillColor, '#ff5a1f');
+});
+
 test('migrates a v12 composition to v14 without changing existing clips', () => {
   const migrated = migrateComposition({
     schemaVersion: 12,

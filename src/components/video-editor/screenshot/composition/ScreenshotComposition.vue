@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
 import { useMediaQuery } from '@vueuse/core';
-import { ChevronDown, Eye, EyeOff, GripVertical, Layers, LockKeyhole, Trash2, UnlockKeyhole } from '@lucide/vue';
+import { ChevronDown, Eye, EyeOff, Layers, LockKeyhole, Trash2, UnlockKeyhole } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import Badge from '~/ui/badge/Badge.vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
@@ -68,7 +68,7 @@ const thumbnails = useLayerThumbnails(
   () => !collapsed.value,
 );
 const front = computed(() => [...props.layers].reverse());
-const { preview, dragging, begin } = useScreenshotLayerReorder(
+const { preview, dragging, begin, consumeClick } = useScreenshotLayerReorder(
   list,
   () => front.value.map((layer) => layer.id),
   (id, index) => emit('reorder', id, index),
@@ -77,6 +77,11 @@ const ordered = computed(
   () => preview.value?.flatMap((id) => front.value.filter((layer) => layer.id === id)) ?? front.value,
 );
 const selected = computed(() => props.layers.find((layer) => layer.id === props.selectedId));
+const selectLayer = (event: MouseEvent, id: string) => {
+  if (consumeClick(event, id)) return;
+  if (event.ctrlKey || event.metaKey) emit('select', id, 'toggle');
+  else emit('select', id);
+};
 
 const label = (layer: ScreenshotLayer) =>
   layer.name ||
@@ -243,20 +248,11 @@ const keyboard = (event: KeyboardEvent, id: string) => {
               @contextmenu="openMenu($event, layer.id)"
             >
               <button
-                class="layer-grip"
-                :disabled="disabled"
-                :aria-label="t('reorder', { name: label(layer) })"
-                @pointerdown="begin($event, layer.id)"
-              >
-                <GripVertical :size="12" />
-              </button>
-              <button
                 class="layer-select"
                 :disabled="disabled"
                 :aria-pressed="selectedIds.includes(layer.id)"
-                @click="
-                  $event.ctrlKey || $event.metaKey ? emit('select', layer.id, 'toggle') : emit('select', layer.id)
-                "
+                @pointerdown="begin($event, layer.id)"
+                @click="selectLayer($event, layer.id)"
               >
                 <LayerThumbnail :value="thumbnails[layer.id]" />
                 <span class="layer-name" :title="label(layer)">{{ label(layer) }}</span>
@@ -427,31 +423,24 @@ const keyboard = (event: KeyboardEvent, id: string) => {
 .layer-row.hidden .layer-select {
   opacity: 0.45;
 }
-.layer-grip,
 .layer-select {
   background: transparent;
   color: var(--text-secondary);
   border: 0;
-  padding: 0;
+  padding: 0 0 0 6px;
   height: 100%;
   display: flex;
   align-items: center;
-}
-.layer-grip {
-  width: 18px;
-  flex-shrink: 0;
-  justify-content: center;
-  cursor: grab;
-  touch-action: none;
-}
-.layer-select {
   flex: 1;
   min-width: 0;
   gap: 8px;
   text-align: left;
-  cursor: pointer;
+  cursor: grab;
+  touch-action: none;
 }
-.layer-grip:focus-visible,
+.layer-row.dragging .layer-select {
+  cursor: grabbing;
+}
 .layer-select:focus-visible {
   outline: 1px solid var(--color-primary);
   outline-offset: -1px;

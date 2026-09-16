@@ -120,6 +120,87 @@ describe('useTimelineContextMenu', () => {
     expect(copied.descriptor).toEqual({ kind: 'item', name: 'demo-recording.mp4' });
   });
 
+  it('copies the full mixed selection as independent clip, asset, and zoom snapshots', () => {
+    const secondAsset: MediaAsset = {
+      ...asset,
+      id: 'asset-2',
+      name: 'Overlay recording',
+      fileName: 'overlay-recording.mp4',
+      src: '/media/overlay-recording.mp4',
+    };
+    const first = { ...clip(), id: 'clip-1', timelineStartMs: 1_000 };
+    const second = { ...clip(), id: 'clip-2', assetId: secondAsset.id, timelineStartMs: 4_000 };
+    const selectedZoom = zoom('zoom-1', 2_500);
+    const menu = createMenu({
+      composition: ref({ ...composition(), assets: [asset, secondAsset], clips: [first, second] }),
+      zoomElements: ref([zoom('zoom-before', 0), selectedZoom, zoom('zoom-after', 8_000)]),
+      selectedClipId: ref(second.id),
+      selectedClipIds: ref([first.id, second.id]),
+      selectedZoomId: ref(null),
+      selectedZoomIds: ref([selectedZoom.id]),
+      assetFor: (candidate: Clip) =>
+        'assetId' in candidate && candidate.assetId === asset.id
+          ? asset
+          : 'assetId' in candidate && candidate.assetId === secondAsset.id
+            ? secondAsset
+            : null,
+    });
+
+    menu.openClipContextMenu(new MouseEvent('contextmenu'), second);
+    menu.handleContextMenuSelect('copy');
+
+    expect(menu.emitSpy).toHaveBeenCalledWith('clipboard:copied', expect.objectContaining({ type: 'selection' }));
+    const copied = useTimelineClipboard().getClipboardItem();
+    expect(copied).toEqual({
+      type: 'selection',
+      scopeId: 'project-a',
+      entries: [
+        {
+          type: 'clip',
+          category: 'visual',
+          clip: first,
+          asset,
+          descriptor: { kind: 'item', name: asset.fileName },
+        },
+        {
+          type: 'clip',
+          category: 'visual',
+          clip: second,
+          asset: secondAsset,
+          descriptor: { kind: 'item', name: secondAsset.fileName },
+        },
+        {
+          type: 'zoom',
+          category: 'zoom',
+          zoom: selectedZoom,
+          descriptor: { kind: 'zoom', number: 2 },
+        },
+      ],
+      anchorTimeMs: 1_000,
+      primaryIndex: 1,
+      descriptor: {
+        kind: 'selection',
+        items: [
+          { kind: 'item', name: asset.fileName },
+          { kind: 'item', name: secondAsset.fileName },
+          { kind: 'zoom', number: 2 },
+        ],
+      },
+    });
+
+    first.transform.x = 0.25;
+    secondAsset.fileName = 'changed-after-copy.mp4';
+    selectedZoom.depth = 4;
+    expect(useTimelineClipboard().getClipboardItem()).toMatchObject({
+      type: 'selection',
+      entries: [
+        expect.objectContaining({ clip: expect.objectContaining({ transform: { x: 0, y: 0, width: 1, height: 1 } }) }),
+        expect.objectContaining({ asset: expect.objectContaining({ fileName: 'overlay-recording.mp4' }) }),
+        expect.objectContaining({ zoom: expect.objectContaining({ depth: 2 }) }),
+      ],
+    });
+  });
+
   it('pastes the copied descriptor at the current playhead and preserves the destination target', () => {
     const menu = createMenu();
 
@@ -148,13 +229,27 @@ describe('useTimelineContextMenu', () => {
     expect(copied.descriptor).toEqual({ kind: 'zoom', number: 2 });
   });
 
-  it('reports a localized empty-clipboard error before emitting a paste request', () => {
+  it('disables paste while the clipboard is empty', () => {
     const menu = createMenu();
 
     menu.openTrackContextMenu(new MouseEvent('contextmenu'), 'visual', 'video-track');
+    expect(contextMenuItem(menu, 'paste')).toEqual(expect.objectContaining({ disabled: true }));
     menu.handleContextMenuSelect('paste');
 
-    expect(menu.emitSpy).toHaveBeenCalledWith('paste:error', 'Copy an item first.');
+    expect(menu.emitSpy).not.toHaveBeenCalledWith('paste:error', expect.anything());
+    expect(menu.emitSpy).not.toHaveBeenCalledWith('paste:item', expect.anything());
+  });
+
+  it('disables paste when the clipboard belongs to another project', () => {
+    const menu = createMenu({ scopeId: ref('project-b') });
+    useTimelineClipboard().copyClip('project-a', menu.sourceClip);
+
+    menu.openTrackContextMenu(new MouseEvent('contextmenu'), 'visual', 'video-track');
+
+    expect(contextMenuItem(menu, 'paste')).toEqual(expect.objectContaining({ disabled: true }));
+    menu.handleContextMenuSelect('paste');
+
+    expect(menu.emitSpy).not.toHaveBeenCalledWith('paste:error', expect.anything());
     expect(menu.emitSpy).not.toHaveBeenCalledWith('paste:item', expect.anything());
   });
 
@@ -198,7 +293,7 @@ describe('useTimelineContextMenu', () => {
       selectedClipIds: ref([first.id, second.id]),
     });
 
-    menu.openTrackContextMenu(new MouseEvent('contextmenu'), 'visual', 'empty-track');
+    menu.openTrackContextMenu(new MouseEvent('contextmenu'), 'visual');
     menu.handleContextMenuSelect('delete');
 
     expect(menu.emitSpy).toHaveBeenCalledWith('delete:selection', {

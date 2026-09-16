@@ -32,6 +32,7 @@ const props = withDefaults(defineProps<TimelineTracksProps>(), {
   recentPaste: null,
   selectedClipIds: () => [],
   selectedZoomIds: () => [],
+  controlsLocked: false,
   canvas: () => ({ ...DEFAULT_OUTPUT_CANVAS, transitions: { ...EMPTY_CLIP_TRANSITIONS } }),
 });
 const emit = defineEmits<TimelineTracksEmits>();
@@ -130,6 +131,7 @@ const {
   closeContextMenu,
   handleContextMenuSelect,
   copySelected,
+  cutSelected,
   pasteClipboard,
 } = useTimelineContextMenu({
   scopeId: computed(() => props.projectId ?? null),
@@ -148,7 +150,9 @@ useTimelineClipboardShortcuts({
   composition: () => props.composition,
   selectedClipId: () => props.selectedClipId,
   selectedZoomId: () => props.selectedZoomId,
+  disabled: () => props.controlsLocked,
   copySelected,
+  cutSelected,
   pasteClipboard,
 });
 const formatExportLimit = (timeMs: number) => {

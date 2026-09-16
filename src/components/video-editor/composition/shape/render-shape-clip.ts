@@ -1,10 +1,11 @@
 import { drawElementText, drawFreehand } from './render-element-content';
 import type { BlurClip, NormalizedTransform, ShapeClip } from '~/media/shared/composition-types';
-import { normalizeShapeLayerStyle } from '~/media/shared/shape-layer-style';
+import { normalizeShapeLayerStyle, shapeLayerFill } from '~/media/shared/shape-layer-style';
 import type { ShapeLayerStyle } from '~/media/shared/shape-layer-types';
 import type { Canvas2DContext } from '~/types/canvas';
 import { applyBlurEffect } from '../effects/blur-effect';
 import type { EffectRect } from '../effects/effect-types';
+import { backgroundFillStyle } from '../background/render-background';
 
 const shadowOffset = (direction: ShapeClip['shadowDirection'], scale: number) => {
   const distance = 12 * scale;
@@ -129,7 +130,7 @@ export function drawShapeClip(
   if (style.family === 'drawing') drawFreehand(ctx, clip, rect, scale);
   else if (style.family !== 'text') {
     traceShapeInRect(ctx, rect, style);
-    ctx.fillStyle = style.fillColor;
+    ctx.fillStyle = backgroundFillStyle(ctx, shapeLayerFill(style), rect);
     ctx.fill();
     if (style.borderWidth > 0) {
       ctx.shadowColor = 'transparent';

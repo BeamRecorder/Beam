@@ -62,8 +62,8 @@ import {
   type ZoomElement,
 } from '~/components/video-editor/zoom/zoom-types';
 import type { CursorSelection } from '~/api/types/cursor-pack';
-import { pasteClipAt } from '~/components/video-editor/composition/engine/clip-paste';
 import type { TimelinePasteRequest } from '~/components/video-editor/timeline/composables/timeline-clipboard-types';
+import { pasteTimelineClipboard } from '~/components/video-editor/timeline/composables/paste-timeline-clipboard';
 import type { AddVisualElementRequest } from './composition/visual-element-types';
 import { useTimelineClipboardFeedback } from '~/components/video-editor/timeline/composables/useTimelineClipboardFeedback';
 import { EMPTY_CLIP_TRANSITIONS } from '~/media/shared/clip-transitions';
@@ -228,7 +228,6 @@ const {
   updateZoom,
   trimZoomEdge,
   moveZoom,
-  pasteZoomAtTime,
 } = zoomState;
 const zoomMotionBlur = zoomState.zoomMotionBlur ?? ref({ ...DEFAULT_ZOOM_MOTION_BLUR });
 const zoomAutoFollow = zoomState.zoomAutoFollow ?? ref({ ...DEFAULT_ZOOM_AUTO_FOLLOW });
@@ -535,34 +534,33 @@ const pasteTimelineItem = (request: TimelinePasteRequest) => {
     if (!projectId || request.item.scopeId !== projectId) throw new Error(t('timelineClipboardDifferentProject'));
     finishCrop();
     const timelineDurationMs = Math.round(duration.value * 1_000);
-    let pastedId: string;
-    if (request.item.type === 'zoom') {
-      const pasted = pasteZoomAtTime(request.item.zoom, request.timeMs);
-      selectedClipId.value = null;
-      pastedId = pasted.id;
+    const pasted = pasteTimelineClipboard({
+      composition: composition.value,
+      zoomElements: zoomElements.value,
+      item: request.item,
+      timeMs: request.timeMs,
+      timelineDurationMs,
+      target: request.target,
+    });
+    if (
+      !preservesLockedItems(composition.value.clips, pasted.composition.clips) ||
+      !preservesLockedAssets(composition.value, pasted.composition) ||
+      !preservesLockedItems(zoomElements.value, pasted.zoomElements)
+    )
+      throw new Error(tTimelineTracks('locked'));
+    composition.value = pasted.composition;
+    zoomElements.value = pasted.zoomElements;
+    openPropertiesPanel();
+    if (pasted.primary.type === 'clip') {
+      selectZooms(pasted.zoomIds);
+      selectClips(pasted.clipIds, pasted.primary.id);
     } else {
-      const targetTrackId =
-        request.target?.category === 'visual' && (isVisualClip(request.item.clip) || isBlurClip(request.item.clip))
-          ? request.target.trackId
-          : null;
-      const pasted = pasteClipAt(composition.value, request.item.clip, {
-        timelineStartMs: request.timeMs,
-        timelineDurationMs,
-        targetTrackId,
-        asset: request.item.asset,
-      });
-      if (
-        !preservesLockedItems(composition.value.clips, pasted.composition.clips) ||
-        !preservesLockedAssets(composition.value, pasted.composition)
-      )
-        throw new Error(tTimelineTracks('locked'));
-      composition.value = pasted.composition;
-      selectEditorClip(pasted.clipId);
-      editorState.scheduleSave();
-      pastedId = pasted.clipId;
+      selectClips(pasted.clipIds);
+      selectZooms(pasted.zoomIds, pasted.primary.id);
     }
+    editorState.scheduleSave();
     commitNow(createEditorSnapshot());
-    reportTimelinePasteSuccess(pastedId, request.item);
+    reportTimelinePasteSuccess(pasted.primary, request.item);
   } catch (error) {
     reportTimelinePasteError(
       error instanceof TimelineLockedError

@@ -1,4 +1,5 @@
 const { normalizeElementContent } = require('./composition-element-content.cjs');
+const { normalizeColorFill } = require('./composition-color-fill.cjs');
 const PRESETS = new Set([
   'rectangle',
   'rounded-rectangle',
@@ -35,9 +36,18 @@ const finite = (value, fallback, max) =>
   typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.min(max, value)) : fallback;
 const color = (value, fallback) =>
   typeof value === 'string' && /^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/i.test(value) ? value : fallback;
+const optionalFill = (value) => {
+  if (value === undefined) return undefined;
+  try {
+    return normalizeColorFill(value);
+  } catch {
+    return undefined;
+  }
+};
 
 const normalizeShapeLayerStyle = (value) => {
   const family = ['arrow', 'text', 'drawing'].includes(value?.family) ? value.family : 'shape';
+  const fill = optionalFill(value?.fill);
   const preset =
     PRESETS.has(value?.preset) &&
     (family === 'shape'
@@ -53,6 +63,7 @@ const normalizeShapeLayerStyle = (value) => {
     ...normalizeElementContent(value ?? {}),
     family,
     preset,
+    ...(fill ? { fill } : {}),
     fillColor: color(value?.fillColor, DEFAULTS.fillColor),
     borderColor: color(value?.borderColor, DEFAULTS.borderColor),
     borderWidth: finite(value?.borderWidth, DEFAULTS.borderWidth, 40),

@@ -45,6 +45,13 @@ const zoom = (): ZoomElement => ({
   mode: 'manual',
 });
 
+const secondAsset: MediaAsset = {
+  ...asset,
+  id: 'second-video-asset',
+  name: 'Second video',
+  fileName: 'second.mp4',
+};
+
 const textCaption = (overrides: Partial<Extract<CaptionClip['caption'], { type: 'text' }>> = {}): CaptionClip => ({
   id: 'caption-clip',
   kind: 'caption',
@@ -115,8 +122,8 @@ describe('useTimelineClipboard', () => {
     sourceAsset.name = 'Mutated asset';
 
     const copied = clipboard.getClipboardItem();
-    expect(copied?.category).toBe('visual');
     if (!copied || copied.type !== 'clip') throw new Error('Expected a copied visual clip');
+    expect(copied.category).toBe('visual');
     expect(copied.scopeId).toBe('project-a');
     expect(copied.clip.id).toBe(sourceClip.id);
     expect(copied.clip.timelineStartMs).toBe(1_000);
@@ -125,6 +132,62 @@ describe('useTimelineClipboard', () => {
     expect(copied.clip).not.toBe(sourceClip);
     expect(copied.asset).not.toBe(sourceAsset);
     expect(copied.descriptor).toEqual({ kind: 'item', name: 'original.mp4' });
+  });
+
+  it('copies a mixed selection as an isolated bundle with its anchor and primary item', () => {
+    const first = clip();
+    const second = { ...clip(), id: 'camera-later', assetId: secondAsset.id, timelineStartMs: 5_000 };
+    const earlyZoom = { ...zoom(), id: 'zoom-early', startMs: 500, endMs: 1_500 };
+    const lateZoom = { ...zoom(), id: 'zoom-late', startMs: 6_000, endMs: 6_500 };
+    const clipboard = useTimelineClipboard();
+
+    const copiedItem = clipboard.copySelection({
+      scopeId: 'project-a',
+      clips: [first, second],
+      zooms: [earlyZoom, lateZoom],
+      allZooms: [earlyZoom, lateZoom],
+      primaryId: second.id,
+      assetFor: (candidate) => ('assetId' in candidate && candidate.assetId === secondAsset.id ? secondAsset : asset),
+    });
+    if (!copiedItem || copiedItem.type !== 'selection') throw new Error('Expected a copied timeline selection');
+
+    first.timelineStartMs = 9_000;
+    first.transform.x = 0.8;
+    secondAsset.name = 'Changed after copy';
+    earlyZoom.startMs = 7_000;
+    earlyZoom.focus.cx = 0.9;
+
+    const copied = clipboard.getClipboardItem();
+    if (!copied || copied.type !== 'selection') throw new Error('Expected a copied timeline selection');
+
+    expect(copied.scopeId).toBe('project-a');
+    expect(copied.anchorTimeMs).toBe(500);
+    expect(copied.primaryIndex).toBe(1);
+    expect(copied.entries.map((entry) => (entry.type === 'clip' ? entry.clip.id : entry.zoom.id))).toEqual([
+      'camera-clip',
+      'camera-later',
+      'zoom-early',
+      'zoom-late',
+    ]);
+    expect(copied.entries[0]).toMatchObject({
+      type: 'clip',
+      clip: { timelineStartMs: 1_000, transform: { x: 0.1 } },
+      asset: { id: 'video-asset', name: 'Original video' },
+    });
+    expect(copied.entries[1]).toMatchObject({
+      type: 'clip',
+      clip: { timelineStartMs: 5_000 },
+      asset: { id: 'second-video-asset', name: 'Second video' },
+    });
+    expect(copied.entries[2]).toMatchObject({
+      type: 'zoom',
+      zoom: { startMs: 500, focus: { cx: 0.5 } },
+    });
+    expect(copied.descriptor).toMatchObject({ kind: 'selection', items: expect.any(Array) });
+    const copiedFirst = copied.entries[0];
+    if (copiedFirst.type !== 'clip') throw new Error('Expected a copied clip entry');
+    expect(copiedFirst.clip).not.toBe(first);
+    expect(copiedFirst.asset).not.toBe(asset);
   });
 
   it('falls back from an empty asset filename to the track name and then the asset name', () => {

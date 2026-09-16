@@ -225,41 +225,260 @@ describe('TimelineTracks', () => {
     expect(mounted!.emitted('delete:selection')).toContainEqual([{ clipIds: [], zoomIds: ['zoom-1'], mode: 'lift' }]);
   });
 
-  it('supports Ctrl/Cmd copy and paste, ignores editable fields, and reports an empty clipboard', async () => {
-    const mounted = await mountTracks({ selectedZoomId: null });
+  it('copies, cuts, and pastes the mixed selection on Ctrl/Cmd, using a new layer for keyboard paste', async () => {
+    const mounted = await mountTracks({
+      selectedZoomId: 'zoom-1',
+      selectedZoomIds: ['zoom-1'],
+      selectedClipId: 'screen-clip',
+      selectedClipIds: ['screen-clip', 'image-clip'],
+    });
     const dispatchShortcut = (key: string, modifiers: Pick<KeyboardEventInit, 'ctrlKey' | 'metaKey'>) => {
-      window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, ...modifiers }));
+      const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...modifiers });
+      window.dispatchEvent(event);
+      return event;
     };
 
-    dispatchShortcut('c', { ctrlKey: true });
-    expect(mounted!.emitted('clipboard:copied')).toHaveLength(1);
-    dispatchShortcut('c', { metaKey: true });
+    expect(dispatchShortcut('c', { ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(dispatchShortcut('c', { metaKey: true }).defaultPrevented).toBe(true);
     expect(mounted!.emitted('clipboard:copied')).toHaveLength(2);
+
+    const copied = mounted!.emitted('clipboard:copied')?.at(-1)?.[0] as
+      | { type: string; scopeId: string; anchorTimeMs?: number; primaryIndex?: number; entries?: unknown[] }
+      | undefined;
+    expect(copied).toMatchObject({
+      type: 'selection',
+      scopeId: 'project-a',
+      anchorTimeMs: 0,
+      primaryIndex: 2,
+      entries: expect.arrayContaining([
+        expect.objectContaining({ type: 'clip', clip: expect.objectContaining({ id: 'screen-clip' }) }),
+        expect.objectContaining({ type: 'clip', clip: expect.objectContaining({ id: 'image-clip' }) }),
+        expect.objectContaining({ type: 'zoom', zoom: expect.objectContaining({ id: 'zoom-1' }) }),
+      ]),
+    });
+
     await mounted!.setProps({ currentTime: 6 });
-    dispatchShortcut('v', { metaKey: true });
+    expect(dispatchShortcut('v', { metaKey: true }).defaultPrevented).toBe(true);
     await flushPromises();
 
-    let pastePayload = mounted!.emitted('paste:item')?.at(-1)?.[0] as
-      | { item: { type: string; clip?: { id: string } }; timeMs: number }
+    const pastePayload = mounted!.emitted('paste:item')?.at(-1)?.[0] as
+      | {
+          item: { type: string };
+          timeMs: number;
+          target?: { category: string; trackId?: string | null; placement?: string };
+        }
       | undefined;
     expect(pastePayload?.timeMs).toBe(6_000);
-    expect(pastePayload?.item).toEqual(expect.objectContaining({ type: 'clip' }));
-    expect(pastePayload?.item.clip?.id).toBe('screen-clip');
+    expect(pastePayload?.item.type).toBe('selection');
+    expect(pastePayload?.target).toEqual({
+      category: 'visual',
+      trackId: 'screen-track',
+      placement: 'new-layer',
+    });
+
+    expect(dispatchShortcut('v', { ctrlKey: true }).defaultPrevented).toBe(true);
+    await flushPromises();
+    const ctrlPastePayload = mounted!.emitted('paste:item')?.at(-1)?.[0] as
+      | { item: { type: string }; timeMs: number; target?: { category: string; placement?: string } }
+      | undefined;
+    expect(mounted!.emitted('paste:item')).toHaveLength(2);
+    expect(ctrlPastePayload).toMatchObject({
+      timeMs: 6_000,
+      item: { type: 'selection' },
+      target: { category: 'visual', placement: 'new-layer' },
+    });
+
+    expect(dispatchShortcut('x', { ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(dispatchShortcut('x', { metaKey: true }).defaultPrevented).toBe(true);
+    expect(mounted!.emitted('delete:selection')).toEqual([
+      [{ clipIds: ['screen-clip', 'image-clip'], zoomIds: ['zoom-1'], mode: 'lift' }],
+      [{ clipIds: ['screen-clip', 'image-clip'], zoomIds: ['zoom-1'], mode: 'lift' }],
+    ]);
 
     const input = document.createElement('input');
     document.body.appendChild(input);
     input.focus();
-    const pasteCountBeforeEditableShortcuts = mounted!.emitted('paste:item')?.length ?? 0;
-    dispatchShortcut('c', { ctrlKey: true });
-    dispatchShortcut('v', { ctrlKey: true });
+    const copiesBeforeEditableShortcuts = mounted!.emitted('clipboard:copied')?.length ?? 0;
+    const pastesBeforeEditableShortcuts = mounted!.emitted('paste:item')?.length ?? 0;
+    const deletesBeforeEditableShortcuts = mounted!.emitted('delete:selection')?.length ?? 0;
+    expect(dispatchShortcut('c', { ctrlKey: true }).defaultPrevented).toBe(false);
+    expect(dispatchShortcut('x', { ctrlKey: true }).defaultPrevented).toBe(false);
+    expect(dispatchShortcut('v', { ctrlKey: true }).defaultPrevented).toBe(false);
     await flushPromises();
-    expect(mounted!.emitted('paste:item')?.length ?? 0).toBe(pasteCountBeforeEditableShortcuts);
+    expect(mounted!.emitted('clipboard:copied')?.length ?? 0).toBe(copiesBeforeEditableShortcuts);
+    expect(mounted!.emitted('paste:item')?.length ?? 0).toBe(pastesBeforeEditableShortcuts);
+    expect(mounted!.emitted('delete:selection')?.length ?? 0).toBe(deletesBeforeEditableShortcuts);
     input.remove();
 
     useTimelineClipboard().clearClipboard();
-    dispatchShortcut('v', { ctrlKey: true });
+    expect(dispatchShortcut('v', { ctrlKey: true }).defaultPrevented).toBe(true);
     await flushPromises();
     expect(mounted!.emitted('paste:error')).toContainEqual(['Copy a timeline item before pasting.']);
+    expect(mounted!.emitted('paste:item')?.length ?? 0).toBe(pastesBeforeEditableShortcuts);
+  });
+
+  it('does not cut or replace the clipboard for a locked selection', async () => {
+    const lockedComposition = composition();
+    lockedComposition.clips = lockedComposition.clips.map((clip) =>
+      clip.id === 'image-clip' ? { ...clip, locked: true } : clip,
+    );
+    const mounted = await mountTracks({
+      composition: lockedComposition,
+      selectedClipId: 'image-clip',
+      selectedClipIds: ['image-clip'],
+      selectedZoomId: null,
+      selectedZoomIds: [],
+    });
+    const clipboard = useTimelineClipboard();
+    const previousItem = clipboard.copyClip(
+      'project-a',
+      lockedComposition.clips.find((clip) => clip.id === 'screen-clip')!,
+    );
+    const event = new KeyboardEvent('keydown', { key: 'x', ctrlKey: true, bubbles: true, cancelable: true });
+
+    window.dispatchEvent(event);
+    await flushPromises();
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(mounted!.emitted('delete:selection')).toBeUndefined();
+    expect(mounted!.emitted('clipboard:copied')).toBeUndefined();
+    expect(clipboard.getClipboardItem()).toEqual(previousItem);
+  });
+
+  it('ignores Ctrl/Cmd copy, cut, and paste shortcuts while controls are locked', async () => {
+    const comp = composition();
+    const clipboard = useTimelineClipboard();
+    const previousItem = clipboard.copyClip(
+      'project-a',
+      comp.clips.find((clip) => clip.id === 'webcam-clip')!,
+    );
+    const mounted = await mountTracks({
+      controlsLocked: true,
+      composition: comp,
+      selectedZoomId: 'zoom-1',
+      selectedZoomIds: ['zoom-1'],
+      selectedClipId: 'screen-clip',
+      selectedClipIds: ['screen-clip', 'image-clip'],
+    });
+    const events = ['c', 'x', 'v'].flatMap((key) => [
+      new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ctrlKey: true }),
+      new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, metaKey: true }),
+    ]);
+
+    events.forEach((event) => window.dispatchEvent(event));
+    await flushPromises();
+
+    expect(events.every((event) => !event.defaultPrevented)).toBe(true);
+    expect(mounted!.emitted('clipboard:copied')).toBeUndefined();
+    expect(mounted!.emitted('delete:selection')).toBeUndefined();
+    expect(mounted!.emitted('paste:item')).toBeUndefined();
+    expect(mounted!.emitted('paste:error')).toBeUndefined();
+    expect(clipboard.getClipboardItem()).toEqual(previousItem);
+  });
+
+  it.each([
+    ['repeated keydown', { repeat: true }],
+    ['IME composition', { isComposing: true }],
+    ['Alt modifier', { altKey: true }],
+    ['Shift modifier', { shiftKey: true }],
+  ] as Array<[string, Pick<KeyboardEventInit, 'repeat' | 'isComposing' | 'altKey' | 'shiftKey'>]>)(
+    'ignores copy, cut, and paste during %s',
+    async (_label, guard) => {
+      const mounted = await mountTracks({ selectedZoomId: null });
+      const clipboard = useTimelineClipboard();
+      const events = ['c', 'x', 'v'].map(
+        (key) =>
+          new KeyboardEvent('keydown', {
+            key,
+            bubbles: true,
+            cancelable: true,
+            ctrlKey: true,
+            ...guard,
+          }),
+      );
+
+      events.forEach((event) => window.dispatchEvent(event));
+      await flushPromises();
+
+      expect(events.every((event) => !event.defaultPrevented)).toBe(true);
+      expect(mounted!.emitted('clipboard:copied')).toBeUndefined();
+      expect(mounted!.emitted('delete:selection')).toBeUndefined();
+      expect(mounted!.emitted('paste:item')).toBeUndefined();
+      expect(mounted!.emitted('paste:error')).toBeUndefined();
+      expect(clipboard.getClipboardItem()).toBeNull();
+    },
+  );
+
+  it('ignores keyboard shortcuts already prevented by another handler', async () => {
+    const mounted = await mountTracks({ selectedZoomId: null });
+    const clipboard = useTimelineClipboard();
+    const events = ['c', 'x', 'v'].map((key) => {
+      const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ctrlKey: true });
+      event.preventDefault();
+      window.dispatchEvent(event);
+      return event;
+    });
+
+    await flushPromises();
+
+    expect(events.every((event) => event.defaultPrevented)).toBe(true);
+    expect(mounted!.emitted('clipboard:copied')).toBeUndefined();
+    expect(mounted!.emitted('delete:selection')).toBeUndefined();
+    expect(mounted!.emitted('paste:item')).toBeUndefined();
+    expect(clipboard.getClipboardItem()).toBeNull();
+  });
+
+  it('ignores keyboard shortcuts from a nested contenteditable element', async () => {
+    const mounted = await mountTracks({ selectedZoomId: null });
+    const clipboard = useTimelineClipboard();
+    const editor = document.createElement('div');
+    editor.setAttribute('contenteditable', 'true');
+    const nested = document.createElement('span');
+    editor.appendChild(nested);
+    document.body.appendChild(editor);
+    try {
+      const events = ['c', 'x', 'v'].map((key) => {
+        const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ctrlKey: true });
+        nested.dispatchEvent(event);
+        return event;
+      });
+
+      await flushPromises();
+
+      expect(events.every((event) => !event.defaultPrevented)).toBe(true);
+      expect(mounted!.emitted('clipboard:copied')).toBeUndefined();
+      expect(mounted!.emitted('delete:selection')).toBeUndefined();
+      expect(mounted!.emitted('paste:item')).toBeUndefined();
+      expect(clipboard.getClipboardItem()).toBeNull();
+    } finally {
+      editor.remove();
+    }
+  });
+
+  it('ignores keyboard shortcuts while an aria-modal dialog is open', async () => {
+    const mounted = await mountTracks({ selectedZoomId: null });
+    const clipboard = useTimelineClipboard();
+    const dialog = document.createElement('div');
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+    document.body.appendChild(dialog);
+    try {
+      const events = ['c', 'x', 'v'].map((key) => {
+        const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ctrlKey: true });
+        window.dispatchEvent(event);
+        return event;
+      });
+
+      await flushPromises();
+
+      expect(events.every((event) => !event.defaultPrevented)).toBe(true);
+      expect(mounted!.emitted('clipboard:copied')).toBeUndefined();
+      expect(mounted!.emitted('delete:selection')).toBeUndefined();
+      expect(mounted!.emitted('paste:item')).toBeUndefined();
+      expect(clipboard.getClipboardItem()).toBeNull();
+    } finally {
+      dialog.remove();
+    }
   });
 
   it('displays real-time caption text and triggers the settling animation on edit', async () => {
