@@ -11,6 +11,8 @@ const { registerProjectIpc, CURSOR_PACK_DISCOVERY_URL } = require('../electron/p
     BrowserWindow: object,
     trustedRenderer: (url: string) => boolean,
     cursorLibrary?: object,
+    screenshotStore?: object,
+    clipboard?: object,
   ) => void;
 };
 
@@ -22,7 +24,7 @@ const importedFont = {
   url: 'project-media://font/' + 'a'.repeat(64),
 };
 
-const setup = (options: { trusted?: boolean; rendererUrl?: string } = {}) => {
+const setup = (options: { trusted?: boolean; rendererUrl?: string; clipboardImage?: object } = {}) => {
   const handlers = new Map<string, Function>();
   const ipcMain = { handle: (channel: string, handler: Function) => handlers.set(channel, handler) };
   const importFile = vi.fn((source) => ({ source }));
@@ -33,8 +35,11 @@ const setup = (options: { trusted?: boolean; rendererUrl?: string } = {}) => {
   const windows = { getAllWindows: () => [window] };
   const event = { sender: { getURL: vi.fn(() => options.rendererUrl ?? 'file:///editor.html') } };
   const trustedRenderer = vi.fn(() => options.trusted ?? true);
+  const clipboardImage = options.clipboardImage ?? { isEmpty: () => true };
+  const readImage = vi.fn(() => clipboardImage);
   const projectStore = {
     importDroppedProjectMedia: vi.fn((projectId, input) => ({ projectId, ...input })),
+    importClipboardImage: vi.fn((projectId, input) => ({ projectId, kind: 'image', ...input })),
   };
   const backgroundLibrary = { importFile, list: vi.fn() };
   const fontLibrary = { importFile: fontImportFile, list: fontList };
@@ -56,10 +61,13 @@ const setup = (options: { trusted?: boolean; rendererUrl?: string } = {}) => {
     windows,
     trustedRenderer,
     cursorLibrary,
+    undefined,
+    { readImage },
   );
   return {
     handler: handlers.get('background-library:pick-import')!,
     droppedHandler: handlers.get('projects:import-dropped-media')!,
+    pasteHandler: handlers.get('projects:paste-clipboard-image')!,
     fontListHandler: handlers.get('font-library:list')!,
     fontImportHandler: handlers.get('font-library:pick-import')!,
     cursorImportHandler: handlers.get('cursor-packs:pick-import')!,
@@ -69,6 +77,7 @@ const setup = (options: { trusted?: boolean; rendererUrl?: string } = {}) => {
     fontList,
     cursorLibrary,
     projectStore,
+    clipboard: { readImage },
     window,
     event,
     trustedRenderer,
@@ -129,6 +138,46 @@ describe('background import IPC', () => {
     });
     expect(projectStore.importDroppedProjectMedia).toHaveBeenCalledOnce();
     expect(projectStore.importDroppedProjectMedia).toHaveBeenCalledWith('project-42', { source, kind: 'video' });
+  });
+
+  it('returns null for an empty clipboard without importing an image', async () => {
+    const { pasteHandler, projectStore, clipboard, event } = setup({ clipboardImage: { isEmpty: () => true } });
+
+    expect(pasteHandler(event, { projectId: 'project-42' })).toBeNull();
+    expect(clipboard.readImage).toHaveBeenCalledOnce();
+    expect(projectStore.importClipboardImage).not.toHaveBeenCalled();
+  });
+
+  it('imports a valid clipboard image into the requested project', async () => {
+    const png = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+    const { pasteHandler, projectStore, clipboard, event } = setup({
+      clipboardImage: {
+        isEmpty: () => false,
+        getSize: () => ({ width: 800, height: 450 }),
+        toPNG: () => png,
+      },
+    });
+
+    expect(pasteHandler(event, { projectId: 'project-42' })).toMatchObject({
+      projectId: 'project-42',
+      kind: 'image',
+      width: 800,
+      height: 450,
+    });
+    expect(clipboard.readImage).toHaveBeenCalledOnce();
+    expect(projectStore.importClipboardImage).toHaveBeenCalledWith(
+      'project-42',
+      expect.objectContaining({ buffer: png, width: 800, height: 450 }),
+    );
+  });
+
+  it('rejects clipboard image imports from an untrusted renderer', async () => {
+    const { pasteHandler, projectStore, clipboard, event, trustedRenderer } = setup({ trusted: false });
+
+    expect(() => pasteHandler(event, { projectId: 'project-42' })).toThrow('Renderer non autorisé');
+    expect(trustedRenderer).toHaveBeenCalledWith('file:///editor.html');
+    expect(clipboard.readImage).not.toHaveBeenCalled();
+    expect(projectStore.importClipboardImage).not.toHaveBeenCalled();
   });
 
   it('lists imported fonts for a trusted renderer', async () => {

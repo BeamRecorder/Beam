@@ -15,6 +15,7 @@ export const ARROW_PRESETS: readonly ShapeLayerPreset[] = ['arrow'];
 export const DEFAULT_SHAPE_LAYER_STYLE: ShapeLayerStyle = {
   family: 'shape',
   preset: 'rounded-rectangle',
+  fillEnabled: true,
   fillColor: '#ff5a1f',
   borderColor: '#ffffff',
   borderWidth: 0,
@@ -31,6 +32,17 @@ export const DEFAULT_SHAPE_LAYER_STYLE: ShapeLayerStyle = {
   shadowDirection: 'bottom-right',
 };
 
+/** New annotation shapes follow the familiar screenshot-tool convention: an outlined, unfilled rectangle. */
+export const DEFAULT_ANNOTATION_SHAPE_STYLE: ShapeLayerStyle = {
+  ...DEFAULT_SHAPE_LAYER_STYLE,
+  preset: 'rectangle',
+  fillEnabled: false,
+  fillColor: '#ff5a1f',
+  borderColor: '#ff5a1f',
+  borderWidth: 8,
+  cornerRadius: 0,
+};
+
 const finite = (value: number | undefined, fallback: number, max: number) =>
   Number.isFinite(value) ? Math.min(max, Math.max(0, value!)) : fallback;
 const color = (value: string | undefined, fallback: string) =>
@@ -42,7 +54,9 @@ export const defaultShapePresetFor = (family: ShapeLayerFamily): ShapeLayerPrese
 export const shapeLayerFill = (value: Pick<ShapeLayerStyle, 'fill' | 'fillColor'>): ColorFill =>
   isColorFill(value.fill) ? value.fill : { kind: 'color', color: value.fillColor };
 
-export const normalizeShapeLayerStyle = (value: Partial<ShapeLayerStyle> | null | undefined): ShapeLayerStyle => {
+export const normalizeShapeLayerStyle = (
+  value: Partial<ShapeLayerStyle> | null | undefined,
+): ShapeLayerStyle & { fillEnabled: boolean } => {
   const family = value?.family && ['arrow', 'text', 'drawing'].includes(value.family) ? value.family : 'shape';
   const presets = family === 'shape' ? SHAPE_PRESETS : [defaultShapePresetFor(family)];
   return {
@@ -51,6 +65,7 @@ export const normalizeShapeLayerStyle = (value: Partial<ShapeLayerStyle> | null 
     family,
     preset: presets.includes(value?.preset as ShapeLayerPreset) ? value!.preset! : defaultShapePresetFor(family),
     ...(isColorFill(value?.fill) ? { fill: value.fill } : {}),
+    fillEnabled: value?.fillEnabled !== false,
     fillColor: color(value?.fillColor, DEFAULT_SHAPE_LAYER_STYLE.fillColor),
     borderColor: color(value?.borderColor, DEFAULT_SHAPE_LAYER_STYLE.borderColor),
     borderWidth: finite(value?.borderWidth, DEFAULT_SHAPE_LAYER_STYLE.borderWidth, 40),

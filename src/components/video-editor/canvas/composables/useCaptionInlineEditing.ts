@@ -58,15 +58,16 @@ export function useCaptionInlineEditing(options: {
     if (clipId && !editingCaption.value?.locked) options.onUpdate({ clipId, customText });
   };
   const begin = (event: Pick<MouseEvent, 'clientX' | 'clientY' | 'button'>) => {
-    if (event.button !== 0 || options.isPlaying() || options.isCropping() || options.isManualZoom()) return;
+    if (event.button !== 0 || options.isPlaying() || options.isCropping() || options.isManualZoom()) return false;
     const clipId = options.clipIdAt(event);
     const clip = options.composition().clips.find((candidate) => candidate.id === clipId);
-    if (!clip || clip.locked || !isTextCaptionClip(clip)) return;
+    if (!clip || clip.locked || !isTextCaptionClip(clip)) return false;
     if (options.selectedClip()?.id !== clip.id) options.onSelect(clip.id);
     options.onStart();
     editingCaptionId.value = clip.id;
     originalCustomText.value = clip.caption.style.customText;
     options.onRender();
+    return true;
   };
 
   watch(

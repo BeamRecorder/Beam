@@ -63,6 +63,17 @@ const composition = (clips: Clip[]): ClipComposition => ({
 
 const contextMenuEvent = () => new MouseEvent('contextmenu', { clientX: 120, clientY: 80 });
 
+const dispatchPaste = (target: EventTarget, items: Array<{ kind: string; type: string }> = []) => {
+  // jsdom does not expose ClipboardEvent, so use it when available and retain the
+  // same cancelable event shape in the test environment.
+  const event = globalThis.ClipboardEvent
+    ? new globalThis.ClipboardEvent('paste', { bubbles: true, cancelable: true })
+    : new Event('paste', { bubbles: true, cancelable: true });
+  Object.defineProperty(event, 'clipboardData', { configurable: true, value: { items } });
+  target.dispatchEvent(event);
+  return event;
+};
+
 const createMenu = (overrides: Partial<Parameters<typeof useTimelineContextMenu>[0]> = {}) => {
   const clips = [clip('clip-1')];
   const sourceZoom = zoom('zoom-1');
@@ -97,6 +108,7 @@ const mountClipboardShortcuts = (menu: ReturnType<typeof createMenu>) => {
         disabled: () => false,
         copySelected: menu.copySelected,
         cutSelected: menu.cutSelected,
+        canPaste: menu.canPasteClipboard,
         pasteClipboard: menu.pasteClipboard,
       });
       return () => h('div');
@@ -225,6 +237,35 @@ describe('useTimelineContextMenu lock actions', () => {
 
     menu.handleContextMenuSelect('copy');
     expect(menu.emitSpy).toHaveBeenCalledWith('clipboard:copied', expect.objectContaining({ type: 'clip' }));
+  });
+
+  it('pastes the internal timeline clipboard from a paste event without image data', () => {
+    const menu = createMenu();
+    useTimelineClipboard().copyClip('project-a', menu.clips[0]!);
+    mountClipboardShortcuts(menu);
+
+    const event = dispatchPaste(window);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(menu.emitSpy).toHaveBeenCalledWith(
+      'paste:item',
+      expect.objectContaining({
+        item: expect.objectContaining({ type: 'clip' }),
+        timeMs: 1_000,
+        target: { category: 'visual', trackId: 'video-track', placement: 'new-layer' },
+      }),
+    );
+  });
+
+  it('leaves image paste events unclaimed for the image handler', () => {
+    const menu = createMenu();
+    useTimelineClipboard().copyClip('project-a', menu.clips[0]!);
+    mountClipboardShortcuts(menu);
+
+    const event = dispatchPaste(window, [{ kind: 'file', type: 'image/png' }]);
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(menu.emitSpy).not.toHaveBeenCalledWith('paste:item', expect.anything());
   });
 
   it('leaves Ctrl+X and the existing clipboard untouched when any selected item is locked', () => {

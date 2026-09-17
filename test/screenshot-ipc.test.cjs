@@ -68,6 +68,7 @@ function makeFixture(options = {}) {
   const calls = {
     nativeRequests: [],
     presetReads: 0,
+    clipboardReads: 0,
     clipboardWrites: [],
     imageBuffers: [],
     dialogs: [],
@@ -110,7 +111,14 @@ function makeFixture(options = {}) {
       return dialogResult;
     },
   };
-  const clipboard = { writeImage: (image) => calls.clipboardWrites.push(image) };
+  const clipboardImage = options.clipboardImage ?? { isEmpty: () => true };
+  const clipboard = {
+    readImage: () => {
+      calls.clipboardReads += 1;
+      return clipboardImage;
+    },
+    writeImage: (image) => calls.clipboardWrites.push(image),
+  };
   const nativeImage = {
     createFromBuffer: (buffer) => {
       calls.imageBuffers.push(Buffer.from(buffer));
@@ -483,6 +491,47 @@ test('validates PNG and WebP encodings for clipboard publication and file saving
     assert.equal(fs.existsSync(canceledFile), false);
     assert.equal(fixture.calls.dialogs.length, 3);
     assert.equal(fixture.calls.dialogs[2][1].filters[0].extensions[0], 'webp');
+  } finally {
+    fixture.cleanup();
+  }
+});
+
+test('returns no screenshot asset when the native clipboard is empty', async () => {
+  const fixture = makeFixture({ clipboardImage: { isEmpty: () => true } });
+  try {
+    const screenshot = addScreenshot(fixture.store);
+
+    assert.equal(await fixture.invoke('screenshot:paste-clipboard-image', screenshot.id), null);
+    assert.equal(fixture.calls.clipboardReads, 1);
+    assert.equal(fs.existsSync(path.join(fixture.screenshotRoot, screenshot.id, 'media')), false);
+  } finally {
+    fixture.cleanup();
+  }
+});
+
+test('imports a valid native clipboard image into the screenshot project', async () => {
+  const fixture = makeFixture({
+    clipboardImage: {
+      isEmpty: () => false,
+      getSize: () => ({ width: 640, height: 360 }),
+      toPNG: () => pngBytes,
+    },
+  });
+  try {
+    const screenshot = addScreenshot(fixture.store);
+
+    const asset = await fixture.invoke('screenshot:paste-clipboard-image', screenshot.id);
+
+    assert.equal(fixture.calls.clipboardReads, 1);
+    assert.equal(asset.kind, 'image');
+    assert.equal(asset.width, 640);
+    assert.equal(asset.height, 360);
+    assert.match(asset.src, new RegExp(`^project-media://screenshot/${screenshot.id}/media/`));
+    assert.match(asset.fileName, /^[0-9a-f-]{36}\.png$/);
+    assert.deepEqual(
+      fs.readFileSync(path.join(fixture.screenshotRoot, screenshot.id, 'media', asset.fileName)),
+      pngBytes,
+    );
   } finally {
     fixture.cleanup();
   }

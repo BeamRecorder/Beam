@@ -45,6 +45,35 @@ const importMedia = (directory, input) => {
   };
 };
 
+const importImageBuffer = (directory, input) => {
+  if (
+    !input ||
+    !Buffer.isBuffer(input.buffer) ||
+    input.buffer.length === 0 ||
+    !Number.isInteger(input.width) ||
+    !Number.isInteger(input.height) ||
+    input.width <= 0 ||
+    input.height <= 0
+  )
+    throw new Error('Invalid image data import.');
+  const targetDirectory = path.join(directory, 'media');
+  fs.mkdirSync(targetDirectory, { recursive: true });
+  const fileName = `${randomUUID()}.png`;
+  const target = path.join(targetDirectory, fileName);
+  fs.writeFileSync(target, input.buffer, { flag: 'wx', mode: 0o600 });
+  return {
+    id: randomUUID(),
+    kind: 'image',
+    name: String(input.name || 'Clipboard image').slice(0, 160),
+    fileName,
+    durationMs: 0,
+    width: input.width,
+    height: input.height,
+    src: pathToFileURL(target).href,
+    origin: 'project',
+  };
+};
+
 const pruneProjectMedia = (directory, previous, next) => {
   const used = new Set(next.assets.filter((asset) => asset.origin === 'project').map((asset) => asset.fileName));
   for (const asset of previous.assets || []) {
@@ -53,4 +82,4 @@ const pruneProjectMedia = (directory, previous, next) => {
   }
 };
 
-module.exports = { materializeComposition, importMedia, pruneProjectMedia };
+module.exports = { materializeComposition, importMedia, importImageBuffer, pruneProjectMedia };

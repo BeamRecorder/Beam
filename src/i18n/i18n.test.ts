@@ -34,6 +34,7 @@ describe('internationalization', () => {
     expect(i18n.global.t('QuickSnipCropBar.screenshot')).toBe('Chụp ảnh màn hình');
     expect(i18n.global.t('ScreenshotEditor.title')).toBe('Ảnh chụp màn hình');
     expect(i18n.global.t('ScreenshotEditor.screenshots')).toBe('Ảnh chụp màn hình');
+    expect(i18n.global.t('ProjectPicker.explore')).toBe('Mở thư mục');
   });
 
   it('provides screenshot, preset and capture-mode UI in all locales without falling back to English', () => {

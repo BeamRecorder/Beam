@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SHAPE_LAYER_STYLE, isShapeLayerStyle, normalizeShapeLayerStyle } from './shape-layer-style';
+import {
+  DEFAULT_ANNOTATION_SHAPE_STYLE,
+  DEFAULT_SHAPE_LAYER_STYLE,
+  isShapeLayerStyle,
+  normalizeShapeLayerStyle,
+} from './shape-layer-style';
 import type { ShapeLayerStyle } from './shape-layer-types';
 
 describe('normalizeShapeLayerStyle', () => {
@@ -48,6 +53,20 @@ describe('normalizeShapeLayerStyle', () => {
     expect(isShapeLayerStyle(DEFAULT_SHAPE_LAYER_STYLE)).toBe(true);
     expect(normalized).not.toHaveProperty('fill');
     expect(normalized.fillColor).toBe(DEFAULT_SHAPE_LAYER_STYLE.fillColor);
+  });
+
+  it('defines the annotation default as an unfilled outlined rectangle', () => {
+    expect(DEFAULT_ANNOTATION_SHAPE_STYLE).toMatchObject({
+      family: 'shape',
+      preset: 'rectangle',
+      fillEnabled: false,
+      borderColor: '#ff5a1f',
+      borderWidth: 8,
+      cornerRadius: 0,
+    });
+    expect(DEFAULT_ANNOTATION_SHAPE_STYLE).not.toHaveProperty('fill');
+    expect(isShapeLayerStyle(DEFAULT_ANNOTATION_SHAPE_STYLE)).toBe(true);
+    expect(normalizeShapeLayerStyle(DEFAULT_ANNOTATION_SHAPE_STYLE)).toEqual(DEFAULT_ANNOTATION_SHAPE_STYLE);
   });
 
   it('preserves a valid gradient fill and its fillColor fallback', () => {

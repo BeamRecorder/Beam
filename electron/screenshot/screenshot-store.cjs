@@ -3,7 +3,7 @@ const path = require('path');
 const { randomUUID } = require('crypto');
 const { dimensions: validDimensions, validateScreenshotState } = require('./screenshot-validation.cjs');
 const { validateScreenshotHistory } = require('./screenshot-history.cjs');
-const { importMedia } = require('../projects/composition-project-media.cjs');
+const { importMedia, importImageBuffer } = require('../projects/composition-project-media.cjs');
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function createScreenshotStore(root) {
@@ -54,6 +54,11 @@ function createScreenshotStore(root) {
     importImage(id, source) {
       read(id);
       const asset = importMedia(directory(id), { kind: 'image', source });
+      return { ...asset, src: `project-media://screenshot/${id}/media/${asset.fileName}` };
+    },
+    importClipboardImage(id, input) {
+      read(id);
+      const asset = importImageBuffer(directory(id), input);
       return { ...asset, src: `project-media://screenshot/${id}/media/${asset.fileName}` };
     },
     discardImage(id, source) {

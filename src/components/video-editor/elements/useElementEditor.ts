@@ -3,7 +3,11 @@ import { useTranslate } from '~/i18n/useTranslate';
 import type { ShapeClip } from '~/media/shared/composition-types';
 import { createElementText } from '~/media/shared/element-text';
 import { DEFAULT_DRAWING_SETTINGS } from '~/media/shared/freehand';
-import { defaultShapePresetFor, normalizeShapeLayerStyle } from '~/media/shared/shape-layer-style';
+import {
+  DEFAULT_ANNOTATION_SHAPE_STYLE,
+  defaultShapePresetFor,
+  normalizeShapeLayerStyle,
+} from '~/media/shared/shape-layer-style';
 import type { ShapeLayerFamily } from '~/media/shared/shape-layer-types';
 import type { ElementEditorContext, ElementEditorOptions } from './element-editor-types';
 
@@ -21,8 +25,12 @@ export function provideElementEditor(options: ElementEditorOptions): ElementEdit
   const create = (family: ShapeLayerFamily): ShapeClip => {
     const { startMs, durationMs } = options.timing();
     const id = crypto.randomUUID();
+    const style =
+      family === 'shape'
+        ? { ...DEFAULT_ANNOTATION_SHAPE_STYLE }
+        : normalizeShapeLayerStyle({ family, preset: defaultShapePresetFor(family) });
     return {
-      ...normalizeShapeLayerStyle({ family, preset: defaultShapePresetFor(family) }),
+      ...style,
       id,
       trackId: id,
       kind: 'shape',

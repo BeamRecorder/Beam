@@ -76,6 +76,9 @@ export interface EditorCanvasEmits {
   (event: 'update:clip-transform', transform: NormalizedTransform): void;
   (event: 'preview:clip-crop', crop: NormalizedCrop | null): void;
   (event: 'update:clip-crop', crop: NormalizedCrop): void;
+  (event: 'preview:shape-rotation', rotation: number | null): void;
+  (event: 'update:shape-rotation', rotation: number): void;
+  (event: 'request:crop', clipId: string): void;
   (event: 'select:canvas'): void;
   (event: 'select:cursor'): void;
   (event: 'update:cursor-size', value: number): void;

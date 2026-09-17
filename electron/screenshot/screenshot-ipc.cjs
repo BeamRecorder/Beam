@@ -3,6 +3,7 @@ const path = require('path');
 const { randomUUID } = require('crypto');
 const { buildDefaultCaptureConfig } = require('../capture/capture-config.cjs');
 const { isCaptureCancellation } = require('../capture/capture-cancellation.cjs');
+const { readClipboardPng } = require('../clipboard/image-clipboard.cjs');
 
 function registerScreenshotIpc({
   ipcMain,
@@ -78,6 +79,10 @@ function registerScreenshotIpc({
     });
     if (selected.canceled || !selected.filePaths[0]) return null;
     return store.importImage(id, selected.filePaths[0]);
+  });
+  handle('screenshot:paste-clipboard-image', (_event, id) => {
+    const image = readClipboardPng(clipboard);
+    return image ? store.importClipboardImage(id, image) : null;
   });
   handle('screenshot:list', () => store.list());
   handle('screenshot:save', (_event, { id, state, history }) => store.save(id, state, history));

@@ -97,6 +97,29 @@ describe('ScreenshotEditor', () => {
     wrapper.unmount();
   });
 
+  it('opens with the Elements panel active instead of canvas settings', async () => {
+    const wrapper = mountEditor();
+    await flushPromises();
+
+    expect(wrapper.get('[aria-label="Elements"]').classes()).toContain('active');
+    expect(wrapper.find('[data-testid="canvas-panel"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('activates image cropping when the screenshot canvas requests it', async () => {
+    const wrapper = mountEditor();
+    await flushPromises();
+
+    const canvas = wrapper.findComponent(ScreenshotCanvasStub);
+    canvas.vm.$emit('cropRequest', 'screenshot');
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.get('[aria-label="Image"]').classes()).toContain('active');
+    expect(canvas.props('selectedId')).toBe('screenshot');
+    expect(canvas.props('cropping')).toBe(true);
+    wrapper.unmount();
+  });
+
   it('converts numeric input strings, preserves invalid dimensions, and exports the saved image', async () => {
     const wrapper = mountEditor();
     await flushPromises();
@@ -512,11 +535,12 @@ describe('ScreenshotEditor', () => {
     expect(copyEvent.defaultPrevented).toBe(true);
     expect(useToastStore().toasts.at(-1)?.message).toBe('Copied: First shape, Second shape');
 
-    const pasteEvent = new KeyboardEvent('keydown', {
-      key: 'v',
-      ctrlKey: true,
+    const pasteEvent = new Event('paste', {
       bubbles: true,
       cancelable: true,
+    }) as ClipboardEvent;
+    Object.defineProperty(pasteEvent, 'clipboardData', {
+      value: { items: [{ kind: 'string', type: 'text/plain' }] },
     });
     window.dispatchEvent(pasteEvent);
     await flushPromises();

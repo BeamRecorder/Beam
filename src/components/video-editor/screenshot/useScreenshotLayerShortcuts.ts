@@ -1,4 +1,5 @@
 import { onMounted, onScopeDispose } from 'vue';
+import { clipboardContainsImage, isEditablePasteTarget } from '../composables/useClipboardImagePaste';
 import type { ScreenshotLayer } from './screenshot-layer-types';
 
 export function useScreenshotLayerShortcuts(options: {
@@ -21,8 +22,7 @@ export function useScreenshotLayerShortcuts(options: {
       return;
     const key = event.key.toLowerCase();
     if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey) {
-      const handled =
-        key === 'c' ? options.copy() : key === 'x' ? options.cut() : key === 'v' ? options.paste() : false;
+      const handled = key === 'c' ? options.copy() : key === 'x' ? options.cut() : false;
       if (handled) event.preventDefault();
       return;
     }
@@ -40,6 +40,22 @@ export function useScreenshotLayerShortcuts(options: {
     event.preventDefault();
     options.remove(layer.id);
   };
+  const paste = (event: ClipboardEvent) => {
+    if (
+      event.defaultPrevented ||
+      options.disabled() ||
+      isEditablePasteTarget(event.target) ||
+      (event.target instanceof Element && event.target.closest('[role="menu"], .popover-content')) ||
+      document.querySelector('[role="dialog"][aria-modal="true"]') ||
+      clipboardContainsImage(event)
+    )
+      return;
+    if (options.paste()) event.preventDefault();
+  };
   onMounted(() => window.addEventListener('keydown', keydown));
-  onScopeDispose(() => window.removeEventListener('keydown', keydown));
+  onMounted(() => window.addEventListener('paste', paste));
+  onScopeDispose(() => {
+    window.removeEventListener('keydown', keydown);
+    window.removeEventListener('paste', paste);
+  });
 }

@@ -134,7 +134,7 @@ describe('useElementEditor', () => {
   });
 
   it.each([
-    ['shape', 'rounded-rectangle', 0.3],
+    ['shape', 'rectangle', 0.3],
     ['arrow', 'arrow', 0.16],
     ['text', 'text', 0.16],
   ] as const)('inserts a %s with current timing and selects it', (family, preset, height) => {
@@ -167,6 +167,23 @@ describe('useElementEditor', () => {
       expect(inserted.text).toBeUndefined();
       expect(editor.context.editing.value).toBeNull();
     }
+  });
+
+  it('inserts an unfilled outlined rectangle for new shape annotations', () => {
+    const editor = mountEditor();
+
+    editor.context.add('shape');
+
+    const inserted = editor.insert.mock.calls[0]![0];
+    expect(inserted).toMatchObject({
+      family: 'shape',
+      preset: 'rectangle',
+      fillEnabled: false,
+      borderColor: '#ff5a1f',
+      borderWidth: 8,
+      cornerRadius: 0,
+    });
+    expect(inserted).not.toHaveProperty('fill');
   });
 
   it('toggles drawing mode and inserts completed points using current duration and drawing color', () => {

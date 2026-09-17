@@ -182,6 +182,39 @@ afterEach(() => {
 });
 
 describe('ScreenshotCanvas', () => {
+  it('requests crop for the base image after a double-click', async () => {
+    const state = stateFixture();
+    state.shapes = [];
+    const wrapper = mountCanvas(state);
+    await flushPromises();
+    setCanvasBounds(wrapper);
+
+    await wrapper.get('.image-stage').trigger('dblclick', {
+      button: 0,
+      clientX: 10,
+      clientY: 10,
+    });
+
+    expect(wrapper.emitted('select')).toContainEqual(['screenshot']);
+    expect(wrapper.emitted('cropRequest')).toEqual([['screenshot']]);
+    wrapper.unmount();
+  });
+
+  it('does not request crop when a shape receives a double-click', async () => {
+    const wrapper = mountCanvas();
+    await flushPromises();
+    setCanvasBounds(wrapper);
+
+    await wrapper.get('.image-stage').trigger('dblclick', {
+      button: 0,
+      clientX: 30,
+      clientY: 30,
+    });
+
+    expect(wrapper.emitted('cropRequest')).toBeUndefined();
+    wrapper.unmount();
+  });
+
   it('waits for measured stage dimensions, then draws at the capped resolution and selects the topmost shape', async () => {
     const wrapper = mountCanvas();
     await flushPromises();

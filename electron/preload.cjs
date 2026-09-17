@@ -237,7 +237,9 @@ contextBridge.exposeInMainWorld(
     saveProjectEditorState: (projectId, state) =>
       ipcRenderer.invoke('projects:save-editor-state', { projectId, state }),
     pickProjectMedia: (projectId, kind) => ipcRenderer.invoke('projects:pick-media', { projectId, kind }),
+    pasteProjectClipboardImage: (projectId) => ipcRenderer.invoke('projects:paste-clipboard-image', { projectId }),
     pickScreenshotImage: (id) => ipcRenderer.invoke('screenshot:pick-image', id),
+    pasteScreenshotClipboardImage: (id) => ipcRenderer.invoke('screenshot:paste-clipboard-image', id),
     discardScreenshotImage: (id, source) => ipcRenderer.invoke('screenshot:discard-image', { id, source }),
     importDroppedProjectMedia: (projectId, file, kind) => {
       let source;

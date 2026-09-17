@@ -1,5 +1,6 @@
 import { computed, onMounted, onUnmounted } from 'vue';
 import type { ClipComposition } from '~/media/shared/composition-types';
+import { clipboardContainsImage, isEditablePasteTarget } from '../../composables/useClipboardImagePaste';
 import { getClipCategory } from './useTimelineClipboard';
 import type { TimelinePasteTarget } from './timeline-clipboard-types';
 
@@ -10,6 +11,7 @@ export function useTimelineClipboardShortcuts(options: {
   disabled: () => boolean;
   copySelected: () => void;
   cutSelected: () => boolean;
+  canPaste: () => boolean;
   pasteClipboard: (target: TimelinePasteTarget | null) => void;
 }) {
   const selectedPasteTarget = computed<TimelinePasteTarget | null>(() => {
@@ -42,14 +44,28 @@ export function useTimelineClipboardShortcuts(options: {
       options.copySelected();
     } else if (key === 'x' && hasSelection) {
       if (options.cutSelected()) event.preventDefault();
-    } else if (key === 'v') {
-      event.preventDefault();
-      options.pasteClipboard({
-        ...(selectedPasteTarget.value ?? { category: 'visual' as const }),
-        placement: 'new-layer',
-      });
     }
   };
+  const paste = (event: ClipboardEvent) => {
+    if (
+      event.defaultPrevented ||
+      options.disabled() ||
+      isEditablePasteTarget(event.target) ||
+      document.querySelector('[role="dialog"][aria-modal="true"]') ||
+      clipboardContainsImage(event) ||
+      !options.canPaste()
+    )
+      return;
+    event.preventDefault();
+    options.pasteClipboard({
+      ...(selectedPasteTarget.value ?? { category: 'visual' as const }),
+      placement: 'new-layer',
+    });
+  };
   onMounted(() => window.addEventListener('keydown', keydown));
-  onUnmounted(() => window.removeEventListener('keydown', keydown));
+  onMounted(() => window.addEventListener('paste', paste));
+  onUnmounted(() => {
+    window.removeEventListener('keydown', keydown);
+    window.removeEventListener('paste', paste);
+  });
 }

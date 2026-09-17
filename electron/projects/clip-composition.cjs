@@ -7,7 +7,12 @@ const { normalizeShapeLayerStyle } = require('./composition-shape-layer.cjs');
 const { historicalAppearance, normalizeAppearance } = require('./composition-appearance.cjs');
 const { withoutInheritedKeyboardText, withHistoricalTypography } = require('./composition-migration-helpers.cjs');
 const { normalizeClipTransitions } = require('./composition-clip-transitions.cjs');
-const { materializeComposition, importMedia, pruneProjectMedia } = require('./composition-project-media.cjs');
+const {
+  materializeComposition,
+  importMedia,
+  importImageBuffer,
+  pruneProjectMedia,
+} = require('./composition-project-media.cjs');
 const {
   assignMigratedTrackIds,
   repairMigratedTrackIds,
@@ -491,5 +496,6 @@ module.exports = {
   migrateComposition,
   materializeComposition,
   importMedia,
+  importImageBuffer,
   pruneProjectMedia,
 };

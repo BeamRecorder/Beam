@@ -18,6 +18,8 @@ export interface ShapeLayerStyle {
   family: ShapeLayerFamily;
   preset: ShapeLayerPreset;
   fill?: ColorFill;
+  /** Omitted by legacy projects, where shape fills remain enabled. */
+  fillEnabled?: boolean;
   fillColor: string;
   borderColor: string;
   borderWidth: number;

@@ -7,7 +7,7 @@ import { RotateCcw } from '@lucide/vue';
 import Button from '../../ui/button/Button.vue';
 import CanvasLoadingSkeleton from './CanvasLoadingSkeleton.vue';
 import UndoRedoToast from './UndoRedoToast.vue';
-import type { VisualClip } from '~/media/shared/composition-types';
+import { isVisualClip, type VisualClip } from '~/media/shared/composition-types';
 import { createCompositionSceneLayerResolver } from '../composition/scene-layers';
 import { OUTPUT_FALLBACK_COLOR, OUTPUT_PREVIEW_RADIUS, outputPreviewRect } from './output-canvas';
 import { useCanvasBackground } from './composables/useCanvasBackground';
@@ -19,12 +19,7 @@ import { useLayerTransformAndCrop } from './composables/useLayerTransformAndCrop
 import { useViewportZoom } from './composables/useViewportZoom';
 import { useTranslate } from '~/i18n/useTranslate';
 import { canvasGuideLines } from './canvas-guides';
-import {
-  transformCaptionFollowsCursor,
-  type EditorCanvasEmits,
-  type EditorCanvasProps,
-  type DrawVisualStack,
-} from './editor-canvas-types';
+import { type EditorCanvasEmits, type EditorCanvasProps, type DrawVisualStack } from './editor-canvas-types';
 import { DEFAULT_ZOOM_AUTO_FOLLOW, DEFAULT_ZOOM_MOTION_BLUR } from '../zoom/zoom-types';
 import { PerspectivePreviewRenderer } from '../zoom/perspective-preview-renderer';
 import { drawBeamWatermark } from './watermark-render';
@@ -40,11 +35,12 @@ import { resizeEditorCanvas } from './canvas-sizing';
 import { useEditorCanvasAssets } from './composables/useEditorCanvasAssets';
 import { useEditorCanvasInvalidation } from './composables/useEditorCanvasInvalidation';
 import { CaptionInlineEditor, useCaptionInlineEditing } from './caption-inline-editing';
-import CanvasLayerSelection from './CanvasLayerSelection.vue';
+import EditorCanvasLayerSelection from './EditorCanvasLayerSelection.vue';
 import CanvasCropSelection from './CanvasCropSelection.vue';
 import { drawFallbackPreviewScene } from './fallback-preview-scene';
 import { createEditorVisualStackRenderer } from './editor-visual-stack-renderer';
 const { t } = useTranslate('EditorCanvas');
+const { t: canvasText } = useTranslate('CanvasPanel');
 const props = withDefaults(defineProps<EditorCanvasProps>(), { previewQuality: 'full' });
 const emit = defineEmits<EditorCanvasEmits>();
 const canvasRef = ref<HTMLCanvasElement | null>(null);
@@ -357,6 +353,14 @@ const handleIslandPointerDownCapture = (event: PointerEvent) => {
     return;
   handleCanvasPointerDownCapture(event);
 };
+const editCanvasContent = (event: MouseEvent) => {
+  if (elements.begin(event)) return;
+  if (captionEditing.begin(event)) return;
+  if (props.isPlaying || props.isCropping || props.selectedZoom?.mode === 'manual') return;
+  const clipId = transformAndCrop.clipIdAt(event, canvasRef.value);
+  const clip = props.composition.clips.find((candidate) => candidate.id === clipId);
+  if (clip && isVisualClip(clip) && !clip.locked) emit('request:crop', clip.id);
+};
 onUnmounted(() => {
   frameScheduler.dispose();
   perspectivePreviewRenderer.dispose();
@@ -378,7 +382,7 @@ defineExpose({ viewportZoom });
     @pointermove="handleIslandPointerMove"
     @pointerup="handleIslandPointerUp"
     @pointercancel="handleIslandPointerUp"
-    @dblclick="elements.begin($event) || captionEditing.begin($event)"
+    @dblclick="editCanvasContent"
   >
     <Transition name="fade-slide">
       <div v-if="viewportZoom.isOutOfBounds.value" class="canvas-recenter-float" @pointerdown.stop>
@@ -455,26 +459,17 @@ defineExpose({ viewportZoom });
         :camera="cameraZoom.overlayWindowBounds.value ?? undefined"
         :surface-size="logicalSize"
       />
-      <CanvasLayerSelection
-        v-if="
-          selectedTransformClip &&
-          selectedTransformClip.id !== (elements.editingId.value ?? captionEditing.editingCaptionId.value) &&
-          !transformCaptionFollowsCursor(selectedTransformClip) &&
-          !isCropping &&
-          selectedZoom?.mode !== 'manual'
-        "
-        :viewport-style="transformAndCrop.transformSelectionViewportStyle.value"
-        :handle-style="transformAndCrop.transformHandleStyle.value"
+      <EditorCanvasLayerSelection
+        :clip="selectedTransformClip"
+        :editing-id="elements.editingId.value ?? captionEditing.editingCaptionId.value"
+        :cropping="isCropping"
+        :manual-zoom="selectedZoom?.mode === 'manual'"
         :muted="transformHandlesMuted"
-        :resize-corners="transformAndCrop.transformResizeCorners.value"
-        :resize-handle-positions="transformAndCrop.transformHandlePositions.value"
-        :perspective-corners="transformAndCrop.transformPerspectiveCorners.value"
+        :interaction="transformAndCrop"
+        :rotate-label="canvasText('shapeRotation')"
         @pointer-down="handleTransformPointerDown"
-        @pointer-move="transformAndCrop.moveTransformDrag"
-        @pointer-up="transformAndCrop.endTransformDrag"
-        @resize-start="(corner, event) => transformAndCrop.beginTransformDrag(event, 'resize', corner)"
-        @resize-move="transformAndCrop.moveTransformDrag"
-        @resize-end="transformAndCrop.endTransformDrag"
+        @rotate="emit('preview:shape-rotation', $event)"
+        @rotate-end="emit('update:shape-rotation', $event)"
       />
       <CanvasCropSelection
         v-if="isCropping && selectedTransformClip"

@@ -39,6 +39,7 @@ import {
   updateScreenshotLayer,
   setScreenshotLayerVisible,
 } from './screenshot-layers';
+import { useClipboardImagePaste } from '../composables/useClipboardImagePaste';
 
 const props = defineProps<{ id: string }>();
 const emit = defineEmits<{ ready: [] }>();
@@ -65,12 +66,15 @@ const {
   dirty,
   selectedImage,
   image,
+  pasteImage,
   fail,
   savePreset,
   presetAction,
   select,
   selectPanel,
   transform,
+  rotate,
+  startCrop,
   translate,
   removeLayer,
   appearance,
@@ -87,6 +91,11 @@ const {
   () => props.id,
   () => emit('ready'),
 );
+useClipboardImagePaste({
+  disabled: () => busy.value || cropping.value,
+  paste: pasteImage,
+  onError: fail,
+});
 const tabs = computed(() => [
   { id: 'canvas', label: t('canvas'), icon: Monitor },
   { id: 'image', label: t('image'), icon: Image },
@@ -260,9 +269,11 @@ const composition = computed(() => (state.value ? screenshotLayers(state.value) 
         :cursor-packs-ready="cursors.ready.value"
         @select="select"
         @transform="transform"
+        @rotate="rotate"
         @translate="translate"
         @crop="image && (image.crop = $event)"
         @crop-done="cropping = false"
+        @crop-request="startCrop"
         @error="
           error = $event;
           emit('ready');

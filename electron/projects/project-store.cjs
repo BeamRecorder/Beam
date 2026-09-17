@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { fileURLToPath, pathToFileURL } = require('url');
 const { kindFor } = require('../backgrounds/background-library.cjs');
-const { emptyComposition, importMedia } = require('./clip-composition.cjs');
+const { emptyComposition, importMedia, importImageBuffer } = require('./clip-composition.cjs');
 const { normalizeInputSidecar, recordedPlatform } = require('./input-sidecar.cjs');
 const {
   createDefaultPresentation,
@@ -429,6 +429,10 @@ function createProjectStore(root, { mediaHost = 'asset', category = null } = {})
       }
       if (!stats.isFile()) throw new Error('Fichier média invalide');
       const asset = importMedia(directoryFor(id), input);
+      return { ...asset, src: mediaUrlFor(asset.src) || '' };
+    },
+    importClipboardImage: (id, input) => {
+      const asset = importImageBuffer(directoryFor(id), input);
       return { ...asset, src: mediaUrlFor(asset.src) || '' };
     },
     importBackground,

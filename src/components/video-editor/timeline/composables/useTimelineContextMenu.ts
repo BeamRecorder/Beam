@@ -211,6 +211,7 @@ export function useTimelineContextMenu(options: {
     if (!item) return options.emit('paste:error', options.t('clipboardEmpty'));
     options.emit('paste:item', { item, timeMs: options.currentTimeMs.value, target });
   };
+  const canPasteClipboard = () => clipboard.canPaste(options.scopeId.value);
 
   const canHoldClip = (clip: Clip | null) =>
     clip !== null &&
@@ -313,5 +314,6 @@ export function useTimelineContextMenu(options: {
     copySelected,
     cutSelected,
     pasteClipboard,
+    canPasteClipboard,
   };
 }

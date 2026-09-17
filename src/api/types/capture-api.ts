@@ -175,6 +175,7 @@ export interface DesktopCaptureApi extends CaptureApi, ScreenshotApi, QuickSnipA
   getProjectEditorState(projectId: string): Promise<ProjectEditorState>;
   saveProjectEditorState(projectId: string, state: ProjectEditorState): Promise<ProjectEditorState>;
   pickProjectMedia(projectId: string, kind: 'video' | 'image' | 'audio'): Promise<MediaAsset | null>;
+  pasteProjectClipboardImage(projectId: string): Promise<MediaAsset | null>;
   importDroppedProjectMedia(projectId: string, file: File, kind: 'video' | 'image' | 'audio'): Promise<MediaAsset>;
   beginProjectVoiceover(payload: ProjectVoiceoverStart): Promise<{ recordingId: string }>;
   writeProjectVoiceoverChunk(payload: ProjectVoiceoverChunk): Promise<void>;

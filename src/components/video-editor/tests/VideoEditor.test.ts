@@ -12,6 +12,7 @@ import type { ZoomElement } from '../zoom/zoom-types';
 import type { TimelineClipboardItem } from '../timeline/composables/timeline-clipboard-types';
 import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
 import {
+  capture,
   editorState,
   fullscreenState,
   historyState,
@@ -72,6 +73,35 @@ const cropFromComposition = (composition: ClipComposition | undefined) => {
 };
 
 describe('VideoEditor', () => {
+  it('pastes a clipboard image into the Studio composition at the playhead', async () => {
+    const asset: MediaAsset = {
+      id: 'clipboard-image',
+      kind: 'image',
+      name: 'Clipboard image',
+      fileName: 'clipboard.png',
+      durationMs: 0,
+      width: 800,
+      height: 450,
+      src: 'project-media://clipboard.png',
+      origin: 'project',
+    };
+    capture.pasteProjectClipboardImage.mockResolvedValue(asset);
+    mountEditor();
+    const event = new Event('paste', { bubbles: true, cancelable: true }) as ClipboardEvent;
+    Object.defineProperty(event, 'clipboardData', { value: { items: [{ kind: 'file', type: 'image/png' }] } });
+
+    window.dispatchEvent(event);
+    await flushPromises();
+
+    expect(capture.pasteProjectClipboardImage).toHaveBeenCalledWith('project-1');
+    expect(editorState.store.compositionState.addImportedAsset).toHaveBeenCalledWith(
+      asset,
+      expect.objectContaining({ kind: 'image', durationMs: 5_000, width: 800, height: 450 }),
+      0,
+    );
+    expect(event.defaultPrevented).toBe(true);
+  });
+
   it('toggles Properties for the same tab and reopens it for a new selection', async () => {
     const mounted = mountEditor();
     const canvasTab = mounted.get('.sidebar-canvas-tab');

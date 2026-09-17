@@ -31,6 +31,7 @@ import LinkedClipsDeleteDialog from '~/components/video-editor/LinkedClipsDelete
 import Button from '~/components/ui/button/Button.vue';
 import { useVideoEditor } from '~/components/video-editor/composables/useVideoEditor';
 import { useEditorMediaDrop } from '~/components/video-editor/composables/useEditorMediaDrop';
+import { useClipboardImagePaste } from '~/components/video-editor/composables/useClipboardImagePaste';
 import { usePlaybackErrorToast } from '~/components/video-editor/composables/usePlaybackErrorToast';
 import { useEditorUndoRedo, type EditorStateSnapshot } from '~/components/video-editor/composables/useEditorUndoRedo';
 import { useTimelineResize } from '~/components/video-editor/composables/useTimelineResize';
@@ -75,6 +76,10 @@ import { useAudioNormalization } from './composables/useAudioNormalization';
 import { useEditorVoiceover } from './voiceover/useEditorVoiceover';
 import type { TimelineElementKind } from './timeline/timeline-element-types';
 import { shiftTimelineSelection } from './composition/timeline-edit-operations';
+import { setShapeLayerStyle } from './composition/engine/clip-engine';
+import { IMAGE_DURATION_MS } from '~/media/shared';
+import { capture } from '~/api/capture';
+import { useToastStore } from '~/ui/toast/toastStore';
 import type {
   TimelineItemSelectionRequest,
   TimelineSelectionDelete,
@@ -85,6 +90,7 @@ const { t } = useTranslate('VideoEditor');
 const { t: tTopbarHud } = useTranslate('TopbarHUD');
 const { t: tTimelineTracks } = useTranslate('TimelineTracks');
 const { t: tTimelineToolbar } = useTranslate('TimelineToolbar');
+const toast = useToastStore();
 const props = withDefaults(
   defineProps<{
     project?: CaptureProject | null;
@@ -210,6 +216,36 @@ const mediaDrop = useEditorMediaDrop({
   },
   t,
 });
+const isPastingClipboardImage = ref(false);
+const pasteClipboardImage = async () => {
+  const projectId = props.project?.id;
+  if (!projectId || isPastingClipboardImage.value) return;
+  isPastingClipboardImage.value = true;
+  try {
+    const asset = await capture.pasteProjectClipboardImage(projectId);
+    if (!asset) return;
+    addImportedAsset(
+      asset,
+      {
+        kind: 'image',
+        durationMs: IMAGE_DURATION_MS,
+        width: asset.width,
+        height: asset.height,
+        hasAudio: false,
+        canDecodeAudio: false,
+        audioCodec: null,
+      },
+      Math.max(0, Math.round(currentTime.value * 1_000)),
+    );
+  } finally {
+    isPastingClipboardImage.value = false;
+  }
+};
+useClipboardImagePaste({
+  disabled: () => !props.project || isPastingClipboardImage.value || mediaDrop.isImportingMedia.value,
+  paste: pasteClipboardImage,
+  onError: (reason) => toast.error(`${t('mediaDropImportFailed')}: ${String(reason)}`),
+});
 usePlaybackErrorToast(playbackError, t, () => ({
   project: props.project ?? null,
   editorData: props.editorData ?? null,
@@ -268,6 +304,7 @@ const timelinePreviewDuration = computed(() => {
 });
 const timelineCanvasPreview = ref<OutputCanvasSettings | null>(null);
 const captionCompositionPreview = ref<typeof composition.value | null>(null);
+const shapeCompositionPreview = ref<typeof composition.value | null>(null);
 const cursorPreview = ref<CursorSelection | null>(null);
 const transformHandlesMuted = ref(false);
 const isInlineCaptionEditing = ref(false);
@@ -276,6 +313,7 @@ const canvasComposition = computed(
   () =>
     cropCompositionPreview.value ??
     captionCompositionPreview.value ??
+    shapeCompositionPreview.value ??
     timelineCompositionPreview.value ??
     composition.value,
 );
@@ -291,7 +329,9 @@ const selectedTransformClip = computed(() => {
   if (editLocked.value) return null;
   if (selectedClipIds.value.length !== 1) return null;
   const clip =
-    cropCompositionPreview.value?.clips.find((item) => item.id === selectedClipId.value) ?? selectedClip.value;
+    cropCompositionPreview.value?.clips.find((item) => item.id === selectedClipId.value) ??
+    shapeCompositionPreview.value?.clips.find((item) => item.id === selectedClipId.value) ??
+    selectedClip.value;
   return clip &&
     (isVisualClip(clip) || isColorClip(clip) || isShapeClip(clip) || isBlurClip(clip) || isCaptionClip(clip))
     ? clip
@@ -623,6 +663,21 @@ const commitSelectedCrop = (crop: NormalizedCrop) => {
   previewCrop(null);
   commitNow(createEditorSnapshot());
 };
+const previewSelectedShapeRotation = (rotation: number | null) => {
+  const clip = selectedTransformClip.value;
+  shapeCompositionPreview.value =
+    rotation === null || !clip || !isShapeClip(clip)
+      ? null
+      : setShapeLayerStyle(composition.value, clip.id, { rotation });
+};
+const commitSelectedShapeRotation = (rotation: number) => {
+  const clip = selectedTransformClip.value;
+  if (!clip || !isShapeClip(clip)) return;
+  shapeCompositionPreview.value = null;
+  composition.value = setShapeLayerStyle(composition.value, clip.id, { rotation });
+  commitNow(createEditorSnapshot());
+  editorState.scheduleSave();
+};
 
 const commitZoom = (zoom: ZoomElement) => {
   updateZoom(zoom);
@@ -736,12 +791,19 @@ watch(
   [selectedClipId, () => selectedClipIds.value.join('\0')],
   () => {
     isCropping.value = false;
+    shapeCompositionPreview.value = null;
   },
   { flush: 'sync' },
 );
 const toggleCrop = () => {
   if (isCropping.value) finishCrop();
   else if (selectedTransformClip.value && isVisualClip(selectedTransformClip.value)) isCropping.value = true;
+};
+const startCrop = (clipId: string) => {
+  const clip = composition.value.clips.find((candidate) => candidate.id === clipId);
+  if (!clip || !isVisualClip(clip) || clip.locked) return;
+  selectEditorClip(clipId);
+  isCropping.value = true;
 };
 const selectCanvasPreset = (preset: Exclude<OutputCanvasPreset, 'custom'>) => {
   outputCanvas.value = {
@@ -1020,6 +1082,9 @@ onBeforeUnmount(() => {
               @update:clip-transform="commitSelectedTransform"
               @update:clip-crop="commitSelectedCrop"
               @preview:clip-crop="previewCrop"
+              @preview:shape-rotation="previewSelectedShapeRotation"
+              @update:shape-rotation="commitSelectedShapeRotation"
+              @request:crop="startCrop"
               @update:caption-text="updateInlineCaptionText"
               @caption-editing-start="beginInlineCaptionEditing"
               @caption-editing-end="endInlineCaptionEditing"

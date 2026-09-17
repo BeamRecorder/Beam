@@ -183,8 +183,16 @@ const rotationPresets = [0, 90, 180, 270] as const;
       />
       <Divider />
       <template v-if="style.family !== 'text'">
+        <div v-if="style.family !== 'drawing'" class="toggle-row">
+          <span>{{ t('fillColor') }}</span>
+          <Switch
+            :model-value="style.fillEnabled"
+            :aria-label="t('fillColor')"
+            @update:model-value="update({ fillEnabled: $event })"
+          />
+        </div>
         <ColorFillPresetControls
-          v-if="style.family !== 'drawing'"
+          v-if="style.family !== 'drawing' && style.fillEnabled"
           :model-value="fill"
           :label="t('fillColor')"
           @update:model-value="updateFill"

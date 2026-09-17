@@ -72,6 +72,17 @@ const dispatchKey = (
   return event;
 };
 
+const dispatchPaste = (target: EventTarget, items: Array<{ kind: string; type: string }> = []) => {
+  // jsdom does not expose ClipboardEvent, so use it when available and retain the
+  // same cancelable event shape in the test environment.
+  const event = globalThis.ClipboardEvent
+    ? new globalThis.ClipboardEvent('paste', { bubbles: true, cancelable: true })
+    : new Event('paste', { bubbles: true, cancelable: true });
+  Object.defineProperty(event, 'clipboardData', { configurable: true, value: { items } });
+  target.dispatchEvent(event);
+  return event;
+};
+
 afterEach(() => {
   for (const wrapper of wrappers.splice(0)) wrapper.unmount();
   for (const dialog of dialogs.splice(0)) dialog.remove();
@@ -84,8 +95,6 @@ describe('useScreenshotLayerShortcuts', () => {
     ['Cmd+C', 'c', { metaKey: true }, 'copy'],
     ['Ctrl+X', 'x', { ctrlKey: true }, 'cut'],
     ['Cmd+X', 'x', { metaKey: true }, 'cut'],
-    ['Ctrl+V', 'v', { ctrlKey: true }, 'paste'],
-    ['Cmd+V', 'v', { metaKey: true }, 'paste'],
   ] as const)('handles %s through the matching callback', (_label, key, modifiers, action) => {
     const { copy, cut, paste } = mountShortcuts(makeLayer());
 
@@ -95,20 +104,18 @@ describe('useScreenshotLayerShortcuts', () => {
     expect({ copy, cut, paste }[action]).toHaveBeenCalledOnce();
     expect(copy).toHaveBeenCalledTimes(action === 'copy' ? 1 : 0);
     expect(cut).toHaveBeenCalledTimes(action === 'cut' ? 1 : 0);
-    expect(paste).toHaveBeenCalledTimes(action === 'paste' ? 1 : 0);
+    expect(paste).not.toHaveBeenCalled();
   });
 
-  it('does not claim clipboard shortcuts when there is no selection or clipboard content', () => {
-    const { copy, cut, paste } = mountShortcuts(undefined, false, {
+  it('does not claim clipboard shortcuts when there is no selection', () => {
+    const { copy, cut } = mountShortcuts(undefined, false, {
       copy: false,
       cut: false,
-      paste: false,
     });
 
     for (const [key, modifiers] of [
       ['c', { ctrlKey: true }],
       ['x', { metaKey: true }],
-      ['v', { ctrlKey: true }],
     ] as const) {
       const event = dispatchKey(window, key, modifiers);
       expect(event.defaultPrevented).toBe(false);
@@ -116,7 +123,24 @@ describe('useScreenshotLayerShortcuts', () => {
 
     expect(copy).toHaveBeenCalledOnce();
     expect(cut).toHaveBeenCalledOnce();
+  });
+
+  it('pastes internal layers from a paste event without image data', () => {
+    const { paste } = mountShortcuts(makeLayer());
+
+    const event = dispatchPaste(window);
+
+    expect(event.defaultPrevented).toBe(true);
     expect(paste).toHaveBeenCalledOnce();
+  });
+
+  it('leaves image paste events unclaimed for the image handler', () => {
+    const { paste } = mountShortcuts(makeLayer());
+
+    const event = dispatchPaste(window, [{ kind: 'file', type: 'image/png' }]);
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(paste).not.toHaveBeenCalled();
   });
 
   it('ignores clipboard shortcuts from editable controls, menus, and popovers', () => {
@@ -135,7 +159,6 @@ describe('useScreenshotLayerShortcuts', () => {
       for (const [key, modifiers] of [
         ['c', { ctrlKey: true }],
         ['x', { metaKey: true }],
-        ['v', { ctrlKey: true }],
       ] as const) {
         const event = dispatchKey(target, key, modifiers);
         expect(event.defaultPrevented).toBe(false);
@@ -158,7 +181,6 @@ describe('useScreenshotLayerShortcuts', () => {
     for (const [key, modifiers] of [
       ['c', { ctrlKey: true }],
       ['x', { metaKey: true }],
-      ['v', { ctrlKey: true }],
     ] as const) {
       const event = dispatchKey(window, key, modifiers);
       expect(event.defaultPrevented).toBe(false);
@@ -169,24 +191,22 @@ describe('useScreenshotLayerShortcuts', () => {
     expect(paste).not.toHaveBeenCalled();
   });
 
-  it('ignores repeated clipboard shortcuts and shortcuts while disabled', () => {
+  it('ignores repeated copy/cut shortcuts and shortcuts while disabled', () => {
     const repeated = mountShortcuts(makeLayer());
-    const repeatedEvent = dispatchKey(window, 'v', { ctrlKey: true, repeat: true });
+    const repeatedEvent = dispatchKey(window, 'c', { ctrlKey: true, repeat: true });
     expect(repeatedEvent.defaultPrevented).toBe(false);
-    expect(repeated.paste).not.toHaveBeenCalled();
+    expect(repeated.copy).not.toHaveBeenCalled();
 
     repeated.disabled.value = true;
     for (const [key, modifiers] of [
       ['c', { ctrlKey: true }],
       ['x', { metaKey: true }],
-      ['v', { ctrlKey: true }],
     ] as const) {
       const event = dispatchKey(window, key, modifiers);
       expect(event.defaultPrevented).toBe(false);
     }
     expect(repeated.copy).not.toHaveBeenCalled();
     expect(repeated.cut).not.toHaveBeenCalled();
-    expect(repeated.paste).not.toHaveBeenCalled();
   });
 
   it('ignores clipboard shortcuts with Alt or Shift modifiers', () => {
@@ -194,7 +214,6 @@ describe('useScreenshotLayerShortcuts', () => {
     const events = [
       dispatchKey(window, 'c', { ctrlKey: true, shiftKey: true }),
       dispatchKey(window, 'x', { metaKey: true, altKey: true }),
-      dispatchKey(window, 'v', { ctrlKey: true, altKey: true }),
     ];
 
     expect(events.every((event) => !event.defaultPrevented)).toBe(true);

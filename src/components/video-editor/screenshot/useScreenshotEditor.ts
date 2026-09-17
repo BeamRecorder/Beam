@@ -10,7 +10,7 @@ import { applyScreenshotTranslation } from './screenshot-selection-transform';
 import type { CaptureProject } from '~/api/types/capture-api';
 import { capture } from '~/api/capture';
 import type { ScreenshotDocument, ScreenshotState } from '~/api/types/screenshot';
-import type { ClipAppearance, NormalizedTransform } from '~/media/shared/composition-types';
+import type { ClipAppearance, MediaAsset, NormalizedTransform } from '~/media/shared/composition-types';
 import type { EditorPresetDocument } from '~/api/types/editor-preset';
 import { BACKGROUND_MEDIA, groupBackgroundMedia, type BackgroundMedia } from '../composables/backgroundCatalog';
 import { screenshotState, screenshotPresetSettings } from './screenshot-state';
@@ -46,7 +46,7 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
   const backgroundLibrary = ref<BackgroundMedia[]>([]);
   const selection = useScreenshotSelection(() => (state.value ? screenshotLayers(state.value) : []));
   const { selectedId, selectedIds } = selection;
-  const panel = ref<ScreenshotPanel>('canvas');
+  const panel = ref<ScreenshotPanel>('shapes');
   const cropping = ref(false);
   const advanced = ref(false);
   const keepAspect = ref(true);
@@ -58,6 +58,7 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
   let generation = 0;
   let applyingPreset = false;
   let baseline = '';
+  const loadImage = createScreenshotImageLoader();
   const plain = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
   const fail = (reason: unknown) => {
     error.value = reason instanceof Error ? reason.message : String(reason);
@@ -199,10 +200,34 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
     else if (effects.selected.value) effects.selected.value.transform = value;
     else if (image.value) image.value.transform = value;
   };
+  const rotate = (value: number) => {
+    if (selectedLayer.value?.locked) return;
+    if (cursors.selected.value) cursors.update({ rotation: value });
+    else if (selectedShape.value) selectedShape.value.rotation = value;
+  };
+  const startCrop = (targetId: string) => {
+    if (!state.value || busy.value) return;
+    const target = screenshotLayers(state.value).find((layer) => layer.id === targetId);
+    if (target?.kind !== 'image' || target.locked) return;
+    select(targetId);
+    cropping.value = true;
+  };
   const appearance = (value: Partial<ClipAppearance>) => {
     if (image.value) image.value.appearance = { ...image.value.appearance, ...value };
   };
-  const addImage = async () => {
+  const insertImageAsset = async (asset: MediaAsset, current: number) => {
+    const decoded = await loadImage(asset.src);
+    if (current !== generation || !state.value) return false;
+    if (!validScreenshotDimensions({ width: decoded.naturalWidth, height: decoded.naturalHeight }))
+      throw new Error(t('dimensionsError'));
+    const layer = createScreenshotImage(asset, decoded.naturalWidth, decoded.naturalHeight, state.value.canvas);
+    initializeScreenshotComposition(state.value);
+    (state.value.images ??= []).push(layer);
+    insertScreenshotLayer(state.value, layer.id);
+    select(layer.id);
+    return true;
+  };
+  const importImage = async (source: (projectId: string) => Promise<MediaAsset | null>) => {
     if (!document.value || !state.value || busy.value || cropping.value) return;
     elements.finishText();
     elements.drawingMode.value = false;
@@ -212,19 +237,10 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
     let importedSource: string | undefined;
     let inserted = false;
     try {
-      const asset = await capture.pickScreenshotImage(projectId);
+      const asset = await source(projectId);
       importedSource = asset?.src;
       if (!asset || current !== generation) return;
-      const decoded = await createScreenshotImageLoader()(asset.src);
-      if (current !== generation || !state.value) return;
-      if (!validScreenshotDimensions({ width: decoded.naturalWidth, height: decoded.naturalHeight }))
-        throw new Error(t('dimensionsError'));
-      const layer = createScreenshotImage(asset, decoded.naturalWidth, decoded.naturalHeight, state.value.canvas);
-      initializeScreenshotComposition(state.value);
-      (state.value.images ??= []).push(layer);
-      insertScreenshotLayer(state.value, layer.id);
-      inserted = true;
-      select(layer.id);
+      inserted = await insertImageAsset(asset, current);
     } catch (reason) {
       fail(reason);
     } finally {
@@ -232,6 +248,8 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
       busy.value = false;
     }
   };
+  const addImage = () => importImage((projectId) => capture.pickScreenshotImage(projectId));
+  const pasteImage = () => importImage((projectId) => capture.pasteScreenshotClipboardImage(projectId));
   const removeShape = () => {
     if (!state.value || !selectedShape.value) return;
     removeScreenshotLayer(state.value, selectedShape.value.id);
@@ -435,12 +453,15 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
     selectedImage,
     image,
     addImage,
+    pasteImage,
     fail,
     savePreset,
     presetAction,
     select,
     selectPanel,
     transform,
+    rotate,
+    startCrop,
     translate,
     removeLayer,
     appearance,

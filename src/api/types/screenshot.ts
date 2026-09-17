@@ -44,6 +44,7 @@ export interface ScreenshotDocument {
 }
 export interface ScreenshotApi {
   pickScreenshotImage(id: string): Promise<MediaAsset | null>;
+  pasteScreenshotClipboardImage(id: string): Promise<MediaAsset | null>;
   discardScreenshotImage(id: string, source: string): Promise<void>;
   captureScreenshot(options: ScreenshotCaptureOptions): Promise<ScreenshotDocument | null>;
   getScreenshot(id: string): Promise<ScreenshotDocument>;

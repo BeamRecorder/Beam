@@ -16,6 +16,7 @@ const SHAPE_PRESETS = new Set(['rectangle', 'rounded-rectangle', 'ellipse', 'tri
 const DEFAULTS = {
   family: 'shape',
   preset: 'rounded-rectangle',
+  fillEnabled: true,
   fillColor: '#ff5a1f',
   borderColor: '#ffffff',
   borderWidth: 0,
@@ -64,6 +65,7 @@ const normalizeShapeLayerStyle = (value) => {
     family,
     preset,
     ...(fill ? { fill } : {}),
+    fillEnabled: value?.fillEnabled !== false,
     fillColor: color(value?.fillColor, DEFAULTS.fillColor),
     borderColor: color(value?.borderColor, DEFAULTS.borderColor),
     borderWidth: finite(value?.borderWidth, DEFAULTS.borderWidth, 40),

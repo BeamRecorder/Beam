@@ -23,7 +23,7 @@ import {
 } from '~/media/shared/composition-types';
 import { DEFAULT_COLOR_LAYER_STYLE } from '~/media/shared/color-layer-style';
 import { DEFAULT_COLOR_FILL } from '~/media/shared/color-fill-types';
-import { DEFAULT_SHAPE_LAYER_STYLE } from '~/media/shared/shape-layer-style';
+import { DEFAULT_ANNOTATION_SHAPE_STYLE } from '~/media/shared/shape-layer-style';
 import type { EditorPreferenceDefaults } from './editor-default-types';
 import {
   audioDefaultsFor,
@@ -323,7 +323,7 @@ export function useClipComposition(options: {
         enabled: true,
         order: generatedOrder,
         transform: { x: 0.3, y: 0.3, width: 0.4, height: 0.4 },
-        ...DEFAULT_SHAPE_LAYER_STYLE,
+        ...DEFAULT_ANNOTATION_SHAPE_STYLE,
       };
       composition.value = addClip(composition.value, clip);
       selectClip(clip.id);

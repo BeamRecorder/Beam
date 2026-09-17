@@ -133,6 +133,7 @@ const {
   copySelected,
   cutSelected,
   pasteClipboard,
+  canPasteClipboard,
 } = useTimelineContextMenu({
   scopeId: computed(() => props.projectId ?? null),
   currentTimeMs: computed(() => Math.round(props.currentTime * 1_000)),
@@ -153,6 +154,7 @@ useTimelineClipboardShortcuts({
   disabled: () => props.controlsLocked,
   copySelected,
   cutSelected,
+  canPaste: canPasteClipboard,
   pasteClipboard,
 });
 const formatExportLimit = (timeMs: number) => {

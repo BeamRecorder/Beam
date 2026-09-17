@@ -205,7 +205,7 @@
                 ["Làm mới dự án", "Tải lại danh sách từ bộ lưu trữ và báo cáo ngắn gọn các Dự án được làm mới."],
                 ["Dự án mở", "Mở dự án đã chọn trong trình chỉnh sửa."],
                 ["Đổi tên", "Thay đổi tên dự án."],
-                ["Khám phá", "Hiển thị thư mục dự án trong trình quản lý tệp nền tảng."],
+                ["Mở thư mục", "Hiển thị thư mục dự án trong trình quản lý tệp nền tảng."],
                 ["Xóa", "Xác nhận yêu cầu xóa một dự án. Xóa hàng loạt bắt đầu trực tiếp cho các dự án đã chọn."],
                 ["Quay lại", "Quay lại HUD ghi âm."],
                 ["Tạo / Hủy", "Xác nhận hoặc từ bỏ việc tạo dự án trống."]

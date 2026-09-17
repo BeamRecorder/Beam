@@ -1018,6 +1018,20 @@ describe('EditorCanvas', () => {
     ]);
   });
 
+  it('requests crop when a visual clip receives a double-click', async () => {
+    state.clipIdAt.mockReturnValue('image');
+    const mounted = mountEditor({ selectedTransformClip: screen() });
+
+    await mounted.get('.canvas-island').trigger('dblclick', {
+      button: 0,
+      clientX: 400,
+      clientY: 225,
+    });
+
+    expect(mounted.emitted('request:crop')).toContainEqual(['image']);
+    expect(mounted.emitted('caption-editing-start')).toBeUndefined();
+  });
+
   it('raycasts layers above an already selected recording before starting its drag', async () => {
     const mounted = mountEditor({ selectedTransformClip: screen() });
     await flushPromises();

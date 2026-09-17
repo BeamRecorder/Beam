@@ -130,8 +130,10 @@ export function drawShapeClip(
   if (style.family === 'drawing') drawFreehand(ctx, clip, rect, scale);
   else if (style.family !== 'text') {
     traceShapeInRect(ctx, rect, style);
-    ctx.fillStyle = backgroundFillStyle(ctx, shapeLayerFill(style), rect);
-    ctx.fill();
+    if (style.fillEnabled !== false) {
+      ctx.fillStyle = backgroundFillStyle(ctx, shapeLayerFill(style), rect);
+      ctx.fill();
+    }
     if (style.borderWidth > 0) {
       ctx.shadowColor = 'transparent';
       ctx.strokeStyle = style.borderColor;

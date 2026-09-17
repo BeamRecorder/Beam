@@ -261,6 +261,7 @@ function initializeApplication() {
         isTrustedRenderer,
         cursorLibrary,
         screenshotStore,
+        require('electron').clipboard,
       );
       protocol.handle(
         'project-media',

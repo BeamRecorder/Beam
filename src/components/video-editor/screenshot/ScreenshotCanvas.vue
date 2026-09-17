@@ -38,6 +38,7 @@ import { screenshotLayers } from './screenshot-layers';
 import { createScreenshotImageLoader } from './screenshot-assets';
 
 const { t } = useTranslate('ScreenshotEditor');
+const { t: canvasText } = useTranslate('CanvasPanel');
 const elements = useElementEditor();
 const props = defineProps<{
   source: string;
@@ -58,6 +59,8 @@ const emit = defineEmits<{
   ready: [];
   crop: [value: NormalizedCrop];
   cropDone: [];
+  cropRequest: [id: string];
+  rotate: [value: number];
 }>();
 const stage = ref<HTMLElement | null>(null);
 const available = useElementSize(stage);
@@ -88,6 +91,7 @@ let generation = 0;
 let loadedGeneration = 0;
 let painted = false;
 let drag: ScreenshotDrag | null = null;
+let rotating = false;
 const dragging = ref(false);
 const dragRenderer = createScreenshotDragRenderer();
 const transformDraft = shallowRef<NormalizedTransform | null>(null);
@@ -126,6 +130,8 @@ const selections = computed(() => {
       ? [
           {
             id,
+            rotation: screenshotLayerRotation(props.state, id),
+            rotatable: ['shape', 'arrow', 'text', 'drawing', 'cursor'].includes(layer.kind),
             style: {
               left: '0',
               top: '0',
@@ -241,10 +247,30 @@ const select = (event: PointerEvent) => {
   if (event.ctrlKey || event.metaKey) emit('select', id, 'toggle');
   else emit('select', id);
 };
-const editText = (event: MouseEvent) => {
+const editLayer = (event: MouseEvent) => {
   if (props.cropping || props.disabled || event.button !== 0 || event.ctrlKey || event.metaKey) return;
   const id = layerAt(event);
-  if (id) elements?.beginText(id);
+  if (!id || elements?.beginText(id)) return;
+  const layer = screenshotLayers(props.state).find((candidate) => candidate.id === id);
+  if (layer?.kind !== 'image' || layer.locked) return;
+  emit('select', id);
+  emit('cropRequest', id);
+};
+const beginRotation = () => {
+  if (props.disabled || props.cropping || rotating) return;
+  rotating = true;
+  dragging.value = true;
+  beginPropertyInteraction();
+};
+const rotate = (value: number) => {
+  if (rotating) emit('rotate', value);
+};
+const endRotation = (value: number) => {
+  if (!rotating) return;
+  emit('rotate', value);
+  rotating = false;
+  dragging.value = false;
+  endPropertyInteraction();
 };
 const start = (event: PointerEvent, corner?: ResizeCorner) => {
   if (props.cropping || props.disabled || event.button !== 0) return;
@@ -351,6 +377,11 @@ watch(
 onBeforeUnmount(() => {
   generation++;
   endDrag();
+  if (rotating) {
+    rotating = false;
+    dragging.value = false;
+    endPropertyInteraction();
+  }
   frames.dispose();
 });
 </script>
@@ -358,7 +389,7 @@ onBeforeUnmount(() => {
 <template>
   <div class="screenshot-stage">
     <div ref="stage" class="stage-bounds">
-      <div class="image-stage" :style="stageStyle" @dblclick="editText">
+      <div class="image-stage" :style="stageStyle" @dblclick="editLayer">
         <canvas ref="canvas" :aria-label="t('preview')" @pointerdown="select" />
         <CanvasLayerSelection
           v-for="selection in cropping ? [] : selections"
@@ -367,6 +398,9 @@ onBeforeUnmount(() => {
           :viewport-style="{ inset: '0' }"
           :handle-style="selection.style"
           :resize-corners="selection.id === selectedId ? undefined : []"
+          :rotation="selection.rotation"
+          :rotatable="selection.id === selectedId && selection.rotatable"
+          :rotate-label="canvasText('shapeRotation')"
           :muted="handlesMuted || (propertyInteractionActive && !dragging)"
           @pointer-down="start($event)"
           @pointer-move="move"
@@ -374,6 +408,9 @@ onBeforeUnmount(() => {
           @resize-start="(corner, event) => start(event, corner)"
           @resize-move="move"
           @resize-end="endDrag"
+          @rotate-start="beginRotation"
+          @rotate="rotate"
+          @rotate-end="endRotation"
         />
         <ElementCanvasOverlay :viewport="{ x: 0, y: 0, ...stageSize }" :surface-size="stageSize" />
         <ScreenshotCropSelection

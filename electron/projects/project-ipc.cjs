@@ -1,5 +1,6 @@
 const fs = require('fs');
 const { createProjectLibrary } = require('./project-library.cjs');
+const { readClipboardPng } = require('../clipboard/image-clipboard.cjs');
 const CURSOR_PACK_DISCOVERY_URL = 'https://store.kde.org/browse/cat/107/';
 
 function registerProjectIpc(
@@ -12,6 +13,7 @@ function registerProjectIpc(
   trustedRenderer,
   cursorLibrary,
   screenshotStore,
+  clipboard,
 ) {
   const library = createProjectLibrary(projectStore, screenshotStore);
   ipcMain.handle('projects:list', () => library.list());
@@ -44,6 +46,11 @@ function registerProjectIpc(
   ipcMain.handle('projects:import-dropped-media', (_event, payload = {}) =>
     projectStore.importDroppedProjectMedia(payload.projectId, { kind: payload.kind, source: payload.source }),
   );
+  ipcMain.handle('projects:paste-clipboard-image', (event, payload = {}) => {
+    if (!trustedRenderer?.(event.sender.getURL())) throw new Error('Renderer non autorisé');
+    const image = readClipboardPng(clipboard);
+    return image ? projectStore.importClipboardImage(payload.projectId, image) : null;
+  });
   const notifyBackgroundLibraryChanged = () => {
     for (const window of BrowserWindow.getAllWindows()) window.webContents.send('background-library:changed');
   };

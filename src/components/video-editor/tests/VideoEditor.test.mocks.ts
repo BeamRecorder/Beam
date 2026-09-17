@@ -9,7 +9,7 @@ import type { AddVisualElementRequest } from '~/components/video-editor/composit
 import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
 
 const { editorState } = vi.hoisted(() => ({ editorState: { store: undefined as any } }));
-const capture = vi.hoisted(() => ({}));
+const capture = vi.hoisted(() => ({ pasteProjectClipboardImage: vi.fn() }));
 const exportState = vi.hoisted(() => ({ isExporting: undefined as any, progress: undefined as any }));
 const toast = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
 const historyState = vi.hoisted(() => ({
@@ -184,6 +184,7 @@ vi.mock('../composables/useVideoEditor', async () => {
           selectedClipId.value = id;
           activeTab.value = 'clip';
         }),
+        addImportedAsset: vi.fn(),
         addElement: vi.fn().mockResolvedValue(undefined),
         addCaptionAtTime: vi.fn(),
         addVisualElementAtTime: vi.fn(async (request: AddVisualElementRequest) => {
