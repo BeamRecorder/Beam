@@ -292,6 +292,32 @@ afterEach(() => {
 });
 
 describe('useLayerTransformAndCrop', () => {
+  it('exposes active unlocked canvas targets and marks the screen as a backdrop', () => {
+    const lockedWebcam = { ...webcamClip(), locked: true };
+    const followingCaption = captionClip();
+    followingCaption.id = 'following-caption';
+    followingCaption.caption = {
+      type: 'keyboard',
+      steps: [],
+      followCursor: true,
+      recordedPlatform: 'windows',
+      sourceSessionId: 'session',
+      style: followingCaption.caption.style,
+    };
+    const scene = composition();
+    scene.clips = [screenClip(), lockedWebcam, imageClip(), followingCaption];
+
+    const mounted = mountComposable(null, false, scene);
+
+    expect(mounted.state.marqueeTargets.value.map((target) => target.id)).toEqual(['image', 'screen']);
+    expect(mounted.state.marqueeTargets.value.find((target) => target.id === 'screen')).toMatchObject({
+      backdrop: true,
+    });
+    expect(mounted.state.marqueeTargets.value.find((target) => target.id === 'image')).toMatchObject({
+      backdrop: false,
+    });
+  });
+
   it('computes hidden, projected, webcam and mirrored crop styles', async () => {
     const mounted = mountComposable(null);
     expect(mounted.state.transformHandleStyle.value).toEqual({ display: 'none' });

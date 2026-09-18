@@ -36,6 +36,8 @@ import {
 import { screenshotLayerAt, screenshotLayerTransform, screenshotLayerRotation } from './screenshot-layer-geometry';
 import { screenshotLayers } from './screenshot-layers';
 import { createScreenshotImageLoader } from './screenshot-assets';
+import CanvasMarqueeSurface from '../canvas/CanvasMarqueeSurface.vue';
+import type { CanvasMarqueeSelection, CanvasMarqueeTarget } from '../canvas/canvas-marquee-types';
 
 const { t } = useTranslate('ScreenshotEditor');
 const { t: canvasText } = useTranslate('CanvasPanel');
@@ -53,6 +55,7 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{
   select: [id: string | null, mode?: ScreenshotSelectionMode];
+  selectMany: [selection: CanvasMarqueeSelection];
   transform: [value: NormalizedTransform];
   translate: [value: ScreenshotTranslation];
   error: [message: string];
@@ -144,6 +147,26 @@ const selections = computed(() => {
       : [];
   });
 });
+const marqueeTargets = computed<CanvasMarqueeTarget[]>(() =>
+  screenshotLayers(props.state).flatMap((layer) => {
+    if (!layer.visible || layer.locked || layer.opacity === 0 || ['background', 'watermark'].includes(layer.kind))
+      return [];
+    const transform = screenshotLayerTransform(props.state, assets.value, layer.id);
+    return transform
+      ? [
+          {
+            id: layer.id,
+            x: transform.x * stageSize.value.width,
+            y: transform.y * stageSize.value.height,
+            width: transform.width * stageSize.value.width,
+            height: transform.height * stageSize.value.height,
+            rotation: screenshotLayerRotation(props.state, layer.id),
+            backdrop: layer.id === props.state.image.id,
+          },
+        ]
+      : [];
+  }),
+);
 const paint = () => {
   if (loadedGeneration !== generation) return;
   const ctx = canvas.value?.getContext('2d');
@@ -389,7 +412,15 @@ onBeforeUnmount(() => {
 <template>
   <div class="screenshot-stage">
     <div ref="stage" class="stage-bounds">
-      <div class="image-stage" :style="stageStyle" @dblclick="editLayer">
+      <CanvasMarqueeSurface
+        class="image-stage"
+        :style="stageStyle"
+        :targets="marqueeTargets"
+        :selection="selectedIds"
+        :disabled="disabled || cropping || Boolean(elements?.editing.value) || elements?.drawingMode.value"
+        @select="emit('selectMany', $event)"
+        @dblclick="editLayer"
+      >
         <canvas ref="canvas" :aria-label="t('preview')" @pointerdown="select" />
         <CanvasLayerSelection
           v-for="selection in cropping ? [] : selections"
@@ -420,7 +451,7 @@ onBeforeUnmount(() => {
           @crop="emit('crop', $event)"
           @done="emit('cropDone')"
         />
-      </div>
+      </CanvasMarqueeSurface>
     </div>
     <div class="canvas-controls"><slot name="controls" /></div>
     <slot name="overlay" />

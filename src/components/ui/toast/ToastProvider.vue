@@ -60,38 +60,44 @@ const handleToastAction = async (toast: Toast) => {
           <Info v-else class="toast-icon info" />
         </span>
 
-        <span class="toast-content">
-          <span class="toast-message">
-            {{ toast.message }}
-            <span v-if="toast.count > 1" class="toast-count">×{{ toast.count }}</span>
-          </span>
-          <code v-if="toast.action?.detail" class="toast-detail">{{ toast.action.detail }}</code>
-        </span>
+        <div class="toast-body">
+          <div class="toast-content">
+            <span class="toast-message">
+              {{ toast.message }}
+              <span v-if="toast.count > 1" class="toast-count">×{{ toast.count }}</span>
+            </span>
+            <code v-if="toast.action?.detail" class="toast-detail">{{ toast.action.detail }}</code>
+          </div>
 
-        <CopyButton
-          v-if="toast.action?.copyText"
-          :text="toast.action.copyText"
-          display="icon"
-          variant="secondary"
-          size="sm"
-          class="toast-action-btn"
-          :label="toast.action.label"
-          :copied-label="toast.action.copiedLabel"
-          :error-label="toast.action.errorLabel"
-          @copied="toast.action.dismissOnSuccess === true && toastStore.remove(toast.id)"
-          @error="reportCopyError"
-        />
+          <div v-if="toast.action" class="toast-action">
+            <CopyButton
+              v-if="toast.action.copyText"
+              :text="toast.action.copyText"
+              display="icon"
+              variant="secondary"
+              size="sm"
+              class="toast-action-btn"
+              :label="toast.action.label"
+              :copied-label="toast.action.copiedLabel"
+              :error-label="toast.action.errorLabel"
+              @copied="toast.action.dismissOnSuccess === true && toastStore.remove(toast.id)"
+              @error="reportCopyError"
+            />
 
-        <Button
-          v-else-if="toast.action"
-          variant="secondary"
-          size="sm"
-          class="toast-action-btn"
-          :aria-label="toast.action.label"
-          @click="handleToastAction(toast)"
-        >
-          {{ toast.action.label }}
-        </Button>
+            <Button
+              v-else
+              variant="secondary"
+              size="sm"
+              block
+              wrap
+              class="toast-action-btn"
+              :aria-label="toast.action.label"
+              @click="handleToastAction(toast)"
+            >
+              {{ toast.action.label }}
+            </Button>
+          </div>
+        </div>
 
         <button type="button" class="toast-close" @click="toastStore.remove(toast.id)" aria-label="Dismiss toast">
           <X class="close-icon" />
@@ -223,10 +229,29 @@ const handleToastAction = async (toast: Toast) => {
 
 .toast-content {
   display: flex;
-  flex: 1;
   min-width: 0;
   flex-direction: column;
   gap: 6px;
+}
+
+.toast-body {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.toast-action {
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.toast-action-btn {
+  max-width: 100%;
 }
 
 .toast-message {

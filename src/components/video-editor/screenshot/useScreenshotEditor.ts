@@ -5,6 +5,7 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useToastStore } from '~/ui/toast/toastStore';
 import type { ScreenshotPanel, ScreenshotSelectionMode, ScreenshotTranslation } from './screenshot-types';
+import type { CanvasMarqueeSelection } from '../canvas/canvas-marquee-types';
 import { useScreenshotSelection } from './useScreenshotSelection';
 import { applyScreenshotTranslation } from './screenshot-selection-transform';
 import type { CaptureProject } from '~/api/types/capture-api';
@@ -156,6 +157,10 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
     selection.select(id, mode);
     id = selectedId.value;
     showSelection(id);
+  };
+  const selectMany = (next: CanvasMarqueeSelection) => {
+    selection.selectMany(next.ids, next.primaryId);
+    showSelection(selectedId.value);
   };
   const showSelection = (id: string | null) => {
     if (state.value?.effects?.some((effect) => effect.id === id)) {
@@ -459,6 +464,7 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
     savePreset,
     presetAction,
     select,
+    selectMany,
     selectPanel,
     transform,
     rotate,

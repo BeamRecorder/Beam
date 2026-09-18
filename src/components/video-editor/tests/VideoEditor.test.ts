@@ -317,6 +317,17 @@ describe('VideoEditor', () => {
     expect(timeline.emitted('select:track')).toHaveLength(2);
   });
 
+  it('relays canvas marquee selection to grouped clip selection', async () => {
+    const mounted = mountEditor();
+    const canvas = mounted.findComponent({ name: 'MockEditorCanvas' });
+
+    canvas.vm.$emit('select:clips', { ids: ['screen', 'audio'], primaryId: 'audio', additive: false });
+    await mounted.vm.$nextTick();
+
+    expect(editorState.store.compositionState.selectClips).toHaveBeenLastCalledWith(['screen', 'audio'], 'audio');
+    expect(editorState.store.compositionState.selectedClipIds.value).toEqual(['screen', 'audio']);
+  });
+
   it('opens linked deletion and keeps the dialog available for one or all linked clips', async () => {
     const mounted = mountEditor();
     const state = editorState.store;

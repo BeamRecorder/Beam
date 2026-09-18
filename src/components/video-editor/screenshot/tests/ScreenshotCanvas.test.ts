@@ -38,6 +38,7 @@ vi.mock('@vueuse/core', async () => {
 });
 
 import ScreenshotCanvas from '../ScreenshotCanvas.vue';
+import CanvasMarqueeSurface from '../../canvas/CanvasMarqueeSurface.vue';
 
 const stateFixture = (): ScreenshotState => {
   const document: ScreenshotDocument = {
@@ -182,6 +183,18 @@ afterEach(() => {
 });
 
 describe('ScreenshotCanvas', () => {
+  it('forwards canvas marquee selections to the screenshot selection owner', async () => {
+    const wrapper = mountCanvas();
+    await flushPromises();
+    const selection = { ids: ['shape-lower', 'shape-upper'], primaryId: 'shape-upper', additive: false };
+
+    wrapper.getComponent(CanvasMarqueeSurface).vm.$emit('select', selection);
+    await nextTick();
+
+    expect(wrapper.emitted('selectMany')).toEqual([[selection]]);
+    wrapper.unmount();
+  });
+
   it('requests crop for the base image after a double-click', async () => {
     const state = stateFixture();
     state.shapes = [];

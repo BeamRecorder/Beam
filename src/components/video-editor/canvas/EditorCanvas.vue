@@ -40,9 +40,11 @@ import CanvasCropSelection from './CanvasCropSelection.vue';
 import { drawFallbackPreviewScene } from './fallback-preview-scene';
 import { createEditorVisualStackRenderer } from './editor-visual-stack-renderer';
 import { captureCanvasFrame } from './canvas-frame-capture';
-const { t } = useTranslate('EditorCanvas');
-const { t: canvasText } = useTranslate('CanvasPanel');
-const props = withDefaults(defineProps<EditorCanvasProps>(), { previewQuality: 'full' });
+import CanvasMarqueeSurface from './CanvasMarqueeSurface.vue';
+import EditorCanvasGuides from './EditorCanvasGuides.vue';
+const { t } = useTranslate('EditorCanvas'),
+  { t: canvasText } = useTranslate('CanvasPanel');
+const props = withDefaults(defineProps<EditorCanvasProps>(), { previewQuality: 'full', selectedClipIds: () => [] });
 const emit = defineEmits<EditorCanvasEmits>();
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const containerRef = ref<HTMLDivElement | null>(null);
@@ -401,7 +403,15 @@ defineExpose({ viewportZoom, captureCurrentFrame });
         </Button>
       </div>
     </Transition>
-    <div class="canvas-viewport" :style="viewportZoom.viewportStyle.value">
+    <CanvasMarqueeSurface
+      class="canvas-viewport"
+      :style="viewportZoom.viewportStyle.value"
+      :targets="transformAndCrop.marqueeTargets.value"
+      :selection="selectedClipIds"
+      show-selection-outlines
+      :disabled="isPlaying || isCropping || selectedZoom?.mode === 'manual'"
+      @select="emit('select:clips', $event)"
+    >
       <div class="preview-frame" :style="{ '--preview-aspect-ratio': outputAspectRatio }">
         <div
           class="zoom-selection-box"
@@ -419,19 +429,7 @@ defineExpose({ viewportZoom, captureCurrentFrame });
           'is-loading-covered': isCanvasCovered,
         }"
       ></canvas>
-      <div v-if="isGridVisible" class="canvas-3x3-grid" :style="previewFrameStyle">
-        <div class="grid-line vertical line-1" />
-        <div class="grid-line vertical line-2" />
-        <div class="grid-line horizontal line-1" />
-        <div class="grid-line horizontal line-2" />
-      </div>
-      <div
-        v-for="(guide, index) in renderGuideLines"
-        :key="index"
-        class="canvas-guide-line"
-        :class="guide.type"
-        :style="guide.style"
-      />
+      <EditorCanvasGuides :grid-visible="isGridVisible" :grid-style="previewFrameStyle" :guides="renderGuideLines" />
       <CanvasLoadingSkeleton
         :visible="showLoadingSkeleton"
         :label="t('videoPreviewLoading')"
@@ -488,7 +486,7 @@ defineExpose({ viewportZoom, captureCurrentFrame });
         @resize-end="transformAndCrop.endCropDrag"
         @done="commitCrop"
       />
-    </div>
+    </CanvasMarqueeSurface>
     <UndoRedoToast :action="historyAction ?? null" />
   </div>
 </template>

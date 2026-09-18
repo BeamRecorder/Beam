@@ -25,6 +25,7 @@ const props = withDefaults(
     href?: string;
     icon?: Component;
     iconOnly?: boolean;
+    wrap?: boolean;
   }>(),
   {
     variant: 'primary',
@@ -39,6 +40,7 @@ const props = withDefaults(
     tooltipDisabled: false,
     type: 'button',
     iconOnly: false,
+    wrap: false,
   },
 );
 
@@ -81,6 +83,7 @@ const buttonClasses = computed(() => {
     { 'btn-loading': props.loading },
     { 'btn-block': props.block },
     { 'btn-icon-only': props.iconOnly },
+    { 'btn-wrap': props.wrap },
   ];
 });
 
@@ -172,6 +175,23 @@ const handleClick = (event: MouseEvent) => {
 
 .btn.btn-block {
   width: 100%;
+}
+
+.btn.btn-wrap {
+  height: auto;
+  min-height: 2.25rem;
+  white-space: normal;
+}
+
+.btn-wrap .btn-content {
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.btn-wrap .btn-content-label {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
 }
 
 .btn:disabled,

@@ -11,6 +11,7 @@ import type { CursorAutoHideSettings, CursorClickEffects } from '../../../../api
 import ResizeHandle from '../../../ui/ResizeHandle/ResizeHandle.vue';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import { resolveCompositionSceneLayers } from '../../composition/scene-layers';
+import CanvasMarqueeSurface from '../CanvasMarqueeSurface.vue';
 
 const { state } = vi.hoisted(() => ({
   state: {
@@ -201,6 +202,7 @@ vi.mock('../composables/useLayerTransformAndCrop', async () => {
         }),
         cropMeasurements: ref(null),
         activeGuideLines: ref([]),
+        marqueeTargets: ref([]),
         transformDraft: state.transformDraft,
         transformResizeCorners: state.transformResizeCorners,
         beginTransformDrag: state.beginTransformDrag,
@@ -473,6 +475,18 @@ const mountEditor = (overrides: Record<string, unknown> = {}) => {
 };
 
 describe('EditorCanvas', () => {
+  it('forwards canvas marquee selections to the editor selection owner', async () => {
+    const mounted = mountEditor({ selectedClipIds: ['image'] });
+    const surface = mounted.getComponent(CanvasMarqueeSurface);
+    const selection = { ids: ['image', 'webcam'], primaryId: 'webcam', additive: false };
+
+    expect(surface.props('selection')).toEqual(['image']);
+    surface.vm.$emit('select', selection);
+    await nextTick();
+
+    expect(mounted.emitted('select:clips')).toEqual([[selection]]);
+  });
+
   it('defaults to full preview quality', async () => {
     mountEditor();
     await nextTick();

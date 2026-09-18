@@ -15,6 +15,11 @@ export function useScreenshotSelection(layers: () => ScreenshotLayer[]) {
         : [...selectedIds.value, id];
     }
   };
+  const selectMany = (nextIds: string[], primaryId: string | null = nextIds.at(-1) ?? null) => {
+    const valid = [...new Set(nextIds)].filter((id) => ids.value.has(id));
+    selectedIds.value =
+      primaryId && valid.includes(primaryId) ? [...valid.filter((id) => id !== primaryId), primaryId] : valid;
+  };
   const selectedId = computed({
     get: () => selectedIds.value.at(-1) ?? null,
     set: (id: string | null) => select(id),
@@ -24,5 +29,5 @@ export function useScreenshotSelection(layers: () => ScreenshotLayer[]) {
     if (remaining.length !== selectedIds.value.length) selectedIds.value = remaining;
   };
   watch(ids, reconcile);
-  return { selectedIds, selectedId, select, reconcile };
+  return { selectedIds, selectedId, select, selectMany, reconcile };
 }

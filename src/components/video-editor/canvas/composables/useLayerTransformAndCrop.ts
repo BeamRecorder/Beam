@@ -10,7 +10,8 @@ import {
   type CaptionClip,
   type NormalizedTransform,
 } from '~/media/shared/composition-types';
-import type { TransformClip } from '../editor-canvas-types';
+import { transformCaptionFollowsCursor, type TransformClip } from '../editor-canvas-types';
+import type { CanvasMarqueeTarget } from '../canvas-marquee-types';
 import {
   approximateCaptionTextWidth,
   captionTextAt,
@@ -103,6 +104,41 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
       isCropping: Boolean(options.isCropping()),
     });
   };
+  const marqueeTargets = computed<CanvasMarqueeTarget[]>(() => {
+    const active = activeClipsAt(options.composition(), options.currentTime() * 1_000);
+    const backToFront = [
+      ...active.filter((clip) => clip.kind !== 'caption').reverse(),
+      ...active.filter((clip) => clip.kind === 'caption').reverse(),
+    ];
+    return backToFront.flatMap((clip) => {
+      if (
+        clip.locked ||
+        !(
+          clip.kind === 'caption' ||
+          isVisualClip(clip) ||
+          isColorClip(clip) ||
+          isShapeClip(clip) ||
+          isBlurClip(clip)
+        ) ||
+        transformCaptionFollowsCursor(clip)
+      )
+        return [];
+      const layout = displayLayoutFor(clip);
+      return layout
+        ? [
+            {
+              id: clip.id,
+              x: layout.left,
+              y: layout.top,
+              width: layout.width,
+              height: layout.height,
+              rotation: clip.kind === 'shape' ? clip.rotation : 0,
+              backdrop: clip.kind === 'screen',
+            },
+          ]
+        : [];
+    });
+  });
 
   watch(
     () => options.selectedTransformClip()?.id,
@@ -359,6 +395,7 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     transformPerspectiveCorners,
     transformResizeCorners,
     activeGuideLines,
+    marqueeTargets,
     beginTransformDrag,
     moveTransformDrag,
     endTransformDrag,

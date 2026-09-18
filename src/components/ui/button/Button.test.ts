@@ -20,6 +20,14 @@ describe('Button', () => {
     await wrapper.get('button').trigger('click');
     expect(wrapper.emitted('click')).toHaveLength(1);
   });
+  it('opts long labels into the wrapping button layout', () => {
+    const wrapper = mount(Button, {
+      props: { wrap: true },
+      slots: { default: 'Open in screenshot editor' },
+    });
+
+    expect(wrapper.get('button').classes()).toContain('btn-wrap');
+  });
   it('renders the same button primitive as a link when href is provided', () => {
     const wrapper = mount(Button, {
       props: { href: '/install', size: 'lg' },

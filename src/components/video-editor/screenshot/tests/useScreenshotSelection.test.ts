@@ -90,6 +90,15 @@ describe('useScreenshotSelection', () => {
     expect(selection.selectedId.value).toBe('a');
   });
 
+  it('replaces the selection with valid marquee IDs and keeps its explicit primary last', () => {
+    const { selection } = mountSelection();
+
+    selection.selectMany(['c', 'missing', 'a', 'c'], 'a');
+
+    expect(selection.selectedIds.value).toEqual(['c', 'a']);
+    expect(selection.selectedId.value).toBe('a');
+  });
+
   it('keeps selectedId writable as a single-selection compatibility interface', () => {
     const { selection } = mountSelection();
 

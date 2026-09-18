@@ -61,6 +61,7 @@ export interface EditorCanvasProps {
   outputCanvas: OutputCanvasSettings;
   activeTab: string;
   selectedTransformClip: TransformClip | null;
+  selectedClipIds?: string[];
   transformHandlesMuted?: boolean;
   loopProgress?: number;
   isCropping?: boolean;
@@ -71,6 +72,7 @@ export interface EditorCanvasProps {
 export interface EditorCanvasEmits {
   (event: 'update:zoom', value: ZoomElement): void;
   (event: 'select:clip', clipId: string): void;
+  (event: 'select:clips', selection: { ids: string[]; primaryId: string | null; additive: boolean }): void;
   (event: 'deselect:transform-clip'): void;
   (event: 'deselect:zoom'): void;
   (event: 'update:clip-transform', transform: NormalizedTransform): void;

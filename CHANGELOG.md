@@ -10,6 +10,7 @@ User-facing changes to Beam are documented in this file.
 - Added reusable solid-color and saved-gradient controls for shapes and freehand drawings.
 - Added multi-item copy, cut, and paste shortcuts with localized feedback in the Studio and Screenshot editors.
 - Added direct clipboard-image paste into Screenshot compositions and Studio tracks, double-click crop, and on-canvas rotation handles for elements.
+- Added right-drag box selection on Screenshot and Studio canvases for multi-item copy, cut, and delete workflows.
 
 ### Changed
 
@@ -29,6 +30,7 @@ User-facing changes to Beam are documented in this file.
 - Fixed shape and drawing fill and border controls so each property updates the correct style, including immediately after creating a drawing.
 - Fixed pasted Studio selections so every selected clip, caption layer, and zoom is recreated instead of only showing paste feedback.
 - Corrected the Vietnamese folder reveal action to “Mở thư mục”.
+- Fixed long toast actions so their labels wrap below the message instead of overlapping capture feedback.
 
 ## [0.2.9] - 2026-09-13
 

@@ -72,6 +72,7 @@ const {
   savePreset,
   presetAction,
   select,
+  selectMany,
   selectPanel,
   transform,
   rotate,
@@ -270,6 +271,7 @@ const composition = computed(() => (state.value ? screenshotLayers(state.value) 
         :cursor-packs="cursors.packs.value"
         :cursor-packs-ready="cursors.ready.value"
         @select="select"
+        @select-many="selectMany"
         @transform="transform"
         @rotate="rotate"
         @translate="translate"

@@ -28,6 +28,19 @@ describe('ToastProvider', () => {
     expect(store.toasts).toHaveLength(2);
   });
 
+  it('places a long wrapping action below the toast message', () => {
+    const store = useToastStore();
+    store.success('Capture d’écran créée', 0, {
+      label: 'Ouvrir dans l’éditeur de captures d’écran',
+      onClick: vi.fn(),
+    });
+    const wrapper = mount(ToastProvider);
+
+    expect(wrapper.get('.toast-body > .toast-content').text()).toContain('Capture d’écran créée');
+    expect(wrapper.get('.toast-action .toast-action-btn').classes()).toContain('btn-wrap');
+    expect(wrapper.get('.toast-action .toast-action-btn').classes()).toContain('btn-block');
+  });
+
   it('renders a copy action with the Lucide Copy icon and an accessible label', () => {
     const store = useToastStore();
     store.error('Playback failed', 0, { label: 'Copy error', copyText: 'diagnostic details' });
