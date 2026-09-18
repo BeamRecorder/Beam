@@ -164,6 +164,9 @@ const begin = (event: PointerEvent) => {
   cancel();
   suppressContextMenu = true;
   const initial = [...props.selection];
+  const startsFromSelection = Boolean(
+    event.target.closest('.webcam-selection, .canvas-marquee-selection, .resize-handle'),
+  );
   gesture = {
     pointerId: event.pointerId,
     origin: point(event),
@@ -172,7 +175,7 @@ const begin = (event: PointerEvent) => {
     initial,
     last: initial,
     targets: props.targets.filter((target) => target.width > 0 && target.height > 0),
-    additive: event.shiftKey || event.ctrlKey || event.metaKey,
+    additive: startsFromSelection || event.shiftKey || event.ctrlKey || event.metaKey,
     dragged: false,
   };
   window.addEventListener('pointermove', move);

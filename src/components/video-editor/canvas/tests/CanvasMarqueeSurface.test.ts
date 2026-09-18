@@ -43,7 +43,7 @@ const mountSurface = (selection: string[] = [], disabled = false) => {
   wrapper = mount(CanvasMarqueeSurface, {
     attachTo: document.body,
     props: { targets, selection, disabled },
-    slots: { default: () => h('canvas') },
+    slots: { default: () => [h('canvas'), h('div', { class: 'webcam-selection' })] },
   });
   vi.spyOn(wrapper.element, 'getBoundingClientRect').mockReturnValue({
     left: 100,
@@ -91,6 +91,14 @@ describe('CanvasMarqueeSurface', () => {
   it.each(['shiftKey', 'ctrlKey', 'metaKey'] as const)('adds hits to the existing selection with %s', async (key) => {
     const mounted = mountSurface(['shape']);
     await drag(mounted.element, [290, 290], [390, 390], { [key]: true });
+
+    expect(mounted.emitted('select')).toEqual([[{ ids: ['shape', 'image'], primaryId: 'image', additive: true }]]);
+  });
+
+  it('keeps the current selection when a right-drag starts from its selection handle', async () => {
+    const mounted = mountSurface(['shape']);
+
+    await drag(mounted.get('.webcam-selection').element, [290, 290], [390, 390]);
 
     expect(mounted.emitted('select')).toEqual([[{ ids: ['shape', 'image'], primaryId: 'image', additive: true }]]);
   });
