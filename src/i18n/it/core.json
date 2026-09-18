@@ -188,7 +188,12 @@
     "zoomOut": "Riduci canvas",
     "resetZoom": "Reimposta vista canvas",
     "canvasZoom": "Zoom canvas",
-    "toggleGrid": "Attiva/disattiva griglia 3×3"
+    "toggleGrid": "Attiva/disattiva griglia 3×3",
+    "takeScreenshot": "Cattura il canvas",
+    "screenshotCreated": "Screenshot creato",
+    "openInScreenshotEditor": "Apri nell’editor di screenshot",
+    "screenshotFailed": "Impossibile creare lo screenshot: {message}",
+    "screenshotOpenFailed": "Impossibile aprire l’editor di screenshot: {message}"
   },
   "CaptionClipPanel": {
     "generatedByAI": "Generato dall'IA (Whisper)",

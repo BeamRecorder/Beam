@@ -2,9 +2,17 @@ import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, vi } from 'vitest';
 import type { Component } from 'vue';
 import './VideoEditor.test.mocks';
-import { capture, editorState, exportState, fullscreenState, historyState, toast } from './VideoEditor.test.mocks';
+import {
+  capture,
+  canvasState,
+  editorState,
+  exportState,
+  fullscreenState,
+  historyState,
+  toast,
+} from './VideoEditor.test.mocks';
 
-export { capture, editorState, exportState, fullscreenState, historyState, toast };
+export { capture, canvasState, editorState, exportState, fullscreenState, historyState, toast };
 
 export const project = {
   id: 'project-1',

@@ -188,7 +188,12 @@
     "zoomOut": "縮小畫布",
     "resetZoom": "重設畫布檢視",
     "canvasZoom": "畫布縮放",
-    "toggleGrid": "切換 3×3 網格"
+    "toggleGrid": "切換 3×3 網格",
+    "takeScreenshot": "擷取畫布",
+    "screenshotCreated": "已建立螢幕截圖",
+    "openInScreenshotEditor": "在螢幕截圖編輯器中開啟",
+    "screenshotFailed": "無法建立螢幕截圖：{message}",
+    "screenshotOpenFailed": "無法開啟螢幕截圖編輯器：{message}"
   },
   "CaptionClipPanel": {
     "generatedByAI": "AI 產生（Whisper）",

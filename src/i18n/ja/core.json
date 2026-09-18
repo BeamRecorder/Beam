@@ -188,7 +188,12 @@
     "zoomOut": "キャンバスを縮小",
     "resetZoom": "キャンバス表示をリセット",
     "canvasZoom": "キャンバスのズーム",
-    "toggleGrid": "3×3グリッドを切り替え"
+    "toggleGrid": "3×3グリッドを切り替え",
+    "takeScreenshot": "キャンバスのスクリーンショットを撮る",
+    "screenshotCreated": "スクリーンショットを作成しました",
+    "openInScreenshotEditor": "スクリーンショットエディターで開く",
+    "screenshotFailed": "スクリーンショットを作成できませんでした: {message}",
+    "screenshotOpenFailed": "スクリーンショットエディターを開けませんでした: {message}"
   },
   "CaptionClipPanel": {
     "generatedByAI": "AI生成（Whisper）",

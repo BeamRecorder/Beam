@@ -6,12 +6,14 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- Added one-click Studio canvas screenshots with a three-second shortcut to open each capture in a new Screenshot editor window.
 - Added reusable solid-color and saved-gradient controls for shapes and freehand drawings.
 - Added multi-item copy, cut, and paste shortcuts with localized feedback in the Studio and Screenshot editors.
 - Added direct clipboard-image paste into Screenshot compositions and Studio tracks, double-click crop, and on-canvas rotation handles for elements.
 
 ### Changed
 
+- Property-panel delete footers now blend into the shared, symmetrical scroll shadow without an extra top border.
 - Screenshot layers can now be reordered by dragging the layer row directly, without a separate drag handle.
 - Screenshot editing now opens on Elements, and new annotation shapes start as unfilled outlined rectangles.
 - Crop measurements and confirmation now stay together in a compact floating HUD outside the selected media.

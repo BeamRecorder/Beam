@@ -114,6 +114,7 @@ contextBridge.exposeInMainWorld(
       return () => ipcRenderer.removeListener('preferences:shortcut', callback);
     },
     captureScreenshot: (options) => ipcRenderer.invoke('screenshot:capture', options),
+    createScreenshotFromCanvas: (input) => ipcRenderer.invoke('screenshot:create-from-canvas', input),
     getScreenshot: (id) => ipcRenderer.invoke('screenshot:get', id),
     listScreenshots: () => ipcRenderer.invoke('screenshot:list'),
     saveScreenshot: (id, state, history) => ipcRenderer.invoke('screenshot:save', { id, state, history }),

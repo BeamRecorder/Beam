@@ -8,9 +8,9 @@ const PopoverMenuButton = {
 };
 const Button = {
   inheritAttrs: true,
-  props: ['disabled'],
+  props: ['disabled', 'loading'],
   emits: ['click'],
-  template: '<button v-bind="$attrs" :disabled="disabled" @click="$emit(\'click\')"><slot /></button>',
+  template: '<button v-bind="$attrs" :disabled="disabled || loading" @click="$emit(\'click\')"><slot /></button>',
 };
 
 describe('CanvasToolbar', () => {
@@ -52,7 +52,7 @@ describe('CanvasToolbar', () => {
     expect(wrapper.text()).toContain('OK');
   });
 
-  it('renders zoom and grid controls and emits events', async () => {
+  it('renders zoom, grid and screenshot controls and emits events', async () => {
     const wrapper = mount(CanvasToolbar, {
       props: {
         preset: '16:9',
@@ -69,7 +69,24 @@ describe('CanvasToolbar', () => {
     await wrapper.get('.grid-toggle-btn').trigger('click');
     expect(wrapper.emitted('toggle:grid')).toHaveLength(1);
 
+    await wrapper.get('.screenshot-btn').trigger('click');
+    expect(wrapper.emitted('take:screenshot')).toHaveLength(1);
+
     await wrapper.get('.zoom-indicator').trigger('click');
     expect(wrapper.emitted('reset:zoom')).toHaveLength(1);
+  });
+
+  it('disables the screenshot button while a canvas capture is in progress', () => {
+    const wrapper = mount(CanvasToolbar, {
+      props: {
+        preset: '16:9',
+        canCrop: true,
+        isCropping: false,
+        isCapturingScreenshot: true,
+      },
+      global: { stubs: { PopoverMenuButton, Button } },
+    });
+
+    expect(wrapper.get('.screenshot-btn').attributes('disabled')).toBeDefined();
   });
 });

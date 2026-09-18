@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
+import { nextTick } from 'vue';
 import ScrollShadow from './ScrollShadow.vue';
 
 describe('ScrollShadow.vue', () => {
@@ -50,5 +51,25 @@ describe('ScrollShadow.vue', () => {
 
     // When neither top nor bottom overflow, no mask
     expect(wrapper.find('.scroll-shadow-viewport').attributes('style')).toBeUndefined();
+  });
+
+  it('uses the same fade size at the top and bottom edges', async () => {
+    const wrapper = mount(ScrollShadow, { props: { size: 24 } });
+    const viewport = wrapper.get('.scroll-shadow-viewport').element;
+    Object.defineProperties(viewport, {
+      clientHeight: { value: 100, configurable: true },
+      scrollHeight: { value: 300, configurable: true },
+      scrollTop: { value: 0, writable: true, configurable: true },
+    });
+    const updateShadows = (wrapper.vm as unknown as { updateShadows: () => void }).updateShadows;
+
+    updateShadows();
+    await nextTick();
+    expect(wrapper.get('.scroll-shadow-viewport').attributes('style')).toContain('calc(100% - 24px)');
+
+    Object.defineProperty(viewport, 'scrollTop', { value: 200, writable: true, configurable: true });
+    updateShadows();
+    await nextTick();
+    expect(wrapper.get('.scroll-shadow-viewport').attributes('style')).toContain('black 24px');
   });
 });

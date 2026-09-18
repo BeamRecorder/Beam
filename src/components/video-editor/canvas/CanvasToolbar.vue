@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Crop, Check, ZoomIn, ZoomOut, Grid } from '@lucide/vue';
+import { Crop, Check, ZoomIn, ZoomOut, Grid, Camera } from '@lucide/vue';
 import PopoverMenuButton from '../../ui/popover/PopoverMenuButton.vue';
 import Button from '../../ui/button/Button.vue';
 import Skeleton from '../../ui/skeleton/Skeleton.vue';
@@ -17,12 +17,14 @@ const props = withDefaults(
     isGridVisible?: boolean;
     zoomPercent?: number;
     isZoomedOrPanned?: boolean;
+    isCapturingScreenshot?: boolean;
     loading?: boolean;
   }>(),
   {
     isGridVisible: false,
     zoomPercent: 100,
     isZoomedOrPanned: false,
+    isCapturingScreenshot: false,
     loading: false,
   },
 );
@@ -31,6 +33,7 @@ const emit = defineEmits<{
   (event: 'select:preset', preset: Exclude<OutputCanvasPreset, 'custom'>): void;
   (event: 'toggle:crop'): void;
   (event: 'toggle:grid'): void;
+  (event: 'take:screenshot'): void;
   (event: 'zoom:in'): void;
   (event: 'zoom:out'): void;
   (event: 'reset:zoom'): void;
@@ -83,6 +86,16 @@ const items = computed(() => presets.map((id) => ({ id, label: id, active: props
           class="grid-toggle-btn"
           :class="{ 'is-active': isGridVisible }"
           @click="emit('toggle:grid')"
+        />
+        <Button
+          variant="ghost"
+          size="xs"
+          :icon="Camera"
+          :loading="isCapturingScreenshot"
+          :aria-label="t('takeScreenshot')"
+          :tooltip="t('takeScreenshot')"
+          class="screenshot-btn"
+          @click="emit('take:screenshot')"
         />
 
         <div class="zoom-controls">
@@ -203,7 +216,8 @@ const items = computed(() => presets.map((id) => ({ id, label: id, active: props
   margin: 0 2px;
 }
 
-.canvas-toolbar :deep(.grid-toggle-btn) {
+.canvas-toolbar :deep(.grid-toggle-btn),
+.canvas-toolbar :deep(.screenshot-btn) {
   padding: 0 6px !important;
   min-width: 28px !important;
 }

@@ -9,7 +9,12 @@ import type { AddVisualElementRequest } from '~/components/video-editor/composit
 import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
 
 const { editorState } = vi.hoisted(() => ({ editorState: { store: undefined as any } }));
-const capture = vi.hoisted(() => ({ pasteProjectClipboardImage: vi.fn() }));
+const capture = vi.hoisted(() => ({
+  pasteProjectClipboardImage: vi.fn(),
+  createScreenshotFromCanvas: vi.fn(),
+  openScreenshot: vi.fn(),
+}));
+const canvasState = vi.hoisted(() => ({ captureCurrentFrame: vi.fn() }));
 const exportState = vi.hoisted(() => ({ isExporting: undefined as any, progress: undefined as any }));
 const toast = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
 const historyState = vi.hoisted(() => ({
@@ -628,6 +633,7 @@ vi.mock('../canvas/EditorCanvas.vue', async () => {
             resetZoom: vi.fn(),
           },
           getFullscreenElement: () => document.querySelector('.mock-canvas'),
+          captureCurrentFrame: canvasState.captureCurrentFrame,
         });
         return () => {
           const previewComposition = props.composition as ClipComposition | null;
@@ -690,13 +696,14 @@ vi.mock('../canvas/CanvasToolbar.vue', async () => {
   return {
     default: defineComponent({
       name: 'MockCanvasToolbar',
-      emits: ['select:preset', 'toggle:crop', 'toggle:grid'],
+      emits: ['select:preset', 'toggle:crop', 'toggle:grid', 'take:screenshot'],
       setup(_, { emit }) {
         return () =>
           h('div', [
             h('button', { class: 'preset', onClick: () => emit('select:preset', '1:1') }),
             h('button', { class: 'toggle-crop', onClick: () => emit('toggle:crop') }),
             h('button', { class: 'toggle-grid', onClick: () => emit('toggle:grid') }),
+            h('button', { class: 'take-screenshot', onClick: () => emit('take:screenshot') }),
           ]);
       },
     }),
@@ -873,4 +880,4 @@ vi.mock('../timeline/EditorTimeline.vue', async () => {
   };
 });
 
-export { editorState, capture, exportState, toast, historyState, fullscreenState };
+export { editorState, capture, canvasState, exportState, toast, historyState, fullscreenState };

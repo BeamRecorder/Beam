@@ -188,7 +188,12 @@
     "zoomOut": "Намаляване на платното",
     "resetZoom": "Нулиране на изгледа на платното",
     "canvasZoom": "Мащаб на платното",
-    "toggleGrid": "Превключване на мрежата 3×3"
+    "toggleGrid": "Превключване на мрежата 3×3",
+    "takeScreenshot": "Заснемане на платното",
+    "screenshotCreated": "Екранната снимка е създадена",
+    "openInScreenshotEditor": "Отваряне в редактора на екранни снимки",
+    "screenshotFailed": "Екранната снимка не можа да бъде създадена: {message}",
+    "screenshotOpenFailed": "Редакторът на екранни снимки не можа да бъде отворен: {message}"
   },
   "CaptionClipPanel": {
     "generatedByAI": "Генерирано от AI (Whisper)",

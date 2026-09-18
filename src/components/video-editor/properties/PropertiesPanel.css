@@ -112,6 +112,5 @@
   left: 0;
   right: 0;
   padding: 12px 20px;
-  border-top: 1px solid var(--color-border);
   background: var(--color-bg-element);
 }

@@ -188,7 +188,12 @@
     "zoomOut": "Alejar el lienzo",
     "resetZoom": "Restablecer vista del lienzo",
     "canvasZoom": "Zoom del lienzo",
-    "toggleGrid": "Alternar cuadrícula 3×3"
+    "toggleGrid": "Alternar cuadrícula 3×3",
+    "takeScreenshot": "Capturar el lienzo",
+    "screenshotCreated": "Captura creada",
+    "openInScreenshotEditor": "Abrir en el editor de capturas",
+    "screenshotFailed": "No se pudo crear la captura: {message}",
+    "screenshotOpenFailed": "No se pudo abrir el editor de capturas: {message}"
   },
   "CaptionClipPanel": {
     "generatedByAI": "Generado por IA (Whisper)",

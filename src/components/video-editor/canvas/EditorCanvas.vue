@@ -39,6 +39,7 @@ import EditorCanvasLayerSelection from './EditorCanvasLayerSelection.vue';
 import CanvasCropSelection from './CanvasCropSelection.vue';
 import { drawFallbackPreviewScene } from './fallback-preview-scene';
 import { createEditorVisualStackRenderer } from './editor-visual-stack-renderer';
+import { captureCanvasFrame } from './canvas-frame-capture';
 const { t } = useTranslate('EditorCanvas');
 const { t: canvasText } = useTranslate('CanvasPanel');
 const props = withDefaults(defineProps<EditorCanvasProps>(), { previewQuality: 'full' });
@@ -121,7 +122,6 @@ const transformAndCrop = useLayerTransformAndCrop({
   onUpdateCrop: (crop) => emit('update:clip-crop', crop),
   onSelectTransformClip: (clipId) => emit('select:clip', clipId),
 });
-
 const renderGuideLines = computed(() =>
   canvasGuideLines(logicalSize.value, props.outputCanvas, transformAndCrop.activeGuideLines.value),
 );
@@ -365,7 +365,11 @@ onUnmounted(() => {
   frameScheduler.dispose();
   perspectivePreviewRenderer.dispose();
 });
-defineExpose({ viewportZoom });
+const captureCurrentFrame = () => {
+  renderCanvas();
+  return captureCanvasFrame(canvasRef.value, logicalSize.value, props.outputCanvas);
+};
+defineExpose({ viewportZoom, captureCurrentFrame });
 </script>
 <template>
   <div

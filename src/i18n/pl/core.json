@@ -188,7 +188,12 @@
     "zoomOut": "Pomniejsz płótno",
     "resetZoom": "Zresetuj widok płótna",
     "canvasZoom": "Powiększenie płótna",
-    "toggleGrid": "Przełącz siatkę 3×3"
+    "toggleGrid": "Przełącz siatkę 3×3",
+    "takeScreenshot": "Utwórz zrzut płótna",
+    "screenshotCreated": "Utworzono zrzut ekranu",
+    "openInScreenshotEditor": "Otwórz w edytorze zrzutów ekranu",
+    "screenshotFailed": "Nie udało się utworzyć zrzutu ekranu: {message}",
+    "screenshotOpenFailed": "Nie udało się otworzyć edytora zrzutów ekranu: {message}"
   },
   "CaptionClipPanel": {
     "generatedByAI": "Wygenerowano przez AI (Whisper)",

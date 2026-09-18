@@ -69,6 +69,33 @@ function registerScreenshotIpc({
       return action(event, ...args);
     });
   handle('screenshot:capture', (event, options) => capture(options, event));
+  handle('screenshot:create-from-canvas', (_event, input) => {
+    if (
+      !input ||
+      !(input.bytes instanceof ArrayBuffer) ||
+      input.bytes.byteLength === 0 ||
+      input.bytes.byteLength > 100_000_000 ||
+      typeof input.name !== 'string'
+    )
+      throw new Error('Invalid canvas screenshot.');
+    const buffer = Buffer.from(input.bytes);
+    if (!buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])))
+      throw new Error('Canvas screenshot must be encoded as PNG.');
+    const image = nativeImage.createFromBuffer(buffer);
+    if (image.isEmpty()) throw new Error('Canvas screenshot image is invalid.');
+    const dimensions = image.getSize();
+    const presetDocument = presetStore.read();
+    const preset = presetDocument.presets.find((item) => item.id === presetDocument.activePresetId);
+    if (!preset) throw new Error('Active screenshot preset is unavailable.');
+    const pending = store.create();
+    try {
+      fs.writeFileSync(pending.path, buffer, { flag: 'wx', mode: 0o600 });
+      return store.complete(pending.id, dimensions, preset.settings, input.name);
+    } catch (error) {
+      store.remove(pending.id);
+      throw error;
+    }
+  });
   handle('screenshot:get', (_event, id) => store.read(id));
   handle('screenshot:discard-image', (_event, { id, source }) => store.discardImage(id, source));
   handle('screenshot:pick-image', async (event, id) => {

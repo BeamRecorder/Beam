@@ -188,7 +188,12 @@
     "zoomOut": "कैनवास ज़ूम आउट करें",
     "resetZoom": "कैनवास व्यू रीसेट करें",
     "canvasZoom": "कैनवास ज़ूम",
-    "toggleGrid": "3×3 ग्रिड टॉगल करें"
+    "toggleGrid": "3×3 ग्रिड टॉगल करें",
+    "takeScreenshot": "कैनवास का स्क्रीनशॉट लें",
+    "screenshotCreated": "स्क्रीनशॉट बनाया गया",
+    "openInScreenshotEditor": "स्क्रीनशॉट एडिटर में खोलें",
+    "screenshotFailed": "स्क्रीनशॉट नहीं बनाया जा सका: {message}",
+    "screenshotOpenFailed": "स्क्रीनशॉट एडिटर नहीं खोला जा सका: {message}"
   },
   "CaptionClipPanel": {
     "generatedByAI": "AI द्वारा बनाया गया (Whisper)",

@@ -13,6 +13,7 @@ import type { TimelineClipboardItem } from '../timeline/composables/timeline-cli
 import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
 import {
   capture,
+  canvasState,
   editorState,
   fullscreenState,
   historyState,
@@ -73,6 +74,43 @@ const cropFromComposition = (composition: ClipComposition | undefined) => {
 };
 
 describe('VideoEditor', () => {
+  it('captures the current canvas and offers a new Screenshot editor window for three seconds', async () => {
+    const bytes = Uint8Array.from([137, 80, 78, 71]).buffer;
+    canvasState.captureCurrentFrame.mockResolvedValue({ bytes, width: 1_920, height: 1_080 });
+    capture.createScreenshotFromCanvas.mockResolvedValue({
+      id: 'screenshot-1',
+      name: 'Project — Sep 18, 2026',
+      source: 'project-media://screenshot/screenshot-1/source.png',
+    });
+    capture.openScreenshot.mockResolvedValue(undefined);
+    const mounted = mountEditor();
+
+    await mounted.get('.take-screenshot').trigger('click');
+    await flushPromises();
+
+    expect(canvasState.captureCurrentFrame).toHaveBeenCalledOnce();
+    expect(capture.createScreenshotFromCanvas).toHaveBeenCalledWith({
+      bytes,
+      name: expect.stringMatching(/^Project — /),
+    });
+    expect(toast.success).toHaveBeenCalledWith(
+      'Screenshot created',
+      3_000,
+      expect.objectContaining({ label: 'Open in Screenshot Editor' }),
+      {
+        preview: {
+          kind: 'image',
+          src: 'project-media://screenshot/screenshot-1/source.png',
+          alt: 'Project — Sep 18, 2026',
+        },
+      },
+    );
+
+    const action = toast.success.mock.calls[0]?.[2];
+    await action.onClick();
+    expect(capture.openScreenshot).toHaveBeenCalledWith('screenshot-1', { disposition: 'new-window' });
+  });
+
   it('pastes a clipboard image into the Studio composition at the playhead', async () => {
     const asset: MediaAsset = {
       id: 'clipboard-image',

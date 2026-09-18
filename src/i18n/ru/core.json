@@ -188,7 +188,12 @@
     "zoomOut": "Отдалить холст",
     "resetZoom": "Сбросить вид холста",
     "canvasZoom": "Масштаб холста",
-    "toggleGrid": "Показать сетку 3×3"
+    "toggleGrid": "Показать сетку 3×3",
+    "takeScreenshot": "Сделать снимок холста",
+    "screenshotCreated": "Снимок экрана создан",
+    "openInScreenshotEditor": "Открыть в редакторе снимков",
+    "screenshotFailed": "Не удалось создать снимок экрана: {message}",
+    "screenshotOpenFailed": "Не удалось открыть редактор снимков: {message}"
   },
   "CaptionClipPanel": {
     "generatedByAI": "Создано ИИ (Whisper)",

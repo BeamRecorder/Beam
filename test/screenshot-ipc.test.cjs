@@ -73,6 +73,7 @@ function makeFixture(options = {}) {
     imageBuffers: [],
     dialogs: [],
     openedEditors: [],
+    openedEditorRequests: [],
     canCapture: 0,
   };
   let dialogResult = options.dialogResult ?? { canceled: false, filePath: path.join(outputDirectory, 'saved.png') };
@@ -122,12 +123,17 @@ function makeFixture(options = {}) {
   const nativeImage = {
     createFromBuffer: (buffer) => {
       calls.imageBuffers.push(Buffer.from(buffer));
-      return { isEmpty: () => options.emptyNativeImage === true, buffer: Buffer.from(buffer) };
+      return {
+        isEmpty: () => options.emptyNativeImage === true,
+        getSize: () => options.nativeImageSize ?? { width: 640, height: 360 },
+        buffer: Buffer.from(buffer),
+      };
     },
   };
   const BrowserWindow = { fromWebContents: () => ({ owner: 'trusted-window' }) };
-  const openEditor = async (id) => {
+  const openEditor = async (id, openOptions, sender) => {
     calls.openedEditors.push(id);
+    calls.openedEditorRequests.push({ id, options: openOptions, sender });
     return { opened: id };
   };
   const registration = registerScreenshotIpc({
@@ -244,6 +250,46 @@ test('captures through the native screenshot command without cursor or audio tra
     assert.equal(fixture.calls.presetReads, 1);
     assert.equal(result.width, 1280);
     assert.equal(fixture.store.list().length, 1);
+  } finally {
+    fixture.cleanup();
+  }
+});
+
+test('creates a named canvas screenshot with the active Screenshot preset', async () => {
+  const fixture = makeFixture({ nativeImageSize: { width: 1920, height: 1080 } });
+  try {
+    const result = await fixture.invoke('screenshot:create-from-canvas', {
+      bytes: asArrayBuffer(pngBytes),
+      name: 'Product demo — Sep 18, 2026',
+    });
+
+    assert.equal(result.name, 'Product demo — Sep 18, 2026');
+    assert.equal(result.width, 1920);
+    assert.equal(result.height, 1080);
+    assert.deepEqual(result.preset, { format: 'png', canvas: { width: 1920, height: 1080 } });
+    assert.deepEqual(fs.readFileSync(path.join(fixture.screenshotRoot, result.id, 'source.png')), pngBytes);
+    assert.equal(fixture.calls.presetReads, 1);
+    assert.deepEqual(fixture.calls.nativeRequests, []);
+    assert.equal(fixture.calls.canCapture, 0);
+  } finally {
+    fixture.cleanup();
+  }
+});
+
+test('rejects invalid canvas screenshot bytes without leaving a project behind', async () => {
+  const fixture = makeFixture();
+  try {
+    await assert.rejects(
+      Promise.resolve().then(() =>
+        fixture.invoke('screenshot:create-from-canvas', {
+          bytes: Uint8Array.from([1, 2, 3]).buffer,
+          name: 'Invalid frame',
+        }),
+      ),
+      /encoded as PNG/i,
+    );
+    assert.equal(fixture.store.list().length, 0);
+    assert.equal(fixture.calls.presetReads, 0);
   } finally {
     fixture.cleanup();
   }
@@ -410,8 +456,18 @@ test('saves screenshot editor state and opens only an existing screenshot', asyn
     assert.deepEqual(await fixture.invoke('screenshot:get', screenshot.id), fixture.store.read(screenshot.id));
     assert.equal((await fixture.invoke('screenshot:list')).length, 1);
 
-    assert.deepEqual(await fixture.invoke('screenshot:open', screenshot.id), { opened: screenshot.id });
+    const open = fixture.handlers.get('screenshot:open');
+    assert.deepEqual(await open(fixture.trustedEvent, screenshot.id, { disposition: 'new-window' }), {
+      opened: screenshot.id,
+    });
     assert.deepEqual(fixture.calls.openedEditors, [screenshot.id]);
+    assert.deepEqual(fixture.calls.openedEditorRequests, [
+      {
+        id: screenshot.id,
+        options: { disposition: 'new-window' },
+        sender: fixture.trustedEvent.sender,
+      },
+    ]);
     await assert.rejects(
       Promise.resolve().then(() => fixture.invoke('screenshot:open', '11111111-1111-4111-8111-111111111111')),
     );

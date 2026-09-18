@@ -5,6 +5,11 @@ const { dimensions: validDimensions, validateScreenshotState } = require('./scre
 const { validateScreenshotHistory } = require('./screenshot-history.cjs');
 const { importMedia, importImageBuffer } = require('../projects/composition-project-media.cjs');
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const screenshotName = (value) => {
+  const name = String(value ?? '').trim();
+  if (!name || name.length > 200) throw new Error('Invalid screenshot name.');
+  return name;
+};
 
 function createScreenshotStore(root) {
   const directory = (id) => {
@@ -74,9 +79,7 @@ function createScreenshotStore(root) {
       fs.rmSync(path.join(mediaDirectory, fileName), { force: true });
     },
     rename(id, name) {
-      const nextName = String(name ?? '').trim();
-      if (!nextName || nextName.length > 200) throw new Error('Invalid screenshot name.');
-      write(id, { ...read(id), name: nextName });
+      write(id, { ...read(id), name: screenshotName(name) });
       return read(id);
     },
     create() {
@@ -84,13 +87,14 @@ function createScreenshotStore(root) {
       fs.mkdirSync(directory(id), { recursive: true });
       return { id, path: path.join(directory(id), 'source.png') };
     },
-    complete(id, dimensions, preset) {
+    complete(id, dimensions, preset, name) {
       if (!validDimensions(dimensions.width, dimensions.height)) throw new Error('Invalid screenshot dimensions.');
+      const createdAt = new Date().toISOString();
       write(id, {
         schemaVersion: 1,
-        createdAt: new Date().toISOString(),
+        createdAt,
         id,
-        name: `Screenshot ${new Date().toISOString()}`,
+        name: name === undefined ? `Screenshot ${createdAt}` : screenshotName(name),
         width: dimensions.width,
         height: dimensions.height,
         preset,

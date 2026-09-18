@@ -188,7 +188,12 @@
     "zoomOut": "Reduzir tela",
     "resetZoom": "Redefinir visualização da tela",
     "canvasZoom": "Zoom da tela",
-    "toggleGrid": "Alternar grade 3×3"
+    "toggleGrid": "Alternar grade 3×3",
+    "takeScreenshot": "Capturar a tela do canvas",
+    "screenshotCreated": "Captura de tela criada",
+    "openInScreenshotEditor": "Abrir no editor de capturas",
+    "screenshotFailed": "Não foi possível criar a captura: {message}",
+    "screenshotOpenFailed": "Não foi possível abrir o editor de capturas: {message}"
   },
   "CaptionClipPanel": {
     "generatedByAI": "Gerado por IA (Whisper)",

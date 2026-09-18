@@ -188,7 +188,12 @@
     "zoomOut": "Thu nhỏ khung vẽ",
     "resetZoom": "Đặt lại góc nhìn",
     "canvasZoom": "Thu phóng khung vẽ",
-    "toggleGrid": "Bật/tắt lưới 3x3"
+    "toggleGrid": "Bật/tắt lưới 3x3",
+    "takeScreenshot": "Chụp ảnh canvas",
+    "screenshotCreated": "Đã tạo ảnh chụp màn hình",
+    "openInScreenshotEditor": "Mở trong trình chỉnh sửa ảnh chụp",
+    "screenshotFailed": "Không thể tạo ảnh chụp màn hình: {message}",
+    "screenshotOpenFailed": "Không thể mở trình chỉnh sửa ảnh chụp: {message}"
   },
   "CaptionClipPanel": {
     "generatedByAI": "Tạo bởi AI (Whisper)",

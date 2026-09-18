@@ -188,7 +188,12 @@
     "zoomOut": "Aus der Arbeitsfläche herauszoomen",
     "resetZoom": "Arbeitsflächenansicht zurücksetzen",
     "canvasZoom": "Arbeitsflächen-Zoom",
-    "toggleGrid": "3×3-Raster umschalten"
+    "toggleGrid": "3×3-Raster umschalten",
+    "takeScreenshot": "Screenshot der Arbeitsfläche aufnehmen",
+    "screenshotCreated": "Screenshot erstellt",
+    "openInScreenshotEditor": "Im Screenshot-Editor öffnen",
+    "screenshotFailed": "Screenshot konnte nicht erstellt werden: {message}",
+    "screenshotOpenFailed": "Screenshot-Editor konnte nicht geöffnet werden: {message}"
   },
   "CaptionClipPanel": {
     "generatedByAI": "Von KI generiert (Whisper)",

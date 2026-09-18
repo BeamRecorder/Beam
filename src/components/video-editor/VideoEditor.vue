@@ -32,6 +32,7 @@ import Button from '~/components/ui/button/Button.vue';
 import { useVideoEditor } from '~/components/video-editor/composables/useVideoEditor';
 import { useEditorMediaDrop } from '~/components/video-editor/composables/useEditorMediaDrop';
 import { useClipboardImagePaste } from '~/components/video-editor/composables/useClipboardImagePaste';
+import { useCanvasScreenshot } from '~/components/video-editor/composables/useCanvasScreenshot';
 import { usePlaybackErrorToast } from '~/components/video-editor/composables/usePlaybackErrorToast';
 import { useEditorUndoRedo, type EditorStateSnapshot } from '~/components/video-editor/composables/useEditorUndoRedo';
 import { useTimelineResize } from '~/components/video-editor/composables/useTimelineResize';
@@ -784,6 +785,10 @@ const isGridVisible = ref(false);
 const { timelineZoomLevel } = useTimelineZoom();
 const isSnappingEnabled = ref(true);
 const editorCanvasRef = ref<InstanceType<typeof EditorCanvas> | null>(null);
+const { isCapturingScreenshot, takeCanvasScreenshot } = useCanvasScreenshot({
+  source: editorCanvasRef,
+  project: () => props.project,
+});
 const canvasPreviewStageRef = ref<HTMLElement | null>(null);
 const canvasFullscreen = useElementFullscreen(() => canvasPreviewStageRef.value);
 const finishCrop = () => {
@@ -1012,11 +1017,13 @@ onBeforeUnmount(() => {
             :can-crop="Boolean(selectedTransformClip && isVisualClip(selectedTransformClip))"
             :is-cropping="isCropping"
             :is-grid-visible="isGridVisible"
+            :is-capturing-screenshot="isCapturingScreenshot"
             :zoom-percent="editorCanvasRef?.viewportZoom.zoomPercent.value ?? 100"
             :is-zoomed-or-panned="editorCanvasRef?.viewportZoom.isZoomedOrPanned.value ?? false"
             @select:preset="selectCanvasPreset"
             @toggle:crop="toggleCrop"
             @toggle:grid="isGridVisible = !isGridVisible"
+            @take:screenshot="takeCanvasScreenshot"
             @zoom:in="editorCanvasRef?.viewportZoom.zoomIn()"
             @zoom:out="editorCanvasRef?.viewportZoom.zoomOut()"
             @reset:zoom="editorCanvasRef?.viewportZoom.resetZoom()"

@@ -188,7 +188,12 @@
     "zoomOut": "캔버스 축소",
     "resetZoom": "캔버스 보기 초기화",
     "canvasZoom": "캔버스 확대/축소",
-    "toggleGrid": "3×3 격자 전환"
+    "toggleGrid": "3×3 격자 전환",
+    "takeScreenshot": "캔버스 스크린샷 찍기",
+    "screenshotCreated": "스크린샷을 만들었습니다",
+    "openInScreenshotEditor": "스크린샷 편집기에서 열기",
+    "screenshotFailed": "스크린샷을 만들 수 없습니다: {message}",
+    "screenshotOpenFailed": "스크린샷 편집기를 열 수 없습니다: {message}"
   },
   "CaptionClipPanel": {
     "generatedByAI": "AI 생성(Whisper)",

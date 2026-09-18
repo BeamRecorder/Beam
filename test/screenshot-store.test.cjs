@@ -96,6 +96,28 @@ test('creates, completes, lists, reads and resolves an opaque screenshot URL', (
   }
 });
 
+test('uses a validated custom name when completing a canvas screenshot', () => {
+  const fixture = makeStore();
+  try {
+    const pending = fixture.store.create();
+    fs.writeFileSync(pending.path, pngBytes);
+    const completed = fixture.store.complete(
+      pending.id,
+      { width: 1920, height: 1080 },
+      { background: 'studio' },
+      '  Product demo — Sep 18, 2026  ',
+    );
+
+    assert.equal(completed.name, 'Product demo — Sep 18, 2026');
+    assert.throws(
+      () => fixture.store.complete(fixture.store.create().id, { width: 10, height: 10 }, {}, '   '),
+      /invalid screenshot name/i,
+    );
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
 test('rejects UUID traversal and malformed screenshot media URLs', () => {
   const fixture = makeStore();
   try {
