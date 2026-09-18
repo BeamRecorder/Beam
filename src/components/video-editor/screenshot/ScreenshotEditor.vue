@@ -67,6 +67,7 @@ const {
   selectedImage,
   image,
   pasteImage,
+  canPasteLayers,
   fail,
   savePreset,
   presetAction,
@@ -93,6 +94,7 @@ const {
 );
 useClipboardImagePaste({
   disabled: () => busy.value || cropping.value,
+  preferInternal: canPasteLayers,
   paste: pasteImage,
   onError: fail,
 });

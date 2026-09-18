@@ -2,6 +2,7 @@ import { defineComponent, h } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { clipboardContainsImage, isEditablePasteTarget, useClipboardImagePaste } from './useClipboardImagePaste';
+import { resetInternalEditorClipboardSync, syncInternalEditorClipboard } from './internal-editor-clipboard';
 
 const clipboardItem = (kind: string, type: string) => ({ kind, type });
 
@@ -15,7 +16,7 @@ const pasteEvent = (target: EventTarget | null, items: Array<{ kind: string; typ
 
 let wrapper: VueWrapper | undefined;
 
-const mountPaste = (disabled = false) => {
+const mountPaste = (disabled = false, preferInternal = false) => {
   let state!: ReturnType<typeof useClipboardImagePaste>;
   const paste = vi.fn().mockResolvedValue(undefined);
   const onError = vi.fn();
@@ -23,6 +24,7 @@ const mountPaste = (disabled = false) => {
     setup() {
       state = useClipboardImagePaste({
         disabled: () => disabled,
+        preferInternal: () => preferInternal,
         paste,
         onError,
       });
@@ -36,6 +38,8 @@ const mountPaste = (disabled = false) => {
 afterEach(() => {
   wrapper?.unmount();
   wrapper = undefined;
+  resetInternalEditorClipboardSync();
+  vi.unstubAllGlobals();
 });
 
 describe('clipboard image paste detection', () => {
@@ -74,6 +78,33 @@ describe('useClipboardImagePaste', () => {
     expect(event.preventDefault).toHaveBeenCalledOnce();
     expect(paste).toHaveBeenCalledOnce();
     expect(onError).not.toHaveBeenCalled();
+  });
+
+  it('leaves a stale native image for a fresh internal editor copy', async () => {
+    syncInternalEditorClipboard('Rectangle');
+    const { state, paste } = mountPaste(false, true);
+    const event = pasteEvent(document.body, [clipboardItem('file', 'image/png')]);
+
+    state.handlePaste(event);
+    await flushPromises();
+
+    expect(event.preventDefault).not.toHaveBeenCalled();
+    expect(paste).not.toHaveBeenCalled();
+  });
+
+  it('imports a newer native image after the internal clipboard was synchronized', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    syncInternalEditorClipboard('Rectangle');
+    await flushPromises();
+    const { state, paste } = mountPaste(false, true);
+    const event = pasteEvent(document.body, [clipboardItem('file', 'image/png')]);
+
+    state.handlePaste(event);
+    await flushPromises();
+
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+    expect(paste).toHaveBeenCalledOnce();
   });
 
   it.each([

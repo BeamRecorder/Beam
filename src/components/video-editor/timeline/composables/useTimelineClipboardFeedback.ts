@@ -1,6 +1,8 @@
 import { onBeforeUnmount, ref } from 'vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useToastStore } from '~/ui/toast/toastStore';
+import { timelineClipboardPreview } from '../../clipboard/clipboard-preview';
+import { syncInternalEditorClipboard } from '../../composables/internal-editor-clipboard';
 import type {
   TimelineClipboardDescriptor,
   TimelineClipboardItem,
@@ -8,7 +10,7 @@ import type {
 } from './timeline-clipboard-types';
 
 const PASTE_HIGHLIGHT_DURATION_MS = 900;
-const SUCCESS_TOAST_DURATION_MS = 1_500;
+const SUCCESS_TOAST_DURATION_MS = 2_400;
 const ERROR_TOAST_DURATION_MS = 5_000;
 
 export const useTimelineClipboardFeedback = () => {
@@ -23,13 +25,14 @@ export const useTimelineClipboardFeedback = () => {
     if (descriptor.kind === 'selection') return descriptor.items.map(describeItem).join(', ');
     return descriptor.name;
   };
-  const reportCopySuccess = (item: TimelineClipboardItem) =>
-    toast.success(
-      t('timelineCopiedItem', { item: describeItem(item.descriptor) }),
-      SUCCESS_TOAST_DURATION_MS,
-      undefined,
-      { leadingIcon: 'copy' },
-    );
+  const reportCopySuccess = (item: TimelineClipboardItem) => {
+    const description = describeItem(item.descriptor);
+    syncInternalEditorClipboard(description);
+    toast.success(t('timelineCopiedItem', { item: description }), SUCCESS_TOAST_DURATION_MS, undefined, {
+      leadingIcon: 'copy',
+      preview: timelineClipboardPreview(item),
+    });
+  };
   const reportPasteError = (message: string) =>
     toast.error(t('timelinePasteFailed', { message }), ERROR_TOAST_DURATION_MS);
   const reportPasteSuccess = (highlight: Omit<TimelinePasteHighlight, 'timestamp'>, item: TimelineClipboardItem) => {
@@ -43,7 +46,7 @@ export const useTimelineClipboardFeedback = () => {
       t('timelinePastedItem', { item: describeItem(item.descriptor) }),
       SUCCESS_TOAST_DURATION_MS,
       undefined,
-      { leadingIcon: 'paste' },
+      { leadingIcon: 'paste', preview: timelineClipboardPreview(item) },
     );
   };
 

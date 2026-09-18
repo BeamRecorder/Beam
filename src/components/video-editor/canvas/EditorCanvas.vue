@@ -357,7 +357,7 @@ const editCanvasContent = (event: MouseEvent) => {
   if (elements.begin(event)) return;
   if (captionEditing.begin(event)) return;
   if (props.isPlaying || props.isCropping || props.selectedZoom?.mode === 'manual') return;
-  const clipId = transformAndCrop.clipIdAt(event, canvasRef.value);
+  const clipId = transformAndCrop.clipIdAt(event, canvasRef.value, true);
   const clip = props.composition.clips.find((candidate) => candidate.id === clipId);
   if (clip && isVisualClip(clip) && !clip.locked) emit('request:crop', clip.id);
 };

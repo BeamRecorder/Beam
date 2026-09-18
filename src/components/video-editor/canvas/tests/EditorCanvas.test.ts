@@ -926,7 +926,8 @@ describe('EditorCanvas', () => {
     await mounted.find('.crop-overlay-box').trigger('pointerdown');
     await mounted.find('.crop-overlay-box').trigger('pointermove');
     await mounted.find('.crop-overlay-box').trigger('pointerup');
-    await mounted.find('button').trigger('click');
+    (document.body.querySelector('.crop-ok-button') as HTMLButtonElement).click();
+    await nextTick();
     expect(state.beginCropDrag).toHaveBeenCalledWith(expect.anything(), 'move');
     expect(state.moveCropDrag).toHaveBeenCalled();
     expect(state.endCropDrag).toHaveBeenCalled();
@@ -1030,6 +1031,24 @@ describe('EditorCanvas', () => {
 
     expect(mounted.emitted('request:crop')).toContainEqual(['image']);
     expect(mounted.emitted('caption-editing-start')).toBeUndefined();
+  });
+
+  it('requests crop for a screen recording and enables screen hit-testing on double-click', async () => {
+    state.clipIdAt.mockReturnValue('screen');
+    const mounted = mountEditor({ selectedTransformClip: screen() });
+
+    await mounted.get('.canvas-island').trigger('dblclick', {
+      button: 0,
+      clientX: 400,
+      clientY: 225,
+    });
+
+    expect(state.clipIdAt).toHaveBeenCalledWith(
+      expect.objectContaining({ clientX: 400, clientY: 225 }),
+      expect.any(HTMLCanvasElement),
+      true,
+    );
+    expect(mounted.emitted('request:crop')).toContainEqual(['screen']);
   });
 
   it('raycasts layers above an already selected recording before starting its drag', async () => {

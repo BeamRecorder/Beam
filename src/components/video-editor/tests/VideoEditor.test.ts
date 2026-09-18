@@ -626,6 +626,18 @@ describe('VideoEditor', () => {
     expect(historyState.commitNow).toHaveBeenCalledTimes(commitCallsBefore);
   });
 
+  it('starts screen cropping when the canvas requests it', async () => {
+    const mounted = mountEditor();
+    const canvas = mounted.findComponent({ name: 'MockEditorCanvas' });
+
+    canvas.vm.$emit('request:crop', 'screen');
+    await mounted.vm.$nextTick();
+
+    expect(editorState.store.compositionState.selectedClipId.value).toBe('screen');
+    expect(editorState.store.compositionState.selectedClipIds.value).toEqual(['screen']);
+    expect(canvas.attributes('data-is-cropping')).toBe('true');
+  });
+
   it('commits one crop history state and clears the shared preview through undo and redo', async () => {
     const mounted = mountEditor();
     const state = editorState.store;
@@ -964,7 +976,12 @@ describe('VideoEditor', () => {
     await mounted.vm.$nextTick();
 
     expect(toast.success).toHaveBeenCalledTimes(1);
-    expect(toast.success).toHaveBeenCalledWith('Copied: screen.mp4', 1_500, undefined, { leadingIcon: 'copy' });
+    expect(toast.success).toHaveBeenCalledWith(
+      'Copied: screen.mp4',
+      2_400,
+      undefined,
+      expect.objectContaining({ leadingIcon: 'copy', preview: expect.objectContaining({ kind: 'video' }) }),
+    );
   });
 
   it('rejects a pasted item from another project without mutating the timeline', async () => {
@@ -998,7 +1015,12 @@ describe('VideoEditor', () => {
     expect(editorState.store.activeTab.value).toBe('clip');
     expect(editorState.store.editorState.scheduleSave).toHaveBeenCalled();
     expect(historyState.commitNow).toHaveBeenCalledWith(expect.objectContaining({ composition }));
-    expect(toast.success).toHaveBeenCalledWith('Pasted: screen.mp4', 1_500, undefined, { leadingIcon: 'paste' });
+    expect(toast.success).toHaveBeenCalledWith(
+      'Pasted: screen.mp4',
+      2_400,
+      undefined,
+      expect.objectContaining({ leadingIcon: 'paste', preview: expect.objectContaining({ kind: 'video' }) }),
+    );
   });
 
   it('pastes a copied clip bundle onto one new layer without changing sources and commits once', async () => {
@@ -1106,9 +1128,15 @@ describe('VideoEditor', () => {
     expect(state.editorState.scheduleSave).toHaveBeenCalledTimes(saveCount + 1);
     expect(historyState.commitNow).toHaveBeenCalledTimes(commitCount + 1);
     expect(toast.error).not.toHaveBeenCalled();
-    expect(toast.success).toHaveBeenCalledWith('Pasted: screen.mp4, overlay.mp4', 1_500, undefined, {
-      leadingIcon: 'paste',
-    });
+    expect(toast.success).toHaveBeenCalledWith(
+      'Pasted: screen.mp4, overlay.mp4',
+      2_400,
+      undefined,
+      expect.objectContaining({
+        leadingIcon: 'paste',
+        preview: expect.objectContaining({ kind: 'video', count: 2 }),
+      }),
+    );
   });
 
   it('does not apply a partially valid clipboard bundle when a later item does not fit', async () => {
@@ -1213,7 +1241,12 @@ describe('VideoEditor', () => {
     expect(editorState.store.activeTab.value).toBe('zoom');
     expect(editorState.store.compositionState.selectedClipId.value).toBeNull();
     expect(historyState.commitNow).toHaveBeenCalled();
-    expect(toast.success).toHaveBeenCalledWith('Pasted: Zoom 1', 1_500, undefined, { leadingIcon: 'paste' });
+    expect(toast.success).toHaveBeenCalledWith(
+      'Pasted: Zoom 1',
+      2_400,
+      undefined,
+      expect.objectContaining({ leadingIcon: 'paste', preview: expect.objectContaining({ kind: 'image' }) }),
+    );
   });
 
   it('keeps the latest paste highlight alive and expires it 900ms after the latest paste', async () => {

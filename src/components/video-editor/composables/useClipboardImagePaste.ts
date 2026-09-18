@@ -1,4 +1,5 @@
 import { onMounted, onScopeDispose } from 'vue';
+import { shouldPreferInternalEditorClipboard } from './internal-editor-clipboard';
 
 const EDITABLE_PASTE_TARGET =
   'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]';
@@ -11,15 +12,18 @@ export const clipboardContainsImage = (event: ClipboardEvent) =>
 
 export function useClipboardImagePaste(options: {
   disabled?: () => boolean;
+  preferInternal?: () => boolean;
   paste: () => Promise<void>;
   onError: (error: unknown) => void;
 }) {
   const handlePaste = (event: ClipboardEvent) => {
+    const containsImage = clipboardContainsImage(event);
     if (
       event.defaultPrevented ||
       options.disabled?.() ||
       isEditablePasteTarget(event.target) ||
-      !clipboardContainsImage(event)
+      !containsImage ||
+      (options.preferInternal?.() && shouldPreferInternalEditorClipboard(containsImage))
     )
       return;
     event.preventDefault();

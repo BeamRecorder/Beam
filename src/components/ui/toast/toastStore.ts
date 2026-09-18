@@ -22,6 +22,13 @@ type ToastCopyAction = ToastActionBase & {
 
 const isCopyAction = (action: ToastAction): action is ToastCopyAction => typeof action.copyText === 'string';
 
+export interface ToastPreview {
+  kind: 'image' | 'video';
+  src: string;
+  alt: string;
+  count?: number;
+}
+
 export interface Toast {
   id: string;
   message: string;
@@ -29,13 +36,26 @@ export interface Toast {
   duration: number;
   action?: ToastAction;
   leadingIcon?: 'copy' | 'paste';
+  preview?: ToastPreview;
   count: number;
   revision: number;
 }
 
 export interface ToastOptions {
   leadingIcon?: Toast['leadingIcon'];
+  preview?: ToastPreview;
 }
+
+const samePreview = (left?: ToastPreview, right?: ToastPreview) =>
+  left === right ||
+  Boolean(
+    left &&
+    right &&
+    left.kind === right.kind &&
+    left.src === right.src &&
+    left.alt === right.alt &&
+    left.count === right.count,
+  );
 
 const sameAction = (left?: ToastAction, right?: ToastAction) => {
   if (!left || !right) return left === right;
@@ -84,6 +104,7 @@ export const useToastStore = defineStore('toast', () => {
         toast.type === type &&
         toast.duration === duration &&
         toast.leadingIcon === options?.leadingIcon &&
+        samePreview(toast.preview, options?.preview) &&
         sameAction(toast.action, action),
     );
     if (duplicate) {
@@ -101,6 +122,7 @@ export const useToastStore = defineStore('toast', () => {
       duration,
       action,
       leadingIcon: options?.leadingIcon,
+      preview: options?.preview,
       count: 1,
       revision: 0,
     };

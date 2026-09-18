@@ -1,6 +1,7 @@
 import { computed, onMounted, onUnmounted } from 'vue';
 import type { ClipComposition } from '~/media/shared/composition-types';
 import { clipboardContainsImage, isEditablePasteTarget } from '../../composables/useClipboardImagePaste';
+import { shouldPreferInternalEditorClipboard } from '../../composables/internal-editor-clipboard';
 import { getClipCategory } from './useTimelineClipboard';
 import type { TimelinePasteTarget } from './timeline-clipboard-types';
 
@@ -47,13 +48,14 @@ export function useTimelineClipboardShortcuts(options: {
     }
   };
   const paste = (event: ClipboardEvent) => {
+    const containsImage = clipboardContainsImage(event);
     if (
       event.defaultPrevented ||
       options.disabled() ||
       isEditablePasteTarget(event.target) ||
       document.querySelector('[role="dialog"][aria-modal="true"]') ||
-      clipboardContainsImage(event) ||
-      !options.canPaste()
+      !options.canPaste() ||
+      (containsImage && !shouldPreferInternalEditorClipboard(containsImage))
     )
       return;
     event.preventDefault();

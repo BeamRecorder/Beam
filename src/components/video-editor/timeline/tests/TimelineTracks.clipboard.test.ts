@@ -258,7 +258,10 @@ describe('TimelineTracks', () => {
     });
 
     await mounted!.setProps({ currentTime: 6 });
-    expect(dispatchShortcut('v', { metaKey: true }).defaultPrevented).toBe(true);
+    const pasteEvent = new Event('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(pasteEvent, 'clipboardData', { configurable: true, value: { items: [] } });
+    window.dispatchEvent(pasteEvent);
+    expect(pasteEvent.defaultPrevented).toBe(true);
     await flushPromises();
 
     const pastePayload = mounted!.emitted('paste:item')?.at(-1)?.[0] as
@@ -276,7 +279,10 @@ describe('TimelineTracks', () => {
       placement: 'new-layer',
     });
 
-    expect(dispatchShortcut('v', { ctrlKey: true }).defaultPrevented).toBe(true);
+    const repeatedPasteEvent = new Event('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(repeatedPasteEvent, 'clipboardData', { configurable: true, value: { items: [] } });
+    window.dispatchEvent(repeatedPasteEvent);
+    expect(repeatedPasteEvent.defaultPrevented).toBe(true);
     await flushPromises();
     const ctrlPastePayload = mounted!.emitted('paste:item')?.at(-1)?.[0] as
       | { item: { type: string }; timeMs: number; target?: { category: string; placement?: string } }
@@ -311,9 +317,12 @@ describe('TimelineTracks', () => {
     input.remove();
 
     useTimelineClipboard().clearClipboard();
-    expect(dispatchShortcut('v', { ctrlKey: true }).defaultPrevented).toBe(true);
+    const emptyPasteEvent = new Event('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(emptyPasteEvent, 'clipboardData', { configurable: true, value: { items: [] } });
+    window.dispatchEvent(emptyPasteEvent);
+    expect(emptyPasteEvent.defaultPrevented).toBe(false);
     await flushPromises();
-    expect(mounted!.emitted('paste:error')).toContainEqual(['Copy a timeline item before pasting.']);
+    expect(mounted!.emitted('paste:error')).toBeUndefined();
     expect(mounted!.emitted('paste:item')?.length ?? 0).toBe(pastesBeforeEditableShortcuts);
   });
 

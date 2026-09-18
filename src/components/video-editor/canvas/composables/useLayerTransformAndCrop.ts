@@ -299,6 +299,7 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
   const clipIdAt = (
     event: Pick<PointerEvent, 'clientX' | 'clientY'>,
     canvas: HTMLCanvasElement | null,
+    includeScreen = false,
   ): string | null => {
     if (!canvas) return null;
     const canvasRect = canvas.getBoundingClientRect();
@@ -328,9 +329,9 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
           isVisualClip(clip) || isColorClip(clip) || isShapeClip(clip) || isBlurClip(clip),
       ),
     ];
-    // The screen layer participates in occlusion, but its existing dedicated
-    // selection path owns the actual screen selection.
-    return topmostClipIdAtPoint(clips, { x, y }, displayLayoutFor);
+    // Normal pointer selection remains owned by the camera layer. Explicit
+    // editing gestures such as double-click crop can still target the screen.
+    return topmostClipIdAtPoint(clips, { x, y }, displayLayoutFor, includeScreen);
   };
 
   const selectVisualAt = (event: PointerEvent, canvas: HTMLCanvasElement | null) => {

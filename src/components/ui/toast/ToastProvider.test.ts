@@ -96,6 +96,19 @@ describe('ToastProvider', () => {
     expect(wrapper.find('.toast-icon-morph').exists()).toBe(true);
   });
 
+  it('renders a generic media thumbnail and selection count', () => {
+    const store = useToastStore();
+    store.success('Copied rectangle', 0, undefined, {
+      leadingIcon: 'copy',
+      preview: { kind: 'image', src: 'data:image/svg+xml,preview', alt: 'Rectangle', count: 3 },
+    });
+    const wrapper = mount(ToastProvider);
+
+    expect(wrapper.get('.toast-preview').attributes('aria-label')).toBe('Rectangle');
+    expect(wrapper.get('.toast-preview img').attributes('src')).toBe('data:image/svg+xml,preview');
+    expect(wrapper.get('.toast-preview-count').text()).toBe('+2');
+  });
+
   it.each([
     ['copy', 'lucide-copy'],
     ['paste', 'lucide-clipboard-paste'],

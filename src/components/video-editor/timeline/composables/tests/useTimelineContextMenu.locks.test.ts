@@ -9,6 +9,10 @@ import type { TimelineTracksEmits } from '../timeline-tracks-types';
 import { useTimelineClipboard } from '../useTimelineClipboard';
 import { useTimelineClipboardShortcuts } from '../useTimelineClipboardShortcuts';
 import { useTimelineContextMenu } from '../useTimelineContextMenu';
+import {
+  resetInternalEditorClipboardSync,
+  syncInternalEditorClipboard,
+} from '../../../composables/internal-editor-clipboard';
 
 const asset: MediaAsset = {
   id: 'asset-1',
@@ -127,6 +131,7 @@ afterEach(() => {
   shortcutWrapper?.unmount();
   shortcutWrapper = undefined;
   useTimelineClipboard().clearClipboard();
+  resetInternalEditorClipboardSync();
 });
 
 describe('useTimelineContextMenu lock actions', () => {
@@ -266,6 +271,21 @@ describe('useTimelineContextMenu lock actions', () => {
 
     expect(event.defaultPrevented).toBe(false);
     expect(menu.emitSpy).not.toHaveBeenCalledWith('paste:item', expect.anything());
+  });
+
+  it('pastes a freshly copied timeline item instead of a stale native image', () => {
+    const menu = createMenu();
+    useTimelineClipboard().copyClip('project-a', menu.clips[0]!);
+    syncInternalEditorClipboard('clip-1');
+    mountClipboardShortcuts(menu);
+
+    const event = dispatchPaste(window, [{ kind: 'file', type: 'image/png' }]);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(menu.emitSpy).toHaveBeenCalledWith(
+      'paste:item',
+      expect.objectContaining({ item: expect.objectContaining({ type: 'clip' }) }),
+    );
   });
 
   it('leaves Ctrl+X and the existing clipboard untouched when any selected item is locked', () => {

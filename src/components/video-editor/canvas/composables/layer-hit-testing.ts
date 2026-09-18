@@ -29,6 +29,7 @@ export function topmostClipIdAtPoint(
   clips: readonly HitTestClip[],
   point: { x: number; y: number },
   layoutFor: (clip: HitTestClip) => HitTestLayout | null,
+  includeScreen = false,
 ): string | null {
   for (const clip of clips) {
     const layout = layoutFor(clip);
@@ -41,7 +42,7 @@ export function topmostClipIdAtPoint(
             (isVisualClip(clip) && clip.cameraFramingPreset === 'circle')
           ? pointInsideEllipse(testPoint.x, testPoint.y, layout, RAYCAST_SLOP_PX)
           : pointInsideRect(testPoint.x, testPoint.y, layout, RAYCAST_SLOP_PX);
-    if (insideShape) return clip.kind === 'screen' ? null : clip.id;
+    if (insideShape) return clip.kind === 'screen' && !includeScreen ? null : clip.id;
   }
   return null;
 }

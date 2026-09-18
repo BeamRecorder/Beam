@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setCurrentLocale } from '~/i18n';
 import type { Clip } from '~/media/shared/composition-types';
 import type { TimelineClipboardItem } from '../timeline-clipboard-types';
+import { resetInternalEditorClipboardSync } from '../../../composables/internal-editor-clipboard';
 
 const toast = vi.hoisted(() => ({
   error: vi.fn(),
@@ -47,28 +48,41 @@ describe('useTimelineClipboardFeedback', () => {
     wrapper = undefined;
     vi.useRealTimers();
     setCurrentLocale('en');
+    resetInternalEditorClipboardSync();
   });
 
   it('includes the source item name in copy and paste success toasts', () => {
     const source = item({ kind: 'item', name: 'screen-recording.mp4' });
 
     feedback.reportCopySuccess(source);
-    expect(toast.success).toHaveBeenCalledWith('Copied: screen-recording.mp4', 1_500, undefined, {
-      leadingIcon: 'copy',
-    });
+    expect(toast.success).toHaveBeenCalledWith(
+      'Copied: screen-recording.mp4',
+      2_400,
+      undefined,
+      expect.objectContaining({
+        leadingIcon: 'copy',
+        preview: expect.objectContaining({ kind: 'image', alt: expect.any(String) }),
+      }),
+    );
 
     feedback.reportPasteSuccess({ type: 'clip', id: 'pasted-clip' }, source);
-    expect(toast.success).toHaveBeenLastCalledWith('Pasted: screen-recording.mp4', 1_500, undefined, {
-      leadingIcon: 'paste',
-    });
+    expect(toast.success).toHaveBeenLastCalledWith(
+      'Pasted: screen-recording.mp4',
+      2_400,
+      undefined,
+      expect.objectContaining({ leadingIcon: 'paste', preview: expect.any(Object) }),
+    );
     expect(feedback.recentPaste.value).toEqual({ type: 'clip', id: 'pasted-clip', timestamp: expect.any(Number) });
   });
 
   it('formats caption and zoom descriptors in detailed feedback', () => {
     feedback.reportCopySuccess(item({ kind: 'caption', text: 'Hello timeline' }));
-    expect(toast.success).toHaveBeenLastCalledWith('Copied: Caption “Hello timeline”', 1_500, undefined, {
-      leadingIcon: 'copy',
-    });
+    expect(toast.success).toHaveBeenLastCalledWith(
+      'Copied: Caption “Hello timeline”',
+      2_400,
+      undefined,
+      expect.objectContaining({ leadingIcon: 'copy', preview: expect.any(Object) }),
+    );
 
     feedback.reportPasteSuccess(
       { type: 'zoom', id: 'pasted-zoom' },
@@ -80,9 +94,12 @@ describe('useTimelineClipboardFeedback', () => {
         descriptor: { kind: 'zoom', number: 2 },
       },
     );
-    expect(toast.success).toHaveBeenLastCalledWith('Pasted: Zoom 2', 1_500, undefined, {
-      leadingIcon: 'paste',
-    });
+    expect(toast.success).toHaveBeenLastCalledWith(
+      'Pasted: Zoom 2',
+      2_400,
+      undefined,
+      expect.objectContaining({ leadingIcon: 'paste', preview: expect.any(Object) }),
+    );
   });
 
   it('lists every copied and pasted item name in a multi-item bundle toast', () => {
@@ -126,17 +143,23 @@ describe('useTimelineClipboardFeedback', () => {
     feedback.reportCopySuccess(bundle);
     expect(toast.success).toHaveBeenLastCalledWith(
       'Copied: screen.mp4, Caption “Hello timeline”, Zoom 2',
-      1_500,
+      2_400,
       undefined,
-      { leadingIcon: 'copy' },
+      expect.objectContaining({
+        leadingIcon: 'copy',
+        preview: expect.objectContaining({ count: 3 }),
+      }),
     );
 
     feedback.reportPasteSuccess({ type: 'clip', id: 'pasted-screen' }, bundle);
     expect(toast.success).toHaveBeenLastCalledWith(
       'Pasted: screen.mp4, Caption “Hello timeline”, Zoom 2',
-      1_500,
+      2_400,
       undefined,
-      { leadingIcon: 'paste' },
+      expect.objectContaining({
+        leadingIcon: 'paste',
+        preview: expect.objectContaining({ count: 3 }),
+      }),
     );
     expect(feedback.recentPaste.value).toEqual({
       type: 'clip',

@@ -14,9 +14,13 @@ User-facing changes to Beam are documented in this file.
 
 - Screenshot layers can now be reordered by dragging the layer row directly, without a separate drag handle.
 - Screenshot editing now opens on Elements, and new annotation shapes start as unfilled outlined rectangles.
+- Crop measurements and confirmation now stay together in a compact floating HUD outside the selected media.
+- Copy and paste feedback in Screenshot and Studio now includes a visual thumbnail of the affected element.
 
 ### Fixed
 
+- Fixed double-click crop so the primary screen recording can enter crop mode in Studio.
+- Fixed Studio and Screenshot paste shortcuts so a freshly copied Beam element wins over a stale system-clipboard image.
 - Fixed KDE/Wayland cursor metadata and pointer-motion capture for touchpads and absolute pointing devices.
 - Fixed Windows cursor coordinates when display scaling is above 100%.
 - Improved editor startup timeout diagnostics with copyable technical details.

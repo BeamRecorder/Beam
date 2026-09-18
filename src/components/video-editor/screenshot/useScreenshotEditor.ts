@@ -454,6 +454,7 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
     image,
     addImage,
     pasteImage,
+    canPasteLayers: layerClipboard.canPaste,
     fail,
     savePreset,
     presetAction,

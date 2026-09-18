@@ -1,5 +1,6 @@
 import { onMounted, onScopeDispose } from 'vue';
 import { clipboardContainsImage, isEditablePasteTarget } from '../composables/useClipboardImagePaste';
+import { shouldPreferInternalEditorClipboard } from '../composables/internal-editor-clipboard';
 import type { ScreenshotLayer } from './screenshot-layer-types';
 
 export function useScreenshotLayerShortcuts(options: {
@@ -41,13 +42,14 @@ export function useScreenshotLayerShortcuts(options: {
     options.remove(layer.id);
   };
   const paste = (event: ClipboardEvent) => {
+    const containsImage = clipboardContainsImage(event);
     if (
       event.defaultPrevented ||
       options.disabled() ||
       isEditablePasteTarget(event.target) ||
       (event.target instanceof Element && event.target.closest('[role="menu"], .popover-content')) ||
       document.querySelector('[role="dialog"][aria-modal="true"]') ||
-      clipboardContainsImage(event)
+      (containsImage && !shouldPreferInternalEditorClipboard(containsImage))
     )
       return;
     if (options.paste()) event.preventDefault();

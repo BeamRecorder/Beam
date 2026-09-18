@@ -67,6 +67,7 @@ import type { TimelinePasteRequest } from '~/components/video-editor/timeline/co
 import { pasteTimelineClipboard } from '~/components/video-editor/timeline/composables/paste-timeline-clipboard';
 import type { AddVisualElementRequest } from './composition/visual-element-types';
 import { useTimelineClipboardFeedback } from '~/components/video-editor/timeline/composables/useTimelineClipboardFeedback';
+import { useTimelineClipboard } from '~/components/video-editor/timeline/composables/useTimelineClipboard';
 import { EMPTY_CLIP_TRANSITIONS } from '~/media/shared/clip-transitions';
 import { usePreviewPerformanceMonitor } from './performance/usePreviewPerformanceMonitor';
 import { createMediaProcessingCollector, MEDIA_PROCESSING_COLLECTOR } from './performance/media-processing-pressure';
@@ -217,6 +218,7 @@ const mediaDrop = useEditorMediaDrop({
   t,
 });
 const isPastingClipboardImage = ref(false);
+const timelineClipboard = useTimelineClipboard();
 const pasteClipboardImage = async () => {
   const projectId = props.project?.id;
   if (!projectId || isPastingClipboardImage.value) return;
@@ -243,6 +245,7 @@ const pasteClipboardImage = async () => {
 };
 useClipboardImagePaste({
   disabled: () => !props.project || isPastingClipboardImage.value || mediaDrop.isImportingMedia.value,
+  preferInternal: () => timelineClipboard.canPaste(props.project?.id),
   paste: pasteClipboardImage,
   onError: (reason) => toast.error(`${t('mediaDropImportFailed')}: ${String(reason)}`),
 });

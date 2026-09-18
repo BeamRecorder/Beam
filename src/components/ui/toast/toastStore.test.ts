@@ -49,7 +49,7 @@ describe('toastStore', () => {
     expect(store.toasts).toHaveLength(0);
   });
 
-  it('does not deduplicate toasts when type, duration, action, or leading icon differs', () => {
+  it('does not deduplicate toasts when type, duration, action, icon, or preview differs', () => {
     const store = useToastStore();
     const retry = vi.fn();
 
@@ -59,8 +59,11 @@ describe('toastStore', () => {
     store.success('Copied', 2000);
     store.success('Copied', 1000, undefined, { leadingIcon: 'copy' });
     store.success('Copied', 1000, undefined, { leadingIcon: 'paste' });
+    store.success('Copied', 1000, undefined, {
+      preview: { kind: 'image', src: 'first.png', alt: 'First' },
+    });
 
-    expect(store.toasts).toHaveLength(6);
+    expect(store.toasts).toHaveLength(7);
     expect(store.toasts.every((toast) => toast.count === 1 && toast.revision === 0)).toBe(true);
   });
 });

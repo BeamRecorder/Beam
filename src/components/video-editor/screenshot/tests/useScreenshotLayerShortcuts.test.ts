@@ -3,6 +3,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import type { ScreenshotLayer } from '../screenshot-layer-types';
 import { useScreenshotLayerShortcuts } from '../useScreenshotLayerShortcuts';
+import {
+  resetInternalEditorClipboardSync,
+  syncInternalEditorClipboard,
+} from '../../composables/internal-editor-clipboard';
 
 const makeLayer = (
   kind: ScreenshotLayer['kind'] = 'shape',
@@ -87,6 +91,7 @@ afterEach(() => {
   for (const wrapper of wrappers.splice(0)) wrapper.unmount();
   for (const dialog of dialogs.splice(0)) dialog.remove();
   vi.restoreAllMocks();
+  resetInternalEditorClipboardSync();
 });
 
 describe('useScreenshotLayerShortcuts', () => {
@@ -141,6 +146,16 @@ describe('useScreenshotLayerShortcuts', () => {
 
     expect(event.defaultPrevented).toBe(false);
     expect(paste).not.toHaveBeenCalled();
+  });
+
+  it('pastes a freshly copied internal layer instead of a stale native image', () => {
+    const { paste } = mountShortcuts(makeLayer());
+    syncInternalEditorClipboard('Rectangle');
+
+    const event = dispatchPaste(window, [{ kind: 'file', type: 'image/png' }]);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(paste).toHaveBeenCalledOnce();
   });
 
   it('ignores clipboard shortcuts from editable controls, menus, and popovers', () => {

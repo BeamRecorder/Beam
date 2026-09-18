@@ -9,6 +9,10 @@ const toastStore = useToastStore();
 const reportCopyError = (error: Error) => {
   console.error('Unable to copy toast details.', error);
 };
+const revealVideoFrame = (event: Event) => {
+  const video = event.currentTarget as HTMLVideoElement;
+  if (Number.isFinite(video.duration) && video.duration > 0) video.currentTime = Math.min(0.1, video.duration / 2);
+};
 
 const handleToastAction = async (toast: Toast) => {
   if (!toast.action?.onClick) return;
@@ -25,6 +29,21 @@ const handleToastAction = async (toast: Toast) => {
   <div class="toast-container" aria-live="assertive">
     <TransitionGroup name="toast-list">
       <div v-for="toast in toastStore.toasts" :key="toast.id" class="toast-item" :class="toast.type">
+        <span v-if="toast.preview" class="toast-preview" :aria-label="toast.preview.alt" role="img">
+          <img v-if="toast.preview.kind === 'image'" :src="toast.preview.src" alt="" draggable="false" />
+          <video
+            v-else
+            :src="toast.preview.src"
+            aria-hidden="true"
+            muted
+            playsinline
+            preload="auto"
+            @loadedmetadata="revealVideoFrame"
+          />
+          <span v-if="toast.preview.count && toast.preview.count > 1" class="toast-preview-count">
+            +{{ toast.preview.count - 1 }}
+          </span>
+        </span>
         <span class="toast-icon-wrapper" aria-hidden="true">
           <span
             v-if="toast.type === 'success' && toast.leadingIcon"
@@ -116,6 +135,42 @@ const handleToastAction = async (toast: Toast) => {
   position: relative;
   overflow: hidden;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toast-preview {
+  position: relative;
+  display: grid;
+  width: 52px;
+  height: 38px;
+  flex-shrink: 0;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: repeating-conic-gradient(var(--color-bg-surface) 0% 25%, var(--color-bg-surface-hover) 0% 50%) 0 0 / 8px
+    8px;
+}
+
+.toast-preview img,
+.toast-preview video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.toast-preview-count {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  min-width: 17px;
+  padding: 1px 4px;
+  border-radius: var(--radius-full);
+  background: rgba(0, 0, 0, 0.78);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: center;
 }
 
 .toast-icon-wrapper {

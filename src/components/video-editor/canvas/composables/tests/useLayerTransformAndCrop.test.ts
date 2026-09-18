@@ -1170,6 +1170,7 @@ describe('useLayerTransformAndCrop', () => {
     const hit = pointer(canvas, { clientX: 200, clientY: 150 });
 
     expect(mounted.state.clipIdAt(hit, canvas)).toBeNull();
+    expect(mounted.state.clipIdAt(hit, canvas, true)).toBe('screen');
     mounted.currentTime.value = 2.5;
     expect(mounted.state.clipIdAt(hit, canvas)).toBe('blur');
 
