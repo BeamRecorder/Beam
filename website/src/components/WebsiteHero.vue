@@ -318,7 +318,7 @@ const beginInstall = () => {
   display: flex;
   position: relative;
   z-index: 2;
-  margin: -22px auto 30px;
+  margin: 18px auto 30px;
   align-items: center;
   justify-content: center;
   gap: 9px;
