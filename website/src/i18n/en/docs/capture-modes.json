@@ -1,0 +1,253 @@
+{
+  "pages": [
+    {
+      "slug": "modes/index",
+      "title": "Capture modes",
+      "description": "Choose the Beam workflow that matches how quickly and how deeply you need to edit.",
+      "lead": "Beam has three capture modes. Instant renders a styled video automatically, Studio opens a fully editable video project, and Screenshot opens a layer-based image editor.",
+      "sections": [
+        {
+          "title": "Choose a workflow",
+          "tables": [
+            {
+              "headers": ["Mode", "Result", "Use it when"],
+              "rows": [
+                [
+                  "Instant",
+                  "An exported video file copied to the system clipboard, plus an editable source project",
+                  "You want a polished recording without opening the timeline first."
+                ],
+                [
+                  "Studio",
+                  "A local project opened in the Video Editor",
+                  "You want complete control over timing, layers, motion, captions, audio, and export."
+                ],
+                [
+                  "Screenshot",
+                  "A screenshot project opened in the Screenshot Editor",
+                  "You want to crop, annotate, compose, copy, or save a still image."
+                ]
+              ]
+            }
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Instant copies a file, not a link",
+            "text": "Beam does not create a hosted share URL. Instant renders locally and publishes the completed video file to the system clipboard so you can paste it into an application that accepts files."
+          }
+        },
+        {
+          "title": "The shared capture setup",
+          "paragraphs": [
+            "Select Instant, Studio, or Screenshot from the Recorder top bar. The current mode is saved and also used by the Quick Snip shortcut. Source selection remains shared: choose a display, application window, or supported region before starting.",
+            "Studio is the default. Instant adds a video preset selector. Screenshot removes video-only device controls because it captures a still image."
+          ],
+          "steps": [
+            "Choose a mode from the Recorder top bar.",
+            "Choose Screen or Window and select the source. In Screen mode, optionally select a region where supported.",
+            "Configure the controls that belong to the current mode.",
+            "Start the capture and follow that mode's completion workflow."
+          ]
+        },
+        {
+          "title": "Quick Snip shortcut",
+          "paragraphs": [
+            "The configurable Quick Snip shortcut defaults to Alt+Shift+S. It opens the compact capture surface using the last selected mode. The same workflow is available from the system tray."
+          ],
+          "notice": {
+            "kind": "tip",
+            "title": "Fast repeat captures",
+            "text": "Beam remembers the current mode, preset, and supported region so repeated Instant recordings or screenshots require fewer setup steps."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "modes/instant",
+      "title": "Instant Mode",
+      "description": "Record, render, and copy a styled video file without opening the editor first.",
+      "lead": "Instant Mode applies an editor preset after recording, exports the composited video automatically, and places the finished file on the system clipboard while retaining the editable project.",
+      "sections": [
+        {
+          "title": "Before recording",
+          "steps": [
+            "Select Instant from the Recorder top bar.",
+            "Choose the display, window, or supported screen region to capture.",
+            "Choose a video preset. The preset carries its visual composition and export format, quality, resolution, frame rate, and audio-inclusion settings.",
+            "Choose the microphone, system audio, and camera sources you need.",
+            "Start from the Recorder, the Quick Snip shortcut, or the tray action."
+          ]
+        },
+        {
+          "title": "Automatic processing",
+          "paragraphs": [
+            "When the recording stops, Beam keeps the source project, applies the selected preset, and renders the same composited output used by Studio export. Zooms, cursor treatment, camera, visual layers, and included audio are processed locally.",
+            "The status pill shows a real preview, progress, and an estimated remaining duration. Hover it or focus it with the keyboard to reveal its available actions."
+          ],
+          "bullets": [
+            "Open in editor hands the retained project to Studio when you need another pass.",
+            "Copy again republishes a completed export to the clipboard.",
+            "Dismiss closes the status pill without deleting the project or exported file.",
+            "The completed status dismisses automatically after a short idle delay; interacting with it pauses that delay."
+          ]
+        },
+        {
+          "title": "Clipboard behavior",
+          "paragraphs": [
+            "Instant copies the exported video as a native file. It does not copy a URL and it does not upload the recording. The clipboard entry remains available until another application replaces it."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Paste destination support",
+            "text": "Paste works in applications that accept files from the operating-system clipboard. If an application only accepts text or images, reveal or open the export and attach it through that application's file picker."
+          }
+        },
+        {
+          "title": "Storage and recovery",
+          "paragraphs": [
+            "Instant projects appear in the shared Project Manager with an Instant mode label. The source project remains editable even after automatic export, so a fast capture can become a full Studio edit later.",
+            "If capture or export fails, Beam keeps the failure visible instead of copying a background-only or incomplete result. Copy error preserves the diagnostic text for a bug report."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "modes/studio",
+      "title": "Studio Mode",
+      "description": "Capture a local project and refine it in Beam's complete Video Editor.",
+      "lead": "Studio Mode is the editable workflow. It records the supported screen, camera, microphone, system-audio, and interaction sources, then opens the project in the Video Editor.",
+      "sections": [
+        {
+          "title": "From capture to editor",
+          "steps": [
+            "Select Studio and prepare the capture sources in the Recorder.",
+            "Record, pause, resume, and stop with the Recording Bar or configured shortcuts.",
+            "Beam finalizes the local media and opens the retained project in the Video Editor.",
+            "Trim and arrange the timeline, design the canvas, then export as MP4 or WebM."
+          ]
+        },
+        {
+          "title": "What stays editable",
+          "bullets": [
+            "Visual clips for the recorded screen, camera, imported images, and imported videos.",
+            "System, microphone, and imported audio where those sources are available.",
+            "Automatic and manual zooms, cursor presentation, captions, text, blur, and other canvas elements.",
+            "Background, padding, corners, shadows, frames, color treatment, aspect ratio, and export settings.",
+            "Clip timing, speed, transitions, ordering, transforms, cropping, and multi-selection."
+          ]
+        },
+        {
+          "title": "Create a screenshot from the canvas",
+          "paragraphs": [
+            "Use Screenshot beside Grid in the canvas toolbar to capture the current composed frame. Beam creates a separate screenshot project named from the video project and the capture date. A three-second notification offers Open in Screenshot Editor.",
+            "Opening the generated screenshot does not replace the Video Editor. It opens an additional Screenshot Editor window, and an already-open screenshot does not prevent another generated screenshot from opening."
+          ],
+          "notice": {
+            "kind": "tip",
+            "title": "The composed result is captured",
+            "text": "The screenshot contains the current Beam canvas at the playhead, including enabled visual layers and effects, rather than a raw source frame."
+          }
+        },
+        {
+          "title": "Continue with the full editor guide",
+          "paragraphs": [
+            "Open the [Video Editor overview](/editor/) for the workspace tour, or use [Video Editor capabilities](/editor/capabilities) for focused references covering the timeline, canvas, clips, zooms, cursor, captions, audio, settings, and export."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "modes/screenshot",
+      "title": "Screenshot Mode and editor",
+      "description": "Capture a still image, crop and annotate it in layers, then copy or export the composition.",
+      "lead": "Screenshot Mode creates a retained image project and opens a dedicated editor with canvas styling, crop controls, elements, effects, composition layers, reusable presets, and clipboard-first output.",
+      "sections": [
+        {
+          "title": "Capture a screenshot",
+          "steps": [
+            "Select Screenshot from the Recorder top bar.",
+            "Choose Screen or Window and select the source. In Screen mode, choose a region when the platform supports it.",
+            "Start the screenshot capture. Beam hides its capture surfaces before requesting the native image.",
+            "The new screenshot project opens directly in the Screenshot Editor."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Quick Snip can copy first",
+            "text": "The compact Quick Snip Screenshot workflow can either copy the styled result immediately or open it in the editor. Screenshot presets are separate from video presets."
+          }
+        },
+        {
+          "title": "Editor layout",
+          "tables": [
+            {
+              "headers": ["Area", "Purpose"],
+              "rows": [
+                [
+                  "Top bar",
+                  "Return to the Recorder, switch projects, undo or redo, manage the screenshot preset, copy, or export."
+                ],
+                [
+                  "Sidebar",
+                  "Open Canvas, Image, Elements, cursor, or settings controls. Elements is the default editing section."
+                ],
+                [
+                  "Properties",
+                  "Edit the selected image, shape, text, drawing, cursor, blur, highlight, background, or watermark."
+                ],
+                ["Canvas", "Select, crop, move, resize, rotate, align, and compose the current image."],
+                ["Composition", "Inspect layer previews, reorder, lock, hide, select, or delete layers."],
+                [
+                  "Size control",
+                  "Choose canvas dimensions, aspect-ratio behavior, image format, and advanced export options."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Crop any crop-capable image",
+          "paragraphs": [
+            "Double-click a crop-capable image on the canvas to enter crop mode, or select the image and use Crop in the properties header. Drag the crop boundary to change the visible area, then confirm the crop. Reset crop restores the full source image.",
+            "Cropping is non-destructive: Beam preserves the source and stores the visible framing in the screenshot project."
+          ]
+        },
+        {
+          "title": "Elements and composition",
+          "bullets": [
+            "Add images, rectangles and other shapes, arrows, editable text, freehand drawings, cursor graphics, blur, and highlight effects.",
+            "Shapes start as an outline without an opaque fill so annotations do not hide the content underneath.",
+            "Drag transform handles to resize. Use the exterior rotation handle when the selected element supports rotation.",
+            "Use the Composition panel to reorder layers and view a thumbnail for each visual layer.",
+            "Lock finished layers, hide them temporarily, or adjust compatible appearance and blend settings."
+          ]
+        },
+        {
+          "title": "Multiple selection",
+          "paragraphs": [
+            "Hold Ctrl or Cmd while selecting items to build a multiple selection, or right-drag the selection handle across the canvas. Selected image, video-frame, shape, text, drawing, cursor, blur, highlight, screen-recording, and camera items participate when their editor supports the operation.",
+            "Dragging one selected item moves the complete selection without collapsing it. Alignment guides use the group bounds so the selection can still snap to useful canvas positions. Delete removes every removable selected layer."
+          ],
+          "notice": {
+            "kind": "tip",
+            "title": "Selection modifiers belong to the canvas",
+            "text": "Press Ctrl or Cmd while clicking the next item. Pressing the modifier without clicking does not change the current selection."
+          }
+        },
+        {
+          "title": "Copy, paste, and reuse",
+          "paragraphs": [
+            "Press Ctrl+C or Cmd+C to copy the current selected layer or compatible multiple selection. Beam stores its internal layer payload with a visual thumbnail so Copy and Paste feedback shows what will be reused. Pasting inside a Beam editor prefers that internal payload over an unrelated image already on the operating-system clipboard.",
+            "If the clipboard contains an external image instead, paste inserts it as a new image layer in the Screenshot Editor. In Studio, pasting an image creates visual media in the composition and timeline."
+          ]
+        },
+        {
+          "title": "Copy or export the result",
+          "paragraphs": [
+            "Copy renders the complete screenshot composition and places the image on the clipboard. Export saves the result as PNG or WebP using the selected dimensions and quality settings.",
+            "PNG and WebP preserve transparency when the canvas background is disabled. Screenshot projects remain available from the shared Project Manager for later edits."
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,14 +1,18 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Code2, ExternalLink } from '@lucide/vue';
+import { Clapperboard, Code2, ExternalLink, ScanLine, Zap } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import Button from '~/ui/button/Button.vue';
 import WebsiteFeatureSection from '@website/components/WebsiteFeatureSection.vue';
 import WebsiteHero from '@website/components/WebsiteHero.vue';
+import WebsiteModeCards from '@website/components/WebsiteModeCards.vue';
+import WebsiteModeSpotlight from '@website/components/WebsiteModeSpotlight.vue';
 import WebsiteShaderPanel from '@website/components/WebsiteShaderPanel.vue';
+import { HOME_PAGE_COPY } from '@website/content/home-page';
 import { createHomeJsonLd } from '@website/seo/json-ld';
 import { usePageSeo } from '@website/seo/use-page-seo';
 import type { WebsiteFeature } from '@website/types/website-features';
+import type { WebsiteModeSpotlightContent, WebsiteModeSummary } from '@website/types/website-modes';
 import discordIconUrl from '../../../public/discord_svg.svg';
 
 const { t } = useI18n();
@@ -91,6 +95,70 @@ const features = computed<WebsiteFeature[]>(() => [
   },
 ]);
 
+const modes = computed<WebsiteModeSummary[]>(() => [
+  {
+    id: 'instant',
+    label: HOME_PAGE_COPY.modes.instant,
+    title: HOME_PAGE_COPY.cards.instant.title,
+    description: HOME_PAGE_COPY.cards.instant.text,
+    bestFor: HOME_PAGE_COPY.cards.instant.bestFor,
+    icon: Zap,
+    tone: 'blue',
+    steps: HOME_PAGE_COPY.cards.instant.steps,
+  },
+  {
+    id: 'studio',
+    label: HOME_PAGE_COPY.modes.studio,
+    title: HOME_PAGE_COPY.cards.studio.title,
+    description: HOME_PAGE_COPY.cards.studio.text,
+    bestFor: HOME_PAGE_COPY.cards.studio.bestFor,
+    icon: Clapperboard,
+    tone: 'violet',
+    steps: HOME_PAGE_COPY.cards.studio.steps,
+  },
+  {
+    id: 'screenshot',
+    label: HOME_PAGE_COPY.modes.screenshot,
+    title: HOME_PAGE_COPY.cards.screenshot.title,
+    description: HOME_PAGE_COPY.cards.screenshot.text,
+    bestFor: HOME_PAGE_COPY.cards.screenshot.bestFor,
+    icon: ScanLine,
+    tone: 'green',
+    steps: HOME_PAGE_COPY.cards.screenshot.steps,
+  },
+]);
+
+const modeSpotlights = computed<WebsiteModeSpotlightContent[]>(() => [
+  {
+    id: 'instant',
+    eyebrow: HOME_PAGE_COPY.spotlights.instant.eyebrow,
+    title: HOME_PAGE_COPY.spotlights.instant.title,
+    description: HOME_PAGE_COPY.spotlights.instant.text,
+    tone: 'blue',
+    media: 'instant',
+    features: HOME_PAGE_COPY.spotlights.instant.features,
+  },
+  {
+    id: 'studio',
+    eyebrow: HOME_PAGE_COPY.spotlights.studio.eyebrow,
+    title: HOME_PAGE_COPY.spotlights.studio.title,
+    description: HOME_PAGE_COPY.spotlights.studio.text,
+    tone: 'violet',
+    media: 'studio',
+    reverse: true,
+    features: HOME_PAGE_COPY.spotlights.studio.features,
+  },
+  {
+    id: 'screenshot',
+    eyebrow: HOME_PAGE_COPY.spotlights.screenshot.eyebrow,
+    title: HOME_PAGE_COPY.spotlights.screenshot.title,
+    description: HOME_PAGE_COPY.spotlights.screenshot.text,
+    tone: 'green',
+    media: 'screenshot',
+    features: HOME_PAGE_COPY.spotlights.screenshot.features,
+  },
+]);
+
 usePageSeo({
   path: '/',
   title: computed(() => t('Website.meta.title')),
@@ -105,6 +173,15 @@ const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
   <div class="site-shell">
     <main id="top">
       <WebsiteHero />
+
+      <WebsiteModeCards
+        :eyebrow="HOME_PAGE_COPY.overview.eyebrow"
+        :title="HOME_PAGE_COPY.overview.title"
+        :description="HOME_PAGE_COPY.overview.text"
+        :modes="modes"
+      />
+
+      <WebsiteModeSpotlight v-for="mode in modeSpotlights" :key="mode.id" :content="mode" />
 
       <WebsiteFeatureSection
         id="editor-demo"

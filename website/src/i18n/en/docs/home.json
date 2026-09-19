@@ -1,10 +1,10 @@
 {
   "title": "Beam documentation",
-  "description": "Learn how to record, edit, and share polished product demos with Beam.",
+  "description": "Learn Instant, Studio, and Screenshot workflows in Beam.",
   "hero": {
     "name": "Beam Docs",
-    "text": "Record. Edit. Share.",
-    "tagline": "Practical guides for capturing and polishing product demos with Beam.",
+    "text": "Capture. Polish. Deliver.",
+    "tagline": "Practical guides for Instant recordings, Studio projects, and the Screenshot Editor.",
     "imageAlt": "Beam app icon",
     "actions": [
       { "theme": "brand", "text": "Get started", "link": "/getting-started" },
@@ -13,6 +13,12 @@
     ]
   },
   "categories": [
+    {
+      "title": "Capture modes",
+      "details": "Choose Instant for automatic export, Studio for a fully editable video, or Screenshot for a layer-based still image.",
+      "link": "/modes/",
+      "visual": "screenshot"
+    },
     {
       "title": "Recorder app",
       "details": "Choose a source, prepare audio and camera tracks, then control the recording from the compact HUD.",

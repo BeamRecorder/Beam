@@ -15,6 +15,15 @@
       ]
     },
     {
+      "text": "Capture modes",
+      "items": [
+        { "text": "Overview", "link": "/modes/" },
+        { "text": "Instant Mode", "link": "/modes/instant" },
+        { "text": "Studio Mode", "link": "/modes/studio" },
+        { "text": "Screenshot Mode and editor", "link": "/modes/screenshot" }
+      ]
+    },
+    {
       "text": "Recorder app",
       "items": [
         { "text": "Overview", "link": "/recorder/" },

@@ -7,7 +7,7 @@ const props = defineProps<{
   title: string;
   details: string;
   link: string;
-  visual: 'recorder' | 'editor';
+  visual: 'recorder' | 'editor' | 'screenshot';
 }>();
 
 const href = computed(() => withBase(props.link));
@@ -26,19 +26,27 @@ const screenshot = computed(() => {
           width: 160,
           height: 240,
         }
-      : {
-          src: '/showcase/Beam-showcase-editor-400.webp',
-          sources: [
-            ['/showcase/Beam-showcase-editor-400.webp', 400],
-            ['/showcase/Beam-showcase-editor-500.webp', 500],
-            ['/showcase/Beam-showcase-editor-576.webp', 576],
-            ['/showcase/Beam-showcase-editor-600.webp', 600],
-            ['/showcase/Beam-showcase-editor-800.webp', 800],
-          ] as const,
-          sizes: '(max-width: 720px) calc(90vw - 44px), 326px',
-          width: 400,
-          height: 250,
-        };
+      : props.visual === 'screenshot'
+        ? {
+            src: '/showcase/screenshot-editor-placeholder.svg',
+            sources: [['/showcase/screenshot-editor-placeholder.svg', 800]] as const,
+            sizes: '(max-width: 720px) calc(90vw - 44px), 326px',
+            width: 800,
+            height: 500,
+          }
+        : {
+            src: '/showcase/Beam-showcase-editor-400.webp',
+            sources: [
+              ['/showcase/Beam-showcase-editor-400.webp', 400],
+              ['/showcase/Beam-showcase-editor-500.webp', 500],
+              ['/showcase/Beam-showcase-editor-576.webp', 576],
+              ['/showcase/Beam-showcase-editor-600.webp', 600],
+              ['/showcase/Beam-showcase-editor-800.webp', 800],
+            ] as const,
+            sizes: '(max-width: 720px) calc(90vw - 44px), 326px',
+            width: 400,
+            height: 250,
+          };
 
   return {
     ...visual,
@@ -192,6 +200,12 @@ const screenshot = computed(() => {
   height: auto;
 }
 
+.docs-product-card__visual.is-screenshot .docs-product-card__screenshot {
+  width: 94%;
+  height: auto;
+  border-radius: var(--radius-md);
+}
+
 .docs-product-card:hover .docs-product-card__screenshot {
   transform: translate(-50%, calc(-50% - 3px)) scale(1.01);
 }
@@ -216,7 +230,8 @@ const screenshot = computed(() => {
     border-left: 0;
   }
 
-  .docs-product-card__visual.is-editor .docs-product-card__screenshot {
+  .docs-product-card__visual.is-editor .docs-product-card__screenshot,
+  .docs-product-card__visual.is-screenshot .docs-product-card__screenshot {
     width: 90%;
   }
 }

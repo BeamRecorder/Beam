@@ -45,19 +45,19 @@ describe('HomePage', () => {
     const hero = wrapper.get('.website-hero');
     const features = wrapper.get('#editor-demo');
 
-    expect(wrapper.get('#hero-title').text()).toBe('Record. Edit. Share.');
+    expect(wrapper.get('#hero-title').text()).toBe('Capture. Polish. Deliver.');
     expect(
       wrapper
         .get('#hero-title')
         .findAll('.hero-title__phrase')
         .map((part) => part.text()),
-    ).toEqual(['Record.', 'Edit.', 'Share.']);
-    expect(hero.get('.hero-availability').text()).toContain('Free on every desktop.');
+    ).toEqual(['Capture.', 'Polish.', 'Deliver.']);
+    expect(hero.get('.hero-availability').text()).toContain('Free, local-first, and open source.');
     expect(hero.get('.hero-availability').text()).toContain('Available for Windows, macOS, and Linux.');
     expect(hero.find('.hero-eyebrow').exists()).toBe(false);
     expect(wrapper.find('.availability').exists()).toBe(false);
     expect(wrapper.text()).toContain(
-      'Beam makes polished screen recordings, so your product demos are easier to create—and better to watch.',
+      'One open-source desktop app for quick recordings, deeply edited videos, and screenshots that are ready to paste.',
     );
     expect(wrapper.text()).toContain('free');
     expect(wrapper.text()).toContain('Windows');
@@ -69,6 +69,10 @@ describe('HomePage', () => {
     expect(wrapper.find('.hero-drag').exists()).toBe(false);
     expect(wrapper.find('.hero-drag__cursor').exists()).toBe(false);
     expect(wrapper.find('[data-testid="project-loader"]').exists()).toBe(false);
+    expect(wrapper.findAll('.mode-card')).toHaveLength(3);
+    expect(wrapper.findAll('.mode-spotlight')).toHaveLength(3);
+    expect(wrapper.get('#instant').text()).toContain('The video file is copied');
+    expect(wrapper.get('#screenshot').text()).toContain('Direct cropping');
     expect(features.get('h2').text()).toBe('A powerful editor.');
     expect(features.get('.feature-section__intro p').text()).toBe(
       'Built for speed and precision, from first cut to final export.',

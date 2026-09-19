@@ -1,6 +1,8 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { nextTick } from 'vue';
+import { createI18n } from 'vue-i18n';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import englishUiMessages from '../../../../src/i18n/en/core.json';
 
 const mocked = vi.hoisted(() => ({
   page: { value: { relativePath: 'index.md' } },
@@ -27,9 +29,16 @@ const ClientOnlyStub = {
 const mountedWrappers: VueWrapper[] = [];
 
 const mountSearch = () => {
+  const i18n = createI18n({
+    legacy: false,
+    locale: 'en',
+    fallbackLocale: 'en',
+    messages: { en: englishUiMessages },
+  });
   const wrapper = mount(DocsSearch, {
     attachTo: document.body,
     global: {
+      plugins: [i18n],
       stubs: {
         ClientOnly: ClientOnlyStub,
       },
@@ -90,19 +99,19 @@ describe('DocsSearch', () => {
     expect(trigger.find('.keyboard-chip-group').exists()).toBe(true);
   });
 
-  it('starts with the Recorder and Video editor sections', async () => {
+  it('starts with the capture, Recorder, and Video editor sections', async () => {
     const wrapper = mountSearch();
     await openSearch(wrapper);
 
     expect(document.body.querySelector('.docs-search-section')?.getAttribute('aria-label')).toBe(
       'Main documentation sections',
     );
-    expect(resultTitles()).toEqual(['Recorder app', 'Video editor']);
+    expect(resultTitles()).toEqual(['Capture modes', 'Recorder app', 'Video editor']);
     expect(
       [...document.body.querySelectorAll<HTMLAnchorElement>('.docs-search-result')].map((link) =>
         link.getAttribute('href'),
       ),
-    ).toEqual(['/docs/recorder/', '/docs/editor/']);
+    ).toEqual(['/docs/modes/', '/docs/recorder/', '/docs/editor/']);
   });
 
   it('finds Recorder pages for an exact search', async () => {

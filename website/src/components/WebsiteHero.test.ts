@@ -16,14 +16,16 @@ const mountHero = () => {
 };
 
 describe('WebsiteHero', () => {
-  it('renders the copy on the left and the final WebM video on the right', () => {
+  it('renders the three-mode hero above the MacBook-framed demo', () => {
     const wrapper = mountHero();
-    const columns = wrapper.get('.website-hero').element.children;
-
-    expect(columns).toHaveLength(2);
-    expect(columns[0]?.classList.contains('website-hero__copy')).toBe(true);
-    expect(columns[1]?.classList.contains('website-hero__media')).toBe(true);
-    expect(wrapper.get('.website-hero__copy').text()).toContain('Record. Edit. Share.');
+    expect(wrapper.get('.website-hero__copy').text()).toContain('Capture. Polish. Deliver.');
+    expect(wrapper.get('.hero-announcement').text()).toContain('Screenshot Editor is here');
+    expect(wrapper.findAll('.hero-modes a').map((link) => link.text())).toEqual([
+      'Instant Mode',
+      'Studio Mode',
+      'Screenshot Mode',
+    ]);
+    expect(wrapper.get('.website-hero__media').find('.macbook-frame').exists()).toBe(true);
     expect(wrapper.get('.website-hero__media').find('video').exists()).toBe(true);
   });
 

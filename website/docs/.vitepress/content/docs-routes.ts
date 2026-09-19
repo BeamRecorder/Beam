@@ -1,4 +1,5 @@
 import commonEn from '../../../src/i18n/en/docs/common.json';
+import captureModesEn from '../../../src/i18n/en/docs/capture-modes.json';
 import editorEn from '../../../src/i18n/en/docs/editor.json';
 import editorMediaEn from '../../../src/i18n/en/docs/editor-media.json';
 import editorShowcaseEn from '../../../src/i18n/en/docs/editor-showcase.json';
@@ -203,6 +204,7 @@ const createCatalogs = (common: unknown, home: unknown, catalogs: readonly unkno
 const locales: Partial<Record<DocsLocale, DocsLocaleCatalogs>> = {
   en: createCatalogs(commonEn, homeEn, [
     gettingStartedEn,
+    captureModesEn,
     recorderEn,
     recorderCaptureEn,
     recorderWorkspaceEn,
@@ -216,6 +218,7 @@ const locales: Partial<Record<DocsLocale, DocsLocaleCatalogs>> = {
   ]),
   bg: createCatalogs(commonBg, homeBg, [
     gettingStartedBg,
+    captureModesEn,
     recorderBg,
     recorderCaptureBg,
     recorderWorkspaceBg,
@@ -229,6 +232,7 @@ const locales: Partial<Record<DocsLocale, DocsLocaleCatalogs>> = {
   ]),
   de: createCatalogs(commonDe, homeDe, [
     gettingStartedDe,
+    captureModesEn,
     recorderDe,
     recorderCaptureDe,
     recorderWorkspaceDe,
@@ -242,6 +246,7 @@ const locales: Partial<Record<DocsLocale, DocsLocaleCatalogs>> = {
   ]),
   es: createCatalogs(commonEs, homeEs, [
     gettingStartedEs,
+    captureModesEn,
     recorderEs,
     recorderCaptureEs,
     recorderWorkspaceEs,
@@ -255,6 +260,7 @@ const locales: Partial<Record<DocsLocale, DocsLocaleCatalogs>> = {
   ]),
   fr: createCatalogs(commonFr, homeFr, [
     gettingStartedFr,
+    captureModesEn,
     recorderFr,
     recorderCaptureFr,
     recorderWorkspaceFr,
@@ -268,6 +274,7 @@ const locales: Partial<Record<DocsLocale, DocsLocaleCatalogs>> = {
   ]),
   hi: createCatalogs(commonHi, homeHi, [
     gettingStartedHi,
+    captureModesEn,
     recorderHi,
     recorderCaptureHi,
     recorderWorkspaceHi,
@@ -281,6 +288,7 @@ const locales: Partial<Record<DocsLocale, DocsLocaleCatalogs>> = {
   ]),
   it: createCatalogs(commonIt, homeIt, [
     gettingStartedIt,
+    captureModesEn,
     recorderIt,
     recorderCaptureIt,
     recorderWorkspaceIt,
@@ -294,6 +302,7 @@ const locales: Partial<Record<DocsLocale, DocsLocaleCatalogs>> = {
   ]),
   ja: createCatalogs(commonJa, homeJa, [
     gettingStartedJa,
+    captureModesEn,
     recorderJa,
     recorderCaptureJa,
     recorderWorkspaceJa,
@@ -307,6 +316,7 @@ const locales: Partial<Record<DocsLocale, DocsLocaleCatalogs>> = {
   ]),
   ko: createCatalogs(commonKo, homeKo, [
     gettingStartedKo,
+    captureModesEn,
     recorderKo,
     recorderCaptureKo,
     recorderWorkspaceKo,
@@ -320,6 +330,7 @@ const locales: Partial<Record<DocsLocale, DocsLocaleCatalogs>> = {
   ]),
   pl: createCatalogs(commonPl, homePl, [
     gettingStartedPl,
+    captureModesEn,
     recorderPl,
     recorderCapturePl,
     recorderWorkspacePl,
@@ -333,6 +344,7 @@ const locales: Partial<Record<DocsLocale, DocsLocaleCatalogs>> = {
   ]),
   'pt-BR': createCatalogs(commonPtBr, homePtBr, [
     gettingStartedPtBr,
+    captureModesEn,
     recorderPtBr,
     recorderCapturePtBr,
     recorderWorkspacePtBr,
@@ -346,6 +358,7 @@ const locales: Partial<Record<DocsLocale, DocsLocaleCatalogs>> = {
   ]),
   ru: createCatalogs(commonRu, homeRu, [
     gettingStartedRu,
+    captureModesEn,
     recorderRu,
     recorderCaptureRu,
     recorderWorkspaceRu,
@@ -359,6 +372,7 @@ const locales: Partial<Record<DocsLocale, DocsLocaleCatalogs>> = {
   ]),
   vi: createCatalogs(commonVi, homeVi, [
     gettingStartedVi,
+    captureModesEn,
     recorderVi,
     recorderCaptureVi,
     recorderWorkspaceVi,
@@ -372,6 +386,7 @@ const locales: Partial<Record<DocsLocale, DocsLocaleCatalogs>> = {
   ]),
   'zh-CN': createCatalogs(commonZhCn, homeZhCn, [
     gettingStartedZhCn,
+    captureModesEn,
     recorderZhCn,
     recorderCaptureZhCn,
     recorderWorkspaceZhCn,
@@ -385,6 +400,7 @@ const locales: Partial<Record<DocsLocale, DocsLocaleCatalogs>> = {
   ]),
   'zh-TW': createCatalogs(commonZhTw, homeZhTw, [
     gettingStartedZhTw,
+    captureModesEn,
     recorderZhTw,
     recorderCaptureZhTw,
     recorderWorkspaceZhTw,

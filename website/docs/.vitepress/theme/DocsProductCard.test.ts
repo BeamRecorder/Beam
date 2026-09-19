@@ -11,7 +11,7 @@ type CardProps = {
   title: string;
   details: string;
   link: string;
-  visual: 'recorder' | 'editor';
+  visual: 'recorder' | 'editor' | 'screenshot';
 };
 
 const defaultProps: CardProps = {
@@ -88,6 +88,15 @@ describe('DocsProductCard', () => {
       '(max-width: 720px) calc(90vw - 44px), 326px',
       '400',
       '250',
+    ],
+    [
+      'screenshot',
+      'Screenshot Editor',
+      '/showcase/screenshot-editor-placeholder.svg',
+      '/showcase/screenshot-editor-placeholder.svg 800w',
+      '(max-width: 720px) calc(90vw - 44px), 326px',
+      '800',
+      '500',
     ],
   ] as const)(
     'renders the %s product visual with its accessible label and base-aware image',

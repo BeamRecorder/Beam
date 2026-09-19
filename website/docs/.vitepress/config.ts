@@ -97,6 +97,20 @@ export default defineConfig({
   appearance: false,
   outDir: '../dist/docs',
   vite: {
+    define: {
+      __VUE_PROD_DEVTOOLS__: false,
+      __VUE_I18N_FULL_INSTALL__: true,
+      __VUE_I18N_LEGACY_API__: false,
+    },
+    resolve: {
+      alias: {
+        '~/ui': fileURLToPath(new URL('../../../src/components/ui', import.meta.url)),
+        '~': fileURLToPath(new URL('../../../src', import.meta.url)),
+      },
+    },
+    ssr: {
+      noExternal: ['vue-i18n', '@intlify/core-base', '@intlify/message-compiler', '@intlify/shared'],
+    },
     plugins: [
       {
         name: 'beam-docs-assets',

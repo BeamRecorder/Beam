@@ -64,6 +64,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
 watch(
   () => props.isOpen,
   async (newVal) => {
+    if (typeof document === 'undefined') return;
     if (newVal) {
       previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       document.body.style.overflow = 'hidden';

@@ -163,11 +163,15 @@ describe('docs content renderer', () => {
     expect(() => validateDocsCatalogs(content)).not.toThrow();
 
     const routes = createDocsRoutes('en');
-    expect(routes).toHaveLength(28);
+    expect(routes).toHaveLength(32);
     expect(routes.map((route) => route.params.page)).toEqual([
       'index',
       'getting-started',
       'updates',
+      'modes/index',
+      'modes/instant',
+      'modes/studio',
+      'modes/screenshot',
       'recorder/index',
       'recorder/interface',
       'recorder/capabilities/index',
@@ -202,12 +206,15 @@ describe('docs content renderer', () => {
     expect(routes[0]?.content).toContain('height: 192');
     expect(routes[0]?.content).toContain('<div class="docs-product-grid">');
     expect(routes[0]?.content).toContain(
+      '<DocsProductCard title="Capture modes" details="Choose Instant for automatic export, Studio for a fully editable video, or Screenshot for a layer-based still image." link="/modes/" visual="screenshot" />',
+    );
+    expect(routes[0]?.content).toContain(
       '<DocsProductCard title="Recorder app" details="Choose a source, prepare audio and camera tracks, then control the recording from the compact HUD." link="/recorder/" visual="recorder" />',
     );
     expect(routes[0]?.content).toContain(
       '<DocsProductCard title="Video editor" details="Shape timing, framing, zooms, cursor motion, captions, sound, and export from one workspace." link="/editor/" visual="editor" />',
     );
-    expect(routes[0]?.content.match(/<DocsProductCard /g)).toHaveLength(2);
+    expect(routes[0]?.content.match(/<DocsProductCard /g)).toHaveLength(3);
     expect(routes.slice(1).every((route) => /\n# .+\n/.test(route.content))).toBe(true);
 
     const filesystemRoute = routes.find((route) => route.params.page === 'filesystem');

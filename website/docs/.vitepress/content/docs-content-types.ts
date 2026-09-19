@@ -50,7 +50,7 @@ export interface DocsHomeContent {
     imageAlt: string;
     actions: Array<{ theme: 'brand' | 'alt'; text: string; link: string }>;
   };
-  categories: Array<{ title: string; details: string; link: string; visual: 'recorder' | 'editor' }>;
+  categories: Array<{ title: string; details: string; link: string; visual: 'recorder' | 'editor' | 'screenshot' }>;
 }
 
 export interface DocsCommonContent {
