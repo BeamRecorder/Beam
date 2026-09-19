@@ -27,6 +27,10 @@ import type { PreviewQuality } from '~/media/playback';
 import type { CaptionInlineEditingEnd, CaptionInlineTextUpdate } from './caption-inline-editor-types';
 
 export type TransformClip = VisualClip | ColorClip | ShapeClip | BlurClip | CaptionClip;
+export interface ClipTransformUpdate {
+  id: string;
+  transform: NormalizedTransform;
+}
 export const transformCaptionFollowsCursor = (clip: TransformClip | null) =>
   clip?.kind === 'caption' && clip.caption.type === 'keyboard' && clip.caption.followCursor;
 
@@ -76,6 +80,7 @@ export interface EditorCanvasEmits {
   (event: 'deselect:transform-clip'): void;
   (event: 'deselect:zoom'): void;
   (event: 'update:clip-transform', transform: NormalizedTransform): void;
+  (event: 'update:clip-transforms', transforms: ClipTransformUpdate[]): void;
   (event: 'preview:clip-crop', crop: NormalizedCrop | null): void;
   (event: 'update:clip-crop', crop: NormalizedCrop): void;
   (event: 'preview:shape-rotation', rotation: number | null): void;

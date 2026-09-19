@@ -15,6 +15,7 @@ import {
   type NormalizedTransform,
 } from '~/media/shared/composition-types';
 import type { CameraFramingPreset, CameraLayoutPreset } from '~/media/shared/camera-layout-types';
+import type { ClipTransformUpdate } from '../canvas/editor-canvas-types';
 import { isSplitCameraLayout } from '~/media/shared/camera-layout-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import { cameraScreenPartner } from '../composition/camera-screen-link';
@@ -169,6 +170,12 @@ export function useSelectedClips(options: { composition: Ref<ClipComposition>; a
       (clip) => !isAudioClip(clip),
       (next, id) => setTransform(next, id, transform),
     );
+  const updateSelectedTransforms = (transforms: readonly ClipTransformUpdate[]) => {
+    const selected = new Set(selectedClipIds.value);
+    let next = options.composition.value;
+    for (const { id, transform } of transforms) if (selected.has(id)) next = setTransform(next, id, transform);
+    options.composition.value = next;
+  };
   const updateSelectedBlur = (
     patch: Partial<
       Pick<
@@ -230,6 +237,7 @@ export function useSelectedClips(options: { composition: Ref<ClipComposition>; a
     deleteSelectedClip,
     updateSelectedAppearance,
     updateSelectedTransform,
+    updateSelectedTransforms,
     updateSelectedBlur,
     updateSelectedCrop,
     updateSelectedCameraLayout,

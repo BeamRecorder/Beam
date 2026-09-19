@@ -12,6 +12,7 @@ import {
   applyScreenshotTranslation,
   constrainScreenshotTranslation,
   movableScreenshotSelection,
+  snapScreenshotTranslation,
   withScreenshotTranslation,
 } from '../screenshot-selection-transform';
 
@@ -173,6 +174,19 @@ const expectTranslatedTransform = (
 };
 
 describe('screenshot selection translation', () => {
+  it('snaps the group envelope to alignment guides without changing member spacing', () => {
+    const state = makeState();
+    const selected = ['shape-moving', 'effect-moving'];
+    const snapped = snapScreenshotTranslation(state, selected, { x: -0.025, y: 0 }, renderAssets());
+    const preview = withScreenshotTranslation(state, selected, snapped.translation);
+
+    expect(snapped.translation.x).toBeCloseTo(-0.025);
+    expect(snapped.guides).toContainEqual({ type: 'vertical', position: 0.5 });
+    expect(preview.effects![0]!.transform.x - preview.shapes[0]!.transform.x).toBeCloseTo(
+      state.effects![0]!.transform.x - state.shapes[0]!.transform.x,
+    );
+  });
+
   it('moves every selected layer family by one shared delta without changing offsets or source records', () => {
     const state = makeState();
     const snapshot = structuredClone(state);

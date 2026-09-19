@@ -115,6 +115,7 @@ const transformAndCrop = useLayerTransformAndCrop({
   composition: () => props.composition,
   currentTime: () => props.currentTime,
   selectedTransformClip: () => props.selectedTransformClip,
+  selectedClipIds: () => props.selectedClipIds,
   videoWindowBounds: () => cameraZoom.videoWindowBounds.value,
   overlayWindowBounds: () => {
     if (cameraZoom.overlayWindowBounds.value) return cameraZoom.overlayWindowBounds.value;
@@ -126,6 +127,7 @@ const transformAndCrop = useLayerTransformAndCrop({
   measureCaptionText: (text, fontSize, style) => measureCanvasCaptionText(canvasRef.value, text, fontSize, style),
   zoomScale: () => viewportZoom.zoomScale.value,
   onUpdateTransform: (transform) => emit('update:clip-transform', transform),
+  onUpdateTransforms: (transforms) => emit('update:clip-transforms', transforms),
   onPreviewCrop: (crop) => emit('preview:clip-crop', crop),
   onUpdateCrop: (crop) => emit('update:clip-crop', crop),
   onSelectTransformClip: selectCanvasClip,
@@ -146,8 +148,7 @@ cameraZoom = useCameraZoom({
   activeTab: () => props.activeTab,
   composition: () => renderComposition,
   sceneLayersAt: (timeMs) => sceneLayersAt.value(timeMs),
-  screenTransformDraft: () =>
-    props.selectedTransformClip?.kind === 'screen' ? transformAndCrop.transformDraft.value : null,
+  screenTransformDraft: () => transformAndCrop.transformDraftFor(liveScreenClip.value?.id ?? ''),
   isCropping: () => props.isCropping,
   drawBackground,
   videoError: () => props.playbackError?.message ?? null,
@@ -200,6 +201,7 @@ const compositionMedia = useCompositionMedia({
   frameFor: props.frameFor,
   selectedTransformClip: () => props.selectedTransformClip,
   transformDraft: () => transformAndCrop.transformDraft.value,
+  transformDraftFor: transformAndCrop.transformDraftFor,
   isCropping: () => props.isCropping,
   outputCanvas: () => props.outputCanvas,
   captionViewport: () => {
@@ -254,7 +256,7 @@ const cursorInteraction = useCursorCanvasInteraction({
 const isFormatTransitioning = useCanvasFormatTransition(() => props.outputCanvas, renderOnce);
 useEditorCanvasInvalidation({
   props,
-  transformDraft: () => transformAndCrop.transformDraft.value,
+  transformDraft: () => [transformAndCrop.transformDraft.value, transformAndCrop.transformDrafts.value],
   renderOnce,
   resetCamera: cameraZoom.resetCameraUnlessDragging,
 });
@@ -370,10 +372,8 @@ const editCanvasContent = (event: MouseEvent) => {
   const clip = props.composition.clips.find((candidate) => candidate.id === clipId);
   if (clip && isVisualClip(clip) && !clip.locked) emit('request:crop', clip.id);
 };
-onUnmounted(() => {
-  frameScheduler.dispose();
-  perspectivePreviewRenderer.dispose();
-});
+onUnmounted(() => frameScheduler.dispose());
+onUnmounted(() => perspectivePreviewRenderer.dispose());
 const captureCurrentFrame = () => {
   renderCanvas();
   return captureCanvasFrame(canvasRef.value, logicalSize.value, props.outputCanvas);

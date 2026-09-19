@@ -438,6 +438,36 @@ describe('ScreenshotCanvas', () => {
     wrapper.unmount();
   });
 
+  it('moves every selected layer when dragging a secondary outline without resetting the selection', async () => {
+    const wrapper = mountCanvas(stateFixture(), 'shape-upper', undefined, undefined, ['shape-upper', 'shape-lower']);
+    await flushPromises();
+    setCanvasBounds(wrapper);
+    const secondary = wrapper
+      .findAllComponents(SelectionStub)
+      .find((selection) => selection.attributes('data-layer-id') === 'shape-lower');
+    if (!secondary) throw new Error('Expected a secondary selected outline.');
+    const event = {
+      button: 0,
+      clientX: 25,
+      clientY: 30,
+      pointerId: 9,
+      currentTarget: { setPointerCapture: vi.fn() },
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    } as unknown as PointerEvent;
+
+    secondary.vm.$emit('pointer-down', event);
+    secondary.vm.$emit('pointer-move', { ...event, clientX: 35, clientY: 40 });
+    secondary.vm.$emit('pointer-up', { ...event, clientX: 35, clientY: 40 });
+
+    const translation = wrapper.emitted('translate')?.[0]?.[0] as { x: number; y: number };
+    expect(translation.x).toBeCloseTo(0.1);
+    expect(translation.y).toBeCloseTo(0.1);
+    expect(wrapper.emitted('select')).toBeUndefined();
+    expect(propertyInteractionActive.value).toBe(false);
+    wrapper.unmount();
+  });
+
   it('loads cursor assets from the supplied packs and selects a cursor above overlapping artwork', async () => {
     const state = stateFixture();
     const cursor = createScreenshotCursor('cursor-1', 'Pointer', cursorPack);

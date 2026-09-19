@@ -235,6 +235,7 @@ const mountComposable = (initialComposition = composition(), initiallyCropping =
   const currentTime = ref(0.5);
   const selected = ref<VisualClip | CaptionClip | null>(null);
   const draft = ref<VisualClip['transform'] | null>(null);
+  const transformDrafts = ref<Record<string, NonNullable<VisualClip['transform']>>>({});
   const cropping = ref(initiallyCropping);
   const frames = new Map([
     ['video', mediaFrame('video', 640, 360)],
@@ -251,6 +252,7 @@ const mountComposable = (initialComposition = composition(), initiallyCropping =
         frameFor,
         selectedTransformClip: () => selected.value,
         transformDraft: () => draft.value,
+        transformDraftFor: (clipId) => transformDrafts.value[clipId] ?? null,
         isCropping: () => cropping.value,
         outputCanvas: () => ({ ...DEFAULT_OUTPUT_CANVAS, width: 1_600, height: 900 }),
         captionViewport: () => ({ x: 0, y: 0, width: 800, height: 450 }),
@@ -266,6 +268,7 @@ const mountComposable = (initialComposition = composition(), initiallyCropping =
     currentTime,
     selected,
     draft,
+    transformDrafts,
     cropping,
     frameFor,
     frames,
@@ -327,6 +330,26 @@ describe('useCompositionMedia', () => {
         mirrored: true,
         mirroredY: true,
       }),
+    );
+  });
+
+  it('renders per-clip transform drafts while a group is moving', () => {
+    const mounted = mountComposable();
+    const image = state.images.get('image-asset')!;
+    Object.defineProperties(image, {
+      complete: { configurable: true, value: true },
+      naturalWidth: { configurable: true, value: 100 },
+      naturalHeight: { configurable: true, value: 80 },
+    });
+    mounted.transformDrafts.value = {
+      image: { x: 0.3, y: 0.25, width: 0.5, height: 0.4 },
+    };
+
+    state.drawComposition(context(), { dx: 10, dy: 20, dw: 800, dh: 400 }, 'image');
+
+    expect(drawDecoratedMedia).toHaveBeenLastCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ rect: expect.objectContaining({ x: 290, y: 136 }) }),
     );
   });
 

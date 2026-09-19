@@ -29,8 +29,8 @@ import type {
   ScreenshotTranslation,
 } from './screenshot-types';
 import {
-  constrainScreenshotTranslation,
   movableScreenshotSelection,
+  snapScreenshotTranslation,
   withScreenshotTranslation,
 } from './screenshot-selection-transform';
 import { screenshotLayerAt, screenshotLayerTransform, screenshotLayerRotation } from './screenshot-layer-geometry';
@@ -38,6 +38,7 @@ import { screenshotLayers } from './screenshot-layers';
 import { createScreenshotImageLoader } from './screenshot-assets';
 import CanvasMarqueeSurface from '../canvas/CanvasMarqueeSurface.vue';
 import type { CanvasMarqueeSelection, CanvasMarqueeTarget } from '../canvas/canvas-marquee-types';
+import ScreenshotAlignmentGuides from './ScreenshotAlignmentGuides.vue';
 
 const { t } = useTranslate('ScreenshotEditor');
 const { t: canvasText } = useTranslate('CanvasPanel');
@@ -67,7 +68,6 @@ const emit = defineEmits<{
 }>();
 const stage = ref<HTMLElement | null>(null);
 const available = useElementSize(stage);
-// ResizeObserver can remain idle while the native editor waits for its first paint.
 onMounted(async () => {
   await nextTick();
   const rect = stage.value?.getBoundingClientRect();
@@ -101,6 +101,7 @@ const transformDraft = shallowRef<NormalizedTransform | null>(null);
 let pendingTransform: NormalizedTransform | null = null;
 const translationDraft = shallowRef<ScreenshotTranslation | null>(null);
 let pendingTranslation: ScreenshotTranslation | null = null;
+const activeGuideLines = shallowRef<ReturnType<typeof snapScreenshotTranslation>['guides']>([]);
 const flushTransform = () => {
   if (pendingTranslation) {
     translationDraft.value = pendingTranslation;
@@ -295,16 +296,17 @@ const endRotation = (value: number) => {
   dragging.value = false;
   endPropertyInteraction();
 };
-const start = (event: PointerEvent, corner?: ResizeCorner) => {
+const start = (event: PointerEvent, corner?: ResizeCorner, selectionId?: string) => {
   if (props.cropping || props.disabled || event.button !== 0) return;
+  const selectedOutlineId = props.selectedIds.length > 1 ? selectionId : undefined;
   if (event.ctrlKey || event.metaKey || event.shiftKey) {
     event.stopPropagation();
-    select(event);
+    emit('select', selectedOutlineId ?? layerAt(event), 'toggle');
     return;
   }
-  let targetId = props.selectedId;
+  let targetId = selectedOutlineId ?? props.selectedId;
   if (!corner) {
-    const id = layerAt(event);
+    const id = selectedOutlineId ?? layerAt(event);
     if (!id || !props.selectedIds.includes(id)) {
       event.stopPropagation();
       emit('select', id);
@@ -360,7 +362,9 @@ const move = (event: PointerEvent) => {
     dy = (event.clientY - drag.y) / drag.height;
   if (drag.selection) {
     if (!translationDraft.value && !pendingTranslation && Math.hypot(dx * drag.width, dy * drag.height) < 4) return;
-    pendingTranslation = constrainScreenshotTranslation(props.state, drag.selection, { x: dx, y: dy }, assets.value);
+    const snapped = snapScreenshotTranslation(props.state, drag.selection, { x: dx, y: dy }, assets.value);
+    pendingTranslation = snapped.translation;
+    activeGuideLines.value = snapped.guides;
     frames.requestRender();
     return;
   }
@@ -422,6 +426,7 @@ onBeforeUnmount(() => {
         @dblclick="editLayer"
       >
         <canvas ref="canvas" :aria-label="t('preview')" @pointerdown="select" />
+        <ScreenshotAlignmentGuides :guides="dragging && translationDraft ? activeGuideLines : []" />
         <CanvasLayerSelection
           v-for="selection in cropping ? [] : selections"
           :key="selection.id"
@@ -433,10 +438,10 @@ onBeforeUnmount(() => {
           :rotatable="selection.id === selectedId && selection.rotatable"
           :rotate-label="canvasText('shapeRotation')"
           :muted="handlesMuted || (propertyInteractionActive && !dragging)"
-          @pointer-down="start($event)"
+          @pointer-down="start($event, undefined, selection.id)"
           @pointer-move="move"
           @pointer-up="endDrag"
-          @resize-start="(corner, event) => start(event, corner)"
+          @resize-start="(corner, event) => start(event, corner, selection.id)"
           @resize-move="move"
           @resize-end="endDrag"
           @rotate-start="beginRotation"

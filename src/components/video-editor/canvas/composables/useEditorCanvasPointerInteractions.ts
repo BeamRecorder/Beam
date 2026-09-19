@@ -2,6 +2,7 @@ import type { EditorCanvasPointerOptions } from '../editor-canvas-pointer-types'
 
 export function useEditorCanvasPointerInteractions(options: EditorCanvasPointerOptions) {
   const handleIslandPointerDown = (event: PointerEvent) => {
+    if (!options.isManualZoom() && options.transformAndCrop.beginSelectedTransformDrag(event, options.canvas())) return;
     if (
       !options.isManualZoom() &&
       event.button === 0 &&
@@ -32,6 +33,7 @@ export function useEditorCanvasPointerInteractions(options: EditorCanvasPointerO
     options.transformAndCrop.beginTransformDrag(event, 'move');
   };
   const handleIslandPointerMove = (event: PointerEvent) => {
+    if (options.transformAndCrop.moveSelectedTransformDrag(event)) return;
     if (options.viewportZoom.isPanning.value) {
       options.viewportZoom.movePan(event);
       return;
@@ -39,6 +41,7 @@ export function useEditorCanvasPointerInteractions(options: EditorCanvasPointerO
     options.cameraZoom.moveSelection(event);
   };
   const handleIslandPointerUp = (event: PointerEvent) => {
+    if (options.transformAndCrop.endSelectedTransformDrag(event)) return;
     if (options.viewportZoom.isPanning.value) {
       options.viewportZoom.endPan(event, options.container());
       return;

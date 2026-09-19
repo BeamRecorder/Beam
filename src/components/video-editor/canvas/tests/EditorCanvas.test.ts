@@ -36,6 +36,9 @@ const { state } = vi.hoisted(() => ({
     clearCursorBounds: vi.fn(),
     clipIdAt: vi.fn(),
     selectVisualAt: vi.fn(),
+    beginSelectedTransformDrag: vi.fn(() => false),
+    moveSelectedTransformDrag: vi.fn(() => false),
+    endSelectedTransformDrag: vi.fn(() => false),
     selectTransformClip: undefined as ((clipId: string, event?: PointerEvent) => void) | undefined,
     transformDraft: undefined as { value: unknown } | undefined,
     transformSelectionViewportStyle: undefined as { value: unknown } | undefined,
@@ -206,6 +209,8 @@ vi.mock('../composables/useLayerTransformAndCrop', async () => {
         activeGuideLines: ref([]),
         marqueeTargets: ref([]),
         transformDraft: state.transformDraft,
+        transformDrafts: ref({}),
+        transformDraftFor: () => null,
         transformResizeCorners: state.transformResizeCorners,
         beginTransformDrag: state.beginTransformDrag,
         moveTransformDrag: state.moveTransformDrag,
@@ -216,6 +221,9 @@ vi.mock('../composables/useLayerTransformAndCrop', async () => {
         commitCrop: state.commitCrop,
         clipIdAt: state.clipIdAt,
         selectVisualAt: state.selectVisualAt,
+        beginSelectedTransformDrag: state.beginSelectedTransformDrag,
+        moveSelectedTransformDrag: state.moveSelectedTransformDrag,
+        endSelectedTransformDrag: state.endSelectedTransformDrag,
       };
     },
   };

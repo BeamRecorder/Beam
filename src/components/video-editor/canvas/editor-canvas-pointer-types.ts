@@ -21,6 +21,9 @@ export interface EditorCanvasPointerOptions {
   transformAndCrop: {
     selectVisualAt: (event: PointerEvent, canvas: HTMLCanvasElement | null) => boolean;
     clipIdAt: (event: PointerEvent, canvas: HTMLCanvasElement | null) => string | null;
+    beginSelectedTransformDrag: (event: PointerEvent, canvas: HTMLCanvasElement | null) => boolean;
+    moveSelectedTransformDrag: (event: PointerEvent) => boolean;
+    endSelectedTransformDrag: (event: PointerEvent) => boolean;
     beginTransformDrag: (event: PointerEvent, mode: 'move') => void;
     commitCrop: () => void;
   };

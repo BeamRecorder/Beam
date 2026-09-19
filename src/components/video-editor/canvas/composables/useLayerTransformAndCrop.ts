@@ -33,6 +33,7 @@ import { topmostClipIdAtPoint } from './layer-hit-testing';
 import { transformClipDisplayLayout } from './layer-display-layout';
 import { layerSelectionPresentation, perspectivePointerDelta } from './layer-selection-presentation';
 import { resizeCroppedLayer } from './cropped-layer-resize';
+import { useSelectedLayerMove } from './useSelectedLayerMove';
 
 const TRANSFORM_MIN = -3;
 const TRANSFORM_MAX = 3;
@@ -104,6 +105,21 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
       isCropping: Boolean(options.isCropping()),
     });
   };
+  const selectedLayerMove = useSelectedLayerMove({
+    composition: options.composition,
+    currentTime: options.currentTime,
+    selectedClipIds: () => options.selectedClipIds?.() ?? [],
+    clipIdAt: (event, canvas, includeScreen) => clipIdAt(event, canvas, includeScreen),
+    transformFor,
+    boundsFor,
+    displayLayoutFor,
+    zoomScale: () => options.zoomScale?.() ?? 1,
+    onUpdate: (transforms) => options.onUpdateTransforms?.(transforms),
+    onGuides: (guides) => (activeGuideLines.value = guides),
+  });
+  const transformDraftFor = (clipId: string) =>
+    selectedLayerMove.draftFor(clipId) ??
+    (clipId === options.selectedTransformClip()?.id ? transformDraft.value : null);
   const marqueeTargets = computed<CanvasMarqueeTarget[]>(() => {
     const active = activeClipsAt(options.composition(), options.currentTime() * 1_000);
     const backToFront = [
@@ -123,7 +139,7 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
         transformCaptionFollowsCursor(clip)
       )
         return [];
-      const layout = displayLayoutFor(clip);
+      const layout = displayLayoutFor(clip, transformDraftFor(clip.id) ?? transformFor(clip));
       return layout
         ? [
             {
@@ -389,6 +405,8 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
   return {
     ...cropSelection,
     transformDraft,
+    transformDrafts: selectedLayerMove.drafts,
+    transformDraftFor,
     transformSelectionViewportStyle,
     transformHandleStyle,
     transformHandlePositions,
@@ -399,6 +417,9 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     beginTransformDrag,
     moveTransformDrag,
     endTransformDrag,
+    beginSelectedTransformDrag: selectedLayerMove.begin,
+    moveSelectedTransformDrag: selectedLayerMove.move,
+    endSelectedTransformDrag: selectedLayerMove.end,
     clipIdAt,
     selectVisualAt,
   };

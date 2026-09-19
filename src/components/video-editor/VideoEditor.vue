@@ -195,6 +195,7 @@ const {
   reorderCaptionClip,
   updateSelectedAppearance,
   updateSelectedTransform,
+  updateSelectedTransforms,
   updateSelectedBlur,
   updateSelectedCrop,
   updateSelectedCameraLayout,
@@ -660,6 +661,10 @@ const commitSelectedTransform = (transform: NormalizedTransform) => {
   updateSelectedTransform(transform);
   commitNow(createEditorSnapshot());
 };
+const commitSelectedTransforms = (transforms: Parameters<typeof updateSelectedTransforms>[0]) => {
+  updateSelectedTransforms(transforms);
+  commitNow(createEditorSnapshot());
+};
 
 const commitSelectedCrop = (crop: NormalizedCrop) => {
   commitNow(createEditorSnapshot());
@@ -1094,6 +1099,7 @@ onBeforeUnmount(() => {
               @update:cursor-size="cursorSize = $event"
               @deselect:transform-clip="deselectTransformClip"
               @update:clip-transform="commitSelectedTransform"
+              @update:clip-transforms="commitSelectedTransforms"
               @update:clip-crop="commitSelectedCrop"
               @preview:clip-crop="previewCrop"
               @preview:shape-rotation="previewSelectedShapeRotation"

@@ -204,6 +204,7 @@ const mountComposable = (
   const croppingRef = ref(cropping);
   const compositionRef = ref(initialComposition);
   const currentTime = ref(1);
+  const selectedIds = ref<string[]>(selected ? [selected.id] : []);
   const selectedBounds = ref<VideoWindowBounds | null>(bounds());
   const overlayBounds = ref<VideoWindowBounds | null>(bounds());
   const outputCanvas = ref({ ...DEFAULT_OUTPUT_CANVAS, width: 800, height: 450 });
@@ -211,11 +212,13 @@ const mountComposable = (
     composition: () => compositionRef.value,
     currentTime: () => currentTime.value,
     selectedTransformClip: () => selectedRef.value,
+    selectedClipIds: () => selectedIds.value,
     videoWindowBounds: () => selectedBounds.value,
     overlayWindowBounds: () => overlayBounds.value,
     isCropping: () => croppingRef.value,
     outputCanvas: () => outputCanvas.value,
     onUpdateTransform: vi.fn(),
+    onUpdateTransforms: vi.fn(),
     onUpdateCrop: vi.fn(),
     onSelectTransformClip: vi.fn(),
   };
@@ -231,6 +234,7 @@ const mountComposable = (
     selectedRef,
     compositionRef,
     currentTime,
+    selectedIds,
     croppingRef,
     selectedBounds,
     overlayBounds,

@@ -47,6 +47,9 @@ const createHarness = (manualZoom = true) => {
     transformAndCrop: {
       selectVisualAt,
       clipIdAt,
+      beginSelectedTransformDrag: vi.fn(() => false),
+      moveSelectedTransformDrag: vi.fn(() => false),
+      endSelectedTransformDrag: vi.fn(() => false),
       beginTransformDrag: vi.fn(),
       commitCrop: vi.fn(),
     },

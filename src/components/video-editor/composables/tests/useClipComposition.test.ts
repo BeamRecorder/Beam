@@ -562,6 +562,30 @@ describe('useClipComposition', () => {
     );
   });
 
+  it('applies distinct transforms to selected clips in one composition update', () => {
+    const mounted = mountComposable();
+    const first = visualClip('visual-first');
+    const second = visualClip('visual-second', { transform: { x: 0.4, y: 0.3, width: 0.2, height: 0.2 } });
+    mounted.state.composition.value = {
+      ...mounted.state.composition.value,
+      assets: [mediaAssetFor(first.assetId, 'image'), mediaAssetFor(second.assetId, 'image')],
+      clips: [first, second],
+    };
+    mounted.state.selectClips([first.id, second.id]);
+
+    mounted.state.updateSelectedTransforms([
+      { id: first.id, transform: { ...first.transform, x: 0.2 } },
+      { id: second.id, transform: { ...second.transform, x: 0.6 } },
+      { id: 'not-selected', transform: { x: 0, y: 0, width: 1, height: 1 } },
+    ]);
+
+    expect(mounted.state.composition.value.clips).toEqual([
+      expect.objectContaining({ id: first.id, transform: expect.objectContaining({ x: 0.2 }) }),
+      expect.objectContaining({ id: second.id, transform: expect.objectContaining({ x: 0.6 }) }),
+    ]);
+    expect(mounted.state.selectedClipIds.value).toEqual([first.id, second.id]);
+  });
+
   it('deletes all selected clips, including linked group members', () => {
     const mounted = mountComposable();
     const groupedVisual = visualClip('grouped-visual', { kind: 'video', groupId: 'group-1' });

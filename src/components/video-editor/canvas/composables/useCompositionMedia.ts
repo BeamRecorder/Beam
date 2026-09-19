@@ -37,6 +37,7 @@ export interface UseCompositionMediaOptions {
   frameFor: (clipId: string) => MediaFrame | null;
   selectedTransformClip: () => VisualClip | ColorClip | ShapeClip | BlurClip | CaptionClip | null;
   transformDraft: () => NormalizedTransform | null;
+  transformDraftFor?: (clipId: string) => NormalizedTransform | null;
   isCropping?: () => boolean | undefined;
   outputCanvas: () => OutputCanvasSettings;
   captionViewport: () => CaptionViewport;
@@ -47,6 +48,10 @@ export interface UseCompositionMediaOptions {
 
 export function useCompositionMedia(options: UseCompositionMediaOptions) {
   const images = new Map<string, HTMLImageElement>();
+  const transformDraftFor = (clipId: string) => {
+    const selected = options.selectedTransformClip();
+    return options.transformDraftFor?.(clipId) ?? (clipId === selected?.id ? options.transformDraft() : null);
+  };
   const dispose = () => {
     images.clear();
   };
@@ -74,8 +79,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
   const drawCaption = (ctx: CanvasRenderingContext2D, clip: CaptionClip, timeMs: number) => {
     const { text, runs, wordHighlight } = captionContentAt(clip, timeMs);
     if (!text) return;
-    const selected = options.selectedTransformClip();
-    const transformDraft = clip.id === selected?.id ? options.transformDraft() : null;
+    const transformDraft = transformDraftFor(clip.id);
     const renderClip = transformDraft ? { ...clip, transform: transformDraft } : clip;
     drawCaptionText(ctx, {
       clip: renderClip,
@@ -101,7 +105,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     const source = frame?.bitmap ?? image;
     if (!source) return;
     const selected = options.selectedTransformClip();
-    const transform = clip.id === selected?.id && options.transformDraft() ? options.transformDraft()! : clip.transform;
+    const transform = transformDraftFor(clip.id) ?? clip.transform;
     const sourceWidth = frame?.width ?? image?.naturalWidth ?? 0;
     const sourceHeight = frame?.height ?? image?.naturalHeight ?? 0;
     const editingCrop = Boolean(options.isCropping?.() && clip.id === selected?.id);
@@ -157,8 +161,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     clip: BlurClip,
     window: { dx: number; dy: number; dw: number; dh: number },
   ) => {
-    const selected = options.selectedTransformClip();
-    const transform = clip.id === selected?.id && options.transformDraft() ? options.transformDraft()! : clip.transform;
+    const transform = transformDraftFor(clip.id) ?? clip.transform;
     applyBlurEffect(ctx, clip, {
       x: window.dx + transform.x * window.dw,
       y: window.dy + transform.y * window.dh,
@@ -172,8 +175,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     clip: ColorClip,
     window: { dx: number; dy: number; dw: number; dh: number },
   ) => {
-    const selected = options.selectedTransformClip();
-    const transform = clip.id === selected?.id && options.transformDraft() ? options.transformDraft()! : clip.transform;
+    const transform = transformDraftFor(clip.id) ?? clip.transform;
     drawColorClip(ctx, clip, { x: window.dx, y: window.dy, width: window.dw, height: window.dh }, transform);
   };
 
@@ -182,8 +184,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     clip: ShapeClip,
     window: { dx: number; dy: number; dw: number; dh: number },
   ) => {
-    const selected = options.selectedTransformClip();
-    const transform = clip.id === selected?.id && options.transformDraft() ? options.transformDraft()! : clip.transform;
+    const transform = transformDraftFor(clip.id) ?? clip.transform;
     const visible = clip.id === options.editingCaptionId?.() ? { ...clip, text: undefined } : clip;
     drawShapeClip(ctx, visible, { x: window.dx, y: window.dy, width: window.dw, height: window.dh }, transform);
   };
@@ -226,7 +227,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
         ...webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY),
         reactToZoom: webcamReactsToZoom(clip),
       },
-      clip.id === selected?.id && options.transformDraft() ? options.transformDraft()! : clip.transform,
+      transformDraftFor(clip.id) ?? clip.transform,
       options.isCropping?.() && clip.id === selected?.id ? undefined : clip.crop,
       clip.appearance,
       clip.name,
@@ -313,7 +314,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
           ...webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY),
           reactToZoom: webcamReactsToZoom(clip),
         },
-        clip.id === selected?.id && options.transformDraft() ? options.transformDraft()! : clip.transform,
+        transformDraftFor(clip.id) ?? clip.transform,
         options.isCropping?.() && clip.id === selected?.id ? undefined : clip.crop,
         clip.appearance,
         clip.name,
