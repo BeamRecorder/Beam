@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { isShapeKind, SHAPE_CATALOG, shapeDefinition, shapeDisplayName, type ShapeKind } from './shape-catalog';
+import { SHAPE_GALLERY_PATHS } from './shape-gallery-paths';
 
 describe('shape catalog', () => {
   it('contains unique, renderable vector definitions', () => {
-    expect(SHAPE_CATALOG.length).toBeGreaterThanOrEqual(24);
+    expect(SHAPE_CATALOG).toHaveLength(94);
     expect(new Set(SHAPE_CATALOG.map(({ id }) => id)).size).toBe(SHAPE_CATALOG.length);
     for (const definition of SHAPE_CATALOG) {
       expect(definition.path).toMatch(/^M/i);
@@ -30,5 +31,18 @@ describe('shape catalog', () => {
     );
     expect(shapeDisplayName('heart', 'fr-FR')).toBe('Cœur');
     expect(shapeDisplayName('heart', 'en-US')).toBe('Heart');
+    expect(shapeDisplayName('gallery-2', 'fr-FR')).toBe('Forme 2');
+  });
+
+  it('contains every exact vector path from the 72-shape gallery pack', () => {
+    const normalizedCatalogPaths = new Set(
+      SHAPE_CATALOG.filter(({ width, height }) => width === 256 && height === 256).map(({ path }) =>
+        path.replace(/\s+/g, ''),
+      ),
+    );
+
+    expect(SHAPE_GALLERY_PATHS).toHaveLength(72);
+    expect(normalizedCatalogPaths.size).toBe(72);
+    for (const path of SHAPE_GALLERY_PATHS) expect(normalizedCatalogPaths.has(path.replace(/\s+/g, ''))).toBe(true);
   });
 });

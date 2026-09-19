@@ -195,7 +195,6 @@ const createEditor = (shape: ShapeClip | null, layers: ShapeClip[] = shape ? [sh
     drawingSettings: ref({ ...DEFAULT_DRAWING_SETTINGS }),
     showLayers: false,
     add: vi.fn(),
-    addShape: vi.fn(),
     addHighlight: vi.fn(),
     addBlur: vi.fn(),
     addColor: vi.fn(),
@@ -274,7 +273,7 @@ describe('PropertiesPanel Elements tab', () => {
         .get('.element-tools')
         .findAll('button')
         .map((button) => button.text()),
-    ).toEqual(['Rectangle', 'arrow', 'text', 'drawing', 'title', 'blur', 'color', 'image']);
+    ).toEqual(['shape', 'arrow', 'text', 'drawing', 'title', 'blur', 'color', 'image']);
     expect(wrapper.find('[data-test="shape-layer-properties"]').exists()).toBe(true);
     expect(wrapper.find('[data-test="generated-layer-properties"]').exists()).toBe(false);
   });

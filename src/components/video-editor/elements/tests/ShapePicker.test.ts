@@ -1,6 +1,7 @@
 import { DOMWrapper, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
+import { SHAPE_CATALOG } from '~/media/shared/shape-catalog';
 import ShapePicker from '../ShapePicker.vue';
 
 vi.mock('~/i18n/useTranslate', () => ({
@@ -34,9 +35,9 @@ describe('ShapePicker', () => {
     await wrapper.get('[aria-label="Shape: Rectangle"]').trigger('click');
     await nextTick();
 
-    expect(body().get('[role="listbox"]').findAll('[role="option"]')).toHaveLength(29);
+    expect(body().get('[role="listbox"]').findAll('[role="option"]')).toHaveLength(SHAPE_CATALOG.length);
     expect(body().get('[aria-label="Heart"]').find('svg path').attributes('d')).toMatch(/^M/);
-    expect(body().text()).toContain('29 shapes');
+    expect(body().text()).toContain(`${SHAPE_CATALOG.length} shapes`);
 
     await body().get('.shape-picker').trigger('keydown', { key: 'Escape' });
     await nextTick();

@@ -99,10 +99,10 @@ test('preserves normalized gradient fills on shape and drawing clips', () => {
 test('preserves shapes selected from the shared vector catalog', () => {
   const normalized = normalizeComposition({
     ...emptyComposition(),
-    clips: [shapeClip({ family: 'shape', preset: 'sparkle-quad' })],
+    clips: [shapeClip({ family: 'shape', preset: 'gallery-72' })],
   });
 
-  assert.equal(normalized.clips[0].preset, 'sparkle-quad');
+  assert.equal(normalized.clips[0].preset, 'gallery-72');
 });
 
 test('drops an invalid optional gradient fill while preserving the solid legacy fill', () => {

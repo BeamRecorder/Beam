@@ -1,3 +1,5 @@
+import { SHAPE_GALLERY_PATHS } from './shape-gallery-paths';
+
 export interface ShapeDefinition {
   id: string;
   name: string;
@@ -14,7 +16,7 @@ const shape = <const T extends Omit<ShapeDefinition, 'fillRule'> & { fillRule?: 
   ...definition,
 });
 
-export const SHAPE_CATALOG = [
+const BASE_SHAPE_CATALOG = [
   shape({
     id: 'rectangle',
     name: 'Rectangle',
@@ -278,9 +280,50 @@ export const SHAPE_CATALOG = [
   }),
 ] as const;
 
-export type ShapeKind = (typeof SHAPE_CATALOG)[number]['id'];
+type BaseShapeKind = (typeof BASE_SHAPE_CATALOG)[number]['id'];
+type GalleryShapeKind = `gallery-${number}`;
+export type ShapeKind = BaseShapeKind | GalleryShapeKind;
 
-const FRENCH_SHAPE_NAMES: Record<ShapeKind, string> = {
+const NAMED_GALLERY_SHAPES: Partial<Record<number, { id: BaseShapeKind; name: string; keywords: readonly string[] }>> =
+  {
+    1: { id: 'petal-four', name: 'Four petals', keywords: ['flower', 'clover', 'fleur', 'trèfle'] },
+    29: { id: 'orbit-open', name: 'Open orbit', keywords: ['circle', 'ring', 'orbite', 'cercle'] },
+    48: { id: 'bloom-star', name: 'Bloom star', keywords: ['flower', 'sparkle', 'fleur', 'étoile'] },
+    52: {
+      id: 'sparkle-asterisk',
+      name: 'Asterisk sparkle',
+      keywords: ['spark', 'star', 'shine', 'étincelle', 'astérisque'],
+    },
+    57: { id: 'ribbon-arch', name: 'Ribbon arch', keywords: ['loop', 'curve', 'ruban', 'arche'] },
+    65: {
+      id: 'sparkle-quad',
+      name: 'Four-point sparkle',
+      keywords: ['spark', 'star', 'shine', 'étincelle', 'quatre pointes'],
+    },
+    70: { id: 'steps-duo', name: 'Double steps', keywords: ['stairs', 'blocks', 'marches', 'escalier'] },
+  };
+const NAMED_GALLERY_IDS = new Set(Object.values(NAMED_GALLERY_SHAPES).flatMap((value) => (value ? [value.id] : [])));
+const GALLERY_SHAPE_CATALOG: Array<ShapeDefinition & { id: ShapeKind }> = SHAPE_GALLERY_PATHS.map((path, index) => {
+  const number = index + 1;
+  const named = NAMED_GALLERY_SHAPES[number];
+  return {
+    id: named?.id ?? `gallery-${number}`,
+    name: named?.name ?? `Shape ${number}`,
+    keywords: named?.keywords ?? ['gallery', 'abstract', `shape ${number}`, `forme ${number}`],
+    viewBox: '0 0 256 256',
+    width: 256,
+    height: 256,
+    path,
+    fillRule: 'nonzero',
+  };
+});
+
+export const SHAPE_CATALOG: readonly (ShapeDefinition & { id: ShapeKind })[] = [
+  ...BASE_SHAPE_CATALOG.filter(({ id }) => !NAMED_GALLERY_IDS.has(id)),
+  ...GALLERY_SHAPE_CATALOG,
+];
+
+const FRENCH_SHAPE_NAMES: Partial<Record<ShapeKind, string>> = {
   rectangle: 'Rectangle',
   'rounded-rectangle': 'Rectangle arrondi',
   ellipse: 'Ellipse',
@@ -319,5 +362,8 @@ export const isShapeKind = (value: unknown): value is ShapeKind =>
 
 export const shapeDefinition = (value: ShapeKind) => SHAPE_BY_ID.get(value)!;
 
-export const shapeDisplayName = (value: ShapeKind, locale: string) =>
-  locale.toLowerCase().startsWith('fr') ? FRENCH_SHAPE_NAMES[value] : shapeDefinition(value).name;
+export const shapeDisplayName = (value: ShapeKind, locale: string) => {
+  const definition = shapeDefinition(value);
+  if (!locale.toLowerCase().startsWith('fr')) return definition.name;
+  return FRENCH_SHAPE_NAMES[value] ?? definition.name.replace(/^Shape /, 'Forme ');
+};

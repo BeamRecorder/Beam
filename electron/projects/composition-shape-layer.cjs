@@ -31,6 +31,10 @@ const SHAPE_PRESETS = new Set([
   'sparkle-quad',
   'steps-duo',
 ]);
+const NAMED_GALLERY_INDEXES = new Set([1, 29, 48, 52, 57, 65, 70]);
+for (let index = 1; index <= 72; index += 1) {
+  if (!NAMED_GALLERY_INDEXES.has(index)) SHAPE_PRESETS.add(`gallery-${index}`);
+}
 const PRESETS = new Set([...SHAPE_PRESETS, 'arrow', 'text', 'freehand']);
 const DIRECTIONS = new Set(['all', 'bottom', 'bottom-right', 'top-left']);
 const DEFAULTS = {

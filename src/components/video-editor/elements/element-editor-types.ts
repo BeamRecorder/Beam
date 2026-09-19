@@ -1,7 +1,6 @@
 import type { ComputedRef, Ref } from 'vue';
 import type { NormalizedTransform, ShapeClip } from '~/media/shared/composition-types';
 import type { ShapeLayerFamily, ShapeLayerStyle } from '~/media/shared/shape-layer-types';
-import type { ShapeKind } from '~/media/shared/shape-catalog';
 import type { DrawingSettings, DrawnElement } from '~/media/shared/element-types';
 
 export interface ElementEditorOptions {
@@ -28,7 +27,6 @@ export interface ElementEditorContext {
   drawingSettings: Ref<DrawingSettings>;
   showLayers: boolean;
   add: (family: ShapeLayerFamily) => void;
-  addShape: (preset: ShapeKind) => void;
   addHighlight?: () => void | Promise<void>;
   addBlur?: () => void | Promise<void>;
   addColor?: () => void | Promise<void>;

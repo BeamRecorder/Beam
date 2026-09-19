@@ -186,23 +186,6 @@ describe('useElementEditor', () => {
     expect(inserted).not.toHaveProperty('fill');
   });
 
-  it('inserts the requested catalog shape with its preview name and annotation styling', () => {
-    const editor = mountEditor();
-
-    editor.context.addShape('heart');
-
-    expect(editor.insert).toHaveBeenCalledOnce();
-    expect(editor.insert.mock.calls[0]![0]).toMatchObject({
-      family: 'shape',
-      preset: 'heart',
-      name: 'Heart',
-      fillEnabled: false,
-      borderColor: '#ff5a1f',
-      borderWidth: 8,
-    });
-    expect(editor.select).toHaveBeenLastCalledWith('element-1');
-  });
-
   it('toggles drawing mode and inserts completed points using current duration and drawing color', () => {
     const editor = mountEditor({ timing: { startMs: 700, durationMs: 1_900 } });
     editor.context.add('drawing');

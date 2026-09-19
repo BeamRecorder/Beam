@@ -1,22 +1,19 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import { ArrowRight, Shapes, Type, Pencil, MousePointer2, Image, Focus, CircleDashed, Palette } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import Divider from '~/ui/divider/Divider.vue';
 import ShapeLayerPropertiesPanel from '../properties/clip/ShapeLayerPropertiesPanel.vue';
 import DrawingControls from './DrawingControls.vue';
-import ShapePicker from './ShapePicker.vue';
 import { useElementEditor } from './useElementEditor';
 import { useTranslate } from '~/i18n/useTranslate';
-import type { ShapeKind } from '~/media/shared/shape-catalog';
 const editor = useElementEditor();
 defineProps<{ disabled?: boolean }>();
-const selectedShape = ref<ShapeKind>('rectangle');
 const { t } = useTranslate('Elements');
 const { t: tHighlight } = useTranslate('Highlight');
 const { t: tTimeline } = useTranslate('TimelineToolbar');
 const { t: tCanvas } = useTranslate('CanvasPanel');
 const tools = [
+  { family: 'shape', icon: Shapes },
   { family: 'arrow', icon: ArrowRight },
   { family: 'text', icon: Type },
   { family: 'drawing', icon: Pencil },
@@ -27,11 +24,6 @@ const icons = { shape: Shapes, arrow: ArrowRight, text: Type, drawing: Pencil };
   <section v-if="editor" class="elements-panel">
     <div class="element-tools">
       <slot name="tools" />
-      <ShapePicker
-        v-model="selectedShape"
-        :disabled="disabled || !editor.canInteract.value"
-        @select="editor.addShape"
-      />
       <Button
         v-for="tool in tools"
         :key="tool.family"

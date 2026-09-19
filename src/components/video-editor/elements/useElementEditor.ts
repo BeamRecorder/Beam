@@ -9,26 +9,25 @@ import {
   normalizeShapeLayerStyle,
 } from '~/media/shared/shape-layer-style';
 import type { ShapeLayerFamily } from '~/media/shared/shape-layer-types';
-import { shapeDisplayName, type ShapeKind } from '~/media/shared/shape-catalog';
 import type { ElementEditorContext, ElementEditorOptions } from './element-editor-types';
 
 export const ELEMENT_EDITOR: InjectionKey<ElementEditorContext> = Symbol('element-editor');
 export const useElementEditor = () => inject(ELEMENT_EDITOR, null);
 
 export function provideElementEditor(options: ElementEditorOptions): ElementEditorContext {
-  const { t, locale } = useTranslate('Elements');
+  const { t } = useTranslate('Elements');
   const layers = computed(options.layers);
   const selected = computed(() => layers.value.find((c) => c.id === options.selectedId()) ?? null);
   const editing = ref<ShapeClip | null>(null);
   const drawingMode = ref(false);
   const drawingSettings = ref({ ...DEFAULT_DRAWING_SETTINGS });
   let latestDrawingId: string | null = null;
-  const create = (family: ShapeLayerFamily, preset?: ShapeKind): ShapeClip => {
+  const create = (family: ShapeLayerFamily): ShapeClip => {
     const { startMs, durationMs } = options.timing();
     const id = crypto.randomUUID();
     const style =
       family === 'shape'
-        ? { ...DEFAULT_ANNOTATION_SHAPE_STYLE, ...(preset ? { preset } : {}) }
+        ? { ...DEFAULT_ANNOTATION_SHAPE_STYLE }
         : normalizeShapeLayerStyle({ family, preset: defaultShapePresetFor(family) });
     return {
       ...style,
@@ -36,7 +35,7 @@ export function provideElementEditor(options: ElementEditorOptions): ElementEdit
       trackId: id,
       kind: 'shape',
       assetId: '',
-      name: preset ? shapeDisplayName(preset, String(locale?.value ?? 'en')) : t(family),
+      name: t(family),
       enabled: true,
       order: 0,
       timelineStartMs: startMs,
@@ -92,15 +91,6 @@ export function provideElementEditor(options: ElementEditorOptions): ElementEdit
       options.insert(clip);
       options.select(clip.id);
       if (family === 'text') beginText(clip.id);
-    },
-    addShape: (preset) => {
-      if (!allowed()) return;
-      finishText();
-      drawingMode.value = false;
-      latestDrawingId = null;
-      const clip = create('shape', preset);
-      options.insert(clip);
-      options.select(clip.id);
     },
     addDrawing: (value) => {
       if (!allowed()) return;

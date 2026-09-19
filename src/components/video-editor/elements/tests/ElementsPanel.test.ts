@@ -38,24 +38,6 @@ const DrawingControlsStub = defineComponent({
   },
 });
 
-const ShapePickerStub = defineComponent({
-  name: 'ShapePicker',
-  props: { modelValue: String, disabled: Boolean },
-  emits: ['update:modelValue', 'select'],
-  setup(props, { emit }) {
-    return () =>
-      h(
-        'button',
-        {
-          class: 'shape-picker-stub',
-          disabled: props.disabled,
-          onClick: () => emit('select', 'heart'),
-        },
-        'shape',
-      );
-  },
-});
-
 const ShapeLayerPropertiesPanelStub = defineComponent({
   name: 'ShapeLayerPropertiesPanel',
   props: { clip: { type: Object as PropType<ShapeClip>, required: true } },
@@ -73,7 +55,6 @@ const panelStubs = {
   Button: ButtonStub,
   Divider: true,
   DrawingControls: DrawingControlsStub,
-  ShapePicker: ShapePickerStub,
   ShapeLayerPropertiesPanel: ShapeLayerPropertiesPanelStub,
 };
 
@@ -121,7 +102,7 @@ describe('ElementsPanel', () => {
     expect(familyButtons().every((button) => button.attributes('disabled') === undefined)).toBe(true);
   });
 
-  it('adds the shape selected from the shared catalog picker', async () => {
+  it('adds the default outlined rectangle directly from the shape tool', async () => {
     let nextId = 0;
     vi.stubGlobal('crypto', { randomUUID: () => `shape-${++nextId}` });
     const composition = shallowRef(createComposition([], []));
@@ -149,10 +130,19 @@ describe('ElementsPanel', () => {
     const wrapper = mount(Host, { global: { stubs: panelStubs } });
     wrappers.push(wrapper);
 
-    await wrapper.get('.shape-picker-stub').trigger('click');
+    const shapeButton = wrapper.findAll('.element-tools button').find((button) => button.text().trim() === 'shape');
+    expect(shapeButton).toBeDefined();
+    await shapeButton!.trigger('click');
     await nextTick();
 
-    expect(editor!.selected.value).toMatchObject({ id: 'shape-1', preset: 'heart', name: 'Heart' });
+    expect(editor!.selected.value).toMatchObject({
+      id: 'shape-1',
+      family: 'shape',
+      preset: 'rectangle',
+      name: 'shape',
+      fillEnabled: false,
+      borderWidth: 8,
+    });
   });
 
   it('keeps drawing controls active and updates the latest stroke from their settings', async () => {
