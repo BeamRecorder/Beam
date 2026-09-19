@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { Clapperboard, Code2, ExternalLink, ScanLine, Zap } from '@lucide/vue';
+import { computed, ref } from 'vue';
+import { Clapperboard, ClipboardPaste, Code2, Crop, ExternalLink, PenTool, ScanLine, Zap } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import Button from '~/ui/button/Button.vue';
 import WebsiteFeatureSection from '@website/components/WebsiteFeatureSection.vue';
@@ -11,89 +11,117 @@ import WebsiteShaderPanel from '@website/components/WebsiteShaderPanel.vue';
 import { HOME_PAGE_COPY } from '@website/content/home-page';
 import { createHomeJsonLd } from '@website/seo/json-ld';
 import { usePageSeo } from '@website/seo/use-page-seo';
-import type { WebsiteFeature } from '@website/types/website-features';
-import type { WebsiteModeSpotlightContent, WebsiteModeSummary } from '@website/types/website-modes';
+import type { WebsiteFeatureGroups } from '@website/types/website-features';
+import type { WebsiteModeId, WebsiteModeSpotlightContent, WebsiteModeSummary } from '@website/types/website-modes';
 import discordIconUrl from '../../../public/discord_svg.svg';
 
 const { t } = useI18n();
+const activeMode = ref<WebsiteModeId>('studio');
 
-const features = computed<WebsiteFeature[]>(() => [
-  {
-    title: t('Website.home.featureRecorder'),
-    media: {
-      type: 'image',
-      src: '/features/recorder.webp',
-      srcset: '/features/recorder.webp 320w',
-      sizes: '(max-width: 760px) 320px, 420px',
-      width: 320,
-      height: 480,
-      fit: 'contain',
-      containShape: 'portrait',
-      backdrop: '/features/product-backdrop.webp',
-    },
+const featureGroups = computed<WebsiteFeatureGroups>(() => ({
+  instant: {
+    ...HOME_PAGE_COPY.featureExplorer.modes.instant,
+    features: [
+      {
+        title: t('Website.home.featureRecorder'),
+        media: {
+          type: 'image',
+          src: '/features/recorder.webp',
+          srcset: '/features/recorder.webp 320w',
+          sizes: '(max-width: 760px) 320px, 420px',
+          width: 320,
+          height: 480,
+          fit: 'contain',
+          containShape: 'portrait',
+          backdrop: '/features/product-backdrop.webp',
+        },
+      },
+      {
+        title: t('Website.home.featureBackgrounds'),
+        media: {
+          type: 'image',
+          src: '/features/backgrounds-640.webp',
+          srcset: '/features/backgrounds-640.webp 640w, /features/backgrounds-960.webp 960w',
+          sizes: '(max-width: 760px) calc(100vw - 24px), 390px',
+          mobileSrc: '/features/backgrounds-400.webp',
+          width: 640,
+          height: 640,
+        },
+      },
+      {
+        title: t('Website.home.featureExport'),
+        media: {
+          type: 'image',
+          src: '/features/export-settings-640.webp',
+          srcset: '/features/export-settings-640.webp 640w, /features/export-settings-960.webp 960w',
+          sizes: '(max-width: 760px) calc(100vw - 24px), 640px',
+          mobileSrc: '/features/export-settings-400.webp',
+          width: 640,
+          height: 640,
+        },
+      },
+    ],
   },
-  {
-    title: t('Website.home.featureEditor'),
-    media: {
-      type: 'image',
-      src: '/features/editor.webp',
-      srcset: '/features/editor.webp 800w',
-      sizes: '(max-width: 760px) calc(100vw - 48px), 600px',
-      mobileSrc: '/features/editor-400.webp',
-      width: 800,
-      height: 500,
-      fit: 'contain',
-      containShape: 'landscape',
-      backdrop: '/features/product-backdrop.webp',
-    },
+  studio: {
+    ...HOME_PAGE_COPY.featureExplorer.modes.studio,
+    features: [
+      {
+        title: t('Website.home.featureEditor'),
+        media: {
+          type: 'image',
+          src: '/features/editor.webp',
+          srcset: '/features/editor.webp 800w',
+          sizes: '(max-width: 760px) calc(100vw - 48px), 600px',
+          mobileSrc: '/features/editor-400.webp',
+          width: 800,
+          height: 500,
+          fit: 'contain',
+          containShape: 'landscape',
+          backdrop: '/features/product-backdrop.webp',
+        },
+      },
+      {
+        title: t('Website.home.featureZoomControls'),
+        media: {
+          type: 'image',
+          src: '/features/zooms-640.webp',
+          srcset: '/features/zooms-640.webp 640w, /features/zooms-960.webp 960w',
+          sizes: '(max-width: 760px) calc(100vw - 24px), 390px',
+          mobileSrc: '/features/zooms-400.webp',
+          width: 640,
+          height: 640,
+        },
+      },
+      {
+        title: t('Website.home.feature3dZooms'),
+        media: {
+          type: 'video',
+          src: '/features/tilt-zoom-full.webm',
+          poster: '/features/tilt-zoom-full-poster.webp',
+          width: 1280,
+          height: 720,
+        },
+      },
+    ],
   },
-  {
-    title: t('Website.home.featureBackgrounds'),
-    media: {
-      type: 'image',
-      src: '/features/backgrounds-640.webp',
-      srcset: '/features/backgrounds-640.webp 640w, /features/backgrounds-960.webp 960w',
-      sizes: '(max-width: 760px) calc(100vw - 24px), 390px',
-      mobileSrc: '/features/backgrounds-400.webp',
-      width: 640,
-      height: 640,
-    },
+  screenshot: {
+    ...HOME_PAGE_COPY.featureExplorer.modes.screenshot,
+    features: [
+      {
+        title: HOME_PAGE_COPY.featureExplorer.screenshotFeatures.crop,
+        media: { type: 'placeholder', label: 'Screenshot crop feature media', icon: Crop },
+      },
+      {
+        title: HOME_PAGE_COPY.featureExplorer.screenshotFeatures.annotate,
+        media: { type: 'placeholder', label: 'Screenshot annotation feature media', icon: PenTool },
+      },
+      {
+        title: HOME_PAGE_COPY.featureExplorer.screenshotFeatures.clipboard,
+        media: { type: 'placeholder', label: 'Screenshot clipboard feature media', icon: ClipboardPaste },
+      },
+    ],
   },
-  {
-    title: t('Website.home.featureZoomControls'),
-    media: {
-      type: 'image',
-      src: '/features/zooms-640.webp',
-      srcset: '/features/zooms-640.webp 640w, /features/zooms-960.webp 960w',
-      sizes: '(max-width: 760px) calc(100vw - 24px), 390px',
-      mobileSrc: '/features/zooms-400.webp',
-      width: 640,
-      height: 640,
-    },
-  },
-  {
-    title: t('Website.home.feature3dZooms'),
-    media: {
-      type: 'video',
-      src: '/features/tilt-zoom-full.webm',
-      poster: '/features/tilt-zoom-full-poster.webp',
-      width: 1280,
-      height: 720,
-    },
-  },
-  {
-    title: t('Website.home.featureExport'),
-    media: {
-      type: 'image',
-      src: '/features/export-settings-640.webp',
-      srcset: '/features/export-settings-640.webp 640w, /features/export-settings-960.webp 960w',
-      sizes: '(max-width: 760px) calc(100vw - 24px), 640px',
-      mobileSrc: '/features/export-settings-400.webp',
-      width: 640,
-      height: 640,
-    },
-  },
-]);
+}));
 
 const modes = computed<WebsiteModeSummary[]>(() => [
   {
@@ -175,7 +203,7 @@ const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
 <template>
   <div class="site-shell">
     <main id="top">
-      <WebsiteHero />
+      <WebsiteHero v-model:mode="activeMode" />
 
       <WebsiteModeCards
         :title="HOME_PAGE_COPY.overview.title"
@@ -186,10 +214,12 @@ const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
       <WebsiteModeSpotlight v-for="mode in modeSpotlights" :key="mode.id" :content="mode" />
 
       <WebsiteFeatureSection
+        v-model:mode="activeMode"
         id="editor-demo"
-        :title="t('Website.home.featuresTitle')"
-        :description="t('Website.home.featuresText')"
-        :features="features"
+        :eyebrow="HOME_PAGE_COPY.featureExplorer.eyebrow"
+        :mode-navigation="HOME_PAGE_COPY.featureExplorer.modeNavigation"
+        :modes="modes"
+        :groups="featureGroups"
       />
 
       <section class="free-statement" aria-labelledby="free-title">

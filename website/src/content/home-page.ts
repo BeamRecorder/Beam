@@ -28,6 +28,32 @@ export const HOME_PAGE_COPY = {
     },
   },
   seeHowItWorks: 'See how Beam works',
+  featureExplorer: {
+    eyebrow: 'Explore features',
+    modeNavigation: 'Explore features by capture mode',
+    modes: {
+      instant: {
+        title: ['Record.', 'Stop.', 'Paste.'],
+        description:
+          'Start from a saved look, render locally when the recording ends, and paste the finished video file wherever it needs to go.',
+      },
+      studio: {
+        title: ['Edit.', 'Refine.', 'Export.'],
+        description:
+          'Keep every source editable, shape the pacing and presentation, then export a finished product story on your terms.',
+      },
+      screenshot: {
+        title: ['Capture.', 'Explain.', 'Copy.'],
+        description:
+          'Crop the source, add clear visual direction, compose with pasted images, and copy the final result in one flow.',
+      },
+    },
+    screenshotFeatures: {
+      crop: 'Crop and resize',
+      annotate: 'Annotation toolkit',
+      clipboard: 'Clipboard composition',
+    },
+  },
   overview: {
     title: 'One app for every capture workflow.',
     text: 'Move fast with Instant, take full control in Studio, or turn a still capture into a clear visual explanation.',

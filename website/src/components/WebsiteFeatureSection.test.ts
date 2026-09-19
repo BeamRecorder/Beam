@@ -1,6 +1,8 @@
 import { mount, type VueWrapper } from '@vue/test-utils';
+import { Crop, ScanLine } from '@lucide/vue';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { WebsiteFeature } from '@website/types/website-features';
+import type { WebsiteFeature, WebsiteFeatureGroups } from '@website/types/website-features';
+import type { WebsiteModeOption } from '@website/types/website-modes';
 import WebsiteFeatureSection from './WebsiteFeatureSection.vue';
 
 const features: WebsiteFeature[] = [
@@ -39,6 +41,30 @@ const features: WebsiteFeature[] = [
   },
 ];
 
+const modes: WebsiteModeOption[] = [
+  { id: 'instant', label: 'Instant Mode', icon: ScanLine },
+  { id: 'studio', label: 'Studio Mode', icon: ScanLine },
+  { id: 'screenshot', label: 'Screenshot Mode', icon: ScanLine },
+];
+
+const groups: WebsiteFeatureGroups = {
+  instant: {
+    title: ['Record.', 'Stop.', 'Paste.'],
+    description: 'Instant description.',
+    features: features.slice(1),
+  },
+  studio: {
+    title: ['Edit.', 'Refine.', 'Export.'],
+    description: 'Studio description.',
+    features,
+  },
+  screenshot: {
+    title: ['Capture.', 'Explain.', 'Copy.'],
+    description: 'Screenshot description.',
+    features: [{ title: 'Crop and resize', media: { type: 'placeholder', label: 'Crop media', icon: Crop } }],
+  },
+};
+
 let intersectionCallback: IntersectionObserverCallback;
 const observe = vi.fn();
 const disconnect = vi.fn();
@@ -62,9 +88,10 @@ class IntersectionObserverMock implements IntersectionObserver {
 const mountSection = (): VueWrapper =>
   mount(WebsiteFeatureSection, {
     props: {
-      title: 'A powerful editor.',
-      description: 'Built for speed and precision, from first cut to final export.',
-      features,
+      eyebrow: 'Explore features',
+      modeNavigation: 'Feature modes',
+      modes,
+      groups,
     },
   });
 
@@ -82,11 +109,9 @@ describe('WebsiteFeatureSection', () => {
 
     const title = wrapper.get('h2');
 
-    expect(title.text()).toBe('A powerful editor.');
-    expect(title.findAll('.feature-section__punctuation').map((part) => part.text())).toEqual(['.']);
-    expect(wrapper.get('.feature-section__intro p').text()).toBe(
-      'Built for speed and precision, from first cut to final export.',
-    );
+    expect(title.text().replaceAll(/\s+/g, ' ')).toBe('Edit. Refine. Export.');
+    expect(title.findAll('.mode-message__phrase').map((part) => part.text())).toEqual(['Edit.', 'Refine.', 'Export.']);
+    expect(wrapper.get('.mode-message__description').text()).toBe('Studio description.');
     expect(cards.map((card) => card.get('h3').text())).toEqual(['3D zooms', 'Custom backgrounds', 'Export your way']);
     expect(cards.every((card) => card.classes().length === 1)).toBe(true);
     expect(images[0].attributes('srcset')).toContain('backgrounds-960.webp 960w');
@@ -94,6 +119,17 @@ describe('WebsiteFeatureSection', () => {
     expect(images[1].attributes('alt')).toBe('');
     expect(wrapper.find('.feature-card__backdrop').exists()).toBe(true);
     expect(wrapper.find('.feature-card__backdrop--video').exists()).toBe(true);
+  });
+
+  it('switches the copy and media group through the shared mode controls', async () => {
+    const wrapper = mountSection();
+
+    await wrapper.findAll('.feature-section__modes button')[2]!.trigger('click');
+
+    expect(wrapper.get('h2').text().replaceAll(/\s+/g, ' ')).toBe('Capture. Explain. Copy.');
+    expect(wrapper.findAll('.feature-card')).toHaveLength(1);
+    expect(wrapper.get('.feature-card h3').text()).toBe('Crop and resize');
+    expect(wrapper.get('.feature-card__placeholder').attributes('aria-label')).toBe('Crop media');
   });
 
   it('waits until the section is near the viewport before loading video files', async () => {

@@ -22,6 +22,7 @@ describe('WebsiteHero', () => {
       'Record. Shape. Make it yours.',
     );
     expect(wrapper.get('.hero-announcement').text()).toContain('Screenshot Editor is here');
+    expect(wrapper.get('.hero-announcement').attributes('href')).toBe('#editor-demo');
     expect(wrapper.findAll('.hero-modes button').map((button) => button.text())).toEqual([
       'Instant Mode',
       'Studio Mode',
@@ -33,6 +34,15 @@ describe('WebsiteHero', () => {
     expect(wrapper.find('.macbook-demo__status').exists()).toBe(false);
   });
 
+  it('opens the feature explorer in Screenshot mode from the announcement', async () => {
+    const wrapper = mountHero();
+
+    await wrapper.get('.hero-announcement').trigger('click');
+
+    expect(wrapper.emitted('update:mode')?.at(-1)).toEqual(['screenshot']);
+    expect(wrapper.get('#hero-title').text().replaceAll(/\s+/g, ' ')).toContain('Capture. Mark up. Make it clear.');
+  });
+
   it('switches the hero message without navigating', async () => {
     const wrapper = mountHero();
     const buttons = wrapper.findAll('.hero-modes button');
@@ -41,7 +51,7 @@ describe('WebsiteHero', () => {
     await buttons[0]!.trigger('click');
 
     expect(wrapper.get('#hero-title').text().replaceAll(/\s+/g, ' ')).toContain('Record. Stop. Already polished.');
-    expect(wrapper.get('.lede').text()).toContain('finished video file lands on your clipboard');
+    expect(wrapper.get('.mode-message__description').text()).toContain('finished video file lands on your clipboard');
     expect(wrapper.findAll('.hero-modes button')[0]!.attributes('aria-pressed')).toBe('true');
   });
 

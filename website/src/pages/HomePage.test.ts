@@ -49,7 +49,7 @@ describe('HomePage', () => {
     expect(
       wrapper
         .get('#hero-title')
-        .findAll('.hero-title__phrase')
+        .findAll('.mode-message__phrase')
         .map((part) => part.text()),
     ).toEqual(['Record.', 'Shape.', 'Make it yours.']);
     expect(hero.get('.hero-availability').text()).toContain('Free, local-first, and open source.');
@@ -76,29 +76,23 @@ describe('HomePage', () => {
     expect(wrapper.text()).not.toContain('Real Beam editor footage');
     expect(wrapper.get('#instant').text()).toContain('The video file is copied');
     expect(wrapper.get('#screenshot').text()).toContain('Direct cropping');
-    expect(features.get('h2').text()).toBe('A powerful editor.');
-    expect(features.get('.feature-section__intro p').text()).toBe(
-      'Built for speed and precision, from first cut to final export.',
-    );
+    expect(features.get('.feature-section__eyebrow').text()).toBe('Explore features');
+    expect(features.get('h2').text().replaceAll(/\s+/g, ' ')).toBe('Edit. Refine. Export.');
+    expect(features.get('.mode-message__description').text()).toContain('Keep every source editable');
     const featureCards = features.findAll('.feature-card');
 
-    expect(featureCards).toHaveLength(6);
+    expect(featureCards).toHaveLength(3);
     expect(features.findAll('h3').map((title) => title.text())).toEqual([
-      'Recorder app',
       'Video editor',
-      'Custom backgrounds',
       'Precise zoom controls',
       '3D zooms',
-      'Export your way',
     ]);
     expect(features.findAll('video')).toHaveLength(1);
-    expect(features.findAll('img')).toHaveLength(5);
+    expect(features.findAll('img')).toHaveLength(2);
 
     const mobileImageCandidates = new Map([
       ['Video editor', '/features/editor-400.webp'],
-      ['Custom backgrounds', '/features/backgrounds-400.webp'],
       ['Precise zoom controls', '/features/zooms-400.webp'],
-      ['Export your way', '/features/export-settings-400.webp'],
     ]);
 
     for (const [title, src] of mobileImageCandidates) {
@@ -111,11 +105,49 @@ describe('HomePage', () => {
       });
     }
 
-    expect(features.findAll('.feature-card__media--product')).toHaveLength(2);
+    expect(features.findAll('.feature-card__media--product')).toHaveLength(1);
     expect(features.get('.feature-card__media--product .feature-card__backdrop').attributes('style')).toContain(
       'product-backdrop.webp',
     );
     expect(wrapper.find('.showcase-image').exists()).toBe(false);
+  });
+
+  it('keeps the hero and feature explorer mode selections synchronized', async () => {
+    const wrapper = mountHome();
+    const hero = wrapper.get('.website-hero');
+    const features = wrapper.get('#editor-demo');
+
+    await hero.findAll('.hero-modes button')[0]!.trigger('click');
+
+    expect(features.findAll('.feature-section__modes button')[0]!.attributes('aria-pressed')).toBe('true');
+    expect(features.get('h2').text().replaceAll(/\s+/g, ' ')).toBe('Record. Stop. Paste.');
+    expect(features.findAll('h3').map((title) => title.text())).toEqual([
+      'Recorder app',
+      'Custom backgrounds',
+      'Export your way',
+    ]);
+
+    await features.findAll('.feature-section__modes button')[2]!.trigger('click');
+
+    expect(hero.findAll('.hero-modes button')[2]!.attributes('aria-pressed')).toBe('true');
+    expect(hero.get('#hero-title').text().replaceAll(/\s+/g, ' ')).toBe('Capture. Mark up. Make it clear.');
+    expect(features.findAll('.feature-card__placeholder')).toHaveLength(3);
+  });
+
+  it('opens the synchronized Screenshot feature explorer from the hero announcement', async () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const wrapper = mountHome();
+    document.body.appendChild(wrapper.element);
+
+    await wrapper.get('.hero-announcement').trigger('click');
+    await wrapper.vm.$nextTick();
+
+    const features = wrapper.get('#editor-demo');
+    expect(window.location.hash).toBe('#editor-demo');
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+    expect(features.findAll('.feature-section__modes button')[2]!.attributes('aria-pressed')).toBe('true');
+    expect(features.get('h2').text().replaceAll(/\s+/g, ' ')).toBe('Capture. Explain. Copy.');
   });
 
   it('does not render the removed hero explore action', () => {

@@ -1,3 +1,6 @@
+import type { Component } from 'vue';
+import type { WebsiteModeId } from './website-modes';
+
 export interface WebsiteFeatureImage {
   type: 'image';
   src: string;
@@ -19,7 +22,21 @@ export interface WebsiteFeatureVideo {
   height: number;
 }
 
+export interface WebsiteFeaturePlaceholder {
+  type: 'placeholder';
+  label: string;
+  icon: Component;
+}
+
 export interface WebsiteFeature {
   title: string;
-  media: WebsiteFeatureImage | WebsiteFeatureVideo;
+  media: WebsiteFeatureImage | WebsiteFeatureVideo | WebsiteFeaturePlaceholder;
 }
+
+export interface WebsiteFeatureGroup {
+  title: readonly string[];
+  description: string;
+  features: readonly WebsiteFeature[];
+}
+
+export type WebsiteFeatureGroups = Record<WebsiteModeId, WebsiteFeatureGroup>;

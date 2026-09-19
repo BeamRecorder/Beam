@@ -1,12 +1,20 @@
 import type { Component } from 'vue';
 
+export type WebsiteModeId = 'instant' | 'studio' | 'screenshot';
+
+export interface WebsiteModeOption {
+  id: WebsiteModeId;
+  label: string;
+  icon: Component;
+}
+
 export interface WebsiteModeStep {
   title: string;
   text: string;
 }
 
 export interface WebsiteModeSummary {
-  id: 'instant' | 'studio' | 'screenshot';
+  id: WebsiteModeId;
   label: string;
   title: string;
   description: string;
