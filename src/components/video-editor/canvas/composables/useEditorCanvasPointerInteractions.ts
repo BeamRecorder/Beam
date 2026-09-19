@@ -17,7 +17,12 @@ export function useEditorCanvasPointerInteractions(options: EditorCanvasPointerO
   };
   const handleTransformPointerDown = (event: PointerEvent) => {
     if (event.button === 0) {
-      const clipId = options.transformAndCrop.clipIdAt(event, options.canvas());
+      const clipId = options.transformAndCrop.clipIdAt(event, options.canvas()) ?? options.selectedClipId();
+      if (clipId && (event.ctrlKey || event.metaKey || event.shiftKey)) {
+        event.stopPropagation();
+        options.onToggleClip(clipId, event);
+        return;
+      }
       if (clipId && clipId !== options.selectedClipId()) {
         event.stopPropagation();
         options.onSelectClip(clipId);

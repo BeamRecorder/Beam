@@ -36,6 +36,7 @@ const { state } = vi.hoisted(() => ({
     clearCursorBounds: vi.fn(),
     clipIdAt: vi.fn(),
     selectVisualAt: vi.fn(),
+    selectTransformClip: undefined as ((clipId: string, event?: PointerEvent) => void) | undefined,
     transformDraft: undefined as { value: unknown } | undefined,
     transformSelectionViewportStyle: undefined as { value: unknown } | undefined,
     transformHandlePositions: undefined as { value: unknown } | undefined,
@@ -167,7 +168,8 @@ vi.mock('../composables/useCameraZoom', async () => {
 vi.mock('../composables/useLayerTransformAndCrop', async () => {
   const { ref } = await import('vue');
   return {
-    useLayerTransformAndCrop: () => {
+    useLayerTransformAndCrop: (options: { onSelectTransformClip: (clipId: string, event?: PointerEvent) => void }) => {
+      state.selectTransformClip = options.onSelectTransformClip;
       state.transformDraft = ref(null);
       state.transformSelectionViewportStyle = ref({
         left: '0px',
@@ -424,6 +426,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   frames = [];
   state.onRenderOnce = undefined;
+  state.selectTransformClip = undefined;
   contextMock = context();
   vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
     frames.push(callback);
@@ -475,6 +478,22 @@ const mountEditor = (overrides: Record<string, unknown> = {}) => {
 };
 
 describe('EditorCanvas', () => {
+  it('toggles canvas clips into and out of the selection with Ctrl-click', async () => {
+    const mounted = mountEditor({ selectedClipIds: ['screen'] });
+    const ctrlClick = { ctrlKey: true, metaKey: false, shiftKey: false } as PointerEvent;
+
+    state.selectTransformClip?.('image', ctrlClick);
+    expect(mounted.emitted('select:clips')).toEqual([
+      [{ ids: ['screen', 'image'], primaryId: 'image', additive: false }],
+    ]);
+
+    await mounted.setProps({ selectedClipIds: ['screen', 'image'] });
+    state.selectTransformClip?.('image', ctrlClick);
+    expect(mounted.emitted('select:clips')?.at(-1)).toEqual([
+      { ids: ['screen'], primaryId: 'screen', additive: false },
+    ]);
+  });
+
   it('forwards canvas marquee selections to the editor selection owner', async () => {
     const mounted = mountEditor({ selectedClipIds: ['image'] });
     const surface = mounted.getComponent(CanvasMarqueeSurface);

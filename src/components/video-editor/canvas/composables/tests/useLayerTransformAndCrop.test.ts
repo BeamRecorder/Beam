@@ -293,7 +293,8 @@ afterEach(() => {
 
 describe('useLayerTransformAndCrop', () => {
   it('exposes active unlocked canvas targets and marks the screen as a backdrop', () => {
-    const lockedWebcam = { ...webcamClip(), locked: true };
+    const activeWebcam = webcamClip();
+    const lockedWebcam = { ...webcamClip(), id: 'locked-webcam', order: 4, locked: true };
     const followingCaption = captionClip();
     followingCaption.id = 'following-caption';
     followingCaption.caption = {
@@ -305,16 +306,21 @@ describe('useLayerTransformAndCrop', () => {
       style: followingCaption.caption.style,
     };
     const scene = composition();
-    scene.clips = [screenClip(), lockedWebcam, imageClip(), followingCaption];
+    scene.clips = [screenClip(), activeWebcam, imageClip(), lockedWebcam, followingCaption];
 
     const mounted = mountComposable(null, false, scene);
 
-    expect(mounted.state.marqueeTargets.value.map((target) => target.id)).toEqual(['image', 'screen']);
+    expect(mounted.state.marqueeTargets.value.map((target) => target.id)).toEqual(['image', 'webcam', 'screen']);
     expect(mounted.state.marqueeTargets.value.find((target) => target.id === 'screen')).toMatchObject({
       backdrop: true,
     });
     expect(mounted.state.marqueeTargets.value.find((target) => target.id === 'image')).toMatchObject({
       backdrop: false,
+    });
+    expect(mounted.state.marqueeTargets.value.find((target) => target.id === 'webcam')).toMatchObject({
+      backdrop: false,
+      width: expect.any(Number),
+      height: expect.any(Number),
     });
   });
 
@@ -1153,7 +1159,7 @@ describe('useLayerTransformAndCrop', () => {
     const event = pointer(canvas, { clientX: 300, clientY: 180 });
     expect(mounted.state.selectVisualAt(event, null)).toBe(false);
     expect(mounted.state.selectVisualAt(event, canvas)).toBe(true);
-    expect(mounted.options.onSelectTransformClip).toHaveBeenCalledWith('image');
+    expect(mounted.options.onSelectTransformClip).toHaveBeenCalledWith('image', event);
 
     mounted.selectedRef.value = screenClip();
     expect(mounted.state.selectVisualAt(pointer(canvas, { clientX: 750, clientY: 400 }), canvas)).toBe(false);
@@ -1171,7 +1177,7 @@ describe('useLayerTransformAndCrop', () => {
     rectangleScene.clips = [screenClip(), blurClip({ order: -1 })];
     const mounted = mountComposable(null, false, rectangleScene);
     expect(mounted.state.selectVisualAt(pointer(canvas, { clientX: 200, clientY: 100 }), canvas)).toBe(true);
-    expect(mounted.options.onSelectTransformClip).toHaveBeenCalledWith('blur');
+    expect(mounted.options.onSelectTransformClip).toHaveBeenCalledWith('blur', expect.anything());
 
     const circleScene = composition();
     circleScene.clips = [blurClip({ shape: 'circle' })];
@@ -1179,7 +1185,7 @@ describe('useLayerTransformAndCrop', () => {
     vi.mocked(mounted.options.onSelectTransformClip).mockClear();
     expect(mounted.state.selectVisualAt(pointer(canvas, { clientX: 150, clientY: 70 }), canvas)).toBe(false);
     expect(mounted.state.selectVisualAt(pointer(canvas, { clientX: 250, clientY: 150 }), canvas)).toBe(true);
-    expect(mounted.options.onSelectTransformClip).toHaveBeenCalledWith('blur');
+    expect(mounted.options.onSelectTransformClip).toHaveBeenCalledWith('blur', expect.anything());
   });
 
   it('raycasts only active visible layers at the current composition time', () => {
@@ -1225,6 +1231,6 @@ describe('useLayerTransformAndCrop', () => {
     vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({ left: 0, top: 0, width: 800, height: 450 } as DOMRect);
 
     expect(mounted.state.selectVisualAt(pointer(canvas, { clientX: 400, clientY: 225 }), canvas)).toBe(true);
-    expect(mounted.options.onSelectTransformClip).toHaveBeenCalledWith('imported-video');
+    expect(mounted.options.onSelectTransformClip).toHaveBeenCalledWith('imported-video', expect.anything());
   });
 });

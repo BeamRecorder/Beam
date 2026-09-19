@@ -20,6 +20,9 @@ const createHarness = (manualZoom = true) => {
   const movePan = vi.fn();
   const endPan = vi.fn();
   const selectVisualAt = vi.fn(() => true);
+  const clipIdAt = vi.fn(() => null as string | null);
+  const onToggleClip = vi.fn();
+  const selectedClipId = ref<string | null>(null);
   const beginSelectionMove = vi.fn();
   const moveSelection = vi.fn();
   const endSelectionMove = vi.fn();
@@ -28,7 +31,7 @@ const createHarness = (manualZoom = true) => {
     container: () => null,
     isCropping: () => false,
     isManualZoom: () => manualZoom,
-    selectedClipId: () => null,
+    selectedClipId: () => selectedClipId.value,
     viewportZoom: {
       isPanning,
       beginPan,
@@ -43,12 +46,13 @@ const createHarness = (manualZoom = true) => {
     },
     transformAndCrop: {
       selectVisualAt,
-      clipIdAt: vi.fn(() => null),
+      clipIdAt,
       beginTransformDrag: vi.fn(),
       commitCrop: vi.fn(),
     },
     cursorInteraction: { selectAt: vi.fn(() => false) },
     onSelectClip: vi.fn(),
+    onToggleClip,
     onDoneCrop: vi.fn(),
   };
 
@@ -59,6 +63,9 @@ const createHarness = (manualZoom = true) => {
     movePan,
     endPan,
     selectVisualAt,
+    clipIdAt,
+    onToggleClip,
+    selectedClipId,
     beginSelectionMove,
     moveSelection,
     endSelectionMove,
@@ -122,5 +129,16 @@ describe('useEditorCanvasPointerInteractions', () => {
 
     expect(harness.selectVisualAt).toHaveBeenCalledOnce();
     expect(harness.beginSelectionMove).not.toHaveBeenCalled();
+  });
+
+  it('toggles a transform handle target when a selection modifier is held', () => {
+    const harness = createHarness(false);
+    harness.selectedClipId.value = 'image';
+    const event = pointer({ ctrlKey: true, stopPropagation: vi.fn() });
+
+    harness.interactions.handleTransformPointerDown(event);
+
+    expect(harness.onToggleClip).toHaveBeenCalledWith('image', event);
+    expect(event.stopPropagation).toHaveBeenCalledOnce();
   });
 });

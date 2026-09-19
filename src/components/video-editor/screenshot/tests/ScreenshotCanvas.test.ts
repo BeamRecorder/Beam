@@ -289,6 +289,7 @@ describe('ScreenshotCanvas', () => {
   it.each([
     ['Ctrl', { ctrlKey: true }],
     ['Meta', { metaKey: true }],
+    ['Shift', { shiftKey: true }],
   ] as const)('toggles the topmost layer when canvas selection uses %s', async (_modifier, modifier) => {
     const wrapper = mountCanvas();
     await flushPromises();
@@ -372,6 +373,7 @@ describe('ScreenshotCanvas', () => {
   it.each([
     ['Ctrl', { ctrlKey: true }],
     ['Meta', { metaKey: true }],
+    ['Shift', { shiftKey: true }],
   ] as const)(
     'modifier-clicking a secondary selected outline with %s raycasts and toggles without dragging',
     async (_modifier, modifier) => {

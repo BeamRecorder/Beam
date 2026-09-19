@@ -853,8 +853,9 @@ describe('useCameraZoom', () => {
       Object.assign(new MouseEvent('pointerdown', { clientX: x, clientY: y }), {
         pointerId,
       }) as unknown as PointerEvent;
-    state.beginSelectionMove(pointer(400, 200, 1));
-    expect(options.callbacks.onSelectScreenClip).toHaveBeenCalledWith('screen');
+    const screenPointer = pointer(400, 200, 1);
+    state.beginSelectionMove(screenPointer);
+    expect(options.callbacks.onSelectScreenClip).toHaveBeenCalledWith('screen', screenPointer);
     options.output.value = { preset: '16:9', width: 800, height: 450, ...options.output.value, showBackground: true };
     state.drawVideoWindow(ctx, 800, 450, frame());
     options.selected.value = autoZoom;

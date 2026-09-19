@@ -23,6 +23,7 @@ const bounds = ref<CanvasMarqueeBounds | null>(null);
 let gesture: CanvasMarqueeGesture | null = null;
 let suppressContextMenu = false;
 let replayingContextMenu = false;
+const BACKDROP_SELECTION_MIN_COVERAGE = 0.5;
 
 const boxStyle = computed(
   () =>
@@ -73,6 +74,15 @@ const intersects = (target: CanvasMarqueeTarget, box: CanvasMarqueeBounds) => {
     targetBox.y + targetBox.height > box.y
   );
 };
+const coveredRatio = (target: CanvasMarqueeTarget, box: CanvasMarqueeBounds) => {
+  const targetBox = targetBounds(target);
+  const width = Math.max(0, Math.min(targetBox.x + targetBox.width, box.x + box.width) - Math.max(targetBox.x, box.x));
+  const height = Math.max(
+    0,
+    Math.min(targetBox.y + targetBox.height, box.y + box.height) - Math.max(targetBox.y, box.y),
+  );
+  return (width * height) / Math.max(1, targetBox.width * targetBox.height);
+};
 const update = (event: PointerEvent) => {
   if (!gesture || event.pointerId !== gesture.pointerId) return;
   if (
@@ -90,8 +100,10 @@ const update = (event: PointerEvent) => {
   };
   bounds.value = box;
   const hits = gesture.targets.filter((target) => intersects(target, box));
-  const foregroundHits = hits.filter((target) => !target.backdrop);
-  const chosen = foregroundHits.length ? foregroundHits : hits;
+  const hasForegroundHit = hits.some((target) => !target.backdrop);
+  const chosen = hits.filter(
+    (target) => !target.backdrop || !hasForegroundHit || coveredRatio(target, box) >= BACKDROP_SELECTION_MIN_COVERAGE,
+  );
   const ids = [...new Set([...(gesture.additive ? gesture.initial : []), ...chosen.map((target) => target.id)])];
   if (JSON.stringify(ids) === JSON.stringify(gesture.last)) return;
   gesture.last = ids;

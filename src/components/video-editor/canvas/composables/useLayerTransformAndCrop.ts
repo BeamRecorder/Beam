@@ -373,7 +373,7 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
   const selectVisualAt = (event: PointerEvent, canvas: HTMLCanvasElement | null) => {
     const clipId = clipIdAt(event, canvas);
     if (!clipId) return false;
-    options.onSelectTransformClip(clipId);
+    options.onSelectTransformClip(clipId, event);
     return true;
   };
 

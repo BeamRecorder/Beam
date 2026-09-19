@@ -26,5 +26,6 @@ export interface EditorCanvasPointerOptions {
   };
   cursorInteraction: { selectAt: (event: PointerEvent) => boolean };
   onSelectClip: (clipId: string) => void;
+  onToggleClip: (clipId: string, event: PointerEvent) => void;
   onDoneCrop: () => void;
 }

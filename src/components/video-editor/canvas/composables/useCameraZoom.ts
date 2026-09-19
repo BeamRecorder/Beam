@@ -151,7 +151,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       const y = (event.clientY - rect.top) / (scaleRatio || 1);
       if (x >= bounds.dx && x <= bounds.dx + bounds.dw && y >= bounds.dy && y <= bounds.dy + bounds.dh) {
         const screen = screenClip();
-        if (screen) options.onSelectScreenClip(screen.id);
+        if (screen) options.onSelectScreenClip(screen.id, event);
         return;
       }
     }

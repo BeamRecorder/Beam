@@ -42,10 +42,16 @@ import { createEditorVisualStackRenderer } from './editor-visual-stack-renderer'
 import { captureCanvasFrame } from './canvas-frame-capture';
 import CanvasMarqueeSurface from './CanvasMarqueeSurface.vue';
 import EditorCanvasGuides from './EditorCanvasGuides.vue';
+import { toggleCanvasClipSelection } from './canvas-clip-selection';
 const { t } = useTranslate('EditorCanvas'),
   { t: canvasText } = useTranslate('CanvasPanel');
 const props = withDefaults(defineProps<EditorCanvasProps>(), { previewQuality: 'full', selectedClipIds: () => [] });
 const emit = defineEmits<EditorCanvasEmits>();
+const selectCanvasClip = (clipId: string, event?: PointerEvent) => {
+  const selection = toggleCanvasClipSelection(props.selectedClipIds, clipId, event);
+  if (selection) emit('select:clips', selection);
+  else emit('select:clip', clipId);
+};
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const containerRef = ref<HTMLDivElement | null>(null);
 const logicalSize = ref({ width: 0, height: 0 });
@@ -122,7 +128,7 @@ const transformAndCrop = useLayerTransformAndCrop({
   onUpdateTransform: (transform) => emit('update:clip-transform', transform),
   onPreviewCrop: (crop) => emit('preview:clip-crop', crop),
   onUpdateCrop: (crop) => emit('update:clip-crop', crop),
-  onSelectTransformClip: (clipId) => emit('select:clip', clipId),
+  onSelectTransformClip: selectCanvasClip,
 });
 const renderGuideLines = computed(() =>
   canvasGuideLines(logicalSize.value, props.outputCanvas, transformAndCrop.activeGuideLines.value),
@@ -147,7 +153,7 @@ cameraZoom = useCameraZoom({
   videoError: () => props.playbackError?.message ?? null,
   renderVisualStack: (ctx, window, drawScreen, layers) => drawVisualStack?.(ctx, window, drawScreen, layers),
   onUpdateZoom: (zoom) => emit('update:zoom', zoom),
-  onSelectScreenClip: (clipId) => emit('select:clip', clipId),
+  onSelectScreenClip: selectCanvasClip,
   onSelectCanvas: () => emit('select:canvas'),
   onDeselectTransformClip: () => emit('deselect:transform-clip'),
   onDeselectZoom: () => emit('deselect:zoom'),
@@ -348,6 +354,7 @@ const {
   transformAndCrop,
   cursorInteraction,
   onSelectClip: (clipId) => emit('select:clip', clipId),
+  onToggleClip: selectCanvasClip,
   onDoneCrop: () => emit('done:crop'),
 });
 const handleIslandPointerDownCapture = (event: PointerEvent) => {

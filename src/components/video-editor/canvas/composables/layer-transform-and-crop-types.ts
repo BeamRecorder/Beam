@@ -19,7 +19,7 @@ export interface UseLayerTransformAndCropOptions {
   onUpdateTransform: (transform: NormalizedTransform) => void;
   onPreviewCrop?: (crop: NormalizedCrop | null) => void;
   onUpdateCrop: (crop: NormalizedCrop) => void;
-  onSelectTransformClip: (clipId: string) => void;
+  onSelectTransformClip: (clipId: string, event?: PointerEvent) => void;
 }
 
 export interface CropDrag {

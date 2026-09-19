@@ -50,7 +50,7 @@ export interface UseCameraZoomOptions {
     layers: CompositionSceneLayers,
   ) => void;
   onUpdateZoom: (zoom: ZoomElement) => void;
-  onSelectScreenClip: (clipId: string) => void;
+  onSelectScreenClip: (clipId: string, event: PointerEvent) => void;
   onSelectCanvas: () => void;
   onDeselectTransformClip: () => void;
   onDeselectZoom: () => void;

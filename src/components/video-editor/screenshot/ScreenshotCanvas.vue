@@ -267,7 +267,7 @@ const layerAt = (event: MouseEvent) => {
 const select = (event: PointerEvent) => {
   if (props.cropping || props.disabled || event.button !== 0) return;
   const id = layerAt(event);
-  if (event.ctrlKey || event.metaKey) emit('select', id, 'toggle');
+  if (event.ctrlKey || event.metaKey || event.shiftKey) emit('select', id, 'toggle');
   else emit('select', id);
 };
 const editLayer = (event: MouseEvent) => {
@@ -297,7 +297,7 @@ const endRotation = (value: number) => {
 };
 const start = (event: PointerEvent, corner?: ResizeCorner) => {
   if (props.cropping || props.disabled || event.button !== 0) return;
-  if (event.ctrlKey || event.metaKey) {
+  if (event.ctrlKey || event.metaKey || event.shiftKey) {
     event.stopPropagation();
     select(event);
     return;

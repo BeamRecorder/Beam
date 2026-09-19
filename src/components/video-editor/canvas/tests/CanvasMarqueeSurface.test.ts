@@ -88,6 +88,15 @@ describe('CanvasMarqueeSurface', () => {
     expect(mounted.find('.canvas-marquee-box').exists()).toBe(false);
   });
 
+  it('includes the backdrop when a select-all drag substantially covers it', async () => {
+    const mounted = mountSurface();
+    await drag(mounted.element, [105, 205], [495, 395]);
+
+    expect(mounted.emitted('select')).toEqual([
+      [{ ids: ['backdrop', 'shape', 'image'], primaryId: 'image', additive: false }],
+    ]);
+  });
+
   it.each(['shiftKey', 'ctrlKey', 'metaKey'] as const)('adds hits to the existing selection with %s', async (key) => {
     const mounted = mountSurface(['shape']);
     await drag(mounted.element, [290, 290], [390, 390], { [key]: true });
