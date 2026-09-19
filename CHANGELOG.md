@@ -23,6 +23,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Fixed tooltip-backed options in segmented button groups so custom-setting buttons no longer collapse into a narrow stray segment.
 - Fixed double-click crop so the primary screen recording can enter crop mode in Studio.
 - Fixed Studio and Screenshot paste shortcuts so a freshly copied Beam element wins over a stale system-clipboard image.
 - Fixed KDE/Wayland cursor metadata and pointer-motion capture for touchpads and absolute pointing devices.

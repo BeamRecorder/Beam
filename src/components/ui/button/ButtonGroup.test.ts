@@ -93,6 +93,25 @@ describe('ButtonGroup', () => {
     expect(buttons.every((button) => button.find('.btn-content').exists())).toBe(true);
   });
 
+  it('keeps tooltip-backed controls in the shared group-item wrapper', () => {
+    const wrapper = mount(ButtonGroup, {
+      props: { full: true },
+      slots: {
+        default: () => [
+          h(Button, {}, { default: () => 'Preset' }),
+          h(Button, { icon: TestIcon, iconOnly: true, tooltip: 'Custom' }),
+        ],
+      },
+    });
+
+    const items = wrapper.findAll('.btn-group > .btn-container');
+    expect(items).toHaveLength(2);
+    expect(items.map((item) => item.classes())).toEqual([
+      expect.arrayContaining(['btn-container']),
+      expect.arrayContaining(['btn-container', 'tooltip-wrapper']),
+    ]);
+  });
+
   it('marks an overflowing button and exposes the measured marquee distance', async () => {
     const wrapper = mount(ButtonGroup, {
       props: { full: true },

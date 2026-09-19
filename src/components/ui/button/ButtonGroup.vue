@@ -65,7 +65,9 @@ const props = withDefaults(
   gap: 4px;
 }
 
-.btn-group :slotted(.btn-container) {
+/* Tooltip-backed buttons add one component boundary, so this shared item
+   wrapper must be reached through the child component as well. */
+.btn-group :deep(.btn-container) {
   flex: 1;
   display: inline-flex;
   align-items: center;
@@ -84,11 +86,11 @@ const props = withDefaults(
   flex-shrink: 0;
 }
 
-.btn-group.is-divided > :slotted(.btn-container:not(:last-child)) {
+.btn-group.is-divided > :deep(.btn-container:not(:last-child)) {
   margin-right: 0;
 }
 
-.btn-group.is-divided > :slotted(.btn-container:not(:last-child))::after {
+.btn-group.is-divided > :deep(.btn-container:not(:last-child))::after {
   content: '';
   display: inline-block;
   width: 1px;
