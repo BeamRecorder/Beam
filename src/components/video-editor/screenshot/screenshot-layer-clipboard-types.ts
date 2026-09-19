@@ -20,6 +20,18 @@ export interface ScreenshotLayerClipboard {
   primaryIndex: number;
 }
 
+export interface ScreenshotClipboardSource {
+  source: string;
+  width: number;
+  height: number;
+}
+
+export interface ScreenshotSpecialLayerCopies {
+  capturedImage?: ScreenshotImageLayer;
+  background?: ScreenshotImageLayer;
+  watermark?: ScreenshotImageLayer;
+}
+
 export interface ScreenshotPasteResult {
   ids: string[];
   primaryId: string;

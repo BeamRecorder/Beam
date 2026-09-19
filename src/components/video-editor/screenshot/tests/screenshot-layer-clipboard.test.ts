@@ -7,7 +7,11 @@ import { defaultLayerCompositing } from '~/media/shared/layer-compositing';
 import type { LayerCompositing } from '~/media/shared/layer-compositing-types';
 import { DEFAULT_OUTPUT_CANVAS } from '../../canvas/output-canvas';
 import type { ScreenshotCursorLayer, ScreenshotImageLayer } from '../screenshot-layer-types';
-import { copyScreenshotLayerSelection, pasteScreenshotLayerSelection } from '../screenshot-layer-clipboard';
+import {
+  capturedScreenshotClipboardLayer,
+  copyScreenshotLayerSelection,
+  pasteScreenshotLayerSelection,
+} from '../screenshot-layer-clipboard';
 import {
   initializeScreenshotComposition,
   SCREENSHOT_BACKGROUND_ID,
@@ -129,6 +133,17 @@ const imageLayer = (): ScreenshotImageLayer => ({
   source: 'project-media://screenshot/image.png',
   width: 320,
   height: 200,
+});
+
+const specialImageLayer = (id: string, name: string, source: string): ScreenshotImageLayer => ({
+  ...imageLayer(),
+  id,
+  name,
+  assetId: id,
+  source,
+  width: 1280,
+  height: 720,
+  transform: { x: 0, y: 0, width: 1, height: 1 },
 });
 
 describe('screenshot layer clipboard', () => {
@@ -284,7 +299,52 @@ describe('screenshot layer clipboard', () => {
     ]);
   });
 
-  it('excludes protected pseudo-layers and the captured image, and omits locked layers from cut payloads', () => {
+  it('copies the captured image, background, and watermark as editable image layers', () => {
+    const state = makeState();
+    const specialLayers = {
+      capturedImage: capturedScreenshotClipboardLayer(state, {
+        source: 'project-media://screenshot/source.png',
+        width: 1920,
+        height: 1080,
+      }),
+      background: specialImageLayer(SCREENSHOT_BACKGROUND_ID, 'Background', 'data:image/webp;base64,background'),
+      watermark: specialImageLayer(SCREENSHOT_WATERMARK_ID, 'Watermark', 'data:image/webp;base64,watermark'),
+    };
+    const clipboard = copyScreenshotLayerSelection(
+      state,
+      [SCREENSHOT_BACKGROUND_ID, state.image.id, SCREENSHOT_WATERMARK_ID],
+      SCREENSHOT_WATERMARK_ID,
+      false,
+      specialLayers,
+    )!;
+
+    expect(clipboard.entries.map(({ layer }) => layer.type)).toEqual(['image', 'image', 'image']);
+    expect(clipboard.entries.map(({ name }) => name)).toEqual(['Background', 'Captured screen', 'Watermark']);
+    expect(clipboard.primaryIndex).toBe(2);
+
+    const result = pasteScreenshotLayerSelection(
+      state,
+      clipboard,
+      (() => {
+        const ids = ['background-copy', 'screenshot-copy', 'watermark-copy'];
+        return () => ids.shift()!;
+      })(),
+    );
+
+    expect(result.primaryId).toBe('watermark-copy');
+    expect(state.images?.map(({ id, source }) => ({ id, source }))).toEqual([
+      { id: 'background-copy', source: 'data:image/webp;base64,background' },
+      { id: 'screenshot-copy', source: 'project-media://screenshot/source.png' },
+      { id: 'watermark-copy', source: 'data:image/webp;base64,watermark' },
+    ]);
+    expect(state.composition?.slice(-3).map(({ id }) => id)).toEqual([
+      'background-copy',
+      'screenshot-copy',
+      'watermark-copy',
+    ]);
+  });
+
+  it('requires raster copies for built-in visual layers and omits locked layers from cut payloads', () => {
     const state = makeState([makeShape('unlocked'), makeShape('locked')]);
     state.composition!.find(({ id }) => id === 'locked')!.locked = true;
     expect(

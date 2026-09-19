@@ -10,11 +10,15 @@ import {
   insertScreenshotLayer,
   removeScreenshotLayer,
   reorderScreenshotLayer,
+  restoreScreenshotLayer,
   SCREENSHOT_BACKGROUND_ID,
   SCREENSHOT_WATERMARK_ID,
   screenshotLayers,
   setScreenshotLayerVisible,
+  updateScreenshotBackground,
+  updateScreenshotBackgroundBlur,
   updateScreenshotLayer,
+  updateScreenshotWatermark,
 } from '../screenshot-layers';
 import { screenshotShape } from '../screenshot-state';
 
@@ -347,19 +351,46 @@ describe('setScreenshotLayerVisible', () => {
 });
 
 describe('removeScreenshotLayer', () => {
-  it('protects the screenshot image, background and watermark layers', () => {
+  it('removes the screenshot image, background and watermark from the composition', () => {
     const state = makeState({ shapes: [makeShape('shape-1')], cursors: [makeCursor('cursor-1')] });
     initializeScreenshotComposition(state);
-    const composition = structuredClone(state.composition);
 
     removeScreenshotLayer(state, 'screenshot');
     removeScreenshotLayer(state, SCREENSHOT_BACKGROUND_ID);
     removeScreenshotLayer(state, SCREENSHOT_WATERMARK_ID);
 
-    expect(state.image.id).toBe('screenshot');
+    expect(state.image.enabled).toBe(false);
+    expect(state.canvas.showBackground).toBe(false);
+    expect(state.canvas.watermark?.enabled).toBe(false);
     expect(state.shapes.map(({ id }) => id)).toEqual(['shape-1']);
     expect(state.cursors?.map(({ id }) => id)).toEqual(['cursor-1']);
-    expect(state.composition).toEqual(composition);
+    expect(state.composition?.map(({ id }) => id)).toEqual(['shape-1', 'cursor-1']);
+    expect(screenshotLayers(state).map(({ id }) => id)).toEqual(['shape-1', 'cursor-1']);
+  });
+
+  it('restores deleted built-in layers when their settings are used again', () => {
+    const state = makeState({ shapes: [makeShape('shape-1')] });
+    initializeScreenshotComposition(state);
+    removeScreenshotLayer(state, 'screenshot');
+    removeScreenshotLayer(state, SCREENSHOT_BACKGROUND_ID);
+    removeScreenshotLayer(state, SCREENSHOT_WATERMARK_ID);
+
+    restoreScreenshotLayer(state, 'screenshot');
+    updateScreenshotBackground(state, { id: 'new-bg', name: 'New background', kind: 'color', color: '#abcdef' });
+    updateScreenshotBackgroundBlur(state, 64);
+    updateScreenshotWatermark(state, { ...DEFAULT_OUTPUT_CANVAS.watermark!, enabled: true, size: 150 });
+
+    expect(state.image.enabled).toBe(true);
+    expect(state.canvas.showBackground).toBe(true);
+    expect(state.background).toMatchObject({ id: 'new-bg', color: '#abcdef' });
+    expect(state.blurPercent).toBe(64);
+    expect(state.canvas.watermark).toMatchObject({ enabled: true, size: 150 });
+    expect(state.composition?.map(({ id }) => id)).toEqual([
+      SCREENSHOT_BACKGROUND_ID,
+      'screenshot',
+      'shape-1',
+      SCREENSHOT_WATERMARK_ID,
+    ]);
   });
 
   it('removes shape and cursor content together with their composition records', () => {

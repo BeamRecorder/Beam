@@ -25,6 +25,7 @@ User-facing changes to Beam are documented in this file.
 - Screenshot editing now opens on Elements, and new annotation shapes start as unfilled outlined rectangles.
 - Crop measurements and confirmation now stay together in a compact floating HUD outside the selected media.
 - Copy and paste feedback in Screenshot and Studio now includes a visual thumbnail of the affected element.
+- Screenshot source, background, and watermark layers can now be copied or cut into editable image layers, deleted like other unlocked layers, and restored by using their controls again.
 
 ### Fixed
 

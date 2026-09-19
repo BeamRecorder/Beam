@@ -37,7 +37,10 @@ import {
   screenshotLayers,
   reorderScreenshotLayer,
   updateScreenshotLayer,
+  updateScreenshotBackground,
+  updateScreenshotBackgroundBlur,
   setScreenshotLayerVisible,
+  updateScreenshotWatermark,
 } from './screenshot-layers';
 import { useClipboardImagePaste } from '../composables/useClipboardImagePaste';
 
@@ -161,7 +164,7 @@ const composition = computed(() => (state.value ? screenshotLayers(state.value) 
     <div v-if="state && document" class="editor-body">
       <SidebarPanel :active-tab="panel === 'cursor' ? 'shapes' : panel" :items="tabs" @select-tab="selectPanel" />
       <ScreenshotPropertiesPanel :title="panelTitle">
-        <template v-if="selectedLayer && (panel === 'shapes' || panel === 'cursor' || selectedLayer.removable)" #footer>
+        <template v-if="selectedLayer" #footer>
           <PropertiesDeleteAction
             :name="selectedLayer.name || elementsText(selectedLayer.kind)"
             :disabled="busy || selectedLayer.locked"
@@ -242,10 +245,10 @@ const composition = computed(() => (state.value ? screenshotLayers(state.value) 
             :blur-percent="state.blurPercent"
             :show-background="state.canvas.showBackground"
             :watermark="state.canvas.watermark"
-            @update:selected-background="state.background = $event"
-            @update:blur-percent="state.blurPercent = $event"
-            @update:show-background="state.canvas.showBackground = $event"
-            @update:watermark="state.canvas.watermark = $event"
+            @update:selected-background="updateScreenshotBackground(state, $event)"
+            @update:blur-percent="updateScreenshotBackgroundBlur(state, $event)"
+            @update:show-background="setScreenshotLayerVisible(state, '__background__', $event)"
+            @update:watermark="updateScreenshotWatermark(state, $event)"
             @import:background="backgroundLibrary.push($event)"
           />
 

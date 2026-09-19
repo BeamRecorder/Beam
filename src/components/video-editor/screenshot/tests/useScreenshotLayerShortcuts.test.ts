@@ -237,7 +237,7 @@ describe('useScreenshotLayerShortcuts', () => {
     expect(paste).not.toHaveBeenCalled();
   });
 
-  it.each(['Delete', 'Backspace'])('removes a selected removable layer on %s', (key) => {
+  it.each(['Delete', 'Backspace'])('removes a selected unlocked layer on %s', (key) => {
     const { remove } = mountShortcuts(makeLayer('text'));
 
     const event = dispatchKey(window, key);
@@ -317,11 +317,21 @@ describe('useScreenshotLayerShortcuts', () => {
   });
 
   it.each([
-    ['no selected layer', undefined],
-    ['a locked layer', makeLayer('shape', { locked: true })],
     ['the screenshot image', makeLayer('image')],
     ['the background', makeLayer('background')],
     ['the watermark', makeLayer('watermark')],
+  ])('deletes %s', (_label, selected) => {
+    const { remove } = mountShortcuts(selected);
+
+    const event = dispatchKey(window);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(remove).toHaveBeenCalledWith('layer-1');
+  });
+
+  it.each([
+    ['no selected layer', undefined],
+    ['a locked layer', makeLayer('shape', { locked: true })],
   ])('does not delete %s', (_label, selected) => {
     const { remove } = mountShortcuts(selected);
 

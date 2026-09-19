@@ -150,7 +150,7 @@ describe('ScreenshotEditor imported image layers', () => {
     expect(canvas.props('selectedId')).toBe(imported.id);
     expect(composition.props('selectedId')).toBe(imported.id);
     expect(composition.props('layers')).toContainEqual(
-      expect.objectContaining({ id: imported.id, kind: 'image', name: asset.name, removable: true }),
+      expect.objectContaining({ id: imported.id, kind: 'image', name: asset.name }),
     );
     expect(wrapper.find('[data-testid="clip-properties"]').exists()).toBe(true);
 

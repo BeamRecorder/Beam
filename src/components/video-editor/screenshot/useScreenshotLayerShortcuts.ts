@@ -7,8 +7,8 @@ export function useScreenshotLayerShortcuts(options: {
   selected: () => ScreenshotLayer | undefined;
   disabled: () => boolean;
   remove: (id: string) => void;
-  copy: () => boolean;
-  cut: () => boolean;
+  copy: () => boolean | Promise<boolean>;
+  cut: () => boolean | Promise<boolean>;
   paste: () => boolean;
 }) {
   const keydown = (event: KeyboardEvent) => {
@@ -24,7 +24,10 @@ export function useScreenshotLayerShortcuts(options: {
     const key = event.key.toLowerCase();
     if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey) {
       const handled = key === 'c' ? options.copy() : key === 'x' ? options.cut() : false;
-      if (handled) event.preventDefault();
+      if (handled instanceof Promise) {
+        event.preventDefault();
+        void handled;
+      } else if (handled) event.preventDefault();
       return;
     }
     if (
@@ -36,8 +39,7 @@ export function useScreenshotLayerShortcuts(options: {
     )
       return;
     const layer = options.selected();
-    if (!layer || layer.locked || (!layer.removable && ['image', 'background', 'watermark'].includes(layer.kind)))
-      return;
+    if (!layer || layer.locked) return;
     event.preventDefault();
     options.remove(layer.id);
   };

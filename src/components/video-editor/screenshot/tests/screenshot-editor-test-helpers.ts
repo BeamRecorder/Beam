@@ -118,10 +118,12 @@ export function createScreenshotEditorTestHarness(
     emits: ['update'],
     template: '<section data-testid="screenshot-cursor-controls" />',
   });
-  const CanvasPanelStub = {
+  const CanvasPanelStub = defineComponent({
     name: 'CanvasPanel',
+    props: ['selectedBackground', 'blurPercent', 'showBackground', 'watermark'],
+    emits: ['update:selectedBackground', 'update:blurPercent', 'update:showBackground', 'update:watermark'],
     template: '<div data-testid="canvas-panel" />',
-  };
+  });
   const ClipPropertiesStub = {
     name: 'ClipPropertiesPanel',
     template: '<div data-testid="clip-properties" />',

@@ -33,6 +33,7 @@ import {
   insertScreenshotLayer,
   removeScreenshotLayer,
   canRemoveScreenshotLayer,
+  restoreScreenshotLayer,
   screenshotLayers,
   SCREENSHOT_BACKGROUND_ID,
   SCREENSHOT_WATERMARK_ID,
@@ -180,14 +181,14 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
   const removeLayer = (id: string) => {
     if (!state.value || busy.value || cropping.value) return;
     const targets = selectedIds.value.includes(id) ? selectedIds.value : [id];
-    const removable = screenshotLayers(state.value).filter(
+    const targetsToRemove = screenshotLayers(state.value).filter(
       (layer) => targets.includes(layer.id) && canRemoveScreenshotLayer(layer),
     );
-    if (!removable.length) return;
+    if (!targetsToRemove.length) return;
     beginPropertyInteraction();
     try {
       elements.finishText();
-      for (const layer of removable) removeScreenshotLayer(state.value, layer.id);
+      for (const layer of targetsToRemove) removeScreenshotLayer(state.value, layer.id);
       selection.reconcile();
       showSelection(selectedId.value);
     } finally {
@@ -310,6 +311,10 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
     state,
     selectedIds,
     selectedId,
+    source: () =>
+      document.value
+        ? { source: document.value.source, width: document.value.width, height: document.value.height }
+        : null,
     disabled: () => busy.value || cropping.value || Boolean(elements.editing.value) || elements.drawingMode.value,
     reconcileSelection: selection.reconcile,
     showSelection,
@@ -428,8 +433,10 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
   });
 
   const selectPanel = (next: string) => {
-    if (next === 'image') select(state.value?.image.id ?? null);
-    else if (next === 'canvas') select(null);
+    if (next === 'image') {
+      if (state.value) restoreScreenshotLayer(state.value, state.value.image.id);
+      select(state.value?.image.id ?? null);
+    } else if (next === 'canvas') select(null);
     else if (next === 'shapes' || next === 'settings') {
       panel.value = next;
       cropping.value = false;

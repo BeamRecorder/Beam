@@ -1,18 +1,48 @@
 import type { ScreenshotState } from '~/api/types/screenshot';
 import type { NormalizedTransform } from '~/media/shared/composition-types';
-import { initializeScreenshotComposition, screenshotLayers } from './screenshot-layers';
+import {
+  canRemoveScreenshotLayer,
+  initializeScreenshotComposition,
+  SCREENSHOT_BACKGROUND_ID,
+  SCREENSHOT_WATERMARK_ID,
+  screenshotLayers,
+} from './screenshot-layers';
 import type {
   ScreenshotClipboardEntry,
   ScreenshotClipboardLayer,
+  ScreenshotClipboardSource,
   ScreenshotLayerClipboard,
   ScreenshotPasteResult,
+  ScreenshotSpecialLayerCopies,
 } from './screenshot-layer-clipboard-types';
+import type { ScreenshotImageLayer } from './screenshot-layer-types';
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const MAX_SCREENSHOT_OVERLAY_LAYERS = 500;
 const MAX_SCREENSHOT_STATE_CHARACTERS = 2_000_000;
 
-const clipboardLayer = (state: ScreenshotState, id: string): ScreenshotClipboardLayer | null => {
+export const capturedScreenshotClipboardLayer = (
+  state: ScreenshotState,
+  source: ScreenshotClipboardSource,
+): ScreenshotImageLayer => ({
+  ...clone(state.image),
+  kind: 'image',
+  source: source.source,
+  width: source.width,
+  height: source.height,
+});
+
+const clipboardLayer = (
+  state: ScreenshotState,
+  id: string,
+  specialLayers: ScreenshotSpecialLayerCopies,
+): ScreenshotClipboardLayer | null => {
+  if (id === state.image.id && specialLayers.capturedImage)
+    return { type: 'image', value: clone(specialLayers.capturedImage) };
+  if (id === SCREENSHOT_BACKGROUND_ID && specialLayers.background)
+    return { type: 'image', value: clone(specialLayers.background) };
+  if (id === SCREENSHOT_WATERMARK_ID && specialLayers.watermark)
+    return { type: 'image', value: clone(specialLayers.watermark) };
   const shape = state.shapes.find((layer) => layer.id === id);
   if (shape) return { type: 'shape', value: clone(shape) };
   const effect = state.effects?.find((layer) => layer.id === id);
@@ -27,18 +57,24 @@ export function copyScreenshotLayerSelection(
   state: ScreenshotState,
   selectedIds: readonly string[],
   primaryId: string | null,
-  removableOnly = false,
+  requireUnlocked = false,
+  specialLayers: ScreenshotSpecialLayerCopies = {},
 ): ScreenshotLayerClipboard | null {
   const selected = new Set(selectedIds);
   const entries: ScreenshotClipboardEntry[] = [];
   let primaryIndex = -1;
   for (const layer of screenshotLayers(state)) {
     if (!selected.has(layer.id)) continue;
-    const value = clipboardLayer(state, layer.id);
+    if (requireUnlocked && !canRemoveScreenshotLayer(layer)) return null;
+    const value = clipboardLayer(state, layer.id, specialLayers);
     if (!value) continue;
-    if (removableOnly && layer.locked) return null;
     if (layer.id === primaryId) primaryIndex = entries.length;
-    entries.push({ layer: value, name: layer.name, opacity: layer.opacity, blendMode: layer.blendMode });
+    entries.push({
+      layer: value,
+      name: layer.name || value.value.name,
+      opacity: layer.opacity,
+      blendMode: layer.blendMode,
+    });
   }
   if (!entries.length) return null;
   return { entries, primaryIndex: primaryIndex >= 0 ? primaryIndex : entries.length - 1 };

@@ -27,6 +27,7 @@ const capture = vi.hoisted(() => ({
   openScreenshot: vi.fn(),
 }));
 const renderer = vi.hoisted(() => ({ encodeScreenshot: vi.fn() }));
+const clipboardRaster = vi.hoisted(() => ({ rasterize: vi.fn() }));
 let screenshotCanvasEditor: ElementEditorContext | null = null;
 
 vi.mock('~/api/capture', () => ({ capture }));
@@ -34,6 +35,9 @@ vi.mock('../screenshot-render', () => ({
   encodeScreenshot: renderer.encodeScreenshot,
   loadScreenshotAssets: vi.fn(),
   drawScreenshot: vi.fn(),
+}));
+vi.mock('../screenshot-layer-clipboard-raster', () => ({
+  rasterizeScreenshotLayer: clipboardRaster.rasterize,
 }));
 
 import ScreenshotEditor from '../ScreenshotEditor.vue';
@@ -70,6 +74,16 @@ describe('ScreenshotEditor', () => {
     capture.selectEditorPreset.mockResolvedValue(presetFixture());
     capture.deleteEditorPreset.mockResolvedValue(presetFixture());
     renderer.encodeScreenshot.mockResolvedValue(new ArrayBuffer(4));
+    clipboardRaster.rasterize.mockImplementation(async (state: ScreenshotState, layerId: string, name: string) => ({
+      ...structuredClone(state.image),
+      id: layerId,
+      kind: 'image',
+      name,
+      assetId: layerId,
+      source: `data:image/webp;base64,${layerId}`,
+      width: state.canvas.width,
+      height: state.canvas.height,
+    }));
   });
 
   afterEach(() => {
@@ -580,6 +594,106 @@ describe('ScreenshotEditor', () => {
     wrapper.unmount();
   });
 
+  it('copies and pastes the captured image, background, and watermark as editable images', async () => {
+    const ids = ['captured-copy', 'background-copy', 'watermark-copy'];
+    let nextId = 0;
+    vi.stubGlobal('crypto', { randomUUID: () => ids[nextId++]! });
+    const wrapper = mountEditor();
+    await flushPromises();
+    const canvas = wrapper.findComponent(ScreenshotCanvasStub);
+    const composition = wrapper.findComponent(ScreenshotCompositionStub);
+    const state = canvas.props('state') as ScreenshotState;
+    const paste = async () => {
+      const event = new Event('paste', { bubbles: true, cancelable: true }) as ClipboardEvent;
+      Object.defineProperty(event, 'clipboardData', {
+        value: { items: [{ kind: 'string', type: 'text/plain' }] },
+      });
+      window.dispatchEvent(event);
+      await flushPromises();
+      expect(event.defaultPrevented).toBe(true);
+    };
+    const copy = async (id: string) => {
+      composition.vm.$emit('select', id);
+      await wrapper.vm.$nextTick();
+      const event = new KeyboardEvent('keydown', {
+        key: 'c',
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      window.dispatchEvent(event);
+      await flushPromises();
+      expect(event.defaultPrevented).toBe(true);
+    };
+
+    await copy(state.image.id);
+    await paste();
+    await copy('__background__');
+    await paste();
+    await copy('__watermark__');
+    await paste();
+
+    expect(state.images?.map(({ id, name, source }) => ({ id, name, source }))).toEqual([
+      {
+        id: 'captured-copy',
+        name: 'Captured screen',
+        source: 'project-media://screenshot/screen-1/source.png',
+      },
+      {
+        id: 'background-copy',
+        name: 'Background',
+        source: 'data:image/webp;base64,__background__',
+      },
+      {
+        id: 'watermark-copy',
+        name: 'Watermark',
+        source: 'data:image/webp;base64,__watermark__',
+      },
+    ]);
+    expect(clipboardRaster.rasterize.mock.calls.map(([, id]) => id)).toEqual(['__background__', '__watermark__']);
+    expect(composition.props('selectedId')).toBe('watermark-copy');
+    wrapper.unmount();
+  });
+
+  it('cuts a built-in background and pastes its raster as a normal editable image', async () => {
+    vi.stubGlobal('crypto', { randomUUID: () => 'cut-background-copy' });
+    const wrapper = mountEditor();
+    await flushPromises();
+    const canvas = wrapper.findComponent(ScreenshotCanvasStub);
+    const composition = wrapper.findComponent(ScreenshotCompositionStub);
+    const state = canvas.props('state') as ScreenshotState;
+    composition.vm.$emit('select', '__background__');
+    await wrapper.vm.$nextTick();
+
+    const cut = new KeyboardEvent('keydown', {
+      key: 'x',
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    window.dispatchEvent(cut);
+    expect(cut.defaultPrevented).toBe(true);
+    await flushPromises();
+    expect(state.canvas.showBackground).toBe(false);
+    expect(compositionLayers(wrapper).map(({ id }) => id)).not.toContain('__background__');
+
+    const paste = new Event('paste', { bubbles: true, cancelable: true }) as ClipboardEvent;
+    Object.defineProperty(paste, 'clipboardData', {
+      value: { items: [{ kind: 'string', type: 'text/plain' }] },
+    });
+    window.dispatchEvent(paste);
+    await flushPromises();
+    expect(paste.defaultPrevented).toBe(true);
+    expect(state.images).toContainEqual(
+      expect.objectContaining({
+        id: 'cut-background-copy',
+        kind: 'image',
+        source: 'data:image/webp;base64,__background__',
+      }),
+    );
+    wrapper.unmount();
+  });
+
   it('translates a selected group in place and records the movement as one undo step', async () => {
     const ids = ['translate-a', 'translate-b', 'translate-outside'];
     let nextId = 0;
@@ -688,7 +802,7 @@ describe('ScreenshotEditor', () => {
     wrapper.unmount();
   });
 
-  it('deletes removable selected members from a context target while preserving locked and protected members', async () => {
+  it('deletes every unlocked selected member from a context target while preserving locked members', async () => {
     const ids = ['context-a', 'context-b'];
     let nextId = 0;
     vi.stubGlobal('crypto', { randomUUID: () => ids[nextId++]! });
@@ -712,21 +826,74 @@ describe('ScreenshotEditor', () => {
     const state = canvas.props('state') as ScreenshotState;
     expect(state.shapes.map(({ id }) => id)).toEqual(['context-b']);
     expect(state.composition?.find(({ id }) => id === 'context-b')?.locked).toBe(true);
-    expect(state.image.id).toBe('screenshot');
-    expect(compositionLayers(wrapper).map(({ id }) => id)).toEqual(expect.arrayContaining(['screenshot', 'context-b']));
+    expect(state.image.enabled).toBe(false);
+    expect(compositionLayers(wrapper).map(({ id }) => id)).toEqual(expect.arrayContaining(['context-b']));
+    expect(compositionLayers(wrapper).map(({ id }) => id)).not.toContain('screenshot');
     expect(compositionLayers(wrapper).map(({ id }) => id)).not.toContain('context-a');
-    expect(composition.props('selectedIds')).toEqual(['screenshot', 'context-b']);
+    expect(composition.props('selectedIds')).toEqual(['context-b']);
     expect(composition.props('selectedId')).toBe('context-b');
 
     wrapper.findComponent({ name: 'EditorHistoryControls' }).vm.$emit('undo');
     await flushPromises();
     const restored = canvas.props('state') as ScreenshotState;
     expect(restored.shapes.map(({ id }) => id)).toEqual(['context-a', 'context-b']);
-    expect(composition.props('selectedIds')).toEqual(['screenshot', 'context-b']);
+    expect(composition.props('selectedIds')).toEqual(['context-b']);
     const layerIds = compositionLayers(wrapper).map(({ id }) => id);
     expect(new Set(layerIds).size).toBe(layerIds.length);
     expect(restored.composition?.map(({ id }) => id)).toEqual(layerIds);
     expect(layerIds).toEqual(expect.arrayContaining(['screenshot', 'context-a', 'context-b']));
+    wrapper.unmount();
+  });
+
+  it('deletes built-in visual layers and restores them when their controls are used again', async () => {
+    const wrapper = mountEditor();
+    await flushPromises();
+    const canvas = wrapper.findComponent(ScreenshotCanvasStub);
+    const composition = wrapper.findComponent(ScreenshotCompositionStub);
+    const state = canvas.props('state') as ScreenshotState;
+
+    composition.vm.$emit('select', '__background__');
+    composition.vm.$emit('remove', '__background__');
+    await wrapper.vm.$nextTick();
+    expect(state.canvas.showBackground).toBe(false);
+    expect(compositionLayers(wrapper).map(({ id }) => id)).not.toContain('__background__');
+
+    const canvasPanel = wrapper.findComponent({ name: 'CanvasPanel' });
+    canvasPanel.vm.$emit('update:selectedBackground', {
+      id: 'restored-background',
+      name: 'Restored background',
+      kind: 'color',
+      color: '#abcdef',
+    });
+    await wrapper.vm.$nextTick();
+    expect(state.canvas.showBackground).toBe(true);
+    expect(
+      compositionLayers(wrapper)
+        .map(({ id }) => id)
+        .at(0),
+    ).toBe('__background__');
+
+    composition.vm.$emit('select', '__watermark__');
+    composition.vm.$emit('remove', '__watermark__');
+    await wrapper.vm.$nextTick();
+    expect(state.canvas.watermark?.enabled).toBe(false);
+    expect(compositionLayers(wrapper).map(({ id }) => id)).not.toContain('__watermark__');
+    canvasPanel.vm.$emit('update:watermark', { ...state.canvas.watermark!, enabled: true });
+    await wrapper.vm.$nextTick();
+    expect(
+      compositionLayers(wrapper)
+        .map(({ id }) => id)
+        .at(-1),
+    ).toBe('__watermark__');
+
+    composition.vm.$emit('select', 'screenshot');
+    composition.vm.$emit('remove', 'screenshot');
+    await wrapper.vm.$nextTick();
+    expect(state.image.enabled).toBe(false);
+    expect(compositionLayers(wrapper).map(({ id }) => id)).not.toContain('screenshot');
+    await wrapper.get('[aria-label="Image"]').trigger('click');
+    expect(state.image.enabled).toBe(true);
+    expect(compositionLayers(wrapper).map(({ id }) => id)).toEqual(['__background__', 'screenshot', '__watermark__']);
     wrapper.unmount();
   });
 

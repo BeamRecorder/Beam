@@ -387,7 +387,7 @@ describe('ScreenshotComposition', () => {
     expect(wrapper.emitted('remove')).toEqual([['arrow-1']]);
   });
 
-  it('enables group deletion from a protected member but still targets that member', async () => {
+  it('enables group deletion from a built-in member and still targets that member', async () => {
     const wrapper = mountComposition({ selectedId: 'shape-1', selectedIds: ['shape-1', 'screenshot'] });
     wrappers.push(wrapper);
 
@@ -400,18 +400,22 @@ describe('ScreenshotComposition', () => {
     expect(wrapper.emitted('remove')).toEqual([['screenshot']]);
   });
 
-  it('disables context-menu deletion for protected or locked layers and blocks disabled editors', async () => {
+  it('allows deletion for every unlocked built-in layer', async () => {
     const wrapper = mountComposition({ selectedId: 'shape-1' });
     wrappers.push(wrapper);
 
     for (const id of ['screenshot', '__background__', '__watermark__']) {
       const item = await openRowContextMenu(wrapper, id);
-      expect(item.disabled).toBe(true);
+      expect(item.disabled).toBe(false);
       item.click();
       await nextTick();
-      expect(wrapper.emitted('remove')).toBeUndefined();
-      await closeContextMenu();
+      expect(wrapper.emitted('remove')?.at(-1)).toEqual([id]);
     }
+  });
+
+  it('disables context-menu deletion for locked layers and blocks disabled editors', async () => {
+    const wrapper = mountComposition({ selectedId: 'shape-1' });
+    wrappers.push(wrapper);
 
     const locked = allLayers().map((layer) => (layer.id === 'shape-1' ? { ...layer, locked: true } : layer));
     await wrapper.setProps({ layers: locked });
