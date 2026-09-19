@@ -7,7 +7,7 @@ withDefaults(
     title: readonly string[];
     description: string;
     headingId: string;
-    heading?: 'h1' | 'h2';
+    heading?: 'h1' | 'h2' | 'h3';
   }>(),
   { heading: 'h2' },
 );

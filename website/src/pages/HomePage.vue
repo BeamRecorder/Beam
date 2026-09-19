@@ -216,7 +216,7 @@ const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
       <WebsiteFeatureSection
         v-model:mode="activeMode"
         id="editor-demo"
-        :eyebrow="HOME_PAGE_COPY.featureExplorer.eyebrow"
+        :title="HOME_PAGE_COPY.featureExplorer.title"
         :mode-navigation="HOME_PAGE_COPY.featureExplorer.modeNavigation"
         :modes="modes"
         :groups="featureGroups"

@@ -16,7 +16,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
-- The homepage hero and feature explorer now share the same Instant, Studio, and Screenshot selection, with synchronized animated copy, colors, and mode-specific media.
+- The homepage now presents a full-size Explore features gallery synchronized with the hero across Instant, Studio, and Screenshot copy, colors, and mode-specific media.
 - The website hero now switches smoothly between Instant, Studio, and Screenshot messaging, brings the product forward inside a real MacBook frame, and uses subtly animated, soft-edged sparkles with ordered dithering.
 - The homepage capture-mode cards now stand on their own with aligned content, while each detailed mode section uses its own colored icon badge.
 - Redesigned the Beam homepage around its three capture workflows with accurate local-first clipboard behavior and product demonstrations.

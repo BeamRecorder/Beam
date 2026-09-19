@@ -88,7 +88,7 @@ class IntersectionObserverMock implements IntersectionObserver {
 const mountSection = (): VueWrapper =>
   mount(WebsiteFeatureSection, {
     props: {
-      eyebrow: 'Explore features',
+      title: 'Explore features',
       modeNavigation: 'Feature modes',
       modes,
       groups,
@@ -107,12 +107,13 @@ describe('WebsiteFeatureSection', () => {
     const cards = wrapper.findAll('.feature-card');
     const images = wrapper.findAll('img');
 
-    const title = wrapper.get('h2');
+    const title = wrapper.get('h3');
 
     expect(title.text().replaceAll(/\s+/g, ' ')).toBe('Edit. Refine. Export.');
     expect(title.findAll('.mode-message__phrase').map((part) => part.text())).toEqual(['Edit.', 'Refine.', 'Export.']);
     expect(wrapper.get('.mode-message__description').text()).toBe('Studio description.');
-    expect(cards.map((card) => card.get('h3').text())).toEqual(['3D zooms', 'Custom backgrounds', 'Export your way']);
+    expect(wrapper.get('.feature-section__title').text()).toBe('Explore features.');
+    expect(cards.map((card) => card.get('h4').text())).toEqual(['3D zooms', 'Custom backgrounds', 'Export your way']);
     expect(cards.every((card) => card.classes().length === 1)).toBe(true);
     expect(images[0].attributes('srcset')).toContain('backgrounds-960.webp 960w');
     expect(images[0].attributes('loading')).toBe('lazy');
@@ -126,9 +127,11 @@ describe('WebsiteFeatureSection', () => {
 
     await wrapper.findAll('.feature-section__modes button')[2]!.trigger('click');
 
-    expect(wrapper.get('h2').text().replaceAll(/\s+/g, ' ')).toBe('Capture. Explain. Copy.');
+    expect(wrapper.get('.feature-section__message h3').text().replaceAll(/\s+/g, ' ')).toBe(
+      'Capture. Explain. Copy.',
+    );
     expect(wrapper.findAll('.feature-card')).toHaveLength(1);
-    expect(wrapper.get('.feature-card h3').text()).toBe('Crop and resize');
+    expect(wrapper.get('.feature-card h4').text()).toBe('Crop and resize');
     expect(wrapper.get('.feature-card__placeholder').attributes('aria-label')).toBe('Crop media');
   });
 

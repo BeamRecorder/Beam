@@ -29,7 +29,7 @@ export const HOME_PAGE_COPY = {
   },
   seeHowItWorks: 'See how Beam works',
   featureExplorer: {
-    eyebrow: 'Explore features',
+    title: 'Explore features',
     modeNavigation: 'Explore features by capture mode',
     modes: {
       instant: {

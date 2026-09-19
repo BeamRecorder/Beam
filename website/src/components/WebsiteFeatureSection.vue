@@ -6,7 +6,7 @@ import type { WebsiteFeatureGroups } from '@website/types/website-features';
 import type { WebsiteModeId, WebsiteModeOption } from '@website/types/website-modes';
 
 const props = defineProps<{
-  eyebrow: string;
+  title: string;
   modeNavigation: string;
   modes: readonly WebsiteModeOption[];
   groups: WebsiteFeatureGroups;
@@ -48,14 +48,17 @@ onBeforeUnmount(() => observer?.disconnect());
     aria-labelledby="feature-section-title"
   >
     <header class="feature-section__intro">
-      <span class="feature-section__eyebrow">{{ eyebrow }}</span>
+      <h2 id="feature-section-title" class="feature-section__title">
+        {{ title }}<span aria-hidden="true">.</span>
+      </h2>
       <WebsiteModeTabs v-model="activeMode" class="feature-section__modes" :label="modeNavigation" :modes="modes" />
       <WebsiteModeMessage
         class="feature-section__message"
         :mode="activeMode"
         :title="activeGroup.title"
         :description="activeGroup.description"
-        heading-id="feature-section-title"
+        heading="h3"
+        heading-id="feature-mode-title"
       />
     </header>
 
@@ -118,7 +121,7 @@ onBeforeUnmount(() => observer?.disconnect());
               <span aria-hidden="true"><component :is="feature.media.icon" /></span>
             </div>
           </div>
-          <h3>{{ feature.title }}</h3>
+          <h4>{{ feature.title }}</h4>
         </article>
       </div>
     </Transition>
@@ -150,28 +153,28 @@ onBeforeUnmount(() => observer?.disconnect());
   text-align: center;
 }
 
-.feature-section__eyebrow {
-  display: inline-flex;
-  min-height: 30px;
-  padding: 0 11px;
-  align-items: center;
-  border: 1px solid rgb(var(--mode-accent-rgb) / 12%);
-  border-radius: 999px;
-  background: rgb(var(--mode-accent-rgb) / 9%);
+.feature-section__title {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-headline);
+  font-size: clamp(58px, 7.6vw, 104px);
+  font-weight: 650;
+  letter-spacing: -0.065em;
+  line-height: 0.92;
+}
+
+.feature-section__title span {
   color: var(--mode-accent);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
+  transition: color 220ms ease;
 }
 
 .feature-section__modes {
-  margin-top: 22px;
+  margin-top: clamp(26px, 3.2vw, 38px);
 }
 
 .feature-section__message {
-  --mode-message-heading-margin: clamp(28px, 4vw, 46px) 0 0;
-  --mode-message-heading-size: clamp(44px, 6.2vw, 80px);
+  --mode-message-heading-margin: clamp(34px, 4.2vw, 52px) 0 0;
+  --mode-message-heading-size: clamp(40px, 5.4vw, 68px);
   --mode-message-heading-width: 900px;
   --mode-message-min-height: 220px;
   --mode-message-description-size: clamp(17px, 2vw, 20px);
@@ -333,7 +336,7 @@ onBeforeUnmount(() => observer?.disconnect());
   stroke-width: 1.8;
 }
 
-.feature-card h3 {
+.feature-card h4 {
   margin: 0;
   color: var(--text-primary);
   font-family: var(--font-headline);
@@ -355,8 +358,12 @@ onBeforeUnmount(() => observer?.disconnect());
   }
 
   .feature-section__message {
-    --mode-message-heading-size: clamp(42px, 13vw, 64px);
+    --mode-message-heading-size: clamp(38px, 11.5vw, 52px);
     --mode-message-min-height: 250px;
+  }
+
+  .feature-section__title {
+    font-size: clamp(50px, 15vw, 66px);
   }
 
   .feature-grid {

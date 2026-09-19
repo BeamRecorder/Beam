@@ -76,13 +76,13 @@ describe('HomePage', () => {
     expect(wrapper.text()).not.toContain('Real Beam editor footage');
     expect(wrapper.get('#instant').text()).toContain('The video file is copied');
     expect(wrapper.get('#screenshot').text()).toContain('Direct cropping');
-    expect(features.get('.feature-section__eyebrow').text()).toBe('Explore features');
-    expect(features.get('h2').text().replaceAll(/\s+/g, ' ')).toBe('Edit. Refine. Export.');
+    expect(features.get('.feature-section__title').text()).toBe('Explore features.');
+    expect(features.get('h3').text().replaceAll(/\s+/g, ' ')).toBe('Edit. Refine. Export.');
     expect(features.get('.mode-message__description').text()).toContain('Keep every source editable');
     const featureCards = features.findAll('.feature-card');
 
     expect(featureCards).toHaveLength(3);
-    expect(features.findAll('h3').map((title) => title.text())).toEqual([
+    expect(features.findAll('.feature-card h4').map((title) => title.text())).toEqual([
       'Video editor',
       'Precise zoom controls',
       '3D zooms',
@@ -96,7 +96,7 @@ describe('HomePage', () => {
     ]);
 
     for (const [title, src] of mobileImageCandidates) {
-      const card = featureCards.find((candidate) => candidate.get('h3').text() === title);
+      const card = featureCards.find((candidate) => candidate.get('h4').text() === title);
 
       expect(card, `Missing feature card: ${title}`).toBeDefined();
       expect(card?.find('picture source').attributes()).toMatchObject({
@@ -120,8 +120,8 @@ describe('HomePage', () => {
     await hero.findAll('.hero-modes button')[0]!.trigger('click');
 
     expect(features.findAll('.feature-section__modes button')[0]!.attributes('aria-pressed')).toBe('true');
-    expect(features.get('h2').text().replaceAll(/\s+/g, ' ')).toBe('Record. Stop. Paste.');
-    expect(features.findAll('h3').map((title) => title.text())).toEqual([
+    expect(features.get('h3').text().replaceAll(/\s+/g, ' ')).toBe('Record. Stop. Paste.');
+    expect(features.findAll('.feature-card h4').map((title) => title.text())).toEqual([
       'Recorder app',
       'Custom backgrounds',
       'Export your way',
@@ -147,7 +147,7 @@ describe('HomePage', () => {
     expect(window.location.hash).toBe('#editor-demo');
     expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
     expect(features.findAll('.feature-section__modes button')[2]!.attributes('aria-pressed')).toBe('true');
-    expect(features.get('h2').text().replaceAll(/\s+/g, ' ')).toBe('Capture. Explain. Copy.');
+    expect(features.get('h3').text().replaceAll(/\s+/g, ' ')).toBe('Capture. Explain. Copy.');
   });
 
   it('does not render the removed hero explore action', () => {
