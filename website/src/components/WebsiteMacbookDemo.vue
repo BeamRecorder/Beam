@@ -88,7 +88,7 @@ const toggleVideo = async () => {
 .macbook-demo {
   position: relative;
   width: min(100%, 1120px);
-  margin: -70px auto -5px;
+  margin: -54px auto -5px;
 }
 
 .macbook-demo__stage {
