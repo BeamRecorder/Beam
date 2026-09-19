@@ -69,6 +69,13 @@ describe('normalizeShapeLayerStyle', () => {
     expect(normalizeShapeLayerStyle(DEFAULT_ANNOTATION_SHAPE_STYLE)).toEqual(DEFAULT_ANNOTATION_SHAPE_STYLE);
   });
 
+  it('preserves presets selected from the shared shape catalog', () => {
+    const style = { ...DEFAULT_ANNOTATION_SHAPE_STYLE, preset: 'sparkle-quad' as const };
+
+    expect(normalizeShapeLayerStyle(style).preset).toBe('sparkle-quad');
+    expect(isShapeLayerStyle(style)).toBe(true);
+  });
+
   it('preserves a valid gradient fill and its fillColor fallback', () => {
     const style = {
       ...DEFAULT_SHAPE_LAYER_STYLE,

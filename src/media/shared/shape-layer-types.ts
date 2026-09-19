@@ -1,17 +1,9 @@
 import type { ElementText, FreehandDrawing } from './element-types';
 import type { ColorFill } from './color-fill-types';
+import type { ShapeKind } from './shape-catalog';
 
 export type ShapeLayerFamily = 'shape' | 'arrow' | 'text' | 'drawing';
-export type ShapeLayerPreset =
-  | 'rectangle'
-  | 'rounded-rectangle'
-  | 'ellipse'
-  | 'triangle'
-  | 'diamond'
-  | 'star'
-  | 'arrow'
-  | 'text'
-  | 'freehand';
+export type ShapeLayerPreset = ShapeKind | 'arrow' | 'text' | 'freehand';
 export interface ShapeLayerStyle {
   text?: ElementText;
   drawing?: FreehandDrawing;

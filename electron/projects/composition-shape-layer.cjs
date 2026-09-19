@@ -1,18 +1,38 @@
 const { normalizeElementContent } = require('./composition-element-content.cjs');
 const { normalizeColorFill } = require('./composition-color-fill.cjs');
-const PRESETS = new Set([
+const SHAPE_PRESETS = new Set([
   'rectangle',
   'rounded-rectangle',
   'ellipse',
   'triangle',
   'diamond',
   'star',
-  'arrow',
-  'text',
-  'freehand',
+  'pentagon',
+  'hexagon',
+  'octagon',
+  'parallelogram',
+  'trapezoid',
+  'pill',
+  'cross',
+  'heart',
+  'speech-bubble',
+  'cloud',
+  'crescent',
+  'lightning',
+  'shield',
+  'badge',
+  'burst',
+  'wave',
+  'bloom-star',
+  'orbit-open',
+  'petal-four',
+  'ribbon-arch',
+  'sparkle-asterisk',
+  'sparkle-quad',
+  'steps-duo',
 ]);
+const PRESETS = new Set([...SHAPE_PRESETS, 'arrow', 'text', 'freehand']);
 const DIRECTIONS = new Set(['all', 'bottom', 'bottom-right', 'top-left']);
-const SHAPE_PRESETS = new Set(['rectangle', 'rounded-rectangle', 'ellipse', 'triangle', 'diamond', 'star']);
 const DEFAULTS = {
   family: 'shape',
   preset: 'rounded-rectangle',

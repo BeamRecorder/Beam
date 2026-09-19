@@ -1,16 +1,10 @@
 import { isElementText } from './element-text';
 import { isFreehandDrawing } from './freehand';
 import { isColorFill, type ColorFill } from './color-fill-types';
+import { SHAPE_CATALOG } from './shape-catalog';
 import type { ShapeLayerFamily, ShapeLayerPreset, ShapeLayerStyle } from './shape-layer-types';
 
-export const SHAPE_PRESETS: readonly ShapeLayerPreset[] = [
-  'rectangle',
-  'rounded-rectangle',
-  'ellipse',
-  'triangle',
-  'diamond',
-  'star',
-];
+export const SHAPE_PRESETS: readonly ShapeLayerPreset[] = SHAPE_CATALOG.map(({ id }) => id);
 export const ARROW_PRESETS: readonly ShapeLayerPreset[] = ['arrow'];
 export const DEFAULT_SHAPE_LAYER_STYLE: ShapeLayerStyle = {
   family: 'shape',

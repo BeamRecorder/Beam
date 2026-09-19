@@ -3,6 +3,7 @@ import type { ColorFill } from '~/media/shared/color-fill-types';
 import type { CaptionClip, Clip, ShapeClip } from '~/media/shared/composition-types';
 import type { ScreenshotLayerClipboard } from '../screenshot/screenshot-layer-clipboard-types';
 import type { TimelineClipboardEntry, TimelineClipboardItem } from '../timeline/composables/timeline-clipboard-types';
+import { isShapeKind, shapeDefinition } from '~/media/shared/shape-catalog';
 
 const xml = (value: unknown) =>
   String(value)
@@ -59,6 +60,11 @@ const shapeSvg = (clip: ShapeClip) => {
   );
   const strokeWidth = Math.max(clip.family === 'arrow' ? 3 : 0, Math.min(7, clip.borderWidth / 2));
   const common = `fill="${xml(fillValue)}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linejoin="round"`;
+  const catalog = clip.family === 'shape' && isShapeKind(clip.preset) ? shapeDefinition(clip.preset) : null;
+  const catalogBody =
+    catalog && !['rectangle', 'rounded-rectangle', 'ellipse', 'triangle', 'diamond', 'star'].includes(catalog.id)
+      ? `<svg x="14" y="8" width="68" height="48" viewBox="${xml(catalog.viewBox)}" preserveAspectRatio="none"><path d="${xml(catalog.path)}" fill-rule="${catalog.fillRule ?? 'nonzero'}" ${common}/></svg>`
+      : null;
   const body =
     clip.preset === 'ellipse'
       ? `<ellipse cx="48" cy="32" rx="31" ry="21" ${common}/>`
@@ -74,7 +80,8 @@ const shapeSvg = (clip: ShapeClip) => {
                 ? `<text x="48" y="38" text-anchor="middle" fill="${xml(clip.text?.style.color ?? clip.fillColor)}" font-family="sans-serif" font-size="18" font-weight="700">${xml(clip.text?.content.trim().slice(0, 12) || 'Text')}</text>`
                 : clip.preset === 'freehand'
                   ? `<path d="${freehandPath(clip)}" fill="none" stroke="${xml(clip.fillColor)}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`
-                  : `<rect x="14" y="11" width="68" height="42" rx="${clip.preset === 'rounded-rectangle' ? 10 : 1}" ${common}/>`;
+                  : (catalogBody ??
+                    `<rect x="14" y="11" width="68" height="42" rx="${clip.preset === 'rounded-rectangle' ? 10 : 1}" ${common}/>`);
   return dataSvg(`${fill.definition}<g transform="rotate(${clip.rotation} 48 32)">${body}</g>`, '#20232a');
 };
 

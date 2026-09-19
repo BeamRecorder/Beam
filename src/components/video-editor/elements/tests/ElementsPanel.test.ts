@@ -38,6 +38,24 @@ const DrawingControlsStub = defineComponent({
   },
 });
 
+const ShapePickerStub = defineComponent({
+  name: 'ShapePicker',
+  props: { modelValue: String, disabled: Boolean },
+  emits: ['update:modelValue', 'select'],
+  setup(props, { emit }) {
+    return () =>
+      h(
+        'button',
+        {
+          class: 'shape-picker-stub',
+          disabled: props.disabled,
+          onClick: () => emit('select', 'heart'),
+        },
+        'shape',
+      );
+  },
+});
+
 const ShapeLayerPropertiesPanelStub = defineComponent({
   name: 'ShapeLayerPropertiesPanel',
   props: { clip: { type: Object as PropType<ShapeClip>, required: true } },
@@ -55,6 +73,7 @@ const panelStubs = {
   Button: ButtonStub,
   Divider: true,
   DrawingControls: DrawingControlsStub,
+  ShapePicker: ShapePickerStub,
   ShapeLayerPropertiesPanel: ShapeLayerPropertiesPanelStub,
 };
 
@@ -86,7 +105,7 @@ describe('ElementsPanel', () => {
         return () => h(ElementsPanel);
       },
     });
-    const wrapper = mount(Host);
+    const wrapper = mount(Host, { global: { stubs: panelStubs } });
     wrappers.push(wrapper);
     const familyButtons = () =>
       wrapper
@@ -100,6 +119,40 @@ describe('ElementsPanel', () => {
     await nextTick();
 
     expect(familyButtons().every((button) => button.attributes('disabled') === undefined)).toBe(true);
+  });
+
+  it('adds the shape selected from the shared catalog picker', async () => {
+    let nextId = 0;
+    vi.stubGlobal('crypto', { randomUUID: () => `shape-${++nextId}` });
+    const composition = shallowRef(createComposition([], []));
+    const selectedId = ref<string | null>(null);
+    const activeTab = ref('elements');
+    const currentTime = ref(0);
+    const isPlaying = ref(false);
+    let editor: ReturnType<typeof useVideoElements> | null = null;
+    const Host = defineComponent({
+      setup() {
+        editor = useVideoElements({
+          composition,
+          selectedId,
+          activeTab,
+          currentTime,
+          isPlaying,
+          select: (id) => {
+            selectedId.value = id;
+          },
+          clearZoom: vi.fn(),
+        });
+        return () => h(ElementsPanel);
+      },
+    });
+    const wrapper = mount(Host, { global: { stubs: panelStubs } });
+    wrappers.push(wrapper);
+
+    await wrapper.get('.shape-picker-stub').trigger('click');
+    await nextTick();
+
+    expect(editor!.selected.value).toMatchObject({ id: 'shape-1', preset: 'heart', name: 'Heart' });
   });
 
   it('keeps drawing controls active and updates the latest stroke from their settings', async () => {

@@ -984,6 +984,7 @@ describe('PropertiesPanel', () => {
       drawingSettings: ref({ smoothing: 50, strokeWidth: 8, color: '#ff5a1f' }),
       showLayers: true,
       add: vi.fn(),
+      addShape: vi.fn(),
       addDrawing: vi.fn(),
       updateDrawingSettings: vi.fn(),
       select: vi.fn(),

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ShapeClip } from '~/media/shared/composition-types';
 import { createElementText } from '~/media/shared/element-text';
 const blurEffect = vi.hoisted(() => ({ applyBlurEffect: vi.fn() }));
@@ -80,7 +80,40 @@ const context = () => {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.stubGlobal(
+    'Path2D',
+    class Path2DMock {
+      readonly data?: string;
+      readonly additions: Array<{ path: Path2DMock; transform: unknown }> = [];
+
+      constructor(data?: string) {
+        this.data = data;
+      }
+
+      addPath(path: Path2DMock, transform: unknown) {
+        this.additions.push({ path, transform });
+      }
+    },
+  );
+  vi.stubGlobal(
+    'DOMMatrix',
+    class DOMMatrixMock {
+      translateSelf() {
+        return this;
+      }
+
+      rotateSelf() {
+        return this;
+      }
+
+      scaleSelf() {
+        return this;
+      }
+    },
+  );
 });
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe('drawShapeClip', () => {
   it('uses the optional opacity toggle without applying a canvas filter', () => {
@@ -117,6 +150,26 @@ describe('drawShapeClip', () => {
     expect(ctx.fill).toHaveBeenCalledOnce();
     expect(ctx.save).toHaveBeenCalledTimes(2);
     expect(ctx.restore).toHaveBeenCalledTimes(2);
+  });
+
+  it('renders catalog SVG paths as scalable canvas vectors', () => {
+    const ctx = context();
+
+    drawShapeClip(ctx, shapeClip({ preset: 'heart', borderWidth: 5 }), {
+      x: 0,
+      y: 0,
+      width: 200,
+      height: 100,
+    });
+
+    const transformed = expect.objectContaining({
+      additions: [
+        expect.objectContaining({ path: expect.objectContaining({ data: expect.stringMatching(/^M50 92/) }) }),
+      ],
+    });
+    expect(ctx.fill).toHaveBeenCalledWith(transformed, 'nonzero');
+    expect(ctx.stroke).toHaveBeenCalledWith(transformed);
+    expect(ctx.lineWidth).toBeCloseTo(5 * (100 / 1_080));
   });
 
   it('fills a shape with its gradient stops and alpha values', () => {

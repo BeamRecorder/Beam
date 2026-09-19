@@ -48,7 +48,7 @@ test('normalizes an assetless shape clip for persistence', () => {
 
   assert.equal(normalized.schemaVersion, 14);
   assert.equal(normalized.assets.length, 0);
-  assert.deepEqual(normalized.clips[0], shapeClip());
+  assert.deepEqual(normalized.clips[0], { ...shapeClip(), fillEnabled: true });
 });
 
 test('preserves normalized gradient fills on shape and drawing clips', () => {
@@ -94,6 +94,15 @@ test('preserves normalized gradient fills on shape and drawing clips', () => {
   assert.equal(normalizedShape.fillColor, '#123456');
   assert.deepEqual(normalizedDrawing.fill, fill);
   assert.equal(normalizedDrawing.fillColor, '#654321');
+});
+
+test('preserves shapes selected from the shared vector catalog', () => {
+  const normalized = normalizeComposition({
+    ...emptyComposition(),
+    clips: [shapeClip({ family: 'shape', preset: 'sparkle-quad' })],
+  });
+
+  assert.equal(normalized.clips[0].preset, 'sparkle-quad');
 });
 
 test('drops an invalid optional gradient fill while preserving the solid legacy fill', () => {

@@ -88,4 +88,23 @@ describe('clipboard preview descriptors', () => {
       }),
     );
   });
+
+  it('uses the selected catalog vector in copied shape thumbnails', () => {
+    const heart = shape('heart-shape');
+    heart.preset = 'heart';
+    const clipboard: ScreenshotLayerClipboard = {
+      entries: [
+        {
+          layer: { type: 'shape', value: heart },
+          name: 'Heart',
+          opacity: 100,
+          blendMode: 'source-over',
+        },
+      ],
+      primaryIndex: 0,
+    };
+
+    const result = screenshotClipboardPreview(clipboard);
+    expect(decodeURIComponent(result.src)).toContain('M50 92C43 82');
+  });
 });

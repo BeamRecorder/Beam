@@ -3,6 +3,7 @@ import type { BlurClip, NormalizedTransform, ShapeClip } from '~/media/shared/co
 import { normalizeShapeLayerStyle, shapeLayerFill } from '~/media/shared/shape-layer-style';
 import type { ShapeLayerStyle } from '~/media/shared/shape-layer-types';
 import type { Canvas2DContext } from '~/types/canvas';
+import { isShapeKind, shapeDefinition, type ShapeKind } from '~/media/shared/shape-catalog';
 import { applyBlurEffect } from '../effects/blur-effect';
 import type { EffectRect } from '../effects/effect-types';
 import { backgroundFillStyle } from '../background/render-background';
@@ -15,7 +16,28 @@ const shadowOffset = (direction: ShapeClip['shadowDirection'], scale: number) =>
   return { x: 0, y: 0 };
 };
 
-const traceShape = (ctx: Canvas2DContext, preset: ShapeClip['preset'], style: ShapeLayerStyle) => {
+const NATIVE_SHAPE_PRESETS = new Set<ShapeKind>([
+  'rectangle',
+  'rounded-rectangle',
+  'ellipse',
+  'triangle',
+  'diamond',
+  'star',
+]);
+const catalogPaths = new Map<ShapeKind, Path2D>();
+
+const usesCatalogPath = (preset: ShapeClip['preset']): preset is ShapeKind =>
+  isShapeKind(preset) && !NATIVE_SHAPE_PRESETS.has(preset);
+
+const catalogPath = (preset: ShapeKind) => {
+  const cached = catalogPaths.get(preset);
+  if (cached) return cached;
+  const path = new Path2D(shapeDefinition(preset).path);
+  catalogPaths.set(preset, path);
+  return path;
+};
+
+const traceNativeShape = (ctx: Canvas2DContext, preset: ShapeClip['preset'], style: ShapeLayerStyle) => {
   ctx.beginPath();
   if (preset === 'rectangle') ctx.rect(0, 0, 1, 1);
   else if (preset === 'rounded-rectangle') ctx.roundRect(0, 0, 1, 1, style.cornerRadius / 100);
@@ -68,8 +90,32 @@ const traceShapeInRect = (ctx: Canvas2DContext, rect: EffectRect, style: ShapeLa
   ctx.rotate((style.rotation * Math.PI) / 180);
   ctx.translate(-rect.width / 2, -rect.height / 2);
   ctx.scale(rect.width, rect.height);
-  traceShape(ctx, style.preset, style);
+  traceNativeShape(ctx, style.preset, style);
   ctx.restore();
+};
+
+const transformedCatalogPath = (rect: EffectRect, style: ShapeLayerStyle, preset: ShapeKind) => {
+  const definition = shapeDefinition(preset);
+  const transform = new DOMMatrix()
+    .translateSelf(rect.x + rect.width / 2, rect.y + rect.height / 2)
+    .rotateSelf(style.rotation)
+    .translateSelf(-rect.width / 2, -rect.height / 2)
+    .scaleSelf(rect.width / definition.width, rect.height / definition.height);
+  const path = new Path2D();
+  path.addPath(catalogPath(preset), transform);
+  return path;
+};
+
+const maskShapeInRect = (ctx: Canvas2DContext, rect: EffectRect, style: ShapeLayerStyle) => {
+  if (!usesCatalogPath(style.preset)) {
+    traceShapeInRect(ctx, rect, style);
+    return;
+  }
+  const definition = shapeDefinition(style.preset);
+  ctx.fill(transformedCatalogPath(rect, style, style.preset), definition.fillRule ?? 'nonzero');
+  // applyBlurEffect fills the traced native path after this callback. Leave an empty
+  // path behind because catalog paths have already been painted into the mask.
+  ctx.beginPath();
 };
 
 const rotatedBounds = (rect: EffectRect, rotation: number): EffectRect => {
@@ -115,7 +161,7 @@ export function drawShapeClip(
     applyBlurEffect(ctx, backdropClip, rect, {
       ...(backdrop ? { source: backdrop } : {}),
       bounds: rotatedBounds(rect, style.rotation),
-      maskPath: (maskContext, maskRect) => traceShapeInRect(maskContext, maskRect, style),
+      maskPath: (maskContext, maskRect) => maskShapeInRect(maskContext, maskRect, style),
     });
   }
   ctx.save();
@@ -129,16 +175,32 @@ export function drawShapeClip(
   }
   if (style.family === 'drawing') drawFreehand(ctx, clip, rect, scale);
   else if (style.family !== 'text') {
-    traceShapeInRect(ctx, rect, style);
-    if (style.fillEnabled !== false) {
-      ctx.fillStyle = backgroundFillStyle(ctx, shapeLayerFill(style), rect);
-      ctx.fill();
-    }
-    if (style.borderWidth > 0) {
-      ctx.shadowColor = 'transparent';
-      ctx.strokeStyle = style.borderColor;
-      ctx.lineWidth = style.borderWidth * scale;
-      ctx.stroke();
+    const fillStyle = backgroundFillStyle(ctx, shapeLayerFill(style), rect);
+    if (usesCatalogPath(style.preset)) {
+      const definition = shapeDefinition(style.preset);
+      const path = transformedCatalogPath(rect, style, style.preset);
+      if (style.fillEnabled !== false) {
+        ctx.fillStyle = fillStyle;
+        ctx.fill(path, definition.fillRule ?? 'nonzero');
+      }
+      if (style.borderWidth > 0) {
+        ctx.shadowColor = 'transparent';
+        ctx.strokeStyle = style.borderColor;
+        ctx.lineWidth = style.borderWidth * scale;
+        ctx.stroke(path);
+      }
+    } else {
+      traceShapeInRect(ctx, rect, style);
+      if (style.fillEnabled !== false) {
+        ctx.fillStyle = fillStyle;
+        ctx.fill();
+      }
+      if (style.borderWidth > 0) {
+        ctx.shadowColor = 'transparent';
+        ctx.strokeStyle = style.borderColor;
+        ctx.lineWidth = style.borderWidth * scale;
+        ctx.stroke();
+      }
     }
   }
   ctx.shadowColor = 'transparent';

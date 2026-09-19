@@ -75,6 +75,14 @@ const BigSliderStub = {
   template: '<div class="slider-stub" :data-label="label" :data-value="modelValue" />',
 };
 
+const ShapePickerStub = {
+  name: 'ShapePickerStub',
+  props: ['modelValue'],
+  emits: ['update:modelValue'],
+  template:
+    '<button class="shape-picker-stub" :data-model-value="modelValue" @click="$emit(\'update:modelValue\', \'heart\')" />',
+};
+
 const stubs = {
   Button: {
     props: {
@@ -103,6 +111,7 @@ const stubs = {
       '<button class="switch-stub" :aria-label="ariaLabel" :aria-pressed="modelValue" @click="$emit(\'update:modelValue\', !modelValue)" />',
   },
   ShadowDirectionGroup: { template: '<div class="direction-stub" />' },
+  ShapePicker: ShapePickerStub,
 };
 
 const sliderLabels = (wrapper: ReturnType<typeof mount>) =>
@@ -121,9 +130,10 @@ describe('ShapeLayerPropertiesPanel', () => {
 
     expect(arrows).toBeDefined();
     expect(wrapper.findAll('.button-group-stub').every((group) => group.classes('is-full'))).toBe(true);
-    const rectangle = wrapper.get('[aria-label="Rectangle"]');
-    expect(rectangle.attributes('data-block')).toBe('true');
-    expect(rectangle.attributes('data-icon-only')).toBeUndefined();
+    const picker = wrapper.get('.shape-picker-stub');
+    expect(picker.attributes('data-model-value')).toBe('rounded-rectangle');
+    await picker.trigger('click');
+    expect(wrapper.emitted('update')).toContainEqual([{ preset: 'heart' }]);
     await arrows!.trigger('click');
     expect(wrapper.emitted('update')).toContainEqual([{ family: 'arrow', preset: 'arrow' }]);
     await wrapper.setProps({ clip: clip({ family: 'arrow', preset: 'arrow' }) });

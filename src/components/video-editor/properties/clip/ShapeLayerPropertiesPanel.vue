@@ -2,8 +2,8 @@
 import { useElementEditor } from '../../elements/useElementEditor';
 import ElementTextControls from '../../elements/ElementTextControls.vue';
 import DrawingControls from '../../elements/DrawingControls.vue';
-import { computed, ref, watch, type Component } from 'vue';
-import { ArrowRight, Circle, Diamond, RectangleHorizontal, SquareRoundCorner, Star, Triangle } from '@lucide/vue';
+import ShapePicker from '../../elements/ShapePicker.vue';
+import { computed, ref, watch } from 'vue';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
@@ -12,15 +12,10 @@ import Divider from '~/ui/divider/Divider.vue';
 import Switch from '~/ui/switch/Switch.vue';
 import ShadowDirectionGroup from '../cursor/ShadowDirectionGroup.vue';
 import type { ShapeClip } from '~/media/shared/composition-types';
-import {
-  ARROW_PRESETS,
-  defaultShapePresetFor,
-  normalizeShapeLayerStyle,
-  SHAPE_PRESETS,
-  shapeLayerFill,
-} from '~/media/shared/shape-layer-style';
+import { defaultShapePresetFor, normalizeShapeLayerStyle, shapeLayerFill } from '~/media/shared/shape-layer-style';
 import type { ColorFill } from '~/media/shared/color-fill-types';
-import type { ShapeLayerFamily, ShapeLayerPreset, ShapeLayerStyle } from '~/media/shared/shape-layer-types';
+import type { ShapeKind } from '~/media/shared/shape-catalog';
+import type { ShapeLayerFamily, ShapeLayerStyle } from '~/media/shared/shape-layer-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import ColorFillPresetControls from '../ColorFillPresetControls.vue';
 
@@ -38,22 +33,8 @@ watch(
   { immediate: true },
 );
 const style = computed(() => normalizeShapeLayerStyle(props.clip));
+const shapePreset = computed(() => style.value.preset as ShapeKind);
 const fill = computed(() => shapeLayerFill(style.value));
-const presetOptions: Record<Exclude<ShapeLayerPreset, 'text' | 'freehand'>, { icon: Component; labelKey: string }> = {
-  rectangle: { icon: RectangleHorizontal, labelKey: 'shapePresetRectangle' },
-  'rounded-rectangle': { icon: SquareRoundCorner, labelKey: 'shapePresetRoundedRectangle' },
-  ellipse: { icon: Circle, labelKey: 'shapePresetEllipse' },
-  triangle: { icon: Triangle, labelKey: 'shapePresetTriangle' },
-  diamond: { icon: Diamond, labelKey: 'shapePresetDiamond' },
-  star: { icon: Star, labelKey: 'shapePresetStar' },
-  arrow: { icon: ArrowRight, labelKey: 'shapePresetArrow' },
-};
-const presets = computed(() =>
-  (style.value.family === 'arrow' ? ARROW_PRESETS : SHAPE_PRESETS).map((value) => ({
-    value,
-    ...presetOptions[value as keyof typeof presetOptions],
-  })),
-);
 const update = (patch: Partial<ShapeLayerStyle>) => emit('update', patch);
 const updateFill = (value: ColorFill) =>
   update({
@@ -101,19 +82,11 @@ const rotationPresets = [0, 90, 180, 270] as const;
         </Button>
       </ButtonGroup>
 
-      <ButtonGroup v-if="style.family === 'shape'" full size="xs" :aria-label="t('shapePreset')">
-        <Button
-          v-for="preset in presets"
-          :key="preset.value"
-          size="xs"
-          block
-          :variant="style.preset === preset.value ? 'primary' : 'secondary'"
-          :icon="preset.icon"
-          :tooltip="t(preset.labelKey)"
-          :aria-label="t(preset.labelKey)"
-          @click="update({ preset: preset.value })"
-        />
-      </ButtonGroup>
+      <ShapePicker
+        v-if="style.family === 'shape'"
+        :model-value="shapePreset"
+        @update:model-value="update({ preset: $event })"
+      />
 
       <ButtonGroup full size="xs" :aria-label="t('shapeRotation')">
         <Button

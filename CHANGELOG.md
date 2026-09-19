@@ -13,6 +13,7 @@ User-facing changes to Beam are documented in this file.
 - Added direct clipboard-image paste into Screenshot compositions and Studio tracks, double-click crop, and on-canvas rotation handles for elements.
 - Added right-drag box selection and Ctrl/Cmd/Shift-click toggling on Screenshot and Studio canvases, including additive drags from existing selection handles, for multi-item copy, cut, and delete workflows.
 - Added group dragging for multi-selected items in both Screenshot and Studio without collapsing the selection, with alignment guides for the moved group.
+- Added a shared searchable library of 29 previewable vector shapes to the Studio and Screenshot editors.
 
 ### Changed
 
