@@ -19,6 +19,7 @@ export interface WebsiteModeSummary {
 export interface WebsiteModeSpotlightContent {
   id: WebsiteModeSummary['id'];
   eyebrow: string;
+  icon: Component;
   title: string;
   description: string;
   features: readonly WebsiteModeStep[];

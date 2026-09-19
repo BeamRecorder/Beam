@@ -132,6 +132,7 @@ const modeSpotlights = computed<WebsiteModeSpotlightContent[]>(() => [
   {
     id: 'instant',
     eyebrow: HOME_PAGE_COPY.spotlights.instant.eyebrow,
+    icon: Zap,
     title: HOME_PAGE_COPY.spotlights.instant.title,
     description: HOME_PAGE_COPY.spotlights.instant.text,
     tone: 'blue',
@@ -141,6 +142,7 @@ const modeSpotlights = computed<WebsiteModeSpotlightContent[]>(() => [
   {
     id: 'studio',
     eyebrow: HOME_PAGE_COPY.spotlights.studio.eyebrow,
+    icon: Clapperboard,
     title: HOME_PAGE_COPY.spotlights.studio.title,
     description: HOME_PAGE_COPY.spotlights.studio.text,
     tone: 'violet',
@@ -151,6 +153,7 @@ const modeSpotlights = computed<WebsiteModeSpotlightContent[]>(() => [
   {
     id: 'screenshot',
     eyebrow: HOME_PAGE_COPY.spotlights.screenshot.eyebrow,
+    icon: ScanLine,
     title: HOME_PAGE_COPY.spotlights.screenshot.title,
     description: HOME_PAGE_COPY.spotlights.screenshot.text,
     tone: 'green',
@@ -175,7 +178,6 @@ const openExternal = (url: string) => window.open(url, '_blank', 'noopener');
       <WebsiteHero />
 
       <WebsiteModeCards
-        :eyebrow="HOME_PAGE_COPY.overview.eyebrow"
         :title="HOME_PAGE_COPY.overview.title"
         :description="HOME_PAGE_COPY.overview.text"
         :modes="modes"

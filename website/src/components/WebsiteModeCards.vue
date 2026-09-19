@@ -3,7 +3,6 @@ import { ArrowRight } from '@lucide/vue';
 import type { WebsiteModeSummary } from '@website/types/website-modes';
 
 defineProps<{
-  eyebrow: string;
   title: string;
   description: string;
   modes: readonly WebsiteModeSummary[];
@@ -13,7 +12,6 @@ defineProps<{
 <template>
   <section id="modes" class="mode-overview" aria-labelledby="modes-title">
     <header class="mode-overview__intro">
-      <span class="section-eyebrow">{{ eyebrow }}</span>
       <h2 id="modes-title">{{ title }}</h2>
       <p>{{ description }}</p>
     </header>
@@ -71,28 +69,23 @@ defineProps<{
 
 .mode-overview__grid {
   display: grid;
-  padding: 14px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-  border: 1px solid var(--color-border);
-  border-radius: 30px;
-  background: color-mix(in srgb, var(--color-bg-surface) 72%, transparent);
+  align-items: stretch;
+  gap: 20px;
 }
 
 .mode-card {
   --mode-accent: #4c9deb;
   --mode-soft: rgb(76 157 235 / 12%);
   position: relative;
-  display: flex;
+  display: grid;
   min-width: 0;
-  min-height: 430px;
   padding: clamp(24px, 2.6vw, 34px);
   border: 1px solid var(--color-border);
   border-radius: 21px;
   background: var(--color-bg-element);
   box-shadow: var(--shadow-sm);
   color: var(--text-primary);
-  flex-direction: column;
   text-decoration: none;
   transition:
     transform 180ms ease,
@@ -183,7 +176,6 @@ defineProps<{
 
 .mode-card__best {
   display: grid;
-  margin-top: auto;
   padding-top: 20px;
   gap: 5px;
   border-top: 1px solid var(--color-border);
@@ -216,20 +208,31 @@ defineProps<{
   transform: translateX(3px);
 }
 
+@media (min-width: 981px) {
+  .mode-card {
+    grid-template-rows: auto 110px 112px 220px auto auto;
+  }
+}
+
 @media (max-width: 980px) {
   .mode-overview__grid {
     grid-template-columns: 1fr;
   }
 
   .mode-card {
+    display: flex;
     min-height: 0;
+    flex-direction: column;
+  }
+
+  .mode-card__best {
+    margin-top: auto;
   }
 }
 
 @media (max-width: 620px) {
   .mode-overview__grid {
-    padding: 8px;
-    border-radius: 24px;
+    gap: 14px;
   }
 
   .mode-card {

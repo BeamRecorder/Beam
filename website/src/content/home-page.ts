@@ -10,10 +10,25 @@ export const HOME_PAGE_COPY = {
     studio: 'Studio Mode',
     screenshot: 'Screenshot Mode',
   },
+  heroModes: {
+    instant: {
+      title: ['Record.', 'Stop.', 'Already polished.'],
+      description:
+        'Start with a saved look, capture the moment, and let Beam render locally. The finished video file lands on your clipboard, ready to paste.',
+    },
+    studio: {
+      title: ['Record.', 'Shape.', 'Make it yours.'],
+      description:
+        'Keep the screen, camera, sound, timing, and motion editable. Studio gives every product story room to become unmistakably yours.',
+    },
+    screenshot: {
+      title: ['Capture.', 'Mark up.', 'Make it clear.'],
+      description:
+        'Crop any image, layer arrows and text, then copy the complete composition. Clear visual communication without leaving Beam.',
+    },
+  },
   seeHowItWorks: 'See how Beam works',
-  realProductDemo: 'Real Beam editor footage',
   overview: {
-    eyebrow: 'Three capture modes',
     title: 'One app for every capture workflow.',
     text: 'Move fast with Instant, take full control in Studio, or turn a still capture into a clear visual explanation.',
   },

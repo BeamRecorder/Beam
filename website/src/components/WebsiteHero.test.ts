@@ -16,17 +16,33 @@ const mountHero = () => {
 };
 
 describe('WebsiteHero', () => {
-  it('renders the three-mode hero above the MacBook-framed demo', () => {
+  it('renders the three-mode hero above the supplied MacBook frame', () => {
     const wrapper = mountHero();
-    expect(wrapper.get('.website-hero__copy').text()).toContain('Capture. Polish. Deliver.');
+    expect(wrapper.get('.website-hero__copy').text().replaceAll(/\s+/g, ' ')).toContain(
+      'Record. Shape. Make it yours.',
+    );
     expect(wrapper.get('.hero-announcement').text()).toContain('Screenshot Editor is here');
-    expect(wrapper.findAll('.hero-modes a').map((link) => link.text())).toEqual([
+    expect(wrapper.findAll('.hero-modes button').map((button) => button.text())).toEqual([
       'Instant Mode',
       'Studio Mode',
       'Screenshot Mode',
     ]);
-    expect(wrapper.get('.website-hero__media').find('.macbook-frame').exists()).toBe(true);
-    expect(wrapper.get('.website-hero__media').find('video').exists()).toBe(true);
+    expect(wrapper.get('.macbook-demo__frame').attributes('src')).toBe('/macbook-pro-14-silver.webp');
+    expect(wrapper.get('.macbook-demo').find('video').exists()).toBe(true);
+    expect(wrapper.find('.macbook-demo__label').exists()).toBe(false);
+    expect(wrapper.find('.macbook-demo__status').exists()).toBe(false);
+  });
+
+  it('switches the hero message without navigating', async () => {
+    const wrapper = mountHero();
+    const buttons = wrapper.findAll('.hero-modes button');
+
+    expect(buttons[1]!.attributes('aria-pressed')).toBe('true');
+    await buttons[0]!.trigger('click');
+
+    expect(wrapper.get('#hero-title').text().replaceAll(/\s+/g, ' ')).toContain('Record. Stop. Already polished.');
+    expect(wrapper.get('.lede').text()).toContain('finished video file lands on your clipboard');
+    expect(wrapper.findAll('.hero-modes button')[0]!.attributes('aria-pressed')).toBe('true');
   });
 
   it('uses the shared Button with the detected platform icon', () => {
@@ -64,16 +80,17 @@ describe('WebsiteHero', () => {
     expect(installButton.attributes('href')).toBe(platform ? `/install?os=${platform}` : '/install');
   });
 
-  it('uses one native WebM source with immediate autoplay settings', () => {
+  it('uses synchronized foreground and ambient WebM layers with immediate autoplay settings', () => {
     const wrapper = mountHero();
     const videos = wrapper.findAll('video');
     const sources = wrapper.findAll('video source');
-    const video = wrapper.get('video');
+    const video = wrapper.get('.macbook-demo__video--primary');
 
-    expect(videos).toHaveLength(1);
-    expect(sources).toHaveLength(1);
-    expect(sources[0]!.attributes('src')).toBe('/website-demo.webm');
-    expect(sources[0]!.attributes('type')).toBe('video/webm');
+    expect(videos).toHaveLength(2);
+    expect(sources).toHaveLength(2);
+    expect(sources.every((source) => source.attributes('src') === '/website-demo.webm')).toBe(true);
+    expect(sources.every((source) => source.attributes('type') === 'video/webm')).toBe(true);
+    expect(wrapper.get('.macbook-demo__video--ambient').attributes('aria-hidden')).toBe('true');
     const videoElement = video.element as HTMLVideoElement;
     expect(videoElement.autoplay).toBe(true);
     expect(videoElement.muted).toBe(true);
@@ -91,8 +108,8 @@ describe('WebsiteHero', () => {
       nativePaused = false;
     });
     const wrapper = mountHero();
-    const video = wrapper.get('video');
-    const control = wrapper.get('.website-hero__video-control');
+    const video = wrapper.get('.macbook-demo__video--primary');
+    const control = wrapper.get('.macbook-demo__control');
     Object.defineProperty(video.element, 'paused', {
       configurable: true,
       get: () => nativePaused,
@@ -101,14 +118,14 @@ describe('WebsiteHero', () => {
     expect((video.element as HTMLVideoElement).paused).toBe(true);
 
     await control.trigger('click');
-    expect(play).toHaveBeenCalledOnce();
+    expect(play).toHaveBeenCalledTimes(2);
     expect(pause).not.toHaveBeenCalled();
     expect((video.element as HTMLVideoElement).paused).toBe(false);
     await video.trigger('play');
     expect(control.attributes('aria-label')).toBe('Pause demo');
 
     await control.trigger('click');
-    expect(pause).toHaveBeenCalledOnce();
+    expect(pause).toHaveBeenCalledTimes(2);
     expect((video.element as HTMLVideoElement).paused).toBe(true);
     await video.trigger('pause');
     expect(control.attributes('aria-label')).toBe('Play demo');

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Check, ClipboardCheck, FileVideo2, SlidersHorizontal, Sparkles } from '@lucide/vue';
+import { Check, ClipboardCheck, FileVideo2, SlidersHorizontal } from '@lucide/vue';
 import WebsiteScreenshotMockup from './WebsiteScreenshotMockup.vue';
 import type { WebsiteModeSpotlightContent } from '@website/types/website-modes';
 
@@ -41,14 +41,15 @@ defineProps<{ content: WebsiteModeSpotlightContent }>();
         <video autoplay muted loop playsinline preload="metadata" aria-label="Beam Studio editor demo">
           <source src="/website-demo.webm" type="video/webm" />
         </video>
-        <span class="studio-demo__badge"><Sparkles aria-hidden="true" />Editable project</span>
       </div>
 
       <WebsiteScreenshotMockup v-else />
     </div>
 
     <div class="mode-spotlight__copy">
-      <span class="section-eyebrow">{{ content.eyebrow }}</span>
+      <span class="mode-spotlight__badge">
+        <component :is="content.icon" aria-hidden="true" />{{ content.eyebrow }}
+      </span>
       <h2 :id="`${content.id}-title`">{{ content.title }}</h2>
       <p>{{ content.description }}</p>
       <ul>
@@ -100,6 +101,29 @@ defineProps<{ content: WebsiteModeSpotlightContent }>();
   display: grid;
   align-content: center;
   gap: 20px;
+}
+
+.mode-spotlight__badge {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 36px;
+  padding: 0 12px;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid color-mix(in srgb, var(--mode-accent) 13%, transparent);
+  border-radius: 11px;
+  background: var(--mode-soft);
+  color: var(--mode-accent);
+  font-size: 12px;
+  font-weight: 760;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mode-spotlight__badge svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.4;
 }
 
 .mode-spotlight__copy h2 {
@@ -344,30 +368,6 @@ defineProps<{ content: WebsiteModeSpotlightContent }>();
   border: 1px solid rgb(47 30 78 / 14%);
   border-radius: 17px;
   box-shadow: 0 30px 58px -30px rgb(52 25 96 / 55%);
-}
-
-.studio-demo__badge {
-  position: absolute;
-  right: clamp(10px, 2vw, 28px);
-  bottom: clamp(14px, 3vw, 36px);
-  display: inline-flex;
-  min-height: 38px;
-  padding: 0 13px;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid rgb(255 255 255 / 55%);
-  border-radius: 11px;
-  background: rgb(32 21 50 / 88%);
-  box-shadow: var(--shadow-md);
-  color: white;
-  font-size: 12px;
-  font-weight: 720;
-  backdrop-filter: blur(12px);
-}
-
-.studio-demo__badge svg {
-  width: 16px;
-  color: #d5baff;
 }
 
 @media (max-width: 980px) {

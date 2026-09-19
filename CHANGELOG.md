@@ -16,6 +16,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
+- The website hero now switches smoothly between Instant, Studio, and Screenshot messaging, brings the product forward inside a real MacBook frame, and uses subtly animated, soft-edged sparkles with ordered dithering.
+- The homepage capture-mode cards now stand on their own with aligned content, while each detailed mode section uses its own colored icon badge.
 - Redesigned the Beam homepage around its three capture workflows with accurate local-first clipboard behavior and product demonstrations.
 - Property-panel delete footers now blend into the shared, symmetrical scroll shadow without an extra top border.
 - Screenshot layers can now be reordered by dragging the layer row directly, without a separate drag handle.

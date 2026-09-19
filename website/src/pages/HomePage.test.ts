@@ -45,20 +45,18 @@ describe('HomePage', () => {
     const hero = wrapper.get('.website-hero');
     const features = wrapper.get('#editor-demo');
 
-    expect(wrapper.get('#hero-title').text()).toBe('Capture. Polish. Deliver.');
+    expect(wrapper.get('#hero-title').text().replaceAll(/\s+/g, ' ')).toBe('Record. Shape. Make it yours.');
     expect(
       wrapper
         .get('#hero-title')
         .findAll('.hero-title__phrase')
         .map((part) => part.text()),
-    ).toEqual(['Capture.', 'Polish.', 'Deliver.']);
+    ).toEqual(['Record.', 'Shape.', 'Make it yours.']);
     expect(hero.get('.hero-availability').text()).toContain('Free, local-first, and open source.');
     expect(hero.get('.hero-availability').text()).toContain('Available for Windows, macOS, and Linux.');
     expect(hero.find('.hero-eyebrow').exists()).toBe(false);
     expect(wrapper.find('.availability').exists()).toBe(false);
-    expect(wrapper.text()).toContain(
-      'One open-source desktop app for quick recordings, deeply edited videos, and screenshots that are ready to paste.',
-    );
+    expect(wrapper.text()).toContain('Keep the screen, camera, sound, timing, and motion editable.');
     expect(wrapper.text()).toContain('free');
     expect(wrapper.text()).toContain('Windows');
     expect(wrapper.text()).toContain('macOS');
@@ -71,6 +69,11 @@ describe('HomePage', () => {
     expect(wrapper.find('[data-testid="project-loader"]').exists()).toBe(false);
     expect(wrapper.findAll('.mode-card')).toHaveLength(3);
     expect(wrapper.findAll('.mode-spotlight')).toHaveLength(3);
+    expect(wrapper.findAll('.mode-spotlight__badge')).toHaveLength(3);
+    expect(wrapper.findAll('.mode-spotlight__badge svg')).toHaveLength(3);
+    expect(wrapper.text()).not.toContain('Three capture modes');
+    expect(wrapper.text()).not.toContain('Editable project');
+    expect(wrapper.text()).not.toContain('Real Beam editor footage');
     expect(wrapper.get('#instant').text()).toContain('The video file is copied');
     expect(wrapper.get('#screenshot').text()).toContain('Direct cropping');
     expect(features.get('h2').text()).toBe('A powerful editor.');
