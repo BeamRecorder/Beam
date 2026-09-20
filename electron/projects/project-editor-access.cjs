@@ -11,6 +11,7 @@ const {
   presentationState,
   zoomState,
 } = require('./project-editor-state.cjs');
+const { repairLegacySessionMediaPaths } = require('./legacy-session-media.cjs');
 
 function createProjectEditorAccess(options) {
   const migrateEditor = (directory, manifest) => {
@@ -20,7 +21,11 @@ function createProjectEditorAccess(options) {
       current.composition?.schemaVersion === compositionSchemaVersion &&
       current.presentation?.cursor?.selection
     ) {
-      const composition = normalizeComposition(current.composition);
+      const composition = repairLegacySessionMediaPaths(
+        directory,
+        normalizeComposition(current.composition),
+        options.sessionFileFor,
+      );
       if (JSON.stringify(composition) === JSON.stringify(current.composition)) return current;
       manifest.editor = { ...current, composition };
       options.writeManifest(directory, manifest);
@@ -30,17 +35,21 @@ function createProjectEditorAccess(options) {
       throw new Error(`Version d’état éditeur inconnue: ${String(current.schemaVersion)}`);
     const legacyComposition = current?.composition ?? { schemaVersion: 1, assets: [], clips: [] };
     const presentation = migratePresentation(current?.presentation);
+    const composition = repairLegacySessionMediaPaths(
+      directory,
+      legacyComposition.schemaVersion === compositionSchemaVersion
+        ? normalizeComposition(legacyComposition)
+        : migrateComposition(
+            legacyComposition,
+            presentation.canvas.showBackground,
+            Array.isArray(manifest.sessions) ? manifest.sessions.map((session) => session.sessionId) : [],
+          ),
+      options.sessionFileFor,
+    );
     const editor = {
       schemaVersion: 3,
       ...(current?.applyGlobalDefaults === true ? { applyGlobalDefaults: true } : {}),
-      composition:
-        legacyComposition.schemaVersion === compositionSchemaVersion
-          ? normalizeComposition(legacyComposition)
-          : migrateComposition(
-              legacyComposition,
-              presentation.canvas.showBackground,
-              Array.isArray(manifest.sessions) ? manifest.sessions.map((session) => session.sessionId) : [],
-            ),
+      composition,
       zoom: current?.zoom
         ? zoomState(current.zoom)
         : {

@@ -267,6 +267,7 @@ export interface ProjectEditorData {
   sessionId: string;
   manifest: SessionManifestData;
   videoSrc: string | null;
+  videoSessionPath: string | null;
   tracks: SessionTrackData[];
   cursor: {
     available: boolean;

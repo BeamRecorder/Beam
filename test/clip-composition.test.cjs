@@ -2276,6 +2276,184 @@ test('returns opaque project-media URLs for editor session assets', () => {
   assert.doesNotMatch(segmentSrc, /^file:/);
   assert.match(data.videoSrc, /^project-media:/);
   assert.doesNotMatch(data.videoSrc, /^file:/);
+  assert.equal(data.videoSessionPath, 'screen/capture.mp4');
+});
+
+test('repairs legacy screen primary paths while preserving the edited clip', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-legacy-screen-path-'));
+  const store = createProjectStore(root);
+  const project = store.create({ name: 'Legacy screen path' });
+  const directory = store.directoryFor(project.id);
+  const sessionId = 'session-legacy';
+  const sessionDirectory = path.join(directory, 'sessions', sessionId);
+  const screenDirectory = path.join(sessionDirectory, 'screen');
+  const segmentPath = path.join(screenDirectory, 'segment-0001.mp4');
+  fs.mkdirSync(screenDirectory, { recursive: true });
+  fs.writeFileSync(segmentPath, 'video');
+  fs.writeFileSync(path.join(sessionDirectory, 'manifest.json'), JSON.stringify({ sessionId, tracks: [] }));
+
+  const assetId = `session:${sessionId}:screen:primary`;
+  const clip = visualClip(assetId, {
+    id: 'screen',
+    kind: 'screen',
+    name: 'Trimmed legacy screen',
+    trackId: 'legacy-screen-track',
+    timelineStartMs: 320,
+    timelineDurationMs: 760,
+    sourceInMs: 480,
+    sourceDurationMs: 760,
+    enabled: false,
+    order: 42,
+    transform: { x: 0.13, y: 0.17, width: 0.71, height: 0.69 },
+    isMirrored: true,
+    isMirroredY: true,
+  });
+  const manifestPath = path.join(directory, 'project.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  manifest.sessions = [{ sessionId, relativePath: path.join('sessions', sessionId) }];
+  manifest.editor = {
+    ...manifest.editor,
+    schemaVersion: 3,
+    composition: {
+      schemaVersion: 14,
+      assets: [
+        {
+          id: assetId,
+          kind: 'video',
+          name: 'Screen recording',
+          fileName: null,
+          durationMs: 2_000,
+          width: null,
+          height: null,
+          src: '',
+          origin: 'session',
+          sessionId,
+          sessionPath: 'screen/primary',
+        },
+      ],
+      clips: [clip],
+      keyboardCaptionSessions: [],
+    },
+  };
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+
+  const state = store.editorState(project.id);
+  const repairedAsset = state.composition.assets.find((asset) => asset.id === assetId);
+  const repairedClip = state.composition.clips.find((candidate) => candidate.id === 'screen');
+
+  assert.ok(repairedAsset);
+  assert.equal(repairedAsset.id, assetId);
+  assert.equal(repairedAsset.sessionPath, 'screen/segment-0001.mp4');
+  assert.match(repairedAsset.src, /^project-media:\/\/asset\//);
+  assert.equal(store.mediaFileForUrl(repairedAsset.src), segmentPath);
+  assert.ok(repairedClip);
+  assert.equal(repairedClip.assetId, assetId);
+  assert.equal(repairedClip.name, clip.name);
+  assert.equal(repairedClip.timelineStartMs, clip.timelineStartMs);
+  assert.equal(repairedClip.timelineDurationMs, clip.timelineDurationMs);
+  assert.equal(repairedClip.sourceInMs, clip.sourceInMs);
+  assert.equal(repairedClip.sourceDurationMs, clip.sourceDurationMs);
+  assert.equal(repairedClip.enabled, clip.enabled);
+  assert.equal(repairedClip.trackId, clip.trackId);
+  assert.deepEqual(repairedClip.transform, clip.transform);
+  assert.deepEqual(repairedClip.appearance, clip.appearance);
+  assert.equal(repairedClip.isMirrored, clip.isMirrored);
+  assert.equal(repairedClip.isMirroredY, clip.isMirroredY);
+
+  const rewritten = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  assert.equal(rewritten.editor.composition.assets[0].id, assetId);
+  assert.equal(rewritten.editor.composition.assets[0].sessionPath, 'screen/segment-0001.mp4');
+  assert.equal(rewritten.editor.composition.clips[0].assetId, assetId);
+  assert.equal(rewritten.editor.composition.clips[0].timelineStartMs, clip.timelineStartMs);
+  assert.equal(rewritten.editor.composition.clips[0].timelineDurationMs, clip.timelineDurationMs);
+});
+
+const createLegacyPrimaryPathFixture = (screenFiles = []) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-legacy-primary-path-'));
+  const store = createProjectStore(root);
+  const project = store.create({ name: 'Legacy primary path' });
+  const directory = store.directoryFor(project.id);
+  const sessionId = 'session-legacy-primary';
+  const sessionDirectory = path.join(directory, 'sessions', sessionId);
+  const screenDirectory = path.join(sessionDirectory, 'screen');
+  fs.mkdirSync(screenDirectory, { recursive: true });
+  for (const file of screenFiles) fs.writeFileSync(path.join(screenDirectory, file), 'video');
+  fs.writeFileSync(path.join(sessionDirectory, 'manifest.json'), JSON.stringify({ sessionId, tracks: [] }));
+
+  const assetId = `session:${sessionId}:screen:primary`;
+  const clip = visualClip(assetId, {
+    id: 'screen',
+    kind: 'screen',
+    name: 'Legacy screen',
+    trackId: 'legacy-screen-track',
+    timelineStartMs: 320,
+    timelineDurationMs: 760,
+    sourceInMs: 480,
+    sourceDurationMs: 760,
+  });
+  const manifestPath = path.join(directory, 'project.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  manifest.sessions = [{ sessionId, relativePath: path.join('sessions', sessionId) }];
+  manifest.editor = {
+    ...manifest.editor,
+    schemaVersion: 3,
+    composition: {
+      schemaVersion: 14,
+      assets: [
+        {
+          id: assetId,
+          kind: 'video',
+          name: 'Screen recording',
+          fileName: null,
+          durationMs: 2_000,
+          width: null,
+          height: null,
+          src: '',
+          origin: 'session',
+          sessionId,
+          sessionPath: 'screen/primary',
+        },
+      ],
+      clips: [clip],
+      keyboardCaptionSessions: [],
+    },
+  };
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  return { store, project, assetId, clip, manifestPath, screenDirectory };
+};
+
+test('keeps a real legacy screen primary path unchanged', () => {
+  const fixture = createLegacyPrimaryPathFixture(['primary']);
+  const state = fixture.store.editorState(fixture.project.id);
+  const asset = state.composition.assets.find((candidate) => candidate.id === fixture.assetId);
+
+  assert.ok(asset);
+  assert.equal(asset.sessionPath, 'screen/primary');
+  assert.match(asset.src, /^project-media:\/\/asset\//);
+  assert.equal(fixture.store.mediaFileForUrl(asset.src), path.join(fixture.screenDirectory, 'primary'));
+  assert.equal(state.composition.clips[0].assetId, fixture.assetId);
+
+  const rewritten = JSON.parse(fs.readFileSync(fixture.manifestPath, 'utf8'));
+  assert.equal(rewritten.editor.composition.assets[0].sessionPath, 'screen/primary');
+});
+
+test('keeps an unavailable legacy screen primary path and clip unchanged', () => {
+  const fixture = createLegacyPrimaryPathFixture();
+  const state = fixture.store.editorState(fixture.project.id);
+  const asset = state.composition.assets.find((candidate) => candidate.id === fixture.assetId);
+  const clip = state.composition.clips.find((candidate) => candidate.id === 'screen');
+
+  assert.ok(asset);
+  assert.equal(asset.sessionPath, 'screen/primary');
+  assert.equal(asset.src, '');
+  assert.ok(clip);
+  assert.equal(clip.assetId, fixture.assetId);
+  assert.equal(clip.timelineStartMs, fixture.clip.timelineStartMs);
+  assert.equal(clip.timelineDurationMs, fixture.clip.timelineDurationMs);
+
+  const rewritten = JSON.parse(fs.readFileSync(fixture.manifestPath, 'utf8'));
+  assert.equal(rewritten.editor.composition.assets[0].sessionPath, 'screen/primary');
+  assert.equal(rewritten.editor.composition.clips[0].assetId, fixture.assetId);
 });
 
 test('returns an opaque project-media URL for project previews', () => {

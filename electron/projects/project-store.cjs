@@ -292,6 +292,7 @@ function createProjectStore(root, { mediaHost = 'asset', category = null } = {})
         sessionId: session.sessionId,
         manifest: sessionManifest,
         videoSrc: video ? mediaUrlFor(pathToFileURL(path.join(screenDirectory, video)).href) : null,
+        videoSessionPath: video ? path.posix.join('screen', video) : null,
         tracks,
         cursor: {
           available: Array.isArray(events),
@@ -388,7 +389,6 @@ function createProjectStore(root, { mediaHost = 'asset', category = null } = {})
       path: pathToFileURL(targetPath).href,
     };
   };
-
   applyPendingRenames();
   return {
     list: () =>

@@ -207,7 +207,8 @@ export function synchronizeRecordingClips(
     !candidates.some((clip) => clip.kind === 'screen') &&
     !clips.some((clip) => clip.kind === 'screen') &&
     !hasKnownScreenSource &&
-    editorData.videoSrc
+    editorData.videoSrc &&
+    editorData.videoSessionPath
   ) {
     const durationMs = Math.max(40, milliseconds(editorData.manifest.durationNs));
     const asset: MediaAsset = {
@@ -221,7 +222,7 @@ export function synchronizeRecordingClips(
       src: editorData.videoSrc,
       origin: 'session',
       sessionId: editorData.sessionId,
-      sessionPath: 'screen/primary',
+      sessionPath: editorData.videoSessionPath,
     };
     assets.set(asset.id, asset);
     assetsChanged = true;

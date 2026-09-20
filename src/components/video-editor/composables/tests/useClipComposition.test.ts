@@ -257,6 +257,7 @@ const mediaAssetFor = (id: string, kind: MediaAsset['kind']): MediaAsset => ({
 const editorData = (): ProjectEditorData => ({
   sessionId: 'session-1',
   videoSrc: 'session.mp4',
+  videoSessionPath: 'screen/session.mp4',
   manifest: {
     schemaVersion: 1,
     projectId: 'project-1',

@@ -23,6 +23,7 @@ const zoom = (id: string, mode: ZoomElement['mode'] = 'manual', sessionId = 'ses
 const data = (overrides: Partial<ProjectEditorData> = {}): ProjectEditorData => ({
   sessionId: 'session',
   videoSrc: null,
+  videoSessionPath: null,
   tracks: [],
   manifest: {
     schemaVersion: 1,

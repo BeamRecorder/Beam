@@ -40,10 +40,12 @@ const editorData = (
     interactions?: InputEventSidecar;
     omitInteractions?: boolean;
     recordedPlatform?: ProjectEditorData['recordedPlatform'];
+    videoSessionPath?: string | null;
   } = {},
 ): ProjectEditorData => ({
   sessionId: 'session-1',
   videoSrc,
+  videoSessionPath: options.videoSessionPath ?? null,
   manifest: {
     schemaVersion: 3,
     projectId: 'project',
@@ -164,6 +166,7 @@ describe('synchronizeRecordingClips', () => {
           track('camera', [segment({ path: 'camera.webm', src: '/camera.webm' })], { placement: { x: 'bad' } }),
         ],
         '/primary.mp4',
+        { videoSessionPath: 'screen/segment-0001.mp4' },
       ),
     );
 
@@ -176,7 +179,13 @@ describe('synchronizeRecordingClips', () => {
     expect(result.clips.find((clip) => clip.kind === 'webcam')).toMatchObject({
       transform: { x: 0.72, y: 0.72, width: 0.24, height: 0.24 },
     });
-    expect(result.assets.some((asset) => asset.src === '/primary.mp4')).toBe(true);
+    expect(result.assets).toContainEqual(
+      expect.objectContaining({
+        id: 'session:session-1:screen:primary',
+        src: '/primary.mp4',
+        sessionPath: 'screen/segment-0001.mp4',
+      }),
+    );
   });
 
   it('preserves existing clips and does not duplicate recording sources', () => {

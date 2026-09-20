@@ -50,6 +50,7 @@ const task = (): QuickSnipRenderTask => {
   const editorData: ProjectEditorData = {
     sessionId: 'session',
     videoSrc: tracks[0].assets[0].src,
+    videoSessionPath: tracks[0].assets[0].path,
     manifest: {
       schemaVersion: 3,
       projectId: 'project',
