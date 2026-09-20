@@ -7,6 +7,18 @@ User-facing changes to Beam are documented in this file.
 ### Added
 
 - Added English guides for Instant, Studio, and Screenshot capture modes, including cropping, composition, clipboard, and export workflows.
+
+### Changed
+
+- The homepage now presents a full-size Explore features gallery synchronized with the hero across Instant, Studio, and Screenshot copy, colors, and mode-specific media.
+- The website hero now switches smoothly between Instant, Studio, and Screenshot messaging, brings the product forward inside a real MacBook frame, and uses subtly animated, soft-edged sparkles with ordered dithering.
+- The homepage capture-mode cards now stand on their own with aligned content, while each detailed mode section uses its own colored icon badge.
+- Redesigned the Beam homepage around its three capture workflows with accurate local-first clipboard behavior and product demonstrations.
+
+## [0.3.0] - 2026-09-20
+
+### Added
+
 - Added one-click Studio canvas screenshots with a three-second shortcut to open each capture in a new Screenshot editor window.
 - Added reusable solid-color and saved-gradient controls for shapes and freehand drawings.
 - Added multi-item copy, cut, and paste shortcuts with localized feedback in the Studio and Screenshot editors.
@@ -18,10 +30,6 @@ User-facing changes to Beam are documented in this file.
 ### Changed
 
 - The Elements toolbar now adds an outlined rectangle immediately from “Shape”; the selected element’s properties open the full library when another shape is needed.
-- The homepage now presents a full-size Explore features gallery synchronized with the hero across Instant, Studio, and Screenshot copy, colors, and mode-specific media.
-- The website hero now switches smoothly between Instant, Studio, and Screenshot messaging, brings the product forward inside a real MacBook frame, and uses subtly animated, soft-edged sparkles with ordered dithering.
-- The homepage capture-mode cards now stand on their own with aligned content, while each detailed mode section uses its own colored icon badge.
-- Redesigned the Beam homepage around its three capture workflows with accurate local-first clipboard behavior and product demonstrations.
 - Property-panel delete footers now blend into the shared, symmetrical scroll shadow without an extra top border.
 - Screenshot layers can now be reordered by dragging the layer row directly, without a separate drag handle.
 - Screenshot editing now opens on Elements, and new annotation shapes start as unfilled outlined rectangles.
@@ -77,7 +85,8 @@ User-facing changes to Beam are documented in this file.
 
 - Improved the editor workflow and native recording startup reliability, including Linux capture startup.
 
-[Unreleased]: https://github.com/BeamRecorder/Beam/compare/0.2.9...HEAD
+[Unreleased]: https://github.com/BeamRecorder/Beam/compare/0.3.0...HEAD
+[0.3.0]: https://github.com/BeamRecorder/Beam/releases/tag/0.3.0
 [0.2.9]: https://github.com/BeamRecorder/Beam/releases/tag/0.2.9
 [0.2.7]: https://github.com/BeamRecorder/Beam/releases/tag/0.2.7
 [0.2.6]: https://github.com/BeamRecorder/Beam/releases/tag/0.2.6
