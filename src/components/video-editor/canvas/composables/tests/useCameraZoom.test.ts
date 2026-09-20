@@ -584,6 +584,44 @@ describe('useCameraZoom', () => {
     expect(options.canvas.releasePointerCapture).toHaveBeenCalledWith(4);
   });
 
+  it('commits a valid manual focus and deselects exactly once on pointerup', () => {
+    mountComposable();
+    prepareManualDrag();
+
+    state.beginSelectionMove(pointer('pointerdown', 400, 225));
+    state.endSelectionMove(pointer('pointerup', 640, 140));
+
+    expect(options.callbacks.onUpdateZoom).toHaveBeenCalledOnce();
+    expect(options.callbacks.onDeselectZoom).toHaveBeenCalledOnce();
+  });
+
+  it('does not deselect on pointerup when no manual drag is active', () => {
+    mountComposable();
+
+    state.endSelectionMove(pointer('pointerup', 640, 140));
+
+    expect(options.callbacks.onUpdateZoom).not.toHaveBeenCalled();
+    expect(options.callbacks.onDeselectZoom).not.toHaveBeenCalled();
+  });
+
+  it('does not deselect when a manual drag has no valid geometry or focus', () => {
+    mountComposable();
+
+    state.beginSelectionMove(pointer('pointerdown', 400, 225));
+    state.endSelectionMove(pointer('pointerup', 640, 140));
+
+    expect(options.callbacks.onUpdateZoom).not.toHaveBeenCalled();
+    expect(options.callbacks.onDeselectZoom).not.toHaveBeenCalled();
+
+    prepareManualDrag();
+    state.beginSelectionMove(pointer('pointerdown', 400, 225));
+    options.selected.value = null;
+    state.endSelectionMove(pointer('pointerup', 640, 140));
+
+    expect(options.callbacks.onUpdateZoom).not.toHaveBeenCalled();
+    expect(options.callbacks.onDeselectZoom).not.toHaveBeenCalled();
+  });
+
   it('coalesces manual drag moves into one RAF and uses the latest pointer', () => {
     const raf = mockAnimationFrameQueue();
     mountComposable();

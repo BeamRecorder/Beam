@@ -25,6 +25,7 @@ import { mapSourcePointToScreen, resolveScreenRenderGeometry } from '../../compo
 import { resolveCompositionSceneLayers, type CompositionSceneLayers } from '../../composition/scene-layers';
 import type { RenderedVideoWindow, UseCameraZoomOptions, VideoWindowBounds } from './useCameraZoom.types';
 import { selectedZoomPreviewTilt } from './camera-preview-tilt';
+import { drawInCameraSpace } from './camera-space';
 export type { RenderedVideoWindow, UseCameraZoomOptions, VideoWindowBounds } from './useCameraZoom.types';
 export function useCameraZoom(options: UseCameraZoomOptions) {
   let cameraEvaluator: ReturnType<typeof createCompositionCameraEvaluator> | null = null;
@@ -172,7 +173,10 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       isMovingSelection.value = false;
       draftFocus.value = null;
       zoomDragGeometry = null;
-      if (selected?.mode === 'manual' && focus) options.onUpdateZoom({ ...selected, focus });
+      if (selected?.mode === 'manual' && focus) {
+        options.onUpdateZoom({ ...selected, focus });
+        options.onDeselectZoom();
+      }
       const target = (event.currentTarget as HTMLElement) ?? options.canvasRef();
       if (target?.hasPointerCapture?.(event.pointerId)) target.releasePointerCapture(event.pointerId);
     }
@@ -477,18 +481,6 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       tiltY: camera.tiltY,
     };
     return renderedWindow;
-  };
-
-  const drawInCameraSpace = (ctx: CanvasRenderingContext2D, window: RenderedVideoWindow, draw: () => void) => {
-    ctx.save();
-    ctx.beginPath();
-    ctx.roundRect(window.dx, window.dy, window.dw, window.dh, 0);
-    ctx.clip();
-    ctx.translate(window.dx + window.dw / 2, window.dy + window.dh / 2);
-    ctx.scale(window.scale, window.scale);
-    ctx.translate(-window.focusX, -window.focusY);
-    draw();
-    ctx.restore();
   };
 
   return {
