@@ -147,11 +147,22 @@ fn property(object: &Object, key: u32) -> &Value {
         .expect("expected buffer property")
 }
 
-fn fixed_int(value: &Value) -> Option<i32> {
+fn accepts_int(value: &Value, peer: i32) -> bool {
     match value {
-        Value::Int(value) => Some(*value),
-        Value::Choice(ChoiceValue::Int(Choice(_, ChoiceEnum::None(value)))) => Some(*value),
-        _ => None,
+        Value::Int(value) => *value == peer,
+        Value::Choice(ChoiceValue::Int(Choice(_, choice))) => match choice {
+            ChoiceEnum::None(value) => *value == peer,
+            ChoiceEnum::Range { min, max, .. } => (*min..=*max).contains(&peer),
+            ChoiceEnum::Step { min, max, step, .. } => {
+                (*min..=*max).contains(&peer) && *step > 0 && (peer - min) % step == 0
+            }
+            ChoiceEnum::Enum {
+                default,
+                alternatives,
+            } => *default == peer || alternatives.contains(&peer),
+            ChoiceEnum::Flags { .. } => false,
+        },
+        _ => false,
     }
 }
 
@@ -325,10 +336,12 @@ fn cursor_meta_size_range_intersects_fixed_kwin_and_mutter_sizes() {
             fixed_id(property(&object, spa::sys::SPA_PARAM_META_type)),
             Some(spa::utils::Id(spa::sys::SPA_META_Cursor))
         );
-        assert_eq!(
-            fixed_int(property(&object, spa::sys::SPA_PARAM_META_size)),
-            Some(peer_size),
-            "fixed peer size {peer_size:?} should be negotiated as-is"
+        let size = property(&object, spa::sys::SPA_PARAM_META_size);
+        // libspa versions differ in whether filtering collapses a compatible
+        // fixed peer size to an Int or retains a Choice containing that size.
+        assert!(
+            accepts_int(size, peer_size),
+            "fixed peer size {peer_size:?} should remain negotiable; got {size:?}"
         );
     }
 }
