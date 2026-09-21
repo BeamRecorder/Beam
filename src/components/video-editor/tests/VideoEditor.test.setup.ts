@@ -35,6 +35,7 @@ beforeEach(() => {
   );
   vi.stubGlobal('cancelAnimationFrame', vi.fn());
   editorState.store = undefined;
+  editorState.previewInitiallySettled = true;
 });
 
 afterEach(() => {

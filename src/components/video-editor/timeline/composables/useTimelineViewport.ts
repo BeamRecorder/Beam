@@ -107,9 +107,9 @@ export function useTimelineViewport(
   );
   const stableThumbnailSlots = ref(liveThumbnailSlots.value);
   watch(
-    [liveThumbnailSlots, isMediaPreviewFrozen, isWheelZooming],
-    ([slots, frozen, wheelZooming]) => {
-      if (!frozen && !wheelZooming) stableThumbnailSlots.value = slots;
+    [liveThumbnailSlots, isMediaPreviewFrozen],
+    ([slots, frozen]) => {
+      if (!frozen) stableThumbnailSlots.value = slots;
     },
     { immediate: true },
   );

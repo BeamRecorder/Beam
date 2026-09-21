@@ -1,10 +1,11 @@
 import { reactive, ref } from 'vue';
 import ThumbnailWorker from '~/media/playback/thumbnail.worker?worker';
-import type { ThumbnailWorkerResponse } from '~/media/playback/thumbnail-protocol';
+import { THUMBNAIL_WIDTH, thumbnailWidthFor, type ThumbnailWorkerResponse } from '~/media/playback/thumbnail-protocol';
 import { mediaSourceDescriptor, type MediaAsset } from '~/media/shared';
 import type { MediaProcessingReporter } from '../../performance/media-processing-pressure';
 
 const CACHE_LIMIT = 96;
+const THUMBNAIL_CROSSFADE_MS = 200;
 export const THUMBNAIL_WORKER_COUNT = 2;
 
 export function createThumbnailSource(asset: MediaAsset, pressure: MediaProcessingReporter) {
@@ -13,19 +14,33 @@ export function createThumbnailSource(asset: MediaAsset, pressure: MediaProcessi
   const isExtracting = ref(false);
   const error = ref<string | null>(null);
   const cacheOrder: number[] = [];
+  const widths = reactive<Record<number, number>>({});
+  const retiredUrls = new Map<string, ReturnType<typeof setTimeout>>();
   const retainedTimes = new Set<number>();
   const workers: Worker[] = [];
   const activeWorkers = new Set<number>();
   const inFlightTimes = new Set<number>();
-  const pendingFrames = new Map<number, Blob>();
+  let inFlightWidth = 0;
+  const pendingFrames = new Map<number, { blob: Blob; width: number }>();
   let generation = 0;
   let thumbnailFrame = 0;
   let requestQueued = false;
   let queuedTimes: number[] = [];
+  let queuedWidth = THUMBNAIL_WIDTH;
   let remainingFrames = 0;
 
   const updatePressure = () =>
     pressure.update(activeWorkers.size, remainingFrames + queuedTimes.length + pendingFrames.size);
+
+  const retireUrl = (url: string) => {
+    retiredUrls.set(
+      url,
+      setTimeout(() => {
+        retiredUrls.delete(url);
+        URL.revokeObjectURL(url);
+      }, THUMBNAIL_CROSSFADE_MS),
+    );
+  };
 
   const clearCache = () => {
     generation += 1;
@@ -34,6 +49,12 @@ export function createThumbnailSource(asset: MediaAsset, pressure: MediaProcessi
       URL.revokeObjectURL(url);
       delete thumbnails[Number(time)];
     }
+    for (const [url, timer] of retiredUrls) {
+      clearTimeout(timer);
+      URL.revokeObjectURL(url);
+    }
+    retiredUrls.clear();
+    for (const time of Object.keys(widths)) delete widths[Number(time)];
     cacheOrder.length = 0;
     retainedTimes.clear();
     queuedTimes = [];
@@ -41,6 +62,7 @@ export function createThumbnailSource(asset: MediaAsset, pressure: MediaProcessi
     isExtracting.value = false;
     activeWorkers.clear();
     inFlightTimes.clear();
+    inFlightWidth = 0;
     pendingFrames.clear();
     remainingFrames = 0;
     cancelAnimationFrame(thumbnailFrame);
@@ -60,25 +82,28 @@ export function createThumbnailSource(asset: MediaAsset, pressure: MediaProcessi
       const expiredIndex = cacheOrder.findIndex((time) => !retainedTimes.has(time));
       if (expiredIndex < 0) break;
       const expired = cacheOrder.splice(expiredIndex, 1)[0]!;
-      URL.revokeObjectURL(thumbnails[expired]);
+      retireUrl(thumbnails[expired]);
       delete thumbnails[expired];
+      delete widths[expired];
     }
   };
 
-  const cacheThumbnail = (time: number, blob: Blob) => {
+  const cacheThumbnail = (time: number, blob: Blob, width: number) => {
+    if ((widths[time] ?? 0) > width) return;
     const existing = thumbnails[time];
-    if (existing) URL.revokeObjectURL(existing);
+    if (existing) retireUrl(existing);
     thumbnails[time] = URL.createObjectURL(blob);
+    widths[time] = width;
     touchThumbnail(time);
     pruneCache();
   };
 
-  const queueThumbnail = (time: number, blob: Blob) => {
-    pendingFrames.set(time, blob);
+  const queueThumbnail = (time: number, blob: Blob, width: number) => {
+    pendingFrames.set(time, { blob, width });
     if (thumbnailFrame) return;
     thumbnailFrame = requestAnimationFrame(() => {
       thumbnailFrame = 0;
-      for (const [pendingTime, pendingBlob] of pendingFrames) cacheThumbnail(pendingTime, pendingBlob);
+      for (const [pendingTime, pending] of pendingFrames) cacheThumbnail(pendingTime, pending.blob, pending.width);
       pendingFrames.clear();
       updatePressure();
     });
@@ -99,13 +124,14 @@ export function createThumbnailSource(asset: MediaAsset, pressure: MediaProcessi
       if (message.type === 'error') error.value = message.message;
       if (message.type === 'error') pressure.error();
       if (message.type === 'error' || activeWorkers.size === 0) inFlightTimes.clear();
+      if (message.type === 'error' || activeWorkers.size === 0) inFlightWidth = 0;
       if (activeWorkers.size === 0) remainingFrames = 0;
       updatePressure();
       return;
     }
     remainingFrames = Math.max(0, remainingFrames - 1);
     inFlightTimes.delete(message.time);
-    queueThumbnail(message.time, message.blob);
+    queueThumbnail(message.time, message.blob, message.width);
     updatePressure();
   };
 
@@ -115,6 +141,7 @@ export function createThumbnailSource(asset: MediaAsset, pressure: MediaProcessi
     workers.length = 0;
     activeWorkers.clear();
     inFlightTimes.clear();
+    inFlightWidth = 0;
     isExtracting.value = false;
     remainingFrames = 0;
     updatePressure();
@@ -137,8 +164,9 @@ export function createThumbnailSource(asset: MediaAsset, pressure: MediaProcessi
     }
   };
 
-  const requestVisibleFrames = (visibleTimes: number[]) => {
+  const requestVisibleFrames = (visibleTimes: number[], width = THUMBNAIL_WIDTH) => {
     if (disposed) return;
+    queuedWidth = thumbnailWidthFor(width);
     queuedTimes = [...new Set(visibleTimes.filter((time) => Number.isFinite(time) && time >= 0))].sort(
       (left, right) => left - right,
     );
@@ -154,26 +182,31 @@ export function createThumbnailSource(asset: MediaAsset, pressure: MediaProcessi
     queueMicrotask(() => {
       requestQueued = false;
       const times = queuedTimes;
+      const width = queuedWidth;
       queuedTimes = [];
       updatePressure();
-      void requestMissingFrames(times);
+      void requestMissingFrames(times, width);
     });
   };
 
-  const requestMissingFrames = (visibleTimes: number[]) => {
+  const requestMissingFrames = (visibleTimes: number[], width: number) => {
     if (disposed) return;
     if (visibleTimes.length === 0) {
       stopWorkers();
       return;
     }
-    const missingTimes = visibleTimes.filter((time) => !thumbnails[time] && !pendingFrames.has(time));
+    const missingTimes = visibleTimes.filter(
+      (time) => (widths[time] ?? 0) < width && (pendingFrames.get(time)?.width ?? 0) < width,
+    );
     if (missingTimes.length === 0) return;
-    if (activeWorkers.size > 0 && missingTimes.every((time) => inFlightTimes.has(time))) return;
+    if (activeWorkers.size > 0 && width <= inFlightWidth && missingTimes.every((time) => inFlightTimes.has(time)))
+      return;
     initWorkers();
     const requestGeneration = ++generation;
     remainingFrames = missingTimes.length;
     activeWorkers.clear();
     inFlightTimes.clear();
+    inFlightWidth = width;
     for (const time of missingTimes) inFlightTimes.add(time);
     isExtracting.value = true;
     error.value = null;
@@ -188,6 +221,7 @@ export function createThumbnailSource(asset: MediaAsset, pressure: MediaProcessi
           generation: requestGeneration,
           source: mediaSourceDescriptor(asset),
           visibleTimes,
+          width,
         });
       }
       updatePressure();
@@ -195,6 +229,7 @@ export function createThumbnailSource(asset: MediaAsset, pressure: MediaProcessi
       console.error('[Beam media:thumbnails] Thumbnail request failed.', postError);
       activeWorkers.clear();
       inFlightTimes.clear();
+      inFlightWidth = 0;
       isExtracting.value = false;
       error.value = 'Timeline thumbnail decoding failed.';
       remainingFrames = 0;
@@ -211,5 +246,5 @@ export function createThumbnailSource(asset: MediaAsset, pressure: MediaProcessi
     pressure.dispose();
   };
 
-  return { thumbnails, isExtracting, error, requestVisibleFrames, clearCache, dispose };
+  return { thumbnails, widths, isExtracting, error, requestVisibleFrames, clearCache, dispose };
 }

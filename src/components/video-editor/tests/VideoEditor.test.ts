@@ -170,6 +170,22 @@ describe('VideoEditor', () => {
     expect(mounted.emitted('open-project')).toHaveLength(1);
   });
 
+  it('emits ready with a pending preview, then ignores later settling and duplicate readiness', async () => {
+    editorState.previewInitiallySettled = false;
+    const mounted = mountEditor();
+    expect(mounted.emitted('ready')).toHaveLength(1);
+
+    editorState.store.initialPlaybackSettled.value = true;
+    await flushPromises();
+    expect(mounted.emitted('ready')).toHaveLength(1);
+  });
+
+  it('emits ready immediately when the initial preview has already settled', () => {
+    editorState.previewInitiallySettled = true;
+    const mounted = mountEditor();
+    expect(mounted.emitted('ready')).toHaveLength(1);
+  });
+
   it('connects the timeline fullscreen event to the canvas fullscreen controller', async () => {
     const mounted = mountEditor();
 

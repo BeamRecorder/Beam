@@ -10,6 +10,8 @@ const state = vi.hoisted(() => ({
   removeContextListener: vi.fn(),
   videoModuleLoads: 0,
   videoModuleLoadObserver: null as (() => void) | null,
+  deferVideoReady: false,
+  resolveVideoReady: null as (() => void) | null,
   screenshotModuleLoads: 0,
 }));
 
@@ -48,8 +50,13 @@ vi.mock('../VideoEditor.vue', async () => {
       emits: ['ready', 'back-to-hud', 'open-project'],
       setup(props: { project: { id: string }; editorData: object }, { emit }) {
         capture.reportEditorLoadingStage('renderingEditor');
-        onMounted(() => {
+        onMounted(async () => {
           capture.reportEditorLoadingStage('loadingPreview');
+          if (state.deferVideoReady) {
+            await new Promise<void>((resolve) => {
+              state.resolveVideoReady = resolve;
+            });
+          }
           emit('ready');
         });
         return () =>
@@ -95,6 +102,8 @@ describe('EditorWindowApp', () => {
     document.documentElement.classList.remove('dark');
     state.contextListener = null;
     state.videoModuleLoadObserver = null;
+    state.deferVideoReady = false;
+    state.resolveVideoReady = null;
     capture.getEditorContext.mockResolvedValue({ projectId: project.id });
     capture.getProject.mockResolvedValue(project);
     capture.listProjects.mockResolvedValue([project]);
@@ -255,6 +264,45 @@ describe('EditorWindowApp', () => {
     await flushPromises();
 
     expect(wrapper.find('.mock-editor').exists()).toBe(true);
+    expect(capture.notifyEditorReady).toHaveBeenCalledOnce();
+  });
+
+  it('notifies Studio readiness once after the editor DOM commits even when preview readiness is pending', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal(
+      'requestAnimationFrame',
+      vi.fn((callback: FrameRequestCallback) => {
+        callback(0);
+        return 1;
+      }),
+    );
+    state.deferVideoReady = true;
+
+    mountEditor();
+    await flushPromises();
+    expect(state.resolveVideoReady).toBeTypeOf('function');
+    expect(capture.notifyEditorReady).not.toHaveBeenCalled();
+
+    state.resolveVideoReady!();
+    await flushPromises();
+    expect(capture.notifyEditorReady).toHaveBeenCalledOnce();
+
+    // Advancing the old 100 ms fallback must not produce another notification.
+    await vi.advanceTimersByTimeAsync(100);
+    expect(capture.notifyEditorReady).toHaveBeenCalledOnce();
+  });
+
+  it('notifies the native window synchronously when Studio reports readiness', async () => {
+    state.deferVideoReady = true;
+    const wrapper = mountEditor();
+    await flushPromises();
+    expect(capture.notifyEditorReady).not.toHaveBeenCalled();
+
+    (wrapper.get('.ready').element as HTMLButtonElement).click();
+    expect(capture.notifyEditorReady).toHaveBeenCalledOnce();
+
+    state.resolveVideoReady?.();
+    await flushPromises();
     expect(capture.notifyEditorReady).toHaveBeenCalledOnce();
   });
 

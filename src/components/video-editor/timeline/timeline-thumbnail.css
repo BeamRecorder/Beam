@@ -1,0 +1,76 @@
+.thumbnails-track {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+}
+.thumbnail-frame {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #111;
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+}
+.thumbnail-img,
+.image-preview {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.thumbnail-img {
+  position: absolute;
+  inset: 0;
+  object-fit: cover;
+  object-position: center;
+  transition: filter 160ms ease;
+}
+.thumbnail-img--pending {
+  filter: blur(1.5px);
+}
+.image-preview {
+  background-position: left center;
+  background-repeat: repeat-x;
+  background-size: contain;
+}
+.thumbnail-crossfade-enter-active,
+.thumbnail-crossfade-leave-active,
+.thumbnail-slot-enter-active,
+.thumbnail-slot-leave-active {
+  transition: opacity 160ms ease;
+}
+.thumbnail-crossfade-enter-from,
+.thumbnail-crossfade-leave-to,
+.thumbnail-slot-enter-from,
+.thumbnail-slot-leave-to {
+  opacity: 0;
+}
+.thumbnail-crossfade-leave-active,
+.thumbnail-slot-leave-active {
+  position: absolute;
+}
+.thumbnail-loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+  animation: thumbnail-pending 900ms ease-in-out infinite alternate;
+}
+@keyframes thumbnail-pending {
+  to {
+    background: rgba(0, 0, 0, 0.32);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .thumbnail-img,
+  .thumbnail-crossfade-enter-active,
+  .thumbnail-crossfade-leave-active,
+  .thumbnail-slot-enter-active,
+  .thumbnail-slot-leave-active {
+    transition: none;
+  }
+  .thumbnail-loading-overlay {
+    animation: none;
+  }
+}

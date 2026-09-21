@@ -1,7 +1,6 @@
 import { CanvasSink } from 'mediabunny';
 import { openMediaInput, type MediaSourceDescriptor, type OpenedMediaInput } from '../shared';
 import {
-  THUMBNAIL_WIDTH,
   assertThumbnailWorkerResponse,
   isThumbnailWorkerRequest,
   uniqueSortedTimes,
@@ -57,7 +56,7 @@ async function processRequests() {
 
 async function decodeBatch(request: ThumbnailRequest) {
   try {
-    const canvasSink = await sinkFor(request.source, request.generation);
+    const canvasSink = await sinkFor(request.source, request.width, request.generation);
     if (!canvasSink || isStale(request.generation)) return;
     let index = 0;
     for await (const wrappedCanvas of canvasSink.canvasesAtTimestamps(request.visibleTimes)) {
@@ -67,7 +66,7 @@ async function decodeBatch(request: ThumbnailRequest) {
       if (!wrappedCanvas) continue;
       const blob = await canvasToJpeg(wrappedCanvas.canvas);
       if (!isStale(request.generation)) {
-        post({ type: 'frame-ready', generation: request.generation, time, blob });
+        post({ type: 'frame-ready', generation: request.generation, time, width: request.width, blob });
       }
     }
   } catch (error) {
@@ -82,8 +81,12 @@ async function decodeBatch(request: ThumbnailRequest) {
   }
 }
 
-async function sinkFor(source: MediaSourceDescriptor, requestGeneration: number): Promise<CanvasSink | null> {
-  const key = `${source.assetId}:${source.url}`;
+async function sinkFor(
+  source: MediaSourceDescriptor,
+  width: number,
+  requestGeneration: number,
+): Promise<CanvasSink | null> {
+  const key = `${source.assetId}:${source.url}:${width}`;
   if (sink && sourceKey === key) return sink;
   const version = ++decoderVersion;
   releaseDecoder();
@@ -120,7 +123,7 @@ async function sinkFor(source: MediaSourceDescriptor, requestGeneration: number)
     if (!decoderConfig || !configSupported) {
       throw new Error('This video codec is not supported by WebCodecs.');
     }
-    const nextSink = new CanvasSink(track, { width: THUMBNAIL_WIDTH, poolSize: 2 });
+    const nextSink = new CanvasSink(track, { width, poolSize: 2 });
     opened = candidate;
     candidate = null;
     sink = nextSink;

@@ -7,17 +7,25 @@ import {
 } from '../../performance/media-processing-pressure';
 import { createThumbnailSource, THUMBNAIL_WORKER_COUNT } from './thumbnail-source';
 import type { SharedThumbnailSource } from './thumbnail-source-types';
+import { THUMBNAIL_WIDTH } from '~/media/playback/thumbnail-protocol';
 
 const defaultCollector = createMediaProcessingCollector();
 const pools = new WeakMap<MediaProcessingCollector, Map<string, SharedThumbnailSource>>();
 const emptyThumbnails: Record<number, string> = Object.freeze({});
+const emptyWidths: Record<number, number> = Object.freeze({});
 
 function requestSharedFrames(entry: SharedThumbnailSource) {
   if (entry.queued) return;
   entry.queued = true;
   queueMicrotask(() => {
     entry.queued = false;
-    if (entry.requests.size) entry.source.requestVisibleFrames([...entry.requests.values()].flat());
+    if (entry.requests.size) {
+      const requests = [...entry.requests.values()];
+      entry.source.requestVisibleFrames(
+        requests.flatMap((request) => request.times),
+        Math.max(...requests.map((request) => request.width)),
+      );
+    }
   });
 }
 
@@ -60,7 +68,7 @@ export function useThumbnails(videoAssetRef: Ref<MediaAsset | null>) {
         };
         sources.set(key, entry);
       }
-      entry.requests.set(owner, []);
+      entry.requests.set(owner, { times: [], width: THUMBNAIL_WIDTH });
       current.value = entry;
       currentKey = key;
     },
@@ -70,12 +78,13 @@ export function useThumbnails(videoAssetRef: Ref<MediaAsset | null>) {
 
   return {
     thumbnails: computed(() => current.value?.source.thumbnails ?? emptyThumbnails),
+    widths: computed(() => current.value?.source.widths ?? emptyWidths),
     isExtracting: computed(() => current.value?.source.isExtracting.value ?? false),
     error: computed(() => current.value?.source.error.value ?? null),
-    requestVisibleFrames(times: number[]) {
+    requestVisibleFrames(times: number[], width = THUMBNAIL_WIDTH) {
       const entry = current.value;
       if (!entry) return;
-      entry.requests.set(owner, [...times]);
+      entry.requests.set(owner, { times: [...times], width });
       requestSharedFrames(entry);
     },
     clearCache() {

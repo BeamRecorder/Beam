@@ -24,3 +24,11 @@ export const timelineFrameStyle = (clip: Clip, relativeMs: number, durationMs: n
 export const timelineTransitionStyle = (clip: Clip, edge: 'entry' | 'exit') => ({
   width: `${((clip.transitions?.[edge]?.durationMs ?? 0) / Math.max(1, clip.timelineDurationMs)) * 100}%`,
 });
+
+export const formatTimelineTrimTime = (milliseconds: number) => {
+  const seconds = Math.max(0, milliseconds / 1_000);
+  const minutes = Math.floor(seconds / 60);
+  const wholeSeconds = Math.floor(seconds % 60);
+  const tenths = Math.floor((seconds % 1) * 10);
+  return `${minutes > 0 ? `${minutes}:` : ''}${wholeSeconds.toString().padStart(2, '0')}.${tenths}s`;
+};

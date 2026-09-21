@@ -17,12 +17,18 @@ const source = (overrides: Partial<MediaSourceDescriptor> = {}): MediaSourceDesc
 });
 
 const request = (
-  overrides: Partial<{ generation: number; source: MediaSourceDescriptor; visibleTimes: unknown[] }> = {},
+  overrides: Partial<{
+    generation: number;
+    source: MediaSourceDescriptor;
+    visibleTimes: unknown[];
+    width: number;
+  }> = {},
 ) => ({
   type: 'request-frames',
   generation: 3,
   source: source(),
   visibleTimes: [0, 1],
+  width: 240,
   ...overrides,
 });
 
@@ -34,6 +40,17 @@ describe('thumbnail worker protocol', () => {
   it('accepts a complete project-media frame request', () => {
     expect(isThumbnailWorkerRequest(request())).toBe(true);
   });
+
+  it.each([240, 480, 960])('accepts the %s thumbnail width tier', (width) => {
+    expect(isThumbnailWorkerRequest(request({ width }))).toBe(true);
+  });
+
+  it.each([0, 239, 241, 720, 961, 480.5, Number.NaN, Number.POSITIVE_INFINITY])(
+    'rejects an unsupported thumbnail width (%s)',
+    (width) => {
+      expect(isThumbnailWorkerRequest(request({ width }))).toBe(false);
+    },
+  );
 
   it('rejects filesystem, blob, data, audio, and incomplete source descriptors', () => {
     for (const url of ['file:///recording.mp4', 'blob:https://example.test/id', 'data:video/mp4;base64,AAAA']) {
@@ -54,7 +71,7 @@ describe('thumbnail worker protocol', () => {
     const responses: ThumbnailWorkerResponse[] = [
       { type: 'batch-started', generation: 1 },
       { type: 'batch-finished', generation: 1 },
-      { type: 'frame-ready', generation: 1, time: 0, blob: new Blob(['frame']) },
+      { type: 'frame-ready', generation: 1, time: 0, width: 240, blob: new Blob(['frame']) },
       { type: 'error', generation: 1, message: 'decoder failed' },
     ];
 
@@ -72,9 +89,10 @@ describe('thumbnail worker protocol', () => {
       { type: 'batch-finished', generation: Number.MAX_SAFE_INTEGER + 1 },
       { type: 'error', generation: 1, message: '' },
       { type: 'error', generation: 1, message: 42 },
-      { type: 'frame-ready', generation: 1, time: -1, blob: new Blob(['frame']) },
-      { type: 'frame-ready', generation: 1, time: Number.NaN, blob: new Blob(['frame']) },
-      { type: 'frame-ready', generation: 1, time: 0, blob: 'frame' },
+      { type: 'frame-ready', generation: 1, time: -1, width: 240, blob: new Blob(['frame']) },
+      { type: 'frame-ready', generation: 1, time: Number.NaN, width: 240, blob: new Blob(['frame']) },
+      { type: 'frame-ready', generation: 1, time: 0, width: 240, blob: 'frame' },
+      { type: 'frame-ready', generation: 1, time: 0, width: 720, blob: new Blob(['frame']) },
       { type: 'unknown', generation: 1 },
     ];
 

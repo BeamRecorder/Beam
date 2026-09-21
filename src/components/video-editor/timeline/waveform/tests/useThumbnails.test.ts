@@ -133,12 +133,13 @@ describe('useThumbnails', () => {
   afterEach(() => {
     for (const unmount of additionalUnmounts) unmount();
     wrapper.unmount();
+    vi.useRealTimers();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
-  const ready = (generation: number, time: number, blob = new Blob([String(time)]), workerIndex = 0) => {
-    sendWorkerMessage(workerIndex, { type: 'frame-ready', generation, time, blob });
+  const ready = (generation: number, time: number, blob = new Blob([String(time)]), workerIndex = 0, width = 240) => {
+    sendWorkerMessage(workerIndex, { type: 'frame-ready', generation, time, width, blob });
   };
 
   const batchStarted = (generation: number, workerIndex: number) => {
@@ -184,6 +185,7 @@ describe('useThumbnails', () => {
         url: 'project-media://asset/video-1',
       },
       visibleTimes: [1],
+      width: 240,
     });
     expect(secondWorker.postMessage).toHaveBeenCalledWith(
       expect.objectContaining({ generation: batchGeneration, visibleTimes: [2] }),
@@ -198,6 +200,8 @@ describe('useThumbnails', () => {
     expect(api.thumbnails.value[1]).toContain('blob:');
     ready(batchGeneration, 1, new Blob(['replacement']));
     flushAnimationFrame();
+    expect(revokeObjectURL).not.toHaveBeenCalled();
+    await new Promise((resolve) => setTimeout(resolve, 210));
     expect(revokeObjectURL).toHaveBeenCalled();
     batchFinished(batchGeneration, 0);
     expect(api.isExtracting.value).toBe(true);
@@ -277,6 +281,7 @@ describe('useThumbnails', () => {
         url: 'project-media://asset/video-1-version-2',
       },
       visibleTimes: [6],
+      width: 240,
     });
   });
 
@@ -326,6 +331,7 @@ describe('useThumbnails', () => {
         type: 'request-frames',
         source: expect.objectContaining({ assetId: 'video-1', url: 'project-media://asset/video-1-version-2' }),
         visibleTimes: [3],
+        width: 240,
       }),
     );
   });

@@ -30,11 +30,12 @@ const source = (assetId: string) => ({
   url: `project-media://asset/${assetId}`,
 });
 
-const request = (generation: number, assetId: string) => ({
+const request = (generation: number, assetId: string, width = 240) => ({
   type: 'request-frames' as const,
   generation,
   source: source(assetId),
   visibleTimes: [1],
+  width,
 });
 
 const openedInput = () => {
@@ -87,6 +88,28 @@ afterEach(() => {
 const send = (message: unknown) => workerSelf.onmessage?.({ data: message } as MessageEvent<unknown>);
 
 describe('thumbnail worker decoder lifecycle', () => {
+  it.each([240, 480, 960])('uses the requested %s canvas width and returns it with each frame', async (width) => {
+    const canvas = { convertToBlob: vi.fn().mockResolvedValue(new Blob(['frame'])) };
+    runtime.CanvasSink.mockImplementationOnce(function CanvasSinkMock() {
+      const sink = {
+        canvasesAtTimestamps: vi.fn().mockReturnValue(
+          (async function* () {
+            yield { canvas };
+          })(),
+        ),
+      };
+      runtime.sinks.push(sink);
+      return sink;
+    });
+    runtime.openMediaInput.mockResolvedValueOnce(openedInput());
+
+    send(request(1, 'sized', width));
+    await flush();
+
+    expect(runtime.CanvasSink).toHaveBeenCalledWith(expect.anything(), { width, poolSize: 2 });
+    expect(messages()).toContainEqual(expect.objectContaining({ type: 'frame-ready', generation: 1, time: 1, width }));
+  });
+
   it('disposes a candidate input resolved after clear without creating a sink', async () => {
     const opened = openedInput();
     const pendingOpen = deferred<typeof opened>();

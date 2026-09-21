@@ -1,10 +1,18 @@
 export const THUMBNAIL_WIDTH = 240;
+export const MAX_THUMBNAIL_WIDTH = 960;
+const THUMBNAIL_WIDTH_TIERS = [THUMBNAIL_WIDTH, 480, MAX_THUMBNAIL_WIDTH] as const;
+
+export const thumbnailWidthFor = (displayWidth: number) =>
+  Number.isFinite(displayWidth) && displayWidth > 0
+    ? (THUMBNAIL_WIDTH_TIERS.find((width) => width >= displayWidth) ?? MAX_THUMBNAIL_WIDTH)
+    : THUMBNAIL_WIDTH;
 
 export interface ThumbnailRequest {
   type: 'request-frames';
   generation: number;
   source: MediaSourceDescriptor;
   visibleTimes: number[];
+  width: number;
 }
 
 export interface ThumbnailClearRequest {
@@ -17,7 +25,7 @@ export type ThumbnailWorkerRequest = ThumbnailRequest | ThumbnailClearRequest;
 export type ThumbnailWorkerResponse =
   | { type: 'batch-started'; generation: number }
   | { type: 'batch-finished'; generation: number }
-  | { type: 'frame-ready'; generation: number; time: number; blob: Blob }
+  | { type: 'frame-ready'; generation: number; time: number; width: number; blob: Blob }
   | { type: 'error'; generation: number; message: string };
 
 const approvedSourceUrl = (value: unknown) => {
@@ -51,7 +59,8 @@ export function isThumbnailWorkerRequest(value: unknown): value is ThumbnailWork
       message.source.label.length > 0,
     ) &&
     Array.isArray(message.visibleTimes) &&
-    message.visibleTimes.every((time) => typeof time === 'number')
+    message.visibleTimes.every((time) => typeof time === 'number') &&
+    THUMBNAIL_WIDTH_TIERS.includes(message.width as (typeof THUMBNAIL_WIDTH_TIERS)[number])
   );
 }
 
@@ -66,6 +75,7 @@ export function isThumbnailWorkerResponse(value: unknown): value is ThumbnailWor
     typeof message.time === 'number' &&
     Number.isFinite(message.time) &&
     message.time >= 0 &&
+    THUMBNAIL_WIDTH_TIERS.includes(message.width as (typeof THUMBNAIL_WIDTH_TIERS)[number]) &&
     message.blob instanceof Blob
   );
 }

@@ -6,11 +6,17 @@ import { sourceTimeAt } from '~/media/shared';
 import { useThumbnails } from './waveform/useThumbnails';
 import { useTranslate } from '~/i18n/useTranslate';
 import BlickWaveformCanvas from './waveform/BlickWaveformCanvas.vue';
-import { timelineClipStyle, timelineFrameStyle, timelineTransitionStyle } from './timeline-clip-geometry';
+import {
+  formatTimelineTrimTime,
+  timelineClipStyle,
+  timelineFrameStyle,
+  timelineTransitionStyle,
+} from './timeline-clip-geometry';
 import TimelineTransitionCurve from './TimelineTransitionCurve.vue';
 import ShapeTimelinePreview from './ShapeTimelinePreview.vue';
 import ColorTimelinePreview from './ColorTimelinePreview.vue';
 import type { TimelineClipProps } from './timeline-clip-types';
+import { thumbnailIsPending, thumbnailUrlFor, timelineThumbnailWidth } from './timeline-thumbnail-presentation';
 const { t } = useTranslate('TimelineTracks');
 const { t: tHighlight } = useTranslate('Highlight');
 const props = defineProps<TimelineClipProps>();
@@ -21,7 +27,7 @@ const emit = defineEmits<{
   (event: 'contextmenu', value: MouseEvent): void;
 }>();
 const videoAsset = computed(() => (props.clip.kind !== 'audio' && props.asset?.kind === 'video' ? props.asset : null));
-const { thumbnails, requestVisibleFrames } = useThumbnails(videoAsset);
+const { thumbnails, widths, requestVisibleFrames } = useThumbnails(videoAsset);
 const clipEndMs = computed(() => props.clip.timelineStartMs + props.clip.timelineDurationMs);
 type TimelineFrame = { timelineSecond: number; mediaSecond: number; relativeMs: number; durationMs: number };
 const frames = computed<TimelineFrame[]>(() =>
@@ -46,6 +52,9 @@ const frames = computed<TimelineFrame[]>(() =>
 );
 const frozenFrames = ref<TimelineFrame[]>([]);
 const displayedFrames = computed(() => (frozenFrames.value.length ? frozenFrames.value : frames.value));
+const requestedThumbnailWidth = computed(() =>
+  timelineThumbnailWidth(frames.value, props.timelineWidthPx, props.duration, window.devicePixelRatio || 1),
+);
 const thumbnailRefreshKey = computed(() =>
   [
     props.thumbnailSlots.map((slot) => `${slot.timelineSeconds}:${slot.durationSeconds}`).join(','),
@@ -56,8 +65,16 @@ const thumbnailRefreshKey = computed(() =>
     props.clip.sourceInMs,
     props.clip.sourceDurationMs,
     props.clip.playbackRate,
+    requestedThumbnailWidth.value,
     'freezeFrameSourceMs' in props.clip ? props.clip.freezeFrameSourceMs : '',
   ].join('|'),
+);
+watch(
+  () => props.thumbnailSlots,
+  () => {
+    frozenFrames.value = frames.value;
+  },
+  { immediate: true },
 );
 watch(
   [thumbnailRefreshKey, () => props.deferThumbnailRequests],
@@ -65,7 +82,7 @@ watch(
     if (props.deferThumbnailRequests) return;
     const value = frames.value;
     frozenFrames.value = value;
-    requestVisibleFrames([...new Set(value.map((frame) => frame.mediaSecond))]);
+    requestVisibleFrames([...new Set(value.map((frame) => frame.mediaSecond))], requestedThumbnailWidth.value);
   },
   { immediate: true },
 );
@@ -87,23 +104,9 @@ const imagePreviewStyle = computed(() => ({
 }));
 const frameStyle = (frame: TimelineFrame) => timelineFrameStyle(props.clip, frame.relativeMs, frame.durationMs);
 const transitionStyle = (edge: 'entry' | 'exit') => timelineTransitionStyle(props.clip, edge);
-const thumbnailFor = (frame: TimelineFrame) => {
-  const exact = thumbnails.value[frame.mediaSecond];
-  if (exact) return exact;
-  let nearest: { distance: number; url: string } | null = null;
-  for (const [time, url] of Object.entries(thumbnails.value)) {
-    const distance = Math.abs(Number(time) - frame.mediaSecond);
-    if (!nearest || distance < nearest.distance) nearest = { distance, url };
-  }
-  return nearest?.url ?? null;
-};
-const formatTrimTime = (milliseconds: number) => {
-  const seconds = Math.max(0, milliseconds / 1_000);
-  const minutes = Math.floor(seconds / 60);
-  const wholeSeconds = Math.floor(seconds % 60);
-  const tenths = Math.floor((seconds % 1) * 10);
-  return `${minutes > 0 ? `${minutes}:` : ''}${wholeSeconds.toString().padStart(2, '0')}.${tenths}s`;
-};
+const thumbnailFor = (frame: TimelineFrame) => thumbnailUrlFor(frame.mediaSecond, thumbnails.value);
+const thumbnailPending = (frame: TimelineFrame) =>
+  thumbnailIsPending(frame.mediaSecond, thumbnails.value, widths.value, requestedThumbnailWidth.value);
 let marqueeFrame = 0;
 let marqueeTimer = 0;
 const stopMarquee = (target?: HTMLElement | null) => {
@@ -184,7 +187,7 @@ onUnmounted(() => stopMarquee());
         {{ t('waveformUnavailable') }}
       </span>
     </div>
-    <div v-else-if="asset?.kind === 'video'" class="thumbnails-track">
+    <TransitionGroup v-else-if="asset?.kind === 'video'" tag="div" name="thumbnail-slot" class="thumbnails-track">
       <div
         v-for="frame in displayedFrames"
         :key="`${frame.timelineSecond}:${frame.mediaSecond}`"
@@ -197,13 +200,14 @@ onUnmounted(() => stopMarquee());
             :key="thumbnailFor(frame)!"
             :src="thumbnailFor(frame)!"
             class="thumbnail-img"
+            :class="{ 'thumbnail-img--pending': thumbnailPending(frame) }"
             alt=""
             draggable="false"
           />
         </Transition>
-        <span v-if="!thumbnails[frame.mediaSecond]" class="thumbnail-loading-overlay" />
+        <span v-if="thumbnailPending(frame)" class="thumbnail-loading-overlay" />
       </div>
-    </div>
+    </TransitionGroup>
     <span
       v-else-if="asset?.kind === 'image' && asset.src"
       class="image-preview"
@@ -219,7 +223,7 @@ onUnmounted(() => stopMarquee());
       @pointerdown.stop="emit('trim', { event: $event, edge: 'start' })"
     >
       <span v-if="trimState?.edge === 'start'" class="trim-side-badge" :class="{ 'at-limit': trimState?.atLimit }">{{
-        formatTrimTime(trimState.durationMs)
+        formatTimelineTrimTime(trimState.durationMs)
       }}</span>
     </span>
     <TimelineLockOverlay v-if="clip.locked" />
@@ -246,7 +250,7 @@ onUnmounted(() => stopMarquee());
       @pointerdown.stop="emit('trim', { event: $event, edge: 'end' })"
     >
       <span v-if="trimState?.edge === 'end'" class="trim-side-badge" :class="{ 'at-limit': trimState?.atLimit }">{{
-        formatTrimTime(trimState.durationMs)
+        formatTimelineTrimTime(trimState.durationMs)
       }}</span>
     </span>
   </button>
@@ -320,61 +324,6 @@ onUnmounted(() => stopMarquee());
 }
 .timeline-clip.kind-audio {
   background: var(--color-track-audio-light);
-}
-.thumbnails-track {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  height: 100%;
-}
-.thumbnail-frame {
-  position: absolute;
-  top: 0;
-  height: 100%;
-  overflow: hidden;
-  background: #111;
-  border-right: 1px solid rgba(0, 0, 0, 0.08);
-}
-.thumbnail-img,
-.image-preview {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-.thumbnail-img {
-  position: absolute;
-  inset: 0;
-  object-fit: cover;
-  object-position: center;
-}
-.image-preview {
-  background-position: left center;
-  background-repeat: repeat-x;
-  background-size: contain;
-}
-.thumbnail-crossfade-enter-active,
-.thumbnail-crossfade-leave-active {
-  transition: opacity 160ms ease;
-}
-.thumbnail-crossfade-enter-from,
-.thumbnail-crossfade-leave-to {
-  opacity: 0;
-}
-.thumbnail-crossfade-leave-active {
-  position: absolute;
-}
-.thumbnail-loading-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  background: rgba(0, 0, 0, 0.18);
-  pointer-events: none;
-  animation: thumbnail-pending 900ms ease-in-out infinite alternate;
-}
-@keyframes thumbnail-pending {
-  to {
-    background: rgba(0, 0, 0, 0.32);
-  }
 }
 .trim-handle {
   position: absolute;
@@ -482,3 +431,4 @@ onUnmounted(() => stopMarquee());
 
 <style scoped src="./waveform/audio-waveform.css"></style>
 <style scoped src="./timeline-highlight.css"></style>
+<style scoped src="./timeline-thumbnail.css"></style>

@@ -142,11 +142,12 @@ const handleOpenProject = (nextProject: CaptureProject) => {
   });
 };
 
-const notifyEditorReady = async (generation: number) => {
+const notifyEditorReady = (generation: number) => {
   if (generation !== loadGeneration || generation !== editorGeneration.value || !project.value) return;
+  // The child is mounted and has its loading shell. Notify the native window
+  // synchronously so camera decoding cannot delay the readiness handshake.
   if (nativeEditorReadyNotified) return;
   nativeEditorReadyNotified = true;
-  await waitForEditorPaint();
   capture.notifyEditorReady();
 };
 

@@ -9,12 +9,15 @@ import type { MediaError } from '~/media/shared/media-types';
 const thumbnailState = vi.hoisted(() => ({
   thumbnails: {} as Record<number, string>,
   thumbnailsRef: null as unknown as Ref<Record<number, string>>,
+  widths: {} as Record<number, number>,
+  widthsRef: null as unknown as Ref<Record<number, number>>,
   requestVisibleFrames: vi.fn(),
 }));
 
 vi.mock('../waveform/useThumbnails', () => ({
   useThumbnails: () => ({
     thumbnails: thumbnailState.thumbnailsRef,
+    widths: thumbnailState.widthsRef,
     requestVisibleFrames: thumbnailState.requestVisibleFrames,
   }),
 }));
@@ -131,6 +134,8 @@ const baseProps = {
 beforeEach(() => {
   thumbnailState.thumbnails = reactive<Record<number, string>>({ 0: '/thumb-0.png' });
   thumbnailState.thumbnailsRef = computed(() => thumbnailState.thumbnails);
+  thumbnailState.widths = reactive<Record<number, number>>({ 0: 240 });
+  thumbnailState.widthsRef = computed(() => thumbnailState.widths);
   thumbnailState.requestVisibleFrames.mockClear();
   vi.useFakeTimers();
   vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
@@ -282,7 +287,7 @@ describe('TimelineClip', () => {
     expect(wrapper.findAll('.thumbnail-img')[1]?.attributes('src')).toBe('/thumb-0.png');
     expect(wrapper.findAll('.thumbnail-loading-overlay')).toHaveLength(1);
     expect(wrapper.find('.skeleton-stub').exists()).toBe(false);
-    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([0, 1.25]);
+    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([0, 1.25], 240);
     expect(wrapper.findAll('.thumbnail-frame')[0]?.attributes('style')).toContain('width: 50%');
     expect(wrapper.findAll('.thumbnail-frame')[1]?.attributes('style')).toContain('width: 50%');
 
@@ -366,7 +371,7 @@ describe('TimelineClip', () => {
       props: { ...baseProps },
       global: { stubs: { Skeleton, BlickWaveformCanvas } },
     });
-    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([0, 1.25]);
+    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([0, 1.25], 240);
 
     thumbnailState.requestVisibleFrames.mockClear();
     await wrapper.setProps({
@@ -376,7 +381,30 @@ describe('TimelineClip', () => {
       ],
     });
 
-    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([1.25]);
+    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([1.25], 240);
+  });
+
+  it('defers higher-resolution video thumbnails during zoom and refines them afterward', async () => {
+    const wrapper = mount(TimelineClip, {
+      props: { ...baseProps, timelineWidthPx: 4_000 },
+      global: { stubs: { Skeleton, BlickWaveformCanvas } },
+    });
+    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([0, 1.25], 480);
+    expect(wrapper.find('.thumbnails-track').exists()).toBe(true);
+
+    thumbnailState.requestVisibleFrames.mockClear();
+    await wrapper.setProps({ timelineWidthPx: 9_000, deferThumbnailRequests: true });
+    expect(thumbnailState.requestVisibleFrames).not.toHaveBeenCalled();
+    expect(wrapper.find('.thumbnail-img--pending').exists()).toBe(true);
+
+    await wrapper.setProps({ deferThumbnailRequests: false });
+    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([0, 1.25], 960);
+    thumbnailState.thumbnails[0] = '/thumb-0-hd.png';
+    thumbnailState.widths[0] = 960;
+    await nextTick();
+    const firstFrame = wrapper.findAll('.thumbnail-frame')[0]!;
+    expect(firstFrame.get('.thumbnail-img').attributes('src')).toBe('/thumb-0-hd.png');
+    expect(firstFrame.find('.thumbnail-img--pending').exists()).toBe(false);
   });
 
   it('refreshes visible frames after asset identity and clip timeline geometry changes', async () => {
@@ -387,21 +415,23 @@ describe('TimelineClip', () => {
 
     thumbnailState.requestVisibleFrames.mockClear();
     await wrapper.setProps({ asset: { ...asset('video', '/video.mp4'), id: 'video-asset-replaced' } });
-    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([0, 1.25]);
+    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([0, 1.25], 240);
 
     thumbnailState.requestVisibleFrames.mockClear();
     await wrapper.setProps({ clip: clip({ timelineStartMs: 2_000 }) });
-    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([0, 1.25]);
+    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([0, 1.25], 240);
 
     thumbnailState.requestVisibleFrames.mockClear();
     await wrapper.setProps({ clip: clip({ timelineStartMs: 2_000, timelineDurationMs: 1_000 }) });
-    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([0]);
+    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([0], 240);
     expect(wrapper.findAll('.thumbnail-frame')).toHaveLength(1);
   });
 
   it('keeps the nearest cached thumbnail under a dark loading overlay, then crossfades to the exact source', async () => {
     thumbnailState.thumbnails[1] = '/thumb-nearest.png';
     thumbnailState.thumbnails[2] = '/thumb-farther.png';
+    thumbnailState.widths[1] = 240;
+    thumbnailState.widths[2] = 240;
     const wrapper = mount(TimelineClip, {
       props: {
         ...baseProps,
@@ -420,13 +450,14 @@ describe('TimelineClip', () => {
       },
     });
 
-    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([1.25]);
+    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([1.25], 240);
     expect(wrapper.find('.thumbnail-img').attributes('src')).toBe('/thumb-nearest.png');
     const overlay = wrapper.find('.thumbnail-loading-overlay');
     expect(overlay.exists()).toBe(true);
     expect(getComputedStyle(overlay.element).backgroundColor).toMatch(/^rgba\(0, 0, 0,/);
     expect(wrapper.find('.skeleton').exists()).toBe(false);
     thumbnailState.thumbnails[1.25] = '/thumb-exact.png';
+    thumbnailState.widths[1.25] = 240;
     await nextTick();
 
     expect(wrapper.find('.thumbnail-img').attributes('src')).toBe('/thumb-exact.png');
@@ -434,9 +465,26 @@ describe('TimelineClip', () => {
     wrapper.unmount();
   });
 
+  it.each(['video', 'webcam'] as const)('uses the same thumbnail request path for %s clips', (kind) => {
+    const wrapper = mount(TimelineClip, {
+      props: {
+        ...baseProps,
+        clip: clip({ kind }),
+        asset: asset('video', '/camera.mp4'),
+      },
+      global: { stubs: { Skeleton, BlickWaveformCanvas } },
+    });
+
+    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([0, 1.25], 240);
+    expect(wrapper.findAll('.thumbnail-frame')).toHaveLength(2);
+    wrapper.unmount();
+  });
+
   it('renders a loading slot without an image when no cached thumbnail can be selected', () => {
     thumbnailState.thumbnails = reactive<Record<number, string>>({});
     thumbnailState.thumbnailsRef = computed(() => thumbnailState.thumbnails);
+    thumbnailState.widths = reactive<Record<number, number>>({});
+    thumbnailState.widthsRef = computed(() => thumbnailState.widths);
     const wrapper = mount(TimelineClip, {
       props: { ...baseProps },
       global: { stubs: { Skeleton, BlickWaveformCanvas } },
@@ -455,7 +503,7 @@ describe('TimelineClip', () => {
 
     await wrapper.setProps({ deferThumbnailRequests: false });
 
-    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([0, 1.25]);
+    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([0, 1.25], 240);
   });
 
   it('uses translate3d positioning when the timeline width is provided', () => {
@@ -511,7 +559,7 @@ describe('TimelineClip', () => {
     expect(waveform.props('widthPercent')).toBe(60);
     expect(audio.get('.waveform-slice').attributes('style')).toBeUndefined();
     expect(audio.find('.waveform-slice > .blick-waveform').exists()).toBe(true);
-    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([]);
+    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([], 240);
 
     await audio.setProps({ deferWaveformDraw: false, waveformSourceDurationSeconds: 2.75 });
     expect(waveform.props('deferDraw')).toBe(false);

@@ -8,7 +8,7 @@ import { DEFAULT_SHAPE_LAYER_STYLE } from '~/media/shared/shape-layer-style';
 import type { AddVisualElementRequest } from '~/components/video-editor/composition/visual-element-types';
 import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
 
-const { editorState } = vi.hoisted(() => ({ editorState: { store: undefined as any } }));
+const { editorState } = vi.hoisted(() => ({ editorState: { store: undefined as any, previewInitiallySettled: true } }));
 const capture = vi.hoisted(() => ({
   pasteProjectClipboardImage: vi.fn(),
   createScreenshotFromCanvas: vi.fn(),
@@ -299,7 +299,7 @@ vi.mock('../composables/useVideoEditor', async () => {
         });
       const store = {
         activeTab,
-        initialPlaybackSettled: ref(true),
+        initialPlaybackSettled: ref(editorState.previewInitiallySettled),
         includeAudioInExport: ref(true),
         editorDefaults: ref({ zoom: { durationMs: 1_500 } }),
         systemVolume: roleVolume('system'),

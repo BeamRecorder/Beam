@@ -723,28 +723,6 @@ const handleTimelineItemSelection = (request: TimelineItemSelectionRequest) => {
 };
 
 let historyInitialized = false;
-let editorReadyTimer: ReturnType<typeof setTimeout> | null = null;
-let editorReadyFallbackTimer: ReturnType<typeof setTimeout> | null = null;
-let editorReadyEmitted = false;
-let stopInitialPlaybackWatch: (() => void) | null = null;
-
-const emitEditorReady = () => {
-  if (editorReadyEmitted) return;
-  editorReadyEmitted = true;
-  if (editorReadyFallbackTimer) {
-    clearTimeout(editorReadyFallbackTimer);
-    editorReadyFallbackTimer = null;
-  }
-  stopInitialPlaybackWatch?.();
-  stopInitialPlaybackWatch = null;
-  // requestAnimationFrame is paused while the native window is hidden. A
-  // short timer lets the parent reveal it without waiting for a frame that
-  // cannot run in a hidden Electron window.
-  editorReadyTimer = setTimeout(() => {
-    editorReadyTimer = null;
-    emit('ready');
-  }, 0);
-};
 watch(
   editorState.loading,
   (loading) => {
@@ -772,18 +750,9 @@ watch(
 
 onMounted(() => {
   capture.reportEditorLoadingStage?.('loadingPreview');
-  stopInitialPlaybackWatch = watch(
-    initialPlaybackSettled,
-    (settled) => {
-      if (!settled) return;
-      emitEditorReady();
-    },
-    { immediate: true },
-  );
-  editorReadyFallbackTimer = setTimeout(() => {
-    console.warn('[Beam media:editor] Initial playback did not settle before the editor ready timeout.');
-    emitEditorReady();
-  }, 5_000);
+  // The shell already renders a loading state while media is prepared. Show
+  // the native window before camera decoding can occupy the hidden renderer.
+  emit('ready');
 });
 
 const isCropping = ref(false);
@@ -862,9 +831,6 @@ onMounted(() => {
 });
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeyDown);
-  if (editorReadyTimer) clearTimeout(editorReadyTimer);
-  if (editorReadyFallbackTimer) clearTimeout(editorReadyFallbackTimer);
-  stopInitialPlaybackWatch?.();
 });
 capture.reportEditorLoadingStage?.('renderingEditor');
 </script>
