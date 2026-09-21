@@ -41,7 +41,10 @@ fn closed_stdout_terminates_a_still_running_helper_and_keeps_stderr() {
     let error = failed_startup(&mut broker, &mut child, "");
 
     assert!(started.elapsed() < Duration::from_secs(2));
-    assert!(error.to_string().contains("helper stderr detail"), "{error}");
+    assert!(
+        error.to_string().contains("helper stderr detail"),
+        "{error}"
+    );
     assert!(broker.diagnostics.is_none());
 }
 
