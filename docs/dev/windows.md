@@ -58,8 +58,11 @@ The TypeScript coverage gate is 90% for statements, branches, functions, and lin
 
 ```powershell
 bun run rust-test
+py -3 scripts/ci/check_rust_test_layout.py
 bun run rust-test:coverage
 ```
+
+Rust source-line coverage must reach 85% for the workspace and for each crate. The coverage command uses Nextest and the configured shared Cargo target directory.
 
 ## Before changing code
 

@@ -16,6 +16,7 @@ When a task affects Electron windows, read `docs/electron_window.md` first and f
 - Keep UI code consistent with `docs/UI.md`: use the existing `src/components/ui/` primitives, Lucide icons, theme tokens, and scoped styles without deep selectors whenever possible.
 - Keep code organized according to `docs/ARCHITECTURE.md`: preserve the Electron security boundary and keep capture-domain logic in Rust.
 - Keep changes consistent with `docs/CODE_QUALITY.md`: no source file over 500 lines, types in dedicated type files, readable small units, and tests for TypeScript and Rust changes.
+- Rust source-line coverage must reach at least 85% for the whole workspace **and for every crate**. Tests must exercise failure and boundary paths, not only successful paths. Keep Rust tests outside `src/` in the mirrored `test/` tree; run `python3 scripts/ci/check_rust_test_layout.py` to enforce the layout.
 
 ## Verification
 
@@ -26,6 +27,7 @@ Before handing off a change, run the smallest relevant checks and report any una
 - A repository-wide test run is allowed only when the user explicitly requests it or when a genuinely cross-cutting change cannot be validated with targeted checks. Explain that need before starting the full run.
 - Type checking and the smallest relevant build may still be used when they validate compilation across a changed typed boundary.
 - For Rust changes, target the affected package/module for formatting, tests, and Clippy when the toolchain is available; do not default to the whole workspace.
+- Use `cargo nextest run` for Rust tests. The full Rust coverage gate uses `python3 scripts/ci/check_rust_coverage.py` when a workspace-wide validation is requested or required; it runs Nextest once and checks both 85% thresholds. Reuse Cargo's configured shared target directory; do not create a checkout-local target directory or override `CARGO_TARGET_DIR` for these checks.
 
 ## Changelog
 

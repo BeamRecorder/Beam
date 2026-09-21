@@ -54,13 +54,14 @@ cargo --version
 rustup show
 ```
 
-## Rust coverage tooling
+## Rust test and coverage tooling
 
-The optional Rust coverage command uses `cargo-llvm-cov` and the LLVM tools component:
+Rust tests use Nextest. The mandatory 85% source-line coverage gate uses `cargo-llvm-cov`, Nextest, and Python 3.11 or newer:
 
 ```bash
 rustup component add llvm-tools-preview
+cargo install cargo-nextest
 cargo install cargo-llvm-cov
 ```
 
-On Windows, run the same commands in PowerShell. After installation, use the coverage command from the [Windows development guide](./windows.md). On macOS, use `cargo llvm-cov` directly when you need Rust coverage.
+On Windows, run the same commands in PowerShell and use `py -3` for the Python checks. On macOS and Linux, use `python3`. Configure a shared Cargo target directory before running Rust checks; do not create a separate `target/` directory in each checkout. `bun run rust-test:coverage` uses the configured target directory, runs Nextest once, and checks the workspace and every crate.

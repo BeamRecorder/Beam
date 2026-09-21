@@ -64,10 +64,12 @@ bun run test:coverage
 bun run typecheck
 ```
 
-The TypeScript coverage gate is 90% for statements, branches, functions, and lines. For Rust changes, run the native test suite directly:
+The TypeScript coverage gate is 90% for statements, branches, functions, and lines. For Rust changes, use Nextest and the 85% workspace/per-crate source-line gate:
 
 ```bash
-cargo test --workspace --all-features
+cargo nextest run --workspace --all-features
+python3 scripts/ci/check_rust_test_layout.py
+bun run rust-test:coverage
 cargo fmt --all --check
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 ```

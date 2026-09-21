@@ -79,9 +79,8 @@ The command checks Cargo first. When Cargo is available, it builds both `capture
 The deterministic FFmpeg tests use a fake child process. The opt-in synthetic runtime smoke uses the actual system executable without opening the Portal picker:
 
 ```bash
-cargo test -p capture --lib \
-  screen::linux::ffmpeg_process_tests::system_ffmpeg_encodes_a_playable_mp4_segment \
-  -- --ignored --exact
+cargo nextest run -p capture --lib --run-ignored ignored-only --exact \
+  -- screen::linux::ffmpeg_process_tests::system_ffmpeg_encodes_a_playable_mp4_segment
 ```
 
 A real monitor/window smoke remains interactive and must be run manually because the Portal requires explicit user consent.

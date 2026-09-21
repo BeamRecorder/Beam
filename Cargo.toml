@@ -1,5 +1,5 @@
 [workspace]
-members = ["packages/capture"]
+members = ["packages/capture", "packages/media-core"]
 resolver = "2"
 
 [profile.dev.package.capture]

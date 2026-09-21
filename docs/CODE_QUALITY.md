@@ -47,6 +47,9 @@ You should write at least 3 tests per function you want, more if it's complex an
 
 - Use Rust unit and integration tests for model, protocol, storage, clock, cursor, and session behavior.
 - Keep hardware tests separate from deterministic tests and clearly report platform requirements.
+- Put every Rust test outside `src/`. Mirror each `src/` file at the same relative path below its crate's `test/` directory, including platform subdirectories (`src/linux/audio.rs` → `test/linux/audio.rs`). Use explicit `[[test]]` targets in `Cargo.toml` to make this singular `test/` directory discoverable by Cargo, and include nested test modules from those targets.
+- Do not leave `#[test]`, test-framework attributes, `#[cfg(test)]`, test modules, or test-named files in `src/`. Run `python3 scripts/ci/check_rust_test_layout.py` to check every workspace crate.
+- Use Nextest for Rust tests. Cover permission denial, unavailable devices, disconnection, malformed data, cancellation, partial writes, backpressure, clock boundaries, and recovery where relevant; successful-path tests alone do not satisfy the gate.
 
 ### Minimum quality gate
 
@@ -59,6 +62,8 @@ The target and minimum coverage gate for tested TypeScript code is 90% for:
 
 Do not lower the threshold to make a change pass. If a module is difficult to test, reduce side effects or split the module before adding exclusions. Generated files, build output, and hardware-only integration paths may be excluded only when the exclusion is explicit and justified in the test configuration.
 
+For Rust, the minimum **source-line** coverage is 85% for the workspace and independently 85% for **each crate**. A crate below 85% fails even if the workspace average passes. Run `python3 scripts/ci/check_rust_coverage.py` for the full gate: it checks the test layout first, invokes `cargo llvm-cov nextest` once, counts only workspace `src/` lines, and reports every crate separately. Measure on each supported OS when platform-specific code is involved; document any unavailable hardware or platform checks. Use the configured shared Cargo target directory so coverage does not create another build tree in the checkout. Do not lower the threshold or count test sources toward it.
+
 ## Required checks
 
 Use the relevant commands before handoff:
@@ -68,7 +73,9 @@ bun run test
 bunx vitest run --coverage
 bun run build
 cargo fmt --all --check
-cargo test --workspace --all-features
+cargo nextest run --workspace --all-features
+python3 scripts/ci/check_rust_test_layout.py
+python3 scripts/ci/check_rust_coverage.py
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 ```
 
@@ -81,5 +88,6 @@ Report commands that cannot run because of platform, toolchain, permissions, or 
 - Are types in the correct dedicated module?
 - Are failure and missing-data states explicit?
 - Are tests present for branches and edge cases?
-- Does coverage remain at or above 90% across statements, branches, functions, and lines?
+- Does TypeScript coverage remain at or above 90% across statements, branches, functions, and lines?
+- Does Rust source-line coverage reach 85% for the workspace and every crate, with failure and boundary tests?
 - Are TypeScript and Rust checks documented in the handoff?
