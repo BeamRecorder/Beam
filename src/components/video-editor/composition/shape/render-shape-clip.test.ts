@@ -78,6 +78,24 @@ const context = () => {
   };
 };
 
+const paintShadowTrace = (ctx: ReturnType<typeof context>) => {
+  let shadowColor = 'transparent';
+  const fillShadows: string[] = [];
+  const strokeShadows: string[] = [];
+
+  Object.defineProperty(ctx, 'shadowColor', {
+    configurable: true,
+    get: () => shadowColor,
+    set: (value: string) => {
+      shadowColor = value;
+    },
+  });
+  (ctx.fill as ReturnType<typeof vi.fn>).mockImplementation(() => fillShadows.push(shadowColor));
+  (ctx.stroke as ReturnType<typeof vi.fn>).mockImplementation(() => strokeShadows.push(shadowColor));
+
+  return { fillShadows, strokeShadows };
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubGlobal(
@@ -170,6 +188,52 @@ describe('drawShapeClip', () => {
     expect(ctx.fill).toHaveBeenCalledWith(transformed, 'nonzero');
     expect(ctx.stroke).toHaveBeenCalledWith(transformed);
     expect(ctx.lineWidth).toBeCloseTo(5 * (100 / 1_080));
+  });
+
+  it.each([
+    ['a native preset', 'rounded-rectangle'],
+    ['the speech bubble catalog preset', 'speech-bubble'],
+  ] as const)('keeps the shadow on the border of an unfilled %s', (_, preset) => {
+    const ctx = context();
+    const { strokeShadows } = paintShadowTrace(ctx);
+
+    drawShapeClip(
+      ctx,
+      shapeClip({
+        preset,
+        fillEnabled: false,
+        borderWidth: 8,
+        shadowEnabled: true,
+        shadowColor: '#654321',
+      }),
+      { x: 0, y: 0, width: 1_920, height: 1_080 },
+    );
+
+    expect(ctx.fill).not.toHaveBeenCalled();
+    expect(ctx.stroke).toHaveBeenCalledOnce();
+    expect(strokeShadows).toEqual(['#654321']);
+  });
+
+  it.each([
+    ['a native preset', 'rounded-rectangle'],
+    ['the speech bubble catalog preset', 'speech-bubble'],
+  ] as const)('does not apply a second shadow to the border of a filled %s', (_, preset) => {
+    const ctx = context();
+    const { fillShadows, strokeShadows } = paintShadowTrace(ctx);
+
+    drawShapeClip(
+      ctx,
+      shapeClip({
+        preset,
+        borderWidth: 8,
+        shadowEnabled: true,
+        shadowColor: '#654321',
+      }),
+      { x: 0, y: 0, width: 1_920, height: 1_080 },
+    );
+
+    expect(fillShadows).toEqual(['#654321']);
+    expect(strokeShadows).toEqual(['transparent']);
   });
 
   it('fills a shape with its gradient stops and alpha values', () => {

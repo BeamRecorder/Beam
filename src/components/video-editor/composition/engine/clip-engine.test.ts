@@ -742,6 +742,89 @@ describe('camera layout engine operations', () => {
 });
 
 describe('hold clip engine operation', () => {
+  it('remaps a recording microphone to the right screen fragment when splitting a linked recording', () => {
+    const recordingAudioAsset: MediaAsset = {
+      ...videoAsset('recording-audio-asset', 'audio'),
+      fileName: null,
+      origin: 'session',
+      sessionId: 'session-1',
+    };
+    const composition = createComposition(
+      [sessionVideoAsset('recording-screen-asset'), recordingAudioAsset],
+      [
+        visual('recording-screen', 'screen', 'recording-screen-asset', {
+          trackId: 'recording-screen-track',
+          timelineDurationMs: 4_000,
+          sourceDurationMs: 4_000,
+        }),
+        {
+          ...audio('recording-audio-asset'),
+          id: 'recording-microphone',
+          timelineDurationMs: 4_000,
+          sourceDurationMs: 4_000,
+          recordingClipId: 'recording-screen',
+        },
+      ],
+    );
+    let id = 0;
+    const split = splitClip(composition, 'recording-screen', 2_000, () => `recording-fragment-${++id}`);
+    const leftMicrophone = split.clips.find((clip) => clip.id === 'recording-microphone') as AudioClip;
+    const rightScreen = split.clips.find(
+      (clip): clip is VisualClip => clip.kind === 'screen' && clip.timelineStartMs === 2_000,
+    );
+    const rightMicrophone = split.clips.find(
+      (clip): clip is AudioClip => clip.kind === 'audio' && clip.timelineStartMs === 2_000,
+    );
+
+    expect(rightScreen).toBeDefined();
+    expect(rightMicrophone).toBeDefined();
+    expect(leftMicrophone.recordingClipId).toBe('recording-screen');
+    expect(rightMicrophone!.recordingClipId).toBe(rightScreen!.id);
+  });
+
+  it('remaps a recording microphone to the right screen fragment when inserting a hold', () => {
+    const recordingAudioAsset: MediaAsset = {
+      ...videoAsset('held-recording-audio-asset', 'audio'),
+      fileName: null,
+      origin: 'session',
+      sessionId: 'session-1',
+    };
+    const composition = createComposition(
+      [sessionVideoAsset('held-recording-screen-asset'), recordingAudioAsset],
+      [
+        visual('held-recording-screen', 'screen', 'held-recording-screen-asset', {
+          trackId: 'held-recording-screen-track',
+          groupId: 'held-recording',
+          timelineDurationMs: 4_000,
+          sourceDurationMs: 4_000,
+        }),
+        {
+          ...audio('held-recording-audio-asset'),
+          id: 'held-recording-microphone',
+          groupId: 'held-recording',
+          timelineDurationMs: 4_000,
+          sourceDurationMs: 4_000,
+          recordingClipId: 'held-recording-screen',
+        },
+      ],
+    );
+    let id = 0;
+    const held = holdClipAtPlayhead(composition, 'held-recording-screen', 2_000, () => `held-fragment-${++id}`);
+    const rightScreen = held.clips.find(
+      (clip): clip is VisualClip =>
+        clip.kind === 'screen' &&
+        clip.timelineStartMs === 3_000 &&
+        !('freezeFrameSourceMs' in clip && clip.freezeFrameSourceMs !== undefined),
+    );
+    const rightMicrophone = held.clips.find(
+      (clip): clip is AudioClip => clip.kind === 'audio' && clip.timelineStartMs === 3_000,
+    );
+
+    expect(rightScreen).toBeDefined();
+    expect(rightMicrophone).toBeDefined();
+    expect(rightMicrophone!.recordingClipId).toBe(rightScreen!.id);
+  });
+
   it('captures the exact source frame and inserts a one-second frozen segment', () => {
     const composition = createComposition(
       [videoAsset('video-asset')],

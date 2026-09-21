@@ -1,5 +1,9 @@
 {
   "LinkedClipsDeleteDialog": {
+    "preview": "Vorschau",
+    "selectPreview": "Vorschau von {name}",
+    "previewUnavailable": "Diese Vorschau kann nicht abgespielt werden.",
+    "seekPreview": "In der Vorschau springen",
     "title": "Verknüpfte Clips löschen",
     "description": "Dieses Element enthält verknüpfte Clips. Wähle genau aus, welche Clips gelöscht werden sollen.",
     "deleteAll": "Alle löschen ({count})",
@@ -221,6 +225,7 @@
     "unlock": "Entsperren",
     "locked": "Gesperrt",
     "removeGap": "Lücke entfernen",
+    "removeGapBlocked": "Lücke kann nicht entfernt werden: Ein anderer Clip oder Zoom überlappt sie oder ein verknüpftes Element ist gesperrt.",
     "lockedMessage": "{name} ist gesperrt. Änderungen sind nicht möglich."
   },
   "TimelineVideoClip": {

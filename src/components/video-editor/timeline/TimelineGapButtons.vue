@@ -6,10 +6,12 @@ import { useTranslate } from '~/i18n/useTranslate';
 import type { Clip, ClipComposition } from '~/media/shared/composition-types';
 import { timelineGaps, removeTimelineGap } from '../composition/timeline-gaps';
 import type { TimelineGap } from '../composition/timeline-lock-types';
+import type { ZoomElement } from '../zoom/zoom-types';
 import { timelineSpanStyle } from './timeline-clip-geometry';
 const props = defineProps<{
   clips: Clip[];
   composition: ClipComposition;
+  zoomElements?: readonly ZoomElement[];
   durationMs: number;
   widthPx: number;
   moving: boolean;
@@ -17,13 +19,16 @@ const props = defineProps<{
 const emit = defineEmits<{ remove: [gap: TimelineGap] }>();
 const { t } = useTranslate('TimelineTracks');
 const gaps = computed(() =>
-  timelineGaps(props.clips).filter((gap) => removeTimelineGap(props.composition, gap) !== props.composition),
+  timelineGaps(props.clips).map((gap) => ({
+    gap,
+    removable: removeTimelineGap(props.composition, gap, props.zoomElements) !== props.composition,
+  })),
 );
 </script>
 <template>
   <template v-if="!moving">
     <div
-      v-for="gap in gaps"
+      v-for="{ gap, removable } in gaps"
       :key="gap.startMs"
       class="timeline-gap"
       :style="timelineSpanStyle(gap.startMs, gap.endMs - gap.startMs, durationMs / 1000, widthPx)"
@@ -36,8 +41,10 @@ const gaps = computed(() =>
           icon-only
           :style="{ color: 'inherit' }"
           :icon="Trash2"
-          :title="t('removeGap')"
-          :aria-label="t('removeGap')"
+          :disabled="!removable"
+          :tooltip="removable ? t('removeGap') : t('removeGapBlocked')"
+          :title="removable ? t('removeGap') : t('removeGapBlocked')"
+          :aria-label="removable ? t('removeGap') : t('removeGapBlocked')"
           @click.stop="emit('remove', gap)"
         />
       </div>

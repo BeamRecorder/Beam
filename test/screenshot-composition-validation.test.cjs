@@ -206,6 +206,48 @@ test('requires every compositing entry to be unique and reference an existing sc
   assert.throws(() => validateScreenshotState(duplicateEntry), /invalid screenshot compositing settings/i);
 });
 
+test('allows deleted built-in layers to be absent when they are disabled', () => {
+  const state = withComposition(
+    screenshotState({
+      image: { enabled: false },
+      canvas: { showBackground: false, watermark: { enabled: false } },
+      shapes: [shape()],
+    }),
+  );
+  state.composition = state.composition.filter(
+    ({ id }) => !['screenshot', '__background__', '__watermark__'].includes(id),
+  );
+
+  assert.doesNotThrow(() => validateScreenshotState(state));
+  assert.deepEqual(
+    state.composition.map(({ id }) => id),
+    ['shape-1'],
+  );
+});
+
+test('requires every enabled built-in layer to keep a composition entry', () => {
+  const cases = [
+    ['captured image', screenshotState({ image: { enabled: true } }), 'screenshot'],
+    ['background', screenshotState({ canvas: { showBackground: true } }), '__background__'],
+    ['watermark', screenshotState({ canvas: { watermark: { enabled: true } } }), '__watermark__'],
+  ];
+
+  for (const [label, input, id] of cases) {
+    const state = withComposition(input);
+    state.composition = state.composition.filter((layer) => layer.id !== id);
+    assert.throws(() => validateScreenshotState(state), /invalid screenshot composition/i, label);
+  }
+});
+
+test('still requires disabled dynamic layers to keep a composition entry', () => {
+  const state = withComposition(screenshotState({ shapes: [shape()], cursors: [cursor()] }));
+  state.shapes[0].enabled = false;
+  state.cursors[0].enabled = false;
+  state.composition = state.composition.filter(({ id }) => !['shape-1', 'cursor-1'].includes(id));
+
+  assert.throws(() => validateScreenshotState(state), /invalid screenshot composition/i);
+});
+
 test('accepts persisted highlight effects and validates opacity, mode and color', () => {
   for (const strength of [0, 100]) {
     const state = withComposition(screenshotState({ effects: [highlightEffect({ strength })] }));

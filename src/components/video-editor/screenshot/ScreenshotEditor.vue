@@ -9,6 +9,7 @@ import {
   Crop,
   Image,
   Layers,
+  Maximize2,
   Monitor,
   MousePointer2,
   RotateCcw,
@@ -43,6 +44,7 @@ import {
   updateScreenshotWatermark,
 } from './screenshot-layers';
 import { useClipboardImagePaste } from '../composables/useClipboardImagePaste';
+import { useElementFullscreen } from '../canvas/composables/useElementFullscreen';
 
 const props = defineProps<{ id: string }>();
 const emit = defineEmits<{ ready: [] }>();
@@ -51,6 +53,14 @@ const { t } = useTranslate('ScreenshotEditor');
 const { t: topbarText } = useTranslate('Topbar');
 const { t: elementsText } = useTranslate('Elements');
 const { t: sidebarText } = useTranslate('SidebarPanel');
+const { t: fullscreenText } = useTranslate('TimelineToolbar');
+const { t: backText } = useTranslate('TopbarHUD');
+const previewStage = ref<HTMLElement | null>(null);
+const canvasFullscreen = useElementFullscreen(() => previewStage.value);
+const toggleFullscreen = (event?: MouseEvent) => {
+  (event?.currentTarget as HTMLElement | null)?.blur();
+  canvasFullscreen.toggleFullscreen();
+};
 const {
   document,
   state,
@@ -92,12 +102,14 @@ const {
   effects,
   selectedLayer,
   history,
+  elements,
 } = useScreenshotEditor(
   () => props.id,
   () => emit('ready'),
+  () => canvasFullscreen.isFullscreen.value,
 );
 useClipboardImagePaste({
-  disabled: () => busy.value || cropping.value,
+  disabled: () => busy.value || cropping.value || canvasFullscreen.isFullscreen.value,
   preferInternal: canPasteLayers,
   paste: pasteImage,
   onError: fail,
@@ -263,65 +275,102 @@ const composition = computed(() => (state.value ? screenshotLayers(state.value) 
           <SettingsPanel v-else-if="panel === 'settings'" hide-recorder @back-to-hud="back" />
         </fieldset>
       </ScreenshotPropertiesPanel>
-      <ScreenshotCanvas
-        :source="document.source"
-        :state="state"
-        :selected-id="selectedId"
-        :selected-ids="selectedIds"
-        :disabled="busy"
-        :cropping="cropping"
-        :handles-muted="handlesMuted"
-        :cursor-packs="cursors.packs.value"
-        :cursor-packs-ready="cursors.ready.value"
-        @select="select"
-        @select-many="selectMany"
-        @transform="transform"
-        @rotate="rotate"
-        @translate="translate"
-        @crop="image && (image.crop = $event)"
-        @crop-done="cropping = false"
-        @crop-request="startCrop"
-        @error="
-          error = $event;
-          emit('ready');
-        "
-        @ready="emit('ready')"
+      <div
+        ref="previewStage"
+        class="screenshot-preview-stage"
+        :class="{
+          'is-app-fullscreen': canvasFullscreen.isFullscreen.value,
+          'is-fullscreen-exiting': canvasFullscreen.isExiting.value,
+        }"
       >
-        <template #overlay>
-          <ScreenshotComposition
-            :layers="composition"
-            :state="state"
-            :cursor-packs="cursors.packs.value"
-            :selected-id="selectedId"
-            :selected-ids="selectedIds"
-            :source="document.source"
-            :disabled="busy || cropping"
-            @select="select"
-            @reorder="(id, index) => reorderScreenshotLayer(state!, id, index)"
-            @update="(id, patch) => updateScreenshotLayer(state!, id, patch)"
-            @visibility="(id, visible) => setScreenshotLayerVisible(state!, id, visible)"
-            @remove="removeLayer"
-          />
-        </template>
-        <template #controls>
-          <Popover align="center" direction="up" :match-trigger-width="false">
-            <template #trigger>
-              <Button variant="secondary" size="sm" :icon="SlidersHorizontal" :aria-label="t('dimensions')">
-                {{ state.canvas.width }} × {{ state.canvas.height }}
-                <span class="format-badge">{{ state.format.toUpperCase() }}</span>
-              </Button>
-            </template>
-            <div class="canvas-size-popover">
-              <ScreenshotSizeControls
-                :original="document"
-                v-model:canvas="state.canvas"
-                v-model:advanced="advanced"
-                v-model:keep-aspect="keepAspect"
-              />
-            </div>
-          </Popover>
-        </template>
-      </ScreenshotCanvas>
+        <div v-if="canvasFullscreen.isFullscreen.value" class="fullscreen-preview-back">
+          <Button
+            variant="frosted"
+            size="sm"
+            :icon="ArrowLeft"
+            :tooltip="fullscreenText('exitFullscreenPreview')"
+            @click="toggleFullscreen"
+          >
+            {{ backText('back') }}
+          </Button>
+        </div>
+        <ScreenshotCanvas
+          :source="document.source"
+          :state="state"
+          :selected-id="canvasFullscreen.isFullscreen.value ? null : selectedId"
+          :selected-ids="canvasFullscreen.isFullscreen.value ? [] : selectedIds"
+          :disabled="busy || canvasFullscreen.isFullscreen.value"
+          :cropping="cropping && !canvasFullscreen.isFullscreen.value"
+          :handles-muted="handlesMuted"
+          :cursor-packs="cursors.packs.value"
+          :cursor-packs-ready="cursors.ready.value"
+          @select="select"
+          @select-many="selectMany"
+          @transform="transform"
+          @rotate="rotate"
+          @translate="translate"
+          @crop="image && (image.crop = $event)"
+          @crop-done="cropping = false"
+          @crop-request="startCrop"
+          @error="
+            error = $event;
+            emit('ready');
+          "
+          @ready="emit('ready')"
+        >
+          <template #overlay>
+            <ScreenshotComposition
+              v-if="!canvasFullscreen.isFullscreen.value"
+              :layers="composition"
+              :state="state"
+              :cursor-packs="cursors.packs.value"
+              :selected-id="selectedId"
+              :selected-ids="selectedIds"
+              :source="document.source"
+              :disabled="busy || cropping"
+              @select="select"
+              @reorder="(id, index) => reorderScreenshotLayer(state!, id, index)"
+              @update="(id, patch) => updateScreenshotLayer(state!, id, patch)"
+              @visibility="(id, visible) => setScreenshotLayerVisible(state!, id, visible)"
+              @remove="removeLayer"
+            />
+          </template>
+          <template #controls>
+            <Popover
+              v-if="!canvasFullscreen.isFullscreen.value"
+              align="center"
+              direction="up"
+              :match-trigger-width="false"
+            >
+              <template #trigger>
+                <Button variant="secondary" size="sm" :icon="SlidersHorizontal" :aria-label="t('dimensions')">
+                  {{ state.canvas.width }} × {{ state.canvas.height }}
+                  <span class="format-badge">{{ state.format.toUpperCase() }}</span>
+                </Button>
+              </template>
+              <div class="canvas-size-popover">
+                <ScreenshotSizeControls
+                  :original="document"
+                  v-model:canvas="state.canvas"
+                  v-model:advanced="advanced"
+                  v-model:keep-aspect="keepAspect"
+                />
+              </div>
+            </Popover>
+            <Button
+              v-if="!canvasFullscreen.isFullscreen.value"
+              variant="ghost"
+              size="sm"
+              icon-only
+              :icon="Maximize2"
+              :disabled="busy || cropping || Boolean(elements.editing.value) || elements.drawingMode.value"
+              :aria-label="fullscreenText('fullscreenPreview')"
+              :tooltip="fullscreenText('fullscreenPreview')"
+              @click="toggleFullscreen"
+            />
+          </template>
+        </ScreenshotCanvas>
+      </div>
     </div>
   </main>
 </template>
@@ -394,3 +443,4 @@ const composition = computed(() => (state.value ? screenshotLayers(state.value) 
   margin: 0;
 }
 </style>
+<style scoped src="./screenshot-fullscreen.css"></style>

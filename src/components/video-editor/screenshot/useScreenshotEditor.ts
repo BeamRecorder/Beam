@@ -39,7 +39,7 @@ import {
   SCREENSHOT_WATERMARK_ID,
 } from './screenshot-layers';
 
-export function useScreenshotEditor(id: () => string, ready: () => void) {
+export function useScreenshotEditor(id: () => string, ready: () => void, previewFullscreen: () => boolean) {
   const { t } = useTranslate('ScreenshotEditor');
   const toast = useToastStore();
   const document = ref<ScreenshotDocument | null>(null);
@@ -295,11 +295,17 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
     },
     remove: () => removeShape(),
     timing: () => ({ startMs: 0, durationMs: 1 }),
-    canInteract: () => !busy.value && !cropping.value && !selectedLayer.value?.locked,
+    canInteract: () => !busy.value && !cropping.value && !previewFullscreen() && !selectedLayer.value?.locked,
   });
   const cursors = useScreenshotCursors(state, selectedId, select, fail);
+  const shortcutsDisabled = () =>
+    busy.value ||
+    cropping.value ||
+    previewFullscreen() ||
+    Boolean(elements.editing.value) ||
+    elements.drawingMode.value;
   const history = useScreenshotHistory(state, {
-    disabled: () => busy.value || Boolean(elements.editing.value),
+    disabled: () => busy.value || previewFullscreen() || Boolean(elements.editing.value),
     restore: () => {
       cropping.value = false;
       const previous = selectedId.value;
@@ -315,7 +321,7 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
       document.value
         ? { source: document.value.source, width: document.value.width, height: document.value.height }
         : null,
-    disabled: () => busy.value || cropping.value || Boolean(elements.editing.value) || elements.drawingMode.value,
+    disabled: shortcutsDisabled,
     reconcileSelection: selection.reconcile,
     showSelection,
   });
@@ -326,7 +332,7 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
             (layer) => selectedIds.value.includes(layer.id) && canRemoveScreenshotLayer(layer),
           )
         : undefined,
-    disabled: () => busy.value || cropping.value || Boolean(elements.editing.value) || elements.drawingMode.value,
+    disabled: shortcutsDisabled,
     remove: removeLayer,
     copy: layerClipboard.copy,
     cut: layerClipboard.cut,
@@ -489,5 +495,6 @@ export function useScreenshotEditor(id: () => string, ready: () => void) {
     effects,
     selectedLayer,
     history,
+    elements,
   };
 }

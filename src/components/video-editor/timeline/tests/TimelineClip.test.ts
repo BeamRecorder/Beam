@@ -305,6 +305,28 @@ describe('TimelineClip', () => {
     expect(wrapper.get('.trim-side-badge').classes()).toContain('at-limit');
   });
 
+  it('renders a linked badge and exposes companion names in the tooltip and accessible name', () => {
+    const linkedNames = ['Screen recording (0.0s)', 'Microphone 2 (0.0s)'];
+    const wrapper = mount(TimelineClip, {
+      props: { ...baseProps, linkedClipNames: linkedNames },
+      global: { stubs: { Skeleton, BlickWaveformCanvas } },
+    });
+
+    expect(wrapper.find('.linked-badge').exists()).toBe(true);
+    expect(wrapper.get('.linked-badge svg').attributes('aria-label')).toBe(linkedNames.join(' · '));
+    expect(wrapper.get('.timeline-clip').attributes('title')).toBe(linkedNames.join(' · '));
+  });
+
+  it('keeps the normal clip tooltip and hides the linked badge when there are no companions', () => {
+    const wrapper = mount(TimelineClip, {
+      props: { ...baseProps, linkedClipNames: [] },
+      global: { stubs: { Skeleton, BlickWaveformCanvas } },
+    });
+
+    expect(wrapper.find('.linked-badge').exists()).toBe(false);
+    expect(wrapper.get('.timeline-clip').attributes('title')).toBe('A very long recording title');
+  });
+
   it('renders solid and radial color layers without media thumbnails', async () => {
     const wrapper = mount(TimelineClip, {
       props: {

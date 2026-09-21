@@ -134,10 +134,10 @@ describe('useElementEditor', () => {
   });
 
   it.each([
-    ['shape', 'rectangle', 0.3],
-    ['arrow', 'arrow', 0.16],
-    ['text', 'text', 0.16],
-  ] as const)('inserts a %s with current timing and selects it', (family, preset, height) => {
+    ['shape', 'rectangle', 0.4, 0.3],
+    ['arrow', 'arrow', 0.2, 0.055],
+    ['text', 'text', 0.4, 0.16],
+  ] as const)('inserts a %s with current timing and selects it', (family, preset, width, height) => {
     const editor = mountEditor({ timing: { startMs: 850, durationMs: 3_250 } });
 
     editor.context.add(family);
@@ -154,7 +154,7 @@ describe('useElementEditor', () => {
       timelineStartMs: 850,
       timelineDurationMs: 3_250,
       sourceDurationMs: 3_250,
-      transform: { x: 0.3, y: 0.3, width: 0.4, height },
+      transform: { x: 0.3, y: 0.3, width, height },
     });
     expect(editor.select).toHaveBeenLastCalledWith('element-1');
     expect(editor.context.selected.value?.id).toBe('element-1');
@@ -167,6 +167,30 @@ describe('useElementEditor', () => {
       expect(inserted.text).toBeUndefined();
       expect(editor.context.editing.value).toBeNull();
     }
+  });
+
+  it('uses compact thin defaults for new arrows without changing saved arrow layers', () => {
+    const savedArrow = createClip('saved-arrow', {
+      family: 'arrow',
+      preset: 'arrow',
+      arrowThickness: 36,
+      arrowHeadSize: 38,
+      transform: { x: 0.1, y: 0.2, width: 0.4, height: 0.16 },
+    });
+    const savedArrowBefore = structuredClone(savedArrow);
+    const editor = mountEditor({ initialLayers: [savedArrow], selectedId: savedArrow.id });
+
+    editor.context.add('arrow');
+
+    const inserted = editor.insert.mock.calls[0]![0];
+    expect(inserted).toMatchObject({
+      family: 'arrow',
+      preset: 'arrow',
+      arrowThickness: 12,
+      arrowHeadSize: 18,
+      transform: { width: 0.2, height: 0.055 },
+    });
+    expect(savedArrow).toEqual(savedArrowBefore);
   });
 
   it('inserts an unfilled outlined rectangle for new shape annotations', () => {

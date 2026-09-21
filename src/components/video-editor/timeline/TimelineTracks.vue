@@ -22,6 +22,7 @@ import { normalizeZoomProjection } from '../zoom/zoom-types';
 import TimelineAddMenu from './TimelineAddMenu.vue';
 import { useTimelineItemInteractions } from './composables/useTimelineItemInteractions';
 import TimelineAudioTracks from './TimelineAudioTracks.vue';
+import { linkedClipNames } from './timeline-linked-clips';
 const { t } = useTranslate('TimelineTracks');
 const { t: tCanvas } = useTranslate('CanvasPanel');
 const { t: tToolbar } = useTranslate('TimelineToolbar');
@@ -324,6 +325,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                   v-if="track.clips.some((clip) => ['screen', 'video', 'image', 'webcam'].includes(clip.kind))"
                   :clips="track.clips"
                   :composition="composition"
+                  :zoom-elements="zoomElements"
                   :duration-ms="layoutDurationMs"
                   :width-px="rulerLayoutWidth"
                   :moving="isMoving || activeTrimState !== null"
@@ -341,6 +343,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                   :defer-thumbnail-requests="isWheelZooming || activeTrimState !== null || isMoving"
                   :defer-waveform-draw="isWheelZooming || isMoving"
                   :selected="selectedClipIdSet.has(clip.id)"
+                  :linked-clip-names="linkedClipNames(composition, clip)"
                   :trim-state="trimStateFor(clip.id)"
                   :paste-highlight="recentPaste?.type === 'clip' && recentPaste.id === clip.id"
                   @select="selectItem('clip', clip.id, $event)"
@@ -451,6 +454,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
             :imported-audio-tracks="importedAudioTracks"
             :voiceover-draft="voiceoverDraft"
             :composition="composition"
+            :zoom-elements="zoomElements"
             :include-audio-in-export="includeAudioInExport"
             :layout-duration-ms="layoutDurationMs"
             :ruler-layout-width="rulerLayoutWidth"

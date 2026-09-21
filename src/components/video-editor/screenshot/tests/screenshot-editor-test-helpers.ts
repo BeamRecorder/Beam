@@ -49,7 +49,7 @@ export function createScreenshotEditorTestHarness(
       loading: Boolean,
       variant: String,
       size: String,
-      icon: Object,
+      icon: [Object, Function],
       block: Boolean,
     },
     emits: ['click'],
@@ -88,6 +88,7 @@ export function createScreenshotEditorTestHarness(
       state: Object,
       selectedId: String,
       selectedIds: { type: Array as PropType<string[]>, default: () => [] },
+      disabled: Boolean,
       cropping: Boolean,
       cursorPacks: Array,
     },
@@ -95,7 +96,8 @@ export function createScreenshotEditorTestHarness(
     setup() {
       onCanvasEditor(useElementEditor());
     },
-    template: '<div data-testid="screenshot-canvas"><slot name="overlay" /></div>',
+    template:
+      '<div data-testid="screenshot-canvas"><div class="canvas-controls"><slot name="controls" /></div><slot name="overlay" /></div>',
   });
   const ScreenshotCompositionStub = defineComponent({
     name: 'ScreenshotComposition',

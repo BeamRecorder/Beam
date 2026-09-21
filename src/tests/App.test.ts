@@ -414,7 +414,7 @@ describe('App', () => {
       await wrapper.get('.open').trigger('click');
       await nextTick();
       mocks.controller.editorProgress?.({ stage: 'loadingTimeline', value: 60 });
-      rejectOpening(new Error('diagnostic détaillé'));
+      rejectOpening(Object.assign(new Error('diagnostic détaillé'), { code: 'BEAM_EDITOR_TIMEOUT' }));
       await settle();
 
       const error = wrapper.get('[role="alert"]');
@@ -422,6 +422,7 @@ describe('App', () => {
       expect(error.text()).toContain(
         'Beam n’a pas reçu le signal de disponibilité de l’éditeur. Votre enregistrement est toujours conservé.',
       );
+      expect(error.text()).toMatch(/délai|temps d’attente/i);
       expect(error.text()).toContain('Dernière étape signalée : Chargement de la timeline…');
       expect(error.text()).toContain('Retour à Beam');
       expect(error.text()).not.toContain('diagnostic détaillé');
@@ -438,7 +439,8 @@ describe('App', () => {
       expect(diagnostics).toContain('Runtime platform: win32');
       expect(diagnostics).toContain('Project ID: project-1');
       expect(diagnostics).toContain('Project mode: studio');
-      expect(diagnostics).toContain('Last reported stage: loadingTimeline (60%)');
+      expect(diagnostics).toContain('Classification: timeout');
+      expect(diagnostics).toContain('Last confirmed step: loadingTimeline (60%)');
       expect(diagnostics).toMatch(/^Occurred at: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/m);
       expect(diagnostics).toContain(`User agent: ${navigator.userAgent}`);
       expect(diagnostics).toContain('Error: diagnostic détaillé');
@@ -474,6 +476,34 @@ describe('App', () => {
     finishOpening(true);
     await settle();
     expect(wrapper.get('.mock-hud').attributes('data-preparing-editor')).toBe('false');
+  });
+
+  it('shows a localized unresponsive reason while retaining the saved-recording reassurance', async () => {
+    setCurrentLocale('fr');
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    let rejectOpening!: (error: Error) => void;
+    mocks.capture.openEditor.mockReturnValueOnce(
+      new Promise<boolean>((_resolve, reject) => {
+        rejectOpening = reject;
+      }),
+    );
+
+    try {
+      await wrapper.get('.open').trigger('click');
+      await nextTick();
+      mocks.controller.editorProgress?.({ stage: 'initializingEditor', value: 82 });
+      rejectOpening(Object.assign(new Error('renderer stopped'), { code: 'BEAM_EDITOR_UNRESPONSIVE' }));
+      await settle();
+
+      const error = wrapper.get('[role="alert"]');
+      expect(error.text()).toMatch(/ne répond|sans réponse/i);
+      expect(error.text()).toContain(
+        'Beam n’a pas reçu le signal de disponibilité de l’éditeur. Votre enregistrement est toujours conservé.',
+      );
+      expect(error.text()).toContain('Dernière étape signalée : Initialisation de l’éditeur…');
+    } finally {
+      errorSpy.mockRestore();
+    }
   });
 
   it('opens the dedicated editor after completed recordings and reports missing projects', async () => {

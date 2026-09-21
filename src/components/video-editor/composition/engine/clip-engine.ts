@@ -216,13 +216,16 @@ export function splitClip(
   const ids = new Set(targetIds(next, clipId));
   const rightGroupId = source.groupId ? idFactory() : undefined;
   const additions: Clip[] = [];
+  const rightIds = new Map<string, string>();
   next.clips = next.clips.map((clip) => {
     if (!ids.has(clip.id)) return clip;
     const leftSourceDuration = integer(offset * clip.playbackRate);
     const freezeFrameSourceMs = isVisualClip(clip) ? clip.freezeFrameSourceMs : undefined;
+    const rightId = idFactory();
+    rightIds.set(clip.id, rightId);
     const right: Clip = {
       ...clip,
-      id: idFactory(),
+      id: rightId,
       groupId: rightGroupId,
       timelineStartMs: target,
       timelineDurationMs: clip.timelineDurationMs - offset,
@@ -242,6 +245,10 @@ export function splitClip(
       transitions: normalizeClipTransitions({ entry: clip.transitions?.entry ?? null, exit: null }, offset, clip.kind),
     };
   });
+  for (const right of additions) {
+    if (right.recordingClipId && rightIds.has(right.recordingClipId))
+      right.recordingClipId = rightIds.get(right.recordingClipId);
+  }
   next.clips = normalizeClipOrders([...next.clips, ...additions]);
   validateComposition(next);
   return next;

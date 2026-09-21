@@ -3,6 +3,30 @@ import { describe, expect, it } from 'vitest';
 import Slider from './Slider.vue';
 
 describe('Slider', () => {
+  it('shows the formatted value by default', () => {
+    const wrapper = mount(Slider, { props: { modelValue: 42, valueSuffix: '%' } });
+
+    expect(wrapper.get('.slider-value').text()).toBe('42%');
+    expect(wrapper.get('input').attributes('aria-label')).toBeUndefined();
+  });
+
+  it('can hide the value without removing the range input', async () => {
+    const wrapper = mount(Slider, { props: { modelValue: 42, showValue: false } });
+
+    expect(wrapper.find('.slider-value').exists()).toBe(false);
+    await wrapper.get('input').setValue('43');
+    expect(wrapper.emitted('update:modelValue')).toEqual([[43]]);
+  });
+
+  it('uses the supplied label as the range input accessible name', () => {
+    const wrapper = mount(Slider, {
+      props: { modelValue: 42, showValue: false, label: 'Preview volume' },
+    });
+
+    expect(wrapper.get('input').attributes('aria-label')).toBe('Preview volume');
+    expect(wrapper.find('.slider-value').exists()).toBe(false);
+  });
+
   it('uses the default size unless compact is requested', () => {
     const standard = mount(Slider, { props: { modelValue: 50 } });
     expect(standard.get('.slider-wrapper').classes()).toEqual(expect.arrayContaining(['size-default']));

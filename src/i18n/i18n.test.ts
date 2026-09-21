@@ -176,7 +176,9 @@ describe('internationalization', () => {
         'loadingProject',
         'loadingTimeline',
         'loadingEditorModule',
+        'initializingEditor',
         'renderingEditor',
+        'loadingPreview',
       ]) {
         expect(i18n.global.te(`EditorPreparingHud.${stage}`, locale)).toBe(true);
       }

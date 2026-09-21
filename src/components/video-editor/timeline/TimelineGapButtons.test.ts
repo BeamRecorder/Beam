@@ -1,14 +1,40 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
+import { defineComponent, h } from 'vue';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import type { ClipComposition, MediaAsset, VisualClip } from '~/media/shared/composition-types';
 import TimelineGapButtons from './TimelineGapButtons.vue';
 
 vi.mock('~/i18n/useTranslate', () => ({
   useTranslate: () => ({
-    t: (key: string) => (key === 'removeGap' ? 'Remove gap' : key),
+    t: (key: string) => (key === 'removeGap' ? 'Remove gap' : key === 'removeGapBlocked' ? 'Cannot remove gap' : key),
   }),
 }));
+
+const ButtonStub = defineComponent({
+  inheritAttrs: false,
+  props: {
+    disabled: Boolean,
+    tooltip: { type: String, default: '' },
+  },
+  emits: ['click'],
+  setup(props, { attrs, emit }) {
+    return () =>
+      h('button', {
+        ...attrs,
+        type: attrs.type ?? 'button',
+        disabled: props.disabled || undefined,
+        title: props.tooltip || attrs.title,
+        onClick: (event: MouseEvent) => {
+          if (props.disabled) {
+            event.preventDefault();
+            return;
+          }
+          emit('click', event);
+        },
+      });
+  },
+});
 
 const asset = (id: string, kind: MediaAsset['kind'] = 'video'): MediaAsset => ({
   id,
@@ -63,6 +89,7 @@ const mountButtons = (overrides: Partial<TimelineGapButtonProps> = {}) => {
       moving: false,
       ...overrides,
     },
+    global: { stubs: { Button: ButtonStub } },
   });
 };
 
@@ -96,15 +123,17 @@ describe('TimelineGapButtons', () => {
     expect(wrapper.find('button[aria-label="Remove gap"]').exists()).toBe(true);
   });
 
-  it('hides a gap whose downstream lane content is locked', () => {
+  it('keeps a locked gap visible with a disabled explanatory button', () => {
     const clips = [visual('before', 0), visual('locked-after', 3_000, { locked: true })];
     const wrapper = mountButtons({ clips, composition: composition(clips) });
+    const button = wrapper.get('button[aria-label="Cannot remove gap"]');
 
-    expect(wrapper.find('.timeline-gap').exists()).toBe(false);
-    expect(wrapper.find('button[aria-label="Remove gap"]').exists()).toBe(false);
+    expect(wrapper.find('.timeline-gap').exists()).toBe(true);
+    expect(button.attributes('disabled')).toBeDefined();
+    expect(button.attributes('title')).toBe('Cannot remove gap');
   });
 
-  it('hides a gap when linked movement would collide on another visual lane', () => {
+  it('keeps a colliding linked gap visible with a disabled explanatory button', () => {
     const target = [
       visual('main-before', 0, { trackId: 'main-lane' }),
       visual('main-after', 3_000, { trackId: 'main-lane', groupId: 'recording' }),
@@ -115,9 +144,11 @@ describe('TimelineGapButtons', () => {
       visual('companion-after', 3_000, { trackId: 'companion-lane', groupId: 'recording' }),
     ];
     const wrapper = mountButtons({ clips: target, composition: composition(allClips) });
+    const button = wrapper.get('button[aria-label="Cannot remove gap"]');
 
-    expect(wrapper.find('.timeline-gap').exists()).toBe(false);
-    expect(wrapper.find('button[aria-label="Remove gap"]').exists()).toBe(false);
+    expect(wrapper.find('.timeline-gap').exists()).toBe(true);
+    expect(button.attributes('disabled')).toBeDefined();
+    expect(button.attributes('title')).toBe('Cannot remove gap');
   });
 
   it('stops pointer and click gestures on the gap container from reaching the timeline', async () => {

@@ -39,10 +39,12 @@ describe('createScreenshotImage', () => {
   it.each([
     { name: 'landscape', width: 1600, height: 900 },
     { name: 'portrait', width: 900, height: 1600 },
-  ])('centers and fits a $name image inside 60% of the canvas without stretching', ({ width, height }) => {
+    { name: 'same-size', width: 1200, height: 800 },
+  ])('centers and fits a $name image inside the canvas without enlarging or stretching', ({ width, height }) => {
     const image = createScreenshotImage(asset, width, height, canvas);
     const fittedWidth = image.transform.width * canvas.width;
     const fittedHeight = image.transform.height * canvas.height;
+    const scale = Math.min(1, canvas.width / width, canvas.height / height);
 
     expect(image.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
     expect(image).toMatchObject({
@@ -59,11 +61,22 @@ describe('createScreenshotImage', () => {
     });
     expect(image.appearance).toEqual(createDefaultClipAppearance('image'));
     expect(fittedWidth / fittedHeight).toBeCloseTo(width / height);
-    expect(fittedWidth).toBeLessThanOrEqual(canvas.width * 0.6 + Number.EPSILON);
-    expect(fittedHeight).toBeLessThanOrEqual(canvas.height * 0.6 + Number.EPSILON);
+    expect(fittedWidth).toBeCloseTo(width * scale);
+    expect(fittedHeight).toBeCloseTo(height * scale);
+    expect(fittedWidth).toBeLessThanOrEqual(canvas.width + Number.EPSILON);
+    expect(fittedHeight).toBeLessThanOrEqual(canvas.height + Number.EPSILON);
     expect(image.transform.x * canvas.width + fittedWidth / 2).toBeCloseTo(canvas.width / 2);
     expect(image.transform.y * canvas.height + fittedHeight / 2).toBeCloseTo(canvas.height / 2);
-    expect(Math.max(fittedWidth / (canvas.width * 0.6), fittedHeight / (canvas.height * 0.6))).toBeCloseTo(1);
+    expect(Math.max(fittedWidth / width, fittedHeight / height)).toBeCloseTo(scale);
+  });
+
+  it('keeps a smaller imported image at its native pixel size instead of enlarging it', () => {
+    const image = createScreenshotImage(asset, 800, 600, canvas);
+
+    expect(image.transform.x).toBeCloseTo((canvas.width - 800) / (2 * canvas.width));
+    expect(image.transform.y).toBeCloseTo((canvas.height - 600) / (2 * canvas.height));
+    expect(image.transform.width).toBeCloseTo(800 / canvas.width);
+    expect(image.transform.height).toBeCloseTo(600 / canvas.height);
   });
 });
 

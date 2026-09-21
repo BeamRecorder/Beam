@@ -5,7 +5,9 @@ export type EditorLoadingStage =
   | 'loadingProject'
   | 'loadingTimeline'
   | 'loadingEditorModule'
+  | 'initializingEditor'
   | 'renderingEditor'
+  | 'loadingPreview'
   | 'ready';
 
 export interface EditorLoadingProgress {

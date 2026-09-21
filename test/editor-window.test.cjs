@@ -222,6 +222,12 @@ test('editor window is opaque and routes native editor lifecycle without changin
     assert.deepEqual(calls.at(-1), ['hud-send', 'editor:loading-progress', { stage: 'loadingEditor', value: 20 }]);
     ipcListeners.get('editor:loading-stage')({ sender: editor.webContents }, 'loadingTimeline');
     assert.deepEqual(calls.at(-1), ['hud-send', 'editor:loading-progress', { stage: 'loadingTimeline', value: 60 }]);
+    ipcListeners.get('editor:loading-stage')({ sender: editor.webContents }, 'initializingEditor');
+    assert.deepEqual(calls.at(-1), ['hud-send', 'editor:loading-progress', { stage: 'initializingEditor', value: 82 }]);
+    ipcListeners.get('editor:loading-stage')({ sender: editor.webContents }, 'renderingEditor');
+    assert.deepEqual(calls.at(-1), ['hud-send', 'editor:loading-progress', { stage: 'renderingEditor', value: 90 }]);
+    ipcListeners.get('editor:loading-stage')({ sender: editor.webContents }, 'loadingPreview');
+    assert.deepEqual(calls.at(-1), ['hud-send', 'editor:loading-progress', { stage: 'loadingPreview', value: 95 }]);
     assert.deepEqual(ipcHandlers.get('editor:context')({ sender: editor.webContents }), { projectId });
     ipcListeners.get('editor:ready')({ sender: editor.webContents });
     await opening;
@@ -441,8 +447,10 @@ test('times out a hidden editor after 30 seconds without closing the HUD and all
     fireTimeout();
 
     await assert.rejects(opening, (error) => {
-      assert.match(error.message, /did not finish opening the project within 30 seconds/);
-      assert.match(error.message, /Last reported stage: loadingTimeline \(60%\)\./);
+      assert.equal(error.code, 'BEAM_EDITOR_TIMEOUT');
+      assert.match(error.message, /did not finish opening within 30 seconds/);
+      assert.match(error.message, /Last confirmed step: loadingTimeline \(60%\)\./);
+      assert.match(error.message, /Time since this step started: \d+ ms\./);
       assert.match(error.message, /Editor document loaded: yes\./);
       return true;
     });
@@ -461,6 +469,28 @@ test('times out a hidden editor after 30 seconds without closing the HUD and all
   } finally {
     global.setTimeout = originalSetTimeout;
     global.clearTimeout = originalClearTimeout;
+    fixture.restore();
+  }
+});
+
+test('classifies an unresponsive editor and reports the confirmed stage details', async () => {
+  const fixture = createThemeFixture({ theme: 'light' });
+  try {
+    const opening = fixture.manager.open(projectId);
+    const editor = fixture.windows[0];
+    editor.emitContent('did-finish-load');
+    fixture.ipcListeners.get('editor:loading-stage')({ sender: editor.webContents }, 'initializingEditor');
+    editor.emit('unresponsive');
+
+    await assert.rejects(opening, (error) => {
+      assert.equal(error.code, 'BEAM_EDITOR_UNRESPONSIVE');
+      assert.match(error.message, /stopped responding while opening/);
+      assert.match(error.message, /Last confirmed step: initializingEditor \(82%\)\./);
+      assert.match(error.message, /Time since this step started: \d+ ms\./);
+      assert.match(error.message, /Editor document loaded: yes\./);
+      return true;
+    });
+  } finally {
     fixture.restore();
   }
 });

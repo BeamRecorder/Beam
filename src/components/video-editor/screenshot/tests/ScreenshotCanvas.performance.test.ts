@@ -262,7 +262,11 @@ describe('ScreenshotCanvas interaction performance', () => {
 
     secondaryOutline.vm.$emit('pointer-up', pointerEvent({ clientX: 30, clientY: 20 }));
 
-    expect(wrapper.emitted('translate')).toEqual([[{ x: 0.2, y: 0.1 }]]);
+    const translation = wrapper.emitted('translate');
+    expect(translation).toHaveLength(1);
+    expect(translation?.[0]).toHaveLength(1);
+    expect((translation?.[0]?.[0] as { x: number; y: number }).x).toBeCloseTo(0.2);
+    expect((translation?.[0]?.[0] as { x: number; y: number }).y).toBeCloseTo(0.1);
     expect(wrapper.emitted('transform')).toBeUndefined();
     expect(propertyInteractionActive.value).toBe(false);
     wrapper.unmount();

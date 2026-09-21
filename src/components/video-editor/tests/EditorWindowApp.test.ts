@@ -1,5 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils';
-import { onMounted } from 'vue';
+import { isReactive, onMounted, toRaw } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setCurrentLocale } from '../../../i18n';
 import EditorWindowApp from '../EditorWindowApp.vue';
@@ -41,10 +41,17 @@ vi.mock('../VideoEditor.vue', async () => {
   return {
     default: defineComponent({
       name: 'MockVideoEditor',
-      props: { project: { type: Object, required: true } },
+      props: {
+        project: { type: Object, required: true },
+        editorData: { type: Object, required: true },
+      },
       emits: ['ready', 'back-to-hud', 'open-project'],
-      setup(props: { project: { id: string } }, { emit }) {
-        onMounted(() => emit('ready'));
+      setup(props: { project: { id: string }; editorData: object }, { emit }) {
+        capture.reportEditorLoadingStage('renderingEditor');
+        onMounted(() => {
+          capture.reportEditorLoadingStage('loadingPreview');
+          emit('ready');
+        });
         return () =>
           h('div', { class: 'mock-editor', 'data-project-id': props.project.id }, [
             h('button', { class: 'ready', onClick: () => emit('ready') }),
@@ -167,6 +174,17 @@ describe('EditorWindowApp', () => {
       'stage:loadingEditorModule',
       'import:VideoEditor',
     ]);
+    expect(loadEvents).toEqual([
+      'stage:loadingProject',
+      'getProject',
+      'stage:loadingTimeline',
+      'getProjectEditorData',
+      'stage:loadingEditorModule',
+      'import:VideoEditor',
+      'stage:initializingEditor',
+      'stage:renderingEditor',
+      'stage:loadingPreview',
+    ]);
     expect(wrapper.find('.mock-editor[data-project-id="project-1"]').exists()).toBe(true);
     expect(wrapper.find('.mock-screenshot-editor').exists()).toBe(false);
     expect(state.videoModuleLoads).toBe(1);
@@ -189,9 +207,42 @@ describe('EditorWindowApp', () => {
       'loadingProject',
       'loadingTimeline',
       'loadingEditorModule',
+      'initializingEditor',
       'renderingEditor',
+      'loadingPreview',
     ]);
     expect(capture.notifyEditorReady).toHaveBeenCalledOnce();
+  });
+
+  it('keeps a long recording cursor-event payload raw when it is handed to the editor', async () => {
+    const cursorEvents = Array.from({ length: 20_000 }, (_, index) => ({
+      event: 'move',
+      sessionNs: index * 5_000_000,
+      normalizedX: 0.42,
+      normalizedY: 0.58,
+      visible: true,
+    }));
+    const editorData = {
+      composition: {},
+      zoom: {},
+      presentation: {},
+      cursor: { events: cursorEvents },
+    };
+    capture.getProjectEditorData.mockResolvedValueOnce(editorData);
+
+    const wrapper = mountEditor();
+    await flushPromises();
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await flushPromises();
+
+    const editor = wrapper.findComponent({ name: 'MockVideoEditor' });
+    const received = editor.props('editorData') as typeof editorData;
+    expect(received).toBe(editorData);
+    expect(isReactive(received)).toBe(false);
+    expect(received.cursor.events).toBe(cursorEvents);
+    expect(received.cursor.events.at(-1)).toBe(cursorEvents.at(-1));
+    expect(isReactive(received.cursor.events[0])).toBe(false);
+    expect(toRaw(received.cursor.events[0])).toBe(cursorEvents[0]);
   });
 
   it('notifies native readiness when the hidden window never receives an animation frame', async () => {
@@ -268,8 +319,16 @@ describe('EditorWindowApp', () => {
     vi.useFakeTimers();
     const nextProject = { id: 'project-2', name: 'Next project', previewSrc: 'next.mp4', mode: 'studio' as const };
     let resolveNextData!: (value: unknown) => void;
+    const initialEditorData = { composition: {}, zoom: {}, presentation: {} };
+    const replacementCursorEvent = { timestampMs: 91_000, position: { x: 0.2, y: 0.8 } };
+    const replacementEditorData = {
+      composition: {},
+      zoom: {},
+      presentation: {},
+      cursor: { events: [replacementCursorEvent] },
+    };
     capture.getProject.mockImplementation(async (id: string) => (id === nextProject.id ? nextProject : project));
-    capture.getProjectEditorData.mockResolvedValueOnce({ composition: {}, zoom: {}, presentation: {} });
+    capture.getProjectEditorData.mockResolvedValueOnce(initialEditorData);
     capture.getProjectEditorData.mockReturnValueOnce(
       new Promise((resolve) => {
         resolveNextData = resolve;
@@ -293,7 +352,7 @@ describe('EditorWindowApp', () => {
     expect(wrapper.find('.editor-project-loading-overlay').exists()).toBe(true);
     expect(wrapper.findComponent(EditorProjectLoadingOverlay).props('showTopbarSkeleton')).toBe(false);
 
-    resolveNextData({ composition: {}, zoom: {}, presentation: {} });
+    resolveNextData(replacementEditorData);
     await flushPromises();
     await wrapper.vm.$nextTick();
 
@@ -301,6 +360,11 @@ describe('EditorWindowApp', () => {
     expect(wrapper.find('.mock-editor[data-project-id="project-1"]').exists()).toBe(false);
     expect(document.title).toBe('Next project - Beam Editor');
     expect(wrapper.find('.editor-project-loading-overlay').exists()).toBe(true);
+    const replacementEditor = wrapper.findComponent({ name: 'MockVideoEditor' });
+    const receivedReplacement = replacementEditor.props('editorData') as typeof replacementEditorData;
+    expect(receivedReplacement).toBe(replacementEditorData);
+    expect(receivedReplacement.cursor.events[0]).toBe(replacementCursorEvent);
+    expect(isReactive(receivedReplacement.cursor.events[0])).toBe(false);
   });
 
   it('ignores a stale video load after the context switches to a screenshot', async () => {

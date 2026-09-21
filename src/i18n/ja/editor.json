@@ -1,5 +1,9 @@
 {
   "LinkedClipsDeleteDialog": {
+    "preview": "プレビュー",
+    "selectPreview": "{name} をプレビュー",
+    "previewUnavailable": "このプレビューを再生できません。",
+    "seekPreview": "プレビューをシーク",
     "title": "リンクされたクリップを削除",
     "description": "この項目にはリンクされたクリップがあります。削除するクリップを選択してください。",
     "deleteAll": "すべて削除（{count}）",
@@ -221,6 +225,7 @@
     "unlock": "ロック解除",
     "locked": "ロック中",
     "removeGap": "空白を削除",
+    "removeGapBlocked": "この空白は削除できません。別のクリップやズームが重なっているか、リンクされた項目がロックされています。",
     "lockedMessage": "{name} はロックされています。変更できません。"
   },
   "TimelineVideoClip": {

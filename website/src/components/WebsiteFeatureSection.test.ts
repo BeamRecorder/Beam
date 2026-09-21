@@ -127,9 +127,7 @@ describe('WebsiteFeatureSection', () => {
 
     await wrapper.findAll('.feature-section__modes button')[2]!.trigger('click');
 
-    expect(wrapper.get('.feature-section__message h3').text().replaceAll(/\s+/g, ' ')).toBe(
-      'Capture. Explain. Copy.',
-    );
+    expect(wrapper.get('.feature-section__message h3').text().replaceAll(/\s+/g, ' ')).toBe('Capture. Explain. Copy.');
     expect(wrapper.findAll('.feature-card')).toHaveLength(1);
     expect(wrapper.get('.feature-card h4').text()).toBe('Crop and resize');
     expect(wrapper.get('.feature-card__placeholder').attributes('aria-label')).toBe('Crop media');

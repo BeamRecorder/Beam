@@ -24,9 +24,14 @@ const identifier = (value) => typeof value === 'string' && value.length > 0 && v
 
 function validateScreenshotComposition(state) {
   const ids = new Set(['__background__', '__watermark__']);
+  const requiredIds = new Set();
+  if (state.canvas.showBackground) requiredIds.add('__background__');
+  if (state.canvas.watermark?.enabled) requiredIds.add('__watermark__');
+  if (state.image.enabled) requiredIds.add(state.image.id);
   for (const item of [state.image, ...state.shapes, ...(state.effects ?? []), ...(state.images ?? [])]) {
     if (ids.has(item.id)) throw new Error('Duplicate screenshot layer identifier.');
     ids.add(item.id);
+    if (item !== state.image) requiredIds.add(item.id);
   }
   if (state.cursors !== undefined) {
     if (!Array.isArray(state.cursors) || state.cursors.length + state.shapes.length > 500)
@@ -55,10 +60,15 @@ function validateScreenshotComposition(state) {
       )
         throw new Error('Invalid screenshot cursor.');
       ids.add(cursor.id);
+      requiredIds.add(cursor.id);
     }
   }
   if (state.composition === undefined) return; // Older documents keep their original paint order on load.
-  if (!Array.isArray(state.composition) || state.composition.length !== ids.size)
+  if (
+    !Array.isArray(state.composition) ||
+    state.composition.length < requiredIds.size ||
+    state.composition.length > ids.size
+  )
     throw new Error('Invalid screenshot composition.');
   const seen = new Set();
   for (const layer of state.composition) {
@@ -73,5 +83,6 @@ function validateScreenshotComposition(state) {
       throw new Error('Invalid screenshot compositing settings.');
     seen.add(layer.id);
   }
+  if ([...requiredIds].some((id) => !seen.has(id))) throw new Error('Invalid screenshot composition.');
 }
 module.exports = { validateScreenshotComposition };

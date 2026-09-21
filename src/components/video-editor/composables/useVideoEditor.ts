@@ -221,14 +221,10 @@ export function useVideoEditor(options: {
     },
     { immediate: true },
   );
-  watch(
-    editorData,
-    () => {
-      compositionState.synchronizeRecording();
-      zoomState.ensureAutomaticZooms();
-    },
-    { deep: true },
-  );
+  watch(editorData, () => {
+    compositionState.synchronizeRecording();
+    zoomState.ensureAutomaticZooms();
+  });
   let playbackLoad = 0;
   watch(
     () =>

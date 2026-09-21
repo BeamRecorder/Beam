@@ -1,15 +1,23 @@
 const EDITOR_OPEN_TIMEOUT_MS = 30_000;
 
-function editorTimeoutError(session) {
+function editorStartupError(session, code, message) {
   const stage = session.lastProgressStage || 'openingWindow';
   const progress = Number.isFinite(session.lastProgressValue) ? session.lastProgressValue : 0;
-  return new Error(
+  const stageAgeMs = session.lastProgressAt ? Math.max(0, Date.now() - session.lastProgressAt) : null;
+  const error = new Error(
     [
-      'The editor did not finish opening the project within 30 seconds.',
-      `Last reported stage: ${stage} (${progress}%).`,
+      `${code}: ${message}`,
+      `Last confirmed step: ${stage} (${progress}%).`,
+      `Time since this step started: ${stageAgeMs === null ? 'unknown' : `${stageAgeMs} ms`}.`,
       `Editor document loaded: ${session.documentLoaded ? 'yes' : 'no'}.`,
     ].join('\n'),
   );
+  error.code = code;
+  return error;
+}
+
+function editorTimeoutError(session) {
+  return editorStartupError(session, 'BEAM_EDITOR_TIMEOUT', 'The editor did not finish opening within 30 seconds.');
 }
 
 function createEditorStartupGuard(session) {
@@ -30,12 +38,17 @@ function createEditorStartupGuard(session) {
     reject(error);
   };
   session.window.webContents.on('did-fail-load', (_event, code, description, _url, isMainFrame) => {
-    if (isMainFrame !== false && code !== -3) fail(new Error(`Editor loading failed (${code}): ${description}`));
+    if (isMainFrame !== false && code !== -3)
+      fail(editorStartupError(session, 'BEAM_EDITOR_LOAD_FAILED', `Editor loading failed (${code}): ${description}`));
   });
   session.window.webContents.on('render-process-gone', (_event, details) => {
-    fail(new Error(`Editor renderer stopped: ${details.reason}`));
+    fail(editorStartupError(session, 'BEAM_EDITOR_RENDERER_GONE', `Editor renderer stopped: ${details.reason}`));
   });
-  session.window.on('unresponsive', () => fail(new Error('The editor stopped responding while opening the project.')));
+  session.window.on('unresponsive', () =>
+    fail(
+      editorStartupError(session, 'BEAM_EDITOR_UNRESPONSIVE', 'The editor window stopped responding while opening.'),
+    ),
+  );
   return {
     clear,
     fail,

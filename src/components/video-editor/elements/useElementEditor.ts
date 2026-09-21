@@ -28,7 +28,11 @@ export function provideElementEditor(options: ElementEditorOptions): ElementEdit
     const style =
       family === 'shape'
         ? { ...DEFAULT_ANNOTATION_SHAPE_STYLE }
-        : normalizeShapeLayerStyle({ family, preset: defaultShapePresetFor(family) });
+        : normalizeShapeLayerStyle({
+            family,
+            preset: defaultShapePresetFor(family),
+            ...(family === 'arrow' ? { arrowThickness: 12, arrowHeadSize: 18 } : {}),
+          });
     return {
       ...style,
       id,
@@ -44,7 +48,12 @@ export function provideElementEditor(options: ElementEditorOptions): ElementEdit
       sourceInMs: 0,
       playbackRate: 1,
       transitions: { entry: null, exit: null },
-      transform: { x: 0.3, y: 0.3, width: 0.4, height: family === 'text' || family === 'arrow' ? 0.16 : 0.3 },
+      transform: {
+        x: 0.3,
+        y: 0.3,
+        width: family === 'arrow' ? 0.2 : 0.4,
+        height: family === 'arrow' ? 0.055 : family === 'text' ? 0.16 : 0.3,
+      },
       ...(family === 'text' ? { text: createElementText(t('newText')) } : {}),
     };
   };

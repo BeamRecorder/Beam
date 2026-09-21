@@ -13,7 +13,9 @@ const ScreenshotEditor = shallowRef<Component>();
 const screenshotId = ref<string | null>(null);
 
 const project = ref<CaptureProject | null>(null);
-const editorData = ref<ProjectEditorData | null>(null);
+// Session cursor/input arrays are immutable and can be large after a long recording.
+// Keep them out of Vue's deep reactive graph during editor startup.
+const editorData = shallowRef<ProjectEditorData | null>(null);
 const loading = ref(true);
 const error = ref('');
 const editorGeneration = ref(0);
@@ -74,6 +76,7 @@ const loadProject = async (projectId: string) => {
     capture.reportEditorLoadingStage('loadingEditorModule');
     const editor = await import('./VideoEditor.vue');
     if (generation !== loadGeneration) return;
+    capture.reportEditorLoadingStage('initializingEditor');
     VideoEditor.value = editor.default;
     project.value = nextProject;
     document.title = editorTitle(nextProject.name);
@@ -141,7 +144,6 @@ const handleOpenProject = (nextProject: CaptureProject) => {
 
 const notifyEditorReady = async (generation: number) => {
   if (generation !== loadGeneration || generation !== editorGeneration.value || !project.value) return;
-  capture.reportEditorLoadingStage('renderingEditor');
   if (nativeEditorReadyNotified) return;
   nativeEditorReadyNotified = true;
   await waitForEditorPaint();

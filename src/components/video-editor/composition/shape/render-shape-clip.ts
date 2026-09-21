@@ -184,7 +184,7 @@ export function drawShapeClip(
         ctx.fill(path, definition.fillRule ?? 'nonzero');
       }
       if (style.borderWidth > 0) {
-        ctx.shadowColor = 'transparent';
+        if (style.fillEnabled !== false) ctx.shadowColor = 'transparent';
         ctx.strokeStyle = style.borderColor;
         ctx.lineWidth = style.borderWidth * scale;
         ctx.stroke(path);
@@ -196,7 +196,7 @@ export function drawShapeClip(
         ctx.fill();
       }
       if (style.borderWidth > 0) {
-        ctx.shadowColor = 'transparent';
+        if (style.fillEnabled !== false) ctx.shadowColor = 'transparent';
         ctx.strokeStyle = style.borderColor;
         ctx.lineWidth = style.borderWidth * scale;
         ctx.stroke();

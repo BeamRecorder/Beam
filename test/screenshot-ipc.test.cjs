@@ -566,11 +566,17 @@ test('returns no screenshot asset when the native clipboard is empty', async () 
 });
 
 test('imports a valid native clipboard image into the screenshot project', async () => {
+  const clipboardPng = Buffer.alloc(24);
+  pngBytes.subarray(0, 8).copy(clipboardPng);
+  clipboardPng.writeUInt32BE(13, 8);
+  clipboardPng.write('IHDR', 12, 'ascii');
+  clipboardPng.writeUInt32BE(640, 16);
+  clipboardPng.writeUInt32BE(360, 20);
   const fixture = makeFixture({
     clipboardImage: {
       isEmpty: () => false,
       getSize: () => ({ width: 640, height: 360 }),
-      toPNG: () => pngBytes,
+      toPNG: () => clipboardPng,
     },
   });
   try {
@@ -586,7 +592,7 @@ test('imports a valid native clipboard image into the screenshot project', async
     assert.match(asset.fileName, /^[0-9a-f-]{36}\.png$/);
     assert.deepEqual(
       fs.readFileSync(path.join(fixture.screenshotRoot, screenshot.id, 'media', asset.fileName)),
-      pngBytes,
+      clipboardPng,
     );
   } finally {
     fixture.cleanup();

@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { createComposition } from './engine/clip-engine';
+import { createComposition, moveClip, splitClip } from './engine/clip-engine';
 import type { AudioClip, Clip, ClipComposition, MediaAsset, VisualClip } from '~/media/shared/composition-types';
 import { removeTimelineGap, timelineGaps } from './timeline-gaps';
 import type { TimelineGap } from './timeline-lock-types';
+import type { ZoomElement } from '../zoom/zoom-types';
 
 const asset = (id: string, kind: MediaAsset['kind'] = 'video'): MediaAsset => ({
   id,
@@ -64,6 +65,14 @@ const composition = (clips: Clip[]): ClipComposition => {
   return createComposition(assets, clips);
 };
 
+const recordingComposition = (clips: Clip[]): ClipComposition => {
+  const base = composition(clips);
+  return createComposition(
+    base.assets.map((entry) => ({ ...entry, origin: 'session' as const, sessionId: 'recording-session' })),
+    clips,
+  );
+};
+
 const lane = (next: ClipComposition, ids: string[]) => next.clips.filter((clip) => ids.includes(clip.id));
 
 const gapBetween = (next: ClipComposition, ids: string[], startMs?: number) => {
@@ -77,6 +86,16 @@ const clipAt = (next: ClipComposition, id: string) => {
   if (!clip) throw new Error(`Missing clip ${id}`);
   return clip;
 };
+
+const manualZoom = (id: string, startMs: number, endMs: number): ZoomElement => ({
+  id,
+  sessionId: 'session-1',
+  startMs,
+  endMs,
+  focus: { cx: 0.5, cy: 0.5 },
+  depth: 2,
+  mode: 'manual',
+});
 
 describe('timeline gaps', () => {
   it('finds leading and internal gaps, ignores overlaps, and omits the trailing range', () => {
@@ -96,7 +115,7 @@ describe('timeline gaps', () => {
     expect(timelineGaps([])).toEqual([]);
   });
 
-  it('removes a leading gap by moving every later clip in that lane left', () => {
+  it('removes a leading gap by moving every later clip on every lane left', () => {
     const next = composition([
       visual('first', 1_000, { trackId: 'lane' }),
       visual('second', 3_000, { trackId: 'lane' }),
@@ -108,7 +127,7 @@ describe('timeline gaps', () => {
 
     expect(clipAt(result, 'first').timelineStartMs).toBe(0);
     expect(clipAt(result, 'second').timelineStartMs).toBe(2_000);
-    expect(clipAt(result, 'unrelated').timelineStartMs).toBe(3_000);
+    expect(clipAt(result, 'unrelated').timelineStartMs).toBe(2_000);
   });
 
   it('recomputes the lane gap and rejects stale bounds, incomplete ids, and another lane', () => {
@@ -174,6 +193,45 @@ describe('timeline gaps', () => {
     expect(JSON.stringify(next)).toBe(originalSource);
   });
 
+  it('removes a gap on a right recording fragment without moving the left fragment', () => {
+    const next = recordingComposition([
+      visual('recording-screen', 0, {
+        trackId: 'recording-screen-track',
+        groupId: 'recording',
+        timelineDurationMs: 6_000,
+        sourceDurationMs: 6_000,
+      }),
+      microphone('recording-microphone', 0, {
+        groupId: 'recording',
+        timelineDurationMs: 6_000,
+        sourceDurationMs: 6_000,
+        recordingClipId: 'recording-screen',
+      }),
+    ]);
+    let id = 0;
+    const split = splitClip(next, 'recording-screen', 2_000, () => `recording-fragment-${++id}`);
+    const rightScreen = split.clips.find(
+      (clip): clip is VisualClip => clip.kind === 'video' && clip.timelineStartMs === 2_000,
+    );
+    if (!rightScreen) throw new Error('Expected the right recording screen fragment.');
+    const moved = moveClip(split, rightScreen.id, 4_000);
+    const gap = gapBetween(
+      moved,
+      moved.clips
+        .filter((clip) => 'trackId' in clip && clip.trackId === 'recording-screen-track')
+        .map((clip) => clip.id),
+      2_000,
+    );
+
+    const result = removeTimelineGap(moved, gap);
+
+    expect(clipAt(result, 'recording-screen').timelineStartMs).toBe(0);
+    expect(clipAt(result, 'recording-microphone').timelineStartMs).toBe(0);
+    expect(clipAt(result, rightScreen.id).timelineStartMs).toBe(2_000);
+    expect(clipAt(result, 'recording-fragment-2').timelineStartMs).toBe(2_000);
+    expect(clipAt(result, 'recording-fragment-2')).toMatchObject({ recordingClipId: rightScreen.id });
+  });
+
   it('does not ripple when the downstream clip or a linked companion is locked', () => {
     const lockedDirect = composition([
       visual('before-direct', 0, { trackId: 'lane' }),
@@ -204,7 +262,7 @@ describe('timeline gaps', () => {
     expect(clipAt(next, 'main-after').timelineStartMs).toBe(3_000);
     expect(clipAt(next, 'companion-after').timelineStartMs).toBe(3_000);
   });
-  it('closes microphone gaps without moving another audio role', () => {
+  it('closes microphone gaps by rippling every downstream audio role', () => {
     const next = composition([
       microphone('mic-a', 0),
       microphone('mic-b', 3000),
@@ -212,7 +270,54 @@ describe('timeline gaps', () => {
     ]);
     const result = removeTimelineGap(next, { clipIds: ['mic-a', 'mic-b'], startMs: 1000, endMs: 3000 });
     expect(clipAt(result, 'mic-b').timelineStartMs).toBe(1000);
-    expect(clipAt(result, 'system')).toBe(clipAt(next, 'system'));
+    expect(clipAt(result, 'system').timelineStartMs).toBe(1000);
+  });
+
+  it('ripples downstream clips on every lane when the gap is empty globally', () => {
+    const next = composition([
+      visual('target-before', 0, { trackId: 'target-lane' }),
+      visual('target-after', 3_000, { trackId: 'target-lane' }),
+      visual('other-before', 0, { trackId: 'other-lane' }),
+      visual('other-after', 3_000, { trackId: 'other-lane' }),
+    ]);
+    const gap = gapBetween(next, ['target-before', 'target-after'], 1_000);
+
+    const result = removeTimelineGap(next, gap);
+
+    expect(clipAt(result, 'target-after').timelineStartMs).toBe(1_000);
+    expect(clipAt(result, 'other-after').timelineStartMs).toBe(1_000);
+  });
+
+  it('rejects a global ripple when another lane overlaps the requested gap', () => {
+    const next = composition([
+      visual('target-before', 0, { trackId: 'target-lane' }),
+      visual('target-after', 3_000, { trackId: 'target-lane' }),
+      visual('other-before', 0, { trackId: 'other-lane' }),
+      visual('other-overlap', 1_500, {
+        trackId: 'other-lane',
+        timelineDurationMs: 500,
+        sourceDurationMs: 500,
+      }),
+    ]);
+    const gap = gapBetween(next, ['target-before', 'target-after'], 1_000);
+
+    const result = removeTimelineGap(next, gap);
+
+    expect(result).toBe(next);
+  });
+
+  it('blocks an overlapping manual zoom but allows a downstream zoom', () => {
+    const next = composition([
+      visual('target-before', 0, { trackId: 'target-lane' }),
+      visual('target-after', 3_000, { trackId: 'target-lane' }),
+    ]);
+    const gap = gapBetween(next, ['target-before', 'target-after'], 1_000);
+
+    expect(removeTimelineGap(next, gap, [manualZoom('overlapping-zoom', 1_500, 2_500)])).toBe(next);
+
+    const result = removeTimelineGap(next, gap, [manualZoom('downstream-zoom', 3_000, 3_500)]);
+    expect(result).not.toBe(next);
+    expect(clipAt(result, 'target-after').timelineStartMs).toBe(1_000);
   });
 
   it('rejects empty, missing, unsupported and mixed lane requests', () => {

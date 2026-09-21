@@ -521,7 +521,9 @@ describe('VideoEditor', () => {
       const current = state.compositionState.composition.value as ClipComposition;
       state.compositionState.composition.value = {
         ...current,
-        clips: current.clips.map((clip) => (clip.id === 'screen' ? { ...clip, timelineStartMs: 1_000 } : clip)),
+        clips: current.clips.map((clip) =>
+          clip.id === 'screen' || clip.id === 'audio' ? { ...clip, timelineStartMs: 1_000 } : clip,
+        ),
       };
       await mounted.vm.$nextTick();
       await vi.advanceTimersByTimeAsync(300);
@@ -535,7 +537,10 @@ describe('VideoEditor', () => {
       await mounted.vm.$nextTick();
 
       expect((state.compositionState.composition.value as ClipComposition).clips).toEqual(
-        expect.arrayContaining([expect.objectContaining({ id: 'screen', timelineStartMs: 0 })]),
+        expect.arrayContaining([
+          expect.objectContaining({ id: 'screen', timelineStartMs: 0 }),
+          expect.objectContaining({ id: 'audio', timelineStartMs: 0 }),
+        ]),
       );
       expect(historyState.commitNow).toHaveBeenCalledTimes(commitCallsBefore + 2);
       expect(historyState.undoStack?.value).toHaveLength(historyEntriesBefore + 1);
@@ -547,7 +552,10 @@ describe('VideoEditor', () => {
 
       expect(historyState.undo).toHaveBeenCalledOnce();
       expect((state.compositionState.composition.value as ClipComposition).clips).toEqual(
-        expect.arrayContaining([expect.objectContaining({ id: 'screen', timelineStartMs: 1_000 })]),
+        expect.arrayContaining([
+          expect.objectContaining({ id: 'screen', timelineStartMs: 1_000 }),
+          expect.objectContaining({ id: 'audio', timelineStartMs: 1_000 }),
+        ]),
       );
     } finally {
       vi.useRealTimers();

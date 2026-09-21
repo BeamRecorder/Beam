@@ -1,14 +1,18 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, watch, type Component } from 'vue';
-import { Captions, Camera, Check, Film, Image, Layers, Monitor, Palette, Shapes, Trash2, Volume2 } from '@lucide/vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { Check, Trash2 } from '@lucide/vue';
 import Button from '~/components/ui/button/Button.vue';
 import Dialog from '~/components/ui/dialog/Dialog.vue';
-import type { Clip, ClipKind } from '~/media/shared/composition-types';
+import type { Clip, ClipKind, MediaAsset } from '~/media/shared/composition-types';
 import { useTranslate } from '~/i18n/useTranslate';
+import LinkedClipPreviewPlayer from './LinkedClipPreviewPlayer.vue';
+import LinkedClipThumbnail from './LinkedClipThumbnail.vue';
+import { useLinkedClipPosters } from './linked-clip-posters';
 
 const props = defineProps<{
   isOpen: boolean;
   clips: Clip[];
+  assets?: MediaAsset[];
 }>();
 const emit = defineEmits<{
   (event: 'close'): void;
@@ -17,20 +21,20 @@ const emit = defineEmits<{
 const { t } = useTranslate('LinkedClipsDeleteDialog');
 const { t: tCanvas } = useTranslate('CanvasPanel');
 
-const kindIcons: Record<ClipKind, Component> = {
-  screen: Monitor,
-  video: Film,
-  image: Image,
-  webcam: Camera,
-  color: Palette,
-  shape: Shapes,
-  blur: Layers,
-  audio: Volume2,
-  caption: Captions,
-};
 const kindLabel = (kind: ClipKind) =>
   kind === 'color' ? tCanvas('color') : kind === 'shape' ? tCanvas('shapesAndArrows') : t(`kind.${kind}`);
 const allClipIds = computed(() => props.clips.map((clip) => clip.id));
+const assetById = computed(() => new Map((props.assets ?? []).map((asset) => [asset.id, asset])));
+const clipAsset = (clip: Clip) => ('assetId' in clip ? assetById.value.get(clip.assetId) : undefined);
+const { posterUrl, requestPoster } = useLinkedClipPosters(computed(() => props.isOpen));
+const selectedClipId = ref<string | null>(null);
+const selectedClip = computed(
+  () => props.clips.find((clip) => clip.id === selectedClipId.value) ?? props.clips[0] ?? null,
+);
+const formatTime = (milliseconds: number) => {
+  const seconds = Math.floor(milliseconds / 1_000);
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+};
 const COMPLETION_CLOSE_DELAY_MS = 900;
 let hadClips = false;
 let closeTimer = 0;
@@ -41,6 +45,7 @@ watch(
     window.clearTimeout(closeTimer);
     closeTimer = 0;
     if (!isOpen) {
+      selectedClipId.value = null;
       hadClips = false;
       return;
     }
@@ -57,9 +62,20 @@ onBeforeUnmount(() => window.clearTimeout(closeTimer));
 </script>
 
 <template>
-  <Dialog :is-open="isOpen" :title="t('title')" size="sm" @close="emit('close')">
+  <Dialog :is-open="isOpen" :title="t('title')" size="md" @close="emit('close')">
     <div class="linked-delete-content">
       <p class="linked-delete-description">{{ t('description') }}</p>
+
+      <div class="preview-slot">
+        <Transition name="preview-swap" appear>
+          <LinkedClipPreviewPlayer
+            v-if="selectedClip"
+            :key="selectedClip.id"
+            :clip="selectedClip"
+            :asset="clipAsset(selectedClip)"
+          />
+        </Transition>
+      </div>
 
       <Button
         v-if="clips.length"
@@ -74,14 +90,41 @@ onBeforeUnmount(() => window.clearTimeout(closeTimer));
       </Button>
 
       <div v-if="clips.length" class="linked-clip-list">
-        <div v-for="clip in clips" :key="clip.id" class="linked-clip-row">
-          <span class="clip-kind-icon" aria-hidden="true">
-            <component :is="kindIcons[clip.kind]" class="clip-type-svg" />
-          </span>
-          <span class="clip-details">
-            <span class="clip-name">{{ clip.name }}</span>
-            <span class="clip-kind">{{ kindLabel(clip.kind) }}</span>
-          </span>
+        <div
+          v-for="(clip, index) in clips"
+          :key="clip.id"
+          class="linked-clip-row"
+          :class="{ selected: selectedClip?.id === clip.id }"
+        >
+          <button
+            type="button"
+            class="select-preview-button"
+            :aria-pressed="selectedClip?.id === clip.id"
+            :aria-label="t('selectPreview', { name: clip.name })"
+            @click="selectedClipId = clip.id"
+          >
+            <LinkedClipThumbnail
+              :clip="clip"
+              :asset="clipAsset(clip)"
+              :poster-url="posterUrl(clip, clipAsset(clip))"
+              :request-poster="requestPoster"
+            />
+            <span class="clip-details">
+              <span class="clip-heading"
+                ><span class="clip-ordinal">{{ index + 1 }}.</span><span class="clip-name">{{ clip.name }}</span></span
+              >
+              <span class="clip-kind">{{ kindLabel(clip.kind) }}</span>
+              <span
+                v-if="clipAsset(clip)"
+                class="clip-source"
+                :title="clipAsset(clip)?.sessionPath ?? clipAsset(clip)?.fileName ?? clip.name"
+              >
+                {{ clipAsset(clip)?.sessionPath ?? clipAsset(clip)?.fileName }} · {{ formatTime(clip.sourceInMs) }}–{{
+                  formatTime(clip.sourceInMs + clip.sourceDurationMs)
+                }}
+              </span>
+            </span>
+          </button>
           <Button
             class="delete-one-button"
             variant="ghost"
@@ -118,37 +161,83 @@ onBeforeUnmount(() => window.clearTimeout(closeTimer));
   line-height: 1.45;
 }
 
+.preview-slot {
+  display: grid;
+  min-height: 0;
+}
+.preview-slot > * {
+  grid-area: 1 / 1;
+}
+.preview-swap-enter-active,
+.preview-swap-leave-active {
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+.preview-swap-enter-from {
+  opacity: 0;
+  transform: translateY(7px);
+}
+.preview-swap-leave-to {
+  opacity: 0;
+  transform: translateY(-7px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .preview-swap-enter-active,
+  .preview-swap-leave-active {
+    transition: none;
+  }
+}
+
 .linked-clip-list {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-height: 0;
+  max-height: clamp(160px, 30vh, 280px);
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding: 2px;
 }
 
 .linked-clip-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 48px;
-  padding: 7px 8px;
+  min-height: 62px;
+  padding: 5px 8px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-bg-surface);
 }
-
-.clip-kind-icon {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  flex: 0 0 28px;
-  border-radius: var(--radius-sm);
-  color: var(--color-primary);
+.linked-clip-row.selected {
+  border-color: var(--color-primary);
   background: var(--color-primary-light);
 }
+.select-preview-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.select-preview-button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
 
-.clip-type-svg {
-  width: 15px;
-  height: 15px;
+.clip-source {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .clip-details {
@@ -157,6 +246,17 @@ onBeforeUnmount(() => window.clearTimeout(closeTimer));
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+.clip-heading {
+  display: flex;
+  min-width: 0;
+  gap: 4px;
+}
+
+.clip-ordinal {
+  color: var(--text-muted);
+  font-size: 12px;
 }
 
 .clip-name {

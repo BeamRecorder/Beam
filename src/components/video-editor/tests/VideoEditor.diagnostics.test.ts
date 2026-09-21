@@ -87,6 +87,17 @@ describe('VideoEditor diagnostics and keyboard behavior', () => {
 
     editorState.store.compositionState.selectedClipId.value = null;
     editorState.store.activeTab.value = 'zoom';
+    editorState.store.zoomState.zoomElements.value = [
+      {
+        id: 'z',
+        sessionId: 'session-1',
+        startMs: 0,
+        endMs: 1_000,
+        focus: { cx: 0.5, cy: 0.5 },
+        depth: 2,
+        mode: 'manual',
+      },
+    ];
     editorState.store.zoomState.selectedZoom.value = { id: 'z', mode: 'manual' };
     editorState.store.zoomState.selectedZoomIds.value = ['z'];
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', cancelable: true }));

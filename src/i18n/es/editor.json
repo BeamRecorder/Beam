@@ -1,5 +1,9 @@
 {
   "LinkedClipsDeleteDialog": {
+    "preview": "Vista previa",
+    "selectPreview": "Previsualizar {name}",
+    "previewUnavailable": "No se puede reproducir esta vista previa.",
+    "seekPreview": "Desplazarse por la vista previa",
     "title": "Eliminar clips vinculados",
     "description": "Este elemento contiene clips vinculados. Elige exactamente cuáles quieres eliminar.",
     "deleteAll": "Eliminar todo ({count})",
@@ -221,6 +225,7 @@
     "unlock": "Desbloquear",
     "locked": "Bloqueado",
     "removeGap": "Eliminar espacio",
+    "removeGapBlocked": "No se puede eliminar este espacio: otro clip o zoom se superpone, o un elemento vinculado está bloqueado.",
     "lockedMessage": "{name} está bloqueado. No se pueden realizar modificaciones."
   },
   "TimelineVideoClip": {

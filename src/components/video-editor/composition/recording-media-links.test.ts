@@ -130,6 +130,39 @@ describe('recording media links', () => {
     expect(recordingMediaOwner(composition([movedOwner, timelineCandidate, missingOwner]), missingOwner)).toBeNull();
   });
 
+  it('recovers the grouped right-hand owner when a split sidecar still points to the left screen', () => {
+    const leftScreen = screen('left-screen', {
+      assetId: 'left-screen-asset',
+      groupId: 'left-group',
+      timelineDurationMs: 2_000,
+    });
+    const rightScreen = screen('right-screen', {
+      assetId: 'right-screen-asset',
+      groupId: 'right-group',
+      timelineStartMs: 4_000,
+      timelineDurationMs: 2_000,
+    });
+    const leftMicrophone = audio('left-microphone', 'microphone', {
+      assetId: 'left-microphone-asset',
+      groupId: 'left-group',
+      timelineDurationMs: 2_000,
+      recordingClipId: leftScreen.id,
+    });
+    const rightMicrophone = audio('right-microphone', 'microphone', {
+      assetId: 'right-microphone-asset',
+      groupId: 'right-group',
+      timelineStartMs: 4_000,
+      timelineDurationMs: 2_000,
+      recordingClipId: leftScreen.id,
+    });
+    const next = composition([leftScreen, rightScreen, leftMicrophone, rightMicrophone]);
+
+    expect(recordingMediaOwner(next, rightMicrophone)).toBe(rightScreen);
+    expect(new Set(recordingLinkedClipIds(next, [rightScreen.id]))).toEqual(
+      new Set([rightScreen.id, rightMicrophone.id]),
+    );
+  });
+
   it('uses the sidecar midpoint, then the sole screen fallback, and otherwise returns no owner', () => {
     const first = screen('first', { timelineStartMs: 0, timelineDurationMs: 1_000 });
     const second = screen('second', { timelineStartMs: 3_000, timelineDurationMs: 1_000 });

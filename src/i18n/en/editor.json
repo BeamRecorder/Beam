@@ -1,5 +1,9 @@
 {
   "LinkedClipsDeleteDialog": {
+    "preview": "Preview",
+    "selectPreview": "Preview {name}",
+    "previewUnavailable": "This preview cannot be played.",
+    "seekPreview": "Seek in preview",
     "title": "Delete linked clips",
     "description": "This item has linked clips. Choose exactly which clips you want to delete.",
     "deleteAll": "Delete all ({count})",
@@ -221,6 +225,7 @@
     "unlock": "Unlock",
     "locked": "Locked",
     "removeGap": "Remove gap",
+    "removeGapBlocked": "Cannot remove this gap: another clip or zoom overlaps it, or a linked item is locked.",
     "lockedMessage": "{name} is locked. Modifications are not possible."
   },
   "TimelineVideoClip": {

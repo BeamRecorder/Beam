@@ -28,7 +28,7 @@ describe('TimelineTracks', () => {
       .find((component) => (component.props('clip') as VisualClip).id === 'screen-clip');
     if (!screenClip) throw new Error('Expected the screen timeline clip stub.');
     const zoomButton = mounted!.get('.cursor-zoom-indicator:not(.preview-ghost)');
-    expect((zoomButton.element as HTMLElement).style.left).toBe('20%');
+    expect((zoomButton.element as HTMLElement).style.transform).toMatch(/^translate3d\(200px,/);
 
     await screenClip.trigger('pointerdown', { clientX: 200 });
     window.dispatchEvent(pointerEvent('pointermove', 300));
@@ -37,7 +37,7 @@ describe('TimelineTracks', () => {
     const preview = mounted!.emitted('preview:composition')?.at(-1)?.[0] as ClipComposition | null | undefined;
     expect(preview?.clips.find((clip) => clip.id === 'screen-clip')).toMatchObject({ timelineStartMs: 1_000 });
     expect(preview?.clips.find((clip) => clip.id === 'webcam-clip')).toMatchObject({ timelineStartMs: 1_000 });
-    expect((zoomButton.element as HTMLElement).style.left).toBe('30%');
+    expect((zoomButton.element as HTMLElement).style.transform).toMatch(/^translate3d\(300px,/);
     expect(mounted!.emitted('move:selection') ?? []).toHaveLength(0);
 
     window.dispatchEvent(pointerEvent('pointerup', 300));
@@ -70,7 +70,7 @@ describe('TimelineTracks', () => {
 
     const preview = mounted!.emitted('preview:composition')?.at(-1)?.[0] as ClipComposition | null | undefined;
     expect(preview?.clips.find((clip) => clip.id === 'imported-audio')).toMatchObject({ timelineStartMs: 0 });
-    expect((zoomButton.element as HTMLElement).style.left).toBe('0%');
+    expect((zoomButton.element as HTMLElement).style.transform).toMatch(/^translate3d\(0px,/);
 
     window.dispatchEvent(pointerEvent('pointerup', 0));
 
@@ -140,7 +140,9 @@ describe('TimelineTracks', () => {
     await flushPromises();
     window.dispatchEvent(pointerEvent('pointerup', 275));
 
-    expect(mounted!.emitted('move:clip')).toContainEqual([{ id: 'screen-clip', startMs: 1_000 }]);
+    expect(mounted!.emitted('move:selection')).toContainEqual([
+      expect.objectContaining({ clipIds: expect.arrayContaining(['screen-clip', 'webcam-clip']), deltaMs: 1_000 }),
+    ]);
   });
 
   it('moves and trims linked clips and zooms with clamped timeline bounds', async () => {
@@ -149,7 +151,9 @@ describe('TimelineTracks', () => {
     await clips[2]!.trigger('pointerdown', { clientX: 120 });
     window.dispatchEvent(pointerEvent('pointermove', 500));
     window.dispatchEvent(pointerEvent('pointerup', 500));
-    expect(mounted!.emitted('move:clip')).toContainEqual([expect.objectContaining({ id: 'screen-clip' })]);
+    expect(mounted!.emitted('move:selection')).toContainEqual([
+      expect.objectContaining({ clipIds: expect.arrayContaining(['screen-clip', 'webcam-clip']) }),
+    ]);
 
     await clips[2]!.find('.trim-handle.start').trigger('pointerdown', { clientX: 200 });
     window.dispatchEvent(pointerEvent('pointermove', 250));
@@ -193,11 +197,13 @@ describe('TimelineTracks', () => {
     expect(mounted!.emitted('preview:composition')).toContainEqual([
       expect.objectContaining({ clips: expect.any(Array) }),
     ]);
-    expect(mounted!.emitted('move:clip') ?? []).toHaveLength(0);
+    expect(mounted!.emitted('move:selection') ?? []).toHaveLength(0);
 
     window.dispatchEvent(pointerEvent('pointerup', 500));
     expect(mounted!.emitted('preview:composition')?.at(-1)).toEqual([null]);
-    expect(mounted!.emitted('move:clip')).toContainEqual([expect.objectContaining({ id: 'screen-clip' })]);
+    expect(mounted!.emitted('move:selection')).toContainEqual([
+      expect.objectContaining({ clipIds: expect.arrayContaining(['screen-clip', 'webcam-clip']) }),
+    ]);
 
     const originalDuration = (screenClip.props('clip') as VisualClip).timelineDurationMs;
     await screenClip.find('.trim-handle.end').trigger('pointerdown', { clientX: 500 });

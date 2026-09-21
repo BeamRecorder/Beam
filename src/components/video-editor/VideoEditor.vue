@@ -638,7 +638,7 @@ const lockTimelineSelection = (request: TimelineLockRequest) => {
 };
 const closeTimelineGap = (gap: TimelineGap) => {
   finishCrop();
-  const next = removeTimelineGap(composition.value, gap);
+  const next = removeTimelineGap(composition.value, gap, zoomElements.value);
   if (next === composition.value) return;
   const before = new Map(composition.value.clips.map((clip) => [clip.id, clip.timelineStartMs]));
   const result = shiftTimelineSelection({
@@ -646,7 +646,7 @@ const closeTimelineGap = (gap: TimelineGap) => {
     zoomElements: zoomElements.value,
     selection: {
       clipIds: next.clips.filter((clip) => before.get(clip.id) !== clip.timelineStartMs).map((clip) => clip.id),
-      zoomIds: [],
+      zoomIds: zoomElements.value.filter((zoom) => zoom.startMs >= gap.endMs).map((zoom) => zoom.id),
     },
     deltaMs: gap.startMs - gap.endMs,
   });
@@ -771,6 +771,7 @@ watch(
 );
 
 onMounted(() => {
+  capture.reportEditorLoadingStage?.('loadingPreview');
   stopInitialPlaybackWatch = watch(
     initialPlaybackSettled,
     (settled) => {
@@ -865,6 +866,7 @@ onBeforeUnmount(() => {
   if (editorReadyFallbackTimer) clearTimeout(editorReadyFallbackTimer);
   stopInitialPlaybackWatch?.();
 });
+capture.reportEditorLoadingStage?.('renderingEditor');
 </script>
 
 <template>
@@ -1230,6 +1232,7 @@ onBeforeUnmount(() => {
     <LinkedClipsDeleteDialog
       :is-open="isDeleteDialogOpen"
       :clips="linkedDeleteClips"
+      :assets="composition.assets"
       @delete="deleteFromDialog"
       @close="closeDeleteDialog"
     />

@@ -39,6 +39,7 @@ import { createScreenshotImageLoader } from './screenshot-assets';
 import CanvasMarqueeSurface from '../canvas/CanvasMarqueeSurface.vue';
 import type { CanvasMarqueeSelection, CanvasMarqueeTarget } from '../canvas/canvas-marquee-types';
 import ScreenshotAlignmentGuides from './ScreenshotAlignmentGuides.vue';
+import { screenshotPreviewSize } from './screenshot-preview-resolution';
 
 const { t } = useTranslate('ScreenshotEditor');
 const { t: canvasText } = useTranslate('CanvasPanel');
@@ -172,9 +173,7 @@ const paint = () => {
   if (loadedGeneration !== generation) return;
   const ctx = canvas.value?.getContext('2d');
   if (!ctx || !assets.value || !canvas.value || !available.width.value || !available.height.value) return;
-  const scale = Math.min(1, 1600 / Math.max(props.state.canvas.width, props.state.canvas.height));
-  const width = Math.round(props.state.canvas.width * scale),
-    height = Math.round(props.state.canvas.height * scale);
+  const { width, height } = screenshotPreviewSize(props.state.canvas, stageSize.value, window.devicePixelRatio);
   if (canvas.value.width !== width) canvas.value.width = width;
   if (canvas.value.height !== height) canvas.value.height = height;
   try {
@@ -462,7 +461,6 @@ onBeforeUnmount(() => {
     <slot name="overlay" />
   </div>
 </template>
-
 <style scoped>
 .screenshot-stage {
   position: relative;
@@ -495,6 +493,7 @@ canvas {
   right: 0;
   bottom: 20px;
   display: flex;
+  gap: 8px;
   justify-content: center;
 }
 </style>

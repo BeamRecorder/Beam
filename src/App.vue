@@ -107,6 +107,7 @@ const TeleprompterWindowApp = defineAsyncComponent(
 const currentProject = ref<CaptureProject | null>(null);
 const isPreparingEditor = ref(false);
 const editorLoadError = ref('');
+const editorLoadErrorCode = ref('');
 const editorLoadErrorAt = ref('');
 const appVersion = ref('Unknown');
 const editorLoadingProgress = ref<EditorLoadingProgress>({ stage: 'openingWindow', value: 10 });
@@ -198,6 +199,8 @@ onMounted(() => {
 
 const showEditorLoadError = (reason: unknown) => {
   editorLoadError.value = reason instanceof Error ? reason.message : String(reason);
+  editorLoadErrorCode.value =
+    reason instanceof Error && 'code' in reason && typeof reason.code === 'string' ? reason.code : '';
   editorLoadErrorAt.value = new Date().toISOString();
 };
 
@@ -398,6 +401,7 @@ const dismissRecorderLauncher = async () => {
     <EditorOpenError
       v-if="editorLoadError"
       :error="editorLoadError"
+      :error-code="editorLoadErrorCode"
       :progress="editorLoadingProgress"
       :app-version="appVersion"
       :runtime-platform="capture.platform"

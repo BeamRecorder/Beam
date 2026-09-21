@@ -6,6 +6,7 @@ import TimelineGapButtons from './TimelineGapButtons.vue';
 import WaveformCanvas from './waveform/WaveformCanvas.vue';
 import type { TimelineGap } from '../composition/timeline-lock-types';
 import type { TimelineAudioLane, TimelineAudioTracksProps } from './timeline-audio-tracks-types';
+import { linkedClipNames } from './timeline-linked-clips';
 
 const props = defineProps<TimelineAudioTracksProps>();
 const emit = defineEmits<{ 'remove:gap': [gap: TimelineGap] }>();
@@ -55,6 +56,7 @@ const lanes = computed(() => {
         v-if="lane.gaps"
         :clips="lane.clips"
         :composition="composition"
+        :zoom-elements="zoomElements"
         :duration-ms="layoutDurationMs"
         :width-px="rulerLayoutWidth"
         :moving="isMoving || isTrimming"
@@ -71,6 +73,7 @@ const lanes = computed(() => {
         :defer-thumbnail-requests="isWheelZooming || isTrimming || isMoving"
         :defer-waveform-draw="isWheelZooming || isMoving"
         :selected="selectedClipIdSet.has(clip.id)"
+        :linked-clip-names="linkedClipNames(composition, clip)"
         :waveform-bars="audioWaveforms[clip.id]?.bars"
         :waveform-bands="audioWaveforms[clip.id]?.bands"
         :waveform-source-duration-seconds="audioWaveforms[clip.id]?.sourceDurationSeconds"

@@ -1,5 +1,9 @@
 {
   "LinkedClipsDeleteDialog": {
+    "preview": "预览",
+    "selectPreview": "预览{name}",
+    "previewUnavailable": "无法播放此预览。",
+    "seekPreview": "预览进度",
     "title": "删除关联片段",
     "description": "此项目包含关联片段。请选择要删除的具体片段。",
     "deleteAll": "全部删除（{count}）",
@@ -221,6 +225,7 @@
     "unlock": "解锁",
     "locked": "已锁定",
     "removeGap": "删除间隙",
+    "removeGapBlocked": "无法删除此间隙：其他片段或缩放与其重叠，或关联项目已锁定。",
     "lockedMessage": "{name} 已锁定，无法修改。"
   },
   "TimelineVideoClip": {

@@ -1,7 +1,6 @@
 import type { ScreenshotState } from '~/api/types/screenshot';
 import type { MediaAsset } from '~/media/shared/composition-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { containedMediaRect } from '../canvas/output-canvas';
 import type { ScreenshotImageLayer } from './screenshot-layer-types';
 
 export const screenshotImage = (state: ScreenshotState, id: string | null) =>
@@ -13,7 +12,8 @@ export function createScreenshotImage(
   height: number,
   canvas: ScreenshotState['canvas'],
 ): ScreenshotImageLayer {
-  const fitted = containedMediaRect(width, height, canvas.width * 0.6, canvas.height * 0.6);
+  const scale = Math.min(1, canvas.width / width, canvas.height / height);
+  const fitted = { width: width * scale, height: height * scale };
   return {
     id: crypto.randomUUID(),
     kind: 'image',

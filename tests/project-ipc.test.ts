@@ -149,7 +149,12 @@ describe('background import IPC', () => {
   });
 
   it('imports a valid clipboard image into the requested project', async () => {
-    const png = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+    const png = Buffer.alloc(24);
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]).copy(png);
+    png.writeUInt32BE(13, 8);
+    png.write('IHDR', 12, 'ascii');
+    png.writeUInt32BE(800, 16);
+    png.writeUInt32BE(450, 20);
     const { pasteHandler, projectStore, clipboard, event } = setup({
       clipboardImage: {
         isEmpty: () => false,

@@ -24,4 +24,5 @@ export interface TimelineClipProps {
   deferThumbnailRequests?: boolean;
   deferWaveformDraw?: boolean;
   pasteHighlight?: boolean;
+  linkedClipNames?: string[];
 }

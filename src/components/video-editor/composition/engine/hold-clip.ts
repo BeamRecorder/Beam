@@ -41,6 +41,7 @@ export function holdClipAtPlayhead(
   const rightGroupId = source.groupId ? idFactory() : undefined;
   const holdGroupId = heldTargets.length > 1 ? idFactory() : undefined;
   const additions: Clip[] = [];
+  const rightIds = new Map<string, string>();
 
   next.clips = next.clips.map((clip) => {
     if (!targetIds.has(clip.id))
@@ -51,9 +52,11 @@ export function holdClipAtPlayhead(
     const offset = target - clip.timelineStartMs;
     const leftSourceDuration = Math.round(offset * clip.playbackRate);
     const rightDuration = clip.timelineDurationMs - offset;
+    const rightId = idFactory();
+    rightIds.set(clip.id, rightId);
     additions.push({
       ...clip,
-      id: idFactory(),
+      id: rightId,
       groupId: rightGroupId,
       timelineStartMs: target + HOLD_SEGMENT_DURATION_MS,
       timelineDurationMs: rightDuration,
@@ -89,6 +92,10 @@ export function holdClipAtPlayhead(
       transitions: normalizeClipTransitions({ entry: clip.transitions?.entry ?? null, exit: null }, offset, clip.kind),
     };
   });
+  for (const right of additions) {
+    if (right.recordingClipId && rightIds.has(right.recordingClipId))
+      right.recordingClipId = rightIds.get(right.recordingClipId);
+  }
   next.clips = normalizeClipOrders([...next.clips, ...additions]);
   validateComposition(next);
   return next;

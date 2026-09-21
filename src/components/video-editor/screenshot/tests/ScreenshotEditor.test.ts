@@ -87,7 +87,9 @@ describe('ScreenshotEditor', () => {
   });
 
   afterEach(() => {
+    document.body.classList.remove('beam-app-fullscreen-active');
     vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   it('surfaces load errors and still signals that initialization finished', async () => {
@@ -109,6 +111,113 @@ describe('ScreenshotEditor', () => {
     wrapper.findComponent(ScreenshotCanvasStub).vm.$emit('ready');
     expect(wrapper.emitted('ready')).toEqual([[]]);
     wrapper.unmount();
+  });
+
+  it('places the fullscreen preview action beside the screenshot dimensions control', async () => {
+    const wrapper = mountEditor();
+    await flushPromises();
+
+    const controls = wrapper.get('.canvas-controls');
+    expect(controls.find('button[aria-label="Dimensions"]').exists()).toBe(true);
+    expect(controls.find('button[aria-label="Fullscreen preview"]').exists()).toBe(true);
+    expect(controls.findAll('button').map((button) => button.attributes('aria-label'))).toEqual([
+      'Dimensions',
+      'Fullscreen preview',
+    ]);
+    wrapper.unmount();
+  });
+
+  it('keeps preview entry unavailable during text editing and drawing', async () => {
+    const wrapper = mountEditor();
+    await flushPromises();
+    const fullscreen = () => wrapper.get('button[aria-label="Fullscreen preview"]');
+    const editor = screenshotCanvasEditor!;
+
+    editor.add('drawing');
+    await wrapper.vm.$nextTick();
+    expect(fullscreen().attributes('disabled')).toBeDefined();
+
+    editor.add('drawing');
+    editor.add('text');
+    await wrapper.vm.$nextTick();
+    expect(fullscreen().attributes('disabled')).toBeDefined();
+
+    editor.cancelText();
+    await wrapper.vm.$nextTick();
+    expect(fullscreen().attributes('disabled')).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it('enters the fullscreen screenshot preview with an in-canvas back action', async () => {
+    vi.useFakeTimers();
+    const wrapper = mountEditor();
+    await flushPromises();
+
+    await wrapper.get('button[aria-label="Fullscreen preview"]').trigger('click');
+    await wrapper.vm.$nextTick();
+
+    const stage = wrapper.get('.screenshot-preview-stage');
+    expect(stage.classes()).toContain('is-app-fullscreen');
+    expect(stage.get('.fullscreen-preview-back button').text()).toContain('Back');
+
+    await stage.get('.fullscreen-preview-back button').trigger('click');
+    await vi.advanceTimersByTimeAsync(160);
+    await wrapper.vm.$nextTick();
+    expect(stage.classes()).not.toContain('is-app-fullscreen');
+    expect(stage.classes()).not.toContain('is-fullscreen-exiting');
+    wrapper.unmount();
+  });
+
+  it('exits the fullscreen screenshot preview with Escape', async () => {
+    vi.useFakeTimers();
+    const wrapper = mountEditor();
+    await flushPromises();
+
+    await wrapper.get('button[aria-label="Fullscreen preview"]').trigger('click');
+    const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    document.dispatchEvent(event);
+    await wrapper.vm.$nextTick();
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(wrapper.get('.screenshot-preview-stage').classes()).toContain('is-fullscreen-exiting');
+    await vi.advanceTimersByTimeAsync(160);
+    await wrapper.vm.$nextTick();
+    expect(wrapper.get('.screenshot-preview-stage').classes()).not.toContain('is-app-fullscreen');
+    expect(wrapper.find('button[aria-label="Fullscreen preview"]').exists()).toBe(true);
+    wrapper.unmount();
+  });
+
+  it('disables screenshot interaction, clears selection and hides composition while fullscreen', async () => {
+    const wrapper = mountEditor();
+    await flushPromises();
+
+    const canvas = wrapper.findComponent(ScreenshotCanvasStub);
+    canvas.vm.$emit('select', 'screenshot');
+    await wrapper.vm.$nextTick();
+    expect(canvas.props('selectedId')).toBe('screenshot');
+    expect(wrapper.findComponent(ScreenshotCompositionStub).exists()).toBe(true);
+
+    await wrapper.get('button[aria-label="Fullscreen preview"]').trigger('click');
+    await wrapper.vm.$nextTick();
+
+    expect(canvas.props('disabled')).toBe(true);
+    expect(canvas.props('selectedId')).toBe(null);
+    expect(canvas.props('selectedIds')).toEqual([]);
+    expect(canvas.props('cropping')).toBe(false);
+    expect(wrapper.findComponent(ScreenshotCompositionStub).exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('cleans up the fullscreen body state when the screenshot editor unmounts', async () => {
+    const wrapper = mountEditor();
+    await flushPromises();
+
+    await wrapper.get('button[aria-label="Fullscreen preview"]').trigger('click');
+    expect(document.body.classList.contains('beam-app-fullscreen-active')).toBe(true);
+
+    wrapper.unmount();
+
+    expect(document.body.classList.contains('beam-app-fullscreen-active')).toBe(false);
   });
 
   it('opens with the Elements panel active instead of canvas settings', async () => {
@@ -984,7 +1093,8 @@ describe('ScreenshotEditor', () => {
     const children = wrapper.get('.editor-body').element.children;
     expect(children[0]?.classList.contains('sidebar-island')).toBe(true);
     expect(children[1]?.classList.contains('properties-island')).toBe(true);
-    expect(children[2]?.getAttribute('data-testid')).toBe('screenshot-canvas');
+    expect(children[2]?.classList.contains('screenshot-preview-stage')).toBe(true);
+    expect(children[2]?.querySelector('[data-testid="screenshot-canvas"]')).not.toBeNull();
     expect(wrapper.find('[aria-label="Audio"]').exists()).toBe(false);
     await wrapper.get('[aria-label="Image"]').trigger('click');
     expect(wrapper.findComponent(ClipPropertiesStub).attributes('hide-layout')).toBeDefined();

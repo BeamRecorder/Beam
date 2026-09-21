@@ -1,5 +1,9 @@
 {
   "LinkedClipsDeleteDialog": {
+    "preview": "Xem trước",
+    "selectPreview": "Xem trước {name}",
+    "previewUnavailable": "Không thể phát bản xem trước này.",
+    "seekPreview": "Tua bản xem trước",
     "title": "Xóa các clip được liên kết",
     "description": "Mục này có các clip được liên kết. Hãy chọn chính xác những clip bạn muốn xóa.",
     "deleteAll": "Xóa tất cả ({count})",
@@ -221,6 +225,7 @@
     "unlock": "Mở khóa",
     "locked": "Đã khóa",
     "removeGap": "Xóa khoảng trống",
+    "removeGapBlocked": "Không thể xóa khoảng trống này: clip hoặc hiệu ứng thu phóng khác chồng lên, hoặc mục liên kết đã bị khóa.",
     "lockedMessage": "{name} đã bị khóa. Không thể chỉnh sửa."
   },
   "TimelineVideoClip": {

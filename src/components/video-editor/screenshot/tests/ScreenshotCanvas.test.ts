@@ -20,6 +20,7 @@ const renderer = vi.hoisted(() => ({
 const measurement = vi.hoisted(() => ({
   set: null as null | ((width: number, height: number) => void),
 }));
+const originalDevicePixelRatio = window.devicePixelRatio;
 
 vi.mock('../screenshot-render', () => renderer);
 vi.mock('@vueuse/core', async () => {
@@ -155,6 +156,7 @@ beforeEach(() => {
   measurement.set = null;
   animationFrames = new Map();
   frameSequence = 0;
+  Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: 1 });
   vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
     const id = ++frameSequence;
     animationFrames.set(id, callback);
@@ -178,6 +180,10 @@ beforeEach(() => {
 
 afterEach(() => {
   resetPropertyInteractions();
+  Object.defineProperty(window, 'devicePixelRatio', {
+    configurable: true,
+    value: originalDevicePixelRatio,
+  });
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -228,7 +234,7 @@ describe('ScreenshotCanvas', () => {
     wrapper.unmount();
   });
 
-  it('waits for measured stage dimensions, then draws at the capped resolution and selects the topmost shape', async () => {
+  it('waits for measured stage dimensions, then draws at the physical stage resolution and selects the topmost shape', async () => {
     const wrapper = mountCanvas();
     await flushPromises();
 
@@ -238,8 +244,8 @@ describe('ScreenshotCanvas', () => {
     await flushPromises();
     await flushAnimationFrames();
 
-    expect(canvas.element.width).toBe(1600);
-    expect(canvas.element.height).toBe(800);
+    expect(canvas.element.width).toBe(800);
+    expect(canvas.element.height).toBe(400);
     expect(renderer.loadScreenshotAssets.mock.calls[0]?.[0]).toBe('project-media://screenshot/screen-1/source.png');
     expect(renderer.loadScreenshotAssets.mock.calls[0]?.[1]).toEqual(
       expect.objectContaining({
@@ -253,8 +259,8 @@ describe('ScreenshotCanvas', () => {
         canvas: expect.objectContaining({ width: 2000, height: 1000 }),
       }),
       assets,
-      1600,
       800,
+      400,
       undefined,
     );
     expect(wrapper.emitted('ready')).toEqual([[]]);
@@ -283,6 +289,27 @@ describe('ScreenshotCanvas', () => {
     expect(selectionStyle).toContain('width: 40%');
     expect(selectionStyle).toContain('height: 40%');
     expect(selectionStyle).toContain('translate3d(320px, 160px, 0)');
+    wrapper.unmount();
+  });
+
+  it('uses device pixels for a HiDPI preview without exceeding the stage or output aspect ratio', async () => {
+    Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: 2 });
+    const wrapper = mountCanvas();
+    measurement.set?.(800, 600);
+    await flushPromises();
+    await flushAnimationFrames();
+
+    const canvas = wrapper.get('canvas').element as HTMLCanvasElement;
+    expect(canvas.width).toBe(1600);
+    expect(canvas.height).toBe(800);
+    expect(renderer.drawScreenshot).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ canvas: expect.objectContaining({ width: 2000, height: 1000 }) }),
+      assets,
+      1600,
+      800,
+      undefined,
+    );
     wrapper.unmount();
   });
 
@@ -486,7 +513,7 @@ describe('ScreenshotCanvas', () => {
       cursors: [cursor],
     });
     expect(call?.[2]).toEqual([cursorPack]);
-    expect(renderer.drawScreenshot).toHaveBeenCalledWith(expect.any(Object), state, assets, 1600, 800, undefined);
+    expect(renderer.drawScreenshot).toHaveBeenCalledWith(expect.any(Object), state, assets, 800, 400, undefined);
 
     const bounds = screenshotCursorTransform(cursor, state.canvas, pointer);
     const canvas = wrapper.get('canvas');

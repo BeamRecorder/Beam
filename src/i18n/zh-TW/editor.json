@@ -1,5 +1,9 @@
 {
   "LinkedClipsDeleteDialog": {
+    "preview": "預覽",
+    "selectPreview": "預覽{name}",
+    "previewUnavailable": "無法播放此預覽。",
+    "seekPreview": "預覽進度",
     "title": "刪除連結片段",
     "description": "此項目包含連結片段。請選擇要刪除的特定片段。",
     "deleteAll": "全部刪除（{count}）",
@@ -221,6 +225,7 @@
     "unlock": "解除鎖定",
     "locked": "已鎖定",
     "removeGap": "移除間隙",
+    "removeGapBlocked": "無法移除此間隙：其他片段或縮放與其重疊，或連結項目已鎖定。",
     "lockedMessage": "{name} 已鎖定，無法修改。"
   },
   "TimelineVideoClip": {

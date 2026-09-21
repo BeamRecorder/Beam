@@ -34,6 +34,8 @@ export function drawScreenshotLayer(
     const image = screenshotImage(state, layer.id);
     const asset = layer.id === state.image.id ? assets : assets.images?.get(layer.id);
     if (!image || !asset?.image || !asset.width || !asset.height) throw new Error('Screenshot image unavailable.');
+    target.imageSmoothingEnabled = true;
+    target.imageSmoothingQuality = 'high';
     drawDecoratedMedia(target, {
       source: asset.image,
       ...screenshotImageRaster(screenshotImageFraming({ ...state, image }, asset.width, asset.height, width, height), {

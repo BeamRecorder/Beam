@@ -48,9 +48,7 @@ onBeforeUnmount(() => observer?.disconnect());
     aria-labelledby="feature-section-title"
   >
     <header class="feature-section__intro">
-      <h2 id="feature-section-title" class="feature-section__title">
-        {{ title }}<span aria-hidden="true">.</span>
-      </h2>
+      <h2 id="feature-section-title" class="feature-section__title">{{ title }}<span aria-hidden="true">.</span></h2>
       <WebsiteModeTabs v-model="activeMode" class="feature-section__modes" :label="modeNavigation" :modes="modes" />
       <WebsiteModeMessage
         class="feature-section__message"

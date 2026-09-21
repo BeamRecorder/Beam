@@ -12,7 +12,13 @@ export function recordingMediaOwner(composition: ClipComposition, clip: Clip): V
   const screens = composition.clips.filter(
     (item): item is VisualClip => item.kind === 'screen' && assets.has(item.assetId),
   );
-  if (clip.recordingClipId) return screens.find((screen) => screen.id === clip.recordingClipId) ?? null;
+  if (clip.recordingClipId) {
+    const explicit = screens.find((screen) => screen.id === clip.recordingClipId);
+    if (explicit && (!clip.groupId || explicit.groupId === clip.groupId)) return explicit;
+    // Older split/hold projects kept the left screen ID on right-hand sidecars.
+    const grouped = clip.groupId ? screens.find((screen) => screen.groupId === clip.groupId) : null;
+    return grouped ?? explicit ?? null;
+  }
   const midpoint = (clip.timelineStartMs + clipEndMs(clip)) / 2;
   return (
     screens.find((screen) => midpoint >= screen.timelineStartMs && midpoint < clipEndMs(screen)) ??

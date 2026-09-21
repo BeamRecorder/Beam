@@ -1,5 +1,9 @@
 {
   "LinkedClipsDeleteDialog": {
+    "preview": "미리보기",
+    "selectPreview": "{name} 미리보기",
+    "previewUnavailable": "이 미리보기를 재생할 수 없습니다.",
+    "seekPreview": "미리보기 탐색",
     "title": "연결된 클립 삭제",
     "description": "이 항목에는 연결된 클립이 있습니다. 삭제할 클립을 정확히 선택하세요.",
     "deleteAll": "모두 삭제 ({count})",
@@ -221,6 +225,7 @@
     "unlock": "잠금 해제",
     "locked": "잠김",
     "removeGap": "빈 공간 제거",
+    "removeGapBlocked": "다른 클립이나 확대/축소가 겹치거나 연결된 항목이 잠겨 있어 이 빈 공간을 제거할 수 없습니다.",
     "lockedMessage": "{name} 항목이 잠겨 있습니다. 수정할 수 없습니다."
   },
   "TimelineVideoClip": {

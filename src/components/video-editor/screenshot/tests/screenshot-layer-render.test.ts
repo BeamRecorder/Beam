@@ -176,6 +176,36 @@ describe('drawScreenshotLayer', () => {
     );
   });
 
+  it('enables high-quality canvas interpolation before drawing an imported image', () => {
+    const target = makeTarget();
+    target.imageSmoothingEnabled = false;
+    target.imageSmoothingQuality = 'low';
+    const importedImage = {
+      ...defaultImage,
+      id: 'pasted-image',
+      name: 'Pasted image',
+      source: 'project-media://pasted.png',
+      width: 800,
+      height: 400,
+    } as NonNullable<ScreenshotState['images']>[number];
+    const image = { width: 800, height: 400 } as CanvasImageSource;
+    renderers.decoratedMedia.mockImplementationOnce((context: Canvas2DContext) => {
+      expect(context.imageSmoothingEnabled).toBe(true);
+      expect(context.imageSmoothingQuality).toBe('high');
+    });
+
+    drawScreenshotLayer(
+      target,
+      makeState({ images: [importedImage] }),
+      makeLayer(importedImage.id, 'image'),
+      { images: new Map([[importedImage.id, { image, width: 800, height: 400 }]]) },
+      500,
+      250,
+    );
+
+    expect(renderers.decoratedMedia).toHaveBeenCalledOnce();
+  });
+
   it('passes a missing logo through to the watermark renderer, which safely skips an empty watermark', () => {
     const target = makeTarget();
     const canvas: ScreenshotState['canvas'] = {

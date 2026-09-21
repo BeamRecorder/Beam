@@ -9,6 +9,7 @@ import { useTranslate } from '~/i18n/useTranslate';
 
 const props = defineProps<{
   error: string;
+  errorCode?: string;
   progress: EditorLoadingProgress;
   appVersion: string;
   runtimePlatform: string;
@@ -24,6 +25,20 @@ defineEmits<{
 const { t } = useTranslate('EditorOpenError');
 const { t: tStage } = useTranslate('EditorPreparingHud');
 const stageLabel = computed(() => tStage(props.progress.stage));
+const failureCode = computed(
+  () =>
+    props.errorCode ||
+    props.error.match(/BEAM_EDITOR_(?:UNRESPONSIVE|TIMEOUT|LOAD_FAILED|RENDERER_GONE)/)?.[0] ||
+    'BEAM_EDITOR_UNKNOWN',
+);
+const failureClassification = computed(() => failureCode.value.replace(/^BEAM_EDITOR_/, '').toLowerCase());
+const failureMessage = computed(() => {
+  if (failureCode.value === 'BEAM_EDITOR_UNRESPONSIVE') return t('unresponsive');
+  if (failureCode.value === 'BEAM_EDITOR_TIMEOUT') return t('timeout');
+  if (failureCode.value === 'BEAM_EDITOR_LOAD_FAILED') return t('loadFailed');
+  if (failureCode.value === 'BEAM_EDITOR_RENDERER_GONE') return t('rendererGone');
+  return t('unknownFailure');
+});
 const diagnosticReport = computed(() =>
   [
     '=== Beam Editor Open Diagnostics ===',
@@ -31,7 +46,9 @@ const diagnosticReport = computed(() =>
     `Runtime platform: ${props.runtimePlatform || navigator.platform || 'Unknown'}`,
     `Project ID: ${props.projectId || 'Unknown'}`,
     `Project mode: ${props.projectMode || 'Unknown'}`,
-    `Last reported stage: ${props.progress.stage} (${Math.round(props.progress.value)}%)`,
+    `Classification: ${failureClassification.value}`,
+    `Failure code: ${failureCode.value}`,
+    `Last confirmed step: ${props.progress.stage} (${Math.round(props.progress.value)}%)`,
     `Occurred at: ${props.occurredAt || 'Unknown'}`,
     `User agent: ${navigator.userAgent || 'Unknown'}`,
     `Error: ${props.error}`,
@@ -46,6 +63,7 @@ const diagnosticReport = computed(() =>
     </div>
     <div class="editor-open-error-copy">
       <h2 id="editor-open-error-title">{{ t('title') }}</h2>
+      <p class="editor-open-error-reason">{{ failureMessage }}</p>
       <p>{{ t('description') }}</p>
       <p class="editor-open-error-stage">{{ t('lastStage', { stage: stageLabel }) }}</p>
     </div>
@@ -116,6 +134,10 @@ const diagnosticReport = computed(() =>
 .editor-open-error-copy .editor-open-error-stage {
   color: var(--text-secondary);
   font-weight: 600;
+}
+
+.editor-open-error-copy .editor-open-error-reason {
+  color: var(--text-primary);
 }
 
 .editor-open-error-actions {

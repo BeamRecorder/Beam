@@ -1,5 +1,9 @@
 {
   "LinkedClipsDeleteDialog": {
+    "preview": "Podgląd",
+    "selectPreview": "Podgląd {name}",
+    "previewUnavailable": "Nie można odtworzyć tego podglądu.",
+    "seekPreview": "Przewiń podgląd",
     "title": "Usuń połączone klipy",
     "description": "Ten element zawiera połączone klipy. Wybierz dokładnie, które klipy chcesz usunąć.",
     "deleteAll": "Usuń wszystko ({count})",
@@ -221,6 +225,7 @@
     "unlock": "Odblokuj",
     "locked": "Zablokowano",
     "removeGap": "Usuń przerwę",
+    "removeGapBlocked": "Nie można usunąć przerwy: inny klip lub powiększenie nakłada się na nią albo połączony element jest zablokowany.",
     "lockedMessage": "{name} jest zablokowany. Wprowadzanie zmian jest niemożliwe."
   },
   "TimelineVideoClip": {

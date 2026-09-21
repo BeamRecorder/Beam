@@ -3,9 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useScreenshotLayerReorder } from '../composition/useScreenshotLayerReorder';
 
 class PointerCaptureTarget extends EventTarget {
-  readonly setPointerCapture = vi.fn();
-  readonly hasPointerCapture = vi.fn(() => true);
-  readonly releasePointerCapture = vi.fn();
+  private readonly capturedPointers = new Set<number>();
+  readonly setPointerCapture = vi.fn((pointerId: number) => this.capturedPointers.add(pointerId));
+  readonly hasPointerCapture = vi.fn((pointerId: number) => this.capturedPointers.has(pointerId));
+  readonly releasePointerCapture = vi.fn((pointerId: number) => this.capturedPointers.delete(pointerId));
 }
 
 const makeList = (bounds = { top: 0, bottom: 240 }, rowHeight = 40, hasRow = true) => {
@@ -74,7 +75,7 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe('useScreenshotLayerReorder', () => {
-  it('waits for a four pixel drag threshold and releases capture without committing a click', () => {
+  it('waits for a four pixel drag threshold without capturing the pointer or committing a click', () => {
     const { list } = makeList();
     const scope = effectScope();
     const commit = vi.fn();
@@ -82,8 +83,8 @@ describe('useScreenshotLayerReorder', () => {
     const { event, target: grip } = pointer(0, 1, 20);
 
     state.begin(event, 'middle');
-    expect(event.preventDefault).toHaveBeenCalledOnce();
-    expect(list.setPointerCapture).toHaveBeenCalledWith(1);
+    expect(event.preventDefault).not.toHaveBeenCalled();
+    expect(list.setPointerCapture).not.toHaveBeenCalled();
     expect(grip.setPointerCapture).not.toHaveBeenCalled();
 
     dispatchPointer('pointermove', 1, 23);
@@ -93,7 +94,7 @@ describe('useScreenshotLayerReorder', () => {
 
     dispatchPointer('pointerup', 1, 23);
     expect(commit).not.toHaveBeenCalled();
-    expect(list.releasePointerCapture).toHaveBeenCalledWith(1);
+    expect(list.releasePointerCapture).not.toHaveBeenCalled();
     expect(state.dragging.value).toBeNull();
     scope.stop();
   });
@@ -271,14 +272,14 @@ describe('useScreenshotLayerReorder', () => {
     const concurrent = pointer(0, 6, 20);
     state.begin(first.event, 'one');
     state.begin(concurrent.event, 'two');
-    expect(list.setPointerCapture).toHaveBeenCalledTimes(1);
+    expect(list.setPointerCapture).not.toHaveBeenCalled();
 
     dispatchPointer('pointermove', 6, 100);
     dispatchPointer('pointerup', 6, 100);
     expect(state.dragging.value).toBeNull();
     expect(commit).not.toHaveBeenCalled();
     dispatchPointer('pointerup', 5, 20);
-    expect(list.releasePointerCapture).toHaveBeenCalledWith(5);
+    expect(list.releasePointerCapture).not.toHaveBeenCalled();
     scope.stop();
   });
 

@@ -10,6 +10,8 @@ const props = withDefaults(
     disabled?: boolean;
     valueSuffix?: string;
     size?: 'default' | 'compact';
+    showValue?: boolean;
+    label?: string;
   }>(),
   {
     min: 0,
@@ -18,6 +20,7 @@ const props = withDefaults(
     disabled: false,
     valueSuffix: '',
     size: 'default',
+    showValue: true,
   },
 );
 
@@ -54,6 +57,7 @@ const handleCommit = (event: Event) => {
         :step="step"
         :value="modelValue"
         :disabled="disabled"
+        :aria-label="label"
         class="slider-input"
         :style="{
           background: `linear-gradient(to right, var(--color-primary) 0%, var(--color-primary) ${percentage}%, var(--color-border) ${percentage}%, var(--color-border) 100%)`,
@@ -62,7 +66,7 @@ const handleCommit = (event: Event) => {
         @change="handleCommit"
       />
     </div>
-    <span class="slider-value">{{ modelValue }}{{ valueSuffix }}</span>
+    <span v-if="showValue" class="slider-value">{{ modelValue }}{{ valueSuffix }}</span>
   </div>
 </template>
 

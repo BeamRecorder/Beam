@@ -23,7 +23,7 @@ export function useEditorCanvasInvalidation(options: {
     },
   );
   watch(() => options.props.isCropping, options.renderOnce);
-  watch(() => options.props.editorData?.cursor.telemetry, options.resetCamera, { deep: true });
+  watch(() => options.props.editorData?.cursor.telemetry, options.resetCamera);
   watch(() => [options.props.zoomElements, options.props.selectedZoom] as const, options.resetCamera, { deep: true });
   watch(
     () =>

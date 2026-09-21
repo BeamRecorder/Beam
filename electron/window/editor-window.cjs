@@ -17,7 +17,9 @@ const EDITOR_LOADING_PROGRESS = Object.freeze({
   loadingProject: 45,
   loadingTimeline: 60,
   loadingEditorModule: 75,
+  initializingEditor: 82,
   renderingEditor: 90,
+  loadingPreview: 95,
   ready: 100,
 });
 
@@ -77,6 +79,7 @@ function createEditorWindowManager({
   const sendProgress = (session, stage) => {
     const value = EDITOR_LOADING_PROGRESS[stage];
     if (presentingSession !== session || value === undefined || value < session.lastProgressValue) return false;
+    if (session.lastProgressStage !== stage) session.lastProgressAt = Date.now();
     session.lastProgressValue = value;
     session.lastProgressStage = stage;
     if (hudWindow.isDestroyed()) return false;
@@ -243,6 +246,7 @@ function createEditorWindowManager({
       rejectPresentation: null,
       lastProgressValue: 0,
       lastProgressStage: null,
+      lastProgressAt: null,
       documentLoaded: false,
       persistTimer: null,
     };
@@ -335,6 +339,7 @@ function createEditorWindowManager({
     session.returningToHud = false;
     session.lastProgressValue = 0;
     session.lastProgressStage = null;
+    session.lastProgressAt = null;
     session.currentProjectId = projectId;
     session.kind = options.kind ?? null;
     activeSession = session;

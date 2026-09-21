@@ -1,4 +1,5 @@
 import type { AudioClip, Clip, ClipComposition, MediaAsset } from '~/media/shared/composition-types';
+import type { ZoomElement } from '../zoom/zoom-types';
 import type { MediaError } from '~/media/shared';
 import type { TimelineClipProps } from './timeline-clip-types';
 import type { ImportedAudioTimelineTrack } from './composables/audio-timeline-tracks';
@@ -21,6 +22,7 @@ export interface TimelineAudioTracksProps {
   importedAudioTracks: ImportedAudioTimelineTrack[];
   voiceoverDraft?: LiveAudioDraft | null;
   composition: ClipComposition;
+  zoomElements: readonly ZoomElement[];
   includeAudioInExport: boolean;
   layoutDurationMs: number;
   rulerLayoutWidth: number;

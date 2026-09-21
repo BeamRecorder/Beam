@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import TimelineLockOverlay from './TimelineLockOverlay.vue';
-import { CircleDashed, Focus, Lock } from '@lucide/vue';
+import { CircleDashed, Focus, Link2, Lock } from '@lucide/vue';
 import { computed, onUnmounted, ref, watch } from 'vue';
 import { sourceTimeAt } from '~/media/shared';
 import { useThumbnails } from './waveform/useThumbnails';
@@ -140,6 +140,7 @@ onUnmounted(() => stopMarquee());
     type="button"
     class="timeline-clip"
     :data-timeline-clip-id="clip.id"
+    :title="linkedClipNames?.length ? linkedClipNames.join(' · ') : clipLabel"
     :class="[`kind-${visualKind}`, { selected, disabled: !clip.enabled, 'trim-at-limit': trimState?.atLimit }]"
     :data-paste-highlight="pasteHighlight || undefined"
     :style="clipStyle"
@@ -233,6 +234,9 @@ onUnmounted(() => stopMarquee());
         :aria-label="visualKind === 'highlight' ? tHighlight('title') : t('blur')"
       />
       <span class="clip-label-text">{{ clipLabel }}</span>
+      <span v-if="linkedClipNames?.length" class="linked-badge">
+        <Link2 :size="12" role="img" :aria-label="linkedClipNames.join(' · ')" />
+      </span>
       <span v-if="Math.abs(clip.playbackRate - 1) > 0.01" class="speed-badge">{{ clip.playbackRate.toFixed(2) }}×</span>
     </span>
     <span
@@ -457,6 +461,15 @@ onUnmounted(() => stopMarquee());
 }
 .clip-kind-icon {
   flex: none;
+}
+.linked-badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  padding: 1px 3px;
+  border-radius: var(--radius-xs);
+  background: var(--color-primary);
+  color: #fff;
 }
 .speed-badge {
   flex: none;

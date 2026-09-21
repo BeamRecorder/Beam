@@ -1,5 +1,9 @@
 {
   "LinkedClipsDeleteDialog": {
+    "preview": "Prévia",
+    "selectPreview": "Prévia de {name}",
+    "previewUnavailable": "Não é possível reproduzir esta prévia.",
+    "seekPreview": "Avançar na prévia",
     "title": "Excluir clipes vinculados",
     "description": "Este item contém clipes vinculados. Escolha exatamente quais clipes deseja excluir.",
     "deleteAll": "Excluir tudo ({count})",
@@ -221,6 +225,7 @@
     "unlock": "Desbloquear",
     "locked": "Bloqueado",
     "removeGap": "Remover intervalo",
+    "removeGapBlocked": "Não é possível remover o intervalo: outro clipe ou zoom se sobrepõe, ou um item vinculado está bloqueado.",
     "lockedMessage": "{name} está bloqueado. Não é possível fazer alterações."
   },
   "TimelineVideoClip": {

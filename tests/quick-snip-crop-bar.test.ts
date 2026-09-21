@@ -177,7 +177,7 @@ const windowConfiguration = {
 
 const ButtonStub = {
   inheritAttrs: true,
-  props: ['disabled', 'icon', 'loading', 'iconOnly', 'size', 'variant'],
+  props: ['disabled', 'icon', 'loading', 'iconOnly', 'size', 'variant', 'tooltip', 'tooltipPosition'],
   emits: ['click'],
   template: `
     <button

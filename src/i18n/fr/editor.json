@@ -1,5 +1,9 @@
 {
   "LinkedClipsDeleteDialog": {
+    "preview": "Aperçu",
+    "selectPreview": "Voir ou écouter {name}",
+    "previewUnavailable": "Cet aperçu ne peut pas être lu.",
+    "seekPreview": "Naviguer dans l’aperçu",
     "title": "Supprimer des clips liés",
     "description": "Cet élément contient des clips liés. Choisissez précisément les clips à supprimer.",
     "deleteAll": "Tout supprimer ({count})",
@@ -221,6 +225,7 @@
     "unlock": "Déverrouiller",
     "locked": "Verrouillé",
     "removeGap": "Supprimer l’espace",
+    "removeGapBlocked": "Impossible de supprimer cet espace : un autre clip ou zoom le chevauche, ou un élément lié est verrouillé.",
     "lockedMessage": "{name} est verrouillé. Les modifications sont impossibles."
   },
   "TimelineVideoClip": {

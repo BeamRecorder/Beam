@@ -6,6 +6,31 @@ User-facing changes to Beam are documented in this file.
 
 Nothing changed at the moment.
 
+## [0.3.2] - 2026-09-21
+
+### Added
+
+- Screenshot editor now has a fullscreen preview button beside the canvas dimensions control, with a Back button and Escape to return.
+
+### Changed
+
+- New arrows in Screenshot and Studio start smaller and thinner while existing arrows keep their saved appearance.
+- Studio's Remove gap now closes a truly empty interval across all tracks and zooms together; it is unavailable when media overlaps the interval.
+- Linked clips in the Studio timeline show a link marker and identify their companions on hover.
+- The linked-clip deletion dialog now has a dedicated video, image, and audio preview player with clip-range seeking, real media thumbnails, animated selection, and a scrollable clip list.
+- Audio previews in the linked-clip dialog now show Beam's WebGL waveform in a moderately zoomed, scrolling view with live playback progress and click-to-seek.
+
+### Fixed
+
+- Editor startup failures now show a clearer reason and the last confirmed loading step; copied diagnostics include the failure code and time spent on that step.
+- Opening Studio after longer recordings no longer deeply observes the full cursor and input event history during editor startup.
+- Splitting or holding a recording now keeps microphone and other sidecar links attached to the matching screen fragment, including when reopening older edited projects.
+- Audio previews now play with sound even when the audio clip shares a video file with its linked clip.
+- Outline-only shapes, including speech bubbles, now cast a shadow when Fill Color is off and a border is present.
+- Resized Screenshot images now use high-quality interpolation in preview and export.
+- Imported and pasted Screenshot images now retain their available native resolution, including HiDPI clipboard variants, and preview at display-matched pixel density instead of a fixed low-resolution cap.
+- Screenshot compositions now save, copy, and export after deleting the captured image, background, or watermark layer.
+
 ## [0.3.1] - 2026-09-20
 
 ### Fixed
@@ -87,7 +112,8 @@ Nothing changed at the moment.
 
 - Improved the editor workflow and native recording startup reliability, including Linux capture startup.
 
-[Unreleased]: https://github.com/BeamRecorder/Beam/compare/0.3.1...HEAD
+[Unreleased]: https://github.com/BeamRecorder/Beam/compare/0.3.2...HEAD
+[0.3.2]: https://github.com/BeamRecorder/Beam/releases/tag/0.3.2
 [0.3.1]: https://github.com/BeamRecorder/Beam/releases/tag/0.3.1
 [0.3.0]: https://github.com/BeamRecorder/Beam/releases/tag/0.3.0
 [0.2.9]: https://github.com/BeamRecorder/Beam/releases/tag/0.2.9
