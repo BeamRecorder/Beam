@@ -7,7 +7,7 @@ use crate::{
 
 pub(crate) const MAX_VIDEO_DIMENSION: u32 = 16_384;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) enum NativePixelFormat {
     Bgrx,
     Bgra,
@@ -15,7 +15,7 @@ pub(crate) enum NativePixelFormat {
     Rgba,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) struct NegotiatedFormat {
     pub width: u32,
     pub height: u32,

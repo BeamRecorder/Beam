@@ -12,9 +12,28 @@ use crate::{CaptureError, NativeCaptureErrorCode};
 
 use super::{NativePixelFormat, NegotiatedFormat};
 
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+struct DmaBufPlaneKey {
+    fd: RawFd,
+    data_type: u32,
+    flags: u32,
+    map_offset: u32,
+    max_size: u32,
+    chunk_offset: u32,
+    chunk_size: u32,
+    chunk_stride: i32,
+    chunk_flags: i32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+struct DmaBufKey {
+    planes: Vec<DmaBufPlaneKey>,
+    format: NegotiatedFormat,
+}
+
 pub(super) struct DmaBufImporter {
     device: Option<Device<File>>,
-    buffers: HashMap<RawFd, BufferObject<()>>,
+    buffers: HashMap<DmaBufKey, BufferObject<()>>,
 }
 
 impl DmaBufImporter {
@@ -30,11 +49,11 @@ impl DmaBufImporter {
         planes: &[Data],
         format: NegotiatedFormat,
         operation: impl FnOnce(&[u8], i32) -> Result<T, CaptureError>,
-    ) -> Result<T, CaptureError> {
-        let key = planes[0].fd();
+    ) -> Result<Result<T, CaptureError>, CaptureError> {
+        let key = DmaBufKey::new(planes, format);
         if !self.buffers.contains_key(&key) {
             let buffer = self.import(planes, format)?;
-            self.buffers.insert(key, buffer);
+            self.buffers.insert(key.clone(), buffer);
         }
         let buffer = self
             .buffers
@@ -44,9 +63,13 @@ impl DmaBufImporter {
             .map(0, 0, format.width, format.height, |mapped| {
                 let stride = i32::try_from(mapped.stride())
                     .map_err(|_| memory_error("mapped DMA-BUF stride exceeds PipeWire limits"))?;
-                operation(mapped.buffer(), stride)
+                Ok(operation(mapped.buffer(), stride))
             })
             .map_err(|error| memory_error(format!("failed to map DMA-BUF: {error}")))?
+    }
+
+    pub(super) fn clear(&mut self) {
+        self.buffers.clear();
     }
 
     fn import(
@@ -90,6 +113,32 @@ impl DmaBufImporter {
             "no DRM render node can import modifier {modifier:?}: {}",
             failures.join("; ")
         )))
+    }
+}
+
+impl DmaBufKey {
+    fn new(planes: &[Data], format: NegotiatedFormat) -> Self {
+        Self {
+            planes: planes
+                .iter()
+                .map(|plane| {
+                    let data = plane.as_raw();
+                    let chunk = plane.chunk();
+                    DmaBufPlaneKey {
+                        fd: plane.fd(),
+                        data_type: plane.type_().as_raw(),
+                        flags: plane.flags().bits(),
+                        map_offset: data.mapoffset,
+                        max_size: data.maxsize,
+                        chunk_offset: chunk.offset(),
+                        chunk_size: chunk.size(),
+                        chunk_stride: chunk.stride(),
+                        chunk_flags: chunk.flags().bits(),
+                    }
+                })
+                .collect(),
+            format,
+        }
     }
 }
 

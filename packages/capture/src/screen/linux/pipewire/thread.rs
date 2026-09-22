@@ -372,7 +372,10 @@ fn pipewire_worker(
                 }
                 match apply_format_event(stream, param) {
                     Ok(FormatParamEvent::Ready(format)) => {
-                        state.borrow_mut().negotiated = Some(format);
+                        let mut process_state = state.borrow_mut();
+                        process_state.dmabuf_importer.clear();
+                        process_state.negotiated = Some(format);
+                        drop(process_state);
                         if matches!(stream.state(), pw::stream::StreamState::Paused) {
                             if format_negotiation_stopped.get() {
                                 send_ready_ok(&ready, format);
@@ -391,6 +394,9 @@ fn pipewire_worker(
                         // PipeWire uses a null format parameter to clear the
                         // current format before (re)negotiation. Wait for the
                         // next concrete format instead of failing capture.
+                        let mut process_state = state.borrow_mut();
+                        process_state.negotiated = None;
+                        process_state.dmabuf_importer.clear();
                     }
                     Err(error) => {
                         let diagnostic = error.to_string();

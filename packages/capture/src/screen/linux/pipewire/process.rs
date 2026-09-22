@@ -106,7 +106,7 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
     let defer_unusable_preroll = {
         let datas = buffer.datas_mut();
         if datas.is_empty() {
-            false
+            state.last_frame_geometry.is_none()
         } else {
             let chunk = datas[0].chunk();
             should_defer_timestamp_origin(
@@ -219,7 +219,23 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
                 )
             })
         {
-            Ok(copied) => copied,
+            Ok(Ok(copied)) => copied,
+            Ok(Err(error))
+                if matches!(
+                    &error,
+                    CaptureError::Native {
+                        code: NativeCaptureErrorCode::PipewireBufferInvalid,
+                        ..
+                    }
+                ) =>
+            {
+                invalid_buffer(&mut state, timestamp.session_ns, &error.to_string());
+                return;
+            }
+            Ok(Err(error)) => {
+                set_fatal(&state.fatal, error);
+                return;
+            }
             Err(error) => {
                 set_fatal(&state.fatal, error);
                 return;

@@ -9,46 +9,46 @@ use pipewire::spa;
 use spa::{
     param::ParamType,
     pod::{
-        ChoiceValue, Object, Pod, Property, PropertyFlags, Value, deserialize::PodDeserializer,
+        ChoiceValue, Object, Pod, Property, Value, deserialize::PodDeserializer,
         serialize::PodSerializer,
     },
     utils::{Choice, ChoiceEnum, ChoiceFlags, SpaTypes},
 };
 
-const POD_STORAGE_SIZE: usize = 1024;
+pub(super) const POD_STORAGE_SIZE: usize = 1024;
 const FILTER_STORAGE_SIZE: usize = 4096;
 
 #[repr(align(8))]
-struct AlignedBytes<const N: usize>([u8; N]);
+pub(super) struct AlignedBytes<const N: usize>([u8; N]);
 
 impl<const N: usize> AlignedBytes<N> {
-    fn from_bytes(bytes: &[u8]) -> Self {
+    pub(super) fn from_bytes(bytes: &[u8]) -> Self {
         assert!(bytes.len() <= N, "test pod is larger than aligned storage");
         let mut aligned = Self([0; N]);
         aligned.0[..bytes.len()].copy_from_slice(bytes);
         aligned
     }
 
-    fn pod(&self) -> &Pod {
+    pub(super) fn pod(&self) -> &Pod {
         Pod::from_bytes(&self.0).expect("aligned bytes should contain a valid pod")
     }
 }
 
-fn serialized(value: Value) -> Vec<u8> {
+pub(super) fn serialized(value: Value) -> Vec<u8> {
     PodSerializer::serialize(Cursor::new(Vec::new()), &value)
         .expect("test pod should serialize")
         .0
         .into_inner()
 }
 
-fn choice_range(default: i32, min: i32, max: i32) -> Value {
+pub(super) fn choice_range(default: i32, min: i32, max: i32) -> Value {
     Value::Choice(ChoiceValue::Int(Choice(
         ChoiceFlags::empty(),
         ChoiceEnum::Range { default, min, max },
     )))
 }
 
-fn choice_flags(default: i32) -> Value {
+pub(super) fn choice_flags(default: i32) -> Value {
     Value::Choice(ChoiceValue::Int(Choice(
         ChoiceFlags::empty(),
         ChoiceEnum::Flags {
@@ -58,7 +58,7 @@ fn choice_flags(default: i32) -> Value {
     )))
 }
 
-fn buffers_pod(buffers: Value, blocks: i32, data_type: Value) -> Vec<u8> {
+pub(super) fn buffers_pod(buffers: Value, blocks: i32, data_type: Value) -> Vec<u8> {
     serialized(Value::Object(Object {
         type_: SpaTypes::ObjectParamBuffers.as_raw(),
         id: ParamType::Buffers.as_raw(),
@@ -91,69 +91,6 @@ fn fixed_buffers_pod(count: i32) -> Vec<u8> {
     )
 }
 
-fn dma_only_buffers_pod(blocks: i32) -> Vec<u8> {
-    buffers_pod(
-        choice_range(3, 2, 4),
-        blocks,
-        choice_flags(1_i32 << spa::sys::SPA_DATA_DmaBuf),
-    )
-}
-
-fn niri_format_pod() -> Vec<u8> {
-    serialized(Value::Object(Object {
-        type_: SpaTypes::ObjectParamFormat.as_raw(),
-        id: ParamType::EnumFormat.as_raw(),
-        properties: vec![
-            Property::new(
-                spa::param::format::FormatProperties::MediaType.as_raw(),
-                Value::Id(spa::utils::Id(
-                    spa::param::format::MediaType::Video.as_raw(),
-                )),
-            ),
-            Property::new(
-                spa::param::format::FormatProperties::MediaSubtype.as_raw(),
-                Value::Id(spa::utils::Id(
-                    spa::param::format::MediaSubtype::Raw.as_raw(),
-                )),
-            ),
-            Property::new(
-                spa::param::format::FormatProperties::VideoFormat.as_raw(),
-                Value::Id(spa::utils::Id(
-                    spa::param::video::VideoFormat::BGRx.as_raw(),
-                )),
-            ),
-            Property {
-                key: spa::sys::SPA_FORMAT_VIDEO_modifier,
-                flags: PropertyFlags::MANDATORY | PropertyFlags::DONT_FIXATE,
-                value: Value::Choice(ChoiceValue::Long(Choice(
-                    ChoiceFlags::empty(),
-                    ChoiceEnum::Enum {
-                        default: 0,
-                        alternatives: vec![
-                            72_057_594_037_927_937,
-                            72_057_594_037_927_938,
-                            72_057_594_037_927_942,
-                            72_057_594_037_927_944,
-                            72_057_594_037_927_935,
-                        ],
-                    },
-                ))),
-            },
-            Property::new(
-                spa::param::format::FormatProperties::VideoSize.as_raw(),
-                Value::Rectangle(spa::utils::Rectangle {
-                    width: 1294,
-                    height: 1410,
-                }),
-            ),
-            Property::new(
-                spa::param::format::FormatProperties::VideoFramerate.as_raw(),
-                Value::Fraction(spa::utils::Fraction { num: 0, denom: 1 }),
-            ),
-        ],
-    }))
-}
-
 fn cursor_meta_size(dimension: i32) -> i32 {
     i32::try_from(size_of::<spa::sys::spa_meta_cursor>()).expect("cursor header size")
         + i32::try_from(size_of::<spa::sys::spa_meta_bitmap>()).expect("cursor bitmap header size")
@@ -182,7 +119,7 @@ fn cursor_meta_pod(size: Value) -> Vec<u8> {
     }))
 }
 
-fn decoded_object(bytes: &[u8]) -> Object {
+pub(super) fn decoded_object(bytes: &[u8]) -> Object {
     let (remaining, value) =
         PodDeserializer::deserialize_any_from(bytes).expect("test pod should deserialize");
     assert!(
@@ -196,7 +133,7 @@ fn decoded_object(bytes: &[u8]) -> Object {
     object.expect("expected an object pod")
 }
 
-fn property(object: &Object, key: u32) -> &Value {
+pub(super) fn property(object: &Object, key: u32) -> &Value {
     object
         .properties
         .iter()
@@ -232,7 +169,7 @@ fn fixed_id(value: &Value) -> Option<spa::utils::Id> {
     }
 }
 
-fn filter_pods(pod_bytes: &[u8], filter_bytes: &[u8]) -> Result<Vec<u8>, i32> {
+pub(super) fn filter_pods(pod_bytes: &[u8], filter_bytes: &[u8]) -> Result<Vec<u8>, i32> {
     let pod_storage = AlignedBytes::<POD_STORAGE_SIZE>::from_bytes(pod_bytes);
     let filter_storage = AlignedBytes::<POD_STORAGE_SIZE>::from_bytes(filter_bytes);
     let pod = pod_storage.pod();
@@ -353,7 +290,7 @@ fn rejects_the_old_fixed_count_but_accepts_a_fixed_eight_buffer_peer() {
 }
 
 #[test]
-fn rejects_buffer_counts_outside_the_supported_range_and_dma_only_memory() {
+fn rejects_buffer_counts_outside_the_supported_range() {
     let beam = buffer_parameter(negotiated(NativePixelFormat::Bgra, 1920, 1080))
         .expect("buffer parameter should serialize");
     for count in [1, 9] {
@@ -362,60 +299,6 @@ fn rejects_buffer_counts_outside_the_supported_range_and_dma_only_memory() {
             "buffer count {count} must not intersect Beam's 2..=8 range"
         );
     }
-    assert!(filter_pods(&beam, &dma_only_buffers_pod(1)).is_err());
-}
-
-#[test]
-fn shm_format_rejects_niri_bgrx_with_mandatory_modifiers() {
-    let beam = format_parameter().expect("format parameter should serialize");
-
-    assert_eq!(filter_pods(&beam, &niri_format_pod()), Err(-libc::EINVAL));
-}
-
-#[test]
-fn dma_format_intersects_and_fixates_niri_modifier_choices() {
-    let beam = dma_buf_format_parameter().expect("DMA-BUF format should serialize");
-    let filtered = filter_pods(&beam, &niri_format_pod()).expect("DMA-BUF format should intersect");
-    let storage = AlignedBytes::<POD_STORAGE_SIZE>::from_bytes(&filtered);
-    let offered = decoded_object(&filtered);
-    let offered_modifier = offered
-        .properties
-        .iter()
-        .find(|property| property.key == spa::sys::SPA_FORMAT_VIDEO_modifier)
-        .expect("filtered format should retain a modifier");
-    assert!(offered_modifier.flags.contains(PropertyFlags::DONT_FIXATE));
-
-    let selected = 72_057_594_037_927_944;
-    let fixed = fixate_modifier_parameter(storage.pod(), selected)
-        .expect("selected modifier should fixate");
-    let fixed = decoded_object(&fixed);
-    let fixed_modifier = fixed
-        .properties
-        .iter()
-        .find(|property| property.key == spa::sys::SPA_FORMAT_VIDEO_modifier)
-        .expect("fixed format should retain a modifier");
-    assert_eq!(fixed_modifier.value, Value::Long(selected as i64));
-    assert!(!fixed_modifier.flags.contains(PropertyFlags::DONT_FIXATE));
-    assert!(fixed_modifier.flags.contains(PropertyFlags::MANDATORY));
-}
-
-#[test]
-fn dma_buffer_layout_intersects_niri_multi_plane_allocation() {
-    let format = negotiated(NativePixelFormat::Bgrx, 1920, 1080)
-        .with_modifier(72_057_594_037_927_944, false);
-    let beam = buffer_parameter(format).expect("DMA-BUF parameters should serialize");
-    let object = decoded_object(&beam);
-
-    assert_eq!(
-        property(&object, spa::sys::SPA_PARAM_BUFFERS_blocks),
-        &choice_range(1, 1, 4)
-    );
-    assert_eq!(
-        property(&object, spa::sys::SPA_PARAM_BUFFERS_dataType),
-        &Value::Int(1_i32 << spa::sys::SPA_DATA_DmaBuf)
-    );
-    assert!(filter_pods(&beam, &dma_only_buffers_pod(2)).is_ok());
-    assert!(filter_pods(&beam, &dma_only_buffers_pod(4)).is_ok());
 }
 
 #[test]
