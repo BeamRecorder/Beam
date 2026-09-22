@@ -1,5 +1,7 @@
 use crate::screen::{FrameTimestamp, ScreenDiscontinuity, TimestampSource};
 
+const NATIVE_PTS_STALL_THRESHOLD_NS: u64 = 50_000_000;
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub(crate) struct HeaderMetadata {
     pub pts_ns: Option<u64>,
@@ -16,6 +18,7 @@ pub(crate) struct TimestampMapper {
     first_native_pts_ns: Option<u64>,
     first_arrival_ns: Option<u64>,
     last_native_pts_ns: Option<u64>,
+    native_stall_started_arrival_ns: Option<u64>,
     last_session_ns: Option<u64>,
 }
 
@@ -28,6 +31,7 @@ impl TimestampMapper {
             first_native_pts_ns: None,
             first_arrival_ns: None,
             last_native_pts_ns: None,
+            native_stall_started_arrival_ns: None,
             last_session_ns: None,
         }
     }
@@ -43,11 +47,27 @@ impl TimestampMapper {
                 "PipeWire marked the buffer discontinuous, corrupt, or a gap",
             ));
         }
-        let source = *self.source.get_or_insert(if header.pts_ns.is_some() {
+        let first_arrival_ns = *self.first_arrival_ns.get_or_insert(arrival_ns);
+        let mut source = *self.source.get_or_insert(if header.pts_ns.is_some() {
             TimestampSource::NativePresentation
         } else {
             TimestampSource::MonotonicArrival
         });
+        if source == TimestampSource::NativePresentation
+            && let Some(pts) = header.pts_ns
+        {
+            if self.last_native_pts_ns == Some(pts) {
+                let stalled_since = *self
+                    .native_stall_started_arrival_ns
+                    .get_or_insert(arrival_ns);
+                if arrival_ns.saturating_sub(stalled_since) >= NATIVE_PTS_STALL_THRESHOLD_NS {
+                    source = TimestampSource::MonotonicArrival;
+                    self.source = Some(source);
+                }
+            } else {
+                self.native_stall_started_arrival_ns = None;
+            }
+        }
         let session_ns = match source {
             TimestampSource::NativePresentation => {
                 let pts = header.pts_ns.ok_or_else(|| {
@@ -73,8 +93,7 @@ impl TimestampMapper {
                     })?
             }
             TimestampSource::MonotonicArrival => {
-                let first = *self.first_arrival_ns.get_or_insert(arrival_ns);
-                let elapsed = arrival_ns.checked_sub(first).ok_or_else(|| {
+                let elapsed = arrival_ns.checked_sub(first_arrival_ns).ok_or_else(|| {
                     self.discontinuity(
                         "pipewire-timestamp-discontinuity",
                         "monotonic arrival timestamp regressed",

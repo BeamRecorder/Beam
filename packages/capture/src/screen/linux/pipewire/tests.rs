@@ -39,6 +39,7 @@ fn copy_pixel(format: NativePixelFormat, bytes: &[u8]) -> Vec<u8> {
 
 mod buffer_params_tests;
 mod cursor_tests;
+mod dma_buf_params_tests;
 mod format_tests;
 mod region_tests;
 mod sink_tests;

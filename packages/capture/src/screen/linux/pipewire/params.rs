@@ -2,8 +2,16 @@ use std::{io::Cursor, mem::size_of};
 
 use pipewire::{self as pw, spa};
 use spa::{
-    param::{ParamType, format::MediaSubtype, format::MediaType, video::VideoInfoRaw},
-    pod::{ChoiceValue, Pod, Value},
+    param::{
+        ParamType,
+        format::MediaSubtype,
+        format::MediaType,
+        video::{VideoFlags, VideoInfoRaw},
+    },
+    pod::{
+        ChoiceValue, Pod, PropertyFlags, Value, deserialize::PodDeserializer,
+        serialize::PodSerializer,
+    },
     utils::{Choice, ChoiceEnum, ChoiceFlags},
 };
 
@@ -47,8 +55,16 @@ pub(super) fn parse_format(param: &Pod) -> Result<NegotiatedFormat, CaptureError
             )));
         }
     };
-    NegotiatedFormat::new(raw.size().width, raw.size().height, pixel_format)
-        .map_err(|error| format_error(error.to_string()))
+    let format = NegotiatedFormat::new(raw.size().width, raw.size().height, pixel_format)
+        .map_err(|error| format_error(error.to_string()))?;
+    Ok(if raw.flags().contains(VideoFlags::MODIFIER) {
+        let fixation_required = raw.flags().bits()
+            & spa::sys::SPA_VIDEO_FLAG_MODIFIER_FIXATION_REQUIRED
+            != 0;
+        format.with_modifier(raw.modifier(), fixation_required)
+    } else {
+        format
+    })
 }
 
 pub(super) fn parse_format_event(
@@ -57,8 +73,36 @@ pub(super) fn parse_format_event(
     param.map(parse_format).transpose()
 }
 
-pub(super) fn format_parameter() -> Result<Vec<u8>, CaptureError> {
-    let object = spa::pod::object!(
+pub(super) enum FormatParamEvent {
+    Cleared,
+    Fixating,
+    Ready(NegotiatedFormat),
+}
+
+pub(super) fn apply_format_event(
+    stream: &pw::stream::Stream,
+    param: Option<&Pod>,
+) -> Result<FormatParamEvent, CaptureError> {
+    let Some(format) = parse_format_event(param)? else {
+        return Ok(FormatParamEvent::Cleared);
+    };
+    if format.modifier_fixation_required {
+        let param = param.ok_or_else(|| format_error("missing DMA-BUF format parameter"))?;
+        let modifier = format
+            .modifier
+            .ok_or_else(|| format_error("missing negotiated DMA-BUF modifier"))?;
+        let bytes = fixate_modifier_parameter(param, modifier)?;
+        let pod = Pod::from_bytes(&bytes)
+            .ok_or_else(|| format_error("failed to fixate DMA-BUF modifier"))?;
+        stream.update_params(&mut [pod]).map_err(pipewire_error)?;
+        return Ok(FormatParamEvent::Fixating);
+    }
+    update_buffer_params(stream, format)?;
+    Ok(FormatParamEvent::Ready(format))
+}
+
+fn format_object() -> spa::pod::Object {
+    spa::pod::object!(
         spa::utils::SpaTypes::ObjectParamFormat,
         ParamType::EnumFormat,
         spa::pod::property!(
@@ -109,7 +153,47 @@ pub(super) fn format_parameter() -> Result<Vec<u8>, CaptureError> {
             spa::utils::Fraction { num: 0, denom: 1 },
             spa::utils::Fraction { num: 240, denom: 1 }
         ),
-    );
+    )
+}
+
+pub(super) fn format_parameter() -> Result<Vec<u8>, CaptureError> {
+    serialize_object(format_object())
+}
+
+pub(super) fn dma_buf_format_parameter() -> Result<Vec<u8>, CaptureError> {
+    let mut object = format_object();
+    object.properties.push(spa::pod::Property {
+        key: spa::sys::SPA_FORMAT_VIDEO_modifier,
+        flags: PropertyFlags::MANDATORY | PropertyFlags::DONT_FIXATE,
+        value: Value::Choice(ChoiceValue::Long(Choice(
+            ChoiceFlags::empty(),
+            ChoiceEnum::Range {
+                default: 0,
+                min: 0,
+                max: i64::MAX,
+            },
+        ))),
+    });
+    serialize_object(object)
+}
+
+pub(super) fn fixate_modifier_parameter(
+    param: &Pod,
+    modifier: u64,
+) -> Result<Vec<u8>, CaptureError> {
+    let (_, value) = PodDeserializer::deserialize_any_from(param.as_bytes())
+        .map_err(|error| format_error(format!("{error:?}")))?;
+    let Value::Object(mut object) = value else {
+        return Err(format_error("negotiated format is not an object pod"));
+    };
+    let property = object
+        .properties
+        .iter_mut()
+        .find(|property| property.key == spa::sys::SPA_FORMAT_VIDEO_modifier)
+        .ok_or_else(|| format_error("negotiated DMA-BUF format has no modifier"))?;
+    property.flags.remove(PropertyFlags::DONT_FIXATE);
+    property.flags.insert(PropertyFlags::MANDATORY);
+    property.value = Value::Long(modifier as i64);
     serialize_object(object)
 }
 
@@ -124,32 +208,53 @@ pub(super) fn buffer_parameter(format: NegotiatedFormat) -> Result<Vec<u8>, Capt
     let size = stride
         .checked_mul(i32::try_from(format.height).map_err(|_| format_error("height too large"))?)
         .ok_or_else(|| format_error("negotiated buffer size overflows"))?;
-    let memory_mask = (1_i32 << spa::sys::SPA_DATA_MemPtr) | (1_i32 << spa::sys::SPA_DATA_MemFd);
-    let buffer = spa::pod::Object {
-        type_: spa::utils::SpaTypes::ObjectParamBuffers.as_raw(),
-        id: ParamType::Buffers.as_raw(),
-        properties: vec![
-            // KWin offers 2–4 buffers. Eight is a preference, not a requirement;
-            // keep the existing upper bound while allowing the producer's pool.
-            spa::pod::Property::new(
-                spa::sys::SPA_PARAM_BUFFERS_buffers,
+    let memory_mask = if format.modifier.is_some() {
+        1_i32 << spa::sys::SPA_DATA_DmaBuf
+    } else {
+        (1_i32 << spa::sys::SPA_DATA_MemPtr) | (1_i32 << spa::sys::SPA_DATA_MemFd)
+    };
+    let mut properties = vec![
+        // KWin offers 2–4 buffers. Eight is a preference, not a requirement;
+        // keep the existing upper bound while allowing the producer's pool.
+        spa::pod::Property::new(
+            spa::sys::SPA_PARAM_BUFFERS_buffers,
+            Value::Choice(ChoiceValue::Int(Choice(
+                ChoiceFlags::empty(),
+                ChoiceEnum::Range {
+                    default: 8,
+                    min: 2,
+                    max: 8,
+                },
+            ))),
+        ),
+        spa::pod::Property::new(
+            spa::sys::SPA_PARAM_BUFFERS_blocks,
+            if format.modifier.is_some() {
                 Value::Choice(ChoiceValue::Int(Choice(
                     ChoiceFlags::empty(),
                     ChoiceEnum::Range {
-                        default: 8,
-                        min: 2,
-                        max: 8,
+                        default: 1,
+                        min: 1,
+                        max: 4,
                     },
-                ))),
-            ),
-            spa::pod::Property::new(spa::sys::SPA_PARAM_BUFFERS_blocks, Value::Int(1)),
-            spa::pod::Property::new(spa::sys::SPA_PARAM_BUFFERS_size, Value::Int(size)),
-            spa::pod::Property::new(spa::sys::SPA_PARAM_BUFFERS_stride, Value::Int(stride)),
-            spa::pod::Property::new(
-                spa::sys::SPA_PARAM_BUFFERS_dataType,
-                Value::Int(memory_mask),
-            ),
-        ],
+                )))
+            } else {
+                Value::Int(1)
+            },
+        ),
+    ];
+    properties.extend([
+        spa::pod::Property::new(spa::sys::SPA_PARAM_BUFFERS_size, Value::Int(size)),
+        spa::pod::Property::new(spa::sys::SPA_PARAM_BUFFERS_stride, Value::Int(stride)),
+    ]);
+    properties.push(spa::pod::Property::new(
+        spa::sys::SPA_PARAM_BUFFERS_dataType,
+        Value::Int(memory_mask),
+    ));
+    let buffer = spa::pod::Object {
+        type_: spa::utils::SpaTypes::ObjectParamBuffers.as_raw(),
+        id: ParamType::Buffers.as_raw(),
+        properties,
     };
     serialize_object(buffer)
 }
@@ -215,7 +320,7 @@ fn meta_parameter(meta_type: u32, size: Value) -> Result<Vec<u8>, CaptureError> 
 }
 
 fn serialize_object(object: spa::pod::Object) -> Result<Vec<u8>, CaptureError> {
-    spa::pod::serialize::PodSerializer::serialize(Cursor::new(Vec::new()), &Value::Object(object))
+    PodSerializer::serialize(Cursor::new(Vec::new()), &Value::Object(object))
         .map(|(cursor, _)| cursor.into_inner())
         .map_err(|error| format_error(error.to_string()))
 }
