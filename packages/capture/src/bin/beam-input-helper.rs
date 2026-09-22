@@ -55,23 +55,46 @@ mod linux {
         active_shortcuts: HashMap<KeyCode, ActiveShortcut>,
     }
 
-    pub(crate) fn run() -> Result<(), Box<dyn std::error::Error>> {
-        let mut arguments = std::env::args().skip(1);
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub(super) enum HelperCommand {
+        Probe,
+        Stream,
+        Install,
+        InstallStream,
+        Uninstall,
+        Version,
+    }
+
+    pub(super) fn parse_helper_command(
+        arguments: impl IntoIterator<Item = String>,
+    ) -> Result<HelperCommand, &'static str> {
+        let mut arguments = arguments.into_iter();
         let command = arguments.next().unwrap_or_else(|| "probe".into());
         if arguments.next().is_some() {
-            return Err("beam-input-helper accepts exactly one command".into());
+            return Err("beam-input-helper accepts exactly one command");
         }
         match command.as_str() {
-            "probe" => probe(),
-            "stream" => stream(),
-            "install" => install(),
-            "install-stream" => install_stream(),
-            "uninstall" => uninstall(),
-            "version" => write_json(&serde_json::json!({
+            "probe" => Ok(HelperCommand::Probe),
+            "stream" => Ok(HelperCommand::Stream),
+            "install" => Ok(HelperCommand::Install),
+            "install-stream" => Ok(HelperCommand::InstallStream),
+            "uninstall" => Ok(HelperCommand::Uninstall),
+            "version" => Ok(HelperCommand::Version),
+            _ => Err("unsupported beam-input-helper command"),
+        }
+    }
+
+    pub(crate) fn run() -> Result<(), Box<dyn std::error::Error>> {
+        match parse_helper_command(std::env::args().skip(1))? {
+            HelperCommand::Probe => probe(),
+            HelperCommand::Stream => stream(),
+            HelperCommand::Install => install(),
+            HelperCommand::InstallStream => install_stream(),
+            HelperCommand::Uninstall => uninstall(),
+            HelperCommand::Version => write_json(&serde_json::json!({
                 "version": env!("CARGO_PKG_VERSION"),
                 "policyVersion": POLICY_VERSION
             })),
-            _ => Err("unsupported beam-input-helper command".into()),
         }
     }
 
@@ -442,9 +465,13 @@ mod linux {
     }
 }
 
-#[cfg(all(target_os = "linux", test))]
-#[path = "beam_input_helper/filter_tests.rs"]
-mod filter_tests;
+#[cfg(target_os = "linux")]
+#[path = "../../test/bin/beam_input_helper/filter_tests.rs"]
+mod filter_checks;
+
+#[cfg(target_os = "linux")]
+#[path = "../../test/bin/beam_input_helper/command_tests.rs"]
+mod command_checks;
 
 #[cfg(target_os = "linux")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {

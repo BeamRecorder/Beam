@@ -9,8 +9,8 @@ mod support;
 mod thread;
 mod timestamp;
 
-#[cfg(test)]
-mod tests;
+#[path = "../../../../test/screen/linux/pipewire/mod.rs"]
+mod tests_checks;
 
 use cursor_classifier::*;
 pub(crate) use cursor_state::*;

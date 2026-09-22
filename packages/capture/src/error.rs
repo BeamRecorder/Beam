@@ -128,3 +128,21 @@ impl CaptureError {
         Self::ParentDeathGuard(message.into())
     }
 }
+
+impl From<beam_media_manifest::ManifestError> for CaptureError {
+    fn from(error: beam_media_manifest::ManifestError) -> Self {
+        match error {
+            beam_media_manifest::ManifestError::InvalidSourceId => {
+                Self::InvalidConfiguration("source id must contain 1..=1024 characters".into())
+            }
+            beam_media_manifest::ManifestError::InvalidPath => {
+                Self::InvalidConfiguration("atomic path has no filename".into())
+            }
+            beam_media_manifest::ManifestError::Storage { path, source } => Self::Storage {
+                path: path.display().to_string(),
+                source,
+            },
+            beam_media_manifest::ManifestError::Serialization(error) => Self::Serialization(error),
+        }
+    }
+}

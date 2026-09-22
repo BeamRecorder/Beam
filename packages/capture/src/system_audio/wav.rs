@@ -78,6 +78,5 @@ impl FloatWavWriter {
     }
 }
 
-#[cfg(test)]
-#[path = "wav_tests.rs"]
-mod tests;
+#[path = "../../test/system_audio/wav.rs"]
+mod wav_checks;

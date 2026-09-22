@@ -69,7 +69,7 @@ def main() -> int:
         report_path.parent.mkdir(parents=True, exist_ok=True)
         command = [
             "cargo", "llvm-cov", "nextest", "--workspace", "--all-features",
-            "--json", "--summary-only", "--output-path", str(report_path),
+            "--failure-mode", "all", "--json", "--summary-only", "--output-path", str(report_path),
         ]
         subprocess.run(command, cwd=root, check=True)
         results = evaluate(metadata, json.loads(report_path.read_text(encoding="utf-8")))

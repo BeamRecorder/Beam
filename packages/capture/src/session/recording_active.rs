@@ -3,6 +3,9 @@ use std::sync::Arc;
 mod metrics;
 mod source_watches;
 
+#[path = "../../test/session/recording_active.rs"]
+mod active_checks;
+
 use crate::{
     CaptureError,
     catalog::CatalogSnapshot,
@@ -20,7 +23,7 @@ use source_watches::source_watches;
 pub(super) struct ActiveRecordings {
     reporter: Option<PeriodicReporter>,
     screen: Option<crate::screen::ScreenRecording>,
-    #[cfg(test)]
+    /// Optional source state override used by deterministic session checks.
     test_screen_availability: Option<bool>,
     system_audio: Option<crate::system_audio::SystemAudioRecording>,
     #[cfg(all(windows, feature = "cursor"))]
@@ -43,7 +46,6 @@ pub(super) struct OpenContext<'a> {
 
 impl ActiveRecordings {
     pub(super) fn has_screen(&self) -> bool {
-        #[cfg(test)]
         if self.test_screen_availability.is_some() {
             return true;
         }
@@ -51,7 +53,6 @@ impl ActiveRecordings {
     }
 
     pub(super) fn screen_available(&self) -> bool {
-        #[cfg(test)]
         if let Some(available) = self.test_screen_availability {
             return available;
         }
@@ -60,7 +61,7 @@ impl ActiveRecordings {
             .is_none_or(crate::screen::ScreenRecording::is_available)
     }
 
-    #[cfg(test)]
+    #[allow(dead_code)]
     pub(super) fn set_screen_availability_for_test(&mut self, available: bool) {
         self.test_screen_availability = Some(available);
     }

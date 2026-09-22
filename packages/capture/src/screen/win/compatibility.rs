@@ -74,6 +74,5 @@ fn settings_for_support(
     }
 }
 
-#[cfg(test)]
-#[path = "compatibility_tests.rs"]
-mod tests;
+#[path = "../../../test/screen/win/compatibility.rs"]
+mod compatibility_checks;

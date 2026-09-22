@@ -2,9 +2,12 @@ use std::{path::PathBuf, sync::Arc};
 
 use crate::{CaptureError, model::SystemAudioSelection, session::StartGate};
 
+#[path = "../../test/system_audio/mod.rs"]
+mod system_audio_checks;
+
 #[cfg(target_os = "linux")]
 mod linux;
-#[cfg(any(target_os = "linux", test))]
+#[cfg(target_os = "linux")]
 mod wav;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

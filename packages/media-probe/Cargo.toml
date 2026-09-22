@@ -1,0 +1,67 @@
+[package]
+name = "beam-media-probe"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.92"
+publish = false
+
+[dependencies]
+beam-media-session = { path = "../media-session" }
+beam-media-manifest = { path = "../media-manifest" }
+beam-camera = { path = "../camera" }
+beam-audio = { path = "../audio" }
+beam-camera-wgpu = { path = "../camera-wgpu" }
+beam-media-core = { path = "../media-core" }
+wgpu = "=30.0.1"
+pollster = "0.4"
+serde_json = "1"
+sysinfo = "=0.36.1"
+ctrlc = "=3.4.7"
+
+[dev-dependencies]
+tempfile = "3"
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+all = "deny"
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+
+[[bin]]
+name = "beam-media-probe"
+path = "src/main.rs"
+
+[[test]]
+name = "cli"
+path = "test/cli.rs"
+
+[[test]]
+name = "probe_args"
+path = "test/args.rs"
+
+[[test]]
+name = "probe_main"
+path = "test/main.rs"
+
+[[test]]
+name = "probe_report"
+path = "test/report.rs"
+
+[[test]]
+name = "probe_record"
+path = "test/record.rs"
+
+[[test]]
+name = "probe_resources"
+path = "test/resources.rs"
+
+[[test]]
+name = "probe_devices"
+path = "test/devices.rs"
+
+[[test]]
+name = "probe_preview"
+path = "test/preview.rs"

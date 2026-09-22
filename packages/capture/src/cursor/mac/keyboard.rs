@@ -1,5 +1,8 @@
 use core_graphics::event_source::CGEventSourceStateID;
 
+#[path = "../../../test/cursor/mac/keyboard.rs"]
+mod keyboard_checks;
+
 use crate::input::{InputKey, InputModifier};
 
 #[must_use]
@@ -15,18 +18,25 @@ pub fn request_input_access() -> bool {
 
 #[must_use]
 pub(crate) fn shortcut_modifier_pressed(modifier: InputModifier) -> bool {
-    let keys = match modifier {
+    modifier_codes(modifier).into_iter().any(key_state)
+}
+
+fn modifier_codes(modifier: InputModifier) -> [u16; 2] {
+    match modifier {
         InputModifier::Control => [0x3b, 0x3e],
         InputModifier::Shift => [0x38, 0x3c],
         InputModifier::Alt => [0x3a, 0x3d],
         InputModifier::Meta => [0x37, 0x36],
-    };
-    keys.into_iter().any(key_state)
+    }
 }
 
 #[must_use]
 pub(crate) fn shortcut_key_pressed(key: InputKey) -> bool {
-    key_state(match key {
+    key_state(key_code(key))
+}
+
+fn key_code(key: InputKey) -> u16 {
+    match key {
         InputKey::A => 0x00,
         InputKey::B => 0x0b,
         InputKey::C => 0x08,
@@ -90,7 +100,7 @@ pub(crate) fn shortcut_key_pressed(key: InputKey) -> bool {
         InputKey::F10 => 0x6d,
         InputKey::F11 => 0x67,
         InputKey::F12 => 0x6f,
-    })
+    }
 }
 
 fn key_state(key: u16) -> bool {

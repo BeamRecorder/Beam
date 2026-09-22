@@ -60,6 +60,5 @@ impl SessionState {
     }
 }
 
-#[cfg(test)]
-#[path = "state_tests.rs"]
-mod tests;
+#[path = "../../test/session/state.rs"]
+mod state_checks;

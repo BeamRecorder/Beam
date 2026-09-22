@@ -1,4 +1,9 @@
-use std::{path::PathBuf, sync::Arc, thread::JoinHandle, time::Instant};
+use std::{
+    path::PathBuf,
+    sync::Arc,
+    thread::JoinHandle,
+    time::{Duration, Instant},
+};
 
 use crossbeam_channel::{Receiver, RecvTimeoutError, Sender, bounded};
 
@@ -61,6 +66,26 @@ impl PeriodicReporter {
         samplers: Vec<MetricSampler>,
         source_watches: Vec<SourceWatch>,
     ) -> Result<Self, CaptureError> {
+        Self::start_with_interval(
+            health_path,
+            timing_path,
+            start_gate,
+            segment_start_ns,
+            samplers,
+            source_watches,
+            Duration::from_secs(1),
+        )
+    }
+
+    fn start_with_interval(
+        health_path: PathBuf,
+        timing_path: PathBuf,
+        start_gate: Arc<StartGate>,
+        segment_start_ns: u64,
+        samplers: Vec<MetricSampler>,
+        source_watches: Vec<SourceWatch>,
+        interval: Duration,
+    ) -> Result<Self, CaptureError> {
         let (stop, receiver) = bounded(1);
         let thread = std::thread::Builder::new()
             .name("capture-health-reporter".into())
@@ -73,6 +98,7 @@ impl PeriodicReporter {
                     &samplers,
                     &source_watches,
                     &receiver,
+                    interval,
                 )
             })
             .map_err(|error| CaptureError::Backend(error.to_string()))?;
@@ -110,6 +136,7 @@ fn report_loop(
     samplers: &[MetricSampler],
     source_watches: &[SourceWatch],
     stop: &Receiver<()>,
+    interval: Duration,
 ) -> Result<(), CaptureError> {
     let started = Instant::now();
     let mut previous = vec![TrackMetrics::default(); samplers.len()];
@@ -119,7 +146,7 @@ fn report_loop(
         .collect::<Vec<_>>();
     let catalog = NativeCatalog::default();
     loop {
-        match stop.recv_timeout(report_interval()) {
+        match stop.recv_timeout(interval) {
             Ok(()) | Err(RecvTimeoutError::Disconnected) => return Ok(()),
             Err(RecvTimeoutError::Timeout) => {}
         }
@@ -304,15 +331,6 @@ fn detect_source_changes(
     }
     events
 }
-#[cfg(not(test))]
-fn report_interval() -> std::time::Duration {
-    std::time::Duration::from_secs(1)
-}
-#[cfg(test)]
-fn report_interval() -> std::time::Duration {
-    std::time::Duration::from_millis(20)
-}
-
 fn native_clock(format: &TrackFormat, metrics: &TrackMetrics) -> (u64, u64) {
     match format {
         TrackFormat::Video { nominal_fps, .. } => {
@@ -350,150 +368,5 @@ fn add_metrics(base: &TrackMetrics, current: &TrackMetrics) -> TrackMetrics {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use std::sync::atomic::{AtomicU64, Ordering};
-
-    use super::*;
-
-    #[test]
-    fn reporter_emits_monotonic_periodic_health_and_timing()
-    -> Result<(), Box<dyn std::error::Error>> {
-        let temporary = tempfile::tempdir()?;
-        let health = temporary.path().join("health.jsonl");
-        let timing = temporary.path().join("timing.jsonl");
-        let gate = Arc::new(StartGate::new());
-        let frames = Arc::new(AtomicU64::new(0));
-        let sampled_frames = frames.clone();
-        let reporter = PeriodicReporter::start(
-            health.clone(),
-            timing.clone(),
-            gate.clone(),
-            100,
-            vec![MetricSampler::new(
-                TrackId::new(),
-                TrackFormat::Video {
-                    codec: "fake".into(),
-                    width: 1,
-                    height: 1,
-                    nominal_fps: 30,
-                },
-                TrackMetrics::default(),
-                move || TrackMetrics {
-                    frames_received: sampled_frames.fetch_add(1, Ordering::Relaxed),
-                    ..TrackMetrics::default()
-                },
-            )],
-            Vec::new(),
-        )?;
-        gate.release(7)?;
-        std::thread::sleep(std::time::Duration::from_millis(75));
-        reporter.stop()?;
-
-        let anchors = std::fs::read_to_string(timing)?
-            .lines()
-            .map(serde_json::from_str::<TimingAnchor>)
-            .collect::<Result<Vec<_>, _>>()?;
-        let events = std::fs::read_to_string(health)?
-            .lines()
-            .map(serde_json::from_str::<HealthEvent>)
-            .collect::<Result<Vec<_>, _>>()?;
-        assert!(anchors.len() >= 2);
-        assert_eq!(anchors.len(), events.len());
-        assert!(
-            anchors
-                .windows(2)
-                .all(|pair| pair[0].session_ns < pair[1].session_ns)
-        );
-        assert!(
-            anchors
-                .windows(2)
-                .all(|pair| pair[0].native_position < pair[1].native_position)
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn source_monitor_reports_disconnect_reconnect_and_format_change()
-    -> Result<(), Box<dyn std::error::Error>> {
-        use crate::model::{
-            CaptureCapabilities, MediaFormat, PermissionSnapshot, SourceCapabilities, SourceKind,
-            SourceSelectionMode,
-        };
-
-        let track_id = TrackId::new();
-        let source = SourceDescriptor {
-            id: SourceId::new("display:test")?,
-            kind: SourceKind::Display,
-            label: "Test display".into(),
-            is_default: true,
-            selection_mode: SourceSelectionMode::Direct,
-            display_id: None,
-            capabilities: SourceCapabilities::default(),
-        };
-        let watch = SourceWatch::new(track_id, source.clone());
-        let mut states = vec![SourceState::from_source(&source)];
-        let snapshot = |sources| CatalogSnapshot {
-            generation: 1,
-            created_at_utc: String::new(),
-            capabilities: CaptureCapabilities::default(),
-            permissions: PermissionSnapshot::default(),
-            diagnostics: Default::default(),
-            limitations: Vec::new(),
-            sources,
-        };
-
-        let disconnected = detect_source_changes(
-            std::slice::from_ref(&watch),
-            &mut states,
-            &snapshot(vec![]),
-            1,
-        );
-        assert!(matches!(disconnected[0], HealthEvent::DeviceChanged { .. }));
-        assert!(disconnected.iter().any(|event| matches!(
-            event,
-            HealthEvent::Error { code, .. } if code == "source-lost"
-        )));
-        assert!(
-            detect_source_changes(
-                std::slice::from_ref(&watch),
-                &mut states,
-                &snapshot(vec![]),
-                2
-            )
-            .is_empty()
-        );
-
-        let mut changed = source.clone();
-        changed.capabilities.formats.push(MediaFormat::Video {
-            width: 1920,
-            height: 1080,
-            fps: 30,
-            pixel_format: Some("nv12".into()),
-        });
-        let reconnected = detect_source_changes(
-            std::slice::from_ref(&watch),
-            &mut states,
-            &snapshot(vec![changed.clone()]),
-            3,
-        );
-        assert!(reconnected.iter().any(|event| matches!(
-            event,
-            HealthEvent::DeviceChanged { detail, .. } if detail.contains("reconnected")
-        )));
-
-        changed.capabilities.formats.push(MediaFormat::Video {
-            width: 1280,
-            height: 720,
-            fps: 30,
-            pixel_format: Some("nv12".into()),
-        });
-        let format_changed =
-            detect_source_changes(&[watch], &mut states, &snapshot(vec![changed]), 4);
-        assert!(format_changed.iter().any(|event| matches!(
-            event,
-            HealthEvent::DeviceChanged { detail, .. } if detail.contains("format")
-        )));
-        Ok(())
-    }
-}
+#[path = "../../test/session/periodic_reporter.rs"]
+mod reporter_checks;

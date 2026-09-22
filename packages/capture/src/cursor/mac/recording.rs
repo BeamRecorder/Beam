@@ -9,6 +9,9 @@ use std::{
     time::{Duration, Instant},
 };
 
+#[path = "../../../test/cursor/mac/recording.rs"]
+mod recording_checks;
+
 use core_graphics::{
     event::{CGEvent, CGMouseButton},
     event_source::CGEventSourceStateID,

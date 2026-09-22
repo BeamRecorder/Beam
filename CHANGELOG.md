@@ -4,7 +4,52 @@ User-facing changes to Beam are documented in this file.
 
 ## [Unreleased]
 
-Nothing changed at the moment.
+### Added
+
+- Added an experimental shared native media control API to feature-enabled Rust capture engines and the Electron bridge for device discovery and independent camera, microphone, and system-audio recording sessions.
+- Added a native media prototype CLI that records a camera, microphone, and system audio as separate tracks with a shared timeline, a session manifest, bounded measurements including camera-to-GPU submission latency, and a live wgpu camera preview.
+- Linux system-audio discovery now lists individual PipeWire output devices and lets recordings select one explicitly.
+- Native media sessions now expose shared audio and camera source contracts across Linux, macOS, and Windows.
+- The native media report now includes observed wgpu allocation memory when the GPU backend provides it.
+- The native media probe can deliberately slow camera preview with `--preview-delay-ms` and reports preview CPU buffer growth, making it possible to check that recording stays independent of a slow preview.
+- Native media reports now show preview color conversion, CPU row padding copies, and GPU upload bytes per uploaded frame.
+- Native media process samples now include the cumulative preview frame count, allowing frame rate and resource use to be compared throughout a recording.
+- Native media reports now show the longest session poll and resource sample times to help diagnose recording stalls.
+- Linux system-audio capture now carries valid PipeWire buffer timestamps into the shared audio packet when the server provides them, enabling drift measurements for supported outputs.
+
+### Changed
+
+- The Windows native camera prototype now uses a direct asynchronous Media Foundation reader with bounded frame delivery and cancelable shutdown.
+- The macOS native camera prototype now captures through AVFoundation with late-frame discard and bounded callback queues.
+
+### Fixed
+
+- Linux screen and system-audio capture now finish their output workers when a PipeWire worker panics, avoiding a stuck stop operation.
+- Linux screen capture now reports the PipeWire worker failure that interrupted preparation instead of labeling every early exit as a negotiation timeout.
+- Capture probe commands now reject unknown commands and missing format source IDs before attempting device discovery; Linux native probes no longer require an unrelated catalog scan.
+- Native camera access failures now report permission denial separately from a missing device on Linux, macOS, and Windows.
+- The native macOS probe now embeds camera, microphone, and system-audio privacy descriptions so its standalone executable can request capture access.
+- Checked macOS camera buffer bounds before copying frames and preserved the first Windows camera capture error for clearer failure reporting.
+- Recovery keeps an explicitly incomplete session incomplete even when its final manifest file exists.
+- Older capture catalog snapshots now load with newer capability flags defaulting to unavailable.
+- The native media probe rejects extra arguments for `devices` and help before opening any devices.
+- Native media recording now drains queued camera and audio packets after stopping capture, preserving the end of each track.
+- Native media recording now reports a stalled encoder at stop instead of waiting indefinitely for its worker.
+- Native media sessions now mark a track with no accepted media packets as interrupted, including when audio packets were received but every writer submission was dropped.
+- The native media probe now writes a failed camera track and session manifest when no camera is available.
+- Native device discovery now lists available audio devices even when camera permission is denied, with separate errors for each device category.
+- Native macOS system-audio capture now uses a private Core Audio tap for duplex outputs so the output track does not accidentally record the device microphone.
+- macOS system-audio tap errors now distinguish denied capture permission and a missing output device from other Core Audio failures.
+- Native camera and Linux system-audio shutdown now retain stalled workers for a later stop attempt instead of losing their join handles on timeout.
+- Native microphone capture now fails clearly when a device produces audio faster than real time, and fatal capture errors reach the session even when drop metrics saturate their event queue.
+- Native camera disconnect and failure events now reach the session even when dropped-frame notifications fill their event queue.
+- Native Linux system-audio failures now reach the session even when PipeWire drop notifications fill their event queue.
+- A recording tied to a specific Linux PipeWire output now becomes interrupted when that output disappears, instead of completing after an unnoticed route change.
+- The native camera preview now submits GPU uploads so long recordings do not accumulate staging memory, and preserves preview metrics if a GPU error occurs.
+- Native media stop now finishes promptly when a capture source keeps reporting queued data that cannot be read, marking that track interrupted while finalizing unaffected tracks.
+- Native media stop now preserves completed track files and publishes an incomplete manifest with a warning when saving measurements fails; failed atomic publication also removes its temporary file.
+- A failed periodic native-media checkpoint now leaves its cause in an incomplete final manifest even when the checkpoint path cannot be removed.
+- Native media drift reports now use the first available native timestamp and suppress a drift value after a clock discontinuity, while preserving the raw timing points.
 
 ## [0.3.3] - 2026-09-21
 

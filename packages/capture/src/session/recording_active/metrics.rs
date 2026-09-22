@@ -1,4 +1,7 @@
 use crate::model::TrackMetadata;
+
+#[path = "../../../test/session/recording_active/metrics.rs"]
+mod metrics_checks;
 use crate::model::{TrackKind, TrackMetrics};
 
 use super::ActiveRecordings;

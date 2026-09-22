@@ -126,5 +126,5 @@ fn backend_error(error: impl std::fmt::Display) -> CaptureError {
     CaptureError::Backend(error.to_string())
 }
 
-#[cfg(test)]
-mod tests;
+#[path = "../../test/screenshot/mod.rs"]
+mod tests_checks;

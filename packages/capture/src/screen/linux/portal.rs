@@ -13,6 +13,9 @@ use ashpd::desktop::{
 };
 use futures_util::StreamExt;
 
+#[path = "../../../test/screen/linux/portal.rs"]
+mod portal_checks;
+
 use crate::{
     CaptureError, NativeCaptureErrorCode,
     model::{CursorSelection, PortalSourceKind},
@@ -93,11 +96,24 @@ pub(super) fn prepare_portal(
     kind: PortalSourceKind,
     cursor: CursorSelection,
 ) -> Result<PreparedPortal, CaptureError> {
+    prepare_portal_with_worker(move |receiver, ready_sender| {
+        portal_worker(kind, cursor, receiver, ready_sender)
+    })
+}
+
+fn prepare_portal_with_worker(
+    worker: impl FnOnce(
+        tokio::sync::mpsc::UnboundedReceiver<PortalCommand>,
+        mpsc::SyncSender<Result<PortalReady, CaptureError>>,
+    ) -> Result<(), CaptureError>
+    + Send
+    + 'static,
+) -> Result<PreparedPortal, CaptureError> {
     let (commands, receiver) = tokio::sync::mpsc::unbounded_channel();
     let (ready_sender, ready_receiver) = mpsc::sync_channel(1);
     let thread = thread::Builder::new()
         .name("beam-linux-portal".into())
-        .spawn(move || portal_worker(kind, cursor, receiver, ready_sender))
+        .spawn(move || worker(receiver, ready_sender))
         .map_err(|error| {
             CaptureError::native(NativeCaptureErrorCode::PortalUnavailable, error.to_string())
         })?;
@@ -261,6 +277,18 @@ async fn verify_capabilities(
         .available_source_types()
         .await
         .map_err(map_portal_error)?;
+    validate_source_capabilities(sources, kind)?;
+    let modes = proxy
+        .available_cursor_modes()
+        .await
+        .map_err(map_portal_error)?;
+    validate_cursor_capabilities(modes, cursor)
+}
+
+fn validate_source_capabilities(
+    sources: ashpd::enumflags2::BitFlags<SourceType>,
+    kind: PortalSourceKind,
+) -> Result<(), CaptureError> {
     let requested = source_type(kind);
     if !requested.iter().any(|source| sources.contains(source)) {
         return Err(CaptureError::native(
@@ -268,10 +296,13 @@ async fn verify_capabilities(
             "the ScreenCast portal does not advertise the requested source type",
         ));
     }
-    let modes = proxy
-        .available_cursor_modes()
-        .await
-        .map_err(map_portal_error)?;
+    Ok(())
+}
+
+fn validate_cursor_capabilities(
+    modes: ashpd::enumflags2::BitFlags<CursorMode>,
+    cursor: CursorSelection,
+) -> Result<(), CaptureError> {
     let requested_cursor = cursor_mode(cursor);
     if !modes.contains(requested_cursor) {
         return Err(CaptureError::native(
@@ -314,3 +345,6 @@ fn map_portal_error(error: ashpd::Error) -> CaptureError {
     };
     CaptureError::native(code, error.to_string())
 }
+
+#[path = "../../../test/screen/linux/portal_capabilities.rs"]
+mod capabilities_checks;

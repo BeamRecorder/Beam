@@ -16,7 +16,9 @@ use crate::{
 
 use super::{
     input_helper_diagnostics::{HelperDiagnostics, startup_error},
-    input_helper_executable::{command_on_path, helper_launch, input_helper_path},
+    input_helper_executable::{
+        ElevatedHelperExecutable, command_on_path, helper_launch, input_helper_path,
+    },
     owned_child,
 };
 
@@ -66,7 +68,7 @@ struct LinuxInputBroker {
 static BROKER: OnceLock<Mutex<LinuxInputBroker>> = OnceLock::new();
 
 pub(crate) struct LinuxInputMonitor {
-    queue: Arc<Mutex<InputEventQueue>>,
+    pub(super) queue: Arc<Mutex<InputEventQueue>>,
 }
 
 impl LinuxInputMonitor {
@@ -207,6 +209,14 @@ fn try_request_linux_input_access() -> Result<InputAccessStatus, CaptureError> {
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
+    start_broker_with_command(&mut broker, helper, command)
+}
+
+fn start_broker_with_command(
+    broker: &mut LinuxInputBroker,
+    helper: ElevatedHelperExecutable,
+    mut command: Command,
+) -> Result<InputAccessStatus, CaptureError> {
     owned_child::configure(&mut command);
     let mut child = command
         .spawn()
@@ -227,7 +237,7 @@ fn try_request_linux_input_access() -> Result<InputAccessStatus, CaptureError> {
     };
     let Some(stdout) = child.stdout.take() else {
         return Err(failed_startup(
-            &mut broker,
+            broker,
             &mut child,
             "Input helper stdout was unavailable.",
         ));
@@ -235,10 +245,10 @@ fn try_request_linux_input_access() -> Result<InputAccessStatus, CaptureError> {
     let mut reader = BufReader::new(stdout);
     let mut ready_line = String::new();
     match reader.read_line(&mut ready_line) {
-        Ok(0) => return Err(failed_startup(&mut broker, &mut child, "")),
+        Ok(0) => return Err(failed_startup(broker, &mut child, "")),
         Err(error) => {
             return Err(failed_startup(
-                &mut broker,
+                broker,
                 &mut child,
                 &format!("Input helper readiness failed: {error}"),
             ));
@@ -248,34 +258,8 @@ fn try_request_linux_input_access() -> Result<InputAccessStatus, CaptureError> {
     // The sealed memfd must outlive Polkit authentication and the helper's
     // exec. A readiness line proves the privileged process has started.
     drop(helper);
-    let ready: serde_json::Value = match serde_json::from_str(&ready_line) {
-        Ok(ready) => ready,
-        Err(error) => {
-            return Err(failed_startup(
-                &mut broker,
-                &mut child,
-                &format!("Invalid input helper readiness JSON: {error}"),
-            ));
-        }
-    };
-    if ready.get("event").and_then(serde_json::Value::as_str) != Some("ready") {
-        return Err(failed_startup(
-            &mut broker,
-            &mut child,
-            "Input helper returned an invalid readiness response.",
-        ));
-    }
-
-    let mouse_devices = ready
-        .get("mouseDevices")
-        .and_then(serde_json::Value::as_u64)
-        .and_then(|value| usize::try_from(value).ok())
-        .unwrap_or(0);
-    let keyboard_devices = ready
-        .get("keyboardDevices")
-        .and_then(serde_json::Value::as_u64)
-        .and_then(|value| usize::try_from(value).ok())
-        .unwrap_or(0);
+    let (mouse_devices, keyboard_devices) = parse_ready_counts(&ready_line)
+        .map_err(|context| failed_startup(broker, &mut child, &context))?;
     broker
         .shared
         .mouse_devices
@@ -289,34 +273,13 @@ fn try_request_linux_input_access() -> Result<InputAccessStatus, CaptureError> {
     let shared = broker.shared.clone();
     let reader_thread = std::thread::Builder::new()
         .name("beam-linux-input-broker".into())
-        .spawn(move || {
-            for line in reader.lines().map_while(Result::ok) {
-                let Ok(event) = serde_json::from_str::<NativeInputEvent>(&line) else {
-                    continue;
-                };
-                if let Ok(mut subscribers) = shared.subscribers.lock() {
-                    subscribers.retain(|subscriber| {
-                        let Some(queue) = subscriber.upgrade() else {
-                            return false;
-                        };
-                        if let Ok(mut queue) = queue.lock() {
-                            queue.push(event.clone());
-                        }
-                        true
-                    });
-                }
-            }
-            shared.ready.store(false, Ordering::Release);
-            if let Ok(mut subscribers) = shared.subscribers.lock() {
-                subscribers.clear();
-            }
-        });
+        .spawn(move || read_input_lines(reader, &shared));
     let reader_thread = match reader_thread {
         Ok(reader_thread) => reader_thread,
         Err(error) => {
             broker.shared.ready.store(false, Ordering::Release);
             return Err(failed_startup(
-                &mut broker,
+                broker,
                 &mut child,
                 &format!("Input broker reader failed to start: {error}"),
             ));
@@ -324,7 +287,50 @@ fn try_request_linux_input_access() -> Result<InputAccessStatus, CaptureError> {
     };
     broker.reader = Some(reader_thread);
     broker.child = Some(child);
-    Ok(linux_input_access_status_from(&broker))
+    Ok(linux_input_access_status_from(broker))
+}
+
+fn parse_ready_counts(line: &str) -> Result<(usize, usize), String> {
+    let ready: serde_json::Value = serde_json::from_str(line)
+        .map_err(|error| format!("Invalid input helper readiness JSON: {error}"))?;
+    if ready.get("event").and_then(serde_json::Value::as_str) != Some("ready") {
+        return Err("Input helper returned an invalid readiness response.".into());
+    }
+    let count = |name| {
+        ready
+            .get(name)
+            .and_then(serde_json::Value::as_u64)
+            .and_then(|value| usize::try_from(value).ok())
+            .unwrap_or(0)
+    };
+    Ok((count("mouseDevices"), count("keyboardDevices")))
+}
+
+fn dispatch_input_line(shared: &BrokerShared, line: &str) {
+    let Ok(event) = serde_json::from_str::<NativeInputEvent>(line) else {
+        return;
+    };
+    if let Ok(mut subscribers) = shared.subscribers.lock() {
+        subscribers.retain(|subscriber| {
+            let Some(queue) = subscriber.upgrade() else {
+                return false;
+            };
+            if let Ok(mut queue) = queue.lock() {
+                queue.push(event.clone());
+            }
+            true
+        });
+    }
+}
+
+fn read_input_lines(reader: impl BufRead, shared: &BrokerShared) {
+    for line in reader.lines().map_while(Result::ok) {
+        dispatch_input_line(shared, &line);
+    }
+    shared.ready.store(false, Ordering::Release);
+    if let Ok(mut subscribers) = shared.subscribers.lock() {
+        subscribers.clear();
+    }
 }
 
 fn failed_startup(broker: &mut LinuxInputBroker, child: &mut Child, context: &str) -> CaptureError {
@@ -417,6 +423,8 @@ fn linux_input_access_status_from(broker: &LinuxInputBroker) -> InputAccessStatu
     )
 }
 
-#[cfg(test)]
-#[path = "input_monitor_startup_tests.rs"]
-mod startup_tests;
+#[path = "../../../test/screen/linux/input_monitor_startup_tests.rs"]
+mod input_monitor_startup_checks;
+
+#[path = "../../../test/screen/linux/input_monitor_spawn.rs"]
+mod input_monitor_spawn_checks;

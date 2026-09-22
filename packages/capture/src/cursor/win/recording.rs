@@ -9,6 +9,9 @@ use std::{
     time::{Duration, Instant},
 };
 
+#[path = "../../../test/cursor/win/recording.rs"]
+mod recording_checks;
+
 use crate::{
     CaptureError,
     cursor::{

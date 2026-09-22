@@ -22,7 +22,7 @@ pub fn recover_session(layout: &SessionLayout) -> Result<RecoveryReport, crate::
     let mut manifest: SessionManifest = serde_json::from_slice(
         &std::fs::read(&path).map_err(|e| crate::CaptureError::storage(&path, e))?,
     )?;
-    manifest.completed = layout.manifest().exists();
+    manifest.completed &= layout.manifest().exists();
     if !manifest.completed {
         for track in &mut manifest.tracks {
             let missing_or_incomplete = track

@@ -23,9 +23,10 @@ use crate::{
 };
 
 use super::{
-    BufferLayout, CursorState, FrameGeometry, NegotiatedFormat, TimestampMapper, copy_frame,
-    crop_frame, expand_crop_to_content, has_fatal, metadata, repaired_window_crop, set_fatal,
-    sink_error, video_format,
+    BufferLayout, CropRect, CursorMetadata, CursorState, FrameGeometry, HeaderMetadata,
+    NegotiatedFormat, TimestampMapper, VideoTransform, copy_frame, crop_frame,
+    expand_crop_to_content, has_fatal, metadata, repaired_window_crop, set_fatal, sink_error,
+    video_format,
 };
 
 pub(super) enum SinkMessage {
@@ -63,6 +64,23 @@ pub(super) struct ProcessState {
     pub region: Option<ScreenRegion>,
 }
 
+pub(super) struct PlaneData<'a> {
+    pub layout: BufferLayout,
+    pub corrupted: bool,
+    pub memory_type: DataType,
+    pub memory: Option<&'a [u8]>,
+}
+
+pub(super) struct DecodedBuffer<'a> {
+    pub header: HeaderMetadata,
+    pub cursor: Option<CursorMetadata>,
+    pub reported_crop: Option<CropRect>,
+    pub transform: VideoTransform,
+    pub plane_count: usize,
+    pub plane: Option<PlaneData<'a>>,
+    pub arrival_ns: u64,
+}
+
 pub(super) fn should_defer_timestamp_origin(
     has_frame_geometry: bool,
     corrupted: bool,
@@ -95,53 +113,109 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
     };
     let header = metadata::header(&buffer);
     let cursor = metadata::cursor(&buffer, state.cursor.classifier_mut());
-    let has_cursor_metadata = cursor.as_ref().is_some_and(|cursor| cursor.id != 0);
     let reported_crop = metadata::crop(&buffer);
     let transform = metadata::transform(&buffer);
+    let datas = buffer.datas_mut();
+    let plane_count = datas.len();
+    let plane = if let [data] = datas {
+        let chunk = data.chunk();
+        let layout = BufferLayout {
+            offset: usize::try_from(chunk.offset()).unwrap_or(usize::MAX),
+            size: usize::try_from(chunk.size()).unwrap_or(usize::MAX),
+            stride: chunk.stride(),
+            crop: reported_crop,
+            transform,
+        };
+        let corrupted = chunk.flags().contains(ChunkFlags::CORRUPTED);
+        let memory_type = data.type_();
+        let memory = if !corrupted
+            && layout.size != 0
+            && matches!(
+                memory_type,
+                DataType::MemPtr | DataType::MemFd | DataType::DmaBuf
+            ) {
+            data.data().map(|data| &*data)
+        } else {
+            None
+        };
+        Some(PlaneData {
+            layout,
+            corrupted,
+            memory_type,
+            memory,
+        })
+    } else {
+        None
+    };
+    let arrival_ns = u64::try_from(state.clock.elapsed().as_nanos()).unwrap_or(u64::MAX);
+    process_decoded_buffer(
+        &mut state,
+        format,
+        DecodedBuffer {
+            header,
+            cursor,
+            reported_crop,
+            transform,
+            plane_count,
+            plane,
+            arrival_ns,
+        },
+    );
+}
+
+pub(super) fn process_decoded_buffer(
+    state: &mut ProcessState,
+    format: NegotiatedFormat,
+    buffer: DecodedBuffer<'_>,
+) {
+    let DecodedBuffer {
+        header,
+        cursor,
+        reported_crop,
+        transform,
+        plane_count,
+        plane,
+        arrival_ns,
+    } = buffer;
+    let has_cursor_metadata = cursor.as_ref().is_some_and(|cursor| cursor.id != 0);
     // Mutter may publish cursor-only buffers before the first window frame.
     // They cannot be mapped without frame geometry and must not establish the
     // session clock origin, otherwise the cursor timeline starts ahead of the
     // encoded video by the wait for that first usable frame.
-    let defer_unusable_preroll = {
-        let datas = buffer.datas_mut();
-        if datas.len() != 1 {
-            false
-        } else {
-            let chunk = datas[0].chunk();
-            should_defer_timestamp_origin(
-                state.last_frame_geometry.is_some(),
-                chunk.flags().contains(ChunkFlags::CORRUPTED),
-                chunk.size(),
-            )
-        }
-    };
+    let defer_unusable_preroll = plane.as_ref().is_some_and(|plane| {
+        should_defer_timestamp_origin(
+            state.last_frame_geometry.is_some(),
+            plane.corrupted,
+            u32::try_from(plane.layout.size).unwrap_or(u32::MAX),
+        )
+    });
     if defer_unusable_preroll {
         return;
     }
-    let arrival_ns = u64::try_from(state.clock.elapsed().as_nanos()).unwrap_or(u64::MAX);
     let timestamp = match state.timestamp.map(header, arrival_ns) {
         Ok(timestamp) => timestamp,
         Err(event) => {
             state.metrics.dropped_frames(1);
-            try_discontinuity(&mut state, event);
+            try_discontinuity(state, event);
             return;
         }
     };
-    let datas = buffer.datas_mut();
-    if datas.len() != 1 {
+    if plane_count != 1 {
         invalid_buffer(
-            &mut state,
+            state,
             timestamp.session_ns,
             "expected exactly one video plane",
         );
         return;
     }
-    let data = &mut datas[0];
-    let chunk = data.chunk();
+    let Some(plane) = plane else {
+        invalid_buffer(state, timestamp.session_ns, "missing video plane");
+        return;
+    };
     // Mutter deliberately queues cursor-only updates with an empty video chunk
     // flagged CORRUPTED. The MetaCursor payload remains valid and must reach the
     // sidecar without duplicating the previous video frame.
-    if chunk.flags().contains(ChunkFlags::CORRUPTED) || chunk.size() == 0 {
+    if plane.corrupted || plane.layout.size == 0 {
         let Some(geometry) = state.last_frame_geometry else {
             return;
         };
@@ -150,17 +224,17 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
             .cursor
             .resolve(cursor, geometry.width(), geometry.height());
         if has_cursor_metadata && matches!(sample_cursor, CursorSampleState::Known { .. }) {
-            try_cursor_sample(&mut state, timestamp.session_ns, sample_cursor);
+            try_cursor_sample(state, timestamp.session_ns, sample_cursor);
         } else {
             invalid_buffer(
-                &mut state,
+                state,
                 timestamp.session_ns,
                 "PipeWire delivered an empty or corrupted video chunk without cursor metadata",
             );
         }
         return;
     }
-    let memory_type = data.type_();
+    let memory_type = plane.memory_type;
     if !matches!(
         memory_type,
         DataType::MemPtr | DataType::MemFd | DataType::DmaBuf
@@ -177,14 +251,8 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
     let mut frame_crop = reported_crop;
     let mut cursor_crop = reported_crop;
     let mut frame_transform = transform;
-    let layout = BufferLayout {
-        offset: usize::try_from(chunk.offset()).unwrap_or(usize::MAX),
-        size: usize::try_from(chunk.size()).unwrap_or(usize::MAX),
-        stride: chunk.stride(),
-        crop: reported_crop,
-        transform,
-    };
-    let Some(memory) = data.data() else {
+    let layout = plane.layout;
+    let Some(memory) = plane.memory else {
         set_fatal(
             &state.fatal,
             CaptureError::native(
@@ -198,7 +266,7 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
         let content_crop = match expand_crop_to_content(memory, format, layout) {
             Ok(content_crop) => content_crop,
             Err(error) => {
-                invalid_buffer(&mut state, timestamp.session_ns, &error.to_string());
+                invalid_buffer(state, timestamp.session_ns, &error.to_string());
                 return;
             }
         };
@@ -216,7 +284,7 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
     let uncropped_frame = match copy_frame(memory, format, layout) {
         Ok(frame) => frame,
         Err(error) => {
-            invalid_buffer(&mut state, timestamp.session_ns, &error.to_string());
+            invalid_buffer(state, timestamp.session_ns, &error.to_string());
             return;
         }
     };
@@ -257,10 +325,10 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
         state.metrics.changed_format();
         state.last_announced = Some(announced);
     }
-    flush_pending_drops(&mut state, timestamp.session_ns);
+    flush_pending_drops(state, timestamp.session_ns);
     let has_cursor = matches!(sample_cursor, CursorSampleState::Known { .. });
     if has_cursor {
-        try_cursor_sample(&mut state, timestamp.session_ns, sample_cursor.clone());
+        try_cursor_sample(state, timestamp.session_ns, sample_cursor.clone());
     }
     let sample = OwnedScreenSample {
         frame,
@@ -268,7 +336,7 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
         sequence: header.sequence,
         cursor: CursorSampleState::Unknown,
     };
-    enqueue_video_sample(&mut state, sample, has_cursor);
+    enqueue_video_sample(state, sample, has_cursor);
 }
 
 pub(super) fn enqueue_video_sample(

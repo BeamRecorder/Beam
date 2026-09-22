@@ -140,7 +140,15 @@ class CaptureEngine {
     this.ensureStarted();
     const id = randomUUID();
     return new Promise((resolve, reject) => {
-      const interactive = ['prepare', 'start', 'screenshot', 'request-input-access'].includes(command);
+      const interactive = [
+        'prepare',
+        'start',
+        'screenshot',
+        'request-input-access',
+        'native-media-prepare',
+        'native-media-start',
+        'native-media-stop',
+      ].includes(command);
       const timeoutMs = options.timeoutMs ?? (interactive ? INTERACTIVE_REQUEST_TIMEOUT_MS : REQUEST_TIMEOUT_MS);
       const timeout = setTimeout(() => {
         void this.terminateProcess(new Error(`Délai dépassé pour la commande de capture "${command}"`));

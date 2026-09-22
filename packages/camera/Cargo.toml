@@ -1,0 +1,77 @@
+[package]
+name = "beam-camera"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.92"
+publish = false
+
+[dependencies]
+beam-media-core = { path = "../media-core" }
+crossbeam-channel = "0.5"
+thiserror = "2"
+jpeg-decoder = "=0.3.2"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+v4l = "=0.14.0"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+block2 = "=0.6.2"
+dispatch2 = "=0.3.1"
+objc2 = "=0.6.4"
+objc2-av-foundation = { version = "=0.3.2", default-features = false, features = ["AVCaptureDevice", "AVCaptureInput", "AVCaptureOutputBase", "AVCaptureSession", "AVCaptureSessionPreset", "AVCaptureVideoDataOutput", "AVMediaFormat", "block2", "dispatch2", "objc2-core-media"] }
+objc2-core-media = { version = "=0.3.2", features = ["objc2-core-video"] }
+objc2-core-video = "=0.3.2"
+objc2-foundation = { version = "=0.3.2", features = ["NSArray", "NSDictionary", "NSError", "NSObject", "NSString", "NSValue"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "=0.62.2", features = ["Win32_Foundation", "Win32_Media_MediaFoundation", "Win32_System_Com"] }
+windows-core = "=0.62.2"
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+all = "deny"
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+
+[dev-dependencies]
+jpeg-encoder = "=0.7.1"
+tempfile = "3"
+
+[[test]]
+name = "camera_color"
+path = "test/color.rs"
+
+[[test]]
+name = "camera_error"
+path = "test/error.rs"
+
+[[test]]
+name = "camera_types"
+path = "test/types.rs"
+
+[[test]]
+name = "hardware_camera"
+path = "test/hardware/camera.rs"
+
+[[test]]
+name = "linux_capture"
+path = "test/linux/capture.rs"
+
+[[test]]
+name = "linux_camera_api"
+path = "test/linux/mod.rs"
+
+[[test]]
+name = "camera_public_api"
+path = "test/lib.rs"
+
+[[test]]
+name = "macos_camera"
+path = "test/macos/mod.rs"
+
+[[test]]
+name = "windows_camera"
+path = "test/windows/mod.rs"

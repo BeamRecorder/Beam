@@ -1,5 +1,8 @@
 use std::sync::{Arc, Mutex};
 
+#[path = "../../../test/system_audio/linux/writer.rs"]
+mod writer_checks;
+
 use crossbeam_channel::Receiver;
 
 use crate::CaptureError;

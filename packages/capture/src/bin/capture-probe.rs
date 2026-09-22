@@ -21,13 +21,13 @@ fn main() {
 
 fn run() -> Result<(), capture::CaptureError> {
     let command = std::env::args().nth(1).unwrap_or_else(|| "discover".into());
-    let snapshot = NativeCatalog::default().snapshot()?;
     let value = match command.as_str() {
-        "discover" => serde_json::to_value(snapshot)?,
-        "capabilities" => serde_json::to_value(snapshot.capabilities)?,
-        "permissions" => serde_json::to_value(snapshot.permissions)?,
+        "discover" => serde_json::to_value(NativeCatalog::default().snapshot()?)?,
+        "capabilities" => serde_json::to_value(NativeCatalog::default().snapshot()?.capabilities)?,
+        "permissions" => serde_json::to_value(NativeCatalog::default().snapshot()?.permissions)?,
         "formats" => {
             let source = argument_value("--source")?;
+            let snapshot = NativeCatalog::default().snapshot()?;
             serde_json::to_value(
                 snapshot
                     .sources
@@ -157,40 +157,18 @@ impl ProbeSink {
 #[cfg(target_os = "linux")]
 fn run_linux_native_capture() -> Result<serde_json::Value, capture::CaptureError> {
     use capture::{
-        model::{CursorSelection, PortalSourceKind, RecordingSettings, ScreenSelection},
+        model::{CursorSelection, RecordingSettings, ScreenSelection},
         screen::{ScreenConsumer, ScreenOpenRequest, ScreenRecording},
         session::StartGate,
     };
 
-    let duration = argument_value("--duration-seconds")?
-        .parse::<u64>()
-        .map_err(|error| capture::CaptureError::Protocol(error.to_string()))?;
-    if duration == 0 || duration > 300 {
-        return Err(capture::CaptureError::InvalidConfiguration(
-            "probe duration must be between 1 and 300 seconds".into(),
-        ));
-    }
-    let kind = match optional_argument_value("--kind").as_deref() {
-        None | Some("both") => PortalSourceKind::MonitorOrWindow,
-        Some("monitor") => PortalSourceKind::Monitor,
-        Some("window") => PortalSourceKind::Window,
-        Some(other) => {
-            return Err(capture::CaptureError::Protocol(format!(
-                "unknown Portal source kind: {other}"
-            )));
-        }
-    };
+    let (duration, kind, queue_capacity) = parse_linux_native_capture_options(std::env::args())?;
     let summary = Arc::new(Mutex::new(LinuxProbeSummary::default()));
     let gate = Arc::new(StartGate::new());
-    let mut settings = RecordingSettings::default();
-    settings.queue_capacity = optional_argument_value("--queue-capacity").map_or(
-        Ok(settings.queue_capacity),
-        |value| {
-            value
-                .parse::<usize>()
-                .map_err(|error| capture::CaptureError::Protocol(error.to_string()))
-        },
-    )?;
+    let settings = RecordingSettings {
+        queue_capacity,
+        ..RecordingSettings::default()
+    };
     let selection = ScreenSelection::Portal {
         kind,
         restore_token: None,
@@ -243,8 +221,57 @@ fn run_linux_native_capture() -> Result<serde_json::Value, capture::CaptureError
     }))
 }
 
+#[cfg(target_os = "linux")]
+fn parse_linux_native_capture_options(
+    arguments: impl IntoIterator<Item = String>,
+) -> Result<(u64, capture::model::PortalSourceKind, usize), capture::CaptureError> {
+    use capture::model::{PortalSourceKind, RecordingSettings};
+
+    let arguments: Vec<_> = arguments.into_iter().collect();
+    let duration = argument_value_from(arguments.iter().cloned(), "--duration-seconds")?
+        .parse::<u64>()
+        .map_err(|error| capture::CaptureError::Protocol(error.to_string()))?;
+    if duration == 0 || duration > 300 {
+        return Err(capture::CaptureError::InvalidConfiguration(
+            "probe duration must be between 1 and 300 seconds".into(),
+        ));
+    }
+    let kind = match optional_argument_value_from(arguments.iter().cloned(), "--kind").as_deref() {
+        None | Some("both") => PortalSourceKind::MonitorOrWindow,
+        Some("monitor") => PortalSourceKind::Monitor,
+        Some("window") => PortalSourceKind::Window,
+        Some(other) => {
+            return Err(capture::CaptureError::Protocol(format!(
+                "unknown Portal source kind: {other}"
+            )));
+        }
+    };
+    let queue_capacity = optional_argument_value_from(
+        arguments.iter().cloned(),
+        "--queue-capacity",
+    )
+    .map_or(Ok(RecordingSettings::default().queue_capacity), |value| {
+        value
+            .parse::<usize>()
+            .map_err(|error| capture::CaptureError::Protocol(error.to_string()))
+    })?;
+    if queue_capacity == 0 {
+        return Err(capture::CaptureError::InvalidConfiguration(
+            "screen sample queue capacity must be non-zero".into(),
+        ));
+    }
+    Ok((duration, kind, queue_capacity))
+}
+
 fn argument_value(name: &str) -> Result<String, capture::CaptureError> {
-    let mut arguments = std::env::args();
+    argument_value_from(std::env::args(), name)
+}
+
+fn argument_value_from(
+    arguments: impl Iterator<Item = String>,
+    name: &str,
+) -> Result<String, capture::CaptureError> {
+    let mut arguments = arguments;
     while let Some(value) = arguments.next() {
         if value == name {
             return arguments.next().ok_or_else(|| {
@@ -257,9 +284,15 @@ fn argument_value(name: &str) -> Result<String, capture::CaptureError> {
     )))
 }
 
+#[path = "../../test/bin/capture-probe.rs"]
+mod probe_checks;
+
 #[cfg(target_os = "linux")]
-fn optional_argument_value(name: &str) -> Option<String> {
-    let mut arguments = std::env::args();
+fn optional_argument_value_from(
+    arguments: impl IntoIterator<Item = String>,
+    name: &str,
+) -> Option<String> {
+    let mut arguments = arguments.into_iter();
     while let Some(value) = arguments.next() {
         if value == name {
             return arguments.next();

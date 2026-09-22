@@ -8,3 +8,6 @@ pub use capture::*;
 pub use catalog::*;
 pub use permissions::*;
 pub use preview::*;
+
+#[path = "../../../test/screen/mac/mod.rs"]
+mod platform_checks;

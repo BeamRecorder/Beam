@@ -1,6 +1,7 @@
 use std::{
     cell::{Cell, RefCell},
     os::fd::OwnedFd,
+    panic::{AssertUnwindSafe, catch_unwind},
     rc::Rc,
     sync::{Arc, Mutex, mpsc},
     thread::{self, JoinHandle},
@@ -18,12 +19,17 @@ use crate::{
     session::StartGate,
 };
 
+use super::support::ReadySender;
 use super::{
-    CursorMessage, CursorState, ProcessState, SinkMessage, TimestampMapper, backpressure_event,
-    flush_pending_cursor, format_error, format_parameter, has_fatal, join, parse_format_event,
-    pipewire_error, process_buffer, send_ready_error, send_ready_ok, set_fatal, sink_error,
-    sink_worker, stream_error, take_fatal, update_buffer_params,
+    CursorMessage, CursorState, NegotiatedFormat, ProcessState, SinkMessage, TimestampMapper,
+    backpressure_event, flush_pending_cursor, format_error, format_parameter, has_fatal, join,
+    parse_format_event, pipewire_error, process_buffer, send_ready_error, send_ready_ok, set_fatal,
+    sink_error, sink_worker, stream_error, take_fatal, update_buffer_params,
 };
+
+#[path = "thread_events.rs"]
+mod thread_events;
+use thread_events::{handle_command, handle_format_event, handle_stream_state};
 
 const PIPEWIRE_READY_TIMEOUT: Duration = Duration::from_secs(10);
 const CURSOR_QUEUE_CAPACITY: usize = 256;
@@ -65,8 +71,31 @@ pub(crate) struct PipewireCaptureRequest {
     pub(crate) region: Option<ScreenRegion>,
 }
 
+struct PipewireWorkerConfig {
+    remote_fd: OwnedFd,
+    node_id: u32,
+    stream_scope: String,
+    commands: pw::channel::Receiver<PipewireCommand>,
+    sink: Sender<SinkMessage>,
+    cursor_sink: Sender<CursorMessage>,
+    fatal: Arc<Mutex<Option<CaptureError>>>,
+    metrics: Arc<ScreenCaptureMetrics>,
+    start_ns: u64,
+    start_gate: Arc<StartGate>,
+    ready: mpsc::SyncSender<Result<VideoFormat, CaptureError>>,
+    repair_window_crop: bool,
+    region: Option<ScreenRegion>,
+}
+
 impl PipewireCapture {
     pub(crate) fn prepare(request: PipewireCaptureRequest) -> Result<Self, CaptureError> {
+        Self::prepare_with_worker(request, pipewire_worker)
+    }
+
+    fn prepare_with_worker(
+        request: PipewireCaptureRequest,
+        worker: impl FnOnce(PipewireWorkerConfig) -> Result<(), CaptureError> + Send + 'static,
+    ) -> Result<Self, CaptureError> {
         let PipewireCaptureRequest {
             remote_fd,
             node_id,
@@ -103,21 +132,24 @@ impl PipewireCapture {
         let thread = thread::Builder::new()
             .name("beam-linux-pipewire".into())
             .spawn(move || {
-                let result = pipewire_worker(
-                    remote_fd,
-                    node_id,
-                    stream_scope,
-                    receiver,
-                    sink_sender,
-                    cursor_sender,
-                    worker_fatal,
-                    worker_metrics,
-                    start_ns,
-                    worker_gate,
-                    ready_sender,
-                    repair_window_crop,
-                    region,
-                );
+                let result = catch_unwind(AssertUnwindSafe(|| {
+                    worker(PipewireWorkerConfig {
+                        remote_fd,
+                        node_id,
+                        stream_scope,
+                        commands: receiver,
+                        sink: sink_sender,
+                        cursor_sink: cursor_sender,
+                        fatal: worker_fatal,
+                        metrics: worker_metrics,
+                        start_ns,
+                        start_gate: worker_gate,
+                        ready: ready_sender,
+                        repair_window_crop,
+                        region,
+                    })
+                }))
+                .unwrap_or_else(|_| Err(pipewire_error("PipeWire worker panicked")));
                 let _ = finish_sender.send(SinkMessage::Finish);
                 result
             });
@@ -133,23 +165,35 @@ impl PipewireCapture {
         drop(cleanup_sender);
         let format = match ready_receiver
             .recv_timeout(PIPEWIRE_READY_TIMEOUT)
-            .map_err(|_| {
-                CaptureError::native(
-                    NativeCaptureErrorCode::PipewireConnectFailed,
-                    "PipeWire stream negotiation timed out",
-                )
+            .map_err(|error| {
+                let reason = match error {
+                    mpsc::RecvTimeoutError::Timeout => "PipeWire stream negotiation timed out",
+                    mpsc::RecvTimeoutError::Disconnected => {
+                        "PipeWire worker exited before stream negotiation completed"
+                    }
+                };
+                CaptureError::native(NativeCaptureErrorCode::PipewireConnectFailed, reason)
             })
             .and_then(|result| result)
         {
             Ok(format) => format,
             Err(error) => {
                 let _ = commands.send(PipewireCommand::Stop);
-                let _ = thread.join();
-                let _ = sink_thread.join();
-                return match take_fatal(&fatal) {
-                    Err(fatal) => Err(fatal),
-                    Ok(()) => Err(error),
-                };
+                let worker_error = thread
+                    .join()
+                    .map_err(|_| pipewire_error("PipeWire worker panicked"))
+                    .and_then(|result| result)
+                    .err();
+                let sink_error = sink_thread
+                    .join()
+                    .map_err(|_| sink_error("screen sink worker panicked"))
+                    .and_then(|result| result)
+                    .err();
+                return Err(take_fatal(&fatal)
+                    .err()
+                    .or(worker_error)
+                    .or(sink_error)
+                    .unwrap_or(error));
             }
         };
         Ok(Self {
@@ -213,12 +257,13 @@ impl PipewireCapture {
         if let Some(commands) = self.commands.take() {
             let _ = commands.send(PipewireCommand::Stop);
         }
-        let worker_result = join(&mut self.thread, "PipeWire")?;
-        let sink_result = join(&mut self.sink_thread, "screen sink")?;
+        let worker_result = join(&mut self.thread, "PipeWire");
+        let sink_result = join(&mut self.sink_thread, "screen sink");
         self.running = false;
-        worker_result?;
-        sink_result?;
-        take_fatal(&self.fatal)
+        let fatal_result = take_fatal(&self.fatal);
+        worker_result??;
+        sink_result??;
+        fatal_result
     }
 
     pub(crate) fn is_available(&self) -> bool {
@@ -273,22 +318,22 @@ impl Drop for PipewireCapture {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
-fn pipewire_worker(
-    remote_fd: OwnedFd,
-    node_id: u32,
-    stream_scope: String,
-    commands: pw::channel::Receiver<PipewireCommand>,
-    sink: Sender<SinkMessage>,
-    cursor_sink: Sender<CursorMessage>,
-    fatal: Arc<Mutex<Option<CaptureError>>>,
-    metrics: Arc<ScreenCaptureMetrics>,
-    start_ns: u64,
-    start_gate: Arc<StartGate>,
-    ready: mpsc::SyncSender<Result<VideoFormat, CaptureError>>,
-    repair_window_crop: bool,
-    region: Option<ScreenRegion>,
-) -> Result<(), CaptureError> {
+fn pipewire_worker(config: PipewireWorkerConfig) -> Result<(), CaptureError> {
+    let PipewireWorkerConfig {
+        remote_fd,
+        node_id,
+        stream_scope,
+        commands,
+        sink,
+        cursor_sink,
+        fatal,
+        metrics,
+        start_ns,
+        start_gate,
+        ready,
+        repair_window_crop,
+        region,
+    } = config;
     pw::init();
     let mainloop = pw::main_loop::MainLoopRc::new(None).map_err(pipewire_error)?;
     let context = pw::context::ContextRc::new(&mainloop, None).map_err(pipewire_error)?;
@@ -335,31 +380,15 @@ fn pipewire_worker(
     let format_negotiation_stopped = negotiation_stopped.clone();
     let listener = stream
         .add_local_listener_with_user_data(())
-        .state_changed(move |stream, _, _, new| match new {
-            pw::stream::StreamState::Error(message) => {
-                set_fatal(&listener_state.borrow().fatal, stream_error(&message));
-                send_ready_error(&listener_ready, pipewire_error(message));
-                listener_loop.quit();
-            }
-            pw::stream::StreamState::Paused => {
-                if listener_negotiation_stopped.get()
-                    && let Some(format) = listener_state.borrow().negotiated
-                {
-                    send_ready_ok(&listener_ready, format);
-                }
-            }
-            pw::stream::StreamState::Streaming => {
-                if listener_state.borrow().negotiated.is_some()
-                    && !listener_negotiation_stopped.replace(true)
-                    && let Err(error) = stream.set_active(false)
-                {
-                    let diagnostic = error.to_string();
-                    set_fatal(&listener_state.borrow().fatal, pipewire_error(error));
-                    send_ready_error(&listener_ready, pipewire_error(diagnostic));
-                    listener_loop.quit();
-                }
-            }
-            _ => {}
+        .state_changed(move |stream, _, _, new| {
+            handle_stream_state(
+                new,
+                &listener_state,
+                &listener_ready,
+                &listener_negotiation_stopped,
+                || stream.set_active(false).map_err(pipewire_error),
+                || listener_loop.quit(),
+            );
         })
         .param_changed({
             let state = state.clone();
@@ -368,43 +397,16 @@ fn pipewire_worker(
                 if id != ParamType::Format.as_raw() {
                     return;
                 }
-                let result = parse_format_event(param);
-                match result {
-                    Ok(Some(format)) => {
-                        state.borrow_mut().negotiated = Some(format);
-                        if let Err(error) = update_buffer_params(stream, format) {
-                            let diagnostic = error.to_string();
-                            set_fatal(&state.borrow().fatal, error);
-                            send_ready_error(&ready, format_error(diagnostic));
-                            format_loop.quit();
-                            return;
-                        }
-                        if matches!(stream.state(), pw::stream::StreamState::Paused) {
-                            if format_negotiation_stopped.get() {
-                                send_ready_ok(&ready, format);
-                            }
-                        } else if matches!(stream.state(), pw::stream::StreamState::Streaming)
-                            && !format_negotiation_stopped.replace(true)
-                            && let Err(error) = stream.set_active(false)
-                        {
-                            let diagnostic = error.to_string();
-                            set_fatal(&state.borrow().fatal, pipewire_error(error));
-                            send_ready_error(&ready, pipewire_error(diagnostic));
-                            format_loop.quit();
-                        }
-                    }
-                    Ok(None) => {
-                        // PipeWire uses a null format parameter to clear the
-                        // current format before (re)negotiation. Wait for the
-                        // next concrete format instead of failing capture.
-                    }
-                    Err(error) => {
-                        let diagnostic = error.to_string();
-                        set_fatal(&state.borrow().fatal, error);
-                        send_ready_error(&ready, format_error(diagnostic));
-                        format_loop.quit();
-                    }
-                }
+                handle_format_event(
+                    parse_format_event(param),
+                    stream.state(),
+                    &state,
+                    &ready,
+                    &format_negotiation_stopped,
+                    |format| update_buffer_params(stream, format),
+                    || stream.set_active(false).map_err(pipewire_error),
+                    || format_loop.quit(),
+                );
             }
         })
         .process({
@@ -421,50 +423,14 @@ fn pipewire_worker(
             command_loop.quit();
             return;
         };
-        match command {
-            PipewireCommand::Start {
-                start_ns,
-                start_gate,
-                reply,
-            } => {
-                let mut state = command_state.borrow_mut();
-                state.timestamp = TimestampMapper::new(start_ns);
-                state.start_gate = start_gate;
-                state.active = true;
-                let result = stream.set_active(true).map_err(pipewire_error);
-                if let Err(error) = &result {
-                    set_fatal(&state.fatal, pipewire_error(error));
-                }
-                if result.is_ok() {
-                    state.start_reply = Some(reply);
-                } else {
-                    let _ = reply.send(result);
-                }
-            }
-            PipewireCommand::Pause { reply } => {
-                let mut state = command_state.borrow_mut();
-                state.active = false;
-                flush_pending_cursor(&mut state);
-                let result = stream
-                    .set_active(false)
-                    .and_then(|()| stream.flush(false))
-                    .map_err(pipewire_error);
-                if let Err(error) = &result {
-                    set_fatal(&state.fatal, pipewire_error(error));
-                }
-                let _ = reply.send(result);
-            }
-            PipewireCommand::Stop => {
-                let mut state = command_state.borrow_mut();
-                state.active = false;
-                state.stopping = true;
-                flush_pending_cursor(&mut state);
-                drop(state);
-                let _ = stream.set_active(false);
-                let _ = stream.disconnect();
-                command_loop.quit();
-            }
-        }
+        handle_command(
+            command,
+            &command_state,
+            |active| stream.set_active(active).map_err(pipewire_error),
+            || stream.flush(false).map_err(pipewire_error),
+            || stream.disconnect().map_err(pipewire_error),
+            || command_loop.quit(),
+        );
     });
     let format_bytes = format_parameter()?;
     let format_pod = Pod::from_bytes(&format_bytes)
@@ -493,6 +459,11 @@ fn pipewire_worker(
     Ok(())
 }
 
-#[cfg(test)]
-#[path = "thread_tests.rs"]
-mod tests;
+#[path = "../../../../test/screen/linux/pipewire/thread.rs"]
+mod thread_checks;
+
+#[path = "../../../../test/screen/linux/pipewire/thread_prepare.rs"]
+mod thread_prepare_checks;
+
+#[path = "../../../../test/screen/linux/pipewire/daemon.rs"]
+mod daemon_checks;

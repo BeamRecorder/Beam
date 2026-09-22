@@ -145,8 +145,8 @@ fn probe_windows_cursor() -> Result<(), capture::CaptureError> {
     )
 }
 
-fn argument_value(name: &str) -> Option<String> {
-    let mut arguments = std::env::args();
+fn argument_value_from(arguments: impl IntoIterator<Item = String>, name: &str) -> Option<String> {
+    let mut arguments = arguments.into_iter();
     while let Some(value) = arguments.next() {
         if value == name {
             return arguments.next();
@@ -164,6 +164,7 @@ fn record_full_session() -> Result<(), capture::CaptureError> {
         session::RecordingSession,
     };
 
+    let (duration, output_root) = parse_full_session_options(std::env::args())?;
     let snapshot = NativeCatalog::default().snapshot()?;
     let screen = snapshot
         .sources
@@ -178,13 +179,6 @@ fn record_full_session() -> Result<(), capture::CaptureError> {
         .map(|source| ScreenSelection::Source {
             source_id: source.id.clone(),
         });
-    let duration = argument_value("--duration")
-        .map(|value| value.parse::<u64>())
-        .transpose()
-        .map_err(|error| capture::CaptureError::Protocol(error.to_string()))?
-        .unwrap_or(10);
-    let output_root = argument_value("--output")
-        .map_or_else(|| PathBuf::from("capture-smoke-full"), PathBuf::from);
     let request = CaptureRequest {
         project_id: ProjectId::new(),
         screen,
@@ -218,3 +212,20 @@ fn record_full_session() -> Result<(), capture::CaptureError> {
         }),
     )
 }
+
+fn parse_full_session_options(
+    arguments: impl IntoIterator<Item = String>,
+) -> Result<(u64, PathBuf), capture::CaptureError> {
+    let arguments: Vec<_> = arguments.into_iter().collect();
+    let duration = argument_value_from(arguments.iter().cloned(), "--duration")
+        .map(|value| value.parse::<u64>())
+        .transpose()
+        .map_err(|error| capture::CaptureError::Protocol(error.to_string()))?
+        .unwrap_or(10);
+    let output_root = argument_value_from(arguments.iter().cloned(), "--output")
+        .map_or_else(|| PathBuf::from("capture-smoke-full"), PathBuf::from);
+    Ok((duration, output_root))
+}
+
+#[path = "../../test/bin/capture_smoke_options.rs"]
+mod smoke_option_checks;

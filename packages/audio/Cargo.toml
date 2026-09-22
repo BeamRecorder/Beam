@@ -1,0 +1,74 @@
+[package]
+name = "beam-audio"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.92"
+publish = false
+
+[dependencies]
+beam-media-core = { path = "../media-core" }
+cpal = "=0.18.2"
+crossbeam-channel = "0.5"
+thiserror = "2"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+pipewire = { version = "=0.10.0", features = ["v0_3_65"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "=0.6.4"
+objc2-core-audio = { version = "=0.3.2", default-features = false, features = ["std", "AudioHardware", "AudioHardwareDeprecated", "objc2", "objc2-foundation"] }
+objc2-core-foundation = "=0.3.2"
+objc2-foundation = { version = "=0.3.2", default-features = false, features = ["std", "NSArray", "NSString", "NSValue"] }
+
+[dev-dependencies]
+cpal = { version = "=0.18.2", features = ["custom"] }
+tempfile = "3"
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+all = "deny"
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+
+[[test]]
+name = "audio_timing"
+path = "test/timing.rs"
+
+[[test]]
+name = "audio_api"
+path = "test/lib.rs"
+
+[[test]]
+name = "audio_error"
+path = "test/error.rs"
+
+[[test]]
+name = "audio_types"
+path = "test/types.rs"
+
+[[test]]
+name = "macos_audio_api"
+path = "test/macos/mod.rs"
+
+[[test]]
+name = "cpal_capture_api"
+path = "test/cpal_capture_api.rs"
+
+[[test]]
+name = "hardware_audio"
+path = "test/hardware/audio.rs"
+
+[[test]]
+name = "linux_capture"
+path = "test/linux/capture.rs"
+
+[[test]]
+name = "linux_outputs"
+path = "test/linux/mod.rs"
+
+[[test]]
+name = "macos_duplex"
+path = "test/hardware/macos_duplex.rs"

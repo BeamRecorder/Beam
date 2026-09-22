@@ -9,6 +9,9 @@ use capture::{
     session::{RecordingSession, SessionState},
     system_audio::SystemAudioMonitor,
 };
+#[cfg(feature = "native-media")]
+#[path = "capture_engine/native_media.rs"]
+mod native_media;
 #[cfg(windows)]
 #[path = "capture_engine/windows.rs"]
 mod windows_dpi;
@@ -113,6 +116,8 @@ fn read_requests(sender: mpsc::Sender<Result<Option<RequestEnvelope>, capture::C
 #[derive(Default)]
 struct Engine {
     session: Option<RecordingSession>,
+    #[cfg(feature = "native-media")]
+    native_media: native_media::NativeMediaController,
     catalog: NativeCatalog,
     system_audio_preview: Option<SystemAudioMonitor>,
     #[cfg(target_os = "linux")]
@@ -120,6 +125,17 @@ struct Engine {
 }
 
 impl Engine {
+    fn native_media_active(&self) -> bool {
+        #[cfg(feature = "native-media")]
+        {
+            self.native_media.is_active()
+        }
+        #[cfg(not(feature = "native-media"))]
+        {
+            false
+        }
+    }
+
     fn state(&self) -> SessionState {
         self.session
             .as_ref()
@@ -220,6 +236,12 @@ fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
         )?)
         .map_err(Into::into),
         Command::Prepare { config } => {
+            if engine.native_media_active() {
+                return Err(capture::CaptureError::InvalidTransition {
+                    from: "NativeMediaActive".into(),
+                    to: "Preparing".into(),
+                });
+            }
             engine.stop_system_audio_preview()?;
             if engine.session.as_ref().is_some_and(|session| {
                 !matches!(
@@ -299,10 +321,12 @@ fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
             "screenAvailable": engine.session.as_ref().is_none_or(RecordingSession::screen_available),
         })),
         Command::StartSystemAudioPreview => {
-            if !matches!(
-                engine.state(),
-                SessionState::Idle | SessionState::Completed | SessionState::Failed
-            ) {
+            if engine.native_media_active()
+                || !matches!(
+                    engine.state(),
+                    SessionState::Idle | SessionState::Completed | SessionState::Failed
+                )
+            {
                 return Err(capture::CaptureError::InvalidTransition {
                     from: format!("{:?}", engine.state()),
                     to: "SystemAudioPreview".into(),
@@ -324,6 +348,36 @@ fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
             engine.stop_system_audio_preview()?;
             Ok(serde_json::json!({ "level": 0.0 }))
         }
+        #[cfg(feature = "native-media")]
+        Command::NativeMediaDevices => Ok(native_media::devices()),
+        #[cfg(feature = "native-media")]
+        Command::NativeMediaPrepare { config } => {
+            if !matches!(
+                engine.state(),
+                SessionState::Idle | SessionState::Completed | SessionState::Failed
+            ) {
+                return Err(capture::CaptureError::InvalidTransition {
+                    from: format!("{:?}", engine.state()),
+                    to: "NativeMediaPrepare".into(),
+                });
+            }
+            engine.stop_system_audio_preview()?;
+            engine.native_media.prepare(config)
+        }
+        #[cfg(feature = "native-media")]
+        Command::NativeMediaStart => engine.native_media.start(),
+        #[cfg(feature = "native-media")]
+        Command::NativeMediaStop => engine.native_media.stop(),
+        #[cfg(feature = "native-media")]
+        Command::NativeMediaStatus => engine.native_media.status(),
+        #[cfg(not(feature = "native-media"))]
+        Command::NativeMediaDevices
+        | Command::NativeMediaPrepare { .. }
+        | Command::NativeMediaStart
+        | Command::NativeMediaStop
+        | Command::NativeMediaStatus => Err(capture::CaptureError::Unsupported(
+            "native media support is not included in this capture-engine build".into(),
+        )),
     })();
     match result {
         Ok(value) => ResponseEnvelope::success(request.id, value),
@@ -349,6 +403,5 @@ fn session_value(session: &RecordingSession) -> Result<serde_json::Value, captur
     }))
 }
 
-#[cfg(test)]
-#[path = "capture_engine_tests/mod.rs"]
-mod tests;
+#[path = "../../test/bin/capture-engine.rs"]
+mod capture_engine_checks;

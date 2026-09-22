@@ -1,5 +1,8 @@
 use crate::model::{CaptureCapabilities, PermissionSnapshot, PermissionState};
 
+#[path = "../../../test/screen/mac/permissions.rs"]
+mod permission_checks;
+
 #[must_use]
 pub fn capabilities() -> CaptureCapabilities {
     CaptureCapabilities {

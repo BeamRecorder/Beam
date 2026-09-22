@@ -1,0 +1,48 @@
+[package]
+name = "beam-media-encode"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.92"
+publish = false
+
+[dependencies]
+beam-media-core = { path = "../media-core" }
+gst = { package = "gstreamer", version = "0.25", features = ["v1_24"] }
+gst_app = { package = "gstreamer-app", version = "0.25", features = ["v1_24"] }
+crossbeam-channel = "0.5"
+thiserror = "2"
+
+[dev-dependencies]
+tempfile = "3"
+
+[target.'cfg(target_os = "linux")'.dev-dependencies]
+libc = "0.2"
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+all = "deny"
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+
+[[test]]
+name = "writer"
+path = "test/writer.rs"
+
+[[test]]
+name = "pipeline"
+path = "test/pipeline.rs"
+
+[[test]]
+name = "types"
+path = "test/types.rs"
+
+[[test]]
+name = "error"
+path = "test/error.rs"
+
+[[test]]
+name = "lib"
+path = "test/lib.rs"

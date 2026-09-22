@@ -5,6 +5,9 @@ use std::{
     thread::JoinHandle,
 };
 
+#[path = "../../../test/system_audio/linux/support.rs"]
+mod support_checks;
+
 use crate::{CaptureError, NativeCaptureErrorCode};
 
 use super::SystemAudioFormat;

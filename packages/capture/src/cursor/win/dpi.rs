@@ -32,6 +32,5 @@ impl Drop for PhysicalCoordinates {
     }
 }
 
-#[cfg(test)]
-#[path = "dpi_tests.rs"]
-mod tests;
+#[path = "../../../test/cursor/win/dpi.rs"]
+mod dpi_checks;

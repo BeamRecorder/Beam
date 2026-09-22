@@ -2,7 +2,7 @@
 name = "beam-media-core"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.88"
+rust-version = "1.92"
 publish = false
 
 [lints.rust]
@@ -13,3 +13,23 @@ all = "deny"
 unwrap_used = "deny"
 expect_used = "deny"
 panic = "deny"
+
+[[test]]
+name = "gate"
+path = "test/gate.rs"
+
+[[test]]
+name = "clock"
+path = "test/clock.rs"
+
+[[test]]
+name = "preview"
+path = "test/preview.rs"
+
+[[test]]
+name = "frame"
+path = "test/frame.rs"
+
+[[test]]
+name = "lib"
+path = "test/lib.rs"

@@ -1,5 +1,8 @@
 use std::path::PathBuf;
 
+#[path = "../../../test/screen/linux/ffmpeg_encoder.rs"]
+mod encoder_checks;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum FfmpegAcceleration {
     Software,

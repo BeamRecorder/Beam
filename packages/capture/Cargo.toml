@@ -2,16 +2,21 @@
 name = "capture"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.88"
+rust-version = "1.92"
 publish = false
 
 [features]
 default = ["cursor"]
 cursor = []
 hardware-tests = []
+native-media = ["dep:beam-media-session", "dep:beam-audio", "dep:beam-camera"]
 
 [dependencies]
 beam-media-core = { path = "../media-core" }
+beam-media-manifest = { path = "../media-manifest" }
+beam-media-session = { path = "../media-session", optional = true }
+beam-audio = { path = "../audio", optional = true }
+beam-camera = { path = "../camera", optional = true }
 crossbeam-channel = "0.5"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -109,3 +114,79 @@ path = "src/bin/beam-input-helper.rs"
 name = "full_session_smoke"
 path = "tests/hardware/full_session_smoke.rs"
 required-features = ["hardware-tests"]
+
+[[test]]
+name = "capture_architecture"
+path = "test/lib.rs"
+
+[[test]]
+name = "capture_catalog"
+path = "test/catalog/mod.rs"
+
+[[test]]
+name = "capture_catalog_service"
+path = "test/catalog/service.rs"
+
+[[test]]
+name = "capture_catalog_snapshot"
+path = "test/catalog/snapshot.rs"
+
+[[test]]
+name = "capture_clock"
+path = "test/clock/mod.rs"
+
+[[test]]
+name = "capture_clock_anchors"
+path = "test/clock/anchors.rs"
+
+[[test]]
+name = "capture_clock_mapper"
+path = "test/clock/mapper.rs"
+
+[[test]]
+name = "capture_session_clock"
+path = "test/clock/session_clock.rs"
+
+[[test]]
+name = "capture_cursor"
+path = "test/cursor/mod.rs"
+
+[[test]]
+name = "capture_input"
+path = "test/input/mod.rs"
+
+[[test]]
+name = "capture_input_helper_policy"
+path = "test/bin/beam-input-helper.rs"
+
+[[test]]
+name = "capture_linux_portal"
+path = "test/screen/linux/mod.rs"
+
+[[test]]
+name = "capture_mac_catalog_policy"
+path = "test/screen/mac/catalog_policy.rs"
+
+[[test]]
+name = "capture_model"
+path = "test/model/mod.rs"
+
+[[test]]
+name = "capture_protocol"
+path = "test/protocol/mod.rs"
+
+[[test]]
+name = "capture_session"
+path = "test/session/mod.rs"
+
+[[test]]
+name = "capture_storage"
+path = "test/storage/mod.rs"
+
+[[test]]
+name = "capture_screen_contract"
+path = "test/screen/mod.rs"
+
+[[test]]
+name = "capture_smoke_cli"
+path = "test/bin/capture-smoke.rs"

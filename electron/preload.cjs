@@ -25,6 +25,11 @@ contextBridge.exposeInMainWorld(
     resume: () => invoke('resume'),
     stop: () => invoke('stop'),
     status: () => invoke('status'),
+    nativeMediaDevices: () => invoke('native-media-devices'),
+    prepareNativeMedia: (config) => invoke('native-media-prepare', { config }),
+    startNativeMedia: () => invoke('native-media-start'),
+    stopNativeMedia: () => invoke('native-media-stop'),
+    nativeMediaStatus: () => invoke('native-media-status'),
     startSystemAudioPreview: async () => {
       await invoke('start-system-audio-preview');
     },

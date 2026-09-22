@@ -1,4 +1,7 @@
-use std::mem::size_of;
+use std::{mem::size_of, ops::Range};
+
+#[path = "../../../../test/screen/linux/pipewire/metadata.rs"]
+mod metadata_checks;
 
 use pipewire::spa::buffer::meta::{
     MetaCursor, MetaHeader, MetaHeaderFlags, MetaVideoCrop, MetaVideoTransform,
@@ -63,17 +66,15 @@ fn cursor_shape(
     let width = usize::try_from(size.width).ok()?;
     let height = usize::try_from(size.height).ok()?;
     let stride = usize::try_from(bitmap.stride().unsigned_abs()).ok()?;
-    if width == 0 || height == 0 || width > 384 || height > 384 || stride < width.checked_mul(4)? {
-        return None;
-    }
     let data_offset = usize::try_from(bitmap.offset()).ok()?;
-    let data_size = height.checked_mul(stride)?;
-    let data_end = cursor_offset
-        .checked_add(data_offset)?
-        .checked_add(data_size)?;
-    if data_offset < bitmap_meta_size || data_end > CURSOR_META_SIZE {
-        return None;
-    }
+    validated_cursor_bitmap_range(
+        cursor_offset,
+        bitmap_meta_size,
+        data_offset,
+        width,
+        height,
+        stride,
+    )?;
     let pixels = bitmap.bitmap_data()?;
     let id = stable_cursor_shape_id(
         bitmap.format().0,
@@ -97,6 +98,30 @@ fn cursor_shape(
         hotspot,
     );
     Some((id, hotspot, kind))
+}
+
+fn validated_cursor_bitmap_range(
+    cursor_offset: usize,
+    bitmap_meta_size: usize,
+    data_offset: usize,
+    width: usize,
+    height: usize,
+    stride: usize,
+) -> Option<Range<usize>> {
+    if cursor_offset < size_of::<pipewire::spa::sys::spa_meta_cursor>()
+        || cursor_offset.checked_add(bitmap_meta_size)? > CURSOR_META_SIZE
+        || width == 0
+        || height == 0
+        || width > 384
+        || height > 384
+        || stride < width.checked_mul(4)?
+        || data_offset < bitmap_meta_size
+    {
+        return None;
+    }
+    let start = cursor_offset.checked_add(data_offset)?;
+    let end = start.checked_add(height.checked_mul(stride)?)?;
+    (end <= CURSOR_META_SIZE).then_some(start..end)
 }
 
 pub(crate) fn stable_cursor_shape_id(

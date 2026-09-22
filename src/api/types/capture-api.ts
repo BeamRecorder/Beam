@@ -43,6 +43,7 @@ import type {
 } from './camera-recording';
 import type { EditorPresetDocument, EditorPresetSettings } from './editor-preset';
 import type { QuickSnipApi } from './quick-snip-api';
+import type { NativeMediaConfig, NativeMediaDevices, NativeMediaStatus } from './native-media';
 
 export type * from './capture-config';
 export type * from './screen-region';
@@ -52,6 +53,7 @@ export type * from './cursor-pack';
 export type * from '~/types/appearance';
 export type * from './editor-preset';
 export type * from './quick-snip';
+export type * from './native-media';
 
 export interface ImportedFont {
   id: string;
@@ -82,6 +84,11 @@ export interface CaptureApi {
   resume(): Promise<CaptureSession>;
   stop(): Promise<CaptureSession>;
   status(): Promise<CaptureSession>;
+  nativeMediaDevices(): Promise<NativeMediaDevices>;
+  prepareNativeMedia(config: NativeMediaConfig): Promise<NativeMediaStatus>;
+  startNativeMedia(): Promise<NativeMediaStatus>;
+  stopNativeMedia(): Promise<NativeMediaStatus>;
+  nativeMediaStatus(): Promise<NativeMediaStatus>;
   startSystemAudioPreview(): Promise<void>;
   systemAudioPreviewLevel(): Promise<number>;
   stopSystemAudioPreview(): Promise<void>;

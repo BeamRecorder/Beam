@@ -1,5 +1,8 @@
 use std::io::Cursor;
 
+#[path = "../../../test/system_audio/linux/format.rs"]
+mod format_checks;
+
 use pipewire::spa;
 use spa::{
     param::{ParamType, audio::AudioInfoRaw, format::MediaSubtype, format::MediaType},

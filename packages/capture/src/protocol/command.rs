@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+use super::NativeMediaConfig;
 use crate::model::CaptureRequest;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -48,4 +49,11 @@ pub enum Command {
     StartSystemAudioPreview,
     SystemAudioPreviewLevel,
     StopSystemAudioPreview,
+    NativeMediaDevices,
+    NativeMediaPrepare {
+        config: NativeMediaConfig,
+    },
+    NativeMediaStart,
+    NativeMediaStop,
+    NativeMediaStatus,
 }

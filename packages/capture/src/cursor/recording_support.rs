@@ -81,6 +81,5 @@ fn remove_published_partial(path: &Path) -> Result<(), CaptureError> {
     std::fs::remove_file(path).map_err(|error| CaptureError::storage(path, error))
 }
 
-#[cfg(test)]
-#[path = "recording_support_tests.rs"]
-mod tests;
+#[path = "../../test/cursor/recording_support.rs"]
+mod recording_support_checks;

@@ -3,14 +3,17 @@ mod coordinates;
 mod event_writer;
 #[cfg(target_os = "macos")]
 pub mod mac;
-#[cfg(any(windows, target_os = "macos", test))]
+#[cfg(any(windows, target_os = "macos", target_os = "linux"))]
+#[allow(dead_code)]
 mod recording_support;
-#[cfg(any(target_os = "macos", test))]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[allow(dead_code)]
 mod resilient_source;
 #[cfg(windows)]
 pub mod win;
 pub use backend::*;
 pub use coordinates::*;
 pub use event_writer::*;
-#[cfg(any(windows, target_os = "macos", test))]
+#[cfg(any(windows, target_os = "macos", target_os = "linux"))]
+#[allow(unused_imports)]
 pub(crate) use recording_support::*;

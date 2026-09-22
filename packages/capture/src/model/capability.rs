@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
 
+pub use beam_media_manifest::{PermissionSnapshot, PermissionState};
+
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[serde(default)]
 pub struct CaptureCapabilities {
     pub display_capture: bool,
     pub window_capture: bool,
@@ -16,21 +19,4 @@ pub struct CaptureCapabilities {
     pub hardware_hevc: bool,
     pub hardware_av1: bool,
     pub hardware_vp9: bool,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum PermissionState {
-    Granted,
-    Denied,
-    PromptRequired,
-    NotApplicable,
-    Unknown,
-}
-
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PermissionSnapshot {
-    pub screen: Option<PermissionState>,
-    pub accessibility: Option<PermissionState>,
 }

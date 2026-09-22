@@ -1,5 +1,8 @@
 use screencapturekit::shareable_content::SCShareableContent;
 
+#[path = "../../../test/screen/mac/catalog.rs"]
+mod catalog_checks;
+
 use crate::{
     CaptureError,
     model::{

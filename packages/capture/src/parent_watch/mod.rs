@@ -120,8 +120,15 @@ mod macos {
 pub fn parent_pid_from_env() -> Option<u32> {
     std::env::var(PARENT_PID_ENV)
         .ok()
-        .and_then(|value| value.parse::<u32>().ok())
+        .and_then(|value| parse_parent_pid(&value))
 }
+
+fn parse_parent_pid(value: &str) -> Option<u32> {
+    value.parse::<u32>().ok()
+}
+
+#[path = "../../test/parent_watch/mod.rs"]
+mod parent_watch_checks;
 
 #[cfg(target_os = "linux")]
 mod linux {

@@ -388,10 +388,10 @@ impl RecordingSession {
 
     fn checkpoint(&self) -> Result<(), CaptureError> {
         checkpoint_tracks(&self.layout, &self.manifest.tracks)?;
-        self.writer.checkpoint(&self.manifest)
+        self.writer.checkpoint(&self.manifest)?;
+        Ok(())
     }
 }
 
-#[cfg(test)]
-#[path = "recording_tests.rs"]
-mod tests;
+#[path = "../../test/session/recording.rs"]
+mod recording_checks;

@@ -174,21 +174,9 @@ fn portal_source(
     })
 }
 
-#[cfg(all(test, target_os = "linux"))]
-mod tests {
-    use super::should_offer_portal_source;
-
-    #[test]
-    fn transient_portal_probe_failures_keep_an_optimistic_source_available() {
-        assert!(should_offer_portal_source(false, false));
-    }
-
-    #[test]
-    fn successful_portal_probes_keep_reported_source_types_exact() {
-        assert!(should_offer_portal_source(true, true));
-        assert!(!should_offer_portal_source(true, false));
-    }
-}
+#[cfg(target_os = "linux")]
+#[path = "../../test/catalog/native.rs"]
+mod native_checks;
 
 #[cfg(target_os = "macos")]
 fn platform_catalog() -> Result<PlatformCatalog, CaptureError> {

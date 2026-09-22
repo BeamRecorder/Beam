@@ -1,6 +1,60 @@
 # Beam : plan du prototype média entièrement natif
 
-Statut au 21 septembre 2026 : plan d'implémentation. Seule `beam-media-core` et son raccordement initial à `capture` existent ; aucune des captures micro/caméra ni aucun writer GStreamer décrits ci-dessous ne sont encore livrés.
+Statut au 22 septembre 2026 : les neuf crates, la CLI, la session partagée, les writers GStreamer et les adaptateurs caméra/audio Linux, macOS et Windows existent derrière la même API. `AudioSource` et `CameraSource` formalisent désormais le contrat commun de la session. La sortie macOS duplex utilise un tap Core Audio privé de Beam ; Linux découvre et cible les sorties PipeWire individuelles. L'ancien moteur `capture` réexporte le manifeste v2 extrait. Avec la feature `native-media`, `capture-engine` expose la découverte et le cycle de vie natifs au travers de son protocole JSON-lines, avec un worker qui continue de drainer les sources pendant les lectures bloquantes du protocole ; Electron relaie ces commandes via une API typée et attribue lui-même le répertoire de sortie. Le build distribué garde cette feature désactivée tant que GStreamer privé et l'intégration produit ne sont pas prêts. Les sidecars Chromium du Studio et son éditeur ne sont pas encore migrés. Les fichiers source Rust du workspace possèdent leur miroir sous `test/` ; les 12 suites d'intégration historiques ont été migrées.
+
+Les 1084 tests Nextest non ignorés du workspace passent sous Linux ; sept tests dépendant du matériel ou d'un serveur PipeWire restent ignorés dans cette commande et les essais locaux pertinents ont été exécutés séparément. Après fermeture des producteurs, drainage des files et bornage de l'attente EOS, un essai Linux optimisé de cinq secondes a finalisé trois pistes lisibles : 62 images caméra encodées et affichées, 241152 échantillons micro, 240640 échantillons système, zéro drop et un pic RSS observé de 105594880 octets. Les durées lues par `ffprobe` sont 4,913336 s pour la caméra, 5,024 s pour le micro et 5,013333 s pour le système. Un essai séparé avec `--system-output` sur la sortie haut-parleur PipeWire a finalisé un WAV de 2,026667 s avec 97280 échantillons sans perte. Après l'introduction des interfaces de source, un nouvel essai Linux optimisé de trois secondes a finalisé les trois pistes (durées 2,993355 s, 3,029333 s et 3,029333 s). Après les corrections d'arrêt des workers, un autre essai de trois secondes a finalisé 38 images caméra et deux WAV de 3,029333 s. Le rapport ne donne pas d'offset A/V sans signal de référence ; la nouvelle sonde demande la mémoire allouée à wgpu quand le backend sait la fournir.
+
+Un essai Linux de cinq secondes a ensuite envoyé une tonalité de 440 Hz vers une sortie PipeWire virtuelle, sans jouer sur les haut-parleurs, pendant une session micro + système. Les deux pistes ont fini en état `Completed` avec zéro drop : 240128 échantillons micro silencieux et 240640 échantillons système contenant la tonalité (pic PCM 0,125 ; RMS 0,0684). Leurs empreintes SHA-256 diffèrent. Cela prouve la séparation et le ciblage de cette sortie virtuelle, pas la qualité d'une prise micro audible ni les cas matériels des autres OS.
+
+Le formatage et Clippy Rust 1.92 avec `--all-targets --all-features` passent sous Linux et en compilation croisée de tout le workspace pour macOS x86_64/ARM64 et Windows MSVC x86_64/ARM64 (`DOCS_RS=1` en cross pour éviter le lien au SDK GStreamer absent ici). Le remplacement de Nokhwa a supprimé l'ancien blocage `objc_exception` de la compilation croisée macOS. Le workflow `native-media.yml` installe GStreamer 1.28.7 et exécute compilation, Clippy et Nextest sur les trois OS, mais il n'a pas encore été exécuté sur GitHub. La dernière mesure LLVM Linux des 1084 tests sans matériel couvre 11436/14352 lignes source du workspace (79,68 %). `beam-audio` est à 1006/1271 (79,15 %) et `capture` à 7498/9824 (76,32 %) ; les sept autres crates dépassent chacune 85 %. Un profil brut LLVM corrompu a encore été signalé et ignoré pendant cette collecte. Le gate strict de 85 % par crate et workspace reste ouvert ; les plus grands manques portent sur les callbacks PipeWire/DBus et les chemins d'entrée matériels non injectables.
+
+Une mesure ciblée plus récente de `beam-media-probe` sous Linux, avec le test du worker wgpu désormais inclus, la finalisation sur durée impossible et les sources audio/caméra inexistantes, couvre 507 lignes sur 594 (85,35 %) avec 22 tests passants. Elle fait passer cette crate au-dessus de son seuil individuel pour ce scénario de mesure ; la couverture globale du workspace et des autres crates reste ouverte.
+
+La couverture combinée de `beam-media-session` atteint ensuite 800 lignes sur 935 (85,56 %) : 34 tests de la crate, 22 tests du probe et un enregistrement local réel des trois pistes. Les chemins des adaptateurs partagés sont ainsi inclus dans cette mesure Linux. Un premier essai instrumenté demandé pour quatre secondes a pris 7,42 s et perdu des échantillons, alors qu'un second a duré 4,026 s, sans drop, avec des fichiers de 3,953 s (vidéo), 4,021 s (micro) et 4,032 s (système) lisibles par `ffprobe`. La couverture n'est pas une mesure de performance ; les essais optimisés et ceux sur les autres OS restent nécessaires.
+
+Le rapport expose maintenant le nombre d'appels à `poll()`, leur durée maximale, et la durée maximale de l'échantillonnage RSS/CPU. Un nouvel essai Linux optimisé de quatre secondes termine les trois pistes sans drop ; 375 appels à `poll()` culminent à 1,26 ms, quatre échantillons de ressources culminent à 59,5 ms, et les 50 images acquises sont encodées et affichées. Un essai identique sous instrumentation LLVM termine aussi sans drop, mais `poll()` atteint 947 ms (32 appels sur quatre secondes), tandis que l'échantillonnage culmine à 134 ms. L'écart vient donc principalement du chemin de session instrumenté sur cet essai ; la cause exacte du premier essai long reste à confirmer et aucun seuil de performance n'est déduit des exécutions avec couverture.
+
+Après l'ajout des compteurs et des tests de compatibilité, les 59 tests ciblés de `beam-media-session` et `beam-media-probe` passent sous Linux. La collecte LLVM combinant ces tests et les essais matériels locaux donne 825/957 lignes (86,21 %) pour la session et 553/606 (91,25 %) pour le probe. Ces pourcentages ciblés ne ferment pas le seuil de 85 % de tout le workspace ni les essais natifs des autres OS.
+
+Les essais physiques macOS/Windows, une session Linux X11 native, la validation des bundles privés GStreamer sur leurs runners et les obligations de licence, la couverture stricte et l'intégration produit restent à valider. Aucun gate matériel sur les autres OS n'est déduit de la compilation croisée.
+
+Un essai long préparatoire a révélé que l'entrée virtuelle ALSA `alsa:null` rendait 579 secondes d'échantillons micro en environ 13 secondes réelles. Cette entrée n'est pas cadencée par le matériel et ne convient pas au gate de durée. La capture CPAL commune aux trois OS rejette désormais une source dont la fin des échantillons dépasse de plus de deux secondes l'horloge de session. Les erreurs terminales des sources CPAL, caméra et PipeWire Linux passent par une file prioritaire distincte pour conserver leur statut même lorsque les notifications de drops saturent leur file. Un essai de trois secondes avec `alsa:null` a produit un WAV borné à 0,93 s, un manifeste `Failed` et un code retour non nul ; `alsa:default` a enregistré 2,965 s avec `Completed`.
+
+Un premier essai physique de 30 minutes a finalisé les trois pistes (caméra 1799,993 s, micro 1787,104 s, système 1799,723 s), mais l'aperçu a épuisé la mémoire GPU vers la 26e minute et la CLI a échoué. La cause était l'absence de `queue.submit` après `write_texture`, qui laissait s'accumuler les allocations de transfert. L'aperçu soumet et poll désormais chaque frame, et transmet un éventuel échec GPU avec les compteurs déjà acquis. Un nouvel essai optimisé de cinq secondes a terminé avec 62 frames d'aperçu, une seule texture recréée, zéro drop et aucune erreur GPU. Un autre essai long a été arrêté proprement après ses premières minutes sans drop pour ajouter l'échantillonnage mémoire GPU au binaire. L'essai physique final de 30 minutes avec le micro matériel, la caméra et une sortie PipeWire virtuelle a terminé avec trois pistes `Completed`, zéro drop et aucun échec de l'aperçu. `ffprobe` lit 1799,994 s pour la caméra, 1799,936 s pour le micro et 1800,021 s pour le système. Les 22495 images acquises sont toutes encodées et chargées dans l'aperçu, avec une seule création de texture ; la latence moyenne de soumission est 4,596 ms, le maximum 24,761 ms. Le pic RSS de l'arbre de processus est 116269056 octets ; les allocations wgpu rapportées restent à 2990536 octets sur les dix dernières minutes, avec un pic de 2990784 octets. La tonalité 440 Hz atteint 0,125 sur le WAV système ; les cinq premières secondes du WAV micro sont silencieuses. La dérive mesurée du micro est 41,67 ppm ; l'audio système et l'offset A/V restent non mesurés faute de timestamp natif et de signal de référence respectivement.
+
+Le backend PipeWire audio demande maintenant une métadonnée de buffer `Header` et ne transmet son PTS au contrat audio commun que s’il est valide et monotone. Une discontinuité invalide les ancres natives suivantes. Un essai local de cinq secondes avec uniquement l’audio système a terminé en `Completed`, mais le moniteur PipeWire n’a fourni aucun PTS : la dérive système reste donc non mesurée sur cette route. L’horloge de graphe PipeWire n’est pas substituée au PTS du buffer. Les tests audio ciblés passent sous Linux ; la compilation croisée Clippy des crates audio, caméra, session et probe passe sur macOS x86_64/ARM64 et Windows MSVC x86_64/ARM64. Les backends macOS/Windows restent à exécuter sur leurs OS respectifs.
+
+Le calcul de dérive commun conserve maintenant le premier timestamp natif disponible même si la piste a commencé sans lui. Une perte ultérieure de timestamps ou une discontinuité signalée par la caméra ou l’audio invalide la dérive de cette piste uniquement ; les points bruts restent sauvegardés et les anciens fichiers de mesures gardent une valeur par défaut compatible. Les tests ciblés des crates audio, session et probe passent sous Linux, ainsi que Clippy avec toutes les features sur les quatre cibles macOS/Windows.
+
+La timeline audio CPAL commune aux trois OS détecte aussi les reculs et grands sauts de son horloge de capture. Elle continue à enregistrer les échantillons mais invalide les ancres natives de dérive suivantes. Les 115 tests ciblés audio/session/probe passent après cette correction ; les essais matériels Mac/Windows restent ouverts.
+
+Un essai optimisé de cinq secondes micro + système après cette détection a terminé les deux WAV en `Completed`, sans drop ni discontinuité signalée : 240128 échantillons micro, 240640 échantillons système. La pente micro calculée sur les ancres natives de cet essai vaut 77,15 ppm ; celle du système reste inconnue car le moniteur PipeWire n’a livré aucun PTS.
+
+Un essai Linux de débranchement de sortie virtuelle a confirmé le contrôle de la route explicitement choisie : suppression du sink après deux secondes, piste système `Interrupted`, raison du débranchement dans le manifeste, WAV finalisé et code retour non nul. Le choix de sortie par défaut reste libre de suivre le défaut du système.
+
+Le backend caméra Windows utilise un Source Reader Media Foundation asynchrone direct : une seule lecture en vol, callback vers une file bornée, `Flush` à l'arrêt et `IMFMediaSource::Shutdown` explicite. Le backend caméra macOS utilise désormais directement `AVCaptureVideoDataOutput`, son option de [rejet des images tardives](https://developer.apple.com/documentation/avfoundation/avcapturevideodataoutput/alwaysdiscardslatevideoframes), un callback à file bornée et une copie BGRA de taille vérifiée avant de rendre le buffer au système. Les deux backends échouent explicitement après dix secondes sans image/callback. Les quatre compilations croisées macOS/Windows du workspace passent et les contrats publics `CameraSource` et `CameraFrame` restent communs. Les tests des runners macOS/Windows et les appareils réels restent à exécuter ; G3/G6 restent ouverts.
+
+Le branchement du protocole `capture-engine` avec la feature `native-media` a enregistré localement sous Linux trois secondes de caméra, micro et audio système. Les trois pistes sont `Completed` avec zéro drop : 37 images caméra acquises et encodées, 143872 échantillons micro et 143360 échantillons système. `ffprobe` lit leurs durées de 2,913367 s, 2,997333 s et 2,986667 s. Le moteur a répondu aux commandes de découverte, préparation, démarrage, état et arrêt, puis a quitté sans erreur. Ses nouvelles commandes compilent avec toutes les features sous Rust 1.92 pour macOS ARM64/x64 et Windows ARM64/x64 ; ces vérifications Linux ne lient ni n'exécutent les binaires sur ces OS.
+
+Le contrôle d'allowlist `scripts/ci/check_gstreamer_profile.py` isole les plugins GStreamer et relance les huit tests des writers. Deux de ces tests isolent un `appsrc` manquant et forcent une erreur d'écriture avec `RLIMIT_FSIZE` sous Linux ; le writer échoue sans publier de fichier final. Il a révélé que `filesink` exige `coreelements`, omis de l'inventaire initial ; le profil corrigé de sept plugins passe sous Linux. Un inventaire JSON des sept plugins Linux, avec empreintes SHA-256, a aussi été généré. Le workflow prévoit ce même contrôle et un inventaire archivé sur macOS et Windows, mais cette exécution reste à faire sur leurs runners.
+
+Un assembleur de bundle privé Fedora 44 copie désormais le probe, ces sept plugins, le scanner GStreamer, les bibliothèques ELF requises hors dépendances système déclarées, les notices RPM installées et un inventaire de leurs empreintes. Un lancement déplacé du bundle a enregistré trois pistes lisibles sur le matériel Linux. Dans un conteneur Fedora 44 sans paquets GStreamer, après installation des seules bibliothèques système PipeWire/ALSA/DRM, les sept factories privées et le probe se chargent. Le workflow natif construit maintenant ce bundle sur Fedora 44 et le reteste dans un second conteneur propre ; la commande de contrôle a passé localement, mais pas encore sur un runner GitHub. Des assembleurs macOS et Windows sont écrits et branchés dans ce workflow ; ils sélectionnent les mêmes sept plugins et vérifient leurs bibliothèques liées. Des seconds jobs macOS et Windows doivent aussi retester les artefacts téléchargés sur des runners frais sans installer GStreamer. Ces jobs n'ont pas encore été exécutés. Il reste à vérifier l'enregistrement sur une machine propre avec périphériques, les autres distributions Linux et les bundles macOS/Windows ; G6 reste ouvert.
+
+Le probe accepte `--preview-delay-ms 0..1000` pour ralentir uniquement son worker wgpu. Sur la caméra intégrée et deux essais Linux de huit secondes, l'aperçu normal a chargé 100 images et la piste en a acquis/encodé 100 ; avec 500 ms de délai par aperçu, 16 images ont été affichées et 101 images ont été acquises/encodées, sans perte dans les deux cas. Les deux WebM sont lisibles (7,953 s et 8,033 s). La mesure de capacité des buffers CPU réutilisés compte leurs réallocations et leur croissance. Après cet ajout, deux essais de cinq secondes confirment 63/63 images acquises/encodées et affichées sans délai, contre 64/64 acquises/encodées et dix affichées avec 500 ms de délai. Chaque aperçu n'a eu qu'une croissance initiale de 1 228 800 octets, sans autre réallocation. Le probe compte maintenant aussi les octets écrits pendant la conversion couleur CPU, les copies de padding de ligne CPU et les octets transférés au GPU, puis publie ces totaux par image d'aperçu chargée. Les tests unitaires et un essai local du worker wgpu valident les compteurs. Un essai Linux optimisé de cinq secondes a ensuite produit trois pistes `Completed`, avec 63 images caméra acquises/encodées et chargées dans l'aperçu, zéro drop et des durées lisibles de 4,993369 s, 5,013333 s et 5,013333 s. Le rapport mesure 1 228 800 octets de conversion CPU et d'upload GPU par image, aucune copie supplémentaire de padding pour cette largeur alignée, une croissance initiale de buffer CPU de 1 228 800 octets et un pic de 2 990 784 octets alloués selon wgpu. Il reste à relever les valeurs sur les autres OS et à les comparer au moteur actuel. Ces mesures sont propres à cette caméra et à ce GPU ; elles prouvent l'indépendance de la file d'enregistrement pour ce cas, sans fixer un seuil universel de performance.
+
+Les échantillons périodiques RSS/CPU/GPU incluent maintenant le nombre cumulé d'images d'aperçu chargées. Un essai Linux optimisé de quatre secondes a terminé les trois pistes et 50 images d'aperçu ; les quatre échantillons publiés portent successivement 7, 20, 32 et 45 images, avec RSS et CPU associés. `ffprobe` lit 4,033257 s de vidéo et 4,032 s pour chacun des deux WAV. Cette série permet de comparer cadence et ressources au cours du temps, mais n'est pas encore une comparaison au Beam Electron actuel ni une mesure sur macOS/Windows.
+
+L'arrêt de session borne désormais le drainage après `halt` : si une source annonce toujours des paquets qu'aucune lecture ne rend, sa piste devient `Interrupted` plutôt que de bloquer la finalisation. Un test injecte cette panne sur le micro et vérifie que le WAV système indépendant reste finalisé en `Completed`. Le gate G5 exige encore les essais de permissions, changement de sortie et référence A/V sur les autres machines.
+
+L'API caméra distingue maintenant `PermissionDenied` de `DeviceUnavailable` sur les trois adaptateurs : autorisation AVFoundation refusée, erreur d'accès V4L2 et `E_ACCESSDENIED` de Media Foundation. Un test de session force aussi l'échec de publication du WAV micro après encodage ; le manifeste marque cette piste `Failed`, conserve son `.part`, et finalise la vidéo et le WAV système. Ces tests vérifient la classification et l'isolation, pas les dialogues de permission physiques des autres OS ni une saturation réelle du disque.
+
+Un test de panne de publication de `measurements.json` a révélé que `MediaSession::stop` quittait sans manifeste final après avoir achevé les médias. L'arrêt tente désormais de publier un manifeste final incomplet avec l'erreur dans `warnings`, conserve les segments achevés et renvoie l'erreur de stockage. L'écriture atomique supprime son fichier temporaire si le renommage final échoue. Un second test bloque la publication du manifeste final et confirme que le checkpoint partiel, les mesures et le WAV finalisé restent présents. Ces tests bloquent les chemins de destination plutôt que de saturer réellement le disque ; ils ne prouvent pas l'écriture d'un manifeste final quand le disque n'a plus d'espace.
+
+Des tests de session et de CLI remplacent `manifest.partial.json` par un répertoire après le démarrage : le checkpoint périodique échoue, puis `interrupt` publie quand même un manifeste final incomplet avec la cause en avertissement et conserve les mesures. La finalisation ne tente de supprimer le checkpoint que s'il s'agit d'un fichier. Le rapport LLVM frais du workspace, avant l'ajout de ces tests, a exécuté 562 tests sans appareil (7 ignorés) et atteint 8112/13285 lignes, soit 61,06 %. Après les cinq tests matériels Linux ignorés et une session instrumentée à trois pistes de quatre secondes sans drop, la couverture combinée atteint 66,26 % du workspace ; `beam-audio` est à 85,89 %, `beam-camera` à 82,97 %, `beam-media-session` à 83,32 % et `capture` à 57,26 %. Un profil brut corrompu issu de la suite complète a été isolé avant la fusion LLVM ; les chiffres combinés ne doivent pas être pris pour le gate strict CI, qui reste ouvert.
+
+La revue des adaptateurs macOS et Windows conserve leur implémentation native derrière `CameraSource` et `AudioSource`. La copie BGRA de la caméra AVFoundation vérifie désormais la taille réelle du buffer Core Video avant la lecture, et le callback Media Foundation garde la première erreur remontée par ses callbacks même si une autre erreur survient ensuite. La CLI macOS embarque maintenant son propre `Info.plist` dans `__TEXT,__info_plist` avec les descriptions caméra, micro et audio système requises avant la demande de permission ; le vérificateur du bundle relit ces clés dans le binaire relocalisé. Les quatre cibles macOS/Windows compilent avec tous les features, mais le lien natif, la lecture du Mach-O final et les essais sur périphériques attendent leurs runners et machines respectifs.
+
+Un essai Linux a envoyé SIGINT au probe après trois secondes de capture réelle. La session a quitté avec un code non nul, trois pistes `Interrupted` et trois fichiers finalisés lisibles par `ffprobe` (caméra 2,273 s, micro et système 2,368 s). Un essai séparé avec une caméra explicitement inexistante a conservé la piste caméra en `Failed` et finalisé les deux WAV audio en `Completed` (2,997 s et 2,987 s). Ces essais confirment l'arrêt forcé et l'isolation d'une source manquante sur ce matériel.
 
 ## 1. Résultat attendu et limites du premier goal
 
@@ -70,11 +124,11 @@ packages/*/test/hardware/                                   # tests matériels c
 
 Les dossiers d'OS contiennent uniquement du code réel ; pas de stubs ni de fallback silencieux. Les fichiers de production restent sous 500 lignes. Le point d'entrée UI futur ne reçoit que des états/événements typés et une vue de texture ; le domaine de capture demeure en Rust.
 
-## 5. `Cargo.toml` proposés
+## 5. Dépendances du prototype
 
-Les versions ci-dessous sont des **candidats vérifiés dans le registre le 21 septembre 2026**, pas des dépendances déjà ajoutées. `cpal 0.18.2` demande Rust 1.85, `wgpu 30.0.1` Rust 1.87 et la branche stable `gstreamer-rs 0.25` Rust 1.92. L'accord pour relever le MSRV de Beam est acquis : passer les crates concernées à Rust 1.92 avant d'intégrer GStreamer, puis valider le lockfile et ses dépendances transitives sur cette version. Le runtime GStreamer choisi pour les bundles doit être au moins 1.24 ; figer la même version mineure et les mêmes plugins sur les trois OS à l'étape packaging.
+Les blocs ci-dessous conservent les choix initiaux du plan ; les `Cargo.toml` du dépôt et `Cargo.lock` décrivent les dépendances réellement intégrées. Les neuf crates utilisent Rust 1.92, `cpal 0.18.2`, `wgpu 30.0.1` et `gstreamer-rs 0.25`. Les quatre compilations croisées macOS/Windows valident la résolution et le typage ; le lien et l'exécution avec les SDK natifs restent au workflow et aux machines de ces OS. Le runtime GStreamer des bundles doit être au moins 1.24 ; la version candidate commune est 1.28.7.
 
-Racine, quand toutes les crates seront créées :
+La racine contient les neuf crates :
 
 ```toml
 [workspace]
@@ -86,7 +140,7 @@ members = [
 resolver = "2"
 ```
 
-Toutes les nouvelles crates gardent `edition = "2024"`, `publish = false` et les lints Rust/Clippy du dépôt. Leur `rust-version` passe à `1.92` avec l'intégration de GStreamer ; le socle déjà créé reste à `1.88` jusqu'à ce gate. Ne déclarer les dépendances conditionnelles que lorsque leur backend est implémenté.
+Toutes les nouvelles crates utilisent `edition = "2024"`, `publish = false`, `rust-version = "1.92"` et les lints Rust/Clippy du dépôt. Les dépendances natives restent conditionnelles à leur OS.
 
 ### `beam-media-core` : `packages/media-core/Cargo.toml`
 
@@ -124,7 +178,7 @@ thiserror = "2"
 pipewire = { version = "=0.10.0", features = ["v0_3_65"] }
 ```
 
-Linux réutilise puis extrait le backend PipeWire système de `capture`. CPAL est tenté pour le micro sur Linux/macOS/Windows et pour le loopback macOS/Windows. Si le gate Mac révèle un défaut du loopback CPAL, ajouter **seulement alors** `objc2-core-audio = "0.3.2"` et `objc2-foundation = "0.3.2"` sous `cfg(target_os = "macos")` pour un tap Beam direct. [ScreenCaptureKit audio](https://developer.apple.com/documentation/screencapturekit/capturing-screen-content-in-macos) reste une seconde option mesurée, avec une permission et un couplage à la capture écran différents.
+Le backend PipeWire du prototype est séparé de `capture`. CPAL fournit le micro sur Linux/macOS/Windows et le loopback de sortie Windows. Sur macOS, CPAL gère une sortie simple ; une sortie duplex utilise le tap Core Audio privé de Beam et un périphérique agrégé pour éviter que son micro ne soit pris pour l'audio système. [ScreenCaptureKit audio](https://developer.apple.com/documentation/screencapturekit/capturing-screen-content-in-macos) reste une option de comparaison si les essais matériels révèlent un défaut.
 
 ### `beam-camera` : `packages/camera/Cargo.toml`
 
@@ -203,7 +257,7 @@ pollster = "0.4"
 serde_json = "1"
 ```
 
-Le binaire parse une petite liste d'arguments sans framework CLI tant que trois commandes suffisent. Il expose `--camera`, `--microphone`, `--system-output`, `--duration`, `--output` et produit `manifest.json`, `measurements.json`, `camera.webm`, `microphone.wav`, `system-audio.wav`. Il ne crée pas de fausses données lorsqu'une source manque.
+Le binaire parse une petite liste d'arguments sans framework CLI tant que trois commandes suffisent. Il expose `--camera`, `--microphone`, `--system-output`, `--duration`, `--preview-delay-ms`, `--output` et produit `manifest.json`, `measurements.json`, `camera.webm`, `microphone.wav`, `system-audio.wav`. Il ne crée pas de fausses données lorsqu'une source manque.
 
 ### `capture` existant, au moment de l'intégration
 
@@ -232,20 +286,22 @@ backend OS -> frame/paquet + timestamp natif -> ancre SessionClock -> PTS ns
 
 ## 7. Checklist et gates de livraison
 
+Une case reste ouverte tant que tous ses essais et critères, notamment les essais matériels sur chaque OS, ne sont pas validés. La présence du code seul ne suffit pas à fermer un gate.
+
 ### G0 — Socle et frontières
 
 - [x] Lire `docs/UI.md`, `docs/ARCHITECTURE.md`, `docs/CODE_QUALITY.md` ; étudier Cap sans reprendre ses crates ou son code.
 - [x] Créer `beam-media-core`, raccorder l'horloge et le mapper existants ; tests et Clippy ciblés Linux réussis.
-- [ ] Relever les versions minimales macOS/Windows et les distributions Linux réellement visées par Beam ; le tap Core Audio impose au moins macOS 14.2.
-- [ ] Fixer les états de piste, erreurs, événements et ownership des buffers dans une revue d'API d'une page.
-- [ ] Extraire le manifeste v2 et l'écriture atomique de `capture` vers `beam-media-manifest`, avec tests de lecture d'anciennes sessions et de reprise d'écriture interrompue.
+- [x] Relever les versions minimales macOS/Windows et les distributions Linux réellement visées par Beam ; le tap Core Audio impose au moins macOS 14.2 (voir `native-media-api.md`).
+- [x] Fixer les états de piste, erreurs, événements et ownership des buffers dans une revue d'API d'une page (`native-media-api.md`).
+- [x] Extraire le manifeste v2 et l'écriture atomique de `capture` vers `beam-media-manifest`, avec tests de lecture d'anciennes sessions et de reprise d'écriture interrompue.
 
 **Gate :** mêmes JSON v2 avant/après extraction, aucun cycle Cargo, tous les fichiers source <500 lignes.
 
 ### G1 — Writer GStreamer avant les périphériques
 
 - [ ] Relever le MSRV à Rust 1.92, installer les SDK GStreamer/ALSA et compiler `gstreamer-rs 0.25` sur les trois OS.
-- [ ] Implémenter trois `appsrc` avec données synthétiques déterministes, PTS/durées, EOS et fichiers `.part`.
+- [x] Implémenter trois `appsrc` avec données synthétiques déterministes, PTS/durées, EOS et fichiers `.part`.
 - [ ] Vérifier `camera.webm` VP8 et deux WAV par lecture indépendante ; tester timestamps non monotones, file pleine, plugin absent, disque plein et arrêt pendant l'initialisation.
 - [ ] Inventorier les bibliothèques/plugins du bundle et leurs licences ; exclure `gst-libav` et les plugins GPL du profil initial.
 
@@ -263,25 +319,25 @@ backend OS -> frame/paquet + timestamp natif -> ancre SessionClock -> PTS ns
 
 ### G3 — Webcam native
 
-- [ ] Linux V4L2 mmap ; macOS AVFoundation ; Windows Media Foundation, chacun dans son dossier OS.
+- [x] Linux V4L2 mmap ; macOS AVFoundation ; Windows Media Foundation, chacun dans son dossier OS.
 - [ ] Découverte stable, négociation résolution/fps/format, permissions, frames timestampées et arrêt/déconnexion.
 - [ ] Mesurer YUYV/NV12/BGRA/MJPEG sur au moins une caméra intégrée et une USB ; n'ajouter DirectShow ou un décodeur MJPEG supplémentaire que pour un appareil démontré.
-- [ ] Envoyer la même capture vers la file d'enregistrement et la boîte « dernière frame » de l'aperçu, sans garder les buffers natifs trop longtemps.
+- [x] Envoyer la même capture vers la file d'enregistrement et la boîte « dernière frame » de l'aperçu, sans garder les buffers natifs trop longtemps.
 
 **Gate :** une seule ouverture du périphérique, frames réelles et monotonie contrôlée, aucune rétention non bornée.
 
 ### G4 — Texture wgpu sur Device appelant
 
-- [ ] Créer l'aperçu avec Device/Queue fournis, texture réutilisée et PTS associé ; gérer redimensionnement, arrêt et destruction du Device.
+- [x] Créer l'aperçu avec Device/Queue fournis, texture réutilisée et PTS associé ; gérer redimensionnement, arrêt et destruction du Device.
 - [ ] Mesurer fps, latence, copies CPU, octets alloués par frame et mémoire GPU ; comparer upload réutilisé et import natif seulement si utile.
-- [ ] Vérifier que ralentir l'appelant wgpu ne réduit pas le débit de la piste enregistrée.
+- [x] Vérifier que ralentir l'appelant wgpu ne réduit pas le débit de la piste enregistrée sur la caméra Linux intégrée (100/100 frames sans délai, 101/101 avec 500 ms par aperçu ; 16 frames affichées dans le second cas).
 
 **Gate :** preview temps réel pendant l'enregistrement, sans allocation de texture par frame à format constant.
 
 ### G5 — Session complète sans UI
 
-- [ ] Relier les trois sources, les trois writers, le start gate et le manifeste via `beam-media-session`.
-- [ ] CLI `beam-media-probe` avec `devices`, `record`, `report` ; produire les cinq artefacts annoncés.
+- [x] Relier les trois sources, les trois writers, le start gate et le manifeste via `beam-media-session`.
+- [x] CLI `beam-media-probe` avec `devices`, `record`, `report` ; produire les cinq artefacts annoncés.
 - [ ] Tester arrêt normal, arrêt forcé, permission refusée, source manquante, hot-unplug, disque plein et sortie qui change.
 - [ ] Mesurer avec un clap ou signal de référence pour distinguer offset initial et dérive ; conserver les données brutes de mesure.
 
@@ -301,9 +357,10 @@ Avant de déclarer ce goal terminé, migrer les tests Rust existants vers le mir
 
 ### G7 — Intégration produit ultérieure
 
-- [ ] Brancher les APIs du prototype à l'engine Rust, retirer les sidecars Chromium correspondants et migrer le modèle/éditeur sans perdre la lecture des anciennes sessions.
+- [x] Brancher les APIs du prototype à l'engine Rust derrière la feature `native-media` et les exposer par le pont Electron typé.
+- [ ] Retirer les sidecars Chromium correspondants et migrer le modèle/éditeur sans perdre la lecture des anciennes sessions ; activer ensuite la feature dans le bundle distribué avec le runtime GStreamer privé.
 - [ ] Reprendre ensuite seulement la capture écran pour donner ses frames au même temps/encodeur ; les chemins écran actuels peuvent rester en service jusqu'à leur gate.
 - [ ] Brancher ARGUI sur les commandes/états et la texture wgpu, sans déplacer la logique média dans l'UI.
 - [ ] Mettre à jour `docs/ARCHITECTURE.md`, les tests d'intégration et `CHANGELOG.md` au moment du changement utilisateur réel.
 
-Ce plan est documentaire : il n'ajoute aujourd'hui aucune dépendance Cargo au-delà de `beam-media-core`. Sur la machine Linux actuelle, le runtime GStreamer 1.28.7 et les plugins du profil initial sont présents, mais les fichiers de développement `gstreamer-1.0.pc`, `gstreamer-app-1.0.pc` et `alsa.pc` manquent. Les gates matériels macOS/Windows ne peuvent pas être déclarés réussis depuis Linux.
+Le prototype utilise actuellement les SDK de développement GStreamer et ALSA installés sur la machine Linux. Les détails de son API sont dans [native-media-api.md](native-media-api.md), l'inventaire initial de plugins dans [native-media-bundle.md](native-media-bundle.md) et les scénarios matériels des trois OS dans [native-media-platform-smoke.md](native-media-platform-smoke.md). Le workflow `native-media.yml` installe les SDK GStreamer officiels 1.28.7 sur macOS et Windows, puis compile, lint et lance les tests Rust du workspace sur les trois OS. Il prévoit des builds de bundles privés sur Fedora, macOS et Windows et des vérifications séparées sans installation GStreamer. Il n'a pas encore été exécuté sur GitHub et ne prouve pas les essais matériels. Les gates matériels macOS/Windows ne peuvent pas être déclarés réussis depuis Linux.

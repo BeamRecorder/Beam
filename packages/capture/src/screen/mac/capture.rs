@@ -6,6 +6,9 @@ use std::{
     },
 };
 
+#[path = "../../../test/screen/mac/capture.rs"]
+mod capture_checks;
+
 use screencapturekit::{
     cm::CMTime,
     recording_output::{
@@ -294,11 +297,11 @@ pub(crate) fn resolve_filter(
 fn application_id(
     application: &screencapturekit::shareable_content::SCRunningApplication,
 ) -> Result<SourceId, CaptureError> {
-    SourceId::new(format!(
+    Ok(SourceId::new(format!(
         "sck:application:{}:{}",
         application.process_id(),
         application.bundle_identifier()
-    ))
+    ))?)
 }
 
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]

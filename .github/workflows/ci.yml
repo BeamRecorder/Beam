@@ -56,6 +56,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+      - uses: taiki-e/install-action@nextest
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: ci-quality-linux
@@ -71,8 +72,8 @@ jobs:
       - run: bun run test
       # - run: bun run test:coverage
       - run: cargo fmt --all --check
-      - run: cargo test -p capture --all-features
-      - run: cargo clippy -p capture --all-targets --all-features -- -D warnings
+      - run: cargo nextest run -p capture
+      - run: cargo clippy -p capture --all-targets -- -D warnings
 
   package-linux:
     needs: changes
@@ -178,13 +179,14 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-pc-windows-msvc,aarch64-pc-windows-msvc
+      - uses: taiki-e/install-action@nextest
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: cargo-package-windows-x64-arm64-release
           cache-on-failure: true
       - run: node scripts/ci/bun-install-retry.cjs
       - name: Test Windows capture initialization
-        run: cargo test -p capture --all-features --lib --target x86_64-pc-windows-msvc screen::win::capture::tests
+        run: cargo nextest run -p capture --lib --target x86_64-pc-windows-msvc -E 'test(screen::win::capture::capture_checks)'
       - name: Build and stage both Windows engines
         shell: pwsh
         run: |

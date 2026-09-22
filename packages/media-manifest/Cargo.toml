@@ -1,0 +1,68 @@
+[package]
+name = "beam-media-manifest"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.92"
+publish = false
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["serde", "v7"] }
+thiserror = "2"
+
+[dev-dependencies]
+tempfile = "3"
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+all = "deny"
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+
+[[test]]
+name = "manifest_model"
+path = "test/model/manifest.rs"
+
+[[test]]
+name = "manifest_ids"
+path = "test/model/ids.rs"
+
+[[test]]
+name = "manifest_atomic_file"
+path = "test/storage/atomic_file.rs"
+
+[[test]]
+name = "manifest_writer"
+path = "test/storage/manifest_writer.rs"
+
+[[test]]
+name = "manifest_layout"
+path = "test/storage/layout.rs"
+
+[[test]]
+name = "manifest_track"
+path = "test/model/track.rs"
+
+[[test]]
+name = "manifest_permission"
+path = "test/model/permission.rs"
+
+[[test]]
+name = "manifest_error"
+path = "test/error.rs"
+
+[[test]]
+name = "manifest_public_api"
+path = "test/lib.rs"
+
+[[test]]
+name = "manifest_model_exports"
+path = "test/model/mod.rs"
+
+[[test]]
+name = "manifest_storage_exports"
+path = "test/storage/mod.rs"

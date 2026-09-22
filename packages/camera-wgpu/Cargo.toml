@@ -1,0 +1,36 @@
+[package]
+name = "beam-camera-wgpu"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.92"
+publish = false
+
+[dependencies]
+beam-media-core = { path = "../media-core" }
+beam-camera = { path = "../camera" }
+wgpu = "=30.0.1"
+thiserror = "2"
+
+[dev-dependencies]
+pollster = "0.4"
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+all = "deny"
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+
+[[test]]
+name = "upload"
+path = "test/upload.rs"
+
+[[test]]
+name = "preview"
+path = "test/preview.rs"
+
+[[test]]
+name = "lib"
+path = "test/lib.rs"

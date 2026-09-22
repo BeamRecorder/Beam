@@ -7,6 +7,50 @@ const test = require('node:test');
 
 const { registerCaptureIpc } = require('../electron/capture/capture-ipc.cjs');
 
+test('forwards native media commands and applies the recording gate', async () => {
+  const handlers = new Map();
+  const requests = [];
+  let recordingAllowed = false;
+  registerCaptureIpc({
+    ipcMain: { handle: (channel, handler) => handlers.set(channel, handler) },
+    desktopCapturer: {},
+    screen: {},
+    captureEngine: {
+      request: async (command, payload) => {
+        requests.push({ command, payload });
+        return { state: 'armed' };
+      },
+    },
+    userPaths: { projects: 'recordings', studioProjects: 'recordings/studio' },
+    trackStorages: [],
+    platform: 'darwin',
+    canStartRecording: () => recordingAllowed,
+  });
+
+  const request = handlers.get('capture:request');
+  const config = {
+    outputDir: '/outside-studio',
+    camera: { mode: 'disabled' },
+    microphone: { mode: 'default' },
+    systemAudio: { mode: 'disabled' },
+  };
+  await assert.rejects(() => request({}, 'native-media-prepare', { config }), /Quick Snip capture/);
+  recordingAllowed = true;
+  assert.deepEqual(await request({}, 'native-media-prepare', { config }), { state: 'armed' });
+  await request({}, 'native-media-start');
+  await request({}, 'native-media-status');
+  await request({}, 'native-media-stop');
+  assert.deepEqual(requests.slice(1), [
+    { command: 'native-media-start', payload: {} },
+    { command: 'native-media-status', payload: {} },
+    { command: 'native-media-stop', payload: {} },
+  ]);
+  assert.equal(requests[0].command, 'native-media-prepare');
+  assert.deepEqual(requests[0].payload.config.camera, config.camera);
+  assert.notEqual(requests[0].payload.config.outputDir, config.outputDir);
+  assert.match(requests[0].payload.config.outputDir, /^recordings\/studio\/native-[0-9a-f-]+$/);
+});
+
 test('stops native capture before completing sidecar tracks', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-capture-ipc-'));
   const manifestPath = path.join(root, 'manifest.json');

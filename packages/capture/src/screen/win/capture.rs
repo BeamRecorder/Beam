@@ -463,6 +463,5 @@ fn backend_error(error: impl std::fmt::Display) -> CaptureError {
     CaptureError::Backend(format!("Windows Graphics Capture failed: {error}"))
 }
 
-#[cfg(test)]
-#[path = "capture_tests.rs"]
-mod tests;
+#[path = "../../../test/screen/win/capture.rs"]
+mod capture_checks;

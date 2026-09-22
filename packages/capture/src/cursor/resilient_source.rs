@@ -42,6 +42,5 @@ impl<T: Clone> ResilientSource<T> {
     }
 }
 
-#[cfg(test)]
-#[path = "resilient_source_tests.rs"]
-mod tests;
+#[path = "../../test/cursor/resilient_source.rs"]
+mod resilient_source_checks;

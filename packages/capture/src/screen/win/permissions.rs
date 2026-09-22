@@ -1,5 +1,8 @@
 use crate::model::{CaptureCapabilities, PermissionSnapshot, PermissionState};
 
+#[path = "../../../test/screen/win/permissions.rs"]
+mod permission_checks;
+
 use super::compatibility::supports_cursor_exclusion;
 
 #[must_use]

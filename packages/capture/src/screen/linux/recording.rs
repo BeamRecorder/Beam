@@ -1,8 +1,11 @@
 use std::sync::Arc;
 
+#[path = "../../../test/screen/linux/recording.rs"]
+mod recording_checks;
+
 use crate::{
     CaptureError,
-    model::{CursorSelection, ScreenSelection},
+    model::{CursorSelection, PortalSourceKind, ScreenRegion, ScreenSelection},
     screen::{ScreenCaptureMetrics, ScreenConsumer, ScreenOpenRequest, ScreenSegment, VideoFormat},
     session::StartGate,
 };
@@ -22,25 +25,7 @@ pub struct LinuxRecording {
 
 impl LinuxRecording {
     pub(crate) fn open(request: ScreenOpenRequest<'_>) -> Result<Self, CaptureError> {
-        let ScreenSelection::Portal {
-            kind,
-            restore_token,
-        } = request.selection
-        else {
-            return Err(CaptureError::Unsupported(
-                "Linux native screen capture requires the system Portal picker".into(),
-            ));
-        };
-        if restore_token.is_some() {
-            return Err(CaptureError::InvalidConfiguration(
-                "Linux Portal restore tokens are not supported in non-persistent mode".into(),
-            ));
-        }
-        if request.region.is_some() && !matches!(kind, crate::model::PortalSourceKind::Monitor) {
-            return Err(CaptureError::InvalidConfiguration(
-                "screen region requires a Portal monitor source".into(),
-            ));
-        }
+        let kind = validate_portal_request(request.selection, request.region)?;
         let (sink, encoded_output, encoded_codec): (
             Box<dyn crate::screen::ScreenSampleSink>,
             bool,
@@ -81,7 +66,7 @@ impl LinuxRecording {
         let repair_window_crop = matches!(
             portal.source_type,
             Some(ashpd::desktop::screencast::SourceType::Window)
-        ) || matches!(kind, crate::model::PortalSourceKind::Window);
+        ) || matches!(kind, PortalSourceKind::Window);
         let stream_scope = portal
             .stream_id
             .clone()
@@ -187,6 +172,32 @@ impl LinuxRecording {
     pub fn encoded_codec(&self) -> Option<&str> {
         self.encoded_codec.as_deref()
     }
+}
+
+fn validate_portal_request(
+    selection: &ScreenSelection,
+    region: Option<ScreenRegion>,
+) -> Result<PortalSourceKind, CaptureError> {
+    let ScreenSelection::Portal {
+        kind,
+        restore_token,
+    } = selection
+    else {
+        return Err(CaptureError::Unsupported(
+            "Linux native screen capture requires the system Portal picker".into(),
+        ));
+    };
+    if restore_token.is_some() {
+        return Err(CaptureError::InvalidConfiguration(
+            "Linux Portal restore tokens are not supported in non-persistent mode".into(),
+        ));
+    }
+    if region.is_some() && !matches!(kind, PortalSourceKind::Monitor) {
+        return Err(CaptureError::InvalidConfiguration(
+            "screen region requires a Portal monitor source".into(),
+        ));
+    }
+    Ok(kind.clone())
 }
 
 impl Drop for LinuxRecording {

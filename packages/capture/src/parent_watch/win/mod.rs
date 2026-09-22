@@ -124,3 +124,6 @@ fn creation_time(handle: HANDLE) -> windows::core::Result<u64> {
     unsafe { GetProcessTimes(handle, &mut created, &mut exited, &mut kernel, &mut user) }?;
     Ok((u64::from(created.dwHighDateTime) << 32) | u64::from(created.dwLowDateTime))
 }
+
+#[path = "../../../test/parent_watch/win/mod.rs"]
+mod win_checks;

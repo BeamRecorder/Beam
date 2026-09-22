@@ -1,5 +1,5 @@
 /// A camera or screen frame in the shared session timeline.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct VideoFrame<T> {
     pub captured_ns: u64,
     pub width: u32,

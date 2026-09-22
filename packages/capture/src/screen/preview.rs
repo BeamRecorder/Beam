@@ -1,6 +1,6 @@
-#[cfg(any(test, target_os = "macos"))]
+#[cfg(target_os = "macos")]
 use base64::{Engine as _, engine::general_purpose::STANDARD};
-#[cfg(any(test, target_os = "macos"))]
+#[cfg(target_os = "macos")]
 use jpeg_encoder::{ColorType, Encoder};
 use serde::{Deserialize, Serialize};
 
@@ -8,7 +8,7 @@ use crate::{CaptureError, model::SourceId};
 
 const MAX_PREVIEW_WIDTH: u32 = 640;
 const MAX_PREVIEW_HEIGHT: u32 = 360;
-#[cfg(any(test, target_os = "macos"))]
+#[cfg(target_os = "macos")]
 const JPEG_QUALITY: u8 = 72;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -37,7 +37,7 @@ pub fn capture_source_preview(
     }
 }
 
-#[cfg(any(test, target_os = "macos"))]
+#[cfg(target_os = "macos")]
 pub(crate) fn fit_preview_dimensions(
     source_width: u32,
     source_height: u32,
@@ -68,7 +68,7 @@ pub(crate) fn fit_preview_dimensions(
     )
 }
 
-#[cfg(any(test, target_os = "macos"))]
+#[cfg(target_os = "macos")]
 pub(crate) fn jpeg_data_url(rgba: &[u8], width: u32, height: u32) -> Result<String, CaptureError> {
     let expected = usize::try_from(width)
         .ok()
@@ -112,32 +112,5 @@ fn validate_preview_bounds(max_width: u32, max_height: u32) -> Result<(), Captur
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn fits_landscape_portrait_and_small_sources_without_distortion() {
-        assert_eq!(fit_preview_dimensions(1920, 1080, 300, 200), (300, 169));
-        assert_eq!(fit_preview_dimensions(1080, 1920, 300, 200), (113, 200));
-        assert_eq!(fit_preview_dimensions(120, 80, 300, 200), (120, 80));
-    }
-
-    #[test]
-    fn rejects_zero_and_oversized_preview_bounds() {
-        assert!(validate_preview_bounds(0, 200).is_err());
-        assert!(validate_preview_bounds(300, 0).is_err());
-        assert!(validate_preview_bounds(641, 200).is_err());
-        assert!(validate_preview_bounds(300, 361).is_err());
-    }
-
-    #[test]
-    fn encodes_valid_rgba_as_a_jpeg_data_url_and_rejects_wrong_lengths() {
-        let result = jpeg_data_url(&[255, 64, 0, 255], 1, 1);
-        assert!(result.is_ok(), "one RGBA pixel should encode");
-        let encoded = result.unwrap_or_default();
-        assert!(encoded.starts_with("data:image/jpeg;base64,/9j/"));
-        assert!(jpeg_data_url(&[], 1, 1).is_err());
-        assert!(jpeg_data_url(&[0; 8], 1, 1).is_err());
-    }
-}
+#[path = "../../test/screen/preview.rs"]
+mod preview_checks;

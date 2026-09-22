@@ -1,4 +1,5 @@
 const fs = require('fs');
+const { randomUUID } = require('crypto');
 const path = require('path');
 const { pathToFileURL } = require('url');
 const { buildDefaultCaptureConfig } = require('./capture-config.cjs');
@@ -20,6 +21,11 @@ const ALLOWED_COMMANDS = new Set([
   'start-system-audio-preview',
   'system-audio-preview-level',
   'stop-system-audio-preview',
+  'native-media-devices',
+  'native-media-prepare',
+  'native-media-start',
+  'native-media-stop',
+  'native-media-status',
 ]);
 
 function completedVideoSource(session) {
@@ -144,9 +150,15 @@ function registerCaptureIpc({
       if (command === 'system-audio-preview-level') return systemAudioPreview.level(event.sender);
     }
     if (
-      ['start-default-recording', 'prepare-default-recording', 'start-recording', 'prepare', 'start'].includes(
-        command,
-      ) &&
+      [
+        'start-default-recording',
+        'prepare-default-recording',
+        'start-recording',
+        'prepare',
+        'start',
+        'native-media-prepare',
+        'native-media-start',
+      ].includes(command) &&
       !canStartRecording(event)
     ) {
       throw new Error('A Quick Snip capture is already active.');
@@ -200,6 +212,12 @@ function registerCaptureIpc({
       return withProjectId(completedVideoSource(session));
     }
     if (command === 'stop') return withProjectId(completedVideoSource(completeSession(await requestEngine('stop'))));
+    if (command === 'native-media-prepare') {
+      if (!payload?.config || typeof payload.config !== 'object' || Array.isArray(payload.config))
+        throw new TypeError('Native media configuration is required.');
+      const outputDir = path.join(userPaths.studioProjects, `native-${randomUUID()}`);
+      return requestEngine(command, { config: { ...payload.config, outputDir } });
+    }
     if (!ALLOWED_COMMANDS.has(command)) throw new Error(`Commande de capture interdite: ${command}`);
     return withProjectId(await requestEngine(command, payload));
   });

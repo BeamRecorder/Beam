@@ -433,6 +433,5 @@ fn normalized_hotspot_distance(
     (left_x - right_x).abs() + (left_y - right_y).abs()
 }
 
-#[cfg(test)]
-#[path = "cursor_classifier_tests.rs"]
-mod tests;
+#[path = "../../../../test/screen/linux/pipewire/cursor_classifier.rs"]
+mod cursor_classifier_checks;

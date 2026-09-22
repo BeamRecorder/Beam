@@ -1,0 +1,61 @@
+[package]
+name = "beam-media-session"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.92"
+publish = false
+
+[dependencies]
+beam-media-core = { path = "../media-core" }
+beam-media-manifest = { path = "../media-manifest" }
+beam-audio = { path = "../audio" }
+beam-camera = { path = "../camera" }
+beam-media-encode = { path = "../media-encode" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+time = { version = "0.3", features = ["formatting"] }
+thiserror = "2"
+
+[dev-dependencies]
+tempfile = "3"
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+all = "deny"
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+
+[[test]]
+name = "session"
+path = "test/session/mod.rs"
+
+[[test]]
+name = "measurements"
+path = "test/measurements.rs"
+
+[[test]]
+name = "session_prepare"
+path = "test/session/prepare.rs"
+
+[[test]]
+name = "session_drain"
+path = "test/session/drain.rs"
+
+[[test]]
+name = "session_finish"
+path = "test/session/finish.rs"
+
+[[test]]
+name = "types"
+path = "test/types.rs"
+
+[[test]]
+name = "error"
+path = "test/error.rs"
+
+[[test]]
+name = "lib"
+path = "test/lib.rs"

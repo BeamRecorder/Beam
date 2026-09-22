@@ -1,4 +1,7 @@
 use super::{capture::window_from_source_id, compatibility::compatible_settings};
+
+#[path = "../../../test/screen/win/screenshot.rs"]
+mod screenshot_checks;
 use crate::{
     CaptureError,
     model::ScreenSelection,

@@ -5,12 +5,15 @@ use std::{
     sync::{Mutex, OnceLock},
 };
 
+#[path = "../../../test/screen/linux/owned_child.rs"]
+mod owned_child_checks;
+
 fn process_groups() -> &'static Mutex<Vec<libc::pid_t>> {
     static GROUPS: OnceLock<Mutex<Vec<libc::pid_t>>> = OnceLock::new();
     GROUPS.get_or_init(|| Mutex::new(Vec::new()))
 }
 
-#[cfg(test)]
+#[allow(dead_code)]
 pub(super) fn test_lock() -> std::sync::MutexGuard<'static, ()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
     LOCK.get_or_init(|| Mutex::new(()))

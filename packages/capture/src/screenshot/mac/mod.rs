@@ -1,4 +1,7 @@
 use super::{ScreenshotRequest, backend_error};
+
+#[path = "../../../test/screenshot/mac/mod.rs"]
+mod screenshot_checks;
 use crate::{
     CaptureError,
     model::ScreenSelection,

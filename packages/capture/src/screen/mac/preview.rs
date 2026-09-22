@@ -4,6 +4,9 @@ use screencapturekit::{
     stream::configuration::{PixelFormat, SCStreamConfiguration},
 };
 
+#[path = "../../../test/screen/mac/preview.rs"]
+mod preview_checks;
+
 use crate::{
     CaptureError,
     model::SourceId,

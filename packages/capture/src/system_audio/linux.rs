@@ -2,7 +2,7 @@ use std::{
     cell::{Cell, RefCell},
     rc::Rc,
     sync::{Arc, Mutex, mpsc},
-    thread::{self, JoinHandle},
+    thread::JoinHandle,
     time::Duration,
 };
 
@@ -13,14 +13,15 @@ use spa::{param::ParamType, pod::Pod};
 use crate::{CaptureError, model::SystemAudioSelection, session::StartGate};
 
 use super::{SystemAudioFormat, SystemAudioMetrics, SystemAudioOpenRequest, SystemAudioSegment};
-use crate::system_audio::wav::FloatWavWriter;
 
 mod format;
+mod negotiation;
+mod open;
 mod support;
 mod writer;
 use format::{audio_format_parameter, parse_audio_format_event, peak_f32le};
+use negotiation::{handle_format_changed, handle_state_changed};
 use support::{ReadySender, join, pipewire_error, send_ready, set_fatal, take_fatal};
-use writer::writer_worker;
 
 const READY_TIMEOUT: Duration = Duration::from_secs(10);
 
@@ -86,95 +87,6 @@ impl PipewireSystemAudioRecording {
         Ok(preview)
     }
 
-    fn open_inner(
-        selection: SystemAudioSelection,
-        segment: Option<SystemAudioSegment>,
-        start_gate: Arc<StartGate>,
-        queue_capacity: usize,
-    ) -> Result<Self, CaptureError> {
-        match selection {
-            SystemAudioSelection::DefaultOutput => {}
-        }
-        if queue_capacity == 0 {
-            return Err(CaptureError::InvalidConfiguration(
-                "system audio queue capacity must be non-zero".into(),
-            ));
-        }
-        let persist_samples = segment.is_some();
-        let (sink, receiver) = crossbeam_channel::bounded(queue_capacity);
-        let (commands, command_receiver) = pw::channel::channel();
-        let (ready, ready_receiver) = mpsc::sync_channel(1);
-        let fatal = Arc::new(Mutex::new(None));
-        let metrics = Arc::new(SystemAudioMetrics::default());
-        let worker_sink = sink.clone();
-        let worker_fatal = fatal.clone();
-        let worker_metrics = metrics.clone();
-        let worker_gate = start_gate.clone();
-        let worker = thread::Builder::new()
-            .name("beam-linux-system-audio".into())
-            .spawn(move || {
-                let result = pipewire_worker(
-                    command_receiver,
-                    worker_sink.clone(),
-                    worker_fatal,
-                    worker_metrics,
-                    worker_gate,
-                    persist_samples,
-                    ready,
-                );
-                let _ = worker_sink.send(SinkMessage::Finish);
-                result
-            })
-            .map_err(pipewire_error)?;
-        let negotiated = ready_receiver
-            .recv_timeout(READY_TIMEOUT)
-            .map_err(|_| pipewire_error("system audio format negotiation timed out"))
-            .and_then(|result| result);
-        let format = match negotiated {
-            Ok(format) => format,
-            Err(error) => {
-                let _ = commands.send(Command::Stop);
-                let worker_error = worker.join().ok().and_then(Result::err);
-                return worker_error.map_or_else(|| take_fatal(&fatal).and(Err(error)), Err);
-            }
-        };
-        let initial_writer = match segment {
-            Some(segment) => match FloatWavWriter::create(&segment.path, format) {
-                Ok(writer) => Some(writer),
-                Err(error) => {
-                    let _ = commands.send(Command::Stop);
-                    let _ = worker.join();
-                    return Err(error);
-                }
-            },
-            None => None,
-        };
-        let writer_fatal = fatal.clone();
-        let writer = thread::Builder::new()
-            .name("beam-system-audio-writer".into())
-            .spawn(move || writer_worker(receiver, format, initial_writer, writer_fatal))
-            .map_err(|error| CaptureError::Backend(error.to_string()));
-        let writer = match writer {
-            Ok(writer) => writer,
-            Err(error) => {
-                let _ = commands.send(Command::Stop);
-                let _ = worker.join();
-                return Err(error);
-            }
-        };
-        Ok(Self {
-            commands: Some(commands),
-            sink,
-            worker: Some(worker),
-            writer: Some(writer),
-            fatal,
-            format,
-            metrics,
-            start_gate,
-            running: false,
-        })
-    }
-
     pub(super) fn start(&mut self) -> Result<(), CaptureError> {
         self.send_wait(|reply| Command::Start {
             gate: self.start_gate.clone(),
@@ -223,9 +135,10 @@ impl PipewireSystemAudioRecording {
         let worker = join(&mut self.worker, "system audio PipeWire");
         let writer = join(&mut self.writer, "system audio writer");
         self.running = false;
+        let fatal_result = take_fatal(&self.fatal);
         worker??;
         writer??;
-        take_fatal(&self.fatal)
+        fatal_result
     }
 
     fn send_wait(
@@ -371,58 +284,29 @@ fn audio_listener(
     let process_state = state.clone();
     stream
         .add_local_listener_with_user_data(())
-        .state_changed(move |stream, _, _, new| match new {
-            pw::stream::StreamState::Error(message) => {
-                send_ready(&state_changed_ready, Err(pipewire_error(message.clone())));
-                set_fatal(&state_changed_state.borrow().fatal, pipewire_error(message));
-                state_changed_loop.quit();
-            }
-            pw::stream::StreamState::Paused if state_changed_stopped.get() => {
-                if let Some(format) = state_changed_state.borrow().format {
-                    send_ready(&state_changed_ready, Ok(format));
-                }
-            }
-            pw::stream::StreamState::Streaming => {
-                if state_changed_state.borrow().format.is_some()
-                    && !state_changed_stopped.replace(true)
-                    && let Err(error) = stream.set_active(false)
-                {
-                    send_ready(&state_changed_ready, Err(pipewire_error(error)));
-                    state_changed_loop.quit();
-                }
-            }
-            _ => {}
+        .state_changed(move |stream, _, _, new| {
+            handle_state_changed(
+                new,
+                &state_changed_state,
+                &state_changed_ready,
+                &state_changed_stopped,
+                || stream.set_active(false).map_err(pipewire_error),
+                || state_changed_loop.quit(),
+            );
         })
         .param_changed(move |stream, _, id, param| {
             if id != ParamType::Format.as_raw() {
                 return;
             }
-            let result = parse_audio_format_event(param);
-            match result {
-                Ok(Some(format)) => {
-                    format_state.borrow_mut().format = Some(format);
-                    if matches!(stream.state(), pw::stream::StreamState::Paused)
-                        && format_stopped.get()
-                    {
-                        send_ready(&format_ready, Ok(format));
-                    } else if matches!(stream.state(), pw::stream::StreamState::Streaming)
-                        && !format_stopped.replace(true)
-                        && let Err(error) = stream.set_active(false)
-                    {
-                        send_ready(&format_ready, Err(pipewire_error(error)));
-                        format_loop.quit();
-                    }
-                }
-                Ok(None) => {
-                    // A null format clears the current PipeWire format during
-                    // negotiation. Keep waiting for the next concrete format.
-                }
-                Err(error) => {
-                    send_ready(&format_ready, Err(pipewire_error(error.to_string())));
-                    set_fatal(&format_state.borrow().fatal, error);
-                    format_loop.quit();
-                }
-            }
+            handle_format_changed(
+                parse_audio_format_event(param),
+                stream.state(),
+                &format_state,
+                &format_ready,
+                &format_stopped,
+                || stream.set_active(false).map_err(pipewire_error),
+                || format_loop.quit(),
+            );
         })
         .process(move |stream, _| process_audio(stream, &process_state))
         .register()
@@ -430,14 +314,8 @@ fn audio_listener(
 }
 
 fn process_audio(stream: &pw::stream::Stream, state: &Rc<RefCell<ProcessState>>) {
-    let state = state.borrow_mut();
+    let state = state.borrow();
     let Some(mut buffer) = stream.dequeue_buffer() else {
-        return;
-    };
-    if !state.active || !state.gate.is_released() {
-        return;
-    }
-    let Some(format) = state.format else {
         return;
     };
     let datas = buffer.datas_mut();
@@ -447,13 +325,24 @@ fn process_audio(stream: &pw::stream::Stream, state: &Rc<RefCell<ProcessState>>)
     let chunk = data.chunk();
     let offset = usize::try_from(chunk.offset()).unwrap_or(usize::MAX);
     let size = usize::try_from(chunk.size()).unwrap_or(0);
+    let memory = data.data();
+    process_audio_chunk(&state, offset, size, memory.as_deref());
+}
+
+fn process_audio_chunk(state: &ProcessState, offset: usize, size: usize, memory: Option<&[u8]>) {
+    if !state.active || !state.gate.is_released() {
+        return;
+    }
+    let Some(format) = state.format else {
+        return;
+    };
     let frame_bytes = 4 * usize::from(format.channels.max(1));
     let samples = u64::try_from(size / frame_bytes).unwrap_or(0);
-    if size % frame_bytes != 0 {
+    if !size.is_multiple_of(frame_bytes) {
         state.metrics.dropped(samples.saturating_add(1));
         return;
     }
-    let Some(memory) = data.data() else {
+    let Some(memory) = memory else {
         state.metrics.dropped(samples);
         return;
     };
@@ -482,6 +371,11 @@ fn process_audio(stream: &pw::stream::Stream, state: &Rc<RefCell<ProcessState>>)
     }
 }
 
-#[cfg(test)]
-#[path = "linux/tests.rs"]
-mod tests;
+#[path = "../../test/system_audio/linux.rs"]
+mod tests_checks;
+
+#[path = "../../test/system_audio/linux/process_chunk.rs"]
+mod chunk_checks;
+
+#[path = "../../test/system_audio/linux/daemon.rs"]
+mod daemon_checks;

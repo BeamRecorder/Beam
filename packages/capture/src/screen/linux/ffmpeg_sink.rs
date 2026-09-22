@@ -449,6 +449,5 @@ fn ffmpeg_error(message: impl Into<String>) -> CaptureError {
     CaptureError::native(NativeCaptureErrorCode::FfmpegFailed, message)
 }
 
-#[cfg(test)]
-#[path = "ffmpeg_sink_tests.rs"]
-mod tests;
+#[path = "../../../test/screen/linux/ffmpeg_sink.rs"]
+mod ffmpeg_sink_checks;

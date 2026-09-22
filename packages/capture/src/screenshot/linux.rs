@@ -1,4 +1,7 @@
 use super::{ScreenshotRequest, backend_error};
+
+#[path = "../../test/screenshot/linux.rs"]
+mod screenshot_checks;
 use crate::{
     CaptureError,
     model::{CursorSelection, RecordingSettings},

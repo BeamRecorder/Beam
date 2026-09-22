@@ -225,7 +225,7 @@ pub(super) fn update_video_metrics(
     }
 }
 
-#[cfg(any(windows, target_os = "linux", test))]
+#[cfg_attr(target_os = "macos", allow(dead_code))]
 pub(super) fn update_video_format(
     tracks: &mut [TrackMetadata],
     kind: TrackKind,
@@ -261,7 +261,7 @@ pub(super) fn selected_sources(
 }
 
 pub(super) fn system_audio_source_id() -> Result<SourceId, CaptureError> {
-    SourceId::new("system-audio:default-output")
+    Ok(SourceId::new("system-audio:default-output")?)
 }
 
 pub(super) fn platform_backend() -> &'static str {
@@ -284,7 +284,7 @@ pub(super) fn portal_source_id(
         crate::model::PortalSourceKind::Window => "window",
         crate::model::PortalSourceKind::MonitorOrWindow => "monitor-or-window",
     };
-    SourceId::new(format!("portal:{suffix}"))
+    Ok(SourceId::new(format!("portal:{suffix}"))?)
 }
 
 pub(super) fn invalid_transition(from: super::SessionState, to: &str) -> CaptureError {
@@ -320,9 +320,8 @@ pub(super) fn ensure_free_space(root: &Path, minimum: u64) -> Result<(), Capture
     Ok(())
 }
 
-#[cfg(test)]
-#[path = "recording_support_tests.rs"]
-mod tests;
+#[path = "../../test/session/recording_support.rs"]
+mod recording_support_checks;
 
 pub(super) fn checkpoint_tracks(
     layout: &crate::storage::SessionLayout,

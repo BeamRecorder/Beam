@@ -6,19 +6,19 @@ mod ffmpeg;
 mod ffmpeg_cache;
 mod ffmpeg_encoder;
 mod ffmpeg_process;
-#[cfg(test)]
-mod ffmpeg_process_tests;
+#[path = "../../../test/screen/linux/ffmpeg_process.rs"]
+mod ffmpeg_process_checks;
 mod ffmpeg_sink;
 mod gpu_inventory;
 mod input_helper_diagnostics;
-#[cfg(test)]
-mod input_helper_diagnostics_tests;
+#[path = "../../../test/screen/linux/input_helper_diagnostics.rs"]
+mod input_helper_diagnostics_checks;
 mod input_helper_executable;
-#[cfg(test)]
-mod input_helper_executable_tests;
+#[path = "../../../test/screen/linux/input_helper_executable.rs"]
+mod input_helper_executable_checks;
 mod input_monitor;
-#[cfg(test)]
-mod input_monitor_tests;
+#[path = "../../../test/screen/linux/input_monitor.rs"]
+mod input_monitor_checks;
 mod input_timeline;
 mod owned_child;
 mod pipewire;

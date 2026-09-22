@@ -1,5 +1,8 @@
 use windows_capture::{monitor::Monitor, window::Window};
 
+#[path = "../../../test/screen/win/catalog.rs"]
+mod catalog_checks;
+
 use crate::{
     CaptureError,
     model::{
@@ -35,7 +38,7 @@ pub fn source_at_point(x: i32, y: i32) -> Result<SourceId, CaptureError> {
     let device = Monitor::from_raw_hmonitor(handle.0)
         .device_name()
         .map_err(backend_error)?;
-    SourceId::new(format!("wgc:monitor:{device}"))
+    Ok(SourceId::new(format!("wgc:monitor:{device}"))?)
 }
 
 pub fn discover_sources() -> Result<Vec<SourceDescriptor>, CaptureError> {

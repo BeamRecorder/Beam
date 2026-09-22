@@ -4,6 +4,9 @@ use crate::{
     session::{periodic_reporter::SourceWatch, recording_support::track_for},
 };
 
+#[path = "../../../test/session/recording_active/source_watches.rs"]
+mod source_watch_checks;
+
 pub(super) fn source_watches(
     request: &CaptureRequest,
     snapshot: &CatalogSnapshot,

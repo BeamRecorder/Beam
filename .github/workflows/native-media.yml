@@ -1,0 +1,281 @@
+name: Native media contracts
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/native-media.yml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'packages/capture/**'
+      - 'packages/audio/**'
+      - 'packages/camera/**'
+      - 'packages/camera-wgpu/**'
+      - 'packages/media-core/**'
+      - 'packages/media-encode/**'
+      - 'packages/media-manifest/**'
+      - 'packages/media-probe/**'
+      - 'packages/media-session/**'
+      - 'scripts/ci/check_rust_test_layout.py'
+      - 'scripts/ci/check_gstreamer_profile.py'
+      - 'scripts/ci/test_check_gstreamer_profile.py'
+      - 'scripts/ci/build_gstreamer_linux_bundle.py'
+      - 'scripts/ci/test_build_gstreamer_linux_bundle.py'
+      - 'scripts/ci/build_gstreamer_macos_bundle.py'
+      - 'scripts/ci/test_build_gstreamer_macos_bundle.py'
+      - 'scripts/ci/build_gstreamer_windows_bundle.py'
+      - 'scripts/ci/test_build_gstreamer_windows_bundle.py'
+      - 'scripts/ci/verify_gstreamer_bundle_inventory.py'
+      - 'scripts/ci/test_verify_gstreamer_bundle_inventory.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.92.0
+          components: rustfmt, clippy
+      - uses: taiki-e/install-action@nextest
+      - uses: Swatinem/rust-cache@v2
+      - name: Install native media development libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            clang libclang-dev libasound2-dev libpipewire-0.3-dev \
+            pipewire \
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+            gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
+            gstreamer1.0-tools \
+            pkg-config
+      - name: Verify Rust formatting and test layout
+        run: |
+          cargo fmt --all --check
+          python3 scripts/ci/check_rust_test_layout.py --max-errors 0
+      - name: Check every crate and test target together
+        run: cargo check --workspace --all-targets --all-features
+      - name: Lint every crate and test target together
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+      - name: Run all Rust tests without physical device access
+        run: cargo nextest run --workspace --all-features
+      - name: Verify isolated writer plugin profile
+        run: |
+          PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/ci -p 'test_*gstreamer*py'
+          python3 scripts/ci/check_gstreamer_profile.py --inventory-output native-media-gstreamer-inventory.json -- cargo nextest run -p beam-media-encode --test writer
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-media-gstreamer-linux
+          path: native-media-gstreamer-inventory.json
+
+  linux_bundle:
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:44
+    steps:
+      - name: Install Fedora build tools and native media libraries
+        run: |
+          dnf -y --setopt=install_weak_deps=False install \
+            alsa-lib-devel clang clang-devel curl gcc git gzip make \
+            pkgconf-pkg-config pipewire-devel python3 rpm tar \
+            gstreamer1-devel gstreamer1-plugins-base-devel \
+            gstreamer1-plugins-good
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.92.0
+      - name: Build and verify the private Fedora runtime
+        run: |
+          python3 -m unittest discover -s scripts/ci -p test_build_gstreamer_linux_bundle.py
+          cargo build -p beam-media-probe --release --all-features
+          python3 scripts/ci/build_gstreamer_linux_bundle.py \
+            --binary target/release/beam-media-probe \
+            --output "$RUNNER_TEMP/beam-gst-bundle"
+          "$RUNNER_TEMP/beam-gst-bundle/run-probe" --help
+          tar -C "$RUNNER_TEMP" -czf native-media-private-linux.tar.gz beam-gst-bundle
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-media-private-linux
+          path: native-media-private-linux.tar.gz
+          if-no-files-found: error
+
+  linux_bundle_clean:
+    needs: linux_bundle
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:44
+    steps:
+      - name: Install only declared Fedora system libraries
+        run: |
+          dnf -y --setopt=install_weak_deps=False install \
+            alsa-lib libdrm pipewire-libs python3 tar gzip
+          if rpm -q gstreamer1 || rpm -q gstreamer1-plugins-base; then
+            echo 'A host GStreamer package was installed in the clean container' >&2
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: native-media-private-linux
+      - name: Verify the relocated runtime without host GStreamer
+        run: |
+          tar -xzf native-media-private-linux.tar.gz
+          PYTHONPATH=scripts/ci python3 -c \
+            'from pathlib import Path; from build_gstreamer_linux_bundle import verify_bundle; verify_bundle(Path("beam-gst-bundle").resolve())'
+          if rpm -q gstreamer1 || rpm -q gstreamer1-plugins-base; then
+            echo 'The bundle verification installed host GStreamer' >&2
+            exit 1
+          fi
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.92.0
+      - uses: taiki-e/install-action@nextest
+      - uses: Swatinem/rust-cache@v2
+      - name: Install official GStreamer 1.28.7 runtime and SDK
+        run: |
+          curl -fsSL -o /tmp/gstreamer-runtime.pkg https://gstreamer.freedesktop.org/data/pkg/osx/1.28.7/gstreamer-1.0-1.28.7-universal.pkg
+          curl -fsSL -o /tmp/gstreamer-devel.pkg https://gstreamer.freedesktop.org/data/pkg/osx/1.28.7/gstreamer-1.0-devel-1.28.7-universal.pkg
+          runtime_hash=$(curl -fsSL https://gstreamer.freedesktop.org/data/pkg/osx/1.28.7/gstreamer-1.0-1.28.7-universal.pkg.sha256sum | cut -d ' ' -f 1)
+          devel_hash=$(curl -fsSL https://gstreamer.freedesktop.org/data/pkg/osx/1.28.7/gstreamer-1.0-devel-1.28.7-universal.pkg.sha256sum | cut -d ' ' -f 1)
+          test "$(shasum -a 256 /tmp/gstreamer-runtime.pkg | cut -d ' ' -f 1)" = "$runtime_hash"
+          test "$(shasum -a 256 /tmp/gstreamer-devel.pkg | cut -d ' ' -f 1)" = "$devel_hash"
+          sudo installer -pkg /tmp/gstreamer-runtime.pkg -target /
+          sudo installer -pkg /tmp/gstreamer-devel.pkg -target /
+          echo '/Library/Frameworks/GStreamer.framework/Versions/1.0/bin' >> "$GITHUB_PATH"
+          echo 'PKG_CONFIG_PATH=/Library/Frameworks/GStreamer.framework/Versions/1.0/lib/pkgconfig' >> "$GITHUB_ENV"
+      - name: Verify native encoder factories
+        run: |
+          pkg-config --modversion gstreamer-1.0
+          for factory in filesink appsrc videoconvert vp8enc webmmux audioconvert wavenc; do
+            gst-inspect-1.0 "$factory" >/dev/null
+          done
+      - name: Check Apple native capture and shared APIs with the Apple SDK
+        run: cargo check --workspace --all-targets --all-features
+      - name: Lint Apple native capture and shared APIs
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+      - name: Run native media and capture contract tests
+        run: cargo nextest run --workspace --all-features
+      - name: Verify isolated writer plugin profile
+        run: |
+          python3 -m unittest discover -s scripts/ci -p test_check_gstreamer_profile.py
+          python3 scripts/ci/check_gstreamer_profile.py --inventory-output native-media-gstreamer-inventory.json -- cargo nextest run -p beam-media-encode --test writer
+      - name: Build and verify the private macOS runtime
+        env:
+          RUSTFLAGS: -C link-arg=-Wl,-headerpad_max_install_names
+        run: |
+          python3 -m unittest discover -s scripts/ci -p test_build_gstreamer_macos_bundle.py
+          cargo build -p beam-media-probe --release --all-features
+          pkgutil --expand /tmp/gstreamer-runtime.pkg "$RUNNER_TEMP/gstreamer-runtime-expanded"
+          python3 scripts/ci/build_gstreamer_macos_bundle.py --binary target/release/beam-media-probe --installer-license "$RUNNER_TEMP/gstreamer-runtime-expanded/Resources/license.txt" --output "$RUNNER_TEMP/beam-gstreamer-private"
+          "$RUNNER_TEMP/beam-gstreamer-private/run-probe" --help
+          tar -C "$RUNNER_TEMP" -czf native-media-private-macos.tar.gz beam-gstreamer-private
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-media-gstreamer-macos
+          path: native-media-gstreamer-inventory.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-media-private-macos
+          path: native-media-private-macos.tar.gz
+          if-no-files-found: error
+
+  macos_bundle_clean:
+    needs: macos
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: native-media-private-macos
+      - name: Verify private macOS runtime on a fresh runner
+        run: |
+          test ! -e /Library/Frameworks/GStreamer.framework
+          tar -xzf native-media-private-macos.tar.gz
+          PYTHONPATH=scripts/ci python3 -c \
+            'from pathlib import Path; from build_gstreamer_macos_bundle import verify_bundle; verify_bundle(Path("beam-gstreamer-private").resolve())'
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.92.0
+      - uses: taiki-e/install-action@nextest
+      - uses: Swatinem/rust-cache@v2
+      - name: Install official GStreamer 1.28.7 runtime and SDK
+        shell: pwsh
+        run: |
+          $installer = Join-Path $env:RUNNER_TEMP 'gstreamer.exe'
+          $gstRoot = Join-Path $env:RUNNER_TEMP 'gstreamer'
+          Invoke-WebRequest 'https://gstreamer.freedesktop.org/data/pkg/windows/1.28.7/msvc/gstreamer-1.0-msvc-x86_64-1.28.7.exe' -OutFile $installer
+          $checksum = (Invoke-WebRequest 'https://gstreamer.freedesktop.org/data/pkg/windows/1.28.7/msvc/gstreamer-1.0-msvc-x86_64-1.28.7.exe.sha256sum').Content.Split(' ')[0].ToLowerInvariant()
+          if ((Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant() -ne $checksum) { throw 'GStreamer installer SHA-256 mismatch' }
+          $process = Start-Process -FilePath $installer -ArgumentList '/VERYSILENT', '/NORESTART', '/CURRENTUSER', '/TYPE=devel', "/DIR=$gstRoot" -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw "GStreamer installation failed: $($process.ExitCode)" }
+          (Join-Path $gstRoot 'bin') | Out-File -FilePath $env:GITHUB_PATH -Append
+          "PKG_CONFIG_PATH=$(Join-Path $gstRoot 'lib\pkgconfig')" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Verify native encoder factories
+        shell: pwsh
+        run: |
+          pkg-config --modversion gstreamer-1.0
+          if ($LASTEXITCODE -ne 0) { throw 'GStreamer SDK is unavailable' }
+          foreach ($factory in @('filesink', 'appsrc', 'videoconvert', 'vp8enc', 'webmmux', 'audioconvert', 'wavenc')) {
+            gst-inspect-1.0 $factory | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw "Missing GStreamer factory: $factory" }
+          }
+      - name: Check Windows native capture and shared APIs
+        run: cargo check --workspace --all-targets --all-features
+      - name: Lint Windows native capture and shared APIs
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+      - name: Run native media and capture contract tests
+        run: cargo nextest run --workspace --all-features
+      - name: Verify isolated writer plugin profile
+        run: |
+          python -m unittest discover -s scripts/ci -p test_check_gstreamer_profile.py
+          python scripts/ci/check_gstreamer_profile.py --inventory-output native-media-gstreamer-inventory.json -- cargo nextest run -p beam-media-encode --test writer
+      - name: Build and verify the private Windows runtime
+        shell: pwsh
+        run: |
+          python -m unittest discover -s scripts/ci -p test_build_gstreamer_windows_bundle.py
+          cargo build -p beam-media-probe --release --all-features
+          if ($LASTEXITCODE -ne 0) { throw 'Native media probe release build failed' }
+          python scripts/ci/build_gstreamer_windows_bundle.py --binary target/release/beam-media-probe.exe --runtime-root (Join-Path $env:RUNNER_TEMP 'gstreamer') --output (Join-Path $env:RUNNER_TEMP 'beam-gstreamer-private')
+          if ($LASTEXITCODE -ne 0) { throw 'Private Windows GStreamer staging failed' }
+          & (Join-Path $env:RUNNER_TEMP 'beam-gstreamer-private/run-probe.cmd') --help
+          if ($LASTEXITCODE -ne 0) { throw 'Private Windows GStreamer probe launch failed' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-media-gstreamer-windows
+          path: native-media-gstreamer-inventory.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-media-private-windows
+          path: ${{ runner.temp }}/beam-gstreamer-private/
+
+  windows_bundle_clean:
+    needs: windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: native-media-private-windows
+          path: ${{ runner.temp }}/beam-gstreamer-private
+      - name: Verify private Windows runtime on a fresh runner
+        shell: pwsh
+        run: |
+          $bundle = Join-Path $env:RUNNER_TEMP 'beam-gstreamer-private'
+          $env:PYTHONPATH = Join-Path $env:GITHUB_WORKSPACE 'scripts/ci'
+          python -c 'import sys; from pathlib import Path; from build_gstreamer_windows_bundle import find_dumpbin, verify_bundle; verify_bundle(Path(sys.argv[1]).resolve(), find_dumpbin())' $bundle
+          if ($LASTEXITCODE -ne 0) { throw 'Private Windows runtime failed on the clean runner' }
+          & (Join-Path $bundle 'run-probe.cmd') --help
+          if ($LASTEXITCODE -ne 0) { throw 'Private Windows launcher failed on the clean runner' }

@@ -47,3 +47,6 @@ fn install_bytes(
     fs::rename(temporary, destination)?;
     Ok(())
 }
+
+#[path = "../../../test/bin/beam_input_helper/install.rs"]
+mod install_checks;
