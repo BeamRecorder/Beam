@@ -16,16 +16,16 @@ use crate::{
     CaptureError, NativeCaptureErrorCode,
     model::ScreenRegion,
     screen::{
-        CursorSampleState, OwnedScreenSample, ScreenCaptureMetrics, ScreenDiscontinuity,
-        ScreenSegment, VideoFormat,
+        CursorSampleState, OwnedScreenSample, OwnedVideoFrame, ScreenCaptureMetrics,
+        ScreenDiscontinuity, ScreenSegment, VideoFormat,
     },
     session::StartGate,
 };
 
 use super::{
-    BufferLayout, CursorState, FrameGeometry, NegotiatedFormat, TimestampMapper, copy_frame,
-    crop_frame, expand_crop_to_content, has_fatal, metadata, repaired_window_crop, set_fatal,
-    sink_error, video_format,
+    BufferLayout, CursorState, DmaBufImporter, FrameGeometry, NegotiatedFormat, TimestampMapper,
+    copy_frame, crop_frame, expand_crop_to_content, has_fatal, metadata, repaired_window_crop,
+    set_fatal, sink_error, video_format,
 };
 
 pub(super) enum SinkMessage {
@@ -61,6 +61,7 @@ pub(super) struct ProcessState {
     pub last_frame_geometry: Option<FrameGeometry>,
     pub repair_window_crop: bool,
     pub region: Option<ScreenRegion>,
+    pub dmabuf_importer: DmaBufImporter,
 }
 
 pub(super) fn should_defer_timestamp_origin(
@@ -104,7 +105,7 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
     // encoded video by the wait for that first usable frame.
     let defer_unusable_preroll = {
         let datas = buffer.datas_mut();
-        if datas.len() != 1 {
+        if datas.is_empty() {
             false
         } else {
             let chunk = datas[0].chunk();
@@ -128,16 +129,15 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
         }
     };
     let datas = buffer.datas_mut();
-    if datas.len() != 1 {
+    if datas.is_empty() || datas.len() > 4 {
         invalid_buffer(
             &mut state,
             timestamp.session_ns,
-            "expected exactly one video plane",
+            "expected between one and four video planes",
         );
         return;
     }
-    let data = &mut datas[0];
-    let chunk = data.chunk();
+    let chunk = datas[0].chunk();
     // Mutter deliberately queues cursor-only updates with an empty video chunk
     // flagged CORRUPTED. The MetaCursor payload remains valid and must reach the
     // sidecar without duplicating the previous video frame.
@@ -160,7 +160,7 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
         }
         return;
     }
-    let memory_type = data.type_();
+    let memory_type = datas[0].type_();
     if !matches!(
         memory_type,
         DataType::MemPtr | DataType::MemFd | DataType::DmaBuf
@@ -174,9 +174,24 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
         );
         return;
     }
-    let mut frame_crop = reported_crop;
-    let mut cursor_crop = reported_crop;
-    let mut frame_transform = transform;
+    if memory_type != DataType::DmaBuf && datas.len() != 1 {
+        invalid_buffer(
+            &mut state,
+            timestamp.session_ns,
+            "CPU-mappable video buffers must contain exactly one plane",
+        );
+        return;
+    }
+    if memory_type == DataType::DmaBuf
+        && datas.iter().any(|data| data.type_() != DataType::DmaBuf)
+    {
+        invalid_buffer(
+            &mut state,
+            timestamp.session_ns,
+            "DMA-BUF video planes must use one memory type",
+        );
+        return;
+    }
     let layout = BufferLayout {
         offset: usize::try_from(chunk.offset()).unwrap_or(usize::MAX),
         size: usize::try_from(chunk.size()).unwrap_or(usize::MAX),
@@ -184,42 +199,60 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
         crop: reported_crop,
         transform,
     };
-    let Some(memory) = data.data() else {
-        set_fatal(
-            &state.fatal,
-            CaptureError::native(
-                NativeCaptureErrorCode::PipewireMemoryUnsupported,
-                format!("PipeWire memory {memory_type:?} is not CPU-mappable"),
-            ),
-        );
-        return;
-    };
-    if state.last_frame_geometry.is_none() && state.repair_window_crop {
-        let content_crop = match expand_crop_to_content(memory, format, layout) {
-            Ok(content_crop) => content_crop,
+    let previous_geometry = state.last_frame_geometry;
+    let repair_window_crop = state.repair_window_crop;
+    let copied = if memory_type == DataType::DmaBuf {
+        match state
+            .dmabuf_importer
+            .with_mapping(datas, format, |memory, stride| {
+                copy_buffer(
+                    memory,
+                    format,
+                    BufferLayout {
+                        offset: 0,
+                        size: memory.len(),
+                        stride,
+                        ..layout
+                    },
+                    repair_window_crop,
+                    previous_geometry,
+                )
+            })
+        {
+            Ok(copied) => copied,
             Err(error) => {
-                invalid_buffer(&mut state, timestamp.session_ns, &error.to_string());
+                set_fatal(&state.fatal, error);
                 return;
             }
-        };
-        frame_crop = repaired_window_crop(reported_crop, content_crop);
-    } else if let Some(geometry) = state.last_frame_geometry {
-        frame_crop = geometry.frame_crop;
-        cursor_crop = geometry.cursor_crop;
-        frame_transform = geometry.transform;
-    }
-    let layout = BufferLayout {
-        crop: frame_crop,
-        transform: frame_transform,
-        ..layout
-    };
-    let uncropped_frame = match copy_frame(memory, format, layout) {
-        Ok(frame) => frame,
-        Err(error) => {
-            invalid_buffer(&mut state, timestamp.session_ns, &error.to_string());
-            return;
+        }
+    } else {
+        match datas[0].data() {
+            Some(memory) => match copy_buffer(
+                memory,
+                format,
+                layout,
+                repair_window_crop,
+                previous_geometry,
+            ) {
+                Ok(copied) => copied,
+                Err(error) => {
+                    invalid_buffer(&mut state, timestamp.session_ns, &error.to_string());
+                    return;
+                }
+            },
+            None => {
+                set_fatal(
+                    &state.fatal,
+                    CaptureError::native(
+                        NativeCaptureErrorCode::PipewireMemoryUnsupported,
+                        format!("PipeWire memory {memory_type:?} is not CPU-mappable"),
+                    ),
+                );
+                return;
+            }
         }
     };
+    let (uncropped_frame, frame_crop, cursor_crop, frame_transform) = copied;
     let (frame, region_crop) = match crop_frame(uncropped_frame, state.region) {
         Ok(result) => result,
         Err(error) => {
@@ -269,6 +302,38 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
         cursor: CursorSampleState::Unknown,
     };
     enqueue_video_sample(&mut state, sample, has_cursor);
+}
+
+fn copy_buffer(
+    memory: &[u8],
+    format: NegotiatedFormat,
+    mut layout: BufferLayout,
+    repair_window_crop: bool,
+    previous_geometry: Option<FrameGeometry>,
+) -> Result<
+    (
+        OwnedVideoFrame,
+        Option<super::CropRect>,
+        Option<super::CropRect>,
+        super::VideoTransform,
+    ),
+    CaptureError,
+> {
+    let mut frame_crop = layout.crop;
+    let mut cursor_crop = layout.crop;
+    let mut frame_transform = layout.transform;
+    if let Some(geometry) = previous_geometry {
+        frame_crop = geometry.frame_crop;
+        cursor_crop = geometry.cursor_crop;
+        frame_transform = geometry.transform;
+    } else if repair_window_crop {
+        let content_crop = expand_crop_to_content(memory, format, layout)?;
+        frame_crop = repaired_window_crop(layout.crop, content_crop);
+    }
+    layout.crop = frame_crop;
+    layout.transform = frame_transform;
+    let frame = copy_frame(memory, format, layout)?;
+    Ok((frame, frame_crop, cursor_crop, frame_transform))
 }
 
 pub(super) fn enqueue_video_sample(

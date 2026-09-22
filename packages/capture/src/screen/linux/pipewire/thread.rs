@@ -19,10 +19,11 @@ use crate::{
 };
 
 use super::{
-    CursorMessage, CursorState, ProcessState, SinkMessage, TimestampMapper, backpressure_event,
-    flush_pending_cursor, format_error, format_parameter, has_fatal, join, parse_format_event,
-    pipewire_error, process_buffer, send_ready_error, send_ready_ok, set_fatal, sink_error,
-    sink_worker, stream_error, take_fatal, update_buffer_params,
+    CursorMessage, CursorState, DmaBufImporter, FormatParamEvent, ProcessState, SinkMessage,
+    TimestampMapper, apply_format_event, backpressure_event, dma_buf_format_parameter,
+    flush_pending_cursor, format_error, format_parameter, has_fatal, join, pipewire_error,
+    process_buffer, send_ready_error, send_ready_ok, set_fatal, sink_error, sink_worker,
+    stream_error, take_fatal,
 };
 
 const PIPEWIRE_READY_TIMEOUT: Duration = Duration::from_secs(10);
@@ -324,6 +325,7 @@ fn pipewire_worker(
         last_frame_geometry: None,
         repair_window_crop,
         region,
+        dmabuf_importer: DmaBufImporter::new(),
     }));
     let ready = Rc::new(RefCell::new(Some(ready)));
     let negotiation_stopped = Rc::new(Cell::new(false));
@@ -368,17 +370,9 @@ fn pipewire_worker(
                 if id != ParamType::Format.as_raw() {
                     return;
                 }
-                let result = parse_format_event(param);
-                match result {
-                    Ok(Some(format)) => {
+                match apply_format_event(stream, param) {
+                    Ok(FormatParamEvent::Ready(format)) => {
                         state.borrow_mut().negotiated = Some(format);
-                        if let Err(error) = update_buffer_params(stream, format) {
-                            let diagnostic = error.to_string();
-                            set_fatal(&state.borrow().fatal, error);
-                            send_ready_error(&ready, format_error(diagnostic));
-                            format_loop.quit();
-                            return;
-                        }
                         if matches!(stream.state(), pw::stream::StreamState::Paused) {
                             if format_negotiation_stopped.get() {
                                 send_ready_ok(&ready, format);
@@ -393,7 +387,7 @@ fn pipewire_worker(
                             format_loop.quit();
                         }
                     }
-                    Ok(None) => {
+                    Ok(FormatParamEvent::Cleared | FormatParamEvent::Fixating) => {
                         // PipeWire uses a null format parameter to clear the
                         // current format before (re)negotiation. Wait for the
                         // next concrete format instead of failing capture.
@@ -466,15 +460,20 @@ fn pipewire_worker(
             }
         }
     });
-    let format_bytes = format_parameter()?;
-    let format_pod = Pod::from_bytes(&format_bytes)
-        .ok_or_else(|| format_error("failed to build PipeWire format parameter"))?;
-    let mut params = [format_pod];
+    let format_bytes = [format_parameter()?, dma_buf_format_parameter()?];
+    let mut params = format_bytes
+        .iter()
+        .map(|bytes| {
+            Pod::from_bytes(bytes)
+                .ok_or_else(|| format_error("failed to build PipeWire format parameter"))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
     stream
         .connect(
             spa::utils::Direction::Input,
             Some(node_id),
-            pw::stream::StreamFlags::AUTOCONNECT | pw::stream::StreamFlags::MAP_BUFFERS,
+            pw::stream::StreamFlags::AUTOCONNECT
+                | pw::stream::StreamFlags::MAP_BUFFERS,
             &mut params,
         )
         .map_err(pipewire_error)?;

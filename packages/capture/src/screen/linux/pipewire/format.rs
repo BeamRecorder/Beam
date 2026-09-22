@@ -20,6 +20,8 @@ pub(crate) struct NegotiatedFormat {
     pub width: u32,
     pub height: u32,
     pub pixel_format: NativePixelFormat,
+    pub modifier: Option<u64>,
+    pub modifier_fixation_required: bool,
 }
 
 impl NegotiatedFormat {
@@ -42,7 +44,19 @@ impl NegotiatedFormat {
             width,
             height,
             pixel_format,
+            modifier: None,
+            modifier_fixation_required: false,
         })
+    }
+
+    pub(crate) const fn with_modifier(
+        mut self,
+        modifier: u64,
+        fixation_required: bool,
+    ) -> Self {
+        self.modifier = Some(modifier);
+        self.modifier_fixation_required = fixation_required;
+        self
     }
 }
 

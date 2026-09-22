@@ -4,7 +4,9 @@ User-facing changes to Beam are documented in this file.
 
 ## [Unreleased]
 
-Nothing changed at the moment.
+### Fixed
+
+- Screen recording now works on Niri and other Linux compositors that require modifier-backed DMA-BUF capture buffers.
 
 ## [0.3.3] - 2026-09-21
 
