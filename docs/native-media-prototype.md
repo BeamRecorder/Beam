@@ -357,6 +357,8 @@ Avant de déclarer ce goal terminé, migrer les tests Rust existants vers le mir
 
 ### G7 — Intégration produit ultérieure
 
+La cible actualisée de cette intégration est détaillée dans [native-media-argui-migration.md](native-media-argui-migration.md) : session unique à quatre pistes, branchement ARGUI et suppression intégrale de l'ancien moteur après migration de ses capacités.
+
 - [x] Brancher les APIs du prototype à l'engine Rust derrière la feature `native-media` et les exposer par le pont Electron typé.
 - [ ] Retirer les sidecars Chromium correspondants et migrer le modèle/éditeur sans perdre la lecture des anciennes sessions ; activer ensuite la feature dans le bundle distribué avec le runtime GStreamer privé.
 - [ ] Reprendre ensuite seulement la capture écran pour donner ses frames au même temps/encodeur ; les chemins écran actuels peuvent rester en service jusqu'à leur gate.
