@@ -246,7 +246,7 @@ test('normalizes the Linux tray icon to 24x24 when nativeImage resize is availab
   }
 });
 
-test('skips Linux tray initialization when tray icon assets are missing', () => {
+test('skips Linux tray initialization when tray icon assets are unreadable', () => {
   const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
   const originalLoad = Module._load;
   const modulePath = require.resolve('../electron/tray/tray-manager.cjs');
