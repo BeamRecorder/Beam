@@ -343,6 +343,10 @@ fn process_callback(
     let Some(session_callback_ns) = gate.session_ns(clock.now_ns()) else {
         return;
     };
+    if let Err(error) = timeline.set_epoch(gate.epoch(), session_callback_ns) {
+        let _ = terminal_tx.try_send(AudioEvent::Failed(error.to_string()));
+        return;
+    }
     let sample_count = data.len();
     let channel_count = usize::from(channels);
     if sample_count == 0 || channel_count == 0 || !sample_count.is_multiple_of(channel_count) {

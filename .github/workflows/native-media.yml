@@ -6,7 +6,8 @@ on:
       - '.github/workflows/native-media.yml'
       - 'Cargo.toml'
       - 'Cargo.lock'
-      - 'packages/capture/**'
+      - 'packages/screen/**'
+      - 'packages/media-engine/**'
       - 'packages/audio/**'
       - 'packages/camera/**'
       - 'packages/camera-wgpu/**'
@@ -90,11 +91,11 @@ jobs:
       - name: Build and verify the private Fedora runtime
         run: |
           python3 -m unittest discover -s scripts/ci -p test_build_gstreamer_linux_bundle.py
-          cargo build -p beam-media-probe --release --all-features
+          cargo build -p beam-media-engine --release --all-features
           python3 scripts/ci/build_gstreamer_linux_bundle.py \
-            --binary target/release/beam-media-probe \
+            --binary target/release/beam-media-engine \
             --output "$RUNNER_TEMP/beam-gst-bundle"
-          "$RUNNER_TEMP/beam-gst-bundle/run-probe" --help
+          "$RUNNER_TEMP/beam-gst-bundle/run-engine" --help
           tar -C "$RUNNER_TEMP" -czf native-media-private-linux.tar.gz beam-gst-bundle
       - uses: actions/upload-artifact@v4
         with:
@@ -172,10 +173,10 @@ jobs:
           RUSTFLAGS: -C link-arg=-Wl,-headerpad_max_install_names
         run: |
           python3 -m unittest discover -s scripts/ci -p test_build_gstreamer_macos_bundle.py
-          cargo build -p beam-media-probe --release --all-features
+          cargo build -p beam-media-engine --release --all-features
           pkgutil --expand /tmp/gstreamer-runtime.pkg "$RUNNER_TEMP/gstreamer-runtime-expanded"
-          python3 scripts/ci/build_gstreamer_macos_bundle.py --binary target/release/beam-media-probe --installer-license "$RUNNER_TEMP/gstreamer-runtime-expanded/Resources/license.txt" --output "$RUNNER_TEMP/beam-gstreamer-private"
-          "$RUNNER_TEMP/beam-gstreamer-private/run-probe" --help
+          python3 scripts/ci/build_gstreamer_macos_bundle.py --binary target/release/beam-media-engine --installer-license "$RUNNER_TEMP/gstreamer-runtime-expanded/Resources/license.txt" --output "$RUNNER_TEMP/beam-gstreamer-private"
+          "$RUNNER_TEMP/beam-gstreamer-private/run-engine" --help
           tar -C "$RUNNER_TEMP" -czf native-media-private-macos.tar.gz beam-gstreamer-private
       - uses: actions/upload-artifact@v4
         with:
@@ -246,11 +247,11 @@ jobs:
         shell: pwsh
         run: |
           python -m unittest discover -s scripts/ci -p test_build_gstreamer_windows_bundle.py
-          cargo build -p beam-media-probe --release --all-features
+          cargo build -p beam-media-engine --release --all-features
           if ($LASTEXITCODE -ne 0) { throw 'Native media probe release build failed' }
-          python scripts/ci/build_gstreamer_windows_bundle.py --binary target/release/beam-media-probe.exe --runtime-root (Join-Path $env:RUNNER_TEMP 'gstreamer') --output (Join-Path $env:RUNNER_TEMP 'beam-gstreamer-private')
+          python scripts/ci/build_gstreamer_windows_bundle.py --binary target/release/beam-media-engine.exe --runtime-root (Join-Path $env:RUNNER_TEMP 'gstreamer') --output (Join-Path $env:RUNNER_TEMP 'beam-gstreamer-private')
           if ($LASTEXITCODE -ne 0) { throw 'Private Windows GStreamer staging failed' }
-          & (Join-Path $env:RUNNER_TEMP 'beam-gstreamer-private/run-probe.cmd') --help
+          & (Join-Path $env:RUNNER_TEMP 'beam-gstreamer-private/run-engine.cmd') --help
           if ($LASTEXITCODE -ne 0) { throw 'Private Windows GStreamer probe launch failed' }
       - uses: actions/upload-artifact@v4
         with:
@@ -277,5 +278,5 @@ jobs:
           $env:PYTHONPATH = Join-Path $env:GITHUB_WORKSPACE 'scripts/ci'
           python -c 'import sys; from pathlib import Path; from build_gstreamer_windows_bundle import find_dumpbin, verify_bundle; verify_bundle(Path(sys.argv[1]).resolve(), find_dumpbin())' $bundle
           if ($LASTEXITCODE -ne 0) { throw 'Private Windows runtime failed on the clean runner' }
-          & (Join-Path $bundle 'run-probe.cmd') --help
+          & (Join-Path $bundle 'run-engine.cmd') --help
           if ($LASTEXITCODE -ne 0) { throw 'Private Windows launcher failed on the clean runner' }

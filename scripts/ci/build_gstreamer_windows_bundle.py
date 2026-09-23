@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage a relocatable private Windows GStreamer runtime for beam-media-probe."""
+"""Stage a relocatable private Windows GStreamer runtime for beam-media-engine."""
 
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ set "GST_PLUGIN_PATH_1_0=%BUNDLE%plugins"
 set "GST_PLUGIN_SCANNER=%BUNDLE%libexec\gst-plugin-scanner.exe"
 set "GST_PLUGIN_SCANNER_1_0=%GST_PLUGIN_SCANNER%"
 set "GST_REGISTRY_1_0=%TEMP%\beam-gst-%RANDOM%-%RANDOM%.bin"
-"%BUNDLE%bin\beam-media-probe.exe" %*
+"%BUNDLE%bin\beam-media-engine.exe" %*
 set "BEAM_STATUS=%ERRORLEVEL%"
 del /q "%GST_REGISTRY_1_0%" 2>nul
 exit /b %BEAM_STATUS%
@@ -54,7 +54,7 @@ def find_dumpbin() -> Path:
     program_files = os.environ.get("ProgramFiles(x86)")
     if program_files:
         visual_studio = Path(program_files) / "Microsoft Visual Studio"
-        matches = sorted(visual_studio.glob("*/*/VC/Tools/MSVC/*/bin/Hostx64/x64/dumpbin.exe"))
+        matches = sorted(visual_studio.glob("*/*/VC/Tools/MSVC/*/bin/Host*/**/dumpbin.exe"))
         if matches:
             return matches[-1]
     raise RuntimeError("dumpbin.exe from the MSVC toolchain is unavailable")
@@ -190,7 +190,7 @@ def verify_bundle(root: Path, dumpbin: Path) -> None:
     runtime = runtime_dlls(root / "bin")
     system = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32"
     binaries = [
-        root / "bin/beam-media-probe.exe",
+        root / "bin/beam-media-engine.exe",
         root / "bin/gst-inspect-1.0.exe",
         root / "libexec/gst-plugin-scanner.exe",
         *sorted((root / "plugins").glob("*.dll")),
@@ -211,7 +211,7 @@ def verify_bundle(root: Path, dumpbin: Path) -> None:
         if inspect(inspector, factory, environment).returncode == 0:
             raise RuntimeError(f"excluded factory {factory} is visible in the private bundle")
     probe = subprocess.run(
-        [str(root / "bin/beam-media-probe.exe"), "--help"],
+        [str(root / "bin/beam-media-engine.exe"), "--help"],
         env=environment, text=True, capture_output=True, check=False,
     )
     if probe.returncode:
@@ -251,7 +251,7 @@ def build(binary: Path, runtime_root: Path, output: Path) -> None:
     if len(versions) != 1:
         raise RuntimeError(f"mixed GStreamer plugin versions: {sorted(versions)}")
     inputs = [
-        (binary, "bin/beam-media-probe.exe"),
+        (binary, "bin/beam-media-engine.exe"),
         (inspector, "bin/gst-inspect-1.0.exe"),
         (scanner, "libexec/gst-plugin-scanner.exe"),
         *sources,
@@ -275,7 +275,7 @@ def build(binary: Path, runtime_root: Path, output: Path) -> None:
             shutil.copy2(source, destination)
             files.append(record(source, destination, root))
         files.extend(copy_notices(runtime_root, root))
-        (root / "run-probe.cmd").write_text(LAUNCHER, encoding="utf-8")
+        (root / "run-engine.cmd").write_text(LAUNCHER, encoding="utf-8")
         (root / "inventory.json").write_text(
             json.dumps({
                 "schema_version": 1,

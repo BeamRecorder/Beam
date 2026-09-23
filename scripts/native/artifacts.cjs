@@ -3,12 +3,13 @@ const path = require('node:path');
 const { spawn, spawnSync } = require('node:child_process');
 const {
   NATIVE_TARGETS,
-  captureEngineAssetName,
-  captureEngineFilename,
+  mediaRuntimeAssetName,
+  mediaEngineAssetName,
+  mediaEngineFilename,
   inputHelperAssetName,
   inputHelperFilename,
   nativeTarget,
-} = require('../../electron/capture/capture-engine-path.cjs');
+} = require('../../electron/capture/media-engine-path.cjs');
 
 const applicationRoot = path.join(__dirname, '../..');
 
@@ -33,14 +34,14 @@ function runCommand(command, args, options = {}, spawnImpl = spawn) {
 }
 
 function cargoBuildArguments(platform = process.platform, release = false, target = null) {
-  const args = ['build', '-p', 'capture', '--bin', 'capture-engine'];
-  if (platform === 'linux') args.push('--bin', 'beam-input-helper');
+  const args = ['build', '-p', 'beam-media-engine', '--bin', 'beam-media-engine'];
+  if (platform === 'linux') args.push('-p', 'beam-screen', '--bin', 'beam-input-helper');
   if (release) args.push('--release');
   if (target) args.push('--target', target);
   return args;
 }
 
-async function buildCaptureEngine({
+async function buildMediaEngine({
   platform = process.platform,
   release = false,
   target = null,
@@ -54,9 +55,18 @@ function builderPlatform(platform) {
   return platform === 'win32' ? 'win' : platform === 'darwin' ? 'mac' : platform === 'linux' ? 'linux' : null;
 }
 
+function cargoTargetDirectory(root) {
+  const result = spawnSync('cargo', ['metadata', '--no-deps', '--format-version', '1'], {
+    cwd: root,
+    encoding: 'utf8',
+  });
+  if (result.status === 0) return JSON.parse(result.stdout).target_directory;
+  return path.join(root, 'target');
+}
+
 function builtFile(root, name, platform, profile, target) {
-  const extension = platform === 'win32' && name === 'capture-engine' ? '.exe' : '';
-  return path.join(root, 'target', ...(target ? [target] : []), profile, `${name}${extension}`);
+  const extension = platform === 'win32' && name === 'beam-media-engine' ? '.exe' : '';
+  return path.join(cargoTargetDirectory(root), ...(target ? [target] : []), profile, `${name}${extension}`);
 }
 
 function stageDirectory(root, platform, arch) {
@@ -75,11 +85,11 @@ function stageNativeFiles({
   helperSource = null,
 }) {
   const destinationDirectory = stageDirectory(root, platform, arch);
-  const engineName = captureEngineFilename(version, platform, arch);
+  const engineName = mediaEngineFilename(version, platform, arch);
   if (!destinationDirectory || !engineName) throw new Error(`Unsupported native target ${platform}/${arch}`);
   const files = [
     {
-      source: engineSource || builtFile(root, 'capture-engine', platform, profile, target),
+      source: engineSource || builtFile(root, 'beam-media-engine', platform, profile, target),
       destination: path.join(destinationDirectory, engineName),
     },
   ];
@@ -104,10 +114,16 @@ function collectNativeAssets({ root = applicationRoot, outputDirectory, version 
   for (const [platform, target] of Object.entries(NATIVE_TARGETS)) {
     for (const arch of target.arches) {
       const staged = path.join(root, 'build', 'native', builderPlatform(platform), arch);
+      const runtime = path.join(staged, 'media-runtime');
+      if (fs.existsSync(runtime)) {
+        const archive = path.join(outputDirectory, mediaRuntimeAssetName(version, platform, arch));
+        require('./runtime-archive.cjs').packRuntime(runtime, archive);
+        copied.push(archive);
+      }
       const candidates = [
         {
-          source: path.join(staged, captureEngineFilename(version, platform, arch)),
-          asset: captureEngineAssetName(version, platform, arch),
+          source: path.join(staged, mediaEngineFilename(version, platform, arch)),
+          asset: mediaEngineAssetName(version, platform, arch),
         },
       ];
       const helper = inputHelperFilename(version, platform, arch);
@@ -143,8 +159,14 @@ async function main() {
   const { version } = require('../../package.json');
   if (command === 'build') {
     if (!cargoAvailable()) throw new Error('Cargo is required by bun run build and bun run electron:build');
-    await buildCaptureEngine({ release: true });
-    stageNativeFiles({ version });
+    await buildMediaEngine({ release: true });
+    const files = stageNativeFiles({ version });
+    await require('./runtime-bundle.cjs').stageRuntime({
+      root: applicationRoot,
+      platform: process.platform,
+      arch: process.arch,
+      binary: files[0].destination,
+    });
     return;
   }
   if (command === 'stage') {
@@ -156,7 +178,22 @@ async function main() {
       engineSource: options.engine || null,
       helperSource: options.helper || null,
     });
+    await require('./runtime-bundle.cjs').stageRuntime({
+      root: applicationRoot,
+      platform: options.platform || process.platform,
+      arch: options.arch || process.arch,
+      binary: files[0].destination,
+    });
     for (const file of files) console.log(`Staged ${file.destination}`);
+    return;
+  }
+  if (command === 'restore') {
+    const input = path.resolve(options.input || 'native-runtime-artifacts');
+    const destination = path.join(applicationRoot, 'build', 'native');
+    fs.mkdirSync(destination, { recursive: true });
+    const archives = fs.readdirSync(input).filter((file) => /^native-runtime-.*\.tar\.gz$/.test(file));
+    if (!archives.length) throw new Error('No native runtime artifact was downloaded');
+    for (const archive of archives) await runCommand('tar', ['-xzf', path.join(input, archive), '-C', destination]);
     return;
   }
   if (command === 'collect') {
@@ -164,7 +201,7 @@ async function main() {
     for (const file of collectNativeAssets({ outputDirectory: output, version })) console.log(`Collected ${file}`);
     return;
   }
-  throw new Error('Usage: node scripts/native/artifacts.cjs <build|stage|collect> [--key value]');
+  throw new Error('Usage: node scripts/native/artifacts.cjs <build|stage|collect|restore> [--key value]');
 }
 
 if (require.main === module) {
@@ -175,9 +212,10 @@ if (require.main === module) {
 }
 
 module.exports = {
-  buildCaptureEngine,
+  buildMediaEngine,
   builderPlatform,
   builtFile,
+  cargoTargetDirectory,
   cargoAvailable,
   cargoBuildArguments,
   collectNativeAssets,

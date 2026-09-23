@@ -3,6 +3,7 @@ import type { ScreenRegionSelectionOptions, ScreenRegionSelectionResult } from '
 
 export const captureMock = {
   platform: 'darwin',
+  audioLevels: vi.fn().mockResolvedValue({ microphone: null, systemAudio: null }),
   discover: vi.fn(),
   getSources: vi.fn(),
   hideScreenRegionOverlay: vi.fn(),

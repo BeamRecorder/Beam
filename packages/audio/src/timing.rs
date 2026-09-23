@@ -20,6 +20,7 @@ pub struct PacketTiming {
 
 pub struct AudioTimeline {
     sample_rate: u32,
+    epoch: u64,
     clock: Option<AudioSampleClock>,
     next_sample: u64,
     last_native_capture_ns: Option<u64>,
@@ -35,12 +36,23 @@ impl AudioTimeline {
     pub fn new(sample_rate: u32) -> Self {
         Self {
             sample_rate,
+            epoch: 0,
             clock: None,
             next_sample: 0,
             last_native_capture_ns: None,
             last_native_callback_ns: None,
             native_clock_discontinuous: false,
         }
+    }
+
+    pub fn set_epoch(&mut self, epoch: u64, session_ns: u64) -> Result<(), ClockError> {
+        if self.epoch != epoch {
+            self.clock = Some(AudioSampleClock::new(session_ns, self.sample_rate)?);
+            self.last_native_capture_ns = None;
+            self.last_native_callback_ns = None;
+            self.epoch = epoch;
+        }
+        Ok(())
     }
 
     pub fn packet(

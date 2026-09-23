@@ -15,6 +15,8 @@ impl MediaSession {
     ) -> Result<beam_media_manifest::SessionManifest, SessionError> {
         self.manifest.warnings.push(reason.into());
         for kind in [
+            TrackKind::Screen,
+            TrackKind::Cursor,
             TrackKind::Camera,
             TrackKind::Microphone,
             TrackKind::SystemAudio,
@@ -30,8 +32,14 @@ impl MediaSession {
                 "session has not started".into(),
             ));
         }
+        if self.paused {
+            self.drain_screen_limit(0);
+            self.drain_events();
+            return Ok(());
+        }
         self.observe_queues();
         self.drain_events();
+        self.drain_screen_limit(64);
         self.drain_camera();
         self.drain_microphone();
         self.drain_system_audio();
@@ -95,8 +103,11 @@ impl MediaSession {
             .as_ref()
             .map(|camera| 1_000_000_000 / u64::from(camera.format().fps))
             .unwrap_or(1);
+        if frame.captured_ns < self.segment_start_ns {
+            return;
+        }
         let owned = VideoFrame {
-            captured_ns: frame.captured_ns,
+            captured_ns: frame.captured_ns - self.segment_start_ns,
             width: frame.width,
             height: frame.height,
             data: rgba,
@@ -179,7 +190,28 @@ impl MediaSession {
         }
     }
 
-    fn write_audio(&mut self, packet: TimedAudioPacket, kind: TrackKind) {
+    fn write_audio(&mut self, mut packet: TimedAudioPacket, kind: TrackKind) {
+        if packet.packet.start_ns < self.segment_start_ns {
+            return;
+        }
+
+        let values = &packet.packet.data;
+        if !values.is_empty() && values.iter().all(|value| value.is_finite()) {
+            let peak = values
+                .iter()
+                .fold(0.0_f32, |peak, value| peak.max(value.abs()));
+            let squares: f64 = values.iter().map(|value| f64::from(*value).powi(2)).sum();
+            let level = crate::AudioLevel {
+                timestamp_ns: packet.packet.start_ns,
+                peak,
+                rms: (squares / values.len() as f64).sqrt() as f32,
+            };
+            match kind {
+                TrackKind::Microphone => self.audio_levels.microphone = Some(level),
+                TrackKind::SystemAudio => self.audio_levels.system_audio = Some(level),
+                _ => {}
+            }
+        }
         let frames = u64::from(packet.packet.frames);
         let measurements = match kind {
             TrackKind::Microphone => &mut self.measurements.microphone,
@@ -199,6 +231,7 @@ impl MediaSession {
             TrackKind::SystemAudio => self.system_writer.as_ref(),
             _ => None,
         };
+        packet.packet.start_ns -= self.segment_start_ns;
         let result = writer.map(|writer| writer.push_audio(packet.packet));
         match result {
             Some(Ok(())) => {}
@@ -324,7 +357,7 @@ impl MediaSession {
         if let Some(track) = self.track_mut(kind)
             && matches!(
                 track.status,
-                TrackStatus::Preparing | TrackStatus::Recording
+                TrackStatus::Preparing | TrackStatus::Recording | TrackStatus::Paused
             )
         {
             track.status = status;

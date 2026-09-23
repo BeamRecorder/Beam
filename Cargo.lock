@@ -238,6 +238,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "beam-media-engine"
+version = "0.1.0"
+dependencies = [
+ "beam-audio",
+ "beam-camera",
+ "beam-media-core",
+ "beam-media-manifest",
+ "beam-media-session",
+ "beam-screen",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.19",
+]
+
+[[package]]
 name = "beam-media-manifest"
 version = "0.1.0"
 dependencies = [
@@ -275,11 +291,48 @@ dependencies = [
  "beam-media-core",
  "beam-media-encode",
  "beam-media-manifest",
+ "beam-screen",
  "serde",
  "serde_json",
  "tempfile",
  "thiserror 2.0.19",
  "time",
+]
+
+[[package]]
+name = "beam-screen"
+version = "0.1.0"
+dependencies = [
+ "ashpd",
+ "base64",
+ "beam-media-core",
+ "beam-media-manifest",
+ "core-graphics",
+ "crossbeam-channel",
+ "evdev",
+ "foreign-types",
+ "fs2",
+ "futures-util",
+ "jpeg-encoder",
+ "libc",
+ "objc2",
+ "objc2-app-kit",
+ "parking_lot",
+ "pipewire",
+ "png",
+ "screencapturekit",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.19",
+ "time",
+ "tokio",
+ "uuid",
+ "walkdir",
+ "windows 0.62.2",
+ "windows-capture",
+ "xcursor",
+ "zbus",
 ]
 
 [[package]]
@@ -403,44 +456,6 @@ name = "bytes"
 version = "1.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
-
-[[package]]
-name = "capture"
-version = "0.1.0"
-dependencies = [
- "ashpd",
- "base64",
- "beam-audio",
- "beam-camera",
- "beam-media-core",
- "beam-media-manifest",
- "beam-media-session",
- "core-graphics",
- "crossbeam-channel",
- "evdev",
- "foreign-types",
- "fs2",
- "futures-util",
- "jpeg-encoder",
- "libc",
- "objc2",
- "objc2-app-kit",
- "parking_lot",
- "pipewire",
- "png",
- "screencapturekit",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.19",
- "time",
- "tokio",
- "uuid",
- "walkdir",
- "windows 0.62.2",
- "windows-capture",
- "xcursor",
-]
 
 [[package]]
 name = "cc"

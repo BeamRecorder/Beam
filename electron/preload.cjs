@@ -1,55 +1,28 @@
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
-const invoke = (command, payload) => ipcRenderer.invoke('capture:request', command, payload);
+const invoke = (command, payload) => ipcRenderer.invoke('media:request', command, payload);
 
 contextBridge.exposeInMainWorld(
   'capture',
   Object.freeze({
     platform: process.platform,
-    discover: () => invoke('discover'),
+    discover: () => invoke('sources'),
     capabilities: () => invoke('capabilities'),
     permissions: () => invoke('permissions'),
     inputAccessStatus: () => ipcRenderer.invoke('input-access:status'),
     requestInputAccess: () => ipcRenderer.invoke('input-access:request'),
-    formats: (sourceId) => invoke('formats', { source: sourceId }),
-    prepare: (config) => invoke('prepare', { config }),
-    prepareRecording: (options = {}) => invoke('prepare-default-recording', { options }),
-    startPreparedRecording: () => invoke('start-prepared-recording'),
-    stopNativeRecording: () => invoke('stop-native-recording'),
-    completeNativeRecording: () => invoke('complete-native-recording'),
-    cancelPreparedRecording: () => invoke('cancel-prepared-recording'),
-    discardRecording: (sessionId) => invoke('discard-recording', { sessionId }),
-    startRecording: (options = {}) => invoke('start-default-recording', { options }),
-    start: (config) => (config ? invoke('start-recording', { config }) : invoke('start')),
+    prepareRecording: (options = {}) => invoke('prepare', { options }),
+    startPreparedRecording: () => invoke('start'),
+    cancelPreparedRecording: () => invoke('cancel'),
+    discardRecording: (sessionId) => invoke('cancel', { sessionId }),
     pause: () => invoke('pause'),
     resume: () => invoke('resume'),
     stop: () => invoke('stop'),
     status: () => invoke('status'),
-    nativeMediaDevices: () => invoke('native-media-devices'),
-    prepareNativeMedia: (config) => invoke('native-media-prepare', { config }),
-    startNativeMedia: () => invoke('native-media-start'),
-    stopNativeMedia: () => invoke('native-media-stop'),
-    nativeMediaStatus: () => invoke('native-media-status'),
-    startSystemAudioPreview: async () => {
-      await invoke('start-system-audio-preview');
-    },
-    systemAudioPreviewLevel: async () => (await invoke('system-audio-preview-level')).level,
-    stopSystemAudioPreview: async () => {
-      await invoke('stop-system-audio-preview');
-    },
+    nativeMediaDevices: () => invoke('devices'),
+    audioLevels: () => invoke('levels'),
+    cameraPreview: () => invoke('camera-preview'),
     getSourcePreview: (request) => ipcRenderer.invoke('capture:source-preview', request),
-    beginCameraSegment: (payload) => ipcRenderer.invoke('camera:begin-segment', payload),
-    writeCameraSegment: (payload) => ipcRenderer.invoke('camera:write-segment', payload),
-    finalizeCameraSegment: (payload) => ipcRenderer.invoke('camera:finalize-segment', payload),
-    failCamera: (payload) => ipcRenderer.invoke('camera:fail', payload),
-    beginMicrophoneSegment: (payload) => ipcRenderer.invoke('microphone:begin-segment', payload),
-    writeMicrophoneSegment: (payload) => ipcRenderer.invoke('microphone:write-segment', payload),
-    finalizeMicrophoneSegment: (payload) => ipcRenderer.invoke('microphone:finalize-segment', payload),
-    failMicrophone: (payload) => ipcRenderer.invoke('microphone:fail', payload),
-    beginSystemAudioSegment: (payload) => ipcRenderer.invoke('system-audio:begin-segment', payload),
-    writeSystemAudioSegment: (payload) => ipcRenderer.invoke('system-audio:write-segment', payload),
-    finalizeSystemAudioSegment: (payload) => ipcRenderer.invoke('system-audio:finalize-segment', payload),
-    failSystemAudio: (payload) => ipcRenderer.invoke('system-audio:fail', payload),
     close: () => ipcRenderer.send('window:close'),
     quit: () => ipcRenderer.send('app:quit'),
     minimize: () => ipcRenderer.send('window:minimize'),
@@ -311,20 +284,7 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.on('camera-overlay:hover', callback);
       return () => ipcRenderer.removeListener('camera-overlay:hover', callback);
     },
-    controlCameraOverlayRecording: (control) => ipcRenderer.invoke('camera-overlay:recording-control', control),
-    onCameraOverlayRecordingCommand: (listener) => {
-      const callback = (_event, command) => listener(command);
-      ipcRenderer.on('camera-overlay:recording-command', callback);
-      return () => ipcRenderer.removeListener('camera-overlay:recording-command', callback);
-    },
-    completeCameraOverlayRecordingCommand: (result) => ipcRenderer.send('camera-overlay:recording-result', result),
     notifyCameraOverlayReady: () => ipcRenderer.send('camera-overlay:renderer-ready'),
-    reportCameraRecordingFailure: (failure) => ipcRenderer.send('camera-overlay:recording-failure', failure),
-    onCameraRecordingFailure: (listener) => {
-      const callback = (_event, failure) => listener(failure);
-      ipcRenderer.on('camera-overlay:recording-failure', callback);
-      return () => ipcRenderer.removeListener('camera-overlay:recording-failure', callback);
-    },
     onCameraShadow: (listener) => {
       const callback = (_event, state) => listener(state);
       ipcRenderer.on('camera-shadow:state', callback);

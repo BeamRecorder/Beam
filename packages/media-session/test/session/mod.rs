@@ -8,6 +8,7 @@ use beam_media_session::{AudioSelection, MediaSession, SessionConfig};
 fn session_without_requested_sources_is_explicitly_empty() {
     let temporary = tempfile::tempdir().expect("tempdir");
     let config = SessionConfig {
+        screen: None,
         output_dir: temporary.path().join("session"),
         camera: beam_media_session::CameraSelection::Disabled,
         microphone: AudioSelection::Disabled,
@@ -25,6 +26,7 @@ fn session_without_requested_sources_is_explicitly_empty() {
 fn timeline_handle_opens_and_closes_with_the_session() {
     let temporary = tempfile::tempdir().expect("tempdir");
     let config = SessionConfig {
+        screen: None,
         output_dir: temporary.path().join("session"),
         camera: beam_media_session::CameraSelection::Disabled,
         microphone: AudioSelection::Disabled,
@@ -45,6 +47,7 @@ fn missing_camera_is_recorded_as_failed_without_fake_track_file() {
     let temporary = tempfile::tempdir().expect("tempdir");
     let output = temporary.path().join("session");
     let config = SessionConfig {
+        screen: None,
         output_dir: output.clone(),
         camera: beam_media_session::CameraSelection::Device(beam_camera::CameraRequest {
             device_id: "/dev/video999999".into(),

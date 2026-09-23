@@ -21,7 +21,7 @@ use crate::{
 
 use super::MediaSession;
 
-const ENCODE_LIMITS: QueueLimits = QueueLimits {
+pub(super) const ENCODE_LIMITS: QueueLimits = QueueLimits {
     packets: 32,
     bytes: 64 * 1024 * 1024,
 };
@@ -31,9 +31,25 @@ impl MediaSession {
         Self::prepare_with_factory(config, &NativeSources)
     }
 
+    /// Prepare under the project identity assigned by the embedding host.
+    pub fn prepare_for_project(
+        config: SessionConfig,
+        project_id: ProjectId,
+    ) -> Result<Self, SessionError> {
+        Self::prepare_project_with_factory(config, &NativeSources, project_id)
+    }
+
     fn prepare_with_factory(
         config: SessionConfig,
         sources: &impl SourceFactory,
+    ) -> Result<Self, SessionError> {
+        Self::prepare_project_with_factory(config, sources, ProjectId::new())
+    }
+
+    fn prepare_project_with_factory(
+        config: SessionConfig,
+        sources: &impl SourceFactory,
+        project_id: ProjectId,
     ) -> Result<Self, SessionError> {
         if config.output_dir.as_os_str().is_empty() {
             return Err(SessionError::InvalidConfiguration(
@@ -53,7 +69,7 @@ impl MediaSession {
             .format(&time::format_description::well_known::Rfc3339)?;
         let manifest = SessionManifest {
             schema_version: SCHEMA_VERSION,
-            project_id: ProjectId::new(),
+            project_id,
             session_id: SessionId::new(),
             created_at_utc,
             session_start_monotonic_ns: 0,
@@ -81,15 +97,23 @@ impl MediaSession {
             measurements: Default::default(),
             clock,
             gate,
+            screen: None,
+            screen_writer: None,
+            screen_fps: 0,
+            screen_telemetry: None,
             camera: None,
             camera_writer: None,
             microphone: None,
             microphone_writer: None,
             system_audio: None,
             system_writer: None,
+            audio_levels: crate::AudioLevels::default(),
             started: false,
+            paused: false,
+            segment_start_ns: 0,
             last_checkpoint_ns: 0,
         };
+        session.prepare_screen(config.screen, sources)?;
         match config.camera {
             CameraSelection::Disabled => {}
             CameraSelection::Device(camera) => session.prepare_camera(camera, sources)?,
@@ -374,7 +398,7 @@ fn select_audio_id(
     }
 }
 
-fn prepared_track(
+pub(super) fn prepared_track(
     kind: TrackKind,
     source_id: SourceId,
     format: TrackFormat,
@@ -398,7 +422,7 @@ fn prepared_track(
     }
 }
 
-fn failed_track(
+pub(super) fn failed_track(
     kind: TrackKind,
     source_id: Option<SourceId>,
     format: TrackFormat,
@@ -432,7 +456,7 @@ fn unavailable_audio() -> TrackFormat {
     }
 }
 
-fn unavailable_video() -> TrackFormat {
+pub(super) fn unavailable_video() -> TrackFormat {
     TrackFormat::Video {
         codec: "unavailable".into(),
         width: 0,

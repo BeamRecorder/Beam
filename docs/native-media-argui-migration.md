@@ -2,6 +2,37 @@
 
 Ce plan remplace le périmètre « intégration produit ultérieure » du G7 de `native-media-prototype.md` : l'écran rejoint la session commune et l'ancien moteur est supprimé après migration de ses capacités.
 
+## Avancement de l’implémentation
+
+Le parcours produit utilise maintenant `beam-media-engine`, appelable directement
+comme bibliothèque Rust ou via son protocole JSON-lines versionné, sans ARGUI.
+[API, contrat d’erreur et exemple à quatre sources](native-media-engine.md).
+
+L’implémentation comprend :
+
+- `beam-screen` : producteurs bruts natifs, sélection écran/fenêtre/région,
+  captures fixes, curseur et interactions, files et aperçus bornés ;
+- une session commune pour écran, caméra, microphone et audio système, avec
+  deux vidéos WebM, deux WAV, pause/reprise segmentée et manifeste v2 ;
+- le worker propriétaire, les commandes typées, les événements, les aperçus et
+  les vumètres des streams déjà ouverts ;
+- le branchement Electron, les lecteurs de projets anciens et des segments v2,
+  les runtimes GStreamer privés et leurs workflows de construction par plateforme ;
+- la suppression de `packages/capture`, de ses binaires et commandes, de la
+  feature transitoire et des enregistreurs Chromium de Studio. La voix off
+  indépendante de l’éditeur reste séparée.
+
+Les validations automatisées Linux, le bundle Linux déplacé et les compilations
+croisées macOS/Windows ont été exécutés. Les tests utilisent notamment quatre
+writers réels avec des sources synthétiques, un Portal D-Bus isolé et un serveur
+PipeWire isolé. Ils ne constituent pas les essais matériels demandés plus bas.
+
+Restent à exécuter sur les machines cibles : les workflows de packaging/signature,
+la lecture/export des quatre pistes avec les périphériques réels sur chaque OS,
+les essais Linux Wayland/X11 et les sessions matérielles de 5 et 30 minutes.
+Aucun gate matériel macOS/Windows, aucune mesure longue durée et aucune exécution
+de CI distante ne sont déclarés réussis à partir de ce checkout Linux.
+
 ## Résultat exigé
 
 ARGUI doit pouvoir sélectionner un écran, une fenêtre ou une région, une caméra, un microphone et une sortie audio système, puis enregistrer les quatre sources dans **une seule session**. L'écran et la caméra ont chacun leur piste vidéo ; le micro et l'audio système ont chacun leur piste audio. Un seul démarrage, une seule horloge, un seul manifeste et une seule commande d'arrêt gouvernent ces pistes indépendantes.

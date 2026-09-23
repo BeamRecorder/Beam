@@ -49,7 +49,7 @@ test('uses the exact native source id, caches results for five seconds, and hono
     now: () => now,
     requestNative: async (command, payload) => {
       calls.push({ command, payload });
-      return preview(payload.source);
+      return preview(payload.sourceId);
     },
   });
   const request = { sourceId: 'sck:window:42', maxWidth: 320, maxHeight: 180 };
@@ -62,7 +62,7 @@ test('uses the exact native source id, caches results for five seconds, and hono
   assert.deepEqual(calls, [
     {
       command: 'source-preview',
-      payload: { source: request.sourceId, maxWidth: 320, maxHeight: 180 },
+      payload: { sourceId: request.sourceId, width: 320, height: 180 },
     },
   ]);
 
@@ -168,7 +168,7 @@ test('evicts the least recently used entries after the bounded cache is full', a
     platform: 'darwin',
     requestNative: async (_command, payload) => {
       calls += 1;
-      return preview(payload.source);
+      return preview(payload.sourceId);
     },
   });
 

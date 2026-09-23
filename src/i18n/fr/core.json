@@ -626,6 +626,9 @@
     "selectionAndMore": "… et {count} de plus"
   },
   "RecorderBar": {
+    "microphone": "Microphone",
+    "camera": "Caméra",
+    "systemAudio": "Audio système",
     "recordingControls": "Contrôles d'enregistrement",
     "moveRecorderBar": "Déplacer la barre d’enregistrement",
     "ready": "Prêt",
@@ -633,7 +636,7 @@
     "resumeRecording": "Reprendre l'enregistrement",
     "pauseRecording": "Mettre en pause",
     "stopRecording": "Arrêter l'enregistrement",
-    "cancelRecording": "Annuler et supprimer l'enregistrement",
+    "cancelRecording": "Annuler",
     "turnMicOff": "Couper le micro",
     "turnMicOn": "Activer le micro",
     "turnCameraOff": "Désactiver la caméra",

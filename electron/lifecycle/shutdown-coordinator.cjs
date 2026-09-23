@@ -69,13 +69,13 @@ function createShutdownCoordinator({
     };
     const nativeShutdown = async () => {
       try {
-        await withDeadline(() => captureEngine.shutdown(), gracefulDeadlineMs, 'capture-engine graceful shutdown');
+        await withDeadline(() => captureEngine.shutdown(), gracefulDeadlineMs, 'media-engine graceful shutdown');
       } catch (error) {
         errors.push(message(error));
       }
       const forced = await forceNative();
-      if (forced && forced.confirmed === false && forced.reason !== 'no capture-engine process') {
-        errors.push(`capture-engine exit unconfirmed: ${forced.reason}`);
+      if (forced && forced.confirmed === false && forced.reason !== 'no media-engine process') {
+        errors.push(`media-engine exit unconfirmed: ${forced.reason}`);
       }
     };
     const resourceShutdown = () =>
@@ -100,7 +100,7 @@ function createShutdownCoordinator({
       // Electron. Dispatch the hard kill once; the engine-level parent guard
       // remains the independent fallback if the child never reports exit.
       void forceNative().catch((forceError) => {
-        errors.push(`capture-engine force shutdown: ${message(forceError)}`);
+        errors.push(`media-engine force shutdown: ${message(forceError)}`);
       });
     }
     state = 'shutdown-complete';

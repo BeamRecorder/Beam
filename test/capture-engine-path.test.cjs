@@ -4,18 +4,18 @@ const path = require('node:path');
 
 const {
   NATIVE_TARGETS,
-  captureEngineAssetName,
-  captureEngineFilename,
+  mediaEngineAssetName,
+  mediaEngineFilename,
   inputHelperAssetName,
   inputHelperFilename,
   nativeManifestAssetName,
   nativeRecorderDirectory,
   nativeTarget,
-  packagedCaptureEnginePath,
+  packagedMediaEnginePath,
   packagedInputHelperPath,
-  prebuiltCaptureEnginePath,
+  prebuiltMediaEnginePath,
   prebuiltInputHelperPath,
-} = require('../electron/capture/capture-engine-path.cjs');
+} = require('../electron/capture/media-engine-path.cjs');
 
 const root = path.join('project', 'beam');
 const version = '1.2.3';
@@ -37,12 +37,12 @@ test('resolves versioned Windows x64 and ARM64 cache paths and release assets', 
       nativeRecorderDirectory(root, 'win32', arch),
       path.join(root, 'packages', 'native-recorder', 'win', arch),
     );
-    assert.equal(captureEngineFilename(version, 'win32', arch), `capture-engine-${version}.exe`);
+    assert.equal(mediaEngineFilename(version, 'win32', arch), `beam-media-engine-${version}.exe`);
     assert.equal(
-      prebuiltCaptureEnginePath(root, version, 'win32', arch),
-      path.join(root, 'packages', 'native-recorder', 'win', arch, `capture-engine-${version}.exe`),
+      prebuiltMediaEnginePath(root, version, 'win32', arch),
+      path.join(root, 'packages', 'native-recorder', 'win', arch, `beam-media-engine-${version}.exe`),
     );
-    assert.equal(captureEngineAssetName(version, 'win32', arch), `capture-engine-${version}-windows-${arch}.exe`);
+    assert.equal(mediaEngineAssetName(version, 'win32', arch), `beam-media-engine-${version}-windows-${arch}.exe`);
   }
 });
 
@@ -51,32 +51,32 @@ test('resolves versioned macOS and Linux paths, including the Linux helper', () 
     nativeRecorderDirectory(root, 'darwin', 'arm64'),
     path.join(root, 'packages', 'native-recorder', 'mac', 'arm64'),
   );
-  assert.equal(captureEngineFilename(version, 'darwin', 'arm64'), `capture-engine-${version}`);
+  assert.equal(mediaEngineFilename(version, 'darwin', 'arm64'), `beam-media-engine-${version}`);
   assert.equal(
-    prebuiltCaptureEnginePath(root, version, 'darwin', 'arm64'),
-    path.join(root, 'packages', 'native-recorder', 'mac', 'arm64', `capture-engine-${version}`),
+    prebuiltMediaEnginePath(root, version, 'darwin', 'arm64'),
+    path.join(root, 'packages', 'native-recorder', 'mac', 'arm64', `beam-media-engine-${version}`),
   );
-  assert.equal(captureEngineAssetName(version, 'darwin', 'arm64'), `capture-engine-${version}-macos-arm64`);
+  assert.equal(mediaEngineAssetName(version, 'darwin', 'arm64'), `beam-media-engine-${version}-macos-arm64`);
 
   assert.equal(
     nativeRecorderDirectory(root, 'linux', 'x64'),
     path.join(root, 'packages', 'native-recorder', 'linux', 'x64'),
   );
-  assert.equal(captureEngineFilename(version, 'linux', 'x64'), `capture-engine-${version}`);
+  assert.equal(mediaEngineFilename(version, 'linux', 'x64'), `beam-media-engine-${version}`);
   assert.equal(inputHelperFilename(version, 'linux', 'x64'), `beam-input-helper-${version}`);
   assert.equal(
     prebuiltInputHelperPath(root, version, 'linux', 'x64'),
     path.join(root, 'packages', 'native-recorder', 'linux', 'x64', `beam-input-helper-${version}`),
   );
-  assert.equal(captureEngineAssetName(version, 'linux', 'x64'), `capture-engine-${version}-linux-x64`);
+  assert.equal(mediaEngineAssetName(version, 'linux', 'x64'), `beam-media-engine-${version}-linux-x64`);
   assert.equal(inputHelperAssetName(version, 'linux', 'x64'), `beam-input-helper-${version}-linux-x64`);
 });
 
 test('resolves versioned packaged resources and the native manifest asset', () => {
   const resources = path.join(root, 'resources');
   assert.equal(
-    packagedCaptureEnginePath(resources, version, 'win32', 'arm64'),
-    path.join(resources, 'capture-engine', `capture-engine-${version}.exe`),
+    packagedMediaEnginePath(resources, version, 'win32', 'arm64'),
+    path.join(resources, 'media-runtime', 'bin', 'beam-media-engine.exe'),
   );
   assert.equal(
     packagedInputHelperPath(resources, version, 'linux', 'x64'),
@@ -87,13 +87,13 @@ test('resolves versioned packaged resources and the native manifest asset', () =
 
 test('rejects unsupported architectures, platforms, and malformed versions', () => {
   for (const invalidVersion of ['1.2', 'v1.2.3', '1.2.3+build', '', null, 1]) {
-    assert.equal(captureEngineFilename(invalidVersion, 'win32', 'x64'), null);
+    assert.equal(mediaEngineFilename(invalidVersion, 'win32', 'x64'), null);
     assert.equal(nativeManifestAssetName(invalidVersion), null);
   }
-  assert.equal(captureEngineFilename(version, 'linux', 'arm64'), null);
+  assert.equal(mediaEngineFilename(version, 'linux', 'arm64'), null);
   assert.equal(inputHelperFilename(version, 'linux', 'arm64'), null);
-  assert.equal(prebuiltCaptureEnginePath(root, version, 'freebsd', 'x64'), null);
-  assert.equal(packagedCaptureEnginePath(root, version, 'win32', 'ia32'), null);
-  assert.equal(captureEngineAssetName(version, 'freebsd', 'x64'), null);
+  assert.equal(prebuiltMediaEnginePath(root, version, 'freebsd', 'x64'), null);
+  assert.equal(packagedMediaEnginePath(root, version, 'win32', 'ia32'), null);
+  assert.equal(mediaEngineAssetName(version, 'freebsd', 'x64'), null);
   assert.equal(inputHelperAssetName(version, 'darwin', 'arm64'), null);
 });

@@ -1,0 +1,31 @@
+[package]
+name = "beam-media-engine"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.92"
+publish = false
+
+[dependencies]
+beam-screen = { path = "../screen" }
+beam-media-session = { path = "../media-session" }
+beam-media-core = { path = "../media-core" }
+beam-media-manifest = { path = "../media-manifest" }
+beam-camera = { path = "../camera" }
+beam-audio = { path = "../audio" }
+thiserror = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]
+tempfile = "3"
+serde_json = "1"
+
+[lints.clippy]
+all = "deny"
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+
+[[test]]
+name = "engine"
+path = "test/lib.rs"

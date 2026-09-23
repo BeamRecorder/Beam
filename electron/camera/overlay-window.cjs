@@ -30,25 +30,6 @@ function createCameraOverlayWindow({
     }
   };
 
-  const waitForRenderer = (signal) =>
-    new Promise((resolve, reject) => {
-      if (signal?.aborted) {
-        reject(Object.assign(new Error('The camera recording command was cancelled.'), { name: 'AbortError' }));
-        return;
-      }
-      const waiter = {
-        resolve,
-        reject,
-        signal,
-        onAbort: () => {
-          readyWaiters = readyWaiters.filter((entry) => entry !== waiter);
-          reject(Object.assign(new Error('The camera recording command was cancelled.'), { name: 'AbortError' }));
-        },
-      };
-      signal?.addEventListener('abort', waiter.onAbort, { once: true });
-      readyWaiters.push(waiter);
-    });
-
   const readSavedPlacement = () => {
     const saved = preferencesStore?.read()?.extras?.cameraOverlay;
     if (!saved || typeof saved !== 'object') return null;
@@ -270,16 +251,6 @@ function createCameraOverlayWindow({
     return true;
   };
 
-  const sendRecordingCommand = async (command, { signal } = {}) => {
-    const target = create();
-    if (!target) throw new Error('The camera overlay is unavailable.');
-    const ready = rendererReady || (await waitForRenderer(signal));
-    if (signal?.aborted)
-      throw Object.assign(new Error('The camera recording command was cancelled.'), { name: 'AbortError' });
-    if (!ready || target !== window || target.isDestroyed()) throw new Error('The camera overlay was closed.');
-    target.webContents.send('camera-overlay:recording-command', command);
-  };
-
   const isRenderer = (sender) => Boolean(window && !window.isDestroyed() && sender === window.webContents);
 
   return {
@@ -288,7 +259,6 @@ function createCameraOverlayWindow({
     resetPlacement,
     state,
     markRendererReady,
-    sendRecordingCommand,
     isRenderer,
     destroy: () => {
       flushPlacementSave();

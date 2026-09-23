@@ -6,7 +6,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
-- Added an experimental shared native media control API to feature-enabled Rust capture engines and the Electron bridge for device discovery and independent camera, microphone, and system-audio recording sessions.
+- Added a directly callable native media engine for screen, camera, microphone and system audio, with a shared timeline, pause/resume, previews, meters, screenshots and an autonomous example that runs without ARGUI.
 - Added a native media prototype CLI that records a camera, microphone, and system audio as separate tracks with a shared timeline, a session manifest, bounded measurements including camera-to-GPU submission latency, and a live wgpu camera preview.
 - Linux system-audio discovery now lists individual PipeWire output devices and lets recordings select one explicitly.
 - Native media sessions now expose shared audio and camera source contracts across Linux, macOS, and Windows.
@@ -18,6 +18,11 @@ User-facing changes to Beam are documented in this file.
 - Linux system-audio capture now carries valid PipeWire buffer timestamps into the shared audio packet when the server provides them, enabling drift measurements for supported outputs.
 
 ### Changed
+
+- Cancelled native recordings retain their interrupted manifest and recoverable media instead of deleting captured files.
+
+- Studio now records through one native engine with separate editable video/audio tracks and a bundled private media runtime; Chromium Studio recorders and the former capture engine are removed.
+- macOS recordings now require macOS 14.2 or later for native system audio.
 
 - The Windows native camera prototype now uses a direct asynchronous Media Foundation reader with bounded frame delivery and cancelable shutdown.
 - The macOS native camera prototype now captures through AVFoundation with late-frame discard and bounded callback queues.

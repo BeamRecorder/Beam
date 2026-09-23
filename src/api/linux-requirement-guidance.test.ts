@@ -23,7 +23,7 @@ const diagnostics = (overrides: Partial<LinuxCaptureDiagnostics> = {}): LinuxCap
     detail: null,
   },
   pipewire: { available: true, errorCode: null, detail: null },
-  ffmpeg: {
+  gstreamer: {
     available: true,
     encoder: 'libx264',
     codec: 'h264',
@@ -83,13 +83,13 @@ describe('linuxRequirementGuidance', () => {
           errorCode: 'pipewire-connect-failed',
           detail: 'Beam could not connect to PipeWire',
         },
-        ffmpeg: {
+        gstreamer: {
           available: false,
           encoder: null,
           codec: null,
           hardware: null,
-          errorCode: 'ffmpeg-unavailable',
-          detail: 'FFmpeg is unavailable or does not provide the required MP4 muxer',
+          errorCode: 'gstreamer-unavailable',
+          detail: 'GStreamer is unavailable or does not provide the required WebM muxer',
         },
         recordingAvailable: false,
       }),
@@ -101,9 +101,7 @@ describe('linuxRequirementGuidance', () => {
     expect(result[1]?.instructions).toContain(
       'Restart the user services: systemctl --user restart pipewire wireplumber',
     );
-    expect(result[2]?.instructions).toContain(
-      "Verify FFmpeg, a supported encoder, and the MP4 muxer: ffmpeg -hide_banner -version && ffmpeg -hide_banner -encoders | awk '$2 ~ /^(h264_nvenc|h264_qsv|h264_vaapi|h264_amf|av1_nvenc|av1_qsv|av1_vaapi|vp9_vaapi|av1_amf|vp9_qsv|libx264|libopenh264)$/ { found=1 } END { exit !found }' && ffmpeg -hide_banner -muxers | grep -w mp4",
-    );
+    expect(result[2]?.instructions.join(' ')).toContain('bundled media runtime');
   });
 
   it.each([
@@ -132,29 +130,25 @@ describe('linuxRequirementGuidance', () => {
     expect(result[0]?.instructions).toContain(`Install or repair PipeWire: ${command}`);
   });
 
-  it('provides encoder-specific FFmpeg verification for encoder failures', () => {
+  it('repairs the private runtime instead of asking for a host SDK', () => {
     const result = linuxRequirementGuidance(
       diagnostics({
-        ffmpeg: {
+        gstreamer: {
           available: false,
           encoder: null,
           codec: null,
           hardware: null,
-          errorCode: 'ffmpeg-encoder-unavailable',
-          detail: 'FFmpeg has no supported working encoder (libx264, libopenh264, or hardware)',
+          errorCode: 'gstreamer-encoder-unavailable',
+          detail: 'GStreamer has no supported working encoder (VP8/Vorbis plugins)',
         },
         recordingAvailable: false,
       }),
     );
 
     expect(result).toHaveLength(1);
-    expect(result[0]?.errorCode).toBe('ffmpeg-encoder-unavailable');
-    expect(result[0]?.instructions).toContain(
-      "Verify a supported encoder: ffmpeg -hide_banner -encoders | awk '$2 ~ /^(h264_nvenc|h264_qsv|h264_vaapi|h264_amf|av1_nvenc|av1_qsv|av1_vaapi|vp9_vaapi|av1_amf|vp9_qsv|libx264|libopenh264)$/ { found=1 } END { exit !found }'",
-    );
-    expect(result[0]?.instructions).not.toContain(
-      "Verify FFmpeg, a supported encoder, and the MP4 muxer: ffmpeg -hide_banner -version && ffmpeg -hide_banner -encoders | awk '$2 ~ /^(h264_nvenc|h264_qsv|h264_vaapi|h264_amf|av1_nvenc|av1_qsv|av1_vaapi|vp9_vaapi|av1_amf|vp9_qsv|libx264|libopenh264)$/ { found=1 } END { exit !found }' && ffmpeg -hide_banner -muxers | grep -w mp4",
-    );
+    expect(result[0]?.errorCode).toBe('gstreamer-encoder-unavailable');
+    expect(result[0]?.instructions.join(' ')).toContain('reinstall Beam');
+    expect(result[0]?.instructions.join(' ')).not.toMatch(/sudo|apt|dnf/);
   });
 
   it('returns no remediation when the recording gate is healthy', () => {

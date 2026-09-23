@@ -9,7 +9,7 @@ const { after, test } = require('node:test');
 const { createScreenshotStore } = require('../electron/screenshot/screenshot-store.cjs');
 const { registerScreenshotIpc } = require('../electron/screenshot/screenshot-ipc.cjs');
 
-const fakeExecutable = path.join(os.tmpdir(), 'beam-fake-capture-engine');
+const fakeExecutable = path.join(os.tmpdir(), 'beam-fake-beam-media-engine');
 const pngBytes = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 1, 2, 3]);
 const catalog = {
   sources: [{ id: 'display-1', kind: 'display', isDefault: true }],
@@ -17,7 +17,7 @@ const catalog = {
 };
 const originalSpawn = childProcess.spawn;
 const originalExistsSync = fs.existsSync;
-const originalEngineOverride = process.env.BEAM_CAPTURE_ENGINE;
+const originalEngineOverride = process.env.BEAM_MEDIA_ENGINE;
 let activeHarness = null;
 
 childProcess.spawn = (executable, _args, _options) => {
@@ -51,7 +51,7 @@ childProcess.spawn = (executable, _args, _options) => {
         return false;
       }
       activeHarness.requests.push(request);
-      if (typeof request.command !== 'string') {
+      if (request.version !== 1 || typeof request.command?.type !== 'string') {
         activeHarness.invalidRequests.push(request);
         callback?.(new TypeError('The capture protocol requires command to be a string.'));
         return false;
@@ -75,15 +75,15 @@ childProcess.spawn = (executable, _args, _options) => {
 fs.existsSync = function (candidate, ...args) {
   return String(candidate) === fakeExecutable || originalExistsSync.call(fs, candidate, ...args);
 };
-process.env.BEAM_CAPTURE_ENGINE = fakeExecutable;
+process.env.BEAM_MEDIA_ENGINE = fakeExecutable;
 
-const { CaptureEngine } = require('../electron/capture/capture-engine.cjs');
+const { MediaEngine } = require('../electron/capture/media-engine.cjs');
 
 after(() => {
   childProcess.spawn = originalSpawn;
   fs.existsSync = originalExistsSync;
-  if (originalEngineOverride === undefined) delete process.env.BEAM_CAPTURE_ENGINE;
-  else process.env.BEAM_CAPTURE_ENGINE = originalEngineOverride;
+  if (originalEngineOverride === undefined) delete process.env.BEAM_MEDIA_ENGINE;
+  else process.env.BEAM_MEDIA_ENGINE = originalEngineOverride;
 });
 
 function makeFixture({ failScreenshot = false } = {}) {
@@ -97,40 +97,47 @@ function makeFixture({ failScreenshot = false } = {}) {
     invalidRequests: [],
     respond(request) {
       const staleResponse = {
+        version: 1,
         requestId: `unmatched-${request.id}`,
         ok: true,
         result: { stale: true },
       };
-      if (request.command === 'discover') {
-        return { staleResponse, response: { requestId: request.id, ok: true, result: catalog } };
+      if (request.command.type === 'sources') {
+        return {
+          staleResponse,
+          response: { version: 1, requestId: request.id, ok: true, result: { screens: { Ok: catalog.sources } } },
+        };
       }
-      if (request.command === 'screenshot') {
+      if (request.command.type === 'screenshot') {
         if (failScreenshot) {
           return {
             staleResponse,
             response: {
+              version: 1,
               requestId: request.id,
               ok: false,
               error: { code: 'native-screenshot-error', message: 'native screenshot failed promptly' },
             },
           };
         }
-        fs.writeFileSync(request.config.output, pngBytes);
+        const output = path.join(root, 'native', request.command.config.projectId, 'session', 'screenshot.png');
+        fs.mkdirSync(path.dirname(output), { recursive: true });
+        fs.writeFileSync(output, pngBytes);
         return {
           staleResponse,
-          response: { requestId: request.id, ok: true, result: { width: 1280, height: 720 } },
+          response: { version: 1, requestId: request.id, ok: true, result: { path: output, width: 1280, height: 720 } },
         };
       }
       return {
         staleResponse,
-        response: { requestId: request.id, ok: true, result: {} },
+        response: { version: 1, requestId: request.id, ok: true, result: {} },
       };
     },
   };
   activeHarness = harness;
-  process.env.BEAM_CAPTURE_ENGINE = fakeExecutable;
+  process.env.BEAM_MEDIA_ENGINE = fakeExecutable;
 
-  const engine = new CaptureEngine({ isPackaged: false, getVersion: () => '1.2.3', getPath: () => root }, root);
+  const engine = new MediaEngine({ isPackaged: false, getVersion: () => '1.2.3', getPath: () => root }, root);
   const store = createScreenshotStore(screenshotRoot);
   const handlers = new Map();
   const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
@@ -175,7 +182,7 @@ function makeFixture({ failScreenshot = false } = {}) {
 }
 
 test(
-  'Screenshot IPC uses string commands and correlates real engine JSONL replies by requestId',
+  'Screenshot IPC uses versioned commands and correlates real engine JSONL replies by requestId',
   { timeout: 5_000 },
   async () => {
     const fixture = makeFixture();
@@ -189,24 +196,29 @@ test(
 
       assert.deepEqual(fixture.harness.invalidRequests, []);
       assert.deepEqual(
-        fixture.harness.requests.map((request) => request.command),
-        ['discover', 'screenshot'],
+        fixture.harness.requests.map((request) => request.command.type),
+        ['sources', 'capabilities', 'permissions', 'screenshot'],
       );
-      assert.ok(fixture.harness.requests.every((request) => typeof request.command === 'string'));
-      assert.deepEqual(fixture.harness.requests[1].config, {
-        screen: { mode: 'source', sourceId: 'display-1' },
-        region: { x: 0.1, y: 0.2, width: 0.4, height: 0.5 },
-        output: path.join(fixture.root, 'screenshots', result.id, 'source.png'),
-        excludedWindowHandles: ['abc123'],
-      });
-      assert.equal(new Set(fixture.harness.requests.map((request) => request.id)).size, 2);
+      assert.ok(
+        fixture.harness.requests.every((request) => request.version === 1 && typeof request.command.type === 'string'),
+      );
+      assert.deepEqual(
+        { ...fixture.harness.requests[3].command.config, projectId: undefined },
+        {
+          screen: { mode: 'source', sourceId: 'display-1' },
+          region: { x: 0.1, y: 0.2, width: 0.4, height: 0.5 },
+          projectId: undefined,
+          excludedWindowHandles: ['abc123'],
+        },
+      );
+      assert.equal(new Set(fixture.harness.requests.map((request) => request.id)).size, 4);
       assert.deepEqual(
         fixture.harness.responses
           .filter((response) => fixture.harness.requests.some((request) => request.id === response.requestId))
           .map((response) => response.requestId),
         fixture.harness.requests.map((request) => request.id),
       );
-      assert.equal(fixture.harness.responses.length, 4, 'unmatched response IDs must be ignored');
+      assert.equal(fixture.harness.responses.length, 8, 'unmatched response IDs must be ignored');
       assert.equal(result.width, 1280);
       assert.equal(result.height, 720);
       assert.deepEqual(fs.readFileSync(fixture.store.fileForUrl(result.source)), pngBytes);
@@ -233,10 +245,10 @@ test(
         'the matching error response must reject before the 120-second timeout',
       );
       assert.deepEqual(
-        fixture.harness.requests.map((request) => request.command),
-        ['discover', 'screenshot'],
+        fixture.harness.requests.map((request) => request.command.type),
+        ['sources', 'capabilities', 'permissions', 'screenshot'],
       );
-      const screenshotRequest = fixture.harness.requests[1];
+      const screenshotRequest = fixture.harness.requests[3];
       const screenshotError = fixture.harness.responses.find(
         (response) => response.requestId === screenshotRequest.id && !response.ok,
       );

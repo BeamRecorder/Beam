@@ -6,6 +6,7 @@ rust-version = "1.92"
 publish = false
 
 [dependencies]
+beam-screen = { path = "../screen" }
 beam-media-core = { path = "../media-core" }
 beam-media-manifest = { path = "../media-manifest" }
 beam-audio = { path = "../audio" }

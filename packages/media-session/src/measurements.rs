@@ -43,6 +43,10 @@ impl TrackMeasurements {
                 point.session_ns.saturating_sub(last.session_ns) >= 1_000_000_000
             }) || record_transition;
         if should_record {
+            // Keep the origin plus one hour of recent one-second samples.
+            if self.points.len() == 3601 {
+                self.points.remove(1);
+            }
             self.points.push(point);
         }
     }
@@ -103,6 +107,7 @@ impl QueuePeaks {
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
 pub struct SessionMeasurements {
+    pub screen: TrackMeasurements,
     pub camera: TrackMeasurements,
     pub microphone: TrackMeasurements,
     pub system_audio: TrackMeasurements,

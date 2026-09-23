@@ -253,6 +253,7 @@ fn run_pipewire(
         clock,
         gate,
         sample_clock: None,
+        gate_epoch: 0,
         next_sample: 0,
         active: false,
         packet_tx,

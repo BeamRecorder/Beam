@@ -77,8 +77,7 @@ function positiveInteger(value, fallback, name) {
 
 function screenRegion(value, screenKind) {
   if (value == null) return null;
-  if (screenKind !== 'display' || typeof value !== 'object')
-    throw new Error('La sélection de zone est disponible uniquement pour un écran');
+  if (typeof value !== 'object') throw new Error('La sélection de zone est disponible uniquement pour un écran');
   const values = ['x', 'y', 'width', 'height'].map((key) => value[key]);
   if (
     !values.every((entry) => Number.isFinite(entry)) ||
@@ -98,54 +97,50 @@ function buildDefaultCaptureConfig(catalog, options, environment) {
   const sources = Array.isArray(catalog?.sources) ? catalog.sources : [];
   const capabilities = catalog?.capabilities || {};
   const screenKind = options.screenKind === 'window' ? 'window' : 'display';
-  // Portal sources are stable intents, not enumerated desktop objects. The HUD
-  // may have selected one from an earlier catalog snapshot, while a later
-  // capability probe can transiently return no virtual sources. Accept only
-  // Beam's exact Linux Portal IDs here; Rust revalidates Portal, PipeWire and
-  // FFmpeg before opening the system picker.
   const screen =
     stablePortalSource(options.screenId, screenKind, environment.platform) ||
     selectSource(sources, screenKind, options.screenId, environment.platform);
   if (!screen) throw new Error('Aucun écran ou fenêtre capturable n’est disponible');
-  const portalSelection = screen.selectionMode === 'portal';
-  const region = screenRegion(options.region, screenKind);
+  const audio = (id, enabled) =>
+    !enabled ? { mode: 'disabled' } : !id || id === 'default' ? { mode: 'default' } : { mode: 'device', deviceId: id };
+  const camera =
+    !options.cameraId || options.cameraId === 'off'
+      ? { mode: 'disabled' }
+      : { mode: 'device', deviceId: options.cameraId, width: 1280, height: 720, fps: 30 };
   return {
     projectId: options.projectId || randomUUID(),
-    screen: portalSelection
-      ? {
-          mode: 'portal',
-          kind: screenKind === 'window' ? 'window' : 'monitor',
-          restoreToken: null,
-        }
-      : { mode: 'source', sourceId: screen.id },
-    systemAudio: environment.platform === 'linux' && options.systemAudio === true ? { mode: 'default-output' } : null,
-    cursor:
-      options.cursor !== false && capabilities.separateCursor
-        ? {
-            mode: 'separate',
-            captureClicks:
-              Boolean(capabilities.cursorClicks) &&
-              (environment.platform !== 'linux' || options.recordInteractions === true),
-            captureShortcuts: options.recordInteractions === true && Boolean(capabilities.inputShortcuts),
-            captureShape: Boolean(capabilities.cursorShapes),
-          }
-        : { mode: capabilities.embeddedCursor ? 'embedded' : 'disabled' },
-    recording: {
-      outputRoot: options.outputRoot || environment.defaultOutputRoot,
-      videoBitrateBps: positiveInteger(options.videoBitrateBps, 12_000_000, 'videoBitrateBps'),
-      targetFps: positiveInteger(options.targetFps, 60, 'targetFps'),
-      keyframeIntervalSeconds: 2,
-      queueCapacity: positiveInteger(options.queueCapacity, 8, 'queueCapacity'),
-      minimumFreeBytes: options.minimumFreeBytes ?? 536_870_912,
+    output: environment.instantRoot && options.outputRoot === environment.instantRoot ? 'instant' : 'studio',
+    screen: {
+      selection:
+        screen.selectionMode === 'portal'
+          ? {
+              mode: 'portal',
+              kind: screenKind === 'window' ? 'window' : 'monitor',
+              restoreToken: null,
+            }
+          : { mode: 'source', sourceId: screen.id },
+      region: screenRegion(options.region, screenKind),
+      fps: positiveInteger(options.targetFps, 60, 'targetFps'),
+      cursor:
+        options.cursor === false
+          ? { mode: 'disabled' }
+          : capabilities.separateCursor
+            ? {
+                mode: 'separate',
+                captureClicks: options.recordInteractions === true && Boolean(capabilities.cursorClicks),
+                captureShortcuts: options.recordInteractions === true && Boolean(capabilities.inputShortcuts),
+                captureShape: Boolean(capabilities.cursorShapes),
+              }
+            : { mode: capabilities.embeddedCursor ? 'embedded' : 'disabled' },
+      excludedWindowHandles: Array.isArray(options.excludedWindowHandles)
+        ? options.excludedWindowHandles
+            .filter((value) => typeof value === 'string' && /^[0-9a-f]+$/i.test(value))
+            .slice(0, 16)
+        : [],
     },
-    failurePolicy: options.failurePolicy || 'continue-without-optional-tracks',
-    region,
-    excludedProcessId: environment.excludedProcessId,
-    excludedWindowHandles: Array.isArray(options.excludedWindowHandles)
-      ? options.excludedWindowHandles
-          .filter((value) => typeof value === 'string' && /^[0-9a-f]+$/i.test(value))
-          .slice(0, 16)
-      : [],
+    camera,
+    microphone: audio(options.microphoneId, Boolean(options.microphoneId && options.microphoneId !== 'no-audio')),
+    systemAudio: audio(options.systemOutputId, options.systemAudio === true),
   };
 }
 

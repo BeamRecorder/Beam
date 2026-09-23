@@ -159,6 +159,7 @@ fn track(kind: TrackKind, path: &str, format: TrackFormat) -> TrackMetadata {
 
 fn session(temporary: &tempfile::TempDir) -> MediaSession {
     MediaSession::prepare(SessionConfig {
+        screen: None,
         output_dir: temporary.path().join("session"),
         camera: CameraSelection::Disabled,
         microphone: AudioSelection::Disabled,
@@ -474,3 +475,8 @@ mod failure_checks;
 
 #[path = "synthetic_edges.rs"]
 mod edge_checks;
+
+#[path = "screen.rs"]
+mod screen_checks;
+#[path = "segments.rs"]
+mod segment_checks;

@@ -21,14 +21,13 @@ const { autoUpdater } = require('electron-updater');
 const fs = require('fs');
 const path = require('path');
 const { Readable } = require('stream');
-const { CaptureEngine } = require('./capture/capture-engine.cjs');
+const { MediaEngine } = require('./capture/media-engine.cjs');
 const { registerCaptureIpc } = require('./capture/capture-ipc.cjs');
 const { registerProjectIpc } = require('./projects/project-ipc.cjs');
 const {
   createProjectVoiceoverStorage,
   registerProjectVoiceoverIpc,
 } = require('./projects/project-voiceover-storage.cjs');
-const { createCameraRecordingControl } = require('./camera/recording-control.cjs');
 const { registerCaptureWindowIpc } = require('./lifecycle/capture-window-ipc.cjs');
 const { createProjectStore } = require('./projects/project-store.cjs');
 const { createProjectMediaHandler } = require('./projects/project-media-protocol.cjs');
@@ -41,9 +40,6 @@ const { registerTranscriptExportIpc } = require('./captions/transcript-export-ip
 const { createCameraOverlayWindow } = require('./camera/overlay-window.cjs');
 const { createCountdownWindow } = require('./countdown-window.cjs');
 const { createScreenRegionOverlayWindow } = require('./screen-region-overlay.cjs');
-const { createCameraStorage, registerCameraIpc } = require('./camera-ipc.cjs');
-const { createMicrophoneStorage, registerMicrophoneIpc } = require('./microphone/ipc.cjs');
-const { createSystemAudioStorage, registerSystemAudioIpc } = require('./system-audio/ipc.cjs');
 const { createWhisperModelStore } = require('./captions/whisper-model-store.cjs');
 const { registerWhisperIpc } = require('./captions/whisper-ipc.cjs');
 const { createPreferencesStore } = require('./preferences/preferences-store.cjs');
@@ -111,20 +107,19 @@ function restoreCanonicalHud() {
 const { isTrustedRenderer, configureMediaPermission, configureDesktopLoopback, getAppIconPath, createWindow } =
   createRendererSetup({ app, BrowserWindow, session, desktopCapturer, applicationRoot, controllers, logStartup });
 function initializeApplication() {
+  const userPaths = createUserPaths(app.getPath('videos'));
   const inputAccess = new InputAccess({
     app,
     applicationRoot,
     nativeRequest: (command) => captureEngine.request(command),
   });
-  captureEngine = new CaptureEngine(app, applicationRoot, {
+  captureEngine = new MediaEngine(app, applicationRoot, {
+    projectsRoot: userPaths.projects,
     inputHelperPath: () => inputAccess.helperForCapture(),
   });
   coordinator = createShutdownCoordinator({ captureEngine, log: logStartup });
   const applicationIpc = createShutdownAwareIpc(ipcMain, () => coordinator.canAcceptWork());
   registerFatalLifecycle({ app, powerMonitor, coordinator, log: logStartup });
-  const cameraStorage = createCameraStorage({});
-  const microphoneStorage = createMicrophoneStorage({});
-  const systemAudioStorage = createSystemAudioStorage({});
 
   app
     .whenReady()
@@ -135,7 +130,6 @@ function initializeApplication() {
       logStartup('Media permission policy registered.');
       configureDesktopLoopback();
       registerInputAccessIpc(applicationIpc, inputAccess);
-      const userPaths = createUserPaths(app.getPath('videos'));
       organizeProjectCategories(userPaths.projects);
       const preferencesStore = createPreferencesStore(userPaths.preferences, { platform: process.platform });
       const startupPreferences = preferencesStore.repair();
@@ -224,7 +218,6 @@ function initializeApplication() {
         captureEngine,
         app,
         userPaths,
-        trackStorages: [cameraStorage, microphoneStorage, systemAudioStorage],
         canAcceptWork: () => coordinator.canAcceptWork(),
         canStartRecording: (event) => {
           const senderUrl = event?.sender?.getURL?.() || '';
@@ -238,9 +231,6 @@ function initializeApplication() {
         },
       });
       logStartup('Capture IPC registered.');
-      registerCameraIpc({ ipcMain: applicationIpc, storage: cameraStorage });
-      registerMicrophoneIpc({ ipcMain: applicationIpc, storage: microphoneStorage });
-      registerSystemAudioIpc({ ipcMain: applicationIpc, storage: systemAudioStorage });
       logStartup('Capture track IPC registered.');
       const projectStore = createProjectStore(userPaths.projects, { category: 'studio' });
       const projectVoiceoverStorage = createProjectVoiceoverStorage({ projectStore });
@@ -285,15 +275,11 @@ function initializeApplication() {
         isPackaged: app.isPackaged,
         canAcceptWork: () => coordinator.canAcceptWork(),
       };
-      let cameraRecordingCleanup = () => {};
       const cameraOverlay = createCameraOverlayWindow({
         ...lifecycleOptions,
         preferencesStore,
         platform: process.platform,
-        onWebContentsDestroyed: (contents) => {
-          if (contents) cameraStorage.cleanupOwner(contents.id);
-          cameraRecordingCleanup('The camera overlay was closed while recording.');
-        },
+        onWebContentsDestroyed: (contents) => {},
       });
       const countdownOverlay = createCountdownWindow(lifecycleOptions);
       const screenRegionOverlay = createScreenRegionOverlayWindow({
@@ -349,12 +335,7 @@ function initializeApplication() {
         if (coordinator.canAcceptWork()) app.quit();
       });
       const win = createWindow(preferencesStore, appIconPath);
-      cameraRecordingCleanup = createCameraRecordingControl({
-        ipcMain: applicationIpc,
-        cameraOverlay,
-        hudWebContents: win.webContents,
-        isRecordingOwner: (sender) => sender === win.webContents || quickSnipService.cropWindow.owns(sender),
-      });
+      applicationIpc.on('camera-overlay:renderer-ready', (event) => cameraOverlay.markRendererReady(event.sender));
       win.webContents.once('did-finish-load', () => {
         shortcutReady = true;
         for (const id of pendingExternalShortcuts.splice(0)) externalShortcutHandler(id);
@@ -375,9 +356,6 @@ function initializeApplication() {
         resolveSystemDark: () => nativeTheme.shouldUseDarkColors,
         cleanupWindow: (contents) => {
           exportIpc.cleanupWindow(contents);
-          cameraStorage.cleanupOwner(contents.id);
-          microphoneStorage.cleanupOwner(contents.id);
-          systemAudioStorage.cleanupOwner(contents.id);
           projectVoiceoverStorage.cleanupOwner(contents.id);
         },
         canAcceptWork: () => coordinator.canAcceptWork(),
@@ -436,7 +414,6 @@ function initializeApplication() {
       coordinator.registerCleanup({ id: 'teleprompter', cleanup: () => teleprompterWindow.destroy() });
       coordinator.registerCleanup({ id: 'spell-check-context-menu', cleanup: spellCheckContextMenuCleanup });
       coordinator.registerCleanup({ id: 'countdown', cleanup: () => countdownOverlay.destroy() });
-      coordinator.registerCleanup({ id: 'camera-recording-control', cleanup: cameraRecordingCleanup });
       coordinator.registerCleanup({ id: 'camera-overlay', cleanup: () => cameraOverlay.destroy() });
       coordinator.registerCleanup({ id: 'screen-region', cleanup: () => screenRegionOverlay.destroy() });
       coordinator.registerCleanup({ id: 'quick-snip-crop', cleanup: () => quickSnipService.cropWindow.destroy() });
@@ -449,9 +426,6 @@ function initializeApplication() {
 
       win.webContents.once('destroyed', () => {
         exportIpc.cleanupWindow(win.webContents);
-        cameraStorage.cleanupOwner(win.webContents.id);
-        microphoneStorage.cleanupOwner(win.webContents.id);
-        systemAudioStorage.cleanupOwner(win.webContents.id);
         projectVoiceoverStorage.cleanupOwner(win.webContents.id);
       });
       void updater.checkForUpdates();

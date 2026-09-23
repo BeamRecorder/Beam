@@ -626,6 +626,9 @@
     "selectionAndMore": "… 以及其他 {count} 個"
   },
   "RecorderBar": {
+    "microphone": "麥克風",
+    "camera": "相機",
+    "systemAudio": "系統音訊",
     "recordingControls": "錄影控制",
     "moveRecorderBar": "移動錄影列",
     "ready": "準備就緒",
@@ -633,7 +636,7 @@
     "resumeRecording": "繼續錄影",
     "pauseRecording": "暫停錄影",
     "stopRecording": "停止錄影",
-    "cancelRecording": "取消並刪除錄影",
+    "cancelRecording": "取消",
     "turnMicOff": "關閉麥克風",
     "turnMicOn": "開啟麥克風",
     "turnCameraOff": "關閉相機",

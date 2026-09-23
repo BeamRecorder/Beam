@@ -626,6 +626,9 @@
     "selectionAndMore": "… и още {count}"
   },
   "RecorderBar": {
+    "microphone": "Микрофон",
+    "camera": "Камера",
+    "systemAudio": "Системен звук",
     "recordingControls": "Контроли за запис",
     "moveRecorderBar": "Преместване на лентата за запис",
     "ready": "Готово",
@@ -633,7 +636,7 @@
     "resumeRecording": "Продължаване на записа",
     "pauseRecording": "Поставяне на записа на пауза",
     "stopRecording": "Спиране на записа",
-    "cancelRecording": "Отмяна и изтриване на записа",
+    "cancelRecording": "Отказ",
     "turnMicOff": "Изключване на микрофона",
     "turnMicOn": "Включване на микрофона",
     "turnCameraOff": "Изключване на камерата",

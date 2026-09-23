@@ -10,7 +10,7 @@ Vue renderer
 Electron preload
   -> narrow IPC methods
 Electron main process
-  -> capture-engine JSON-lines protocol
+  -> beam-media-engine version 1 JSON-lines protocol
 Rust capture engine
   -> native screen, cursor, audio, timing, and storage backends
 Session files on disk
@@ -20,7 +20,7 @@ Session files on disk
 
 The renderer owns presentation, editor state, playback state, and user interaction. It must not access Node.js, arbitrary IPC, native APIs, or unrestricted filesystem paths.
 
-Use feature folders under `src/components/` for feature composition. Put reusable controls under `src/components/ui/`. Keep domain types in `src/types/` or a feature type file such as `{feature}-types.ts`. Browser webcam capture is the deliberate exception to native capture: a renderer media coordinator owns `getUserMedia` and `MediaRecorder`, while the preload exposes only bounded, session-owned write operations.
+Use feature folders under `src/components/` for feature composition. Put reusable controls under `src/components/ui/`. Keep domain types in `src/types/` or a feature type file such as `{feature}-types.ts`. Studio screen, camera, microphone and system audio use the native engine exclusively. The independent editor voiceover tool retains its browser microphone recorder; it is not a Studio fallback.
 
 ### Preload
 
@@ -28,13 +28,26 @@ The preload is the only renderer-facing bridge. Expose narrow, typed operations 
 
 ### Electron main process
 
-The main process owns windows, IPC handlers, project/session file access, and the capture-engine child process. Validate identifiers and paths at this boundary. Resolve project-relative paths safely and return structured data rather than leaking unrestricted filesystem access.
+The main process owns windows, IPC handlers, project/session file access, and the beam-media-engine child process. Validate identifiers and paths at this boundary. Resolve project-relative paths safely and return structured data rather than leaking unrestricted filesystem access.
 
 ### Rust capture engine
 
-Rust owns capture lifecycle, native permissions, source discovery, clocks, track coordination, encoding, cursor events, recovery, and manifest persistence. Platform-specific code belongs under the relevant backend module. Shared behavior belongs in platform-neutral modules.
+`beam-media-engine` provides an in-process `RecordingController` and a thin,
+versioned process adapter. Its exclusive worker owns `beam-media-session`, whose
+four native inputs share one clock/start gate and independent writers. `beam-screen`
+owns raw native screen frames, screenshots and cursor/input telemetry; it never
+encodes media. Camera and audio adapters remain in their respective crates.
 
-With the `native-media` Cargo feature, the capture engine also exposes `native-media-devices`, `native-media-prepare`, `native-media-start`, `native-media-stop`, and `native-media-status` through its JSON-lines protocol. Its native media worker polls `beam-media-session` independently of blocking protocol reads. The session and its typed camera/audio selections are shared across Linux, macOS, and Windows; only the source adapters differ. Electron assigns each native media session an output directory under its Studio projects root. Release builds leave this feature off until the private GStreamer runtime and project/editor migration are ready; the commands then return an explicit unsupported-operation error. The existing Studio recording path still uses its browser sidecars until that migration.
+Hosts supply a private project root and typed project IDs. Cloned handles share
+the worker; bounded commands, events and preview mailboxes prevent UI backpressure.
+Pause/resume produces manifest v2 segments on a timeline excluding pauses. The
+editor uses manifest paths and retains completed segments of failed tracks.
+See `native-media-engine.md` for Rust and JSON-lines usage without ARGUI.
+
+Electron forwards selections and session commands; it does not poll raw sources,
+coordinate independent recorders or write delayed Studio sidecars. Releases carry
+the sole engine with a private GStreamer allowlist and license inventory. macOS
+requires 14.2 for native system audio. Old projects use data readers only.
 
 Linux interaction capture uses the privileged input helper under both Wayland and X11. Compare the bundled and installed helper bytes in bounded chunks and verify the installed Polkit policy before reusing it; crate version strings are not binary identity. AppImage installation/update keeps the sealed executable alive across authorization. Drain helper stderr concurrently, retain at most 4 KiB for diagnostics, and return failed access with its error code/message; pkexec exit 127 does not distinguish an authorization failure from an execution failure. Dismissing authorization (exit 126) returns to the requestable state without a failure. Preserve startup errors until retry or successful access, expose them in the HUD/preferences/onboarding and copied system information, and never mark failed capture as authorized. DEB depends on `pkexec`; RPM depends on `polkit`.
 
@@ -43,9 +56,7 @@ Linux interaction capture uses the privileged input helper under both Wayland an
 - The editor keeps its document transparent over the native themed backing until the shared theme store finishes hydration. Make the renderer opaque before mounting; do not perform a second bootstrap preference request.
 - Load the selected editor module on demand. Video module loading and its project/data requests run concurrently; `projects:get` resolves only the selected video project summary without reading the screenshot catalogue. The project picker and ambient video decoder load only when needed.
 - Screenshot transfers ownership of validated IPC history snapshots to the shared history engine and retains only document metadata alongside its editable state. Default history initialization still copies caller-owned snapshots; every restored state is cloned before editing.
-- On Linux, warm native capabilities when Electron is ready, concurrently with renderer loading. Rust owns and caches FFmpeg capability probes; failures are reused for two seconds to avoid repeating a failed warmup immediately, then retried. The HUD still requests a fresh source catalog; warmup failure cannot prevent the UI from loading. Do not extend this warmup to platforms whose discovery can present permission dialogs.
-- Linux FFmpeg inventories run concurrently, while hardware encoder trials remain sequential. A complete PCI/DRM vendor inventory skips vendor-specific backends that cannot run on the machine; missing or ambiguous hardware information retains all candidates. Positive NVIDIA device/container hints preserve NVENC even if PCI sysfs is filtered. Drain subprocess output before waiting for exit.
-- Browser camera and microphone lists share an in-flight enumeration, without caching stale devices or opening temporary streams for labels. Restore available browser devices independently of native discovery. The camera overlay owns its preview stream and access errors.
+- On Linux, native capability warmup must not open the Portal picker. Native camera/microphone discovery is separate from preview: previews and levels consume only already-open sources. Do not warm discovery on platforms where it can present a permission dialog.
 - Ordinary preference updates preserve registered global shortcuts. Re-register only when the persisted shortcut map changes, including reset; serialize actual shortcut changes.
 
 ## Session and project data flow
@@ -82,7 +93,7 @@ Linux interaction capture uses the privileged input helper under both Wayland an
 - Quick Snip offers Studio (styled video) and Screenshot as direct capture choices. All Quick Snip video jobs export with the selected preset into Instant storage; disabling automatic zoom preserves the other effects. Device menus use a bounded Crop Bar-owned IPC with native Electron radio items and the existing Chromium device identifiers.
 - Native source-selection cancellation crosses screenshot capture and default recording preparation IPC as `null`, identified by the engine error code before Electron serializes errors. Recording startup still cleans up prepared browser devices; only a clean cancellation returns Quick Snip to its existing selecting job. Permission denials, other capture errors and cleanup failures remain failures.
 - Studio and Instant share `editor-presets.json`. Screenshot uses `screenshot-presets.json`. Existing editor preferences seed the video Default; only a new installation receives the bundled image/30% blur/strong shadow/click spring defaults.
-- `packages/capture/src/screenshot/` owns native still capture: WGC on Windows, ScreenCaptureKit on macOS, and the existing Portal/PipeWire sample consumer on Linux. It returns dimensions after atomically writing a PNG; Electron exposes only UUID-scoped media URLs and validates saved image state.
+- `packages/screen/src/screenshot/` owns native still capture: WGC on Windows, ScreenCaptureKit on macOS, and the existing Portal/PipeWire sample consumer on Linux. It returns dimensions after atomically writing a PNG; Electron exposes only UUID-scoped media URLs and validates saved image state.
 - Screenshot export reports captured, rendered and completed stages for the current Quick Snip job. The main process owns UUID validation, source media URLs and bounded preview validation; cancellation invalidates pending renderer work before it can publish to the clipboard. Source PNG encoding is lossless and prioritizes latency, including optimized PNG dependencies in development builds.
 - The screenshot editor reuses the Studio canvas, appearance and shape rendering functions and property controls. Its persistence and editor orchestration live under `video-editor/screenshot/`; it has no timeline or audio state. PNG/WebP output preserves alpha when the background is disabled.
 - `video-editor/elements/` owns the shared Elements palette, text editing and freehand interaction. Studio's Add → Elements menu uses the same insertion tools as Screenshot, including editable text and freehand drawing. Element selections open the Elements properties page while retaining timeline transitions, visibility and selection deletion. Studio adapts insertion and edits through the composition engine; Screenshot stores the same `ShapeClip` records in its ordered `shapes` array. Text and drawing are generated shape families, with optional text content/style and bounded normalized stroke points. Existing shapes remain readable without these fields. Electron validates the added content before saving.

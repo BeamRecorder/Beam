@@ -1,0 +1,100 @@
+[package]
+name = "beam-screen"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.92"
+publish = false
+
+[features]
+default = ["cursor"]
+cursor = []
+hardware-tests = []
+
+[dependencies]
+beam-media-core = { path = "../media-core" }
+beam-media-manifest = { path = "../media-manifest" }
+crossbeam-channel = "0.5"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+uuid = { version = "1", features = ["serde", "v7"] }
+time = { version = "0.3", features = ["formatting"] }
+fs2 = "0.4"
+png = "0.18"
+base64 = "0.23.1"
+jpeg-encoder = "0.7.1"
+
+[target.'cfg(windows)'.dependencies]
+windows-capture = "2.0.0"
+parking_lot = "0.12"
+windows = { version = "0.62", features = [
+  "Win32_Foundation",
+  "Win32_Graphics_Direct3D",
+  "Win32_Graphics_Direct3D11",
+  "Win32_Graphics_Dxgi",
+  "Win32_Graphics_Gdi",
+  "Win32_Security",
+  "Win32_System_Com",
+  "Win32_System_JobObjects",
+  "Win32_System_Performance",
+  "Win32_System_Threading",
+  "Win32_UI_HiDpi",
+  "Win32_UI_Input_KeyboardAndMouse",
+  "Win32_UI_Shell",
+  "Win32_UI_Shell_Common",
+  "Win32_UI_WindowsAndMessaging",
+] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = { version = "0.6.4", features = ["catch-all"] }
+objc2-app-kit = { version = "0.3.2", features = ["NSCursor"] }
+screencapturekit = { version = "8.0.1", features = ["macos_15_0"] }
+core-graphics = "0.25"
+foreign-types = "0.5"
+libc = "0.2"
+base64 = "0.23.1"
+jpeg-encoder = "0.7.1"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+ashpd = { version = "=0.13.13", default-features = false, features = ["tokio", "screencast"] }
+evdev = "=0.13.2"
+libc = "0.2"
+pipewire = { version = "=0.10.0", features = ["v0_3_65"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
+futures-util = "0.3"
+xcursor = "=0.3.11"
+
+[dev-dependencies]
+base64 = "0.23.1"
+jpeg-encoder = "0.7.1"
+tempfile = "3"
+walkdir = "2"
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+unused_lifetimes = "deny"
+unused_qualifications = "warn"
+unreachable_pub = "warn"
+
+[lints.clippy]
+all = "deny"
+correctness = "deny"
+suspicious = "deny"
+complexity = "deny"
+perf = "deny"
+style = "deny"
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"
+print_stdout = "deny"
+print_stderr = "deny"
+
+[[test]]
+name = "screen"
+path = "test/lib.rs"
+
+[target.'cfg(target_os = "linux")'.dev-dependencies]
+zbus = { version = "5", default-features = false, features = ["tokio"] }

@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { enumerateBrowserMediaDevices } from '../browser-media-devices';
-import { listBrowserCameras } from '../camera-recorder';
-import { listBrowserMicrophones } from '../microphone-recorder';
+import { listBrowserMicrophones } from '../browser-microphones';
 
 const original = Object.getOwnPropertyDescriptor(navigator, 'mediaDevices');
 afterEach(() => {
@@ -20,11 +19,11 @@ describe('browser device discovery', () => {
       configurable: true,
       value: { enumerateDevices, getUserMedia },
     });
-    const [microphones, cameras] = await Promise.all([listBrowserMicrophones(), listBrowserCameras()]);
+    const [microphones, cameras] = await Promise.all([listBrowserMicrophones(), enumerateBrowserMediaDevices()]);
     expect(enumerateDevices).toHaveBeenCalledOnce();
     expect(getUserMedia).not.toHaveBeenCalled();
     expect(microphones[0]?.id).toBe('microphone:chromium:mic');
-    expect(cameras[0]?.id).toBe('camera:chromium:cam');
+    expect(cameras[1]?.deviceId).toBe('cam');
 
     enumerateDevices.mockResolvedValue([]);
     await expect(enumerateBrowserMediaDevices()).resolves.toEqual([]);
@@ -34,7 +33,7 @@ describe('browser device discovery', () => {
   it('retries after a shared failure and reports missing Chromium support', async () => {
     const enumerateDevices = vi.fn().mockRejectedValueOnce(new Error('device service unavailable'));
     Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: { enumerateDevices } });
-    const results = await Promise.allSettled([listBrowserMicrophones(), listBrowserCameras()]);
+    const results = await Promise.allSettled([listBrowserMicrophones(), enumerateBrowserMediaDevices()]);
     expect(results.map((result) => result.status)).toEqual(['rejected', 'rejected']);
     expect(enumerateDevices).toHaveBeenCalledOnce();
     enumerateDevices.mockResolvedValue([]);

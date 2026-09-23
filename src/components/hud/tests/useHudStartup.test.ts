@@ -6,6 +6,11 @@ import { browserCameraMock } from './camera-recorder.mock';
 import { browserMicrophoneMock } from './microphone-recorder.mock';
 import { useHudState } from '../useHudState';
 
+vi.mock('../../../api/native-devices', async () => ({
+  listNativeCameras: (await import('./camera-recorder.mock')).listBrowserCameras,
+  listNativeMicrophones: (await import('./microphone-recorder.mock')).listBrowserMicrophones,
+  systemAudioSource: (await import('./system-audio-recorder.mock')).systemAudioSource,
+}));
 vi.mock('../../../api/capture', async () => ({ capture: (await import('./capture.mock')).captureMock }));
 vi.mock('../../../api/camera-recorder', async () => import('./camera-recorder.mock'));
 vi.mock('../../../api/microphone-recorder', async () => import('./microphone-recorder.mock'));
@@ -66,7 +71,7 @@ afterEach(() => {
 });
 
 describe('HUD startup', () => {
-  it('restores browser devices and subscribes to controls while native discovery is pending', async () => {
+  it('restores native devices and subscribes to controls while native discovery is pending', async () => {
     let resolveCatalog!: (value: typeof catalog) => void;
     capture.discover.mockReturnValue(
       new Promise((resolve) => {

@@ -7,6 +7,7 @@ fn failed_periodic_checkpoint_still_publishes_the_interruption() {
     let temporary = tempfile::tempdir().expect("tempdir");
     let output = temporary.path().join("session");
     let mut session = MediaSession::prepare(SessionConfig {
+        screen: None,
         output_dir: output.clone(),
         camera: beam_media_session::CameraSelection::Disabled,
         microphone: AudioSelection::Disabled,
@@ -40,6 +41,7 @@ fn polling_requires_a_started_session_and_does_not_create_media() {
     let temporary = tempfile::tempdir().expect("tempdir");
     let output = temporary.path().join("session");
     let mut session = MediaSession::prepare(SessionConfig {
+        screen: None,
         output_dir: output.clone(),
         camera: beam_media_session::CameraSelection::Disabled,
         microphone: AudioSelection::Disabled,

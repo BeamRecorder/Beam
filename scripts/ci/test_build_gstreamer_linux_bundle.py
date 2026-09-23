@@ -15,10 +15,10 @@ class BundleChecks(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="beam bundle moved ") as temporary:
             root = Path(temporary) / "relocated"
             (root / "bin").mkdir(parents=True)
-            launcher = root / "run-probe"
+            launcher = root / "run-engine"
             launcher.write_text(LAUNCHER, encoding="utf-8")
             launcher.chmod(0o755)
-            probe = root / "bin/beam-media-probe"
+            probe = root / "bin/beam-media-engine"
             probe.write_text(
                 "#!/bin/sh\nprintf '%s\\n' \"$LD_LIBRARY_PATH\" \"$GST_PLUGIN_PATH_1_0\" \"$GST_PLUGIN_SCANNER\" \"$GST_PLUGIN_SYSTEM_PATH_1_0\" \"$1\"\n",
                 encoding="utf-8",

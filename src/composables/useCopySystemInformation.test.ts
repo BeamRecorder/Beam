@@ -44,10 +44,10 @@ const linuxCatalog = (recordingAvailable = true): CaptureCatalog => ({
         metadataCursor: true,
       },
       pipewire: { available: true, errorCode: null, detail: null },
-      ffmpeg: {
+      gstreamer: {
         available: recordingAvailable,
-        errorCode: recordingAvailable ? null : 'ffmpeg-encoder-unavailable',
-        detail: recordingAvailable ? null : 'Install an FFmpeg build with H.264 support',
+        errorCode: recordingAvailable ? null : 'gstreamer-encoder-unavailable',
+        detail: recordingAvailable ? null : 'Install an GStreamer build with H.264 support',
         encoder: recordingAvailable ? 'libx264' : null,
         codec: recordingAvailable ? 'h264' : null,
         hardware: false,
@@ -133,7 +133,7 @@ describe('buildSystemInformation', () => {
     expect(information).toContain('Session Type: x11');
     expect(information).toContain('XDG ScreenCast Portal: Yes (v5, monitor, window, cursor metadata)');
     expect(information).toContain('PipeWire: Yes');
-    expect(information).toContain('FFmpeg: Yes (libx264, h264, software)');
+    expect(information).toContain('GStreamer: Yes (libx264, h264, software)');
     expect(information).toContain('Recording Available: Yes');
     expect(information).toContain('Interaction Access: available (clicks=Yes, shortcuts=Yes)');
   });
@@ -228,7 +228,7 @@ describe('useCopySystemInformation', () => {
     await state.copy();
 
     expect(clipboardWriteText).toHaveBeenCalledWith(
-      expect.stringContaining('Linux Requirement Issues:\n- Install an FFmpeg build with H.264 support'),
+      expect.stringContaining('Linux Requirement Issues:\n- Install an GStreamer build with H.264 support'),
     );
     wrapper.unmount();
   });

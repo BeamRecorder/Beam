@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-engine_path=${1:?usage: verify-parent-death.sh /absolute/path/to/capture-engine}
+engine_path=${1:?usage: verify-parent-death.sh /absolute/path/to/beam-media-engine}
 case "$engine_path" in
   /*) ;;
-  *) echo "capture-engine path must be absolute" >&2; exit 2 ;;
+  *) echo "beam-media-engine path must be absolute" >&2; exit 2 ;;
 esac
 test -x "$engine_path"
 
@@ -33,7 +33,7 @@ tail -f /dev/null >"$test_root/engine-stdin" &
 writer_pid=$!
 
 bash -c '
-  BEAM_PARENT_PID=$$ "$1" <"$2/engine-stdin" >"$2/out" 2>"$2/err" &
+  BEAM_PARENT_PID=$$ "$1" "$2/projects" <"$2/engine-stdin" >"$2/out" 2>"$2/err" &
   printf "%s\n" "$!" >"$2/pid"
   wait
 ' _ "$engine_path" "$test_root" &
@@ -58,7 +58,7 @@ while test -e "/proc/$engine_pid/exe" && test "$SECONDS" -lt "$deadline"; do
   read -r -t 0.1 _ </dev/null || true
 done
 if test -e "/proc/$engine_pid/exe"; then
-  echo "capture-engine PID $engine_pid survived direct parent death" >&2
+  echo "beam-media-engine PID $engine_pid survived direct parent death" >&2
   exit 1
 fi
-echo "PASS: capture-engine PID $engine_pid exited while stdin remained open"
+echo "PASS: beam-media-engine PID $engine_pid exited while stdin remained open"

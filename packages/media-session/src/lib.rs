@@ -1,4 +1,4 @@
-//! Three independently failing native tracks on a shared session timeline.
+//! Four independently failing native tracks on a shared session timeline.
 
 mod error;
 mod measurements;
@@ -11,7 +11,9 @@ pub use measurements::{
     SessionMeasurements, TrackMeasurements,
 };
 pub use source::{AudioSource, CameraSource, CapturedCameraFrame};
-pub use types::{AudioSelection, CameraSelection, SessionConfig, SessionTimeline};
+pub use types::{
+    AudioLevel, AudioLevels, AudioSelection, CameraSelection, SessionConfig, SessionTimeline,
+};
 
 mod session;
 pub use session::MediaSession;

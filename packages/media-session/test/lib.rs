@@ -7,6 +7,7 @@ fn public_session_api_persists_process_measurements() {
     let temporary = tempfile::tempdir().expect("tempdir");
     let output = temporary.path().join("session");
     let mut session = MediaSession::prepare(SessionConfig {
+        screen: None,
         output_dir: output.clone(),
         camera: beam_media_session::CameraSelection::Disabled,
         microphone: AudioSelection::Disabled,

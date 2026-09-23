@@ -105,6 +105,7 @@ fn an_empty_writer_cannot_complete_a_track_with_received_but_dropped_audio() {
     let temporary = tempfile::tempdir().expect("tempdir");
     let output_dir = temporary.path().join("session");
     let mut session = MediaSession::prepare(SessionConfig {
+        screen: None,
         output_dir: output_dir.clone(),
         camera: CameraSelection::Disabled,
         microphone: AudioSelection::Disabled,
@@ -131,6 +132,7 @@ fn an_empty_writer_cannot_complete_a_track_with_received_but_dropped_audio() {
     );
 
     let mut session = MediaSession::prepare(SessionConfig {
+        screen: None,
         output_dir: temporary.path().join("successful-session"),
         camera: CameraSelection::Disabled,
         microphone: AudioSelection::Disabled,
@@ -161,6 +163,7 @@ fn an_empty_writer_cannot_complete_a_track_with_received_but_dropped_audio() {
 fn stop_interrupts_a_source_whose_reported_queue_never_drains() {
     let temporary = tempfile::tempdir().expect("tempdir");
     let mut session = MediaSession::prepare(SessionConfig {
+        screen: None,
         output_dir: temporary.path().join("stalled-session"),
         camera: CameraSelection::Disabled,
         microphone: AudioSelection::Disabled,

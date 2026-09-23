@@ -1,3 +1,4 @@
+const { screenMedia } = require('./session-media.cjs');
 const { randomUUID } = require('crypto');
 const fs = require('fs');
 const path = require('path');
@@ -143,16 +144,9 @@ function createProjectStore(root, { mediaHost = 'asset', category = null } = {})
     }
     for (const session of [...sessions].reverse()) {
       const sessionDirectory = safePath(directory, session.relativePath);
-      const screenDirectory = sessionDirectory && path.join(sessionDirectory, 'screen');
-      const video =
-        screenDirectory &&
-        fs.existsSync(screenDirectory) &&
-        fs
-          .readdirSync(screenDirectory)
-          .filter((name) => /\.mp4$/i.test(name))
-          .sort()[0];
+      const video = sessionDirectory && screenMedia(sessionDirectory);
       if (video) {
-        const url = pathToFileURL(path.join(screenDirectory, video)).href;
+        const url = pathToFileURL(video.file).href;
         manifest.previewSrc = url;
         try {
           writeManifest(directory, manifest);
@@ -225,13 +219,7 @@ function createProjectStore(root, { mediaHost = 'asset', category = null } = {})
       } catch {
         continue;
       }
-      const screenDirectory = path.join(sessionDirectory, 'screen');
-      const video =
-        fs.existsSync(screenDirectory) &&
-        fs
-          .readdirSync(screenDirectory)
-          .filter((name) => /\.mp4$/i.test(name))
-          .sort()[0];
+      const video = screenMedia(sessionDirectory, sessionManifest);
       const tracks = Array.isArray(sessionManifest.tracks)
         ? sessionManifest.tracks.map((track) => ({
             ...track,
@@ -291,8 +279,8 @@ function createProjectStore(root, { mediaHost = 'asset', category = null } = {})
       return {
         sessionId: session.sessionId,
         manifest: sessionManifest,
-        videoSrc: video ? mediaUrlFor(pathToFileURL(path.join(screenDirectory, video)).href) : null,
-        videoSessionPath: video ? path.posix.join('screen', video) : null,
+        videoSrc: video ? mediaUrlFor(pathToFileURL(video.file).href) : null,
+        videoSessionPath: video ? video.relativePath : null,
         tracks,
         cursor: {
           available: Array.isArray(events),

@@ -1,6 +1,6 @@
 import { computed, onBeforeUnmount, reactive, ref, type Ref } from 'vue';
 import { capture } from '~/api/capture';
-import { listBrowserMicrophones } from '~/api/microphone-recorder';
+import { listBrowserMicrophones } from '~/api/browser-microphones';
 import { ProjectVoiceoverRecorder } from '~/api/project-voiceover-recorder';
 import { inspectMedia, mediaSourceDescriptor, type DroppedMediaInspection, type MediaAsset } from '~/media/shared';
 import type { VoiceoverDraft, VoiceoverPhase, VoiceoverRecorderState } from './voiceover-types';

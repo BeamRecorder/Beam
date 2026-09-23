@@ -2,20 +2,22 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const {
-  captureEngineAssetName,
+  mediaEngineAssetName,
+  mediaRuntimeAssetName,
+  prebuiltRuntimePath,
   inputHelperAssetName,
   nativeManifestAssetName,
-  prebuiltCaptureEnginePath,
+  prebuiltMediaEnginePath,
   prebuiltInputHelperPath,
-} = require('../../electron/capture/capture-engine-path.cjs');
+} = require('../../electron/capture/media-engine-path.cjs');
 
 const RELEASE_BASE_URL = 'https://github.com/BeamRecorder/Beam/releases/download';
 
 function requiredNativeFiles(applicationRoot, version, platform = process.platform, arch = process.arch) {
-  const engineAsset = captureEngineAssetName(version, platform, arch);
-  const enginePath = prebuiltCaptureEnginePath(applicationRoot, version, platform, arch);
+  const engineAsset = mediaEngineAssetName(version, platform, arch);
+  const enginePath = prebuiltMediaEnginePath(applicationRoot, version, platform, arch);
   if (!engineAsset || !enginePath) return null;
-  const files = [{ kind: 'capture-engine', asset: engineAsset, destination: enginePath }];
+  const files = [{ kind: 'beam-media-engine', asset: engineAsset, destination: enginePath }];
   if (platform === 'linux') {
     files.push({
       kind: 'beam-input-helper',
@@ -23,6 +25,11 @@ function requiredNativeFiles(applicationRoot, version, platform = process.platfo
       destination: prebuiltInputHelperPath(applicationRoot, version, platform, arch),
     });
   }
+  files.push({
+    kind: 'beam-media-runtime',
+    asset: mediaRuntimeAssetName(version, platform, arch),
+    destination: path.join(prebuiltRuntimePath(applicationRoot, version, platform, arch), 'inventory.json'),
+  });
   return files;
 }
 
@@ -99,7 +106,15 @@ async function downloadNativeFiles({
   }));
   for (const file of resolved) {
     const bytes = await fetchBuffer(`${releaseUrl}/${encodeURIComponent(file.asset)}`, fetchImpl);
-    await writeVerifiedFile(file.destination, bytes, file.manifest.sha256, platform);
+    if (file.kind === 'beam-media-runtime') {
+      const archive = `${path.dirname(file.destination)}.tar.gz`;
+      await writeVerifiedFile(archive, bytes, file.manifest.sha256, platform);
+      try {
+        await require('./runtime-archive.cjs').unpackRuntime(archive, path.dirname(file.destination));
+      } finally {
+        await fs.promises.rm(archive, { force: true });
+      }
+    } else await writeVerifiedFile(file.destination, bytes, file.manifest.sha256, platform);
   }
   return resolved.map(({ destination }) => destination);
 }

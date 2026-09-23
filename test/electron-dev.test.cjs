@@ -57,18 +57,20 @@ test('build arguments compile the engine and the Linux helper, with release and 
   assert.deepEqual(cargoBuildArguments('linux'), [
     'build',
     '-p',
-    'capture',
+    'beam-media-engine',
     '--bin',
-    'capture-engine',
+    'beam-media-engine',
+    '-p',
+    'beam-screen',
     '--bin',
     'beam-input-helper',
   ]);
   assert.deepEqual(cargoBuildArguments('win32', true, 'aarch64-pc-windows-msvc'), [
     'build',
     '-p',
-    'capture',
+    'beam-media-engine',
     '--bin',
-    'capture-engine',
+    'beam-media-engine',
     '--release',
     '--target',
     'aarch64-pc-windows-msvc',
@@ -90,12 +92,12 @@ test('startElectron marks GNOME Wayland shortcut launches as the development ins
   let invocation;
   const env = {
     PATH: '/bin',
-    BEAM_CAPTURE_ENGINE: '/old/capture-engine',
+    BEAM_MEDIA_ENGINE: '/old/beam-media-engine',
     XDG_CURRENT_DESKTOP: 'GNOME',
     XDG_SESSION_TYPE: 'wayland',
     WAYLAND_DISPLAY: 'wayland-0',
   };
-  const start = startElectron('/built/capture-engine', {
+  const start = startElectron('/built/beam-media-engine', {
     root: '/workspace',
     env,
     spawnImpl: (command, args, options) => {
@@ -110,11 +112,11 @@ test('startElectron marks GNOME Wayland shortcut launches as the development ins
   assert.deepEqual(invocation.args, [require.resolve('electron/cli.js'), '.']);
   assert.equal(invocation.options.cwd, '/workspace');
   assert.equal(invocation.options.env.PATH, '/bin');
-  assert.equal(invocation.options.env.BEAM_CAPTURE_ENGINE, '/built/capture-engine');
+  assert.equal(invocation.options.env.BEAM_MEDIA_ENGINE, '/built/beam-media-engine');
   assert.equal(invocation.options.env.BEAM_DEVELOPMENT_INSTANCE, '1');
   assert.deepEqual(env, {
     PATH: '/bin',
-    BEAM_CAPTURE_ENGINE: '/old/capture-engine',
+    BEAM_MEDIA_ENGINE: '/old/beam-media-engine',
     XDG_CURRENT_DESKTOP: 'GNOME',
     XDG_SESSION_TYPE: 'wayland',
     WAYLAND_DISPLAY: 'wayland-0',
@@ -133,7 +135,7 @@ test('Cargo-present development builds are used directly', async () => {
       hasCargo: () => true,
       build: async (options) => calls.push(options),
     });
-    assert.equal(executable, path.join(root, 'target', 'debug', 'capture-engine.exe'));
+    assert.equal(executable, path.join(root, 'target', 'debug', 'beam-media-engine.exe'));
     assert.deepEqual(calls, [{ platform: 'win32' }]);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
@@ -214,7 +216,7 @@ test('interactive confirmation accepts Y and rejects N while the default is yes'
 
   const yes = await ask('Y\n');
   assert.equal(yes.result, true);
-  assert.ok(yes.output.includes(`Download capture-engine ${version}? [Y/n]`));
+  assert.ok(yes.output.includes(`Download beam-media-engine ${version}? [Y/n]`));
 
   const no = await ask('N\n');
   assert.equal(no.result, false);
@@ -277,7 +279,7 @@ test('non-interactive terminals refuse by default and allow only explicit opt-in
       version,
       platform: 'win32',
       arch: 'x64',
-      env: { BEAM_DOWNLOAD_CAPTURE_ENGINE: '1' },
+      env: { BEAM_DOWNLOAD_MEDIA_ENGINE: '1' },
       stdin: { isTTY: false },
       stdout: { isTTY: false },
       hasCargo: () => false,
@@ -310,7 +312,7 @@ test('unknown architectures fail before Cargo detection or fallback', async () =
           return false;
         },
       }),
-      /no capture-engine build for linux\/arm64/,
+      /no beam-media-engine build for linux\/arm64/,
     );
     assert.equal(cargoChecked, false);
   } finally {

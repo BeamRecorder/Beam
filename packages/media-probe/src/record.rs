@@ -35,6 +35,7 @@ pub fn run(args: RecordArgs) -> Result<(), Box<dyn Error>> {
         }
     };
     let config = SessionConfig {
+        screen: None,
         output_dir: args.output.clone(),
         camera,
         microphone: select_audio(args.no_microphone, args.microphone),

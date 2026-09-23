@@ -393,9 +393,6 @@ const dismissRecorderLauncher = async () => {
         @stop="cancelOrStopRecording"
         @cancel="cancelRecording"
         @pause="recording.togglePause"
-        @camera="recording.toggleCamera"
-        @microphone="recording.toggleMicrophone"
-        @system-audio="recording.toggleSystemAudio"
       />
     </Transition>
     <EditorOpenError

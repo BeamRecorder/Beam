@@ -136,3 +136,25 @@ fn callback_clock_regression_invalidates_timestamps_without_moving_sample_timeli
     assert_eq!(second.start_ns, 19_000_000);
     assert_eq!(second.end_ns, 29_000_000);
 }
+
+#[test]
+fn resume_epoch_reanchors_without_counting_paused_time_or_resetting_samples() {
+    let mut timeline = AudioTimeline::new(48_000);
+    timeline.packet(1_000, 1_000, 0, 480).expect("first packet");
+    timeline.set_epoch(1, 20_000_000).expect("resume");
+    let resumed = timeline
+        .packet(5_000_000_000, 5_000_000_000, 20_000_000, 480)
+        .expect("resumed");
+    assert_eq!(resumed.start_ns, 20_000_000);
+    assert_eq!(resumed.first_sample, 480);
+    assert!(!resumed.clock_discontinuity);
+    timeline.set_epoch(1, 900_000_000).expect("same epoch");
+    assert_eq!(
+        timeline
+            .packet(5_001_000_000, 5_001_000_000, 900_000_000, 480)
+            .expect("next")
+            .start_ns,
+        30_000_000
+    );
+    assert!(AudioTimeline::new(0).set_epoch(1, 0).is_err());
+}

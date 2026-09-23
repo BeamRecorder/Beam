@@ -1,6 +1,8 @@
 mod drain;
 mod finish;
 mod prepare;
+mod screen;
+mod segments;
 
 use std::sync::Arc;
 
@@ -22,18 +24,48 @@ pub struct MediaSession {
     measurements: SessionMeasurements,
     clock: SessionClock,
     gate: Arc<StartGate>,
+    screen: Option<Box<dyn beam_screen::ScreenSource>>,
+    screen_writer: Option<TrackWriter>,
+    screen_fps: u32,
+    screen_telemetry: Option<beam_screen::ScreenTelemetry>,
     camera: Option<Box<dyn CameraSource>>,
     camera_writer: Option<TrackWriter>,
     microphone: Option<Box<dyn AudioSource>>,
     microphone_writer: Option<TrackWriter>,
     system_audio: Option<Box<dyn AudioSource>>,
     system_writer: Option<TrackWriter>,
+    audio_levels: crate::AudioLevels,
     started: bool,
+    paused: bool,
+    segment_start_ns: u64,
     last_checkpoint_ns: u64,
 }
 
 impl MediaSession {
+    pub fn audio_levels(&self) -> crate::AudioLevels {
+        if self.paused {
+            crate::AudioLevels::default()
+        } else {
+            self.audio_levels
+        }
+    }
+
     fn observe_queues(&mut self) {
+        if let Some(source) = &self.screen {
+            let (packets, bytes) = source.queue_depth();
+            self.measurements
+                .screen
+                .queue_peaks
+                .observe_source(packets, bytes);
+        }
+        if let Some(writer) = &self.screen_writer {
+            let (packets, bytes) = writer.queue_depth();
+            self.measurements
+                .screen
+                .queue_peaks
+                .observe_encoder(packets, bytes);
+        }
+
         if let Some(source) = &self.camera {
             let (packets, bytes) = source.queue_depth();
             self.measurements
@@ -100,6 +132,10 @@ impl MediaSession {
         &self.measurements
     }
 
+    pub fn screen_preview_source(&self) -> Option<beam_screen::ScreenPreview> {
+        self.screen.as_ref().map(|source| source.preview_handle())
+    }
+
     pub fn camera_preview_frame(
         &self,
     ) -> Option<beam_media_core::VideoFrame<beam_camera::CameraFrame>> {
@@ -131,6 +167,9 @@ impl MediaSession {
     }
 
     pub fn record_process_sample(&mut self, sample: ProcessSample) {
+        if self.measurements.process_samples.len() == 3601 {
+            self.measurements.process_samples.remove(1);
+        }
         self.measurements.process_samples.push(sample);
     }
 

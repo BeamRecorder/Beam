@@ -82,6 +82,13 @@ pub trait CameraSource: Send {
 
 /// The session's device boundary. Tests can supply bounded producers without native devices.
 pub(crate) trait SourceFactory {
+    fn open_screen(
+        &self,
+        request: beam_screen::ScreenRequest,
+        clock: SessionClock,
+        gate: Arc<StartGate>,
+    ) -> Result<Box<dyn beam_screen::ScreenSource>, beam_screen::CaptureError>;
+
     fn list_cameras(&self) -> Result<Vec<CameraDevice>, CameraError>;
     fn open_camera(
         &self,
@@ -111,6 +118,21 @@ pub(crate) trait SourceFactory {
 pub(crate) struct NativeSources;
 
 impl SourceFactory for NativeSources {
+    fn open_screen(
+        &self,
+        request: beam_screen::ScreenRequest,
+        clock: SessionClock,
+        gate: Arc<StartGate>,
+    ) -> Result<Box<dyn beam_screen::ScreenSource>, beam_screen::CaptureError> {
+        beam_screen::open_screen(
+            request,
+            clock,
+            gate,
+            beam_screen::ScreenQueueLimits::default(),
+        )
+        .map(|source| Box::new(source) as Box<dyn beam_screen::ScreenSource>)
+    }
+
     fn list_cameras(&self) -> Result<Vec<CameraDevice>, CameraError> {
         beam_camera::list_cameras()
     }

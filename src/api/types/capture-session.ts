@@ -10,9 +10,12 @@ export type CaptureState =
   | 'finalizing'
   | 'completed'
   | 'recoverable'
-  | 'failed';
+  | 'failed'
+  | 'interrupted';
 
 export interface CaptureSession {
+  manifest?: SessionManifestData | null;
+  error?: string | null;
   state: CaptureState;
   projectId?: string | null;
   sessionId?: string | null;

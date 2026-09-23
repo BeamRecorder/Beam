@@ -1,6 +1,5 @@
 [workspace]
 members = [
-  "packages/capture",
   "packages/media-core",
   "packages/media-manifest",
   "packages/media-encode",
@@ -9,10 +8,12 @@ members = [
   "packages/camera-wgpu",
   "packages/media-session",
   "packages/media-probe",
+  "packages/media-engine",
+  "packages/screen",
 ]
 resolver = "2"
 
-[profile.dev.package.capture]
+[profile.dev.package.beam-screen]
 opt-level = 2
 
 # PNG screenshots run on the latency-sensitive capture path in development too.

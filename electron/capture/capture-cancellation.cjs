@@ -1,5 +1,5 @@
 function isCaptureCancellation(error) {
-  return error?.code === 'portal-cancelled' || error?.code === 'cancelled';
+  return ['portal-cancelled', 'cancelled'].includes(error?.code) || error?.code === 'cancelled';
 }
 
 module.exports = { isCaptureCancellation };

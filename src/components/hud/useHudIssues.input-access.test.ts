@@ -56,7 +56,7 @@ const linuxDiagnostics: LinuxCaptureDiagnostics = {
     detail: null,
   },
   pipewire: { available: true, errorCode: null, detail: null },
-  ffmpeg: {
+  gstreamer: {
     available: true,
     encoder: 'libx264',
     codec: 'h264',

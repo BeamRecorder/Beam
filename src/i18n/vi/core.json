@@ -626,13 +626,16 @@
     "selectionAndMore": "… và {count} mục khác"
   },
   "RecorderBar": {
+    "microphone": "Micrô",
+    "camera": "Máy ảnh",
+    "systemAudio": "Âm thanh hệ thống",
     "recordingControls": "Điều khiển ghi hình",
     "moveRecorderBar": "Di chuyển thanh ghi hình",
     "ready": "Sẵn sàng",
     "resumeRecording": "Tiếp tục ghi",
     "pauseRecording": "Tạm dừng ghi",
     "stopRecording": "Dừng ghi",
-    "cancelRecording": "Hủy và xóa bản ghi",
+    "cancelRecording": "Hủy",
     "turnMicOff": "Tắt micro",
     "turnMicOn": "Bật micro",
     "turnCameraOff": "Tắt camera",

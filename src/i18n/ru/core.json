@@ -626,6 +626,9 @@
     "selectionAndMore": "… и ещё {count}"
   },
   "RecorderBar": {
+    "microphone": "Микрофон",
+    "camera": "Камера",
+    "systemAudio": "Системный звук",
     "recordingControls": "Управление записью",
     "moveRecorderBar": "Переместить панель записи",
     "ready": "Готово",
@@ -633,7 +636,7 @@
     "resumeRecording": "Продолжить запись",
     "pauseRecording": "Приостановить запись",
     "stopRecording": "Остановить запись",
-    "cancelRecording": "Отменить и удалить запись",
+    "cancelRecording": "Отмена",
     "turnMicOff": "Выключить микрофон",
     "turnMicOn": "Включить микрофон",
     "turnCameraOff": "Выключить камеру",

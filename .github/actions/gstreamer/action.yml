@@ -1,0 +1,42 @@
+name: Native GStreamer SDK
+description: Install the SDK matching the runner architecture; bundles retain only the approved plugins.
+runs:
+  using: composite
+  steps:
+    - if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install --yes clang libclang-dev libpipewire-0.3-dev libasound2-dev libudev-dev pkg-config libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good
+    - if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        set -euo pipefail
+        base=https://gstreamer.freedesktop.org/data/pkg/osx/1.28.7
+        for name in gstreamer-1.0-1.28.7-universal.pkg gstreamer-1.0-devel-1.28.7-universal.pkg; do
+          curl -fsSL "$base/$name" -o "$RUNNER_TEMP/$name"
+          expected=$(curl -fsSL "$base/$name.sha256sum" | cut -d ' ' -f 1)
+          test "$(shasum -a 256 "$RUNNER_TEMP/$name" | cut -d ' ' -f 1)" = "$expected"
+          sudo installer -pkg "$RUNNER_TEMP/$name" -target /
+        done
+        pkgutil --expand "$RUNNER_TEMP/gstreamer-1.0-1.28.7-universal.pkg" "$RUNNER_TEMP/gstreamer-notices"
+        echo '/Library/Frameworks/GStreamer.framework/Versions/1.0/bin' >> "$GITHUB_PATH"
+        echo 'PKG_CONFIG_PATH=/Library/Frameworks/GStreamer.framework/Versions/1.0/lib/pkgconfig' >> "$GITHUB_ENV"
+        echo "BEAM_GSTREAMER_INSTALLER_LICENSE=$RUNNER_TEMP/gstreamer-notices/Resources/license.txt" >> "$GITHUB_ENV"
+        echo 'RUSTFLAGS=-C link-arg=-Wl,-headerpad_max_install_names' >> "$GITHUB_ENV"
+    - if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        $arch = if ($env:RUNNER_ARCH -eq 'ARM64') { 'arm64' } else { 'x86_64' }
+        $name = "gstreamer-1.0-msvc-$arch-1.28.7.exe"
+        $base = 'https://gstreamer.freedesktop.org/data/pkg/windows/1.28.7/msvc'
+        $installer = Join-Path $env:RUNNER_TEMP $name
+        $gstRoot = Join-Path $env:RUNNER_TEMP 'gstreamer'
+        Invoke-WebRequest "$base/$name" -OutFile $installer
+        $checksum = (Invoke-WebRequest "$base/$name.sha256sum").Content.Split(' ')[0].ToLowerInvariant()
+        if ((Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant() -ne $checksum) { throw 'GStreamer checksum mismatch' }
+        $process = Start-Process $installer -ArgumentList '/VERYSILENT','/NORESTART','/CURRENTUSER','/TYPE=devel',"/DIR=$gstRoot" -Wait -PassThru
+        if ($process.ExitCode -ne 0) { throw 'GStreamer installation failed' }
+        (Join-Path $gstRoot 'bin') | Out-File $env:GITHUB_PATH -Append
+        "PKG_CONFIG_PATH=$(Join-Path $gstRoot 'lib\pkgconfig')" | Out-File $env:GITHUB_ENV -Append
+        "BEAM_GSTREAMER_ROOT=$gstRoot" | Out-File $env:GITHUB_ENV -Append

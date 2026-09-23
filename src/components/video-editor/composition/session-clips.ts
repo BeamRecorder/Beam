@@ -175,7 +175,7 @@ export function synchronizeRecordingClips(
   let hasKnownScreenSource = false;
 
   for (const track of editorData.tracks) {
-    if (!['screen', 'camera', 'system-audio', 'microphone'].includes(track.kind) || track.status === 'failed') continue;
+    if (!['screen', 'camera', 'system-audio', 'microphone'].includes(track.kind)) continue;
     for (const segment of track.assets) {
       if (!segment.complete || !segment.exists || !segment.src) continue;
       const durationMs = safeDuration(segment, fallbackEndNs);

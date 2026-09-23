@@ -1,6 +1,6 @@
 async function prewarmCaptureCapabilities(engine, { platform = process.platform, log = () => {} } = {}) {
-  // Linux capability discovery only probes Portal/PipeWire availability and
-  // encoders. Start Rust's cached FFmpeg probe while Chromium loads the HUD.
+  // Linux capability discovery probes Portal/PipeWire availability without
+  // opening the picker or starting a media producer.
   // Other platforms can involve screen-access permission UI during discovery.
   if (platform !== 'linux') return;
   try {

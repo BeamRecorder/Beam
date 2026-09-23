@@ -3,7 +3,7 @@ import type { InputAccessStatus } from './types/capture-api';
 
 const LINUX_GUIDE_URL = 'https://github.com/BeamRecorder/Beam/blob/master/docs/dev/linux.md';
 
-export type LinuxRequirementId = 'portal' | 'pipewire' | 'ffmpeg';
+export type LinuxRequirementId = 'portal' | 'pipewire' | 'gstreamer';
 
 export interface LinuxRequirementGuidance {
   id: LinuxRequirementId;
@@ -38,7 +38,7 @@ const packageCommand = (family: PackageFamily | null, packages: string[]): strin
     return `sudo apt update && sudo apt install ${packages.join(' ')}`;
   }
   if (family === 'dnf') {
-    return `sudo dnf install ${packages.map((name) => (name === 'ffmpeg' ? 'ffmpeg-free' : name)).join(' ')}`;
+    return `sudo dnf install ${packages.join(' ')}`;
   }
   if (family === 'pacman') {
     return `sudo pacman -S --needed ${packages.join(' ')}`;
@@ -113,17 +113,11 @@ export const linuxRequirementGuidance = (diagnostics?: LinuxCaptureDiagnostics):
     );
   }
 
-  if (!diagnostics.ffmpeg.available) {
-    const install = packageCommand(family, ['ffmpeg']);
-    const encoderUnavailable = diagnostics.ffmpeg.errorCode === 'ffmpeg-encoder-unavailable';
-    const verifyEncoder =
-      "ffmpeg -hide_banner -encoders | awk '$2 ~ /^(h264_nvenc|h264_qsv|h264_vaapi|h264_amf|av1_nvenc|av1_qsv|av1_vaapi|vp9_vaapi|av1_amf|vp9_qsv|libx264|libopenh264)$/ { found=1 } END { exit !found }'";
+  if (!diagnostics.gstreamer.available) {
     guidance.push(
-      report(diagnostics, 'ffmpeg', 'FFmpeg', diagnostics.ffmpeg, [
-        ...(install ? [`Install the distribution FFmpeg package: ${install}`] : []),
-        encoderUnavailable
-          ? `Verify a supported encoder: ${verifyEncoder}`
-          : `Verify FFmpeg, a supported encoder, and the MP4 muxer: ffmpeg -hide_banner -version && ${verifyEncoder} && ffmpeg -hide_banner -muxers | grep -w mp4`,
+      report(diagnostics, 'gstreamer', 'GStreamer', diagnostics.gstreamer, [
+        'Restart Beam. If the problem continues, reinstall Beam to restore its bundled media runtime.',
+        'Copy the system information and the reported error when contacting support.',
       ]),
     );
   }

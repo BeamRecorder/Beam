@@ -15,6 +15,15 @@ impl MediaSession {
         self.gate.close();
         self.observe_queues();
         self.drain_events();
+        if let Some(screen) = self.screen.as_mut()
+            && let Err(error) = screen.halt()
+        {
+            self.mark_track(
+                TrackKind::Screen,
+                TrackStatus::Interrupted,
+                error.to_string(),
+            );
+        }
         if let Some(camera) = self.camera.as_mut()
             && let Err(error) = camera.halt()
         {
@@ -45,23 +54,54 @@ impl MediaSession {
         self.drain_pending_sources();
         self.drain_events();
         self.observe_queues();
+        if let Some(telemetry) = self.screen_telemetry.take() {
+            match telemetry.finish() {
+                Ok(()) => {
+                    let end = self.gate.elapsed_ns(end_clock_ns).unwrap_or(0);
+                    let started = self.started;
+                    if let Some(track) = self.track_mut(TrackKind::Cursor) {
+                        if matches!(
+                            track.status,
+                            TrackStatus::Preparing | TrackStatus::Recording
+                        ) {
+                            track.status = if started {
+                                TrackStatus::Completed
+                            } else {
+                                TrackStatus::Interrupted
+                            };
+                        }
+                        if let Some(segment) = track.segments.last_mut() {
+                            segment.end_ns = Some(end);
+                            segment.complete = started;
+                        }
+                    }
+                }
+                Err(error) => {
+                    self.mark_track(TrackKind::Cursor, TrackStatus::Failed, error.to_string())
+                }
+            }
+        }
+        self.screen.take();
         self.camera.take();
         self.microphone.take();
         self.system_audio.take();
-        let duration_ns = self
-            .gate
-            .release_ns()
-            .and_then(|start| end_clock_ns.checked_sub(start))
-            .unwrap_or(0);
+        let duration_ns = self.gate.elapsed_ns(end_clock_ns).unwrap_or(0);
         self.manifest.duration_ns = duration_ns;
 
+        let screen = self.screen_writer.take();
         let camera = self.camera_writer.take();
         let microphone = self.microphone_writer.take();
         let system = self.system_writer.take();
+        self.finish_track(TrackKind::Screen, screen, duration_ns);
         self.finish_track(TrackKind::Camera, camera, duration_ns);
         self.finish_track(TrackKind::Microphone, microphone, duration_ns);
         self.finish_track(TrackKind::SystemAudio, system, duration_ns);
 
+        for track in &mut self.manifest.tracks {
+            if track.status == TrackStatus::Paused {
+                track.status = TrackStatus::Completed;
+            }
+        }
         let measurements_path = self.layout.root().join("measurements.json");
         let measurements_result = write_atomic(
             &measurements_path,
@@ -86,10 +126,14 @@ impl MediaSession {
         Ok(self.manifest)
     }
 
-    fn drain_pending_sources(&mut self) {
+    pub(super) fn drain_pending_sources(&mut self) {
         let mut previous_pending = usize::MAX;
         let mut stalled_rounds = 0;
         for _ in 0..MAX_DRAIN_ROUNDS {
+            let screen = self
+                .screen
+                .as_ref()
+                .map_or(0, |source| source.queue_depth().0);
             let camera = self
                 .camera
                 .as_ref()
@@ -102,7 +146,8 @@ impl MediaSession {
                 .system_audio
                 .as_ref()
                 .map_or(0, |source| source.queue_depth().0);
-            let pending = camera
+            let pending = screen
+                .saturating_add(camera)
                 .saturating_add(microphone)
                 .saturating_add(system_audio);
             if pending == 0 {
@@ -117,11 +162,18 @@ impl MediaSession {
                 stalled_rounds = 0;
             }
             previous_pending = pending;
+            self.drain_screen_limit(screen.min(64));
             self.drain_camera_limit(camera.min(64));
             self.drain_microphone_limit(microphone.min(128));
             self.drain_system_audio_limit(system_audio.min(128));
         }
         for (kind, pending) in [
+            (
+                TrackKind::Screen,
+                self.screen
+                    .as_ref()
+                    .map_or(0, |source| source.queue_depth().0),
+            ),
             (
                 TrackKind::Camera,
                 self.camera
@@ -151,7 +203,12 @@ impl MediaSession {
         }
     }
 
-    fn finish_track(&mut self, kind: TrackKind, writer: Option<TrackWriter>, duration_ns: u64) {
+    pub(super) fn finish_track(
+        &mut self,
+        kind: TrackKind,
+        writer: Option<TrackWriter>,
+        duration_ns: u64,
+    ) {
         let Some(writer) = writer else { return };
         let had_data = writer.accepted_packet_count() > 0;
         let result = writer.finish();
@@ -160,7 +217,7 @@ impl MediaSession {
         };
         match result {
             Ok(_) => {
-                if let Some(segment) = track.segments.first_mut() {
+                if let Some(segment) = track.segments.last_mut() {
                     segment.end_ns = Some(duration_ns);
                     segment.complete = true;
                 }

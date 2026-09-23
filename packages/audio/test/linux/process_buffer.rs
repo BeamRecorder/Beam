@@ -24,6 +24,7 @@ impl BufferFixture {
                 clock: SessionClock::start(),
                 gate: Arc::new(StartGate::new()),
                 sample_clock: None,
+                gate_epoch: 0,
                 next_sample: 0,
                 active: true,
                 packet_tx,

@@ -75,7 +75,16 @@ fn frame_dispatch_waits_for_gate_and_copies_only_bytes_used() {
         .dispatch(&[1, 2, 3, 4, 5], 1, 4, false, None)
         .expect("before start");
     assert!(test.frames.try_recv().is_err());
-    assert!(test.latest.take().is_none());
+    assert_eq!(
+        test.latest
+            .take()
+            .expect("armed preview")
+            .data
+            .data
+            .as_ref(),
+        &[1, 2, 3, 4]
+    );
+    assert_eq!(test.queued_bytes.load(Ordering::Acquire), 0);
 
     start(&test);
     test.dispatch
@@ -175,7 +184,7 @@ fn regressing_native_timestamp_reports_discontinuity_and_keeps_pts_monotonic() {
 }
 
 #[test]
-fn closed_gate_stops_publishing_new_frames() {
+fn closed_gate_stops_recording_but_keeps_preview() {
     let mut test = harness(2, 8);
     start(&test);
     test.gate.close();
@@ -183,7 +192,8 @@ fn closed_gate_stops_publishing_new_frames() {
         .dispatch(&[1, 2, 3, 4], 4, 4, false, Some(1_000_000_000))
         .expect("frame after stop");
     assert!(test.frames.try_recv().is_err());
-    assert!(test.latest.take().is_none());
+    assert_eq!(test.latest.take().expect("preview").data.sequence, 4);
+    assert_eq!(test.queued_bytes.load(Ordering::Acquire), 0);
 }
 
 #[test]
@@ -252,4 +262,26 @@ fn saturated_event_queue_never_blocks_started_drop_or_clock_recovery() {
         .expect("clock reset with no event consumer");
     assert_eq!(test.frames.try_recv().expect("first").data.sequence, 2);
     assert_eq!(test.frames.try_recv().expect("second").data.sequence, 3);
+}
+
+#[test]
+fn resume_reanchors_camera_native_clock_without_pause_gap() {
+    let mut test = harness(8, 32);
+    start(&test);
+    test.dispatch
+        .dispatch(&[1, 2, 3, 4], 1, 4, false, Some(1_000_000))
+        .expect("first");
+    let first = test.frames.recv().expect("first frame");
+    test.gate.pause(test.clock.now_ns()).expect("pause");
+    test.dispatch
+        .dispatch(&[1, 2, 3, 4], 2, 4, false, Some(5_000_000_000))
+        .expect("paused");
+    assert!(test.frames.try_recv().is_err());
+    test.gate.resume(test.clock.now_ns()).expect("resume");
+    test.dispatch
+        .dispatch(&[1, 2, 3, 4], 3, 4, false, Some(10_000_000_000))
+        .expect("resumed");
+    let resumed = test.frames.recv().expect("resumed frame");
+    assert!(resumed.captured_ns > first.captured_ns);
+    assert!(resumed.captured_ns < 1_000_000_000);
 }

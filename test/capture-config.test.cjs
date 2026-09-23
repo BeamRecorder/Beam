@@ -25,17 +25,17 @@ const environment = { platform: 'win32', defaultOutputRoot: 'recordings', exclud
 test('builds a one-call recording config from defaults', () => {
   const config = buildDefaultCaptureConfig(catalog, {}, environment);
 
-  assert.equal(config.screen.sourceId, 'display:1');
-  assert.equal('microphone' in config, false);
-  assert.equal(config.systemAudio, null);
-  assert.deepEqual(config.cursor, {
+  assert.equal(config.screen.selection.sourceId, 'display:1');
+  assert.deepEqual(config.microphone, { mode: 'disabled' });
+  assert.deepEqual(config.systemAudio, { mode: 'disabled' });
+  assert.deepEqual(config.screen.cursor, {
     mode: 'separate',
-    captureClicks: true,
+    captureClicks: false,
     captureShortcuts: false,
     captureShape: false,
   });
-  assert.equal(config.recording.outputRoot, 'recordings');
-  assert.equal(config.excludedProcessId, 4242);
+  assert.equal(config.output, 'studio');
+  assert.equal(config.outputDir, undefined);
 });
 
 test('supports explicit source selection and disabling optional devices', () => {
@@ -47,7 +47,7 @@ test('supports explicit source selection and disabling optional devices', () => 
     },
     environment,
   );
-  assert.equal(config.screen.sourceId, 'window:1');
+  assert.equal(config.screen.selection.sourceId, 'window:1');
 });
 
 test('normalizes an Electron Windows window id to the Rust WGC source id', () => {
@@ -59,7 +59,7 @@ test('normalizes an Electron Windows window id to the Rust WGC source id', () =>
     },
     environment,
   );
-  assert.equal(config.screen.sourceId, 'wgc:window:7b');
+  assert.equal(config.screen.selection.sourceId, 'wgc:window:7b');
 });
 
 test('normalizes an Electron macOS window id to the ScreenCaptureKit source id', () => {
@@ -71,15 +71,15 @@ test('normalizes an Electron macOS window id to the ScreenCaptureKit source id',
     },
     { ...environment, platform: 'darwin' },
   );
-  assert.equal(config.screen.sourceId, 'sck:window:123');
+  assert.equal(config.screen.selection.sourceId, 'sck:window:123');
 });
 
-test('rejects missing explicit sources and invalid queue capacity', () => {
+test('rejects missing explicit sources and invalid frame rate', () => {
   assert.throws(
     () => buildDefaultCaptureConfig(catalog, { screenId: 'missing' }, environment),
     /Source display introuvable/,
   );
-  assert.throws(() => buildDefaultCaptureConfig(catalog, { queueCapacity: 0 }, environment), /queueCapacity/);
+  assert.throws(() => buildDefaultCaptureConfig(catalog, { targetFps: 0 }, environment), /targetFps/);
 });
 
 test('builds a Linux monitor Portal selection without a Chromium source id', () => {
@@ -98,12 +98,12 @@ test('builds a Linux monitor Portal selection without a Chromium source id', () 
     {},
     { ...environment, platform: 'linux' },
   );
-  assert.deepEqual(config.screen, {
+  assert.deepEqual(config.screen.selection, {
     mode: 'portal',
     kind: 'monitor',
     restoreToken: null,
   });
-  assert.deepEqual(config.cursor, {
+  assert.deepEqual(config.screen.cursor, {
     mode: 'separate',
     captureClicks: false,
     captureShortcuts: false,
@@ -119,25 +119,27 @@ test('maps Linux system audio to the native default output only when requested',
   };
 
   assert.deepEqual(buildDefaultCaptureConfig(linuxCatalog, { systemAudio: true }, linux).systemAudio, {
-    mode: 'default-output',
+    mode: 'default',
   });
-  assert.equal(buildDefaultCaptureConfig(linuxCatalog, { systemAudio: false }, linux).systemAudio, null);
+  assert.deepEqual(buildDefaultCaptureConfig(linuxCatalog, { systemAudio: false }, linux).systemAudio, {
+    mode: 'disabled',
+  });
 
   for (const platform of ['win32', 'darwin']) {
-    assert.equal(
+    assert.deepEqual(
       buildDefaultCaptureConfig(catalog, { systemAudio: true }, { ...environment, platform }).systemAudio,
-      null,
+      { mode: 'default' },
     );
   }
 });
 
-test('keeps mouse clicks on Windows and macOS when interaction recording is off', () => {
+test('disables interaction capture consistently on Windows and macOS', () => {
   for (const platform of ['win32', 'darwin']) {
     const config = buildDefaultCaptureConfig(catalog, { recordInteractions: false }, { ...environment, platform });
 
-    assert.deepEqual(config.cursor, {
+    assert.deepEqual(config.screen.cursor, {
       mode: 'separate',
-      captureClicks: true,
+      captureClicks: false,
       captureShortcuts: false,
       captureShape: false,
     });
@@ -158,7 +160,7 @@ test('enables clicks and shortcuts on Linux only when interaction recording is o
   };
 
   const disabled = buildDefaultCaptureConfig(linuxCatalog, { recordInteractions: false }, linux);
-  assert.deepEqual(disabled.cursor, {
+  assert.deepEqual(disabled.screen.cursor, {
     mode: 'separate',
     captureClicks: false,
     captureShortcuts: false,
@@ -166,7 +168,7 @@ test('enables clicks and shortcuts on Linux only when interaction recording is o
   });
 
   const enabled = buildDefaultCaptureConfig(linuxCatalog, { recordInteractions: true }, linux);
-  assert.deepEqual(enabled.cursor, {
+  assert.deepEqual(enabled.screen.cursor, {
     mode: 'separate',
     captureClicks: true,
     captureShortcuts: true,
@@ -174,7 +176,7 @@ test('enables clicks and shortcuts on Linux only when interaction recording is o
   });
 });
 
-test('keeps a region for Linux Portal monitors and rejects it for windows', () => {
+test('normalizes regions relative to Linux Portal monitor and window sources', () => {
   const portalCatalog = {
     capabilities: { portalSelection: true },
     sources: [
@@ -195,20 +197,22 @@ test('keeps a region for Linux Portal monitors and rejects it for windows', () =
   const linux = { ...environment, platform: 'linux' };
   const region = { x: 0.1, y: 0.2, width: 0.5, height: 0.4 };
   const monitor = buildDefaultCaptureConfig(portalCatalog, { screenId: 'portal:monitor', region }, linux);
-  assert.deepEqual(monitor.screen, {
+  assert.deepEqual(monitor.screen.selection, {
     mode: 'portal',
     kind: 'monitor',
     restoreToken: null,
   });
-  assert.deepEqual(monitor.region, region);
+  assert.deepEqual(monitor.screen.region, region);
 
   assert.equal(
-    buildDefaultCaptureConfig(portalCatalog, { screenKind: 'window', screenId: 'portal:window' }, linux).screen.kind,
+    buildDefaultCaptureConfig(portalCatalog, { screenKind: 'window', screenId: 'portal:window' }, linux).screen
+      .selection.kind,
     'window',
   );
-  assert.throws(
-    () => buildDefaultCaptureConfig(portalCatalog, { screenKind: 'window', screenId: 'portal:window', region }, linux),
-    /uniquement pour un écran/,
+  assert.deepEqual(
+    buildDefaultCaptureConfig(portalCatalog, { screenKind: 'window', screenId: 'portal:window', region }, linux).screen
+      .region,
+    region,
   );
 });
 
@@ -228,8 +232,8 @@ test('keeps Linux Portal intents when a second discovery is empty', () => {
     ['window', 'portal:window', 'window'],
   ]) {
     const options = { screenId, ...(screenKind ? { screenKind } : {}) };
-    assert.equal(buildDefaultCaptureConfig(firstCatalog, options, linux).screen.kind, expectedKind);
-    assert.deepEqual(buildDefaultCaptureConfig(emptySecondCatalog, options, linux).screen, {
+    assert.equal(buildDefaultCaptureConfig(firstCatalog, options, linux).screen.selection.kind, expectedKind);
+    assert.deepEqual(buildDefaultCaptureConfig(emptySecondCatalog, options, linux).screen.selection, {
       mode: 'portal',
       kind: expectedKind,
       restoreToken: null,

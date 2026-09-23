@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 
-UNLISTED_FILES = frozenset({"inventory.json", "registry.bin", "run-probe", "run-probe.cmd"})
+UNLISTED_FILES = frozenset({"inventory.json", "registry.bin", "run-engine", "run-engine.cmd"})
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
 

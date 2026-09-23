@@ -6,6 +6,7 @@ use beam_media_session::{AudioSelection, MediaSession, SessionConfig};
 fn cloned_timeline_handle_follows_the_session_gate() {
     let temporary = tempfile::tempdir().expect("tempdir");
     let mut session = MediaSession::prepare(SessionConfig {
+        screen: None,
         output_dir: temporary.path().join("session"),
         camera: beam_media_session::CameraSelection::Disabled,
         microphone: AudioSelection::Disabled,

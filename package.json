@@ -26,7 +26,7 @@
   "scripts": {
     "test": "node --max-old-space-size=512 --test --test-concurrency=1 test/*.test.cjs",
     "test:coverage": "vitest run --coverage",
-    "rust-test": "cargo nextest run -p capture --all-features",
+    "rust-test": "cargo nextest run -p beam-media-engine -p beam-media-session -p beam-screen",
     "rust-test:coverage": "node scripts/ci/run_rust_coverage.cjs",
     "typecheck": "tsc -p tsconfig.typecheck.json --noEmit --pretty false",
     "typecheck:vue": "vue-tsc -b --pretty false",
@@ -74,6 +74,7 @@
     "jsdom": "^26.1.0",
     "oxfmt": "^0.64.0",
     "oxlint": "^1.79.0",
+    "tar": "7.5.20",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
     "vite": "^8.1.1",
     "vue-tsc": "^3.3.9"
@@ -100,10 +101,10 @@
       "icon": "public/brand/BeamIcon.ico",
       "extraResources": [
         {
-          "from": "build/native/${os}/${arch}",
-          "to": "capture-engine",
+          "from": "build/native/${os}/${arch}/media-runtime",
+          "to": "media-runtime",
           "filter": [
-            "capture-engine-${version}.exe"
+            "**/*"
           ]
         }
       ]
@@ -120,13 +121,20 @@
       "icon": "public/brand/BeamIcon.icns",
       "extraResources": [
         {
-          "from": "build/native/${os}/${arch}",
-          "to": "capture-engine",
+          "from": "build/native/${os}/${arch}/media-runtime",
+          "to": "media-runtime",
           "filter": [
-            "capture-engine-${version}"
+            "**/*"
           ]
         }
-      ]
+      ],
+      "minimumSystemVersion": "14.2",
+      "extendInfo": {
+        "NSCameraUsageDescription": "Beam records the camera you select.",
+        "NSMicrophoneUsageDescription": "Beam records the microphone you select.",
+        "NSAudioCaptureUsageDescription": "Beam records system audio when enabled.",
+        "NSScreenCaptureUsageDescription": "Beam records the screen or window you select."
+      }
     },
     "linux": {
       "target": [
@@ -141,16 +149,16 @@
       "extraResources": [
         {
           "from": "build/native/${os}/${arch}",
-          "to": "capture-engine",
-          "filter": [
-            "capture-engine-${version}"
-          ]
-        },
-        {
-          "from": "build/native/${os}/${arch}",
           "to": "input-helper",
           "filter": [
             "beam-input-helper-${version}"
+          ]
+        },
+        {
+          "from": "build/native/${os}/${arch}/media-runtime",
+          "to": "media-runtime",
+          "filter": [
+            "**/*"
           ]
         }
       ]

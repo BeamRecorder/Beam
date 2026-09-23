@@ -298,6 +298,7 @@ fn run_reader(
     callback_state: &ReaderState,
 ) -> Result<(), CameraError> {
     let mut mapper: Option<NativeTimestampMapper> = None;
+    let mut gate_epoch = 0;
     let mut sequence = 0_u64;
     let mut last_pts = 0_u64;
     let mut last_frame_at = Instant::now();
@@ -371,12 +372,28 @@ fn run_reader(
         };
         last_frame_at = Instant::now();
         let Some(session_now) = gate.session_ns(clock.now_ns()) else {
+            let data = copy_sample(&sample, byte_limit)?;
+            latest.publish(VideoFrame {
+                captured_ns: gate.elapsed_ns(clock.now_ns()).unwrap_or(0),
+                width: format.width,
+                height: format.height,
+                data: CameraFrame {
+                    format: format_with_buffer_stride(format, data.len()),
+                    native_timestamp_ns: None,
+                    sequence,
+                    data,
+                },
+            });
             continue;
         };
         sequence = sequence.saturating_add(1);
         let native_ns = u64::try_from(timestamp_100ns)
             .ok()
             .and_then(|value| value.checked_mul(100));
+        if gate.epoch() != gate_epoch {
+            mapper = None;
+            gate_epoch = gate.epoch();
+        }
         let mapped = if let Some(native_ns) = native_ns {
             if mapper.is_none() {
                 mapper = Some(

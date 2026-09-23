@@ -7,6 +7,7 @@ fn stopping_before_start_keeps_the_session_incomplete_and_writes_a_manifest() {
     let temporary = tempfile::tempdir().expect("tempdir");
     let output = temporary.path().join("session");
     let session = MediaSession::prepare(SessionConfig {
+        screen: None,
         output_dir: output.clone(),
         camera: beam_media_session::CameraSelection::Disabled,
         microphone: AudioSelection::Disabled,

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIdentifier</key>
+    <string>app.beam.media-engine</string>
+    <key>CFBundleName</key>
+    <string>Beam Media Engine</string>
+    <key>NSCameraUsageDescription</key>
+    <string>Beam records the camera track selected for your recording.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Beam records the microphone track selected for your recording.</string>
+    <key>NSAudioCaptureUsageDescription</key>
+    <string>Beam records the system audio track selected for your recording.</string>
+</dict>
+</plist>

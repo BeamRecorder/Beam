@@ -1,5 +1,7 @@
 #[derive(Debug, thiserror::Error)]
 pub enum SessionError {
+    #[error("screen capture failed: {0}")]
+    Screen(#[from] beam_screen::CaptureError),
     #[error("invalid session configuration: {0}")]
     InvalidConfiguration(String),
     #[error("session storage failed: {0}")]

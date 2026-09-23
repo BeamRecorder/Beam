@@ -14,9 +14,9 @@ const linuxSystemInformation = (diagnostics: LinuxCaptureDiagnostics, inputAcces
     diagnostics.portal.metadataCursor ? 'cursor metadata' : null,
   ].filter(Boolean);
   const encoder = [
-    diagnostics.ffmpeg.encoder,
-    diagnostics.ffmpeg.codec,
-    diagnostics.ffmpeg.hardware == null ? null : diagnostics.ffmpeg.hardware ? 'hardware' : 'software',
+    diagnostics.gstreamer.encoder,
+    diagnostics.gstreamer.codec,
+    diagnostics.gstreamer.hardware == null ? null : diagnostics.gstreamer.hardware ? 'hardware' : 'software',
   ].filter(Boolean);
   const issues = unavailableLinuxRequirements(diagnostics);
   const guidance = linuxRequirementGuidance(diagnostics);
@@ -36,7 +36,7 @@ const linuxSystemInformation = (diagnostics: LinuxCaptureDiagnostics, inputAcces
     `Capture Backend: ${diagnostics.backend || 'Unknown'}`,
     `XDG ScreenCast Portal: ${yesNo(diagnostics.portal.available)}${portalFeatures.length ? ` (${portalFeatures.join(', ')})` : ''}`,
     `PipeWire: ${yesNo(diagnostics.pipewire.available)}`,
-    `FFmpeg: ${yesNo(diagnostics.ffmpeg.available)}${encoder.length ? ` (${encoder.join(', ')})` : ''}`,
+    `GStreamer: ${yesNo(diagnostics.gstreamer.available)}${encoder.length ? ` (${encoder.join(', ')})` : ''}`,
     `Recording Available: ${yesNo(diagnostics.recordingAvailable)}`,
     `Interaction Access: ${inputAccess?.state || 'Unknown'}${inputAccess?.unavailableReason ? ` (${inputAccess.unavailableReason})` : inputAccess ? ` (clicks=${yesNo(inputAccess.clicks)}, shortcuts=${yesNo(inputAccess.shortcuts)})` : ''}`,
     ...(inputAccess?.mouseDevices !== undefined ? [`Mouse Devices: ${inputAccess.mouseDevices}`] : []),

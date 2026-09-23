@@ -10,7 +10,7 @@ export const latestCaptureCatalog = (): CaptureCatalog | null => latestCatalog;
 
 export const unavailableLinuxRequirements = (diagnostics?: LinuxCaptureDiagnostics): string[] => {
   if (!diagnostics || diagnostics.recordingAvailable) return [];
-  return [diagnostics.portal, diagnostics.pipewire, diagnostics.ffmpeg]
+  return [diagnostics.portal, diagnostics.pipewire, diagnostics.gstreamer]
     .filter((requirement) => !requirement.available)
     .map((requirement) => requirement.detail || requirement.errorCode || 'Unknown Linux capture requirement failure');
 };

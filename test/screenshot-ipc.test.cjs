@@ -80,16 +80,21 @@ function makeFixture(options = {}) {
   const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
   const captureEngine = {
     request: async (command, payload = {}) => {
-      if (typeof command !== 'string') throw new TypeError('CaptureEngine.request requires a command string.');
+      if (typeof command !== 'string') throw new TypeError('MediaEngine.request requires a command string.');
       const request = { command, payload };
       calls.nativeRequests.push(request);
-      if (command === 'discover') {
+      if (command === 'sources') {
         if (options.discover) return options.discover(request);
-        return catalog;
+        return { screens: { Ok: catalog.sources } };
       }
+      if (command === 'capabilities') return catalog.capabilities;
+      if (command === 'permissions') return {};
       if (command === 'screenshot') {
-        if (options.onScreenshot) return options.onScreenshot(request);
-        return { width: 1280, height: 720 };
+        const dimensions = options.onScreenshot ? await options.onScreenshot(request) : { width: 1280, height: 720 };
+        const output = path.join(root, 'native', payload.config.projectId, 'session', 'screenshot.png');
+        fs.mkdirSync(path.dirname(output), { recursive: true });
+        fs.writeFileSync(output, pngBytes);
+        return { ...dimensions, path: output };
       }
       throw new Error('Unexpected native request: ' + command);
     },
@@ -233,15 +238,15 @@ test('captures through the native screenshot command without cursor or audio tra
 
     assert.deepEqual(
       fixture.calls.nativeRequests.map((request) => request.command),
-      ['discover', 'screenshot'],
+      ['sources', 'capabilities', 'permissions', 'screenshot'],
     );
     assert.ok(fixture.calls.nativeRequests.every((request) => typeof request.command === 'string'));
-    const screenshotRequest = fixture.calls.nativeRequests[1];
+    const screenshotRequest = fixture.calls.nativeRequests[3];
     assert.deepEqual(screenshotRequest.payload, {
       config: {
         screen: { mode: 'source', sourceId: 'display-1' },
         region: { x: 0.1, y: 0.2, width: 0.4, height: 0.5 },
-        output: path.join(fixture.screenshotRoot, result.id, 'source.png'),
+        projectId: screenshotRequest.payload.config.projectId,
         excludedWindowHandles: ['abc123'],
       },
     });
@@ -305,13 +310,13 @@ test('serializes capture requests and releases the lock after completion', async
     const first = fixture.invoke('screenshot:capture', { screenKind: 'display', screenId: 'display-1' });
     await new Promise((resolve) => setImmediate(resolve));
     assert.equal(fixture.registration.isBusy(), true);
-    assert.equal(fixture.calls.nativeRequests.length, 2);
+    assert.equal(fixture.calls.nativeRequests.length, 4);
 
     await assert.rejects(
       fixture.invoke('screenshot:capture', { screenKind: 'display', screenId: 'display-1' }),
       /another capture is already active/i,
     );
-    assert.equal(fixture.calls.nativeRequests.length, 2);
+    assert.equal(fixture.calls.nativeRequests.length, 4);
 
     releaseScreenshot({ width: 1280, height: 720 });
     await first;
@@ -360,7 +365,7 @@ for (const code of ['portal-cancelled', 'cancelled']) {
 
       const firstCapture = fixture.calls.nativeRequests.find((request) => request.command === 'screenshot');
       assert.ok(firstCapture);
-      assert.equal(fs.existsSync(path.dirname(firstCapture.payload.config.output)), false);
+      assert.equal(fixture.store.list().length > 0, false);
       assert.equal(fixture.store.list().length, 0);
       assert.equal(fixture.registration.isBusy(), false);
 
@@ -371,7 +376,16 @@ for (const code of ['portal-cancelled', 'cancelled']) {
       assert.equal(fixture.registration.isBusy(), false);
       assert.deepEqual(
         fixture.calls.nativeRequests.map((request) => request.command),
-        ['discover', 'screenshot', 'discover', 'screenshot'],
+        [
+          'sources',
+          'capabilities',
+          'permissions',
+          'screenshot',
+          'sources',
+          'capabilities',
+          'permissions',
+          'screenshot',
+        ],
       );
     } finally {
       fixture.cleanup();
@@ -399,7 +413,7 @@ test('does not treat cancellation-like screenshot error text as a canceled captu
 
     const failedCapture = fixture.calls.nativeRequests.find((request) => request.command === 'screenshot');
     assert.ok(failedCapture);
-    assert.equal(fs.existsSync(path.dirname(failedCapture.payload.config.output)), false);
+    assert.equal(fixture.store.list().length > 0, false);
     assert.equal(fixture.store.list().length, 0);
     assert.equal(fixture.registration.isBusy(), false);
 
@@ -425,7 +439,7 @@ test('removes a captured screenshot and releases the lock when preset lookup fai
     );
     assert.deepEqual(
       fixture.calls.nativeRequests.map((request) => request.command),
-      ['discover', 'screenshot'],
+      ['sources', 'capabilities', 'permissions', 'screenshot'],
     );
     assert.equal(fixture.store.list().length, 0);
     assert.equal(fixture.registration.isBusy(), false);

@@ -81,6 +81,7 @@ impl CameraSource for SilentCamera {
 
 #[derive(Default)]
 struct FakeSources {
+    screen_mode: &'static str,
     discovery_fails: bool,
     catalog_has_no_defaults: bool,
     open_fails: bool,
@@ -104,6 +105,22 @@ fn output() -> AudioDevice {
 }
 
 impl SourceFactory for FakeSources {
+    fn open_screen(
+        &self,
+        _: beam_screen::ScreenRequest,
+        _: SessionClock,
+        _: Arc<StartGate>,
+    ) -> Result<Box<dyn beam_screen::ScreenSource>, beam_screen::CaptureError> {
+        self.calls.lock().expect("calls").push("screen-1".into());
+        match self.screen_mode {
+            "cancel" => Err(beam_screen::CaptureError::Cancelled),
+            "fail" => Err(beam_screen::CaptureError::SourceNotFound(
+                "screen lost".into(),
+            )),
+            _ => Ok(Box::new(screen_cases::SilentScreen)),
+        }
+    }
+
     fn list_cameras(&self) -> Result<Vec<CameraDevice>, CameraError> {
         if self.discovery_fails {
             return Err(CameraError::DeviceUnavailable(
@@ -188,6 +205,7 @@ impl SourceFactory for FakeSources {
 
 fn all_sources(output_dir: std::path::PathBuf) -> SessionConfig {
     SessionConfig {
+        screen: None,
         output_dir,
         camera: CameraSelection::FirstAvailable {
             width: 16,
@@ -309,6 +327,7 @@ fn explicit_device_selection_does_not_require_device_enumeration() {
     };
     let session = MediaSession::prepare_with_factory(
         SessionConfig {
+            screen: None,
             output_dir: temporary.path().join("session"),
             camera: CameraSelection::Device(CameraRequest {
                 device_id: "camera-1".into(),
@@ -407,3 +426,6 @@ fn writer_open_failures_leave_all_three_tracks_failed_without_fake_media() {
     }
     session.stop().expect("stop");
 }
+
+#[path = "prepare_screen.rs"]
+mod screen_cases;

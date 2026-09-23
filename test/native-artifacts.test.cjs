@@ -31,7 +31,7 @@ function stage(
   arch,
   { engine = `${platform}-${arch}-engine`, helper = `${platform}-${arch}-helper` } = {},
 ) {
-  const engineSource = writeSource(root, `${platform}-${arch}-capture-engine`, engine);
+  const engineSource = writeSource(root, `${platform}-${arch}-beam-media-engine`, engine);
   const helperSource = platform === 'linux' ? writeSource(root, `${platform}-${arch}-input-helper`, helper) : null;
   return stageNativeFiles({
     root,
@@ -51,10 +51,13 @@ test('stages versioned Windows x64 and ARM64 engines in architecture-specific di
 
     assert.equal(x64.length, 1);
     assert.equal(arm64.length, 1);
-    assert.equal(x64[0].destination, path.join(root, 'build', 'native', 'win', 'x64', `capture-engine-${VERSION}.exe`));
+    assert.equal(
+      x64[0].destination,
+      path.join(root, 'build', 'native', 'win', 'x64', `beam-media-engine-${VERSION}.exe`),
+    );
     assert.equal(
       arm64[0].destination,
-      path.join(root, 'build', 'native', 'win', 'arm64', `capture-engine-${VERSION}.exe`),
+      path.join(root, 'build', 'native', 'win', 'arm64', `beam-media-engine-${VERSION}.exe`),
     );
     assert.notEqual(x64[0].destination, arm64[0].destination);
     assert.equal(fs.readFileSync(x64[0].destination, 'utf8'), 'win32-x64-engine');
@@ -72,7 +75,7 @@ test('stages the Linux engine and helper with executable permissions and a versi
     const files = stage(root, 'linux', 'x64');
     assert.deepEqual(
       files.map(({ destination }) => path.basename(destination)),
-      [`capture-engine-${VERSION}`, `beam-input-helper-${VERSION}`],
+      [`beam-media-engine-${VERSION}`, `beam-input-helper-${VERSION}`],
     );
     assert.deepEqual(
       files.map(({ destination }) => path.dirname(destination)),
@@ -89,8 +92,8 @@ test('stages the Linux engine and helper with executable permissions and a versi
 test('builtFile includes a cross-compilation target directory', () => {
   const root = path.join('project', 'beam');
   assert.equal(
-    builtFile(root, 'capture-engine', 'win32', 'release', 'aarch64-pc-windows-msvc'),
-    path.join(root, 'target', 'aarch64-pc-windows-msvc', 'release', 'capture-engine.exe'),
+    builtFile(root, 'beam-media-engine', 'win32', 'release', 'aarch64-pc-windows-msvc'),
+    path.join(root, 'target', 'aarch64-pc-windows-msvc', 'release', 'beam-media-engine.exe'),
   );
   assert.equal(
     builtFile(root, 'beam-input-helper', 'linux', 'release', null),
@@ -111,17 +114,17 @@ test('collects staged engines and helper under standalone versioned asset names'
     const names = collected.map((file) => path.basename(file)).sort();
     assert.deepEqual(names, [
       `beam-input-helper-${VERSION}-linux-x64`,
-      `capture-engine-${VERSION}-linux-x64`,
-      `capture-engine-${VERSION}-macos-arm64`,
-      `capture-engine-${VERSION}-windows-arm64.exe`,
-      `capture-engine-${VERSION}-windows-x64.exe`,
+      `beam-media-engine-${VERSION}-linux-x64`,
+      `beam-media-engine-${VERSION}-macos-arm64`,
+      `beam-media-engine-${VERSION}-windows-arm64.exe`,
+      `beam-media-engine-${VERSION}-windows-x64.exe`,
     ]);
     for (const file of collected) assert.equal(fs.existsSync(file), true);
 
     const linuxAssets = collected.filter((file) => file.includes('-linux-'));
     for (const file of linuxAssets) assert.equal(fs.statSync(file).mode & 0o111, 0o111);
     assert.equal(
-      fs.readFileSync(path.join(outputDirectory, `capture-engine-${VERSION}-windows-arm64.exe`), 'utf8'),
+      fs.readFileSync(path.join(outputDirectory, `beam-media-engine-${VERSION}-windows-arm64.exe`), 'utf8'),
       'win32-arm64-engine',
     );
     assert.equal(

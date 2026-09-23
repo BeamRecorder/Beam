@@ -5,10 +5,11 @@ const path = require('node:path');
 const yaml = require('js-yaml');
 const {
   NATIVE_TARGETS,
-  captureEngineAssetName,
+  mediaRuntimeAssetName,
+  mediaEngineAssetName,
   inputHelperAssetName,
   nativeManifestAssetName,
-} = require('../../electron/capture/capture-engine-path.cjs');
+} = require('../../electron/capture/media-engine-path.cjs');
 
 const METADATA_CONTRACTS = Object.freeze({
   'latest.yml': ['.exe'],
@@ -32,7 +33,13 @@ function expectedEntries(version) {
   const entries = [];
   for (const [platform, target] of Object.entries(NATIVE_TARGETS)) {
     for (const arch of target.arches) {
-      entries.push({ kind: 'capture-engine', platform, arch, asset: captureEngineAssetName(version, platform, arch) });
+      entries.push({
+        kind: 'beam-media-runtime',
+        platform,
+        arch,
+        asset: mediaRuntimeAssetName(version, platform, arch),
+      });
+      entries.push({ kind: 'beam-media-engine', platform, arch, asset: mediaEngineAssetName(version, platform, arch) });
       if (platform === 'linux') {
         entries.push({
           kind: 'beam-input-helper',
@@ -106,7 +113,7 @@ function validateMetadata(directory, filename, version, requiredExtensions = MET
       throw new Error(`${filename} contains an invalid file entry`);
     }
     const asset = safeAssetName(entry.url, filename);
-    if (/^(?:capture-engine|beam-input-helper)-/.test(asset)) {
+    if (/^(?:beam-media-engine|beam-input-helper)-/.test(asset)) {
       throw new Error(`${filename} must not reference standalone native assets`);
     }
     const local = path.join(directory, asset);

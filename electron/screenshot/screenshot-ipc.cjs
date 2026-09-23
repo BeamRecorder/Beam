@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { randomUUID } = require('crypto');
+const { nativeCatalog } = require('../capture/native-catalog.cjs');
 const { buildDefaultCaptureConfig } = require('../capture/capture-config.cjs');
 const { isCaptureCancellation } = require('../capture/capture-cancellation.cjs');
 const { readClipboardPng } = require('../clipboard/image-clipboard.cjs');
@@ -36,7 +37,7 @@ function registerScreenshotIpc({
       const portal =
         platform === 'linux' &&
         options.screenId === (options.screenKind === 'window' ? 'portal:window' : 'portal:monitor');
-      const catalog = portal ? null : await captureEngine.request('discover');
+      const catalog = portal ? null : await nativeCatalog(captureEngine);
       const config = buildDefaultCaptureConfig(
         catalog,
         { ...options, cursor: false, systemAudio: false },
@@ -46,12 +47,23 @@ function registerScreenshotIpc({
       pending = store.create();
       const dimensions = await captureEngine.request('screenshot', {
         config: {
-          screen: config.screen,
-          region: config.region,
-          output: pending.path,
-          excludedWindowHandles: config.excludedWindowHandles ?? [],
+          projectId: config.projectId,
+          screen: config.screen.selection,
+          region: config.screen.region,
+          excludedWindowHandles: config.screen.excludedWindowHandles ?? [],
         },
       });
+      try {
+        fs.renameSync(dimensions.path, pending.path);
+      } catch (error) {
+        if (error.code !== 'EXDEV') throw error;
+        fs.copyFileSync(dimensions.path, pending.path, fs.constants.COPYFILE_EXCL);
+        fs.unlinkSync(dimensions.path);
+      }
+      fs.rmdirSync(path.dirname(dimensions.path));
+      try {
+        fs.rmdirSync(path.dirname(path.dirname(dimensions.path)));
+      } catch {}
       const document = presetStore.read();
       const preset = document.presets.find((item) => item.id === document.activePresetId);
       return store.complete(pending.id, dimensions, preset.settings);

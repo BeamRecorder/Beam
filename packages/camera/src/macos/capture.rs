@@ -324,6 +324,7 @@ fn run_capture(
     state: &CallbackState,
 ) -> Result<(), CameraError> {
     let mut mapper: Option<NativeTimestampMapper> = None;
+    let mut gate_epoch = 0;
     let mut last_pts = 0_u64;
     let mut last_sample_at = Instant::now();
     let _ = event_tx.try_send(CameraEvent::Started);
@@ -356,8 +357,23 @@ fn run_capture(
             }
         };
         let Some(session_now) = gate.session_ns(clock.now_ns()) else {
+            latest.publish(VideoFrame {
+                captured_ns: gate.elapsed_ns(clock.now_ns()).unwrap_or(0),
+                width: sample.format.width,
+                height: sample.format.height,
+                data: CameraFrame {
+                    format: sample.format,
+                    native_timestamp_ns: sample.native_timestamp_ns,
+                    sequence: sample.sequence,
+                    data: Arc::from(sample.bytes),
+                },
+            });
             continue;
         };
+        if gate.epoch() != gate_epoch {
+            mapper = None;
+            gate_epoch = gate.epoch();
+        }
         let mapped = if let Some(native_ns) = sample.native_timestamp_ns {
             if mapper.is_none() {
                 mapper = Some(

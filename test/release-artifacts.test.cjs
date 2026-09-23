@@ -121,13 +121,13 @@ test('rejects an incorrect SHA-512 in update metadata', () => {
   });
 });
 
-test('rejects standalone capture-engine and helper assets from every latest manifest', () => {
+test('rejects standalone beam-media-engine and helper assets from every latest manifest', () => {
   for (const [name, requiredExtensions] of Object.entries(METADATA_CONTRACTS)) {
     withTemporaryDirectory((directory) => {
       const requiredAssets = requiredExtensions.map((extension) => `Beam-${VERSION}${extension}`);
       writeMetadata(directory, name, VERSION, [
         ...requiredAssets,
-        `capture-engine-${VERSION}-windows-x64.exe`,
+        `beam-media-engine-${VERSION}-windows-x64.exe`,
         `beam-input-helper-${VERSION}-linux-x64`,
       ]);
 
@@ -153,10 +153,16 @@ test('generates and validates the complete native manifest for every supported e
     );
     assert.deepEqual(entries.map(({ kind, platform, arch }) => `${kind}:${platform}/${arch}`).sort(), [
       'beam-input-helper:linux/x64',
-      'capture-engine:darwin/arm64',
-      'capture-engine:linux/x64',
-      'capture-engine:win32/arm64',
-      'capture-engine:win32/x64',
+      'beam-media-engine:darwin/arm64',
+      'beam-media-engine:darwin/x64',
+      'beam-media-engine:linux/x64',
+      'beam-media-engine:win32/arm64',
+      'beam-media-engine:win32/x64',
+      'beam-media-runtime:darwin/arm64',
+      'beam-media-runtime:darwin/x64',
+      'beam-media-runtime:linux/x64',
+      'beam-media-runtime:win32/arm64',
+      'beam-media-runtime:win32/x64',
     ]);
   });
 });

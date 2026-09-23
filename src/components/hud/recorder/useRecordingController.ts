@@ -1,478 +1,255 @@
 import { computed, ref } from 'vue';
 import { capture } from '../../../api/capture';
-import { CameraOverlayRecorder, isCameraUnavailableError } from '../../../api/camera-recorder';
-import { BrowserMicrophoneRecorder } from '../../../api/microphone-recorder';
-import { BrowserSystemAudioRecorder } from '../../../api/system-audio-recorder';
-import { useDeviceToggles } from './useDeviceToggles';
-import { useRecordingHealth } from './useRecordingHealth';
-import { useNativeSystemAudioLevel } from './useNativeSystemAudioLevel';
-import { recordingCameraMetadata } from './recording-camera-metadata';
 import { CaptureSelectionCancelled, prepareNativeRecording } from './recording-native-preparation';
 import { formatRecordingTime, isRecordingActivePhase } from './recording-types';
-import type { RecordingConfiguration, RecordingPhase, RecordingSessionResult } from './recording-types';
-import type { RecordingStartFailure, RecordingStartStage, StartupSidecarState } from './recording-types';
+import type {
+  RecordingConfiguration,
+  RecordingPhase,
+  RecordingSessionResult,
+  RecordingStartFailure,
+} from './recording-types';
 
-type Recorder = CameraOverlayRecorder | BrowserMicrophoneRecorder | BrowserSystemAudioRecorder;
-type SidecarKind = 'camera' | 'microphone' | 'systemAudio';
-type SidecarStates = Record<SidecarKind, StartupSidecarState>;
-const [inactiveCamera, inactiveMicrophone] = ['off', 'no-audio'];
 export function useRecordingController(
   onComplete: (session: RecordingSessionResult) => void,
   onStartupFailure?: (failure: RecordingStartFailure) => void,
   onStartupCancelled?: () => void,
 ) {
-  const nativeSystemAudio = capture.platform === 'linux';
   const phase = ref<RecordingPhase>('idle');
   const secondsRemaining = ref(0);
   const elapsedTenths = ref(0);
   const cameraEnabled = ref(false);
   const microphoneEnabled = ref(false);
   const systemAudioEnabled = ref(false);
-  const {
-    level: systemAudioLevel,
-    refresh: refreshSystemAudioLevel,
-    reset: resetSystemAudioLevel,
-  } = useNativeSystemAudioLevel(systemAudioEnabled, phase);
+  const systemAudioLevel = ref(0);
   const recorderHoverOnlyActive = ref(false);
   const error = ref('');
-  let configuration: RecordingConfiguration | null = null;
+  const recordingTime = computed(() => formatRecordingTime(elapsedTenths.value));
+  let generation = 0;
+  let preparing = false;
+  let pendingStart: Promise<void> | null = null;
+  let sessionId: string | null = null;
   let countdown: number | null = null;
   let timer: number | null = null;
-  let sessionId: string | null = null;
-  let projectId: string | null = null;
-  let camera: CameraOverlayRecorder | null = null;
-  let microphone: BrowserMicrophoneRecorder | null = null;
-  let systemAudio: BrowserSystemAudioRecorder | null = null;
-  let sessionTimelineStartedAt = 0;
-  let recordingGeneration = 0;
-  let pendingNativeStart: Promise<void> | null = null;
-  let prewarm: Promise<boolean> | null = null;
-  let preparedGeneration: number | null = null;
-  let nativeStarted = false;
-  let cancelling = false;
-  let nativeCleanupBlocked = false;
-  const sidecarStates = { camera: 'disabled', microphone: 'disabled', systemAudio: 'disabled' } as SidecarStates;
-  const recordingHealth = useRecordingHealth(phase, error, () => systemAudio, cancel, stop);
-  const deviceToggles = useDeviceToggles({
-    getConfiguration: () => configuration,
-    setConfigurationCameraId: (id) => {
-      if (configuration) configuration.cameraId = id;
-    },
-    setConfigurationMicrophoneId: (id) => {
-      if (configuration) configuration.microphoneId = id;
-    },
-    getSessionId: () => sessionId,
-    getSessionTimelineStartedAt: () => sessionTimelineStartedAt,
-    getCamera: () => camera,
-    setCamera: (recorder) => {
-      camera = recorder;
-    },
-    getMicrophone: () => microphone,
-    setMicrophone: (recorder) => {
-      microphone = recorder;
-    },
-    getSystemAudio: () => systemAudio,
-    setSystemAudio: (recorder) => {
-      systemAudio = recorder;
-    },
-    registerSystemAudioRecorder: recordingHealth.registerSystemAudioRecorder,
-    setCameraEnabled: (enabled) => {
-      cameraEnabled.value = enabled;
-    },
-    setMicrophoneEnabled: (enabled) => {
-      microphoneEnabled.value = enabled;
-    },
-    setSystemAudioEnabled: (enabled) => {
-      systemAudioEnabled.value = enabled;
-    },
-    canToggleSystemAudio: () => !nativeSystemAudio,
-    setError: (message) => {
-      error.value = message;
-    },
-    cameraMetadata: recordingCameraMetadata,
-  });
-  const isActive = computed(() => isRecordingActivePhase(phase.value));
-  const cleanupStaleNativeStart = async (session: { sessionId?: string | null }) => {
-    try {
-      await capture.discardRecording(session.sessionId ?? undefined);
-    } catch (reason) {
-      nativeCleanupBlocked = true;
-      const detail = reason instanceof Error ? reason.message : String(reason);
-      error.value = `The cancelled recording could not be cleaned up safely: ${detail}. Restart Beam before recording again.`;
-    }
-  };
-  const clearCountdown = () => {
+  let polling = false;
+  let pollingTicks = 0;
+  let cleanupBlocked = false;
+  const clearTimers = () => {
+    if (timer !== null) window.clearInterval(timer);
     if (countdown !== null) window.clearInterval(countdown);
+    timer = null;
     countdown = null;
   };
-  const clearTimer = () => {
-    if (timer !== null) window.clearInterval(timer);
-    timer = null;
-  };
-  const startTimer = () => {
-    timer = window.setInterval(() => {
-      elapsedTenths.value += 1;
-      if (elapsedTenths.value % 2 === 0) void refreshSystemAudioLevel();
-    }, 100);
-  };
-  const timelineNowNs = () =>
-    sessionId !== null
-      ? Math.max(0, Math.round((performance.now() - sessionTimelineStartedAt) * 1_000_000))
-      : undefined;
-  const stopRecorder = async (recorder: Recorder | null, endNs?: number) => {
-    await recorder?.stop(endNs).catch(() => undefined);
-  };
-  const stopRecorderStrict = async (recorder: Recorder | null, endNs?: number) => {
-    await recorder?.stop(endNs);
-  };
-  const prepareSources = async () => {
-    if (!configuration) return;
-    if (configuration.cameraId !== inactiveCamera) {
-      try {
-        camera = await CameraOverlayRecorder.request(configuration.cameraId);
-        const preparedCamera = camera;
-        preparedCamera.onFatal((reason) => {
-          if (camera !== preparedCamera) return;
-          camera = null;
-          cameraEnabled.value = false;
-          sidecarStates.camera = 'failed';
-          error.value = `Camera recording stopped: ${reason.message}`;
-        });
-        sidecarStates.camera = 'prepared';
-      } catch (reason) {
-        sidecarStates.camera = 'failed';
-        if (!isCameraUnavailableError(reason)) throw reason;
-        configuration.cameraId = inactiveCamera;
-        sidecarStates.camera = 'disabled';
-        error.value = 'Camera is unavailable. Recording will continue without camera.';
-      }
-    }
-    if (configuration.microphoneId !== inactiveMicrophone) {
-      try {
-        microphone = await BrowserMicrophoneRecorder.request(configuration.microphoneId);
-        sidecarStates.microphone = 'prepared';
-      } catch (reason) {
-        sidecarStates.microphone = 'failed';
-        throw reason;
-      }
-    }
-    if (configuration.systemAudio && !nativeSystemAudio) {
-      try {
-        systemAudio = await BrowserSystemAudioRecorder.request();
-        recordingHealth.registerSystemAudioRecorder(systemAudio);
-        sidecarStates.systemAudio = 'prepared';
-      } catch (reason) {
-        sidecarStates.systemAudio = 'failed';
-        throw reason;
-      }
-    }
-    cameraEnabled.value = Boolean(camera);
-    microphoneEnabled.value = Boolean(microphone);
-    systemAudioEnabled.value = Boolean(systemAudio) || (nativeSystemAudio && configuration.systemAudio);
-  };
-
-  const startSidecars = async () => {
-    if (!sessionId) return;
-    const { appearance, placement } = await recordingCameraMetadata();
-    const results = await Promise.allSettled([
-      camera?.start(sessionId, appearance, placement, sessionTimelineStartedAt),
-      microphone?.start(sessionId),
-      systemAudio?.start(sessionId),
-    ]);
-    const mark = (recorder: Recorder | null, kind: SidecarKind, result: PromiseSettledResult<void>) => {
-      if (!recorder) return;
-      sidecarStates[kind] = result.status === 'fulfilled' ? 'started' : 'failed';
-    };
-    mark(camera, 'camera', results[0]);
-    mark(microphone, 'microphone', results[1]);
-    mark(systemAudio, 'systemAudio', results[2]);
-    const failed = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
-    if (failed) throw failed.reason;
-  };
-
-  const prewarmNativeRecording = async (generation: number) => {
-    if (!configuration) return false;
-    await prepareNativeRecording(configuration);
-    if (nativeSystemAudio && configuration.systemAudio) sidecarStates.systemAudio = 'prepared';
-    if (generation !== recordingGeneration) {
-      await capture.cancelPreparedRecording().catch(() => undefined);
-      return false;
-    }
-    preparedGeneration = generation;
-    return true;
-  };
-
-  const startupFailure = (generation: number, stage: RecordingStartStage, reason: unknown): RecordingStartFailure => ({
-    stage,
-    message: reason instanceof Error ? reason.message : String(reason),
-    nativePrepared: preparedGeneration === generation,
-    nativeStarted,
-    camera: sidecarStates.camera,
-    microphone: sidecarStates.microphone,
-    systemAudio: sidecarStates.systemAudio,
-    ...(reason instanceof CaptureSelectionCancelled && { cancelled: true }),
-  });
-
-  const terminateStartup = async (generation: number, failure: RecordingStartFailure) => {
-    if (generation !== recordingGeneration) return;
-    const cleanupErrors: string[] = [];
-    const runCleanup = async (operation: () => Promise<unknown>) => {
-      try {
-        await operation();
-      } catch (reason) {
-        cleanupErrors.push(reason instanceof Error ? reason.message : String(reason));
-      }
-    };
-    const wasNativeStarted = nativeStarted;
-    const wasNativePrepared = preparedGeneration === generation;
-    const nativeSessionId = sessionId;
-    await runCleanup(() => stopRecorderStrict(camera));
-    await runCleanup(() => stopRecorderStrict(microphone));
-    await runCleanup(() => stopRecorderStrict(systemAudio));
-    if (wasNativeStarted || wasNativePrepared) {
-      const before = cleanupErrors.length;
-      await runCleanup(() => capture.discardRecording(nativeSessionId ?? undefined));
-      nativeCleanupBlocked ||= cleanupErrors.length > before;
-    }
-    preparedGeneration = null;
-    capture.setTeleprompterSession(null);
-    if (cleanupErrors.length > 0) failure.cleanupErrors = cleanupErrors;
-    error.value = failure.cancelled && cleanupErrors.length === 0 ? '' : failure.message;
-    await resetState(true);
-    if (nativeCleanupBlocked)
-      error.value = `${failure.message} Native cleanup is unresolved; restart Beam before recording again.`;
-    if (failure.cancelled && cleanupErrors.length === 0) onStartupCancelled?.();
-    else onStartupFailure?.(failure);
-  };
-
-  const performStartup = async (generation: number) => {
-    if (!configuration) return;
-    let stage: RecordingStartStage = 'prepare-native';
-    let ownsPreparedSession = false;
-    try {
-      if (preparedGeneration !== generation || generation !== recordingGeneration) return;
-      ownsPreparedSession = true;
-      stage = 'start-native';
-      await capture.setCountdown(null);
-      recorderHoverOnlyActive.value = configuration.recordingBarVisibility === 'hover-only';
-      await capture.prepareRecordingSurface();
-      const session = await capture.startPreparedRecording();
-      ownsPreparedSession = false;
-      sessionTimelineStartedAt = performance.now();
-      if (generation !== recordingGeneration) {
-        await cleanupStaleNativeStart(session);
-        return;
-      }
-      nativeStarted = true;
-      if (nativeSystemAudio && configuration.systemAudio) sidecarStates.systemAudio = 'started';
-      preparedGeneration = null;
-      if (!session.sessionId) throw new Error('The capture session did not provide an identifier.');
-      sessionId = session.sessionId;
-      projectId = session.projectId ?? null;
-      if (capture.platform !== 'linux' && configuration.region && configuration.regionOverlay)
-        capture.showScreenRegionOverlay({ ...configuration.regionOverlay, region: configuration.region });
-      if (projectId) capture.setTeleprompterSession({ projectId, sessionId });
-      stage = 'start-sidecars';
-      await startSidecars();
-      if (generation !== recordingGeneration) {
-        await Promise.all([stopRecorder(camera), stopRecorder(microphone), stopRecorder(systemAudio)]);
-        await cleanupStaleNativeStart(session);
-        return;
-      }
-      elapsedTenths.value = 0;
-      startTimer();
-      phase.value = 'recording';
-      // Avoid status polling while the single-threaded native prepare/start is running.
-      recordingHealth.start();
-    } catch (reason) {
-      if (generation !== recordingGeneration) {
-        // Release a stale prepared session once its single-threaded native start returns.
-        if (ownsPreparedSession) await capture.cancelPreparedRecording().catch(() => undefined);
-        return;
-      }
-      await terminateStartup(generation, startupFailure(generation, stage, reason));
-    }
-  };
-
-  const launchNativeStartup = (generation: number) => {
-    const operation = performStartup(generation).catch(() => undefined);
-    pendingNativeStart = operation;
-    void operation.finally(() => {
-      if (pendingNativeStart === operation) pendingNativeStart = null;
-    });
-    return operation;
-  };
-
-  const start = async (next: RecordingConfiguration) => {
-    if (nativeCleanupBlocked) {
-      error.value ||= 'Native recording cleanup is unresolved. Restart Beam before recording again.';
-      return;
-    }
-    if (isActive.value || pendingNativeStart || prewarm) {
-      if (!isActive.value) error.value = 'The previous recording is still being cleaned up. Please try again.';
-      return;
-    }
-    error.value = '';
-    const generation = ++recordingGeneration;
-    configuration = next;
-    preparedGeneration = null;
-    nativeStarted = false;
-    sidecarStates.camera = next.cameraId === inactiveCamera ? 'disabled' : 'failed';
-    sidecarStates.microphone = next.microphoneId === inactiveMicrophone ? 'disabled' : 'failed';
-    sidecarStates.systemAudio = next.systemAudio ? 'failed' : 'disabled';
-    let stage: RecordingStartStage = 'prepare-sources';
-    try {
-      await prepareSources();
-      if (generation !== recordingGeneration) return;
-      secondsRemaining.value = Math.max(0, next.countdownSeconds);
-      phase.value = 'countdown';
-      stage = 'prepare-native';
-      const preparation = prewarmNativeRecording(generation);
-      prewarm = preparation;
-      let prepared = false;
-      try {
-        prepared = await preparation;
-      } finally {
-        if (prewarm === preparation) prewarm = null;
-      }
-      if (!prepared || generation !== recordingGeneration) return;
-      if (secondsRemaining.value === 0) {
-        phase.value = 'starting';
-        void launchNativeStartup(generation);
-        return;
-      }
-      void capture.setCountdown(secondsRemaining.value);
-      countdown = window.setInterval(() => {
-        secondsRemaining.value = Math.max(0, secondsRemaining.value - 1);
-        if (secondsRemaining.value > 0) {
-          void capture.setCountdown(secondsRemaining.value);
-          return;
-        }
-        clearCountdown();
-        void capture.setCountdown(null);
-        phase.value = 'starting';
-        void launchNativeStartup(generation);
-      }, 1000);
-    } catch (reason) {
-      if (generation !== recordingGeneration) return;
-      await terminateStartup(generation, startupFailure(generation, stage, reason));
-    }
-  };
-
-  const resetState = async (sidecarsAlreadyStopped = false) => {
-    recordingGeneration += 1;
-    clearCountdown();
+  const reset = async () => {
+    clearTimers();
     await capture.setCountdown(null);
     capture.hideScreenRegionOverlay();
-    clearTimer();
-    recordingHealth.reset();
-    if (!sidecarsAlreadyStopped)
-      await Promise.all([stopRecorder(camera), stopRecorder(microphone), stopRecorder(systemAudio)]);
-    camera = null;
-    microphone = null;
-    systemAudio = null;
+    capture.setTeleprompterSession(null);
     sessionId = null;
-    projectId = null;
-    sessionTimelineStartedAt = 0;
-    nativeStarted = false;
     cameraEnabled.value = false;
     microphoneEnabled.value = false;
     systemAudioEnabled.value = false;
-    resetSystemAudioLevel();
+    systemAudioLevel.value = 0;
     recorderHoverOnlyActive.value = false;
     elapsedTenths.value = 0;
-    sidecarStates.camera = 'disabled';
-    sidecarStates.microphone = 'disabled';
-    sidecarStates.systemAudio = 'disabled';
-    if (preparedGeneration !== null) {
-      preparedGeneration = null;
-      if (!pendingNativeStart) await capture.cancelPreparedRecording().catch(() => undefined);
-    }
     phase.value = 'idle';
   };
-
-  async function cancel() {
-    if (cancelling) return;
-    cancelling = true;
-    const nativeRecording = sessionId !== null;
-    const nativeSessionId = sessionId;
+  const poll = async () => {
+    if (polling || !sessionId) return;
+    polling = true;
+    const current = generation;
     try {
-      if (nativeRecording) phase.value = 'finalizing';
-      const stopNs = nativeRecording ? timelineNowNs() : undefined;
-      await Promise.all([
-        stopRecorder(camera, stopNs),
-        stopRecorder(microphone, stopNs),
-        stopRecorder(systemAudio, stopNs),
-      ]);
-      if (nativeRecording) await capture.discardRecording(nativeSessionId ?? undefined);
-      capture.setTeleprompterSession(null);
-      await resetState(true);
-    } catch (reason) {
-      error.value = reason instanceof Error ? reason.message : String(reason);
-      if (nativeRecording) phase.value = 'recording';
-    } finally {
-      cancelling = false;
-    }
-  }
-
-  async function stop() {
-    if (phase.value === 'countdown' || phase.value === 'starting') return cancel();
-    if (phase.value !== 'recording' && phase.value !== 'paused') return;
-    const wasRecording = phase.value === 'recording';
-    phase.value = 'finalizing';
-    clearTimer();
-    try {
-      const stopNs = timelineNowNs();
-      const nativeStop = capture.stopNativeRecording();
-      const sidecarsStop = Promise.all([
-        stopRecorder(camera, stopNs),
-        stopRecorder(microphone, stopNs),
-        stopRecorder(systemAudio, stopNs),
-      ]);
-      const results = await Promise.allSettled([nativeStop, sidecarsStop]);
-      const nativeResult = results[0];
-      const sidecarsResult = results[1];
-      if (nativeResult.status === 'rejected') throw nativeResult.reason;
-      if (sidecarsResult.status === 'rejected') throw sidecarsResult.reason;
-      const session = await capture.completeNativeRecording();
-      capture.hideScreenRegionOverlay();
-      await resetState(true);
-      onComplete(session);
-    } catch (reason) {
-      error.value = reason instanceof Error ? reason.message : String(reason);
-      phase.value = 'recording';
-      if (wasRecording && timer === null) {
-        startTimer();
+      const status = await capture.status();
+      if (current !== generation) return;
+      const tracks = status.manifest?.tracks || [];
+      const active = (kind: string) =>
+        tracks.some((track) => track.kind === kind && ['recording', 'paused', 'preparing'].includes(track.status));
+      cameraEnabled.value = active('camera');
+      microphoneEnabled.value = active('microphone');
+      systemAudioEnabled.value = active('system-audio');
+      systemAudioLevel.value = status.systemAudioLevel ?? 0;
+      const failed = tracks.filter((track) => ['failed', 'interrupted'].includes(track.status));
+      if (failed.length)
+        error.value = failed.map((track) => `${track.kind}: ${track.terminationReason || track.status}`).join('\n');
+      if (status.error) error.value = status.error;
+      if (['failed', 'interrupted'].includes(status.state)) {
+        clearTimers();
+        await reset();
+        if (status.manifestPath) onComplete(status);
       }
-    }
-  }
-
-  const togglePause = async () => {
-    if (!sessionId) return;
-    if (phase.value === 'recording') {
-      const pauseNs = timelineNowNs();
-      await Promise.all([
-        capture.pause(),
-        camera?.pause(pauseNs),
-        microphone?.pause(pauseNs),
-        systemAudio?.pause(pauseNs),
-      ]);
-      clearTimer();
-      phase.value = 'paused';
-      resetSystemAudioLevel();
-    } else if (phase.value === 'paused') {
-      await Promise.all([
-        capture.resume(),
-        camera?.resume(sessionId),
-        microphone?.resume(sessionId),
-        systemAudio?.resume(sessionId),
-      ]);
-      startTimer();
-      phase.value = 'recording';
+    } catch (reason) {
+      error.value = reason instanceof Error ? reason.message : String(reason);
+    } finally {
+      polling = false;
     }
   };
-
-  const recordingTime = computed(() => formatRecordingTime(elapsedTenths.value));
+  const startTimer = () => {
+    if (timer !== null) window.clearInterval(timer);
+    timer = window.setInterval(() => {
+      if (phase.value === 'recording') elapsedTenths.value += 1;
+      if (++pollingTicks % 3 === 0) void poll();
+    }, 100);
+  };
+  const cleanup = async (id?: string) => {
+    try {
+      await capture.discardRecording(id);
+    } catch (reason) {
+      cleanupBlocked = true;
+      throw reason;
+    }
+  };
+  const start = async (configuration: RecordingConfiguration) => {
+    if (cleanupBlocked || preparing || pendingStart || phase.value !== 'idle') return;
+    const current = ++generation;
+    error.value = '';
+    preparing = true;
+    phase.value = 'countdown';
+    let prepared = false;
+    let started = false;
+    const fail = async (reason: unknown) => {
+      const failure: RecordingStartFailure = {
+        stage: prepared ? 'start-native' : 'prepare-native',
+        message: reason instanceof Error ? reason.message : String(reason),
+        nativePrepared: prepared,
+        nativeStarted: started,
+        camera: configuration.cameraId === 'off' ? 'disabled' : 'failed',
+        microphone: configuration.microphoneId === 'no-audio' ? 'disabled' : 'failed',
+        systemAudio: configuration.systemAudio ? 'failed' : 'disabled',
+      };
+      if (prepared) {
+        try {
+          await cleanup(sessionId ?? undefined);
+        } catch (cleanupError) {
+          failure.cleanupErrors = [String(cleanupError)];
+        }
+      }
+      if (current !== generation) return;
+      await reset();
+      if (reason instanceof CaptureSelectionCancelled) {
+        onStartupCancelled?.();
+        return;
+      }
+      error.value = failure.message;
+      onStartupFailure?.(failure);
+    };
+    const begin = async () => {
+      if (current !== generation) return;
+      phase.value = 'starting';
+      try {
+        await capture.setCountdown(null);
+        await capture.prepareRecordingSurface();
+        const session = await capture.startPreparedRecording();
+        started = true;
+        if (current !== generation) {
+          await cleanup(session.sessionId ?? undefined);
+          return;
+        }
+        sessionId = session.sessionId ?? null;
+        if (!sessionId) throw new Error('The native recording did not provide a session identifier.');
+        if (session.projectId) capture.setTeleprompterSession({ projectId: session.projectId, sessionId });
+        if (capture.platform !== 'linux' && configuration.region && configuration.regionOverlay)
+          capture.showScreenRegionOverlay({ ...configuration.regionOverlay, region: configuration.region });
+        recorderHoverOnlyActive.value = configuration.recordingBarVisibility === 'hover-only';
+        phase.value = 'recording';
+        startTimer();
+        await poll();
+      } catch (reason) {
+        await fail(reason);
+      }
+    };
+    const launch = () => {
+      const operation = begin();
+      pendingStart = operation;
+      void operation.finally(() => {
+        if (pendingStart === operation) pendingStart = null;
+      });
+    };
+    try {
+      const session = await prepareNativeRecording(configuration);
+      prepared = true;
+      if (current !== generation) {
+        await cleanup(session.sessionId ?? undefined);
+        return;
+      }
+      sessionId = session.sessionId ?? null;
+      secondsRemaining.value = Math.max(0, configuration.countdownSeconds);
+      if (!secondsRemaining.value) {
+        launch();
+        return;
+      }
+      await capture.setCountdown(secondsRemaining.value);
+      countdown = window.setInterval(() => {
+        secondsRemaining.value -= 1;
+        if (secondsRemaining.value > 0) void capture.setCountdown(secondsRemaining.value);
+        else {
+          if (countdown !== null) window.clearInterval(countdown);
+          countdown = null;
+          launch();
+        }
+      }, 1000);
+    } catch (reason) {
+      await fail(reason);
+    } finally {
+      preparing = false;
+    }
+  };
+  const cancel = async () => {
+    if (phase.value === 'finalizing') return;
+    generation += 1;
+    const id = sessionId;
+    phase.value = 'finalizing';
+    clearTimers();
+    try {
+      // In-flight prepare/start owns its cleanup when the generation changes.
+      if (id && !pendingStart) await cleanup(id);
+      await reset();
+    } catch (reason) {
+      error.value = String(reason);
+      phase.value = 'idle';
+    }
+  };
+  const stop = async () => {
+    if (['countdown', 'starting'].includes(phase.value)) return cancel();
+    if (!['recording', 'paused'].includes(phase.value)) return;
+    const previousPhase = phase.value;
+    phase.value = 'finalizing';
+    clearTimers();
+    try {
+      const session = await capture.stop();
+      generation += 1;
+      await reset();
+      onComplete(session);
+    } catch (reason) {
+      error.value = String(reason);
+      try {
+        const status = await capture.status();
+        if (['completed', 'failed', 'interrupted', 'idle'].includes(status.state)) {
+          generation += 1;
+          await reset();
+          if (status.manifestPath) onComplete(status);
+          return;
+        }
+        phase.value = status.state === 'paused' ? 'paused' : previousPhase;
+      } catch {
+        phase.value = previousPhase;
+      }
+      startTimer();
+    }
+  };
+  const togglePause = async () => {
+    if (!sessionId) return;
+    try {
+      if (phase.value === 'recording') {
+        await capture.pause();
+        phase.value = 'paused';
+        systemAudioLevel.value = 0;
+      } else if (phase.value === 'paused') {
+        await capture.resume();
+        phase.value = 'recording';
+      }
+    } catch (reason) {
+      error.value = String(reason);
+    }
+  };
   return {
     phase,
     secondsRemaining,
@@ -487,8 +264,6 @@ export function useRecordingController(
     stop,
     cancel,
     togglePause,
-    toggleCamera: deviceToggles.toggleCamera,
-    toggleMicrophone: deviceToggles.toggleMicrophone,
-    toggleSystemAudio: deviceToggles.toggleSystemAudio,
+    isActive: computed(() => isRecordingActivePhase(phase.value)),
   };
 }

@@ -61,17 +61,17 @@ function createSourcePreviewService({ requestNative, platform = process.platform
     // The renderer-facing contract is platform-neutral. macOS is the first
     // native provider; Windows keeps desktopCapturer and Linux keeps Portal
     // until their native providers can satisfy the same source-id invariant.
-    if (platform !== 'darwin') {
+    if (platform === 'linux') {
       return remember(key, { sourceId: request.sourceId, thumbnail: null, status: 'unavailable' });
     }
 
     const operation = requestNative('source-preview', {
-      source: request.sourceId,
-      maxWidth: request.maxWidth,
-      maxHeight: request.maxHeight,
+      sourceId: request.sourceId,
+      width: request.maxWidth,
+      height: request.maxHeight,
     })
       .then((result) => {
-        if (!validNativeResult(result, request.sourceId)) throw new Error('capture-engine returned an invalid preview');
+        if (!validNativeResult(result, request.sourceId)) throw new Error('media-engine returned an invalid preview');
         return remember(key, { sourceId: request.sourceId, thumbnail: result.thumbnail, status: 'ready' });
       })
       .catch(() => remember(key, { sourceId: request.sourceId, thumbnail: null, status: 'unavailable' }))

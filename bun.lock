@@ -33,6 +33,7 @@
         "jsdom": "^26.1.0",
         "oxfmt": "^0.64.0",
         "oxlint": "^1.79.0",
+        "tar": "7.5.20",
         "typescript": "npm:@typescript/typescript6@^6.0.2",
         "vite": "^8.1.1",
         "vue-tsc": "^3.3.9",

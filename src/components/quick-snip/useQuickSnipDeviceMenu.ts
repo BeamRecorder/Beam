@@ -1,6 +1,6 @@
 import { capture } from '~/api/capture';
-import { listBrowserCameras } from '~/api/camera-recorder';
-import { listBrowserMicrophones } from '~/api/microphone-recorder';
+import { listNativeCameras } from '~/api/native-devices';
+import { listNativeMicrophones } from '~/api/native-devices';
 import { useTranslate } from '~/i18n/useTranslate';
 import type { QuickSnipDeviceKind, QuickSnipDeviceMenu } from '~/api/types/quick-snip';
 import type { QuickSnipDeviceControls, QuickSnipDeviceFlags } from './quick-snip-device-types';
@@ -22,7 +22,7 @@ export function useQuickSnipDeviceMenu(controls: QuickSnipDeviceControls) {
     controls.busy.value = true;
     try {
       const sources =
-        kind === 'camera' ? await listBrowserCameras() : kind === 'microphone' ? await listBrowserMicrophones() : [];
+        kind === 'camera' ? await listNativeCameras() : kind === 'microphone' ? await listNativeMicrophones() : [];
       if (generation !== controls.generation()) return;
       const options =
         kind === 'systemAudio'

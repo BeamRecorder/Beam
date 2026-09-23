@@ -626,6 +626,9 @@
     "selectionAndMore": "… और {count} अन्य"
   },
   "RecorderBar": {
+    "microphone": "माइक्रोफ़ोन",
+    "camera": "कैमरा",
+    "systemAudio": "सिस्टम ऑडियो",
     "recordingControls": "रिकॉर्डिंग नियंत्रण",
     "moveRecorderBar": "रिकॉर्डर बार खिसकाएँ",
     "ready": "तैयार",
@@ -633,7 +636,7 @@
     "resumeRecording": "रिकॉर्डिंग जारी रखें",
     "pauseRecording": "रिकॉर्डिंग रोकें",
     "stopRecording": "रिकॉर्डिंग बंद करें",
-    "cancelRecording": "रद्द करें और रिकॉर्डिंग हटाएँ",
+    "cancelRecording": "रद्द करें",
     "turnMicOff": "माइक्रोफ़ोन बंद करें",
     "turnMicOn": "माइक्रोफ़ोन चालू करें",
     "turnCameraOff": "कैमरा बंद करें",

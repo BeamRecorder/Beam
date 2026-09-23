@@ -7,6 +7,11 @@ import { browserSystemAudioMock } from './system-audio-recorder.mock';
 
 const validateCameraAccessMock = vi.hoisted(() => vi.fn());
 
+vi.mock('../../../api/native-devices', async () => ({
+  listNativeCameras: (await import('./camera-recorder.mock')).listBrowserCameras,
+  listNativeMicrophones: (await import('./microphone-recorder.mock')).listBrowserMicrophones,
+  systemAudioSource: (await import('./system-audio-recorder.mock')).systemAudioSource,
+}));
 vi.mock('../../../api/capture', async () => ({ capture: (await import('./capture.mock')).captureMock }));
 vi.mock('../../../api/camera-recorder', async () => {
   const camera = await import('./camera-recorder.mock');

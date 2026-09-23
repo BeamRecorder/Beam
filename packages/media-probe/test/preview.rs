@@ -54,6 +54,7 @@ fn preview_worker_uploads_a_shared_frame_without_camera_hardware() {
     let supports_allocation_report = device.generate_allocator_report().is_some();
     let temporary = tempfile::tempdir().expect("tempdir");
     let mut session = MediaSession::prepare(SessionConfig {
+        screen: None,
         output_dir: temporary.path().join("session"),
         camera: CameraSelection::Disabled,
         microphone: AudioSelection::Disabled,

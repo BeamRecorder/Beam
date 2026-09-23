@@ -5,7 +5,7 @@ const path = require('node:path');
 const test = require('node:test');
 
 const { InputAccess } = require('../electron/input/input-access.cjs');
-const { prebuiltInputHelperPath, packagedInputHelperPath } = require('../electron/capture/capture-engine-path.cjs');
+const { prebuiltInputHelperPath, packagedInputHelperPath } = require('../electron/capture/media-engine-path.cjs');
 
 const version = '1.2.3';
 const available = {
@@ -60,7 +60,7 @@ test('non-Linux status delegates to the native capture engine without a helper',
   });
 
   assert.deepEqual(await inputAccess.status(), available);
-  assert.deepEqual(commands, ['input-access-status']);
+  assert.deepEqual(commands, ['input-access']);
   assert.equal(inputAccess.helperForCapture(), null);
 });
 
@@ -125,7 +125,7 @@ test('Linux resolves the exact versioned cache helper and only requests authoriz
       platform: 'linux',
       nativeRequest: async (command) => {
         commands.push(command);
-        return command === 'input-access-status' ? { ...available, state: 'permission-required' } : available;
+        return command === 'input-access' ? { ...available, state: 'permission-required' } : available;
       },
     });
 
@@ -133,9 +133,9 @@ test('Linux resolves the exact versioned cache helper and only requests authoriz
     const status = await inputAccess.status();
     assert.equal(status.state, 'permission-required');
     assert.equal(status.unavailableReason, undefined);
-    assert.deepEqual(commands, ['input-access-status']);
+    assert.deepEqual(commands, ['input-access']);
     assert.deepEqual(await inputAccess.request(), available);
-    assert.deepEqual(commands, ['input-access-status', 'request-input-access']);
+    assert.deepEqual(commands, ['input-access', 'request-input-access']);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -219,7 +219,7 @@ test('Linux clears a remembered request error when status reports access availab
 test('Linux clears a remembered request error when a retry resolves without access', async () => {
   let requestCount = 0;
   const { inputAccess, cleanup } = createLinuxInputAccess(async (command) => {
-    if (command === 'input-access-status') return permissionRequired;
+    if (command === 'input-access') return permissionRequired;
     requestCount += 1;
     if (requestCount === 1) throw new Error('first request failed');
     // Polkit cancellation resolves with the current status instead of throwing.

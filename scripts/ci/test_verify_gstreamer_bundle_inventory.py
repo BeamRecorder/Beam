@@ -20,7 +20,7 @@ class BundleInventoryChecks(unittest.TestCase):
         license_file = self.root / "licenses/beam-LICENSE"
         license_file.parent.mkdir()
         license_file.write_text("MIT", encoding="utf-8")
-        (self.root / "run-probe").write_text("launcher", encoding="utf-8")
+        (self.root / "run-engine").write_text("launcher", encoding="utf-8")
         self.records = [self.record(self.binary), self.record(license_file)]
         self.write_inventory()
 

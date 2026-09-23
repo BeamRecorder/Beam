@@ -1,13 +1,9 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch, type WatchStopHandle } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Video } from '@lucide/vue';
-import { cameraVideoConstraints } from '../../../api/camera-recorder';
-import { waitForFirstCameraFrame } from '../../../api/camera-frame-ready';
 import { useTranslate } from '~/i18n/useTranslate';
 import { capture } from '../../../api/capture';
-
 const { t } = useTranslate('CameraPreviewOverlay');
-
 const props = withDefaults(
   defineProps<{
     cameraId: string;
@@ -18,99 +14,41 @@ const props = withDefaults(
   }>(),
   { isRecording: false, isHovered: false, theme: 'light' },
 );
-
-const videoRef = ref<HTMLVideoElement | null>(null);
-const cameraStream = ref<MediaStream | null>(null);
+const thumbnail = ref<string | null>(null);
 const streamError = ref<string | null>(null);
-const isLoading = ref(false);
-let cameraRequest = 0;
-let cameraLoadQueue = Promise.resolve();
-let stopCameraWatch: WatchStopHandle | null = null;
-let frameWaitAbort: AbortController | null = null;
-let readyCameraId: string | null = null;
-
-const stopCameraStream = () => {
-  videoRef.value?.pause();
-  if (videoRef.value) videoRef.value.srcObject = null;
-  cameraStream.value?.getTracks().forEach((track) => track.stop());
-  cameraStream.value = null;
-  readyCameraId = null;
-};
-
-const loadCamera = async (cameraId: string, request: number) => {
-  if (request !== cameraRequest) return;
-  stopCameraStream();
-  if (!cameraId || cameraId === 'off') {
-    isLoading.value = false;
-    return;
-  }
-  try {
+const isLoading = computed(() => props.cameraId !== 'off' && !thumbnail.value && !streamError.value);
+watch(
+  () => props.cameraId,
+  () => {
+    thumbnail.value = null;
     streamError.value = null;
-    isLoading.value = true;
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: cameraVideoConstraints(cameraId),
-    });
-    if (request !== cameraRequest) {
-      stream.getTracks().forEach((track) => track.stop());
-      return;
+  },
+);
+let timer: ReturnType<typeof setInterval> | null = null;
+let disposed = false;
+let busy = false;
+const refresh = async () => {
+  if (busy || props.cameraId === 'off') return;
+  busy = true;
+  const selected = props.cameraId;
+  try {
+    const frame = await capture.cameraPreview();
+    if (!disposed && selected === props.cameraId && frame) {
+      thumbnail.value = frame;
+      streamError.value = null;
     }
-    cameraStream.value = stream;
-    const video = videoRef.value;
-    if (!video) throw new Error('The camera preview is unavailable.');
-    video.srcObject = stream;
-    frameWaitAbort = new AbortController();
-    const firstFrame = waitForFirstCameraFrame(video, { signal: frameWaitAbort.signal });
-    try {
-      await Promise.all([video.play(), firstFrame]);
-    } catch (error) {
-      frameWaitAbort.abort();
-      await firstFrame.catch(() => undefined);
-      throw error;
-    }
-    readyCameraId = cameraId;
-  } catch (error) {
-    if (request === cameraRequest) {
-      stopCameraStream();
-      streamError.value = error instanceof Error ? error.message : t('unableToStartCamera');
-      capture.configureCameraOverlay({ cameraId: 'off' });
-    }
+  } catch (reason) {
+    if (!disposed && selected === props.cameraId) streamError.value = String(reason);
   } finally {
-    if (request === cameraRequest) {
-      frameWaitAbort = null;
-      isLoading.value = false;
-    }
+    busy = false;
   }
 };
-
-const scheduleCameraLoad = (cameraId: string) => {
-  const request = ++cameraRequest;
-  frameWaitAbort?.abort();
-  // Some camera drivers are exclusive. Wait for an obsolete request to settle
-  // and release its stream before asking Chromium for the next device.
-  cameraLoadQueue = cameraLoadQueue.then(() => loadCamera(cameraId, request));
-};
-
-const readyStream = async (sourceId: string) => {
-  await cameraLoadQueue;
-  if (readyCameraId !== sourceId || !cameraStream.value)
-    throw Object.assign(new Error(streamError.value || 'The selected camera is not ready.'), {
-      name: 'NotReadableError',
-    });
-  return cameraStream.value;
-};
-
-defineExpose({ readyStream });
-
 onMounted(() => {
-  stopCameraWatch = watch(() => props.cameraId, scheduleCameraLoad, { immediate: true });
+  timer = setInterval(() => void refresh(), 100);
 });
-
 onBeforeUnmount(() => {
-  cameraRequest += 1;
-  frameWaitAbort?.abort();
-  stopCameraWatch?.();
-  stopCameraStream();
+  disposed = true;
+  if (timer) clearInterval(timer);
 });
 </script>
 
@@ -121,7 +59,7 @@ onBeforeUnmount(() => {
     :data-theme="theme"
     :class="{ 'is-recording': isRecording, 'is-hovered': isHovered }"
   >
-    <video ref="videoRef" autoplay muted playsinline class="camera-overlay-video" />
+    <img v-if="thumbnail" :src="thumbnail" alt="" class="camera-overlay-video" />
     <div v-if="isLoading" class="camera-overlay-skeleton" :aria-label="t('loadingCameraPreview')"><div /></div>
     <div v-else-if="streamError" class="camera-overlay-error"><Video :size="24" /></div>
   </main>

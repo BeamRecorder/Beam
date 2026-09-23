@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage and relocate a private macOS GStreamer runtime for beam-media-probe."""
+"""Stage and relocate a private macOS GStreamer runtime for beam-media-engine."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ export GST_PLUGIN_PATH_1_0="$bundle_root/plugins"
 export GST_PLUGIN_SCANNER="$bundle_root/libexec/gst-plugin-scanner"
 export GST_PLUGIN_SCANNER_1_0="$bundle_root/libexec/gst-plugin-scanner"
 export GST_REGISTRY_1_0="$registry_dir/registry.bin"
-"$bundle_root/bin/beam-media-probe" "$@"
+"$bundle_root/bin/beam-media-engine" "$@"
 """
 
 
@@ -216,9 +216,9 @@ def inspect(executable: Path, name: str, environment: dict[str, str]) -> subproc
 
 def verify_bundle(root: Path) -> None:
     verify_inventory(root)
-    embedded_privacy_descriptions(root / "bin/beam-media-probe")
+    embedded_privacy_descriptions(root / "bin/beam-media-engine")
     binaries = [
-        root / "bin/beam-media-probe",
+        root / "bin/beam-media-engine",
         root / "bin/gst-inspect-1.0",
         root / "libexec/gst-plugin-scanner",
         *sorted((root / "plugins").iterdir()),
@@ -246,7 +246,7 @@ def verify_bundle(root: Path) -> None:
         if inspect(inspector, factory, environment).returncode == 0:
             raise RuntimeError(f"excluded factory {factory} is visible in the private bundle")
     probe = subprocess.run(
-        [str(root / "run-probe"), "--help"],
+        [str(root / "run-engine"), "--help"],
         text=True, capture_output=True, check=False,
     )
     if probe.returncode:
@@ -285,7 +285,7 @@ def build(binary: Path, framework: Path, installer_license: Path, output: Path) 
     if len(versions) != 1:
         raise RuntimeError(f"mixed GStreamer plugin versions: {sorted(versions)}")
     inputs = [
-        (binary, "bin/beam-media-probe"),
+        (binary, "bin/beam-media-engine"),
         (inspector, "bin/gst-inspect-1.0"),
         (scanner, "libexec/gst-plugin-scanner"),
         *sources,
@@ -303,7 +303,7 @@ def build(binary: Path, framework: Path, installer_license: Path, output: Path) 
             relocate(source, destination, framework, root)
             files.append(record(source, destination, root))
         files.extend(copy_notices(framework, installer_license, root))
-        launcher = root / "run-probe"
+        launcher = root / "run-engine"
         launcher.write_text(LAUNCHER, encoding="utf-8")
         launcher.chmod(0o755)
         (root / "inventory.json").write_text(

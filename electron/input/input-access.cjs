@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { packagedInputHelperPath, prebuiltInputHelperPath } = require('../capture/capture-engine-path.cjs');
+const { packagedInputHelperPath, prebuiltInputHelperPath } = require('../capture/media-engine-path.cjs');
 
 const INSTALLED_HELPER = '/usr/libexec/beam-input-helper';
 
@@ -23,7 +23,7 @@ class InputAccess {
   async status() {
     if (this.platform === 'linux' && !this.helperForCapture()) return unavailableStatus('input-helper-unavailable');
     try {
-      const status = await this.nativeRequest('input-access-status');
+      const status = await this.nativeRequest('input-access');
       if (status.state === 'available') this.lastError = null;
       return status.error || !this.lastError ? status : { ...status, error: this.lastError };
     } catch (error) {

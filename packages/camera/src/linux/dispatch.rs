@@ -26,6 +26,7 @@ pub(super) struct FrameDispatcher {
     gate: Arc<StartGate>,
     mapper: Option<NativeTimestampMapper>,
     last_pts: u64,
+    epoch: u64,
     ports: DispatchPorts,
 }
 
@@ -42,6 +43,7 @@ impl FrameDispatcher {
             gate,
             mapper: None,
             last_pts: 0,
+            epoch: 0,
             ports,
         }
     }
@@ -63,8 +65,27 @@ impl FrameDispatcher {
             return Ok(());
         }
         let Some(session_now) = self.gate.session_ns(self.clock.now_ns()) else {
+            let length = usize::try_from(bytes_used)
+                .unwrap_or(bytes.len())
+                .min(bytes.len());
+            self.ports.latest.publish(VideoFrame {
+                captured_ns: self.gate.elapsed_ns(self.clock.now_ns()).unwrap_or(0),
+                width: self.format.width,
+                height: self.format.height,
+                data: CameraFrame {
+                    format: self.format,
+                    native_timestamp_ns: native_ns,
+                    sequence,
+                    data: Arc::from(&bytes[..length]),
+                },
+            });
             return Ok(());
         };
+        let epoch = self.gate.epoch();
+        if epoch != self.epoch {
+            self.mapper = None;
+            self.epoch = epoch;
+        }
         let captured_ns = if let Some(native) = native_ns {
             if self.mapper.is_none() {
                 self.mapper = Some(

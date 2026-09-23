@@ -100,7 +100,7 @@ Summary
         self.assertIn("set \"PATH=%BUNDLE%bin;%SystemRoot%", LAUNCHER)
         self.assertIn("set \"GST_PLUGIN_PATH_1_0=%BUNDLE%plugins\"", LAUNCHER)
         self.assertIn("set \"GST_PLUGIN_SYSTEM_PATH_1_0=\"", LAUNCHER)
-        self.assertIn("%BUNDLE%bin\\beam-media-probe.exe", LAUNCHER)
+        self.assertIn("%BUNDLE%bin\\beam-media-engine.exe", LAUNCHER)
 
     def test_missing_runtime_notices_fail_before_bundle_publication(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

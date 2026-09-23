@@ -14,7 +14,7 @@ const {
   validateManifestEntry,
   writeVerifiedFile,
 } = require('../scripts/native/download.cjs');
-const { nativeManifestAssetName } = require('../electron/capture/capture-engine-path.cjs');
+const { nativeManifestAssetName } = require('../electron/capture/media-engine-path.cjs');
 
 const version = '1.2.3';
 
@@ -38,26 +38,27 @@ test('required native files are exact for Windows, macOS, and Linux helper paylo
   const root = temporaryRoot();
   try {
     const windows = requiredNativeFiles(root, version, 'win32', 'arm64');
-    assert.deepEqual(windows, [
+    assert.deepEqual(windows.slice(0, 1), [
       {
-        kind: 'capture-engine',
-        asset: `capture-engine-${version}-windows-arm64.exe`,
-        destination: path.join(root, 'packages', 'native-recorder', 'win', 'arm64', `capture-engine-${version}.exe`),
+        kind: 'beam-media-engine',
+        asset: `beam-media-engine-${version}-windows-arm64.exe`,
+        destination: path.join(root, 'packages', 'native-recorder', 'win', 'arm64', `beam-media-engine-${version}.exe`),
       },
     ]);
 
     const mac = requiredNativeFiles(root, version, 'darwin', 'arm64');
-    assert.equal(mac.length, 1);
-    assert.equal(mac[0].asset, `capture-engine-${version}-macos-arm64`);
-    assert.match(mac[0].destination, /native-recorder[\/]mac[\/]arm64[\/]capture-engine-1\.2\.3$/);
+    assert.equal(mac.length, 2);
+    assert.equal(mac[0].asset, `beam-media-engine-${version}-macos-arm64`);
+    assert.match(mac[0].destination, /native-recorder[\/]mac[\/]arm64[\/]beam-media-engine-1\.2\.3$/);
 
     const linux = requiredNativeFiles(root, version, 'linux', 'x64');
-    assert.equal(linux.length, 2);
+    assert.equal(linux.length, 3);
     assert.deepEqual(
       linux.map(({ kind, asset }) => ({ kind, asset })),
       [
-        { kind: 'capture-engine', asset: `capture-engine-${version}-linux-x64` },
+        { kind: 'beam-media-engine', asset: `beam-media-engine-${version}-linux-x64` },
         { kind: 'beam-input-helper', asset: `beam-input-helper-${version}-linux-x64` },
+        { kind: 'beam-media-runtime', asset: `beam-media-runtime-${version}-linux-x64.tar.gz` },
       ],
     );
 
@@ -70,8 +71,8 @@ test('required native files are exact for Windows, macOS, and Linux helper paylo
 
 test('manifest validation requires the requested version, platform, architecture, asset, and lowercase SHA-256', () => {
   const required = {
-    kind: 'capture-engine',
-    asset: `capture-engine-${version}-windows-x64.exe`,
+    kind: 'beam-media-engine',
+    asset: `beam-media-engine-${version}-windows-x64.exe`,
   };
   const valid = {
     version,
@@ -90,14 +91,17 @@ test('manifest validation requires the requested version, platform, architecture
   assert.deepEqual(validateManifestEntry(valid.files, required, 'win32', 'x64'), valid.files[0]);
   assert.throws(() => manifestEntries({ ...valid, version: '1.2.4' }, version), /invalid version/);
   assert.throws(() => manifestEntries({ version, files: {} }, version), /invalid version/);
-  assert.throws(() => validateManifestEntry(valid.files, required, 'darwin', 'arm64'), /no valid capture-engine entry/);
+  assert.throws(
+    () => validateManifestEntry(valid.files, required, 'darwin', 'arm64'),
+    /no valid beam-media-engine entry/,
+  );
   assert.throws(
     () => validateManifestEntry([{ ...valid.files[0], asset: 'other' }], required, 'win32', 'x64'),
-    /no valid capture-engine entry/,
+    /no valid beam-media-engine entry/,
   );
   assert.throws(
     () => validateManifestEntry([{ ...valid.files[0], sha256: 'A'.repeat(64) }], required, 'win32', 'x64'),
-    /no valid capture-engine entry/,
+    /no valid beam-media-engine entry/,
   );
 });
 
@@ -120,13 +124,13 @@ test('fetchBuffer reports HTTP failures and follows successful binary responses'
 
 test('writeVerifiedFile verifies before an atomic rename, preserves executable mode, and leaves no temp file', async () => {
   const root = temporaryRoot();
-  const destination = path.join(root, 'linux', 'capture-engine');
+  const destination = path.join(root, 'linux', 'beam-media-engine');
   const bytes = Buffer.from('verified engine');
   try {
     await writeVerifiedFile(destination, bytes, sha256(bytes), 'linux');
     assert.deepEqual(fs.readFileSync(destination), bytes);
     assert.equal(fs.statSync(destination).mode & 0o111, 0o111);
-    assert.deepEqual(fs.readdirSync(path.dirname(destination)), ['capture-engine']);
+    assert.deepEqual(fs.readdirSync(path.dirname(destination)), ['beam-media-engine']);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -134,12 +138,12 @@ test('writeVerifiedFile verifies before an atomic rename, preserves executable m
 
 test('a corrupted SHA-256 never creates or replaces the destination', async () => {
   const root = temporaryRoot();
-  const destination = path.join(root, 'capture-engine');
+  const destination = path.join(root, 'beam-media-engine');
   const bytes = Buffer.from('corrupted engine');
   try {
     await assert.rejects(
       writeVerifiedFile(destination, bytes, '0'.repeat(64), 'linux'),
-      /SHA-256 mismatch for capture-engine/,
+      /SHA-256 mismatch for beam-media-engine/,
     );
     assert.equal(fs.existsSync(destination), false);
     assert.equal(fs.existsSync(root) && fs.readdirSync(root).length, 0);
@@ -160,6 +164,7 @@ test('downloadNativeFiles downloads and atomically installs all Linux files from
     const bytesByAsset = new Map([
       [required[0].asset, engine],
       [required[1].asset, helper],
+      [required[2].asset, runtimeArchive(root)],
     ]);
     const manifest = {
       version,
@@ -197,7 +202,7 @@ test('downloadNativeFiles downloads and atomically installs all Linux files from
     assert.equal(fs.statSync(required[0].destination).mode & 0o111, 0o111);
     assert.equal(fs.statSync(required[1].destination).mode & 0o111, 0o111);
     assert.equal(requested[0].url, `${release}/${manifestName}`);
-    assert.equal(requested.length, 3);
+    assert.equal(requested.length, 4);
     assert.equal(requested[1].url, `${release}/${encodeURIComponent(required[0].asset)}`);
     assert.equal(requested[2].url, `${release}/${encodeURIComponent(required[1].asset)}`);
     assert.equal(RELEASE_BASE_URL, 'https://github.com/BeamRecorder/Beam/releases/download');
@@ -224,10 +229,17 @@ test('downloadNativeFiles rejects a corrupted engine before writing any native f
       version,
       files: [
         {
-          kind: 'capture-engine',
+          kind: 'beam-media-engine',
           platform: 'win32',
           arch: 'x64',
           asset: required[0].asset,
+          sha256: 'f'.repeat(64),
+        },
+        {
+          kind: 'beam-media-runtime',
+          platform: 'win32',
+          arch: 'x64',
+          asset: required[1].asset,
           sha256: 'f'.repeat(64),
         },
       ],
@@ -252,3 +264,17 @@ test('downloadNativeFiles rejects a corrupted engine before writing any native f
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+function runtimeArchive(root) {
+  const directory = path.join(root, 'runtime-fixture');
+  fs.mkdirSync(path.join(directory, 'bin'), { recursive: true });
+  const bytes = Buffer.from('private executable');
+  fs.writeFileSync(path.join(directory, 'bin', 'beam-media-engine'), bytes);
+  fs.writeFileSync(
+    path.join(directory, 'inventory.json'),
+    JSON.stringify({ schema_version: 1, files: [{ path: 'bin/beam-media-engine', sha256: sha256(bytes) }] }),
+  );
+  const archive = path.join(root, 'fixture.tar.gz');
+  require('../scripts/native/runtime-archive.cjs').packRuntime(directory, archive);
+  return fs.readFileSync(archive);
+}

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage and verify a private Linux GStreamer runtime for beam-media-probe."""
+"""Stage and verify a private Linux GStreamer runtime for beam-media-engine."""
 
 from __future__ import annotations
 
@@ -23,6 +23,7 @@ from check_gstreamer_profile import (
     plugin_details,
 )
 from verify_gstreamer_bundle_inventory import verify_inventory
+from linux_package_metadata import package_metadata, copy_licenses, plugin_scanner
 
 
 SYSTEM_LIBRARIES = frozenset(
@@ -54,7 +55,7 @@ export GST_PLUGIN_PATH_1_0="$bundle_root/plugins"
 export GST_PLUGIN_SCANNER="$bundle_root/libexec/gst-plugin-scanner"
 export GST_PLUGIN_SCANNER_1_0="$bundle_root/libexec/gst-plugin-scanner"
 export GST_REGISTRY_1_0="$registry_dir/registry.bin"
-"$bundle_root/bin/beam-media-probe" "$@"
+"$bundle_root/bin/beam-media-engine" "$@"
 """
 
 
@@ -84,22 +85,6 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def package_metadata(source: Path) -> dict[str, str]:
-    result = subprocess.run(
-        [
-            "rpm", "-qf", "--queryformat",
-            "%{NAME}\t%{VERSION}-%{RELEASE}\t%{LICENSE}\n", str(source),
-        ],
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-    fields = result.stdout.strip().split("\t")
-    if result.returncode or len(fields) != 3:
-        raise RuntimeError(f"no RPM license metadata for {source}: {result.stderr.strip()}")
-    return {"package": fields[0], "package_version": fields[1], "package_license": fields[2]}
-
-
 def record(source: Path, destination: Path, root: Path) -> dict[str, str | int]:
     return {
         "path": destination.relative_to(root).as_posix(),
@@ -108,25 +93,6 @@ def record(source: Path, destination: Path, root: Path) -> dict[str, str | int]:
         "sha256": sha256(destination),
         **package_metadata(source),
     }
-
-
-def copy_licenses(packages: set[str], root: Path) -> list[str]:
-    missing = []
-    for package in sorted(packages):
-        result = subprocess.run(
-            ["rpm", "-ql", package], text=True, capture_output=True, check=True
-        )
-        licenses = [Path(line) for line in result.stdout.splitlines() if "/share/licenses/" in line]
-        copied = 0
-        for source in licenses:
-            if source.is_file():
-                destination = root / "licenses" / source.relative_to("/usr/share/licenses")
-                destination.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(source, destination)
-                copied += 1
-        if copied == 0:
-            missing.append(package)
-    return missing
 
 
 def verify_bundle(root: Path) -> None:
@@ -171,7 +137,7 @@ def verify_bundle(root: Path) -> None:
         if result.returncode == 0:
             raise RuntimeError(f"excluded factory {factory} is visible in the private bundle")
     launch = subprocess.run(
-        [str(root / "run-probe"), "--help"], text=True, capture_output=True, check=False
+        [str(root / "run-engine"), "--help"], text=True, capture_output=True, check=False
     )
     if launch.returncode:
         raise RuntimeError(f"private probe launch failed ({launch.returncode}): {launch.stderr}")
@@ -180,8 +146,6 @@ def verify_bundle(root: Path) -> None:
 def build(binary: Path, output: Path) -> None:
     if platform.system() != "Linux":
         raise RuntimeError("this bundle builder requires Linux")
-    if shutil.which("rpm") is None:
-        raise RuntimeError("this bundle builder requires RPM package metadata")
     if output.exists():
         raise FileExistsError(f"bundle output already exists: {output}")
     binary = binary.resolve(strict=True)
@@ -190,13 +154,13 @@ def build(binary: Path, output: Path) -> None:
         root = Path(temporary)
         for directory in ("bin", "lib", "plugins", "libexec"):
             (root / directory).mkdir()
-        scanner = Path("/usr/libexec/gstreamer-1.0/gst-plugin-scanner").resolve(strict=True)
+        scanner = plugin_scanner()
         inspector_command = shutil.which("gst-inspect-1.0")
         if inspector_command is None:
             raise RuntimeError("gst-inspect-1.0 is unavailable")
         inspector = Path(inspector_command).resolve(strict=True)
         inputs: list[tuple[Path, Path]] = [
-            (binary, root / "bin/beam-media-probe"),
+            (binary, root / "bin/beam-media-engine"),
             (inspector, root / "bin/gst-inspect-1.0"),
             (scanner, root / "libexec/gst-plugin-scanner"),
         ]
@@ -249,7 +213,7 @@ def build(binary: Path, output: Path) -> None:
                 packages.add(str(metadata["package"]))
         missing_notices = copy_licenses(packages, root)
         if missing_notices:
-            raise RuntimeError(f"missing installed RPM license notices: {missing_notices}")
+            raise RuntimeError(f"missing installed package license notices: {missing_notices}")
         shutil.copy2(
             Path(__file__).resolve().parents[2] / "LICENSE",
             root / "licenses/beam-LICENSE",
@@ -263,7 +227,7 @@ def build(binary: Path, output: Path) -> None:
                         "sha256": sha256(notice),
                     }
                 )
-        launcher = root / "run-probe"
+        launcher = root / "run-engine"
         launcher.write_text(LAUNCHER, encoding="utf-8")
         launcher.chmod(0o755)
         (root / "inventory.json").write_text(
@@ -293,7 +257,7 @@ def build(binary: Path, output: Path) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--binary", required=True, type=Path, help="compiled beam-media-probe executable"
+        "--binary", required=True, type=Path, help="compiled beam-media-engine executable"
     )
     parser.add_argument("--output", required=True, type=Path, help="new bundle directory")
     args = parser.parse_args()

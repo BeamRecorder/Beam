@@ -626,6 +626,9 @@
     "selectionAndMore": "… 외 {count}개"
   },
   "RecorderBar": {
+    "microphone": "마이크",
+    "camera": "카메라",
+    "systemAudio": "시스템 오디오",
     "recordingControls": "녹화 컨트롤",
     "moveRecorderBar": "녹화 막대 이동",
     "ready": "준비됨",
@@ -633,7 +636,7 @@
     "resumeRecording": "녹화 재개",
     "pauseRecording": "녹화 일시 중지",
     "stopRecording": "녹화 중지",
-    "cancelRecording": "녹화 취소 및 삭제",
+    "cancelRecording": "취소",
     "turnMicOff": "마이크 끄기",
     "turnMicOn": "마이크 켜기",
     "turnCameraOff": "카메라 끄기",

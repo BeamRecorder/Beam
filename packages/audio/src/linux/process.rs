@@ -19,6 +19,7 @@ pub(super) struct ProcessState {
     pub(super) format: Option<NegotiatedFormat>,
     pub(super) clock: SessionClock,
     pub(super) gate: Arc<StartGate>,
+    pub(super) gate_epoch: u64,
     pub(super) sample_clock: Option<AudioSampleClock>,
     pub(super) next_sample: u64,
     pub(super) active: bool,
@@ -178,6 +179,11 @@ pub(super) fn process_bytes(
     let Some(session_now) = state.gate.session_ns(state.clock.now_ns()) else {
         return;
     };
+    if state.gate_epoch != state.gate.epoch() {
+        state.sample_clock = None;
+        state.last_native_timestamp_ns = None;
+        state.gate_epoch = state.gate.epoch();
+    }
     if state.sample_clock.is_none() {
         state.sample_clock = AudioSampleClock::new(session_now, format.sample_rate).ok();
     }

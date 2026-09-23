@@ -81,14 +81,14 @@ describe('RecorderBar', () => {
 
     expect(wrapper.emitted('pause')).toHaveLength(1);
     expect(wrapper.emitted('stop')).toHaveLength(1);
-    expect(wrapper.emitted('microphone')).toHaveLength(1);
-    expect(wrapper.emitted('camera')).toHaveLength(1);
-    expect(wrapper.emitted('systemAudio')).toHaveLength(1);
+    expect(wrapper.emitted('microphone')).toBeUndefined();
+    expect(wrapper.emitted('camera')).toBeUndefined();
+    expect(wrapper.emitted('systemAudio')).toBeUndefined();
     expect(wrapper.emitted('cancel')).toHaveLength(1);
     wrapper.unmount();
   });
 
-  it('shows disabled devices as inactive, emits re-enable actions, and reflects prop updates', async () => {
+  it('shows disabled devices as inactive, keeps indicators read-only, and reflects prop updates', async () => {
     const wrapper = mount(RecorderBar, {
       props: { ...props, microphoneEnabled: false, cameraEnabled: false, systemAudioEnabled: false },
     });
@@ -96,24 +96,24 @@ describe('RecorderBar', () => {
     const deviceControls = controls.slice(2, 5);
 
     expect(deviceControls.map((control) => control.attributes('aria-label'))).toEqual([
-      'Turn microphone on',
-      'Turn camera on',
-      'Turn system audio on',
+      'Microphone',
+      'Camera',
+      'System audio',
     ]);
     deviceControls.forEach((control) => expect(control.classes()).toContain('inactive'));
 
     await deviceControls[0]!.trigger('click');
     await deviceControls[1]!.trigger('click');
     await deviceControls[2]!.trigger('click');
-    expect(wrapper.emitted('microphone')).toHaveLength(1);
-    expect(wrapper.emitted('camera')).toHaveLength(1);
-    expect(wrapper.emitted('systemAudio')).toHaveLength(1);
+    expect(wrapper.emitted('microphone')).toBeUndefined();
+    expect(wrapper.emitted('camera')).toBeUndefined();
+    expect(wrapper.emitted('systemAudio')).toBeUndefined();
 
     await wrapper.setProps({ microphoneEnabled: true, cameraEnabled: true, systemAudioEnabled: true });
     expect(deviceControls.map((control) => control.attributes('aria-label'))).toEqual([
-      'Turn microphone off',
-      'Turn camera off',
-      'Turn system audio off',
+      'Microphone',
+      'Camera',
+      'System audio',
     ]);
     deviceControls.forEach((control) => expect(control.classes()).not.toContain('inactive'));
     wrapper.unmount();
@@ -128,15 +128,17 @@ describe('RecorderBar', () => {
     expect(wrapper.get('.recording-time').text()).toContain('Ready');
     const controls = wrapper.findAll('.control');
     expect(controls[0].attributes('disabled')).toBeDefined();
-    expect(controls[2].attributes('disabled')).toBeDefined();
-    expect(controls[3].attributes('disabled')).toBeDefined();
-    expect(controls[4].attributes('disabled')).toBeDefined();
+    expect(controls[2].element.tagName).toBe('SPAN');
+    expect(controls[3].element.tagName).toBe('SPAN');
+    expect(controls[4].element.tagName).toBe('SPAN');
 
     await wrapper.setProps({ phase: 'paused' });
     expect(wrapper.get('.recording-time').text()).toBe('00:12.3');
     expect(wrapper.get('.control').attributes('aria-label')).toContain('Resume');
     await wrapper.setProps({ phase: 'finalizing' });
-    expect(wrapper.findAll('.control').every((control) => control.attributes('disabled') !== undefined)).toBe(true);
+    expect(wrapper.findAll('button.control').every((control) => control.attributes('disabled') !== undefined)).toBe(
+      true,
+    );
     wrapper.unmount();
   });
 
@@ -191,9 +193,9 @@ describe('RecorderBar', () => {
     // Pause and the three device toggles are disabled during startup.
     const controls = wrapper.findAll('.control');
     expect(controls[0].attributes('disabled')).toBeDefined();
-    expect(controls[2].attributes('disabled')).toBeDefined();
-    expect(controls[3].attributes('disabled')).toBeDefined();
-    expect(controls[4].attributes('disabled')).toBeDefined();
+    expect(controls[2].element.tagName).toBe('SPAN');
+    expect(controls[3].element.tagName).toBe('SPAN');
+    expect(controls[4].element.tagName).toBe('SPAN');
     // Stop and cancel stay available so startup can be aborted.
     expect(controls[1].attributes('disabled')).toBeUndefined();
     expect(controls[5].attributes('disabled')).toBeUndefined();

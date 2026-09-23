@@ -5,6 +5,7 @@ use beam_media_session::{AudioSelection, MediaSession, SessionConfig, SessionErr
 
 fn empty_sources(output_dir: std::path::PathBuf) -> SessionConfig {
     SessionConfig {
+        screen: None,
         output_dir,
         camera: beam_media_session::CameraSelection::Disabled,
         microphone: AudioSelection::Disabled,
@@ -58,6 +59,7 @@ fn existing_manifest_is_never_overwritten_by_prepare() {
     std::fs::create_dir(&output).expect("create session dir");
     std::fs::write(output.join("manifest.json"), b"previous session").expect("old manifest");
     let result = MediaSession::prepare(SessionConfig {
+        screen: None,
         output_dir: output.clone(),
         camera: beam_media_session::CameraSelection::Disabled,
         microphone: AudioSelection::Disabled,
@@ -75,6 +77,7 @@ fn unavailable_microphone_is_a_failed_track_with_no_fake_wav() {
     let temporary = tempfile::tempdir().expect("tempdir");
     let output = temporary.path().join("session");
     let session = MediaSession::prepare(SessionConfig {
+        screen: None,
         output_dir: output.clone(),
         camera: beam_media_session::CameraSelection::Disabled,
         microphone: AudioSelection::Device("beam-no-such-microphone".into()),
@@ -93,6 +96,7 @@ fn default_camera_failure_is_recorded_without_a_fake_video() {
     let temporary = tempfile::tempdir().expect("tempdir");
     let output = temporary.path().join("session");
     let session = MediaSession::prepare(SessionConfig {
+        screen: None,
         output_dir: output.clone(),
         camera: beam_media_session::CameraSelection::FirstAvailable {
             width: 0,
@@ -108,4 +112,53 @@ fn default_camera_failure_is_recorded_without_a_fake_video() {
     assert_eq!(track.status, TrackStatus::Failed);
     assert!(track.termination_reason.is_some());
     assert!(!output.join("camera.webm").exists());
+}
+
+#[test]
+fn host_project_identity_is_checkpointed_and_finalized() {
+    let temporary = tempfile::tempdir().expect("tempdir");
+    let project_id = beam_media_manifest::ProjectId::new();
+    let session = MediaSession::prepare_for_project(
+        empty_sources(temporary.path().join("session")),
+        project_id,
+    )
+    .expect("prepare");
+    let checkpoint: beam_media_manifest::SessionManifest = serde_json::from_slice(
+        &std::fs::read(temporary.path().join("session/manifest.partial.json")).expect("checkpoint"),
+    )
+    .expect("manifest");
+    assert_eq!(checkpoint.project_id, project_id);
+    assert_eq!(session.stop().expect("finalize").project_id, project_id);
+}
+
+#[test]
+fn host_project_prepare_rejects_invalid_output() {
+    let result = MediaSession::prepare_for_project(
+        empty_sources(std::path::PathBuf::new()),
+        beam_media_manifest::ProjectId::new(),
+    );
+    assert!(matches!(result, Err(SessionError::InvalidConfiguration(_))));
+}
+
+#[test]
+fn host_project_prepare_preserves_existing_recording() {
+    let temporary = tempfile::tempdir().expect("tempdir");
+    let output = temporary.path().join("session");
+    let session = MediaSession::prepare_for_project(
+        empty_sources(output.clone()),
+        beam_media_manifest::ProjectId::new(),
+    )
+    .expect("prepare");
+    let original = session.stop().expect("finalize");
+    assert!(
+        MediaSession::prepare_for_project(
+            empty_sources(output.clone()),
+            beam_media_manifest::ProjectId::new()
+        )
+        .is_err()
+    );
+    let saved: beam_media_manifest::SessionManifest =
+        serde_json::from_slice(&std::fs::read(output.join("manifest.json")).expect("read"))
+            .expect("manifest");
+    assert_eq!(saved, original);
 }

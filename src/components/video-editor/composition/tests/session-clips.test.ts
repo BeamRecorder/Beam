@@ -83,6 +83,22 @@ const shortcut = (sessionNs: number, key: 'a' | 'b', pressed = true) => ({
 });
 
 describe('synchronizeRecordingClips', () => {
+  it('retains completed segments of a failed native track and omits unfinished tails', () => {
+    const result = synchronizeRecordingClips(
+      emptyComposition(),
+      editorData([
+        track(
+          'camera',
+          [segment({ path: 'camera.webm', src: '/camera.webm' }), segment({ path: 'camera-1.webm', complete: false })],
+          { width: 640, height: 480 },
+          'failed',
+        ),
+      ]),
+    );
+    expect(result.clips).toHaveLength(1);
+    expect(result.clips[0]?.kind).toBe('webcam');
+  });
+
   it('returns the original composition without editor data', () => {
     const composition = emptyComposition();
     expect(synchronizeRecordingClips(composition, null)).toBe(composition);
@@ -130,7 +146,7 @@ describe('synchronizeRecordingClips', () => {
         track('system-audio', [system]),
         track('microphone', [microphone]),
         track('cursor', [segment()]),
-        track('camera', [segment({ path: 'failed.webm' })], {}, 'failed'),
+        track('camera', [segment({ path: 'failed.webm', complete: false })], {}, 'failed'),
       ]),
     );
 

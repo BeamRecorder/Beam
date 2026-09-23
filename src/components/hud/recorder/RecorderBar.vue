@@ -29,9 +29,6 @@ const emit = defineEmits<{
   stop: [];
   cancel: [];
   pause: [];
-  camera: [];
-  microphone: [];
-  systemAudio: [];
 }>();
 </script>
 
@@ -79,41 +76,29 @@ const emit = defineEmits<{
       <Square />
     </button>
 
-    <button
+    <span
       class="control"
+      role="img"
+      :aria-label="t('microphone')"
       :class="{ inactive: !microphoneEnabled }"
-      :aria-label="microphoneEnabled ? t('turnMicOff') : t('turnMicOn')"
-      :title="microphoneEnabled ? t('turnMicOff') : t('turnMicOn')"
-      :disabled="phase === 'countdown' || phase === 'starting' || phase === 'finalizing'"
       @pointerdown.stop
-      @click="emit('microphone')"
     >
       <AudioIconMeter kind="mic" :enabled="microphoneEnabled" :level="micLevel" size="sm" />
-    </button>
+    </span>
 
-    <button
-      class="control"
-      :class="{ inactive: !cameraEnabled }"
-      :aria-label="cameraEnabled ? t('turnCameraOff') : t('turnCameraOn')"
-      :title="cameraEnabled ? t('turnCameraOff') : t('turnCameraOn')"
-      :disabled="phase === 'countdown' || phase === 'starting' || phase === 'finalizing'"
-      @pointerdown.stop
-      @click="emit('camera')"
-    >
+    <span class="control" role="img" :aria-label="t('camera')" :class="{ inactive: !cameraEnabled }" @pointerdown.stop>
       <Video v-if="cameraEnabled" /><VideoOff v-else />
-    </button>
+    </span>
 
-    <button
+    <span
       class="control"
+      role="img"
+      :aria-label="t('systemAudio')"
       :class="{ inactive: !systemAudioEnabled }"
-      :aria-label="systemAudioEnabled ? t('turnSystemAudioOff') : t('turnSystemAudioOn')"
-      :title="systemAudioEnabled ? t('turnSystemAudioOff') : t('turnSystemAudioOn')"
-      :disabled="phase === 'countdown' || phase === 'starting' || phase === 'finalizing'"
       @pointerdown.stop
-      @click="emit('systemAudio')"
     >
       <AudioIconMeter kind="system" :enabled="systemAudioEnabled" :level="systemAudioLevel" size="sm" />
-    </button>
+    </span>
 
     <div class="cancel-slot">
       <button

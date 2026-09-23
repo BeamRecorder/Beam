@@ -27,10 +27,10 @@ const diagnostics = (recordingAvailable = true): LinuxCaptureDiagnostics => ({
     errorCode: 'pipewire-connect-failed',
     detail: null,
   },
-  ffmpeg: {
+  gstreamer: {
     available: recordingAvailable,
-    errorCode: recordingAvailable ? null : 'ffmpeg-unavailable',
-    detail: recordingAvailable ? null : 'FFmpeg does not provide the MP4 muxer required by Beam',
+    errorCode: recordingAvailable ? null : 'gstreamer-unavailable',
+    detail: recordingAvailable ? null : 'GStreamer does not provide the MP4 muxer required by Beam',
     encoder: recordingAvailable ? 'libx264' : null,
     codec: recordingAvailable ? 'h264' : null,
     hardware: false,
@@ -79,7 +79,7 @@ describe('unavailableLinuxRequirements', () => {
   it('returns details first and error codes when requirements are unavailable', () => {
     expect(unavailableLinuxRequirements(diagnostics(false))).toEqual([
       'pipewire-connect-failed',
-      'FFmpeg does not provide the MP4 muxer required by Beam',
+      'GStreamer does not provide the MP4 muxer required by Beam',
     ]);
   });
 
@@ -89,7 +89,7 @@ describe('unavailableLinuxRequirements', () => {
 
     expect(unavailableLinuxRequirements(broken)).toEqual([
       'Unknown Linux capture requirement failure',
-      'FFmpeg does not provide the MP4 muxer required by Beam',
+      'GStreamer does not provide the MP4 muxer required by Beam',
     ]);
   });
 });

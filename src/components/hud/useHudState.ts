@@ -2,9 +2,9 @@ import { restoreHudDevices } from './hud-devices';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { capture } from '../../api/capture';
 import { rememberCaptureCatalog } from '../../api/capture-diagnostics';
-import { listBrowserCameras } from '~/api/camera-recorder';
-import { listBrowserMicrophones } from '~/api/microphone-recorder';
-import { systemAudioSource } from '~/api/system-audio-recorder';
+import { listNativeCameras } from '~/api/native-devices';
+import { listNativeMicrophones } from '~/api/native-devices';
+import { systemAudioSource } from '~/api/native-devices';
 import type { CaptureCatalog, CaptureProject, CaptureSource } from '../../api/types/capture-api';
 import type { ScreenRegion } from '../../api/types/screen-region';
 import { canonicalMacWindowSourceId, matchScreenPreview } from './source-preview';
@@ -252,7 +252,7 @@ export function useHudState(props: HudProps, emit: HudEmit) {
     errorMessage.value = '';
     sourceDiscoveryCompleted.value = false;
     try {
-      const browserDevices = Promise.all([listBrowserMicrophones(), listBrowserCameras()]).then(
+      const browserDevices = Promise.all([listNativeMicrophones(), listNativeCameras()]).then(
         ([microphones, cameras]) => {
           sources.value = [
             ...sources.value.filter((source) => source.kind !== 'camera' && source.kind !== 'microphone'),

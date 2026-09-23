@@ -16,6 +16,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  native-runtimes:
+    needs: prepare
+    uses: ./.github/workflows/native-runtime.yml
+
   prepare:
     if: >-
       github.actor == 'ExtraBinoss' &&
@@ -55,10 +59,15 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
   package-windows:
-    needs: prepare
+    needs: [prepare, native-runtimes]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: media-runtime-win-*
+          path: native-runtime-artifacts
+          merge-multiple: true
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -81,14 +90,8 @@ jobs:
           shared-key: cargo-package-windows-x64-arm64-release
           cache-on-failure: true
       - run: node scripts/ci/bun-install-retry.cjs
-      - name: Build and stage x64 and ARM64 capture engines
-        shell: pwsh
-        run: |
-          cargo build -p capture --bin capture-engine --release --target x86_64-pc-windows-msvc
-          cargo build -p capture --bin capture-engine --release --target aarch64-pc-windows-msvc
-          node scripts/native/artifacts.cjs stage --platform win32 --arch x64 --target x86_64-pc-windows-msvc
-          node scripts/native/artifacts.cjs stage --platform win32 --arch arm64 --target aarch64-pc-windows-msvc
-          bunx vite build
+      - run: node scripts/native/artifacts.cjs restore --input native-runtime-artifacts
+      - run: bunx vite build
       - run: bunx electron-builder --win nsis --x64 --arm64 --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
@@ -97,17 +100,17 @@ jobs:
         shell: pwsh
         run: |
           $version = node -p "require('./package.json').version"
-          node scripts/release/verify-pe.cjs x64 "build/native/win/x64/capture-engine-$version.exe" "dist_electron/win-unpacked/Beam.exe" "dist_electron/win-unpacked/resources/capture-engine/capture-engine-$version.exe"
-          node scripts/release/verify-pe.cjs arm64 "build/native/win/arm64/capture-engine-$version.exe" "dist_electron/win-arm64-unpacked/Beam.exe" "dist_electron/win-arm64-unpacked/resources/capture-engine/capture-engine-$version.exe"
+          node scripts/release/verify-pe.cjs x64 "build/native/win/x64/beam-media-engine-$version.exe" "dist_electron/win-unpacked/Beam.exe" "dist_electron/win-unpacked/resources/media-runtime/bin/beam-media-engine.exe"
+          node scripts/release/verify-pe.cjs arm64 "build/native/win/arm64/beam-media-engine-$version.exe" "dist_electron/win-arm64-unpacked/Beam.exe" "dist_electron/win-arm64-unpacked/resources/media-runtime/bin/beam-media-engine.exe"
           node scripts/release/artifacts.cjs metadata dist_electron latest.yml
           $installer = Get-ChildItem dist_electron -Filter '*.exe' | Where-Object Name -Like '*Setup*' | Select-Object -First 1
           $listing = & 7z l $installer.FullName | Out-String
           if ($listing -notmatch 'app-64\.7z' -or $listing -notmatch 'app-arm64\.7z') { throw 'Universal NSIS payloads are missing' }
           Start-Process -FilePath $installer.FullName -ArgumentList '/S' -Wait
           node scripts/release/verify-pe.cjs x64 (Join-Path $env:LOCALAPPDATA 'Programs/Beam/Beam.exe')
-          $engine = "build/native/win/x64/capture-engine-$version.exe"
-          $response = '{"id":"release-status","command":"status"}' | & $engine | Select-Object -First 1 | ConvertFrom-Json
-          if (-not $response.ok) { throw 'x64 capture-engine status smoke failed' }
+          $engine = "build/native/win/x64/media-runtime/run-engine.cmd"
+          $response = '{"id":"release-status","version":1,"command":{"type":"status"}}' | & $engine (Join-Path $env:RUNNER_TEMP 'beam-smoke-projects') | Select-Object -First 1 | ConvertFrom-Json
+          if (-not $response.ok) { throw 'x64 beam-media-engine status smoke failed' }
       - uses: actions/upload-artifact@v4
         with:
           name: windows-release-assets
@@ -123,7 +126,7 @@ jobs:
           name: windows-arm64-smoke-payload
           path: |
             dist_electron/win-arm64-unpacked/Beam.exe
-            dist_electron/win-arm64-unpacked/resources/capture-engine/*.exe
+            dist_electron/win-arm64-unpacked/resources/media-runtime/**
           if-no-files-found: error
           retention-days: 1
           compression-level: 0
@@ -145,17 +148,22 @@ jobs:
         run: |
           $version = node -p "require('./package.json').version"
           $application = Get-ChildItem windows-arm64-payload -Recurse -File -Filter 'Beam.exe' | Select-Object -First 1
-          $engine = Get-ChildItem windows-arm64-payload -Recurse -File -Filter "capture-engine-$version.exe" | Select-Object -First 1
+          $engine = Get-ChildItem windows-arm64-payload -Recurse -File -Filter "beam-media-engine.exe" | Select-Object -First 1
           if (-not $application -or -not $engine) { throw 'ARM64 smoke payload is incomplete' }
           node scripts/release/verify-pe.cjs arm64 $application.FullName $engine.FullName
-          $response = '{"id":"release-status","command":"status"}' | & $engine.FullName | Select-Object -First 1 | ConvertFrom-Json
-          if (-not $response.ok) { throw 'ARM64 capture-engine status smoke failed' }
+          $response = '{"id":"release-status","version":1,"command":{"type":"status"}}' | & (Join-Path $engine.Directory.Parent.FullName 'run-engine.cmd') (Join-Path $env:RUNNER_TEMP 'beam-smoke-projects') | Select-Object -First 1 | ConvertFrom-Json
+          if (-not $response.ok) { throw 'ARM64 beam-media-engine status smoke failed' }
 
   package-macos:
-    needs: prepare
+    needs: [prepare, native-runtimes]
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: media-runtime-mac-*
+          path: native-runtime-artifacts
+          merge-multiple: true
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -178,12 +186,9 @@ jobs:
           shared-key: cargo-package-macos-aarch64-apple-darwin-release
           cache-on-failure: true
       - run: node scripts/ci/bun-install-retry.cjs
-      - name: Build and stage the Apple Silicon engine
-        run: |
-          cargo build -p capture --bin capture-engine --release --target aarch64-apple-darwin
-          node scripts/native/artifacts.cjs stage --platform darwin --arch arm64 --target aarch64-apple-darwin
-          bunx vite build
-      - run: bunx electron-builder --mac dmg zip --arm64 --publish never
+      - run: node scripts/native/artifacts.cjs restore --input native-runtime-artifacts
+      - run: bunx vite build
+      - run: bunx electron-builder --mac dmg zip --x64 --arm64 --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       - run: node scripts/native/artifacts.cjs collect --output dist_native
@@ -192,9 +197,13 @@ jobs:
         run: |
           set -euo pipefail
           version="$(node -p "require('./package.json').version")"
-          packaged="$(find dist_electron -type f -path "*/Beam.app/Contents/Resources/capture-engine/capture-engine-$version" -print -quit)"
-          test -n "$packaged"
-          file "$packaged" | grep 'arm64'
+          for entry in 'mac:x86_64' 'mac-arm64:arm64'; do
+            directory="${entry%%:*}"
+            architecture="${entry##*:}"
+            packaged="dist_electron/$directory/Beam.app/Contents/Resources/media-runtime/bin/beam-media-engine"
+            test -f "$packaged"
+            file "$packaged" | grep "$architecture"
+          done
           otool -L "$packaged"
           node scripts/release/artifacts.cjs metadata dist_electron latest-mac.yml
       - uses: actions/upload-artifact@v4
@@ -210,10 +219,15 @@ jobs:
           retention-days: 1
 
   package-linux:
-    needs: prepare
+    needs: [prepare, native-runtimes]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: media-runtime-linux-*
+          path: native-runtime-artifacts
+          merge-multiple: true
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -236,9 +250,11 @@ jobs:
       - name: Install Linux build and inspection dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install --yes clang libclang-dev libpipewire-0.3-dev pkg-config rpm
+          sudo apt-get install --yes clang libclang-dev libpipewire-0.3-dev libasound2-dev libudev-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good pkg-config rpm
       - run: node scripts/ci/bun-install-retry.cjs
-      - run: bun run build
+      - run: node scripts/native/artifacts.cjs restore --input native-runtime-artifacts
+      - run: bunx vite build
+      - run: bunx vite build
       - run: bunx electron-builder --linux AppImage deb rpm --x64 --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
@@ -253,7 +269,7 @@ jobs:
           rpm_package="$(find dist_electron -maxdepth 1 -type f -name '*.rpm' -print -quit)"
           chmod +x "$appimage"
           (cd dist_electron && "./$(basename "$appimage")" --appimage-extract >/dev/null)
-          packaged_engine="$(find dist_electron/squashfs-root -type f -path "*/resources/capture-engine/capture-engine-$version" -print -quit)"
+          packaged_engine="$(find dist_electron/squashfs-root -type f -path "*/resources/media-runtime/bin/beam-media-engine" -print -quit)"
           packaged_helper="$(find dist_electron/squashfs-root -type f -path "*/resources/input-helper/beam-input-helper-$version" -print -quit)"
           test -x "$packaged_engine"
           test -x "$packaged_helper"

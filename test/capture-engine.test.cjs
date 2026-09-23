@@ -70,16 +70,12 @@ childProcess.spawn = () => {
 };
 readline.createInterface = () => fakeInterface();
 fs.existsSync = () => true;
-process.env.BEAM_CAPTURE_ENGINE = '/fake/capture-engine';
+process.env.BEAM_MEDIA_ENGINE = '/fake/beam-media-engine';
 
-const { CaptureEngine } = require('../electron/capture/capture-engine.cjs');
+const { MediaEngine } = require('../electron/capture/media-engine.cjs');
 
 function createEngine() {
-  return new CaptureEngine(
-    { isPackaged: false, getVersion: () => '1.2.3', getPath: () => '/tmp/beam' },
-    '/tmp/beam',
-    {},
-  );
+  return new MediaEngine({ isPackaged: false, getVersion: () => '1.2.3', getPath: () => '/tmp/beam' }, '/tmp/beam', {});
 }
 
 test('invalid commands reject before starting the engine or registering pending requests', async () => {
@@ -92,7 +88,7 @@ test('invalid commands reject before starting the engine or registering pending 
   };
   const expectedError = {
     name: 'TypeError',
-    message: 'capture-engine: command must be a non-empty string',
+    message: 'beam-media-engine: command must be a non-empty string',
   };
   const requests = [{}, '', ' \t '].map((command) => engine.request(command, {}, { timeoutMs: 10 }));
   const rejectionChecks = requests.map((request) => assert.rejects(request, expectedError));
@@ -148,7 +144,7 @@ test('a crashed child poisons the engine and rejects pending requests', async ()
   const pending = engine.request('status', {}, { timeoutMs: 1000 });
   spawned[0].emit('exit', 1, null);
 
-  await assert.rejects(pending, /capture-engine arrêté/);
+  await assert.rejects(pending, /beam-media-engine arrêté/);
   await engine.terminating?.promise;
   assert.equal(engine.isPoisoned, true);
   assert.equal(engine.process, null);
@@ -245,9 +241,9 @@ test('requests are gated as soon as engine shutdown begins', async () => {
   const shutdown = engine.shutdown();
 
   await assert.rejects(engine.request('status', {}, { timeoutMs: 20 }), /disabled during application shutdown/);
-  const stopWrite = writes.find((line) => line.includes('"command":"stop"'));
+  const stopWrite = writes.find((line) => JSON.parse(line).command.type === 'status');
   const { id } = JSON.parse(stopWrite);
-  interfaces[0].lineHandler(JSON.stringify({ requestId: id, ok: true, result: {} }));
+  interfaces[0].lineHandler(JSON.stringify({ version: 1, requestId: id, ok: true, result: {} }));
   spawned[0].exitCode = 0;
   spawned[0].emit('exit', 0, null);
   await shutdown;
@@ -262,9 +258,9 @@ test('shutdown gracefully stops, force-kills the child, and stays idempotent', a
   assert.equal(spawned.length, 1);
 
   const shutdownPromise = engine.shutdown();
-  const stopWrite = writes.find((line) => line.includes('"command":"stop"'));
+  const stopWrite = writes.find((line) => JSON.parse(line).command.type === 'status');
   const { id } = JSON.parse(stopWrite);
-  interfaces[0].lineHandler(JSON.stringify({ requestId: id, ok: true, result: { sessionId: 'done' } }));
+  interfaces[0].lineHandler(JSON.stringify({ version: 1, requestId: id, ok: true, result: { sessionId: 'done' } }));
   spawned[0].exitCode = 0;
   spawned[0].emit('exit', 0, null);
 
@@ -277,8 +273,8 @@ test('shutdown gracefully stops, force-kills the child, and stays idempotent', a
 });
 
 test('native preview cleanup is allowed only on a live running engine', () => {
-  const { CaptureEngine } = require('../electron/capture/capture-engine.cjs');
-  const engine = new CaptureEngine({}, '/beam');
+  const { MediaEngine } = require('../electron/capture/media-engine.cjs');
+  const engine = new MediaEngine({}, '/beam', { projectsRoot: '/projects' });
   assert.equal(engine.canCleanup(), false);
   assert.equal(spawned.length, 0);
   engine.process = {};

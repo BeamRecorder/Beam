@@ -2,7 +2,13 @@ const fs = require('node:fs');
 const path = require('node:path');
 const readline = require('node:readline');
 const { spawn } = require('node:child_process');
-const { buildCaptureEngine, cargoAvailable, cargoBuildArguments, runCommand } = require('../native/artifacts.cjs');
+const {
+  cargoTargetDirectory,
+  buildMediaEngine,
+  cargoAvailable,
+  cargoBuildArguments,
+  runCommand,
+} = require('../native/artifacts.cjs');
 const { downloadNativeFiles, requiredNativeFiles } = require('../native/download.cjs');
 
 const applicationRoot = path.join(__dirname, '../..');
@@ -10,7 +16,7 @@ const applicationRoot = path.join(__dirname, '../..');
 function askDownload(version, input = process.stdin, output = process.stdout) {
   const prompt = readline.createInterface({ input, output });
   return new Promise((resolve) => {
-    prompt.question(`Download capture-engine ${version}? [Y/n] `, (answer) => {
+    prompt.question(`Download beam-media-engine ${version}? [Y/n] `, (answer) => {
       prompt.close();
       resolve(!['n', 'no'].includes(answer.trim().toLowerCase()));
     });
@@ -37,24 +43,24 @@ async function resolveDevelopmentEngine({
   stdout = process.stdout,
   existsSync = fs.existsSync,
   hasCargo = cargoAvailable,
-  build = buildCaptureEngine,
+  build = buildMediaEngine,
   download = downloadNativeFiles,
   prompt = askDownload,
 } = {}) {
   const required = requiredNativeFiles(root, version, platform, arch);
-  if (!required) throw new Error(`Beam has no capture-engine build for ${platform}/${arch}`);
+  if (!required) throw new Error(`Beam has no beam-media-engine build for ${platform}/${arch}`);
   if (hasCargo()) {
     await build({ platform });
     const extension = platform === 'win32' ? '.exe' : '';
-    return path.join(root, 'target', 'debug', `capture-engine${extension}`);
+    return path.join(cargoTargetDirectory(root), 'debug', `beam-media-engine${extension}`);
   }
   if (missingFiles(required, existsSync).length === 0) return required[0].destination;
   let approved = false;
   if (stdin.isTTY && stdout.isTTY) approved = await prompt(version, stdin, stdout);
-  else approved = env.BEAM_DOWNLOAD_CAPTURE_ENGINE === '1';
+  else approved = env.BEAM_DOWNLOAD_MEDIA_ENGINE === '1';
   if (!approved) {
     throw new Error(
-      `capture-engine ${version} is not cached for ${platform}/${arch}; install Rust or allow the verified download`,
+      `beam-media-engine ${version} is not cached for ${platform}/${arch}; install Rust or allow the verified download`,
     );
   }
   await download({ applicationRoot: root, version, platform, arch });
@@ -65,10 +71,21 @@ async function resolveDevelopmentEngine({
 
 async function startElectron(executable, { root = applicationRoot, spawnImpl = spawn, env = process.env } = {}) {
   const electronCli = require.resolve('electron/cli.js');
+  const { prebuiltRuntimePath } = require('../../electron/capture/media-engine-path.cjs');
+  const runtime = prebuiltRuntimePath(root, require('../../package.json').version);
+  const privateRuntime = runtime && fs.existsSync(path.join(runtime, 'inventory.json'));
+  if (privateRuntime && executable.includes(path.join('packages', 'native-recorder'))) {
+    executable = path.join(
+      runtime,
+      'bin',
+      process.platform === 'win32' ? 'beam-media-engine.exe' : 'beam-media-engine',
+    );
+    env = { ...env, BEAM_MEDIA_RUNTIME: runtime };
+  }
   await runCommand(
     process.execPath,
     [electronCli, '.'],
-    { cwd: root, env: { ...env, BEAM_CAPTURE_ENGINE: executable, BEAM_DEVELOPMENT_INSTANCE: '1' } },
+    { cwd: root, env: { ...env, BEAM_MEDIA_ENGINE: executable, BEAM_DEVELOPMENT_INSTANCE: '1' } },
     spawnImpl,
   );
 }
@@ -93,7 +110,7 @@ if (require.main === module) {
 
 module.exports = {
   askDownload,
-  buildCaptureEngine,
+  buildMediaEngine,
   cargoAvailable,
   cargoBuildArguments,
   missingFiles,

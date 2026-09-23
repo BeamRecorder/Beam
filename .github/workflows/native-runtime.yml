@@ -1,0 +1,34 @@
+name: Build native media runtimes
+on:
+  workflow_call:
+jobs:
+  runtime:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {runner: ubuntu-24.04, platform: linux, os: linux, arch: x64}
+          - {runner: windows-latest, platform: win32, os: win, arch: x64}
+          - {runner: windows-11-arm, platform: win32, os: win, arch: arm64}
+          - {runner: macos-15-intel, platform: darwin, os: mac, arch: x64}
+          - {runner: macos-latest, platform: darwin, os: mac, arch: arm64}
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.92.0
+      - uses: Swatinem/rust-cache@v2
+      - uses: ./.github/actions/gstreamer
+      - name: Build, stage and verify the native runtime
+        run: node scripts/native/artifacts.cjs build
+      - name: Preserve executable modes in the runtime artifact
+        run: tar -C build/native -czf native-runtime-${{ matrix.os }}-${{ matrix.arch }}.tar.gz .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: media-runtime-${{ matrix.os }}-${{ matrix.arch }}
+          path: native-runtime-${{ matrix.os }}-${{ matrix.arch }}.tar.gz
+          if-no-files-found: error
