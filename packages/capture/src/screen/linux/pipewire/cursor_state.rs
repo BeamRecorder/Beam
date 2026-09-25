@@ -5,6 +5,8 @@ use crate::{
 
 use super::{CropRect, CursorClassifier, VideoTransform};
 
+pub(crate) const HIDDEN_CURSOR_SHAPE_ID: u64 = 0;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct CursorMetadata {
     pub id: u64,
@@ -20,6 +22,8 @@ pub(crate) struct CursorState {
     stream_scope: String,
     native_id: Option<u64>,
     last_raw_id: Option<u64>,
+    last_visible_position: Option<(i32, i32)>,
+    shape_visible: bool,
     cursor_kind: CursorKind,
     classifier: CursorClassifier,
 }
@@ -31,6 +35,8 @@ impl CursorState {
             stream_scope: stream_scope.into(),
             native_id: None,
             last_raw_id: None,
+            last_visible_position: None,
+            shape_visible: true,
             cursor_kind: CursorKind::Custom,
             classifier: CursorClassifier::system(),
         }
@@ -50,6 +56,31 @@ impl CursorState {
         let Some(metadata) = metadata else {
             return CursorSampleState::Unknown;
         };
+        if metadata.shape_id == Some(HIDDEN_CURSOR_SHAPE_ID) {
+            self.shape_visible = false;
+        } else if metadata.shape_id.is_some() {
+            self.shape_visible = true;
+        }
+        if !self.shape_visible {
+            let (Some(native_id), Some((pixel_x, pixel_y))) =
+                (self.native_id, self.last_visible_position)
+            else {
+                return CursorSampleState::Unknown;
+            };
+            if width == 0 || height == 0 {
+                return CursorSampleState::Unknown;
+            }
+            return CursorSampleState::Known {
+                native_cursor_id: format!("pipewire:{}:{native_id}", self.stream_scope),
+                cursor_kind: self.cursor_kind,
+                pixel_x,
+                pixel_y,
+                normalized_x: f64::from(pixel_x) / f64::from(width),
+                normalized_y: f64::from(pixel_y) / f64::from(height),
+                visible: false,
+                hotspot: None,
+            };
+        }
         if let Some(shape_id) = metadata.shape_id.filter(|id| *id != 0) {
             // Mutter keeps MetaCursor.id at 1 across shape changes. Use the
             // transient bitmap to derive an opaque identity and portable kind;
@@ -76,6 +107,9 @@ impl CursorState {
             && metadata.y >= 0
             && u32::try_from(metadata.x).is_ok_and(|x| x < width)
             && u32::try_from(metadata.y).is_ok_and(|y| y < height);
+        if visible {
+            self.last_visible_position = Some((metadata.x, metadata.y));
+        }
         CursorSampleState::Known {
             native_cursor_id: format!("pipewire:{}:{native_id}", self.stream_scope),
             cursor_kind: self.cursor_kind,

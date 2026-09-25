@@ -6,6 +6,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Prevent Linux window recordings from moving the cursor to the top-left when focus leaves or returns to the shared window or display.
 - Keep Linux cursor movement synchronized when compositors such as niri provide a stagnant PipeWire presentation timestamp.
 - Screen recording now works on Niri and other Linux compositors that require modifier-backed DMA-BUF capture buffers.
 - Linux screen recording now drops malformed DMA-BUF frames without ending capture and refreshes imported buffers after format changes.
