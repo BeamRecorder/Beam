@@ -63,7 +63,7 @@ jobs:
       - name: Install native build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install --yes clang libclang-dev libpipewire-0.3-dev pkg-config
+          sudo apt-get install --yes clang libclang-dev libgbm-dev libpipewire-0.3-dev pkg-config
       - run: node scripts/ci/bun-install-retry.cjs
       - run: bun run format:check
       - run: bun run typecheck
@@ -106,7 +106,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --yes \
-            clang cpio ffmpeg libclang-dev libpipewire-0.3-dev \
+            clang cpio ffmpeg libclang-dev libgbm-dev libpipewire-0.3-dev \
             p7zip-full pipewire pkg-config rpm wireplumber \
             xdg-desktop-portal xdg-desktop-portal-gnome
       - run: node scripts/ci/bun-install-retry.cjs
