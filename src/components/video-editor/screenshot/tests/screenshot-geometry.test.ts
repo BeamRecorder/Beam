@@ -12,6 +12,18 @@ describe('screenshot output dimensions', () => {
     expect(resizeScreenshotCanvas(canvas, 'height', 400, true)).toMatchObject({ width: 600, height: 400 });
     expect(resizeScreenshotCanvas(canvas, 'height', 400, false)).toMatchObject({ width: 1200, height: 400 });
   });
+  it('preserves the starting aspect through intermediate width and height edits', () => {
+    const narrow = resizeScreenshotCanvas(canvas, 'width', '6', true, canvas);
+    const wider = resizeScreenshotCanvas(narrow, 'width', '60', true, canvas);
+    expect(resizeScreenshotCanvas(wider, 'width', '600', true, canvas)).toMatchObject({ width: 600, height: 400 });
+
+    const short = resizeScreenshotCanvas(canvas, 'height', '4', true, canvas);
+    expect(resizeScreenshotCanvas(short, 'height', '400', true, canvas)).toMatchObject({ width: 600, height: 400 });
+  });
+  it('uses a new aspect source for a later edit', () => {
+    const square = screenshotCanvasPreset(canvas, '1:1', { width: 1200, height: 800 });
+    expect(resizeScreenshotCanvas(square, 'width', 540, true, square)).toMatchObject({ width: 540, height: 540 });
+  });
   it.each(['', 'bad', 'Infinity', '0', '-1', '120.5', '16385'])(
     'rejects invalid dimensions (%s) without changing the canvas',
     (value) => {

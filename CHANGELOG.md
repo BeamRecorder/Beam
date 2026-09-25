@@ -11,6 +11,7 @@ User-facing changes to Beam are documented in this file.
 ### Fixed
 
 - The cursor stop spring now stays sharp while motion blur continues to follow regular cursor movement.
+- Typing a Screenshot export width or height with Keep aspect ratio enabled now preserves the starting proportions, so placed elements scale with the captured image.
 - Cropping a Studio video now keeps the cursor and click effects aligned with the visible recording in preview and export.
 - Instant capture from the HUD now opens on a full display without a Quick Snip window geometry error.
 - The floating camera preview now opens in a square shape; previews saved at the former default size adopt the new shape.
