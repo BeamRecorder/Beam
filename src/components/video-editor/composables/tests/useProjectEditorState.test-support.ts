@@ -38,7 +38,14 @@ export const globalCursor = (): CursorPresentation => ({
       rippleColor: '#445566',
     },
   },
-  motion: { preset: 'custom', smoothing: 0.31, springMassMultiplier: 1.72, motionBlur: 0.18 },
+  motion: {
+    preset: 'custom',
+    smoothing: 0.31,
+    springMassMultiplier: 1.72,
+    motionBlur: 0.18,
+    stopSpringEnabled: false,
+    stopSpringStrength: 0.72,
+  },
   autoHide: { enabled: true, delaySeconds: 6.5, fadeDurationMs: 650 },
 });
 
@@ -66,6 +73,13 @@ export const projectCursor = (): CursorPresentation => ({
       rippleColor: '#fedcba',
     },
   },
-  motion: { preset: 'focused', smoothing: 0.91, springMassMultiplier: 0.61, motionBlur: 0.73 },
+  motion: {
+    preset: 'focused',
+    smoothing: 0.91,
+    springMassMultiplier: 0.61,
+    motionBlur: 0.73,
+    stopSpringEnabled: true,
+    stopSpringStrength: 0.2,
+  },
   autoHide: { enabled: true, delaySeconds: 4.25, fadeDurationMs: 425 },
 });

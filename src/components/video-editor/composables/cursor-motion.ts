@@ -4,6 +4,7 @@ import type { RecordedCursorPoint } from './cursor-motion-types';
 import type { CursorPlaybackState } from './cursorPlayback';
 import { cursorStateAt } from './cursorPlayback';
 import { createDeterministicCursorMotionEvaluator } from './cursor-motion-evaluator';
+import { createCursorStopSpring } from './cursor-stop-spring';
 
 export { stepSpringAxis } from './cursor-motion-evaluator';
 
@@ -344,13 +345,15 @@ export function createCursorMotionPlayer(
   const timeline: CursorMotionTimeline = { ...stylizedTimeline, targetAt: recordedTargetAt };
   const buttonTimes = buttonEvents(events).map(eventTime);
   const drags = dragRanges(events);
+  const isDraggingAt = (timeSeconds: number) =>
+    drags.some((range) => timeSeconds >= range.startSeconds && timeSeconds <= range.endSeconds);
   const evaluator = createDeterministicCursorMotionEvaluator({
     settings,
     targetAt: recordedTargetAt,
     directTargetAt: recordedTargetAt,
-    isDraggingAt: (timeSeconds) =>
-      drags.some((range) => timeSeconds >= range.startSeconds && timeSeconds <= range.endSeconds),
+    isDraggingAt,
     buttonTimes,
+    stopSpringAt: createCursorStopSpring(events, settings, sourceWidth, sourceHeight, isDraggingAt),
   });
   const sample = (timeSeconds: number, rawState: CursorPlaybackState | null): CursorMotionSample | null => {
     if (!rawState) return null;

@@ -4,6 +4,10 @@ User-facing changes to Beam are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Added an adjustable cursor spring when movement stops, enabled by default and saved with editor presets.
+
 ### Fixed
 
 - Typing a Screenshot export width or height with Keep aspect ratio enabled now preserves the starting proportions, so placed elements scale with the captured image.

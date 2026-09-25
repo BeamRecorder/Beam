@@ -24,6 +24,7 @@ import {
   type CursorAutoHideSettings,
   type CursorClickEffects,
   type CursorMotionSettings,
+  normalizeCursorMotionSettings,
 } from '../../../api/types/cursor-settings';
 import type { CursorShadowDirection } from '../../../api/types/cursor-presentation';
 import type { CursorSelection } from '../../../api/types/cursor-pack';
@@ -212,7 +213,7 @@ export function useProjectEditorState(options: {
       options.cursorShadowColor.value = cursor.shadow.color;
       options.cursorShadowDirection.value = cursor.shadow.direction;
       options.cursorEffects.value = clone(cursor.clickEffects);
-      options.cursorMotion.value = clone(cursor.motion);
+      options.cursorMotion.value = normalizeCursorMotionSettings(cursor.motion);
       options.cursorAutoHide.value = clone(cursor.autoHide);
     } finally {
       if (generation === loadGeneration) loading.value = false;

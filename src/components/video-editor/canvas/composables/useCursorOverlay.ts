@@ -191,7 +191,7 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
 
   const playerFor = (events: ProjectEditorData['cursor']['events'], videoWidth: number, videoHeight: number) => {
     const motion = options.motion();
-    const key = `${events.length}:${events.at(-1)?.sessionNs ?? 0}:${videoWidth}:${videoHeight}:${motion.preset}:${motion.smoothing}:${motion.springMassMultiplier}:${motion.motionBlur}`;
+    const key = `${events.length}:${events.at(-1)?.sessionNs ?? 0}:${videoWidth}:${videoHeight}:${motion.preset}:${motion.smoothing}:${motion.springMassMultiplier}:${motion.motionBlur}:${motion.stopSpringEnabled}:${motion.stopSpringStrength}`;
     if (!motionPlayer || motionPlayerEvents !== events || motionPlayerKey !== key) {
       motionPlayer = createCursorMotionPlayer(events, motion, videoWidth, videoHeight);
       motionPlayerEvents = events;

@@ -2226,7 +2226,14 @@ test('persists and reads one atomic editor state', () => {
       background: null,
       blurPercent: 0,
       importedBackgrounds: [],
-      cursor: cursorPresentation({ preset: 'custom', smoothing: 0.55, springMassMultiplier: 1.1, motionBlur: 0.2 }),
+      cursor: cursorPresentation({
+        preset: 'custom',
+        smoothing: 0.55,
+        springMassMultiplier: 1.1,
+        motionBlur: 0.2,
+        stopSpringEnabled: false,
+        stopSpringStrength: 0.8,
+      }),
     },
   });
   assert.equal(saved.schemaVersion, 3);
@@ -2244,6 +2251,8 @@ test('persists and reads one atomic editor state', () => {
     smoothing: 0.55,
     springMassMultiplier: 1.1,
     motionBlur: 0.2,
+    stopSpringEnabled: false,
+    stopSpringStrength: 0.8,
   });
 });
 

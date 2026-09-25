@@ -275,4 +275,48 @@ describe('cursor motion', () => {
 
     expect(replay).toEqual(expected);
   });
+
+  it('adds a bounded, adjustable wobble after stopping and settles back to the recorded position', () => {
+    const recorded = events(move(0, 0.1, 0.5), move(0.1, 0.5, 0.5));
+    const baseline = { ...createDefaultCursorMotionSettings(), smoothing: 0, stopSpringEnabled: false };
+    const subtle = { ...baseline, stopSpringEnabled: true, stopSpringStrength: 0.2 };
+    const strong = { ...subtle, stopSpringStrength: 1 };
+    const plain = createCursorMotionPlayer(recorded, baseline).sample(0.15, rawState())!;
+    const soft = createCursorMotionPlayer(recorded, subtle).sample(0.15, rawState())!;
+    const bold = createCursorMotionPlayer(recorded, strong).sample(0.15, rawState())!;
+
+    expect(soft.x).toBeGreaterThan(plain.x);
+    expect(bold.x - plain.x).toBeCloseTo((soft.x - plain.x) * 5, 10);
+    expect((bold.x - plain.x) * 1920).toBeLessThan(12);
+    expect(createCursorMotionPlayer(recorded, strong).sample(0.6, rawState())?.x).toBeCloseTo(0.5);
+  });
+
+  it('does not wobble on a click or while dragging and remains deterministic after a seek', () => {
+    const settings = { ...createDefaultCursorMotionSettings(), smoothing: 0, stopSpringStrength: 1 };
+    const clicked = events(move(0, 0.1, 0.5), move(0.1, 0.5, 0.5), button(0.1, 0.5, 0.5));
+    expect(createCursorMotionPlayer(clicked, settings).sample(0.15, rawState())?.x).toBeCloseTo(0.5);
+    const dragged = events(move(0, 0.1, 0.5), button(0, 0.1, 0.5), move(0.1, 0.5, 0.5), button(0.1, 0.5, 0.5, false));
+    expect(createCursorMotionPlayer(dragged, settings).sample(0.15, rawState())?.x).toBeCloseTo(0.5);
+
+    const recorded = events(move(0, 0.1, 0.5), move(0.1, 0.5, 0.5));
+    const player = createCursorMotionPlayer(recorded, settings);
+    const first = player.sample(0.15, rawState());
+    player.sample(0.6, rawState());
+    player.reset();
+    expect(player.sample(0.15, rawState())).toEqual(first);
+  });
+
+  it('recognizes a recorded pause without stationary samples and avoids wobbling mid-travel', () => {
+    const settings = { ...createDefaultCursorMotionSettings(), smoothing: 0, stopSpringStrength: 1 };
+    const plain = { ...settings, stopSpringEnabled: false };
+    const paused = events(move(0, 0.1, 0.5), move(0.1, 0.5, 0.5), move(1.1, 0.6, 0.5));
+    expect(createCursorMotionPlayer(paused, settings).sample(0.15, rawState())!.x).toBeGreaterThan(
+      createCursorMotionPlayer(paused, plain).sample(0.15, rawState())!.x,
+    );
+
+    const continuous = events(move(0, 0.1, 0.5), move(0.1, 0.5, 0.5), move(0.2, 0.6, 0.5));
+    expect(createCursorMotionPlayer(continuous, settings).sample(0.15, rawState())?.x).toBeCloseTo(
+      createCursorMotionPlayer(continuous, plain).sample(0.15, rawState())!.x,
+    );
+  });
 });

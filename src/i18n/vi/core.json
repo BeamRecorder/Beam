@@ -371,6 +371,8 @@
     "customPreset": "Tùy chỉnh",
     "cursorSmoothing": "Độ mượt con trỏ",
     "springMassMultiplier": "Khối lượng lò xo",
+    "stopSpring": "Lò xo khi dừng",
+    "stopSpringStrength": "Cường độ lò xo",
     "motionBlur": "Làm mờ chuyển động",
     "cursorPack": "Gói con trỏ",
     "packInfo": "Giới thiệu gói con trỏ tương thích",

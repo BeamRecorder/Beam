@@ -9,6 +9,7 @@ import {
   createDefaultCursorClickEffects,
   createDefaultCursorMotionSettings,
   type CursorAutoHideSettings,
+  type CursorMotionSettings,
 } from '~/api/types/cursor-settings';
 import type { CursorClickEffects } from '~/api/types/cursor-settings';
 import { useToastStore } from '~/ui/toast/toastStore';
@@ -43,7 +44,7 @@ const BigSlider = {
   props: ['label', 'modelValue', 'defaultValue', 'min', 'max', 'step'],
   emits: ['update:modelValue'],
   template:
-    '<button type="button" class="cursor-slider" :data-label="label" :data-model-value="modelValue" :data-default-value="defaultValue" :data-min="min" :data-max="max" :data-step="step" @click="$emit(\'update:modelValue\', 30)">Slider</button>',
+    '<button type="button" class="cursor-slider" :data-label="label" :data-model-value="modelValue" :data-default-value="defaultValue" :data-min="min" :data-max="max" :data-step="step" @click="$emit(\'update:modelValue\', max <= 1 ? 0.3 : 30)">Slider</button>',
 };
 
 const ColorInput = {
@@ -138,6 +139,7 @@ const baseProps = (
     enableShadow: boolean;
     clickEffects: CursorClickEffects;
     autoHide: CursorAutoHideSettings;
+    motion: CursorMotionSettings;
   }> = {},
 ) => ({
   selection: { packId: MACOS_CURSOR_PACK.id, mode: 'automatic' as const, cursorId: null },
@@ -260,6 +262,32 @@ describe('CursorPanel', () => {
     expect(wrapper.emitted('update:autoHide')?.at(-1)).toEqual([
       { enabled: true, delaySeconds: 10, fadeDurationMs: 30 },
     ]);
+  });
+
+  it('enables the stop spring by default and preserves its strength when switched off', async () => {
+    const wrapper = mountPanel();
+    const stopSwitch = wrapper.get('[aria-label="Spring when stopping"]');
+    expect(stopSwitch.attributes('data-model-value')).toBe('true');
+    const strengthSlider = () =>
+      wrapper.findAll('.cursor-slider').find((slider) => slider.attributes('data-label') === 'Spring strength');
+    expect(strengthSlider()?.attributes('data-model-value')).toBe('0.45');
+
+    await stopSwitch.trigger('click');
+    expect(wrapper.emitted('update:motion')?.at(-1)?.[0]).toMatchObject({
+      preset: 'custom',
+      stopSpringEnabled: false,
+      stopSpringStrength: 0.45,
+    });
+    await wrapper.setProps({ motion: { ...createDefaultCursorMotionSettings(), stopSpringEnabled: false } });
+    expect(strengthSlider()).toBeUndefined();
+
+    await wrapper.setProps({ motion: { ...createDefaultCursorMotionSettings(), stopSpringStrength: 0.6 } });
+    await strengthSlider()!.trigger('click');
+    expect(wrapper.emitted('update:motion')?.at(-1)?.[0]).toMatchObject({
+      preset: 'custom',
+      stopSpringEnabled: true,
+      stopSpringStrength: 0.3,
+    });
   });
 
   it.each([

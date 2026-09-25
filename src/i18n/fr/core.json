@@ -378,6 +378,8 @@
     "customPreset": "Personnalisé",
     "cursorSmoothing": "Lissage du curseur",
     "springMassMultiplier": "Masse du ressort",
+    "stopSpring": "Rebond à l’arrêt",
+    "stopSpringStrength": "Intensité du rebond",
     "motionBlur": "Flou de mouvement",
     "cursorPack": "Pack de curseurs",
     "packInfo": "À propos des packs compatibles",

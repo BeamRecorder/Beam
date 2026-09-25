@@ -29,6 +29,7 @@ interface CursorMotionEvaluatorInputs {
   directTargetAt: (timeSeconds: number) => Point | null;
   isDraggingAt: (timeSeconds: number) => boolean;
   buttonTimes: readonly number[];
+  stopSpringAt: (timeSeconds: number) => Point;
 }
 
 const STEP_SECONDS = 1 / 120;
@@ -148,7 +149,7 @@ export function createDeterministicCursorMotionEvaluator(inputs: CursorMotionEva
     return state;
   };
 
-  const pointAt = (timeSeconds: number): Point => {
+  const basePointAt = (timeSeconds: number): Point => {
     const time = Math.max(0, Number.isFinite(timeSeconds) ? timeSeconds : 0);
     if (inputs.settings.smoothing <= 0) return inputs.directTargetAt(time) ?? inputs.targetAt(time) ?? { x: 0, y: 0 };
     const lowerStep = Math.floor(time / STEP_SECONDS);
@@ -160,6 +161,12 @@ export function createDeterministicCursorMotionEvaluator(inputs: CursorMotionEva
       x: lower.x.position + (upper.x.position - lower.x.position) * progress,
       y: lower.y.position + (upper.y.position - lower.y.position) * progress,
     };
+  };
+
+  const pointAt = (timeSeconds: number): Point => {
+    const base = basePointAt(timeSeconds);
+    const offset = inputs.stopSpringAt(timeSeconds);
+    return { x: clamp01(base.x + offset.x), y: clamp01(base.y + offset.y) };
   };
 
   return {

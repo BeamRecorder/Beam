@@ -242,6 +242,28 @@ const selectMotionPreset = (preset: CursorMotionPreset) =>
         :format-value="(value) => value.toFixed(2)"
         @update:model-value="updateMotion({ springMassMultiplier: $event })"
       />
+      <div class="prop-row">
+        <span class="prop-label">{{ t('stopSpring') }}</span>
+        <Switch
+          :model-value="motion.stopSpringEnabled"
+          :aria-label="t('stopSpring')"
+          @update:model-value="updateMotion({ stopSpringEnabled: $event })"
+        />
+      </div>
+      <BlurRevealTransition>
+        <div v-if="motion.stopSpringEnabled" class="nested-options">
+          <BigSlider
+            :model-value="motion.stopSpringStrength"
+            :default-value="createDefaultCursorMotionSettings().stopSpringStrength"
+            :min="0"
+            :max="1"
+            :step="0.01"
+            :label="t('stopSpringStrength')"
+            :format-value="(value) => `${Math.round(value * 100)}%`"
+            @update:model-value="updateMotion({ stopSpringStrength: $event })"
+          />
+        </div>
+      </BlurRevealTransition>
       <BigSlider
         :model-value="motion.motionBlur"
         :min="0"

@@ -7,7 +7,11 @@ import CanvasLoadingSkeleton from '../CanvasLoadingSkeleton.vue';
 import { DEFAULT_OUTPUT_CANVAS } from '../output-canvas';
 import type { CaptionClip, ClipComposition, VisualClip } from '~/media/shared/composition-types';
 import type { MediaFrame } from '~/media/shared';
-import type { CursorAutoHideSettings, CursorClickEffects } from '../../../../api/types/cursor-settings';
+import {
+  createDefaultCursorMotionSettings,
+  type CursorAutoHideSettings,
+  type CursorClickEffects,
+} from '../../../../api/types/cursor-settings';
 import ResizeHandle from '../../../ui/ResizeHandle/ResizeHandle.vue';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import { resolveCompositionSceneLayers } from '../../composition/scene-layers';
@@ -380,6 +384,7 @@ const props = () => ({
   clickEffects: effects,
   autoHide,
   motion: {
+    ...createDefaultCursorMotionSettings(),
     preset: 'smooth' as const,
     smoothing: 0.67,
     springMassMultiplier: 1.29,

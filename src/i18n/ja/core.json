@@ -371,6 +371,8 @@
     "customPreset": "カスタム",
     "cursorSmoothing": "カーソルの滑らかさ",
     "springMassMultiplier": "スプリング質量",
+    "stopSpring": "停止時のバネ",
+    "stopSpringStrength": "バネの強さ",
     "motionBlur": "モーションブラー",
     "cursorPack": "カーソルパック",
     "packInfo": "互換カーソルパックについて",

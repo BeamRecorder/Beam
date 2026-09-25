@@ -376,6 +376,8 @@
     "customPreset": "Custom",
     "cursorSmoothing": "Cursor Smoothing",
     "springMassMultiplier": "Spring Mass",
+    "stopSpring": "Spring when stopping",
+    "stopSpringStrength": "Spring strength",
     "motionBlur": "Motion Blur",
     "cursorPack": "Cursor pack",
     "packInfo": "About compatible cursor packs",

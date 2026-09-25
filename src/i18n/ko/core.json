@@ -371,6 +371,8 @@
     "customPreset": "사용자 지정",
     "cursorSmoothing": "커서 부드럽게 하기",
     "springMassMultiplier": "스프링 질량",
+    "stopSpring": "멈출 때 탄성",
+    "stopSpringStrength": "탄성 강도",
     "motionBlur": "모션 블러",
     "cursorPack": "커서 팩",
     "packInfo": "호환 커서 팩 정보",

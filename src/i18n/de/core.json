@@ -371,6 +371,8 @@
     "customPreset": "Benutzerdefiniert",
     "cursorSmoothing": "Cursor-Glättung",
     "springMassMultiplier": "Federmasse",
+    "stopSpring": "Feder beim Anhalten",
+    "stopSpringStrength": "Federstärke",
     "motionBlur": "Bewegungsunschärfe",
     "cursorPack": "Cursor-Paket",
     "packInfo": "Über kompatible Cursor-Pakete",

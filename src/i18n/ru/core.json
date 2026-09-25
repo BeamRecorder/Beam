@@ -371,6 +371,8 @@
     "customPreset": "Собственная",
     "cursorSmoothing": "Сглаживание курсора",
     "springMassMultiplier": "Масса пружины",
+    "stopSpring": "Пружина при остановке",
+    "stopSpringStrength": "Сила пружины",
     "motionBlur": "Размытие движения",
     "cursorPack": "Пакет курсоров",
     "packInfo": "О совместимых пакетах курсоров",

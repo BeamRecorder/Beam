@@ -69,6 +69,31 @@ test('defaults new cursor presentations to spring-on and ripple-off for both but
   });
 });
 
+test('defaults the stop spring for older projects and preserves an explicit disabled setting', () => {
+  const legacy = cursor();
+  const input = {
+    canvas: canvas(undefined),
+    selectedBackgroundId: null,
+    background: null,
+    blurPercent: 0,
+    importedBackgrounds: [],
+    cursor: legacy,
+  };
+  assert.deepEqual(presentationState(input).cursor.motion, {
+    ...legacy.motion,
+    stopSpringEnabled: true,
+    stopSpringStrength: 0.45,
+  });
+  const disabled = {
+    ...input,
+    cursor: {
+      ...legacy,
+      motion: { ...legacy.motion, stopSpringEnabled: false, stopSpringStrength: 0.8 },
+    },
+  };
+  assert.deepEqual(presentationState(disabled).cursor.motion, disabled.cursor.motion);
+});
+
 test('preserves every watermark presentation field', () => {
   const expected = watermark();
   const state = presentationState({

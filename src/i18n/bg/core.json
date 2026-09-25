@@ -371,6 +371,8 @@
     "customPreset": "Персонализирано",
     "cursorSmoothing": "Изглаждане на курсора",
     "springMassMultiplier": "Маса на пружината",
+    "stopSpring": "Пружина при спиране",
+    "stopSpringStrength": "Сила на пружината",
     "motionBlur": "Замъгляване при движение",
     "cursorPack": "Пакет курсори",
     "packInfo": "За съвместимите пакети курсори",

@@ -178,7 +178,14 @@ describe('useProjectEditorState property persistence', () => {
         cursor: {
           ...createDefaultCursorPresentation(),
           selection: { packId: 'pack-imported', mode: 'fixed', cursorId: 'left_ptr' },
-          motion: { preset: 'custom', smoothing: 0.5, springMassMultiplier: 1.1, motionBlur: 0.2 },
+          motion: {
+            preset: 'custom',
+            smoothing: 0.5,
+            springMassMultiplier: 1.1,
+            motionBlur: 0.2,
+            stopSpringEnabled: false,
+            stopSpringStrength: 0.25,
+          },
         },
       },
     } satisfies ProjectEditorState);
@@ -207,6 +214,8 @@ describe('useProjectEditorState property persistence', () => {
       smoothing: 0.5,
       springMassMultiplier: 1.1,
       motionBlur: 0.2,
+      stopSpringEnabled: false,
+      stopSpringStrength: 0.25,
     });
     expect(state.cursorAutoHide.value).toEqual({ enabled: false, delaySeconds: 2, fadeDurationMs: 250 });
     expect(editor.loading.value).toBe(false);

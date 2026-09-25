@@ -7,6 +7,8 @@ export interface CursorMotionSettings {
   smoothing: number;
   springMassMultiplier: number;
   motionBlur: number;
+  stopSpringEnabled: boolean;
+  stopSpringStrength: number;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object';
@@ -56,12 +58,16 @@ const FOCUSED_MOTION: Omit<CursorMotionSettings, 'preset'> = {
   smoothing: 0.67,
   springMassMultiplier: 1,
   motionBlur: 0.25,
+  stopSpringEnabled: true,
+  stopSpringStrength: 0.3,
 };
 
 const SMOOTH_MOTION: Omit<CursorMotionSettings, 'preset'> = {
   smoothing: 0.67,
   springMassMultiplier: 1.29,
   motionBlur: 0.4,
+  stopSpringEnabled: true,
+  stopSpringStrength: 0.45,
 };
 
 export const createDefaultCursorMotionSettings = (): CursorMotionSettings => ({
@@ -86,6 +92,8 @@ export const normalizeCursorMotionSettings = (value: unknown): CursorMotionSetti
     smoothing: clamp(finiteNumber(input.smoothing, fallback.smoothing), 0, 1),
     springMassMultiplier: clamp(finiteNumber(input.springMassMultiplier, fallback.springMassMultiplier), 0.5, 2),
     motionBlur: clamp(finiteNumber(input.motionBlur, fallback.motionBlur), 0, 1),
+    stopSpringEnabled: booleanValue(input.stopSpringEnabled, fallback.stopSpringEnabled),
+    stopSpringStrength: clamp(finiteNumber(input.stopSpringStrength, fallback.stopSpringStrength), 0, 1),
   };
 };
 
