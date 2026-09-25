@@ -119,6 +119,10 @@ function createTrayManager({ applicationRoot, getWindow, getController, onShowHu
     }
 
     if (!icon) {
+      if (process.platform === 'linux') {
+        console.warn(`[Beam tray] Linux tray icon is missing or unreadable. Searched: ${candidatePaths.join(', ')}`);
+        return null;
+      }
       throw new Error(`Beam tray icon is missing or unreadable. Searched: ${candidatePaths.join(', ')}`);
     }
     if (process.platform === 'linux' && typeof icon.resize === 'function') {
