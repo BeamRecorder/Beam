@@ -93,6 +93,56 @@ fn arrival_timestamp_source_stays_locked_and_ignores_late_pts() {
 }
 
 #[test]
+fn brief_duplicate_native_pts_remain_on_the_native_timeline() {
+    let mut mapper = TimestampMapper::new(1_000);
+    let first = mapper
+        .map(
+            HeaderMetadata {
+                pts_ns: Some(0),
+                ..Default::default()
+            },
+            100,
+        )
+        .expect("first native timestamp");
+    let duplicate = mapper
+        .map(
+            HeaderMetadata {
+                pts_ns: Some(0),
+                ..Default::default()
+            },
+            120,
+        )
+        .expect("brief duplicate timestamp");
+
+    assert_eq!(first.session_ns, 1_000);
+    assert_eq!(duplicate.session_ns, 1_000);
+    assert_eq!(duplicate.source, TimestampSource::NativePresentation);
+}
+
+#[test]
+fn stagnant_niri_pts_fall_back_to_monotonic_arrival_time() {
+    let mut mapper = TimestampMapper::new(10_000);
+    let arrivals = [100_000_000, 120_000_000, 180_000_000, 210_000_000];
+    let mapped = arrivals.map(|arrival_ns| {
+        mapper
+            .map(
+                HeaderMetadata {
+                    pts_ns: Some(0),
+                    ..Default::default()
+                },
+                arrival_ns,
+            )
+            .expect("stagnant native timestamp")
+    });
+
+    assert_eq!(mapped[1].source, TimestampSource::NativePresentation);
+    assert_eq!(mapped[2].source, TimestampSource::MonotonicArrival);
+    assert_eq!(mapped[2].session_ns, 80_010_000);
+    assert_eq!(mapped[3].session_ns, 110_010_000);
+    assert_eq!(mapped[3].native_pts_ns, None);
+}
+
+#[test]
 fn timestamp_mapper_rejects_flags_regressions_missing_pts_and_overflow() {
     for header in [
         HeaderMetadata {

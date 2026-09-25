@@ -18,7 +18,9 @@ test('stops native capture before completing sidecar tracks', async () => {
   const requests = [];
   let completeCalls = 0;
   const session = { state: 'completed', sessionId: 'session-1', manifestPath };
-  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const ipcMain = {
+    handle: (channel, handler) => handlers.set(channel, handler),
+  };
   const captureEngine = {
     canCleanup: () => true,
     request: async (command) => {
@@ -67,8 +69,14 @@ test('recovers a completed partial native session after stop rejects', async () 
     const handlers = new Map();
     const requests = [];
     let completeCalls = 0;
-    const session = { state: 'completed', sessionId: 'session-partial', manifestPath };
-    const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+    const session = {
+      state: 'completed',
+      sessionId: 'session-partial',
+      manifestPath,
+    };
+    const ipcMain = {
+      handle: (channel, handler) => handlers.set(channel, handler),
+    };
     const captureEngine = {
       canCleanup: () => true,
       request: async (command) => {
@@ -115,7 +123,9 @@ test('recovers a completed partial native session after stop rejects', async () 
 test('resolves display bounds by native display id without relying on desktop previews', async () => {
   const handlers = new Map();
   let previewCalls = 0;
-  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const ipcMain = {
+    handle: (channel, handler) => handlers.set(channel, handler),
+  };
   const desktopCapturer = {
     getSources: async () => {
       previewCalls += 1;
@@ -140,8 +150,18 @@ test('resolves display bounds by native display id without relying on desktop pr
 
   const getDisplayBounds = handlers.get('screen:get-display-bounds');
   assert.equal(typeof getDisplayBounds, 'function');
-  assert.deepEqual(await getDisplayBounds({}, '42'), { x: 0, y: 0, width: 2560, height: 1440 });
-  assert.deepEqual(await getDisplayBounds({}, '84'), { x: 2560, y: 0, width: 1920, height: 1080 });
+  assert.deepEqual(await getDisplayBounds({}, '42'), {
+    x: 0,
+    y: 0,
+    width: 2560,
+    height: 1440,
+  });
+  assert.deepEqual(await getDisplayBounds({}, '84'), {
+    x: 2560,
+    y: 0,
+    width: 1920,
+    height: 1080,
+  });
   assert.equal(await getDisplayBounds({}, '999'), null);
   assert.equal(await getDisplayBounds({}, null), null);
   assert.equal(previewCalls, 0);
@@ -149,7 +169,9 @@ test('resolves display bounds by native display id without relying on desktop pr
 
 test('wraps native errors with the failing command context', async () => {
   const handlers = new Map();
-  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const ipcMain = {
+    handle: (channel, handler) => handlers.set(channel, handler),
+  };
   const captureEngine = {
     canCleanup: () => true,
     request: async () => {
@@ -179,7 +201,9 @@ test('forwards system-audio preview commands unchanged outside Linux', async () 
     'system-audio-preview-level': { level: 0.42 },
     'stop-system-audio-preview': { stopped: true },
   };
-  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const ipcMain = {
+    handle: (channel, handler) => handlers.set(channel, handler),
+  };
   const captureEngine = {
     canCleanup: () => true,
     request: async (command, payload) => {
@@ -215,7 +239,9 @@ test('shares Linux preview clients and restarts the preview after capture comple
   const requests = [];
   let state = 'idle';
   let previewActive = false;
-  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const ipcMain = {
+    handle: (channel, handler) => handlers.set(channel, handler),
+  };
   const captureEngine = {
     canCleanup: () => true,
     request: async (command, payload) => {
@@ -290,7 +316,9 @@ test('shares Linux preview clients and restarts the preview after capture comple
 
 test('invalidates the deferred session and rejects when the engine is poisoned', async () => {
   const handlers = new Map();
-  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const ipcMain = {
+    handle: (channel, handler) => handlers.set(channel, handler),
+  };
   let poisoned = false;
   const captureEngine = {
     canCleanup: () => true,
@@ -328,7 +356,9 @@ test('invalidates the deferred session and rejects when the engine is poisoned',
 test('does not enumerate Electron sources on the Linux Portal path', async () => {
   const handlers = new Map();
   let previewCalls = 0;
-  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const ipcMain = {
+    handle: (channel, handler) => handlers.set(channel, handler),
+  };
   const desktopCapturer = {
     getSources: async () => {
       previewCalls += 1;
@@ -356,14 +386,36 @@ test('does not enumerate Electron sources on the Linux Portal path', async () =>
 test('excludes the owner window from Electron source previews', async () => {
   const handlers = new Map();
   const previewCalls = [];
-  const thumbnail = (label) => ({ toDataURL: () => `data:image/png;base64,${label}` });
+  const thumbnail = (label) => ({
+    toDataURL: () => `data:image/png;base64,${label}`,
+  });
   const sources = [
-    { id: 'window:owner', name: 'Beam', thumbnail: thumbnail('owner'), appIcon: null },
-    { id: 'window:other', name: 'Other app', thumbnail: thumbnail('other'), appIcon: null },
-    { id: 'screen:1', name: 'Screen 1', thumbnail: thumbnail('screen'), appIcon: null, display_id: '1' },
+    {
+      id: 'window:owner',
+      name: 'Beam',
+      thumbnail: thumbnail('owner'),
+      appIcon: null,
+    },
+    {
+      id: 'window:other',
+      name: 'Other app',
+      thumbnail: thumbnail('other'),
+      appIcon: null,
+    },
+    {
+      id: 'screen:1',
+      name: 'Screen 1',
+      thumbnail: thumbnail('screen'),
+      appIcon: null,
+      display_id: '1',
+    },
   ];
-  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
-  const screen = { getAllDisplays: () => [{ id: 1, bounds: { x: 0, y: 0, width: 1920, height: 1080 } }] };
+  const ipcMain = {
+    handle: (channel, handler) => handlers.set(channel, handler),
+  };
+  const screen = {
+    getAllDisplays: () => [{ id: 1, bounds: { x: 0, y: 0, width: 1920, height: 1080 } }],
+  };
   const desktopCapturer = {
     getSources: async (options) => {
       previewCalls.push(options);
@@ -372,7 +424,9 @@ test('excludes the owner window from Electron source previews', async () => {
   };
   const event = { sender: {} };
   const ownerWindow = { getMediaSourceId: () => 'window:owner' };
-  const BrowserWindow = { fromWebContents: (sender) => (sender === event.sender ? ownerWindow : null) };
+  const BrowserWindow = {
+    fromWebContents: (sender) => (sender === event.sender ? ownerWindow : null),
+  };
 
   registerCaptureIpc({
     ipcMain,
@@ -394,7 +448,12 @@ test('excludes the owner window from Electron source previews', async () => {
     ['window:other', 'screen:1'],
   );
   assert.equal(previews[0].thumbnail, 'data:image/png;base64,other');
-  assert.deepEqual(previews[1].displayBounds, { x: 0, y: 0, width: 1920, height: 1080 });
+  assert.deepEqual(previews[1].displayBounds, {
+    x: 0,
+    y: 0,
+    width: 1920,
+    height: 1080,
+  });
   assert.deepEqual(previewCalls, [
     {
       types: ['window', 'screen'],
@@ -408,7 +467,9 @@ test('keeps Electron sources when the owner window metadata is unavailable', asy
   const handlers = new Map();
   const thumbnail = { toDataURL: () => 'data:image/png;base64,source' };
   const sources = [{ id: 'window:source', name: 'Source', thumbnail, appIcon: null }];
-  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const ipcMain = {
+    handle: (channel, handler) => handlers.set(channel, handler),
+  };
   const desktopCapturer = { getSources: async () => sources };
   const BrowserWindow = { fromWebContents: (sender) => sender?.owner ?? null };
 
@@ -438,7 +499,9 @@ test('starts a Linux Portal recording from one catalog without an Electron previ
   const handlers = new Map();
   const requests = [];
   let previewCalls = 0;
-  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const ipcMain = {
+    handle: (channel, handler) => handlers.set(channel, handler),
+  };
   const desktopCapturer = {
     getSources: async () => {
       previewCalls += 1;
@@ -498,7 +561,9 @@ test('starts a Linux Portal recording from one catalog without an Electron previ
 test('starts a prepared Linux Portal session without rediscovering or preparing it again', async () => {
   const handlers = new Map();
   const requests = [];
-  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const ipcMain = {
+    handle: (channel, handler) => handlers.set(channel, handler),
+  };
   const captureEngine = {
     canCleanup: () => true,
     request: async (command, payload) => {
@@ -553,7 +618,9 @@ test('coalesces concurrent identical Linux Portal preparation requests', async (
   const prepareGate = new Promise((resolve) => {
     releasePrepare = resolve;
   });
-  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const ipcMain = {
+    handle: (channel, handler) => handlers.set(channel, handler),
+  };
   const captureEngine = {
     canCleanup: () => true,
     request: async (command, payload) => {
@@ -585,7 +652,10 @@ test('coalesces concurrent identical Linux Portal preparation requests', async (
   });
 
   const request = handlers.get('capture:request');
-  const options = { projectId: 'project-concurrent', screenId: 'portal:monitor' };
+  const options = {
+    projectId: 'project-concurrent',
+    screenId: 'portal:monitor',
+  };
   const first = request({}, 'prepare-default-recording', { options });
   const second = request({}, 'prepare-default-recording', { options });
   await new Promise((resolve) => setImmediate(resolve));
@@ -606,7 +676,9 @@ for (const code of ['portal-cancelled', 'cancelled']) {
     const handlers = new Map();
     const requests = [];
     let prepareAttempts = 0;
-    const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+    const ipcMain = {
+      handle: (channel, handler) => handlers.set(channel, handler),
+    };
     const captureEngine = {
       canCleanup: () => true,
       request: async (command, payload) => {
@@ -640,7 +712,10 @@ for (const code of ['portal-cancelled', 'cancelled']) {
       screen: {},
       captureEngine,
       app: {},
-      userPaths: { projects: 'recordings', studioProjects: 'recordings/studio' },
+      userPaths: {
+        projects: 'recordings',
+        studioProjects: 'recordings/studio',
+      },
       trackStorages: [],
       platform: 'linux',
     });
@@ -663,7 +738,9 @@ test('does not treat cancellation-like preparation error text as a dismissed Por
   const handlers = new Map();
   const requests = [];
   let prepareAttempts = 0;
-  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const ipcMain = {
+    handle: (channel, handler) => handlers.set(channel, handler),
+  };
   const captureEngine = {
     canCleanup: () => true,
     request: async (command, payload) => {
@@ -728,7 +805,9 @@ test('does not prepare the Linux Portal during discovery/previews and starts it 
     capabilities: { portalSelection: true, separateCursor: true },
   };
   const session = { state: 'recording', sessionId: 'session-portal-1' };
-  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const ipcMain = {
+    handle: (channel, handler) => handlers.set(channel, handler),
+  };
   const captureEngine = {
     canCleanup: () => true,
     request: async (command, payload) => {
@@ -786,7 +865,9 @@ test('does not prepare the Linux Portal during discovery/previews and starts it 
 test('forwards macOS source previews to the native engine with the same source id', async () => {
   const handlers = new Map();
   const requests = [];
-  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const ipcMain = {
+    handle: (channel, handler) => handlers.set(channel, handler),
+  };
   const captureEngine = {
     request: async (command, payload) => {
       requests.push({ command, payload });
@@ -836,7 +917,9 @@ test('forwards macOS source previews to the native engine with the same source i
 test('rejects source previews during shutdown before contacting the native engine', async () => {
   const handlers = new Map();
   let requests = 0;
-  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const ipcMain = {
+    handle: (channel, handler) => handlers.set(channel, handler),
+  };
   const captureEngine = {
     request: async () => {
       requests += 1;

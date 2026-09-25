@@ -8,7 +8,10 @@ use pipewire::spa::buffer::meta::{
 use crate::cursor::Hotspot;
 
 use super::params::CURSOR_META_SIZE;
-use super::{CropRect, CursorClassifier, CursorMetadata, HeaderMetadata, VideoTransform};
+use super::{
+    CropRect, CursorClassifier, CursorMetadata, HIDDEN_CURSOR_SHAPE_ID, HeaderMetadata,
+    VideoTransform,
+};
 
 pub(super) fn header(buffer: &pipewire::buffer::Buffer<'_>) -> HeaderMetadata {
     let Some(header) = buffer.find_meta::<MetaHeader>() else {
@@ -75,27 +78,42 @@ fn cursor_shape(
         return None;
     }
     let pixels = bitmap.bitmap_data()?;
-    let id = stable_cursor_shape_id(
-        bitmap.format().0,
-        size.width,
-        size.height,
-        bitmap.stride(),
-        pixels,
-    );
-    let point = cursor.hotspot();
-    let hotspot = Hotspot {
-        x: u32::try_from(point.x).unwrap_or(0),
-        y: u32::try_from(point.y).unwrap_or(0),
-    };
-    let kind = classifier.classify(
-        id,
+    let hidden = CursorClassifier::is_fully_transparent(
         bitmap.format(),
         size.width,
         size.height,
         bitmap.stride(),
         pixels,
-        hotspot,
     );
+    let id = if hidden {
+        HIDDEN_CURSOR_SHAPE_ID
+    } else {
+        stable_cursor_shape_id(
+            bitmap.format().0,
+            size.width,
+            size.height,
+            bitmap.stride(),
+            pixels,
+        )
+    };
+    let point = cursor.hotspot();
+    let hotspot = Hotspot {
+        x: u32::try_from(point.x).unwrap_or(0),
+        y: u32::try_from(point.y).unwrap_or(0),
+    };
+    let kind = if hidden {
+        crate::cursor::CursorKind::Custom
+    } else {
+        classifier.classify(
+            id,
+            bitmap.format(),
+            size.width,
+            size.height,
+            bitmap.stride(),
+            pixels,
+            hotspot,
+        )
+    };
     Some((id, hotspot, kind))
 }
 

@@ -32,7 +32,12 @@ function completedVideoSource(session) {
         .filter((name) => /\.mp4$/i.test(name))
         .sort()[0]
     : null;
-  return video ? { ...session, videoSrc: pathToFileURL(path.join(screenDirectory, video)).href } : session;
+  return video
+    ? {
+        ...session,
+        videoSrc: pathToFileURL(path.join(screenDirectory, video)).href,
+      }
+    : session;
 }
 
 function withProjectId(session) {
@@ -56,7 +61,12 @@ function displayBoundsForId(screen, displayId) {
     bounds.height <= 0
   )
     return null;
-  return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };
+  return {
+    x: bounds.x,
+    y: bounds.y,
+    width: bounds.width,
+    height: bounds.height,
+  };
 }
 
 function registerCaptureIpc({
@@ -101,7 +111,10 @@ function registerCaptureIpc({
       canStart: canAcceptWork,
       canCleanup: () => canAcceptWork() && captureEngine.canCleanup(),
     });
-  const sourcePreviews = createSourcePreviewService({ requestNative: requestEngine, platform });
+  const sourcePreviews = createSourcePreviewService({
+    requestNative: requestEngine,
+    platform,
+  });
   let pendingDefaultPreparation = null;
   const prepareDefaultRecording = (options) => {
     const key = JSON.stringify(options || {});

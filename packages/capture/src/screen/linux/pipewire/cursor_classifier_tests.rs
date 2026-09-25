@@ -92,6 +92,39 @@ fn normalizes_channel_order_stride_and_transparency() {
 }
 
 #[test]
+fn detects_fully_transparent_cursor_bitmap_with_nonzero_color_channels() {
+    assert!(CursorClassifier::is_fully_transparent(
+        VideoFormat::BGRA,
+        2,
+        1,
+        8,
+        &[30, 20, 10, 0, 60, 50, 40, 0],
+    ));
+}
+
+#[test]
+fn cursor_bitmap_with_any_visible_alpha_is_not_transparent() {
+    assert!(!CursorClassifier::is_fully_transparent(
+        VideoFormat::RGBA,
+        2,
+        1,
+        8,
+        &[10, 20, 30, 0, 40, 50, 60, 1],
+    ));
+}
+
+#[test]
+fn unsupported_cursor_bitmap_format_is_not_assumed_transparent() {
+    assert!(!CursorClassifier::is_fully_transparent(
+        VideoFormat::RGB,
+        2,
+        1,
+        8,
+        &[0; 8],
+    ));
+}
+
+#[test]
 fn parses_quoted_and_ini_theme_values() {
     assert_eq!(clean_setting("  'Moga-Dark'\n"), Some("Moga-Dark".into()));
     assert_eq!(clean_setting("\"Breeze\""), Some("Breeze".into()));
