@@ -1,8 +1,12 @@
 import { nextTick, ref } from 'vue';
 import { describe, expect, it, vi } from 'vitest';
 import type { CursorPackDescriptor } from '../../../../api/types/cursor-pack';
-import { createDefaultCursorAutoHideSettings } from '../../../../api/types/cursor-settings';
+import {
+  createDefaultCursorAutoHideSettings,
+  createDefaultCursorMotionSettings,
+} from '../../../../api/types/cursor-settings';
 import { MACOS_CURSOR_PACK } from '../../properties/cursor/cursor-packs';
+import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 
 const getCursorImage = vi.hoisted(() => vi.fn());
 vi.mock('../../properties/cursor/useCursorReplacer', () => ({
@@ -108,6 +112,7 @@ const baseOptions = (): UseCursorOverlayOptions => ({
   enableShadow: () => true,
   clickEffects: () => effects,
   motion: () => ({
+    ...createDefaultCursorMotionSettings(),
     preset: 'smooth' as const,
     smoothing: 0.67,
     springMassMultiplier: 1.29,
@@ -165,6 +170,7 @@ const baseOptions = (): UseCursorOverlayOptions => ({
       sourceInMs: 0,
       playbackRate: 1,
       transform: { x: 0, y: 0, width: 1, height: 1 },
+      appearance: createDefaultClipAppearance('screen'),
       isMirrored: false,
     }) as never,
   isScreenEnabled: () => true,
@@ -241,6 +247,7 @@ describe('useCursorOverlay', () => {
       const options = baseOptions();
       options.currentTime = () => 0.5;
       options.motion = () => ({
+        ...createDefaultCursorMotionSettings(),
         preset: 'smooth',
         smoothing: 0.67,
         springMassMultiplier: 1.29,
@@ -286,6 +293,7 @@ describe('useCursorOverlay', () => {
           sourceDurationMs: 1_000,
           playbackRate: 1,
           transform: { x: 0, y: 0, width: 1, height: 1 },
+          appearance: createDefaultClipAppearance('screen'),
           isMirrored: false,
           transitions:
             edge === 'entry'
@@ -431,6 +439,7 @@ describe('useCursorOverlay', () => {
     const options = baseOptions();
     options.currentTime = () => time.value;
     options.motion = () => ({
+      ...createDefaultCursorMotionSettings(),
       preset: 'smooth',
       smoothing: 0.67,
       springMassMultiplier: 1.29,
@@ -477,6 +486,7 @@ describe('useCursorOverlay', () => {
     const options = baseOptions();
     options.currentTime = () => time.value;
     options.motion = () => ({
+      ...createDefaultCursorMotionSettings(),
       preset: 'smooth',
       smoothing: 0.67,
       springMassMultiplier: 1.29,
@@ -542,6 +552,7 @@ describe('useCursorOverlay', () => {
     const options = baseOptions();
     options.currentTime = () => time.value;
     options.motion = () => ({
+      ...createDefaultCursorMotionSettings(),
       preset: 'smooth',
       smoothing: 0.67,
       springMassMultiplier: 1.29,

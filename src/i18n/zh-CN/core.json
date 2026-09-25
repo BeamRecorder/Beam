@@ -371,6 +371,8 @@
     "customPreset": "自定义",
     "cursorSmoothing": "光标平滑",
     "springMassMultiplier": "弹簧质量",
+    "stopSpring": "停止时弹跳",
+    "stopSpringStrength": "弹跳强度",
     "motionBlur": "运动模糊",
     "cursorPack": "光标包",
     "packInfo": "关于兼容的光标包",

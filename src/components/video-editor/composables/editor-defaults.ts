@@ -23,7 +23,7 @@ import {
   DEFAULT_ZOOM_TILT_VERTICAL,
   type ZoomElement,
 } from '../zoom/zoom-types';
-import { normalizeCursorAutoHideSettings } from '~/api/types/cursor-settings';
+import { normalizeCursorAutoHideSettings, normalizeCursorMotionSettings } from '~/api/types/cursor-settings';
 import type { EditorPreferenceDefaults, VisualClipDefaults } from './editor-default-types';
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
@@ -107,6 +107,11 @@ const visualDefaults = (kind: VisualClip['kind'], value: unknown): VisualClipDef
 
 export const normalizeEditorPreferenceDefaults = (value: unknown): EditorPreferenceDefaults => {
   const input = record(value);
+  const presentation =
+    input.presentation && typeof input.presentation === 'object'
+      ? clone(input.presentation as EditorPreferenceDefaults['presentation'])
+      : null;
+  if (presentation?.cursor) presentation.cursor.motion = normalizeCursorMotionSettings(presentation.cursor.motion);
   const visualInput = record(input.visual);
   const visual = Object.fromEntries(
     (['screen', 'video', 'image', 'webcam'] as const).flatMap((kind) =>
@@ -115,9 +120,7 @@ export const normalizeEditorPreferenceDefaults = (value: unknown): EditorPrefere
   );
   return {
     schemaVersion: 1,
-    ...(input.presentation && typeof input.presentation === 'object'
-      ? { presentation: clone(input.presentation as EditorPreferenceDefaults['presentation']) }
-      : {}),
+    ...(presentation ? { presentation } : {}),
     ...(Object.keys(visual).length ? { visual } : {}),
     ...(input.caption && typeof input.caption === 'object'
       ? {
@@ -225,6 +228,7 @@ export function applyGlobalCursorDefaults(state: ProjectEditorState, defaults: E
       ...state.presentation,
       cursor: {
         ...clone(defaults.presentation.cursor),
+        motion: normalizeCursorMotionSettings(defaults.presentation.cursor.motion),
         autoHide: normalizeCursorAutoHideSettings(defaults.presentation.cursor.autoHide),
       },
     },

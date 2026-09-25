@@ -65,7 +65,14 @@ const base = (): Parameters<typeof createCompositionSnapshot>[0] => ({
       left: { springEnabled: true, springIntensity: 50, rippleEnabled: true, rippleSize: 30, rippleColor: '#ff5a1f' },
       right: { springEnabled: true, springIntensity: 50, rippleEnabled: true, rippleSize: 30, rippleColor: '#6366f1' },
     },
-    motion: { preset: 'smooth' as const, smoothing: 0.67, springMassMultiplier: 1.29, motionBlur: 0.4 },
+    motion: {
+      preset: 'smooth' as const,
+      smoothing: 0.67,
+      springMassMultiplier: 1.29,
+      motionBlur: 0.4,
+      stopSpringEnabled: true,
+      stopSpringStrength: 0.45,
+    },
     autoHide: createDefaultCursorAutoHideSettings(),
   },
   cursorPack: MACOS_CURSOR_PACK,
@@ -165,7 +172,14 @@ describe('createCompositionSnapshot', () => {
       ...base(),
       cursorSettings: {
         ...base().cursorSettings,
-        motion: { preset: 'custom', smoothing: 2, springMassMultiplier: 0.1, motionBlur: -1 },
+        motion: {
+          preset: 'custom',
+          smoothing: 2,
+          springMassMultiplier: 0.1,
+          motionBlur: -1,
+          stopSpringEnabled: false,
+          stopSpringStrength: 2,
+        },
       },
     });
     expect(snapshot.cursorSettings.motion).toEqual({
@@ -173,6 +187,8 @@ describe('createCompositionSnapshot', () => {
       smoothing: 1,
       springMassMultiplier: 0.5,
       motionBlur: 0,
+      stopSpringEnabled: false,
+      stopSpringStrength: 1,
     });
   });
 

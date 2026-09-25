@@ -4,6 +4,10 @@ User-facing changes to Beam are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Added an adjustable cursor spring when movement stops, enabled by default and saved with editor presets.
+
 ### Fixed
 
 - Cropping a Studio video now keeps the cursor and click effects aligned with the visible recording in preview and export.

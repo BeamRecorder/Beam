@@ -371,6 +371,8 @@
     "customPreset": "Niestandardowe",
     "cursorSmoothing": "Wygładzanie kursora",
     "springMassMultiplier": "Masa sprężyny",
+    "stopSpring": "Sprężyna przy zatrzymaniu",
+    "stopSpringStrength": "Siła sprężyny",
     "motionBlur": "Rozmycie ruchu",
     "cursorPack": "Pakiet kursorów",
     "packInfo": "O zgodnych pakietach kursorów",

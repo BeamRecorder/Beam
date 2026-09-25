@@ -141,6 +141,8 @@ describe('useEditorPresets', () => {
 
     await controller.load();
     defaults.value.presentation!.selectedBackgroundId = 'edited-background';
+    defaults.value.presentation!.cursor.motion.stopSpringEnabled = false;
+    defaults.value.presentation!.cursor.motion.stopSpringStrength = 0.72;
     await nextTick();
     expect(controller.dirty.value).toBe(true);
 
@@ -152,7 +154,12 @@ describe('useEditorPresets', () => {
         devices: { cameraId: 'off', micId: 'no-audio' },
         export: { format: 'mp4' },
         editor: expect.objectContaining({
-          presentation: expect.objectContaining({ selectedBackgroundId: 'edited-background' }),
+          presentation: expect.objectContaining({
+            selectedBackgroundId: 'edited-background',
+            cursor: expect.objectContaining({
+              motion: expect.objectContaining({ stopSpringEnabled: false, stopSpringStrength: 0.72 }),
+            }),
+          }),
         }),
       }),
     );

@@ -108,7 +108,14 @@ const defaultCursor = () => ({
       rippleColor: '#6366f1',
     },
   },
-  motion: { preset: 'smooth', smoothing: 0.67, springMassMultiplier: 1.29, motionBlur: 0.4 },
+  motion: {
+    preset: 'smooth',
+    smoothing: 0.67,
+    springMassMultiplier: 1.29,
+    motionBlur: 0.4,
+    stopSpringEnabled: true,
+    stopSpringStrength: 0.45,
+  },
   autoHide: { enabled: false, delaySeconds: 2, fadeDurationMs: 250 },
 });
 
@@ -286,6 +293,8 @@ const cursorState = (value) => {
       smoothing: clamp(value.motion.smoothing, 0, 1),
       springMassMultiplier: clamp(value.motion.springMassMultiplier, 0.5, 2),
       motionBlur: clamp(value.motion.motionBlur, 0, 1),
+      stopSpringEnabled: typeof value.motion.stopSpringEnabled === 'boolean' ? value.motion.stopSpringEnabled : true,
+      stopSpringStrength: finite(value.motion.stopSpringStrength) ? clamp(value.motion.stopSpringStrength, 0, 1) : 0.45,
     },
     autoHide: {
       enabled: value.autoHide?.enabled === true,

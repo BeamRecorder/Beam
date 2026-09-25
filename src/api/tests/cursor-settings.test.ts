@@ -138,6 +138,8 @@ describe('cursor click settings', () => {
       smoothing: 0.67,
       springMassMultiplier: 1.29,
       motionBlur: 0.4,
+      stopSpringEnabled: true,
+      stopSpringStrength: 0.45,
     });
   });
 
@@ -149,6 +151,15 @@ describe('cursor click settings', () => {
       smoothing: 1,
       springMassMultiplier: 0.5,
       motionBlur: 0,
+      stopSpringEnabled: true,
+      stopSpringStrength: 0.45,
+    });
+  });
+
+  it('preserves an explicitly disabled stop spring and clamps its strength', () => {
+    expect(normalizeCursorMotionSettings({ stopSpringEnabled: false, stopSpringStrength: 4 })).toMatchObject({
+      stopSpringEnabled: false,
+      stopSpringStrength: 1,
     });
   });
 });

@@ -105,6 +105,8 @@ export const snapshot = (): CompositionSnapshot => ({
       smoothing: 0.67,
       springMassMultiplier: 1.29,
       motionBlur: 0.4,
+      stopSpringEnabled: true,
+      stopSpringStrength: 0.45,
     },
     autoHide: createDefaultCursorAutoHideSettings(),
   },

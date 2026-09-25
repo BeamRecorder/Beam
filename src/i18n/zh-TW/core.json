@@ -371,6 +371,8 @@
     "customPreset": "自訂",
     "cursorSmoothing": "游標平滑",
     "springMassMultiplier": "彈簧質量",
+    "stopSpring": "停止時彈跳",
+    "stopSpringStrength": "彈跳強度",
     "motionBlur": "動態模糊",
     "cursorPack": "游標套件",
     "packInfo": "關於相容的游標套件",

@@ -1,5 +1,6 @@
 import {
   createDefaultCursorAutoHideSettings,
+  createDefaultCursorMotionSettings,
   type CursorAutoHideSettings,
   type CursorClickEffects,
   type CursorMotionSettings,
@@ -86,6 +87,6 @@ export const createDefaultCursorPresentation = (): CursorPresentationSettings =>
       rippleColor: '#6366f1',
     },
   },
-  motion: { preset: 'smooth', smoothing: 0.67, springMassMultiplier: 1.29, motionBlur: 0.4 },
+  motion: createDefaultCursorMotionSettings(),
   autoHide: createDefaultCursorAutoHideSettings(),
 });

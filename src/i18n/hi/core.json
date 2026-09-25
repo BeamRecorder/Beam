@@ -371,6 +371,8 @@
     "customPreset": "कस्टम",
     "cursorSmoothing": "कर्सर स्मूदिंग",
     "springMassMultiplier": "स्प्रिंग मास",
+    "stopSpring": "रुकने पर स्प्रिंग",
+    "stopSpringStrength": "स्प्रिंग की तीव्रता",
     "motionBlur": "मोशन ब्लर",
     "cursorPack": "कर्सर पैक",
     "packInfo": "संगत कर्सर पैक के बारे में",

@@ -241,6 +241,8 @@ describe('useVideoEditor', () => {
       smoothing: 0,
       springMassMultiplier: 0.5,
       motionBlur: 0,
+      stopSpringEnabled: false,
+      stopSpringStrength: 0.7,
     };
     api.exportRequest.value!.createSnapshot();
     expect(state.createCompositionSnapshot).toHaveBeenLastCalledWith(
@@ -254,6 +256,8 @@ describe('useVideoEditor', () => {
             smoothing: 0,
             springMassMultiplier: 0.5,
             motionBlur: 0,
+            stopSpringEnabled: false,
+            stopSpringStrength: 0.7,
           },
         }),
       }),
