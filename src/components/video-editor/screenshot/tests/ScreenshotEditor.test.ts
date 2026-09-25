@@ -1145,6 +1145,56 @@ describe('ScreenshotEditor', () => {
     wrapper.unmount();
   });
 
+  it('keeps the captured aspect when typing a smaller export width digit by digit', async () => {
+    const wrapper = mountEditor();
+    await flushPromises();
+    await clickText(wrapper, 'Export');
+    await clickText(wrapper, 'Advanced');
+
+    const width = wrapper.get('input[aria-label="Width"]');
+    await width.trigger('focus');
+    await width.setValue('6');
+    await width.setValue('60');
+    await width.setValue('600');
+
+    const canvas = wrapper.findComponent(ScreenshotCanvasStub);
+    expect(canvas.props('state')!.canvas).toMatchObject({ width: 600, height: 400 });
+    expect(wrapper.get('input[aria-label="Height"]').element).toHaveProperty('value', '400');
+
+    await clickText(wrapper, 'Save image');
+    await flushPromises();
+    expect(renderer.encodeScreenshot).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ canvas: expect.objectContaining({ width: 600, height: 400 }) }),
+    );
+    wrapper.unmount();
+  });
+
+  it('starts a new aspect calculation when dragging a dimension and switching fields', async () => {
+    const wrapper = mountEditor();
+    await flushPromises();
+    await clickText(wrapper, 'Export');
+    await clickText(wrapper, 'Advanced');
+
+    const width = wrapper.get('input[aria-label="Width"]');
+    await width.trigger('focus');
+    await width.setValue('600');
+    await width.trigger('mousedown', { button: 0, clientX: 0 });
+    window.dispatchEvent(new MouseEvent('mousemove', { clientX: 400 }));
+    window.dispatchEvent(new MouseEvent('mouseup'));
+    await wrapper.vm.$nextTick();
+
+    const canvas = wrapper.findComponent(ScreenshotCanvasStub);
+    expect(canvas.props('state')!.canvas).toMatchObject({ width: 700, height: 467 });
+
+    await width.trigger('blur');
+    const height = wrapper.get('input[aria-label="Height"]');
+    await height.trigger('focus');
+    await height.setValue('200');
+    expect(canvas.props('state')!.canvas).toMatchObject({ width: 300, height: 200 });
+    wrapper.unmount();
+  });
+
   it('shows an export failure without announcing a successful clipboard copy', async () => {
     capture.exportScreenshot.mockRejectedValueOnce(new Error('Clipboard unavailable'));
     const wrapper = mountEditor();

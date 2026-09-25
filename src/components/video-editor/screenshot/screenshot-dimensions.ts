@@ -13,11 +13,12 @@ export function resizeScreenshotCanvas(
   side: 'width' | 'height',
   value: string | number,
   keepAspect: boolean,
+  aspectSource: ScreenshotDimensions = canvas,
 ): OutputCanvasSettings {
   const size = Number(value);
   const other = side === 'width' ? 'height' : 'width';
   const next = { ...canvas, preset: 'custom' as const, [side]: size };
-  if (keepAspect) next[other] = Math.round((size * canvas[other]) / canvas[side]);
+  if (keepAspect) next[other] = Math.round((size * aspectSource[other]) / aspectSource[side]);
   return validScreenshotDimensions(next) ? next : canvas;
 }
 

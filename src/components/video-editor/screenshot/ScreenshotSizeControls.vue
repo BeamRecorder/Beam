@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, useId } from 'vue';
+import { computed, ref, useId, watch } from 'vue';
 import AdvancedButton from '~/ui/button/AdvancedButton.vue';
 import Checkbox from '~/ui/checkbox/Checkbox.vue';
 import Input from '~/ui/input/Input.vue';
@@ -15,6 +15,21 @@ const advanced = defineModel<boolean>('advanced', { required: true });
 const keepAspect = defineModel<boolean>('keepAspect', { required: true });
 const { t } = useTranslate('ScreenshotEditor');
 const controlsId = useId();
+const aspectSource = ref<ScreenshotDimensions | null>(null);
+const startDimensionEdit = () => {
+  aspectSource.value = { width: canvas.value.width, height: canvas.value.height };
+};
+const endDimensionEdit = () => {
+  aspectSource.value = null;
+};
+const resizeDimension = (side: 'width' | 'height', value: string | number) => {
+  const source = aspectSource.value ?? { width: canvas.value.width, height: canvas.value.height };
+  aspectSource.value = source;
+  canvas.value = resizeScreenshotCanvas(canvas.value, side, value, keepAspect.value, source);
+};
+watch(advanced, (open) => {
+  if (!open) endDimensionEdit();
+});
 const options = computed(() => [
   { value: 'original', label: t('originalSize'), description: `${props.original.width} × ${props.original.height}` },
   ...Object.values(OUTPUT_CANVAS_PRESETS).map((item) => ({
@@ -57,7 +72,10 @@ const sizeOptions = computed(() =>
             :min="1"
             :max="16384"
             :aria-label="t('width')"
-            @update:model-value="canvas = resizeScreenshotCanvas(canvas, 'width', $event, keepAspect)"
+            @focus="startDimensionEdit"
+            @mousedown="startDimensionEdit"
+            @blur="endDimensionEdit"
+            @update:model-value="resizeDimension('width', $event)"
         /></label>
         <span class="dimension-separator" aria-hidden="true">×</span>
         <label
@@ -68,7 +86,10 @@ const sizeOptions = computed(() =>
             :min="1"
             :max="16384"
             :aria-label="t('height')"
-            @update:model-value="canvas = resizeScreenshotCanvas(canvas, 'height', $event, keepAspect)"
+            @focus="startDimensionEdit"
+            @mousedown="startDimensionEdit"
+            @blur="endDimensionEdit"
+            @update:model-value="resizeDimension('height', $event)"
         /></label>
       </div>
       <Checkbox v-model="keepAspect" :label="t('keepAspectRatio')" size="sm" />
