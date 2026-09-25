@@ -4,7 +4,9 @@ User-facing changes to Beam are documented in this file.
 
 ## [Unreleased]
 
-Nothing changed at the moment.
+### Fixed
+
+- Cropping a Studio video now keeps the cursor and click effects aligned with the visible recording in preview and export.
 
 ## [0.3.3] - 2026-09-21
 

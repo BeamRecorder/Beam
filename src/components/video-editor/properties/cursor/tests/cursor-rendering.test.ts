@@ -5,6 +5,8 @@ import { frameContentRect } from '../../../composition/appearance/frames';
 import { resolvePhoneFrameGeometry } from '../../../composition/appearance/frame-geometry';
 import type { CursorPackDescriptor, CursorSelection } from '~/api/types/cursor-pack';
 import type { CursorPlaybackState } from '../../../composables/cursorPlayback';
+import type { VisualClip } from '~/media/shared/composition-types';
+import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 
 const state = (x: number, y: number, cursorKind: string | null = 'default'): CursorPlaybackState => ({
   x,
@@ -15,6 +17,12 @@ const state = (x: number, y: number, cursorKind: string | null = 'default'): Cur
   cursorKind: cursorKind as CursorPlaybackState['cursorKind'],
   hotspot: { x: 0, y: 0 },
 });
+const screenClip = (overrides: Partial<VisualClip> = {}): VisualClip =>
+  ({
+    transform: { x: 0, y: 0, width: 1, height: 1 },
+    appearance: createDefaultClipAppearance('screen'),
+    ...overrides,
+  }) as VisualClip;
 
 const renderingPack: CursorPackDescriptor = {
   id: 'pack:rendering',
@@ -109,12 +117,13 @@ describe('cursor rendering', () => {
 
   it('uses the same framed-background and base-transform coordinates for every canvas', () => {
     expect(
-      cursorPositionAt(state(0.5, 0.5), { width: 100, height: 50 }, { x: 10, y: 20, width: 200, height: 200 }, true, {
-        x: 0.1,
-        y: 0.2,
-        width: 0.8,
-        height: 0.6,
-      }),
+      cursorPositionAt(
+        state(0.5, 0.5),
+        { width: 100, height: 50 },
+        { x: 10, y: 20, width: 200, height: 200 },
+        true,
+        screenClip({ transform: { x: 0.1, y: 0.2, width: 0.8, height: 0.6 } }),
+      ),
     ).toEqual({ x: 110, y: 120 });
   });
 
@@ -122,12 +131,13 @@ describe('cursor rendering', () => {
     const rect = { x: 10, y: 20, width: 400, height: 200 };
     const content = frameContentRect(rect, 'safari');
     expect(
-      cursorPositionAt(state(0.5, 0.5), { width: 400, height: 200 }, rect, false, undefined, false, false, {
-        frame: 'safari',
-        frameShowMenu: true,
-        frameShowScrollbars: true,
-        frameChromeScale: 1,
-      }),
+      cursorPositionAt(
+        state(0.5, 0.5),
+        { width: 400, height: 200 },
+        rect,
+        false,
+        screenClip({ appearance: { ...createDefaultClipAppearance('screen'), frame: 'safari' } }),
+      ),
     ).toEqual({
       x: content.x + content.width / 2,
       y: content.y + content.height / 2,
@@ -152,10 +162,7 @@ describe('cursor rendering', () => {
       { width: 400, height: 260 },
       rect,
       false,
-      undefined,
-      false,
-      false,
-      appearance,
+      screenClip({ appearance: { ...createDefaultClipAppearance('screen'), ...appearance } }),
     );
     expect(position).toEqual({
       x: content.x + content.width * 0.25,
@@ -173,21 +180,62 @@ describe('cursor rendering', () => {
         { width: 800, height: 400 },
         rect,
         false,
-        undefined,
-        false,
-        false,
-        {
-          frame: 'safari',
-          frameShowMenu: true,
-          frameShowScrollbars: true,
-          frameChromeScale: 1,
-        },
-        { x: 0.25, y: 0.25, width: 0.5, height: 0.5 },
+        screenClip({
+          appearance: { ...createDefaultClipAppearance('screen'), frame: 'safari' },
+          crop: { x: 0.25, y: 0.25, width: 0.5, height: 0.5 },
+        }),
       ),
     ).toEqual({
       x: content.x + content.width / 2,
       y: content.y + content.height / 2,
     });
+  });
+
+  it.each([false, true])(
+    'keeps cursor positions on their source pixels after a bottom crop with background=%s',
+    (showBackground) => {
+      const source = { width: 400, height: 200 };
+      const viewport = { x: 10, y: 20, width: 400, height: 200 };
+      const before = cursorPositionAt(state(0.7, 0.5), source, viewport, showBackground, screenClip());
+      const after = cursorPositionAt(
+        state(0.7, 0.5),
+        source,
+        viewport,
+        showBackground,
+        screenClip({ crop: { x: 0, y: 0, width: 1, height: 0.75 } }),
+      );
+      expect(after).toEqual(before);
+    },
+  );
+
+  it('keeps cursor alignment through a moved and resized crop', () => {
+    const source = { width: 800, height: 400 };
+    const viewport = { x: 5, y: 10, width: 400, height: 200 };
+    const transform = { x: 0.1, y: 0.2, width: 0.8, height: 0.6 };
+    const before = cursorPositionAt(state(0.375, 0.6), source, viewport, false, screenClip({ transform }));
+    const after = cursorPositionAt(
+      state(0.375, 0.6),
+      source,
+      viewport,
+      false,
+      screenClip({ transform, crop: { x: 0.25, y: 0.25, width: 0.5, height: 0.5 } }),
+    );
+    expect(after).toEqual(before);
+  });
+
+  it('keeps mirrored cursor alignment after cropping both axes', () => {
+    const source = { width: 800, height: 400 };
+    const viewport = { x: 0, y: 0, width: 400, height: 200 };
+    const mirror = { isMirrored: true, isMirroredY: true };
+    const before = cursorPositionAt(state(0.375, 0.6), source, viewport, false, screenClip(mirror));
+    const after = cursorPositionAt(
+      state(0.375, 0.6),
+      source,
+      viewport,
+      false,
+      screenClip({ ...mirror, crop: { x: 0.25, y: 0.25, width: 0.5, height: 0.5 } }),
+    );
+    expect(after).toEqual(before);
   });
 
   it.each(phoneFrames)('maps the cursor to the contained 16:9 media inside the fitted %s phone', (frame) => {
@@ -199,12 +247,13 @@ describe('cursor rendering', () => {
     const media = containedMediaRect(source.width, source.height, content.width, content.height);
 
     expect(
-      cursorPositionAt(state(0, 0), source, viewport, true, undefined, false, false, {
-        frame,
-        frameShowMenu: true,
-        frameShowScrollbars: true,
-        frameChromeScale: 1,
-      }),
+      cursorPositionAt(
+        state(0, 0),
+        source,
+        viewport,
+        true,
+        screenClip({ appearance: { ...createDefaultClipAppearance('screen'), frame } }),
+      ),
     ).toEqual({
       x: content.x + media.x,
       y: content.y + media.y,
@@ -218,8 +267,7 @@ describe('cursor rendering', () => {
         { width: 100, height: 100 },
         { x: 0, y: 0, width: 100, height: 100 },
         false,
-        undefined,
-        true,
+        screenClip({ isMirrored: true }),
       ),
     ).toEqual({ x: 0, y: 0 });
   });
