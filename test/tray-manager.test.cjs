@@ -246,11 +246,13 @@ test('normalizes the Linux tray icon to 24x24 when nativeImage resize is availab
   }
 });
 
-test('rejects an absent or unreadable Linux tray icon before creating an empty Tray', () => {
+test('skips Linux tray initialization when tray icon assets are unreadable', () => {
   const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
   const originalLoad = Module._load;
   const modulePath = require.resolve('../electron/tray/tray-manager.cjs');
+  const originalWarn = console.warn;
   let trayCreated = false;
+  const warnings = [];
   class FakeTray {
     constructor() {
       trayCreated = true;
@@ -274,6 +276,7 @@ test('rejects an absent or unreadable Linux tray icon before creating an empty T
     ipcMain: { on() {} },
   };
   Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
+  console.warn = (message) => warnings.push(message);
   Module._load = function load(request, parent, isMain) {
     if (request === 'electron') return electron;
     if (request === 'fs') return { existsSync: () => true };
@@ -284,10 +287,12 @@ test('rejects an absent or unreadable Linux tray icon before creating an empty T
   try {
     const { createTrayManager } = require(modulePath);
     const manager = createTrayManager({ applicationRoot: '/app', getWindow: () => null, getController: () => null });
-    assert.throws(() => manager.init(), /tray icon|icon/i);
+    assert.equal(manager.init(), null);
     assert.equal(trayCreated, false);
+    assert.match(warnings[0], /Linux tray icon is missing or unreadable/i);
   } finally {
     Module._load = originalLoad;
+    console.warn = originalWarn;
     Object.defineProperty(process, 'platform', originalPlatform);
     delete require.cache[modulePath];
   }
