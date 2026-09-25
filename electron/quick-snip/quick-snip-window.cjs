@@ -162,7 +162,7 @@ function createQuickSnipWindow({
       if (saved) {
         baseBounds = saved;
         setNativeBounds(saved);
-      } else if (configuration.screenKind === 'window') {
+      } else if (configuration.screenKind === 'window' || configuration.region == null) {
         const area = display.workArea;
         baseBounds = {
           ...BAR_SIZE,

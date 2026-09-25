@@ -223,6 +223,23 @@ test('places a Linux window capture bar centered at the bottom without a parent'
   assert.equal(configureCall[2].hideWhileRecording, undefined);
 });
 
+for (const platform of ['linux', 'win32', 'darwin']) {
+  test(`${platform} places an uncropped display capture bar without region geometry`, () => {
+    const fixture = createFixture(display, platform);
+    const selected = { ...configuration(), screenKind: 'display', screenId: 'portal:monitor', region: null };
+
+    assert.doesNotThrow(() => fixture.crop.show(selected, display));
+    const window = fixture.windows[0];
+    assert.deepEqual(window.getBounds(), { x: 720, y: 932, width: 480, height: 132 });
+    window.emit('ready-to-show');
+    assert.equal(fixture.crop.rendererReady(window.webContents), true);
+    const configureCall = fixture.calls.find((call) => call[0] === 'send' && call[1] === 'quick-snip:configure');
+    assert.equal(configureCall[2].screenKind, 'display');
+    assert.equal(configureCall[2].screenId, 'portal:monitor');
+    assert.equal(configureCall[2].region, null);
+  });
+}
+
 test('keeps a Linux window capture bar visible while recording', () => {
   const fixture = createFixture(display, 'linux');
   fixture.crop.show(linuxWindowConfiguration(), display);
