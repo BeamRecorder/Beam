@@ -49,11 +49,7 @@ impl NegotiatedFormat {
         })
     }
 
-    pub(crate) const fn with_modifier(
-        mut self,
-        modifier: u64,
-        fixation_required: bool,
-    ) -> Self {
+    pub(crate) const fn with_modifier(mut self, modifier: u64, fixation_required: bool) -> Self {
         self.modifier = Some(modifier);
         self.modifier_fixation_required = fixation_required;
         self

@@ -58,9 +58,8 @@ pub(super) fn parse_format(param: &Pod) -> Result<NegotiatedFormat, CaptureError
     let format = NegotiatedFormat::new(raw.size().width, raw.size().height, pixel_format)
         .map_err(|error| format_error(error.to_string()))?;
     Ok(if raw.flags().contains(VideoFlags::MODIFIER) {
-        let fixation_required = raw.flags().bits()
-            & spa::sys::SPA_VIDEO_FLAG_MODIFIER_FIXATION_REQUIRED
-            != 0;
+        let fixation_required =
+            raw.flags().bits() & spa::sys::SPA_VIDEO_FLAG_MODIFIER_FIXATION_REQUIRED != 0;
         format.with_modifier(raw.modifier(), fixation_required)
     } else {
         format

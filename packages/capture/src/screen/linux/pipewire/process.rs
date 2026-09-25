@@ -182,8 +182,7 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
         );
         return;
     }
-    if memory_type == DataType::DmaBuf
-        && datas.iter().any(|data| data.type_() != DataType::DmaBuf)
+    if memory_type == DataType::DmaBuf && datas.iter().any(|data| data.type_() != DataType::DmaBuf)
     {
         invalid_buffer(
             &mut state,
@@ -217,8 +216,7 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
                     repair_window_crop,
                     previous_geometry,
                 )
-            })
-        {
+            }) {
             Ok(Ok(copied)) => copied,
             Ok(Err(error))
                 if matches!(

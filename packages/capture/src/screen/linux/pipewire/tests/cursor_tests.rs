@@ -20,7 +20,6 @@ fn cursor_spa_id_changes_without_a_bitmap_and_zero_preserves_identity() {
         } if native_cursor_id == "pipewire:stream:17"
     ));
 
-    // SPA IDs are the identity even when no bitmap is present in the meta.
     let changed = CursorMetadata { id: 23, ..first };
     assert!(matches!(
         state.resolve(Some(changed), 10, 10),
@@ -353,7 +352,12 @@ fn transparent_shape_hides_cursor_without_moving_it_to_the_window_origin() {
     );
     assert!(matches!(
         hidden_move,
-        CursorSampleState::Known { pixel_x: 6, pixel_y: 7, visible: false, .. }
+        CursorSampleState::Known {
+            pixel_x: 6,
+            pixel_y: 7,
+            visible: false,
+            ..
+        }
     ));
 
     let restored = state.resolve(
@@ -482,8 +486,6 @@ fn frame_geometry_scales_cursor_crop_to_frame_and_ignores_later_cursor_crop_chan
         .expect("mapped cursor");
     assert_eq!((mapped.x, mapped.y), (2, 2));
 
-    // A cursor-only update may advertise a different crop, but it must keep
-    // using the last real frame's geometry rather than changing the scale.
     let cursor_only_crop = CropRect {
         x: 0,
         y: 0,
