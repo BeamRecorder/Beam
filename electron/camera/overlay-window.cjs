@@ -1,7 +1,8 @@
 const { BrowserWindow, screen } = require('electron');
 const path = require('path');
 
-const DEFAULT_SIZE = { width: 320, height: 180 };
+const DEFAULT_SIZE = { width: 220, height: 220 };
+const PREVIOUS_DEFAULT_SIZE = { width: 320, height: 180 };
 const MIN_SIZE = { width: 120, height: 90 };
 
 function createCameraOverlayWindow({
@@ -57,11 +58,12 @@ function createCameraOverlayWindow({
     const width = Number(saved.width);
     const height = Number(saved.height);
     if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(width) || !Number.isFinite(height)) return null;
+    const previousDefault = width === PREVIOUS_DEFAULT_SIZE.width && height === PREVIOUS_DEFAULT_SIZE.height;
     return {
-      x: Math.round(x),
-      y: Math.round(y),
-      width: Math.max(MIN_SIZE.width, Math.round(width)),
-      height: Math.max(MIN_SIZE.height, Math.round(height)),
+      x: Math.round(x + (previousDefault ? width - DEFAULT_SIZE.width : 0)),
+      y: Math.round(y + (previousDefault ? height - DEFAULT_SIZE.height : 0)),
+      width: previousDefault ? DEFAULT_SIZE.width : Math.max(MIN_SIZE.width, Math.round(width)),
+      height: previousDefault ? DEFAULT_SIZE.height : Math.max(MIN_SIZE.height, Math.round(height)),
     };
   };
 

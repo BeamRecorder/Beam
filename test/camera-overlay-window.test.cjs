@@ -156,6 +156,44 @@ function loadOverlayWindow() {
   return require(modulePath);
 }
 
+test('opens a new camera preview as a square near the lower-right display edge', () => {
+  const fixture = createElectronFixture();
+  try {
+    const { createCameraOverlayWindow } = loadOverlayWindow();
+    const overlay = createCameraOverlayWindow({
+      applicationRoot: '/app',
+      isPackaged: false,
+      platform: 'linux',
+      preferencesStore: fixture.preferencesStore,
+    });
+
+    overlay.configure({ cameraId: 'camera:front' });
+    assert.deepEqual(fixture.windows[0].getBounds(), { x: 1680, y: 840, width: 220, height: 220 });
+    overlay.destroy();
+  } finally {
+    fixture.restore();
+  }
+});
+
+test('updates the previous default camera shape while keeping its lower-right anchor', () => {
+  const fixture = createElectronFixture({ cameraOverlay: { x: 1580, y: 880, width: 320, height: 180 } });
+  try {
+    const { createCameraOverlayWindow } = loadOverlayWindow();
+    const overlay = createCameraOverlayWindow({
+      applicationRoot: '/app',
+      isPackaged: false,
+      platform: 'linux',
+      preferencesStore: fixture.preferencesStore,
+    });
+
+    overlay.configure({ cameraId: 'camera:front' });
+    assert.deepEqual(fixture.windows[0].getBounds(), { x: 1680, y: 840, width: 220, height: 220 });
+    overlay.destroy();
+  } finally {
+    fixture.restore();
+  }
+});
+
 test('persists camera overlay position and size after native move and resize events', () => {
   const fixture = createElectronFixture();
   try {
