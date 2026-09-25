@@ -38,6 +38,7 @@ export interface CursorMotionSample extends CursorPlaybackState {
   previousX: number;
   previousY: number;
   deltaSeconds: number;
+  stopSpringActive: boolean;
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -392,6 +393,21 @@ export function motionBlurTrail(
       alpha: index === kernel - 1 ? 1 : (1 - progress) * 0.42,
     };
   });
+}
+
+/** Movement keeps its configured blur; the small settling spring stays crisp. */
+export function cursorMotionBlurTrail(
+  motion: CursorMotionSample,
+  intensity: number,
+  viewport: { width: number; height: number },
+) {
+  return motionBlurTrail(
+    { x: motion.x, y: motion.y },
+    { x: motion.previousX, y: motion.previousY },
+    motion.deltaSeconds,
+    motion.stopSpringActive ? 0 : intensity,
+    viewport,
+  );
 }
 
 export function cursorMotionStateAt(

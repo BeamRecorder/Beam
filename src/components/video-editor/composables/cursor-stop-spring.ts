@@ -18,7 +18,7 @@ export function createCursorStopSpring(
   height: number,
   isDraggingAt: (timeSeconds: number) => boolean,
 ) {
-  if (!settings.stopSpringEnabled || settings.stopSpringStrength <= 0) return () => ({ x: 0, y: 0 });
+  if (!settings.stopSpringEnabled || settings.stopSpringStrength <= 0) return () => ({ x: 0, y: 0, active: false });
 
   const moves = events.filter((event) => event.event === 'move').sort((a, b) => a.sessionNs - b.sessionNs);
   const buttonTimes = events
@@ -89,9 +89,9 @@ export function createCursorStopSpring(
       else high = middle;
     }
     const spring = springs[low - 1];
-    if (!spring || timeSeconds >= spring.endSeconds || isDraggingAt(timeSeconds)) return { x: 0, y: 0 };
+    if (!spring || timeSeconds >= spring.endSeconds || isDraggingAt(timeSeconds)) return { x: 0, y: 0, active: false };
     const elapsed = timeSeconds - spring.timeSeconds;
     const displacement = Math.sin(2 * Math.PI * 7 * elapsed) * Math.exp(-10 * elapsed);
-    return { x: spring.x * displacement, y: spring.y * displacement };
+    return { x: spring.x * displacement, y: spring.y * displacement, active: true };
   };
 }
