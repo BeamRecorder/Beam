@@ -56,11 +56,7 @@ export function cursorPositionForKeyboardCaption(
       { width: sourceWidth, height: sourceHeight },
       { x: 0, y: 0, width, height },
       snapshot.canvas.showBackground,
-      screen.transform,
-      screen.isMirrored ?? false,
-      screen.isMirroredY ?? false,
-      screen.appearance,
-      screen.crop,
+      screen,
     ),
   );
   return {
@@ -97,11 +93,7 @@ export function drawCursorLayer(
       { width: sourceWidth, height: sourceHeight },
       { x: 0, y: 0, width, height },
       snapshot.canvas.showBackground,
-      screen.transform,
-      screen.isMirrored ?? false,
-      screen.isMirroredY ?? false,
-      screen.appearance,
-      screen.crop,
+      screen,
     );
 
   for (const click of buttonEventsBetween(snapshot.cursor.events, Math.max(0, time - 0.5), time)) {

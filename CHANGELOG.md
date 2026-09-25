@@ -7,6 +7,7 @@ User-facing changes to Beam are documented in this file.
 ### Fixed
 
 - Typing a Screenshot export width or height with Keep aspect ratio enabled now preserves the starting proportions, so placed elements scale with the captured image.
+- Cropping a Studio video now keeps the cursor and click effects aligned with the visible recording in preview and export.
 
 ## [0.3.3] - 2026-09-21
 

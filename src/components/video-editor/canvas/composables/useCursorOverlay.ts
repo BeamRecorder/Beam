@@ -163,16 +163,18 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
     videoHeight: number,
   ) => {
     const screen = options.screenClip();
+    if (!screen) throw new Error('Screen clip unavailable for cursor positioning');
     return cursorPositionAt(
       state,
       { width: videoWidth, height: videoHeight },
-      { x: videoWindow.dx, y: videoWindow.dy, width: videoWindow.dw, height: videoWindow.dh },
+      {
+        x: videoWindow.dx,
+        y: videoWindow.dy,
+        width: videoWindow.dw,
+        height: videoWindow.dh,
+      },
       options.showBackground(),
-      screen?.transform ?? { x: 0, y: 0, width: 1, height: 1 },
-      screen?.isMirrored ?? false,
-      screen?.isMirroredY ?? false,
-      screen?.appearance,
-      screen?.crop,
+      screen,
     );
   };
 

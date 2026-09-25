@@ -1,7 +1,8 @@
 import type { CursorPlaybackState } from '../../composables/cursorPlayback';
-import { framedMediaRect, outputPoint, type CanvasRect } from '../../canvas/output-canvas';
-import type { ClipAppearance, NormalizedCrop, NormalizedTransform } from '~/media/shared/composition-types';
+import type { CanvasRect } from '../../canvas/output-canvas';
+import type { VisualClip } from '~/media/shared/composition-types';
 import { frameMediaRect } from '../../composition/appearance/frames';
+import { resolveScreenRenderGeometry } from '../../composition/camera-layout';
 import type { CursorPackDescriptor, CursorSelection } from '../../../../api/types/cursor-pack';
 import { cursorGeometry, resolveCursorAsset } from './cursor-packs';
 
@@ -48,38 +49,30 @@ export function cursorPositionAt(
   source: { width: number; height: number },
   viewport: CanvasRect,
   showBackground: boolean,
-  transform: NormalizedTransform = { x: 0, y: 0, width: 1, height: 1 },
-  mirrored = false,
-  mirroredY = false,
-  appearance?: Pick<ClipAppearance, 'frame' | 'frameShowMenu' | 'frameShowScrollbars' | 'frameChromeScale'>,
-  crop?: NormalizedCrop,
+  screen: VisualClip,
 ) {
-  const hasCrop = Boolean(crop && crop.width > 0 && crop.height > 0);
-  const sourceWidth = hasCrop ? source.width * crop!.width : source.width;
-  const sourceHeight = hasCrop ? source.height * crop!.height : source.height;
-  const sourceX = hasCrop ? (state.x - crop!.x) / crop!.width : state.x;
-  const sourceY = hasCrop ? (state.y - crop!.y) / crop!.height : state.y;
-  const localX = Math.max(0, Math.min(1, sourceX));
-  const localY = Math.max(0, Math.min(1, sourceY));
-  const media = showBackground
-    ? framedMediaRect(sourceWidth, sourceHeight, viewport.width, viewport.height)
-    : { x: 0, y: 0, width: viewport.width, height: viewport.height };
-  const point = showBackground
-    ? { cx: localX, cy: localY }
-    : outputPoint(localX, localY, sourceWidth, sourceHeight, viewport.width, viewport.height, false);
+  const geometry = resolveScreenRenderGeometry(
+    screen,
+    source.width,
+    source.height,
+    viewport.width,
+    viewport.height,
+    showBackground,
+  );
   const outer = {
-    x: viewport.x + media.x + transform.x * media.width,
-    y: viewport.y + media.y + transform.y * media.height,
-    width: media.width * transform.width,
-    height: media.height * transform.height,
+    ...geometry.positioned,
+    x: viewport.x + geometry.positioned.x,
+    y: viewport.y + geometry.positioned.y,
   };
-  const content = frameMediaRect(outer, appearance?.frame ?? 'none', sourceWidth, sourceHeight, {
-    showMenu: appearance?.frameShowMenu,
-    showScrollbars: appearance?.frameShowScrollbars,
-    chromeScale: appearance?.frameChromeScale,
+  const content = frameMediaRect(outer, screen.appearance.frame, geometry.source.width, geometry.source.height, {
+    showMenu: screen.appearance.frameShowMenu,
+    showScrollbars: screen.appearance.frameShowScrollbars,
+    chromeScale: screen.appearance.frameChromeScale,
   });
-  const x = mirrored ? 1 - point.cx : point.cx;
-  const y = mirroredY ? 1 - point.cy : point.cy;
+  const localX = Math.max(0, Math.min(1, (state.x * source.width - geometry.source.x) / geometry.source.width));
+  const localY = Math.max(0, Math.min(1, (state.y * source.height - geometry.source.y) / geometry.source.height));
+  const x = screen.isMirrored ? 1 - localX : localX;
+  const y = screen.isMirroredY ? 1 - localY : localY;
   return {
     x: content.x + x * content.width,
     y: content.y + y * content.height,
