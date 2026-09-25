@@ -17,7 +17,7 @@ import type { CursorPackDescriptor, CursorSelection } from '../../../../api/type
 import { cursorAssetSupportsTint, MACOS_CURSOR_PACK } from '../../properties/cursor/cursor-packs';
 import type { VisualClip } from '~/media/shared/composition-types';
 import { CURSOR_SIZE_MAX } from '../../properties/cursor/cursor-size';
-import { createCursorMotionPlayer, motionBlurTrail } from '../../composables/cursor-motion';
+import { createCursorMotionPlayer, cursorMotionBlurTrail } from '../../composables/cursor-motion';
 import {
   effectButtonForRecordedButton,
   type CursorClickEffectSettings,
@@ -315,13 +315,10 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
               ? cursorCanvasBounds(transitionedCursorPosition, geometry, videoWindow, scale * screenTransition.scale)
               : null,
           );
-          const trail = motionBlurTrail(
-            { x: motionState.x, y: motionState.y },
-            { x: motionState.previousX, y: motionState.previousY },
-            motionState.deltaSeconds,
-            options.motion().motionBlur,
-            { width: videoWindow.dw, height: videoWindow.dh },
-          );
+          const trail = cursorMotionBlurTrail(motionState, options.motion().motionBlur, {
+            width: videoWindow.dw,
+            height: videoWindow.dh,
+          });
           for (const sample of trail) {
             const sampleState = { ...motionState, x: sample.x, y: sample.y };
             const samplePosition = positionAt(sampleState, videoWindow, videoWidth, videoHeight);

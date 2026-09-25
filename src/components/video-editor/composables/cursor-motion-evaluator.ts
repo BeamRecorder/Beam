@@ -21,6 +21,7 @@ export interface CursorMotionEvaluation {
   previousX: number;
   previousY: number;
   deltaSeconds: number;
+  stopSpringActive: boolean;
 }
 
 interface CursorMotionEvaluatorInputs {
@@ -29,7 +30,7 @@ interface CursorMotionEvaluatorInputs {
   directTargetAt: (timeSeconds: number) => Point | null;
   isDraggingAt: (timeSeconds: number) => boolean;
   buttonTimes: readonly number[];
-  stopSpringAt: (timeSeconds: number) => Point;
+  stopSpringAt: (timeSeconds: number) => Point & { active: boolean };
 }
 
 const STEP_SECONDS = 1 / 120;
@@ -180,6 +181,7 @@ export function createDeterministicCursorMotionEvaluator(inputs: CursorMotionEva
         previousX: previous.x,
         previousY: previous.y,
         deltaSeconds: time - previousTime,
+        stopSpringActive: inputs.stopSpringAt(time).active,
       };
     },
     reset,

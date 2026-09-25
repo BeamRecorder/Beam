@@ -2,7 +2,7 @@ import type { VisualClip } from '~/media/shared/composition-types';
 import { cursorClickSpringScale } from '../../video-editor/composables/cursor-click-spring';
 import {
   createCursorMotionPlayer,
-  motionBlurTrail,
+  cursorMotionBlurTrail,
   type CursorMotionSample,
 } from '../../video-editor/composables/cursor-motion';
 import {
@@ -138,13 +138,7 @@ export function drawCursorLayer(
   const age = click ? Math.max(0, time - click.sessionNs / 1_000_000_000) : Infinity;
   const spring = click ? settingsForButton(click.button) : null;
   const clickScale = cursorClickSpringScale(age, Boolean(spring?.springEnabled), spring?.springIntensity ?? 0);
-  const trail = motionBlurTrail(
-    { x: motionCursor.x, y: motionCursor.y },
-    { x: motionCursor.previousX, y: motionCursor.previousY },
-    motionCursor.deltaSeconds,
-    settings.motion.motionBlur,
-    { width, height },
-  );
+  const trail = cursorMotionBlurTrail(motionCursor, settings.motion.motionBlur, { width, height });
   for (const sample of trail) {
     const samplePosition = positionAt({ ...motionCursor, x: sample.x, y: sample.y });
     ctx.save();

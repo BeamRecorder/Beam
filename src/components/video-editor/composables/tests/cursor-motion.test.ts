@@ -3,6 +3,7 @@ import type { CursorEvent } from '../../../../api/types/capture-api';
 import { createDefaultCursorMotionSettings, cursorMotionPreset } from '../../../../api/types/cursor-settings';
 import {
   createCursorMotionPlayer,
+  cursorMotionBlurTrail,
   createCursorMotionTimeline,
   extractCursorMotionAnchors,
   minimumJerk,
@@ -318,5 +319,29 @@ describe('cursor motion', () => {
     expect(createCursorMotionPlayer(continuous, settings).sample(0.15, rawState())?.x).toBeCloseTo(
       createCursorMotionPlayer(continuous, plain).sample(0.15, rawState())!.x,
     );
+  });
+
+  it('keeps the stop spring sharp while retaining blur during cursor travel', () => {
+    const settings = { ...createDefaultCursorMotionSettings(), smoothing: 0, stopSpringStrength: 1, motionBlur: 1 };
+    const player = createCursorMotionPlayer(events(move(0, 0.1, 0.5), move(0.1, 0.5, 0.5)), settings);
+    const viewport = { width: 1920, height: 1080 };
+    const moving = player.sample(0.05, rawState())!;
+    expect(moving.stopSpringActive).toBe(false);
+    expect(cursorMotionBlurTrail(moving, settings.motionBlur, viewport).length).toBeGreaterThan(1);
+
+    const settling = player.sample(0.15, rawState())!;
+    expect(settling.stopSpringActive).toBe(true);
+    expect(
+      motionBlurTrail(
+        { x: settling.x, y: settling.y },
+        { x: settling.previousX, y: settling.previousY },
+        settling.deltaSeconds,
+        settings.motionBlur,
+        viewport,
+      ).length,
+    ).toBeGreaterThan(1);
+    expect(cursorMotionBlurTrail(settling, settings.motionBlur, viewport)).toEqual([
+      { x: settling.x, y: settling.y, alpha: 1 },
+    ]);
   });
 });
