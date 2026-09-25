@@ -62,6 +62,17 @@ impl CursorClassifier {
         kind
     }
 
+    pub(super) fn is_fully_transparent(
+        format: VideoFormat,
+        width: u32,
+        height: u32,
+        stride: i32,
+        pixels: &[u8],
+    ) -> bool {
+        canonical_bitmap(format, width, height, stride, pixels)
+            .is_some_and(|pixels| pixels.as_chunks::<4>().0.iter().all(|pixel| pixel[3] == 0))
+    }
+
     fn match_pixels(
         &self,
         width: u32,

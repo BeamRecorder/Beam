@@ -20,7 +20,6 @@ fn cursor_spa_id_changes_without_a_bitmap_and_zero_preserves_identity() {
         } if native_cursor_id == "pipewire:stream:17"
     ));
 
-    // SPA IDs are the identity even when no bitmap is present in the meta.
     let changed = CursorMetadata { id: 23, ..first };
     assert!(matches!(
         state.resolve(Some(changed), 10, 10),
@@ -297,27 +296,14 @@ fn raw_spa_id_change_then_bitmap_shape_change_updates_identity_in_order() {
 }
 
 #[test]
-fn zero_shape_hash_does_not_replace_an_existing_identity() {
+fn transparent_shape_hides_cursor_without_moving_it_to_the_window_origin() {
     let shape = metadata::stable_cursor_shape_id(1, 2, 2, 8, &[0, 1, 2, 3]);
     let mut state = CursorState::new("stream");
     let _ = state.resolve(
         Some(CursorMetadata {
-            id: 17,
+            id: 1,
             shape_id: Some(shape),
             cursor_kind: Some(CursorKind::Default),
-            x: 4,
-            y: 5,
-            hotspot: None,
-        }),
-        10,
-        10,
-    );
-
-    let invalid = state.resolve(
-        Some(CursorMetadata {
-            id: 17,
-            shape_id: Some(0),
-            cursor_kind: None,
             x: 6,
             y: 7,
             hotspot: None,
@@ -325,11 +311,96 @@ fn zero_shape_hash_does_not_replace_an_existing_identity() {
         10,
         10,
     );
+
+    let hidden = state.resolve(
+        Some(CursorMetadata {
+            id: 99,
+            shape_id: Some(HIDDEN_CURSOR_SHAPE_ID),
+            cursor_kind: None,
+            x: 0,
+            y: 0,
+            hotspot: None,
+        }),
+        10,
+        10,
+    );
+
     assert!(matches!(
-        invalid,
-        CursorSampleState::Known { ref native_cursor_id, .. }
-            if native_cursor_id == &format!("pipewire:stream:{shape}")
+        hidden,
+        CursorSampleState::Known {
+            ref native_cursor_id,
+            pixel_x: 6,
+            pixel_y: 7,
+            normalized_x: 0.6,
+            normalized_y: 0.7,
+            visible: false,
+            ..
+        } if native_cursor_id == &format!("pipewire:stream:{shape}")
     ));
+
+    let hidden_move = state.resolve(
+        Some(CursorMetadata {
+            id: 0,
+            shape_id: None,
+            cursor_kind: None,
+            x: 1,
+            y: 1,
+            hotspot: None,
+        }),
+        10,
+        10,
+    );
+    assert!(matches!(
+        hidden_move,
+        CursorSampleState::Known {
+            pixel_x: 6,
+            pixel_y: 7,
+            visible: false,
+            ..
+        }
+    ));
+
+    let restored = state.resolve(
+        Some(CursorMetadata {
+            id: 1,
+            shape_id: Some(shape),
+            cursor_kind: Some(CursorKind::Default),
+            x: 8,
+            y: 9,
+            hotspot: None,
+        }),
+        10,
+        10,
+    );
+    assert!(matches!(
+        restored,
+        CursorSampleState::Known {
+            pixel_x: 8,
+            pixel_y: 9,
+            visible: true,
+            ..
+        }
+    ));
+}
+
+#[test]
+fn transparent_shape_before_any_visible_position_is_unknown() {
+    let mut state = CursorState::new("stream");
+    assert_eq!(
+        state.resolve(
+            Some(CursorMetadata {
+                id: 1,
+                shape_id: Some(HIDDEN_CURSOR_SHAPE_ID),
+                cursor_kind: None,
+                x: 0,
+                y: 0,
+                hotspot: None,
+            }),
+            10,
+            10,
+        ),
+        CursorSampleState::Unknown
+    );
 }
 
 #[test]
@@ -415,8 +486,6 @@ fn frame_geometry_scales_cursor_crop_to_frame_and_ignores_later_cursor_crop_chan
         .expect("mapped cursor");
     assert_eq!((mapped.x, mapped.y), (2, 2));
 
-    // A cursor-only update may advertise a different crop, but it must keep
-    // using the last real frame's geometry rather than changing the scale.
     let cursor_only_crop = CropRect {
         x: 0,
         y: 0,

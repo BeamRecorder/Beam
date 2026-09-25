@@ -1,6 +1,6 @@
 mod cursor_classifier;
-mod dmabuf_importer;
 mod cursor_state;
+mod dmabuf_importer;
 mod format;
 mod geometry;
 mod metadata;
@@ -14,8 +14,8 @@ mod timestamp;
 mod tests;
 
 use cursor_classifier::*;
-use dmabuf_importer::*;
 pub(crate) use cursor_state::*;
+use dmabuf_importer::*;
 pub(crate) use format::*;
 use geometry::*;
 use params::*;

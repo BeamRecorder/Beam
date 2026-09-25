@@ -391,9 +391,7 @@ fn pipewire_worker(
                         }
                     }
                     Ok(FormatParamEvent::Cleared | FormatParamEvent::Fixating) => {
-                        // PipeWire uses a null format parameter to clear the
-                        // current format before (re)negotiation. Wait for the
-                        // next concrete format instead of failing capture.
+                        // A null format clears negotiation; wait for the next concrete format.
                         let mut process_state = state.borrow_mut();
                         process_state.negotiated = None;
                         process_state.dmabuf_importer.clear();
@@ -478,8 +476,7 @@ fn pipewire_worker(
         .connect(
             spa::utils::Direction::Input,
             Some(node_id),
-            pw::stream::StreamFlags::AUTOCONNECT
-                | pw::stream::StreamFlags::MAP_BUFFERS,
+            pw::stream::StreamFlags::AUTOCONNECT | pw::stream::StreamFlags::MAP_BUFFERS,
             &mut params,
         )
         .map_err(pipewire_error)?;
