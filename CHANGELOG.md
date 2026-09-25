@@ -7,6 +7,7 @@ User-facing changes to Beam are documented in this file.
 ### Fixed
 
 - Cropping a Studio video now keeps the cursor and click effects aligned with the visible recording in preview and export.
+- Instant capture from the HUD now opens on a full display without a Quick Snip window geometry error.
 
 ## [0.3.3] - 2026-09-21
 
