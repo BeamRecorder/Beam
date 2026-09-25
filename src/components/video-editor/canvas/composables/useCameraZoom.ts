@@ -10,7 +10,7 @@ import {
   type MotionBlurSurface,
 } from '../../zoom/zoom-motion-blur-compositor';
 import { OUTPUT_PREVIEW_RADIUS, outputPreviewRect } from '../output-canvas';
-import { sourceTimeAt, type MediaFrame } from '~/media/shared';
+import { sessionTimeAt, type MediaFrame } from '~/media/shared';
 import type { VisualClip } from '~/media/shared/composition-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import { drawDecoratedMedia } from '../../composition/appearance/render-decorated-media';
@@ -255,11 +255,13 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     ctx.clip();
     const currentTime = options.currentTime();
     const telemetry = options.editorData()?.cursor.telemetry ?? [];
+    const composition = options.composition();
     const selectedZoom = options.selectedZoom();
     const zooms = options.zoomElements();
     const evaluatorInputs = [
       zooms,
       telemetry,
+      composition,
       output,
       screen,
       selectedZoom?.id,
@@ -284,7 +286,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
         autoFollow: options.zoomAutoFollow?.(),
         mapTelemetryTime: (timeMs) => {
           const activeScreen = sceneLayersAt(timeMs).screen;
-          return activeScreen ? (sourceTimeAt(activeScreen, timeMs) ?? timeMs) : timeMs;
+          return activeScreen ? (sessionTimeAt(activeScreen, timeMs, composition) ?? timeMs) : timeMs;
         },
         mapFocus: (focus, zoom, timeMs) => {
           const activeScreen = sceneLayersAt(timeMs).screen;

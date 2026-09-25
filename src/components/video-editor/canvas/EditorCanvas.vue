@@ -239,6 +239,7 @@ const cursorOverlay = useCursorOverlay({
   currentTime: () => props.currentTime,
   isPlaying: () => props.isPlaying,
   editorData: () => props.editorData,
+  composition: () => props.composition,
   screenClip: () => liveScreenClip.value,
   isScreenEnabled: () => Boolean(liveScreenClip.value && screenFrame.value),
   showBackground: () => props.outputCanvas.showBackground,

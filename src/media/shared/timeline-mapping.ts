@@ -19,6 +19,14 @@ export function sourceTimeAt(clip: Clip, timelineTimeMs: number): number | null 
   return Math.round(clip.sourceInMs + (timeMs - clip.timelineStartMs) * clip.playbackRate);
 }
 
+/** Maps a screen clip's local media time to its recorded cursor/telemetry clock. */
+export function sessionTimeAt(clip: Clip, timelineTimeMs: number, composition: ClipComposition): number | null {
+  const sourceMs = sourceTimeAt(clip, timelineTimeMs);
+  if (sourceMs === null) return null;
+  const asset = assetForClip(composition, clip);
+  return sourceMs + (asset?.origin === 'session' ? (asset.sessionStartMs ?? 0) : 0);
+}
+
 export const activeClipsAt = (composition: ClipComposition, timelineTimeMs: number) =>
   composition.clips
     .filter((clip) => clip.enabled && sourceTimeAt(clip, timelineTimeMs) !== null)

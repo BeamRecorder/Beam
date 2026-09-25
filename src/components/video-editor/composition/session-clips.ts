@@ -82,6 +82,7 @@ const sessionAsset = (
     origin: 'session',
     sessionId: editorData.sessionId,
     sessionPath: segment.path,
+    ...(milliseconds(segment.startNs) > 0 ? { sessionStartMs: milliseconds(segment.startNs) } : {}),
   };
 };
 
@@ -184,6 +185,11 @@ export function synchronizeRecordingClips(
       if (track.kind === 'screen' && sourceWasAlreadyMaterialized) hasKnownScreenSource = true;
       if (!sourceWasAlreadyMaterialized) {
         assets.set(asset.id, asset);
+        assetsChanged = true;
+      } else if (asset.sessionStartMs !== undefined && assets.get(asset.id)?.sessionStartMs !== asset.sessionStartMs) {
+        // Older projects already own this media; recover its immutable start
+        // from the session manifest without replacing the saved media URL.
+        assets.set(asset.id, { ...assets.get(asset.id)!, sessionStartMs: asset.sessionStartMs });
         assetsChanged = true;
       }
       const priority =

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { VisualClip } from '../composition-types';
 import { createDefaultClipAppearance } from '../composition-defaults';
-import { activeClipsAt, sourceTimeAt } from '../timeline-mapping';
+import { activeClipsAt, sessionTimeAt, sourceTimeAt } from '../timeline-mapping';
 
 const frozenVideo = (): VisualClip => ({
   id: 'hold',
@@ -54,6 +54,44 @@ const contiguousComposition = (cutMs: number) => {
 };
 
 describe('timeline mapping', () => {
+  it('maps a trimmed and accelerated session clip to its original recording clock', () => {
+    const clip = {
+      ...frozenVideo(),
+      freezeFrameSourceMs: undefined,
+      assetId: 'session-segment',
+      timelineStartMs: 2_000,
+      timelineDurationMs: 500,
+      sourceInMs: 250,
+      playbackRate: 2,
+    };
+    const composition = {
+      ...contiguousComposition(1_000),
+      assets: [
+        {
+          id: 'session-segment',
+          kind: 'video' as const,
+          name: 'Screen',
+          fileName: null,
+          durationMs: 2_000,
+          width: 100,
+          height: 50,
+          src: '/second.webm',
+          origin: 'session' as const,
+          sessionStartMs: 7_000,
+        },
+      ],
+      clips: [clip],
+    };
+
+    expect(sourceTimeAt(clip, 2_250)).toBe(750);
+    expect(sessionTimeAt(clip, 2_250, composition)).toBe(7_750);
+    expect(sessionTimeAt(clip, 1_999, composition)).toBeNull();
+    expect(sessionTimeAt(clip, 2_500, composition)).toBeNull();
+    expect(
+      sessionTimeAt(clip, 2_250, { ...composition, assets: [{ ...composition.assets[0]!, origin: 'project' }] }),
+    ).toBe(750);
+  });
+
   it('maps every instant of a freeze-frame segment to its captured source timestamp', () => {
     const clip = frozenVideo();
 

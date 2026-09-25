@@ -5,6 +5,8 @@ import { COMPOSITION_SCHEMA_VERSION, emptyComposition, type ClipComposition } fr
 import { synchronizeRecordingClips } from '../session-clips';
 import { deleteClip, splitClip } from '../engine/clip-engine';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { sessionTimeAt } from '~/media/shared/timeline-mapping';
+import { removeTimelineGap, timelineGaps } from '../timeline-gaps';
 
 const segment = (overrides: Partial<SessionTrackAsset> = {}): SessionTrackAsset => ({
   path: 'segment.webm',
@@ -83,6 +85,42 @@ const shortcut = (sessionNs: number, key: 'a' | 'b', pressed = true) => ({
 });
 
 describe('synchronizeRecordingClips', () => {
+  it('keeps cursor time aligned after removing a pause gap from two recording segments', () => {
+    const first = segment({ path: 'first.webm', src: '/first.webm' });
+    const second = segment({ path: 'second.webm', src: '/second.webm', startNs: 7_000_000_000, endNs: 9_000_000_000 });
+    const data = editorData([track('screen', [first, second])]);
+    const recorded = synchronizeRecordingClips(emptyComposition(), data);
+    const screenClips = recorded.clips.filter((clip) => clip.kind === 'screen');
+    const gap = timelineGaps(screenClips).find(({ startMs, endMs }) => startMs === 2_000 && endMs === 7_000);
+    expect(gap).toBeDefined();
+    const joined = removeTimelineGap(recorded, gap!);
+    const laterClip = joined.clips.find(
+      (clip) => clip.kind === 'screen' && clip.assetId === 'session:session-1:screen:second.webm',
+    );
+    expect(laterClip).toBeDefined();
+    if (laterClip?.kind !== 'screen') throw new Error('Second screen segment missing');
+
+    expect(laterClip.timelineStartMs).toBe(2_000);
+    expect(joined.assets.find((asset) => asset.id === laterClip.assetId)?.sessionStartMs).toBe(7_000);
+    expect(sessionTimeAt(laterClip, 2_500, joined)).toBe(7_500);
+
+    const oldProject = {
+      ...joined,
+      assets: joined.assets.map((asset) =>
+        asset.id === laterClip.assetId
+          ? { ...asset, src: 'project-media://saved/second.webm', sessionStartMs: undefined }
+          : asset,
+      ),
+    };
+    const restored = synchronizeRecordingClips(oldProject, data);
+    expect(restored.clips).toEqual(oldProject.clips);
+    expect(restored.assets.find((asset) => asset.id === laterClip.assetId)).toMatchObject({
+      src: 'project-media://saved/second.webm',
+      sessionStartMs: 7_000,
+    });
+    expect(sessionTimeAt(laterClip, 2_500, restored)).toBe(7_500);
+  });
+
   it('returns the original composition without editor data', () => {
     const composition = emptyComposition();
     expect(synchronizeRecordingClips(composition, null)).toBe(composition);

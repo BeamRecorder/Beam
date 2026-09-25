@@ -150,6 +150,12 @@ function normalizeComposition(value) {
         asset.sessionPath.split(/[\\/]+/).includes('..'))
     )
       throw new Error('Média de session invalide');
+    if (
+      origin === 'session' &&
+      asset.sessionStartMs !== undefined &&
+      (!finite(asset.sessionStartMs) || !Number.isInteger(asset.sessionStartMs) || asset.sessionStartMs < 0)
+    )
+      throw new Error('Début de segment invalide');
     return {
       id: asset.id,
       kind: asset.kind,
@@ -160,6 +166,7 @@ function normalizeComposition(value) {
       height: finite(asset.height) ? Math.max(1, Math.round(asset.height)) : null,
       origin,
       ...(origin === 'session' ? { sessionId: asset.sessionId, sessionPath: asset.sessionPath } : {}),
+      ...(origin === 'session' && asset.sessionStartMs > 0 ? { sessionStartMs: asset.sessionStartMs } : {}),
       ...(Array.isArray(asset.audioAnalyses)
         ? { audioAnalyses: asset.audioAnalyses.slice(-64).map(normalizeAudioAnalysis) }
         : {}),

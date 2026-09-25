@@ -101,6 +101,7 @@ const settleCursorImage = async () => {
 };
 
 const baseOptions = (): UseCursorOverlayOptions => ({
+  composition: () => ({ schemaVersion: 14, assets: [], clips: [], keyboardCaptionSessions: [] }),
   cursorSelection: () => ({
     packId: MACOS_CURSOR_PACK.id,
     mode: 'automatic' as const,

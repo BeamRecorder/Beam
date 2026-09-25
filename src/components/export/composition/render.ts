@@ -44,7 +44,7 @@ import {
   type MotionBlurSurface,
 } from '../../video-editor/zoom/zoom-motion-blur-compositor';
 import { normalizeZoomMotionBlur } from '../../video-editor/zoom/zoom-types';
-import { sourceTimeAt } from '~/media/shared';
+import { sessionTimeAt } from '~/media/shared';
 import { drawExportGeneratedLayer } from './render-generated-layer';
 import { hasPerspectiveTilt } from '../../video-editor/zoom/perspective-projection';
 import { disposePerspectiveRenderer, renderPerspectiveLayers } from './perspective-render';
@@ -224,7 +224,7 @@ export const createSnapshotCameraEvaluator = (
     autoFollow: snapshot.zoomAutoFollow,
     mapTelemetryTime: (timeMs) => {
       const screen = resolveCompositionSceneLayers(snapshot.composition, timeMs).screen;
-      return screen ? (sourceTimeAt(screen, timeMs) ?? timeMs) : timeMs;
+      return screen ? (sessionTimeAt(screen, timeMs, snapshot.composition) ?? timeMs) : timeMs;
     },
     mapFocus: (focus, zoom, timeMs) => {
       const screen = resolveCompositionSceneLayers(snapshot.composition, timeMs).screen;
@@ -266,7 +266,7 @@ function renderCompositionFrameContent(
   const timeMs = time * 1_000;
   const layers = resolvedLayers ?? resolveCompositionSceneLayers(snapshot.composition, timeMs);
   const screen = layers.screen;
-  const screenTime = screen ? (sourceTimeAt(screen, timeMs) ?? timeMs) / 1_000 : time;
+  const screenTime = screen ? (sessionTimeAt(screen, timeMs, snapshot.composition) ?? timeMs) / 1_000 : time;
   const sourceWidth = video?.width ?? width;
   const sourceHeight = video?.height ?? height;
   const screenGeometry = screen

@@ -156,6 +156,8 @@ export interface MediaAsset {
   origin: 'project' | 'session';
   sessionId?: string;
   sessionPath?: string;
+  /** Segment start on the original recording clock; media source time starts at zero. */
+  sessionStartMs?: number;
   audioAnalyses?: AudioAnalysis[];
 }
 

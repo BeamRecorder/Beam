@@ -308,6 +308,38 @@ test('normalizes canonical clip timing, linked groups and appearance', () => {
   });
 });
 
+test('preserves a session segment start offset when normalizing a saved composition', () => {
+  const asset = {
+    id: 'session-second',
+    kind: 'video',
+    name: 'Second segment',
+    fileName: null,
+    durationMs: 2_000,
+    width: 100,
+    height: 50,
+    origin: 'session',
+    sessionId: 'session-1',
+    sessionPath: 'screen/second.webm',
+    sessionStartMs: 7_000,
+  };
+  const composition = {
+    schemaVersion: 14,
+    assets: [asset],
+    keyboardCaptionSessions: [],
+    clips: [visualClip(asset.id, { id: 'second', timelineStartMs: 2_000 })],
+  };
+
+  assert.equal(normalizeComposition(composition).assets[0].sessionStartMs, 7_000);
+  assert.throws(
+    () =>
+      normalizeComposition({
+        ...composition,
+        assets: [{ ...asset, sessionStartMs: -1 }],
+      }),
+    /Début de segment invalide/,
+  );
+});
+
 test('round-trips optional clip lock flags without materializing omitted values', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-clip-locks-'));
   const store = createProjectStore(root);

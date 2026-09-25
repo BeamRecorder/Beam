@@ -15,7 +15,7 @@ import {
 } from '../../properties/cursor/cursor-rendering';
 import type { CursorPackDescriptor, CursorSelection } from '../../../../api/types/cursor-pack';
 import { cursorAssetSupportsTint, MACOS_CURSOR_PACK } from '../../properties/cursor/cursor-packs';
-import type { VisualClip } from '~/media/shared/composition-types';
+import type { ClipComposition, VisualClip } from '~/media/shared/composition-types';
 import { CURSOR_SIZE_MAX } from '../../properties/cursor/cursor-size';
 import { createCursorMotionPlayer, cursorMotionBlurTrail } from '../../composables/cursor-motion';
 import {
@@ -27,7 +27,7 @@ import {
 } from '../../../../api/types/cursor-settings';
 import type { OutputCanvasSettings } from '../output-canvas';
 import { cursorRippleAt } from '../../composables/cursor-ripple';
-import { sourceTimeAt } from '~/media/shared';
+import { sessionTimeAt } from '~/media/shared';
 import { resolveClipTransitionState } from '~/media/shared/clip-transitions';
 import { drawWithClipTransition, transitionPointWithClip } from '../../composition/transitions/render-transition';
 
@@ -48,6 +48,7 @@ export interface UseCursorOverlayOptions {
   currentTime: () => number;
   isPlaying: () => boolean;
   editorData: () => ProjectEditorData | null | undefined;
+  composition: () => ClipComposition;
   screenClip: () => VisualClip | null;
   isScreenEnabled: () => boolean;
   showBackground: () => boolean;
@@ -97,7 +98,7 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
   const cursorTime = () => {
     const timelineTime = options.currentTime();
     const screen = options.screenClip();
-    const mappedTime = screen ? sourceTimeAt(screen, timelineTime * 1_000) : null;
+    const mappedTime = screen ? sessionTimeAt(screen, timelineTime * 1_000, options.composition()) : null;
     return mappedTime !== null && Number.isFinite(mappedTime) ? mappedTime / 1_000 : timelineTime;
   };
 
@@ -353,7 +354,7 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
     if (!cursorData?.available || !screen || !options.isScreenEnabled() || !image?.complete || image.naturalWidth <= 0)
       return null;
     const timelineTime = options.currentTime();
-    const time = (sourceTimeAt(screen, timelineTime * 1_000) ?? timelineTime * 1_000) / 1_000;
+    const time = (sessionTimeAt(screen, timelineTime * 1_000, options.composition()) ?? timelineTime * 1_000) / 1_000;
     const state = cursorStateAt(cursorData.events, time);
     const motionState = motionStateAt(cursorData.events, time, videoWidth, videoHeight, state).motion;
     if (!state?.visible || !motionState?.visible) return null;

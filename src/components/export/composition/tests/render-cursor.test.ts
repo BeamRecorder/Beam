@@ -15,6 +15,42 @@ const transitionContext = () => {
 };
 
 describe('cursor and ripple composition rendering', () => {
+  it('exports post-pause cursor activity at the joined clip position', () => {
+    const value = snapshot();
+    const screen = value.composition.clips[0]!;
+    value.composition.assets[0]!.sessionStartMs = 7_000;
+    screen.timelineStartMs = 2_000;
+    screen.timelineDurationMs = 1_000;
+    value.duration = 3;
+    value.cursor = {
+      ...value.cursor,
+      available: true,
+      events: [
+        {
+          event: 'move',
+          sessionNs: 7_000_000_000,
+          pixelX: 80,
+          pixelY: 25,
+          normalizedX: 0.8,
+          normalizedY: 0.5,
+          visible: true,
+        },
+        { event: 'button', sessionNs: 7_200_000_000, button: 1, pressed: true, normalizedX: 0.8, normalizedY: 0.5 },
+      ],
+    };
+    value.cursorSettings.motion.motionBlur = 0;
+    value.cursorSettings.clickEffects.left = {
+      ...value.cursorSettings.clickEffects.left,
+      rippleEnabled: true,
+      rippleSize: 40,
+    };
+    const ctx = context();
+
+    renderCompositionFrame(ctx, { source: {} as CanvasImageSource, width: 100, height: 50 }, value, 2.25);
+
+    expect(ctx.arc).toHaveBeenCalledWith(80, 25, expect.any(Number), 0, Math.PI * 2);
+  });
+
   it('does not export cursor or ripples when the active screen has no video frame', () => {
     const value = snapshot();
     value.cursor = {
