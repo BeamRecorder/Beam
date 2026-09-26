@@ -2,6 +2,17 @@
 
 Beam records screens and windows on Linux through the XDG ScreenCast Portal, PipeWire and FFmpeg. Electron never enumerates desktop sources on Linux: the source selector represents the system picker, which opens once during preparation and remains attached across pause/resume.
 
+### Cinnamon on X11
+
+Linux Mint's default Cinnamon/X11 session uses the XApp portal backend, which does not implement the ScreenCast interface. Installing or restarting `xdg-desktop-portal` or `xdg-desktop-portal-xapp` alone cannot make Beam record in that session. Beam currently has no direct X11 capture backend.
+
+Use a desktop session with a working ScreenCast portal, such as GNOME or KDE Plasma, and restart Beam. A separately configured ScreenCast backend can also work if it exposes the interface in the active session. Check with:
+
+```bash
+gdbus introspect --session --dest org.freedesktop.portal.Desktop \
+  --object-path /org/freedesktop/portal/desktop | grep org.freedesktop.portal.ScreenCast
+```
+
 ## Prerequisites
 
 Interaction recording also requires Polkit: `pkexec` on Debian/Ubuntu, `polkit` on Fedora, and an authentication agent in the desktop session. Beam's DEB/RPM declare the corresponding runtime dependency. AppImage users install that prerequisite through their distribution. The protected input helper handles Wayland and X11 alike; startup errors are available in Beam Preferences and in **Copy system information**. Include the package format and whether the authorization dialog appeared when reporting a failure.

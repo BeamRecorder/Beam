@@ -36,6 +36,59 @@ const diagnostics = (overrides: Partial<LinuxCaptureDiagnostics> = {}): LinuxCap
 });
 
 describe('linuxRequirementGuidance', () => {
+  it('explains that the default Cinnamon X11 portal cannot provide ScreenCast', () => {
+    const result = linuxRequirementGuidance(
+      diagnostics({
+        distribution: 'Linux Mint 22.3',
+        distributionId: 'linuxmint',
+        distributionLike: ['ubuntu', 'debian'],
+        desktop: 'X-Cinnamon',
+        portal: {
+          available: false,
+          version: null,
+          monitor: null,
+          window: null,
+          metadataCursor: null,
+          errorCode: 'portal-unavailable',
+          detail: 'Beam could not connect to the XDG ScreenCast portal',
+        },
+        recordingAvailable: false,
+      }),
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.description).toContain('The default XApp portal does not implement ScreenCast');
+    expect(result[0]?.instructions.join('\n')).toContain('GNOME or KDE Plasma');
+    expect(result[0]?.instructions.join('\n')).not.toContain('sudo apt install');
+    expect(result[0]?.copyText).toContain('Linux Mint 22.3; X-Cinnamon; x11');
+  });
+
+  it('keeps ordinary portal repair guidance for Cinnamon outside X11', () => {
+    const result = linuxRequirementGuidance(
+      diagnostics({
+        desktop: 'Cinnamon',
+        sessionType: 'wayland',
+        portal: {
+          available: false,
+          version: null,
+          monitor: null,
+          window: null,
+          metadataCursor: null,
+          errorCode: 'portal-unavailable',
+          detail: 'Portal unavailable',
+        },
+        recordingAvailable: false,
+      }),
+    );
+
+    expect(result[0]?.description).toBe('Portal unavailable');
+    expect(result[0]?.instructions.join('\n')).toContain('sudo apt install xdg-desktop-portal');
+  });
+
+  it('does not warn about Cinnamon X11 when a ScreenCast backend is available', () => {
+    expect(linuxRequirementGuidance(diagnostics({ desktop: 'Cinnamon', sessionType: 'x11' }))).toEqual([]);
+  });
+
   it.each(['debian', 'ubuntu'])('uses the apt package command for %s', (distributionId) => {
     const result = linuxRequirementGuidance(
       diagnostics({

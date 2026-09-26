@@ -89,17 +89,39 @@ export const linuxRequirementGuidance = (diagnostics?: LinuxCaptureDiagnostics):
   const family = packageFamily(diagnostics);
 
   if (!diagnostics.portal.available) {
-    const packages = ['xdg-desktop-portal'];
-    const backend = portalBackendPackage(diagnostics.desktop);
-    if (backend) packages.push(backend);
-    const install = packageCommand(family, packages);
-    guidance.push(
-      report(diagnostics, 'portal', 'XDG ScreenCast Portal', diagnostics.portal, [
-        ...(install ? [`Install or repair the detected desktop portal: ${install}`] : []),
-        'Restart your desktop session after installing or updating the portal backend.',
-        'Verify the user service: systemctl --user status xdg-desktop-portal',
-      ]),
-    );
+    const cinnamonX11 =
+      diagnostics.sessionType.toLowerCase() === 'x11' && diagnostics.desktop?.toLowerCase().includes('cinnamon');
+    if (cinnamonX11) {
+      guidance.push(
+        report(
+          diagnostics,
+          'portal',
+          'XDG ScreenCast Portal',
+          {
+            ...diagnostics.portal,
+            detail:
+              'This Cinnamon/X11 session has no ScreenCast portal available to Beam. The default XApp portal does not implement ScreenCast.',
+          },
+          [
+            'Use a desktop session with a working ScreenCast portal, such as GNOME or KDE Plasma, then restart Beam.',
+            'Installing xdg-desktop-portal or xdg-desktop-portal-xapp alone does not add ScreenCast support to Cinnamon/X11.',
+            'Verify the active portal interface: gdbus introspect --session --dest org.freedesktop.portal.Desktop --object-path /org/freedesktop/portal/desktop | grep org.freedesktop.portal.ScreenCast',
+          ],
+        ),
+      );
+    } else {
+      const packages = ['xdg-desktop-portal'];
+      const backend = portalBackendPackage(diagnostics.desktop);
+      if (backend) packages.push(backend);
+      const install = packageCommand(family, packages);
+      guidance.push(
+        report(diagnostics, 'portal', 'XDG ScreenCast Portal', diagnostics.portal, [
+          ...(install ? [`Install or repair the detected desktop portal: ${install}`] : []),
+          'Restart your desktop session after installing or updating the portal backend.',
+          'Verify the user service: systemctl --user status xdg-desktop-portal',
+        ]),
+      );
+    }
   }
 
   if (!diagnostics.pipewire.available) {
