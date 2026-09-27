@@ -1,5 +1,6 @@
 """Focused checks for the Windows private runtime dependency closure."""
 
+import os
 import subprocess
 import tempfile
 import unittest
@@ -11,6 +12,7 @@ from build_gstreamer_windows_bundle import (
     copy_notices,
     dependency_closure,
     imported_dlls,
+    find_dumpbin,
     vc_redist_dlls,
 )
 
@@ -32,6 +34,15 @@ Summary
                 imported_dlls(Path("probe.exe"), Path("dumpbin.exe")),
                 {"kernel32.dll", "libgstreamer-1.0-0.dll", "api-ms-win-core-synch-l1-2-0.dll"},
             )
+
+    def test_dumpbin_is_found_in_program_files_visual_studio(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            dumpbin = root / "Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.44/bin/Hostx64/x64/dumpbin.exe"
+            dumpbin.parent.mkdir(parents=True)
+            dumpbin.touch()
+            with patch.dict(os.environ, {"ProgramFiles": str(root), "ProgramFiles(x86)": ""}), patch("build_gstreamer_windows_bundle.shutil.which", return_value=None):
+                self.assertEqual(find_dumpbin(), dumpbin)
 
     def test_dependency_closure_includes_transitive_runtime_dlls(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

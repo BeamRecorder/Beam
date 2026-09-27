@@ -23,6 +23,9 @@ dist-ssr
 *.sln
 *.sw?
 
+# Python test caches
+__pycache__/
+
 # Rust build artifacts
 target/
 target-windows/

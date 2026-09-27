@@ -69,7 +69,7 @@ jobs:
       - name: Install native build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install --yes clang libclang-dev libpipewire-0.3-dev libasound2-dev libudev-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good pkg-config
+          sudo apt-get install --yes clang libclang-dev libpipewire-0.3-dev pipewire libasound2-dev libudev-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good pkg-config
       - run: node scripts/ci/bun-install-retry.cjs
       - run: bun run format:check
       - run: bun run typecheck

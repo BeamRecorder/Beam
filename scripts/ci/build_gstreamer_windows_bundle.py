@@ -51,12 +51,13 @@ def find_dumpbin() -> Path:
     found = shutil.which("dumpbin")
     if found:
         return Path(found)
-    program_files = os.environ.get("ProgramFiles(x86)")
-    if program_files:
-        visual_studio = Path(program_files) / "Microsoft Visual Studio"
-        matches = sorted(visual_studio.glob("*/*/VC/Tools/MSVC/*/bin/Host*/**/dumpbin.exe"))
-        if matches:
-            return matches[-1]
+    for variable in ("ProgramFiles", "ProgramFiles(x86)"):
+        program_files = os.environ.get(variable)
+        if program_files:
+            visual_studio = Path(program_files) / "Microsoft Visual Studio"
+            matches = sorted(visual_studio.glob("*/*/VC/Tools/MSVC/*/bin/Host*/**/dumpbin.exe"))
+            if matches:
+                return matches[-1]
     raise RuntimeError("dumpbin.exe from the MSVC toolchain is unavailable")
 
 
@@ -258,10 +259,11 @@ def build(binary: Path, runtime_root: Path, output: Path) -> None:
     ]
     runtime = runtime_dlls(runtime_bin)
     architecture = "arm64" if platform.machine().lower() == "arm64" else "x64"
-    program_files = os.environ.get("ProgramFiles(x86)")
-    if program_files:
-        for name, source in vc_redist_dlls(Path(program_files), architecture).items():
-            runtime.setdefault(name, source)
+    for variable in ("ProgramFiles", "ProgramFiles(x86)"):
+        program_files = os.environ.get(variable)
+        if program_files:
+            for name, source in vc_redist_dlls(Path(program_files), architecture).items():
+                runtime.setdefault(name, source)
     system = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32"
     linked, external = dependency_closure([source for source, _ in inputs], runtime, system, dumpbin)
     inputs.extend((source, f"bin/{source.name}") for source in linked.values())
