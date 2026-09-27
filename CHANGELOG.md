@@ -4,6 +4,8 @@ User-facing changes to Beam are documented in this file.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-27
+
 ### Added
 
 - Added an adjustable cursor spring when movement stops, enabled by default and saved with editor presets.
