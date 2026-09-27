@@ -125,6 +125,7 @@ If you want to run Beam locally or contribute to the project, start with the gui
 - 🪟 [Windows development](./docs/dev/windows.md)
 - 🍏 [macOS development](./docs/dev/mac.md)
 - 🐧 [Linux development](./docs/dev/linux.md)
+- 🦀 [Native Argui development](./apps/beam-native/README.md)
 
 The repository's engineering guidelines are linked from each guide.
 

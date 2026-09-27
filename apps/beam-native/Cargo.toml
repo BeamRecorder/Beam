@@ -1,0 +1,12 @@
+[package]
+name = "beam-native"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.89"
+
+[workspace]
+
+[dependencies]
+argui-runtime = { path = "../../vendor/argui/crates/argui-runtime" }
+argui-text = { path = "../../vendor/argui/crates/argui-text" }
+argui-ui = { path = "../../vendor/argui/crates/argui-ui" }

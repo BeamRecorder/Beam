@@ -6,6 +6,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- Added a developer-only Argui native window linked to a pinned source checkout, so Beam can rebuild local Argui fixes without waiting for a crates.io release.
 - Added a directly callable native media engine for screen, camera, microphone and system audio, with a shared timeline, pause/resume, previews, meters, screenshots and an autonomous example that runs without ARGUI.
 - Added a native media prototype CLI that records a camera, microphone, and system audio as separate tracks with a shared timeline, a session manifest, bounded measurements including camera-to-GPU submission latency, and a live wgpu camera preview.
 - Linux system-audio discovery now lists individual PipeWire output devices and lets recordings select one explicitly.

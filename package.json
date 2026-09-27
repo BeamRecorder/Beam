@@ -33,6 +33,7 @@
     "format": "oxfmt --write \"src/**/*.{vue,ts}\" \"website/**/*.{vue,ts,css,html,json,jsonc}\" \"electron/**/*.cjs\" \"scripts/**/*.cjs\" \"test/**/*.cjs\"",
     "format:check": "oxfmt --check \"src/**/*.{vue,ts}\" \"website/**/*.{vue,ts,css,html,json,jsonc}\" \"electron/**/*.cjs\" \"scripts/**/*.cjs\" \"test/**/*.cjs\"",
     "lint": "oxlint --vue-plugin",
+    "argui": "node scripts/dev/argui.cjs",
     "dev": "vite",
     "website:dev": "bun run --filter @beam/website dev",
     "website:docs:dev": "bun run --filter @beam/website docs:dev",

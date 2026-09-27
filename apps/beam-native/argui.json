@@ -1,0 +1,16 @@
+{
+  "projectVersion": 2,
+  "name": "beam-native",
+  "framework": "rust",
+  "targets": [
+    "native"
+  ],
+  "features": [],
+  "arguiVersion": "0.4.0",
+  "sdkSha256": "78500a47b02670dc539ac9a787dfd2d0ff50c2f4609e215fc047a8e6d1b5c374",
+  "distribution": "release",
+  "components": [],
+  "componentFiles": [],
+  "componentChecksums": {},
+  "componentVersions": {}
+}
