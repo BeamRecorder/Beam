@@ -363,8 +363,8 @@ mod tests {
         let health = temporary.path().join("health.jsonl");
         let timing = temporary.path().join("timing.jsonl");
         let gate = Arc::new(StartGate::new());
-        let frames = Arc::new(AtomicU64::new(0));
-        let sampled_frames = frames.clone();
+        let sampled_frames = AtomicU64::new(0);
+        let (sampled, samples) = crossbeam_channel::unbounded();
         let reporter = PeriodicReporter::start(
             health.clone(),
             timing.clone(),
@@ -379,15 +379,20 @@ mod tests {
                     nominal_fps: 30,
                 },
                 TrackMetrics::default(),
-                move || TrackMetrics {
-                    frames_received: sampled_frames.fetch_add(1, Ordering::Relaxed),
-                    ..TrackMetrics::default()
+                move || {
+                    let frames_received = sampled_frames.fetch_add(1, Ordering::Relaxed);
+                    let _ = sampled.send(());
+                    TrackMetrics {
+                        frames_received,
+                        ..TrackMetrics::default()
+                    }
                 },
             )],
             Vec::new(),
         )?;
         gate.release(7)?;
-        std::thread::sleep(std::time::Duration::from_millis(75));
+        samples.recv_timeout(std::time::Duration::from_secs(2))?;
+        samples.recv_timeout(std::time::Duration::from_secs(2))?;
         reporter.stop()?;
 
         let anchors = std::fs::read_to_string(timing)?

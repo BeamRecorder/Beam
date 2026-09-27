@@ -83,18 +83,32 @@ fn shm_format_rejects_niri_bgrx_with_mandatory_modifiers() {
 }
 
 #[test]
-fn dma_format_intersects_and_fixates_niri_modifier_choices() {
+fn dma_format_offers_modifier_range_and_fixates_niri_choice() {
     let beam = dma_buf_format_parameter().expect("DMA-BUF format should serialize");
-    let filtered = filter_pods(&beam, &niri_format_pod()).expect("DMA-BUF format should intersect");
-    let storage = AlignedBytes::<POD_STORAGE_SIZE>::from_bytes(&filtered);
-    let offered = decoded_object(&filtered);
+    let storage = AlignedBytes::<POD_STORAGE_SIZE>::from_bytes(&beam);
+    let offered = decoded_object(&beam);
     let offered_modifier = offered
         .properties
         .iter()
         .find(|property| property.key == spa::sys::SPA_FORMAT_VIDEO_modifier)
-        .expect("filtered format should retain a modifier");
+        .expect("DMA-BUF format should advertise a modifier");
+    assert!(offered_modifier.flags.contains(PropertyFlags::MANDATORY));
     assert!(offered_modifier.flags.contains(PropertyFlags::DONT_FIXATE));
+    assert_eq!(
+        offered_modifier.value,
+        Value::Choice(ChoiceValue::Long(Choice(
+            ChoiceFlags::empty(),
+            ChoiceEnum::Range {
+                default: 0,
+                min: 0,
+                max: i64::MAX,
+            },
+        )))
+    );
 
+    // The direct SPA pod filter varies across PipeWire versions for a mandatory
+    // Long range and Niri's Long enum. The produced offer and fixation are the
+    // contract Beam controls; the live stream negotiates with its server.
     let selected = 72_057_594_037_927_944;
     let fixed = fixate_modifier_parameter(storage.pod(), selected)
         .expect("selected modifier should fixate");
