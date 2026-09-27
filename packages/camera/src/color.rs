@@ -26,8 +26,10 @@ pub(crate) fn convert_to_rgba(
                 .zip(rgba.chunks_exact_mut(width * 4))
             {
                 for (pixel, output) in src[..width * 4]
-                    .chunks_exact(4)
-                    .zip(dst.chunks_exact_mut(4))
+                    .as_chunks::<4>()
+                    .0
+                    .iter()
+                    .zip(dst.as_chunks_mut::<4>().0.iter_mut())
                 {
                     output.copy_from_slice(&[pixel[2], pixel[1], pixel[0], pixel[3]]);
                 }
@@ -44,8 +46,10 @@ pub(crate) fn convert_to_rgba(
                 .zip(rgba.chunks_exact_mut(width * 4))
             {
                 for (pair, output) in src[..width * 2]
-                    .chunks_exact(4)
-                    .zip(dst.chunks_exact_mut(8))
+                    .as_chunks::<4>()
+                    .0
+                    .iter()
+                    .zip(dst.as_chunks_mut::<8>().0.iter_mut())
                 {
                     output[..4].copy_from_slice(&yuv_to_rgba(pair[0], pair[1], pair[3]));
                     output[4..].copy_from_slice(&yuv_to_rgba(pair[2], pair[1], pair[3]));
@@ -88,12 +92,17 @@ fn convert_mjpeg(bytes: &[u8], format: CameraFormat, rgba: &mut [u8]) -> Result<
     }
     match info.pixel_format {
         jpeg_decoder::PixelFormat::RGB24 if pixels.len() == rgba.len() / 4 * 3 => {
-            for (rgb, output) in pixels.chunks_exact(3).zip(rgba.chunks_exact_mut(4)) {
+            for (rgb, output) in pixels
+                .as_chunks::<3>()
+                .0
+                .iter()
+                .zip(rgba.as_chunks_mut::<4>().0.iter_mut())
+            {
                 output.copy_from_slice(&[rgb[0], rgb[1], rgb[2], 255]);
             }
         }
         jpeg_decoder::PixelFormat::L8 if pixels.len() == rgba.len() / 4 => {
-            for (gray, output) in pixels.iter().zip(rgba.chunks_exact_mut(4)) {
+            for (gray, output) in pixels.iter().zip(rgba.as_chunks_mut::<4>().0.iter_mut()) {
                 output.copy_from_slice(&[*gray, *gray, *gray, 255]);
             }
         }

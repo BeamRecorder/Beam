@@ -183,10 +183,7 @@ impl PreviewMeasurements {
     }
 
     pub fn mean_submission_latency_ns(&self) -> Option<u64> {
-        if self.submission_latency_samples == 0 {
-            None
-        } else {
-            Some(self.submission_latency_sum_ns / self.submission_latency_samples)
-        }
+        self.submission_latency_sum_ns
+            .checked_div(self.submission_latency_samples)
     }
 }
