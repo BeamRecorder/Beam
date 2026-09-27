@@ -19,10 +19,19 @@ def package_metadata(source: Path) -> dict[str, str]:
         if len(fields) != 3:
             raise RuntimeError(f"no RPM license metadata for {source}")
         return dict(zip(("package", "package_version", "package_license"), fields))
-    # Resolve merged-/usr aliases, which dpkg's ownership database may not use.
-    candidates = [source]
-    if str(source).startswith("/usr/lib/"):
-        candidates.append(Path(str(source)[4:]))
+    # Check both the linked name and its target across merged-/usr aliases.
+    candidates = []
+    for path in (source, source.resolve()):
+        if path not in candidates:
+            candidates.append(path)
+        if str(path).startswith("/usr/lib/"):
+            alias = Path(str(path)[4:])
+        elif str(path).startswith("/lib/"):
+            alias = Path("/usr" + str(path))
+        else:
+            continue
+        if alias not in candidates:
+            candidates.append(alias)
     owner = None
     for candidate in candidates:
         try:

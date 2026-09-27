@@ -33,7 +33,9 @@ runs:
         $installer = Join-Path $env:RUNNER_TEMP $name
         $gstRoot = Join-Path $env:RUNNER_TEMP 'gstreamer'
         Invoke-WebRequest "$base/$name" -OutFile $installer
-        $checksum = (Invoke-WebRequest "$base/$name.sha256sum").Content.Split(' ')[0].ToLowerInvariant()
+        $checksumFile = Join-Path $env:RUNNER_TEMP "$name.sha256sum"
+        Invoke-WebRequest "$base/$name.sha256sum" -OutFile $checksumFile
+        $checksum = (Get-Content -Raw -Path $checksumFile).Trim().Split(' ')[0].ToLowerInvariant()
         if ((Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant() -ne $checksum) { throw 'GStreamer checksum mismatch' }
         $process = Start-Process $installer -ArgumentList '/VERYSILENT','/NORESTART','/CURRENTUSER','/TYPE=devel',"/DIR=$gstRoot" -Wait -PassThru
         if ($process.ExitCode -ne 0) { throw 'GStreamer installation failed' }

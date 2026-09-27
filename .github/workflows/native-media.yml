@@ -218,7 +218,9 @@ jobs:
           $installer = Join-Path $env:RUNNER_TEMP 'gstreamer.exe'
           $gstRoot = Join-Path $env:RUNNER_TEMP 'gstreamer'
           Invoke-WebRequest 'https://gstreamer.freedesktop.org/data/pkg/windows/1.28.7/msvc/gstreamer-1.0-msvc-x86_64-1.28.7.exe' -OutFile $installer
-          $checksum = (Invoke-WebRequest 'https://gstreamer.freedesktop.org/data/pkg/windows/1.28.7/msvc/gstreamer-1.0-msvc-x86_64-1.28.7.exe.sha256sum').Content.Split(' ')[0].ToLowerInvariant()
+          $checksumFile = Join-Path $env:RUNNER_TEMP 'gstreamer.exe.sha256sum'
+          Invoke-WebRequest 'https://gstreamer.freedesktop.org/data/pkg/windows/1.28.7/msvc/gstreamer-1.0-msvc-x86_64-1.28.7.exe.sha256sum' -OutFile $checksumFile
+          $checksum = (Get-Content -Raw -Path $checksumFile).Trim().Split(' ')[0].ToLowerInvariant()
           if ((Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant() -ne $checksum) { throw 'GStreamer installer SHA-256 mismatch' }
           $process = Start-Process -FilePath $installer -ArgumentList '/VERYSILENT', '/NORESTART', '/CURRENTUSER', '/TYPE=devel', "/DIR=$gstRoot" -Wait -PassThru
           if ($process.ExitCode -ne 0) { throw "GStreamer installation failed: $($process.ExitCode)" }

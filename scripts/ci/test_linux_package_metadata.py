@@ -21,6 +21,35 @@ class PackageMetadataTests(unittest.TestCase):
             metadata=package_metadata(Path('/usr/lib/libexample.so'))
             self.assertEqual(metadata,{'package':'libexample:amd64','package_version':'1.2.3-4','package_license':'BSD-3-Clause; LGPL-2.1+'})
 
+    def test_debian_reverse_merged_usr_alias(self):
+        def command(*args):
+            import subprocess
+            if args[:2] == ('dpkg-query', '-S'):
+                if args[2] != '/usr/lib/libexample.so':
+                    raise subprocess.CalledProcessError(1, args)
+                return 'libexample:amd64: /usr/lib/libexample.so'
+            return '1.2.3-4'
+        with patch('linux_package_metadata.package_manager', return_value='dpkg'), patch('linux_package_metadata.command', side_effect=command), patch.object(Path, 'is_file', return_value=True), patch.object(Path, 'read_text', return_value='License: MIT\n'):
+            metadata = package_metadata(Path('/lib/libexample.so'))
+            self.assertEqual(metadata['package'], 'libexample:amd64')
+
+    def test_debian_resolves_unowned_library_symlink(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / 'libexample.so.1.0.4'
+            target.touch()
+            linked = Path(directory) / 'libexample.so.1.0'
+            linked.symlink_to(target)
+            def command(*args):
+                import subprocess
+                if args[:2] == ('dpkg-query', '-S'):
+                    if args[2] != str(target):
+                        raise subprocess.CalledProcessError(1, args)
+                    return f'libexample:amd64: {target}'
+                return '1.2.3-4'
+            with patch('linux_package_metadata.package_manager', return_value='dpkg'), patch('linux_package_metadata.command', side_effect=command), patch.object(Path, 'is_file', return_value=True), patch.object(Path, 'read_text', return_value='License: MIT\n'):
+                metadata = package_metadata(linked)
+                self.assertEqual(metadata['package'], 'libexample:amd64')
+
     def test_missing_notice_or_scanner_fails_closed(self):
         with patch('linux_package_metadata.package_manager',return_value='dpkg'), patch('linux_package_metadata.command',return_value='libexample: /lib/libexample.so'), patch.object(Path,'is_file',return_value=False):
             with self.assertRaisesRegex(RuntimeError,'copyright'):
