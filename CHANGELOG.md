@@ -6,6 +6,12 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- Native Beam now supports the existing 15 interface languages through ARGUI i18n, automatically following the system language until a language is chosen in Appearance, with immediate updates across its windows.
+
+- About now checks GitHub releases through ARGUI's native updater, with cancellable downloads, package verification and explicit installation; release CI publishes the update feed and complete application packages.
+- Added a native teleprompter and a window picker with real thumbnails, foreground preview, and a selection outline.
+- Added a native ARGUI capture launcher with recorder, screenshot, and instant modes, device selection, a region picker, countdown, compact recording controls, tray behavior, and a separate settings window. Completed captures open in the Electron editor.
+- The native launcher remembers its size, position, shortcuts, and selected devices in Beam preferences.
 - Added a developer-only Argui native window linked to a pinned source checkout, so Beam can rebuild local Argui fixes without waiting for a crates.io release.
 - Added a directly callable native media engine for screen, camera, microphone and system audio, with a shared timeline, pause/resume, previews, meters, screenshots and an autonomous example that runs without ARGUI.
 - Added a native media prototype CLI that records a camera, microphone, and system audio as separate tracks with a shared timeline, a session manifest, bounded measurements including camera-to-GPU submission latency, and a live wgpu camera preview.
@@ -20,6 +26,16 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
+- Native microphone menus now use the desktop audio server on Linux, with hardware-only ALSA fallback; system audio uses the same On/Off choices as the editor.
+- Native text uses a slightly stronger default weight and system font fallbacks for additional writing systems.
+
+- Beam now uses Hanken Grotesk throughout its interface and Concat's light/dark surface and text colors, retaining its orange accent.
+- Capture mode tabs now sit centered above the source cards, with roomier animated items; settings icon tiles use centered, slightly thicker white vectors.
+- Native settings now use compact label/control rows, solid icon tiles, direct shortcut capture with keyboard caps and automatic saving, and an About page with copied system information.
+
+- Capture starts directly from the Full screen, Region, or Window card. The rounded launcher resizes between 440 × 208 and 680 × 252, adapting mode labels to icons; refresh happens automatically.
+- The native launcher now defaults to 680 × 252 with compact capture cards, icon-only device fields, and animated mode tabs. Select menus have bounded widths, visible borders, shadows, SVG selection marks, and native hover scrolling for long labels.
+- Reduced the countdown and recording bar to their essential controls, and removed shortcut and zoom hints from the launcher.
 - Cancelled native recordings retain their interrupted manifest and recoverable media instead of deleting captured files.
 
 - Studio now records through one native engine with separate editable video/audio tracks and a bundled private media runtime; Chromium Studio recorders and the former capture engine are removed.
@@ -30,6 +46,27 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Native Shadcn select menus follow their button width when resized, with opaque themed borders and smooth corner coverage.
+
+- Small toolbar icons now use even pixel sizes to keep their centers aligned with their buttons.
+
+- Select menus open directly below their controls, preserving the requested panel width and shadow; long option labels scroll slowly on hover and reset when the pointer leaves.
+- Legacy disabled device preferences are normalized, and unavailable saved devices no longer appear silently disabled while remaining selected for capture.
+
+- Removed the dark rim around native window corners and stale hover highlights in select menus.
+- Fixed unequal active-tab insets and vertically misaligned select labels; native buttons now keep icon and text content centered without excessive vertical padding.
+- Fixed duplicate native device-option IDs when the source catalog refreshes while a select menu is open.
+- Rebuilt region selection from ARGUI's native screen spotlight: draw, move by the border, resize by corners, and select presets with separate crop controls. The X11 crop interior forwards mouse clicks to the app underneath.
+- Fixed faint native window borders, capture-card aspect ratios, mode-tab sizing, and long device-menu placement. Theme changes now update hidden and visible windows immediately; interface zoom is disabled.
+- Reduced transparent-window resize flashes by preserving X11 backing contents and presenting valid swapchain frames before reconfiguration.
+- Linux Wayland now uses the system window chooser; Linux X11, macOS and Windows retain Beam's window picker. Closed or replaced picker sessions cannot reopen stale previews.
+
+- Fixed native startup losing the theme context when linked workspace dependencies bundled multiple copies of SolidJS and the ARGUI Solid adapter.
+- Fixed native startup errors from conflicting ARGUI patches and missing QuickJS globals. Native preferences and teleprompter documents now share validated, atomic JSON storage.
+- Reset saved window sizes from earlier native launcher layouts to the compact 680 × 252 default once; subsequent manual resizes remain saved.
+- Fixed native region dragging and auxiliary button input. Settings now reopen in a retained native window without launching another process, and auxiliary Solid scenes mount on demand.
+- Region selection, the countdown, and recording controls now open in their own native ARGUI windows while the HUD keeps its original bounds and position. The launcher and settings use custom window controls, region dragging follows the pointer, and auxiliary windows load when needed so the HUD appears sooner. The native development launcher can also rebuild while an earlier instance remains open.
+- Fixed native development startup so `beam:native` loads its staged ARGUI bundle, and made `electron:dev` report a missing Electron installation before compiling Rust.
 - Linux screen and system-audio capture now finish their output workers when a PipeWire worker panics, avoiding a stuck stop operation.
 - Linux screen capture now reports the PipeWire worker failure that interrupted preparation instead of labeling every early exit as a negotiation timeout.
 - Capture probe commands now reject unknown commands and missing format source IDs before attempting device discovery; Linux native probes no longer require an unrelated catalog scan.

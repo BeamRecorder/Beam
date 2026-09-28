@@ -70,6 +70,9 @@ fn window_descriptor(
         return None;
     }
     let application = window.owning_application()?;
+    if application.process_id() == std::process::id() as i32 {
+        return None;
+    }
     let application_name = application.application_name();
     let frame = window.frame();
     if !is_user_window_candidate(

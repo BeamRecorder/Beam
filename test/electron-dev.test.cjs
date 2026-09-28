@@ -12,6 +12,7 @@ const {
   cargoBuildArguments,
   parseDevelopmentArguments,
   resolveDevelopmentEngine,
+  resolveElectronCli,
   startElectron,
 } = require('../scripts/dev/electron.cjs');
 const { requiredNativeFiles } = require('../scripts/native/download.cjs');
@@ -87,6 +88,11 @@ test('development arguments reject unsupported options', () => {
   assert.throws(() => parseDevelopmentArguments(['--skip-build']), /Unknown electron:dev option: --skip-build/);
 });
 
+test('missing Electron dependency is reported before compilation', () => {
+  const missing = Object.assign(new Error('missing'), { code: 'MODULE_NOT_FOUND' });
+  assert.throws(() => resolveElectronCli(() => { throw missing; }), /Run bun install/);
+});
+
 test('startElectron marks GNOME Wayland shortcut launches as the development instance', async () => {
   const child = new EventEmitter();
   let invocation;
@@ -100,6 +106,7 @@ test('startElectron marks GNOME Wayland shortcut launches as the development ins
   const start = startElectron('/built/beam-media-engine', {
     root: '/workspace',
     env,
+    electronCli: '/workspace/node_modules/electron/cli.js',
     spawnImpl: (command, args, options) => {
       invocation = { command, args, options };
       queueMicrotask(() => child.emit('exit', 0, null));
@@ -109,7 +116,7 @@ test('startElectron marks GNOME Wayland shortcut launches as the development ins
   await start;
 
   assert.equal(invocation.command, process.execPath);
-  assert.deepEqual(invocation.args, [require.resolve('electron/cli.js'), '.']);
+  assert.deepEqual(invocation.args, ['/workspace/node_modules/electron/cli.js', '.']);
   assert.equal(invocation.options.cwd, '/workspace');
   assert.equal(invocation.options.env.PATH, '/bin');
   assert.equal(invocation.options.env.BEAM_MEDIA_ENGINE, '/built/beam-media-engine');

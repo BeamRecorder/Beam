@@ -640,7 +640,7 @@ test('restores and persists editor window dimensions via preferencesStore', asyn
   }
 });
 
-function createRecorderFixture({ isPackaged = false, cleanupWindow = null } = {}) {
+function createRecorderFixture({ isPackaged = false, cleanupWindow = null, returnToNative = null } = {}) {
   const calls = [];
   const windows = [];
   const ipcHandlers = new Map();
@@ -717,6 +717,7 @@ function createRecorderFixture({ isPackaged = false, cleanupWindow = null } = {}
     },
     registerController: () => undefined,
     cleanupWindow,
+    returnToNative,
   });
   return {
     calls,
@@ -731,6 +732,19 @@ function createRecorderFixture({ isPackaged = false, cleanupWindow = null } = {}
     },
   };
 }
+
+test('editor handoff returns to the native launcher without showing the legacy HUD', async () => {
+  const calls = [];
+  const fixture = createRecorderFixture({ returnToNative: () => calls.push('return-to-native') });
+  try {
+    assert.equal(fixture.manager.showHud(), true);
+    assert.deepEqual(calls, ['return-to-native']);
+    assert.equal(fixture.hudWindow.isVisible(), true);
+    assert.equal(fixture.calls.some((call) => call[0] === 'show-hud'), false);
+  } finally {
+    fixture.restore();
+  }
+});
 
 test('editor destruction removes browser zoom policy listeners and still cleans the webContents owner', async () => {
   const cleanedContents = [];

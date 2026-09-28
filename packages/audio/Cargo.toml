@@ -12,6 +12,10 @@ crossbeam-channel = "0.5"
 thiserror = "2"
 
 [target.'cfg(target_os = "linux")'.dependencies]
+cpal = { version = "=0.18.2", features = ["pipewire", "pulseaudio"] }
+pulseaudio = "0.3"
+alsa = "0.11"
+futures = { version = "0.3", features = ["executor"] }
 pipewire = { version = "=0.10.0", features = ["v0_3_65"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]

@@ -3,7 +3,10 @@
 
 use pipewire::{self as pw, properties::properties};
 
-use super::{finish_discovery, selected_sink, selected_sink_with, sink_from_properties};
+use super::{
+    finish_discovery, microphone_from_properties, selected_sink, selected_sink_with,
+    sink_from_properties,
+};
 use crate::{AudioDevice, AudioError};
 use std::cell::Cell;
 
@@ -13,6 +16,100 @@ fn sink(id: &str, name: &str) -> AudioDevice {
         name: name.into(),
         is_default: false,
     }
+}
+
+#[test]
+fn microphone_source_keeps_its_cpal_id_and_prefers_its_description() {
+    let props = properties! {
+        *pw::keys::MEDIA_CLASS => "Audio/Source",
+        *pw::keys::NODE_NAME => "alsa_input.usb-Example.analog-stereo",
+        *pw::keys::NODE_DESCRIPTION => "USB studio microphone",
+        *pw::keys::NODE_NICK => "USB mic",
+    };
+    let device = microphone_from_properties(props.as_ref()).expect("microphone source");
+    assert_eq!(device.id, "pipewire:alsa_input.usb-Example.analog-stereo");
+    assert_eq!(device.name, "USB studio microphone");
+    assert!(!device.is_default);
+}
+
+#[test]
+fn microphone_labels_fall_back_to_nickname_then_native_node_name() {
+    let mut props = properties! {
+        *pw::keys::MEDIA_CLASS => "Audio/Source",
+        *pw::keys::NODE_NAME => "alsa_input.usb-Example.analog-stereo",
+    };
+    let device = microphone_from_properties(props.as_ref()).expect("unlabelled microphone");
+    assert_eq!(device.name, "alsa_input.usb-Example.analog-stereo");
+    props.insert(*pw::keys::NODE_NICK, "USB mic");
+    let nicknamed = microphone_from_properties(props.as_ref()).expect("nicknamed microphone");
+    assert_eq!(nicknamed.name, "USB mic");
+    assert_eq!(nicknamed.id, device.id);
+}
+
+#[test]
+fn hardware_duplex_is_a_microphone_only_when_it_has_a_device_identity() {
+    let mut props = properties! {
+        *pw::keys::MEDIA_CLASS => "Audio/Duplex",
+        *pw::keys::NODE_NAME => "usb_interface.capture-playback",
+        *pw::keys::NODE_DESCRIPTION => "USB audio interface",
+    };
+    assert!(microphone_from_properties(props.as_ref()).is_none());
+    props.insert("device.id", "42");
+    let device = microphone_from_properties(props.as_ref()).expect("hardware duplex");
+    assert_eq!(device.id, "pipewire:usb_interface.capture-playback");
+    assert_eq!(device.name, "USB audio interface");
+    assert!(!device.is_default);
+}
+
+#[test]
+fn output_application_stream_and_internal_nodes_are_not_microphones() {
+    for class in [
+        "Audio/Sink",
+        "Stream/Input/Audio",
+        "Stream/Output/Audio",
+        "Audio/Source/Internal",
+        "Audio/Sink/Internal",
+        "Audio/Duplex/Internal",
+        "Video/Source",
+    ] {
+        let props = properties! {
+            *pw::keys::MEDIA_CLASS => class,
+            *pw::keys::NODE_NAME => "node.with.hardware.property",
+            "device.id" => "42",
+        };
+        assert!(
+            microphone_from_properties(props.as_ref()).is_none(),
+            "{class} must not enter the microphone menu"
+        );
+    }
+}
+
+#[test]
+fn microphone_discovery_requires_both_class_and_native_node_name() {
+    let missing_class = properties! { *pw::keys::NODE_NAME => "alsa_input.usb-Example" };
+    assert!(microphone_from_properties(missing_class.as_ref()).is_none());
+    let missing_name = properties! { *pw::keys::MEDIA_CLASS => "Audio/Source" };
+    assert!(microphone_from_properties(missing_name.as_ref()).is_none());
+}
+
+#[test]
+fn microphones_with_identical_labels_keep_distinct_source_identities() {
+    let first = properties! {
+        *pw::keys::MEDIA_CLASS => "Audio/Source",
+        *pw::keys::NODE_NAME => "alsa_input.usb-first.analog-stereo",
+        *pw::keys::NODE_DESCRIPTION => "USB microphone",
+    };
+    let second = properties! {
+        *pw::keys::MEDIA_CLASS => "Audio/Source",
+        *pw::keys::NODE_NAME => "alsa_input.usb-second.analog-stereo",
+        *pw::keys::NODE_DESCRIPTION => "USB microphone",
+    };
+    let first = microphone_from_properties(first.as_ref()).expect("first microphone");
+    let second = microphone_from_properties(second.as_ref()).expect("second microphone");
+    assert_eq!(first.name, second.name);
+    assert_eq!(first.id, "pipewire:alsa_input.usb-first.analog-stereo");
+    assert_eq!(second.id, "pipewire:alsa_input.usb-second.analog-stereo");
+    assert_ne!(first.id, second.id);
 }
 
 #[test]

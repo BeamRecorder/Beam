@@ -63,6 +63,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: actions/download-artifact@v4
         with:
           pattern: media-runtime-win-*
@@ -159,6 +161,8 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: actions/download-artifact@v4
         with:
           pattern: media-runtime-mac-*
@@ -191,6 +195,13 @@ jobs:
       - run: bunx electron-builder --mac dmg zip --x64 --arm64 --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Archive complete macOS applications for native updates
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./package.json').version")"
+          COPYFILE_DISABLE=1 tar -czf "dist_electron/Beam-$version-mac-x64.app.tar.gz" -C dist_electron/mac Beam.app
+          COPYFILE_DISABLE=1 tar -czf "dist_electron/Beam-$version-mac-arm64.app.tar.gz" -C dist_electron/mac-arm64 Beam.app
       - run: node scripts/native/artifacts.cjs collect --output dist_native
       - name: Verify packaged engine and metadata
         shell: bash
@@ -212,6 +223,7 @@ jobs:
           path: |
             dist_electron/*.dmg
             dist_electron/*.zip
+            dist_electron/*.app.tar.gz
             dist_electron/*.blockmap
             dist_electron/latest-mac.yml
             dist_native/*
@@ -223,6 +235,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: actions/download-artifact@v4
         with:
           pattern: media-runtime-linux-*
@@ -294,6 +308,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -347,10 +363,12 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/release/artifacts.cjs generate-native release-assets
+          node scripts/release/native-updates.cjs generate release-assets "$TAG"
           gh release upload "$TAG" release-assets/* --repo "$GITHUB_REPOSITORY" --clobber
           mkdir uploaded-assets
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir uploaded-assets
           node scripts/release/artifacts.cjs release uploaded-assets
+          node scripts/release/native-updates.cjs validate uploaded-assets "$TAG"
           diff \
             <(find release-assets -maxdepth 1 -type f -printf '%f\n' | sort) \
             <(find uploaded-assets -maxdepth 1 -type f -printf '%f\n' | sort)
@@ -370,3 +388,4 @@ jobs:
           node scripts/release/artifacts.cjs metadata post-release-assets latest.yml
           node scripts/release/artifacts.cjs metadata post-release-assets latest-linux.yml
           node scripts/release/artifacts.cjs metadata post-release-assets latest-mac.yml
+          node scripts/release/native-updates.cjs verify-published post-native-update-assets "$TAG"

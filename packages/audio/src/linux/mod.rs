@@ -1,6 +1,7 @@
 mod capture;
 mod catalog;
 mod format;
+pub(crate) mod microphones;
 mod process;
 mod sink_watch;
 

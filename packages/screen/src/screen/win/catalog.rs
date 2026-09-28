@@ -102,6 +102,9 @@ fn window_descriptor(
         return Ok(None);
     }
     let process_id = window.process_id().map_err(backend_error)?;
+    if process_id == std::process::id() {
+        return Ok(None);
+    }
     let width = u32::try_from(window.width().map_err(backend_error)?.max(1))
         .map_err(|error| CaptureError::Backend(error.to_string()))?;
     let height = u32::try_from(window.height().map_err(backend_error)?.max(1))

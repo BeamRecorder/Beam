@@ -95,3 +95,17 @@ test('shortcut ids decode safely and malformed arguments are ignored', () => {
   assert.equal(shortcutId(['beam', '--beam-shortcut=%']), null);
   assert.equal(shortcutId(['beam']), null);
 });
+
+test('a native capture opens in the owning editor instance without restoring the HUD', () => {
+  const app = new EventEmitter();
+  app.requestSingleInstanceLock = () => true;
+  let restored = 0;
+  const projects = [];
+  initializeSingleInstance({ app, initialize: () => {}, restoreHud: () => (restored += 1),
+    handleProject: (args) => { projects.push(args); return args.some((arg) => arg.startsWith('--beam-open-project=')); },
+    commandLine: ['beam'],
+  });
+  app.emit('second-instance', {}, ['beam', '--beam-open-project=video:00000000-0000-0000-0000-000000000001']);
+  assert.equal(restored, 0);
+  assert.deepEqual(projects.at(-1), ['beam', '--beam-open-project=video:00000000-0000-0000-0000-000000000001']);
+});

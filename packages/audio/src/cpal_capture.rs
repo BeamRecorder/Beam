@@ -68,10 +68,14 @@ impl AudioCapture {
 }
 
 pub fn list_inputs() -> Result<Vec<AudioDevice>, AudioError> {
-    list_inputs_with_host(&cpal::default_host())
+    let host = cpal::default_host();
+    #[cfg(target_os = "linux")]
+    return crate::linux::microphones::list(&host);
+    #[cfg(not(target_os = "linux"))]
+    list_inputs_with_host(&host)
 }
 
-fn list_inputs_with_host(host: &cpal::Host) -> Result<Vec<AudioDevice>, AudioError> {
+pub(crate) fn list_inputs_with_host(host: &cpal::Host) -> Result<Vec<AudioDevice>, AudioError> {
     let default_id = host
         .default_input_device()
         .and_then(|device| device.id().ok());
@@ -120,7 +124,8 @@ pub fn open_microphone(
     gate: Arc<StartGate>,
     limits: AudioQueueLimits,
 ) -> Result<AudioCapture, AudioError> {
-    open_microphone_with_host(&cpal::default_host(), device_id, clock, gate, limits)
+    let host = host_for_device(device_id)?;
+    open_microphone_with_host(&host, device_id, clock, gate, limits)
 }
 
 fn open_microphone_with_host(
@@ -142,7 +147,8 @@ pub fn open_system_audio(
     gate: Arc<StartGate>,
     limits: AudioQueueLimits,
 ) -> Result<AudioCapture, AudioError> {
-    open_system_audio_with_host(&cpal::default_host(), device_id, clock, gate, limits)
+    let host = host_for_device(device_id)?;
+    open_system_audio_with_host(&host, device_id, clock, gate, limits)
 }
 
 #[cfg(any(target_os = "windows", target_os = "macos"))]
@@ -454,3 +460,13 @@ fn process_callback(
 
 #[path = "../test/cpal_capture.rs"]
 mod callback_checks;
+
+fn host_for_device(device_id: Option<&str>) -> Result<cpal::Host, AudioError> {
+    match device_id {
+        Some(id) => {
+            let id = cpal::DeviceId::from_str(id).map_err(AudioError::from)?;
+            cpal::host_from_id(id.host()).map_err(AudioError::from)
+        }
+        None => Ok(cpal::default_host()),
+    }
+}

@@ -1,10 +1,16 @@
 # Architecture Guidelines
 
-Beam is an Electron application with a Vue renderer and a native Rust capture engine. The boundaries below are intentional and must remain explicit.
+Beam uses an ARGUI desktop launcher for capture and an Electron/Vue editor after capture. Both hosts use the same native Rust media engine and project files. The boundaries below are intentional and must remain explicit.
 
 ## Runtime layers
 
 ```text
+Solid TSX launcher (packages/beam-ui/src/solid)
+  -> ARGUI QuickJS service bridge
+Rust desktop host (apps/beam-native)
+  -> in-process beam-media-engine controller
+Session files on disk
+  -> Electron editor handoff by validated project ID
 Vue renderer
   -> typed window.capture API
 Electron preload
@@ -15,6 +21,44 @@ Rust capture engine
   -> native screen, cursor, audio, timing, and storage backends
 Session files on disk
 ```
+
+The native host owns the launcher HUD, source and device selection, countdown,
+recording controls, tray, settings window, and saved launcher geometry. ARGUI
+owns native windows and rendering; the Rust host exposes only typed capture,
+preference, and window operations to Solid. Capture logic stays in the media
+engine. Auxiliary windows mount their Solid scenes on demand. The settings
+window is retained in the same Rust process and hidden on close; reopening
+shows and focuses that existing window. The editor is opened with `--beam-open-project=video|screenshot:<id>`
+after a native capture finishes. Electron keeps a hidden coordinator for its
+existing editor/window IPC and does not display the legacy HUD in this path.
+
+`scripts/native-ui/build.mjs` builds the checked-out ARGUI submodule directly and
+stages the native executable, both Solid bundles, and their assets for
+desktop packaging. Linux region selection uses an X11 window with a compositor
+that supports transparent, positioned topmost windows. Its mask and drag state
+are owned by Rust using the ARGUI gallery spotlight implementation; Solid
+presets and Record controls occupy separate small native windows. The crop
+interior uses an X11 input hole while its border remains draggable. Unsupported
+window capabilities report a failure before opening the overlay.
+
+The native JSON boundary is `apps/beam-native/src/beam/json.rs`: typed readers,
+writers, service envelopes, and atomic document updates share one codec. Stable
+file names live in `beam/files.rs`. Preferences retain editor-owned fields while
+validating native settings before writing under an exclusive lock. Corrupt
+documents produce a path-specific error and are never replaced with defaults.
+On X11, explicit monitor/window identities use the direct screen backend;
+Wayland retains portal-mediated capture and uses the system window chooser:
+an Xwayland client list cannot enumerate native Wayland windows. Linux X11,
+macOS and Windows use Beam's own picker, thumbnails and hover outlines with
+the same native identities as the eventual capture. Committed theme changes
+are broadcast to visible and hidden scenes and wake their parked actors.
+
+Native update checks run on service workers through one shared ARGUI updater
+transaction. Beam reads its GitHub HTTPS release feed, freezes the complete
+application package metadata, and verifies its streamed size and SHA-256 before
+explicit installation. About reads progress without waiting for the download
+lock. Release CI stages each native architecture and publishes the feed beside
+the full packages; development executables cannot replace a packaged application.
 
 ### Vue renderer
 

@@ -1,6 +1,7 @@
 //! Native screen frames, screenshots, cursor and interaction backends.
 pub mod clock;
 pub mod cursor;
+pub mod desktop;
 pub mod error;
 pub mod gate;
 pub mod input;

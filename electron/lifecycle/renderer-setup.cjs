@@ -86,7 +86,7 @@ function createRendererSetup({
     return path.join(applicationRoot, `public/brand/BeamIcon.${extensions[0]}`);
   }
 
-  function createWindow(preferencesStore, appIconPath) {
+  function createWindow(preferencesStore, appIconPath, { editorOnly = false } = {}) {
     logStartup('Creating BrowserWindow.');
     const initialSize = normalizeHudWindowSize(preferencesStore.read().hudWindow);
     const win = new BrowserWindow({
@@ -118,7 +118,7 @@ function createRendererSetup({
     win.once('ready-to-show', () => {
       logStartup('Window is ready to show (ready-to-show).');
       enforceDefaultZoom(win.webContents);
-      if (preferencesStore.read().onboardingCompleted) controller.markReadyToShow();
+      if (!editorOnly && preferencesStore.read().onboardingCompleted) controller.markReadyToShow();
     });
     win.webContents.once('did-start-loading', () => logStartup('Renderer navigation started.'));
     win.webContents.once('dom-ready', () => logStartup('Renderer DOM is ready.'));
@@ -126,7 +126,10 @@ function createRendererSetup({
     if (shouldAutoOpenDevTools({ isPackaged: app.isPackaged })) {
       win.webContents.once('did-finish-load', () => win.webContents.openDevTools({ mode: 'detach' }));
     }
-    if (app.isPackaged) {
+    if (editorOnly) {
+      logStartup('Loading hidden editor coordinator.');
+      win.loadURL('about:blank');
+    } else if (app.isPackaged) {
       logStartup('Loading dist/index.html.');
       win.loadFile(path.join(applicationRoot, 'dist/index.html'));
     } else {

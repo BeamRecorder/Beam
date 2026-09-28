@@ -1,48 +1,32 @@
-# Beam Native
+# Beam native capture host
 
-This is the first Argui window for Beam's native rewrite. It is a small working
-UI shell; recording remains in `packages/media-engine` and is not wired into
-this window yet. The app uses Argui source from `vendor/argui`, so editing a
-local Argui crate and building again picks up the change immediately.
+This Rust application runs the Solid ARGUI launcher in a native window. Its
+`beam` services call the existing `beam-media-engine` controller in process for
+source discovery, recording, pause/resume, and screenshots. The editor remains
+in Electron and receives a validated project ID after capture.
 
-## First checkout
+`src/beam/preferences.rs` reads and patches the same
+`Videos/Beam/user/preferences.json` document used by Electron. The native host
+also owns the tray, global shortcuts, window geometry, and separate native
+windows for settings and capture overlays. Settings stay mounted in the same
+process when hidden, so reopening reuses the window. Every native window embeds
+Hanken Grotesk from `public/font`; its OFL license is included in the UI bundle.
+Native and Electron interfaces use Concat's light/dark neutral palette with
+Beam's orange accent. The palette source is documented in `beamPalette.ts`.
 
-From the Beam repository root:
+Build and stage the host with `node scripts/native-ui/build.mjs --stage` from
+the repository root. The script builds the checked-out ARGUI submodule directly.
+For a direct development session, run `bun run beam:native`.
+The UI structure and focused checks are documented in
+`packages/beam-ui/README.md`.
 
-```sh
-git submodule update --init vendor/argui
-bun run argui doctor
-bun run argui check apps/beam-native
-bun run argui dev apps/beam-native --target native
-```
-
-`node scripts/dev/argui.cjs` builds the CLI from the same Argui submodule. It
-uses Beam's ignored `target/` directory for its build cache; no CLI binary is
-committed. Run `bun run argui build apps/beam-native dev --target native`
-to compile without opening a window.
-
-## Fix Argui while developing Beam
-
-Edit the crate under `vendor/argui/crates/`, then rerun the build command. The
-app's `argui-runtime` dependency is a Cargo path dependency, and Argui's
-internal crates resolve from that same checkout. Cargo recompiles changed
-sources without a crates.io release. Changes to the CLI itself are picked up
-by the next `bun run argui` invocation.
-
-For shared fixes, first create a branch inside the submodule because a fresh
-`git submodule update` checks out a detached commit:
-
-```sh
-git -C vendor/argui switch -c codex/beam-fix
-# Edit and verify the Argui crates, then commit and push this Argui branch.
-git add vendor/argui
-# Commit Beam's updated submodule pointer separately.
-```
-
-Other developers can run `git submodule update --init vendor/argui` to use
-that exact source revision. Keep the Beam app's Cargo lockfile committed so
-its other dependencies stay reproducible.
-
-The Beam media engine and Argui both use `wgpu 30.0.1`, allowing the future UI
-host to pass device and queue handles directly. The recording integration is
-described in `docs/native-media-argui-migration.md`.
+The About page uses a shared `argui-updater` transaction on service workers.
+Its Beam backend reads the HTTPS GitHub `native-updates.json` feed, freezes
+the selected package URL, size and SHA-256, then verifies the downloaded bytes
+before handing the complete application package to ARGUI's native installer.
+The release workflow publishes and validates this feed alongside AppImage,
+the universal Windows installer and macOS application archives. This uses
+GitHub HTTPS release metadata as its trust source; the Minisign HTTP backend
+is a separate ARGUI option and is not configured here.
+Checks do not download or install automatically. Source checkouts can check
+and download releases; installation requires the matching packaged Beam app.

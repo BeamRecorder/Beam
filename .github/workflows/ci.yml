@@ -35,6 +35,7 @@ jobs:
               - 'build/**'
               - 'bun.lock'
               - 'Cargo.*'
+              - 'apps/beam-native/**'
               - 'electron/**'
               - 'packages/**'
               - 'package*.json'
@@ -46,12 +47,15 @@ jobs:
               - 'tests/**'
               - 'tsconfig*.json'
               - 'vite.config.ts'
+              - 'vendor/argui'
               - '*.html'
 
   quality:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -89,6 +93,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: actions/download-artifact@v4
         with:
           pattern: media-runtime-linux-*
@@ -174,6 +180,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: actions/download-artifact@v4
         with:
           pattern: media-runtime-win-*
@@ -282,6 +290,8 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: actions/download-artifact@v4
         with:
           pattern: media-runtime-mac-*

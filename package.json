@@ -12,7 +12,13 @@
   "packageManager": "bun@1.4.0",
   "main": "electron/main.cjs",
   "workspaces": [
-    "website"
+    "website",
+    "packages/beam-ui",
+    "vendor/argui/packages/host",
+    "vendor/argui/packages/react",
+    "vendor/argui/packages/solid",
+    "vendor/argui/packages/widgets",
+    "vendor/argui/packages/i18n"
   ],
   "overrides": {
     "onnxruntime-web": "1.27.0"
@@ -41,7 +47,9 @@
     "website:preview": "bun run --filter @beam/website preview",
     "website:typecheck": "bun run --filter @beam/website typecheck",
     "website:test": "bun run --filter @beam/website test",
-    "build": "node scripts/native/artifacts.cjs build && vite build",
+    "build": "node scripts/native/artifacts.cjs build && node scripts/native-ui/build.mjs --release --stage && vite build",
+    "beam:native": "bun run native:dev",
+    "native:dev": "node scripts/native-ui/dev.mjs",
     "electron:dev": "node scripts/dev/electron.cjs",
     "electron:dev:no-rust": "node scripts/dev/electron.cjs --force-no-rust",
     "electron:build": "bun run build && electron-builder --publish never"
@@ -102,6 +110,13 @@
       "icon": "public/brand/BeamIcon.ico",
       "extraResources": [
         {
+          "from": "build/native/${os}/${arch}/native-ui",
+          "to": "native-ui",
+          "filter": [
+            "**/*"
+          ]
+        },
+        {
           "from": "build/native/${os}/${arch}/media-runtime",
           "to": "media-runtime",
           "filter": [
@@ -121,6 +136,13 @@
       ],
       "icon": "public/brand/BeamIcon.icns",
       "extraResources": [
+        {
+          "from": "build/native/${os}/${arch}/native-ui",
+          "to": "native-ui",
+          "filter": [
+            "**/*"
+          ]
+        },
         {
           "from": "build/native/${os}/${arch}/media-runtime",
           "to": "media-runtime",
@@ -148,6 +170,13 @@
       "category": "AudioVideo",
       "artifactName": "${productName}-${version}-linux-${arch}.${ext}",
       "extraResources": [
+        {
+          "from": "build/native/${os}/${arch}/native-ui",
+          "to": "native-ui",
+          "filter": [
+            "**/*"
+          ]
+        },
         {
           "from": "build/native/${os}/${arch}",
           "to": "input-helper",

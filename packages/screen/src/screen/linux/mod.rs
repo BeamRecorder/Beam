@@ -14,6 +14,7 @@ mod pipewire;
 mod portal;
 pub(crate) mod recording;
 mod runtime;
+pub mod x11;
 
 pub use capabilities::*;
 pub(crate) use input_monitor::{LinuxInputMonitor, input_helper_supported};

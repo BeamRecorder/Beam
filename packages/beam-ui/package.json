@@ -1,0 +1,23 @@
+{
+  "name": "@beam/native-ui",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "assets": "bun scripts/generate-i18n.mjs && bun scripts/generate-assets.mjs assets.config.json",
+    "check": "bun run assets && node node_modules/typescript/bin/tsc --noEmit",
+    "build": "bun run assets && node node_modules/vite/bin/vite.js build --mode native && BEAM_UI_ENTRY=settings node node_modules/vite/bin/vite.js build --mode native --emptyOutDir false",
+    "test": "node src/solid/shared/base-ui/shortcutKeys.test.mjs"
+  },
+  "dependencies": {
+    "@argui/host": "workspace:*",
+    "@argui/solid": "workspace:*",
+    "@argui/widgets": "workspace:*",
+    "solid-js": "1.9.15",
+    "@argui/i18n": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vite": "8.2.2",
+    "vite-plugin-solid": "2.11.14"
+  }
+}

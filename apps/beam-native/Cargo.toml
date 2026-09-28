@@ -5,8 +5,71 @@ edition = "2024"
 rust-version = "1.89"
 
 [workspace]
+resolver = "3"
+
+[features]
+default = []
+dev-metrics = []
+dev-tabler-icons = []
 
 [dependencies]
-argui-runtime = { path = "../../vendor/argui/crates/argui-runtime" }
-argui-text = { path = "../../vendor/argui/crates/argui-text" }
+beam-native-assets = { path = "assets-host" }
+beam-media-engine = { path = "../../packages/media-engine" }
+argui-core = { path = "../../vendor/argui/crates/argui-core" }
+argui-effects = { path = "../../vendor/argui/crates/argui-effects", features = ["scroll"] }
+argui-host = { path = "../../vendor/argui/crates/argui-host", features = ["media"] }
+argui-i18n = { path = "../../vendor/argui/crates/argui-i18n" }
+argui-paint = { path = "../../vendor/argui/crates/argui-paint" }
+argui-platform = { path = "../../vendor/argui/crates/argui-platform", features = ["file-picker"] }
+argui-render = { path = "../../vendor/argui/crates/argui-render" }
+argui-runtime = { path = "../../vendor/argui/crates/argui-runtime", features = ["tray", "global-shortcuts", "desktop-backdrop", "native-popups", "window-input-regions"] }
 argui-ui = { path = "../../vendor/argui/crates/argui-ui" }
+argui-text = { path = "../../vendor/argui/crates/argui-text" }
+argui-updater = { path = "../../vendor/argui/crates/argui-updater", features = ["native"] }
+reqwest = { version = "=0.12.28", default-features = false, features = ["blocking", "rustls-tls"] }
+semver = { version = "=1.0.28", features = ["serde"] }
+sha2 = "0.10"
+tempfile = "=3.27.0"
+rquickjs = "=0.14.0"
+rquickjs-sys = { version = "=0.14.0", features = ["bindgen"] }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.151"
+image = { version = "=0.25.10", default-features = false, features = ["png", "jpeg"] }
+base64 = "0.23.1"
+time = { version = "=0.3.55", features = ["formatting", "parsing"] }
+pollster = "=0.4.0"
+dirs = "=6.0.0"
+fs2 = "=0.4.3"
+fontdb = "=0.23.0"
+sys-locale = "=0.3.2"
+beam-screen = { path = "../../packages/screen" }
+beam-camera = { path = "../../packages/camera" }
+
+[profile.dev]
+opt-level = 1
+debug = "line-tables-only"
+incremental = false
+
+[profile.dev.package."*"]
+opt-level = 2
+debug = false
+
+[[test]]
+name = "beam_preferences"
+path = "test/beam/preferences.rs"
+
+[[test]]
+name = "runner_paths"
+path = "test/runner/paths.rs"
+
+[[test]]
+name = "delivery"
+path = "test/delivery.rs"
+
+[[test]]
+name = "quickjs"
+path = "test/lib.rs"
+
+[[test]]
+name = "solid_bundles"
+path = "test/solid_bundles.rs"

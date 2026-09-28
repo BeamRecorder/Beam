@@ -1,0 +1,8 @@
+node_modules/
+dist/
+assets.generated.ts
+assets.dev.generated.json
+assets.generated.json
+assets.generated.rs
+src/solid/shared/i18n/catalogs.generated.json
+src/solid/shared/i18n/localeOptions.generated.json

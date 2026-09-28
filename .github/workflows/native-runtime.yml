@@ -15,9 +15,14 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.92.0
@@ -25,6 +30,10 @@ jobs:
       - uses: ./.github/actions/gstreamer
       - name: Build, stage and verify the native runtime
         run: node scripts/native/artifacts.cjs build
+      - name: Build and stage the native Beam interface for this architecture
+        run: |
+          bun install --frozen-lockfile --ignore-scripts
+          node scripts/native-ui/build.mjs --release --stage
       - name: Preserve executable modes in the runtime artifact
         run: tar -C build/native -czf native-runtime-${{ matrix.os }}-${{ matrix.arch }}.tar.gz .
       - uses: actions/upload-artifact@v4

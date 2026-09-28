@@ -33,12 +33,15 @@ target-windows/
 
 # Electron build artifacts
 dist_electron/
+dist_native/
 build/native/
+.cache/
 
 # Verified, versioned native-engine cache for development without Cargo
 packages/native-recorder/win/*/beam-media-engine-*.exe
 packages/native-recorder/mac/*/beam-media-engine-*
 packages/native-recorder/linux/*/beam-media-engine-*
 packages/native-recorder/linux/*/beam-input-helper-*
+packages/native-recorder/*/*/capture-engine-*
 
 coverage/*

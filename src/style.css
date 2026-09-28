@@ -1,26 +1,18 @@
 /* Design System: Beam styles */
 
 @font-face {
-  font-family: 'Stack Sans Text';
-  src: url('/font/StackSansText-VariableFont_wght.ttf') format('truetype');
+  font-family: 'Hanken Grotesk';
+  src: url('/font/HankenGrotesk-VariableFont_wght.ttf') format('truetype');
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Stack Sans Headline';
-  src: url('/font/StackSansHeadline-VariableFont_wght.ttf') format('truetype');
+  font-family: 'Hanken Grotesk';
+  src: url('/font/HankenGrotesk-Italic-VariableFont_wght.ttf') format('truetype');
   font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Stack Sans Notch';
-  src: url('/font/StackSansNotch-VariableFont_wght.ttf') format('truetype');
-  font-weight: 100 900;
-  font-style: normal;
+  font-style: italic;
   font-display: swap;
 }
 
@@ -32,17 +24,17 @@
   --color-primary-border: rgba(255, 90, 31, 0.3);
 
   /* Backgrounds & Surfaces */
-  --color-bg-app: #f7f5f0;
-  --color-bg-surface: #f7f5f0;
-  --color-bg-surface-hover: #ebe8e0;
+  --color-bg-app: #d2d2d9;
+  --color-bg-surface: #f7f7f8;
+  --color-bg-surface-hover: #e8e8ec;
   --color-bg-element: #ffffff;
   --github-icon-filter: brightness(0);
   --editor-ambient-media-opacity: 0.7;
   --editor-ambient-veil-opacity: 0.82;
 
   /* Borders */
-  --color-border: #e6e3dc;
-  --color-border-strong: #d3cfc5;
+  --color-border: #0000001f;
+  --color-border-strong: #00000038;
   --color-border-dark: #334155;
 
   /* Track Colors */
@@ -58,10 +50,10 @@
   --color-track-blur-highlight: #0891b2;
 
   /* Texts */
-  --text-primary: #1e1e1e;
-  --text-secondary: #555555;
-  --text-muted: #888888;
-  --text-light: #f7f5f0;
+  --text-primary: #16161a;
+  --text-secondary: #56565e;
+  --text-muted: #86868c;
+  --text-light: #f7f7f8;
 
   /* Component Specific / Aliases */
   --accent: var(--color-primary);
@@ -82,11 +74,11 @@
   /* Keep the product typeface first, then use glyph-complete platform fallbacks
      for Cyrillic, CJK, and Japanese characters. */
   --font-sans:
-    'Stack Sans Text', 'Noto Sans', 'Noto Sans CJK SC', 'Noto Sans CJK TC', 'Noto Sans KR', 'Noto Sans JP',
+    'Hanken Grotesk', 'Noto Sans', 'Noto Sans CJK SC', 'Noto Sans CJK TC', 'Noto Sans KR', 'Noto Sans JP',
     'PingFang SC', 'PingFang TC', 'Hiragino Sans GB', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Apple SD Gothic Neo',
     'Microsoft YaHei', 'Malgun Gothic', 'Segoe UI', system-ui, sans-serif;
   --font-headline:
-    'Stack Sans Headline', 'Noto Sans', 'Noto Sans CJK SC', 'Noto Sans CJK TC', 'Noto Sans KR', 'Noto Sans JP',
+    'Hanken Grotesk', 'Noto Sans', 'Noto Sans CJK SC', 'Noto Sans CJK TC', 'Noto Sans KR', 'Noto Sans JP',
     'PingFang SC', 'PingFang TC', 'Hiragino Sans GB', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Apple SD Gothic Neo',
     'Microsoft YaHei', 'Malgun Gothic', 'Segoe UI', system-ui, sans-serif;
 
@@ -113,7 +105,7 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Stack Sans does not contain Cyrillic glyphs. Use one coherent system face for
+/* The bundled UI face does not contain Cyrillic glyphs. Use one coherent system face for
    Russian and Bulgarian so fallback glyph metrics do not make words look spaced
    out, while keeping the product face for the Latin and CJK locales. */
 :root:lang(ru),
@@ -129,27 +121,27 @@
 
 :root.dark {
   /* Backgrounds & Surfaces */
-  --color-bg-app: #141310;
-  --color-bg-surface: #161512;
-  --color-bg-surface-hover: #262420;
-  --color-bg-element: #201f1c;
+  --color-bg-app: #151517;
+  --color-bg-surface: #212123;
+  --color-bg-surface-hover: #3b3b3e;
+  --color-bg-element: #2b2b2e;
   --github-icon-filter: brightness(0) invert(1);
   --editor-ambient-media-opacity: 0.78;
   --editor-ambient-veil-opacity: 0.7;
 
   /* Borders */
-  --color-border: #2e2c28;
-  --color-border-strong: #3d3a34;
-  --color-border-dark: #3d3a34;
+  --color-border: #ffffff1a;
+  --color-border-strong: #ffffff33;
+  --color-border-dark: #ffffff33;
 
   /* Track Colors */
   --color-track-blur: #155e75;
   --color-track-blur-highlight: #0e7490;
 
   /* Texts */
-  --text-primary: #f4f4f5;
-  --text-secondary: #a1a1aa;
-  --text-muted: #71717a;
+  --text-primary: #f5f5f7;
+  --text-secondary: #a1a1a6;
+  --text-muted: #6e6e73;
 
   /* Shadows (Claude-inspired warm dark shadows) */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.25);

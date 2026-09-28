@@ -38,6 +38,7 @@ function createEditorWindowManager({
   appIconPath,
   screen = null,
   canAcceptWork = () => true,
+  returnToNative = null,
 }) {
   const sessions = new Map();
   let activeSession = null;
@@ -107,6 +108,10 @@ function createEditorWindowManager({
   };
 
   const presentHud = () => {
+    if (returnToNative) {
+      returnToNative();
+      return;
+    }
     prepareHudAuxiliaryWindows();
     if (hudWindow.isMinimized()) hudWindow.restore();
     hudController.showHud();

@@ -151,6 +151,8 @@ enum PlatformScreenRecording {
     Mac(super::mac::MacRecording),
     #[cfg(target_os = "linux")]
     Linux(super::linux::LinuxRecording),
+    #[cfg(target_os = "linux")]
+    X11(super::linux::x11::X11Recording),
 }
 
 impl ScreenRecording {
@@ -161,7 +163,12 @@ impl ScreenRecording {
         #[cfg(target_os = "macos")]
         let backend = PlatformScreenRecording::Mac(super::mac::MacRecording::open(request)?);
         #[cfg(target_os = "linux")]
-        let backend = PlatformScreenRecording::Linux(super::linux::LinuxRecording::open(request)?);
+        let backend = if matches!(request.selection, ScreenSelection::Source { source_id } if source_id.as_str().starts_with("x11:"))
+        {
+            PlatformScreenRecording::X11(super::linux::x11::X11Recording::open(request)?)
+        } else {
+            PlatformScreenRecording::Linux(super::linux::LinuxRecording::open(request)?)
+        };
         Ok(Self { backend })
     }
 
@@ -174,6 +181,8 @@ impl ScreenRecording {
             PlatformScreenRecording::Mac(recording) => recording.metrics(),
             #[cfg(target_os = "linux")]
             PlatformScreenRecording::Linux(recording) => recording.metrics(),
+            #[cfg(target_os = "linux")]
+            PlatformScreenRecording::X11(recording) => recording.metrics(),
         }
     }
 
@@ -181,6 +190,8 @@ impl ScreenRecording {
         match &self.backend {
             #[cfg(target_os = "linux")]
             PlatformScreenRecording::Linux(recording) => recording.source_id(),
+            #[cfg(target_os = "linux")]
+            PlatformScreenRecording::X11(_) => None,
             #[cfg(any(windows, target_os = "macos"))]
             _ => None,
         }
@@ -190,6 +201,8 @@ impl ScreenRecording {
         match &mut self.backend {
             #[cfg(target_os = "linux")]
             PlatformScreenRecording::Linux(recording) => recording.start(),
+            #[cfg(target_os = "linux")]
+            PlatformScreenRecording::X11(recording) => recording.start(),
             #[cfg(any(windows, target_os = "macos"))]
             _ => Ok(()),
         }
@@ -199,6 +212,8 @@ impl ScreenRecording {
         match &mut self.backend {
             #[cfg(target_os = "linux")]
             PlatformScreenRecording::Linux(recording) => recording.pause(),
+            #[cfg(target_os = "linux")]
+            PlatformScreenRecording::X11(recording) => recording.pause(),
             #[cfg(any(windows, target_os = "macos"))]
             _ => Err(CaptureError::Unsupported(
                 "the encoded screen backend pauses by closing its segment".into(),
@@ -218,6 +233,10 @@ impl ScreenRecording {
             PlatformScreenRecording::Linux(recording) => {
                 recording.prepare_resume(start_ns, start_gate, segment)
             }
+            #[cfg(target_os = "linux")]
+            PlatformScreenRecording::X11(recording) => {
+                recording.prepare_resume(start_ns, start_gate, segment)
+            }
             #[cfg(any(windows, target_os = "macos"))]
             _ => {
                 let _ = (start_ns, start_gate, segment);
@@ -235,6 +254,8 @@ impl ScreenRecording {
             PlatformScreenRecording::Windows(recording) => recording.video_format(),
             #[cfg(target_os = "linux")]
             PlatformScreenRecording::Linux(recording) => recording.video_format(),
+            #[cfg(target_os = "linux")]
+            PlatformScreenRecording::X11(recording) => recording.video_format(),
             #[cfg(target_os = "macos")]
             PlatformScreenRecording::Mac(recording) => recording.video_format(),
         }
@@ -248,6 +269,8 @@ impl ScreenRecording {
             PlatformScreenRecording::Mac(recording) => recording.stop(),
             #[cfg(target_os = "linux")]
             PlatformScreenRecording::Linux(recording) => recording.stop(),
+            #[cfg(target_os = "linux")]
+            PlatformScreenRecording::X11(recording) => recording.stop(),
         }
     }
 
@@ -260,6 +283,8 @@ impl ScreenRecording {
             PlatformScreenRecording::Mac(recording) => recording.is_available(),
             #[cfg(target_os = "linux")]
             PlatformScreenRecording::Linux(recording) => recording.is_available(),
+            #[cfg(target_os = "linux")]
+            PlatformScreenRecording::X11(recording) => recording.is_available(),
         }
     }
 }

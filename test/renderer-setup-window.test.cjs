@@ -6,7 +6,7 @@ const test = require('node:test');
 const { createRendererSetup } = require('../electron/lifecycle/renderer-setup.cjs');
 const { HUD_SIZE, WindowController } = require('../electron/window/window-controller.cjs');
 
-function createFixture({ onboardingCompleted = true } = {}) {
+function createFixture({ onboardingCompleted = true, editorOnly = false } = {}) {
   const calls = [];
   let visible = false;
   const applicationRoot = '/beam-app';
@@ -119,7 +119,7 @@ function createFixture({ onboardingCompleted = true } = {}) {
       controllers,
       logStartup: (message) => calls.push(['log', message]),
     });
-    const window = setup.createWindow(preferencesStore, '/beam-app/public/brand/BeamIcon.png');
+    const window = setup.createWindow(preferencesStore, '/beam-app/public/brand/BeamIcon.png', { editorOnly });
     return {
       calls,
       controllers,
@@ -184,6 +184,13 @@ test('does not show the HUD when onboarding is not complete', () => {
   assert.equal(fixture.getVisible(), false);
   assert.equal(fixture.controller.ready, false);
   assert.equal(fixture.calls.filter(([name]) => name === 'showInactive').length, 0);
+});
+
+test('an editor-only native handoff keeps the legacy HUD hidden', () => {
+  const fixture = createFixture({ editorOnly: true });
+  fixture.window.emit('ready-to-show');
+  assert.equal(fixture.getVisible(), false);
+  assert.equal(fixture.controller.ready, false);
 });
 
 test('trusts the dedicated local status entry but rejects unrelated origins and paths', () => {

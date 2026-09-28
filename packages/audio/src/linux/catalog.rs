@@ -12,6 +12,14 @@ pub(super) const DEFAULT_OUTPUT: &str = "pipewire:default-output";
 const SINK_PREFIX: &str = "pipewire:sink:";
 
 pub fn list_system_outputs() -> Result<Vec<AudioDevice>, AudioError> {
+    finish_discovery(true, list_nodes(sink_from_properties)?)
+}
+
+pub(super) fn list_microphones() -> Result<Vec<AudioDevice>, AudioError> {
+    list_nodes(microphone_from_properties)
+}
+
+fn list_nodes(parse: fn(&DictRef) -> Option<AudioDevice>) -> Result<Vec<AudioDevice>, AudioError> {
     pw::init();
     let mainloop = pw::main_loop::MainLoopRc::new(None)
         .map_err(|error| AudioError::Backend(error.to_string()))?;
@@ -30,7 +38,7 @@ pub fn list_system_outputs() -> Result<Vec<AudioDevice>, AudioError> {
         .global(move |global| {
             if global.type_ == pw::types::ObjectType::Node
                 && let Some(props) = global.props
-                && let Some(device) = sink_from_properties(props)
+                && let Some(device) = parse(props)
             {
                 found.borrow_mut().push(device);
             }
@@ -57,8 +65,15 @@ pub fn list_system_outputs() -> Result<Vec<AudioDevice>, AudioError> {
     mainloop.run();
     drop(core_listener);
     drop(registry_listener);
-    let devices = sinks.borrow().clone();
-    finish_discovery(done.get(), devices)
+    if !done.get() {
+        return Err(AudioError::Backend(
+            "PipeWire device discovery timed out".into(),
+        ));
+    }
+    let mut devices = sinks.borrow().clone();
+    devices.sort_by(|left, right| left.id.cmp(&right.id));
+    devices.dedup_by(|left, right| left.id == right.id);
+    Ok(devices)
 }
 
 fn finish_discovery(
@@ -125,3 +140,22 @@ fn sink_from_properties(props: &DictRef) -> Option<AudioDevice> {
 
 #[path = "../../test/linux/catalog.rs"]
 mod catalog_checks;
+
+/// CPAL IDs identify the real source node, excluding sinks and app streams.
+fn microphone_from_properties(props: &DictRef) -> Option<AudioDevice> {
+    match props.get(*pw::keys::MEDIA_CLASS)? {
+        "Audio/Source" => {}
+        "Audio/Duplex" if props.get("device.id").is_some() => {}
+        _ => return None,
+    }
+    let name = props.get(*pw::keys::NODE_NAME)?;
+    let title = props
+        .get(*pw::keys::NODE_DESCRIPTION)
+        .or_else(|| props.get(*pw::keys::NODE_NICK))
+        .unwrap_or(name);
+    Some(AudioDevice {
+        id: format!("pipewire:{name}"),
+        name: title.into(),
+        is_default: false,
+    })
+}

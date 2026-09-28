@@ -2,7 +2,7 @@
    platform's proportional text family instead of the Latin-only product face. */
 .editor-panel,
 .teleprompter-display {
-  font-family: system-ui, 'Segoe UI', 'Noto Sans', Arial, sans-serif;
+  font-family: var(--font-sans);
   letter-spacing: normal;
   word-spacing: normal;
 }

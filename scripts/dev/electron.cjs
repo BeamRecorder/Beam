@@ -69,8 +69,17 @@ async function resolveDevelopmentEngine({
   return required[0].destination;
 }
 
-async function startElectron(executable, { root = applicationRoot, spawnImpl = spawn, env = process.env } = {}) {
-  const electronCli = require.resolve('electron/cli.js');
+function resolveElectronCli(resolveImpl = require.resolve) {
+  try { return resolveImpl('electron/cli.js'); }
+  catch (error) {
+    if (error.code === 'MODULE_NOT_FOUND')
+      throw new Error('Electron is not installed in this checkout. Run bun install from the Beam repository root.');
+    throw error;
+  }
+}
+
+async function startElectron(executable, { root = applicationRoot, spawnImpl = spawn, env = process.env,
+  electronCli = resolveElectronCli() } = {}) {
   const { prebuiltRuntimePath } = require('../../electron/capture/media-engine-path.cjs');
   const runtime = prebuiltRuntimePath(root, require('../../package.json').version);
   const privateRuntime = runtime && fs.existsSync(path.join(runtime, 'inventory.json'));
@@ -93,12 +102,16 @@ async function startElectron(executable, { root = applicationRoot, spawnImpl = s
 async function main() {
   const { version } = require('../../package.json');
   const { forceNoRust } = parseDevelopmentArguments(process.argv.slice(2));
+  const electronCli = resolveElectronCli();
   const executable = await resolveDevelopmentEngine({
     version,
     ...(forceNoRust ? { hasCargo: () => false } : {}),
   });
+  if (forceNoRust) throw new Error('The native ARGUI launcher requires Rust; use electron:dev without --force-no-rust');
+  await runCommand(process.execPath, [path.join(applicationRoot, 'scripts/native-ui/build.mjs'), '--stage'],
+    { cwd: applicationRoot });
   console.log(`[electron:dev] Using ${executable}`);
-  await startElectron(executable);
+  await startElectron(executable, { electronCli });
 }
 
 if (require.main === module) {
@@ -116,6 +129,7 @@ module.exports = {
   missingFiles,
   parseDevelopmentArguments,
   resolveDevelopmentEngine,
+  resolveElectronCli,
   runCommand,
   startElectron,
 };

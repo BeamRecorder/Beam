@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM"],
+    "jsx": "preserve",
+    "jsxImportSource": "@argui/solid",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "preserveSymlinks": true,
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "types": []
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "assets.generated.ts"]
+}

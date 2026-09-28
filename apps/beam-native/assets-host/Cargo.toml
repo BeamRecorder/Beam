@@ -1,0 +1,10 @@
+[package]
+name = "beam-native-assets"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+argui-media = { path = "../../../vendor/argui/crates/argui-media", features = ["media"] }
+argui-paint = { path = "../../../vendor/argui/crates/argui-paint" }
+argui-runtime = { path = "../../../vendor/argui/crates/argui-runtime" }
+serde_json = "=1.0.151"

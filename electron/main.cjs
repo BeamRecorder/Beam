@@ -61,6 +61,8 @@ const { createShutdownCoordinator } = require('./lifecycle/shutdown-coordinator.
 const { createShutdownAwareIpc } = require('./lifecycle/shutdown-ipc.cjs');
 const { registerFatalLifecycle } = require('./lifecycle/fatal-events.cjs');
 const { initializeSingleInstance } = require('./lifecycle/single-instance.cjs');
+const { externalProject, completeNativeScreenshot } = require('./lifecycle/external-project.cjs');
+const { launchNativeUi } = require('./lifecycle/native-ui-launcher.cjs');
 const { configureDevelopmentProfile } = require('./lifecycle/development-profile.cjs');
 const { createQuickSnipService } = require('./quick-snip/quick-snip-service.cjs');
 const DISCORD_INVITE_URL = 'https://discord.gg/6Q6v2xUCB';
@@ -81,6 +83,7 @@ const logStartup = (step) => {
 };
 
 const applicationRoot = path.join(__dirname, '..');
+const initialExternalProject = externalProject(process.argv);
 configureDevelopmentProfile(app);
 if (process.platform === 'linux') {
   // Use Chromium's XDG GlobalShortcuts portal on desktops that provide it.
@@ -93,6 +96,8 @@ let quitting = false;
 let showExistingHud = () => false;
 let pendingHudRestore = false;
 let shortcutReady = false;
+const pendingExternalProjects = [];
+let externalProjectHandler = (project) => { pendingExternalProjects.push(project); return true; };
 const pendingExternalShortcuts = [];
 let externalShortcutHandler = (id) => {
   pendingExternalShortcuts.push(id);
@@ -334,7 +339,7 @@ function initializeApplication() {
       ipcMain.on('app:quit', () => {
         if (coordinator.canAcceptWork()) app.quit();
       });
-      const win = createWindow(preferencesStore, appIconPath);
+      const win = createWindow(preferencesStore, appIconPath, { editorOnly: Boolean(initialExternalProject) });
       applicationIpc.on('camera-overlay:renderer-ready', (event) => cameraOverlay.markRendererReady(event.sender));
       win.webContents.once('did-finish-load', () => {
         shortcutReady = true;
@@ -359,7 +364,20 @@ function initializeApplication() {
           projectVoiceoverStorage.cleanupOwner(contents.id);
         },
         canAcceptWork: () => coordinator.canAcceptWork(),
+        returnToNative: initialExternalProject ? () => app.quit() : null,
       });
+      externalProjectHandler = (project) => {
+        try {
+          completeNativeScreenshot(project, screenshotStore, screenshotPresetStore);
+          void Promise.resolve(editorWindow.open(project.id, project.kind === 'screenshot' ? { kind: 'screenshot' } : {}))
+            .catch((error) => console.error('[Beam] Native capture editor failed:', error));
+          return true;
+        } catch (error) {
+          console.error('[Beam] Could not open native capture:', error);
+          return false;
+        }
+      };
+      for (const project of pendingExternalProjects.splice(0)) externalProjectHandler(project);
       screenshotService = registerScreenshotIpc({
         ipcMain: applicationIpc,
         store: screenshotStore,
@@ -404,8 +422,8 @@ function initializeApplication() {
         onQuickSnip: () =>
           void quickSnipController.toggle().catch((error) => console.error('[Quick Snip] tray toggle failed:', error)),
       });
-      trayManager.init();
-      if (!preferencesStore.read().onboardingCompleted) onboardingWindow.open();
+      if (!initialExternalProject) trayManager.init();
+      if (!initialExternalProject && !preferencesStore.read().onboardingCompleted) onboardingWindow.open();
 
       coordinator.registerCleanup({ id: 'hud-window', cleanup: () => win.destroy() });
       coordinator.registerCleanup({ id: 'editor', cleanup: () => editorWindow.destroy() });
@@ -453,9 +471,27 @@ function initializeApplication() {
   });
 }
 
-initializeSingleInstance({
-  app,
-  initialize: initializeApplication,
-  restoreHud: restoreCanonicalHud,
-  handleShortcut: (id) => externalShortcutHandler(id),
-});
+function runElectronEditor() {
+  initializeSingleInstance({
+    app,
+    initialize: initializeApplication,
+    restoreHud: restoreCanonicalHud,
+    handleShortcut: (id) => externalShortcutHandler(id),
+    handleProject: (commandLine) => {
+      const project = externalProject(commandLine);
+      return project ? externalProjectHandler(project) : false;
+    },
+  });
+}
+
+if (initialExternalProject || process.env.BEAM_FORCE_ELECTRON_HUD === '1') runElectronEditor();
+else {
+  app.whenReady().then(async () => {
+    await launchNativeUi({ app, applicationRoot });
+    app.quit();
+  }).catch((error) => {
+    console.error('[Beam] Could not start native UI:', error);
+    require('electron').dialog.showErrorBox('Beam could not start', String(error));
+    app.quit();
+  });
+}

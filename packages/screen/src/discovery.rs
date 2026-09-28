@@ -14,6 +14,9 @@ pub fn list_sources() -> Result<Vec<SourceDescriptor>, CaptureError> {
     }
     #[cfg(target_os = "linux")]
     {
+        if crate::screen::linux::x11::desktop_available() {
+            return crate::screen::linux::x11::discover_sources();
+        }
         use crate::model::{SourceCapabilities, SourceId, SourceKind, SourceSelectionMode};
         let available =
             crate::screen::linux::probe_native_capabilities(std::time::Duration::from_secs(2))?;
@@ -62,6 +65,19 @@ pub fn capabilities() -> Result<CaptureCapabilities, CaptureError> {
     }
     #[cfg(target_os = "linux")]
     {
+        if crate::screen::linux::x11::desktop_available() {
+            let input = crate::input::input_access_status();
+            return Ok(CaptureCapabilities {
+                display_capture: true,
+                window_capture: true,
+                embedded_cursor: true,
+                separate_cursor: true,
+                cursor_shapes: true,
+                cursor_clicks: input.clicks,
+                input_shortcuts: input.shortcuts,
+                ..Default::default()
+            });
+        }
         let native =
             crate::screen::linux::probe_native_capabilities(std::time::Duration::from_secs(2))?;
         Ok(CaptureCapabilities {
@@ -90,7 +106,11 @@ pub fn permissions() -> PermissionSnapshot {
     #[cfg(target_os = "linux")]
     {
         PermissionSnapshot {
-            screen: Some(crate::model::PermissionState::PromptRequired),
+            screen: Some(if crate::screen::linux::x11::desktop_available() {
+                crate::model::PermissionState::Granted
+            } else {
+                crate::model::PermissionState::PromptRequired
+            }),
             accessibility: Some(crate::model::PermissionState::NotApplicable),
         }
     }
