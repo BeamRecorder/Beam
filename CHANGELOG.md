@@ -50,7 +50,8 @@ User-facing changes to Beam are documented in this file.
 
 - Small toolbar icons now use even pixel sizes to keep their centers aligned with their buttons.
 
-- Select menus open directly below their controls, preserving the requested panel width and shadow; long option labels scroll slowly on hover and reset when the pointer leaves.
+- Native capture selectors use the gallery's fruit-select placement, keeping the selected option aligned with its button rather than opening a menu below the pointer.
+- Select menus preserve their panel width and shadow; long option labels scroll slowly on hover and reset when the pointer leaves.
 - Legacy disabled device preferences are normalized, and unavailable saved devices no longer appear silently disabled while remaining selected for capture.
 
 - Removed the dark rim around native window corners and stale hover highlights in select menus.

@@ -327,6 +327,14 @@ fn assert_select_geometry(root: &Element) {
     assert_eq!(row.style.align_items, Some(AlignItems::CENTER));
     assert_eq!(label.style.align_items, Some(AlignItems::CENTER));
     assert_eq!(label.style.size.height, Dimension::length(20.0));
+    let popup = keyed_element(root, "system-audio-popup").expect("open device selector");
+    let argui_ui::PortalTarget::Anchor(anchor) = &popup.portal.as_ref().unwrap().target else {
+        panic!("device selector must remain anchored to its trigger");
+    };
+    assert_eq!(anchor.key, "system-audio");
+    // On follows Off: its row center must coincide with the 28px trigger center.
+    assert_eq!(anchor.placement.offset, -104.0);
+    assert_eq!(anchor.placement.cross_offset, -18.0);
 }
 
 /// Returns whether visible `text` appears in a currently mounted native text primitive.
