@@ -103,14 +103,13 @@ bun run --filter @beam/native-ui build
 cargo run --manifest-path apps/beam-native/Cargo.toml -- --editor
 ```
 
-On this checkout, GES is available under `/tmp/beam-ges`. To open the inspected recording directly with that runtime, use:
-
-```sh
-PKG_CONFIG_PATH=/tmp/beam-ges/usr/lib64/pkgconfig \
-LD_LIBRARY_PATH=/tmp/beam-ges/usr/lib64 \
-GST_PLUGIN_PATH_1_0=/tmp/beam-ges/usr/lib64/gstreamer-1.0 \
-RUSTC_WRAPPER= cargo run --manifest-path apps/beam-native/Cargo.toml -- --editor-project="/home/albi/Vidéos/Beam/user/projects/studio/01a0e9c3-7d9e-71f5-9315-b8dc5501cdbc/01a0e9c3-7dbe-7577-b3bd-671997ed78f5"
-```
+The earlier `/tmp/beam-ges` extraction was temporary and may disappear between
+launches. On Fedora, install `gst-editing-services-devel` matching the installed
+runtime, or keep that package's development files under
+`~/.cache/beam/ges-sdk/<installed-rpm-version>/usr`. `bun run beam:native`
+detects the matching cached SDK when the system development package is absent.
+For a direct Cargo invocation, point `PKG_CONFIG_PATH` to its `usr/lib64/pkgconfig`
+directory and `LIBRARY_PATH` to its `usr/lib64` directory.
 
 Test dragging all pane dividers, growing the timeline, selecting a clip, switching
 video/audio/effects tabs, creating and editing a title, applying a fade, undo/redo,

@@ -83,6 +83,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Linux native development builds now find a persistent, version-matched local GES SDK when the system development package is absent, avoiding linker failures after a temporary SDK is removed.
 - Native Beam starts again when a previously saved HUD size falls outside the current launcher bounds; it restores the default size while retaining the other preferences.
 - Completed recordings wait for the editor to load before Beam considers it open, and editor startup failures report their actual diagnostic. Installed Linux interaction access reconnects automatically on launch, while Settings shows its current state instead of asking to allow it again.
 - Recorded clips now open when the encoded media ends before the capture clock, and Linux previews select the GLES shader path consistently.

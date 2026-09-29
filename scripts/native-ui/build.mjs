@@ -3,6 +3,7 @@ import { cpSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync,
 import { join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
+import { nativeBuildEnvironment } from './linux-ges.mjs'
 
 const root = resolve(fileURLToPath(new URL('../..', import.meta.url)))
 const ui = join(root, 'packages/beam-ui')
@@ -78,7 +79,8 @@ try {
     if (!existsSync(path) || !readFileSync(path).length)
       throw new Error(`Native UI build did not produce ${name}`)
   }
-  run('cargo', ['build', '--manifest-path', manifest, ...(release ? ['--release'] : [])])
+  run('cargo', ['build', '--manifest-path', manifest, ...(release ? ['--release'] : [])],
+    root, nativeBuildEnvironment())
   if (stage) stageNative(bundleDirectory)
 } finally {
   if (stage) rmSync(bundleDirectory, { recursive: true, force: true })
