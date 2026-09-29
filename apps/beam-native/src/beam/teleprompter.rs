@@ -40,16 +40,25 @@ pub(super) fn validate(script: &TeleprompterDocument) -> Result<(), String> {
         return Err("script exceeds 48 KiB".into());
     }
     let settings = &script.settings;
-    if !(16..=36).contains(&settings.font_size) {
-        return Err("teleprompter font size must be 16–36".into());
+    if !(16..=96).contains(&settings.font_size) {
+        return Err("teleprompter font size must be 16–96".into());
     }
     for (key, number, min, max) in [
         ("speed", settings.scroll_speed, 5.0, 200.0),
         ("line height", settings.line_height, 1.0, 2.5),
+        ("window opacity", settings.window_opacity, 0.1, 1.0),
     ] {
         if !number.is_finite() || !(min..=max).contains(&number) {
             return Err(format!("invalid teleprompter {key}"));
         }
+    }
+    if settings.text_color.len() != 9
+        || !settings.text_color.starts_with('#')
+        || !settings.text_color.as_bytes()[1..]
+            .iter()
+            .all(u8::is_ascii_hexdigit)
+    {
+        return Err("teleprompter text color must be #RRGGBBAA".into());
     }
     time::OffsetDateTime::parse(
         &script.updated_at_utc,

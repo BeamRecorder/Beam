@@ -17,22 +17,22 @@ const edges: { direction: ResizeDirection; inset: PositionInsetsValue; width?: n
 ]
 
 /** Final paint layer shares the surface silhouette, with no dark rim outside it. */
-export function WindowOutline(props: { rounded?: boolean }): JSX.Element {
+export function WindowOutline(props: { rounded?: boolean; radius?: number }): JSX.Element {
   const theme = useTheme<WidgetTheme>()
   return <rectangle position="absolute" inset={{ left: 0, right: 0, top: 0, bottom: 0 }}
-    radii={props.rounded === false ? 0 : 12} border={{ width: 1, color: theme().outlineBorder }} />
+    radii={props.rounded === false ? 0 : props.radius ?? 12} border={{ width: 1, color: theme().outlineBorder }} />
 }
 
 /** Rounded native client surface with real OS resize handles. */
-export function WindowSurface(props: { api?: BeamApi; children: JSX.Element; resizable?: boolean }): JSX.Element {
+export function WindowSurface(props: { api?: BeamApi; children: JSX.Element; resizable?: boolean; radius?: number }): JSX.Element {
   const theme = useTheme<WidgetTheme>()
   return <container width="100%" height="100%">
-    <rectangle width="100%" height="100%" radii={12} clip background={theme().background}>
+    <rectangle width="100%" height="100%" radii={props.radius ?? 12} clip background={theme().background}>
       <container width="100%" height="100%" padding={1}>{props.children}</container>
     </rectangle>
     {props.api && props.resizable !== false && edges.map(edge => <touchArea position="absolute" inset={edge.inset}
       width={edge.width} height={edge.height} mouseCursor={edge.cursor}
       onPointerDown={() => void props.api!.resizeWindow(edge.direction).catch(console.error)} />)}
-    <WindowOutline />
+    <WindowOutline radius={props.radius} />
   </container>
 }

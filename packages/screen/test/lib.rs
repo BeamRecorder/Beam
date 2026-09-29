@@ -25,6 +25,8 @@ mod model;
 mod screen_frame;
 #[path = "screen/recording.rs"]
 mod screen_metrics;
+#[path = "screen/source_geometry.rs"]
+mod screen_source_geometry;
 
 #[cfg(target_os = "linux")]
 #[path = "screen/linux/mod.rs"]

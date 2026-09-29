@@ -19,7 +19,9 @@ pub(super) fn route_deliveries(
             let generation = delivery.callback.node.generation();
             if let Some((_, sender)) = auxiliary
                 .iter()
-                .find(|(base, _)| generation >= *base && generation < *base + 100_000)
+                // Retained auxiliary actors own one exact generation. Ranges
+                // overlapped for the two region scenes and swallowed clicks.
+                .find(|(base, _)| generation == *base)
             {
                 let _ = sender.send(delivery);
             } else {

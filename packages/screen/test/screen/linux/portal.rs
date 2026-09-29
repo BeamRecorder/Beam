@@ -8,6 +8,57 @@ use super::{
 use crate::model::{CursorSelection, PortalSourceKind};
 use ashpd::desktop::screencast::{CursorMode, SourceType};
 
+fn stream(
+    position: Option<(i32, i32)>,
+    size: Option<(i32, i32)>,
+) -> ashpd::desktop::screencast::Stream {
+    use zbus::zvariant::{LE, OwnedValue, Value, serialized::Context, to_bytes};
+    let mut properties = std::collections::HashMap::<String, OwnedValue>::new();
+    for (name, value) in [("position", position), ("size", size)] {
+        if let Some(value) = value {
+            properties.insert(
+                name.into(),
+                OwnedValue::try_from(Value::from(value)).expect("variant"),
+            );
+        }
+    }
+    to_bytes(Context::new_dbus(LE, 0), &(42_u32, properties))
+        .expect("serialize stream")
+        .deserialize()
+        .expect("deserialize portal stream")
+        .0
+}
+
+#[test]
+fn portal_geometry_retains_compositor_coordinates_without_applying_a_pixel_scale() {
+    let stream = stream(Some((-1920, 0)), Some((1920, 1080)));
+    let geometry = super::stream_geometry(&stream).expect("geometry");
+    assert_eq!(geometry.position, Some((-1920, 0)));
+    assert_eq!(geometry.size, Some((1920, 1080)));
+}
+
+#[test]
+fn portal_geometry_preserves_absent_optional_properties() {
+    for position in [None, Some((-5, -10))] {
+        let stream = stream(position, None);
+        let geometry = super::stream_geometry(&stream).expect("optional geometry");
+        assert!(geometry.size.is_none());
+    }
+}
+
+#[test]
+fn portal_geometry_rejects_zero_and_negative_display_sizes() {
+    for size in [(0, 1080), (1920, 0), (-1, 1080), (1920, -1)] {
+        let stream = stream(None, Some(size));
+        assert_eq!(
+            super::stream_geometry(&stream)
+                .expect_err("invalid size")
+                .code(),
+            "portal-invalid-stream-response"
+        );
+    }
+}
+
 #[test]
 fn portal_picker_modes_follow_the_requested_screen_and_cursor() {
     assert!(source_type(PortalSourceKind::Monitor).contains(SourceType::Monitor));
@@ -65,6 +116,7 @@ fn prepared_portal_remote_fd_can_only_be_consumed_once() -> Result<(), Box<dyn s
         node_id: 7,
         stream_id: Some("stream-7".into()),
         source_type: Some(SourceType::Monitor),
+        geometry: Default::default(),
         control: PortalControl {
             commands: None,
             thread: None,
@@ -129,6 +181,7 @@ fn portal_worker_prepares_remote_and_closes_on_command() -> Result<(), Box<dyn s
                 node_id: 42,
                 stream_id: Some("fixture-stream".into()),
                 source_type: Some(SourceType::Window),
+                geometry: Default::default(),
             }))
             .map_err(|error| crate::CaptureError::Backend(error.to_string()))?;
         let command = commands.blocking_recv();
@@ -200,6 +253,7 @@ fn portal_worker_error_after_preparation_is_returned_on_close() {
                 node_id: 1,
                 stream_id: None,
                 source_type: None,
+                geometry: Default::default(),
             }))
             .map_err(|error| crate::CaptureError::Backend(error.to_string()))?;
         Err(crate::CaptureError::Backend(
@@ -227,6 +281,7 @@ fn completed_portal_worker_is_unavailable_before_close_and_close_is_repeatable()
                 node_id: 9,
                 stream_id: None,
                 source_type: None,
+                geometry: Default::default(),
             }))
             .map_err(|error| crate::CaptureError::Backend(error.to_string()))?;
         Ok(())
@@ -254,6 +309,7 @@ fn dropping_prepared_portal_sends_close_to_its_worker() {
                 node_id: 10,
                 stream_id: None,
                 source_type: None,
+                geometry: Default::default(),
             }))
             .map_err(|error| crate::CaptureError::Backend(error.to_string()))?;
         if matches!(commands.blocking_recv(), Some(super::PortalCommand::Close)) {

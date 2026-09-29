@@ -5,6 +5,33 @@ fn request() -> Value {
     json!({ "mode":"recorder", "sourceMode":"display", "sourceId":"x11:monitor:1:0", "cameraId":null,
         "microphoneId":null, "systemAudioId":null })
 }
+
+#[test]
+fn video_editor_requests_use_the_argui_process_with_a_validated_project_id() {
+    let project = ProjectId::new();
+    assert_eq!(
+        editor_argument(json!({ "projectId": project, "mode": "video" })).unwrap(),
+        format!("--editor={project}")
+    );
+}
+
+#[test]
+fn screenshot_editor_requests_never_fall_through_to_a_legacy_process() {
+    let error = editor_argument(json!({ "projectId": ProjectId::new(), "mode": "screenshot" }))
+        .unwrap_err();
+    assert!(error.contains("native Argui app") && error.contains("remains saved"));
+}
+
+#[test]
+fn editor_arguments_reject_invalid_ids_modes_and_unexpected_process_arguments() {
+    for payload in [
+        json!({ "projectId": "../project", "mode": "video" }),
+        json!({ "projectId": ProjectId::new(), "mode": "invalid" }),
+        json!({ "projectId": ProjectId::new(), "mode": "video", "executable": "legacy" }),
+    ] {
+        assert!(editor_argument(payload).is_err());
+    }
+}
 #[test]
 fn typed_capture_request_rejects_invalid_modes_and_unknown_fields() {
     for patch in [

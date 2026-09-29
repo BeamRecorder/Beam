@@ -85,3 +85,23 @@ path = "test/solid_bundles.rs"
 [[test]]
 name = "native_editor"
 path = "test/editor/mod.rs"
+
+[[test]]
+name = "native_region"
+path = "test/desktop_application/region.rs"
+
+[[test]]
+name = "native_audio_meters"
+path = "test/beam/audio_meters.rs"
+
+[[test]]
+name = "native_scene"
+path = "test/runner/scene.rs"
+
+[[test]]
+name = "presentation_timing"
+path = "test/telemetry/presentation.rs"
+
+[[test]]
+name = "window_activation"
+path = "test/desktop_application/activation.rs"

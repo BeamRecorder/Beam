@@ -27,6 +27,7 @@ fn stopped_recording_rejects_lifecycle_commands_and_stop_is_idempotent() {
     recording.stop().expect("stop");
     recording.stop().expect("second stop");
     assert!(recording.source_id().is_none());
+    assert!(recording.source_geometry().is_none());
 }
 #[test]
 fn raw_video_format_is_never_adjusted_for_an_encoder() {

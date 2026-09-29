@@ -44,7 +44,7 @@ fn auxiliary_state_and_actions_reach_the_hud_without_changing_window_identity() 
             1,
             "main",
             "update",
-            json!({ "remaining": 2, "paused": true })
+            json!({ "remaining": 2, "paused": true, "shortcut": "Ctrl+Shift+R", "pauseShortcut": "Alt+P" })
         )["status"],
         "ok"
     );
@@ -56,6 +56,8 @@ fn auxiliary_state_and_actions_reach_the_hud_without_changing_window_identity() 
     let state = request(&registry, 2, "recorder", "state", Value::Null);
     assert_eq!(state["value"]["remaining"], 2);
     assert_eq!(state["value"]["paused"], true);
+    assert_eq!(state["value"]["shortcut"], "Ctrl+Shift+R");
+    assert_eq!(state["value"]["pauseShortcut"], "Alt+P");
 
     let region = json!({ "x": 0.1, "y": 0.15, "width": 0.3, "height": 0.2 });
     assert_eq!(
@@ -101,6 +103,7 @@ fn presentation_patches_reject_unknown_keys_and_fractional_revisions() {
         json!({"regionRevision": 0.5}),
         json!({"busy": "true"}),
         json!({"unknown":true}),
+        json!({"pauseShortcut": "P".repeat(81)}),
     ]
     .into_iter()
     .enumerate()

@@ -5,6 +5,9 @@ use argui_runtime::{
 use argui_ui::UiEventKind;
 use beam_native::event_json;
 
+#[path = "delivery/resizes.rs"]
+mod resizes;
+
 #[test]
 fn native_window_and_reload_generations_deliver_to_the_local_js_identity() {
     for generation in [1, 2, 100_000, 200_000, 300_000, 400_000] {
@@ -36,6 +39,9 @@ fn native_window_and_reload_generations_deliver_to_the_local_js_identity() {
         assert_eq!(delivery.callback.node.generation(), generation);
     }
 }
+
+#[path = "delivery/pointers.rs"]
+mod pointers;
 
 #[path = "delivery/types.rs"]
 mod types;

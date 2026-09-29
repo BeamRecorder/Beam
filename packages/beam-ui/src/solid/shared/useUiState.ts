@@ -4,7 +4,7 @@ import type { BeamUiState } from './beamTypes'
 
 /** Observes capture presentation state across the retained native scenes. */
 export function useUiState(api: BeamApi) {
-  const [state, setState] = createSignal<BeamUiState>({ remaining: 3, shortcut: 'Alt+Shift+R', paused: false, busy: false, regionRevision: 0 })
+  const [state, setState] = createSignal<BeamUiState>({ remaining: 3, shortcut: 'Alt+Shift+R', pauseShortcut: 'Alt+Shift+P', paused: false, busy: false, regionRevision: 0 })
   let disposed = false
   onCleanup(() => { disposed = true })
   onMount(() => {

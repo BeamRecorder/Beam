@@ -72,7 +72,13 @@ pub(crate) struct StoredExtras {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub native_hud_position: Option<WindowPosition>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub native_window_positions: Option<BTreeMap<String, WindowPosition>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub native_countdown_seconds: Option<u8>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub native_hide_taskbar: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub native_hide_desktop_icons: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub native_system_audio_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

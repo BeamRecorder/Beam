@@ -1,6 +1,6 @@
 //! Crop geometry in the same UI units as the native spotlight input region.
 
-use super::types::Corner;
+use super::types::{Corner, Edge};
 use argui_core::{Point, Rect, Size};
 
 /// Bounds `point` to the selected monitor's UI viewport.
@@ -149,6 +149,90 @@ pub(super) fn corner_at(rect: Rect, point: Point) -> Option<Corner> {
     None
 }
 
+/// Returns the narrow resize band, leaving the inner drag band available for moving.
+pub(super) fn edge_at(rect: Rect, point: Point) -> Option<Edge> {
+    let right = rect.origin.x + rect.size.width;
+    let bottom = rect.origin.y + rect.size.height;
+    if point.x >= rect.origin.x && point.x <= right {
+        if (point.y - rect.origin.y).abs() <= 4.0 {
+            return Some(Edge::North);
+        }
+        if (point.y - bottom).abs() <= 4.0 {
+            return Some(Edge::South);
+        }
+    }
+    if point.y >= rect.origin.y && point.y <= bottom {
+        if (point.x - rect.origin.x).abs() <= 4.0 {
+            return Some(Edge::West);
+        }
+        if (point.x - right).abs() <= 4.0 {
+            return Some(Edge::East);
+        }
+    }
+    None
+}
+
+/// Resizes one edge, keeping its opposite edge fixed and centering a ratio constraint.
+pub(super) fn resized_edge(
+    rect: Rect,
+    edge: Edge,
+    at: Point,
+    ratio: Option<f32>,
+    viewport: Size,
+) -> Rect {
+    let at = clamped(at, viewport);
+    let right = rect.origin.x + rect.size.width;
+    let bottom = rect.origin.y + rect.size.height;
+    let center = Point::new(
+        rect.origin.x + rect.size.width / 2.0,
+        rect.origin.y + rect.size.height / 2.0,
+    );
+    let horizontal = matches!(edge, Edge::West | Edge::East);
+    let fixed = match edge {
+        Edge::North => bottom,
+        Edge::South => rect.origin.y,
+        Edge::West => right,
+        Edge::East => rect.origin.x,
+    };
+    let end = if horizontal { at.x } else { at.y };
+    let mut extent = (end - fixed).abs();
+    let mut other = if horizontal {
+        rect.size.height
+    } else {
+        rect.size.width
+    };
+    if let Some(ratio) = ratio.filter(|value| value.is_finite() && *value > 0.0) {
+        let limit = if horizontal {
+            center.y.min(viewport.height - center.y) * 2.0
+        } else {
+            center.x.min(viewport.width - center.x) * 2.0
+        };
+        other = (if horizontal {
+            extent / ratio
+        } else {
+            extent * ratio
+        })
+        .min(limit.max(0.0));
+        extent = if horizontal {
+            other * ratio
+        } else {
+            other / ratio
+        };
+    }
+    let start = if end < fixed { fixed - extent } else { fixed };
+    if horizontal {
+        Rect::new(
+            Point::new(start, center.y - other / 2.0),
+            Size::new(extent, other),
+        )
+    } else {
+        Rect::new(
+            Point::new(center.x - other / 2.0, start),
+            Size::new(other, extent),
+        )
+    }
+}
+
 /// Tests whether a pointer is inside the crop including its visible drag band.
 pub(super) fn contains(rect: Rect, point: Point) -> bool {
     point.x >= rect.origin.x
@@ -157,6 +241,28 @@ pub(super) fn contains(rect: Rect, point: Point) -> bool {
         && point.y <= rect.origin.y + rect.size.height
 }
 
-#[cfg(test)]
-#[path = "../../../test/desktop_application/region/geometry.rs"]
-mod tests;
+/// Snaps a bounded UI point to the physical desktop's pixel grid.
+pub(super) fn pixel_point(point: Point, viewport: Size, scale: f64) -> Point {
+    let point = clamped(point, viewport);
+    let snap = |value: f32| (f64::from(value) * scale).round() as f32 / scale as f32;
+    Point::new(
+        snap(point.x).min(viewport.width),
+        snap(point.y).min(viewport.height),
+    )
+}
+
+/// Snaps both crop edges, preserving physical pixel dimensions at fractional DPI.
+pub(super) fn pixel_rect(rect: Rect, viewport: Size, scale: f64) -> Rect {
+    selection(
+        pixel_point(rect.origin, viewport, scale),
+        pixel_point(
+            Point::new(
+                rect.origin.x + rect.size.width,
+                rect.origin.y + rect.size.height,
+            ),
+            viewport,
+            scale,
+        ),
+        viewport,
+    )
+}

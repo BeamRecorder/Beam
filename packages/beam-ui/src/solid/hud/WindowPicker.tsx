@@ -1,4 +1,5 @@
 import { useTR } from '../shared/i18n'
+import { ErrorNotice } from '../shared/base-ui/errorNotice'
 import { createSignal, onCleanup, onMount, Show } from 'solid-js'
 import type { AssetRef } from '@argui/host'
 import type { JSX } from '@argui/solid/jsx-runtime'
@@ -139,7 +140,7 @@ export function WindowPicker(props: { api: BeamApi }): JSX.Element {
           renderItem={index => <WindowTile api={props.api} choice={choices()[index]} active={active() === index}
             disabled={pending()} onHover={() => hover(index)} onSelect={() => void select(index)} />} />}</Show>
       </Show>
-      <Show when={error()}><text color={theme().destructive} fontSize={11} lineClamp={1} role="alert">{error()}</text></Show>
+      <ErrorNotice message={error()} lineClamp={1} onCopy={text => props.api.copyText(text)} />
     </column>
   </WindowSurface>
 }

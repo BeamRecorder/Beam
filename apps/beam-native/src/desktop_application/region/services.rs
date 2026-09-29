@@ -1,6 +1,9 @@
 //! Typed services for opening the native spotlight and controlling its crop.
 
-use super::types::{ColorsRequest, PresentRequest, PresetRequest, RegionMessage, RegionState};
+use super::{
+    capture::{monitor_for_window, screen_pixels},
+    types::{ColorsRequest, PresentRequest, PresetRequest, RegionMessage, RegionState},
+};
 use crate::{ServiceRegistry, json};
 use argui_core::{Color, Size};
 use argui_platform::{
@@ -13,7 +16,7 @@ use std::{
         Arc, Mutex,
         mpsc::{self, Sender},
     },
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 /// Registers native crop operations; no pointer stream crosses the service bridge.
@@ -59,11 +62,29 @@ pub(crate) fn register(
                 "16:9",
                 "16:10",
                 "4:3",
+                "3:2",
+                "5:4",
                 "1:1",
+                "21:9",
+                "32:9",
                 "9:16",
+                "2:3",
+                "3:4",
+                "4:5",
+                "3840×2160",
+                "2560×1440",
+                "2560×1080",
                 "1920×1080",
+                "1920×1200",
+                "1600×900",
+                "1440×900",
+                "1366×768",
                 "1280×720",
+                "1024×768",
                 "1080×1920",
+                "1080×1350",
+                "1080×1080",
+                "720×1280",
             ]
             .contains(&request.value.as_str())
             {
@@ -127,25 +148,90 @@ pub(crate) fn register(
                 .lock()
                 .unwrap_or_else(|poison| poison.into_inner())
                 .snapshot();
-            if !snapshot.selected || snapshot.revision != request.revision {
+            if !snapshot.open || snapshot.dragging || snapshot.revision != request.revision {
                 return Ok(());
             }
-            query(&sender, |reply| {
-                NativeHostApplicationRequest::SetWindowPhysicalPosition(
-                    WindowKey::new("regionControls"),
+            let preferences = crate::beam::initial_preferences()?;
+            let saved = preferences.window_positions.get("regionActions");
+            let (actions_x, actions_y) =
+                saved.map_or((snapshot.actions_x, snapshot.actions_y), |position| {
+                    let state = present_state
+                        .lock()
+                        .unwrap_or_else(|poison| poison.into_inner());
+                    let Some(monitor) = &state.monitor else {
+                        return (snapshot.actions_x, snapshot.actions_y);
+                    };
+                    let width = (snapshot.actions_width * state.pixel_scale).round() as i32;
+                    let height = (snapshot.actions_height * state.pixel_scale).round() as i32;
+                    (
+                        (position.x as i32)
+                            .clamp(monitor.x, monitor.x + (monitor.width as i32 - width).max(0)),
+                        (position.y as i32).clamp(
+                            monitor.y,
+                            monitor.y + (monitor.height as i32 - height).max(0),
+                        ),
+                    )
+                });
+            for (name, x, y, width, height) in [
+                snapshot.selected.then_some((
+                    "regionControls",
                     snapshot.controls_x,
                     snapshot.controls_y,
-                    reply,
-                )
-            })?;
-            query(&sender, |reply| {
-                NativeHostApplicationRequest::SetWindowPhysicalPosition(
-                    WindowKey::new("regionActions"),
-                    snapshot.actions_x,
-                    snapshot.actions_y,
-                    reply,
-                )
-            })?;
+                    snapshot.controls_width,
+                    snapshot.controls_height,
+                )),
+                Some((
+                    "regionActions",
+                    actions_x,
+                    actions_y,
+                    snapshot.actions_width,
+                    snapshot.actions_height,
+                )),
+            ]
+            .into_iter()
+            .flatten()
+            {
+                let key = WindowKey::new(name);
+                // Dragging already hides these surfaces. Presets only reposition
+                // retained controls so the compositor does not replay their entrance.
+                query(&sender, |reply| {
+                    NativeHostApplicationRequest::SetWindowPhysicalPosition(
+                        key.clone(),
+                        x,
+                        y,
+                        reply,
+                    )
+                })?;
+                query(&sender, |reply| {
+                    NativeHostApplicationRequest::SetWindowSize(key.clone(), width, height, reply)
+                })?;
+                let deadline = Instant::now() + Duration::from_secs(2);
+                loop {
+                    let info: NativeWindowInfo = query(&sender, |reply| {
+                        NativeHostApplicationRequest::GetWindowInfo(key.clone(), reply)
+                    })?;
+                    let placed = info.x.zip(info.y).is_some_and(|(actual_x, actual_y)| {
+                        (actual_x * info.scale_factor).round() as i32 == x
+                            && (actual_y * info.scale_factor).round() as i32 == y
+                    });
+                    let sized =
+                        (info.width - width).abs() < 1.0 && (info.height - height).abs() < 1.0;
+                    let current = present_state
+                        .lock()
+                        .unwrap_or_else(|poison| poison.into_inner())
+                        .snapshot();
+                    if current.revision != request.revision || !current.open || current.dragging {
+                        return Ok(());
+                    }
+                    if placed && sized {
+                        break;
+                    }
+                    if Instant::now() >= deadline {
+                        return Err(format!("The window manager did not place {name}."));
+                    }
+                    std::thread::sleep(Duration::from_millis(8));
+                }
+            }
             message(
                 &sender,
                 RegionMessage::Present {
@@ -183,11 +269,16 @@ fn open(
     let monitors: Vec<NativeMonitorInfo> = query(sender, |reply| {
         NativeHostApplicationRequest::GetMonitors(WindowKey::main(), reply)
     })?;
-    let monitor = monitors
-        .iter()
-        .find(|monitor| monitor.primary)
-        .or_else(|| monitors.first())
-        .ok_or("no native monitor is available")?;
+    let monitor = monitor_for_window(&info, &monitors).ok_or("no native monitor is available")?;
+    if monitor.width == 0
+        || monitor.height == 0
+        || !monitor.scale_factor.is_finite()
+        || monitor.scale_factor <= 0.0
+    {
+        return Err("The native monitor has invalid pixel geometry.".into());
+    }
+    let capture = screen_pixels(monitor, &monitors)?;
+    let monitor = &capture.monitor;
     let width = f64::from(monitor.width) / monitor.scale_factor;
     let height = f64::from(monitor.height) / monitor.scale_factor;
     let created = {
@@ -201,7 +292,11 @@ fn open(
         state.input_holes = capabilities.input_regions;
         state.crop = None;
         state.drag = None;
+        state.magnifier = None;
+        state.pixels = Some(capture.pixels);
+        state.source_id = Some(capture.source_id);
         state.open = true;
+        state.passive = false;
         state.revision += 1;
         state.created
     };
@@ -218,7 +313,6 @@ fn open(
                 reply,
             )
         })?;
-        message(sender, RegionMessage::Refresh)?;
     } else {
         let mut spec = WindowSpec::new(
             key.clone(),
@@ -232,6 +326,8 @@ fn open(
                 transparent: true,
                 native_shadow: false,
                 level: WindowLevel::AlwaysOnTop,
+                skip_taskbar: true,
+                focus_on_launch: false,
                 close_behavior: CloseBehavior::Hide,
                 ..WindowConfig::default()
             },
@@ -245,6 +341,32 @@ fn open(
             .unwrap_or_else(|poison| poison.into_inner())
             .created = true;
     }
+    // The actual window DPI may differ from a monitor's advertised DPI on X11.
+    // Pointer events and the loupe must share the runtime's physical/UI scale.
+    let native: NativeWindowInfo = query(sender, |reply| {
+        NativeHostApplicationRequest::GetWindowInfo(key.clone(), reply)
+    })?;
+    let scale = native.scale_factor * f64::from(native.ui_zoom_factor);
+    if !scale.is_finite() || scale <= 0.0 {
+        return Err("The region window has invalid DPI.".into());
+    }
+    query(sender, |reply| {
+        NativeHostApplicationRequest::SetWindowSize(
+            key.clone(),
+            f64::from(monitor.width) / native.scale_factor,
+            f64::from(monitor.height) / native.scale_factor,
+            reply,
+        )
+    })?;
+    {
+        let mut state = state.lock().unwrap_or_else(|poison| poison.into_inner());
+        state.pixel_scale = scale;
+        state.viewport = Size::new(
+            (f64::from(monitor.width) / scale) as f32,
+            (f64::from(monitor.height) / scale) as f32,
+        );
+        state.revision += 1;
+    }
     query(sender, |reply| {
         NativeHostApplicationRequest::SetWindowInputRegion(
             key.clone(),
@@ -257,7 +379,8 @@ fn open(
     })?;
     query(sender, |reply| {
         NativeHostApplicationRequest::FocusNamedWindow(key, reply)
-    })
+    })?;
+    message(sender, RegionMessage::Refresh)
 }
 
 /// Sends a typed model message after releasing shared state locks.

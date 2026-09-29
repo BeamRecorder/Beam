@@ -4,6 +4,7 @@ import { useTheme } from '@argui/solid'
 import type { WidgetTheme } from '@argui/widgets/solid'
 import { mediaAssets } from '../../../../assets.generated'
 import { Button } from '../base-ui/button'
+import { ErrorNotice } from '../base-ui/errorNotice'
 import { Icon } from '../base-ui/icon'
 import type { BeamApi } from '../beamApi'
 import type { ApplicationInfo } from '../beamTypes'
@@ -94,9 +95,7 @@ export function About(props: { api: BeamApi; info: ApplicationInfo | null; copie
           </Button>
         </Show>
       </row>
-      <Show when={error() || update()?.error}>
-        <text color={theme().destructive} fontSize={11} lineClamp={4} role="alert">{error() || update()?.error || ''}</text>
-      </Show>
+      <ErrorNotice message={error() || update()?.error || ''} lineClamp={4} onCopy={text => props.api.copyText(text)} />
     </column>
   </column>
 }

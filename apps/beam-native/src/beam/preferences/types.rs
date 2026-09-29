@@ -62,9 +62,15 @@ pub(crate) struct NativePreferences {
     pub capture_mode: CaptureMode,
     pub hud_window: WindowSize,
     pub hud_position: Option<WindowPosition>,
+    #[serde(default)]
+    pub window_positions: BTreeMap<String, WindowPosition>,
     pub shortcuts: BTreeMap<String, String>,
     pub devices: Devices,
     pub countdown_seconds: u8,
+    #[serde(default)]
+    pub hide_taskbar: bool,
+    #[serde(default)]
+    pub hide_desktop_icons: bool,
 }
 #[derive(Default, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -74,9 +80,12 @@ pub(crate) struct PreferencePatch {
     pub capture_mode: Option<CaptureMode>,
     pub hud_window: Option<WindowSize>,
     pub hud_position: Option<WindowPosition>,
+    pub window_positions: Option<BTreeMap<String, WindowPosition>>,
     pub shortcuts: Option<BTreeMap<String, String>>,
     pub devices: Option<DevicePatch>,
     pub countdown_seconds: Option<u8>,
+    pub hide_taskbar: Option<bool>,
+    pub hide_desktop_icons: Option<bool>,
     pub teleprompter_document: Option<TeleprompterDocument>,
 }
 pub(crate) const DEFAULT_SHORTCUTS: [(&str, &str); 6] = [

@@ -1,5 +1,7 @@
 //! Beam-specific services exposed to the native Solid presentation.
 
+mod audio_meters;
+mod desktop_capture;
 mod info;
 mod preferences;
 mod requests;
@@ -22,8 +24,8 @@ use json::{JsonFile, Writer};
 use requests::recording_config;
 use serde_json::Value;
 use types::{
-    ActiveCapture, CaptureRequest, CaptureStatus, EditorMode, EditorRequest, ScreenshotMetadata,
-    ScreenshotResult, SourceCatalog, SourceOption,
+    ActiveCapture, CaptureRequest, CaptureStatus, ScreenshotMetadata, ScreenshotResult,
+    SourceCatalog, SourceOption,
 };
 
 use crate::{ServiceOutcome, ServiceRegistry};
@@ -44,6 +46,8 @@ pub(crate) fn register(registry: &Arc<ServiceRegistry>) -> Result<(), String> {
     let projects = preferences.projects_root()?;
     let controller = RecordingController::new(&projects).map_err(|error| error.to_string())?;
     let active = Arc::new(Mutex::new(None::<ActiveCapture>));
+    let desktop = Arc::new(Mutex::new(None::<desktop_capture::Monitor>));
+    let meters = audio_meters::register(registry, controller.clone(), active.clone())?;
     updater::register(registry, controller.clone())?;
 
     let read = preferences.clone();
@@ -67,27 +71,80 @@ pub(crate) fn register(registry: &Arc<ServiceRegistry>) -> Result<(), String> {
     registry.register("beam", "sources", move |_| {
         outcome(source_catalog(&sources))
     });
+    registry.register("beam", "desktopCapabilities", move |_| {
+        outcome(
+            beam_screen::desktop::appearance::capabilities()
+                .map_err(|error| error.to_string())
+                .and_then(|value| json::encode(&value)),
+        )
+    });
 
     let prepare = controller.clone();
     let prepare_active = Arc::clone(&active);
     let script_preferences = preferences.clone();
+    let prepare_meters = meters.clone();
+    let prepare_desktop = desktop.clone();
+    let preparing = Mutex::new(());
     registry.register("beam", "prepare", move |request| {
-        let config = match recording_config(request) {
+        let _preparing = preparing
+            .lock()
+            .unwrap_or_else(|poison| poison.into_inner());
+        if prepare_active
+            .lock()
+            .unwrap_or_else(|poison| poison.into_inner())
+            .is_some()
+        {
+            return ServiceOutcome::Error("a recording is already prepared".into());
+        }
+        let mut config = match recording_config(request) {
             Ok(config) => config,
             Err(error) => return ServiceOutcome::Error(error),
         };
         let project = config.project_id;
         let output = config.output;
+        if let Err(error) = prepare_meters.suspend() {
+            prepare_meters.enable();
+            return ServiceOutcome::Error(error);
+        }
+        let appearance = match desktop_capture::begin(&script_preferences) {
+            Ok(appearance) => appearance,
+            Err(error) => {
+                prepare_meters.enable();
+                return ServiceOutcome::Error(error);
+            }
+        };
+        if let Some(screen) = &mut config.screen
+            && let Some(appearance) = &appearance
+        {
+            screen
+                .excluded_window_handles
+                .extend(appearance.excluded_window_handles());
+        }
         match prepare.prepare(config) {
             Ok(status) => {
                 let Some(id) = status.session_id else {
+                    prepare_meters.enable();
                     return ServiceOutcome::Error("engine returned no session ID".into());
                 };
                 if let Some(manifest) = &status.manifest_path
                     && let Err(error) = teleprompter::checkpoint(&script_preferences, manifest)
                 {
                     let _ = prepare.cancel(id);
+                    prepare_meters.enable();
                     return ServiceOutcome::Error(error);
+                }
+                if let Some(appearance) = appearance {
+                    let monitor = match desktop_capture::Monitor::new(appearance, prepare.clone()) {
+                        Ok(monitor) => monitor,
+                        Err(error) => {
+                            let _ = prepare.cancel(id);
+                            prepare_meters.enable();
+                            return ServiceOutcome::Error(error);
+                        }
+                    };
+                    *prepare_desktop
+                        .lock()
+                        .unwrap_or_else(|poison| poison.into_inner()) = Some(monitor);
                 }
                 *prepare_active
                     .lock()
@@ -98,7 +155,10 @@ pub(crate) fn register(registry: &Arc<ServiceRegistry>) -> Result<(), String> {
                 });
                 outcome(status_json(status, Some(project)))
             }
-            Err(error) => ServiceOutcome::Error(error.to_string()),
+            Err(error) => {
+                prepare_meters.enable();
+                ServiceOutcome::Error(error.to_string())
+            }
         }
     });
 
@@ -115,15 +175,19 @@ pub(crate) fn register(registry: &Arc<ServiceRegistry>) -> Result<(), String> {
         let controller = controller.clone();
         let active = Arc::clone(&active);
         let projects_root = projects.clone();
+        let meters = meters.clone();
+        let desktop = desktop.clone();
         registry.register("beam", name, move |_| {
             let mut current = active.lock().unwrap_or_else(|poison| poison.into_inner());
             let Some(capture) = *current else {
                 return ServiceOutcome::Error("no prepared recording".into());
             };
             match operation(&controller, capture.id) {
-                Ok(status) => {
+                Ok(mut status) => {
                     if matches!(name, "stop" | "cancel") {
                         *current = None;
+                        meters.enable();
+                        desktop_capture::restore(&desktop, &mut status);
                     }
                     if name == "cancel" {
                         let category = match capture.output {
@@ -146,23 +210,46 @@ pub(crate) fn register(registry: &Arc<ServiceRegistry>) -> Result<(), String> {
                     }
                     outcome(status_json(status, Some(capture.project)))
                 }
-                Err(error) => ServiceOutcome::Error(error.to_string()),
+                Err(error) => {
+                    let mut status = controller.status();
+                    if desktop_capture::terminal(status.state) {
+                        desktop_capture::restore(&desktop, &mut status);
+                        *current = None;
+                        meters.enable();
+                    }
+                    ServiceOutcome::Error(status.error.unwrap_or_else(|| error.to_string()))
+                }
             }
         });
     }
     let status = controller.clone();
     let status_active = Arc::clone(&active);
+    let status_desktop = desktop.clone();
     registry.register("beam", "status", move |_| {
         let project = status_active
             .lock()
             .unwrap_or_else(|poison| poison.into_inner())
             .map(|active| active.project);
-        outcome(status_json(status.status(), project))
+        let mut value = status.status();
+        if desktop_capture::terminal(value.state) {
+            desktop_capture::restore(&status_desktop, &mut value);
+        }
+        outcome(status_json(value, project))
     });
 
     let still = controller.clone();
     registry.register("beam", "screenshot", move |request| {
-        outcome(capture_still(&still, &projects, &request))
+        outcome((|| {
+            let mut appearance = desktop_capture::begin(&preferences)?;
+            let excluded = appearance
+                .as_ref()
+                .map_or_else(Vec::new, |value| value.excluded_window_handles());
+            let result = capture_still(&still, &projects, &request, excluded);
+            if let Some(appearance) = &mut appearance {
+                appearance.restore().map_err(|error| error.to_string())?;
+            }
+            result
+        })())
     });
     registry.register("beam", "openVideoEditor", move |_| {
         outcome((|| {
@@ -287,6 +374,7 @@ fn capture_still(
     controller: &RecordingController,
     projects: &Path,
     request: &Value,
+    excluded_window_handles: Vec<String>,
 ) -> Result<Value, String> {
     let request: CaptureRequest = json::decode(request.clone())?;
     if !matches!(request.mode, preferences::CaptureMode::Screenshot) {
@@ -299,7 +387,7 @@ fn capture_still(
             project_id: project,
             screen: selection,
             region: requests::region(&request)?,
-            excluded_window_handles: Vec::new(),
+            excluded_window_handles,
         })
         .map_err(|error| error.to_string())?;
     let destination = projects
@@ -330,31 +418,9 @@ fn capture_still(
 }
 
 fn open_editor(payload: &Value) -> Result<Value, String> {
-    let request: EditorRequest = json::decode(payload.clone())?;
-    let project = request.project_id;
-    if matches!(request.mode, EditorMode::Video) {
-        Command::new(std::env::current_exe().map_err(|e| e.to_string())?)
-            .arg(format!("--editor={project}"))
-            .spawn()
-            .map_err(|e| e.to_string())?;
-        return Ok(Value::Null);
-    }
-    let mode = match request.mode {
-        EditorMode::Video => "video",
-        EditorMode::Screenshot => "screenshot",
-    };
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
-    let executable = std::env::var_os("BEAM_ELECTRON_BINARY")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| root.join("node_modules/.bin/electron"));
-    let mut command = Command::new(executable);
-    if let Some(app) = std::env::var_os("BEAM_ELECTRON_APP") {
-        command.arg(app);
-    } else if std::env::var_os("BEAM_ELECTRON_BINARY").is_none() {
-        command.arg(&root);
-    }
-    command
-        .arg(format!("--beam-open-project={mode}:{project}"))
+    let argument = requests::editor_argument(payload.clone())?;
+    Command::new(std::env::current_exe().map_err(|error| error.to_string())?)
+        .arg(argument)
         .spawn()
         .map_err(|error| error.to_string())?;
     Ok(Value::Null)

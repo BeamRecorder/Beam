@@ -1,7 +1,7 @@
 use crate::{
     CaptureError,
     model::{ScreenRegion, ScreenSelection},
-    screen::OwnedVideoFrame,
+    screen::{CapturedScreenFrame, OwnedVideoFrame},
 };
 use serde::{Deserialize, Serialize};
 use std::{fs::File, io::BufWriter, path::PathBuf};
@@ -47,16 +47,42 @@ pub fn capture(request: ScreenshotRequest) -> Result<ScreenshotResult, CaptureEr
     write_png(&frame, &request.output)
 }
 
-pub(crate) fn capture_frame(request: &ScreenshotRequest) -> Result<OwnedVideoFrame, CaptureError> {
+/// Captures one native frame without encoding or writing a file.
+///
+/// `request` selects the source, optional crop and excluded native windows; its
+/// output path is unused. The returned pixels retain the native BGRA layout.
+///
+/// # Errors
+/// Returns invalid-region, source, permission, timeout or native capture errors.
+pub fn capture_frame(request: &ScreenshotRequest) -> Result<OwnedVideoFrame, CaptureError> {
+    capture_frame_with_geometry(request).map(|capture| capture.frame)
+}
+
+/// Captures pixels and the authorized source's optional compositor geometry.
+///
+/// The output path is unused. Geometry describes the displayed source, while
+/// the frame retains its negotiated native pixel dimensions and row stride.
+///
+/// # Errors
+/// Returns invalid-region, source, permission, timeout or native capture errors.
+pub fn capture_frame_with_geometry(
+    request: &ScreenshotRequest,
+) -> Result<CapturedScreenFrame, CaptureError> {
     if let Some(region) = request.region {
         region.validate()?;
     }
     #[cfg(target_os = "linux")]
     return linux::capture(request);
     #[cfg(target_os = "macos")]
-    return mac::capture(request);
+    return mac::capture(request).map(|frame| CapturedScreenFrame {
+        frame,
+        geometry: None,
+    });
     #[cfg(windows)]
-    return win::capture(request);
+    return win::capture(request).map(|frame| CapturedScreenFrame {
+        frame,
+        geometry: None,
+    });
 }
 
 fn write_png(

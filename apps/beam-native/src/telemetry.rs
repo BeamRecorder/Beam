@@ -61,8 +61,10 @@ impl JsCounts {
 }
 
 #[cfg(any(debug_assertions, feature = "dev-metrics"))]
+mod presentation;
+#[cfg(any(debug_assertions, feature = "dev-metrics"))]
 mod profile;
 #[cfg(any(debug_assertions, feature = "dev-metrics"))]
-pub(crate) use profile::{
-    ProfileSummary, mark_commit_for_presentation, observe_profile, report_remaining,
-};
+pub(crate) use presentation::{discard_commit_for_presentation, mark_commit_for_presentation};
+#[cfg(any(debug_assertions, feature = "dev-metrics"))]
+pub(crate) use profile::{ProfileSummary, observe_profile, report_remaining};

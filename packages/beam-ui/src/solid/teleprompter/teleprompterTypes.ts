@@ -12,13 +12,16 @@ export interface TeleprompterDocument {
   fontSize: number;
   lineHeight: number;
   textAlign: TeleprompterTextAlign;
+  textColor: string;
+  useThemeTextColor?: boolean | null;
+  windowOpacity: number;
   theme: TeleprompterTheme;
   updatedAtUtc: string;
 }
 
 export type TeleprompterSettings = Pick<
   TeleprompterDocument,
-  'mode' | 'autoscroll' | 'scrollSpeed' | 'fontSize' | 'lineHeight' | 'textAlign'
+  'mode' | 'autoscroll' | 'scrollSpeed' | 'fontSize' | 'lineHeight' | 'textAlign' | 'textColor' | 'useThemeTextColor' | 'windowOpacity'
 >;
 
 export interface TeleprompterSessionContext {
@@ -41,6 +44,9 @@ export const TELEPROMPTER_DEFAULTS: Omit<TeleprompterDocument, 'updatedAtUtc'> =
   fontSize: TELEPROMPTER_FONT_SIZE,
   lineHeight: 1.35,
   textAlign: 'left',
+  textColor: '#ffffffff',
+  useThemeTextColor: true,
+  windowOpacity: 0.94,
   theme: 'system',
 };
 

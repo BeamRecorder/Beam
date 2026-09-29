@@ -23,8 +23,12 @@ mod editor_controls;
 mod editor_controls_layout;
 #[path = "solid_bundles/editor_splitters.rs"]
 mod editor_splitters;
+#[path = "solid_bundles/errors.rs"]
+mod errors;
 #[path = "solid_bundles/localization.rs"]
 mod localization;
+#[path = "solid_bundles/overlays.rs"]
+mod overlays;
 
 const DEFAULT_OUTPUT: &str = "default";
 const DEFAULT_OUTPUT_LABEL: &str = "Default system output";
@@ -187,12 +191,7 @@ fn validate_scene(source: &str, scene: &str, entry: &str) {
         editor::validate_selection(&checks);
         assert_no_alert(&operations.borrow(), scene);
     }
-    if scene == "app.mjs:mountRegionControls" {
-        region::validate_controls(&checks);
-    }
-    if scene == "app.mjs:mountRegionActions" {
-        region::validate_actions(&checks);
-    }
+    overlays::validate(&checks);
     checks.validate_locale(delayed_preferences);
     errors::validate_copy(&checks);
 
@@ -440,6 +439,9 @@ fn service_value(request: &ServiceRequest, output_label: &str) -> Value {
         ("editor", method) => editor::service(method, &request.payload),
         ("beam", "preferences") => localization::preferences("en"),
         ("beam", "savePreferences") => localization::saved_preferences(&request.payload),
+        ("beam", "status") => json!({
+            "state": "recording", "sessionId": "session", "manifest": { "durationNs": 5_000_000_000u64 }
+        }),
         ("beam", "info") => json!({
             "version": "test", "operatingSystem": "linux", "architecture": "x86_64",
             "logicalProcessors": 4, "desktopSession": "x11"
@@ -489,6 +491,7 @@ fn service_value(request: &ServiceRequest, output_label: &str) -> Value {
         ("teleprompter", "read") => json!({
             "schemaVersion": 1, "text": "", "mode": "continuous", "autoscroll": true,
             "scrollSpeed": 42, "fontSize": 36, "lineHeight": 1.35, "textAlign": "left",
+            "textColor": "#ffffffff", "useThemeTextColor": true, "windowOpacity": 0.94,
             "theme": "system", "updatedAtUtc": "2026-09-28T00:00:00Z"
         }),
         _ => Value::Null,

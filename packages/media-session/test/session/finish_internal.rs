@@ -229,3 +229,6 @@ fn stop_interrupts_a_source_whose_reported_queue_never_drains() {
             .is_file()
     );
 }
+
+#[path = "finish_failures.rs"]
+mod failures;

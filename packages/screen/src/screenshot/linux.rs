@@ -7,8 +7,9 @@ use crate::{
     gate::StartGate,
     model::{CursorSelection, RecordingSettings},
     screen::{
-        CursorSampleState, OwnedScreenSample, OwnedVideoFrame, ScreenConsumer, ScreenDiscontinuity,
-        ScreenOpenRequest, ScreenRecording, ScreenSampleSink, ScreenSegment, VideoFormat,
+        CapturedScreenFrame, CursorSampleState, OwnedScreenSample, OwnedVideoFrame, ScreenConsumer,
+        ScreenDiscontinuity, ScreenOpenRequest, ScreenRecording, ScreenSampleSink, ScreenSegment,
+        VideoFormat,
     },
 };
 use std::{
@@ -44,7 +45,7 @@ impl ScreenSampleSink for FirstFrame {
     }
 }
 
-pub(super) fn capture(request: &ScreenshotRequest) -> Result<OwnedVideoFrame, CaptureError> {
+pub(super) fn capture(request: &ScreenshotRequest) -> Result<CapturedScreenFrame, CaptureError> {
     let (sender, receiver) = mpsc::sync_channel(1);
     let gate = Arc::new(StartGate::new());
     let mut recording = ScreenRecording::open(ScreenOpenRequest {
@@ -57,6 +58,7 @@ pub(super) fn capture(request: &ScreenshotRequest) -> Result<OwnedVideoFrame, Ca
         start_gate: gate.clone(),
         consumer: ScreenConsumer::Samples(Box::new(FirstFrame(Some(sender)))),
     })?;
+    let geometry = recording.source_geometry();
     let frame = (|| {
         gate.release(0)?;
         recording.start()?;
@@ -67,5 +69,5 @@ pub(super) fn capture(request: &ScreenshotRequest) -> Result<OwnedVideoFrame, Ca
     let stopped = recording.stop();
     let frame = frame?;
     stopped?;
-    Ok(frame)
+    Ok(CapturedScreenFrame { frame, geometry })
 }

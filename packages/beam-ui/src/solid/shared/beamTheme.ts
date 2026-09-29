@@ -50,6 +50,9 @@ function variant(name: 'light' | 'dark'): BeamTheme {
     sidebarBorder: colors.line, sidebarRing: accent.ring,
     chart1: colors.charts[0], chart2: colors.charts[1], chart3: colors.charts[2],
     chart4: colors.charts[3], chart5: colors.charts[4], overlayTint: colors.overlayTint,
+    captureLabelSurface: colors.raised, captureLabelForeground: colors.foreground,
+    meterGreen: colors.charts[1], meterYellow: name === 'dark' ? '#facc15' : '#ca8a04',
+    meterOrange: accent.primary, meterRed: colors.danger,
     radius: 7, spacing: 6, inputHeight: 28, inputGroupHeight: 28, inputLineHeight: 20,
     fieldLabelSize: 11, selectCompactHeight: 28, selectRowHeight: 26, selectCompactRowHeight: 26,
     selectMaxPopupHeight: 240,
@@ -61,7 +64,14 @@ function variant(name: 'light' | 'dark'): BeamTheme {
 /** Concat light/dark colors and metrics, keeping Beam's orange action color. */
 export const beamThemeDefinition: ThemeDefinition<BeamTheme> = {
   ...widgetThemeDefinition,
-  tokens: { ...widgetThemeDefinition.tokens, overlayTint: { type: 'Color', default: beamPalettes.light.overlayTint, impact: 'Paint' } },
+  tokens: { ...widgetThemeDefinition.tokens, overlayTint: { type: 'Color', default: beamPalettes.light.overlayTint, impact: 'Paint' },
+    captureLabelSurface: { type: 'Color', default: beamPalettes.light.raised, impact: 'Paint' },
+    captureLabelForeground: { type: 'Color', default: beamPalettes.light.foreground, impact: 'Paint' },
+    meterGreen: { type: 'Color', default: beamPalettes.light.charts[1], impact: 'Paint' },
+    meterYellow: { type: 'Color', default: '#ca8a04', impact: 'Paint' },
+    meterOrange: { type: 'Color', default: accent.primary, impact: 'Paint' },
+    meterRed: { type: 'Color', default: beamPalettes.light.danger, impact: 'Paint' },
+  },
   variants: {
     light: variant('light'),
     dark: variant('dark'),

@@ -6,6 +6,7 @@ import { ScrollShadow, type WidgetTheme } from '@argui/widgets/solid'
 import { mediaAssets } from '../../../../assets.generated'
 import { Select } from '../base-ui/select'
 import { Button } from '../base-ui/button'
+import { ErrorNotice } from '../base-ui/errorNotice'
 import { ShortcutField } from '../base-ui/shortcutField'
 import { WindowSurface } from '../base-ui/windowSurface'
 import { Icon } from '../base-ui/icon'
@@ -133,9 +134,7 @@ export function Settings(props: { api: BeamApi; onTheme: (variant: BeamPreferenc
                   <Button width="100%" size="sm" disabled={pending()} onClick={() => void requestInputAccess()}>{TR('allowAccess')}</Button>
                 </SettingRow>
               </Show>
-              <Show when={inputAccess()?.error}>
-                <text color={theme().destructive} fontSize={12}>{inputAccess()?.error?.message ?? ''}</text>
-              </Show>
+              <ErrorNotice message={inputAccess()?.error?.message ?? ''} fontSize={12} onCopy={text => props.api.copyText(text)} />
             </Show>
             <Show when={section() === 'shortcuts'}>
               {shortcuts.map(shortcut => <SettingRow label={S(shortcut.label)}>
@@ -158,7 +157,7 @@ export function Settings(props: { api: BeamApi; onTheme: (variant: BeamPreferenc
               <About api={props.api} info={info()} copied={copied()} onCopy={copySystemInfo} />
             </Show>
           </Show>
-          <Show when={error()}><text color={theme().destructive} fontSize={12} role="alert">{error()}</text></Show>
+          <ErrorNotice message={error()} fontSize={12} onCopy={text => props.api.copyText(text)} />
         </column>
       </ScrollShadow>
     </row>

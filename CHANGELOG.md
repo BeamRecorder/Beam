@@ -6,18 +6,19 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
-- Native editor errors include a shared copy button with translated clipboard feedback and the complete diagnostic.
+- Native error messages now include a shared copy button with translated clipboard feedback, preserving the complete diagnostic.
 - Native video projects now support independent timeline sequences with their own tracks and undo/redo history, using shared source media.
 - Timeline clips show visible video filmstrips and Blick audio waveforms with shared, bounded caches and cancellable source-range decoding.
 - Native editing now supports generated text titles, image imports, and bounded audio/video fades with saved undo/redo history.
+- Microphone and system-audio controls now show real native audio levels as a green-to-red gradient behind their icons, including during recording. Disabled microphone, system audio and camera controls show red crossed-out icons.
+- The native region selector includes a precision magnifier of real screen pixels, including Wayland with initial screen authorization, desktop coordinates and pixel-snapped corner resizing.
 - Added a native, Concat-inspired video editor with a media library, composed preview, contextual controls and a multi-lane timeline. Import video/audio, trim, split, move, mix audio, adjust framing and color, and export MP4 or WebM through GStreamer Editing Services.
 - Native video projects save non-destructive edits and undo/redo history atomically, with exclusive project locking and recovery checkpoints. Beam's recorded click zooms, cursor follow and camera springs now run in Rust and share the preview/export composition.
-
 - Native Beam now supports the existing 15 interface languages through ARGUI i18n, automatically following the system language until a language is chosen in Appearance, with immediate updates across its windows.
 
 - About now checks GitHub releases through ARGUI's native updater, with cancellable downloads, package verification and explicit installation; release CI publishes the update feed and complete application packages.
 - Added a native teleprompter and a window picker with real thumbnails, foreground preview, and a selection outline.
-- Added a native ARGUI capture launcher with recorder, screenshot, and instant modes, device selection, a region picker, countdown, compact recording controls, tray behavior, and a separate settings window. Completed captures open in the Electron editor.
+- Added a native ARGUI capture launcher with recorder, screenshot, and instant modes, device selection, a region picker, countdown, compact recording controls, tray behavior, and a separate settings window. Completed video captures open in the native editor.
 - The native launcher remembers its size, position, shortcuts, and selected devices in Beam preferences.
 - Added a developer-only Argui native window linked to a pinned source checkout, so Beam can rebuild local Argui fixes without waiting for a crates.io release.
 - Added a directly callable native media engine for screen, camera, microphone and system audio, with a shared timeline, pause/resume, previews, meters, screenshots and an autonomous example that runs without ARGUI.
@@ -33,9 +34,16 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
-- The native editor uses GPU decoding where supported, GPU composition and camera/color effects, and explicit hardware video encoding. Linux preview shares GStreamer frames with Argui through DMA-BUF, and VA export shares GPU NV12 planes without CPU pixel copies. Argui exposes a common external-frame API with Vulkan, Metal/IOSurface and Direct3D shared texture imports. Export preserves full canvas dimensions.
-- Completed native video recordings now open directly in the native editor. The launcher also opens an empty editor for standalone video editing; screenshots retain their existing editor.
+- The native launcher and video editor run exclusively through Argui. Screenshot captures stay saved; native screenshot editing reports that it is unavailable instead of launching Electron.
 
+- Activating a native Beam window restores its other open windows together on X11, while keeping the chosen window focused and leaving closed windows hidden.
+
+- Both native Select styles now open with a brief fade and subtle scale animation; classic menus also slide from the trigger while compact menus preserve the selected row's alignment.
+
+- The native teleprompter now uses a blurred floating toolbar with live speed/font sliders, a full color picker, window opacity and scrolling preview. Settings persist and speed/font changes preserve reading progress.
+
+- The native editor uses GPU decoding where supported, GPU composition and camera/color effects, and explicit hardware video encoding. Linux preview shares GStreamer frames with Argui through DMA-BUF, and VA export shares GPU NV12 planes without CPU pixel copies. Argui exposes a common external-frame API with Vulkan, Metal/IOSurface and Direct3D shared texture imports. Export preserves full canvas dimensions.
+- Completed native video recordings now open directly in the native editor. The launcher also opens an empty editor for standalone video editing; screenshots remain saved while their native editor is unavailable.
 - Native microphone menus now use the desktop audio server on Linux, with hardware-only ALSA fallback; system audio uses the same On/Off choices as the editor.
 - Native text uses a slightly stronger default weight and system font fallbacks for additional writing systems.
 
@@ -56,14 +64,42 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Confirmed regions keep their dimming mask visible with mouse passthrough during countdown and recording, closing it on stop or cancellation. Countdown and default bottom-centered recording controls use the crop's display, including mixed DPI.
+- The recording timer follows native session duration through pauses, window resizing and hiding. User-moved control positions are saved before hiding; obsolete monitor positions return to the default placement.
+- Native development builds prepare isolated UI bundles, preventing missing editor files when another build refreshes the UI output during Rust compilation.
+- Region dimensions use compact pills that follow the selected light or dark theme during dragging and after selection. Changing crop presets updates retained controls without replaying their entrance animation.
+- Fixed translucent rendering artifacts in region selection and the teleprompter when separate parts of a surface update. The teleprompter now follows the selected theme, with automatic text contrast and preserved custom colors.
+- Linux Region selection now distinguishes the authorized stream's pixel resolution from Wayland/XWayland desktop geometry, selects the granted monitor, and keeps the magnifier, dimensions and crop presets aligned at different display scales.
 - Copied native text remains available on Linux desktops without a clipboard manager while Beam is running.
+- Native Linux controls and Select menus now advance active animations with independent frame deadlines; X11 and popup surfaces use supported Mailbox presentation so covered windows do not hold up other windows.
+
 - Native editor toolbar icons stay centered, sequence tabs align left, and library tabs adapt during panel dragging. Delayed library hints appear only in icon-only mode; tooltip bubbles fit short labels and wrap longer text within a maximum width.
 - Native editor edits keep the project title, preview and inspector stable without temporarily disabling every control. Undo/Redo use plain toolbar buttons, and narrow property fields keep their Select arrows visible.
 - Native editor tabs reuse the recorder's animated segmented control. Narrow library tabs show icons with delayed tooltips, and compact preview selectors open readable menus.
+- Native windows resume updates after minimizing, closing and restoring them under Wayland, including when only Settings returns. Settings preloads independently of unsupported capture-window stacking.
+- Transparent native window corners retain their border color, and Select menus wait for their first GPU frame and fade their panel, border and shadow together.
+- Native capture preparation can cancel cleanly at every asynchronous step, starts immediately when countdown is disabled, and always releases stopped or failed scene actors.
+
 - Native editor panels adapt to smaller windows. Resize handles show small centered orange pills only on hover; the native engine resizes panes directly and sends JavaScript the final size once on release.
+- X11 region controls and capture bars now declare inactive presentation and stay out of the taskbar, preventing GNOME's repeated “window is ready” notifications while retaining always-on-top stacking and keyboard interaction.
+- Native Select menus reuse their GPU renderer and load only the assets they display, reducing reopening latency. The first capture-mode tab change now animates, and returning focus resumes suspended native presentation.
+- Screenshot mode explains why camera and audio controls are absent in all 15 interface languages. Region dimensions remain visible while dragging, and its preparation controls restore their always-on-top level without requesting focus after every crop.
+- Fixed the preparation bar's countdown submenu failing on numeric labels; inline numeric text is now converted safely before reaching the native renderer.
 - The native editor keeps Beam's existing orange action and focus colors with its Concat-style surfaces.
+- The native teleprompter keeps only its four live adjustments and Play/Pause in one floating row, with direct editing when stopped and native resize bounds from 320×180 to 1600×1000. Its color picker avoids repeated layout and script scans while dragging, renders clean corner colors, removes redundant percentages, and puts the scrollbar against the popover edge.
+- The launcher's device selectors align with the top of the capture-mode tabs, and the Teleprompter button aligns with the bottom of the capture cards; both columns remain centered while resizing.
+- Native layouts follow resize events without stale geometry reads or lingering animated sizes, and a timed-out frame retries without waiting for another click. Window geometry saves after resizing settles, and live audio meters no longer trigger layout work for each level change.
+- Fixed invalid zero-duration native transitions at startup and on pause; long teleprompter scripts retain their selected speed through bounded scrolling segments.
 - Native screen recordings retain sharper text and fine detail with explicit recording quality and hardware VP9 on supported GPUs, while preserving source dimensions and reporting the actual codec.
 - The native editor now follows the Concat reference more closely, with resizable panes, a timeline that fills its pane, real source thumbnails, wider contextual controls, and full-resolution preview by default.
+- Region dimensions are read-only text beside an expanded preset Select, aligned to the crop's upper left and placed below when needed. Its preparation bar shares camera, microphone and system-audio selectors with the launcher, with Cancel at the left, Record at the right and consistent corner radii. Native corner/edge cursors support resizing.
+- Fixed the precision loupe's cursor/DPI alignment on native capture backends. Wayland authorizes real pixels when Region opens and reuses the screen grant for recording when the portal supports it, without invoking the Screenshot portal's sound/flash.
+- Fixed native region-bar clicks being routed to the preset window, retained live audio levels, and Cancel handling. Region, full-screen and window capture now share the same preparation controls, bottom-centered by default with saved user moves.
+- Audio-meter gradients are transparent and subtle, with fast response, brief interpolation and immediate silence clearing instead of delayed activity or a permanent green level.
+- Preparation controls include countdown quick settings and supported desktop/taskbar hiding, restoring the desktop after cancellation or recording failure. Unavailable desktop options are shown explicitly.
+- Countdown and recording controls reassert their X11 always-on-top level. The recording bar starts at the bottom center and remembers user moves; auxiliary windows restore their saved desktop positions. Countdown shortcut hints appear below Cancel, matching the existing frontend.
+- Finishing a native recording opens only its video editor without showing the capture launcher again.
+
 - Native GPU exports preserve color by using the same BT.709 conversion and encoder metadata.
 
 - Native Shadcn select menus follow their button width when resized, with opaque themed borders and smooth corner coverage.

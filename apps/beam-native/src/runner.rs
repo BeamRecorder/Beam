@@ -23,7 +23,7 @@ use crate::{
     effects::registry_from_json,
     hot_reload::{BundleWatcher, Dispatch},
     native_metrics::control_request,
-    services::{ServiceChannels, ServiceRegistry, ServiceResponse},
+    services::{ActorSession, ServiceChannels, ServiceRegistry, ServiceResponse},
     telemetry::JsCounts,
 };
 #[cfg(any(debug_assertions, feature = "dev-metrics"))]
@@ -46,11 +46,14 @@ use argui_runtime::{
 use serde_json::Value;
 
 mod auxiliary;
+mod auxiliary_types;
 mod deliveries;
+mod scene;
 pub(crate) use auxiliary::WindowGate;
 #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
 mod fonts;
 mod js_loop;
+mod js_loop_types;
 mod paths;
 mod relay;
 mod renderer;
@@ -134,20 +137,12 @@ pub fn run_desktop_with_services(
     let bundle_path = std::env::var_os("ARGUI_APP_BUNDLE")
         .map(PathBuf::from)
         .or_else(dev_bundle_path)
-        .or_else(|| {
-            let executable = std::env::current_exe().ok()?;
-            Some(paths::fallback_bundle_path(
-                &executable,
-                &PathBuf::from(env!("CARGO_MANIFEST_DIR")),
-            ))
-        });
-    let bundle_path = if std::env::args().any(|argument| argument == "--settings") {
-        bundle_path.map(|path| path.with_file_name("settings.mjs"))
-    } else if crate::editor::is_editor() {
-        bundle_path.map(|path| path.with_file_name("editor.mjs"))
-    } else {
-        bundle_path
-    };
+        .or_else(paths::running_bundle_path);
+    let bundle_path = paths::scene_bundle_path(
+        bundle_path,
+        std::env::args().any(|argument| argument == "--settings"),
+        crate::editor::is_editor(),
+    );
     let result = run_gallery(
         bundle_path,
         services,
@@ -360,7 +355,7 @@ fn run_gallery(
     let (ready_sender, ready) = mpsc::channel();
     let asset_bundle_path = bundle_path.clone();
     std::thread::spawn(move || {
-        actor_services.register_actor(1);
+        let _session = ActorSession::new(Arc::clone(&actor_services), 1);
         actor_services.register_session(1, "main", service_sender.clone());
         let batch_count = Arc::new(AtomicU64::new(0));
         let operation_count = Arc::new(AtomicU64::new(0));
@@ -390,8 +385,11 @@ fn run_gallery(
                     .unwrap_or_default()
             },
         );
-        let mut gallery = match gallery {
-            Ok(gallery) => gallery,
+        let mut scene = match gallery {
+            Ok(gallery) => scene::NativeScene {
+                gallery,
+                window: "main",
+            },
             Err(error) => {
                 let _ = ready_sender.send(Err(error));
                 return;
@@ -436,7 +434,8 @@ fn run_gallery(
                 "argui-gallery-profile mode=quickjs startup_batches={startup_batches} startup_operations={startup_operations}"
             );
         }
-        let effects = gallery
+        let effects = scene
+            .gallery
             .effect_definitions_json()
             .and_then(|json| registry_from_json(&json));
         let effects = match effects {
@@ -448,7 +447,7 @@ fn run_gallery(
         };
         let _ = ready_sender.send(Ok(effects));
         if let Err(error) = run_js_loop(
-            &mut gallery,
+            &mut scene.gallery,
             &mut dispatch,
             &mut reload,
             JsLoopInbox {
@@ -468,9 +467,7 @@ fn run_gallery(
         ) {
             eprintln!("{error}");
         }
-        if let Err(error) = gallery.dispose() {
-            eprintln!("{error}");
-        }
+        drop(scene);
         actor_services.cancel_session(dispatch.borrow().generation);
     });
     let effects = ready.recv().map_err(|error| error.to_string())??;
@@ -478,19 +475,11 @@ fn run_gallery(
     let assets = if let Some(manifest) = std::env::var_os("ARGUI_APP_ASSETS") {
         beam_native_assets::load_manifest(&PathBuf::from(manifest))?
     } else {
-        let parent = asset_bundle_path
-            .as_ref()
-            .and_then(|path| path.parent())
-            .ok_or("bundle path has no directory")?;
-        let packaged = parent.join(crate::files::ASSET_MANIFEST);
-        let development = parent
-            .join("../..")
-            .join(crate::files::DEVELOPMENT_ASSET_MANIFEST);
-        let manifest = if packaged.exists() {
-            packaged
-        } else {
-            development
-        };
+        let manifest = paths::fallback_asset_manifest(
+            asset_bundle_path.as_deref(),
+            crate::files::ASSET_MANIFEST,
+            crate::files::DEVELOPMENT_ASSET_MANIFEST,
+        )?;
         beam_native_assets::load_manifest(&manifest)?
     };
     let result = launch(

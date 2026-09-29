@@ -82,8 +82,8 @@ pub(crate) fn beam_config() -> Result<ApplicationConfig, Box<dyn std::error::Err
                 super::region::ACTIONS_SIZE.0,
                 super::region::ACTIONS_SIZE.1,
             ),
-            ("countdown", "Beam Countdown", 220.0, 220.0),
-            ("recorder", "Beam Recorder", 210.0, 54.0),
+            ("countdown", "Beam Countdown", 560.0, 284.0),
+            ("recorder", "Beam Recorder", 400.0, 54.0),
             ("settings", "Beam Settings", 640.0, 420.0),
             ("windowPicker", "Beam Window Picker", 960.0, 320.0),
             ("windowHighlight", "Beam Window Highlight", 320.0, 240.0),
@@ -95,13 +95,18 @@ pub(crate) fn beam_config() -> Result<ApplicationConfig, Box<dyn std::error::Err
                     title: title.into(),
                     width,
                     height,
+                    physical_position: preferences
+                        .window_positions
+                        .get(key)
+                        .map(|position| (position.x as i32, position.y as i32)),
                     decorations: false,
                     resizable: matches!(key, "settings" | "teleprompter"),
                     minimum_size: match key {
                         "settings" => Some((440.0, 320.0)),
-                        "teleprompter" => Some((360.0, 240.0)),
+                        "teleprompter" => Some((320.0, 180.0)),
                         _ => None,
                     },
+                    maximum_size: (key == "teleprompter").then_some((1600.0, 1000.0)),
                     transparent: true,
                     native_shadow: matches!(key, "settings" | "teleprompter"),
                     level: if key == "settings" {
@@ -111,6 +116,14 @@ pub(crate) fn beam_config() -> Result<ApplicationConfig, Box<dyn std::error::Err
                     },
                     close_behavior: CloseBehavior::Hide,
                     focus_on_launch: false,
+                    skip_taskbar: matches!(
+                        key,
+                        "regionControls"
+                            | "regionActions"
+                            | "countdown"
+                            | "recorder"
+                            | "windowHighlight"
+                    ),
                     ..WindowConfig::default()
                 },
             );

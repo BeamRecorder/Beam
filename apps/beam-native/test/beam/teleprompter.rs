@@ -12,6 +12,7 @@ fn defaults_and_saved_settings_use_the_same_typed_schema() {
     let script = document(&json::decode(preferences.clone()).unwrap()).unwrap();
     assert_eq!(script.settings.font_size, 36);
     assert_eq!(script.settings.scroll_speed, 42.0);
+    assert_eq!(script.settings.use_theme_text_color, Some(true));
     validate(&script).unwrap();
     preferences["extras"] = serde_json::json!({ "teleprompterSettings": {
         "mode": "line-by-line", "autoscroll": false, "scrollSpeed": 60,
@@ -25,6 +26,37 @@ fn defaults_and_saved_settings_use_the_same_typed_schema() {
     );
     preferences["extras"]["teleprompterSettings"]["mode"] = Value::from("invalid");
     assert!(json::decode::<PreferenceDocument>(preferences).is_err());
+}
+
+#[test]
+fn old_scripts_keep_their_custom_color_and_an_unspecified_theme_color_choice() {
+    let mut value = serde_json::to_value(TeleprompterDocument::default()).unwrap();
+    value.as_object_mut().unwrap().remove("useThemeTextColor");
+    value["textColor"] = Value::from("#ff804080");
+    let saved: TeleprompterDocument = json::decode(value).unwrap();
+    assert_eq!(saved.settings.text_color, "#ff804080");
+    assert_eq!(saved.settings.use_theme_text_color, None);
+    validate(&saved).unwrap();
+}
+
+#[test]
+fn explicit_theme_and_custom_color_choices_round_trip_and_invalid_values_fail() {
+    for choice in [Some(true), Some(false), None] {
+        let mut script = TeleprompterDocument::default();
+        script.settings.use_theme_text_color = choice;
+        let decoded: TeleprompterDocument =
+            json::decode(serde_json::to_value(script).unwrap()).unwrap();
+        assert_eq!(decoded.settings.use_theme_text_color, choice);
+    }
+    for choice in [
+        serde_json::json!("true"),
+        serde_json::json!(1),
+        serde_json::json!({}),
+    ] {
+        let mut value = serde_json::to_value(TeleprompterDocument::default()).unwrap();
+        value["useThemeTextColor"] = choice;
+        assert!(json::decode::<TeleprompterDocument>(value).is_err());
+    }
 }
 
 #[test]
@@ -45,7 +77,7 @@ fn script_validation_covers_versions_size_numeric_bounds_and_timestamps() {
         value.settings.scroll_speed = speed;
         assert!(validate(&value).is_err());
     }
-    for size in [15, 37] {
+    for size in [15, 97] {
         let mut value = script.clone();
         value.settings.font_size = size;
         assert!(validate(&value).is_err());

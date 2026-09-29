@@ -2,6 +2,7 @@ import { useTR } from '../shared/i18n'
 import { createEffect, createSignal, onCleanup, onMount } from 'solid-js'
 import type { BeamApi } from '../shared/beamApi'
 import type { BeamPreferences, CaptureRequest, SourceCatalog, SourceMode } from '../shared/beamTypes'
+import { showPreparation } from './preparationWindow'
 
 const emptyCatalog: SourceCatalog = { screens: [], cameras: [], microphones: [], systemOutputs: [], errors: [] }
 
@@ -20,6 +21,12 @@ export function useCaptureLauncher(props: {
   let handledCommand = props.startCommand ?? 0
   let refreshing: Promise<SourceCatalog> | undefined
   let selection: SourceMode | null = null
+  let selectedSource: string | undefined
+  const recoverSelection = async (cause: unknown) => {
+    selection = null; selectedSource = undefined; setError(String(cause))
+    await props.api.hideWindow('regionActions').catch(console.error)
+    await props.api.showWindow().catch(console.error)
+  }
   createEffect(() => { setMode(props.preferences.captureMode); setDevices(props.preferences.devices) })
 
   async function refreshSources(): Promise<SourceCatalog> {
@@ -47,13 +54,19 @@ export function useCaptureLauncher(props: {
       if (event.type !== 'beamUi' || !selection) return
       if (event.action === 'regionSelected' && event.region && selection === 'region') {
         selection = null
-        void props.api.hideWindow('region').then(() => begin('region', undefined, event.region))
+        void begin('region', event.sourceId, event.region).catch(recoverSelection)
       } else if (event.action === 'windowSelected' && event.sourceId && selection === 'window') {
+        selectedSource = event.sourceId
+        void showPreparation(props.api, 'window').catch(recoverSelection)
+      } else if (event.action === 'preparationRecord' && selection && selection !== 'region') {
+        const source = selection, id = selectedSource
+        selection = null; selectedSource = undefined
+        void props.api.hideWindow('regionActions').then(() => begin(source, id)).catch(recoverSelection)
+      } else if (event.action === 'regionCanceled' || event.action === 'windowCanceled' || event.action === 'preparationCanceled') {
         selection = null
-        void begin('window', event.sourceId)
-      } else if (event.action === 'regionCanceled' || event.action === 'windowCanceled') {
-        selection = null
-        void props.api.hideWindow('region').then(() => props.api.showWindow())
+        selectedSource = undefined
+        void Promise.all(['region', 'regionControls', 'regionActions'].map(window => props.api.hideWindow(window)))
+          .then(() => props.api.showWindow()).catch(recoverSelection)
       }
     }))
     const watcher = setInterval(() => {
@@ -66,36 +79,49 @@ export function useCaptureLauncher(props: {
   })
   createEffect(() => {
     const command = props.startCommand ?? 0
-    if (command > handledCommand) { handledCommand = command; void choose(sourceMode()) }
+    if (command <= handledCommand) return
+    handledCommand = command
+    if (busy() || props.captureBusy) return
+    if (selection === 'region') void props.api.confirmRegion().catch(cause => setError(String(cause)))
+    else if (selection === 'display' || (selection === 'window' && selectedSource))
+      void props.api.emitUiAction('preparationRecord').catch(cause => setError(String(cause)))
+    else if (!selection) void choose(sourceMode())
   })
 
   async function begin(source: SourceMode, sourceId?: string, region?: CaptureRequest['region']): Promise<void> {
     setBusy(true)
     setError('')
     try {
-      const sources = catalog().screens.length ? catalog() : await refreshSources()
+      const sources = await refreshSources()
+      const selectedDevices = (await props.api.preferences()).devices
+      setDevices(selectedDevices)
       const display = sources.screens.find(item => item.kind === 'display' && item.isDefault)
         ?? sources.screens.find(item => item.kind === 'display')
-      const id = source === 'window' ? sourceId : display?.id
+      const id = source === 'window' || source === 'region' ? sourceId : display?.id
       if (!id) throw new Error('The capture source is no longer available.')
       for (const [key, choices] of [['camera', sources.cameras], ['microphone', sources.microphones]] as const) {
-        const selected = devices()[key]
+        const selected = selectedDevices[key]
         if (mode() !== 'screenshot' && selected && !choices.some(choice => choice.id === selected)) {
           throw new Error(TR('unavailableDevice', { name: selected }))
         }
       }
       const request: CaptureRequest = { mode: mode(), sourceMode: source, sourceId: id, region,
-        cameraId: mode() === 'screenshot' ? null : devices().camera || null,
-        microphoneId: mode() === 'screenshot' ? null : devices().microphone || null,
-        systemAudioId: mode() === 'screenshot' ? null : devices().systemAudio || null }
+        cameraId: mode() === 'screenshot' ? null : selectedDevices.camera || null,
+        microphoneId: mode() === 'screenshot' ? null : selectedDevices.microphone || null,
+        systemAudioId: mode() === 'screenshot' ? null : selectedDevices.systemAudio || null }
       await props.api.hideWindow()
       if (mode() === 'screenshot') {
+        if (source === 'region') await props.api.cancelRegion()
         await new Promise(resolve => setTimeout(resolve, 120))
         const result = await props.api.screenshot(request)
         props.onScreenshot(result.projectId)
         await props.api.showWindow()
       } else await props.onRecord(request)
-    } catch (cause) { setError(String(cause)); await props.api.showWindow() }
+    } catch (cause) {
+      setError(String(cause))
+      if (source === 'region') await props.api.cancelRegion().catch(console.error)
+      await props.api.showWindow()
+    }
     finally { setBusy(false) }
   }
 
@@ -103,13 +129,21 @@ export function useCaptureLauncher(props: {
     if (busy() || selection || props.captureBusy) return
     setSourceMode(source)
     setError('')
-    if (source === 'display') { await begin('display'); return }
     setBusy(true)
     try {
+      if (source === 'display') {
+        selection = source; selectedSource = undefined
+        await showPreparation(props.api, source)
+        return
+      }
       if (source === 'window') {
         const sources = await refreshSources()
         const portal = sources.screens.find(item => item.kind === 'window' && item.id.startsWith('portal:'))
-        if (portal) { await begin('window', portal.id); return }
+        if (portal) {
+          selection = source; selectedSource = portal.id
+          await showPreparation(props.api, source)
+          return
+        }
       }
       const info = await props.api.windowInfo()
       if (!info.capabilities.absolutePosition || !info.capabilities.windowLevel || !info.capabilities.transparentCompositing)
@@ -120,7 +154,9 @@ export function useCaptureLauncher(props: {
       selection = source
       await props.api.hideWindow()
       if (source === 'region') {
-        await Promise.all([props.api.ensureWindow('regionControls'), props.api.ensureWindow('regionActions')])
+        await props.api.updateUiState({ preparationSource: 'region' })
+        await props.api.ensureWindow('regionControls')
+        await props.api.ensureWindow('regionActions')
         await props.api.openRegion()
       } else {
         await props.api.ensureWindow('windowPicker')

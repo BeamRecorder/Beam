@@ -2,6 +2,7 @@ mod crop;
 mod frame;
 mod preview;
 mod recording;
+mod source_geometry;
 
 #[cfg(target_os = "linux")]
 pub(crate) use crop::PixelCrop;
@@ -10,6 +11,7 @@ pub(crate) use crop::normalize_crop;
 pub use frame::*;
 pub use preview::*;
 pub use recording::*;
+pub use source_geometry::*;
 
 #[cfg(target_os = "linux")]
 pub mod linux;

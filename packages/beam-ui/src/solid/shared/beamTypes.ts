@@ -18,17 +18,27 @@ export interface BeamPreferences {
   captureMode: CaptureMode
   hudWindow: { width: number; height: number }
   hudPosition?: { x: number; y: number } | null
+  windowPositions?: Record<string, { x: number; y: number }>
   shortcuts: Record<string, string>
   devices: { camera?: string; microphone?: string; systemAudio?: string }
   countdownSeconds: number
+  hideTaskbar?: boolean
+  hideDesktopIcons?: boolean
 }
+export interface DesktopCapabilities { taskbar: boolean; desktopIcons: boolean; captureOnly: boolean }
+export type CaptureQuickSettings = Pick<BeamPreferences, 'countdownSeconds' | 'hideTaskbar' | 'hideDesktopIcons'>
 export interface RecordingStatus {
   state: RecordingPhase
   sessionId: string | null
   projectId?: string | null
   manifestPath?: string | null
+  manifest?: { durationNs: number } | null
   error?: string | null
 }
+export interface AudioLevel { timestampNs: number; peak: number; rms: number }
+export interface AudioLevels { microphone: AudioLevel | null; systemAudio: AudioLevel | null }
+export interface AudioPreviewRequest { microphoneId: string | null; systemAudioId: string | null }
+export type CaptureDevice = 'camera' | 'microphone' | 'systemAudio'
 export interface CaptureRequest {
   mode: CaptureMode
   sourceMode: SourceMode
@@ -40,8 +50,14 @@ export interface CaptureRequest {
 }
 
 export interface MonitorInfo { name: string | null; x: number; y: number; width: number; height: number; scaleFactor: number; primary: boolean }
+export interface WindowPosition { x: number; y: number }
+export interface WindowGeometry { x?: number | null; y?: number | null; width: number; height: number; scaleFactor: number }
 export interface WindowChoice { generation: number; id: string; label: string; x: number; y: number; width: number; height: number }
-export interface BeamUiState { remaining: number; shortcut: string; paused: boolean; busy: boolean; regionRevision: number }
+export interface BeamUiState {
+  remaining: number; shortcut: string; pauseShortcut?: string; paused: boolean; busy: boolean; regionRevision: number;
+  microphoneEnabled?: boolean; systemAudioEnabled?: boolean; cameraEnabled?: boolean;
+  preparationSource?: SourceMode;
+}
 export type BeamEvent = {
   type: 'preferencesChanged'; preferences: BeamPreferences;
 } | {
@@ -51,6 +67,7 @@ export type BeamEvent = {
   preferences?: never;
   physicalWidth?: number; physicalHeight?: number; scaleFactor?: number;
   scheme?: string;
+  x?: number; y?: number;
   snapshot?: RegionSnapshot;
   update?: import('./settings/updateTypes').UpdateSnapshot;
 }
@@ -59,8 +76,10 @@ export interface ApplicationInfo {
   version: string; operatingSystem: string; architecture: string; logicalProcessors: number; desktopSession: string | null
 }
 export interface RegionSnapshot {
+  open?: boolean; dragging?: boolean;
   revision: number; width: number; height: number; preset: string; selected: boolean; canRecord: boolean;
-  controlsX: number; controlsY: number; actionsX: number; actionsY: number;
+  controlsX: number; controlsY: number; controlsWidth: number; controlsHeight: number;
+  actionsX: number; actionsY: number; actionsWidth: number; actionsHeight: number;
 }
 /** Colors shared with the native Rust region mask and its drawing feedback. */
 export interface RegionColors {

@@ -1,9 +1,10 @@
 use argui_core::{Point, Rect, Size};
 
-use super::{
-    Corner, aspect_selection, constrained, contains, corner_at, input_hole, moved, opposite_corner,
-    resized, selection,
+use super::geometry::{
+    aspect_selection, constrained, contains, corner_at, input_hole, moved, opposite_corner,
+    pixel_point, pixel_rect, resized, selection,
 };
+use super::types::Corner;
 
 const VIEWPORT: Size = Size::new(800.0, 600.0);
 const CROP: Rect = Rect::new(Point::new(100.0, 80.0), Size::new(300.0, 200.0));
@@ -487,3 +488,6 @@ fn contains_keeps_a_collapsed_crop_at_its_exact_logical_point() {
     assert!(!contains(crop, Point::new(100.5, 80.5)));
     assert!(!contains(crop, Point::new(100.25, 80.25)));
 }
+
+#[path = "geometry_pixels.rs"]
+mod pixels;

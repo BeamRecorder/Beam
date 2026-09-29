@@ -6,7 +6,7 @@ import { ThemeProvider, render, useNativeHost } from '@argui/solid'
 import { type WidgetTheme } from '@argui/widgets/solid'
 import { beamThemeDefinition, observeBeamTheme } from './shared/beamTheme'
 import { BeamApi } from './shared/beamApi'
-import { RegionActions, RegionControls } from './hud/RegionControls'
+import { RegionControls, RegionActions } from './hud/RegionControls'
 import { Countdown } from './hud/Countdown'
 import { RecorderBar } from './hud/RecorderBar'
 import { Settings } from './shared/settings/Settings'
@@ -18,13 +18,14 @@ import type { AuxiliaryWindow } from './shared/beamTypes'
 
 function CountdownScene(props: { api: BeamApi }) {
   const state = useUiState(props.api)
-  return <Countdown remaining={state().remaining}
+  return <Countdown api={props.api} remaining={state().remaining} shortcut={state().shortcut} pauseShortcut={state().pauseShortcut}
     onCancel={() => void props.api.emitUiAction('countdownCanceled').catch(console.error)} />
 }
 function RecorderScene(props: { api: BeamApi }) {
   const state = useUiState(props.api)
-  const metrics = useWindowMetrics(props.api, { width: 210, height: 54 })
-  return <RecorderBar api={props.api} paused={state().paused} busy={state().busy} visible={metrics().visible}
+  const metrics = useWindowMetrics(props.api, { width: 400, height: 54 })
+  return <RecorderBar api={props.api} paused={state().paused} busy={state().busy} visible={metrics().visible} shortcut={state().shortcut}
+    microphoneEnabled={state().microphoneEnabled ?? false} systemAudioEnabled={state().systemAudioEnabled ?? false} cameraEnabled={state().cameraEnabled ?? false}
     onPause={() => void props.api.emitUiAction('pause').catch(console.error)}
     onStop={() => void props.api.emitUiAction('stop').catch(console.error)}
     onDelete={() => void props.api.emitUiAction('delete').catch(console.error)} />
@@ -43,8 +44,7 @@ function mountScene(bridge: NativeBridge, expectedAbiHash: string,
   host.setProperty(root, 'width', '100%')
   host.setProperty(root, 'height', '100%')
   const dispose = render(() => <ThemeProvider runtime={runtime}>
-    {window === 'regionControls' ? <RegionControls api={api} /> : window === 'regionActions'
-      ? <RegionActions api={api} /> : window === 'countdown'
+    {window === 'regionControls' ? <RegionControls api={api} /> : window === 'regionActions' ? <RegionActions api={api} /> : window === 'countdown'
       ? <CountdownScene api={api} /> : window === 'recorder' ? <RecorderScene api={api} />
         : window === 'windowPicker' ? <WindowPicker api={api} /> : window === 'windowHighlight'
         ? <WindowHighlight /> : window === 'teleprompter' ? <Teleprompter api={api} />

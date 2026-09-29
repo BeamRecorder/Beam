@@ -10,6 +10,8 @@ import type { BeamPreferences } from './shared/beamTypes'
 import { Hud } from './hud/Hud'
 import { useCaptureSession } from './hud/useCaptureSession'
 import { activeShortcuts } from './shared/shortcuts'
+import { routeApplicationEvent, routeGeometryEvent } from './appEvents'
+import { warmAuxiliaryWindows } from './windowWarmup'
 export { mountRegionControls, mountRegionActions, mountCountdown, mountRecorder, mountSettings, mountWindowPicker, mountWindowHighlight, mountTeleprompter } from './auxiliaryScenes'
 
 const initialPreferences: BeamPreferences = {
@@ -26,42 +28,71 @@ function BeamApp(props: { api: BeamApi; runtime: ReturnType<typeof createThemeRu
   let lastGeometry = ''
   let lastShortcuts = ''
   let polling = false
+  let pendingObservation = false
   async function observePreferences(): Promise<void> {
-    if (polling) return
+    if (polling) { pendingObservation = true; return }
     polling = true
+    pendingObservation = false
     try {
       const latest = preferences()
       const shortcuts = activeShortcuts(latest)
       const keys = JSON.stringify(shortcuts)
       if (keys !== lastShortcuts) { await props.api.shortcuts(shortcuts); lastShortcuts = keys }
-      if (capture.stage() === 'hud') {
-        const info = await props.api.windowInfo()
-        if (info.visible) {
-          const geometry = { width: Math.round(info.width), height: Math.round(info.height), x: info.x, y: info.y }
-          const serialized = JSON.stringify(geometry)
-          if (geometry.width >= 440 && geometry.width <= 680 && geometry.height >= 208 && geometry.height <= 252) {
-            if (lastGeometry && serialized !== lastGeometry) await props.api.savePreferences({
-              hudWindow: { width: geometry.width, height: geometry.height }, hudPosition: { x: geometry.x, y: geometry.y },
-            })
-            lastGeometry = serialized
-          }
-        }
-      }
+      if (capture.stage() === 'hud') await observeGeometry()
     } catch (cause) { setError(String(cause)) }
-    finally { polling = false }
+    finally { polling = false; if (pendingObservation) void observePreferences() }
+  }
+  async function observeGeometry(): Promise<void> {
+    const info = await props.api.windowInfo()
+    const geometry = { width: Math.round(info.width), height: Math.round(info.height), x: info.x, y: info.y }
+    const serialized = JSON.stringify(geometry)
+    if (geometry.width >= 440 && geometry.width <= 680 && geometry.height >= 208 && geometry.height <= 252) {
+      if (lastGeometry && serialized !== lastGeometry) await props.api.savePreferences({
+        hudWindow: { width: geometry.width, height: geometry.height }, hudPosition: { x: geometry.x, y: geometry.y },
+      })
+      lastGeometry = serialized
+    }
+  }
+  function receivePreferences(value: BeamPreferences): void {
+    preferenceRevision++; setPreferences(value)
+    void props.api.updateUiState({ shortcut: value.shortcuts['hud.startStopRecording'],
+      pauseShortcut: value.shortcuts['hud.playPause'] }).catch(console.error)
+    props.runtime.update({ variant: value.theme })
+    const shortcuts = activeShortcuts(value)
+    const keys = JSON.stringify(shortcuts)
+    if (keys !== lastShortcuts) { lastShortcuts = keys; void props.api.shortcuts(shortcuts).catch(console.error) }
+  }
+  function receiveCaptureAction(action: string | undefined): void {
+    switch (action) {
+      case 'countdownCanceled': void capture.cancelCountdown(); break
+      case 'pause': void capture.togglePause(); break
+      case 'stop': void capture.stop(); break
+      case 'delete': void capture.discard(); break
+    }
+  }
+  function receiveShortcut(id: string | undefined): void {
+    switch (id) {
+      case 'hud.startStopRecording':
+        if (capture.stage() === 'hud') setStartCommand(value => value + 1)
+        else if (capture.stage() === 'countdown') void capture.cancelCountdown()
+        else void capture.stop()
+        break
+      case 'hud.playPause': void capture.togglePause(); break
+      case 'teleprompter.toggleVisibility': void props.api.toggleTeleprompter().catch(console.error); break
+    }
   }
   let preferenceRevision = 0
   onMount(() => {
     let disposed = false
+    let geometryTimer: ReturnType<typeof setTimeout> | undefined
+    const scheduleGeometry = () => {
+      clearTimeout(geometryTimer)
+      geometryTimer = setTimeout(() => { geometryTimer = undefined; void observePreferences() }, 200)
+    }
     const warm = setTimeout(() => {
-      void (async () => {
-        for (const window of ['countdown', 'recorder', 'settings'] as const) {
-          if (disposed) return
-          await props.api.ensureWindow(window)
-        }
-      })().catch(console.error)
+      void warmAuxiliaryWindows(props.api, () => disposed, console.error).catch(console.error)
     }, 1000)
-    onCleanup(() => { disposed = true; clearTimeout(warm) })
+    onCleanup(() => { disposed = true; clearTimeout(warm); clearTimeout(geometryTimer) })
     void props.api.preferences().then(async value => {
       if (disposed || preferenceRevision !== 0) return
       setPreferences(value); lastShortcuts = JSON.stringify(activeShortcuts(value))
@@ -76,32 +107,20 @@ function BeamApp(props: { api: BeamApi; runtime: ReturnType<typeof createThemeRu
       }
       await observePreferences()
     }).catch(cause => setError(String(cause)))
+    const applicationHandlers = {
+      preferences: receivePreferences,
+      scheme: (scheme: 'light' | 'dark') => props.runtime.update({ systemScheme: scheme }),
+      action: receiveCaptureAction,
+      shortcut: receiveShortcut,
+    }
+    const geometryHandlers = {
+      schedule: scheduleGeometry,
+      observe: () => { clearTimeout(geometryTimer); geometryTimer = undefined; void observePreferences() },
+    }
     onCleanup(props.api.onEvent(event => {
-      if (event.type === 'preferencesChanged' && event.preferences) {
-        preferenceRevision++; setPreferences(event.preferences)
-        props.runtime.update({ variant: event.preferences.theme })
-        const shortcuts = activeShortcuts(event.preferences)
-        const keys = JSON.stringify(shortcuts)
-        if (keys !== lastShortcuts) { lastShortcuts = keys; void props.api.shortcuts(shortcuts).catch(console.error) }
-      } else if (event.type === 'systemScheme' && (event.scheme === 'light' || event.scheme === 'dark')) {
-        props.runtime.update({ systemScheme: event.scheme })
-      } else if (event.type === 'beamUi') {
-        if (event.action === 'countdownCanceled') void capture.cancelCountdown()
-        else if (event.action === 'pause') void capture.togglePause()
-        else if (event.action === 'stop') void capture.stop()
-        else if (event.action === 'delete') void capture.discard()
-      } else if (event.type === 'shortcut' && event.state === 'pressed') {
-        if (event.id === 'hud.startStopRecording') {
-          if (capture.stage() === 'hud') setStartCommand(value => value + 1)
-          else if (capture.stage() === 'countdown') void capture.cancelCountdown()
-          else void capture.stop()
-        } else if (event.id === 'hud.playPause') void capture.togglePause()
-        else if (event.id === 'teleprompter.toggleVisibility') void props.api.toggleTeleprompter().catch(console.error)
-      }
-      if (event.type === 'windowResized' || (event.type === 'windowVisibility' && event.visible)) void observePreferences()
+      routeApplicationEvent(event, applicationHandlers)
+      routeGeometryEvent(event, geometryHandlers)
     }))
-    const watcher = setInterval(() => void observePreferences(), 2000)
-    onCleanup(() => clearInterval(watcher))
   })
   return <column width="100%" height="100%">
     <Hud api={props.api} preferences={preferences()} externalError={capture.error() || error()}

@@ -4,6 +4,17 @@ mod paths;
 use std::{fs, path::Path};
 
 #[test]
+fn running_binary_uses_the_same_bundle_lookup_as_explicit_paths() {
+    assert_eq!(
+        paths::running_bundle_path(),
+        Some(paths::fallback_bundle_path(
+            &std::env::current_exe().unwrap(),
+            Path::new(env!("CARGO_MANIFEST_DIR")),
+        )),
+    );
+}
+
+#[test]
 fn cargo_binary_uses_the_beam_ui_bundle() {
     let root = std::env::temp_dir().join(format!("beam-native-paths-{}", std::process::id()));
     let cargo = root.join("target/debug/beam-native");
@@ -28,4 +39,43 @@ fn staged_binary_uses_its_adjacent_ui_bundle() {
         bundle
     );
     fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn settings_and_editor_resolve_beside_the_launcher() {
+    for (settings, editor, name) in [
+        (false, false, "app.mjs"),
+        (false, true, "editor.mjs"),
+        (true, false, "settings.mjs"),
+        (true, true, "settings.mjs"),
+    ] {
+        assert_eq!(
+            paths::scene_bundle_path(Some(Path::new("ui/app.mjs").into()), settings, editor),
+            Some(Path::new("ui").join(name)),
+        );
+        assert_eq!(paths::scene_bundle_path(None, settings, editor), None);
+    }
+}
+
+#[test]
+fn asset_lookup_prefers_packaged_files_and_reports_missing_bundle() {
+    let root = tempfile::tempdir().unwrap();
+    let bundle = root.path().join("native-ui/ui/editor.mjs");
+    let packaged = bundle.parent().unwrap().join("assets.json");
+    assert_eq!(
+        paths::fallback_asset_manifest(Some(&bundle), "assets.json", "assets/manifest.json"),
+        Ok(bundle.parent().unwrap().join("../../assets/manifest.json")),
+    );
+    fs::create_dir_all(packaged.parent().unwrap()).unwrap();
+    fs::write(&packaged, "{}").unwrap();
+    assert_eq!(
+        paths::fallback_asset_manifest(Some(&bundle), "assets.json", "assets/manifest.json"),
+        Ok(packaged),
+    );
+    for missing in [None, Some(Path::new("/"))] {
+        assert_eq!(
+            paths::fallback_asset_manifest(missing, "assets.json", "assets/manifest.json"),
+            Err("bundle path has no directory"),
+        );
+    }
 }

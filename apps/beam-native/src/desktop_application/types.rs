@@ -7,6 +7,11 @@ use serde::{Deserialize, Serialize};
 pub(super) struct NativeUiState {
     pub remaining: u8,
     pub shortcut: String,
+    pub pause_shortcut: String,
+    pub microphone_enabled: bool,
+    pub system_audio_enabled: bool,
+    pub camera_enabled: bool,
+    pub preparation_source: PreparationSource,
     pub paused: bool,
     pub busy: bool,
     pub region_revision: u64,
@@ -16,6 +21,11 @@ impl Default for NativeUiState {
         Self {
             remaining: 3,
             shortcut: "Alt+Shift+R".into(),
+            pause_shortcut: "Alt+Shift+P".into(),
+            microphone_enabled: false,
+            system_audio_enabled: false,
+            camera_enabled: false,
+            preparation_source: PreparationSource::Region,
             paused: false,
             busy: false,
             region_revision: 0,
@@ -27,6 +37,11 @@ impl Default for NativeUiState {
 pub(super) struct UiStatePatch {
     pub remaining: Option<u8>,
     pub shortcut: Option<String>,
+    pub pause_shortcut: Option<String>,
+    pub microphone_enabled: Option<bool>,
+    pub system_audio_enabled: Option<bool>,
+    pub camera_enabled: Option<bool>,
+    pub preparation_source: Option<PreparationSource>,
     pub paused: Option<bool>,
     pub busy: Option<bool>,
     pub region_revision: Option<u64>,
@@ -50,6 +65,17 @@ pub(super) enum UiAction {
     Pause,
     Stop,
     Delete,
+    PreparationRecord,
+    PreparationCanceled,
+}
+
+/// Source represented by the shared preparation bar, before devices are opened.
+#[derive(Clone, Copy, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub(super) enum PreparationSource {
+    Display,
+    Region,
+    Window,
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -89,6 +115,11 @@ pub(super) enum NativeEvent {
     WindowVisibility {
         window: String,
         visible: bool,
+    },
+    WindowMoved {
+        window: String,
+        x: i32,
+        y: i32,
     },
     Menu {
         id: String,

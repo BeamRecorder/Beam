@@ -3,7 +3,7 @@
 use super::{
     json,
     preferences::CaptureMode,
-    types::{CaptureRequest, SourceMode},
+    types::{CaptureRequest, EditorMode, EditorRequest, SourceMode},
 };
 use beam_media_engine::{
     AudioSelection, CameraSelection, OutputLocation, ProjectId, RecordingConfig, ScreenRequest,
@@ -11,6 +11,18 @@ use beam_media_engine::{
 };
 use beam_screen::model::{CursorSelection, PortalSourceKind, ScreenRegion, SourceId};
 use serde_json::Value;
+
+/// Validates an editor request and returns an argument for the current Argui executable.
+/// Screenshot captures remain saved, but their legacy editor is not a native host.
+pub(super) fn editor_argument(payload: Value) -> Result<String, String> {
+    let request: EditorRequest = json::decode(payload)?;
+    match request.mode {
+        EditorMode::Video => Ok(format!("--editor={}", request.project_id)),
+        EditorMode::Screenshot => Err(
+            "Screenshot editing is not available in the native Argui app. The capture remains saved in Beam's screenshot library.".into(),
+        ),
+    }
+}
 
 pub(super) fn source(request: &CaptureRequest) -> Result<ScreenSelection, String> {
     let id = request.source_id.as_deref();

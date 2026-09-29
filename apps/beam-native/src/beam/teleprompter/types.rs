@@ -26,6 +26,22 @@ pub(crate) struct TeleprompterSettings {
     pub font_size: u32,
     pub line_height: f64,
     pub text_align: TextAlign,
+    #[serde(default = "default_text_color")]
+    pub text_color: String,
+    /// True follows theme contrast; absent legacy values retain custom colors
+    /// while the original opaque-white default follows the current foreground.
+    #[serde(default)]
+    pub use_theme_text_color: Option<bool>,
+    #[serde(default = "default_window_opacity")]
+    pub window_opacity: f64,
+}
+
+fn default_text_color() -> String {
+    "#ffffffff".into()
+}
+
+fn default_window_opacity() -> f64 {
+    0.94
 }
 
 impl Default for TeleprompterSettings {
@@ -37,6 +53,9 @@ impl Default for TeleprompterSettings {
             font_size: 36,
             line_height: 1.35,
             text_align: TextAlign::Left,
+            text_color: default_text_color(),
+            use_theme_text_color: Some(true),
+            window_opacity: default_window_opacity(),
         }
     }
 }

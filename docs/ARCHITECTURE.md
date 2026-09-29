@@ -20,8 +20,10 @@ GES actor-owned timeline
   -> leased external GPU frame to the native Argui WGPU canvas
      (negotiated DMA-BUF on Linux; bounded RGBA compatibility transport)
 Versioned editor.beam.json and recovery checkpoint on disk
-Screenshot capture
-  -> Electron screenshot editor handoff by validated project ID
+Native screenshot capture
+  -> validated screenshot project saved on disk
+Explicit Electron launch
+  -> Electron screenshot editor
 Vue renderer
   -> typed window.capture API
 Electron preload
@@ -39,17 +41,111 @@ owns native windows and rendering; the Rust host exposes only typed capture,
 preference, and window operations to Solid. Capture logic stays in the media
 engine. Auxiliary windows mount their Solid scenes on demand. The settings
 window is retained in the same Rust process and hidden on close; reopening
-shows and focuses that existing window. Video captures launch the same native executable with `--editor=<id>`; `--editor` starts an empty standalone project. The editor uses its own opaque resizable window and process, independent from recorder geometry. Screenshots open with `--beam-open-project=screenshot:<id>` after capture. Electron keeps a hidden coordinator for its
-existing editor/window IPC and does not display the legacy HUD in this path.
+shows and focuses that existing window. Video captures launch the same native
+executable with `--editor=<id>`; `--editor` starts an empty standalone project.
+The editor uses its own opaque resizable window and process, independent from
+recorder geometry. The native host never launches Electron or provisions its
+executable. Native screenshots remain saved in the screenshot library; an edit
+request reports that the Argui screenshot editor is unavailable. The existing
+Electron screenshot editor belongs only to the explicit Electron launch path.
 
 `scripts/native-ui/build.mjs` builds the checked-out ARGUI submodule directly and
 stages the native executable, launcher/settings/editor Solid bundles, and their assets for
-desktop packaging. Linux region selection uses an X11 window with a compositor
+desktop packaging. Each staged build compiles its three bundles into a private
+temporary directory and checks their presence before Cargo runs. Publication
+reads that retained output and replaces complete files atomically, so another
+UI build cleaning `dist/native` cannot remove pending staging inputs. Linux region selection uses an X11 window with a compositor
 that supports transparent, positioned topmost windows. Its mask and drag state
 are owned by Rust using the ARGUI gallery spotlight implementation; Solid
-presets and Record controls occupy separate small native windows. The crop
+read-only dimensions and presets share a toolbar aligned to the crop's top left;
+Region, full-screen and window capture share a preparation bar at the monitor's
+bottom center, restoring its saved position after user moves. It has the shared
+camera/microphone/system-audio selectors and real meters, Cancel at its left,
+quick settings, and Record at its right. Countdown choices use a native hover
+submenu. Confirming a video region retains only the dimming outside its capture
+bounds, without resize handles or paint inside the crop, and makes the whole mask
+click-through. Countdown is centered on that monitor, and recording controls
+default to its bottom center. Latest user positions are flushed on hide; removed
+monitor origins use the default. Stop, discard, cancellation and preparation
+failure dismiss the passive mask; screenshots dismiss it before acquisition.
+The recording clock reads the native session manifest's pause-aware duration,
+independently of window resizing or visibility, and suspends polling while hidden.
+Desktop hiding is scoped to capture with rollback on cancellation,
+preparation failure and shutdown: Explorer elements on Windows, EWMH panels on
+X11, and supported Cinnamon/MATE icon settings. Unsupported desktop controls
+remain visibly unavailable; macOS excludes Dock/icon windows from capture.
+Both region control windows remain monitor-bounded and above the crop mask.
+Capture controls declare passive X11 mapping with `_NET_WM_USER_TIME = 0`
+and `_NET_WM_STATE_SKIP_TASKBAR` before initial display and each remapping.
+`focus_on_launch: false` alone is insufficient on Winit's X11 backend. Mapping
+these tools must not request activation; pointer interaction still permits focus.
+The precision loupe samples actual native screen pixels captured before the overlay
+opens, using a bounded nearest-neighbor raster at the actual native pointer position;
+no capture or QuickJS pointer traffic runs during the drag. Confirmation carries the
+selected monitor's native source identity into recording on direct capture backends;
+Wayland requests ScreenCast authorization before opening Region so the loupe
+has real pixels, then uses application-scoped one-use restore tokens when portal
+version 4 or newer supports them. Grants stay in memory, monitor and window
+permissions are independent, and invalid grants fall back to normal consent.
+Selection never invokes the compositor's Screenshot portal. The crop
+preview retains the portal's optional compositor position and displayed size
+alongside the actual pixel raster. These sizes need not match on scaled
+Wayland/XWayland desktops. Region resolves the granted monitor unambiguously,
+keeps window placement in the overlay backend's coordinate space, and maps
+loupe samples, dimensions, presets and crop boundaries into the untouched
+capture raster. Ambiguous or invalid geometry keeps an actionable error instead
+of placing another screen's pixels on the launcher's monitor. The crop
 interior uses an X11 input hole while its border remains draggable. Unsupported
 window capabilities report a failure before opening the overlay.
+
+The native teleprompter uses a reader surface with configurable alpha and a
+bottom-centered single-row toolbar with real compositor backdrop blur. Its
+four live adjustments accompany only Play/Pause; stopped scripts edit inline
+and playback is continuous. Native resize bounds are 320×180 through 1600×1000.
+Shared
+controlled slider popovers and an HSVA color picker provide native pad dragging,
+keyboard controls, hue/opacity sliders and validated hex input. The pad is one
+native bilinear GPU fill, with white/hue/black corners in sRGB. Drag thumbs use
+fixed layout and compositor transforms, with immediate native pointer input.
+Hex labels update after a drag,
+and color updates do not rescan or relayout the script editor. Document settings
+are saved serially and checkpointed with captures; existing schema-v1 documents
+receive color/opacity defaults. Continuous preview animates measured text bounds
+in the native compositor, pauses on hide/resize and retargets speed/font changes
+without idle frame polling. Timed segments stay within the native 1–60,000 ms
+contract; paused readers omit both timed transition properties.
+
+Responsive dimensions update directly from native resize events. Scene actors
+discard consecutive obsolete sizes while preserving DPI, visibility and reply
+ordering. Launcher geometry persists after a 200 ms pause in moving/resizing;
+mode-indicator animations apply to selection changes, and meter reveal uses
+compositor clipping and native transitions instead of JS frame timers or changing
+layout height. Revision guards prevent stale geometry reads from overwriting
+new resize events. Removing a layout transition restores the actual cached
+Taffy style and advances the retained-tree revision; unchanged authored sizes
+cannot leave an interpolated width in the layout cache. Frame-acquisition
+timeouts request another redraw while occluded surfaces remain idle.
+
+On native Linux, including X11 and native popup surfaces, automatic GPU
+presentation selects supported tear-free mailbox rather than waiting for a
+covered window's FIFO images on the shared UI thread. Active Linux animations
+have bounded 60 Hz deadlines even when mailbox is unavailable, preserving
+one-shot deadlines and idle suspension. On Wayland, compositor focus or real pointer entry
+resumes a window hidden through native minimization; restoration can preserve
+keyboard focus without another focus event. Other backends retain their explicit
+hidden-window policy. Settings preloads before capture tools and does not depend
+on unsupported window-stacking capabilities.
+
+Beam requests grouped restoration on native focus gain. The runtime includes
+only requested-open presentations and raises the selected window last. X11
+restacks visible peers without activation. Minimized peers use the WM restoration
+request followed by reactivation of the chosen source: some WMs keep minimized
+clients mapped, so ICCCM mapping alone cannot restore them. Calling Winit's
+`set_minimized(false)` on already-visible peers would cause focus ping-pong. Native minimize
+requests and observed minimizations briefly exclude automatic focus fallback;
+restoring a minimized source bypasses that guard. Closed/prewarmed hidden scenes
+stay hidden. This stacking operation is unavailable on native Wayland; compositor
+activation remains authoritative there.
 
 The native JSON boundary is `apps/beam-native/src/beam/json.rs`: typed readers,
 writers, service envelopes, and atomic document updates share one codec. Stable
@@ -110,7 +206,7 @@ Linux interaction capture uses the privileged input helper under both Wayland an
 - The editor keeps its document transparent over the native themed backing until the shared theme store finishes hydration. Make the renderer opaque before mounting; do not perform a second bootstrap preference request.
 - Load the selected editor module on demand. Video module loading and its project/data requests run concurrently; `projects:get` resolves only the selected video project summary without reading the screenshot catalogue. The project picker and ambient video decoder load only when needed.
 - Screenshot transfers ownership of validated IPC history snapshots to the shared history engine and retains only document metadata alongside its editable state. Default history initialization still copies caller-owned snapshots; every restored state is cloned before editing.
-- On Linux, native capability warmup must not open the Portal picker. Native camera/microphone discovery is separate from preview: previews and levels consume only already-open sources. Do not warm discovery on platforms where it can present a permission dialog.
+- On Linux, native capability warmup must not open the Portal picker. Device discovery remains separate from preview. The visible launcher or preparation bar's explicitly selected microphone/system-audio inputs have bounded native meter previews; hiding the bar closes those streams before recording preparation. Recording meters consume existing session packets and never open another input. Meter visuals use transparent, subdued gradients, brief interpolation and immediate silence clearing. Do not warm discovery on platforms where it can present a permission dialog.
 - Ordinary preference updates preserve registered global shortcuts. Re-register only when the persisted shortcut map changes, including reset; serialize actual shortcut changes.
 
 ## Session and project data flow

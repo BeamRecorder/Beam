@@ -1,8 +1,8 @@
 use super::*;
-#[path = "services/clipboard.rs"]
-mod clipboard;
 use serde_json::json;
 use std::{sync::mpsc, time::Duration};
+#[path = "services/clipboard.rs"]
+mod clipboard;
 
 #[test]
 fn typed_reply_envelopes_preserve_the_host_contract() {
@@ -103,3 +103,6 @@ fn cancelled_requests_cannot_deliver_after_their_session_closes() {
     release.send(()).unwrap();
     assert!(response.recv_timeout(Duration::from_secs(2)).is_err());
 }
+
+#[path = "services/actor.rs"]
+mod actor;

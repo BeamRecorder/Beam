@@ -1,5 +1,6 @@
 //! Native Beam window, tray, and shortcut services.
 
+mod activation;
 mod config;
 pub(crate) mod region;
 mod types;
@@ -69,6 +70,13 @@ impl BeamApp {
 }
 
 impl AppModel for BeamApp {
+    fn image_assets(&self) -> Vec<argui_paint::ImageAsset> {
+        self.region
+            .lock()
+            .unwrap_or_else(|poison| poison.into_inner())
+            .images()
+    }
+
     fn view(&self, window: &WindowKey, _environment: WindowEnvironment) -> Option<Element> {
         (window.as_str() == "region").then(|| {
             self.region
@@ -79,47 +87,61 @@ impl AppModel for BeamApp {
     }
 
     fn update(&mut self, event: &AppEvent) -> AppUpdate {
-        if matches!(event, AppEvent::Window { window, .. } | AppEvent::HostMessage { window, .. } if window.as_str() == "region")
+        let update = if matches!(event, AppEvent::Window { window, .. } | AppEvent::HostMessage { window, .. } if window.as_str() == "region")
         {
-            return self
-                .region
+            self.region
                 .lock()
                 .unwrap_or_else(|poison| poison.into_inner())
-                .update(event, &self.services);
-        }
-        match event {
-            AppEvent::Tray(TrayEvent::Click {
-                button: TrayPointerButton::Primary,
-                ..
-            })
-            | AppEvent::Tray(TrayEvent::Action {
-                action: TrayAction::Custom(_),
-                ..
-            }) => AppUpdate::none().command(AppCommand::FocusWindow(WindowKey::main())),
-            AppEvent::GlobalShortcut(event) if event.state == GlobalShortcutState::Pressed => {
-                AppUpdate::none()
-            }
-            AppEvent::Window {
-                window,
-                event: PlatformEvent::PreferencesChanged(preferences),
-            } if window.as_str() == "main" => {
-                let scheme = match preferences.color_scheme.value {
-                    argui_core::ColorScheme::Light => "light",
-                    argui_core::ColorScheme::Dark => "dark",
-                };
-                if let Err(error) = ui_state::send_event(
-                    &self.events,
-                    "main",
-                    NativeEvent::SystemScheme {
-                        scheme: scheme.into(),
-                    },
-                ) {
-                    eprintln!("Beam preference event: {error}");
+                .update(event, &self.services)
+        } else {
+            match event {
+                AppEvent::Window {
+                    window,
+                    event: PlatformEvent::VisibilityChanged(true) | PlatformEvent::Focused(_),
+                } if matches!(
+                    window.as_str(),
+                    "countdown" | "recorder" | "regionControls" | "regionActions"
+                ) =>
+                {
+                    AppUpdate::none().command(AppCommand::SetWindowLevel {
+                        window: window.clone(),
+                        level: argui_platform::WindowLevel::AlwaysOnTop,
+                    })
                 }
-                AppUpdate::none()
+                AppEvent::Tray(TrayEvent::Click {
+                    button: TrayPointerButton::Primary,
+                    ..
+                })
+                | AppEvent::Tray(TrayEvent::Action {
+                    action: TrayAction::Custom(_),
+                    ..
+                }) => AppUpdate::none().command(AppCommand::FocusWindow(WindowKey::main())),
+                AppEvent::GlobalShortcut(event) if event.state == GlobalShortcutState::Pressed => {
+                    AppUpdate::none()
+                }
+                AppEvent::Window {
+                    window,
+                    event: PlatformEvent::PreferencesChanged(preferences),
+                } if window.as_str() == "main" => {
+                    let scheme = match preferences.color_scheme.value {
+                        argui_core::ColorScheme::Light => "light",
+                        argui_core::ColorScheme::Dark => "dark",
+                    };
+                    if let Err(error) = ui_state::send_event(
+                        &self.events,
+                        "main",
+                        NativeEvent::SystemScheme {
+                            scheme: scheme.into(),
+                        },
+                    ) {
+                        eprintln!("Beam preference event: {error}");
+                    }
+                    AppUpdate::none()
+                }
+                _ => AppUpdate::none(),
             }
-            _ => AppUpdate::none(),
-        }
+        };
+        activation::restore_open_windows(event, update)
     }
 }
 
@@ -365,6 +387,14 @@ pub(crate) fn runtime_service_event(event: &RuntimeEvent) -> Option<ServiceRespo
         _ => "main",
     };
     let value = match event {
+        RuntimeEvent::Window {
+            window,
+            event: WindowRuntimeEvent::Platform(PlatformEvent::Moved { x, y }),
+        } => NativeEvent::WindowMoved {
+            window: window.as_str().into(),
+            x: *x,
+            y: *y,
+        },
         RuntimeEvent::Window {
             event: WindowRuntimeEvent::Platform(PlatformEvent::PreferencesChanged(preferences)),
             ..

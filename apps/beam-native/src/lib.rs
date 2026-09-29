@@ -25,7 +25,10 @@ mod telemetry;
 mod validate;
 mod wire;
 
-pub use delivery::{coalesce_virtual_windows, event_json, ui_event_payload};
+pub use delivery::{
+    coalesce_absolute_pointer_moves, coalesce_virtual_windows, coalesce_window_resizes, event_json,
+    ui_event_payload,
+};
 pub use effects::registry_from_json;
 pub use native_metrics::parse_control;
 #[cfg(any(debug_assertions, feature = "dev-metrics"))]

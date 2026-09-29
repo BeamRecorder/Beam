@@ -117,6 +117,14 @@ impl MockPortal {
                         OwnedValue::from(zbus::zvariant::Str::from("fixture")),
                     ),
                     ("source_type".to_owned(), OwnedValue::from(1u32)),
+                    (
+                        "position".to_owned(),
+                        OwnedValue::try_from(Value::from((-1920_i32, 0_i32))).unwrap(),
+                    ),
+                    (
+                        "size".to_owned(),
+                        OwnedValue::try_from(Value::from((1920_i32, 1080_i32))).unwrap(),
+                    ),
                 ]),
             )]
         };
@@ -188,6 +196,8 @@ fn isolated_portal_contract_covers_selection_cancel_denial_and_cleanup() {
         prepare_portal(PortalSourceKind::Monitor, CursorSelection::Disabled).unwrap();
     assert_eq!(selected.node_id, 42);
     assert_eq!(selected.stream_id.as_deref(), Some("fixture"));
+    assert_eq!(selected.geometry.position, Some((-1920, 0)));
+    assert_eq!(selected.geometry.size, Some((1920, 1080)));
     assert!(selected.take_remote_fd().is_ok());
     assert!(selected.take_remote_fd().is_err());
     selected.close().unwrap();

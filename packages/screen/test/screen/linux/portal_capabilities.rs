@@ -47,3 +47,6 @@ fn portal_cursor_capabilities_require_exact_requested_mode() {
             .is_ok()
     );
 }
+
+#[path = "portal/restore.rs"]
+mod restoration;

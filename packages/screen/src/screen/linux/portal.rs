@@ -12,6 +12,7 @@ use ashpd::desktop::{
     },
 };
 use futures_util::StreamExt;
+mod restore;
 
 #[path = "../../../test/screen/linux/portal.rs"]
 mod portal_checks;
@@ -26,6 +27,7 @@ pub(super) struct PreparedPortal {
     pub node_id: u32,
     pub stream_id: Option<String>,
     pub source_type: Option<SourceType>,
+    pub geometry: crate::screen::ScreenSourceGeometry,
     control: PortalControl,
 }
 
@@ -57,6 +59,7 @@ struct PortalReady {
     node_id: u32,
     stream_id: Option<String>,
     source_type: Option<SourceType>,
+    geometry: crate::screen::ScreenSourceGeometry,
 }
 
 struct PortalControl {
@@ -140,6 +143,7 @@ fn prepare_portal_with_worker(
         node_id: ready.node_id,
         stream_id: ready.stream_id,
         source_type: ready.source_type,
+        geometry: ready.geometry,
         control: PortalControl {
             commands: Some(commands),
             thread: Some(thread),
@@ -234,10 +238,22 @@ async fn prepare_session(
         .select_sources(
             session,
             SelectSourcesOptions::default()
-                .set_sources(source_type(kind))
+                .set_sources(source_type(kind.clone()))
                 .set_multiple(false)
                 .set_cursor_mode(cursor_mode(cursor))
-                .set_persist_mode(PersistMode::DoNot),
+                .set_persist_mode(if proxy.version() >= 4 {
+                    PersistMode::Application
+                } else {
+                    PersistMode::DoNot
+                })
+                .set_restore_token(
+                    if proxy.version() >= 4 {
+                        restore::take(&kind)
+                    } else {
+                        None
+                    }
+                    .as_deref(),
+                ),
         )
         .await
         .map_err(map_portal_error)?;
@@ -247,6 +263,9 @@ async fn prepare_session(
         .await
         .map_err(map_portal_error)?;
     let response = request.response().map_err(map_portal_error)?;
+    if let Some(token) = response.restore_token() {
+        restore::remember(&kind, token);
+    }
     let [stream] = response.streams() else {
         return Err(CaptureError::native(
             NativeCaptureErrorCode::PortalInvalidStreamResponse,
@@ -265,6 +284,29 @@ async fn prepare_session(
         node_id: stream.pipe_wire_node_id(),
         stream_id: stream.id().map(ToOwned::to_owned),
         source_type: stream.source_type(),
+        geometry: stream_geometry(stream)?,
+    })
+}
+
+/// Retains compositor coordinates without treating them as PipeWire pixel sizes.
+fn stream_geometry(
+    stream: &ashpd::desktop::screencast::Stream,
+) -> Result<crate::screen::ScreenSourceGeometry, CaptureError> {
+    let size = stream
+        .size()
+        .map(
+            |(width, height)| match (u32::try_from(width), u32::try_from(height)) {
+                (Ok(width), Ok(height)) if width > 0 && height > 0 => Ok((width, height)),
+                _ => Err(CaptureError::native(
+                    NativeCaptureErrorCode::PortalInvalidStreamResponse,
+                    "the ScreenCast portal returned invalid compositor dimensions",
+                )),
+            },
+        )
+        .transpose()?;
+    Ok(crate::screen::ScreenSourceGeometry {
+        position: stream.position(),
+        size,
     })
 }
 

@@ -25,6 +25,10 @@ pub(crate) fn register_ui_state_services(
             let patch: UiStatePatch = json::decode(payload)?;
             if patch.remaining.is_some_and(|seconds| seconds > 30)
                 || patch.shortcut.as_ref().is_some_and(|key| key.len() > 80)
+                || patch
+                    .pause_shortcut
+                    .as_ref()
+                    .is_some_and(|key| key.len() > 80)
             {
                 return Err("invalid beam UI state".into());
             }
@@ -35,6 +39,21 @@ pub(crate) fn register_ui_state_services(
             if let Some(value) = patch.shortcut {
                 current.shortcut = value;
             }
+            if let Some(value) = patch.pause_shortcut {
+                current.pause_shortcut = value;
+            }
+            if let Some(value) = patch.microphone_enabled {
+                current.microphone_enabled = value;
+            }
+            if let Some(value) = patch.system_audio_enabled {
+                current.system_audio_enabled = value;
+            }
+            if let Some(value) = patch.camera_enabled {
+                current.camera_enabled = value;
+            }
+            if let Some(value) = patch.preparation_source {
+                current.preparation_source = value;
+            }
             if let Some(value) = patch.paused {
                 current.paused = value;
             }
@@ -44,7 +63,7 @@ pub(crate) fn register_ui_state_services(
             if let Some(value) = patch.region_revision {
                 current.region_revision = value;
             }
-            for window in ["region", "countdown", "recorder"] {
+            for window in ["region", "regionActions", "countdown", "recorder"] {
                 send_event(
                     &state_events,
                     window,

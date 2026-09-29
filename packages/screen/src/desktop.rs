@@ -1,6 +1,7 @@
 //! Foreground preview operations for the native recording-window selector.
 
 use crate::{CaptureError, model::SourceId};
+pub mod appearance;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DesktopBounds {

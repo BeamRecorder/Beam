@@ -6,6 +6,7 @@ import { useTheme } from '@argui/solid'
 import type { WidgetTheme } from '@argui/widgets/solid'
 import { mediaAssets } from '../../../assets.generated'
 import { Button } from '../shared/base-ui/button'
+import { ErrorNotice } from '../shared/base-ui/errorNotice'
 import { Icon } from '../shared/base-ui/icon'
 import { SegmentedControl } from '../shared/base-ui/segmentedControl'
 import { WindowSurface } from '../shared/base-ui/windowSurface'
@@ -14,8 +15,10 @@ import type { BeamApi } from '../shared/beamApi'
 import type { BeamPreferences, CaptureMode, CaptureRequest } from '../shared/beamTypes'
 import { SourceCard } from './SourceCard'
 import { DeviceSelect } from './DeviceSelect'
+import { ScreenshotNotice } from './ScreenshotNotice'
 import { hudLayout } from './hudLayout'
 import { useCaptureLauncher } from './useCaptureLauncher'
+import { useAudioMeters } from '../shared/useAudioMeters'
 
 const modes: { id: CaptureMode; label: string; asset: AssetRef }[] = [
   { id: 'recorder', label: 'Recorder', asset: mediaAssets['modes/recorder.svg'] },
@@ -32,6 +35,11 @@ export function Hud(props: {
   const theme = useTheme<WidgetTheme>()
   const launcher = useCaptureLauncher(props)
   const metrics = useWindowMetrics(props.api, props.preferences.hudWindow)
+  const meters = useAudioMeters(props.api, () => {
+    if (!metrics().visible || launcher.busy() || launcher.mode() === 'screenshot') return null
+    const microphoneId = launcher.devices().microphone || null, systemAudioId = launcher.devices().systemAudio || null
+    return microphoneId || systemAudioId ? { microphoneId, systemAudioId } : null
+  })
   const layout = () => hudLayout(metrics().width, metrics().height)
   const report = (cause: unknown) => console.error(String(cause))
   return <WindowSurface api={props.api}>
@@ -61,9 +69,9 @@ export function Hud(props: {
         </row>
       </row>
       <rectangle width="100%" height={1} shrink={0} background={theme().border} />
-      <column width="100%" grow={1} minHeight={0} padding={10} gap={5}>
-        <row width="100%" grow={1} minHeight={0} gap={10} alignItems="center">
-          <column width={0} grow={1} minWidth={0} gap={10} alignItems="center">
+      <column width="100%" grow={1} minHeight={0} padding={10} gap={5} justifyContent="center">
+        <row width="100%" minHeight={0} gap={10} alignItems="stretch">
+          <column width={0} grow={1} minWidth={0} gap={10} alignItems="center" justifyContent="spaceBetween">
             <SegmentedControl label={N('captureMode')} value={launcher.mode()} options={modes.map(item => ({ ...item, label: item.id === 'recorder' ? N('recorder') : TR(item.id) }))}
               width={layout().modeGroupWidth} compact={!layout().showModeLabels} disabled={launcher.busy()}
               onChange={value => void launcher.changeMode(value)} />
@@ -76,15 +84,19 @@ export function Hud(props: {
                 disabled={launcher.busy()} onSelect={() => void launcher.choose('window')} />
             </row>
           </column>
-          <rectangle width={1} height="100%" shrink={0} background={theme().border} />
-          <column width={layout().deviceWidth} shrink={0} gap={6}>
-            <Show when={launcher.mode() !== 'screenshot'}>
-              <DeviceSelect id="camera" label={R('camera')} icon="camera" options={launcher.catalog().cameras} value={launcher.devices().camera ?? ''}
-                onChange={value => void launcher.saveDevice('camera', value)} />
-              <DeviceSelect id="microphone" label={R('microphone')} icon="mic" options={launcher.catalog().microphones} value={launcher.devices().microphone ?? ''}
-                onChange={value => void launcher.saveDevice('microphone', value)} />
-              <DeviceSelect id="system-audio" label={R('systemAudio')} icon="volume-2" options={[{ id: 'default', label: P('on') }]} value={launcher.devices().systemAudio ?? ''}
-                onChange={value => void launcher.saveDevice('systemAudio', value)} />
+          <rectangle width={1} shrink={0} alignSelf="stretch" background={theme().border} />
+          <column width={layout().deviceWidth} shrink={0} gap={10} justifyContent="spaceBetween">
+            <Show when={launcher.mode() !== 'screenshot'} fallback={<ScreenshotNotice />}>
+              <column width="100%" gap={6} shrink={0}>
+                <DeviceSelect id="camera" label={R('camera')} icon="camera" options={launcher.catalog().cameras} value={launcher.devices().camera ?? ''}
+                  onChange={value => void launcher.saveDevice('camera', value)} />
+                <DeviceSelect id="microphone" label={R('microphone')} icon="mic" options={launcher.catalog().microphones} value={launcher.devices().microphone ?? ''}
+                  level={meters.levels().microphone}
+                  onChange={value => void launcher.saveDevice('microphone', value)} />
+                <DeviceSelect id="system-audio" label={R('systemAudio')} icon="volume-2" options={[{ id: 'default', label: P('on') }]} value={launcher.devices().systemAudio ?? ''}
+                  level={meters.levels().systemAudio}
+                  onChange={value => void launcher.saveDevice('systemAudio', value)} />
+              </column>
               <Button variant="secondary" size="sm" width="100%" onClick={() => void props.api.openTeleprompter().catch(report)}>
                 <row alignItems="center" justifyContent="center" gap={6}>
                   <Icon name="scroll-text" size={14} color={theme().foreground} />
@@ -94,9 +106,7 @@ export function Hud(props: {
             </Show>
           </column>
         </row>
-        <Show when={launcher.error() || props.externalError}>
-          <text color={theme().destructive} fontSize={11} lineClamp={2} role="alert">{launcher.error() || props.externalError || ''}</text>
-        </Show>
+        <ErrorNotice message={launcher.error() || props.externalError || meters.error() || ''} onCopy={text => props.api.copyText(text)} />
       </column>
     </column>
   </WindowSurface>

@@ -15,6 +15,17 @@ impl MediaSession {
         self.gate.close();
         self.observe_queues();
         self.drain_events();
+        self.halt_sources();
+        self.drain_pending_sources();
+        self.drain_events();
+        self.observe_queues();
+        self.finish_telemetry(end_clock_ns);
+        self.finish_sources(end_clock_ns);
+        self.persist_completion()?;
+        Ok(self.manifest)
+    }
+
+    fn halt_sources(&mut self) {
         if let Some(screen) = self.screen.as_mut()
             && let Err(error) = screen.halt()
         {
@@ -51,9 +62,9 @@ impl MediaSession {
                 error.to_string(),
             );
         }
-        self.drain_pending_sources();
-        self.drain_events();
-        self.observe_queues();
+    }
+
+    fn finish_telemetry(&mut self, end_clock_ns: u64) {
         if let Some(telemetry) = self.screen_telemetry.take() {
             match telemetry.finish() {
                 Ok(()) => {
@@ -81,6 +92,9 @@ impl MediaSession {
                 }
             }
         }
+    }
+
+    fn finish_sources(&mut self, end_clock_ns: u64) {
         self.screen.take();
         self.camera.take();
         self.microphone.take();
@@ -102,6 +116,9 @@ impl MediaSession {
                 track.status = TrackStatus::Completed;
             }
         }
+    }
+
+    fn persist_completion(&mut self) -> Result<(), SessionError> {
         let measurements_path = self.layout.root().join("measurements.json");
         let measurements_result = write_atomic(
             &measurements_path,
@@ -123,7 +140,7 @@ impl MediaSession {
         self.manifest_writer
             .finalize_with_completion(&mut self.manifest, successful)?;
         measurements_result?;
-        Ok(self.manifest)
+        Ok(())
     }
 
     pub(super) fn drain_pending_sources(&mut self) {

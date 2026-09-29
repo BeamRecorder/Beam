@@ -6,7 +6,11 @@ use argui_core::{Key, KeyState};
 use argui_runtime::{HostId, NativeHostDelivery};
 use argui_ui::{GestureKind, GesturePhase, SemanticAction, SemanticValue, UiEventKind};
 use serde_json::Value;
+mod pointers;
+mod resizes;
 mod types;
+pub use pointers::coalesce_absolute_pointer_moves;
+pub use resizes::coalesce_window_resizes;
 use types::{
     CallbackEvent, EventData, EventPayload, Measurement, NodeIdentity, PointerGeometry,
     SemanticValue as SerializedSemanticValue,

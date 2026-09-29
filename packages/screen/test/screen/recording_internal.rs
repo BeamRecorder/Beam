@@ -8,6 +8,7 @@ fn stopped_native_backend_preserves_dispatch_contract_and_idempotent_cleanup() {
         backend: PlatformScreenRecording::Linux(backend),
     };
     assert!(recording.source_id().is_none());
+    assert!(recording.source_geometry().is_none());
     assert!(recording.video_format().is_none());
     assert!(recording.start().is_err());
     assert!(recording.pause().is_err());

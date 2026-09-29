@@ -15,7 +15,12 @@ use argui_platform::{
     file_picker::{FileDialog, FilePickerMode},
 };
 use serde_json::Value;
+#[path = "services/actor.rs"]
+mod actor;
+pub(crate) use actor::ActorSession;
+#[path = "services/events.rs"]
 mod events;
+#[path = "services/types.rs"]
 mod types;
 use types::{
     Cancellation, FileReference, MAX_SCRIPT_SERVICE_BYTES, MAX_SERVICE_BYTES, ReplyOutcome,

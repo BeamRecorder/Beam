@@ -45,6 +45,7 @@ fn missing_file_has_safe_defaults() {
     assert!(!root.exists());
     assert_eq!(view["captureMode"], "recorder");
     assert_eq!(view["hudWindow"], json!({ "width": 680, "height": 252 }));
+    assert_eq!(view["windowPositions"], json!({}));
     assert_eq!(view["shortcuts"]["hud.startStopRecording"], "Alt+Shift+R");
     assert_eq!(preferences.initialize().unwrap(), view);
     assert!(!root.exists());
@@ -326,6 +327,61 @@ fn invalid_stored_locale_falls_back_without_rewriting_editor_preferences() {
         let stored = json::encode(&preferences.read().unwrap()).unwrap();
         assert_eq!(stored["extras"]["locale"], "fr");
         assert_eq!(stored["extras"]["editorSettings"]["known"], true);
+    }
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn auxiliary_positions_merge_and_survive_reopening_preferences() {
+    let (root, preferences) = fixture();
+    preferences
+        .patch(&json!({ "windowPositions": {
+        "recorder": { "x": -1200, "y": 800 }, "countdown": { "x": 400, "y": 300 }
+    } }))
+        .unwrap();
+    let updated = preferences
+        .patch(&json!({ "windowPositions": {
+        "recorder": { "x": -1000, "y": 700 }
+    } }))
+        .unwrap();
+    assert_eq!(
+        updated["windowPositions"]["countdown"],
+        json!({ "x": 400, "y": 300 })
+    );
+    let reopened = preferences::Preferences::at(root.join("preferences.json"))
+        .view()
+        .unwrap();
+    assert_eq!(reopened["windowPositions"], updated["windowPositions"]);
+    assert_eq!(
+        reopened["windowPositions"]["recorder"],
+        json!({ "x": -1000, "y": 700 })
+    );
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn invalid_auxiliary_positions_never_replace_saved_positions() {
+    let (root, preferences) = fixture();
+    preferences
+        .patch(&json!({ "windowPositions": { "recorder": { "x": 400, "y": 300 } } }))
+        .unwrap();
+    let original = fs::read_to_string(root.join("preferences.json")).unwrap();
+    for positions in [
+        json!({ "regionControls": { "x": 0, "y": 0 } }),
+        json!({ "recorder": { "x": 100001, "y": 0 } }),
+        json!({ "countdown": { "x": 0, "y": -100001 } }),
+        json!({ "settings": { "x": 0.5, "y": 0 } }),
+        json!({ "teleprompter": { "x": 0, "y": 0, "width": 100 } }),
+    ] {
+        assert!(
+            preferences
+                .patch(&json!({ "windowPositions": positions }))
+                .is_err()
+        );
+        assert_eq!(
+            fs::read_to_string(root.join("preferences.json")).unwrap(),
+            original
+        );
     }
     fs::remove_dir_all(root).unwrap();
 }

@@ -65,6 +65,11 @@ impl LinuxRecording {
         })
     }
 
+    /// Returns the granted source's compositor geometry before its session closes.
+    pub(crate) fn source_geometry(&self) -> Option<crate::screen::ScreenSourceGeometry> {
+        self.portal.as_ref().map(|portal| portal.geometry)
+    }
+
     pub fn start(&mut self) -> Result<(), CaptureError> {
         self.pipewire
             .as_mut()
@@ -150,7 +155,7 @@ fn validate_portal_request(
     };
     if restore_token.is_some() {
         return Err(CaptureError::InvalidConfiguration(
-            "Linux Portal restore tokens are not supported in non-persistent mode".into(),
+            "Linux Portal restore grants are managed internally for this application".into(),
         ));
     }
     if let Some(region) = region {

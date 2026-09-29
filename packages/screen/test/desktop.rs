@@ -1,6 +1,7 @@
-#![cfg(all(test, target_os = "linux"))]
+#![cfg(test)]
 #![allow(clippy::unwrap_used)]
 
+#[cfg(target_os = "linux")]
 #[test]
 #[ignore = "requires the private X11 display"]
 fn desktop_preview_rejects_unresolved_sources() {
@@ -10,3 +11,6 @@ fn desktop_preview_rejects_unresolved_sources() {
     assert!(super::raise_window(&id).is_err());
     assert!(super::activate_window(&id).is_err());
 }
+
+#[path = "desktop/appearance.rs"]
+mod appearance;

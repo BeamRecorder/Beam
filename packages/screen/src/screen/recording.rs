@@ -197,6 +197,22 @@ impl ScreenRecording {
         }
     }
 
+    /// Returns optional compositor-space geometry, separately from pixel format.
+    ///
+    /// Direct capture backends have no portal metadata. Callers must use the
+    /// captured raster dimensions for pixel sampling and normalized cropping.
+    #[must_use]
+    pub fn source_geometry(&self) -> Option<super::ScreenSourceGeometry> {
+        match &self.backend {
+            #[cfg(target_os = "linux")]
+            PlatformScreenRecording::Linux(recording) => recording.source_geometry(),
+            #[cfg(target_os = "linux")]
+            PlatformScreenRecording::X11(_) => None,
+            #[cfg(any(windows, target_os = "macos"))]
+            _ => None,
+        }
+    }
+
     pub fn start(&mut self) -> Result<(), CaptureError> {
         match &mut self.backend {
             #[cfg(target_os = "linux")]

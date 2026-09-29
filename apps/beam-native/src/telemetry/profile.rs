@@ -1,24 +1,14 @@
 //! Development-only native frame and GPU profile aggregation.
 
+use super::presentation::observe_presentation;
 use argui_paint::RenderObjectId;
 use argui_render::DamageMode;
 use argui_runtime::{RuntimeEvent, WindowRuntimeEvent};
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex, OnceLock},
-    time::{Duration, Instant},
+    sync::{Arc, Mutex},
+    time::Duration,
 };
-
-static PRESENTATION_PROBE: OnceLock<Mutex<Option<Instant>>> = OnceLock::new();
-
-/// Marks a large host batch's commit as the start of first-presentation timing.
-/// This timestamp excludes JavaScript callback and native commit work.
-pub(crate) fn mark_commit_for_presentation() {
-    *PRESENTATION_PROBE
-        .get_or_init(|| Mutex::new(None))
-        .lock()
-        .expect("probe lock") = Some(Instant::now());
-}
 
 /// Records one native profile, sending complete bounded samples to an output thread.
 /// `profiles` is the shared sample state; `event` is a runtime profile event.
@@ -28,23 +18,11 @@ pub(crate) fn observe_profile(
     event: &RuntimeEvent,
     label: &'static str,
 ) {
-    if matches!(
-        event,
-        RuntimeEvent::RenderProfile(_)
-            | RuntimeEvent::Window {
-                event: WindowRuntimeEvent::RenderProfile(_),
-                ..
-            }
-    ) && let Some(entered) = PRESENTATION_PROBE
-        .get_or_init(|| Mutex::new(None))
-        .lock()
-        .expect("probe lock")
-        .take()
-    {
-        let elapsed = entered.elapsed();
+    if let Some((window, elapsed)) = observe_presentation(event) {
         std::thread::spawn(move || {
             eprintln!(
-                "argui-comparison commit_to_first_render_ms={:.3}",
+                "argui-comparison window={} queued_commit_to_first_render_ms={:.3}",
+                window.as_str(),
                 elapsed.as_secs_f64() * 1000.0
             )
         });

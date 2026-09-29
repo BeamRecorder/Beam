@@ -26,6 +26,8 @@ The native launcher, settings and video editor use `packages/beam-ui/src/solid/s
 - Before adding a color, spacing, radius, shadow, typography, or z-index value, check whether a theme token already exists.
 - Use the existing theme variables from `src/style.css` and related theme files. Do not introduce a parallel token naming system.
 - Hard-coded values are acceptable for geometry that is intrinsic to a component, but not for reusable visual language.
+- Capture measurements use compact pills with paired foreground and surface colors from the current theme, during dragging and after selection. Crop presets update retained visible controls; hide and reveal them only around native dragging.
+- The native teleprompter follows the application theme for its surface, chrome and default script text. Explicit text colors, including white and alpha, remain user choices; legacy default-white scripts use automatic theme contrast.
 - Keep layout responsibilities clear: parents control placement; children control their internal layout.
 - Do not use global element selectors to style a feature unless the global behavior is intentional and documented.
 

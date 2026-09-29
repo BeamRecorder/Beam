@@ -87,6 +87,18 @@ impl Preferences {
     }
 }
 fn validate_patch(patch: &PreferencePatch) -> Result<(), String> {
+    if let Some(positions) = &patch.window_positions {
+        for (window, position) in positions {
+            if !matches!(
+                window.as_str(),
+                "recorder" | "countdown" | "settings" | "teleprompter" | "regionActions"
+            ) || position.x.unsigned_abs() > 100_000
+                || position.y.unsigned_abs() > 100_000
+            {
+                return Err("windowPositions contains an unsupported window or position".into());
+            }
+        }
+    }
     if let Some(value) = &patch.locale {
         locale::validate(value)?;
     }
@@ -166,11 +178,28 @@ fn apply_patch(document: &mut PreferenceDocument, patch: PreferencePatch) {
     if let Some(position) = patch.hud_position {
         document.extras.get_or_insert_default().native_hud_position = Some(position);
     }
+    if let Some(positions) = patch.window_positions {
+        document
+            .extras
+            .get_or_insert_default()
+            .native_window_positions
+            .get_or_insert_default()
+            .extend(positions);
+    }
     if let Some(seconds) = patch.countdown_seconds {
         document
             .extras
             .get_or_insert_default()
             .native_countdown_seconds = Some(seconds);
+    }
+    if let Some(hidden) = patch.hide_taskbar {
+        document.extras.get_or_insert_default().native_hide_taskbar = Some(hidden);
+    }
+    if let Some(hidden) = patch.hide_desktop_icons {
+        document
+            .extras
+            .get_or_insert_default()
+            .native_hide_desktop_icons = Some(hidden);
     }
     if let Some(devices) = patch.devices {
         let stored = document.devices.get_or_insert_default();
@@ -259,8 +288,11 @@ fn view_of(document: &PreferenceDocument) -> Result<NativePreferences, String> {
         },
         hud_window,
         hud_position: extras.native_hud_position,
+        window_positions: extras.native_window_positions.clone().unwrap_or_default(),
         shortcuts,
         countdown_seconds,
+        hide_taskbar: extras.native_hide_taskbar.unwrap_or(false),
+        hide_desktop_icons: extras.native_hide_desktop_icons.unwrap_or(false),
         devices: Devices {
             camera: normalize_device(devices.camera_id.as_deref().unwrap_or_default()),
             microphone: normalize_device(devices.mic_id.as_deref().unwrap_or_default()),
