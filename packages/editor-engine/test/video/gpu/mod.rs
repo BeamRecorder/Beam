@@ -8,4 +8,6 @@ mod linear;
 mod egl;
 mod source;
 mod transfer;
+mod transition;
+mod transition_shader;
 mod types;

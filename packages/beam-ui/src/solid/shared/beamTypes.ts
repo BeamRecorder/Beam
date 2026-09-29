@@ -1,7 +1,13 @@
 export type CaptureMode = 'recorder' | 'screenshot' | 'instant'
 export type SourceMode = 'display' | 'region' | 'window'
 export type ResizeDirection = 'north' | 'northEast' | 'east' | 'southEast' | 'south' | 'southWest' | 'west' | 'northWest'
-export type AuxiliaryWindow = 'regionControls' | 'regionActions' | 'countdown' | 'recorder' | 'settings' | 'windowPicker' | 'windowHighlight' | 'teleprompter'
+export type AuxiliaryWindow = 'regionControls' | 'regionActions' | 'countdown' | 'recorder' | 'settings' | 'windowPicker' | 'windowHighlight' | 'teleprompter' | 'projects' | 'editorLoading'
+export interface NativeProjectSummary {
+  id: string
+  name: string
+  kind: 'recording' | 'instant' | 'project'
+  updatedAtMs: number
+}
 export type RecordingPhase = 'idle' | 'preparing' | 'armed' | 'recording' | 'paused' | 'finalizing' | 'completed' | 'failed' | 'interrupted'
 
 export interface SourceOption { id: string; label: string; kind?: string; isDefault?: boolean }
@@ -69,6 +75,7 @@ export type BeamEvent = {
   scheme?: string;
   x?: number; y?: number;
   snapshot?: RegionSnapshot;
+  projectId?: string; sequenceId?: string; revision?: number;
   update?: import('./settings/updateTypes').UpdateSnapshot;
 }
 export interface InputAccessStatus { state: 'available' | 'permission-required' | 'installation-required' | 'unavailable' | 'denied'; canRequest: boolean; clicks: boolean; shortcuts: boolean; error?: { code: string; message: string } }

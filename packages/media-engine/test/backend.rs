@@ -14,6 +14,7 @@ pub(crate) mod fixtures {
     }
     pub(crate) fn manifest() -> SessionManifest {
         SessionManifest {
+            cursor_mode: Default::default(),
             schema_version: 2,
             project_id: ProjectId::new(),
             session_id: SessionId::new(),

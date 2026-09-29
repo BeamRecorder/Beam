@@ -78,9 +78,9 @@ pub(super) fn validate_pending_edit(scene: &super::localization::Scene<'_>) {
             .selected,
         "fresh snapshots must preserve the chosen inspector tab"
     );
-    assert!(super::contains_text(&authored, "Color"));
+    assert!(super::contains_text(&authored, "Effect stack"));
     assert!(!super::contains_text(&authored, "Untitled project"));
-    super::click_named(scene.gallery, scene.operations, "editor-clip-tabs-video").unwrap();
+    super::click_named(scene.gallery, scene.operations, "editor-clip-tabs-clip").unwrap();
     scene.gallery.tick(0.).unwrap();
 }
 

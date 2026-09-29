@@ -12,6 +12,8 @@ import { RecorderBar } from './hud/RecorderBar'
 import { Settings } from './shared/settings/Settings'
 import { WindowPicker, WindowHighlight } from './hud/WindowPicker'
 import { Teleprompter } from './teleprompter/Teleprompter'
+import { ProjectPicker } from './projects/ProjectPicker'
+import { EditorLoading } from './hud/EditorLoading'
 import { useUiState } from './shared/useUiState'
 import { useWindowMetrics } from './shared/useWindowMetrics'
 import type { AuxiliaryWindow } from './shared/beamTypes'
@@ -23,9 +25,9 @@ function CountdownScene(props: { api: BeamApi }) {
 }
 function RecorderScene(props: { api: BeamApi }) {
   const state = useUiState(props.api)
-  const metrics = useWindowMetrics(props.api, { width: 400, height: 54 })
-  return <RecorderBar api={props.api} paused={state().paused} busy={state().busy} visible={metrics().visible} shortcut={state().shortcut}
-    microphoneEnabled={state().microphoneEnabled ?? false} systemAudioEnabled={state().systemAudioEnabled ?? false} cameraEnabled={state().cameraEnabled ?? false}
+  const metrics = useWindowMetrics(props.api, { width: 240, height: 54 })
+  return <RecorderBar api={props.api} paused={state().paused} busy={state().busy} visible={metrics().visible}
+    onReset={() => void props.api.emitUiAction('reset').catch(console.error)}
     onPause={() => void props.api.emitUiAction('pause').catch(console.error)}
     onStop={() => void props.api.emitUiAction('stop').catch(console.error)}
     onDelete={() => void props.api.emitUiAction('delete').catch(console.error)} />
@@ -48,6 +50,8 @@ function mountScene(bridge: NativeBridge, expectedAbiHash: string,
       ? <CountdownScene api={api} /> : window === 'recorder' ? <RecorderScene api={api} />
         : window === 'windowPicker' ? <WindowPicker api={api} /> : window === 'windowHighlight'
         ? <WindowHighlight /> : window === 'teleprompter' ? <Teleprompter api={api} />
+        : window === 'projects' ? <ProjectPicker api={api} />
+        : window === 'editorLoading' ? <EditorLoading api={api} />
         : <Settings api={api} onClose={() => void api.hideWindow()} onTheme={variant => runtime.update({ variant })} />}
   </ThemeProvider> as unknown as NativeNode, root)
   host.setRoot(root)
@@ -65,3 +69,5 @@ export const mountSettings = (bridge: NativeBridge, expectedAbiHash: string) => 
 export const mountWindowPicker = (bridge: NativeBridge, expectedAbiHash: string) => mountScene(bridge, expectedAbiHash, 'windowPicker')
 export const mountWindowHighlight = (bridge: NativeBridge, expectedAbiHash: string) => mountScene(bridge, expectedAbiHash, 'windowHighlight')
 export const mountTeleprompter = (bridge: NativeBridge, expectedAbiHash: string) => mountScene(bridge, expectedAbiHash, 'teleprompter')
+export const mountProjects = (bridge: NativeBridge, expectedAbiHash: string) => mountScene(bridge, expectedAbiHash, 'projects')
+export const mountEditorLoading = (bridge: NativeBridge, expectedAbiHash: string) => mountScene(bridge, expectedAbiHash, 'editorLoading')

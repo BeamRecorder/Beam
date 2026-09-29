@@ -10,6 +10,77 @@ pub(crate) fn configure(
     clip: &Clip,
     canvas: &Canvas,
 ) -> Result<()> {
+    raster_size(source, canvas)?;
+    for (name, value) in properties(title, clip, canvas) {
+        ges::prelude::TimelineElementExtManual::set_child_property(source, name, value)
+            .map_err(media)?;
+    }
+    Ok(())
+}
+
+/// GES places its default 320×240 videotestsrc directly before Pango. Caps after
+/// the text overlay resize artwork, and cannot make normalized text positions
+/// refer to the canvas. Pin the raster dimensions before glyphs are generated.
+fn raster_size(source: &ges::TrackElement, canvas: &Canvas) -> Result<()> {
+    let element = source
+        .element()
+        .and_then(|e| e.downcast::<gst::Bin>().ok())
+        .ok_or_else(|| media("native title source has no bin"))?;
+    let background = element
+        .iterate_recurse()
+        .into_iter()
+        .flatten()
+        .find(|e| e.factory().is_some_and(|f| f.name() == "videotestsrc"))
+        .ok_or_else(|| media("native title has no raster background"))?;
+    let parent = background
+        .parent()
+        .and_then(|p| p.downcast::<gst::Bin>().ok())
+        .ok_or_else(|| media("title raster background has no parent"))?;
+    let before = background
+        .static_pad("src")
+        .ok_or_else(|| media("title raster has no output"))?;
+    let after = before
+        .peer()
+        .ok_or_else(|| media("title raster is not linked to Pango"))?;
+    let caps = gst::Caps::builder("video/x-raw")
+        .field("format", "RGBA")
+        .field("width", i32::try_from(canvas.width).map_err(media)?)
+        .field("height", i32::try_from(canvas.height).map_err(media)?)
+        .field(
+            "framerate",
+            gst::Fraction::new(
+                i32::try_from(canvas.fps).map_err(media)?,
+                i32::try_from(canvas.fps_denominator).map_err(media)?,
+            ),
+        )
+        .field("pixel-aspect-ratio", gst::Fraction::new(1, 1))
+        .build();
+    let filter = gst::ElementFactory::make("capsfilter")
+        .name("beam_title_raster")
+        .property("caps", caps)
+        .build()
+        .map_err(media)?;
+    before.unlink(&after).map_err(media)?;
+    parent.add(&filter).map_err(media)?;
+    before
+        .link(
+            &filter
+                .static_pad("sink")
+                .ok_or_else(|| media("title raster filter has no input"))?,
+        )
+        .map_err(media)?;
+    filter
+        .static_pad("src")
+        .ok_or_else(|| media("title raster filter has no output"))?
+        .link(&after)
+        .map_err(media)?;
+    Ok(())
+}
+pub(crate) fn properties(
+    title: &Title,
+    clip: &Clip,
+    canvas: &Canvas,
+) -> Vec<(&'static str, gst::glib::Value)> {
     let font = format!(
         "{} {} {} {}px",
         title.font,
@@ -17,7 +88,7 @@ pub(crate) fn configure(
         if title.italic { "Italic" } else { "" },
         canvas.height as f64 * title.size / 100.
     );
-    for (name, value) in [
+    vec![
         (
             "text",
             gst::glib::markup_escape_text(&title.text).to_value(),
@@ -31,68 +102,5 @@ pub(crate) fn configure(
         ("ypos", clip.effects.y.to_value()),
         ("halignment", ges::TextHAlign::Position.to_value()),
         ("valignment", ges::TextVAlign::Position.to_value()),
-    ] {
-        ges::prelude::TimelineElementExtManual::set_child_property(source, name, value)
-            .map_err(media)?;
-    }
-    Ok(())
-}
-
-/// Source-time fades keep paused seeks, trims, and hardware exports deterministic.
-pub(crate) fn fades(source: &ges::TrackElement, clip: &Clip, hidden: bool) -> Result<()> {
-    envelope(
-        source,
-        clip,
-        "alpha",
-        if hidden { 0. } else { clip.effects.opacity },
-    )
-}
-
-/// Audio transitions use the same source-time envelope, preserving lane mute and gain.
-pub(crate) fn audio_fades(source: &ges::TrackElement, clip: &Clip, muted: bool) -> Result<()> {
-    envelope(
-        source,
-        clip,
-        "volume",
-        if muted { 0. } else { clip.effects.volume },
-    )
-}
-
-fn envelope(source: &ges::TrackElement, clip: &Clip, property: &str, opacity: f64) -> Result<()> {
-    use gst_controller::prelude::*;
-    if clip.effects.fade_in_ms == 0 && clip.effects.fade_out_ms == 0 {
-        return Ok(());
-    }
-    let control = gst_controller::InterpolationControlSource::new();
-    control.set_mode(gst_controller::InterpolationMode::Linear);
-    let begin = clip.source_in_ms;
-    let end = begin + clip.duration_ms;
-    for (time, value) in [
-        (
-            begin,
-            if clip.effects.fade_in_ms > 0 {
-                0.
-            } else {
-                opacity
-            },
-        ),
-        (begin + clip.effects.fade_in_ms, opacity),
-        (end - clip.effects.fade_out_ms, opacity),
-        (
-            end,
-            if clip.effects.fade_out_ms > 0 {
-                0.
-            } else {
-                opacity
-            },
-        ),
-    ] {
-        if !control.set(gst::ClockTime::from_mseconds(time), value) {
-            return Err(media("could not create opacity envelope"));
-        }
-    }
-    if !source.set_control_source(&control, property, "direct-absolute") {
-        return Err(media("could not bind opacity envelope"));
-    }
-    Ok(())
+    ]
 }

@@ -1,15 +1,15 @@
 //! Native playback results; raster bytes never cross the JavaScript JSON bridge.
-use crate::{Canvas, Clip, MediaAsset, Project, Track};
+use crate::{Canvas, MediaAsset, Project};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Default)]
 pub struct FrameMailbox {
     pub(crate) pending: std::sync::Mutex<FrameSlot>,
+    pub(crate) delivery: std::sync::Mutex<()>,
     pub(crate) consumer: std::sync::Mutex<Option<FrameConsumer>>,
     pub(crate) ready: std::sync::Condvar,
     pub(crate) transport: std::sync::Mutex<super::gpu::types::PreviewTransport>,
-    pub(crate) producer: std::sync::Mutex<Option<gst::Buffer>>,
     pub(crate) forward: std::sync::Mutex<std::sync::Weak<FrameMailbox>>,
     pub(crate) quality: std::sync::Mutex<PreviewQuality>,
 }
@@ -39,6 +39,7 @@ pub(crate) struct FrameSlot {
     pub frame: Option<PreviewFrame>,
     pub window: Option<(u64, u64)>,
     pub ready: bool,
+    pub gate: super::frame_gate_types::SegmentGate,
 }
 
 pub type FrameConsumer = std::sync::Arc<dyn Fn(PreviewFrame) + Send + Sync>;
@@ -71,6 +72,8 @@ pub struct EditorSnapshot {
     pub revision: u64,
     pub can_undo: bool,
     pub can_redo: bool,
+    pub can_project_undo: bool,
+    pub can_project_redo: bool,
     pub recovered: bool,
     pub transport: Transport,
     pub export_formats: Vec<crate::export::types::ExportEncoding>,
@@ -89,6 +92,7 @@ pub struct AssetView {
     pub has_cursor: bool,
     pub zoom_count: usize,
     pub recording: bool,
+    pub cursor_mode: beam_editor_domain::recording::style_types::CursorMode,
 }
 impl From<&MediaAsset> for AssetView {
     fn from(a: &MediaAsset) -> Self {
@@ -104,6 +108,7 @@ impl From<&MediaAsset> for AssetView {
             has_cursor: !a.cursor.is_empty(),
             zoom_count: a.zooms.len(),
             recording: a.recording,
+            cursor_mode: a.cursor_mode,
         }
     }
 }
@@ -114,9 +119,12 @@ pub struct ProjectView {
     pub name: String,
     pub canvas: Canvas,
     pub assets: Vec<AssetView>,
-    pub tracks: Vec<Track>,
-    pub clips: Vec<Clip>,
+    pub tracks: Vec<beam_editor_domain::protocol::TrackOverview>,
+    pub clips: Vec<beam_editor_domain::protocol::ClipOverview>,
     pub warnings: Vec<String>,
+    pub definitions: Vec<beam_editor_domain::effects::Definition>,
+    pub transitions: Vec<beam_editor_domain::effects::Transition>,
+    pub recording_style: beam_editor_domain::recording::style_types::RecordingStyle,
 }
 impl From<&Project> for ProjectView {
     fn from(p: &Project) -> Self {
@@ -125,9 +133,24 @@ impl From<&Project> for ProjectView {
             name: p.name.clone(),
             canvas: p.canvas.clone(),
             assets: p.assets.iter().map(AssetView::from).collect(),
-            tracks: p.tracks.clone(),
-            clips: p.clips.clone(),
+            tracks: p
+                .tracks
+                .headers()
+                .map(|track| {
+                    beam_editor_domain::protocol::TrackOverview::from_header(track, &p.definitions)
+                })
+                .collect(),
+            clips: p
+                .clips
+                .headers()
+                .map(|clip| {
+                    beam_editor_domain::protocol::ClipOverview::from_header(clip, &p.definitions)
+                })
+                .collect(),
             warnings: p.warnings.clone(),
+            definitions: p.definitions.clone(),
+            transitions: p.transitions.clone(),
+            recording_style: p.recording_style.clone(),
         }
     }
 }

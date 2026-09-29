@@ -86,7 +86,7 @@ fn run(queue: Shared) {
 fn process(shared: Shared) {
     let mut videos = VecDeque::new();
     let mut audios = VecDeque::new();
-    let mut slices: VecDeque<((uuid::Uuid, uuid::Uuid), super::types::Waveform)> = VecDeque::new();
+    let mut slices: VecDeque<(super::types::SourceKey, super::types::Waveform)> = VecDeque::new();
     loop {
         let mut job = {
             let mut queue = shared.0.lock().unwrap_or_else(|p| p.into_inner());
@@ -103,15 +103,20 @@ fn process(shared: Shared) {
         if job.cancel.load(Ordering::Acquire) {
             continue;
         }
-        let key = (job.source.project_id, job.source.asset.id);
+        let key = super::types::SourceKey {
+            project_id: job.source.project_id,
+            asset_id: job.source.asset.id,
+            identity: job.source.asset.identity.clone(),
+        };
         let result = match job.request {
             VisualRequest::Video { position_ms } => (|| {
+                crate::project::sources::verify(&job.source.root, &job.source.asset)?;
                 if !videos.iter().any(|(id, _)| *id == key) {
                     let decoder = video::Decoder::new(&job.source)?;
                     if videos.len() == 2 {
                         videos.pop_front();
                     }
-                    videos.push_back((key, decoder));
+                    videos.push_back((key.clone(), decoder));
                 }
                 let decoder = &videos
                     .iter()
@@ -145,12 +150,13 @@ fn process(shared: Shared) {
                         complete: true,
                     });
                 }
+                crate::project::sources::verify(&job.source.root, &job.source.asset)?;
                 if !audios.iter().any(|(id, _)| *id == key) {
                     let decoder = audio::Decoder::new(&job.source)?;
                     if audios.len() == 2 {
                         audios.pop_front();
                     }
-                    audios.push_back((key, decoder));
+                    audios.push_back((key.clone(), decoder));
                 }
                 let decoder = &audios
                     .iter()

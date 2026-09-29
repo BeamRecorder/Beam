@@ -157,6 +157,11 @@ impl RecordingController {
         self.request(|reply| Command::Resume(id, reply))
     }
 
+    /// Erases the active take and starts a fresh session with the same sources.
+    pub fn restart(&self, id: SessionId) -> Result<RecordingStatus, EngineError> {
+        self.request(|reply| Command::Restart(id, reply))
+    }
+
     pub fn stop(&self, id: SessionId) -> Result<RecordingStatus, EngineError> {
         self.request(|reply| Command::Finish(id, None, reply))
     }

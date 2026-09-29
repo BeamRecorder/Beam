@@ -1,6 +1,7 @@
 import type { ApplicationServices } from '@argui/host';
-import type { Edit, ExportStatus, Frame, Snapshot, Transport, PreviewQuality } from './editorTypes';
+import type { Edit, ExportStatus, Frame, Snapshot, Transport, PreviewQuality, Operation } from './editorTypes';
 import type { VisualLease, VisualRequest } from '../media/visualTypes';
+import type { Query, Response } from './generated/editorContracts';
 
 /** Project paths and export destinations are chosen entirely by the Rust host. */
 export class EditorApi {
@@ -20,9 +21,13 @@ export class EditorApi {
   edit(revision: number, edit: Edit): Promise<Snapshot> {
     return this.services.call('editor', 'edit', { revision, edit });
   }
+  commands(revision: number, sequenceId: string, operations: Operation[]): Promise<Snapshot> {
+    return this.services.call('editor', 'commands', { revision, sequenceId, commands: operations.map((operation, index) => ({ commandId: `command-${index}`, operation })) });
+  }
   snapshot(): Promise<Snapshot> {
     return this.services.call('editor', 'snapshot');
   }
+  query(query: Query): Promise<Response> { return this.services.call('editor', 'query', query); }
   retry(): Promise<Snapshot> {
     return this.services.call('editor', 'retry');
   }

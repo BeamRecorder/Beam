@@ -1,3 +1,6 @@
+#[allow(dead_code)]
+#[path = "../../src/beam/files.rs"]
+mod files;
 #[path = "../../src/runner/paths.rs"]
 mod paths;
 
@@ -78,4 +81,40 @@ fn asset_lookup_prefers_packaged_files_and_reports_missing_bundle() {
             Err("bundle path has no directory"),
         );
     }
+}
+
+#[test]
+fn explicit_assets_do_not_require_a_bundle_path() {
+    let explicit = Path::new("/tmp/beam-explicit-assets.json").to_path_buf();
+    assert_eq!(
+        paths::asset_manifest_path(Some(explicit.clone()), None).unwrap(),
+        explicit
+    );
+}
+
+#[test]
+fn packaged_assets_take_precedence_over_development_assets() {
+    let root = tempfile::tempdir().unwrap();
+    let directory = root.path().join("native-ui/ui");
+    fs::create_dir_all(&directory).unwrap();
+    let bundle = directory.join("app.mjs");
+    let packaged = directory.join(files::ASSET_MANIFEST);
+    fs::write(&packaged, "{}").unwrap();
+    assert_eq!(
+        paths::asset_manifest_path(None, Some(&bundle)).unwrap(),
+        packaged
+    );
+    fs::remove_file(&packaged).unwrap();
+    assert_eq!(
+        paths::asset_manifest_path(None, Some(&bundle)).unwrap(),
+        directory
+            .join("../..")
+            .join(files::DEVELOPMENT_ASSET_MANIFEST)
+    );
+}
+
+#[test]
+fn assets_without_explicit_manifest_or_bundle_directory_are_rejected() {
+    assert!(paths::asset_manifest_path(None, None).is_err());
+    assert!(paths::asset_manifest_path(None, Some(Path::new("/"))).is_err());
 }

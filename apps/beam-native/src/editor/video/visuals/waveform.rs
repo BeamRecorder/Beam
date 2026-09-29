@@ -54,6 +54,7 @@ impl GpuCanvasFactory for Factory {
             strips,
             data: None,
             columns: 0,
+            source: self.source.clone(),
         }))
     }
 }
@@ -78,7 +79,21 @@ fn binding(binding: u32, buffer: &wgpu::Buffer) -> wgpu::BindGroupEntry<'_> {
 }
 impl GpuCanvasRenderer for Renderer {
     fn render(&mut self, context: &mut GpuCanvasRenderContext<'_>) -> Result<(), GpuCanvasError> {
-        let incoming = self.mailbox.take();
+        let incoming = if let Some(source) = &self.source {
+            let latest = source.lock().unwrap_or_else(|p| p.into_inner()).clone();
+            self.mailbox.clear();
+            if latest.is_none() {
+                self.data = None;
+                self.columns = 0;
+            }
+            latest.filter(|latest| {
+                self.data
+                    .as_ref()
+                    .is_none_or(|current| !Arc::ptr_eq(current, latest))
+            })
+        } else {
+            self.mailbox.take().map(Arc::new)
+        };
         let changed = incoming.is_some();
         if let Some(data) = incoming {
             if data.points.is_empty()

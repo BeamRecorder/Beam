@@ -33,13 +33,72 @@ impl super::types::FrameMailbox {
     }
     /// Rejects prerolls left over from a previous seek, including backward seeks.
     pub fn expect_position(&self, time: u64, fps: u32) {
+        self.expect_position_rate(time, fps, 1);
+    }
+    /// Fractional rates use the actual frame duration when accepting a seek result.
+    pub fn expect_position_rate(&self, time: u64, numerator: u32, denominator: u32) {
         let mut slot = self.pending.lock().unwrap_or_else(|p| p.into_inner());
         slot.frame = None;
         slot.ready = false;
         slot.window = Some((
             time.saturating_sub(1),
-            time.saturating_add(1000_u64.div_ceil(fps.max(1) as u64)),
+            time.saturating_add(
+                (1000 * u64::from(denominator.max(1))).div_ceil(u64::from(numerator.max(1))),
+            ),
         ));
+    }
+    /// Associate a request with the real downstream Segment before accepting its frames.
+    pub fn seek(
+        &self,
+        pipeline: &ges::Pipeline,
+        position: gst::ClockTime,
+        numerator: u32,
+        denominator: u32,
+    ) -> Result<gst::Seqnum> {
+        if numerator == 0 || denominator == 0 || position.nseconds() > i64::MAX as u64 {
+            return Err(EditorError::Invalid(
+                "invalid native preview clock or frame rate".into(),
+            ));
+        }
+        let timeline = pipeline
+            .timeline()
+            .ok_or_else(|| media("native preview seek requires a prepared timeline"))?;
+        let duration = timeline.duration();
+        if duration == gst::ClockTime::ZERO
+            || duration.nseconds() > i64::MAX as u64
+            || position > duration
+        {
+            return Err(EditorError::Invalid(
+                "native preview seek is outside a finite prepared timeline".into(),
+            ));
+        }
+        let event = gst::event::Seek::new(
+            1.,
+            gst::SeekFlags::FLUSH | gst::SeekFlags::ACCURATE,
+            gst::SeekType::Set,
+            position,
+            // NLE may retain the previous stack's stop when the seek uses NONE.
+            // Explicitly reset it before seeking beyond the first cut or window.
+            gst::SeekType::Set,
+            duration,
+        );
+        let seqnum = event.seqnum();
+        let time = position.mseconds();
+        {
+            let _delivery = self.delivery.lock().unwrap_or_else(|p| p.into_inner());
+            let mut slot = self.pending.lock().unwrap_or_else(|p| p.into_inner());
+            slot.frame = None;
+            slot.ready = false;
+            slot.window = Some((
+                time.saturating_sub(1),
+                time.saturating_add((1000 * u64::from(denominator)).div_ceil(u64::from(numerator))),
+            ));
+            slot.gate.expect(seqnum);
+        }
+        if !pipeline.send_event(event) {
+            return Err(media("GStreamer rejected the preview seek"));
+        }
+        Ok(seqnum)
     }
     pub fn resume(&self) {
         self.pending
@@ -48,23 +107,44 @@ impl super::types::FrameMailbox {
             .window = None;
     }
     pub fn publish(&self, frame: PreviewFrame) {
+        self.publish_segment(frame, None);
+    }
+    fn segment_marker(&self, buffer: &gst::BufferRef) -> Option<gst::Seqnum> {
+        self.pending
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .gate
+            .marker(buffer)
+    }
+    fn accepts_segment(&self, marker: Option<gst::Seqnum>) -> bool {
+        self.pending
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .gate
+            .accepts(marker)
+    }
+    fn publish_segment(&self, frame: PreviewFrame, marker: Option<gst::Seqnum>) {
+        let _delivery = self.delivery.lock().unwrap_or_else(|p| p.into_inner());
+        let mut slot = self.pending.lock().unwrap_or_else(|p| p.into_inner());
+        if !slot.gate.accepts(marker)
+            || slot
+                .window
+                .is_some_and(|(start, end)| frame.position_ms < start || frame.position_ms > end)
+        {
+            return;
+        }
         let consumer = self
             .consumer
             .lock()
             .unwrap_or_else(|p| p.into_inner())
             .clone();
         if let Some(consume) = consumer {
+            drop(slot);
             consume(frame);
+            self.pending.lock().unwrap_or_else(|p| p.into_inner()).ready = true;
+            self.ready.notify_all();
             return;
         }
-        let mut slot = self.pending.lock().unwrap_or_else(|p| p.into_inner());
-        if slot
-            .window
-            .is_some_and(|(start, end)| frame.position_ms < start || frame.position_ms > end)
-        {
-            return;
-        }
-        slot.ready = true;
         let target = self
             .forward
             .lock()
@@ -73,8 +153,10 @@ impl super::types::FrameMailbox {
         if let Some(target) = target {
             drop(slot);
             target.publish(frame);
+            self.pending.lock().unwrap_or_else(|p| p.into_inner()).ready = true;
         } else {
             slot.frame = Some(frame);
+            slot.ready = true;
         }
         self.ready.notify_all();
     }
@@ -124,16 +206,39 @@ pub fn attach(pipeline: &ges::Pipeline, canvas: &Canvas, frames: Frames) -> Resu
     appsink.set_max_buffers(1);
     appsink.set_drop(true);
     appsink.set_sync(true);
-    if transport != super::gpu::types::PreviewTransport::Rgba {
-        let producer = Arc::clone(&frames);
-        sink.by_name("preview_transfer")
-            .and_then(|element| element.static_pad("sink"))
-            .ok_or_else(|| media("missing GPU preview transfer"))?
-            .add_probe(gst::PadProbeType::BUFFER, move |_, info| {
-                *producer.producer.lock().unwrap_or_else(|p| p.into_inner()) =
-                    info.buffer().cloned();
+    super::frame_gate::register();
+    let segments = Arc::clone(&frames);
+    appsink
+        .static_pad("sink")
+        .ok_or_else(|| media("preview sink has no input"))?
+        .add_probe(
+            gst::PadProbeType::EVENT_DOWNSTREAM
+                | gst::PadProbeType::EVENT_FLUSH
+                | gst::PadProbeType::BUFFER,
+            move |pad, info| {
+                let mut slot = segments.pending.lock().unwrap_or_else(|p| p.into_inner());
+                if let Some(event) = info.event() {
+                    slot.gate.observe(event);
+                }
+                if let Some(buffer) = info.buffer_mut() {
+                    if !slot.gate.accepts(slot.gate.active()) {
+                        return gst::PadProbeReturn::Drop;
+                    }
+                    if let Err(error) = slot.gate.stamp(buffer.make_mut()) {
+                        if let Some(element) = pad.parent_element() {
+                            gst::element_error!(element, gst::StreamError::Failed, ("{error}"));
+                        }
+                        return gst::PadProbeReturn::Drop;
+                    }
+                }
                 gst::PadProbeReturn::Ok
-            });
+            },
+        );
+    if transport != super::gpu::types::PreviewTransport::Rgba {
+        let transfer = sink
+            .by_name("preview_transfer")
+            .ok_or_else(|| media("missing GPU preview transfer"))?;
+        super::preview_lease::attach(&transfer)?;
     }
     let counter = Arc::new(AtomicU64::new(0));
     let preroll_frames = Arc::clone(&frames);
@@ -168,6 +273,10 @@ fn publish(
     frames: &Frames,
     sequence: &AtomicU64,
 ) -> std::result::Result<gst::FlowSuccess, gst::FlowError> {
+    let marker = frames.segment_marker(sample.buffer().ok_or(gst::FlowError::Error)?);
+    if marker.is_none() || !frames.accepts_segment(marker) {
+        return Ok(gst::FlowSuccess::Ok);
+    }
     #[cfg(target_os = "linux")]
     if *frames.transport.lock().unwrap_or_else(|p| p.into_inner())
         == super::gpu::types::PreviewTransport::DmaBuf
@@ -175,26 +284,25 @@ fn publish(
         let info =
             gst_video::VideoInfoDmaDrm::from_caps(sample.caps().ok_or(gst::FlowError::Error)?)
                 .map_err(|_| gst::FlowError::Error)?;
-        let producer = frames
-            .producer
-            .lock()
-            .unwrap_or_else(|p| p.into_inner())
-            .take()
-            .ok_or(gst::FlowError::Error)?;
+        let producer =
+            super::preview_lease::producer(&sample).map_err(|_| gst::FlowError::Error)?;
         let external =
             super::gpu::transfer::dmabuf(&sample, producer).map_err(|_| gst::FlowError::Error)?;
-        frames.publish(PreviewFrame {
-            sequence: sequence.fetch_add(1, Ordering::Relaxed),
-            position_ms: sample
-                .buffer()
-                .and_then(|buffer| buffer.pts())
-                .ok_or(gst::FlowError::Error)?
-                .mseconds(),
-            width: info.width(),
-            height: info.height(),
-            rgba: vec![],
-            external: Some(external),
-        });
+        frames.publish_segment(
+            PreviewFrame {
+                sequence: sequence.fetch_add(1, Ordering::Relaxed),
+                position_ms: sample
+                    .buffer()
+                    .and_then(|buffer| buffer.pts())
+                    .ok_or(gst::FlowError::Error)?
+                    .mseconds(),
+                width: info.width(),
+                height: info.height(),
+                rgba: vec![],
+                external: Some(external),
+            },
+            marker,
+        );
         return Ok(gst::FlowSuccess::Ok);
     }
     let info = gst_video::VideoInfo::from_caps(sample.caps().ok_or(gst::FlowError::Error)?)
@@ -215,18 +323,21 @@ fn publish(
                 .ok_or(gst::FlowError::Error)?,
         );
     }
-    frames.publish(PreviewFrame {
-        sequence: sequence.fetch_add(1, Ordering::Relaxed),
-        position_ms: sample
-            .buffer()
-            .and_then(|buffer| buffer.pts())
-            .ok_or(gst::FlowError::Error)?
-            .mseconds(),
-        width: info.width(),
-        height: info.height(),
-        rgba,
-        external: None,
-    });
+    frames.publish_segment(
+        PreviewFrame {
+            sequence: sequence.fetch_add(1, Ordering::Relaxed),
+            position_ms: sample
+                .buffer()
+                .and_then(|buffer| buffer.pts())
+                .ok_or(gst::FlowError::Error)?
+                .mseconds(),
+            width: info.width(),
+            height: info.height(),
+            rgba,
+            external: None,
+        },
+        marker,
+    );
     Ok(gst::FlowSuccess::Ok)
 }
 
@@ -237,21 +348,37 @@ pub fn configure_geometry(
     clip: &Clip,
     canvas: &Canvas,
 ) -> Result<()> {
-    let aspect = asset.width as f64 / asset.height as f64;
-    let width = (canvas.width as f64).min(canvas.height as f64 * aspect) * clip.effects.scale;
-    let height = width / aspect;
-    for (property, value) in [
-        ("width", width),
-        ("height", height),
-        ("posx", canvas.width as f64 * clip.effects.x - width * 0.5),
-        ("posy", canvas.height as f64 * clip.effects.y - height * 0.5),
-    ] {
+    for (property, value) in geometry(asset, clip, canvas) {
         ges::prelude::TimelineElementExtManual::set_child_property(
             source,
             property,
-            (value.round() as i32).to_value(),
+            value.to_value(),
         )
         .map_err(media)?;
     }
     Ok(())
+}
+pub(crate) fn geometry(
+    asset: &MediaAsset,
+    clip: &Clip,
+    canvas: &Canvas,
+) -> [(&'static str, i32); 4] {
+    geometry_size(asset.width, asset.height, clip, canvas)
+}
+pub(crate) fn geometry_size(
+    width: u32,
+    height: u32,
+    clip: &Clip,
+    canvas: &Canvas,
+) -> [(&'static str, i32); 4] {
+    let aspect = width as f64 / height as f64;
+    let width = (canvas.width as f64).min(canvas.height as f64 * aspect) * clip.effects.scale;
+    let height = width / aspect;
+    [
+        ("width", width),
+        ("height", height),
+        ("posx", canvas.width as f64 * clip.effects.x - width * 0.5),
+        ("posy", canvas.height as f64 * clip.effects.y - height * 0.5),
+    ]
+    .map(|(property, value)| (property, value.round() as i32))
 }

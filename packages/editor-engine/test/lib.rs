@@ -1,7 +1,9 @@
 use beam_editor_engine::{Document, Edit, Project};
+mod broker;
 mod export;
 mod fixtures;
 mod project;
+mod service;
 mod shared;
 mod timeline;
 mod video;

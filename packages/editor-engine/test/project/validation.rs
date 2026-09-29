@@ -46,21 +46,21 @@ fn invalid_canvas_identity_effects_and_ranges_are_rejected_atomically() {
     bad.canvas.width = 4097;
     assert!(validation::project(&bad).is_err());
     bad = original.clone();
-    bad.assets[0].id = bad.tracks[0].id;
+    bad.assets[0].id = bad.tracks.headers().next().unwrap().id;
     assert!(validation::project(&bad).is_err());
     for value in [f64::NAN, f64::INFINITY, -0.1, 1.1] {
         bad = original.clone();
-        bad.clips[0].effects.opacity = value;
+        crate::fixtures::clip_mut(&mut bad, 0).effects.opacity = value;
         assert!(validation::project(&bad).is_err());
     }
     bad = original.clone();
-    bad.clips[0].source_in_ms = 1;
+    crate::fixtures::clip_mut(&mut bad, 0).source_in_ms = 1;
     assert!(validation::project(&bad).is_err());
     bad = original.clone();
-    bad.clips[0].start_ms = u64::MAX;
+    crate::fixtures::clip_mut(&mut bad, 0).start_ms = u64::MAX;
     assert!(validation::project(&bad).is_err());
     bad = original.clone();
-    bad.clips[0].duration_ms = 0;
+    crate::fixtures::clip_mut(&mut bad, 0).duration_ms = 0;
     assert!(validation::project(&bad).is_err());
 }
 #[test]
@@ -69,15 +69,16 @@ fn source_cursor_and_history_boundary_paths_are_validated() {
     project.assets[0].cursor = vec![
         crate::fixtures::point(2, 0.5, 0.5, None),
         crate::fixtures::point(1, 0.5, 0.5, None),
-    ];
+    ]
+    .into();
     assert!(validation::project(&project).is_err());
-    project.assets[0].cursor.clear();
+    std::sync::Arc::make_mut(&mut project.assets[0].cursor).clear();
     project.assets[0].duration_ms = 0;
     assert!(validation::project(&project).is_err());
     let mut document = Document::new(crate::fixtures::project());
     document.schema_version = 99;
     assert!(validation::document(&document).is_err());
-    document.schema_version = 1;
+    document.schema_version = 2;
     document.undo = vec![EditState::capture(&document.project); 50];
     assert!(validation::document(&document).is_err());
     document.undo.truncate(1);

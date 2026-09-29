@@ -23,9 +23,22 @@ pub struct SelectedSources {
     pub camera: Option<SourceId>,
 }
 
+/// Persisted screen composition mode; telemetry alone cannot prove exclusion.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum CursorMode {
+    #[default]
+    Unknown,
+    Separated,
+    BakedIn,
+    Absent,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionManifest {
+    #[serde(default)]
+    pub cursor_mode: CursorMode,
     pub schema_version: u32,
     pub project_id: ProjectId,
     pub session_id: SessionId,

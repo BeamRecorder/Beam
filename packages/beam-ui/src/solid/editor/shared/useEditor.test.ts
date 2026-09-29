@@ -1,16 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { createRoot } from 'solid-js';
-import type { ApplicationServices } from '@argui/host';
-import type { BeamApi } from '../../shared/beamApi';
-import type { BeamEvent } from '../../shared/beamTypes';
-import { EditorApi } from './editorApi';
-import { useEditor } from './useEditor';
-import type { Snapshot, Transport } from './editorTypes';
+import type { Snapshot } from './editorTypes';
+import { disposers, flush, mount } from './useEditor.testSupport';
 
-const disposers: (() => void)[] = [];
-const flush = async () => {
-  for (let index = 0; index < 12; index++) await Promise.resolve();
-};
 beforeEach(() => {
   vi.useFakeTimers();
   vi.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -21,99 +12,78 @@ afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
 });
-function mount() {
-  let document: Snapshot = {
-    activeSequence: 'sequence', sequences: [{ id: 'sequence', name: 'Timeline 1' }],
-    project: {
-      id: 'p',
-      name: 'Test',
-      canvas: { width: 320, height: 180, fps: 30, background: 0 },
-      warnings: [],
-      assets: [
-        {
-          id: 'asset',
-          name: 'Video',
-          width: 320,
-          height: 180,
-          durationMs: 1000,
-          hasVideo: true,
-          hasAudio: false,
-          hasCursor: false,
-          zoomCount: 0,
-          recording: false,
-        },
-      ],
-      tracks: [{ id: 'video', name: 'Video', kind: 'video', muted: false, hidden: false }],
-      clips: [
-        {
-          id: 'clip',
-          assetId: 'asset',
-          trackId: 'video',
-          startMs: 0,
-          sourceInMs: 0,
-          durationMs: 1000,
-          effects: { opacity: 1, volume: 1, brightness: 0, saturation: 1, scale: 1, x: 0.5, y: 0.5, autoZoom: true },
-        },
-      ],
-    },
-    revision: 0,
-    canUndo: false,
-    canRedo: false,
-    recovered: false,
-    exportFormats: [],
-    transport: { durationMs: 1000, positionMs: 0, playing: false, error: null },
-  };
-  let transport: Transport = { ...document.transport },
-    listener: (event: BeamEvent) => void = () => undefined;
-  const unsubscribe = vi.fn();
-  const responses = new Map<string, () => Promise<unknown>>();
-  const call = vi.fn(async (_service: string, method: string, payload?: Record<string, unknown>) => {
-    if (responses.has(method)) return responses.get(method)!();
-    if (method === 'frame') return { transport, canvasId: document.project.clips.length ? 42 : null };
-    if (method === 'play') return (transport = { ...transport, playing: Boolean(payload?.playing) });
-    if (method === 'seek') return (transport = { ...transport, positionMs: Number(payload?.positionMs) });
-    if (method === 'edit') {
-      document = { ...document, revision: document.revision + 1, canUndo: true };
-      return document;
-    }
-    if (method === 'export') return { phase: 'rendering', progress: 0, error: null };
-    if (method === 'exportStatus') return { phase: 'completed', progress: 1, error: null };
-    if (method === 'cancelExport') return null;
-    return document;
-  });
-  const api = new EditorApi({ call, onEvent: () => () => {} } as unknown as ApplicationServices);
-  const beam = {
-    onEvent: (handler: typeof listener) => {
-      listener = handler;
-      return unsubscribe;
-    },
-  } as unknown as BeamApi;
-  const editor = createRoot((dispose) => {
-    disposers.push(dispose);
-    return useEditor(api, beam);
-  });
-  return {
-    editor,
-    call,
-    responses,
-    unsubscribe,
-    event: (event: BeamEvent) => listener(event),
-    setDocument: (value: Snapshot) => (document = value),
-    setTransport: (value: Transport) => (transport = value),
-  };
-}
 it('hydrates native state, exposes selection and keeps idle work parked', async () => {
-  const { editor, call } = mount();
+  const { editor, call, editorStartup } = mount();
   await flush();
+  expect(editorStartup).toHaveBeenCalledWith();
   expect(editor.snapshot()?.revision).toBe(0);
   expect(editor.busy()).toBe(false);
   editor.select('clip');
+  await flush();
   expect(editor.clip()?.id).toBe('clip');
   expect(editor.asset()?.id).toBe('asset');
   expect(editor.canvasId()).toBe(42);
   call.mockClear();
   await vi.advanceTimersByTimeAsync(2000);
   expect(call).not.toHaveBeenCalled();
+});
+it('reports the initial editor failure to the waiting launcher', async () => {
+  const { editor, responses, editorStartup } = mount();
+  responses.set('bootstrap', async () => { throw new Error('cannot open recording'); });
+  await flush();
+  expect(editor.error()).toContain('cannot open recording');
+  expect(editorStartup).toHaveBeenCalledWith('Error: cannot open recording');
+});
+it('refreshes the preview when bootstrap finishes during an earlier frame request', async () => {
+  const { editor, responses, event, call } = mount();
+  let resolve!: (value: unknown) => void;
+  let frames = 0;
+  responses.set('frame', () => ++frames === 1
+    ? new Promise(done => { resolve = done; })
+    : Promise.resolve({ transport: editor.snapshot()!.transport, canvasId: 42 }));
+  event({ type: 'windowVisibility', window: 'main', visible: true });
+  await flush();
+  expect(editor.snapshot()?.project.clips).toHaveLength(1);
+  expect(frames).toBe(1);
+  resolve({ transport: { durationMs: 0, positionMs: 0, playing: false, error: null }, canvasId: null });
+  await flush();
+  expect(frames).toBe(2);
+  expect(editor.canvasId()).toBe(42);
+  expect(editor.transport().durationMs).toBe(1000);
+  call.mockClear();
+  await vi.advanceTimersByTimeAsync(1000);
+  expect(call).not.toHaveBeenCalled();
+});
+it('coalesces overlapping frame requests and refreshes after the first request fails', async () => {
+  const { editor, responses, event } = mount();
+  await flush();
+  let reject!: (error: Error) => void;
+  let frames = 0;
+  responses.set('frame', () => ++frames === 1
+    ? new Promise((_done, failed) => { reject = failed; })
+    : Promise.resolve({ transport: editor.transport(), canvasId: 99 }));
+  for (let index = 0; index < 10; index++) event({ type: 'windowVisibility', window: 'main', visible: true });
+  expect(frames).toBe(1);
+  reject(new Error('first frame failed'));
+  await flush();
+  expect(frames).toBe(2);
+  expect(editor.canvasId()).toBe(99);
+  expect(editor.error()).toContain('first frame failed');
+});
+it('discards a queued preview refresh when the editor is disposed', async () => {
+  const { editor, responses, event } = mount();
+  await flush();
+  let resolve!: (value: unknown) => void;
+  let frames = 0;
+  responses.set('frame', () => { frames++; return new Promise(done => { resolve = done; }); });
+  event({ type: 'windowVisibility', window: 'main', visible: true });
+  event({ type: 'windowVisibility', window: 'main', visible: true });
+  const before = editor.canvasId();
+  disposers.pop()!();
+  resolve({ transport: editor.transport(), canvasId: 99 });
+  await flush();
+  expect(frames).toBe(1);
+  expect(editor.canvasId()).toBe(before);
 });
 it('serializes edits against the latest revision and supports native document operations', async () => {
   const { editor, call } = mount();

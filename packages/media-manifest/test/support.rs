@@ -5,6 +5,7 @@ use beam_media_manifest::{
 
 pub fn sample_manifest(project_id: ProjectId, session_id: SessionId) -> SessionManifest {
     SessionManifest {
+        cursor_mode: Default::default(),
         schema_version: SCHEMA_VERSION,
         project_id,
         session_id,

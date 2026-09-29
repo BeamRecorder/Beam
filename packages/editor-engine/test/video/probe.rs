@@ -27,9 +27,26 @@ fn import_copies_immutable_bytes_and_rejects_missing_extension() {
     assert_eq!(std::fs::read(root.path().join(asset.path)).unwrap(), bytes);
     assert_eq!(std::fs::read(&path).unwrap(), bytes);
     assert!(asset.cursor.is_empty());
+    let identity = asset.identity.as_ref().unwrap();
+    assert_eq!(identity.byte_length, bytes.len() as u64);
+    identity.validate().unwrap();
     let bare = source.path().join("bare");
     std::fs::copy(path, &bare).unwrap();
     assert!(import(root.path(), &bare).is_err());
+}
+#[cfg(unix)]
+#[test]
+fn media_import_rejects_symlinked_source_and_managed_destination_without_writing_outside() {
+    let source = tempfile::tempdir().unwrap();
+    let root = tempfile::tempdir().unwrap();
+    let outside = tempfile::tempdir().unwrap();
+    let path = crate::fixtures::media(source.path(), "actual.webm", false);
+    let link = source.path().join("link.webm");
+    std::os::unix::fs::symlink(&path, &link).unwrap();
+    assert!(import(root.path(), &link).is_err());
+    std::os::unix::fs::symlink(outside.path(), root.path().join("media")).unwrap();
+    assert!(import(root.path(), &path).is_err());
+    assert_eq!(std::fs::read_dir(outside.path()).unwrap().count(), 0);
 }
 #[test]
 fn still_images_keep_dimensions_and_have_a_finite_editable_duration() {

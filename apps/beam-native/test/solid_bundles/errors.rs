@@ -49,6 +49,9 @@ pub(super) fn validate_copy(scene: &Scene<'_>) {
     );
     scene.gallery.tick(0.0).unwrap();
     let message = format!("ServiceError: {diagnostic}");
+    click_named(scene.gallery, scene.operations, "hud-issues-trigger").unwrap();
+    scene.gallery.tick(250.0).unwrap();
+    scene.gallery.tick(500.0).unwrap();
     let root = scene.host.borrow().root_element().unwrap();
     assert!(contains_text(&root, &message));
     let copy_button = button(&root, "Copier l’erreur").expect("translated native copy button");

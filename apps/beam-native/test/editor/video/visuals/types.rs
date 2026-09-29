@@ -11,11 +11,16 @@ fn entry(refs: usize, touched: u64, status: Status) -> Entry {
         super::waveform::Factory {
             mailbox: mailbox.clone(),
             pipelines: Default::default(),
+            source: None,
         },
     );
     Entry {
+        _lease: None,
         registration,
-        target: Target::Audio(mailbox),
+        target: Target::Audio {
+            mailbox,
+            latest: Default::default(),
+        },
         cancel: Arc::new(AtomicBool::new(false)),
         refs,
         touched,

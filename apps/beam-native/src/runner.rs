@@ -108,15 +108,17 @@ pub fn run_desktop_with_services(
     }
     let (application_sender, application_requests) = mpsc::channel();
     let editor_canvas = if crate::editor::is_editor() {
-        Some(crate::editor::register(
-            &services,
-            crate::beam::projects_root()?,
-        )?)
+        crate::editor::register(&services, crate::beam::projects_root()?)?
     } else {
-        None
+        Vec::new()
     };
     let gpu_canvases = argui_render::GpuCanvasRegistry::new(editor_canvas)?;
     register_application_services(&services, application_sender.clone(), config.tray.clone());
+    crate::desktop_application::register_project_thumbnail_service(
+        &services,
+        application_sender.clone(),
+        crate::beam::projects_root()?,
+    );
     register_auxiliary_windows(
         &services,
         application_sender.clone(),
@@ -472,16 +474,11 @@ fn run_gallery(
     });
     let effects = ready.recv().map_err(|error| error.to_string())??;
 
-    let assets = if let Some(manifest) = std::env::var_os("ARGUI_APP_ASSETS") {
-        beam_native_assets::load_manifest(&PathBuf::from(manifest))?
-    } else {
-        let manifest = paths::fallback_asset_manifest(
-            asset_bundle_path.as_deref(),
-            crate::files::ASSET_MANIFEST,
-            crate::files::DEVELOPMENT_ASSET_MANIFEST,
-        )?;
-        beam_native_assets::load_manifest(&manifest)?
-    };
+    let manifest = paths::asset_manifest_path(
+        std::env::var_os("ARGUI_APP_ASSETS").map(PathBuf::from),
+        asset_bundle_path.as_deref(),
+    )?;
+    let assets = beam_native_assets::load_manifest(&manifest)?;
     let result = launch(
         host,
         assets,

@@ -21,7 +21,11 @@ export function TimelineToolbar(props: { editor: EditorState; pixels: number; sn
     <IconButton icon="scissors" label={TR('split')} disabled={!canSplit() || props.editor.busy()}
       onClick={() => void props.editor.edit({ type: 'split', id: clip()!.id, timeMs: position() })} />
     <IconButton icon="trash-2" label={TR('delete')} disabled={!clip() || props.editor.busy()}
-      onClick={() => void props.editor.edit({ type: 'remove', id: clip()!.id })} />
+      onClick={() => void props.editor.removeSelection()} />
+    <IconButton icon="link" label={TR('linkClips')} disabled={props.editor.selectedIds().length<2 || props.editor.busy()}
+      onClick={()=>void props.editor.edit({type:'link',ids:props.editor.selectedIds()})} />
+    <IconButton icon="link" label={TR('unlinkClips')} disabled={!clip()?.linkGroup || props.editor.busy()}
+      onClick={()=>void props.editor.edit({type:'unlink',id:clip()!.id})} />
     <rectangle width={1} height={16} background={theme().border} />
     <IconButton icon="magnet" label={TR('snapping')} pressed={props.snapping} onClick={() => props.setSnapping(!props.snapping)} />
     <Popover width={30} contentWidth={200} accessibleLabel={TR('addTrack')} placement="bottomStart"

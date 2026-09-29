@@ -1,12 +1,11 @@
 import { useTR } from '../shared/i18n'
-import { Show } from 'solid-js'
+import { Show, createSignal } from 'solid-js'
 import type { JSX } from '@argui/solid/jsx-runtime'
 import type { AssetRef } from '@argui/host'
 import { useTheme } from '@argui/solid'
 import type { WidgetTheme } from '@argui/widgets/solid'
 import { mediaAssets } from '../../../assets.generated'
 import { Button } from '../shared/base-ui/button'
-import { ErrorNotice } from '../shared/base-ui/errorNotice'
 import { Icon } from '../shared/base-ui/icon'
 import { SegmentedControl } from '../shared/base-ui/segmentedControl'
 import { WindowSurface } from '../shared/base-ui/windowSurface'
@@ -19,6 +18,7 @@ import { ScreenshotNotice } from './ScreenshotNotice'
 import { hudLayout } from './hudLayout'
 import { useCaptureLauncher } from './useCaptureLauncher'
 import { useAudioMeters } from '../shared/useAudioMeters'
+import { HudIssues } from './HudIssues'
 
 const modes: { id: CaptureMode; label: string; asset: AssetRef }[] = [
   { id: 'recorder', label: 'Recorder', asset: mediaAssets['modes/recorder.svg'] },
@@ -31,8 +31,9 @@ export function Hud(props: {
   api: BeamApi; preferences: BeamPreferences; externalError?: string; startCommand?: number;
   captureBusy?: boolean; onRecord: (request: CaptureRequest) => Promise<void>; onScreenshot: (projectId: string) => void;
 }): JSX.Element {
-  const TR = useTR('HUD'), N = useTR('Native'), R = useTR('RecorderBar'), T = useTR('TopbarHUD'), P = useTR('Teleprompter'), E = useTR('NativeEditor')
+  const TR = useTR('HUD'), N = useTR('Native'), R = useTR('RecorderBar'), T = useTR('TopbarHUD'), P = useTR('Teleprompter'), E = useTR('NativeEditor'), Projects = useTR('ProjectPicker')
   const theme = useTheme<WidgetTheme>()
+  const [projectError, setProjectError] = createSignal('')
   const launcher = useCaptureLauncher(props)
   const metrics = useWindowMetrics(props.api, props.preferences.hudWindow)
   const meters = useAudioMeters(props.api, () => {
@@ -45,7 +46,7 @@ export function Hud(props: {
   return <WindowSurface api={props.api}>
     <column width="100%" height="100%">
       <row width="100%" height={36} shrink={0} padding={{ left: 12, right: 8 }} alignItems="center" background={theme().card}>
-        <container grow={1} minWidth={24} height="100%">
+        <container width={layout().showBrandLabel ? 68 : 22} shrink={0} height="100%">
           <touchArea width="100%" height="100%" onPointerDown={() => void props.api.dragWindow().catch(report)} mouseCursor="grab">
             <row height="100%" alignItems="center" gap={7}>
               <image source={mediaAssets['brand/beam.png']} width={18} height={18} fit="contain" alt="Beam" />
@@ -53,7 +54,18 @@ export function Hud(props: {
             </row>
           </touchArea>
         </container>
+        <rectangle width={1} height={18} shrink={0} background={theme().border} margin={{ start: 6, end: 6 }} />
+        <Button variant="ghost" size="sm" onClick={() => void props.api.openProjects().then(() => setProjectError('')).catch(cause => setProjectError(String(cause)))}>
+          <row alignItems="center" gap={6}>
+            <Icon name="film" size={14} color={theme().foreground} />
+            <text fontSize={12} color={theme().foreground}>{Projects('projects')}</text>
+          </row>
+        </Button>
+        <container grow={1} minWidth={10} height="100%">
+          <touchArea width="100%" height="100%" onPointerDown={() => void props.api.dragWindow().catch(report)} mouseCursor="grab" />
+        </container>
         <row alignItems="center" gap={2} margin={{ left: 6 }}>
+          <HudIssues api={props.api} errors={[launcher.error(), props.externalError ?? '', meters.error(), projectError(), ...launcher.catalog().errors]} />
           <Button variant="ghost" size="icon-xs" iconOnly accessibleName={E('editor')} onClick={() => void props.api.openVideoEditor().catch(report)}>
             <Icon name="video" size={16} color={theme().foreground} />
           </Button>
@@ -106,7 +118,6 @@ export function Hud(props: {
             </Show>
           </column>
         </row>
-        <ErrorNotice message={launcher.error() || props.externalError || meters.error() || ''} onCopy={text => props.api.copyText(text)} />
       </column>
     </column>
   </WindowSurface>

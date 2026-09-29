@@ -27,6 +27,87 @@ mod checks {
         (root, controller)
     }
     #[test]
+    fn restart_discards_only_the_active_take_and_rejects_its_stale_commands() {
+        let (_root, controller) = setup();
+        let request = config("ok");
+        let previous = controller.prepare(request.clone()).unwrap();
+        let previous_id = previous.session_id.unwrap();
+        let previous_dir = previous.manifest_path.unwrap().parent().unwrap().to_owned();
+        std::fs::write(previous_dir.join("video.webm"), b"previous take").unwrap();
+        controller.start(previous_id).unwrap();
+        controller.stop(previous_id).unwrap();
+        for paused in [false, true] {
+            let first = controller.prepare(request.clone()).unwrap();
+            let first_id = first.session_id.unwrap();
+            let first_dir = first.manifest_path.unwrap().parent().unwrap().to_owned();
+            std::fs::write(first_dir.join("video.webm"), b"discarded take").unwrap();
+            controller.start(first_id).unwrap();
+            if paused {
+                controller.pause(first_id).unwrap();
+            }
+            let cursor = controller.events(0).cursor;
+            let restarted = controller.restart(first_id).unwrap();
+            let new_id = restarted.session_id.unwrap();
+            assert_ne!(new_id, first_id);
+            assert_eq!(restarted.state, RecordingState::Recording);
+            assert_eq!(restarted.manifest.unwrap().duration_ns, 0);
+            assert!(!first_dir.exists());
+            assert_eq!(
+                std::fs::read(previous_dir.join("video.webm")).unwrap(),
+                b"previous take"
+            );
+            let index: serde_json::Value = serde_json::from_slice(
+                &std::fs::read(previous_dir.parent().unwrap().join("project.json")).unwrap(),
+            )
+            .unwrap();
+            assert_eq!(index["projectId"], serde_json::json!(request.project_id));
+            let sessions = index["sessions"].as_array().unwrap();
+            assert!(
+                sessions
+                    .iter()
+                    .any(|item| item["sessionId"] == serde_json::json!(new_id))
+            );
+            assert!(
+                !sessions
+                    .iter()
+                    .any(|item| item["sessionId"] == serde_json::json!(first_id))
+            );
+            assert!(
+                !controller
+                    .events(cursor)
+                    .events
+                    .iter()
+                    .any(|event| event.state == RecordingState::Interrupted)
+            );
+            assert!(matches!(
+                controller.stop(first_id),
+                Err(EngineError::StaleSession)
+            ));
+            assert!(matches!(
+                controller.restart(first_id),
+                Err(EngineError::StaleSession)
+            ));
+            assert_eq!(controller.status().state, RecordingState::Recording);
+            controller.stop(new_id).unwrap();
+        }
+    }
+    #[test]
+    fn restart_requires_recording_and_preserves_the_take_if_finalization_fails() {
+        let (_root, controller) = setup();
+        let status = controller.prepare(config("finish-error")).unwrap();
+        let id = status.session_id.unwrap();
+        let directory = status.manifest_path.unwrap().parent().unwrap().to_owned();
+        assert!(matches!(
+            controller.restart(id),
+            Err(EngineError::InvalidTransition { .. })
+        ));
+        assert!(directory.exists());
+        controller.start(id).unwrap();
+        assert!(controller.restart(id).is_err());
+        assert_eq!(controller.status().state, RecordingState::Failed);
+        assert!(directory.exists());
+    }
+    #[test]
     fn complete_cycle_polls_without_host_requests() {
         let (_root, controller) = setup();
         assert_eq!(controller.status().state, RecordingState::Idle);

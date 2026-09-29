@@ -1,8 +1,11 @@
+import type { Instance, Definition, Transition, Operation, RecordingStyle, Telemetry, Clip as ClipDetails, ClipOverview as GeneratedClipOverview } from './generated/editorContracts';
+export type { Instance, Definition, Transition, Operation, Edit } from './generated/editorContracts';
 export type TrackKind = 'video' | 'audio';
 export interface Canvas {
   width: number;
   height: number;
   fps: number;
+  fpsDenominator?: number;
   background: number;
 }
 export interface Zoom {
@@ -24,6 +27,7 @@ export interface Asset {
   hasCursor: boolean;
   zoomCount: number;
   recording: boolean;
+  cursorMode?: Telemetry;
 }
 export interface Track {
   id: string;
@@ -49,24 +53,27 @@ export interface Title {
   color: number; shadow: boolean; background: boolean;
 }
 export type PreviewQuality = 'full' | 'half' | 'quarter';
-export interface Clip {
-  id: string;
-  assetId: string;
-  trackId: string;
-  startMs: number;
-  sourceInMs: number;
-  durationMs: number;
-  effects: Effects;
-  title?: Title;
-}
+export type Clip = ClipDetails;
+export type ClipOverview = Omit<GeneratedClipOverview,'effectCount'|'regionCount'> & {
+  effectCount?: number;
+  regionCount?: number;
+};
+export type ClipPlacement = Pick<Clip,'id'|'assetId'|'trackId'|'startMs'|'sourceInMs'|'durationMs'|'title'|'rate'|'animationOffsetMs'|'linkGroup'> & {
+  generator?: GeneratedClipOverview['generator'];
+  effectCount?: number;
+  regionCount?: number;
+};
 export interface Project {
   id: string;
   name: string;
   canvas: Canvas;
   assets: Asset[];
   tracks: Track[];
-  clips: Clip[];
+  clips: ClipPlacement[];
   warnings: string[];
+  definitions?: Definition[];
+  transitions?: Transition[];
+  recordingStyle?: RecordingStyle;
 }
 export interface Transport {
   positionMs: number;
@@ -81,6 +88,8 @@ export interface Snapshot {
   revision: number;
   canUndo: boolean;
   canRedo: boolean;
+  canProjectUndo?: boolean;
+  canProjectRedo?: boolean;
   recovered: boolean;
   transport: Transport;
   exportFormats: ExportEncoding[];
@@ -99,20 +108,3 @@ export interface ExportStatus {
   progress: number;
   error: string | null;
 }
-export type Edit =
-  | { type: 'addSequence'; name: string }
-  | { type: 'selectSequence' | 'removeSequence'; id: string }
-  | { type: 'renameSequence'; id: string; name: string }
-  | { type: 'rename'; name: string }
-  | { type: 'canvas'; canvas: Canvas }
-  | { type: 'addTrack'; name: string; kind: TrackKind }
-  | { type: 'track'; id: string; muted: boolean; hidden: boolean }
-  | { type: 'insert'; assetId: string; trackId: string; startMs: number }
-  | { type: 'insertTitle'; title: Title; startMs: number }
-  | { type: 'title'; id: string; title: Title }
-  | { type: 'move'; id: string; trackId: string; startMs: number }
-  | { type: 'trim'; id: string; sourceInMs: number; durationMs: number; startMs: number }
-  | { type: 'split'; id: string; timeMs: number }
-  | { type: 'remove'; id: string }
-  | { type: 'effects'; id: string; effects: Effects }
-  | { type: 'undo' | 'redo' };

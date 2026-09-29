@@ -1,12 +1,15 @@
 const schema = JSON.parse(globalThis.__arguiContractJson)
 const formatLogValue = (value) => {
-  if (value instanceof Error) return value.stack ?? value.message
+  if (value instanceof Error) return `${value.name}: ${value.message}${value.stack ? `\n${value.stack}` : ''}`
   if (typeof value === 'string') return value
   try { return JSON.stringify(value) ?? String(value) }
   catch { return String(value) }
 }
 globalThis.console = Object.fromEntries(['log', 'info', 'warn', 'error', 'debug'].map(level =>
-  [level, (...values) => globalThis.__arguiLog(level, values.map(formatLogValue).join(' '))]))
+  [level, (...values) => {
+    if (level === 'error' && values.length && values.every(value => value instanceof Error && (value.code === 'closed' || value.code === 'cancelled'))) return
+    globalThis.__arguiLog(level, values.map(formatLogValue).join(' '))
+  }]))
 globalThis.__arguiNativeEffects = []
 let subscriber = null
 let profileSubscriber = null

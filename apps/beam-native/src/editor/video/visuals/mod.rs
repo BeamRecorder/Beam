@@ -1,22 +1,23 @@
 //! Leased source visuals: shared by source time, cancelled offscreen, never serialized as pixels.
 mod pipelines;
+mod pool;
 mod types;
 mod waveform;
-use argui_render::{GpuCanvasMailbox, GpuCanvasRegistration};
-use beam_editor_engine::{
-    EditorController,
-    video::visuals::types::{Update, VisualRequest},
-};
+use argui_render::GpuCanvasRegistration;
+use beam_editor_engine::{EditorController, video::visuals::types::Update};
 use std::sync::{
     Arc, Mutex,
     atomic::{AtomicBool, Ordering},
 };
-use types::{Acquire, Cache, Entry, Release, Status, Target};
+use types::{Acquire, Cache, Entry, Release, Status};
 
-pub(crate) fn register(registry: &Arc<crate::ServiceRegistry>, controller: Arc<EditorController>) {
+pub(crate) fn register(
+    registry: &Arc<crate::ServiceRegistry>,
+    controller: Arc<EditorController>,
+) -> Vec<GpuCanvasRegistration> {
     let cache = Arc::new(Mutex::new(Cache::default()));
-    let pipelines = Arc::new(Mutex::new(None));
-    let video_resources = Default::default();
+    let pool = Arc::new(pool::Pool::new());
+    let registrations = pool.registrations();
     let released = Arc::clone(&cache);
     registry.register("editor", "releaseVisual", move |payload| {
         super::super::result((|| {
@@ -62,33 +63,14 @@ pub(crate) fn register(registry: &Arc<crate::ServiceRegistry>, controller: Arc<E
             // A cancelled partial slice starts again; completed slices remain reusable.
             entries.entries.remove(&key);
             entries.make_room()?;
-            let (target, registration) = match request.request {
-                VisualRequest::Video { .. } => {
-                    let mailbox = GpuCanvasMailbox::new();
-                    let mut factory = super::canvas::Factory::new(mailbox.clone(), None);
-                    factory.resources = Arc::clone(&video_resources);
-                    factory.cover = true;
-                    let registration = GpuCanvasRegistration::new("beam-source-video", factory);
-                    mailbox.bind(&registration);
-                    (Target::Video(mailbox), registration)
-                }
-                VisualRequest::Audio { .. } => {
-                    let mailbox = GpuCanvasMailbox::new();
-                    let registration = GpuCanvasRegistration::new(
-                        "beam-source-blick",
-                        waveform::Factory {
-                            mailbox: mailbox.clone(),
-                            pipelines: Arc::clone(&pipelines),
-                        },
-                    );
-                    mailbox.bind(&registration);
-                    (Target::Audio(mailbox), registration)
-                }
-            };
+            let lease = pool.acquire(&request.request)?;
+            let target = lease.target();
+            let registration = lease.registration();
             let cancel = Arc::new(AtomicBool::new(false));
             entries.entries.insert(
                 key.clone(),
                 Entry {
+                    _lease: Some(lease),
                     registration,
                     target,
                     cancel: Arc::clone(&cancel),
@@ -152,4 +134,5 @@ pub(crate) fn register(registry: &Arc<crate::ServiceRegistry>, controller: Arc<E
             Ok(entries.entries[&key].reply(&key))
         })())
     });
+    registrations
 }

@@ -13,6 +13,7 @@ fn public_api_writes_a_v2_session_without_private_module_access() {
     let layout = ProjectLayout::new(temporary.path(), project_id).session(session_id);
     layout.create().expect("layout");
     let mut manifest = SessionManifest {
+        cursor_mode: Default::default(),
         schema_version: SCHEMA_VERSION,
         project_id,
         session_id,

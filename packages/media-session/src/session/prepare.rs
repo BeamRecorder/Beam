@@ -68,6 +68,7 @@ impl MediaSession {
         let created_at_utc = time::OffsetDateTime::now_utc()
             .format(&time::format_description::well_known::Rfc3339)?;
         let manifest = SessionManifest {
+            cursor_mode: Default::default(),
             schema_version: SCHEMA_VERSION,
             project_id,
             session_id: SessionId::new(),

@@ -63,10 +63,12 @@ pub(super) enum UiAction {
     WindowCanceled,
     CountdownCanceled,
     Pause,
+    Reset,
     Stop,
     Delete,
     PreparationRecord,
     PreparationCanceled,
+    EditorLoadingCanceled,
 }
 
 /// Source represented by the shared preparation bar, before devices are opened.

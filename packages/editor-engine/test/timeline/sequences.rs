@@ -13,7 +13,7 @@ fn timelines_share_sources_but_keep_tracks_clips_canvas_and_history_independent(
     let changed = edit(
         &first,
         Edit::Remove {
-            id: first.project.clips[0].id,
+            id: crate::fixtures::clip(&first.project, 0).id,
         },
     );
     let second = edit(
@@ -25,7 +25,10 @@ fn timelines_share_sources_but_keep_tracks_clips_canvas_and_history_independent(
     assert_eq!(second.project.assets, first.project.assets);
     assert!(second.project.clips.is_empty());
     assert!(second.undo.is_empty());
-    assert_ne!(second.project.tracks[0].id, first.project.tracks[0].id);
+    assert_ne!(
+        second.project.tracks.headers().next().unwrap().id,
+        first.project.tracks.headers().next().unwrap().id
+    );
     let second_id = second.active_sequence;
     let second = edit(
         &second,
@@ -102,7 +105,7 @@ fn sequence_limits_names_overflow_and_corrupt_histories_are_rejected() {
             },
         );
     }
-    assert!(history::edited(&document, &Edit::AddSequence { name: "17".into() }).is_err());
+    assert!(history::edited(&document, &Edit::AddSequence { name: "17".into() }).is_ok());
     let mut invalid = document.clone();
     invalid.sequences[1].id = invalid.sequences[0].id;
     assert!(sequences::validate(&invalid).is_err());

@@ -2,6 +2,7 @@
 
 mod activation;
 mod config;
+mod project_thumbnails;
 pub(crate) mod region;
 mod types;
 mod ui_state;
@@ -11,6 +12,7 @@ mod windows;
 
 pub(crate) use config::beam_config;
 use config::complete_menu;
+pub(crate) use project_thumbnails::register_project_thumbnail_service;
 pub(crate) use ui_state::register_ui_state_services;
 pub(crate) use window_picker::register_window_picker_services;
 pub(crate) use windows::register_auxiliary_windows;

@@ -7,7 +7,7 @@ use beam_editor_engine::{
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, atomic::AtomicBool},
 };
 
 #[derive(Deserialize)]
@@ -37,24 +37,46 @@ pub(super) enum Status {
     Ready,
     Failed,
 }
+#[derive(Clone)]
 pub(super) enum Target {
-    Video(GpuCanvasMailbox<PreviewFrame>),
-    Audio(GpuCanvasMailbox<Waveform>),
+    Video {
+        mailbox: GpuCanvasMailbox<PreviewFrame>,
+        latest: super::super::types::SourceFrame,
+    },
+    Audio {
+        mailbox: GpuCanvasMailbox<Waveform>,
+        latest: SourceWaveform,
+    },
 }
 impl Target {
     pub fn publish(&self, visual: &Visual) {
         match (self, visual) {
-            (Self::Video(mailbox), Visual::Video(frame)) => {
+            (Self::Video { mailbox, latest }, Visual::Video(frame)) => {
+                *latest.lock().unwrap_or_else(|p| p.into_inner()) = Some(Arc::new(frame.clone()));
                 mailbox.publish(frame.clone());
             }
-            (Self::Audio(mailbox), Visual::Audio(data)) => {
+            (Self::Audio { mailbox, latest }, Visual::Audio(data)) => {
+                *latest.lock().unwrap_or_else(|p| p.into_inner()) = Some(Arc::new(data.clone()));
                 mailbox.publish(data.clone());
             }
             _ => {}
         }
     }
+    pub fn clear(&self) {
+        match self {
+            Self::Video { mailbox, latest } => {
+                mailbox.clear();
+                latest.lock().unwrap_or_else(|p| p.into_inner()).take();
+            }
+            Self::Audio { mailbox, latest } => {
+                mailbox.clear();
+                latest.lock().unwrap_or_else(|p| p.into_inner()).take();
+            }
+        }
+    }
 }
 pub(super) struct Entry {
+    pub _lease: Option<Lease>,
     pub registration: GpuCanvasRegistration,
     pub target: Target,
     pub cancel: Cancel,
@@ -124,6 +146,7 @@ pub(super) struct Pipelines {
 pub(super) struct WaveformFactory {
     pub mailbox: GpuCanvasMailbox<Waveform>,
     pub pipelines: Arc<Mutex<Option<Arc<Pipelines>>>>,
+    pub source: Option<SourceWaveform>,
 }
 pub(super) struct WaveformRenderer {
     pub mailbox: GpuCanvasMailbox<Waveform>,
@@ -133,6 +156,21 @@ pub(super) struct WaveformRenderer {
     pub uniform: wgpu::Buffer,
     pub analysis: wgpu::BindGroup,
     pub strips: wgpu::BindGroup,
-    pub data: Option<Waveform>,
+    pub data: Option<Arc<Waveform>>,
     pub columns: u32,
+    pub source: Option<SourceWaveform>,
 }
+pub(super) type SourceWaveform = Arc<Mutex<Option<Arc<Waveform>>>>;
+
+pub(super) struct Slot {
+    pub registration: GpuCanvasRegistration,
+    pub target: Target,
+    pub video: bool,
+    pub busy: AtomicBool,
+}
+
+pub(super) struct Pool {
+    pub slots: Vec<Arc<Slot>>,
+}
+
+pub(super) struct Lease(pub Arc<Slot>);

@@ -168,10 +168,25 @@ fn user_window_title(
 
 /// Resolves known EWMH types once per catalog; normal and dialog lead the list.
 fn window_types(connection: &RustConnection) -> Result<Vec<u32>, CaptureError> {
-    ["NORMAL", "DIALOG", "DESKTOP", "DOCK", "TOOLBAR", "MENU", "UTILITY", "SPLASH",
-        "DROPDOWN_MENU", "POPUP_MENU", "TOOLTIP", "NOTIFICATION", "COMBO", "DND"]
-        .into_iter().map(|name| atom(connection, format!("_NET_WM_WINDOW_TYPE_{name}").as_bytes()))
-        .collect()
+    [
+        "NORMAL",
+        "DIALOG",
+        "DESKTOP",
+        "DOCK",
+        "TOOLBAR",
+        "MENU",
+        "UTILITY",
+        "SPLASH",
+        "DROPDOWN_MENU",
+        "POPUP_MENU",
+        "TOOLTIP",
+        "NOTIFICATION",
+        "COMBO",
+        "DND",
+    ]
+    .into_iter()
+    .map(|name| atom(connection, format!("_NET_WM_WINDOW_TYPE_{name}").as_bytes()))
+    .collect()
 }
 
 fn application_type(kinds: &[u32], normal: u32, dialog: u32, basic: &[u32]) -> bool {

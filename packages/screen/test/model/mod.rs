@@ -23,6 +23,7 @@ fn identifiers_are_unique_and_roundtrip() {
 #[test]
 fn manifest_schema_is_versioned_and_roundtrips() {
     let manifest = SessionManifest {
+        cursor_mode: Default::default(),
         schema_version: SCHEMA_VERSION,
         project_id: ProjectId::new(),
         session_id: SessionId::new(),

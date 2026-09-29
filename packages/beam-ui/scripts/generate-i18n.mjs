@@ -5,7 +5,7 @@ import { flattenMessages } from './i18nCatalog.mjs'
 
 const repository = resolve(import.meta.dirname, '../../..')
 const read = path => JSON.parse(readFileSync(path, 'utf8'))
-const coreNamespaces = ['HUD', 'HudPreferences', 'RecorderBar', 'ScreenRegionOverlay', 'SettingsPanel', 'AppearanceSettings', 'VoiceoverRecorder', 'ProjectPicker']
+const coreNamespaces = ['HUD', 'HudPreferences', 'RecorderBar', 'ScreenRegionOverlay', 'SettingsPanel', 'AppearanceSettings', 'VoiceoverRecorder', 'ProjectPicker', 'EditorPreparingHud']
 const editorNamespaces = ['Teleprompter', 'ShortcutPreferences', 'Tray', 'Updates', 'TopbarHUD']
 const editor = read(resolve(import.meta.dirname, '../src/solid/editor/shared/messages.json'))
 const extra = read(resolve(import.meta.dirname, '../src/solid/shared/i18n/nativeMessages.json'))

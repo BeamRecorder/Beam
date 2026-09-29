@@ -1,0 +1,23 @@
+[package]
+name = "beam-editor-mcp"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.92"
+publish = false
+
+[[bin]]
+name = "beam-editor-mcp"
+path = "src/main.rs"
+
+[dependencies]
+beam-editor-domain = { path = "../../packages/editor-domain" }
+beam-editor-engine = { path = "../../packages/editor-engine" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[[test]]
+name = "mcp"
+path = "test/lib.rs"
+
+[lints.clippy]
+all = "deny"

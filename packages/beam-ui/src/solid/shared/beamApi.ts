@@ -1,5 +1,5 @@
 import type { ApplicationServices, AssetRef } from '@argui/host'
-import type { ApplicationInfo, AuxiliaryWindow, BeamEvent, BeamPreferences, BeamUiState, CaptureRequest, DesktopCapabilities, InputAccessStatus, MonitorInfo, RecordingStatus, RegionColors, RegionSnapshot, ResizeDirection, SourceCatalog, WindowChoice } from './beamTypes'
+import type { ApplicationInfo, AuxiliaryWindow, BeamEvent, BeamPreferences, BeamUiState, CaptureRequest, DesktopCapabilities, InputAccessStatus, MonitorInfo, NativeProjectSummary, RecordingStatus, RegionColors, RegionSnapshot, ResizeDirection, SourceCatalog, WindowChoice } from './beamTypes'
 import type { TeleprompterDocument } from '../teleprompter/teleprompterTypes'
 import type { UpdateSnapshot } from './settings/updateTypes'
 import { monitorForWindow, windowPosition } from './windowPlacement'
@@ -11,7 +11,7 @@ export class BeamApi {
   private readonly positionWrites = new Map<string, ReturnType<typeof setTimeout>>()
   private readonly pendingPositions = new Map<string, WindowPosition>()
   private meterRevision = Date.now() * 1024
-  constructor(private readonly services: ApplicationServices, private readonly window = 'main') {}
+  constructor(private readonly services: ApplicationServices, readonly window = 'main') {}
 
   preferences(): Promise<BeamPreferences> { return this.services.call('beam', 'preferences') }
   info(): Promise<ApplicationInfo> { return this.services.call('beam', 'info') }
@@ -39,6 +39,7 @@ export class BeamApi {
   start(): Promise<RecordingStatus> { return this.services.call('beam', 'start') }
   pause(): Promise<RecordingStatus> { return this.services.call('beam', 'pause') }
   resume(): Promise<RecordingStatus> { return this.services.call('beam', 'resume') }
+  reset(): Promise<RecordingStatus> { return this.services.call('beam', 'reset') }
   stop(): Promise<RecordingStatus> { return this.services.call('beam', 'stop') }
   cancel(): Promise<RecordingStatus> { return this.services.call('beam', 'cancel') }
   status(): Promise<RecordingStatus> { return this.services.call('beam', 'status') }
@@ -57,9 +58,17 @@ export class BeamApi {
     await this.services.call('windows', 'focusNamed', { window: 'settings' })
   }
   openVideoEditor(): Promise<void> { return this.services.call('beam', 'openVideoEditor') }
+  listProjects(): Promise<NativeProjectSummary[]> { return this.services.call('beam', 'listProjects') }
+  projectThumbnail(id: string): Promise<AssetRef | null> { return this.services.call('beam', 'projectThumbnail', { id }) }
+  async openProjects(): Promise<void> {
+    await this.ensureWindow('projects')
+    await this.services.call('windows', 'focusNamed', { window: 'projects' })
+  }
   openEditor(projectId: string, mode: 'video' | 'screenshot'): Promise<void> {
     return this.services.call('beam', 'openEditor', { projectId, mode })
   }
+  cancelEditorOpen(): Promise<void> { return this.services.call('beam', 'cancelEditorOpen') }
+  editorStartup(error?: string): Promise<void> { return this.services.call('beam', 'editorStartup', error ? { error } : {}) }
   windowInfo(window = this.window) { return this.services.getWindowInfo(window) }
   async hideWindow(window = this.window): Promise<void> {
     this.movedWindows.delete(window)
@@ -70,9 +79,9 @@ export class BeamApi {
   closeWindow(window = this.window): Promise<void> { return this.services.closeWindow(window) }
   async ensureWindow(window: AuxiliaryWindow): Promise<void> {
     await this.services.call('windows', 'ensureAuxiliary', { window })
-    if (window !== 'settings' && window !== 'teleprompter') return
+    if (window !== 'settings' && window !== 'teleprompter' && window !== 'projects') return
     const saved = (await this.preferences()).windowPositions?.[window]
-    if (!saved) return
+    if (!saved && window !== 'projects') return
     const info = await this.windowInfo(window)
     if (!info.capabilities.absolutePosition) return
     const monitors = await this.monitors(), monitor = monitorForWindow(monitors, info)
@@ -82,7 +91,7 @@ export class BeamApi {
     await this.windowPosition(position.x, position.y, window)
   }
   dragWindow(window = this.window): Promise<void> {
-    if (['recorder', 'countdown', 'settings', 'teleprompter', 'regionActions'].includes(window)) this.movedWindows.add(window)
+    if (['recorder', 'countdown', 'settings', 'teleprompter', 'projects', 'regionActions'].includes(window)) this.movedWindows.add(window)
     return this.services.call<void>('windows', 'drag', { window }).catch(cause => {
       this.movedWindows.delete(window)
       throw cause
@@ -130,7 +139,7 @@ export class BeamApi {
   updateUiState(patch: Partial<BeamUiState>): Promise<void> {
     return this.services.call('beamUi', 'update', patch)
   }
-  emitUiAction(action: 'regionSelected' | 'regionCanceled' | 'countdownCanceled' | 'preparationRecord' | 'preparationCanceled' | 'pause' | 'stop' | 'delete', region?: CaptureRequest['region']): Promise<void> {
+  emitUiAction(action: 'regionSelected' | 'regionCanceled' | 'countdownCanceled' | 'preparationRecord' | 'preparationCanceled' | 'pause' | 'reset' | 'stop' | 'delete' | 'editorLoadingCanceled', region?: CaptureRequest['region']): Promise<void> {
     return this.services.call('beamUi', 'emit', { action, region })
   }
   private async flushPosition(window: string): Promise<void> {

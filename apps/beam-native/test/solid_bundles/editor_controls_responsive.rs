@@ -30,7 +30,7 @@ pub(super) fn validate(authored: &Element) {
     let label = ui
         .element_for(node(&ui, "editor-sequences-first-label"))
         .unwrap();
-    let argui_ui::ElementKind::Text { style, .. } = &label.children[0].kind else {
+    let argui_ui::ElementKind::Text { style, .. } = &label.children[0].children[0].kind else {
         panic!("sequence label")
     };
     assert_eq!(style.align, argui_text::TextAlign::Start);
@@ -53,6 +53,7 @@ pub(super) fn validate(authored: &Element) {
     for (width, labeled) in [
         (600., true),
         (463. + header_inset, false),
+        (464. + header_inset, true),
         (465. + header_inset, true),
         (320., false),
         (600., true),
@@ -66,55 +67,67 @@ pub(super) fn validate(authored: &Element) {
             bounds(&output, node(&ui, "editor-library-pane")).size.width,
             width
         );
-        let label = node(&ui, "editor-library-media-label");
-        assert_eq!(
-            bounds(&output, label).size.height > 0.,
-            labeled,
-            "native label height at {width}"
-        );
-        let label_text = ui.element_for(label).unwrap().children[0].clone();
-        let text_node = super::native_node(&ui, &label_text);
-        let text_layout = output
-            .nodes
-            .iter()
-            .find(|entry| entry.node == text_node)
-            .unwrap();
-        let visible = text_layout.clip.is_some_and(|clip| {
-            clip.size.height > 0. && clip.intersection(text_layout.bounds).is_some()
-        });
-        assert_eq!(
-            visible, labeled,
-            "painted labels must change during drag at {width}: {text_layout:?}"
-        );
-        let painted = text_layout.text_index.is_some_and(|index| output.display_list.commands().iter().any(|command| {
-            matches!(command, argui_paint::DisplayCommand::Text { block, clips, .. } if *block == index && clips.contains(center(text_layout.bounds)))
-        }));
-        assert_eq!(
-            painted, labeled,
-            "label must follow the actual paint clip during drag at {width}"
-        );
-        let hint = node(&ui, "editor-library-media-hint");
-        assert_eq!(
-            output.hit_regions.iter().any(|region| region.node == hint),
-            !labeled,
-            "library hints are available only without their visible label at {width}"
-        );
-        let tab = bounds(&output, node(&ui, "editor-library-media"));
-        let indicator = bounds(&output, node(&ui, "editor-library-indicator"));
-        assert!(
-            (tab.size.width - indicator.size.width).abs() <= 1.,
-            "indicator follows native tab width during resize"
-        );
-        if !labeled {
-            let icon = bounds(&output, vector_node(&ui, node(&ui, "editor-library-media")));
-            assert!(
-                (center(tab).x - center(icon).x).abs() <= 0.5,
-                "icon-only horizontal centering"
+        for key in [
+            "media",
+            "text",
+            "transitions",
+            "effects",
+            "filters",
+            "templates",
+        ] {
+            let label = node(&ui, &format!("editor-library-{key}-label"));
+            assert_eq!(
+                bounds(&output, label).size.height > 0.,
+                labeled,
+                "native label height at {width}"
             );
-            assert!(
-                (center(tab).y - center(icon).y).abs() <= 0.5,
-                "icon-only content is centered"
+            let label_text = ui.element_for(label).unwrap().children[0].children[0].clone();
+            let text_node = super::native_node(&ui, &label_text);
+            let text_layout = output
+                .nodes
+                .iter()
+                .find(|entry| entry.node == text_node)
+                .unwrap();
+            let visible = text_layout.clip.is_some_and(|clip| {
+                clip.size.height > 0. && clip.intersection(text_layout.bounds).is_some()
+            });
+            assert_eq!(
+                visible, labeled,
+                "painted labels must change during drag at {width}: {text_layout:?}"
             );
+            let painted = text_layout.text_index.is_some_and(|index| {
+                output.display_list.commands().iter().any(|command| {
+            matches!(command, argui_paint::DisplayCommand::Text { block, .. } if *block == index)
+        })
+            });
+            assert_eq!(
+                painted, labeled,
+                "label must follow the actual paint clip during drag at {width}"
+            );
+            let hint = node(&ui, &format!("editor-library-{key}-hint"));
+            assert_eq!(
+                output.hit_regions.iter().any(|region| region.node == hint),
+                !labeled,
+                "library hints are available only without their visible label at {width}"
+            );
+            let tab_node = node(&ui, &format!("editor-library-{key}"));
+            let tab = bounds(&output, tab_node);
+            let indicator = bounds(&output, node(&ui, "editor-library-indicator"));
+            assert!(
+                (tab.size.width - indicator.size.width).abs() <= 1.,
+                "indicator follows native tab width during resize"
+            );
+            if !labeled {
+                let icon = bounds(&output, vector_node(&ui, tab_node));
+                assert!(
+                    (center(tab).x - center(icon).x).abs() <= 0.5,
+                    "icon-only horizontal centering"
+                );
+                assert!(
+                    (center(tab).y - center(icon).y).abs() <= 0.5,
+                    "icon-only content is centered"
+                );
+            }
         }
         assert_eq!(ui.revision(), revision);
     }
@@ -157,6 +170,28 @@ pub(super) fn validate_hint(authored: &Element, id: &str) {
             short_height = surface.size.height;
         }
     }
+    // A hint can remain mounted until JS sees pointer leave after native resizing.
+    let mut view = authored.clone();
+    element_mut(&mut view, "editor-library-pane")
+        .style
+        .size
+        .width = argui_ui::length(600.);
+    element_mut(&mut view, "editor-library").style.size.width = argui_ui::length(540.);
+    let (ui, output) = layout(view);
+    let hint_text = node(&ui, &format!("{id}-text"));
+    let index = output
+        .nodes
+        .iter()
+        .find(|entry| entry.node == hint_text)
+        .unwrap()
+        .text_index
+        .unwrap();
+    assert!(
+        output.display_list.commands().iter().all(|command| {
+            !matches!(command, argui_paint::DisplayCommand::Text { block, .. } if *block == index)
+        }),
+        "a mounted hint must stop painting when labels become visible"
+    );
 }
 
 /// Returns a measured control's center in logical coordinates.

@@ -6,7 +6,20 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- Finishing a recording now shows an always-on-top loading window with an animated Beam mascot and a cancel control. The HUD groups current errors and Linux interaction access in a scrollable, copyable warning popover; Settings has a dedicated Linux access page.
+- The native launcher now opens a rounded Projects window with recent video projects in a responsive thumbnail grid, immediate name search, and direct reopening in the editor. Recordings without saved artwork get a frame thumbnail automatically.
 - Native error messages now include a shared copy button with translated clipboard feedback, preserving the complete diagnostic.
+- Media imports can run as cancellable jobs, with one atomic timeline publication and recovery of accepted results after an interrupted owner.
+- Native editor documents preserve independently ordered track and sequence effect stacks, with absolute-time curves, presets and undo history.
+- Source analysis and hardware proxy jobs keep immutable media provenance, durable status and bounded JSON/video artifact resources independently of the montage.
+- Native media can be relinked to a verified source version for explicitly selected clips, with undo and retries after reopening.
+- Native projects can reclaim unreachable decision blocks while preserving current content, history, recovery checkpoints and durable render snapshots.
+- Native renders run as identifiable jobs pinned to a sequence and revision, with durable status, cancellation and bounded PNG/video artifact resources.
+
+- Native editing exposes a shared local API, generated TypeScript SDK, CLI and MCP adapter with revision checks, atomic batches, dry runs and authorized media destinations.
+- Native clips support independently named and ordered effect instances, typed keyframes, source/clip/sequence time references, real two-input crossfades and wipes, and shader-based extension definitions.
+- Native timelines support linked audio/video edits, selection and mapped copy/paste, sequence duplication and a separate project history that can restore deleted sequences.
+- Recording cursor styles and zoom defaults can be inherited from a sequence or overridden per clip; captures identify separate, embedded, absent and unknown cursor modes explicitly.
 - Native video projects now support independent timeline sequences with their own tracks and undo/redo history, using shared source media.
 - Timeline clips show visible video filmstrips and Blick audio waveforms with shared, bounded caches and cancellable source-range decoding.
 - Native editing now supports generated text titles, image imports, and bounded audio/video fades with saved undo/redo history.
@@ -35,6 +48,13 @@ User-facing changes to Beam are documented in this file.
 ### Changed
 
 - The native launcher and video editor run exclusively through Argui. Screenshot captures stay saved; native screenshot editing reports that it is unavailable instead of launching Electron.
+- V1 scalar adjustments migrate to editable effect instances while preserving their rendered values and undo history.
+- Accepted SDK, CLI and MCP edits refresh native editor panels without idle polling.
+- Native history retains up to 50 states within a 256 MiB budget for historical decisions, independently of the current montage's size.
+- Native exports acquire source graphs in bounded windows while writing one continuous hardware-encoded output.
+- Native preview acquires media for the active playback window, retaining the accepted frame during parameter updates and preparation of another window.
+- Native project decisions use immutable content-addressed blocks with paged clip storage, preserving source telemetry outside edit history.
+- The native editor uses GPU decoding where supported, GPU composition and camera/color effects, and explicit hardware video encoding. Linux preview shares GStreamer frames with Argui through DMA-BUF, and VA export shares GPU NV12 planes without CPU pixel copies. Argui exposes a common external-frame API with Vulkan, Metal/IOSurface and Direct3D shared texture imports. Export preserves full canvas dimensions.
 
 - Activating a native Beam window restores its other open windows together on X11, while keeping the chosen window focused and leaving closed windows hidden.
 
@@ -42,7 +62,6 @@ User-facing changes to Beam are documented in this file.
 
 - The native teleprompter now uses a blurred floating toolbar with live speed/font sliders, a full color picker, window opacity and scrolling preview. Settings persist and speed/font changes preserve reading progress.
 
-- The native editor uses GPU decoding where supported, GPU composition and camera/color effects, and explicit hardware video encoding. Linux preview shares GStreamer frames with Argui through DMA-BUF, and VA export shares GPU NV12 planes without CPU pixel copies. Argui exposes a common external-frame API with Vulkan, Metal/IOSurface and Direct3D shared texture imports. Export preserves full canvas dimensions.
 - Completed native video recordings now open directly in the native editor. The launcher also opens an empty editor for standalone video editing; screenshots remain saved while their native editor is unavailable.
 - Native microphone menus now use the desktop audio server on Linux, with hardware-only ALSA fallback; system audio uses the same On/Off choices as the editor.
 - Native text uses a slightly stronger default weight and system font fallbacks for additional writing systems.
@@ -64,6 +83,12 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Native Beam starts again when a previously saved HUD size falls outside the current launcher bounds; it restores the default size while retaining the other preferences.
+- Completed recordings wait for the editor to load before Beam considers it open, and editor startup failures report their actual diagnostic. Installed Linux interaction access reconnects automatically on launch, while Settings shows its current state instead of asking to allow it again.
+- Recorded clips now open when the encoded media ends before the capture clock, and Linux previews select the GLES shader path consistently.
+- Native recording controls now show only discard, restart, pause/resume, a larger Stop button and a vertically centered timer. Restart erases the current take and records again from zero; empty areas let you drag the bar.
+- Recorded video previews remain available when separate cursor positions are missing, with a warning instead of a failed preview. The recording clock updates from live native duration and resumes when its window becomes visible.
+
 - Confirmed regions keep their dimming mask visible with mouse passthrough during countdown and recording, closing it on stop or cancellation. Countdown and default bottom-centered recording controls use the crop's display, including mixed DPI.
 - The recording timer follows native session duration through pauses, window resizing and hiding. User-moved control positions are saved before hiding; obsolete monitor positions return to the default placement.
 - Native development builds prepare isolated UI bundles, preventing missing editor files when another build refreshes the UI output during Rust compilation.
@@ -80,6 +105,20 @@ User-facing changes to Beam are documented in this file.
 - Transparent native window corners retain their border color, and Select menus wait for their first GPU frame and fade their panel, border and shadow together.
 - Native capture preparation can cancel cleanly at every asynchronous step, starts immediately when countdown is disabled, and always releases stopped or failed scene actors.
 
+- Native timeline effect regions mount reliably after loading media and keep their controls when project metadata refreshes.
+- Native editor source thumbnails and waveforms use GPU canvases registered before launch, preserving live preview, pointer controls and responsive tabs after media loads.
+- Native editor category tabs keep labels aligned in wide panes, switch to centered icons with delayed hover hints in narrow panes, and clear hints when labels return.
+- Native editor refreshes the preview after overlapping startup requests without adding idle polling.
+- Native projects reopen safely after an interrupted API owner, renewing their private access token while preserving an active owner.
+
+- Duplicated sequences keep independent track and sequence effect identities and animation keys.
+- Native projects open correctly from long directory paths using a private local owner endpoint.
+- Native seeks wait for their own media segment and completed viewport delivery, correctly reach positions beyond the first timeline cut, and external previews retain the producer of each displayed frame.
+- Failed media imports remove their unpublished managed copies and preserve the accepted project.
+- Native inspectors reject stale clip details and refresh when another client has edited the project.
+- The first V1 project checkpoint remains available after migration and later edits.
+- Transition keyframes use the transition's own clock, and command receipts identify new animation keys without loading the entire timeline.
+- Native titles use the canvas dimensions for text positioning, keeping titles visible at their requested location.
 - Native editor panels adapt to smaller windows. Resize handles show small centered orange pills only on hover; the native engine resizes panes directly and sends JavaScript the final size once on release.
 - X11 region controls and capture bars now declare inactive presentation and stay out of the taskbar, preventing GNOME's repeated “window is ready” notifications while retaining always-on-top stacking and keyboard interaction.
 - Native Select menus reuse their GPU renderer and load only the assets they display, reducing reopening latency. The first capture-mode tab change now animates, and returning focus resumes suspended native presentation.

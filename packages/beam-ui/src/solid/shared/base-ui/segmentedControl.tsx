@@ -40,18 +40,22 @@ export function SegmentedControl<T extends string>(props: SegmentedControlProps<
         const initial = options().get(key)!;
         const option = () => options().get(key) ?? initial;
         const color = () => props.value === key ? theme().primary : theme().mutedForeground;
-        const icon = () => <Show when={option().asset || option().icon}>
+        const icon = () => <Show when={option().asset || option().icon}><container
+            width={option().asset || below ? 15 : 12} height={option().asset || below ? 15 : 12} shrink={0}>
           <Show when={option().asset} fallback={<Icon name={option().icon!} size={below ? 15 : 12} color={color()} />}>
             <svg source={option().asset!} width={15} height={15} color={color()} />
           </Show>
-        </Show>;
+        </container></Show>;
         const label = () => <Show when={!props.compact}>
           <container id={`${id}-${key}-label`} width={below ? '100%' : 0} grow={below ? undefined : 1}
-            minWidth={0} height={14} clip containerRules={props.labelMinimumWidth === undefined ? undefined : [{
-              scope: id, when: { maxWidth: labelThreshold()! }, style: { height: 0 },
+            minWidth={0} minHeight={0} height={labelThreshold() === undefined ? 14 : 0} shrink={0} containerRules={props.labelMinimumWidth === undefined ? undefined : [{
+              scope: id, when: { minWidth: labelThreshold()! }, style: { height: 14 },
             }]}>
-            <text width="100%" textAlign={below ? 'center' : props.contentAlign ?? 'center'} fontSize={11} lineHeight={14} lineClamp={1}
-              color={props.value === key ? theme().foreground : theme().mutedForeground} text={option().label} />
+            {/* Keep clipping separate: native query patches replace the wrapper's layout style. */}
+            <container width="100%" height="100%" minWidth={0} minHeight={0} clip>
+              <text width="100%" textAlign={below ? 'center' : props.contentAlign ?? 'center'} fontSize={11} lineHeight={14} lineClamp={1}
+                color={props.value === key ? theme().foreground : theme().mutedForeground} text={option().label} />
+            </container>
           </container>
         </Show>;
         return <focusScope id={`${id}-${key}`} role="tab" accessibleName={option().label}
@@ -66,9 +70,9 @@ export function SegmentedControl<T extends string>(props: SegmentedControlProps<
                 onlyBelow={props.compact || labelThreshold() === undefined ? undefined : { scope: id, width: labelThreshold()! }}
                 mouseCursor={props.disabled ? 'notAllowed' : 'pointer'}>
                 {below
-                  ? <column width="100%" height="100%" alignItems="center" justifyContent="center" gap={2}
+                  ? <column width="100%" height={props.compact || labelThreshold() !== undefined ? 15 : 31} shrink={0} alignItems="center" justifyContent="center" gap={labelThreshold() === undefined ? 2 : 0}
                       containerRules={labelThreshold() === undefined ? undefined : [{ scope: id,
-                        when: { maxWidth: labelThreshold()! }, style: { gap: 0 } }]}>{icon()}{label()}</column>
+                        when: { minWidth: labelThreshold()! }, style: { height: 31, gap: 2 } }]}>{icon()}{label()}</column>
                   : <row width="100%" height="100%" alignItems="center" justifyContent={props.contentAlign ?? 'center'} gap={5}
                       padding={{ start: 6, end: 6 }}>{icon()}{label()}</row>}
               </Tooltip>

@@ -1,5 +1,5 @@
 use crate::EngineError;
-use beam_media_manifest::{ProjectId, SessionManifest, write_atomic};
+use beam_media_manifest::{ProjectId, SessionId, SessionManifest, write_atomic};
 use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
 
@@ -66,6 +66,54 @@ pub(crate) fn register(output: &Path, session: &SessionManifest) -> Result<(), E
     let bytes = serde_json::to_vec_pretty(&project)
         .map_err(|error| EngineError::InvalidConfiguration(error.to_string()))?;
     write_atomic(&path, &bytes).map_err(|error| EngineError::Media(error.to_string()))
+}
+
+/// Removes only the take owned by this engine, preserving the rest of the project.
+pub(crate) fn discard_session(
+    output: &Path,
+    id: ProjectId,
+    session: SessionId,
+) -> Result<(), EngineError> {
+    let invalid = |message: &str| EngineError::InvalidConfiguration(message.into());
+    let directory = output
+        .parent()
+        .ok_or_else(|| invalid("missing project directory"))?;
+    let path = directory.join("project.json");
+    for owned in [directory, output, &path] {
+        if std::fs::symlink_metadata(owned)?.file_type().is_symlink() {
+            return Err(invalid("recording paths must not be symlinks"));
+        }
+    }
+    let relative = output
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| invalid("invalid session directory"))?;
+    let mut project: Value = serde_json::from_slice(&std::fs::read(&path)?)
+        .map_err(|error| invalid(&error.to_string()))?;
+    if project.get("projectId") != Some(&json!(id)) {
+        return Err(invalid("project identifier collision"));
+    }
+    let sessions = project
+        .get_mut("sessions")
+        .and_then(Value::as_array_mut)
+        .ok_or_else(|| invalid("invalid project sessions"))?;
+    let index = sessions
+        .iter()
+        .position(|item| {
+            item.get("sessionId") == Some(&json!(session))
+                && item.get("relativePath").and_then(Value::as_str) == Some(relative)
+        })
+        .ok_or_else(|| invalid("recording does not belong to this project"))?;
+    sessions.remove(index);
+    let bytes = serde_json::to_vec_pretty(&project).map_err(|error| invalid(&error.to_string()))?;
+    let discarded = directory.join(format!(".discard-{}", SessionId::new()));
+    std::fs::rename(output, &discarded)?;
+    if let Err(error) = write_atomic(&path, &bytes) {
+        std::fs::rename(&discarded, output)?;
+        return Err(EngineError::Media(error.to_string()));
+    }
+    std::fs::remove_dir_all(discarded)?;
+    Ok(())
 }
 
 #[path = "../test/project.rs"]

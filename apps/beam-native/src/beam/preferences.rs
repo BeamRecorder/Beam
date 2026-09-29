@@ -55,7 +55,7 @@ impl Preferences {
         json::encode(&view_of(&self.read()?)?)
     }
     pub(super) fn initialize(&self) -> Result<Value, String> {
-        if legacy_hud_layout(&self.read()?) {
+        if needs_hud_layout_reset(&self.read()?) {
             self.patch_typed(PreferencePatch::default())
         } else {
             self.view()
@@ -69,7 +69,7 @@ impl Preferences {
         validate_patch(&patch)?;
         self.file.update::<PreferenceDocument, _>(|document| {
             apply_patch(document, patch);
-            if legacy_hud_layout(document) {
+            if needs_hud_layout_reset(document) {
                 save_size(document, WindowSize::default());
             }
             json::encode(&view_of(document)?)
@@ -91,7 +91,12 @@ fn validate_patch(patch: &PreferencePatch) -> Result<(), String> {
         for (window, position) in positions {
             if !matches!(
                 window.as_str(),
-                "recorder" | "countdown" | "settings" | "teleprompter" | "regionActions"
+                "recorder"
+                    | "countdown"
+                    | "settings"
+                    | "teleprompter"
+                    | "projects"
+                    | "regionActions"
             ) || position.x.unsigned_abs() > 100_000
                 || position.y.unsigned_abs() > 100_000
             {
@@ -238,22 +243,24 @@ fn apply_patch(document: &mut PreferenceDocument, patch: PreferencePatch) {
         extras.native_teleprompter_document = Some(script);
     }
 }
-fn legacy_hud_layout(document: &PreferenceDocument) -> bool {
-    document.hud_window.is_some()
-        && document
-            .extras
-            .as_ref()
-            .and_then(|extras| extras.native_hud_layout_version.as_ref())
-            .and_then(Value::as_u64)
-            .unwrap_or(0)
-            < HUD_LAYOUT_VERSION
+fn needs_hud_layout_reset(document: &PreferenceDocument) -> bool {
+    document.hud_window.is_some_and(|size| {
+        validate_size(size).is_err()
+            || document
+                .extras
+                .as_ref()
+                .and_then(|extras| extras.native_hud_layout_version.as_ref())
+                .and_then(Value::as_u64)
+                .unwrap_or(0)
+                < HUD_LAYOUT_VERSION
+    })
 }
 fn view_of(document: &PreferenceDocument) -> Result<NativePreferences, String> {
     let empty_extras = stored_types::StoredExtras::default();
     let extras = document.extras.as_ref().unwrap_or(&empty_extras);
     let empty_devices = stored_types::StoredDevices::default();
     let devices = document.devices.as_ref().unwrap_or(&empty_devices);
-    let hud_window = if legacy_hud_layout(document) {
+    let hud_window = if needs_hud_layout_reset(document) {
         WindowSize::default()
     } else {
         document.hud_window.unwrap_or_default()

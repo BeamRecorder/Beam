@@ -35,6 +35,7 @@ impl Drop for Decoder {
 }
 impl Decoder {
     pub(super) fn new(source: &Source) -> Result<Self> {
+        crate::project::sources::verify(&source.root, &source.asset)?;
         let path = crate::project::validation::source_path(&source.root, &source.asset.path)?;
         let sink = gst_app::AppSink::builder()
             .sync(false)

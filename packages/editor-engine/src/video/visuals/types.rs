@@ -15,6 +15,14 @@ pub struct Source {
     pub asset: MediaAsset,
 }
 
+/// Cached artwork and decoders belong to the immutable source bytes.
+#[derive(Clone, PartialEq)]
+pub(super) struct SourceKey {
+    pub project_id: uuid::Uuid,
+    pub asset_id: uuid::Uuid,
+    pub identity: Option<beam_editor_domain::project::types::SourceIdentity>,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
 #[serde(
     tag = "kind",

@@ -1,0 +1,7540 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "AnalysisAlgorithm": {
+      "enum": [
+        "zoomClicksV1"
+      ],
+      "type": "string"
+    },
+    "ArtifactData": {
+      "additionalProperties": false,
+      "description": "Bytes travel only through this explicitly bounded resource operation.",
+      "properties": {
+        "artifactId": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "byteLength": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "dataBase64": {
+          "type": "string"
+        },
+        "next": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "offset": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "artifactId",
+        "byteLength",
+        "dataBase64",
+        "offset"
+      ],
+      "type": "object"
+    },
+    "ArtifactInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "byteLength": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "height": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "jobId": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "mimeType": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "width": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "byteLength",
+        "height",
+        "id",
+        "jobId",
+        "mimeType",
+        "name",
+        "sha256",
+        "width"
+      ],
+      "type": "object"
+    },
+    "AssetInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "durationMs": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "hasAudio": {
+          "type": "boolean"
+        },
+        "hasVideo": {
+          "type": "boolean"
+        },
+        "height": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "identity": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SourceIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "isImage": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "recording": {
+          "type": "boolean"
+        },
+        "telemetry": {
+          "$ref": "#/definitions/Telemetry"
+        },
+        "width": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "durationMs",
+        "hasAudio",
+        "hasVideo",
+        "height",
+        "id",
+        "isImage",
+        "name",
+        "recording",
+        "telemetry",
+        "width"
+      ],
+      "type": "object"
+    },
+    "Binding": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "constant"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/definitions/Value"
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "keys": {
+              "items": {
+                "$ref": "#/definitions/Keyframe"
+              },
+              "type": "array"
+            },
+            "kind": {
+              "enum": [
+                "curve"
+              ],
+              "type": "string"
+            },
+            "space": {
+              "$ref": "#/definitions/TimeSpace"
+            }
+          },
+          "required": [
+            "keys",
+            "kind",
+            "space"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Canvas": {
+      "additionalProperties": false,
+      "properties": {
+        "background": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "fps": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "fpsDenominator": {
+          "default": 1,
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "height": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "width": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "background",
+        "fps",
+        "height",
+        "width"
+      ],
+      "type": "object"
+    },
+    "Capabilities": {
+      "additionalProperties": false,
+      "properties": {
+        "apiVersion": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "documentVersion": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "exports": {
+          "items": {
+            "$ref": "#/definitions/Container"
+          },
+          "type": "array"
+        },
+        "messageBudgetBytes": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "pageLimit": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "platform": {
+          "type": "string"
+        },
+        "processors": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "rendering": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "apiVersion",
+        "documentVersion",
+        "exports",
+        "messageBudgetBytes",
+        "pageLimit",
+        "platform",
+        "processors",
+        "rendering"
+      ],
+      "type": "object"
+    },
+    "Clip": {
+      "additionalProperties": false,
+      "properties": {
+        "animationOffsetMs": {
+          "default": 0,
+          "format": "int64",
+          "type": "integer"
+        },
+        "assetId": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "cursorStyle": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CursorStyleOverride"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "durationMs": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "effects": {
+          "$ref": "#/definitions/Effects"
+        },
+        "generator": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Instance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "instances": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/Instance"
+          },
+          "type": "array"
+        },
+        "linkGroup": {
+          "default": null,
+          "format": "uuid",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rate": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/Rate"
+            }
+          ],
+          "default": {
+            "denominator": 1,
+            "numerator": 1
+          }
+        },
+        "sourceInMs": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "startMs": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Title"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "trackId": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "assetId",
+        "durationMs",
+        "effects",
+        "id",
+        "sourceInMs",
+        "startMs",
+        "trackId"
+      ],
+      "type": "object"
+    },
+    "ClipHeader": {
+      "additionalProperties": false,
+      "properties": {
+        "animationOffsetMs": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "assetId": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "durationMs": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "generator": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/InstanceHeader"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "instances": {
+          "items": {
+            "$ref": "#/definitions/InstanceHeader"
+          },
+          "type": "array"
+        },
+        "keyframeIds": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "linkGroup": {
+          "format": "uuid",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rate": {
+          "$ref": "#/definitions/Rate"
+        },
+        "sourceInMs": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "startMs": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Title"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "trackId": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "animationOffsetMs",
+        "assetId",
+        "durationMs",
+        "id",
+        "instances",
+        "keyframeIds",
+        "rate",
+        "sourceInMs",
+        "startMs",
+        "trackId"
+      ],
+      "type": "object"
+    },
+    "ClipOverview": {
+      "additionalProperties": false,
+      "properties": {
+        "animationOffsetMs": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "assetId": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "durationMs": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "effectCount": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "generator": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/InstanceHeader"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "linkGroup": {
+          "format": "uuid",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rate": {
+          "$ref": "#/definitions/Rate"
+        },
+        "regionCount": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "sourceInMs": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "startMs": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Title"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "trackId": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "animationOffsetMs",
+        "assetId",
+        "durationMs",
+        "effectCount",
+        "id",
+        "rate",
+        "regionCount",
+        "sourceInMs",
+        "startMs",
+        "trackId"
+      ],
+      "type": "object"
+    },
+    "Command": {
+      "additionalProperties": false,
+      "properties": {
+        "commandId": {
+          "type": "string"
+        },
+        "operation": {
+          "$ref": "#/definitions/Operation"
+        }
+      },
+      "required": [
+        "commandId",
+        "operation"
+      ],
+      "type": "object"
+    },
+    "CommandResult": {
+      "additionalProperties": false,
+      "properties": {
+        "commandId": {
+          "type": "string"
+        },
+        "created": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "commandId",
+        "created"
+      ],
+      "type": "object"
+    },
+    "Container": {
+      "enum": [
+        "mp4",
+        "webm"
+      ],
+      "type": "string"
+    },
+    "CursorShape": {
+      "enum": [
+        "pointer",
+        "dot"
+      ],
+      "type": "string"
+    },
+    "CursorStyle": {
+      "additionalProperties": false,
+      "properties": {
+        "borderColor": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "type": "array"
+        },
+        "clicks": {
+          "type": "boolean"
+        },
+        "color": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "type": "array"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "hideAfterMs": {
+          "description": "Zero disables automatic hiding.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "shape": {
+          "$ref": "#/definitions/CursorShape"
+        },
+        "size": {
+          "description": "Cursor height in immutable source pixels.",
+          "format": "double",
+          "type": "number"
+        },
+        "smoothingMs": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "borderColor",
+        "clicks",
+        "color",
+        "enabled",
+        "hideAfterMs",
+        "shape",
+        "size",
+        "smoothingMs"
+      ],
+      "type": "object"
+    },
+    "CursorStyleOverride": {
+      "additionalProperties": false,
+      "description": "Absent fields continue inheriting future changes to the sequence profile.",
+      "properties": {
+        "borderColor": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "clicks": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "color": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "enabled": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "hideAfterMs": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "shape": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CursorShape"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "size": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "smoothingMs": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "Definition": {
+      "additionalProperties": false,
+      "properties": {
+        "domain": {
+          "$ref": "#/definitions/Domain"
+        },
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "parameters": {
+          "items": {
+            "$ref": "#/definitions/Parameter"
+          },
+          "type": "array"
+        },
+        "processor": {
+          "$ref": "#/definitions/Processor"
+        },
+        "targets": {
+          "items": {
+            "$ref": "#/definitions/ScopeTarget"
+          },
+          "type": "array"
+        },
+        "timelineRegion": {
+          "type": "boolean"
+        },
+        "version": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "domain",
+        "id",
+        "label",
+        "parameters",
+        "processor",
+        "timelineRegion",
+        "version"
+      ],
+      "type": "object"
+    },
+    "Domain": {
+      "enum": [
+        "video",
+        "audio",
+        "transition",
+        "generator"
+      ],
+      "type": "string"
+    },
+    "Edit": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "addSequence"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "duplicateSequence"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "enum": [
+                "undoProject"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "enum": [
+                "redoProject"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "selectSequence"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "renameSequence"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "removeSequence"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "rename"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "canvas": {
+              "$ref": "#/definitions/Canvas"
+            },
+            "type": {
+              "enum": [
+                "canvas"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "canvas",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "$ref": "#/definitions/TrackKind"
+            },
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "addTrack"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "name",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "hidden": {
+              "type": "boolean"
+            },
+            "id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "muted": {
+              "type": "boolean"
+            },
+            "type": {
+              "enum": [
+                "track"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "hidden",
+            "id",
+            "muted",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "trackRename"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "index": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "type": {
+              "enum": [
+                "trackReorder"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "index",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "deleteClips": {
+              "type": "boolean"
+            },
+            "id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "trackRemove"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "deleteClips",
+            "id",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ids": {
+              "items": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": {
+              "enum": [
+                "link"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "ids",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "unlink"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "style": {
+              "$ref": "#/definitions/RecordingStyle"
+            },
+            "type": {
+              "enum": [
+                "recordingStyle"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "style",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "style": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/CursorStyleOverride"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "enum": [
+                "cursorStyle"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "clipId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "index": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "type": {
+              "enum": [
+                "applySuggestion"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "clipId",
+            "index",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "assetId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "startMs": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "trackId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "insert"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "assetId",
+            "startMs",
+            "trackId",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "startMs": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "title": {
+              "$ref": "#/definitions/Title"
+            },
+            "type": {
+              "enum": [
+                "insertTitle"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "startMs",
+            "title",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": {
+              "$ref": "#/definitions/Title"
+            },
+            "type": {
+              "enum": [
+                "title"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "title",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "startMs": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "trackId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "move"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "startMs",
+            "trackId",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "durationMs": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "sourceInMs": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "startMs": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "type": {
+              "enum": [
+                "trim"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "durationMs",
+            "id",
+            "sourceInMs",
+            "startMs",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "timeMs": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "type": {
+              "enum": [
+                "split"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "timeMs",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "remove"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "effects": {
+              "$ref": "#/definitions/Effects"
+            },
+            "id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "effects"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "effects",
+            "id",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "startMs": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "trackId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "duplicate"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "startMs",
+            "trackId",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "durationMs": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "rate": {
+              "$ref": "#/definitions/Rate"
+            },
+            "type": {
+              "enum": [
+                "retime"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "durationMs",
+            "id",
+            "rate",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "clipId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "instance": {
+              "$ref": "#/definitions/Instance"
+            },
+            "type": {
+              "enum": [
+                "effectAdd"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "clipId",
+            "instance",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "clipId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "instance": {
+              "$ref": "#/definitions/Instance"
+            },
+            "type": {
+              "enum": [
+                "effectUpdate"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "clipId",
+            "instance",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "clipId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "instanceId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "effectRemove"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "clipId",
+            "instanceId",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "clipId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "index": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "instanceId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "effectReorder"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "clipId",
+            "index",
+            "instanceId",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "transition": {
+              "$ref": "#/definitions/Transition"
+            },
+            "type": {
+              "enum": [
+                "transitionAdd"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "transition",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "transition": {
+              "$ref": "#/definitions/Transition"
+            },
+            "type": {
+              "enum": [
+                "transitionUpdate"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "transition",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "transitionRemove"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "durationMs": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "instance": {
+              "$ref": "#/definitions/Instance"
+            },
+            "startMs": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "trackId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "insertGenerator"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "durationMs",
+            "instance",
+            "startMs",
+            "trackId",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "clipId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "instance": {
+              "$ref": "#/definitions/Instance"
+            },
+            "type": {
+              "enum": [
+                "generatorUpdate"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "clipId",
+            "instance",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "endMs": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "startMs": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "trackIds": {
+              "items": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": {
+              "enum": [
+                "rippleDelete"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "endMs",
+            "startMs",
+            "trackIds",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "enum": [
+                "undo"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "enum": [
+                "redo"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Effects": {
+      "additionalProperties": false,
+      "properties": {
+        "autoZoom": {
+          "type": "boolean"
+        },
+        "brightness": {
+          "format": "double",
+          "type": "number"
+        },
+        "fadeInMs": {
+          "default": 0,
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "fadeOutMs": {
+          "default": 0,
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "opacity": {
+          "format": "double",
+          "type": "number"
+        },
+        "saturation": {
+          "format": "double",
+          "type": "number"
+        },
+        "scale": {
+          "format": "double",
+          "type": "number"
+        },
+        "volume": {
+          "format": "double",
+          "type": "number"
+        },
+        "x": {
+          "format": "double",
+          "type": "number"
+        },
+        "y": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "autoZoom",
+        "brightness",
+        "opacity",
+        "saturation",
+        "scale",
+        "volume",
+        "x",
+        "y"
+      ],
+      "type": "object"
+    },
+    "ErrorCode": {
+      "enum": [
+        "invalidRequest",
+        "conflict",
+        "unauthorized",
+        "unsupported",
+        "storage",
+        "media",
+        "stopped"
+      ],
+      "type": "string"
+    },
+    "Event": {
+      "additionalProperties": false,
+      "properties": {
+        "commandIds": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "revision": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "sequenceId": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "commandIds",
+        "revision",
+        "sequenceId"
+      ],
+      "type": "object"
+    },
+    "ExtensionPack": {
+      "additionalProperties": false,
+      "properties": {
+        "definitions": {
+          "items": {
+            "$ref": "#/definitions/Definition"
+          },
+          "type": "array"
+        },
+        "id": {
+          "type": "string"
+        },
+        "namespace": {
+          "type": "string"
+        },
+        "presets": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/Preset"
+          },
+          "type": "array"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "version": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "definitions",
+        "id",
+        "namespace",
+        "sha256",
+        "version"
+      ],
+      "type": "object"
+    },
+    "FrameRate": {
+      "additionalProperties": false,
+      "properties": {
+        "denominator": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "numerator": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "denominator",
+        "numerator"
+      ],
+      "type": "object"
+    },
+    "GarbageCollection": {
+      "additionalProperties": false,
+      "properties": {
+        "freedBytes": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "removedBlocks": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "retainedBlocks": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "freedBytes",
+        "removedBlocks",
+        "retainedBlocks"
+      ],
+      "type": "object"
+    },
+    "GrantInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/GrantKind"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "name"
+      ],
+      "type": "object"
+    },
+    "GrantKind": {
+      "enum": [
+        "project",
+        "source",
+        "destination"
+      ],
+      "type": "string"
+    },
+    "ImportPublication": {
+      "additionalProperties": false,
+      "properties": {
+        "assetIds": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "clipIds": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "fingerprint": {
+          "type": "string"
+        },
+        "idempotencyKey": {
+          "type": "string"
+        },
+        "projectId": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "revision": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "sequenceId": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "assetIds",
+        "clipIds",
+        "fingerprint",
+        "idempotencyKey",
+        "projectId",
+        "revision",
+        "sequenceId"
+      ],
+      "type": "object"
+    },
+    "Instance": {
+      "additionalProperties": false,
+      "properties": {
+        "definitionId": {
+          "type": "string"
+        },
+        "definitionVersion": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "parameters": {
+          "additionalProperties": {
+            "$ref": "#/definitions/Binding"
+          },
+          "type": "object"
+        },
+        "range": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TimeRange"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "definitionId",
+        "definitionVersion",
+        "enabled",
+        "id",
+        "parameters"
+      ],
+      "type": "object"
+    },
+    "InstanceHeader": {
+      "additionalProperties": false,
+      "properties": {
+        "definitionId": {
+          "type": "string"
+        },
+        "definitionVersion": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "range": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TimeRange"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "definitionId",
+        "definitionVersion",
+        "enabled",
+        "id"
+      ],
+      "type": "object"
+    },
+    "Interpolation": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "constant"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "linear"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "incoming": {
+              "$ref": "#/definitions/Tangent"
+            },
+            "kind": {
+              "enum": [
+                "bezier"
+              ],
+              "type": "string"
+            },
+            "outgoing": {
+              "$ref": "#/definitions/Tangent"
+            }
+          },
+          "required": [
+            "incoming",
+            "kind",
+            "outgoing"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "JobContext": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "context": {
+              "$ref": "#/definitions/RenderContext"
+            },
+            "kind": {
+              "enum": [
+                "sequence"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "context",
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "context": {
+              "$ref": "#/definitions/SourceContext"
+            },
+            "kind": {
+              "enum": [
+                "source"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "context",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "JobInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "artifacts": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "error": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/JobKind"
+        },
+        "phase": {
+          "$ref": "#/definitions/JobPhase"
+        },
+        "progress": {
+          "format": "double",
+          "type": "number"
+        },
+        "projectId": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "revision": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "scope": {
+          "$ref": "#/definitions/JobScope"
+        },
+        "snapshotId": {
+          "description": "Populated before rendering begins; queued jobs may still be pinning their blocks.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sourceVersions": {
+          "additionalProperties": {
+            "$ref": "#/definitions/SourceVersion"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "artifacts",
+        "id",
+        "kind",
+        "phase",
+        "progress",
+        "projectId",
+        "revision",
+        "scope",
+        "sourceVersions"
+      ],
+      "type": "object"
+    },
+    "JobKind": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "import"
+              ],
+              "type": "string"
+            },
+            "sourceCount": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "kind",
+            "sourceCount"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "container": {
+              "$ref": "#/definitions/Container"
+            },
+            "kind": {
+              "enum": [
+                "export"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "container",
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "preview"
+              ],
+              "type": "string"
+            },
+            "quality": {
+              "$ref": "#/definitions/RenderQuality"
+            },
+            "time": {
+              "$ref": "#/definitions/Time"
+            }
+          },
+          "required": [
+            "kind",
+            "quality",
+            "time"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "algorithm": {
+              "$ref": "#/definitions/AnalysisAlgorithm"
+            },
+            "kind": {
+              "enum": [
+                "analysis"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "algorithm",
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "proxy"
+              ],
+              "type": "string"
+            },
+            "settings": {
+              "$ref": "#/definitions/ProxySettings"
+            }
+          },
+          "required": [
+            "kind",
+            "settings"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "JobPhase": {
+      "enum": [
+        "queued",
+        "rendering",
+        "completed",
+        "cancelled",
+        "failed"
+      ],
+      "type": "string"
+    },
+    "JobScope": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "sequence"
+              ],
+              "type": "string"
+            },
+            "sequenceId": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "sequenceId"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "assetId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "source"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "assetId",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Keyframe": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "interpolation": {
+          "$ref": "#/definitions/Interpolation"
+        },
+        "time": {
+          "$ref": "#/definitions/Time"
+        },
+        "value": {
+          "$ref": "#/definitions/Value"
+        }
+      },
+      "required": [
+        "id",
+        "interpolation",
+        "time",
+        "value"
+      ],
+      "type": "object"
+    },
+    "Operation": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "$ref": "#/definitions/ScopedAction"
+            },
+            "target": {
+              "$ref": "#/definitions/ScopeAddress"
+            },
+            "type": {
+              "enum": [
+                "scopedEffect"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "action",
+            "target",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "edit": {
+              "$ref": "#/definitions/Edit"
+            },
+            "type": {
+              "enum": [
+                "edit"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "edit",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "assetId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "durationMs": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "sourceInMs": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "startMs": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "track": {
+              "$ref": "#/definitions/Reference"
+            },
+            "type": {
+              "enum": [
+                "insert"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "assetId",
+            "durationMs",
+            "sourceInMs",
+            "startMs",
+            "track",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "clip": {
+              "$ref": "#/definitions/Reference"
+            },
+            "definitionId": {
+              "type": "string"
+            },
+            "definitionVersion": {
+              "format": "uint32",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "parameters": {
+              "additionalProperties": {
+                "$ref": "#/definitions/Binding"
+              },
+              "type": "object"
+            },
+            "type": {
+              "enum": [
+                "effectAdd"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "clip",
+            "definitionId",
+            "definitionVersion",
+            "parameters",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "binding": {
+              "$ref": "#/definitions/Binding"
+            },
+            "clip": {
+              "$ref": "#/definitions/Reference"
+            },
+            "instance": {
+              "$ref": "#/definitions/Reference"
+            },
+            "parameter": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "parameterSet"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "binding",
+            "clip",
+            "instance",
+            "parameter",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "presetId": {
+              "type": "string"
+            },
+            "presetVersion": {
+              "format": "uint32",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "target": {
+              "$ref": "#/definitions/PresetTarget"
+            },
+            "type": {
+              "enum": [
+                "applyPreset"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "presetId",
+            "presetVersion",
+            "target",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "assetId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "clipIds": {
+              "items": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "previousAssetId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "assetRetarget"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "assetId",
+            "clipIds",
+            "previousAssetId",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "clip": {
+              "$ref": "#/definitions/Reference"
+            },
+            "end": {
+              "$ref": "#/definitions/Time"
+            },
+            "instance": {
+              "$ref": "#/definitions/Reference"
+            },
+            "start": {
+              "$ref": "#/definitions/Time"
+            },
+            "type": {
+              "enum": [
+                "effectRangeAt"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "clip",
+            "end",
+            "instance",
+            "start",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "clip": {
+              "$ref": "#/definitions/Reference"
+            },
+            "instance": {
+              "$ref": "#/definitions/Reference"
+            },
+            "parameter": {
+              "type": "string"
+            },
+            "space": {
+              "$ref": "#/definitions/TimeSpace"
+            },
+            "type": {
+              "enum": [
+                "curveSpace"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "clip",
+            "instance",
+            "parameter",
+            "space",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "clip": {
+              "$ref": "#/definitions/Reference"
+            },
+            "instance": {
+              "$ref": "#/definitions/Reference"
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "type": {
+              "enum": [
+                "instanceRename"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "clip",
+            "instance",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "clip": {
+              "$ref": "#/definitions/Reference"
+            },
+            "instance": {
+              "$ref": "#/definitions/Reference"
+            },
+            "interpolation": {
+              "$ref": "#/definitions/Interpolation"
+            },
+            "parameter": {
+              "type": "string"
+            },
+            "space": {
+              "$ref": "#/definitions/TimeSpace"
+            },
+            "time": {
+              "$ref": "#/definitions/Time"
+            },
+            "type": {
+              "enum": [
+                "keyframeAdd"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/definitions/Value"
+            }
+          },
+          "required": [
+            "clip",
+            "instance",
+            "interpolation",
+            "parameter",
+            "space",
+            "time",
+            "type",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "clip": {
+              "$ref": "#/definitions/Reference"
+            },
+            "instance": {
+              "$ref": "#/definitions/Reference"
+            },
+            "interpolation": {
+              "$ref": "#/definitions/Interpolation"
+            },
+            "parameter": {
+              "type": "string"
+            },
+            "sequenceTime": {
+              "$ref": "#/definitions/Time"
+            },
+            "space": {
+              "$ref": "#/definitions/TimeSpace"
+            },
+            "type": {
+              "enum": [
+                "keyframeAt"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/definitions/Value"
+            }
+          },
+          "required": [
+            "clip",
+            "instance",
+            "interpolation",
+            "parameter",
+            "sequenceTime",
+            "space",
+            "type",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "clip": {
+              "$ref": "#/definitions/Reference"
+            },
+            "instance": {
+              "$ref": "#/definitions/Reference"
+            },
+            "keyframe": {
+              "$ref": "#/definitions/Keyframe"
+            },
+            "parameter": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "keyframeUpdate"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "clip",
+            "instance",
+            "keyframe",
+            "parameter",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "clip": {
+              "$ref": "#/definitions/Reference"
+            },
+            "instance": {
+              "$ref": "#/definitions/Reference"
+            },
+            "keyframeId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "parameter": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "keyframeRemove"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "clip",
+            "instance",
+            "keyframeId",
+            "parameter",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "clip": {
+              "$ref": "#/definitions/Reference"
+            },
+            "instance": {
+              "$ref": "#/definitions/Reference"
+            },
+            "type": {
+              "enum": [
+                "effectDuplicate"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "clip",
+            "instance",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "definitionId": {
+              "type": "string"
+            },
+            "definitionVersion": {
+              "format": "uint32",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "durationMs": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "fromClip": {
+              "$ref": "#/definitions/Reference"
+            },
+            "toClip": {
+              "$ref": "#/definitions/Reference"
+            },
+            "type": {
+              "enum": [
+                "transitionAdd"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "definitionId",
+            "definitionVersion",
+            "durationMs",
+            "fromClip",
+            "toClip",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "definitionId": {
+              "type": "string"
+            },
+            "definitionVersion": {
+              "format": "uint32",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "durationMs": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "parameters": {
+              "additionalProperties": {
+                "$ref": "#/definitions/Binding"
+              },
+              "type": "object"
+            },
+            "startMs": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "track": {
+              "$ref": "#/definitions/Reference"
+            },
+            "type": {
+              "enum": [
+                "generatorInsert"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "definitionId",
+            "definitionVersion",
+            "durationMs",
+            "parameters",
+            "startMs",
+            "track",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "clips": {
+              "items": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "destinationTrack": {
+              "$ref": "#/definitions/Reference"
+            },
+            "sourceSequence": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "startMs": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "type": {
+              "enum": [
+                "copyPaste"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "clips",
+            "destinationTrack",
+            "sourceSequence",
+            "startMs",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "clips": {
+              "items": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "sourceSequence": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "startMs": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "trackMap": {
+              "additionalProperties": {
+                "$ref": "#/definitions/Reference"
+              },
+              "type": "object"
+            },
+            "type": {
+              "enum": [
+                "pasteMapped"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "clips",
+            "sourceSequence",
+            "startMs",
+            "trackMap",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "pack": {
+              "$ref": "#/definitions/ExtensionPack"
+            },
+            "type": {
+              "enum": [
+                "registerPack"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "pack",
+            "type"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "OwnerGrants": {
+      "additionalProperties": false,
+      "properties": {
+        "destination": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "project": {
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "project",
+        "sources"
+      ],
+      "type": "object"
+    },
+    "OwnerReady": {
+      "additionalProperties": false,
+      "description": "Trusted CLI bootstrap metadata, never a renderer-facing filesystem grant operation.",
+      "properties": {
+        "endpoint": {
+          "type": "string"
+        },
+        "grants": {
+          "$ref": "#/definitions/OwnerGrants"
+        },
+        "tokenFile": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "endpoint",
+        "grants",
+        "tokenFile"
+      ],
+      "type": "object"
+    },
+    "PackDraft": {
+      "additionalProperties": false,
+      "properties": {
+        "definitions": {
+          "items": {
+            "$ref": "#/definitions/Definition"
+          },
+          "type": "array"
+        },
+        "id": {
+          "type": "string"
+        },
+        "namespace": {
+          "type": "string"
+        },
+        "presets": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/Preset"
+          },
+          "type": "array"
+        },
+        "version": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "definitions",
+        "id",
+        "namespace",
+        "version"
+      ],
+      "type": "object"
+    },
+    "Page_for_ArtifactInfo": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/ArtifactInfo"
+          },
+          "type": "array"
+        },
+        "next": {
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "revision": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "total": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "revision",
+        "total"
+      ],
+      "type": "object"
+    },
+    "Page_for_AssetInfo": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/AssetInfo"
+          },
+          "type": "array"
+        },
+        "next": {
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "revision": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "total": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "revision",
+        "total"
+      ],
+      "type": "object"
+    },
+    "Page_for_Clip": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/Clip"
+          },
+          "type": "array"
+        },
+        "next": {
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "revision": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "total": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "revision",
+        "total"
+      ],
+      "type": "object"
+    },
+    "Page_for_ClipOverview": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/ClipOverview"
+          },
+          "type": "array"
+        },
+        "next": {
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "revision": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "total": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "revision",
+        "total"
+      ],
+      "type": "object"
+    },
+    "Page_for_Definition": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/Definition"
+          },
+          "type": "array"
+        },
+        "next": {
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "revision": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "total": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "revision",
+        "total"
+      ],
+      "type": "object"
+    },
+    "Page_for_Event": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/Event"
+          },
+          "type": "array"
+        },
+        "next": {
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "revision": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "total": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "revision",
+        "total"
+      ],
+      "type": "object"
+    },
+    "Page_for_GrantInfo": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/GrantInfo"
+          },
+          "type": "array"
+        },
+        "next": {
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "revision": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "total": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "revision",
+        "total"
+      ],
+      "type": "object"
+    },
+    "Page_for_JobInfo": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/JobInfo"
+          },
+          "type": "array"
+        },
+        "next": {
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "revision": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "total": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "revision",
+        "total"
+      ],
+      "type": "object"
+    },
+    "Page_for_Preset": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/Preset"
+          },
+          "type": "array"
+        },
+        "next": {
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "revision": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "total": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "revision",
+        "total"
+      ],
+      "type": "object"
+    },
+    "Page_for_SequenceInfo": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/SequenceInfo"
+          },
+          "type": "array"
+        },
+        "next": {
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "revision": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "total": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "revision",
+        "total"
+      ],
+      "type": "object"
+    },
+    "Page_for_TimelineRegion": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/TimelineRegion"
+          },
+          "type": "array"
+        },
+        "next": {
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "revision": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "total": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "revision",
+        "total"
+      ],
+      "type": "object"
+    },
+    "Page_for_TrackOverview": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/TrackOverview"
+          },
+          "type": "array"
+        },
+        "next": {
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "revision": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "total": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "revision",
+        "total"
+      ],
+      "type": "object"
+    },
+    "Page_for_Transition": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/Transition"
+          },
+          "type": "array"
+        },
+        "next": {
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "revision": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "total": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "revision",
+        "total"
+      ],
+      "type": "object"
+    },
+    "Page_for_Zoom": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/Zoom"
+          },
+          "type": "array"
+        },
+        "next": {
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "revision": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "total": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "revision",
+        "total"
+      ],
+      "type": "object"
+    },
+    "Parameter": {
+      "additionalProperties": false,
+      "properties": {
+        "animatable": {
+          "type": "boolean"
+        },
+        "default": {
+          "$ref": "#/definitions/Value"
+        },
+        "group": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "valueType": {
+          "$ref": "#/definitions/ParameterType"
+        }
+      },
+      "required": [
+        "animatable",
+        "default",
+        "group",
+        "key",
+        "label",
+        "unit",
+        "valueType"
+      ],
+      "type": "object"
+    },
+    "ParameterType": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "number"
+              ],
+              "type": "string"
+            },
+            "max": {
+              "format": "double",
+              "type": "number"
+            },
+            "min": {
+              "format": "double",
+              "type": "number"
+            },
+            "step": {
+              "format": "double",
+              "type": "number"
+            }
+          },
+          "required": [
+            "kind",
+            "max",
+            "min",
+            "step"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "boolean"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "point"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "color"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "text"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "choice"
+              ],
+              "type": "string"
+            },
+            "options": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "kind",
+            "options"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Preset": {
+      "additionalProperties": false,
+      "properties": {
+        "definitionId": {
+          "type": "string"
+        },
+        "definitionVersion": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "parameters": {
+          "additionalProperties": {
+            "$ref": "#/definitions/Binding"
+          },
+          "type": "object"
+        },
+        "version": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "definitionId",
+        "definitionVersion",
+        "id",
+        "label",
+        "parameters",
+        "version"
+      ],
+      "type": "object"
+    },
+    "PresetTarget": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "instanceId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "track"
+              ],
+              "type": "string"
+            },
+            "trackId": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          "required": [
+            "instanceId",
+            "kind",
+            "trackId"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "instanceId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "sequence"
+              ],
+              "type": "string"
+            },
+            "sequenceId": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          "required": [
+            "instanceId",
+            "kind",
+            "sequenceId"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "clipId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "instanceId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "effect"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "clipId",
+            "instanceId",
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "clipId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "instanceId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "generator"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "clipId",
+            "instanceId",
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "instanceId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "transition"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "instanceId",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Processor": {
+      "description": "Processing families are implemented by media backends, never interpreted by UI.",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "colorBalance"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "transform"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "framing"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "textPlacement"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "opacity"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "gain"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "cameraZoom"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "cursor"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "fragment": {
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "shader"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "fragment",
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "transitionShader"
+              ],
+              "type": "string"
+            },
+            "mask_fragment": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "mask_fragment"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "crossfade"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "direction": {
+              "$ref": "#/definitions/WipeDirection"
+            },
+            "kind": {
+              "enum": [
+                "wipe"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "direction",
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "solid"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "ProjectInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "activeSequence": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "assetCount": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "canProjectRedo": {
+          "type": "boolean"
+        },
+        "canProjectUndo": {
+          "type": "boolean"
+        },
+        "canRedo": {
+          "type": "boolean"
+        },
+        "canUndo": {
+          "type": "boolean"
+        },
+        "canvas": {
+          "$ref": "#/definitions/Canvas"
+        },
+        "id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "recordingStyle": {
+          "$ref": "#/definitions/RecordingStyle"
+        },
+        "recovered": {
+          "type": "boolean"
+        },
+        "revision": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "sequenceCount": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "activeSequence",
+        "assetCount",
+        "canProjectRedo",
+        "canProjectUndo",
+        "canRedo",
+        "canUndo",
+        "canvas",
+        "id",
+        "name",
+        "recordingStyle",
+        "recovered",
+        "revision",
+        "sequenceCount",
+        "warnings"
+      ],
+      "type": "object"
+    },
+    "ProxySettings": {
+      "additionalProperties": false,
+      "properties": {
+        "container": {
+          "$ref": "#/definitions/Container"
+        },
+        "frameRate": {
+          "$ref": "#/definitions/FrameRate"
+        },
+        "height": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "width": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "container",
+        "frameRate",
+        "height",
+        "width"
+      ],
+      "type": "object"
+    },
+    "Query": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "clipHeaders"
+              ],
+              "type": "string"
+            },
+            "limit": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "offset": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "sequenceId": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "limit",
+            "offset",
+            "sequenceId"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "scopedParameterValues"
+              ],
+              "type": "string"
+            },
+            "target": {
+              "$ref": "#/definitions/ReadTarget"
+            },
+            "time": {
+              "$ref": "#/definitions/Time"
+            }
+          },
+          "required": [
+            "kind",
+            "target",
+            "time"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "track"
+              ],
+              "type": "string"
+            },
+            "sequenceId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "trackId": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "sequenceId",
+            "trackId"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "sequence"
+              ],
+              "type": "string"
+            },
+            "sequenceId": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "sequenceId"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "presets"
+              ],
+              "type": "string"
+            },
+            "limit": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "offset": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "kind",
+            "limit",
+            "offset"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "clipId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "clip"
+              ],
+              "type": "string"
+            },
+            "sequenceId": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          "required": [
+            "clipId",
+            "kind",
+            "sequenceId"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "project"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "jobs"
+              ],
+              "type": "string"
+            },
+            "limit": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "offset": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "kind",
+            "limit",
+            "offset"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "artifacts"
+              ],
+              "type": "string"
+            },
+            "limit": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "offset": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "kind",
+            "limit",
+            "offset"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "grants"
+              ],
+              "type": "string"
+            },
+            "limit": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "offset": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "kind",
+            "limit",
+            "offset"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "sequences"
+              ],
+              "type": "string"
+            },
+            "limit": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "offset": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "kind",
+            "limit",
+            "offset"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "assets"
+              ],
+              "type": "string"
+            },
+            "limit": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "offset": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "kind",
+            "limit",
+            "offset"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "asset"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "tracks"
+              ],
+              "type": "string"
+            },
+            "limit": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "offset": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "sequenceId": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "limit",
+            "offset",
+            "sequenceId"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "clips"
+              ],
+              "type": "string"
+            },
+            "limit": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "offset": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "sequenceId": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "limit",
+            "offset",
+            "sequenceId"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "transitions"
+              ],
+              "type": "string"
+            },
+            "limit": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "offset": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "sequenceId": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "limit",
+            "offset",
+            "sequenceId"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "definitions"
+              ],
+              "type": "string"
+            },
+            "limit": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "offset": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "kind",
+            "limit",
+            "offset"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "end": {
+              "$ref": "#/definitions/Time"
+            },
+            "kind": {
+              "enum": [
+                "regions"
+              ],
+              "type": "string"
+            },
+            "limit": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "offset": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "sequenceId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "start": {
+              "$ref": "#/definitions/Time"
+            }
+          },
+          "required": [
+            "end",
+            "kind",
+            "limit",
+            "offset",
+            "sequenceId",
+            "start"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "clipId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "parameterValues"
+              ],
+              "type": "string"
+            },
+            "sequenceId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "time": {
+              "$ref": "#/definitions/Time"
+            }
+          },
+          "required": [
+            "clipId",
+            "kind",
+            "sequenceId",
+            "time"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "assetId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "recordingSuggestions"
+              ],
+              "type": "string"
+            },
+            "limit": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "offset": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "assetId",
+            "kind",
+            "limit",
+            "offset"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Rate": {
+      "additionalProperties": false,
+      "description": "Source seconds consumed for each sequence second. Positive rational speed.",
+      "properties": {
+        "denominator": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "numerator": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "denominator",
+        "numerator"
+      ],
+      "type": "object"
+    },
+    "ReadTarget": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "clipId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "clip"
+              ],
+              "type": "string"
+            },
+            "sequenceId": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          "required": [
+            "clipId",
+            "kind",
+            "sequenceId"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "track"
+              ],
+              "type": "string"
+            },
+            "sequenceId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "trackId": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "sequenceId",
+            "trackId"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "sequence"
+              ],
+              "type": "string"
+            },
+            "sequenceId": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "sequenceId"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Receipt": {
+      "additionalProperties": false,
+      "properties": {
+        "fingerprint": {
+          "type": "string"
+        },
+        "idempotencyKey": {
+          "type": "string"
+        },
+        "results": {
+          "items": {
+            "$ref": "#/definitions/CommandResult"
+          },
+          "type": "array"
+        },
+        "revision": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "sequenceId": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "fingerprint",
+        "idempotencyKey",
+        "results",
+        "revision",
+        "sequenceId"
+      ],
+      "type": "object"
+    },
+    "RecordingStyle": {
+      "additionalProperties": false,
+      "properties": {
+        "cursor": {
+          "$ref": "#/definitions/CursorStyle"
+        },
+        "version": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "zoom": {
+          "$ref": "#/definitions/ZoomDefaults"
+        }
+      },
+      "required": [
+        "cursor",
+        "version",
+        "zoom"
+      ],
+      "type": "object"
+    },
+    "Reference": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "properties": {
+            "createdBy": {
+              "type": "string"
+            },
+            "index": {
+              "default": 0,
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "createdBy"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "RegionKind": {
+      "enum": [
+        "effect",
+        "transition"
+      ],
+      "type": "string"
+    },
+    "RenderContext": {
+      "additionalProperties": false,
+      "properties": {
+        "expectedRevision": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "idempotencyKey": {
+          "type": "string"
+        },
+        "projectId": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "sequenceId": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "expectedRevision",
+        "idempotencyKey",
+        "projectId",
+        "sequenceId"
+      ],
+      "type": "object"
+    },
+    "RenderQuality": {
+      "enum": [
+        "full",
+        "half",
+        "quarter"
+      ],
+      "type": "string"
+    },
+    "Request": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "expectedRevision": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "method": {
+              "enum": [
+                "garbageCollect"
+              ],
+              "type": "string"
+            },
+            "projectId": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          "required": [
+            "expectedRevision",
+            "method",
+            "projectId"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "method": {
+              "enum": [
+                "sealPack"
+              ],
+              "type": "string"
+            },
+            "pack": {
+              "$ref": "#/definitions/PackDraft"
+            }
+          },
+          "required": [
+            "method",
+            "pack"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "method": {
+              "enum": [
+                "discovery"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "method"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "method": {
+              "enum": [
+                "schema"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "method"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "method": {
+              "enum": [
+                "create"
+              ],
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "projectGrant": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "method",
+            "name",
+            "projectGrant"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "method": {
+              "enum": [
+                "open"
+              ],
+              "type": "string"
+            },
+            "projectGrant": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "method",
+            "projectGrant"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "context": {
+              "$ref": "#/definitions/RenderContext"
+            },
+            "method": {
+              "enum": [
+                "import"
+              ],
+              "type": "string"
+            },
+            "sourceGrants": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "context",
+            "method",
+            "sourceGrants"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "context": {
+              "$ref": "#/definitions/RenderContext"
+            },
+            "method": {
+              "enum": [
+                "importStart"
+              ],
+              "type": "string"
+            },
+            "sourceGrants": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "context",
+            "method",
+            "sourceGrants"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "assetId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "clipIds": {
+              "items": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "context": {
+              "$ref": "#/definitions/RenderContext"
+            },
+            "method": {
+              "enum": [
+                "relink"
+              ],
+              "type": "string"
+            },
+            "sourceGrant": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "assetId",
+            "clipIds",
+            "context",
+            "method",
+            "sourceGrant"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "method": {
+              "enum": [
+                "query"
+              ],
+              "type": "string"
+            },
+            "query": {
+              "$ref": "#/definitions/Query"
+            }
+          },
+          "required": [
+            "method",
+            "query"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "method": {
+              "enum": [
+                "transaction"
+              ],
+              "type": "string"
+            },
+            "transaction": {
+              "$ref": "#/definitions/Transaction"
+            }
+          },
+          "required": [
+            "method",
+            "transaction"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "method": {
+              "enum": [
+                "validateTransaction"
+              ],
+              "type": "string"
+            },
+            "transaction": {
+              "$ref": "#/definitions/Transaction"
+            }
+          },
+          "required": [
+            "method",
+            "transaction"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "afterRevision": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "limit": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "method": {
+              "enum": [
+                "events"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "afterRevision",
+            "limit",
+            "method"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "method": {
+              "enum": [
+                "seek"
+              ],
+              "type": "string"
+            },
+            "positionMs": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "method",
+            "positionMs"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "method": {
+              "enum": [
+                "play"
+              ],
+              "type": "string"
+            },
+            "playing": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "method",
+            "playing"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "method": {
+              "enum": [
+                "transport"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "method"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "container": {
+              "$ref": "#/definitions/Container"
+            },
+            "context": {
+              "$ref": "#/definitions/RenderContext"
+            },
+            "destinationGrant": {
+              "type": "string"
+            },
+            "fileName": {
+              "type": "string"
+            },
+            "method": {
+              "enum": [
+                "export"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "container",
+            "context",
+            "destinationGrant",
+            "fileName",
+            "method"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "context": {
+              "$ref": "#/definitions/RenderContext"
+            },
+            "method": {
+              "enum": [
+                "previewRender"
+              ],
+              "type": "string"
+            },
+            "quality": {
+              "$ref": "#/definitions/RenderQuality"
+            },
+            "time": {
+              "$ref": "#/definitions/Time"
+            }
+          },
+          "required": [
+            "context",
+            "method",
+            "quality",
+            "time"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "algorithm": {
+              "$ref": "#/definitions/AnalysisAlgorithm"
+            },
+            "context": {
+              "$ref": "#/definitions/SourceContext"
+            },
+            "method": {
+              "enum": [
+                "analysisStart"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "algorithm",
+            "context",
+            "method"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "context": {
+              "$ref": "#/definitions/SourceContext"
+            },
+            "method": {
+              "enum": [
+                "proxyStart"
+              ],
+              "type": "string"
+            },
+            "settings": {
+              "$ref": "#/definitions/ProxySettings"
+            }
+          },
+          "required": [
+            "context",
+            "method",
+            "settings"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "method": {
+              "enum": [
+                "jobGet"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "method"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "method": {
+              "enum": [
+                "jobCancel"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "method"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "length": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "method": {
+              "enum": [
+                "artifactRead"
+              ],
+              "type": "string"
+            },
+            "offset": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "id",
+            "length",
+            "method",
+            "offset"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "RequestEnvelope": {
+      "additionalProperties": false,
+      "properties": {
+        "apiVersion": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "request": {
+          "$ref": "#/definitions/Request"
+        },
+        "requestId": {
+          "type": "string"
+        },
+        "token": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "apiVersion",
+        "request",
+        "requestId",
+        "token"
+      ],
+      "type": "object"
+    },
+    "Response": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "$ref": "#/definitions/Page_for_ClipOverview"
+            },
+            "type": {
+              "enum": [
+                "clipHeaders"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "page",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "revision": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "target": {
+              "$ref": "#/definitions/ReadTarget"
+            },
+            "time": {
+              "$ref": "#/definitions/Time"
+            },
+            "type": {
+              "enum": [
+                "scopedParameterValues"
+              ],
+              "type": "string"
+            },
+            "values": {
+              "additionalProperties": {
+                "additionalProperties": {
+                  "$ref": "#/definitions/Value"
+                },
+                "type": "object"
+              },
+              "type": "object"
+            }
+          },
+          "required": [
+            "revision",
+            "target",
+            "time",
+            "type",
+            "values"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "result": {
+              "$ref": "#/definitions/GarbageCollection"
+            },
+            "type": {
+              "enum": [
+                "garbageCollection"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "result",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "pack": {
+              "$ref": "#/definitions/ExtensionPack"
+            },
+            "type": {
+              "enum": [
+                "pack"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "pack",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "$ref": "#/definitions/Page_for_Preset"
+            },
+            "type": {
+              "enum": [
+                "presets"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "page",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "clip": {
+              "$ref": "#/definitions/Clip"
+            },
+            "revision": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "type": {
+              "enum": [
+                "clip"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "clip",
+            "revision",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "capabilities": {
+              "$ref": "#/definitions/Capabilities"
+            },
+            "type": {
+              "enum": [
+                "discovery"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "capabilities",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "schema": true,
+            "type": {
+              "enum": [
+                "schema"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "schema",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "project": {
+              "$ref": "#/definitions/ProjectInfo"
+            },
+            "type": {
+              "enum": [
+                "project"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "project",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "project": {
+              "$ref": "#/definitions/ProjectInfo"
+            },
+            "publication": {
+              "$ref": "#/definitions/ImportPublication"
+            },
+            "type": {
+              "enum": [
+                "imported"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "project",
+            "publication",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "$ref": "#/definitions/Page_for_GrantInfo"
+            },
+            "type": {
+              "enum": [
+                "grants"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "page",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "$ref": "#/definitions/Page_for_SequenceInfo"
+            },
+            "type": {
+              "enum": [
+                "sequences"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "page",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "$ref": "#/definitions/Page_for_AssetInfo"
+            },
+            "type": {
+              "enum": [
+                "assets"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "page",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "asset": {
+              "$ref": "#/definitions/AssetInfo"
+            },
+            "revision": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "type": {
+              "enum": [
+                "asset"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "asset",
+            "revision",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "$ref": "#/definitions/Page_for_TrackOverview"
+            },
+            "type": {
+              "enum": [
+                "tracks"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "page",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "revision": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "track": {
+              "$ref": "#/definitions/Track"
+            },
+            "type": {
+              "enum": [
+                "track"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "revision",
+            "track",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "instances": {
+              "items": {
+                "$ref": "#/definitions/Instance"
+              },
+              "type": "array"
+            },
+            "revision": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "sequence": {
+              "$ref": "#/definitions/SequenceInfo"
+            },
+            "type": {
+              "enum": [
+                "sequence"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "instances",
+            "revision",
+            "sequence",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "$ref": "#/definitions/Page_for_Clip"
+            },
+            "type": {
+              "enum": [
+                "clips"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "page",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "$ref": "#/definitions/Page_for_Transition"
+            },
+            "type": {
+              "enum": [
+                "transitions"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "page",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "$ref": "#/definitions/Page_for_Definition"
+            },
+            "type": {
+              "enum": [
+                "definitions"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "page",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "$ref": "#/definitions/Page_for_TimelineRegion"
+            },
+            "type": {
+              "enum": [
+                "regions"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "page",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "enum": [
+                "parameterValues"
+              ],
+              "type": "string"
+            },
+            "values": {
+              "additionalProperties": {
+                "additionalProperties": {
+                  "$ref": "#/definitions/Value"
+                },
+                "type": "object"
+              },
+              "type": "object"
+            }
+          },
+          "required": [
+            "type",
+            "values"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "$ref": "#/definitions/Page_for_Zoom"
+            },
+            "type": {
+              "enum": [
+                "recordingSuggestions"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "page",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "receipt": {
+              "$ref": "#/definitions/Receipt"
+            },
+            "type": {
+              "enum": [
+                "receipt"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "receipt",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "$ref": "#/definitions/Page_for_Event"
+            },
+            "type": {
+              "enum": [
+                "events"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "page",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "transport": {
+              "$ref": "#/definitions/TransportInfo"
+            },
+            "type": {
+              "enum": [
+                "transport"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "transport",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "job": {
+              "$ref": "#/definitions/JobInfo"
+            },
+            "type": {
+              "enum": [
+                "job"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "job",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "$ref": "#/definitions/Page_for_JobInfo"
+            },
+            "type": {
+              "enum": [
+                "jobs"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "page",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "$ref": "#/definitions/Page_for_ArtifactInfo"
+            },
+            "type": {
+              "enum": [
+                "artifacts"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "page",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "$ref": "#/definitions/ArtifactData"
+            },
+            "type": {
+              "enum": [
+                "artifactData"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "data",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "enum": [
+                "acknowledged"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "$ref": "#/definitions/ServiceError"
+            },
+            "type": {
+              "enum": [
+                "error"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "error",
+            "type"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "ResponseEnvelope": {
+      "additionalProperties": false,
+      "properties": {
+        "apiVersion": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "requestId": {
+          "type": "string"
+        },
+        "response": {
+          "$ref": "#/definitions/Response"
+        }
+      },
+      "required": [
+        "apiVersion",
+        "requestId",
+        "response"
+      ],
+      "type": "object"
+    },
+    "ScopeAddress": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "track"
+              ],
+              "type": "string"
+            },
+            "track": {
+              "$ref": "#/definitions/Reference"
+            }
+          },
+          "required": [
+            "kind",
+            "track"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "sequence"
+              ],
+              "type": "string"
+            },
+            "sequenceId": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "sequenceId"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "ScopeTarget": {
+      "enum": [
+        "clip",
+        "track",
+        "sequence"
+      ],
+      "type": "string"
+    },
+    "ScopedAction": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "definitionId": {
+              "type": "string"
+            },
+            "definitionVersion": {
+              "format": "uint32",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "parameters": {
+              "additionalProperties": {
+                "$ref": "#/definitions/Binding"
+              },
+              "default": {},
+              "type": "object"
+            },
+            "type": {
+              "enum": [
+                "add"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "definitionId",
+            "definitionVersion",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "instance": {
+              "$ref": "#/definitions/Instance"
+            },
+            "type": {
+              "enum": [
+                "update"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "instance",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "instance": {
+              "$ref": "#/definitions/Reference"
+            },
+            "type": {
+              "enum": [
+                "remove"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "instance",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "index": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "instance": {
+              "$ref": "#/definitions/Reference"
+            },
+            "type": {
+              "enum": [
+                "reorder"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "index",
+            "instance",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "instance": {
+              "$ref": "#/definitions/Reference"
+            },
+            "type": {
+              "enum": [
+                "bypass"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "enabled",
+            "instance",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "instance": {
+              "$ref": "#/definitions/Reference"
+            },
+            "type": {
+              "enum": [
+                "duplicate"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "instance",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "instance": {
+              "$ref": "#/definitions/Reference"
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "type": {
+              "enum": [
+                "rename"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "instance",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "instance": {
+              "$ref": "#/definitions/Reference"
+            },
+            "range": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/TimeRange"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "enum": [
+                "range"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "instance",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "binding": {
+              "$ref": "#/definitions/Binding"
+            },
+            "instance": {
+              "$ref": "#/definitions/Reference"
+            },
+            "parameter": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "parameterSet"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "binding",
+            "instance",
+            "parameter",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "instance": {
+              "$ref": "#/definitions/Reference"
+            },
+            "interpolation": {
+              "$ref": "#/definitions/Interpolation"
+            },
+            "parameter": {
+              "type": "string"
+            },
+            "time": {
+              "$ref": "#/definitions/Time"
+            },
+            "type": {
+              "enum": [
+                "keyframeAdd"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/definitions/Value"
+            }
+          },
+          "required": [
+            "instance",
+            "interpolation",
+            "parameter",
+            "time",
+            "type",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "instance": {
+              "$ref": "#/definitions/Reference"
+            },
+            "keyframe": {
+              "$ref": "#/definitions/Keyframe"
+            },
+            "parameter": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "keyframeUpdate"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "instance",
+            "keyframe",
+            "parameter",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "instance": {
+              "$ref": "#/definitions/Reference"
+            },
+            "keyframeId": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "parameter": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "keyframeRemove"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "instance",
+            "keyframeId",
+            "parameter",
+            "type"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "SequenceInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "canvas": {
+          "$ref": "#/definitions/Canvas"
+        },
+        "clipCount": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "durationMs": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "recordingStyle": {
+          "$ref": "#/definitions/RecordingStyle"
+        },
+        "trackCount": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "canvas",
+        "clipCount",
+        "durationMs",
+        "id",
+        "name",
+        "recordingStyle",
+        "trackCount"
+      ],
+      "type": "object"
+    },
+    "ServiceError": {
+      "additionalProperties": false,
+      "properties": {
+        "actualRevision": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "code": {
+          "$ref": "#/definitions/ErrorCode"
+        },
+        "expectedRevision": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "type": "object"
+    },
+    "SourceAnalysis": {
+      "additionalProperties": false,
+      "description": "JSON artifact with explicit immutable source and telemetry provenance.",
+      "properties": {
+        "algorithm": {
+          "$ref": "#/definitions/AnalysisAlgorithm"
+        },
+        "assetId": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "projectId": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "revision": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "sourceIdentity": {
+          "$ref": "#/definitions/SourceIdentity"
+        },
+        "suggestions": {
+          "items": {
+            "$ref": "#/definitions/Zoom"
+          },
+          "type": "array"
+        },
+        "telemetrySha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "algorithm",
+        "assetId",
+        "projectId",
+        "revision",
+        "sourceIdentity",
+        "suggestions",
+        "telemetrySha256"
+      ],
+      "type": "object"
+    },
+    "SourceContext": {
+      "additionalProperties": false,
+      "properties": {
+        "assetId": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "expectedRevision": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "idempotencyKey": {
+          "type": "string"
+        },
+        "projectId": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "assetId",
+        "expectedRevision",
+        "idempotencyKey",
+        "projectId"
+      ],
+      "type": "object"
+    },
+    "SourceIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "byteLength": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "byteLength",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "SourceVersion": {
+      "additionalProperties": false,
+      "properties": {
+        "byteLength": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "byteLength",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "Tangent": {
+      "additionalProperties": false,
+      "properties": {
+        "time": {
+          "format": "double",
+          "type": "number"
+        },
+        "value": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "time",
+        "value"
+      ],
+      "type": "object"
+    },
+    "Telemetry": {
+      "enum": [
+        "unknown",
+        "separated",
+        "bakedIn",
+        "absent"
+      ],
+      "type": "string"
+    },
+    "Time": {
+      "additionalProperties": false,
+      "properties": {
+        "ticks": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "timescale": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "ticks",
+        "timescale"
+      ],
+      "type": "object"
+    },
+    "TimeRange": {
+      "additionalProperties": false,
+      "properties": {
+        "end": {
+          "$ref": "#/definitions/Time"
+        },
+        "space": {
+          "$ref": "#/definitions/TimeSpace"
+        },
+        "start": {
+          "$ref": "#/definitions/Time"
+        }
+      },
+      "required": [
+        "end",
+        "space",
+        "start"
+      ],
+      "type": "object"
+    },
+    "TimeSpace": {
+      "enum": [
+        "source",
+        "clipLocal",
+        "sequence"
+      ],
+      "type": "string"
+    },
+    "TimelineRegion": {
+      "additionalProperties": false,
+      "properties": {
+        "definitionId": {
+          "type": "string"
+        },
+        "definitionVersion": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "end": {
+          "$ref": "#/definitions/Time"
+        },
+        "id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/RegionKind"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "start": {
+          "$ref": "#/definitions/Time"
+        },
+        "target": {
+          "$ref": "#/definitions/ReadTarget"
+        }
+      },
+      "required": [
+        "definitionId",
+        "definitionVersion",
+        "enabled",
+        "end",
+        "id",
+        "kind",
+        "start",
+        "target"
+      ],
+      "type": "object"
+    },
+    "Title": {
+      "additionalProperties": false,
+      "properties": {
+        "background": {
+          "type": "boolean"
+        },
+        "bold": {
+          "type": "boolean"
+        },
+        "color": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "font": {
+          "type": "string"
+        },
+        "italic": {
+          "type": "boolean"
+        },
+        "shadow": {
+          "type": "boolean"
+        },
+        "size": {
+          "format": "double",
+          "type": "number"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "background",
+        "bold",
+        "color",
+        "font",
+        "italic",
+        "shadow",
+        "size",
+        "text"
+      ],
+      "type": "object"
+    },
+    "Track": {
+      "additionalProperties": false,
+      "properties": {
+        "hidden": {
+          "type": "boolean"
+        },
+        "id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "instances": {
+          "items": {
+            "$ref": "#/definitions/Instance"
+          },
+          "type": "array"
+        },
+        "kind": {
+          "$ref": "#/definitions/TrackKind"
+        },
+        "muted": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "hidden",
+        "id",
+        "kind",
+        "muted",
+        "name"
+      ],
+      "type": "object"
+    },
+    "TrackKind": {
+      "enum": [
+        "video",
+        "audio"
+      ],
+      "type": "string"
+    },
+    "TrackOverview": {
+      "additionalProperties": false,
+      "properties": {
+        "effectCount": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "hidden": {
+          "type": "boolean"
+        },
+        "id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/TrackKind"
+        },
+        "muted": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "regionCount": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "effectCount",
+        "hidden",
+        "id",
+        "kind",
+        "muted",
+        "name",
+        "regionCount"
+      ],
+      "type": "object"
+    },
+    "Transaction": {
+      "additionalProperties": false,
+      "properties": {
+        "apiVersion": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "commands": {
+          "items": {
+            "$ref": "#/definitions/Command"
+          },
+          "type": "array"
+        },
+        "expectedRevision": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "idempotencyKey": {
+          "type": "string"
+        },
+        "projectId": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "sequenceId": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "apiVersion",
+        "commands",
+        "expectedRevision",
+        "idempotencyKey",
+        "projectId",
+        "sequenceId"
+      ],
+      "type": "object"
+    },
+    "Transition": {
+      "additionalProperties": false,
+      "properties": {
+        "durationMs": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "fromClip": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "instance": {
+          "$ref": "#/definitions/Instance"
+        },
+        "toClip": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "durationMs",
+        "fromClip",
+        "instance",
+        "toClip"
+      ],
+      "type": "object"
+    },
+    "TransportInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "durationMs": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "error": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "playing": {
+          "type": "boolean"
+        },
+        "positionMs": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "durationMs",
+        "playing",
+        "positionMs"
+      ],
+      "type": "object"
+    },
+    "Value": {
+      "oneOf": [
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "number"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "format": "double",
+              "type": "number"
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "boolean"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "choice"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "text"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "point"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "items": {
+                "format": "double",
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "color"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "items": {
+                "format": "double",
+                "type": "number"
+              },
+              "maxItems": 4,
+              "minItems": 4,
+              "type": "array"
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "WipeDirection": {
+      "enum": [
+        "left",
+        "right",
+        "up",
+        "down"
+      ],
+      "type": "string"
+    },
+    "Zoom": {
+      "additionalProperties": false,
+      "properties": {
+        "cx": {
+          "format": "double",
+          "type": "number"
+        },
+        "cy": {
+          "format": "double",
+          "type": "number"
+        },
+        "endMs": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "scale": {
+          "format": "double",
+          "type": "number"
+        },
+        "startMs": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "cx",
+        "cy",
+        "endMs",
+        "scale",
+        "startMs"
+      ],
+      "type": "object"
+    },
+    "ZoomDefaults": {
+      "additionalProperties": false,
+      "properties": {
+        "entryMs": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "exitMs": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "followCursor": {
+          "type": "boolean"
+        },
+        "scale": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "entryMs",
+        "exitMs",
+        "followCursor",
+        "scale"
+      ],
+      "type": "object"
+    }
+  },
+  "description": "Schema-only carrier ensures every public request, response and envelope is exported.",
+  "properties": {
+    "clip_header": {
+      "$ref": "#/definitions/ClipHeader"
+    },
+    "clip_overview": {
+      "$ref": "#/definitions/ClipOverview"
+    },
+    "frame_rate": {
+      "$ref": "#/definitions/FrameRate"
+    },
+    "job_context": {
+      "$ref": "#/definitions/JobContext"
+    },
+    "owner_ready": {
+      "$ref": "#/definitions/OwnerReady"
+    },
+    "proxy_settings": {
+      "$ref": "#/definitions/ProxySettings"
+    },
+    "request": {
+      "$ref": "#/definitions/Request"
+    },
+    "request_envelope": {
+      "$ref": "#/definitions/RequestEnvelope"
+    },
+    "response": {
+      "$ref": "#/definitions/Response"
+    },
+    "response_envelope": {
+      "$ref": "#/definitions/ResponseEnvelope"
+    },
+    "source_analysis": {
+      "$ref": "#/definitions/SourceAnalysis"
+    },
+    "track_overview": {
+      "$ref": "#/definitions/TrackOverview"
+    }
+  },
+  "required": [
+    "clip_header",
+    "clip_overview",
+    "frame_rate",
+    "job_context",
+    "owner_ready",
+    "proxy_settings",
+    "request",
+    "request_envelope",
+    "response",
+    "response_envelope",
+    "source_analysis",
+    "track_overview"
+  ],
+  "title": "Contracts",
+  "type": "object",
+  "x-beam": {
+    "apiVersion": 1,
+    "documentVersion": 2,
+    "messageBudgetBytes": 8388608,
+    "pageLimit": 256
+  }
+}

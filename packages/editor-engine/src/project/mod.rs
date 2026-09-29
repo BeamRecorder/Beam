@@ -1,5 +1,5 @@
-//! Versioned editable documents and capture-session import.
+//! Domain document and native capture importer.
+pub use beam_editor_domain::project::{store, types, validation};
 pub mod recording;
-pub mod store;
-pub mod types;
-pub mod validation;
+pub(crate) mod source_types;
+pub mod sources;

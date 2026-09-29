@@ -3,6 +3,36 @@
 use beam_media_session::{AudioSelection, MediaSession, SessionConfig, SessionError};
 
 #[test]
+fn live_duration_advances_before_checkpoint_and_excludes_pauses() {
+    let temporary = tempfile::tempdir().expect("tempdir");
+    let mut session = MediaSession::prepare(SessionConfig {
+        screen: None,
+        output_dir: temporary.path().join("session"),
+        camera: beam_media_session::CameraSelection::Disabled,
+        microphone: AudioSelection::Disabled,
+        system_audio: AudioSelection::Disabled,
+    })
+    .expect("prepare");
+    session.start().expect("start");
+    std::thread::sleep(std::time::Duration::from_millis(30));
+    session.poll().expect("live clock");
+    let first = session.manifest().duration_ns;
+    assert!(first >= 20_000_000 && first < 1_000_000_000, "{first}");
+    session.pause().expect("pause");
+    let paused = session.manifest().duration_ns;
+    std::thread::sleep(std::time::Duration::from_millis(50));
+    session.poll().expect("paused poll");
+    assert_eq!(session.manifest().duration_ns, paused);
+    session.resume().expect("resume");
+    session.poll().expect("resumed clock");
+    assert!(session.manifest().duration_ns - paused < 40_000_000);
+    std::thread::sleep(std::time::Duration::from_millis(20));
+    session.poll().expect("resumed clock advances");
+    assert!(session.manifest().duration_ns >= paused + 15_000_000);
+    session.stop().expect("finalize");
+}
+
+#[test]
 fn failed_periodic_checkpoint_still_publishes_the_interruption() {
     let temporary = tempfile::tempdir().expect("tempdir");
     let output = temporary.path().join("session");

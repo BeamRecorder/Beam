@@ -21,6 +21,10 @@ mod editor;
 mod editor_controls;
 #[path = "solid_bundles/editor_controls_layout.rs"]
 mod editor_controls_layout;
+#[path = "solid_bundles/editor_errors.rs"]
+mod editor_errors;
+#[path = "solid_bundles/editor_pointer.rs"]
+mod editor_pointer;
 #[path = "solid_bundles/editor_splitters.rs"]
 mod editor_splitters;
 #[path = "solid_bundles/errors.rs"]
@@ -67,6 +71,7 @@ fn native_recorder_shared_controls_mount_without_a_window() {
         .join("../../packages/beam-ui/dist/native/app.mjs");
     let source = fs::read_to_string(path).unwrap();
     validate_scene(&source, "app.mjs:mountGallery", "mountGallery");
+    validate_scene(&source, "app.mjs:mountRecorder", "mountRecorder");
 }
 
 #[derive(Deserialize)]
@@ -98,6 +103,8 @@ fn solid_scenes_mount_hydrate_and_dispose_with_valid_native_commits() {
         "mountWindowPicker",
         "mountWindowHighlight",
         "mountTeleprompter",
+        "mountProjects",
+        "mountEditorLoading",
     ];
     let settings_entries = ["mountGallery"];
     for (bundle, entries) in [
@@ -111,6 +118,18 @@ fn solid_scenes_mount_hydrate_and_dispose_with_valid_native_commits() {
             validate_scene(&source, &format!("{bundle}:{entry}"), entry);
         }
     }
+}
+
+#[test]
+#[ignore = "requires built Solid bundle"]
+fn projects_scene_mounts_with_a_real_searchable_library() {
+    let bundle_dir = std::env::var_os("BEAM_UI_BUNDLE_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../packages/beam-ui/dist/native")
+        });
+    let source = fs::read_to_string(bundle_dir.join("app.mjs")).unwrap();
+    validate_scene(&source, "app.mjs:mountProjects", "mountProjects");
 }
 
 /// Mounts one scene, validates its hydrated commits, and accepts its root disposal.
@@ -194,6 +213,7 @@ fn validate_scene(source: &str, scene: &str, entry: &str) {
     overlays::validate(&checks);
     checks.validate_locale(delayed_preferences);
     errors::validate_copy(&checks);
+    editor_errors::validate_copy(&checks);
 
     // Keep the native acceptor alive while Solid removes listeners and its root.
     let disposed = gallery.dispose();
@@ -456,6 +476,10 @@ fn service_value(request: &ServiceRequest, output_label: &str) -> Value {
                 { "id": USB_OUTPUT, "label": "USB speaker", "isDefault": false }
             ]
         }),
+        ("beam", "listProjects") => json!([
+            { "id": "d57fe49a-bb81-42ae-ab07-cc2a233dbb6d", "name": "Screen recording", "kind": "recording", "updatedAtMs": 1_780_000_000_000u64 },
+            { "id": "73b55d21-a830-4554-92dc-465f2336a9bb", "name": "Edited project", "kind": "project", "updatedAtMs": 1_770_000_000_000u64 }
+        ]),
         ("beam", "audioPreview" | "audioLevels") => {
             json!({ "microphone": null, "systemAudio": null })
         }

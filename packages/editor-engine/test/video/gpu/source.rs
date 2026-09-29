@@ -8,14 +8,14 @@ fn shared_ges_pipeline_builds_overlays_color_volume_and_canvas_background() {
         let path = crate::fixtures::media(root.path(), "source.webm", true);
         let asset = beam_editor_engine::video::probe::import(root.path(), &path).unwrap();
         let mut project = crate::fixtures::project();
-        project.clips[0].asset_id = asset.id;
-        project.clips[0].duration_ms = 800;
+        crate::video::clip_mut(&mut project, 0).asset_id = asset.id;
+        crate::video::clip_mut(&mut project, 0).duration_ms = 800;
         project.assets = vec![asset];
         project.canvas.background = 0xff334455;
-        project.clips[0].effects.brightness = 0.2;
-        project.clips[0].effects.scale = 0.5;
-        project.clips[0].effects.volume = 0.5;
-        project.tracks[0].muted = true;
+        crate::video::clip_mut(&mut project, 0).effects.brightness = 0.2;
+        crate::video::clip_mut(&mut project, 0).effects.scale = 0.5;
+        crate::video::clip_mut(&mut project, 0).effects.volume = 0.5;
+        crate::video::track_mut(&mut project, 0).muted = true;
         let pipeline = build(root.path(), &project).unwrap();
         assert_eq!(pipeline.timeline().unwrap().tracks().len(), 2);
         let factories: Vec<_> = pipeline

@@ -11,8 +11,8 @@ use std::sync::Arc;
 pub(super) fn register_visuals(
     registry: &Arc<crate::ServiceRegistry>,
     controller: Arc<EditorController>,
-) {
-    visuals::register(registry, controller);
+) -> Vec<GpuCanvasRegistration> {
+    visuals::register(registry, controller)
 }
 
 /// The GStreamer actor publishes pixels directly to Rust; JavaScript receives only this ID.

@@ -17,3 +17,8 @@ it('handles empty projects and real text or missing source labels', () => {
   expect(clipLabel({ ...clip, title: defaultTitle }, project)).toBe('Title');
   expect(clipLabel(clip, project)).toBe('');
 });
+it('reserves only the largest compact region stack per lane and labels its real source',()=>{
+  const regions={...project,clips:[{...clip,regionCount:2},{...clip,id:'other',regionCount:5}],assets:[{id:'asset',name:'Original.webm',width:320,height:180,durationMs:1000,hasVideo:true,hasAudio:false,hasCursor:false,zoomCount:0,recording:false}]};
+  expect(trackLayout(regions).map(({y,height})=>[y,height])).toEqual([[28,212],[240,54]]);
+  expect(clipLabel(clip,regions)).toBe('Original.webm');
+});

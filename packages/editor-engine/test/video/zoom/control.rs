@@ -13,16 +13,14 @@ fn ordinary_imports_have_two_resting_control_keys() {
 #[test]
 fn compiled_motion_is_seek_independent_sorted_and_bounded() {
     let mut asset = crate::fixtures::asset(10_000);
-    asset.zooms.push(Zoom {
+    std::sync::Arc::make_mut(&mut asset.zooms).push(Zoom {
         start_ms: 1000,
         end_ms: 3500,
         cx: 0.8,
         cy: 0.5,
         scale: 2.,
     });
-    asset
-        .cursor
-        .push(crate::fixtures::point(1000, 0.8, 0.5, None));
+    std::sync::Arc::make_mut(&mut asset.cursor).push(crate::fixtures::point(1000, 0.8, 0.5, None));
     let keys = compile(&asset).unwrap();
     let second = compile(&asset).unwrap();
     assert!(keys.len() < 300);
@@ -34,7 +32,7 @@ fn compiled_motion_is_seek_independent_sorted_and_bounded() {
 #[test]
 fn excessive_control_points_fail_instead_of_allocating_unbounded_curves() {
     let mut asset = crate::fixtures::asset(10_000_000);
-    asset.zooms.push(Zoom {
+    std::sync::Arc::make_mut(&mut asset.zooms).push(Zoom {
         start_ms: 0,
         end_ms: 10_000_000,
         cx: 0.5,

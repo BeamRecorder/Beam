@@ -53,6 +53,8 @@ pub(super) fn spawn_all(
         ("windowPicker", "mountWindowPicker", 500_000),
         ("windowHighlight", "mountWindowHighlight", 600_000),
         ("teleprompter", "mountTeleprompter", 700_000),
+        ("projects", "mountProjects", 800_000),
+        ("editorLoading", "mountEditorLoading", 900_000),
     ] {
         let Some(gate) = gates.get(key) else {
             continue;

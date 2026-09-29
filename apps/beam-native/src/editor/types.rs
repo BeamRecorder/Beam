@@ -34,3 +34,11 @@ pub(super) struct FrameResult {
     pub transport: beam_editor_engine::Transport,
     pub canvas_id: Option<u64>,
 }
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(super) struct CommandsRequest {
+    pub revision: u64,
+    pub sequence_id: uuid::Uuid,
+    pub commands: Vec<beam_editor_engine::domain::commands::types::Command>,
+}

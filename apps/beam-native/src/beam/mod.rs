@@ -2,6 +2,7 @@
 
 mod audio_meters;
 mod desktop_capture;
+mod editor_launch;
 mod info;
 mod preferences;
 mod requests;
@@ -169,6 +170,7 @@ pub(crate) fn register(registry: &Arc<ServiceRegistry>) -> Result<(), String> {
         ),
         ("pause", RecordingController::pause),
         ("resume", RecordingController::resume),
+        ("reset", RecordingController::restart),
         ("stop", RecordingController::stop),
         ("cancel", RecordingController::cancel),
     ] {
@@ -184,6 +186,14 @@ pub(crate) fn register(registry: &Arc<ServiceRegistry>) -> Result<(), String> {
             };
             match operation(&controller, capture.id) {
                 Ok(mut status) => {
+                    if name == "reset" {
+                        let Some(id) = status.session_id else {
+                            return ServiceOutcome::Error(
+                                "restarted recording has no session ID".into(),
+                            );
+                        };
+                        *current = Some(ActiveCapture { id, ..capture });
+                    }
                     if matches!(name, "stop" | "cancel") {
                         *current = None;
                         meters.enable();
@@ -237,6 +247,7 @@ pub(crate) fn register(registry: &Arc<ServiceRegistry>) -> Result<(), String> {
         outcome(status_json(value, project))
     });
 
+    let project_library = projects.clone();
     let still = controller.clone();
     registry.register("beam", "screenshot", move |request| {
         outcome((|| {
@@ -260,19 +271,35 @@ pub(crate) fn register(registry: &Arc<ServiceRegistry>) -> Result<(), String> {
             Ok(Value::Null)
         })())
     });
-    registry.register("beam", "openEditor", move |payload| {
-        outcome(open_editor(&payload))
+    editor_launch::register(registry);
+    registry.register("beam", "listProjects", move |_| {
+        outcome(
+            crate::editor::list_projects(&project_library).and_then(|items| json::encode(&items)),
+        )
     });
     registry.register("beam", "inputAccessStatus", move |_| {
         outcome(json::encode(&beam_screen::input::input_access_status()))
     });
+    let input_events = Arc::downgrade(registry);
     registry.register("beam", "requestInputAccess", move |_| {
-        outcome(
-            beam_screen::input::request_input_access()
-                .map_err(|error| error.to_string())
-                .and_then(|status| json::encode(&status)),
-        )
+        let result = beam_screen::input::request_input_access()
+            .map_err(|error| error.to_string())
+            .and_then(|status| json::encode(&status));
+        if let Some(registry) = input_events.upgrade() {
+            registry.broadcast_event(&serde_json::json!({ "type": "inputAccessChanged" }));
+        }
+        outcome(result)
     });
+    #[cfg(target_os = "linux")]
+    if !crate::editor::is_editor() {
+        let events = Arc::downgrade(registry);
+        std::thread::spawn(move || {
+            let _ = beam_screen::screen::linux::auto_start_installed_linux_input_access();
+            if let Some(registry) = events.upgrade() {
+                registry.broadcast_event(&serde_json::json!({ "type": "inputAccessChanged" }));
+            }
+        });
+    }
     Ok(())
 }
 
@@ -415,13 +442,4 @@ fn capture_still(
         project_id: project,
         path: final_image,
     })
-}
-
-fn open_editor(payload: &Value) -> Result<Value, String> {
-    let argument = requests::editor_argument(payload.clone())?;
-    Command::new(std::env::current_exe().map_err(|error| error.to_string())?)
-        .arg(argument)
-        .spawn()
-        .map_err(|error| error.to_string())?;
-    Ok(Value::Null)
 }

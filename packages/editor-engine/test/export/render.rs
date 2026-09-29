@@ -29,8 +29,8 @@ fn mp4_export_encodes_actual_video_and_audio_through_ges() {
     let asset = probe::import(root.path(), &source).unwrap();
     let mut project = crate::fixtures::project();
     project.canvas = Canvas::from_source(asset.width, asset.height);
-    project.clips[0].asset_id = asset.id;
-    project.clips[0].duration_ms = asset.duration_ms;
+    crate::fixtures::clip_mut(&mut project, 0).asset_id = asset.id;
+    crate::fixtures::clip_mut(&mut project, 0).duration_ms = asset.duration_ms;
     project.assets = vec![asset];
     {
         ProjectStore::lock(root.path())

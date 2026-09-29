@@ -1,0 +1,12 @@
+{
+  "name": "@beam/editor-sdk",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts", "./contracts": "./src/generated/contracts.ts" },
+  "scripts": {
+    "check": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --config vitest.config.ts",
+    "generate": "node ../../scripts/editor/generate-contracts.mjs"
+  }
+}

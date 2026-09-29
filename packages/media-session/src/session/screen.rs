@@ -41,6 +41,17 @@ impl MediaSession {
                 return Ok(());
             }
         };
+        self.manifest.cursor_mode = match telemetry_request.cursor {
+            beam_screen::model::CursorSelection::Disabled => {
+                beam_media_manifest::CursorMode::Absent
+            }
+            beam_screen::model::CursorSelection::Embedded => {
+                beam_media_manifest::CursorMode::BakedIn
+            }
+            beam_screen::model::CursorSelection::Separate { .. } => {
+                beam_media_manifest::CursorMode::Separated
+            }
+        };
         let id = SourceId::new(source.source_id())?;
         self.manifest.selected_sources.screen = Some(id.clone());
         let format = source.format();

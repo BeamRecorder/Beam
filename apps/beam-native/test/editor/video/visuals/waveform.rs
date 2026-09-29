@@ -15,6 +15,7 @@ fn blick_shader_renders_four_envelopes_keeps_pending_blank_and_reuses_gpu_resour
         Factory {
             mailbox: mailbox.clone(),
             pipelines: std::sync::Arc::clone(&pipelines),
+            source: None,
         },
     );
     mailbox.bind(&registration);

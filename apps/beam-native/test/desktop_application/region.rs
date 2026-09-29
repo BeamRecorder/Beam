@@ -36,3 +36,24 @@ mod pointer;
 
 #[path = "region/model.rs"]
 mod model;
+
+#[test]
+fn projects_window_can_call_registered_services() {
+    let registry = std::sync::Arc::new(ServiceRegistry::new());
+    registry.register("beam", "listProjects", |_| {
+        ServiceOutcome::Ok(serde_json::json!([]))
+    });
+    let (reply, response) = std::sync::mpsc::channel();
+    registry
+        .submit(
+            1,
+            &serde_json::json!({"requestId":1,"window":"projects","service":"beam","method":"listProjects"}).to_string(),
+            reply,
+        )
+        .unwrap();
+    let message = response
+        .recv_timeout(std::time::Duration::from_secs(2))
+        .unwrap();
+    assert_eq!(message.window, "projects");
+    assert!(matches!(message.outcome, ServiceOutcome::Ok(_)));
+}

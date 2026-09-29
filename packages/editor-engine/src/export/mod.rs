@@ -4,3 +4,9 @@ pub mod render;
 pub mod types;
 
 mod gpu;
+mod segment_encoder;
+pub mod segment_schedule;
+mod segment_source;
+pub mod segment_streams;
+pub mod segment_types;
+pub mod segments;

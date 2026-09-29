@@ -1,8 +1,27 @@
 # Plan de l’éditeur vidéo non destructif et programmable
 
-Statut : brouillon d’architecture et d’exécution, 29 septembre 2026.
+Statut : implémentation en cours, 29 septembre 2026. Les gates finaux P0–P11 ne sont pas encore tous validés.
 
-Ce document prépare l’implémentation ; il ne décrit pas des fonctionnalités déjà livrées. Le périmètre couvre les six axes demandés : catalogue d’effets, instances persistantes, régions dans la timeline, inspecteur générique, rendu natif extensible et règles temporelles/historique. Il inclut une API programmable, un SDK, une CLI et un adaptateur MCP.
+Ce document fixe les critères d’acceptation et suit l’implémentation. Les preuves intermédiaires ci-dessous ne remplacent pas les gates finaux. Le périmètre couvre les six axes demandés : catalogue d’effets, instances persistantes, régions dans la timeline, inspecteur générique, rendu natif extensible et règles temporelles/historique. Il inclut une API programmable, un SDK, une CLI et un adaptateur MCP.
+
+## Suivi de l’implémentation
+
+| Lot | État intermédiaire | Preuves et travail restant |
+| --- | --- | --- |
+| P0 | En cours | ADR et contrats Rust générés ; baseline native 1/10/100 FX mesurée. Mesures finales et CI de dérive à terminer. |
+| P1 | En cours | V2 en blocs immuables, recovery, historiques indépendants et historique projet ; partage COW, chargement paresseux, GC et migration scalaire complète en cours. |
+| P2 | En cours | Batches atomiques, dry-run, révisions, createdBy/index et reçus persistés ; événements des imports et jobs à compléter. |
+| P3 | En cours | Temps rationnels et mapper partagé fallible, interpolation hold/linear/Bézier, espaces source/clip/séquence ; audit final des frontières de cadence. |
+| P4 | En cours | Instances indépendantes, ordre, activation, plages, duplication et noms ; presets versionnés à finaliser. |
+| P5 | En cours | Updates conservant les décodeurs et fenêtre native active ; 10 000 clips testés avec 14 clips GES. Fusion des FX et export segmenté en cours. |
+| P6 | En cours | Zooms et curseurs synchronisés par pixels réels, styles hérités et overrides persistés ; intégration UI et validation finale à terminer. |
+| P7 | En cours | Sélection multiple, AV lié, copy/paste de pistes, gestes annulables et requête Rust de régions ; régions visuelles et contrôles de pistes à terminer. |
+| P8 | En cours | Inspecteur générique typé, stack virtualisée, keyframes, références temporelles et vraies transitions ; QA native et densité à vérifier. |
+| P9 | En cours | Effet GLSL externe et transition à masque animée rendus réellement ; contrat documentaire et test générateur externe à finaliser. |
+| P10 | En cours | SDK/CLI/MCP utilisent le même broker et service ; scénario réel pour les trois transports, restart et SHA256 source. Artefacts, jobs persistés et requêtes compactes à compléter. |
+| P11 | En cours | Export matériel testé : refus explicite 64×64, fichier exactement 128×96 après transaction distincte ; snapshots/jobs/annulation et checks multiplateformes à terminer. |
+
+Les scénarios des trois transports ont été exécutés sur Linux, sans fenêtre. Ils couvrent import, découpe, animation, instances répétées, définitions externes, undo/redo, arrêt du propriétaire, réouverture et export. Les limites de l’encodeur proviennent de ses véritables caps ; aucun redimensionnement ou encodeur CPU silencieux n’est accepté.
 
 ## 1. Résultat attendu
 
@@ -29,7 +48,7 @@ Contrats existants à respecter : [UI](UI.md), [architecture](ARCHITECTURE.md), 
 | Automatisation | Services typés, mais import/ouverture/export dépendent de dialogues du host | Ajouter des références autorisées sans dialogue pour les clients programmatiques |
 | Taille de montage | Validation actuelle : 512 sources, 2 048 clips, 32 pistes et document de 64 MiB | Remplacer les plafonds de nombre par un modèle indexé/paginé et des budgets opérationnels |
 
-Références du constat : [modèle actuel](../packages/editor-engine/src/project/types.rs), [intents](../packages/editor-engine/src/timeline/types.rs), [presets](../packages/beam-ui/src/solid/editor/media/libraryModel.ts), [pipeline](../packages/editor-engine/src/video/pipeline.rs), [commit](../packages/editor-engine/src/video/worker.rs), [services du host](../apps/beam-native/src/editor/mod.rs), [visuels et panels](native-video-editor.md).
+Références du constat : [modèle actuel](../packages/editor-domain/src/project/types.rs), [intents](../packages/editor-domain/src/timeline/types.rs), [presets](../packages/beam-ui/src/solid/editor/media/libraryModel.ts), [pipeline](../packages/editor-engine/src/video/pipeline.rs), [commit](../packages/editor-engine/src/video/worker.rs), [services du host](../apps/beam-native/src/editor/mod.rs), [visuels et panels](native-video-editor.md).
 
 ## 3. Invariants d’architecture
 
@@ -66,14 +85,14 @@ Organisation cible, à introduire par étape :
 
 | Emplacement | Responsabilité |
 | --- | --- |
-| packages/editor-engine/src/project/ | Document V2, sources, migrations, checkpoints, verrou |
-| packages/editor-engine/src/timeline/ | Séquences, pistes, clips, relations de transition, règles d’édition |
-| packages/editor-engine/src/timing/ | Temps rationnel, mapping source/clip/séquence, bornes |
-| packages/editor-engine/src/effects/ | Catalogue, définitions, instances, presets, validation et modules métier |
-| packages/editor-engine/src/animation/ | Paramètres animés, interpolation et évaluation seek-safe |
-| packages/editor-engine/src/commands/ | Transactions, commandes de domaine, conflits et résultats |
-| packages/editor-engine/src/query/ | Requêtes paginées et projections sans télémétrie lourde |
-| packages/editor-engine/src/protocol/ | Contrats de transport, erreurs et génération des schémas |
+| packages/editor-domain/src/project/ | Document V2, sources, migrations, checkpoints, verrou |
+| packages/editor-domain/src/timeline/ | Séquences, pistes, clips, relations de transition, règles d’édition |
+| packages/editor-domain/src/timing/ | Temps rationnel, mapping source/clip/séquence, bornes |
+| packages/editor-domain/src/effects/ | Catalogue, définitions, instances, presets, validation et modules métier |
+| packages/editor-domain/src/animation/ | Paramètres animés, interpolation et évaluation seek-safe |
+| packages/editor-domain/src/commands/ | Transactions, commandes de domaine, conflits et résultats |
+| packages/editor-domain/src/commands/query.rs | Requêtes paginées et projections sans télémétrie lourde |
+| packages/editor-domain/src/protocol/ | Contrats de transport, erreurs et génération des schémas |
 | packages/editor-engine/src/video/ | Backend GES/GL, ressources et mises à jour du rendu |
 | packages/editor-engine/src/export/ | Snapshot figé, jobs, annulation et publication |
 | apps/beam-native/src/editor/ | Dialogues, grants, fenêtres, canvas et adaptation des services |
@@ -460,4 +479,4 @@ Qualité de code :
 - [ ] Les pièges ARGUI réellement constatés/corrigés sont ajoutés au skill commun avec preuve de régression.
 - [ ] Chaque lot modifiant le comportement contient son entrée CHANGELOG.md sous Unreleased.
 
-Ce brouillon ne change que la documentation ; ses lots seront considérés complets uniquement avec leur code, leurs validations et leurs notes de livraison.
+Les lots sont considérés complets uniquement avec leur code intégré, les validations finales du responsable et leurs notes de livraison. Une preuve locale Linux ne valide pas les chemins Windows ou macOS.

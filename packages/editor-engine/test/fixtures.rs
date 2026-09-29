@@ -13,31 +13,67 @@ pub fn asset(duration_ms: u64) -> MediaAsset {
         id: Uuid::new_v4(),
         name: "Source".into(),
         path: "media/source.webm".into(),
+        identity: None,
         duration_ms,
         width: 320,
         height: 180,
         has_video: true,
         has_audio: false,
-        cursor: vec![],
-        zooms: vec![],
+        cursor: vec![].into(),
+        zooms: vec![].into(),
         recording: false,
+        cursor_mode: Default::default(),
     }
 }
 pub fn project() -> Project {
     let mut project = Project::new("Test".into());
     let asset = asset(10_000);
-    project.clips.push(Clip {
-        title: None,
-        id: Uuid::new_v4(),
-        asset_id: asset.id,
-        track_id: project.tracks[0].id,
-        start_ms: 0,
-        source_in_ms: 0,
-        duration_ms: 10_000,
-        effects: Effects::default(),
-    });
+    project
+        .clips
+        .try_push(Clip {
+            cursor_style: None,
+            title: None,
+            instances: vec![],
+            rate: Default::default(),
+            animation_offset_ms: 0,
+            generator: None,
+            link_group: None,
+            id: Uuid::new_v4(),
+            asset_id: asset.id,
+            track_id: project.tracks.headers().next().unwrap().id,
+            start_ms: 0,
+            source_in_ms: 0,
+            duration_ms: 10_000,
+            effects: Effects::default(),
+        })
+        .unwrap();
     project.assets.push(asset);
     project
+}
+pub fn clip(project: &Project, index: usize) -> std::sync::Arc<Clip> {
+    decision(&project.clips, index)
+}
+pub fn clip_mut(
+    project: &mut Project,
+    index: usize,
+) -> beam_editor_domain::collections::ItemMut<'_, Clip> {
+    decision_mut(&mut project.clips, index)
+}
+pub fn decision(
+    clips: &beam_editor_domain::collections::PersistentCollection<Clip>,
+    index: usize,
+) -> std::sync::Arc<Clip> {
+    clips
+        .try_by_id(clips.headers().nth(index).unwrap().id)
+        .unwrap()
+        .unwrap()
+}
+pub fn decision_mut(
+    clips: &mut beam_editor_domain::collections::PersistentCollection<Clip>,
+    index: usize,
+) -> beam_editor_domain::collections::ItemMut<'_, Clip> {
+    let id = clips.headers().nth(index).unwrap().id;
+    clips.try_by_id_mut(id).unwrap().unwrap()
 }
 pub fn point(
     time_ms: u64,

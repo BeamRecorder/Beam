@@ -14,6 +14,8 @@ export function useCaptureSession(api: BeamApi, preferences: () => BeamPreferenc
   let pending: CaptureRun | undefined
   let disposed = false
   let regionCapture = false
+  let editorOpening = false
+  let editorOpeningCanceled = false
   onCleanup(() => {
     disposed = true
     if (!pending || pending.canceled) return
@@ -126,7 +128,7 @@ export function useCaptureSession(api: BeamApi, preferences: () => BeamPreferenc
     await operations(run, [
       () => api.updateUiState({ paused: false, busy: false }),
       () => api.ensureWindow('recorder'),
-      () => place(run, 'recorder', 400, 54, request),
+      () => place(run, 'recorder', 240, 54, request),
       () => api.showWindow('recorder'),
       () => api.windowLevel('top', 'recorder'),
       () => api.focusWindow('recorder'),
@@ -192,22 +194,66 @@ export function useCaptureSession(api: BeamApi, preferences: () => BeamPreferenc
     } catch (cause) { setError(String(cause)) }
     finally { setBusy(false); await api.updateUiState({ busy: false }).catch(report) }
   }
-  async function finish(discard: boolean): Promise<void> {
+  async function reset(): Promise<void> {
     if (busy() || stage() !== 'recording') return
-    setBusy(true)
+    setBusy(true); setError('')
     try {
       await api.updateUiState({ busy: true })
+      const result = await api.reset()
+      if (result.state !== 'recording' || !result.sessionId) {
+        throw new Error(result.error ?? 'The recording could not be restarted.')
+      }
+      projectId = result.projectId ?? projectId
+      setPaused(false)
+      await api.updateUiState({ paused: false })
+    } catch (cause) { setError(String(cause)); await restore().catch(report) }
+    finally { setBusy(false); await api.updateUiState({ busy: false }).catch(report) }
+  }
+  async function showEditorLoading(): Promise<void> {
+    await api.ensureWindow('editorLoading')
+    const monitors = await api.monitors()
+    const monitor = monitors.find(item => item.primary) ?? monitors[0]
+    if (monitor) {
+      const info = await api.windowInfo('editorLoading')
+      const scale = info.capabilities.backend === 'x11' ? info.scaleFactor : 1
+      await api.windowPosition(monitor.x + (monitor.width - 360 * scale) / 2,
+        monitor.y + (monitor.height - 236 * scale) / 2, 'editorLoading')
+    }
+    await api.showWindow('editorLoading')
+    await api.windowLevel('top', 'editorLoading')
+  }
+  async function cancelEditorOpening(): Promise<void> {
+    if (!editorOpening || editorOpeningCanceled) return
+    editorOpeningCanceled = true
+    await api.cancelEditorOpen().catch(report)
+    await api.hideWindow('editorLoading').catch(report)
+    await api.showWindow().catch(report)
+  }
+  async function finish(discard: boolean): Promise<void> {
+    if (busy() || stage() !== 'recording') return
+    setBusy(true); setError('')
+    editorOpening = !discard; editorOpeningCanceled = false
+    try {
+      await api.updateUiState({ busy: true })
+      if (!discard) await showEditorLoading().catch(cause => console.error(String(cause)))
       const result = discard ? await api.cancel() : await api.stop()
-      if (result.error) setError(result.error)
+      if (result.error && !discard) setError(result.error)
       const project = result.projectId ?? projectId
       if (discard) await restore()
       else {
         if (!project) throw new Error('The completed recording has no project ID.')
-        await restore(false)
+        await restore(editorOpeningCanceled)
+        if (editorOpeningCanceled) return
         await api.openEditor(project, 'video')
       }
-    } catch (cause) { setError(String(cause)); await restore().catch(report) }
-    finally { setBusy(false); await api.updateUiState({ busy: false }).catch(report) }
+    } catch (cause) {
+      if (!editorOpeningCanceled) setError(String(cause))
+      await restore().catch(report)
+    } finally {
+      editorOpening = false
+      if (!discard) await api.hideWindow('editorLoading').catch(report)
+      setBusy(false); await api.updateUiState({ busy: false }).catch(report)
+    }
   }
-  return { stage, busy, error, record, cancelCountdown, togglePause, stop: () => finish(false), discard: () => finish(true) }
+  return { stage, busy, error, record, cancelCountdown, cancelEditorOpening, togglePause, reset, stop: () => finish(false), discard: () => finish(true) }
 }

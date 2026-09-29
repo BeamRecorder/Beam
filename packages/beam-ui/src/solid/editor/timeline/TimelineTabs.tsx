@@ -24,17 +24,23 @@ export function TimelineTabs(props: { editor: EditorState; width: number }) {
         onChange={id => { if (id !== active()) void props.editor.edit({ type: 'selectSequence', id }); }} />
     </scrollView>
     <IconButton id="editor-add-sequence" icon="plus" label={TR('addTimeline')}
-      disabled={!props.editor.snapshot() || props.editor.busy() || sequences().length >= 16}
+      disabled={!props.editor.snapshot() || props.editor.busy()}
       onClick={() => void props.editor.edit({ type: 'addSequence', name: `${TR('timeline')} ${sequences().length + 1}` })} />
     <Popover trigger="" width={26} contentWidth={240} accessibleLabel={TR('timelineOptions')}
       leading={<Icon name="chevron-down" size={13} color={theme().mutedForeground} />}>
       <column width="100%" gap={8}>
+        <Button variant="secondary" width="100%" disabled={props.editor.busy() || !active()}
+          onClick={()=>void props.editor.edit({type:'duplicateSequence',id:active(),name:`${name()} (${TR('copy')})`})}>{TR('duplicateTimeline')}</Button>
         <InputField accessibleName={TR('timelineName')} value={name()} onValueChange={setName}
           onSubmit={value => { if (value.trim()) void props.editor.edit({ type: 'renameSequence', id: active(), name: value }); }} />
         <Button width="100%" disabled={!name().trim() || props.editor.busy()}
           onClick={() => void props.editor.edit({ type: 'renameSequence', id: active(), name: name() })}>{TR('renameTimeline')}</Button>
         <Button variant="ghost" width="100%" disabled={sequences().length <= 1 || props.editor.busy()}
           onClick={() => void props.editor.edit({ type: 'removeSequence', id: active() })}>{TR('removeTimeline')}</Button>
+        <row width="100%" gap={5}>
+          <Button variant="ghost" grow={1} disabled={!props.editor.snapshot()?.canProjectUndo || props.editor.busy()} onClick={()=>void props.editor.edit({type:'undoProject'})}>{TR('projectUndo')}</Button>
+          <Button variant="ghost" grow={1} disabled={!props.editor.snapshot()?.canProjectRedo || props.editor.busy()} onClick={()=>void props.editor.edit({type:'redoProject'})}>{TR('projectRedo')}</Button>
+        </row>
       </column>
     </Popover>
   </row>;

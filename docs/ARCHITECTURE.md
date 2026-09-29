@@ -43,11 +43,23 @@ engine. Auxiliary windows mount their Solid scenes on demand. The settings
 window is retained in the same Rust process and hidden on close; reopening
 shows and focuses that existing window. Video captures launch the same native
 executable with `--editor=<id>`; `--editor` starts an empty standalone project.
+The Projects auxiliary window lists only validated native video projects from
+the Studio and Instant libraries, newest first. Rust supplies bounded project
+summaries without filesystem paths; Solid filters their names in memory and
+opens a selected project through the existing ID-scoped editor launch.
 The editor uses its own opaque resizable window and process, independent from
 recorder geometry. The native host never launches Electron or provisions its
 executable. Native screenshots remain saved in the screenshot library; an edit
 request reports that the Argui screenshot editor is unavailable. The existing
 Electron screenshot editor belongs only to the explicit Electron launch path.
+
+The native recorder is a draggable 240 × 54 window containing discard, restart,
+pause/resume, Stop and the timer, in that order. Empty space and the timer start
+native window dragging; button presses do not. Restart is one media-engine
+operation: finalize and remove only the current take, then prepare and start a
+new session with the same project and sources. Hosts see an active transition
+until it succeeds or fails. The displayed timer reads the engine's live,
+pause-aware duration while the recorder is visible; resize events do not reset it.
 
 `scripts/native-ui/build.mjs` builds the checked-out ARGUI submodule directly and
 stages the native executable, launcher/settings/editor Solid bundles, and their assets for
@@ -264,6 +276,7 @@ Linux interaction capture uses the privileged input helper under both Wayland an
 
 - `beam-editor-engine` owns recording parsing, source validation, non-destructive edit intents, bounded persistent history, recovery and GES graphs. `editor.beam.json` is separate from the capture manifest; immutable imports are copied into the project's `media/` directory. Cursor telemetry and source bytes are outside undo history. The last valid document is checkpointed before atomic replacement. Corrupt primary files are preserved when reading a recovery checkpoint, and recovery is visible in the UI.
 - GES objects stay on their worker thread and GLib context. Preview and export build the same timeline, including layer priorities, aspect fit, color, opacity, audio volume and source-time Beam zoom controls. Async asset discovery drives the actor's context with a deadline. Preview owns one bounded appsink frame; paused seeks wait for a new raster. Native image registration carries pixels directly to ARGUI without JSON raster payloads. Idle editor actors and paused UIs do not poll.
+- Separate cursor telemetry is optional for captured footage. Missing positions produce a project warning and omit the inherited cursor overlay; they never change the declared capture mode or block the video. An explicitly requested cursor effect still requires valid separate positions.
 - Typed editor services accept edit intents and revisions, never renderer-supplied file paths. Rust owns open/import/save dialogs, UUID recording lookup and canonical source resolution. Rejected edits retain the prior document. Export freezes the composition, supports cancellation, writes to a temporary file and never replaces an existing destination. Restored sources can explicitly rebuild the composition through Retry.
 
 - UI components render state and emit user intent.

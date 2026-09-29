@@ -9,6 +9,8 @@ pub(super) mod meta;
 mod mixer;
 pub(crate) mod source;
 pub(crate) mod transfer;
+pub(crate) mod transition;
+pub(crate) mod transition_shader;
 pub mod types;
 use crate::{EditorError, Result};
 use gst::prelude::*;
@@ -57,6 +59,11 @@ pub fn display_context() -> &'static gst::Context {
 pub fn configure(pipeline: &ges::Pipeline) {
     pipeline.set_context(display_context());
     mixer::configure(pipeline);
+}
+
+/// Export filters retain their actual upstream texture until the handoff releases it.
+pub(crate) fn preserve_bin(bin: &gst::Bin) -> Result<()> {
+    meta::preserve_bin(bin)
 }
 
 /// Selects a platform memory handle, never a CPU map, for a compatible native device.

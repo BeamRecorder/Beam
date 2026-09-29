@@ -56,10 +56,10 @@ fn a_scene_disposes_before_returning_an_initialization_or_delivery_failure() {
 #[test]
 fn a_scene_disposes_even_when_its_actor_exits_before_first_acknowledgement() {
     let (scene, disposed) = scene("");
-    let result = (|| -> Result<(), String> {
+    let result: Result<(), String> = {
         let _scene = scene;
         Err("native acknowledgement rejected".into())
-    })();
+    };
     assert!(result.is_err());
     assert_eq!(&*disposed.borrow(), &["disposed"]);
 }

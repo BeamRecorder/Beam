@@ -202,3 +202,61 @@ fn streamed_chunks_complete_bins_crossing_eight_seconds_and_reuse_finer_coverage
     assert!(data.ready.iter().all(|ready| *ready));
     assert_eq!(data.points.len(), 18);
 }
+
+#[test]
+fn cached_video_decoders_follow_source_versions_and_reject_missing_live_bytes() {
+    use beam_editor_engine::video::{
+        probe,
+        visuals::{VisualWorker, types::Source},
+    };
+    crate::fixtures::context(|| {
+        let root = tempfile::tempdir().unwrap();
+        let media = tempfile::tempdir().unwrap();
+        let red = crate::video::transitions::fixture(media.path(), "red.webm", "red", 440);
+        let blue = crate::video::transitions::fixture(media.path(), "blue.webm", "blue", 880);
+        let mut source = Source {
+            project_id: uuid::Uuid::new_v4(),
+            root: root.path().into(),
+            asset: probe::import(root.path(), &red).unwrap(),
+        };
+        let worker = VisualWorker::new().unwrap();
+        let image = |source: Source| {
+            let (sender, receiver) = mpsc::channel();
+            worker
+                .submit(
+                    source,
+                    VisualRequest::Video { position_ms: 500 },
+                    Arc::new(AtomicBool::new(false)),
+                    Box::new(move |result| {
+                        sender.send(result).unwrap();
+                    }),
+                )
+                .unwrap();
+            receiver.recv_timeout(Duration::from_secs(15)).unwrap()
+        };
+        let Visual::Video(first) = image(source.clone()).unwrap().visual else {
+            panic!("video")
+        };
+        let center = |frame: &beam_editor_engine::PreviewFrame| {
+            let index = ((frame.height / 2 * frame.width + frame.width / 2) * 4) as usize;
+            [frame.rgba[index], frame.rgba[index + 2]]
+        };
+        assert!(center(&first)[0] > 240 && center(&first)[1] < 10);
+        let mut replacement = probe::import(root.path(), &blue).unwrap();
+        replacement.id = source.asset.id;
+        assert_ne!(replacement.identity, source.asset.identity);
+        source.asset = replacement;
+        let Visual::Video(second) = image(source.clone()).unwrap().visual else {
+            panic!("video")
+        };
+        assert!(
+            center(&second)[1] > 240 && center(&second)[0] < 10,
+            "a changed version must acquire its own decoder"
+        );
+        std::fs::remove_file(root.path().join(&source.asset.path)).unwrap();
+        assert!(
+            image(source).is_err(),
+            "cached live decoders must verify before reading again"
+        );
+    });
+}

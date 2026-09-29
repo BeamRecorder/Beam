@@ -151,6 +151,34 @@ fn legacy_hud_sizes_reset_once_and_preserve_other_preferences() {
 }
 
 #[test]
+fn current_version_out_of_bounds_hud_sizes_recover_without_losing_preferences() {
+    for size in [
+        json!({ "width": 352, "height": 512 }),
+        json!({ "width": 439, "height": 208 }),
+        json!({ "width": 680, "height": 253 }),
+    ] {
+        let (root, preferences) = fixture();
+        fs::create_dir_all(&root).unwrap();
+        let original = json!({
+            "hudWindow": size,
+            "theme": "dark",
+            "editor": { "zoom": 2 },
+            "extras": { "nativeHudLayoutVersion": 4, "known": true },
+        });
+        fs::write(root.join(files::PREFERENCES), original.to_string()).unwrap();
+        let recovered = json!({ "width": 680, "height": 252 });
+        assert_eq!(preferences.view().unwrap()["hudWindow"], recovered);
+        assert_eq!(preferences.initialize().unwrap()["hudWindow"], recovered);
+        let stored = json::encode(&preferences.read().unwrap()).unwrap();
+        assert_eq!(stored["hudWindow"], recovered);
+        assert_eq!(stored["theme"], "dark");
+        assert_eq!(stored["editor"]["zoom"], 2);
+        assert_eq!(stored["extras"]["known"], true);
+        fs::remove_dir_all(root).unwrap();
+    }
+}
+
+#[test]
 fn explicit_resizes_survive_initialization_and_still_validate_bounds() {
     let (root, preferences) = fixture();
     fs::create_dir_all(&root).unwrap();

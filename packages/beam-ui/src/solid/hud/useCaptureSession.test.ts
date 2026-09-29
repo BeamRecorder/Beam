@@ -19,7 +19,7 @@ it('centers countdown and defaults recorder to the bottom of the selected crop m
   const recording = capture.record({ ...request, sourceMode: 'region' })
   await flush(); await vi.advanceTimersByTimeAsync(80); await recording
   expect(services.setWindowPosition).toHaveBeenCalledWith('countdown', -1700, 507)
-  expect(services.setWindowPosition).toHaveBeenCalledWith('recorder', -1580, 1329)
+  expect(services.setWindowPosition).toHaveBeenCalledWith('recorder', -1460, 1329)
   expect(calls('cancel').filter(call => call[0] === 'region')).toHaveLength(0)
   await capture.stop()
   expect(calls('cancel').filter(call => call[0] === 'region')).toHaveLength(1)
@@ -41,7 +41,7 @@ it('dismisses the passive crop mask when a region countdown is canceled', async 
   expect(calls('start')).toHaveLength(0)
 })
 
-it('starts a zero countdown immediately and opens only the editor after stopping', async () => {
+it('shows finalization progress and opens the editor after stopping', async () => {
   const { capture, calls, services } = mount()
   const recording = capture.record(request)
   await flush()
@@ -55,7 +55,35 @@ it('starts a zero countdown immediately and opens only the editor after stopping
   await capture.stop()
   expect(capture.stage()).toBe('hud')
   expect(calls('openEditor')[0]?.[2]).toEqual({ projectId: 'project', mode: 'video' })
-  expect(services.showWindow).not.toHaveBeenCalled()
+  expect(services.showWindow).toHaveBeenCalledWith('editorLoading')
+  expect(calls('hide').some(call => (call[2] as { window?: string })?.window === 'editorLoading')).toBe(true)
+  expect(services.showWindow).not.toHaveBeenCalledWith('main')
+})
+it('finishes recording and opens the editor if the loading window cannot open', async () => {
+  const { capture, responses, calls } = mount()
+  const recording = capture.record(request); await flush(); await vi.advanceTimersByTimeAsync(80); await recording
+  responses.set('ensureAuxiliary', async () => { throw new Error('loading window unavailable') })
+  await capture.stop()
+  expect(calls('stop')).toHaveLength(1)
+  expect(calls('openEditor')).toHaveLength(1)
+  expect(capture.stage()).toBe('hud')
+  expect(capture.busy()).toBe(false)
+  expect(console.error).toHaveBeenCalledWith('Error: loading window unavailable')
+})
+it('cancels a stalled editor launch while keeping the recording available', async () => {
+  const { capture, responses, calls, services } = mount()
+  const recording = capture.record(request); await flush(); await vi.advanceTimersByTimeAsync(80); await recording
+  const opening = deferred<void>()
+  responses.set('openEditor', () => opening.promise)
+  const stopping = capture.stop()
+  await flush()
+  expect(calls('openEditor')).toHaveLength(1)
+  await capture.cancelEditorOpening()
+  opening.reject(new Error('Editor opening canceled'))
+  await stopping
+  expect(calls('cancelEditorOpen')).toHaveLength(1)
+  expect(services.showWindow).toHaveBeenCalledWith('main')
+  expect(capture.error()).toBe('')
 })
 
 it('waits for portal authorization before showing the countdown', async () => {

@@ -1,10 +1,47 @@
 //! Final color conversion and GPU-memory handoff to hardware video encoders.
-use crate::{Result, export::types::VideoEncoder, video::pipeline::media};
-use ges::prelude::*;
+use crate::export::types::VideoEncoder;
+use gst::prelude::*;
 
-pub(crate) fn attach(pipeline: &ges::Pipeline, encoder: VideoEncoder) -> Result<()> {
+/// Opaque encoders resolve final straight alpha against the authored canvas.
+/// Ordinary GES mixes already provide premultiplied RGB; scoped final processors
+/// preserve straight RGBA, so their alpha is resolved before conversion to NV12.
+pub(crate) fn source_sink(canvas: &crate::Canvas, straight_alpha: bool) -> crate::Result<gst::Bin> {
+    let processor = if straight_alpha {
+        "glshader name=beam_gpu_input ! glcolorconvert"
+    } else {
+        "glcolorconvert name=beam_gpu_input"
+    };
+    let sink = gst::parse::bin_from_description(
+        &format!("{processor} ! video/x-raw(memory:GLMemory),format=RGBA,texture-target=2D ! identity name=beam_gpu_output ! appsink name=beam_segment_video sync=false enable-last-sample=false"),
+        true,
+    ).map_err(crate::video::pipeline::media)?;
+    if straight_alpha {
+        let shader = sink.by_name("beam_gpu_input").ok_or_else(|| {
+            crate::video::pipeline::media("export has no alpha resolution shader")
+        })?;
+        shader.set_property("fragment", "#ifdef GL_ES\n#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\n#endif\nvarying vec2 v_texcoord;uniform sampler2D tex;uniform float beam_background_r;uniform float beam_background_g;uniform float beam_background_b;void main(){vec4 c=texture2D(tex,v_texcoord);vec3 bg=vec3(beam_background_r,beam_background_g,beam_background_b);gl_FragColor=vec4(c.rgb*c.a+bg*(1.0-c.a),1.0);}");
+        shader.set_property(
+            "uniforms",
+            gst::Structure::builder("uniforms")
+                .field(
+                    "beam_background_r",
+                    ((canvas.background >> 16) & 255) as f32 / 255.,
+                )
+                .field(
+                    "beam_background_g",
+                    ((canvas.background >> 8) & 255) as f32 / 255.,
+                )
+                .field("beam_background_b", (canvas.background & 255) as f32 / 255.)
+                .build(),
+        );
+    }
+    crate::video::gpu::preserve_bin(&sink)?;
+    Ok(sink)
+}
+
+pub(crate) fn description(encoder: VideoEncoder) -> &'static str {
     let caps = super::profile::input(encoder);
-    let description = if caps
+    if caps
         .features(0)
         .is_some_and(|features| features.contains("memory:GLMemory"))
     {
@@ -19,51 +56,5 @@ pub(crate) fn attach(pipeline: &ges::Pipeline, encoder: VideoEncoder) -> Result<
         #[cfg(not(target_os = "linux"))]
         let description = "glcolorconvert ! gldownload ! video/x-raw,format=NV12,colorimetry=bt709";
         description
-    };
-    let filter = gst::parse::bin_from_description(description, true).map_err(media)?;
-    let encodebin = pipeline
-        .iterate_recurse()
-        .into_iter()
-        .flatten()
-        .find(|element| {
-            element
-                .factory()
-                .is_some_and(|factory| factory.name() == "encodebin2")
-        })
-        .ok_or_else(|| media("missing GES encodebin"))?;
-    encodebin.set_property_from_str("flags", "no-video-conversion");
-    let timeline = pipeline
-        .timeline()
-        .ok_or_else(|| media("missing export timeline"))?;
-    let track = timeline
-        .tracks()
-        .into_iter()
-        .find(|track| track.track_type() == ges::TrackType::VIDEO)
-        .ok_or_else(|| media("missing export video track"))?;
-    let input = track
-        .static_pad("src")
-        .ok_or_else(|| media("missing video track output"))?;
-    let output = timeline
-        .src_pads()
-        .into_iter()
-        .filter_map(|pad| pad.downcast::<gst::GhostPad>().ok())
-        .find(|pad| pad.target().as_ref() == Some(&input))
-        .ok_or_else(|| media("missing timeline video output"))?;
-    let sink = filter
-        .static_pad("sink")
-        .ok_or_else(|| media("missing GPU encoder input"))?;
-    let source = filter
-        .static_pad("src")
-        .ok_or_else(|| media("missing GPU encoder output"))?;
-    output.set_target(gst::Pad::NONE).map_err(media)?;
-    timeline.add(&filter).map_err(media)?;
-    input.link(&sink).map_err(|error| {
-        media(format!(
-            "{error}: output {}, filter {}",
-            input.query_caps(None),
-            sink.query_caps(None)
-        ))
-    })?;
-    output.set_target(Some(&source)).map_err(media)?;
-    Ok(())
+    }
 }

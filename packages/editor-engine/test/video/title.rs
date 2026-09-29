@@ -41,7 +41,9 @@ fn generated_titles_render_and_fade_at_native_frame_times_without_a_source_file(
             .any(|pixel| pixel[0] > 150 && pixel[1] > 150 && pixel[2] > 150),
         "native title must paint text"
     );
-    let mut effects = snapshot.project.clips[0].effects.clone();
+    let mut effects = crate::video::clip(&controller.document().unwrap().project, 0)
+        .effects
+        .clone();
     effects.fade_in_ms = 1000;
     controller
         .edit(

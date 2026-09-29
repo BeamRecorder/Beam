@@ -19,8 +19,11 @@ fn generated_titles_are_persisted_and_undoable_without_fake_assets() {
     )
     .unwrap();
     assert!(document.project.assets.is_empty());
-    assert_eq!(document.project.clips[0].title, Some(title));
-    assert_eq!(document.project.clips[0].start_ms, 1000);
+    assert_eq!(
+        crate::fixtures::clip(&document.project, 0).title,
+        Some(title)
+    );
+    assert_eq!(crate::fixtures::clip(&document.project, 0).start_ms, 1000);
     let decoded: Document =
         serde_json::from_slice(&serde_json::to_vec(&document).unwrap()).unwrap();
     assert_eq!(decoded.project.clips, document.project.clips);
@@ -69,14 +72,14 @@ fn title_validation_rejects_blank_markup_nul_invalid_fonts_and_nonvideo_tracks()
     .unwrap();
     let audio = valid
         .tracks
-        .iter()
+        .headers()
         .find(|track| track.kind == TrackKind::Audio)
         .unwrap();
     assert!(
         apply(
             &valid,
             &Edit::Move {
-                id: valid.clips[0].id,
+                id: crate::fixtures::clip(&valid, 0).id,
                 track_id: audio.id,
                 start_ms: 0
             }
@@ -88,7 +91,7 @@ fn title_validation_rejects_blank_markup_nul_invalid_fonts_and_nonvideo_tracks()
         apply(
             &ordinary,
             &Edit::Title {
-                id: ordinary.clips[0].id,
+                id: crate::fixtures::clip(&ordinary, 0).id,
                 title: Title::default()
             }
         )
@@ -98,24 +101,24 @@ fn title_validation_rejects_blank_markup_nul_invalid_fonts_and_nonvideo_tracks()
 #[test]
 fn split_and_trim_keep_outer_fades_within_the_resulting_clip_boundaries() {
     let mut project = crate::fixtures::project();
-    project.clips[0].effects = Effects {
+    crate::fixtures::clip_mut(&mut project, 0).effects = Effects {
         fade_in_ms: 4000,
         fade_out_ms: 4000,
         ..Effects::default()
     };
-    let id = project.clips[0].id;
+    let id = crate::fixtures::clip(&project, 0).id;
     let split = apply(&project, &Edit::Split { id, time_ms: 1000 }).unwrap();
     assert_eq!(
         (
-            split.clips[0].effects.fade_in_ms,
-            split.clips[0].effects.fade_out_ms
+            crate::fixtures::clip(&split, 0).effects.fade_in_ms,
+            crate::fixtures::clip(&split, 0).effects.fade_out_ms
         ),
         (1000, 0)
     );
     assert_eq!(
         (
-            split.clips[1].effects.fade_in_ms,
-            split.clips[1].effects.fade_out_ms
+            crate::fixtures::clip(&split, 1).effects.fade_in_ms,
+            crate::fixtures::clip(&split, 1).effects.fade_out_ms
         ),
         (0, 4000)
     );
@@ -131,8 +134,8 @@ fn split_and_trim_keep_outer_fades_within_the_resulting_clip_boundaries() {
     .unwrap();
     assert_eq!(
         (
-            trimmed.clips[0].effects.fade_in_ms,
-            trimmed.clips[0].effects.fade_out_ms
+            crate::fixtures::clip(&trimmed, 0).effects.fade_in_ms,
+            crate::fixtures::clip(&trimmed, 0).effects.fade_out_ms
         ),
         (250, 250)
     );
@@ -161,6 +164,6 @@ fn old_documents_load_zero_fades_and_no_generated_title() {
     effects.remove("fadeInMs");
     effects.remove("fadeOutMs");
     let decoded: Project = serde_json::from_value(json).unwrap();
-    assert!(decoded.clips[0].title.is_none());
-    assert_eq!(decoded.clips[0].effects.fade_in_ms, 0);
+    assert!(crate::fixtures::clip(&decoded, 0).title.is_none());
+    assert_eq!(crate::fixtures::clip(&decoded, 0).effects.fade_in_ms, 0);
 }

@@ -38,7 +38,8 @@
     "desktopUnavailable": "Unavailable on this desktop",
     "captureOnly": "Hidden in the capture",
     "screenshotDevicesTitle": "Screenshot mode",
-    "screenshotDevicesDescription": "Camera and audio are not used for screenshots."
+    "screenshotDevicesDescription": "Camera and audio are not used for screenshots.",
+    "resetRecording": "Restart recording"
   },
   "fr": {
     "recorder": "Enregistreur",
@@ -79,7 +80,8 @@
     "desktopUnavailable": "Indisponible sur ce bureau",
     "captureOnly": "Masqué dans la capture",
     "screenshotDevicesTitle": "Capture d’écran",
-    "screenshotDevicesDescription": "La caméra et le son ne sont pas utilisés pour les captures d’écran."
+    "screenshotDevicesDescription": "La caméra et le son ne sont pas utilisés pour les captures d’écran.",
+    "resetRecording": "Recommencer l’enregistrement"
   },
   "es": {
     "recorder": "Grabador",
@@ -120,7 +122,8 @@
     "desktopUnavailable": "No disponible en este escritorio",
     "captureOnly": "Oculto en la captura",
     "screenshotDevicesTitle": "Captura de pantalla",
-    "screenshotDevicesDescription": "La cámara y el audio no se usan en las capturas de pantalla."
+    "screenshotDevicesDescription": "La cámara y el audio no se usan en las capturas de pantalla.",
+    "resetRecording": "Reiniciar grabación"
   },
   "de": {
     "recorder": "Recorder",
@@ -161,7 +164,8 @@
     "desktopUnavailable": "Auf diesem Desktop nicht verfügbar",
     "captureOnly": "In der Aufnahme ausgeblendet",
     "screenshotDevicesTitle": "Bildschirmaufnahme",
-    "screenshotDevicesDescription": "Kamera und Audio werden für Screenshots nicht verwendet."
+    "screenshotDevicesDescription": "Kamera und Audio werden für Screenshots nicht verwendet.",
+    "resetRecording": "Aufnahme neu starten"
   },
   "ru": {
     "recorder": "Запись",
@@ -202,7 +206,8 @@
     "desktopUnavailable": "Недоступно на этом рабочем столе",
     "captureOnly": "Скрыто в записи",
     "screenshotDevicesTitle": "Снимок экрана",
-    "screenshotDevicesDescription": "Камера и звук не используются для снимков экрана."
+    "screenshotDevicesDescription": "Камера и звук не используются для снимков экрана.",
+    "resetRecording": "Начать запись заново"
   },
   "bg": {
     "recorder": "Запис",
@@ -243,7 +248,8 @@
     "desktopUnavailable": "Недостъпно на този работен плот",
     "captureOnly": "Скрито в записа",
     "screenshotDevicesTitle": "Екранна снимка",
-    "screenshotDevicesDescription": "Камерата и звукът не се използват за екранни снимки."
+    "screenshotDevicesDescription": "Камерата и звукът не се използват за екранни снимки.",
+    "resetRecording": "Започване на записа отначало"
   },
   "zh-CN": {
     "recorder": "录制",
@@ -284,7 +290,8 @@
     "desktopUnavailable": "此桌面不支持",
     "captureOnly": "在录制中隐藏",
     "screenshotDevicesTitle": "屏幕截图",
-    "screenshotDevicesDescription": "屏幕截图不使用摄像头或音频。"
+    "screenshotDevicesDescription": "屏幕截图不使用摄像头或音频。",
+    "resetRecording": "重新录制"
   },
   "ko": {
     "recorder": "녹화",
@@ -325,7 +332,8 @@
     "desktopUnavailable": "이 데스크톱에서 사용할 수 없음",
     "captureOnly": "녹화에서 숨김",
     "screenshotDevicesTitle": "스크린샷 모드",
-    "screenshotDevicesDescription": "스크린샷에는 카메라와 오디오가 사용되지 않습니다."
+    "screenshotDevicesDescription": "스크린샷에는 카메라와 오디오가 사용되지 않습니다.",
+    "resetRecording": "녹화 다시 시작"
   },
   "pt-BR": {
     "recorder": "Gravador",
@@ -366,7 +374,8 @@
     "desktopUnavailable": "Indisponível nesta área de trabalho",
     "captureOnly": "Oculto na captura",
     "screenshotDevicesTitle": "Captura de tela",
-    "screenshotDevicesDescription": "A câmera e o áudio não são usados nas capturas de tela."
+    "screenshotDevicesDescription": "A câmera e o áudio não são usados nas capturas de tela.",
+    "resetRecording": "Reiniciar gravação"
   },
   "ja": {
     "recorder": "録画",
@@ -407,7 +416,8 @@
     "desktopUnavailable": "このデスクトップでは利用できません",
     "captureOnly": "録画で非表示",
     "screenshotDevicesTitle": "スクリーンショット",
-    "screenshotDevicesDescription": "スクリーンショットではカメラと音声は使用しません。"
+    "screenshotDevicesDescription": "スクリーンショットではカメラと音声は使用しません。",
+    "resetRecording": "録画をやり直す"
   },
   "it": {
     "recorder": "Registratore",
@@ -448,7 +458,8 @@
     "desktopUnavailable": "Non disponibile su questo desktop",
     "captureOnly": "Nascosto nella cattura",
     "screenshotDevicesTitle": "Screenshot",
-    "screenshotDevicesDescription": "La fotocamera e l’audio non vengono usati per gli screenshot."
+    "screenshotDevicesDescription": "La fotocamera e l’audio non vengono usati per gli screenshot.",
+    "resetRecording": "Ricomincia registrazione"
   },
   "pl": {
     "recorder": "Nagrywanie",
@@ -489,7 +500,8 @@
     "desktopUnavailable": "Niedostępne na tym pulpicie",
     "captureOnly": "Ukryte w nagraniu",
     "screenshotDevicesTitle": "Zrzut ekranu",
-    "screenshotDevicesDescription": "Kamera i dźwięk nie są używane do zrzutów ekranu."
+    "screenshotDevicesDescription": "Kamera i dźwięk nie są używane do zrzutów ekranu.",
+    "resetRecording": "Rozpocznij nagrywanie od nowa"
   },
   "zh-TW": {
     "recorder": "錄製",
@@ -530,7 +542,8 @@
     "desktopUnavailable": "此桌面不支援",
     "captureOnly": "在錄製中隱藏",
     "screenshotDevicesTitle": "螢幕截圖",
-    "screenshotDevicesDescription": "螢幕截圖不使用攝影機或音訊。"
+    "screenshotDevicesDescription": "螢幕截圖不使用攝影機或音訊。",
+    "resetRecording": "重新錄製"
   },
   "hi": {
     "recorder": "रिकॉर्डर",
@@ -571,7 +584,8 @@
     "desktopUnavailable": "इस डेस्कटॉप पर उपलब्ध नहीं",
     "captureOnly": "रिकॉर्डिंग में छिपा हुआ",
     "screenshotDevicesTitle": "स्क्रीनशॉट मोड",
-    "screenshotDevicesDescription": "स्क्रीनशॉट में कैमरा और ऑडियो का उपयोग नहीं होता।"
+    "screenshotDevicesDescription": "स्क्रीनशॉट में कैमरा और ऑडियो का उपयोग नहीं होता।",
+    "resetRecording": "रिकॉर्डिंग फिर से शुरू करें"
   },
   "vi": {
     "recorder": "Trình ghi",
@@ -612,6 +626,7 @@
     "desktopUnavailable": "Không khả dụng trên màn hình này",
     "captureOnly": "Ẩn trong bản ghi",
     "screenshotDevicesTitle": "Chụp màn hình",
-    "screenshotDevicesDescription": "Camera và âm thanh không được sử dụng khi chụp màn hình."
+    "screenshotDevicesDescription": "Camera và âm thanh không được sử dụng khi chụp màn hình.",
+    "resetRecording": "Ghi lại từ đầu"
   }
 }

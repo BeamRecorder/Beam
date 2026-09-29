@@ -34,6 +34,21 @@ fn boundary_rejects_legacy_commands_arbitrary_paths_and_invalid_ids() {
 }
 
 #[test]
+fn restart_requires_a_valid_session_and_has_no_renderer_supplied_paths() {
+    let session = beam_media_engine::SessionId::new();
+    let command: Command =
+        serde_json::from_value(json!({"type":"restart","sessionId":session})).unwrap();
+    assert!(matches!(command, Command::Restart { session_id } if session_id == session));
+    for payload in [
+        json!({"type":"restart","sessionId":"bad"}),
+        json!({"type":"restart","sessionId":session,"outputDir":"/tmp/elsewhere"}),
+        json!({"type":"restart"}),
+    ] {
+        assert!(serde_json::from_value::<Command>(payload).is_err());
+    }
+}
+
+#[test]
 fn configuration_conversion_keeps_disabled_default_and_explicit_devices_distinct() {
     use beam_media_engine::{AudioSelection, CameraSelection, RecordingConfig};
     for (camera, audio) in [

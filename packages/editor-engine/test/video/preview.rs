@@ -106,7 +106,7 @@ fn recorded_camera_controls_keep_source_time_after_splitting_and_moving_a_clip()
     let root = tempfile::tempdir().unwrap();
     let source = crate::fixtures::media(media.path(), "camera.webm", false);
     let mut asset = probe::import(root.path(), &source).unwrap();
-    asset.zooms.push(Zoom {
+    std::sync::Arc::make_mut(&mut asset.zooms).push(Zoom {
         start_ms: 0,
         end_ms: 1000,
         cx: 0.7,
@@ -115,10 +115,10 @@ fn recorded_camera_controls_keep_source_time_after_splitting_and_moving_a_clip()
     });
     let mut project = crate::fixtures::project();
     project.canvas = Canvas::from_source(asset.width, asset.height);
-    project.clips[0].asset_id = asset.id;
-    project.clips[0].duration_ms = asset.duration_ms;
+    crate::video::clip_mut(&mut project, 0).asset_id = asset.id;
+    crate::video::clip_mut(&mut project, 0).duration_ms = asset.duration_ms;
     project.assets = vec![asset];
-    let id = project.clips[0].id;
+    let id = crate::video::clip_mut(&mut project, 0).id;
     {
         ProjectStore::lock(root.path())
             .unwrap()
@@ -176,7 +176,9 @@ fn recorded_camera_controls_keep_source_time_after_splitting_and_moving_a_clip()
     );
 
     let current = controller.snapshot().unwrap();
-    let mut effects = current.project.clips[0].effects.clone();
+    let mut effects = crate::video::clip(&controller.document().unwrap().project, 0)
+        .effects
+        .clone();
     effects.auto_zoom = false;
     controller
         .edit(
@@ -213,15 +215,80 @@ fn native_viewport_consumer_receives_frames_without_json_or_a_pending_raster() {
             false,
         )])
         .unwrap();
-    controller.seek(600).unwrap();
-    controller.transport().unwrap();
-    let frame = delivered
-        .lock()
-        .unwrap()
-        .take()
-        .expect("native canvas frame");
-    assert_eq!(frame.rgba.len(), (frame.width * frame.height * 4) as usize);
-    assert!(controller.frame().is_none());
+    for position in [600, 200, 600, 100, 600, 100] {
+        delivered.lock().unwrap().take();
+        controller.seek(position).unwrap();
+        controller.transport().unwrap();
+        let frame = delivered
+            .lock()
+            .unwrap()
+            .take()
+            .expect("native canvas frame");
+        assert_eq!(
+            frame.position_ms, position,
+            "the native consumer obeys the requested seek"
+        );
+        assert_eq!(frame.rgba.len(), (frame.width * frame.height * 4) as usize);
+        assert!(controller.frame().is_none());
+    }
+}
+
+#[test]
+fn a_native_seek_completes_after_the_viewport_has_received_its_frame() {
+    use std::sync::{Arc, Condvar, Mutex, mpsc};
+    use std::time::Duration;
+    let media = tempfile::tempdir().unwrap();
+    let root = tempfile::tempdir().unwrap();
+    let controller = EditorController::new().unwrap();
+    controller
+        .create(root.path().into(), "Seek delivery".into())
+        .unwrap();
+    controller
+        .import(vec![crate::fixtures::media(
+            media.path(),
+            "delivery.webm",
+            false,
+        )])
+        .unwrap();
+    let release = Arc::new((Mutex::new(false), Condvar::new()));
+    let delivery = release.clone();
+    let (entered, received) = mpsc::channel();
+    controller.set_frame_consumer(move |frame| {
+        if frame.position_ms != 600 {
+            return;
+        }
+        let _ = entered.send(());
+        let (state, wake) = &*delivery;
+        let lock = state.lock().unwrap();
+        drop(wake.wait_while(lock, |released| !*released).unwrap());
+    });
+    let premature = std::thread::scope(|scope| {
+        let (done, completion) = mpsc::channel();
+        let controller = &controller;
+        let task = scope.spawn(move || done.send(controller.seek(600)).unwrap());
+        let started = received.recv_timeout(Duration::from_secs(10));
+        let premature = completion.recv_timeout(Duration::from_millis(100)).ok();
+        *release.0.lock().unwrap() = true;
+        release.1.notify_all();
+        let result = premature
+            .as_ref()
+            .map(|r| r.as_ref().map(|_| ()).map_err(|e| e.to_string()))
+            .unwrap_or_else(|| {
+                completion
+                    .recv_timeout(Duration::from_secs(10))
+                    .unwrap()
+                    .map(|_| ())
+                    .map_err(|e| e.to_string())
+            });
+        task.join().unwrap();
+        started.expect("native consumer started");
+        result.unwrap();
+        premature.is_some()
+    });
+    assert!(
+        !premature,
+        "a completed seek implies completed viewport delivery"
+    );
 }
 #[test]
 fn source_pixels_keep_exact_frame_time_after_splitting_and_moving_without_camera() {
@@ -232,10 +299,10 @@ fn source_pixels_keep_exact_frame_time_after_splitting_and_moving_without_camera
     let asset = probe::import(root.path(), &source).unwrap();
     let mut project = crate::fixtures::project();
     project.canvas = Canvas::from_source(asset.width, asset.height);
-    project.clips[0].asset_id = asset.id;
-    project.clips[0].duration_ms = asset.duration_ms;
+    crate::video::clip_mut(&mut project, 0).asset_id = asset.id;
+    crate::video::clip_mut(&mut project, 0).duration_ms = asset.duration_ms;
     project.assets = vec![asset];
-    let id = project.clips[0].id;
+    let id = crate::video::clip_mut(&mut project, 0).id;
     {
         ProjectStore::lock(root.path())
             .unwrap()

@@ -70,10 +70,10 @@ fn close_and_reopen_preserve_history_and_optimistic_revision() {
     }
     let opened = opened.unwrap();
     assert_eq!(opened.project.name, "Second");
-    assert!(opened.can_undo);
+    assert!(opened.can_project_undo);
     assert_eq!(
         controller
-            .edit(opened.revision, Edit::Undo {})
+            .edit(opened.revision, Edit::UndoProject {})
             .unwrap()
             .project
             .name,

@@ -1,4 +1,4 @@
-import { Show, createSignal } from 'solid-js';
+import { Show, createSignal, createEffect, untrack } from 'solid-js';
 import { useTheme } from '@argui/solid';
 import type { WidgetTheme } from '@argui/widgets/solid';
 import type { NativeEventPayload } from '@argui/host';
@@ -6,13 +6,13 @@ import { ClipVisuals } from './ClipVisuals';
 import type { VisualViewport } from '../media/visualTypes';
 import { Icon } from '../../shared/base-ui/icon';
 import { useTR } from '../../shared/i18n';
-import type { Asset, Clip, Project, Track } from '../shared/editorTypes';
+import type { Asset, ClipPlacement, Project, Track } from '../shared/editorTypes';
 import type { EditorState } from '../shared/useEditor';
 import { snapStart, timecode } from './timelineModel';
 
 /** Pointer gestures keep a local draft and commit one non-destructive edit on release. */
 export function TimelineClip(props: {
-  clip: Clip;
+  clip: ClipPlacement;
   asset?: Asset;
   track: Track;
   project: Project;
@@ -28,12 +28,12 @@ export function TimelineClip(props: {
     [trim, setTrim] = createSignal<{ left: number; duration: number }>();
   const currentStart = () => start() ?? props.clip.startMs;
   const currentDuration = () => trim()?.duration ?? props.clip.durationMs;
-  const selected = () => props.editor.selected() === props.clip.id;
+  const selected = () => props.editor.selectedIds().includes(props.clip.id);
   let originX = 0,
     dragging = false,
     trimMode: 'left' | 'right' | undefined;
   function down(payload: NativeEventPayload<'pointerDown'>, mode?: 'left' | 'right') {
-    props.editor.select(props.clip.id);
+    if (props.editor.additive() || !selected()) props.editor.select(props.clip.id,props.editor.additive());
     originX = payload.x ?? 0;
     trimMode = mode;
     dragging = true;
@@ -54,11 +54,12 @@ export function TimelineClip(props: {
       return;
     }
     if (trimMode === 'left') {
-      const amount = Math.max(-props.clip.sourceInMs, -props.clip.startMs, Math.min(props.clip.durationMs - 1, delta));
+      const rate=(props.clip.rate?.numerator ?? 1)/(props.clip.rate?.denominator ?? 1);
+      const amount = Math.max(-Math.floor(props.clip.sourceInMs/rate), -props.clip.startMs, Math.min(props.clip.durationMs - 1, delta));
       setTrim({ left: amount, duration: props.clip.durationMs - amount });
       setStart(props.clip.startMs + amount);
     } else {
-      const available = (props.asset?.durationMs ?? 21_600_000) - props.clip.sourceInMs;
+      const available = Math.floor(((props.asset?.durationMs ?? 21_600_000) - props.clip.sourceInMs)*(props.clip.rate?.denominator ?? 1)/(props.clip.rate?.numerator ?? 1));
       setTrim({ left: 0, duration: Math.max(1, Math.min(available, props.clip.durationMs + delta)) });
     }
   }
@@ -70,12 +71,12 @@ export function TimelineClip(props: {
       void props.editor.edit({
         type: 'trim',
         id: props.clip.id,
-        sourceInMs: props.clip.sourceInMs + draft.left,
+        sourceInMs: Math.round(props.clip.sourceInMs + draft.left * (props.clip.rate?.numerator ?? 1) / (props.clip.rate?.denominator ?? 1)),
         durationMs: draft.duration,
         startMs: position ?? props.clip.startMs,
       });
     else if (position !== undefined && position !== props.clip.startMs)
-      void props.editor.edit({ type: 'move', id: props.clip.id, trackId: props.clip.trackId, startMs: position });
+      void props.editor.moveSelection(props.clip.id,position);
     cancel();
   }
   function cancel() {
@@ -84,9 +85,10 @@ export function TimelineClip(props: {
     trimMode = undefined;
     dragging = false;
   }
-  const color = () => props.clip.title ? theme().chart3 : props.track.kind === 'video' ? theme().chart1 : theme().chart2;
-  const label = () => props.clip.title?.text ?? props.asset?.name ?? TR('unavailable');
-  const plan = () => ({ asset: props.asset!, clip: { startMs: currentStart(), sourceInMs: props.clip.sourceInMs + (trim()?.left ?? 0), durationMs: currentDuration() }, viewport: props.viewport });
+  createEffect(() => {props.editor.gestureVersion(); untrack(cancel);});
+  const color = () => props.clip.title ? theme().primary : props.track.kind === 'video' ? theme().chart1 : theme().chart2;
+  const label = () => props.clip.title?.text ?? props.asset?.name ?? props.project.definitions?.find(d => d.id === props.clip.generator?.definitionId)?.label ?? TR('unavailable');
+  const plan = () => ({ asset: props.asset!, clip: { startMs: currentStart(), sourceInMs: props.clip.sourceInMs + (trim()?.left ?? 0)*(props.clip.rate?.numerator ?? 1)/(props.clip.rate?.denominator ?? 1), durationMs: currentDuration() }, viewport: props.viewport });
   return (
     <focusScope
       id={`timeline-clip-${props.clip.id}`}
@@ -97,9 +99,9 @@ export function TimelineClip(props: {
       role="button"
       accessibleName={`${label()} ${timecode(props.clip.startMs)}`}
       selected={selected()}
-      keyboardActivation="enterOrSpace"
+      keyboardActivation="none"
       enabled={!props.editor.busy()}
-      onClick={() => props.editor.select(props.clip.id)}
+      onKey={event => {if (event.state === 'pressed' && event.key === 'Enter') props.editor.select(props.clip.id,props.editor.additive());}}
     >
       <rectangle
         width="100%"
@@ -124,7 +126,7 @@ export function TimelineClip(props: {
             <row width="100%" height={18} shrink={0} padding={{ start: 8, end: 8 }} gap={4} alignItems="center">
               <Icon name={props.clip.title ? 'type' : props.track.kind === 'video' ? 'film' : 'audio-lines'} size={10} color="#ffffff" />
               <container grow={1} minWidth={0}><text fontSize={10} color="#ffffff" lineClamp={1} text={label()} /></container>
-              <Show when={props.asset?.zoomCount && props.clip.effects.autoZoom}><Icon name="mouse-pointer-2" size={10} color="#ffffff" /></Show>
+              <Show when={(props.clip.regionCount ?? 0)>0}><Icon name="mouse-pointer-2" size={10} color="#ffffff" /></Show>
             </row>
             <Show when={props.asset && !props.clip.title} fallback={
               <row width="100%" grow={1} padding={{ start: 8 }} alignItems="center"><text fontSize={10} color="#ffffff" text={timecode(currentDuration())} /></row>

@@ -5,6 +5,7 @@ export type IconName = keyof typeof iconAssets
 
 const iconAssets = {
   'gauge': mediaAssets['icons/gauge.svg'],
+  'triangle-alert': mediaAssets['icons/triangle-alert.svg'],
   'circle-dashed': mediaAssets['icons/circle-dashed.svg'],
   'a-large-small': mediaAssets['icons/a-large-small.svg'],
   'arrow-down-to-line': mediaAssets['icons/arrow-down-to-line.svg'],

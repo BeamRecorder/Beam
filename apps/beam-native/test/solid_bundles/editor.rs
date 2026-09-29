@@ -5,6 +5,8 @@ use serde_json::{Value, json};
 
 thread_local! {
     static HAS_CLIPS: std::cell::Cell<bool> = const { std::cell::Cell::new(true) };
+    static REVISION: std::cell::Cell<u64> = const { std::cell::Cell::new(1) };
+    static CLIP_DURATION: std::cell::Cell<u64> = const { std::cell::Cell::new(10_000) };
 }
 
 /// Exercises the live compiled clip selection and its native contextual controls.
@@ -15,15 +17,31 @@ pub(super) fn validate_selection(scene: &super::localization::Scene<'_>) {
     super::editor_controls_layout::validate(scene);
     super::editor_controls::validate_hover(scene);
     super::editor_splitters::validate(scene);
-    super::click_named(scene.gallery, scene.operations, "timeline-clip-clip").unwrap();
-    scene.gallery.tick(0.).unwrap();
+    super::editor_pointer::select_clip(scene);
+    super::hydrate_services(
+        scene.gallery,
+        scene.requests,
+        scene.rejections,
+        scene.name,
+        super::DEFAULT_OUTPUT_LABEL,
+    );
     super::assert_no_rejections(scene.rejections, scene.name);
     let host = scene.host.borrow();
     let root = host.root_element().unwrap();
+    let region_id = "timeline-region-00000000-0000-0000-0000-00000000002a";
+    let region = super::keyed_element(&root, region_id).expect("loaded effect region");
+    assert!(
+        super::contains_text(region, "Color correction"),
+        "region label is initialized on mount"
+    );
+    let retained_region = region
+        .source_identity()
+        .cloned()
+        .expect("region native identity");
     for text in [
-        "Automatic zooms",
-        "Transform",
-        "00:10.000 · Original preserved",
+        "Source zoom suggestions",
+        "Speed numerator",
+        "00:00:10:00 · Original preserved",
     ] {
         assert!(
             super::contains_text(&root, text),
@@ -31,6 +49,7 @@ pub(super) fn validate_selection(scene: &super::localization::Scene<'_>) {
         );
     }
     drop(host);
+    select_clip(scene, "timeline-clip-clip");
     super::click_named(scene.gallery, scene.operations, "editor-undo").unwrap();
     super::hydrate_services(
         scene.gallery,
@@ -40,14 +59,45 @@ pub(super) fn validate_selection(scene: &super::localization::Scene<'_>) {
         super::DEFAULT_OUTPUT_LABEL,
     );
     let root = scene.host.borrow().root_element().unwrap();
+    let region = super::keyed_element(&root, region_id).expect("refreshed effect region");
+    assert_eq!(
+        region.source_identity(),
+        Some(&retained_region),
+        "metadata refresh retains effect controls"
+    );
     assert!(
-        super::contains_text(&root, "00:05.000 · Original preserved"),
+        super::contains_text(&root, "00:00:05:00 · Original preserved"),
         "a fresh native edit snapshot must update retained clip controls"
     );
     super::assert_no_rejections(scene.rejections, scene.name);
     super::editor_controls::validate_pending_edit(scene);
     validate_responsive(scene);
     validate_sequences(scene);
+}
+
+/// Native keyboard selection uses the clip's FocusScope callback, without synthesizing a click.
+fn select_clip(scene: &super::localization::Scene<'_>, public_id: &str) {
+    let contract: Value = serde_json::from_str(super::CONTRACT).unwrap();
+    let id_property = super::contract_member(&contract, "FocusScope", "properties", "id");
+    let key_event = super::contract_member(&contract, "FocusScope", "events", "key");
+    let (node, callback) = {
+        let trace = scene.operations.borrow();
+        let node = super::native_id(&trace, id_property, public_id);
+        let callback = trace
+            .iter()
+            .rev()
+            .find_map(|operation| match operation {
+                argui_runtime::WireOperation::SetListener {
+                    id,
+                    event,
+                    callback,
+                } if *id == node && *event == key_event => *callback,
+                _ => None,
+            })
+            .expect("clip keyboard listener");
+        (node, callback)
+    };
+    scene.gallery.deliver(&json!({"node":{"slot":node.slot,"generation":node.generation},"callback":callback,"payload":{"kind":"key","key":"Enter","state":"pressed"}}).to_string()).unwrap();
 }
 
 fn resize(scene: &super::localization::Scene<'_>, width: u32, height: u32) {
@@ -157,12 +207,14 @@ pub(super) fn service(method: &str, payload: &Value) -> Value {
             "activeSequence":"first", "sequences":[{"id":"first","name":"Timeline 1"}],
             "project": {"id":"00000000-0000-4000-8000-000000000001","name":"Native recording",
                 "canvas":{"width":1920,"height":1080,"fps":30,"background":4279637526u32},
-                "assets":[{"id":"source","name":"Screen.webm","width":1920,"height":1080,"durationMs":10_000,"hasVideo":true,"hasAudio":true,"hasCursor":true,"zoomCount":2,"recording":true}],
+                "assets":[{"id":"source","name":"Screen.webm","width":1920,"height":1080,"durationMs":10_000,"hasVideo":true,"hasAudio":true,"hasCursor":true,"zoomCount":2,"recording":true,"cursorMode":"separated"}],
                 "tracks":[{"id":"video","name":"Video","kind":"video","hidden":false,"muted":false},{"id":"audio","name":"Audio","kind":"audio","hidden":false,"muted":false}],
                 "clips":[{"id":"clip","assetId":"source","trackId":"video","startMs":0,"sourceInMs":0,"durationMs":10_000,
-                    "effects":{"opacity":1,"volume":1,"brightness":0,"saturation":1,"scale":1,"x":0.5,"y":0.5,"autoZoom":true}}],"warnings":[]},
+                    "effectCount":1,"regionCount":1}],"warnings":[],
+                "definitions":beam_editor_engine::domain::effects::catalog::builtins(),
+                "recordingStyle":beam_editor_engine::domain::recording::style_types::RecordingStyle::default()},
             "exportFormats":[{"container":"mp4","codec":"AV1","encoder":"vaav1enc"}],
-            "revision":1,"canUndo":true,"canRedo":false,"recovered":false,"transport":transport
+            "revision":REVISION.get(),"canUndo":true,"canRedo":false,"recovered":false,"transport":transport
         }),
         "frame" => {
             let has_clips = HAS_CLIPS.get();
@@ -187,8 +239,49 @@ pub(super) fn service(method: &str, payload: &Value) -> Value {
                 }
             }
             HAS_CLIPS.set(!snapshot["project"]["clips"].as_array().unwrap().is_empty());
+            REVISION.set(2);
+            CLIP_DURATION.set(
+                snapshot["project"]["clips"]
+                    .as_array()
+                    .unwrap()
+                    .first()
+                    .map_or(10_000, |clip| clip["durationMs"].as_u64().unwrap()),
+            );
             snapshot
         }
+        "query" => match payload["kind"].as_str() {
+            Some("clip") => {
+                let mut clip = service("bootstrap", &Value::Null)["project"]["clips"][0].clone();
+                clip["durationMs"] = json!(CLIP_DURATION.get());
+                clip["effects"] = json!(beam_editor_engine::Effects::default());
+                let definitions = beam_editor_engine::domain::effects::catalog::builtins();
+                let mut instance =
+                    beam_editor_engine::domain::effects::definition(&definitions, "beam.color", 1)
+                        .unwrap()
+                        .instantiate();
+                instance.id = uuid::Uuid::from_u128(42);
+                clip["instances"] = json!([instance]);
+                clip["rate"] = json!({"numerator":1,"denominator":1});
+                json!({"type":"clip","revision":REVISION.get(),"clip":clip})
+            }
+            Some("parameterValues") => json!({"type":"parameterValues","values":{}}),
+            Some("presets") => {
+                json!({"type":"presets","page":{"revision":REVISION.get(),"items":beam_editor_engine::domain::effects::presets::builtins(),"next":null,"total":5}})
+            }
+            Some("regions") => {
+                let items = if HAS_CLIPS.get() {
+                    vec![json!({"id":"00000000-0000-0000-0000-00000000002a",
+                        "definitionId":"beam.color","definitionVersion":1,"name":null,
+                        "target":{"kind":"clip","sequenceId":"first","clipId":"clip"},
+                        "kind":"effect","enabled":true,"start":{"ticks":0,"timescale":1000},
+                        "end":{"ticks":CLIP_DURATION.get(),"timescale":1000}})]
+                } else {
+                    Vec::new()
+                };
+                json!({"type":"regions","page":{"revision":REVISION.get(),"total":items.len(),"items":items,"next":null}})
+            }
+            other => panic!("unexpected editor query {other:?}"),
+        },
         "play" => transport,
         "acquireVisual" => {
             json!({"key":"source-visual","canvasId":43,"status":"ready","error":null})

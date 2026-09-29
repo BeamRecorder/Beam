@@ -44,6 +44,8 @@ export function Settings(props: { api: BeamApi; onTheme: (variant: BeamPreferenc
     void props.api.preferences().then(value => { if (!disposed && revision === 0) applyPreferences(value) }).catch(cause => setError(String(cause)))
     onCleanup(props.api.onEvent(event => {
       if (event.type === 'preferencesChanged' && event.preferences) { revision++; applyPreferences(event.preferences) }
+      if (event.type === 'inputAccessChanged' || (event.type === 'windowVisibility' && event.window === 'settings' && event.visible))
+        void props.api.inputAccessStatus().then(setInputAccess).catch(cause => setError(String(cause)))
     }))
     void props.api.info().then(setInfo).catch(cause => setError(String(cause)))
     void props.api.inputAccessStatus().then(setInputAccess).catch(cause => setError(String(cause)))
@@ -113,7 +115,7 @@ export function Settings(props: { api: BeamApi; onTheme: (variant: BeamPreferenc
     </row>
     <rectangle width="100%" height={1} shrink={0} background={theme().border} />
     <row width="100%" grow={1} minHeight={0}>
-      <SettingsSidebar value={section()} onChange={setSection} />
+      <SettingsSidebar value={section()} onChange={setSection} showLinux={info()?.operatingSystem === 'linux'} />
       <rectangle width={1} height="100%" background={theme().border} />
       <ScrollShadow grow={1} minWidth={0} height="100%" scrollbarEndInset={0}>
         <column width="100%" padding={14} gap={6}>
@@ -129,12 +131,18 @@ export function Settings(props: { api: BeamApi; onTheme: (variant: BeamPreferenc
                   options={[1, 2, 3, 5, 10].map(value => ({ value: String(value), label: `${value} s` }))}
                   onValueChange={value => void save({ countdownSeconds: Number(value) })} allowOutsideWindow />
               </SettingRow>
-              <Show when={inputAccess()?.canRequest}>
-                <SettingRow label={TR('interactionAccess')}>
-                  <Button width="100%" size="sm" disabled={pending()} onClick={() => void requestInputAccess()}>{TR('allowAccess')}</Button>
+            </Show>
+            <Show when={section() === 'linux'}>
+              <column width="100%" gap={12}>
+                <SettingRow label={TR('interactionAccess')} description={TR('interactionAccessDescriptionLinux')}>
+                  <Show when={inputAccess()?.state !== 'available'} fallback={<text fontSize={12} color={theme().primary}>{TR('accessReady')}</text>}>
+                    <Show when={inputAccess()?.canRequest} fallback={<text fontSize={12} color={theme().mutedForeground}>{TR('interactionAccessUnavailableDescription')}</text>}>
+                      <Button width="100%" size="sm" disabled={pending()} onClick={() => void requestInputAccess()}>{TR('allowAccess')}</Button>
+                    </Show>
+                  </Show>
                 </SettingRow>
-              </Show>
-              <ErrorNotice message={inputAccess()?.error?.message ?? ''} fontSize={12} onCopy={text => props.api.copyText(text)} />
+                <ErrorNotice message={inputAccess()?.error?.message ?? ''} fontSize={12} onCopy={text => props.api.copyText(text)} />
+              </column>
             </Show>
             <Show when={section() === 'shortcuts'}>
               {shortcuts.map(shortcut => <SettingRow label={S(shortcut.label)}>

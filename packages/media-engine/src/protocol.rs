@@ -120,6 +120,9 @@ pub enum Command {
     Resume {
         session_id: SessionId,
     },
+    Restart {
+        session_id: SessionId,
+    },
     Stop {
         session_id: SessionId,
     },

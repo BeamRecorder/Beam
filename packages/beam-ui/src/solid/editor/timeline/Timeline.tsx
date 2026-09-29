@@ -1,4 +1,4 @@
-import { For, Show, createMemo, createSignal } from 'solid-js';
+import { For, Show, createEffect, createMemo, createSignal, onCleanup } from 'solid-js';
 import { useTheme } from '@argui/solid';
 import type { WidgetTheme } from '@argui/widgets/solid';
 import { Icon } from '../../shared/base-ui/icon';
@@ -10,6 +10,10 @@ import { trackLayout } from './trackLayout';
 import { TimelineToolbar } from './TimelineToolbar';
 import { TimelineClip } from './TimelineClip';
 import { TimelineTabs } from './TimelineTabs';
+import { timelineShortcut } from './timelineShortcut';
+import { TimelineRegion } from './TimelineRegion';
+import type { TimelineRegion as Region } from '../shared/generated/editorContracts';
+import type { RegionRow } from './regionTypes';
 import type { EditorState } from '../shared/useEditor';
 
 /** The timeline fills its resized pane; lane headers and source clips share one vertical viewport. */
@@ -17,6 +21,7 @@ export function Timeline(props: { editor: EditorState; width: number; height: nu
   const theme = useTheme<WidgetTheme>(), TR = useTR('NativeEditor');
   const [pixels, setPixels] = createSignal(80), [offset, setOffset] = createSignal(0);
   const [verticalOffset, setVerticalOffset] = createSignal(0);
+  const [regions, setRegions] = createSignal<Region[]>([]);
   const [requestedHeader, setHeader] = createSignal(190), [snapping, setSnapping] = createSignal(true);
   const project = () => props.editor.snapshot()?.project;
   const header = () => Math.min(Math.max(140, requestedHeader()), Math.min(320, props.width / 3));
@@ -27,6 +32,40 @@ export function Timeline(props: { editor: EditorState; width: number; height: nu
   const visible = createMemo(() => visibleClips(project()?.clips ?? [], offset() / pixels() * 1000, (offset() + props.width - header()) / pixels() * 1000));
   const visualViewport = () => ({ startMs: offset() / pixels() * 1000, endMs: (offset() + props.width - header()) / pixels() * 1000, pixels: pixels() });
   const visibleRows = createMemo(() => rows().filter(row => row.y + row.height > verticalOffset() && row.y < verticalOffset() + viewport()));
+  createEffect(() => {
+    const document = props.editor.snapshot(), visible = visualViewport();
+    if (!document || visible.endMs <= visible.startMs) { setRegions([]); return; }
+    let obsolete = false;
+    onCleanup(() => { obsolete = true; });
+    void (async () => {
+      const values: Region[] = [];
+      let offset = 0;
+      for (;;) {
+        const response = await props.editor.query({ kind: 'regions', sequenceId: document.activeSequence,
+          start: { ticks: Math.floor(visible.startMs), timescale: 1000 }, end: { ticks: Math.ceil(visible.endMs), timescale: 1000 }, offset, limit: 256 });
+        if (obsolete || response.type !== 'regions' || response.page.revision !== document.revision) return;
+        values.push(...response.page.items);
+        if (response.page.next == null) break;
+        offset = response.page.next;
+      }
+      if (!obsolete) setRegions(values);
+    })().catch(cause => { if (!obsolete) props.editor.reportError(cause); });
+  });
+  const regionRows = createMemo(() => {
+    const values: RegionRow[] = [], indices = new Map<string, number>();
+    const clips = new Map((project()?.clips ?? []).map(clip => [clip.id, clip]));
+    const tracks = new Map(rows().map(row => [row.track.id, row]));
+    for (const region of regions()) {
+      if (region.target.kind !== 'clip') continue;
+      const clip = clips.get(region.target.clipId), row = clip && tracks.get(clip.trackId);
+      if (!clip || !row) continue;
+      const index = indices.get(clip.id) ?? 0;
+      const top = region.kind === 'transition' ? row.y + 2 : row.y + row.mediaHeight + index * 22;
+      if (region.kind !== 'transition') indices.set(clip.id, index + 1);
+      if (top + 20 > verticalOffset() && top < verticalOffset() + viewport()) values.push({ region, clip, top });
+    }
+    return values;
+  });
   const step = () => pixels() >= 100 ? 1000 : pixels() >= 30 ? 5000 : 10000;
   const ticks = createMemo(() => {
     const start = Math.floor(offset() / pixels() * 1000 / step()) * step();
@@ -60,7 +99,19 @@ export function Timeline(props: { editor: EditorState; width: number; height: nu
           <Splitter id="editor-track-divider" vertical hairline label={TR('resizeTracks')} value={header()}
             target="editor-track-headers" minimum={140} maximum={Math.min(320, props.width / 3)} onCommit={setHeader} />
           <scrollView grow={1} minWidth={0} height="100%" scrollX scrollY={false} onScroll={event => setOffset(event.offsetX)}>
-            <container id="editor-timeline-grid" width={width()} height="100%" position="relative" background={theme().muted}>
+            <focusScope id="editor-timeline-grid" role="group" accessibleName={TR('timeline')} keyboardActivation="none"
+              onKey={event => {
+                const action=timelineShortcut(event,props.editor.busy());
+                if(action==='undo' && props.editor.snapshot()?.canUndo) void props.editor.edit({type:'undo'});
+                else if(action==='redo' && props.editor.snapshot()?.canRedo) void props.editor.edit({type:'redo'});
+                else if(action==='selectAll') props.editor.selectAll();
+                else if(action==='copy') props.editor.copy();
+                else if(action==='paste') void props.editor.paste();
+                else if(action==='play') void props.editor.toggle();
+                else if(action==='remove' && props.editor.selected()) void props.editor.removeSelection();
+                else if(action==='cancel') {props.editor.cancelGesture();props.editor.select(undefined);}
+              }} width={width()} height="100%" position="relative">
+              <rectangle width="100%" height="100%" position="absolute" inset={{start:0,top:0}} background={theme().muted} />
               <touchArea width="100%" height={28} position="absolute" inset={{ top: 0, start: 0 }} mouseCursor="pointer"
                 onClick={event => void props.editor.seek((event.localX ?? 0) / pixels() * 1000)}>
                 <For each={ticks()}>{time => <container position="absolute" inset={{ start: time / 1000 * pixels() + 5, top: 8 }}>
@@ -71,15 +122,20 @@ export function Timeline(props: { editor: EditorState; width: number; height: nu
               <For each={visibleRows().map(row => row.track.id)}>{trackId => { const row = () => rows().find(row => row.track.id === trackId)!; return <container width="100%" height={row().height} position="absolute" inset={{ start: 0, top: row().y }}>
                 <rectangle width="100%" height={1} background={theme().border} opacity={0.6} />
                 <For each={visible().filter(clip => clip.trackId === row().track.id).map(clip => clip.id)}>{id => <TimelineClip clip={project()!.clips.find(clip => clip.id === id)!} track={row().track} project={project()!}
-                  height={row().height - 8} snapping={snapping()} pixels={pixels()} viewport={visualViewport()} editor={props.editor} asset={project()?.assets.find(asset => asset.id === project()!.clips.find(clip => clip.id === id)!.assetId)} />}</For>
+                  height={row().mediaHeight - 8} snapping={snapping()} pixels={pixels()} viewport={visualViewport()} editor={props.editor} asset={project()?.assets.find(asset => asset.id === project()!.clips.find(clip => clip.id === id)!.assetId)} />}</For>
               </container>; }}</For>
+              <For each={regionRows().map(row => row.region.id)}>{id => {
+                const initial = regionRows().find(row => row.region.id === id)!;
+                const row = () => regionRows().find(row => row.region.id === id) ?? initial;
+                return <TimelineRegion row={row()} pixels={pixels()} editor={props.editor} />;
+              }}</For>
               <container width={1} height="100%" position="absolute" inset={{ start: props.editor.transport().positionMs / 1000 * pixels(), top: 0 }} background={theme().primary}>
                 <rectangle width={9} height={12} position="absolute" inset={{ start: -4, top: 0 }} radii={{ bottomLeft: 4, bottomRight: 4 }} background={theme().primary} />
               </container>
               <Show when={!project()?.clips.length}><container position="absolute" inset={{ start: 24, top: 58 }}>
                 <text fontSize={12} color={theme().mutedForeground} text={TR('timelineHint')} />
               </container></Show>
-            </container>
+            </focusScope>
           </scrollView>
         </row>
       </scrollView>

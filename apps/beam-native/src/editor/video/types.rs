@@ -8,6 +8,7 @@ pub(super) struct Factory {
     pub generation: std::sync::atomic::AtomicU64,
     pub resources: ResourceCache,
     pub cover: bool,
+    pub source: Option<SourceFrame>,
 }
 
 pub(super) struct Texture {
@@ -24,7 +25,12 @@ pub(super) struct Renderer {
     pub uniform: wgpu::Buffer,
     pub texture: Option<Texture>,
     pub cover: bool,
+    pub source: Option<SourceFrame>,
+    pub seen_source: Option<std::sync::Arc<PreviewFrame>>,
 }
+
+pub(super) type SourceFrame =
+    std::sync::Arc<std::sync::Mutex<Option<std::sync::Arc<PreviewFrame>>>>;
 
 pub(super) type ResourceCache = std::sync::Arc<std::sync::Mutex<Option<Resources>>>;
 pub(super) struct Resources {

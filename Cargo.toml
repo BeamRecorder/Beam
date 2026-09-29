@@ -1,6 +1,9 @@
 [workspace]
 members = [
   "packages/editor-engine",
+  "packages/editor-domain",
+  "apps/beam-editor-cli",
+  "apps/beam-editor-mcp",
   "packages/media-core",
   "packages/media-manifest",
   "packages/media-encode",

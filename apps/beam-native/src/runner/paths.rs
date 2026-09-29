@@ -56,3 +56,18 @@ pub(crate) fn fallback_asset_manifest(
         Ok(parent.join("../..").join(development_name))
     }
 }
+
+/// Resolves the explicit manifest first, then the packaged or development assets.
+pub(crate) fn asset_manifest_path(
+    explicit: Option<PathBuf>,
+    bundle: Option<&Path>,
+) -> Result<PathBuf, &'static str> {
+    if let Some(path) = explicit {
+        return Ok(path);
+    }
+    fallback_asset_manifest(
+        bundle,
+        crate::files::ASSET_MANIFEST,
+        crate::files::DEVELOPMENT_ASSET_MANIFEST,
+    )
+}

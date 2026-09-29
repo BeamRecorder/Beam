@@ -8,6 +8,12 @@ use std::sync::{Mutex, OnceLock};
 fn wire(bin: &gst::Bin, decoder: &str) -> Result<()> {
     bin.set_context(super::display_context());
     let source = gst::ElementFactory::make(decoder).build().map_err(media)?;
+    // Matroska's VP9 caps can omit profile and framing. Autoplug selects this
+    // wrapper from its encoded template, so the hardware input still needs its
+    // normal bitstream parser even when decodebin did not insert one outside.
+    let parser = (decoder == "vavp9dec")
+        .then(|| gst::ElementFactory::make("vp9parse").build().map_err(media))
+        .transpose()?;
     let bridge = gst::parse::bin_from_description(
         "glupload ! glcolorconvert ! video/x-raw(memory:GLMemory),format=RGBA,texture-target=2D ! identity",
         true,
@@ -15,7 +21,22 @@ fn wire(bin: &gst::Bin, decoder: &str) -> Result<()> {
     bin.add_many([&source, bridge.upcast_ref()])
         .map_err(media)?;
     source.link(&bridge).map_err(media)?;
-    for (name, element) in [("sink", &source), ("src", bridge.upcast_ref())] {
+    if let Some(parser) = &parser {
+        bin.add(parser).map_err(media)?;
+        parser.link(&source).map_err(media)?;
+    }
+    super::meta::protect(
+        &source
+            .static_pad("src")
+            .ok_or_else(|| media("hardware decoder output is missing"))?,
+        &bridge
+            .static_pad("src")
+            .ok_or_else(|| media("GPU decoder bridge output is missing"))?,
+    );
+    for (name, element) in [
+        ("sink", parser.as_ref().unwrap_or(&source)),
+        ("src", bridge.upcast_ref()),
+    ] {
         let target = element
             .static_pad(name)
             .ok_or_else(|| media("GPU decoder pad is missing"))?;

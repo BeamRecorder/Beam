@@ -1,4 +1,4 @@
-import type { Clip, Project } from '../shared/editorTypes';
+import type { ClipPlacement, Project } from '../shared/editorTypes';
 
 /** Stable millisecond timecode for the preview, source ranges, and timeline ruler. */
 export function timecode(milliseconds: number): string {
@@ -9,7 +9,7 @@ export function timecode(milliseconds: number): string {
 /** Snaps a drag to actual clip edges and the playhead within eight screen pixels. */
 export function snapStart(
   value: number,
-  clip: Clip,
+  clip: ClipPlacement,
   project: Project,
   playhead: number,
   pixelsPerSecond: number,
@@ -33,6 +33,6 @@ export function snapStart(
   return result;
 }
 /** Keeps viewport work bounded at every timeline magnification. */
-export function visibleClips(clips: readonly Clip[], startMs: number, endMs: number): Clip[] {
+export function visibleClips(clips: readonly ClipPlacement[], startMs: number, endMs: number): ClipPlacement[] {
   return clips.filter((c) => c.startMs < endMs && c.startMs + c.durationMs > startMs);
 }

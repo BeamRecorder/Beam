@@ -3,11 +3,11 @@ use uuid::Uuid;
 #[test]
 fn split_and_trim_preserve_source_time_without_touching_originals() {
     let original = crate::fixtures::project();
-    let id = original.clips[0].id;
+    let id = crate::fixtures::clip(&original, 0).id;
     let split = apply(&original, &Edit::Split { id, time_ms: 4000 }).unwrap();
-    assert_eq!(original.clips[0].duration_ms, 10_000);
-    assert_eq!(split.clips[1].source_in_ms, 4000);
-    assert_eq!(split.clips[1].duration_ms, 6000);
+    assert_eq!(crate::fixtures::clip(&original, 0).duration_ms, 10_000);
+    assert_eq!(crate::fixtures::clip(&split, 1).source_in_ms, 4000);
+    assert_eq!(crate::fixtures::clip(&split, 1).duration_ms, 6000);
     let trimmed = apply(
         &split,
         &Edit::Trim {
@@ -19,12 +19,12 @@ fn split_and_trim_preserve_source_time_without_touching_originals() {
     )
     .unwrap();
     assert_eq!(trimmed.assets, original.assets);
-    assert_eq!(trimmed.clips[0].source_in_ms, 1000);
+    assert_eq!(crate::fixtures::clip(&trimmed, 0).source_in_ms, 1000);
 }
 #[test]
 fn exact_split_boundaries_missing_clips_and_overlapping_moves_fail() {
     let original = crate::fixtures::project();
-    let id = original.clips[0].id;
+    let id = crate::fixtures::clip(&original, 0).id;
     for time_ms in [0, 10_000, 10_001] {
         assert!(apply(&original, &Edit::Split { id, time_ms }).is_err());
     }
@@ -34,7 +34,7 @@ fn exact_split_boundaries_missing_clips_and_overlapping_moves_fail() {
             &original,
             &Edit::Insert {
                 asset_id: original.assets[0].id,
-                track_id: original.tracks[0].id,
+                track_id: original.tracks.headers().next().unwrap().id,
                 start_ms: 9000
             }
         )
@@ -45,7 +45,7 @@ fn exact_split_boundaries_missing_clips_and_overlapping_moves_fail() {
             &original,
             &Edit::Move {
                 id,
-                track_id: original.tracks[1].id,
+                track_id: original.tracks.headers().nth(1).unwrap().id,
                 start_ms: 0
             }
         )
@@ -56,12 +56,12 @@ fn exact_split_boundaries_missing_clips_and_overlapping_moves_fail() {
 #[test]
 fn every_edit_intent_is_validated_before_replacing_the_project() {
     let original = crate::fixtures::project();
-    let id = original.clips[0].id;
+    let id = crate::fixtures::clip(&original, 0).id;
     let moved = apply(
         &original,
         &Edit::Move {
             id,
-            track_id: original.tracks[0].id,
+            track_id: original.tracks.headers().next().unwrap().id,
             start_ms: 500,
         },
     )
@@ -72,21 +72,17 @@ fn every_edit_intent_is_validated_before_replacing_the_project() {
         volume: 0.5,
         ..Effects::default()
     };
-    assert_eq!(
-        apply(
-            &original,
-            &Edit::Effects {
-                id,
-                effects: effects.clone()
-            }
-        )
-        .unwrap()
-        .clips[0]
-            .effects,
-        effects
-    );
+    let changed = apply(
+        &original,
+        &Edit::Effects {
+            id,
+            effects: effects.clone(),
+        },
+    )
+    .unwrap();
+    assert_eq!(crate::fixtures::clip(&changed, 0).effects, effects);
     assert!(apply(&original, &Edit::Rename { name: "  ".into() }).is_err());
-    let track = original.tracks[0].id;
+    let track = original.tracks.headers().next().unwrap().id;
     let hidden = apply(
         &original,
         &Edit::Track {
@@ -96,7 +92,10 @@ fn every_edit_intent_is_validated_before_replacing_the_project() {
         },
     )
     .unwrap();
-    assert!(hidden.tracks[0].hidden && hidden.tracks[0].muted);
+    assert!(
+        hidden.tracks.headers().next().unwrap().hidden
+            && hidden.tracks.headers().next().unwrap().muted
+    );
     assert_eq!(
         apply(
             &original,
@@ -142,8 +141,11 @@ fn new_video_lanes_compose_above_existing_clips_and_audio_lanes_append() {
         },
     )
     .unwrap();
-    assert_eq!(video.tracks[0].name, "Overlay");
-    assert_eq!(video.tracks[1].id, original.tracks[0].id);
+    assert_eq!(video.tracks.headers().next().unwrap().name, "Overlay");
+    assert_eq!(
+        video.tracks.headers().nth(1).unwrap().id,
+        original.tracks.headers().next().unwrap().id
+    );
     assert_eq!(video.clips, original.clips);
     let audio = apply(
         &video,
@@ -153,6 +155,13 @@ fn new_video_lanes_compose_above_existing_clips_and_audio_lanes_append() {
         },
     )
     .unwrap();
-    assert_eq!(audio.tracks.last().unwrap().name, "Music");
-    assert_eq!(&audio.tracks[..video.tracks.len()], video.tracks);
+    assert_eq!(audio.tracks.headers().last().unwrap().name, "Music");
+    assert_eq!(
+        audio
+            .tracks
+            .headers()
+            .take(video.tracks.len())
+            .collect::<Vec<_>>(),
+        video.tracks.headers().collect::<Vec<_>>()
+    );
 }

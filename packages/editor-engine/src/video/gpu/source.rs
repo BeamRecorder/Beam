@@ -28,6 +28,7 @@ pub(crate) fn configure(source: &ges::TrackElement) -> Result<()> {
             _ => continue,
         };
         let replacement = gst::parse::bin_from_description(description, true).map_err(media)?;
+        super::meta::preserve_bin(&replacement)?;
         replace(&element, &replacement)?;
     }
     Ok(())
@@ -53,15 +54,18 @@ pub(crate) fn replace(old: &gst::Element, new: &gst::Bin) -> Result<()> {
     src.unlink(&after).map_err(media)?;
     parent.remove(old).map_err(media)?;
     parent.add(new).map_err(media)?;
+    // Other stock filters are still CPU-only during this NULL-state rewrite.
+    // Negotiate caps once the complete GPU graph prerolls, as GES itself does.
     before
-        .link(
+        .link_full(
             &new.static_pad("sink")
                 .ok_or_else(|| media("GPU clip filter has no input"))?,
+            gst::PadLinkCheck::empty(),
         )
         .map_err(media)?;
     new.static_pad("src")
         .ok_or_else(|| media("GPU clip filter has no output"))?
-        .link(&after)
+        .link_full(&after, gst::PadLinkCheck::empty())
         .map_err(media)?;
     Ok(())
 }

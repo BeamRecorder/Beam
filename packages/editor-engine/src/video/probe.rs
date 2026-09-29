@@ -57,9 +57,29 @@ pub fn discover(path: &Path) -> Result<Probe> {
 /// Copies a selected source into the project's media directory without touching the original.
 /// An interrupted copy never becomes a referenced asset.
 pub fn import(root: &Path, path: &Path) -> Result<MediaAsset> {
-    let metadata = discover(path)?;
+    import_cancellable(
+        root,
+        path,
+        &std::sync::atomic::AtomicBool::new(false),
+        |_, _| Ok(()),
+    )
+}
+pub fn import_cancellable(
+    root: &Path,
+    path: &Path,
+    cancel: &std::sync::atomic::AtomicBool,
+    progress: impl FnMut(u64, u64) -> Result<()>,
+) -> Result<MediaAsset> {
     let id = Uuid::new_v4();
     let directory = root.join("media");
+    if directory
+        .symlink_metadata()
+        .is_ok_and(|metadata| !metadata.is_dir() || metadata.file_type().is_symlink())
+    {
+        return Err(EditorError::Invalid(
+            "managed media directory is not a regular directory".into(),
+        ));
+    }
     fs::create_dir_all(&directory).map_err(|e| crate::shared::storage(&directory, e))?;
     let extension = path
         .extension()
@@ -68,9 +88,14 @@ pub fn import(root: &Path, path: &Path) -> Result<MediaAsset> {
         .ok_or_else(|| EditorError::Invalid("media filename needs an extension".into()))?;
     let relative = format!("media/{id}.{extension}");
     let destination = root.join(&relative);
-    let temporary = tempfile::NamedTempFile::new_in(&directory)
+    let mut temporary = tempfile::NamedTempFile::new_in(&directory)
         .map_err(|e| crate::shared::storage(&directory, e))?;
-    fs::copy(path, temporary.path()).map_err(|e| crate::shared::storage(path, e))?;
+    let identity = super::import_copy::copy(path, temporary.as_file_mut(), cancel, progress)?;
+    // Metadata and identity describe the immutable copy actually referenced by clips.
+    let metadata = discover(temporary.path())?;
+    if cancel.load(std::sync::atomic::Ordering::Acquire) {
+        return Err(EditorError::Stopped);
+    }
     temporary
         .as_file()
         .sync_all()
@@ -78,6 +103,14 @@ pub fn import(root: &Path, path: &Path) -> Result<MediaAsset> {
     temporary
         .persist_noclobber(&destination)
         .map_err(|e| crate::shared::storage(&destination, e.error))?;
+    if let Err(error) = fs::File::open(&directory).and_then(|file| file.sync_all())
+        && !matches!(
+            error.kind(),
+            std::io::ErrorKind::PermissionDenied | std::io::ErrorKind::InvalidInput
+        )
+    {
+        return Err(crate::shared::storage(&directory, error));
+    }
     Ok(MediaAsset {
         id,
         name: path
@@ -86,14 +119,16 @@ pub fn import(root: &Path, path: &Path) -> Result<MediaAsset> {
             .unwrap_or("Media")
             .to_owned(),
         path: relative,
+        identity: Some(identity),
         duration_ms: metadata.duration_ms,
         width: metadata.width,
         height: metadata.height,
         has_video: metadata.has_video,
         has_audio: metadata.has_audio,
         is_image: metadata.is_image,
-        cursor: vec![],
-        zooms: vec![],
+        cursor: vec![].into(),
+        zooms: vec![].into(),
         recording: false,
+        cursor_mode: beam_editor_domain::recording::style_types::CursorMode::Absent,
     })
 }

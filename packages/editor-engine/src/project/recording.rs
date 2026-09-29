@@ -2,6 +2,11 @@
 use super::validation;
 use crate::video::zoom::suggestions;
 use crate::{Clip, EditorError, Effects, MediaAsset, Project, Result, Track, TrackKind};
+use beam_editor_domain::recording::{
+    decisions,
+    style_types::CursorMode,
+    types::{CursorInteractionType, CursorPoint},
+};
 use beam_media_manifest::{
     ProjectManifest, SessionManifest, TrackFormat, TrackKind as RecordedKind, TrackStatus,
 };
@@ -25,7 +30,7 @@ pub fn open(root: &Path) -> Result<Project> {
     });
     project.id = Uuid::parse_str(&manifest.project_id.to_string())
         .map_err(|e| EditorError::Invalid(e.to_string()))?;
-    project.tracks.clear();
+    project.tracks = Default::default();
     let mut offset = 0;
     for reference in manifest.sessions {
         validation::relative_path(&reference.relative_path)?;
@@ -99,7 +104,8 @@ pub fn open(root: &Path) -> Result<Project> {
                     continue;
                 }
                 let relative = format!("{}/{}", reference.relative_path, segment.path);
-                validation::source_path(root, &relative)?;
+                let source = validation::source_path(root, &relative)?;
+                let version = crate::service::artifacts::version(&source)?;
                 let (width, height) = match recorded.format {
                     TrackFormat::Video { width, height, .. } => (width, height),
                     _ => (0, 0),
@@ -116,7 +122,12 @@ pub fn open(root: &Path) -> Result<Project> {
                             .cloned()
                             .map(|mut p| {
                                 p.time_ms -= start_ms;
-                                p
+                                CursorPoint {
+                                    time_ms: p.time_ms,
+                                    cx: p.cx,
+                                    cy: p.cy,
+                                    interaction_type: p.interaction_type.map(interaction),
+                                }
                             })
                             .collect::<Vec<_>>(),
                         duration,
@@ -126,6 +137,10 @@ pub fn open(root: &Path) -> Result<Project> {
                 };
                 let zooms = suggestions::generate(&cursor, duration, &[]);
                 let asset = MediaAsset {
+                    identity: Some(beam_editor_domain::project::types::SourceIdentity {
+                        sha256: version.sha256,
+                        byte_length: version.byte_length,
+                    }),
                     is_image: false,
                     id: Uuid::new_v4(),
                     name: format!("{:?}", recorded.kind),
@@ -135,9 +150,10 @@ pub fn open(root: &Path) -> Result<Project> {
                     height,
                     has_video: is_video,
                     has_audio: !is_video,
-                    cursor,
-                    zooms,
+                    cursor: cursor.into(),
+                    zooms: zooms.into(),
                     recording: true,
+                    cursor_mode: cursor_mode(recorded.kind, session.cursor_mode),
                 };
                 let effects = if recorded.kind == RecordedKind::Camera {
                     Effects {
@@ -150,8 +166,14 @@ pub fn open(root: &Path) -> Result<Project> {
                 } else {
                     Effects::default()
                 };
-                project.clips.push(Clip {
+                let mut clip = Clip {
+                    cursor_style: None,
                     title: None,
+                    instances: vec![],
+                    rate: Default::default(),
+                    animation_offset_ms: 0,
+                    generator: None,
+                    link_group: None,
                     id: Uuid::new_v4(),
                     asset_id: asset.id,
                     track_id: track.id,
@@ -159,22 +181,24 @@ pub fn open(root: &Path) -> Result<Project> {
                     source_in_ms: 0,
                     duration_ms: duration,
                     effects,
-                });
+                };
+                decisions::apply_suggestions(&mut clip, &asset);
+                project.clips.try_push(clip)?;
                 project.assets.push(asset);
             }
-            project.tracks.push(track);
+            project.tracks.try_push(track)?;
         }
         offset += session.duration_ns / 1_000_000;
     }
-    if !project.tracks.iter().any(|t| t.kind == TrackKind::Video) {
+    if !project.tracks.headers().any(|t| t.kind == TrackKind::Video) {
         project
             .tracks
-            .insert(0, Track::new("Video".into(), TrackKind::Video));
+            .try_insert(0, Track::new("Video".into(), TrackKind::Video))?;
     }
-    if !project.tracks.iter().any(|t| t.kind == TrackKind::Audio) {
+    if !project.tracks.headers().any(|t| t.kind == TrackKind::Audio) {
         project
             .tracks
-            .push(Track::new("Audio".into(), TrackKind::Audio));
+            .try_push(Track::new("Audio".into(), TrackKind::Audio))?;
     }
     validation::project(&project)?;
     Ok(project)
@@ -192,4 +216,30 @@ fn read<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T> {
         ));
     }
     Ok(serde_json::from_slice(&bytes)?)
+}
+
+fn cursor_mode(kind: RecordedKind, mode: beam_media_manifest::CursorMode) -> CursorMode {
+    if kind != RecordedKind::Screen {
+        return CursorMode::Absent;
+    }
+    match mode {
+        beam_media_manifest::CursorMode::Separated => CursorMode::Separated,
+        beam_media_manifest::CursorMode::BakedIn => CursorMode::BakedIn,
+        beam_media_manifest::CursorMode::Absent => CursorMode::Absent,
+        beam_media_manifest::CursorMode::Unknown => CursorMode::Unknown,
+    }
+}
+fn interaction(kind: beam_screen::cursor::CursorInteractionType) -> CursorInteractionType {
+    match kind {
+        beam_screen::cursor::CursorInteractionType::Move => CursorInteractionType::Move,
+        beam_screen::cursor::CursorInteractionType::Click => CursorInteractionType::Click,
+        beam_screen::cursor::CursorInteractionType::DoubleClick => {
+            CursorInteractionType::DoubleClick
+        }
+        beam_screen::cursor::CursorInteractionType::RightClick => CursorInteractionType::RightClick,
+        beam_screen::cursor::CursorInteractionType::MiddleClick => {
+            CursorInteractionType::MiddleClick
+        }
+        beam_screen::cursor::CursorInteractionType::Mouseup => CursorInteractionType::Mouseup,
+    }
 }

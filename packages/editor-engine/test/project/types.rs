@@ -2,10 +2,13 @@ use beam_editor_engine::{Canvas, Document, EditState, Project};
 #[test]
 fn empty_document_has_distinct_lanes_and_versioned_history() {
     let document = Document::new(Project::new("Empty".into()));
-    assert_eq!(document.schema_version, 1);
+    assert_eq!(document.schema_version, 2);
     assert_eq!(document.revision, 0);
     assert_eq!(document.project.duration_ms(), 0);
-    assert_ne!(document.project.tracks[0].id, document.project.tracks[1].id);
+    assert_ne!(
+        document.project.tracks.headers().next().unwrap().id,
+        document.project.tracks.headers().nth(1).unwrap().id
+    );
     assert!(document.undo.is_empty());
 }
 #[test]
@@ -20,7 +23,7 @@ fn history_restores_edits_without_discarding_library_sources() {
     let mut project = crate::fixtures::project();
     let state = EditState::capture(&project);
     project.name = "Changed".into();
-    project.clips.clear();
+    project.clips = Default::default();
     state.restore(&mut project);
     assert_eq!(project.name, "Test");
     assert_eq!(project.clips.len(), 1);

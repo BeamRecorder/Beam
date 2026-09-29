@@ -9,18 +9,19 @@ import { useTR } from '../../shared/i18n';
 import { Panel } from '../shared/Panel';
 import type { EditorState } from '../shared/useEditor';
 import type { PreviewQuality } from '../shared/editorTypes';
-import { frameTimecode, parseTimecode } from './timecode';
+import { frameTimecode, parseTimecode, stepFrame } from './timecode';
 
 /** Full/Half/Quarter change the native GPU preview resolution; originals and exports keep their size. */
 export function Preview(props: { editor: EditorState; width: number }) {
   const theme = useTheme<WidgetTheme>(), TR = useTR('NativeEditor');
   const canvas = () => props.editor.snapshot()?.project.canvas;
   const fps = () => canvas()?.fps ?? 30;
+  const denominator = () => canvas()?.fpsDenominator ?? 1;
   const [position, setPosition] = createSignal('00:00:00:00');
-  createEffect(() => setPosition(frameTimecode(props.editor.transport().positionMs, fps())));
+  createEffect(() => setPosition(frameTimecode(props.editor.transport().positionMs, fps(),denominator())));
   const disabled = () => !props.editor.transport().durationMs || props.editor.busy();
   return <Panel width="100%" title={TR('preview')}
-    trailing={<text color={theme().mutedForeground} fontSize={11} text={canvas() ? `${canvas()!.width} × ${canvas()!.height} · ${fps()} fps` : ''} />}>
+    trailing={<text color={theme().mutedForeground} fontSize={11} text={canvas() ? `${canvas()!.width} × ${canvas()!.height} · ${Number((fps()/denominator()).toFixed(3))} fps` : ''} />}>
     <column width="100%" grow={1} minHeight={0} justifyContent="center" alignItems="center" padding={12} background={theme().muted}>
       <Show when={props.editor.canvasId()} fallback={<column gap={12} alignItems="center">
         <Icon name="monitor" size={36} color={theme().mutedForeground} />
@@ -33,18 +34,18 @@ export function Preview(props: { editor: EditorState; width: number }) {
     <row id="editor-preview-controls" containerScope="editor-preview-controls" width="100%" height={46}
       shrink={0} padding={{ start: 10, end: 10 }} gap={4} alignItems="center">
       <InputField width={108} accessibleName={TR('playhead')} value={position()} onValueChange={setPosition}
-        invalid={parseTimecode(position(), fps()) === undefined} disabled={disabled()}
-        onSubmit={() => { const time = parseTimecode(position(), fps()); if (time !== undefined) void props.editor.seek(time); }} />
+        invalid={parseTimecode(position(), fps(),denominator()) === undefined} disabled={disabled()}
+        onSubmit={() => { const time = parseTimecode(position(), fps(),denominator()); if (time !== undefined) void props.editor.seek(time); }} />
       <PreviewControl width={90} minimumWidth={650}>
         <row width="100%" height="100%" alignItems="center"><text width="100%" fontSize={11} lineClamp={1}
-          color={theme().mutedForeground} text={`/ ${frameTimecode(props.editor.transport().durationMs, fps())}`} /></row>
+          color={theme().mutedForeground} text={`/ ${frameTimecode(props.editor.transport().durationMs, fps(),denominator())}`} /></row>
       </PreviewControl>
       <container grow={1} />
       <PreviewControl width={26} minimumWidth={480}><IconButton icon="skip-back" label={TR('goStart')} disabled={disabled()} onClick={() => void props.editor.seek(0)} /></PreviewControl>
-      <PreviewControl width={26} minimumWidth={380}><IconButton icon="step-back" label={TR('previousFrame')} disabled={disabled()} onClick={() => void props.editor.seek(props.editor.transport().positionMs - 1000 / fps())} /></PreviewControl>
+      <PreviewControl width={26} minimumWidth={380}><IconButton icon="step-back" label={TR('previousFrame')} disabled={disabled()} onClick={() => void props.editor.seek(stepFrame(props.editor.transport().positionMs,-1,fps(),denominator()))} /></PreviewControl>
       <IconButton icon={props.editor.transport().playing ? 'pause' : 'play'} accent label={TR(props.editor.transport().playing ? 'pause' : 'play')} disabled={disabled()} onClick={() => void props.editor.toggle()} />
-      <PreviewControl width={26} minimumWidth={380}><IconButton icon="step-forward" label={TR('nextFrame')} disabled={disabled()} onClick={() => void props.editor.seek(props.editor.transport().positionMs + 1000 / fps())} /></PreviewControl>
-      <PreviewControl width={26} minimumWidth={480}><IconButton icon="skip-forward" label={TR('goEnd')} disabled={disabled()} onClick={() => void props.editor.seek(props.editor.transport().durationMs - 1000 / fps())} /></PreviewControl>
+      <PreviewControl width={26} minimumWidth={380}><IconButton icon="step-forward" label={TR('nextFrame')} disabled={disabled()} onClick={() => void props.editor.seek(stepFrame(props.editor.transport().positionMs,1,fps(),denominator()))} /></PreviewControl>
+      <PreviewControl width={26} minimumWidth={480}><IconButton icon="skip-forward" label={TR('goEnd')} disabled={disabled()} onClick={() => void props.editor.seek(stepFrame(props.editor.transport().durationMs,-1,fps(),denominator()))} /></PreviewControl>
       <container grow={1} />
       <PreviewControl width={68} minimumWidth={560}><Select id="editor-aspect" width="100%" contentWidth={160} label={TR('aspectRatio')}
         value={canvas()?.width === canvas()?.height ? '1:1' : (canvas()?.width ?? 0) > (canvas()?.height ?? 0) ? '16:9' : '9:16'}

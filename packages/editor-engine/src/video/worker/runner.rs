@@ -6,10 +6,17 @@ use std::{
     time::Duration,
 };
 
-pub(crate) fn run(commands: Receiver<Command>, frames: Frames, exporter: Exporter) {
+pub(crate) fn run(
+    commands: Receiver<Command>,
+    frames: Frames,
+    exporter: Exporter,
+    changes: std::sync::Arc<super::super::change_types::Changes>,
+) {
     let context = gst::glib::MainContext::new();
     if let Err(error) = context.with_thread_default(|| {
         let mut worker = Worker {
+            preload_task: None,
+            preview_window: Default::default(),
             store: None,
             document: None,
             pipeline: None,
@@ -20,9 +27,10 @@ pub(crate) fn run(commands: Receiver<Command>, frames: Frames, exporter: Exporte
             error: None,
             recovered: false,
             exporter,
+            changes,
         };
         loop {
-            let command = if worker.playing {
+            let command = if worker.playing || worker.preload_task.is_some() {
                 match commands.recv_timeout(Duration::from_millis(33)) {
                     Ok(c) => Some(c),
                     Err(RecvTimeoutError::Timeout) => None,
@@ -94,8 +102,72 @@ pub(crate) fn run(commands: Receiver<Command>, frames: Frames, exporter: Exporte
                     Command::Edit(revision, edit, reply) => {
                         let _ = reply.send(worker.edit(revision, edit));
                     }
+                    Command::Transaction(request, reply) => {
+                        let _ = reply.send(worker.transaction(request));
+                    }
+                    Command::ValidateTransaction(request, reply) => {
+                        let result =
+                            worker
+                                .document
+                                .as_ref()
+                                .ok_or_else(no_project)
+                                .and_then(|doc| {
+                                    beam_editor_domain::commands::prepare(doc, &request)
+                                        .map(|p| p.receipt)
+                                });
+                        let _ = reply.send(result);
+                    }
+                    Command::Document(reply) => {
+                        let _ = reply.send(worker.document.clone().ok_or_else(no_project));
+                    }
+                    Command::ProjectRoot(reply) => {
+                        let _ = reply.send(
+                            worker
+                                .store
+                                .as_ref()
+                                .map(|s| s.root.clone())
+                                .ok_or_else(no_project),
+                        );
+                    }
+                    Command::GarbageCollect(project_id, revision, pins, reply) => {
+                        let result = (|| {
+                            if worker.playing {
+                                return Err(crate::EditorError::Invalid(
+                                    "pause playback before collecting decision blocks".into(),
+                                ));
+                            }
+                            let document = worker.document.as_ref().ok_or_else(no_project)?;
+                            if document.project.id != project_id {
+                                return Err(crate::EditorError::Invalid(
+                                    "garbage collection project scope is stale".into(),
+                                ));
+                            }
+                            if document.revision != revision {
+                                return Err(crate::EditorError::Conflict {
+                                    expected: revision,
+                                    actual: document.revision,
+                                });
+                            }
+                            worker
+                                .store
+                                .as_ref()
+                                .ok_or_else(no_project)?
+                                .garbage_collect(&pins)
+                        })();
+                        let _ = reply.send(result);
+                    }
                     Command::Import(paths, reply) => {
                         let _ = reply.send(worker.import(paths));
+                    }
+                    Command::ImportPublication(context, paths, reply) => {
+                        let _ = reply.send(worker.import_publication(context, paths));
+                    }
+                    Command::PublishImport(root, context, prepared, cancel, reply) => {
+                        let _ =
+                            reply.send(worker.publish_import(root, context, *prepared, &cancel));
+                    }
+                    Command::Relink(context, asset, clips, source, reply) => {
+                        let _ = reply.send(worker.relink(context, asset, clips, source));
                     }
                     Command::Export(destination, container, reply) => {
                         let result = (|| {
@@ -116,6 +188,7 @@ pub(crate) fn run(commands: Receiver<Command>, frames: Frames, exporter: Exporte
                 context.iteration(false);
             }
             worker.messages();
+            worker.preload();
         }
     }) {
         eprintln!("Beam editor context: {error}");

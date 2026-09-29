@@ -1,3 +1,4 @@
+use crate::fixtures::decision;
 use beam_editor_engine::project::recording::open;
 use beam_media_manifest::{
     PermissionSnapshot, PlatformMetadata, ProjectId, ProjectManifest, ProjectSession, SegmentId,
@@ -25,6 +26,7 @@ fn recording(root: &Path) -> (ProjectManifest, SessionManifest) {
         extra: Default::default(),
     };
     let session = SessionManifest {
+        cursor_mode: Default::default(),
         schema_version: 2,
         project_id,
         session_id,
@@ -176,4 +178,42 @@ fn traversal_unknown_schema_telemetry_and_empty_metadata_fail_explicitly() {
     assert!(open(root.path()).is_err());
     fs::write(root.path().join("project.json"), b"{").unwrap();
     assert!(open(root.path()).is_err());
+}
+
+#[test]
+fn importer_uses_manifest_cursor_mode_and_never_guesses_from_telemetry() {
+    let root = tempfile::tempdir().unwrap();
+    let (project, mut session) = recording(root.path());
+    let directory = root
+        .path()
+        .join(&project.sessions[0].relative_path)
+        .join("cursor");
+    fs::create_dir(&directory).unwrap();
+    fs::write(
+        directory.join("telemetry.json"),
+        r#"{"version":2,"samples":[{"timeMs":1500,"cx":0.7,"cy":0.4,"interactionType":"click"}]}"#,
+    )
+    .unwrap();
+    for (stored, expected) in [
+        (
+            beam_media_manifest::CursorMode::Unknown,
+            beam_editor_domain::recording::style_types::CursorMode::Unknown,
+        ),
+        (
+            beam_media_manifest::CursorMode::Separated,
+            beam_editor_domain::recording::style_types::CursorMode::Separated,
+        ),
+        (
+            beam_media_manifest::CursorMode::BakedIn,
+            beam_editor_domain::recording::style_types::CursorMode::BakedIn,
+        ),
+    ] {
+        session.cursor_mode = stored;
+        save(root.path(), &project, &session);
+        let editor = open(root.path()).unwrap();
+        assert_eq!(editor.assets[0].cursor_mode, expected);
+        assert!(!editor.assets[0].cursor.is_empty());
+        assert!(!decision(&editor.clips, 0).instances.is_empty());
+        assert!(!decision(&editor.clips, 0).effects.auto_zoom);
+    }
 }

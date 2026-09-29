@@ -3,6 +3,10 @@ use beam_editor_engine::{
     export::types::{Container, ExportPhase},
 };
 use std::time::{Duration, Instant};
+mod assets;
+mod presentation;
+mod window;
+mod window_types;
 #[test]
 #[ignore = "requires a hardware video encoder and OpenGL; uses no GUI"]
 fn ges_import_split_seek_and_export_use_the_same_timeline() {
@@ -120,4 +124,27 @@ fn failed_media_rebuild_keeps_the_previous_document_and_sources() {
     let restored = controller.retry().unwrap();
     assert_eq!(restored.revision, imported.revision);
     assert!(restored.transport.error.is_none());
+}
+#[test]
+fn failed_compound_import_preserves_the_document_sources_and_managed_directory() {
+    let root = tempfile::tempdir().unwrap();
+    let media = tempfile::tempdir().unwrap();
+    let controller = beam_editor_engine::EditorController::new().unwrap();
+    controller
+        .create(root.path().into(), "Atomic import".into())
+        .unwrap();
+    let before = controller.document().unwrap();
+    let valid = crate::fixtures::media(media.path(), "original.webm", false);
+    let original = std::fs::read(&valid).unwrap();
+    let invalid = media.path().join("invalid.webm");
+    std::fs::write(&invalid, b"not media").unwrap();
+    assert!(controller.import(vec![valid.clone(), invalid]).is_err());
+    assert_eq!(controller.document().unwrap(), before);
+    assert_eq!(std::fs::read(&valid).unwrap(), original);
+    assert_eq!(
+        std::fs::read_dir(root.path().join("media"))
+            .unwrap()
+            .count(),
+        0
+    );
 }

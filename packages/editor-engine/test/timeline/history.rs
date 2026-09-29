@@ -30,8 +30,7 @@ fn redo_is_invalidated_by_a_new_edit_and_noop_preserves_revision() {
 #[test]
 fn fifty_state_budget_does_not_duplicate_immutable_telemetry() {
     let mut document = Document::new(crate::fixtures::project());
-    document.project.assets[0]
-        .cursor
+    std::sync::Arc::make_mut(&mut document.project.assets[0].cursor)
         .push(crate::fixtures::point(0, 0.5, 0.5, None));
     for index in 0..70 {
         document = edited(

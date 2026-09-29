@@ -29,8 +29,8 @@ fn gpu_exports_preserve_visible_pixels_canvas_dimensions_and_originals() {
     let asset = beam_editor_engine::video::probe::import(root.path(), &source).unwrap();
     let mut project = crate::fixtures::project();
     project.canvas = Canvas::from_source(320, 180);
-    project.clips[0].asset_id = asset.id;
-    project.clips[0].duration_ms = asset.duration_ms;
+    crate::video::clip_mut(&mut project, 0).asset_id = asset.id;
+    crate::video::clip_mut(&mut project, 0).duration_ms = asset.duration_ms;
     project.assets = vec![asset];
     {
         ProjectStore::lock(root.path())
@@ -75,4 +75,57 @@ fn gpu_exports_preserve_visible_pixels_canvas_dimensions_and_originals() {
         pipeline.set_state(gst::State::Null).unwrap();
     }
     assert_eq!(std::fs::read(source).unwrap(), original);
+}
+
+#[test]
+#[ignore = "real native sequence alpha, GL and opaque VA VP9 export"]
+fn sequence_alpha_is_resolved_against_the_canvas_for_opaque_hardware_output() {
+    use beam_editor_domain::{
+        animation::{Binding, Value},
+        effects::definition,
+    };
+    use beam_editor_engine::{
+        export::{segments, types::VideoEncoder},
+        video::scoped_pipeline,
+    };
+    crate::fixtures::context(|| {
+        let root = tempfile::tempdir().unwrap();
+        let mut project = crate::video::effects::project();
+        project.canvas.width = 128;
+        project.canvas.height = 96;
+        project.canvas.background = 0xff0000ff;
+        let mut opacity = definition(&project.definitions, "beam.opacity", 2)
+            .unwrap()
+            .instantiate();
+        opacity
+            .parameters
+            .insert("opacity".into(), Binding::constant(Value::Number(0.5)));
+        project.sequence_instances.push(opacity);
+        let output = root.path().join("alpha.webm");
+        let report = segments::render_with_source(
+            root.path(),
+            &project,
+            &output,
+            Container::Webm,
+            VideoEncoder::new("VP9", "video/x-vp9", "vavp9enc"),
+            std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            |_| {},
+            Default::default(),
+            scoped_pipeline::build_window,
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!((report.video_frames, report.audio_samples), (30, 0));
+        let frames = super::scopes::pixels(&output);
+        assert_eq!(frames.len(), 30);
+        for pixel in frames {
+            assert!(
+                (i16::from(pixel[0]) - 128).abs() <= 10
+                    && pixel[1] < 10
+                    && (i16::from(pixel[2]) - 128).abs() <= 10
+                    && pixel[3] == 255,
+                "sequence alpha must blend red over blue: {pixel:?}"
+            );
+        }
+    });
 }

@@ -2,7 +2,6 @@
 use super::types::{Container, ExportPhase, ExportStatus};
 use crate::video::pipeline::media;
 use crate::{EditorError, Project, Result};
-use ges::prelude::*;
 use std::{
     fs::File,
     path::{Path, PathBuf},
@@ -74,6 +73,9 @@ impl Exporter {
                         status.progress = 1.;
                     }
                     Ok(false) => status.phase = ExportPhase::Cancelled,
+                    Err(EditorError::Stopped) if job.cancel.load(Ordering::Acquire) => {
+                        status.phase = ExportPhase::Cancelled
+                    }
                     Err(error) => {
                         status.phase = ExportPhase::Failed;
                         status.error = Some(error.to_string());
@@ -97,6 +99,36 @@ pub fn render(
     container: Container,
     job: &Exporter,
 ) -> Result<bool> {
+    render_with_progress(
+        root,
+        project,
+        destination,
+        container,
+        job.cancel.clone(),
+        |progress| {
+            job.status
+                .lock()
+                .unwrap_or_else(|p| p.into_inner())
+                .progress = progress;
+        },
+    )
+}
+/// The same renderer reports durable job progress without touching playback state.
+pub fn render_with_progress(
+    root: &Path,
+    project: &Project,
+    destination: &Path,
+    container: Container,
+    cancel: Arc<AtomicBool>,
+    mut progress: impl FnMut(f64),
+) -> Result<bool> {
+    if cancel.load(Ordering::Acquire) {
+        return Ok(false);
+    }
+    if project.duration_ms() == 0 {
+        return Err(EditorError::Invalid("add media before exporting".into()));
+    }
+    let versions = crate::service::job_snapshot::sources(root, project, &cancel)?;
     if destination.exists() {
         return Err(EditorError::Invalid(
             "choose a new export filename; existing files are preserved".into(),
@@ -112,55 +144,27 @@ pub fn render(
         .tempfile_in(parent)
         .map_err(|e| crate::shared::storage(parent, e))?;
     let encoder = super::profile::hardware(container)?;
-    let pipeline = crate::video::pipeline::build(root, project)?;
-    let guard = crate::video::worker::PipelineGuard(pipeline.clone());
-    let profile = super::profile::build(
+    if !super::segments::render(
+        root,
+        project,
+        temporary.path(),
         container,
         encoder,
-        crate::video::pipeline::has_audio(project),
-    )?;
-    pipeline
-        .set_render_settings(&crate::video::probe::uri(temporary.path())?, &profile)
-        .map_err(media)?;
-    pipeline
-        .set_mode(ges::PipelineFlags::RENDER)
-        .map_err(media)?;
-    super::gpu::attach(&pipeline, encoder)?;
-    pipeline.set_state(gst::State::Playing).map_err(media)?;
-    let bus = pipeline
-        .bus()
-        .ok_or_else(|| EditorError::Media("export has no message bus".into()))?;
-    loop {
-        if job.cancel.load(Ordering::Acquire) {
-            return Ok(false);
-        }
-        if let Some(message) = bus.timed_pop(gst::ClockTime::from_mseconds(100)) {
-            match message.view() {
-                gst::MessageView::Eos(..) => break,
-                gst::MessageView::Error(error) => {
-                    return Err(media(format!(
-                        "{} ({})",
-                        error.error(),
-                        error.debug().unwrap_or_default()
-                    )));
-                }
-                _ => {}
-            }
-        }
-        let current = pipeline
-            .query_position::<gst::ClockTime>()
-            .map_or(0, |t| t.mseconds());
-        job.status
-            .lock()
-            .unwrap_or_else(|p| p.into_inner())
-            .progress = (current as f64 / project.duration_ms() as f64).clamp(0., 0.99);
-        let context = gst::glib::MainContext::thread_default()
-            .ok_or_else(|| EditorError::Media("export has no owning context".into()))?;
-        while context.pending() {
-            context.iteration(false);
-        }
+        cancel.clone(),
+        |position_ms| {
+            progress((position_ms as f64 / project.duration_ms() as f64).clamp(0., 0.99));
+        },
+    )? {
+        return Ok(false);
     }
-    drop(guard);
+    if cancel.load(Ordering::Acquire) {
+        return Ok(false);
+    }
+    if crate::service::job_snapshot::sources(root, project, &cancel)? != versions {
+        return Err(EditorError::Invalid(
+            "source bytes changed before export publication".into(),
+        ));
+    }
     File::open(temporary.path())
         .and_then(|file| file.sync_all())
         .map_err(|e| crate::shared::storage(temporary.path(), e))?;

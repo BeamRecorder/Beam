@@ -187,6 +187,17 @@ pub fn request_linux_input_access() -> Result<InputAccessStatus, CaptureError> {
     }
 }
 
+/// Reconnects a previously installed helper without entering the installation flow.
+pub fn auto_start_installed_linux_input_access() -> Result<InputAccessStatus, CaptureError> {
+    if !command_on_path("pkexec") {
+        return Ok(linux_input_access_status());
+    }
+    if helper_launch()?.1 != "stream" {
+        return Ok(linux_input_access_status());
+    }
+    request_linux_input_access()
+}
+
 fn try_request_linux_input_access() -> Result<InputAccessStatus, CaptureError> {
     if !command_on_path("pkexec") {
         return Err(CaptureError::Unsupported(

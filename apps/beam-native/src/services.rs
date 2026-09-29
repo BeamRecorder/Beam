@@ -268,6 +268,8 @@ impl ServiceRegistry {
                 | "windowPicker"
                 | "windowHighlight"
                 | "teleprompter"
+                | "projects"
+                | "editorLoading"
         ) {
             Some(ServiceOutcome::Unsupported(format!(
                 "window {window} is unavailable"

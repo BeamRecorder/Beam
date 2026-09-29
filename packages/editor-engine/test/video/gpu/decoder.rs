@@ -21,6 +21,28 @@ fn native_gpu_decoder_bridge_is_selected_and_preserves_original_factory_ranks() 
         "filesrc location=\"{}\" ! matroskademux ! decodebin ! video/x-raw(memory:GLMemory),format=RGBA,texture-target=2D ! gldownload ! video/x-raw,format=RGBA ! fakesink name=decoded signal-handoffs=true", source.display()
     )).unwrap().downcast::<gst::Pipeline>().unwrap();
     pipeline.set_context(gpu::display_context());
+    let leases = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let observed = leases.clone();
+    pipeline.connect_deep_element_added(move |_, _, element| {
+        if element
+            .factory()
+            .is_some_and(|factory| factory.name() == "beamglvavp8dec")
+        {
+            let observed = observed.clone();
+            element.static_pad("src").unwrap().add_probe(
+                gst::PadProbeType::BUFFER,
+                move |_, info| {
+                    let buffer = info.buffer().unwrap();
+                    observed.lock().unwrap().push(
+                        buffer
+                            .iter_meta::<gst::ParentBufferMeta>()
+                            .any(|meta| meta.parent().pts() == buffer.pts()),
+                    );
+                    gst::PadProbeReturn::Ok
+                },
+            );
+        }
+    });
     let ranges = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
     let delivered = std::sync::Arc::clone(&ranges);
     pipeline
@@ -62,6 +84,12 @@ fn native_gpu_decoder_bridge_is_selected_and_preserves_original_factory_ranks() 
         .filter_map(|element| element.factory().map(|factory| factory.name().to_string()))
         .collect();
     pipeline.set_state(gst::State::Null).unwrap();
+    let leases = leases.lock().unwrap();
+    assert!(!leases.is_empty(), "observe actual GPU decoder outputs");
+    assert!(
+        leases.iter().all(|retained| *retained),
+        "converted GPU buffers lease their native decoder input"
+    );
     assert!(
         matches!(message.view(), gst::MessageView::Eos(..)),
         "{message:?}"

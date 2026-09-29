@@ -2,9 +2,7 @@ use beam_editor_engine::video::types::{AssetView, ProjectView, Transport};
 #[test]
 fn native_asset_view_excludes_paths_and_cursor_payloads() {
     let mut source = crate::fixtures::asset(1000);
-    source
-        .cursor
-        .push(crate::fixtures::point(0, 0.5, 0.5, None));
+    std::sync::Arc::make_mut(&mut source.cursor).push(crate::fixtures::point(0, 0.5, 0.5, None));
     let json = serde_json::to_value(AssetView::from(&source)).unwrap();
     assert_eq!(json["hasCursor"], true);
     assert!(json.get("path").is_none());
@@ -15,7 +13,14 @@ fn project_view_keeps_edit_metadata_and_warnings() {
     let mut project = crate::fixtures::project();
     project.warnings.push("audio unavailable".into());
     let view = ProjectView::from(&project);
-    assert_eq!(view.clips, project.clips);
+    let expected = project
+        .clips
+        .headers()
+        .map(|clip| {
+            beam_editor_domain::protocol::ClipOverview::from_header(clip, &project.definitions)
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(view.clips, expected);
     assert_eq!(view.warnings, project.warnings);
 }
 #[test]

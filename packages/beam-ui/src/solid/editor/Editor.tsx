@@ -56,16 +56,7 @@ function Workspace(props: { api: EditorApi; beam: BeamApi }) {
       accessibleName={TR('editor')}
       role="group"
       keyboardActivation="none"
-      onKey={(event) => {
-        if (event.state !== 'pressed' || event.repeat || editor.busy()) return;
-        if ((event.control || event.super) && event.key.toLowerCase() === 'z') {
-          if (event.shift && editor.snapshot()?.canRedo) void editor.edit({ type: 'redo' });
-          else if (!event.shift && editor.snapshot()?.canUndo) void editor.edit({ type: 'undo' });
-        } else if (event.key === 'Space' || event.key === ' ') void editor.toggle();
-        else if (event.key === 'Delete' && editor.selected())
-          void editor.edit({ type: 'remove', id: editor.selected()! });
-        else if (event.key === 'Escape') editor.select(undefined);
-      }}
+      onKey={event => editor.modifiers(!!(event.control || event.super || event.shift))}
     >
       <column width="100%" height="100%" minHeight={0} background={theme().sidebar}>
         <row width="100%" height={40} shrink={0} padding={{ start: 14, end: 12 }} gap={8} alignItems="center">

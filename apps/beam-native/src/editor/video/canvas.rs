@@ -19,6 +19,7 @@ impl Factory {
             generation: std::sync::atomic::AtomicU64::new(0),
             resources: Default::default(),
             cover: false,
+            source: None,
         }
     }
 }
@@ -73,6 +74,8 @@ impl GpuCanvasFactory for Factory {
             }),
             texture: None,
             cover: self.cover,
+            source: self.source.clone(),
+            seen_source: None,
         }))
     }
 }
@@ -80,7 +83,7 @@ impl Renderer {
     fn upload(
         &mut self,
         context: &mut GpuCanvasRenderContext<'_>,
-        frame: PreviewFrame,
+        frame: &PreviewFrame,
     ) -> Result<(), GpuCanvasError> {
         let size = [frame.width, frame.height];
         if frame.width == 0
@@ -92,7 +95,7 @@ impl Renderer {
         {
             return Err(GpuCanvasError::new("invalid GStreamer preview dimensions"));
         }
-        if let Some(external) = frame.external {
+        if let Some(external) = frame.external.clone() {
             let imported = super::external::import(context, size, external)?;
             let image = imported.texture(context).clone();
             self.texture = Some(self.bind(context.device(), image, size, Some(imported)));
@@ -180,8 +183,24 @@ impl Renderer {
 }
 impl GpuCanvasRenderer for Renderer {
     fn render(&mut self, context: &mut GpuCanvasRenderContext<'_>) -> Result<(), GpuCanvasError> {
-        if let Some(frame) = self.mailbox.take() {
-            self.upload(context, frame)?;
+        if let Some(source) = &self.source {
+            let frame = source.lock().unwrap_or_else(|p| p.into_inner()).clone();
+            if let Some(frame) = frame {
+                if self
+                    .seen_source
+                    .as_ref()
+                    .is_none_or(|seen| !std::sync::Arc::ptr_eq(seen, &frame))
+                {
+                    self.upload(context, &frame)?;
+                    self.seen_source = Some(frame);
+                }
+            } else {
+                self.texture = None;
+                self.seen_source = None;
+            }
+            self.mailbox.clear();
+        } else if let Some(frame) = self.mailbox.take() {
+            self.upload(context, &frame)?;
         }
         let Some(texture) = &self.texture else {
             return Ok(());

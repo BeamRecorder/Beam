@@ -41,6 +41,17 @@ it('propagates native errors without fabricating projects or success', async () 
   await expect(api.open()).rejects.toThrow('missing source');
   await expect(api.export('webm')).rejects.toThrow('missing source');
 });
+it('forwards typed atomic commands and paged queries without transforming decisions',async()=>{
+  const call=vi.fn().mockResolvedValue({type:'presets',page:{revision:9,items:[],next:null,total:0}});
+  const api=new EditorApi({call} as unknown as ApplicationServices);
+  const operation={type:'instanceRename',clip:'clip',instance:'fx',name:'Warm'} as const;
+  await api.commands(9,'sequence',[operation]);
+  await api.query({kind:'presets',offset:0,limit:128});
+  expect(call.mock.calls).toEqual([
+    ['editor','commands',{revision:9,sequenceId:'sequence',commands:[{commandId:'command-0',operation}]}],
+    ['editor','query',{kind:'presets',offset:0,limit:128}],
+  ]);
+});
 it('keeps source previews and quality in narrow native services', async () => {
   const call = vi.fn().mockResolvedValue({ canvasId: 43 }), api = new EditorApi({ call } as unknown as ApplicationServices);
   await api.acquireVisual('p', 'asset', { kind: 'video', positionMs: 1024 }); await api.releaseVisual('key'); await api.quality('quarter');

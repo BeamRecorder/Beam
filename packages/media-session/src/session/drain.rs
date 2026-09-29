@@ -46,8 +46,8 @@ impl MediaSession {
         self.drain_events();
         self.observe_queues();
         let now = self.clock.now_ns();
+        self.manifest.duration_ns = self.gate.session_ns(now).unwrap_or(0);
         if now.saturating_sub(self.last_checkpoint_ns) >= 1_000_000_000 {
-            self.manifest.duration_ns = self.gate.session_ns(now).unwrap_or(0);
             self.manifest_writer.checkpoint(&self.manifest)?;
             self.last_checkpoint_ns = now;
         }

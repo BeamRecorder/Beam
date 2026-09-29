@@ -17,10 +17,16 @@ impl Decoder {
         let mut video = asset.clone();
         video.has_audio = false;
         project.assets.push(video);
-        project.clips.push(Clip {
+        let track_id = project
+            .tracks
+            .headers()
+            .next()
+            .ok_or_else(|| media("source artwork has no video track"))?
+            .id;
+        project.clips.try_push(Clip {
             id: uuid::Uuid::new_v4(),
             asset_id: asset.id,
-            track_id: project.tracks[0].id,
+            track_id,
             start_ms: 0,
             source_in_ms: 0,
             duration_ms: asset.duration_ms,
@@ -28,8 +34,14 @@ impl Decoder {
                 auto_zoom: false,
                 ..Effects::default()
             },
+            cursor_style: None,
             title: None,
-        });
+            instances: vec![],
+            rate: Default::default(),
+            animation_offset_ms: 0,
+            generator: None,
+            link_group: None,
+        })?;
         let frames = Frames::default();
         let pipeline = crate::video::pipeline::build(&source.root, &project)?;
         let guard = PipelineGuard(pipeline.clone());

@@ -24,6 +24,7 @@ pub struct EditorController {
     frames: Frames,
     exporter: Exporter,
     worker: Option<std::thread::JoinHandle<()>>,
+    changes: Arc<super::change_types::Changes>,
 }
 impl EditorController {
     /// Starts the exclusive editor actor; an idle actor is parked without a polling timer.
@@ -33,9 +34,11 @@ impl EditorController {
         let output = Arc::clone(&frames);
         let exporter = Exporter::default();
         let jobs = exporter.clone();
+        let changes = Arc::new(super::change_types::Changes::default());
+        let notifications = changes.clone();
         let worker = std::thread::Builder::new()
             .name("beam-editor".into())
-            .spawn(move || run(receiver, output, jobs))
+            .spawn(move || run(receiver, output, jobs, notifications))
             .map_err(|e| crate::shared::storage("editor worker", e))?;
         Ok(Self {
             visuals: super::visuals::VisualWorker::new()?,
@@ -43,7 +46,15 @@ impl EditorController {
             frames,
             exporter,
             worker: Some(worker),
+            changes,
         })
+    }
+    /// Runs on the editor actor after acceptance. Consumers must enqueue notifications.
+    pub fn set_change_consumer(
+        &self,
+        consumer: impl Fn(super::change_types::ProjectChanged) + Send + Sync + 'static,
+    ) {
+        self.changes.set_consumer(consumer);
     }
     /// Opens an existing native edit document or a manifest-authoritative recording.
     pub fn open(&self, root: PathBuf) -> Result<EditorSnapshot> {
@@ -86,9 +97,69 @@ impl EditorController {
     pub fn edit(&self, revision: u64, edit: Edit) -> Result<EditorSnapshot> {
         self.request(|reply| Command::Edit(revision, edit, reply))
     }
+    /// Applies the same atomic domain batch used by UI, CLI and MCP.
+    pub fn transaction(
+        &self,
+        request: beam_editor_domain::commands::types::Transaction,
+    ) -> Result<beam_editor_domain::commands::types::Receipt> {
+        self.request(|reply| Command::Transaction(request, reply))
+    }
+    /// Validates without publishing storage or render changes.
+    pub fn validate_transaction(
+        &self,
+        request: beam_editor_domain::commands::types::Transaction,
+    ) -> Result<beam_editor_domain::commands::types::Receipt> {
+        self.request(|reply| Command::ValidateTransaction(request, reply))
+    }
+    /// Returns the immutable accepted domain state for bounded service projections.
+    pub fn document(&self) -> Result<crate::Document> {
+        self.request(Command::Document)
+    }
+    /// Trusted hosts use this location to publish the owner's local endpoint.
+    pub fn project_root(&self) -> Result<PathBuf> {
+        self.request(Command::ProjectRoot)
+    }
+    /// Collects unreachable decision blocks while the owner actor is exclusive.
+    pub fn garbage_collect(
+        &self,
+        project_id: uuid::Uuid,
+        revision: u64,
+        pins: Vec<String>,
+    ) -> Result<beam_editor_domain::project::gc_types::GarbageCollection> {
+        self.request(|reply| Command::GarbageCollect(project_id, revision, pins, reply))
+    }
     /// Copies selected media and inserts it on a compatible lane as one history step.
     pub fn import(&self, paths: Vec<PathBuf>) -> Result<EditorSnapshot> {
         self.request(|reply| Command::Import(paths, reply))
+    }
+    /// Publishes explicit source identities under revision context with durable retry results.
+    pub fn import_publication(
+        &self,
+        context: beam_editor_domain::protocol::RenderContext,
+        paths: Vec<PathBuf>,
+    ) -> Result<beam_editor_domain::commands::import_types::ImportPublication> {
+        self.request(|reply| Command::ImportPublication(context, paths, reply))
+    }
+    pub(crate) fn publish_import(
+        &self,
+        root: PathBuf,
+        context: beam_editor_domain::protocol::RenderContext,
+        prepared: beam_editor_domain::commands::import_types::PreparedImport,
+        cancel: Arc<std::sync::atomic::AtomicBool>,
+    ) -> Result<beam_editor_domain::commands::import_types::ImportPublication> {
+        self.request(|reply| {
+            Command::PublishImport(root, context, Box::new(prepared), cancel, reply)
+        })
+    }
+    /// Publishes a verified source version and retargets explicit sequence clips atomically.
+    pub fn relink(
+        &self,
+        context: beam_editor_domain::protocol::RenderContext,
+        asset_id: uuid::Uuid,
+        clip_ids: Vec<uuid::Uuid>,
+        source: PathBuf,
+    ) -> Result<beam_editor_domain::commands::types::Receipt> {
+        self.request(|reply| Command::Relink(context, asset_id, clip_ids, source, reply))
     }
     /// Seeks the composed NLE timeline, never a guessed single source file.
     pub fn seek(&self, position_ms: u64) -> Result<Transport> {

@@ -17,6 +17,7 @@ pub(crate) enum Command {
     Start(SessionId, Reply<RecordingStatus>),
     Pause(SessionId, Reply<RecordingStatus>),
     Resume(SessionId, Reply<RecordingStatus>),
+    Restart(SessionId, Reply<RecordingStatus>),
     Finish(SessionId, Option<&'static str>, Reply<RecordingStatus>),
     ScreenPreview(SessionId, Reply<Option<beam_screen::ScreenPreview>>),
     Preview(SessionId, Reply<Option<CameraPreview>>),
@@ -30,6 +31,8 @@ pub(crate) struct Worker {
     prepare: Prepare,
     session: Option<Box<dyn Session>>,
     status: RecordingStatus,
+    configuration: Option<RecordingConfig>,
+    output: Option<PathBuf>,
 }
 
 impl Worker {
@@ -41,6 +44,8 @@ impl Worker {
             prepare,
             session: None,
             status,
+            configuration: None,
+            output: None,
         }
     }
 
@@ -102,6 +107,9 @@ impl Worker {
                 }
                 Command::Start(id, reply) => {
                     let _ = reply.send(self.start(id));
+                }
+                Command::Restart(id, reply) => {
+                    let _ = reply.send(self.restart(id));
                 }
                 Command::Finish(id, reason, reply) => {
                     let _ = reply.send(self.finish(id, reason));
@@ -171,6 +179,8 @@ impl Worker {
             crate::OutputLocation::Instant => output::managed_root(&self.root, "instant")?,
         };
         let output = output::reserve(&root, config.project_id)?;
+        self.configuration = Some(config.clone());
+        self.output = Some(output.clone());
         self.status = RecordingStatus {
             state: RecordingState::Preparing,
             session_id: None,
@@ -283,7 +293,49 @@ impl Worker {
         Ok(self.status.clone())
     }
 
+    fn restart(&mut self, id: SessionId) -> Result<RecordingStatus, EngineError> {
+        self.check_id(id)?;
+        if !matches!(
+            self.status.state,
+            RecordingState::Recording | RecordingState::Paused
+        ) {
+            return Err(self.transition_error("restart"));
+        }
+        let config = self
+            .configuration
+            .clone()
+            .ok_or(EngineError::WorkerUnavailable)?;
+        let output = self.output.clone().ok_or(EngineError::WorkerUnavailable)?;
+        // A restart remains one active capture to hosts watching terminal states.
+        self.finalize_take(Some("take restarted by host"), false);
+        if self.status.state == RecordingState::Failed {
+            self.publish();
+            return Err(EngineError::Media(
+                self.status
+                    .error
+                    .clone()
+                    .unwrap_or_else(|| "take finalization failed".into()),
+            ));
+        }
+        if let Err(error) = crate::project::discard_session(&output, config.project_id, id) {
+            self.fail(error.to_string());
+            return Err(error);
+        }
+        let prepared = match self.prepare(config) {
+            Ok(prepared) => prepared,
+            Err(error) => {
+                self.fail(error.to_string());
+                return Err(error);
+            }
+        };
+        self.start(prepared.session_id.ok_or(EngineError::WorkerUnavailable)?)
+    }
+
     fn finalize(&mut self, reason: Option<&str>) {
+        self.finalize_take(reason, true);
+    }
+
+    fn finalize_take(&mut self, reason: Option<&str>, publish_terminal: bool) {
         self.status.state = RecordingState::Finalizing;
         self.publish();
         if let Some(session) = self.session.take() {
@@ -305,7 +357,9 @@ impl Worker {
                 }
             }
         }
-        self.publish();
+        if publish_terminal {
+            self.publish();
+        }
     }
 
     fn fail(&mut self, reason: String) {

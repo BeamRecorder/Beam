@@ -8,15 +8,19 @@ import { ShelfCard } from '../shared/ShelfCard';
 import { defaultTitle } from '../shared/defaults';
 import type { EditorState } from '../shared/useEditor';
 import type { LibraryPage } from './libraryTypes';
-import { effects, filters, presetEffects } from './libraryModel';
+import { filters } from './libraryModel';
+import { EffectStack } from '../properties/EffectStack';
+import { TransitionControls } from '../properties/TransitionControls';
+import { definitionLabel } from '../properties/definitionLabels';
 
-/** Shelves expose Beam's actual title, fade, GPU effect and canvas preset operations. */
+/** Shelves create typed instances and real two-input transitions through the shared service. */
 export function LibraryShelf(props: { page: LibraryPage; editor: EditorState }) {
   const theme = useTheme<WidgetTheme>(), TR = useTR('NativeEditor');
   const selected = () => !!props.editor.clip() && !props.editor.busy();
-  const apply = (values: Parameters<typeof presetEffects>[1]) => {
+  const apply = (values: {brightness?:number;saturation?:number}) => {
     const clip = props.editor.clip();
-    if (clip) void props.editor.edit({ type: 'effects', id: clip.id, effects: presetEffects(clip, values) });
+    if (clip) void props.editor.execute([{type:'effectAdd',clip:clip.id,definitionId:'beam.color',definitionVersion:1,
+      parameters:Object.fromEntries(Object.entries(values).map(([key,value])=>[key,{kind:'constant',value:{kind:'number',value}}]))}]);
   };
   return <scrollView width="100%" grow={1} minHeight={0}>
     <column width="100%" padding={14} gap={10}>
@@ -30,25 +34,22 @@ export function LibraryShelf(props: { page: LibraryPage; editor: EditorState }) 
           </ShelfCard>
         </Match>
         <Match when={props.page === 'transitions'}>
-          <For each={['fadeIn', 'fadeOut', 'fadeBoth', 'noFade']}>{id =>
-            <Button variant="secondary" width="100%" disabled={!selected()} onClick={() => apply({
-              fadeInMs: id === 'fadeIn' || id === 'fadeBoth' ? 500 : 0,
-              fadeOutMs: id === 'fadeOut' || id === 'fadeBoth' ? 500 : 0,
-            })}><Icon name="link" size={15} color={theme().mutedForeground} />{TR(id)}</Button>
-          }</For>
-          <text fontSize={11} color={theme().mutedForeground} lineClamp={3} text={TR('fadeHint')} />
+          <TransitionControls editor={props.editor} />
         </Match>
-        <Match when={props.page === 'effects' || props.page === 'filters'}>
-          <For each={props.page === 'filters' ? filters : effects}>{preset =>
+        <Match when={props.page === 'effects'}><EffectStack editor={props.editor} /></Match>
+        <Match when={props.page === 'filters'}>
+          <For each={filters}>{preset =>
             <Button variant="secondary" width="100%" contentAlign="start"
               disabled={!selected() || (!props.editor.asset()?.hasVideo && !props.editor.clip()?.title)
-                || (preset.id === 'automatic' && !props.editor.asset()?.hasCursor)}
+                }
               onClick={() => apply(preset.values)}>
               <Icon name={props.page === 'filters' ? 'blend' : 'sparkles'} size={15} color={theme().mutedForeground} />{TR(preset.id)}
             </Button>
           }</For>
         </Match>
         <Match when={props.page === 'templates'}>
+          <For each={props.editor.snapshot()?.project.definitions?.filter(d=>d.domain==='generator') ?? []}>{d=><Button variant="secondary" width="100%" disabled={props.editor.busy() || !props.editor.snapshot()?.project.tracks.some(t=>t.kind==='video')}
+            onClick={()=>{const track=props.editor.snapshot()?.project.tracks.find(t=>t.kind==='video');if(track)void props.editor.execute([{type:'generatorInsert',track:track.id,definitionId:d.id,definitionVersion:d.version,startMs:props.editor.transport().positionMs,durationMs:3000,parameters:{}}]);}}>{definitionLabel(d.label,TR)}</Button>}</For>
           <For each={[
             { id: 'landscape', width: 1920, height: 1080 },
             { id: 'portrait', width: 1080, height: 1920 },

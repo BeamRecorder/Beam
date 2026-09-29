@@ -11,11 +11,12 @@ const sections: SettingsItem[] = [
   { id: 'appearance', title: 'Appearance', icon: 'palette', color: '#06b6d4' },
 ]
 const about: SettingsItem = { id: 'about', title: 'About', icon: 'info', color: '#64748b' }
+const linux: SettingsItem = { id: 'linux', title: 'Linux', icon: 'lock', color: '#dc2626' }
 
 /** Apple-style icon tiles and a neutral active item; About stays at the bottom. */
-export function SettingsSidebar(props: { value: SettingsSection; onChange: (section: SettingsSection) => void }) {
+export function SettingsSidebar(props: { value: SettingsSection; onChange: (section: SettingsSection) => void; showLinux?: boolean }) {
   const TR = useTR('HudPreferences'), N = useTR('Native'), A = useTR('AppearanceSettings')
-  const title = (id: SettingsSection) => id === 'capture' ? N('capture') : id === 'appearance' ? A('title') : TR(id)
+  const title = (id: SettingsSection) => id === 'linux' ? 'Linux' : id === 'capture' ? N('capture') : id === 'appearance' ? A('title') : TR(id)
   const theme = useTheme<WidgetTheme>()
   const item = (entry: SettingsItem) => <Button id={`settings-section-${entry.id}`} accessibleName={title(entry.id)}
     variant="ghost"
@@ -30,6 +31,7 @@ export function SettingsSidebar(props: { value: SettingsSection; onChange: (sect
   </Button>
   return <column width={144} shrink={0} height="100%" background={theme().sidebar} padding={8} gap={5}>
     {sections.map(item)}
+    {props.showLinux && <><rectangle width="100%" height={1} background={theme().border} margin={{ top: 7, bottom: 5 }} />{item(linux)}</>}
     <container grow={1} />
     {item(about)}
   </column>

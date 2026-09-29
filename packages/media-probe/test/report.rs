@@ -24,6 +24,7 @@ fn saved_measurements_report_real_cpu_rss_and_gpu_peaks() {
     let temporary = tempfile::tempdir().expect("tempdir");
     let output = temporary.path();
     let manifest = SessionManifest {
+        cursor_mode: Default::default(),
         schema_version: SCHEMA_VERSION,
         project_id: ProjectId::new(),
         session_id: SessionId::new(),
@@ -126,6 +127,7 @@ fn report_joins_three_track_files_and_preview_metrics_without_guessing_missing_m
         termination_reason: None,
     };
     let manifest = SessionManifest {
+        cursor_mode: Default::default(),
         schema_version: SCHEMA_VERSION,
         project_id: ProjectId::new(),
         session_id: SessionId::new(),

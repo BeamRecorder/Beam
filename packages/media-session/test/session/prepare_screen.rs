@@ -129,3 +129,51 @@ fn screen_loss_or_writer_failure_does_not_disable_other_tracks() {
         session.stop().expect("stop");
     }
 }
+
+#[test]
+fn successful_capture_persists_its_actual_cursor_composition_mode() {
+    for (selection, expected) in [
+        (
+            beam_screen::model::CursorSelection::Disabled,
+            beam_media_manifest::CursorMode::Absent,
+        ),
+        (
+            beam_screen::model::CursorSelection::Embedded,
+            beam_media_manifest::CursorMode::BakedIn,
+        ),
+        (
+            beam_screen::model::CursorSelection::Separate {
+                capture_clicks: false,
+                capture_shortcuts: false,
+                capture_shape: false,
+            },
+            beam_media_manifest::CursorMode::Separated,
+        ),
+    ] {
+        let temporary = tempfile::tempdir().expect("tempdir");
+        let sources = FakeSources::default();
+        let mut config = all_sources(temporary.path().join("session"));
+        let mut screen = request(false);
+        screen.cursor = selection;
+        config.screen = Some(screen);
+        let session = MediaSession::prepare_with_factory(config, &sources).expect("prepare");
+        assert_eq!(session.manifest.cursor_mode, expected);
+        session.stop().expect("stop");
+    }
+}
+#[test]
+fn failed_screen_open_does_not_publish_an_unproven_cursor_mode() {
+    let temporary = tempfile::tempdir().expect("tempdir");
+    let sources = FakeSources {
+        screen_mode: "fail",
+        ..Default::default()
+    };
+    let mut config = all_sources(temporary.path().join("session"));
+    config.screen = Some(request(true));
+    let session = MediaSession::prepare_with_factory(config, &sources).expect("failure retained");
+    assert_eq!(
+        session.manifest.cursor_mode,
+        beam_media_manifest::CursorMode::Unknown
+    );
+    session.stop().expect("stop");
+}

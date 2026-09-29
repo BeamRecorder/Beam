@@ -6,13 +6,17 @@ use super::{
 };
 use crate::export::render::Exporter;
 use crate::project::{store::ProjectStore, types::DOCUMENT_FILE};
-use crate::{Document, Edit, EditorError, Project, Result, TrackKind};
-use ges::prelude::GESPipelineExt;
+use crate::{Document, Edit, EditorError, Project, Result};
 use gst::prelude::*;
 use std::{path::PathBuf, sync::Arc, time::Duration};
 
 pub(super) use super::command_types::Command;
+mod assets;
+mod presentation;
 mod runner;
+mod window;
+mod window_types;
+use presentation::{prepare, transfer};
 pub(super) use runner::run;
 pub(crate) struct PipelineGuard(pub ges::Pipeline);
 impl Drop for PipelineGuard {
@@ -23,6 +27,8 @@ impl Drop for PipelineGuard {
     }
 }
 struct Worker {
+    preload_task: Option<window_types::WindowTask>,
+    preview_window: super::plan_types::PreviewWindow,
     store: Option<ProjectStore>,
     document: Option<Document>,
     pipeline: Option<PipelineGuard>,
@@ -33,6 +39,7 @@ struct Worker {
     error: Option<String>,
     recovered: bool,
     exporter: Exporter,
+    changes: Arc<super::change_types::Changes>,
 }
 
 impl Worker {
@@ -47,11 +54,13 @@ impl Worker {
             .ok_or_else(|| media("missing source asset"))?;
         // Source artwork needs no cursor/zoom telemetry, which may span hours.
         let asset = crate::MediaAsset {
-            cursor: vec![],
-            zooms: vec![],
+            cursor_mode: beam_editor_domain::recording::style_types::CursorMode::Absent,
+            cursor: vec![].into(),
+            zooms: vec![].into(),
             id: source.id,
             name: source.name.clone(),
             path: source.path.clone(),
+            identity: source.identity.clone(),
             duration_ms: source.duration_ms,
             width: source.width,
             height: source.height,
@@ -71,7 +80,8 @@ impl Worker {
             return self.snapshot();
         }
         let store = ProjectStore::lock(&root)?;
-        let (document, recovered) = if let Some(name) = name {
+        self.cancel_preload();
+        let (mut document, recovered) = if let Some(name) = name {
             if root.join(DOCUMENT_FILE).exists() || root.join("project.json").exists() {
                 return Err(EditorError::Invalid("project already exists".into()));
             }
@@ -86,8 +96,8 @@ impl Worker {
                 false,
             )
         };
+        crate::project::sources::hydrate(&store.root, &mut document.project)?;
         crate::project::validation::document(&document)?;
-        self.play(false)?;
         let frames = Frames::default();
         *frames.quality.lock().unwrap_or_else(|p| p.into_inner()) = *self
             .frames
@@ -104,8 +114,9 @@ impl Worker {
             Err(e) => (None, Some(e.to_string())),
         };
         if !recovered {
-            store.write(&document)?;
+            document = store.write(&document)?;
         }
+        self.playing = false;
         self.pipeline = pipeline;
         self.store = Some(store);
         self.document = Some(document);
@@ -116,12 +127,14 @@ impl Worker {
         self.pipeline_frames = frames;
         transfer(&self.frames, &self.pipeline_frames);
         self.pipeline_frames.forward_to(&self.frames);
+        self.changes
+            .publish(self.document.as_ref().ok_or_else(no_project)?);
         self.snapshot()
     }
     fn snapshot(&mut self) -> Result<EditorSnapshot> {
         let transport = self.transport();
         let document = self.document.as_ref().ok_or_else(no_project)?;
-        Ok(EditorSnapshot {
+        let mut snapshot = EditorSnapshot {
             active_sequence: document.active_sequence,
             sequences: document
                 .sequences
@@ -135,10 +148,17 @@ impl Worker {
             revision: document.revision,
             can_undo: !document.undo.is_empty(),
             can_redo: !document.redo.is_empty(),
+            can_project_undo: !document.project_undo.is_empty(),
+            can_project_redo: !document.project_redo.is_empty(),
             recovered: self.recovered,
             transport,
             export_formats: crate::export::profile::available(),
-        })
+        };
+        snapshot
+            .project
+            .warnings
+            .extend(super::recording_effects::warnings(&document.project));
+        Ok(snapshot)
     }
     fn transport(&mut self) -> Transport {
         self.messages();
@@ -200,27 +220,25 @@ impl Worker {
             return Err(EditorError::Invalid("seek is outside the timeline".into()));
         }
         let time = time.min(duration.saturating_sub(1));
+        if self.ensure_window(time)? {
+            return Ok(self.transport());
+        }
         if let Some(pipeline) = &self.pipeline {
-            if !self.playing {
-                self.pipeline_frames.expect_position(
-                    time,
-                    self.document
-                        .as_ref()
-                        .ok_or_else(no_project)?
-                        .project
-                        .canvas
-                        .fps,
-                );
-                self.frames.clear();
-            }
-            pipeline
-                .0
-                .seek_simple(
-                    gst::SeekFlags::FLUSH | gst::SeekFlags::ACCURATE,
-                    gst::ClockTime::from_mseconds(time),
-                )
-                .map_err(media)?;
-            if !self.playing {
+            let canvas = &self
+                .document
+                .as_ref()
+                .ok_or_else(no_project)?
+                .project
+                .canvas;
+            self.pipeline_frames.seek(
+                &pipeline.0,
+                gst::ClockTime::from_mseconds(time),
+                canvas.fps,
+                canvas.fps_denominator,
+            )?;
+            if self.playing {
+                self.pipeline_frames.resume();
+            } else {
                 self.pipeline_frames.wait(Duration::from_secs(10))?;
             }
         }
@@ -234,55 +252,58 @@ impl Worker {
                 "the project changed; refresh before editing".into(),
             ));
         }
-        let next = crate::timeline::history::edited(document, &edit)?;
-        self.commit(next)
+        let request = beam_editor_domain::commands::single(document, edit);
+        let prepared = beam_editor_domain::commands::prepare(document, &request)?;
+        self.commit(prepared.document)
+    }
+    fn transaction(
+        &mut self,
+        request: beam_editor_domain::commands::types::Transaction,
+    ) -> Result<beam_editor_domain::commands::types::Receipt> {
+        let prepared = beam_editor_domain::commands::prepare(
+            self.document.as_ref().ok_or_else(no_project)?,
+            &request,
+        )?;
+        if !prepared.replay {
+            self.commit(prepared.document)?;
+        }
+        Ok(prepared.receipt)
     }
     fn import(&mut self, paths: Vec<PathBuf>) -> Result<EditorSnapshot> {
-        if paths.is_empty() || paths.len() > 32 {
-            return Err(EditorError::Invalid("select 1–32 media files".into()));
-        }
-        let store = self.store.as_ref().ok_or_else(no_project)?;
         let document = self.document.as_ref().ok_or_else(no_project)?;
-        let mut project = document.project.clone();
-        for path in paths {
-            let asset = super::probe::import(&store.root, &path)?;
-            let kind = if asset.has_video {
-                TrackKind::Video
-            } else {
-                TrackKind::Audio
-            };
-            let track = project
-                .tracks
-                .iter()
-                .find(|t| t.kind == kind)
-                .ok_or_else(|| {
-                    EditorError::Invalid("add a compatible lane before importing".into())
-                })?
-                .id;
-            let start = project
-                .clips
-                .iter()
-                .filter(|c| c.track_id == track)
-                .map(|c| c.start_ms + c.duration_ms)
-                .max()
-                .unwrap_or(0);
-            if project.assets.is_empty() && asset.has_video {
-                project.canvas = crate::Canvas::from_source(asset.width, asset.height);
-            }
-            project.assets.push(asset.clone());
-            project = crate::timeline::edit::apply(
-                &project,
-                &Edit::Insert {
-                    asset_id: asset.id,
-                    track_id: track,
-                    start_ms: start,
-                },
-            )?;
-        }
-        self.commit(crate::timeline::history::replaced(document, project)?)
+        let context = beam_editor_domain::protocol::RenderContext {
+            project_id: document.project.id,
+            sequence_id: document.active_sequence,
+            expected_revision: document.revision,
+            idempotency_key: uuid::Uuid::new_v4().to_string(),
+        };
+        self.import_publication(context, paths)?;
+        self.snapshot()
     }
     fn commit(&mut self, next: Document) -> Result<EditorSnapshot> {
-        self.play(false)?;
+        self.cancel_preload();
+        if let (Some(pipeline), Some(previous), Some(store)) =
+            (&self.pipeline, &self.document, &self.store)
+            && previous.revision != next.revision
+            && previous.active_sequence == next.active_sequence
+            && let Some(update) =
+                super::pipeline::prepare_update(&pipeline.0, &previous.project, &next.project)?
+        {
+            let next = store.write(&next)?;
+            update.apply();
+            self.document = Some(next);
+            self.error = None;
+            self.recovered = false;
+            if !self.playing
+                && let Err(error) = self.seek(self.position)
+            {
+                self.error = Some(error.to_string());
+            }
+            self.changes
+                .publish(self.document.as_ref().ok_or_else(no_project)?);
+            return self.snapshot();
+        }
+        self.transport();
         let switched = self
             .document
             .as_ref()
@@ -306,16 +327,18 @@ impl Worker {
             .lock()
             .unwrap_or_else(|p| p.into_inner());
         let pipeline = prepare(store, &next.project, Arc::clone(&pending), position)?;
-        store.write(&next)?;
+        let next = store.write(&next)?;
+        self.playing = false;
         self.pipeline = pipeline;
         self.document = Some(next);
         self.position = position;
         self.error = None;
         self.recovered = false;
-        self.frames.clear();
         self.pipeline_frames = pending;
         transfer(&self.frames, &self.pipeline_frames);
         self.pipeline_frames.forward_to(&self.frames);
+        self.changes
+            .publish(self.document.as_ref().ok_or_else(no_project)?);
         self.snapshot()
     }
     fn messages(&mut self) {
@@ -348,59 +371,4 @@ impl Worker {
 }
 fn no_project() -> EditorError {
     EditorError::Invalid("open or create a project first".into())
-}
-fn prepare(
-    store: &ProjectStore,
-    project: &Project,
-    frames: Frames,
-    position: u64,
-) -> Result<Option<PipelineGuard>> {
-    if project.duration_ms() == 0 {
-        return Ok(None);
-    }
-    let pipeline = super::pipeline::build(&store.root, project)?;
-    let guard = PipelineGuard(pipeline.clone());
-    frames.expect_position(0, project.canvas.fps);
-    super::preview::attach(&pipeline, &project.canvas, Arc::clone(&frames))?;
-    if !super::pipeline::has_audio(project) {
-        pipeline
-            .set_mode(ges::PipelineFlags::VIDEO_PREVIEW)
-            .map_err(media)?;
-    }
-    pipeline
-        .set_state(gst::State::Paused)
-        .map_err(|error| preview_error(&pipeline, error))?;
-    let (result, _, _) = pipeline.state(gst::ClockTime::from_seconds(15));
-    result.map_err(|error| preview_error(&pipeline, error))?;
-    frames.wait(Duration::from_secs(10))?;
-    if position > 0 {
-        frames.expect_position(position, project.canvas.fps);
-        pipeline
-            .seek_simple(
-                gst::SeekFlags::FLUSH | gst::SeekFlags::ACCURATE,
-                gst::ClockTime::from_mseconds(position),
-            )
-            .map_err(media)?;
-        frames.wait(Duration::from_secs(10))?;
-    }
-    Ok(Some(guard))
-}
-fn preview_error(pipeline: &ges::Pipeline, error: impl std::fmt::Display) -> EditorError {
-    if let Some(bus) = pipeline.bus() {
-        for message in bus.iter() {
-            if let gst::MessageView::Error(failure) = message.view() {
-                return media(format!(
-                    "{} ({})",
-                    failure.error(),
-                    failure.debug().unwrap_or_default()
-                ));
-            }
-        }
-    }
-    media(error)
-}
-fn transfer(output: &Frames, pending: &Frames) {
-    if let Some(frame) = pending.take() {
-        output.publish(frame);
-    }
 }

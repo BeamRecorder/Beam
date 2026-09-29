@@ -83,11 +83,13 @@ pub(crate) fn beam_config() -> Result<ApplicationConfig, Box<dyn std::error::Err
                 super::region::ACTIONS_SIZE.1,
             ),
             ("countdown", "Beam Countdown", 560.0, 284.0),
-            ("recorder", "Beam Recorder", 400.0, 54.0),
+            ("recorder", "Beam Recorder", 240.0, 54.0),
             ("settings", "Beam Settings", 640.0, 420.0),
             ("windowPicker", "Beam Window Picker", 960.0, 320.0),
             ("windowHighlight", "Beam Window Highlight", 320.0, 240.0),
             ("teleprompter", "Beam Teleprompter", 520.0, 360.0),
+            ("projects", "Beam Projects", 600.0, 520.0),
+            ("editorLoading", "Opening Beam Editor", 360.0, 236.0),
         ] {
             let mut window = WindowSpec::new(
                 WindowKey::new(key),
@@ -100,16 +102,24 @@ pub(crate) fn beam_config() -> Result<ApplicationConfig, Box<dyn std::error::Err
                         .get(key)
                         .map(|position| (position.x as i32, position.y as i32)),
                     decorations: false,
-                    resizable: matches!(key, "settings" | "teleprompter"),
+                    resizable: matches!(key, "settings" | "teleprompter" | "projects"),
                     minimum_size: match key {
                         "settings" => Some((440.0, 320.0)),
                         "teleprompter" => Some((320.0, 180.0)),
+                        "projects" => Some((440.0, 360.0)),
                         _ => None,
                     },
-                    maximum_size: (key == "teleprompter").then_some((1600.0, 1000.0)),
+                    maximum_size: match key {
+                        "teleprompter" => Some((1600.0, 1000.0)),
+                        "projects" => Some((1100.0, 900.0)),
+                        _ => None,
+                    },
                     transparent: true,
-                    native_shadow: matches!(key, "settings" | "teleprompter"),
-                    level: if key == "settings" {
+                    native_shadow: matches!(
+                        key,
+                        "settings" | "teleprompter" | "projects" | "editorLoading"
+                    ),
+                    level: if matches!(key, "settings" | "projects") {
                         WindowLevel::Normal
                     } else {
                         WindowLevel::AlwaysOnTop
@@ -122,6 +132,7 @@ pub(crate) fn beam_config() -> Result<ApplicationConfig, Box<dyn std::error::Err
                             | "regionActions"
                             | "countdown"
                             | "recorder"
+                            | "editorLoading"
                             | "windowHighlight"
                     ),
                     ..WindowConfig::default()

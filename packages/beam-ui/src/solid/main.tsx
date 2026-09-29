@@ -12,7 +12,7 @@ import { useCaptureSession } from './hud/useCaptureSession'
 import { activeShortcuts } from './shared/shortcuts'
 import { routeApplicationEvent, routeGeometryEvent } from './appEvents'
 import { warmAuxiliaryWindows } from './windowWarmup'
-export { mountRegionControls, mountRegionActions, mountCountdown, mountRecorder, mountSettings, mountWindowPicker, mountWindowHighlight, mountTeleprompter } from './auxiliaryScenes'
+export { mountRegionControls, mountRegionActions, mountCountdown, mountRecorder, mountSettings, mountWindowPicker, mountWindowHighlight, mountTeleprompter, mountProjects, mountEditorLoading } from './auxiliaryScenes'
 
 const initialPreferences: BeamPreferences = {
   theme: 'system', locale: 'en', captureMode: 'recorder', hudWindow: { width: 680, height: 252 },
@@ -66,8 +66,10 @@ function BeamApp(props: { api: BeamApi; runtime: ReturnType<typeof createThemeRu
     switch (action) {
       case 'countdownCanceled': void capture.cancelCountdown(); break
       case 'pause': void capture.togglePause(); break
+      case 'reset': void capture.reset(); break
       case 'stop': void capture.stop(); break
       case 'delete': void capture.discard(); break
+      case 'editorLoadingCanceled': void capture.cancelEditorOpening(); break
     }
   }
   function receiveShortcut(id: string | undefined): void {
