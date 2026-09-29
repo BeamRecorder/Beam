@@ -45,7 +45,7 @@ if (stage) {
   } finally {
     rmSync(temporaryExecutable, { force: true })
   }
-  for (const name of ['app.mjs', 'settings.mjs'])
+  for (const name of ['app.mjs', 'settings.mjs', 'editor.mjs'])
     copyFileSync(join(ui, 'dist/native', name), join(destination, 'ui', name))
   copyFileSync(join(ui, 'assets.generated.json'), join(destination, 'ui/assets.generated.json'))
   cpSync(join(ui, 'assets'), join(destination, 'ui/assets'), { recursive: true })

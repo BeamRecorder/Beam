@@ -11,6 +11,9 @@ use argui_platform::{
 /// # Errors
 /// Returns an error for invalid identity, icon, or preference paths.
 pub(crate) fn beam_config() -> Result<ApplicationConfig, Box<dyn std::error::Error>> {
+    if crate::editor::is_editor() {
+        return crate::editor::window_config();
+    }
     let settings = std::env::args().any(|argument| argument == "--settings");
     let preferences = crate::beam::initial_preferences()?;
     let identity = ApplicationIdentity::new(

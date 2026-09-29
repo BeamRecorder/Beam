@@ -76,6 +76,9 @@ pub fn event_json(delivery: &NativeHostDelivery) -> Value {
 /// logical pixels, while pan velocity uses logical pixels per second.
 pub fn ui_event_payload(kind: &UiEventKind) -> Value {
     let (name, data) = match kind {
+        UiEventKind::ResizeCommitted { value } => {
+            ("resizeCommit", EventData::Resize { value: *value })
+        }
         UiEventKind::KeyInput(input) => (
             "key",
             EventData::Key {

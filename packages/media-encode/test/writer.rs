@@ -20,7 +20,7 @@ fn synthetic_rgba_frames_produce_webm_only_after_eos() {
     let writer = TrackWriter::open_video(&path, config, LIMITS).expect("video pipeline");
     for index in 0..4_u64 {
         let mut rgba = vec![0_u8; 16 * 16 * 4];
-        for pixel in rgba.chunks_exact_mut(4) {
+        for pixel in rgba.as_chunks_mut::<4>().0.iter_mut() {
             pixel.copy_from_slice(&[index as u8 * 40, 80, 120, 255]);
         }
         writer

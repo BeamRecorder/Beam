@@ -5,7 +5,7 @@
   "scripts": {
     "assets": "bun scripts/generate-i18n.mjs && bun scripts/generate-assets.mjs assets.config.json",
     "check": "bun run assets && node node_modules/typescript/bin/tsc --noEmit",
-    "build": "bun run assets && node node_modules/vite/bin/vite.js build --mode native && BEAM_UI_ENTRY=settings node node_modules/vite/bin/vite.js build --mode native --emptyOutDir false",
+    "build": "bun run assets && node node_modules/vite/bin/vite.js build --mode native && BEAM_UI_ENTRY=settings node node_modules/vite/bin/vite.js build --mode native --emptyOutDir false && BEAM_UI_ENTRY=editor node node_modules/vite/bin/vite.js build --mode native --emptyOutDir false",
     "test": "node src/solid/shared/base-ui/shortcutKeys.test.mjs"
   },
   "dependencies": {

@@ -30,6 +30,10 @@ use crate::{ServiceOutcome, ServiceRegistry};
 use preferences::Preferences;
 pub(crate) use preferences::{HUD_MAX_SIZE, HUD_MIN_SIZE};
 
+pub(crate) fn projects_root() -> Result<PathBuf, String> {
+    Preferences::new()?.projects_root()
+}
+
 pub(crate) fn initial_preferences() -> Result<preferences::NativePreferences, String> {
     json::decode(Preferences::new()?.initialize()?)
 }
@@ -159,6 +163,15 @@ pub(crate) fn register(registry: &Arc<ServiceRegistry>) -> Result<(), String> {
     let still = controller.clone();
     registry.register("beam", "screenshot", move |request| {
         outcome(capture_still(&still, &projects, &request))
+    });
+    registry.register("beam", "openVideoEditor", move |_| {
+        outcome((|| {
+            Command::new(std::env::current_exe().map_err(|e| e.to_string())?)
+                .arg("--editor")
+                .spawn()
+                .map_err(|e| e.to_string())?;
+            Ok(Value::Null)
+        })())
     });
     registry.register("beam", "openEditor", move |payload| {
         outcome(open_editor(&payload))
@@ -319,6 +332,13 @@ fn capture_still(
 fn open_editor(payload: &Value) -> Result<Value, String> {
     let request: EditorRequest = json::decode(payload.clone())?;
     let project = request.project_id;
+    if matches!(request.mode, EditorMode::Video) {
+        Command::new(std::env::current_exe().map_err(|e| e.to_string())?)
+            .arg(format!("--editor={project}"))
+            .spawn()
+            .map_err(|e| e.to_string())?;
+        return Ok(Value::Null);
+    }
     let mode = match request.mode {
         EditorMode::Video => "video",
         EditorMode::Screenshot => "screenshot",

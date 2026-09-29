@@ -1,5 +1,6 @@
 [workspace]
 members = [
+  "packages/editor-engine",
   "packages/media-core",
   "packages/media-manifest",
   "packages/media-encode",

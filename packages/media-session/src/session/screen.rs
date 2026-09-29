@@ -86,6 +86,11 @@ impl MediaSession {
                         None
                     }
                 };
+                let encoding = writer.video_encoding().ok_or_else(|| {
+                    crate::SessionError::InvalidConfiguration(
+                        "screen writer has no video encoding".into(),
+                    )
+                })?;
                 self.screen = Some(source);
                 self.screen_writer = Some(writer);
                 self.screen_fps = fps;
@@ -93,7 +98,7 @@ impl MediaSession {
                     TrackKind::Screen,
                     id,
                     TrackFormat::Video {
-                        codec: "vp8".into(),
+                        codec: encoding.codec.into(),
                         width: format.width,
                         height: format.height,
                         nominal_fps: fps,

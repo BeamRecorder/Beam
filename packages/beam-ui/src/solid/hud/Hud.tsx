@@ -28,7 +28,7 @@ export function Hud(props: {
   api: BeamApi; preferences: BeamPreferences; externalError?: string; startCommand?: number;
   captureBusy?: boolean; onRecord: (request: CaptureRequest) => Promise<void>; onScreenshot: (projectId: string) => void;
 }): JSX.Element {
-  const TR = useTR('HUD'), N = useTR('Native'), R = useTR('RecorderBar'), T = useTR('TopbarHUD'), P = useTR('Teleprompter')
+  const TR = useTR('HUD'), N = useTR('Native'), R = useTR('RecorderBar'), T = useTR('TopbarHUD'), P = useTR('Teleprompter'), E = useTR('NativeEditor')
   const theme = useTheme<WidgetTheme>()
   const launcher = useCaptureLauncher(props)
   const metrics = useWindowMetrics(props.api, props.preferences.hudWindow)
@@ -46,6 +46,9 @@ export function Hud(props: {
           </touchArea>
         </container>
         <row alignItems="center" gap={2} margin={{ left: 6 }}>
+          <Button variant="ghost" size="icon-xs" iconOnly accessibleName={E('editor')} onClick={() => void props.api.openVideoEditor().catch(report)}>
+            <Icon name="video" size={16} color={theme().foreground} />
+          </Button>
           <Button variant="ghost" size="icon-xs" iconOnly accessibleName={T('preferences')} onClick={() => void props.api.openSettings().catch(report)}>
             <Icon name="settings" size={16} color={theme().foreground} />
           </Button>

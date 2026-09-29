@@ -1,6 +1,8 @@
 # UI Guidelines
 
-This document defines the visual and implementation rules for the Vue renderer.
+This document defines the visual and implementation rules for Beam's Vue and native ARGUI interfaces.
+
+The native launcher, settings and video editor use `packages/beam-ui/src/solid/shared/base-ui/` and the checked-out `@argui/widgets/solid` controls. Read `vendor/argui/skills/argui-common-pitfalls/SKILL.md`, verify primitive props against the generated JSX declarations, and mount the compiled bundle in the Rust host. Preserve Beam's shared Hanken typography, semantic theme tokens and i18n. Native interfaces use Lucide assets generated from the existing icon package rather than DOM/CSS controls. Run graphical checks in ARGUI's private compositor and inspect actual captures.
 
 ## Component system
 

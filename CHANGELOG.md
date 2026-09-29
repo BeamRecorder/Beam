@@ -6,6 +6,13 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- Native editor errors include a shared copy button with translated clipboard feedback and the complete diagnostic.
+- Native video projects now support independent timeline sequences with their own tracks and undo/redo history, using shared source media.
+- Timeline clips show visible video filmstrips and Blick audio waveforms with shared, bounded caches and cancellable source-range decoding.
+- Native editing now supports generated text titles, image imports, and bounded audio/video fades with saved undo/redo history.
+- Added a native, Concat-inspired video editor with a media library, composed preview, contextual controls and a multi-lane timeline. Import video/audio, trim, split, move, mix audio, adjust framing and color, and export MP4 or WebM through GStreamer Editing Services.
+- Native video projects save non-destructive edits and undo/redo history atomically, with exclusive project locking and recovery checkpoints. Beam's recorded click zooms, cursor follow and camera springs now run in Rust and share the preview/export composition.
+
 - Native Beam now supports the existing 15 interface languages through ARGUI i18n, automatically following the system language until a language is chosen in Appearance, with immediate updates across its windows.
 
 - About now checks GitHub releases through ARGUI's native updater, with cancellable downloads, package verification and explicit installation; release CI publishes the update feed and complete application packages.
@@ -26,6 +33,9 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
+- The native editor uses GPU decoding where supported, GPU composition and camera/color effects, and explicit hardware video encoding. Linux preview shares GStreamer frames with Argui through DMA-BUF, and VA export shares GPU NV12 planes without CPU pixel copies. Argui exposes a common external-frame API with Vulkan, Metal/IOSurface and Direct3D shared texture imports. Export preserves full canvas dimensions.
+- Completed native video recordings now open directly in the native editor. The launcher also opens an empty editor for standalone video editing; screenshots retain their existing editor.
+
 - Native microphone menus now use the desktop audio server on Linux, with hardware-only ALSA fallback; system audio uses the same On/Off choices as the editor.
 - Native text uses a slightly stronger default weight and system font fallbacks for additional writing systems.
 
@@ -45,6 +55,16 @@ User-facing changes to Beam are documented in this file.
 - The macOS native camera prototype now captures through AVFoundation with late-frame discard and bounded callback queues.
 
 ### Fixed
+
+- Copied native text remains available on Linux desktops without a clipboard manager while Beam is running.
+- Native editor toolbar icons stay centered, sequence tabs align left, and library tabs adapt during panel dragging. Delayed library hints appear only in icon-only mode; tooltip bubbles fit short labels and wrap longer text within a maximum width.
+- Native editor edits keep the project title, preview and inspector stable without temporarily disabling every control. Undo/Redo use plain toolbar buttons, and narrow property fields keep their Select arrows visible.
+- Native editor tabs reuse the recorder's animated segmented control. Narrow library tabs show icons with delayed tooltips, and compact preview selectors open readable menus.
+- Native editor panels adapt to smaller windows. Resize handles show small centered orange pills only on hover; the native engine resizes panes directly and sends JavaScript the final size once on release.
+- The native editor keeps Beam's existing orange action and focus colors with its Concat-style surfaces.
+- Native screen recordings retain sharper text and fine detail with explicit recording quality and hardware VP9 on supported GPUs, while preserving source dimensions and reporting the actual codec.
+- The native editor now follows the Concat reference more closely, with resizable panes, a timeline that fills its pane, real source thumbnails, wider contextual controls, and full-resolution preview by default.
+- Native GPU exports preserve color by using the same BT.709 conversion and encoder metadata.
 
 - Native Shadcn select menus follow their button width when resized, with opaque themed borders and smooth corner coverage.
 

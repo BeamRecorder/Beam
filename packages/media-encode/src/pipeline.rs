@@ -5,7 +5,7 @@ use std::{
 
 use gst::prelude::*;
 
-use crate::{AudioConfig, EncodeError, VideoConfig};
+use crate::{AudioConfig, EncodeError, VideoConfig, VideoEncoding, video};
 
 pub(crate) enum MediaConfig {
     Video(VideoConfig),
@@ -17,9 +17,13 @@ pub(crate) struct TrackPipeline {
     source: gst_app::AppSrc,
     destination: PathBuf,
     partial: PathBuf,
+    encoding: Option<VideoEncoding>,
 }
 
 impl TrackPipeline {
+    pub(crate) fn encoding(&self) -> Option<VideoEncoding> {
+        self.encoding
+    }
     pub(crate) fn abort_handle(&self) -> gst::Pipeline {
         self.pipeline.clone()
     }
@@ -57,12 +61,30 @@ impl TrackPipeline {
         source.set_format(gst::Format::Time);
         source.set_block(true);
 
+        let encoding = match config {
+            MediaConfig::Video(config) => Some(video::select(config)?),
+            MediaConfig::Audio(_) => None,
+        };
         let (caps, middle, max_queue_bytes) = match config {
             MediaConfig::Video(video) => {
-                let encoder = element("vp8enc")?;
-                encoder.set_property("deadline", 1_i64);
-                encoder.set_property("cpu-used", 8_i32);
-                encoder.set_property("threads", 4_i32);
+                let profile = encoding
+                    .ok_or_else(|| EncodeError::Pipeline("missing recording profile".into()))?;
+                let encoder = element(profile.factory)?;
+                video::configure(&encoder, video, profile)?;
+                let conversion = element("capsfilter")?;
+                conversion.set_property(
+                    "caps",
+                    gst::Caps::builder("video/x-raw")
+                        .field("format", profile.pixel_format)
+                        .field("colorimetry", "bt709")
+                        .build(),
+                );
+                let output = element("capsfilter")?;
+                let mut encoded = gst::Caps::builder(format!("video/x-{}", profile.codec));
+                if profile.pixel_format == "VUYA" {
+                    encoded = encoded.field("profile", "1");
+                }
+                output.set_property("caps", encoded.build());
                 let caps = gst::Caps::builder("video/x-raw")
                     .field("format", "RGBA")
                     .field("width", video.width as i32)
@@ -71,7 +93,13 @@ impl TrackPipeline {
                     .build();
                 (
                     caps,
-                    vec![element("videoconvert")?, encoder, element("webmmux")?],
+                    vec![
+                        element("videoconvert")?,
+                        conversion,
+                        encoder,
+                        output,
+                        element("webmmux")?,
+                    ],
                     u64::try_from(video.rgba_bytes()?)
                         .unwrap_or(u64::MAX)
                         .saturating_mul(3)
@@ -117,6 +145,7 @@ impl TrackPipeline {
             source,
             destination: destination.to_path_buf(),
             partial,
+            encoding,
         })
     }
 

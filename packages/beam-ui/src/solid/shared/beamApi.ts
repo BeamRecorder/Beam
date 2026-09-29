@@ -7,6 +7,7 @@ import type { UpdateSnapshot } from './settings/updateTypes'
 export class BeamApi {
   constructor(private readonly services: ApplicationServices, private readonly window = 'main') {}
 
+  openVideoEditor(): Promise<void> { return this.services.call('beam', 'openVideoEditor') }
   preferences(): Promise<BeamPreferences> { return this.services.call('beam', 'preferences') }
   info(): Promise<ApplicationInfo> { return this.services.call('beam', 'info') }
   updateState(): Promise<UpdateSnapshot> { return this.services.call('updates', 'state') }

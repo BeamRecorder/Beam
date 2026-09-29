@@ -12,6 +12,8 @@ mod delivery;
 mod desktop_application;
 #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
 pub use desktop_application::BeamApp;
+#[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
+mod editor;
 mod effects;
 mod hot_reload;
 mod i18n;

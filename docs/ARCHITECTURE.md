@@ -1,6 +1,6 @@
 # Architecture Guidelines
 
-Beam uses an ARGUI desktop launcher for capture and an Electron/Vue editor after capture. Both hosts use the same native Rust media engine and project files. The boundaries below are intentional and must remain explicit.
+Beam uses an ARGUI desktop launcher for capture and a native ARGUI/GStreamer video editor. The Electron/Vue screenshot editor and existing editor remain separate hosts. They share the native Rust capture engine and manifest-authoritative project files. The boundaries below are intentional and must remain explicit.
 
 ## Runtime layers
 
@@ -10,7 +10,18 @@ Solid TSX launcher (packages/beam-ui/src/solid)
 Rust desktop host (apps/beam-native)
   -> in-process beam-media-engine controller
 Session files on disk
-  -> Electron editor handoff by validated project ID
+  -> native video editor by validated project ID
+Solid TSX editor (packages/beam-ui/src/solid/editor)
+  -> typed ARGUI QuickJS editor services
+Rust host (apps/beam-native/src/editor)
+  -> beam-editor-engine project / timeline / video / export / shared modules
+GES actor-owned timeline
+  -> GStreamer hardware decode, OpenGL composition/effects, hardware encodebin export
+  -> leased external GPU frame to the native Argui WGPU canvas
+     (negotiated DMA-BUF on Linux; bounded RGBA compatibility transport)
+Versioned editor.beam.json and recovery checkpoint on disk
+Screenshot capture
+  -> Electron screenshot editor handoff by validated project ID
 Vue renderer
   -> typed window.capture API
 Electron preload
@@ -28,12 +39,11 @@ owns native windows and rendering; the Rust host exposes only typed capture,
 preference, and window operations to Solid. Capture logic stays in the media
 engine. Auxiliary windows mount their Solid scenes on demand. The settings
 window is retained in the same Rust process and hidden on close; reopening
-shows and focuses that existing window. The editor is opened with `--beam-open-project=video|screenshot:<id>`
-after a native capture finishes. Electron keeps a hidden coordinator for its
+shows and focuses that existing window. Video captures launch the same native executable with `--editor=<id>`; `--editor` starts an empty standalone project. The editor uses its own opaque resizable window and process, independent from recorder geometry. Screenshots open with `--beam-open-project=screenshot:<id>` after capture. Electron keeps a hidden coordinator for its
 existing editor/window IPC and does not display the legacy HUD in this path.
 
 `scripts/native-ui/build.mjs` builds the checked-out ARGUI submodule directly and
-stages the native executable, both Solid bundles, and their assets for
+stages the native executable, launcher/settings/editor Solid bundles, and their assets for
 desktop packaging. Linux region selection uses an X11 window with a compositor
 that supports transparent, positioned topmost windows. Its mask and drag state
 are owned by Rust using the ARGUI gallery spotlight implementation; Solid
@@ -155,6 +165,10 @@ Linux interaction capture uses the privileged input helper under both Wayland an
 - Highlight is an inverse mask in the existing effect clip model (`kind: blur`, `mode: highlight`); strength controls the outside opacity, while tintOpacity and optional highlightColor control the illuminated interior independently. New highlights use white at 20%; existing clips with zero tint retain their appearance. It shares effect geometry, color and feather controls, and Studio's timing and transitions. Screenshot offers both Highlight and Blur in Elements, stores them in optional `effects`, and includes them in the same composition, history, hit-testing and thumbnail paths. Preview and export share the mask renderer. Hard edges render without a scratch surface; feathering owns one reusable surface, released with its renderer. Highlight and Blur keep separate saved defaults.
 
 ## Feature boundaries
+
+- `beam-editor-engine` owns recording parsing, source validation, non-destructive edit intents, bounded persistent history, recovery and GES graphs. `editor.beam.json` is separate from the capture manifest; immutable imports are copied into the project's `media/` directory. Cursor telemetry and source bytes are outside undo history. The last valid document is checkpointed before atomic replacement. Corrupt primary files are preserved when reading a recovery checkpoint, and recovery is visible in the UI.
+- GES objects stay on their worker thread and GLib context. Preview and export build the same timeline, including layer priorities, aspect fit, color, opacity, audio volume and source-time Beam zoom controls. Async asset discovery drives the actor's context with a deadline. Preview owns one bounded appsink frame; paused seeks wait for a new raster. Native image registration carries pixels directly to ARGUI without JSON raster payloads. Idle editor actors and paused UIs do not poll.
+- Typed editor services accept edit intents and revisions, never renderer-supplied file paths. Rust owns open/import/save dialogs, UUID recording lookup and canonical source resolution. Rejected edits retain the prior document. Export freezes the composition, supports cancellation, writes to a temporary file and never replaces an existing destination. Restored sources can explicitly rebuild the composition through Retry.
 
 - UI components render state and emit user intent.
 - Composables coordinate reactive behavior and browser media primitives.

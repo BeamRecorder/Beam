@@ -3,8 +3,9 @@
 mod error;
 mod pipeline;
 mod types;
+mod video;
 mod writer;
 
 pub use error::EncodeError;
-pub use types::{AudioConfig, QueueLimits, VideoConfig};
+pub use types::{AudioConfig, QueueLimits, VideoConfig, VideoEncoding};
 pub use writer::TrackWriter;

@@ -45,6 +45,9 @@ pub(super) enum SemanticValue {
 #[derive(Serialize)]
 #[serde(untagged, rename_all_fields = "camelCase")]
 pub(super) enum EventData {
+    Resize {
+        value: f32,
+    },
     Empty {},
     Text {
         text: String,

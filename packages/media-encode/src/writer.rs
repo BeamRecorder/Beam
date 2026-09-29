@@ -13,7 +13,7 @@ use crossbeam_channel::{Receiver, SendTimeoutError, Sender, TrySendError};
 use gst::prelude::*;
 
 use crate::{
-    AudioConfig, EncodeError, QueueLimits, VideoConfig,
+    AudioConfig, EncodeError, QueueLimits, VideoConfig, VideoEncoding,
     pipeline::{MediaConfig, TrackPipeline},
 };
 
@@ -44,9 +44,14 @@ pub struct TrackWriter {
     accepted_packets: AtomicUsize,
     worker_error: Arc<Mutex<Option<String>>>,
     last_position_ns: Mutex<Option<u64>>,
+    encoding: Option<VideoEncoding>,
 }
 
 impl TrackWriter {
+    /// Returns the negotiated recording profile; PCM audio has no video encoder.
+    pub fn video_encoding(&self) -> Option<VideoEncoding> {
+        self.encoding
+    }
     pub fn queue_depth(&self) -> (usize, usize) {
         (
             self.sender.as_ref().map_or(0, Sender::len),
@@ -90,6 +95,7 @@ impl TrackWriter {
     ) -> Result<Self, EncodeError> {
         limits.validate()?;
         let pipeline = TrackPipeline::open(destination, pipeline_config)?;
+        let encoding = pipeline.encoding();
         let abort_pipeline = pipeline.abort_handle();
         let (sender, receiver) = crossbeam_channel::bounded(limits.packets);
         let (completion_sender, completion) = crossbeam_channel::bounded(1);
@@ -116,6 +122,7 @@ impl TrackWriter {
             accepted_packets: AtomicUsize::new(0),
             worker_error,
             last_position_ns: Mutex::new(None),
+            encoding,
         })
     }
 

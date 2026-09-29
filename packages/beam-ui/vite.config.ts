@@ -14,9 +14,9 @@ export default defineConfig({
   },
   ssr: { noExternal: true, resolve: { conditions: ['browser'] } },
   build: {
-    ssr: process.env.BEAM_UI_ENTRY === 'settings' ? 'src/solid/settingsMain.tsx' : 'src/solid/main.tsx',
+    ssr: process.env.BEAM_UI_ENTRY === 'settings' ? 'src/solid/settingsMain.tsx' : process.env.BEAM_UI_ENTRY === 'editor' ? 'src/solid/editorMain.tsx' : 'src/solid/main.tsx',
     outDir: 'dist/native',
     target: 'es2022',
-    rollupOptions: { output: { entryFileNames: process.env.BEAM_UI_ENTRY === 'settings' ? 'settings.mjs' : 'app.mjs' } },
+    rollupOptions: { output: { entryFileNames: process.env.BEAM_UI_ENTRY === 'settings' ? 'settings.mjs' : process.env.BEAM_UI_ENTRY === 'editor' ? 'editor.mjs' : 'app.mjs' } },
   },
 })

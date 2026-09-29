@@ -8,6 +8,7 @@ on:
       - 'Cargo.lock'
       - 'packages/screen/**'
       - 'packages/media-engine/**'
+      - 'packages/editor-engine/**'
       - 'packages/audio/**'
       - 'packages/camera/**'
       - 'packages/camera-wgpu/**'
@@ -34,6 +35,9 @@ permissions:
 
 jobs:
   linux:
+    env:
+      GST_GL_PLATFORM: egl
+      GST_GL_WINDOW: surfaceless
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -49,8 +53,9 @@ jobs:
           sudo apt-get install --yes \
             clang libclang-dev libasound2-dev libpipewire-0.3-dev \
             pipewire \
-            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libges-1.0-dev \
             gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
+            gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav gstreamer1.0-gl \
             gstreamer1.0-tools \
             pkg-config
       - name: Verify Rust formatting and test layout

@@ -116,6 +116,18 @@ impl MediaSession {
             };
             match result {
                 Ok(writer) => {
+                    if let TrackFormat::Video { codec, .. } = &track.format
+                        && writer
+                            .video_encoding()
+                            .is_none_or(|profile| profile.codec != codec)
+                    {
+                        self.mark_track(
+                            kind,
+                            TrackStatus::Failed,
+                            "recording encoder changed while paused".into(),
+                        );
+                        continue;
+                    }
                     match kind {
                         TrackKind::Screen => self.screen_writer = Some(writer),
                         TrackKind::Camera => self.camera_writer = Some(writer),

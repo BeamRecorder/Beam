@@ -36,3 +36,6 @@ fn native_window_and_reload_generations_deliver_to_the_local_js_identity() {
         assert_eq!(delivery.callback.node.generation(), generation);
     }
 }
+
+#[path = "delivery/types.rs"]
+mod types;

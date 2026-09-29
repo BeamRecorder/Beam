@@ -2,7 +2,7 @@
 name = "beam-native"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.89"
+rust-version = "1.92"
 
 [workspace]
 resolver = "3"
@@ -13,6 +13,10 @@ dev-metrics = []
 dev-tabler-icons = []
 
 [dependencies]
+beam-audio = { path = "../../packages/audio" }
+beam-media-core = { path = "../../packages/media-core" }
+beam-media-manifest = { path = "../../packages/media-manifest" }
+beam-editor-engine = { path = "../../packages/editor-engine" }
 beam-native-assets = { path = "assets-host" }
 beam-media-engine = { path = "../../packages/media-engine" }
 argui-core = { path = "../../vendor/argui/crates/argui-core" }
@@ -45,6 +49,10 @@ sys-locale = "=0.3.2"
 beam-screen = { path = "../../packages/screen" }
 beam-camera = { path = "../../packages/camera" }
 
+[dev-dependencies]
+argui-animation = { path = "../../vendor/argui/crates/argui-animation" }
+argui-layout = { path = "../../vendor/argui/crates/argui-layout" }
+
 [profile.dev]
 opt-level = 1
 debug = "line-tables-only"
@@ -73,3 +81,7 @@ path = "test/lib.rs"
 [[test]]
 name = "solid_bundles"
 path = "test/solid_bundles.rs"
+
+[[test]]
+name = "native_editor"
+path = "test/editor/mod.rs"

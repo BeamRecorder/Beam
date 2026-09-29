@@ -104,17 +104,29 @@ impl ServiceRegistry {
             target_os = "windows",
             target_os = "macos"
         )) {
-            registry.register("clipboard", "readText", |_| {
-                match Clipboard::new().read_text() {
+            // X11 serves clipboard data from the owning process. Dropping the
+            // last handle after a write loses it on desktops without a manager.
+            let clipboard = Arc::new(Mutex::new(Clipboard::new()));
+            let reader = clipboard.clone();
+            registry.register("clipboard", "readText", move |_| {
+                match reader
+                    .lock()
+                    .unwrap_or_else(|poison| poison.into_inner())
+                    .read_text()
+                {
                     Ok(text) => ServiceOutcome::Ok(Value::from(text)),
                     Err(error) => ServiceOutcome::Error(error.to_string()),
                 }
             });
-            registry.register("clipboard", "writeText", |payload| {
+            registry.register("clipboard", "writeText", move |payload| {
                 let Some(text) = payload.get("text").and_then(Value::as_str) else {
                     return ServiceOutcome::Error("clipboard.writeText requires text".into());
                 };
-                match Clipboard::new().write_text(text.to_owned()) {
+                match clipboard
+                    .lock()
+                    .unwrap_or_else(|poison| poison.into_inner())
+                    .write_text(text.to_owned())
+                {
                     Ok(()) => ServiceOutcome::Ok(Value::Null),
                     Err(error) => ServiceOutcome::Error(error.to_string()),
                 }

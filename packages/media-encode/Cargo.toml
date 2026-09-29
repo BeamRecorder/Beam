@@ -46,3 +46,7 @@ path = "test/error.rs"
 [[test]]
 name = "lib"
 path = "test/lib.rs"
+
+[[test]]
+name = "video"
+path = "test/video.rs"

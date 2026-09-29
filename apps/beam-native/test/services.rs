@@ -1,4 +1,6 @@
 use super::*;
+#[path = "services/clipboard.rs"]
+mod clipboard;
 use serde_json::json;
 use std::{sync::mpsc, time::Duration};
 

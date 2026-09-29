@@ -7,7 +7,7 @@ runs:
       shell: bash
       run: |
         sudo apt-get update
-        sudo apt-get install --yes clang libclang-dev libpipewire-0.3-dev libasound2-dev libudev-dev pkg-config libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good
+        sudo apt-get install --yes clang libclang-dev libpipewire-0.3-dev libasound2-dev libudev-dev pkg-config libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libges-1.0-dev gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav gstreamer1.0-gl
     - if: runner.os == 'macOS'
       shell: bash
       run: |

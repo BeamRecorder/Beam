@@ -180,13 +180,16 @@ impl MediaSession {
         let path = self.layout.root().join("camera.webm");
         match TrackWriter::open_video(&path, video, ENCODE_LIMITS) {
             Ok(writer) => {
+                let encoding = writer.video_encoding().ok_or_else(|| {
+                    SessionError::InvalidConfiguration("camera writer has no video encoding".into())
+                })?;
                 self.camera = Some(capture);
                 self.camera_writer = Some(writer);
                 self.manifest.tracks.push(prepared_track(
                     TrackKind::Camera,
                     source_id,
                     TrackFormat::Video {
-                        codec: "vp8".into(),
+                        codec: encoding.codec.into(),
                         width: video.width,
                         height: video.height,
                         nominal_fps: video.fps,

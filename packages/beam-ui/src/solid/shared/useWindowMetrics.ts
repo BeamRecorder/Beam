@@ -7,6 +7,7 @@ export function useWindowMetrics(api: BeamApi, initial: { width: number; height:
   let reading = false
   let pending = false
   let disposed = false
+  let revision = 0
   onCleanup(() => { disposed = true })
   async function refresh(): Promise<void> {
     if (reading) { pending = true; return }
@@ -14,7 +15,9 @@ export function useWindowMetrics(api: BeamApi, initial: { width: number; height:
     try {
       do {
         pending = false
+        const readingRevision = revision
         const info = await api.windowInfo()
+        if (readingRevision !== revision) { pending = true; continue }
         if (!disposed) setMetrics({ width: info.width / info.uiZoomFactor, height: info.height / info.uiZoomFactor,
           visible: info.visible !== false, pixelScale: info.scaleFactor * info.uiZoomFactor })
       } while (pending && !disposed)
@@ -24,6 +27,7 @@ export function useWindowMetrics(api: BeamApi, initial: { width: number; height:
   onMount(() => {
     void refresh()
     onCleanup(api.onEvent(event => {
+      if (event.type === 'windowResized' || event.type === 'windowVisibility') revision++
       if (event.type === 'windowResized' && event.physicalWidth !== undefined && event.physicalHeight !== undefined) {
         setMetrics(current => ({ ...current, width: event.physicalWidth! / current.pixelScale, height: event.physicalHeight! / current.pixelScale }))
       } else if (event.type === 'windowResized' || event.type === 'windowVisibility') void refresh()

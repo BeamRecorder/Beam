@@ -15,6 +15,14 @@ use beam_native::{QuickJsGallery, ServiceOutcome, ServiceResponse, decode_wire_o
 use serde::Deserialize;
 use serde_json::{Value, json};
 
+#[path = "solid_bundles/editor.rs"]
+mod editor;
+#[path = "solid_bundles/editor_controls.rs"]
+mod editor_controls;
+#[path = "solid_bundles/editor_controls_layout.rs"]
+mod editor_controls_layout;
+#[path = "solid_bundles/editor_splitters.rs"]
+mod editor_splitters;
 #[path = "solid_bundles/localization.rs"]
 mod localization;
 
@@ -24,6 +32,38 @@ const DEFAULT_OPTION_ID: &str = "system-audio-option-default";
 const USB_OUTPUT: &str = "pipewire:sink:usb-speaker";
 const CONTRACT: &str =
     include_str!("../../../vendor/argui/packages/host/src/contract.generated.json");
+
+#[test]
+#[ignore = "requires built Solid launcher bundle"]
+fn native_region_toolbar_mounts_presets_actions_and_revision_guard_without_a_window() {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../packages/beam-ui/dist/native/app.mjs");
+    let source = fs::read_to_string(path).unwrap();
+    validate_scene(
+        &source,
+        "app.mjs:mountRegionControls",
+        "mountRegionControls",
+    );
+    validate_scene(&source, "app.mjs:mountRegionActions", "mountRegionActions");
+}
+
+#[test]
+#[ignore = "requires built Solid editor bundle"]
+fn native_editor_mounts_empty_and_populated_project_scenes() {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../packages/beam-ui/dist/native/editor.mjs");
+    let source = fs::read_to_string(path).unwrap();
+    validate_scene(&source, "editor.mjs:mountGallery", "mountGallery");
+}
+
+#[test]
+#[ignore = "requires built Solid launcher bundle"]
+fn native_recorder_shared_controls_mount_without_a_window() {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../packages/beam-ui/dist/native/app.mjs");
+    let source = fs::read_to_string(path).unwrap();
+    validate_scene(&source, "app.mjs:mountGallery", "mountGallery");
+}
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -143,7 +183,18 @@ fn validate_scene(source: &str, scene: &str, entry: &str) {
     if matches!(scene, "app.mjs:mountSettings" | "settings.mjs:mountGallery") {
         checks.validate_about();
     }
+    if scene == "editor.mjs:mountGallery" {
+        editor::validate_selection(&checks);
+        assert_no_alert(&operations.borrow(), scene);
+    }
+    if scene == "app.mjs:mountRegionControls" {
+        region::validate_controls(&checks);
+    }
+    if scene == "app.mjs:mountRegionActions" {
+        region::validate_actions(&checks);
+    }
     checks.validate_locale(delayed_preferences);
+    errors::validate_copy(&checks);
 
     // Keep the native acceptor alive while Solid removes listeners and its root.
     let disposed = gallery.dispose();
@@ -358,10 +409,10 @@ fn text_matches(actual: &str, expected: &str) -> bool {
 /// Checks Beam's default or explicit weight on a currently mounted native Text primitive.
 fn assert_text_weight(root: &Element, text: &str, expected: u16) {
     fn weight(root: &Element, text: &str) -> Option<u16> {
-        if let ElementKind::Text { content, style } = &root.kind {
-            if text_matches(content.as_str(), text) {
-                return Some(style.weight);
-            }
+        if let ElementKind::Text { content, style } = &root.kind
+            && text_matches(content.as_str(), text)
+        {
+            return Some(style.weight);
         }
         root.children.iter().find_map(|child| weight(child, text))
     }
@@ -386,6 +437,7 @@ fn assert_no_rejections(rejections: &RefCell<Vec<String>>, scene: &str) {
 /// `request` selects the service fixture; command services complete with no value.
 fn service_value(request: &ServiceRequest, output_label: &str) -> Value {
     match (request.service.as_str(), request.method.as_str()) {
+        ("editor", method) => editor::service(method, &request.payload),
         ("beam", "preferences") => localization::preferences("en"),
         ("beam", "savePreferences") => localization::saved_preferences(&request.payload),
         ("beam", "info") => json!({
@@ -402,8 +454,11 @@ fn service_value(request: &ServiceRequest, output_label: &str) -> Value {
                 { "id": USB_OUTPUT, "label": "USB speaker", "isDefault": false }
             ]
         }),
+        ("beam", "audioPreview" | "audioLevels") => {
+            json!({ "microphone": null, "systemAudio": null })
+        }
         ("beamUi", "state") => json!({
-            "remaining": 3, "shortcut": "Alt+Shift+R", "paused": false,
+            "remaining": 3, "shortcut": "Alt+Shift+R", "pauseShortcut": "Alt+Shift+P", "paused": false,
             "busy": false, "regionRevision": 1
         }),
         ("updates", "state") => json!({
@@ -427,7 +482,8 @@ fn service_value(request: &ServiceRequest, output_label: &str) -> Value {
         }]),
         ("region", "state") => json!({
             "revision": 1, "width": 640, "height": 360, "preset": "free", "selected": true, "canRecord": true,
-            "controlsX": 0, "controlsY": 0, "actionsX": 0, "actionsY": 360
+            "controlsX": 0, "controlsY": 0, "controlsWidth": 300, "controlsHeight": 40,
+            "actionsX": 400, "actionsY": 368, "actionsWidth": 620, "actionsHeight": 54
         }),
         ("windowPicker", "choices") => json!([]),
         ("teleprompter", "read") => json!({

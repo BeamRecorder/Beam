@@ -104,6 +104,15 @@ pub fn run_desktop_with_services(
         config.windows[0].window.title = title;
     }
     let (application_sender, application_requests) = mpsc::channel();
+    let editor_canvas = if crate::editor::is_editor() {
+        Some(crate::editor::register(
+            &services,
+            crate::beam::projects_root()?,
+        )?)
+    } else {
+        None
+    };
+    let gpu_canvases = argui_render::GpuCanvasRegistry::new(editor_canvas)?;
     register_application_services(&services, application_sender.clone(), config.tray.clone());
     register_auxiliary_windows(
         &services,
@@ -134,6 +143,8 @@ pub fn run_desktop_with_services(
         });
     let bundle_path = if std::env::args().any(|argument| argument == "--settings") {
         bundle_path.map(|path| path.with_file_name("settings.mjs"))
+    } else if crate::editor::is_editor() {
+        bundle_path.map(|path| path.with_file_name("editor.mjs"))
     } else {
         bundle_path
     };
@@ -168,6 +179,7 @@ pub fn run_desktop_with_services(
             run_native_host_application_with_text_engine_and_windows(
                 config,
                 RendererConfig::default()
+                    .gpu_canvases(gpu_canvases)
                     .profiling(cfg!(debug_assertions) || cfg!(feature = "dev-metrics"))
                     .blur_algorithm(gallery_blur_algorithm())
                     .effects(effects),

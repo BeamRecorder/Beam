@@ -1,5 +1,13 @@
 use crate::EncodeError;
 
+/// The actual recording codec and native encoder, exposed to session metadata.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct VideoEncoding {
+    pub factory: &'static str,
+    pub codec: &'static str,
+    pub pixel_format: &'static str,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct VideoConfig {
     pub width: u32,
@@ -12,6 +20,14 @@ impl VideoConfig {
         if self.width == 0 || self.height == 0 || self.fps == 0 {
             return Err(EncodeError::InvalidFormat(
                 "video width, height and fps must be non-zero".into(),
+            ));
+        }
+        if self.width > i32::MAX as u32
+            || self.height > i32::MAX as u32
+            || self.fps > i32::MAX as u32
+        {
+            return Err(EncodeError::InvalidFormat(
+                "video format exceeds GStreamer caps limits".into(),
             ));
         }
         let _ = self.rgba_bytes()?;

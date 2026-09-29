@@ -84,3 +84,21 @@ fn meters_measure_the_recorded_packets_and_clear_during_pause() {
     assert!(session.audio_levels().microphone.is_none());
     session.stop().expect("stop");
 }
+
+#[test]
+fn resume_rejects_a_different_declared_video_codec_without_publishing_a_segment() {
+    let temporary = tempfile::tempdir().expect("tempdir");
+    let mut session = session(&temporary);
+    add_screen(&mut session, vec![screen_frame(0)], false);
+    session.start().expect("start");
+    session.poll().expect("poll");
+    session.pause().expect("pause");
+    if let TrackFormat::Video { codec, .. } = &mut session.manifest.tracks[0].format {
+        *codec = "different-codec".into();
+    }
+    session.resume().expect("resume reports track failure");
+    assert_eq!(session.manifest.tracks[0].status, TrackStatus::Failed);
+    assert_eq!(session.manifest.tracks[0].segments.len(), 1);
+    assert!(!temporary.path().join("screen-1.webm").exists());
+    session.stop().expect("stop failed track safely");
+}
