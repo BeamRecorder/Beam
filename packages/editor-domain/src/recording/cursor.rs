@@ -19,11 +19,13 @@ pub fn at(
     Ok(source_at(&asset.cursor, style, source))
 }
 
-pub fn prepare(points: &[CursorPoint]) -> CursorIndex {
+pub fn prepare(points: &[CursorPoint], style: &CursorStyle) -> CursorIndex {
     let mut index = CursorIndex::default();
     for (i, p) in points.iter().enumerate() {
         if i == 0
             || !matches!(p.interaction_type, None | Some(CursorInteractionType::Move))
+            || p.visible != points[i - 1].visible
+            || p.cursor_type != points[i - 1].cursor_type
             || (p.cx - points[i - 1].cx).abs() > 0.00001
             || (p.cy - points[i - 1].cy).abs() > 0.00001
         {
@@ -33,6 +35,8 @@ pub fn prepare(points: &[CursorPoint]) -> CursorIndex {
             index.clicks.push(p.time_ms);
         }
     }
+    index.motion = super::cursor_motion::prepare(points, &style.motion);
+    index.settings = style.motion.clone();
     index
 }
 
@@ -52,7 +56,7 @@ pub fn source_at(
     style: &CursorStyle,
     time_ms: f64,
 ) -> Option<CursorSample> {
-    source_at_prepared(points, &prepare(points), style, time_ms)
+    source_at_prepared(points, &prepare(points, style), style, time_ms)
 }
 
 pub fn source_at_prepared(
@@ -65,8 +69,15 @@ pub fn source_at_prepared(
         return None;
     }
     let end = points.partition_point(|p| p.time_ms as f64 <= time_ms);
-    end.checked_sub(1).and_then(|i| points.get(i))?;
-    let position = smoothed(points, time_ms, style.smoothing_ms)?;
+    let latest = end.checked_sub(1).and_then(|i| points.get(i))?;
+    if latest.visible == Some(false) {
+        return None;
+    }
+    let position = if style.smoothing_ms == 0 || style.motion.smoothing == 0. {
+        playback::cursor_at(points, time_ms).map(|p| (p.x, p.y))?
+    } else {
+        super::cursor_motion::at(points, &index.motion, &style.motion, time_ms)?
+    };
     let last = index
         .activity
         .partition_point(|time| *time as f64 <= time_ms)
@@ -76,7 +87,12 @@ pub fn source_at_prepared(
     let opacity = if style.hide_after_ms == 0 {
         1.
     } else {
-        (1. - (elapsed - style.hide_after_ms as f64) / 200.).clamp(0., 1.)
+        let age = elapsed - style.hide_after_ms as f64;
+        if style.fade_duration_ms == 0 {
+            if age >= 0. { 0. } else { 1. }
+        } else {
+            (1. - age / style.fade_duration_ms as f64).clamp(0., 1.)
+        }
     };
     let click = if style.clicks {
         index
@@ -106,22 +122,4 @@ fn is_click(point: &CursorPoint) -> bool {
                 | CursorInteractionType::MiddleClick
         )
     )
-}
-
-/// A fixed convolution window means unrelated seek order cannot affect smoothing.
-fn smoothed(points: &[CursorPoint], time_ms: f64, smoothing_ms: u64) -> Option<(f64, f64)> {
-    if smoothing_ms == 0 {
-        return playback::cursor_at(points, time_ms).map(|p| (p.x, p.y));
-    }
-    let window = smoothing_ms as f64 * 4.;
-    let (mut x, mut y, mut total) = (0., 0., 0.);
-    for step in 0..=32 {
-        let lag = window * step as f64 / 32.;
-        let weight = (-lag / smoothing_ms as f64).exp();
-        let p = playback::cursor_at(points, (time_ms - lag).max(points[0].time_ms as f64))?;
-        x += p.x * weight;
-        y += p.y * weight;
-        total += weight;
-    }
-    Some((x / total, y / total))
 }

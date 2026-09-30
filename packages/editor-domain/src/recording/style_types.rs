@@ -36,18 +36,33 @@ pub struct CursorStyle {
     /// Zero disables automatic hiding.
     pub hide_after_ms: u64,
     pub clicks: bool,
+    #[serde(default)]
+    pub selection: super::cursor_style_types::CursorSelection,
+    #[serde(default)]
+    pub shadow: super::cursor_style_types::CursorShadow,
+    #[serde(default)]
+    pub motion: super::cursor_style_types::CursorMotion,
+    #[serde(default)]
+    pub click_effects: super::cursor_style_types::CursorClickEffects,
+    #[serde(default = "default_fade")]
+    pub fade_duration_ms: u64,
 }
 impl Default for CursorStyle {
     fn default() -> Self {
         Self {
             enabled: true,
             shape: CursorShape::Pointer,
-            size: 24.,
-            color: [1.; 4],
+            size: 45.,
+            color: [0., 0., 0., 1.],
             border_color: [0.08, 0.08, 0.08, 1.],
             smoothing_ms: 60,
-            hide_after_ms: 3000,
+            hide_after_ms: 0,
             clicks: true,
+            selection: Default::default(),
+            shadow: Default::default(),
+            motion: Default::default(),
+            click_effects: Default::default(),
+            fade_duration_ms: default_fade(),
         }
     }
 }
@@ -64,6 +79,14 @@ pub struct CursorStyleOverride {
     pub smoothing_ms: Option<u64>,
     pub hide_after_ms: Option<u64>,
     pub clicks: Option<bool>,
+    pub selection: Option<super::cursor_style_types::CursorSelection>,
+    pub shadow: Option<super::cursor_style_types::CursorShadow>,
+    pub motion: Option<super::cursor_style_types::CursorMotion>,
+    pub click_effects: Option<super::cursor_style_types::CursorClickEffects>,
+    pub fade_duration_ms: Option<u64>,
+}
+fn default_fade() -> u64 {
+    250
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -116,4 +139,6 @@ pub struct CursorSample {
 pub struct CursorIndex {
     pub activity: Vec<u64>,
     pub clicks: Vec<u64>,
+    pub motion: Vec<super::cursor_motion_types::MotionKey>,
+    pub settings: super::cursor_style_types::CursorMotion,
 }

@@ -14,6 +14,7 @@ pub(super) fn validate_selection(scene: &super::localization::Scene<'_>) {
     resize(scene, 1440, 900);
     validate_theme(scene);
     validate_geometry(scene);
+    super::editor_interactions::validate(scene);
     super::editor_controls_layout::validate(scene);
     super::editor_controls::validate_hover(scene);
     super::editor_splitters::validate(scene);
@@ -105,7 +106,7 @@ fn resize(scene: &super::localization::Scene<'_>, width: u32, height: u32) {
         .gallery
         .deliver_service(
             &json!({"requestId":0,"window":"main","status":"event",
-        "value":{"type":"windowResized","physicalWidth":width,"physicalHeight":height}})
+        "value":{"type":"windowResized","window":"main","physicalWidth":width,"physicalHeight":height}})
             .to_string(),
         )
         .unwrap();
@@ -282,6 +283,7 @@ pub(super) fn service(method: &str, payload: &Value) -> Value {
             }
             other => panic!("unexpected editor query {other:?}"),
         },
+        "cursorPacks" => json!([]),
         "play" => transport,
         "acquireVisual" => {
             json!({"key":"source-visual","canvasId":43,"status":"ready","error":null})
@@ -305,7 +307,8 @@ pub(super) fn validate_geometry(scene: &super::localization::Scene<'_>) {
         "editor-timeline-divider",
         "editor-track-divider",
     ] {
-        let divider = super::keyed_element(&root, key).expect("native pane separator");
+        let divider = super::keyed_element(&root, key)
+            .unwrap_or_else(|| panic!("missing native pane separator {key}"));
         assert!(
             divider.semantics.is_some(),
             "{key} must expose keyboard/accessibility semantics"

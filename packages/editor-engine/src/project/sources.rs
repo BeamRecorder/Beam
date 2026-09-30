@@ -26,6 +26,7 @@ pub fn hydrate(root: &Path, project: &mut Project) -> Result<()> {
             asset.identity = Some(identity(&path)?);
         }
     }
+    super::cursor_migration::hydrate(root, project)?;
     Ok(())
 }
 pub fn verify(root: &Path, asset: &MediaAsset) -> Result<()> {

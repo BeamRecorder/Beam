@@ -9,9 +9,10 @@ import type { RegionGesture, RegionRow, RegionWindow } from './regionTypes';
 import type { EditorState } from '../shared/useEditor';
 
 /** Region drags submit one edit and retain the instance's existing time space. */
-export function TimelineRegion(props: { row: RegionRow; pixels: number; editor: EditorState }) {
+export function TimelineRegion(props: { row: RegionRow; pixels: number; margin: number; editor: EditorState }) {
   const theme = useTheme<WidgetTheme>(), TR = useTR('NativeEditor');
   const [draft, setDraft] = createSignal<RegionWindow>();
+  const [committing, setCommitting] = createSignal(false);
   let originX = 0, gesture: RegionGesture | undefined;
   const transition = () => props.row.region.kind === 'transition';
   const window = () => draft() ?? regionWindow(props.row.region);
@@ -24,7 +25,7 @@ export function TimelineRegion(props: { row: RegionRow; pixels: number; editor: 
   }
   function down(event: NativeEventPayload<'pointerDown'>, mode: RegionGesture) {
     select();
-    if (transition() || props.editor.busy()) return;
+    if (transition() || props.editor.busy() || committing()) return;
     originX = event.x ?? 0;
     gesture = mode;
   }
@@ -32,14 +33,20 @@ export function TimelineRegion(props: { row: RegionRow; pixels: number; editor: 
     if (gesture) setDraft(dragRegion(regionWindow(props.row.region), props.row.clip, ((event.x ?? originX) - originX) * 1000 / props.pixels, gesture));
   }
   function cancel() { gesture = undefined; setDraft(undefined); }
-  function finish() {
+  async function finish() {
     const range = draft();
-    if (gesture && range) void props.editor.execute([{ type: 'effectRangeAt', clip: props.row.clip.id, instance: props.row.region.id,
-      start: { ticks: Math.round(range.startMs * 1000), timescale: 1000000 }, end: { ticks: Math.round(range.endMs * 1000), timescale: 1000000 } }]);
-    cancel();
+    gesture = undefined;
+    setCommitting(true);
+    try {
+      if (range) await props.editor.execute([{ type: 'effectRangeAt', clip: props.row.clip.id, instance: props.row.region.id,
+        start: { ticks: Math.round(range.startMs * 1000), timescale: 1000000 }, end: { ticks: Math.round(range.endMs * 1000), timescale: 1000000 } }]);
+    } finally { cancel(); setCommitting(false); }
   }
   createEffect(() => { props.editor.gestureVersion(); untrack(cancel); });
-  return <focusScope id={`timeline-region-${props.row.region.id}`} position="absolute" inset={{ start: window().startMs / 1000 * props.pixels, top: props.row.top }}
+  return <container position="absolute" inset={{ start: props.margin + regionWindow(props.row.region).startMs / 1000 * props.pixels, top: props.row.top }}
+    transform={{ translateX: (window().startMs - regionWindow(props.row.region).startMs) / 1000 * props.pixels }}
+    width={Math.max(5, (window().endMs - window().startMs) / 1000 * props.pixels)} height={20}>
+    <focusScope id={`timeline-region-${props.row.region.id}`} enabled={!committing()}
     width={Math.max(5, (window().endMs - window().startMs) / 1000 * props.pixels)} height={20} role="button" accessibleName={label()}
     keyboardActivation="none" selected={selected()} onKey={event => { if (event.state === 'pressed' && event.key === 'Enter') select(); }}>
     <rectangle width="100%" height="100%" radii={4} background={transition() ? theme().chart3 : theme().primary} opacity={props.row.region.enabled ? 0.85 : 0.35}
@@ -54,5 +61,5 @@ export function TimelineRegion(props: { row: RegionRow; pixels: number; editor: 
           onPointerDown={event => down(event, 'end')} onMoved={move} onPointerUp={finish} onPointerCancel={cancel} />
       </Show>
     </rectangle>
-  </focusScope>;
+  </focusScope></container>;
 }

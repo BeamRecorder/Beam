@@ -127,6 +127,18 @@ fn captured_click_ring_and_automatic_hiding_are_real_gpu_pixels() {
             ),
         ]
         .into();
+        project
+            .recording_style
+            .cursor
+            .click_effects
+            .left
+            .ripple_enabled = true;
+        project
+            .recording_style
+            .cursor
+            .click_effects
+            .left
+            .ripple_size = 10.;
         let render = Render::new(root.path(), &project);
         assert!(pixel(&render.image(100), 54, 32)[0] < 10);
         assert!(pixel(&render.image(300), 54, 32)[0] > 30);

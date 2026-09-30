@@ -56,8 +56,15 @@ function Workspace(props: { api: EditorApi; beam: BeamApi }) {
       accessibleName={TR('editor')}
       role="group"
       keyboardActivation="none"
-      onKey={event => editor.modifiers(!!(event.control || event.super || event.shift))}
+      onCaptureKey={event => {
+        editor.modifiers(!!(event.control || event.super || event.shift), !!(event.control || event.super));
+        if (event.state === 'pressed' && !event.repeat && !event.alt && (event.control || event.super)) {
+          if (event.key === '+' || event.key === '=') editor.zoomTimeline(1);
+          else if (event.key === '-') editor.zoomTimeline(-1);
+        }
+      }}
     >
+      <keyBinding shortcut="Space" enabled={!editor.busy() && editor.transport().durationMs > 0} onActivated={() => void editor.toggle()} />
       <column width="100%" height="100%" minHeight={0} background={theme().sidebar}>
         <row width="100%" height={40} shrink={0} padding={{ start: 14, end: 12 }} gap={8} alignItems="center">
           <image source={mediaAssets['brand/beam.png']} width={18} height={18} fit="contain" alt="Beam" />

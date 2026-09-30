@@ -22,7 +22,15 @@ pub(crate) fn decisions_for_plan(
     let mut cursor_indexes: std::collections::HashMap<_, _> = previous
         .into_iter()
         .flat_map(|p| p.values())
-        .filter_map(|s| Some((s.asset.as_ref()?.id, s.cursor_index.as_ref()?.clone())))
+        .filter_map(|s| {
+            Some((
+                (
+                    s.asset.as_ref()?.id,
+                    serde_json::to_string(&s.cursor_index.as_ref()?.settings).ok()?,
+                ),
+                s.cursor_index.as_ref()?.clone(),
+            ))
+        })
         .collect();
     let clips = super::super::pipeline::loaded_clips(project, plan)?
         .into_iter()
@@ -31,6 +39,11 @@ pub(crate) fn decisions_for_plan(
                 .get(&clip.track_id)
                 .ok_or_else(|| media("render decisions have no lane"))?;
             let asset = assets.get(&clip.asset_id).copied();
+            let cursor_style = project
+                .recording_style
+                .cursor
+                .overridden(clip.cursor_style.as_ref());
+            let motion_key = serde_json::to_string(&cursor_style.motion)?;
             let cursor_index = asset
                 .filter(|a| {
                     a.cursor_mode
@@ -38,10 +51,11 @@ pub(crate) fn decisions_for_plan(
                 })
                 .map(|asset| {
                     cursor_indexes
-                        .entry(asset.id)
+                        .entry((asset.id, motion_key.clone()))
                         .or_insert_with(|| {
                             Arc::new(beam_editor_domain::recording::cursor::prepare(
                                 &asset.cursor,
+                                &cursor_style,
                             ))
                         })
                         .clone()

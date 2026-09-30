@@ -84,6 +84,8 @@ pub fn point(
     interaction_type: Option<CursorInteractionType>,
 ) -> CursorPoint {
     CursorPoint {
+        cursor_type: None,
+        visible: None,
         time_ms,
         cx,
         cy,

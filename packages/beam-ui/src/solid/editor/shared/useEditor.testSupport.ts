@@ -11,7 +11,7 @@ export const disposers: (() => void)[] = [];
 export const flush = async () => {
   for (let index = 0; index < 12; index++) await Promise.resolve();
 };
-export function mount() {
+export function mount(configure?: (responses: Map<string, (payload?: Record<string, unknown>) => Promise<unknown>>) => void) {
   let document: Snapshot = {
     activeSequence: 'sequence', sequences: [{ id: 'sequence', name: 'Timeline 1' }],
     project: {
@@ -56,8 +56,10 @@ export function mount() {
     listener: (event: BeamEvent) => void = () => undefined;
   const unsubscribe = vi.fn();
   const responses = new Map<string, (payload?: Record<string, unknown>) => Promise<unknown>>();
+  configure?.(responses);
   const call = vi.fn(async (_service: string, method: string, payload?: Record<string, unknown>) => {
     if (responses.has(method)) return responses.get(method)!(payload);
+    if (method === 'cursorPacks') return [];
     if (method === 'frame') return { transport, canvasId: document.project.clips.length ? 42 : null };
     if (method === 'play') return (transport = { ...transport, playing: Boolean(payload?.playing) });
     if (method === 'seek') return (transport = { ...transport, positionMs: Number(payload?.positionMs) });

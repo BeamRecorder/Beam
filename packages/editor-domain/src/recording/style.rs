@@ -14,9 +14,21 @@ impl CursorStyle {
             smoothing_ms: v.smoothing_ms.unwrap_or(self.smoothing_ms),
             hide_after_ms: v.hide_after_ms.unwrap_or(self.hide_after_ms),
             clicks: v.clicks.unwrap_or(self.clicks),
+            selection: v
+                .selection
+                .clone()
+                .unwrap_or_else(|| self.selection.clone()),
+            shadow: v.shadow.clone().unwrap_or_else(|| self.shadow.clone()),
+            motion: v.motion.clone().unwrap_or_else(|| self.motion.clone()),
+            click_effects: v
+                .click_effects
+                .clone()
+                .unwrap_or_else(|| self.click_effects.clone()),
+            fade_duration_ms: v.fade_duration_ms.unwrap_or(self.fade_duration_ms),
         }
     }
     pub fn validate(&self) -> Result<()> {
+        super::cursor_style::validate(self)?;
         if !self.size.is_finite()
             || !(1. ..=256.).contains(&self.size)
             || self

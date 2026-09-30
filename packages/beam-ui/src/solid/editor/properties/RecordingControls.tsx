@@ -6,6 +6,7 @@ import { Select } from '../../shared/base-ui/select';
 import { useTR } from '../../shared/i18n';
 import { NumberField, PropertyRow, PropertySection } from './PropertyRow';
 import { ValueControl } from './ValueControl';
+import { CursorControls } from './CursorControls';
 import type { CursorStyle, CursorStyleOverride, Parameter, RecordingStyle } from '../shared/generated/editorContracts';
 import type { EditorState } from '../shared/useEditor';
 
@@ -32,9 +33,12 @@ export function RecordingControls(props: {editor:EditorState;clip?:boolean}) {
         <PropertyRow label={TR('cursorSize')}><NumberField label={TR('cursorSize')} value={cursor()!.size} min={1} max={256} onChange={value=>setCursor('size',value)} /></PropertyRow>
         <For each={['color','borderColor'] as const}>{key=><PropertyRow label={TR(key)}><ValueControl id={`cursor-${key}`} parameter={colorParameter(key)} value={{kind:'color',value:cursor()![key]}}
           onChange={value=>{if(value.kind==='color')setCursor(key,value.value);}} /></PropertyRow>}</For>
-        <PropertyRow label={TR('smoothing')}><NumberField label={TR('smoothing')} value={cursor()!.smoothingMs} min={0} max={1000} onChange={value=>setCursor('smoothingMs',Math.round(value))} /></PropertyRow>
         <PropertyRow label={TR('autoHide')}><NumberField label={TR('autoHide')} value={cursor()!.hideAfterMs} min={0} max={60000} onChange={value=>setCursor('hideAfterMs',Math.round(value))} /></PropertyRow>
         <PropertyRow label={TR('clicks')}><Switch accessibleName={TR('clicks')} value={cursor()!.clicks} onValueChange={value=>setCursor('clicks',value)} /></PropertyRow>
+        <CursorControls editor={props.editor} style={cursor()!} onChange={value => {
+          if (props.clip) void props.editor.edit({type:'cursorStyle',id:props.editor.clip()!.id,style:{...override(),...value} as CursorStyleOverride});
+          else void props.editor.edit({type:'recordingStyle',style:{...profile()!,cursor:{...cursor()!,...value}}});
+        }} />
       </Show>
     </PropertySection>
     <Show when={!props.clip}><PropertySection label={TR('zoomDefaults')}>

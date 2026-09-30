@@ -343,3 +343,29 @@ it('selects inserted clips and clears selection when switching sequence', async 
   responses.set('edit', async () => ({ ...before, activeSequence: 'other' }));
   await editor.edit({ type: 'selectSequence', id: 'other' }); expect(editor.selected()).toBeUndefined();
 });
+
+it('keeps playback polling steady without querying inspector values on every frame', async () => {
+  const { editor, responses, call } = mount();
+  await flush();
+  editor.select('clip'); await flush();
+  await editor.toggle(); await flush();
+  let position = 0;
+  responses.set('frame', async () => ({ transport: { ...editor.transport(), positionMs: position += 33, playing: true }, canvasId: 42 }));
+  call.mockClear();
+  await vi.advanceTimersByTimeAsync(1000);
+  expect(call.mock.calls.filter(c => c[1] === 'frame').length).toBeGreaterThanOrEqual(29);
+  expect(call.mock.calls.filter(c => c[1] === 'query' && c[2]?.kind === 'parameterValues')).toHaveLength(0);
+  await editor.toggle(); await flush();
+  expect(call.mock.calls.filter(c => c[1] === 'query' && c[2]?.kind === 'parameterValues')).toHaveLength(1);
+});
+it('tracks command and additive modifiers independently and forwards zoom intents', async () => {
+  const { editor } = mount(); await flush();
+  editor.modifiers(true, true); expect(editor.additive()).toBe(true); expect(editor.commandModifier()).toBe(true);
+  editor.zoomTimeline(1); expect(editor.zoomRequest()).toEqual({serial: 1, direction: 1});
+  editor.modifiers(false, false); expect(editor.commandModifier()).toBe(false);
+  editor.zoomTimeline(-1); expect(editor.zoomRequest()).toEqual({serial: 2, direction: -1});
+});
+it('reports catalogue failures without losing the open project', async () => {
+  const { editor } = mount(responses => {responses.set('cursorPacks', async () => { throw new Error('invalid imported cursor pack'); });});
+  await flush(); expect(editor.snapshot()?.project.id).toBe('p'); expect(editor.error()).toContain('invalid imported cursor pack');
+});

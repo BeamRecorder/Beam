@@ -2,6 +2,10 @@
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CursorPoint {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cursor_type: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub visible: Option<bool>,
     pub time_ms: u64,
     pub cx: f64,
     pub cy: f64,

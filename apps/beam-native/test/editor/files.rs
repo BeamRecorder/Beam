@@ -56,9 +56,10 @@ fn symlinked_recordings_outside_the_library_are_skipped() {
 #[test]
 fn new_projects_have_independent_atomic_documents_inside_the_studio_library() {
     let root = tempfile::tempdir().unwrap();
-    let controller = super::session::Session::new(std::sync::Arc::new(
-        beam_editor_engine::EditorController::new().unwrap(),
-    ));
+    let controller = super::session::Session::new(
+        std::sync::Arc::new(beam_editor_engine::EditorController::new().unwrap()),
+        None,
+    );
     let first = create(&controller, root.path()).unwrap();
     let second = create(&controller, root.path()).unwrap();
     assert_ne!(first.project.id, second.project.id);

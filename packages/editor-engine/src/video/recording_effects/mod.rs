@@ -1,6 +1,10 @@
 //! Real recording processors use the same prepared decisions in preview and export.
 pub mod camera;
 pub mod cursor;
+pub mod cursor_catalog;
+pub(crate) mod cursor_overlay;
+pub(crate) mod cursor_raster;
+pub(crate) mod cursor_types;
 use super::effects::types::RenderState;
 use crate::{Clip, MediaAsset, Project, Result, video::pipeline::media};
 use beam_editor_domain::{effects::Processor, recording::style_types::CursorMode};

@@ -1,7 +1,7 @@
 //! The native editor uses an opaque, resizable ordinary desktop window.
 use argui_platform::{
     AppIcon, ApplicationConfig, ApplicationId, ApplicationIdentity, CloseBehavior, IconSet,
-    WindowConfig,
+    UiZoomConfig, WindowConfig,
 };
 
 /// Recognizes only native editor launch arguments, including explicit project paths.
@@ -32,5 +32,6 @@ pub(crate) fn window_config() -> Result<ApplicationConfig, Box<dyn std::error::E
             close_behavior: CloseBehavior::Quit,
             ..WindowConfig::default()
         },
-    ))
+    )
+    .with_ui_zoom(UiZoomConfig::disabled()))
 }

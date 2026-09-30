@@ -6,6 +6,7 @@ import type { EditorOperationOptions } from './editorStateTypes';
 import { createSourceVisuals } from '../media/sourceVisuals';
 import { moveSelection, removeSelection } from './selectionModel';
 import type { Value } from './generated/editorContracts';
+import type { CursorPackSummary } from '../properties/cursorControlTypes';
 
 /** Coordinates native operations. Playback polling exists only while the window is active. */
 export function useEditor(api: EditorApi, beam: BeamApi) {
@@ -17,6 +18,9 @@ export function useEditor(api: EditorApi, beam: BeamApi) {
   const [selectedEffect, setSelectedEffect] = createSignal<string>();
   const [selectedTransition, setSelectedTransition] = createSignal<string>();
   const [additive, setAdditive] = createSignal(false);
+  const [commandModifier, setCommandModifier] = createSignal(false);
+  const [zoomRequest, setZoomRequest] = createSignal({ serial: 0, direction: 0 });
+  const [cursorPacks, setCursorPacks] = createSignal<CursorPackSummary[]>([]);
   const [gestureVersion, setGestureVersion] = createSignal(0);
   const [details, setDetails] = createSignal<{clip: Clip; sequence: string; revision: number}>();
   const [clipLoading, setClipLoading] = createSignal(false);
@@ -28,7 +32,9 @@ export function useEditor(api: EditorApi, beam: BeamApi) {
     durationMs: 0,
     playing: false,
     error: null,
-  });
+  }, { equals: (before, after) => before.positionMs === after.positionMs && before.durationMs === after.durationMs && before.playing === after.playing && before.error === after.error });
+  const playing = createMemo(() => transport().playing);
+  const parameterTime = createMemo(() => playing() ? undefined : transport().positionMs);
   const [error, setError] = createSignal('');
   const [busy, setBusy] = createSignal(true);
   const [pending, setPending] = createSignal(0);
@@ -164,6 +170,7 @@ export function useEditor(api: EditorApi, beam: BeamApi) {
     }
   }
   onMount(() => {
+    void api.cursorPacks().then(value => { if (!disposed) setCursorPacks(value); }).catch(cause => { if (!disposed) setError(String(cause)); });
     void operation(() => api.bootstrap(), { reportStartup: true });
     onCleanup(
       beam.onEvent((event) => {
@@ -214,8 +221,9 @@ export function useEditor(api: EditorApi, beam: BeamApi) {
       .finally(() => {if (!disposed && !obsolete) setClipLoading(false);});
   });
   createEffect(() => {
-    const document = snapshot(), selectedClip = clip(), time = transport().positionMs;
+    const document = snapshot(), selectedClip = clip(), time = parameterTime();
     if (!document || !selectedClip || !visible()) { setParameterValues({}); return; }
+    if (time === undefined) return;
     document.revision;
     let obsolete = false;
     onCleanup(() => { obsolete = true; });
@@ -229,7 +237,7 @@ export function useEditor(api: EditorApi, beam: BeamApi) {
       .catch(cause => { if (!disposed && !obsolete) setError(String(cause)); });
   });
   createEffect(() => {
-    if (!visible() || !transport().playing) return;
+    if (!visible() || !playing()) return;
     const timer = setInterval(() => void frame(), 33);
     onCleanup(() => clearInterval(timer));
   });
@@ -256,7 +264,10 @@ export function useEditor(api: EditorApi, beam: BeamApi) {
     snapshot,
     transport,
     selected,
-    selectedIds, additive, modifiers: setAdditive, select,
+    selectedIds, additive, commandModifier,
+    cursorPacks,
+    zoomRequest, zoomTimeline: (direction: number) => setZoomRequest(value => ({serial: value.serial + 1, direction})),
+    modifiers: (extend: boolean, command = false) => batch(() => {setAdditive(extend); setCommandModifier(command);}), select,
     selectedEffect, selectedTransition,
     selectEffect: (clipId:string,instanceId:string) => {select(clipId);setSelectedEffect(instanceId);},
     selectTransition: (id:string) => {const transition = snapshot()?.project.transitions?.find(t => t.instance.id === id); if (transition) {select(transition.fromClip);setSelectedTransition(id);}},

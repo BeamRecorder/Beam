@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use argui_core::{Key, KeyState};
+use argui_core::{Key, KeyState, ScrollDelta};
 use argui_runtime::{HostId, NativeHostDelivery};
 use argui_ui::{GestureKind, GesturePhase, SemanticAction, SemanticValue, UiEventKind};
 use serde_json::Value;
@@ -112,6 +112,20 @@ pub fn ui_event_payload(kind: &UiEventKind) -> Value {
         UiEventKind::Focused => ("focus", EventData::Empty {}),
         UiEventKind::Blurred => ("blur", EventData::Empty {}),
         UiEventKind::Click(_) => ("click", EventData::Empty {}),
+        UiEventKind::Wheel { delta, .. } => {
+            let (delta, delta_mode) = match delta {
+                ScrollDelta::Lines(value) => (value, "lines"),
+                ScrollDelta::Pixels(value) => (value, "pixels"),
+            };
+            (
+                "wheel",
+                EventData::Wheel {
+                    delta_x: delta.x,
+                    delta_y: delta.y,
+                    delta_mode,
+                },
+            )
+        }
         UiEventKind::Scrolled { offset, .. } => (
             "scroll",
             EventData::Scroll {

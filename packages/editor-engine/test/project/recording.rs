@@ -6,7 +6,7 @@ use beam_media_manifest::{
     TrackMetadata, TrackMetrics, TrackStatus,
 };
 use std::{fs, path::Path};
-fn recording(root: &Path) -> (ProjectManifest, SessionManifest) {
+pub(super) fn recording(root: &Path) -> (ProjectManifest, SessionManifest) {
     let project_id = ProjectId::new();
     let session_id = SessionId::new();
     let folder = root.join(session_id.to_string());
@@ -72,7 +72,7 @@ fn recording(root: &Path) -> (ProjectManifest, SessionManifest) {
     save(root, &project, &session);
     (project, session)
 }
-fn save(root: &Path, project: &ProjectManifest, session: &SessionManifest) {
+pub(super) fn save(root: &Path, project: &ProjectManifest, session: &SessionManifest) {
     fs::write(
         root.join("project.json"),
         serde_json::to_vec(project).unwrap(),

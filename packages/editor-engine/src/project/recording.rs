@@ -3,9 +3,7 @@ use super::validation;
 use crate::video::zoom::suggestions;
 use crate::{Clip, EditorError, Effects, MediaAsset, Project, Result, Track, TrackKind};
 use beam_editor_domain::recording::{
-    decisions,
-    style_types::CursorMode,
-    types::{CursorInteractionType, CursorPoint},
+    decisions, style_types::CursorMode, types::CursorInteractionType,
 };
 use beam_media_manifest::{
     ProjectManifest, SessionManifest, TrackFormat, TrackKind as RecordedKind, TrackStatus,
@@ -31,6 +29,14 @@ pub fn open(root: &Path) -> Result<Project> {
     project.id = Uuid::parse_str(&manifest.project_id.to_string())
         .map_err(|e| EditorError::Invalid(e.to_string()))?;
     project.tracks = Default::default();
+    if let Some(cursor) = manifest
+        .editor
+        .extra
+        .get("presentation")
+        .and_then(|p| p.get("cursor"))
+    {
+        project.recording_style.cursor = super::cursor_preferences::import(cursor)?;
+    }
     let mut offset = 0;
     for reference in manifest.sessions {
         validation::relative_path(&reference.relative_path)?;
@@ -59,6 +65,14 @@ pub fn open(root: &Path) -> Result<Project> {
             sidecar.samples
         } else {
             Vec::new()
+        };
+        let cursor_events = if session_root.join("cursor/cursor.json").exists() {
+            read::<Vec<beam_screen::cursor::CursorEvent>>(&validation::source_path(
+                root,
+                &format!("{}/cursor/cursor.json", reference.relative_path),
+            )?)?
+        } else {
+            vec![]
         };
         let mut tracks = session.tracks.clone();
         tracks.sort_by_key(|t| match t.kind {
@@ -116,20 +130,12 @@ pub fn open(root: &Path) -> Result<Project> {
                 let start_ms = segment.start_ns / 1_000_000;
                 let cursor = if recorded.kind == RecordedKind::Screen {
                     suggestions::normalize(
-                        &telemetry
-                            .iter()
-                            .filter(|p| p.time_ms >= start_ms && p.time_ms < start_ms + duration)
-                            .cloned()
-                            .map(|mut p| {
-                                p.time_ms -= start_ms;
-                                CursorPoint {
-                                    time_ms: p.time_ms,
-                                    cx: p.cx,
-                                    cy: p.cy,
-                                    interaction_type: p.interaction_type.map(interaction),
-                                }
-                            })
-                            .collect::<Vec<_>>(),
+                        &super::cursor_import::points(
+                            &telemetry,
+                            &cursor_events,
+                            start_ms,
+                            duration,
+                        ),
                         duration,
                     )
                 } else {
@@ -203,7 +209,7 @@ pub fn open(root: &Path) -> Result<Project> {
     validation::project(&project)?;
     Ok(project)
 }
-fn read<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T> {
+pub(super) fn read<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T> {
     let mut bytes = Vec::new();
     File::open(path)
         .map_err(|e| crate::shared::storage(path, e))?
@@ -229,7 +235,9 @@ fn cursor_mode(kind: RecordedKind, mode: beam_media_manifest::CursorMode) -> Cur
         beam_media_manifest::CursorMode::Unknown => CursorMode::Unknown,
     }
 }
-fn interaction(kind: beam_screen::cursor::CursorInteractionType) -> CursorInteractionType {
+pub(super) fn interaction(
+    kind: beam_screen::cursor::CursorInteractionType,
+) -> CursorInteractionType {
     match kind {
         beam_screen::cursor::CursorInteractionType::Move => CursorInteractionType::Move,
         beam_screen::cursor::CursorInteractionType::Click => CursorInteractionType::Click,

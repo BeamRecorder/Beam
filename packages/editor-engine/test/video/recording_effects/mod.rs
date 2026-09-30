@@ -22,6 +22,15 @@ pub fn project(root: &std::path::Path, media: &std::path::Path) -> Project {
     decision_mut(&mut project.clips, 0).effects.auto_zoom = false;
     project.recording_style.cursor.shape = CursorShape::Dot;
     project.recording_style.cursor.size = 8.;
+    project.recording_style.cursor.color = [1.; 4];
+    project.recording_style.cursor.shadow.enabled = false;
+    project.recording_style.cursor.motion.motion_blur = 0.;
+    project
+        .recording_style
+        .cursor
+        .click_effects
+        .left
+        .spring_enabled = false;
     project.recording_style.cursor.smoothing_ms = 0;
     project.recording_style.cursor.hide_after_ms = 0;
     project.assets = vec![asset];
@@ -31,3 +40,8 @@ pub fn pixel(frame: &beam_editor_engine::PreviewFrame, x: u32, y: u32) -> [u8; 4
     let index = ((y * frame.width + x) * 4) as usize;
     frame.rgba[index..index + 4].try_into().unwrap()
 }
+
+mod cursor_catalog;
+mod cursor_overlay;
+mod cursor_raster;
+mod cursor_types;

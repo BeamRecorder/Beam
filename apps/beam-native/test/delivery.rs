@@ -45,3 +45,44 @@ mod pointers;
 
 #[path = "delivery/types.rs"]
 mod types;
+
+#[test]
+fn wheel_delivery_preserves_axes_units_and_trackpad_fractional_values() {
+    for (delta, x, y, unit) in [
+        (
+            argui_core::ScrollDelta::Lines(Point::new(2., 0.)),
+            2.,
+            0.,
+            "lines",
+        ),
+        (
+            argui_core::ScrollDelta::Lines(Point::new(0., -3.)),
+            0.,
+            -3.,
+            "lines",
+        ),
+        (
+            argui_core::ScrollDelta::Pixels(Point::new(1.25, -0.5)),
+            1.25,
+            -0.5,
+            "pixels",
+        ),
+    ] {
+        let delivery = NativeHostDelivery {
+            callback: CallbackDelivery {
+                node: HostId::new(1, 1),
+                callback: CallbackId(7),
+            },
+            kind: UiEventKind::Wheel {
+                delta,
+                position: Point::new(10., 20.),
+            },
+            pointer: None,
+        };
+        let payload = event_json(&delivery)["payload"].clone();
+        assert_eq!(payload["kind"], "wheel");
+        assert_eq!(payload["deltaX"], x);
+        assert_eq!(payload["deltaY"], y);
+        assert_eq!(payload["deltaMode"], unit);
+    }
+}

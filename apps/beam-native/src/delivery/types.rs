@@ -72,6 +72,11 @@ pub(super) enum EventData {
         offset_x: f32,
         offset_y: f32,
     },
+    Wheel {
+        delta_x: f32,
+        delta_y: f32,
+        delta_mode: &'static str,
+    },
     Pan {
         delta_x: f32,
         delta_y: f32,

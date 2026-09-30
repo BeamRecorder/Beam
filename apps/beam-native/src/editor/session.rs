@@ -15,9 +15,13 @@ pub(super) struct Session {
     pub service: Arc<EditorService>,
     owner: Mutex<Option<broker::Broker>>,
     export_job: Mutex<Option<uuid::Uuid>>,
+    cursor_defaults: Option<beam_editor_engine::domain::recording::style_types::CursorStyle>,
 }
 impl Session {
-    pub fn new(controller: Arc<EditorController>) -> Self {
+    pub fn new(
+        controller: Arc<EditorController>,
+        cursor_defaults: Option<beam_editor_engine::domain::recording::style_types::CursorStyle>,
+    ) -> Self {
         let service = Arc::new(EditorService::new(
             controller.clone(),
             Arc::new(GrantRegistry::default()),
@@ -27,6 +31,7 @@ impl Session {
             service,
             owner: Mutex::new(None),
             export_job: Mutex::new(None),
+            cursor_defaults,
         }
     }
     pub fn create(&self, root: PathBuf, name: String) -> Result<EditorSnapshot, String> {
@@ -53,6 +58,18 @@ impl Session {
         self.load(root, None)
     }
     fn load(&self, root: PathBuf, name: Option<String>) -> Result<EditorSnapshot, String> {
+        let seed = self.cursor_defaults.as_ref().filter(|_| {
+            !root.join("editor.beam.json").exists()
+                && !root.join("editor.beam.previous.json").exists()
+        });
+        let seed = if seed.is_some()
+            && beam_editor_engine::project::cursor_preferences::has_recorded_profile(&root)
+                .map_err(|e| e.to_string())?
+        {
+            None
+        } else {
+            seed
+        };
         let mut owner = self.owner.lock().unwrap_or_else(|p| p.into_inner());
         // Join clients before replacing the project they were attached to.
         drop(owner.take());
@@ -79,6 +96,17 @@ impl Session {
                 Some(broker::serve(endpoint, self.service.clone()).map_err(|e| e.to_string())?);
         }
         result?;
+        if let Some(cursor) = seed {
+            let snapshot = self.controller.snapshot().map_err(|e| e.to_string())?;
+            let mut style = snapshot.project.recording_style;
+            style.cursor = cursor.clone();
+            self.controller
+                .edit(
+                    snapshot.revision,
+                    beam_editor_engine::Edit::RecordingStyle { style },
+                )
+                .map_err(|e| e.to_string())?;
+        }
         *self.export_job.lock().unwrap_or_else(|p| p.into_inner()) = None;
         self.controller.snapshot().map_err(|e| e.to_string())
     }

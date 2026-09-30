@@ -18,6 +18,7 @@ export function TimelineClip(props: {
   project: Project;
   pixels: number;
   height: number;
+  margin: number;
   snapping: boolean;
   editor: EditorState;
   viewport: VisualViewport;
@@ -26,6 +27,7 @@ export function TimelineClip(props: {
     TR = useTR('NativeEditor');
   const [start, setStart] = createSignal<number>(),
     [trim, setTrim] = createSignal<{ left: number; duration: number }>();
+  const [committing, setCommitting] = createSignal(false);
   const currentStart = () => start() ?? props.clip.startMs;
   const currentDuration = () => trim()?.duration ?? props.clip.durationMs;
   const selected = () => props.editor.selectedIds().includes(props.clip.id);
@@ -33,6 +35,7 @@ export function TimelineClip(props: {
     dragging = false,
     trimMode: 'left' | 'right' | undefined;
   function down(payload: NativeEventPayload<'pointerDown'>, mode?: 'left' | 'right') {
+    if (committing()) return;
     if (props.editor.additive() || !selected()) props.editor.select(props.clip.id,props.editor.additive());
     originX = payload.x ?? 0;
     trimMode = mode;
@@ -63,22 +66,21 @@ export function TimelineClip(props: {
       setTrim({ left: 0, duration: Math.max(1, Math.min(available, props.clip.durationMs + delta)) });
     }
   }
-  function finish() {
+  async function finish() {
     if (!dragging) return;
     const draft = trim(),
       position = start();
-    if (draft)
-      void props.editor.edit({
-        type: 'trim',
-        id: props.clip.id,
+    dragging = false;
+    trimMode = undefined;
+    setCommitting(true);
+    try {
+      if (draft) await props.editor.edit({ type: 'trim', id: props.clip.id,
         sourceInMs: Math.round(props.clip.sourceInMs + draft.left * (props.clip.rate?.numerator ?? 1) / (props.clip.rate?.denominator ?? 1)),
-        durationMs: draft.duration,
-        startMs: position ?? props.clip.startMs,
-      });
-    else if (position !== undefined && position !== props.clip.startMs)
-      void props.editor.moveSelection(props.clip.id,position);
-    cancel();
+        durationMs: draft.duration, startMs: position ?? props.clip.startMs });
+      else if (position !== undefined && position !== props.clip.startMs) await props.editor.moveSelection(props.clip.id, position);
+    } finally { cancel(); setCommitting(false); }
   }
+
   function cancel() {
     setStart(undefined);
     setTrim(undefined);
@@ -88,19 +90,20 @@ export function TimelineClip(props: {
   createEffect(() => {props.editor.gestureVersion(); untrack(cancel);});
   const color = () => props.clip.title ? theme().primary : props.track.kind === 'video' ? theme().chart1 : theme().chart2;
   const label = () => props.clip.title?.text ?? props.asset?.name ?? props.project.definitions?.find(d => d.id === props.clip.generator?.definitionId)?.label ?? TR('unavailable');
-  const plan = () => ({ asset: props.asset!, clip: { startMs: currentStart(), sourceInMs: props.clip.sourceInMs + (trim()?.left ?? 0)*(props.clip.rate?.numerator ?? 1)/(props.clip.rate?.denominator ?? 1), durationMs: currentDuration() }, viewport: props.viewport });
+  const plan = () => ({ asset: props.asset!, clip: { startMs: props.clip.startMs, sourceInMs: props.clip.sourceInMs + (trim()?.left ?? 0)*(props.clip.rate?.numerator ?? 1)/(props.clip.rate?.denominator ?? 1), durationMs: currentDuration() }, viewport: props.viewport });
   return (
+    <container position="absolute" inset={{ start: props.margin + props.clip.startMs / 1000 * props.pixels, top: 4 }}
+      transform={{ translateX: (currentStart() - props.clip.startMs) / 1000 * props.pixels }}
+      width={Math.max(5, currentDuration() / 1000 * props.pixels)} height={props.height}>
     <focusScope
       id={`timeline-clip-${props.clip.id}`}
-      position="absolute"
-      inset={{ start: (currentStart() / 1000) * props.pixels, top: 4 }}
-      width={Math.max(5, (currentDuration() / 1000) * props.pixels)}
+      width="100%"
       height={props.height}
       role="button"
       accessibleName={`${label()} ${timecode(props.clip.startMs)}`}
       selected={selected()}
       keyboardActivation="none"
-      enabled={!props.editor.busy()}
+      enabled={!props.editor.busy() && !committing()}
       onKey={event => {if (event.state === 'pressed' && event.key === 'Enter') props.editor.select(props.clip.id,props.editor.additive());}}
     >
       <rectangle
@@ -115,7 +118,7 @@ export function TimelineClip(props: {
         <touchArea
           width="100%"
           height="100%"
-          enabled={!props.editor.busy()}
+          enabled={!props.editor.busy() && !committing()}
           mouseCursor="grab"
           onPointerDown={(event) => down(event)}
           onMoved={move}
@@ -188,5 +191,6 @@ export function TimelineClip(props: {
         </Show>
       </rectangle>
     </focusScope>
+    </container>
   );
 }

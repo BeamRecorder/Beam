@@ -83,6 +83,11 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Native recording projects open with cursor shadow controls in every interface language; missing cursor labels no longer interrupt editor loading.
+- Existing recording projects reopen when captured cursor positions extend outside the recorded frame; restoring cursor shapes applies the same coordinate normalization as recording imports.
+- Native editor playback uses Space across the editor, and Ctrl/Cmd zoom controls target the timeline instead of scaling the window. Timeline scrolling preserves wheel and trackpad axes, with graduated ticks, alternating time bands and space before zero and after the end.
+- Timeline clips and effect regions retain their dragged position until the edit finishes; moving clips reuses their artwork, and playback avoids refreshing inspector parameters every frame.
+- Native recorded cursors use Beam's original packs, captured shapes and screen orientation, restoring saved size, color, shadow, motion, click and disappearance settings in the shared preview/export engine and recovering cursor shapes in older projects.
 - Linux native development builds now find a persistent, version-matched local GES SDK when the system development package is absent, avoiding linker failures after a temporary SDK is removed.
 - Native Beam starts again when a previously saved HUD size falls outside the current launcher bounds; it restores the default size while retaining the other preferences.
 - Completed recordings wait for the editor to load before Beam considers it open, and editor startup failures report their actual diagnostic. Installed Linux interaction access reconnects automatically on launch, while Settings shows its current state instead of asking to allow it again.

@@ -23,6 +23,8 @@ mod editor_controls;
 mod editor_controls_layout;
 #[path = "solid_bundles/editor_errors.rs"]
 mod editor_errors;
+#[path = "solid_bundles/editor_interactions.rs"]
+mod editor_interactions;
 #[path = "solid_bundles/editor_pointer.rs"]
 mod editor_pointer;
 #[path = "solid_bundles/editor_splitters.rs"]

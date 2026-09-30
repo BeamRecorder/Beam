@@ -299,6 +299,46 @@
       ],
       "type": "object"
     },
+    "ClickEffect": {
+      "additionalProperties": false,
+      "properties": {
+        "rippleColor": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "type": "array"
+        },
+        "rippleEnabled": {
+          "type": "boolean"
+        },
+        "rippleSize": {
+          "format": "double",
+          "type": "number"
+        },
+        "rippleStyle": {
+          "$ref": "#/definitions/RippleStyle"
+        },
+        "springEnabled": {
+          "type": "boolean"
+        },
+        "springIntensity": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "rippleColor",
+        "rippleEnabled",
+        "rippleSize",
+        "rippleStyle",
+        "springEnabled",
+        "springIntensity"
+      ],
+      "type": "object"
+    },
     "Clip": {
       "additionalProperties": false,
       "properties": {
@@ -631,6 +671,102 @@
       ],
       "type": "string"
     },
+    "CursorClickEffects": {
+      "additionalProperties": false,
+      "properties": {
+        "left": {
+          "$ref": "#/definitions/ClickEffect"
+        },
+        "right": {
+          "$ref": "#/definitions/ClickEffect"
+        }
+      },
+      "required": [
+        "left",
+        "right"
+      ],
+      "type": "object"
+    },
+    "CursorMotion": {
+      "additionalProperties": false,
+      "properties": {
+        "motionBlur": {
+          "format": "double",
+          "type": "number"
+        },
+        "preset": {
+          "$ref": "#/definitions/MotionPreset"
+        },
+        "smoothing": {
+          "format": "double",
+          "type": "number"
+        },
+        "springMassMultiplier": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "motionBlur",
+        "preset",
+        "smoothing",
+        "springMassMultiplier"
+      ],
+      "type": "object"
+    },
+    "CursorSelection": {
+      "additionalProperties": false,
+      "properties": {
+        "cursorId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "mode": {
+          "$ref": "#/definitions/SelectionMode"
+        },
+        "packId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "mode",
+        "packId"
+      ],
+      "type": "object"
+    },
+    "CursorShadow": {
+      "additionalProperties": false,
+      "properties": {
+        "blur": {
+          "format": "double",
+          "type": "number"
+        },
+        "color": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "type": "array"
+        },
+        "direction": {
+          "$ref": "#/definitions/ShadowDirection"
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "blur",
+        "color",
+        "direction",
+        "enabled"
+      ],
+      "type": "object"
+    },
     "CursorShape": {
       "enum": [
         "pointer",
@@ -650,6 +786,41 @@
           "minItems": 4,
           "type": "array"
         },
+        "clickEffects": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/CursorClickEffects"
+            }
+          ],
+          "default": {
+            "left": {
+              "rippleColor": [
+                1,
+                0.35294117647058826,
+                0.12156862745098039,
+                1
+              ],
+              "rippleEnabled": false,
+              "rippleSize": 30,
+              "rippleStyle": "single",
+              "springEnabled": true,
+              "springIntensity": 50
+            },
+            "right": {
+              "rippleColor": [
+                0.38823529411764707,
+                0.4,
+                0.9450980392156862,
+                1
+              ],
+              "rippleEnabled": false,
+              "rippleSize": 30,
+              "rippleStyle": "single",
+              "springEnabled": true,
+              "springIntensity": 50
+            }
+          }
+        },
         "clicks": {
           "type": "boolean"
         },
@@ -665,11 +836,60 @@
         "enabled": {
           "type": "boolean"
         },
+        "fadeDurationMs": {
+          "default": 250,
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
         "hideAfterMs": {
           "description": "Zero disables automatic hiding.",
           "format": "uint64",
           "minimum": 0,
           "type": "integer"
+        },
+        "motion": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/CursorMotion"
+            }
+          ],
+          "default": {
+            "motionBlur": 0.4,
+            "preset": "smooth",
+            "smoothing": 0.67,
+            "springMassMultiplier": 1.29
+          }
+        },
+        "selection": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/CursorSelection"
+            }
+          ],
+          "default": {
+            "cursorId": null,
+            "mode": "automatic",
+            "packId": "builtin:macos"
+          }
+        },
+        "shadow": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/CursorShadow"
+            }
+          ],
+          "default": {
+            "blur": 6,
+            "color": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "direction": "bottom",
+            "enabled": true
+          }
         },
         "shape": {
           "$ref": "#/definitions/CursorShape"
@@ -713,6 +933,16 @@
             "null"
           ]
         },
+        "clickEffects": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CursorClickEffects"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "clicks": {
           "type": [
             "boolean",
@@ -737,12 +967,50 @@
             "null"
           ]
         },
+        "fadeDurationMs": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
         "hideAfterMs": {
           "format": "uint64",
           "minimum": 0,
           "type": [
             "integer",
             "null"
+          ]
+        },
+        "motion": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CursorMotion"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "selection": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CursorSelection"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "shadow": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CursorShadow"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "shape": {
@@ -2521,6 +2789,14 @@
         "value"
       ],
       "type": "object"
+    },
+    "MotionPreset": {
+      "enum": [
+        "focused",
+        "smooth",
+        "custom"
+      ],
+      "type": "string"
     },
     "Operation": {
       "oneOf": [
@@ -6383,6 +6659,15 @@
       ],
       "type": "object"
     },
+    "RippleStyle": {
+      "enum": [
+        "none",
+        "single",
+        "double",
+        "solid"
+      ],
+      "type": "string"
+    },
     "ScopeAddress": {
       "oneOf": [
         {
@@ -6746,6 +7031,13 @@
         }
       ]
     },
+    "SelectionMode": {
+      "enum": [
+        "automatic",
+        "fixed"
+      ],
+      "type": "string"
+    },
     "SequenceInfo": {
       "additionalProperties": false,
       "properties": {
@@ -6820,6 +7112,15 @@
         "message"
       ],
       "type": "object"
+    },
+    "ShadowDirection": {
+      "enum": [
+        "all",
+        "bottom",
+        "bottom-right",
+        "top-left"
+      ],
+      "type": "string"
     },
     "SourceAnalysis": {
       "additionalProperties": false,

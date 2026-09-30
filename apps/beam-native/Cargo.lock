@@ -811,6 +811,7 @@ dependencies = [
  "gstreamer-video",
  "libc",
  "png",
+ "resvg",
  "serde",
  "serde_json",
  "sha2",

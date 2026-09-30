@@ -11,3 +11,8 @@ mod style;
 mod style_types;
 mod suggestions;
 mod types;
+
+mod cursor_motion;
+mod cursor_motion_types;
+mod cursor_style;
+mod cursor_style_types;

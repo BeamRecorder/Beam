@@ -40,7 +40,7 @@ fn seek_order_does_not_change_smoothed_position_click_pulse_or_auto_hide() {
     let hidden = cursor::source_at(&points, &style, 1800.).unwrap();
     let repeated = cursor::source_at(&points, &style, 600.).unwrap();
     assert_eq!(first, repeated);
-    assert!(first.x > 0.5 && first.x < 0.8);
+    assert!((first.x - 0.8).abs() < 0.000001);
     assert_eq!(first.click, Some(100. / 350.));
     assert_eq!(hidden.opacity, 0.);
     assert_eq!(hidden.click, None);
@@ -79,7 +79,7 @@ fn prepared_cursor_index_bounds_idle_queries_without_replaying_telemetry() {
         crate::fixtures::point(100, 0.8, 0.7, Some(CursorInteractionType::Click)),
     ];
     points.extend((101..10_000).map(|time| crate::fixtures::point(time, 0.8, 0.7, None)));
-    let index = cursor::prepare(&points);
+    let index = cursor::prepare(&points, &CursorStyle::default());
     assert_eq!(index.activity, vec![0, 100]);
     assert_eq!(index.clicks, vec![100]);
     let style = CursorStyle {
@@ -97,7 +97,7 @@ fn prepared_cursor_index_bounds_idle_queries_without_replaying_telemetry() {
         cursor::source_at_prepared(&points, &index, &style, 150.),
         cursor::source_at(&points, &style, 150.)
     );
-    assert!(cursor::prepare(&[]).activity.is_empty());
+    assert!(cursor::prepare(&[], &style).activity.is_empty());
 }
 
 #[test]
@@ -126,5 +126,40 @@ fn cursor_mapping_errors_are_explicit_even_for_a_hidden_style() {
             beam_editor_domain::timing::Time::ZERO
         )
         .is_err()
+    );
+}
+
+#[test]
+fn visibility_and_fade_boundaries_follow_real_captured_events() {
+    let mut points = vec![
+        crate::fixtures::point(0, 0.5, 0.5, None),
+        crate::fixtures::point(500, 0.5, 0.5, None),
+        crate::fixtures::point(1000, 0.5, 0.5, None),
+    ];
+    points[1].visible = Some(false);
+    points[2].visible = Some(true);
+    let mut style = CursorStyle {
+        smoothing_ms: 0,
+        hide_after_ms: 100,
+        fade_duration_ms: 250,
+        ..Default::default()
+    };
+    assert_eq!(
+        cursor::source_at(&points, &style, 100.).unwrap().opacity,
+        1.
+    );
+    assert_eq!(
+        cursor::source_at(&points, &style, 225.).unwrap().opacity,
+        0.5
+    );
+    assert!(cursor::source_at(&points, &style, 500.).is_none());
+    assert_eq!(
+        cursor::source_at(&points, &style, 1000.).unwrap().opacity,
+        1.
+    );
+    style.fade_duration_ms = 0;
+    assert_eq!(
+        cursor::source_at(&points, &style, 100.).unwrap().opacity,
+        0.
     );
 }

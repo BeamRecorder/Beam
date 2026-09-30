@@ -142,6 +142,13 @@ fn validate_metadata(project: &Project) -> Result<()> {
                 || sample.time_ms > asset.duration_ms
                 || !unit(sample.cx)
                 || !unit(sample.cy)
+                || sample.cursor_type.as_ref().is_some_and(|kind| {
+                    kind.len() > 128
+                        || kind.is_empty()
+                        || kind
+                            .chars()
+                            .any(|c| !c.is_ascii_alphanumeric() && !"-_".contains(c))
+                })
             {
                 return invalid("invalid cursor data");
             }

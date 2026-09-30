@@ -279,12 +279,14 @@ impl EditorService {
             ("transitionShader", "glshader"),
             ("solid", "videotestsrc"),
             ("cameraZoom", "glshader"),
-            ("cursor", "glshader"),
+            ("cursor", "gloverlaycompositor"),
             ("framing", "glshader"),
             ("textPlacement", "textoverlay"),
         ]
         .into_iter()
-        .filter(|(_, factory)| has(factory))
+        .filter(|(processor, factory)| {
+            has(factory) && (*processor != "cursor" || has("overlaycomposition"))
+        })
         .map(|(processor, _)| processor.to_owned())
         .collect();
         Capabilities {

@@ -2,6 +2,7 @@ import type { ApplicationServices } from '@argui/host';
 import type { Edit, ExportStatus, Frame, Snapshot, Transport, PreviewQuality, Operation } from './editorTypes';
 import type { VisualLease, VisualRequest } from '../media/visualTypes';
 import type { Query, Response } from './generated/editorContracts';
+import type { CursorPackSummary } from '../properties/cursorControlTypes';
 
 /** Project paths and export destinations are chosen entirely by the Rust host. */
 export class EditorApi {
@@ -40,6 +41,7 @@ export class EditorApi {
   frame(): Promise<Frame> {
     return this.services.call('editor', 'frame');
   }
+  cursorPacks(): Promise<CursorPackSummary[]> { return this.services.call('editor', 'cursorPacks'); }
   quality(quality: PreviewQuality): Promise<Snapshot> { return this.services.call('editor', 'quality', { quality }); }
   acquireVisual(projectId: string, assetId: string, request: VisualRequest): Promise<VisualLease> {
     return this.services.call('editor', 'acquireVisual', { projectId, assetId, request });

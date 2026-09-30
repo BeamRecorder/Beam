@@ -19,12 +19,24 @@ pub(crate) fn register(
     registry: &Arc<ServiceRegistry>,
     root: PathBuf,
 ) -> Result<Vec<GpuCanvasRegistration>, String> {
+    beam_editor_engine::video::recording_effects::cursor_catalog::configure_library(
+        root.join("media/cursors"),
+    )
+    .map_err(|e| e.to_string())?;
+    registry.register("editor", "cursorPacks", move |_| {
+        result(
+            beam_editor_engine::video::recording_effects::cursor_catalog::summaries()
+                .map_err(|e| e.to_string()),
+        )
+    });
     let controller = Arc::new(EditorController::new().map_err(|e| e.to_string())?);
     let events = Arc::downgrade(registry);
     controller.set_change_consumer(move|change|{
         if let Some(registry)=events.upgrade(){registry.broadcast_event(&serde_json::json!({"type":"editorChanged","projectId":change.project_id,"sequenceId":change.sequence_id,"revision":change.revision}));}
     });
-    let session = Arc::new(session::Session::new(controller.clone()));
+    let cursor_defaults = beam_editor_engine::project::cursor_preferences::defaults(&root)
+        .map_err(|e| e.to_string())?;
+    let session = Arc::new(session::Session::new(controller.clone(), cursor_defaults));
     session.configure(std::env::args())?;
     let initial = Arc::clone(&session);
     let initial_root = root.clone();
