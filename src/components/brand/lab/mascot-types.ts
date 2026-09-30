@@ -1,4 +1,4 @@
-import type { ExpressionId, EyeStyle, ShapeId, StateId } from '../Beamy/engine/bot-types';
+import type { ExpressionId, EyeGeometry, EyeStyle, ShapeId, StateId } from '../Beamy/engine/bot-types';
 
 export type PreviewSurface = 'paper' | 'dark' | 'transparent';
 
@@ -8,6 +8,7 @@ export interface MascotLook {
   expression: ExpressionId;
   eyes: EyeStyle;
   blush: boolean;
+  eyeGeometry: EyeGeometry;
 }
 
 export interface MascotStep {

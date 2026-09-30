@@ -1,3 +1,4 @@
+const { readJsonSync, writeJsonAtomicSync } = require('../storage/json-file.cjs');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -33,18 +34,14 @@ function validState(value) {
 function createUpdateCache({ stateFile, cacheDirectory = updaterCacheDirectory(), fsModule = fs }) {
   const readState = () => {
     try {
-      const value = JSON.parse(fsModule.readFileSync(stateFile, 'utf8'));
+      const value = readJsonSync(stateFile, { fsModule });
       return validState(value) ? value : null;
     } catch {
       return null;
     }
   };
   const writeState = (state) => {
-    fsModule.mkdirSync(path.dirname(stateFile), { recursive: true });
-    const temporary = `${stateFile}.tmp`;
-    fsModule.writeFileSync(temporary, `${JSON.stringify(state, null, 2)}\n`);
-    fsModule.rmSync(stateFile, { force: true });
-    fsModule.renameSync(temporary, stateFile);
+    writeJsonAtomicSync(stateFile, state, { fsModule });
   };
   const stateFor = (lastSeenVersion, pendingVersion = null) => ({
     schemaVersion: CACHE_STATE_SCHEMA,

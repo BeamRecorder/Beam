@@ -108,6 +108,7 @@ export function useMascotPlayer(look: Ref<MascotLook>, steps: Ref<MascotStep[]>)
       engine.setShape(SHAPE_BY_ID.get(look.value.shape)!.radii, at);
       engine.setExpression(EXPRESSION_BY_ID.get(look.value.expression)!, at);
       engine.setEyes(look.value.eyes, at);
+      engine.setEyeGeometry(look.value.eyeGeometry);
       draw();
     },
     { deep: true },

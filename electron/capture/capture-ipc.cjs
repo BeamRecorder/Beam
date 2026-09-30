@@ -1,3 +1,4 @@
+const { readJsonSync } = require('../storage/json-file.cjs');
 const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
@@ -46,7 +47,7 @@ function completedVideoSource(session) {
 function withProjectId(session) {
   if (!session || typeof session !== 'object' || typeof session.manifestPath !== 'string') return session;
   try {
-    const manifest = JSON.parse(fs.readFileSync(session.manifestPath, 'utf8'));
+    const manifest = readJsonSync(session.manifestPath);
     return typeof manifest.projectId === 'string' ? { ...session, projectId: manifest.projectId } : session;
   } catch {
     return session;

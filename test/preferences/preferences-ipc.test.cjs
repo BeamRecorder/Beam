@@ -32,7 +32,7 @@ function shortcutPreferences() {
 }
 
 function storeWith(preferences) {
-  return {
+  const store = {
     read: () => structuredClone(preferences),
     patch: (patch) => {
       const next = { ...preferences, ...patch };
@@ -41,7 +41,81 @@ function storeWith(preferences) {
     },
     write: (next) => Object.assign(preferences, next),
   };
+  store.patchBatch = (patches) => {
+    const previous = structuredClone(preferences);
+    for (const patch of patches) store.patch(patch);
+    return { previous, preferences };
+  };
+  return store;
 }
+
+test('a batch publishes only its final settings and registers shortcuts once', async () => {
+  const handlers = new Map();
+  const sent = [];
+  const changes = [];
+  const source = linuxSourceWith({ fallbackIds: [] });
+  const cleanup = registerPreferencesIpc({
+    ipcMain: ipcMainWith(handlers),
+    BrowserWindow: { getAllWindows: () => [windowWith(sent)] },
+    globalShortcut: { register: () => {}, unregisterAll: () => {} },
+    store: storeWith(shortcutPreferences()),
+    linuxShortcutSource: source,
+    onPreferencesChanged: (preferences) => changes.push(preferences),
+  });
+  await flush();
+  const result = await handlers.get('preferences:update-batch')(null, [
+    { theme: 'dark' },
+    { shortcuts: { 'hud.startStopRecording': { keys: 'Alt+Shift+Q', scope: 'global', category: 'hud' } } },
+    { shortcuts: { 'hud.startStopRecording': { keys: 'Alt+Shift+E', scope: 'global', category: 'hud' } } },
+  ]);
+  assert.equal(result.theme, 'dark');
+  assert.equal(source.calls.register.length, 2);
+  assert.equal(source.calls.register.at(-1), 'Alt+Shift+E');
+  assert.deepEqual(sent, [{ channel: 'preferences:changed', id: result }]);
+  assert.deepEqual(changes, [result]);
+  await cleanup();
+});
+
+test('empty batches do not write, broadcast or apply window policy', async () => {
+  const handlers = new Map();
+  const sent = [];
+  const store = storeWith(shortcutPreferences());
+  store.patchBatch = () => assert.fail('empty batch should not write');
+  const cleanup = registerPreferencesIpc({
+    ipcMain: ipcMainWith(handlers),
+    BrowserWindow: { getAllWindows: () => [windowWith(sent)] },
+    globalShortcut: { register: () => {}, unregisterAll: () => {} },
+    store,
+    onPreferencesChanged: () => assert.fail('empty batch should not change policy'),
+  });
+  assert.deepEqual(await handlers.get('preferences:update-batch')(null, []), shortcutPreferences());
+  assert.deepEqual(sent, []);
+  await cleanup();
+});
+
+test('rejects invalid or oversized batches before storage and propagates persistence failure without broadcast', async () => {
+  const handlers = new Map();
+  const sent = [];
+  const store = storeWith(shortcutPreferences());
+  let writes = 0;
+  store.patchBatch = () => {
+    writes += 1;
+    throw new Error('disk full');
+  };
+  const cleanup = registerPreferencesIpc({
+    ipcMain: ipcMainWith(handlers),
+    BrowserWindow: { getAllWindows: () => [windowWith(sent)] },
+    globalShortcut: { register: () => {}, unregisterAll: () => {} },
+    store,
+  });
+  const update = handlers.get('preferences:update-batch');
+  for (const invalid of [null, {}, Array(65).fill({})]) await assert.rejects(update(null, invalid), TypeError);
+  assert.equal(writes, 0);
+  await assert.rejects(update(null, [{ theme: 'dark' }]), /disk full/);
+  assert.equal(writes, 1);
+  assert.deepEqual(sent, []);
+  await cleanup();
+});
 
 function linuxSourceWith(result) {
   const calls = { register: [], cleanup: 0 };

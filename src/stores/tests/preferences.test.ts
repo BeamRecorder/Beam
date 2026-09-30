@@ -16,6 +16,7 @@ const settings = (theme: PreferenceSettings['theme'] = 'light'): PreferenceSetti
 const capture = {
   getPreferences: vi.fn(),
   updatePreferences: vi.fn(),
+  updatePreferencesBatch: vi.fn(),
   onPreferencesChanged: vi.fn(),
 };
 
@@ -29,6 +30,7 @@ beforeEach(() => {
   });
   capture.getPreferences.mockResolvedValue(settings());
   capture.updatePreferences.mockResolvedValue(settings('dark'));
+  capture.updatePreferencesBatch.mockResolvedValue(settings('dark'));
   capture.onPreferencesChanged.mockReturnValue(vi.fn());
 });
 
@@ -37,6 +39,36 @@ afterEach(() => {
 });
 
 describe('preferences store', () => {
+  it('persists a batch through one IPC call and keeps the returned state', async () => {
+    const { usePreferencesStore } = await import('../preferences');
+    const store = usePreferencesStore();
+    await expect(
+      store.updateBatch([{ theme: 'dark' }, { extras: { kept: true, omitted: undefined } }]),
+    ).resolves.toEqual(settings('dark'));
+    expect(capture.updatePreferencesBatch).toHaveBeenCalledExactlyOnceWith([
+      { theme: 'dark' },
+      { extras: { kept: true } },
+    ]);
+    expect(capture.updatePreferences).not.toHaveBeenCalled();
+    expect(store.settings).toEqual(settings('dark'));
+  });
+
+  it('keeps the last confirmed state when a batch fails', async () => {
+    const { usePreferencesStore } = await import('../preferences');
+    const store = usePreferencesStore();
+    await store.load();
+    capture.updatePreferencesBatch.mockRejectedValueOnce(new Error('disk full'));
+    await expect(store.updateBatch([{ theme: 'dark' }])).rejects.toThrow('disk full');
+    expect(store.settings).toEqual(settings());
+  });
+
+  it('passes an empty batch without inventing local settings', async () => {
+    const { usePreferencesStore } = await import('../preferences');
+    const store = usePreferencesStore();
+    capture.updatePreferencesBatch.mockResolvedValueOnce(settings());
+    await expect(store.updateBatch([])).resolves.toEqual(settings());
+    expect(capture.updatePreferencesBatch).toHaveBeenCalledExactlyOnceWith([]);
+  });
   it('loads preferences and subscribes exactly once across repeated loads', async () => {
     const { usePreferencesStore } = await import('../preferences');
     const store = usePreferencesStore();

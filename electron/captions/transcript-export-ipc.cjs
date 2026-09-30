@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { randomUUID } = require('node:crypto');
+const { writeJsonAtomic } = require('../storage/json-file.cjs');
 const { safeExportName } = require('../export/export-ipc.cjs');
 
 const MAX_TRANSCRIPT_BYTES = 16 * 1024 * 1024;
@@ -12,7 +12,7 @@ const text = (value, limit) => typeof value === 'string' && value.length <= limi
 const time = (value) => typeof value === 'number' && Number.isFinite(value) && value >= 0;
 const nullableId = (value) => value === null || (text(value, 600) && value.length > 0);
 
-function transcriptJson(value) {
+function normalizeTranscript(value) {
   if (
     !record(value) ||
     value.format !== 'beam-transcript' ||
@@ -70,26 +70,22 @@ function transcriptJson(value) {
       words,
     };
   });
-  const json = `${JSON.stringify(
-    {
-      format: 'beam-transcript',
-      schemaVersion: 1,
-      timeUnit: 'ms',
-      timelineDurationMs: value.timelineDurationMs,
-      text: value.text,
-      segments,
-    },
-    null,
-    2,
-  )}\n`;
-  if (Buffer.byteLength(json, 'utf8') > MAX_TRANSCRIPT_BYTES) invalid();
-  return json;
+  const document = {
+    format: 'beam-transcript',
+    schemaVersion: 1,
+    timeUnit: 'ms',
+    timelineDurationMs: value.timelineDurationMs,
+    text: value.text,
+    segments,
+  };
+  if (Buffer.byteLength(`${JSON.stringify(document, null, 2)}\n`, 'utf8') > MAX_TRANSCRIPT_BYTES) invalid();
+  return document;
 }
 
 function registerTranscriptExportIpc({ ipcMain, dialog, BrowserWindow, defaultExportDirectory, fsModule = fs }) {
   ipcMain.handle('captions:export-transcript', async (event, payload = {}) => {
     if (!record(payload) || !text(payload.projectName, 600)) invalid();
-    const json = transcriptJson(payload.transcript);
+    const document = normalizeTranscript(payload.transcript);
     const owner = BrowserWindow.fromWebContents(event.sender);
     if (!owner || owner.isDestroyed()) throw new Error('Transcript export window unavailable.');
     const fileName = safeExportName(`${payload.projectName} transcript`, 'json');
@@ -103,17 +99,7 @@ function registerTranscriptExportIpc({ ipcMain, dialog, BrowserWindow, defaultEx
     const targetPath = path.resolve(result.filePath);
     if (path.extname(targetPath).toLowerCase() !== '.json')
       throw new Error('The transcript file must use the .json extension.');
-    const temporaryPath = `${targetPath}.${randomUUID()}.partial`;
-    let temporaryWritten = false;
-    try {
-      await fsModule.promises.writeFile(temporaryPath, json, { encoding: 'utf8', mode: 0o600, flag: 'wx' });
-      temporaryWritten = true;
-      await fsModule.promises.rename(temporaryPath, targetPath);
-    } catch (error) {
-      if (temporaryWritten || error.code !== 'EEXIST')
-        await fsModule.promises.unlink(temporaryPath).catch(() => undefined);
-      throw error;
-    }
+    await writeJsonAtomic(targetPath, document, { fsModule });
     return { canceled: false, path: targetPath };
   });
 }

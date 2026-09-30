@@ -2,6 +2,7 @@ import { BotEngine } from '../Beamy/engine/engine';
 import { EXPRESSION_BY_ID } from '../Beamy/engine/expressions';
 import { SHAPE_BY_ID } from '../Beamy/engine/skins';
 import { RAYON } from '../Beamy/engine/repere';
+import { DEFAULT_EYE_GEOMETRY } from '../Beamy/engine/eye-geometry';
 import type { ExpressionId, ShapeId, StateId } from '../Beamy/engine/bot-types';
 import type { MascotLook, MascotStep } from './mascot-types';
 
@@ -11,6 +12,7 @@ export const DEFAULT_LOOK: MascotLook = {
   expression: 'surpris',
   eyes: 'sparkle',
   blush: true,
+  eyeGeometry: { ...DEFAULT_EYE_GEOMETRY },
 };
 export const DEFAULT_TIMELINE: MascotStep[] = [
   { state: 'idle', duration: 2 },
@@ -86,6 +88,7 @@ export function createMascotEngine(look: MascotLook, state: StateId = 'idle'): B
     EXPRESSION_BY_ID.get(look.expression)!,
   );
   engine.setEyes(look.eyes, -1);
+  engine.setEyeGeometry(look.eyeGeometry);
   return engine;
 }
 

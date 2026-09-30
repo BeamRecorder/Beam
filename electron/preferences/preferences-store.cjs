@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { readJsonSync, writeJsonAtomicSync } = require('../storage/json-file.cjs');
 const { DEFAULT_HUD_WINDOW_SIZE, normalizeHudWindowSize } = require('../window/hud-window-size.cjs');
 const { normalizeRecorderLayout } = require('../window/recorder-layout.cjs');
 
@@ -25,6 +26,7 @@ const defaults = (platform = process.platform) => ({
   schemaVersion: 3,
   theme: 'light',
   appearance: defaultAppearance(),
+  alwaysOnTop: true,
   hudWindow: { ...DEFAULT_HUD_WINDOW_SIZE },
   recordingBar: { visibility: platform === 'linux' ? 'hover-only' : 'always' },
   recordingInteractions: { enabled: false, noticeDismissed: false },
@@ -157,6 +159,7 @@ const normalize = (value, platform = process.platform) => {
     schemaVersion: 3,
     theme: resolvedTheme,
     appearance: appearanceSettings,
+    alwaysOnTop: typeof next.alwaysOnTop === 'boolean' ? next.alwaysOnTop : base.alwaysOnTop,
     hudWindow: normalizeHudWindowSize(next.hudWindow),
     recordingBar: {
       visibility: ['always', 'auto-fade', 'hover-only'].includes(next.recordingBar?.visibility)
@@ -203,21 +206,12 @@ function createPreferencesStore(file, { platform = process.platform } = {}) {
     }
   };
   const inspect = () => {
-    let source;
-    try {
-      source = fs.readFileSync(targetFile, 'utf8');
-    } catch (error) {
-      if (error?.code === 'ENOENT') return { preferences: defaults(platform), writable: true, quarantine: false };
-      return { preferences: defaults(platform), writable: false, quarantine: false, error };
-    }
-
     let parsed;
     try {
-      parsed = JSON.parse(source);
+      parsed = readJsonSync(targetFile);
     } catch (error) {
-      if (error instanceof SyntaxError) {
-        return { preferences: defaults(platform), writable: true, quarantine: true };
-      }
+      if (error?.code === 'ENOENT') return { preferences: defaults(platform), writable: true, quarantine: false };
+      if (error instanceof SyntaxError) return { preferences: defaults(platform), writable: true, quarantine: true };
       return { preferences: defaults(platform), writable: false, quarantine: false, error };
     }
 
@@ -230,40 +224,44 @@ function createPreferencesStore(file, { platform = process.platform } = {}) {
   const read = () => inspect().preferences;
   const write = (value) => {
     const next = normalize(value, platform);
-    fs.mkdirSync(path.dirname(targetFile), { recursive: true });
-    const temp = `${targetFile}.tmp`;
-    fs.writeFileSync(temp, `${JSON.stringify(next, null, 2)}\n`);
-    fs.renameSync(temp, targetFile);
+    writeJsonAtomicSync(targetFile, next);
     return next;
   };
-  const patch = (value) => {
-    const inspected = inspect();
-    if (!inspected.writable) throw inspected.error;
-    const current = inspected.preferences;
-    const nextAppearance = value?.appearance ? { ...current.appearance, ...value.appearance } : current.appearance;
+  const mergePatch = (current, value) => {
+    const nextAppearance = { ...current.appearance, ...value.appearance };
     const nextTheme = value?.theme || value?.appearance?.theme || current.theme;
-    if (nextAppearance) {
-      nextAppearance.theme = nextTheme;
-    }
-    return write({
+    nextAppearance.theme = nextTheme;
+    return {
       ...current,
-      ...(value || {}),
+      ...value,
       theme: nextTheme,
       appearance: nextAppearance,
       hudWindow: { ...current.hudWindow, ...value?.hudWindow },
-      recordingBar: { ...current.recordingBar, ...(value?.recordingBar || {}) },
+      recordingBar: { ...current.recordingBar, ...value.recordingBar },
       recordingInteractions: {
         ...current.recordingInteractions,
-        ...(value?.recordingInteractions || {}),
+        ...value.recordingInteractions,
       },
       voiceover: { ...current.voiceover, ...value?.voiceover },
-      spellCheck: { ...current.spellCheck, ...(value?.spellCheck || {}) },
-      devices: { ...current.devices, ...(value?.devices || {}) },
-      shortcuts: { ...current.shortcuts, ...(value?.shortcuts || {}) },
-      backgroundPresets: { ...current.backgroundPresets, ...(value?.backgroundPresets || {}) },
-      extras: { ...current.extras, ...(value?.extras || {}) },
-    });
+      spellCheck: { ...current.spellCheck, ...value.spellCheck },
+      devices: { ...current.devices, ...value.devices },
+      shortcuts: { ...current.shortcuts, ...value.shortcuts },
+      backgroundPresets: { ...current.backgroundPresets, ...value.backgroundPresets },
+      extras: { ...current.extras, ...value.extras },
+    };
   };
+  const patchBatch = (values) => {
+    if (!Array.isArray(values)) throw new TypeError('Preference batch must be an array.');
+    const inspected = inspect();
+    if (!inspected.writable) throw inspected.error;
+    let current = inspected.preferences;
+    for (const value of values) {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) throw new TypeError('Invalid preference patch.');
+      current = mergePatch(current, value);
+    }
+    return { previous: inspected.preferences, preferences: values.length ? write(current) : current };
+  };
+  const patch = (value) => patchBatch([value]).preferences;
   const quarantineMalformedFile = () => {
     const base = `${targetFile}.invalid`;
     let quarantineFile = base;
@@ -281,6 +279,6 @@ function createPreferencesStore(file, { platform = process.platform } = {}) {
       return inspected.preferences;
     }
   };
-  return { read, write, patch, repair, file: targetFile };
+  return { read, write, patch, patchBatch, repair, file: targetFile };
 }
 module.exports = { createPreferencesStore, defaults, normalize };

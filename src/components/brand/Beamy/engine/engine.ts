@@ -16,7 +16,8 @@ import { blinkScale, eyePoses, liveliness } from './face';
 import { clamp, easings, lerp, r2 } from './math';
 import { blend, closedPath, radiusAtAngle, toPoints } from './shape';
 import { eyeShapePath } from './eye-shape';
-import type { EyeStyle } from './bot-types';
+import type { EyeGeometry, EyeStyle } from './bot-types';
+import { DEFAULT_EYE_GEOMETRY, validateEyeGeometry } from './eye-geometry';
 import { STATE_BY_ID } from './states';
 const NO_LOOK: Look = { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 };
 const lerpLook = (a: Look, b: Look, t: number): Look => ({
@@ -86,6 +87,7 @@ export class BotEngine {
   private eyeStyle: EyeStyle = 'capsule';
   private eyeFrom: EyeStyle = 'capsule';
   private eyeAt = -10;
+  private eyeGeometry: EyeGeometry = { ...DEFAULT_EYE_GEOMETRY };
 
   static readonly SHAPE_MORPH = 0.45;
 
@@ -106,6 +108,10 @@ export class BotEngine {
     this.eyeFrom = this.eyeStyle;
     this.eyeStyle = style;
     this.eyeAt = now;
+  }
+
+  setEyeGeometry(geometry: EyeGeometry) {
+    this.eyeGeometry = validateEyeGeometry(geometry);
   }
 
   setExpression(expression: BotExpression | null, now = 0) {
@@ -327,7 +333,7 @@ export class BotEngine {
     const bodyRadius = (x: number, y: number) => radiusAtAngle(pose.sil.radii, Math.atan2(y, x) - pose.sil.rot);
     const eyes: RenderedEye[] = [];
     if (pose.eyeAlpha > 0.01) {
-      const poses = eyePoses(gaze, R, pose.split);
+      const poses = eyePoses(gaze, R, pose.split * this.eyeGeometry.spacing);
       for (let i = 0; i < 2; i++) {
         const e = poses[i]!;
         if (e.depth <= 0.02) continue;
@@ -348,13 +354,13 @@ export class BotEngine {
         const k = blinkScale(Math.min(lid, cfg.open));
         eyes.push({
           d: eyeShapePath(
-            cfg.w * R,
-            cfg.h * R,
+            cfg.w * R * this.eyeGeometry.size * this.eyeGeometry.width,
+            cfg.h * R * this.eyeGeometry.size * this.eyeGeometry.height,
             this.eyeFrom,
             this.eyeStyle,
             easings.easeOutQuint(clamp((now - this.eyeAt) / BotEngine.SHAPE_MORPH)),
           ),
-          matrix: `matrix(${r2(ax)},${r2(ay * k)},${r2(cx2)},${r2(cy2 * k)},${r2(e.x * fit + (offX + decalage.x) * R)},${r2(e.y * fit + (offY + decalage.y) * R)})`,
+          matrix: `matrix(${r2(ax)},${r2(ay * k)},${r2(cx2)},${r2(cy2 * k)},${r2(e.x * fit + (offX + decalage.x) * R)},${r2(e.y * fit + (offY + decalage.y + this.eyeGeometry.offsetY) * R)})`,
           alpha: pose.eyeAlpha * clamp(e.depth / 0.12),
         });
       }

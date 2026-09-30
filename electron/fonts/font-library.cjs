@@ -1,3 +1,4 @@
+const { readJsonSync, writeJsonAtomicSync } = require('../storage/json-file.cjs');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
@@ -15,23 +16,12 @@ function createFontLibrary(directory) {
   const metadataFile = path.join(directory, 'library.json');
   const readMetadata = () => {
     if (!fs.existsSync(metadataFile)) return [];
-    const parsed = JSON.parse(fs.readFileSync(metadataFile, 'utf8'));
+    const parsed = readJsonSync(metadataFile);
     if (!Array.isArray(parsed)) throw new Error('Invalid font library metadata.');
     return parsed;
   };
   const writeMetadata = (items) => {
-    fs.mkdirSync(directory, { recursive: true });
-    const temporaryFile = `${metadataFile}.${process.pid}.${crypto.randomUUID()}.tmp`;
-    try {
-      fs.writeFileSync(temporaryFile, `${JSON.stringify(items, null, 2)}\n`, { mode: 0o600 });
-      fs.renameSync(temporaryFile, metadataFile);
-    } finally {
-      try {
-        fs.unlinkSync(temporaryFile);
-      } catch (error) {
-        if (error?.code !== 'ENOENT') throw error;
-      }
-    }
+    writeJsonAtomicSync(metadataFile, items);
   };
   const fileFor = (item) => path.join(directory, `${item.id}${item.extension}`);
   const list = () =>

@@ -24,6 +24,7 @@ class WindowController {
     this.interactive = false;
     this.hiddenByController = false;
     this.overlayAlwaysOnTop = null;
+    this.hudAlwaysOnTop = preferencesStore?.read()?.alwaysOnTop !== false;
     // Start click-through so the renderer can classify the pointer from the
     // first forwarded mousemove, including when it starts over transparent HUD.
     // Electron only forwards mousemove to click-through windows on macOS and
@@ -271,12 +272,17 @@ class WindowController {
 
   applyZOrderPolicy() {
     if (this.window.isDestroyed()) return;
-    // HUD and Recorder are persistent capture controls while visible. The
-    // editor transition explicitly hides and demotes this window before the
-    // editor is presented, so the overlay can never cover the loaded editor.
+    // Recording controls stay reachable during capture. The setup window uses
+    // the user's preference; hidden/editor-transition windows stay demoted.
     const overlayIsVisible =
       !this.hiddenByController && ['hud', 'recorder'].includes(this.mode) && this.window.isVisible();
-    this.setOverlayAlwaysOnTop(this.ready && overlayIsVisible && !this.window.isMinimized());
+    const wantsTopmost = this.mode === 'recorder' || this.hudAlwaysOnTop;
+    this.setOverlayAlwaysOnTop(this.ready && overlayIsVisible && !this.window.isMinimized() && wantsTopmost);
+  }
+
+  setHudAlwaysOnTop(enabled) {
+    this.hudAlwaysOnTop = enabled !== false;
+    this.applyZOrderPolicy();
   }
 
   applyModePolicy({ restoreMaximized = true } = {}) {

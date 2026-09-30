@@ -1,5 +1,5 @@
+const { readJsonSync, writeJsonAtomicSync } = require('../storage/json-file.cjs');
 const fs = require('fs');
-const path = require('path');
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_TEXT_LENGTH = 1_000_000;
@@ -47,7 +47,7 @@ function normalizeTeleprompterDocument(value, now = new Date().toISOString()) {
   };
 }
 
-function createTeleprompterStorage({ projectStore, fsModule = fs, pathModule = path }) {
+function createTeleprompterStorage({ projectStore, fsModule = fs }) {
   const fileFor = (projectId, sessionId) => {
     assertId(projectId, 'projet');
     assertId(sessionId, 'session');
@@ -58,10 +58,7 @@ function createTeleprompterStorage({ projectStore, fsModule = fs, pathModule = p
   const save = (projectId, sessionId, value) => {
     const file = fileFor(projectId, sessionId);
     const document = normalizeTeleprompterDocument(value);
-    fsModule.mkdirSync(pathModule.dirname(file), { recursive: true });
-    const temporary = `${file}.tmp`;
-    fsModule.writeFileSync(temporary, `${JSON.stringify(document, null, 2)}\n`, 'utf8');
-    fsModule.renameSync(temporary, file);
+    writeJsonAtomicSync(file, document, { fsModule });
     return document;
   };
   const get = (projectId, sessionId) => {
@@ -69,7 +66,7 @@ function createTeleprompterStorage({ projectStore, fsModule = fs, pathModule = p
     if (!fsModule.existsSync(file)) return null;
     let value;
     try {
-      value = JSON.parse(fsModule.readFileSync(file, 'utf8'));
+      value = readJsonSync(file, { fsModule });
     } catch (error) {
       throw new Error(`Document téléprompteur illisible : ${error instanceof Error ? error.message : String(error)}`);
     }

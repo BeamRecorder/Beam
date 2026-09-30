@@ -5,7 +5,10 @@ import { useBrandJingle } from './useBrandJingle';
 import { useTranslate } from '~/i18n/useTranslate';
 import type { BeamyPhase } from './Beamy/beamy-types';
 
-withDefaults(defineProps<{ title?: string; phase?: BeamyPhase }>(), { phase: 'idle' });
+withDefaults(defineProps<{ title?: string; phase?: BeamyPhase; layout?: 'inline' | 'stacked' }>(), {
+  phase: 'idle',
+  layout: 'inline',
+});
 const { t } = useTranslate('Brand');
 const { playing, letters, cycleOffset, play } = useBrandJingle();
 </script>
@@ -18,7 +21,7 @@ const { playing, letters, cycleOffset, play } = useBrandJingle();
     :aria-label="t('animateBeamy')"
     :title="t('animateBeamy')"
     :style="{
-      height: '34px',
+      height: layout === 'stacked' ? 'auto' : '34px',
       minHeight: '0',
       padding: '0',
       color: 'inherit',
@@ -27,11 +30,11 @@ const { playing, letters, cycleOffset, play } = useBrandJingle();
     }"
     @click="play"
   >
-    <span class="brand-identity">
+    <span class="brand-identity" :class="{ 'is-stacked': layout === 'stacked' }">
       <span class="brand-avatar" data-beamy-dock
         ><Beamy
           portrait
-          :size="32"
+          :size="layout === 'stacked' ? 112 : 32"
           :cycle-offset="cycleOffset"
           :phase="phase === 'idle' && playing ? 'processing' : phase"
       /></span>
@@ -99,5 +102,18 @@ const { playing, letters, cycleOffset, play } = useBrandJingle();
 .brand-letter-effect {
   position: absolute;
   inset: 0;
+}
+.brand-identity.is-stacked {
+  flex-direction: column;
+  height: auto;
+  gap: 8px;
+  padding: 8px 24px;
+}
+.is-stacked .brand-avatar {
+  width: 112px;
+  height: 112px;
+}
+.is-stacked .topbar-title {
+  font-size: 32px;
 }
 </style>

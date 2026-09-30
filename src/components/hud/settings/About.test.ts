@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const capture = vi.hoisted(() => ({
   getUpdateState: vi.fn(),
+  onUpdateState: vi.fn(() => () => undefined),
+  checkForUpdates: vi.fn(),
+  openDiscordInvite: vi.fn(),
+  openGithubRepository: vi.fn(),
 }));
 vi.mock('~/api/capture', () => ({ capture }));
 
@@ -10,7 +14,7 @@ import About from './About.vue';
 
 beforeEach(() => {
   vi.clearAllMocks();
-  capture.getUpdateState.mockResolvedValue({ currentVersion: '8.6.4' });
+  capture.getUpdateState.mockResolvedValue({ status: 'idle', currentVersion: '8.6.4' });
   Object.defineProperty(navigator, 'clipboard', {
     configurable: true,
     value: { writeText: vi.fn().mockResolvedValue(undefined) },
@@ -22,24 +26,50 @@ describe('About', () => {
     const wrapper = mount(About);
     await flushPromises();
 
-    expect(wrapper.get('.about-name').text()).toBe('Beam');
+    expect(wrapper.get('.brand-wordmark').text()).toBe('Beam');
+    expect(wrapper.get('.beam-mascot').attributes('data-phase')).toBe('idle');
     expect(wrapper.get('.about-version').text()).toBe('Version 8.6.4');
-    expect(wrapper.get('.about-description-title').text()).toBe('Beam is a screen recorder and editor.');
-    expect(wrapper.findAll('.about-description')[1]!.text()).toContain('Record, style, annotate, and export.');
+    expect(wrapper.get('.about-description-title').text()).toBe('Beautiful demos. Thoughtful screenshots.');
+    expect(wrapper.get('.about-description').text()).toContain(
+      'Record polished product demos, edit and annotate screenshots',
+    );
     expect(wrapper.get('.system-info-button').text()).toContain('Copy System Info');
-    expect(capture.getUpdateState).toHaveBeenCalledOnce();
+    expect(capture.getUpdateState).toHaveBeenCalledTimes(2);
     wrapper.unmount();
   });
 
-  it('keeps the default version when the update state lookup fails', async () => {
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    capture.getUpdateState.mockRejectedValueOnce(new Error('update state unavailable'));
+  it('reports an unavailable version without inventing one when lookup fails', async () => {
+    capture.getUpdateState
+      .mockResolvedValueOnce({ status: 'idle', currentVersion: '8.6.4' })
+      .mockRejectedValueOnce(new Error('update state unavailable'));
     const wrapper = mount(About);
     await flushPromises();
+    expect(wrapper.get('.about-version').text()).toBe('Version unavailable');
+    expect(wrapper.get('.about-version').text()).not.toContain('0.2.6');
+    wrapper.unmount();
+  });
 
-    expect(wrapper.get('.about-version').text()).toBe('Version 0.2.6');
-    expect(consoleError).toHaveBeenCalledWith('Failed to resolve current app version:', expect.any(Error));
-    consoleError.mockRestore();
+  it('shows loading and empty version states, with update and community actions in About', async () => {
+    let resolveState!: (value: { currentVersion: string }) => void;
+    capture.getUpdateState.mockResolvedValueOnce({ status: 'idle', currentVersion: '8.6.4' }).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveState = resolve;
+      }),
+    );
+    const wrapper = mount(About);
+    expect(wrapper.get('.about-version').text()).toBe('Version …');
+    resolveState({ currentVersion: '' });
+    await flushPromises();
+    expect(wrapper.get('.about-version').text()).toBe('Version unavailable');
+    const update = wrapper.findAll('.update-actions button').find((button) => button.text() === 'Check for updates')!;
+    capture.checkForUpdates.mockResolvedValue({ status: 'checking', currentVersion: '8.6.4' });
+    await update.trigger('click');
+    expect(capture.checkForUpdates).toHaveBeenCalledOnce();
+    const discord = wrapper.findAll('.social-links button').find((button) => button.text() === 'Discord')!;
+    await discord.trigger('click');
+    expect(capture.openDiscordInvite).toHaveBeenCalledOnce();
+    await wrapper.get('button.about-brand').trigger('click');
+    expect(wrapper.get('.beam-mascot').attributes('data-phase')).toBe('processing');
     wrapper.unmount();
   });
 

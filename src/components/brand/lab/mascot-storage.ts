@@ -1,6 +1,7 @@
 import { EXPRESSIONS } from '../Beamy/engine/expressions';
 import { SHAPES } from '../Beamy/engine/skins';
 import { SEQUENCE } from '../Beamy/engine/states';
+import { DEFAULT_EYE_GEOMETRY, validateEyeGeometry } from '../Beamy/engine/eye-geometry';
 import { DEFAULT_LOOK, DEFAULT_TIMELINE } from './mascot-catalog';
 import type { MascotLook, MascotPreset, MascotStep } from './mascot-types';
 
@@ -46,6 +47,7 @@ export function parsePreset(text: string): MascotPreset {
       expression: look.expression,
       eyes: look.eyes,
       blush: look.blush,
+      eyeGeometry: look.eyeGeometry === undefined ? { ...DEFAULT_EYE_GEOMETRY } : validateEyeGeometry(look.eyeGeometry),
     } as MascotLook,
     timeline: value.timeline.map((step: unknown) => {
       const validated = step as MascotStep;
@@ -55,5 +57,9 @@ export function parsePreset(text: string): MascotPreset {
 }
 
 export function defaultPreset(): MascotPreset {
-  return { version: 1, look: { ...DEFAULT_LOOK }, timeline: DEFAULT_TIMELINE.map((step) => ({ ...step })) };
+  return {
+    version: 1,
+    look: { ...DEFAULT_LOOK, eyeGeometry: { ...DEFAULT_LOOK.eyeGeometry } },
+    timeline: DEFAULT_TIMELINE.map((step) => ({ ...step })),
+  };
 }

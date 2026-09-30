@@ -4,6 +4,12 @@
   gap: 0.75rem;
   width: 100%;
 }
+.theme-choice {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  min-width: 72px;
+}
 
 .appearance-header {
   display: flex;
@@ -375,4 +381,20 @@
 
 .surface-tone-select {
   width: 100%;
+}
+.is-compact .advanced-category {
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+.is-compact .advanced-category-title {
+  color: var(--text-secondary);
+}
+.is-compact .customization-panel {
+  gap: 20px;
+}
+.is-compact [data-setting]:focus-visible {
+  outline: 2px solid var(--text-secondary);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
 }

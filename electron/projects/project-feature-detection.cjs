@@ -1,3 +1,4 @@
+const { readJsonSync } = require('../storage/json-file.cjs');
 const fs = require('fs');
 const path = require('path');
 
@@ -51,7 +52,7 @@ function createProjectFeatureDetector({ safePath, sessionFileFor }) {
       try {
         const file = sessionFileFor(directory, sessionId, path.join('cursor', 'input.json'));
         if (!file || !fs.existsSync(file)) return false;
-        const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+        const data = readJsonSync(file);
         return Array.isArray(data?.events) && data.events.length > 0;
       } catch {
         return false;
@@ -65,7 +66,7 @@ function createProjectFeatureDetector({ safePath, sessionFileFor }) {
       .find(fs.existsSync);
     if (!manifestPath) return new Set();
     try {
-      const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+      const manifest = readJsonSync(manifestPath);
       const kinds = new Set();
       for (const track of Array.isArray(manifest.tracks) ? manifest.tracks : []) {
         if (!['system-audio', 'microphone'].includes(track?.kind) || track.status === 'failed') continue;

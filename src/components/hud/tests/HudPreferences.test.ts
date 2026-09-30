@@ -1,5 +1,5 @@
 import { createPinia, setActivePinia } from 'pinia';
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { defineComponent, h } from 'vue';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import HudPreferences from '../settings/HudPreferences.vue';
@@ -48,7 +48,13 @@ const deniedAccess = {
 
 const mountPreferences = (props: Record<string, unknown> = {}) =>
   mount(HudPreferences, {
-    props: { countdownSeconds: 3, inputAccess: availableAccess, recordInteractions: false, ...props },
+    props: {
+      view: 'accessibility',
+      countdownSeconds: 3,
+      inputAccess: availableAccess,
+      recordInteractions: false,
+      ...props,
+    },
     global: { stubs: { Select } },
   });
 
@@ -71,10 +77,19 @@ describe('HudPreferences', () => {
     capture.onPreferencesChanged.mockReturnValue(() => undefined);
     window.matchMedia ??= () => ({ matches: false, addEventListener: () => undefined }) as unknown as MediaQueryList;
   });
+  it('renders the developer actions as a dedicated category', () => {
+    const wrapper = mountPreferences({ view: 'developer' });
+    expect(wrapper.get('h1').text()).toBe('Developer');
+    expect(wrapper.get('[data-setting="devtools"] button').text()).toContain('DevTools');
+    expect(wrapper.get('[data-setting="mascot-lab"] button').text()).toContain('Mascot Lab');
+    expect(wrapper.find('.appearance-settings').exists()).toBe(false);
+    wrapper.unmount();
+  });
   it('relays recording preferences', async () => {
-    const wrapper = mountPreferences();
+    const wrapper = mountPreferences({ view: 'recording' });
     await wrapper.get('.recording-bar-option').trigger('click');
     await wrapper.find('.countdown').trigger('click');
+    await wrapper.setProps({ view: 'accessibility' });
     await wrapper.get('.input-access-actions [role="switch"]').trigger('click');
     expect(wrapper.emitted('update:countdownSeconds')).toContainEqual([10]);
     expect(wrapper.emitted('update:recordingBarVisibility')).toContainEqual(['hover-only']);
@@ -82,13 +97,13 @@ describe('HudPreferences', () => {
   });
 
   it('renders the shared appearance controls', () => {
-    const wrapper = mountPreferences({ countdownSeconds: 0 });
+    const wrapper = mountPreferences({ view: 'general', countdownSeconds: 0 });
     expect(wrapper.find('.appearance-settings').exists()).toBe(true);
     expect(wrapper.find('.theme-mode-group').exists()).toBe(true);
   });
 
   it('passes the HUD-specific scaling flag and does not render scaling controls', async () => {
-    const wrapper = mountPreferences();
+    const wrapper = mountPreferences({ view: 'general' });
     const appearance = wrapper.findComponent(AppearanceSettings);
 
     expect(appearance.exists()).toBe(true);
@@ -100,24 +115,15 @@ describe('HudPreferences', () => {
     expect(appearance.find('.ui-scale-slider').exists()).toBe(false);
   });
 
-  it('opens language advanced settings and toggles spell check', async () => {
+  it('exposes spell check directly under Accessibility', async () => {
     const wrapper = mountPreferences();
-    const advanced = wrapper.get('.language-title-row .advanced-toggle');
-
-    expect(advanced.attributes('aria-expanded')).toBe('false');
-    expect(wrapper.find('#hud-language-advanced-panel').exists()).toBe(false);
-
-    await advanced.trigger('click');
-
-    expect(advanced.attributes('aria-expanded')).toBe('true');
-    const spellCheck = wrapper.get('#hud-language-advanced-panel [role="switch"]');
+    const spellCheck = wrapper.get('[data-setting="spell-check"] [role="switch"]');
     expect(spellCheck.attributes('aria-checked')).toBe('true');
-
     capture.updatePreferences.mockResolvedValueOnce({ spellCheck: { enabled: false } });
     await spellCheck.trigger('click');
-
     expect(capture.updatePreferences).toHaveBeenCalledWith({ spellCheck: { enabled: false } });
     expect(spellCheck.attributes('aria-checked')).toBe('false');
+    wrapper.unmount();
   });
 
   it('shows the interaction switch only when input access is available', async () => {
@@ -213,13 +219,39 @@ describe('HudPreferences', () => {
     expect(unavailable.find('.input-access-actions button').exists()).toBe(false);
   });
 
-  it('does not render or emit the removed always-on-top preference', async () => {
-    const wrapper = mount(HudPreferences, {
-      props: { countdownSeconds: 3 },
-      global: { stubs: { Select } },
-    });
+  it('keeps each category focused and reverses motion when moving up the sidebar', async () => {
+    const wrapper = mountPreferences({ view: 'general' });
+    expect(wrapper.find('[data-setting="countdown"]').exists()).toBe(false);
+    expect(wrapper.find('[data-setting="spell-check"]').exists()).toBe(false);
+    await wrapper.setProps({ view: 'recording' });
+    expect(wrapper.getComponent({ name: 'Transition' }).props('name')).toBe('settings-next');
+    expect(wrapper.find('[data-setting="language"]').exists()).toBe(false);
+    await wrapper.setProps({ view: 'general' });
+    expect(wrapper.getComponent({ name: 'Transition' }).props('name')).toBe('settings-previous');
+    wrapper.unmount();
+  });
 
-    expect(wrapper.findAll('.preference-title').some((title) => title.text() === 'Always on top')).toBe(false);
-    expect(wrapper.emitted('update:alwaysOnTop')).toBeUndefined();
+  it('reveals and focuses advanced appearance settings from a search result', async () => {
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: vi.fn() });
+    const wrapper = mountPreferences({ view: 'general', focusedSetting: 'secondary-color' });
+    await flushPromises();
+    expect(wrapper.get('.advanced-toggle').attributes('aria-expanded')).toBe('true');
+    expect(wrapper.get('[data-setting="secondary-color"]').element.scrollIntoView).toHaveBeenCalled();
+    expect(wrapper.find('.divider').exists()).toBe(false);
+    await wrapper.setProps({ focusedSetting: 'missing-setting' });
+    await flushPromises();
+    wrapper.unmount();
+  });
+
+  it('exposes and relays Recorder setup always-on-top preferences', async () => {
+    const wrapper = mountPreferences({ view: 'recording', alwaysOnTop: false });
+    const control = wrapper.get('[data-setting="always-on-top"] [role="switch"]');
+    expect(control.attributes('aria-checked')).toBe('false');
+    await control.trigger('click');
+    expect(wrapper.emitted('update:alwaysOnTop')).toEqual([[true]]);
+    await wrapper.setProps({ alwaysOnTop: true });
+    await control.trigger('click');
+    expect(wrapper.emitted('update:alwaysOnTop')).toContainEqual([false]);
+    wrapper.unmount();
   });
 });

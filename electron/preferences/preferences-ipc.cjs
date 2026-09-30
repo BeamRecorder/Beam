@@ -44,10 +44,12 @@ function registerPreferencesIpc({
       });
     return registration;
   };
-  const update = async (patch) => {
-    const previousShortcuts = store.read().shortcuts;
-    const preferences = store.patch(patch);
-    if (!isDeepStrictEqual(previousShortcuts, preferences.shortcuts)) await registerShortcuts(preferences);
+  const updateBatch = async (patches) => {
+    if (!Array.isArray(patches) || patches.length > 64)
+      throw new TypeError('Preference batch must contain at most 64 patches.');
+    if (!patches.length) return store.read();
+    const { previous, preferences } = store.patchBatch(patches);
+    if (!isDeepStrictEqual(previous.shortcuts, preferences.shortcuts)) await registerShortcuts(preferences);
     broadcast(preferences);
     onPreferencesChanged?.(preferences);
     return preferences;
@@ -66,7 +68,8 @@ function registerPreferencesIpc({
   };
 
   ipcMain.handle('preferences:get', () => store.read());
-  ipcMain.handle('preferences:update', (_event, patch) => update(patch));
+  ipcMain.handle('preferences:update', (_event, patch) => updateBatch([patch]));
+  ipcMain.handle('preferences:update-batch', (_event, patches) => updateBatch(patches));
   ipcMain.handle('preferences:reset', reset);
   void registerShortcuts(store.read());
 

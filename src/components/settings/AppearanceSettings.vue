@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue';
 import { Check, Maximize2, Palette, RotateCcw, Shapes, SlidersHorizontal, Sparkles } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import AdvancedButton from '~/ui/button/AdvancedButton.vue';
+import ThemeChoicePreview from './ThemeChoicePreview.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue';
 import Select from '~/ui/select/Select.vue';
@@ -17,6 +18,7 @@ import {
   THEME_PRESETS,
   UI_SCALE_PRESETS,
   type SurfaceTone,
+  type ThemeMode,
   type ThemePreset,
   type UiScalePercent,
   type UiScaleRegion,
@@ -25,11 +27,12 @@ import {
 const { t, locale } = useTranslate('AppearanceSettings');
 const themeStore = useThemeStore();
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     showTitle?: boolean;
     compact?: boolean;
     showUiScaling?: boolean;
+    focusedSetting?: string;
   }>(),
   {
     showTitle: true,
@@ -86,13 +89,27 @@ const surfaceToneOptions = computed<Array<{ value: SurfaceTone; label: string }>
   { value: 'deep', label: t('toneDeep') },
 ]);
 
-const themeModeOptions = computed(() => [
+const themeModeOptions = computed<Array<{ value: ThemeMode; label: string }>>(() => [
   { value: 'light', label: t('light') },
   { value: 'dark', label: t('dark') },
   { value: 'system', label: t('system') },
 ]);
 const customRadiusSelected = ref(themeStore.isPillRadius);
 const advancedOpen = ref(false);
+watch(
+  () => props.focusedSetting,
+  (setting) => {
+    if (
+      setting &&
+      ['theme-presets', 'primary-color', 'secondary-color', 'corner-radius', 'surface-tone', 'reset-theme'].includes(
+        setting,
+      )
+    )
+      advancedOpen.value = true;
+  },
+  { immediate: true },
+);
+
 const uiScaleDraft = ref<number>(themeStore.uiScaleGlobal);
 const uiScaleOverrideDrafts = ref<Record<UiScaleRegion, number>>({
   topbar: themeStore.resolvedUiScale('topbar'),
@@ -165,7 +182,7 @@ const isCustomSecondaryColor = computed(() => {
       </div>
     </div>
 
-    <div class="theme-mode-setting">
+    <div class="theme-mode-setting" data-setting="theme-mode" tabindex="-1">
       <span class="row-label">{{ t('themeMode') }}</span>
       <ButtonGroup
         full
@@ -175,6 +192,7 @@ const isCustomSecondaryColor = computed(() => {
         role="group"
         :aria-label="t('themeMode')"
         :selection="{ index: themeModeOptions.findIndex((mode) => mode.value === themeStore.theme), count: 3 }"
+        :style="compact ? { height: 'auto' } : undefined"
       >
         <Button
           v-for="mode in themeModeOptions"
@@ -183,9 +201,14 @@ const isCustomSecondaryColor = computed(() => {
           size="sm"
           :class="{ active: themeStore.theme === mode.value }"
           :aria-pressed="themeStore.theme === mode.value"
+          :wrap="compact"
+          :style="compact ? { height: 'auto', padding: '6px', color: 'var(--text-primary)', width: '100%' } : undefined"
           @click="handleThemeMode(mode.value)"
         >
-          {{ mode.label }}
+          <span v-if="compact" class="theme-choice"
+            ><ThemeChoicePreview :mode="mode.value" /><span>{{ mode.label }}</span></span
+          >
+          <template v-else>{{ mode.label }}</template>
         </Button>
       </ButtonGroup>
       <div class="advanced-toggle-row">
@@ -260,7 +283,7 @@ const isCustomSecondaryColor = computed(() => {
       <section class="advanced-category theme-customization-section">
         <h4 class="advanced-category-title">{{ t('themeCustomization') }}</h4>
         <div id="appearance-customization-panel" class="customization-panel">
-          <div class="customization-actions">
+          <div class="customization-actions" data-setting="reset-theme" tabindex="-1">
             <Button
               class="appearance-reset-button"
               variant="ghost"
@@ -272,9 +295,9 @@ const isCustomSecondaryColor = computed(() => {
               {{ t('resetDefault') }}
             </Button>
           </div>
-          <Divider spacing="xs" />
+          <Divider v-if="!compact" spacing="xs" />
 
-          <div class="setting-section theme-presets-section">
+          <div class="setting-section theme-presets-section" data-setting="theme-presets" tabindex="-1">
             <div class="section-title-row">
               <div class="title-with-icon">
                 <Sparkles class="section-icon" :size="15" />
@@ -300,9 +323,9 @@ const isCustomSecondaryColor = computed(() => {
             </div>
           </div>
 
-          <Divider spacing="xs" />
+          <Divider v-if="!compact" spacing="xs" />
 
-          <div class="setting-section primary-color-section">
+          <div class="setting-section primary-color-section" data-setting="primary-color" tabindex="-1">
             <div class="section-title-row">
               <div class="title-with-icon">
                 <Palette class="section-icon" :size="15" />
@@ -339,9 +362,9 @@ const isCustomSecondaryColor = computed(() => {
             </div>
           </div>
 
-          <Divider spacing="xs" />
+          <Divider v-if="!compact" spacing="xs" />
 
-          <div class="setting-section secondary-color-section">
+          <div class="setting-section secondary-color-section" data-setting="secondary-color" tabindex="-1">
             <div class="section-title-row">
               <span class="row-label">{{ t('secondaryColor') }}</span>
             </div>
@@ -375,9 +398,9 @@ const isCustomSecondaryColor = computed(() => {
             </div>
           </div>
 
-          <Divider spacing="xs" />
+          <Divider v-if="!compact" spacing="xs" />
 
-          <div class="setting-section">
+          <div class="setting-section" data-setting="corner-radius" tabindex="-1">
             <div class="section-title-row">
               <div class="title-with-icon">
                 <Shapes class="section-icon" :size="15" />
@@ -413,9 +436,9 @@ const isCustomSecondaryColor = computed(() => {
             </div>
           </div>
 
-          <Divider spacing="xs" />
+          <Divider v-if="!compact" spacing="xs" />
 
-          <div class="setting-section">
+          <div class="setting-section" data-setting="surface-tone" tabindex="-1">
             <div class="section-title-row">
               <span class="row-label">{{ t('surfaceTone') }}</span>
             </div>

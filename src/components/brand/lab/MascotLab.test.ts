@@ -117,6 +117,21 @@ describe('standalone mascot laboratory', () => {
     localStorage.setItem(PRESET_KEY, '{}');
     expect(setup().find('[role="status"]').text()).toContain('relus'.slice(0, 4));
   });
+  it('edits and reloads eye geometry while the real mascot preview is paused', async () => {
+    const wrapper = setup(true);
+    await click(wrapper, 'Mettre en pause');
+    const before = wrapper.get('[data-mascot-preview] svg').html();
+    await wrapper.get('input[aria-label="Taille des yeux"]').setValue('150');
+    await wrapper.get('input[aria-label="Écartement des yeux"]').setValue('130');
+    expect(wrapper.get('[data-mascot-preview] svg').html()).not.toBe(before);
+    expect(wrapper.get('[data-mascot-preview] svg').html()).not.toMatch(/NaN|Infinity/);
+    expect(JSON.parse(localStorage.getItem(PRESET_KEY)!).look.eyeGeometry).toMatchObject({ size: 1.5, spacing: 1.3 });
+    const restored = setup(true);
+    expect(restored.get<HTMLInputElement>('input[aria-label="Taille des yeux"]').element.value).toBe('150');
+    expect(restored.get<HTMLInputElement>('input[aria-label="Écartement des yeux"]').element.value).toBe('130');
+    await click(restored, 'Réinitialiser les yeux');
+    expect(JSON.parse(localStorage.getItem(PRESET_KEY)!).look.eyeGeometry.size).toBe(1);
+  });
   it('reports storage read and write failures instead of pretending to save', async () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('denied');

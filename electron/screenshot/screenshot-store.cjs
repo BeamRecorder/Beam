@@ -1,3 +1,4 @@
+const { readJsonSync, writeJsonAtomicSync } = require('../storage/json-file.cjs');
 const fs = require('fs');
 const path = require('path');
 const { randomUUID } = require('crypto');
@@ -21,22 +22,13 @@ function createScreenshotStore(root) {
   };
   const write = (id, document) => {
     const target = path.join(directory(id), 'screenshot.json');
-    const temporary = `${target}.${randomUUID()}.tmp`;
-    fs.writeFileSync(temporary, JSON.stringify({ ...document, updatedAt: new Date().toISOString() }), {
-      flag: 'wx',
-      mode: 0o600,
-    });
-    try {
-      fs.renameSync(temporary, target);
-    } finally {
-      fs.rmSync(temporary, { force: true });
-    }
+    writeJsonAtomicSync(target, { ...document, updatedAt: new Date().toISOString() }, { pretty: false });
   };
   const read = (id) => {
     const metadata = path.join(directory(id), 'screenshot.json');
     const stat = fs.lstatSync(metadata);
     if (!stat.isFile()) throw new Error('Invalid screenshot metadata.');
-    const document = JSON.parse(fs.readFileSync(metadata, 'utf8'));
+    const document = readJsonSync(metadata);
     if (document.id !== id || document.schemaVersion !== 1 || !validDimensions(document.width, document.height))
       throw new Error('Invalid screenshot document.');
     if (document.state) validateScreenshotState(document.state, id);

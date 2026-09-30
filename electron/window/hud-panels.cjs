@@ -5,8 +5,9 @@ const PROJECT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 const PANEL_SIZES = {
   settings: { width: 720, height: 680, minWidth: 580, minHeight: 480 },
   projects: { width: 720, height: 560, minWidth: 560, minHeight: 440 },
+  mascot: { width: 1280, height: 900, minWidth: 960, minHeight: 640 },
 };
-const PANEL_TITLES = { settings: 'Beam Settings', projects: 'Beam Projects' };
+const PANEL_TITLES = { settings: 'Beam Settings', projects: 'Beam Projects', mascot: 'Beam Mascot Lab' };
 
 function createHudPanelManager({
   applicationRoot,
@@ -30,7 +31,10 @@ function createHudPanelManager({
     panel.resolve(true);
   };
   const open = (role, sender) => {
-    if (sender !== hudWindow.webContents || !available()) throw new Error('The recorder is not available.');
+    if (role === 'mascot') {
+      if (isPackaged || !canAcceptWork() || !owns(sender, 'settings'))
+        throw new Error('Developer tools are not available.');
+    } else if (sender !== hudWindow.webContents || !available()) throw new Error('The recorder is not available.');
     const existing = panels.get(role);
     if (existing && !existing.window.isDestroyed()) {
       present(existing);
@@ -91,6 +95,15 @@ function createHudPanelManager({
 
   ipcMain.handle('hud:open-settings', (event) => open('settings', event.sender));
   ipcMain.handle('hud:open-projects', (event) => open('projects', event.sender));
+  if (!isPackaged) {
+    ipcMain.handle('developer:open-mascot-lab', (event) => open('mascot', event.sender));
+    ipcMain.handle('developer:open-devtools', (event) => {
+      const window = panels.get('settings')?.window;
+      if (!canAcceptWork() || !owns(event.sender, 'settings') || !window || window.isDestroyed())
+        throw new Error('Developer tools are not available.');
+      window.webContents.openDevTools({ mode: 'detach' });
+    });
+  }
   ipcMain.on('hud-panel:ready', (event) => {
     for (const panel of panels.values()) {
       if (panel.window.webContents !== event.sender) continue;

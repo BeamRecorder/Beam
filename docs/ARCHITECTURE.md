@@ -34,6 +34,16 @@ The main process owns windows, IPC handlers, project/session file access, and th
 
 Rust owns capture lifecycle, native permissions, source discovery, clocks, track coordination, encoding, cursor events, recovery, and manifest persistence. Platform-specific code belongs under the relevant backend module. Shared behavior belongs in platform-neutral modules.
 
+### JSON file storage
+
+Electron stores read and write JSON through `electron/storage/json-file.cjs`: `readJsonSync` / `readJson`, `writeJsonAtomicSync` / `writeJsonAtomic`, and `writeJsonBatchSync` / `writeJsonBatch`. A batch takes `{ file, value, pretty? }` entries, serializes before filesystem work and writes each destination once (last entry wins). Async staging has at most four in-flight writes. Domain stores retain their schema validation and recovery policy; generic storage does not cache documents or expose filesystem operations to renderers.
+
+Preference batches use the bounded `capture.updatePreferencesBatch(patches)` API and `usePreferencesStore().updateBatch(patches)`. The main-process store merges patches in memory, validates the final state, then performs one read/write cycle and broadcasts once. Empty batches do not write or broadcast. Shortcut registration runs only when the final shortcut map changes.
+
+Rust uses `storage::read_json<T>`, `write_json_atomic`, `JsonWrite::new` / `write_json_batch` and `update_json_batch<T>`. Files are synchronized before replacement and each parent directory is synchronized once per batch. Cursor artifacts and track checkpoints use batches; append-only JSONL capture journals and IPC streams keep their streaming contracts.
+
+Batch atomicity is per file, not a multi-file transaction. All files stage before publication; a failure during staging preserves every destination. A later publication failure can leave some complete files updated. Callers needing recovery across multiple files must retain their domain journal. Only temporary files created by the current operation are removed.
+
 Linux interaction capture uses the privileged input helper under both Wayland and X11. Compare the bundled and installed helper bytes in bounded chunks and verify the installed Polkit policy before reusing it; crate version strings are not binary identity. AppImage installation/update keeps the sealed executable alive across authorization. Drain helper stderr concurrently, retain at most 4 KiB for diagnostics, and return failed access with its error code/message; pkexec exit 127 does not distinguish an authorization failure from an execution failure. Dismissing authorization (exit 126) returns to the requestable state without a failure. Preserve startup errors until retry or successful access, expose them in the HUD/preferences/onboarding and copied system information, and never mark failed capture as authorized. DEB depends on `pkexec`; RPM depends on `polkit`.
 
 ## Startup work

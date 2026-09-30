@@ -80,12 +80,30 @@ describe('preset boundary validation', () => {
   it('returns independent default objects', () => {
     const preset = defaultPreset();
     preset.look.color = '#000000';
+    preset.look.eyeGeometry.size = 1.8;
     preset.timeline[0]!.duration = 9;
     expect(defaultPreset().look.color).toBe(DEFAULT_LOOK.color);
+    expect(defaultPreset().look.eyeGeometry.size).toBe(1);
     expect(defaultPreset().timeline[0]!.duration).toBe(2);
   });
   it('strips unrecognized fields rather than carrying them into application state', () => {
     expect(parsePreset(JSON.stringify({ ...defaultPreset(), extra: 5 }))).not.toHaveProperty('extra');
+  });
+  it('migrates saved version-one looks without eye geometry', () => {
+    const preset = defaultPreset();
+    const { eyeGeometry, ...previousLook } = preset.look;
+    const migrated = parsePreset(JSON.stringify({ ...preset, look: previousLook }));
+    expect(migrated.look.eyeGeometry).toEqual(eyeGeometry);
+    expect(migrated.look.eyeGeometry).not.toBe(DEFAULT_LOOK.eyeGeometry);
+    expect(migrated.look.shape).toBe(previousLook.shape);
+  });
+  it('round trips custom eye proportions and rejects corrupt saved geometry', () => {
+    const preset = defaultPreset();
+    preset.look.eyeGeometry = { size: 1.8, width: 0.5, height: 1.5, spacing: 0.6, offsetY: -0.2 };
+    expect(parsePreset(JSON.stringify(preset))).toEqual(preset);
+    for (const eyeGeometry of [null, {}, { ...preset.look.eyeGeometry, size: 4 }]) {
+      expect(() => parsePreset(JSON.stringify({ ...preset, look: { ...preset.look, eyeGeometry } }))).toThrow();
+    }
   });
   it.each(['null', '[]', '{}', '{', '"mascot"'])('rejects an invalid root %s', (text) =>
     expect(() => parsePreset(text)).toThrow(),

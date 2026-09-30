@@ -1,3 +1,4 @@
+const { readJsonSync, writeJsonAtomicSync } = require('../storage/json-file.cjs');
 const { randomUUID } = require('crypto');
 const fs = require('fs');
 const path = require('path');
@@ -42,11 +43,10 @@ function createProjectStore(root, { mediaHost = 'asset', category = null } = {})
       .toLowerCase();
     return normalized.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'untitled-project';
   };
-  const readManifest = (directory) => JSON.parse(fs.readFileSync(path.join(directory, 'project.json'), 'utf8'));
+  const readManifest = (directory) => readJsonSync(path.join(directory, 'project.json'));
   const writeManifest = (directory, manifest) => {
     const target = path.join(directory, 'project.json');
-    fs.writeFileSync(`${target}.tmp`, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
-    fs.renameSync(`${target}.tmp`, target);
+    writeJsonAtomicSync(target, manifest);
   };
   const projectDirectories = () => {
     const roots = category ? ['studio', 'instant'].map((name) => path.join(root, name)) : [root];
@@ -167,7 +167,7 @@ function createProjectStore(root, { mediaHost = 'asset', category = null } = {})
   const readJsonArray = (file) => {
     if (!fs.existsSync(file)) return null;
     try {
-      const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+      const parsed = readJsonSync(file);
       return Array.isArray(parsed) ? parsed : null;
     } catch {
       return fs
@@ -186,7 +186,7 @@ function createProjectStore(root, { mediaHost = 'asset', category = null } = {})
   const telemetryFor = (file) => {
     if (!fs.existsSync(file)) return [];
     try {
-      return (JSON.parse(fs.readFileSync(file, 'utf8'))?.samples || [])
+      return (readJsonSync(file)?.samples || [])
         .filter(
           (sample) =>
             sample && Number.isFinite(sample.timeMs) && Number.isFinite(sample.cx) && Number.isFinite(sample.cy),
@@ -221,7 +221,7 @@ function createProjectStore(root, { mediaHost = 'asset', category = null } = {})
       if (!manifestPath) continue;
       let sessionManifest;
       try {
-        sessionManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+        sessionManifest = readJsonSync(manifestPath);
       } catch {
         continue;
       }
@@ -252,12 +252,12 @@ function createProjectStore(root, { mediaHost = 'asset', category = null } = {})
       const events = readJsonArray(path.join(cursorDirectory, 'cursor.json'));
       let interactions = null;
       try {
-        const parsed = JSON.parse(fs.readFileSync(path.join(cursorDirectory, 'input.json'), 'utf8'));
+        const parsed = readJsonSync(path.join(cursorDirectory, 'input.json'));
         interactions = normalizeInputSidecar(parsed);
       } catch {}
       let metadata = {};
       try {
-        metadata = JSON.parse(fs.readFileSync(path.join(cursorDirectory, 'shapes.json'), 'utf8')) || {};
+        metadata = readJsonSync(path.join(cursorDirectory, 'shapes.json')) || {};
       } catch {}
       const catalog = Object.fromEntries(
         Object.entries(metadata)

@@ -8,7 +8,7 @@ use crate::{
         CaptureRequest, PlatformMetadata, SCHEMA_VERSION, SessionId, SessionManifest, TrackKind,
         TrackStatus,
     },
-    storage::{ManifestWriter, ProjectLayout, create_or_update_project, write_atomic},
+    storage::{ManifestWriter, ProjectLayout, create_or_update_project},
 };
 
 use super::{
@@ -236,14 +236,12 @@ impl RecordingSession {
         }
         let manifest_path = self.project_layout.project_manifest();
         if self.project_existed {
-            let mut project: crate::model::ProjectManifest = serde_json::from_slice(
-                &std::fs::read(&manifest_path)
-                    .map_err(|error| CaptureError::storage(&manifest_path, error))?,
-            )?;
+            let mut project: crate::model::ProjectManifest =
+                crate::storage::read_json(&manifest_path)?;
             project
                 .sessions
                 .retain(|entry| entry.session_id != self.session_id);
-            write_atomic(&manifest_path, &serde_json::to_vec_pretty(&project)?)?;
+            crate::storage::write_json_atomic(&manifest_path, &project)?;
         } else if self.project_layout.project_dir().exists() {
             std::fs::remove_dir_all(self.project_layout.project_dir()).map_err(|error| {
                 CaptureError::storage(&self.project_layout.project_dir(), error)

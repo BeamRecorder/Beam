@@ -211,7 +211,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', keyboard));
     <div class="lab-content">
       <header class="intro">
         <div>
-          <span class="eyebrow"><Sparkles :size="13" /> UNE FUTURE MASCOTTE POUR BEAM</span>
+          <span class="eyebrow"><Sparkles :size="13" /> LE LABORATOIRE DE BEAMY</span>
           <h1>Un petit compagnon.<br /><span>Plein de personnalité.</span></h1>
           <p>Donne-lui une forme, des étoiles dans les yeux et quelques petits mouvements.</p>
         </div>

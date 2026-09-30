@@ -19,6 +19,8 @@ function fixture({ packaged = false } = {}) {
       this.webContents = new EventEmitter();
       this.webContents.setZoomFactor = () => {};
       this.webContents.setZoomLevel = () => {};
+      this.devtools = [];
+      this.webContents.openDevTools = (options) => this.devtools.push(options);
       windows.push(this);
     }
     isDestroyed() {
@@ -140,8 +142,77 @@ test('loads the packaged entry and preserves separate settings and projects life
   assert.equal(f.windows[0].query.panel, 'settings');
   assert.equal(f.windows[1].query.panel, 'projects');
   assert.equal(f.handlers.has('hud:open-mascot'), false);
+  assert.equal(f.handlers.has('developer:open-mascot-lab'), false);
+  assert.equal(f.handlers.has('developer:open-devtools'), false);
   f.windows[0].close();
   assert.equal(f.windows[1].isDestroyed(), false);
+  f.manager.destroy();
+});
+
+test('only the Settings window opens detached DevTools in development', async () => {
+  const f = fixture();
+  const opening = f.open('settings');
+  const settings = f.windows[0];
+  f.ready(settings);
+  await opening;
+  const open = f.handlers.get('developer:open-devtools');
+  assert.throws(() => open({ sender: f.hud.webContents }), /not available/);
+  assert.throws(() => open({ sender: {} }), /not available/);
+  open({ sender: settings.webContents });
+  assert.deepEqual(settings.devtools, [{ mode: 'detach' }]);
+  f.stop();
+  assert.throws(() => open({ sender: settings.webContents }), /not available/);
+  f.manager.destroy();
+});
+
+test('Mascot Lab is independent, reuses its window and waits for both readiness signals', async () => {
+  const f = fixture();
+  const opening = f.open('settings');
+  const settings = f.windows[0];
+  f.ready(settings);
+  await opening;
+  const open = () => f.handlers.get('developer:open-mascot-lab')({ sender: settings.webContents });
+  const pending = open();
+  const lab = f.windows[1];
+  assert.equal(lab.options.title, 'Beam Mascot Lab');
+  assert.equal(lab.options.parent, undefined);
+  assert.equal(lab.options.width, 1280);
+  assert.equal(lab.options.minWidth, 960);
+  assert.equal(lab.options.transparent, false);
+  lab.emit('ready-to-show');
+  assert.equal(lab.shown, 0);
+  f.handlers.get('hud-panel:ready')({ sender: lab.webContents });
+  await pending;
+  await open();
+  assert.equal(f.windows.length, 2);
+  assert.equal(lab.shown, 2);
+  assert.match(lab.url, /hud-panel.html\?panel=mascot/);
+  lab.close();
+  assert.equal(settings.isDestroyed(), false);
+  const replacement = open();
+  f.ready(f.windows[2]);
+  await replacement;
+  f.manager.destroy();
+});
+
+test('Mascot Lab rejects foreign senders, recovers from failed loading and refuses work during shutdown', async () => {
+  const f = fixture();
+  const handler = f.handlers.get('developer:open-mascot-lab');
+  assert.throws(() => handler({ sender: f.hud.webContents }), /not available/);
+  assert.throws(() => handler({ sender: {} }), /not available/);
+  const opening = f.open('settings');
+  const settings = f.windows[0];
+  f.ready(settings);
+  await opening;
+  const pending = handler({ sender: settings.webContents });
+  f.windows[1].webContents.emit('did-fail-load', {}, -2, 'missing', '', true);
+  await assert.rejects(pending, /Could not load/);
+  assert.equal(f.windows[1].isDestroyed(), true);
+  const retry = handler({ sender: settings.webContents });
+  f.ready(f.windows[2]);
+  await retry;
+  f.stop();
+  assert.throws(() => handler({ sender: settings.webContents }), /not available/);
   f.manager.destroy();
 });
 test('only the HUD may open panels, and unavailable recorder states reject the request', () => {

@@ -1,5 +1,12 @@
 import type { PROFILES } from './profiles';
 export type EyeStyle = 'sparkle' | 'star' | 'capsule';
+export interface EyeGeometry {
+  size: number;
+  width: number;
+  height: number;
+  spacing: number;
+  offsetY: number;
+}
 export interface DotRender {
   x: number;
   y: number;

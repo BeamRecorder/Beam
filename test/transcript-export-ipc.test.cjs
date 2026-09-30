@@ -47,6 +47,7 @@ function makeFsFixture({ failureStage = null } = {}) {
   const failure = new Error(`simulated ${failureStage} failure`);
   const fsModule = {
     promises: {
+      mkdir: fs.promises.mkdir.bind(fs.promises),
       writeFile: async (filePath, data, options) => {
         calls.writeFile.push({ filePath, data, options });
         if (failureStage === 'write') {
@@ -155,7 +156,7 @@ test('exports normalized JSON atomically with Unicode, a final newline, and a pr
   assert.deepEqual(fsFixture.calls.writeFile[0].options, { encoding: 'utf8', mode: 0o600, flag: 'wx' });
   assert.match(
     fsFixture.calls.writeFile[0].filePath,
-    /^.+\.json\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.partial$/,
+    /^.+\.json\.\d+\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.tmp$/,
   );
   assert.deepEqual(fsFixture.calls.rename, [{ fromPath: fsFixture.calls.writeFile[0].filePath, toPath: target }]);
   assert.deepEqual(fs.readdirSync(root), ['transcript.json']);

@@ -16,6 +16,7 @@ const props = withDefaults(
     hoverOnlyActive?: boolean;
     busy?: boolean;
     mascot?: boolean;
+    preview?: boolean;
   }>(),
   { busy: false, mascot: false },
 );
@@ -65,6 +66,7 @@ watch(
       'hover-only': visibility === 'hover-only' && hoverOnlyActive,
       'pointer-over': isPointerOver,
       confirming: confirmingRestart,
+      'is-preview': preview,
     }"
     :aria-label="t('recordingControls')"
     @pointerenter="isPointerOver = true"
@@ -188,6 +190,10 @@ watch(
 .control-slot {
   display: flex;
   flex: none;
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+.recorder-bar.is-preview {
   -webkit-app-region: no-drag;
   app-region: no-drag;
 }

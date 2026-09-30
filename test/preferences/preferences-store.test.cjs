@@ -236,7 +236,7 @@ test('repair returns normalized preferences when writing the temporary file fail
   const writeFileSync = fs.writeFileSync;
   let attempted = false;
   fs.writeFileSync = (destination, ...args) => {
-    if (destination === `${file}.tmp`) {
+    if (destination.startsWith(`${file}.`) && destination.endsWith('.tmp')) {
       attempted = true;
       throw new Error('temporary preferences write failed');
     }
@@ -450,4 +450,36 @@ test('preserves custom orange and colors belonging to other presets', () => {
 test('new and invalid appearance settings use the same softer default orange', () => {
   assert.equal(defaults().appearance.primaryColor, '#b85c38');
   assert.equal(normalize({ appearance: { primaryColor: 'orange' } }).appearance.primaryColor, '#b85c38');
+});
+
+test('defaults Recorder setup to always on top and preserves explicit booleans', () => {
+  for (const platform of ['linux', 'darwin', 'win32']) {
+    assert.equal(defaults(platform).alwaysOnTop, true);
+    assert.equal(normalize({}, platform).alwaysOnTop, true);
+    assert.equal(normalize({ alwaysOnTop: false }, platform).alwaysOnTop, false);
+    assert.equal(normalize({ alwaysOnTop: true }, platform).alwaysOnTop, true);
+  }
+});
+
+test('rejects malformed always-on-top values without truthiness coercion', () => {
+  for (const alwaysOnTop of [null, 0, 1, '', 'false', [], {}])
+    assert.equal(normalize({ alwaysOnTop }).alwaysOnTop, true);
+});
+
+test('persists always-on-top changes across restart without resetting other preferences', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-topmost-'));
+  const file = path.join(directory, 'preferences.json');
+  try {
+    const store = createPreferencesStore(file);
+    store.patch({ alwaysOnTop: false, recordingBar: { visibility: 'auto-fade' } });
+    const reopened = createPreferencesStore(file);
+    assert.equal(reopened.read().alwaysOnTop, false);
+    reopened.patch({ theme: 'dark' });
+    assert.equal(reopened.read().alwaysOnTop, false);
+    assert.equal(reopened.read().recordingBar.visibility, 'auto-fade');
+    reopened.patch({ alwaysOnTop: true });
+    assert.equal(createPreferencesStore(file).read().alwaysOnTop, true);
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
 });

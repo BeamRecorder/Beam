@@ -144,7 +144,7 @@ const resetShortcut = async (id: string) => {
   <div class="shortcut-preferences">
     <section v-for="group in shortcutGroups" :key="group.id" class="shortcut-group">
       <h3 class="shortcut-group-title">{{ group.label() }}</h3>
-      <div v-for="item in group.definitions" :key="item.id" class="shortcut-row">
+      <div v-for="item in group.definitions" :key="item.id" class="shortcut-row" :data-setting="item.id" tabindex="-1">
         <div class="shortcut-info">
           <span class="shortcut-label">{{ item.label() }}</span>
           <span class="shortcut-desc">{{ item.description() }}</span>
@@ -172,7 +172,6 @@ const resetShortcut = async (id: string) => {
 
 .shortcut-group + .shortcut-group {
   padding-top: 14px;
-  border-top: 1px solid var(--color-border);
 }
 
 .shortcut-group-title {
@@ -190,8 +189,10 @@ const resetShortcut = async (id: string) => {
   justify-content: space-between;
   gap: 12px;
   min-height: 42px;
-  padding: 7px 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  padding: 14px 16px;
+  background: var(--color-bg-element);
+  border-radius: var(--radius-md);
+  margin-top: 8px;
 }
 
 .shortcut-info {
@@ -209,12 +210,24 @@ const resetShortcut = async (id: string) => {
 }
 
 .shortcut-desc {
-  font-size: 10px;
-  color: var(--text-muted);
+  font-size: var(--font-size-body);
+  color: var(--text-secondary);
 }
 
 .shortcut-input-container {
   width: 160px;
   flex-shrink: 0;
+}
+.shortcut-row:focus-visible {
+  outline: 2px solid var(--text-secondary);
+  outline-offset: 3px;
+}
+@media (max-width: 700px) {
+  .shortcut-row {
+    flex-wrap: wrap;
+  }
+  .shortcut-info {
+    flex-basis: 100%;
+  }
 }
 </style>

@@ -195,6 +195,25 @@ describe('mascot playback lifecycle', () => {
     expect(player.elapsed.value).toBe(1);
     expect(player.activeStep.value).toBe(0);
   });
+  it('applies eye edits immediately while paused and preserves them through state changes and seeks', async () => {
+    const { player, look } = setup();
+    player.playing.value = false;
+    await nextTick();
+    const before = player.frame.value;
+    look.value.eyeGeometry.size = 1.5;
+    look.value.eyeGeometry.spacing = 1.3;
+    await nextTick();
+    expect(player.frame.value.eyes[0]!.d).not.toBe(before.eyes[0]!.d);
+    expect(player.frame.value.eyes[0]!.matrix).not.toBe(before.eyes[0]!.matrix);
+    expect(callbacks.size).toBe(0);
+    player.choose('wide');
+    expect(player.frame.value).toEqual(createMascotEngine(look.value, 'wide').sample(0));
+    player.seek(0.8);
+    expect(player.frame.value).toEqual(createMascotEngine(look.value).sample(0.8));
+    player.seek(4.8);
+    player.seek(0.8);
+    expect(player.frame.value).toEqual(createMascotEngine(look.value).sample(0.8));
+  });
   it('follows mouse gaze, releases it, and ignores touch or boxes without area', async () => {
     const { player } = setup();
     tick(0);

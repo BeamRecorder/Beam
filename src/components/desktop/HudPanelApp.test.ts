@@ -11,12 +11,13 @@ import HudPanelApp from './HudPanelApp.vue';
 import type { HudPanel } from '~/api/types/hud-panel';
 const settings = { name: 'HudSettingsWindow', emits: ['ready'], template: '<div />' };
 const projects = { name: 'ProjectPicker', emits: ['open-project', 'back'], template: '<div />' };
+const mascot = { name: 'MascotLab', props: ['embedded'], template: '<div />' };
 const create = async (panel: string) => {
   window.history.replaceState({}, '', `?panel=${panel}`);
   const wrapper = mount(HudPanelApp, {
     props: {
       panel: panel === 'unknown' ? null : (panel as HudPanel),
-      content: panel === 'settings' ? settings : panel === 'projects' ? projects : null,
+      content: panel === 'settings' ? settings : panel === 'projects' ? projects : panel === 'mascot' ? mascot : null,
     },
     global: { stubs: { HudSettingsWindow: settings, ProjectPicker: projects, ToastProvider: true } },
   });
@@ -29,6 +30,13 @@ beforeEach(() => {
   capture.requestHudProject.mockResolvedValue(true);
 });
 describe('independent HUD panel renderer', () => {
+  it('presents the embedded Mascot Lab with its own title and readiness', async () => {
+    const wrapper = await create('mascot');
+    expect(document.title).toBe('Beam Mascot Lab');
+    expect(wrapper.getComponent(mascot).props('embedded')).toBe(true);
+    expect(capture.notifyHudPanelReady).toHaveBeenCalledOnce();
+    wrapper.unmount();
+  });
   it('does not announce readiness for an unknown panel role', async () => {
     const wrapper = await create('unknown');
     expect(capture.notifyHudPanelReady).not.toHaveBeenCalled();

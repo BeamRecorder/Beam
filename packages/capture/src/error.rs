@@ -77,6 +77,12 @@ pub enum CaptureError {
     },
     #[error("serialization error: {0}")]
     Serialization(#[from] serde_json::Error),
+    #[error("JSON error at {path}: {source}")]
+    JsonFile {
+        path: String,
+        #[source]
+        source: serde_json::Error,
+    },
     #[error("backend error: {0}")]
     Backend(String),
     #[error("parent-death guard unavailable: {0}")]
@@ -110,6 +116,7 @@ impl CaptureError {
             Self::Protocol(_) => "protocol-error",
             Self::Storage { .. } => "storage-error",
             Self::Serialization(_) => "serialization-error",
+            Self::JsonFile { .. } => "serialization-error",
             Self::Backend(_) => "capture-error",
             Self::Cancelled => "cancelled",
             Self::ParentDeathGuard(_) => "parent-death-guard-unavailable",

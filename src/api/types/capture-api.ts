@@ -150,6 +150,7 @@ export interface DesktopCaptureApi extends CaptureApi, ScreenshotApi, QuickSnipA
   getWindowBounds(): Promise<{ x: number; y: number; width: number; height: number } | null>;
   getPreferences(): Promise<PreferenceSettings>;
   updatePreferences(patch: PreferencePatch): Promise<PreferenceSettings>;
+  updatePreferencesBatch(patches: PreferencePatch[]): Promise<PreferenceSettings>;
   resetPreferences(keys?: Array<keyof PreferenceSettings>): Promise<PreferenceSettings>;
   onPreferencesChanged(listener: (preferences: PreferenceSettings) => void): () => void;
   onPreferenceShortcut(listener: (id: string) => void): () => void;
@@ -295,6 +296,7 @@ export interface PreferenceShortcut {
   category: string;
 }
 export interface PreferenceSettings {
+  alwaysOnTop?: boolean;
   schemaVersion: 3;
   theme: 'light' | 'dark' | 'system';
   appearance?: AppearanceSettings;

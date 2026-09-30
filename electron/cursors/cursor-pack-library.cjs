@@ -1,3 +1,4 @@
+const { readJsonSync, writeJsonAtomicSync } = require('../storage/json-file.cjs');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
@@ -198,7 +199,7 @@ function readRole(scalableRoot, roleEntry) {
   if (!within(scalableRoot, realMetadata)) throw new Error(`Rôle ${roleEntry.name}: metadata externe interdite`);
   const metadataBytes = fs.statSync(realMetadata).size;
   if (metadataBytes > MAX_PACK_BYTES) throw new Error(`Rôle ${roleEntry.name}: metadata.json trop volumineux`);
-  const frames = JSON.parse(fs.readFileSync(realMetadata, 'utf8'));
+  const frames = readJsonSync(realMetadata);
   if (!Array.isArray(frames) || frames.length === 0) throw new Error(`Rôle ${roleEntry.name}: metadata.json invalide`);
   if (frames.length > 1 || frames[0]?.delay !== undefined) return { animated: true, role: roleEntry.name };
   const frame = frames[0];
@@ -268,7 +269,7 @@ function readXcursorRole(cursorsRoot, roleEntry) {
 
 function createCursorPackLibrary(root) {
   const libraryRoot = path.resolve(root);
-  const manifestFor = (directory) => JSON.parse(fs.readFileSync(path.join(directory, 'pack.json'), 'utf8'));
+  const manifestFor = (directory) => readJsonSync(path.join(directory, 'pack.json'));
   const list = () => {
     try {
       return fs
@@ -352,7 +353,7 @@ function createCursorPackLibrary(root) {
         cursors,
         automaticMap: Object.fromEntries(cursors.map((cursor) => [cursor.id, cursor.id])),
       };
-      fs.writeFileSync(path.join(temporary, 'pack.json'), `${JSON.stringify(pack, null, 2)}\n`, 'utf8');
+      writeJsonAtomicSync(path.join(temporary, 'pack.json'), pack);
       fs.renameSync(temporary, target);
       return { pack, importedCount: cursors.length, ignoredAnimatedRoles: animated, duplicate: false };
     } catch (error) {

@@ -56,7 +56,7 @@ const openGithubRepository = () => {
 }
 
 .socials-description {
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 11px;
 }
 

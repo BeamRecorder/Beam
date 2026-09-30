@@ -1,265 +1,94 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { Keyboard, Info, Sparkles } from '@lucide/vue';
-import { useLocaleStore } from '~/stores/locale';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useTranslate } from '~/i18n/useTranslate';
-import { capture } from '~/api/capture';
-import Button from '~/ui/button/Button.vue';
-import AdvancedButton from '~/ui/button/AdvancedButton.vue';
-import Select from '~/ui/select/Select.vue';
-import Divider from '~/ui/divider/Divider.vue';
-import ShortcutPreferences from './ShortcutPreferences.vue';
 import About from './About.vue';
+import GeneralPreferences from './GeneralPreferences.vue';
+import RecordingPreferences from './RecordingPreferences.vue';
+import AccessibilityPreferences from './AccessibilityPreferences.vue';
+import ShortcutPreferences from './ShortcutPreferences.vue';
+import DeveloperPreferences from './DeveloperPreferences.vue';
 import UpdateControls from '~/components/updates/UpdateControls.vue';
-import SocialLinks from '~/components/socials/SocialLinks.vue';
-import AppearanceSettings from '~/components/settings/AppearanceSettings.vue';
-import { isSupportedLocale, localeOptions } from '~/i18n/locales';
+import { SETTINGS_CATEGORIES } from './settings-catalog';
+import type { HudPreferenceProps, SettingsView } from './settings-types';
 import type { RecordingBarVisibility } from '../recorder/recording-types';
-import type { InteractionAccessViewState } from '../interactions/interaction-access-types';
-import InteractionAccessControl from '../interactions/InteractionAccessControl.vue';
-import InteractionAccessError from '../interactions/InteractionAccessError.vue';
-import SpellCheckPreference from '~/components/settings/SpellCheckPreference.vue';
 
+const props = withDefaults(defineProps<HudPreferenceProps>(), {
+  view: 'general',
+  alwaysOnTop: true,
+  recordingBarVisibility: 'always',
+  recordInteractions: false,
+  requestingInputAccess: false,
+  platform: 'unknown',
+  inputAccess: () => ({ state: 'checking', canRequest: false, clicks: false, shortcuts: false, recordsText: false }),
+});
+const emit = defineEmits<{
+  'update:countdownSeconds': [number];
+  'update:alwaysOnTop': [boolean];
+  'update:recordingBarVisibility': [RecordingBarVisibility];
+  'update:recordInteractions': [boolean];
+  requestInputAccess: [];
+  'update:view': [SettingsView];
+  close: [];
+}>();
 const { t } = useTranslate('HudPreferences');
-const { t: tHud } = useTranslate('HUD');
-
-const props = withDefaults(
-  defineProps<{
-    countdownSeconds: number;
-    recordingBarVisibility?: RecordingBarVisibility;
-    inputAccess?: InteractionAccessViewState;
-    recordInteractions?: boolean;
-    requestingInputAccess?: boolean;
-    platform?: string;
-    view?: 'general' | 'shortcuts' | 'about';
-  }>(),
-  {
-    recordingBarVisibility: 'always',
-    inputAccess: () => ({
-      state: 'checking',
-      canRequest: false,
-      clicks: false,
-      shortcuts: false,
-      recordsText: false,
-    }),
-    recordInteractions: false,
-    requestingInputAccess: false,
-    platform: 'unknown',
-    view: 'general',
+const root = ref<HTMLElement>();
+const development = import.meta.env.DEV;
+const direction = ref('next');
+const category = computed(() => SETTINGS_CATEGORIES.find(({ id }) => id === props.view)!);
+watch(
+  () => props.view,
+  (next, previous) => {
+    const index = (view: SettingsView) => SETTINGS_CATEGORIES.findIndex(({ id }) => id === view);
+    direction.value = index(next) > index(previous) ? 'next' : 'previous';
   },
 );
-
-const emit = defineEmits<{
-  (event: 'update:countdownSeconds', value: number): void;
-  (event: 'update:recordingBarVisibility', value: RecordingBarVisibility): void;
-  (event: 'update:recordInteractions', value: boolean): void;
-  (event: 'requestInputAccess'): void;
-  (event: 'update:view', value: 'general' | 'shortcuts' | 'about'): void;
-  (event: 'close'): void;
-}>();
-
-const localeStore = useLocaleStore();
-const languageAdvancedOpen = ref(false);
-const currentView = computed({
-  get: () => props.view,
-  set: (val) => emit('update:view', val),
-});
-const inputDescription = computed(() => {
-  if (props.inputAccess.state === 'unavailable') return t('interactionAccessUnavailableDescription');
-  if (props.inputAccess.state === 'available') {
-    return t(props.platform === 'linux' ? 'recordInteractionsDescriptionLinux' : 'recordInteractionsDescription');
-  }
-  return t(props.platform === 'linux' ? 'interactionAccessDescriptionLinux' : 'interactionAccessDescription');
-});
-const interactionTitle = computed(() =>
-  t(props.platform === 'linux' ? 'recordInteractionsLinux' : 'recordInteractions'),
-);
-
-const countdownOptions = Array.from({ length: 11 }, (_, seconds) => ({
-  value: seconds,
-  label: seconds === 0 ? t('off') : `${seconds}s`,
-}));
-const recordingBarOptions = [
-  { value: 'always', label: t('alwaysVisible') },
-  { value: 'auto-fade', label: t('autoFade') },
-  { value: 'hover-only', label: t('hiddenUntilHovered') },
-];
-const updateRecordingBarVisibility = (value: string | number) => {
-  if (typeof value === 'string') emit('update:recordingBarVisibility', value as RecordingBarVisibility);
+const focusSetting = async () => {
+  await nextTick();
+  if (!props.focusedSetting) return;
+  const target = [...(root.value?.querySelectorAll<HTMLElement>('[data-setting]') ?? [])].find(
+    (element) => element.dataset.setting === props.focusedSetting,
+  );
+  if (!target) return;
+  target.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+  (target.querySelector<HTMLElement>('button, input, [role="switch"]') ?? target).focus({ preventScroll: true });
 };
-const updateCountdownSeconds = (value: string | number) => {
-  if (typeof value === 'number') emit('update:countdownSeconds', value);
-};
-const updateLocale = (value: string | number) => {
-  if (typeof value === 'string' && isSupportedLocale(value)) localeStore.setLocale(value);
-};
-
-const openOnboarding = () => {
-  void capture.openOnboarding();
-  emit('close');
-};
+watch(() => props.focusedSetting, focusSetting);
+onMounted(focusSetting);
 </script>
 
 <template>
-  <section class="preferences" :aria-label="t('preferences')">
-    <Transition name="slide-view" mode="out-in">
-      <!-- Sub-page: Edit Shortcuts -->
-      <div v-if="currentView === 'shortcuts'" key="shortcuts" class="view-container">
-        <div class="preferences-list shortcut-view-list">
-          <ShortcutPreferences />
+  <section ref="root" class="preferences" :aria-label="t(category.label)">
+    <Transition :name="`settings-${direction}`" mode="out-in" @after-enter="focusSetting">
+      <div :key="view" class="view-container">
+        <header class="view-header">
+          <h1>{{ t(category.label) }}</h1>
+          <p>{{ t(category.description) }}</p>
+        </header>
+        <GeneralPreferences v-if="view === 'general'" :focused-setting="focusedSetting" @close="emit('close')" />
+        <RecordingPreferences
+          v-else-if="view === 'recording'"
+          :countdown-seconds="countdownSeconds"
+          :always-on-top="alwaysOnTop"
+          :recording-bar-visibility="recordingBarVisibility"
+          @update:countdown-seconds="emit('update:countdownSeconds', $event)"
+          @update:always-on-top="emit('update:alwaysOnTop', $event)"
+          @update:recording-bar-visibility="emit('update:recordingBarVisibility', $event)"
+        />
+        <AccessibilityPreferences
+          v-else-if="view === 'accessibility'"
+          :input-access="inputAccess"
+          :record-interactions="recordInteractions"
+          :requesting-input-access="requestingInputAccess"
+          :platform="platform"
+          @request-input-access="emit('requestInputAccess')"
+          @update:record-interactions="emit('update:recordInteractions', $event)"
+        />
+        <ShortcutPreferences v-else-if="view === 'shortcuts'" />
+        <div v-else-if="view === 'updates'" class="updates-card" data-setting="updates" tabindex="-1">
+          <UpdateControls show-icon />
         </div>
-      </div>
-
-      <!-- Sub-page: About -->
-      <div v-else-if="currentView === 'about'" key="about" class="view-container">
-        <About />
-      </div>
-
-      <!-- Main Preferences View -->
-      <div v-else key="general" class="view-container">
-        <div class="preferences-list">
-          <!-- Category: Recording -->
-          <div class="preference-category-divider">
-            <Divider :label="t('categoryRecording')" spacing="none" />
-          </div>
-
-          <div class="preference-item clickable" @click="currentView = 'shortcuts'">
-            <div class="preference-copy">
-              <p class="preference-title">{{ t('shortcuts') }}</p>
-              <p class="preference-description">{{ t('configureHotkeys') }}</p>
-            </div>
-            <Button variant="secondary" size="sm" class="preference-control">
-              <template #icon><Keyboard class="button-icon" /></template>
-              {{ t('edit') }}
-            </Button>
-          </div>
-
-          <div class="preference-item input-access-item">
-            <div class="preference-copy">
-              <p class="preference-title">{{ interactionTitle }}</p>
-              <p class="preference-description">{{ inputDescription }}</p>
-              <InteractionAccessError :status="props.inputAccess" />
-            </div>
-            <div class="input-access-actions" role="status" aria-live="polite">
-              <InteractionAccessControl
-                :status="props.inputAccess"
-                :enabled="recordInteractions"
-                :requesting="requestingInputAccess"
-                :enable-label="tHud('authorizeInteractions')"
-                :enabling-label="tHud('authorizingInteractions')"
-                :checking-label="t('checkingAccess')"
-                :unavailable-label="t('accessUnavailable')"
-                @request="emit('requestInputAccess')"
-                @update:enabled="emit('update:recordInteractions', $event)"
-              />
-            </div>
-          </div>
-
-          <div class="preference-item">
-            <div class="preference-copy">
-              <p class="preference-title">{{ t('recorderBar') }}</p>
-              <p class="preference-description">{{ t('visibilityWhileRecording') }}</p>
-            </div>
-            <div class="recorder-bar-select preference-control">
-              <Select
-                :model-value="recordingBarVisibility ?? 'always'"
-                :options="recordingBarOptions"
-                size="sm"
-                direction="up"
-                @update:model-value="updateRecordingBarVisibility"
-              />
-            </div>
-          </div>
-
-          <div class="preference-item">
-            <div class="preference-copy">
-              <p class="preference-title">{{ t('countdown') }}</p>
-              <p class="preference-description">{{ t('selectDelay') }}</p>
-            </div>
-            <div class="countdown-select preference-control">
-              <Select
-                :model-value="countdownSeconds"
-                :options="countdownOptions"
-                size="sm"
-                direction="up"
-                @update:model-value="updateCountdownSeconds"
-              />
-            </div>
-          </div>
-
-          <!-- Category: General -->
-          <div class="preference-category-divider">
-            <Divider :label="t('categoryGeneral')" spacing="none" />
-          </div>
-
-          <div class="preference-item language-preference-item">
-            <div class="language-preference-main">
-              <div class="language-title-row">
-                <p class="preference-title">{{ t('language') }}</p>
-                <AdvancedButton
-                  :open="languageAdvancedOpen"
-                  controls="hud-language-advanced-panel"
-                  :label="t('advanced')"
-                  @update:open="languageAdvancedOpen = $event"
-                />
-              </div>
-              <div class="language-control-row">
-                <p class="preference-description">{{ t('chooseLanguage') }}</p>
-                <div class="language-select preference-control">
-                  <Select
-                    :model-value="localeStore.locale"
-                    :options="localeOptions"
-                    size="sm"
-                    direction="up"
-                    @update:model-value="updateLocale"
-                  />
-                </div>
-              </div>
-            </div>
-            <div v-if="languageAdvancedOpen" id="hud-language-advanced-panel" class="hud-language-advanced-panel">
-              <SpellCheckPreference />
-            </div>
-          </div>
-
-          <div class="preference-item preference-appearance-item">
-            <AppearanceSettings :show-title="false" :compact="true" :show-ui-scaling="false" />
-          </div>
-
-          <!-- Category: About -->
-          <div class="preference-category-divider">
-            <Divider :label="t('categoryAbout')" spacing="none" />
-          </div>
-
-          <div class="preference-item update-preference-item">
-            <UpdateControls />
-          </div>
-
-          <div class="preference-socials">
-            <SocialLinks />
-          </div>
-
-          <div class="preference-item clickable" @click="currentView = 'about'">
-            <div class="preference-copy">
-              <p class="preference-title">{{ t('about') }}</p>
-              <p class="preference-description">{{ t('aboutDesc') }}</p>
-            </div>
-            <Button variant="secondary" size="sm" class="preference-control">
-              <template #icon><Info class="button-icon" /></template>
-              {{ t('view') }}
-            </Button>
-          </div>
-
-          <div class="preference-item clickable" @click="openOnboarding">
-            <div class="preference-copy">
-              <p class="preference-title">{{ t('onboarding') }}</p>
-              <p class="preference-description">{{ t('onboardingDesc') }}</p>
-            </div>
-            <Button variant="secondary" size="sm" class="preference-control">
-              <template #icon><Sparkles class="button-icon" /></template>
-              {{ t('relaunchOnboarding') }}
-            </Button>
-          </div>
-        </div>
+        <DeveloperPreferences v-else-if="view === 'developer' && development" />
+        <About v-else-if="view === 'about'" />
       </div>
     </Transition>
   </section>
@@ -268,181 +97,72 @@ const openOnboarding = () => {
 <style scoped>
 .preferences {
   flex: 1;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  position: relative;
   min-height: 0;
-  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
 }
 .view-container {
-  display: flex;
-  flex-direction: column;
   flex: 1;
   min-height: 0;
-  height: 100%;
-  width: 100%;
+  overflow: auto;
+  padding: 28px;
 }
 .view-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  margin-bottom: 24px;
 }
-.view-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text-primary);
+.view-header h1 {
+  font-size: 24px;
+  font-weight: var(--weight-display);
+  letter-spacing: -0.5px;
+  line-height: 1.2;
 }
-.preferences-list {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  box-sizing: border-box;
-  width: 100%;
-  padding: 0 0 12px 0;
+.view-header p {
+  margin: 8px 0 0;
+  font-size: var(--font-size-lg);
+  color: var(--text-secondary);
+  line-height: 1.5;
 }
-.preference-category-divider {
-  padding: 14px 16px 6px;
-  box-sizing: border-box;
-  width: 100%;
+.updates-card {
+  background: var(--color-bg-element);
+  border-radius: var(--radius-lg);
+  padding: 24px;
 }
-.preference-category-divider:first-child {
-  padding-top: 10px;
-}
-.shortcut-view-list {
-  padding: 16px;
-}
-.preference-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 11px 16px;
-  background: transparent;
-  border-bottom: 1px solid var(--color-border);
-  box-sizing: border-box;
-  width: 100%;
-  transition: background-color 0.15s ease;
-}
-.preference-appearance-item {
-  flex-direction: column;
-  align-items: stretch;
-}
-.language-preference-item {
-  align-items: stretch;
-  flex-direction: column;
-}
-.language-preference-main,
-.language-title-row,
-.language-control-row {
-  display: flex;
-}
-.language-preference-main {
-  flex-direction: column;
-  gap: 4px;
-}
-.language-title-row,
-.language-control-row {
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.language-title-row {
-  min-height: 24px;
-}
-.hud-language-advanced-panel {
-  padding-top: 10px;
-  border-top: 1px solid var(--color-border);
-}
-.preference-copy {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.preference-control {
-  flex-shrink: 0;
-}
-.input-access-item {
-  gap: 12px;
-}
-.input-access-actions {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-}
-.update-preference-item {
-  min-width: 0;
-  padding: 11px 16px;
-}
-.preference-socials {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--color-border);
-  box-sizing: border-box;
-  width: 100%;
-}
-.preference-item.clickable {
-  cursor: pointer;
-}
-.preference-item:hover {
-  background-color: color-mix(in srgb, var(--color-bg-surface-hover) 50%, transparent);
-}
-.preference-item.clickable:hover {
-  background-color: var(--color-bg-surface-hover);
-}
-.preference-title,
-.preference-description {
-  margin: 0;
-}
-.preference-title {
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.3;
-  color: var(--text-primary);
-}
-.preference-description {
-  font-size: 11px;
-  line-height: 1.35;
-  color: var(--text-muted);
-}
-.countdown-select {
-  width: 84px;
-}
-.language-select {
-  width: 136px;
-}
-.recorder-bar-select {
-  width: 140px;
-}
-.theme-controls {
-  width: auto;
-  max-width: 140px;
-}
-.button-icon {
-  width: 16px;
-  height: 16px;
-}
-
-/* View Slide Transition */
-.slide-view-enter-active,
-.slide-view-leave-active {
+.settings-next-enter-active,
+.settings-next-leave-active,
+.settings-previous-enter-active,
+.settings-previous-leave-active {
   transition:
-    opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity 120ms ease,
+    transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
 }
-
-.slide-view-enter-from {
+.settings-next-enter-from,
+.settings-previous-leave-to {
   opacity: 0;
-  transform: translateX(12px) scale(0.98);
+  transform: translateY(10px);
 }
-
-.slide-view-leave-to {
+.settings-next-leave-to,
+.settings-previous-enter-from {
   opacity: 0;
-  transform: translateX(-12px) scale(0.98);
+  transform: translateY(-10px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .settings-next-enter-active,
+  .settings-next-leave-active,
+  .settings-previous-enter-active,
+  .settings-previous-leave-active {
+    transition: none;
+  }
+  .settings-next-enter-from,
+  .settings-next-leave-to,
+  .settings-previous-enter-from,
+  .settings-previous-leave-to {
+    transform: none;
+  }
+}
+@media (max-width: 700px) {
+  .view-container {
+    padding: 20px;
+  }
 }
 </style>

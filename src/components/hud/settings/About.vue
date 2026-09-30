@@ -1,40 +1,44 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { Check, Copy } from '@lucide/vue';
 import { useTranslate } from '~/i18n/useTranslate';
-import { resolvePublicAssetUrl } from '~/utils/public-asset';
 import { capture } from '~/api/capture';
 import Button from '~/ui/button/Button.vue';
-import { Check, Copy } from '@lucide/vue';
+import BrandLogo from '~/components/brand/BrandLogo.vue';
+import UpdateControls from '~/components/updates/UpdateControls.vue';
+import SocialLinks from '~/components/socials/SocialLinks.vue';
 import { useCopySystemInformation } from '~/composables/useCopySystemInformation';
 
 const { t } = useTranslate('HudPreferences');
 const { t: tSettings } = useTranslate('SettingsPanel');
 const { copied, copy } = useCopySystemInformation();
-const currentVersion = ref('0.2.6');
+const currentVersion = ref<string | null>(null);
+const versionFailed = ref(false);
 
 onMounted(async () => {
   try {
     const state = await capture.getUpdateState();
-    if (state && state.currentVersion) {
-      currentVersion.value = state.currentVersion;
-    }
-  } catch (error) {
-    console.error('Failed to resolve current app version:', error);
+    currentVersion.value = state?.currentVersion || null;
+    versionFailed.value = !currentVersion.value;
+  } catch {
+    versionFailed.value = true;
   }
 });
 </script>
 
 <template>
   <div class="about-container">
-    <div class="about-content">
-      <img :src="resolvePublicAssetUrl('/brand/BeamIcon.webp')" class="about-logo" alt="Beam logo" />
-      <h2 class="about-name">Beam</h2>
-      <p class="about-version">{{ t('version', { version: currentVersion }) }}</p>
-
-      <p class="about-description about-description-title">{{ t('aboutDescriptionTitle') }}</p>
-      <p class="about-description">
-        {{ t('aboutDescriptionText') }}
+    <div class="about-content" data-setting="about" tabindex="-1">
+      <BrandLogo layout="stacked" class="about-brand" />
+      <p class="about-version">
+        {{ versionFailed ? t('versionUnavailable') : t('version', { version: currentVersion ?? '…' }) }}
       </p>
+      <p class="about-description-title">{{ t('aboutDescriptionTitle') }}</p>
+      <p class="about-description">{{ t('aboutDescriptionText') }}</p>
+    </div>
+    <div class="about-card"><UpdateControls /></div>
+    <div class="about-card" data-setting="socials" tabindex="-1"><SocialLinks /></div>
+    <div class="about-support" data-setting="system-info" tabindex="-1">
       <Button variant="secondary" size="sm" class="system-info-button" @click="copy">
         <template #icon><Check v-if="copied" /><Copy v-else /></template>
         {{ copied ? tSettings('copied') : tSettings('copySysInfo') }}
@@ -47,66 +51,57 @@ onMounted(async () => {
 .about-container {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  flex: 1;
-  height: 100%;
-  padding: 24px 16px;
-  box-sizing: border-box;
-  width: 100%;
-  overflow-y: auto;
+  align-items: stretch;
+  gap: 16px;
+  max-width: 560px;
+  margin: 0 auto;
 }
-
 .about-content {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   gap: 12px;
-  max-width: 280px;
+  padding: 12px 12px 24px;
 }
-
-.about-logo {
-  width: 96px;
-  height: 96px;
-  object-fit: contain;
-  border-radius: 22px;
-  box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.08),
-    0 2px 6px rgba(0, 0, 0, 0.04);
-}
-
-.about-name {
-  font-size: 24px;
-  font-weight: 750;
+.about-brand {
   color: var(--text-primary);
-  margin: 0;
-  margin-top: 4px;
-  letter-spacing: -0.5px;
 }
-
 .about-version {
-  font-size: 13px;
-  font-family: var(--font-sans);
-  color: var(--text-muted);
-  margin: 0;
-  opacity: 0.8;
-}
-
-.about-description {
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--font-size-lg);
+  font-variant-numeric: tabular-nums;
   color: var(--text-secondary);
   margin: 0;
-  margin-top: 12px;
-  font-weight: 450;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-field);
+}
+.about-description,
+.about-description-title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  line-height: 1.6;
+  color: var(--text-secondary);
+  max-width: 400px;
 }
 .about-description-title {
-  margin-bottom: -8px;
-  font-weight: 600;
+  margin-top: 8px;
+  font-weight: var(--weight-display);
   color: var(--text-primary);
 }
-.system-info-button {
-  margin-top: 4px;
+.about-card {
+  background: var(--color-bg-element);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+.about-support {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0 8px;
+}
+[data-setting]:focus-visible {
+  outline: 2px solid var(--text-secondary);
+  outline-offset: 4px;
+  border-radius: var(--radius-lg);
 }
 </style>

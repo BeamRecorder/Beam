@@ -59,6 +59,8 @@ contextBridge.exposeInMainWorld(
     quit: () => ipcRenderer.send('app:quit'),
     minimize: () => ipcRenderer.send('window:minimize'),
     toggleDevTools: () => ipcRenderer.send('window:toggle-devtools'),
+    openDeveloperTools: () => ipcRenderer.invoke('developer:open-devtools'),
+    openMascotLab: () => ipcRenderer.invoke('developer:open-mascot-lab'),
     updateTrayMenu: (labels) => ipcRenderer.send('tray:update-menu', labels),
     setNormalRecordingActive: (active) => ipcRenderer.send('recording:set-active', Boolean(active)),
     onTrayStopRecording: (listener) => {
@@ -127,6 +129,7 @@ contextBridge.exposeInMainWorld(
     getWindowBounds: () => ipcRenderer.invoke('window:bounds'),
     getPreferences: () => ipcRenderer.invoke('preferences:get'),
     updatePreferences: (patch) => ipcRenderer.invoke('preferences:update', patch),
+    updatePreferencesBatch: (patches) => ipcRenderer.invoke('preferences:update-batch', patches),
     resetPreferences: (keys) => ipcRenderer.invoke('preferences:reset', keys),
     onPreferencesChanged: (listener) => {
       const callback = (_event, preferences) => listener(preferences);

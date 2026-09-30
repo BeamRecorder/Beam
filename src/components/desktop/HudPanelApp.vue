@@ -8,7 +8,7 @@ import ToastProvider from '~/ui/toast/ToastProvider.vue';
 const { panel, content } = defineProps<{ panel: HudPanel | null; content: Component | null }>();
 const { t } = useTranslate('HudPreferences');
 const { t: tProjects } = useTranslate('ProjectPicker');
-const title = panel === 'settings' ? 'Beam Settings' : 'Beam Projects';
+const title = panel === 'settings' ? 'Beam Settings' : panel === 'mascot' ? 'Beam Mascot Lab' : 'Beam Projects';
 const error = ref('');
 const contentMounted = () => {
   if (panel !== 'settings') capture.notifyHudPanelReady();
@@ -29,12 +29,13 @@ onMounted(() => {
 <template>
   <main class="panel-window" :class="{ mac: capture.platform === 'darwin' }">
     <header class="panel-titlebar">
-      {{ panel === 'settings' ? t('preferences') : tProjects('projects') }}
+      {{ panel === 'settings' ? t('preferences') : panel === 'mascot' ? t('mascotLab') : tProjects('projects') }}
     </header>
     <p v-if="error" class="panel-error" role="alert">{{ error }}</p>
     <component
       :is="content"
       v-if="content"
+      v-bind="panel === 'mascot' ? { embedded: true } : {}"
       @ready="capture.notifyHudPanelReady()"
       @vue:mounted="contentMounted"
       @open-project="openProject"

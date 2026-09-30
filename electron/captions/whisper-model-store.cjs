@@ -1,3 +1,4 @@
+const { readJsonSync, writeJsonAtomicSync } = require('../storage/json-file.cjs');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
@@ -35,7 +36,7 @@ const safeTarget = (root, relative) => {
 };
 const readJson = (file) => {
   try {
-    return JSON.parse(fs.readFileSync(file, 'utf8'));
+    return readJsonSync(file);
   } catch {
     return null;
   }
@@ -231,9 +232,7 @@ function createWhisperModelStore(root, fetchImpl = fetch) {
       hashes[artifact.path] = { algorithm: artifact.hashAlgorithm, value: artifact.hash };
     }
     const metadata = { revision: manifest.revision, hashes, totalBytes: manifest.totalBytes };
-    const temporary = `${manifestFile(id)}.tmp`;
-    fs.writeFileSync(temporary, `${JSON.stringify(metadata, null, 2)}\n`);
-    fs.renameSync(temporary, manifestFile(id));
+    writeJsonAtomicSync(manifestFile(id), metadata);
     return state(id);
   };
   const download = (id, notify = () => {}) => {

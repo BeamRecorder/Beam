@@ -452,11 +452,8 @@ test('HUD restores and clamps saved positions using the normalized native width'
   assert.deepEqual(win.getPosition(), [328, 532]);
 });
 
-test('HUD and Recorder stay topmost independently of a legacy preference', () => {
-  const preferencesStore = {
-    read: () => ({ alwaysOnTop: false }),
-    patch: () => undefined,
-  };
+test('saved Recorder setup preference controls the HUD while capture stays topmost', () => {
+  const preferencesStore = { read: () => ({ alwaysOnTop: false }), patch: () => undefined };
   const display = {
     id: 1,
     bounds: { x: 0, y: 0, width: 1000, height: 800 },
@@ -465,22 +462,57 @@ test('HUD and Recorder stay topmost independently of a legacy preference', () =>
   const win = fakeWindow();
   const controller = new WindowController(win, {
     preferencesStore,
-    screenModule: {
-      getCursorScreenPoint: () => ({ x: 500, y: 400 }),
-      getDisplayNearestPoint: () => display,
-    },
+    screenModule: { getCursorScreenPoint: () => ({ x: 500, y: 400 }), getDisplayNearestPoint: () => display },
   });
-
-  // The removed preference no longer controls native overlay policy.
   controller.markReadyToShow();
-  assert.equal(topCalls(win).at(-1)[1], true);
-
+  assert.equal(topCalls(win).at(-1)[1], false);
   controller.setMode('recorder');
   assert.equal(topCalls(win).at(-1)[1], true);
-
-  // Returning to the visible HUD restores its fixed topmost policy.
   controller.setMode('hud');
+  assert.equal(topCalls(win).at(-1)[1], false);
+});
+
+test('live changes apply immediately without repeated native calls or disk reads on focus', () => {
+  let reads = 0;
+  const win = fakeWindow();
+  const controller = new WindowController(win, {
+    preferencesStore: {
+      read: () => {
+        reads++;
+        return { alwaysOnTop: true };
+      },
+    },
+  });
+  controller.markReadyToShow();
   assert.equal(topCalls(win).at(-1)[1], true);
+  controller.setHudAlwaysOnTop(false);
+  assert.equal(topCalls(win).at(-1)[1], false);
+  const calls = topCalls(win).length;
+  const initialReads = reads;
+  win.emit('blur');
+  win.emit('focus');
+  controller.setHudAlwaysOnTop(false);
+  assert.equal(topCalls(win).length, calls);
+  assert.equal(reads, initialReads);
+  controller.setHudAlwaysOnTop(true);
+  assert.equal(topCalls(win).at(-1)[1], true);
+});
+
+test('preference changes never raise hidden or minimized setup windows', () => {
+  const win = fakeWindow();
+  const controller = new WindowController(win);
+  controller.markReadyToShow();
+  controller.setVisible(false);
+  controller.setHudAlwaysOnTop(false);
+  controller.setHudAlwaysOnTop(true);
+  assert.equal(topCalls(win).at(-1)[1], false);
+  controller.setVisible(true);
+  assert.equal(topCalls(win).at(-1)[1], true);
+  win.setMinimized(true);
+  win.emit('minimize');
+  controller.setHudAlwaysOnTop(false);
+  controller.setHudAlwaysOnTop(true);
+  assert.equal(topCalls(win).at(-1)[1], false);
 });
 
 test('editor transition demotes and hides the HUD until it is explicitly shown again', () => {

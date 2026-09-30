@@ -18,5 +18,10 @@ export const usePreferencesStore = defineStore('preferences', () => {
     settings.value = await capture.updatePreferences(plainPatch);
     return settings.value;
   };
-  return { settings, load, update };
+  const updateBatch = async (patches: PreferencePatch[]) => {
+    const plainPatches: PreferencePatch[] = JSON.parse(JSON.stringify(patches));
+    settings.value = await capture.updatePreferencesBatch(plainPatches);
+    return settings.value;
+  };
+  return { settings, load, update, updateBatch };
 });

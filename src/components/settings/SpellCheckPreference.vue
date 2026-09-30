@@ -37,13 +37,13 @@ const spellCheckStore = useSpellCheckStore();
 }
 
 .spell-check-title {
-  color: var(--text-secondary);
-  font-size: 12px;
+  color: var(--text-primary);
+  font-size: var(--font-size-lg);
   font-weight: 600;
 }
 
 .spell-check-description {
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 11px;
   line-height: 1.35;
 }

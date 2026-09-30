@@ -1,4 +1,6 @@
 .mascot-lab {
+  flex: 1;
+  min-height: 0;
   height: 100%;
   overflow: auto;
   background: var(--color-bg-app);
@@ -140,6 +142,9 @@
 }
 .preview-panel {
   min-width: 0;
+  align-self: start;
+  position: sticky;
+  top: 16px;
   display: flex;
   flex-direction: column;
   background: var(--color-bg-element);

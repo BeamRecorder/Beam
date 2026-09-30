@@ -246,11 +246,15 @@ onBeforeUnmount(() => {
 .update-description {
   margin: 3px 0 0;
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   line-height: 14px;
   min-height: 28px;
   display: flex;
   align-items: center;
+  justify-content: flex-start;
+  text-align: left;
+}
+.update-centered .update-description {
   justify-content: center;
   text-align: center;
 }

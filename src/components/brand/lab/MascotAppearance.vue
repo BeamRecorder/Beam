@@ -6,6 +6,7 @@ import Select from '~/ui/select/Select.vue';
 import Switch from '~/ui/switch/Switch.vue';
 import Input from '~/ui/input/Input.vue';
 import BeamySvg from '../Beamy/BeamySvg.vue';
+import MascotEyeControls from './MascotEyeControls.vue';
 import { SHAPES } from '../Beamy/engine/skins';
 import { EXPRESSIONS } from '../Beamy/engine/expressions';
 import { createMascotEngine, EXPRESSION_LABELS, PALETTE, SHAPE_LABELS } from './mascot-catalog';
@@ -62,13 +63,15 @@ const changeColor = (value: string | number) => {
           v-for="preview in previews"
           :key="preview.id"
           variant="card"
+          block
+          :style="{ padding: '0', minWidth: '0' }"
           :class="{ 'is-selected': look.shape === preview.id }"
           :aria-label="SHAPE_LABELS[preview.id]"
           :aria-pressed="look.shape === preview.id"
           @click="look.shape = preview.id"
         >
           <span class="shape-choice"
-            ><BeamySvg :frame="preview.frame" :color="look.color" :size="54" /><span>{{
+            ><BeamySvg :frame="preview.frame" :color="look.color" :size="44" /><span>{{
               SHAPE_LABELS[preview.id]
             }}</span></span
           >
@@ -82,6 +85,9 @@ const changeColor = (value: string | number) => {
           v-for="style in eyeStyles"
           :key="style.id"
           variant="tab"
+          size="xs"
+          block
+          :style="{ flexDirection: 'column', width: '100%', padding: '7px 2px', gap: '3px' }"
           :class="{ active: look.eyes === style.id }"
           :icon="style.icon"
           :aria-pressed="look.eyes === style.id"
@@ -89,6 +95,7 @@ const changeColor = (value: string | number) => {
           >{{ style.label }}</Button
         >
       </div>
+      <MascotEyeControls v-model="look.eyeGeometry" />
     </section>
     <section class="appearance-section">
       <h3>
@@ -175,7 +182,7 @@ const changeColor = (value: string | number) => {
 }
 .shape-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
 }
 .shape-choice {
@@ -187,7 +194,8 @@ const changeColor = (value: string | number) => {
   font-weight: 450;
 }
 .eye-grid {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 2px;
   padding: 4px;
   background: var(--color-bg-app);

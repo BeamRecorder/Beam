@@ -1,3 +1,4 @@
+const { readJsonSync, writeJsonAtomicSync } = require('../storage/json-file.cjs');
 const fs = require('fs');
 const path = require('path');
 const { randomUUID } = require('crypto');
@@ -92,7 +93,7 @@ function normalizeDocument(value, preferences = {}) {
 function createEditorPresetStore(file, { readPreferences = () => ({}) } = {}) {
   const target = path.extname(file) ? file : path.join(file, 'editor-presets.json');
   const backup = `${target}.bak`;
-  const parse = (candidate) => normalizeDocument(JSON.parse(fs.readFileSync(candidate, 'utf8')), readPreferences());
+  const parse = (candidate) => normalizeDocument(readJsonSync(candidate), readPreferences());
   const read = () => {
     try {
       return parse(target);
@@ -107,11 +108,8 @@ function createEditorPresetStore(file, { readPreferences = () => ({}) } = {}) {
   };
   const write = (value) => {
     const next = normalizeDocument(value, readPreferences());
-    fs.mkdirSync(path.dirname(target), { recursive: true });
-    const temporary = `${target}.${process.pid}.tmp`;
-    fs.writeFileSync(temporary, `${JSON.stringify(next, null, 2)}\n`, { mode: 0o600 });
     if (fs.existsSync(target)) fs.copyFileSync(target, backup);
-    fs.renameSync(temporary, target);
+    writeJsonAtomicSync(target, next);
     return next;
   };
   const mutate = (operation) => write(operation(read()));

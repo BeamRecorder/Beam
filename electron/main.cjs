@@ -67,8 +67,7 @@ const { registerFatalLifecycle } = require('./lifecycle/fatal-events.cjs');
 const { initializeSingleInstance } = require('./lifecycle/single-instance.cjs');
 const { configureDevelopmentProfile } = require('./lifecycle/development-profile.cjs');
 const { createQuickSnipService } = require('./quick-snip/quick-snip-service.cjs');
-const DISCORD_INVITE_URL = 'https://discord.gg/6Q6v2xUCB';
-const GITHUB_REPOSITORY_URL = 'https://github.com/BeamRecorder/Beam';
+const { registerCommunityLinks } = require('./community-links.cjs');
 
 const ENABLE_ELECTRON_DIAGNOSTIC_LOGS = !app.isPackaged;
 
@@ -203,6 +202,7 @@ function initializeApplication() {
           for (const win of BrowserWindow.getAllWindows()) {
             const controller = controllers.get(win);
             if (controller) {
+              controller.setHudAlwaysOnTop(preferences.alwaysOnTop);
               controller.applyModePolicy();
             }
           }
@@ -342,8 +342,7 @@ function initializeApplication() {
         defaultExportDirectory: app.getPath('documents'),
       });
       const updater = initializeApplicationUpdater({ app, BrowserWindow, autoUpdater, coordinator, applicationIpc });
-      applicationIpc.handle('community:open-discord', () => shell.openExternal(DISCORD_INVITE_URL));
-      applicationIpc.handle('community:open-github', () => shell.openExternal(GITHUB_REPOSITORY_URL));
+      registerCommunityLinks({ ipcMain: applicationIpc, shell });
       ipcMain.on('app:quit', () => {
         if (coordinator.canAcceptWork()) app.quit();
       });

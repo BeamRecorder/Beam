@@ -2,10 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
 
-const atomicJson = (file, value) => {
-  fs.writeFileSync(`${file}.tmp`, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
-  fs.renameSync(`${file}.tmp`, file);
-};
+const { readJsonSync, writeJsonAtomicSync, writeJsonBatchSync } = require('./json-file.cjs');
 
 function rewriteProjectReferences(directory, root, previous) {
   const oldRelative = path.relative(root, previous).split(path.sep).join('/');
@@ -28,18 +25,20 @@ function rewriteProjectReferences(directory, root, previous) {
       return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, replace(item)]));
     return value;
   };
+  const updates = [];
   const visit = (current) => {
     for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
       const file = path.join(current, entry.name);
       if (entry.isDirectory()) visit(file);
       else if (entry.isFile() && entry.name.endsWith('.json')) {
-        const original = JSON.parse(fs.readFileSync(file, 'utf8'));
+        const original = readJsonSync(file);
         const next = replace(original);
-        if (JSON.stringify(next) !== JSON.stringify(original)) atomicJson(file, next);
+        if (JSON.stringify(next) !== JSON.stringify(original)) updates.push({ file, value: next });
       }
     }
   };
   visit(directory);
+  writeJsonBatchSync(updates);
 }
 
 function organizeProjectCategories(root) {
@@ -52,7 +51,7 @@ function organizeProjectCategories(root) {
   }
   const journal = path.join(root, '.category-migration.json');
   let entries;
-  if (fs.existsSync(journal)) entries = JSON.parse(fs.readFileSync(journal, 'utf8'));
+  if (fs.existsSync(journal)) entries = readJsonSync(journal);
   else {
     const reserved = new Set(fs.readdirSync(studio));
     entries = fs
@@ -70,7 +69,7 @@ function organizeProjectCategories(root) {
         return { source: entry.name, target };
       });
     if (!entries.length) return;
-    atomicJson(journal, entries);
+    writeJsonAtomicSync(journal, entries);
   }
   if (
     !Array.isArray(entries) ||

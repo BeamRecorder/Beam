@@ -1,3 +1,4 @@
+const { readJsonSync, writeJsonAtomicSync } = require('./storage/json-file.cjs');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
@@ -11,12 +12,6 @@ function validId(value) {
 function requireInteger(value, name) {
   if (!Number.isSafeInteger(value) || value < 0) throw new Error(`${name} must be a non-negative integer.`);
   return value;
-}
-
-function writeJsonAtomic(file, value, fsModule) {
-  const temporary = `${file}.${crypto.randomUUID()}.tmp`;
-  fsModule.writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
-  fsModule.renameSync(temporary, file);
 }
 
 function createMediaSegmentStorage({
@@ -172,7 +167,7 @@ function createMediaSegmentStorage({
         sessions.delete(session.sessionId);
         return session;
       }
-      const manifest = JSON.parse(fsModule.readFileSync(pending.manifestPath, 'utf8'));
+      const manifest = readJsonSync(pending.manifestPath, { fsModule });
       manifest.selectedSources = { ...(manifest.selectedSources || {}), [manifestKey]: pending.sourceId };
       manifest.permissions = { ...(manifest.permissions || {}), [manifestKey]: 'granted' };
       manifest.tracks = (manifest.tracks || []).filter((track) => track?.kind !== kind);
@@ -188,7 +183,7 @@ function createMediaSegmentStorage({
       });
       if (pending.failureReason)
         manifest.warnings = [...(manifest.warnings || []), `${trackName} recording failed: ${pending.failureReason}`];
-      writeJsonAtomic(pending.manifestPath, manifest, fsModule);
+      writeJsonAtomicSync(pending.manifestPath, manifest, { fsModule });
       sessions.delete(session.sessionId);
       return session;
     },

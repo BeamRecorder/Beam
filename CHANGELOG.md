@@ -6,6 +6,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- Development Settings now include shortcuts to detached DevTools and a separate Mascot Lab, with adjustable eye size, width, height, spacing and vertical position. Eye proportions are saved with lab presets and included in exports.
 - Added a shared screen/window chooser for Windows and macOS with searchable thumbnails, keyboard navigation, live window previews and a click-through selection aura that disappears before countdown. Development launches can supply 3 simulated displays and 21 windows through `DEV_CROSSPLATFORM=1`, including on Linux; normal Linux capture retains the Portal.
 - Beamy now appears large and centered during loading with translated tips, then gently moves into the HUD logo. Clicking the brand plays independent selections from twelve mascot morphs and twelve text effects, returning to the original cloud and plain Beam text.
 - The recorder shows a lightweight animated cloud while its interface loads, with a retry action if startup fails.
@@ -16,6 +17,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
+- Redesigned Settings with neutral navigation, colored category icons, direction-aware transitions and indexed search across setting names, descriptions and shortcuts in the selected language and English. Search is focused on opening and accepts typing only in the active Settings window. Recorder setup now has a saved Always on top option, with previews for its window, recording bar visibility and Light/Dark/System themes. About features the interactive Beamy identity, clearer version contrast, update controls and the current Discord invitation.
+- Preference changes can now be saved together in one batch. Shared JSON storage in Electron and Rust avoids repeated writes, preserves complete existing documents when staging fails, and cleans up owned temporary files after failures.
 - Capture mode and Light/Dark/System controls share a sliding selection indicator, with instant updates when reduced motion is enabled.
 - Beam's light theme uses a clearer orange with subtle accent fills and borders, correcting its brown appearance on white surfaces; the dark theme and custom colors retain their selected shades.
 - Projects opens in a smaller window with square cards that adapt to resizing. Missing thumbnails are generated only for visible projects, one at a time.
@@ -49,7 +52,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Removed
 
-- Removed the Mascot Lab from the application and build. Its prototype components remain in `components/brand/lab/`.
+- Removed the standalone Mascot Lab entry from production builds; the lab remains accessible through development Settings.
 
 ## [0.4.0] - 2026-09-27
 
