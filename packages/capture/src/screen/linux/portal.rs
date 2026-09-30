@@ -294,6 +294,8 @@ fn source_type(kind: PortalSourceKind) -> ashpd::enumflags2::BitFlags<SourceType
     }
 }
 
+/// Selects the portal cursor mode for the requested cursor capture configuration,
+/// falling back to Hidden mode on Hyprland when Metadata mode is not supported.
 fn cursor_mode(
     cursor: CursorSelection,
     modes: &ashpd::enumflags2::BitFlags<CursorMode>,
@@ -304,10 +306,10 @@ fn cursor_mode(
         CursorSelection::Separate { .. } => {
             if modes.contains(CursorMode::Metadata) {
                 CursorMode::Metadata
-            } else if modes.contains(CursorMode::Hidden) {
+            } else if modes.contains(CursorMode::Hidden) && super::hyprland::is_hyprland() {
                 CursorMode::Hidden
             } else {
-                CursorMode::Embedded
+                CursorMode::Metadata
             }
         }
     }

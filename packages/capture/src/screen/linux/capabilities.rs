@@ -34,6 +34,7 @@ pub struct LinuxNativeCapabilities {
     pub recording_available: bool,
 }
 
+/// Evaluates native Linux capture capabilities from portal properties, PipeWire, and FFmpeg availability.
 #[must_use]
 pub fn evaluate_capabilities(
     portal: PortalProperties,
@@ -43,6 +44,7 @@ pub fn evaluate_capabilities(
     evaluate_capabilities_with_compositor(portal, pipewire_available, ffmpeg_available, false)
 }
 
+/// Evaluates native Linux capture capabilities including compositor-specific fallbacks (such as Hyprland).
 pub fn evaluate_capabilities_with_compositor(
     portal: PortalProperties,
     pipewire_available: bool,
@@ -69,6 +71,7 @@ pub fn evaluate_capabilities_with_compositor(
     }
 }
 
+/// Probes the system for portal, PipeWire, FFmpeg, and compositor capabilities within the given timeout.
 pub fn probe_native_capabilities(
     timeout: Duration,
 ) -> Result<LinuxNativeCapabilities, CaptureError> {
