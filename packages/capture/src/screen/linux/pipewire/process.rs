@@ -95,7 +95,20 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
         return;
     };
     let header = metadata::header(&buffer);
-    let cursor = metadata::cursor(&buffer, state.cursor.classifier_mut());
+    let mut cursor = metadata::cursor(&buffer, state.cursor.classifier_mut());
+    if cursor.is_none()
+        && super::super::hyprland::is_hyprland()
+        && let Some((hx, hy)) = super::super::hyprland::query_cursor_pos()
+    {
+        cursor = Some(super::cursor_state::CursorMetadata {
+            id: 1,
+            shape_id: Some(1),
+            x: hx,
+            y: hy,
+            hotspot: Some(crate::cursor::Hotspot { x: 0, y: 0 }),
+            cursor_kind: Some(crate::cursor::CursorKind::Default),
+        });
+    }
     let has_cursor_metadata = cursor.as_ref().is_some_and(|cursor| cursor.id != 0);
     let reported_crop = metadata::crop(&buffer);
     let transform = metadata::transform(&buffer);

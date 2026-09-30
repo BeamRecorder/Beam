@@ -201,6 +201,21 @@ fn cursor_modes_are_reported_independently_and_metadata_is_required_for_separate
     assert_product_gate(&metadata_only, true);
 }
 
+#[test]
+fn hyprland_enables_separate_cursor_when_metadata_is_absent_but_hidden_is_supported() {
+    let hyprland_capabilities = capture::screen::linux::evaluate_capabilities_with_compositor(
+        portal_properties(5, true, true, true, true, false),
+        true,
+        true,
+        true,
+    );
+    assert!(hyprland_capabilities.portal_selection);
+    assert!(hyprland_capabilities.hidden_cursor);
+    assert!(hyprland_capabilities.separate_cursor);
+    assert!(hyprland_capabilities.cursor_shapes);
+    assert_product_gate(&hyprland_capabilities, true);
+}
+
 const NATIVE_ERROR_CODES: &[(NativeCaptureErrorCode, &str)] = &[
     (
         NativeCaptureErrorCode::PortalUnavailable,
