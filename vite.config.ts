@@ -95,6 +95,7 @@ export default defineConfig({
   },
   server: {
     port: 6500,
+    strictPort: true,
   },
   test: {
     include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
