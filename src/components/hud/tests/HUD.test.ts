@@ -41,14 +41,26 @@ const openIssues = async (hud: VueWrapper) => {
 const selectScreen = async (hud: VueWrapper) => {
   await hud.get('[aria-label="Full screen"]').trigger('click');
   await flushPromises();
-  await hud.get('.source-card').trigger('click');
-  await flushPromises();
 };
 
 beforeEach(() => {
   vi.useFakeTimers();
   vi.clearAllMocks();
   capture.platform = 'win32';
+  capture.devCrossplatform = false;
+  capture.selectCaptureSource.mockImplementation(async (kind) => ({
+    kind,
+    id: kind === 'screen' ? screen.id : 'window:42:0',
+    development: false,
+    source: {
+      id: kind === 'screen' ? screen.id : 'window:42:0',
+      kind,
+      name: 'Selection',
+      app: '',
+      detail: '',
+      aspect: 1.6,
+    },
+  }));
   Object.defineProperty(window, 'capture', { configurable: true, value: capture });
   capture.getPreferences.mockResolvedValue(preferences);
   capture.updatePreferences.mockResolvedValue(preferences);
@@ -127,8 +139,6 @@ describe('horizontal HUD', () => {
     );
     const hud = await createHud();
     await hud.get('[aria-label="Window"]').trigger('click');
-    await flushPromises();
-    await hud.get('.source-card').trigger('click');
     await flushPromises();
     expect(hud.emitted('start-recording')?.[0]?.[0]).toMatchObject({ screenKind: 'window', screenId: 'window:42:0' });
   });
@@ -251,16 +261,32 @@ describe('horizontal HUD', () => {
     expect(hud.find('.teleprompter-button').exists()).toBe(false);
     expect(hud.findAll('.capture-card')).toHaveLength(3);
   });
-  it('leaves an empty source picker explicit without starting a recording', async () => {
+  it('leaves native source selection cancellation idle and keeps the HUD usable', async () => {
+    capture.selectCaptureSource.mockResolvedValueOnce(null);
     capture.discover.mockResolvedValue({ sources: [], capabilities: {} });
     capture.getSources.mockResolvedValue([]);
     const hud = await createHud();
     await hud.get('[aria-label="Full screen"]').trigger('click');
     await flushPromises();
-    expect(hud.text()).toContain('No screens');
-    expect(hud.emitted('start-recording')).toBeUndefined();
-    await hud.get('[aria-label="Back"]').trigger('click');
     expect(hud.findAll('.capture-card')).toHaveLength(3);
+    expect(hud.emitted('start-recording')).toBeUndefined();
+  });
+  it('keeps the record shortcut idle while source selection is pending', async () => {
+    let resolve: ((value: null) => void) | undefined;
+    capture.selectCaptureSource.mockImplementationOnce(
+      () =>
+        new Promise((done) => {
+          resolve = done;
+        }),
+    );
+    const hud = await createHud();
+    await hud.get('[aria-label="Full screen"]').trigger('click');
+    capture.onPreferenceShortcut.mock.calls[0]?.[0]('hud.startStopRecording');
+    await flushPromises();
+    expect(hud.emitted('start-recording')).toBeUndefined();
+    resolve?.(null);
+    await flushPromises();
+    expect(hud.get('[aria-label="Full screen"]').attributes('disabled')).toBeUndefined();
   });
   it('makes discovery failures and startup failures visible within fixed bounds', async () => {
     capture.discover.mockRejectedValueOnce(new Error('Discovery failed'));

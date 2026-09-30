@@ -510,6 +510,18 @@
     "screenshotDescription": "Choose a screen, region or window to capture.",
     "back": "Back"
   },
+  "SourcePicker": {
+    "hoverHint": "Hover to bring a preview forward. Click to select.",
+    "close": "Close",
+    "search": "Search windows or screens…",
+    "sourceCount": "{count} sources",
+    "livePreview": "Live preview",
+    "previewHint": "Your next great capture",
+    "navigate": "Navigate",
+    "noResults": "No sources match your search.",
+    "confirm": "Capture selected source",
+    "developmentNotice": "Development preview · All sources are simulated. No recording is created."
+  },
   "EditorPreparingHud": {
     "title": "Preparing your editor",
     "openingWindow": "Creating the editor window…",

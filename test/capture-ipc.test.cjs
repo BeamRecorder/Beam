@@ -20,6 +20,7 @@ test('stops native capture before completing sidecar tracks', async () => {
   const session = { state: 'completed', sessionId: 'session-1', manifestPath };
   const ipcMain = {
     handle: (channel, handler) => handlers.set(channel, handler),
+    on: () => undefined,
   };
   const captureEngine = {
     canCleanup: () => true,
@@ -41,7 +42,7 @@ test('stops native capture before completing sidecar tracks', async () => {
     desktopCapturer: {},
     screen: {},
     captureEngine,
-    app: {},
+    app: new EventEmitter(),
     userPaths: { projects: root },
     trackStorages: [storage],
   });
@@ -76,6 +77,7 @@ test('recovers a completed partial native session after stop rejects', async () 
     };
     const ipcMain = {
       handle: (channel, handler) => handlers.set(channel, handler),
+      on: () => undefined,
     };
     const captureEngine = {
       canCleanup: () => true,
@@ -99,7 +101,7 @@ test('recovers a completed partial native session after stop rejects', async () 
       desktopCapturer: {},
       screen: {},
       captureEngine,
-      app: {},
+      app: new EventEmitter(),
       userPaths: { projects: root },
       trackStorages: [storage],
     });
@@ -125,6 +127,7 @@ test('resolves display bounds by native display id without relying on desktop pr
   let previewCalls = 0;
   const ipcMain = {
     handle: (channel, handler) => handlers.set(channel, handler),
+    on: () => undefined,
   };
   const desktopCapturer = {
     getSources: async () => {
@@ -143,7 +146,7 @@ test('resolves display bounds by native display id without relying on desktop pr
     desktopCapturer,
     screen,
     captureEngine: { request: async () => undefined },
-    app: {},
+    app: new EventEmitter(),
     userPaths: { projects: 'recordings' },
     trackStorages: [],
   });
@@ -171,6 +174,7 @@ test('wraps native errors with the failing command context', async () => {
   const handlers = new Map();
   const ipcMain = {
     handle: (channel, handler) => handlers.set(channel, handler),
+    on: () => undefined,
   };
   const captureEngine = {
     canCleanup: () => true,
@@ -184,7 +188,7 @@ test('wraps native errors with the failing command context', async () => {
     desktopCapturer: {},
     screen: {},
     captureEngine,
-    app: {},
+    app: new EventEmitter(),
     userPaths: { projects: 'recordings' },
     trackStorages: [],
   });
@@ -203,6 +207,7 @@ test('forwards system-audio preview commands unchanged outside Linux', async () 
   };
   const ipcMain = {
     handle: (channel, handler) => handlers.set(channel, handler),
+    on: () => undefined,
   };
   const captureEngine = {
     canCleanup: () => true,
@@ -217,7 +222,7 @@ test('forwards system-audio preview commands unchanged outside Linux', async () 
     desktopCapturer: {},
     screen: {},
     captureEngine,
-    app: {},
+    app: new EventEmitter(),
     userPaths: { projects: 'recordings' },
     trackStorages: [],
     platform: 'darwin',
@@ -241,6 +246,7 @@ test('shares Linux preview clients and restarts the preview after capture comple
   let previewActive = false;
   const ipcMain = {
     handle: (channel, handler) => handlers.set(channel, handler),
+    on: () => undefined,
   };
   const captureEngine = {
     canCleanup: () => true,
@@ -285,7 +291,7 @@ test('shares Linux preview clients and restarts the preview after capture comple
     desktopCapturer: {},
     screen: {},
     captureEngine,
-    app: {},
+    app: new EventEmitter(),
     userPaths: { projects: 'recordings' },
     trackStorages: [],
     platform: 'linux',
@@ -318,6 +324,7 @@ test('invalidates the deferred session and rejects when the engine is poisoned',
   const handlers = new Map();
   const ipcMain = {
     handle: (channel, handler) => handlers.set(channel, handler),
+    on: () => undefined,
   };
   let poisoned = false;
   const captureEngine = {
@@ -340,7 +347,7 @@ test('invalidates the deferred session and rejects when the engine is poisoned',
     desktopCapturer: {},
     screen: {},
     captureEngine,
-    app: {},
+    app: new EventEmitter(),
     userPaths: { projects: 'recordings' },
     trackStorages: [],
   });
@@ -358,6 +365,7 @@ test('does not enumerate Electron sources on the Linux Portal path', async () =>
   let previewCalls = 0;
   const ipcMain = {
     handle: (channel, handler) => handlers.set(channel, handler),
+    on: () => undefined,
   };
   const desktopCapturer = {
     getSources: async () => {
@@ -371,7 +379,7 @@ test('does not enumerate Electron sources on the Linux Portal path', async () =>
     desktopCapturer,
     screen: {},
     captureEngine: { request: async () => undefined },
-    app: {},
+    app: new EventEmitter(),
     userPaths: { projects: 'recordings' },
     trackStorages: [],
     platform: 'linux',
@@ -412,6 +420,7 @@ test('excludes the owner window from Electron source previews', async () => {
   ];
   const ipcMain = {
     handle: (channel, handler) => handlers.set(channel, handler),
+    on: () => undefined,
   };
   const screen = {
     getAllDisplays: () => [{ id: 1, bounds: { x: 0, y: 0, width: 1920, height: 1080 } }],
@@ -434,7 +443,7 @@ test('excludes the owner window from Electron source previews', async () => {
     BrowserWindow,
     screen,
     captureEngine: { request: async () => undefined },
-    app: {},
+    app: new EventEmitter(),
     userPaths: { projects: 'recordings' },
     trackStorages: [],
     platform: 'win32',
@@ -469,6 +478,7 @@ test('keeps Electron sources when the owner window metadata is unavailable', asy
   const sources = [{ id: 'window:source', name: 'Source', thumbnail, appIcon: null }];
   const ipcMain = {
     handle: (channel, handler) => handlers.set(channel, handler),
+    on: () => undefined,
   };
   const desktopCapturer = { getSources: async () => sources };
   const BrowserWindow = { fromWebContents: (sender) => sender?.owner ?? null };
@@ -479,7 +489,7 @@ test('keeps Electron sources when the owner window metadata is unavailable', asy
     BrowserWindow,
     screen: {},
     captureEngine: { request: async () => undefined },
-    app: {},
+    app: new EventEmitter(),
     userPaths: { projects: 'recordings' },
     trackStorages: [],
     platform: 'win32',
@@ -501,6 +511,7 @@ test('starts a Linux Portal recording from one catalog without an Electron previ
   let previewCalls = 0;
   const ipcMain = {
     handle: (channel, handler) => handlers.set(channel, handler),
+    on: () => undefined,
   };
   const desktopCapturer = {
     getSources: async () => {
@@ -533,7 +544,7 @@ test('starts a Linux Portal recording from one catalog without an Electron previ
     desktopCapturer,
     screen: {},
     captureEngine,
-    app: {},
+    app: new EventEmitter(),
     userPaths: { projects: 'recordings' },
     trackStorages: [],
     platform: 'linux',
@@ -563,6 +574,7 @@ test('starts a prepared Linux Portal session without rediscovering or preparing 
   const requests = [];
   const ipcMain = {
     handle: (channel, handler) => handlers.set(channel, handler),
+    on: () => undefined,
   };
   const captureEngine = {
     canCleanup: () => true,
@@ -589,7 +601,7 @@ test('starts a prepared Linux Portal session without rediscovering or preparing 
     desktopCapturer: {},
     screen: {},
     captureEngine,
-    app: {},
+    app: new EventEmitter(),
     userPaths: { projects: 'recordings' },
     trackStorages: [],
     platform: 'linux',
@@ -620,6 +632,7 @@ test('coalesces concurrent identical Linux Portal preparation requests', async (
   });
   const ipcMain = {
     handle: (channel, handler) => handlers.set(channel, handler),
+    on: () => undefined,
   };
   const captureEngine = {
     canCleanup: () => true,
@@ -645,7 +658,7 @@ test('coalesces concurrent identical Linux Portal preparation requests', async (
     desktopCapturer: {},
     screen: {},
     captureEngine,
-    app: {},
+    app: new EventEmitter(),
     userPaths: { projects: 'recordings' },
     trackStorages: [],
     platform: 'linux',
@@ -678,6 +691,7 @@ for (const code of ['portal-cancelled', 'cancelled']) {
     let prepareAttempts = 0;
     const ipcMain = {
       handle: (channel, handler) => handlers.set(channel, handler),
+      on: () => undefined,
     };
     const captureEngine = {
       canCleanup: () => true,
@@ -711,7 +725,7 @@ for (const code of ['portal-cancelled', 'cancelled']) {
       desktopCapturer: {},
       screen: {},
       captureEngine,
-      app: {},
+      app: new EventEmitter(),
       userPaths: {
         projects: 'recordings',
         studioProjects: 'recordings/studio',
@@ -740,6 +754,7 @@ test('does not treat cancellation-like preparation error text as a dismissed Por
   let prepareAttempts = 0;
   const ipcMain = {
     handle: (channel, handler) => handlers.set(channel, handler),
+    on: () => undefined,
   };
   const captureEngine = {
     canCleanup: () => true,
@@ -769,7 +784,7 @@ test('does not treat cancellation-like preparation error text as a dismissed Por
     desktopCapturer: {},
     screen: {},
     captureEngine,
-    app: {},
+    app: new EventEmitter(),
     userPaths: { projects: 'recordings', studioProjects: 'recordings/studio' },
     trackStorages: [],
     platform: 'linux',
@@ -807,6 +822,7 @@ test('does not prepare the Linux Portal during discovery/previews and starts it 
   const session = { state: 'recording', sessionId: 'session-portal-1' };
   const ipcMain = {
     handle: (channel, handler) => handlers.set(channel, handler),
+    on: () => undefined,
   };
   const captureEngine = {
     canCleanup: () => true,
@@ -828,7 +844,7 @@ test('does not prepare the Linux Portal during discovery/previews and starts it 
     },
     screen: {},
     captureEngine,
-    app: {},
+    app: new EventEmitter(),
     userPaths: { projects: 'recordings' },
     trackStorages: [],
     platform: 'linux',
@@ -867,6 +883,7 @@ test('forwards macOS source previews to the native engine with the same source i
   const requests = [];
   const ipcMain = {
     handle: (channel, handler) => handlers.set(channel, handler),
+    on: () => undefined,
   };
   const captureEngine = {
     request: async (command, payload) => {
@@ -884,7 +901,7 @@ test('forwards macOS source previews to the native engine with the same source i
     desktopCapturer: {},
     screen: {},
     captureEngine,
-    app: {},
+    app: new EventEmitter(),
     userPaths: { projects: 'recordings' },
     trackStorages: [],
     platform: 'darwin',
@@ -919,6 +936,7 @@ test('rejects source previews during shutdown before contacting the native engin
   let requests = 0;
   const ipcMain = {
     handle: (channel, handler) => handlers.set(channel, handler),
+    on: () => undefined,
   };
   const captureEngine = {
     request: async () => {
@@ -932,7 +950,7 @@ test('rejects source previews during shutdown before contacting the native engin
     desktopCapturer: {},
     screen: {},
     captureEngine,
-    app: {},
+    app: new EventEmitter(),
     userPaths: { projects: 'recordings' },
     trackStorages: [],
     platform: 'darwin',

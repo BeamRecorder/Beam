@@ -14,6 +14,7 @@ import { useAudioLevelMeter } from './audio/useAudioLevelMeter';
 import type { RecordingBarVisibility } from './recorder/recording-types';
 import { useInteractionAccess } from './interactions/useInteractionAccess';
 import { useHudCaptureActions } from './useHudCaptureActions';
+import { previewSelectionCountdown } from './source-picker/development-countdown';
 import { useNativeSystemAudioPreview } from './recorder/useNativeSystemAudioPreview';
 import { useHudIssues } from './useHudIssues';
 import { useHudCaptureMode } from './useHudCaptureMode';
@@ -76,21 +77,15 @@ export function useHudState(props: HudProps, emit: HudEmit) {
   const selectedMicId = ref('no-audio');
   const isTeleprompterVisible = ref(false);
   const selectedScreenId = ref<string | null>(null);
-  const {
-    loadPreviews,
-    refreshSourceChoices,
-    screenPreviews,
-    screenPreviewsLoading,
-    windowPreviews,
-    windowPreviewsLoading,
-  } = useCaptureSourcePreviews({
-    platform: desktopPlatform,
-    sources,
-    catalog: captureCatalog,
-    selectedScreenId,
-    selectedWindowId: selectedSourceId,
-    recorderLauncherContext: () => props.recorderLauncherContext,
-  });
+  const { loadPreviews, screenPreviews, screenPreviewsLoading, windowPreviews, windowPreviewsLoading } =
+    useCaptureSourcePreviews({
+      platform: desktopPlatform,
+      sources,
+      catalog: captureCatalog,
+      selectedScreenId,
+      selectedWindowId: selectedSourceId,
+      recorderLauncherContext: () => props.recorderLauncherContext,
+    });
   const systemAudioMode = ref<'on' | 'off'>('off');
 
   const isMicEnabled = computed(() => selectedMicId.value !== 'no-audio');
@@ -349,7 +344,7 @@ export function useHudState(props: HudProps, emit: HudEmit) {
     unsubscribePreferences = capture.onPreferencesChanged(syncRecordingPreferences);
     if (!props.embedded) updateWindowSize();
     unsubscribeShortcut = capture.onPreferenceShortcut((actionId: string) => {
-      if (actionId === 'hud.startStopRecording') {
+      if (actionId === 'hud.startStopRecording' && !captureActions.choosingSource.value) {
         void toggleRecording();
       }
     });
@@ -399,27 +394,31 @@ export function useHudState(props: HudProps, emit: HudEmit) {
   };
   const captureActions = useHudCaptureActions({
     platform: desktopPlatform,
+    developmentSources: capture.devCrossplatform,
+    selectSource: async (kind) => {
+      const selection = await capture.selectCaptureSource(kind);
+      if (selection && !selection.development && !sources.value.some((source) => source.id === selection.id)) {
+        sources.value.push({
+          id: selection.id,
+          kind: selection.kind === 'screen' ? 'display' : 'window',
+          label: selection.source.name,
+          isDefault: false,
+          displayId: selection.source.displayId,
+        });
+      }
+      return selection;
+    },
+    previewSelection: previewSelectionCountdown,
     blocked: computed(
       () => isBusy.value || isRecording.value || props.preparingEditor || interactionAccess.requesting.value,
     ),
     activeTab,
     selectedScreenId,
     selectedSourceId,
-    sources,
-    windowPreviews,
     resetRegion,
     selectRegion: selectScreenRegion,
-    refreshSources: (kind) => refreshSourceChoices(kind, true),
     start: toggleRecording,
   });
-  const sourceChoices = computed(() =>
-    activeTab.value === 'screen'
-      ? displaySources.value.map((source) => {
-          const preview = matchScreenPreview(source, displaySources.value, screenPreviews.value);
-          return { id: source.id, name: source.label, thumbnail: preview?.thumbnail ?? '', appIcon: null };
-        })
-      : windowPreviews.value,
-  );
 
   return {
     captureMode,
@@ -471,7 +470,6 @@ export function useHudState(props: HudProps, emit: HudEmit) {
     closeApp,
     minimizeApp,
     openPanel,
-    sourceChoices,
     ...captureActions,
     discoverSources,
     loadPreviews,

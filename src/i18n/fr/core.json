@@ -510,6 +510,18 @@
     "screenshotDescription": "Choisissez un écran, une région ou une fenêtre à capturer.",
     "back": "Retour"
   },
+  "SourcePicker": {
+    "hoverHint": "Survolez pour afficher un aperçu. Cliquez pour sélectionner.",
+    "close": "Fermer",
+    "search": "Rechercher une fenêtre ou un écran…",
+    "sourceCount": "{count} sources",
+    "livePreview": "Aperçu en direct",
+    "previewHint": "Votre prochaine capture",
+    "navigate": "Naviguer",
+    "noResults": "Aucune source ne correspond à votre recherche.",
+    "confirm": "Capturer la sélection",
+    "developmentNotice": "Aperçu de développement · Toutes les sources sont simulées. Aucun enregistrement créé."
+  },
   "EditorPreparingHud": {
     "title": "Préparation de l’éditeur",
     "openingWindow": "Création de la fenêtre de l’éditeur…",

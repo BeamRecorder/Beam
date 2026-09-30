@@ -5,6 +5,7 @@ const { buildDefaultCaptureConfig } = require('./capture-config.cjs');
 const { createSystemAudioPreview } = require('./system-audio-preview.cjs');
 const { isCaptureCancellation } = require('./capture-cancellation.cjs');
 const { createSourcePreviewService } = require('./source-preview-service.cjs');
+const { registerSourcePickerIpc } = require('../source-picker/source-picker-ipc.cjs');
 
 const ALLOWED_COMMANDS = new Set([
   'discover',
@@ -74,6 +75,7 @@ function registerCaptureIpc({
   desktopCapturer,
   BrowserWindow,
   screen,
+  app,
   captureEngine,
   userPaths,
   trackStorages,
@@ -114,6 +116,18 @@ function registerCaptureIpc({
   const sourcePreviews = createSourcePreviewService({
     requestNative: requestEngine,
     platform,
+  });
+  registerSourcePickerIpc({
+    ipcMain,
+    BrowserWindow,
+    screen,
+    app,
+    platform,
+    desktopCapturer,
+    applicationRoot: path.join(__dirname, '../..'),
+    requestNative: requestEngine,
+    getNativePreview: sourcePreviews.get,
+    canAcceptWork,
   });
   let pendingDefaultPreparation = null;
   const prepareDefaultRecording = (options) => {

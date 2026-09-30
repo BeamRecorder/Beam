@@ -154,7 +154,7 @@ describe('HUD coordination boundaries', () => {
     const state = mountState();
     await flushPromises();
     expect(state.selectedScreenBounds.value).toBeNull();
-    expect(state.sourceChoices.value).toEqual([]);
+    expect(state.displaySources.value).toEqual([]);
     await state.toggleRecording();
     expect(state.hudIssues.value[0]?.details.join()).toContain('screen');
     state.activeTab.value = 'window';

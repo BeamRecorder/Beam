@@ -1,4 +1,5 @@
 import type { HudPanelApi } from './hud-panel';
+import type { SourcePickerApi } from './source-picker';
 import type { InputAccessStatus } from './input-access';
 export type { InputAccessStatus } from './input-access';
 import type { ScreenshotApi } from './screenshot';
@@ -89,7 +90,7 @@ export interface CaptureApi {
   getSourcePreview(request: CaptureSourcePreviewRequest): Promise<CaptureSourcePreview>;
 }
 
-export interface DesktopCaptureApi extends CaptureApi, ScreenshotApi, QuickSnipApi, HudPanelApi {
+export interface DesktopCaptureApi extends CaptureApi, ScreenshotApi, QuickSnipApi, HudPanelApi, SourcePickerApi {
   close(): void;
   quit(): void;
   minimize(): void;

@@ -4,6 +4,7 @@ const { WindowController } = require('../window/window-controller.cjs');
 const { shouldAutoOpenDevTools } = require('../window/devtools-policy.cjs');
 const { normalizeHudWindowSize } = require('../window/hud-window-size.cjs');
 const { enforceDefaultZoom, installBrowserZoomPolicy } = require('../window/browser-zoom-policy.cjs');
+const { isDevelopmentSourceDataEnabled } = require('../source-picker/source-picker-state.cjs');
 function createRendererSetup({
   app,
   BrowserWindow,
@@ -37,6 +38,7 @@ function createRendererSetup({
           '/teleprompter.html',
           '/onboarding.html',
           '/hud-panel.html',
+          '/source-picker.html',
         ].includes(target.pathname)
       );
     } catch {
@@ -102,6 +104,7 @@ function createRendererSetup({
       hasShadow: false,
       show: false,
       webPreferences: {
+        additionalArguments: isDevelopmentSourceDataEnabled(app.isPackaged) ? ['--beam-dev-crossplatform'] : [],
         preload: path.join(applicationRoot, 'electron/preload.cjs'),
         nodeIntegration: false,
         contextIsolation: true,

@@ -7,7 +7,6 @@ import Select from '~/ui/select/Select.vue';
 import TopbarHUD from './TopbarHUD.vue';
 import CaptureModeGroup from './CaptureModeGroup.vue';
 import HudCaptureCards from './HudCaptureCards.vue';
-import HudSourcePicker from './HudSourcePicker.vue';
 import AudioIconMeter from './audio/AudioIconMeter.vue';
 import EditorPreparingHud from './EditorPreparingHud.vue';
 import InteractionAccessControl from './interactions/InteractionAccessControl.vue';
@@ -51,7 +50,6 @@ const {
   modeShortcut,
   t,
   tPrefs,
-  activeTab,
   isRecording,
   isBusy,
   errorMessage,
@@ -69,14 +67,9 @@ const {
   isRegionSelectionLeaving,
   isRegionSelectionEntering,
   hudHeight,
-  windowPreviewsLoading,
-  screenPreviewsLoading,
-  sourceChoices,
   captureTarget,
-  sourcePicker,
   choosingSource,
   chooseCapture,
-  selectCaptureSource,
   activeDropdowns,
   handleDropdownToggle,
   handleHudIssueAction,
@@ -115,7 +108,10 @@ const togglePopover = (opened: boolean) => {
 onBeforeUnmount(() => emit('popover-toggle', false));
 const choose = (target: HudCaptureTarget) => {
   emit('focus-feature', 'source');
-  if (!props.embedded) void chooseCapture(target);
+  if (!props.embedded)
+    void chooseCapture(target).catch((reason) => {
+      presetError.value = reason instanceof Error ? reason.message : String(reason);
+    });
 };
 </script>
 
@@ -179,21 +175,9 @@ const choose = (target: HudCaptureTarget) => {
             labels
             stacked
             :disabled="isBusy || choosingSource || Boolean(recorderLauncherContext)"
-            @update:model-value="
-              sourcePicker = null;
-              emit('focus-feature', 'tabs');
-            "
+            @update:model-value="emit('focus-feature', 'tabs')"
           />
-          <HudSourcePicker
-            v-if="sourcePicker"
-            :kind="sourcePicker"
-            :previews="sourceChoices"
-            :loading="choosingSource || (activeTab === 'screen' ? screenPreviewsLoading : windowPreviewsLoading)"
-            :disabled="captureDisabled"
-            @select="selectCaptureSource"
-            @back="sourcePicker = null"
-          />
-          <HudCaptureCards v-else :selected="captureTarget" :disabled="captureDisabled" @choose="choose" />
+          <HudCaptureCards :selected="captureTarget" :disabled="captureDisabled" @choose="choose" />
         </section>
         <aside class="hud-devices" :class="{ instant: captureMode === 'instant' }">
           <template v-if="captureMode !== 'screenshot'">

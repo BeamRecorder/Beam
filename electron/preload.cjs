@@ -6,6 +6,15 @@ contextBridge.exposeInMainWorld(
   'capture',
   Object.freeze({
     platform: process.platform,
+    devCrossplatform: process.argv.includes('--beam-dev-crossplatform'),
+    selectCaptureSource: (kind) => ipcRenderer.invoke('source-picker:open', kind),
+    sourcePickerAction: (action) => ipcRenderer.send('source-picker:action', action),
+    notifySourcePickerReady: () => ipcRenderer.send('source-picker:ready'),
+    onSourcePickerState: (listener) => {
+      const callback = (_event, state) => listener(state);
+      ipcRenderer.on('source-picker:state', callback);
+      return () => ipcRenderer.removeListener('source-picker:state', callback);
+    },
     discover: () => invoke('discover'),
     capabilities: () => invoke('capabilities'),
     permissions: () => invoke('permissions'),

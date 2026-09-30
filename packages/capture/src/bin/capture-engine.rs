@@ -219,6 +219,13 @@ fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
             max_height,
         )?)
         .map_err(Into::into),
+        Command::WindowSelectionPreview { source, raise } => {
+            serde_json::to_value(capture::screen::preview_window_selection(
+                &capture::model::SourceId::new(source)?,
+                raise,
+            )?)
+            .map_err(Into::into)
+        }
         Command::Prepare { config } => {
             engine.stop_system_audio_preview()?;
             if engine.session.as_ref().is_some_and(|session| {

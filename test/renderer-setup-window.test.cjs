@@ -189,6 +189,7 @@ test('does not show the HUD when onboarding is not complete', () => {
 test('trusts the dedicated local status entry but rejects unrelated origins and paths', () => {
   const setup = createRendererSetup({ applicationRoot: '/beam-app' });
   assert.equal(setup.isTrustedRenderer('http://localhost:6500/quick-snip-status.html?quickSnipStatus=1'), true);
+  assert.equal(setup.isTrustedRenderer('http://localhost:6500/source-picker.html?role=chooser'), true);
   assert.equal(setup.isTrustedRenderer('http://localhost:6501/quick-snip-status.html'), false);
   assert.equal(setup.isTrustedRenderer('http://localhost:6500/untrusted.html'), false);
 });

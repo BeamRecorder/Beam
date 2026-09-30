@@ -6,6 +6,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- Added a shared screen/window chooser for Windows and macOS with searchable thumbnails, keyboard navigation, live window previews and a click-through selection aura that disappears before countdown. Development launches can supply 3 simulated displays and 21 windows through `DEV_CROSSPLATFORM=1`, including on Linux; normal Linux capture retains the Portal.
 - The recorder shows a lightweight animated cloud while its interface loads, with a retry action if startup fails.
 - Instant capture now has a small cloud mascot that accompanies recording, dances and morphs during export, and briefly celebrates completed videos, respecting reduced-motion preferences.
 - Added a standalone Mascot Lab to explore Beam's SVG mascot with morphing star eyes, customizable looks, animation sequences, and transparent SVG/PNG exports before integrating it into the app.
@@ -23,6 +24,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- macOS window selection excludes privacy indicators and other system UI surfaces while retaining real application windows.
 - Windows/macOS HUD popovers temporarily expand the transparent window; Linux menus scroll within compact bounds so added transparent space cannot block desktop clicks.
 - Development builds and launches now find native capture binaries in the Cargo-configured build directory, including shared Linux caches.
 - Linux now selects X11/XWayland at launch to avoid GPU startup crashes and enable native placement; screen region selection waits for renderer readiness and opens at the exact display bounds.

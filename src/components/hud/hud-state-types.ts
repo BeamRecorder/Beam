@@ -1,4 +1,5 @@
 import type { Ref, ComputedRef } from 'vue';
+import type { SourcePickerSelection } from '~/api/types/source-picker';
 import type {
   CapturePreview,
   CaptureSource,
@@ -33,15 +34,15 @@ export type PreviewKind = 'screen' | 'window';
 export type HudCaptureTarget = PreviewKind | 'region';
 export interface HudCaptureActionsOptions {
   platform: string;
+  developmentSources: boolean;
+  selectSource: (kind: PreviewKind) => Promise<SourcePickerSelection | null>;
+  previewSelection: () => Promise<void>;
   blocked: ComputedRef<boolean>;
   activeTab: Ref<PreviewKind>;
   selectedScreenId: Ref<string | null>;
   selectedSourceId: Ref<string | null>;
-  sources: Ref<CaptureSource[]>;
-  windowPreviews: Ref<CapturePreview[]>;
   resetRegion: () => void;
   selectRegion: () => Promise<boolean>;
-  refreshSources: (kind: PreviewKind) => Promise<void>;
   start: () => Promise<void>;
 }
 export interface HudWindowOptions {

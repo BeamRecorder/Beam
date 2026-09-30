@@ -102,6 +102,42 @@ The region overlay waits for both native readiness and `screen-region:ready` fro
 
 ## HUD auxiliary window lifetime
 
+The shared source picker opens for Windows/macOS window selection and for screen
+selection when more than one screen is available. A single native screen is
+selected directly. Linux retains Portal selection. `DEV_CROSSPLATFORM=1` in an
+unpackaged launch replaces only the source provider with 3 simulated screens and
+21 simulated windows, including on Linux. It uses the same picker component and
+controller. Fixture IDs never reach Rust; confirmation exercises the existing
+countdown without starting a real recording.
+
+The chooser is a separate bounded interactive window with physical room for its
+shadow. Its aura is a non-focusable, fully click-through window shown with
+`showInactive()`. Development data additionally presents a simulated target in
+another click-through window. Hover retains chooser keyboard focus, raises the
+native target without application activation and refreshes its live thumbnail.
+Windows inspection returns physical bounds converted to Electron DIP coordinates;
+macOS uses ScreenCaptureKit bounds and a precise Accessibility window match. If
+Accessibility access is missing, show the native warning and retain the preview.
+The selected source owns the aura until confirmation. Destroy all picker surfaces
+before resolving selection to the HUD, before any countdown or recording starts.
+Each surface requires both native and mounted readiness, has a startup deadline,
+and is disposed on cancel, failed load, renderer loss, HUD close or shutdown. No
+picker geometry is persisted. Only the owning HUD may open the picker; only the
+owning chooser renderer may mutate its validated source state.
+
+macOS picker sources come exclusively from the filtered Rust catalogue, rather
+than Chromium's broader window enumeration. Keep only titled, normally layered
+application windows with valid bounds and bundle identity. Exclude Control Center,
+SystemUIServer, Dock, Notification Center, screenshot UI and WindowManager by
+bundle identity, including their layer-zero surfaces. Do not exclude real Apple
+applications, small documents, or windows in other Spaces by title or size guesses.
+Apply this same policy again when inspecting a selected native window.
+
+Start Vite normally, then run `DEV_CROSSPLATFORM=1 bun run electron:dev`. For layout
+inspection without Electron, Vite also serves
+`/source-picker.html?preview=1&kind=window` (or `kind=screen`); that development-only
+route supplies the fixture catalogue to the production picker component.
+
 The editor window manager prepares the countdown and teleprompter at HUD startup and whenever the user returns to the HUD. Preparation runs alongside HUD presentation; it must not block the HUD on renderer loading. Both auxiliary windows are released once the editor can be presented and the HUD is hidden. A canceled countdown (`show(null)`) must not recreate a released window.
 
 Before releasing the teleprompter, hide it and request a checkpoint from its renderer. The renderer flushes pending document/preferences saves and returns its draft, matching session, reading line, scroll position and paused/editing state. Only the owning webContents can acknowledge the unique checkpoint request. A timeout or invalid checkpoint retains the renderer to preserve the draft; returning to the HUD during a pending checkpoint cancels disposal. Restore the matching state before announcing renderer readiness. Native loading and renderer readiness must both complete before showing a requested reader. Hidden readers do not autoscroll: use the native visibility notification as well as page visibility, because a preloaded `show: false` window can initially report `document.hidden === false`. Restore the saved scroll offset with instant scrolling so CSS smooth scrolling cannot move it while the renderer is being prepared.

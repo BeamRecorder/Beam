@@ -89,6 +89,7 @@ export default defineConfig({
         hudPanel: fileURLToPath(new URL('./hud-panel.html', import.meta.url)),
         onboarding: fileURLToPath(new URL('./onboarding.html', import.meta.url)),
         mascot: fileURLToPath(new URL('./mascot.html', import.meta.url)),
+        sourcePicker: fileURLToPath(new URL('./source-picker.html', import.meta.url)),
       },
     },
   },
