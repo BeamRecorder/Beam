@@ -111,6 +111,19 @@ describe('CapturePresetSelect', () => {
     wrapper.unmount();
     expect(subscriptions[0]?.unsubscribe).toHaveBeenCalledOnce();
   });
+  it('uses a themed compact menu in the HUD and forwards its interaction state', async () => {
+    const wrapper = mount(CapturePresetSelect, { props: { kind: 'video', compact: true } });
+    await flushPromises();
+    expect(wrapper.get('.select-trigger').attributes('aria-label')).toBe('Preset');
+    expect(wrapper.get('.select-trigger').classes()).toContain('select-compact');
+    expect(wrapper.find('.lucide-clapperboard').exists()).toBe(true);
+    await wrapper.get('.select-trigger').trigger('click');
+    expect(wrapper.emitted('toggle')).toEqual([[true]]);
+    await wrapper.setProps({ disabled: true });
+    expect(wrapper.get('.select-trigger').attributes('disabled')).toBeDefined();
+    expect(wrapper.emitted('toggle')).toEqual([[true], [false]]);
+    wrapper.unmount();
+  });
 
   it('unsubscribes on kind changes, ignores stale loads, and cleans up the active subscription', async () => {
     const videoLoad = deferred<EditorPresetDocument>();
@@ -156,5 +169,52 @@ describe('CapturePresetSelect', () => {
       { label: 'Video preset', value: 'video-preset' },
     ]);
     wrapper.unmount();
+  });
+});
+
+describe('compact preset errors', () => {
+  it('reports load failures to the toolbar without growing the compact field', async () => {
+    capture.getEditorPresets.mockRejectedValueOnce(new Error('Preset load failed'));
+    const wrapper = mount(CapturePresetSelect, {
+      props: { kind: 'video', compact: true },
+      global: { stubs: { Select: SelectStub } },
+    });
+    await flushPromises();
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+    expect(wrapper.emitted('error')).toContainEqual(['Error: Preset load failed']);
+    wrapper.unmount();
+    expect(wrapper.emitted('error')?.at(-1)).toEqual(['']);
+  });
+  it('reports selection failures and clears them when a later selection succeeds', async () => {
+    capture.getEditorPresets.mockResolvedValueOnce(documentFixture('video'));
+    capture.onEditorPresetsChanged.mockReturnValueOnce(() => {});
+    capture.selectEditorPreset
+      .mockRejectedValueOnce(new Error('Cannot save preset'))
+      .mockResolvedValueOnce(documentFixture('video', '-retry'));
+    const wrapper = mount(CapturePresetSelect, {
+      props: { kind: 'video', compact: true },
+      global: { stubs: { Select: SelectStub } },
+    });
+    await flushPromises();
+    await wrapper.get('button').trigger('click');
+    await flushPromises();
+    expect(wrapper.emitted('error')).toContainEqual(['Error: Cannot save preset']);
+    await wrapper.get('button').trigger('click');
+    await flushPromises();
+    expect(wrapper.emitted('error')?.at(-1)).toEqual(['']);
+    wrapper.unmount();
+  });
+  it('ignores late failed loads after the selector was disposed', async () => {
+    const load = deferred<EditorPresetDocument>();
+    capture.getEditorPresets.mockReturnValueOnce(load.promise);
+    capture.onEditorPresetsChanged.mockReturnValueOnce(() => {});
+    const wrapper = mount(CapturePresetSelect, {
+      props: { kind: 'video', compact: true },
+      global: { stubs: { Select: SelectStub } },
+    });
+    wrapper.unmount();
+    load.reject(new Error('Late failure'));
+    await flushPromises();
+    expect(wrapper.emitted('error')).toEqual([['']]);
   });
 });

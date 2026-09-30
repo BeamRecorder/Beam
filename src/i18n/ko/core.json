@@ -450,6 +450,7 @@
     "includeAudioDesc": "활성화된 오디오 트랙을 내보낸 동영상에 추가합니다."
   },
   "HUD": {
+    "issues": "문제",
     "inputAccessFailed": "상호작용 접근 권한을 요청할 수 없습니다.",
     "title": "Beam",
     "openProject": "프로젝트 열기",
@@ -498,7 +499,16 @@
     "startQuickSnip": "빠른 캡처 시작",
     "stopQuickSnip": "빠른 캡처 중지",
     "screenshot": "스크린샷",
-    "instant": "즉시"
+    "instant": "즉시",
+    "recorder": "녹화",
+    "fullScreen": "전체 화면",
+    "region": "영역",
+    "chooseCaptureSource": "캡처 소스 선택",
+    "camera": "카메라",
+    "microphone": "마이크",
+    "teleprompter": "텔레프롬프터",
+    "screenshotDescription": "캡처할 화면, 영역 또는 창을 선택하세요.",
+    "back": "뒤로"
   },
   "EditorPreparingHud": {
     "title": "편집기 준비 중",

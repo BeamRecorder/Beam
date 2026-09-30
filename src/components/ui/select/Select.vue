@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onUnmounted, ref, useId, type Component } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, useId, type Component } from 'vue';
 import { useVirtualList } from '@vueuse/core';
 import Popover from '../popover/Popover.vue';
 import Skeleton from '../skeleton/Skeleton.vue';
@@ -14,6 +14,7 @@ const props = withDefaults(
     options?: SelectOption[];
     items?: SelectOption[];
     placeholder?: string;
+    label?: string;
     disabled?: boolean;
     direction?: 'up' | 'down';
     optionHeight?: number;
@@ -22,7 +23,7 @@ const props = withDefaults(
     noResultsLabel?: string;
     searchPlaceholder?: string;
     variant?: 'default' | 'source' | 'search';
-    size?: 'sm' | 'md' | 'lg' | 'small' | 'medium' | 'large';
+    size?: 'sm' | 'md' | 'lg' | 'compact' | 'small' | 'medium' | 'large';
     icon?: Component;
   }>(),
   {
@@ -52,6 +53,7 @@ const searchInput = ref<InstanceType<typeof Input> | null>(null);
 const searchQuery = ref('');
 const listboxId = useId();
 let restoreFocusOnClose = false;
+let menuOpen = false;
 
 const normalizedOptions = computed<SelectOption[]>(() => {
   return props.options ?? props.items ?? [];
@@ -68,6 +70,8 @@ const selectedOption = computed(() => {
 });
 
 const handleToggle = (isOpen: boolean) => {
+  if (menuOpen === isOpen) return;
+  menuOpen = isOpen;
   emit('toggle', isOpen);
   if (isOpen) {
     void nextTick(() => {
@@ -186,6 +190,7 @@ const normalizedSize = computed(() => {
 });
 
 const labelStyle = computed(() => {
+  if (normalizedSize.value === 'compact') return {};
   const text = selectedOption.value ? selectedOption.value.label : props.placeholder;
   const len = text.length;
   if (normalizedSize.value === 'sm') {
@@ -250,13 +255,21 @@ const stopMarquee = (event: PointerEvent) => {
   stopMarqueeRun(option);
 };
 
-onUnmounted(() => {
+onBeforeUnmount(() => {
+  if (menuOpen) handleToggle(false);
   for (const option of listbox.value?.querySelectorAll<HTMLElement>('[role="option"]') ?? []) stopMarqueeRun(option);
 });
 </script>
 
 <template>
-  <Popover align="left" :direction="direction" :block="true" class="select-popover" @toggle="handleToggle">
+  <Popover
+    align="left"
+    :direction="direction"
+    :block="true"
+    :disabled="disabled"
+    class="select-popover"
+    @toggle="handleToggle"
+  >
     <template #trigger="{ isOpen }">
       <button
         ref="selectTrigger"
@@ -267,12 +280,15 @@ onUnmounted(() => {
           { 'is-open': isOpen, 'is-disabled': disabled, 'is-source': variant === 'source' },
         ]"
         :disabled="disabled"
+        :aria-label="label"
+        :title="selectedOption?.label || label || placeholder"
         aria-haspopup="listbox"
         :aria-expanded="isOpen"
         :aria-controls="listboxId"
       >
         <div class="trigger-content-wrapper">
-          <component :is="icon" v-if="icon" class="select-leading-icon" aria-hidden="true" />
+          <span v-if="$slots.icon" class="select-leading-icon" aria-hidden="true"><slot name="icon" /></span>
+          <component :is="icon" v-else-if="icon" class="select-leading-icon" aria-hidden="true" />
 
           <!-- Thumbnail preview -->
           <div v-if="selectedOption?.thumbnail" class="selected-thumbnail-wrapper">
@@ -314,7 +330,10 @@ onUnmounted(() => {
     </template>
 
     <template #default="{ close }">
-      <div class="select-menu" :class="{ 'is-searchable': variant === 'search' }">
+      <div
+        class="select-menu"
+        :class="{ 'is-searchable': variant === 'search', 'is-compact': normalizedSize === 'compact' }"
+      >
         <div v-if="variant === 'search'" class="select-search-row">
           <Input
             ref="searchInput"

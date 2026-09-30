@@ -15,7 +15,13 @@ export interface HudProps {
   recorderLauncherContext?: RecorderLauncherContext | null;
 }
 export type HudEmit = (
-  event: 'start-recording' | 'stop-recording' | 'open-project' | 'focus-feature' | 'dismiss-launcher',
+  event:
+    | 'start-recording'
+    | 'stop-recording'
+    | 'open-project'
+    | 'focus-feature'
+    | 'dismiss-launcher'
+    | 'popover-toggle',
   ...args: unknown[]
 ) => void;
 export interface SavedDevices {
@@ -24,6 +30,20 @@ export interface SavedDevices {
   systemAudioMode?: 'on' | 'off';
 }
 export type PreviewKind = 'screen' | 'window';
+export type HudCaptureTarget = PreviewKind | 'region';
+export interface HudCaptureActionsOptions {
+  platform: string;
+  blocked: ComputedRef<boolean>;
+  activeTab: Ref<PreviewKind>;
+  selectedScreenId: Ref<string | null>;
+  selectedSourceId: Ref<string | null>;
+  sources: Ref<CaptureSource[]>;
+  windowPreviews: Ref<CapturePreview[]>;
+  resetRegion: () => void;
+  selectRegion: () => Promise<boolean>;
+  refreshSources: (kind: PreviewKind) => Promise<void>;
+  start: () => Promise<void>;
+}
 export interface HudWindowOptions {
   props: HudProps;
   activeTab: Ref<PreviewKind>;
@@ -33,8 +53,5 @@ export interface HudWindowOptions {
   selectedScreen: ComputedRef<CaptureSource | null>;
   selectedScreenId: Ref<string | null>;
   selectedScreenPreview: ComputedRef<CapturePreview | null>;
-  showSettings: Ref<boolean>;
-  showProjectPicker: Ref<boolean>;
   loadPreviews: (kind: PreviewKind) => Promise<void>;
-  refreshInteraction: () => Promise<unknown>;
 }

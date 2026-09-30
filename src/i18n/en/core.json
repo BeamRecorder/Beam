@@ -450,6 +450,7 @@
     "includeAudioDesc": "Add enabled audio tracks to the exported video."
   },
   "HUD": {
+    "issues": "Issues",
     "inputAccessFailed": "Could not request interaction access.",
     "title": "Beam",
     "openProject": "Open a project",
@@ -498,7 +499,16 @@
     "linuxRequirementsTitle": "Linux setup required",
     "recordingErrorTitle": "Recording error",
     "screenshot": "Screenshot",
-    "instant": "Instant"
+    "instant": "Instant",
+    "recorder": "Recorder",
+    "fullScreen": "Full screen",
+    "region": "Region",
+    "chooseCaptureSource": "Choose a capture source",
+    "camera": "Camera",
+    "microphone": "Microphone",
+    "teleprompter": "Teleprompter",
+    "screenshotDescription": "Choose a screen, region or window to capture.",
+    "back": "Back"
   },
   "EditorPreparingHud": {
     "title": "Preparing your editor",

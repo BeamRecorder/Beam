@@ -5,7 +5,7 @@ const path = require('node:path');
 const test = require('node:test');
 const { createPreferencesStore, defaults, normalize } = require('../../electron/preferences/preferences-store.cjs');
 
-const CANONICAL_HUD_WINDOW = { width: 352, height: 512 };
+const CANONICAL_HUD_WINDOW = { width: 672, height: 268 };
 
 test('writes durable generic preferences and merges patches', () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-preferences-'));
@@ -104,7 +104,7 @@ test('exposes canonical HUD window dimensions in defaults and normalized prefere
   assert.deepEqual(defaults('darwin').hudWindow, CANONICAL_HUD_WINDOW);
   assert.deepEqual(normalize({}).hudWindow, CANONICAL_HUD_WINDOW);
   assert.deepEqual(
-    normalize({ hudWindow: { width: 352, height: 512, unexpected: 'discarded' } }).hudWindow,
+    normalize({ hudWindow: { width: 672, height: 268, unexpected: 'discarded' } }).hudWindow,
     CANONICAL_HUD_WINDOW,
   );
 });
@@ -113,20 +113,20 @@ test('normalizes missing, partial, malformed, and unexpected HUD window sizes ex
   const invalidSizes = [
     null,
     {},
-    { width: 352 },
-    { height: 512 },
-    { width: undefined, height: 512 },
-    { width: 352, height: undefined },
-    { width: 351, height: 512 },
-    { width: 352, height: 511 },
-    { width: 352.5, height: 512 },
-    { width: 352, height: '512' },
-    { width: '352', height: 512 },
+    { width: 672 },
+    { height: 268 },
+    { width: undefined, height: 268 },
+    { width: 672, height: undefined },
+    { width: 711, height: 268 },
+    { width: 672, height: 283 },
+    { width: 672.5, height: 268 },
+    { width: 672, height: '268' },
+    { width: '672', height: 268 },
     { width: 0, height: 0 },
-    { width: -352, height: -512 },
-    { width: 352, height: 512, scale: 2 },
-    [352, 512],
-    '352x512',
+    { width: -672, height: -268 },
+    { width: 672, height: 268, scale: 2 },
+    [672, 268],
+    '672x268',
     true,
   ];
 
@@ -373,7 +373,7 @@ test('normalizes and patches appearance customizer settings properly', () => {
   const initial = store.read();
   assert.ok(initial.appearance);
   assert.equal(initial.appearance.primaryColor, '#ff5a1f');
-  assert.equal(initial.appearance.radiusPx, 10);
+  assert.equal(initial.appearance.radiusPx, 7);
   assert.equal(initial.appearance.surfaceTone, 'default');
 
   const patched = store.patch({

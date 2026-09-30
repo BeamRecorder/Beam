@@ -215,6 +215,7 @@ onMounted(() => {
       updatePresetMatch();
     }
   });
+  capture.notifyScreenRegionReady();
   void loadSavedPreset();
 });
 watch(

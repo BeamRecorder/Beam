@@ -373,7 +373,7 @@ test('recorder position persistence stores the compact bar position', () => {
 });
 
 test('HUD restores and clamps saved positions using the normalized native width', () => {
-  assert.deepEqual(HUD_SIZE, { width: 352, height: 512 });
+  assert.deepEqual(HUD_SIZE, { width: 672, height: 268 });
   const display = {
     id: 1,
     bounds: { x: 0, y: 0, width: 1000, height: 800 },
@@ -389,12 +389,12 @@ test('HUD restores and clamps saved positions using the normalized native width'
     screenModule: { getDisplayNearestPoint: () => display },
   });
 
-  assert.deepEqual(win.getPosition(), [648, 288]);
+  assert.deepEqual(win.getPosition(), [328, 532]);
   controller.showHud();
 
-  assert.deepEqual(win.calls.filter((call) => call[0] === 'minimumSize').at(-1), ['minimumSize', 352, 512]);
-  assert.deepEqual(win.calls.filter((call) => call[0] === 'size').at(-1), ['size', 352, 512]);
-  assert.deepEqual(win.getPosition(), [648, 288]);
+  assert.deepEqual(win.calls.filter((call) => call[0] === 'minimumSize').at(-1), ['minimumSize', 672, 268]);
+  assert.deepEqual(win.calls.filter((call) => call[0] === 'size').at(-1), ['size', 672, 268]);
+  assert.deepEqual(win.getPosition(), [328, 532]);
 });
 
 test('HUD and Recorder stay topmost independently of a legacy preference', () => {
@@ -448,11 +448,11 @@ test('WindowController reads hudWindow and normalizes every unexpected size to t
     undefined,
     null,
     {},
-    { width: 351, height: 512 },
-    { width: 352, height: 511 },
-    { width: 352.5, height: 512 },
-    { width: '352', height: 512 },
-    [352, 512],
+    { width: 711, height: 268 },
+    { width: 672, height: 283 },
+    { width: 672.5, height: 268 },
+    { width: '672', height: 268 },
+    [672, 268],
   ]) {
     const preferencesStore = preferencesWithHudWindow(hudWindow);
     const controller = new WindowController(fakeWindow(), { preferencesStore });
@@ -471,13 +471,13 @@ test('showHud applies the normalized HUD size to native bounds, minimum, and sav
 
   controller.showHud();
 
-  assert.deepEqual(win.getBounds(), { x: 148, y: 288, width: 352, height: 512 });
+  assert.deepEqual(win.getBounds(), { x: 100, y: 532, width: 672, height: 268 });
   assert.deepEqual(win.calls.filter((call) => call[0] === 'minimumSize').at(-1), [
     'minimumSize',
     HUD_SIZE.width,
     HUD_SIZE.height,
   ]);
-  assert.deepEqual(win.calls.filter((call) => call[0] === 'position').at(-1), ['position', 148, 288]);
+  assert.deepEqual(win.calls.filter((call) => call[0] === 'position').at(-1), ['position', 100, 532]);
 });
 
 test('Recorder keeps its fixed 72x344 native bounds with an unexpected HUD size', () => {

@@ -450,6 +450,7 @@
     "includeAudioDesc": "Thêm các rãnh âm thanh đang bật vào video xuất."
   },
   "HUD": {
+    "issues": "Sự cố",
     "inputAccessFailed": "Không thể yêu cầu quyền truy cập tương tác.",
     "title": "Beam",
     "openProject": "Mở dự án",
@@ -498,7 +499,16 @@
     "startQuickSnip": "Bắt đầu chụp nhanh",
     "stopQuickSnip": "Dừng chụp nhanh",
     "screenshot": "Chụp ảnh màn hình",
-    "instant": "Tức thì"
+    "instant": "Tức thì",
+    "recorder": "Ghi hình",
+    "fullScreen": "Toàn màn hình",
+    "region": "Vùng",
+    "chooseCaptureSource": "Chọn nguồn ghi hình",
+    "camera": "Máy ảnh",
+    "microphone": "Micrô",
+    "teleprompter": "Máy nhắc chữ",
+    "screenshotDescription": "Chọn màn hình, vùng hoặc cửa sổ để ghi lại.",
+    "back": "Quay lại"
   },
   "EditorPreparingHud": {
     "title": "Đang chuẩn bị trình chỉnh sửa",

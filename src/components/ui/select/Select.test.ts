@@ -1,5 +1,5 @@
 import { enableAutoUnmount, mount } from '@vue/test-utils';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { h, nextTick } from 'vue';
 import { Mic } from '@lucide/vue';
 import Select from './Select.vue';
@@ -317,5 +317,114 @@ describe('Select', () => {
     expect(document.body.querySelectorAll('[role="option"]')).toHaveLength(1);
     expect(document.body.querySelector('[role="option"]')?.getAttribute('data-option-index')).toBe('0');
     expect(visibleOptionLabels()).toEqual(['Only Match']);
+  });
+});
+
+describe('compact and keyboard menus', () => {
+  it.each([
+    ['small', 22, '0.75rem'],
+    ['small', 30, '0.7rem'],
+    ['medium', 22, '0.82rem'],
+    ['medium', 30, '0.75rem'],
+    ['large', 22, '0.85rem'],
+    ['large', 30, '0.75rem'],
+  ] as const)('keeps long labels readable in the %s trigger', (size, length, fontSize) => {
+    const wrapper = mount(Select, {
+      props: { modelValue: 'device', options: [{ value: 'device', label: 'x'.repeat(length) }], size },
+    });
+    expect(wrapper.get<HTMLElement>('.select-label').element.style.fontSize).toBe(fontSize);
+  });
+  it('renders compact icon slots, accessible names and explicit empty device lists', async () => {
+    const wrapper = mount(Select, {
+      attachTo: document.body,
+      props: { modelValue: null, size: 'compact', label: 'Camera', emptyLabel: 'No cameras' },
+      slots: { icon: '<span class="custom-icon">Icon</span>' },
+    });
+    expect(wrapper.get('.select-trigger').attributes('aria-label')).toBe('Camera');
+    expect(wrapper.find('.custom-icon').exists()).toBe(true);
+    await wrapper.get('.select-trigger').trigger('click');
+    expect(document.querySelector('.options-empty')?.textContent).toBe('No cameras');
+  });
+  it('renders source placeholders and application icons for current and offered devices', async () => {
+    const sources = [
+      { value: 'screen', label: 'Screen', thumbnailFallback: 'screen' as const },
+      { value: 'window', label: 'Window', thumbnailFallback: 'window' as const },
+      { value: 'preview', label: 'Preview', thumbnail: '/preview.png', appIcon: '/app.png' },
+    ];
+    const wrapper = mount(Select, {
+      attachTo: document.body,
+      props: { modelValue: 'screen', options: sources, variant: 'source' },
+    });
+    expect(wrapper.find('.lucide-monitor').exists()).toBe(true);
+    await wrapper.setProps({ modelValue: 'window' });
+    expect(wrapper.find('.lucide-panels-top-left').exists()).toBe(true);
+    await wrapper.setProps({ modelValue: 'preview' });
+    expect(wrapper.find('.trigger-app-icon').exists()).toBe(true);
+    await wrapper.get('.select-trigger').trigger('click');
+    expect(document.querySelectorAll('.thumbnail-fallback')).toHaveLength(2);
+    expect(document.querySelector('.app-icon')).not.toBeNull();
+  });
+  it('navigates all options with wrapping arrows and returns to the search input', async () => {
+    const wrapper = mount(Select, {
+      attachTo: document.body,
+      props: { modelValue: 'noto', options: searchableOptions, variant: 'search' },
+    });
+    await wrapper.get('.select-trigger').trigger('click');
+    const press = async (key: string) => {
+      document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+      await nextTick();
+    };
+    await press('ArrowUp');
+    expect(document.activeElement?.textContent).toContain('Serif Display');
+    await press('ArrowDown');
+    expect(document.activeElement?.textContent).toContain('Noto Sans');
+    await press('ArrowDown');
+    expect(document.activeElement?.textContent).toContain('Café Mono');
+    await press('ArrowUp');
+    await press('ArrowUp');
+    expect(document.activeElement?.tagName).toBe('INPUT');
+    await press('Tab');
+    await press('Enter');
+    expect(wrapper.emitted('update:modelValue')).toContainEqual(['noto']);
+  });
+  it('supports empty searches and configured no-results text without selecting a missing item', async () => {
+    const wrapper = mount(Select, {
+      attachTo: document.body,
+      props: { modelValue: null, options: searchableOptions, variant: 'search', noResultsLabel: 'No devices found' },
+    });
+    await wrapper.get('.select-trigger').trigger('click');
+    await setSearch('unmatched');
+    searchInput().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await nextTick();
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+    expect(document.querySelector('.options-empty')?.textContent).toBe('No devices found');
+    await wrapper.setProps({ noResultsLabel: '' });
+    expect(document.querySelector('.options-empty')?.textContent).toBe('No matching options');
+  });
+  it('runs a long-label marquee and cancels it on leave and close', async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(Select, { attachTo: document.body, props: { modelValue: 'one', options } });
+    try {
+      await wrapper.get('.select-trigger').trigger('click');
+      const option = document.querySelectorAll<HTMLElement>('.select-option')[1]!;
+      const label = option.querySelector<HTMLElement>('.option-label')!;
+      Object.defineProperty(label, 'scrollWidth', { value: 200 });
+      Object.defineProperty(label, 'clientWidth', { value: 40 });
+      option.dispatchEvent(new Event('pointerenter'));
+      await vi.advanceTimersByTimeAsync(3500);
+      expect(label.style.transform).toContain('translateX');
+      expect(option.classList.contains('has-left-overflow')).toBe(true);
+      await vi.advanceTimersByTimeAsync(6000);
+      option.dispatchEvent(new Event('pointerleave'));
+      await nextTick();
+      expect(label.style.transform).toBe('');
+      option.dispatchEvent(new Event('pointerenter'));
+      await vi.advanceTimersByTimeAsync(350);
+      await wrapper.get('.select-trigger').trigger('click');
+      expect(label.style.transform).toBe('');
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
   });
 });

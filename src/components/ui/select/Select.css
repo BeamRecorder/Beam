@@ -19,6 +19,35 @@
 }
 
 /* Sizes */
+.select-trigger.select-compact {
+  height: var(--control-height);
+  padding: 0 8px;
+  border-color: transparent;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-field);
+  font-size: var(--font-size-body);
+  font-weight: var(--weight-body);
+  -webkit-app-region: no-drag;
+}
+.select-trigger.select-compact:hover:not(.is-disabled) {
+  background: var(--color-bg-field-hover);
+}
+.select-trigger.select-compact .select-chevron {
+  width: 12px;
+  height: 12px;
+}
+.select-leading-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.select-menu.is-compact .virtual-scroll-container {
+  max-height: min(224px, var(--popover-available-height, 224px));
+}
+.is-compact .select-option {
+  font-size: var(--font-size-body);
+  font-weight: var(--weight-body);
+}
 .select-trigger.select-sm {
   height: 2.125rem;
   padding: 0.25rem 0.625rem;

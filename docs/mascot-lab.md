@@ -3,8 +3,12 @@
 Run `bun install --frozen-lockfile`, then `bun run dev`. Open
 [http://localhost:6500/mascot.html](http://localhost:6500/mascot.html).
 
-This is an independent browser page in the Beam renderer, with no Electron API,
-capture engine, HUD entry, or loading-screen integration. Its Vue SVG component
+The recorder toolbar also has a temporary **Mascot Lab** button. It opens the
+same lab in an independent, resizable Electron window. Reopening the button
+focuses the existing lab; closing it leaves the recorder available.
+
+The standalone browser page remains available without an Electron API. The lab
+does not control capture or integrate into loading screens. Its Vue SVG component
 and clock-free engine can be integrated later.
 
 The laboratory includes Bloub's 14 animation states, eight body shapes, twelve

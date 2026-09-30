@@ -450,6 +450,7 @@
     "includeAudioDesc": "Dodaje włączone ścieżki audio do eksportowanego filmu."
   },
   "HUD": {
+    "issues": "Problemy",
     "inputAccessFailed": "Nie udało się poprosić o dostęp do interakcji.",
     "title": "Beam",
     "openProject": "Otwórz projekt",
@@ -498,7 +499,16 @@
     "startQuickSnip": "Rozpocznij szybkie nagranie",
     "stopQuickSnip": "Zatrzymaj szybkie nagranie",
     "screenshot": "Zrzut ekranu",
-    "instant": "Natychmiast"
+    "instant": "Natychmiast",
+    "recorder": "Nagrywanie",
+    "fullScreen": "Cały ekran",
+    "region": "Obszar",
+    "chooseCaptureSource": "Wybierz źródło przechwytywania",
+    "camera": "Kamera",
+    "microphone": "Mikrofon",
+    "teleprompter": "Teleprompter",
+    "screenshotDescription": "Wybierz ekran, obszar lub okno do przechwycenia.",
+    "back": "Wstecz"
   },
   "EditorPreparingHud": {
     "title": "Przygotowywanie edytora",

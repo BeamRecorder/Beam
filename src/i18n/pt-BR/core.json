@@ -450,6 +450,7 @@
     "includeAudioDesc": "Adiciona as faixas de áudio ativadas ao vídeo exportado."
   },
   "HUD": {
+    "issues": "Problemas",
     "inputAccessFailed": "Não foi possível solicitar acesso às interações.",
     "title": "Beam",
     "openProject": "Abrir um projeto",
@@ -498,7 +499,16 @@
     "startQuickSnip": "Iniciar captura rápida",
     "stopQuickSnip": "Parar captura rápida",
     "screenshot": "Captura de tela",
-    "instant": "Instantâneo"
+    "instant": "Instantâneo",
+    "recorder": "Gravador",
+    "fullScreen": "Tela inteira",
+    "region": "Região",
+    "chooseCaptureSource": "Escolher fonte de captura",
+    "camera": "Câmera",
+    "microphone": "Microfone",
+    "teleprompter": "Teleprompter",
+    "screenshotDescription": "Escolha uma tela, região ou janela para capturar.",
+    "back": "Voltar"
   },
   "EditorPreparingHud": {
     "title": "Preparando o editor",

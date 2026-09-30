@@ -1,95 +1,48 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
-
 vi.mock('../../../api/capture', () => ({
   capture: {
-    getUpdateState: vi.fn().mockResolvedValue({
-      status: 'unsupported',
-      currentVersion: '0.1.0',
-      availableVersion: null,
-      percent: null,
-      message: null,
-    }),
+    getUpdateState: vi.fn().mockResolvedValue({ status: 'unsupported', currentVersion: '0.1.0' }),
     onUpdateState: vi.fn().mockReturnValue(() => undefined),
   },
 }));
 import TopbarHUD from '../TopbarHUD.vue';
 
 describe('TopbarHUD', () => {
-  it('keeps Beam branding and places expanded capture modes between the logo and window actions', () => {
+  it('keeps Beam branding and moves capture modes out of the titlebar', () => {
     const wrapper = mount(TopbarHUD);
-    const identity = wrapper.get('.topbar-identity');
-    const logo = identity.get('img');
-    const group = wrapper.get('[role="group"]');
-    const actions = wrapper.get('.window-actions');
-
-    expect(logo.attributes('alt')).toBe('Beam');
-    expect(logo.attributes('src')).toContain('BeamIcon.webp');
-    expect(identity.element.contains(group.element)).toBe(true);
-    expect(identity.element.contains(logo.element)).toBe(true);
-    expect(logo.element.compareDocumentPosition(group.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(group.element.compareDocumentPosition(actions.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(group.classes()).toContain('full-width');
-    expect(group.classes()).toContain('column-layout');
-    expect(group.attributes('style')).toContain('--button-group-columns: 3');
-    expect(group.attributes('aria-label')).toBe('Mode');
-    expect(wrapper.get('[aria-label="Studio"]').attributes('aria-pressed')).toBe('true');
-    expect(wrapper.get('[aria-label="Screenshot"]').attributes('aria-pressed')).toBe('false');
-    expect(wrapper.get('[aria-label="Instant"]').attributes('aria-pressed')).toBe('false');
-    expect(wrapper.find('.rec-badge').exists()).toBe(false);
-  });
-
-  it('emits mode changes and disables the group while busy or recording', async () => {
-    const wrapper = mount(TopbarHUD, { props: { modeDisabled: true } });
-
-    for (const label of ['Studio', 'Screenshot', 'Instant']) {
-      expect(wrapper.get(`[aria-label="${label}"]`).element).toHaveProperty('disabled', true);
-    }
-
-    await wrapper.setProps({ modeDisabled: false, isRecording: true });
-    for (const label of ['Studio', 'Screenshot', 'Instant']) {
-      expect(wrapper.get(`[aria-label="${label}"]`).element).toHaveProperty('disabled', true);
-    }
-    expect(wrapper.text()).toContain('REC');
-
-    await wrapper.setProps({ isRecording: false });
-    await wrapper.get('[aria-label="Screenshot"]').trigger('click');
-    expect(wrapper.emitted('update:mode')).toEqual([['screenshot']]);
-  });
-
-  it('renders back, title, and preferences states', async () => {
-    const wrapper = mount(TopbarHUD, {
-      props: { title: 'Edit', showBack: true, showSettings: true },
-    });
-
+    expect(wrapper.get('img').attributes('src')).toContain('BeamIcon.webp');
+    expect(wrapper.get('img').attributes('alt')).toBe('Beam');
+    expect(wrapper.get('.topbar-title').text()).toBe('Beam');
     expect(wrapper.find('[role="group"]').exists()).toBe(false);
-    expect(wrapper.text()).toContain('Edit');
-    await wrapper.get('[aria-label="Back"]').trigger('click');
-    await wrapper.get('[aria-label="Preferences"]').trigger('click');
-    expect(wrapper.emitted('back')).toHaveLength(1);
-    expect(wrapper.emitted('open-settings')).toHaveLength(1);
   });
-
-  it('emits native window actions', async () => {
+  it('opens the separate settings, project and mascot windows', async () => {
     const wrapper = mount(TopbarHUD);
-    await wrapper.get('[aria-label="Minimize"]').trigger('click');
-    await wrapper.get('[aria-label="Close"]').trigger('click');
-    expect(wrapper.emitted('minimize')).toHaveLength(1);
-    expect(wrapper.emitted('close')).toHaveLength(1);
+    await wrapper.get('[aria-label="Preferences"]').trigger('click');
+    await wrapper.get('[aria-label="Open a project"]').trigger('click');
+    await wrapper.get('[aria-label="Mascot Lab"]').trigger('click');
+    expect(wrapper.emitted('open-settings')).toEqual([[]]);
+    expect(wrapper.emitted('open-projects')).toEqual([[]]);
+    expect(wrapper.emitted('open-mascot')).toEqual([[]]);
   });
-
-  it('does not start a native drag when clicking a window action', async () => {
-    const previousCapture = window.capture;
-    const dragStart = vi.fn();
-    window.capture = { dragStart, drag: vi.fn(), dragEnd: vi.fn() } as unknown as NonNullable<typeof window.capture>;
-    const wrapper = mount(TopbarHUD, { props: { showSettings: true } });
-
-    await wrapper
-      .get('[aria-label="Preferences"] svg')
-      .trigger('pointerdown', { button: 0, pointerId: 1, clientX: 10, clientY: 10 });
-    expect(dragStart).not.toHaveBeenCalled();
-
-    wrapper.unmount();
-    window.capture = previousCapture;
+  it('disables panel actions during loading while leaving close available', async () => {
+    const wrapper = mount(TopbarHUD, { props: { disabled: true, title: 'Loading' } });
+    expect(wrapper.get('[aria-label="Preferences"]').attributes('disabled')).toBeDefined();
+    await wrapper.get('[aria-label="Preferences"]').trigger('click');
+    expect(wrapper.emitted('open-settings')).toBeUndefined();
+    expect(wrapper.get('[aria-label="Mascot Lab"]').attributes('disabled')).toBeDefined();
+    await wrapper.get('[aria-label="Mascot Lab"]').trigger('click');
+    expect(wrapper.emitted('open-mascot')).toBeUndefined();
+    await wrapper.get('[aria-label="Close"]').trigger('click');
+    expect(wrapper.emitted('close')).toEqual([[]]);
+    expect(wrapper.get('.topbar-title').text()).toBe('Loading');
+  });
+  it('hides optional actions and delegates minimize to Electron', async () => {
+    const wrapper = mount(TopbarHUD, { props: { showSettings: false, showProjects: false, showMascot: false } });
+    expect(wrapper.find('[aria-label="Preferences"]').exists()).toBe(false);
+    expect(wrapper.find('[aria-label="Open a project"]').exists()).toBe(false);
+    expect(wrapper.find('[aria-label="Mascot Lab"]').exists()).toBe(false);
+    await wrapper.get('[aria-label="Minimize"]').trigger('click');
+    expect(wrapper.emitted('minimize')).toEqual([[]]);
   });
 });

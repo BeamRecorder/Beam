@@ -107,7 +107,7 @@ test('startElectron marks GNOME Wayland shortcut launches as the development ins
   await start;
 
   assert.equal(invocation.command, process.execPath);
-  assert.deepEqual(invocation.args, [require.resolve('electron/cli.js'), '.']);
+  assert.deepEqual(invocation.args, [require.resolve('electron/cli.js'), '.', ...(process.platform === 'linux' ? ['--ozone-platform=x11'] : [])]);
   assert.equal(invocation.options.cwd, '/workspace');
   assert.equal(invocation.options.env.PATH, '/bin');
   assert.equal(invocation.options.env.BEAM_CAPTURE_ENGINE, '/built/capture-engine');
@@ -131,10 +131,13 @@ test('Cargo-present development builds are used directly', async () => {
       platform: 'win32',
       arch: 'x64',
       hasCargo: () => true,
-      build: async (options) => calls.push(options),
+      build: async (options) => {
+        calls.push(options);
+        return path.join(root, 'target');
+      },
     });
     assert.equal(executable, path.join(root, 'target', 'debug', 'capture-engine.exe'));
-    assert.deepEqual(calls, [{ platform: 'win32' }]);
+    assert.deepEqual(calls, [{ platform: 'win32', cwd: root }]);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -315,5 +318,25 @@ test('unknown architectures fail before Cargo detection or fallback', async () =
     assert.equal(cargoChecked, false);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('development launch uses Cargo-configured shared outputs for each supported platform', async () => {
+  for (const platform of ['linux', 'win32', 'darwin']) {
+    const executable = await resolveDevelopmentEngine({
+      applicationRoot: '/worktree',
+      version,
+      platform,
+      arch: platform === 'darwin' ? 'arm64' : 'x64',
+      hasCargo: () => true,
+      build: async ({ cwd }) => {
+        assert.equal(cwd, '/worktree');
+        return '/shared/cargo-target';
+      },
+    });
+    assert.equal(
+      executable,
+      path.join('/shared/cargo-target', 'debug', platform === 'win32' ? 'capture-engine.exe' : 'capture-engine'),
+    );
   }
 });

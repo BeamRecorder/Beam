@@ -327,3 +327,28 @@ test('Linux falls back to the installed helper when no bundled helper is availab
     fs.statSync = originalStatSync;
   }
 });
+
+test('finds the Linux input helper alongside shared Cargo outputs and caches the directory', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-cargo-helper-'));
+  let queries = 0;
+  try {
+    const targetDirectory = path.join(root, 'shared-target');
+    const helper = path.join(targetDirectory, 'debug', 'beam-input-helper');
+    writeExecutable(helper);
+    const access = new InputAccess({
+      app: app(),
+      applicationRoot: root,
+      platform: 'linux',
+      nativeRequest: async () => available,
+      resolveTargetDirectory: () => {
+        queries++;
+        return targetDirectory;
+      },
+    });
+    assert.equal(access.bundledHelper(), helper);
+    assert.equal(access.bundledHelper(), helper);
+    assert.equal(queries, 1);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

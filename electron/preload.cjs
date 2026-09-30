@@ -58,6 +58,16 @@ contextBridge.exposeInMainWorld(
     },
     setWindowMode: (mode) => ipcRenderer.send('window:set-mode', mode),
     showHud: () => ipcRenderer.send('window:show-hud'),
+    openHudSettings: () => ipcRenderer.invoke('hud:open-settings'),
+    openHudProjects: () => ipcRenderer.invoke('hud:open-projects'),
+    openHudMascot: () => ipcRenderer.invoke('hud:open-mascot'),
+    notifyHudPanelReady: () => ipcRenderer.send('hud-panel:ready'),
+    requestHudProject: (request) => ipcRenderer.invoke('hud-panel:open-project', request),
+    onHudProjectRequested: (listener) => {
+      const callback = (_event, request) => listener(request);
+      ipcRenderer.on('hud:open-project', callback);
+      return () => ipcRenderer.removeListener('hud:open-project', callback);
+    },
     openEditor: (projectId, options) => ipcRenderer.invoke('editor:open', projectId, options),
     openRecorderFromEditor: () => ipcRenderer.invoke('editor:open-recorder'),
     dismissRecorderLauncher: () => ipcRenderer.invoke('editor:dismiss-recorder'),
@@ -83,6 +93,7 @@ contextBridge.exposeInMainWorld(
     },
     setPosition: (x, y) => ipcRenderer.send('window:setPosition', x, y),
     setSize: (width, height) => ipcRenderer.send('window:setSize', width, height),
+    resizeHudPopover: (height) => ipcRenderer.invoke('window:resize-hud-popover', height),
     setSizeSmooth: (width, height) => ipcRenderer.send('window:setSizeSmooth', width, height),
     setWindowVisible: (visible) => ipcRenderer.send('window:set-visible', Boolean(visible)),
     setInteractive: (value) => ipcRenderer.send('window:setInteractive', value),
@@ -96,6 +107,7 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.on('screen-region:configure', callback);
       return () => ipcRenderer.removeListener('screen-region:configure', callback);
     },
+    notifyScreenRegionReady: () => ipcRenderer.send('screen-region:ready'),
     confirmScreenRegion: (region) => ipcRenderer.send('screen-region:confirm', region),
     updateScreenRegion: (region) => ipcRenderer.send('screen-region:update', region),
     cancelScreenRegion: () => ipcRenderer.send('screen-region:cancel'),

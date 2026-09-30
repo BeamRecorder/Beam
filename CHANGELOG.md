@@ -7,6 +7,20 @@ User-facing changes to Beam are documented in this file.
 ### Added
 
 - Added a standalone Mascot Lab to explore Beam's SVG mascot with morphing star eyes, customizable looks, animation sequences, and transparent SVG/PNG exports before integrating it into the app.
+- Added a temporary Mascot Lab button to the recorder toolbar, opening the lab in its own desktop window.
+- Capture problems now appear in the toolbar with a count and a scrollable hover panel, including individual copy actions.
+- Settings and Projects now open in separate, resizable desktop windows.
+
+### Changed
+
+- Redesigned the capture HUD into a compact horizontal layout with Full screen, Region and Window cards that open the matching selection and capture after confirmation.
+- Refreshed the default light and dark surfaces, typography and control shapes, with bundled Hanken Grotesk and themed device/preset menus.
+
+### Fixed
+
+- Windows/macOS HUD popovers temporarily expand the transparent window; Linux menus scroll within compact bounds so added transparent space cannot block desktop clicks.
+- Development builds and launches now find native capture binaries in the Cargo-configured build directory, including shared Linux caches.
+- Linux now selects X11/XWayland at launch to avoid GPU startup crashes and enable native placement; screen region selection waits for renderer readiness and opens at the exact display bounds.
 
 ## [0.4.0] - 2026-09-27
 

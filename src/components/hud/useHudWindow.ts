@@ -3,7 +3,8 @@ import { capture } from '~/api/capture';
 import type { ScreenRegion, ScreenRegionBounds, ScreenRegionOverlayOptions } from '~/api/types/screen-region';
 import type { HudWindowOptions } from './hud-state-types';
 
-const HUD_WIDTH = 320;
+const HUD_WIDTH = 640;
+const HUD_HEIGHT = 236;
 
 export function useHudWindow(options: HudWindowOptions) {
   const {
@@ -15,10 +16,7 @@ export function useHudWindow(options: HudWindowOptions) {
     selectedScreen,
     selectedScreenId,
     selectedScreenPreview,
-    showSettings,
-    showProjectPicker,
     loadPreviews,
-    refreshInteraction,
   } = options;
   const desktopPlatform = capture.platform;
   const selectedScreenRegion = ref<ScreenRegion | null>(null);
@@ -61,7 +59,7 @@ export function useHudWindow(options: HudWindowOptions) {
   });
 
   const selectScreenRegion = async () => {
-    if (props.embedded) return;
+    if (props.embedded) return false;
     const linuxPortalSelection = desktopPlatform === 'linux';
     if (
       isBusy.value ||
@@ -69,7 +67,7 @@ export function useHudWindow(options: HudWindowOptions) {
       isRegionSelectionLeaving.value ||
       (!linuxPortalSelection && !selectedScreenBounds.value)
     )
-      return;
+      return false;
     const resolvedBounds = linuxPortalSelection
       ? null
       : ((await refreshSelectedScreenBounds()) ?? selectedScreenBounds.value);
@@ -79,7 +77,7 @@ export function useHudWindow(options: HudWindowOptions) {
       isRecording.value ||
       isRegionSelectionLeaving.value
     )
-      return;
+      return false;
     // Values read from Vue refs/computed values can be reactive proxies. Electron
     // IPC cannot structured-clone those proxies, so always send a plain snapshot.
     const bounds = resolvedBounds ? snapshotScreenBounds(resolvedBounds) : null;
@@ -95,7 +93,7 @@ export function useHudWindow(options: HudWindowOptions) {
         ...(bounds ? { bounds } : {}),
         region: currentRegion ? { ...currentRegion } : null,
       });
-      if (!selection) return;
+      if (!selection) return false;
       const region = selection.region;
       const selectionBounds = snapshotScreenBounds(selection.bounds);
       const isFullScreen = region.x <= 0.01 && region.y <= 0.01 && region.width >= 0.98 && region.height >= 0.98;
@@ -117,8 +115,10 @@ export function useHudWindow(options: HudWindowOptions) {
         isRegionConfirmationAnimating.value = false;
         regionConfirmationTimeout = null;
       }, 700);
+      return true;
     } catch (error) {
       errorMessage.value = error instanceof Error ? error.message : String(error);
+      return false;
     } finally {
       isRegionSelectionLeaving.value = false;
       isRegionSelectionEntering.value = true;
@@ -136,80 +136,17 @@ export function useHudWindow(options: HudWindowOptions) {
   };
 
   const activeDropdowns = ref(0);
-  // Start without an assumed size so the first HUD render also reserves the
-  // outer margin required for its border and shadow.
-  let lastHeight = 0;
-  let lastWidth = 0;
-
+  let sized = false;
   const updateWindowSize = () => {
-    if (props.embedded) return;
-    const isDropdownOpen = activeDropdowns.value > 0;
-    let targetHeight = 480;
-    if (props.preparingEditor) {
-      targetHeight = 480;
-    } else if (showSettings.value) {
-      targetHeight = 520;
-    } else if (showProjectPicker.value) {
-      targetHeight = 520;
-    } else {
-      if (activeTab.value === 'window') {
-        targetHeight = isDropdownOpen ? 660 : 500;
-      } else {
-        targetHeight = isDropdownOpen ? 640 : 480;
-      }
-    }
-
-    // Popovers are teleported and viewport-bounded; resizing the HUD horizontally
-    // makes the card jump to the right without creating usable space.
-    const targetWidth = HUD_WIDTH;
-
-    if (targetHeight > lastHeight || targetWidth > lastWidth) {
-      // Grow the Electron window instantly so transitions are not clipped
-      capture.setSize(targetWidth + 32, targetHeight + 32);
-    } else if (targetHeight < lastHeight || targetWidth < lastWidth) {
-      // Wait for the card's CSS transition (200ms) to complete before shrinking
-      const snapshotDropdownOpen = activeDropdowns.value > 0;
-      const snapshotHeight = targetHeight;
-      const snapshotWidth = targetWidth;
-      setTimeout(() => {
-        const currentDropdownOpen = activeDropdowns.value > 0;
-        let currentTargetHeight = 480;
-        if (props.preparingEditor) {
-          currentTargetHeight = 480;
-        } else if (showSettings.value) {
-          currentTargetHeight = 520;
-        } else if (showProjectPicker.value) {
-          currentTargetHeight = 520;
-        } else {
-          if (activeTab.value === 'window') {
-            currentTargetHeight = currentDropdownOpen ? 660 : 500;
-          } else {
-            currentTargetHeight = currentDropdownOpen ? 640 : 480;
-          }
-        }
-        const currentTargetWidth = HUD_WIDTH;
-
-        // Only apply if the situation hasn't changed (don't override a subsequent open)
-        if (
-          currentDropdownOpen === snapshotDropdownOpen &&
-          currentTargetHeight === snapshotHeight &&
-          currentTargetWidth === snapshotWidth
-        ) {
-          capture.setSize(snapshotWidth + 32, snapshotHeight + 32);
-        }
-      }, 200);
-    }
-    lastHeight = targetHeight;
-    lastWidth = targetWidth;
+    if (props.embedded || sized) return;
+    capture.setSize(HUD_WIDTH + 32, HUD_HEIGHT + 32);
+    sized = true;
   };
-
-  const hudHeight = computed(() => {
-    if (props.preparingEditor) return 480;
-    if (showSettings.value || showProjectPicker.value) {
-      return 520;
-    }
-    return activeTab.value === 'window' ? 500 : 480;
-  });
+  const hudHeight = computed(() => HUD_HEIGHT);
+  const resetRegion = () => {
+    selectedScreenRegion.value = null;
+    selectedScreenOverlay.value = null;
+  };
 
   const handleDropdownToggle = (isOpen: boolean) => {
     if (isOpen) {
@@ -229,7 +166,7 @@ export function useHudWindow(options: HudWindowOptions) {
       selectedScreenOverlay.value = null;
     }
     updateWindowSize();
-    void loadPreviews(activeTab.value);
+    if (!isBusy.value) void loadPreviews(activeTab.value);
   });
 
   watch(
@@ -255,16 +192,6 @@ export function useHudWindow(options: HudWindowOptions) {
     void refreshSelectedScreenBounds();
   });
 
-  // Watch settings view toggle to update window size
-  watch(showSettings, (isOpen) => {
-    updateWindowSize();
-    if (isOpen) void refreshInteraction();
-  });
-
-  watch(showProjectPicker, () => {
-    updateWindowSize();
-  });
-
   onBeforeUnmount(() => {
     screenBoundsRequest++;
     if (!props.embedded) capture.hideScreenRegionOverlay();
@@ -272,6 +199,7 @@ export function useHudWindow(options: HudWindowOptions) {
     if (regionConfirmationTimeout) clearTimeout(regionConfirmationTimeout);
   });
   return {
+    resetRegion,
     selectedScreenRegion,
     selectedScreenOverlay,
     savedScreenRegion,

@@ -450,6 +450,7 @@
     "includeAudioDesc": "将已启用的音轨添加到导出的视频中。"
   },
   "HUD": {
+    "issues": "问题",
     "inputAccessFailed": "无法请求交互访问权限。",
     "title": "Beam",
     "openProject": "打开项目",
@@ -498,7 +499,16 @@
     "startQuickSnip": "开始快速录制",
     "stopQuickSnip": "停止快速录制",
     "screenshot": "截图",
-    "instant": "即时"
+    "instant": "即时",
+    "recorder": "录制",
+    "fullScreen": "全屏",
+    "region": "区域",
+    "chooseCaptureSource": "选择捕获来源",
+    "camera": "摄像头",
+    "microphone": "麦克风",
+    "teleprompter": "提词器",
+    "screenshotDescription": "选择要捕获的屏幕、区域或窗口。",
+    "back": "返回"
   },
   "EditorPreparingHud": {
     "title": "正在准备编辑器",

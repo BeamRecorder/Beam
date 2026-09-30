@@ -32,8 +32,8 @@ describe('standalone mascot laboratory', () => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
-  const setup = () => {
-    const wrapper = mount(MascotLab);
+  const setup = (embedded = false) => {
+    const wrapper = mount(MascotLab, { props: { embedded } });
     wrappers.push(wrapper);
     return wrapper;
   };
@@ -50,6 +50,14 @@ describe('standalone mascot laboratory', () => {
     expect(wrapper.findAll('.state-panel button')).toHaveLength(14);
     expect(wrapper.findAll('.step')).toHaveLength(4);
     expect(wrapper.html()).not.toMatch(/NaN|Infinity/);
+    expect(wrapper.get('.brand').attributes('href')).toBe('./mascot.html');
+  });
+  it('keeps the native panel entry when embedded while preserving lab controls', async () => {
+    const wrapper = setup(true);
+    expect(wrapper.get('.brand').attributes('href')).toBeUndefined();
+    expect(wrapper.findAll('.state-panel button')).toHaveLength(14);
+    await click(wrapper, 'Clin d’œil');
+    expect(wrapper.find('[data-mascot-preview] svg').attributes('aria-label')).toContain('Clin d’œil');
   });
   it('selects a state, pauses with the keyboard, and steps through the catalogue', async () => {
     const wrapper = setup();

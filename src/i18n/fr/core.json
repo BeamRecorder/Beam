@@ -450,6 +450,7 @@
     "includeAudioDesc": "Ajoute les pistes audio activées à la vidéo exportée."
   },
   "HUD": {
+    "issues": "Problèmes",
     "inputAccessFailed": "Impossible de demander l’accès aux interactions.",
     "title": "Beam",
     "openProject": "Ouvrir un projet",
@@ -498,7 +499,16 @@
     "linuxRequirementsTitle": "Configuration Linux requise",
     "recordingErrorTitle": "Erreur d’enregistrement",
     "screenshot": "Capture d’écran",
-    "instant": "Instantané"
+    "instant": "Instantané",
+    "recorder": "Enregistrer",
+    "fullScreen": "Plein écran",
+    "region": "Région",
+    "chooseCaptureSource": "Choisir une source de capture",
+    "camera": "Caméra",
+    "microphone": "Microphone",
+    "teleprompter": "Téléprompteur",
+    "screenshotDescription": "Choisissez un écran, une région ou une fenêtre à capturer.",
+    "back": "Retour"
   },
   "EditorPreparingHud": {
     "title": "Préparation de l’éditeur",

@@ -4,6 +4,7 @@ const readline = require('node:readline');
 const { spawn } = require('node:child_process');
 const { buildCaptureEngine, cargoAvailable, cargoBuildArguments, runCommand } = require('../native/artifacts.cjs');
 const { downloadNativeFiles, requiredNativeFiles } = require('../native/download.cjs');
+const { x11LaunchArguments } = require('../../electron/lifecycle/linux-display-backend.cjs');
 
 const applicationRoot = path.join(__dirname, '../..');
 
@@ -44,9 +45,9 @@ async function resolveDevelopmentEngine({
   const required = requiredNativeFiles(root, version, platform, arch);
   if (!required) throw new Error(`Beam has no capture-engine build for ${platform}/${arch}`);
   if (hasCargo()) {
-    await build({ platform });
+    const targetDirectory = await build({ platform, cwd: root });
     const extension = platform === 'win32' ? '.exe' : '';
-    return path.join(root, 'target', 'debug', `capture-engine${extension}`);
+    return path.join(targetDirectory, 'debug', `capture-engine${extension}`);
   }
   if (missingFiles(required, existsSync).length === 0) return required[0].destination;
   let approved = false;
@@ -63,11 +64,14 @@ async function resolveDevelopmentEngine({
   return required[0].destination;
 }
 
-async function startElectron(executable, { root = applicationRoot, spawnImpl = spawn, env = process.env } = {}) {
+async function startElectron(
+  executable,
+  { root = applicationRoot, spawnImpl = spawn, env = process.env, platform = process.platform } = {},
+) {
   const electronCli = require.resolve('electron/cli.js');
   await runCommand(
     process.execPath,
-    [electronCli, '.'],
+    [electronCli, ...(platform === 'linux' ? x11LaunchArguments(['.']) : ['.'])],
     { cwd: root, env: { ...env, BEAM_CAPTURE_ENGINE: executable, BEAM_DEVELOPMENT_INSTANCE: '1' } },
     spawnImpl,
   );

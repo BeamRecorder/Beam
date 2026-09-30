@@ -56,6 +56,7 @@ function createScreenRegionOverlayWindow({
 }) {
   let window = null;
   let ready = false;
+  let rendererReady = false;
   let pending = null;
   let current = null;
   let regionChangeListener = null;
@@ -71,11 +72,11 @@ function createScreenRegionOverlayWindow({
   };
 
   const send = (options) => {
-    if (!window || window.isDestroyed() || !ready) return;
+    if (!window || window.isDestroyed() || !ready || !rendererReady) return;
     window.webContents.send('screen-region:configure', options);
   };
   const present = () => {
-    if (!window || window.isDestroyed() || !ready || !current) return;
+    if (!window || window.isDestroyed() || !ready || !rendererReady || !current) return;
     if (current.mode === 'select') {
       window.show();
       window.focus();
@@ -85,10 +86,11 @@ function createScreenRegionOverlayWindow({
     }
   };
 
-  const ensureWindow = () => {
+  const ensureWindow = (bounds) => {
     if (!canAcceptWork()) throw new Error('Cannot create a screen overlay while Beam is shutting down');
     if (window && !window.isDestroyed()) return window;
-    window = new BrowserWindow({
+    const target = new BrowserWindow({
+      ...bounds,
       frame: false,
       transparent: true,
       backgroundColor: '#00000000',
@@ -106,6 +108,8 @@ function createScreenRegionOverlayWindow({
         sandbox: false,
       },
     });
+    window = target;
+    rendererReady = false;
     window.setContentProtection(true);
     if (platform === 'darwin') {
       window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
@@ -118,11 +122,14 @@ function createScreenRegionOverlayWindow({
       });
     }
     window.once('ready-to-show', () => {
+      if (window !== target || target.isDestroyed()) return;
       ready = true;
       if (current) send(current);
       present();
     });
     window.on('closed', () => {
+      if (window !== target) return;
+      rendererReady = false;
       ready = false;
       window = null;
       if (pending) {
@@ -136,8 +143,9 @@ function createScreenRegionOverlayWindow({
   };
 
   const configure = (options, interactive, parentWindow = null) => {
-    const target = ensureWindow();
-    current = { ...options, bounds: finiteBounds(options.bounds), mode: interactive ? 'select' : 'record' };
+    const bounds = finiteBounds(options.bounds);
+    const target = ensureWindow(bounds);
+    current = { ...options, bounds, mode: interactive ? 'select' : 'record' };
     target.setParentWindow(interactive && platform === 'linux' ? parentWindow : null);
     target.setBounds(current.bounds);
     target.setIgnoreMouseEvents(!interactive);
@@ -146,6 +154,13 @@ function createScreenRegionOverlayWindow({
   };
 
   return {
+    markRendererReady(sender) {
+      if (!window || window.isDestroyed() || window.webContents !== sender) return false;
+      rendererReady = true;
+      if (current) send(current);
+      present();
+      return true;
+    },
     select(options, parentWindow = null) {
       if (pending) {
         pending.resolve(null);

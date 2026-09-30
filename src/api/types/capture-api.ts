@@ -1,3 +1,4 @@
+import type { HudPanelApi } from './hud-panel';
 import type { InputAccessStatus } from './input-access';
 export type { InputAccessStatus } from './input-access';
 import type { ScreenshotApi } from './screenshot';
@@ -88,7 +89,7 @@ export interface CaptureApi {
   getSourcePreview(request: CaptureSourcePreviewRequest): Promise<CaptureSourcePreview>;
 }
 
-export interface DesktopCaptureApi extends CaptureApi, ScreenshotApi, QuickSnipApi {
+export interface DesktopCaptureApi extends CaptureApi, ScreenshotApi, QuickSnipApi, HudPanelApi {
   close(): void;
   quit(): void;
   minimize(): void;
@@ -120,6 +121,7 @@ export interface DesktopCaptureApi extends CaptureApi, ScreenshotApi, QuickSnipA
   onRecorderLauncherContext(listener: (context: RecorderLauncherContext | null) => void): () => void;
   setPosition(x: number, y: number): void;
   setSize(width: number, height: number): void;
+  resizeHudPopover(height: number): Promise<number | null>;
   setSizeSmooth(width: number, height: number): void;
   setWindowVisible(visible: boolean): void;
   setInteractive(overInteractive: boolean): void;
@@ -134,6 +136,7 @@ export interface DesktopCaptureApi extends CaptureApi, ScreenshotApi, QuickSnipA
   onScreenRegionConfigure(
     listener: (options: ScreenRegionOverlayOptions & { mode?: 'select' | 'record' }) => void,
   ): () => void;
+  notifyScreenRegionReady(): void;
   confirmScreenRegion(region: ScreenRegion): void;
   updateScreenRegion(region: ScreenRegion): void;
   cancelScreenRegion(): void;

@@ -1,20 +1,24 @@
 <script setup lang="ts">
-import { defineAsyncComponent } from 'vue';
+import { computed, onBeforeUnmount, ref } from 'vue';
+import { Camera, CameraOff, ScrollText } from '@lucide/vue';
 import type { EditorLoadingProgress, RecorderLauncherContext } from '~/api/types/capture-api';
 import Button from '~/ui/button/Button.vue';
 import Select from '~/ui/select/Select.vue';
-import ButtonGroup from '~/ui/button/ButtonGroup.vue';
-import Skeleton from '~/ui/skeleton/Skeleton.vue';
 import TopbarHUD from './TopbarHUD.vue';
-import SourceSelect from './SourceSelect.vue';
-import { Monitor, Layout, ArrowUpRight, Video, VideoOff, Crop, ScrollText, Check } from '@lucide/vue';
+import CaptureModeGroup from './CaptureModeGroup.vue';
+import HudCaptureCards from './HudCaptureCards.vue';
+import HudSourcePicker from './HudSourcePicker.vue';
 import AudioIconMeter from './audio/AudioIconMeter.vue';
 import EditorPreparingHud from './EditorPreparingHud.vue';
 import InteractionAccessControl from './interactions/InteractionAccessControl.vue';
 import HudIssue from './HudIssue.vue';
+import HudIssuesPopover from './HudIssuesPopover.vue';
 import { useHudState } from './useHudState';
 import CapturePresetSelect from './CapturePresetSelect.vue';
 import KeyboardChip from '~/ui/Kbd/KeyboardChip.vue';
+import type { HudCaptureTarget } from './hud-state-types';
+import { useHudPopoverViewport } from './useHudPopoverViewport';
+
 const props = withDefaults(
   defineProps<{
     embedded?: boolean;
@@ -32,402 +36,257 @@ const props = withDefaults(
     recorderLauncherContext: null,
   },
 );
-
-const emit = defineEmits(['start-recording', 'stop-recording', 'open-project', 'focus-feature', 'dismiss-launcher']);
-const ProjectPicker = defineAsyncComponent(() => import('../projects/ProjectPicker.vue'));
-const HudPreferences = defineAsyncComponent(() => import('./settings/HudPreferences.vue'));
-
+const emit = defineEmits([
+  'start-recording',
+  'stop-recording',
+  'open-project',
+  'focus-feature',
+  'dismiss-launcher',
+  'popover-toggle',
+]);
+const popoverViewport = useHudPopoverViewport(props.embedded);
+const presetError = ref('');
 const {
   captureMode,
   modeShortcut,
   t,
   tPrefs,
-  desktopPlatform,
   activeTab,
   isRecording,
   isBusy,
-  sources,
-  sourceDiscoveryCompleted,
-  showSettings,
-  settingsView,
-  showProjectPicker,
-  countdownSeconds,
-  recordingBarVisibility,
-  interactionAccess,
-  hudIssues,
-  windowPreviews,
-  screenPreviews,
-  windowPreviewsLoading,
-  screenPreviewsLoading,
-  selectedSourceId,
+  errorMessage,
   cameraOptions,
   selectedCameraId,
   micOptions,
   selectedMicId,
-  isTeleprompterVisible,
-  selectedScreenId,
   systemAudioMode,
+  systemAudioOptions,
   micLevel,
   systemAudioLevel,
-  displaySources,
-  hasSelectedCaptureSource,
-  selectedScreenBounds,
-  selectedScreenRegion,
+  isTeleprompterVisible,
+  interactionAccess,
+  hudIssues,
   isRegionSelectionLeaving,
   isRegionSelectionEntering,
-  isRegionConfirmationAnimating,
-  activeDropdowns,
   hudHeight,
+  windowPreviewsLoading,
+  screenPreviewsLoading,
+  sourceChoices,
+  captureTarget,
+  sourcePicker,
+  choosingSource,
+  chooseCapture,
+  selectCaptureSource,
+  activeDropdowns,
   handleDropdownToggle,
-  handleSourceDropdownToggle,
-  selectScreenRegion,
-  systemAudioOptions,
-  recordingTime,
-  authorizeInteractionAccess,
   handleHudIssueAction,
-  toggleRecording,
+  authorizeInteractionAccess,
   toggleTeleprompter,
   closeApp,
   minimizeApp,
-  openProjectPicker,
-  closeProjectPicker,
-  handleTopbarBack,
-  openProject,
+  openPanel,
 } = useHudState(props, emit);
+const issues = computed(() => {
+  const rows = hudIssues.value.filter((issue) => issue.tone !== 'success');
+  if (props.externalError && errorMessage.value && props.externalError !== errorMessage.value) {
+    rows.push({
+      id: 'internal-error',
+      title: t('recordingErrorTitle'),
+      details: [errorMessage.value],
+      tone: 'error',
+      copyText: errorMessage.value,
+    });
+  }
+  for (const [id, message] of [
+    ['preset', presetError.value],
+    ['popover', popoverViewport.error.value],
+  ] as const) {
+    if (message) rows.push({ id, title: t('issues'), details: [message], tone: 'error', copyText: message });
+  }
+  return rows;
+});
+const captureDisabled = computed(
+  () => isBusy.value || choosingSource.value || isRecording.value || interactionAccess.requesting.value,
+);
+const togglePopover = (opened: boolean) => {
+  handleDropdownToggle(opened);
+  emit('popover-toggle', activeDropdowns.value > 0);
+};
+onBeforeUnmount(() => emit('popover-toggle', false));
+const choose = (target: HudCaptureTarget) => {
+  emit('focus-feature', 'source');
+  if (!props.embedded) void chooseCapture(target);
+};
 </script>
 
 <template>
   <div
     class="hud-wrapper"
-    :class="[
-      activeTab,
-      {
-        embedded,
-        'settings-open': showSettings,
-        'dropdown-open': activeDropdowns > 0,
-        'region-selection-leaving': isRegionSelectionLeaving,
-        'region-selection-entering': isRegionSelectionEntering,
-      },
-    ]"
-    :style="embedded ? {} : { height: `${hudHeight}px` }"
+    :class="{
+      embedded,
+      'region-selection-leaving': isRegionSelectionLeaving,
+      'region-selection-entering': isRegionSelectionEntering,
+    }"
+    :style="{ height: `${hudHeight}px` }"
   >
     <TopbarHUD
       v-if="!embedded || showTopbar"
-      :title="
-        preparingEditor
-          ? t('preparingEditor')
-          : showProjectPicker
-            ? t('openProject')
-            : showSettings
-              ? settingsView === 'shortcuts'
-                ? tPrefs('keyboardShortcuts')
-                : settingsView === 'about'
-                  ? tPrefs('about')
-                  : tPrefs('preferences')
-              : t('title')
-      "
-      :show-back="!preparingEditor && (showProjectPicker || showSettings)"
-      :show-settings="!preparingEditor && !showSettings && !showProjectPicker"
-      :is-recording="isRecording"
-      v-model:mode="captureMode"
-      :mode-disabled="isBusy || preparingEditor || Boolean(recorderLauncherContext)"
-      @back="handleTopbarBack"
-      @minimize="minimizeApp"
+      :title="preparingEditor ? t('preparingEditor') : undefined"
+      :disabled="isBusy || preparingEditor"
+      :show-settings="!preparingEditor"
+      :show-projects="!preparingEditor"
+      :show-mascot="!embedded && !preparingEditor"
+      @open-mascot="openPanel('mascot')"
       @open-settings="
-        showSettings = true;
+        openPanel('settings');
         emit('focus-feature', 'topbar');
       "
+      @open-projects="
+        openPanel('projects');
+        emit('focus-feature', 'projects');
+      "
+      @minimize="minimizeApp"
       @close="closeApp"
-    />
-
-    <Transition name="hud-view" mode="out-in">
-      <EditorPreparingHud v-if="preparingEditor" key="editor-preparing" :progress="editorLoadingProgress" />
-
-      <!-- Project Picker View -->
-      <ProjectPicker
-        v-else-if="showProjectPicker"
-        key="project-picker"
-        @back="closeProjectPicker"
-        @open-project="openProject"
-        @toggle-popover="handleDropdownToggle"
-      />
-
-      <HudPreferences
-        v-else-if="showSettings"
-        key="settings"
-        v-model:view="settingsView"
-        :countdown-seconds="countdownSeconds"
-        :recording-bar-visibility="recordingBarVisibility"
-        :input-access="interactionAccess.status.value"
-        :record-interactions="interactionAccess.enabled.value"
-        :requesting-input-access="interactionAccess.requesting.value"
-        :platform="desktopPlatform"
-        @update:countdown-seconds="countdownSeconds = $event"
-        @update:recording-bar-visibility="recordingBarVisibility = $event"
-        @update:record-interactions="interactionAccess.setEnabled"
-        @request-input-access="authorizeInteractionAccess"
-        @close="showSettings = false"
-      />
-
-      <!-- Main HUD Form -->
-      <div v-else key="hud" class="hud-body">
-        <!-- Tabs (Screen / Window) -->
-        <ButtonGroup class="mode-tabs">
-          <Button
-            :class="{ active: activeTab === 'screen' }"
-            variant="tab"
-            @click="
-              activeTab = 'screen';
+    >
+      <template #issues>
+        <HudIssuesPopover :count="issues.length" @toggle="togglePopover">
+          <HudIssue v-for="issue in issues" :key="issue.id" :issue="issue" @action="handleHudIssueAction">
+            <template v-if="issue.id === 'interaction-access'" #action>
+              <InteractionAccessControl
+                :status="interactionAccess.status.value"
+                :enabled="interactionAccess.enabled.value"
+                :requesting="interactionAccess.requesting.value"
+                :enable-label="t('authorizeInteractions')"
+                :enabling-label="t('authorizingInteractions')"
+                :checking-label="tPrefs('checkingAccess')"
+                :unavailable-label="tPrefs('accessUnavailable')"
+                @request="authorizeInteractionAccess"
+                @update:enabled="interactionAccess.setEnabled"
+              />
+            </template>
+          </HudIssue>
+        </HudIssuesPopover>
+      </template>
+    </TopbarHUD>
+    <EditorPreparingHud v-if="preparingEditor" :progress="editorLoadingProgress" />
+    <div v-else class="hud-body">
+      <div class="hud-layout">
+        <section class="capture-section">
+          <CaptureModeGroup
+            v-model="captureMode"
+            class="hud-modes"
+            full
+            labels
+            stacked
+            :disabled="isBusy || choosingSource || Boolean(recorderLauncherContext)"
+            @update:model-value="
+              sourcePicker = null;
               emit('focus-feature', 'tabs');
             "
-          >
-            <template #icon><Monitor class="btn-icon" /></template>
-            {{ t('screen') }}
-          </Button>
-          <Button
-            :class="{ active: activeTab === 'window' }"
-            variant="tab"
-            @click="
-              activeTab = 'window';
-              emit('focus-feature', 'tabs');
-            "
-          >
-            <template #icon><Layout class="btn-icon" /></template>
-            {{ t('window') }}
-          </Button>
-        </ButtonGroup>
-
-        <Transition name="fade-slide" mode="out-in">
-          <CapturePresetSelect :key="captureMode" v-if="captureMode === 'instant'" kind="video" :disabled="isBusy" />
-        </Transition>
-        <div class="form-inputs-area">
-          <Transition name="fade-slide" mode="out-in">
-            <div :key="`${activeTab}:${captureMode}`" class="tab-content-container">
-              <!-- Linux uses the system Portal picker at recording start, but region selection remains available here. -->
-              <template v-if="activeTab === 'window'">
-                <template v-if="desktopPlatform !== 'linux'">
-                  <div class="device-row">
-                    <Layout class="device-icon" />
-                    <SourceSelect
-                      v-model="selectedSourceId"
-                      kind="window"
-                      :sources="sources"
-                      :previews="windowPreviews"
-                      :prefer-native-sources="desktopPlatform === 'darwin'"
-                      :loading="windowPreviewsLoading"
-                      :disabled="isRecording || isBusy"
-                      @toggle="
-                        handleSourceDropdownToggle('window', $event);
-                        if ($event) emit('focus-feature', 'source');
-                      "
-                    />
-                  </div>
-                </template>
-              </template>
-
-              <div v-else class="device-row">
-                <Monitor class="device-icon" />
-                <div class="screen-select-controls">
-                  <SourceSelect
-                    v-if="desktopPlatform !== 'linux'"
-                    v-model="selectedScreenId"
-                    kind="screen"
-                    :sources="sources"
-                    :previews="screenPreviews"
-                    :loading="screenPreviewsLoading"
-                    :disabled="isRecording || isBusy || displaySources.length === 0"
-                    @toggle="
-                      handleSourceDropdownToggle('screen', $event);
-                      if ($event) emit('focus-feature', 'source');
-                    "
-                  />
-                  <Button
-                    :variant="selectedScreenRegion ? 'primary' : 'secondary'"
-                    size="sm"
-                    :icon-only="desktopPlatform !== 'linux'"
-                    :block="desktopPlatform === 'linux'"
-                    :icon="isRegionConfirmationAnimating ? Check : Crop"
-                    :aria-label="selectedScreenRegion ? t('screenRegionSelected') : t('selectScreenRegion')"
-                    :tooltip="selectedScreenRegion ? t('editScreenRegion') : t('selectScreenRegion')"
-                    :disabled="isRecording || isBusy || (desktopPlatform !== 'linux' && !selectedScreenBounds)"
-                    :class="{
-                      'screen-region-confirmed': Boolean(selectedScreenRegion),
-                      'screen-region-checkmark': isRegionConfirmationAnimating,
-                    }"
-                    @click="
-                      selectScreenRegion();
-                      emit('focus-feature', 'source');
-                    "
-                  >
-                    <template v-if="desktopPlatform === 'linux'">
-                      {{ selectedScreenRegion ? t('editScreenRegion') : t('selectScreenRegion') }}
-                    </template>
-                  </Button>
-                </div>
-              </div>
-
-              <!-- Audio and input devices -->
-              <div v-if="captureMode !== 'screenshot'" class="selectors-stack">
-                <div class="device-row">
-                  <AudioIconMeter
-                    class="device-icon"
-                    kind="system"
-                    :enabled="systemAudioMode === 'on'"
-                    :level="systemAudioLevel"
-                  />
-                  <Select
-                    v-model="systemAudioMode"
-                    :options="systemAudioOptions"
-                    :disabled="isRecording || isBusy"
-                    @toggle="
-                      handleDropdownToggle($event);
-                      if ($event) emit('focus-feature', 'systemAudio');
-                    "
-                  />
-                </div>
-
-                <div class="device-row">
-                  <AudioIconMeter
-                    class="device-icon"
-                    kind="mic"
-                    :enabled="selectedMicId !== 'no-audio'"
-                    :level="micLevel"
-                  />
-                  <div class="mic-select-controls">
-                    <div v-if="isBusy && sources.length === 0">
-                      <Skeleton variant="radial" height="2.75rem" radius="var(--radius-md)" />
-                    </div>
-                    <Select
-                      v-else
-                      v-model="selectedMicId"
-                      :options="micOptions"
-                      :disabled="isRecording || isBusy"
-                      @toggle="
-                        handleDropdownToggle($event);
-                        if ($event) emit('focus-feature', 'mic');
-                      "
-                    />
-                    <Button
-                      :variant="isTeleprompterVisible ? 'primary' : 'secondary'"
-                      size="sm"
-                      icon-only
-                      :icon="ScrollText"
-                      :aria-label="isTeleprompterVisible ? t('closeTeleprompter') : t('openTeleprompter')"
-                      :tooltip="isTeleprompterVisible ? t('closeTeleprompter') : t('openTeleprompter')"
-                      :disabled="isBusy"
-                      :class="{ 'teleprompter-active': isTeleprompterVisible }"
-                      @click="
-                        toggleTeleprompter();
-                        emit('focus-feature', 'teleprompter');
-                      "
-                    />
-                  </div>
-                </div>
-
-                <div class="device-row">
-                  <component
-                    :is="selectedCameraId === 'off' ? VideoOff : Video"
-                    class="device-icon"
-                    :class="{ 'is-unavailable': selectedCameraId === 'off' }"
-                  />
-                  <div v-if="isBusy && sources.length === 0">
-                    <Skeleton variant="linear" height="2.75rem" radius="var(--radius-md)" />
-                  </div>
-                  <Select
-                    v-else
-                    v-model="selectedCameraId"
-                    :options="cameraOptions"
-                    :disabled="isRecording || isBusy"
-                    @toggle="
-                      handleDropdownToggle($event);
-                      if ($event) emit('focus-feature', 'camera');
-                    "
-                  />
-                </div>
-              </div>
-            </div>
-          </Transition>
-        </div>
-
-        <div class="recording-action-stack" :class="{ 'has-issues': hudIssues.length > 0 }">
-          <TransitionGroup v-if="hudIssues.length > 0" name="hud-issue" tag="div" class="hud-issues">
-            <HudIssue v-for="issue in hudIssues" :key="issue.id" :issue="issue" @action="handleHudIssueAction">
-              <template v-if="issue.id === 'interaction-access'" #action>
-                <InteractionAccessControl
-                  class="hud-issue-action"
-                  :status="interactionAccess.status.value"
-                  :enabled="interactionAccess.enabled.value"
-                  :requesting="interactionAccess.requesting.value"
-                  :enable-label="t('authorizeInteractions')"
-                  :enabling-label="t('authorizingInteractions')"
-                  :checking-label="tPrefs('checkingAccess')"
-                  :unavailable-label="tPrefs('accessUnavailable')"
-                  @request="authorizeInteractionAccess"
-                  @update:enabled="interactionAccess.setEnabled"
-                />
-              </template>
-            </HudIssue>
-          </TransitionGroup>
-
-          <!-- Action Button (Centered Capsule) -->
-          <div class="action-section">
-            <Button
-              :variant="isRecording ? 'outline' : 'primary'"
-              size="md"
-              :block="true"
-              class="record-btn-override"
-              :class="{ recording: isRecording }"
-              :disabled="
-                isBusy ||
-                interactionAccess.requesting.value ||
-                (!isRecording && sourceDiscoveryCompleted && !hasSelectedCaptureSource)
-              "
-              @click="
-                toggleRecording();
-                emit('focus-feature', 'record');
-              "
+          />
+          <HudSourcePicker
+            v-if="sourcePicker"
+            :kind="sourcePicker"
+            :previews="sourceChoices"
+            :loading="choosingSource || (activeTab === 'screen' ? screenPreviewsLoading : windowPreviewsLoading)"
+            :disabled="captureDisabled"
+            @select="selectCaptureSource"
+            @back="sourcePicker = null"
+          />
+          <HudCaptureCards v-else :selected="captureTarget" :disabled="captureDisabled" @choose="choose" />
+        </section>
+        <aside class="hud-devices" :class="{ instant: captureMode === 'instant' }">
+          <template v-if="captureMode !== 'screenshot'">
+            <Select
+              size="compact"
+              :option-height="28"
+              @toggle="togglePopover"
+              v-model="selectedCameraId"
+              :options="cameraOptions"
+              :label="t('camera')"
+              :disabled="captureDisabled"
+              @update:model-value="emit('focus-feature', 'camera')"
             >
-              <template #icon>
-                <span class="pulse-dot" v-if="isRecording"></span>
-              </template>
-              {{
-                isBusy
-                  ? t('pleaseWait')
-                  : isRecording
-                    ? t('stopRecording', { time: recordingTime })
-                    : captureMode === 'screenshot'
-                      ? t('screenshot')
-                      : captureMode === 'instant'
-                        ? t('instant')
-                        : t('startRecording')
-              }}
-            </Button>
-          </div>
-        </div>
-
-        <div v-if="captureMode !== 'studio'" class="mode-shortcut">
-          <span>{{ t('quickSnip') }}</span
-          ><KeyboardChip :shortcut="modeShortcut" />
-        </div>
-        <!-- Open existing project button (Subtle style) -->
-        <div class="web-link-container">
-          <Button
-            variant="link"
-            size="sm"
-            class="web-link-text project-btn"
-            :icon="ArrowUpRight"
-            @click="
-              openProjectPicker();
-              emit('focus-feature', 'projects');
-            "
-          >
-            {{ t('openExistingProject') }}
-          </Button>
-        </div>
+              <template #icon
+                ><component
+                  :is="selectedCameraId === 'off' ? CameraOff : Camera"
+                  :size="14"
+                  :class="{ 'is-unavailable': selectedCameraId === 'off' }"
+              /></template>
+            </Select>
+            <Select
+              size="compact"
+              :option-height="28"
+              @toggle="togglePopover"
+              v-model="selectedMicId"
+              :options="micOptions"
+              :label="t('microphone')"
+              :disabled="captureDisabled"
+              @update:model-value="emit('focus-feature', 'mic')"
+            >
+              <template #icon
+                ><AudioIconMeter
+                  kind="mic"
+                  :enabled="selectedMicId !== 'no-audio'"
+                  :level="micLevel"
+                  :style="{ width: '14px', height: '14px' }"
+              /></template>
+            </Select>
+            <Select
+              size="compact"
+              :option-height="28"
+              @toggle="togglePopover"
+              v-model="systemAudioMode"
+              :options="systemAudioOptions"
+              :label="t('systemAudio')"
+              :disabled="captureDisabled"
+              @update:model-value="emit('focus-feature', 'systemAudio')"
+            >
+              <template #icon
+                ><AudioIconMeter
+                  kind="system"
+                  :enabled="systemAudioMode === 'on'"
+                  :level="systemAudioLevel"
+                  :style="{ width: '14px', height: '14px' }"
+              /></template>
+            </Select>
+            <div class="device-spacer" />
+            <CapturePresetSelect
+              v-if="captureMode === 'instant'"
+              kind="video"
+              compact
+              @toggle="togglePopover"
+              @error="presetError = $event"
+              :disabled="captureDisabled"
+            />
+            <Button
+              variant="secondary"
+              size="sm"
+              block
+              :icon="ScrollText"
+              class="teleprompter-button"
+              :class="{ active: isTeleprompterVisible }"
+              :aria-pressed="isTeleprompterVisible"
+              :disabled="isBusy || choosingSource"
+              @click="
+                toggleTeleprompter();
+                emit('focus-feature', 'teleprompter');
+              "
+              >{{ t('teleprompter') }}</Button
+            >
+          </template>
+          <template v-else>
+            <p class="mode-description">{{ t('screenshotDescription') }}</p>
+            <div class="device-spacer" />
+            <div class="mode-shortcut">
+              <span>{{ t('quickSnip') }}</span
+              ><KeyboardChip :shortcut="modeShortcut" />
+            </div>
+          </template>
+        </aside>
       </div>
-    </Transition>
+    </div>
   </div>
 </template>
 
 <style scoped src="./hud-shell.css"></style>
-<style scoped src="./hud-form.css"></style>

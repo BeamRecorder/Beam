@@ -26,7 +26,7 @@ describe('AppearanceSettings.vue', () => {
         theme: 'light',
         primaryColor: '#ff5a1f',
         secondaryColor: '#6366f1',
-        radiusPx: 10,
+        radiusPx: 7,
         isPillRadius: false,
         surfaceTone: 'default',
         activePresetId: 'beam-sunset',
@@ -293,7 +293,7 @@ describe('AppearanceSettings.vue', () => {
     await resetBtn.trigger('click');
 
     expect(store.primaryColor).toBe('#ff5a1f');
-    expect(store.radiusPx).toBe(10);
+    expect(store.radiusPx).toBe(7);
     expect(store.surfaceTone).toBe('default');
   });
 });

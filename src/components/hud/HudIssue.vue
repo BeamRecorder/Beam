@@ -4,6 +4,8 @@ import { AlertCircle, AlertTriangle, CheckCircle2, Info } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import CopyButton from '~/ui/button/CopyButton.vue';
 import type { HudIssueModel } from './hud-issue-types';
+import { useTranslate } from '~/i18n/useTranslate';
+const { t } = useTranslate('HUD');
 
 const props = defineProps<{ issue: HudIssueModel }>();
 const emit = defineEmits<{ action: [id: string] }>();
@@ -31,18 +33,8 @@ const icon = computed(() => {
       </ul>
     </div>
     <slot name="action">
-      <CopyButton
-        v-if="issue.copyText"
-        :text="issue.copyText"
-        display="icon"
-        variant="secondary"
-        size="xs"
-        class="hud-issue-action"
-        :label="issue.copyLabel"
-        :copied-label="issue.copiedLabel"
-      />
       <Button
-        v-else-if="issue.actionLabel"
+        v-if="issue.actionLabel"
         variant="secondary"
         size="xs"
         class="hud-issue-action"
@@ -53,6 +45,15 @@ const icon = computed(() => {
         {{ issue.actionLabel }}
       </Button>
     </slot>
+    <CopyButton
+      :text="issue.copyText ?? [issue.title, ...issue.details].join('\n')"
+      display="icon"
+      variant="secondary"
+      size="xs"
+      class="hud-issue-action"
+      :label="issue.copyLabel ?? t('copyError')"
+      :copied-label="issue.copiedLabel ?? t('copied')"
+    />
   </article>
 </template>
 

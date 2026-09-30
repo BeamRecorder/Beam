@@ -76,10 +76,7 @@ describe('useHudWindow', () => {
           }
         : null,
     );
-    const showSettings = ref(false);
-    const showProjectPicker = ref(false);
     const loadPreviews = vi.fn().mockResolvedValue(undefined);
-    const refreshInteraction = vi.fn().mockResolvedValue(undefined);
     const options: HudWindowOptions = {
       props,
       activeTab,
@@ -89,10 +86,7 @@ describe('useHudWindow', () => {
       selectedScreen,
       selectedScreenId,
       selectedScreenPreview: computed(() => selectedScreenPreview.value),
-      showSettings,
-      showProjectPicker,
       loadPreviews,
-      refreshInteraction,
     };
     let api!: ReturnType<typeof useHudWindow>;
     wrapper = mount(
@@ -112,10 +106,7 @@ describe('useHudWindow', () => {
       errorMessage,
       selectedScreenId,
       selectedScreenPreview,
-      showSettings,
-      showProjectPicker,
       loadPreviews,
-      refreshInteraction,
     };
   };
 
@@ -134,112 +125,33 @@ describe('useHudWindow', () => {
     vi.useRealTimers();
   });
 
-  it('starts at the 352 by 512 native size and resizes for settings, project picker, tabs, and dropdowns', async () => {
+  it('reserves the shadow margin around the horizontal card once', () => {
     const hud = mountWindow();
+    expect(capture.setSize).toHaveBeenCalledExactlyOnceWith(672, 268);
+    expect(hud.api.hudHeight.value).toBe(236);
+    hud.api.updateWindowSize();
+    expect(capture.setSize).toHaveBeenCalledOnce();
+  });
 
-    expect(capture.setSize).toHaveBeenLastCalledWith(352, 512);
-    expect(hud.api.hudHeight.value).toBe(480);
-
-    hud.showSettings.value = true;
-    await nextTick();
-    expect(capture.setSize).toHaveBeenLastCalledWith(352, 552);
-    expect(hud.api.hudHeight.value).toBe(520);
-    expect(hud.refreshInteraction).toHaveBeenCalledOnce();
-
-    hud.showSettings.value = false;
-    await nextTick();
-    await vi.advanceTimersByTimeAsync(200);
-    expect(capture.setSize).toHaveBeenLastCalledWith(352, 512);
-
-    hud.showProjectPicker.value = true;
-    await nextTick();
-    expect(capture.setSize).toHaveBeenLastCalledWith(352, 552);
-    expect(hud.api.hudHeight.value).toBe(520);
-    hud.showProjectPicker.value = false;
-    await nextTick();
-    await vi.advanceTimersByTimeAsync(200);
-    expect(capture.setSize).toHaveBeenLastCalledWith(352, 512);
-
+  it('keeps fixed native bounds when source choices and popovers change', async () => {
+    const hud = mountWindow();
     hud.api.handleDropdownToggle(true);
-    expect(capture.setSize).toHaveBeenLastCalledWith(352, 672);
     hud.api.handleDropdownToggle(false);
-    await vi.advanceTimersByTimeAsync(200);
-    expect(capture.setSize).toHaveBeenLastCalledWith(352, 512);
     hud.api.handleDropdownToggle(false);
+    hud.activeTab.value = 'window';
+    await nextTick();
     expect(hud.api.activeDropdowns.value).toBe(0);
-
-    hud.activeTab.value = 'window';
-    await nextTick();
-    expect(hud.api.hudHeight.value).toBe(500);
     expect(hud.loadPreviews).toHaveBeenCalledWith('window');
-    expect(capture.setSize).toHaveBeenLastCalledWith(352, 532);
-    hud.api.handleDropdownToggle(true);
-    expect(capture.setSize).toHaveBeenLastCalledWith(352, 692);
-    hud.api.handleDropdownToggle(false);
-    await vi.advanceTimersByTimeAsync(200);
-    expect(capture.setSize).toHaveBeenLastCalledWith(352, 532);
+    expect(capture.setSize).toHaveBeenCalledOnce();
   });
 
-  it.each([
-    ['preparing editor', 'preparing'] as const,
-    ['settings', 'settings'] as const,
-    ['project picker', 'project'] as const,
-    ['window tab', 'window'] as const,
-    ['screen tab', 'screen'] as const,
-  ])('revalidates a delayed shrink against the current %s state', async (_label, view) => {
+  it('keeps the loading card interactive without changing native bounds', async () => {
     const hud = mountWindow();
-    hud.api.handleDropdownToggle(true);
-    const previousCalls = capture.setSize.mock.calls.length;
-
-    if (view === 'preparing') {
-      hud.props.preparingEditor = true;
-      await nextTick();
-      expect(capture.setInteractive).toHaveBeenCalledWith(true);
-    } else if (view === 'settings') {
-      hud.showSettings.value = true;
-      await nextTick();
-    } else if (view === 'project') {
-      hud.showProjectPicker.value = true;
-      await nextTick();
-    } else if (view === 'window') {
-      hud.activeTab.value = 'window';
-      await nextTick();
-      hud.api.handleDropdownToggle(false);
-    } else {
-      hud.api.handleDropdownToggle(false);
-    }
-
-    const expectedHeight = view === 'settings' || view === 'project' ? 552 : view === 'window' ? 532 : 512;
-    await vi.advanceTimersByTimeAsync(200);
-    expect(capture.setSize.mock.calls.length).toBeGreaterThan(previousCalls);
-    expect(capture.setSize).toHaveBeenLastCalledWith(352, expectedHeight);
-  });
-
-  it('skips stale delayed shrinks after a dropdown reopens or the tab changes', async () => {
-    const hud = mountWindow();
-    hud.api.handleDropdownToggle(true);
-    hud.api.handleDropdownToggle(false);
-    hud.api.handleDropdownToggle(true);
-    const callsAfterReopen = capture.setSize.mock.calls.length;
-    await vi.advanceTimersByTimeAsync(200);
-    expect(capture.setSize.mock.calls.length).toBe(callsAfterReopen);
-    expect(capture.setSize).toHaveBeenLastCalledWith(352, 672);
-
-    hud.api.handleDropdownToggle(false);
-    hud.activeTab.value = 'window';
+    hud.props.preparingEditor = true;
     await nextTick();
-    const callsAfterTabChange = capture.setSize.mock.calls.length;
-    await vi.advanceTimersByTimeAsync(200);
-    expect(capture.setSize.mock.calls.length).toBe(callsAfterTabChange);
-    expect(capture.setSize).toHaveBeenLastCalledWith(352, 532);
-
-    hud.api.handleDropdownToggle(true);
-    hud.api.handleDropdownToggle(false);
-    hud.api.handleDropdownToggle(true);
-    const callsAfterWindowDropdownReopens = capture.setSize.mock.calls.length;
-    await vi.advanceTimersByTimeAsync(200);
-    expect(capture.setSize.mock.calls.length).toBe(callsAfterWindowDropdownReopens);
-    expect(capture.setSize).toHaveBeenLastCalledWith(352, 692);
+    expect(capture.setInteractive).toHaveBeenCalledWith(true);
+    expect(hud.api.hudHeight.value).toBe(236);
+    expect(capture.setSize).toHaveBeenCalledOnce();
   });
 
   it('keeps embedded HUDs out of native window sizing and region selection', async () => {

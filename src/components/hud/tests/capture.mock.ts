@@ -2,6 +2,10 @@ import { vi } from 'vitest';
 import type { ScreenRegionSelectionOptions, ScreenRegionSelectionResult } from '../../../api/types/screen-region';
 
 export const captureMock = {
+  openHudSettings: vi.fn().mockResolvedValue(true),
+  openHudProjects: vi.fn().mockResolvedValue(true),
+  openHudMascot: vi.fn().mockResolvedValue(true),
+  notifyScreenRegionReady: vi.fn(),
   platform: 'darwin',
   discover: vi.fn(),
   getSources: vi.fn(),
@@ -28,6 +32,7 @@ export const captureMock = {
   stop: vi.fn(),
   discardRecording: vi.fn(),
   setSize: vi.fn(),
+  resizeHudPopover: vi.fn().mockResolvedValue(268),
   close: vi.fn(),
   quit: vi.fn(),
   minimize: vi.fn(),

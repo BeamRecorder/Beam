@@ -36,6 +36,7 @@ function createRendererSetup({
           '/editor.html',
           '/teleprompter.html',
           '/onboarding.html',
+          '/hud-panel.html',
         ].includes(target.pathname)
       );
     } catch {

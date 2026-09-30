@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import HUD from './components/hud/HUD.vue';
+import { useHudInteractivity } from './components/hud/useHudInteractivity';
 import ToastProvider from './components/ui/toast/ToastProvider.vue';
 import EditorOpenError from './components/hud/EditorOpenError.vue';
 import RecorderBar from './components/hud/recorder/RecorderBar.vue';
@@ -20,32 +21,14 @@ import { useTranslate } from './i18n/useTranslate';
 import type { CaptureProject, RecorderLauncherContext } from './api/types/capture-api';
 import type { EditorLoadingProgress } from './api/types/editor-window';
 
-const INTERACTIVE_SELECTORS =
-  '.hud-wrapper, .recorder-bar, .camera-overlay-container, .camera-settings-popover, button, a, input, select, textarea, [role="button"], [tabindex], label, video, .popover-content, .popover-trigger, .action-menu-content';
-let lastInteractive: boolean | null = null;
 let removeRecorderLauncherListener: (() => void) | null = null;
 let removeEditorLoadingListener: (() => void) | null = null;
 let removeTrayStopListener: (() => void) | null = null;
+let removeHudProjectListener: (() => void) | null = null;
+let disposed = false;
 let removeRecordingShortcutListener: (() => void) | null = null;
 let pauseShortcutPending = false;
-
-const handleMouseMove = (e: MouseEvent) => {
-  if (currentView.value !== 'hud' && recording.phase.value === 'idle') return;
-  const el = document.elementFromPoint(e.clientX, e.clientY);
-  const isInteractive =
-    el != null && el !== document.documentElement && el !== document.body && el.closest(INTERACTIVE_SELECTORS) != null;
-  if (isInteractive !== lastInteractive) {
-    lastInteractive = isInteractive;
-    capture.setInteractive(isInteractive);
-  }
-};
-
-const handleMouseLeave = () => {
-  if (lastInteractive !== false) {
-    lastInteractive = false;
-    capture.setInteractive(false);
-  }
-};
+const interactivity = useHudInteractivity(() => currentView.value === 'hud' || recording.phase.value !== 'idle');
 
 const localeStore = useLocaleStore();
 const { t: tHud } = useTranslate('HUD');
@@ -78,20 +61,18 @@ const logEditor = (message: string, details?: unknown) => {
   else console.log(`[Beam editor] ${message}`, details);
 };
 onMounted(() => {
-  window.addEventListener('mousemove', handleMouseMove, { passive: true });
-  window.addEventListener('mouseleave', handleMouseLeave, { passive: true });
   void capture.getPreferences().then((preferences) => {
     recordingBarVisibility.value = preferences.recordingBar.visibility;
   });
 });
 
 onBeforeUnmount(() => {
-  window.removeEventListener('mousemove', handleMouseMove);
-  window.removeEventListener('mouseleave', handleMouseLeave);
+  disposed = true;
   removeRecorderLauncherListener?.();
   removeEditorLoadingListener?.();
   removeTrayStopListener?.();
   removeRecordingShortcutListener?.();
+  removeHudProjectListener?.();
 });
 
 const currentView = ref<'hud' | 'recorder'>('hud');
@@ -156,12 +137,28 @@ watch(
 
 watch(currentView, (view) => {
   if (view !== 'hud') return;
-  lastInteractive = null;
+  interactivity.reset();
 });
 
 const isRecordingStartedFromEditor = ref(false);
 
 onMounted(() => {
+  removeHudProjectListener = capture.onHudProjectRequested((request) => {
+    if (recording.phase.value !== 'idle' || isPreparingEditor.value) return;
+    void capture
+      .listProjects()
+      .then((projects) => {
+        if (disposed || recording.phase.value !== 'idle' || isPreparingEditor.value) return;
+        const project = projects.find(
+          (candidate) => candidate.id === request.id && (candidate.mode ?? 'studio') === request.mode,
+        );
+        if (!project) throw new Error('The selected project is no longer available.');
+        handleOpenProject(project);
+      })
+      .catch((error) => {
+        recordingStartupError.value = String(error);
+      });
+  });
   removeRecorderLauncherListener = capture.onRecorderLauncherContext((context) => {
     recorderLauncherContext.value = context;
     if (!context) return;
@@ -369,6 +366,7 @@ const dismissRecorderLauncher = async () => {
   </template>
   <div v-if="!isTeleprompter && !isCameraOverlay && !isScreenRegionOverlay && !isQuickSnipCrop" class="app-container">
     <HUD
+      @popover-toggle="interactivity.togglePopover"
       v-if="currentView === 'hud' && !editorLoadError"
       :preparing-editor="isPreparingEditor"
       :editor-loading-progress="editorLoadingProgress"

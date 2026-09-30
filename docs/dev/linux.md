@@ -2,6 +2,8 @@
 
 Beam records screens and windows on Linux through the XDG ScreenCast Portal, PipeWire and FFmpeg. Electron never enumerates desktop sources on Linux: the source selector represents the system picker, which opens once during preparation and remains attached across pause/resume.
 
+Electron windows use X11 (`--ozone-platform=x11`) on Linux, including XWayland on a Wayland desktop. This restores global window placement; HUD popovers stay within compact bounds so transparent added space cannot block desktop clicks. Capture remains the Rust Portal/PipeWire backend, and desktop session environment variables remain intact.
+
 ### Cinnamon on X11
 
 Linux Mint's default Cinnamon/X11 session uses the XApp portal backend, which does not implement the ScreenCast interface. Installing or restarting `xdg-desktop-portal` or `xdg-desktop-portal-xapp` alone cannot make Beam record in that session. Beam currently has no direct X11 capture backend.

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { capture } = vi.hoisted(() => ({
   capture: {
+    notifyScreenRegionReady: vi.fn(),
     onScreenRegionConfigure: vi.fn(),
     confirmScreenRegion: vi.fn(),
     cancelScreenRegion: vi.fn(),

@@ -450,6 +450,7 @@
     "includeAudioDesc": "Добавя включените аудио писти към експортираното видео."
   },
   "HUD": {
+    "issues": "Проблеми",
     "inputAccessFailed": "Неуспешно заявяване на достъп до взаимодействията.",
     "title": "Beam",
     "openProject": "Отваряне на проект",
@@ -498,7 +499,16 @@
     "startQuickSnip": "Стартиране на бърз запис",
     "stopQuickSnip": "Спиране на бърз запис",
     "screenshot": "Екранна снимка",
-    "instant": "Мигновено"
+    "instant": "Мигновено",
+    "recorder": "Запис",
+    "fullScreen": "Цял екран",
+    "region": "Област",
+    "chooseCaptureSource": "Изберете източник за заснемане",
+    "camera": "Камера",
+    "microphone": "Микрофон",
+    "teleprompter": "Телепромптер",
+    "screenshotDescription": "Изберете екран, област или прозорец за заснемане.",
+    "back": "Назад"
   },
   "EditorPreparingHud": {
     "title": "Подготовка на редактора",

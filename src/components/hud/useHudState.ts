@@ -5,21 +5,22 @@ import { rememberCaptureCatalog } from '../../api/capture-diagnostics';
 import { listBrowserCameras } from '~/api/camera-recorder';
 import { listBrowserMicrophones } from '~/api/microphone-recorder';
 import { systemAudioSource } from '~/api/system-audio-recorder';
-import type { CaptureCatalog, CaptureProject, CaptureSource } from '../../api/types/capture-api';
+import type { CaptureCatalog, CaptureSource } from '../../api/types/capture-api';
 import type { ScreenRegion } from '../../api/types/screen-region';
+import type { HudPanel } from '~/api/types/hud-panel';
 import { canonicalMacWindowSourceId, matchScreenPreview } from './source-preview';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useAudioLevelMeter } from './audio/useAudioLevelMeter';
 import type { RecordingBarVisibility } from './recorder/recording-types';
 import { useInteractionAccess } from './interactions/useInteractionAccess';
-import { useHudNavigation } from './navigation/useHudNavigation';
+import { useHudCaptureActions } from './useHudCaptureActions';
 import { useNativeSystemAudioPreview } from './recorder/useNativeSystemAudioPreview';
 import { useHudIssues } from './useHudIssues';
 import { useHudCaptureMode } from './useHudCaptureMode';
 
 import { useCaptureSourcePreviews } from './useCaptureSourcePreviews';
 import { useHudWindow } from './useHudWindow';
-import type { HudProps, HudEmit, SavedDevices, PreviewKind } from './hud-state-types';
+import type { HudProps, HudEmit, SavedDevices } from './hud-state-types';
 
 export function useHudState(props: HudProps, emit: HudEmit) {
   const { t } = useTranslate('HUD');
@@ -36,12 +37,6 @@ export function useHudState(props: HudProps, emit: HudEmit) {
   const shownError = computed(() => props.externalError || errorMessage.value);
   const sources = ref<CaptureSource[]>([]);
   const sourceDiscoveryCompleted = ref(false);
-
-  // Navigation & View State (Main vs Settings vs Project Picker)
-  const navigation = useHudNavigation();
-  const showSettings = navigation.showSettings;
-  const settingsView = navigation.settingsView;
-  const showProjectPicker = navigation.showProjectPicker;
 
   // Preference settings
   const countdownSeconds = ref(3); // 0 for Off, 3, 5, 10
@@ -146,6 +141,7 @@ export function useHudState(props: HudProps, emit: HudEmit) {
     return matchScreenPreview(source, displaySources.value, screenPreviews.value);
   });
   const {
+    resetRegion,
     selectedScreenRegion,
     selectedScreenOverlay,
     savedScreenRegion,
@@ -167,10 +163,7 @@ export function useHudState(props: HudProps, emit: HudEmit) {
     selectedScreen,
     selectedScreenId,
     selectedScreenPreview,
-    showSettings,
-    showProjectPicker,
     loadPreviews: (kind) => loadPreviews(kind),
-    refreshInteraction: () => interactionAccess.refresh(),
   });
   const systemAudioOptions = computed(() => [
     { value: 'on', label: t('systemAudio') },
@@ -178,13 +171,11 @@ export function useHudState(props: HudProps, emit: HudEmit) {
   ]);
 
   const recordingTime = ref('00:00');
-  let previewsRefreshInterval: ReturnType<typeof setInterval> | null = null;
 
   watch(
     () => props.recorderLauncherContext,
     (context) => {
       if (!context) return;
-      navigation.openHud();
       activeTab.value = context.preferredKind;
       errorMessage.value = '';
       selectedSourceId.value =
@@ -197,13 +188,6 @@ export function useHudState(props: HudProps, emit: HudEmit) {
     },
     { immediate: true },
   );
-  const openSourceDropdown = ref<PreviewKind | null>(null);
-  const handleSourceDropdownToggle = (type: PreviewKind, isOpen: boolean) => {
-    handleDropdownToggle(isOpen);
-    openSourceDropdown.value = isOpen ? type : openSourceDropdown.value === type ? null : openSourceDropdown.value;
-    if (isOpen) void refreshSourceChoices(type, true);
-  };
-
   // Control functions
   const toggleRecording = async () => {
     if (isBusy.value) return;
@@ -302,6 +286,14 @@ export function useHudState(props: HudProps, emit: HudEmit) {
       selectedSourceId.value;
   };
 
+  let unsubscribePreferences: (() => void) | null = null;
+  const syncRecordingPreferences = (preferences: import('~/api/types/capture-api').PreferenceSettings) => {
+    const countdown = preferences.extras.recordingCountdownSeconds;
+    countdownSeconds.value = typeof countdown === 'number' && [0, 3, 5, 10].includes(countdown) ? countdown : 3;
+    recordingBarVisibility.value = preferences.recordingBar.visibility;
+    interactionAccess.hydrate(preferences);
+    if (sourceDiscoveryCompleted.value) void interactionAccess.refresh();
+  };
   let unsubscribeShortcut: (() => void) | null = null;
   let unsubscribeTeleprompterVisibility: (() => void) | null = null;
   let disposed = false;
@@ -353,8 +345,8 @@ export function useHudState(props: HudProps, emit: HudEmit) {
         };
       }
     }
-    recordingBarVisibility.value = preferences.recordingBar.visibility;
-    interactionAccess.hydrate(preferences);
+    syncRecordingPreferences(preferences);
+    unsubscribePreferences = capture.onPreferencesChanged(syncRecordingPreferences);
     if (!props.embedded) updateWindowSize();
     unsubscribeShortcut = capture.onPreferenceShortcut((actionId: string) => {
       if (actionId === 'hud.startStopRecording') {
@@ -368,22 +360,15 @@ export function useHudState(props: HudProps, emit: HudEmit) {
     await Promise.all([discoverSources(), interactionAccess.refresh()]);
     if (disposed) return;
     void loadPreviews(activeTab.value);
-
-    // Refresh native snapshots only while their source picker is open.
-    previewsRefreshInterval = setInterval(() => {
-      if (!props.preparingEditor && !showSettings.value && !isRecording.value && openSourceDropdown.value) {
-        void refreshSourceChoices(openSourceDropdown.value, true);
-      }
-    }, 5000);
   });
 
   onBeforeUnmount(() => {
     disposed = true;
     window.removeEventListener('keydown', handleLauncherKeydown);
+    unsubscribePreferences?.();
     unsubscribeCameraOverlayState?.();
     unsubscribeShortcut?.();
     unsubscribeTeleprompterVisibility?.();
-    if (previewsRefreshInterval) clearInterval(previewsRefreshInterval);
   });
 
   const closeApp = () => {
@@ -402,24 +387,39 @@ export function useHudState(props: HudProps, emit: HudEmit) {
     }, 160);
   };
 
-  const openProjectPicker = () => {
-    navigation.openProjects();
-    emit('focus-feature', 'projects');
-  };
-
-  const closeProjectPicker = () => {
-    navigation.openHud();
-  };
-
-  const handleTopbarBack = () => {
-    navigation.handleTopbarBack();
-  };
-
-  const openProject = (project: CaptureProject) => {
+  const openPanel = async (panel: HudPanel) => {
     if (props.embedded) return;
-    closeProjectPicker();
-    emit('open-project', project);
+    try {
+      if (panel === 'settings') await capture.openHudSettings();
+      else if (panel === 'projects') await capture.openHudProjects();
+      else await capture.openHudMascot();
+    } catch (reason) {
+      errorMessage.value = reason instanceof Error ? reason.message : String(reason);
+    }
   };
+  const captureActions = useHudCaptureActions({
+    platform: desktopPlatform,
+    blocked: computed(
+      () => isBusy.value || isRecording.value || props.preparingEditor || interactionAccess.requesting.value,
+    ),
+    activeTab,
+    selectedScreenId,
+    selectedSourceId,
+    sources,
+    windowPreviews,
+    resetRegion,
+    selectRegion: selectScreenRegion,
+    refreshSources: (kind) => refreshSourceChoices(kind, true),
+    start: toggleRecording,
+  });
+  const sourceChoices = computed(() =>
+    activeTab.value === 'screen'
+      ? displaySources.value.map((source) => {
+          const preview = matchScreenPreview(source, displaySources.value, screenPreviews.value);
+          return { id: source.id, name: source.label, thumbnail: preview?.thumbnail ?? '', appIcon: null };
+        })
+      : windowPreviews.value,
+  );
 
   return {
     captureMode,
@@ -430,11 +430,9 @@ export function useHudState(props: HudProps, emit: HudEmit) {
     activeTab,
     isRecording,
     isBusy,
+    errorMessage,
     sources,
     sourceDiscoveryCompleted,
-    showSettings,
-    settingsView,
-    showProjectPicker,
     countdownSeconds,
     recordingBarVisibility,
     interactionAccess,
@@ -463,7 +461,6 @@ export function useHudState(props: HudProps, emit: HudEmit) {
     activeDropdowns,
     hudHeight,
     handleDropdownToggle,
-    handleSourceDropdownToggle,
     selectScreenRegion,
     systemAudioOptions,
     recordingTime,
@@ -473,10 +470,9 @@ export function useHudState(props: HudProps, emit: HudEmit) {
     toggleTeleprompter,
     closeApp,
     minimizeApp,
-    openProjectPicker,
-    closeProjectPicker,
-    handleTopbarBack,
-    openProject,
+    openPanel,
+    sourceChoices,
+    ...captureActions,
     discoverSources,
     loadPreviews,
   };

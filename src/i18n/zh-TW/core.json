@@ -450,6 +450,7 @@
     "includeAudioDesc": "將已啟用的音軌加入匯出的影片。"
   },
   "HUD": {
+    "issues": "問題",
     "inputAccessFailed": "無法請求互動存取權限。",
     "title": "Beam",
     "openProject": "開啟專案",
@@ -498,7 +499,16 @@
     "startQuickSnip": "開始快速錄製",
     "stopQuickSnip": "停止快速錄製",
     "screenshot": "螢幕截圖",
-    "instant": "即時"
+    "instant": "即時",
+    "recorder": "錄製",
+    "fullScreen": "全螢幕",
+    "region": "區域",
+    "chooseCaptureSource": "選擷取來源",
+    "camera": "攝影機",
+    "microphone": "麥克風",
+    "teleprompter": "提詞器",
+    "screenshotDescription": "選擇要擷取的螢幕、區域或視窗。",
+    "back": "返回"
   },
   "EditorPreparingHud": {
     "title": "正在準備編輯器",

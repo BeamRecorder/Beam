@@ -137,8 +137,8 @@ test('creates the HUD at the canonical native size with isolated renderer settin
   const fixture = createFixture();
   const options = fixture.window.options;
 
-  assert.equal(HUD_SIZE.width, 352);
-  assert.equal(HUD_SIZE.height, 512);
+  assert.equal(HUD_SIZE.width, 672);
+  assert.equal(HUD_SIZE.height, 268);
   assert.equal(options.width, HUD_SIZE.width);
   assert.equal(options.height, HUD_SIZE.height);
 

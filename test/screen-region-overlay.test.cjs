@@ -7,6 +7,7 @@ function createOverlayHarness() {
   const listeners = new Map();
   let destroyed = false;
   const window = {
+    options: null,
     webContents: { send: (...args) => calls.push(['send', ...args]) },
     once: (event, listener) => listeners.set(event, listener),
     on: (event, listener) => listeners.set(event, listener),
@@ -30,7 +31,8 @@ function createOverlayHarness() {
   };
   const electron = {
     BrowserWindow: class {
-      constructor() {
+      constructor(options) {
+        window.options = options;
         return window;
       }
     },
@@ -58,6 +60,50 @@ function createOverlayHarness() {
   }
 }
 
+test('Linux region construction uses exact X11 display bounds', async () => {
+  const { overlay, window, calls } = createOverlayHarness();
+  const bounds = { x: 0, y: 0, width: 1920, height: 1080 };
+  const selection = overlay.select({ bounds });
+  assert.equal(window.options.fullscreen, undefined);
+  assert.equal(window.options.width, bounds.width);
+  assert.equal(window.options.height, bounds.height);
+  window.emit('ready-to-show');
+  assert.equal(
+    calls.some(([name]) => name === 'show'),
+    false,
+  );
+  assert.equal(overlay.markRendererReady({}), false);
+  assert.equal(
+    calls.some(([name]) => name === 'send'),
+    false,
+  );
+  assert.equal(overlay.markRendererReady(window.webContents), true);
+  assert.equal(
+    calls.some(([name]) => name === 'show'),
+    true,
+  );
+  overlay.cancel();
+  assert.equal(await selection, null);
+});
+
+test('renderer readiness before native readiness does not show an unpainted overlay', async () => {
+  const { overlay, window, calls } = createOverlayHarness();
+  assert.equal(overlay.markRendererReady(window.webContents), false);
+  const selection = overlay.select({ bounds: { x: 0, y: 0, width: 1280, height: 800 } });
+  overlay.markRendererReady(window.webContents);
+  assert.equal(
+    calls.some(([name]) => name === 'show'),
+    false,
+  );
+  window.emit('ready-to-show');
+  assert.equal(
+    calls.some(([name]) => name === 'show'),
+    true,
+  );
+  overlay.cancel();
+  assert.equal(await selection, null);
+});
+
 test('defers screen overlay presentation until the native window is ready', async () => {
   const { overlay, calls, window } = createOverlayHarness();
   const selection = overlay.select({
@@ -79,6 +125,7 @@ test('defers screen overlay presentation until the native window is ready', asyn
     false,
   );
 
+  overlay.markRendererReady(window.webContents);
   window.emit('ready-to-show');
 
   assert.equal(
@@ -105,6 +152,7 @@ test('stays hidden when a pending selection is canceled before native readiness'
   });
 
   overlay.cancel();
+  overlay.markRendererReady(window.webContents);
   window.emit('ready-to-show');
 
   assert.equal(
@@ -130,6 +178,7 @@ test('stays hidden when the overlay is hidden before native readiness', async ()
   });
 
   overlay.hide();
+  overlay.markRendererReady(window.webContents);
   window.emit('ready-to-show');
 
   assert.equal(
@@ -155,6 +204,7 @@ test('restores the noninteractive recording overlay with showInactive', () => {
     region: { x: 0.1, y: 0.2, width: 0.5, height: 0.4 },
   });
 
+  overlay.markRendererReady(window.webContents);
   window.emit('ready-to-show');
 
   assert.equal(
@@ -347,6 +397,7 @@ test('updates the live overlay payload and clamps the current selection before c
     context: 'quick-snip',
     region: { x: 0.1, y: 0.2, width: 0.5, height: 0.4 },
   });
+  overlay.markRendererReady(window.webContents);
   window.emit('ready-to-show');
   calls.length = 0;
   let liveRegion = null;
@@ -427,6 +478,7 @@ test('cancels an active selection, detaches its parent, and ignores stale update
     parentWindow,
   );
 
+  overlay.markRendererReady(window.webContents);
   window.emit('ready-to-show');
   overlay.cancel();
 
@@ -529,6 +581,7 @@ test('keeps interactive Windows region selection available on Windows 10', async
     });
     const bounds = { x: -1280, y: 0, width: 1280, height: 720 };
     const selection = overlay.select({ bounds, region: null });
+    overlay.markRendererReady(window.webContents);
     window.emit('ready-to-show');
     const region = { x: 0.1, y: 0.2, width: 0.5, height: 0.4 };
 
@@ -607,6 +660,7 @@ test('shows the recording region marker on Windows 11 build 22000 and newer', ()
     });
     const bounds = { x: -1280, y: 0, width: 1280, height: 720 };
     overlay.show({ bounds, region: { x: 0.1, y: 0.2, width: 0.5, height: 0.4 } });
+    overlay.markRendererReady(window.webContents);
     window.emit('ready-to-show');
 
     assert.equal(constructed, 1);
@@ -647,6 +701,7 @@ test('keeps an offset macOS display selection interactive across Spaces', async 
     const region = { x: 0.125, y: 0.2, width: 0.5, height: 0.4 };
 
     const firstSelection = overlay.select({ bounds, region: null });
+    overlay.markRendererReady(window.webContents);
     window.emit('ready-to-show');
     assert.deepEqual(
       calls.filter((call) =>

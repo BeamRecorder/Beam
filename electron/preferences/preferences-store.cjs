@@ -6,7 +6,7 @@ const defaultAppearance = () => ({
   theme: 'light',
   primaryColor: '#ff5a1f',
   secondaryColor: '#6366f1',
-  radiusPx: 10,
+  radiusPx: 7,
   isPillRadius: false,
   surfaceTone: 'default',
   activePresetId: 'beam-sunset',

@@ -150,3 +150,18 @@ test('unknown targets are rejected and a collector with no staged files fails cl
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test('stages both release binaries from Cargo-configured shared outputs', () => {
+  const root = temporaryRoot();
+  try {
+    const targetDirectory = path.join(root, 'shared-cargo-target');
+    fs.mkdirSync(path.join(targetDirectory, 'release'), { recursive: true });
+    fs.writeFileSync(path.join(targetDirectory, 'release', 'capture-engine'), 'engine');
+    fs.writeFileSync(path.join(targetDirectory, 'release', 'beam-input-helper'), 'helper');
+    const files = stageNativeFiles({ root, version: VERSION, platform: 'linux', arch: 'x64', targetDirectory });
+    assert.equal(fs.readFileSync(files[0].destination, 'utf8'), 'engine');
+    assert.equal(fs.readFileSync(files[1].destination, 'utf8'), 'helper');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

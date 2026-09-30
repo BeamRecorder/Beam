@@ -17,6 +17,7 @@ const {
   nativeTheme,
   powerMonitor,
 } = require('electron');
+require('./lifecycle/linux-display-backend.cjs').configureLinuxDisplayBackend(app);
 const { autoUpdater } = require('electron-updater');
 const fs = require('fs');
 const path = require('path');
@@ -35,6 +36,7 @@ const { createProjectMediaHandler } = require('./projects/project-media-protocol
 const { registerWindowIpc } = require('./window/window-ipc.cjs');
 const { createRendererSetup } = require('./lifecycle/renderer-setup.cjs');
 const { createEditorWindowManager } = require('./window/editor-window.cjs');
+const { createHudPanelManager } = require('./window/hud-panels.cjs');
 const { createOnboardingWindowManager } = require('./window/onboarding-window.cjs');
 const { registerExportIpc } = require('./export/export-ipc.cjs');
 const { registerTranscriptExportIpc } = require('./captions/transcript-export-ipc.cjs');
@@ -429,6 +431,14 @@ function initializeApplication() {
       trayManager.init();
       if (!preferencesStore.read().onboardingCompleted) onboardingWindow.open();
 
+      const hudPanels = createHudPanelManager({
+        ...lifecycleOptions,
+        appIconPath,
+        ipcMain: applicationIpc,
+        hudWindow: win,
+        hudController: controllers.get(win),
+      });
+      coordinator.registerCleanup({ id: 'hud-panels', cleanup: () => hudPanels.destroy() });
       coordinator.registerCleanup({ id: 'hud-window', cleanup: () => win.destroy() });
       coordinator.registerCleanup({ id: 'editor', cleanup: () => editorWindow.destroy() });
       coordinator.registerCleanup({ id: 'onboarding', cleanup: () => onboardingWindow.destroy() });

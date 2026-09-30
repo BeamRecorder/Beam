@@ -1,16 +1,25 @@
 const fs = require('fs');
 const path = require('path');
+const { resolveCargoTargetDirectory } = require('../capture/cargo-build-paths.cjs');
 const { packagedInputHelperPath, prebuiltInputHelperPath } = require('../capture/capture-engine-path.cjs');
 
 const INSTALLED_HELPER = '/usr/libexec/beam-input-helper';
 
 class InputAccess {
-  constructor({ app, applicationRoot, nativeRequest, platform = process.platform }) {
+  constructor({
+    app,
+    applicationRoot,
+    nativeRequest,
+    platform = process.platform,
+    resolveTargetDirectory = resolveCargoTargetDirectory,
+  }) {
     this.app = app;
     this.applicationRoot = applicationRoot;
     this.nativeRequest = nativeRequest;
     this.platform = platform;
     this.lastError = null;
+    this.resolveTargetDirectory = resolveTargetDirectory;
+    this.targetDirectory = undefined;
   }
 
   helperForCapture() {
@@ -52,11 +61,25 @@ class InputAccess {
     const candidates = this.app.isPackaged
       ? [packagedInputHelperPath(process.resourcesPath, version, this.platform)]
       : [
+          ...(process.env.BEAM_CAPTURE_ENGINE
+            ? [path.join(path.dirname(process.env.BEAM_CAPTURE_ENGINE), 'beam-input-helper')]
+            : []),
           path.join(this.applicationRoot, 'target', 'debug', 'beam-input-helper'),
           path.join(this.applicationRoot, 'target', 'release', 'beam-input-helper'),
           prebuiltInputHelperPath(this.applicationRoot, version, this.platform),
         ];
-    return candidates.filter(Boolean).find(executable) || null;
+    const helper = candidates.filter(Boolean).find(executable);
+    if (helper || this.app.isPackaged) return helper || null;
+    try {
+      this.targetDirectory ??= this.resolveTargetDirectory(this.applicationRoot);
+      return (
+        ['debug', 'release']
+          .map((profile) => path.join(this.targetDirectory, profile, 'beam-input-helper'))
+          .find(executable) || null
+      );
+    } catch {
+      return null;
+    }
   }
 }
 

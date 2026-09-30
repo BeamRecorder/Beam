@@ -450,6 +450,7 @@
     "includeAudioDesc": "有効な音声トラックをエクスポート動画に追加します。"
   },
   "HUD": {
+    "issues": "問題",
     "inputAccessFailed": "操作へのアクセス権限をリクエストできませんでした。",
     "title": "Beam",
     "openProject": "プロジェクトを開く",
@@ -498,7 +499,16 @@
     "startQuickSnip": "クイックスニップを開始",
     "stopQuickSnip": "クイックスニップを停止",
     "screenshot": "スクリーンショット",
-    "instant": "即時"
+    "instant": "即時",
+    "recorder": "録画",
+    "fullScreen": "全画面",
+    "region": "範囲",
+    "chooseCaptureSource": "キャプチャ元を選択",
+    "camera": "カメラ",
+    "microphone": "マイク",
+    "teleprompter": "テレプロンプター",
+    "screenshotDescription": "画面、範囲、ウィンドウを選択してキャプチャします。",
+    "back": "戻る"
   },
   "EditorPreparingHud": {
     "title": "エディターを準備しています",

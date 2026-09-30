@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { inject, nextTick, provide, ref, onMounted, onUnmounted, watch } from 'vue';
+import { inject, nextTick, provide, ref, onMounted, onBeforeUnmount, watch } from 'vue';
+import { popoverViewportKey, popoverAnchorConstraintKey } from './popover-viewport-types';
 
 const props = withDefaults(
   defineProps<{
@@ -43,6 +44,8 @@ let gestureResetTimer: ReturnType<typeof setTimeout> | null = null;
 let gestureStartedInOwnedPopover = false;
 const VIEWPORT_MARGIN = 8;
 const parentPopoverId = inject<string | null>('popover-owner-id', null);
+const resizeViewport = inject(popoverViewportKey, null);
+const fitAnchor = inject(popoverAnchorConstraintKey, false);
 const popoverId = `popover-${Math.random().toString(36).slice(2)}`;
 provide('popover-owner-id', popoverId);
 
@@ -94,6 +97,12 @@ const adjustPosition = async () => {
   if (!popoverRef.value || !contentRef.value || !isOpen.value) return;
   const triggerEl = popoverRef.value.querySelector('.popover-trigger') || popoverRef.value;
   const rect = triggerEl.getBoundingClientRect();
+  if (resizeViewport && props.direction === 'down') {
+    const height = Math.max(contentRef.value.scrollHeight, contentRef.value.getBoundingClientRect().height);
+    await resizeViewport(popoverId, rect.bottom + VIEWPORT_MARGIN + height);
+    await nextTick();
+    if (!contentRef.value || !isOpen.value) return;
+  }
   const content = contentRef.value.getBoundingClientRect();
   const spaceBelow = window.innerHeight - rect.bottom - VIEWPORT_MARGIN;
   const spaceAbove = rect.top - VIEWPORT_MARGIN;
@@ -107,8 +116,10 @@ const adjustPosition = async () => {
     directionClass.value = props.direction;
   }
 
+  const availableHeight = Math.max(0, directionClass.value === 'down' ? spaceBelow : spaceAbove);
+  const fittedHeight = fitAnchor ? Math.min(content.height, availableHeight) : content.height;
   const top =
-    directionClass.value === 'down' ? rect.bottom + VIEWPORT_MARGIN : rect.top - content.height - VIEWPORT_MARGIN;
+    directionClass.value === 'down' ? rect.bottom + VIEWPORT_MARGIN : rect.top - fittedHeight - VIEWPORT_MARGIN;
   let left = rect.left;
 
   if (props.align === 'left') {
@@ -119,17 +130,18 @@ const adjustPosition = async () => {
     left = rect.left + rect.width / 2 - content.width / 2;
   }
   const clampedLeft = Math.max(VIEWPORT_MARGIN, Math.min(left, window.innerWidth - content.width - VIEWPORT_MARGIN));
-  const clampedTop = Math.max(VIEWPORT_MARGIN, Math.min(top, window.innerHeight - content.height - VIEWPORT_MARGIN));
+  const clampedTop = Math.max(VIEWPORT_MARGIN, Math.min(top, window.innerHeight - fittedHeight - VIEWPORT_MARGIN));
   floatingStyle.value = {
     position: 'fixed',
     visibility: 'visible',
     top: `${clampedTop}px`,
     left: `${clampedLeft}px`,
     zIndex: '10000',
+    ...(fitAnchor ? { '--popover-available-height': `${Math.max(0, availableHeight - 10)}px` } : {}),
     ...(props.allowOverflow
       ? {}
       : {
-          maxHeight: `calc(100vh - ${VIEWPORT_MARGIN * 2}px)`,
+          maxHeight: fitAnchor ? `${availableHeight}px` : `calc(100vh - ${VIEWPORT_MARGIN * 2}px)`,
           overflowY: 'auto',
         }),
     ...(props.matchTriggerWidth
@@ -166,6 +178,7 @@ watch(isOpen, (val) => {
       }
     });
   } else {
+    void resizeViewport?.(popoverId, null);
     resizeObserver?.disconnect();
     resizeObserver = null;
   }
@@ -245,7 +258,9 @@ onMounted(() => {
   document.addEventListener('keydown', handleEscape);
 });
 
-onUnmounted(() => {
+onBeforeUnmount(() => {
+  void resizeViewport?.(popoverId, null);
+  if (isOpen.value) emit('toggle', false);
   resizeObserver?.disconnect();
   resizeObserver = null;
   window.removeEventListener('pointerdown', handleInteractionStart, true);

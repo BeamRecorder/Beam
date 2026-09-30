@@ -450,6 +450,7 @@
     "includeAudioDesc": "Добавляет включённые аудиодорожки в экспортируемое видео."
   },
   "HUD": {
+    "issues": "Проблемы",
     "inputAccessFailed": "Не удалось запросить доступ к взаимодействиям.",
     "title": "Beam",
     "openProject": "Открыть проект",
@@ -498,7 +499,16 @@
     "startQuickSnip": "Начать быстрый снимок",
     "stopQuickSnip": "Остановить быстрый снимок",
     "screenshot": "Снимок экрана",
-    "instant": "Мгновенно"
+    "instant": "Мгновенно",
+    "recorder": "Запись",
+    "fullScreen": "Весь экран",
+    "region": "Область",
+    "chooseCaptureSource": "Выберите источник захвата",
+    "camera": "Камера",
+    "microphone": "Микрофон",
+    "teleprompter": "Телесуфлёр",
+    "screenshotDescription": "Выберите экран, область или окно для захвата.",
+    "back": "Назад"
   },
   "EditorPreparingHud": {
     "title": "Подготовка редактора",

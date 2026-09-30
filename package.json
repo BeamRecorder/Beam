@@ -129,6 +129,9 @@
       ]
     },
     "linux": {
+      "executableArgs": [
+        "--ozone-platform=x11"
+      ],
       "target": [
         "AppImage",
         "deb",

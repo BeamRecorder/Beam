@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useTranslate } from '~/i18n/useTranslate';
-import { Clapperboard, ScanLine, Zap } from '@lucide/vue';
+import { Camera, Clapperboard, ScanLine, Video, Zap } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import type { CaptureMode } from '~/api/types/capture-mode';
 
 const { t } = useTranslate('QuickSnipCropBar');
+const { t: tHud } = useTranslate('HUD');
 
 const props = withDefaults(
   defineProps<{
@@ -15,14 +16,15 @@ const props = withDefaults(
     full?: boolean;
     modes?: CaptureMode[];
     labels?: boolean;
+    stacked?: boolean;
   }>(),
   { modes: () => ['studio', 'screenshot', 'instant'] },
 );
 const emit = defineEmits<{ 'update:modelValue': [mode: CaptureMode] }>();
 const availableModes = [
-  { id: 'studio', icon: Clapperboard },
-  { id: 'screenshot', icon: ScanLine },
-  { id: 'instant', icon: Zap },
+  { id: 'studio', icon: Clapperboard, stackedIcon: Video },
+  { id: 'screenshot', icon: ScanLine, stackedIcon: Camera },
+  { id: 'instant', icon: Zap, stackedIcon: Zap },
 ] as const;
 const visibleModes = computed(() => availableModes.filter((mode) => props.modes.includes(mode.id)));
 const columns = computed(() => (visibleModes.value.length === 1 ? 1 : visibleModes.value.length === 2 ? 2 : 3));
@@ -32,6 +34,7 @@ const columns = computed(() => (visibleModes.value.length === 1 ? 1 : visibleMod
   <ButtonGroup
     size="sm"
     class="capture-modes"
+    :class="{ 'is-stacked': stacked }"
     :full="full"
     :columns="full ? columns : undefined"
     role="group"
@@ -42,17 +45,17 @@ const columns = computed(() => (visibleModes.value.length === 1 ? 1 : visibleMod
       :key="mode.id"
       size="sm"
       :icon-only="!labels"
-      :icon="mode.icon"
+      :icon="stacked ? mode.stackedIcon : mode.icon"
       variant="tab"
-      :class="{ active: modelValue === mode.id }"
-      :title="labels ? t(mode.id) : undefined"
+      :class="{ active: modelValue === mode.id, stacked }"
+      :title="labels ? (stacked && mode.id === 'studio' ? tHud('recorder') : t(mode.id)) : undefined"
       :tooltip="labels ? '' : t(`${mode.id}Description`)"
       tooltip-position="bottom"
-      :aria-label="t(mode.id)"
+      :aria-label="stacked && mode.id === 'studio' ? tHud('recorder') : t(mode.id)"
       :aria-pressed="modelValue === mode.id"
       :disabled="disabled"
       @click="emit('update:modelValue', mode.id)"
-      >{{ labels ? t(mode.id) : undefined }}</Button
+      >{{ labels ? (stacked && mode.id === 'studio' ? tHud('recorder') : t(mode.id)) : undefined }}</Button
     >
   </ButtonGroup>
 </template>
@@ -60,5 +63,18 @@ const columns = computed(() => (visibleModes.value.length === 1 ? 1 : visibleMod
 <style scoped>
 .capture-modes {
   -webkit-app-region: no-drag;
+}
+.capture-modes.is-stacked {
+  background: var(--color-bg-well);
+}
+/* Button forwards attributes to its native control inside a wrapper. */
+.capture-modes :deep(.stacked) {
+  flex-direction: column;
+  height: 34px;
+  gap: 2px;
+  padding: 2px 6px;
+  font-size: var(--font-size-sm);
+  line-height: 12px;
+  font-weight: var(--weight-body);
 }
 </style>

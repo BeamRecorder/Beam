@@ -3,6 +3,7 @@ const { randomUUID } = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
+const { resolveCargoTargetDirectory } = require('./cargo-build-paths.cjs');
 const {
   captureEngineFilename,
   packagedCaptureEnginePath,
@@ -29,6 +30,8 @@ class CaptureEngine {
     this.stdoutReader = null;
     this.stderrReader = null;
     this.shutdownPromise = null;
+    this.resolveTargetDirectory = options.resolveTargetDirectory || resolveCargoTargetDirectory;
+    this.targetDirectory = undefined;
   }
 
   get isPoisoned() {
@@ -52,10 +55,22 @@ class CaptureEngine {
       prebuilt,
     ];
     const candidates = [process.env.BEAM_CAPTURE_ENGINE, ...(bundled ? [bundled] : development)].filter(Boolean);
-    const executable = candidates.find((candidate) => fs.existsSync(candidate));
+    let executable = candidates.find((candidate) => fs.existsSync(candidate));
+    let cargoError = null;
+    if (!executable && !this.app.isPackaged) {
+      try {
+        this.targetDirectory ??= this.resolveTargetDirectory(this.applicationRoot);
+        candidates.push(
+          ...['debug', 'release'].map((profile) => path.join(this.targetDirectory, profile, buildFilename)),
+        );
+        executable = candidates.find((candidate) => fs.existsSync(candidate));
+      } catch (error) {
+        cargoError = error;
+      }
+    }
     if (!executable)
       throw new Error(
-        `capture-engine ${version} introuvable pour ${process.platform}/${process.arch}. Chemins testés: ${candidates.join(', ')}`,
+        `capture-engine ${version} introuvable pour ${process.platform}/${process.arch}. Chemins testés: ${candidates.join(', ')}${cargoError ? `. ${cargoError.message}` : ''}`,
       );
     return executable;
   }

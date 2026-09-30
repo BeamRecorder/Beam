@@ -26,6 +26,7 @@ const mocks = vi.hoisted(() => ({
     openScreenshot: vi.fn(),
     dismissRecorderLauncher: vi.fn(),
     setRecorderLauncherActive: vi.fn(),
+    onHudProjectRequested: vi.fn().mockReturnValue(() => undefined),
     onRecorderLauncherContext: vi.fn(),
     onEditorLoadingProgress: vi.fn(),
     onTrayStopRecording: vi.fn(),
@@ -216,6 +217,57 @@ const settle = async () => {
 };
 
 describe('App', () => {
+  it('opens a project requested by its separate Projects window', async () => {
+    await settle();
+    const requested = mocks.capture.onHudProjectRequested.mock.calls[0]![0];
+    requested({ id: project.id, mode: 'studio' });
+    await settle();
+    expect(mocks.capture.openEditor).toHaveBeenCalledWith(project.id, { disposition: 'reuse' });
+  });
+  it('rejects a stale project identifier or a mismatched capture mode', async () => {
+    await settle();
+    const requested = mocks.capture.onHudProjectRequested.mock.calls[0]![0];
+    requested({ id: project.id, mode: 'screenshot' });
+    await settle();
+    expect(mocks.capture.openEditor).not.toHaveBeenCalled();
+    requested({ id: 'removed-project', mode: 'studio' });
+    await settle();
+    expect(mocks.capture.openEditor).not.toHaveBeenCalled();
+  });
+  it('does not open a project after recording begins during its lookup', async () => {
+    await settle();
+    let resolve!: (projects: (typeof project)[]) => void;
+    mocks.capture.listProjects.mockReturnValueOnce(
+      new Promise((done) => {
+        resolve = done;
+      }),
+    );
+    mocks.capture.onHudProjectRequested.mock.calls[0]![0]({ id: project.id, mode: 'studio' });
+    mocks.controller.recording.phase.value = 'recording';
+    resolve([project]);
+    await settle();
+    expect(mocks.capture.openEditor).not.toHaveBeenCalled();
+    const calls = mocks.capture.listProjects.mock.calls.length;
+    mocks.capture.onHudProjectRequested.mock.calls[0]![0]({ id: project.id, mode: 'studio' });
+    await settle();
+    expect(mocks.capture.listProjects.mock.calls.length).toBe(calls);
+  });
+  it('releases project requests and ignores a pending lookup after closing', async () => {
+    await settle();
+    let resolve!: (projects: (typeof project)[]) => void;
+    mocks.capture.listProjects.mockReturnValueOnce(
+      new Promise((done) => {
+        resolve = done;
+      }),
+    );
+    mocks.capture.onHudProjectRequested.mock.calls[0]![0]({ id: project.id, mode: 'studio' });
+    const unsubscribe = mocks.capture.onHudProjectRequested.mock.results[0]!.value;
+    wrapper.unmount();
+    resolve([project]);
+    await settle();
+    expect(mocks.capture.openEditor).not.toHaveBeenCalled();
+    expect(unsubscribe).toBeTypeOf('function');
+  });
   it('loads HUD preferences and reports interactive mouse regions', async () => {
     await settle();
     expect(wrapper.find('.mock-hud').exists()).toBe(true);

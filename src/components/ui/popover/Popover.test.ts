@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import Popover from './Popover.vue';
+import { popoverViewportKey, popoverAnchorConstraintKey } from './popover-viewport-types';
 
 const NestedPopovers = {
   components: { Popover },
@@ -171,6 +172,103 @@ describe('Popover', () => {
     } finally {
       wrapper.unmount();
       bounds.mockRestore();
+    }
+  });
+});
+
+describe('Popover native viewport coordination', () => {
+  it('requests natural content height before positioning and releases it on close', async () => {
+    const resize = vi.fn().mockResolvedValue(undefined);
+    const bounds = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockImplementation(function (this: HTMLElement) {
+        return this.classList.contains('popover-content') ? new DOMRect(0, 0, 180, 224) : new DOMRect(50, 100, 180, 28);
+      });
+    const wrapper = mount(Popover, {
+      attachTo: document.body,
+      global: { provide: { [popoverViewportKey as symbol]: resize } },
+      slots: { trigger: '<button>Menu</button>', default: '<div>Options</div>' },
+    });
+    try {
+      await wrapper.get('.popover-trigger').trigger('click');
+      await flushPromises();
+      expect(resize).toHaveBeenCalledWith(expect.any(String), 360);
+      expect(document.querySelector<HTMLElement>('.popover-content')!.style.visibility).toBe('visible');
+      await wrapper.get('.popover-trigger').trigger('click');
+      await flushPromises();
+      expect(resize).toHaveBeenLastCalledWith(expect.any(String), null);
+    } finally {
+      wrapper.unmount();
+      bounds.mockRestore();
+    }
+  });
+  it('does not position stale content when the menu closes during native resize', async () => {
+    let resolve!: () => void;
+    const resize = vi.fn().mockImplementation((_id: string, bottom: number | null) =>
+      bottom === null
+        ? Promise.resolve()
+        : new Promise<void>((r) => {
+            resolve = r;
+          }),
+    );
+    const wrapper = mount(Popover, {
+      attachTo: document.body,
+      global: { provide: { [popoverViewportKey as symbol]: resize } },
+      slots: { trigger: '<button>Menu</button>', default: '<div>Options</div>' },
+    });
+    await wrapper.get('.popover-trigger').trigger('click');
+    await flushPromises();
+    window.dispatchEvent(new Event('blur'));
+    await flushPromises();
+    resolve();
+    await flushPromises();
+    expect(document.querySelector('.popover-content')).toBeNull();
+    expect(wrapper.emitted('toggle')).toEqual([[true], [false]]);
+    wrapper.unmount();
+  });
+  it('releases an open viewport request and interaction state when unmounted', async () => {
+    const resize = vi.fn().mockResolvedValue(undefined);
+    const toggles = vi.fn();
+    const wrapper = mount(Popover, {
+      attachTo: document.body,
+      props: { onToggle: toggles },
+      global: { provide: { [popoverViewportKey as symbol]: resize } },
+      slots: { trigger: '<button>Menu</button>' },
+    });
+    await wrapper.get('.popover-trigger').trigger('click');
+    await flushPromises();
+    wrapper.unmount();
+    expect(resize).toHaveBeenLastCalledWith(expect.any(String), null);
+    expect(toggles.mock.calls).toEqual([[true], [false]]);
+  });
+});
+
+describe('compact Linux popover bounds', () => {
+  it('fits the scroll viewport above a low trigger without native expansion', async () => {
+    const bounds = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockImplementation(function (this: HTMLElement) {
+        return this.classList.contains('popover-content') ? new DOMRect(0, 0, 180, 300) : new DOMRect(50, 180, 180, 28);
+      });
+    const previousHeight = window.innerHeight;
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 268 });
+    const wrapper = mount(Popover, {
+      attachTo: document.body,
+      global: { provide: { [popoverAnchorConstraintKey as symbol]: true } },
+      slots: { trigger: '<button>Menu</button>' },
+    });
+    try {
+      await wrapper.get('.popover-trigger').trigger('click');
+      await flushPromises();
+      const content = document.querySelector<HTMLElement>('.popover-content')!;
+      expect(content.classList.contains('up')).toBe(true);
+      expect(content.style.maxHeight).toBe('172px');
+      expect(content.style.top).toBe('8px');
+      expect(content.style.getPropertyValue('--popover-available-height')).toBe('162px');
+    } finally {
+      wrapper.unmount();
+      bounds.mockRestore();
+      Object.defineProperty(window, 'innerHeight', { configurable: true, value: previousHeight });
     }
   });
 });

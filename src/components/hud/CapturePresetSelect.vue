@@ -9,10 +9,12 @@ import type { EditorPresetDocument } from '~/api/types/editor-preset';
 
 const { t } = useTranslate('QuickSnipCropBar');
 
-const props = defineProps<{ kind: PresetKind; disabled?: boolean }>();
+const props = defineProps<{ kind: PresetKind; disabled?: boolean; compact?: boolean }>();
+const emit = defineEmits<{ toggle: [opened: boolean]; error: [message: string] }>();
 const document = ref<EditorPresetDocument | null>(null);
 const error = ref('');
 const busy = ref(false);
+watch(error, (message) => emit('error', message));
 let generation = 0;
 let unsubscribe: (() => void) | null = null;
 const options = computed(
@@ -58,22 +60,30 @@ const select = async (id: string | number) => {
   }
 };
 onBeforeUnmount(() => {
+  emit('error', '');
   generation++;
   unsubscribe?.();
 });
 </script>
 
 <template>
-  <div class="preset-control">
-    <component :is="kind === 'screenshot' ? ScanLine : Clapperboard" :size="17" aria-hidden="true" />
+  <div class="preset-control" :class="{ compact }">
+    <component v-if="!compact" :is="kind === 'screenshot' ? ScanLine : Clapperboard" :size="17" aria-hidden="true" />
     <Select
       :model-value="document?.activePresetId ?? 'default'"
       :options="options"
+      :size="compact ? 'compact' : 'lg'"
+      :option-height="compact ? 32 : 38"
       :disabled="disabled || busy"
-      :aria-label="t('preset')"
+      :label="t('preset')"
       @update:model-value="select"
-    />
-    <p v-if="error" role="alert">{{ error }}</p>
+      @toggle="emit('toggle', $event)"
+    >
+      <template v-if="compact" #icon
+        ><component :is="kind === 'screenshot' ? ScanLine : Clapperboard" :size="14"
+      /></template>
+    </Select>
+    <p v-if="error && !compact" role="alert">{{ error }}</p>
   </div>
 </template>
 
@@ -84,6 +94,10 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 10px;
   color: var(--text-secondary);
+}
+.preset-control.compact {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
 }
 p {
   grid-column: 1 / -1;

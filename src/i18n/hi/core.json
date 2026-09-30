@@ -450,6 +450,7 @@
     "includeAudioDesc": "चालू ऑडियो ट्रैक को निर्यात किए गए वीडियो में जोड़ता है।"
   },
   "HUD": {
+    "issues": "समस्याएँ",
     "inputAccessFailed": "इंटरैक्शन ऐक्सेस का अनुरोध नहीं किया जा सका।",
     "title": "Beam",
     "openProject": "प्रोजेक्ट खोलें",
@@ -498,7 +499,16 @@
     "startQuickSnip": "त्वरित कैप्चर शुरू करें",
     "stopQuickSnip": "त्वरित कैप्चर रोकें",
     "screenshot": "स्क्रीनशॉट",
-    "instant": "तुरंत"
+    "instant": "तुरंत",
+    "recorder": "रिकॉर्डर",
+    "fullScreen": "पूरी स्क्रीन",
+    "region": "क्षेत्र",
+    "chooseCaptureSource": "कैप्चर स्रोत चुनें",
+    "camera": "कैमरा",
+    "microphone": "माइक्रोफ़ोन",
+    "teleprompter": "टेलीप्रॉम्प्टर",
+    "screenshotDescription": "कैप्चर करने के लिए स्क्रीन, क्षेत्र या विंडो चुनें।",
+    "back": "वापस"
   },
   "EditorPreparingHud": {
     "title": "एडिटर तैयार हो रहा है",

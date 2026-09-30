@@ -1,110 +1,116 @@
 <script setup lang="ts">
-import { ChevronLeft, Minus, Settings, X } from '@lucide/vue';
-import Badge from '~/ui/badge/Badge.vue';
+import { FlaskConical, FolderOpen, Minus, Settings, X } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
-import CaptureModeGroup from './CaptureModeGroup.vue';
-import type { CaptureMode } from '~/api/types/capture-mode';
 import UpdateAvailableBadge from '~/components/updates/UpdateAvailableBadge.vue';
 
 const { t } = useTranslate('TopbarHUD');
-
+const { t: tHud } = useTranslate('HUD');
 withDefaults(
   defineProps<{
     title?: string;
-    mode?: CaptureMode;
-    modeDisabled?: boolean;
-    showBack?: boolean;
+    disabled?: boolean;
     showSettings?: boolean;
-    isRecording?: boolean;
+    showProjects?: boolean;
+    showMascot?: boolean;
   }>(),
   {
-    title: '',
-    mode: 'studio',
-    showBack: false,
-    showSettings: false,
-    isRecording: false,
+    showSettings: true,
+    showProjects: true,
+    showMascot: true,
   },
 );
-
-const emit = defineEmits<{
-  (event: 'update:mode', value: CaptureMode): void;
-  (event: 'back'): void;
-  (event: 'minimize'): void;
-  (event: 'open-settings'): void;
-  (event: 'close'): void;
-}>();
+const emit = defineEmits<{ 'open-settings': []; 'open-projects': []; 'open-mascot': []; minimize: []; close: [] }>();
 </script>
 
 <template>
   <header class="hud-topbar">
     <div class="topbar-identity">
-      <div v-if="showBack" class="topbar-back-action">
-        <Button variant="ghost" size="sm" icon-only :icon="ChevronLeft" :aria-label="t('back')" @click="emit('back')" />
-      </div>
       <img
-        v-else
         :src="resolvePublicAssetUrl('/brand/BeamIcon.webp')"
         class="brand-logo"
         :alt="t('title')"
         draggable="false"
       />
-      <span v-if="showBack" class="topbar-title">{{ title || t('title') }}</span>
-      <CaptureModeGroup
-        v-else
-        class="topbar-modes"
-        full
-        :model-value="mode"
-        :disabled="modeDisabled || isRecording"
-        @update:model-value="emit('update:mode', $event)"
-      />
-      <Badge v-if="isRecording" variant="error" class="rec-badge">{{ t('rec') }}</Badge>
+      <span class="topbar-title">{{ title || t('title') }}</span>
     </div>
     <div class="window-actions">
-      <button type="button" class="window-action" :aria-label="t('minimize')" @click="emit('minimize')">
-        <Minus :size="16" />
-      </button>
+      <slot name="issues" />
+      <Button
+        v-if="showMascot"
+        variant="ghost"
+        size="xs"
+        icon-only
+        :icon="FlaskConical"
+        class="window-action"
+        :disabled="disabled"
+        aria-label="Mascot Lab"
+        title="Mascot Lab"
+        @click="emit('open-mascot')"
+      />
+      <Button
+        v-if="showProjects"
+        variant="ghost"
+        size="xs"
+        icon-only
+        :icon="FolderOpen"
+        class="window-action"
+        :disabled="disabled"
+        :aria-label="tHud('openProject')"
+        :title="tHud('openProject')"
+        @click="emit('open-projects')"
+      />
       <span v-if="showSettings" class="settings-action">
         <Button
           variant="ghost"
-          size="sm"
+          size="xs"
           icon-only
           :icon="Settings"
+          class="window-action"
+          :disabled="disabled"
           :aria-label="t('preferences')"
+          :title="t('preferences')"
           @click="emit('open-settings')"
         />
         <UpdateAvailableBadge />
       </span>
-      <button type="button" class="window-action close-button" :aria-label="t('close')" @click="emit('close')">
-        <X :size="16" />
-      </button>
+      <Button
+        variant="ghost"
+        size="xs"
+        icon-only
+        :icon="Minus"
+        class="window-action"
+        :aria-label="t('minimize')"
+        :title="t('minimize')"
+        @click="emit('minimize')"
+      />
+      <Button
+        variant="ghost"
+        size="xs"
+        icon-only
+        :icon="X"
+        class="window-action close-button"
+        :aria-label="t('close')"
+        :title="t('close')"
+        @click="emit('close')"
+      />
     </div>
   </header>
 </template>
 
 <style scoped>
 .hud-topbar {
-  height: 64px;
-  padding: 0 16px;
+  height: 38px;
+  padding: 0 10px 0 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  background: var(--color-bg-element);
   border-bottom: 1px solid var(--color-border);
   -webkit-app-region: drag;
   flex-shrink: 0;
-  cursor: grab;
-}
-.topbar-modes {
-  flex: 1;
-  min-width: 0;
-}
-.brand-logo {
-  flex-shrink: 0;
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
 }
 .topbar-identity,
 .window-actions {
@@ -115,76 +121,38 @@ const emit = defineEmits<{
 .topbar-identity {
   flex: 1;
   min-width: 0;
-  gap: 12px;
-  -webkit-app-region: drag;
 }
-.settings-action {
-  position: relative;
-  display: inline-flex;
-}
-.settings-action {
-  -webkit-app-region: no-drag;
-}
-.window-actions {
-  flex-shrink: 0;
-  gap: 4px;
-  -webkit-app-region: no-drag;
-}
-.topbar-back-action {
-  flex-shrink: 0;
+.brand-logo {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
   -webkit-app-region: no-drag;
 }
 .topbar-title {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 16px;
-  font-weight: 700;
+  font-size: var(--font-size-body);
+  font-weight: var(--weight-title);
   color: var(--text-primary);
-  letter-spacing: -0.5px;
-  user-select: none;
-  cursor: grab;
-}
-.rec-badge {
-  flex-shrink: 0;
-  font-size: 0.6rem;
-  padding: 1px 5px;
   user-select: none;
 }
-.window-action {
-  width: 32px;
-  height: 32px;
-  padding: 0;
+.window-actions {
+  gap: 2px;
+  -webkit-app-region: no-drag;
+}
+.settings-action {
+  position: relative;
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  border: 0;
-  background: transparent;
+}
+.window-actions :deep(.window-action) {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-xs);
   color: var(--text-primary);
-  cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease;
 }
-.window-action:hover {
-  background: var(--color-bg-surface-hover);
-}
-.window-action:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-}
-.close-button:hover {
-  background: var(--color-error) !important;
-  color: white !important;
-}
-.topbar-back-action :deep(.btn) {
-  padding: 0;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-}
-.topbar-back-action :deep(.btn:hover) {
-  background: var(--color-bg-surface-hover);
+.window-actions :deep(.close-button:hover) {
+  background: var(--color-error);
+  color: var(--text-light);
 }
 </style>

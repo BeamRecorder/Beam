@@ -612,7 +612,7 @@ test('flushes a pending Crop Bar position before hide or destroy', () => {
   }
 });
 
-test('ignores the synthetic Wayland origin when committing a Crop Bar move', () => {
+test('persists the X11 zero origin in a Wayland host session', () => {
   const fixture = createFixture(display, 'linux', { environment: { WAYLAND_DISPLAY: 'wayland-0' } });
   fixture.crop.show(configuration(), display);
   const window = fixture.windows[0];
@@ -624,9 +624,12 @@ test('ignores the synthetic Wayland origin when committing a Crop Bar move', () 
   window.emit('moved');
 
   assert.equal(fixture.preferenceWrites.length, 0);
-  assert.equal(fixture.timers.size, 0);
+  assert.equal(fixture.timers.size, 1);
+  const [timer] = fixture.timers.values();
+  timer.callback();
+  assert.equal(fixture.preferenceWrites.length, 1);
   fixture.crop.updateRegion({ x: 0.1, y: 0.1, width: 0.2, height: 0.2 }, display);
-  assert.deepEqual(window.getBounds(), { x: 144, y: 334, width: 480, height: 132 });
+  assert.deepEqual(window.getBounds(), { x: 0, y: 0, width: 480, height: 132 });
 });
 
 test('repositions the Crop Bar below the live selected region', () => {

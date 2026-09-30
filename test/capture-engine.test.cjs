@@ -298,3 +298,57 @@ test('native preview cleanup is allowed only on a live running engine', () => {
   engine.process = null;
   assert.equal(engine.canCleanup(), false);
 });
+
+test('resolves shared Cargo binaries once when the worktree has no local engine', () => {
+  const previousExists = fs.existsSync;
+  let queries = 0;
+  try {
+    fs.existsSync = (candidate) => candidate === '/shared/cargo-target/debug/capture-engine';
+    const engine = new CaptureEngine({ isPackaged: false, getVersion: () => '1.2.3' }, '/worktree', {
+      resolveTargetDirectory: (root) => {
+        assert.equal(root, '/worktree');
+        queries++;
+        return '/shared/cargo-target';
+      },
+    });
+    assert.equal(engine.resolveExecutable(), '/shared/cargo-target/debug/capture-engine');
+    assert.equal(engine.resolveExecutable(), '/shared/cargo-target/debug/capture-engine');
+    assert.equal(queries, 1);
+  } finally {
+    fs.existsSync = previousExists;
+  }
+});
+test('reports Cargo configuration errors when no development binary can be found', () => {
+  const previousExists = fs.existsSync;
+  try {
+    fs.existsSync = () => false;
+    const engine = new CaptureEngine({ isPackaged: false, getVersion: () => '1.2.3' }, '/worktree', {
+      resolveTargetDirectory: () => {
+        throw new Error('Invalid Cargo configuration');
+      },
+    });
+    assert.throws(() => engine.resolveExecutable(), /Invalid Cargo configuration/);
+  } finally {
+    fs.existsSync = previousExists;
+  }
+});
+test('packaged engine resolution never queries the developer Cargo installation', () => {
+  const previousExists = fs.existsSync;
+  const previousResources = process.resourcesPath;
+  try {
+    process.resourcesPath = '/packaged/resources';
+    fs.existsSync = () => false;
+    const engine = new CaptureEngine({ isPackaged: true, getVersion: () => '1.2.3' }, '/worktree', {
+      resolveTargetDirectory: () => {
+        throw new Error('MUST NOT QUERY CARGO');
+      },
+    });
+    assert.throws(
+      () => engine.resolveExecutable(),
+      (error) => /introuvable/.test(error.message) && !/MUST NOT/.test(error.message),
+    );
+  } finally {
+    fs.existsSync = previousExists;
+    process.resourcesPath = previousResources;
+  }
+});

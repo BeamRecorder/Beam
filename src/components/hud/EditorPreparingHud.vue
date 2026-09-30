@@ -49,8 +49,8 @@ const stageLabel = computed(() => t(props.progress.stage));
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 18px;
-  padding: 32px 28px 40px;
+  gap: 10px;
+  padding: 16px 28px;
   color: var(--text-primary);
   text-align: center;
 }

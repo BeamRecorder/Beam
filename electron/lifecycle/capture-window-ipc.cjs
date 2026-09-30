@@ -27,6 +27,7 @@ function registerCaptureWindowIpc({
   applicationIpc.handle('screen-region:select', (event, options) =>
     screenRegionOverlay.select(options, BrowserWindow.fromWebContents(event.sender)),
   );
+  applicationIpc.on('screen-region:ready', (event) => screenRegionOverlay.markRendererReady(event.sender));
   applicationIpc.on('screen-region:show', (_event, options) => screenRegionOverlay.show(options));
   applicationIpc.on('screen-region:hide', () => screenRegionOverlay.hide());
   applicationIpc.on('screen-region:confirm', (_event, region) => screenRegionOverlay.confirm(region));

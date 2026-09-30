@@ -42,6 +42,7 @@ import { downloadBlob, mascotPng, serializeMascot } from './mascot-export';
 import { useMascotPlayer } from './useMascotPlayer';
 import type { PreviewSurface } from './mascot-types';
 
+defineProps<{ embedded?: boolean }>();
 const status = ref('');
 let preset = defaultPreset();
 try {
@@ -186,7 +187,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', keyboard));
 <template>
   <main class="mascot-lab">
     <header class="topbar">
-      <a class="brand" href="./mascot.html" aria-label="Beam Mascot Lab"
+      <a class="brand" :href="embedded ? undefined : './mascot.html'" aria-label="Beam Mascot Lab"
         ><img src="/brand/BeamIcon.webp" alt="" /><span>beam<span class="brand-dot">.</span></span></a
       >
       <span class="header-divider" /><span class="lab-tag"><FlaskConical :size="14" /> Mascot Lab</span>

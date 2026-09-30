@@ -182,12 +182,15 @@ test('ignores synchronous and asynchronous notifications for programmatic bounds
   assert.deepEqual(fixture.commits.at(-1), requested);
 });
 
-test('ignores Wayland synthetic origin while accepting negative coordinates', () => {
+test('accepts zero and negative X11 coordinates even in a Wayland desktop session', () => {
   const fixture = createFixture('linux', { WAYLAND_DISPLAY: 'wayland-0' });
   fixture.window.bounds = { ...fixture.window.bounds, x: 0, y: 0 };
   fixture.window.emit('move');
-  assert.deepEqual(fixture.moves, []);
+  assert.deepEqual(fixture.moves, [{ x: 0, y: 0, width: 380, height: 184 }]);
   assert.deepEqual(fixture.commits, []);
+  fireTimers(fixture);
+  fixture.moves.length = 0;
+  fixture.commits.length = 0;
 
   fixture.window.bounds = { ...fixture.window.bounds, x: -120, y: 35 };
   fixture.window.emit('move');

@@ -239,63 +239,20 @@ test('recreates the countdown after its navigation promise rejects', async () =>
   await fixture.overlay.suspend();
 });
 
-test('Wayland presents the countdown without unsupported global window operations', () => {
+test('a Wayland desktop still positions the countdown through the forced X11 client', () => {
   const fixture = loadCountdownWindow({
     platform: 'linux',
     environment: { XDG_SESSION_TYPE: 'wayland', WAYLAND_DISPLAY: 'wayland-0' },
   });
   const constructor = fixture.calls.find((call) => call[0] === 'constructor');
-
-  assert.equal(constructor[1].width, 560);
-  assert.equal(constructor[1].height, 256);
-  assert.equal(constructor[1].show, false);
-  assert.equal(constructor[1].center, true);
+  assert.equal(constructor[1].center, false);
   assert.equal(constructor[1].focusable, false);
-  assert.ok(fixture.calls.some((call) => call[0] === 'mouse' && call[1] === true));
-  assert.deepEqual(fixture.screenCalls, []);
-
   fixture.overlay.show(3);
-  assert.equal(
-    fixture.calls.some((call) => call[0] === 'send'),
-    false,
-  );
-  assert.equal(
-    fixture.calls.some((call) => call[0] === 'show'),
-    false,
-  );
-
   fixture.finishLoad();
-  assert.ok(fixture.calls.some((call) => call[0] === 'send' && call[1] === 'countdown:state' && call[2] === 3));
-  assert.equal(fixture.calls.filter((call) => call[0] === 'show').length, 1);
-  assert.equal(
-    fixture.calls.some((call) => call[0] === 'showInactive'),
-    false,
-  );
-  assert.equal(
-    fixture.calls.some((call) => call[0] === 'top'),
-    false,
-  );
-  assert.equal(
-    fixture.calls.some((call) => call[0] === 'position'),
-    false,
-  );
-  assert.deepEqual(fixture.screenCalls, []);
-
-  fixture.overlay.show(2);
-  assert.equal(fixture.calls.filter((call) => call[0] === 'show').length, 2);
-  assert.equal(
-    fixture.calls.some((call) => call[0] === 'showInactive'),
-    false,
-  );
-  assert.equal(
-    fixture.calls.some((call) => call[0] === 'top'),
-    false,
-  );
-  assert.equal(
-    fixture.calls.some((call) => call[0] === 'position'),
-    false,
-  );
-
+  assert.ok(fixture.calls.some((call) => call[0] === 'showInactive'));
+  assert.ok(fixture.calls.some((call) => call[0] === 'position'));
+  assert.ok(fixture.calls.some((call) => call[0] === 'top'));
+  assert.ok(fixture.screenCalls.length > 0);
   fixture.overlay.show(null);
   assert.equal(fixture.calls.at(-1)[0], 'hide');
 });

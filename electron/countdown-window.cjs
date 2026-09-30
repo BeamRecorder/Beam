@@ -1,13 +1,7 @@
 const { BrowserWindow, screen } = require('electron');
 const path = require('path');
 
-function createCountdownWindow({
-  applicationRoot,
-  isPackaged,
-  canAcceptWork = () => true,
-  platform = process.platform,
-  environment = process.env,
-}) {
+function createCountdownWindow({ applicationRoot, isPackaged, canAcceptWork = () => true }) {
   let window = null;
   let seconds = null;
   let ready = false;
@@ -15,11 +9,7 @@ function createCountdownWindow({
   let finishPreparation = null;
   const width = 560;
   const height = 256;
-  const isWayland =
-    platform === 'linux' &&
-    (String(environment.XDG_SESSION_TYPE || '').toLowerCase() === 'wayland' || Boolean(environment.WAYLAND_DISPLAY));
   const position = () => {
-    if (isWayland) return;
     const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
     window?.setPosition(
       display.workArea.x + Math.max(0, Math.round((display.workArea.width - width) / 2)),
@@ -38,12 +28,8 @@ function createCountdownWindow({
   };
   const reveal = () => {
     if (!window || window.isDestroyed()) return;
-    // Wayland has no showInactive/moveTop; this surface is always non-focusable.
-    if (isWayland) window.show();
-    else {
-      window.showInactive();
-      window.moveTop();
-    }
+    window.showInactive();
+    window.moveTop();
   };
   const prepare = () => {
     if (!canAcceptWork()) return Promise.resolve(false);
@@ -55,7 +41,7 @@ function createCountdownWindow({
     const target = new BrowserWindow({
       width,
       height,
-      center: isWayland,
+      center: false,
       show: false,
       frame: false,
       transparent: true,

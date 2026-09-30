@@ -1,4 +1,5 @@
-const { BrowserWindow } = require('electron');
+const { BrowserWindow, screen } = require('electron');
+const { resizeHudPopover } = require('./hud-popover-size.cjs');
 
 function windowForEvent(event) {
   return BrowserWindow.fromWebContents(event.sender);
@@ -52,6 +53,10 @@ function registerWindowIpc(ipcMain, controllerForWindow, { debug = false } = {})
     controllerForWindow(windowForEvent(event))?.setVisible(Boolean(visible));
   });
   ipcMain.handle('window:bounds', (event) => windowForEvent(event)?.getBounds() ?? null);
+  ipcMain.handle('window:resize-hud-popover', (event, height) => {
+    const win = windowForEvent(event);
+    return resizeHudPopover(win, controllerForWindow(win), screen, height);
+  });
 
   ipcMain.on('window:setSizeSmooth', (event, width, height) => {
     const win = windowForEvent(event);

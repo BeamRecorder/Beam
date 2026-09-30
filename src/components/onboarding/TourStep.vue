@@ -287,6 +287,8 @@ const toggleChip = (key: FeatureKey) => {
   position: relative;
   z-index: 1;
   max-height: 98%;
+  width: 100%;
+  padding: 0 12px;
   display: flex;
   align-items: center;
   justify-content: center;

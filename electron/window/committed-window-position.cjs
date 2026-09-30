@@ -4,7 +4,6 @@ const samePosition = (left, right) => left && right && left.x === right.x && lef
 function createCommittedWindowPosition({
   window,
   platform = process.platform,
-  environment = process.env,
   onMove = () => {},
   onCommit,
   setTimer = setTimeout,
@@ -34,9 +33,6 @@ function createCommittedWindowPosition({
     if (disposed || window.isDestroyed() || !window.isVisible()) return;
     const bounds = window.getBounds();
     if (!Number.isFinite(bounds.x) || !Number.isFinite(bounds.y)) return;
-    // Wayland withholds global coordinates. Preserve the last usable preference
-    // instead of replacing it with the compositor's synthetic origin.
-    if (platform === 'linux' && environment.WAYLAND_DISPLAY && bounds.x === 0 && bounds.y === 0) return;
     if (samePosition(bounds, programmatic) || samePosition(bounds, observed)) return;
     programmatic = null;
     observed = { ...bounds };

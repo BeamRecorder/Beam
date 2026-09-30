@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { spawn, spawnSync } = require('node:child_process');
+const { resolveCargoTargetDirectory } = require('../../electron/capture/cargo-build-paths.cjs');
 const {
   NATIVE_TARGETS,
   captureEngineAssetName,
@@ -46,17 +47,19 @@ async function buildCaptureEngine({
   target = null,
   spawnImpl = spawn,
   cwd = applicationRoot,
+  resolveTarget = resolveCargoTargetDirectory,
 } = {}) {
   await runCommand('cargo', cargoBuildArguments(platform, release, target), { cwd }, spawnImpl);
+  return resolveTarget(cwd);
 }
 
 function builderPlatform(platform) {
   return platform === 'win32' ? 'win' : platform === 'darwin' ? 'mac' : platform === 'linux' ? 'linux' : null;
 }
 
-function builtFile(root, name, platform, profile, target) {
+function builtFile(root, name, platform, profile, target, targetDirectory = path.join(root, 'target')) {
   const extension = platform === 'win32' && name === 'capture-engine' ? '.exe' : '';
-  return path.join(root, 'target', ...(target ? [target] : []), profile, `${name}${extension}`);
+  return path.join(targetDirectory, ...(target ? [target] : []), profile, `${name}${extension}`);
 }
 
 function stageDirectory(root, platform, arch) {
@@ -73,20 +76,21 @@ function stageNativeFiles({
   target = null,
   engineSource = null,
   helperSource = null,
+  targetDirectory,
 }) {
   const destinationDirectory = stageDirectory(root, platform, arch);
   const engineName = captureEngineFilename(version, platform, arch);
   if (!destinationDirectory || !engineName) throw new Error(`Unsupported native target ${platform}/${arch}`);
   const files = [
     {
-      source: engineSource || builtFile(root, 'capture-engine', platform, profile, target),
+      source: engineSource || builtFile(root, 'capture-engine', platform, profile, target, targetDirectory),
       destination: path.join(destinationDirectory, engineName),
     },
   ];
   const helperName = inputHelperFilename(version, platform, arch);
   if (helperName) {
     files.push({
-      source: helperSource || builtFile(root, 'beam-input-helper', platform, profile, target),
+      source: helperSource || builtFile(root, 'beam-input-helper', platform, profile, target, targetDirectory),
       destination: path.join(destinationDirectory, helperName),
     });
   }
@@ -143,8 +147,8 @@ async function main() {
   const { version } = require('../../package.json');
   if (command === 'build') {
     if (!cargoAvailable()) throw new Error('Cargo is required by bun run build and bun run electron:build');
-    await buildCaptureEngine({ release: true });
-    stageNativeFiles({ version });
+    const targetDirectory = await buildCaptureEngine({ release: true });
+    stageNativeFiles({ version, targetDirectory });
     return;
   }
   if (command === 'stage') {
