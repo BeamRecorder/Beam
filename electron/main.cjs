@@ -345,6 +345,16 @@ function initializeApplication() {
       const updater = initializeApplicationUpdater({ app, BrowserWindow, autoUpdater, coordinator, applicationIpc });
       applicationIpc.handle('community:open-discord', () => shell.openExternal(DISCORD_INVITE_URL));
       applicationIpc.handle('community:open-github', () => shell.openExternal(GITHUB_REPOSITORY_URL));
+      applicationIpc.handle('community:get-github-stars', async () => {
+        try {
+          const res = await fetch('https://api.github.com/repos/BeamRecorder/Beam');
+          if (!res.ok) return { stars: 0 };
+          const data = await res.json();
+          return { stars: data.stargazers_count ?? 0 };
+        } catch {
+          return { stars: 0 };
+        }
+      });
       ipcMain.on('app:quit', () => {
         if (coordinator.canAcceptWork()) app.quit();
       });

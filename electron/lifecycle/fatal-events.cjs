@@ -14,7 +14,13 @@ function registerFatalLifecycle({ app, powerMonitor, coordinator, log = () => {}
   processTarget.on('uncaughtException', (error) =>
     exitAfterShutdown('fatal', `Uncaught exception: ${error?.stack || error}`),
   );
-  processTarget.on('unhandledRejection', (reason) => exitAfterShutdown('fatal', `Unhandled rejection: ${reason}`));
+  processTarget.on('unhandledRejection', (reason) => {
+    if (String(reason?.message || reason).includes('Object has been destroyed')) {
+      log(`Ignored destroyed object rejection: ${reason}`);
+      return;
+    }
+    exitAfterShutdown('fatal', `Unhandled rejection: ${reason}`);
+  });
   powerMonitor.on('shutdown', requestQuit);
   app.on('render-process-gone', (_event, contents, details) =>
     exitAfterShutdown(
