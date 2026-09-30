@@ -238,7 +238,7 @@ test('does not resolve symlinked screenshot media directories or files', (t) => 
     fs.symlinkSync(outside, mediaDirectory, 'dir');
     const url = `project-media://screenshot/${fx.document.id}/media/${fileName}`;
     assert.equal(fx.store.fileForUrl(url), null);
-    fs.rmSync(mediaDirectory, { force: true });
+    fs.rmSync(mediaDirectory, { recursive: true, force: true });
 
     fs.mkdirSync(mediaDirectory);
     fs.symlinkSync(externalFile, path.join(mediaDirectory, fileName), 'file');
