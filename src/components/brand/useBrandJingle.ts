@@ -7,14 +7,12 @@ import {
   sampleBrandJingle,
 } from './brand-motion';
 import type { BrandJingle } from './brand-types';
-import { BEAMY_ACTION_COUNT } from './Beamy/beamy-motion';
 
 export function useBrandJingle() {
   const media = window.matchMedia('(prefers-reduced-motion: reduce)');
   let reducedMotion = media.matches;
   const playing = ref(false);
   const letters = shallowRef(RESTING_WORDMARK);
-  const cycleOffset = ref(0);
   let jingle: BrandJingle | null = null;
   let transition = RESTING_WORDMARK;
   let frame = 0;
@@ -42,7 +40,6 @@ export function useBrandJingle() {
     cancelAnimationFrame(frame);
     transition = letters.value;
     jingle = chooseBrandJingle(jingle);
-    cycleOffset.value = Math.floor(Math.random() * BEAMY_ACTION_COUNT);
     elapsed = 0;
     previous = null;
     playing.value = true;
@@ -64,5 +61,5 @@ export function useBrandJingle() {
     media.removeEventListener('change', motionChanged);
     document.removeEventListener('visibilitychange', visibilityChanged);
   });
-  return { playing, letters, cycleOffset, play };
+  return { playing, letters, play };
 }

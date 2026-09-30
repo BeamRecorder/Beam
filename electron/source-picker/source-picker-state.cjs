@@ -12,6 +12,7 @@ function reducePickerState(state, action) {
   if (action.type === 'kind') return initialPickerState(action.kind, state.sources, state.development);
   if (action.type === 'confirm') return state;
   if (!['hover', 'select'].includes(action.type)) throw new TypeError('Invalid source selection action');
+  if (action.type === 'hover' && action.id === null) return { ...state, highlightedId: null, error: null };
   if (!state.sources.some((source) => source.kind === state.kind && source.id === action.id))
     throw new TypeError('Unknown capture source');
   return {

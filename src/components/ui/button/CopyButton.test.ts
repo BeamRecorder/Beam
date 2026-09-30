@@ -175,32 +175,46 @@ describe('CopyButton', () => {
     wrapper.unmount();
   });
 
-  it('stays loading while clipboard write is pending and shows success after resolution', async () => {
-    let resolveWrite!: () => void;
-    clipboardWriteText.mockImplementationOnce(
-      () =>
-        new Promise<void>((resolve) => {
-          resolveWrite = resolve;
-        }),
-    );
-    const wrapper = mount(CopyButton, {
-      props: { text: 'diagnostic details', display: 'text', label: 'Copy error', copiedLabel: 'Copied' },
-    });
+  it.each(['text', 'icon'] as const)(
+    'keeps the %s copy button visually stable during a pending write and ignores duplicate clicks',
+    async (display) => {
+      let resolveWrite!: () => void;
+      clipboardWriteText.mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            resolveWrite = resolve;
+          }),
+      );
+      const wrapper = mount(CopyButton, {
+        props: { text: 'diagnostic details', display, label: 'Copy error', copiedLabel: 'Copied' },
+      });
+      const button = wrapper.get('button');
+
+      await button.trigger('click');
+      expect(clipboardWriteText).toHaveBeenCalledWith('diagnostic details');
+      expect(button.attributes('disabled')).toBeUndefined();
+      expect(button.attributes('aria-busy')).toBe('true');
+      expect(button.find('.lucide-loader').exists()).toBe(false);
+      expect(button.find('.lucide-copy').exists()).toBe(true);
+      expect(button.text()).not.toContain('Copied');
+      await button.trigger('click');
+      expect(clipboardWriteText).toHaveBeenCalledOnce();
+
+      resolveWrite();
+      await flushPromises();
+      expect(button.attributes('disabled')).toBeUndefined();
+      expect(button.attributes('aria-busy')).toBe('false');
+      expect(button.attributes('aria-label')).toBe('Copied');
+      expect(button.find('.lucide-check').exists()).toBe(true);
+    },
+  );
+  it('preserves an explicitly disabled copy action without writing to the clipboard', async () => {
+    const wrapper = mount(CopyButton, { props: { text: 'diagnostic details', disabled: true } });
     const button = wrapper.get('button');
-
-    await button.trigger('click');
-    expect(clipboardWriteText).toHaveBeenCalledWith('diagnostic details');
     expect(button.attributes('disabled')).toBeDefined();
-    expect(button.attributes('aria-busy')).toBe('true');
-    expect(button.find('.lucide-loader').exists()).toBe(true);
-    expect(button.text()).not.toContain('Copied');
-
-    resolveWrite();
-    await flushPromises();
-    expect(button.attributes('disabled')).toBeUndefined();
-    expect(button.attributes('aria-busy')).toBe('false');
-    expect(button.text()).toContain('Copied');
-    expect(button.find('.lucide-check').exists()).toBe(true);
+    await button.trigger('click');
+    expect(clipboardWriteText).not.toHaveBeenCalled();
+    wrapper.unmount();
   });
 
   it('shows an error after clipboard rejection without claiming success', async () => {

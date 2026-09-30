@@ -24,10 +24,8 @@ const { motion } = useBeamy(toRef(props, 'phase'), toRef(props, 'active'), toRef
       :frame="motion.frame"
       :size="size"
       :portrait="portrait"
-      eye-color="var(--beamy-eye-color)"
       color="var(--color-primary)"
       paper="var(--color-bg-element)"
-      blush
     />
     <span v-if="phase === 'recording'" class="recording-light" />
   </span>
@@ -35,16 +33,12 @@ const { motion } = useBeamy(toRef(props, 'phase'), toRef(props, 'active'), toRef
 
 <style scoped>
 .beam-mascot {
-  --beamy-eye-color: #000;
   position: relative;
   display: inline-flex;
   flex: none;
   vertical-align: middle;
   pointer-events: none;
   overflow: hidden;
-}
-:root.dark .beam-mascot {
-  --beamy-eye-color: #fff;
 }
 .mascot-artwork {
   display: block;

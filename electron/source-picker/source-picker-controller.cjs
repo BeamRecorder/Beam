@@ -18,78 +18,95 @@ function createSourcePickerController({
     if (!previous) return;
     session = null;
     clearTimeout(previous.timer);
-    for (const surface of previous.surfaces) if (!surface.target.isDestroyed()) surface.target.destroy();
+    if (previous.surface && !previous.surface.target.isDestroyed()) previous.surface.target.destroy();
+    if (previous.previewSurface && !previous.previewSurface.target.isDestroyed())
+      previous.previewSurface.target.destroy();
     if (!selection && !hudWindow.isDestroyed() && hudWindow.isVisible()) hudWindow.focus();
     if (error) previous.reject(error);
     else previous.resolve(selection);
   };
-  const publish = () => {
+  const publish = (raise = false) => {
     const current = session;
     if (!current) return;
-    const { state } = current;
-    const active = state.sources.find((source) => source.id === (state.selectedId || state.highlightedId));
-    for (const surface of current.surfaces) {
-      if (!surface.isReady() || surface.target.isDestroyed()) continue;
-      const target = surface.target;
-      target.webContents.send(
-        'source-picker:state',
-        surface.role === 'target' ? { ...state, highlightedId: active?.id ?? null } : state,
+    const preview = current.previewSurface;
+    if (preview?.isReady() && !preview.target.isDestroyed()) {
+      preview.target.webContents.send('source-picker:state', current.state);
+      const active = current.state.sources.find(
+        (source) => source.id === (current.state.highlightedId || current.state.selectedId),
       );
-      if (surface.role !== 'chooser') {
-        if (!active?.bounds) {
-          target.hide();
-          continue;
-        }
-        const bounds = active.bounds;
-        const inset = surface.role === 'aura' && active.kind === 'window' ? 16 : 0;
-        target.setBounds({
-          x: bounds.x - inset,
-          y: bounds.y - inset,
-          width: bounds.width + inset * 2,
-          height: bounds.height + inset * 2,
-        });
-        target.showInactive();
-      } else if (!target.isVisible()) {
-        target.show();
-        target.focus();
+      if (!active?.bounds) preview.target.hide();
+      else if (!preview.target.isVisible()) {
+        preview.target.showInactive();
+        preview.target.moveTop();
+        raise = true;
       }
     }
-    const chooser = current.surfaces.find((surface) => surface.role === 'chooser');
-    if (chooser?.isReady()) chooser.target.moveTop();
+    const surface = current?.surface;
+    if (!surface?.isReady() || surface.target.isDestroyed()) return;
+    const target = surface.target;
+    target.webContents.send('source-picker:state', current.state);
+    if (!target.isVisible()) {
+      target.show();
+      target.focus();
+      raise = true;
+    }
+    if (raise) target.moveTop();
   };
   const refreshPreview = async (raise) => {
     const current = session;
     if (!current || current.previewPending) return;
     const version = current.version;
-    const highlighted = current.state.sources.find((source) => source.id === current.state.highlightedId);
-    const selected = current.state.sources.find((source) => source.id === current.state.selectedId);
-    if (!highlighted && !selected) return;
+    const active = current.state.sources.find(
+      (source) => source.id === (current.state.highlightedId || current.state.selectedId),
+    );
+    if (!active) return;
     current.previewPending = true;
     try {
-      const errors = [];
-      for (const source of [highlighted, ...(selected && selected !== highlighted ? [selected] : [])]) {
-        if (!source) continue;
-        try {
-          const result = await provider.preview(source, raise && source === highlighted);
-          if (session !== current || current.version !== version) return;
-          source.bounds = result.bounds;
-          source.thumbnail = result.thumbnail;
-          if (result.warning) errors.push(result.warning);
-        } catch (error) {
-          if (session !== current || current.version !== version) return;
-          errors.push(error instanceof Error ? error.message : String(error));
-          source.bounds = undefined; // Hide only the vanished target's aura.
-        }
-      }
-      current.state.error = [...new Set(errors)].join('\n') || null;
+      const result = await provider.preview(active, raise);
+      if (session !== current || current.version !== version) return;
+      active.bounds = result.bounds;
+      active.thumbnail = result.thumbnail;
+      current.state.error = result.warning || null;
+    } catch (error) {
+      if (session !== current || current.version !== version) return;
+      current.state.error = error instanceof Error ? error.message : String(error);
+      active.bounds = undefined;
     } finally {
       current.previewPending = false;
-      if (session === current) {
-        publish();
+      if (session === current && !current.confirming) {
+        // Native inspection may already have raised a stale source. Restore the
+        // chooser above it even when its thumbnail result is discarded.
+        publish(raise);
         clearTimeout(current.timer);
-        if (current.version !== version) void refreshPreview(true);
-        else current.timer = setTimeout(() => void refreshPreview(false), 700);
+        if (current.version !== version) requestPreview(true);
+        else if (current.state.highlightedId || current.state.selectedId)
+          current.timer = setTimeout(() => requestPreview(false), 700);
       }
+    }
+  };
+  const requestPreview = (raise) => {
+    if (session && !session.previewPending && !session.confirming) session.previewTask = refreshPreview(raise);
+  };
+  const confirmSelection = async (current) => {
+    if (current.confirming || !current.state.selectedId) return;
+    current.confirming = true;
+    current.version++;
+    clearTimeout(current.timer);
+    const source = current.state.sources.find((source) => source.id === current.state.selectedId);
+    try {
+      // Finish any in-flight inspection before raising the exact clicked source.
+      await current.previewTask;
+      if (session !== current) return;
+      const result = await provider.preview(source, true);
+      if (session !== current) return;
+      source.bounds = result.bounds;
+      source.thumbnail = result.thumbnail;
+      finish({ id: source.id, kind: current.state.kind, development: provider.development, source });
+    } catch (error) {
+      if (session !== current) return;
+      current.confirming = false;
+      current.state.error = error instanceof Error ? error.message : String(error);
+      publish(true);
     }
   };
   const open = (kind) => {
@@ -103,9 +120,9 @@ function createSourcePickerController({
       const candidates = sources.filter((source) => source.kind === kind);
       if (kind === 'screen' && candidates.length === 1 && !provider.development)
         return { id: candidates[0].id, kind, development: false, source: candidates[0] };
-      const { workArea } = screen.getDisplayMatching(hudWindow.getBounds());
-      const width = Math.min(1040, workArea.width - 32);
-      const height = Math.min(540, Math.floor(workArea.height / 2), workArea.height - 32);
+      const { bounds: displayBounds, workArea } = screen.getDisplayMatching(hudWindow.getBounds());
+      const width = Math.min(kind === 'screen' ? 640 : 752, workArea.width);
+      const height = Math.min(200, workArea.height);
       let resolve, reject;
       const result = new Promise((yes, no) => {
         resolve = yes;
@@ -113,43 +130,74 @@ function createSourcePickerController({
       });
       const current = {
         state: initialPickerState(kind, sources, provider.development),
-        surfaces: [],
+        surface: null,
+        previewSurface: null,
         result,
         resolve,
         reject,
         timer: null,
         version: 0,
         previewPending: false,
+        previewTask: null,
+        confirming: false,
       };
       session = current;
       try {
-        for (const role of [...(provider.development ? ['target'] : []), 'aura', 'chooser']) {
-          const bounds =
-            role === 'chooser'
-              ? {
-                  x: workArea.x + Math.round((workArea.width - width) / 2),
-                  y: workArea.y + workArea.height - height - 16,
-                  width,
-                  height,
-                }
-              : { x: workArea.x, y: workArea.y, width: 32, height: 32 };
-          const surface = createSourcePickerSurface({
+        const onReady = () => {
+          if (session === current) publish();
+        };
+        const onFailure = (error) => {
+          if (session === current) finish(null, error);
+        };
+        if (provider.development || kind === 'screen') {
+          const previewWidth = Math.min(kind === 'screen' ? 640 : 1306, Math.round(displayBounds.width * 0.68));
+          const previewHeight = Math.min(kind === 'screen' ? 350 : 648, Math.round(displayBounds.height * 0.6));
+          current.previewSurface = createSourcePickerSurface({
             BrowserWindow,
             applicationRoot,
-            role,
-            bounds,
+            role: 'target',
+            bounds: {
+              x: displayBounds.x + Math.round((displayBounds.width - previewWidth) / 2),
+              y: displayBounds.y + Math.round((displayBounds.height - previewHeight) / 2),
+              width: previewWidth,
+              height: previewHeight,
+            },
             platform,
             isPackaged,
             development: provider.development,
-            onReady: () => {
-              if (session === current) publish();
-            },
-            onFailure: (error) => {
-              if (session === current) finish(null, error);
-            },
+            onReady,
+            onFailure,
           });
-          current.surfaces.push(surface);
         }
+        const chooserBounds = {
+          x: Math.max(
+            workArea.x,
+            Math.min(
+              workArea.x + workArea.width - width,
+              displayBounds.x + Math.round((displayBounds.width - width) / 2),
+            ),
+          ),
+          y: Math.max(
+            workArea.y,
+            Math.min(
+              workArea.y + workArea.height - height,
+              displayBounds.y + Math.round((displayBounds.height - height) / 2),
+            ),
+          ),
+          width,
+          height,
+        };
+        current.surface = createSourcePickerSurface({
+          BrowserWindow,
+          hudWindow,
+          applicationRoot,
+          bounds: chooserBounds,
+          platform,
+          isPackaged,
+          development: provider.development,
+          onReady,
+          onFailure,
+        });
       } catch (error) {
         finish(null, error);
       }
@@ -167,25 +215,18 @@ function createSourcePickerController({
       return;
     }
     const current = session;
+    if (current.confirming) return;
     if (value?.type === 'hover' && current.state.highlightedId === value.id && !current.state.error) return;
     current.state = reducePickerState(current.state, value);
     if (value.type === 'confirm') {
-      if (current.state.selectedId)
-        finish({
-          id: current.state.selectedId,
-          kind: current.state.kind,
-          development: provider.development,
-          source: current.state.sources.find((source) => source.id === current.state.selectedId),
-        });
+      void confirmSelection(current);
       return;
     }
     current.version++;
+    clearTimeout(current.timer);
     publish();
-    if (value.type === 'kind') {
-      clearTimeout(current.timer);
-      return;
-    }
-    void refreshPreview(true);
+    if (value.type === 'kind' || (!current.state.highlightedId && !current.state.selectedId)) return;
+    requestPreview(true);
   };
   hudWindow.once('closed', () => {
     disposed = true;
@@ -195,12 +236,11 @@ function createSourcePickerController({
     open,
     action,
     markReady(sender) {
-      for (const surface of session?.surfaces || []) surface.markReady(sender);
+      session?.surface?.markReady(sender);
+      session?.previewSurface?.markReady(sender);
     },
     ownsChooser(sender) {
-      return Boolean(
-        session?.surfaces.some((surface) => surface.role === 'chooser' && surface.target.webContents === sender),
-      );
+      return Boolean(session?.surface && session.surface.target.webContents === sender);
     },
     reportError(error) {
       if (session) {

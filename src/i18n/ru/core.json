@@ -400,6 +400,11 @@
   },
   "EditorCanvas": {
     "videoPreviewLoading": "Загрузка предпросмотра видео",
+    "videoPreviewUnavailable": "Предпросмотр недоступен",
+    "videoDecodeFailed": "Beam не удалось декодировать это видео.",
+    "videoSeekFailed": "Beam не удалось отобразить этот момент видео.",
+    "videoFormatUnsupported": "Этот формат видео не поддерживается.",
+    "videoFileUnavailable": "Видеофайл недоступен.",
     "ok": "OK",
     "recenter": "Центрировать вид"
   },
@@ -669,6 +674,7 @@
     "pauseRecording": "Приостановить запись",
     "stopRecording": "Остановить запись",
     "cancelRecording": "Отменить и удалить запись",
+    "cancelCountdown": "Отмена",
     "turnMicOff": "Выключить микрофон",
     "turnMicOn": "Включить микрофон",
     "turnCameraOff": "Выключить камеру",

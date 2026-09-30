@@ -26,6 +26,7 @@ const props = withDefaults(
     icon?: Component;
     iconOnly?: boolean;
     wrap?: boolean;
+    align?: 'center' | 'start';
   }>(),
   {
     variant: 'primary',
@@ -41,6 +42,7 @@ const props = withDefaults(
     type: 'button',
     iconOnly: false,
     wrap: false,
+    align: 'center',
   },
 );
 
@@ -84,6 +86,7 @@ const buttonClasses = computed(() => {
     { 'btn-block': props.block },
     { 'btn-icon-only': props.iconOnly },
     { 'btn-wrap': props.wrap },
+    { 'btn-align-start': props.align === 'start' },
   ];
 });
 
@@ -441,6 +444,11 @@ const handleClick = (event: MouseEvent) => {
 
 .btn-content-label {
   min-width: 0;
+}
+.btn-align-start,
+.btn-align-start .btn-content {
+  justify-content: flex-start;
+  text-align: left;
 }
 </style>
 

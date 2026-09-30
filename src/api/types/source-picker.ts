@@ -1,5 +1,4 @@
 export type SourcePickerKind = 'screen' | 'window';
-export type SourcePickerRole = 'chooser' | 'target' | 'aura';
 export type DevelopmentArtwork = 'browser' | 'code' | 'design' | 'chat' | 'terminal' | 'video' | 'document' | 'desktop';
 
 export interface SourcePickerSource {
@@ -27,7 +26,8 @@ export interface SourcePickerState {
 }
 
 export type SourcePickerAction =
-  | { type: 'hover' | 'select'; id: string }
+  | { type: 'hover'; id: string | null }
+  | { type: 'select'; id: string }
   | { type: 'kind'; kind: SourcePickerKind }
   | { type: 'confirm' | 'cancel' };
 

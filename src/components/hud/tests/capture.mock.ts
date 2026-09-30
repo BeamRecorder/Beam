@@ -20,6 +20,7 @@ export const captureMock = {
       aspect: 1.6,
     },
   })),
+  onCountdownCancelled: vi.fn(() => vi.fn()),
   setCountdown: vi.fn().mockResolvedValue(undefined),
   discover: vi.fn(),
   getSources: vi.fn(),

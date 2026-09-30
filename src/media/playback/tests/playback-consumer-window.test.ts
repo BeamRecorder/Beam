@@ -27,6 +27,7 @@ const makeConsumer = (clipId: string, timelineStartSeconds: number, timelineDura
     sinkTrack: {} as never,
     displayWidth: 1_920,
     displayHeight: 1_080,
+    decoderConfig: { codec: 'avc1.640028', codedWidth: 1_920, codedHeight: 1_080 },
   };
   return {
     clip: clip(clipId, timelineStartSeconds, timelineDurationSeconds),

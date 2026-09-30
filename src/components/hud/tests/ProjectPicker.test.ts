@@ -45,9 +45,11 @@ describe('ProjectPicker', () => {
     expect(wrapper.text()).toContain('Unknown date');
     expect(wrapper.findAll('.project-card')[1]?.find('.current-indicator').exists()).toBe(true);
     await wrapper.findAll('.project-card')[0]?.trigger('click');
-    const open = wrapper.findAll('button').find((button) => button.text().includes('Open project'));
-    await open?.trigger('click');
+    expect(wrapper.find('footer').exists()).toBe(false);
+    await wrapper.findAll('.project-card')[0]?.trigger('dblclick');
     expect(wrapper.emitted('open-project')).toEqual([[projects[0]]]);
+    await wrapper.findAll('.project-card')[0]?.trigger('keydown', { key: 'Enter' });
+    expect(wrapper.emitted('open-project')).toHaveLength(2);
   });
   it('shows a recoverable loading error and retries', async () => {
     capture.listProjects.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce([]);
@@ -58,6 +60,29 @@ describe('ProjectPicker', () => {
     await settle();
     expect(wrapper.text()).toContain('No projects yet.');
   });
+  it.each([false, true])(
+    'does not open a project when its action menu is double-clicked (compact=%s)',
+    async (compact) => {
+      capture.listProjects.mockResolvedValue(projects);
+      const wrapper = mount(ProjectPicker, {
+        attachTo: document.body,
+        props: { compact },
+        global: { stubs: { Dialog: stubs.Dialog } },
+      });
+      await settle();
+      const trigger = wrapper.get('.action-trigger-btn');
+      trigger.element.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+      await flushPromises();
+      trigger.element.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 2 }));
+      trigger.element.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, detail: 2 }));
+      await flushPromises();
+      expect(wrapper.emitted('open-project')).toBeUndefined();
+      expect(wrapper.emitted('select-project')).toBeUndefined();
+      expect(wrapper.get('.project-card').attributes('aria-pressed')).toBe('true');
+      await wrapper.get('.project-card').trigger('dblclick');
+      expect(wrapper.emitted('open-project')).toEqual([[projects[0]]]);
+    },
+  );
   it('emits compact selection and creates a new project', async () => {
     capture.listProjects.mockResolvedValue(projects);
     capture.createProject.mockResolvedValue(projects[0]);
@@ -100,6 +125,63 @@ describe('ProjectPicker', () => {
     expect(wrapper.findAll('.project-rename-input')).toHaveLength(0);
     expect(wrapper.get('.project-card-name').text()).toBe('First');
   });
+  it('renames directly from the title, with focused text, without opening the project', async () => {
+    capture.listProjects.mockResolvedValue(projects);
+    capture.renameProject.mockResolvedValue({ ...projects[0], name: 'Renamed' });
+    const wrapper = mount(ProjectPicker, { attachTo: document.body, global: { stubs } });
+    await settle();
+    await wrapper.get('button.project-card-name').trigger('click');
+    const input = wrapper.get('input.project-rename-input');
+    expect(document.activeElement).toBe(input.element);
+    expect((input.element as HTMLInputElement).selectionEnd).toBe('First'.length);
+    await input.setValue('Renamed');
+    await input.trigger('keydown', { key: 'Enter' });
+    await flushPromises();
+    expect(capture.renameProject).toHaveBeenCalledOnce();
+    expect(capture.renameProject).toHaveBeenCalledWith('one', 'Renamed');
+    expect(wrapper.emitted('open-project')).toBeUndefined();
+  });
+  it('lets Escape cancel a title edit and keeps title clicks available for batch selection', async () => {
+    capture.listProjects.mockResolvedValue(projects);
+    const wrapper = mount(ProjectPicker, { attachTo: document.body, global: { stubs } });
+    await settle();
+    await wrapper.get('button.project-card-name').trigger('click');
+    const input = wrapper.get('input.project-rename-input');
+    await input.setValue('Cancelled');
+    await input.trigger('dblclick');
+    await input.trigger('keydown', { key: 'Escape' });
+    await input.trigger('blur');
+    expect(capture.renameProject).not.toHaveBeenCalled();
+    expect(wrapper.emitted('open-project')).toBeUndefined();
+    await wrapper.get('.select-toggle-button').trigger('click');
+    await wrapper.get('span.project-card-name').trigger('click');
+    expect(wrapper.get('.selection-bar-right .btn-danger').text()).toContain('Delete (1)');
+    expect(wrapper.find('.project-rename-input').exists()).toBe(false);
+  });
+  it('starts search with the first typed character and leaves rename, dialogs and compact pickers alone', async () => {
+    capture.listProjects.mockResolvedValue(projects);
+    const wrapper = mount(ProjectPicker, { attachTo: document.body, global: { stubs } });
+    await settle();
+    await wrapper.get('.project-card').trigger('keydown', { key: 'S' });
+    const input = wrapper.get('.project-search-bar input');
+    expect(document.activeElement).toBe(input.element);
+    expect((input.element as HTMLInputElement).value).toBe('S');
+    expect(wrapper.findAll('.project-card')).toHaveLength(2);
+    await input.setValue('Second');
+    expect(wrapper.findAll('.project-card')).toHaveLength(1);
+    await wrapper.get('button.project-card-name').trigger('click');
+    await wrapper.get('input.project-rename-input').trigger('keydown', { key: 'x' });
+    expect((input.element as HTMLInputElement).value).toBe('Second');
+    await wrapper.get('input.project-rename-input').trigger('keydown', { key: 'Escape' });
+    await wrapper.get('.new-project-button').trigger('click');
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'x' }));
+    expect((input.element as HTMLInputElement).value).toBe('Second');
+    wrapper.unmount();
+    const compact = mount(ProjectPicker, { attachTo: document.body, props: { compact: true }, global: { stubs } });
+    await settle();
+    await compact.get('.project-card').trigger('keydown', { key: 'F' });
+    expect(compact.get('.project-search-bar').isVisible()).toBe(false);
+  });
   it('deletes a selected project and selects the next remaining project', async () => {
     capture.listProjects.mockResolvedValueOnce(projects).mockResolvedValueOnce([projects[1]]);
     capture.deleteProject.mockResolvedValue(undefined);
@@ -131,9 +213,13 @@ describe('ProjectPicker', () => {
     video.pause = vi.fn();
     await wrapper.get('video').trigger('timeupdate');
     expect(wrapper.find('.preview-progress-overlay').exists()).toBe(true);
+    await wrapper.get('video').trigger('loadeddata');
+    await wrapper.get('video').trigger('playing');
+    expect(wrapper.get('video').classes()).toContain('is-loaded');
     await wrapper.get('.project-card').trigger('mouseleave');
     expect(video.pause).toHaveBeenCalledOnce();
     expect(video.currentTime).toBe(0.1);
+    await wrapper.get('.projects-viewport').trigger('scroll');
   });
   it('renders content badges for screen recording, camera, and captions based on project features', async () => {
     const featuredProjects = [
@@ -340,6 +426,34 @@ describe('ProjectPicker', () => {
     expect(wrapper.findAll('.project-card')).toHaveLength(2);
     expect(capture.listProjects).toHaveBeenCalledTimes(1);
     wrapper.unmount();
+  });
+  it('keeps card keyboard selection separate from title editing and search controls', async () => {
+    capture.listProjects.mockResolvedValue(projects);
+    const wrapper = mount(ProjectPicker, { attachTo: document.body, global: { stubs } });
+    await settle();
+    const card = wrapper.get('.project-card');
+    await card.trigger('keydown', { key: ' ' });
+    expect(card.attributes('aria-pressed')).toBe('true');
+    const title = wrapper.get('button.project-card-name');
+    await title.trigger('keydown', { key: 'Enter' });
+    await title.trigger('keydown', { key: ' ' });
+    await title.trigger('dblclick');
+    expect(wrapper.emitted('open-project')).toBeUndefined();
+    await title.trigger('click');
+    const input = wrapper.get('input.project-rename-input');
+    await input.trigger('click');
+    await input.trigger('mousedown');
+    await input.trigger('keydown', { key: 'Escape' });
+    await wrapper.get('.search-toggle-button').trigger('click');
+    await wrapper.get('.project-search-bar input').setValue('First');
+    await wrapper.get('.search-clear-btn').trigger('click');
+    expect(wrapper.findAll('.project-card')).toHaveLength(2);
+    await wrapper.get('.select-toggle-button').trigger('click');
+    await card.trigger('keydown', { key: ' ' });
+    expect(card.attributes('aria-pressed')).toBe('true');
+    await wrapper.get('.project-title-checkbox').trigger('click');
+    expect(card.attributes('aria-pressed')).toBe('false');
+    expect(wrapper.find('input.project-rename-input').exists()).toBe(false);
   });
   it('shows success checkmark feedback when refresh is clicked', async () => {
     capture.listProjects.mockResolvedValue(projects);

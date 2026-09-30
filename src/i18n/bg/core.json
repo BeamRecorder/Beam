@@ -400,6 +400,11 @@
   },
   "EditorCanvas": {
     "videoPreviewLoading": "Зареждане на видео визуализация",
+    "videoPreviewUnavailable": "Визуализацията не е налична",
+    "videoDecodeFailed": "Beam не успя да декодира това видео.",
+    "videoSeekFailed": "Beam не успя да покаже този момент от видеото.",
+    "videoFormatUnsupported": "Този видеоформат не се поддържа.",
+    "videoFileUnavailable": "Видеофайлът не е наличен.",
     "ok": "ОК",
     "recenter": "Центриране"
   },
@@ -669,6 +674,7 @@
     "pauseRecording": "Поставяне на записа на пауза",
     "stopRecording": "Спиране на записа",
     "cancelRecording": "Отмяна и изтриване на записа",
+    "cancelCountdown": "Отказ",
     "turnMicOff": "Изключване на микрофона",
     "turnMicOn": "Включване на микрофона",
     "turnCameraOff": "Изключване на камерата",

@@ -1,13 +1,9 @@
 import { CanvasSink, type WrappedCanvas } from 'mediabunny';
 import type { OpenedMediaInput } from '../shared';
 import { snapTimeToBoundary } from '../shared/time-boundary';
-import type { PlaybackClipDescriptor } from './playback-types';
+import type { PlaybackClipDescriptor, PlaybackDecoderOptions } from './playback-types';
 import { playbackPreviewDimensions, type PreviewQuality } from './playback-preview';
 
-export const PLAYBACK_DECODER_OPTIONS = {
-  hardwareAcceleration: 'prefer-hardware' as const,
-  optimizeForLatency: true,
-};
 export const PLAYBACK_TICK_PRELOAD_SECONDS = 0.12;
 
 export type QueuedFrame = {
@@ -22,7 +18,8 @@ export type AssetDecoder = {
   sinkTrack: Awaited<ReturnType<OpenedMediaInput['input']['getPrimaryVideoTrack']>>;
   displayWidth: number;
   displayHeight: number;
-  decoderOptions?: typeof PLAYBACK_DECODER_OPTIONS;
+  decoderConfig: VideoDecoderConfig;
+  decoderOptions?: PlaybackDecoderOptions;
 };
 
 export type ClipConsumer = {

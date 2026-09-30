@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const capture = vi.hoisted(() => ({
   getCameraOverlayState: vi.fn().mockResolvedValue(null),
+  onCountdownCancelled: vi.fn(() => vi.fn()),
   setCountdown: vi.fn().mockResolvedValue(undefined),
   prepareRecordingSurface: vi.fn().mockResolvedValue(undefined),
   hideScreenRegionOverlay: vi.fn(),

@@ -400,6 +400,11 @@
   },
   "EditorCanvas": {
     "videoPreviewLoading": "Carregando prévia do vídeo",
+    "videoPreviewUnavailable": "Prévia indisponível",
+    "videoDecodeFailed": "O Beam não conseguiu decodificar este vídeo.",
+    "videoSeekFailed": "O Beam não conseguiu exibir este ponto do vídeo.",
+    "videoFormatUnsupported": "Este formato de vídeo não é compatível.",
+    "videoFileUnavailable": "O arquivo de vídeo está indisponível.",
     "ok": "OK",
     "recenter": "Recentralizar exibição"
   },
@@ -669,6 +674,7 @@
     "pauseRecording": "Pausar gravação",
     "stopRecording": "Parar gravação",
     "cancelRecording": "Cancelar e excluir gravação",
+    "cancelCountdown": "Cancelar",
     "turnMicOff": "Desligar microfone",
     "turnMicOn": "Ligar microfone",
     "turnCameraOff": "Desligar câmera",

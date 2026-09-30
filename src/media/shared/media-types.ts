@@ -59,9 +59,24 @@ export interface MediaFrame {
   close(): void;
 }
 
+export interface MediaErrorContext {
+  operation: 'open-media' | 'inspect-track' | 'configure-decoder' | 'reset-decoder' | 'seek-frame' | 'decode-frame';
+  errorName?: string;
+  causeMessage?: string;
+  clipId?: string;
+  timelineSeconds?: number;
+  sourceSeconds?: number;
+  codec?: string | null;
+  codedWidth?: number;
+  codedHeight?: number;
+  hardwareAcceleration?: HardwareAcceleration;
+  optimizeForLatency?: boolean;
+}
+
 interface MediaErrorBase {
   sourceId: string;
   message: string;
+  context?: MediaErrorContext;
 }
 
 export type MediaError =

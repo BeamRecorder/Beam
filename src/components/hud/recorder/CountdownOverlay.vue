@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { capture } from '../../../api/capture';
 import type { PreferenceSettings } from '../../../api/types/capture-api';
 import KeyboardChip from '../../ui/Kbd/KeyboardChip.vue';
+import Button from '~/ui/button/Button.vue';
 import { useTranslate } from '../../../i18n/useTranslate';
 
 const { t } = useTranslate('RecorderBar');
@@ -14,6 +15,11 @@ let unsubscribeCountdown: (() => void) | null = null;
 let unsubscribePreferences: (() => void) | null = null;
 let receivedPreferenceUpdate = false;
 let mounted = false;
+const updateInteractive = (event: MouseEvent) =>
+  capture.setCountdownInteractive(
+    event.target instanceof Element && Boolean(event.target.closest('[data-countdown-cancel]')),
+  );
+const leaveInteractive = () => capture.setCountdownInteractive(false);
 
 const shortcutKeys = (preferences: PreferenceSettings, id: string) => {
   const shortcut = preferences.shortcuts[id];
@@ -26,6 +32,8 @@ const applyPreferences = (preferences: PreferenceSettings) => {
 
 onMounted(() => {
   mounted = true;
+  window.addEventListener('mousemove', updateInteractive);
+  window.addEventListener('mouseleave', leaveInteractive);
   unsubscribeCountdown = capture.onCountdown((value) => {
     seconds.value = value;
   });
@@ -43,6 +51,9 @@ onMounted(() => {
 });
 onBeforeUnmount(() => {
   mounted = false;
+  window.removeEventListener('mousemove', updateInteractive);
+  window.removeEventListener('mouseleave', leaveInteractive);
+  leaveInteractive();
   unsubscribeCountdown?.();
   unsubscribePreferences?.();
 });
@@ -51,6 +62,9 @@ onBeforeUnmount(() => {
 <template>
   <main class="countdown-overlay">
     <div class="countdown" role="timer" aria-live="assertive" aria-atomic="true">{{ seconds ?? '' }}</div>
+    <div v-if="seconds !== null && seconds > 0" class="cancel-action" data-countdown-cancel>
+      <Button variant="secondary" size="sm" @click="capture.cancelCountdown()">{{ t('cancelCountdown') }}</Button>
+    </div>
     <div v-if="hasShortcutHints" class="shortcut-hints" role="group" :aria-label="t('recordingControls')">
       <div v-if="startStopShortcut" class="shortcut-hint">
         <span>{{ t('stopRecording') }}</span>
@@ -92,6 +106,9 @@ onBeforeUnmount(() => {
   font-weight: 750;
   font-variant-numeric: tabular-nums;
   box-shadow: var(--shadow-lg);
+}
+.cancel-action {
+  pointer-events: auto;
 }
 .shortcut-hints,
 .shortcut-hint {

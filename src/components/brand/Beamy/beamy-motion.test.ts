@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { createBeamyMotion, beamyIsAnimated, BEAMY_CELEBRATION_SECONDS, BEAMY_ACTION_COUNT } from './beamy-motion';
-import { SHAPES, SHAPE_BY_ID } from './engine/skins';
+import { DEFAULT_SHAPE, SHAPES, SHAPE_BY_ID } from './engine/skins';
+import { DEFAULT_EXPRESSION, EXPRESSION_BY_ID } from './engine/expressions';
+import { BotEngine } from './engine/engine';
+import { RAYON } from './engine/repere';
+import { capsulePath } from './engine/shape';
 import type { BeamyPhase } from './beamy-types';
 const phases: BeamyPhase[] = [
   'idle',
@@ -14,15 +18,37 @@ const phases: BeamyPhase[] = [
 ];
 
 describe('Beamy action motion', () => {
-  it('loops from the cloud to loading dots and back without a discontinuity', () => {
+  it.each(phases.filter((phase) => phase !== 'loading'))(
+    'uses Bloub’s original expression and eye geometry during %s',
+    (phase) => {
+      const expression = EXPRESSION_BY_ID.get(
+        phase === 'failed' ? 'triste' : phase === 'completed' ? 'heureux' : DEFAULT_EXPRESSION,
+      )!;
+      const reference = new BotEngine(RAYON, 'idle', SHAPE_BY_ID.get(DEFAULT_SHAPE)!.radii, expression).sample(0);
+      const frame = createBeamyMotion(phase)(0).frame;
+      expect(frame.bodyPath).toEqual(reference.bodyPath);
+      expect(frame.eyes).toEqual(reference.eyes);
+    },
+  );
+  it('preserves the original tall rounded eyes and measured default proportions', () => {
+    const { eyes } = createBeamyMotion('idle')(0).frame;
+    expect(eyes).toHaveLength(2);
+    expect(eyes.every((eye) => eye.d === capsulePath(18.6, 41.2))).toBe(true);
+    expect(eyes.every((eye) => eye.alpha === 1)).toBe(true);
+    expect(SHAPE_BY_ID.get(DEFAULT_SHAPE)!.radii.every((radius) => radius === 1)).toBe(true);
+  });
+  it('starts with three loading dots and shows a triangle only after three seconds', () => {
     const sample = createBeamyMotion('loading');
-    expect(sample(0).frame.bodyPath).toEqual(sample(3.6).frame.bodyPath);
-    expect(sample(1.5).frame.bodyPath).not.toEqual(sample(0).frame.bodyPath);
-    expect(sample(1.5).frame.dots).toHaveLength(2);
-    expect(sample(3.59).frame.bodyPath).toEqual(sample(0).frame.bodyPath);
+    expect(sample(0).frame.eyes).toHaveLength(0);
+    expect(sample(0).frame.dots).toHaveLength(2);
+    expect(sample(2.99).frame.dots).toHaveLength(2);
+    expect(sample(3.7).frame.eyes).toHaveLength(2);
+    expect(sample(3.7).frame.dots).toHaveLength(0);
+    expect(sample(5).frame.eyes).toHaveLength(0);
+    expect(sample(5).frame.dots).toHaveLength(2);
     expect(beamyIsAnimated('loading', 400, false)).toBe(true);
   });
-  it('uses a sad cloud with rounded eyes on failure and restores sparkle eyes after recovery', () => {
+  it('keeps the rounded eyes while lowering the gaze on failure and recovering', () => {
     const failed = createBeamyMotion('failed')(0);
     const normal = createBeamyMotion('idle')(0);
     expect(failed.shape).toEqual(normal.shape);
@@ -30,8 +56,20 @@ describe('Beamy action motion', () => {
     expect(failed.frame.bodyPath).not.toMatch(/NaN|Infinity/);
     expect(createBeamyMotion('idle')(0)).toEqual(normal);
   });
-  it('uses exactly the shared Mascot Lab cloud as its resting silhouette', () => {
-    expect(createBeamyMotion('idle')(0).shape).toEqual(SHAPE_BY_ID.get('nuage')!.radii);
+  it('blinks and wanders naturally with the original sad expression', () => {
+    const sample = createBeamyMotion('failed');
+    expect(sample(0).frame.eyes.every((eye) => eye.d === capsulePath(22, 40))).toBe(true);
+    const matrix = (time: number) =>
+      sample(time)
+        .frame.eyes[0]!.matrix.match(/-?\d+(?:\.\d+)?/g)!
+        .map(Number);
+    expect(Math.abs(matrix(1.481)[3]!)).toBeLessThan(Math.abs(matrix(0)[3]!) / 10);
+    expect(Math.abs(matrix(1.6)[3]!)).toBeGreaterThan(Math.abs(matrix(1.481)[3]!) * 10);
+    expect(matrix(3).slice(4)).not.toEqual(matrix(0).slice(4));
+    expect(beamyIsAnimated('failed', 400, false)).toBe(true);
+  });
+  it('uses exactly the shared Mascot Lab circle as its resting silhouette', () => {
+    expect(createBeamyMotion('idle')(0).shape).toEqual(SHAPE_BY_ID.get(DEFAULT_SHAPE)!.radii);
   });
   it('offers twelve distinct action paths that each visit all engine shapes', () => {
     const paths = new Set<string>();
@@ -43,14 +81,16 @@ describe('Beamy action motion', () => {
     }
     expect(paths.size).toBe(12);
   });
-  it.each(phases)('keeps the normal cloud and sparkle eyes readable for reduced motion during %s', (phase) => {
+  it.each(phases)('keeps the original circle and eyes readable for reduced motion during %s', (phase) => {
     const sample = createBeamyMotion(phase);
     expect(sample(0, true)).toEqual(sample(90, true));
-    expect(sample(0, true).frame.eyes).toHaveLength(2);
-    expect(sample(0, true).frame.dots).toHaveLength(0);
+    expect(sample(0, true).frame.eyes).toHaveLength(phase === 'loading' ? 0 : 2);
+    expect(sample(0, true).frame.eyes).toEqual(createBeamyMotion(phase)(0).frame.eyes);
+    expect(sample(0, true).shape).toEqual(SHAPE_BY_ID.get(DEFAULT_SHAPE)!.radii);
+    expect(sample(0, true).frame.dots).toHaveLength(phase === 'loading' ? 2 : 0);
     expect(beamyIsAnimated(phase, 0, true)).toBe(false);
   });
-  it.each(['idle', 'recording', 'paused', 'failed'] as const)('keeps %s at its cloud without an idle loop', (phase) => {
+  it.each(['idle', 'recording', 'paused'] as const)('keeps %s at its circle without an idle loop', (phase) => {
     const sample = createBeamyMotion(phase);
     expect(sample(0)).toEqual(sample(100));
     expect(beamyIsAnimated(phase, 0, false)).toBe(false);
@@ -67,14 +107,14 @@ describe('Beamy action motion', () => {
     expect(Math.max(...before.map((radius, index) => Math.abs(radius - after[index]!)))).toBeLessThan(0.0001);
     expect(beamyIsAnimated(phase, 500, false)).toBe(true);
   });
-  it('preserves an interrupted silhouette then eases back into the exact resting cloud', () => {
+  it('preserves an interrupted silhouette then eases back into the exact resting circle', () => {
     const displayed = createBeamyMotion('processing')(1.3);
     const idle = createBeamyMotion('idle');
     expect(idle(0, false, displayed.shape, 0).shape).toEqual(displayed.shape);
     expect(idle(0, false, displayed.shape, 0.5).shape).not.toEqual(displayed.shape);
     expect(idle(0, false, displayed.shape, 1)).toEqual(idle(0));
   });
-  it('celebrates once with theme particles and returns to the same cloud', () => {
+  it('celebrates once with theme particles and returns to the same circle', () => {
     const sample = createBeamyMotion('completed');
     expect(sample(0.3).frame.dots.length).toBeGreaterThan(0);
     expect(sample(0.3).frame.dots.every((dot) => dot.color?.startsWith('var(--color-'))).toBe(true);

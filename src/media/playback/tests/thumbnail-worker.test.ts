@@ -38,10 +38,10 @@ const request = (generation: number, assetId: string, width = 240) => ({
   width,
 });
 
-const openedInput = () => {
+const openedInput = (codec = 'avc1.640028') => {
   const track = {
     canDecode: vi.fn().mockResolvedValue(true),
-    getDecoderConfig: vi.fn().mockResolvedValue({ codec: 'avc1.640028' }),
+    getDecoderConfig: vi.fn().mockResolvedValue({ codec }),
   };
   return {
     input: { getPrimaryVideoTrack: vi.fn().mockResolvedValue(track) },
@@ -88,6 +88,46 @@ afterEach(() => {
 const send = (message: unknown) => workerSelf.onmessage?.({ data: message } as MessageEvent<unknown>);
 
 describe('thumbnail worker decoder lifecycle', () => {
+  it('uses the same buffered software AV1 decoder as playback on Linux', async () => {
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Linux');
+    const opened = openedInput('av01.0.08M.08');
+    runtime.openMediaInput.mockResolvedValueOnce(opened);
+    send(request(1, 'av1'));
+    await flush();
+    expect(VideoDecoder.isConfigSupported).toHaveBeenCalledWith({
+      codec: 'av01.0.08M.08',
+      hardwareAcceleration: 'prefer-software',
+      optimizeForLatency: false,
+    });
+    expect(runtime.CanvasSink).toHaveBeenCalledWith(expect.anything(), {
+      width: 240,
+      poolSize: 2,
+      decoderOptions: { hardwareAcceleration: 'prefer-software', optimizeForLatency: false },
+    });
+    expect(messages()).toContainEqual({ type: 'batch-finished', generation: 1 });
+  });
+  it('keeps normal AV1 thumbnail decoding on Windows and macOS', async () => {
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Macintosh');
+    runtime.openMediaInput.mockResolvedValueOnce(openedInput('av01.0.08M.08'));
+    send(request(1, 'mac-av1'));
+    await flush();
+    expect(runtime.CanvasSink).toHaveBeenCalledWith(expect.anything(), { width: 240, poolSize: 2 });
+  });
+  it('reports unavailable software AV1 support and releases the input', async () => {
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Linux');
+    vi.mocked(VideoDecoder.isConfigSupported).mockResolvedValue({ supported: false });
+    const opened = openedInput('av01.0.08M.08');
+    runtime.openMediaInput.mockResolvedValueOnce(opened);
+    send(request(1, 'unsupported-av1'));
+    await flush();
+    expect(opened.dispose).toHaveBeenCalledOnce();
+    expect(runtime.CanvasSink).not.toHaveBeenCalled();
+    expect(messages()).toContainEqual({
+      type: 'error',
+      generation: 1,
+      message: 'This video codec is not supported by WebCodecs.',
+    });
+  });
   it.each([240, 480, 960])('uses the requested %s canvas width and returns it with each frame', async (width) => {
     const canvas = { convertToBlob: vi.fn().mockResolvedValue(new Blob(['frame'])) };
     runtime.CanvasSink.mockImplementationOnce(function CanvasSinkMock() {

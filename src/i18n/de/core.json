@@ -400,6 +400,11 @@
   },
   "EditorCanvas": {
     "videoPreviewLoading": "Videovorschau wird geladen",
+    "videoPreviewUnavailable": "Vorschau nicht verfügbar",
+    "videoDecodeFailed": "Beam konnte dieses Video nicht dekodieren.",
+    "videoSeekFailed": "Beam konnte diese Stelle im Video nicht anzeigen.",
+    "videoFormatUnsupported": "Dieses Videoformat wird nicht unterstützt.",
+    "videoFileUnavailable": "Die Videodatei ist nicht verfügbar.",
     "ok": "OK",
     "recenter": "Ansicht zentrieren"
   },
@@ -669,6 +674,7 @@
     "pauseRecording": "Aufnahme pausieren",
     "stopRecording": "Aufnahme stoppen",
     "cancelRecording": "Aufnahme abbrechen und löschen",
+    "cancelCountdown": "Abbrechen",
     "turnMicOff": "Mikrofon ausschalten",
     "turnMicOn": "Mikrofon einschalten",
     "turnCameraOff": "Kamera ausschalten",

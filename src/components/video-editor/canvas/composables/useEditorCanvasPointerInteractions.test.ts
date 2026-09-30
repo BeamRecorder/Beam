@@ -69,6 +69,7 @@ const createHarness = (manualZoom = true) => {
     clipIdAt,
     onToggleClip,
     selectedClipId,
+    options,
     beginSelectionMove,
     moveSelection,
     endSelectionMove,
@@ -76,6 +77,32 @@ const createHarness = (manualZoom = true) => {
 };
 
 describe('useEditorCanvasPointerInteractions', () => {
+  it.each([
+    'canvas-playback-error',
+    'caption-text-editor',
+    'canvas-recenter-float',
+    'element-overlay',
+    'cursor-canvas-selection',
+  ])('leaves %s controls outside cursor hit-testing', (className) => {
+    const harness = createHarness();
+    const container = document.createElement('div');
+    container.className = className;
+    const button = document.createElement('button');
+    container.append(button);
+    harness.interactions.handleIslandPointerDownCapture(pointer({ target: button }));
+    expect(harness.options.cursorInteraction.selectAt).not.toHaveBeenCalled();
+  });
+
+  it('captures cursor selection on the canvas while leaving crop mode alone', () => {
+    const harness = createHarness();
+    const event = pointer({ stopPropagation: vi.fn() });
+    vi.mocked(harness.options.cursorInteraction.selectAt).mockReturnValue(true);
+    harness.interactions.handleIslandPointerDownCapture(event);
+    expect(event.stopPropagation).toHaveBeenCalledOnce();
+    harness.options.isCropping = () => true;
+    harness.interactions.handleIslandPointerDownCapture(event);
+    expect(harness.options.cursorInteraction.selectAt).toHaveBeenCalledOnce();
+  });
   it('forwards a Manual Zoom pointerdown to camera zoom without raycasting composited media first', () => {
     const harness = createHarness(true);
 

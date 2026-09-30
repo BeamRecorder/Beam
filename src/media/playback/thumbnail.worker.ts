@@ -1,5 +1,6 @@
 import { CanvasSink } from 'mediabunny';
 import { openMediaInput, type MediaSourceDescriptor, type OpenedMediaInput } from '../shared';
+import { softwareAv1DecoderOptions } from './playback-decoder';
 import {
   assertThumbnailWorkerResponse,
   isThumbnailWorkerRequest,
@@ -115,7 +116,10 @@ async function sinkFor(
       candidate.dispose();
       return null;
     }
-    const configSupported = decoderConfig ? (await VideoDecoder.isConfigSupported(decoderConfig)).supported : false;
+    const decoderOptions = softwareAv1DecoderOptions(decoderConfig?.codec ?? null, navigator.userAgent);
+    const configSupported = decoderConfig
+      ? (await VideoDecoder.isConfigSupported({ ...decoderConfig, ...decoderOptions })).supported
+      : false;
     if (decoderIsStale(version, requestGeneration)) {
       candidate.dispose();
       return null;
@@ -123,7 +127,7 @@ async function sinkFor(
     if (!decoderConfig || !configSupported) {
       throw new Error('This video codec is not supported by WebCodecs.');
     }
-    const nextSink = new CanvasSink(track, { width, poolSize: 2 });
+    const nextSink = new CanvasSink(track, { width, poolSize: 2, ...(decoderOptions ? { decoderOptions } : {}) });
     opened = candidate;
     candidate = null;
     sink = nextSink;

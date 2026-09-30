@@ -13,7 +13,13 @@ export function useEditorCanvasPointerInteractions(options: EditorCanvasPointerO
     options.cameraZoom.beginSelectionMove(event);
   };
   const handleIslandPointerDownCapture = (event: PointerEvent) => {
-    if (options.isCropping() || (event.target as Element | null)?.closest('.cursor-canvas-selection')) return;
+    if (
+      options.isCropping() ||
+      (event.target as Element | null)?.closest(
+        '.cursor-canvas-selection, .caption-text-editor, .canvas-recenter-float, .element-overlay, .canvas-playback-error',
+      )
+    )
+      return;
     if (options.cursorInteraction.selectAt(event)) event.stopPropagation();
   };
   const handleTransformPointerDown = (event: PointerEvent) => {

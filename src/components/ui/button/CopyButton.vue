@@ -83,6 +83,7 @@ const writeText = async (text: string) => {
 };
 
 const copy = async () => {
+  if (state.value === 'copying') return;
   state.value = 'copying';
   try {
     await writeText(props.text);
@@ -103,7 +104,6 @@ const copy = async () => {
     :size="size"
     :icon="stateIcon"
     icon-only
-    :loading="state === 'copying'"
     :disabled="disabled"
     :tooltip="tooltipMode === 'popover' ? stateLabel : ''"
     :title="tooltipMode === 'native' ? stateLabel : undefined"
@@ -120,7 +120,6 @@ const copy = async () => {
     :variant="variant"
     :size="size"
     :icon="stateIcon"
-    :loading="state === 'copying'"
     :disabled="disabled"
     :title="tooltipMode === 'native' ? stateLabel : undefined"
     :tooltip-position="tooltipPosition"

@@ -114,7 +114,6 @@ const definitions = [
     'HudPreferences.aboutDescriptionTitle',
     'HudPreferences.aboutDescriptionText',
     'HudPreferences.version',
-    'Brand.animateBeamy',
   ],
   ['system-info', 'about', 'SettingsPanel.copySysInfo', 'HudPreferences.aboutDesc'],
   ['socials', 'about', 'Socials.title', 'Socials.description', 'Socials.discord', 'Socials.github'],

@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => {
       prepareRecording: vi.fn(async (): Promise<{ sessionId: string } | null> => ({ sessionId: 'prepared' })),
       cancelPreparedRecording: vi.fn(async () => undefined),
       cancelRegionSelection: vi.fn(async () => undefined),
+      onCountdownCancelled: vi.fn<(listener: () => void) => () => void>(() => vi.fn()),
       setCountdown: vi.fn(async () => undefined),
       prepareRecordingSurface: vi.fn(async () => undefined),
       startPreparedRecording: vi.fn(async (): Promise<{ sessionId?: string; projectId?: string }> => ({
@@ -80,6 +81,7 @@ const resetCapture = () => {
   mocks.capture.prepareRecording.mockResolvedValue({ sessionId: 'prepared' });
   mocks.capture.cancelPreparedRecording.mockResolvedValue(undefined);
   mocks.capture.setCountdown.mockResolvedValue(undefined);
+  mocks.capture.onCountdownCancelled.mockReset().mockImplementation(() => vi.fn());
   mocks.capture.prepareRecordingSurface.mockResolvedValue(undefined);
   mocks.capture.startPreparedRecording.mockResolvedValue({ sessionId: 'session-1' });
   mocks.capture.discardRecording.mockResolvedValue(undefined);
@@ -106,6 +108,26 @@ afterEach(() => {
 });
 
 describe('useRecordingController countdown', () => {
+  it('Cancel during countdown releases prepared capture without starting a recording', async () => {
+    vi.useFakeTimers();
+    let cancelCountdown = () => {};
+    const unsubscribe = vi.fn();
+    mocks.capture.onCountdownCancelled.mockImplementation((listener: () => void) => {
+      cancelCountdown = listener;
+      return unsubscribe;
+    });
+    const controller = useRecordingController(vi.fn());
+    await controller.start({ ...baseConfig, countdownSeconds: 3 });
+    expect(controller.phase.value).toBe('countdown');
+    expect(mocks.capture.prepareRecording).toHaveBeenCalledOnce();
+    cancelCountdown();
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(controller.phase.value).toBe('idle');
+    expect(mocks.capture.cancelPreparedRecording).toHaveBeenCalledOnce();
+    expect(mocks.capture.startPreparedRecording).not.toHaveBeenCalled();
+    expect(mocks.capture.setCountdown).toHaveBeenLastCalledWith(null);
+    expect(unsubscribe).toHaveBeenCalledOnce();
+  });
   it('starts recording health polling only after native startup reaches recording', async () => {
     vi.useFakeTimers();
     const deferred = <T>() => {

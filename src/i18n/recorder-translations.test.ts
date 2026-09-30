@@ -32,6 +32,11 @@ const regionKeys = [
   'captureOnly',
 ];
 describe.each(SUPPORTED_LOCALES)('%s recorder translations', (locale) => {
+  it('translates the countdown Cancel button', () => {
+    const text = messages[`./${locale}/core.json`].default.RecorderBar;
+    expect(text.cancelCountdown).toBeTruthy();
+    if (locale !== 'en') expect(text.cancelCountdown).not.toBe('Cancel');
+  });
   it('translates editor preparation, the final encouragement and cancellation', () => {
     const text = messages[`./${locale}/core.json`].default.EditorPreparingHud;
     for (const key of ['title', 'openingWindow', 'loadingProject', 'loadingTimeline', 'almostThere', 'cancel'])

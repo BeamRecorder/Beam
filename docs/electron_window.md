@@ -35,7 +35,7 @@ Electron clips painting outside the BrowserWindow. A CSS shadow around an elemen
 - Keep the HUD card at `640 × 236` pixels, with a `672 × 268` BrowserWindow and a 16 px inset.
 - When HUD content changes height or width, include the 32 px outer allowance in the Electron `setSize` request.
 - Do not solve a clipped shadow by increasing the shadow token. Prefer reserving physical renderer space first.
-- The countdown uses a centered `560 × 256` transparent window: its `160 × 160` circle and shortcut-hint row keep at least 16 px of outer room so the border and shadow remain intact.
+- The countdown uses a centered `560 × 320` transparent window: its `160 × 160` circle, translated Cancel button and shortcut-hint row keep at least 16 px of outer room so the border and shadow remain intact.
 - The main HUD header keeps the Beam logo, flexible capture-mode group and window controls in no-drag regions. The countdown entry `html/countdown.html` loads only its overlay, theme and translations for shortcut hints.
 
 ## Mouse pass-through and focus stealing
@@ -50,7 +50,7 @@ Transparent pixels in an Electron window still intercept input unless `setIgnore
 - Editor: use the native draggable titlebar region. Do not reintroduce renderer mousemove/IPC window dragging; it bypasses native edge snapping and window transitions.
 - Editor: keep `transparent: false`, `thickFrame: true`, and the native Window Controls Overlay. An HTML maximize button does not expose Windows 11 Snap Layouts.
 - Editor: configure Window Controls Overlay with a fixed transparent color and neutral symbol color at construction; omitting `color` lets Windows paint its light system color over a dark editor. Transparent WCO requires Electron 43.2 or newer because Electron 43.1.1 incorrectly fell back to the default frame color for fully transparent values. A live editor theme change is renderer-only: do not update `nativeTheme`, the BrowserWindow background, or `setTitleBarOverlay()` while the window is visible. Use the selected theme only as the next window's initial fallback background.
-- Countdown: uses its own non-focusable, click-through window. It must never steal focus from the recording target.
+- Countdown: uses its own non-focusable window. macOS/Windows pass through mouse input outside the Cancel button; its owning renderer alone may change mouse handling. Linux keeps the bounded window interactive because forwarded mouse motion is unavailable. It must never steal focus from the recording target. Cancel notifies only the renderer that requested the active countdown, clears its timer and releases prepared capture. Ignore cancellation after countdown completion or from stale/foreign overlay renderers. Zero seconds skips countdown presentation and starts capture directly.
 
 ## Popovers in transparent windows
 
@@ -100,7 +100,7 @@ The horizontal HUD card stays at its canonical size while mode and source select
 
 Capture issues live in a toolbar count button with a scrollable hover/focus/click panel and a copy action for each issue. Keep the list scrollbar at the panel edge. Enable interaction on opening, then continue pointer hit testing over both the card and teleported content; transparent added space passes clicks through on macOS/Windows. Linux retains its existing fully interactive policy because Electron cannot forward ignored mouse events there.
 
-Settings and Projects use independent, opaque, resizable windows managed by `electron/window/hud-panels.cjs`. Each role has one live window and loads `html/hud-panel.html` with a bounded `panel` query. Show each panel only after native readiness and `hud-panel:ready` from its own renderer. A failed load, renderer loss, close or 30-second deadline disposes that attempt and permits retry. Use native Window Controls Overlay, reset browser zoom before presentation, and keep the titlebar draggable.
+Settings and Projects use independent, opaque, resizable windows managed by `electron/window/hud-panels.cjs`. Settings retains native Window Controls Overlay. Its titlebar and native Window Controls Overlay are 38 px tall, matching Projects and the recorder. Use the existing Lucide Settings/FolderOpen icons at 16 px in `--text-secondary`, with the body-size, title-weight text tokens; the recorder keeps its original 24 px Beam logo. The recorder retains the static Beam product asset. Icons never mount or morph Beamy. Only the Beam wordmark is an interactive, no-drag control for its text easter egg; translated panel titles stay static. Projects is frameless and uses the shared 38 px Beam titlebar with only Close; keep that button outside the native drag region and retain opaque native resize edges. Ctrl+W (and Cmd+W) closes only Projects through its own `before-input-event` handler, before renderer fields and menu accelerators. Projects has no navigation footer: double-click or Enter on a card opens it, and its title is a keyboard-accessible inline rename control. Typing on the standalone Projects page opens and focuses search with the first character preserved; leave inputs, rename/create dialogs, composition and modified shortcuts alone. Compact editor pickers do not install type-to-search behavior. Each role has one live window and loads `html/hud-panel.html` with a bounded `panel` query. Show each panel only after native readiness and `hud-panel:ready` from its own renderer. A failed load, renderer loss, close or 30-second deadline disposes that attempt and permits retry. Reset browser zoom before presentation and keep the titlebar draggable.
 
 Development Settings also opens the independent Mascot Lab through the same readiness gate. Its initial size is `1280 × 900`, with a native minimum of `960 × 640`; content scrolls below the draggable titlebar. Only the live Settings renderer may invoke `developer:open-mascot-lab` or `developer:open-devtools`. The latter opens detached DevTools for that Settings window. Packaged builds register neither handler, omit developer navigation/search entries and do not import the lab. Closing Settings must not destroy an already opened lab; application shutdown disposes both. Lab presets and eye geometry affect only lab previews and exports.
 
@@ -130,20 +130,53 @@ unpackaged launch replaces only the source provider with 3 simulated screens and
 controller. Fixture IDs never reach Rust; confirmation exercises the existing
 countdown without starting a real recording.
 
-The chooser is a separate bounded interactive window with physical room for its
-shadow. Its aura is a non-focusable, fully click-through window shown with
-`showInactive()`. Development data additionally presents a simulated target in
-another click-through window. Hover retains chooser keyboard focus, raises the
-native target without application activation and refreshes its live thumbnail.
-Windows inspection returns physical bounds converted to Electron DIP coordinates;
-macOS uses ScreenCaptureKit bounds and a precise Accessibility window match. If
-Accessibility access is missing, show the native warning and retain the preview.
-The selected source owns the aura until confirmation. Destroy all picker surfaces
-before resolving selection to the HUD, before any countdown or recording starts.
-Each surface requires both native and mounted readiness, has a startup deadline,
-and is disposed on cancel, failed load, renderer loss, HUD close or shutdown. No
-picker geometry is persisted. Only the owning HUD may open the picker; only the
-owning chooser renderer may mutate its validated source state.
+The chooser is one transparent, frameless child of the HUD, centered on that display
+and clamped to its work area. Keep its native bounds fixed for the entire session,
+including during hover, scrolling and preview refresh. Reserve 16 px around its
+single translucent panel; do not add CSS or native shadows or a glow. Never expand
+it to cover the desktop.
+
+Keep the source kind chosen in the HUD. The recorder-sized 38 px header contains a
+vertically centered title, small search field and top-right Close button. Use a
+compact horizontal thumbnail row with the shared ScrollShadow and keyboard/mouse
+wheel scrolling, with no inline preview, Play button or footer. Clicking,
+double-clicking or pressing Enter selects that exact ID and confirms through the
+existing HUD countdown and capture flow. Zero seconds starts capture directly.
+
+Hover retains chooser keyboard focus while Rust raises the real source window
+without activating it or making it permanently topmost. The source stays behind
+the selector. A selected source remains the background when hover ends. Without a
+selection, clear the hover and stop live refreshes on pointer exit or focus loss.
+Bridge card-to-card pointer and keyboard transitions for 80 ms so the background
+window is not hidden and shown again across each gap. Actual chooser exit or
+window focus loss clears immediately. Reuse the preview component on source
+changes; do not key it by source ID or repeat the renderer readiness handshake.
+Ignore late thumbnail results, but restore the chooser above any already-raised
+source even when that result is discarded. Serialize pending inspection before
+raising the exact clicked source and handing off to the countdown. Source capture
+retains its full native bounds; preview dimensions never change the capture region.
+Windows inspection converts physical bounds to Electron DIP coordinates; macOS
+retains ScreenCaptureKit bounds. Display native inspection errors without clearing
+another selected source.
+
+For development fixtures and screen selection, a separate click-through target
+surface simulates the background source. It is non-focusable on Windows/macOS.
+On Linux it must remain focusable in construction: `focusable: false` bypasses the
+window manager and forces it above managed windows even with `alwaysOnTop: false`.
+Present it with `showInactive`, ignore mouse input and never call `focus` on it.
+Keep its native bounds fixed and fit the source aspect ratio within them; screen previews are
+limited to `640 × 350`, never the full display. This target is a normal native
+window, not always on top. The chooser alone uses the `screen-saver` topmost level,
+and is raised after showing the target or inspecting a real window. Keep explicit
+renderer stacking too: the browser fixture backdrop is below the chooser. This
+ordering applies to Window and Full screen regardless of renderer readiness order.
+Do not add another glow/aura window.
+
+Destroy the picker before resolving selection to the HUD, before any countdown
+or recording starts. It requires both native and mounted readiness, has a startup
+deadline, and is disposed on cancel, failed load, renderer loss, HUD close or
+shutdown. No picker geometry is persisted. Only the owning HUD may open it; only
+the owning chooser renderer may mutate its validated source state.
 
 macOS picker sources come exclusively from the filtered Rust catalogue, rather
 than Chromium's broader window enumeration. Keep only titled, normally layered
@@ -170,7 +203,7 @@ Keep bounds persistence and existing visibility intent across suspension. Captur
 
 ## Checklist for a window change
 
-The recorder's HTML contains a small static export of the Mascot Lab cloud before Vue is imported. Its CSS animation and shared theme tokens load independently of the application, without fonts, an animation library, a timer that delays presentation, or a new native window. Remove it immediately for transparent camera, region, crop and teleprompter overlays. Remove the recorder shell on the first frame after mounting Vue; respect reduced motion and preserve the HUD's 16 px outer margin. Startup failures keep a readable error and native reload button available before Vue exists. These two bootstrap elements intentionally cannot use Vue UI primitives.
+The recorder's HTML contains a small static export of the Mascot Lab loading dots before Vue is imported. Its lightweight shared shape engine and theme tokens load independently of the application, without fonts, an animation library, a timer that delays presentation, or a new native window. The 72 px portrait starts as loading dots; only a load lasting three seconds shows its brief triangle transition. Remove it immediately for transparent camera, region, crop and teleprompter overlays. Remove the recorder shell on the first frame after mounting Vue; respect reduced motion and preserve the HUD's 16 px outer margin. Startup failures keep a readable error and native reload button available before Vue exists. These two bootstrap elements intentionally cannot use Vue UI primitives.
 
 `beam:renderer-bootstrap` measures the renderer import, selected-language initialization and first mounted frame. Native development startup logs include module loading, beginning at the first line of `main.cjs`. Read `docs/recorder-performance.md` for measurement limits and profiling. The frameless application has no default application menu; custom tray and context menus remain independent.
 

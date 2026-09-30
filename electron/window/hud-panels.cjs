@@ -47,9 +47,13 @@ function createHudPanelManager({
       show: false,
       transparent: false,
       backgroundColor: '#212123',
-      titleBarStyle: 'hidden',
-      titleBarOverlay: { color: '#00000000', symbolColor: '#808080', height: 40 },
-      ...(process.platform === 'darwin' ? { trafficLightPosition: { x: 12, y: 12 } } : {}),
+      ...(role === 'projects'
+        ? { frame: false }
+        : {
+            titleBarStyle: 'hidden',
+            titleBarOverlay: { color: '#00000000', symbolColor: '#808080', height: role === 'settings' ? 38 : 40 },
+            ...(process.platform === 'darwin' ? { trafficLightPosition: { x: 12, y: 12 } } : {}),
+          }),
       thickFrame: true,
       resizable: true,
       hasShadow: true,
@@ -73,6 +77,22 @@ function createHudPanelManager({
     };
     panel.timer = setTimeout(() => fail(new Error('The window did not finish loading.')), 30_000);
     installBrowserZoomPolicy(window.webContents, { resetOnLoad: false });
+    if (role === 'projects') {
+      // Own this shortcut before renderer inputs or application menus can consume it.
+      window.webContents.on('before-input-event', (event, input) => {
+        if (
+          input.type === 'keyDown' &&
+          (input.control || input.meta) &&
+          !input.alt &&
+          !input.shift &&
+          input.key.toLowerCase() === 'w' &&
+          !window.isDestroyed()
+        ) {
+          event.preventDefault();
+          window.close();
+        }
+      });
+    }
     window.once('ready-to-show', () => {
       panel.nativeReady = true;
       present(panel);

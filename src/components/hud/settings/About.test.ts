@@ -27,7 +27,8 @@ describe('About', () => {
     await flushPromises();
 
     expect(wrapper.get('.brand-wordmark').text()).toBe('Beam');
-    expect(wrapper.get('.beam-mascot').attributes('data-phase')).toBe('idle');
+    expect(wrapper.get('.brand-symbol img').attributes('src')).toContain('/brand/BeamIcon.webp');
+    expect(wrapper.find('.beam-mascot').exists()).toBe(false);
     expect(wrapper.get('.about-version').text()).toBe('Version 8.6.4');
     expect(wrapper.get('.about-description-title').text()).toBe('Beautiful demos. Thoughtful screenshots.');
     expect(wrapper.get('.about-description').text()).toContain(
@@ -68,8 +69,9 @@ describe('About', () => {
     const discord = wrapper.findAll('.social-links button').find((button) => button.text() === 'Discord')!;
     await discord.trigger('click');
     expect(capture.openDiscordInvite).toHaveBeenCalledOnce();
-    await wrapper.get('button.about-brand').trigger('click');
-    expect(wrapper.get('.beam-mascot').attributes('data-phase')).toBe('processing');
+    await wrapper.get('.about-brand button').trigger('click');
+    expect(wrapper.find('.brand-effects').exists()).toBe(true);
+    expect(wrapper.find('.beam-mascot').exists()).toBe(false);
     wrapper.unmount();
   });
 

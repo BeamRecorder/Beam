@@ -5,7 +5,8 @@ import type { CaptureProject } from '~/api/types/capture-api';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useProjectPreviews } from './useProjectPreviews';
 import { useProjectGrid } from './useProjectGrid';
-import type { ProjectPickerProps, ProjectPickerEmit, ProjectPickerSearchInput } from './project-picker-types';
+import { useProjectSearch } from './useProjectSearch';
+import type { ProjectPickerProps, ProjectPickerEmit } from './project-picker-types';
 
 export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerEmit) {
   const { t } = useTranslate('ProjectPicker');
@@ -17,10 +18,6 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
   const selectedProjectId = ref<string | null>(null);
   const isLoading = ref(true);
   const errorMessage = ref('');
-
-  const isSearchOpen = ref(false);
-  const searchQuery = ref('');
-  const searchInputRef = ref<ProjectPickerSearchInput | null>(null);
 
   const isSelectionMode = ref(false);
   const selectedBatchIds = ref<Set<string>>(new Set());
@@ -107,34 +104,8 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
     }
   };
 
-  const toggleSearch = () => {
-    if (isSelectionMode.value) {
-      cancelSelectionMode();
-    }
-    isSearchOpen.value = !isSearchOpen.value;
-    if (isSearchOpen.value) {
-      void nextTick(() => {
-        if (isSearchOpen.value) searchInputRef.value?.inputRef?.focus({ preventScroll: true });
-      });
-    } else {
-      searchQuery.value = '';
-    }
-  };
-
-  const clearSearch = () => {
-    searchQuery.value = '';
-    searchInputRef.value?.inputRef?.focus({ preventScroll: true });
-  };
-
-  const handleSearchKeydown = (event: KeyboardEvent) => {
-    if (event.key === 'Escape') {
-      if (searchQuery.value) {
-        searchQuery.value = '';
-      } else {
-        isSearchOpen.value = false;
-      }
-    }
-  };
+  const { isSearchOpen, searchQuery, searchInputRef, toggleSearch, clearSearch, handleSearchKeydown } =
+    useProjectSearch(() => !props.compact && !isNewProjectOpen.value && !renameProjectId.value, cancelSelectionMode);
 
   const filteredProjects = computed(() => {
     const query = searchQuery.value.trim().toLowerCase();
@@ -331,10 +302,7 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
     }
   };
 
-  let renameOpenedAt = 0;
-
   const startRename = (project: CaptureProject) => {
-    renameOpenedAt = Date.now();
     renameProjectId.value = project.id;
     renameValue.value = project.name;
     renameError.value = '';
@@ -354,9 +322,7 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
   };
 
   const handleRenameProject = async () => {
-    if (Date.now() - renameOpenedAt < 250) {
-      return;
-    }
+    if (renameBusy.value || !renameProjectId.value) return;
     const trimmed = renameValue.value.trim();
     const originalProject = projects.value.find((p) => p.id === renameProjectId.value);
     if (!trimmed || (originalProject && originalProject.name === trimmed)) {

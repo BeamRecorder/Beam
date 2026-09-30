@@ -19,3 +19,4 @@ export interface BrandLetterFrame {
   shadowX: number;
   reveal: number;
 }
+export type BrandSymbol = 'beam' | 'folder' | 'settings';

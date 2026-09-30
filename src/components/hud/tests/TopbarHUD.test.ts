@@ -9,18 +9,21 @@ vi.mock('../../../api/capture', () => ({
 import TopbarHUD from '../TopbarHUD.vue';
 
 describe('TopbarHUD', () => {
-  it('shows the shared failure pose and clears it when the recorder recovers', async () => {
-    const wrapper = mount(TopbarHUD, { props: { failed: true } });
-    expect(wrapper.get('.beam-mascot').attributes('data-phase')).toBe('failed');
-    await wrapper.setProps({ failed: false });
-    expect(wrapper.get('.beam-mascot').attributes('data-phase')).toBe('idle');
+  it('keeps contextual icons static when its title changes', async () => {
+    const wrapper = mount(TopbarHUD, { props: { symbol: 'folder' } });
+    const icon = wrapper.get('.brand-symbol svg').element;
+    await wrapper.setProps({ title: 'Loading' });
+    expect(wrapper.get('.brand-symbol svg').element).toBe(icon);
+    expect(wrapper.find('.beam-mascot').exists()).toBe(false);
+    await wrapper.setProps({ symbol: 'settings' });
+    expect(wrapper.get('.brand-symbol svg').classes()).toContain('lucide-settings');
     wrapper.unmount();
   });
   it('keeps Beam branding and moves capture modes out of the titlebar', () => {
     const wrapper = mount(TopbarHUD);
-    expect(wrapper.find('img').exists()).toBe(false);
-    expect(wrapper.find('[data-beamy-dock] svg').exists()).toBe(true);
-    expect(wrapper.get('[aria-label="Animate Beamy"]').attributes('type')).toBe('button');
+    expect(wrapper.get('.brand-symbol img').attributes('src')).toContain('/brand/BeamIcon.webp');
+    expect(wrapper.find('.beam-mascot').exists()).toBe(false);
+    expect(wrapper.get('[aria-label="Beam"]').attributes('type')).toBe('button');
     expect(wrapper.get('.topbar-title').text()).toBe('Beam');
     expect(wrapper.find('[role="group"]').exists()).toBe(false);
   });
@@ -48,5 +51,13 @@ describe('TopbarHUD', () => {
     expect(wrapper.find('[aria-label="Mascot Lab"]').exists()).toBe(false);
     await wrapper.get('[aria-label="Minimize"]').trigger('click');
     expect(wrapper.emitted('minimize')).toEqual([[]]);
+  });
+  it('offers a Close-only Beam titlebar for Projects', async () => {
+    const wrapper = mount(TopbarHUD, { props: { showSettings: false, showProjects: false, showMinimize: false } });
+    expect(wrapper.findAll('.window-actions button')).toHaveLength(1);
+    expect(wrapper.find('[aria-label="Minimize"]').exists()).toBe(false);
+    await wrapper.get('[aria-label="Close"]').trigger('click');
+    expect(wrapper.emitted('close')).toEqual([[]]);
+    wrapper.unmount();
   });
 });

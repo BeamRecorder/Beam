@@ -400,6 +400,11 @@
   },
   "EditorCanvas": {
     "videoPreviewLoading": "Đang tải xem trước video",
+    "videoPreviewUnavailable": "Không thể hiển thị bản xem trước",
+    "videoDecodeFailed": "Beam không thể giải mã video này.",
+    "videoSeekFailed": "Beam không thể hiển thị vị trí này trong video.",
+    "videoFormatUnsupported": "Định dạng video này không được hỗ trợ.",
+    "videoFileUnavailable": "Tệp video không khả dụng.",
     "ok": "OK",
     "recenter": "Căn giữa góc nhìn"
   },
@@ -668,6 +673,7 @@
     "pauseRecording": "Tạm dừng ghi",
     "stopRecording": "Dừng ghi",
     "cancelRecording": "Hủy và xóa bản ghi",
+    "cancelCountdown": "Hủy",
     "turnMicOff": "Tắt micro",
     "turnMicOn": "Bật micro",
     "turnCameraOff": "Tắt camera",

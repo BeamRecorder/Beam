@@ -96,11 +96,6 @@ export function mountStartupShell(element: HTMLElement): StartupShell {
       stop();
       portrait.dispose();
     },
-    settle: () => {
-      failed = true;
-      stop();
-      portrait.settle();
-    },
     dispose: () => {
       disposed = true;
       stop();

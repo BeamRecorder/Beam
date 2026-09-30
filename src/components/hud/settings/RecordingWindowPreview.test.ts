@@ -9,7 +9,8 @@ describe('instructional recording previews', () => {
     expect(wrapper.get('.recording-preview').attributes('aria-hidden')).toBe('true');
     expect(wrapper.get('.hud-scale').attributes('inert')).toBeDefined();
     expect(wrapper.findAll('.capture-card')).toHaveLength(3);
-    expect(wrapper.get('.beam-mascot').attributes('data-phase')).toBe('idle');
+    expect(wrapper.get('.preview-brand img').attributes('src')).toContain('/brand/BeamIcon.webp');
+    expect(wrapper.find('.beam-mascot').exists()).toBe(false);
     expect(wrapper.find('.recorder-bar').exists()).toBe(false);
     wrapper.unmount();
   });

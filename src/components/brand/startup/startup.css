@@ -20,8 +20,8 @@
   -webkit-app-region: drag;
 }
 .startup-portrait {
-  width: 184px;
-  height: 184px;
+  width: 72px;
+  height: 72px;
   flex: none;
   transform-origin: center;
 }
@@ -31,14 +31,14 @@
   height: 100%;
   overflow: visible;
 }
-#beam-startup .startup-cloud {
+#beam-startup .startup-body {
+  fill: var(--color-primary);
+}
+#beam-startup .startup-dots circle {
   fill: var(--color-primary);
 }
 #beam-startup .startup-eyes {
-  fill: #000;
-}
-:root.dark #beam-startup .startup-eyes {
-  fill: #fff;
+  fill: var(--color-bg-element);
 }
 .startup-tip {
   margin: 0;
@@ -50,22 +50,6 @@
 [data-startup-tip-label] {
   color: var(--color-primary);
   font-weight: 600;
-}
-:root[data-beam-startup] [data-beamy-dock] {
-  visibility: hidden;
-}
-#beam-startup[data-docking] {
-  pointer-events: none;
-  -webkit-app-region: no-drag;
-  background: transparent;
-  border-color: transparent;
-  transition:
-    background 220ms ease-out,
-    border-color 220ms ease-out;
-}
-#beam-startup[data-docking] .startup-tip {
-  opacity: 0;
-  transition: opacity 120ms ease-out;
 }
 #beam-startup[data-error] {
   -webkit-app-region: no-drag;

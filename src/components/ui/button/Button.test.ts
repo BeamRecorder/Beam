@@ -4,6 +4,17 @@ import { describe, expect, it } from 'vitest';
 import Button from './Button.vue';
 
 describe('Button', () => {
+  it('keeps normal labels centered unless start alignment is requested', async () => {
+    const wrapper = mount(Button, { slots: { default: 'Project title' } });
+    expect(wrapper.get('button').classes()).not.toContain('btn-align-start');
+    await wrapper.setProps({ align: 'start', block: true });
+    expect(wrapper.get('button').classes()).toContain('btn-align-start');
+    await wrapper.get('button').trigger('click');
+    expect(wrapper.emitted('click')).toHaveLength(1);
+    await wrapper.setProps({ align: 'center' });
+    expect(wrapper.get('button').classes()).not.toContain('btn-align-start');
+    wrapper.unmount();
+  });
   it('renders its semantic type, content and visual variants', () => {
     const wrapper = mount(Button, {
       props: { type: 'submit', variant: 'danger', size: 'lg', block: true },

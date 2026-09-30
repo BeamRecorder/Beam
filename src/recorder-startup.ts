@@ -1,5 +1,4 @@
 import { mountStartupShell } from './components/brand/startup/startup-shell';
-import { dockStartupMascot } from './components/brand/startup/startup-handoff';
 import type { StartupShell } from './components/brand/startup/startup-types';
 
 let shell: StartupShell | null = null;
@@ -43,13 +42,10 @@ export const completeRecorderStartup = (): void => {
     performance.mark('beam:renderer-mounted');
     performance.measure('beam:renderer-bootstrap', 'beam:bootstrap-start', 'beam:renderer-mounted');
     const currentShell = shell;
-    currentShell?.settle();
+    currentShell?.dispose();
     shell = null;
     const startup = document.getElementById('beam-startup');
-    if (startup) dockStartupMascot(startup, () => currentShell?.dispose());
-    else {
-      currentShell?.dispose();
-      document.documentElement.removeAttribute('data-beam-startup');
-    }
+    startup?.remove();
+    document.documentElement.removeAttribute('data-beam-startup');
   });
 };

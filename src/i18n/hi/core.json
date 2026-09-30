@@ -400,6 +400,11 @@
   },
   "EditorCanvas": {
     "videoPreviewLoading": "वीडियो पूर्वावलोकन लोड हो रहा है",
+    "videoPreviewUnavailable": "पूर्वावलोकन उपलब्ध नहीं है",
+    "videoDecodeFailed": "Beam इस वीडियो को डिकोड नहीं कर सका।",
+    "videoSeekFailed": "Beam वीडियो में यह स्थान नहीं दिखा सका।",
+    "videoFormatUnsupported": "यह वीडियो फ़ॉर्मैट समर्थित नहीं है।",
+    "videoFileUnavailable": "वीडियो फ़ाइल उपलब्ध नहीं है।",
     "ok": "ठीक है",
     "recenter": "दृश्य पुनः केंद्रित करें"
   },
@@ -669,6 +674,7 @@
     "pauseRecording": "रिकॉर्डिंग रोकें",
     "stopRecording": "रिकॉर्डिंग बंद करें",
     "cancelRecording": "रद्द करें और रिकॉर्डिंग हटाएँ",
+    "cancelCountdown": "रद्द करें",
     "turnMicOff": "माइक्रोफ़ोन बंद करें",
     "turnMicOn": "माइक्रोफ़ोन चालू करें",
     "turnCameraOff": "कैमरा बंद करें",

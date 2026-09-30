@@ -5,9 +5,10 @@ import { useTranslate } from '~/i18n/useTranslate';
 import type { CaptureProject } from '~/api/types/capture-api';
 import type { HudPanel } from '~/api/types/hud-panel';
 import ToastProvider from '~/ui/toast/ToastProvider.vue';
+import TopbarHUD from '../hud/TopbarHUD.vue';
+import BrandLogo from '../brand/BrandLogo.vue';
 const { panel, content } = defineProps<{ panel: HudPanel | null; content: Component | null }>();
 const { t } = useTranslate('HudPreferences');
-const { t: tProjects } = useTranslate('ProjectPicker');
 const title = panel === 'settings' ? 'Beam Settings' : panel === 'mascot' ? 'Beam Mascot Lab' : 'Beam Projects';
 const error = ref('');
 const contentMounted = () => {
@@ -28,8 +29,17 @@ onMounted(() => {
 
 <template>
   <main class="panel-window" :class="{ mac: capture.platform === 'darwin' }">
-    <header class="panel-titlebar">
-      {{ panel === 'settings' ? t('preferences') : panel === 'mascot' ? t('mascotLab') : tProjects('projects') }}
+    <TopbarHUD
+      v-if="panel === 'projects'"
+      symbol="folder"
+      :show-settings="false"
+      :show-projects="false"
+      :show-minimize="false"
+      @close="capture.close()"
+    />
+    <header v-else-if="panel" class="panel-titlebar" :class="{ 'settings-titlebar': panel === 'settings' }">
+      <BrandLogo v-if="panel === 'settings'" :title="t('preferences')" symbol="settings" />
+      <span v-else>{{ t('mascotLab') }}</span>
     </header>
     <p v-if="error" class="panel-error" role="alert">{{ error }}</p>
     <component
@@ -39,7 +49,6 @@ onMounted(() => {
       @ready="capture.notifyHudPanelReady()"
       @vue:mounted="contentMounted"
       @open-project="openProject"
-      @back="capture.close()"
     />
     <ToastProvider />
   </main>
@@ -68,6 +77,9 @@ onMounted(() => {
 }
 .mac .panel-titlebar {
   padding-left: 80px;
+}
+.settings-titlebar {
+  height: 38px;
 }
 .panel-error {
   padding: 12px 16px;

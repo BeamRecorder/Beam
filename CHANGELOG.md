@@ -7,18 +7,25 @@ User-facing changes to Beam are documented in this file.
 ### Added
 
 - Development Settings now include shortcuts to detached DevTools and a separate Mascot Lab, with adjustable eye size, width, height, spacing and vertical position. Eye proportions are saved with lab presets and included in exports.
-- Added a shared screen/window chooser for Windows and macOS with searchable thumbnails, keyboard navigation, live window previews and a click-through selection aura that disappears before countdown. Development launches can supply 3 simulated displays and 21 windows through `DEV_CROSSPLATFORM=1`, including on Linux; normal Linux capture retains the Portal.
-- Beamy now appears large and centered during loading with translated tips, then gently moves into the HUD logo. Clicking the brand plays independent selections from twelve mascot morphs and twelve text effects, returning to the original cloud and plain Beam text.
-- The recorder shows a lightweight animated cloud while its interface loads, with a retry action if startup fails.
-- Instant capture now has a small cloud mascot that accompanies recording, dances and morphs during export, and briefly celebrates completed videos, respecting reduced-motion preferences.
+- Added a shared screen/window chooser for Windows and macOS with searchable thumbnails and keyboard navigation. Development launches can supply 3 simulated displays and 21 windows through `DEV_CROSSPLATFORM=1`, including on Linux; normal Linux capture retains the Portal.
+- Beamy appears centered during loading with translated tips, then disappears when the recorder is ready. Clicking the Beam wordmark plays one of twelve text effects before returning to plain text.
+- The recorder shows a lightweight animated Beamy while its interface loads, with a retry action if startup fails.
+- Instant capture now has a small Beamy mascot that accompanies recording, dances and morphs during export, and briefly celebrates completed videos, respecting reduced-motion preferences.
 - Region recording now offers a desktop magnifier, live pixel dimensions, Full screen and size presets, teleprompter, device controls and a 0–10 second countdown. Controls hide during dragging and return with a spring animation. Desktop icons and the taskbar/Dock can be hidden from capture on supported platforms.
 - Capture problems now appear in the toolbar with a count and a scrollable hover panel, including individual copy actions.
 - Settings and Projects now open in separate, resizable desktop windows.
 
 ### Changed
 
-- Redesigned Settings with neutral navigation, colored category icons, direction-aware transitions and indexed search across setting names, descriptions and shortcuts in the selected language and English. Search is focused on opening and accepts typing only in the active Settings window. Recorder setup now has a saved Always on top option, with previews for its window, recording bar visibility and Light/Dark/System themes. About features the interactive Beamy identity, clearer version contrast, update controls and the current Discord invitation.
+- Beamy now uses Bloub’s original circular body, rounded capsule eyes and neutral/sad/happy expressions in Beam’s theme color, without cloud styling or cheeks. Sad states blink and move their gaze naturally.
+- Startup immediately shows compact animated loading dots. After three seconds, Beamy briefly morphs into a triangle before returning to the dancing dots, using the shared Mascot Lab engine.
+- Projects and Preferences now use smaller muted gray titlebar icons and lighter titles. Preferences matches the recorder’s compact 38 px titlebar height, including native window controls.
+- Titlebars use the fixed Beam logo for the recorder, the existing folder icon for Projects and the gear icon for Preferences. The text-only Beam easter egg remains available, including in About. Beamy is reserved for loading and status states.
+- Redesigned Settings with neutral navigation, colored category icons, direction-aware transitions and indexed search across setting names, descriptions and shortcuts in the selected language and English. Search is focused on opening and accepts typing only in the active Settings window. Recorder setup now has a saved Always on top option, with previews for its window, recording bar visibility and Light/Dark/System themes. About features the interactive Beam wordmark, clearer version contrast, update controls and the current Discord invitation.
 - Preference changes can now be saved together in one batch. Shared JSON storage in Electron and Rust avoids repeated writes, preserves complete existing documents when staging fails, and cleans up owned temporary files after failures.
+- Projects now uses Beam’s compact titlebar with only Close and no oversized navigation footer. Ctrl+W (Cmd+W on macOS) closes the window, clicking a project title renames it, and typing anywhere on the page starts searching immediately. Project titles stay left-aligned.
+- Simplified source selection into a centered transparent Alt-Tab-style overlay with a compact search header, thumbnail row and scroll fades, without shadows, glow or footer. Hover shows the source behind the selector; clicking or pressing Enter starts the configured countdown immediately, or recording directly at 0 seconds.
+- The countdown now has a Cancel button translated into all 15 supported languages, which releases the prepared recording without starting capture.
 - Capture mode and Light/Dark/System controls share a sliding selection indicator, with instant updates when reduced motion is enabled.
 - Beam's light theme uses a clearer orange with subtle accent fills and borders, correcting its brown appearance on white surfaces; the dark theme and custom colors retain their selected shades.
 - Projects opens in a smaller window with square cards that adapt to resizing. Missing thumbnails are generated only for visible projects, one at a time.
@@ -34,6 +41,12 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Linux AV1 playback and timeline thumbnails use the software decoder to avoid hardware decoding failures during seeking. Copied playback diagnostics now identify the file, clip, codec, decoder configuration, operation and exact source/timeline position.
+- Copy buttons keep their icon stable while copying, then show confirmation without briefly flashing disabled or displaying a spinner.
+- Playback errors now show a sad Beamy and a translated diagnostic copy button in the editor preview, instead of drawing technical errors into the canvas.
+- Double-clicking a project’s action menu no longer opens the project behind it.
+- Window and Full screen previews stay behind the source selector, including during rapid hovering and late preview loading.
+- Moving between source cards keeps the same preview visible, avoiding repeated window-opening animations and preview remounts in development mode.
 - Centered the Beam logo and wordmark vertically in the recorder toolbar, including animated text.
 - Editor opening now shows Beamy with a single friendly, translated status, no HUD titlebar, and a Cancel button that safely returns to the recorder without deleting the project.
 - Beamy shows a downcast expression with round eyes when editor opening or another Beamy status fails; editor error actions stay accessible with long translations.
@@ -41,7 +54,7 @@ User-facing changes to Beam are documented in this file.
 - Saved project thumbnails use the same media protocol as video previews, so development windows display them instead of a broken image.
 - macOS window selection excludes privacy indicators and other system UI surfaces while retaining real application windows.
 - The first countdown value now waits for its mounted renderer as well as native window readiness, preventing an empty countdown on first use.
-- The Beam wordmark stays vertically centered and unclipped at rest; Beamy uses the original rounded Mascot Lab cloud and eases back to it after each interaction.
+- The Beam wordmark stays vertically centered and unclipped at rest; its text easter egg eases back to the original layout after each interaction.
 - Full screen region controls keep a visible margin at the top and bottom, and their placement adapts to translated labels, wrapped controls and device errors.
 - The region selector shows the live desktop through its transparent crop instead of covering it with a frozen screenshot; the snapshot is used only by the magnifier.
 - Region controls return directly to their final position at screen edges, and the selector loads independently while its native desktop preview prepares.

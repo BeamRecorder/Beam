@@ -10,6 +10,7 @@ import { recordingCameraMetadata } from './recording-camera-metadata';
 import { CaptureSelectionCancelled, prepareNativeRecording } from './recording-native-preparation';
 import { formatRecordingTime, isRecordingActivePhase } from './recording-types';
 import { createRecordingRestart } from './recording-restart';
+import { createRecordingCountdown } from './recording-countdown';
 import type { RecordingConfiguration, RecordingPhase, RecordingSessionResult } from './recording-types';
 import type { RecordingStartFailure, RecordingStartStage, StartupSidecarState } from './recording-types';
 
@@ -37,7 +38,7 @@ export function useRecordingController(
   const recorderHoverOnlyActive = ref(false);
   const error = ref('');
   let configuration: RecordingConfiguration | null = null;
-  let countdown: number | null = null;
+  const countdown = createRecordingCountdown(secondsRemaining);
   let timer: number | null = null;
   let sessionId: string | null = null;
   let projectId: string | null = null;
@@ -102,10 +103,7 @@ export function useRecordingController(
       error.value = `The cancelled recording could not be cleaned up safely: ${detail}. Restart Beam before recording again.`;
     }
   };
-  const clearCountdown = () => {
-    if (countdown !== null) window.clearInterval(countdown);
-    countdown = null;
-  };
+  const clearCountdown = countdown.clear;
   const clearTimer = () => {
     if (timer !== null) window.clearInterval(timer);
     timer = null;
@@ -343,18 +341,13 @@ export function useRecordingController(
         void launchNativeStartup(generation);
         return;
       }
-      void capture.setCountdown(secondsRemaining.value);
-      countdown = window.setInterval(() => {
-        secondsRemaining.value = Math.max(0, secondsRemaining.value - 1);
-        if (secondsRemaining.value > 0) {
-          void capture.setCountdown(secondsRemaining.value);
-          return;
-        }
-        clearCountdown();
-        void capture.setCountdown(null);
-        phase.value = 'starting';
-        void launchNativeStartup(generation);
-      }, 1000);
+      countdown.start(
+        () => {
+          phase.value = 'starting';
+          void launchNativeStartup(generation);
+        },
+        () => void cancel(),
+      );
     } catch (reason) {
       if (generation !== recordingGeneration) return;
       await terminateStartup(generation, startupFailure(generation, stage, reason));

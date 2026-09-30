@@ -254,6 +254,13 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.invoke('teleprompter:get-session', { projectId, sessionId }),
     setCountdown: (seconds) => ipcRenderer.invoke('countdown:set', seconds),
     notifyCountdownReady: () => ipcRenderer.send('countdown:ready'),
+    cancelCountdown: () => ipcRenderer.send('countdown:cancel'),
+    setCountdownInteractive: (interactive) => ipcRenderer.send('countdown:interactive', interactive),
+    onCountdownCancelled: (listener) => {
+      const callback = () => listener();
+      ipcRenderer.on('countdown:cancelled', callback);
+      return () => ipcRenderer.removeListener('countdown:cancelled', callback);
+    },
     prepareRecordingSurface: () => ipcRenderer.invoke('recording-surface:prepare'),
     onCountdown: (listener) => {
       const callback = (_event, seconds) => listener(seconds);

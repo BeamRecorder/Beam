@@ -7,6 +7,8 @@ const { capture } = vi.hoisted(() => ({
     onPreferencesChanged: vi.fn(),
     getPreferences: vi.fn(),
     notifyCountdownReady: vi.fn(),
+    cancelCountdown: vi.fn(),
+    setCountdownInteractive: vi.fn(),
   },
 }));
 vi.mock('../../../api/capture', () => ({ capture }));
@@ -49,9 +51,13 @@ describe('CountdownOverlay', () => {
     listener?.(3);
     await wrapper.vm.$nextTick();
     expect(wrapper.get('.countdown').text()).toBe('3');
+    expect(wrapper.get('button').text()).toBe('Cancel');
+    await wrapper.get('button').trigger('click');
+    expect(capture.cancelCountdown).toHaveBeenCalledOnce();
     listener?.(null);
     await wrapper.vm.$nextTick();
     expect(wrapper.get('.countdown').text()).toBe('');
+    expect(wrapper.find('button').exists()).toBe(false);
     wrapper.unmount();
     expect(unsubscribeCountdown).toHaveBeenCalledOnce();
     expect(unsubscribePreferences).toHaveBeenCalledOnce();
@@ -138,6 +144,34 @@ describe('CountdownOverlay', () => {
     countdownListener?.(3);
     await wrapper.vm.$nextTick();
     expect(wrapper.get('.countdown').text()).toBe('3');
+    wrapper.unmount();
+  });
+
+  it('enables mouse input only over Cancel and clears it on exit and teardown', async () => {
+    const wrapper = mount(CountdownOverlay, { attachTo: document.body });
+    const listener = capture.onCountdown.mock.calls[0]![0] as (value: number | null) => void;
+    listener(3);
+    await wrapper.vm.$nextTick();
+    await wrapper.get('button').trigger('mousemove');
+    expect(capture.setCountdownInteractive).toHaveBeenLastCalledWith(true);
+    await wrapper.get('.countdown').trigger('mousemove');
+    expect(capture.setCountdownInteractive).toHaveBeenLastCalledWith(false);
+    window.dispatchEvent(new MouseEvent('mousemove'));
+    expect(capture.setCountdownInteractive).toHaveBeenLastCalledWith(false);
+    window.dispatchEvent(new MouseEvent('mouseleave'));
+    expect(capture.setCountdownInteractive).toHaveBeenLastCalledWith(false);
+    wrapper.unmount();
+    const calls = capture.setCountdownInteractive.mock.calls.length;
+    window.dispatchEvent(new MouseEvent('mousemove'));
+    expect(capture.setCountdownInteractive).toHaveBeenCalledTimes(calls);
+  });
+
+  it.each([null, 0, -1])('does not expose Cancel for inactive countdown %s', async (seconds) => {
+    const wrapper = mount(CountdownOverlay);
+    const listener = capture.onCountdown.mock.calls[0]![0] as (value: number | null) => void;
+    listener(seconds);
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find('button').exists()).toBe(false);
     wrapper.unmount();
   });
 });

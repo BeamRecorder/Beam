@@ -4,7 +4,7 @@ import { DEFAULT_APPEARANCE, SURFACE_TONES } from '~/types/appearance';
 import { mountStartupShell } from './startup-shell';
 import type { StartupShell } from './startup-types';
 
-const portrait = vi.hoisted(() => ({ settle: vi.fn(), dispose: vi.fn() }));
+const portrait = vi.hoisted(() => ({ dispose: vi.fn() }));
 vi.mock('./startup-portrait', () => ({ animateStartupPortrait: () => portrait }));
 let element: HTMLElement;
 let hidden: boolean;
@@ -28,7 +28,6 @@ beforeEach(() => {
   element = document.createElement('div');
   element.innerHTML = '<span data-startup-tip-label></span><span data-startup-tip></span>';
   portrait.dispose.mockClear();
-  portrait.settle.mockClear();
   vi.stubGlobal('capture', undefined);
 });
 afterEach(() => {
@@ -86,19 +85,16 @@ describe('startup shell tips and theme', () => {
     expect(button.textContent).toBe('Reload Beam');
     expect(button.getAttribute('aria-label')).toBe('Reload Beam');
   });
-  it.each(['fail', 'settle', 'dispose'] as const)(
-    'stops rotating on %s and owns the portrait lifecycle',
-    async (action) => {
-      const shell = setup();
-      await flush();
-      expect(vi.getTimerCount()).toBe(1);
-      shell[action]();
-      expect(vi.getTimerCount()).toBe(0);
-      document.dispatchEvent(new Event('visibilitychange'));
-      expect(vi.getTimerCount()).toBe(0);
-      expect(action === 'settle' ? portrait.settle : portrait.dispose).toHaveBeenCalledOnce();
-    },
-  );
+  it.each(['fail', 'dispose'] as const)('stops rotating on %s and owns the portrait lifecycle', async (action) => {
+    const shell = setup();
+    await flush();
+    expect(vi.getTimerCount()).toBe(1);
+    shell[action]();
+    expect(vi.getTimerCount()).toBe(0);
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(vi.getTimerCount()).toBe(0);
+    expect(portrait.dispose).toHaveBeenCalledOnce();
+  });
   it('ignores translations and preferences that arrive after disposal', async () => {
     let resolve!: (value: unknown) => void;
     vi.stubGlobal('capture', {

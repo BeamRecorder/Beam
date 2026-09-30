@@ -62,7 +62,16 @@ describe('recorder startup', () => {
     });
     expect(log).toHaveBeenCalledWith('Beam renderer failed to load:', expect.any(Error));
   });
-  it('removes the shell on the next frame and records renderer readiness', async () => {
+  it('removes the loading mascot on the next frame without moving it into the titlebar', async () => {
+    const logo = document.createElement('img');
+    logo.setAttribute('src', '/brand/BeamIcon.webp');
+    document.getElementById('app')!.append(logo);
+    const animate = vi.fn();
+    const portrait = document.createElement('div');
+    portrait.dataset.startupMascot = '';
+    Object.defineProperty(portrait, 'animate', { value: animate });
+    document.getElementById('beam-startup')!.append(portrait);
+    document.documentElement.setAttribute('data-beam-startup', '');
     let frame!: FrameRequestCallback;
     vi.stubGlobal(
       'requestAnimationFrame',
@@ -76,6 +85,10 @@ describe('recorder startup', () => {
     expect(document.getElementById('beam-startup')).not.toBeNull();
     frame(0);
     expect(document.getElementById('beam-startup')).toBeNull();
+    expect(document.documentElement.hasAttribute('data-beam-startup')).toBe(false);
+    expect(animate).not.toHaveBeenCalled();
+    expect(logo.isConnected).toBe(true);
+    expect(logo.getAttribute('src')).toBe('/brand/BeamIcon.webp');
     expect(performance.getEntriesByName('beam:renderer-bootstrap')[0]?.duration).toBeGreaterThanOrEqual(0);
   });
   it('records overlay readiness when its shell was removed before loading', async () => {

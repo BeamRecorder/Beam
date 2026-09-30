@@ -3,8 +3,9 @@ const { installBrowserZoomPolicy } = require('../window/browser-zoom-policy.cjs'
 
 function createSourcePickerSurface({
   BrowserWindow,
+  hudWindow,
   applicationRoot,
-  role,
+  role = 'chooser',
   bounds,
   platform,
   isPackaged,
@@ -13,19 +14,23 @@ function createSourcePickerSurface({
   onReady,
 }) {
   const interactive = role === 'chooser';
+  const isLinux = platform === 'linux';
   const target = new BrowserWindow({
     ...bounds,
-    title: `Beam Source Selection — ${role}`,
+    parent: interactive ? hudWindow : undefined,
+    title: 'Beam Source Selection',
     frame: false,
     transparent: true,
     backgroundColor: '#00000000',
     hasShadow: false,
     resizable: false,
     movable: false,
-    focusable: interactive,
+    // Linux focusable:false bypasses the WM and forces the surface above managed
+    // windows. Keep the backdrop managed; showInactive and pass-through avoid focus.
+    focusable: interactive || isLinux,
     skipTaskbar: true,
     show: false,
-    alwaysOnTop: true,
+    alwaysOnTop: interactive,
     webPreferences: {
       additionalArguments: development ? ['--beam-dev-crossplatform'] : [],
       preload: path.join(applicationRoot, 'electron/preload.cjs'),
@@ -37,6 +42,7 @@ function createSourcePickerSurface({
   });
   let deadline;
   try {
+    if (interactive) target.setAlwaysOnTop(true, 'screen-saver');
     target.setContentProtection(true);
     target.setIgnoreMouseEvents(!interactive);
     if (platform === 'darwin')

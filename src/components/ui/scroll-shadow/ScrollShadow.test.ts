@@ -4,6 +4,14 @@ import { nextTick, type VNode, type CSSProperties } from 'vue';
 import ScrollShadow from './ScrollShadow.vue';
 
 describe('ScrollShadow.vue', () => {
+  it.each(['vertical', 'horizontal', 'both'] as const)('selects the scrollable axes for %s', (orientation) => {
+    const wrapper = mount(ScrollShadow, { props: { orientation } });
+    expect(wrapper.get('.scroll-shadow-viewport').classes().includes('is-horizontal')).toBe(
+      orientation === 'horizontal',
+    );
+    expect(wrapper.get('.scroll-shadow-viewport').classes().includes('is-both')).toBe(orientation === 'both');
+    wrapper.unmount();
+  });
   it('renders slot content inside scrollable viewport', () => {
     const wrapper = mount(ScrollShadow, {
       slots: {

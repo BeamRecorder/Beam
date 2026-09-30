@@ -2,7 +2,6 @@ import type { CaptureProject } from '~/api/types/capture-api';
 
 export type ProjectPickerProps = { compact: boolean; currentProjectId: string | null };
 export type ProjectPickerEvents = {
-  back: [];
   'open-project': [project: CaptureProject];
   'select-project': [project: CaptureProject];
   'rename-project': [project: CaptureProject];
@@ -14,6 +13,7 @@ export type ProjectPickerEmit = <K extends keyof ProjectPickerEvents>(
   ...args: ProjectPickerEvents[K]
 ) => void;
 export type ProjectIdentity = Pick<CaptureProject, 'id' | 'name' | 'mode'>;
+export type ProjectTitleProps = { project: ProjectIdentity; selectionMode: boolean };
 
 export interface ProjectPickerSearchInput {
   inputRef: HTMLInputElement | null;

@@ -3,6 +3,59 @@ const Module = require('node:module');
 const path = require('node:path');
 const test = require('node:test');
 
+test('zero and invalid countdown values never allocate or reveal a window', () => {
+  const fixture = loadCountdownWindow({ platform: 'win32', prepare: false });
+  for (const value of [0, -1, null, 1.5, '3', NaN]) fixture.overlay.show(value);
+  assert.equal(fixture.windows.length, 0);
+});
+
+test('Cancel only notifies the current requesting owner once', () => {
+  const fixture = loadCountdownWindow({ platform: 'win32' });
+  const messages = [];
+  const owner = { isDestroyed: () => false, send: (...args) => messages.push(args) };
+  fixture.overlay.show(3, owner);
+  fixture.finishLoad();
+  assert.equal(fixture.overlay.cancel({}), false);
+  assert.equal(fixture.overlay.cancel(fixture.window.webContents), true);
+  assert.equal(fixture.calls.at(-1)[0], 'hide');
+  assert.deepEqual(messages, [['countdown:cancelled']]);
+  assert.equal(fixture.overlay.cancel(fixture.window.webContents), false);
+  fixture.overlay.destroy();
+});
+
+test('Cancel cannot reach a closed owner or a replacement countdown session', () => {
+  const fixture = loadCountdownWindow({ platform: 'win32' });
+  const messages = [];
+  const closedOwner = { isDestroyed: () => true, send: () => assert.fail('closed owner was notified') };
+  fixture.overlay.show(3, closedOwner);
+  assert.equal(fixture.overlay.cancel(fixture.window.webContents), false);
+  fixture.overlay.destroy();
+  const owner = { isDestroyed: () => false, send: (...args) => messages.push(args) };
+  fixture.overlay.show(2, owner);
+  assert.equal(fixture.overlay.cancel(fixture.window.webContents), false);
+  assert.equal(fixture.overlay.cancel(fixture.windows[1].webContents), true);
+  assert.deepEqual(messages, [['countdown:cancelled']]);
+  fixture.overlay.destroy();
+});
+
+for (const platform of ['win32', 'darwin', 'linux'])
+  test(`${platform} enables only supported countdown mouse handling without focus`, () => {
+    const fixture = loadCountdownWindow({ platform });
+    const renderer = fixture.window.webContents;
+    assert.equal(fixture.overlay.setInteractive(renderer, true), false);
+    fixture.overlay.show(3);
+    assert.equal(fixture.overlay.setInteractive({}, true), false);
+    assert.equal(fixture.overlay.setInteractive(renderer, 'yes'), false);
+    assert.equal(fixture.overlay.setInteractive(renderer, true), true);
+    assert.deepEqual(fixture.calls.at(-1), ['mouse', false]);
+    assert.equal(fixture.overlay.setInteractive(renderer, false), true);
+    if (platform !== 'linux') assert.deepEqual(fixture.calls.at(-1), ['mouse', true]);
+    fixture.overlay.show(null);
+    assert.equal(fixture.overlay.setInteractive(renderer, true), false);
+    assert.equal(fixture.calls.find(([name]) => name === 'constructor')[1].focusable, false);
+    fixture.overlay.destroy();
+  });
+
 function loadCountdownWindow({
   platform,
   environment,
@@ -312,11 +365,11 @@ test('X11 positions and raises the countdown with the supported inactive path', 
   const constructor = fixture.calls.find((call) => call[0] === 'constructor');
 
   assert.equal(constructor[1].width, 560);
-  assert.equal(constructor[1].height, 256);
+  assert.equal(constructor[1].height, 320);
   assert.equal(constructor[1].show, false);
   assert.equal(constructor[1].center, false);
   assert.equal(constructor[1].focusable, false);
-  assert.ok(fixture.calls.some((call) => call[0] === 'mouse' && call[1] === true));
+  assert.ok(fixture.calls.some((call) => call[0] === 'mouse' && call[1] === false));
 
   fixture.overlay.show(3);
   assert.equal(
@@ -333,8 +386,8 @@ test('X11 positions and raises the countdown with the supported inactive path', 
   assert.deepEqual(
     fixture.calls.filter((call) => call[0] === 'position'),
     [
-      ['position', 220, 272],
-      ['position', 220, 272],
+      ['position', 220, 240],
+      ['position', 220, 240],
     ],
   );
   assert.equal(fixture.calls.filter((call) => call[0] === 'showInactive').length, 1);

@@ -98,12 +98,17 @@ for (const role of ['settings', 'projects']) {
     assert.equal(win.options.webPreferences.contextIsolation, true);
     assert.equal(win.options.webPreferences.nodeIntegration, false);
     assert.equal(win.options.webPreferences.zoomFactor, 1);
-    assert.equal(win.options.titleBarStyle, 'hidden');
     if (role === 'projects') {
+      assert.equal(win.options.frame, false);
+      assert.equal(win.options.titleBarOverlay, undefined);
+      assert.equal(win.options.trafficLightPosition, undefined);
       assert.equal(win.options.width, 720);
       assert.equal(win.options.height, 560);
       assert.equal(win.options.minWidth, 560);
       assert.equal(win.options.minHeight, 440);
+    } else {
+      assert.equal(win.options.titleBarStyle, 'hidden');
+      assert.equal(win.options.titleBarOverlay.height, 38);
     }
     assert.equal(win.shown, 0);
     win.emit('ready-to-show');
@@ -117,6 +122,69 @@ for (const role of ['settings', 'projects']) {
     f.manager.destroy();
   });
 }
+for (const modifier of ['control', 'meta']) {
+  test(`${modifier}+W closes only Projects before renderer and menu shortcuts`, async () => {
+    const f = fixture();
+    const projects = f.open('projects');
+    const settings = f.open('settings');
+    f.windows.forEach(f.ready);
+    await Promise.all([projects, settings]);
+    let prevented = 0;
+    f.windows[0].webContents.emit(
+      'before-input-event',
+      { preventDefault: () => prevented++ },
+      {
+        type: 'keyDown',
+        key: 'W',
+        [modifier]: true,
+      },
+    );
+    assert.equal(prevented, 1);
+    assert.equal(f.windows[0].isDestroyed(), true);
+    assert.equal(f.windows[1].isDestroyed(), false);
+    assert.equal(f.sent.length, 0);
+    // A queued event from the old renderer cannot close its replacement.
+    const replacement = f.open('projects');
+    f.ready(f.windows[2]);
+    await replacement;
+    f.windows[0].webContents.emit(
+      'before-input-event',
+      { preventDefault: () => prevented++ },
+      {
+        type: 'keyDown',
+        key: 'w',
+        [modifier]: true,
+      },
+    );
+    assert.equal(prevented, 1);
+    assert.equal(f.windows[2].isDestroyed(), false);
+    f.manager.destroy();
+  });
+}
+test('Projects leaves ordinary typing and other shortcuts alone; Settings keeps its native controls', async () => {
+  const f = fixture();
+  const projects = f.open('projects');
+  const settings = f.open('settings');
+  f.windows.forEach(f.ready);
+  await Promise.all([projects, settings]);
+  let prevented = 0;
+  const event = { preventDefault: () => prevented++ };
+  for (const input of [
+    { type: 'keyDown', key: 'w' },
+    { type: 'keyUp', key: 'w', control: true },
+    { type: 'keyDown', key: 'q', control: true },
+    { type: 'keyDown', key: 'w', control: true, shift: true },
+    { type: 'keyDown', key: 'w', control: true, alt: true },
+  ])
+    f.windows[0].webContents.emit('before-input-event', event, input);
+  f.windows[1].webContents.emit('before-input-event', event, { type: 'keyDown', key: 'w', control: true });
+  assert.equal(prevented, 0);
+  assert.equal(
+    f.windows.every((win) => !win.isDestroyed()),
+    true,
+  );
+  f.manager.destroy();
+});
 for (const role of ['settings', 'projects'])
   test(`reuses ${role} and creates a fresh renderer after closing it`, async () => {
     const f = fixture();

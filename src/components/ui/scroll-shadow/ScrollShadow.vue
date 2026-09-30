@@ -94,7 +94,14 @@ defineExpose({
     <div
       ref="viewportRef"
       class="scroll-shadow-viewport"
-      :class="[viewportClass, { 'hide-scrollbar': hideScrollbar }]"
+      :class="[
+        viewportClass,
+        {
+          'hide-scrollbar': hideScrollbar,
+          'is-horizontal': orientation === 'horizontal',
+          'is-both': orientation === 'both',
+        },
+      ]"
       :style="maskStyle"
     >
       <slot />
@@ -126,6 +133,16 @@ defineExpose({
 .scroll-shadow-viewport.hide-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;
+}
+
+.scroll-shadow-viewport.is-horizontal {
+  flex-direction: row;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.scroll-shadow-viewport.is-both {
+  overflow-x: auto;
 }
 
 .scroll-shadow-viewport.hide-scrollbar::-webkit-scrollbar {

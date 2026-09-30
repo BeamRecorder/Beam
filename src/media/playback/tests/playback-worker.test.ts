@@ -148,6 +148,67 @@ const send = (message: unknown) => workerSelf.onmessage!({ data: message } as Me
 const messages = () => workerSelf.postMessage.mock.calls.map(([message]) => message as PlaybackWorkerResponse);
 
 describe('playback worker', () => {
+  it('selects software AV1 playback on Linux before creating a decoder', async () => {
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Linux');
+    const track = videoTrack();
+    track.getCodec.mockResolvedValue('av1');
+    track.getDecoderConfig.mockResolvedValue({ codec: 'av01.0.08M.08', codedWidth: 1920, codedHeight: 1052 });
+    runtime.openMediaInput.mockResolvedValueOnce(openedVideo(track));
+    send({ type: 'load', generation: 1, assets: [source('asset-1')], clips: [clip('clip-a')], previewQuality: 'full' });
+    await flush();
+    expect(runtime.decoderSupport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        codec: 'av01.0.08M.08',
+        hardwareAcceleration: 'prefer-software',
+        optimizeForLatency: false,
+      }),
+    );
+    expect(runtime.CanvasSink).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        decoderOptions: { hardwareAcceleration: 'prefer-software', optimizeForLatency: false },
+      }),
+    );
+  });
+  it('identifies metadata inspection failures and releases the opened media', async () => {
+    const opened = openedVideo();
+    opened.input.getPrimaryVideoTrack.mockRejectedValue(new Error('Track header unreadable'));
+    runtime.openMediaInput.mockResolvedValueOnce(opened);
+    send({ type: 'load', generation: 1, assets: [source('asset-1')], clips: [clip('clip-a')], previewQuality: 'full' });
+    await flush();
+    expect(opened.dispose).toHaveBeenCalledOnce();
+    expect(messages()).toContainEqual(
+      expect.objectContaining({
+        type: 'error',
+        error: expect.objectContaining({
+          sourceId: 'asset-1',
+          message: 'Track header unreadable',
+          context: expect.objectContaining({ operation: 'inspect-track', errorName: 'Error' }),
+        }),
+      }),
+    );
+  });
+  it('reports a browser decoder configuration exception with its known codec', async () => {
+    const opened = openedVideo();
+    runtime.openMediaInput.mockResolvedValueOnce(opened);
+    runtime.decoderSupport.mockRejectedValueOnce(new DOMException('Driver rejected config', 'NotSupportedError'));
+    send({ type: 'load', generation: 1, assets: [source('asset-1')], clips: [clip('clip-a')], previewQuality: 'full' });
+    await flush();
+    expect(opened.dispose).toHaveBeenCalledOnce();
+    expect(messages()).toContainEqual(
+      expect.objectContaining({
+        type: 'error',
+        error: expect.objectContaining({
+          sourceId: 'asset-1',
+          context: expect.objectContaining({
+            operation: 'configure-decoder',
+            codec: 'avc1.640028',
+            errorName: 'NotSupportedError',
+          }),
+        }),
+      }),
+    );
+  });
   it('validates the decoder configuration before creating playback sinks', async () => {
     send({ type: 'load', generation: 2, assets: [source('asset-1')], clips: [clip('clip-a')], previewQuality: 'full' });
     await flush();
@@ -540,7 +601,17 @@ describe('playback worker', () => {
     expect(messages()).toContainEqual({
       type: 'error',
       generation: 30,
-      error: { kind: 'decode-failure', sourceId: 'playback', message: 'second consumer decode failed' },
+      error: expect.objectContaining({
+        kind: 'decode-failure',
+        sourceId: 'asset-2',
+        message: 'second consumer decode failed',
+        context: expect.objectContaining({
+          operation: 'decode-frame',
+          clipId: 'clip-b',
+          timelineSeconds: 0,
+          sourceSeconds: 0,
+        }),
+      }),
     });
   });
 
@@ -566,7 +637,17 @@ describe('playback worker', () => {
       type: 'error',
       generation: 31,
       requestId: 310,
-      error: { kind: 'decode-failure', sourceId: 'playback', message: 'second seek decode failed' },
+      error: expect.objectContaining({
+        kind: 'decode-failure',
+        sourceId: 'asset-2',
+        message: 'second seek decode failed',
+        context: expect.objectContaining({
+          operation: 'seek-frame',
+          clipId: 'clip-b',
+          timelineSeconds: 0.5,
+          sourceSeconds: 0.5,
+        }),
+      }),
     });
   });
 
@@ -628,11 +709,12 @@ describe('playback worker', () => {
       type: 'error',
       generation: 7,
       requestId: 71,
-      error: {
+      error: expect.objectContaining({
         kind: 'decode-failure',
-        sourceId: 'playback',
+        sourceId: 'asset-1',
         message: 'No video frame is available at the requested time.',
-      },
+        context: expect.objectContaining({ operation: 'seek-frame', timelineSeconds: 1, sourceSeconds: 1 }),
+      }),
     });
 
     runtime.openMediaInput.mockReset().mockRejectedValueOnce(
@@ -653,7 +735,12 @@ describe('playback worker', () => {
     expect(messages()).toContainEqual({
       type: 'error',
       generation: 8,
-      error: { kind: 'missing', sourceId: 'asset-1', message: 'The media asset is unavailable.' },
+      error: expect.objectContaining({
+        kind: 'missing',
+        sourceId: 'asset-1',
+        message: 'The media asset is unavailable.',
+        context: expect.objectContaining({ operation: 'open-media' }),
+      }),
     });
   });
 
@@ -813,7 +900,12 @@ describe('playback worker', () => {
         {
           type: 'error',
           generation: 27,
-          error: { kind: 'decode-failure', sourceId: 'playback', message: 'stale tick decode failed' },
+          error: expect.objectContaining({
+            kind: 'decode-failure',
+            sourceId: 'asset-1',
+            message: 'stale tick decode failed',
+            context: expect.objectContaining({ operation: 'decode-frame', timelineSeconds: 0 }),
+          }),
         },
       ]);
       send({ type: 'dispose' });
@@ -1276,7 +1368,17 @@ describe('playback worker', () => {
       type: 'error',
       generation: 4,
       requestId: 42,
-      error: { kind: 'decode-failure', sourceId: 'playback', message: 'decoder exploded' },
+      error: expect.objectContaining({
+        kind: 'decode-failure',
+        sourceId: 'asset-1',
+        message: 'decoder exploded',
+        context: expect.objectContaining({
+          operation: 'seek-frame',
+          timelineSeconds: 1,
+          codec: 'avc1.640028',
+          errorName: 'Error',
+        }),
+      }),
     });
   });
 

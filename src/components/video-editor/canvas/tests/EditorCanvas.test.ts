@@ -5,6 +5,8 @@ import { MotionPlugin } from '@vueuse/motion';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import EditorCanvas from '../EditorCanvas.vue';
 import CanvasLoadingSkeleton from '../CanvasLoadingSkeleton.vue';
+import CanvasPlaybackError from '../CanvasPlaybackError.vue';
+import { PLAYBACK_ERROR_REPORT, playbackErrorDiagnostic } from '../../composables/playback-error-diagnostics';
 import { DEFAULT_OUTPUT_CANVAS } from '../output-canvas';
 import type { CaptionClip, ClipComposition, VisualClip } from '~/media/shared/composition-types';
 import type { MediaFrame } from '~/media/shared';
@@ -484,14 +486,44 @@ afterEach(() => {
 });
 
 const mountEditor = (overrides: Record<string, unknown> = {}) => {
+  const editorProps = { ...props(), ...overrides };
   wrapper = mount(EditorCanvas, {
-    props: { ...props(), ...overrides },
-    global: { plugins: [MotionPlugin] },
+    props: editorProps,
+    global: {
+      plugins: [MotionPlugin],
+      provide: {
+        [PLAYBACK_ERROR_REPORT as symbol]: (error: Parameters<typeof playbackErrorDiagnostic>[0]) =>
+          JSON.stringify(
+            playbackErrorDiagnostic(error, { project: null, editorData: null, composition: editorProps.composition }),
+          ),
+      },
+    },
   });
   return wrapper;
 };
 
 describe('EditorCanvas', () => {
+  it('replaces the loading preview with a sad mascot and keeps copy clicks outside canvas selection', async () => {
+    const mounted = mountEditor({ frameFor: () => null, playbackState: 'loading' });
+    await flushPromises();
+    runFrame();
+    expect(mounted.findComponent(CanvasPlaybackError).exists()).toBe(false);
+    await mounted.setProps({
+      playbackError: { kind: 'decode-failure', sourceId: 'playback', message: 'Error during flush.' },
+    });
+    const error = mounted.getComponent(CanvasPlaybackError);
+    expect(error.element.parentElement).toBe(mounted.get('.canvas-island').element);
+    expect(error.attributes('style')).toContain('width: 800px');
+    expect(error.text()).not.toContain('Error during flush.');
+    expect(mounted.getComponent(CanvasLoadingSkeleton).props('visible')).toBe(false);
+    await triggerPointer(error.get('button'), 'pointerdown');
+    await error.get('button').trigger('dblclick');
+    expect(state.beginSelectionMove).not.toHaveBeenCalled();
+    expect(state.beginSelectedTransformDrag).not.toHaveBeenCalled();
+    expect(mounted.emitted('request:crop')).toBeUndefined();
+    await mounted.setProps({ playbackError: null, playbackState: 'paused', frameFor: (id: string) => frame(id) });
+    expect(mounted.findComponent(CanvasPlaybackError).exists()).toBe(false);
+  });
   it('toggles canvas clips into and out of the selection with Ctrl-click', async () => {
     const mounted = mountEditor({ selectedClipIds: ['screen'] });
     const ctrlClick = { ctrlKey: true, metaKey: false, shiftKey: false } as PointerEvent;

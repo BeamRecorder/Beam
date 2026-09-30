@@ -5,6 +5,7 @@ import type {
   PlaybackWorkerResponse,
 } from './playback-types';
 import { isPreviewQuality } from './playback-preview';
+import { isMediaErrorContext } from './playback-error-context';
 
 const record = (value: unknown): value is Record<string, unknown> => Boolean(value && typeof value === 'object');
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
@@ -104,7 +105,8 @@ function isMediaError(value: unknown): boolean {
     !record(value) ||
     typeof value.kind !== 'string' ||
     typeof value.sourceId !== 'string' ||
-    typeof value.message !== 'string'
+    typeof value.message !== 'string' ||
+    (value.context !== undefined && !isMediaErrorContext(value.context))
   ) {
     return false;
   }

@@ -6,6 +6,7 @@ import { computed, onUnmounted, ref, shallowRef, toRaw, watch } from 'vue';
 import { RotateCcw } from '@lucide/vue';
 import Button from '../../ui/button/Button.vue';
 import CanvasLoadingSkeleton from './CanvasLoadingSkeleton.vue';
+import CanvasPlaybackError from './CanvasPlaybackError.vue';
 import UndoRedoToast from './UndoRedoToast.vue';
 import { isVisualClip, type VisualClip } from '~/media/shared/composition-types';
 import { createCompositionSceneLayerResolver } from '../composition/scene-layers';
@@ -151,7 +152,6 @@ cameraZoom = useCameraZoom({
   screenTransformDraft: () => transformAndCrop.transformDraftFor(liveScreenClip.value?.id ?? ''),
   isCropping: () => props.isCropping,
   drawBackground,
-  videoError: () => props.playbackError?.message ?? null,
   renderVisualStack: (ctx, window, drawScreen, layers) => drawVisualStack?.(ctx, window, drawScreen, layers),
   onUpdateZoom: (zoom) => emit('update:zoom', zoom),
   onSelectScreenClip: selectCanvasClip,
@@ -341,7 +341,7 @@ const renderCanvas = () => {
 const {
   commitCrop,
   handleIslandPointerDown,
-  handleIslandPointerDownCapture: handleCanvasPointerDownCapture,
+  handleIslandPointerDownCapture,
   handleIslandPointerMove,
   handleIslandPointerUp,
   handleIslandWheel,
@@ -360,11 +360,6 @@ const {
   onToggleClip: selectCanvasClip,
   onDoneCrop: () => emit('done:crop'),
 });
-const handleIslandPointerDownCapture = (event: PointerEvent) => {
-  if ((event.target as Element | null)?.closest('.caption-text-editor, .canvas-recenter-float, .element-overlay'))
-    return;
-  handleCanvasPointerDownCapture(event);
-};
 const editCanvasContent = (event: MouseEvent) => {
   if (elements.begin(event)) return;
   if (captionEditing.begin(event)) return;
@@ -388,7 +383,7 @@ defineExpose({ viewportZoom, captureCurrentFrame });
     :class="{
       'is-grabbing': viewportZoom.isPanning.value,
       'is-space-pressed': viewportZoom.isSpacePressed.value,
-      'is-selection-editable': selectedZoom?.mode === 'manual',
+      'is-selection-editable': !playbackError && selectedZoom?.mode === 'manual',
     }"
     @wheel="handleIslandWheel"
     @pointerdown.capture="handleIslandPointerDownCapture"
@@ -495,6 +490,7 @@ defineExpose({ viewportZoom, captureCurrentFrame });
         @done="commitCrop"
       />
     </CanvasMarqueeSurface>
+    <CanvasPlaybackError v-if="playbackError" :error="playbackError" :style="previewFrameStyle" />
     <UndoRedoToast :action="historyAction ?? null" />
   </div>
 </template>

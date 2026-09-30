@@ -47,36 +47,76 @@ afterEach(() => {
 });
 
 describe('interactive Beam identity', () => {
-  it('retains a failure expression during wordmark interactions and recovers when the error clears', async () => {
-    const wrapper = setup();
-    await wrapper.setProps({ phase: 'failed' });
-    await wrapper.get('button').trigger('click');
-    expect(wrapper.get('.beam-mascot').attributes('data-phase')).toBe('failed');
-    await wrapper.setProps({ phase: 'idle' });
-    expect(wrapper.get('.beam-mascot').attributes('data-phase')).toBe('processing');
-  });
-  it('uses a themed Beamy portrait in an accessible native button with a stable docking slot', () => {
-    const wrapper = setup();
-    expect(wrapper.get('button').attributes('type')).toBe('button');
-    expect(wrapper.get('button').attributes('aria-label')).toBe('Animate Beamy');
-    expect(wrapper.get('[data-beamy-dock] svg').attributes('viewBox')).toBe('-116 -116 232 232');
-    expect(wrapper.get('.topbar-title').text()).toBe('Beam');
-    expect(wrapper.find('.brand-effects').exists()).toBe(false);
-    expect(wrapper.get('.brand-wordmark').attributes('style')).toContain('visibility: visible');
-    expect(wrapper.find('img').exists()).toBe(false);
+  it('keeps preferences static and non-interactive instead of animating a mascot', async () => {
+    const wrapper = setup('Preferences');
+    await wrapper.setProps({ symbol: 'settings' });
+    expect(wrapper.get('.brand-symbol svg').classes()).toContain('lucide-settings');
+    expect(wrapper.get('.brand-symbol svg').attributes('width')).toBe('16');
+    expect(wrapper.get('.brand-symbol').classes()).toContain('is-panel-icon');
+    expect(wrapper.get('.topbar-title').text()).toBe('Preferences');
+    expect(wrapper.find('button').exists()).toBe(false);
+    expect(wrapper.find('.beam-mascot').exists()).toBe(false);
     expect(frames.size).toBe(0);
   });
-  it('dances and animates letters on click, settles, then plays a different jingle', async () => {
+  it('keeps the Beam icon outside the accessible wordmark button', () => {
+    const wrapper = setup();
+    const button = wrapper.get('button');
+    expect(button.attributes('type')).toBe('button');
+    expect(button.attributes('aria-label')).toBe('Beam');
+    expect(button.find('img, svg').exists()).toBe(false);
+    expect(wrapper.get('.brand-symbol img').attributes('src')).toContain('/brand/BeamIcon.webp');
+    expect(wrapper.get('.brand-symbol img').attributes('width')).toBe('24');
+    expect(wrapper.get('.brand-symbol').classes()).not.toContain('is-panel-icon');
+    expect(wrapper.get('.topbar-title').text()).toBe('Beam');
+    expect(wrapper.find('.beam-mascot, [data-beamy-dock]').exists()).toBe(false);
+    expect(wrapper.find('.brand-effects').exists()).toBe(false);
+    expect(wrapper.get('.brand-wordmark').attributes('style')).toContain('visibility: visible');
+    expect(frames.size).toBe(0);
+  });
+  it('plays only the text easter egg while the Beam icon remains unchanged', async () => {
+    const wrapper = setup('Beam');
+    const icon = wrapper.get('.brand-symbol img');
+    const source = icon.attributes('src');
+    await icon.trigger('click');
+    expect(frames.size).toBe(0);
+    expect(wrapper.find('.brand-effects').exists()).toBe(false);
+    await wrapper.get('button').trigger('click');
+    expect(frames.size).toBe(1);
+    expect(wrapper.find('.brand-effects').exists()).toBe(true);
+    expect(wrapper.get('.brand-symbol img').element).toBe(icon.element);
+    expect(icon.attributes('src')).toBe(source);
+    expect(wrapper.find('.beam-mascot').exists()).toBe(false);
+  });
+  it('uses the same fixed asset in the stacked About identity', async () => {
+    const wrapper = setup();
+    await wrapper.setProps({ layout: 'stacked' });
+    expect(wrapper.classes()).toContain('is-stacked');
+    expect(wrapper.get('img').attributes('width')).toBe('112');
+    expect(wrapper.get('.topbar-title').text()).toBe('Beam');
+    expect(wrapper.find('.beam-mascot').exists()).toBe(false);
+  });
+  it('keeps the folder compact and muted while preserving the Beam text easter egg', async () => {
+    const wrapper = setup();
+    await wrapper.setProps({ symbol: 'folder' });
+    expect(wrapper.get('.brand-symbol svg').attributes('width')).toBe('16');
+    expect(wrapper.get('.brand-symbol').classes()).toContain('is-panel-icon');
+    await wrapper.get('button').trigger('click');
+    expect(wrapper.find('.brand-effects').exists()).toBe(true);
+    await wrapper.setProps({ symbol: 'beam' });
+    expect(wrapper.get('img').attributes('width')).toBe('24');
+    expect(wrapper.get('.brand-symbol').classes()).not.toContain('is-panel-icon');
+  });
+  it('animates letters on click, settles, then plays a different jingle', async () => {
     const wrapper = setup();
     await wrapper.get('button').trigger('click');
-    expect(wrapper.get('.beam-mascot').attributes('data-phase')).toBe('processing');
+    expect(wrapper.find('.brand-effects').exists()).toBe(true);
     await tick(0);
     await tick(100);
     const first = wrapper.findAll('.brand-letter-effect').map((letter) => letter.attributes('style'));
     expect(first.join('')).not.toContain('NaN');
     const end = BRAND_JINGLE_SECONDS * 1000;
     for (let time = 200; time <= end + 100; time += 100) await tick(time);
-    expect(wrapper.get('.beam-mascot').attributes('data-phase')).toBe('idle');
+    expect(wrapper.find('.brand-effects').exists()).toBe(false);
     expect(wrapper.get('.topbar-title').text()).toBe('Beam');
     expect(wrapper.find('.brand-effects').exists()).toBe(false);
     for (let time = end + 200; time <= end + 900; time += 100) await tick(time);
@@ -87,23 +127,23 @@ describe('interactive Beam identity', () => {
     await tick(end + 1100);
     expect(wrapper.findAll('.brand-letter-effect').map((letter) => letter.attributes('style'))).not.toEqual(first);
   });
-  it('bounds repeated clicks and releases both animation loops and listeners on unmount', async () => {
+  it('bounds repeated clicks and releases its animation loop and listeners on unmount', async () => {
     const wrapper = setup();
     await wrapper.get('button').trigger('click');
     const count = frames.size;
     for (let index = 0; index < 10; index++) await wrapper.get('button').trigger('click');
     expect(frames.size).toBe(count);
-    expect(count).toBe(2);
+    expect(count).toBe(1);
     wrapper.unmount();
     expect(frames.size).toBe(0);
     expect(listeners.size).toBe(0);
   });
   it('keeps reduced-motion and hidden clicks still, and stops active motion when hidden', async () => {
     reduced = true;
-    const wrapper = setup('Preparing');
+    const wrapper = setup();
     await wrapper.get('button').trigger('click');
     expect(frames.size).toBe(0);
-    expect(wrapper.get('.topbar-title').text()).toBe('Preparing');
+    expect(wrapper.get('.topbar-title').text()).toBe('Beam');
     listeners.forEach((listener) => listener({ matches: false } as MediaQueryListEvent));
     hidden = true;
     await wrapper.get('button').trigger('click');
@@ -112,7 +152,7 @@ describe('interactive Beam identity', () => {
     await wrapper.get('button').trigger('click');
     await tick(0);
     await tick(10000);
-    expect(frames.size).toBe(2);
+    expect(frames.size).toBe(1);
     hidden = true;
     document.dispatchEvent(new Event('visibilitychange'));
     await nextTick();
@@ -124,6 +164,6 @@ describe('interactive Beam identity', () => {
     listeners.forEach((listener) => listener({ matches: true } as MediaQueryListEvent));
     await nextTick();
     expect(frames.size).toBe(0);
-    expect(wrapper.get('.beam-mascot').attributes('data-phase')).toBe('idle');
+    expect(wrapper.find('.brand-effects').exists()).toBe(false);
   });
 });

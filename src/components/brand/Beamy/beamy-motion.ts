@@ -1,10 +1,12 @@
 import { BotEngine } from './engine/engine';
-import { SHAPE_BY_ID, SHAPES } from './engine/skins';
+import { DEFAULT_SHAPE, SHAPE_BY_ID, SHAPES } from './engine/skins';
+import { DEFAULT_EXPRESSION, EXPRESSION_BY_ID } from './engine/expressions';
 import { RAYON } from './engine/repere';
 import type { BeamyMotionFrame, BeamyPhase } from './beamy-types';
+import { createBeamyLoadingMotion } from './beamy-loading-motion';
 
-const CLOUD = SHAPE_BY_ID.get('nuage')!.radii;
-const SHAPE_CYCLE = [CLOUD, ...SHAPES.filter((shape) => shape.id !== 'nuage').map((shape) => shape.radii)];
+const REST_SHAPE = SHAPE_BY_ID.get(DEFAULT_SHAPE)!.radii;
+const SHAPE_CYCLE = SHAPES.map((shape) => shape.radii);
 const STILL = 'translate(0%, 0%) rotate(0deg) scale(1, 1)';
 const smooth = (value: number) => {
   const t = Math.max(0, Math.min(1, value));
@@ -20,6 +22,7 @@ export function beamyIsAnimated(phase: BeamyPhase, elapsed: number, reducedMotio
     (phase === 'loading' ||
       phase === 'preparing' ||
       phase === 'processing' ||
+      phase === 'failed' ||
       (phase === 'completed' && elapsed < BEAMY_CELEBRATION_SECONDS))
   );
 }
@@ -30,30 +33,17 @@ export function createBeamyMotion(phase: BeamyPhase, cycleOffset = 0) {
   const offset = Number.isFinite(cycleOffset) ? Math.max(0, Math.floor(cycleOffset)) : 0;
   // Both strides visit the complete eight-shape catalogue, in a different order.
   const stride = offset % BEAMY_ACTION_COUNT < SHAPE_CYCLE.length ? 1 : 3;
-  const expression = {
-    id: phase === 'failed' ? ('triste' as const) : ('heureux' as const),
-    gaze: { yaw: 0, pitch: phase === 'failed' ? -13 : 0, roll: 0 },
-    split: 22,
-    eyes: [
-      { w: 0.38, h: phase === 'failed' ? 0.38 : 0.46, open: 1 },
-      { w: 0.38, h: phase === 'failed' ? 0.38 : 0.46, open: 1 },
-    ] as const,
-  };
-  const engine = new BotEngine(RAYON, 'idle', CLOUD, { ...expression, eyes: [...expression.eyes] });
-  engine.setEyes(phase === 'failed' ? 'capsule' : 'sparkle', -1);
-  engine.setLook({ yaw: 0, pitch: phase === 'failed' ? -13 : 0, mix: 1, spin: 0, wander: 0 }, -1);
-  return (elapsed: number, reducedMotion = false, fromShape = CLOUD, transition = 1): BeamyMotionFrame => {
+  const expression = EXPRESSION_BY_ID.get(
+    phase === 'failed' ? 'triste' : phase === 'completed' ? 'heureux' : DEFAULT_EXPRESSION,
+  )!;
+  const engine = new BotEngine(RAYON, 'idle', REST_SHAPE, expression);
+  const loading = phase === 'loading' ? createBeamyLoadingMotion() : null;
+  return (elapsed: number, reducedMotion = false, fromShape = REST_SHAPE, transition = 1): BeamyMotionFrame => {
     const time = Number.isFinite(elapsed) ? Math.max(0, elapsed) : 0;
-    if (phase === 'loading' && !reducedMotion) {
-      const cycle = time % 3.6;
-      // Seek the same morph forwards and backwards with zero velocity at each turn.
-      // The engine's pose clock returns to zero too, including its tiny idle drift.
-      const poseTime = 1.2 * (1 - Math.cos((cycle * Math.PI) / 1.8));
-      engine.reset('idle', 0);
-      if (poseTime >= 0.7) engine.setState('thinking', 0.7);
-      return { frame: engine.sample(poseTime), transform: STILL, shape: CLOUD };
+    if (phase === 'loading') {
+      return { frame: loading!(reducedMotion ? 0 : time), transform: STILL, shape: REST_SHAPE };
     }
-    let target = CLOUD;
+    let target = REST_SHAPE;
     if (!reducedMotion && (phase === 'processing' || phase === 'preparing')) {
       const segment = time / (phase === 'processing' ? 0.8 : 1.4);
       const index = Math.floor(segment) * stride + offset;
@@ -65,7 +55,7 @@ export function createBeamyMotion(phase: BeamyPhase, cycleOffset = 0) {
     const mix = reducedMotion ? 1 : smooth(transition);
     const shape = target.map((radius, point) => fromShape[point]! + (radius - fromShape[point]!) * mix);
     engine.setShape(shape, -1);
-    const frame = engine.sample(0);
+    const frame = engine.sample(phase === 'failed' && !reducedMotion ? time : 0);
     if (!reducedMotion && phase === 'completed' && time < BEAMY_CELEBRATION_SECONDS) {
       const progress = time / BEAMY_CELEBRATION_SECONDS;
       frame.dots = Array.from({ length: 12 }, (_, index) => {

@@ -236,7 +236,7 @@ describe('project picker individual mutations', () => {
       expect(picker.newProjectBusy.value).toBe(false);
     }
   });
-  it('guards immediate rename blur and renames screenshots through their own route', async () => {
+  it('focuses rename and immediately saves screenshots through their own route', async () => {
     const { picker, emit } = await create();
     const card = document.createElement('div');
     card.className = 'project-card-container';
@@ -248,12 +248,9 @@ describe('project picker individual mutations', () => {
     const select = vi.spyOn(input, 'select');
     picker.startRename(image);
     picker.renameValue.value = ' Renamed ';
-    await picker.handleRenameProject();
-    expect(capture.renameProject).not.toHaveBeenCalled();
     await flushPromises();
     expect(focus).toHaveBeenCalled();
     expect(select).toHaveBeenCalled();
-    await vi.advanceTimersByTimeAsync(250);
     await picker.handleRenameProject();
     expect(capture.renameProject).toHaveBeenCalledWith('image', 'Renamed', 'screenshot');
     expect(emit).toHaveBeenCalledWith('rename-project', image);
@@ -263,6 +260,28 @@ describe('project picker individual mutations', () => {
     await vi.advanceTimersByTimeAsync(250);
     await picker.handleRenameProject();
     expect(picker.renameProjectId.value).toBe('');
+  });
+  it('ignores duplicate rename submissions and canceled edits', async () => {
+    const { picker } = await create();
+    let finish!: (project: CaptureProject) => void;
+    capture.renameProject.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    picker.startRename(first);
+    picker.renameValue.value = 'Changed';
+    const saving = picker.handleRenameProject();
+    await picker.handleRenameProject();
+    expect(capture.renameProject).toHaveBeenCalledOnce();
+    finish({ ...first, name: 'Changed' });
+    await saving;
+    await picker.handleRenameProject();
+    picker.startRename(first);
+    picker.cancelRename();
+    await picker.handleRenameProject();
+    expect(capture.renameProject).toHaveBeenCalledOnce();
   });
   it('handles a removed project while rename is pending and non-Error failures', async () => {
     const { picker } = await create();

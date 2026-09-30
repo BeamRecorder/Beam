@@ -10,7 +10,7 @@ vi.mock('~/api/capture', () => ({ capture }));
 import HudPanelApp from './HudPanelApp.vue';
 import type { HudPanel } from '~/api/types/hud-panel';
 const settings = { name: 'HudSettingsWindow', emits: ['ready'], template: '<div />' };
-const projects = { name: 'ProjectPicker', emits: ['open-project', 'back'], template: '<div />' };
+const projects = { name: 'ProjectPicker', emits: ['open-project'], template: '<div />' };
 const mascot = { name: 'MascotLab', props: ['embedded'], template: '<div />' };
 const create = async (panel: string) => {
   window.history.replaceState({}, '', `?panel=${panel}`);
@@ -46,6 +46,12 @@ describe('independent HUD panel renderer', () => {
   it('announces Settings readiness only after its settings component mounts', async () => {
     const wrapper = await create('settings');
     expect(document.title).toBe('Beam Settings');
+    expect(wrapper.get('.panel-titlebar .topbar-title').text()).toBe('Preferences');
+    expect(wrapper.get('.panel-titlebar svg').classes()).toContain('lucide-settings');
+    expect(wrapper.get('.panel-titlebar svg').attributes('width')).toBe('16');
+    expect(wrapper.find('.panel-titlebar .beam-mascot').exists()).toBe(false);
+    expect(wrapper.find('.panel-titlebar button').exists()).toBe(false);
+    expect(wrapper.find('.hud-topbar').exists()).toBe(false);
     expect(capture.notifyHudPanelReady).not.toHaveBeenCalled();
     wrapper.getComponent(settings).vm.$emit('ready');
     expect(capture.notifyHudPanelReady).toHaveBeenCalledOnce();
@@ -58,7 +64,13 @@ describe('independent HUD panel renderer', () => {
     wrapper.getComponent(projects).vm.$emit('open-project', { id: 'project-id', mode: 'screenshot' });
     await flushPromises();
     expect(capture.requestHudProject).toHaveBeenCalledWith({ id: 'project-id', mode: 'screenshot' });
-    wrapper.getComponent(projects).vm.$emit('back');
+    expect(wrapper.find('.panel-titlebar').exists()).toBe(false);
+    expect(wrapper.get('.hud-topbar .topbar-title').text()).toBe('Beam');
+    expect(wrapper.get('.hud-topbar .brand-symbol svg').classes()).toContain('lucide-folder-open');
+    expect(wrapper.get('.hud-topbar .brand-symbol svg').attributes('width')).toBe('16');
+    expect(wrapper.find('.hud-topbar .beam-mascot').exists()).toBe(false);
+    expect(wrapper.findAll('.window-actions button')).toHaveLength(1);
+    await wrapper.get('.window-actions [aria-label="Close"]').trigger('click');
     expect(capture.close).toHaveBeenCalledOnce();
     wrapper.unmount();
   });

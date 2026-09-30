@@ -216,10 +216,6 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       ctx.clip();
       ctx.fillStyle = 'rgba(15,23,42,.85)';
       ctx.fillRect(preview.x, preview.y, preview.width, preview.height);
-      ctx.fillStyle = '#fff';
-      ctx.font = '14px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(options.videoError() || 'Loading media metadata…', width / 2, height / 2);
       ctx.restore();
       videoWindowBounds.value = null;
       screenHitBounds.value = null;
@@ -365,13 +361,6 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
               chromeScale: screen.appearance.frameChromeScale,
             },
           );
-      } else if (options.videoError()) {
-        target.fillStyle = '#334155';
-        target.fillRect(dx, dy, dw, dh);
-        target.fillStyle = '#fff';
-        target.font = '14px sans-serif';
-        target.textAlign = 'center';
-        target.fillText(options.videoError()!, width / 2, height / 2);
       }
     };
     const blurSettings = options.zoomMotionBlur?.();

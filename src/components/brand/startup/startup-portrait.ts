@@ -1,53 +1,55 @@
-import { BEAMY_SETTLE_SECONDS, createBeamyMotion } from '../Beamy/beamy-motion';
+import { createBeamyMotion } from '../Beamy/beamy-motion';
 import type { StartupPortrait } from './startup-types';
 
 /** The bootstrap uses the same shape engine without loading Vue to paint it. */
 export function animateStartupPortrait(element: HTMLElement): StartupPortrait {
-  const body = element.querySelector<SVGPathElement>('.startup-cloud');
+  const body = element.querySelector<SVGPathElement>('.startup-body');
   const eyes = [...element.querySelectorAll<SVGPathElement>('.startup-eyes')];
+  const dots = [...element.querySelectorAll<SVGCircleElement>('.startup-dots circle')];
   const media = matchMedia('(prefers-reduced-motion: reduce)');
   let reduced = media.matches;
   let disposed = false;
-  let sample = createBeamyMotion('processing');
-  let motion = sample(0, reduced);
+  const sample = createBeamyMotion('loading');
   let elapsed = 0;
-  let settling: number | null = null;
-  let from = motion.shape;
   let frame = 0;
   let previous: number | null = null;
   let lastDraw = -Infinity;
   const draw = () => {
-    motion = sample(elapsed, reduced, from, settling === null ? 1 : (elapsed - settling) / BEAMY_SETTLE_SECONDS);
+    const motion = sample(elapsed, reduced);
     body?.setAttribute('d', motion.frame.bodyPath);
+    body?.setAttribute('opacity', String(motion.frame.bodyAlpha));
     eyes.forEach((path, index) => {
-      const eye = motion.frame.eyes[index]!;
+      const eye = motion.frame.eyes[index];
+      path.setAttribute('opacity', String(eye?.alpha ?? 0));
+      if (!eye) return;
       path.setAttribute('d', eye.d);
       path.setAttribute('transform', eye.matrix);
+    });
+    dots.forEach((circle, index) => {
+      const dot = motion.frame.dots[index];
+      circle.setAttribute('opacity', String(dot?.opacity ?? 0));
+      if (!dot) return;
+      circle.setAttribute('cx', String(dot.x));
+      circle.setAttribute('cy', String(dot.y));
+      circle.setAttribute('r', String(dot.r));
     });
   };
   const tick = (time: number) => {
     elapsed += previous === null ? 0 : Math.max(0, Math.min(100, time - previous)) / 1000;
     previous = time;
-    if (time - lastDraw >= 1000 / 30 || (settling !== null && elapsed - settling >= BEAMY_SETTLE_SECONDS)) {
+    if (time - lastDraw >= 1000 / 30) {
       draw();
       lastDraw = time;
     }
     frame = 0;
-    if (settling === null || elapsed - settling < BEAMY_SETTLE_SECONDS) frame = requestAnimationFrame(tick);
+    frame = requestAnimationFrame(tick);
   };
   const synchronize = () => {
     cancelAnimationFrame(frame);
     previous = null;
     lastDraw = -Infinity;
     draw();
-    if (
-      !disposed &&
-      body &&
-      !document.hidden &&
-      !reduced &&
-      (settling === null || elapsed - settling < BEAMY_SETTLE_SECONDS)
-    )
-      frame = requestAnimationFrame(tick);
+    if (!disposed && body && !document.hidden && !reduced) frame = requestAnimationFrame(tick);
   };
   const changed = (event: MediaQueryListEvent) => {
     reduced = event.matches;
@@ -57,12 +59,6 @@ export function animateStartupPortrait(element: HTMLElement): StartupPortrait {
   document.addEventListener('visibilitychange', synchronize);
   synchronize();
   return {
-    settle: () => {
-      from = motion.shape;
-      settling = elapsed;
-      sample = createBeamyMotion('idle');
-      synchronize();
-    },
     dispose: () => {
       if (disposed) return;
       disposed = true;

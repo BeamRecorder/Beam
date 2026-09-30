@@ -7,6 +7,7 @@ const { capture, cameraApi, microphoneApi, systemApi } = vi.hoisted(() => ({
     platform: 'darwin',
     getCameraOverlayState: vi.fn(),
     configureCameraOverlay: vi.fn(),
+    onCountdownCancelled: vi.fn(() => vi.fn()),
     setCountdown: vi.fn().mockResolvedValue(undefined),
     prepareRecordingSurface: vi.fn().mockResolvedValue(undefined),
     hideScreenRegionOverlay: vi.fn(),

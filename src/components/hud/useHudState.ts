@@ -419,7 +419,7 @@ export function useHudState(props: HudProps, emit: HudEmit) {
       }
       return selection;
     },
-    previewSelection: previewSelectionCountdown,
+    previewSelection: () => previewSelectionCountdown(countdownSeconds.value),
     blocked: computed(
       () => isBusy.value || isRecording.value || props.preparingEditor || interactionAccess.requesting.value,
     ),

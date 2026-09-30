@@ -130,7 +130,6 @@ const choose = (target: HudCaptureTarget) => {
       v-if="!preparingEditor && (!embedded || showTopbar)"
       :title="preparingEditor ? t('preparingEditor') : undefined"
       :disabled="isBusy || preparingEditor"
-      :failed="Boolean(externalError || errorMessage || presetError || popoverViewport.error.value)"
       :show-settings="!preparingEditor"
       :show-projects="!preparingEditor"
       @open-settings="

@@ -17,10 +17,14 @@ function registerCaptureWindowIpc({
   });
   applicationIpc.on('camera-overlay:set-active', (_event, active) => cameraOverlay.setActive(active));
   applicationIpc.on('camera-overlay:reset-placement', () => cameraOverlay.resetPlacement());
-  applicationIpc.handle('countdown:set', (_event, seconds) => {
-    countdownOverlay.show(Number.isInteger(seconds) && seconds >= 0 ? seconds : null);
+  applicationIpc.handle('countdown:set', (event, seconds) => {
+    countdownOverlay.show(Number.isInteger(seconds) && seconds > 0 ? seconds : null, event.sender);
   });
   applicationIpc.on('countdown:ready', (event) => countdownOverlay.markRendererReady(event.sender));
+  applicationIpc.on('countdown:cancel', (event) => countdownOverlay.cancel(event.sender));
+  applicationIpc.on('countdown:interactive', (event, interactive) =>
+    countdownOverlay.setInteractive(event.sender, interactive),
+  );
   applicationIpc.handle('recording-surface:prepare', async () => {
     countdownOverlay.show(null);
     screenRegionOverlay.hide();

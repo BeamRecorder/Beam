@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import {
-  ArrowLeft,
   Check,
   CheckSquare,
   Film,
-  FolderOpen,
   RefreshCw,
   MoreVertical,
   Plus,
@@ -27,6 +25,7 @@ import BlurRevealTransition from '~/ui/transitions/BlurRevealTransition.vue';
 import ProjectFeatureBadges from '../projects/ProjectFeatureBadges.vue';
 
 import ProjectModeIcon from './ProjectModeIcon.vue';
+import ProjectTitle from './ProjectTitle.vue';
 import { useProjectPicker } from './useProjectPicker';
 import type { ProjectPickerProps, ProjectPickerEvents } from './project-picker-types';
 const props = withDefaults(defineProps<Partial<ProjectPickerProps>>(), { compact: false, currentProjectId: null });
@@ -55,13 +54,11 @@ const {
   handleSearchKeydown,
   filteredProjects,
   maskStyle,
-  selectedProject,
   isRefreshing,
   isRefreshSuccess,
   loadProjects,
   handleRefresh,
   selectProject,
-  openSelectedProject,
   formatDate,
   handleProjectOpen,
   isNewProjectOpen,
@@ -361,16 +358,23 @@ defineExpose({ refresh: loadProjects, invalidate });
                         :disabled="renameBusy"
                         @click.stop
                         @mousedown.stop
+                        @dblclick.stop
                         @keydown.enter.stop="handleRenameProject"
                         @keydown.esc.stop="cancelRename"
                         @blur="handleRenameProject"
                       />
-                      <span v-else class="project-card-name" :title="project.name">{{ project.name }}</span>
+                      <ProjectTitle
+                        v-else
+                        :project="project"
+                        :selection-mode="isSelectionMode"
+                        @rename="startRename(project)"
+                      />
                       <div
                         v-if="renameProjectId !== project.id && !isSelectionMode"
                         class="project-card-actions"
                         @click.stop
                         @mousedown.stop
+                        @dblclick.stop
                       >
                         <Popover
                           align="right"
@@ -468,23 +472,6 @@ defineExpose({ refresh: loadProjects, invalidate });
         </div>
       </div>
     </div>
-
-    <footer v-if="!compact" class="project-picker-footer">
-      <ButtonGroup class="project-footer-actions">
-        <Button variant="ghost" size="sm" class="back-project-button" :icon="ArrowLeft" @click="emit('back')">
-          {{ t('back') }}
-        </Button>
-        <Button
-          variant="primary"
-          size="sm"
-          :icon="FolderOpen"
-          :disabled="!selectedProject || selectedProject.id === currentProjectId || isSelectionMode"
-          @click="openSelectedProject"
-        >
-          {{ t('openProject') }}
-        </Button>
-      </ButtonGroup>
-    </footer>
 
     <ProjectCreateDialog
       v-model:open="isNewProjectOpen"

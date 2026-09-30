@@ -4,7 +4,7 @@ import { useTranslate } from '~/i18n/useTranslate';
 import HudCaptureCards from '../HudCaptureCards.vue';
 import CaptureModeGroup from '../CaptureModeGroup.vue';
 import RecorderBar from '../recorder/RecorderBar.vue';
-import Beamy from '~/components/brand/Beamy/Beamy.vue';
+import BrandSymbol from '~/components/brand/BrandSymbol.vue';
 import type { RecordingBarVisibility } from '../recorder/recording-types';
 
 withDefaults(defineProps<{ kind: 'window' | 'bar'; visibility?: RecordingBarVisibility }>(), { visibility: 'always' });
@@ -22,7 +22,7 @@ const hovering = ref(false);
   >
     <div v-if="kind === 'window'" class="hud-scale" inert>
       <div class="preview-topbar">
-        <span class="preview-brand"><Beamy phase="idle" portrait :size="32" :active="false" />Beam</span
+        <span class="preview-brand"><BrandSymbol symbol="beam" :size="24" />Beam</span
         ><CaptureModeGroup model-value="studio" />
       </div>
       <div class="preview-cards"><HudCaptureCards selected="screen" :disabled="false" /></div>

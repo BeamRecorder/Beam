@@ -21,7 +21,7 @@ function createCaptureWindows({
     platform,
     onWebContentsDestroyed: onCameraClosed,
   });
-  const countdownOverlay = createCountdownWindow(lifecycleOptions);
+  const countdownOverlay = createCountdownWindow({ ...lifecycleOptions, platform });
   const selectionPreview = createRegionSelectionPreview({
     captureEngine,
     screen,

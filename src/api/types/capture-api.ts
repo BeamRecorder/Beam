@@ -129,6 +129,9 @@ export interface DesktopCaptureApi extends CaptureApi, ScreenshotApi, QuickSnipA
   setInteractive(overInteractive: boolean): void;
   setCountdown(seconds: number | null): Promise<void>;
   notifyCountdownReady(): void;
+  cancelCountdown(): void;
+  setCountdownInteractive(interactive: boolean): void;
+  onCountdownCancelled(listener: () => void): () => void;
   prepareRecordingSurface(): Promise<void>;
   onCountdown(listener: (seconds: number | null) => void): () => void;
   getSources(types?: string[]): Promise<CapturePreview[]>;

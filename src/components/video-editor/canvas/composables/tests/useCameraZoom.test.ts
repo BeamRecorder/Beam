@@ -109,7 +109,6 @@ let options!: {
   motionBlur: ReturnType<typeof ref<{ enabled: boolean; intensity: number }>>;
   zooms: ReturnType<typeof ref<ZoomElement[]>>;
   screenTransformDraft: ReturnType<typeof ref<NormalizedTransform | null>>;
-  videoError: ReturnType<typeof ref<string | null>>;
   cropping: ReturnType<typeof ref<boolean>>;
   canvas: HTMLCanvasElement;
   callbacks: Record<string, ReturnType<typeof vi.fn>>;
@@ -125,7 +124,6 @@ const mountComposable = (motionBlurSettings = { enabled: false, intensity: 0.55 
   const zooms = ref<ZoomElement[]>([autoZoom]);
   const output = ref({ preset: '16:9' as const, width: 800, height: 450, showBackground: false });
   const screenTransformDraft = ref<NormalizedTransform | null>(null);
-  const videoError = ref<string | null>('recording unavailable');
   const cropping = ref(croppingEnabled);
   const editorData = {
     cursor: {
@@ -186,7 +184,6 @@ const mountComposable = (motionBlurSettings = { enabled: false, intensity: 0.55 
         composition: () => compositionRef.value,
         screenTransformDraft: () => screenTransformDraft.value,
         isCropping: () => cropping.value,
-        videoError: () => videoError.value,
         renderVisualStack: (ctx, bounds, drawScreen) => {
           drawScreen();
           callbacks.onSelectCanvas(ctx, bounds);
@@ -208,7 +205,6 @@ const mountComposable = (motionBlurSettings = { enabled: false, intensity: 0.55 
     motionBlur,
     zooms,
     screenTransformDraft,
-    videoError,
     cropping,
     canvas,
     callbacks,
@@ -313,7 +309,7 @@ describe('useCameraZoom', () => {
     state.drawVideoWindow(loadingContext, 800, 450, null);
     expect(loadingContext.roundRect).toHaveBeenCalledWith(0, 0, 800, 450, 16);
     expect(loadingContext.clip).toHaveBeenCalledOnce();
-    expect(loadingContext.fillText).toHaveBeenCalledWith('recording unavailable', 400, 225);
+    expect(loadingContext.fillText).not.toHaveBeenCalled();
     expect(loadingContext.restore).toHaveBeenCalledOnce();
 
     options.compositionRef.value = composition();
@@ -325,7 +321,6 @@ describe('useCameraZoom', () => {
 
   it('keeps the canvas background visible while a known screen frame reloads', () => {
     mountComposable();
-    options.videoError.value = null;
     options.output.value = { preset: '16:9', width: 800, height: 450, showBackground: true };
     const ctx = context();
 

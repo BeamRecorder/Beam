@@ -77,3 +77,4 @@ export type PlaybackEventMap = {
   metrics: PlaybackMetrics;
   'audio-metrics': AudioPlaybackMetrics;
 };
+export type PlaybackDecoderOptions = Pick<VideoDecoderConfig, 'hardwareAcceleration' | 'optimizeForLatency'>;

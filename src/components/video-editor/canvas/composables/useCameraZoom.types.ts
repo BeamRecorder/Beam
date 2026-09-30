@@ -42,7 +42,6 @@ export interface UseCameraZoomOptions {
     ctx: CanvasRenderingContext2D,
     bounds: { x: number; y: number; width: number; height: number },
   ) => void;
-  videoError: () => string | null;
   renderVisualStack?: (
     ctx: CanvasRenderingContext2D,
     videoWindow: RenderedVideoWindow,

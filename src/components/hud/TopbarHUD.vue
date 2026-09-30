@@ -4,6 +4,7 @@ import Button from '~/ui/button/Button.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import BrandLogo from '../brand/BrandLogo.vue';
 import UpdateAvailableBadge from '~/components/updates/UpdateAvailableBadge.vue';
+import type { BrandSymbol } from '../brand/brand-types';
 
 const { t } = useTranslate('TopbarHUD');
 const { t: tHud } = useTranslate('HUD');
@@ -11,13 +12,16 @@ withDefaults(
   defineProps<{
     title?: string;
     disabled?: boolean;
-    failed?: boolean;
     showSettings?: boolean;
     showProjects?: boolean;
+    showMinimize?: boolean;
+    symbol?: BrandSymbol;
   }>(),
   {
     showSettings: true,
     showProjects: true,
+    showMinimize: true,
+    symbol: 'beam',
   },
 );
 const emit = defineEmits<{ 'open-settings': []; 'open-projects': []; minimize: []; close: [] }>();
@@ -26,7 +30,7 @@ const emit = defineEmits<{ 'open-settings': []; 'open-projects': []; minimize: [
 <template>
   <header class="hud-topbar">
     <div class="topbar-identity">
-      <BrandLogo :title="title || t('title')" :phase="failed ? 'failed' : 'idle'" />
+      <BrandLogo :title="title || t('title')" :symbol="symbol" />
     </div>
     <div class="window-actions">
       <slot name="issues" />
@@ -57,6 +61,7 @@ const emit = defineEmits<{ 'open-settings': []; 'open-projects': []; minimize: [
         <UpdateAvailableBadge />
       </span>
       <Button
+        v-if="showMinimize"
         variant="ghost"
         size="xs"
         icon-only

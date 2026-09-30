@@ -4,6 +4,7 @@ import { MediaInputError, type MediaError } from '../shared';
 import { assertPlaybackWorkerRequest, assertPlaybackWorkerResponse } from './playback-protocol';
 import type { PreviewQuality } from './playback-preview';
 import { loadPlaybackAsset } from './playback-worker-assets';
+import { consumerPlaybackOperation, playbackMediaError as mediaError } from './playback-worker-errors';
 import type {
   PlaybackFrameMessage,
   PlaybackMetrics,
@@ -134,7 +135,7 @@ async function configurePreview(message: Extract<PlaybackWorkerRequest, { type: 
   await waitForProcessingIdle();
   if (isStaleLoad(version)) return;
   try {
-    await Promise.all([...consumers.values()].map(resetConsumer));
+    await Promise.all([...consumers.values()].map(resetWithContext));
     if (isStaleLoad(version)) return;
     previewQuality = message.previewQuality;
     for (const consumer of consumers.values()) consumer.sink = createPlaybackSink(consumer.asset, previewQuality);
@@ -159,7 +160,7 @@ async function retime(message: Extract<PlaybackWorkerRequest, { type: 'retime' }
         throw new Error('Playback asset changed during a timing-only update.');
       if (!assets.has(clip.assetId)) throw new Error('Playback asset is unavailable during a timing-only update.');
     }
-    await Promise.all([...consumers.values()].map(resetConsumer));
+    await Promise.all([...consumers.values()].map(resetWithContext));
     if (isStaleLoad(version)) return;
     const next = message.clips.map(
       (clip) => consumers.get(clip.clipId) ?? createPlaybackConsumer(clip, assets.get(clip.assetId)!, previewQuality),
@@ -232,7 +233,7 @@ async function processTicks() {
       if (request.generation !== generation) continue;
       requestGeneration = request.generation;
       const activeConsumers = consumerWindow.select(request.timelineSeconds, true);
-      await consumerWindow.prepare(activeConsumers, resetConsumer, previewQuality);
+      await consumerWindow.prepare(activeConsumers, resetWithContext, previewQuality);
       if (disposed || request.generation !== generation) continue;
       const decoded = await Promise.allSettled(
         activeConsumers.map(async (consumer) => {
@@ -241,7 +242,9 @@ async function processTicks() {
           return {
             consumer,
             frame: shouldDecodeTickFrame(consumer, targetSeconds)
-              ? await sequentialFrame(consumer, targetSeconds)
+              ? await consumerPlaybackOperation(consumer, 'decode-frame', sampleTimelineSeconds, () =>
+                  sequentialFrame(consumer, targetSeconds),
+                )
               : null,
           };
         }),
@@ -286,27 +289,35 @@ async function processSeeks() {
       const activeConsumers = consumerWindow.select(request.timelineSeconds);
       // Arbitrary access replaces sequential playback. Release its prefetched
       // bitmaps and decoder before opening a separate seek decoder.
-      await consumerWindow.prepare(activeConsumers, resetConsumer, previewQuality, true);
+      await consumerWindow.prepare(activeConsumers, resetWithContext, previewQuality, true);
       if (disposed) break;
       if (request.generation !== generation && !pendingSeek) {
         supersede(request);
         continue;
       }
       const decoded = await Promise.allSettled(
-        activeConsumers.map(async (consumer) => {
-          const targetSeconds = sourceTime(consumer.clip, request.timelineSeconds);
-          let wrapped = await consumer.sink.getCanvas(targetSeconds);
-          if (!wrapped) {
-            const iterator = consumer.sink.canvases(targetSeconds)[Symbol.asyncIterator]();
-            try {
-              const first = await iterator.next();
-              wrapped = first.done ? null : first.value;
-            } finally {
-              await iterator.return?.();
+        activeConsumers.map((consumer) =>
+          consumerPlaybackOperation(consumer, 'seek-frame', request.timelineSeconds, async () => {
+            const targetSeconds = sourceTime(consumer.clip, request.timelineSeconds);
+            let wrapped = await consumer.sink.getCanvas(targetSeconds);
+            if (!wrapped) {
+              const iterator = consumer.sink.canvases(targetSeconds)[Symbol.asyncIterator]();
+              try {
+                const first = await iterator.next();
+                wrapped = first.done ? null : first.value;
+              } finally {
+                await iterator.return?.();
+              }
             }
-          }
-          return wrapped ? { consumer, frame: await bitmapFor(wrapped) } : null;
-        }),
+            if (!wrapped)
+              throw new MediaInputError({
+                kind: 'decode-failure',
+                sourceId: consumer.asset.assetId,
+                message: 'No video frame is available at the requested time.',
+              });
+            return { consumer, frame: await bitmapFor(wrapped) };
+          }),
+        ),
       );
       const failure = decoded.find((result): result is PromiseRejectedResult => result.status === 'rejected');
       if (failure) {
@@ -315,13 +326,6 @@ async function processSeeks() {
         throw failure.reason;
       }
       const frames = decoded.flatMap((result) => (result.status === 'fulfilled' && result.value ? [result.value] : []));
-      if (activeConsumers.length > 0 && frames.length === 0) {
-        throw new MediaInputError({
-          kind: 'decode-failure',
-          sourceId: 'playback',
-          message: 'No video frame is available at the requested time.',
-        });
-      }
       if (request.generation !== generation || pendingSeek) {
         const canPresentScrubPreview = request.mode === 'scrub' && pendingSeek !== null;
         for (const { consumer, frame } of frames) {
@@ -400,14 +404,8 @@ function postMetrics(messageGeneration: number, force = false) {
   });
 }
 
-function mediaError(error: unknown, sourceId: string): MediaError {
-  if (error instanceof MediaInputError) return error.detail;
-  return {
-    kind: 'decode-failure',
-    sourceId,
-    message: error instanceof Error ? error.message : 'Playback decoding failed.',
-  };
-}
+const resetWithContext = (consumer: ClipConsumer) =>
+  consumerPlaybackOperation(consumer, 'reset-decoder', undefined, () => resetConsumer(consumer));
 
 function postError(error: MediaError, messageGeneration = generation, requestId?: number) {
   post({ type: 'error', generation: messageGeneration, error, requestId });

@@ -400,6 +400,11 @@
   },
   "EditorCanvas": {
     "videoPreviewLoading": "正在加载视频预览",
+    "videoPreviewUnavailable": "预览不可用",
+    "videoDecodeFailed": "Beam 无法解码此视频。",
+    "videoSeekFailed": "Beam 无法显示视频的此位置。",
+    "videoFormatUnsupported": "不支持此视频格式。",
+    "videoFileUnavailable": "视频文件不可用。",
     "ok": "确定",
     "recenter": "重新居中"
   },
@@ -669,6 +674,7 @@
     "pauseRecording": "暂停录制",
     "stopRecording": "停止录制",
     "cancelRecording": "取消并删除录制",
+    "cancelCountdown": "取消",
     "turnMicOff": "关闭麦克风",
     "turnMicOn": "打开麦克风",
     "turnCameraOff": "关闭摄像头",

@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
 import Beamy from './Beamy.vue';
+import BeamySvg from './BeamySvg.vue';
 import type { BeamyPhase } from './beamy-types';
 
 let callbacks: Map<number, FrameRequestCallback>;
@@ -48,6 +49,14 @@ afterEach(() => {
 });
 
 describe('Beamy lifecycle', () => {
+  it('uses the Beam accent without cheeks or enlarged eye overrides', () => {
+    const wrapper = setup('idle');
+    const artwork = wrapper.getComponent(BeamySvg);
+    expect(artwork.props('color')).toBe('var(--color-primary)');
+    expect(artwork.props('paper')).toBe('var(--color-bg-element)');
+    expect(artwork.props('blush')).toBe(false);
+    expect(artwork.props('eyeColor')).toBeUndefined();
+  });
   it('keeps the SVG decorative, bounded and separate from its red recording light', async () => {
     const wrapper = setup('recording');
     expect(wrapper.attributes('aria-hidden')).toBe('true');
@@ -144,7 +153,7 @@ describe('Beamy lifecycle', () => {
     expect(removeMotion).toHaveBeenCalledOnce();
     expect(removeVisibility).toHaveBeenCalledWith('visibilitychange', expect.any(Function));
   });
-  it('returns from the displayed shape over 650 ms and stops at the original Lab cloud', async () => {
+  it('returns from the displayed shape over 650 ms and stops at the original Lab circle', async () => {
     const wrapper = setup('idle');
     const resting = wrapper.get('.mascot-artwork > g:nth-of-type(2) path').attributes('d');
     await wrapper.setProps({ phase: 'processing', cycleOffset: 1 });

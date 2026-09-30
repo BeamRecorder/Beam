@@ -400,6 +400,11 @@
   },
   "EditorCanvas": {
     "videoPreviewLoading": "動画プレビューを読み込み中",
+    "videoPreviewUnavailable": "プレビューを表示できません",
+    "videoDecodeFailed": "Beam はこの動画をデコードできませんでした。",
+    "videoSeekFailed": "Beam は動画のこの位置を表示できませんでした。",
+    "videoFormatUnsupported": "この動画形式はサポートされていません。",
+    "videoFileUnavailable": "動画ファイルを利用できません。",
     "ok": "OK",
     "recenter": "表示をリセット"
   },
@@ -669,6 +674,7 @@
     "pauseRecording": "録画を一時停止",
     "stopRecording": "録画を停止",
     "cancelRecording": "録画をキャンセルして削除",
+    "cancelCountdown": "キャンセル",
     "turnMicOff": "マイクをオフ",
     "turnMicOn": "マイクをオン",
     "turnCameraOff": "カメラをオフ",

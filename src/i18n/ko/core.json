@@ -400,6 +400,11 @@
   },
   "EditorCanvas": {
     "videoPreviewLoading": "비디오 미리보기 로드 중",
+    "videoPreviewUnavailable": "미리보기를 표시할 수 없습니다",
+    "videoDecodeFailed": "Beam이 이 동영상을 디코딩하지 못했습니다.",
+    "videoSeekFailed": "Beam이 동영상의 이 위치를 표시하지 못했습니다.",
+    "videoFormatUnsupported": "지원하지 않는 동영상 형식입니다.",
+    "videoFileUnavailable": "동영상 파일을 사용할 수 없습니다.",
     "ok": "확인",
     "recenter": "보기 중앙 정렬"
   },
@@ -669,6 +674,7 @@
     "pauseRecording": "녹화 일시 중지",
     "stopRecording": "녹화 중지",
     "cancelRecording": "녹화 취소 및 삭제",
+    "cancelCountdown": "취소",
     "turnMicOff": "마이크 끄기",
     "turnMicOn": "마이크 켜기",
     "turnCameraOff": "카메라 끄기",

@@ -400,6 +400,11 @@
   },
   "EditorCanvas": {
     "videoPreviewLoading": "正在載入影片預覽",
+    "videoPreviewUnavailable": "無法顯示預覽",
+    "videoDecodeFailed": "Beam 無法解碼此影片。",
+    "videoSeekFailed": "Beam 無法顯示影片的此位置。",
+    "videoFormatUnsupported": "不支援此影片格式。",
+    "videoFileUnavailable": "影片檔案無法使用。",
     "ok": "確定",
     "recenter": "重新置中"
   },
@@ -669,6 +674,7 @@
     "pauseRecording": "暫停錄影",
     "stopRecording": "停止錄影",
     "cancelRecording": "取消並刪除錄影",
+    "cancelCountdown": "取消",
     "turnMicOff": "關閉麥克風",
     "turnMicOn": "開啟麥克風",
     "turnCameraOff": "關閉相機",
