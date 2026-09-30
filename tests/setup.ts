@@ -20,8 +20,8 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
   });
 }
 
-beforeEach(() => {
-  setCurrentLocale('en');
+beforeEach(async () => {
+  await setCurrentLocale('en');
 });
 
 // jsdom does not implement the scrolling API used by virtualized lists.

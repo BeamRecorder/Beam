@@ -30,8 +30,8 @@ describe('useTimelineClipboardFeedback', () => {
   let wrapper: VueWrapper | undefined;
   let feedback!: ReturnType<typeof useTimelineClipboardFeedback>;
 
-  beforeEach(() => {
-    setCurrentLocale('en');
+  beforeEach(async () => {
+    await setCurrentLocale('en');
     vi.useFakeTimers();
     vi.clearAllMocks();
     const Harness = defineComponent({
@@ -43,11 +43,11 @@ describe('useTimelineClipboardFeedback', () => {
     wrapper = mount(Harness);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     wrapper?.unmount();
     wrapper = undefined;
     vi.useRealTimers();
-    setCurrentLocale('en');
+    await setCurrentLocale('en');
     resetInternalEditorClipboardSync();
   });
 

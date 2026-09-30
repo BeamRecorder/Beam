@@ -651,7 +651,12 @@
     "turnCameraOff": "カメラをオフ",
     "turnCameraOn": "カメラをオン",
     "turnSystemAudioOff": "システム音声をオフ",
-    "turnSystemAudioOn": "システム音声をオン"
+    "turnSystemAudioOn": "システム音声をオン",
+    "restartRecording": "録画をやり直す",
+    "restartConfirmation": "やり直しますか？",
+    "restartDescription": "この録画は削除されます。",
+    "keepRecording": "キャンセル",
+    "restart": "やり直す"
   },
   "ScreenRegionOverlay": {
     "instruction": "録画する範囲を選択",

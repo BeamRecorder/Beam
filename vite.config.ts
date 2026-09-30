@@ -77,6 +77,8 @@ export default defineConfig({
     include: ['@mediabunny/aac-encoder'],
   },
   build: {
+    // Every desktop renderer runs on Electron's current Chromium.
+    modulePreload: { polyfill: false },
     rollupOptions: {
       input: {
         main: fileURLToPath(new URL('./index.html', import.meta.url)),

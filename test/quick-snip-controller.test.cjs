@@ -20,6 +20,44 @@ function deferred() {
   return { promise, resolve, reject };
 }
 
+test('restart retains the Instant job and does not export the discarded take', async () => {
+  const f = harness();
+  await selectAndStart(f.controller, 'instant');
+  await f.controller.report({ type: 'recording' });
+  const job = f.controller.state().job;
+  await f.controller.report({ type: 'restarting', name: job.name });
+  assert.equal(f.controller.state().state, 'preparing');
+  assert.deepEqual(f.controller.state().job, job);
+  assert.equal(f.controller.state().progress, 0);
+  assert.equal(f.finalizeCalls.length, 0);
+  await f.controller.report({ type: 'recording' });
+  assert.equal(f.controller.state().state, 'recording');
+});
+
+test('restart ignores an obsolete job and non-recording states', async () => {
+  const f = harness();
+  await selectAndStart(f.controller, 'instant');
+  const job = f.controller.state().job;
+  await f.controller.report({ type: 'restarting', name: job.name });
+  assert.equal(f.controller.state().state, 'preparing');
+  await f.controller.report({ type: 'recording' });
+  await f.controller.report({ type: 'restarting', name: 'obsolete' });
+  assert.equal(f.controller.state().state, 'recording');
+  await f.controller.stop();
+  await f.controller.report({ type: 'restarting', name: job.name });
+  assert.equal(f.controller.state().state, 'finalizing');
+});
+
+test('late restart cannot revive a canceled recording', async () => {
+  const f = harness();
+  await selectAndStart(f.controller, 'instant');
+  await f.controller.report({ type: 'recording' });
+  const job = f.controller.state().job;
+  await f.controller.cancel();
+  await f.controller.report({ type: 'restarting', name: job.name });
+  assert.equal(f.controller.state().state, 'canceled');
+});
+
 function harness({
   normalRecording = false,
   pendingSelection = false,

@@ -1,4 +1,5 @@
 @import './theme/palette.css';
+@import './theme/surfaces.css';
 
 /* Design System: Beam styles */
 
@@ -35,25 +36,9 @@
 }
 
 :root {
-  /* Color Palette - Primary/Accent */
-  --color-primary: #ff5a1f;
-  --color-primary-hover: #e04810;
-  --color-primary-light: rgba(255, 90, 31, 0.1);
-  --color-primary-border: rgba(255, 90, 31, 0.3);
-
-  /* Backgrounds & Surfaces */
-  --color-bg-app: #d2d2d9;
-  --color-bg-surface: #f7f7f8;
-  --color-bg-surface-hover: #e8e8ec;
-  --color-bg-element: #ffffff;
   --github-icon-filter: brightness(0);
   --editor-ambient-media-opacity: 0.7;
   --editor-ambient-veil-opacity: 0.82;
-
-  /* Borders */
-  --color-border: #e6e3dc;
-  --color-border-strong: #d3cfc5;
-  --color-border-dark: #334155;
 
   /* Track Colors */
   --color-track-video: #6366f1;
@@ -132,19 +117,9 @@
 }
 
 :root.dark {
-  /* Backgrounds & Surfaces */
-  --color-bg-app: #151517;
-  --color-bg-surface: #212123;
-  --color-bg-surface-hover: #3b3b3e;
-  --color-bg-element: #2b2b2e;
   --github-icon-filter: brightness(0) invert(1);
   --editor-ambient-media-opacity: 0.78;
   --editor-ambient-veil-opacity: 0.7;
-
-  /* Borders */
-  --color-border: #2e2c28;
-  --color-border-strong: #3d3a34;
-  --color-border-dark: #3d3a34;
 
   /* Track Colors */
   --color-track-blur: #155e75;

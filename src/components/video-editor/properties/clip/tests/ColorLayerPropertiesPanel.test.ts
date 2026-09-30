@@ -1,3 +1,4 @@
+import { triggerPointer } from '../../../../../../tests/support/pointer';
 import { flushPromises, mount } from '@vue/test-utils';
 import { defineComponent, h, ref } from 'vue';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -275,7 +276,7 @@ describe('ColorLayerPropertiesPanel', () => {
       .find((tile) => tile.attributes('style')?.includes('radial-gradient(circle'));
 
     expect(radial).toBeDefined();
-    expect(radial!.attributes('style')).toContain('rgba(0, 0, 0, 1)');
+    expect(radial!.attributes('style')).toContain('rgb(0, 0, 0)');
     expect(radial!.attributes('style')).toContain('rgba(255, 255, 255, 0.5)');
 
     await radial!.trigger('click');
@@ -300,10 +301,10 @@ describe('ColorLayerPropertiesPanel', () => {
       .find((slider) => slider.attributes('data-label')?.toLowerCase().includes('radius'));
 
     expect(radiusSlider).toBeDefined();
-    await radiusSlider!.trigger('pointerdown');
+    await triggerPointer(radiusSlider!, 'pointerdown');
     expect(wrapper.emitted('corner-radius-interaction')).toEqual([[true]]);
 
-    await radiusSlider!.trigger('pointerup');
+    await triggerPointer(radiusSlider!, 'pointerup');
     expect(wrapper.emitted('corner-radius-interaction')).toEqual([[true], [false]]);
     wrapper.unmount();
   });

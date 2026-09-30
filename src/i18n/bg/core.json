@@ -651,7 +651,12 @@
     "turnCameraOff": "Изключване на камерата",
     "turnCameraOn": "Включване на камерата",
     "turnSystemAudioOff": "Изключване на системния звук",
-    "turnSystemAudioOn": "Включване на системния звук"
+    "turnSystemAudioOn": "Включване на системния звук",
+    "restartRecording": "Рестартиране на записа",
+    "restartConfirmation": "Започване отначало?",
+    "restartDescription": "Този запис ще бъде изтрит.",
+    "keepRecording": "Отказ",
+    "restart": "Рестартиране"
   },
   "ScreenRegionOverlay": {
     "instruction": "Изберете област за запис",

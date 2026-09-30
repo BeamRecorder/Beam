@@ -166,6 +166,63 @@ function linuxWindowConfiguration() {
   };
 }
 
+test('switches capture to a bottom-centered horizontal recorder before starting, without moving it on later reports', () => {
+  const f = createFixture();
+  f.crop.show(linuxWindowConfiguration(), display);
+  f.crop.command('start');
+  const target = f.windows[0];
+  assert.deepEqual(target.getBounds(), { x: 784, y: 976, width: 352, height: 88 });
+  const placements = f.calls.filter((call) => call[0] === 'setBounds').length;
+  f.crop.setRecording();
+  f.crop.setRecording();
+  assert.equal(f.crop.updateRegion(configuration().region, display), false);
+  assert.equal(f.calls.filter((call) => call[0] === 'setBounds').length, placements);
+});
+
+test('saves recorder moves under the shared recorder key and flushes them before returning to selection', () => {
+  const f = createFixture();
+  f.crop.show(linuxWindowConfiguration(), display);
+  const target = f.windows[0];
+  target.emit('ready-to-show');
+  f.crop.rendererReady(target.webContents);
+  target.setBounds({ x: 700, y: 800 });
+  target.emit('move');
+  f.crop.command('start');
+  assert.deepEqual(f.preferenceState.extras.quickSnipBarPositions, { 2: { x: 700, y: 800 } });
+  target.emit('move');
+  target.emit('moved');
+  assert.equal(f.preferenceWrites.length, 1);
+
+  target.setBounds({ x: 500, y: 900 });
+  target.emit('move');
+  f.crop.showExisting();
+  assert.deepEqual(f.preferenceState.extras.recorderPositions, { 2: { x: 500, y: 900 } });
+  assert.deepEqual(target.getBounds(), { x: 700, y: 800, width: 480, height: 132 });
+  f.crop.command('start');
+  assert.deepEqual(target.getBounds(), { x: 500, y: 900, width: 352, height: 88 });
+  assert.equal(f.preferenceWrites.length, 2);
+});
+
+test('restores a moved recording bar independently of the selection bar and returns to selection after cancellation', () => {
+  const f = createFixture(display, 'linux', {
+    preferenceState: { extras: { recorderPositions: { 2: { x: 100, y: 200 } } } },
+  });
+  f.crop.show(linuxWindowConfiguration(), display);
+  const selection = f.windows[0].getBounds();
+  f.crop.command('start');
+  assert.deepEqual(f.windows[0].getBounds(), { x: 100, y: 200, width: 352, height: 88 });
+  f.crop.showExisting();
+  assert.deepEqual(f.windows[0].getBounds(), selection);
+});
+
+test('screenshot capture keeps the selection layout when it starts', () => {
+  const f = createFixture();
+  f.crop.show({ ...linuxWindowConfiguration(), mode: 'screenshot' }, display);
+  const bounds = f.windows[0].getBounds();
+  f.crop.command('start');
+  assert.deepEqual(f.windows[0].getBounds(), bounds);
+});
+
 test('shows the Crop Bar after native and renderer readiness while the region selection is pending', () => {
   const fixture = createFixture();
   fixture.crop.show(configuration(), display);

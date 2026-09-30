@@ -651,7 +651,12 @@
     "turnCameraOff": "Désactiver la caméra",
     "turnCameraOn": "Activer la caméra",
     "turnSystemAudioOff": "Couper l'audio système",
-    "turnSystemAudioOn": "Activer l'audio système"
+    "turnSystemAudioOn": "Activer l'audio système",
+    "restartRecording": "Recommencer l’enregistrement",
+    "restartConfirmation": "Recommencer ?",
+    "restartDescription": "Cette prise sera supprimée.",
+    "keepRecording": "Annuler",
+    "restart": "Recommencer"
   },
   "ScreenRegionOverlay": {
     "instruction": "Sélectionnez une zone à enregistrer",

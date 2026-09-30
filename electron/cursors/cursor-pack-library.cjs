@@ -1,7 +1,6 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { DOMParser } = require('@xmldom/xmldom');
 const { parseXcursor, xcursorImageToPng } = require('./xcursor-parser.cjs');
 
 const MAX_ROLES = 256;
@@ -83,13 +82,16 @@ function validateSvg(svg, role) {
   if (/<!DOCTYPE|<!ENTITY|<\?(?!xml\b)/i.test(svg))
     throw new Error(`Curseur ${role}: DOCTYPE, entités et instructions de traitement interdits`);
   const errors = [];
-  const document = new DOMParser({
-    errorHandler: {
-      warning: (message) => errors.push(message),
-      error: (message) => errors.push(message),
-      fatalError: (message) => errors.push(message),
-    },
-  }).parseFromString(svg, 'image/svg+xml');
+  const { DOMParser } = require('@xmldom/xmldom');
+  let document;
+  try {
+    document = new DOMParser({ onError: (_level, message) => errors.push(message) }).parseFromString(
+      svg,
+      'image/svg+xml',
+    );
+  } catch {
+    throw new Error(`Curseur ${role}: XML SVG invalide`);
+  }
   if (errors.length || !document.documentElement || document.documentElement.localName !== 'svg')
     throw new Error(`Curseur ${role}: XML SVG invalide`);
   if (countNodes(document) > MAX_XML_NODES) throw new Error(`Curseur ${role}: plus de ${MAX_XML_NODES} nœuds XML`);

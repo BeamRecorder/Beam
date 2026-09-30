@@ -11,19 +11,19 @@ const captureMock = vi.hoisted(() => ({
 
 vi.mock('../../api/capture', () => ({ capture: captureMock }));
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.clearAllMocks();
   setActivePinia(createPinia());
   localStorage.clear();
-  setCurrentLocale('en');
+  await setCurrentLocale('en');
   captureMock.getPreferences.mockResolvedValue({ extras: {} });
   captureMock.updatePreferences.mockResolvedValue({});
   captureMock.onPreferencesChanged.mockReturnValue(vi.fn());
 });
 
-afterEach(() => {
+afterEach(async () => {
   localStorage.clear();
-  setCurrentLocale('en');
+  await setCurrentLocale('en');
 });
 
 describe('locale store', () => {
@@ -31,7 +31,7 @@ describe('locale store', () => {
     const store = useLocaleStore();
     expect(store.locale).toBe('en');
 
-    store.setLocale('fr');
+    await store.setLocale('fr');
     expect(store.locale).toBe('fr');
     expect(getCurrentLocale()).toBe('fr');
     expect(localStorage.getItem('locale')).toBe('fr');
@@ -49,7 +49,7 @@ describe('locale store', () => {
     expect(store.locale).toBe('en');
 
     preferencesListener?.({ extras: { locale: 'es' } });
-    expect(store.locale).toBe('es');
+    await vi.waitFor(() => expect(store.locale).toBe('es'));
     expect(getCurrentLocale()).toBe('es');
   });
 
@@ -57,7 +57,7 @@ describe('locale store', () => {
     const store = useLocaleStore();
 
     window.dispatchEvent(new StorageEvent('storage', { key: 'locale', newValue: 'de' }));
-    expect(store.locale).toBe('de');
+    await vi.waitFor(() => expect(store.locale).toBe('de'));
     expect(getCurrentLocale()).toBe('de');
   });
 
@@ -66,7 +66,7 @@ describe('locale store', () => {
 
     localStorage.setItem('locale', 'ja');
     window.dispatchEvent(new Event('focus'));
-    expect(store.locale).toBe('ja');
+    await vi.waitFor(() => expect(store.locale).toBe('ja'));
     expect(getCurrentLocale()).toBe('ja');
   });
 });

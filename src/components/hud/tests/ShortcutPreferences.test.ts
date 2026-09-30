@@ -157,7 +157,7 @@ describe('ShortcutPreferences', () => {
   });
 
   it('translates the Quick Snip description into French while keeping the brand label', async () => {
-    setCurrentLocale('fr');
+    await setCurrentLocale('fr');
     const wrapper = mount(ShortcutPreferences, { global: { stubs: { ShortcutInput } } });
     await vi.waitFor(() => expect(capture.getPreferences).toHaveBeenCalledOnce());
     const quickSnipRow = wrapper.findAll('.shortcut-row')[0];

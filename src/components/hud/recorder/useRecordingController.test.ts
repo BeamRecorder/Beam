@@ -266,6 +266,70 @@ describe('useRecordingController countdown', () => {
   });
 });
 
+describe('useRecordingController restart', () => {
+  it.each(['recording', 'paused'] as const)(
+    'discards a %s take and starts the same sources without repeating the countdown',
+    async (phase) => {
+      vi.useFakeTimers();
+      const completed = vi.fn();
+      const controller = useRecordingController(completed);
+      await controller.start({ ...fullConfig, countdownSeconds: 3 });
+      await vi.advanceTimersByTimeAsync(3000);
+      expect(controller.phase.value).toBe('recording');
+      if (phase === 'paused') await controller.togglePause();
+      await controller.restart();
+      await vi.waitFor(() => expect(controller.phase.value).toBe('recording'));
+      expect(controller.secondsRemaining.value).toBe(0);
+      expect(controller.recordingTime.value).toBe('00:00.0');
+      expect(mocks.capture.discardRecording).toHaveBeenCalledWith('session-1');
+      expect(mocks.capture.prepareRecording.mock.calls[1]).toEqual(mocks.capture.prepareRecording.mock.calls[0]);
+      expect(mocks.cameraRecorder.start).toHaveBeenCalledTimes(2);
+      expect(mocks.micRecorder.start).toHaveBeenCalledTimes(2);
+      expect(mocks.systemAudioRecorder.start).toHaveBeenCalledTimes(2);
+      expect(mocks.capture.completeNativeRecording).not.toHaveBeenCalled();
+      expect(completed).not.toHaveBeenCalled();
+      await controller.cancel();
+    },
+  );
+
+  it('waits for native discard before preparing a replacement and blocks concurrent restarts', async () => {
+    vi.useFakeTimers();
+    const controller = useRecordingController(vi.fn());
+    await controller.start(baseConfig);
+    await vi.waitFor(() => expect(controller.phase.value).toBe('recording'));
+    let discarded!: () => void;
+    mocks.capture.discardRecording.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        discarded = resolve;
+      }),
+    );
+    const restarting = controller.restart();
+    await vi.waitFor(() => expect(mocks.capture.discardRecording).toHaveBeenCalledOnce());
+    await controller.restart();
+    expect(controller.phase.value).toBe('finalizing');
+    expect(mocks.capture.prepareRecording).toHaveBeenCalledOnce();
+    discarded();
+    await restarting;
+    await vi.waitFor(() => expect(controller.phase.value).toBe('recording'));
+    expect(mocks.capture.prepareRecording).toHaveBeenCalledTimes(2);
+    await controller.cancel();
+  });
+
+  it('keeps native cleanup errors visible and does not start a replacement', async () => {
+    vi.useFakeTimers();
+    const controller = useRecordingController(vi.fn());
+    await controller.start(baseConfig);
+    await vi.waitFor(() => expect(controller.phase.value).toBe('recording'));
+    mocks.capture.discardRecording.mockRejectedValueOnce(new Error('Discard failed'));
+    await controller.restart();
+    expect(controller.error.value).toBe('Discard failed');
+    expect(controller.phase.value).toBe('recording');
+    expect(mocks.capture.prepareRecording).toHaveBeenCalledOnce();
+    expect(mocks.capture.completeNativeRecording).not.toHaveBeenCalled();
+    await controller.cancel();
+  });
+});
+
 describe('useRecordingController startup', () => {
   it('drives the overlay camera proxy lifecycle without acquiring media in the HUD', async () => {
     const getUserMedia = vi.fn();

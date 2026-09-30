@@ -46,9 +46,9 @@ function registerProjectIpc(
   ipcMain.handle('projects:import-dropped-media', (_event, payload = {}) =>
     projectStore.importDroppedProjectMedia(payload.projectId, { kind: payload.kind, source: payload.source }),
   );
-  ipcMain.handle('projects:paste-clipboard-image', (event, payload = {}) => {
+  ipcMain.handle('projects:paste-clipboard-image', async (event, payload = {}) => {
     if (!trustedRenderer?.(event.sender.getURL())) throw new Error('Renderer non autorisé');
-    const image = readClipboardPng(clipboard);
+    const image = await readClipboardPng(clipboard);
     return image ? projectStore.importClipboardImage(payload.projectId, image) : null;
   });
   const notifyBackgroundLibraryChanged = () => {

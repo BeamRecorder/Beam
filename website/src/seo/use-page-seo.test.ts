@@ -1,8 +1,7 @@
-import { createHead } from '@unhead/vue/client';
+import { createHead, renderDOMHead } from '@unhead/vue/client';
 import { mount } from '@vue/test-utils';
 import { defineComponent, nextTick, ref } from 'vue';
 import { afterEach, describe, expect, it } from 'vitest';
-import { renderDOMHead } from 'unhead/client';
 import { usePageSeo } from './use-page-seo';
 
 afterEach(() => {

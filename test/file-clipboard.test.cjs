@@ -95,15 +95,21 @@ test('sends a Unicode Windows path as stdin data to a static PowerShell script',
   assert.deepEqual(await pending, { native: true, fallback: null });
 });
 
-test('publishes a macOS public.file-url without starting a helper process', async () => {
+test('publishes a macOS native file using ClipboardItem without starting a helper process', async () => {
   const { calls, spawn } = createSpawnFixture();
   const writes = [];
-  const clipboard = { writeBuffer: (...args) => writes.push(args) };
+  const clipboard = { write: async (items) => writes.push(items) };
+  class ClipboardItem {
+    constructor(data) {
+      this.data = data;
+    }
+  }
   const file = '/tmp/Quick Snip café #1.png';
 
-  const result = await createFileClipboard({ platform: 'darwin', clipboard, spawn }).copyFile(file);
+  const result = await createFileClipboard({ platform: 'darwin', clipboard, ClipboardItem, spawn }).copyFile(file);
 
-  assert.deepEqual(writes, [['public.file-url', Buffer.from(pathToFileURL(file).href)]]);
+  assert.equal(writes.length, 1);
+  assert.deepEqual(writes[0][0].data, { 'text/uri-list': `${pathToFileURL(file).href}\r\n` });
   assert.equal(calls.length, 0);
   assert.deepEqual(result, { native: true, fallback: null });
 });
@@ -188,4 +194,42 @@ test('rejects invalid paths and Linux sessions without a clipboard display', asy
   await assert.rejects(clipboard.copyFile('/tmp/bad\0path'), /Invalid clipboard file/);
   await assert.rejects(clipboard.copyFile('/tmp/capture.png'), /requires a Wayland or X11 session/);
   assert.equal(calls.length, 0);
+});
+
+test('waits for asynchronous native file publication and reports failures', async () => {
+  class ClipboardItem {
+    constructor(data) {
+      this.data = data;
+    }
+  }
+  let finish;
+  let completed = false;
+  const clipboard = {
+    write: () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  };
+  const pending = createFileClipboard({ platform: 'darwin', clipboard, ClipboardItem }).copyFile('/tmp/capture.png');
+  pending.then(() => {
+    completed = true;
+  });
+  await Promise.resolve();
+  assert.equal(completed, false);
+  finish();
+  await pending;
+  assert.equal(completed, true);
+  await assert.rejects(
+    () =>
+      createFileClipboard({
+        platform: 'darwin',
+        ClipboardItem,
+        clipboard: {
+          write: async () => {
+            throw new Error('Clipboard busy');
+          },
+        },
+      }).copyFile('/tmp/capture.png'),
+    /Clipboard busy/,
+  );
 });

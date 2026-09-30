@@ -13,7 +13,13 @@ const WINDOWS_COPY_SCRIPT = [
   '[System.Windows.Forms.Clipboard]::SetFileDropList($files)',
 ].join('\n');
 
-function createFileClipboard({ platform = process.platform, env = process.env, clipboard, spawn = spawnProcess }) {
+function createFileClipboard({
+  platform = process.platform,
+  env = process.env,
+  clipboard,
+  ClipboardItem,
+  spawn = spawnProcess,
+}) {
   const publish = (command, args, input) =>
     new Promise((resolve, reject) => {
       const child = spawn(command, args, {
@@ -64,7 +70,7 @@ function createFileClipboard({ platform = process.platform, env = process.env, c
     async copyFile(file) {
       if (typeof file !== 'string' || !file || file.includes('\0')) throw new Error('Invalid clipboard file.');
       if (platform === 'darwin') {
-        clipboard.writeBuffer('public.file-url', Buffer.from(pathToFileURL(file).href));
+        await clipboard.write([new ClipboardItem({ 'text/uri-list': `${pathToFileURL(file).href}\r\n` })]);
       } else if (platform === 'win32') {
         await publish(
           'powershell.exe',

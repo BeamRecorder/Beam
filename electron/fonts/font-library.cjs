@@ -1,7 +1,6 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const fontkit = require('fontkit');
 
 const MAX_FONT_BYTES = 64 * 1024 * 1024;
 const extensions = new Set(['.ttf', '.otf', '.woff', '.woff2']);
@@ -59,7 +58,7 @@ function createFontLibrary(directory) {
     const bytes = fs.readFileSync(source);
     let font;
     try {
-      font = fontkit.create(bytes);
+      font = require('fontkit').create(bytes);
     } catch {
       throw new Error('Fichier de police invalide');
     }

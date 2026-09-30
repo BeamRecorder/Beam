@@ -16,27 +16,27 @@
     "test": "vitest run --config vite.config.ts"
   },
   "dependencies": {
-    "@lucide/vue": "^1.25.0",
-    "@unhead/vue": "^2.1.2",
+    "@lucide/vue": "^1.49.0",
+    "@unhead/vue": "^3.4.2",
     "minisearch": "^7.2.0",
-    "vue": "^3.5.39",
-    "vue-i18n": "^11.4.8",
-    "vue-router": "^4.6.3"
+    "vue": "^3.5.43",
+    "vue-i18n": "^11.4.12",
+    "vue-router": "^5.3.1"
   },
   "devDependencies": {
-    "@types/node": "^24.13.2",
-    "@vitejs/plugin-vue": "^6.0.7",
-    "@vitest/coverage-v8": "^4.1.10",
-    "@vue/test-utils": "^2.4.6",
+    "@types/node": "^26.6.3",
+    "@vitejs/plugin-vue": "^6.0.9",
+    "@vitest/coverage-v8": "^5.0.2",
+    "@vue/test-utils": "^2.5.1",
     "@vue/tsconfig": "^0.9.1",
-    "jsdom": "^26.1.0",
+    "jsdom": "^30.1.1",
     "schema-dts": "^2.0.0",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
-    "vite": "^8.1.1",
+    "vite": "^8.3.1",
     "vite-plugin-sitemap": "^0.8.2",
     "vite-ssg": "^28.3.0",
     "vitepress": "^1.6.4",
-    "vitest": "^4.1.10",
-    "vue-tsc": "^3.3.9"
+    "vitest": "^5.0.2",
+    "vue-tsc": "^3.3.11"
   }
 }

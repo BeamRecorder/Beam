@@ -1,3 +1,4 @@
+const startupAt = process.hrtime.bigint();
 const { initializeApplicationUpdater } = require('./lifecycle/application-updater.cjs');
 const { createCaptureStores } = require('./storage/capture-stores.cjs');
 const { prewarmCaptureCapabilities } = require('./lifecycle/capture-warmup.cjs');
@@ -79,7 +80,6 @@ protocol.registerSchemesAsPrivileged([
   { scheme: 'project-media', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
 ]);
 
-const startupAt = process.hrtime.bigint();
 const logStartup = (step) => {
   if (!ENABLE_ELECTRON_DIAGNOSTIC_LOGS || app.isPackaged) return;
   const elapsedMs = Number(process.hrtime.bigint() - startupAt) / 1_000_000;
@@ -132,6 +132,7 @@ function initializeApplication() {
     .whenReady()
     .then(() => {
       logStartup('Electron app.whenReady resolved.');
+      Menu.setApplicationMenu(null);
       void prewarmCaptureCapabilities(captureEngine, { log: logStartup });
       configureMediaPermission();
       logStartup('Media permission policy registered.');
@@ -325,6 +326,7 @@ function initializeApplication() {
         regionOverlay: screenRegionOverlay,
         nativeImage: require('electron').nativeImage,
         clipboard: require('electron').clipboard,
+        ClipboardItem: require('electron').ClipboardItem,
         getTrayManager: () => trayManager,
       });
       quickSnipController = quickSnipService.controller;
@@ -392,6 +394,7 @@ function initializeApplication() {
         BrowserWindow,
         dialog: require('electron').dialog,
         clipboard: require('electron').clipboard,
+        ClipboardItem: require('electron').ClipboardItem,
         nativeImage: require('electron').nativeImage,
         isTrustedRenderer,
         openEditor: (id, options, sender) => editorWindow.open(id, { ...options, kind: 'screenshot' }, sender),

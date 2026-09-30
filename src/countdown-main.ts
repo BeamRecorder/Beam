@@ -8,6 +8,6 @@ import { useThemeStore } from './stores/theme';
 const app = createApp(CountdownOverlay);
 const pinia = createPinia();
 app.use(pinia);
-app.use(initI18n());
+app.use(await initI18n());
 useThemeStore(pinia);
 app.mount('#app');

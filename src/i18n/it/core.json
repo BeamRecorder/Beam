@@ -651,7 +651,12 @@
     "turnCameraOff": "Spegni fotocamera",
     "turnCameraOn": "Accendi fotocamera",
     "turnSystemAudioOff": "Spegni audio di sistema",
-    "turnSystemAudioOn": "Accendi audio di sistema"
+    "turnSystemAudioOn": "Accendi audio di sistema",
+    "restartRecording": "Riavvia registrazione",
+    "restartConfirmation": "Ricominciare?",
+    "restartDescription": "Questa ripresa verrà eliminata.",
+    "keepRecording": "Annulla",
+    "restart": "Riavvia"
   },
   "ScreenRegionOverlay": {
     "instruction": "Seleziona un'area da registrare",

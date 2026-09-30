@@ -651,7 +651,12 @@
     "turnCameraOff": "Выключить камеру",
     "turnCameraOn": "Включить камеру",
     "turnSystemAudioOff": "Выключить системный звук",
-    "turnSystemAudioOn": "Включить системный звук"
+    "turnSystemAudioOn": "Включить системный звук",
+    "restartRecording": "Начать запись заново",
+    "restartConfirmation": "Начать заново?",
+    "restartDescription": "Эта запись будет удалена.",
+    "keepRecording": "Отмена",
+    "restart": "Начать заново"
   },
   "ScreenRegionOverlay": {
     "instruction": "Выберите область для записи",

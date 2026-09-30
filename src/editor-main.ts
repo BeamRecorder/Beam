@@ -15,7 +15,7 @@ const bootstrap = async () => {
   const pinia = createPinia();
   app.use(pinia);
   app.use(MotionPlugin);
-  app.use(initI18n());
+  app.use(await initI18n());
   capture.reportEditorLoadingStage('loadingAppearance');
   await useThemeStore(pinia).ready;
   // Keep the native window's themed backing visible until all appearance

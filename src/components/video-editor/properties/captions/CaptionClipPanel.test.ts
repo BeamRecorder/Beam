@@ -1,3 +1,4 @@
+import { triggerPointer } from '../../../../../tests/support/pointer';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
@@ -135,7 +136,7 @@ describe('CaptionClipPanel', () => {
         (window as unknown as { queryLocalFonts: ReturnType<typeof vi.fn> }).queryLocalFonts,
       ).toHaveBeenCalledOnce(),
     );
-    await wrapper.get('.font-select').trigger('pointerenter');
+    await triggerPointer(wrapper.get('.font-select'), 'pointerenter');
     await vi.waitFor(() =>
       expect(wrapper.emitted('preview')).toContainEqual([
         expect.objectContaining({

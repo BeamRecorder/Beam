@@ -150,9 +150,9 @@ describe('SidebarPanel', () => {
     expect(wrapper.emitted('select-tab')).toEqual([['canvas'], ['settings']]);
   });
 
-  it('preserves Vietnamese diacritics in every sidebar label', () => {
+  it('preserves Vietnamese diacritics in every sidebar label', async () => {
     const previousLocale = getCurrentLocale();
-    setCurrentLocale('vi');
+    await setCurrentLocale('vi');
     try {
       const wrapper = mount(SidebarPanel, {
         props: { activeTab: 'canvas' },
@@ -169,7 +169,7 @@ describe('SidebarPanel', () => {
         'Cài đặt',
       ]);
     } finally {
-      setCurrentLocale(previousLocale as Parameters<typeof setCurrentLocale>[0]);
+      await setCurrentLocale(previousLocale as Parameters<typeof setCurrentLocale>[0]);
     }
   });
 });

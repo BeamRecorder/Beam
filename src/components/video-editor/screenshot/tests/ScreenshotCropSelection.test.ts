@@ -1,3 +1,4 @@
+import { triggerPointer } from '../../../../../tests/support/pointer';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { propertyInteractionActive, resetPropertyInteractions } from '~/composables/property-interaction';
@@ -129,14 +130,14 @@ describe('screenshot crop controls', () => {
       value: releasePointerCapture,
     });
 
-    await overlay.trigger('pointerdown', {
+    await triggerPointer(overlay, 'pointerdown', {
       button: 0,
       pointerId: 8,
       clientX: 100,
       clientY: 100,
     });
     expect(propertyInteractionActive.value).toBe(true);
-    await overlay.trigger('pointercancel', {
+    await triggerPointer(overlay, 'pointercancel', {
       pointerId: 8,
       clientX: 100,
       clientY: 100,

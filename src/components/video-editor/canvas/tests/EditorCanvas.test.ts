@@ -1,3 +1,4 @@
+import { triggerPointer } from '../../../../../tests/support/pointer';
 import { nextTick } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { MotionPlugin } from '@vueuse/motion';
@@ -673,9 +674,9 @@ describe('EditorCanvas', () => {
     expect(mounted.find('.editor-canvas').classes()).toContain('is-selection-editable');
     expect(mounted.find('.zoom-selection-box').classes()).not.toContain('locked');
 
-    await mounted.find('canvas').trigger('pointerdown');
-    await mounted.find('canvas').trigger('pointermove');
-    await mounted.find('canvas').trigger('pointerup');
+    await triggerPointer(mounted.find('canvas'), 'pointerdown');
+    await triggerPointer(mounted.find('canvas'), 'pointermove');
+    await triggerPointer(mounted.find('canvas'), 'pointerup');
     expect(state.beginSelectionMove).toHaveBeenCalled();
     expect(state.moveSelection).toHaveBeenCalled();
     expect(state.endSelectionMove).toHaveBeenCalled();
@@ -696,9 +697,9 @@ describe('EditorCanvas', () => {
     await flushPromises();
     state.selectVisualAt.mockReturnValue(true);
 
-    await mounted.find('canvas').trigger('pointerdown', { button: 0, clientX: 400, clientY: 225 });
-    await mounted.find('canvas').trigger('pointermove', { clientX: 500, clientY: 280 });
-    await mounted.find('canvas').trigger('pointerup', { clientX: 500, clientY: 280 });
+    await triggerPointer(mounted.find('canvas'), 'pointerdown', { button: 0, clientX: 400, clientY: 225 });
+    await triggerPointer(mounted.find('canvas'), 'pointermove', { clientX: 500, clientY: 280 });
+    await triggerPointer(mounted.find('canvas'), 'pointerup', { clientX: 500, clientY: 280 });
 
     expect(state.selectVisualAt).not.toHaveBeenCalled();
     expect(state.beginSelectionMove).toHaveBeenCalledOnce();
@@ -755,7 +756,7 @@ describe('EditorCanvas', () => {
     });
     await nextTick();
 
-    await canvas.trigger('pointerdown', {
+    await triggerPointer(canvas, 'pointerdown', {
       button: 0,
       clientX: 220,
       clientY: 110,
@@ -764,7 +765,7 @@ describe('EditorCanvas', () => {
     expect(state.selectVisualAt).not.toHaveBeenCalled();
 
     state.selectVisualAt.mockReturnValue(true);
-    await canvas.trigger('pointerdown', {
+    await triggerPointer(canvas, 'pointerdown', {
       button: 0,
       clientX: 600,
       clientY: 400,
@@ -809,25 +810,25 @@ describe('EditorCanvas', () => {
     await nextTick();
 
     const handle = mounted.find('.cursor-canvas-selection .is-top-left');
-    await handle.trigger('pointerdown', {
+    await triggerPointer(handle, 'pointerdown', {
       pointerId: 1,
       clientX: 200,
       clientY: 100,
     });
-    await handle.trigger('pointermove', {
+    await triggerPointer(handle, 'pointermove', {
       pointerId: 1,
       clientX: 800,
       clientY: 450,
     });
     expect(mounted.emitted('update:cursor-size')).toContainEqual([16]);
-    await handle.trigger('pointerup', { pointerId: 1 });
+    await triggerPointer(handle, 'pointerup', { pointerId: 1 });
 
-    await handle.trigger('pointerdown', {
+    await triggerPointer(handle, 'pointerdown', {
       pointerId: 2,
       clientX: 200,
       clientY: 100,
     });
-    await handle.trigger('pointermove', {
+    await triggerPointer(handle, 'pointermove', {
       pointerId: 2,
       clientX: -500,
       clientY: 0,
@@ -835,7 +836,7 @@ describe('EditorCanvas', () => {
     expect(mounted.emitted('update:cursor-size')).toContainEqual([384]);
 
     await mounted.setProps({ isPlaying: true });
-    await handle.trigger('pointermove', {
+    await triggerPointer(handle, 'pointermove', {
       pointerId: 2,
       clientX: 300,
       clientY: 200,
@@ -934,15 +935,15 @@ describe('EditorCanvas', () => {
     expect(state.drawComposition.mock.calls.some((call) => call[1] === bounds)).toBe(true);
     expect(state.updateCursor).toHaveBeenCalled();
     expect(mounted.find('.webcam-selection').exists()).toBe(true);
-    await mounted.find('.webcam-selection').trigger('pointerdown');
-    await mounted.find('.webcam-selection').trigger('pointermove');
-    await mounted.find('.webcam-selection').trigger('pointerup');
+    await triggerPointer(mounted.find('.webcam-selection'), 'pointerdown');
+    await triggerPointer(mounted.find('.webcam-selection'), 'pointermove');
+    await triggerPointer(mounted.find('.webcam-selection'), 'pointerup');
     expect(state.beginTransformDrag).toHaveBeenCalledWith(expect.anything(), 'move');
     expect(state.moveTransformDrag).toHaveBeenCalled();
     expect(state.endTransformDrag).toHaveBeenCalled();
     await mounted.setProps({ transformHandlesMuted: true });
     expect(mounted.find('.webcam-selection').classes()).toContain('is-muted');
-    await mounted.find('.webcam-selection').trigger('pointerdown');
+    await triggerPointer(mounted.find('.webcam-selection'), 'pointerdown');
     expect(state.beginTransformDrag).toHaveBeenCalledTimes(2);
     await mounted.setProps({ transformHandlesMuted: false });
     expect(mounted.find('.webcam-selection').classes()).not.toContain('is-muted');
@@ -969,9 +970,9 @@ describe('EditorCanvas', () => {
     await mounted.setProps({ isCropping: true });
     await nextTick();
     expect(mounted.find('.crop-overlay-box').exists()).toBe(true);
-    await mounted.find('.crop-overlay-box').trigger('pointerdown');
-    await mounted.find('.crop-overlay-box').trigger('pointermove');
-    await mounted.find('.crop-overlay-box').trigger('pointerup');
+    await triggerPointer(mounted.find('.crop-overlay-box'), 'pointerdown');
+    await triggerPointer(mounted.find('.crop-overlay-box'), 'pointermove');
+    await triggerPointer(mounted.find('.crop-overlay-box'), 'pointerup');
     (document.body.querySelector('.crop-ok-button') as HTMLButtonElement).click();
     await nextTick();
     expect(state.beginCropDrag).toHaveBeenCalledWith(expect.anything(), 'move');
@@ -1102,12 +1103,12 @@ describe('EditorCanvas', () => {
     await flushPromises();
     state.clipIdAt.mockReturnValueOnce('blur');
 
-    await mounted.find('.webcam-selection').trigger('pointerdown', { button: 0 });
+    await triggerPointer(mounted.find('.webcam-selection'), 'pointerdown', { button: 0 });
     expect(mounted.emitted('select:clip')).toContainEqual(['blur']);
     expect(state.beginTransformDrag).not.toHaveBeenCalled();
 
     state.clipIdAt.mockReturnValueOnce('screen');
-    await mounted.find('.webcam-selection').trigger('pointerdown', { button: 0 });
+    await triggerPointer(mounted.find('.webcam-selection'), 'pointerdown', { button: 0 });
     expect(state.beginTransformDrag).toHaveBeenCalledWith(expect.anything(), 'move');
   });
 
@@ -1364,7 +1365,7 @@ describe('EditorCanvas', () => {
 
     expect(mounted.find('.recenter-button').exists()).toBe(true);
     const recenterButton = mounted.get('.recenter-button');
-    await recenterButton.trigger('pointerdown', { button: 0, clientX: 400, clientY: 225, pointerId: 1 });
+    await triggerPointer(recenterButton, 'pointerdown', { button: 0, clientX: 400, clientY: 225, pointerId: 1 });
     await recenterButton.trigger('click');
     await nextTick();
 

@@ -24,7 +24,7 @@ const importedFont = {
   url: 'project-media://font/' + 'a'.repeat(64),
 };
 
-const setup = (options: { trusted?: boolean; rendererUrl?: string; clipboardImage?: object } = {}) => {
+const setup = (options: { trusted?: boolean; rendererUrl?: string; clipboardPng?: Uint8Array } = {}) => {
   const handlers = new Map<string, Function>();
   const ipcMain = { handle: (channel: string, handler: Function) => handlers.set(channel, handler) };
   const importFile = vi.fn((source) => ({ source }));
@@ -35,8 +35,11 @@ const setup = (options: { trusted?: boolean; rendererUrl?: string; clipboardImag
   const windows = { getAllWindows: () => [window] };
   const event = { sender: { getURL: vi.fn(() => options.rendererUrl ?? 'file:///editor.html') } };
   const trustedRenderer = vi.fn(() => options.trusted ?? true);
-  const clipboardImage = options.clipboardImage ?? { isEmpty: () => true };
-  const readImage = vi.fn(() => clipboardImage);
+  const read = vi.fn(async () =>
+    options.clipboardPng
+      ? [{ types: ['image/png'], getType: async () => new Blob([Uint8Array.from(options.clipboardPng!)]) }]
+      : [],
+  );
   const projectStore = {
     importDroppedProjectMedia: vi.fn((projectId, input) => ({ projectId, ...input })),
     importClipboardImage: vi.fn((projectId, input) => ({ projectId, kind: 'image', ...input })),
@@ -62,7 +65,7 @@ const setup = (options: { trusted?: boolean; rendererUrl?: string; clipboardImag
     trustedRenderer,
     cursorLibrary,
     undefined,
-    { readImage },
+    { read },
   );
   return {
     handler: handlers.get('background-library:pick-import')!,
@@ -77,7 +80,7 @@ const setup = (options: { trusted?: boolean; rendererUrl?: string; clipboardImag
     fontList,
     cursorLibrary,
     projectStore,
-    clipboard: { readImage },
+    clipboard: { read },
     window,
     event,
     trustedRenderer,
@@ -141,10 +144,10 @@ describe('background import IPC', () => {
   });
 
   it('returns null for an empty clipboard without importing an image', async () => {
-    const { pasteHandler, projectStore, clipboard, event } = setup({ clipboardImage: { isEmpty: () => true } });
+    const { pasteHandler, projectStore, clipboard, event } = setup();
 
-    expect(pasteHandler(event, { projectId: 'project-42' })).toBeNull();
-    expect(clipboard.readImage).toHaveBeenCalledOnce();
+    expect(await pasteHandler(event, { projectId: 'project-42' })).toBeNull();
+    expect(clipboard.read).toHaveBeenCalledOnce();
     expect(projectStore.importClipboardImage).not.toHaveBeenCalled();
   });
 
@@ -156,20 +159,16 @@ describe('background import IPC', () => {
     png.writeUInt32BE(800, 16);
     png.writeUInt32BE(450, 20);
     const { pasteHandler, projectStore, clipboard, event } = setup({
-      clipboardImage: {
-        isEmpty: () => false,
-        getSize: () => ({ width: 800, height: 450 }),
-        toPNG: () => png,
-      },
+      clipboardPng: png,
     });
 
-    expect(pasteHandler(event, { projectId: 'project-42' })).toMatchObject({
+    expect(await pasteHandler(event, { projectId: 'project-42' })).toMatchObject({
       projectId: 'project-42',
       kind: 'image',
       width: 800,
       height: 450,
     });
-    expect(clipboard.readImage).toHaveBeenCalledOnce();
+    expect(clipboard.read).toHaveBeenCalledOnce();
     expect(projectStore.importClipboardImage).toHaveBeenCalledWith(
       'project-42',
       expect.objectContaining({ buffer: png, width: 800, height: 450 }),
@@ -179,9 +178,9 @@ describe('background import IPC', () => {
   it('rejects clipboard image imports from an untrusted renderer', async () => {
     const { pasteHandler, projectStore, clipboard, event, trustedRenderer } = setup({ trusted: false });
 
-    expect(() => pasteHandler(event, { projectId: 'project-42' })).toThrow('Renderer non autorisé');
+    await expect(pasteHandler(event, { projectId: 'project-42' })).rejects.toThrow('Renderer non autorisé');
     expect(trustedRenderer).toHaveBeenCalledWith('file:///editor.html');
-    expect(clipboard.readImage).not.toHaveBeenCalled();
+    expect(clipboard.read).not.toHaveBeenCalled();
     expect(projectStore.importClipboardImage).not.toHaveBeenCalled();
   });
 

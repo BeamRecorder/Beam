@@ -1,3 +1,4 @@
+import { triggerPointer } from '../../../../../tests/support/pointer';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import type { CaptionClip, TextCaptionData } from '~/media/shared/composition-types';
@@ -132,7 +133,7 @@ describe('TimelineTracks text caption layers', () => {
     expect(sidebarRows).toHaveLength(2);
     elementFromPoint.mockReturnValue(sidebarRows[1]!.element);
 
-    await sidebarRows[0]!.get('.track-info').trigger('pointerdown', { clientX: 10, clientY: 10 });
+    await triggerPointer(sidebarRows[0]!.get('.track-info'), 'pointerdown', { clientX: 10, clientY: 10 });
     window.dispatchEvent(pointerEvent('pointermove', 30, 100));
     window.dispatchEvent(pointerEvent('pointerup', 30, 100));
     await flushPromises();
@@ -146,7 +147,7 @@ describe('TimelineTracks text caption layers', () => {
     const sidebarRows = mounted!.findAll('.sidebar-tracks-stack .text-caption-layer');
     elementFromPoint.mockReturnValue(sidebarRows[1]!.element);
 
-    await sidebarRows[0]!.get('.track-info').trigger('pointerdown', { clientX: 10, clientY: 10 });
+    await triggerPointer(sidebarRows[0]!.get('.track-info'), 'pointerdown', { clientX: 10, clientY: 10 });
     window.dispatchEvent(pointerEvent('pointermove', 30, 100));
     window.dispatchEvent(pointerEvent('pointerup', 30, 100));
     await flushPromises();
@@ -172,7 +173,7 @@ describe('TimelineTracks text caption layers', () => {
 
     for (const target of targets) {
       elementFromPoint.mockReturnValue(target.element);
-      await textRow.get('.track-info').trigger('pointerdown', { clientX: 10, clientY: 10 });
+      await triggerPointer(textRow.get('.track-info'), 'pointerdown', { clientX: 10, clientY: 10 });
       window.dispatchEvent(pointerEvent('pointermove', 30, 100));
       window.dispatchEvent(pointerEvent('pointerup', 30, 100));
       await flushPromises();

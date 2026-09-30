@@ -4,7 +4,7 @@ This guide covers the basic local development and verification workflow for Beam
 
 ## Prerequisites
 
-- Node.js 22 or newer and Bun 1.4.0
+- Node.js 22 or newer and Bun 1.4.2
 - [Rust stable with the MSVC toolchain](./INSTALL_RUST.md) for native rebuilds
 - Git
 

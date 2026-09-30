@@ -13,6 +13,7 @@ function registerScreenshotIpc({
   BrowserWindow,
   dialog,
   clipboard,
+  ClipboardItem,
   nativeImage,
   openEditor,
   isTrustedRenderer,
@@ -107,8 +108,8 @@ function registerScreenshotIpc({
     if (selected.canceled || !selected.filePaths[0]) return null;
     return store.importImage(id, selected.filePaths[0]);
   });
-  handle('screenshot:paste-clipboard-image', (_event, id) => {
-    const image = readClipboardPng(clipboard);
+  handle('screenshot:paste-clipboard-image', async (_event, id) => {
+    const image = await readClipboardPng(clipboard);
     return image ? store.importClipboardImage(id, image) : null;
   });
   handle('screenshot:list', () => store.list());
@@ -135,7 +136,7 @@ function registerScreenshotIpc({
     if (image?.isEmpty()) throw new Error('Screenshot image is invalid.');
     if (copy === true) {
       if (!image) throw new Error('Clipboard images must be encoded as PNG.');
-      clipboard.writeImage(image);
+      await clipboard.write([new ClipboardItem({ 'image/png': new Blob([buffer], { type: 'image/png' }) })]);
       return null;
     }
     const result = await dialog.showSaveDialog(BrowserWindow.fromWebContents(event.sender), {

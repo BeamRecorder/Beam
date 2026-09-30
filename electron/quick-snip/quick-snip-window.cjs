@@ -1,6 +1,7 @@
 const path = require('path');
 const { placeCropBar, restoreWindowPosition, saveWindowPosition } = require('./quick-snip-position.cjs');
 const { createCommittedWindowPosition } = require('../window/committed-window-position.cjs');
+const { RECORDER_SIZE, bottomCenterRecorder } = require('../window/recorder-layout.cjs');
 
 const BAR_SIZE = { width: 480, height: 132 };
 
@@ -27,6 +28,8 @@ function createQuickSnipWindow({
   let userPositioned = false;
   let positionTracker = null;
   let activeDisplay = null;
+  let recordingLayout = false;
+  let selectionBounds = null;
   const send = (channel, payload) => {
     if (window && !window.isDestroyed() && ready && rendererReady) window.webContents.send(channel, payload);
   };
@@ -74,6 +77,15 @@ function createQuickSnipWindow({
     }
     return placement;
   };
+  const useRecorderLayout = () => {
+    if (recordingLayout || !activeDisplay) return;
+    positionTracker?.flush();
+    recordingLayout = true;
+    baseBounds =
+      restoreWindowPosition(preferencesStore, 'recorderPositions', activeDisplay, RECORDER_SIZE) ??
+      bottomCenterRecorder(activeDisplay.workArea);
+    setNativeBounds(baseBounds);
+  };
   const ensure = (parent) => {
     if (window && !window.isDestroyed()) return window;
     ready = false;
@@ -114,10 +126,16 @@ function createQuickSnipWindow({
       onMove: (bounds) => {
         userPositioned = true;
         baseBounds = bounds;
+        if (!recordingLayout) selectionBounds = bounds;
       },
       onCommit: (bounds) => {
         const display = screen?.getDisplayMatching(bounds) ?? activeDisplay;
-        saveWindowPosition(preferencesStore, 'quickSnipBarPositions', display, bounds);
+        saveWindowPosition(
+          preferencesStore,
+          recordingLayout ? 'recorderPositions' : 'quickSnipBarPositions',
+          display,
+          bounds,
+        );
       },
     });
     window.once('ready-to-show', () => {
@@ -148,6 +166,7 @@ function createQuickSnipWindow({
     show(configuration, display, parent = null) {
       const target = ensure(parent);
       positionTracker.flush();
+      recordingLayout = false;
       activeDisplay = display;
       setParentWindow(parent);
       const nativeIdentity =
@@ -173,6 +192,7 @@ function createQuickSnipWindow({
       } else {
         placeForRegion(configuration.region, display);
       }
+      selectionBounds = baseBounds;
       flushReady();
     },
     rendererReady(sender) {
@@ -183,17 +203,27 @@ function createQuickSnipWindow({
     },
     command(command) {
       if (!window || window.isDestroyed()) return;
-      if (command === 'start') setParentWindow(null);
+      if (command === 'start') {
+        setParentWindow(null);
+        if (pendingConfiguration?.mode !== 'screenshot') useRecorderLayout();
+      }
       if (ready && rendererReady) send('quick-snip:command', command);
       else pendingCommand = command;
     },
     setRecording() {
       if (!window || window.isDestroyed()) return;
+      useRecorderLayout();
       visibleRequested = true;
       present();
     },
     showExisting() {
       if (!window || window.isDestroyed()) return false;
+      positionTracker?.flush();
+      recordingLayout = false;
+      if (selectionBounds) {
+        baseBounds = selectionBounds;
+        setNativeBounds(baseBounds);
+      }
       visibleRequested = true;
       present();
       return true;
@@ -209,7 +239,7 @@ function createQuickSnipWindow({
     },
     setParentWindow,
     updateRegion(region, display) {
-      if (!window || window.isDestroyed() || !baseBounds) return false;
+      if (!window || window.isDestroyed() || !baseBounds || recordingLayout) return false;
       placeForRegion(region, display);
       return true;
     },

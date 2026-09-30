@@ -5,7 +5,7 @@ This guide covers the basic local development and verification workflow for Beam
 ## Prerequisites
 
 - macOS 13 or newer
-- Node.js 22 or newer and Bun 1.4.0
+- Node.js 22 or newer and Bun 1.4.2
 - [Rust stable](./INSTALL_RUST.md) for native rebuilds
 - Xcode Command Line Tools
 - Git

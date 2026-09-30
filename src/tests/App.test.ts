@@ -63,6 +63,7 @@ vi.mock('../components/hud/recorder/useRecordingController', async () => {
         start: vi.fn(async () => undefined),
         stop: vi.fn(async () => undefined),
         cancel: vi.fn(async () => undefined),
+        restart: vi.fn(async () => undefined),
         togglePause: vi.fn(),
         toggleCamera: vi.fn(),
         toggleMicrophone: vi.fn(),
@@ -135,17 +136,15 @@ vi.mock('../components/hud/recorder/RecorderBar.vue', async () => {
   return {
     default: defineComponent({
       name: 'MockRecorderBar',
-      props: { visibility: { type: String, default: '' } },
-      emits: ['stop', 'cancel', 'pause', 'camera', 'microphone', 'system-audio'],
-      setup(_, { emit }) {
+      props: { visibility: { type: String, default: '' }, busy: Boolean },
+      emits: ['stop', 'cancel', 'pause', 'restart'],
+      setup(props, { emit }) {
         return () =>
-          h('div', { class: 'mock-recorder' }, [
+          h('div', { class: 'mock-recorder', 'data-busy': String(props.busy) }, [
             h('button', { class: 'stop', onClick: () => emit('stop') }),
             h('button', { class: 'cancel', onClick: () => emit('cancel') }),
             h('button', { class: 'pause', onClick: () => emit('pause') }),
-            h('button', { class: 'camera', onClick: () => emit('camera') }),
-            h('button', { class: 'microphone', onClick: () => emit('microphone') }),
-            h('button', { class: 'system-audio', onClick: () => emit('system-audio') }),
+            h('button', { class: 'restart', onClick: () => emit('restart') }),
           ]);
       },
     }),
@@ -165,9 +164,9 @@ const project = { id: 'project-1', name: 'Project', previewSrc: 'project.mp4', m
 
 let wrapper!: VueWrapper;
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.clearAllMocks();
-  setCurrentLocale('en');
+  await setCurrentLocale('en');
   Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: vi.fn(() => document.body) });
   mocks.capture.getPreferences.mockResolvedValue({ recordingBar: { visibility: 'auto-fade' } });
   mocks.capture.getUpdateState.mockResolvedValue({
@@ -290,21 +289,75 @@ describe('App', () => {
     expect(mocks.capture.setWindowMode).toHaveBeenCalledWith('recorder');
     expect(mocks.capture.setCameraOverlayActive).toHaveBeenCalledWith(true);
     expect(mocks.controller.recording.start).toHaveBeenCalledOnce();
+    mocks.controller.recording.phase.value = 'recording';
+    await settle();
 
     await wrapper.get('.pause').trigger('click');
-    await wrapper.get('.camera').trigger('click');
-    await wrapper.get('.microphone').trigger('click');
-    await wrapper.get('.system-audio').trigger('click');
+    await wrapper.get('.restart').trigger('click');
     expect(mocks.controller.recording.togglePause).toHaveBeenCalled();
-    expect(mocks.controller.recording.toggleCamera).toHaveBeenCalled();
-    expect(mocks.controller.recording.toggleMicrophone).toHaveBeenCalled();
-    expect(mocks.controller.recording.toggleSystemAudio).toHaveBeenCalled();
+    expect(mocks.controller.recording.restart).toHaveBeenCalledOnce();
 
     await wrapper.get('.cancel').trigger('click');
     await settle();
     expect(mocks.controller.recording.cancel).toHaveBeenCalled();
     expect(mocks.capture.showHud).toHaveBeenCalled();
     expect(wrapper.find('.mock-hud').exists()).toBe(true);
+  });
+
+  it('keeps the compact recorder visible through restart cleanup and ignores another restart', async () => {
+    await wrapper.get('.start').trigger('click');
+    await settle();
+    mocks.controller.recording.phase.value = 'recording';
+    await settle();
+    mocks.capture.showHud.mockClear();
+    mocks.capture.setNormalRecordingActive.mockClear();
+    let resume!: () => void;
+    mocks.controller.recording.restart.mockImplementationOnce(async () => {
+      mocks.controller.recording.phase.value = 'idle';
+      await new Promise<void>((resolve) => {
+        resume = resolve;
+      });
+      mocks.controller.recording.phase.value = 'starting';
+    });
+
+    await wrapper.get('.restart').trigger('click');
+    await settle();
+    expect(wrapper.get('.mock-recorder').attributes('data-busy')).toBe('true');
+    expect(mocks.capture.showHud).not.toHaveBeenCalled();
+    expect(mocks.capture.setNormalRecordingActive).not.toHaveBeenCalledWith(false);
+    await wrapper.get('.restart').trigger('click');
+    expect(mocks.controller.recording.restart).toHaveBeenCalledOnce();
+    resume();
+    await settle();
+    expect(wrapper.get('.mock-recorder').attributes('data-busy')).toBe('false');
+    expect(mocks.capture.showHud).not.toHaveBeenCalled();
+  });
+
+  it('returns to HUD with an error when restart fails after discarding the old take', async () => {
+    await wrapper.get('.start').trigger('click');
+    await settle();
+    mocks.controller.recording.restart.mockImplementationOnce(async () => {
+      mocks.controller.recording.phase.value = 'idle';
+      throw new Error('Restart failed');
+    });
+    await wrapper.get('.restart').trigger('click');
+    await settle();
+    expect(mocks.capture.showHud).toHaveBeenCalled();
+    expect(mocks.capture.setNormalRecordingActive).toHaveBeenLastCalledWith(false);
+    expect(wrapper.find('.mock-hud').exists()).toBe(true);
+    expect(wrapper.getComponent({ name: 'MockHud' }).attributes('external-error')).toBe('Restart failed');
+  });
+
+  it('keeps the active take visible when restart cleanup does not reach idle', async () => {
+    await wrapper.get('.start').trigger('click');
+    await settle();
+    mocks.controller.recording.phase.value = 'recording';
+    await settle();
+    mocks.capture.showHud.mockClear();
+    await wrapper.get('.restart').trigger('click');
+    await settle();
+    expect(wrapper.get('.mock-recorder').attributes('data-busy')).toBe('false');
+    expect(mocks.capture.showHud).not.toHaveBeenCalled();
   });
 
   it('keeps the camera overlay active until recording stop succeeds', async () => {
@@ -447,7 +500,7 @@ describe('App', () => {
   });
 
   it('shows a translated editor-open failure and copies its complete diagnostics', async () => {
-    setCurrentLocale('fr');
+    await setCurrentLocale('fr');
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const clipboardWriteText = vi.fn().mockResolvedValue(undefined);
     const originalClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
@@ -531,7 +584,7 @@ describe('App', () => {
   });
 
   it('shows a localized unresponsive reason while retaining the saved-recording reassurance', async () => {
-    setCurrentLocale('fr');
+    await setCurrentLocale('fr');
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     let rejectOpening!: (error: Error) => void;
     mocks.capture.openEditor.mockReturnValueOnce(

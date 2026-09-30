@@ -43,7 +43,7 @@ describe('HudIssue', () => {
     await wrapper.get('.hud-issue-action').trigger('click');
 
     expect(wrapper.emitted('action')).toEqual([['issue-warning']]);
-    expect(wrapper.find('.copy-button-idle').exists()).toBe(false);
+    expect(wrapper.find('.copy-button-idle').exists()).toBe(true);
   });
 
   it('renders copy actions as an icon-only CopyButton', () => {

@@ -1,3 +1,4 @@
+import { triggerPointer } from '../../../../../tests/support/pointer';
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { computed, nextTick, reactive, type Ref } from 'vue';
@@ -292,8 +293,8 @@ describe('TimelineClip', () => {
     expect(wrapper.findAll('.thumbnail-frame')[1]?.attributes('style')).toContain('width: 50%');
 
     await wrapper.get('.timeline-clip').trigger('click');
-    await wrapper.get('.timeline-clip').trigger('pointerdown');
-    await wrapper.get('.trim-handle.end').trigger('pointerdown');
+    await triggerPointer(wrapper.get('.timeline-clip'), 'pointerdown');
+    await triggerPointer(wrapper.get('.trim-handle.end'), 'pointerdown');
     expect(wrapper.emitted('select')).toHaveLength(1);
     expect(wrapper.emitted('move')).toHaveLength(1);
     expect(wrapper.emitted('trim')?.[0]?.[0]).toEqual(expect.objectContaining({ edge: 'end' }));
@@ -677,12 +678,12 @@ describe('TimelineClip', () => {
       value: 80,
     });
 
-    await wrapper.get('.timeline-clip').trigger('pointerenter');
+    await triggerPointer(wrapper.get('.timeline-clip'), 'pointerenter');
     vi.advanceTimersByTime(300);
     expect(window.requestAnimationFrame).toHaveBeenCalled();
     expect(label.style.transform).toContain('translateX');
 
-    await wrapper.get('.timeline-clip').trigger('pointerleave');
+    await triggerPointer(wrapper.get('.timeline-clip'), 'pointerleave');
     expect(label.style.transform).toBe('');
     wrapper.unmount();
     expect(window.cancelAnimationFrame).toHaveBeenCalled();

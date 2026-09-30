@@ -1,3 +1,4 @@
+import { triggerPointer } from '../../../../../tests/support/pointer';
 import { defineComponent, nextTick, reactive } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -276,7 +277,7 @@ describe('ScreenshotCanvas', () => {
       height: 100,
       toJSON: () => ({}),
     } as DOMRect);
-    await canvas.trigger('pointerdown', {
+    await triggerPointer(canvas, 'pointerdown', {
       button: 0,
       clientX: 60,
       clientY: 70,
@@ -322,7 +323,7 @@ describe('ScreenshotCanvas', () => {
     await flushPromises();
     setCanvasBounds(wrapper);
 
-    await wrapper.get('canvas').trigger('pointerdown', {
+    await triggerPointer(wrapper.get('canvas'), 'pointerdown', {
       button: 0,
       clientX: 45,
       clientY: 45,
@@ -339,7 +340,7 @@ describe('ScreenshotCanvas', () => {
     await flushPromises();
     setCanvasBounds(wrapper);
 
-    await wrapper.get('canvas').trigger('pointerdown', {
+    await triggerPointer(wrapper.get('canvas'), 'pointerdown', {
       button,
       clientX: 45,
       clientY: 45,
@@ -356,7 +357,7 @@ describe('ScreenshotCanvas', () => {
     await flushPromises();
     setCanvasBounds(wrapper);
 
-    await wrapper.get('canvas').trigger('pointerdown', {
+    await triggerPointer(wrapper.get('canvas'), 'pointerdown', {
       button: 0,
       clientX: 45,
       clientY: 45,
@@ -528,7 +529,7 @@ describe('ScreenshotCanvas', () => {
       height: 100,
       toJSON: () => ({}),
     } as DOMRect);
-    await canvas.trigger('pointerdown', {
+    await triggerPointer(canvas, 'pointerdown', {
       button: 0,
       clientX: (bounds.x + bounds.width / 2) * 100,
       clientY: (bounds.y + bounds.height / 2) * 100,
@@ -628,7 +629,7 @@ describe('ScreenshotCanvas', () => {
 
     selection.vm.$emit('resize-move', { ...pointerDown, clientX: 60 });
     expect(propertyInteractionActive.value).toBe(true);
-    await selection.get('[data-testid="layer-selection"]').trigger('pointercancel', { pointerId: 12 });
+    await triggerPointer(selection.get('[data-testid="layer-selection"]'), 'pointercancel', { pointerId: 12 });
     expect(propertyInteractionActive.value).toBe(false);
 
     selection.vm.$emit('resize-start', 'bottom-right', pointerDown);

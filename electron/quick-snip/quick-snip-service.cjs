@@ -17,6 +17,7 @@ function createQuickSnipService(options) {
     screen,
     nativeImage,
     clipboard,
+    ClipboardItem,
     platform = process.platform,
   } = options;
   let normalRecordingActive = false;
@@ -24,7 +25,7 @@ function createQuickSnipService(options) {
   const cropWindow = createQuickSnipWindow(options);
   const statusWindow = createQuickSnipStatusWindow(options);
   const renderer = createQuickSnipRenderer({ applicationIpc, statusWindow });
-  const fileClipboard = createFileClipboard({ platform, clipboard });
+  const fileClipboard = createFileClipboard({ platform, clipboard, ClipboardItem });
   const requireOutputFile = (file) => {
     const target = fs.realpathSync(path.resolve(String(file || '')));
     const roots = [userPaths.instantProjects].map((root) => path.resolve(root));
@@ -94,7 +95,9 @@ function createQuickSnipService(options) {
   );
   applicationIpc.handle('quick-snip:report', (event, report) => {
     if (
-      ['capture-cancelled', 'screenshot-captured', 'screenshot-rendered', 'screenshot'].includes(report?.type) &&
+      ['restarting', 'capture-cancelled', 'screenshot-captured', 'screenshot-rendered', 'screenshot'].includes(
+        report?.type,
+      ) &&
       !cropWindow.owns(event.sender)
     )
       throw new Error('Quick Snip capture cancellation sender is not authorized.');

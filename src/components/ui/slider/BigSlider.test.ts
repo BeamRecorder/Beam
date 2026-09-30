@@ -1,3 +1,4 @@
+import { triggerPointer } from '../../../../tests/support/pointer';
 import { nextTick } from 'vue';
 import { mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -29,7 +30,7 @@ describe('BigSlider', () => {
     expect(wrapper.get('.big-slider-value').text()).toBe('50%');
     await wrapper.get('.big-slider-input').setValue('80');
     expect(wrapper.emitted('update:modelValue')).toContainEqual([80]);
-    await wrapper.get('.big-slider-input').trigger('pointerdown');
+    await triggerPointer(wrapper.get('.big-slider-input'), 'pointerdown');
     await wrapper.get('.big-slider-input').trigger('change');
     expect(wrapper.emitted('interaction-start')).toHaveLength(1);
     expect(wrapper.emitted('interaction-end')).toHaveLength(1);
@@ -67,7 +68,7 @@ describe('BigSlider', () => {
     expect(wrapper.emitted('update:modelValue')).toContainEqual([100]);
     expect(wrapper.find('.slider-reset-btn').exists()).toBe(true);
     const reset = wrapper.get('.slider-reset-btn');
-    await reset.trigger('pointerdown');
+    await triggerPointer(reset, 'pointerdown');
     await reset.trigger('mousedown');
     await reset.trigger('click');
     expect(wrapper.emitted('update:modelValue')).toContainEqual([25]);
@@ -82,7 +83,7 @@ describe('BigSlider', () => {
     });
 
     const value = wrapper.get('.big-slider-value');
-    await value.trigger('pointerdown');
+    await triggerPointer(value, 'pointerdown');
     await value.trigger('mousedown');
     await value.trigger('click');
     await nextTick();
@@ -102,7 +103,7 @@ describe('BigSlider', () => {
     await wrapper.get('.slider-inline-input').setValue('invalid');
     await wrapper.get('.slider-inline-input').trigger('blur');
     expect(wrapper.emitted('update:modelValue')).toContainEqual([12]);
-    await wrapper.get('.big-slider-input').trigger('pointerdown');
+    await triggerPointer(wrapper.get('.big-slider-input'), 'pointerdown');
     wrapper.unmount();
     expect(wrapper.emitted('interaction-end')).toHaveLength(1);
   });
@@ -120,7 +121,7 @@ describe('BigSlider', () => {
     });
     const input = wrapper.get('.big-slider-input');
 
-    await input.trigger('pointerdown');
+    await triggerPointer(input, 'pointerdown');
     (input.element as HTMLInputElement).value = '90';
     await input.trigger('input');
     (input.element as HTMLInputElement).value = '180';
@@ -211,7 +212,7 @@ describe('BigSlider', () => {
     });
     const input = wrapper.get('.big-slider-input');
 
-    await input.trigger('pointerdown');
+    await triggerPointer(input, 'pointerdown');
     (input.element as HTMLInputElement).value = '35';
     await input.trigger('input');
     expect(frameCallbacks).toHaveLength(1);
@@ -245,10 +246,10 @@ describe('BigSlider', () => {
     });
     const input = wrapper.get('.big-slider-input');
 
-    await input.trigger('pointerdown');
+    await triggerPointer(input, 'pointerdown');
     (input.element as HTMLInputElement).value = '42';
     await input.trigger('input');
-    await input.trigger('pointercancel');
+    await triggerPointer(input, 'pointercancel');
 
     expect(frameCallbacks).toHaveLength(1);
     expect(cancelFrame).toHaveBeenCalledWith(1);
@@ -257,7 +258,7 @@ describe('BigSlider', () => {
     expect(wrapper.emitted('update:modelValue')).toEqual([[42]]);
     expect(wrapper.emitted('interaction-end')).toEqual([[]]);
 
-    await input.trigger('pointercancel');
+    await triggerPointer(input, 'pointercancel');
     expect(wrapper.emitted('interaction-cancel')).toHaveLength(1);
   });
 });

@@ -4,8 +4,6 @@ import HUD from './components/hud/HUD.vue';
 import { useHudInteractivity } from './components/hud/useHudInteractivity';
 import ToastProvider from './components/ui/toast/ToastProvider.vue';
 import EditorOpenError from './components/hud/EditorOpenError.vue';
-import RecorderBar from './components/hud/recorder/RecorderBar.vue';
-import ScreenRegionOverlayApp from './components/hud/region/ScreenRegionOverlayApp.vue';
 import { useRecordingController } from './components/hud/recorder/useRecordingController';
 import type {
   RecordingBarVisibility,
@@ -20,6 +18,13 @@ import { useLocaleStore } from './stores/locale';
 import { useTranslate } from './i18n/useTranslate';
 import type { CaptureProject, RecorderLauncherContext } from './api/types/capture-api';
 import type { EditorLoadingProgress } from './api/types/editor-window';
+
+const RecorderBar = defineAsyncComponent(() =>
+  import('./components/hud/recorder/RecorderBar.vue').then((module) => module.default),
+);
+const ScreenRegionOverlayApp = defineAsyncComponent(() =>
+  import('./components/hud/region/ScreenRegionOverlayApp.vue').then((module) => module.default),
+);
 
 let removeRecorderLauncherListener: (() => void) | null = null;
 let removeEditorLoadingListener: (() => void) | null = null;
@@ -96,6 +101,7 @@ const recorderLauncherContext = ref<RecorderLauncherContext | null>(null);
 
 const recordingBarVisibility = ref<RecordingBarVisibility>('always');
 const recordingStartupError = ref('');
+const isRestartingRecording = ref(false);
 const recording = useRecordingController(
   (session) => {
     void handleStopRecording(session);
@@ -122,18 +128,32 @@ const handleRecordingStartupFailure = (failure: RecordingStartFailure) => {
 };
 
 watch(
-  recording.phase,
-  (phase) => {
+  [recording.phase, isRestartingRecording],
+  ([phase, restarting]) => {
     syncTrayMenu();
     if (!isCameraOverlay && !isScreenRegionOverlay && !isTeleprompter && !isQuickSnipCrop) {
-      capture.setNormalRecordingActive(['countdown', 'starting', 'recording', 'paused', 'finalizing'].includes(phase));
+      capture.setNormalRecordingActive(
+        restarting || ['countdown', 'starting', 'recording', 'paused', 'finalizing'].includes(phase),
+      );
     }
-    // Guarantee the recorder view never coexists with the idle phase, even if
-    // the failure callback above is bypassed or throws.
-    if (phase === 'idle') returnToHud();
+    // A restart briefly becomes idle while discarding the old take. Keep the
+    // compact window in place until the replacement starts or fails.
+    if (phase === 'idle' && !restarting) returnToHud();
   },
   { immediate: true },
 );
+
+const restartRecording = async () => {
+  if (isRestartingRecording.value) return;
+  isRestartingRecording.value = true;
+  try {
+    await recording.restart();
+  } catch (reason) {
+    recordingStartupError.value = reason instanceof Error ? reason.message : String(reason);
+  } finally {
+    isRestartingRecording.value = false;
+  }
+};
 
 watch(currentView, (view) => {
   if (view !== 'hud') return;
@@ -380,20 +400,14 @@ const dismissRecorderLauncher = async () => {
       <RecorderBar
         v-if="currentView === 'recorder'"
         :phase="recording.phase.value"
-        :seconds-remaining="recording.secondsRemaining.value"
         :recording-time="recording.recordingTime.value"
-        :camera-enabled="recording.cameraEnabled.value"
-        :microphone-enabled="recording.microphoneEnabled.value"
-        :system-audio-enabled="recording.systemAudioEnabled.value"
-        :system-audio-level="recording.systemAudioLevel.value"
         :visibility="recordingBarVisibility"
         :hover-only-active="recording.recorderHoverOnlyActive.value"
+        :busy="isRestartingRecording"
         @stop="cancelOrStopRecording"
         @cancel="cancelRecording"
         @pause="recording.togglePause"
-        @camera="recording.toggleCamera"
-        @microphone="recording.toggleMicrophone"
-        @system-audio="recording.toggleSystemAudio"
+        @restart="restartRecording"
       />
     </Transition>
     <EditorOpenError

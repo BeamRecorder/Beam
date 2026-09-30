@@ -112,14 +112,23 @@ function makeFixture(options = {}) {
       return dialogResult;
     },
   };
-  const clipboardImage = options.clipboardImage ?? { isEmpty: () => true };
   const clipboard = {
-    readImage: () => {
+    read: async () => {
       calls.clipboardReads += 1;
-      return clipboardImage;
+      return options.clipboardPng
+        ? [{ types: ['image/png'], getType: async () => new Blob([options.clipboardPng]) }]
+        : [];
     },
-    writeImage: (image) => calls.clipboardWrites.push(image),
+    write: async (items) => {
+      if (options.onClipboardWrite) await options.onClipboardWrite(items);
+      calls.clipboardWrites.push(items);
+    },
   };
+  class ClipboardItem {
+    constructor(data) {
+      this.data = data;
+    }
+  }
   const nativeImage = {
     createFromBuffer: (buffer) => {
       calls.imageBuffers.push(Buffer.from(buffer));
@@ -144,6 +153,7 @@ function makeFixture(options = {}) {
     BrowserWindow,
     dialog,
     clipboard,
+    ClipboardItem,
     nativeImage,
     openEditor,
     isTrustedRenderer: (url) => url === 'beam://app/index.html',
@@ -490,6 +500,9 @@ test('validates PNG and WebP encodings for clipboard publication and file saving
     );
     assert.deepEqual(fixture.calls.imageBuffers[0], pngBytes);
     assert.equal(fixture.calls.clipboardWrites.length, 1);
+    const payload = fixture.calls.clipboardWrites[0][0].data['image/png'];
+    assert.equal(payload.type, 'image/png');
+    assert.deepEqual(Buffer.from(await payload.arrayBuffer()), pngBytes);
 
     await assert.rejects(
       fixture.invoke('screenshot:export', { id: screenshot.id, bytes: webp, format: 'webp', copy: true }),
@@ -552,8 +565,66 @@ test('validates PNG and WebP encodings for clipboard publication and file saving
   }
 });
 
+test('does not resolve image copy before the asynchronous clipboard write completes', async () => {
+  let release;
+  const fixture = makeFixture({
+    onClipboardWrite: () =>
+      new Promise((resolve) => {
+        release = resolve;
+      }),
+  });
+  try {
+    const screenshot = addScreenshot(fixture.store);
+    let completed = false;
+    const pending = fixture
+      .invoke('screenshot:export', {
+        id: screenshot.id,
+        bytes: asArrayBuffer(pngBytes),
+        format: 'png',
+        copy: true,
+      })
+      .then((result) => {
+        completed = true;
+        return result;
+      });
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(completed, false);
+    assert.equal(fixture.calls.clipboardWrites.length, 0);
+    release();
+    assert.equal(await pending, null);
+    assert.equal(fixture.calls.clipboardWrites.length, 1);
+  } finally {
+    release?.();
+    fixture.cleanup();
+  }
+});
+
+test('reports a rejected native clipboard write to the screenshot caller', async () => {
+  const fixture = makeFixture({
+    onClipboardWrite: async () => {
+      throw new Error('Clipboard write rejected');
+    },
+  });
+  try {
+    const screenshot = addScreenshot(fixture.store);
+    await assert.rejects(
+      fixture.invoke('screenshot:export', {
+        id: screenshot.id,
+        bytes: asArrayBuffer(pngBytes),
+        format: 'png',
+        copy: true,
+      }),
+      /Clipboard write rejected/,
+    );
+    assert.equal(fixture.calls.clipboardWrites.length, 0);
+    assert.equal(fixture.calls.dialogs.length, 0);
+  } finally {
+    fixture.cleanup();
+  }
+});
+
 test('returns no screenshot asset when the native clipboard is empty', async () => {
-  const fixture = makeFixture({ clipboardImage: { isEmpty: () => true } });
+  const fixture = makeFixture();
   try {
     const screenshot = addScreenshot(fixture.store);
 
@@ -573,11 +644,7 @@ test('imports a valid native clipboard image into the screenshot project', async
   clipboardPng.writeUInt32BE(640, 16);
   clipboardPng.writeUInt32BE(360, 20);
   const fixture = makeFixture({
-    clipboardImage: {
-      isEmpty: () => false,
-      getSize: () => ({ width: 640, height: 360 }),
-      toPNG: () => clipboardPng,
-    },
+    clipboardPng,
   });
   try {
     const screenshot = addScreenshot(fixture.store);

@@ -1,215 +1,108 @@
-import { createPinia, setActivePinia } from 'pinia';
-import { mount } from '@vue/test-utils';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
-const { capture } = vi.hoisted(() => ({
-  capture: {
-    getPreferences: vi.fn(),
-    onPreferencesChanged: vi.fn(),
-  },
-}));
-
-vi.mock('../../../api/capture', () => ({ capture }));
-
+import { triggerPointer } from '../../../../tests/support/pointer';
+import { flushPromises, mount } from '@vue/test-utils';
+import { afterEach, describe, expect, it } from 'vitest';
 import RecorderBar from './RecorderBar.vue';
 
-const settings = {
-  schemaVersion: 3,
-  theme: 'dark' as const,
-  recordingBar: { visibility: 'always' as const },
-  recordingInteractions: { enabled: false, noticeDismissed: false },
-  alwaysOnTop: true,
-  devices: {},
-  shortcuts: { 'hud.playPause': { keys: 'Ctrl+P', scope: 'global' as const, category: 'recording' } },
-  backgroundPresets: { colors: [], gradients: [] },
-  extras: {},
+const props = { phase: 'recording' as const, recordingTime: '00:12.3', visibility: 'always' as const };
+const wrappers: ReturnType<typeof mount>[] = [];
+const setup = (overrides: Partial<InstanceType<typeof RecorderBar>['$props']> = {}) => {
+  const wrapper = mount(RecorderBar, { props: { ...props, ...overrides }, attachTo: document.body });
+  wrappers.push(wrapper);
+  return wrapper;
 };
+afterEach(() => wrappers.splice(0).forEach((wrapper) => wrapper.unmount()));
+const restartButton = (wrapper: ReturnType<typeof mount>) => wrapper.get('button[aria-label="Restart recording"]');
 
-const props = {
-  phase: 'recording' as const,
-  secondsRemaining: 0,
-  recordingTime: '00:12.3',
-  cameraEnabled: true,
-  microphoneEnabled: true,
-  systemAudioEnabled: true,
-  systemAudioLevel: 0,
-  visibility: 'always' as const,
-};
-
-const originalMediaDevices = navigator.mediaDevices;
-const getDisplayMedia = vi.fn();
-const emptyDisplayStream = () => ({
-  getAudioTracks: () => [],
-  getVideoTracks: () => [],
-  getTracks: () => [],
-});
-
-beforeEach(() => {
-  setActivePinia(createPinia());
-  vi.clearAllMocks();
-  getDisplayMedia.mockReset();
-  getDisplayMedia.mockResolvedValue(emptyDisplayStream());
-  Object.defineProperty(navigator, 'mediaDevices', {
-    configurable: true,
-    value: { getDisplayMedia },
-  });
-  capture.getPreferences.mockResolvedValue(settings);
-  capture.onPreferencesChanged.mockReturnValue(vi.fn());
-  Object.defineProperty(window, 'capture', { configurable: true, value: capture });
-});
-
-afterEach(() => {
-  Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: originalMediaDevices });
-});
-
-describe('RecorderBar', () => {
-  it('renders recording controls, uses preferences, and emits every action', async () => {
-    const wrapper = mount(RecorderBar, { props });
+describe('compact RecorderBar', () => {
+  it('renders Delete, Restart, Pause and Stop in order and emits the capture actions', async () => {
+    const wrapper = setup();
+    const buttons = wrapper.findAll('button');
+    expect(buttons.map((button) => button.attributes('aria-label'))).toEqual([
+      'Cancel and delete recording',
+      'Restart recording',
+      'Pause recording',
+      'Stop recording',
+    ]);
     expect(wrapper.get('.recording-time').text()).toBe('00:12.3');
-    expect(wrapper.findAll('.control')).toHaveLength(6);
-    expect(wrapper.get('.recorder-bar').attributes('aria-label')).toBeTruthy();
-    wrapper.findAll('button').forEach((button) => {
-      expect(button.attributes('aria-label')).toBeTruthy();
-      expect(button.attributes('title')).toBeTruthy();
-    });
-
-    const controls = wrapper.findAll('.control');
-    for (const control of controls) {
-      await control.trigger('pointerdown', { button: 0 });
-      await control.trigger('click');
-    }
-
-    expect(wrapper.emitted('pause')).toHaveLength(1);
-    expect(wrapper.emitted('stop')).toHaveLength(1);
-    expect(wrapper.emitted('microphone')).toHaveLength(1);
-    expect(wrapper.emitted('camera')).toHaveLength(1);
-    expect(wrapper.emitted('systemAudio')).toHaveLength(1);
+    buttons.forEach((button) => expect(button.attributes('title')).toBeTruthy());
+    await buttons[0]!.trigger('click');
+    await buttons[2]!.trigger('click');
+    await buttons[3]!.trigger('click');
     expect(wrapper.emitted('cancel')).toHaveLength(1);
-    wrapper.unmount();
-  });
-
-  it('shows disabled devices as inactive, emits re-enable actions, and reflects prop updates', async () => {
-    const wrapper = mount(RecorderBar, {
-      props: { ...props, microphoneEnabled: false, cameraEnabled: false, systemAudioEnabled: false },
-    });
-    const controls = wrapper.findAll('.control');
-    const deviceControls = controls.slice(2, 5);
-
-    expect(deviceControls.map((control) => control.attributes('aria-label'))).toEqual([
-      'Turn microphone on',
-      'Turn camera on',
-      'Turn system audio on',
-    ]);
-    deviceControls.forEach((control) => expect(control.classes()).toContain('inactive'));
-
-    await deviceControls[0]!.trigger('click');
-    await deviceControls[1]!.trigger('click');
-    await deviceControls[2]!.trigger('click');
-    expect(wrapper.emitted('microphone')).toHaveLength(1);
-    expect(wrapper.emitted('camera')).toHaveLength(1);
-    expect(wrapper.emitted('systemAudio')).toHaveLength(1);
-
-    await wrapper.setProps({ microphoneEnabled: true, cameraEnabled: true, systemAudioEnabled: true });
-    expect(deviceControls.map((control) => control.attributes('aria-label'))).toEqual([
-      'Turn microphone off',
-      'Turn camera off',
-      'Turn system audio off',
-    ]);
-    deviceControls.forEach((control) => expect(control.classes()).not.toContain('inactive'));
-    wrapper.unmount();
-  });
-
-  it('renders countdown and finalizing states with the right disabled controls', async () => {
-    const wrapper = mount(RecorderBar, {
-      props: { ...props, phase: 'countdown', visibility: 'auto-fade' },
-    });
-    await Promise.resolve();
-    expect(wrapper.get('.recorder-bar').classes()).toContain('auto-fade');
-    expect(wrapper.get('.recording-time').text()).toContain('Ready');
-    const controls = wrapper.findAll('.control');
-    expect(controls[0].attributes('disabled')).toBeDefined();
-    expect(controls[2].attributes('disabled')).toBeDefined();
-    expect(controls[3].attributes('disabled')).toBeDefined();
-    expect(controls[4].attributes('disabled')).toBeDefined();
-
-    await wrapper.setProps({ phase: 'paused' });
-    expect(wrapper.get('.recording-time').text()).toBe('00:12.3');
-    expect(wrapper.get('.control').attributes('aria-label')).toContain('Resume');
-    await wrapper.setProps({ phase: 'finalizing' });
-    expect(wrapper.findAll('.control').every((control) => control.attributes('disabled') !== undefined)).toBe(true);
-    wrapper.unmount();
-  });
-
-  it('tracks pointer entry and exit for hover-only and auto-fade visibility', async () => {
-    const wrapper = mount(RecorderBar, {
-      props: { ...props, visibility: 'hover-only', hoverOnlyActive: true },
-    });
-
-    expect(wrapper.get('.recorder-bar').classes()).toContain('hover-only');
-    await wrapper.get('.recorder-bar').trigger('pointerenter');
-    expect(wrapper.get('.recorder-bar').classes()).toContain('pointer-over');
-    await wrapper.get('.recorder-bar').trigger('pointerleave');
-    expect(wrapper.get('.recorder-bar').classes()).not.toContain('pointer-over');
-    await wrapper.setProps({ visibility: 'auto-fade' });
-    await wrapper.get('.recorder-bar').trigger('pointerenter');
-    expect(wrapper.get('.recorder-bar').classes()).toEqual(expect.arrayContaining(['auto-fade', 'pointer-over']));
-    await wrapper.setProps({ visibility: 'hover-only', hoverOnlyActive: false });
-    expect(wrapper.get('.recorder-bar').classes()).not.toContain('hover-only');
-  });
-
-  it('propagates the native system audio level to the system meter', async () => {
-    const wrapper = mount(RecorderBar, {
-      props: { ...props, systemAudioLevel: 0.68 },
-    });
-
-    const meters = wrapper.findAll('.audio-icon-meter');
-    expect(meters).toHaveLength(2);
-    expect(meters[1]?.get('.level-bar-fill').element).toHaveProperty('style.height', '68%');
-
-    await wrapper.setProps({ systemAudioLevel: 0.12 });
-    expect(meters[1]?.get('.level-bar-fill').element).toHaveProperty('style.height', '12%');
-    wrapper.unmount();
-  });
-
-  it('does not request a second desktop stream for an already acquired system-audio recording', async () => {
-    await getDisplayMedia({ audio: true, video: true });
-    expect(getDisplayMedia).toHaveBeenCalledTimes(1);
-
-    const wrapper = mount(RecorderBar, { props });
-    await Promise.resolve();
-
-    expect(getDisplayMedia).toHaveBeenCalledTimes(1);
-    wrapper.unmount();
-  });
-
-  it('shows the Preparing throbber and never the timer while starting', async () => {
-    const wrapper = mount(RecorderBar, {
-      props: { ...props, phase: 'starting' as const },
-    });
-    expect(wrapper.get('.recording-time').text()).toContain('Preparing');
-    expect(wrapper.get('.recording-time').text()).not.toContain('00:');
-    // Pause and the three device toggles are disabled during startup.
-    const controls = wrapper.findAll('.control');
-    expect(controls[0].attributes('disabled')).toBeDefined();
-    expect(controls[2].attributes('disabled')).toBeDefined();
-    expect(controls[3].attributes('disabled')).toBeDefined();
-    expect(controls[4].attributes('disabled')).toBeDefined();
-    // Stop and cancel stay available so startup can be aborted.
-    expect(controls[1].attributes('disabled')).toBeUndefined();
-    expect(controls[5].attributes('disabled')).toBeUndefined();
-    wrapper.unmount();
-  });
-
-  it('keeps pause and stop clickable on their first pointer interaction', async () => {
-    const wrapper = mount(RecorderBar, { props });
-    const controls = wrapper.findAll('.control');
-    await controls[0].trigger('pointerdown', { button: 0 });
-    await controls[0].trigger('click');
-    await controls[1].trigger('pointerdown', { button: 0 });
-    await controls[1].trigger('click');
-
     expect(wrapper.emitted('pause')).toHaveLength(1);
     expect(wrapper.emitted('stop')).toHaveLength(1);
-    wrapper.unmount();
+    expect(wrapper.emitted('restart')).toBeUndefined();
+  });
+  it('requires confirmation before discarding and restarting a take', async () => {
+    const wrapper = setup();
+    await restartButton(wrapper).trigger('click');
+    await flushPromises();
+    const prompt = wrapper.get('[role="alertdialog"]');
+    expect(prompt.text()).toContain('This take will be deleted.');
+    expect(document.activeElement).toBe(prompt.findAll('button')[0]!.element);
+    expect(wrapper.emitted('restart')).toBeUndefined();
+    await prompt.findAll('button')[1]!.trigger('click');
+    await flushPromises();
+    expect(wrapper.emitted('restart')).toHaveLength(1);
+    expect(wrapper.find('[role="alertdialog"]').exists()).toBe(false);
+    expect(document.activeElement).toBe(restartButton(wrapper).element);
+  });
+  it('keeps recording when confirmation is canceled by its button or Escape', async () => {
+    const wrapper = setup();
+    await restartButton(wrapper).trigger('click');
+    await wrapper.get('[role="alertdialog"] button').trigger('click');
+    await restartButton(wrapper).trigger('click');
+    await wrapper.get('.recorder-bar').trigger('keydown', { key: 'Escape' });
+    expect(wrapper.find('[role="alertdialog"]').exists()).toBe(false);
+    expect(wrapper.emitted('restart')).toBeUndefined();
+    expect(wrapper.emitted('cancel')).toBeUndefined();
+  });
+  it('invalidates an open confirmation when recording ends or the caller becomes busy', async () => {
+    const wrapper = setup();
+    await restartButton(wrapper).trigger('click');
+    await wrapper.setProps({ busy: true });
+    expect(wrapper.get('[role="alertdialog"]').findAll('button')[1]!.attributes('disabled')).toBeDefined();
+    await wrapper.get('[role="alertdialog"]').findAll('button')[1]!.trigger('click');
+    expect(wrapper.emitted('restart')).toBeUndefined();
+    await wrapper.setProps({ phase: 'finalizing' });
+    expect(wrapper.find('[role="alertdialog"]').exists()).toBe(false);
+    expect(wrapper.findAll('button').every((button) => button.attributes('disabled') !== undefined)).toBe(true);
+  });
+  it.each(['countdown', 'starting'] as const)(
+    'keeps abort controls available during %s and disables pause/restart',
+    (phase) => {
+      const wrapper = setup({ phase });
+      const buttons = wrapper.findAll('button');
+      expect(buttons[0]!.attributes('disabled')).toBeUndefined();
+      expect(buttons[1]!.attributes('disabled')).toBeDefined();
+      expect(buttons[2]!.attributes('disabled')).toBeDefined();
+      expect(buttons[3]!.attributes('disabled')).toBeUndefined();
+      expect(wrapper.get('.recording-time').text()).toContain(phase === 'starting' ? 'Preparing' : 'Ready');
+    },
+  );
+  it('uses a paused cloud and a Resume control while paused', async () => {
+    const wrapper = setup({ mascot: true, phase: 'paused' });
+    expect(wrapper.find('button[aria-label="Resume recording"]').exists()).toBe(true);
+    expect(wrapper.get('.beam-mascot').attributes('data-phase')).toBe('paused');
+    await wrapper.setProps({ phase: 'starting' });
+    expect(wrapper.get('.beam-mascot').attributes('data-phase')).toBe('preparing');
+  });
+  it('reveals hover-only controls for pointer, keyboard focus and restart confirmation', async () => {
+    const wrapper = setup({ visibility: 'hover-only', hoverOnlyActive: true, mascot: true });
+    const bar = wrapper.get('.recorder-bar');
+    expect(bar.classes()).toContain('hover-only');
+    await triggerPointer(bar, 'pointerenter');
+    expect(bar.classes()).toContain('pointer-over');
+    await triggerPointer(bar, 'pointerleave');
+    expect(bar.classes()).not.toContain('pointer-over');
+    await bar.trigger('focusin');
+    await bar.trigger('focusout', { relatedTarget: restartButton(wrapper).element });
+    await bar.trigger('focusout', { relatedTarget: null });
+    await restartButton(wrapper).trigger('click');
+    expect(bar.classes()).toContain('confirming');
+    await wrapper.setProps({ visibility: 'auto-fade' });
+    expect(bar.classes()).toContain('auto-fade');
+    await wrapper.setProps({ visibility: 'hover-only', hoverOnlyActive: false });
+    expect(bar.classes()).not.toContain('hover-only');
   });
 });

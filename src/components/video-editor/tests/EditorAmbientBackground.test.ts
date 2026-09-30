@@ -98,7 +98,7 @@ describe('EditorAmbientBackground', () => {
 
     await wrapper.setProps({ background: gradient() });
     expect(wrapper.get('.ambient-surface').attributes('style')).toMatch(/linear-gradient/i);
-    expect(wrapper.get('.ambient-surface').attributes('style')).toContain('#ff5a1fcc');
+    expect(wrapper.get('.ambient-surface').attributes('style')).toContain('rgba(255, 90, 31, 0.8)');
   });
 
   it('resolves image paths and keeps the image layer non-interactive', () => {

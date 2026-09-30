@@ -5,10 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import CaptureModeGroup from '../CaptureModeGroup.vue';
 
 describe('CaptureModeGroup', () => {
-  beforeEach(() => setCurrentLocale('en'));
-  afterEach(() => {
+  beforeEach(async () => await setCurrentLocale('en'));
+  afterEach(async () => {
     vi.useRealTimers();
-    setCurrentLocale('en');
+    await setCurrentLocale('en');
   });
 
   it('exposes all capture modes as accessible toggle buttons', () => {
@@ -32,7 +32,7 @@ describe('CaptureModeGroup', () => {
 
   it('updates accessible mode labels when the language changes', async () => {
     const wrapper = mount(CaptureModeGroup, { props: { modelValue: 'screenshot' } });
-    setCurrentLocale('fr');
+    await setCurrentLocale('fr');
     await nextTick();
     expect(wrapper.get('[aria-label="Capture d’écran"]').attributes('aria-pressed')).toBe('true');
     await wrapper.get('[aria-label="Instantané"]').trigger('click');
@@ -61,7 +61,7 @@ describe('CaptureModeGroup', () => {
     },
   ] as const)('shows each icon mode description on hover in $locale', async ({ locale, labels, descriptions }) => {
     vi.useFakeTimers();
-    setCurrentLocale(locale);
+    await setCurrentLocale(locale);
     const wrapper = mount(CaptureModeGroup, { props: { modelValue: 'studio' } });
 
     try {

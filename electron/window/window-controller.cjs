@@ -1,7 +1,7 @@
 const { DEFAULT_HUD_WINDOW_SIZE, normalizeHudWindowSize } = require('./hud-window-size.cjs');
+const { RECORDER_SIZE, bottomCenterRecorder } = require('./recorder-layout.cjs');
 
 const HUD_SIZE = DEFAULT_HUD_WINDOW_SIZE;
-const RECORDER_SIZE = { width: 72, height: 344 };
 
 function clampToDisplayBounds(x, y, width, height, displayBounds) {
   const maxX = displayBounds.x + Math.max(0, displayBounds.width - width);
@@ -30,6 +30,8 @@ class WindowController {
     // Windows; on Linux the HUD stays interactive instead (applyInteractionPolicy).
     this.hudOverInteractive = false;
     this.recorderPositions = this.readRecorderPositions();
+    this.recorderPlacement = null;
+    this.recorderPositionDirty = false;
     this.recorderPositionSaveTimer = null;
     this.hudPosition = this.readHudPosition();
     this.hudSize = this.readHudSize();
@@ -84,9 +86,9 @@ class WindowController {
     if (!stored || typeof stored !== 'object' || Array.isArray(stored)) return positions;
     for (const [displayId, value] of Object.entries(stored)) {
       if (!value || typeof value !== 'object') continue;
-      const x = Number(value.x);
-      const y = Number(value.y);
-      if (Number.isFinite(x) && Number.isFinite(y) && (x !== 0 || y !== 0)) {
+      const x = value.x;
+      const y = value.y;
+      if (Number.isFinite(x) && Number.isFinite(y)) {
         positions.set(displayId, { x: Math.round(x), y: Math.round(y) });
       }
     }
@@ -95,13 +97,13 @@ class WindowController {
 
   persistRecorderPositions() {
     if (!this.preferencesStore) return;
-    const last = this.recorderPositions.size > 0 ? Array.from(this.recorderPositions.values()).at(-1) : null;
+    if (!this.recorderPositionDirty) return;
     this.preferencesStore.patch({
       extras: {
         recorderPositions: Object.fromEntries(this.recorderPositions),
-        ...(last ? { lastRecorderPosition: last } : {}),
       },
     });
+    this.recorderPositionDirty = false;
   }
 
   flushRecorderPosition() {
@@ -207,23 +209,27 @@ class WindowController {
   }
 
   placeRecorder() {
+    this.flushRecorderPosition();
+    if (this.preferencesStore) this.recorderPositions = this.readRecorderPositions();
     const display = this.screen.getDisplayNearestPoint(this.screen.getCursorScreenPoint());
-    const lastSaved = this.preferencesStore?.read()?.extras?.lastRecorderPosition;
-    const saved = this.recorderPositions.get(String(display.id)) ?? lastSaved;
+    const saved = this.recorderPositions.get(String(display.id));
+    const centered = bottomCenterRecorder(display.workArea);
     const position = clampToDisplayBounds(
-      saved?.x ?? display.workArea.x + display.workArea.width - RECORDER_SIZE.width - 20,
-      saved?.y ?? display.workArea.y + Math.round((display.workArea.height - RECORDER_SIZE.height) / 2),
+      saved?.x ?? centered.x,
+      saved?.y ?? centered.y,
       RECORDER_SIZE.width,
       RECORDER_SIZE.height,
       display.workArea,
     );
-    this.window.setBounds({ ...position, width: RECORDER_SIZE.width, height: RECORDER_SIZE.height });
+    this.recorderPlacement = position;
+    this.window.setBounds({ ...position, ...RECORDER_SIZE });
   }
 
   rememberRecorderPosition() {
     if (this.mode !== 'recorder' || this.window.isDestroyed()) return;
     const bounds = this.window.getBounds();
-    if (bounds.x === 0 && bounds.y === 0) return;
+    if (bounds.x === this.recorderPlacement?.x && bounds.y === this.recorderPlacement?.y) return;
+    this.recorderPlacement = null;
     const display = this.screen.getDisplayNearestPoint({
       x: bounds.x + Math.round(bounds.width / 2),
       y: bounds.y + Math.round(bounds.height / 2),
@@ -236,7 +242,10 @@ class WindowController {
       display.workArea,
     );
 
+    const previous = this.recorderPositions.get(String(display.id));
+    if (previous?.x === clamped.x && previous?.y === clamped.y) return;
     this.recorderPositions.set(String(display.id), { x: clamped.x, y: clamped.y });
+    this.recorderPositionDirty = true;
     this.scheduleRecorderPositionSave();
   }
 

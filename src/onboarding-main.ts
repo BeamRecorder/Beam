@@ -12,7 +12,7 @@ document.documentElement.classList.add('onboarding-window-root');
 
 const bootstrap = async () => {
   const pinia = createPinia();
-  const i18n = initI18n();
+  const i18n = await initI18n();
 
   try {
     const preferences = await capture.getPreferences();

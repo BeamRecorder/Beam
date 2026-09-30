@@ -1,3 +1,4 @@
+import { triggerPointer } from '../../../../../tests/support/pointer';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import type { VisualClip } from '~/media/shared/composition-types';
@@ -127,7 +128,7 @@ describe('TimelineTracks zoom header selection', () => {
     expect(initialZoomStyle.style.left).not.toContain('%');
     const initialWidth = initialZoomStyle.style.width;
 
-    await zoomButton.trigger('pointerdown', { button: 0, pointerId: 61, clientX: 200 });
+    await triggerPointer(zoomButton, 'pointerdown', { button: 0, pointerId: 61, clientX: 200 });
     await flushPromises();
     expect(mounted!.get('.timeline-viewport').classes()).toContain('is-moving');
     for (const clipId of fixture.clipIds) {
@@ -201,7 +202,7 @@ describe('recording zoom links during dragging', () => {
     });
     mounted!.get('.timeline-tracks-container').element.dispatchEvent(new Event('scroll'));
     await flushPromises();
-    await findClip(mounted, screen.id).trigger('pointerdown', { button: 0, pointerId: 1, clientX: 200 });
+    await triggerPointer(findClip(mounted, screen.id), 'pointerdown', { button: 0, pointerId: 1, clientX: 200 });
     window.dispatchEvent(pointerEvent('pointermove', 300));
     await flushPromises();
     const preview = mounted!.emitted('preview:zooms')?.at(-1)?.[0] as ReturnType<typeof zoom>[];
@@ -248,7 +249,7 @@ it('drags a screen with its offset microphone even without any selected zooms', 
   });
   mounted!.get('.timeline-tracks-container').element.dispatchEvent(new Event('scroll'));
   await flushPromises();
-  await findClip(mounted, screen.id).trigger('pointerdown', { button: 0, pointerId: 1, clientX: 200 });
+  await triggerPointer(findClip(mounted, screen.id), 'pointerdown', { button: 0, pointerId: 1, clientX: 200 });
   window.dispatchEvent(pointerEvent('pointermove', 300));
   await flushPromises();
   const preview = mounted!.emitted('preview:composition')?.at(-1)?.[0] as typeof base;

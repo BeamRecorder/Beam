@@ -651,7 +651,12 @@
     "turnCameraOn": "Bật camera",
     "turnSystemAudioOff": "Tắt âm thanh hệ thống",
     "turnSystemAudioOn": "Bật âm thanh hệ thống",
-    "preparing": "Đang chuẩn bị…"
+    "preparing": "Đang chuẩn bị…",
+    "restartRecording": "Bắt đầu ghi lại",
+    "restartConfirmation": "Bắt đầu lại?",
+    "restartDescription": "Bản ghi này sẽ bị xóa.",
+    "keepRecording": "Hủy",
+    "restart": "Bắt đầu lại"
   },
   "ScreenRegionOverlay": {
     "instruction": "Chọn một khu vực để ghi",

@@ -651,7 +651,12 @@
     "turnCameraOff": "कैमरा बंद करें",
     "turnCameraOn": "कैमरा चालू करें",
     "turnSystemAudioOff": "सिस्टम ऑडियो बंद करें",
-    "turnSystemAudioOn": "सिस्टम ऑडियो चालू करें"
+    "turnSystemAudioOn": "सिस्टम ऑडियो चालू करें",
+    "restartRecording": "रिकॉर्डिंग फिर से शुरू करें",
+    "restartConfirmation": "फिर से शुरू करें?",
+    "restartDescription": "यह रिकॉर्डिंग हटा दी जाएगी।",
+    "keepRecording": "रद्द करें",
+    "restart": "फिर से शुरू करें"
   },
   "ScreenRegionOverlay": {
     "instruction": "रिकॉर्ड करने के लिए क्षेत्र चुनें",

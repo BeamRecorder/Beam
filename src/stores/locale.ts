@@ -8,25 +8,25 @@ import type { AppLocale } from '../i18n/types';
 export const useLocaleStore = defineStore('locale', () => {
   const locale = ref<AppLocale>(getCurrentLocale() as AppLocale);
 
-  const applyLocale = (lang: AppLocale, persistToCapture = true) => {
+  const applyLocale = async (lang: AppLocale, persistToCapture = true) => {
     if (!isSupportedLocale(lang)) return;
+    if (!(await setCurrentLocale(lang))) return;
     if (locale.value !== lang) {
       locale.value = lang;
     }
-    setCurrentLocale(lang);
     if (persistToCapture && typeof capture?.updatePreferences === 'function') {
       void capture.updatePreferences({ extras: { locale: lang } }).catch(() => undefined);
     }
   };
 
   function setLocale(lang: AppLocale) {
-    applyLocale(lang, true);
+    return applyLocale(lang, true);
   }
 
   if (typeof window !== 'undefined') {
     window.addEventListener('storage', (event) => {
       if (event.key === 'locale' && event.newValue && isSupportedLocale(event.newValue)) {
-        applyLocale(event.newValue as AppLocale, false);
+        void applyLocale(event.newValue as AppLocale, false).catch(console.error);
       }
     });
 
@@ -34,7 +34,7 @@ export const useLocaleStore = defineStore('locale', () => {
       try {
         const stored = localStorage.getItem('locale');
         if (stored && isSupportedLocale(stored) && stored !== locale.value) {
-          applyLocale(stored as AppLocale, false);
+          void applyLocale(stored as AppLocale, false).catch(console.error);
         }
       } catch {}
     });
@@ -46,7 +46,7 @@ export const useLocaleStore = defineStore('locale', () => {
       .then((preferences) => {
         const prefLocale = preferences?.extras?.locale;
         if (typeof prefLocale === 'string' && isSupportedLocale(prefLocale)) {
-          applyLocale(prefLocale as AppLocale, false);
+          return applyLocale(prefLocale as AppLocale, false);
         }
       })
       .catch(() => undefined);
@@ -56,7 +56,7 @@ export const useLocaleStore = defineStore('locale', () => {
     capture.onPreferencesChanged((preferences) => {
       const prefLocale = preferences?.extras?.locale;
       if (typeof prefLocale === 'string' && isSupportedLocale(prefLocale) && prefLocale !== locale.value) {
-        applyLocale(prefLocale as AppLocale, false);
+        void applyLocale(prefLocale as AppLocale, false).catch(console.error);
       }
     });
   }

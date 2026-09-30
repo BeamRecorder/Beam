@@ -28,7 +28,7 @@ jobs:
           node-version: 22
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.0
+          bun-version: 1.4.2
       - name: Install repository dependencies
         run: node scripts/ci/bun-install-retry.cjs
       - name: Verify homepage

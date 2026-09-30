@@ -1,3 +1,4 @@
+import { triggerPointer } from '../../../../../tests/support/pointer';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import type { VisualClip } from '~/media/shared/composition-types';
@@ -59,7 +60,7 @@ describe('TimelineTracks', () => {
     const scroll = setScrubViewportGeometry(mounted!);
     const { flushNextFrame } = queueAnimationFrames();
 
-    await mounted!.get('.ruler-ticks-area').trigger('pointerdown', { clientX: 615 });
+    await triggerPointer(mounted!.get('.ruler-ticks-area'), 'pointerdown', { clientX: 615 });
     flushNextFrame();
     flushNextFrame();
     const firstScrollLeft = scroll.scrollLeft;
@@ -81,7 +82,7 @@ describe('TimelineTracks', () => {
     scroll.scrollLeft = 400;
     const { flushNextFrame } = queueAnimationFrames();
 
-    await mounted!.get('.ruler-ticks-area').trigger('pointerdown', { clientX: 125 });
+    await triggerPointer(mounted!.get('.ruler-ticks-area'), 'pointerdown', { clientX: 125 });
     flushNextFrame();
     flushNextFrame();
     const firstScrollLeft = scroll.scrollLeft;
@@ -98,7 +99,7 @@ describe('TimelineTracks', () => {
     const scroll = setScrubViewportGeometry(mounted!);
     const { pendingFrames, flushNextFrame } = queueAnimationFrames();
 
-    await mounted!.get('.ruler-ticks-area').trigger('pointerdown', { clientX: 615 });
+    await triggerPointer(mounted!.get('.ruler-ticks-area'), 'pointerdown', { clientX: 615 });
     flushNextFrame();
     flushNextFrame();
     const stoppedScrollLeft = scroll.scrollLeft;
@@ -115,7 +116,7 @@ describe('TimelineTracks', () => {
     const scroll = setScrubViewportGeometry(mounted!);
     const { pendingFrames, flushNextFrame } = queueAnimationFrames();
 
-    await mounted!.get('.ruler-ticks-area').trigger('pointerdown', { clientX: 370 });
+    await triggerPointer(mounted!.get('.ruler-ticks-area'), 'pointerdown', { clientX: 370 });
     flushNextFrame();
     window.dispatchEvent(pointerEvent('pointermove', 370));
 

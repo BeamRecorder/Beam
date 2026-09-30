@@ -22,13 +22,13 @@ const messageAt = (root: unknown, path: string) => {
 const placeholders = (value: unknown) =>
   [...new Set(typeof value === 'string' ? (value.match(/\{[^{}]+\}/g) ?? []) : [])].sort();
 
-afterEach(() => {
-  setCurrentLocale('en');
+afterEach(async () => {
+  await setCurrentLocale('en');
 });
 
 describe('internationalization', () => {
-  it('uses an imperative Vietnamese label for screenshot actions and keeps screenshot names nominal', () => {
-    setCurrentLocale('vi');
+  it('uses an imperative Vietnamese label for screenshot actions and keeps screenshot names nominal', async () => {
+    await setCurrentLocale('vi');
 
     expect(i18n.global.t('HUD.screenshot')).toBe('Chụp ảnh màn hình');
     expect(i18n.global.t('QuickSnipCropBar.screenshot')).toBe('Chụp ảnh màn hình');
@@ -37,7 +37,7 @@ describe('internationalization', () => {
     expect(i18n.global.t('ProjectPicker.explore')).toBe('Mở thư mục');
   });
 
-  it('provides screenshot, preset and capture-mode UI in all locales without falling back to English', () => {
+  it('provides screenshot, preset and capture-mode UI in all locales without falling back to English', async () => {
     const namespaces = [
       'ScreenshotEditor',
       'EditorPresetControls',
@@ -46,9 +46,9 @@ describe('internationalization', () => {
       'HUD',
       'QuickSnipStatus',
     ] as const;
-    const english = i18n.global.getLocaleMessage('en');
+    const english = i18n.global.getLocaleMessage('en')!;
     for (const locale of SUPPORTED_LOCALES) {
-      setCurrentLocale(locale);
+      await setCurrentLocale(locale);
       const paths = namespaces.flatMap((namespace) =>
         Object.keys(english[namespace]).map((key) => `${namespace}.${key}`),
       );
@@ -88,7 +88,7 @@ describe('internationalization', () => {
   });
 
   it('keeps the merged English message leaf keys and placeholders in every locale', () => {
-    const english = i18n.global.getLocaleMessage('en');
+    const english = i18n.global.getLocaleMessage('en')!;
     const englishLeaves = messageLeaves(english);
 
     for (const locale of SUPPORTED_LOCALES) {
@@ -103,7 +103,7 @@ describe('internationalization', () => {
     }
   });
 
-  it('provides voice-over and audio normalization labels in every supported locale', () => {
+  it('provides voice-over and audio normalization labels in every supported locale', async () => {
     const namespaces = {
       VoiceoverRecorder: [
         'record',
@@ -124,7 +124,7 @@ describe('internationalization', () => {
     } as const;
 
     for (const locale of SUPPORTED_LOCALES) {
-      setCurrentLocale(locale);
+      await setCurrentLocale(locale);
       for (const [namespace, keys] of Object.entries(namespaces)) {
         for (const key of keys) {
           const path = `${namespace}.${key}`;
@@ -137,7 +137,7 @@ describe('internationalization', () => {
     }
   });
 
-  it('renders UTF-8 translations across the supported writing systems', () => {
+  it('renders UTF-8 translations across the supported writing systems', async () => {
     const checks = [
       ['ru', 'Начать запись'],
       ['bg', 'Започване на запис'],
@@ -153,22 +153,22 @@ describe('internationalization', () => {
     ] as const;
 
     for (const [locale, expected] of checks) {
-      setCurrentLocale(locale);
+      await setCurrentLocale(locale);
       expect(i18n.global.t('HUD.startRecording')).toBe(expected);
     }
   });
 
-  it('keeps interpolation parameters intact in every added locale', () => {
+  it('keeps interpolation parameters intact in every added locale', async () => {
     for (const locale of ['ru', 'bg', 'zh-CN', 'ko', 'pt-BR', 'ja', 'it', 'pl', 'zh-TW', 'hi', 'vi'] as const) {
-      setCurrentLocale(locale);
+      await setCurrentLocale(locale);
       expect(i18n.global.t('HUD.stopRecording', { time: '00:03' })).toContain('00:03');
       expect(i18n.global.t('Updates.downloading', { percent: 42 })).toContain('42%');
     }
   });
 
-  it('translates every editor loading stage in every supported locale', () => {
+  it('translates every editor loading stage in every supported locale', async () => {
     for (const locale of SUPPORTED_LOCALES) {
-      setCurrentLocale(locale);
+      await setCurrentLocale(locale);
       for (const stage of [
         'openingWindow',
         'loadingEditor',
@@ -185,9 +185,9 @@ describe('internationalization', () => {
     }
   });
 
-  it('keeps keyboard and text caption labels available in every supported locale', () => {
+  it('keeps keyboard and text caption labels available in every supported locale', async () => {
     for (const locale of SUPPORTED_LOCALES) {
-      setCurrentLocale(locale);
+      await setCurrentLocale(locale);
       for (const key of ['keyboardCaptions', 'textCaptions']) {
         expect(i18n.global.te(`SidebarPanel.${key}`, locale)).toBe(true);
         expect(i18n.global.t(`SidebarPanel.${key}`)).not.toBe(`SidebarPanel.${key}`);
@@ -220,17 +220,17 @@ describe('internationalization', () => {
     }
   });
 
-  it('translates ripple deletion in every supported locale', () => {
+  it('translates ripple deletion in every supported locale', async () => {
     for (const locale of SUPPORTED_LOCALES) {
-      setCurrentLocale(locale);
+      await setCurrentLocale(locale);
       expect(i18n.global.te('TimelineTracks.rippleDelete', locale)).toBe(true);
       expect(i18n.global.t('TimelineTracks.rippleDelete')).not.toBe('TimelineTracks.rippleDelete');
     }
   });
 
-  it('provides the AI caption editing warning in every supported locale', () => {
+  it('provides the AI caption editing warning in every supported locale', async () => {
     for (const locale of SUPPORTED_LOCALES) {
-      setCurrentLocale(locale);
+      await setCurrentLocale(locale);
       const path = 'CaptionClipPanel.aiTimingEditWarning';
       expect(i18n.global.te(path, locale), `${locale}: missing ${path}`).toBe(true);
       expect(i18n.global.t(path), `${locale}: unresolved ${path}`).not.toBe(path);
@@ -238,19 +238,19 @@ describe('internationalization', () => {
     }
   });
 
-  it('keeps the blur track label available in every supported locale', () => {
+  it('keeps the blur track label available in every supported locale', async () => {
     for (const locale of SUPPORTED_LOCALES) {
-      setCurrentLocale(locale);
+      await setCurrentLocale(locale);
       expect(i18n.global.te('TimelineTracks.blur', locale), `${locale}: missing TimelineTracks.blur`).toBe(true);
       expect(i18n.global.t('TimelineTracks.blur')).not.toBe('TimelineTracks.blur');
     }
   });
 
-  it('provides the clip shadow color label in every supported locale', () => {
+  it('provides the clip shadow color label in every supported locale', async () => {
     const path = 'ClipPropertiesPanel.shadowColor';
 
     for (const locale of SUPPORTED_LOCALES) {
-      setCurrentLocale(locale);
+      await setCurrentLocale(locale);
       expect(i18n.global.te(path, locale), `${locale}: missing ${path}`).toBe(true);
       const translation = i18n.global.t(path);
       expect(translation, `${locale}: unresolved ${path}`).not.toBe(path);
@@ -258,7 +258,7 @@ describe('internationalization', () => {
     }
   });
 
-  it('provides translated linked-clip deletion copy for every locale', () => {
+  it('provides translated linked-clip deletion copy for every locale', async () => {
     const keys = [
       'title',
       'description',
@@ -276,7 +276,7 @@ describe('internationalization', () => {
     ];
 
     for (const locale of SUPPORTED_LOCALES) {
-      setCurrentLocale(locale);
+      await setCurrentLocale(locale);
       for (const key of keys) {
         const path = `LinkedClipsDeleteDialog.${key}`;
         expect(i18n.global.te(path, locale), `${locale}: missing ${path}`).toBe(true);
@@ -287,7 +287,7 @@ describe('internationalization', () => {
     }
   });
 
-  it('provides every preview quality label in every supported locale', () => {
+  it('provides every preview quality label in every supported locale', async () => {
     const keys = [
       'previewQuality',
       'previewQualityFull',
@@ -299,7 +299,7 @@ describe('internationalization', () => {
     ];
 
     for (const locale of SUPPORTED_LOCALES) {
-      setCurrentLocale(locale);
+      await setCurrentLocale(locale);
       for (const key of keys) {
         expect(i18n.global.te(`TimelineToolbar.${key}`, locale), `${locale}: missing TimelineToolbar.${key}`).toBe(
           true,
@@ -309,7 +309,7 @@ describe('internationalization', () => {
     }
   });
 
-  it('provides every preview performance label in every supported locale', () => {
+  it('provides every preview performance label in every supported locale', async () => {
     const keys = [
       'title',
       'ui',
@@ -326,7 +326,7 @@ describe('internationalization', () => {
     ];
 
     for (const locale of SUPPORTED_LOCALES) {
-      setCurrentLocale(locale);
+      await setCurrentLocale(locale);
       for (const key of keys) {
         expect(
           i18n.global.te(`PreviewPerformance.${key}`, locale),
@@ -337,11 +337,11 @@ describe('internationalization', () => {
     }
   });
 
-  it('provides distinct export help for each selectable frame rate in every supported locale', () => {
+  it('provides distinct export help for each selectable frame rate in every supported locale', async () => {
     const keys = ['frameRate24Desc', 'frameRate30Desc', 'frameRate60Desc'];
 
     for (const locale of SUPPORTED_LOCALES) {
-      setCurrentLocale(locale);
+      await setCurrentLocale(locale);
       for (const key of keys) {
         expect(i18n.global.te(`ExportPopover.${key}`, locale), `${locale}: missing ExportPopover.${key}`).toBe(true);
         expect(i18n.global.t(`ExportPopover.${key}`)).not.toBe(`ExportPopover.${key}`);
@@ -349,7 +349,7 @@ describe('internationalization', () => {
     }
   });
 
-  it('provides all playhead export labels in every supported locale', () => {
+  it('provides all playhead export labels in every supported locale', async () => {
     const keys = [
       'exportVideoDuration',
       'exportUntilPlayhead',
@@ -358,7 +358,7 @@ describe('internationalization', () => {
     ];
 
     for (const locale of SUPPORTED_LOCALES) {
-      setCurrentLocale(locale);
+      await setCurrentLocale(locale);
       for (const key of keys) {
         expect(i18n.global.te(`ExportPopover.${key}`, locale), `${locale}: missing ExportPopover.${key}`).toBe(true);
         const message = i18n.global.t(`ExportPopover.${key}`, { seconds: '5' });
@@ -369,21 +369,21 @@ describe('internationalization', () => {
     }
   });
 
-  it('provides the shared frame color label in every supported locale', () => {
+  it('provides the shared frame color label in every supported locale', async () => {
     for (const locale of SUPPORTED_LOCALES) {
-      setCurrentLocale(locale);
+      await setCurrentLocale(locale);
       expect(i18n.global.te('BorderAndFrameControls.frameColor', locale)).toBe(true);
       expect(i18n.global.t('BorderAndFrameControls.frameColor')).not.toBe('BorderAndFrameControls.frameColor');
       expect(i18n.global.t('BorderAndFrameControls.frameColor').trim()).not.toBe('');
     }
   });
 
-  it('uses the compact Performance title in the default locale', () => {
-    setCurrentLocale('en');
+  it('uses the compact Performance title in the default locale', async () => {
+    await setCurrentLocale('en');
     expect(i18n.global.t('PreviewPerformance.title')).toBe('Performance');
   });
 
-  it('provides translated timeline clipboard feedback in every supported locale', () => {
+  it('provides translated timeline clipboard feedback in every supported locale', async () => {
     const expected = {
       en: ['Copied', 'Pasted'],
       fr: ['Copié', 'Collé'],
@@ -403,7 +403,7 @@ describe('internationalization', () => {
     } as const;
 
     for (const locale of SUPPORTED_LOCALES) {
-      setCurrentLocale(locale);
+      await setCurrentLocale(locale);
       for (const [index, key] of ['timelineCopied', 'timelinePasted'].entries()) {
         expect(i18n.global.te(`VideoEditor.${key}`, locale), `${locale}: missing VideoEditor.${key}`).toBe(true);
         expect(i18n.global.t(`VideoEditor.${key}`)).toBe(expected[locale][index]);
@@ -411,10 +411,10 @@ describe('internationalization', () => {
     }
   });
 
-  it('provides detailed timeline clipboard labels and interpolation in every supported locale', () => {
+  it('provides detailed timeline clipboard labels and interpolation in every supported locale', async () => {
     const keys = ['timelineCopiedItem', 'timelinePastedItem', 'timelineClipboardCaption', 'timelineClipboardZoom'];
     for (const locale of SUPPORTED_LOCALES) {
-      setCurrentLocale(locale);
+      await setCurrentLocale(locale);
       for (const key of keys) {
         expect(i18n.global.te(`VideoEditor.${key}`, locale), `${locale}: missing VideoEditor.${key}`).toBe(true);
         expect(i18n.global.t(`VideoEditor.${key}`)).not.toBe(`VideoEditor.${key}`);
@@ -428,7 +428,7 @@ describe('internationalization', () => {
     }
   });
 
-  it('keeps the preferences About and Linux interaction catalog complete', () => {
+  it('keeps the preferences About and Linux interaction catalog complete', async () => {
     const keys = [
       'about',
       'aboutDesc',
@@ -441,7 +441,7 @@ describe('internationalization', () => {
     ];
 
     for (const locale of SUPPORTED_LOCALES) {
-      setCurrentLocale(locale);
+      await setCurrentLocale(locale);
       for (const key of keys) {
         expect(i18n.global.te(`HudPreferences.${key}`, locale)).toBe(true);
         expect(i18n.global.t(`HudPreferences.${key}`)).not.toBe(`HudPreferences.${key}`);
@@ -450,11 +450,11 @@ describe('internationalization', () => {
     }
   });
 
-  it('resolves the language advanced settings in every supported locale', () => {
+  it('resolves the language advanced settings in every supported locale', async () => {
     const keys = ['advanced', 'spellCheck', 'spellCheckDescription'];
 
     for (const locale of SUPPORTED_LOCALES) {
-      setCurrentLocale(locale);
+      await setCurrentLocale(locale);
       for (const key of keys) {
         const path = `HudPreferences.${key}`;
         expect(i18n.global.te(path, locale), `${locale}: missing ${path}`).toBe(true);
@@ -464,9 +464,9 @@ describe('internationalization', () => {
     }
   });
 
-  it('registers every live-HUD onboarding instruction in every supported locale', () => {
+  it('registers every live-HUD onboarding instruction in every supported locale', async () => {
     for (const locale of SUPPORTED_LOCALES) {
-      setCurrentLocale(locale);
+      await setCurrentLocale(locale);
       for (const key of ['tourSubtitle', 'emptyStateDesc']) {
         expect(i18n.global.te(`Onboarding.${key}`, locale), `${locale}: missing Onboarding.${key}`).toBe(true);
         expect(i18n.global.t(`Onboarding.${key}`), `${locale}: unresolved Onboarding.${key}`).not.toBe(
@@ -476,8 +476,8 @@ describe('internationalization', () => {
     }
   });
 
-  it('persists the selected locale and updates the document language', () => {
-    setCurrentLocale('zh-CN');
+  it('persists the selected locale and updates the document language', async () => {
+    await setCurrentLocale('zh-CN');
     expect(localStorage.getItem('locale')).toBe('zh-CN');
     expect(document.documentElement.lang).toBe('zh-CN');
   });

@@ -2,13 +2,15 @@ const MAX_CLIPBOARD_IMAGE_BYTES = 100_000_000;
 const MAX_CLIPBOARD_IMAGE_DIMENSION = 32_768;
 const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 
-function readClipboardPng(clipboard) {
-  if (!clipboard || typeof clipboard.readImage !== 'function') throw new Error('Image clipboard is unavailable.');
-  const image = clipboard.readImage();
-  if (!image || image.isEmpty()) return null;
-  const scaleFactors = image.getScaleFactors?.() ?? [1];
-  const scaleFactor = Math.max(1, ...scaleFactors.filter((value) => Number.isFinite(value) && value > 0));
-  const buffer = image.toPNG({ scaleFactor });
+async function readClipboardPng(clipboard) {
+  if (!clipboard || typeof clipboard.read !== 'function') throw new Error('Image clipboard is unavailable.');
+  const items = await clipboard.read();
+  const item = items.find((item) => item.types.includes('image/png'));
+  if (!item) return null;
+  const blob = await item.getType('image/png');
+  if (blob.size < 24 || blob.size > MAX_CLIPBOARD_IMAGE_BYTES)
+    throw new Error('Clipboard image is invalid or too large.');
+  const buffer = Buffer.from(await blob.arrayBuffer());
   if (!Buffer.isBuffer(buffer) || buffer.length < 24 || buffer.length > MAX_CLIPBOARD_IMAGE_BYTES)
     throw new Error('Clipboard image is invalid or too large.');
   if (

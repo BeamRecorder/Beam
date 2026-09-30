@@ -26,6 +26,63 @@ beforeEach(() => {
 
 describe('quick capture status labels', () => {
   it.each([
+    ['preparing', 'preparing'],
+    ['finalizing', 'preparing'],
+    ['recording', 'recording'],
+    ['processing', 'processing'],
+    ['completed', 'completed'],
+    ['failed', 'failed'],
+  ])('ties the Instant mascot to actual %s state', async (state, phase) => {
+    capture.getQuickSnipState.mockResolvedValue({
+      state,
+      job: { name: 'instant-1', mode: 'instant', preset: { id: 'default' }, format: 'mp4' },
+      progress: 0.48,
+      result: null,
+      error: null,
+      preview: 'data:image/png;base64,abc',
+    });
+    const wrapper = mount(QuickSnipStatus);
+    await flushPromises();
+    expect(wrapper.get('.beam-mascot').attributes('data-phase')).toBe(phase);
+    expect(wrapper.get('.thumbnail img').attributes('src')).toBe('data:image/png;base64,abc');
+    if (state === 'processing') {
+      expect(wrapper.get('.mascot-percent').text()).toBe('48%');
+      expect(wrapper.get('[role="progressbar"]').attributes('aria-valuenow')).toBe('48');
+    }
+    wrapper.unmount();
+  });
+
+  it.each(['studio', 'screenshot'])('leaves the %s status presentation without an Instant mascot', async (mode) => {
+    capture.getQuickSnipState.mockResolvedValue({
+      state: 'processing',
+      job: { mode, preset: { id: 'default' }, format: 'mp4' },
+      progress: 0.48,
+      result: null,
+      error: null,
+    });
+    const wrapper = mount(QuickSnipStatus);
+    await flushPromises();
+    expect(wrapper.find('.beam-mascot').exists()).toBe(false);
+    expect(wrapper.get('.status-value').text()).toBe('48%');
+    wrapper.unmount();
+  });
+
+  it('uses a quiet error pose when clipboard publication fails after encoding', async () => {
+    capture.getQuickSnipState.mockResolvedValue({
+      state: 'completed',
+      job: { name: 'instant-1', mode: 'instant', preset: { id: 'default' }, format: 'mp4' },
+      progress: 1,
+      result: null,
+      error: null,
+      clipboardError: 'Clipboard unavailable',
+    });
+    const wrapper = mount(QuickSnipStatus);
+    await flushPromises();
+    expect(wrapper.get('.beam-mascot').attributes('data-phase')).toBe('failed');
+    expect(wrapper.get('[role="alert"]').text()).toBe('Clipboard unavailable');
+    wrapper.unmount();
+  });
+  it.each([
     ['screenshot', 'preparing', 'Preparing image'],
     ['screenshot', 'processing', 'Exporting image'],
     ['screenshot', 'completed', 'Image ready'],
@@ -46,7 +103,7 @@ describe('quick capture status labels', () => {
     wrapper.unmount();
   });
   it('localizes screenshot progress and the built-in preset name', async () => {
-    setCurrentLocale('fr');
+    await setCurrentLocale('fr');
     capture.getQuickSnipState.mockResolvedValue({
       state: 'processing',
       job: { mode: 'screenshot', preset: { id: 'default', name: 'Default' } },

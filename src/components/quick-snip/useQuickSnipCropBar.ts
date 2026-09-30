@@ -64,6 +64,7 @@ export function useQuickSnipCropBar() {
     return shortcut ? t('actionShortcut', { action, shortcut }) : action;
   });
   const preparing = computed(() => ['countdown', 'starting', 'finalizing'].includes(recorder.phase.value));
+  const compact = computed(() => configured.value && mode.value !== 'screenshot' && !selectionActive.value);
   const settingsDisabled = computed(
     () => !configured.value || deviceMenuBusy.value || actionPending.value || preparing.value || recording.value,
   );
@@ -176,6 +177,21 @@ export function useQuickSnipCropBar() {
     });
   };
   const stop = () => recorder.stop();
+  const restart = async () => {
+    if (actionPending.value || !recording.value || !configuration.value) return;
+    const generation = commandGeneration;
+    actionPending.value = true;
+    try {
+      await recorder.cancel();
+      if (generation !== commandGeneration || recorder.phase.value !== 'idle') return;
+      const state = await capture.reportQuickSnip({ type: 'restarting', name: configuration.value.name });
+      if (generation === commandGeneration && state.state === 'preparing') await start();
+    } catch (reason) {
+      if (generation === commandGeneration) await reportFailure(reason);
+    } finally {
+      if (generation === commandGeneration) actionPending.value = false;
+    }
+  };
   const toggleFromControls = async () => {
     if (deviceMenuBusy.value || actionPending.value || preparing.value || !configured.value) return;
     const generation = commandGeneration;
@@ -316,5 +332,7 @@ export function useQuickSnipCropBar() {
     chooseDevice,
     onDeviceKeydown,
     reportFailure,
+    restart,
+    compact,
   };
 }

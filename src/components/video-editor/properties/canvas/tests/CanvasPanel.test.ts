@@ -1,3 +1,4 @@
+import { triggerPointer } from '../../../../../../tests/support/pointer';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { nextTick, reactive } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -424,7 +425,7 @@ describe('CanvasPanel', () => {
 
     const slider = mounted!.get('.big-slider-input');
     await slider.setValue('55');
-    await slider.trigger('pointerdown');
+    await triggerPointer(slider, 'pointerdown');
     await slider.trigger('change');
     expect(mounted!.emitted('update:blurPercent')?.at(-1)).toEqual([55]);
   });

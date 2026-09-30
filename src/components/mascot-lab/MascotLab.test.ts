@@ -7,6 +7,7 @@ import MascotAppearance from './MascotAppearance.vue';
 import MascotTimeline from './MascotTimeline.vue';
 import Select from '~/ui/select/Select.vue';
 import { createMascotEngine, DEFAULT_LOOK } from './mascot-catalog';
+import type { MascotLook, MascotStep } from './mascot-types';
 import { defaultPreset, PRESET_KEY } from './mascot-storage';
 import { downloadBlob, mascotPng } from './mascot-export';
 
@@ -108,10 +109,10 @@ describe('standalone mascot laboratory', () => {
     saved.look.eyes = 'star';
     localStorage.setItem(PRESET_KEY, JSON.stringify(saved));
     const wrapper = setup();
-    expect(wrapper.findComponent(MascotAppearance).props('modelValue').eyes).toBe('star');
+    expect((wrapper.getComponent(MascotAppearance).props('modelValue') as MascotLook).eyes).toBe('star');
     localStorage.setItem('other-settings', 'keep');
     await click(wrapper, 'Repartir de zéro');
-    expect(wrapper.findComponent(MascotAppearance).props('modelValue').eyes).toBe('sparkle');
+    expect((wrapper.getComponent(MascotAppearance).props('modelValue') as MascotLook).eyes).toBe('sparkle');
     expect(localStorage.getItem('other-settings')).toBe('keep');
     localStorage.setItem(PRESET_KEY, '{}');
     expect(setup().find('[role="status"]').text()).toContain('relus'.slice(0, 4));
@@ -150,26 +151,26 @@ describe('standalone mascot laboratory', () => {
   it('plays and seeks the edited timeline', async () => {
     const wrapper = setup();
     await click(wrapper, 'Jouer la séquence');
-    expect(wrapper.findComponent(MascotTimeline).props('sequencing')).toBe(true);
+    expect(wrapper.getComponent(MascotTimeline).props('sequencing')).toBe(true);
     await click(wrapper, 'Aller au mouvement 3 : En orbite');
-    expect(wrapper.findComponent(MascotTimeline).props('active')).toBe(2);
+    expect(wrapper.getComponent(MascotTimeline).props('active')).toBe(2);
     await click(wrapper, 'Déplacer le mouvement 3 à gauche');
-    expect(wrapper.findComponent(MascotTimeline).props('modelValue')[1].state).toBe('orbit');
+    expect((wrapper.getComponent(MascotTimeline).props('modelValue') as MascotStep[])[1]!.state).toBe('orbit');
     await click(wrapper, 'Déplacer le mouvement 2 à droite');
     await click(wrapper, 'Retirer le mouvement 4');
     expect(wrapper.findAll('.step')).toHaveLength(3);
   });
   it('adds timed movements and changes the rest expression', async () => {
     const wrapper = setup();
-    const timeline = wrapper.findComponent(MascotTimeline);
+    const timeline = wrapper.getComponent(MascotTimeline);
     timeline.findComponent(Select).vm.$emit('update:modelValue', 'comet');
     await nextTick();
     expect(wrapper.findAll('.step')).toHaveLength(5);
     await wrapper.find('input[aria-label="Durée du mouvement 5"]').setValue('3.2');
-    expect(timeline.props('modelValue')[4]).toEqual({ state: 'comet', duration: 3.2 });
-    wrapper.findComponent(MascotAppearance).findComponent(Select).vm.$emit('update:modelValue', 'heureux');
+    expect((timeline.props('modelValue') as MascotStep[])[4]).toEqual({ state: 'comet', duration: 3.2 });
+    wrapper.getComponent(MascotAppearance).findComponent(Select).vm.$emit('update:modelValue', 'heureux');
     await nextTick();
-    expect(wrapper.findComponent(MascotAppearance).props('modelValue').expression).toBe('heureux');
+    expect((wrapper.getComponent(MascotAppearance).props('modelValue') as MascotLook).expression).toBe('heureux');
     expect(wrapper.find('[data-mascot-preview] svg').attributes('aria-label')).toContain('Au repos');
   });
   it('imports a valid preset and rejects oversize or malformed files', async () => {
@@ -183,14 +184,14 @@ describe('standalone mascot laboratory', () => {
     const preset = defaultPreset();
     preset.look.shape = 'goutte';
     await importFile(JSON.stringify(preset));
-    expect(wrapper.findComponent(MascotAppearance).props('modelValue').shape).toBe('goutte');
+    expect((wrapper.getComponent(MascotAppearance).props('modelValue') as MascotLook).shape).toBe('goutte');
     await importFile('{}');
     expect(wrapper.find('[role="status"]').text()).toContain('valides');
     await importFile('{}', 65537);
     expect(wrapper.find('[role="status"]').text()).toContain('volumineux');
     Object.defineProperty(input.element, 'files', { configurable: true, value: [] });
     await input.trigger('change');
-    expect(wrapper.findComponent(MascotAppearance).props('modelValue').shape).toBe('goutte');
+    expect((wrapper.getComponent(MascotAppearance).props('modelValue') as MascotLook).shape).toBe('goutte');
   });
 });
 

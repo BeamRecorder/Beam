@@ -651,7 +651,12 @@
     "turnCameraOff": "Turn camera off",
     "turnCameraOn": "Turn camera on",
     "turnSystemAudioOff": "Turn system audio off",
-    "turnSystemAudioOn": "Turn system audio on"
+    "turnSystemAudioOn": "Turn system audio on",
+    "restartRecording": "Restart recording",
+    "restartConfirmation": "Start over?",
+    "restartDescription": "This take will be deleted.",
+    "keepRecording": "Cancel",
+    "restart": "Restart"
   },
   "ScreenRegionOverlay": {
     "instruction": "Select an area to record",

@@ -1,3 +1,4 @@
+import { triggerPointer } from '../../../../tests/support/pointer';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import { defineComponent, h } from 'vue';
@@ -155,7 +156,7 @@ describe('TimelineGapButtons', () => {
     const wrapper = mountButtons();
     const action = wrapper.get('.gap-action');
 
-    await action.trigger('pointerdown');
+    await triggerPointer(action, 'pointerdown');
     await action.trigger('click');
 
     expect(wrapper.emitted('remove')).toBeUndefined();

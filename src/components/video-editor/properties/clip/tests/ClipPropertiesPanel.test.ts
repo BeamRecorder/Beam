@@ -1,3 +1,4 @@
+import { triggerPointer } from '../../../../../../tests/support/pointer';
 import { defineComponent, h, nextTick, type PropType } from 'vue';
 import { mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -271,10 +272,10 @@ describe('ClipPropertiesPanel', () => {
         .find((slider) => slider.attributes('data-label')?.toLowerCase().includes('radius'));
 
       expect(radiusSlider).toBeDefined();
-      await radiusSlider!.trigger('pointerdown');
+      await triggerPointer(radiusSlider!, 'pointerdown');
       expect(wrapper.emitted('corner-radius-interaction')).toEqual([[true]]);
 
-      await radiusSlider!.trigger('pointerup');
+      await triggerPointer(radiusSlider!, 'pointerup');
       expect(wrapper.emitted('corner-radius-interaction')).toEqual([[true], [false]]);
     },
   );

@@ -133,9 +133,9 @@ beforeEach(() => {
   }
 });
 
-afterEach(() => {
+afterEach(async () => {
   vi.restoreAllMocks();
-  setCurrentLocale('en');
+  await setCurrentLocale('en');
 });
 
 describe('ExportPopover', () => {
@@ -448,11 +448,11 @@ describe('ExportPopover', () => {
     expect(wrapper.get('[role="alert"]').text()).toContain('MP4');
   });
 
-  it('renders translated quality labels in French and English', () => {
+  it('renders translated quality labels in French and English', async () => {
     let wrapper: ReturnType<typeof mountExport> | undefined;
 
     try {
-      setCurrentLocale('fr');
+      await setCurrentLocale('fr');
       wrapper = mountExport();
       const qualityField = wrapper
         .findAll('.field')
@@ -465,7 +465,7 @@ describe('ExportPopover', () => {
       expect(labels).toEqual(['Faible', 'Moyen', 'Élevé']);
 
       wrapper.unmount();
-      setCurrentLocale('en');
+      await setCurrentLocale('en');
       wrapper = mountExport();
       const englishQualityField = wrapper
         .findAll('.field')
@@ -477,7 +477,7 @@ describe('ExportPopover', () => {
       expect(englishLabels).toEqual(['Low', 'Medium', 'High']);
     } finally {
       wrapper?.unmount();
-      setCurrentLocale('en');
+      await setCurrentLocale('en');
     }
   });
 

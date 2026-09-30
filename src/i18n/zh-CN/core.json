@@ -651,7 +651,12 @@
     "turnCameraOff": "关闭摄像头",
     "turnCameraOn": "打开摄像头",
     "turnSystemAudioOff": "关闭系统音频",
-    "turnSystemAudioOn": "打开系统音频"
+    "turnSystemAudioOn": "打开系统音频",
+    "restartRecording": "重新开始录制",
+    "restartConfirmation": "重新开始？",
+    "restartDescription": "当前录制将被删除。",
+    "keepRecording": "取消",
+    "restart": "重新开始"
   },
   "ScreenRegionOverlay": {
     "instruction": "选择要录制的区域",

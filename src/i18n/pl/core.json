@@ -651,7 +651,12 @@
     "turnCameraOff": "Wyłącz kamerę",
     "turnCameraOn": "Włącz kamerę",
     "turnSystemAudioOff": "Wyłącz dźwięk systemowy",
-    "turnSystemAudioOn": "Włącz dźwięk systemowy"
+    "turnSystemAudioOn": "Włącz dźwięk systemowy",
+    "restartRecording": "Rozpocznij nagrywanie ponownie",
+    "restartConfirmation": "Zacząć od nowa?",
+    "restartDescription": "To nagranie zostanie usunięte.",
+    "keepRecording": "Anuluj",
+    "restart": "Uruchom ponownie"
   },
   "ScreenRegionOverlay": {
     "instruction": "Wybierz obszar do nagrania",

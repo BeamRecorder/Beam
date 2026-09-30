@@ -270,6 +270,10 @@ function createQuickSnipController(dependencies) {
   const report = async (event) => {
     if (!event || typeof event !== 'object') return snapshot;
     if (TERMINAL_STATES.has(snapshot.state)) return snapshot;
+    if (event.type === 'restarting') {
+      if (snapshot.state !== 'recording' || event.name !== snapshot.job?.name) return snapshot;
+      return publish({ state: 'preparing', progress: 0, result: null, error: null });
+    }
     if (event.type === 'capture-cancelled') {
       if (snapshot.state !== 'preparing' || event.name !== snapshot.job?.name) return snapshot;
       dependencies.statusWindow.hide();

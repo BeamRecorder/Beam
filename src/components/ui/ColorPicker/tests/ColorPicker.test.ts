@@ -1,3 +1,4 @@
+import { triggerPointer } from '../../../../../tests/support/pointer';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import ColorPicker from '../ColorPicker.vue';
@@ -14,8 +15,8 @@ describe('ColorPicker', () => {
     });
     const custom = wrapper.get('.custom');
     await custom.trigger('click');
-    await custom.trigger('pointerdown');
-    await custom.trigger('pointerup');
+    await triggerPointer(custom, 'pointerdown');
+    await triggerPointer(custom, 'pointerup');
     expect(wrapper.find('.color-picker-label').exists()).toBe(false);
     expect(wrapper.emitted('update:modelValue')).toEqual([['#112233']]);
     expect(wrapper.emitted('drag-start')).toHaveLength(1);

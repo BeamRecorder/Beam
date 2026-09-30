@@ -651,7 +651,12 @@
     "turnCameraOff": "Desligar câmera",
     "turnCameraOn": "Ligar câmera",
     "turnSystemAudioOff": "Desligar áudio do sistema",
-    "turnSystemAudioOn": "Ligar áudio do sistema"
+    "turnSystemAudioOn": "Ligar áudio do sistema",
+    "restartRecording": "Reiniciar gravação",
+    "restartConfirmation": "Começar de novo?",
+    "restartDescription": "Esta tomada será excluída.",
+    "keepRecording": "Cancelar",
+    "restart": "Reiniciar"
   },
   "ScreenRegionOverlay": {
     "instruction": "Selecione uma área para gravar",

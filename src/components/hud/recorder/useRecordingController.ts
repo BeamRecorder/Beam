@@ -9,6 +9,7 @@ import { useNativeSystemAudioLevel } from './useNativeSystemAudioLevel';
 import { recordingCameraMetadata } from './recording-camera-metadata';
 import { CaptureSelectionCancelled, prepareNativeRecording } from './recording-native-preparation';
 import { formatRecordingTime, isRecordingActivePhase } from './recording-types';
+import { createRecordingRestart } from './recording-restart';
 import type { RecordingConfiguration, RecordingPhase, RecordingSessionResult } from './recording-types';
 import type { RecordingStartFailure, RecordingStartStage, StartupSidecarState } from './recording-types';
 
@@ -473,6 +474,7 @@ export function useRecordingController(
   };
 
   const recordingTime = computed(() => formatRecordingTime(elapsedTenths.value));
+  const restart = createRecordingRestart(phase, () => configuration, cancel, start);
   return {
     phase,
     secondsRemaining,
@@ -486,6 +488,7 @@ export function useRecordingController(
     start,
     stop,
     cancel,
+    restart,
     togglePause,
     toggleCamera: deviceToggles.toggleCamera,
     toggleMicrophone: deviceToggles.toggleMicrophone,

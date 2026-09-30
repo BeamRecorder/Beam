@@ -306,9 +306,9 @@ describe('EditorWindowApp', () => {
     expect(capture.notifyEditorReady).toHaveBeenCalledOnce();
   });
 
-  it('translates the animated editor loading message', () => {
+  it('translates the animated editor loading message', async () => {
     capture.getEditorContext.mockReturnValue(new Promise(() => undefined));
-    setCurrentLocale('fr');
+    await setCurrentLocale('fr');
     const wrapper = mountEditor();
 
     expect(wrapper.get('.editor-project-loading-overlay').attributes('aria-label')).toBe('Préparation de l’éditeur');

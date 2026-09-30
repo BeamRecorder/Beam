@@ -1,3 +1,4 @@
+import { triggerPointer } from '../../../../../tests/support/pointer';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CaptionClip } from '~/media/shared/composition-types';
@@ -89,7 +90,7 @@ describe('KeyboardCaptionClipPanel', () => {
     expect(wrapper.findComponent(CaptionStyleControls).props('sampleText')).toBe('Ctrl + K');
     expect(wrapper.get('.follow-cursor-switch').attributes('aria-label')).toBe('Follow cursor');
 
-    await wrapper.get('.font-preview').trigger('pointerenter');
+    await triggerPointer(wrapper.get('.font-preview'), 'pointerenter');
     expect(wrapper.emitted('preview')).toContainEqual([
       expect.objectContaining({
         caption: expect.objectContaining({ style: expect.objectContaining({ fontFamily: 'serif' }) }),

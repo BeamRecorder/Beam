@@ -18,6 +18,7 @@ import Button from '~/ui/button/Button.vue';
 import CaptureModeGroup from '../hud/CaptureModeGroup.vue';
 import Divider from '~/ui/divider/Divider.vue';
 import AudioIconMeter from '~/components/hud/audio/AudioIconMeter.vue';
+import RecorderBar from '../hud/recorder/RecorderBar.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useQuickSnipCropBar } from './useQuickSnipCropBar';
 const { t } = useTranslate('QuickSnipCropBar');
@@ -50,6 +51,8 @@ const {
   chooseDevice,
   onDeviceKeydown,
   reportFailure,
+  restart,
+  compact,
 } = useQuickSnipCropBar();
 const openSelect = (event: MouseEvent) => {
   const select = (event.currentTarget as HTMLElement).querySelector('select')!;
@@ -62,7 +65,21 @@ const openSelect = (event: MouseEvent) => {
 
 <template>
   <main class="crop-shell">
+    <RecorderBar
+      v-if="compact"
+      :phase="recorder.phase.value"
+      :recording-time="elapsed"
+      :visibility="visibility"
+      :hover-only-active="recording || recorder.recorderHoverOnlyActive.value"
+      :busy="actionPending && recorder.phase.value !== 'starting'"
+      :mascot="mode === 'instant'"
+      @stop="recording ? toggleFromControls() : cancel()"
+      @cancel="cancel"
+      @pause="recorder.togglePause"
+      @restart="restart"
+    />
     <section
+      v-else
       class="crop-bar"
       :class="{
         'auto-fade': mode !== 'screenshot' && !selectionActive && visibility === 'auto-fade',

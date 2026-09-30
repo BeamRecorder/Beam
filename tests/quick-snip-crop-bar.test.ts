@@ -1,3 +1,4 @@
+import { triggerPointer } from './support/pointer';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -272,6 +273,75 @@ afterEach(() => {
 });
 
 describe('QuickSnipCropBar', () => {
+  it.each(['recording', 'paused'])(
+    'confirms and discards an Instant %s before restarting the same job',
+    async (phase) => {
+      const wrapper = await mountBar({ ...configuration, mode: 'instant' });
+      await mocks.command?.('start');
+      await flushPromises();
+      mocks.recorder!.phase.value = phase;
+      await mocks.state?.({ state: 'recording' });
+      await flushPromises();
+      mocks.recorder!.start.mockClear();
+      mocks.recorder!.cancel.mockImplementation(async () => {
+        mocks.recorder!.phase.value = 'idle';
+      });
+      mocks.capture.reportQuickSnip.mockResolvedValue({ state: 'preparing' });
+      await wrapper.get('button[aria-label="Restart recording"]').trigger('click');
+      expect(mocks.recorder!.cancel).not.toHaveBeenCalled();
+      await wrapper.get('[role="alertdialog"]').findAll('button')[1]!.trigger('click');
+      await flushPromises();
+      expect(mocks.recorder!.cancel).toHaveBeenCalledOnce();
+      expect(mocks.capture.reportQuickSnip).toHaveBeenCalledWith({ type: 'restarting', name: configuration.name });
+      expect(mocks.recorder!.start).toHaveBeenCalledWith(
+        expect.objectContaining({ screenId: configuration.screenId, countdownSeconds: 0 }),
+      );
+      expect(mocks.capture.quickSnipStop).not.toHaveBeenCalled();
+      wrapper.unmount();
+    },
+  );
+
+  it('keeps a failed cleanup from starting a second Instant recording', async () => {
+    const wrapper = await mountBar({ ...configuration, mode: 'instant' });
+    await mocks.command?.('start');
+    await flushPromises();
+    mocks.recorder!.phase.value = 'recording';
+    await flushPromises();
+    mocks.recorder!.start.mockClear();
+    mocks.capture.reportQuickSnip.mockClear();
+    await wrapper.get('button[aria-label="Restart recording"]').trigger('click');
+    await wrapper.get('[role="alertdialog"]').findAll('button')[1]!.trigger('click');
+    await flushPromises();
+    expect(mocks.recorder!.cancel).toHaveBeenCalledOnce();
+    expect(mocks.recorder!.start).not.toHaveBeenCalled();
+    expect(mocks.capture.reportQuickSnip).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('does not restart a job canceled while its native discard is pending', async () => {
+    const wrapper = await mountBar({ ...configuration, mode: 'instant' });
+    await mocks.command?.('start');
+    await flushPromises();
+    mocks.recorder!.phase.value = 'recording';
+    await flushPromises();
+    mocks.recorder!.start.mockClear();
+    let finish!: () => void;
+    mocks.recorder!.cancel.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    await wrapper.get('button[aria-label="Restart recording"]').trigger('click');
+    await wrapper.get('[role="alertdialog"]').findAll('button')[1]!.trigger('click');
+    await flushPromises();
+    await mocks.command?.('cancel');
+    mocks.recorder!.phase.value = 'idle';
+    finish();
+    await flushPromises();
+    expect(mocks.recorder!.start).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
   it('keeps preset selection but exposes no preset CRUD controls', async () => {
     const wrapper = await mountBar();
 
@@ -295,7 +365,7 @@ describe('QuickSnipCropBar', () => {
   });
 
   it('keeps two equal mode buttons with a full French accessible Screenshot label', async () => {
-    setCurrentLocale('fr');
+    await setCurrentLocale('fr');
     const wrapper = await mountBar();
 
     try {
@@ -310,7 +380,7 @@ describe('QuickSnipCropBar', () => {
       expect(buttons[1].get('.btn-content-label').text()).toBe('Capture d’écran');
     } finally {
       wrapper.unmount();
-      setCurrentLocale('en');
+      await setCurrentLocale('en');
     }
   });
 
@@ -349,7 +419,7 @@ describe('QuickSnipCropBar', () => {
   it('applies live recording-bar visibility after selection and tracks pointer hover', async () => {
     mocks.preferencesSettings!.recordingBar.visibility = 'auto-fade';
     const wrapper = await mountBar();
-    const cropBar = wrapper.get('.crop-bar');
+    let cropBar = wrapper.get('.crop-bar');
 
     expect(mocks.preferencesLoad).toHaveBeenCalledOnce();
     expect(cropBar.classes()).not.toContain('auto-fade');
@@ -365,10 +435,13 @@ describe('QuickSnipCropBar', () => {
     await wrapper.vm.$nextTick();
     await mocks.state?.({ state: 'recording' });
     await wrapper.vm.$nextTick();
+    cropBar = wrapper.get('.recorder-bar');
+    expect(wrapper.find('.preset-field').exists()).toBe(false);
+    expect(cropBar.findAll('button')).toHaveLength(4);
     expect(cropBar.classes()).toContain('auto-fade');
-    await cropBar.trigger('pointerenter');
+    await triggerPointer(cropBar, 'pointerenter');
     expect(cropBar.classes()).toContain('pointer-over');
-    await cropBar.trigger('pointerleave');
+    await triggerPointer(cropBar, 'pointerleave');
     expect(cropBar.classes()).not.toContain('pointer-over');
 
     mocks.preferencesSettings!.recordingBar.visibility = 'hover-only';
@@ -481,7 +554,7 @@ describe('QuickSnipCropBar', () => {
   });
 
   it('renders compact settings with translated labels, icons, titles, and a localized default preset', async () => {
-    setCurrentLocale('en');
+    await setCurrentLocale('en');
     const english = await mountBar();
 
     expect(english.get('.crop-bar').attributes('aria-label')).toBe('Quick Snip controls');
@@ -534,7 +607,7 @@ describe('QuickSnipCropBar', () => {
     english.unmount();
 
     mocks.preferencesSettings!.shortcuts = {};
-    setCurrentLocale('fr');
+    await setCurrentLocale('fr');
     const french = await mountBar();
 
     expect(french.get('.crop-bar').attributes('aria-label')).toBe('Commandes Quick Snip');
@@ -573,7 +646,7 @@ describe('QuickSnipCropBar', () => {
     expect(french.get('.capture-actions button').attributes('title')).toBe('Arrêter : Alt+Shift+S');
     expect(french.get('.capture-actions button').text()).toContain('Arrêter');
     french.unmount();
-    setCurrentLocale('en');
+    await setCurrentLocale('en');
   });
 
   it('keeps settings and controls in two rows with separated audio, effect, and action groups', async () => {
@@ -885,7 +958,7 @@ describe('QuickSnipCropBar', () => {
 
     mocks.recorder!.phase.value = 'recording';
     await wrapper.vm.$nextTick();
-    const stopButton = wrapper.findAll('button').find((button) => button.text() === 'Stop');
+    const stopButton = wrapper.findAll('button').find((button) => button.attributes('aria-label') === 'Stop recording');
     expect(stopButton).toBeDefined();
     mocks.capture.quickSnipToggle.mockClear();
     mocks.capture.quickSnipStop.mockClear();

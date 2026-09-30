@@ -1,0 +1,23 @@
+/* Shared by the lightweight startup shell and the full renderer. */
+:root {
+  --color-primary: #ff5a1f;
+  --color-primary-hover: #e04810;
+  --color-primary-light: rgba(255, 90, 31, 0.1);
+  --color-primary-border: rgba(255, 90, 31, 0.3);
+  --color-bg-app: #d2d2d9;
+  --color-bg-surface: #f7f7f8;
+  --color-bg-surface-hover: #e8e8ec;
+  --color-bg-element: #ffffff;
+  --color-border: #e6e3dc;
+  --color-border-strong: #d3cfc5;
+  --color-border-dark: #334155;
+}
+:root.dark {
+  --color-bg-app: #151517;
+  --color-bg-surface: #212123;
+  --color-bg-surface-hover: #3b3b3e;
+  --color-bg-element: #2b2b2e;
+  --color-border: #2e2c28;
+  --color-border-strong: #3d3a34;
+  --color-border-dark: #3d3a34;
+}

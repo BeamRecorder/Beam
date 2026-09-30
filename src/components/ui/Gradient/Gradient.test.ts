@@ -1,3 +1,4 @@
+import { triggerPointer } from '../../../../tests/support/pointer';
 import { mount } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import { describe, expect, it } from 'vitest';
@@ -54,7 +55,7 @@ describe('Gradient', () => {
     await wrapper.get('.slider-stub').trigger('click');
     expect(wrapper.emitted('update:modelValue')?.at(-1)?.[0]).toMatchObject({ angle: 360 });
 
-    await track.trigger('pointerdown', { clientX: 200, clientY: 30 });
+    await triggerPointer(track, 'pointerdown', { clientX: 200, clientY: 30 });
     expect(wrapper.emitted('update:modelValue')?.at(-1)?.[0]).toMatchObject({
       stops: expect.arrayContaining([expect.objectContaining({ position: 0.5 })]),
     });
@@ -78,7 +79,7 @@ describe('Gradient', () => {
     Object.defineProperty(track.element, 'getBoundingClientRect', {
       value: () => ({ left: 0, right: 100, top: 0, bottom: 28, width: 100, height: 28 }),
     });
-    await track.trigger('pointerdown', { clientX: 50, clientY: 10 });
+    await triggerPointer(track, 'pointerdown', { clientX: 50, clientY: 10 });
     expect(track.classes()).toContain('is-locked');
     expect(wrapper.emitted('update:modelValue')).toBeUndefined();
   });
@@ -89,7 +90,7 @@ describe('Gradient', () => {
     Object.defineProperty(track.element, 'getBoundingClientRect', {
       value: () => ({ left: 0, right: 100, top: 0, bottom: 28, width: 100, height: 28 }),
     });
-    await track.trigger('pointerdown', { clientX: 50, clientY: 10 });
+    await triggerPointer(track, 'pointerdown', { clientX: 50, clientY: 10 });
     await wrapper.find('.stop-handle').trigger('click');
     await nextTick();
     await wrapper.get('.button-stub').trigger('click');

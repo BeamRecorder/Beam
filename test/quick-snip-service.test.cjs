@@ -243,6 +243,7 @@ test('validates Instant project output paths before delegating to the file clipb
 test('accepts screenshot capture stages only from the owning Crop Bar', () => {
   const f = fixture();
   const reports = [
+    { type: 'restarting', name: 'current-job' },
     { type: 'capture-cancelled', name: 'current-job' },
     { type: 'screenshot-captured', name: 'current-job', screenshotId: 'still-id' },
     { type: 'screenshot-rendered', name: 'current-job', preview: 'data:image/jpeg;base64,AA==' },

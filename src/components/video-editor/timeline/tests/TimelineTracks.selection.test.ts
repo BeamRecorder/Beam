@@ -1,3 +1,4 @@
+import { triggerPointer } from '../../../../../tests/support/pointer';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import type { VisualClip } from '~/media/shared/composition-types';
@@ -114,7 +115,7 @@ describe('TimelineTracks selection', () => {
     const mounted = await mountTracks({ selectedClipId: 'screen-clip', selectedClipIds: ['screen-clip'] });
     const screenClip = findClip(mounted, 'screen-clip');
 
-    await screenClip.trigger('pointerdown', { button: 2, pointerId: 7, clientX: 200, clientY: 20 });
+    await triggerPointer(screenClip, 'pointerdown', { button: 2, pointerId: 7, clientX: 200, clientY: 20 });
     window.dispatchEvent(pointerEventWithId('pointercancel', 7, 200, 20, 2));
 
     expect(mounted!.emitted('select:item')).toBeUndefined();
@@ -135,7 +136,7 @@ describe('TimelineTracks selection', () => {
     mounted!.get('.timeline-tracks-container').element.dispatchEvent(new Event('scroll'));
     await flushPromises();
 
-    await screenClip.trigger('pointerdown', { button: 0, pointerId: 11, clientX: 200, clientY: 20 });
+    await triggerPointer(screenClip, 'pointerdown', { button: 0, pointerId: 11, clientX: 200, clientY: 20 });
     window.dispatchEvent(pointerEventWithId('pointermove', 11, 300, 20));
     await flushPromises();
     window.dispatchEvent(pointerEventWithId('pointerup', 11, 300, 20));
@@ -168,7 +169,7 @@ describe('TimelineTracks selection', () => {
 
     expect(mounted!.findAll('.tracks-stack .visual-track')).toHaveLength(12);
     const anchor = findClip(mounted, fixture.clipIds[0]!);
-    await anchor.trigger('pointerdown', { button: 0, pointerId: 41, clientX: 200 });
+    await triggerPointer(anchor, 'pointerdown', { button: 0, pointerId: 41, clientX: 200 });
     await flushPromises();
     expect(mounted!.get('.timeline-viewport').classes()).toContain('is-moving');
     for (const clipId of fixture.clipIds) {
@@ -231,7 +232,7 @@ describe('TimelineTracks selection', () => {
     const { pendingFrames, flushNextFrame } = queueAnimationFrames();
     const anchor = findClip(mounted, fixture.clipIds[0]!);
 
-    await anchor.trigger('pointerdown', { button: 0, pointerId: 42, clientX: 200 });
+    await triggerPointer(anchor, 'pointerdown', { button: 0, pointerId: 42, clientX: 200 });
     window.dispatchEvent(pointerEvent('pointermove', 300));
     window.dispatchEvent(pointerEvent('pointermove', 300));
     window.dispatchEvent(pointerEvent('pointermove', 300));
@@ -287,7 +288,7 @@ describe('TimelineTracks selection', () => {
     setRect(mounted!.get('[data-timeline-clip-id="webcam-clip"]').element, 250, 20, 120, 30);
     setRect(mounted!.get('[data-timeline-zoom-id="zoom-1"]').element, 160, 80, 180, 30);
 
-    await mounted!.get('.timeline-selection-surface').trigger('pointerdown', {
+    await triggerPointer(mounted!.get('.timeline-selection-surface'), 'pointerdown', {
       button: 2,
       pointerId: 13,
       clientX: 50,

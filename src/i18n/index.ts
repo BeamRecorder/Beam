@@ -1,99 +1,17 @@
 import { createI18n } from 'vue-i18n';
 import enCore from './en/core.json';
 import enEditor from './en/editor.json';
-import frCore from './fr/core.json';
-import frEditor from './fr/editor.json';
-import esCore from './es/core.json';
-import esEditor from './es/editor.json';
-import deCore from './de/core.json';
-import deEditor from './de/editor.json';
-import ruCore from './ru/core.json';
-import ruEditor from './ru/editor.json';
-import bgCore from './bg/core.json';
-import bgEditor from './bg/editor.json';
-import zhCnCore from './zh-CN/core.json';
-import zhCnEditor from './zh-CN/editor.json';
-import koCore from './ko/core.json';
-import koEditor from './ko/editor.json';
-import ptBrCore from './pt-BR/core.json';
-import ptBrEditor from './pt-BR/editor.json';
-import jaCore from './ja/core.json';
-import jaEditor from './ja/editor.json';
-import itCore from './it/core.json';
-import itEditor from './it/editor.json';
-import plCore from './pl/core.json';
-import plEditor from './pl/editor.json';
-import zhTwCore from './zh-TW/core.json';
-import zhTwEditor from './zh-TW/editor.json';
-import hiCore from './hi/core.json';
-import hiEditor from './hi/editor.json';
-import viCore from './vi/core.json';
-import viEditor from './vi/editor.json';
 import { isSupportedLocale } from './locales';
 import type { AppLocale } from './types';
+import { createLocaleLoader } from './locale-loader';
+import type { CoreMessages, EditorMessages, LocaleMessages } from './locale-message-types';
 
-const messages = {
-  en: {
-    ...enCore,
-    ...enEditor,
-  },
-  fr: {
-    ...frCore,
-    ...frEditor,
-  },
-  es: {
-    ...esCore,
-    ...esEditor,
-  },
-  de: {
-    ...deCore,
-    ...deEditor,
-  },
-  ru: {
-    ...ruCore,
-    ...ruEditor,
-  },
-  bg: {
-    ...bgCore,
-    ...bgEditor,
-  },
-  'zh-CN': {
-    ...zhCnCore,
-    ...zhCnEditor,
-  },
-  ko: {
-    ...koCore,
-    ...koEditor,
-  },
-  'pt-BR': {
-    ...ptBrCore,
-    ...ptBrEditor,
-  },
-  ja: {
-    ...jaCore,
-    ...jaEditor,
-  },
-  it: {
-    ...itCore,
-    ...itEditor,
-  },
-  pl: {
-    ...plCore,
-    ...plEditor,
-  },
-  'zh-TW': {
-    ...zhTwCore,
-    ...zhTwEditor,
-  },
-  hi: {
-    ...hiCore,
-    ...hiEditor,
-  },
-  vi: {
-    ...viCore,
-    ...viEditor,
-  },
-};
+const english = { ...enCore, ...enEditor };
+const loadLocale = createLocaleLoader(
+  import.meta.glob<CoreMessages>('./*/core.json', { import: 'default' }),
+  import.meta.glob<EditorMessages>('./*/editor.json', { import: 'default' }),
+  english,
+);
 
 function detectLocale(): AppLocale {
   try {
@@ -128,15 +46,20 @@ function syncDocumentLanguage(locale: AppLocale) {
 
 const initialLocale = detectLocale();
 
+const messages: Partial<Record<AppLocale, LocaleMessages>> = { en: english };
+
 export const i18n = createI18n({
   legacy: false,
-  locale: initialLocale,
+  locale: 'en',
   fallbackLocale: 'en',
   messages,
 });
-syncDocumentLanguage(initialLocale);
+syncDocumentLanguage('en');
+let localeGeneration = 0;
+const initialLocaleReady = setCurrentLocale(initialLocale);
 
-export function initI18n() {
+export async function initI18n() {
+  await initialLocaleReady;
   return i18n;
 }
 
@@ -144,12 +67,20 @@ export function getCurrentLocale(): string {
   return i18n.global.locale.value;
 }
 
-export function setCurrentLocale(locale: AppLocale) {
+export async function setCurrentLocale(locale: AppLocale): Promise<boolean> {
+  if (!isSupportedLocale(locale)) throw new Error(`Unsupported locale: ${locale}`);
+  const generation = ++localeGeneration;
+  if (!i18n.global.availableLocales.includes(locale)) {
+    const messages = await loadLocale(locale);
+    i18n.global.setLocaleMessage(locale, messages);
+  }
+  if (generation !== localeGeneration) return false;
   i18n.global.locale.value = locale;
   syncDocumentLanguage(locale);
   try {
     localStorage.setItem('locale', locale);
   } catch {}
+  return true;
 }
 
 export function tNamespace(ns: string) {

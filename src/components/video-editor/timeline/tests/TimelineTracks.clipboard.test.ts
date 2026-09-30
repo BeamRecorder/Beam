@@ -1,3 +1,4 @@
+import { triggerPointer } from '../../../../../tests/support/pointer';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import type { CaptionClip } from '~/media/shared/composition-types';
@@ -19,12 +20,12 @@ describe('TimelineTracks', () => {
       configurable: true,
       value: vi.fn().mockReturnValue(rows[2]!.element),
     });
-    await rows[0]!.get('.track-drag-handle').trigger('pointerdown', { clientX: 10, clientY: 10 });
+    await triggerPointer(rows[0]!.get('.track-drag-handle'), 'pointerdown', { clientX: 10, clientY: 10 });
     window.dispatchEvent(pointerEvent('pointermove', 30, 100));
     window.dispatchEvent(pointerEvent('pointerup', 30, 100));
     expect(mounted!.emitted('reorder:clip')).toContainEqual([{ id: 'image-clip', targetIndex: 2 }]);
 
-    await rows[1]!.get('.track-drag-handle').trigger('pointerdown', { clientX: 10, clientY: 10 });
+    await triggerPointer(rows[1]!.get('.track-drag-handle'), 'pointerdown', { clientX: 10, clientY: 10 });
     window.dispatchEvent(pointerEvent('pointercancel', 10, 10));
     expect(mounted!.emitted('reorder:clip')).toHaveLength(1);
     await mounted!.findAll('.sidebar-tracks-stack .audio-track')[1]!.get('.track-info').trigger('click');
@@ -53,7 +54,7 @@ describe('TimelineTracks', () => {
       value: vi.fn().mockReturnValue(rows[1]!.element),
     });
     // Drag on the .track-info button directly without aiming at grip
-    await rows[0]!.get('.track-info').trigger('pointerdown', { clientX: 10, clientY: 10 });
+    await triggerPointer(rows[0]!.get('.track-info'), 'pointerdown', { clientX: 10, clientY: 10 });
     window.dispatchEvent(pointerEvent('pointermove', 30, 80));
     window.dispatchEvent(pointerEvent('pointerup', 30, 80));
     expect(mounted!.emitted('reorder:clip')).toContainEqual([{ id: 'image-clip', targetIndex: 1 }]);
@@ -67,7 +68,7 @@ describe('TimelineTracks', () => {
       value: vi.fn().mockReturnValue(timelineRows[1]!.element),
     });
     const clipEl = timelineRows[0]!.get('.timeline-clip');
-    await clipEl.trigger('pointerdown', { clientX: 50, clientY: 50 });
+    await triggerPointer(clipEl, 'pointerdown', { clientX: 50, clientY: 50 });
     window.dispatchEvent(pointerEvent('pointermove', 50, 120));
     window.dispatchEvent(pointerEvent('pointerup', 50, 120));
     expect(mounted!.emitted('reorder:clip')).toContainEqual([{ id: 'image-clip', targetIndex: 1 }]);
@@ -86,7 +87,7 @@ describe('TimelineTracks', () => {
       configurable: true,
       value: vi.fn().mockReturnValue(rows[1]!.element),
     });
-    await rows[0]!.get('.track-drag-handle').trigger('pointerdown', { clientX: 10, clientY: 10 });
+    await triggerPointer(rows[0]!.get('.track-drag-handle'), 'pointerdown', { clientX: 10, clientY: 10 });
     window.dispatchEvent(pointerEvent('pointermove', 30, 80));
     window.dispatchEvent(pointerEvent('pointerup', 30, 80));
 
@@ -544,8 +545,8 @@ describe('TimelineTracks', () => {
 
     // Hover marquee triggers
     const indicator = mounted!.find('.text-caption-track .annotation-indicator');
-    await indicator.trigger('pointerenter');
-    await indicator.trigger('pointerleave');
+    await triggerPointer(indicator, 'pointerenter');
+    await triggerPointer(indicator, 'pointerleave');
   });
 
   it('renders entry and exit transition zones on caption clips in the timeline', async () => {

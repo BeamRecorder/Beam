@@ -94,6 +94,55 @@ function expectedAlwaysOnTopLevel() {
   return process.platform === 'win32' ? 'screen-saver' : undefined;
 }
 
+test('Recorder centers independently on each display rather than reusing another display position', () => {
+  const left = {
+    id: 'left',
+    bounds: { x: -1920, y: 0, width: 1920, height: 1080 },
+    workArea: { x: -1920, y: 0, width: 1920, height: 1040 },
+  };
+  const right = {
+    id: 'right',
+    bounds: { x: 0, y: 0, width: 2560, height: 1440 },
+    workArea: { x: 0, y: 0, width: 2560, height: 1400 },
+  };
+  let selected = right;
+  const win = fakeWindow();
+  const controller = new WindowController(win, {
+    screenModule: { getCursorScreenPoint: () => ({ x: 0, y: 0 }), getDisplayNearestPoint: () => selected },
+    preferencesStore: {
+      read: () => ({
+        extras: { recorderPositions: { left: { x: -1000, y: 400 } }, lastRecorderPosition: { x: -1000, y: 400 } },
+      }),
+      patch: () => {},
+    },
+  });
+  controller.setMode('recorder');
+  assert.deepEqual(win.getBounds(), { x: 1104, y: 1296, ...RECORDER_SIZE });
+  controller.setMode('hud');
+  selected = left;
+  controller.setMode('recorder');
+  assert.deepEqual(win.getBounds(), { x: -1000, y: 400, ...RECORDER_SIZE });
+});
+
+test('Recorder restores the X11 zero origin and clamps off-screen placements', () => {
+  const display = {
+    id: 1,
+    bounds: { x: 0, y: 0, width: 1000, height: 800 },
+    workArea: { x: 0, y: 0, width: 1000, height: 800 },
+  };
+  let stored = { x: 0, y: 0 };
+  const win = fakeWindow();
+  const controller = new WindowController(win, {
+    screenModule: { getCursorScreenPoint: () => ({ x: 0, y: 0 }), getDisplayNearestPoint: () => display },
+    preferencesStore: { read: () => ({ extras: { recorderPositions: { 1: stored } } }), patch: () => {} },
+  });
+  controller.setMode('recorder');
+  assert.deepEqual(win.getBounds(), { x: 0, y: 0, ...RECORDER_SIZE });
+  stored = { x: 2000, y: -400 };
+  controller.setMode('recorder');
+  assert.deepEqual(win.getBounds(), { x: 648, y: 0, ...RECORDER_SIZE });
+});
+
 for (const platform of ['linux', 'darwin', 'win32']) {
   test(`${platform}: native focus callbacks cannot reenter a topmost change`, () => {
     const win = fakeWindow();
@@ -342,7 +391,7 @@ test('recorder movement keeps the native bounds compact', () => {
   const boundsCallsBeforeMove = boundsCalls().length;
   win.emit('move');
 
-  assert.deepEqual(win.getBounds(), { x: 908, y: 228, width: 72, height: 344 });
+  assert.deepEqual(win.getBounds(), { x: 324, y: 696, width: 352, height: 88 });
   assert.equal(boundsCalls().length, boundsCallsBeforeMove);
   controller.setMode('hud');
 });
@@ -367,8 +416,14 @@ test('recorder position persistence stores the compact bar position', () => {
   controller.setMode('recorder');
   controller.rememberRecorderPosition();
   controller.flushRecorderPosition();
-
-  assert.deepEqual(saved.at(-1).extras.recorderPositions['1'], { x: 908, y: 228 });
+  assert.equal(saved.filter((entry) => entry.extras.recorderPositions).length, 0);
+  win.setPosition(200, 300);
+  win.emit('move');
+  controller.flushRecorderPosition();
+  assert.deepEqual(saved.at(-1).extras.recorderPositions['1'], { x: 200, y: 300 });
+  win.setPosition(324, 696);
+  win.emit('moved');
+  assert.deepEqual(saved.at(-1).extras.recorderPositions['1'], { x: 324, y: 696 });
   controller.setMode('hud');
 });
 
@@ -480,7 +535,7 @@ test('showHud applies the normalized HUD size to native bounds, minimum, and sav
   assert.deepEqual(win.calls.filter((call) => call[0] === 'position').at(-1), ['position', 100, 532]);
 });
 
-test('Recorder keeps its fixed 72x344 native bounds with an unexpected HUD size', () => {
+test('Recorder keeps its fixed horizontal native bounds with an unexpected HUD size', () => {
   const win = fakeWindow();
   const controller = new WindowController(win, {
     preferencesStore: preferencesWithHudWindow({ width: 1, height: 1 }),
@@ -489,7 +544,7 @@ test('Recorder keeps its fixed 72x344 native bounds with an unexpected HUD size'
 
   controller.setMode('recorder');
 
-  assert.deepEqual(win.getBounds(), { x: 408, y: 328, width: 72, height: 344 });
+  assert.deepEqual(win.getBounds(), { x: 124, y: 696, width: 352, height: 88 });
   assert.deepEqual(win.calls.filter((call) => call[0] === 'minimumSize').at(-1), [
     'minimumSize',
     RECORDER_SIZE.width,

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
-import { nextTick } from 'vue';
+import { nextTick, type VNode, type CSSProperties } from 'vue';
 import ScrollShadow from './ScrollShadow.vue';
 
 describe('ScrollShadow.vue', () => {
@@ -65,11 +65,15 @@ describe('ScrollShadow.vue', () => {
 
     updateShadows();
     await nextTick();
-    expect(wrapper.get('.scroll-shadow-viewport').attributes('style')).toContain('calc(100% - 24px)');
+    expect(wrapper.vm.hasBottomShadow).toBe(true);
+    const viewportStyle = () => (wrapper.vm.$.subTree.children as VNode[])[0]!.props!.style as CSSProperties;
+    // jsdom's CSS parser rejects this valid mask; assert the style passed to Vue.
+    expect(viewportStyle().maskImage).toContain('calc(100% - 24px)');
 
     Object.defineProperty(viewport, 'scrollTop', { value: 200, writable: true, configurable: true });
     updateShadows();
     await nextTick();
-    expect(wrapper.get('.scroll-shadow-viewport').attributes('style')).toContain('black 24px');
+    expect(wrapper.vm.hasTopShadow).toBe(true);
+    expect(viewportStyle().maskImage).toContain('black 24px');
   });
 });

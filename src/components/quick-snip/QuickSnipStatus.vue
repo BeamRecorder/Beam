@@ -4,6 +4,8 @@ import { Check, Copy, ExternalLink, Film, LoaderCircle, X } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import CopyButton from '~/ui/button/CopyButton.vue';
 import QuickSnipCountdown from './QuickSnipCountdown.vue';
+import BeamMascot from '../mascot/BeamMascot.vue';
+import type { MascotPhase } from '../mascot/mascot-types';
 import { capture } from '~/api/capture';
 import { useTranslate } from '../../i18n/useTranslate';
 import type { QuickSnipSnapshot } from '~/api/types/quick-snip';
@@ -27,6 +29,7 @@ const projectId = computed(() =>
   status.value?.job ? (status.value.result?.projectId ?? status.value.job.projectId) : null,
 );
 const screenshot = computed(() => status.value?.job?.mode === 'screenshot');
+const instant = computed(() => status.value?.job?.mode === 'instant');
 const label = computed(() => {
   if (failed.value) return t('failed');
   if (completed.value)
@@ -53,6 +56,13 @@ const detail = computed(() => {
 const error = computed(
   () => actionError.value || status.value?.error || (!copied.value && status.value?.clipboardError),
 );
+const mascotPhase = computed<MascotPhase>(() => {
+  if (error.value || failed.value) return 'failed';
+  if (completed.value) return 'completed';
+  if (status.value?.state === 'processing') return 'processing';
+  if (status.value?.state === 'recording') return 'recording';
+  return 'preparing';
+});
 const expanded = computed(
   () => hovered.value || focused.value || pending.value || failed.value || Boolean(error.value),
 );
@@ -285,8 +295,12 @@ onBeforeUnmount(() => {
           <span>{{ detail }}</span>
           <QuickSnipCountdown v-if="completed && status?.autoClose" :countdown="status.autoClose" :paused="expanded" />
         </div>
-        <div class="status-value">
-          <Check v-if="completed" :size="20" />
+        <div class="status-value" :class="{ 'mascot-value': instant }">
+          <template v-if="instant">
+            <BeamMascot :key="status?.job?.name" :phase="mascotPhase" :size="52" />
+            <span v-if="!completed && !failed" class="mascot-percent">{{ percent }}<small>%</small></span>
+          </template>
+          <Check v-else-if="completed" :size="20" />
           <Button
             v-else-if="failed"
             size="xs"

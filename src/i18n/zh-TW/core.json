@@ -651,7 +651,12 @@
     "turnCameraOff": "關閉相機",
     "turnCameraOn": "開啟相機",
     "turnSystemAudioOff": "關閉系統音訊",
-    "turnSystemAudioOn": "開啟系統音訊"
+    "turnSystemAudioOn": "開啟系統音訊",
+    "restartRecording": "重新開始錄製",
+    "restartConfirmation": "重新開始？",
+    "restartDescription": "目前的錄製將被刪除。",
+    "keepRecording": "取消",
+    "restart": "重新開始"
   },
   "ScreenRegionOverlay": {
     "instruction": "選擇要錄製的區域",

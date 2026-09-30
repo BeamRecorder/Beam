@@ -36,9 +36,9 @@ const available: InputAccessStatus = {
 };
 
 describe('SetupStep input access error', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     setActivePinia(createPinia());
-    setCurrentLocale('en');
+    await setCurrentLocale('en');
     vi.clearAllMocks();
     capture.onPreferencesChanged.mockReturnValue(() => {});
     capture.getPreferences.mockResolvedValue({
@@ -55,8 +55,8 @@ describe('SetupStep input access error', () => {
     capture.requestInputAccess.mockResolvedValue(available);
   });
 
-  afterEach(() => {
-    setCurrentLocale('en');
+  afterEach(async () => {
+    await setCurrentLocale('en');
   });
 
   it('shows a retryable native error and clears it after access is authorized', async () => {

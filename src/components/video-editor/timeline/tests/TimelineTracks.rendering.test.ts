@@ -1,3 +1,4 @@
+import { triggerPointer } from '../../../../../tests/support/pointer';
 import { describe, expect, it, vi } from 'vitest';
 import { flushPromises } from '@vue/test-utils';
 import type { CaptionClip, ColorClip, VisualClip } from '~/media/shared/composition-types';
@@ -75,7 +76,7 @@ describe('TimelineTracks', () => {
     expect(mounted!.findAll('.tracks-stack > .audio-track')).toHaveLength(3);
     expect(mounted!.findAll('.tracks-stack > .audio-track')[1]!.classes()).toContain('disabled');
 
-    await mounted!.get('.ruler-ticks-area').trigger('pointerdown', { clientX: 620 });
+    await triggerPointer(mounted!.get('.ruler-ticks-area'), 'pointerdown', { clientX: 620 });
     window.dispatchEvent(pointerEvent('pointermove', 720));
     window.dispatchEvent(pointerEvent('pointerup', 820));
     expect(mounted!.emitted('update:currentTime')).toBeTruthy();

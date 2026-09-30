@@ -10,7 +10,7 @@ installBrowserZoomGuard();
 const app = createApp(HudPanelApp);
 const pinia = createPinia();
 app.use(pinia);
-app.use(initI18n());
+app.use(await initI18n());
 await useThemeStore(pinia).ready;
 document.documentElement.classList.add('editor-window-root');
 app.mount('#app');

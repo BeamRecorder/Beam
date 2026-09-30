@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { DEFAULT_HUD_WINDOW_SIZE, normalizeHudWindowSize } = require('../window/hud-window-size.cjs');
+const { normalizeRecorderLayout } = require('../window/recorder-layout.cjs');
 
 const defaultAppearance = () => ({
   theme: 'light',
@@ -45,7 +46,7 @@ const defaults = (platform = process.platform) => ({
     'teleprompter.previousLine': { keys: 'Ctrl+Shift+Left', scope: 'global', category: 'teleprompter' },
   },
   backgroundPresets: { colors: [], gradients: [] },
-  extras: {},
+  extras: normalizeRecorderLayout({}),
 });
 const themes = new Set(['light', 'dark', 'system']);
 const scopes = new Set(['global', 'application']);
@@ -187,7 +188,7 @@ const normalize = (value, platform = process.platform) => {
     devices: next.devices && typeof next.devices === 'object' && !Array.isArray(next.devices) ? next.devices : {},
     shortcuts,
     backgroundPresets: presets(next.backgroundPresets),
-    extras: next.extras && typeof next.extras === 'object' && !Array.isArray(next.extras) ? next.extras : {},
+    extras: normalizeRecorderLayout(next.extras),
   };
 };
 function createPreferencesStore(file, { platform = process.platform } = {}) {

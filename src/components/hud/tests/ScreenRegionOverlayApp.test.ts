@@ -1,3 +1,4 @@
+import { triggerPointer } from '../../../../tests/support/pointer';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -64,11 +65,11 @@ describe('ScreenRegionOverlayApp', () => {
     const main = wrapper.get('.region-overlay');
     const setPointerCapture = vi.fn();
     Object.defineProperty(main.element, 'setPointerCapture', { value: setPointerCapture });
-    await main.trigger('pointerdown', { clientX: 100, clientY: 100, pointerId: 7 });
-    await main.trigger('pointermove', { clientX: 500, clientY: 400, pointerId: 7 });
+    await triggerPointer(main, 'pointerdown', { clientX: 100, clientY: 100, pointerId: 7 });
+    await triggerPointer(main, 'pointermove', { clientX: 500, clientY: 400, pointerId: 7 });
     expect(wrapper.get('.region-frame').attributes('style')).toContain('width: 40%');
     expect(wrapper.get('.region-size').text()).toBe('400 × 300');
-    await main.trigger('pointerup');
+    await triggerPointer(main, 'pointerup');
     expect(setPointerCapture).toHaveBeenCalledWith(7);
 
     await wrapper.findAll('.region-actions button')[2].trigger('click');
@@ -97,15 +98,15 @@ describe('ScreenRegionOverlayApp', () => {
     await wrapper.vm.$nextTick();
     const main = wrapper.get('.region-overlay');
     Object.defineProperty(main.element, 'setPointerCapture', { value: vi.fn() });
-    await wrapper.get('.region-frame').trigger('pointerdown', { clientX: 250, clientY: 150, pointerId: 8 });
-    await main.trigger('pointermove', { clientX: 900, clientY: 490, pointerId: 8 });
+    await triggerPointer(wrapper.get('.region-frame'), 'pointerdown', { clientX: 250, clientY: 150, pointerId: 8 });
+    await triggerPointer(main, 'pointermove', { clientX: 900, clientY: 490, pointerId: 8 });
     expect(wrapper.get('.region-frame').attributes('style')).toContain('left: 70%');
     expect(wrapper.get('.region-frame').attributes('style')).toContain('top: 70%');
 
-    await wrapper.get('.resize-handle.se').trigger('pointerdown', { clientX: 500, clientY: 250, pointerId: 9 });
-    await main.trigger('pointermove', { clientX: 1200, clientY: 700, pointerId: 9 });
+    await triggerPointer(wrapper.get('.resize-handle.se'), 'pointerdown', { clientX: 500, clientY: 250, pointerId: 9 });
+    await triggerPointer(main, 'pointermove', { clientX: 1200, clientY: 700, pointerId: 9 });
     expect(wrapper.get('.region-frame').attributes('style')).toMatch(/width: 30/);
-    await main.trigger('pointercancel');
+    await triggerPointer(main, 'pointercancel');
     await wrapper.findAll('.region-actions button')[0].trigger('click');
     expect(wrapper.get('.region-frame').attributes('style')).toContain('width: 100%');
     expect(capture.updatePreferences).toHaveBeenCalledWith({
@@ -124,8 +125,8 @@ describe('ScreenRegionOverlayApp', () => {
     await wrapper.vm.$nextTick();
     expect(wrapper.find('.region-toolbar').exists()).toBe(false);
     expect(wrapper.get('.region-frame').attributes('style')).toContain('width: 100%');
-    await wrapper.get('.region-overlay').trigger('pointerdown', { clientX: 10, clientY: 10, pointerId: 1 });
-    await wrapper.get('.region-overlay').trigger('pointermove', { clientX: 80, clientY: 80, pointerId: 1 });
+    await triggerPointer(wrapper.get('.region-overlay'), 'pointerdown', { clientX: 10, clientY: 10, pointerId: 1 });
+    await triggerPointer(wrapper.get('.region-overlay'), 'pointermove', { clientX: 80, clientY: 80, pointerId: 1 });
     expect(wrapper.get('.region-frame').attributes('style')).toContain('width: 100%');
     expect(capture.confirmScreenRegion).not.toHaveBeenCalled();
 
@@ -222,8 +223,8 @@ describe('ScreenRegionOverlayApp', () => {
     const main = wrapper.get('.region-overlay');
     const setPointerCapture = vi.fn();
     Object.defineProperty(main.element, 'setPointerCapture', { value: setPointerCapture });
-    await wrapper.get('.region-frame').trigger('pointerdown', { clientX: 200, clientY: 250, pointerId: 11 });
-    await main.trigger('pointermove', { clientX: 400, clientY: 350, pointerId: 11 });
+    await triggerPointer(wrapper.get('.region-frame'), 'pointerdown', { clientX: 200, clientY: 250, pointerId: 11 });
+    await triggerPointer(main, 'pointermove', { clientX: 400, clientY: 350, pointerId: 11 });
 
     expect(wrapper.get('.region-frame').attributes('style')).toMatch(/left: 30(?:\.\d+)?%/);
     expect(wrapper.get('.region-frame').attributes('style')).toContain('top: 40%');

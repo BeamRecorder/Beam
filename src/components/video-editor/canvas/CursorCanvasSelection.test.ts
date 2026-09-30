@@ -1,3 +1,4 @@
+import { triggerPointer } from '../../../../tests/support/pointer';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import CursorCanvasSelection from './CursorCanvasSelection.vue';
@@ -16,9 +17,9 @@ describe('CursorCanvasSelection', () => {
     // The selection shell and its actual resize target must remain hit-testable.
     expect(getComputedStyle(handle.element).pointerEvents).toBe('auto');
 
-    await handle.trigger('pointerdown', { pointerId: 7, clientX: 120, clientY: 80 });
-    await handle.trigger('pointermove', { pointerId: 7, clientX: 100, clientY: 60 });
-    await handle.trigger('pointerup', { pointerId: 7, clientX: 100, clientY: 60 });
+    await triggerPointer(handle, 'pointerdown', { pointerId: 7, clientX: 120, clientY: 80 });
+    await triggerPointer(handle, 'pointermove', { pointerId: 7, clientX: 100, clientY: 60 });
+    await triggerPointer(handle, 'pointerup', { pointerId: 7, clientX: 100, clientY: 60 });
 
     expect(wrapper.emitted('resize-start')).toHaveLength(1);
     expect(wrapper.emitted('resize-start')?.[0]?.[0]).toBe('top-left');
@@ -59,12 +60,12 @@ describe('CursorCanvasSelection', () => {
     Object.defineProperty(selection.element, 'setPointerCapture', { value: () => undefined });
 
     expect(selection.classes()).not.toContain('is-blocked-drag');
-    await selection.trigger('pointerdown', { button: 0, pointerId: 9 });
+    await triggerPointer(selection, 'pointerdown', { button: 0, pointerId: 9 });
     expect(selection.classes()).toContain('is-blocked-drag');
-    await selection.trigger('pointerup', { pointerId: 9 });
+    await triggerPointer(selection, 'pointerup', { pointerId: 9 });
     expect(selection.classes()).not.toContain('is-blocked-drag');
 
-    await handle.trigger('pointerdown', { button: 0, pointerId: 10 });
+    await triggerPointer(handle, 'pointerdown', { button: 0, pointerId: 10 });
     expect(selection.classes()).not.toContain('is-blocked-drag');
   });
 });

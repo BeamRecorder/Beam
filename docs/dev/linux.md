@@ -19,7 +19,7 @@ gdbus introspect --session --dest org.freedesktop.portal.Desktop \
 
 Interaction recording also requires Polkit: `pkexec` on Debian/Ubuntu, `polkit` on Fedora, and an authentication agent in the desktop session. Beam's DEB/RPM declare the corresponding runtime dependency. AppImage users install that prerequisite through their distribution. The protected input helper handles Wayland and X11 alike; startup errors are available in Beam Preferences and in **Copy system information**. Include the package format and whether the authorization dialog appeared when reporting a failure.
 
-- Node.js 22 or newer and Bun 1.4.0
+- Node.js 22 or newer and Bun 1.4.2
 - [Rust stable](./INSTALL_RUST.md)
 - Git
 - a C/C++ compiler, Clang development libraries and pkg-config

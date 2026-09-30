@@ -24,6 +24,7 @@ export interface QuickSnipApi {
   reportQuickSnip(event: {
     type:
       | 'recording'
+      | 'restarting'
       | 'completed'
       | 'failed'
       | 'screenshot'

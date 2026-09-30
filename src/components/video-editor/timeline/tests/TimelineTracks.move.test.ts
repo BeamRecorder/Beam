@@ -1,3 +1,4 @@
+import { triggerPointer } from '../../../../../tests/support/pointer';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import type { ClipComposition, VisualClip } from '~/media/shared/composition-types';
@@ -30,7 +31,7 @@ describe('TimelineTracks', () => {
     const zoomButton = mounted!.get('.cursor-zoom-indicator:not(.preview-ghost)');
     expect((zoomButton.element as HTMLElement).style.transform).toMatch(/^translate3d\(200px,/);
 
-    await screenClip.trigger('pointerdown', { clientX: 200 });
+    await triggerPointer(screenClip, 'pointerdown', { clientX: 200 });
     window.dispatchEvent(pointerEvent('pointermove', 300));
     await flushPromises();
 
@@ -64,7 +65,7 @@ describe('TimelineTracks', () => {
     if (!importedAudio) throw new Error('Expected the imported audio timeline clip stub.');
     const zoomButton = mounted!.get('.cursor-zoom-indicator:not(.preview-ghost)');
 
-    await importedAudio.trigger('pointerdown', { clientX: 500 });
+    await triggerPointer(importedAudio, 'pointerdown', { clientX: 500 });
     window.dispatchEvent(pointerEvent('pointermove', 0));
     await flushPromises();
 
@@ -105,7 +106,7 @@ describe('TimelineTracks', () => {
       .findAllComponents(TimelineClipStub)
       .find((component) => (component.props('clip') as VisualClip).id === 'screen-clip');
     if (!screenClip) throw new Error('Expected the screen timeline clip stub.');
-    await screenClip.trigger('pointerdown', { clientX: 200 });
+    await triggerPointer(screenClip, 'pointerdown', { clientX: 200 });
     window.dispatchEvent(pointerEvent('pointermove', 275));
     await flushPromises();
     window.dispatchEvent(pointerEvent('pointerup', 275));
@@ -135,7 +136,7 @@ describe('TimelineTracks', () => {
       .findAllComponents(TimelineClipStub)
       .find((component) => (component.props('clip') as VisualClip).id === 'screen-clip');
     if (!screenClip) throw new Error('Expected the screen timeline clip stub.');
-    await screenClip.trigger('pointerdown', { clientX: 200 });
+    await triggerPointer(screenClip, 'pointerdown', { clientX: 200 });
     window.dispatchEvent(pointerEvent('pointermove', 275));
     await flushPromises();
     window.dispatchEvent(pointerEvent('pointerup', 275));
@@ -148,35 +149,35 @@ describe('TimelineTracks', () => {
   it('moves and trims linked clips and zooms with clamped timeline bounds', async () => {
     const mounted = await mountTracks();
     const clips = mounted!.findAll('.visual-track .timeline-clip');
-    await clips[2]!.trigger('pointerdown', { clientX: 120 });
+    await triggerPointer(clips[2]!, 'pointerdown', { clientX: 120 });
     window.dispatchEvent(pointerEvent('pointermove', 500));
     window.dispatchEvent(pointerEvent('pointerup', 500));
     expect(mounted!.emitted('move:selection')).toContainEqual([
       expect.objectContaining({ clipIds: expect.arrayContaining(['screen-clip', 'webcam-clip']) }),
     ]);
 
-    await clips[2]!.find('.trim-handle.start').trigger('pointerdown', { clientX: 200 });
+    await triggerPointer(clips[2]!.find('.trim-handle.start'), 'pointerdown', { clientX: 200 });
     window.dispatchEvent(pointerEvent('pointermove', 250));
     window.dispatchEvent(pointerEvent('pointerup', 250));
     expect(mounted!.emitted('trim:clip')).toContainEqual([
       expect.objectContaining({ id: 'screen-clip', edge: 'start' }),
     ]);
-    await clips[2]!.find('.trim-handle.end').trigger('pointerdown', { clientX: 700 });
+    await triggerPointer(clips[2]!.find('.trim-handle.end'), 'pointerdown', { clientX: 700 });
     window.dispatchEvent(pointerEvent('pointermove', 900));
     window.dispatchEvent(pointerEvent('pointerup', 900));
     expect(mounted!.emitted('trim:clip')).toContainEqual([expect.objectContaining({ id: 'screen-clip', edge: 'end' })]);
 
     const zoomButton = mounted!.get('.cursor-zoom-indicator:not(.preview-ghost)');
-    await zoomButton.trigger('pointerdown', { clientX: 400 });
+    await triggerPointer(zoomButton, 'pointerdown', { clientX: 400 });
     window.dispatchEvent(pointerEvent('pointermove', 650));
     window.dispatchEvent(pointerEvent('pointerup', 650));
     expect(mounted!.emitted('move:zoom')).toContainEqual([expect.objectContaining({ id: 'zoom-1' })]);
-    await zoomButton.trigger('pointerdown', { clientX: 400 });
-    await zoomButton.find('.trim-handle.start').trigger('pointerdown', { clientX: 400 });
+    await triggerPointer(zoomButton, 'pointerdown', { clientX: 400 });
+    await triggerPointer(zoomButton.find('.trim-handle.start'), 'pointerdown', { clientX: 400 });
     window.dispatchEvent(pointerEvent('pointermove', 100));
     window.dispatchEvent(pointerEvent('pointerup', 100));
     expect(mounted!.emitted('trim:zoom')).toContainEqual([expect.objectContaining({ id: 'zoom-1', edge: 'start' })]);
-    await zoomButton.find('.trim-handle.end').trigger('pointerdown', { clientX: 400 });
+    await triggerPointer(zoomButton.find('.trim-handle.end'), 'pointerdown', { clientX: 400 });
     window.dispatchEvent(pointerEvent('pointermove', 900));
     window.dispatchEvent(pointerEvent('pointerup', 900));
     expect(mounted!.emitted('trim:zoom')).toContainEqual([expect.objectContaining({ id: 'zoom-1', edge: 'end' })]);
@@ -190,7 +191,7 @@ describe('TimelineTracks', () => {
     if (!screenClip) throw new Error('Expected the screen timeline clip stub.');
 
     const originalStart = (screenClip.props('clip') as VisualClip).timelineStartMs;
-    await screenClip.trigger('pointerdown', { clientX: 120 });
+    await triggerPointer(screenClip, 'pointerdown', { clientX: 120 });
     window.dispatchEvent(pointerEvent('pointermove', 500));
     await flushPromises();
     expect((screenClip.props('clip') as VisualClip).timelineStartMs).toBeGreaterThan(originalStart);
@@ -206,7 +207,7 @@ describe('TimelineTracks', () => {
     ]);
 
     const originalDuration = (screenClip.props('clip') as VisualClip).timelineDurationMs;
-    await screenClip.find('.trim-handle.end').trigger('pointerdown', { clientX: 500 });
+    await triggerPointer(screenClip.find('.trim-handle.end'), 'pointerdown', { clientX: 500 });
     window.dispatchEvent(pointerEvent('pointermove', 900));
     await flushPromises();
     expect((screenClip.props('clip') as VisualClip).timelineDurationMs).toBeGreaterThan(originalDuration);
@@ -271,7 +272,7 @@ describe('TimelineTracks', () => {
     const initialThumbnailSlots = holdClip.props('thumbnailSlots');
     expect(holdClip.props('deferThumbnailRequests')).toBe(false);
 
-    await holdClip.find('.trim-handle.end').trigger('pointerdown', { clientX: 220 });
+    await triggerPointer(holdClip.find('.trim-handle.end'), 'pointerdown', { clientX: 220 });
     window.dispatchEvent(pointerEvent('pointermove', 900));
     flushNextFrame();
     await flushPromises();
@@ -357,7 +358,7 @@ describe('TimelineTracks', () => {
       .find((component) => (component.props('clip') as VisualClip).id === hold.id);
     if (!holdClip) throw new Error('Expected the hold timeline clip stub.');
 
-    await holdClip.find('.trim-handle.end').trigger('pointerdown', { clientX: 620 });
+    await triggerPointer(holdClip.find('.trim-handle.end'), 'pointerdown', { clientX: 620 });
     window.dispatchEvent(pointerEvent('pointermove', 120));
     flushNextFrame();
     await flushPromises();

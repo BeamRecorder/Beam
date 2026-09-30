@@ -1,3 +1,4 @@
+import { triggerPointer } from '../../../../tests/support/pointer';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import ResizeHandle from './ResizeHandle.vue';
@@ -11,10 +12,10 @@ describe('ResizeHandle', () => {
 
     const setPointerCapture = vi.fn();
     Object.defineProperty(handles[0].element, 'setPointerCapture', { value: setPointerCapture });
-    await handles[0].trigger('pointerdown', { pointerId: 11 });
-    await handles[0].trigger('pointermove', { pointerId: 11 });
-    await handles[0].trigger('pointerup', { pointerId: 11 });
-    await handles[0].trigger('pointercancel', { pointerId: 11 });
+    await triggerPointer(handles[0], 'pointerdown', { pointerId: 11 });
+    await triggerPointer(handles[0], 'pointermove', { pointerId: 11 });
+    await triggerPointer(handles[0], 'pointerup', { pointerId: 11 });
+    await triggerPointer(handles[0], 'pointercancel', { pointerId: 11 });
 
     expect(setPointerCapture).toHaveBeenCalledWith(11);
     expect(wrapper.emitted('resize-start')?.[0]?.[0]).toBe('top-left');
@@ -74,7 +75,7 @@ describe('ResizeHandle', () => {
     const setPointerCapture = vi.fn();
     Object.defineProperty(handle.element, 'setPointerCapture', { value: setPointerCapture });
 
-    await handle.trigger('pointerdown', { pointerId: 17, buttons: 1 });
+    await triggerPointer(handle, 'pointerdown', { pointerId: 17, buttons: 1 });
     await handle.trigger('lostpointercapture', { pointerId: 17 });
 
     expect(setPointerCapture).toHaveBeenCalledWith(17);

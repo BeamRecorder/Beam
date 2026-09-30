@@ -1,38 +1,60 @@
 <script setup lang="ts">
-import { Video, VideoOff, GripVertical, Pause, Play, Square, Trash2 } from '@lucide/vue';
-import { computed, ref } from 'vue';
+import { Pause, Play, RotateCcw, Square, Trash2 } from '@lucide/vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import type { RecordingBarVisibility, RecordingPhase } from './recording-types';
 import { useTranslate } from '~/i18n/useTranslate';
-import { useAudioLevelMeter } from '../audio/useAudioLevelMeter';
-import AudioIconMeter from '../audio/AudioIconMeter.vue';
+import Button from '~/ui/button/Button.vue';
 import Throbber from '~/ui/throbber/Throbber.vue';
+import BeamMascot from '../../mascot/BeamMascot.vue';
 
 const { t } = useTranslate('RecorderBar');
-
-const props = defineProps<{
-  phase: RecordingPhase;
-  secondsRemaining: number;
-  recordingTime: string;
-  cameraEnabled: boolean;
-  microphoneEnabled: boolean;
-  systemAudioEnabled: boolean;
-  systemAudioLevel: number;
-  visibility: RecordingBarVisibility;
-  hoverOnlyActive?: boolean;
-}>();
-
-const isMicEnabled = computed(() => props.microphoneEnabled && props.phase !== 'finalizing');
-const { level: micLevel } = useAudioLevelMeter(isMicEnabled);
+const props = withDefaults(
+  defineProps<{
+    phase: RecordingPhase;
+    recordingTime: string;
+    visibility: RecordingBarVisibility;
+    hoverOnlyActive?: boolean;
+    busy?: boolean;
+    mascot?: boolean;
+  }>(),
+  { busy: false, mascot: false },
+);
+const emit = defineEmits<{ stop: []; cancel: []; pause: []; restart: [] }>();
 const isPointerOver = ref(false);
-
-const emit = defineEmits<{
-  stop: [];
-  cancel: [];
-  pause: [];
-  camera: [];
-  microphone: [];
-  systemAudio: [];
-}>();
+const isFocused = ref(false);
+const confirmingRestart = ref(false);
+const restartControl = ref<HTMLElement | null>(null);
+const confirmation = ref<HTMLElement | null>(null);
+const canPause = computed(() => !props.busy && ['recording', 'paused'].includes(props.phase));
+const finalizing = computed(() => props.busy || props.phase === 'finalizing');
+const mascotPhase = computed(() =>
+  canPause.value ? (props.phase === 'paused' ? 'paused' : 'recording') : 'preparing',
+);
+const askRestart = async () => {
+  if (!canPause.value) return;
+  confirmingRestart.value = true;
+  await nextTick();
+  confirmation.value?.querySelector<HTMLButtonElement>('button')?.focus();
+};
+const closeConfirmation = async (restart = false) => {
+  const accepted = restart && canPause.value;
+  confirmingRestart.value = false;
+  await nextTick();
+  restartControl.value?.querySelector<HTMLButtonElement>('button')?.focus();
+  if (accepted) emit('restart');
+};
+const focusOut = (event: FocusEvent) => {
+  isFocused.value =
+    event.relatedTarget instanceof Node &&
+    event.currentTarget instanceof HTMLElement &&
+    event.currentTarget.contains(event.relatedTarget);
+};
+watch(
+  () => props.phase,
+  () => {
+    confirmingRestart.value = false;
+  },
+);
 </script>
 
 <template>
@@ -42,200 +64,181 @@ const emit = defineEmits<{
       'auto-fade': visibility === 'auto-fade',
       'hover-only': visibility === 'hover-only' && hoverOnlyActive,
       'pointer-over': isPointerOver,
+      confirming: confirmingRestart,
     }"
     :aria-label="t('recordingControls')"
     @pointerenter="isPointerOver = true"
     @pointerleave="isPointerOver = false"
+    @focusin="isFocused = true"
+    @focusout="focusOut"
+    @keydown.esc.prevent="closeConfirmation()"
   >
-    <button class="drag-handle" type="button" :aria-label="t('moveRecorderBar')" :title="t('moveRecorderBar')">
-      <GripVertical aria-hidden="true" />
-    </button>
-
-    <p class="recording-time" :class="{ countdown: phase === 'countdown' }" aria-live="polite">
-      <template v-if="phase === 'countdown'">{{ t('ready') }}</template>
-      <Throbber v-else-if="phase === 'starting'" :text="t('preparing')" variant="breathe" color="muted" size="xs" />
-      <template v-else>{{ recordingTime }}</template>
-    </p>
-
-    <button
-      class="control"
-      :aria-label="phase === 'paused' ? t('resumeRecording') : t('pauseRecording')"
-      :title="phase === 'paused' ? t('resumeRecording') : t('pauseRecording')"
-      :disabled="phase === 'countdown' || phase === 'starting' || phase === 'finalizing'"
-      @pointerdown.stop
-      @click="emit('pause')"
+    <div
+      v-if="confirmingRestart"
+      ref="confirmation"
+      class="restart-prompt"
+      role="alertdialog"
+      :aria-label="t('restartConfirmation')"
     >
-      <Play v-if="phase === 'paused'" /><Pause v-else />
-    </button>
-
-    <button
-      class="control stop"
-      :aria-label="t('stopRecording')"
-      :title="t('stopRecording')"
-      :disabled="phase === 'finalizing'"
-      @pointerdown.stop
-      @click="emit('stop')"
-    >
-      <Square />
-    </button>
-
-    <button
-      class="control"
-      :class="{ inactive: !microphoneEnabled }"
-      :aria-label="microphoneEnabled ? t('turnMicOff') : t('turnMicOn')"
-      :title="microphoneEnabled ? t('turnMicOff') : t('turnMicOn')"
-      :disabled="phase === 'countdown' || phase === 'starting' || phase === 'finalizing'"
-      @pointerdown.stop
-      @click="emit('microphone')"
-    >
-      <AudioIconMeter kind="mic" :enabled="microphoneEnabled" :level="micLevel" size="sm" />
-    </button>
-
-    <button
-      class="control"
-      :class="{ inactive: !cameraEnabled }"
-      :aria-label="cameraEnabled ? t('turnCameraOff') : t('turnCameraOn')"
-      :title="cameraEnabled ? t('turnCameraOff') : t('turnCameraOn')"
-      :disabled="phase === 'countdown' || phase === 'starting' || phase === 'finalizing'"
-      @pointerdown.stop
-      @click="emit('camera')"
-    >
-      <Video v-if="cameraEnabled" /><VideoOff v-else />
-    </button>
-
-    <button
-      class="control"
-      :class="{ inactive: !systemAudioEnabled }"
-      :aria-label="systemAudioEnabled ? t('turnSystemAudioOff') : t('turnSystemAudioOn')"
-      :title="systemAudioEnabled ? t('turnSystemAudioOff') : t('turnSystemAudioOn')"
-      :disabled="phase === 'countdown' || phase === 'starting' || phase === 'finalizing'"
-      @pointerdown.stop
-      @click="emit('systemAudio')"
-    >
-      <AudioIconMeter kind="system" :enabled="systemAudioEnabled" :level="systemAudioLevel" size="sm" />
-    </button>
-
-    <div class="cancel-slot">
-      <button
-        class="control cancel"
-        :aria-label="t('cancelRecording')"
-        :title="t('cancelRecording')"
-        :disabled="phase === 'finalizing'"
-        @pointerdown.stop
-        @click="emit('cancel')"
-      >
-        <Trash2 />
-      </button>
+      <p>
+        {{ t('restartConfirmation') }}<span>{{ t('restartDescription') }}</span>
+      </p>
+      <div class="control-slot">
+        <Button variant="ghost" size="xs" @click="closeConfirmation()">{{ t('keepRecording') }}</Button>
+      </div>
+      <div class="control-slot">
+        <Button variant="primary" size="xs" :disabled="!canPause" @click="closeConfirmation(true)">{{
+          t('restart')
+        }}</Button>
+      </div>
     </div>
+    <template v-else>
+      <div class="control-slot">
+        <Button
+          variant="ghost"
+          size="sm"
+          icon-only
+          :icon="Trash2"
+          :disabled="finalizing"
+          :aria-label="t('cancelRecording')"
+          :title="t('cancelRecording')"
+          @click="emit('cancel')"
+        />
+      </div>
+      <div ref="restartControl" class="control-slot">
+        <Button
+          variant="ghost"
+          size="sm"
+          icon-only
+          :icon="RotateCcw"
+          :disabled="!canPause"
+          :aria-label="t('restartRecording')"
+          :title="t('restartRecording')"
+          @click="askRestart"
+        />
+      </div>
+      <div class="control-slot">
+        <Button
+          variant="ghost"
+          size="sm"
+          icon-only
+          :icon="phase === 'paused' ? Play : Pause"
+          :disabled="!canPause"
+          :aria-label="phase === 'paused' ? t('resumeRecording') : t('pauseRecording')"
+          :title="phase === 'paused' ? t('resumeRecording') : t('pauseRecording')"
+          @click="emit('pause')"
+        />
+      </div>
+      <p class="recording-time" aria-live="off">
+        <template v-if="phase === 'countdown'">{{ t('ready') }}</template>
+        <Throbber
+          v-else-if="phase === 'starting' || phase === 'finalizing'"
+          :text="t('preparing')"
+          variant="breathe"
+          color="muted"
+          size="xs"
+        />
+        <template v-else>{{ recordingTime }}</template>
+      </p>
+      <div class="control-slot stop-slot">
+        <Button
+          variant="secondary"
+          size="sm"
+          :disabled="finalizing"
+          :aria-label="t('stopRecording')"
+          :title="t('stopRecording')"
+          style="width: 80px; height: 40px; padding: 0; border-radius: var(--radius-full); color: var(--color-error)"
+          @click="emit('stop')"
+        >
+          <template #icon>
+            <BeamMascot
+              v-if="mascot"
+              :phase="mascotPhase"
+              :size="36"
+              :active="visibility !== 'hover-only' || !hoverOnlyActive || isPointerOver || isFocused"
+            />
+            <Square :size="18" aria-hidden="true" />
+          </template>
+        </Button>
+      </div>
+    </template>
   </aside>
 </template>
 
 <style scoped>
 .recorder-bar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 999999;
-  pointer-events: auto;
-  width: 72px;
-  height: 344px;
+  position: absolute;
+  inset: 16px;
+  height: 56px;
   box-sizing: border-box;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: space-evenly;
-  padding: 8px;
+  gap: 8px;
+  padding: 8px 12px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-bg-surface);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-element);
   box-shadow: var(--shadow-lg);
-  overflow: hidden;
-  transition: opacity 0.18s ease;
-}
-.drag-handle {
-  width: 40px;
-  height: 24px;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-md);
-  background: transparent;
-  color: var(--text-muted);
-  cursor: grab;
+  pointer-events: auto;
+  user-select: none;
   -webkit-app-region: drag;
   app-region: drag;
+  transition: opacity 180ms ease;
 }
-.drag-handle:hover,
-.drag-handle:focus-visible {
-  background: var(--color-bg-element);
+.control-slot {
+  display: flex;
+  flex: none;
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+.stop-slot {
+  margin-left: auto;
+}
+.recording-time {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
   color: var(--text-primary);
-  outline: none;
+  white-space: nowrap;
 }
-.drag-handle :deep(svg) {
-  width: 18px;
-  height: 18px;
+.restart-prompt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+.restart-prompt p {
+  flex: 1;
+  margin: 0;
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--text-primary);
+}
+.restart-prompt p span {
+  display: block;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-secondary);
 }
 .recorder-bar.auto-fade {
   opacity: 0.15;
 }
-.recorder-bar.auto-fade:hover,
-.recorder-bar.auto-fade.pointer-over,
-.recorder-bar.auto-fade:focus-within {
-  opacity: 1;
-}
 .recorder-bar.hover-only {
   opacity: 0;
 }
-.recorder-bar.hover-only:hover,
-.recorder-bar.hover-only.pointer-over,
-.recorder-bar.hover-only:focus-within {
+.recorder-bar:hover,
+.recorder-bar.pointer-over,
+.recorder-bar:focus-within,
+.recorder-bar.confirming {
   opacity: 1;
 }
-.control {
-  width: 40px;
-  height: 40px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  border-radius: var(--radius-md);
-  background: transparent;
-  color: var(--text-primary);
-  cursor: pointer;
-  -webkit-app-region: no-drag;
-  app-region: no-drag;
-}
-.control:hover:not(:disabled) {
-  background: var(--color-bg-element);
-}
-.control:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-.control.stop {
-  color: var(--color-error);
-}
-.control.inactive {
-  color: var(--color-error);
-}
-.cancel-slot {
-  margin-top: -4px;
-}
-.control.cancel {
-  color: var(--color-error);
-}
-.control :deep(svg) {
-  width: 20px;
-  height: 20px;
-}
-.recording-time {
-  margin: 0;
-  font-size: 11px;
-  line-height: 24px;
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-}
-.countdown {
-  color: var(--text-muted);
+@media (prefers-reduced-motion: reduce) {
+  .recorder-bar {
+    transition: none;
+  }
 }
 </style>

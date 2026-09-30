@@ -1,3 +1,4 @@
+import { triggerPointer } from '../../../../tests/support/pointer';
 import { ref } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -225,7 +226,7 @@ describe('LinkedClipPreviewPlayer', () => {
       width: 200,
     } as DOMRect);
 
-    await surface.trigger('pointerdown', { clientX: 250 });
+    await triggerPointer(surface, 'pointerdown', { clientX: 250 });
 
     expect(audio.currentTime).toBeCloseTo(5.5);
     expect(wrapper.get('.waveform-playhead').attributes('style')).toContain('left: 75%');
@@ -286,7 +287,7 @@ describe('LinkedClipPreviewPlayer', () => {
 
     // 20% into the viewport + 20% scroll offset = 40% of the zoomed
     // waveform, i.e. twelve seconds into the 30-second clip.
-    await surface.trigger('pointerdown', { clientX: 140 });
+    await triggerPointer(surface, 'pointerdown', { clientX: 140 });
 
     expect(audio.currentTime).toBeCloseTo(12);
     expect(wrapper.get('.waveform-playhead').attributes('style')).toContain('left: 26.666666666666668%');

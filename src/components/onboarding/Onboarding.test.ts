@@ -114,8 +114,8 @@ describe('Onboarding Components', () => {
     });
   });
 
-  afterEach(() => {
-    setCurrentLocale('en');
+  afterEach(async () => {
+    await setCurrentLocale('en');
     Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: originalMediaDevices });
   });
 
@@ -196,7 +196,7 @@ describe('Onboarding Components', () => {
   });
 
   it('localizes the live-HUD instruction and renders it only once', async () => {
-    setCurrentLocale('fr');
+    await setCurrentLocale('fr');
     const wrapper = mount(TourStep, {
       global: {
         plugins: [i18n, MotionPlugin],

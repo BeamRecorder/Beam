@@ -9,7 +9,7 @@ import { initI18n } from './i18n';
 const app = createApp(QuickSnipStatus);
 const pinia = createPinia();
 app.use(pinia);
-app.use(initI18n());
+app.use(await initI18n());
 useThemeStore(pinia);
 useLocaleStore(pinia);
 app.mount('#app');

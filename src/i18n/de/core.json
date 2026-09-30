@@ -651,7 +651,12 @@
     "turnCameraOff": "Kamera ausschalten",
     "turnCameraOn": "Kamera einschalten",
     "turnSystemAudioOff": "Systemaudio ausschalten",
-    "turnSystemAudioOn": "Systemaudio einschalten"
+    "turnSystemAudioOn": "Systemaudio einschalten",
+    "restartRecording": "Aufnahme neu starten",
+    "restartConfirmation": "Neu anfangen?",
+    "restartDescription": "Diese Aufnahme wird gelöscht.",
+    "keepRecording": "Abbrechen",
+    "restart": "Neu starten"
   },
   "ScreenRegionOverlay": {
     "instruction": "Wähle einen Bereich zur Aufnahme aus",

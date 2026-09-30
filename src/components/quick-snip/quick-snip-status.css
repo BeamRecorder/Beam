@@ -112,6 +112,26 @@
   font-weight: 500;
   color: var(--text-secondary);
 }
+.mascot-value {
+  position: relative;
+  flex: 0 0 52px;
+  height: 52px;
+  justify-content: center;
+}
+.mascot-percent {
+  position: absolute;
+  bottom: -2px;
+  inset-inline: 0;
+  text-align: center;
+  font-size: 11px;
+  line-height: 12px;
+  letter-spacing: 0;
+  color: var(--text-secondary);
+}
+.mascot-percent small {
+  margin-left: 1px;
+  font-size: inherit;
+}
 .completed .status-value {
   color: var(--color-primary);
 }

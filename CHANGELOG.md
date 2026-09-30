@@ -6,6 +6,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- The recorder shows a lightweight animated cloud while its interface loads, with a retry action if startup fails.
+- Instant capture now has a small cloud mascot that accompanies recording, dances and morphs during export, and briefly celebrates completed videos, respecting reduced-motion preferences.
 - Added a standalone Mascot Lab to explore Beam's SVG mascot with morphing star eyes, customizable looks, animation sequences, and transparent SVG/PNG exports before integrating it into the app.
 - Added a temporary Mascot Lab button to the recorder toolbar, opening the lab in its own desktop window.
 - Capture problems now appear in the toolbar with a count and a scrollable hover panel, including individual copy actions.
@@ -13,6 +15,9 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
+- Recorder startup now loads other languages, recording overlays, font parsing and SVG validation only when needed, and exposes startup timings in developer tools.
+- Updated desktop and website JavaScript dependencies to their latest stable versions, including Electron 44, and upgraded Bun to 1.4.2 locally and in CI.
+- Recording controls are now a compact horizontal bar with Delete, confirmed Restart, Pause/Resume and Stop. Old bar positions reset once to the bottom center of each display; later moves remain saved.
 - Redesigned the capture HUD into a compact horizontal layout with Full screen, Region and Window cards that open the matching selection and capture after confirmation.
 - Refreshed the default light and dark surfaces, typography and control shapes, with bundled Hanken Grotesk and themed device/preset menus.
 
